@@ -106,8 +106,20 @@ class Event(object):
 		self._eventListeners.append(eventListener)
 		
 	def fire(self):
+		class ProcessEventThread(threading.Thread):
+			def __init__(self, eventListener, event):
+				threading.Thread.__init__(self)
+				self._eventListener = eventListener
+				self._event = event
+			
+			def run(self):
+				try:
+					self._eventListener.processEvent(self._event)
+				except Exception, e:
+					logger.logException(e)
+		
 		for l in self._eventListeners:
-			l.processEvent(self)
+			ProcessEventThread(l, self).start()
 		
 class DaemonStartupEvent(Event):
 	def __init__(self):
@@ -924,9 +936,16 @@ class ServiceConnectionThread(KillableThread):
 			self._choiceSubject.setCallbacks( [ self.stopConnectionCallback ] )
 			self._notificationServer.addSubject(self._choiceSubject)
 			
-			self._statusSubject.setMessage("Connecting to config server '%s'" % self._configServiceUrl)
+			timeout = 5
+			while(timeout >= 0):
+				logger.info("Waiting for user to cancel connect")
+				self._statusSubject.setMessage("Waiting for user to cancel connect (%d)" % timeout)
+				timeout -= 1
+				time.sleep(1)
+			
 			logger.notice("Connecting to config server '%s'" % self._configServiceUrl)
-			#time.sleep(5)
+			self._statusSubject.setMessage( _("Connecting to config server '%s'") % self._configServiceUrl)
+			
 			try:
 				self.configService = JSONRPCBackend(address = self._configServiceUrl, username = self._username, password = self._password)
 				self.configService.authenticated()
@@ -978,19 +997,21 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._clientIdSubject = MessageSubject('clientId')
 		
 		self._config = {
-			'configFile':               'opsiclientd.conf',
-			'logFile':                  'opsiclientd.log',
-			'logLevel':                 LOG_NOTICE,
-			'logFormat':                '(%l) %D %M (%F|%N)',
-			'hostId':                   socket.getfqdn(),
-			'configServiceUrl':         '',
-			'opsiHostKey':              '',
-			'controlServerInterface':   '0.0.0.0',
-			'controlServerPort':        4441,
-			'sslServerKeyFile':         'opsiclientd.pem',
-			'sslServerCertFile':        'opsiclientd.pem',
-			'controlServerStaticDir':   'static_html',
-			'statusApplicationCommand': '',
+			'configFile':                  'opsiclientd.conf',
+			'logFile':                     'opsiclientd.log',
+			'logLevel':                    LOG_NOTICE,
+			'logFormat':                   '(%l) %D %M (%F|%N)',
+			'hostId':                      socket.getfqdn(),
+			'configServiceUrl':            '',
+			'opsiHostKey':                 '',
+			'controlServerInterface':      '0.0.0.0',
+			'controlServerPort':           4441,
+			'sslServerKeyFile':            'opsiclientd.pem',
+			'sslServerCertFile':           'opsiclientd.pem',
+			'notificationServerInterface': '127.0.0.1',
+			'notificationServerPort':      4442,
+			'controlServerStaticDir':      'static_html',
+			'statusApplicationCommand':    '',
 		}
 		
 		self._possibleMethods = [
@@ -1082,6 +1103,17 @@ class Opsiclientd(EventListener, threading.Thread):
 						else:
 							logger.warning("Ignoring unknown option '%s' in config file: '%s'" % (option, self._config['configFile']))
 				
+				elif (section.lower() == 'notification_server'):
+					# Notification server settings
+					for (option, value) in config.items(section):
+						if   (option.lower() == 'port'):
+							self._config['notificationServerPort'] = int(value.strip())
+						
+						elif (option.lower() == 'interface'):
+							self._config['notificationServerInterface'] = value.strip()
+						
+						else:
+							logger.warning("Ignoring unknown option '%s' in config file: '%s'" % (option, self._config['configFile']))
 				else:
 					logger.warning("Ignoring unknown section '%s' in config file: '%s'" % (section, self._config['configFile']))
 		
@@ -1127,8 +1159,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.notice("Starting notification server")
 			try:
 				self._notificationServer = NotificationServer(
-								address  = '127.0.0.1',
-								port     = 4449,
+								address  = self._config['notificationServerInterface'],
+								port     = self._config['notificationServerPort'],
 								subjects = [ self._statusSubject, self._serviceUrlSubject, self._clientIdSubject ] )
 				self._notificationServer.start()
 				logger.notice("Notification server started")
@@ -1210,7 +1242,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.error("Already processing action requests")
 			return
 		self._processingActionRequests = True
-		self._statusSubject.setMessage(_("Processing action requests"))
+		self._statusSubject.setMessage(_("Getting action requests from config service"))
 		try:
 			desktop = 'winlogon'
 			#desktop = 'default'
@@ -1230,23 +1262,29 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.notice("   [%2s] product %-15s %s" % (numRequests, actionRequest['productId'] + ':', actionRequest['actionRequest']))
 			if (numRequests == 0):
 				logger.notice("No product action requests set")
-				return
+				self._statusSubject.setMessage( _("No product action requests set") )
+				if statusApplicationProcess:
+					time.sleep(5)
+					System.terminateProcess(statusApplicationProcess)
+			else:
+				logger.notice("Start processing action requests")
+				self._statusSubject.setMessage( _("Start processing action requests") )
 				
-			networkConfig = self._configService.getNetworkConfig_hash(self._config['hostId'])
-			depot = self._configService.getDepot_hash(networkConfig['depotId'])
-			
-			encryptedPassword = self._configService.getPcpatchPassword(self._config['hostId'])
-			#pcpatchPassword = Tools.blowfishDecrypt(self._config['opsiHostKey'] , encryptedPassword)
-			
-			logger.notice("Connecting depot share")
-			System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password="12345678")
-			if statusApplicationProcess:
-				time.sleep(5)
-				System.terminateProcess(statusApplicationProcess)
-			command = "C:\Programme\opsi.org\preloginloader\utils\winst32.exe /opsiservice %s /clientid %s /username %s /password %s" \
-					% ( '/'.join(self._config['configServiceUrl'].split('/')[:-1]), self._config['hostId'], self._config['hostId'], self._config['opsiHostKey'] )
-			
-			System.runAsSystemInSession(command = command, sessionId = activeSessionId, desktop = desktop)
+				networkConfig = self._configService.getNetworkConfig_hash(self._config['hostId'])
+				depot = self._configService.getDepot_hash(networkConfig['depotId'])
+				
+				encryptedPassword = self._configService.getPcpatchPassword(self._config['hostId'])
+				#pcpatchPassword = Tools.blowfishDecrypt(self._config['opsiHostKey'] , encryptedPassword)
+				
+				logger.notice("Connecting depot share")
+				System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password="12345678")
+				if statusApplicationProcess:
+					time.sleep(5)
+					System.terminateProcess(statusApplicationProcess)
+				command = "C:\Programme\opsi.org\preloginloader\utils\winst32.exe /opsiservice %s /clientid %s /username %s /password %s" \
+						% ( '/'.join(self._config['configServiceUrl'].split('/')[:-1]), self._config['hostId'], self._config['hostId'], self._config['opsiHostKey'] )
+				
+				System.runAsSystemInSession(command = command, sessionId = activeSessionId, desktop = desktop)
 			self._statusSubject.setMessage( _("Finished processing action requests") )
 			
 			

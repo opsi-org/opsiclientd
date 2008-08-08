@@ -48,7 +48,7 @@ class OpsiDialogWindow(NotificationObserver):
 		
 		self.loadSkin()
 		
-		self._notificationClient = NotificationClient('127.0.0.1', 4449, self)
+		self._notificationClient = NotificationClient('127.0.0.1', 4442, self)
 		
 	def _registerWndClass(self):
 		message_map = {}
