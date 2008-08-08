@@ -40,19 +40,22 @@ from OpenSSL import SSL
 
 if (os.name == 'posix'):
 	from signal import *
+	class win32serviceutil:
+		ServiceFramework = object
+
 if (os.name == 'nt'):
 	import win32serviceutil, win32service
 	from ctypes import *
 
 # Twisted imports
 from twisted.internet import defer, threads, reactor
-from twisted.web2 import resource, stream, server, http, responsecode
+from twisted.web2 import resource, stream, server, http, responsecode, static
 from twisted.web2.channel.http import HTTPFactory
 from twisted.python.failure import Failure
+#from twisted.web import static
 #from twisted.internet import defer, threads, reactor
 #from twisted.web2 import resource, stream, server, log, http, responsecode
 #from twisted.web2.http_headers import Cookie
-#from twisted.web2.dav import static
 
 # OPSI imports
 from OPSI.Logger import *
@@ -62,6 +65,7 @@ from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 
 logger = Logger()
+logger.setFileFormat('%D (%l) %M (%F|%N)')
 
 EVENT_TYPE_DAEMON_STARTUP = 'opsiclientd start'
 EVENT_TYPE_DAEMON_SHUTDOWN = 'opsiclientd shutdown'
@@ -160,14 +164,15 @@ def ControlPipeFactory(opsiclientd):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                        CONTROL PIPE                                               -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class ControlPipe(object):
+class ControlPipe(threading.Thread):
 	def __init__(self, opsiclientd):
+		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._pipe = None
 		self._pipeName = ""
 		self._bufferSize = 4096
 		self._running = False
-	
+		
 	def stop(self):
 		self._running = False
 	
@@ -202,11 +207,9 @@ class ControlPipe(object):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                     POSIX CONTROL PIPE                                            -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class PosixControlPipe(ControlPipe, threading.Thread):
+class PosixControlPipe(ControlPipe):
 	def __init__(self, opsiclientd):
-		threading.Thread.__init__(self)
 		ControlPipe.__init__(self, opsiclientd)
-		self._opsiclientd = opsiclientd
 		self._pipeName = "/var/run/opsiclientd/fifo"
 	
 	def createPipe(self):
@@ -220,6 +223,7 @@ class PosixControlPipe(ControlPipe, threading.Thread):
 	
 	def run(self):
 		self._running = True
+		logger.setFileFormat('%D (%l) control pipe: %M (%F|%N)', currentThread=True)
 		try:
 			self.createPipe()
 			while self._running:
@@ -281,6 +285,7 @@ class NTControlPipeConnection(threading.Thread):
 		
 	def run(self):
 		self._running = True
+		logger.setFileFormat('%D (%l) control pipe: %M (%F|%N)', currentThread=True)
 		try:
 			chBuf = create_string_buffer(self._bufferSize)
 			cbRead = c_ulong(0)
@@ -317,7 +322,7 @@ class NTControlPipeConnection(threading.Thread):
 		logger.debug("NTControlPipeConnection exiting")
 		self._running = False
 		
-class NTControlPipe(ControlPipe, threading.Thread):
+class NTControlPipe(ControlPipe):
 	
 	def __init__(self, opsiclientd):
 		threading.Thread.__init__(self)
@@ -349,6 +354,7 @@ class NTControlPipe(ControlPipe, threading.Thread):
 	
 	def run(self):
 		self._running = True
+		logger.setFileFormat('%D (%l) control pipe: %M (%F|%N)', currentThread=True)
 		try:
 			while self._running:
 				self.createPipe()
@@ -400,20 +406,11 @@ class SSLContext:
 # =                                    CONTROL SERVER ROOT                                            =
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 class ControlServerResourceRoot(resource.Resource):
-	''' This class is the base class to handle requests. '''
-	
-	def getChild(self, name, request):
-		''' Get the child resource for the requested path. '''
-		if not name:
-			return self
-		return resource.Resource.getChild(self, name, request)
-	
+	addSlash = True
 	def render(self, request):
-		''' Process request. '''
-		logger.info("Client '%s' requests uri '%s'" % (request.remoteAddr.host, request.uri))
-		
-		return "<html><head><title>opsiclientd</title></head><body></body></html>"
-
+		''' Process GET request. '''
+		return http.Response(stream="<html><head><title>opsiclientd</title></head><body></body></html>")
+	
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 # =                                 CONTROL SERVER JSON RPC                                           =
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -430,13 +427,13 @@ class ControlServerResourceJsonRpc(resource.Resource):
 	
 	def http_POST(self, request):
 		''' Process POST request. '''
-		logger.debug2("OpsiJsonRpc.http_POST()")
+		logger.info("ControlServerResourceJsonRpc: processing POST request")
 		worker = JsonRpcWorker(request, self._opsiclientd, method = 'POST')
 		return worker.process()
 		
 	def http_GET(self, request):
 		''' Process GET request. '''
-		logger.debug2("OpsiJsonRpc.http_GET()")
+		logger.info("ControlServerResourceJsonRpc: processing GET request")
 		worker = JsonRpcWorker(request, self._opsiclientd, method = 'GET')
 		return worker.process()
 
@@ -449,13 +446,13 @@ class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 	
 	def http_POST(self, request):
 		''' Process POST request. '''
-		logger.debug2("OpsiJsonInterface.http_POST()")
+		logger.info("ControlServerResourceInterface: processing POST request")
 		worker = JsonInterfaceWorker(request, self._opsiclientd, method = 'POST')
 		return worker.process()
 		
 	def http_GET(self, request):
 		''' Process GET request. '''
-		logger.debug2("OpsiJsonInterface.http_GET()")
+		logger.info("ControlServerResourceInterface: processing GET request")
 		worker = JsonInterfaceWorker(request, self._opsiclientd, method = 'GET')
 		return worker.process()
 
@@ -858,18 +855,20 @@ class JsonInterfaceWorker(JsonRpcWorker):
 		return self._returnResponse(None)
 	
 class ControlServer(threading.Thread):
-	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile):
+	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._httpsPort = httpsPort
 		self._sslServerKeyFile = sslServerKeyFile
 		self._sslServerCertFile = sslServerCertFile
+		self._staticDir = staticDir
 		self._root = None
 		self._running = False
 		logger.info("ControlServer initiated")
 		
 	def run(self):
 		self._running = True
+		logger.setFileFormat('%D (%l) twisted reactor: %M (%F|%N)', currentThread=True)
 		try:
 			logger.info("creating root resource")
 			self.createRoot()
@@ -879,8 +878,9 @@ class ControlServer(threading.Thread):
 				HTTPFactory(self._site),
 				SSLContext(self._sslServerKeyFile, self._sslServerCertFile) )
 			logger.notice("Accepting HTTPS requests on port %d" % self._httpsPort)
-			if not reactor.isRunning():
+			if not reactor.running:
 				reactor.run(installSignalHandlers=0)
+			
 		except Exception, e:
 			logger.logException(e)
 		logger.notice("Control server exiting")
@@ -891,7 +891,13 @@ class ControlServer(threading.Thread):
 		self._running = False
 		
 	def createRoot(self):
-		self._root = ControlServerResourceRoot()
+		if self._staticDir:
+			if os.path.isdir(self._staticDir):
+				self._root = static.File(self._staticDir)
+			else:
+				logger.error("Cannot add static content '/': directory '%s' does not exist." % self._staticDir)
+		if not self._root:
+			self._root = ControlServerResourceRoot()
 		self._root.putChild("rpc", ControlServerResourceJsonRpc(self._opsiclientd))
 		self._root.putChild("interface", ControlServerResourceInterface(self._opsiclientd))
 
@@ -911,6 +917,7 @@ class ServiceConnectionThread(KillableThread):
 	def run(self):
 		try:
 			self.running = True
+			logger.setFileFormat('%D (%l) service connection: %M (%F|%N)', currentThread=True)
 			self._choiceSubject = ChoiceSubject('stopConnecting')
 			#self._choiceSubject.setMessage("Connecting to config server '%s'" % self._configServiceUrl)
 			self._choiceSubject.setChoices([ 'Stop connection' ])
@@ -954,12 +961,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		threading.Thread.__init__(self) 
 		
 		self._running = False
-		
-		self._configFile = 'c:\opsiclientd.conf'
 		self._configService = None
-		self._hostId = 'vmix-alt.uib.local'
-		self._opsiHostKey = 'ec9ea3012ed7b96cee2e68d931e3d42c'
-		
 		self._daemonStartupEvent = DaemonStartupEvent()
 		self._daemonStartupEvent.addEventListener(self)
 		self._daemonShutdownEvent = DaemonShutdownEvent()
@@ -968,23 +970,29 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._timerEvent.addEventListener(self)
 		self._processActionRequestsEvent = ProcessActionRequestEvent()
 		self._processActionRequestsEvent.addEventListener(self)
-		
 		self._processingActionRequests = False
 		self._blockLogin = True
 		
 		self._statusSubject = MessageSubject('status')
 		self._serviceUrlSubject = MessageSubject('configServiceUrl')
 		self._clientIdSubject = MessageSubject('clientId')
-		self._clientIdSubject.setMessage(self._hostId)
-		
-		self.setConfigServiceUrl('https://bonifax.uib.local:4447/rpc')
 		
 		self._config = {
-			'sslServerKeyFile':  'c:\\Programme\\opsi.org\\opsiclientd\\opsiclientd.pem',
-			'sslServerCertFile': 'c:\\Programme\\opsi.org\\opsiclientd\\opsiclientd.pem',
-			'controlServerPort': 4441,
-			'statusApplication':  'pythonw.exe c:\\Programme\\opsi.org\\opsiclientd\\helpers\\opsi_status\\opsi_status.py',
+			'configFile':               'opsiclientd.conf',
+			'logFile':                  'opsiclientd.log',
+			'logLevel':                 LOG_NOTICE,
+			'logFormat':                '(%l) %D %M (%F|%N)',
+			'hostId':                   socket.getfqdn(),
+			'configServiceUrl':         '',
+			'opsiHostKey':              '',
+			'controlServerInterface':   '0.0.0.0',
+			'controlServerPort':        4441,
+			'sslServerKeyFile':         'opsiclientd.pem',
+			'sslServerCertFile':        'opsiclientd.pem',
+			'controlServerStaticDir':   'static_html',
+			'statusApplicationCommand': '',
 		}
+		
 		self._possibleMethods = [
 			{ 'name': 'getBlockLogin',                 'params': [ ],                      'availability': ['server', 'pipe'] },
 			{ 'name': 'setBlockLogin',                 'params': [ 'blockLogin' ],         'availability': ['server'] },
@@ -995,56 +1003,149 @@ class Opsiclientd(EventListener, threading.Thread):
 			{ 'name': 'setStatusMessage',              'params': [ 'message' ],            'availability': ['server'] },
 		]
 		
-		if (os.name == 'nt'):
-			logger.setLogFile('c:\\Programme\\opsi.org\\opsiclientd\\opsiclientd.log')
-			logger.setFileLevel(LOG_DEBUG)
+		self._clientIdSubject.setMessage(self._config['hostId'])
+		
+	def isRunning(self):
+		return self._running
 	
+	def readConfigFile(self):
+		''' Get settings from config file '''
+		logger.notice("Trying to read config from file: '%s'" % self._config['configFile'])
+		
+		try:
+			# Import File Module
+			from OPSI.Backend.File import File
+			
+			# Read Config-File
+			config = File().readIniFile(self._config['configFile'], caseIgnore = False, raw = True)
+			
+			# Read log values early
+			if config.has_section('global'):
+				if config.has_option('global', 'log level'):
+					self._config['logLevel'] = config.get('global', 'log level')
+					logger.setFileLevel(self._config['logLevel'])
+				if config.has_option('global', 'log file'):
+					self._config['logFile'] = config.get('global', 'log file')
+					logger.setLogFile(self._config['logFile'])
+			
+			# Process all sections
+			for section in config.sections():
+				logger.debug("Processing section '%s' in config file: '%s'" % (section, self._config['configFile']))
+				if (section.lower() == 'global'):
+					# Global settings
+					for (option, value) in config.items(section):
+						if  (option.lower() == 'log level'):
+							self._config['logLevel'] = int(value.strip())
+							logger.setFileLevel(self._config['logLevel'])
+						
+						elif (option.lower() == 'log file'):
+							self._config['logFile'] = value.strip()
+							logger.setLogFile(self._config['logFile'])
+						
+						elif (option.lower() == 'status application command'):
+							self._config['statusApplicationCommand'] = value.strip()
+						
+						else:
+							logger.warning("Ignoring unknown option '%s' in config file: '%s'" % (option, self._config['configFile']))
+				
+				elif (section.lower() == 'config_server'):
+					# Config server settings
+					for (option, value) in config.items(section):
+						if   (option.lower() == 'service url'):
+							self._config['configServiceUrl'] = value.strip()
+							self.setConfigServiceUrl(self._config['configServiceUrl'])
+							
+						elif (option.lower() == 'host key'):
+							self._config['opsiHostKey'] = value.strip()
+						
+						else:
+							logger.warning("Ignoring unknown option '%s' in config file: '%s'" % (option, self._config['configFile']))
+				
+				elif (section.lower() == 'control_server'):
+					# Control server settings
+					for (option, value) in config.items(section):
+						if   (option.lower() == 'https port'):
+							self._config['controlServerPort'] = int(value.strip())
+						
+						elif (option.lower() == 'interface'):
+							self._config['controlServerInterface'] = value.strip()
+						
+						elif (option.lower() == 'ssl server cert'):
+							self._config['sslServerCertFile'] = value.strip()
+						
+						elif (option.lower() == 'ssl server key'):
+							self._config['sslServerKeyFile'] = value.strip()
+						
+						elif (option.lower() == 'static dir'):
+							self._config['controlServerStaticDir'] = value.strip()
+						
+						else:
+							logger.warning("Ignoring unknown option '%s' in config file: '%s'" % (option, self._config['configFile']))
+				
+				else:
+					logger.warning("Ignoring unknown section '%s' in config file: '%s'" % (section, self._config['configFile']))
+		
+		except Exception, e:
+			# An error occured while trying to read the config file
+			logger.error("Failed to read config file '%s': %s" % (self._config['configFile'], e))
+			logger.logException(e)
+			return
+		logger.notice("Config read")
+		
 	def run(self):
 		self._running = True
+		self.readConfigFile()
+		logger.setFileFormat('%D (%l) opsiclientd: %M (%F|%N)', currentThread=True)
 		logger.comment(	"\n==================================================================\n" \
 				+ "                    opsiclientd started" + \
 				"\n==================================================================\n")
-		#self.readConfigFile()
-		
-		logger.notice("Starting control pipe")
 		try:
-			self._controlPipe = ControlPipeFactory(self)
-			self._controlPipe.start()
-			logger.notice("Control pipe started")
-		except Exception, e:
-			logger.error("Failed to start control pipe: %s" % e)
-			raise
+			logger.notice("Using host id '%s'" % self._config['hostId'])
+			logger.notice("Starting control pipe")
+			try:
+				self._controlPipe = ControlPipeFactory(self)
+				self._controlPipe.start()
+				logger.notice("Control pipe started")
+			except Exception, e:
+				logger.error("Failed to start control pipe: %s" % e)
+				raise
+			
+			logger.notice("Starting control server")
+			try:
+				self._controlServer = ControlServer(
+								opsiclientd       = self,
+								httpsPort         = self._config['controlServerPort'],
+								sslServerKeyFile  = self._config['sslServerKeyFile'],
+								sslServerCertFile = self._config['sslServerCertFile'],
+								staticDir         = self._config['controlServerStaticDir'])
+				self._controlServer.start()
+				logger.notice("Control server started")
+			except Exception, e:
+				logger.error("Failed to start control server: %s" % e)
+				raise
+			
+			logger.notice("Starting notification server")
+			try:
+				self._notificationServer = NotificationServer(
+								address  = '127.0.0.1',
+								port     = 4449,
+								subjects = [ self._statusSubject, self._serviceUrlSubject, self._clientIdSubject ] )
+				self._notificationServer.start()
+				logger.notice("Notification server started")
+			except Exception, e:
+				logger.error("Failed to start notification server: %s" % e)
+				raise
+			
+			self._daemonStartupEvent.fire()
+			while self._running:
+				time.sleep(1)
+			self._daemonShutdownEvent.fire()
 		
-		logger.notice("Starting control server")
-		try:
-			self._controlServer = ControlServer(
-							opsiclientd       = self,
-							httpsPort         = self._config['controlServerPort'],
-							sslServerKeyFile  = self._config['sslServerKeyFile'],
-							sslServerCertFile = self._config['sslServerCertFile'])
-			self._controlServer.start()
-			logger.notice("Control server started")
 		except Exception, e:
-			logger.error("Failed to start control server: %s" % e)
-			raise
+			logger.logException(e)
 		
-		logger.notice("Starting notification server")
-		try:
-			self._notificationServer = NotificationServer(
-							address  = '127.0.0.1',
-							port     = 4449,
-							subjects = [ self._statusSubject, self._serviceUrlSubject, self._clientIdSubject ] )
-			self._notificationServer.start()
-			logger.notice("Notification server started")
-		except Exception, e:
-			logger.error("Failed to start notification server: %s" % e)
-			raise
+		self._running = False
 		
-		self._daemonStartupEvent.fire()
-		while self._running:
-			time.sleep(1)
-		self._daemonShutdownEvent.fire()
-	
 	def stop(self):
 		if self._controlPipe:
 			self._controlPipe.stop()
@@ -1054,7 +1155,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._running = False
 	
 	def authenticate(self, username, password):
-		if (username == self._hostId) and (password == self._opsiHostKey):
+		if (username == self._config['hostId']) and (password == self._config['opsiHostKey']):
 			return True
 		if (username == 'Administrator'):
 			import win32security
@@ -1063,8 +1164,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		raise Exception("Invalid credentials")
 		
 	def setConfigServiceUrl(self, url):
-		self._configServiceUrl = url
-		self._serviceUrlSubject.setMessage(self._configServiceUrl)
+		self._config['configServiceUrl'] = url
+		self._serviceUrlSubject.setMessage(self._config['configServiceUrl'])
 		
 	def processEvent(self, event):
 		logger.notice("Processing event %s" % event)
@@ -1074,7 +1175,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				startOpsiCredentialProvider = 1
 				try:
 					startOpsiCredentialProvider = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Provider Filters\\{d2028e19-82fe-44c6-ad64-51497c97a02a}", "StartOpsiCredentialProvider")
-				except:
+				except Exception, e:
 					logger.warning("Failed to get StartOpsiCredentialProvider from registry: %s" % e)
 				logger.info("startOpsiCredentialProvider: %s" % startOpsiCredentialProvider)
 				self.processProductActionRequests()
@@ -1087,7 +1188,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				startOpsiCredentialProvider = 1
 				try:
 					startOpsiCredentialProvider = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Provider Filters\\{d2028e19-82fe-44c6-ad64-51497c97a02a}", "StartOpsiCredentialProvider")
-				except:
+				except Exception, e:
 					logger.warning("Failed to get StartOpsiCredentialProvider from registry: %s" % e)
 				logger.info("startOpsiCredentialProvider: %s" % startOpsiCredentialProvider)
 				if event.logoffCurrentUser:
@@ -1114,23 +1215,28 @@ class Opsiclientd(EventListener, threading.Thread):
 			desktop = 'winlogon'
 			#desktop = 'default'
 			activeSessionId = windll.kernel32.WTSGetActiveConsoleSessionId()
-			statusApplication = self._config.get('statusApplication')
+			statusApplication = self._config.get('statusApplicationCommand')
 			statusApplicationProcess = None
 			if statusApplication:
 				statusApplicationProcess = System.runAsSystemInSession(command = statusApplication, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding=False)[0]
 				time.sleep(5)
 			self.connectConfigServer()
-			actionRequests = self._configService.getProductActionRequests_listOfHashes(self._hostId)
-			logger.debug("Got product action requests from configservice %s" % actionRequests)
-			#for actionRequest in actionRequests:
-			#	logger.notice("Processing action request '%s', product '%s'" \
-			#			% (actionRequest['actionRequest'], actionRequest['productId']))
-			
-			networkConfig = self._configService.getNetworkConfig_hash(self._hostId)
+			actionRequests = self._configService.getProductActionRequests_listOfHashes(self._config['hostId'])
+			logger.notice("Got product action requests from configservice")
+			numRequests = 0
+			for actionRequest in actionRequests:
+				if (actionRequest['actionRequest'] != 'none'):
+					numRequests += 1
+					logger.notice("   [%2s] product %-15s %s" % (numRequests, actionRequest['productId'] + ':', actionRequest['actionRequest']))
+			if (numRequests == 0):
+				logger.notice("No product action requests set")
+				return
+				
+			networkConfig = self._configService.getNetworkConfig_hash(self._config['hostId'])
 			depot = self._configService.getDepot_hash(networkConfig['depotId'])
 			
-			encryptedPassword = self._configService.getPcpatchPassword(self._hostId)
-			#pcpatchPassword = Tools.blowfishDecrypt(self._opsiHostKey , encryptedPassword)
+			encryptedPassword = self._configService.getPcpatchPassword(self._config['hostId'])
+			#pcpatchPassword = Tools.blowfishDecrypt(self._config['opsiHostKey'] , encryptedPassword)
 			
 			logger.notice("Connecting depot share")
 			System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password="12345678")
@@ -1138,7 +1244,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				time.sleep(5)
 				System.terminateProcess(statusApplicationProcess)
 			command = "C:\Programme\opsi.org\preloginloader\utils\winst32.exe /opsiservice %s /clientid %s /username %s /password %s" \
-								% ( '/'.join(self._configServiceUrl.split('/')[:-1]), self._hostId, self._hostId, self._opsiHostKey )
+					% ( '/'.join(self._config['configServiceUrl'].split('/')[:-1]), self._config['hostId'], self._config['hostId'], self._config['opsiHostKey'] )
 			
 			System.runAsSystemInSession(command = command, sessionId = activeSessionId, desktop = desktop)
 			self._statusSubject.setMessage( _("Finished processing action requests") )
@@ -1152,12 +1258,11 @@ class Opsiclientd(EventListener, threading.Thread):
 	def connectConfigServer(self):
 		logger.debug("Creating ServiceConnectionThread")
 		self._serviceConnectionThread = ServiceConnectionThread(
-							self._configServiceUrl,
-							self._hostId,
-							self._opsiHostKey,
+							self._config['configServiceUrl'],
+							self._config['hostId'],
+							self._config['opsiHostKey'],
 							self._notificationServer,
 							self._statusSubject )
-		logger.debug("ServiceConnectionThread created")
 		logger.info("Starting ServiceConnectionThread")
 		self._serviceConnectionThread.start()
 		while self._serviceConnectionThread.running:
@@ -1166,7 +1271,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		self._configService = self._serviceConnectionThread.configService
 		if not self._configService:
-			raise Exception("Failed to connect to config service '%s'" % self._configServiceUrl)
+			raise Exception("Failed to connect to config service '%s'" % self._config['configServiceUrl'])
 		
 	def getPossibleMethods(self):
 		return self._possibleMethods
@@ -1272,6 +1377,8 @@ class OpsiclientdPosixInit(object):
 		# Start opsiclientd
 		self._opsiclientd = Opsiclientd()
 		self._opsiclientd.start()
+		while self._opsiclientd.isRunning():
+			time.sleep(1)
 		
 	def signalHandler(self, signo, stackFrame):
 		if (signo == SIGHUP):
@@ -1360,6 +1467,7 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
 			
 			# Start opsiclientd
+			os.chdir("c:\\Programme\\opsi.org\\opsiclientd")
 			opsiclientd = Opsiclientd()
 			opsiclientd.start()
 			# Write to event log
