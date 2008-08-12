@@ -40,6 +40,7 @@ from OpenSSL import SSL
 
 if (os.name == 'posix'):
 	from signal import *
+	# We need a faked win32serviceutil class
 	class win32serviceutil:
 		ServiceFramework = object
 
@@ -52,10 +53,6 @@ from twisted.internet import defer, threads, reactor
 from twisted.web2 import resource, stream, server, http, responsecode, static
 from twisted.web2.channel.http import HTTPFactory
 from twisted.python.failure import Failure
-#from twisted.web import static
-#from twisted.internet import defer, threads, reactor
-#from twisted.web2 import resource, stream, server, log, http, responsecode
-#from twisted.web2.http_headers import Cookie
 
 # OPSI imports
 from OPSI.Logger import *
@@ -64,24 +61,41 @@ from OPSI import Tools
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 
+# Create logger instance
 logger = Logger()
 logger.setFileFormat('%D (%l) %M (%F|%N)')
 
+# Possible event types
 EVENT_TYPE_DAEMON_STARTUP = 'opsiclientd start'
 EVENT_TYPE_DAEMON_SHUTDOWN = 'opsiclientd shutdown'
 EVENT_TYPE_PROCESS_ACTION_REQUESTS = 'process action requests'
 EVENT_TYPE_TIMER = 'timer'
 
+# Message translation
 def _(msg):
 	return msg
 
-class EventListener(object):
-	def __init__(self):
-		logger.debug("EventListener initiated")
-	
-	def processEvent(event):
-		logger.warning("%s: processEvent() not implemented" % self)
-	
+'''
+= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+=                                               EVENTS                                                =
+= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+=                                                                                                     =
+=                          Classes needed for creating and handling events.                           =
+=                                                                                                     =
+=  The main event class is "Event", the derived classes are:                                          =
+=     DaemonStartupEvent:         This event is triggered on opsiclientd statup                       =
+=     DaemonShutdownEvent:        This event is triggered on opsiclientd shutdown                     =
+=     ProcessActionRequestEvent:  If this event is triggered action request are processed             =
+=     TimerEvent:                 This event is triggered every x seconds                             =
+=                                                                                                     =
+=  The class "EventListener" is an base class for classes which should handle events                  =
+=                                                                                                     =
+= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+'''
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                            EVENT                                                  -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Event(object):
 	def __init__(self, type):
 		if not type in (EVENT_TYPE_DAEMON_STARTUP, EVENT_TYPE_DAEMON_SHUTDOWN, EVENT_TYPE_TIMER, EVENT_TYPE_PROCESS_ACTION_REQUESTS):
@@ -119,21 +133,34 @@ class Event(object):
 					logger.logException(e)
 		
 		for l in self._eventListeners:
+			# Create a new thread for each event listener
 			ProcessEventThread(l, self).start()
-		
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                        DAEMON STARTUP EVENT                                       -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class DaemonStartupEvent(Event):
 	def __init__(self):
 		Event.__init__(self, EVENT_TYPE_DAEMON_STARTUP)
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                       DAEMON SHUTDOWN EVENT                                       -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class DaemonShutdownEvent(Event):
 	def __init__(self):
 		Event.__init__(self, EVENT_TYPE_DAEMON_SHUTDOWN)
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                   PROCESS ACTION REQUESTS EVENT                                   -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ProcessActionRequestEvent(Event):
 	def __init__(self, logoffCurrentUser=False):
 		self.logoffCurrentUser = logoffCurrentUser
 		Event.__init__(self, EVENT_TYPE_PROCESS_ACTION_REQUESTS)
-	
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                            TIMER EVENT                                            -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class TimerEvent(Event):
 	def __init__(self, interval=0):
 		Event.__init__(self, EVENT_TYPE_TIMER)
@@ -161,17 +188,31 @@ class TimerEvent(Event):
 		self._timer = threading.Timer(self._interval, self.timerCallback)
 		self._timer.start()
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                          EVENT LISTENER                                           -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class EventListener(object):
+	def __init__(self):
+		logger.debug("EventListener initiated")
+	
+	def processEvent(event):
+		logger.warning("%s: processEvent() not implemented" % self)
 
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-# =                                       CONTROL PIPES                                               =
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def ControlPipeFactory(opsiclientd):
-	if (os.name == 'posix'):
-		return PosixControlPipe(opsiclientd)
-	if (os.name == 'nt'):
-		return NTControlPipe(opsiclientd)
-	else:
-		raise NotImplemented("Unsupported operating system %s" % os.name)
+
+'''
+= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+=                                            CONTROL PIPES                                            =
+= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+=                                                                                                     =
+=             These classes are used to create named pipes for remote procedure calls                 =
+=                                                                                                     =
+=  The class "ControlPipe" is the base class for a named pipe which handles remote procedure calls    =
+=     PosixControlPipe implements a control pipe for posix operating systems                          =
+=     NTControlPipe implements a control pipe for windows operating systems                           =
+=  The class "ControlPipeFactory" selects the right implementation for the used os                    =
+=                                                                                                     =
+= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+'''
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                        CONTROL PIPE                                               -
@@ -285,7 +326,7 @@ class PosixControlPipe(ControlPipe):
 		self._running = False
 		
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                       NT CONTROL PIPE                                             -
+# -                                     NT CONTROL PIPE CONNECTION                                    -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class NTControlPipeConnection(threading.Thread):
 	def __init__(self, ntControlPipe, pipe, bufferSize):
@@ -333,7 +374,10 @@ class NTControlPipeConnection(threading.Thread):
 			logger.error("NTControlPipeConnection error: %s" % e)
 		logger.debug("NTControlPipeConnection exiting")
 		self._running = False
-		
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                          NT CONTROL PIPE                                          -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class NTControlPipe(ControlPipe):
 	
 	def __init__(self, opsiclientd):
@@ -380,7 +424,7 @@ class NTControlPipe(ControlPipe):
 					logger.info("Creating NTControlPipeConnection")
 					cpc = NTControlPipeConnection(self, self._pipe, self._bufferSize)
 					cpc.start()
-					logger.info("NTControlPipeConnection thread started")
+					logger.debug("NTControlPipeConnection thread started")
 				else:
 					logger.error("Failed to connect to pipe")
 					windll.kernel32.CloseHandle(self._pipe)
@@ -389,11 +433,35 @@ class NTControlPipe(ControlPipe):
 		logger.notice("ControlPipe exiting")
 		self._running = False
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                     CONTROL PIPE FACTORY                                          -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+def ControlPipeFactory(opsiclientd):
+	if (os.name == 'posix'):
+		return PosixControlPipe(opsiclientd)
+	if (os.name == 'nt'):
+		return NTControlPipe(opsiclientd)
+	else:
+		raise NotImplemented("Unsupported operating system %s" % os.name)
 
 
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-# =                                       CLASS SSLCONTEXT                                            =
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+
+
+
+'''
+= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+=                                            CONTROL SERVER                                           =
+= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+=                                                                                                     =
+=      These classes are used to create a https service which executes remote procedure calls         =
+=                                                                                                     =
+=                                                                                                     =
+= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+'''
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                            SSL CONTEXT                                            -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class SSLContext:
 	def __init__(self, sslServerKeyFile, sslServerCertFile):
 		self._sslServerKeyFile = sslServerKeyFile
@@ -409,23 +477,24 @@ class SSLContext:
 		if not os.path.isfile(self._sslServerCertFile):
 			raise Exception("Server certificate file '%s' does not exist!" % self._sslServerCertFile)
 		
+		# Create and return ssl context
 		context = SSL.Context(SSL.SSLv23_METHOD)
 		context.use_privatekey_file(self._sslServerKeyFile)
 		context.use_certificate_file(self._sslServerCertFile)
 		return context
 
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-# =                                    CONTROL SERVER ROOT                                            =
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                    CONTROL SERVER RESOURCE ROOT                                   -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServerResourceRoot(resource.Resource):
 	addSlash = True
 	def render(self, request):
 		''' Process GET request. '''
 		return http.Response(stream="<html><head><title>opsiclientd</title></head><body></body></html>")
 	
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-# =                                 CONTROL SERVER JSON RPC                                           =
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                 CONTROL SERVER RESOURCE JSON RPC                                  -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServerResourceJsonRpc(resource.Resource):
 	def __init__(self, opsiclientd):
 		resource.Resource.__init__(self)
@@ -449,9 +518,9 @@ class ControlServerResourceJsonRpc(resource.Resource):
 		worker = JsonRpcWorker(request, self._opsiclientd, method = 'GET')
 		return worker.process()
 
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-# =                                   CLASS OPSIJSONINTERFACE                                         =
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                 CONTROL SERVER RESOURCE INTERFACE                                 -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 	def __init__(self, opsiclientd):
 		ControlServerResourceJsonRpc.__init__(self, opsiclientd)
@@ -468,9 +537,9 @@ class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 		worker = JsonInterfaceWorker(request, self._opsiclientd, method = 'GET')
 		return worker.process()
 
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-# =                                     CLASS JSONRPCWORKER                                           =
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                          JSON RPC WORKER                                          -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class JsonRpcWorker(object):
 	def __init__(self, request, opsiclientd, method = 'POST'):
 		self.request = request
@@ -484,7 +553,6 @@ class JsonRpcWorker(object):
 	def process(self):
 		try:
 			self.deferred = defer.Deferred()
-			#self.deferred.addCallback(self._getSession)
 			self.deferred.addCallback(self._getQuery)
 			self.deferred.addCallback(self._getRpc)
 			self.deferred.addCallback(self._authenticate)
@@ -633,9 +701,9 @@ class JsonRpcWorker(object):
 			#self.result['error'] = str(e)
 			raise
 		
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-# =                                  CLASS JSONINTERFACEWORKER                                        =
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                       JSON INTERFACE WORKER                                       -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class JsonInterfaceWorker(JsonRpcWorker):
 	xhtml = """
 <?xml version="1.0" encoding="UTF-8"?>
@@ -865,7 +933,10 @@ class JsonInterfaceWorker(JsonRpcWorker):
 				self.result['error'] = str(failure)
 		logger.error("Failed to process rpc: %s" % self.result['error'])
 		return self._returnResponse(None)
-	
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                           CONTROL SERVER                                          -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServer(threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
 		threading.Thread.__init__(self)
@@ -889,7 +960,7 @@ class ControlServer(threading.Thread):
 				self._httpsPort,
 				HTTPFactory(self._site),
 				SSLContext(self._sslServerKeyFile, self._sslServerCertFile) )
-			logger.notice("Accepting HTTPS requests on port %d" % self._httpsPort)
+			logger.notice("Control server is accepting HTTPS requests on port %d" % self._httpsPort)
 			if not reactor.running:
 				reactor.run(installSignalHandlers=0)
 			
@@ -899,7 +970,8 @@ class ControlServer(threading.Thread):
 		self._running = False
 	
 	def stop(self):
-		reactor.stop()
+		if reactor and reactor.running:
+			reactor.stop()
 		self._running = False
 		
 	def createRoot(self):
@@ -914,46 +986,69 @@ class ControlServer(threading.Thread):
 		self._root.putChild("interface", ControlServerResourceInterface(self._opsiclientd))
 
 
+
+
+'''
+= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+=                                             OPSICLIENTD                                             =
+= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+=                                                                                                     =
+=              These classes are used to create the main opsiclientd service / daemon                 =
+=                                                                                                     =
+=                                                                                                     =
+= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+'''
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                     SERVICE CONNECTION THREAD                                     -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ServiceConnectionThread(KillableThread):
-	def __init__(self, configServiceUrl, username, password, notificationServer, statusObject):
+	def __init__(self, configServiceUrl, username, password, notificationServer, statusObject, waitBeforeConnect=0):
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username
 		self._password = password
 		self._notificationServer = notificationServer
 		self._statusSubject = statusObject
+		self._waitBeforeConnect = waitBeforeConnect
 		self._choiceSubject = None
 		self.configService = None
 		self.running = False
-		
+		self.connected = False
+	
 	def run(self):
 		try:
 			self.running = True
+			self.connected = False
 			logger.setFileFormat('%D (%l) service connection: %M (%F|%N)', currentThread=True)
-			self._choiceSubject = ChoiceSubject('stopConnecting')
+			self._choiceSubject = ChoiceSubject(id = 'stopConnecting')
 			#self._choiceSubject.setMessage("Connecting to config server '%s'" % self._configServiceUrl)
 			self._choiceSubject.setChoices([ 'Stop connection' ])
 			self._choiceSubject.setCallbacks( [ self.stopConnectionCallback ] )
 			self._notificationServer.addSubject(self._choiceSubject)
 			
-			timeout = 5
+			timeout = int(self._waitBeforeConnect)
 			while(timeout >= 0):
 				logger.info("Waiting for user to cancel connect")
 				self._statusSubject.setMessage("Waiting for user to cancel connect (%d)" % timeout)
 				timeout -= 1
 				time.sleep(1)
 			
-			logger.notice("Connecting to config server '%s'" % self._configServiceUrl)
-			self._statusSubject.setMessage( _("Connecting to config server '%s'") % self._configServiceUrl)
+			tryNum = 0
+			while not self.connected:
+				try:
+					tryNum += 1
+					logger.notice("Connecting to config server '%s' (%d)" % (self._configServiceUrl, tryNum))
+					self._statusSubject.setMessage( _("Connecting to config server '%s' (%d)") % (self._configServiceUrl, tryNum))
+					self.configService = JSONRPCBackend(address = self._configServiceUrl, username = self._username, password = self._password)
+					self.configService.authenticated()
+					self.connected = True
+					self._statusSubject.setMessage("Connected to config server '%s'" % self._configServiceUrl)
+					logger.notice("Connected to config server '%s'" % self._configServiceUrl)
+				except Exception, e:
+					self._statusSubject.setMessage("Failed to connect to config server '%s': %s" % (self._configServiceUrl, e))
+					logger.error("Failed to connect to config server '%s': %s" % (self._configServiceUrl, e))
+					time.sleep(3)
 			
-			try:
-				self.configService = JSONRPCBackend(address = self._configServiceUrl, username = self._username, password = self._password)
-				self.configService.authenticated()
-				self._statusSubject.setMessage("Connected to config server '%s'" % self._configServiceUrl)
-				logger.notice("Connected to config server '%s'" % self._configServiceUrl)
-			except Exception, e:
-				self._statusSubject.setMessage("Failed to connect to config server '%s': %s" % (self._configServiceUrl, e))
-				logger.error("Failed to connect to config server '%s': %s" % (self._configServiceUrl, e))
 			self._notificationServer.removeSubject(self._choiceSubject)
 		except Exception, e:
 			logger.logException(e)
@@ -969,9 +1064,9 @@ class ServiceConnectionThread(KillableThread):
 		KillableThread.terminate(self)
 		
 		
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-# =                                       OPSICLIENTD                                                 =
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                            OPSICLIENTD                                            -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
 		logger.debug("Opsiclient initiating")
@@ -1004,6 +1099,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			'hostId':                      socket.getfqdn(),
 			'configServiceUrl':            '',
 			'opsiHostKey':                 '',
+			'waitBeforeConnect':           5,
+			'connectionTimeout':           30,
 			'controlServerInterface':      '0.0.0.0',
 			'controlServerPort':           4441,
 			'sslServerKeyFile':            'opsiclientd.pem',
@@ -1079,6 +1176,16 @@ class Opsiclientd(EventListener, threading.Thread):
 						elif (option.lower() == 'host key'):
 							self._config['opsiHostKey'] = value.strip()
 						
+						elif (option.lower() == 'wait before connect'):
+							self._config['waitBeforeConnect'] = int(value.strip())
+							if (self._config['waitBeforeConnect'] < 0):
+								self._config['waitBeforeConnect'] = 0
+						
+						elif (option.lower() == 'connection timeout'):
+							self._config['connectionTimeout'] = int(value.strip())
+							if (self._config['connectionTimeout'] < 0):
+								self._config['connectionTimeout'] = 0
+						
 						else:
 							logger.warning("Ignoring unknown option '%s' in config file: '%s'" % (option, self._config['configFile']))
 				
@@ -1126,8 +1233,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 	def run(self):
 		self._running = True
-		self.readConfigFile()
 		logger.setFileFormat('%D (%l) opsiclientd: %M (%F|%N)', currentThread=True)
+		self.readConfigFile()
 		logger.comment(	"\n==================================================================\n" \
 				+ "                    opsiclientd started" + \
 				"\n==================================================================\n")
@@ -1169,6 +1276,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				raise
 			
 			self._daemonStartupEvent.fire()
+			# TODO: passive wait?
 			while self._running:
 				time.sleep(1)
 			self._daemonShutdownEvent.fire()
@@ -1179,20 +1287,36 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._running = False
 		
 	def stop(self):
+		# Stop control pipe thread
 		if self._controlPipe:
 			self._controlPipe.stop()
 			while self._controlPipe.isRunning():
-				logger.info("Waiting for cotrol pipe to exit...")
+				logger.info("Waiting for control pipe to exit...")
 				time.sleep(0.5)
+		
+		# Stop control server thread
+		if self._controlServer:
+			self._controlServer.stop()
+		
+		# Stop notification server thread
+		if self._notificationServer:
+			self._notificationServer.stop()
+			while self._notificationServer.isRunning():
+				logger.info("Waiting for control server to exit...")
+				time.sleep(0.5)
+		
 		self._running = False
 	
 	def authenticate(self, username, password):
 		if (username == self._config['hostId']) and (password == self._config['opsiHostKey']):
 			return True
-		if (username == 'Administrator'):
-			import win32security
-			win32security.LogonUser(username, 'None', password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
-			return True
+		if (os.name == 'nt'):
+			if (username == 'Administrator'):
+				import win32security
+				# The LogonUser function will raise an Exception on logon failure
+				win32security.LogonUser(username, 'None', password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
+				# No exception raised => user authenticated
+				return True
 		raise Exception("Invalid credentials")
 		
 	def setConfigServiceUrl(self, url):
@@ -1204,7 +1328,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._statusSubject.setMessage( _("Processing event %s") % event )
 		try:
 			if isinstance(event, DaemonStartupEvent):
-				startOpsiCredentialProvider = 1
+				startOpsiCredentialProvider = 0
 				try:
 					startOpsiCredentialProvider = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Provider Filters\\{d2028e19-82fe-44c6-ad64-51497c97a02a}", "StartOpsiCredentialProvider")
 				except Exception, e:
@@ -1265,7 +1389,10 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._statusSubject.setMessage( _("No product action requests set") )
 				if statusApplicationProcess:
 					time.sleep(5)
-					System.terminateProcess(statusApplicationProcess)
+					try:
+						System.terminateProcess(statusApplicationProcess)
+					except Exception, e:
+						logger.error("Failed to terminate statusApplicationProcess: %s" % e)
 			else:
 				logger.notice("Start processing action requests")
 				self._statusSubject.setMessage( _("Start processing action requests") )
@@ -1280,7 +1407,11 @@ class Opsiclientd(EventListener, threading.Thread):
 				System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password="12345678")
 				if statusApplicationProcess:
 					time.sleep(5)
-					System.terminateProcess(statusApplicationProcess)
+					try:
+						System.terminateProcess(statusApplicationProcess)
+					except Exception, e:
+						logger.error("Failed to terminate statusApplicationProcess: %s" % e)
+					
 				command = "C:\Programme\opsi.org\preloginloader\utils\winst32.exe /opsiservice %s /clientid %s /username %s /password %s" \
 						% ( '/'.join(self._config['configServiceUrl'].split('/')[:-1]), self._config['hostId'], self._config['hostId'], self._config['opsiHostKey'] )
 				
@@ -1295,21 +1426,32 @@ class Opsiclientd(EventListener, threading.Thread):
 	
 	def connectConfigServer(self):
 		logger.debug("Creating ServiceConnectionThread")
+		
 		self._serviceConnectionThread = ServiceConnectionThread(
-							self._config['configServiceUrl'],
-							self._config['hostId'],
-							self._config['opsiHostKey'],
-							self._notificationServer,
-							self._statusSubject )
-		logger.info("Starting ServiceConnectionThread")
+					configServiceUrl    = self._config['configServiceUrl'],
+					username            = self._config['hostId'],
+					password            = self._config['opsiHostKey'],
+					notificationServer  = self._notificationServer,
+					statusObject        = self._statusSubject,
+					waitBeforeConnect   = self._config['waitBeforeConnect'] )
+		
+		timeout = int(self._config['connectionTimeout'])
+		logger.info("Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
 		self._serviceConnectionThread.start()
-		while self._serviceConnectionThread.running:
-			logger.debug("Waiting for ServiceConnectionThread...")
+		while self._serviceConnectionThread.running and (timeout > 0):
+			logger.debug("Waiting for ServiceConnectionThread (timeout: %d)..." % timeout)
 			time.sleep(1)
+			timeout -= 1
+		
+		if self._serviceConnectionThread.running:
+			logger.error("ServiceConnectionThread timed out after %d seconds" % self._config['connectionTimeout'])
+			self._serviceConnectionThread.terminate()
+		
+		if not self._serviceConnectionThread.connected:
+			raise Exception("Failed to connect to config service '%s'" % self._config['configServiceUrl'])
 		
 		self._configService = self._serviceConnectionThread.configService
-		if not self._configService:
-			raise Exception("Failed to connect to config service '%s'" % self._config['configServiceUrl'])
+		
 		
 	def getPossibleMethods(self):
 		return self._possibleMethods
@@ -1386,9 +1528,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.logException(e)
 			raise
 		
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-# =                                    OPSICLIENTD INITS                                              =
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                         OPSICLIENTD INIT                                          -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def OpsiclientdInit():
 	if (os.name == 'posix'):
 		return OpsiclientdPosixInit()
@@ -1400,7 +1542,7 @@ def OpsiclientdInit():
 		raise NotImplementedError("Unsupported operating system %s" % os.name)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                        POSIX INIT                                                 -
+# -                                       OPSICLIENTD POSIX INIT                                      -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class OpsiclientdPosixInit(object):
 	def __init__(self):
@@ -1468,9 +1610,8 @@ class OpsiclientdPosixInit(object):
 		sys.stderr = logger.getStderr()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                          NT INIT                                                  -
+# -                                   OPSICLIENTD SERVICE FRAMEWORK                                   -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-#if os.name == 'nt':
 class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		_svc_name_ = "opsiclientd"
 		_svc_display_name_ = "opsiclientd"
@@ -1520,12 +1661,19 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			# Write to event log
 			self.ReportServiceStatus(win32service.SERVICE_STOPPED)
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                        OPSICLIENTD NT INIT                                        -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class OpsiclientdNTInit(object):
 	def __init__(self):
 		logger.debug("OpsiclientdNTInit")
 		win32serviceutil.HandleCommandLine(OpsiclientdServiceFramework)
 		
 
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                               MAIN                                                -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if (__name__ == "__main__"):
 	logger.setConsoleLevel(LOG_DEBUG)
 	logger.logToStdout(True)

@@ -1,23 +1,61 @@
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
-import struct
-import win32api
-import win32con
-import win32ui
-import commctrl
-import threading, time, sys, os
+"""
+   = = = = = = = = = = = = = = = = = = = = =
+   =            status_window              =
+   = = = = = = = = = = = = = = = = = = = = =
+   
+   status_window is part of the desktop management solution opsi
+   (open pc server integration) http://www.opsi.org
+   
+   Copyright (C) 2008 uib GmbH
+   
+   http://www.uib.de/
+   
+   All rights reserved.
+   
+   This program is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License version 2 as
+   published by the Free Software Foundation.
+   
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+   
+   You should have received a copy of the GNU General Public License
+   along with this program; if not, write to the Free Software
+   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+   
+   @copyright:	uib GmbH <info@uib.de>
+   @author: Jan Schneider <j.schneider@uib.de>
+   @license: GNU General Public License version 2
+"""
+
+__version__ = '0.1'
+
+# Imports
+import threading, time, sys, os, getopt
+import struct, win32api, win32con, win32ui, commctrl
 from ctypes import *
-
-from OPSI.Backend.File import File
-from OPSI.Util import NotificationClient, NotificationObserver
-from OPSI.Logger import *
-
-logger = Logger()
-
 try:
 	# Try to use advanced gui
 	import winxpgui as win32gui
 except:
 	import win32gui
+
+# OPSI imports
+from OPSI.Backend.File import File
+from OPSI.Util import NotificationClient, NotificationObserver
+from OPSI.Logger import *
+
+# Create logger instance
+logger = Logger()
+
+# Globals
+transparentColor = (0,0,0)
+host = '127.0.0.1'
+port = 4442
 
 BYTE = c_ubyte
 LONG = c_long
@@ -36,9 +74,7 @@ class BLENDFUNCTION(Structure):
                 ('SourceConstantAlpha', BYTE),
                 ('AlphaFormat', BYTE)]
 
-transparentColor = (0,0,0)
 
-		
 class OpsiDialogWindow(NotificationObserver):
 	def __init__(self):
 		win32gui.InitCommonControls()
@@ -48,7 +84,7 @@ class OpsiDialogWindow(NotificationObserver):
 		
 		self.loadSkin()
 		
-		self._notificationClient = NotificationClient('127.0.0.1', 4442, self)
+		self._notificationClient = NotificationClient(host, port, self)
 		
 	def _registerWndClass(self):
 		message_map = {}
@@ -83,7 +119,7 @@ class OpsiDialogWindow(NotificationObserver):
 			return win32api.RGB(int(color[0]), int(color[1]), int(color[2]))
 		
 		def toStyle(value, type=None):
-			print "value: %s, type: %s" % (value, type)
+			logger.debug("toStyle() value: %s, type: %s" % (value, type))
 			if   ( str(value).lower() == 'left' ):
 				if (type == 'button'):
 					return win32con.BS_LEFT
@@ -132,7 +168,7 @@ class OpsiDialogWindow(NotificationObserver):
 				elif item.startswith('button'):
 					(type, id) = ('button', item[6:])
 				else:
-					print "Unkown type '%s' in ini" % item
+					logger.error("Unkown type '%s' in ini" % item)
 					continue
 				
 				self.skin[item] = {
@@ -234,7 +270,7 @@ class OpsiDialogWindow(NotificationObserver):
 			
 			if not values.get('file'):
 				continue
-			print values['file']
+			
 			self.skin[item]['bitmap'] = win32gui.LoadImage(
 				self.hinst, values['file'], win32con.IMAGE_BITMAP,
 				0, 0, win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE )
@@ -326,12 +362,11 @@ class OpsiDialogWindow(NotificationObserver):
 		#win32gui.SendMessage(self.hwnd, win32con.WM_PAINT, None, None)
 		
 	def onEraseBkgnd(self, hwnd, msg, wparam, lparam):
-		print "onEraseBkgnd"
+		logger.debug("onEraseBkgnd")
 		return 0
 	
 	def onDrawItem(self, hwnd, msg, wparam, lparam):
-		print "onDrawItem"
-		#win32gui.CreateCompatibleDC()
+		logger.debug("onDrawItem")
 		return 0
 	
 	def onCtlColor(self, hwnd, msg, wparam, lparam):
@@ -430,8 +465,8 @@ class OpsiDialogWindow(NotificationObserver):
 				choiceIndex = values.get('choiceIndex')
 				logger.info("Button subjectId: %s, choiceIndex: %s" % (subjectId, choiceIndex))
 				if (subjectId and (choiceIndex >= 0)):
-					print self._notificationClient.setSelectedIndex(subjectId, choiceIndex)
-					print self._notificationClient.selectChoice(subjectId)
+					self._notificationClient.setSelectedIndex(subjectId, choiceIndex)
+					self._notificationClient.selectChoice(subjectId)
 			
 			elif (values.get('type') == 'label'):
 				cwnd = win32ui.CreateWindowFromHandle(self.hwnd)
@@ -522,17 +557,36 @@ class OpsiDialogWindow(NotificationObserver):
 			else:
 				win32gui.EnableWindow(win32gui.GetDlgItem(self.hwnd, values.get('dlgId')), False)
 
+
+def usage():
+	print "\nUsage: %s [-h <host>] [-p <port>]" % os.path.basename(sys.argv[0])
+	print "Options:"
+	print "  -h, --host      Notification server host (default: %s)" % host
+	print "  -p, --port      Notification server port (default: %s)" % port
+
 if (__name__ == "__main__"):
 	logger.setConsoleLevel(LOG_DEBUG)
 	exception = None
 	
 	try:
+		# Process command line arguments
+		try:
+			(opts, args) = getopt.getopt(sys.argv, "h:p:", [ "host=", "port=" ])
+		except getopt.GetoptError:
+			usage()
+			sys.exit(1)
+		
+		for (opt, arg) in opts:
+			if   opt in ("-a", "--host"):
+				host = arg
+			elif opt in ("-p", "--port"):
+				port = int(arg)
+		
 		os.chdir(os.path.dirname(sys.argv[0]))
 		w = OpsiDialogWindow()
 		w.CreateWindow()
 		# PumpMessages runs until PostQuitMessage() is called by someone.
-		win32gui.PumpMessages()	
-		
+		win32gui.PumpMessages()
 	except SystemExit, e:
 		pass
 		
