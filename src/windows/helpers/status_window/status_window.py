@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
    = = = = = = = = = = = = = = = = = = = = =
@@ -32,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.1'
+__version__ = '0.2'
 
 # Imports
 import threading, time, sys, os, getopt
@@ -53,6 +52,7 @@ from OPSI.Logger import *
 logger = Logger()
 
 # Globals
+logFile = 'status_window.log'
 transparentColor = (0,0,0)
 host = '127.0.0.1'
 port = 4442
@@ -362,17 +362,17 @@ class OpsiDialogWindow(NotificationObserver):
 		#win32gui.SendMessage(self.hwnd, win32con.WM_PAINT, None, None)
 		
 	def onEraseBkgnd(self, hwnd, msg, wparam, lparam):
-		logger.debug("onEraseBkgnd")
+		logger.debug2("onEraseBkgnd")
 		return 0
 	
 	def onDrawItem(self, hwnd, msg, wparam, lparam):
-		logger.debug("onDrawItem")
+		logger.debug2("onDrawItem")
 		return 0
 	
 	def onCtlColor(self, hwnd, msg, wparam, lparam):
 		#win32gui.SelectObject(wparam, self._globalFont)
 		#return windll.gdi32.GetStockObject(win32con.HOLLOW_BRUSH)
-		logger.debug("onCtlColor")
+		logger.debug2("onCtlColor")
 		color = self.skin['form']['color']
 		fontColor = self.skin['form']['fontColor']
 		transparent = self.skin['form'].get('transparent', False)
@@ -382,7 +382,7 @@ class OpsiDialogWindow(NotificationObserver):
 			if not values.get('dlgId'):
 				continue
 			if (win32gui.GetDlgItem(self.hwnd, values['dlgId']) == lparam):
-				logger.debug("Item found")
+				logger.debug2("Item found")
 				color = values.get('color', color)
 				fontColor = values.get('fontColor', fontColor)
 				transparent = values.get('transparent', transparent)
@@ -445,12 +445,13 @@ class OpsiDialogWindow(NotificationObserver):
 		win32gui.DestroyWindow(hwnd)
 	
 	def onDestroy(self, hwnd, msg, wparam, lparam):
+		logger.notice("Exiting...")
 		self._notificationClient.stop()
 		win32gui.PostQuitMessage(0) # Terminate the app.
 	
 	def onCommand(self, hwnd, msg, wparam, lparam):
 		dlgId = win32api.LOWORD(wparam)
-		logger.debug("onCommand dlgId: %s" % dlgId)
+		logger.debug2("onCommand dlgId: %s" % dlgId)
 		for (item, values) in self.skin.items():
 			if not values.get('dlgId') or (dlgId != values['dlgId']):
 				continue
@@ -535,7 +536,7 @@ class OpsiDialogWindow(NotificationObserver):
 		pass
 	
 	def subjectsChanged(self, subjects):
-		logger.info("subjects changed: %s" % subjects)
+		logger.info("subjectsChanged(%s)" % subjects)
 		choices = {}
 		for subject in subjects:
 			if (subject['type'] == 'MessageSubject'):
@@ -556,7 +557,7 @@ class OpsiDialogWindow(NotificationObserver):
 				win32gui.EnableWindow(win32gui.GetDlgItem(self.hwnd, values.get('dlgId')), True)
 			else:
 				win32gui.EnableWindow(win32gui.GetDlgItem(self.hwnd, values.get('dlgId')), False)
-
+		logger.debug("subjectsChanged() ended")
 
 def usage():
 	print "\nUsage: %s [-h <host>] [-p <port>]" % os.path.basename(sys.argv[0])
@@ -565,10 +566,22 @@ def usage():
 	print "  -p, --port      Notification server port (default: %s)" % port
 
 if (__name__ == "__main__"):
-	logger.setConsoleLevel(LOG_DEBUG)
+	# If you write to stdout when running from pythonw.exe program will die !!!
+	logger.setConsoleLevel(LOG_NONE)
 	exception = None
 	
 	try:
+		os.chdir(os.path.dirname(sys.argv[0]))
+		
+		if os.path.exists(logFile):
+			logger.notice("Deleting old log file: %s" % logFile)
+			os.unlink(logFile)
+		logger.notice("Opening log file: %s" % logFile)
+		logger.setLogFile(logFile)
+		logger.setFileLevel(LOG_DEBUG)
+		
+		logger.notice("Commandline: %s" % ' '.join(sys.argv))
+		
 		# Process command line arguments
 		try:
 			(opts, args) = getopt.getopt(sys.argv, "h:p:", [ "host=", "port=" ])
@@ -582,7 +595,6 @@ if (__name__ == "__main__"):
 			elif opt in ("-p", "--port"):
 				port = int(arg)
 		
-		os.chdir(os.path.dirname(sys.argv[0]))
 		w = OpsiDialogWindow()
 		w.CreateWindow()
 		# PumpMessages runs until PostQuitMessage() is called by someone.
@@ -599,7 +611,5 @@ if (__name__ == "__main__"):
 		sys.exit(1)
 	sys.exit(0)
 	
-
-
 
 
