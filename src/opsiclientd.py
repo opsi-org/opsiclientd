@@ -1114,6 +1114,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			'notificationServerPort':      4442,
 			'controlServerStaticDir':      'static_html',
 			'statusApplicationCommand':    '',
+			'actionProcessorCommand':      '',
 		}
 		
 		self._possibleMethods = [
@@ -1152,6 +1153,14 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.setFileLevel(self._config['logLevel'])
 				if config.has_option('global', 'log file'):
 					self._config['logFile'] = config.get('global', 'log file')
+					if os.path.exists(self._config['logFile']):
+						try:
+							if os.path.exists(self._config['logFile'] + '.0'):
+								os.unlink(self._config['logFile'] + '.0')
+							os.rename(self._config['logFile'], self._config['logFile'] + '.0')
+						except Exception, e:
+							logger.error("Failed to rename %s to %s.0: %s" % \
+										(self._config['logFile'], self._config['logFile'], e) )
 					logger.setLogFile(self._config['logFile'])
 			
 			# Process all sections
@@ -1170,6 +1179,9 @@ class Opsiclientd(EventListener, threading.Thread):
 						
 						elif (option.lower() == 'status application command'):
 							self._config['statusApplicationCommand'] = value.strip()
+						
+						elif (option.lower() == 'action processor command'):
+							self._config['actionProcessorCommand'] = value.strip()
 						
 						else:
 							logger.warning("Ignoring unknown option '%s' in config file: '%s'" % (option, self._config['configFile']))
@@ -1246,6 +1258,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				+ "                    opsiclientd started" + \
 				"\n==================================================================\n")
 		try:
+			logger.comment("Commandline: %s" % ' '.join(sys.argv))
+			logger.comment("Working directory: %s" % os.getcwd())
 			logger.notice("Using host id '%s'" % self._config['hostId'])
 			logger.notice("Starting control pipe")
 			try:
@@ -1338,10 +1352,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.warning("Failed to get StartOpsiCredentialProvider from registry: %s" % e)
 				logger.info("startOpsiCredentialProvider: %s" % startOpsiCredentialProvider)
 				
-				try:
-					self.processProductActionRequests()
-				except Exception, e:
-					logger.error("Failed to process action requests: %s" % e)
+				self.processProductActionRequests()
 				
 				self._blockLogin = False
 				if (startOpsiCredentialProvider == 1):
@@ -1361,19 +1372,16 @@ class Opsiclientd(EventListener, threading.Thread):
 					time.sleep(5)
 					System.logoffCurrentUser()
 				
-				try:
-					self.processProductActionRequests()
-				except Exception, e:
-					logger.error("Failed to process action requests: %s" % e)
+				self.processProductActionRequests()
 				
-				if event.logoffCurrentUser:
-					self._blockLogin = False
-					if (startOpsiCredentialProvider == 1):
-						System.logoffCurrentUser()
+				if event.logoffCurrentUser and (startOpsiCredentialProvider == 1):
+					System.logoffCurrentUser()
 			
 		except Exception, e:
 			logger.error("Failed to process event %s: %s" % (event, e))
-	
+			logger.logException(e)
+		self._blockLogin = False
+		
 	def processProductActionRequests(self):
 		if self._processingActionRequests:
 			logger.error("Already processing action requests")
@@ -1388,6 +1396,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			statusApplication = self._config.get('statusApplicationCommand')
 			statusApplicationProcess = None
 			if statusApplication:
+				statusApplication = statusApplication.replace('%notificationServerPort%', str(self._config['notificationServerPort']))
 				statusApplicationProcess = System.runAsSystemInSession(command = statusApplication, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding=False)[0]
 				time.sleep(5)
 			self.connectConfigServer()
@@ -1410,10 +1419,10 @@ class Opsiclientd(EventListener, threading.Thread):
 				depot = self._configService.getDepot_hash(networkConfig['depotId'])
 				
 				encryptedPassword = self._configService.getPcpatchPassword(self._config['hostId'])
-				#pcpatchPassword = Tools.blowfishDecrypt(self._config['opsiHostKey'] , encryptedPassword)
+				pcpatchPassword = Tools.blowfishDecrypt(self._config['opsiHostKey'], encryptedPassword)
 				
 				logger.notice("Connecting depot share")
-				System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password="12345678")
+				System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password=pcpatchPassword)
 				if statusApplicationProcess:
 					time.sleep(5)
 					try:
@@ -1422,10 +1431,22 @@ class Opsiclientd(EventListener, threading.Thread):
 						logger.error("Failed to terminate statusApplicationProcess: %s" % e)
 					statusApplicationProcess = None
 				
-				command = "C:\Programme\opsi.org\preloginloader\utils\winst32.exe /opsiservice %s /clientid %s /username %s /password %s" \
-						% ( '/'.join(self._config['configServiceUrl'].split('/')[:-1]), self._config['hostId'], self._config['hostId'], self._config['opsiHostKey'] )
+				actionProcessor = self._config['actionProcessorCommand']
+				if actionProcessor:
+					configServiceHost = ''
+					configServicePort = '4447'
+					configServiceHost = self._config['configServiceUrl'].split('/')[2]
+					if (configServiceHost.find(':') != -1):
+						(configServiceHost, configServicePort) = configServiceHost.split(':', 1)
+					actionProcessor = actionProcessor.replace('%configServiceHost%', configServiceHost)
+					actionProcessor = actionProcessor.replace('%configServicePort%', configServicePort)
+					actionProcessor = actionProcessor.replace('%configServiceUrl%', self._config['configServiceUrl'])
+					actionProcessor = actionProcessor.replace('%hostId%', self._config['hostId'])
+					actionProcessor = actionProcessor.replace('%opsiHostKey%', self._config['opsiHostKey'])
+					System.runAsSystemInSession(command = actionProcessor, sessionId = activeSessionId, desktop = desktop)
+				else:
+					logger.error("No action processor command defined")
 				
-				System.runAsSystemInSession(command = command, sessionId = activeSessionId, desktop = desktop)
 			self._statusSubject.setMessage( _("Finished processing action requests") )
 			
 			shutdownRequested = 0
@@ -1450,6 +1471,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				
 		except Exception, e:
 			logger.error("Failed to process product action requests: %s" % e)
+			logger.logException(e)
 			self._statusSubject.setMessage( _("Failed to process product action requests: %s") % e )
 		
 		if statusApplicationProcess:
@@ -1707,7 +1729,13 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
 			
 			# Start opsiclientd
-			os.chdir("c:\\Programme\\opsi.org\\opsiclientd")
+			workingDirectory = os.getcwd()
+			try:
+				workingDirectory = os.path.dirname(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Services\\opsiclientd\\PythonClass", ""))
+			except Exception, e:
+				logger.error("Failed to get working directory from registry: %s" % e)
+			os.chdir(workingDirectory)
+			
 			opsiclientd = Opsiclientd()
 			opsiclientd.start()
 			# Write to event log
@@ -1742,7 +1770,6 @@ if (__name__ == "__main__"):
 	
 	try:
 		OpsiclientdInit()
-		logger.debug("Back from init")
 		
 	except SystemExit, e:
 		pass

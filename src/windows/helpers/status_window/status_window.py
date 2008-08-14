@@ -584,17 +584,19 @@ if (__name__ == "__main__"):
 		
 		# Process command line arguments
 		try:
-			(opts, args) = getopt.getopt(sys.argv, "h:p:", [ "host=", "port=" ])
+			(opts, args) = getopt.getopt(sys.argv[1:], "h:p:", [ "host=", "port=" ])
 		except getopt.GetoptError:
 			usage()
 			sys.exit(1)
 		
 		for (opt, arg) in opts:
+			logger.info("Processing option %s:%s" % (opt, arg))
 			if   opt in ("-a", "--host"):
 				host = arg
 			elif opt in ("-p", "--port"):
 				port = int(arg)
 		
+		logger.notice("Host: %s, port: %s" % (host, port))
 		w = OpsiDialogWindow()
 		w.CreateWindow()
 		# PumpMessages runs until PostQuitMessage() is called by someone.
