@@ -59,6 +59,7 @@ from OPSI.Logger import *
 from OPSI.Util import *
 from OPSI import Tools
 from OPSI import System
+from OPSI.Backend.File import File
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 
 # Create logger instance
@@ -1097,24 +1098,33 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._clientIdSubject = MessageSubject('clientId')
 		
 		self._config = {
-			'configFile':                  'opsiclientd.conf',
-			'logFile':                     'opsiclientd.log',
-			'logLevel':                    LOG_NOTICE,
-			'logFormat':                   '(%l) %D %M (%F|%N)',
-			'hostId':                      socket.getfqdn(),
-			'configServiceUrl':            '',
-			'opsiHostKey':                 '',
-			'waitBeforeConnect':           5,
-			'connectionTimeout':           30,
-			'controlServerInterface':      '0.0.0.0',
-			'controlServerPort':           4441,
-			'sslServerKeyFile':            'opsiclientd.pem',
-			'sslServerCertFile':           'opsiclientd.pem',
-			'notificationServerInterface': '127.0.0.1',
-			'notificationServerPort':      4442,
-			'controlServerStaticDir':      'static_html',
-			'statusApplicationCommand':    '',
-			'actionProcessorCommand':      '',
+			'config_file':                 'opsiclientd.conf',
+			'log_file':                    'opsiclientd.log',
+			'log_level':                   LOG_NOTICE,
+			'host_id':                     socket.getfqdn(),
+			'opsi_host_key':               '',
+			'config_service': {
+				'url':                   '',
+				'connection_timeout':    30,
+				'wait_before_connect':   5,
+			},
+			'control_server': {
+				'interface':              '0.0.0.0', # TODO
+				'port':                   4441,
+				'ssl_server_key_file':    'opsiclientd.pem',
+				'ssl_server_cert_file':   'opsiclientd.pem',
+				'static_dir':             'static_html',
+			},
+			'notification_server': {
+				'interface':               '127.0.0.1',
+				'port':                    4442,
+			},
+			'opsiclientd_notifier': {
+				'command':               '',
+			},
+			'action_processor': {
+				'command':               '',
+			},
 		}
 		
 		self._possibleMethods = [
@@ -1130,137 +1140,174 @@ class Opsiclientd(EventListener, threading.Thread):
 			{ 'name': 'reboot',                        'params': [ 'wait' ],               'availability': ['server'] },
 		]
 		
-		self._clientIdSubject.setMessage(self._config['hostId'])
+		self._clientIdSubject.setMessage(self._config['host_id'])
 		
 	def isRunning(self):
 		return self._running
 	
+	def setConfigValue(self, section, option, value):
+		if not section or (str(section).strip().lower() == 'global'):
+			section = ''
+		
+		logger.debug("setConfigValue(%s, %s, %s)" % (section, option, value))
+		
+		section = str(section).strip().lower()
+		option = str(option).strip().lower()
+		value = value.strip()
+		
+		if option in ('log_level', 'port'):
+			value = int(value)
+		
+		if not section:
+			self._config[option] = value
+			if   (option == 'log_level'):
+				logger.setFileLevel(self._config[option])
+			elif (option == 'log_file'):
+				logger.setLogFile(self._config[option])
+		else:
+			if not self._config.has_key(section):
+				self._config[section] = {}
+			self._config[section][option] = value
+			
+			if   (section == 'config_service') and (option == 'url'):
+				self.setConfigServiceUrl(self._config[section][option])
+			elif (section == 'config_service') and option in ('wait_before_connect', 'connection_timeout'):
+				self._config[section][option] = int(self._config[section][option])
+				if (self._config[section][option] < 0):
+					self._config[section][option] = 0
+	
 	def readConfigFile(self):
 		''' Get settings from config file '''
-		logger.notice("Trying to read config from file: '%s'" % self._config['configFile'])
+		logger.notice("Trying to read config from file: '%s'" % self._config['config_file'])
 		
 		try:
-			# Import File Module
-			from OPSI.Backend.File import File
-			
 			# Read Config-File
-			config = File().readIniFile(self._config['configFile'], caseIgnore = False, raw = True)
+			config = File().readIniFile(self._config['config_file'], raw = True)
 			
 			# Read log values early
 			if config.has_section('global'):
-				if config.has_option('global', 'log level'):
-					self._config['logLevel'] = config.get('global', 'log level')
-					logger.setFileLevel(self._config['logLevel'])
-				if config.has_option('global', 'log file'):
-					self._config['logFile'] = config.get('global', 'log file')
-					if os.path.exists(self._config['logFile']):
+				if config.has_option('global', 'log_level'):
+					self._config['log_level'] = config.get('global', 'log_level')
+					logger.setFileLevel(self._config['log_level'])
+				if config.has_option('global', 'log_file'):
+					self._config['log_file'] = config.get('global', 'log_file')
+					if os.path.exists(self._config['log_file']):
 						try:
-							if os.path.exists(self._config['logFile'] + '.0'):
-								os.unlink(self._config['logFile'] + '.0')
-							os.rename(self._config['logFile'], self._config['logFile'] + '.0')
+							if os.path.exists(self._config['log_file'] + '.0'):
+								os.unlink(self._config['log_file'] + '.0')
+							os.rename(self._config['log_file'], self._config['log_file'] + '.0')
 						except Exception, e:
 							logger.error("Failed to rename %s to %s.0: %s" % \
-										(self._config['logFile'], self._config['logFile'], e) )
-					logger.setLogFile(self._config['logFile'])
+										(self._config['log_file'], self._config['log_file'], e) )
+					logger.setLogFile(self._config['log_file'])
 			
 			# Process all sections
 			for section in config.sections():
-				logger.debug("Processing section '%s' in config file: '%s'" % (section, self._config['configFile']))
-				if (section.lower() == 'global'):
-					# Global settings
-					for (option, value) in config.items(section):
-						if  (option.lower() == 'log level'):
-							self._config['logLevel'] = int(value.strip())
-							logger.setFileLevel(self._config['logLevel'])
-						
-						elif (option.lower() == 'log file'):
-							self._config['logFile'] = value.strip()
-							logger.setLogFile(self._config['logFile'])
-						
-						elif (option.lower() == 'status application command'):
-							self._config['statusApplicationCommand'] = value.strip()
-						
-						elif (option.lower() == 'action processor command'):
-							self._config['actionProcessorCommand'] = value.strip()
-						
-						else:
-							logger.warning("Ignoring unknown option '%s' in config file: '%s'" % (option, self._config['configFile']))
+				logger.debug("Processing section '%s' in config file: '%s'" % (section, self._config['config_file']))
 				
-				elif (section.lower() == 'config_server'):
-					# Config server settings
-					for (option, value) in config.items(section):
-						if   (option.lower() == 'service url'):
-							self._config['configServiceUrl'] = value.strip()
-							self.setConfigServiceUrl(self._config['configServiceUrl'])
-							
-						elif (option.lower() == 'host key'):
-							self._config['opsiHostKey'] = value.strip()
-						
-						elif (option.lower() == 'wait before connect'):
-							self._config['waitBeforeConnect'] = int(value.strip())
-							if (self._config['waitBeforeConnect'] < 0):
-								self._config['waitBeforeConnect'] = 0
-						
-						elif (option.lower() == 'connection timeout'):
-							self._config['connectionTimeout'] = int(value.strip())
-							if (self._config['connectionTimeout'] < 0):
-								self._config['connectionTimeout'] = 0
-						
-						else:
-							logger.warning("Ignoring unknown option '%s' in config file: '%s'" % (option, self._config['configFile']))
+				for (option, value) in config.items(section):
+					option = option.lower()
+					self.setConfigValue(section.lower(), option, value)
 				
-				elif (section.lower() == 'control_server'):
-					# Control server settings
-					for (option, value) in config.items(section):
-						if   (option.lower() == 'https port'):
-							self._config['controlServerPort'] = int(value.strip())
-						
-						elif (option.lower() == 'interface'):
-							self._config['controlServerInterface'] = value.strip()
-						
-						elif (option.lower() == 'ssl server cert'):
-							self._config['sslServerCertFile'] = value.strip()
-						
-						elif (option.lower() == 'ssl server key'):
-							self._config['sslServerKeyFile'] = value.strip()
-						
-						elif (option.lower() == 'static dir'):
-							self._config['controlServerStaticDir'] = value.strip()
-						
-						else:
-							logger.warning("Ignoring unknown option '%s' in config file: '%s'" % (option, self._config['configFile']))
-				
-				elif (section.lower() == 'notification_server'):
-					# Notification server settings
-					for (option, value) in config.items(section):
-						if   (option.lower() == 'port'):
-							self._config['notificationServerPort'] = int(value.strip())
-						
-						elif (option.lower() == 'interface'):
-							self._config['notificationServerInterface'] = value.strip()
-						
-						else:
-							logger.warning("Ignoring unknown option '%s' in config file: '%s'" % (option, self._config['configFile']))
-				else:
-					logger.warning("Ignoring unknown section '%s' in config file: '%s'" % (section, self._config['configFile']))
-		
 		except Exception, e:
 			# An error occured while trying to read the config file
-			logger.error("Failed to read config file '%s': %s" % (self._config['configFile'], e))
+			logger.error("Failed to read config file '%s': %s" % (self._config['config_file'], e))
 			logger.logException(e)
 			return
 		logger.notice("Config read")
+		logger.debug("Config is now:\n %s" % Tools.objectToBeautifiedText(self._config))
+	
+	def writeConfigFile(self):
+		''' Get settings from config file '''
+		logger.notice("Trying to write config to file: '%s'" % self._config['config_file'])
 		
+		try:
+			# Read config file
+			config = File().readIniFile(self._config['config_file'], raw = True)
+			changed = False
+			for (section, value) in self._config.items():
+				if type(value) is dict:
+					if not config.has_section(section):
+						config.add_section(section)
+						changed = True
+					for (option, value) in value.items():
+						if (section == 'config_service') and option in ('host', 'port'):
+							continue
+						value = str(value)
+						if not config.has_option(section, option) or (config.get(section, option) != value):
+							changed = True
+							config.set(section, option, value)
+				else:
+					option = section
+					section = 'global'
+					value = str(value)
+					if option in ('config_file', 'host_id'):
+						# Do not store these options
+						continue
+					if not config.has_option(section, option) or (config.get(section, option) != value):
+						changed = True
+						config.set(section, option, value)
+			if changed:
+				# Write back config file if changed
+				File().writeIniFile(self._config['config_file'], config)
+				logger.notice("Config file '%s' written" % self._config['config_file'])
+			else:
+				logger.notice("No need to write config file '%s', config file is up to date" % self._config['config_file'])
+			
+		except Exception, e:
+			# An error occured while trying to write the config file
+			logger.error("Failed to write config file '%s': %s" % (self._config['config_file'], e))
+			logger.logException(e)
+		
+		
+	def getConfigFromService(self):
+		''' Get settings from service '''
+		logger.notice("Getting config from service")
+		self._statusSubject.setMessage(_("Getting config from service"))
+		
+		if not self._configService:
+			self.connectConfigServer(waitBeforeConnect = False)
+		
+		
+		for (key, value) in self._configService.getGeneralConfig_hash(self._config['host_id']).items():
+			try:
+				parts = key.lower().split('.')
+				if (len(parts) < 2) or (parts[0] != 'opsiclientd'):
+					continue
+				
+				if (parts[1] == 'log_level'):
+					self._config['log_level'] = int(value)
+					logger.setFileLevel(self._config['log_level'])
+				
+			except Exception, e:
+				logger.error("Failed to process general config key '%s:%s': %s", (key, value, e))
+		
+		logger.notice("Got config from service")
+		self._statusSubject.setMessage(_("Got config from service"))
+		logger.debug("Config is now:\n %s" % Tools.objectToBeautifiedText(self._config))
+	
+	def writeLogToService(self):
+		logger.notice("Writing log to service")
+		try:
+			f = open(self._config['log_file'])
+			data = f.read()
+			f.close()
+			self._configService.writeLog('clientconnect', data, self._config['host_id'])
+		except Exception, e:
+			logger.error("Failed to write log to service: %s" % e)
+	
 	def run(self):
 		self._running = True
+		
 		self.readConfigFile()
 		logger.comment(	"\n==================================================================\n" \
 				+ "                    opsiclientd started" + \
 				"\n==================================================================\n")
+		
 		try:
 			logger.comment("Commandline: %s" % ' '.join(sys.argv))
 			logger.comment("Working directory: %s" % os.getcwd())
-			logger.notice("Using host id '%s'" % self._config['hostId'])
+			logger.notice("Using host id '%s'" % self._config['host_id'])
 			logger.notice("Starting control pipe")
 			try:
 				self._controlPipe = ControlPipeFactory(self)
@@ -1274,10 +1321,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			try:
 				self._controlServer = ControlServer(
 								opsiclientd       = self,
-								httpsPort         = self._config['controlServerPort'],
-								sslServerKeyFile  = self._config['sslServerKeyFile'],
-								sslServerCertFile = self._config['sslServerCertFile'],
-								staticDir         = self._config['controlServerStaticDir'])
+								httpsPort         = self._config['control_server']['port'],
+								sslServerKeyFile  = self._config['control_server']['ssl_server_key_file'],
+								sslServerCertFile = self._config['control_server']['ssl_server_cert_file'],
+								staticDir         = self._config['control_server']['static_dir'])
 				self._controlServer.start()
 				logger.notice("Control server started")
 			except Exception, e:
@@ -1287,8 +1334,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.notice("Starting notification server")
 			try:
 				self._notificationServer = NotificationServer(
-								address  = self._config['notificationServerInterface'],
-								port     = self._config['notificationServerPort'],
+								address  = self._config['notification_server']['interface'],
+								port     = self._config['notification_server']['port'],
 								subjects = [ self._statusSubject, self._serviceUrlSubject, self._clientIdSubject ] )
 				logger.setLogFormat('%D (%l) notification server: %M (%F|%N)', object=self._notificationServer)
 				logger.setLogFormat('%D (%l) notification server: %M (%F|%N)', object=self._notificationServer.getFactory())
@@ -1325,7 +1372,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._running = False
 	
 	def authenticate(self, username, password):
-		if (username == self._config['hostId']) and (password == self._config['opsiHostKey']):
+		if (username == self._config['host_id']) and (password == self._config['opsi_host_key']):
 			return True
 		if (os.name == 'nt'):
 			if (username == 'Administrator'):
@@ -1337,14 +1384,21 @@ class Opsiclientd(EventListener, threading.Thread):
 		raise Exception("Invalid credentials")
 		
 	def setConfigServiceUrl(self, url):
-		self._config['configServiceUrl'] = url
-		self._serviceUrlSubject.setMessage(self._config['configServiceUrl'])
+		self._config['config_service']['url'] = url
+		self._config['config_service']['host'] = self._config['config_service']['url'].split('/')[2]
+		self._config['config_service']['port'] = '4447'
+		if (self._config['config_service']['host'].find(':') != -1):
+			(self._config['config_service']['host'], self._config['config_service']['port']) = self._config['config_service']['host'].split(':', 1)
+		self._serviceUrlSubject.setMessage(self._config['config_service']['url'])
 		
 	def processEvent(self, event):
 		logger.notice("Processing event %s" % event)
 		self._statusSubject.setMessage( _("Processing event %s") % event )
 		try:
 			if isinstance(event, DaemonStartupEvent):
+				self.getConfigFromService()
+				self.writeConfigFile()
+				
 				startOpsiCredentialProvider = 0
 				try:
 					startOpsiCredentialProvider = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Provider Filters\\{d2028e19-82fe-44c6-ad64-51497c97a02a}", "StartOpsiCredentialProvider")
@@ -1359,6 +1413,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					# Opsi credential provider was started
 					# restart winlogon.exe to start opsi credential provider filter again
 					System.logoffCurrentUser()
+				
 			elif isinstance(event, ProcessActionRequestEvent):
 				startOpsiCredentialProvider = 1
 				try:
@@ -1381,6 +1436,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.error("Failed to process event %s: %s" % (event, e))
 			logger.logException(e)
 		self._blockLogin = False
+		self.writeLogToService()
 		
 	def processProductActionRequests(self):
 		if self._processingActionRequests:
@@ -1393,14 +1449,14 @@ class Opsiclientd(EventListener, threading.Thread):
 			desktop = 'winlogon'
 			#desktop = 'default'
 			activeSessionId = windll.kernel32.WTSGetActiveConsoleSessionId()
-			statusApplication = self._config.get('statusApplicationCommand')
+			statusApplication = self._config['opsiclientd_notifier']['command']
 			statusApplicationProcess = None
 			if statusApplication:
-				statusApplication = statusApplication.replace('%notificationServerPort%', str(self._config['notificationServerPort']))
+				statusApplication = statusApplication.replace('%notification_server.port%', str(self._config['notification_server']['port']))
 				statusApplicationProcess = System.runAsSystemInSession(command = statusApplication, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding=False)[0]
 				time.sleep(5)
 			self.connectConfigServer()
-			actionRequests = self._configService.getProductActionRequests_listOfHashes(self._config['hostId'])
+			actionRequests = self._configService.getProductActionRequests_listOfHashes(self._config['host_id'])
 			logger.notice("Got product action requests from configservice")
 			numRequests = 0
 			for actionRequest in actionRequests:
@@ -1415,11 +1471,11 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.notice("Start processing action requests")
 				self._statusSubject.setMessage( _("Start processing action requests") )
 				
-				networkConfig = self._configService.getNetworkConfig_hash(self._config['hostId'])
+				networkConfig = self._configService.getNetworkConfig_hash(self._config['host_id'])
 				depot = self._configService.getDepot_hash(networkConfig['depotId'])
 				
-				encryptedPassword = self._configService.getPcpatchPassword(self._config['hostId'])
-				pcpatchPassword = Tools.blowfishDecrypt(self._config['opsiHostKey'], encryptedPassword)
+				encryptedPassword = self._configService.getPcpatchPassword(self._config['host_id'])
+				pcpatchPassword = Tools.blowfishDecrypt(self._config['opsi_host_key'], encryptedPassword)
 				
 				logger.notice("Connecting depot share")
 				System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password=pcpatchPassword)
@@ -1431,18 +1487,13 @@ class Opsiclientd(EventListener, threading.Thread):
 						logger.error("Failed to terminate statusApplicationProcess: %s" % e)
 					statusApplicationProcess = None
 				
-				actionProcessor = self._config['actionProcessorCommand']
+				actionProcessor = self._config['action_processor']['command']
 				if actionProcessor:
-					configServiceHost = ''
-					configServicePort = '4447'
-					configServiceHost = self._config['configServiceUrl'].split('/')[2]
-					if (configServiceHost.find(':') != -1):
-						(configServiceHost, configServicePort) = configServiceHost.split(':', 1)
-					actionProcessor = actionProcessor.replace('%configServiceHost%', configServiceHost)
-					actionProcessor = actionProcessor.replace('%configServicePort%', configServicePort)
-					actionProcessor = actionProcessor.replace('%configServiceUrl%', self._config['configServiceUrl'])
-					actionProcessor = actionProcessor.replace('%hostId%', self._config['hostId'])
-					actionProcessor = actionProcessor.replace('%opsiHostKey%', self._config['opsiHostKey'])
+					actionProcessor = actionProcessor.replace('%config_service_host%', self._config['config_service']['host'])
+					actionProcessor = actionProcessor.replace('%config_service.port%', self._config['config_service']['port'])
+					actionProcessor = actionProcessor.replace('%config_service.url%', self._config['config_service']['url'])
+					actionProcessor = actionProcessor.replace('%host_id%', self._config['host_id'])
+					actionProcessor = actionProcessor.replace('%opsi_host_key%', self._config['opsi_host_key'])
 					System.runAsSystemInSession(command = actionProcessor, sessionId = activeSessionId, desktop = desktop)
 				else:
 					logger.error("No action processor command defined")
@@ -1483,18 +1534,23 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		self._processingActionRequests = False
 	
-	def connectConfigServer(self):
+	def connectConfigServer(self, waitBeforeConnect = True):
+		if waitBeforeConnect:
+			waitBeforeConnect = self._config['config_service']['wait_before_connect']
+		else:
+			waitBeforeConnect = 0
+		
 		logger.debug("Creating ServiceConnectionThread")
 		
 		self._serviceConnectionThread = ServiceConnectionThread(
-					configServiceUrl    = self._config['configServiceUrl'],
-					username            = self._config['hostId'],
-					password            = self._config['opsiHostKey'],
+					configServiceUrl    = self._config['config_service']['url'],
+					username            = self._config['host_id'],
+					password            = self._config['opsi_host_key'],
 					notificationServer  = self._notificationServer,
 					statusObject        = self._statusSubject,
-					waitBeforeConnect   = self._config['waitBeforeConnect'] )
+					waitBeforeConnect   = waitBeforeConnect )
 		
-		timeout = int(self._config['connectionTimeout'])
+		timeout = int(self._config['config_service']['connection_timeout'])
 		logger.info("Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
 		self._serviceConnectionThread.start()
 		while self._serviceConnectionThread.running and (timeout > 0):
@@ -1503,11 +1559,11 @@ class Opsiclientd(EventListener, threading.Thread):
 			timeout -= 1
 		
 		if self._serviceConnectionThread.running:
-			logger.error("ServiceConnectionThread timed out after %d seconds" % self._config['connectionTimeout'])
+			logger.error("ServiceConnectionThread timed out after %d seconds" % self._config['config_service']['connection_timeout'])
 			self._serviceConnectionThread.terminate()
 		
 		if not self._serviceConnectionThread.connected:
-			raise Exception("Failed to connect to config service '%s'" % self._config['configServiceUrl'])
+			raise Exception("Failed to connect to config service '%s'" % self._config['config_service']['url'])
 		
 		self._configService = self._serviceConnectionThread.configService
 		
@@ -1586,7 +1642,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				if not logType in ('opsiclientd'):
 					raise ValueError("Unknown log type '%s'" % logType)
 				if (logType == 'opsiclientd'):
-					f = open(self._config['logFile'])
+					f = open(self._config['log_file'])
 					data = f.read()
 					f.close()
 					return data
