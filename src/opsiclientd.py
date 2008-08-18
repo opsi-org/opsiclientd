@@ -1130,19 +1130,19 @@ class Opsiclientd(EventListener, threading.Thread):
 		}
 		
 		self._possibleMethods = [
-			{ 'name': 'getPossibleMethods_listOfHashes', 'params': [ ],                      'availability': ['server', 'pipe'] },
-			{ 'name': 'getBlockLogin',                   'params': [ ],                      'availability': ['server', 'pipe'] },
-			{ 'name': 'setBlockLogin',                   'params': [ 'blockLogin' ],         'availability': ['server'] },
-			{ 'name': 'runCommand',                      'params': [ 'command', 'desktop' ], 'availability': ['server'] },
-			{ 'name': 'processProductActionRequests',    'params': [ 'logoffCurrentUser' ],  'availability': ['server'] },
-			{ 'name': 'logoffCurrentUser',               'params': [ ],                      'availability': ['server'] },
-			{ 'name': 'lockWorkstation',                 'params': [ ],                      'availability': ['server'] },
-			{ 'name': 'setStatusMessage',                'params': [ 'message' ],            'availability': ['server'] },
-			{ 'name': 'readLog',                         'params': [ 'type' ],               'availability': ['server'] },
-			{ 'name': 'shutdown',                        'params': [ 'wait' ],               'availability': ['server'] },
-			{ 'name': 'reboot',                          'params': [ 'wait' ],               'availability': ['server'] },
-			{ 'name': 'getCurrentActiveDesktopName',     'params': [ ],                      'availability': ['server'] },
-			{ 'name': 'setCurrentActiveDesktopName',     'params': [ 'desktop' ],            'availability': ['server'] },
+			{ 'name': 'getPossibleMethods_listOfHashes', 'params': [ ],                       'availability': ['server', 'pipe'] },
+			{ 'name': 'getBlockLogin',                   'params': [ ],                       'availability': ['server', 'pipe'] },
+			{ 'name': 'setBlockLogin',                   'params': [ 'blockLogin' ],          'availability': ['server'] },
+			{ 'name': 'runCommand',                      'params': [ 'command', '*desktop' ], 'availability': ['server'] },
+			{ 'name': 'processProductActionRequests',    'params': [ 'logoffCurrentUser' ],   'availability': ['server'] },
+			{ 'name': 'logoffCurrentUser',               'params': [ ],                       'availability': ['server'] },
+			{ 'name': 'lockWorkstation',                 'params': [ ],                       'availability': ['server'] },
+			{ 'name': 'setStatusMessage',                'params': [ 'message' ],             'availability': ['server'] },
+			{ 'name': 'readLog',                         'params': [ '*type' ],               'availability': ['server'] },
+			{ 'name': 'shutdown',                        'params': [ 'wait' ],                'availability': ['server'] },
+			{ 'name': 'reboot',                          'params': [ 'wait' ],                'availability': ['server'] },
+			{ 'name': 'getCurrentActiveDesktopName',     'params': [ ],                       'availability': ['server'] },
+			{ 'name': 'setCurrentActiveDesktopName',     'params': [ 'desktop' ],             'availability': ['server'] },
 		]
 		
 		self._clientIdSubject.setMessage(self._config['host_id'])
@@ -1455,6 +1455,12 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._statusSubject.setMessage(_("Getting action requests from config service"))
 		statusApplicationProcess = None
 		try:
+			bootmode = ''
+			try:
+				bootmode = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\general", "bootmode")
+			except Exception, e:
+				logger.warning("Failed to get bootmode from registry: %s" % e)
+			
 			activeSessionId = windll.kernel32.WTSGetActiveConsoleSessionId()
 			desktop = self.getCurrentActiveDesktopName()
 			if not desktop or desktop.lower() not in ('winlogon', 'default'):
@@ -1474,7 +1480,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				if (actionRequest['actionRequest'] != 'none'):
 					numRequests += 1
 					logger.notice("   [%2s] product %-15s %s" % (numRequests, actionRequest['productId'] + ':', actionRequest['actionRequest']))
-			if (numRequests == 0):
+			
+			if (numRequests == 0) and (bootmode == 'BKSTD'):
 				logger.notice("No product action requests set")
 				self._statusSubject.setMessage( _("No product action requests set") )
 				
@@ -1646,9 +1653,13 @@ class Opsiclientd(EventListener, threading.Thread):
 			elif (method == 'runCommand'):
 				if not params[0]:
 					raise ValueError("No command given")
-				
-				System.runAsSystemInSession(command = params[0], sessionId = None, desktop = params[1], waitForProcessEnding = False)
-				return "command '%s' executed" % params[0]
+				desktop = None
+				if (len(params) > 1):
+					desktop = str(params[1])
+				else:
+					desktop = self.getCurrentActiveDesktopName()
+				System.runAsSystemInSession(command = str(params[0]), sessionId = None, desktop = desktop, waitForProcessEnding = False)
+				return "command '%s' executed" % str(params[0])
 			
 			elif (method == 'logoffCurrentUser'):
 				System.logoffCurrentUser()
@@ -1667,7 +1678,9 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._statusSubject.setMessage(str(params[0]))
 			
 			elif (method == 'readLog'):
-				logType = str(params[0])
+				logType = 'opsiclientd'
+				if (len(params) > 0):
+					logType = str(params[0])
 				if not logType in ('opsiclientd'):
 					raise ValueError("Unknown log type '%s'" % logType)
 				if (logType == 'opsiclientd'):
