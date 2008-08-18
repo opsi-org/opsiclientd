@@ -1517,7 +1517,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			try:
 				shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
 			except Exception, e:
-				logger.error("Failed to get shutdownRequested from registry: %s" % e)
+				logger.warning("Failed to get shutdownRequested from registry: %s" % e)
 			logger.info("shutdownRequested: %s" % shutdownRequested)
 			if shutdownRequested:
 				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
@@ -1527,7 +1527,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				try:
 					rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
 				except Exception, e:
-					logger.error("Failed to get rebootRequested from registry: %s" % e)
+					logger.warning("Failed to get rebootRequested from registry: %s" % e)
 				logger.info("rebootRequested: %s" % rebootRequested)
 				if rebootRequested:
 					System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
