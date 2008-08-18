@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.0.1'
+__version__ = '0.1'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket
@@ -358,13 +358,14 @@ class NTControlPipeConnection(threading.Thread):
 									len(result),
 									byref(cbWritten),
 									None )
-					logger.info("Number of bytes written: %d" % cbWritten.value)
+					logger.debug("Number of bytes written: %d" % cbWritten.value)
 					if not fWriteSuccess:
 						logger.error("Could not reply to the client's request from the pipe")
 						break
 					if (len(result) != cbWritten.value):
 						logger.error("Failed to write all bytes to pipe (%d/%d)" % (cbWritten.value, len(result)))
 						break
+					break
 				else:
 					logger.error("Failed to read from pipe")
 					break
@@ -415,14 +416,14 @@ class NTControlPipe(ControlPipe):
 		try:
 			while self._running:
 				self.createPipe()
-				logger.info("Connecting to named pipe %s" % self._pipeName)
+				logger.debug("Connecting to named pipe %s" % self._pipeName)
 				# This call is blocking until a client connects
 				fConnected = windll.kernel32.ConnectNamedPipe(self._pipe, None)
 				if ((fConnected == 0) and (windll.kernel32.GetLastError() == ERROR_PIPE_CONNECTED)):
 					fConnected = 1
 				if (fConnected == 1):
 					logger.info("Connected to named pipe %s" % self._pipeName)
-					logger.info("Creating NTControlPipeConnection")
+					logger.debug("Creating NTControlPipeConnection")
 					cpc = NTControlPipeConnection(self, self._pipe, self._bufferSize)
 					cpc.start()
 					logger.debug("NTControlPipeConnection thread started")
@@ -701,7 +702,7 @@ class JsonRpcWorker(object):
 			#logger.logException(e)
 			logger.error("Forbidden: %s" % str(e))
 			self.response.code = responsecode.UNAUTHORIZED
-			self.response.headers.setHeader('www-authenticate', [('basic', { 'realm': 'OPSI Configuration Service' } )])
+			self.response.headers.setHeader('www-authenticate', [('basic', { 'realm': 'OPSI Client Service' } )])
 			#self.result['error'] = str(e)
 			raise
 		
@@ -1092,6 +1093,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._processActionRequestsEvent.addEventListener(self)
 		self._processingActionRequests = False
 		self._blockLogin = True
+		self._CurrentActiveDesktopName = None
 		
 		self._statusSubject = MessageSubject('status')
 		self._serviceUrlSubject = MessageSubject('configServiceUrl')
@@ -1128,16 +1130,19 @@ class Opsiclientd(EventListener, threading.Thread):
 		}
 		
 		self._possibleMethods = [
-			{ 'name': 'getBlockLogin',                 'params': [ ],                      'availability': ['server', 'pipe'] },
-			{ 'name': 'setBlockLogin',                 'params': [ 'blockLogin' ],         'availability': ['server'] },
-			{ 'name': 'runCommand',                    'params': [ 'command', 'desktop' ], 'availability': ['server'] },
-			{ 'name': 'processProductActionRequests',  'params': [ 'logoffCurrentUser' ],  'availability': ['server'] },
-			{ 'name': 'logoffCurrentUser',             'params': [ ],                      'availability': ['server'] },
-			{ 'name': 'lockWorkstation',               'params': [ ],                      'availability': ['server'] },
-			{ 'name': 'setStatusMessage',              'params': [ 'message' ],            'availability': ['server'] },
-			{ 'name': 'readLog',                       'params': [ 'type' ],               'availability': ['server'] },
-			{ 'name': 'shutdown',                      'params': [ 'wait' ],               'availability': ['server'] },
-			{ 'name': 'reboot',                        'params': [ 'wait' ],               'availability': ['server'] },
+			{ 'name': 'getPossibleMethods_listOfHashes', 'params': [ ],                      'availability': ['server', 'pipe'] },
+			{ 'name': 'getBlockLogin',                   'params': [ ],                      'availability': ['server', 'pipe'] },
+			{ 'name': 'setBlockLogin',                   'params': [ 'blockLogin' ],         'availability': ['server'] },
+			{ 'name': 'runCommand',                      'params': [ 'command', 'desktop' ], 'availability': ['server'] },
+			{ 'name': 'processProductActionRequests',    'params': [ 'logoffCurrentUser' ],  'availability': ['server'] },
+			{ 'name': 'logoffCurrentUser',               'params': [ ],                      'availability': ['server'] },
+			{ 'name': 'lockWorkstation',                 'params': [ ],                      'availability': ['server'] },
+			{ 'name': 'setStatusMessage',                'params': [ 'message' ],            'availability': ['server'] },
+			{ 'name': 'readLog',                         'params': [ 'type' ],               'availability': ['server'] },
+			{ 'name': 'shutdown',                        'params': [ 'wait' ],               'availability': ['server'] },
+			{ 'name': 'reboot',                          'params': [ 'wait' ],               'availability': ['server'] },
+			{ 'name': 'getCurrentActiveDesktopName',     'params': [ ],                      'availability': ['server'] },
+			{ 'name': 'setCurrentActiveDesktopName',     'params': [ 'desktop' ],            'availability': ['server'] },
 		]
 		
 		self._clientIdSubject.setMessage(self._config['host_id'])
@@ -1292,7 +1297,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			f = open(self._config['log_file'])
 			data = f.read()
 			f.close()
+			# Do not jsonrpc request
+			logger.setLevel(LOG_WARNING)
 			self._configService.writeLog('clientconnect', data, self._config['host_id'])
+			logger.setLevel(self._config['log_level'])
 		except Exception, e:
 			logger.error("Failed to write log to service: %s" % e)
 	
@@ -1301,7 +1309,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		self.readConfigFile()
 		logger.comment(	"\n==================================================================\n" \
-				+ "                    opsiclientd started" + \
+				+ "              opsiclientd version " + str(__version__) + " started" + \
 				"\n==================================================================\n")
 		
 		try:
@@ -1424,9 +1432,10 @@ class Opsiclientd(EventListener, threading.Thread):
 				if event.logoffCurrentUser:
 					self._blockLogin = True
 					System.logoffCurrentUser()
-					time.sleep(5)
-					System.logoffCurrentUser()
-				
+					time.sleep(15)
+					#System.logoffCurrentUser()
+					#time.sleep(10)
+					
 				self.processProductActionRequests()
 				
 				if event.logoffCurrentUser and (startOpsiCredentialProvider == 1):
@@ -1446,9 +1455,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._statusSubject.setMessage(_("Getting action requests from config service"))
 		statusApplicationProcess = None
 		try:
-			desktop = 'winlogon'
-			#desktop = 'default'
 			activeSessionId = windll.kernel32.WTSGetActiveConsoleSessionId()
+			desktop = self.getCurrentActiveDesktopName()
+			if not desktop or desktop.lower() not in ('winlogon', 'default'):
+				desktop = 'winlogon'
+			
 			statusApplication = self._config['opsiclientd_notifier']['command']
 			statusApplicationProcess = None
 			if statusApplication:
@@ -1489,7 +1500,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				
 				actionProcessor = self._config['action_processor']['command']
 				if actionProcessor:
-					actionProcessor = actionProcessor.replace('%config_service_host%', self._config['config_service']['host'])
+					actionProcessor = actionProcessor.replace('%config_service.host%', self._config['config_service']['host'])
 					actionProcessor = actionProcessor.replace('%config_service.port%', self._config['config_service']['port'])
 					actionProcessor = actionProcessor.replace('%config_service.url%', self._config['config_service']['url'])
 					actionProcessor = actionProcessor.replace('%host_id%', self._config['host_id'])
@@ -1498,6 +1509,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				else:
 					logger.error("No action processor command defined")
 				
+				System.umount(networkConfig['depotDrive'])
+			
 			self._statusSubject.setMessage( _("Finished processing action requests") )
 			
 			shutdownRequested = 0
@@ -1577,6 +1590,14 @@ class Opsiclientd(EventListener, threading.Thread):
 				if 'server' not in m['availability']:
 					raise Exception("Access denied")
 				break
+		
+		if (method == 'getPossibleMethods_listOfHashes'):
+			pm = []
+			for m in self._possibleMethods:
+				if 'server' in m['availability']:
+					pm.append(m)
+			return pm
+		
 		return self.executeRpc(method, params)
 		
 	def executePipeRpc(self, method, params=[]):
@@ -1585,6 +1606,14 @@ class Opsiclientd(EventListener, threading.Thread):
 				if 'pipe' not in m['availability']:
 					raise Exception("Access denied")
 				break
+		
+		if (method == 'getPossibleMethods_listOfHashes'):
+			pm = []
+			for m in self._possibleMethods:
+				if 'pipe' in m['availability']:
+					pm.append(m)
+			return pm
+		
 		return self.executeRpc(method, params)
 		
 	def executeRpc(self, method, params=[]):
@@ -1604,7 +1633,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			raise NotImplementedError("Method '%s' not known" % method)
 		
 		try:
-			if   (method == 'getBlockLogin'):
+			if (method == 'getBlockLogin'):
 				return self._blockLogin
 			
 			elif (method == 'setBlockLogin'):
@@ -1660,13 +1689,25 @@ class Opsiclientd(EventListener, threading.Thread):
 					wait = int(params[0])
 				System.reboot(wait = wait)
 			
+			elif (method == 'getCurrentActiveDesktopName'):
+				return self.getCurrentActiveDesktopName()
+			
+			elif (method == 'setCurrentActiveDesktopName'):
+				self._CurrentActiveDesktopName = str(params[0])
+			
 			else:
 				raise NotImplementedError("Method '%s' not implemented" % method)
 			
 		except Exception, e:
 			logger.logException(e)
 			raise
-		
+	
+	def getCurrentActiveDesktopName(self):
+		cmd = '''pythonw.exe -c "from OPSI import System;from OPSI.Backend.JSONRPC import JSONRPCBackend;JSONRPCBackend(username = '%s', password = '%s', address = 'https://localhost:%s/rpc').setCurrentActiveDesktopName(System.getActiveDesktopName())"''' \
+				% (self._config['host_id'], self._config['opsi_host_key'], self._config['control_server']['port'])
+		System.runAsSystemInSession(command = cmd, waitForProcessEnding = True)
+		return self._CurrentActiveDesktopName
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         OPSICLIENTD INIT                                          -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
