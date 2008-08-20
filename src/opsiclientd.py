@@ -32,10 +32,10 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.1.3'
+__version__ = '0.1.4'
 
 # Imports
-import os, sys, threading, time, json, urllib, base64, socket
+import os, sys, threading, time, json, urllib, base64, socket, re
 from OpenSSL import SSL
 
 if (os.name == 'posix'):
@@ -1150,8 +1150,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			{ 'name': 'lockWorkstation',                 'params': [ ],                       'availability': ['server'] },
 			{ 'name': 'setStatusMessage',                'params': [ 'message' ],             'availability': ['server'] },
 			{ 'name': 'readLog',                         'params': [ '*type' ],               'availability': ['server'] },
-			{ 'name': 'shutdown',                        'params': [ 'wait' ],                'availability': ['server'] },
-			{ 'name': 'reboot',                          'params': [ 'wait' ],                'availability': ['server'] },
+			{ 'name': 'shutdown',                        'params': [ '*wait' ],               'availability': ['server'] },
+			{ 'name': 'reboot',                          'params': [ '*wait' ],               'availability': ['server'] },
 			{ 'name': 'getCurrentActiveDesktopName',     'params': [ ],                       'availability': ['server'] },
 			{ 'name': 'setCurrentActiveDesktopName',     'params': [ 'desktop' ],             'availability': ['server'] },
 		]
@@ -1313,11 +1313,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._running = True
 		
 		self.readConfigFile()
-		logger.comment(	"\n==================================================================\n" \
-				+ "              opsiclientd version " + str(__version__) + " started" + \
-				"\n==================================================================\n")
 		
 		try:
+			logger.comment("Opsiclientd version: %s" % __version__)
 			logger.comment("Commandline: %s" % ' '.join(sys.argv))
 			logger.comment("Working directory: %s" % os.getcwd())
 			logger.notice("Using host id '%s'" % self._config['global']['host_id'])
@@ -1707,13 +1705,13 @@ class Opsiclientd(EventListener, threading.Thread):
 			
 			elif (method == 'shutdown'):
 				wait = 0
-				if type(params[0]) is int:
+				if (len(params) > 0) and type(params[0]) is int:
 					wait = int(params[0])
 				System.shutdown(wait = wait)
 			
 			elif (method == 'reboot'):
 				wait = 0
-				if type(params[0]) is int:
+				if (len(params) > 0) and type(params[0]) is int:
 					wait = int(params[0])
 				System.reboot(wait = wait)
 			
