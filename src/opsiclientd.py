@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re
@@ -1239,6 +1239,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		try:
 			# Read config file
+			self._statusSubject.setMessage( _("Updating config file") )
 			config = File().readIniFile(self._config['global']['config_file'], raw = True)
 			changed = False
 			for (section, value) in self._config.items():
@@ -1299,6 +1300,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	def writeLogToService(self):
 		logger.notice("Writing log to service")
 		try:
+			self._statusSubject.setMessage( _("Writing log to service") )
 			if not self._configService:
 				raise Exception("not connected")
 			
