@@ -192,10 +192,10 @@ class OpsiDialogWindow(NotificationObserver):
 				elif  (key == 'closeable') and toBool(value): self.skin[item]['style'] |= win32con.WS_SYSMENU
 				elif  (key == 'resizable') and toBool(value): self.skin[item]['style'] |= win32con.WS_THICKFRAME
 				elif  (key == 'minimizable') and toBool(value): self.skin[item]['style'] |= win32con.WS_MINIMIZEBOX
-				elif  (key == 'left'):          self.skin[item]['left'] = int(value)
-				elif  (key == 'top'):           self.skin[item]['top'] = int(value)
-				elif  (key == 'width'):         self.skin[item]['width'] = int(value)
-				elif  (key == 'height'):        self.skin[item]['height'] = int(value)
+				elif  (key == 'left'):          self.skin[item]['left'] = int(int(value)/2)
+				elif  (key == 'top'):           self.skin[item]['top'] = int(int(value)/2)
+				elif  (key == 'width'):         self.skin[item]['width'] = int(int(value)/2)
+				elif  (key == 'height'):        self.skin[item]['height'] = int(int(value)/2)
 				elif  (key == 'fontname'):      self.skin[item]['font'].lfFaceName = value.strip()
 				elif  (key == 'fontsize'):      self.skin[item]['font'].lfHeight = int(value)
 				elif  (key == 'fontweight'):    self.skin[item]['font'].lfWeight = int(value)
