@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2'
+__version__ = '0.2.1'
 
 # Imports
 import threading, time, sys, os, getopt
@@ -56,6 +56,7 @@ logFile = 'status_window.log'
 transparentColor = (0,0,0)
 host = '127.0.0.1'
 port = 4442
+skin = 'skin.ini'
 
 BYTE = c_ubyte
 LONG = c_long
@@ -80,7 +81,6 @@ class OpsiDialogWindow(NotificationObserver):
 		win32gui.InitCommonControls()
 		self.hinst = win32gui.dllhandle
 		self.wndClassName = "OpsiDialog"
-		self._skinFile = 'skin.ini'
 		
 		self.loadSkin()
 		
@@ -139,7 +139,7 @@ class OpsiDialogWindow(NotificationObserver):
 				return False
 			return True
 		
-		ini = File().readIniFile(self._skinFile)
+		ini = File().readIniFile(skin)
 		
 		self.skin = {
 			'form': {
@@ -560,10 +560,11 @@ class OpsiDialogWindow(NotificationObserver):
 		logger.debug("subjectsChanged() ended")
 
 def usage():
-	print "\nUsage: %s [-h <host>] [-p <port>]" % os.path.basename(sys.argv[0])
+	print "\nUsage: %s [-h <host>] [-p <port>] [-s <skin>]" % os.path.basename(sys.argv[0])
 	print "Options:"
 	print "  -h, --host      Notification server host (default: %s)" % host
 	print "  -p, --port      Notification server port (default: %s)" % port
+	print "  -s, --skin      Skin to use (default: %s)" % skin
 
 if (__name__ == "__main__"):
 	# If you write to stdout when running from pythonw.exe program will die !!!
@@ -584,7 +585,7 @@ if (__name__ == "__main__"):
 		
 		# Process command line arguments
 		try:
-			(opts, args) = getopt.getopt(sys.argv[1:], "h:p:", [ "host=", "port=" ])
+			(opts, args) = getopt.getopt(sys.argv[1:], "h:p:s:", [ "host=", "port=", "skin=" ])
 		except getopt.GetoptError:
 			usage()
 			sys.exit(1)
@@ -595,8 +596,10 @@ if (__name__ == "__main__"):
 				host = arg
 			elif opt in ("-p", "--port"):
 				port = int(arg)
+			elif opt in ("-s", "--skin"):
+				skin = arg
 		
-		logger.notice("Host: %s, port: %s" % (host, port))
+		logger.notice("Host: %s, port: %s, skin: %s" % (host, port, skin))
 		w = OpsiDialogWindow()
 		w.CreateWindow()
 		# PumpMessages runs until PostQuitMessage() is called by someone.

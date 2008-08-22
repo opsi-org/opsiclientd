@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.1.4'
+__version__ = '0.1.8'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re
@@ -64,7 +64,7 @@ from OPSI.Backend.JSONRPC import JSONRPCBackend
 
 # Create logger instance
 logger = Logger()
-logger.setFileFormat('%D (%l) %M (%F|%N)')
+logger.setFileFormat('[%D] [%L] %M (%F|%N)')
 
 # Possible event types
 EVENT_TYPE_DAEMON_STARTUP = 'opsiclientd start'
@@ -103,7 +103,7 @@ class Event(object):
 			raise TypeError("Unkown event type %s" % type)
 		self._type = type
 		self._eventListeners = []
-		logger.setFileFormat('%D (%l) [event ' + str(self._type) + '] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%D] [%L] <event ' + str(self._type) + '] %M (%F|%N)', object=self)
 		
 	def __str__(self):
 		return "<Event %s>" % self.getType()
@@ -221,7 +221,7 @@ class EventListener(object):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlPipe(threading.Thread):
 	def __init__(self, opsiclientd):
-		logger.setFileFormat('%D (%l) [control pipe] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%D] [%L] [control pipe] %M (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._pipe = None
@@ -332,7 +332,7 @@ class PosixControlPipe(ControlPipe):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class NTControlPipeConnection(threading.Thread):
 	def __init__(self, ntControlPipe, pipe, bufferSize):
-		logger.setFileFormat('%D (%l) [control pipe] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%D] [%L] [control pipe] %M (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._ntControlPipe = ntControlPipe
 		self._pipe = pipe
@@ -499,7 +499,7 @@ class ControlServerResourceRoot(resource.Resource):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServerResourceJsonRpc(resource.Resource):
 	def __init__(self, opsiclientd):
-		logger.setFileFormat('%D (%l) [control server] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%D] [%L] [control server] %M (%F|%N)', object=self)
 		resource.Resource.__init__(self)
 		self._opsiclientd = opsiclientd
 		
@@ -526,7 +526,7 @@ class ControlServerResourceJsonRpc(resource.Resource):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 	def __init__(self, opsiclientd):
-		logger.setFileFormat('%D (%l) [control server] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%D] [%L] [control server] %M (%F|%N)', object=self)
 		ControlServerResourceJsonRpc.__init__(self, opsiclientd)
 	
 	def http_POST(self, request):
@@ -546,7 +546,7 @@ class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class JsonRpcWorker(object):
 	def __init__(self, request, opsiclientd, method = 'POST'):
-		logger.setFileFormat('%D (%l) [control server] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%D] [%L] [control server] %M (%F|%N)', object=self)
 		self.request = request
 		self._opsiclientd = opsiclientd
 		self.method = method
@@ -944,7 +944,7 @@ class JsonInterfaceWorker(JsonRpcWorker):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServer(threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
-		logger.setFileFormat('%D (%l) [control server] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%D] [%L] [control server] %M (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._httpsPort = httpsPort
@@ -1008,7 +1008,7 @@ class ControlServer(threading.Thread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, notificationServer, statusObject, waitBeforeConnect=0):
-		logger.setFileFormat('%D (%l) [service connection] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%D] [%L] [service connection] %M (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username
@@ -1036,7 +1036,7 @@ class ServiceConnectionThread(KillableThread):
 			self._notificationServer.addSubject(self._choiceSubject)
 			
 			timeout = int(self._waitBeforeConnect)
-			while(timeout >= 0) and not self.canceled:
+			while(timeout > 0) and not self.canceled:
 				logger.info("Waiting for user to cancel connect")
 				self._statusSubject.setMessage("Waiting for user to cancel connect (%d)" % timeout)
 				timeout -= 1
@@ -1084,12 +1084,13 @@ class ServiceConnectionThread(KillableThread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
-		logger.setFileFormat('%D (%l) [opsiclientd] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%D] [%L] [opsiclientd] %M (%F|%N)', object=self)
 		logger.debug("Opsiclient initiating")
 		
 		EventListener.__init__(self)
 		threading.Thread.__init__(self) 
 		
+		self._startupTime = time.time()
 		self._running = False
 		self._configService = None
 		self._daemonStartupEvent = DaemonStartupEvent()
@@ -1103,6 +1104,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._processingActionRequests = False
 		self._blockLogin = True
 		self._CurrentActiveDesktopName = None
+		
+		self._statusApplicationProcess = None
 		
 		self._statusSubject = MessageSubject('status')
 		self._serviceUrlSubject = MessageSubject('configServiceUrl')
@@ -1152,6 +1155,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			{ 'name': 'readLog',                         'params': [ '*type' ],               'availability': ['server'] },
 			{ 'name': 'shutdown',                        'params': [ '*wait' ],               'availability': ['server'] },
 			{ 'name': 'reboot',                          'params': [ '*wait' ],               'availability': ['server'] },
+			{ 'name': 'uptime',                          'params': [ ],                       'availability': ['server'] },
 			{ 'name': 'getCurrentActiveDesktopName',     'params': [ ],                       'availability': ['server'] },
 			{ 'name': 'setCurrentActiveDesktopName',     'params': [ 'desktop' ],             'availability': ['server'] },
 		]
@@ -1272,8 +1276,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		try:
 			self._statusSubject.setMessage(_("Getting config from service"))
 			
-			if not self._configService:
-				self.connectConfigServer(waitBeforeConnect = False)
+			self.connectConfigServer()
 			
 			for (key, value) in self._configService.getGeneralConfig_hash(self._config['global']['host_id']).items():
 				try:
@@ -1348,8 +1351,8 @@ class Opsiclientd(EventListener, threading.Thread):
 								address  = self._config['notification_server']['interface'],
 								port     = self._config['notification_server']['port'],
 								subjects = [ self._statusSubject, self._serviceUrlSubject, self._clientIdSubject ] )
-				logger.setLogFormat('%D (%l) [notification server] %M (%F|%N)', object=self._notificationServer)
-				logger.setLogFormat('%D (%l) [notification server] %M (%F|%N)', object=self._notificationServer.getFactory())
+				logger.setLogFormat('[%D] [%L] [notification server] %M (%F|%N)', object=self._notificationServer)
+				logger.setLogFormat('[%D] [%L] [notification server] %M (%F|%N)', object=self._notificationServer.getFactory())
 				self._notificationServer.start()
 				logger.notice("Notification server started")
 			except Exception, e:
@@ -1403,54 +1406,127 @@ class Opsiclientd(EventListener, threading.Thread):
 		if (self._config['config_service']['host'].find(':') != -1):
 			(self._config['config_service']['host'], self._config['config_service']['port']) = self._config['config_service']['host'].split(':', 1)
 		self._serviceUrlSubject.setMessage(self._config['config_service']['url'])
+	
+	def startStatusApplication(self):
+		if self._statusApplicationProcess:
+			# Already running
+			return
 		
+		statusApplication = self._config['opsiclientd_notifier']['command']
+		if not statusApplication:
+			return
+		
+		statusApplication = statusApplication.replace('%notification_server.port%', str(self._config['notification_server']['port']))
+		
+		activeSessionId = System.getActiveConsoleSessionId()
+		desktop = self.getCurrentActiveDesktopName()
+		if not desktop or desktop.lower() not in ('winlogon', 'default'):
+			desktop = 'winlogon'
+		
+		logger.notice("Starting status application in session '%s' on desktop '%s'" % (activeSessionId, desktop))
+		self._statusApplicationProcess = System.runAsSystemInSession(command = statusApplication, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding=False)[0]
+		time.sleep(5)
+	
+	def stopStatusApplication(self):
+		if not self._statusApplicationProcess:
+			# Not running
+			return
+		time.sleep(2)
+		logger.notice("Stopping status application")
+		try:
+			System.terminateProcess(self._statusApplicationProcess)
+		except Exception, e:
+			logger.error("Failed to terminate statusApplicationProcess: %s" % e)
+		self._statusApplicationProcess = None
+	
+	def startActionProcessor(self):
+		actionProcessor = self._config['action_processor']['command']
+		if not actionProcessor:
+			logger.error("No action processor command defined")
+			return
+		
+		actionProcessor = actionProcessor.replace('%config_service.host%', self._config['config_service']['host'])
+		actionProcessor = actionProcessor.replace('%config_service.port%', self._config['config_service']['port'])
+		actionProcessor = actionProcessor.replace('%config_service.url%', self._config['config_service']['url'])
+		actionProcessor = actionProcessor.replace('%global.host_id%', self._config['global']['host_id'])
+		actionProcessor = actionProcessor.replace('%global.opsi_host_key%', self._config['global']['opsi_host_key'])
+		
+		activeSessionId = System.getActiveConsoleSessionId()
+		desktop = self.getCurrentActiveDesktopName()
+		if not desktop or desktop.lower() not in ('winlogon', 'default'):
+			desktop = 'winlogon'
+		
+		logger.notice("Starting action processor in session '%s' on desktop '%s'" % (activeSessionId, desktop))
+		self._statusSubject.setMessage( _("Starting action processor") )
+		
+		#self.stopStatusApplication()
+		System.runAsSystemInSession(command = actionProcessor, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding = True)
+		
+		logger.notice("Action processor ended")
+		self._statusSubject.setMessage( _("Action processor ended") )
+		#self.startStatusApplication()
+	
+	def waitForGUI(self):
+		logger.notice("Waiting for GUI to start")
+		logger.info("Waiting for winlogon to start")
+		while not System.getPids("winlogon.exe"):
+			logger.debug("   winlogon not running, sleeping 5 seconds...")
+			time.sleep(5)
+		logger.info("winlogon running")
+	
 	def processEvent(self, event):
 		logger.notice("Processing event %s" % event)
 		self._statusSubject.setMessage( _("Processing event %s") % event )
 		try:
 			if isinstance(event, DaemonStartupEvent):
+				self._blockLogin = True
+				
+				self.waitForGUI()
+				self.startStatusApplication()
 				self.getConfigFromService()
 				self.writeConfigFile()
 				
-				startOpsiCredentialProvider = 0
-				try:
-					startOpsiCredentialProvider = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Provider Filters\\{d2028e19-82fe-44c6-ad64-51497c97a02a}", "StartOpsiCredentialProvider")
-				except Exception, e:
-					logger.warning("Failed to get StartOpsiCredentialProvider from registry: %s" % e)
-				logger.info("startOpsiCredentialProvider: %s" % startOpsiCredentialProvider)
+				#startOpsiCredentialProvider = 0
+				#try:
+				#	startOpsiCredentialProvider = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Provider Filters\\{d2028e19-82fe-44c6-ad64-51497c97a02a}", "StartOpsiCredentialProvider")
+				#except Exception, e:
+				#	logger.warning("Failed to get StartOpsiCredentialProvider from registry: %s" % e)
+				#logger.info("startOpsiCredentialProvider: %s" % startOpsiCredentialProvider)
 				
 				self.processProductActionRequests()
 				
 				self._blockLogin = False
-				if (startOpsiCredentialProvider == 1):
-					# Opsi credential provider was started
-					# restart winlogon.exe to start opsi credential provider filter again
-					System.logoffCurrentUser()
+				
+				#if (startOpsiCredentialProvider == 1):
+				#	# Opsi credential provider was started
+				#	# restart winlogon.exe to start opsi credential provider filter again
+				#	System.logoffCurrentUser()
 				
 			elif isinstance(event, ProcessActionRequestEvent):
-				startOpsiCredentialProvider = 1
-				try:
-					startOpsiCredentialProvider = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Provider Filters\\{d2028e19-82fe-44c6-ad64-51497c97a02a}", "StartOpsiCredentialProvider")
-				except Exception, e:
-					logger.warning("Failed to get StartOpsiCredentialProvider from registry: %s" % e)
-				logger.info("startOpsiCredentialProvider: %s" % startOpsiCredentialProvider)
+				#startOpsiCredentialProvider = 1
+				#try:
+				#	startOpsiCredentialProvider = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Provider Filters\\{d2028e19-82fe-44c6-ad64-51497c97a02a}", "StartOpsiCredentialProvider")
+				#except Exception, e:
+				#	logger.warning("Failed to get StartOpsiCredentialProvider from registry: %s" % e)
+				#logger.info("startOpsiCredentialProvider: %s" % startOpsiCredentialProvider)
 				if event.logoffCurrentUser:
 					self._blockLogin = True
 					System.logoffCurrentUser()
 					time.sleep(15)
-					#System.logoffCurrentUser()
-					#time.sleep(10)
-					
+				
+				self.startStatusApplication()
 				self.processProductActionRequests()
 				
-				if event.logoffCurrentUser and (startOpsiCredentialProvider == 1):
-					System.logoffCurrentUser()
+				#if event.logoffCurrentUser and (startOpsiCredentialProvider == 1):
+				#	System.logoffCurrentUser()
 			
 		except Exception, e:
 			logger.error("Failed to process event %s: %s" % (event, e))
 			logger.logException(e)
 		self._blockLogin = False
 		self.writeLogToService()
+		self.disconnectConfigServer()
+		self.stopStatusApplication()
 		
 	def processProductActionRequests(self):
 		if self._processingActionRequests:
@@ -1466,17 +1542,6 @@ class Opsiclientd(EventListener, threading.Thread):
 			except Exception, e:
 				logger.warning("Failed to get bootmode from registry: %s" % e)
 			
-			activeSessionId = windll.kernel32.WTSGetActiveConsoleSessionId()
-			desktop = self.getCurrentActiveDesktopName()
-			if not desktop or desktop.lower() not in ('winlogon', 'default'):
-				desktop = 'winlogon'
-			
-			statusApplication = self._config['opsiclientd_notifier']['command']
-			statusApplicationProcess = None
-			if statusApplication:
-				statusApplication = statusApplication.replace('%notification_server.port%', str(self._config['notification_server']['port']))
-				statusApplicationProcess = System.runAsSystemInSession(command = statusApplication, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding=False)[0]
-				time.sleep(5)
 			self.connectConfigServer()
 			actionRequests = self._configService.getProductActionRequests_listOfHashes(self._config['global']['host_id'])
 			logger.notice("Got product action requests from configservice")
@@ -1500,30 +1565,16 @@ class Opsiclientd(EventListener, threading.Thread):
 				encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
 				pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
 				
-				logger.notice("Connecting depot share")
-				System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password=pcpatchPassword)
-				if statusApplicationProcess:
-					time.sleep(5)
-					try:
-						System.terminateProcess(statusApplicationProcess)
-					except Exception, e:
-						logger.error("Failed to terminate statusApplicationProcess: %s" % e)
-					statusApplicationProcess = None
+				logger.notice("Mounting depot share")
+				self._statusSubject.setMessage( _("Mounting depot share %s" % depot['depotRemoteUrl']) )
 				
-				actionProcessor = self._config['action_processor']['command']
-				if actionProcessor:
-					actionProcessor = actionProcessor.replace('%config_service.host%', self._config['config_service']['host'])
-					actionProcessor = actionProcessor.replace('%config_service.port%', self._config['config_service']['port'])
-					actionProcessor = actionProcessor.replace('%config_service.url%', self._config['config_service']['url'])
-					actionProcessor = actionProcessor.replace('%global.host_id%', self._config['global']['host_id'])
-					actionProcessor = actionProcessor.replace('%global.opsi_host_key%', self._config['global']['opsi_host_key'])
-					System.runAsSystemInSession(command = actionProcessor, sessionId = activeSessionId, desktop = desktop)
-				else:
-					logger.error("No action processor command defined")
+				System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password=pcpatchPassword)
+				
+				self.startActionProcessor()
 				
 				System.umount(networkConfig['depotDrive'])
 			
-			self._statusSubject.setMessage( _("Finished processing action requests") )
+				self._statusSubject.setMessage( _("Finished processing action requests") )
 			
 			rebootRequested = 0
 			try:
@@ -1559,15 +1610,16 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		self._processingActionRequests = False
 	
-	def connectConfigServer(self, waitBeforeConnect = True):
-		if waitBeforeConnect:
-			waitBeforeConnect = self._config['config_service']['wait_before_connect']
-		else:
-			waitBeforeConnect = 0
+	def connectConfigServer(self):
+		if self._configService:
+			# Already connected
+			return
+		
+		waitBeforeConnect = self._config['config_service']['wait_before_connect']
 		
 		logger.debug("Creating ServiceConnectionThread")
 		
-		self._serviceConnectionThread = ServiceConnectionThread(
+		serviceConnectionThread = ServiceConnectionThread(
 					configServiceUrl    = self._config['config_service']['url'],
 					username            = self._config['global']['host_id'],
 					password            = self._config['global']['opsi_host_key'],
@@ -1577,29 +1629,31 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		timeout = int(self._config['config_service']['connection_timeout'])
 		logger.info("Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
-		self._serviceConnectionThread.start()
+		serviceConnectionThread.start()
 		time.sleep(1)
 		logger.debug("ServiceConnectionThread started")
-		while self._serviceConnectionThread.running and (timeout > 0):
+		while serviceConnectionThread.running and (timeout > 0):
 			logger.debug("Waiting for ServiceConnectionThread (timeout: %d)..." % timeout)
 			time.sleep(1)
 			timeout -= 1
 		
-		if self._serviceConnectionThread.canceled:
+		if serviceConnectionThread.canceled:
 			logger.error("ServiceConnectionThread canceled by user")
 			raise Exception("Failed to connect to config service '%s': canceled by user" % \
 						self._config['config_service']['url'] )
-		elif self._serviceConnectionThread.running:
+		elif serviceConnectionThread.running:
 			logger.error("ServiceConnectionThread timed out after %d seconds" % self._config['config_service']['connection_timeout'])
-			self._serviceConnectionThread.stop()
+			serviceConnectionThread.stop()
 			raise Exception("Failed to connect to config service '%s': timed out after %d seconds" % \
 						(self._config['config_service']['url'], self._config['config_service']['connection_timeout']) )
 			
-		if not self._serviceConnectionThread.connected:
+		if not serviceConnectionThread.connected:
 			raise Exception("Failed to connect to config service '%s': reason unknown" % self._config['config_service']['url'])
 		
-		self._configService = self._serviceConnectionThread.configService
-		
+		self._configService = serviceConnectionThread.configService
+	
+	def disconnectConfigServer(self):
+		self._configService = None
 		
 	def getPossibleMethods(self):
 		return self._possibleMethods
@@ -1654,10 +1708,12 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		try:
 			if (method == 'getBlockLogin'):
+				logger.notice("rpc getBlockLogin: blockLogin is '%s'" % self._blockLogin)
 				return self._blockLogin
 			
 			elif (method == 'setBlockLogin'):
 				self._blockLogin = bool(params[0])
+				logger.notice("rpc setBlockLogin: blockLogin set to '%s'" % self._blockLogin)
 				if self._blockLogin:
 					return "Login blocker is on"
 				else:
@@ -1671,29 +1727,39 @@ class Opsiclientd(EventListener, threading.Thread):
 					desktop = str(params[1])
 				else:
 					desktop = self.getCurrentActiveDesktopName()
+				logger.notice("rpc runCommand: executing command '%s' on desktop '%s'" % (params[0], desktop))
 				System.runAsSystemInSession(command = str(params[0]), sessionId = None, desktop = desktop, waitForProcessEnding = False)
 				return "command '%s' executed" % str(params[0])
 			
 			elif (method == 'logoffCurrentUser'):
+				logger.notice("rpc logoffCurrentUser: logging of current user now")
 				System.logoffCurrentUser()
 				
 			elif (method == 'lockWorkstation'):
+				logger.notice("rpc lockWorkstation: locking workstation now")
 				System.lockWorkstation()
 				
 			elif (method == 'processProductActionRequests'):
 				if self._processingActionRequests:
+					logger.notice("rpc processProductActionRequests: Already processing action requests")
 					return "Already processing action requests"
+				logger.notice("rpc processProductActionRequests: Start processing action requests")
 				self._processActionRequestsEvent.logoffCurrentUser = bool(params[0])
 				self._processActionRequestsEvent.fire()
 				return "Processing action requests started"
 			
 			elif (method == 'setStatusMessage'):
-				self._statusSubject.setMessage(str(params[0]))
+				message = params[0]
+				if not type(message) in (str, unicode):
+					message = ""
+				logger.notice("rpc setStatusMessage: Setting status message to '%s'" % message)
+				self._statusSubject.setMessage(message)
 			
 			elif (method == 'readLog'):
 				logType = 'opsiclientd'
 				if (len(params) > 0) and params[0]:
 					logType = str(params[0])
+				logger.notice("rpc readLog: reading log of type '%s'" % logType)
 				if not logType in ('opsiclientd'):
 					raise ValueError("Unknown log type '%s'" % logType)
 				if (logType == 'opsiclientd'):
@@ -1707,19 +1773,29 @@ class Opsiclientd(EventListener, threading.Thread):
 				wait = 0
 				if (len(params) > 0) and type(params[0]) is int:
 					wait = int(params[0])
+				logger.notice("rpc shutdown: shutting down computer in %s seconds" % wait)
 				System.shutdown(wait = wait)
 			
 			elif (method == 'reboot'):
 				wait = 0
 				if (len(params) > 0) and type(params[0]) is int:
 					wait = int(params[0])
+				logger.notice("rpc reboot: rebooting computer in %s seconds" % wait)
 				System.reboot(wait = wait)
 			
+			elif (method == 'uptime'):
+				uptime = int(time.time() - self._startupTime)
+				logger.notice("rpc uptime: opsiclientd is running for %d seconds")
+				return uptime
+			
 			elif (method == 'getCurrentActiveDesktopName'):
-				return self.getCurrentActiveDesktopName()
+				desktop = self.getCurrentActiveDesktopName()
+				logger.notice("rpc getCurrentActiveDesktopName: current active desktop name is '%s'" % desktop)
+				return desktop
 			
 			elif (method == 'setCurrentActiveDesktopName'):
 				self._CurrentActiveDesktopName = str(params[0])
+				logger.notice("rpc setCurrentActiveDesktopName: current active desktop name set to '%s'" % params[0])
 			
 			else:
 				raise NotImplementedError("Method '%s' not implemented" % method)
