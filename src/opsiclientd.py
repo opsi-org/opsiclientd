@@ -35,7 +35,7 @@
 __version__ = '0.1.9'
 
 # Imports
-import os, sys, threading, time, json, urllib, base64, socket, re
+import os, sys, threading, time, json, urllib, base64, socket, re, shutils, filescmp
 from OpenSSL import SSL
 
 if (os.name == 'posix'):
@@ -1139,6 +1139,9 @@ class Opsiclientd(EventListener, threading.Thread):
 				'command':               '',
 			},
 			'action_processor': {
+				'filelocation_local':		'',
+				'filelocation_on_share':	'';
+				'filename':		'winst32.exe';
 				'command':               '',
 			},
 		}
@@ -1164,6 +1167,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 	def isRunning(self):
 		return self._running
+		
 	
 	def setConfigValue(self, section, option, value):
 		if not section:
@@ -1447,6 +1451,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.error("No action processor command defined")
 			return
 		
+		winst_localfile = self._updateWinst()
+				
+		actionProcessor = actionProcessor.replace('%programfilename%', winst_localfile)
 		actionProcessor = actionProcessor.replace('%config_service.host%', self._config['config_service']['host'])
 		actionProcessor = actionProcessor.replace('%config_service.port%', self._config['config_service']['port'])
 		actionProcessor = actionProcessor.replace('%config_service.url%', self._config['config_service']['url'])
@@ -1530,6 +1537,65 @@ class Opsiclientd(EventListener, threading.Thread):
 		self.disconnectConfigServer()
 		self.stopStatusApplication()
 		
+	
+	def filesDiffer(self, file1, file2)
+		time_diff = 10
+		if  ( abs( os.stat(file1)[-1] - os.stat(file2)[-1] ) > time_diff )  or  not (filecmp.cmp(file1, file2))
+			return true
+		return none 
+	
+	def updateWinst(self):
+		#the defaults
+		#winst_localdir = "c:\\Program Files\\opsi.org\\preloginloader\\opsi-winst"
+		#winst_remotedir = "p:\\utils"
+		#winst_filename = "winst32.exe"
+		
+		programfilesdir = "C:\\Program files";
+		
+		try:
+			programfilesdir = System.getRegistryValue(System.HKEY_LOCAL_MACHINE,"SOFTWARE\Microsoft\Windows\CurrentVersion","ProgramFilesDir");
+		except Exception, e:
+			logger.warning("Failed to get ProgramFilesDir from registry: %s" % e)
+		
+		
+		if self._config['action_processor']['filename']:
+			winst_filename = self._config['action_processor']['filename']
+		
+		if self._config['action_processor']['filelocation_local']:
+			winst_localdir  =self._config['action_processor']['filelocation_local']
+			winst_localdir.replace('%programfilesdir%', programfilesdir)
+			winst_localfile=winst_localfile + '\\' + winst_filename
+			
+		if self._config['action_processor']['filelocation_on_share']:
+			winst_remotedir = self._config['action_processor']['filelocation_on_share']:
+			winst_remotedir.replace('%depotdir%',networkConfig['depotDrive'])
+			winst_remotefile=winst_remotedir + '\\' + winst_filename
+		
+		
+		#update
+		if files_differ(winst_localfile, winst_remotefile):
+			logger.notice('Start copying the winst files')
+			
+			#updatelist = ['winst1.bmp','winst2.bmp','winst3.bmp','winst1.png','winst2.png','winst3.png','zip32.exe','unzipd32.dll','libeay32.dll','ssleay32.dll','qtinf.dll','qtinf70.dll']
+			
+			
+			try:
+				shutil.rmtree(winst_localdir, ignore_errors=true)
+				shutil.copytree(winst_remotedir, '\\'.join( (winst_localdir.split('\\')[:-1] ) )
+					
+				#shutil.copystat(winst_localfile, winst_remotefile)
+				
+			except Exception, e:
+				logger.warning("Error in copying winst files: %s" % e)
+			
+		else:
+			logger.notice('Local winst exists and seems to be up to date')
+			
+		return winst_localfile
+			
+			
+					
+
 	def processProductActionRequests(self):
 		if self._processingActionRequests:
 			logger.error("Already processing action requests")
@@ -1563,7 +1629,6 @@ class Opsiclientd(EventListener, threading.Thread):
 				
 				networkConfig = self._configService.getNetworkConfig_hash(self._config['global']['host_id'])
 				depot = self._configService.getDepot_hash(networkConfig['depotId'])
-				
 				encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
 				pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
 				
@@ -1571,7 +1636,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._statusSubject.setMessage( _("Mounting depot share %s" % depot['depotRemoteUrl']) )
 				
 				System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password=pcpatchPassword)
-				
+
 				self.startActionProcessor()
 				
 				System.umount(networkConfig['depotDrive'])
