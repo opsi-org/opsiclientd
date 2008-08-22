@@ -32,10 +32,10 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.1.9'
+__version__ = '0.2.1'
 
 # Imports
-import os, sys, threading, time, json, urllib, base64, socket, re, shutils, filescmp
+import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
 from OpenSSL import SSL
 
 if (os.name == 'posix'):
@@ -64,7 +64,7 @@ from OPSI.Backend.JSONRPC import JSONRPCBackend
 
 # Create logger instance
 logger = Logger()
-logger.setFileFormat('[%D] [%L] %M (%F|%N)')
+logger.setFileFormat('[%l] [%D] %M (%F|%N)')
 
 # Possible event types
 EVENT_TYPE_DAEMON_STARTUP = 'opsiclientd start'
@@ -75,6 +75,39 @@ EVENT_TYPE_TIMER = 'timer'
 # Message translation
 def _(msg):
 	return msg
+
+
+
+'''
+= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+=                                             EXEPTIONS                                               =
+= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+=                                                                                                     =
+=                                         Exception classes.                                          =
+=                                                                                                     =
+= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+'''
+class opsiclientdError(Exception):
+	""" Base class for opsiclientd exceptions. """
+	
+	ExceptionShortDescription = "Opsiclientd error"
+	
+	def __init__(self, message = None):
+		self.message = message
+	
+	def __str__(self):
+		return str(self.message)
+	
+	def complete_message(self):
+		if self.message:
+			return "%s: %s" % (self.ExceptionShortDescription, self.message)
+		else:
+			return "%s" % self.ExceptionShortDescription
+
+
+class CanceledByUserError(opsiclientdError):
+	""" Exception raised if user cancels operation. """
+	ExceptionShortDescription = "Canceled by user error"
 
 '''
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -103,7 +136,7 @@ class Event(object):
 			raise TypeError("Unkown event type %s" % type)
 		self._type = type
 		self._eventListeners = []
-		logger.setFileFormat('[%D] [%L] <event ' + str(self._type) + '] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [event ' + str(self._type) + '] %M (%F|%N)', object=self)
 		
 	def __str__(self):
 		return "<Event %s>" % self.getType()
@@ -221,7 +254,7 @@ class EventListener(object):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlPipe(threading.Thread):
 	def __init__(self, opsiclientd):
-		logger.setFileFormat('[%D] [%L] [control pipe] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [control pipe] %M (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._pipe = None
@@ -332,7 +365,7 @@ class PosixControlPipe(ControlPipe):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class NTControlPipeConnection(threading.Thread):
 	def __init__(self, ntControlPipe, pipe, bufferSize):
-		logger.setFileFormat('[%D] [%L] [control pipe] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [control pipe] %M (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._ntControlPipe = ntControlPipe
 		self._pipe = pipe
@@ -499,7 +532,7 @@ class ControlServerResourceRoot(resource.Resource):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServerResourceJsonRpc(resource.Resource):
 	def __init__(self, opsiclientd):
-		logger.setFileFormat('[%D] [%L] [control server] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [control server] %M (%F|%N)', object=self)
 		resource.Resource.__init__(self)
 		self._opsiclientd = opsiclientd
 		
@@ -526,7 +559,7 @@ class ControlServerResourceJsonRpc(resource.Resource):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 	def __init__(self, opsiclientd):
-		logger.setFileFormat('[%D] [%L] [control server] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [control server] %M (%F|%N)', object=self)
 		ControlServerResourceJsonRpc.__init__(self, opsiclientd)
 	
 	def http_POST(self, request):
@@ -546,7 +579,7 @@ class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class JsonRpcWorker(object):
 	def __init__(self, request, opsiclientd, method = 'POST'):
-		logger.setFileFormat('[%D] [%L] [control server] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [control server] %M (%F|%N)', object=self)
 		self.request = request
 		self._opsiclientd = opsiclientd
 		self.method = method
@@ -944,7 +977,7 @@ class JsonInterfaceWorker(JsonRpcWorker):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServer(threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
-		logger.setFileFormat('[%D] [%L] [control server] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [control server] %M (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._httpsPort = httpsPort
@@ -1008,7 +1041,7 @@ class ControlServer(threading.Thread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, notificationServer, statusObject, waitBeforeConnect=0):
-		logger.setFileFormat('[%D] [%L] [service connection] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [service connection] %M (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username
@@ -1084,7 +1117,7 @@ class ServiceConnectionThread(KillableThread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
-		logger.setFileFormat('[%D] [%L] [opsiclientd] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [opsiclientd] %M (%F|%N)', object=self)
 		logger.debug("Opsiclient initiating")
 		
 		EventListener.__init__(self)
@@ -1113,11 +1146,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		self._config = {
 			'global': {
-				'config_file':                 'opsiclientd.conf',
-				'log_file':                    'opsiclientd.log',
-				'log_level':                   LOG_NOTICE,
-				'host_id':                     socket.getfqdn(),
-				'opsi_host_key':               '',
+				'config_file':           'opsiclientd.conf',
+				'log_file':              'opsiclientd.log',
+				'log_level':             LOG_NOTICE,
+				'host_id':               socket.getfqdn(),
+				'opsi_host_key':         '',
 			},
 			'config_service': {
 				'url':                   '',
@@ -1125,23 +1158,23 @@ class Opsiclientd(EventListener, threading.Thread):
 				'wait_before_connect':   5,
 			},
 			'control_server': {
-				'interface':              '0.0.0.0', # TODO
-				'port':                   4441,
-				'ssl_server_key_file':    'opsiclientd.pem',
-				'ssl_server_cert_file':   'opsiclientd.pem',
-				'static_dir':             'static_html',
+				'interface':             '0.0.0.0', # TODO
+				'port':                  4441,
+				'ssl_server_key_file':   'opsiclientd.pem',
+				'ssl_server_cert_file':  'opsiclientd.pem',
+				'static_dir':            'static_html',
 			},
 			'notification_server': {
-				'interface':               '127.0.0.1',
-				'port':                    4442,
+				'interface':             '127.0.0.1',
+				'port':                  4442,
 			},
 			'opsiclientd_notifier': {
 				'command':               '',
 			},
 			'action_processor': {
-				'filelocation_local':		'',
-				'filelocation_on_share':	'';
-				'filename':		'winst32.exe';
+				'local_dir':             '',
+				'remote_dir':            '',
+				'filename':              '',
 				'command':               '',
 			},
 		}
@@ -1297,10 +1330,13 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.notice("Got config from service")
 			self._statusSubject.setMessage(_("Got config from service"))
 			logger.debug("Config is now:\n %s" % Tools.objectToBeautifiedText(self._config))
+		except CanceledByUserError, e:
+			logger.error("Failed to get config from service: %s" % e)
+			raise
 		except Exception, e:
 			logger.error("Failed to get config from service: %s" % e)
 			logger.logException(e)
-		
+	
 	def writeLogToService(self):
 		logger.notice("Writing log to service")
 		try:
@@ -1317,6 +1353,14 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.setFileLevel(self._config['global']['log_level'])
 		except Exception, e:
 			logger.error("Failed to write log to service: %s" % e)
+	
+	def fillPlaceholders(self, string):
+		for (section, values) in self._config.items():
+			if not type(values) is dict:
+				continue
+			for (key, value) in values.items():
+				string = string.replace('%' + str(section) + '.' + str(key) + '%', str(value))
+		return string
 	
 	def run(self):
 		self._running = True
@@ -1357,8 +1401,8 @@ class Opsiclientd(EventListener, threading.Thread):
 								address  = self._config['notification_server']['interface'],
 								port     = self._config['notification_server']['port'],
 								subjects = [ self._statusSubject, self._serviceUrlSubject, self._clientIdSubject ] )
-				logger.setLogFormat('[%D] [%L] [notification server] %M (%F|%N)', object=self._notificationServer)
-				logger.setLogFormat('[%D] [%L] [notification server] %M (%F|%N)', object=self._notificationServer.getFactory())
+				logger.setLogFormat('[%l] [%D] [notification server] %M (%F|%N)', object=self._notificationServer)
+				logger.setLogFormat('[%l] [%D] [notification server] %M (%F|%N)', object=self._notificationServer.getFactory())
 				self._notificationServer.start()
 				logger.notice("Notification server started")
 			except Exception, e:
@@ -1422,7 +1466,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not statusApplication:
 			return
 		
-		statusApplication = statusApplication.replace('%notification_server.port%', str(self._config['notification_server']['port']))
+		statusApplication = self.fillPlaceholders(statusApplication)
 		
 		activeSessionId = System.getActiveConsoleSessionId()
 		desktop = self.getCurrentActiveDesktopName()
@@ -1451,14 +1495,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.error("No action processor command defined")
 			return
 		
-		winst_localfile = self._updateWinst()
-				
-		actionProcessor = actionProcessor.replace('%programfilename%', winst_localfile)
-		actionProcessor = actionProcessor.replace('%config_service.host%', self._config['config_service']['host'])
-		actionProcessor = actionProcessor.replace('%config_service.port%', self._config['config_service']['port'])
-		actionProcessor = actionProcessor.replace('%config_service.url%', self._config['config_service']['url'])
-		actionProcessor = actionProcessor.replace('%global.host_id%', self._config['global']['host_id'])
-		actionProcessor = actionProcessor.replace('%global.opsi_host_key%', self._config['global']['opsi_host_key'])
+		actionProcessor = self.fillPlaceholders(actionProcessor)
 		
 		activeSessionId = System.getActiveConsoleSessionId()
 		desktop = self.getCurrentActiveDesktopName()
@@ -1536,73 +1573,64 @@ class Opsiclientd(EventListener, threading.Thread):
 		self.writeLogToService()
 		self.disconnectConfigServer()
 		self.stopStatusApplication()
-		
 	
-	def filesDiffer(self, file1, file2)
-		time_diff = 10
-		if  ( abs( os.stat(file1)[-1] - os.stat(file2)[-1] ) > time_diff )  or  not (filecmp.cmp(file1, file2))
-			return true
-		return none 
-	
-	def updateWinst(self):
-		#the defaults
-		#winst_localdir = "c:\\Program Files\\opsi.org\\preloginloader\\opsi-winst"
-		#winst_remotedir = "p:\\utils"
-		#winst_filename = "winst32.exe"
+	def updateActionProcessor(self):
+		logger.notice("Updating action processor")
+		self._statusSubject.setMessage(_("Updating action processor"))
 		
-		programfilesdir = "C:\\Program files";
+		self.connectConfigServer()
+		networkConfig = self._configService.getNetworkConfig_hash(self._config['global']['host_id'])
 		
-		try:
-			programfilesdir = System.getRegistryValue(System.HKEY_LOCAL_MACHINE,"SOFTWARE\Microsoft\Windows\CurrentVersion","ProgramFilesDir");
-		except Exception, e:
-			logger.warning("Failed to get ProgramFilesDir from registry: %s" % e)
+		actionProcessorFilename = self._config['action_processor']['filename']
 		
+		actionProcessorLocalDir = self._config['action_processor']['local_dir']
+		actionProcessorLocalTmpDir = self._config['action_processor']['local_dir'] + '.tmp'
+		actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
+		actionProcessorLocalTmpFile = os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)
 		
-		if self._config['action_processor']['filename']:
-			winst_filename = self._config['action_processor']['filename']
+		actionProcessorRemoteDir = os.path.join(networkConfig['depotDrive'], self._config['action_processor']['remote_dir'])
+		actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
 		
-		if self._config['action_processor']['filelocation_local']:
-			winst_localdir  =self._config['action_processor']['filelocation_local']
-			winst_localdir.replace('%programfilesdir%', programfilesdir)
-			winst_localfile=winst_localfile + '\\' + winst_filename
-			
-		if self._config['action_processor']['filelocation_on_share']:
-			winst_remotedir = self._config['action_processor']['filelocation_on_share']:
-			winst_remotedir.replace('%depotdir%',networkConfig['depotDrive'])
-			winst_remotefile=winst_remotedir + '\\' + winst_filename
-		
-		
-		#update
-		if files_differ(winst_localfile, winst_remotefile):
-			logger.notice('Start copying the winst files')
-			
-			#updatelist = ['winst1.bmp','winst2.bmp','winst3.bmp','winst1.png','winst2.png','winst3.png','zip32.exe','unzipd32.dll','libeay32.dll','ssleay32.dll','qtinf.dll','qtinf70.dll']
-			
-			
-			try:
-				shutil.rmtree(winst_localdir, ignore_errors=true)
-				shutil.copytree(winst_remotedir, '\\'.join( (winst_localdir.split('\\')[:-1] ) )
-					
-				#shutil.copystat(winst_localfile, winst_remotefile)
-				
-			except Exception, e:
-				logger.warning("Error in copying winst files: %s" % e)
-			
+		if not os.path.exists(actionProcessorLocalFile):
+			logger.notice("Action processor needs update because file '%s' not found" % actionProcessorLocalFile)
+		elif ( abs(os.stat(actionProcessorLocalFile).st_mtime - os.stat(actionProcessorRemoteFile).st_mtime) > 10 ):
+			logger.notice("Action processor needs update because modification time difference is more than 10 seconds")
+		elif not filecmp.cmp(actionProcessorLocalFile, actionProcessorRemoteFile):
+			logger.notice("Action processor needs update because file changed")
 		else:
-			logger.notice('Local winst exists and seems to be up to date')
-			
-		return winst_localfile
-			
-			
-					
-
+			logger.notice("Local action processor exists and seems to be up to date")
+			return actionProcessorLocalFile
+		
+		# Update files
+		logger.notice("Start copying the action processor files")
+		if os.path.exists(actionProcessorLocalTmpDir):
+			logger.info("Deleting dir '%s'" % actionProcessorLocalTmpDir)
+			shutil.rmtree(actionProcessorLocalTmpDir)
+		logger.info("Copying from '%s' to '%s'" % (actionProcessorRemoteDir, actionProcessorLocalTmpDir))
+		shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
+		
+		if not os.path.exists(actionProcessorLocalTmpFile):
+			raise Exception("File '%s' does not exist after copy" % actionProcessorLocalTmpFile)
+		
+		if os.path.exists(actionProcessorLocalDir):
+			logger.info("Deleting dir '%s'" % actionProcessorLocalDir)
+			shutil.rmtree(actionProcessorLocalDir)
+		
+		logger.info("Moving dir '%s' to '%s'" % (actionProcessorLocalTmpDir, actionProcessorLocalDir))
+		shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
+		
+		logger.notice('Local action processor successfully updated')
+		
+		return actionProcessorLocalFile
+	
 	def processProductActionRequests(self):
 		if self._processingActionRequests:
 			logger.error("Already processing action requests")
 			return
 		self._processingActionRequests = True
 		self._statusSubject.setMessage(_("Getting action requests from config service"))
-		statusApplicationProcess = None
+		
+		depotShareMounted = False
 		try:
 			bootmode = ''
 			try:
@@ -1636,9 +1664,15 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._statusSubject.setMessage( _("Mounting depot share %s" % depot['depotRemoteUrl']) )
 				
 				System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password=pcpatchPassword)
-
+				depotShareMounted = True
+				
+				try:
+					actionProcessorLocalFile = self.updateActionProcessor()
+				except Exception, e:
+					logger.error("Failed to update action processor: %s" % e)
 				self.startActionProcessor()
 				
+				logger.notice("Unmounting depot share")
 				System.umount(networkConfig['depotDrive'])
 			
 				self._statusSubject.setMessage( _("Finished processing action requests") )
@@ -1667,14 +1701,11 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.error("Failed to process product action requests: %s" % e)
 			#logger.logException(e)
 			self._statusSubject.setMessage( _("Failed to process product action requests: %s") % e )
+			if depotShareMounted:
+				logger.notice("Unmounting depot share")
+				System.umount(networkConfig['depotDrive'])
 		
-		if statusApplicationProcess:
-			time.sleep(5)
-			try:
-				System.terminateProcess(statusApplicationProcess)
-			except Exception, e:
-				logger.error("Failed to terminate statusApplicationProcess: %s" % e)
-		
+		time.sleep(3)
 		self._processingActionRequests = False
 	
 	def connectConfigServer(self):
@@ -1706,7 +1737,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		if serviceConnectionThread.canceled:
 			logger.error("ServiceConnectionThread canceled by user")
-			raise Exception("Failed to connect to config service '%s': canceled by user" % \
+			raise CanceledByUserError("Failed to connect to config service '%s': canceled by user" % \
 						self._config['config_service']['url'] )
 		elif serviceConnectionThread.running:
 			logger.error("ServiceConnectionThread timed out after %d seconds" % self._config['config_service']['connection_timeout'])
