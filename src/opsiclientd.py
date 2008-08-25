@@ -1519,8 +1519,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		actionProcessorFilename = self._config['action_processor']['filename']
 		
-		actionProcessorLocalDir = self._config['action_processor']['local_dir']
-		actionProcessorLocalTmpDir = self._config['action_processor']['local_dir'] + '.tmp'
+		actionProcessorLocalDir = self.fillPlaceholders(self._config['action_processor']['local_dir'])
+		actionProcessorLocalTmpDir = self.fillPlaceholders(self._config['action_processor']['local_dir'] + '.tmp')
 		actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
 		actionProcessorLocalTmpFile = os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)
 		
