@@ -1145,6 +1145,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._clientIdSubject = MessageSubject('clientId')
 		
 		self._config = {
+			'system': {
+			},
 			'global': {
 				'config_file':           'opsiclientd.conf',
 				'log_file':              'opsiclientd.log',
@@ -1178,6 +1180,10 @@ class Opsiclientd(EventListener, threading.Thread):
 				'command':               '',
 			},
 		}
+		try:
+			self._config['system']['program_files_dir'] = System.getProgramFilesDir()
+		except Exception, e:
+			logger.warning("Failed to get programFilesDir: %s" % e)
 		
 		self._possibleMethods = [
 			{ 'name': 'getPossibleMethods_listOfHashes', 'params': [ ],                       'availability': ['server', 'pipe'] },
@@ -1211,6 +1217,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		section = str(section).strip().lower()
 		option = str(option).strip().lower()
 		value = value.strip()
+		
+		if section in ('system'):
+			return
 		
 		if option in ('log_level', 'port'):
 			value = int(value)
@@ -1281,6 +1290,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			changed = False
 			for (section, value) in self._config.items():
 				if not type(value) is dict:
+					continue
+				if section in ('system'):
 					continue
 				if not config.has_section(section):
 					config.add_section(section)
