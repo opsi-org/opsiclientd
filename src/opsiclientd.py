@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -105,9 +105,9 @@ class opsiclientdError(Exception):
 			return "%s" % self.ExceptionShortDescription
 
 
-class CanceledByUserError(opsiclientdError):
+class CancelledByUserError(opsiclientdError):
 	""" Exception raised if user cancels operation. """
-	ExceptionShortDescription = "Canceled by user error"
+	ExceptionShortDescription = "Cancelled by user error"
 
 '''
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -1053,14 +1053,14 @@ class ServiceConnectionThread(KillableThread):
 		self.configService = None
 		self.running = False
 		self.connected = False
-		self.canceled = False
+		self.cancelled = False
 		
 	def run(self):
 		try:
 			logger.debug("ServiceConnectionThread started...")
 			self.running = True
 			self.connected = False
-			self.canceled = False
+			self.cancelled = False
 			
 			self._choiceSubject = ChoiceSubject(id = 'stopConnecting')
 			#self._choiceSubject.setMessage("Connecting to config server '%s'" % self._configServiceUrl)
@@ -1069,14 +1069,14 @@ class ServiceConnectionThread(KillableThread):
 			self._notificationServer.addSubject(self._choiceSubject)
 			
 			timeout = int(self._waitBeforeConnect)
-			while(timeout > 0) and not self.canceled:
+			while(timeout > 0) and not self.cancelled:
 				logger.info("Waiting for user to cancel connect")
 				self._statusSubject.setMessage("Waiting for user to cancel connect (%d)" % timeout)
 				timeout -= 1
 				time.sleep(1)
 			
 			tryNum = 0
-			while not self.canceled and not self.connected:
+			while not self.cancelled and not self.connected:
 				try:
 					tryNum += 1
 					logger.notice("Connecting to config server '%s' #%d" % (self._configServiceUrl, tryNum))
@@ -1099,13 +1099,13 @@ class ServiceConnectionThread(KillableThread):
 		self.running = False
 	
 	def stopConnectionCallback(self, choiceSubject):
-		logger.notice("Connection canceled by user")
+		logger.notice("Connection cancelled by user")
 		self.stop()
 	
 	def stop(self):
 		if self._choiceSubject:
 			self._notificationServer.removeSubject(self._choiceSubject)
-		self.canceled = True
+		self.cancelled = True
 		time.sleep(2)
 		if self.running and self.isAlive():
 			logger.debug("Terminating thread")
@@ -1735,9 +1735,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			time.sleep(1)
 			timeout -= 1
 		
-		if serviceConnectionThread.canceled:
+		if serviceConnectionThread.cancelled:
 			logger.error("ServiceConnectionThread canceled by user")
-			raise CanceledByUserError("Failed to connect to config service '%s': canceled by user" % \
+			raise CanceledByUserError("Failed to connect to config service '%s': cancelled by user" % \
 						self._config['config_service']['url'] )
 		elif serviceConnectionThread.running:
 			logger.error("ServiceConnectionThread timed out after %d seconds" % self._config['config_service']['connection_timeout'])
