@@ -1557,9 +1557,10 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		logger.notice('Local action processor successfully updated')
 		
-                productdict = self._configService.getProduct_hash('opsi-winst', self._configService.getDepot_hash(networkConfig['depotId']))
-                self._configService.setProductState('opsi-winst',self._config['global']['host_id'],installationStatus='installed',\
-                        actionRequest='none',productVersion=productdict.productVersion,packageVersion=productdict.packageVersion)
+		self._configService.setProductInstallationStatus(
+						'opsi-winst',
+						self._config['global']['host_id'],
+						'installed')
 		
 		self.setActionProcessorInfo()
 		
