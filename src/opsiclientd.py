@@ -1212,11 +1212,14 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not section:
 			section = 'global'
 		
-		logger.debug("setConfigValue(%s, %s, %s)" % (section, option, value))
-		
 		section = str(section).strip().lower()
 		option = str(option).strip().lower()
 		value = value.strip()
+		
+		if (option == 'opsi_host_key'):
+			logger.addConfidentialString(value)
+		
+		logger.debug("setConfigValue(%s, %s, %s)" % (section, option, value))
 		
 		if section in ('system'):
 			return
