@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2.2'
+__version__ = '0.2.3'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -1143,6 +1143,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._statusSubject = MessageSubject('status')
 		self._serviceUrlSubject = MessageSubject('configServiceUrl')
 		self._clientIdSubject = MessageSubject('clientId')
+		self._actionProcessorInfoSubject = MessageSubject('actionProcessorInfo')
+		self._opsiclientdInfoSubject = MessageSubject('opsiclientdInfo')
 		
 		self._config = {
 			'system': {
@@ -1201,8 +1203,6 @@ class Opsiclientd(EventListener, threading.Thread):
 			{ 'name': 'getCurrentActiveDesktopName',     'params': [ ],                       'availability': ['server'] },
 			{ 'name': 'setCurrentActiveDesktopName',     'params': [ 'desktop' ],             'availability': ['server'] },
 		]
-		
-		self._clientIdSubject.setMessage(self._config['global']['host_id'])
 		
 	def isRunning(self):
 		return self._running
@@ -1384,6 +1384,11 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.comment("Working directory: %s" % os.getcwd())
 			logger.notice("Using host id '%s'" % self._config['global']['host_id'])
 			logger.notice("Starting control pipe")
+			
+			self._clientIdSubject.setMessage(self._config['global']['host_id'])
+			self._opsiclientdInfoSubject.setMessage("opsiclientd %s" % __version__)
+			self.setActionProcessorInfo()
+			
 			try:
 				self._controlPipe = ControlPipeFactory(self)
 				self._controlPipe.start()
@@ -1411,7 +1416,12 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._notificationServer = NotificationServer(
 								address  = self._config['notification_server']['interface'],
 								port     = self._config['notification_server']['port'],
-								subjects = [ self._statusSubject, self._serviceUrlSubject, self._clientIdSubject ] )
+								subjects = [ 
+									self._statusSubject,
+									self._serviceUrlSubject,
+									self._clientIdSubject,
+									self._actionProcessorInfoSubject,
+									self._opsiclientdInfoSubject ] )
 				logger.setLogFormat('[%l] [%D] [notification server] %M (%F|%N)', object=self._notificationServer)
 				logger.setLogFormat('[%l] [%D] [notification server] %M (%F|%N)', object=self._notificationServer.getFactory())
 				self._notificationServer.start()
@@ -1425,7 +1435,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			while self._running:
 				time.sleep(1)
 			self._daemonShutdownEvent.fire()
-		
+			
 		except Exception, e:
 			logger.logException(e)
 		
@@ -1499,6 +1509,71 @@ class Opsiclientd(EventListener, threading.Thread):
 		except Exception, e:
 			logger.error("Failed to terminate statusApplicationProcess: %s" % e)
 		self._statusApplicationProcess = None
+	
+	def updateActionProcessor(self):
+		logger.notice("Updating action processor")
+		self._statusSubject.setMessage(_("Updating action processor"))
+		
+		self.connectConfigServer()
+		networkConfig = self._configService.getNetworkConfig_hash(self._config['global']['host_id'])
+		
+		actionProcessorFilename = self._config['action_processor']['filename']
+		
+		actionProcessorLocalDir = self._config['action_processor']['local_dir']
+		actionProcessorLocalTmpDir = self._config['action_processor']['local_dir'] + '.tmp'
+		actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
+		actionProcessorLocalTmpFile = os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)
+		
+		actionProcessorRemoteDir = os.path.join(networkConfig['depotDrive'], self._config['action_processor']['remote_dir'])
+		actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
+		
+		if not os.path.exists(actionProcessorLocalFile):
+			logger.notice("Action processor needs update because file '%s' not found" % actionProcessorLocalFile)
+		elif ( abs(os.stat(actionProcessorLocalFile).st_mtime - os.stat(actionProcessorRemoteFile).st_mtime) > 10 ):
+			logger.notice("Action processor needs update because modification time difference is more than 10 seconds")
+		elif not filecmp.cmp(actionProcessorLocalFile, actionProcessorRemoteFile):
+			logger.notice("Action processor needs update because file changed")
+		else:
+			logger.notice("Local action processor exists and seems to be up to date")
+			return actionProcessorLocalFile
+		
+		# Update files
+		logger.notice("Start copying the action processor files")
+		if os.path.exists(actionProcessorLocalTmpDir):
+			logger.info("Deleting dir '%s'" % actionProcessorLocalTmpDir)
+			shutil.rmtree(actionProcessorLocalTmpDir)
+		logger.info("Copying from '%s' to '%s'" % (actionProcessorRemoteDir, actionProcessorLocalTmpDir))
+		shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
+		
+		if not os.path.exists(actionProcessorLocalTmpFile):
+			raise Exception("File '%s' does not exist after copy" % actionProcessorLocalTmpFile)
+		
+		if os.path.exists(actionProcessorLocalDir):
+			logger.info("Deleting dir '%s'" % actionProcessorLocalDir)
+			shutil.rmtree(actionProcessorLocalDir)
+		
+		logger.info("Moving dir '%s' to '%s'" % (actionProcessorLocalTmpDir, actionProcessorLocalDir))
+		shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
+		
+		logger.notice('Local action processor successfully updated')
+		
+		self.setActionProcessorInfo()
+		
+		return actionProcessorLocalFile
+	
+	def setActionProcessorInfo(self):
+		try:
+			actionProcessorFilename = self._config['action_processor']['filename']
+			actionProcessorLocalDir = self._config['action_processor']['local_dir']
+			actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
+			actionProcessorLocalFile = self.fillPlaceholders(actionProcessorLocalFile)
+			info = System.getFileVersionInfo(actionProcessorLocalFile)
+			version = info.get('FileVersion', '')
+			name = info.get('ProductName', '')
+			logger.info("Action processor name '%s', version '%s'" % (name, version))
+			self._actionProcessorInfoSubject.setMessage("%s %s" % (name, version))
+		except Exception, e:
+			logger.error("Failed to set action processor info: %s" % e)
 	
 	def startActionProcessor(self):
 		actionProcessor = self._config['action_processor']['command']
@@ -1584,55 +1659,6 @@ class Opsiclientd(EventListener, threading.Thread):
 		self.writeLogToService()
 		self.disconnectConfigServer()
 		self.stopStatusApplication()
-	
-	def updateActionProcessor(self):
-		logger.notice("Updating action processor")
-		self._statusSubject.setMessage(_("Updating action processor"))
-		
-		self.connectConfigServer()
-		networkConfig = self._configService.getNetworkConfig_hash(self._config['global']['host_id'])
-		
-		actionProcessorFilename = self._config['action_processor']['filename']
-		
-		actionProcessorLocalDir = self._config['action_processor']['local_dir']
-		actionProcessorLocalTmpDir = self._config['action_processor']['local_dir'] + '.tmp'
-		actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
-		actionProcessorLocalTmpFile = os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)
-		
-		actionProcessorRemoteDir = os.path.join(networkConfig['depotDrive'], self._config['action_processor']['remote_dir'])
-		actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
-		
-		if not os.path.exists(actionProcessorLocalFile):
-			logger.notice("Action processor needs update because file '%s' not found" % actionProcessorLocalFile)
-		elif ( abs(os.stat(actionProcessorLocalFile).st_mtime - os.stat(actionProcessorRemoteFile).st_mtime) > 10 ):
-			logger.notice("Action processor needs update because modification time difference is more than 10 seconds")
-		elif not filecmp.cmp(actionProcessorLocalFile, actionProcessorRemoteFile):
-			logger.notice("Action processor needs update because file changed")
-		else:
-			logger.notice("Local action processor exists and seems to be up to date")
-			return actionProcessorLocalFile
-		
-		# Update files
-		logger.notice("Start copying the action processor files")
-		if os.path.exists(actionProcessorLocalTmpDir):
-			logger.info("Deleting dir '%s'" % actionProcessorLocalTmpDir)
-			shutil.rmtree(actionProcessorLocalTmpDir)
-		logger.info("Copying from '%s' to '%s'" % (actionProcessorRemoteDir, actionProcessorLocalTmpDir))
-		shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
-		
-		if not os.path.exists(actionProcessorLocalTmpFile):
-			raise Exception("File '%s' does not exist after copy" % actionProcessorLocalTmpFile)
-		
-		if os.path.exists(actionProcessorLocalDir):
-			logger.info("Deleting dir '%s'" % actionProcessorLocalDir)
-			shutil.rmtree(actionProcessorLocalDir)
-		
-		logger.info("Moving dir '%s' to '%s'" % (actionProcessorLocalTmpDir, actionProcessorLocalDir))
-		shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
-		
-		logger.notice('Local action processor successfully updated')
-		
-		return actionProcessorLocalFile
 	
 	def processProductActionRequests(self):
 		if self._processingActionRequests:
