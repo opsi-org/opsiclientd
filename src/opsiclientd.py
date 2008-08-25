@@ -1370,7 +1370,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			if not type(values) is dict:
 				continue
 			for (key, value) in values.items():
-				string = string.replace('%' + str(section) + '.' + str(key) + '%', str(value))
+				newString = string.replace('%' + str(section) + '.' + str(key) + '%', str(value))
+				if (newString != string):
+					string = self.fillPlaceholders(newString)
 		return string
 	
 	def run(self):
