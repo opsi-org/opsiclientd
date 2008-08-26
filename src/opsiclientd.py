@@ -1774,12 +1774,13 @@ class Opsiclientd(EventListener, threading.Thread):
 		time.sleep(1)
 		logger.debug("ServiceConnectionThread started")
 		while serviceConnectionThread.running and (timeout > 0):
-			logger.debug("Waiting for ServiceConnectionThread (timeout: %d)..." % timeout)
-			time.sleep(1)
-			timeout -= 1
 			cancellableAfter -= 1
 			if (cancellableAfter == 0):
 				self._notificationServer.addSubject(choiceSubject)
+			logger.debug("Waiting for ServiceConnectionThread (timeout: %d)..." % timeout)
+			time.sleep(1)
+			timeout -= 1
+			
 		
 		self._notificationServer.removeSubject(choiceSubject)
 		
