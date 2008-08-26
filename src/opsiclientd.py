@@ -1053,6 +1053,7 @@ class ServiceConnectionThread(KillableThread):
 		self.running = False
 		self.connected = False
 		self.cancelled = False
+		self.waiting = False
 		
 	def run(self):
 		try:
@@ -1063,11 +1064,13 @@ class ServiceConnectionThread(KillableThread):
 			
 			timeout = int(self._waitBeforeConnect)
 			while(timeout > 0) and not self.cancelled:
+				self.waiting = True
 				logger.info("Waiting for user to cancel connect")
 				self._statusSubject.setMessage("Waiting for user to cancel connect (%d)" % timeout)
 				timeout -= 1
 				time.sleep(1)
 			
+			self.waiting = False
 			tryNum = 0
 			while not self.cancelled and not self.connected:
 				try:
@@ -1749,7 +1752,12 @@ class Opsiclientd(EventListener, threading.Thread):
 			# Already connected
 			return
 		
-		waitBeforeConnect = self._config['config_service']['wait_before_connect']
+		choiceSubject = ChoiceSubject(id = 'stopConnecting')
+		choiceSubject.setChoices([ 'Stop connection' ])
+		
+		waitBeforeConnect = int(self._config['config_service']['wait_before_connect'])
+		if (waitBeforeConnect > 0):
+			self._notificationServer.addSubject(choiceSubject)
 		
 		logger.debug("Creating ServiceConnectionThread")
 		serviceConnectionThread = ServiceConnectionThread(
@@ -1760,8 +1768,6 @@ class Opsiclientd(EventListener, threading.Thread):
 					statusObject        = self._statusSubject,
 					waitBeforeConnect   = waitBeforeConnect )
 		
-		choiceSubject = ChoiceSubject(id = 'stopConnecting')
-		choiceSubject.setChoices([ 'Stop connection' ])
 		choiceSubject.setCallbacks( [ serviceConnectionThread.stopConnectionCallback ] )
 		
 		cancellableAfter = int(self._config['config_service']['user_cancellable_after'])
@@ -1774,13 +1780,14 @@ class Opsiclientd(EventListener, threading.Thread):
 		time.sleep(1)
 		logger.debug("ServiceConnectionThread started")
 		while serviceConnectionThread.running and (timeout > 0):
-			cancellableAfter -= 1
-			if (cancellableAfter == 0):
-				self._notificationServer.addSubject(choiceSubject)
+			if not serviceConnectionThread.waiting:
+				cancellableAfter -= 1
+				if (cancellableAfter == 0):
+					self._notificationServer.addSubject(choiceSubject)
 			logger.debug("Waiting for ServiceConnectionThread (timeout: %d)..." % timeout)
 			time.sleep(1)
 			timeout -= 1
-			
+		
 		
 		self._notificationServer.removeSubject(choiceSubject)
 		
