@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2.4'
+__version__ = '0.2.5'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -1049,7 +1049,6 @@ class ServiceConnectionThread(KillableThread):
 		self._notificationServer = notificationServer
 		self._statusSubject = statusObject
 		self._waitBeforeConnect = waitBeforeConnect
-		self._choiceSubject = None
 		self.configService = None
 		self.running = False
 		self.connected = False
@@ -1061,12 +1060,6 @@ class ServiceConnectionThread(KillableThread):
 			self.running = True
 			self.connected = False
 			self.cancelled = False
-			
-			self._choiceSubject = ChoiceSubject(id = 'stopConnecting')
-			#self._choiceSubject.setMessage("Connecting to config server '%s'" % self._configServiceUrl)
-			self._choiceSubject.setChoices([ 'Stop connection' ])
-			self._choiceSubject.setCallbacks( [ self.stopConnectionCallback ] )
-			self._notificationServer.addSubject(self._choiceSubject)
 			
 			timeout = int(self._waitBeforeConnect)
 			while(timeout > 0) and not self.cancelled:
@@ -1091,9 +1084,6 @@ class ServiceConnectionThread(KillableThread):
 					logger.error("Failed to connect to config server '%s': %s" % (self._configServiceUrl, e))
 					time.sleep(3)
 			
-			if self._choiceSubject:
-				self._notificationServer.removeSubject(self._choiceSubject)
-				self._choiceSubject = None
 		except Exception, e:
 			logger.logException(e)
 		self.running = False
@@ -1103,8 +1093,6 @@ class ServiceConnectionThread(KillableThread):
 		self.stop()
 	
 	def stop(self):
-		if self._choiceSubject:
-			self._notificationServer.removeSubject(self._choiceSubject)
 		self.cancelled = True
 		time.sleep(2)
 		if self.running and self.isAlive():
@@ -1150,36 +1138,37 @@ class Opsiclientd(EventListener, threading.Thread):
 			'system': {
 			},
 			'global': {
-				'config_file':           'opsiclientd.conf',
-				'log_file':              'opsiclientd.log',
-				'log_level':             LOG_NOTICE,
-				'host_id':               socket.getfqdn(),
-				'opsi_host_key':         '',
+				'config_file':            'opsiclientd.conf',
+				'log_file':               'opsiclientd.log',
+				'log_level':              LOG_NOTICE,
+				'host_id':                socket.getfqdn(),
+				'opsi_host_key':          '',
 			},
 			'config_service': {
-				'url':                   '',
-				'connection_timeout':    30,
-				'wait_before_connect':   5,
+				'url':                    '',
+				'connection_timeout':     30,
+				'wait_before_connect':    5,
+				'user_cancellable_after': 0,
 			},
 			'control_server': {
-				'interface':             '0.0.0.0', # TODO
-				'port':                  4441,
-				'ssl_server_key_file':   'opsiclientd.pem',
-				'ssl_server_cert_file':  'opsiclientd.pem',
-				'static_dir':            'static_html',
+				'interface':              '0.0.0.0', # TODO
+				'port':                   4441,
+				'ssl_server_key_file':    'opsiclientd.pem',
+				'ssl_server_cert_file':   'opsiclientd.pem',
+				'static_dir':             'static_html',
 			},
 			'notification_server': {
-				'interface':             '127.0.0.1',
-				'port':                  4442,
+				'interface':              '127.0.0.1',
+				'port':                   4442,
 			},
 			'opsiclientd_notifier': {
-				'command':               '',
+				'command':                '',
 			},
 			'action_processor': {
-				'local_dir':             '',
-				'remote_dir':            '',
-				'filename':              '',
-				'command':               '',
+				'local_dir':              '',
+				'remote_dir':             '',
+				'filename':               '',
+				'command':                '',
 			},
 		}
 		try:
@@ -1234,7 +1223,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		if   (section == 'config_service') and (option == 'url'):
 			self.setConfigServiceUrl(self._config[section][option])
-		elif (section == 'config_service') and option in ('wait_before_connect', 'connection_timeout'):
+		elif (section == 'config_service') and option in ('wait_before_connect', 'connection_timeout', 'user_cancellable_after'):
 			self._config[section][option] = int(self._config[section][option])
 			if (self._config[section][option] < 0):
 				self._config[section][option] = 0
@@ -1763,7 +1752,6 @@ class Opsiclientd(EventListener, threading.Thread):
 		waitBeforeConnect = self._config['config_service']['wait_before_connect']
 		
 		logger.debug("Creating ServiceConnectionThread")
-		
 		serviceConnectionThread = ServiceConnectionThread(
 					configServiceUrl    = self._config['config_service']['url'],
 					username            = self._config['global']['host_id'],
@@ -1771,6 +1759,14 @@ class Opsiclientd(EventListener, threading.Thread):
 					notificationServer  = self._notificationServer,
 					statusObject        = self._statusSubject,
 					waitBeforeConnect   = waitBeforeConnect )
+		
+		choiceSubject = ChoiceSubject(id = 'stopConnecting')
+		choiceSubject.setChoices([ 'Stop connection' ])
+		choiceSubject.setCallbacks( [ serviceConnectionThread.stopConnectionCallback ] )
+		
+		cancellableAfter = int(self._config['config_service']['user_cancellable_after'])
+		if (cancellableAfter < 1):
+			self._notificationServer.addSubject(choiceSubject)
 		
 		timeout = int(self._config['config_service']['connection_timeout'])
 		logger.info("Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
@@ -1781,6 +1777,11 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.debug("Waiting for ServiceConnectionThread (timeout: %d)..." % timeout)
 			time.sleep(1)
 			timeout -= 1
+			cancellableAfter -= 1
+			if (cancellableAfter == 0):
+				self._notificationServer.addSubject(choiceSubject)
+		
+		self._notificationServer.removeSubject(choiceSubject)
 		
 		if serviceConnectionThread.cancelled:
 			logger.error("ServiceConnectionThread canceled by user")
