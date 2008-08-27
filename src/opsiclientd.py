@@ -1577,7 +1577,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		except Exception, e:
 			logger.error("Failed to set action processor info: %s" % e)
 	
-	def startActionProcessor(self):
+	def startActionProcessor(self, desktop='winlogon'):
 		actionProcessor = self._config['action_processor']['command']
 		if not actionProcessor:
 			logger.error("No action processor command defined")
@@ -1585,20 +1585,13 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		actionProcessor = self.fillPlaceholders(actionProcessor)
 		
-		activeSessionId = System.getActiveConsoleSessionId()
-		desktop = self.getCurrentActiveDesktopName()
-		if not desktop or desktop.lower() not in ('winlogon', 'default'):
-			desktop = 'winlogon'
-		
 		logger.notice("Starting action processor in session '%s' on desktop '%s'" % (activeSessionId, desktop))
 		self._statusSubject.setMessage( _("Starting action processor") )
 		
-		#self.stopStatusApplication()
 		System.runAsSystemInSession(command = actionProcessor, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding = True)
 		
 		logger.notice("Action processor ended")
 		self._statusSubject.setMessage( _("Action processor ended") )
-		#self.startStatusApplication()
 	
 	def waitForGUI(self):
 		logger.notice("Waiting for GUI to start")
@@ -1671,6 +1664,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		depotShareMounted = False
 		try:
+			activeSessionId = System.getActiveConsoleSessionId()
+			desktop = self.getCurrentActiveDesktopName()
+			if not desktop or desktop.lower() not in ('winlogon', 'default'):
+				desktop = 'winlogon'
+			
 			bootmode = ''
 			try:
 				bootmode = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\general", "bootmode")
@@ -1709,11 +1707,11 @@ class Opsiclientd(EventListener, threading.Thread):
 					actionProcessorLocalFile = self.updateActionProcessor()
 				except Exception, e:
 					logger.error("Failed to update action processor: %s" % e)
-				self.startActionProcessor()
+				self.startActionProcessor(desktop = desktop)
 				
 				logger.notice("Unmounting depot share")
 				System.umount(networkConfig['depotDrive'])
-			
+				
 				self._statusSubject.setMessage( _("Finished processing action requests") )
 			
 			rebootRequested = 0
