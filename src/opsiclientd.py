@@ -2084,10 +2084,10 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			os.chdir(workingDirectory)
 			
 			opsiclientd = None
-			if (sys.getwindowsversion()[0] == '5'):
+			if (sys.getwindowsversion()[0] == 5):
 				# NT5: XP
 				opsiclientd = OpsiclientdNT5()
-			elif (sys.getwindowsversion()[0] == '6'):
+			elif (sys.getwindowsversion()[0] == 6):
 				# NT6: Vista
 				opsiclientd = OpsiclientdNT6()
 			else:
