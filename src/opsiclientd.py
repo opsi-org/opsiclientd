@@ -1507,91 +1507,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.error("Failed to terminate statusApplicationProcess: %s" % e)
 		self._statusApplicationProcess = None
 	
-	def updateActionProcessor(self):
-		logger.notice("Updating action processor")
-		self._statusSubject.setMessage(_("Updating action processor"))
-		
-		self.connectConfigServer()
-		networkConfig = self._configService.getNetworkConfig_hash(self._config['global']['host_id'])
-		
-		actionProcessorFilename = self._config['action_processor']['filename']
-		
-		actionProcessorLocalDir = self.fillPlaceholders(self._config['action_processor']['local_dir'])
-		actionProcessorLocalTmpDir = self.fillPlaceholders(self._config['action_processor']['local_dir'] + '.tmp')
-		actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
-		actionProcessorLocalTmpFile = os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)
-		
-		actionProcessorRemoteDir = os.path.join(networkConfig['depotDrive'], self._config['action_processor']['remote_dir'])
-		actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
-		
-		if not os.path.exists(actionProcessorLocalFile):
-			logger.notice("Action processor needs update because file '%s' not found" % actionProcessorLocalFile)
-		elif ( abs(os.stat(actionProcessorLocalFile).st_mtime - os.stat(actionProcessorRemoteFile).st_mtime) > 10 ):
-			logger.notice("Action processor needs update because modification time difference is more than 10 seconds")
-		elif not filecmp.cmp(actionProcessorLocalFile, actionProcessorRemoteFile):
-			logger.notice("Action processor needs update because file changed")
-		else:
-			logger.notice("Local action processor exists and seems to be up to date")
-			return actionProcessorLocalFile
-		
-		# Update files
-		logger.notice("Start copying the action processor files")
-		if os.path.exists(actionProcessorLocalTmpDir):
-			logger.info("Deleting dir '%s'" % actionProcessorLocalTmpDir)
-			shutil.rmtree(actionProcessorLocalTmpDir)
-		logger.info("Copying from '%s' to '%s'" % (actionProcessorRemoteDir, actionProcessorLocalTmpDir))
-		shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
-		
-		if not os.path.exists(actionProcessorLocalTmpFile):
-			raise Exception("File '%s' does not exist after copy" % actionProcessorLocalTmpFile)
-		
-		if os.path.exists(actionProcessorLocalDir):
-			logger.info("Deleting dir '%s'" % actionProcessorLocalDir)
-			shutil.rmtree(actionProcessorLocalDir)
-		
-		logger.info("Moving dir '%s' to '%s'" % (actionProcessorLocalTmpDir, actionProcessorLocalDir))
-		shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
-		
-		logger.notice('Local action processor successfully updated')
-		
-		self._configService.setProductInstallationStatus(
-						'opsi-winst',
-						self._config['global']['host_id'],
-						'installed')
-		
-		self.setActionProcessorInfo()
-		
-		return actionProcessorLocalFile
-	
 	def setActionProcessorInfo(self):
-		try:
-			actionProcessorFilename = self._config['action_processor']['filename']
-			actionProcessorLocalDir = self._config['action_processor']['local_dir']
-			actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
-			actionProcessorLocalFile = self.fillPlaceholders(actionProcessorLocalFile)
-			info = System.getFileVersionInfo(actionProcessorLocalFile)
-			version = info.get('FileVersion', '')
-			name = info.get('ProductName', '')
-			logger.info("Action processor name '%s', version '%s'" % (name, version))
-			self._actionProcessorInfoSubject.setMessage("%s %s" % (name, version))
-		except Exception, e:
-			logger.error("Failed to set action processor info: %s" % e)
-	
-	def startActionProcessor(self, desktop='winlogon'):
-		actionProcessor = self._config['action_processor']['command']
-		if not actionProcessor:
-			logger.error("No action processor command defined")
-			return
-		
-		actionProcessor = self.fillPlaceholders(actionProcessor)
-		
-		logger.notice("Starting action processor in session '%s' on desktop '%s'" % (activeSessionId, desktop))
-		self._statusSubject.setMessage( _("Starting action processor") )
-		
-		System.runInSession(command = actionProcessor, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding = True)
-		
-		logger.notice("Action processor ended")
-		self._statusSubject.setMessage( _("Action processor ended") )
+		self._actionProcessorInfoSubject.setMessage("")
 	
 	def waitForGUI(self):
 		logger.notice("Waiting for GUI to start")
@@ -1612,30 +1529,11 @@ class Opsiclientd(EventListener, threading.Thread):
 				self.startStatusApplication()
 				self.getConfigFromService()
 				self.writeConfigFile()
-				
-				#startOpsiCredentialProvider = 0
-				#try:
-				#	startOpsiCredentialProvider = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Provider Filters\\{d2028e19-82fe-44c6-ad64-51497c97a02a}", "StartOpsiCredentialProvider")
-				#except Exception, e:
-				#	logger.warning("Failed to get StartOpsiCredentialProvider from registry: %s" % e)
-				#logger.info("startOpsiCredentialProvider: %s" % startOpsiCredentialProvider)
-				
 				self.processProductActionRequests()
 				
 				self._blockLogin = False
 				
-				#if (startOpsiCredentialProvider == 1):
-				#	# Opsi credential provider was started
-				#	# restart winlogon.exe to start opsi credential provider filter again
-				#	System.logoffCurrentUser()
-				
 			elif isinstance(event, ProcessActionRequestEvent):
-				#startOpsiCredentialProvider = 1
-				#try:
-				#	startOpsiCredentialProvider = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\Credential Provider Filters\\{d2028e19-82fe-44c6-ad64-51497c97a02a}", "StartOpsiCredentialProvider")
-				#except Exception, e:
-				#	logger.warning("Failed to get StartOpsiCredentialProvider from registry: %s" % e)
-				#logger.info("startOpsiCredentialProvider: %s" % startOpsiCredentialProvider)
 				if event.logoffCurrentUser:
 					self._blockLogin = True
 					System.logoffCurrentUser()
@@ -1643,9 +1541,6 @@ class Opsiclientd(EventListener, threading.Thread):
 				
 				self.startStatusApplication()
 				self.processProductActionRequests()
-				
-				#if event.logoffCurrentUser and (startOpsiCredentialProvider == 1):
-				#	System.logoffCurrentUser()
 			
 		except Exception, e:
 			logger.error("Failed to process event %s: %s" % (event, e))
@@ -1656,94 +1551,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self.stopStatusApplication()
 	
 	def processProductActionRequests(self):
-		if self._processingActionRequests:
-			logger.error("Already processing action requests")
-			return
-		self._processingActionRequests = True
-		self._statusSubject.setMessage(_("Getting action requests from config service"))
-		
-		depotShareMounted = False
-		try:
-			activeSessionId = System.getActiveConsoleSessionId()
-			desktop = self.getCurrentActiveDesktopName()
-			if not desktop or desktop.lower() not in ('winlogon', 'default'):
-				desktop = 'winlogon'
-			
-			bootmode = ''
-			try:
-				bootmode = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\general", "bootmode")
-			except Exception, e:
-				logger.warning("Failed to get bootmode from registry: %s" % e)
-			
-			self.connectConfigServer()
-			actionRequests = self._configService.getProductActionRequests_listOfHashes(self._config['global']['host_id'])
-			logger.notice("Got product action requests from configservice")
-			numRequests = 0
-			for actionRequest in actionRequests:
-				if (actionRequest['actionRequest'] != 'none'):
-					numRequests += 1
-					logger.notice("   [%2s] product %-15s %s" % (numRequests, actionRequest['productId'] + ':', actionRequest['actionRequest']))
-			
-			if (numRequests == 0) and (bootmode == 'BKSTD'):
-				logger.notice("No product action requests set")
-				self._statusSubject.setMessage( _("No product action requests set") )
-				
-			else:
-				logger.notice("Start processing action requests")
-				self._statusSubject.setMessage( _("Start processing action requests") )
-				
-				networkConfig = self._configService.getNetworkConfig_hash(self._config['global']['host_id'])
-				depot = self._configService.getDepot_hash(networkConfig['depotId'])
-				encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
-				pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
-				
-				logger.notice("Mounting depot share")
-				self._statusSubject.setMessage( _("Mounting depot share %s" % depot['depotRemoteUrl']) )
-				
-				System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password=pcpatchPassword)
-				depotShareMounted = True
-				
-				try:
-					actionProcessorLocalFile = self.updateActionProcessor()
-				except Exception, e:
-					logger.error("Failed to update action processor: %s" % e)
-				self.startActionProcessor(desktop = desktop)
-				
-				logger.notice("Unmounting depot share")
-				System.umount(networkConfig['depotDrive'])
-				
-				self._statusSubject.setMessage( _("Finished processing action requests") )
-			
-			rebootRequested = 0
-			try:
-				rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
-			except Exception, e:
-				logger.warning("Failed to get rebootRequested from registry: %s" % e)
-			logger.info("rebootRequested: %s" % rebootRequested)
-			if rebootRequested:
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
-				System.reboot(wait = 3)
-			else:
-				shutdownRequested = 0
-				try:
-					shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
-				except Exception, e:
-					logger.warning("Failed to get shutdownRequested from registry: %s" % e)
-				logger.info("shutdownRequested: %s" % shutdownRequested)
-				if shutdownRequested:
-					System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
-					System.shutdown(wait = 3)
-				
-		except Exception, e:
-			logger.error("Failed to process product action requests: %s" % e)
-			#logger.logException(e)
-			self._statusSubject.setMessage( _("Failed to process product action requests: %s") % e )
-			if depotShareMounted:
-				logger.notice("Unmounting depot share")
-				System.umount(networkConfig['depotDrive'])
-		
-		time.sleep(3)
-		self._processingActionRequests = False
+		logger.error("processProductActionRequests not implemented")
 	
 	def connectConfigServer(self):
 		if self._configService:
@@ -1962,6 +1770,194 @@ class Opsiclientd(EventListener, threading.Thread):
 		System.runInSession(command = cmd, waitForProcessEnding = True)
 		return self._CurrentActiveDesktopName
 
+class OpsiclientdPosix(Opsiclientd):
+	def __init__(self):
+		Opsiclientd.__init__(self)
+
+class OpsiclientdNT5(Opsiclientd):
+	def __init__(self):
+		Opsiclientd.__init__(self)
+
+class OpsiclientdNT6(Opsiclientd):
+	def __init__(self):
+		Opsiclientd.__init__(self)
+	
+	def updateActionProcessor(self):
+		logger.notice("Updating action processor")
+		self._statusSubject.setMessage(_("Updating action processor"))
+		
+		self.connectConfigServer()
+		networkConfig = self._configService.getNetworkConfig_hash(self._config['global']['host_id'])
+		
+		actionProcessorFilename = self._config['action_processor']['filename']
+		
+		actionProcessorLocalDir = self.fillPlaceholders(self._config['action_processor']['local_dir'])
+		actionProcessorLocalTmpDir = self.fillPlaceholders(self._config['action_processor']['local_dir'] + '.tmp')
+		actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
+		actionProcessorLocalTmpFile = os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)
+		
+		actionProcessorRemoteDir = os.path.join(networkConfig['depotDrive'], self._config['action_processor']['remote_dir'])
+		actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
+		
+		if not os.path.exists(actionProcessorLocalFile):
+			logger.notice("Action processor needs update because file '%s' not found" % actionProcessorLocalFile)
+		elif ( abs(os.stat(actionProcessorLocalFile).st_mtime - os.stat(actionProcessorRemoteFile).st_mtime) > 10 ):
+			logger.notice("Action processor needs update because modification time difference is more than 10 seconds")
+		elif not filecmp.cmp(actionProcessorLocalFile, actionProcessorRemoteFile):
+			logger.notice("Action processor needs update because file changed")
+		else:
+			logger.notice("Local action processor exists and seems to be up to date")
+			return actionProcessorLocalFile
+		
+		# Update files
+		logger.notice("Start copying the action processor files")
+		if os.path.exists(actionProcessorLocalTmpDir):
+			logger.info("Deleting dir '%s'" % actionProcessorLocalTmpDir)
+			shutil.rmtree(actionProcessorLocalTmpDir)
+		logger.info("Copying from '%s' to '%s'" % (actionProcessorRemoteDir, actionProcessorLocalTmpDir))
+		shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
+		
+		if not os.path.exists(actionProcessorLocalTmpFile):
+			raise Exception("File '%s' does not exist after copy" % actionProcessorLocalTmpFile)
+		
+		if os.path.exists(actionProcessorLocalDir):
+			logger.info("Deleting dir '%s'" % actionProcessorLocalDir)
+			shutil.rmtree(actionProcessorLocalDir)
+		
+		logger.info("Moving dir '%s' to '%s'" % (actionProcessorLocalTmpDir, actionProcessorLocalDir))
+		shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
+		
+		logger.notice('Local action processor successfully updated')
+		
+		self._configService.setProductInstallationStatus(
+						'opsi-winst',
+						self._config['global']['host_id'],
+						'installed')
+		
+		self.setActionProcessorInfo()
+		
+		return actionProcessorLocalFile
+	
+	def setActionProcessorInfo(self):
+		try:
+			actionProcessorFilename = self._config['action_processor']['filename']
+			actionProcessorLocalDir = self._config['action_processor']['local_dir']
+			actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
+			actionProcessorLocalFile = self.fillPlaceholders(actionProcessorLocalFile)
+			info = System.getFileVersionInfo(actionProcessorLocalFile)
+			version = info.get('FileVersion', '')
+			name = info.get('ProductName', '')
+			logger.info("Action processor name '%s', version '%s'" % (name, version))
+			self._actionProcessorInfoSubject.setMessage("%s %s" % (name, version))
+		except Exception, e:
+			logger.error("Failed to set action processor info: %s" % e)
+	
+	def startActionProcessor(self, desktop='winlogon'):
+		actionProcessor = self._config['action_processor']['command']
+		if not actionProcessor:
+			logger.error("No action processor command defined")
+			return
+		
+		actionProcessor = self.fillPlaceholders(actionProcessor)
+		
+		activeSessionId = System.getActiveConsoleSessionId()
+		logger.notice("Starting action processor in session '%s' on desktop '%s'" % (activeSessionId, desktop))
+		self._statusSubject.setMessage( _("Starting action processor") )
+		
+		System.runInSession(command = actionProcessor, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding = True)
+		
+		logger.notice("Action processor ended")
+		self._statusSubject.setMessage( _("Action processor ended") )
+	
+	def processProductActionRequests(self):
+		if self._processingActionRequests:
+			logger.error("Already processing action requests")
+			return
+		self._processingActionRequests = True
+		self._statusSubject.setMessage(_("Getting action requests from config service"))
+		
+		depotShareMounted = False
+		try:
+			desktop = self.getCurrentActiveDesktopName()
+			if not desktop or desktop.lower() not in ('winlogon', 'default'):
+				desktop = 'winlogon'
+			
+			bootmode = ''
+			try:
+				bootmode = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\general", "bootmode")
+			except Exception, e:
+				logger.warning("Failed to get bootmode from registry: %s" % e)
+			
+			self.connectConfigServer()
+			actionRequests = self._configService.getProductActionRequests_listOfHashes(self._config['global']['host_id'])
+			logger.notice("Got product action requests from configservice")
+			numRequests = 0
+			for actionRequest in actionRequests:
+				if (actionRequest['actionRequest'] != 'none'):
+					numRequests += 1
+					logger.notice("   [%2s] product %-15s %s" % (numRequests, actionRequest['productId'] + ':', actionRequest['actionRequest']))
+			
+			if (numRequests == 0) and (bootmode == 'BKSTD'):
+				logger.notice("No product action requests set")
+				self._statusSubject.setMessage( _("No product action requests set") )
+				
+			else:
+				logger.notice("Start processing action requests")
+				self._statusSubject.setMessage( _("Start processing action requests") )
+				
+				networkConfig = self._configService.getNetworkConfig_hash(self._config['global']['host_id'])
+				depot = self._configService.getDepot_hash(networkConfig['depotId'])
+				encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
+				pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
+				
+				logger.notice("Mounting depot share")
+				self._statusSubject.setMessage( _("Mounting depot share %s" % depot['depotRemoteUrl']) )
+				
+				System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password=pcpatchPassword)
+				depotShareMounted = True
+				
+				try:
+					actionProcessorLocalFile = self.updateActionProcessor()
+				except Exception, e:
+					logger.error("Failed to update action processor: %s" % e)
+				self.startActionProcessor(desktop = desktop)
+				
+				logger.notice("Unmounting depot share")
+				System.umount(networkConfig['depotDrive'])
+				
+				self._statusSubject.setMessage( _("Finished processing action requests") )
+			
+			rebootRequested = 0
+			try:
+				rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
+			except Exception, e:
+				logger.warning("Failed to get rebootRequested from registry: %s" % e)
+			logger.info("rebootRequested: %s" % rebootRequested)
+			if rebootRequested:
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
+				System.reboot(wait = 3)
+			else:
+				shutdownRequested = 0
+				try:
+					shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
+				except Exception, e:
+					logger.warning("Failed to get shutdownRequested from registry: %s" % e)
+				logger.info("shutdownRequested: %s" % shutdownRequested)
+				if shutdownRequested:
+					System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
+					System.shutdown(wait = 3)
+				
+		except Exception, e:
+			logger.error("Failed to process product action requests: %s" % e)
+			#logger.logException(e)
+			self._statusSubject.setMessage( _("Failed to process product action requests: %s") % e )
+			if depotShareMounted:
+				logger.notice("Unmounting depot share")
+				System.umount(networkConfig['depotDrive'])
+		
+		time.sleep(3)
+		self._processingActionRequests = False
+	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         OPSICLIENTD INIT                                          -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1989,7 +1985,7 @@ class OpsiclientdPosixInit(object):
 		signal(SIGINT,  self.signalHandler)
 		
 		# Start opsiclientd
-		self._opsiclientd = Opsiclientd()
+		self._opsiclientd = OpsiclientdPosix()
 		self._opsiclientd.start()
 		while self._opsiclientd.isRunning():
 			time.sleep(1)
@@ -2087,7 +2083,16 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 				logger.error("Failed to get working directory from registry: %s" % e)
 			os.chdir(workingDirectory)
 			
-			opsiclientd = Opsiclientd()
+			opsiclientd = None
+			if (sys.getwindowsversion()[0] == '5'):
+				# NT5: XP
+				opsiclientd = OpsiclientdNT5()
+			elif (sys.getwindowsversion()[0] == '6'):
+				# NT6: Vista
+				opsiclientd = OpsiclientdNT6()
+			else:
+				raise Exception("Running windows version not supported")
+			
 			opsiclientd.start()
 			# Write to event log
 			self.ReportServiceStatus(win32service.SERVICE_RUNNING)
