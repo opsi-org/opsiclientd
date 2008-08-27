@@ -1492,7 +1492,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			desktop = 'winlogon'
 		
 		logger.notice("Starting status application in session '%s' on desktop '%s'" % (activeSessionId, desktop))
-		self._statusApplicationProcess = System.runAsSystemInSession(command = statusApplication, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding=False)[0]
+		self._statusApplicationProcess = System.runInSession(command = statusApplication, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding=False)[0]
 		time.sleep(5)
 	
 	def stopStatusApplication(self):
@@ -1588,7 +1588,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.notice("Starting action processor in session '%s' on desktop '%s'" % (activeSessionId, desktop))
 		self._statusSubject.setMessage( _("Starting action processor") )
 		
-		System.runAsSystemInSession(command = actionProcessor, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding = True)
+		System.runInSession(command = actionProcessor, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding = True)
 		
 		logger.notice("Action processor ended")
 		self._statusSubject.setMessage( _("Action processor ended") )
@@ -1880,7 +1880,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				else:
 					desktop = self.getCurrentActiveDesktopName()
 				logger.notice("rpc runCommand: executing command '%s' on desktop '%s'" % (params[0], desktop))
-				System.runAsSystemInSession(command = str(params[0]), sessionId = None, desktop = desktop, waitForProcessEnding = False)
+				System.runInSession(command = str(params[0]), sessionId = None, desktop = desktop, waitForProcessEnding = False)
 				return "command '%s' executed" % str(params[0])
 			
 			elif (method == 'logoffCurrentUser'):
@@ -1959,7 +1959,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	def getCurrentActiveDesktopName(self):
 		cmd = '''pythonw.exe -c "from OPSI import System;from OPSI.Backend.JSONRPC import JSONRPCBackend;JSONRPCBackend(username = '%s', password = '%s', address = 'https://localhost:%s/rpc').setCurrentActiveDesktopName(System.getActiveDesktopName())"''' \
 				% (self._config['global']['host_id'], self._config['global']['opsi_host_key'], self._config['control_server']['port'])
-		System.runAsSystemInSession(command = cmd, waitForProcessEnding = True)
+		System.runInSession(command = cmd, waitForProcessEnding = True)
 		return self._CurrentActiveDesktopName
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
