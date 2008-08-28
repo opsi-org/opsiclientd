@@ -1934,7 +1934,7 @@ class OpsiclientdNT5(OpsiclientdNT):
 		userCreated = False
 		username = 'pcpatch'
 		password = Tools.randomString(16)
-		imp = System.Impersonate(username, password, desktop)
+		imp = None
 		try:
 			logger.notice("Creating local user '%s'" % username)
 			if System.existsUser(username = username):
@@ -1943,6 +1943,7 @@ class OpsiclientdNT5(OpsiclientdNT):
 			userCreated = True
 			
 			# Impersonate
+			imp = System.Impersonate(username, password, desktop)
 			imp.start()
 			
 			logger.notice("Mounting depot share")
@@ -1968,7 +1969,8 @@ class OpsiclientdNT5(OpsiclientdNT):
 			if depotShareMounted:
 				logger.notice("Unmounting depot share")
 				System.umount(networkConfig['depotDrive'])
-			imp.end()
+			if imp:
+				imp.end()
 			if userCreated:
 				logger.notice("Deleting local user '%s'" % username)
 				System.deleteUser(username = username)
