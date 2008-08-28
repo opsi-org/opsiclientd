@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2.5'
+__version__ = '0.2.6'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -1492,7 +1492,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			desktop = 'winlogon'
 		
 		logger.notice("Starting status application in session '%s' on desktop '%s'" % (activeSessionId, desktop))
-		self._statusApplicationProcess = System.runInSession(command = statusApplication, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding=False)[0]
+		self._statusApplicationProcess = System.runCommandInSession(command = statusApplication, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding=False)[0]
 		time.sleep(5)
 	
 	def stopStatusApplication(self):
@@ -1688,7 +1688,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				else:
 					desktop = self.getCurrentActiveDesktopName()
 				logger.notice("rpc runCommand: executing command '%s' on desktop '%s'" % (params[0], desktop))
-				System.runInSession(command = str(params[0]), sessionId = None, desktop = desktop, waitForProcessEnding = False)
+				System.runCommandInSession(command = str(params[0]), sessionId = None, desktop = desktop, waitForProcessEnding = False)
 				return "command '%s' executed" % str(params[0])
 			
 			elif (method == 'logoffCurrentUser'):
@@ -1767,277 +1767,14 @@ class Opsiclientd(EventListener, threading.Thread):
 	def getCurrentActiveDesktopName(self):
 		cmd = '''pythonw.exe -c "from OPSI import System;from OPSI.Backend.JSONRPC import JSONRPCBackend;JSONRPCBackend(username = '%s', password = '%s', address = 'https://localhost:%s/rpc').setCurrentActiveDesktopName(System.getActiveDesktopName())"''' \
 				% (self._config['global']['host_id'], self._config['global']['opsi_host_key'], self._config['control_server']['port'])
-		System.runInSession(command = cmd, waitForProcessEnding = True)
+		System.runCommandInSession(command = cmd, waitForProcessEnding = True)
 		return self._CurrentActiveDesktopName
 
 class OpsiclientdPosix(Opsiclientd):
 	def __init__(self):
 		Opsiclientd.__init__(self)
 
-class OpsiclientdNT5(Opsiclientd):
-	def __init__(self):
-		Opsiclientd.__init__(self)
-
-	def copyACL(self, src, dest):
-		import win32con
-		
-		revision = src.GetAclRevision()
-		logger.debug("copyACL: ace count is %s" % src.GetAceCount())
-		for i in range(src.GetAceCount()):
-			logger.debug("copyACL: processing ace #%s" % i)
-			ace = src.GetAce(i)
-			logger.debug("copyACL: ace: %s" % str(ace))
-			# XXX: Not sure if these are actually correct.
-			# See http://aspn.activestate.com/ASPN/docs/ActivePython/2.4/pywin32/PyACL__GetAce_meth.html
-			if ace[0][0] == win32con.ACCESS_ALLOWED_ACE_TYPE:
-				dest.AddAccessAllowedAce(revision, ace[1], ace[2])
-			elif ace[0][0] == win32con.ACCESS_DENIED_ACE_TYPE:
-				dest.AddAccessDeniedAce(revision, ace[1], ace[2])
-			elif ace[0][0] == win32con.SYSTEM_AUDIT_ACE_TYPE:
-				dest.AddAuditAccessAce(revision, ace[1], ace[2], 1, 1)
-			elif ace[0][0] == win32con.ACCESS_ALLOWED_OBJECT_ACE_TYPE:
-				dest.AddAccessAllowedObjectAce(revision, ace[0][1], ace[1], ace[2], ace[3], ace[4])
-			elif ace[0][0] == win32con.ACCESS_DENIED_OBJECT_ACE_TYPE:
-				dest.AddAccessDeniedObjectAce(revision, ace[0][1], ace[1], ace[2], ace[3], ace[4])
-			elif ace[0][0] == win32con.SYSTEM_AUDIT_OBJECT_ACE_TYPE:
-				dest.AddAuditAccessObjectAce(revision, ace[0][1], ace[1], ace[2], ace[3], ace[4], 1, 1)
-		return src.GetAceCount()
-
-	def addUserToWindowStation(self, winsta, userSid):
-		'''
-		Adds the given PySID representing a user to the given window station's
-		discretionary access-control list. The old security descriptor for
-		winsta is returned.
-		'''
-		
-		import win32security, win32con
-		
-		winsta_all = win32con.WINSTA_ACCESSCLIPBOARD   | \
-				win32con.WINSTA_ACCESSGLOBALATOMS | \
-				win32con.WINSTA_CREATEDESKTOP     | \
-				win32con.WINSTA_ENUMDESKTOPS      | \
-				win32con.WINSTA_ENUMERATE         | \
-				win32con.WINSTA_EXITWINDOWS       | \
-				win32con.WINSTA_READATTRIBUTES    | \
-				win32con.WINSTA_READSCREEN        | \
-				win32con.WINSTA_WRITEATTRIBUTES   | \
-				win32con.DELETE                   | \
-				win32con.READ_CONTROL             | \
-				win32con.WRITE_DAC                | \
-				win32con.WRITE_OWNER
-		
-		generic_access = win32con.GENERIC_READ    | \
-				win32con.GENERIC_WRITE   | \
-				win32con.GENERIC_EXECUTE | \
-				win32con.GENERIC_ALL
-		
-		# Get the security description for winsta.
-		security_desc = win32security.GetUserObjectSecurity(
-							winsta,
-							win32con.DACL_SECURITY_INFORMATION)
-
-		# Get discretionary access-control list (DACL) for winsta.
-		acl = security_desc.GetSecurityDescriptorDacl()
-		
-		# Create a new access control list for winsta.
-		new_acl = win32security.ACL()
-		
-		if acl is not None:
-			logger.debug("copying acl")
-			self.copyACL(acl, new_acl)
-
-		# Add the first ACE for userSid to the window station.
-		ace0_index = new_acl.GetAceCount()
-		ace_flags = win32con.CONTAINER_INHERIT_ACE | \
-				win32con.INHERIT_ONLY_ACE      | \
-				win32con.OBJECT_INHERIT_ACE
-		new_acl.AddAccessAllowedAceEx(win32con.ACL_REVISION, ace_flags, generic_access, userSid)
-		
-		# Add the second ACE for userSid to the window station.
-		ace1_index = new_acl.GetAceCount()
-		ace_flags = win32con.NO_PROPAGATE_INHERIT_ACE
-		new_acl.AddAccessAllowedAceEx(win32con.ACL_REVISION, ace_flags, winsta_all, userSid)
-		
-		# Create a new security descriptor and set its new DACL.
-		# NOTE: Simply creating a new security descriptor and assigning it as
-		# the security descriptor for winsta (without setting the DACL) is
-		# sufficient to allow windows to be opened, but that is probably not
-		# providing any kind of security on winsta.
-		new_security_desc = win32security.SECURITY_DESCRIPTOR()
-		new_security_desc.SetSecurityDescriptorDacl(True, new_acl, False)
-		
-		# Set the new security descriptor for winsta.
-		win32security.SetUserObjectSecurity(	winsta,
-							win32con.DACL_SECURITY_INFORMATION,
-							new_security_desc)
-		
-		return [ace0_index, ace1_index]
-
-	def addUserToDesktop(self, desktop, userSid):
-		'''
-		Adds the given PySID representing a user to the given desktop's
-		discretionary access-control list. The old security descriptor for
-		desktop is returned.
-		'''
-		
-		import win32security, win32con
-		
-		desktop_all = win32con.DESKTOP_CREATEMENU      | \
-				win32con.DESKTOP_CREATEWINDOW    | \
-				win32con.DESKTOP_ENUMERATE       | \
-				win32con.DESKTOP_HOOKCONTROL     | \
-				win32con.DESKTOP_JOURNALPLAYBACK | \
-				win32con.DESKTOP_JOURNALRECORD   | \
-				win32con.DESKTOP_READOBJECTS     | \
-				win32con.DESKTOP_SWITCHDESKTOP   | \
-				win32con.DESKTOP_WRITEOBJECTS    | \
-				win32con.DELETE                  | \
-				win32con.READ_CONTROL            | \
-				win32con.WRITE_DAC               | \
-				win32con.WRITE_OWNER
-		
-		security_desc = win32security.GetUserObjectSecurity(desktop,
-						win32con.DACL_SECURITY_INFORMATION)
-
-		# Get discretionary access-control list (DACL) for desktop.
-		acl = security_desc.GetSecurityDescriptorDacl()
-		
-		# Create a new access control list for desktop.
-		new_acl = win32security.ACL()
-		
-		if acl is not None:
-			self.copyACL(acl, new_acl)
-
-		# Add the ACE for user_sid to the desktop.
-		ace0_index = new_acl.GetAceCount()
-		new_acl.AddAccessAllowedAce(win32con.ACL_REVISION, desktop_all, userSid)
-		
-		# Create a new security descriptor and set its new DACL.
-		new_security_desc = win32security.SECURITY_DESCRIPTOR()
-		new_security_desc.SetSecurityDescriptorDacl(True, new_acl, False)
-		
-		# Set the new security descriptor for desktop.
-		win32security.SetUserObjectSecurity(desktop,
-				win32con.DACL_SECURITY_INFORMATION,
-				new_security_desc)
-
-		return [ace0_index]
-	
-	def processProductActionRequests(self):
-		import win32service, win32api, win32security, win32con, ntsecuritycon, win32process
-		
-		username = 'pcpatch'
-		password = '12345678'
-		domain = win32api.GetComputerName()
-		
-		if self._processingActionRequests:
-			logger.error("Already processing action requests")
-			return
-		self._processingActionRequests = True
-		
-		self.connectConfigServer()
-		networkConfig = self._configService.getNetworkConfig_hash(self._config['global']['host_id'])
-		depot = self._configService.getDepot_hash(networkConfig['depotId'])
-		encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
-		
-		if System.existsUser(username):
-			System.deleteUser(username)
-		System.createUser(username, password, [ System.getAdminGroupName() ])
-		
-		userHandle = win32security.LogonUser(
-				username,
-				domain,
-				password,
-				win32con.LOGON32_LOGON_INTERACTIVE,
-				win32con.LOGON32_PROVIDER_DEFAULT)
-		
-		currentWindowStation = win32service.GetProcessWindowStation()
-		logger.info("Got current window station")
-		
-		currentDesktop = win32service.GetThreadDesktop(win32api.GetCurrentThreadId())
-		logger.info("Got current desktop")
-		
-		try:
-			newWindowStation = win32service.OpenWindowStation(
-								"winsta0",
-								False,
-								win32con.READ_CONTROL |
-								win32con.WRITE_DAC)
-			newWindowStation.SetProcessWindowStation()
-			logger.debug("Process window station set")
-			
-			newDesktop = win32service.OpenDesktop(
-							"Winlogon",
-							win32con.DF_ALLOWOTHERACCOUNTHOOK, #0,
-							False,
-							win32con.READ_CONTROL |
-							win32con.WRITE_DAC |
-							win32con.DESKTOP_READOBJECTS |
-							win32con.DESKTOP_WRITEOBJECTS)
-			newDesktop.SetThreadDesktop()
-			logger.debug("Thread desktop set")
-			
-			tic = win32security.GetTokenInformation(userHandle, ntsecuritycon.TokenGroups)
-			userSid = None
-			for (sid, flags) in tic:
-				if (flags & win32con.SE_GROUP_LOGON_ID):
-					userSid = sid
-					break
-			
-			if not userSid:
-				raise Exception('Failed to determine logon ID')
-			
-			logger.debug("Got logon ID")
-			
-			winsta_ace_indices  = self.addUserToWindowStation(newWindowStation, userSid)
-			logger.debug("Added user to window station")
-			
-			desktop_ace_indices = self.addUserToDesktop(newDesktop, userSid)
-			logger.debug("Added user to desktop")
-			
-			si = win32process.STARTUPINFO()
-			# Copied from process.py. I don't know what these should be in general.
-			si.dwFlags = win32process.STARTF_USESHOWWINDOW ^ win32con.STARTF_USESTDHANDLES
-			si.wShowWindow = win32con.SW_NORMAL
-			si.lpDesktop = r"winsta0\winlogon"
-			create_flags = win32process.CREATE_NEW_CONSOLE
-			
-			win32security.ImpersonateLoggedOnUser(userHandle)
-			
-			
-			
-			logger.notice("Mounting depot share")
-			self._statusSubject.setMessage( _("Mounting depot share %s" % depot['depotRemoteUrl']) )
-			
-			System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username=username, password=password)
-			
-			actionProcessor = self._config['action_processor']['command']
-			if not actionProcessor:
-				logger.error("No action processor command defined")
-				return
-			
-			actionProcessor = self.fillPlaceholders(actionProcessor)
-			
-			logger.info("Running action processor")
-			
-			(process, thread, proc_id, thread_id) = \
-				win32process.CreateProcessAsUser(userHandle, None,
-					actionProcessor,
-					None, None, 1, create_flags, None,
-					None, si)
-		except Exception, e:
-			logger.error(e)
-		
-		currentWindowStation.SetProcessWindowStation()
-		currentDesktop.SetThreadDesktop()
-		
-		if newWindowStation:
-			newWindowStation.CloseWindowStation()
-		
-		if newDesktop:
-			newDesktop.CloseDesktop()
-		
-class OpsiclientdNT6(Opsiclientd):
+class OpsiclientdNT(Opsiclientd):
 	def __init__(self):
 		Opsiclientd.__init__(self)
 	
@@ -2094,8 +1831,6 @@ class OpsiclientdNT6(Opsiclientd):
 						'installed')
 		
 		self.setActionProcessorInfo()
-		
-		return actionProcessorLocalFile
 	
 	def setActionProcessorInfo(self):
 		try:
@@ -2111,23 +1846,6 @@ class OpsiclientdNT6(Opsiclientd):
 		except Exception, e:
 			logger.error("Failed to set action processor info: %s" % e)
 	
-	def startActionProcessor(self, desktop='winlogon'):
-		actionProcessor = self._config['action_processor']['command']
-		if not actionProcessor:
-			logger.error("No action processor command defined")
-			return
-		
-		actionProcessor = self.fillPlaceholders(actionProcessor)
-		
-		activeSessionId = System.getActiveConsoleSessionId()
-		logger.notice("Starting action processor in session '%s' on desktop '%s'" % (activeSessionId, desktop))
-		self._statusSubject.setMessage( _("Starting action processor") )
-		
-		System.runInSession(command = actionProcessor, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding = True)
-		
-		logger.notice("Action processor ended")
-		self._statusSubject.setMessage( _("Action processor ended") )
-	
 	def processProductActionRequests(self):
 		if self._processingActionRequests:
 			logger.error("Already processing action requests")
@@ -2135,12 +1853,7 @@ class OpsiclientdNT6(Opsiclientd):
 		self._processingActionRequests = True
 		self._statusSubject.setMessage(_("Getting action requests from config service"))
 		
-		depotShareMounted = False
 		try:
-			desktop = self.getCurrentActiveDesktopName()
-			if not desktop or desktop.lower() not in ('winlogon', 'default'):
-				desktop = 'winlogon'
-			
 			bootmode = ''
 			try:
 				bootmode = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\general", "bootmode")
@@ -2162,29 +1875,11 @@ class OpsiclientdNT6(Opsiclientd):
 				
 			else:
 				logger.notice("Start processing action requests")
-				self._statusSubject.setMessage( _("Start processing action requests") )
+				self._statusSubject.setMessage( _("Starting actions") )
 				
-				networkConfig = self._configService.getNetworkConfig_hash(self._config['global']['host_id'])
-				depot = self._configService.getDepot_hash(networkConfig['depotId'])
-				encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
-				pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
+				self.runProductActions()
 				
-				logger.notice("Mounting depot share")
-				self._statusSubject.setMessage( _("Mounting depot share %s" % depot['depotRemoteUrl']) )
-				
-				System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password=pcpatchPassword)
-				depotShareMounted = True
-				
-				try:
-					actionProcessorLocalFile = self.updateActionProcessor()
-				except Exception, e:
-					logger.error("Failed to update action processor: %s" % e)
-				self.startActionProcessor(desktop = desktop)
-				
-				logger.notice("Unmounting depot share")
-				System.umount(networkConfig['depotDrive'])
-				
-				self._statusSubject.setMessage( _("Finished processing action requests") )
+				self._statusSubject.setMessage( _("Finished actions") )
 			
 			rebootRequested = 0
 			try:
@@ -2210,12 +1905,123 @@ class OpsiclientdNT6(Opsiclientd):
 			logger.error("Failed to process product action requests: %s" % e)
 			#logger.logException(e)
 			self._statusSubject.setMessage( _("Failed to process product action requests: %s") % e )
+		
+		time.sleep(3)
+		self._processingActionRequests = False
+	
+class OpsiclientdNT5(OpsiclientdNT):
+	def __init__(self):
+		OpsiclientdNT.__init__(self)
+	
+	def runProductActions(self):
+		actionProcessor = self._config['action_processor']['command']
+		if not actionProcessor:
+			logger.error("No action processor command defined")
+			return
+		
+		actionProcessor = self.fillPlaceholders(actionProcessor)
+		
+		desktop = self.getCurrentActiveDesktopName()
+		if not desktop or desktop.lower() not in ('winlogon', 'default'):
+			desktop = 'winlogon'
+		
+		networkConfig = self._configService.getNetworkConfig_hash(self._config['global']['host_id'])
+		depot = self._configService.getDepot_hash(networkConfig['depotId'])
+		encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
+		pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
+		
+		depotShareMounted = False
+		userCreated = False
+		username = 'pcpatch'
+		password = Tools.randomString(16)
+		imp = System.Impersonate(username, password, desktop)
+		try:
+			logger.notice("Creating local user '%s'" % username)
+			if System.existsUser(username = username):
+				System.deleteUser(username = username)
+			System.createUser(username = username, password = password, groups = [ System.getAdminGroupName() ])
+			userCreated = True
+			
+			# Impersonate
+			imp.start()
+			
+			logger.notice("Mounting depot share")
+			self._statusSubject.setMessage( _("Mounting depot share %s" % depot['depotRemoteUrl']) )
+			
+			System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password=pcpatchPassword)
+			depotShareMounted = True
+			
+			try:
+				self.updateActionProcessor()
+			except Exception, e:
+				logger.error("Failed to update action processor: %s" % e)
+			
+			logger.notice("Starting action processor as user '%s' on desktop '%s'" % (username, desktop))
+			self._statusSubject.setMessage( _("Starting action processor") )
+			
+			imp.runCommand(command = actionProcessor, waitForProcessEnding = True)
+			
+			logger.notice("Action processor ended")
+			self._statusSubject.setMessage( _("Action processor ended") )
+			
+		finally:
+			if depotShareMounted:
+				logger.notice("Unmounting depot share")
+				System.umount(networkConfig['depotDrive'])
+			imp.end()
+			if userCreated:
+				logger.notice("Deleting local user '%s'" % username)
+				System.deleteUser(username = username)
+	
+		
+class OpsiclientdNT6(OpsiclientdNT):
+	def __init__(self):
+		OpsiclientdNT.__init__(self)
+	
+	def runProductActions(self):
+		actionProcessor = self._config['action_processor']['command']
+		if not actionProcessor:
+			logger.error("No action processor command defined")
+			return
+		
+		actionProcessor = self.fillPlaceholders(actionProcessor)
+		
+		desktop = self.getCurrentActiveDesktopName()
+		if not desktop or desktop.lower() not in ('winlogon', 'default'):
+			desktop = 'winlogon'
+		
+		networkConfig = self._configService.getNetworkConfig_hash(self._config['global']['host_id'])
+		depot = self._configService.getDepot_hash(networkConfig['depotId'])
+		encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
+		pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
+		
+		depotShareMounted = False
+		try:
+			logger.notice("Mounting depot share")
+			self._statusSubject.setMessage( _("Mounting depot share %s" % depot['depotRemoteUrl']) )
+			
+			System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password=pcpatchPassword)
+			depotShareMounted = True
+			
+			try:
+				self.updateActionProcessor()
+			except Exception, e:
+				logger.error("Failed to update action processor: %s" % e)
+			
+			activeSessionId = System.getActiveConsoleSessionId()
+			logger.notice("Starting action processor in session '%s' on desktop '%s'" % (activeSessionId, desktop))
+			self._statusSubject.setMessage( _("Starting action processor") )
+			
+			System.runCommandInSession(command = actionProcessor, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding = True)
+			
+			logger.notice("Action processor ended")
+			self._statusSubject.setMessage( _("Action processor ended") )
+			
+		finally:
 			if depotShareMounted:
 				logger.notice("Unmounting depot share")
 				System.umount(networkConfig['depotDrive'])
 		
-		time.sleep(3)
-		self._processingActionRequests = False
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         OPSICLIENTD INIT                                          -
