@@ -1879,7 +1879,7 @@ class OpsiclientdNT(Opsiclientd):
 				
 				self.runProductActions()
 				
-				self._statusSubject.setMessage( _("Finished actions") )
+				self._statusSubject.setMessage( _("Actions completed") )
 			
 			rebootRequested = 0
 			try:
