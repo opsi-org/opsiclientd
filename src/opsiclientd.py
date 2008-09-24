@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2.6'
+__version__ = '0.2.6.1'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -1208,7 +1208,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		option = str(option).strip().lower()
 		value = value.strip()
 		
+		logger.info("Setting config value '%s' of section '%s'" % (option, section))
+		
 		if (option == 'opsi_host_key'):
+			if (len(value) != 32):
+				raise ValueError("Bad opsi host key, length != 32")
 			logger.addConfidentialString(value)
 		
 		logger.debug("setConfigValue(%s, %s, %s)" % (section, option, value))
