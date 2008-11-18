@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2.1'
+__version__ = '0.2.2'
 
 # Imports
 import threading, time, sys, os, getopt
@@ -45,7 +45,7 @@ except:
 
 # OPSI imports
 from OPSI.Backend.File import File
-from OPSI.Util import NotificationClient, NotificationObserver
+from OPSI.Util import NotificationClient, SubjectsObserver
 from OPSI.Logger import *
 
 # Create logger instance
@@ -76,7 +76,7 @@ class BLENDFUNCTION(Structure):
                 ('AlphaFormat', BYTE)]
 
 
-class OpsiDialogWindow(NotificationObserver):
+class OpsiDialogWindow(SubjectsObserver):
 	def __init__(self):
 		win32gui.InitCommonControls()
 		self.hinst = win32gui.dllhandle
@@ -539,9 +539,9 @@ class OpsiDialogWindow(NotificationObserver):
 		logger.info("subjectsChanged(%s)" % subjects)
 		choices = {}
 		for subject in subjects:
-			if (subject['type'] == 'MessageSubject'):
+			if (subject['class'] == 'MessageSubject'):
 				self.messageChanged(subject, subject['message'])
-			if (subject['type'] == 'ChoiceSubject'):
+			if (subject['class'] == 'ChoiceSubject'):
 				subjectId = subject.get('id')
 				choices[subjectId] = subject.get('choices', [])
 		

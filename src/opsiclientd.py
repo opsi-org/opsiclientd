@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2.6.1'
+__version__ = '0.2.6.6'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -64,7 +64,7 @@ from OPSI.Backend.JSONRPC import JSONRPCBackend
 
 # Create logger instance
 logger = Logger()
-logger.setFileFormat('[%l] [%D] %M (%F|%N)')
+logger.setFileFormat('[%l] [%D]  %M  (%F|%N)')
 
 # Possible event types
 EVENT_TYPE_DAEMON_STARTUP = 'opsiclientd start'
@@ -105,9 +105,9 @@ class opsiclientdError(Exception):
 			return "%s" % self.ExceptionShortDescription
 
 
-class CancelledByUserError(opsiclientdError):
+class CanceledByUserError(opsiclientdError):
 	""" Exception raised if user cancels operation. """
-	ExceptionShortDescription = "Cancelled by user error"
+	ExceptionShortDescription = "Canceled by user error"
 
 '''
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -136,7 +136,7 @@ class Event(object):
 			raise TypeError("Unkown event type %s" % type)
 		self._type = type
 		self._eventListeners = []
-		logger.setFileFormat('[%l] [%D] [event ' + str(self._type) + '] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [event ' + str(self._type) + ']  %M  (%F|%N)', object=self)
 		
 	def __str__(self):
 		return "<Event %s>" % self.getType()
@@ -254,7 +254,7 @@ class EventListener(object):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlPipe(threading.Thread):
 	def __init__(self, opsiclientd):
-		logger.setFileFormat('[%l] [%D] [control pipe] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [control pipe]  %M  (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._pipe = None
@@ -365,7 +365,7 @@ class PosixControlPipe(ControlPipe):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class NTControlPipeConnection(threading.Thread):
 	def __init__(self, ntControlPipe, pipe, bufferSize):
-		logger.setFileFormat('[%l] [%D] [control pipe] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [control pipe]  %M  (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._ntControlPipe = ntControlPipe
 		self._pipe = pipe
@@ -532,7 +532,7 @@ class ControlServerResourceRoot(resource.Resource):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServerResourceJsonRpc(resource.Resource):
 	def __init__(self, opsiclientd):
-		logger.setFileFormat('[%l] [%D] [control server] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
 		resource.Resource.__init__(self)
 		self._opsiclientd = opsiclientd
 		
@@ -559,7 +559,7 @@ class ControlServerResourceJsonRpc(resource.Resource):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 	def __init__(self, opsiclientd):
-		logger.setFileFormat('[%l] [%D] [control server] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
 		ControlServerResourceJsonRpc.__init__(self, opsiclientd)
 	
 	def http_POST(self, request):
@@ -579,7 +579,7 @@ class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class JsonRpcWorker(object):
 	def __init__(self, request, opsiclientd, method = 'POST'):
-		logger.setFileFormat('[%l] [%D] [control server] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
 		self.request = request
 		self._opsiclientd = opsiclientd
 		self.method = method
@@ -977,7 +977,7 @@ class JsonInterfaceWorker(JsonRpcWorker):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServer(threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
-		logger.setFileFormat('[%l] [%D] [control server] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._httpsPort = httpsPort
@@ -1041,7 +1041,7 @@ class ControlServer(threading.Thread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, notificationServer, statusObject, waitBeforeConnect=0):
-		logger.setFileFormat('[%l] [%D] [service connection] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [service connection]  %M  (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username
@@ -1054,7 +1054,10 @@ class ServiceConnectionThread(KillableThread):
 		self.connected = False
 		self.cancelled = False
 		self.waiting = False
-		
+	
+	def getUsername(self):
+		return self._username
+	
 	def run(self):
 		try:
 			logger.debug("ServiceConnectionThread started...")
@@ -1077,6 +1080,12 @@ class ServiceConnectionThread(KillableThread):
 					tryNum += 1
 					logger.notice("Connecting to config server '%s' #%d" % (self._configServiceUrl, tryNum))
 					self._statusSubject.setMessage( _("Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
+					if (len(self._username.split('.')) < 3):
+						logger.notice("Domain missing in username %s, fetching domain from service" % self._username)
+						configService = JSONRPCBackend(address = self._configServiceUrl, username = '', password = '')
+						domain = configService.getDomain()
+						self._username += '.' + domain
+						logger.notice("Got domain '%s' from service, username expanded to '%s'" % (domain, self._username))
 					self.configService = JSONRPCBackend(address = self._configServiceUrl, username = self._username, password = self._password)
 					self.configService.authenticated()
 					self.connected = True
@@ -1108,7 +1117,7 @@ class ServiceConnectionThread(KillableThread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
-		logger.setFileFormat('[%l] [%D] [opsiclientd] %M (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [opsiclientd]  %M  (%F|%N)', object=self)
 		logger.debug("Opsiclient initiating")
 		
 		EventListener.__init__(self)
@@ -1146,6 +1155,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				'log_level':              LOG_NOTICE,
 				'host_id':                socket.getfqdn(),
 				'opsi_host_key':          '',
+				'wait_before_reboot':     3,
+				'wait_before_shutdown':   3,
 			},
 			'config_service': {
 				'url':                    '',
@@ -1423,8 +1434,8 @@ class Opsiclientd(EventListener, threading.Thread):
 									self._clientIdSubject,
 									self._actionProcessorInfoSubject,
 									self._opsiclientdInfoSubject ] )
-				logger.setLogFormat('[%l] [%D] [notification server] %M (%F|%N)', object=self._notificationServer)
-				logger.setLogFormat('[%l] [%D] [notification server] %M (%F|%N)', object=self._notificationServer.getFactory())
+				logger.setFileFormat('[%l] [%D] [notification server]  %M  (%F|%N)', object=self._notificationServer)
+				logger.setFileFormat('[%l] [%D] [notification server]  %M  (%F|%N)', object=self._notificationServer.getFactory())
 				self._notificationServer.start()
 				logger.notice("Notification server started")
 			except Exception, e:
@@ -1439,6 +1450,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			
 		except Exception, e:
 			logger.logException(e)
+			self._blockLogin = False
 		
 		self._running = False
 		
@@ -1515,12 +1527,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._actionProcessorInfoSubject.setMessage("")
 	
 	def waitForGUI(self):
-		logger.notice("Waiting for GUI to start")
-		logger.info("Waiting for winlogon to start")
-		while not System.getPids("winlogon.exe"):
-			logger.debug("   winlogon not running, sleeping 5 seconds...")
-			time.sleep(5)
-		logger.info("winlogon running")
+		return
 	
 	def processEvent(self, event):
 		logger.notice("Processing event %s" % event)
@@ -1614,6 +1621,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not serviceConnectionThread.connected:
 			raise Exception("Failed to connect to config service '%s': reason unknown" % self._config['config_service']['url'])
 		
+		if (serviceConnectionThread.getUsername() != self._config['global']['host_id']):
+			self._config['global']['host_id'] = serviceConnectionThread.getUsername()
+			logger.info("Updated host_id to '%s'" % self._config['global']['host_id'])
 		self._configService = serviceConnectionThread.configService
 	
 	def disconnectConfigServer(self):
@@ -1782,6 +1792,12 @@ class OpsiclientdNT(Opsiclientd):
 	def __init__(self):
 		Opsiclientd.__init__(self)
 	
+	def _shutdownMachine(self):
+		System.shutdown(wait = self._config['global']['wait_before_reboot'])
+	
+	def _rebootMachine(self):
+		System.reboot(wait = self._config['global']['wait_before_reboot'])
+	
 	def updateActionProcessor(self):
 		logger.notice("Updating action processor")
 		self._statusSubject.setMessage(_("Updating action processor"))
@@ -1865,13 +1881,13 @@ class OpsiclientdNT(Opsiclientd):
 				logger.warning("Failed to get bootmode from registry: %s" % e)
 			
 			self.connectConfigServer()
-			actionRequests = self._configService.getProductActionRequests_listOfHashes(self._config['global']['host_id'])
+			productStates = self._configService.getLocalBootProductStates_hash(self._config['global']['host_id']).get(self._config['global']['host_id'], [])
 			logger.notice("Got product action requests from configservice")
 			numRequests = 0
-			for actionRequest in actionRequests:
-				if (actionRequest['actionRequest'] != 'none'):
+			for productState in productStates:
+				if (productState['actionRequest'] not in ('none', 'undefined')):
 					numRequests += 1
-					logger.notice("   [%2s] product %-15s %s" % (numRequests, actionRequest['productId'] + ':', actionRequest['actionRequest']))
+					logger.notice("   [%2s] product %-20s %s" % (numRequests, productState['productId'] + ':', productState['actionRequest']))
 			
 			if (numRequests == 0) and (bootmode == 'BKSTD'):
 				logger.notice("No product action requests set")
@@ -1889,11 +1905,18 @@ class OpsiclientdNT(Opsiclientd):
 			try:
 				rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
 			except Exception, e:
-				logger.warning("Failed to get rebootRequested from registry: %s" % e)
+				logger.info("Failed to get rebootRequested from registry: %s" % e)
 			logger.info("rebootRequested: %s" % rebootRequested)
 			if rebootRequested:
 				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
-				System.reboot(wait = 3)
+				if (rebootRequested == 2):
+					# Logout
+					logger.notice("Logout requested, nothing to do")
+					pass
+				else:
+					# Reboot
+					self._statusSubject.setMessage(_("Rebooting machine"))
+					self._rebootMachine()
 			else:
 				shutdownRequested = 0
 				try:
@@ -1903,7 +1926,8 @@ class OpsiclientdNT(Opsiclientd):
 				logger.info("shutdownRequested: %s" % shutdownRequested)
 				if shutdownRequested:
 					System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
-					System.shutdown(wait = 3)
+					self._statusSubject.setMessage(_("Shutting down machine"))
+					self._shutdownMachine()
 				
 		except Exception, e:
 			logger.error("Failed to process product action requests: %s" % e)
@@ -1916,6 +1940,42 @@ class OpsiclientdNT(Opsiclientd):
 class OpsiclientdNT5(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
+	
+	def _shutdownMachine(self):
+		# Running in thread to avoid failure of shutdown (device not ready)
+		class _shutdownThread(threading.Thread):
+			def __init__ (self, wait):
+				threading.Thread.__init__(self)
+				self.wait = wait
+			
+			def run(self):
+				while(True):
+					try:
+						System.shutdown(wait = self.wait)
+						break
+					except:
+						# Device not ready
+						time.sleep(1)
+			
+		_shutdownThread(wait = self._config['global']['wait_before_shutdown']).start()
+		
+	def _rebootMachine(self):
+		# Running in thread to avoid failure of reboot (device not ready)
+		class _rebootThread(threading.Thread):
+			def __init__ (self, wait):
+				threading.Thread.__init__(self)
+				self.wait = wait
+			
+			def run(self):
+				while(True):
+					try:
+						System.reboot(wait = self.wait)
+						break
+					except:
+						# Device not ready
+						time.sleep(1)
+		
+		_rebootThread(wait = self._config['global']['wait_before_reboot']).start()
 	
 	def runProductActions(self):
 		actionProcessor = self._config['action_processor']['command']
@@ -1983,6 +2043,14 @@ class OpsiclientdNT5(OpsiclientdNT):
 class OpsiclientdNT6(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
+	
+	def waitForGUI(self):
+		logger.notice("Waiting for GUI to start")
+		logger.info("Waiting for LogonUI.exe to start")
+		while not System.getPids("LogonUI.exe"):
+			logger.debug("   LogonUI.exe not running, sleeping 5 seconds...")
+			time.sleep(3)
+		logger.info("LogonUI.exe running")
 	
 	def runProductActions(self):
 		actionProcessor = self._config['action_processor']['command']
