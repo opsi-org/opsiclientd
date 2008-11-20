@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2.6.6'
+__version__ = '0.2.6.7'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -311,7 +311,7 @@ class PosixControlPipe(ControlPipe):
 		logger.info("Pipe %s created" % self._pipeName)
 	
 	def run(self):
-		self._running = Tru
+		self._running = True
 		try:
 			self.createPipe()
 			while self._running:
@@ -1054,6 +1054,8 @@ class ServiceConnectionThread(KillableThread):
 		self.connected = False
 		self.cancelled = False
 		self.waiting = False
+		if not self._configServiceUrl:
+			raise Exception("No config service url given")
 	
 	def getUsername(self):
 		return self._username
@@ -1395,12 +1397,12 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.comment("Commandline: %s" % ' '.join(sys.argv))
 			logger.comment("Working directory: %s" % os.getcwd())
 			logger.notice("Using host id '%s'" % self._config['global']['host_id'])
-			logger.notice("Starting control pipe")
 			
 			self._clientIdSubject.setMessage(self._config['global']['host_id'])
 			self._opsiclientdInfoSubject.setMessage("opsiclientd %s" % __version__)
 			self.setActionProcessorInfo()
 			
+			logger.notice("Starting control pipe")
 			try:
 				self._controlPipe = ControlPipeFactory(self)
 				self._controlPipe.start()
@@ -1759,7 +1761,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			
 			elif (method == 'uptime'):
 				uptime = int(time.time() - self._startupTime)
-				logger.notice("rpc uptime: opsiclientd is running for %d seconds")
+				logger.notice("rpc uptime: opsiclientd is running for %d seconds" % uptime)
 				return uptime
 			
 			elif (method == 'getCurrentActiveDesktopName'):
@@ -1784,10 +1786,16 @@ class Opsiclientd(EventListener, threading.Thread):
 		System.runCommandInSession(command = cmd, waitForProcessEnding = True)
 		return self._CurrentActiveDesktopName
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                         OPSICLIENTD POSIX                                         -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class OpsiclientdPosix(Opsiclientd):
 	def __init__(self):
 		Opsiclientd.__init__(self)
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                          OPSICLIENTD NT                                           -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class OpsiclientdNT(Opsiclientd):
 	def __init__(self):
 		Opsiclientd.__init__(self)
@@ -1936,7 +1944,10 @@ class OpsiclientdNT(Opsiclientd):
 		
 		time.sleep(3)
 		self._processingActionRequests = False
-	
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                          OPSICLIENTD NT5                                          -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class OpsiclientdNT5(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
@@ -2038,8 +2049,10 @@ class OpsiclientdNT5(OpsiclientdNT):
 			if userCreated:
 				logger.notice("Deleting local user '%s'" % username)
 				System.deleteUser(username = username)
-	
-		
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                          OPSICLIENTD NT6                                          -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class OpsiclientdNT6(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
@@ -2126,6 +2139,7 @@ class OpsiclientdPosixInit(object):
 		# Start opsiclientd
 		self._opsiclientd = OpsiclientdPosix()
 		self._opsiclientd.start()
+		#self._opsiclientd.join()
 		while self._opsiclientd.isRunning():
 			time.sleep(1)
 		
