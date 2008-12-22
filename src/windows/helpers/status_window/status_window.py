@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2.2'
+__version__ = '0.2.3'
 
 # Imports
 import threading, time, sys, os, getopt
@@ -100,12 +100,11 @@ class OpsiDialogWindow(SubjectsObserver):
 		wc.cbWndExtra = win32con.DLGWINDOWEXTRA + struct.calcsize("Pi")
 		icon_flags = win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE
 		
-		## py.ico went away in python 2.5, load from executable instead
 		this_app=win32api.GetModuleHandle(None)
-		try:
-			wc.hIcon=win32gui.LoadIcon(this_app, 1)    ## python.exe and pythonw.exe
-		except win32gui.error:
-			wc.hIcon=win32gui.LoadIcon(this_app, 135)  ## pythonwin's icon
+		#try:
+		#	wc.hIcon=win32gui.LoadIcon(this_app, 1)    ## python.exe and pythonw.exe
+		#except win32gui.error:
+		#	wc.hIcon=win32gui.LoadIcon(this_app, 135)  ## pythonwin's icon
 		try:
 			classAtom = win32gui.RegisterClass(wc)
 		except win32gui.error, err_info:
