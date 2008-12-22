@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2.6.7'
+__version__ = '0.2.6.8'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -1150,6 +1150,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		self._config = {
 			'system': {
+				'program_files_dir':      '',
 			},
 			'global': {
 				'config_file':            'opsiclientd.conf',
@@ -1781,8 +1782,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			raise
 	
 	def getCurrentActiveDesktopName(self):
-		cmd = '''pythonw.exe -c "from OPSI import System;from OPSI.Backend.JSONRPC import JSONRPCBackend;JSONRPCBackend(username = '%s', password = '%s', address = 'https://localhost:%s/rpc').setCurrentActiveDesktopName(System.getActiveDesktopName())"''' \
-				% (self._config['global']['host_id'], self._config['global']['opsi_host_key'], self._config['control_server']['port'])
+		rpc = 'setCurrentActiveDesktopName(System.getActiveDesktopName())'
+		cmd = '%s "%s"' % (self._config['opsiclientd_rpc']['command'], rpc)
 		System.runCommandInSession(command = cmd, waitForProcessEnding = True)
 		return self._CurrentActiveDesktopName
 
@@ -1799,7 +1800,8 @@ class OpsiclientdPosix(Opsiclientd):
 class OpsiclientdNT(Opsiclientd):
 	def __init__(self):
 		Opsiclientd.__init__(self)
-	
+		self._config['global']['config_file'] = self._config['system']['program_files_dir'] + '\\opsi.org\\preloginloader\\opsiclientd.conf'
+		
 	def _shutdownMachine(self):
 		System.shutdown(wait = self._config['global']['wait_before_reboot'])
 	
