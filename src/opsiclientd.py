@@ -1800,7 +1800,7 @@ class OpsiclientdPosix(Opsiclientd):
 class OpsiclientdNT(Opsiclientd):
 	def __init__(self):
 		Opsiclientd.__init__(self)
-		self._config['global']['config_file'] = self._config['system']['program_files_dir'] + '\\opsi.org\\preloginloader\\opsiclientd.conf'
+		self._config['global']['config_file'] = self._config['system']['program_files_dir'] + '\\opsi.org\\preloginloader\\opsiclientd\\opsiclientd.conf'
 		
 	def _shutdownMachine(self):
 		System.shutdown(wait = self._config['global']['wait_before_reboot'])
