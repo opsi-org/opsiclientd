@@ -71,6 +71,7 @@ EVENT_TYPE_DAEMON_STARTUP = 'opsiclientd start'
 EVENT_TYPE_DAEMON_SHUTDOWN = 'opsiclientd shutdown'
 EVENT_TYPE_PROCESS_ACTION_REQUESTS = 'process action requests'
 EVENT_TYPE_TIMER = 'timer'
+EVENT_TYPE_CUSTOM = 'custom'
 
 # Message translation
 def _(msg):
@@ -130,20 +131,54 @@ class CanceledByUserError(opsiclientdError):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                            EVENT                                                  -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Event(object):
-	def __init__(self, type):
-		if not type in (EVENT_TYPE_DAEMON_STARTUP, EVENT_TYPE_DAEMON_SHUTDOWN, EVENT_TYPE_TIMER, EVENT_TYPE_PROCESS_ACTION_REQUESTS):
-			raise TypeError("Unkown event type %s" % type)
+class Event(threading.Thread):
+	def __init__(self, type, name, maxRepetitions=-1, activationDelay=0, notificationDelay=0, wql=""):
+		threading.Thread.__init__(self)
+		if not type in (EVENT_TYPE_DAEMON_STARTUP, EVENT_TYPE_DAEMON_SHUTDOWN, EVENT_TYPE_TIMER, EVENT_TYPE_PROCESS_ACTION_REQUESTS, EVENT_TYPE_CUSTOM):
+			raise TypeError("Unkown event type '%s'" % type)
+		if type is EVENT_TYPE_CUSTOM and not wql:
+			raise Exception("Custom event needs wql param")
+		if (not type is EVENT_TYPE_CUSTOM) and wql:
+			logger.error("Ignoring wql param because event type is '%s'" % type)
 		self._type = type
+		self._name = name
+		self._occured = 0
+		self._maxRepetitions = maxRepetitions
+		# wait <activationDelay> seconds before event gets active
+		self._activationDelay = activationDelay
+		# wait <notificationDelay> seconds before event is fired
+		self._notificationDelay = notificationDelay
+		self._wql = wql
 		self._eventListeners = []
-		logger.setFileFormat('[%l] [%D] [event ' + str(self._type) + ']  %M  (%F|%N)', object=self)
+		logger.setFileFormat('[%l] [%D] [event ' + str(self._name) + ']  %M  (%F|%N)', object=self)
 		
 	def __str__(self):
-		return "<Event %s>" % self.getType()
+		return "<event: %s>" % self._name
 	
 	def getType(self):
 		return self._type
 	
+	def activate(self):
+		return
+	
+	def run(self):
+		try:
+			while (self._maxRepetitions < 0) or (self._occured <= self._maxRepetitions):
+				if (self._activationDelay > 0):
+					logger.debug("Waiting %d seconds before activation of event '%s'" % (self._activationDelay, self))
+					time.sleep(self._activationDelay)
+				logger.info("Activating event '%s'" % self)
+				self.activate()
+				logger.info("Event '%s' occured" % self)
+				if (self._notificationDelay > 0):
+					logger.debug("Waiting %d seconds before firing event '%s'" % (self._notificationDelay, self))
+					time.sleep(self._notificationDelay)
+				self.fire()
+			logger.info("Event '%s' deactivated" % self)
+		except Exception, e:
+			logger.error("Failure in event '%s': %s" % (self, e))
+			logger.logException(e)
+		
 	def addEventListener(self, eventListener):
 		if not isinstance(eventListener, EventListener):
 			raise TypeError("Failed to add event listener, got class %s, need class EventListener" % eventListener.__class__)
@@ -167,6 +202,8 @@ class Event(object):
 				except Exception, e:
 					logger.logException(e)
 		
+		logger.notice("Firing event '%s'" % self)
+		self._occured += 1
 		for l in self._eventListeners:
 			# Create a new thread for each event listener
 			ProcessEventThread(l, self).start()
@@ -175,54 +212,51 @@ class Event(object):
 # -                                        DAEMON STARTUP EVENT                                       -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class DaemonStartupEvent(Event):
-	def __init__(self):
-		Event.__init__(self, EVENT_TYPE_DAEMON_STARTUP)
-
+	def __init__(self, name, maxRepetitions=-1, activationDelay=2, notificationDelay=0):
+		Event.__init__(self, EVENT_TYPE_DAEMON_STARTUP, name, maxRepetitions, activationDelay, notificationDelay)
+		self._maxRepetitions = 0
+	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                       DAEMON SHUTDOWN EVENT                                       -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class DaemonShutdownEvent(Event):
-	def __init__(self):
-		Event.__init__(self, EVENT_TYPE_DAEMON_SHUTDOWN)
-
+	def __init__(self, name, maxRepetitions=-1, activationDelay=0, notificationDelay=0):
+		Event.__init__(self, EVENT_TYPE_DAEMON_SHUTDOWN, name, maxRepetitions, activationDelay, notificationDelay)
+		self._maxRepetitions = 0
+	
+	def activate(self):
+		e = threading.Event()
+		e.wait()
+	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                   PROCESS ACTION REQUESTS EVENT                                   -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ProcessActionRequestEvent(Event):
-	def __init__(self, logoffCurrentUser=False):
-		self.logoffCurrentUser = logoffCurrentUser
-		Event.__init__(self, EVENT_TYPE_PROCESS_ACTION_REQUESTS)
+	def __init__(self, name, maxRepetitions=-1, activationDelay=0, notificationDelay=0):
+		Event.__init__(self, EVENT_TYPE_PROCESS_ACTION_REQUESTS, name, maxRepetitions, activationDelay, notificationDelay)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                            TIMER EVENT                                            -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class TimerEvent(Event):
-	def __init__(self, interval=0):
-		Event.__init__(self, EVENT_TYPE_TIMER)
-		self.setInterval(interval)
+	def __init__(self, name, maxRepetitions=-1, activationDelay=0, notificationDelay=0):
+		Event.__init__(self, EVENT_TYPE_TIMER, name, maxRepetitions, activationDelay, notificationDelay)
 	
-	def __del__(self):
-		if hasattr(self, '_timer') and self._timer:
-			self._timer.cancel()
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                           CUSTOM EVENT                                            -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class CustomEvent(Event):
+	def __init__(self, name, maxRepetitions=-1, activationDelay=0, notificationDelay=0, wql=""):
+		Event.__init__(self, EVENT_TYPE_CUSTOM, name, maxRepetitions, activationDelay, notificationDelay, wql)
+	
+	def activate(self):
+		if self._wql:
+			import wmi
+			c = wmi.WMI(privileges=["Security"])
+			watcher = c.watch_for(raw_wql=self._wql, wmi_class='')
+			w = watcher()
+			logger.info("got wmi object: %s" % w)
 		
-	def __str__(self):
-		return "<Event %s (every %d seconds)>" % (self.getType(), self._interval)
-	
-	def setInterval(self, interval):
-		self._interval = int(interval)
-		if hasattr(self, '_timer') and self._timer:
-			self._timer.cancel()
-		
-		if (self._interval > 0):
-			self._timer = threading.Timer(self._interval, self.timerCallback)
-			self._timer.start()
-		logger.debug("Timer interval set to %d" % self._interval)
-	
-	def timerCallback(self):
-		self.fire()
-		self._timer = threading.Timer(self._interval, self.timerCallback)
-		self._timer.start()
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          EVENT LISTENER                                           -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1128,14 +1162,6 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._startupTime = time.time()
 		self._running = False
 		self._configService = None
-		self._daemonStartupEvent = DaemonStartupEvent()
-		self._daemonStartupEvent.addEventListener(self)
-		self._daemonShutdownEvent = DaemonShutdownEvent()
-		self._daemonShutdownEvent.addEventListener(self)
-		self._timerEvent = TimerEvent()
-		self._timerEvent.addEventListener(self)
-		self._processActionRequestsEvent = ProcessActionRequestEvent()
-		self._processActionRequestsEvent.addEventListener(self)
 		self._processingActionRequests = False
 		self._blockLogin = True
 		self._CurrentActiveDesktopName = None
@@ -1236,7 +1262,6 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		if option in ('log_level', 'port'):
 			value = int(value)
-		
 		
 		if not self._config.has_key(section):
 			self._config[section] = {}
@@ -1388,6 +1413,53 @@ class Opsiclientd(EventListener, threading.Thread):
 					string = self.fillPlaceholders(newString)
 		return string
 	
+	def createEvents(self):
+		self._events = {}
+		for (section, options) in self._config.items():
+			if section.startswith('event_'):
+				(name, active, type, maxRepetitions, activationDelay, notificationDelay, wql) = ('', True, '', -1, 0, 0, '')
+				try:
+					name = section.split('_', 1)[1]
+					if not name:
+						raise ValueError("No event name defined in section '%s'" % section)
+					if name in self._events.keys():
+						raise ValueError("Event '%s' already defined" % name)
+					for key in options.keys():
+						if   (key == 'type'):
+							type = options[key]
+						elif (key == 'active'):
+							active = not options[key].lower() in ('0', 'false', 'off', 'no')
+						elif (key == 'max_repetitions'):
+							maxRepetitions = int(options[key])
+						elif (key == 'activation_delay'):
+							activationDelay = int(options[key])
+						elif (key == 'notification_delay'):
+							activationDelay = int(options[key])
+						elif (key == 'wql'):
+							wql = options[key]
+						else:
+							logger.error("Skipping unknown option '%s' in definition of event '%s'" % (key, name))
+					if not active:
+						logger.notice("Event '%s' is deactivated" % name)
+						continue
+					if   (type == 'daemon startup'):
+						self._events[name] = DaemonStartupEvent(name, maxRepetitions, activationDelay, notificationDelay)
+					elif (type == 'daemon shutdown'):
+						self._events[name] = DaemonShutdownEvent(name, maxRepetitions, activationDelay, notificationDelay)
+					elif (type == 'timer'):
+						self._events[name] = TimerEvent(name, maxRepetitions, activationDelay, notificationDelay)
+					elif (type == 'custom'):
+						self._events[name] = CustomEvent(name, maxRepetitions, activationDelay, notificationDelay, wql)
+					else:
+						raise ValueError("Unhandled event type '%s' in definition of event '%s'" % (type, name))
+					logger.notice("%s event '%s' created" % (type, name))
+					
+				except Exception, e:
+					logger.error("Failed to create event '%s': %s" % (name, e))
+		for event in self._events.values():
+			event.addEventListener(self)
+			event.start()
+		
 	def run(self):
 		self._running = True
 		
@@ -1445,11 +1517,14 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to start notification server: %s" % e)
 				raise
 			
-			self._daemonStartupEvent.fire()
+			# Events
+			self.createEvents()
 			# TODO: passive wait?
 			while self._running:
 				time.sleep(1)
-			self._daemonShutdownEvent.fire()
+			for event in self._events.values():
+				if (event.getType() == EVENT_TYPE_DAEMON_SHUTDOWN):
+					event.fire()
 			
 		except Exception, e:
 			logger.logException(e)
@@ -1721,8 +1796,8 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.notice("rpc processProductActionRequests: Already processing action requests")
 					return "Already processing action requests"
 				logger.notice("rpc processProductActionRequests: Start processing action requests")
-				self._processActionRequestsEvent.logoffCurrentUser = bool(params[0])
-				self._processActionRequestsEvent.fire()
+				#self._processActionRequestsEvent.logoffCurrentUser = bool(params[0])
+				#self._processActionRequestsEvent.fire()
 				return "Processing action requests started"
 			
 			elif (method == 'setStatusMessage'):
