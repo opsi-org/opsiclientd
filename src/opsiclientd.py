@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2.6.8'
+__version__ = '0.3'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -47,6 +47,7 @@ if (os.name == 'posix'):
 if (os.name == 'nt'):
 	import win32serviceutil, win32service
 	from ctypes import *
+	import wmi, pythoncom
 
 # Twisted imports
 from twisted.internet import defer, threads, reactor
@@ -67,8 +68,9 @@ logger = Logger()
 logger.setFileFormat('[%l] [%D]  %M  (%F|%N)')
 
 # Possible event types
-EVENT_TYPE_DAEMON_STARTUP = 'opsiclientd start'
-EVENT_TYPE_DAEMON_SHUTDOWN = 'opsiclientd shutdown'
+EVENT_TYPE_DAEMON_STARTUP = 'daemon startup'
+EVENT_TYPE_DAEMON_SHUTDOWN = 'daemon shutdown'
+EVENT_TYPE_GUI_STARTUP = 'gui startup'
 EVENT_TYPE_PROCESS_ACTION_REQUESTS = 'process action requests'
 EVENT_TYPE_TIMER = 'timer'
 EVENT_TYPE_CUSTOM = 'custom'
@@ -132,25 +134,58 @@ class CanceledByUserError(opsiclientdError):
 # -                                            EVENT                                                  -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Event(threading.Thread):
-	def __init__(self, type, name, maxRepetitions=-1, activationDelay=0, notificationDelay=0, wql=""):
+	def __init__(self, type, name, **kwargs):
 		threading.Thread.__init__(self)
-		if not type in (EVENT_TYPE_DAEMON_STARTUP, EVENT_TYPE_DAEMON_SHUTDOWN, EVENT_TYPE_TIMER, EVENT_TYPE_PROCESS_ACTION_REQUESTS, EVENT_TYPE_CUSTOM):
+		
+		if not type in (EVENT_TYPE_DAEMON_STARTUP, EVENT_TYPE_DAEMON_SHUTDOWN, EVENT_TYPE_GUI_STARTUP,
+				EVENT_TYPE_TIMER, EVENT_TYPE_PROCESS_ACTION_REQUESTS, EVENT_TYPE_CUSTOM):
 			raise TypeError("Unkown event type '%s'" % type)
-		if type is EVENT_TYPE_CUSTOM and not wql:
-			raise Exception("Custom event needs wql param")
-		if (not type is EVENT_TYPE_CUSTOM) and wql:
-			logger.error("Ignoring wql param because event type is '%s'" % type)
+		if not name:
+			raise TypeError("Name not given")
+		
+		self.__dict__.update(kwargs)
 		self._type = type
 		self._name = name
 		self._occured = 0
-		self._maxRepetitions = maxRepetitions
-		# wait <activationDelay> seconds before event gets active
-		self._activationDelay = activationDelay
-		# wait <notificationDelay> seconds before event is fired
-		self._notificationDelay = notificationDelay
-		self._wql = wql
 		self._eventListeners = []
+		
 		logger.setFileFormat('[%l] [%D] [event ' + str(self._name) + ']  %M  (%F|%N)', object=self)
+		
+		self.maxRepetitions = int(self.__dict__.get('maxRepetitions', -1))
+		# wait <activationDelay> seconds before event gets active
+		self.activationDelay = int(self.__dict__.get('activationDelay', 0))
+		# wait <notificationDelay> seconds before event is fired
+		self.notificationDelay = int(self.__dict__.get('notificationDelay', 0))
+		
+		# wql
+		self.wql = str(self.__dict__.get('wql', ''))
+		if self._type is EVENT_TYPE_CUSTOM and not self.wql:
+			raise Exception("Custom event needs wql param")
+		if (not self._type is EVENT_TYPE_CUSTOM) and self.wql:
+			logger.error("Ignoring wql param because event type is '%s'" % self._type)
+			self.wql = ''
+		
+		self.blockLogin = bool(self.__dict__.get('blockLogin', False))
+		self.logoffCurrentUser = bool(self.__dict__.get('logoffCurrentUser', False))
+		self.lockWorkstation = bool(self.__dict__.get('lockWorkstation', False))
+		self.getConfigFromService = bool(self.__dict__.get('getConfigFromService', True))
+		self.updateConfigFile = bool(self.__dict__.get('updateConfigFile', True))
+		self.writeLogToService = bool(self.__dict__.get('writeLogToService', True))
+		
+		self.processProductActions = str(self.__dict__.get('processProductActions', 'none'))
+		if not self.processProductActions in ('none', 'all', 'background'):
+			logger.error("Bad value '%s' for runActions" % self.processProductActions)
+			self.processProductActions = 'all'
+		
+		self.notifierType = str(self.__dict__.get('notifierType', 'window'))
+		if not self.notifierType in ('window', 'none'):
+			logger.error("Bad value '%s' for notifierType" % self.notifierType)
+			self.notifierType = 'window'
+		
+		self.notifierDesktop = str(self.__dict__.get('notifierDesktop', 'current'))
+		if not self.notifierDesktop in ('logon', 'default', 'current'):
+			logger.error("Bad value '%s' for notifierDesktop" % self.notifierDesktop)
+			self.notifierDesktop = 'current'
 		
 	def __str__(self):
 		return "<event: %s>" % self._name
@@ -163,16 +198,16 @@ class Event(threading.Thread):
 	
 	def run(self):
 		try:
-			while (self._maxRepetitions < 0) or (self._occured <= self._maxRepetitions):
-				if (self._activationDelay > 0):
-					logger.debug("Waiting %d seconds before activation of event '%s'" % (self._activationDelay, self))
-					time.sleep(self._activationDelay)
+			while (self.maxRepetitions < 0) or (self._occured <= self.maxRepetitions):
+				if (self.activationDelay > 0):
+					logger.debug("Waiting %d seconds before activation of event '%s'" % (self.activationDelay, self))
+					time.sleep(self.activationDelay)
 				logger.info("Activating event '%s'" % self)
 				self.activate()
 				logger.info("Event '%s' occured" % self)
-				if (self._notificationDelay > 0):
-					logger.debug("Waiting %d seconds before firing event '%s'" % (self._notificationDelay, self))
-					time.sleep(self._notificationDelay)
+				if (self.notificationDelay > 0):
+					logger.debug("Waiting %d seconds before firing event '%s'" % (self.notificationDelay, self))
+					time.sleep(self.notificationDelay)
 				self.fire()
 			logger.info("Event '%s' deactivated" % self)
 		except Exception, e:
@@ -212,50 +247,82 @@ class Event(threading.Thread):
 # -                                        DAEMON STARTUP EVENT                                       -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class DaemonStartupEvent(Event):
-	def __init__(self, name, maxRepetitions=-1, activationDelay=2, notificationDelay=0):
-		Event.__init__(self, EVENT_TYPE_DAEMON_STARTUP, name, maxRepetitions, activationDelay, notificationDelay)
-		self._maxRepetitions = 0
+	def __init__(self, name, **kwargs):
+		Event.__init__(self, EVENT_TYPE_DAEMON_STARTUP, name, **kwargs)
+		self.maxRepetitions = 0
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                       DAEMON SHUTDOWN EVENT                                       -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class DaemonShutdownEvent(Event):
-	def __init__(self, name, maxRepetitions=-1, activationDelay=0, notificationDelay=0):
-		Event.__init__(self, EVENT_TYPE_DAEMON_SHUTDOWN, name, maxRepetitions, activationDelay, notificationDelay)
-		self._maxRepetitions = 0
+	def __init__(self, name, **kwargs):
+		Event.__init__(self, EVENT_TYPE_DAEMON_SHUTDOWN, name, **kwargs)
+		self.maxRepetitions = 0
 	
 	def activate(self):
 		e = threading.Event()
 		e.wait()
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                         GUI STARTUP EVENT                                         -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class GUIStartupEvent(Event):
+	def __init__(self, name, **kwargs):
+		Event.__init__(self, EVENT_TYPE_GUI_STARTUP, name, **kwargs)
+		self.maxRepetitions = 0
+		if   (os.name == 'nt') and (sys.getwindowsversion()[0] == 5):
+			self.wql = "SELECT * FROM __InstanceCreationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_Process' AND TargetInstance.Name = 'winlogon.exe'"
+		elif (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
+			self.wql = "SELECT * FROM __InstanceCreationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_Process' AND TargetInstance.Name = 'LogonUI.exe'"
+	
+	def activate(self):
+		if self.wql:
+			pythoncom.CoInitialize()
+			try:
+				c = wmi.WMI()
+				logger.info("watching for wql: %s" % self.wql)
+				watcher = c.watch_for(raw_wql=self.wql, wmi_class='')
+				w = watcher()
+				logger.info("got wmi object: %s" % w)
+			finally:
+				pythoncom.CoUninitialize()
+		else:
+			# Not yet supported
+			e = threading.Event()
+			e.wait()
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                   PROCESS ACTION REQUESTS EVENT                                   -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ProcessActionRequestEvent(Event):
-	def __init__(self, name, maxRepetitions=-1, activationDelay=0, notificationDelay=0):
-		Event.__init__(self, EVENT_TYPE_PROCESS_ACTION_REQUESTS, name, maxRepetitions, activationDelay, notificationDelay)
+	def __init__(self, name, **kwargs):
+		Event.__init__(self, EVENT_TYPE_PROCESS_ACTION_REQUESTS, name, **kwargs)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                            TIMER EVENT                                            -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class TimerEvent(Event):
-	def __init__(self, name, maxRepetitions=-1, activationDelay=0, notificationDelay=0):
-		Event.__init__(self, EVENT_TYPE_TIMER, name, maxRepetitions, activationDelay, notificationDelay)
+	def __init__(self, name, **kwargs):
+		Event.__init__(self, EVENT_TYPE_TIMER, name, **kwargs)
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                           CUSTOM EVENT                                            -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class CustomEvent(Event):
-	def __init__(self, name, maxRepetitions=-1, activationDelay=0, notificationDelay=0, wql=""):
-		Event.__init__(self, EVENT_TYPE_CUSTOM, name, maxRepetitions, activationDelay, notificationDelay, wql)
+	def __init__(self, name, **kwargs):
+		Event.__init__(self, EVENT_TYPE_CUSTOM, name, **kwargs)
 	
 	def activate(self):
-		if self._wql:
-			import wmi
-			c = wmi.WMI(privileges=["Security"])
-			watcher = c.watch_for(raw_wql=self._wql, wmi_class='')
-			w = watcher()
-			logger.info("got wmi object: %s" % w)
+		if self.wql:
+			pythoncom.CoInitialize()
+			try:
+				c = wmi.WMI()
+				logger.info("watching for wql: %s" % self.wql)
+				watcher = c.watch_for(raw_wql=self.wql, wmi_class='')
+				w = watcher()
+				logger.info("got wmi object: %s" % w)
+			finally:
+				pythoncom.CoUninitialize()
 		
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          EVENT LISTENER                                           -
@@ -1317,7 +1384,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.notice("Config read")
 		logger.debug("Config is now:\n %s" % Tools.objectToBeautifiedText(self._config))
 	
-	def writeConfigFile(self):
+	def updateConfigFile(self):
 		''' Get settings from config file '''
 		logger.notice("Trying to write config to file: '%s'" % self._config['global']['config_file'])
 		
@@ -1417,7 +1484,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._events = {}
 		for (section, options) in self._config.items():
 			if section.startswith('event_'):
-				(name, active, type, maxRepetitions, activationDelay, notificationDelay, wql) = ('', True, '', -1, 0, 0, '')
+				(name, active, type, args) = ('', True, '', {})
+				
 				try:
 					name = section.split('_', 1)[1]
 					if not name:
@@ -1430,26 +1498,48 @@ class Opsiclientd(EventListener, threading.Thread):
 						elif (key == 'active'):
 							active = not options[key].lower() in ('0', 'false', 'off', 'no')
 						elif (key == 'max_repetitions'):
-							maxRepetitions = int(options[key])
+							args['maxRepetitions'] = int(options[key])
 						elif (key == 'activation_delay'):
-							activationDelay = int(options[key])
+							args['activationDelay'] = int(options[key])
 						elif (key == 'notification_delay'):
-							activationDelay = int(options[key])
+							args['notificationDelay'] = int(options[key])
 						elif (key == 'wql'):
-							wql = options[key]
+							args['wql'] = options[key]
+						
+						elif (key == 'block_login'):
+							args['blockLogin'] = options[key].lower() in ('0', 'false', 'off', 'no')
+						elif (key == 'lock_workstation'):
+							args['lockWorkstation'] = options[key].lower() in ('1', 'true', 'on', 'yes')
+						elif (key == 'logoff_current_user'):
+							args['logoffCurrentUser'] = options[key].lower() in ('1', 'true', 'on', 'yes')
+						elif (key == 'get_config_from_service'):
+							args['getConfigFromService'] = not options[key].lower() in ('0', 'false', 'off', 'no')
+						elif (key == 'update_config_file'):
+							args['updateConfigFile'] = not options[key].lower() in ('0', 'false', 'off', 'no')
+						elif (key == 'write_log_to_service'):
+							args['writeLogToService'] = not options[key].lower() in ('0', 'false', 'off', 'no')
+						elif (key == 'process_product_actions'):
+							args['processProductActions'] = options[key].lower()
+						elif (key == 'notifier_type'):
+							args['notifierType'] = options[key].lower()
+						elif (key == 'notifier_desktop'):
+							args['notifierDesktop'] = options[key].lower()
+						
 						else:
 							logger.error("Skipping unknown option '%s' in definition of event '%s'" % (key, name))
 					if not active:
 						logger.notice("Event '%s' is deactivated" % name)
 						continue
-					if   (type == 'daemon startup'):
-						self._events[name] = DaemonStartupEvent(name, maxRepetitions, activationDelay, notificationDelay)
-					elif (type == 'daemon shutdown'):
-						self._events[name] = DaemonShutdownEvent(name, maxRepetitions, activationDelay, notificationDelay)
-					elif (type == 'timer'):
-						self._events[name] = TimerEvent(name, maxRepetitions, activationDelay, notificationDelay)
-					elif (type == 'custom'):
-						self._events[name] = CustomEvent(name, maxRepetitions, activationDelay, notificationDelay, wql)
+					if   (type == EVENT_TYPE_DAEMON_STARTUP):
+						self._events[name] = DaemonStartupEvent(name, **args)
+					elif (type == EVENT_TYPE_DAEMON_SHUTDOWN):
+						self._events[name] = DaemonShutdownEvent(name, **args)
+					elif (type == EVENT_TYPE_GUI_STARTUP):
+						self._events[name] = GUIStartupEvent(name, **args)
+					elif (type == EVENT_TYPE_TIMER):
+						self._events[name] = TimerEvent(name, **args)
+					elif (type == EVENT_TYPE_CUSTOM):
+						self._events[name] = CustomEvent(name, **args)
 					else:
 						raise ValueError("Unhandled event type '%s' in definition of event '%s'" % (type, name))
 					logger.notice("%s event '%s' created" % (type, name))
@@ -1569,7 +1659,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			(self._config['config_service']['host'], self._config['config_service']['port']) = self._config['config_service']['host'].split(':', 1)
 		self._serviceUrlSubject.setMessage(self._config['config_service']['url'])
 	
-	def startStatusApplication(self):
+	def startStatusApplication(self, desktop=''):
 		if self._statusApplicationProcess:
 			# Already running
 			return
@@ -1581,7 +1671,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		statusApplication = self.fillPlaceholders(statusApplication)
 		
 		activeSessionId = System.getActiveConsoleSessionId()
-		desktop = self.getCurrentActiveDesktopName()
+		if not desktop or desktop.lower() in ('winlogon', 'default'):
+			desktop = self.getCurrentActiveDesktopName()
 		if not desktop or desktop.lower() not in ('winlogon', 'default'):
 			desktop = 'winlogon'
 		
@@ -1604,40 +1695,38 @@ class Opsiclientd(EventListener, threading.Thread):
 	def setActionProcessorInfo(self):
 		self._actionProcessorInfoSubject.setMessage("")
 	
-	def waitForGUI(self):
-		return
-	
 	def processEvent(self, event):
 		logger.notice("Processing event %s" % event)
 		self._statusSubject.setMessage( _("Processing event %s") % event )
+		
 		try:
-			if isinstance(event, DaemonStartupEvent):
+			if event.blockLogin:
 				self._blockLogin = True
-				
-				self.waitForGUI()
-				self.startStatusApplication()
+			if event.logoffCurrentUser:
+				System.logoffCurrentUser()
+				time.sleep(15)
+			if event.lockWorkstation:
+				System.lockWorkstation()
+				time.sleep(15)
+			if (event.notifierType == 'window'):
+				self.startStatusApplication(desktop = event.notifierDesktop)
+			if event.getConfigFromService:
 				self.getConfigFromService()
-				self.writeConfigFile()
-				self.processProductActionRequests()
-				
-				self._blockLogin = False
-				
-			elif isinstance(event, ProcessActionRequestEvent):
-				if event.logoffCurrentUser:
-					self._blockLogin = True
-					System.logoffCurrentUser()
-					time.sleep(15)
-				
-				self.startStatusApplication()
+			if event.updateConfigFile:
+				self.updateConfigFile()
+			if (event.processProductActions != 'none'):
 				self.processProductActionRequests()
 			
 		except Exception, e:
 			logger.error("Failed to process event %s: %s" % (event, e))
 			logger.logException(e)
-		self._blockLogin = False
-		self.writeLogToService()
+		
+		if event.writeLogToService:
+			self.writeLogToService()
 		self.disconnectConfigServer()
 		self.stopStatusApplication()
+		
+		self._blockLogin = False
 	
 	def processProductActionRequests(self):
 		logger.error("processProductActionRequests not implemented")
@@ -1857,8 +1946,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			raise
 	
 	def getCurrentActiveDesktopName(self):
+		if not (self._config.has_key('opsiclientd_rpc') and self._config['opsiclientd_rpc'].has_key('command')):
+			raise Exception("opsiclientd_rpc command not defined")
 		rpc = 'setCurrentActiveDesktopName(System.getActiveDesktopName())'
-		cmd = '%s "%s"' % (self._config['opsiclientd_rpc']['command'], rpc)
+		cmd = '%s "%s"' % (self.fillPlaceholders(self._config['opsiclientd_rpc']['command']), rpc)
 		System.runCommandInSession(command = cmd, waitForProcessEnding = True)
 		return self._CurrentActiveDesktopName
 
@@ -2133,14 +2224,6 @@ class OpsiclientdNT5(OpsiclientdNT):
 class OpsiclientdNT6(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
-	
-	def waitForGUI(self):
-		logger.notice("Waiting for GUI to start")
-		logger.info("Waiting for LogonUI.exe to start")
-		while not System.getPids("LogonUI.exe"):
-			logger.debug("   LogonUI.exe not running, sleeping 5 seconds...")
-			time.sleep(3)
-		logger.info("LogonUI.exe running")
 	
 	def runProductActions(self):
 		actionProcessor = self._config['action_processor']['command']
