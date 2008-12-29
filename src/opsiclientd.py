@@ -1229,9 +1229,10 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._startupTime = time.time()
 		self._running = False
 		self._configService = None
-		self._processingActionRequests = False
+		self._processingEvent = False
 		self._blockLogin = True
 		self._CurrentActiveDesktopName = None
+		self._events = {}
 		
 		self._statusApplicationProcess = None
 		
@@ -1249,7 +1250,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				'config_file':            'opsiclientd.conf',
 				'log_file':               'opsiclientd.log',
 				'log_level':              LOG_NOTICE,
-				'host_id':                socket.getfqdn(),
+				'host_id':                System.getFQDN(),
 				'opsi_host_key':          '',
 				'wait_before_reboot':     3,
 				'wait_before_shutdown':   3,
@@ -1291,7 +1292,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			{ 'name': 'getBlockLogin',                   'params': [ ],                       'availability': ['server', 'pipe'] },
 			{ 'name': 'setBlockLogin',                   'params': [ 'blockLogin' ],          'availability': ['server'] },
 			{ 'name': 'runCommand',                      'params': [ 'command', '*desktop' ], 'availability': ['server'] },
-			{ 'name': 'processProductActionRequests',    'params': [ 'logoffCurrentUser' ],   'availability': ['server'] },
+			{ 'name': 'fireEvent',                       'params': [ 'name' ],                'availability': ['server'] },
 			{ 'name': 'logoffCurrentUser',               'params': [ ],                       'availability': ['server'] },
 			{ 'name': 'lockWorkstation',                 'params': [ ],                       'availability': ['server'] },
 			{ 'name': 'setStatusMessage',                'params': [ 'message' ],             'availability': ['server'] },
@@ -1481,7 +1482,6 @@ class Opsiclientd(EventListener, threading.Thread):
 		return string
 	
 	def createEvents(self):
-		self._events = {}
 		for (section, options) in self._config.items():
 			if section.startswith('event_'):
 				(name, active, type, args) = ('', True, '', {})
@@ -1699,6 +1699,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.notice("Processing event %s" % event)
 		self._statusSubject.setMessage( _("Processing event %s") % event )
 		
+		if self._processingEvent:
+			logger.error("Already processing event")
+			return
+		self._processingEvent = True
+		
 		try:
 			if event.blockLogin:
 				self._blockLogin = True
@@ -1721,13 +1726,15 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.error("Failed to process event %s: %s" % (event, e))
 			logger.logException(e)
 		
-		if event.writeLogToService:
-			self.writeLogToService()
-		self.disconnectConfigServer()
-		self.stopStatusApplication()
+		try:
+			if event.writeLogToService:
+				self.writeLogToService()
+			self.disconnectConfigServer()
+			self.stopStatusApplication()
+		finally:
+			self._blockLogin = False
+			self._processingEvent = False
 		
-		self._blockLogin = False
-	
 	def processProductActionRequests(self):
 		logger.error("processProductActionRequests not implemented")
 	
@@ -1880,14 +1887,14 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.notice("rpc lockWorkstation: locking workstation now")
 				System.lockWorkstation()
 				
-			elif (method == 'processProductActionRequests'):
-				if self._processingActionRequests:
-					logger.notice("rpc processProductActionRequests: Already processing action requests")
-					return "Already processing action requests"
-				logger.notice("rpc processProductActionRequests: Start processing action requests")
-				#self._processActionRequestsEvent.logoffCurrentUser = bool(params[0])
-				#self._processActionRequestsEvent.fire()
-				return "Processing action requests started"
+			elif (method == 'fireEvent'):
+				if not params[0]:
+					raise ValueError("No event name given")
+				name = params[0]
+				if not name in self._events.keys():
+					raise ValueError("Event '%s' not in list of known events: %s" % (name, ', '.join(self._events.keys())))
+				logger.notice("Firing event '%s'" % name)
+				self._events[name].fire()
 			
 			elif (method == 'setStatusMessage'):
 				message = params[0]
@@ -2043,10 +2050,6 @@ class OpsiclientdNT(Opsiclientd):
 			logger.error("Failed to set action processor info: %s" % e)
 	
 	def processProductActionRequests(self):
-		if self._processingActionRequests:
-			logger.error("Already processing action requests")
-			return
-		self._processingActionRequests = True
 		self._statusSubject.setMessage(_("Getting action requests from config service"))
 		
 		try:
@@ -2111,7 +2114,6 @@ class OpsiclientdNT(Opsiclientd):
 			self._statusSubject.setMessage( _("Failed to process product action requests: %s") % e )
 		
 		time.sleep(3)
-		self._processingActionRequests = False
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          OPSICLIENTD NT5                                          -
