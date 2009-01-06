@@ -80,7 +80,7 @@ class OpsiDialogWindow(SubjectsObserver):
 	def __init__(self):
 		win32gui.InitCommonControls()
 		self.hinst = win32gui.dllhandle
-		self.wndClassName = "OpsiDialog"
+		self.wndClassName = "opsi status"
 		
 		self.loadSkin()
 		
