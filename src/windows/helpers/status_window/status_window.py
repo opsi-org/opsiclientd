@@ -79,7 +79,20 @@ class BLENDFUNCTION(Structure):
 class OpsiDialogWindow(SubjectsObserver):
 	def __init__(self):
 		win32gui.InitCommonControls()
-		self.hinst = win32gui.dllhandle
+		self.hinst = win32api.GetModuleHandle(None)
+		#self.hinst = win32gui.dllhandle
+		self.taskbarNotifyEventId = win32con.WM_USER + 20
+		self.hidden = False
+		self.x = 0
+		self.y = 0
+		self.cx = 0
+		self.cy = 0
+		
+		try:
+			self.hicon = win32gui.LoadIcon(self.hinst, 1)    ## python.exe and pythonw.exe
+		except win32gui.error:
+			self.hicon = win32gui.LoadIcon(self.hinst, 135)  ## pythonwin's icon
+		
 		self.wndClassName = "opsi status"
 		
 		self.loadSkin()
@@ -99,12 +112,7 @@ class OpsiDialogWindow(SubjectsObserver):
 		# C code: wc.cbWndExtra = DLGWINDOWEXTRA + sizeof(HBRUSH) + (sizeof(COLORREF));
 		wc.cbWndExtra = win32con.DLGWINDOWEXTRA + struct.calcsize("Pi")
 		icon_flags = win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE
-		
-		this_app=win32api.GetModuleHandle(None)
-		#try:
-		#	wc.hIcon=win32gui.LoadIcon(this_app, 1)    ## python.exe and pythonw.exe
-		#except win32gui.error:
-		#	wc.hIcon=win32gui.LoadIcon(this_app, 135)  ## pythonwin's icon
+		wc.hIcon = self.hicon
 		try:
 			classAtom = win32gui.RegisterClass(wc)
 		except win32gui.error, err_info:
@@ -151,6 +159,7 @@ class OpsiDialogWindow(SubjectsObserver):
 				'text':      'Opsi',
 				'style':     0,
 				'stayOnTop': False,
+				'icon':      None
 			}
 		}
 		
@@ -205,10 +214,13 @@ class OpsiDialogWindow(SubjectsObserver):
 				elif  (key == 'text'):          self.skin[item]['text'] = value.strip()
 				elif  (key == 'alignment'):     self.skin[item]['alignment'] = toStyle(value, self.skin[item]['type'])
 				elif  (key == 'file'):          self.skin[item]['file'] = value.strip()
+				elif  (key == 'icon'):          self.skin[item]['icon'] = value
 				elif  (key == 'active'):        self.skin[item]['active'] = toBool(value)
 				elif  (key == 'stayontop'):     self.skin[item]['stayOnTop'] = toBool(value)
 				elif  (key == 'subjectid'):     self.skin[item]['subjectId'] = value.strip()
 				elif  (key == 'choiceindex'):   self.skin[item]['choiceIndex'] = int(value)
+				elif  (section.lower() == 'form') and (key == 'hidden') and toBool(value):
+					self.hidden = True
 			
 	def _getDialogTemplate(self):
 		# dlg item [ type, caption, id, (x,y,cx,cy), style, ex style
@@ -256,7 +268,12 @@ class OpsiDialogWindow(SubjectsObserver):
 		for item in self.skin.keys():
 			if self.skin[item].get('font'):
 				self.skin[item]['font'] = win32gui.CreateFontIndirect(self.skin[item]['font'])
-			
+		
+		if self.skin['form'].get('icon'):
+			self.hicon = win32gui.LoadImage(
+				self.hinst, self.skin['form']['icon'], win32con.IMAGE_ICON,
+				0, 0, win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE )
+		
 		dlgId = 100
 		# Images first
 		for (item, values) in self.skin.items():
@@ -331,14 +348,48 @@ class OpsiDialogWindow(SubjectsObserver):
 			#win32con.WM_DRAWITEM:          self.onDrawItem,
 			#win32con.WM_PAINT:             self.onPaint,
 			#win32con.WM_ERASEBKGND:        self.onEraseBkgnd,
+			self.taskbarNotifyEventId:	self.onTaskbarNotify,
 		}
 		self._registerWndClass()
 		
 		template = self._getDialogTemplate()
+		
 		win32gui.CreateDialogIndirect(self.hinst, template, 0, message_map)
+		if self.hidden:
+			win32gui.ShowWindow(self.hwnd, win32con.SW_HIDE)
+		
+		self.createTrayIcon()
 		
 		self.setButtonFonts()
-		
+	
+	def createTrayIcon(self):
+		flags = win32gui.NIF_ICON | win32gui.NIF_MESSAGE | win32gui.NIF_TIP
+		notifyInfo = (self.hwnd, 0, flags, self.taskbarNotifyEventId, self.hicon, 'opsi status')
+		win32gui.Shell_NotifyIcon(win32gui.NIM_ADD, notifyInfo)
+	
+	def removeTrayIcon(self):
+		flags = win32gui.NIF_ICON | win32gui.NIF_MESSAGE | win32gui.NIF_TIP
+		notifyInfo = (self.hwnd, 0, flags, self.taskbarNotifyEventId, self.hicon, 'opsi status')
+		win32gui.Shell_NotifyIcon(win32gui.NIM_DELETE, notifyInfo)
+	
+	def onTaskbarNotify(self, hwnd, msg, wparam, lparam):
+		if (lparam == win32con.WM_LBUTTONDBLCLK):
+			if self.hidden:
+				# Centre the dialog
+				insertAfter = win32con.HWND_TOP
+				if self.skin['form'].get('stayOnTop'):
+					insertAfter = win32con.HWND_TOPMOST
+				win32gui.SetWindowPos(self.hwnd, insertAfter, self.x, self.y, self.cx, self.cy, 0)
+				win32gui.ShowWindow(self.hwnd, win32con.SW_SHOW)
+				self.hidden = False
+			else:
+				win32gui.ShowWindow(self.hwnd, win32con.SW_HIDE)
+				self.hidden = True
+		elif (lparam == win32con.WM_RBUTTONUP):
+			pos = win32api.GetCursorPos()
+			# cmd = self.cMenu.TrackPopupMenu( pos, # win32con.TPM_LEFTALIGN # |win32.TPM_LEFTBUTTON # |win32con.TPM_NONOTIFY # |win32con.TPM_RETURNCMD, None )
+		return 1
+	
 	def setButtonFonts(self):
 		for (item, values) in self.skin.items():
 			if (values.get('type') != 'button'):
@@ -399,19 +450,26 @@ class OpsiDialogWindow(SubjectsObserver):
 			return windll.gdi32.GetStockObject(win32con.HOLLOW_BRUSH)
 		else:
 			return windll.gdi32.CreateSolidBrush(color)
-		
+	
 	def onInitDialog(self, hwnd, msg, wparam, lparam):
 		self.hwnd = hwnd
+		
 		# Centre the dialog
 		desktop = win32gui.GetDesktopWindow()
 		l,t,r,b = win32gui.GetWindowRect(self.hwnd)
 		dt_l, dt_t, dt_r, dt_b = win32gui.GetWindowRect(desktop)
 		centre_x, centre_y = win32gui.ClientToScreen( desktop, ( (dt_r-dt_l)/2, (dt_b-dt_t)/2) )
+		self.x = centre_x-(r/2)
+		self.y = centre_y-(b/2)
+		self.cx = r-l
+		self.cy = b-t
+		
 		#win32gui.MoveWindow(self.hwnd, centre_x-(r/2), centre_y-(b/2), r-l, b-t, 0)
 		insertAfter = win32con.HWND_TOP
 		if self.skin['form'].get('stayOnTop'):
 			insertAfter = win32con.HWND_TOPMOST
-		win32gui.SetWindowPos(hwnd, insertAfter, centre_x-(r/2), centre_y-(b/2), r-l, b-t, 0)
+		if not self.hidden:
+			win32gui.SetWindowPos(self.hwnd, insertAfter, self.x, self.y, self.cx, self.cy, 0)
 		
 		for (item, values) in self.skin.items():
 			if (values['type'] == 'image') and values.get('bitmap'):
@@ -420,27 +478,29 @@ class OpsiDialogWindow(SubjectsObserver):
 			if (values['type'] == 'button') and not values.get('active'):
 				win32gui.EnableWindow(win32gui.GetDlgItem(self.hwnd, values['dlgId']), False)
 		
-		
-		
-		# We need this for window to show up on winlogon desktop
-		time.sleep(1)
-		win32gui.ShowWindow(self.hwnd, win32con.SW_SHOWMINIMIZED)
-		time.sleep(1)
-		win32gui.ShowWindow(self.hwnd, win32con.SW_SHOWMAXIMIZED)
-		win32gui.SetWindowPos(hwnd, insertAfter, centre_x-(r/2), centre_y-(b/2), r-l, b-t, win32con.SWP_SHOWWINDOW)
-		
-		#win32gui.ShowWindow(self.hwnd, win32con.SW_SHOWMAXIMIZED)
-		#win32gui.SetActiveWindow(self.hwnd)
-		#win32gui.BringWindowToTop(self.hwnd)
-		#win32gui.SetForegroundWindow(self.hwnd)
-		
-		#self.setWindowAlpha(200)
+		if not self.hidden:
+			# We need this for window to show up on winlogon desktop
+			time.sleep(1)
+			win32gui.ShowWindow(self.hwnd, win32con.SW_SHOWMINIMIZED)
+			time.sleep(1)
+			win32gui.ShowWindow(self.hwnd, win32con.SW_SHOWMAXIMIZED)
+			win32gui.SetWindowPos(self.hwnd, insertAfter, self.x, self.y, self.cx, self.cy, win32con.SWP_SHOWWINDOW)
+			
+			#win32gui.ShowWindow(self.hwnd, win32con.SW_SHOWMAXIMIZED)
+			#win32gui.SetActiveWindow(self.hwnd)
+			#win32gui.BringWindowToTop(self.hwnd)
+			#win32gui.SetForegroundWindow(self.hwnd)
+			
+			#self.setWindowAlpha(200)
 		
 		self._timer = threading.Timer(1, self._notificationClient.start)
 		self._timer.start()
 		
-		
 	def onClose(self, hwnd, msg, wparam, lparam):
+		try:
+			self.removeTrayIcon()
+		except:
+			pass
 		win32gui.DestroyWindow(hwnd)
 	
 	def onDestroy(self, hwnd, msg, wparam, lparam):

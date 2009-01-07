@@ -40,6 +40,7 @@ from OpenSSL import SSL
 
 if (os.name == 'posix'):
 	from signal import *
+	import getopt
 	# We need a faked win32serviceutil class
 	class win32serviceutil:
 		ServiceFramework = object
@@ -159,6 +160,7 @@ class Event(threading.Thread):
 		
 		# wql
 		self.wql = str(self.__dict__.get('wql', ''))
+		self.wqlResult = None
 		if self._type is EVENT_TYPE_CUSTOM and not self.wql:
 			raise Exception("Custom event needs wql param")
 		if (not self._type is EVENT_TYPE_CUSTOM) and self.wql:
@@ -270,20 +272,27 @@ class GUIStartupEvent(Event):
 	def __init__(self, name, **kwargs):
 		Event.__init__(self, EVENT_TYPE_GUI_STARTUP, name, **kwargs)
 		self.maxRepetitions = 0
+		self.processName = None
 		if   (os.name == 'nt') and (sys.getwindowsversion()[0] == 5):
-			self.wql = "SELECT * FROM __InstanceCreationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_Process' AND TargetInstance.Name = 'winlogon.exe'"
+			self.processName = 'winlogon.exe'
 		elif (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
-			self.wql = "SELECT * FROM __InstanceCreationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_Process' AND TargetInstance.Name = 'LogonUI.exe'"
-	
+			self.processName = 'LogonUI.exe'
+		if self.processName:
+			self.wql = "SELECT * FROM __InstanceCreationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_Process' AND TargetInstance.Name = '%s'"
+		
 	def activate(self):
+		if self.processName:
+			if System.getPid(self.processName):
+				logger.info("Process '%s' is running on activation of event %s => firing" % (self.processName, self))
+				return
 		if self.wql:
 			pythoncom.CoInitialize()
 			try:
 				c = wmi.WMI()
 				logger.info("watching for wql: %s" % self.wql)
 				watcher = c.watch_for(raw_wql=self.wql, wmi_class='')
-				w = watcher()
-				logger.info("got wmi object: %s" % w)
+				self.wqlResult = watcher()
+				logger.info("got wmi object: %s" % self.wqlResult)
 			finally:
 				pythoncom.CoUninitialize()
 		else:
@@ -319,8 +328,8 @@ class CustomEvent(Event):
 				c = wmi.WMI()
 				logger.info("watching for wql: %s" % self.wql)
 				watcher = c.watch_for(raw_wql=self.wql, wmi_class='')
-				w = watcher()
-				logger.info("got wmi object: %s" % w)
+				self.wqlResult = watcher()
+				logger.info("got wmi object: %s" % self.wqlResult)
 			finally:
 				pythoncom.CoUninitialize()
 		
@@ -1609,6 +1618,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			
 			# Events
 			self.createEvents()
+			time.sleep(3)
+			if not self._processingEvent:
+				self._blockLogin = False
 			# TODO: passive wait?
 			while self._running:
 				time.sleep(1)
@@ -2298,6 +2310,30 @@ class OpsiclientdPosixInit(object):
 		signal(SIGTERM, self.signalHandler)
 		signal(SIGINT,  self.signalHandler)
 		
+		# Process command line arguments
+		try:
+			(opts, args) = getopt.getopt(argv, "vDl:")
+		
+		except getopt.GetoptError:
+			self.usage()
+			sys.exit(1)
+		
+		daemon = False
+		logLevel = LOG_NOTICE
+		for (opt, arg) in opts:
+			if   (opt == "-v"):
+				print "opsiclientd version %s" % __version__
+				sys.exit(0)
+			if   (opt == "-D"):
+				daemon = True
+			if   (opt == "-l"):
+				logLevel = int(arg)
+		if daemon:
+			logger.setConsoleLevel(LOG_NONE)
+			self.daemonize()
+		else:
+			logger.setConsoleLevel(logLevel)
+		
 		# Start opsiclientd
 		self._opsiclientd = OpsiclientdPosix()
 		self._opsiclientd.start()
@@ -2310,7 +2346,16 @@ class OpsiclientdPosixInit(object):
 			return
 		if (signo == SIGTERM or signo == SIGINT):
 			self._opsiclientd.stop()
-		
+	
+	def usage(self):
+		print "\nUsage: %s [-v] [-D]" % os.path.basename(sys.argv[0])
+		print "Options:"
+		print "  -v    Show version information and exit"
+		print "  -D    Causes the server to operate as a daemon"
+		print "  -l    Set log level (default: 4)"
+		print "        0=nothing, 1=critical, 2=error, 3=warning, 4=notice, 5=info, 6=debug, 7=debug2, 9=confidential"
+		print ""
+	
 	def daemonize(self):
 		return
 		# Fork to allow the shell to return and to call setsid
