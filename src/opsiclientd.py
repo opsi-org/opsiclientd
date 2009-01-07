@@ -157,6 +157,7 @@ class Event(threading.Thread):
 		self.activationDelay = int(self.__dict__.get('activationDelay', 0))
 		# wait <notificationDelay> seconds before event is fired
 		self.notificationDelay = int(self.__dict__.get('notificationDelay', 0))
+		self.warningTime = int(self.__dict__.get('warningTime', 0))
 		
 		# wql
 		self.wql = str(self.__dict__.get('wql', ''))
@@ -179,15 +180,19 @@ class Event(threading.Thread):
 			logger.error("Bad value '%s' for runActions" % self.processProductActions)
 			self.processProductActions = 'all'
 		
-		self.notifierType = str(self.__dict__.get('notifierType', 'window'))
-		if not self.notifierType in ('window', 'none'):
-			logger.error("Bad value '%s' for notifierType" % self.notifierType)
-			self.notifierType = 'window'
+		self.eventNotifierCommand = str(self.__dict__.get('eventNotifierCommand'))
 		
-		self.notifierDesktop = str(self.__dict__.get('notifierDesktop', 'current'))
-		if not self.notifierDesktop in ('logon', 'default', 'current'):
-			logger.error("Bad value '%s' for notifierDesktop" % self.notifierDesktop)
-			self.notifierDesktop = 'current'
+		self.eventNotifierDesktop = str(self.__dict__.get('eventNotifierDesktop', 'current'))
+		if not self.eventNotifierDesktop in ('logon', 'default', 'current'):
+			logger.error("Bad value '%s' for eventNotifierDesktop" % self.eventNotifierDesktop)
+			self.eventNotifierDesktop = 'current'
+		
+		self.actionNotifierCommand = str(self.__dict__.get('actionNotifierCommand'))
+		
+		self.actionNotifierDesktop = str(self.__dict__.get('actionNotifierDesktop', 'current'))
+		if not self.actionNotifierDesktop in ('logon', 'default', 'current'):
+			logger.error("Bad value '%s' for eventNotifierDesktop" % self.actionNotifierDesktop)
+			self.actionNotifierDesktop = 'current'
 		
 	def __str__(self):
 		return "<event: %s>" % self._name
@@ -1150,7 +1155,7 @@ class ControlServer(threading.Thread):
 # -                                     SERVICE CONNECTION THREAD                                     -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ServiceConnectionThread(KillableThread):
-	def __init__(self, configServiceUrl, username, password, notificationServer, statusObject, waitBeforeConnect=0):
+	def __init__(self, configServiceUrl, username, password, notificationServer, statusObject):
 		logger.setFileFormat('[%l] [%D] [service connection]  %M  (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
@@ -1158,12 +1163,10 @@ class ServiceConnectionThread(KillableThread):
 		self._password = password
 		self._notificationServer = notificationServer
 		self._statusSubject = statusObject
-		self._waitBeforeConnect = waitBeforeConnect
 		self.configService = None
 		self.running = False
 		self.connected = False
 		self.cancelled = False
-		self.waiting = False
 		if not self._configServiceUrl:
 			raise Exception("No config service url given")
 	
@@ -1177,15 +1180,6 @@ class ServiceConnectionThread(KillableThread):
 			self.connected = False
 			self.cancelled = False
 			
-			timeout = int(self._waitBeforeConnect)
-			while(timeout > 0) and not self.cancelled:
-				self.waiting = True
-				logger.info("Waiting for user to cancel connect")
-				self._statusSubject.setMessage("Waiting for user to cancel connect (%d)" % timeout)
-				timeout -= 1
-				time.sleep(1)
-			
-			self.waiting = False
 			tryNum = 0
 			while not self.cancelled and not self.connected:
 				try:
@@ -1222,8 +1216,131 @@ class ServiceConnectionThread(KillableThread):
 		if self.running and self.isAlive():
 			logger.debug("Terminating thread")
 			self.terminate()
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                      EVENT PROCESSING THREAD                                      -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class EventProcessingThread(KillableThread):
+	def __init__(self, opsiclientd, event):
+		logger.setFileFormat('[%l] [%D] [event processing]  %M  (%F|%N)', object=self)
+		KillableThread.__init__(self)
 		
+		self.opsiclientd = opsiclientd
+		self.event = event
 		
+		self.running = False
+		self.eventCancelled = False
+		self.waiting = False
+		self.waitCancelled = False
+	
+	
+	def startNotifierApplication(self, command, desktop=''):
+		if not command:
+			raise ValueError("No command given")
+		
+		activeSessionId = System.getActiveConsoleSessionId()
+		if not desktop or desktop.lower() not in ('winlogon', 'default'):
+			desktop = self.opsiclientd.getCurrentActiveDesktopName()
+		if not desktop or desktop.lower() not in ('winlogon', 'default'):
+			desktop = 'winlogon'
+		
+		logger.notice("Starting notifier application in session '%s' on desktop '%s'" % (activeSessionId, desktop))
+		process = System.runCommandInSession(command = command, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding=False)[0]
+		time.sleep(3)
+		return process
+		
+	def stopNotifierApplication(self, process):
+		if not process:
+			raise ValueError("No process given")
+		
+		logger.notice("Stopping notifier application")
+		try:
+			System.terminateProcess(process)
+		except Exception, e:
+			logger.error("Failed to terminate process: %s" % e)
+		
+	def run(self):
+		try:
+			logger.debug("EventProcessingThread started...")
+			self.running = True
+			self.eventCancelled = False
+			self.waiting = False
+			self.waitCancelled = False
+			notifierApplication = None
+			try:
+				if self.event.warningTime:
+					choiceSubject = ChoiceSubject(id = 'choice')
+					choiceSubject.setChoices([ 'Abort event', 'Start event' ])
+					choiceSubject.setCallbacks( [ self.abortEventCallback, self.startEventCallback ] )
+					self.opsiclientd.getNotificationServer().addSubject(choiceSubject)
+					try:
+						if self.event.eventNotifierCommand:
+							notifierApplication = self.startNotifierApplication(
+										command = self.event.eventNotifierCommand,
+										desktop = self.event.eventNotifierDesktop )
+							
+						timeout = int(self.event.warningTime)
+						while(timeout > 0) and not self.eventCancelled and not self.waitCancelled:
+							self.waiting = True
+							logger.info("Waiting for user to cancel event")
+							self.opsiclientd.getStatusSubject().setMessage("Waiting for user to cancel event (%d)" % timeout)
+							timeout -= 1
+							time.sleep(1)
+						
+						if self.eventCancelled:
+							raise CanceledByUserError("cancelled by user")
+					finally:
+						self.waiting = False
+						if notifierApplication:
+							self.stopNotifierApplication(notifierApplication)
+						self.opsiclientd.getNotificationServer().removeSubject(choiceSubject)
+				
+				if self.event.blockLogin:
+					self.opsiclientd.setBlockLogin(True)
+				if self.event.logoffCurrentUser:
+					System.logoffCurrentUser()
+					time.sleep(15)
+				if self.event.lockWorkstation:
+					System.lockWorkstation()
+					time.sleep(15)
+				if self.event.actionNotifierCommand:
+					notifierApplication = self.startNotifierApplication(
+									command = self.event.actionNotifierCommand,
+									desktop = self.event.actionNotifierDesktop )
+				if self.event.getConfigFromService:
+					self.opsiclientd.getConfigFromService()
+				if self.event.updateConfigFile:
+					self.opsiclientd.updateConfigFile()
+				if (self.event.processProductActions != 'none'):
+					self.opsiclientd.processProductActionRequests()
+			
+			finally:
+				if self.event.writeLogToService:
+					self.opsiclientd.writeLogToService()
+				self.opsiclientd.disconnectConfigServer()
+				if notifierApplication:
+					self.stopNotifierApplication(notifierApplication)
+			
+		except Exception, e:
+			logger.error("Failed to process event %s: %s" % (self.event, e))
+			logger.logException(e)
+		
+		self.running = False
+	
+	def abortEventCallback(self, choiceSubject):
+		logger.notice("Event aborted by user")
+		self.eventCancelled = True
+	
+	def startEventCallback(self, choiceSubject):
+		logger.notice("Waiting cancelled by user")
+		self.waitCancelled = True
+	
+	#def stop(self):
+	#	time.sleep(5)
+	#	if self.running and self.isAlive():
+	#		logger.debug("Terminating thread")
+	#		self.terminate()
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                            OPSICLIENTD                                            -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1267,7 +1384,6 @@ class Opsiclientd(EventListener, threading.Thread):
 			'config_service': {
 				'url':                    '',
 				'connection_timeout':     30,
-				'wait_before_connect':    5,
 				'user_cancellable_after': 0,
 			},
 			'control_server': {
@@ -1312,7 +1428,16 @@ class Opsiclientd(EventListener, threading.Thread):
 			{ 'name': 'getCurrentActiveDesktopName',     'params': [ ],                       'availability': ['server'] },
 			{ 'name': 'setCurrentActiveDesktopName',     'params': [ 'desktop' ],             'availability': ['server'] },
 		]
-		
+	
+	def setBlockLogin(self, blockLogin):
+		self._blockLogin = bool(blockLogin)
+	
+	def getNotificationServer(self):
+		return self._notificationServer
+	
+	def getStatusSubject(self):
+		return self._statusSubject
+	
 	def isRunning(self):
 		return self._running
 		
@@ -1346,7 +1471,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		if   (section == 'config_service') and (option == 'url'):
 			self.setConfigServiceUrl(self._config[section][option])
-		elif (section == 'config_service') and option in ('wait_before_connect', 'connection_timeout', 'user_cancellable_after'):
+		elif (section == 'config_service') and option in ('connection_timeout', 'user_cancellable_after'):
 			self._config[section][option] = int(self._config[section][option])
 			if (self._config[section][option] < 0):
 				self._config[section][option] = 0
@@ -1512,6 +1637,8 @@ class Opsiclientd(EventListener, threading.Thread):
 							args['activationDelay'] = int(options[key])
 						elif (key == 'notification_delay'):
 							args['notificationDelay'] = int(options[key])
+						elif (key == 'warning_time'):
+							args['warningTime'] = int(options[key])
 						elif (key == 'wql'):
 							args['wql'] = options[key]
 						
@@ -1529,11 +1656,14 @@ class Opsiclientd(EventListener, threading.Thread):
 							args['writeLogToService'] = not options[key].lower() in ('0', 'false', 'off', 'no')
 						elif (key == 'process_product_actions'):
 							args['processProductActions'] = options[key].lower()
-						elif (key == 'notifier_type'):
-							args['notifierType'] = options[key].lower()
-						elif (key == 'notifier_desktop'):
-							args['notifierDesktop'] = options[key].lower()
-						
+						elif (key == 'event_notifier_command'):
+							args['eventNotifierCommand'] = self.fillPlaceholders(options[key].lower())
+						elif (key == 'event_notifier_desktop'):
+							args['eventNotifierDesktop'] = options[key].lower()
+						elif (key == 'action_notifier_command'):
+							args['actionNotifierCommand'] = self.fillPlaceholders(options[key].lower())
+						elif (key == 'action_notifier_desktop'):
+							args['actionNotifierDesktop'] = options[key].lower()
 						else:
 							logger.error("Skipping unknown option '%s' in definition of event '%s'" % (key, name))
 					if not active:
@@ -1683,7 +1813,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		statusApplication = self.fillPlaceholders(statusApplication)
 		
 		activeSessionId = System.getActiveConsoleSessionId()
-		if not desktop or desktop.lower() in ('winlogon', 'default'):
+		if not desktop or desktop.lower() not in ('winlogon', 'default'):
 			desktop = self.getCurrentActiveDesktopName()
 		if not desktop or desktop.lower() not in ('winlogon', 'default'):
 			desktop = 'winlogon'
@@ -1716,37 +1846,14 @@ class Opsiclientd(EventListener, threading.Thread):
 			return
 		self._processingEvent = True
 		
-		try:
-			if event.blockLogin:
-				self._blockLogin = True
-			if event.logoffCurrentUser:
-				System.logoffCurrentUser()
-				time.sleep(15)
-			if event.lockWorkstation:
-				System.lockWorkstation()
-				time.sleep(15)
-			if (event.notifierType == 'window'):
-				self.startStatusApplication(desktop = event.notifierDesktop)
-			if event.getConfigFromService:
-				self.getConfigFromService()
-			if event.updateConfigFile:
-				self.updateConfigFile()
-			if (event.processProductActions != 'none'):
-				self.processProductActionRequests()
-			
-		except Exception, e:
-			logger.error("Failed to process event %s: %s" % (event, e))
-			logger.logException(e)
+		eventProcessingThread = EventProcessingThread(self, event)
+		eventProcessingThread.start()
+		eventProcessingThread.join()
+		logger.error("Done processing event '%s'" % event)
 		
-		try:
-			if event.writeLogToService:
-				self.writeLogToService()
-			self.disconnectConfigServer()
-			self.stopStatusApplication()
-		finally:
-			self._blockLogin = False
-			self._processingEvent = False
-		
+		self.setBlockLogin(False)
+		self._processingEvent = False
+	
 	def processProductActionRequests(self):
 		logger.error("processProductActionRequests not implemented")
 	
@@ -1755,12 +1862,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			# Already connected
 			return
 		
-		choiceSubject = ChoiceSubject(id = 'stopConnecting')
+		choiceSubject = ChoiceSubject(id = 'choice')
 		choiceSubject.setChoices([ 'Stop connection' ])
-		
-		waitBeforeConnect = int(self._config['config_service']['wait_before_connect'])
-		if (waitBeforeConnect > 0):
-			self._notificationServer.addSubject(choiceSubject)
 		
 		logger.debug("Creating ServiceConnectionThread")
 		serviceConnectionThread = ServiceConnectionThread(
@@ -1768,8 +1871,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					username            = self._config['global']['host_id'],
 					password            = self._config['global']['opsi_host_key'],
 					notificationServer  = self._notificationServer,
-					statusObject        = self._statusSubject,
-					waitBeforeConnect   = waitBeforeConnect )
+					statusObject        = self._statusSubject )
 		
 		choiceSubject.setCallbacks( [ serviceConnectionThread.stopConnectionCallback ] )
 		
@@ -1783,14 +1885,12 @@ class Opsiclientd(EventListener, threading.Thread):
 		time.sleep(1)
 		logger.debug("ServiceConnectionThread started")
 		while serviceConnectionThread.running and (timeout > 0):
-			if not serviceConnectionThread.waiting:
-				cancellableAfter -= 1
-				if (cancellableAfter == 0):
-					self._notificationServer.addSubject(choiceSubject)
+			cancellableAfter -= 1
+			if (cancellableAfter == 0):
+				self._notificationServer.addSubject(choiceSubject)
 			logger.debug("Waiting for ServiceConnectionThread (timeout: %d)..." % timeout)
 			time.sleep(1)
 			timeout -= 1
-		
 		
 		self._notificationServer.removeSubject(choiceSubject)
 		

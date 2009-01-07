@@ -363,14 +363,20 @@ class OpsiDialogWindow(SubjectsObserver):
 		self.setButtonFonts()
 	
 	def createTrayIcon(self):
-		flags = win32gui.NIF_ICON | win32gui.NIF_MESSAGE | win32gui.NIF_TIP
-		notifyInfo = (self.hwnd, 0, flags, self.taskbarNotifyEventId, self.hicon, 'opsi status')
-		win32gui.Shell_NotifyIcon(win32gui.NIM_ADD, notifyInfo)
+		try:
+			flags = win32gui.NIF_ICON | win32gui.NIF_MESSAGE | win32gui.NIF_TIP
+			notifyInfo = (self.hwnd, 0, flags, self.taskbarNotifyEventId, self.hicon, 'opsi status')
+			win32gui.Shell_NotifyIcon(win32gui.NIM_ADD, notifyInfo)
+		except Exception, e:
+			logger.error("Failed to create tray icon: %s" % e)
 	
 	def removeTrayIcon(self):
-		flags = win32gui.NIF_ICON | win32gui.NIF_MESSAGE | win32gui.NIF_TIP
-		notifyInfo = (self.hwnd, 0, flags, self.taskbarNotifyEventId, self.hicon, 'opsi status')
-		win32gui.Shell_NotifyIcon(win32gui.NIM_DELETE, notifyInfo)
+		try:
+			flags = win32gui.NIF_ICON | win32gui.NIF_MESSAGE | win32gui.NIF_TIP
+			notifyInfo = (self.hwnd, 0, flags, self.taskbarNotifyEventId, self.hicon, 'opsi status')
+			win32gui.Shell_NotifyIcon(win32gui.NIM_DELETE, notifyInfo)
+		except Exception, e:
+			logger.error("Failed to remove tray icon: %s" % e)
 	
 	def onTaskbarNotify(self, hwnd, msg, wparam, lparam):
 		if (lparam == win32con.WM_LBUTTONDBLCLK):
@@ -609,11 +615,14 @@ class OpsiDialogWindow(SubjectsObserver):
 				continue
 			if values.get('subjectId') in choices.keys():
 				choiceIndex = values.get('choiceIndex', -1)
-				if (choiceIndex >= 0) and (choiceIndex < len(choices[subjectId])):
+				if (choiceIndex >= 0):
 					dlg = win32gui.GetDlgItem(self.hwnd, values['dlgId'])
-					win32gui.SetWindowText(dlg, choices[subjectId][choiceIndex])
-					
-				win32gui.EnableWindow(win32gui.GetDlgItem(self.hwnd, values.get('dlgId')), True)
+					if (choiceIndex < len(choices[subjectId])):
+						win32gui.SetWindowText(dlg, choices[subjectId][choiceIndex])
+						win32gui.EnableWindow(dlg, True)
+					else:
+						win32gui.SetWindowText(dlg, "")
+						win32gui.EnableWindow(dlg, False)
 			else:
 				win32gui.EnableWindow(win32gui.GetDlgItem(self.hwnd, values.get('dlgId')), False)
 		logger.debug("subjectsChanged() ended")
