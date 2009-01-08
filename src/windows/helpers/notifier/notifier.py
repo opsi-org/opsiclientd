@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
    = = = = = = = = = = = = = = = = = = = = =
-   =            status_window              =
+   =               notifier                =
    = = = = = = = = = = = = = = = = = = = = =
    
-   status_window is part of the desktop management solution opsi
+   notifier is part of the desktop management solution opsi
    (open pc server integration) http://www.opsi.org
    
    Copyright (C) 2008 uib GmbH
@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2.3'
+__version__ = '0.3'
 
 # Imports
 import threading, time, sys, os, getopt
