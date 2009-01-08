@@ -38,11 +38,11 @@ opsiclientd = Target(
 	version = "0.2.6.8"
 )
 
-status_window = Target(
-	name = "status_window",
-	description = "opsi status window",
-	script = "windows\\helpers\\status_window\\status_window.py",
-	version = "0.2.3"
+notifier = Target(
+	name = "notifier",
+	description = "opsi notifier",
+	script = "windows\\helpers\\notifier\\notifier.py",
+	version = "0.3"
 )
 
 opsiclientd_rpc = Target(
@@ -64,7 +64,7 @@ excludes = [	"pywin", "pywin.debugger", "pywin.debugger.dbgcon",
 data_files = [
 	('lib',                      ['C:\\Programme\\python25\\lib\\site-packages\\Pythonwin\\MFC71.DLL',
 	                              SYS_DIR + '\\msvcm90.dll']),
-	('status_windows',           ['windows\\helpers\\status_window\\skin.ini', 'windows\\helpers\\status_window\\bg.bmp']),
+	('notifier',                 ['windows\\helpers\\notifier\\event.ini', 'windows\\helpers\\notifier\\action.ini', 'windows\\helpers\\notifier\\action.bmp', 'windows\\helpers\\notifier\\event.bmp']),
 	('opsiclientd',              ['windows\\opsiclientd.conf']),
 	('opsiclientd\\static_html', ['..\\static_html\\favicon.ico', '..\\static_html\\index.html', '..\\static_html\\opsi_logo.png'])
 ]
@@ -83,7 +83,7 @@ setup(
 	data_files = data_files,
 	zipfile = "lib/library.zip",
 	service = [ opsiclientd ],
-	windows = [ status_window ],
+	windows = [ notifier ],
 	console = [ opsiclientd_rpc ],
 )
 
