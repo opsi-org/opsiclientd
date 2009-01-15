@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.3'
+__version__ = '0.3.1'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -152,6 +152,8 @@ class Event(threading.Thread):
 		
 		logger.setFileFormat('[%l] [%D] [event ' + str(self._name) + ']  %M  (%F|%N)', object=self)
 		
+		self.message = str(self.__dict__.get('message', ''))
+		
 		self.maxRepetitions = int(self.__dict__.get('maxRepetitions', -1))
 		# wait <activationDelay> seconds before event gets active
 		self.activationDelay = int(self.__dict__.get('activationDelay', 0))
@@ -162,12 +164,13 @@ class Event(threading.Thread):
 		# wql
 		self.wql = str(self.__dict__.get('wql', ''))
 		self.wqlResult = None
-		if self._type is EVENT_TYPE_CUSTOM and not self.wql:
-			raise Exception("Custom event needs wql param")
+		#if self._type is EVENT_TYPE_CUSTOM and not self.wql:
+		#	raise Exception("Custom event needs wql param")
 		if (not self._type is EVENT_TYPE_CUSTOM) and self.wql:
 			logger.error("Ignoring wql param because event type is '%s'" % self._type)
 			self.wql = ''
 		
+		self.userCancelable = bool(self.__dict__.get('userCancelable', False))
 		self.blockLogin = bool(self.__dict__.get('blockLogin', False))
 		self.logoffCurrentUser = bool(self.__dict__.get('logoffCurrentUser', False))
 		self.lockWorkstation = bool(self.__dict__.get('lockWorkstation', False))
@@ -175,30 +178,30 @@ class Event(threading.Thread):
 		self.updateConfigFile = bool(self.__dict__.get('updateConfigFile', True))
 		self.writeLogToService = bool(self.__dict__.get('writeLogToService', True))
 		
-		self.processProductActions = str(self.__dict__.get('processProductActions', 'none'))
-		if not self.processProductActions in ('none', 'all', 'background'):
-			logger.error("Bad value '%s' for runActions" % self.processProductActions)
-			self.processProductActions = 'all'
-		
 		self.eventNotifierCommand = str(self.__dict__.get('eventNotifierCommand'))
 		
 		self.eventNotifierDesktop = str(self.__dict__.get('eventNotifierDesktop', 'current'))
-		if not self.eventNotifierDesktop in ('logon', 'default', 'current'):
+		if not self.eventNotifierDesktop in ('winlogon', 'default', 'current'):
 			logger.error("Bad value '%s' for eventNotifierDesktop" % self.eventNotifierDesktop)
 			self.eventNotifierDesktop = 'current'
 		
 		self.actionNotifierCommand = str(self.__dict__.get('actionNotifierCommand'))
 		
 		self.actionNotifierDesktop = str(self.__dict__.get('actionNotifierDesktop', 'current'))
-		if not self.actionNotifierDesktop in ('logon', 'default', 'current'):
+		if not self.actionNotifierDesktop in ('winlogon', 'default', 'current'):
 			logger.error("Bad value '%s' for eventNotifierDesktop" % self.actionNotifierDesktop)
 			self.actionNotifierDesktop = 'current'
 		
+		self.directActionSizeLimitMB = int(self.__dict__.get('directActionSizeLimitMB', 0))
+	
 	def __str__(self):
 		return "<event: %s>" % self._name
 	
 	def getType(self):
 		return self._type
+	
+	def getName(self):
+		return self._name
 	
 	def activate(self):
 		return
@@ -337,7 +340,11 @@ class CustomEvent(Event):
 				logger.info("got wmi object: %s" % self.wqlResult)
 			finally:
 				pythoncom.CoUninitialize()
-		
+		else:
+			# Not yet supported
+			e = threading.Event()
+			e.wait()
+	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          EVENT LISTENER                                           -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1268,10 +1275,15 @@ class EventProcessingThread(KillableThread):
 			self.waitCancelled = False
 			notifierApplication = None
 			try:
+				self.opsiclientd.getEventSubject().setMessage(self.event.message)
 				if self.event.warningTime:
 					choiceSubject = ChoiceSubject(id = 'choice')
-					choiceSubject.setChoices([ 'Abort event', 'Start event' ])
-					choiceSubject.setCallbacks( [ self.abortEventCallback, self.startEventCallback ] )
+					if self.event.userCancelable:
+						choiceSubject.setChoices([ 'Abort', 'Start now' ])
+						choiceSubject.setCallbacks( [ self.abortEventCallback, self.startEventCallback ] )
+					else:
+						choiceSubject.setChoices([ 'Start now' ])
+						choiceSubject.setCallbacks( [ self.startEventCallback ] )
 					self.opsiclientd.getNotificationServer().addSubject(choiceSubject)
 					try:
 						if self.event.eventNotifierCommand:
@@ -1282,8 +1294,9 @@ class EventProcessingThread(KillableThread):
 						timeout = int(self.event.warningTime)
 						while(timeout > 0) and not self.eventCancelled and not self.waitCancelled:
 							self.waiting = True
-							logger.info("Waiting for user to cancel event")
-							self.opsiclientd.getStatusSubject().setMessage("Waiting for user to cancel event (%d)" % timeout)
+							logger.info("Notifying user of event %s" % self.event)
+							self.opsiclientd.getStatusSubject().setMessage("Event %s: processing will start in %d seconds" \
+																% (self.event.getName(), timeout))
 							timeout -= 1
 							time.sleep(1)
 						
@@ -1300,9 +1313,10 @@ class EventProcessingThread(KillableThread):
 				if self.event.logoffCurrentUser:
 					System.logoffCurrentUser()
 					time.sleep(15)
-				if self.event.lockWorkstation:
+				elif self.event.lockWorkstation:
 					System.lockWorkstation()
 					time.sleep(15)
+				
 				if self.event.actionNotifierCommand:
 					notifierApplication = self.startNotifierApplication(
 									command = self.event.actionNotifierCommand,
@@ -1311,8 +1325,9 @@ class EventProcessingThread(KillableThread):
 					self.opsiclientd.getConfigFromService()
 				if self.event.updateConfigFile:
 					self.opsiclientd.updateConfigFile()
-				if (self.event.processProductActions != 'none'):
-					self.opsiclientd.processProductActionRequests()
+				# TODO:
+				########if (self.event.processProductActions != 'none'):
+				self.opsiclientd.processProductActionRequests()
 			
 			finally:
 				if self.event.writeLogToService:
@@ -1320,6 +1335,7 @@ class EventProcessingThread(KillableThread):
 				self.opsiclientd.disconnectConfigServer()
 				if notifierApplication:
 					self.stopNotifierApplication(notifierApplication)
+				self.opsiclientd.getEventSubject().setMessage("")
 			
 		except Exception, e:
 			logger.error("Failed to process event %s: %s" % (self.event, e))
@@ -1352,6 +1368,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		EventListener.__init__(self)
 		threading.Thread.__init__(self) 
 		
+		self._setEnvironment = True
 		self._startupTime = time.time()
 		self._running = False
 		self._configService = None
@@ -1363,6 +1380,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._statusApplicationProcess = None
 		
 		self._statusSubject = MessageSubject('status')
+		self._eventSubject = MessageSubject('event')
 		self._serviceUrlSubject = MessageSubject('configServiceUrl')
 		self._clientIdSubject = MessageSubject('clientId')
 		self._actionProcessorInfoSubject = MessageSubject('actionProcessorInfo')
@@ -1437,6 +1455,9 @@ class Opsiclientd(EventListener, threading.Thread):
 	
 	def getStatusSubject(self):
 		return self._statusSubject
+	
+	def getEventSubject(self):
+		return self._eventSubject
 	
 	def isRunning(self):
 		return self._running
@@ -1631,6 +1652,8 @@ class Opsiclientd(EventListener, threading.Thread):
 							type = options[key]
 						elif (key == 'active'):
 							active = not options[key].lower() in ('0', 'false', 'off', 'no')
+						elif (key == 'message'):
+							args['message'] = options[key]
 						elif (key == 'max_repetitions'):
 							args['maxRepetitions'] = int(options[key])
 						elif (key == 'activation_delay'):
@@ -1641,9 +1664,10 @@ class Opsiclientd(EventListener, threading.Thread):
 							args['warningTime'] = int(options[key])
 						elif (key == 'wql'):
 							args['wql'] = options[key]
-						
+						elif (key == 'user_cancelable'):
+							args['userCancelable'] = not options[key].lower() in ('0', 'false', 'off', 'no')
 						elif (key == 'block_login'):
-							args['blockLogin'] = options[key].lower() in ('0', 'false', 'off', 'no')
+							args['blockLogin'] = not options[key].lower() in ('0', 'false', 'off', 'no')
 						elif (key == 'lock_workstation'):
 							args['lockWorkstation'] = options[key].lower() in ('1', 'true', 'on', 'yes')
 						elif (key == 'logoff_current_user'):
@@ -1654,8 +1678,6 @@ class Opsiclientd(EventListener, threading.Thread):
 							args['updateConfigFile'] = not options[key].lower() in ('0', 'false', 'off', 'no')
 						elif (key == 'write_log_to_service'):
 							args['writeLogToService'] = not options[key].lower() in ('0', 'false', 'off', 'no')
-						elif (key == 'process_product_actions'):
-							args['processProductActions'] = options[key].lower()
 						elif (key == 'event_notifier_command'):
 							args['eventNotifierCommand'] = self.fillPlaceholders(options[key].lower())
 						elif (key == 'event_notifier_desktop'):
@@ -1664,6 +1686,8 @@ class Opsiclientd(EventListener, threading.Thread):
 							args['actionNotifierCommand'] = self.fillPlaceholders(options[key].lower())
 						elif (key == 'action_notifier_desktop'):
 							args['actionNotifierDesktop'] = options[key].lower()
+						elif (key == 'direct_action_size_limit_mb'):
+							args['directActionSizeLimitMB'] = int(options[key])
 						else:
 							logger.error("Skipping unknown option '%s' in definition of event '%s'" % (key, name))
 					if not active:
@@ -1718,8 +1742,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._controlServer = ControlServer(
 								opsiclientd       = self,
 								httpsPort         = self._config['control_server']['port'],
-								sslServerKeyFile  = self._config['control_server']['ssl_server_key_file'],
-								sslServerCertFile = self._config['control_server']['ssl_server_cert_file'],
+								sslServerKeyFile  = self.fillPlaceholders(self._config['control_server']['ssl_server_key_file']),
+								sslServerCertFile = self.fillPlaceholders(self._config['control_server']['ssl_server_cert_file']),
 								staticDir         = self._config['control_server']['static_dir'])
 				self._controlServer.start()
 				logger.notice("Control server started")
@@ -1732,8 +1756,9 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._notificationServer = NotificationServer(
 								address  = self._config['notification_server']['interface'],
 								port     = self._config['notification_server']['port'],
-								subjects = [ 
+								subjects = [
 									self._statusSubject,
+									self._eventSubject,
 									self._serviceUrlSubject,
 									self._clientIdSubject,
 									self._actionProcessorInfoSubject,
@@ -2317,6 +2342,28 @@ class OpsiclientdNT5(OpsiclientdNT):
 			logger.notice("Starting action processor as user '%s' on desktop '%s'" % (username, desktop))
 			self._statusSubject.setMessage( _("Starting action processor") )
 			
+			if self._setEnvironment:
+				try:
+					logger.debug("Current environment:")
+					for (k, v) in os.environ.items():
+						logger.debug("   %s=%s" % (k,v))
+					logger.debug("Updating environment")
+					hostname = os.environ['COMPUTERNAME']
+					(homeDrive, homeDir) = os.environ['USERPROFILE'].split('\\')[0:2]
+					# TODO: Anwendungsdaten
+					os.environ['APPDATA']     = '%s\\%s\\%s\\Anwendungsdaten' % (homeDrive, homeDir, username)
+					os.environ['HOMEDRIVE']   = homeDrive
+					os.environ['HOMEPATH']    = '\\%s\\%s' % (homeDir, username)
+					os.environ['LOGONSERVER'] = '\\\\%s' % hostname
+					os.environ['SESSIONNAME'] = 'Console'
+					os.environ['USERDOMAIN']  = '%s' % hostname
+					os.environ['USERNAME']    = username
+					os.environ['USERPROFILE'] = '%s\\%s\\%s' % (homeDrive, homeDir, username)
+					logger.debug("Updated environment:")
+					for (k, v) in os.environ.items():
+						logger.debug("   %s=%s" % (k,v))
+				except Exception, e:
+					logger.error("Failed to set environment: %s" % e)
 			imp.runCommand(command = actionProcessor, waitForProcessEnding = True)
 			
 			logger.notice("Action processor ended")
