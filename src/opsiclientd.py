@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.3.1'
+__version__ = '0.4'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -1744,7 +1744,7 @@ class Opsiclientd(EventListener, threading.Thread):
 								httpsPort         = self._config['control_server']['port'],
 								sslServerKeyFile  = self.fillPlaceholders(self._config['control_server']['ssl_server_key_file']),
 								sslServerCertFile = self.fillPlaceholders(self._config['control_server']['ssl_server_cert_file']),
-								staticDir         = self._config['control_server']['static_dir'])
+								staticDir         = self.fillPlaceholders(self._config['control_server']['static_dir']) )
 				self._controlServer.start()
 				logger.notice("Control server started")
 			except Exception, e:
@@ -2553,6 +2553,7 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		_svc_name_ = "opsiclientd"
 		_svc_display_name_ = "opsiclientd"
 		_svc_description_ = "opsi client daemon"
+		_svc_deps_ = ['Eventlog', 'winmgmt']
 		
 		def __init__(self, args):
 			"""

@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.4'
+__version__ = '0.4.2'
 
 # Imports
 import threading, time, sys, os, getopt
@@ -52,7 +52,7 @@ from OPSI.Logger import *
 logger = Logger()
 
 # Globals
-logFile = 'status_window.log'
+logFile = 'notifier.log'
 transparentColor = (0,0,0)
 host = '127.0.0.1'
 port = 4442
@@ -85,9 +85,13 @@ class OpsiDialogWindow(SubjectsObserver):
 		self.alpha = 255
 		
 		try:
-			self.hicon = win32gui.LoadIcon(self.hinst, 1)    ## python.exe and pythonw.exe
-		except win32gui.error:
-			self.hicon = win32gui.LoadIcon(self.hinst, 135)  ## pythonwin's icon
+			try:
+				self.hicon = win32gui.LoadIcon(self.hinst, 1)    ## python.exe and pythonw.exe
+			except win32gui.error:
+				self.hicon = win32gui.LoadIcon(self.hinst, 135)  ## pythonwin's icon
+		except Exception, e:
+			logger.error("Failed to load icon: %s" % e)
+			self.hicon = None
 		
 		self.wndClassName = "opsi status"
 		
@@ -108,7 +112,8 @@ class OpsiDialogWindow(SubjectsObserver):
 		# C code: wc.cbWndExtra = DLGWINDOWEXTRA + sizeof(HBRUSH) + (sizeof(COLORREF));
 		wc.cbWndExtra = win32con.DLGWINDOWEXTRA + struct.calcsize("Pi")
 		icon_flags = win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE
-		wc.hIcon = self.hicon
+		if self.hicon:
+			wc.hIcon = self.hicon
 		try:
 			classAtom = win32gui.RegisterClass(wc)
 		except win32gui.error, err_info:
@@ -117,6 +122,13 @@ class OpsiDialogWindow(SubjectsObserver):
 		return self.wndClassName
 	
 	def loadSkin(self):
+		skinDir = os.path.dirname(skin)
+		
+		def toPath(value):
+			if skinDir:
+				return os.path.join(skinDir, value)
+			return value
+		
 		def toRGB(value):
 			color = value.split(',')
 			return win32api.RGB(int(color[0]), int(color[1]), int(color[2]))
@@ -141,7 +153,6 @@ class OpsiDialogWindow(SubjectsObserver):
 			if str(value).lower() in ('0', 'false', 'off', 'no', 'nein', ''):
 				return False
 			return True
-		
 		
 		ini = File().readIniFile(skin)
 		
@@ -215,8 +226,8 @@ class OpsiDialogWindow(SubjectsObserver):
 				elif  (key == 'fontcolor'):     self.skin[item]['fontColor'] = toRGB(value)
 				elif  (key == 'text'):          self.skin[item]['text'] = value.strip()
 				elif  (key == 'alignment'):     self.skin[item]['alignment'] = toStyle(value, self.skin[item]['type'])
-				elif  (key == 'file'):          self.skin[item]['file'] = value.strip()
-				elif  (key == 'icon'):          self.skin[item]['icon'] = value
+				elif  (key == 'file'):          self.skin[item]['file'] = toPath(value.strip())
+				elif  (key == 'icon'):          self.skin[item]['icon'] = toPath(value)
 				elif  (key == 'active'):        self.skin[item]['active'] = toBool(value)
 				elif  (key == 'stayontop'):     self.skin[item]['stayOnTop'] = toBool(value)
 				elif  (key == 'fadein'):        self.skin[item]['fadeIn'] = toBool(value)
@@ -657,7 +668,10 @@ if (__name__ == "__main__"):
 	exception = None
 	
 	try:
-		os.chdir(os.path.dirname(sys.argv[0]))
+		try:
+			os.chdir(os.path.dirname(sys.argv[0]))
+		except:
+			pass
 		
 		if os.path.exists(logFile):
 			logger.notice("Deleting old log file: %s" % logFile)
