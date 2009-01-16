@@ -4,6 +4,10 @@ import py2exe, sys, os, shutil
 VC_90_INST_DIR = 'C:\\WINDOWS\\WinSxS\\x86_Microsoft.VC90.CRT_1fc8b3b9a1e18e3b_9.0.21022.8_x-ww_d08d0375'
 SYS_DIR = 'c:\\windows\\system32'
 
+for d in ('build', 'dist'):
+	if os.path.exists(d):
+		shutil.rmtree(d)
+	
 for dll in ('msvcm90.dll', 'msvcp90.dll', 'msvcr90.dll'):
 	if not os.path.exists(os.path.join(SYS_DIR, dll)):
 		shutil.copy2(os.path.join(VC_90_INST_DIR, dll), os.path.join(SYS_DIR, dll))
@@ -62,11 +66,15 @@ excludes = [	"pywin", "pywin.debugger", "pywin.debugger.dbgcon",
 ]
 
 data_files = [
-	('lib',                      ['C:\\Programme\\python25\\lib\\site-packages\\Pythonwin\\MFC71.DLL',
-	                              SYS_DIR + '\\msvcm90.dll']),
-	('notifier',                 ['windows\\helpers\\notifier\\event.ini', 'windows\\helpers\\notifier\\action.ini', 'windows\\helpers\\notifier\\action.bmp', 'windows\\helpers\\notifier\\event.bmp']),
-	('opsiclientd',              ['windows\\opsiclientd.conf']),
-	('opsiclientd\\static_html', ['..\\static_html\\favicon.ico', '..\\static_html\\index.html', '..\\static_html\\opsi_logo.png'])
+	('lib',                      [	'C:\\Programme\\python25\\lib\\site-packages\\Pythonwin\\MFC71.DLL',
+					 SYS_DIR + '\\msvcm90.dll']),
+	('notifier',                 [	'windows\\helpers\\notifier\\event.ini',
+					'windows\\helpers\\notifier\\action.ini',
+					'windows\\helpers\\notifier\\action.bmp',
+					'windows\\helpers\\notifier\\event.bmp',
+					'windows\\helpers\\notifier\\opsi.ico']),
+	('opsiclientd',              [	'windows\\opsiclientd.conf']),
+	('opsiclientd\\static_html', [	'..\\static_html\\favicon.ico', '..\\static_html\\index.html', '..\\static_html\\opsi_logo.png'])
 ]
 #data_files += tree("static_html")
 
@@ -86,4 +94,8 @@ setup(
 	windows = [ notifier ],
 	console = [ opsiclientd_rpc ],
 )
+
+print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+print "!!!   On the target machine always replace exe AND lib   !!!"
+print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 
