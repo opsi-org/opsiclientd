@@ -91,8 +91,7 @@ setup(
 	data_files = data_files,
 	zipfile = "lib/library.zip",
 	service = [ opsiclientd ],
-	windows = [ notifier ],
-	console = [ opsiclientd_rpc ],
+	windows = [ notifier, opsiclientd_rpc ],
 )
 
 print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
