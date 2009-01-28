@@ -2396,7 +2396,7 @@ class OpsiclientdNT5(OpsiclientdNT):
 			
 			# Impersonate
 			imp = System.Impersonate(username = username, password = password, desktop = actionProcessorDesktop)
-			imp.start()
+			imp.start(logonType = 'INTERACTIVE', newDesktop = True)
 			
 			logger.notice("Mounting depot share")
 			self._statusSubject.setMessage( _("Mounting depot share %s" % depot['depotRemoteUrl']) )
