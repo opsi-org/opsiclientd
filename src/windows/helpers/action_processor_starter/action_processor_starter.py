@@ -79,7 +79,7 @@ try:
 	be.setStatusMessage("Action processor ended")
 	
 except Exception, e:
-	logger.logTraceback(e)
+	logger.logException(e)
 	error = "Failed to process action requests: %s" % e
 	be.setStatusMessage(error)
 	logger.error(error)

@@ -1680,7 +1680,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				continue
 			for (key, value) in values.items():
 				value = str(value)
-				if escaped:
+				if (string.find('"%' + str(section) + '.' + str(key) + '%"') != -1) and escaped:
 					if (os.name == 'posix'):
 						value = value.replace('"', '\\"')
 					if (os.name == 'nt'):
