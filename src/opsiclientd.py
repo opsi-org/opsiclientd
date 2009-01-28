@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.4.2.8'
+__version__ = '0.4.2.9'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -1674,14 +1674,21 @@ class Opsiclientd(EventListener, threading.Thread):
 		except Exception, e:
 			logger.error("Failed to write log to service: %s" % e)
 	
-	def fillPlaceholders(self, string):
+	def fillPlaceholders(self, string, escaped=False):
 		for (section, values) in self._config.items():
 			if not type(values) is dict:
 				continue
 			for (key, value) in values.items():
-				newString = string.replace('%' + str(section) + '.' + str(key) + '%', str(value))
+				value = str(value)
+				if escaped:
+					if (os.name == 'posix'):
+						value = value.replace('"', '\\"')
+					if (os.name == 'nt'):
+						value = value.replace('"', '^"')
+				newString = string.replace('%' + str(section) + '.' + str(key) + '%', value)
+				
 				if (newString != string):
-					string = self.fillPlaceholders(newString)
+					string = self.fillPlaceholders(newString, escaped)
 		return string
 	
 	def createEvents(self):
@@ -1689,7 +1696,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		for (section, options) in self._config.items():
 			if section.startswith('event_'):
 				(name, active, type, args) = ('', True, '', {})
-				args['actionProcessorCommand'] =  self._config['action_processor']['command']
+				args['actionProcessorCommand'] = self.fillPlaceholders(self._config['action_processor']['command'])
 				try:
 					name = section.split('_', 1)[1]
 					if not name:
@@ -1728,15 +1735,15 @@ class Opsiclientd(EventListener, threading.Thread):
 						elif (key == 'write_log_to_service'):
 							args['writeLogToService'] = not options[key].lower() in ('0', 'false', 'off', 'no')
 						elif (key == 'event_notifier_command'):
-							args['eventNotifierCommand'] = self.fillPlaceholders(options[key].lower())
+							args['eventNotifierCommand'] = self.fillPlaceholders(options[key].lower(), escaped=True)
 						elif (key == 'event_notifier_desktop'):
 							args['eventNotifierDesktop'] = options[key].lower()
 						elif (key == 'action_notifier_command'):
-							args['actionNotifierCommand'] = self.fillPlaceholders(options[key].lower())
+							args['actionNotifierCommand'] = self.fillPlaceholders(options[key].lower(), escaped=True)
 						elif (key == 'action_notifier_desktop'):
 							args['actionNotifierDesktop'] = options[key].lower()
 						elif (key == 'action_processor_command'):
-							args['actionProcessorCommand'] = self.fillPlaceholders(options[key].lower())
+							args['actionProcessorCommand'] = self.fillPlaceholders(options[key].lower(), escaped=True)
 						elif (key == 'action_processor_desktop'):
 							args['actionProcessorDesktop'] = options[key].lower()
 						elif (key == 'service_options'):
@@ -2318,8 +2325,8 @@ class OpsiclientdNT(Opsiclientd):
 					self._shutdownMachine()
 				
 		except Exception, e:
+			logger.logException(e)
 			logger.error("Failed to process product action requests: %s" % e)
-			#logger.logException(e)
 			self._statusSubject.setMessage( _("Failed to process product action requests: %s") % e )
 		
 		time.sleep(3)
@@ -2487,111 +2494,6 @@ class OpsiclientdNT6(OpsiclientdNT):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          OPSICLIENTD NT7                                          -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-import win32process, win32security, win32con, win32api
-class Impersonate:
-	def __init__(self, username, password, desktop = "default"):
-		if not System.existsUser(username):
-			raise Exception("User '%s' does not exist" % username)
-		self.username = username
-		self.password = password
-		if not desktop:
-			desktop = "default"
-		if (desktop.find('\\') == -1):
-			desktop = 'winsta0\\' + desktop
-		(self.winsta, self.desktop) = desktop.split('\\', 1)
-		self.domain = win32api.GetComputerName()
-		self.userHandle = None
-		self.saveWindowStation = None 
-		self.saveDesktop = None
-		self.newWindowStation = None
-		self.newDesktop = None
-		
-	def start(self):
-		try:
-			self.userHandle = win32security.LogonUser(
-					self.username,
-					self.domain,
-					self.password,
-					win32con.LOGON32_LOGON_INTERACTIVE,
-					win32con.LOGON32_PROVIDER_DEFAULT)
-			
-			#userSid = getUserSidFromHandle(self.userHandle)
-			#if not userSid:
-			#	raise Exception("Failed to determine sid of user '%s'" % self.username)
-			#logger.debug("Got sid of user '%s'" % self.username)
-			#
-			#self.saveWindowStation = win32service.GetProcessWindowStation()
-			#logger.debug("Got current window station")
-			#
-			#self.saveDesktop = win32service.GetThreadDesktop(win32api.GetCurrentThreadId())
-			#logger.debug("Got current desktop")
-			#
-			#self.newWindowStation = win32service.OpenWindowStation(
-			#				self.winsta,
-			#				False,
-			#				win32con.READ_CONTROL |
-			#				win32con.WRITE_DAC)
-			#
-			#self.newWindowStation.SetProcessWindowStation()
-			#logger.debug("Process window station set")
-			#	
-			#self.newDesktop = win32service.OpenDesktop(
-			#				self.desktop,
-			#				win32con.DF_ALLOWOTHERACCOUNTHOOK, #0,
-			#				False,
-			#				win32con.READ_CONTROL |
-			#				win32con.WRITE_DAC |
-			#				win32con.DESKTOP_READOBJECTS |
-			#				win32con.DESKTOP_WRITEOBJECTS)
-			#self.newDesktop.SetThreadDesktop()
-			#logger.debug("Thread desktop set")
-			#
-			#winstaAceIndices = addUserToWindowStation(self.newWindowStation, userSid)
-			#logger.debug("Added user to window station")
-			#
-			#desktopAceIndices = addUserToDesktop(self.newDesktop, userSid)
-			#logger.debug("Added user to desktop")
-			
-			win32security.ImpersonateLoggedOnUser(self.userHandle)
-			logger.debug("User imersonated")
-		except Exception, e:
-			logger.logException(e)
-			self.end()
-			raise
-	
-	def runCommand(self, command, waitForProcessEnding=True):
-		dwCreationFlags = win32process.CREATE_NEW_CONSOLE
-		
-		s = win32process.STARTUPINFO()
-		s.dwFlags = win32process.STARTF_USESHOWWINDOW ^ win32con.STARTF_USESTDHANDLES
-		s.wShowWindow = win32con.SW_NORMAL
-		s.lpDesktop = self.winsta + '\\' + self.desktop
-		
-		logger.notice("Running command '%s' as user '%s' on desktop '%s'" % (command, self.username, self.desktop))
-		
-		(hProcess, hThread, dwProcessId, dwThreadId) = win32process.CreateProcessAsUser(
-					self.userHandle, None, command, None, None, 0, dwCreationFlags, None, None, s)
-		logger.info("Process startet, pid: %d" % dwProcessId)
-		if not waitForProcessEnding:
-			win32security.RevertToSelf()
-			return (hProcess, hThread, dwProcessId, dwThreadId)
-		logger.info("Waiting for process ending: %d" % dwProcessId)
-		while win32event.WaitForSingleObject(hProcess, 0):
-			time.sleep(0.1)
-		logger.notice("Process ended: %d" % dwProcessId)
-
-	def end(self):
-		if self.userHandle:        self.userHandle.Close()
-		win32security.RevertToSelf()
-		if self.saveWindowStation: self.saveWindowStation.SetProcessWindowStation()
-		if self.saveDesktop:       self.saveDesktop.SetThreadDesktop()
-		if self.newWindowStation:  self.newWindowStation.CloseWindowStation()
-		if self.newDesktop:        self.newDesktop.CloseDesktop()
-	
-	def __del__(self):
-		self.end()
-
-
 class OpsiclientdNT7(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
@@ -2604,56 +2506,45 @@ class OpsiclientdNT7(OpsiclientdNT):
 		encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
 		pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
 		
-		depotShareMounted = False
-		userCreated = False
-		username = 'pcpatch'
-		password = Tools.randomString(16)
 		imp = None
+		depotShareMounted = False
 		try:
-			logger.notice("Creating local user '%s'" % username)
-			if System.existsUser(username = username):
-				System.deleteUser(username = username)
-			System.createUser(username = username, password = password, groups = [ System.getAdminGroupName() ])
-			userCreated = True
+			imp = System.Impersonate('pcpatch', pcpatchPassword)
+			imp.start(logonType = 'NEW_CREDENTIALS')
 			
-			imp = Impersonate(username, password)
-			imp.start()
+			logger.notice("Mounting depot share %s" % depot['depotRemoteUrl'])
+			self._statusSubject.setMessage(_("Mounting depot share %s") % depot['depotRemoteUrl'])
 			
-			logger.notice("Mounting depot share")
-			self._statusSubject.setMessage( _("Mounting depot share %s" % depot['depotRemoteUrl']) )
-			
-			System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password=pcpatchPassword)
+			System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username='pcpatch', password=pcpatchPassword)
 			depotShareMounted = True
 			
+			self.updateActionProcessor()
+		
+		except Exception, e:
+			logger.error("Failed to update action processor: %s" % e)
+		
+		if depotShareMounted:
 			try:
-				self.updateActionProcessor()
-			except Exception, e:
-				logger.error("Failed to update action processor: %s" % e)
-			
-			#activeSessionId = System.getActiveConsoleSessionId()
-			#logger.notice("Starting action processor in session '%s' on desktop '%s'" % (activeSessionId, actionProcessorDesktop))
-			#self._statusSubject.setMessage( _("Starting action processor") )
-			
-			#System.runCommandInSession(command = actionProcessorCommand, sessionId = activeSessionId, desktop = actionProcessorDesktop, waitForProcessEnding = True)
-			
-			os.system(actionProcessorCommand)
-			
-			logger.notice("Action processor ended")
-			self._statusSubject.setMessage( _("Action processor ended") )
-			
-		finally:
-			if depotShareMounted:
-				imp = Impersonate(username, password)
-				imp.start()
 				logger.notice("Unmounting depot share")
 				System.umount(networkConfig['depotDrive'])
-			if imp:
+			except:
+				pass
+		if imp:
+			try:
 				imp.end()
-			if userCreated:
-				logger.notice("Deleting local user '%s'" % username)
-				System.deleteUser(username = username)
-
-	
+			except:
+				pass
+		
+		command = '%system.program_files_dir%\\opsi.org\\preloginloader\\action_processor_starter.exe ' \
+			+ '"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
+			+ '"%global.log_file%" "%global.log_level%" ' \
+			+ '"' + depot['depotRemoteUrl'] + '" "' + networkConfig['depotDrive'] + '" ' \
+			+ '"pcpatch" "' + pcpatchPassword + '" ' \
+			+ '"' + actionProcessorDesktop + '" "' + actionProcessorCommand.replace('"', '\\"') + '"'
+		command = self.fillPlaceholders(command)
+		
+		System.runCommandInSession(command = command, desktop = actionProcessorDesktop, waitForProcessEnding = True)
+		
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         OPSICLIENTD INIT                                          -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
