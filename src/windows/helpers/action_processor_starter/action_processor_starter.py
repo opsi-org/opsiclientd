@@ -61,13 +61,13 @@ be = JSONRPCBackend(username = hostId, password = hostKey, address = 'https://lo
 imp = None
 depotShareMounted = False
 try:
-	imp = System.Impersonate(username, password, desktop=actionProcessorDesktop)
+	imp = System.Impersonate(username = username, password = password, desktop = actionProcessorDesktop)
 	imp.start(logonType = 'NEW_CREDENTIALS')
 	
 	logger.notice("Mounting depot share %s" % depotRemoteUrl)
 	be.setStatusMessage("Mounting depot share %s" % depotRemoteUrl)
 	
-	System.mount(depotRemoteUrl, depotDrive, username=username, password=password)
+	System.mount(depotRemoteUrl, depotDrive, username = username, password = password)
 	depotShareMounted = True
 	
 	logger.notice("Starting action processor")
