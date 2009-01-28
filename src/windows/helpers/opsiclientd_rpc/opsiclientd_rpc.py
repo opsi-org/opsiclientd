@@ -36,7 +36,7 @@ __version__ = '0.1'
 # Imports
 import sys, os
 
-from OPSI import System;
+from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 
 if (len(sys.argv) != 5):
@@ -48,6 +48,4 @@ be = JSONRPCBackend(username = username, password = password, address = 'https:/
 exec 'be.%s' % rpc
 
 sys.exit(0)
-	
-
 

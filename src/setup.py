@@ -56,6 +56,13 @@ opsiclientd_rpc = Target(
 	version = "0.1"
 )
 
+action_processor_starter = Target(
+	name = "action_processor_starter",
+	description = "opsi action processor starter",
+	script = "windows\\helpers\\action_processor_starter\\action_processor_starter.py",
+	version = "0.1"
+)
+
 ################################################################
 # COM pulls in a lot of stuff which we don't want or need.
 
@@ -91,7 +98,7 @@ setup(
 	data_files = data_files,
 	zipfile = "lib/library.zip",
 	service = [ opsiclientd ],
-	windows = [ notifier, opsiclientd_rpc ],
+	windows = [ notifier, opsiclientd_rpc, action_processor_starter ],
 )
 
 print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
