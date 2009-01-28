@@ -2395,7 +2395,7 @@ class OpsiclientdNT5(OpsiclientdNT):
 			userCreated = True
 			
 			# Impersonate
-			imp = System.Impersonate(username, password, actionProcessorDesktop)
+			imp = System.Impersonate(username = username, password = password, desktop = actionProcessorDesktop)
 			imp.start()
 			
 			logger.notice("Mounting depot share")
@@ -2509,7 +2509,7 @@ class OpsiclientdNT7(OpsiclientdNT):
 		imp = None
 		depotShareMounted = False
 		try:
-			imp = System.Impersonate('pcpatch', pcpatchPassword)
+			imp = System.Impersonate(username = 'pcpatch', password = pcpatchPassword)
 			imp.start(logonType = 'NEW_CREDENTIALS')
 			
 			logger.notice("Mounting depot share %s" % depot['depotRemoteUrl'])
