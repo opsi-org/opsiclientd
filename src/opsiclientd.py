@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.4.2.9'
+__version__ = '0.4.3.2'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -325,16 +325,15 @@ class GUIStartupEvent(Event):
 			self.wql = "SELECT * FROM __InstanceCreationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_Process' AND TargetInstance.Name = '%s'" % self.processName
 		
 	def activate(self):
-		if self.processName:
-			if System.getPid(self.processName):
-				logger.info("Process '%s' is running on activation of event %s => firing" % (self.processName, self))
-				return
 		if self.wql:
 			pythoncom.CoInitialize()
 			try:
 				c = wmi.WMI()
-				logger.info("watching for wql: %s" % self.wql)
 				watcher = c.watch_for(raw_wql=self.wql, wmi_class='')
+				if self.processName and System.getPid(self.processName):
+					logger.info("Process '%s' is running on activation of event %s => firing" % (self.processName, self))
+					return
+				logger.info("watching for wql: %s" % self.wql)
 				self.wqlResult = watcher()
 				logger.info("got wmi object: %s" % self.wqlResult)
 			except Exception, e:
@@ -344,8 +343,7 @@ class GUIStartupEvent(Event):
 			pythoncom.CoUninitialize()
 		else:
 			# Not yet supported
-			e = threading.Event()
-			e.wait()
+			return
 		
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1445,6 +1443,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				'opsi_host_key':          '',
 				'wait_before_reboot':     3,
 				'wait_before_shutdown':   3,
+				'wait_for_gui_timeout':   120,
 			},
 			'config_service': {
 				'url':                    '',
@@ -1531,7 +1530,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		if section in ('system'):
 			return
 		
-		if option in ('log_level', 'port'):
+		if option in ('log_level', 'port', 'wait_for_gui_timeout'):
 			value = int(value)
 		
 		if not self._config.has_key(section):
@@ -1693,6 +1692,8 @@ class Opsiclientd(EventListener, threading.Thread):
 	
 	def createEvents(self):
 		self._events['panic'] = PanicEvent('panic')
+		self._events['panic'].actionProcessorCommand = self.fillPlaceholders(self._config['action_processor']['command'])
+		
 		for (section, options) in self._config.items():
 			if section.startswith('event_'):
 				(name, active, type, args) = ('', True, '', {})
@@ -1772,6 +1773,24 @@ class Opsiclientd(EventListener, threading.Thread):
 		for event in self._events.values():
 			event.addEventListener(self)
 			event.start()
+	
+	def waitForGUI(self, timeout=None):
+		if not timeout:
+			timeout = None
+		class WaitForGUI(EventListener):
+			def __init__(self):
+				self._guiStarted = threading.Event()
+				event = GUIStartupEvent("wait_for_gui")
+				event.addEventListener(self)
+				event.start()
+			
+			def processEvent(self, event):
+				self._guiStarted.set()
+				
+			def wait(self, timeout=None):
+				self._guiStarted.wait(timeout)
+				
+		WaitForGUI().wait(timeout)
 		
 	def run(self):
 		self._running = True
@@ -1831,11 +1850,20 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to start notification server: %s" % e)
 				raise
 			
-			# Events
+			# Create events
 			self.createEvents()
-			time.sleep(3)
+			
+			# Wait until gui starts up
+			logger.notice("Waiting for gui startup (timeout: %d seconds)" % self._config['global']['wait_for_gui_timeout'])
+			self.waitForGUI(timeout = self._config['global']['wait_for_gui_timeout'])
+			logger.notice("Gui started")
+			
+			# Wait some more seconds for events to fire
+			time.sleep(5)
 			if not self._processingEvent:
+				logger.notice("No events processing, unblocking login")
 				self._blockLogin = False
+			
 			# TODO: passive wait?
 			while self._running:
 				time.sleep(1)
