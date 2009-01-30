@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.4.2'
+__version__ = '0.4.4'
 
 # Imports
 import threading, time, sys, os, getopt
@@ -170,6 +170,7 @@ class OpsiDialogWindow(SubjectsObserver):
 				'style':     0,
 				'stayOnTop': False,
 				'fadeIn':    False,
+				'fadeOut':   False,
 				'icon':      None,
 				'systray':   False
 			}
@@ -231,6 +232,7 @@ class OpsiDialogWindow(SubjectsObserver):
 				elif  (key == 'active'):        self.skin[item]['active'] = toBool(value)
 				elif  (key == 'stayontop'):     self.skin[item]['stayOnTop'] = toBool(value)
 				elif  (key == 'fadein'):        self.skin[item]['fadeIn'] = toBool(value)
+				elif  (key == 'fadeout'):       self.skin[item]['fadeOut'] = toBool(value)
 				elif  (key == 'subjectid'):     self.skin[item]['subjectId'] = value.strip()
 				elif  (key == 'choiceindex'):   self.skin[item]['choiceIndex'] = int(value)
 				elif  (section.lower() == 'form') and (key == 'hidden') and toBool(value):
@@ -426,6 +428,13 @@ class OpsiDialogWindow(SubjectsObserver):
 		if (self.alpha > 255):
 			timer.kill_timer(id)
 	
+	def fadeout(self):
+		self.setWindowAlpha(self.alpha)
+		self.alpha -= 25
+		if (self.alpha >= 0):
+			time.sleep(0.05)
+			self.fadeout()
+	
 	def createTrayIcon(self):
 		try:
 			flags = win32gui.NIF_ICON | win32gui.NIF_MESSAGE | win32gui.NIF_TIP
@@ -532,6 +541,9 @@ class OpsiDialogWindow(SubjectsObserver):
 	
 	def onClose(self, hwnd, msg, wparam, lparam):
 		try:
+			if self.skin['form']['fadeOut']:
+				self.alpha = 255
+				self.fadeout()
 			self.removeTrayIcon()
 		except:
 			pass

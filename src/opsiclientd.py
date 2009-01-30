@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.4.3.2'
+__version__ = '0.4.4.1'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -1293,17 +1293,18 @@ class EventProcessingThread(KillableThread):
 			desktop = 'winlogon'
 		
 		logger.notice("Starting notifier application in session '%s' on desktop '%s'" % (activeSessionId, desktop))
-		process = System.runCommandInSession(command = command, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding=False)[0]
+		processId = System.runCommandInSession(command = command, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding=False)[2]
 		time.sleep(3)
-		return process
+		return processId
 		
-	def stopNotifierApplication(self, process):
-		if not process:
-			raise ValueError("No process given")
+	def stopNotifierApplication(self, processId):
+		if not processId:
+			raise ValueError("No process id given")
 		
 		logger.notice("Stopping notifier application")
 		try:
-			System.terminateProcess(process)
+			self.opsiclientd.closeProcessWindows(processId)
+			System.terminateProcess(processId = processId)
 		except Exception, e:
 			logger.error("Failed to terminate process: %s" % e)
 		
@@ -1314,7 +1315,7 @@ class EventProcessingThread(KillableThread):
 			self.eventCancelled = False
 			self.waiting = False
 			self.waitCancelled = False
-			notifierApplication = None
+			notifierApplicationPid = None
 			try:
 				self.opsiclientd.getEventSubject().setMessage(self.event.message)
 				if self.event.warningTime:
@@ -1328,7 +1329,7 @@ class EventProcessingThread(KillableThread):
 					self.opsiclientd.getNotificationServer().addSubject(choiceSubject)
 					try:
 						if self.event.eventNotifierCommand:
-							notifierApplication = self.startNotifierApplication(
+							notifierApplicationPid = self.startNotifierApplication(
 										command = self.event.eventNotifierCommand,
 										desktop = self.event.eventNotifierDesktop )
 							
@@ -1345,8 +1346,8 @@ class EventProcessingThread(KillableThread):
 							raise CanceledByUserError("cancelled by user")
 					finally:
 						self.waiting = False
-						if notifierApplication:
-							self.stopNotifierApplication(notifierApplication)
+						if notifierApplicationPid:
+							self.stopNotifierApplication(notifierApplicationPid)
 						self.opsiclientd.getNotificationServer().removeSubject(choiceSubject)
 				
 				self.opsiclientd.getStatusSubject().setMessage(_("Processing event %s") % self.event.getName())
@@ -1361,7 +1362,7 @@ class EventProcessingThread(KillableThread):
 					time.sleep(15)
 				
 				if self.event.actionNotifierCommand:
-					notifierApplication = self.startNotifierApplication(
+					notifierApplicationPid = self.startNotifierApplication(
 									command = self.event.actionNotifierCommand,
 									desktop = self.event.actionNotifierDesktop )
 				if self.event.getConfigFromService:
@@ -1378,8 +1379,9 @@ class EventProcessingThread(KillableThread):
 				if self.event.writeLogToService:
 					self.opsiclientd.writeLogToService()
 				self.opsiclientd.disconnectConfigServer()
-				if notifierApplication:
-					self.stopNotifierApplication(notifierApplication)
+				self.opsiclientd.processShutdownRequests()
+				if notifierApplicationPid:
+					self.stopNotifierApplication(notifierApplicationPid)
 				self.opsiclientd.getEventSubject().setMessage("")
 			
 		except Exception, e:
@@ -1491,7 +1493,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			{ 'name': 'uptime',                          'params': [ ],                              'availability': ['server'] },
 			{ 'name': 'getCurrentActiveDesktopName',     'params': [ ],                              'availability': ['server'] },
 			{ 'name': 'setCurrentActiveDesktopName',     'params': [ 'desktop' ],                    'availability': ['server'] },
-			{ 'name': 'setConfigValue',                  'params': [ 'section', 'option', 'value' ], 'availability': ['server'] }
+			{ 'name': 'setConfigValue',                  'params': [ 'section', 'option', 'value' ], 'availability': ['server'] },
+			{ 'name': 'updateConfigFile',                'params': [ ],                              'availability': ['server'] },
 		]
 	
 	def setBlockLogin(self, blockLogin):
@@ -1556,19 +1559,26 @@ class Opsiclientd(EventListener, threading.Thread):
 			# Read Config-File
 			config = File().readIniFile(self._config['global']['config_file'], raw = True)
 			
-			# Read log values early
+			# Read log settings early
 			if config.has_section('global'):
 				if config.has_option('global', 'log_level'):
 					self.setConfigValue('global', 'log_level', config.get('global', 'log_level'))
 				if config.has_option('global', 'log_file'):
 					logFile = config.get('global', 'log_file')
-					if os.path.exists(logFile):
+					for i in (2, 1, 0):
+						slf = None
+						dlf = None
 						try:
-							if os.path.exists(logFile + '.0'):
-								os.unlink(logFile + '.0')
-							os.rename(logFile,logFile + '.0')
+							slf = logFile + '.' + str(i-1)
+							if (i <= 0):
+								slf = logFile
+							dlf = logFile + '.' + str(i)
+							if os.path.exists(slf):
+								if os.path.exists(dlf):
+									os.unlink(dlf)
+								os.rename(slf, dlf)
 						except Exception, e:
-							logger.error("Failed to rename %s to %s.0: %s" % (logFile, logFile, e) )
+							logger.error("Failed to rename %s to %s: %s" % (slf, dlf, e) )
 					self.setConfigValue('global', 'log_file', logFile)
 			
 			# Process all sections
@@ -1914,39 +1924,6 @@ class Opsiclientd(EventListener, threading.Thread):
 			(self._config['config_service']['host'], self._config['config_service']['port']) = self._config['config_service']['host'].split(':', 1)
 		self._serviceUrlSubject.setMessage(self._config['config_service']['url'])
 	
-	def startStatusApplication(self, desktop=''):
-		if self._statusApplicationProcess:
-			# Already running
-			return
-		
-		statusApplication = self._config['opsiclientd_notifier']['command']
-		if not statusApplication:
-			return
-		
-		statusApplication = self.fillPlaceholders(statusApplication)
-		
-		activeSessionId = System.getActiveConsoleSessionId()
-		if not desktop or desktop.lower() not in ('winlogon', 'default'):
-			desktop = self.getCurrentActiveDesktopName()
-		if not desktop or desktop.lower() not in ('winlogon', 'default'):
-			desktop = 'winlogon'
-		
-		logger.notice("Starting status application in session '%s' on desktop '%s'" % (activeSessionId, desktop))
-		self._statusApplicationProcess = System.runCommandInSession(command = statusApplication, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding=False)[0]
-		time.sleep(5)
-	
-	def stopStatusApplication(self):
-		if not self._statusApplicationProcess:
-			# Not running
-			return
-		time.sleep(2)
-		logger.notice("Stopping status application")
-		try:
-			System.terminateProcess(self._statusApplicationProcess)
-		except Exception, e:
-			logger.error("Failed to terminate statusApplicationProcess: %s" % e)
-		self._statusApplicationProcess = None
-	
 	def setActionProcessorInfo(self):
 		self._actionProcessorInfoSubject.setMessage("")
 	
@@ -1954,7 +1931,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.notice("Processing event %s" % event)
 		self._statusSubject.setMessage( _("Processing event %s") % event )
 		
-		if self._processingEvent:
+		if self._processingEvent and (event.type != EVENT_TYPE_PANIC):
 			logger.error("Already processing event")
 			return
 		self._processingEvent = True
@@ -2174,6 +2151,10 @@ class Opsiclientd(EventListener, threading.Thread):
 				if (len(params) < 3):
 					raise ValueError("section, option or value missing")
 				return self.setConfigValue(*params)
+			
+			elif (method == 'updateConfigFile'):
+				self.updateConfigFile()
+			
 			else:
 				raise NotImplementedError("Method '%s' not implemented" % method)
 			
@@ -2188,7 +2169,14 @@ class Opsiclientd(EventListener, threading.Thread):
 		cmd = '%s "%s"' % (self.fillPlaceholders(self._config['opsiclientd_rpc']['command']), rpc)
 		System.runCommandInSession(command = cmd, waitForProcessEnding = True)
 		return self._currentActiveDesktopName
-
+	
+	def closeProcessWindows(self, processId):
+		if not (self._config.has_key('opsiclientd_rpc') and self._config['opsiclientd_rpc'].has_key('command')):
+			raise Exception("opsiclientd_rpc command not defined")
+		rpc = 'exit(); System.closeProcessWindows(processId = %s)' % processId
+		cmd = '%s "%s"' % (self.fillPlaceholders(self._config['opsiclientd_rpc']['command']), rpc)
+		System.runCommandInSession(command = cmd, waitForProcessEnding = True)
+	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         OPSICLIENTD POSIX                                         -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2276,6 +2264,7 @@ class OpsiclientdNT(Opsiclientd):
 			logger.info("Action processor name '%s', version '%s'" % (name, version))
 			self._actionProcessorInfoSubject.setMessage("%s %s" % (name, version))
 		except Exception, e:
+			logException(e)
 			logger.error("Failed to set action processor info: %s" % e)
 	
 	def processProductActionRequests(self, actionProcessorCommand, actionProcessorDesktop, serviceOptions={}):
@@ -2324,41 +2313,42 @@ class OpsiclientdNT(Opsiclientd):
 				
 				self._statusSubject.setMessage( _("Actions completed") )
 			
-			rebootRequested = 0
-			try:
-				rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
-			except Exception, e:
-				logger.info("Failed to get rebootRequested from registry: %s" % e)
-			logger.info("rebootRequested: %s" % rebootRequested)
-			if rebootRequested:
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
-				if (rebootRequested == 2):
-					# Logout
-					logger.notice("Logout requested, nothing to do")
-					pass
-				else:
-					# Reboot
-					self._statusSubject.setMessage(_("Rebooting machine"))
-					self._rebootMachine()
-			else:
-				shutdownRequested = 0
-				try:
-					shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
-				except Exception, e:
-					logger.warning("Failed to get shutdownRequested from registry: %s" % e)
-				logger.info("shutdownRequested: %s" % shutdownRequested)
-				if shutdownRequested:
-					System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
-					self._statusSubject.setMessage(_("Shutting down machine"))
-					self._shutdownMachine()
-				
 		except Exception, e:
 			logger.logException(e)
 			logger.error("Failed to process product action requests: %s" % e)
 			self._statusSubject.setMessage( _("Failed to process product action requests: %s") % e )
 		
 		time.sleep(3)
-
+	
+	def processShutdownRequests(self):
+		rebootRequested = 0
+		try:
+			rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
+		except Exception, e:
+			logger.error("Failed to get rebootRequested from registry: %s" % e)
+		logger.info("rebootRequested: %s" % rebootRequested)
+		if rebootRequested:
+			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
+			if (rebootRequested == 2):
+				# Logout
+				logger.notice("Logout requested, nothing to do")
+				pass
+			else:
+				# Reboot
+				self._statusSubject.setMessage(_("Rebooting machine"))
+				self._rebootMachine()
+		else:
+			shutdownRequested = 0
+			try:
+				shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
+			except Exception, e:
+				logger.error("Failed to get shutdownRequested from registry: %s" % e)
+			logger.info("shutdownRequested: %s" % shutdownRequested)
+			if shutdownRequested:
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
+				self._statusSubject.setMessage(_("Shutting down machine"))
+				self._shutdownMachine()
+		
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          OPSICLIENTD NT5                                          -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
