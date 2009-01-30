@@ -33,36 +33,40 @@ class Target:
 		self.__dict__.update(kw)
 		self.company_name = "uib GmbH"
 		self.copyright = "uib GmbH"
+		self.version = ""
+		f = open(self.script, 'r')
+		for line in f.readlines():
+			if (line.find("__version__") != -1):
+				self.version = line.split('=', 1)[1].strip()[1:-1]
+				break
+		f.close()
+		if not self.version:
+			print >> sys.stderr, "Failed to find version of script '%s'" % self.script
 
 opsiclientd = Target(
 	name = "opsiclientd",
 	description = "opsi client daemon",
 	script = "opsiclientd.py",
 	modules = ["opsiclientd"],
-	version = "0.2.6.8"
 )
 
 notifier = Target(
 	name = "notifier",
 	description = "opsi notifier",
 	script = "windows\\helpers\\notifier\\notifier.py",
-	version = "0.3"
 )
 
 opsiclientd_rpc = Target(
 	name = "opsiclientd_rpc",
 	description = "opsi client daemon rpc tool",
 	script = "windows\\helpers\\opsiclientd_rpc\\opsiclientd_rpc.py",
-	version = "0.1"
 )
 
 action_processor_starter = Target(
 	name = "action_processor_starter",
 	description = "opsi action processor starter",
 	script = "windows\\helpers\\action_processor_starter\\action_processor_starter.py",
-	version = "0.1"
 )
-
 ################################################################
 # COM pulls in a lot of stuff which we don't want or need.
 

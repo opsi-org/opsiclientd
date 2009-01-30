@@ -44,8 +44,11 @@ if (len(sys.argv) != 5):
 	sys.exit(1)
 
 (username, password, port, rpc) = sys.argv[1:]
-be = JSONRPCBackend(username = username, password = password, address = 'https://localhost:%s/rpc' % port)
-exec 'be.%s' % rpc
-
+try:
+	be = JSONRPCBackend(username = username, password = password, address = 'https://localhost:%s/rpc' % port)
+	exec 'be.%s' % rpc
+	be.exit()
+except:
+	pass
 sys.exit(0)
 
