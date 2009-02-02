@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
    = = = = = = = = = = = = = = = = = = = = =
-   =   opsi client daemon (opsiclientd)    =
+   =   opsi client daemonc (opsiclientd)    =
    = = = = = = = = = = = = = = = = = = = = =
    
    opsiclientd is part of the desktop management solution opsi
@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.4.4.1'
+__version__ = '0.4.4.2'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -1304,9 +1304,11 @@ class EventProcessingThread(KillableThread):
 		logger.notice("Stopping notifier application")
 		try:
 			self.opsiclientd.closeProcessWindows(processId)
+			time.sleep(3)
 			System.terminateProcess(processId = processId)
 		except Exception, e:
-			logger.error("Failed to terminate process: %s" % e)
+			#logger.error("Failed to stop notifier application: %s" % e)
+			pass
 		
 	def run(self):
 		try:
@@ -1379,10 +1381,12 @@ class EventProcessingThread(KillableThread):
 				if self.event.writeLogToService:
 					self.opsiclientd.writeLogToService()
 				self.opsiclientd.disconnectConfigServer()
-				self.opsiclientd.processShutdownRequests()
+				willShutdown = self.opsiclientd.processShutdownRequests()
 				if notifierApplicationPid:
 					self.stopNotifierApplication(notifierApplicationPid)
 				self.opsiclientd.getEventSubject().setMessage("")
+				if not willShutdown:
+					self.opsiclientd.setBlockLogin(False)
 			
 		except Exception, e:
 			logger.error("Failed to process event %s: %s" % (self.event, e))
@@ -1941,7 +1945,6 @@ class Opsiclientd(EventListener, threading.Thread):
 		eventProcessingThread.join()
 		logger.notice("Done processing event '%s'" % event)
 		
-		self.setBlockLogin(False)
 		self._processingEvent = False
 	
 	def processProductActionRequests(self, actionProcessorCommand, actionProcessorDesktop, serviceOptions={}):
@@ -2175,7 +2178,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			raise Exception("opsiclientd_rpc command not defined")
 		rpc = 'exit(); System.closeProcessWindows(processId = %s)' % processId
 		cmd = '%s "%s"' % (self.fillPlaceholders(self._config['opsiclientd_rpc']['command']), rpc)
-		System.runCommandInSession(command = cmd, waitForProcessEnding = True)
+		System.runCommandInSession(command = cmd, waitForProcessEnding = False)
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         OPSICLIENTD POSIX                                         -
@@ -2264,7 +2267,7 @@ class OpsiclientdNT(Opsiclientd):
 			logger.info("Action processor name '%s', version '%s'" % (name, version))
 			self._actionProcessorInfoSubject.setMessage("%s %s" % (name, version))
 		except Exception, e:
-			logException(e)
+			logger.logException(e)
 			logger.error("Failed to set action processor info: %s" % e)
 	
 	def processProductActionRequests(self, actionProcessorCommand, actionProcessorDesktop, serviceOptions={}):
@@ -2337,6 +2340,7 @@ class OpsiclientdNT(Opsiclientd):
 				# Reboot
 				self._statusSubject.setMessage(_("Rebooting machine"))
 				self._rebootMachine()
+				return True
 		else:
 			shutdownRequested = 0
 			try:
@@ -2348,6 +2352,8 @@ class OpsiclientdNT(Opsiclientd):
 				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
 				self._statusSubject.setMessage(_("Shutting down machine"))
 				self._shutdownMachine()
+				return True
+		return False
 		
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          OPSICLIENTD NT5                                          -
