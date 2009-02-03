@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.4.4.4'
+__version__ = '0.4.7'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -48,7 +48,6 @@ if (os.name == 'posix'):
 if (os.name == 'nt'):
 	import win32serviceutil, win32service
 	from ctypes import *
-	import wmi, pythoncom
 
 # Twisted imports
 from twisted.internet import defer, threads, reactor
@@ -178,6 +177,7 @@ class Event(threading.Thread):
 		self.getConfigFromService = bool(self.__dict__.get('getConfigFromService', True))
 		self.updateConfigFile = bool(self.__dict__.get('updateConfigFile', True))
 		self.writeLogToService = bool(self.__dict__.get('writeLogToService', True))
+		self.updateActionProcessor = bool(self.__dict__.get('updateActionProcessor', True))
 		
 		self.eventNotifierCommand = str(self.__dict__.get('eventNotifierCommand'))
 		
@@ -280,6 +280,7 @@ class PanicEvent(Event):
 		self.getConfigFromService = False
 		self.updateConfigFile = False
 		self.writeLogToService = False
+		self.updateActionProcessor = False
 		self.eventNotifierCommand = None
 		self.actionNotifierCommand = None
 		self.actionProcessorDesktop = 'winlogon'
@@ -326,6 +327,14 @@ class GUIStartupEvent(Event):
 		
 	def activate(self):
 		if self.wql:
+			(wmi, pythoncom) = (None, None)
+			while True:
+				try:
+					import wmi, pythoncom
+					break
+				except Exception, e:
+					logger.warning("Failed to import: %s, retrying in 5 seconds" % e)
+					sleep(5)
 			pythoncom.CoInitialize()
 			try:
 				c = wmi.WMI()
@@ -369,16 +378,31 @@ class CustomEvent(Event):
 	
 	def activate(self):
 		if self.wql:
+			(wmi, pythoncom) = (None, None)
+			while True:
+				try:
+					import wmi, pythoncom
+					break
+				except Exception, e:
+					logger.warning("Failed to import: %s, retrying in 5 seconds" % e)
+					sleep(5)
 			pythoncom.CoInitialize()
 			try:
+				while True:
+					try:
+						import wmi
+						break
+					except Exception, e:
+						logger.warning("Failed to import wmi: %s, retrying in 5 seconds" % e)
+						sleep(5)
 				c = wmi.WMI()
 				logger.info("watching for wql: %s" % self.wql)
 				watcher = c.watch_for(raw_wql=self.wql, wmi_class='')
 				self.wqlResult = watcher()
 				logger.info("got wmi object: %s" % self.wqlResult)
 			except Exception, e:
-				logger.error("Failed to activate event '%s': %s" % (self, e))
 				pythoncom.CoUninitialize()
+				logger.error("Failed to activate event '%s': %s" % (self, e))
 				raise
 			pythoncom.CoUninitialize()
 		else:
@@ -1372,20 +1396,18 @@ class EventProcessingThread(KillableThread):
 				if self.event.updateConfigFile:
 					self.opsiclientd.updateConfigFile()
 				
-				self.opsiclientd.processProductActionRequests(
-							actionProcessorCommand = self.event.actionProcessorCommand,
-							actionProcessorDesktop = self.event.actionProcessorDesktop,
-							serviceOptions = self.event.serviceOptions )
+				self.opsiclientd.processProductActionRequests(self.event)
 			
 			finally:
 				if self.event.writeLogToService:
 					self.opsiclientd.writeLogToService()
 				self.opsiclientd.disconnectConfigServer()
-				willShutdown = self.opsiclientd.processShutdownRequests()
+				self.opsiclientd.processShutdownRequests()
 				if notifierApplicationPid:
 					self.stopNotifierApplication(notifierApplicationPid)
 				self.opsiclientd.getEventSubject().setMessage("")
-				if not willShutdown or (sys.getwindowsversion()[0] < 6):
+				if (not self.opsiclientd._rebootRequested and not self.opsiclientd._shutdownRequested) \
+				    or (sys.getwindowsversion()[0] < 6):
 					# Windows NT <= 5 can't shutdown while pgina.dll is blockin login!
 					self.opsiclientd.setBlockLogin(False)
 			
@@ -1438,6 +1460,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._actionProcessorInfoSubject = MessageSubject('actionProcessorInfo')
 		self._opsiclientdInfoSubject = MessageSubject('opsiclientdInfo')
 		
+		self._rebootRequested = False
+		self._shutdownRequested = False
+		
 		self._config = {
 			'system': {
 				'program_files_dir':      '',
@@ -1485,6 +1510,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		self._possibleMethods = [
 			{ 'name': 'getPossibleMethods_listOfHashes', 'params': [ ],                              'availability': ['server', 'pipe'] },
+			{ 'name': 'getBlockLogin',                   'params': [ ],                              'availability': ['server', 'pipe'] },
+			{ 'name': 'isRebootRequested',               'params': [ ],                              'availability': ['server', 'pipe'] },
+			{ 'name': 'isShutdownRequested',             'params': [ ],                              'availability': ['server', 'pipe'] },
 			{ 'name': 'getBlockLogin',                   'params': [ ],                              'availability': ['server', 'pipe'] },
 			{ 'name': 'setBlockLogin',                   'params': [ 'blockLogin' ],                 'availability': ['server'] },
 			{ 'name': 'runCommand',                      'params': [ 'command', '*desktop' ],        'availability': ['server'] },
@@ -1750,6 +1778,8 @@ class Opsiclientd(EventListener, threading.Thread):
 							args['updateConfigFile'] = not options[key].lower() in ('0', 'false', 'off', 'no')
 						elif (key == 'write_log_to_service'):
 							args['writeLogToService'] = not options[key].lower() in ('0', 'false', 'off', 'no')
+						elif (key == 'update_action_processor'):
+							args['updateActionProcessor'] = not options[key].lower() in ('0', 'false', 'off', 'no')
 						elif (key == 'event_notifier_command'):
 							args['eventNotifierCommand'] = self.fillPlaceholders(options[key].lower(), escaped=True)
 						elif (key == 'event_notifier_desktop'):
@@ -1936,7 +1966,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.notice("Processing event %s" % event)
 		self._statusSubject.setMessage( _("Processing event %s") % event )
 		
-		if self._processingEvent and (event.type != EVENT_TYPE_PANIC):
+		if self._processingEvent and (event._type != EVENT_TYPE_PANIC):
 			logger.error("Already processing event")
 			return
 		self._processingEvent = True
@@ -1948,7 +1978,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		self._processingEvent = False
 	
-	def processProductActionRequests(self, actionProcessorCommand, actionProcessorDesktop, serviceOptions={}):
+	def processProductActionRequests(self, event):
 		logger.error("processProductActionRequests not implemented")
 	
 	def connectConfigServer(self):
@@ -2130,12 +2160,18 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.notice("rpc shutdown: shutting down computer in %s seconds" % wait)
 				System.shutdown(wait = wait)
 			
+			elif (method == 'isShutdownRequested'):
+				return self._shutdownRequested
+			
 			elif (method == 'reboot'):
 				wait = 0
 				if (len(params) > 0) and type(params[0]) is int:
 					wait = int(params[0])
 				logger.notice("rpc reboot: rebooting computer in %s seconds" % wait)
 				System.reboot(wait = wait)
+			
+			elif (method == 'isRebootRequested'):
+				return self._rebootRequested
 			
 			elif (method == 'uptime'):
 				uptime = int(time.time() - self._startupTime)
@@ -2197,9 +2233,11 @@ class OpsiclientdNT(Opsiclientd):
 		self._config['global']['config_file'] = self._config['system']['program_files_dir'] + '\\opsi.org\\preloginloader\\opsiclientd\\opsiclientd.conf'
 		
 	def _shutdownMachine(self):
+		self._shutdownRequested = True
 		System.shutdown(wait = self._config['global']['wait_before_reboot'])
 	
 	def _rebootMachine(self):
+		self._rebootRequested = True
 		System.reboot(wait = self._config['global']['wait_before_reboot'])
 	
 	def updateActionProcessor(self):
@@ -2270,7 +2308,7 @@ class OpsiclientdNT(Opsiclientd):
 		except Exception, e:
 			logger.error("Failed to set action processor info: %s" % e)
 	
-	def processProductActionRequests(self, actionProcessorCommand, actionProcessorDesktop, serviceOptions={}):
+	def processProductActionRequests(self, event):
 		self._statusSubject.setMessage(_("Getting action requests from config service"))
 		
 		try:
@@ -2283,12 +2321,12 @@ class OpsiclientdNT(Opsiclientd):
 			self.connectConfigServer()
 			productStates = []
 			if (self._configService.getLocalBootProductStates_hash.func_code.co_argcount == 2):
-				if serviceOptions:
+				if event.serviceOptions:
 					logger.warning("Service cannot handle service options in method getLocalBootProductStates_hash")
 				productStates = self._configService.getLocalBootProductStates_hash(self._config['global']['host_id'])
 				productStates = productStates.get(self._config['global']['host_id'], [])
 			else:
-				productStates = self._configService.getLocalBootProductStates_hash(self._config['global']['host_id'], serviceOptions)
+				productStates = self._configService.getLocalBootProductStates_hash(self._config['global']['host_id'], event.serviceOptions)
 				productStates = productStates.get(self._config['global']['host_id'], [])
 			
 			logger.notice("Got product action requests from configservice")
@@ -2305,14 +2343,9 @@ class OpsiclientdNT(Opsiclientd):
 			else:
 				logger.notice("Start processing action requests")
 				
-				if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
-					actionProcessorDesktop = self.getCurrentActiveDesktopName()
-				if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
-					actionProcessorDesktop = 'winlogon'
-				
 				self._statusSubject.setMessage( _("Starting actions") )
 				
-				self.runProductActions(actionProcessorCommand, actionProcessorDesktop)
+				self.runProductActions(event)
 				
 				self._statusSubject.setMessage( _("Actions completed") )
 			
@@ -2324,6 +2357,8 @@ class OpsiclientdNT(Opsiclientd):
 		time.sleep(3)
 	
 	def processShutdownRequests(self):
+		self._rebootRequested = False
+		self._shutdownRequested = False
 		rebootRequested = 0
 		try:
 			rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
@@ -2338,9 +2373,9 @@ class OpsiclientdNT(Opsiclientd):
 				pass
 			else:
 				# Reboot
+				self._rebootRequested = True
 				self._statusSubject.setMessage(_("Rebooting machine"))
 				self._rebootMachine()
-				return True
 		else:
 			shutdownRequested = 0
 			try:
@@ -2349,11 +2384,11 @@ class OpsiclientdNT(Opsiclientd):
 				logger.error("Failed to get shutdownRequested from registry: %s" % e)
 			logger.info("shutdownRequested: %s" % shutdownRequested)
 			if shutdownRequested:
+				# Shutdown
 				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
+				self._shutdownRequested = True
 				self._statusSubject.setMessage(_("Shutting down machine"))
 				self._shutdownMachine()
-				return True
-		return False
 		
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          OPSICLIENTD NT5                                          -
@@ -2361,8 +2396,17 @@ class OpsiclientdNT(Opsiclientd):
 class OpsiclientdNT5(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
-	
+		if (sys.getwindowsversion()[1] == 0):
+			# NT 5.0 / win2k
+			# If reboot/shutdown is triggered while pgina.dll is
+			# in function WlxInitialize the system will not reboot/shutdown
+			# For this the default reboot/shutdown wait time is set to 10 seconds
+			# This should be enough time for pgina to stop blocking and leave WlxInitialize
+			self._config['global']['wait_before_reboot'] = 10
+			self._config['global']['wait_before_shutdown'] = 10
+		
 	def _shutdownMachine(self):
+		self._shutdownRequested = True
 		# Running in thread to avoid failure of shutdown (device not ready)
 		class _shutdownThread(threading.Thread):
 			def __init__ (self, wait):
@@ -2381,6 +2425,7 @@ class OpsiclientdNT5(OpsiclientdNT):
 		_shutdownThread(wait = self._config['global']['wait_before_shutdown']).start()
 		
 	def _rebootMachine(self):
+		self._rebootRequested = True
 		# Running in thread to avoid failure of reboot (device not ready)
 		class _rebootThread(threading.Thread):
 			def __init__ (self, wait):
@@ -2398,8 +2443,14 @@ class OpsiclientdNT5(OpsiclientdNT):
 		
 		_rebootThread(wait = self._config['global']['wait_before_reboot']).start()
 	
-	def runProductActions(self, actionProcessorCommand, actionProcessorDesktop):
+	def runProductActions(self, event):
 		logger.debug("runProductActions(): running on NT5")
+		
+		actionProcessorDesktop = event.actionProcessorDesktop
+		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
+			actionProcessorDesktop = self.getCurrentActiveDesktopName()
+		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
+			actionProcessorDesktop = 'winlogon'
 		
 		networkConfig = self._configService.getNetworkConfig_hash(self._config['global']['host_id'])
 		depot = self._configService.getDepot_hash(networkConfig['depotId'])
@@ -2428,11 +2479,13 @@ class OpsiclientdNT5(OpsiclientdNT):
 			System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password=pcpatchPassword)
 			depotShareMounted = True
 			
-			try:
-				self.updateActionProcessor()
-			except Exception, e:
-				logger.error("Failed to update action processor: %s" % e)
-			
+			if event.updateActionProcessor:
+				logger.notice("Updating action processor")
+				try:
+					self.updateActionProcessor()
+				except Exception, e:
+					logger.error("Failed to update action processor: %s" % e)
+				
 			logger.notice("Starting action processor as user '%s' on desktop '%s'" % (username, actionProcessorDesktop))
 			self._statusSubject.setMessage( _("Starting action processor") )
 			
@@ -2458,7 +2511,7 @@ class OpsiclientdNT5(OpsiclientdNT):
 						logger.debug("   %s=%s" % (k,v))
 				except Exception, e:
 					logger.error("Failed to set environment: %s" % e)
-			imp.runCommand(command = actionProcessorCommand, waitForProcessEnding = True)
+			imp.runCommand(command = event.actionProcessorCommand, waitForProcessEnding = True)
 			
 			logger.notice("Action processor ended")
 			self._statusSubject.setMessage( _("Action processor ended") )
@@ -2480,8 +2533,14 @@ class OpsiclientdNT6(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
 	
-	def runProductActions(self, actionProcessorCommand, actionProcessorDesktop):
+	def runProductActions(self, event):
 		logger.debug("runProductActions(): running on NT6")
+		
+		actionProcessorDesktop = event.actionProcessorDesktop
+		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
+			actionProcessorDesktop = self.getCurrentActiveDesktopName()
+		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
+			actionProcessorDesktop = 'winlogon'
 		
 		networkConfig = self._configService.getNetworkConfig_hash(self._config['global']['host_id'])
 		depot = self._configService.getDepot_hash(networkConfig['depotId'])
@@ -2496,16 +2555,18 @@ class OpsiclientdNT6(OpsiclientdNT):
 			System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username="pcpatch", password=pcpatchPassword)
 			depotShareMounted = True
 			
-			try:
-				self.updateActionProcessor()
-			except Exception, e:
-				logger.error("Failed to update action processor: %s" % e)
-			
+			if event.updateActionProcessor:
+				logger.notice("Updating action processor")
+				try:
+					self.updateActionProcessor()
+				except Exception, e:
+					logger.error("Failed to update action processor: %s" % e)
+				
 			activeSessionId = System.getActiveConsoleSessionId()
 			logger.notice("Starting action processor in session '%s' on desktop '%s'" % (activeSessionId, actionProcessorDesktop))
 			self._statusSubject.setMessage( _("Starting action processor") )
 			
-			System.runCommandInSession(command = actionProcessorCommand, sessionId = activeSessionId, desktop = actionProcessorDesktop, waitForProcessEnding = True)
+			System.runCommandInSession(command = event.actionProcessorCommand, sessionId = activeSessionId, desktop = actionProcessorDesktop, waitForProcessEnding = True)
 			
 			logger.notice("Action processor ended")
 			self._statusSubject.setMessage( _("Action processor ended") )
@@ -2522,49 +2583,57 @@ class OpsiclientdNT7(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
 	
-	def runProductActions(self, actionProcessorCommand, actionProcessorDesktop):
+	def runProductActions(self, event):
 		logger.debug("runProductActions(): running on NT7")
+		
+		actionProcessorDesktop = event.actionProcessorDesktop
+		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
+			actionProcessorDesktop = self.getCurrentActiveDesktopName()
+		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
+			actionProcessorDesktop = 'winlogon'
 		
 		networkConfig = self._configService.getNetworkConfig_hash(self._config['global']['host_id'])
 		depot = self._configService.getDepot_hash(networkConfig['depotId'])
 		encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
 		pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
 		
-		imp = None
-		depotShareMounted = False
-		try:
-			imp = System.Impersonate(username = 'pcpatch', password = pcpatchPassword)
-			imp.start(logonType = 'NEW_CREDENTIALS')
-			
-			logger.notice("Mounting depot share %s" % depot['depotRemoteUrl'])
-			self._statusSubject.setMessage(_("Mounting depot share %s") % depot['depotRemoteUrl'])
-			
-			System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username='pcpatch', password=pcpatchPassword)
-			depotShareMounted = True
-			
-			self.updateActionProcessor()
-		
-		except Exception, e:
-			logger.error("Failed to update action processor: %s" % e)
-		
-		if depotShareMounted:
+		if event.updateActionProcessor:
+			logger.notice("Updating action processor")
+			imp = None
+			depotShareMounted = False
 			try:
-				logger.notice("Unmounting depot share")
-				System.umount(networkConfig['depotDrive'])
-			except:
-				pass
-		if imp:
-			try:
-				imp.end()
-			except:
-				pass
+				imp = System.Impersonate(username = 'pcpatch', password = pcpatchPassword)
+				imp.start(logonType = 'NEW_CREDENTIALS')
+				
+				logger.notice("Mounting depot share %s" % depot['depotRemoteUrl'])
+				self._statusSubject.setMessage(_("Mounting depot share %s") % depot['depotRemoteUrl'])
+				
+				System.mount(depot['depotRemoteUrl'], networkConfig['depotDrive'], username='pcpatch', password=pcpatchPassword)
+				depotShareMounted = True
+				
+				self.updateActionProcessor()
+			
+			except Exception, e:
+				logger.error("Failed to update action processor: %s" % e)
 		
+			if depotShareMounted:
+				try:
+					logger.notice("Unmounting depot share")
+					System.umount(networkConfig['depotDrive'])
+				except:
+					pass
+			if imp:
+				try:
+					imp.end()
+				except:
+					pass
+			
 		command = '%system.program_files_dir%\\opsi.org\\preloginloader\\action_processor_starter.exe ' \
 			+ '"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
 			+ '"%global.log_file%" "%global.log_level%" ' \
 			+ '"' + depot['depotRemoteUrl'] + '" "' + networkConfig['depotDrive'] + '" ' \
 			+ '"pcpatch" "' + pcpatchPassword + '" ' \
-			+ '"' + actionProcessorDesktop + '" "' + actionProcessorCommand.replace('"', '\\"') + '"'
+			+ '"' + actionProcessorDesktop + '" "' + event.actionProcessorCommand.replace('"', '\\"') + '"'
 		command = self.fillPlaceholders(command)
 		
 		System.runCommandInSession(command = command, desktop = actionProcessorDesktop, waitForProcessEnding = True)
@@ -2691,7 +2760,7 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		_svc_name_ = "opsiclientd"
 		_svc_display_name_ = "opsiclientd"
 		_svc_description_ = "opsi client daemon"
-		_svc_deps_ = ['Eventlog', 'winmgmt']
+		#_svc_deps_ = ['Eventlog', 'winmgmt']
 		
 		def __init__(self, args):
 			"""
