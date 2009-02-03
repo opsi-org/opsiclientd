@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.4.4.2'
+__version__ = '0.4.4.4'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -448,7 +448,7 @@ class ControlPipe(threading.Thread):
 			# Execute method
 			start = time.time()
 			result['result'] = self._opsiclientd.executePipeRpc(method, params)
-			logger.info('Got result...')
+			logger.debug('Got result...')
 			duration = round(time.time() - start, 3)
 			logger.info('Took %0.3fs to process %s(%s)' % (duration, method, str(params)[1:-1]))
 		except Exception, e:
@@ -465,13 +465,13 @@ class PosixControlPipe(ControlPipe):
 		self._pipeName = "/var/run/opsiclientd/fifo"
 	
 	def createPipe(self):
-		logger.info("Creating pipe %s" % self._pipeName)
+		logger.debug("Creating pipe %s" % self._pipeName)
 		if not os.path.exists( os.path.dirname(self._pipeName) ):
 			os.mkdir( os.path.dirname(self._pipeName) )
 		if os.path.exists(self._pipeName):
 			os.unlink(self._pipeName)
 		os.mkfifo(self._pipeName)
-		logger.info("Pipe %s created" % self._pipeName)
+		logger.debug("Pipe %s created" % self._pipeName)
 	
 	def run(self):
 		self._running = True
@@ -479,17 +479,17 @@ class PosixControlPipe(ControlPipe):
 			self.createPipe()
 			while self._running:
 				try:
-					logger.info("Opening named pipe %s" % self._pipeName)
+					logger.debug("Opening named pipe %s" % self._pipeName)
 					self._pipe = os.open(self._pipeName, os.O_RDONLY)
-					logger.info("Reading from pipe %s" % self._pipeName)
+					logger.debug("Reading from pipe %s" % self._pipeName)
 					rpc = os.read(self._pipe, self._bufferSize)
 					os.close(self._pipe)
 					if not rpc:
 						logger.error("No rpc from pipe")
 						continue
-					logger.notice("Received rpc from pipe '%s'" % rpc)
+					logger.info("Received rpc from pipe '%s'" % rpc)
 					result = self.executeRpc(rpc)
-					logger.info("Opening named pipe %s" % self._pipeName)
+					logger.debug("Opening named pipe %s" % self._pipeName)
 					timeout = 3
 					ta = 0.0
 					while (ta < timeout):
@@ -504,9 +504,9 @@ class PosixControlPipe(ControlPipe):
 					if (ta >= timeout):
 						logger.error("Failed to write to pipe (timed out after %d seconds)" % timeout)
 						continue
-					logger.info("Writing to pipe")
+					logger.debug("Writing to pipe")
 					written = os.write(self._pipe, result)
-					logger.info("Number of bytes written: %d" % written)
+					logger.debug("Number of bytes written: %d" % written)
 					if (len(result) != written):
 						logger.error("Failed to write all bytes to pipe (%d/%d)" % (written, len(result)))
 				
@@ -541,13 +541,13 @@ class NTControlPipeConnection(threading.Thread):
 			chBuf = create_string_buffer(self._bufferSize)
 			cbRead = c_ulong(0)
 			while self._running:
-				logger.info("Reading fom pipe")
+				logger.debug("Reading fom pipe")
 				fReadSuccess = windll.kernel32.ReadFile(self._pipe, chBuf, self._bufferSize, byref(cbRead), None)
 				if ((fReadSuccess == 1) or (cbRead.value != 0)):
-					logger.notice("Received rpc from pipe '%s'" % chBuf.value)
+					logger.info("Received rpc from pipe '%s'" % chBuf.value)
 					result =  "%s\0" % self._ntControlPipe.executeRpc(chBuf.value)
 					cbWritten = c_ulong(0)
-					logger.info("Writing to pipe")
+					logger.debug("Writing to pipe")
 					fWriteSuccess = windll.kernel32.WriteFile(
 									self._pipe,
 									c_char_p(result),
@@ -605,7 +605,7 @@ class NTControlPipe(ControlPipe):
 					None )
 		if (self._pipe == INVALID_HANDLE_VALUE):
 			raise Exception("Failed to create named pipe")
-		logger.info("Pipe %s created" % self._pipeName)
+		logger.debug("Pipe %s created" % self._pipeName)
 	
 	def run(self):
 		self._running = True
@@ -618,7 +618,7 @@ class NTControlPipe(ControlPipe):
 				if ((fConnected == 0) and (windll.kernel32.GetLastError() == ERROR_PIPE_CONNECTED)):
 					fConnected = 1
 				if (fConnected == 1):
-					logger.info("Connected to named pipe %s" % self._pipeName)
+					logger.debug("Connected to named pipe %s" % self._pipeName)
 					logger.debug("Creating NTControlPipeConnection")
 					cpc = NTControlPipeConnection(self, self._pipe, self._bufferSize)
 					cpc.start()
@@ -1385,7 +1385,8 @@ class EventProcessingThread(KillableThread):
 				if notifierApplicationPid:
 					self.stopNotifierApplication(notifierApplicationPid)
 				self.opsiclientd.getEventSubject().setMessage("")
-				if not willShutdown:
+				if not willShutdown or (sys.getwindowsversion()[0] < 6):
+					# Windows NT <= 5 can't shutdown while pgina.dll is blockin login!
 					self.opsiclientd.setBlockLogin(False)
 			
 		except Exception, e:
@@ -2262,12 +2263,11 @@ class OpsiclientdNT(Opsiclientd):
 			actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
 			actionProcessorLocalFile = self.fillPlaceholders(actionProcessorLocalFile)
 			info = System.getFileVersionInfo(actionProcessorLocalFile)
-			version = info.get('FileVersion', '')
-			name = info.get('ProductName', '')
+			version = info.get('FileVersion', u'')
+			name = info.get('ProductName', u'')
 			logger.info("Action processor name '%s', version '%s'" % (name, version))
-			self._actionProcessorInfoSubject.setMessage("%s %s" % (name, version))
+			self._actionProcessorInfoSubject.setMessage("%s %s" % (name.encode('utf-8'), version.encode('utf-8')))
 		except Exception, e:
-			logger.logException(e)
 			logger.error("Failed to set action processor info: %s" % e)
 	
 	def processProductActionRequests(self, actionProcessorCommand, actionProcessorDesktop, serviceOptions={}):
