@@ -2400,10 +2400,10 @@ class OpsiclientdNT5(OpsiclientdNT):
 			# NT 5.0 / win2k
 			# If reboot/shutdown is triggered while pgina.dll is
 			# in function WlxInitialize the system will not reboot/shutdown
-			# For this the default reboot/shutdown wait time is set to 10 seconds
+			# For this the default reboot/shutdown wait time is set to 15 seconds
 			# This should be enough time for pgina to stop blocking and leave WlxInitialize
-			self._config['global']['wait_before_reboot'] = 10
-			self._config['global']['wait_before_shutdown'] = 10
+			self._config['global']['wait_before_reboot'] = 15
+			self._config['global']['wait_before_shutdown'] = 15
 		
 	def _shutdownMachine(self):
 		self._shutdownRequested = True
