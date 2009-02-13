@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.4.7'
+__version__ = '0.4.7.1'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -617,7 +617,6 @@ class NTControlPipe(ControlPipe):
 		PIPE_UNLIMITED_INSTANCES = 255
 		NMPWAIT_USE_DEFAULT_WAIT = 0
 		INVALID_HANDLE_VALUE = -1
-		ERROR_PIPE_CONNECTED = 535
 		self._pipe = windll.kernel32.CreateNamedPipeA(
 					self._pipeName,
 					PIPE_ACCESS_DUPLEX,
@@ -632,6 +631,7 @@ class NTControlPipe(ControlPipe):
 		logger.debug("Pipe %s created" % self._pipeName)
 	
 	def run(self):
+		ERROR_PIPE_CONNECTED = 535
 		self._running = True
 		try:
 			while self._running:
@@ -1212,7 +1212,6 @@ class ControlServer(threading.Thread):
 
 
 
-
 '''
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 =                                             OPSICLIENTD                                             =
@@ -1223,6 +1222,9 @@ class ControlServer(threading.Thread):
 =                                                                                                     =
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 '''
+
+#class SyncControl(object):
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                     SERVICE CONNECTION THREAD                                     -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
