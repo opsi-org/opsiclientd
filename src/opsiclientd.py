@@ -1212,6 +1212,7 @@ class ControlServer(threading.Thread):
 
 
 
+
 '''
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 =                                             OPSICLIENTD                                             =
@@ -1222,9 +1223,6 @@ class ControlServer(threading.Thread):
 =                                                                                                     =
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 '''
-
-#class SyncControl(object):
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                     SERVICE CONNECTION THREAD                                     -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
