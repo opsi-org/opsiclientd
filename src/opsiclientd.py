@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.4.7.1'
+__version__ = '0.4.7.2'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -1399,16 +1399,16 @@ class EventProcessingThread(KillableThread):
 				self.opsiclientd.processProductActionRequests(self.event)
 			
 			finally:
+				self.opsiclientd.getEventSubject().setMessage("")
+				self.opsiclientd.processShutdownRequests()
 				if self.event.writeLogToService:
 					self.opsiclientd.writeLogToService()
 				self.opsiclientd.disconnectConfigServer()
-				self.opsiclientd.processShutdownRequests()
 				if notifierApplicationPid:
 					self.stopNotifierApplication(notifierApplicationPid)
-				self.opsiclientd.getEventSubject().setMessage("")
 				if (not self.opsiclientd._rebootRequested and not self.opsiclientd._shutdownRequested) \
 				    or (sys.getwindowsversion()[0] < 6):
-					# Windows NT <= 5 can't shutdown while pgina.dll is blockin login!
+					# Windows NT <= 5 can't shutdown while pgina.dll is blocking login!
 					self.opsiclientd.setBlockLogin(False)
 			
 		except Exception, e:
