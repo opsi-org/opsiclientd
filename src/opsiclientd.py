@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.4.7.2'
+__version__ = '0.4.8'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -51,8 +51,8 @@ if (os.name == 'nt'):
 
 # Twisted imports
 from twisted.internet import defer, threads, reactor
-from twisted.web2 import resource, stream, server, http, responsecode, static
-from twisted.web2.channel.http import HTTPFactory
+from OPSI.web2 import resource, stream, server, http, responsecode, static
+from OPSI.web2.channel.http import HTTPFactory
 from twisted.python.failure import Failure
 
 # OPSI imports
@@ -62,6 +62,9 @@ from OPSI import Tools
 from OPSI import System
 from OPSI.Backend.File import File
 from OPSI.Backend.JSONRPC import JSONRPCBackend
+from OPSI.Backend.File31 import File31Backend
+from OPSI.Backend.Cache import CacheBackend
+from OPSI.Backend.BackendManager import BackendManager
 
 # Create logger instance
 logger = Logger()
@@ -667,9 +670,6 @@ def ControlPipeFactory(opsiclientd):
 		raise NotImplemented("Unsupported operating system %s" % os.name)
 
 
-
-
-
 '''
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 =                                            CONTROL SERVER                                           =
@@ -732,13 +732,13 @@ class ControlServerResourceJsonRpc(resource.Resource):
 	def http_POST(self, request):
 		''' Process POST request. '''
 		logger.info("ControlServerResourceJsonRpc: processing POST request")
-		worker = JsonRpcWorker(request, self._opsiclientd, method = 'POST')
+		worker = ControlServerJsonRpcWorker(request, self._opsiclientd, method = 'POST')
 		return worker.process()
 		
 	def http_GET(self, request):
 		''' Process GET request. '''
 		logger.info("ControlServerResourceJsonRpc: processing GET request")
-		worker = JsonRpcWorker(request, self._opsiclientd, method = 'GET')
+		worker = ControlServerJsonRpcWorker(request, self._opsiclientd, method = 'GET')
 		return worker.process()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -752,21 +752,20 @@ class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 	def http_POST(self, request):
 		''' Process POST request. '''
 		logger.info("ControlServerResourceInterface: processing POST request")
-		worker = JsonInterfaceWorker(request, self._opsiclientd, method = 'POST')
+		worker = ControlServerJsonInterfaceWorker(request, self._opsiclientd, method = 'POST')
 		return worker.process()
 		
 	def http_GET(self, request):
 		''' Process GET request. '''
 		logger.info("ControlServerResourceInterface: processing GET request")
-		worker = JsonInterfaceWorker(request, self._opsiclientd, method = 'GET')
+		worker = ControlServerJsonInterfaceWorker(request, self._opsiclientd, method = 'GET')
 		return worker.process()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                          JSON RPC WORKER                                          -
+# -                                           JSON RPC WORKER                                         -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class JsonRpcWorker(object):
 	def __init__(self, request, opsiclientd, method = 'POST'):
-		logger.setFileFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
 		self.request = request
 		self._opsiclientd = opsiclientd
 		self.method = method
@@ -874,24 +873,8 @@ class JsonRpcWorker(object):
 		return d
 	
 	def _realRpc(self):
-		method = self.rpc.get('method')
-		params = self.rpc.get('params')
-		logger.info("RPC method: '%s' params: '%s'" % (method, params))
+		self.result['result'] = None
 		
-		try:
-			# Execute method
-			start = time.time()
-			self.result['result'] = self._opsiclientd.executeServerRpc(method, params)
-		except Exception, e:
-			logger.logException(e)
-			self.result['error'] = { 'class': e.__class__.__name__, 'message': str(e) }
-			self.result['result'] = None
-			return
-		
-		logger.info('Got result...')
-		duration = round(time.time() - start, 3)
-		logger.info('Took %0.3fs to process %s(%s)' % (duration, method, str(params)[1:-1]))
-	
 	def _authenticate(self, result):
 		''' This function tries to authenticate a user.
 		    Raises an exception on authentication failure. '''
@@ -925,11 +908,38 @@ class JsonRpcWorker(object):
 			self.response.headers.setHeader('www-authenticate', [('basic', { 'realm': 'OPSI Client Service' } )])
 			#self.result['error'] = str(e)
 			raise
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                   CONTROL SERVER JSON RPC WORKER                                  -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class ControlServerJsonRpcWorker(JsonRpcWorker):
+	def __init__(self, request, opsiclientd, method = 'POST'):
+		JsonRpcWorker.__init__(self, request, opsiclientd, method)
+		logger.setFileFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
+	
+	def _realRpc(self):
+		method = self.rpc.get('method')
+		params = self.rpc.get('params')
+		logger.info("RPC method: '%s' params: '%s'" % (method, params))
 		
+		try:
+			# Execute method
+			start = time.time()
+			self.result['result'] = self._opsiclientd.executeServerRpc(method, params)
+		except Exception, e:
+			logger.logException(e)
+			self.result['error'] = { 'class': e.__class__.__name__, 'message': str(e) }
+			self.result['result'] = None
+			return
+		
+		logger.info('Got result...')
+		duration = round(time.time() - start, 3)
+		logger.info('Took %0.3fs to process %s(%s)' % (duration, method, str(params)[1:-1]))
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                       JSON INTERFACE WORKER                                       -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class JsonInterfaceWorker(JsonRpcWorker):
+class ControlServerJsonInterfaceWorker(ControlServerJsonRpcWorker):
 	xhtml = """
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
@@ -1124,7 +1134,7 @@ class JsonInterfaceWorker(JsonRpcWorker):
 </html>"""
 
 	def __init__(self, request, opsiconfd, method = 'POST'):
-		JsonRpcWorker.__init__(self, request, opsiconfd, method)
+		ControlServerJsonRpcWorker.__init__(self, request, opsiconfd, method)
 	
 	def _returnResponse(self, result):
 		js = ''
@@ -1158,6 +1168,160 @@ class JsonInterfaceWorker(JsonRpcWorker):
 				self.result['error'] = str(failure)
 		logger.error("Failed to process rpc: %s" % self.result['error'])
 		return self._returnResponse(None)
+
+
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                        CACHED CONFIG SERVICE                                      -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+class CachedConfigService(threading.Thread):
+	def __init__(self, opsiclientd):
+		threading.Thread.__init__(self)
+		self._opsiclientd = opsiclientd
+		self._storageDir = self._opsiclientd._config['cached_config_service']['storage_dir']
+		self._cacheBackendBaseDir  = os.path.join(self._storageDir, 'cache_backend')
+		self._workBackendBaseDir   = os.path.join(self._storageDir, 'work_backend')
+		self._cachedExecutionsFile = os.path.join(self._storageDir, 'cached_exec')
+		self.init()
+		
+	def init(self):
+		
+		self._cacheBackendArgs = {
+			'logDir':                     os.path.join(self._cacheBackendBaseDir, 'logs'),
+			'pckeyFile':                  os.path.join(self._cacheBackendBaseDir, 'pckeys'),
+			'passwdFile':                 os.path.join(self._cacheBackendBaseDir, 'passwd'),
+			'groupsFile':                 os.path.join(self._cacheBackendBaseDir, 'clientgroups.ini'),
+			'licensesFile':               os.path.join(self._cacheBackendBaseDir, 'licenses.ini'),
+			'clientConfigDir':            os.path.join(self._cacheBackendBaseDir, 'clients'),
+			'clientTemplatesDir':         os.path.join(self._cacheBackendBaseDir, 'templates'),
+			'defaultClientTemplateFile':  os.path.join(self._cacheBackendBaseDir, 'templates', 'pcproto.ini'),
+			'globalConfigFile':           os.path.join(self._cacheBackendBaseDir, 'global.ini'),
+			'depotConfigDir':             os.path.join(self._cacheBackendBaseDir, 'depots'),
+			'productLockFile':            os.path.join(self._cacheBackendBaseDir, 'depots', 'product.locks'),
+			'auditInfoDir':               os.path.join(self._cacheBackendBaseDir, 'audit'),
+			'serverId':                   self._opsiclientd.getConfigValue('cached_config_service', 'server_id')
+		}
+		self._workBackendArgs = {
+			'logDir':                     os.path.join(self._workBackendBaseDir, 'logs'),
+			'pckeyFile':                  os.path.join(self._workBackendBaseDir, 'pckeys'),
+			'passwdFile':                 os.path.join(self._workBackendBaseDir, 'passwd'),
+			'groupsFile':                 os.path.join(self._workBackendBaseDir, 'clientgroups.ini'),
+			'licensesFile':               os.path.join(self._workBackendBaseDir, 'licenses.ini'),
+			'clientConfigDir':            os.path.join(self._workBackendBaseDir, 'clients'),
+			'clientTemplatesDir':         os.path.join(self._workBackendBaseDir, 'templates'),
+			'defaultClientTemplateFile':  os.path.join(self._workBackendBaseDir, 'templates', 'pcproto.ini'),
+			'globalConfigFile':           os.path.join(self._workBackendBaseDir, 'global.ini'),
+			'depotConfigDir':             os.path.join(self._workBackendBaseDir, 'depots'),
+			'productLockFile':            os.path.join(self._workBackendBaseDir, 'depots', 'product.locks'),
+			'auditInfoDir':               os.path.join(self._workBackendBaseDir, 'audit'),
+			'serverId':                   self._opsiclientd.getConfigValue('cached_config_service', 'server_id')
+		}
+		
+		self._username = self._opsiclientd.getConfigValue('global', 'host_id')
+		self._password = self._opsiclientd.getConfigValue('global', 'opsi_host_key')
+		self._address =  self._opsiclientd.getConfigValue('config_service', 'url')
+		
+		if not os.path.isdir(self._storageDir):
+			os.mkdir(self._storageDir)
+		if not os.path.isdir(self._cacheBackendBaseDir):
+			os.mkdir(self._cacheBackendBaseDir)
+		if not os.path.isdir(self._workBackendBaseDir):
+			os.mkdir(self._workBackendBaseDir)
+		
+		self._mainBackend = JSONRPCBackend(address = self._address, username = self._username, password = self._password)
+		
+		self._cacheBackend = File31Backend(args = self._cacheBackendArgs)
+		self._cacheBackend.createOpsiBase()
+		#self._cacheBackend = BackendManager(backend = self._cacheBackend, authRequired=False)
+		
+		self._workBackend = File31Backend(args = self._workBackendArgs)
+		self._workBackend.createOpsiBase()
+		#self._workBackend = BackendManager(backend = self._workBackend, authRequired=False)
+		
+		self._backend = CacheBackend(
+					args = {
+						'mainBackend':          self._mainBackend,
+						'cacheBackend':         self._cacheBackend,
+						'workBackend':          self._workBackend,
+						'cachedExecutionsFile': self._cachedExecutionsFile
+					} )
+		#self._backend = BackendManager(backend = self._backend, authRequired=False, configFile='/etc/opsi/backendManager.d/50_interface.conf')
+		self._backend.workCached(False)
+		
+	def run(self):
+		pass
+		#self._backend.buildCache(depotIds=['bonifax.uib.local'], clientIds=['pcbon14.uib.local'], productIds=['acroread'])
+		#self._backend.workCached(True)
+	
+	def reset(self):
+		if not os.path.exists(self._cacheBackendBaseDir):
+			shutil.rmtree(self._cacheBackendBaseDir)
+		if not os.path.exists(self._workBackendBaseDir):
+			shutil.rmtree(self._workBackendBaseDir)
+		if not os.path.exists(self._cachedExecutionsFile):
+			os.remove(self._cachedExecutionsFile)
+		self.init()
+		
+	def processRpc(self, method, params):
+		return eval('self._backend.%s(*params)' % method)
+	
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                              CACHED CONFIG SERVICE RESOURCE JSON RPC                              -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class CachedConfigServiceResourceJsonRpc(resource.Resource):
+	def __init__(self, opsiclientd):
+		logger.setFileFormat('[%l] [%D] [cached config server]  %M  (%F|%N)', object=self)
+		resource.Resource.__init__(self)
+		self._opsiclientd = opsiclientd
+		
+	def getChild(self, name, request):
+		''' Get the child resource for the requested path. '''
+		if not name:
+			return self
+		return resource.Resource.getChild(self, name, request)
+	
+	def http_POST(self, request):
+		''' Process POST request. '''
+		logger.info("CachedConfigServiceResourceJsonRpc: processing POST request")
+		worker = CachedConfigServiceJsonRpcWorker(request, self._opsiclientd, method = 'POST')
+		return worker.process()
+		
+	def http_GET(self, request):
+		''' Process GET request. '''
+		logger.info("CachedConfigServiceResourceJsonRpc: processing GET request")
+		worker = CachedConfigServiceJsonRpcWorker(request, self._opsiclientd, method = 'GET')
+		return worker.process()
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                               CACHED CONFIG SERVICE JSON RPC WORKER                               -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class CachedConfigServiceJsonRpcWorker(JsonRpcWorker):
+	def __init__(self, request, opsiclientd, method = 'POST'):
+		JsonRpcWorker.__init__(self, request, opsiclientd, method)
+		logger.setFileFormat('[%l] [%D] [cached config server]  %M  (%F|%N)', object=self)
+	
+	def _realRpc(self):
+		method = self.rpc.get('method')
+		params = self.rpc.get('params')
+		logger.info("RPC method: '%s' params: '%s'" % (method, params))
+		
+		try:
+			# Execute method
+			start = time.time()
+			self.result['result'] = self._opsiclientd._cachedConfigService.processRpc(method, params)
+		except Exception, e:
+			logger.logException(e)
+			self.result['error'] = { 'class': e.__class__.__name__, 'message': str(e) }
+			self.result['result'] = None
+			return
+		
+		logger.info('Got result...')
+		duration = round(time.time() - start, 3)
+		logger.info('Took %0.3fs to process %s(%s)' % (duration, method, str(params)[1:-1]))
+
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                           CONTROL SERVER                                          -
@@ -1207,9 +1371,9 @@ class ControlServer(threading.Thread):
 				logger.error("Cannot add static content '/': directory '%s' does not exist." % self._staticDir)
 		if not self._root:
 			self._root = ControlServerResourceRoot()
-		self._root.putChild("rpc", ControlServerResourceJsonRpc(self._opsiclientd))
+		self._root.putChild("opsiclientd", ControlServerResourceJsonRpc(self._opsiclientd))
 		self._root.putChild("interface", ControlServerResourceInterface(self._opsiclientd))
-
+		self._root.putChild("rpc", CachedConfigServiceResourceJsonRpc(self._opsiclientd))
 
 
 
@@ -1482,6 +1646,10 @@ class Opsiclientd(EventListener, threading.Thread):
 				'connection_timeout':     30,
 				'user_cancellable_after': 0,
 			},
+			'cached_config_service': {
+				'server_id':              '',
+				'storage_dir':            'cached_config_service'
+			},
 			'control_server': {
 				'interface':              '0.0.0.0', # TODO
 				'port':                   4441,
@@ -1546,6 +1714,17 @@ class Opsiclientd(EventListener, threading.Thread):
 		return self._running
 		
 	
+	def getConfigValue(self, section, option):
+		if not section:
+			section = 'global'
+		section = str(section).strip().lower()
+		option = str(option).strip().lower()
+		if not self._config.has_key(section):
+			raise ValueError("No such config section: %s" % section)
+		if not self._config[section].has_key(option):
+			raise ValueError("No such config option in section '%s': %s" % (section, option))
+		return self._config[section][option]
+		
 	def setConfigValue(self, section, option, value):
 		if not section:
 			section = 'global'
@@ -1875,6 +2054,15 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to start control server: %s" % e)
 				raise
 			
+			logger.notice("Starting cached config service")
+			try:
+				self._cachedConfigService = CachedConfigService(opsiclientd = self)
+				self._cachedConfigService.start()
+				logger.notice("Cached config service")
+			except Exception, e:
+				logger.error("Failed to start cached config service: %s" % e)
+				raise
+			
 			logger.notice("Starting notification server")
 			try:
 				self._notificationServer = NotificationServer(
@@ -1947,6 +2135,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				win32security.LogonUser(username, 'None', password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
 				# No exception raised => user authenticated
 				return True
+		if (os.name == 'posix'):
+			return True
 		raise Exception("Invalid credentials")
 		
 	def setConfigServiceUrl(self, url):
@@ -2216,6 +2406,10 @@ class Opsiclientd(EventListener, threading.Thread):
 		rpc = 'exit(); System.closeProcessWindows(processId = %s)' % processId
 		cmd = '%s "%s"' % (self.fillPlaceholders(self._config['opsiclientd_rpc']['command']), rpc)
 		System.runCommandInSession(command = cmd, waitForProcessEnding = False)
+	
+	def processShutdownRequests(self):
+		pass
+	
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         OPSICLIENTD POSIX                                         -

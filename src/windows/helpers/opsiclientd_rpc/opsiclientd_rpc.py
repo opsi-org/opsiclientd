@@ -45,7 +45,7 @@ if (len(sys.argv) != 5):
 
 (username, password, port, rpc) = sys.argv[1:]
 try:
-	be = JSONRPCBackend(username = username, password = password, address = 'https://localhost:%s/rpc' % port)
+	be = JSONRPCBackend(username = username, password = password, address = 'https://localhost:%s/opsiclientd' % port)
 	exec 'be.%s' % rpc
 	be.exit()
 except:
