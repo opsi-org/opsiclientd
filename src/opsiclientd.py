@@ -1252,7 +1252,7 @@ class CachedConfigService(threading.Thread):
 		
 	def run(self):
 		pass
-		#self._backend.buildCache(depotIds=['bonifax.uib.local'], clientIds=['pcbon14.uib.local'], productIds=['acroread'])
+		#self._backend.buildCache(depotIds=[''], clientIds=[''], productIds=[''])
 		#self._backend.workCached(True)
 	
 	def reset(self):
@@ -2135,8 +2135,6 @@ class Opsiclientd(EventListener, threading.Thread):
 				win32security.LogonUser(username, 'None', password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
 				# No exception raised => user authenticated
 				return True
-		if (os.name == 'posix'):
-			return True
 		raise Exception("Invalid credentials")
 		
 	def setConfigServiceUrl(self, url):
