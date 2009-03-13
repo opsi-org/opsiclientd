@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.4.8'
+__version__ = '0.5'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -68,9 +68,10 @@ from OPSI.Backend.BackendManager import BackendManager
 
 # Create logger instance
 logger = Logger()
-logger.setFileFormat('[%l] [%D]  %M  (%F|%N)')
+logger.setLogFormat('[%l] [%D]  %M  (%F|%N)')
 
 # Possible event types
+EVENT_TYPE_PRODUCT_SYNC_COMPLETED = 'product sync completed'
 EVENT_TYPE_DAEMON_STARTUP = 'daemon startup'
 EVENT_TYPE_DAEMON_SHUTDOWN = 'daemon shutdown'
 EVENT_TYPE_GUI_STARTUP = 'gui startup'
@@ -116,6 +117,10 @@ class CanceledByUserError(opsiclientdError):
 	""" Exception raised if user cancels operation. """
 	ExceptionShortDescription = "Canceled by user error"
 
+
+
+
+
 '''
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 =                                               EVENTS                                                =
@@ -141,7 +146,7 @@ class Event(threading.Thread):
 	def __init__(self, type, name, **kwargs):
 		threading.Thread.__init__(self)
 		
-		if not type in (EVENT_TYPE_DAEMON_STARTUP, EVENT_TYPE_DAEMON_SHUTDOWN, EVENT_TYPE_GUI_STARTUP,
+		if not type in (EVENT_TYPE_PRODUCT_SYNC_COMPLETED, EVENT_TYPE_DAEMON_STARTUP, EVENT_TYPE_DAEMON_SHUTDOWN, EVENT_TYPE_GUI_STARTUP,
 				EVENT_TYPE_TIMER, EVENT_TYPE_PROCESS_ACTION_REQUESTS, EVENT_TYPE_CUSTOM, EVENT_TYPE_PANIC):
 			raise TypeError("Unkown event type '%s'" % type)
 		if not name:
@@ -153,7 +158,7 @@ class Event(threading.Thread):
 		self._occured = 0
 		self._eventListeners = []
 		
-		logger.setFileFormat('[%l] [%D] [event ' + str(self._name) + ']  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [event ' + str(self._name) + ']  %M  (%F|%N)', object=self)
 		
 		self.message = str(self.__dict__.get('message', ''))
 		
@@ -292,7 +297,18 @@ class PanicEvent(Event):
 	def activate(self):
 		e = threading.Event()
 		e.wait()
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                        SYNC COMPLETED EVENT                                       -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class ProductSyncCompletedEvent(Event):
+	def __init__(self, name, **kwargs):
+		Event.__init__(self, EVENT_TYPE_PRODUCT_SYNC_COMPLETED, name, **kwargs)
 	
+	def activate(self):
+		e = threading.Event()
+		e.wait()
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                        DAEMON STARTUP EVENT                                       -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -424,6 +440,11 @@ class EventListener(object):
 		logger.warning("%s: processEvent() not implemented" % self)
 
 
+
+
+
+
+
 '''
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 =                                            CONTROL PIPES                                            =
@@ -444,7 +465,7 @@ class EventListener(object):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlPipe(threading.Thread):
 	def __init__(self, opsiclientd):
-		logger.setFileFormat('[%l] [%D] [control pipe]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [control pipe]  %M  (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._pipe = None
@@ -555,7 +576,7 @@ class PosixControlPipe(ControlPipe):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class NTControlPipeConnection(threading.Thread):
 	def __init__(self, ntControlPipe, pipe, bufferSize):
-		logger.setFileFormat('[%l] [%D] [control pipe]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [control pipe]  %M  (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._ntControlPipe = ntControlPipe
 		self._pipe = pipe
@@ -670,6 +691,12 @@ def ControlPipeFactory(opsiclientd):
 		raise NotImplemented("Unsupported operating system %s" % os.name)
 
 
+
+
+
+
+
+
 '''
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 =                                            CONTROL SERVER                                           =
@@ -719,7 +746,7 @@ class ControlServerResourceRoot(resource.Resource):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServerResourceJsonRpc(resource.Resource):
 	def __init__(self, opsiclientd):
-		logger.setFileFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
 		resource.Resource.__init__(self)
 		self._opsiclientd = opsiclientd
 		
@@ -746,7 +773,7 @@ class ControlServerResourceJsonRpc(resource.Resource):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 	def __init__(self, opsiclientd):
-		logger.setFileFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
 		ControlServerResourceJsonRpc.__init__(self, opsiclientd)
 	
 	def http_POST(self, request):
@@ -915,7 +942,7 @@ class JsonRpcWorker(object):
 class ControlServerJsonRpcWorker(JsonRpcWorker):
 	def __init__(self, request, opsiclientd, method = 'POST'):
 		JsonRpcWorker.__init__(self, request, opsiclientd, method)
-		logger.setFileFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
 	
 	def _realRpc(self):
 		method = self.rpc.get('method')
@@ -1176,18 +1203,37 @@ class ControlServerJsonInterfaceWorker(ControlServerJsonRpcWorker):
 # -                                        CACHED CONFIG SERVICE                                      -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-class CachedConfigService(threading.Thread):
+class CacheService(threading.Thread):
 	def __init__(self, opsiclientd):
 		threading.Thread.__init__(self)
+		logger.setLogFormat('[%l] [%D] [cache service]  %M  (%F|%N)', object=self)
 		self._opsiclientd = opsiclientd
-		self._storageDir = self._opsiclientd._config['cached_config_service']['storage_dir']
+		self._serverId = ''
+		self._storageDir = self._opsiclientd._config['cache_service']['storage_dir']
 		self._cacheBackendBaseDir  = os.path.join(self._storageDir, 'cache_backend')
 		self._workBackendBaseDir   = os.path.join(self._storageDir, 'work_backend')
 		self._cachedExecutionsFile = os.path.join(self._storageDir, 'cached_exec')
-		self.init()
-		
-	def init(self):
-		
+		self._productCacheDir = os.path.join(self._storageDir, 'install')
+		self._depotUrl = ''
+		self._productIds = []
+		self._stateFile = os.path.join(self._storageDir, 'sync_state')
+		self._initiated = False
+		self._state = {
+			'product':  {},
+			'config':   {}
+		}
+		self._cacheConfigRequested = False
+		self._cacheProductsRequested = False
+		self._running = False
+	
+	def stop(self):
+		self._running = False
+	
+	def isRunning(self):
+		return self._running
+	
+	def init(self, serverId):
+		self._serverId = serverId
 		self._cacheBackendArgs = {
 			'logDir':                     os.path.join(self._cacheBackendBaseDir, 'logs'),
 			'pckeyFile':                  os.path.join(self._cacheBackendBaseDir, 'pckeys'),
@@ -1201,7 +1247,7 @@ class CachedConfigService(threading.Thread):
 			'depotConfigDir':             os.path.join(self._cacheBackendBaseDir, 'depots'),
 			'productLockFile':            os.path.join(self._cacheBackendBaseDir, 'depots', 'product.locks'),
 			'auditInfoDir':               os.path.join(self._cacheBackendBaseDir, 'audit'),
-			'serverId':                   self._opsiclientd.getConfigValue('cached_config_service', 'server_id')
+			'serverId':                   self._serverId
 		}
 		self._workBackendArgs = {
 			'logDir':                     os.path.join(self._workBackendBaseDir, 'logs'),
@@ -1216,11 +1262,11 @@ class CachedConfigService(threading.Thread):
 			'depotConfigDir':             os.path.join(self._workBackendBaseDir, 'depots'),
 			'productLockFile':            os.path.join(self._workBackendBaseDir, 'depots', 'product.locks'),
 			'auditInfoDir':               os.path.join(self._workBackendBaseDir, 'audit'),
-			'serverId':                   self._opsiclientd.getConfigValue('cached_config_service', 'server_id')
+			'serverId':                   self._serverId
 		}
 		
-		self._username = self._opsiclientd.getConfigValue('global', 'host_id')
-		self._password = self._opsiclientd.getConfigValue('global', 'opsi_host_key')
+		self._hostId = self._opsiclientd.getConfigValue('global', 'host_id')
+		self._opsiHostKey = self._opsiclientd.getConfigValue('global', 'opsi_host_key')
 		self._address =  self._opsiclientd.getConfigValue('config_service', 'url')
 		
 		if not os.path.isdir(self._storageDir):
@@ -1230,7 +1276,7 @@ class CachedConfigService(threading.Thread):
 		if not os.path.isdir(self._workBackendBaseDir):
 			os.mkdir(self._workBackendBaseDir)
 		
-		self._mainBackend = JSONRPCBackend(address = self._address, username = self._username, password = self._password)
+		self._mainBackend = JSONRPCBackend(address = self._address, username = self._hostId, password = self._opsiHostKey)
 		
 		self._cacheBackend = File31Backend(args = self._cacheBackendArgs)
 		self._cacheBackend.createOpsiBase()
@@ -1248,21 +1294,143 @@ class CachedConfigService(threading.Thread):
 						'cachedExecutionsFile': self._cachedExecutionsFile
 					} )
 		#self._backend = BackendManager(backend = self._backend, authRequired=False, configFile='/etc/opsi/backendManager.d/50_interface.conf')
-		self._backend.workCached(False)
+		self._backend.workDirectOnly(True)
 		
-	def run(self):
-		pass
-		#self._backend.buildCache(depotIds=[''], clientIds=[''], productIds=[''])
-		#self._backend.workCached(True)
+		self.readStateFile()
+		self._initiated = True
+		
+	def readStateFile(self):
+		logger.notice("Reading cache service state file '%s'" % self._stateFile)
+		if not os.path.exists(self._stateFile):
+			logger.warning("Cache service state file '%s' not found" % self._stateFile)
+			return
+		self._state = {
+			'product':  {},
+			'config':   {}
+		}
+		ini = File().readIniFile(self._stateFile)
+		for section in ini.sections():
+			for (k, v) in ini.items(section):
+				if (section.lower() == 'config'):
+					self._state['config'][k] = v
+				elif section.lower().startswith('product_'):
+					productId = section.split('_', 1)[1].lower().strip()
+					if not self._state['product'].has_key(productId):
+						self._state['product'][productId] = {}
+					self._state['product'][productId][k] = v
+		
+	def writeStateFile(self):
+		logger.notice("Writing cache service state file '%s'" % self._stateFile)
+		f = open(self._stateFile, 'w')
+		f.close()
+		ini = File().readIniFile(self._stateFile)
+		ini.add_section('config')
+		for (k, v) in self._state['config'].items():
+			ini.set('config', k, str(v))
+		for (productId, values) in self._state['product'].items():
+			section = 'product_%s' % productId.lower()
+			ini.add_section(section)
+			for (k, v) in self._state['product'][productId].items():
+				ini.set(section, k, str(v))
+		File().writeIniFile(self._stateFile, ini)
+		
+	def cacheProducts(self, depotUrl, productIds):
+		self._depotUrl = depotUrl
+		self._productIds = productIds
+		self._cacheProductsRequested = True
 	
-	def reset(self):
-		if not os.path.exists(self._cacheBackendBaseDir):
-			shutil.rmtree(self._cacheBackendBaseDir)
-		if not os.path.exists(self._workBackendBaseDir):
-			shutil.rmtree(self._workBackendBaseDir)
-		if not os.path.exists(self._cachedExecutionsFile):
-			os.remove(self._cachedExecutionsFile)
-		self.init()
+	def cacheConfig(self, productIds):
+		self._productIds = productIds
+		self._cacheConfigRequested = True
+	
+	def run(self):
+		self._running = True
+		while self._running:
+			if self._cacheConfigRequested:
+				self._cacheConfigRequested = False
+				logger.notice("Caching config (products: %s)" % ', '.join(self._productIds))
+				if not self._initiated:
+					logger.error("Cannot cache config: not initiated")
+					continue
+				
+				self._backend.workDirectOnly(True)
+				modules = self._backend.getOpsiInformation_hash()['modules']
+				if not modules.get('vpn') or not modules['valid']:
+					logger.error("Cannot cache config: VPN module currently disabled")
+					continue
+				
+				try:
+					self._state['config'] = {
+						'sync_started':    time.time(),
+						'sync_completed':  '',
+						'sync_failed':     ''
+					}
+					depotId = self._backend.getDepotId(self._hostId)
+					self._backend.workDirectOnly(False)
+					self._backend.buildCache(
+							serverIds  = [ None ],
+							depotIds   = [ depotId ],
+							clientIds  = [ self._hostId ],
+							groupIds   = [ None ],
+							productIds = self._productIds )
+					self._state['config']['sync_completed'] = time.time()
+					logger.notice("Config cached")
+				except Exception, e:
+					logger.logException(e)
+					logger.error("Failed to cache config: %s" % e)
+					self._state['config']['sync_failed'] = str(e)
+				self.writeStateFile()
+			
+			if self._cacheProductsRequested:
+				self._cacheProductsRequested = False
+				logger.notice("Caching products: %s" % ', '.join(self._productIds))
+				if not self._initiated:
+					logger.error("Cannot cache products: not initiated")
+					continue
+				
+				modules = self._backend.getOpsiInformation_hash()['modules']
+				if not modules.get('vpn') or not modules['valid']:
+					logger.error("Cannot cache products: VPN module currently disabled")
+					continue
+				
+				for productId in self._productIds:
+					logger.notice("Syncing files of product '%s'" % productId)
+					if not self._state['product'].has_key(productId):
+						self._state['product'][productId] = {
+							'sync_started':    time.time(),
+							'sync_completed':  '',
+							'sync_failed':     ''
+						}
+					self.writeStateFile()
+					try:
+						self._productSynchronizer = DepotToLocalDirectorySychronizer(
+							getRepository(url = self._depotUrl, username = self._hostId, password = self._opsiHostKey),
+							self._productCacheDir,
+							[ productId ]
+						)
+						self._productSynchronizer.synchronize()
+						self._state['product'][productId]['sync_completed'] = time.time()
+						logger.notice("Product '%s' synced" % productId)
+					except Exception, e:
+						logger.error("Failed to sync product '%s': %s" % (productId, e))
+						self._state['product'][productId]['sync_failed'] = str(e)
+					self.writeStateFile()
+				
+				failed = False
+				for productId in self._productIds:
+					if self._state['product'][productId]['sync_failed']:
+						failed = True
+						break
+				if not failed:
+					logger.notice("All products cached: %s" % ', '.join(self._productIds))
+					for event in self._opsiclientd.getEvents(EVENT_TYPE_PRODUCT_SYNC_COMPLETED):
+						event.fire()
+			time.sleep(3)
+		
+	def reset(self, serverId):
+		if os.path.exists(self._storageDir):
+			shutil.rmtree(self._storageDir)
+		self.init(serverId)
 		
 	def processRpc(self, method, params):
 		return eval('self._backend.%s(*params)' % method)
@@ -1270,9 +1438,9 @@ class CachedConfigService(threading.Thread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                              CACHED CONFIG SERVICE RESOURCE JSON RPC                              -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class CachedConfigServiceResourceJsonRpc(resource.Resource):
+class CacheServiceResourceJsonRpc(resource.Resource):
 	def __init__(self, opsiclientd):
-		logger.setFileFormat('[%l] [%D] [cached config server]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [cached config server]  %M  (%F|%N)', object=self)
 		resource.Resource.__init__(self)
 		self._opsiclientd = opsiclientd
 		
@@ -1284,24 +1452,24 @@ class CachedConfigServiceResourceJsonRpc(resource.Resource):
 	
 	def http_POST(self, request):
 		''' Process POST request. '''
-		logger.info("CachedConfigServiceResourceJsonRpc: processing POST request")
-		worker = CachedConfigServiceJsonRpcWorker(request, self._opsiclientd, method = 'POST')
+		logger.info("CacheServiceResourceJsonRpc: processing POST request")
+		worker = CacheServiceJsonRpcWorker(request, self._opsiclientd, method = 'POST')
 		return worker.process()
 		
 	def http_GET(self, request):
 		''' Process GET request. '''
-		logger.info("CachedConfigServiceResourceJsonRpc: processing GET request")
-		worker = CachedConfigServiceJsonRpcWorker(request, self._opsiclientd, method = 'GET')
+		logger.info("CacheServiceResourceJsonRpc: processing GET request")
+		worker = CacheServiceJsonRpcWorker(request, self._opsiclientd, method = 'GET')
 		return worker.process()
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                               CACHED CONFIG SERVICE JSON RPC WORKER                               -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class CachedConfigServiceJsonRpcWorker(JsonRpcWorker):
+class CacheServiceJsonRpcWorker(JsonRpcWorker):
 	def __init__(self, request, opsiclientd, method = 'POST'):
 		JsonRpcWorker.__init__(self, request, opsiclientd, method)
-		logger.setFileFormat('[%l] [%D] [cached config server]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [cached config server]  %M  (%F|%N)', object=self)
 	
 	def _realRpc(self):
 		method = self.rpc.get('method')
@@ -1311,7 +1479,7 @@ class CachedConfigServiceJsonRpcWorker(JsonRpcWorker):
 		try:
 			# Execute method
 			start = time.time()
-			self.result['result'] = self._opsiclientd._cachedConfigService.processRpc(method, params)
+			self.result['result'] = self._opsiclientd._cacheService.processRpc(method, params)
 		except Exception, e:
 			logger.logException(e)
 			self.result['error'] = { 'class': e.__class__.__name__, 'message': str(e) }
@@ -1328,7 +1496,7 @@ class CachedConfigServiceJsonRpcWorker(JsonRpcWorker):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServer(threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
-		logger.setFileFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._httpsPort = httpsPort
@@ -1373,7 +1541,13 @@ class ControlServer(threading.Thread):
 			self._root = ControlServerResourceRoot()
 		self._root.putChild("opsiclientd", ControlServerResourceJsonRpc(self._opsiclientd))
 		self._root.putChild("interface", ControlServerResourceInterface(self._opsiclientd))
-		self._root.putChild("rpc", CachedConfigServiceResourceJsonRpc(self._opsiclientd))
+		self._root.putChild("rpc", CacheServiceResourceJsonRpc(self._opsiclientd))
+
+
+
+
+
+
 
 
 
@@ -1392,7 +1566,7 @@ class ControlServer(threading.Thread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, notificationServer, statusObject):
-		logger.setFileFormat('[%l] [%D] [service connection]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [service connection]  %M  (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username
@@ -1458,7 +1632,7 @@ class ServiceConnectionThread(KillableThread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class EventProcessingThread(KillableThread):
 	def __init__(self, opsiclientd, event):
-		logger.setFileFormat('[%l] [%D] [event processing]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [event processing]  %M  (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		
 		self.opsiclientd = opsiclientd
@@ -1600,7 +1774,7 @@ class EventProcessingThread(KillableThread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
-		logger.setFileFormat('[%l] [%D] [opsiclientd]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [opsiclientd]  %M  (%F|%N)', object=self)
 		logger.debug("Opsiclient initiating")
 		
 		EventListener.__init__(self)
@@ -1646,9 +1820,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				'connection_timeout':     30,
 				'user_cancellable_after': 0,
 			},
-			'cached_config_service': {
-				'server_id':              '',
-				'storage_dir':            'cached_config_service'
+			'cache_service': {
+				'storage_dir':            'cache_service'
 			},
 			'control_server': {
 				'interface':              '0.0.0.0', # TODO
@@ -1978,7 +2151,10 @@ class Opsiclientd(EventListener, threading.Thread):
 					if not active:
 						logger.notice("Event '%s' is deactivated" % name)
 						continue
-					if   (type == EVENT_TYPE_DAEMON_STARTUP):
+					
+					if   (type == EVENT_TYPE_PRODUCT_SYNC_COMPLETED):
+						self._events[name] = ProductSyncCompletedEvent(name, **args)
+					elif (type == EVENT_TYPE_DAEMON_STARTUP):
 						self._events[name] = DaemonStartupEvent(name, **args)
 					elif (type == EVENT_TYPE_DAEMON_SHUTDOWN):
 						self._events[name] = DaemonShutdownEvent(name, **args)
@@ -1998,6 +2174,13 @@ class Opsiclientd(EventListener, threading.Thread):
 			event.addEventListener(self)
 			event.start()
 	
+	def getEvents(self, eventType=''):
+		events = []
+		for event in self._events.values():
+			if not eventType or (event.getType() == eventType):
+				events.append(event)
+		return events
+		
 	def waitForGUI(self, timeout=None):
 		if not timeout:
 			timeout = None
@@ -2054,13 +2237,16 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to start control server: %s" % e)
 				raise
 			
-			logger.notice("Starting cached config service")
+			logger.notice("Starting cache service")
 			try:
-				self._cachedConfigService = CachedConfigService(opsiclientd = self)
-				self._cachedConfigService.start()
-				logger.notice("Cached config service")
+				self._cacheService = CacheService(opsiclientd = self)
+				self._cacheService.start()
+				#self._cacheService.init(serverId = 'bonifax.uib.local')
+				#self._cacheService.cacheConfig(['firefox'])
+				#self._cacheService.cacheProducts('webdavs://bonifax.uib.local:4447/opsi-depot', ['firefox'])
+				logger.notice("Cache service started")
 			except Exception, e:
-				logger.error("Failed to start cached config service: %s" % e)
+				logger.error("Failed to start cache service: %s" % e)
 				raise
 			
 			logger.notice("Starting notification server")
@@ -2075,8 +2261,8 @@ class Opsiclientd(EventListener, threading.Thread):
 									self._clientIdSubject,
 									self._actionProcessorInfoSubject,
 									self._opsiclientdInfoSubject ] )
-				logger.setFileFormat('[%l] [%D] [notification server]  %M  (%F|%N)', object=self._notificationServer)
-				logger.setFileFormat('[%l] [%D] [notification server]  %M  (%F|%N)', object=self._notificationServer.getFactory())
+				logger.setLogFormat('[%l] [%D] [notification server]  %M  (%F|%N)', object=self._notificationServer)
+				logger.setLogFormat('[%l] [%D] [notification server]  %M  (%F|%N)', object=self._notificationServer.getFactory())
 				self._notificationServer.start()
 				logger.notice("Notification server started")
 			except Exception, e:
@@ -2085,6 +2271,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			
 			# Create events
 			self.createEvents()
+			for event in self.getEvents(EVENT_TYPE_DAEMON_STARTUP):
+				event.fire()
 			
 			# Wait until gui starts up
 			logger.notice("Waiting for gui startup (timeout: %d seconds)" % self._config['global']['wait_for_gui_timeout'])
@@ -2100,9 +2288,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			# TODO: passive wait?
 			while self._running:
 				time.sleep(1)
-			for event in self._events.values():
-				if (event.getType() == EVENT_TYPE_DAEMON_SHUTDOWN):
-					event.fire()
+			for event in self.getEvents(EVENT_TYPE_DAEMON_SHUTDOWN):
+				event.fire()
 			
 		except Exception, e:
 			logger.logException(e)
@@ -2111,6 +2298,10 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._running = False
 		
 	def stop(self):
+		# Stop cache service
+		if self._cacheService:
+			self._cacheService.stop()
+		
 		# Stop control pipe thread
 		if self._controlPipe:
 			self._controlPipe.stop()
