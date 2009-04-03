@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.1'
+__version__ = '0.2'
 
 # Imports
 import sys, os
@@ -64,11 +64,12 @@ try:
 	imp = System.Impersonate(username = username, password = password, desktop = actionProcessorDesktop)
 	imp.start(logonType = 'NEW_CREDENTIALS')
 	
-	logger.notice("Mounting depot share %s" % depotRemoteUrl)
-	be.setStatusMessage("Mounting depot share %s" % depotRemoteUrl)
-	
-	System.mount(depotRemoteUrl, depotDrive, username = username, password = password)
-	depotShareMounted = True
+	if (depotRemoteUrl.split('/')[2] != 'localhost'):
+		logger.notice("Mounting depot share %s" % depotRemoteUrl)
+		be.setStatusMessage("Mounting depot share %s" % depotRemoteUrl)
+		
+		System.mount(depotRemoteUrl, depotDrive, username = username, password = password)
+		depotShareMounted = True
 	
 	logger.notice("Starting action processor")
 	be.setStatusMessage("Starting action processor")
