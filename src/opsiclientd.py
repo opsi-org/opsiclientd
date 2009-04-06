@@ -210,7 +210,10 @@ class Event(threading.Thread):
 			self.actionProcessorDesktop = 'current'
 		
 		self.serviceOptions = self.__dict__.get('serviceOptions', {})
-	
+		
+		self.cacheProducts = bool(self.__dict__.get('cacheProducts', False))
+		self.cacheMaxBandwidth = int(self.__dict__.get('cacheMaxBandwidth', 0))
+		
 	def __str__(self):
 		return "<event: %s>" % self._name
 	
@@ -1223,6 +1226,8 @@ class CacheService(threading.Thread):
 		}
 		self._cacheConfigRequested = False
 		self._cacheProductsRequested = False
+		self._cacheConfigEnded = threading.Event()
+		self._cacheProductsEnded = threading.Event()
 		self._running = False
 	
 	def stop(self):
@@ -1234,7 +1239,7 @@ class CacheService(threading.Thread):
 	def init(self):
 		serverId = self._opsiclientd.getConfigValue('config_service', 'server_id')
 		if not serverId:
-			raise Exception("Failed to initialize CacheService config_service.service_id not known")
+			raise Exception("Failed to initialize CacheService config_service.server_id not known")
 		
 		self._cacheBackendArgs = {
 			'logDir':                     os.path.join(self._cacheBackendBaseDir, 'logs'),
@@ -1269,7 +1274,13 @@ class CacheService(threading.Thread):
 		
 		self._hostId = self._opsiclientd.getConfigValue('global', 'host_id')
 		self._opsiHostKey = self._opsiclientd.getConfigValue('global', 'opsi_host_key')
-		self._address =  self._opsiclientd.getConfigValue('config_service', 'url')
+		self._address = self._opsiclientd.getConfigValue('config_service', 'url')
+		
+		logger.debug("Using hostId: %s" % self._hostId)
+		logger.debug("Using depot address: %s" % self._address)
+		logger.debug("Using storage dir: %s" % self._storageDir)
+		logger.debug("Using cache backend base dir: %s" % self._cacheBackendBaseDir)
+		logger.debug("Using work backend base dir: %s" % self._workBackendBaseDir)
 		
 		if not os.path.isdir(self._storageDir):
 			os.mkdir(self._storageDir)
@@ -1298,6 +1309,10 @@ class CacheService(threading.Thread):
 		#self._backend = BackendManager(backend = self._backend, authRequired=False, configFile='/etc/opsi/backendManager.d/50_interface.conf')
 		self._backend.workDirectOnly(True)
 		
+		self._repository = getRepository(	#url        = self._opsiclientd.getConfigValue('depot_server', 'url'),
+							url          = 'webdavs://%s:4447/opsi-depot' % self._opsiclientd.getConfigValue('depot_server', 'depot_id'),
+							username     = self._hostId,
+							password     = self._opsiHostKey)
 		self.readStateFile()
 		self._initiated = True
 	
@@ -1352,13 +1367,31 @@ class CacheService(threading.Thread):
 				ini.set(section, k, str(v))
 		File().writeIniFile(self._stateFile, ini)
 		
-	def cacheProducts(self, productIds):
+	def cacheProducts(self, productIds, maxBandwidth=0, waitForEnding=False):
+		if not self._initiated:
+			raise Exception("Cannot cache products: not initiated")
 		self._productIds = productIds
 		self._cacheProductsRequested = True
+		self._cacheProductsEnded.clear()
+		self._repository.setMaxBandwidth(maxBandwidth)
+		if waitForEnding:
+			self._cacheProductsEnded = threading.Event()
+			self._cacheProductsEnded.wait()
+			for productId in self._productIds:
+				if self._state['product'][productId]['sync_failed']:
+					return False
+			return True
 	
-	def cacheConfig(self, productIds):
+	def cacheConfig(self, productIds, waitForEnding=False):
+		if not self._initiated:
+			raise Exception("Cannot cache config: not initiated")
 		self._productIds = productIds
 		self._cacheConfigRequested = True
+		self._cacheConfigEnded.clear()
+		if waitForEnding:
+			self._cacheConfigEnded = threading.Event()
+			self._cacheConfigEnded.wait()
+			return bool(self._state['config']['sync_failed'])
 	
 	def run(self):
 		self._running = True
@@ -1397,6 +1430,7 @@ class CacheService(threading.Thread):
 					logger.error("Failed to cache config: %s" % e)
 					self._state['config']['sync_failed'] = str(e)
 				self.writeStateFile()
+				self._cacheConfigEnded.set()
 			
 			if self._cacheProductsRequested:
 				self._cacheProductsRequested = False
@@ -1415,16 +1449,13 @@ class CacheService(threading.Thread):
 					if not self._state['product'].has_key(productId):
 						self._state['product'][productId] = {
 							'sync_started':    time.time(),
-							'sync_completed':  '',
-							'sync_failed':     ''
 						}
+					self._state['product'][productId]['sync_completed'] = ''
+					self._state['product'][productId]['sync_failed'] = ''
 					self.writeStateFile()
 					try:
 						self._productSynchronizer = DepotToLocalDirectorySychronizer(
-							getRepository(
-								url      = self._opsiclientd.getConfigValue('depot_server', 'url'),
-								username = self._hostId,
-								password = self._opsiHostKey),
+							self._repository,
 							self._productCacheDir,
 							[ productId ]
 						)
@@ -1445,6 +1476,7 @@ class CacheService(threading.Thread):
 					logger.notice("All products cached: %s" % ', '.join(self._productIds))
 					for event in self._opsiclientd.getEvents(EVENT_TYPE_PRODUCT_SYNC_COMPLETED):
 						event.fire()
+				self._cacheProductsEnded.set()
 			time.sleep(3)
 		
 	def reset(self, serverId):
@@ -1849,7 +1881,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				'drive':                  '',
 			},
 			'cache_service': {
-				'storage_dir':            'cache_service'
+				'storage_dir':            'cache_service',
 			},
 			'control_server': {
 				'interface':              '0.0.0.0', # TODO
@@ -1870,13 +1902,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				'remote_dir':             '',
 				'filename':               '',
 				'command':                '',
-			},
+			}
 		}
-		
-		try:
-			self._config['system']['program_files_dir'] = System.getProgramFilesDir()
-		except Exception, e:
-			logger.warning("Failed to get programFilesDir: %s" % e)
 		
 		self._possibleMethods = [
 			{ 'name': 'getPossibleMethods_listOfHashes', 'params': [ ],                              'availability': ['server', 'pipe'] },
@@ -1936,13 +1963,16 @@ class Opsiclientd(EventListener, threading.Thread):
 		value = value.strip()
 		
 		logger.info("Setting config value '%s' of section '%s'" % (option, section))
+		logger.debug("setConfigValue(%s, %s, %s)" % (section, option, value))
+		
+		if (value == ''):
+			logger.warning("Refusing to set empty value for config value '%s' of section '%s'" % (option, section))
+			return
 		
 		if (option == 'opsi_host_key'):
 			if (len(value) != 32):
 				raise ValueError("Bad opsi host key, length != 32")
 			logger.addConfidentialString(value)
-		
-		logger.debug("setConfigValue(%s, %s, %s)" % (section, option, value))
 		
 		if section in ('system'):
 			return
@@ -2059,8 +2089,6 @@ class Opsiclientd(EventListener, threading.Thread):
 			
 			self.connectConfigServer()
 			
-			self._config['config_service']['server_id'] = self._configService.getServerId(self._config['global']['host_id'])
-			
 			for (key, value) in self._configService.getNetworkConfig_hash(self._config['global']['host_id']).items():
 				if (key.lower() == 'depotid'):
 					depotId = value
@@ -2146,7 +2174,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					continue
 				events[eventName] = {
 					'active': True,
-					'args':   {'action_processor_command': self.fillPlaceholders(self._config['action_processor']['command'])},
+					'args':   {},
 					'super':  None }
 				try:
 					for key in options.keys():
@@ -2184,6 +2212,9 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.error("Event '%s': event type not set" % eventName)
 					continue
 				
+				#if not event['args'].get('action_processor_command'):
+				#	event['args']['action_processor_command'] = self.fillPlaceholders(self._config['action_processor']['command'])
+				
 				args = {}
 				for (key, value) in event['args'].items():
 					if   (key == 'type'):
@@ -2214,6 +2245,10 @@ class Opsiclientd(EventListener, threading.Thread):
 						args['updateConfigFile'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'write_log_to_service'):
 						args['writeLogToService'] = not value.lower() in ('0', 'false', 'off', 'no')
+					elif (key == 'cache_products'):
+						args['cacheProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'cache_max_bandwidth'):
+						args['cacheMaxBandwidth'] = int(value)
 					elif (key == 'update_action_processor'):
 						args['updateActionProcessor'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'event_notifier_command'):
@@ -2325,9 +2360,6 @@ class Opsiclientd(EventListener, threading.Thread):
 			try:
 				self._cacheService = CacheService(opsiclientd = self)
 				self._cacheService.start()
-				#self._cacheService.init()
-				#self._cacheService.cacheConfig(['firefox'])
-				#self._cacheService.cacheProducts(['firefox'])
 				logger.notice("Cache service started")
 			except Exception, e:
 				logger.error("Failed to start cache service: %s" % e)
@@ -2498,7 +2530,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			self._config['global']['host_id'] = serviceConnectionThread.getUsername()
 			logger.info("Updated host_id to '%s'" % self._config['global']['host_id'])
 		self._configService = serviceConnectionThread.configService
-	
+		self._config['config_service']['server_id'] = self._configService.getServerId(self._config['global']['host_id'])
+		logger.info("Updated config_service.host_id to '%s'" % self._config['config_service']['server_id'])
+		
 	def disconnectConfigServer(self):
 		self._configService = None
 	
@@ -2697,6 +2731,8 @@ class OpsiclientdPosix(Opsiclientd):
 class OpsiclientdNT(Opsiclientd):
 	def __init__(self):
 		Opsiclientd.__init__(self)
+		self._config['system']['program_files_dir'] = System.getProgramFilesDir()
+		self._config['cache_service']['storage_dir'] = '%s\\tmp\\cache_service' % System.getSystemDrive()
 		self._config['global']['config_file'] = self._config['system']['program_files_dir'] + '\\opsi.org\\preloginloader\\opsiclientd\\opsiclientd.conf'
 		
 	def _shutdownMachine(self):
@@ -2796,13 +2832,13 @@ class OpsiclientdNT(Opsiclientd):
 				productStates = productStates.get(self._config['global']['host_id'], [])
 			
 			logger.notice("Got product action requests from configservice")
-			numRequests = 0
+			productIds = []
 			for productState in productStates:
 				if (productState['actionRequest'] not in ('none', 'undefined')):
-					numRequests += 1
-					logger.notice("   [%2s] product %-20s %s" % (numRequests, productState['productId'] + ':', productState['actionRequest']))
+					productIds.append(productState['productId'])
+					logger.notice("   [%2s] product %-20s %s" % (len(productIds), productState['productId'] + ':', productState['actionRequest']))
 			
-			if (numRequests == 0) and (bootmode == 'BKSTD'):
+			if (len(productIds) == 0) and (bootmode == 'BKSTD'):
 				logger.notice("No product action requests set")
 				self._statusSubject.setMessage( _("No product action requests set") )
 			
@@ -2818,6 +2854,19 @@ class OpsiclientdNT(Opsiclientd):
 				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsurl",    "<deprecated>")
 				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsdrive",  "<deprecated>")
 				
+				if event.cacheProducts:
+					logger.notice("Caching products: %s (max bandwidth: %d kByte/s)" % (productIds, event.cacheMaxBandwidth))
+					self._cacheService.init()
+					self._statusSubject.setMessage( _("Caching products") )
+					if not self._cacheService.cacheProducts(productIds, maxBandwidth=event.cacheMaxBandwidth, waitForEnding=True):
+						raise Exception("Failed to cache products")
+					depotDir = (self._config['cache_service']['storage_dir'] + '\\install').replace('\\', '/').replace('//', '/')
+					depotDrive = depotDir.split('/')[0]
+					depotUrl = 'smb://localhost/noshare/' + ('/'.join(depotDir.split('/')[1:]))
+					logger.notice("Setting depot info for cached products: depotdrive: '%s', depoturl: '%s'" % (depotDrive, depotUrl))
+					System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depoturl",   depotUrl)
+					System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", depotDrive)
+					
 				self._statusSubject.setMessage( _("Starting actions") )
 				
 				self.runProductActions(event)
