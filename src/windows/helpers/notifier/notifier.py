@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.4.4'
+__version__ = '0.4.5'
 
 # Imports
 import threading, time, sys, os, getopt
@@ -188,6 +188,8 @@ class OpsiDialogWindow(SubjectsObserver):
 					(type, id) = ('image', item[5:])
 				elif item.startswith('button'):
 					(type, id) = ('button', item[6:])
+				elif item.startswith('progressbar'):
+					(type, id) = ('progressbar', item[11:])
 				else:
 					logger.error("Unkown type '%s' in ini" % item)
 					continue
@@ -204,7 +206,7 @@ class OpsiDialogWindow(SubjectsObserver):
 					'color':     win32api.RGB(255, 255, 255),
 					'text':      '',
 				}
-			
+
 			for (key, value) in ini.items(section):
 				key = key.lower()
 				if    (key == 'color'):         self.skin[item]['color'] = toRGB(value)
@@ -234,6 +236,7 @@ class OpsiDialogWindow(SubjectsObserver):
 				elif  (key == 'fadein'):        self.skin[item]['fadeIn'] = toBool(value)
 				elif  (key == 'fadeout'):       self.skin[item]['fadeOut'] = toBool(value)
 				elif  (key == 'subjectid'):     self.skin[item]['subjectId'] = value.strip()
+				elif  (key == 'subjecttype'):   self.skin[item]['subjectType'] = value.strip()
 				elif  (key == 'choiceindex'):   self.skin[item]['choiceIndex'] = int(value)
 				elif  (section.lower() == 'form') and (key == 'hidden') and toBool(value):
 					self.hidden = True
@@ -356,6 +359,11 @@ class OpsiDialogWindow(SubjectsObserver):
 					( int(values['left']/2), int(values['top']/2), int(values['width']/2), int(values['height']/2) ),
 					style ] )
 			
+			elif item.startswith('progressbar'):
+				self.skin[item]['ctrlId'] = dlgId
+				dlgId += 1
+				continue
+			
 			else:
 				continue
 			
@@ -377,12 +385,12 @@ class OpsiDialogWindow(SubjectsObserver):
 			win32con.WM_CTLCOLORDLG:       self.onCtlColor,
 			win32con.WM_CTLCOLORSCROLLBAR: self.onCtlColor,
 			win32con.WM_CTLCOLORSTATIC:    self.onCtlColor,
-			self.taskbarNotifyEventId:	self.onTaskbarNotify,
+			self.taskbarNotifyEventId:     self.onTaskbarNotify,
 			#win32con.WM_DRAWITEM:         self.onDrawItem,
 			#win32con.WM_PAINT:            self.onPaint,
 			#win32con.WM_ERASEBKGND:       self.onEraseBkgnd,
-			#win32con.WM_SIZE: 		self.onSize,
-			#win32con.WM_NOTIFY: 		self.onNotify,
+			#win32con.WM_SIZE: 	       self.onSize,
+			#win32con.WM_NOTIFY: 	       self.onNotify,
 		}
 		self._registerWndClass()
 		
@@ -508,9 +516,14 @@ class OpsiDialogWindow(SubjectsObserver):
 		font = self.skin['form'].get('font', None)
 		
 		for (item, values) in self.skin.items():
-			if not values.get('dlgId'):
+			handle = None
+			if values.get('dlgId'):
+				handle = win32gui.GetDlgItem(self.hwnd, values['dlgId'])
+			elif values.get('ctrlId'):
+				handle = values['ctrl']
+			else:
 				continue
-			if (win32gui.GetDlgItem(self.hwnd, values['dlgId']) == lparam):
+			if (handle == lparam):
 				logger.debug2("Item found")
 				color = values.get('color', color)
 				fontColor = values.get('fontColor', fontColor)
@@ -538,6 +551,12 @@ class OpsiDialogWindow(SubjectsObserver):
 				win32gui.SendMessage(bmCtrl, win32con.STM_SETIMAGE, win32con.IMAGE_BITMAP, values['bitmap'])
 			if (values['type'] == 'button') and not values.get('active'):
 				win32gui.EnableWindow(win32gui.GetDlgItem(self.hwnd, values['dlgId']), False)
+			if (values['type'] == 'progressbar'):
+				values['ctrl'] = win32ui.CreateProgressCtrl()
+				values['ctrl'].CreateWindow(
+					win32con.WS_CHILD | win32con.WS_VISIBLE,
+					( int(values['left']), int(values['top']), int(values['left']+values['width']), int(values['top']+values['height']) ),
+					win32ui.CreateWindowFromHandle(self.hwnd), values['ctrlId'])
 	
 	def onClose(self, hwnd, msg, wparam, lparam):
 		try:
@@ -626,12 +645,16 @@ class OpsiDialogWindow(SubjectsObserver):
 		
 	def messageChanged(self, subject, message):
 		subjectId = subject.get('id')
+		subjectType = subject.get('type')
 		for (item, values) in self.skin.items():
-			if values.get('dlgId') and (values.get('subjectId') == subjectId):
-				logger.info("message changed, subjectId: %s, dlgId: %s" % (subjectId, values['dlgId']))
+			dlgId = values.get('dlgId')
+			if not dlgId:
+				continue
+			if (values.get('subjectId') == subjectId) or (values.get('subjectType') == subjectType):
+				logger.info("message changed, subjectId: %s, dlgId: %s" % (subjectId, dlgId))
 				if (self.skin[item].get('text') != message):
 					self.skin[item]['text'] = message
-					win32gui.SendMessage(self.hwnd, win32con.WM_COMMAND, values['dlgId'], None)
+					win32gui.SendMessage(self.hwnd, win32con.WM_COMMAND, dlgId, None)
 				break
 		
 	def selectedIndexChanged(self, subject, selectedIndex):
@@ -639,6 +662,20 @@ class OpsiDialogWindow(SubjectsObserver):
 	
 	def choicesChanged(self, subject, choices):
 		pass
+	
+	def progressChanged(self, subject, state, percent, timeSpend, timeLeft, speed):
+		subjectId = subject.get('id')
+		subjectType = subject.get('type')
+		for (item, values) in self.skin.items():
+			if (values.get('type') != 'progressbar'):
+				continue
+			ctrlId = values.get('ctrlId')
+			if not ctrlId:
+				continue
+			if (values.get('subjectId') == subjectId) or (not values.get('subjectId') and (values.get('subjectType') == subjectType)):
+				logger.info("progress changed, subjectId: %s, ctrlId: %s, percent: %s" % (subjectId, ctrlId, percent))
+				values['ctrl'].SetRange(0, 100)
+				values['ctrl'].SetPos(int(percent))
 	
 	def subjectsChanged(self, subjects):
 		logger.info("subjectsChanged(%s)" % subjects)
@@ -649,6 +686,14 @@ class OpsiDialogWindow(SubjectsObserver):
 			if (subject['class'] == 'ChoiceSubject'):
 				subjectId = subject.get('id')
 				choices[subjectId] = subject.get('choices', [])
+			#if (subject['class'] == 'ProgressSubject'):
+			#	subjectId = subject.get('id')
+			#	subjectType = subject.get('type')
+			#	for (item, values) in self.skin.items():
+			#		if (values['type'] != 'progressbar') or not values.get('ctrlId'):
+			#			continue
+			#		if (values.get('subjectId') == subjectId) or (not values.get('subjectId') and (values.get('subjectType') == subjectType)):
+			#			values['ctrl'].SetRange(0, subject['end'])
 		
 		for (item, values) in self.skin.items():
 			if (values['type'] != 'button') or not values.get('dlgId') or not values.get('subjectId'):
