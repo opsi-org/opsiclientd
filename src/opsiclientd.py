@@ -149,7 +149,7 @@ class Event(threading.Thread):
 		
 		if not type in (EVENT_TYPE_PRODUCT_SYNC_COMPLETED, EVENT_TYPE_DAEMON_STARTUP, EVENT_TYPE_DAEMON_SHUTDOWN, EVENT_TYPE_GUI_STARTUP,
 				EVENT_TYPE_TIMER, EVENT_TYPE_PROCESS_ACTION_REQUESTS, EVENT_TYPE_CUSTOM, EVENT_TYPE_PANIC):
-			raise TypeError("Unkown event type '%s'" % type)
+			raise TypeError("Unknown event type '%s'" % type)
 		if not name:
 			raise TypeError("Name not given")
 		
@@ -1228,7 +1228,15 @@ class CacheService(threading.Thread):
 		self._cacheProductsRequested = False
 		self._cacheConfigEnded = threading.Event()
 		self._cacheProductsEnded = threading.Event()
+		self._productProgressObserver = None
+		self._overallProductProgressObserver = None
 		self._running = False
+	
+	def setProductProgressObserver(self, productProgressObserver):
+		self._productProgressObserver = productProgressObserver
+	
+	def setOverallProductProgressObserver(self, overallProductProgressObserver):
+		self._overallProductProgressObserver = overallProductProgressObserver
 	
 	def stop(self):
 		self._running = False
@@ -1351,6 +1359,7 @@ class CacheService(threading.Thread):
 					if not self._state['product'].has_key(productId):
 						self._state['product'][productId] = {}
 					self._state['product'][productId][k] = v
+		logger.debug("CacheService state is now:\n%s" % Tools.objectToBeautifiedText(self._state))
 		
 	def writeStateFile(self):
 		logger.notice("Writing cache service state file '%s'" % self._stateFile)
@@ -1444,6 +1453,14 @@ class CacheService(threading.Thread):
 					logger.error("Cannot cache products: VPN module currently disabled")
 					continue
 				
+				logger.info("Synchronizing %d product(s):" % len(self._productIds))
+				for productId in self._productIds:
+					logger.info("   %s" % productId)
+				
+				overallProgressSubject = ProgressSubject(id = 'sync_products_overall', type = 'product_sync', end = len(self._productIds))
+				overallProgressSubject.setMessage( _('Synchronizing products') )
+				if self._overallProductProgressObserver: overallProgressSubject.attachObserver(self._overallProductProgressObserver)
+				
 				for productId in self._productIds:
 					logger.notice("Syncing files of product '%s'" % productId)
 					if not self._state['product'].has_key(productId):
@@ -1459,13 +1476,14 @@ class CacheService(threading.Thread):
 							self._productCacheDir,
 							[ productId ]
 						)
-						self._productSynchronizer.synchronize()
+						self._productSynchronizer.synchronize(self._productProgressObserver)
 						self._state['product'][productId]['sync_completed'] = time.time()
 						logger.notice("Product '%s' synced" % productId)
 					except Exception, e:
 						logger.error("Failed to sync product '%s': %s" % (productId, e))
 						self._state['product'][productId]['sync_failed'] = str(e)
 					self.writeStateFile()
+					overallProgressSubject.addToState(1)
 				
 				failed = False
 				for productId in self._productIds:
@@ -1477,12 +1495,15 @@ class CacheService(threading.Thread):
 					for event in self._opsiclientd.getEvents(EVENT_TYPE_PRODUCT_SYNC_COMPLETED):
 						event.fire()
 				self._cacheProductsEnded.set()
+				
+				if self._overallProductProgressObserver: overallProgressSubject.detachObserver(self._overallProductProgressObserver)
+				
 			time.sleep(3)
 		
-	def reset(self, serverId):
+	def reset(self):
 		if os.path.exists(self._storageDir):
 			shutil.rmtree(self._storageDir)
-		self.init(serverId)
+		self.init()
 		
 	def processRpc(self, method, params):
 		if not self._initiated:
@@ -1851,6 +1872,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._clientIdSubject = MessageSubject('clientId')
 		self._actionProcessorInfoSubject = MessageSubject('actionProcessorInfo')
 		self._opsiclientdInfoSubject = MessageSubject('opsiclientdInfo')
+		self._detailSubjectProxy = MessageSubjectProxy('detail')
+		self._currentProgressSubjectProxy = ProgressSubjectProxy('currentProgress')
+		self._overallProgressSubjectProxy = ProgressSubjectProxy('overallProgress')
 		
 		self._rebootRequested = False
 		self._shutdownRequested = False
@@ -1965,7 +1989,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.info("Setting config value '%s' of section '%s'" % (option, section))
 		logger.debug("setConfigValue(%s, %s, %s)" % (section, option, value))
 		
-		if (value == ''):
+		if option not in ('action_processor_command') and (value == ''):
 			logger.warning("Refusing to set empty value for config value '%s' of section '%s'" % (option, section))
 			return
 		
@@ -2376,9 +2400,12 @@ class Opsiclientd(EventListener, threading.Thread):
 									self._serviceUrlSubject,
 									self._clientIdSubject,
 									self._actionProcessorInfoSubject,
-									self._opsiclientdInfoSubject ] )
+									self._opsiclientdInfoSubject,
+									self._detailSubjectProxy,
+									self._currentProgressSubjectProxy,
+									self._overallProgressSubjectProxy ] )
 				logger.setLogFormat('[%l] [%D] [notification server]  %M  (%F|%N)', object=self._notificationServer)
-				logger.setLogFormat('[%l] [%D] [notification server]  %M  (%F|%N)', object=self._notificationServer.getFactory())
+				logger.setLogFormat('[%l] [%D] [notification server]  %M  (%F|%N)', object=self._notificationServer.getObserver())
 				self._notificationServer.start()
 				logger.notice("Notification server started")
 			except Exception, e:
@@ -2855,24 +2882,37 @@ class OpsiclientdNT(Opsiclientd):
 				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsdrive",  "<deprecated>")
 				
 				if event.cacheProducts:
-					logger.notice("Caching products: %s (max bandwidth: %d kByte/s)" % (productIds, event.cacheMaxBandwidth))
+					logger.notice("Caching products: %s (max bandwidth: %d bit/s)" % (productIds, event.cacheMaxBandwidth))
 					self._cacheService.init()
-					self._statusSubject.setMessage( _("Caching products") )
-					if not self._cacheService.cacheProducts(productIds, maxBandwidth=event.cacheMaxBandwidth, waitForEnding=True):
-						raise Exception("Failed to cache products")
+					if event.cacheMaxBandwidth:
+						self._statusSubject.setMessage( _("Caching products (%d kbit/s)") % (event.cacheMaxBandwidth/1000) )
+					else:
+						self._statusSubject.setMessage( _("Caching products") )
+					self._cacheService.setProductProgressObserver(self._currentProgressSubjectProxy)
+					self._cacheService.setOverallProductProgressObserver(self._overallProgressSubjectProxy)
+					self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
+					
+					try:
+						if not self._cacheService.cacheProducts(productIds, maxBandwidth=event.cacheMaxBandwidth, waitForEnding=True):
+							raise Exception("Failed to cache products")
+					finally:
+						self._detailSubjectProxy.setMessage("")
+						self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
+					
+					self._statusSubject.setMessage( _("Products cached") )
+					
 					depotDir = (self._config['cache_service']['storage_dir'] + '\\install').replace('\\', '/').replace('//', '/')
 					depotDrive = depotDir.split('/')[0]
 					depotUrl = 'smb://localhost/noshare/' + ('/'.join(depotDir.split('/')[1:]))
 					logger.notice("Setting depot info for cached products: depotdrive: '%s', depoturl: '%s'" % (depotDrive, depotUrl))
 					System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depoturl",   depotUrl)
 					System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", depotDrive)
-					
-				self._statusSubject.setMessage( _("Starting actions") )
 				
-				self.runProductActions(event)
+				if event.actionProcessorCommand:
+					self._statusSubject.setMessage( _("Starting actions") )
+					self.runProductActions(event)
+					self._statusSubject.setMessage( _("Actions completed") )
 				
-				self._statusSubject.setMessage( _("Actions completed") )
-			
 		except Exception, e:
 			logger.logException(e)
 			logger.error("Failed to process product action requests: %s" % e)
@@ -2980,9 +3020,6 @@ class OpsiclientdNT5(OpsiclientdNT):
 		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
 			actionProcessorDesktop = 'winlogon'
 		
-		encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
-		pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
-		
 		depotShareMounted = False
 		userCreated = False
 		username = 'pcpatch'
@@ -3002,6 +3039,9 @@ class OpsiclientdNT5(OpsiclientdNT):
 			if (self._config['depot_server']['url'].split('/')[2] != 'localhost'):
 				logger.notice("Mounting depot share")
 				self._statusSubject.setMessage( _("Mounting depot share %s" % self._config['depot_server']['url']) )
+				
+				encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
+				pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
 				
 				System.mount(self._config['depot_server']['url'], self._config['depot_server']['drive'], username="pcpatch", password=pcpatchPassword)
 				depotShareMounted = True
@@ -3069,14 +3109,14 @@ class OpsiclientdNT6(OpsiclientdNT):
 		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
 			actionProcessorDesktop = 'winlogon'
 		
-		encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
-		pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
-		
 		depotShareMounted = False
 		try:
 			if (self._config['depot_server']['url'].split('/')[2] != 'localhost'):
 				logger.notice("Mounting depot share")
 				self._statusSubject.setMessage( _("Mounting depot share %s" % self._config['depot_server']['url']) )
+				
+				encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
+				pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
 				
 				System.mount(self._config['depot_server']['url'], self._config['depot_server']['drive'], username="pcpatch", password=pcpatchPassword)
 				depotShareMounted = True
@@ -3118,8 +3158,7 @@ class OpsiclientdNT7(OpsiclientdNT):
 		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
 			actionProcessorDesktop = 'winlogon'
 		
-		encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
-		pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
+		pcpatchPassword = ''
 		
 		if (self._config['depot_server']['url'].split('/')[2] != 'localhost') and event.updateActionProcessor:
 			logger.notice("Updating action processor")
@@ -3131,6 +3170,9 @@ class OpsiclientdNT7(OpsiclientdNT):
 				
 				logger.notice("Mounting depot share %s" %  self._config['depot_server']['url'])
 				self._statusSubject.setMessage(_("Mounting depot share %s") % self._config['depot_server']['url'])
+				
+				encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
+				pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
 				
 				System.mount(self._config['depot_server']['url'], self._config['depot_server']['drive'], username='pcpatch', password=pcpatchPassword)
 				depotShareMounted = True
