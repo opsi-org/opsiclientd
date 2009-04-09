@@ -1405,141 +1405,148 @@ class CacheService(threading.Thread):
 	def run(self):
 		self._running = True
 		while self._running:
-			if self._cacheConfigRequested:
-				self._cacheConfigRequested = False
-				logger.notice("Caching config (products: %s)" % ', '.join(self._productIds))
-				if not self._initiated:
-					logger.error("Cannot cache config: not initiated")
-					continue
-				
-				self._backend.workDirectOnly(True)
-				
-				modules = self.__backendManager.getOpsiInformation_hash()['modules']
-				if not modules.get('vpn'):
-					logger.error("Cannot cache config: VPN module currently disabled")
-					continue
-				
-				if not modules.get('valid'):
-					logger.error("Cannot cache config: modules file invalid")
-					continue
-				
-				import base64, md5, twisted.conch.ssh.keys
-				publicKey = twisted.conch.ssh.keys.getPublicKeyObject(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP'))
-				data = ''
-				mks = modules.keys()
-				mks.sort()
-				for module in mks:
-					if module in ('valid', 'signature'):
+			try:
+				if self._cacheConfigRequested:
+					self._cacheConfigRequested = False
+					logger.notice("Caching config (products: %s)" % ', '.join(self._productIds))
+					if not self._initiated:
+						logger.error("Cannot cache config: not initiated")
 						continue
-					val = modules[module]
-					if (val == False): val = 'no'
-					if (val == True):  val = 'yes'
-					data += module.lower().strip() + ' = ' + val + '\r\n'
-				if not bool(publicKey.verify(md5.new(data).digest(), [ modules['signature'] ])):
-					logger.error("Cannot cache config: modules file invalid")
-					continue
-				
-				try:
-					self._state['config'] = {
-						'sync_started':    time.time(),
-						'sync_completed':  '',
-						'sync_failed':     ''
-					}
-					depotId = self._opsiclientd.getConfigValue('depot_server', 'depot_id')
-					self._backend.workDirectOnly(False)
-					self._backend.buildCache(
-							serverIds  = [ None ],
-							depotIds   = [ depotId ],
-							clientIds  = [ self._hostId ],
-							groupIds   = [ None ],
-							productIds = self._productIds )
-					self._state['config']['sync_completed'] = time.time()
-					logger.notice("Config cached")
-				except Exception, e:
-					logger.logException(e)
-					logger.error("Failed to cache config: %s" % e)
-					self._state['config']['sync_failed'] = str(e)
-				self.writeStateFile()
-				self._cacheConfigEnded.set()
-			
-			if self._cacheProductsRequested:
-				self._cacheProductsRequested = False
-				logger.notice("Caching products: %s" % ', '.join(self._productIds))
-				if not self._initiated:
-					logger.error("Cannot cache products: not initiated")
-					continue
-				
-				modules = self.__backendManager.getOpsiInformation_hash()['modules']
-				if not modules.get('vpn'):
-					logger.error("Cannot cache config: VPN module currently disabled")
-					continue
-				
-				if not modules.get('valid'):
-					logger.error("Cannot cache config: modules file invalid")
-					continue
-				
-				import base64, md5, twisted.conch.ssh.keys
-				publicKey = twisted.conch.ssh.keys.getPublicKeyObject(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP'))
-				data = ''
-				mks = modules.keys()
-				mks.sort()
-				for module in mks:
-					if module in ('valid', 'signature'):
+					
+					self._backend.workDirectOnly(True)
+					
+					modules = self._backend.getOpsiInformation_hash()['modules']
+					if not modules.get('vpn'):
+						logger.error("Cannot cache config: VPN module currently disabled")
 						continue
-					val = modules[module]
-					if (val == False): val = 'no'
-					if (val == True):  val = 'yes'
-					data += module.lower().strip() + ' = ' + val + '\r\n'
-				if not bool(publicKey.verify(md5.new(data).digest(), [ modules['signature'] ])):
-					logger.error("Cannot cache config: modules file invalid")
-					continue
-				
-				logger.info("Synchronizing %d product(s):" % len(self._productIds))
-				for productId in self._productIds:
-					logger.info("   %s" % productId)
-				
-				overallProgressSubject = ProgressSubject(id = 'sync_products_overall', type = 'product_sync', end = len(self._productIds))
-				overallProgressSubject.setMessage( _('Synchronizing products') )
-				if self._overallProductProgressObserver: overallProgressSubject.attachObserver(self._overallProductProgressObserver)
-				
-				for productId in self._productIds:
-					logger.notice("Syncing files of product '%s'" % productId)
-					if not self._state['product'].has_key(productId):
-						self._state['product'][productId] = {
-							'sync_started':    time.time(),
-						}
-					self._state['product'][productId]['sync_completed'] = ''
-					self._state['product'][productId]['sync_failed'] = ''
-					self.writeStateFile()
+					
+					if not modules.get('valid'):
+						logger.error("Cannot cache config: modules file invalid")
+						continue
+					
+					logger.info("Verifying modules file signature")
+					import base64, md5, twisted.conch.ssh.keys
+					publicKey = twisted.conch.ssh.keys.getPublicKeyObject(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP'))
+					data = ''
+					mks = modules.keys()
+					mks.sort()
+					for module in mks:
+						if module in ('valid', 'signature'):
+							continue
+						val = modules[module]
+						if (val == False): val = 'no'
+						if (val == True):  val = 'yes'
+						data += module.lower().strip() + ' = ' + val + '\r\n'
+					if not bool(publicKey.verify(md5.new(data).digest(), [ modules['signature'] ])):
+						logger.error("Cannot cache config: modules file invalid")
+						continue
+					logger.info("Modules file signature verified")
+					
 					try:
-						self._productSynchronizer = DepotToLocalDirectorySychronizer(
-							self._repository,
-							self._productCacheDir,
-							[ productId ]
-						)
-						self._productSynchronizer.synchronize(self._productProgressObserver)
-						self._state['product'][productId]['sync_completed'] = time.time()
-						logger.notice("Product '%s' synced" % productId)
+						self._state['config'] = {
+							'sync_started':    time.time(),
+							'sync_completed':  '',
+							'sync_failed':     ''
+						}
+						depotId = self._opsiclientd.getConfigValue('depot_server', 'depot_id')
+						self._backend.workDirectOnly(False)
+						self._backend.buildCache(
+								serverIds  = [ None ],
+								depotIds   = [ depotId ],
+								clientIds  = [ self._hostId ],
+								groupIds   = [ None ],
+								productIds = self._productIds )
+						self._state['config']['sync_completed'] = time.time()
+						logger.notice("Config cached")
 					except Exception, e:
-						logger.error("Failed to sync product '%s': %s" % (productId, e))
-						self._state['product'][productId]['sync_failed'] = str(e)
+						logger.logException(e)
+						logger.error("Failed to cache config: %s" % e)
+						self._state['config']['sync_failed'] = str(e)
 					self.writeStateFile()
-					overallProgressSubject.addToState(1)
+					self._cacheConfigEnded.set()
 				
-				failed = False
-				for productId in self._productIds:
-					if self._state['product'][productId]['sync_failed']:
-						failed = True
-						break
-				if not failed:
-					logger.notice("All products cached: %s" % ', '.join(self._productIds))
-					for event in self._opsiclientd.getEvents(EVENT_TYPE_PRODUCT_SYNC_COMPLETED):
-						event.fire()
-				self._cacheProductsEnded.set()
-				
-				if self._overallProductProgressObserver: overallProgressSubject.detachObserver(self._overallProductProgressObserver)
-				
-			time.sleep(3)
+				if self._cacheProductsRequested:
+					self._cacheProductsRequested = False
+					logger.notice("Caching products: %s" % ', '.join(self._productIds))
+					if not self._initiated:
+						logger.error("Cannot cache products: not initiated")
+						continue
+					
+					modules = self._backend.getOpsiInformation_hash()['modules']
+					if not modules.get('vpn'):
+						logger.error("Cannot cache config: VPN module currently disabled")
+						continue
+					
+					if not modules.get('valid'):
+						logger.error("Cannot cache config: modules file invalid")
+						continue
+					
+					logger.info("Verifying modules file signature")
+					import base64, md5, twisted.conch.ssh.keys
+					publicKey = twisted.conch.ssh.keys.getPublicKeyObject(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP'))
+					data = ''
+					mks = modules.keys()
+					mks.sort()
+					for module in mks:
+						if module in ('valid', 'signature'):
+							continue
+						val = modules[module]
+						if (val == False): val = 'no'
+						if (val == True):  val = 'yes'
+						data += module.lower().strip() + ' = ' + val + '\r\n'
+					if not bool(publicKey.verify(md5.new(data).digest(), [ modules['signature'] ])):
+						logger.error("Cannot cache config: modules file invalid")
+						continue
+					logger.info("Modules file signature verified")
+					
+					logger.info("Synchronizing %d product(s):" % len(self._productIds))
+					for productId in self._productIds:
+						logger.info("   %s" % productId)
+					
+					overallProgressSubject = ProgressSubject(id = 'sync_products_overall', type = 'product_sync', end = len(self._productIds))
+					overallProgressSubject.setMessage( _('Synchronizing products') )
+					if self._overallProductProgressObserver: overallProgressSubject.attachObserver(self._overallProductProgressObserver)
+					
+					for productId in self._productIds:
+						logger.notice("Syncing files of product '%s'" % productId)
+						if not self._state['product'].has_key(productId):
+							self._state['product'][productId] = {
+								'sync_started':    time.time(),
+							}
+						self._state['product'][productId]['sync_completed'] = ''
+						self._state['product'][productId]['sync_failed'] = ''
+						self.writeStateFile()
+						try:
+							self._productSynchronizer = DepotToLocalDirectorySychronizer(
+								self._repository,
+								self._productCacheDir,
+								[ productId ]
+							)
+							self._productSynchronizer.synchronize(self._productProgressObserver)
+							self._state['product'][productId]['sync_completed'] = time.time()
+							logger.notice("Product '%s' synced" % productId)
+						except Exception, e:
+							logger.error("Failed to sync product '%s': %s" % (productId, e))
+							self._state['product'][productId]['sync_failed'] = str(e)
+						self.writeStateFile()
+						overallProgressSubject.addToState(1)
+					
+					failed = False
+					for productId in self._productIds:
+						if self._state['product'][productId]['sync_failed']:
+							failed = True
+							break
+					if not failed:
+						logger.notice("All products cached: %s" % ', '.join(self._productIds))
+						for event in self._opsiclientd.getEvents(EVENT_TYPE_PRODUCT_SYNC_COMPLETED):
+							event.fire()
+					self._cacheProductsEnded.set()
+					
+					if self._overallProductProgressObserver: overallProgressSubject.detachObserver(self._overallProductProgressObserver)
+					
+				time.sleep(3)
+			except Exception, e:
+				logger.logException(e)
 		
 	def reset(self):
 		if os.path.exists(self._storageDir):
