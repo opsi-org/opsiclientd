@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.5.1'
+__version__ = '0.5.2'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -1413,9 +1413,30 @@ class CacheService(threading.Thread):
 					continue
 				
 				self._backend.workDirectOnly(True)
-				modules = self._backend.getOpsiInformation_hash()['modules']
-				if not modules.get('vpn') or not modules['valid']:
+				
+				modules = self.__backendManager.getOpsiInformation_hash()['modules']
+				if not modules.get('vpn'):
 					logger.error("Cannot cache config: VPN module currently disabled")
+					continue
+				
+				if not modules.get('valid'):
+					logger.error("Cannot cache config: modules file invalid")
+					continue
+				
+				import base64, md5, twisted.conch.ssh.keys
+				publicKey = twisted.conch.ssh.keys.getPublicKeyObject(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP'))
+				data = ''
+				mks = modules.keys()
+				mks.sort()
+				for module in mks:
+					if module in ('valid', 'signature'):
+						continue
+					val = modules[module]
+					if (val == False): val = 'no'
+					if (val == True):  val = 'yes'
+					data += module.lower().strip() + ' = ' + val + '\r\n'
+				if not bool(publicKey.verify(md5.new(data).digest(), [ modules['signature'] ])):
+					logger.error("Cannot cache config: modules file invalid")
 					continue
 				
 				try:
@@ -1448,9 +1469,29 @@ class CacheService(threading.Thread):
 					logger.error("Cannot cache products: not initiated")
 					continue
 				
-				modules = self._backend.getOpsiInformation_hash()['modules']
-				if not modules.get('vpn') or not modules['valid']:
-					logger.error("Cannot cache products: VPN module currently disabled")
+				modules = self.__backendManager.getOpsiInformation_hash()['modules']
+				if not modules.get('vpn'):
+					logger.error("Cannot cache config: VPN module currently disabled")
+					continue
+				
+				if not modules.get('valid'):
+					logger.error("Cannot cache config: modules file invalid")
+					continue
+				
+				import base64, md5, twisted.conch.ssh.keys
+				publicKey = twisted.conch.ssh.keys.getPublicKeyObject(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP'))
+				data = ''
+				mks = modules.keys()
+				mks.sort()
+				for module in mks:
+					if module in ('valid', 'signature'):
+						continue
+					val = modules[module]
+					if (val == False): val = 'no'
+					if (val == True):  val = 'yes'
+					data += module.lower().strip() + ' = ' + val + '\r\n'
+				if not bool(publicKey.verify(md5.new(data).digest(), [ modules['signature'] ])):
+					logger.error("Cannot cache config: modules file invalid")
 					continue
 				
 				logger.info("Synchronizing %d product(s):" % len(self._productIds))
@@ -1696,8 +1737,10 @@ class ServiceConnectionThread(KillableThread):
 		self.stop()
 	
 	def stop(self):
+		logger.debug("stopping thread")
 		self.cancelled = True
 		time.sleep(2)
+		logger.debug("running: %s, alive: %s" % (self.running, self.isAlive()))
 		if self.running and self.isAlive():
 			logger.debug("Terminating thread")
 			self.terminate()
@@ -2530,14 +2573,17 @@ class Opsiclientd(EventListener, threading.Thread):
 		serviceConnectionThread.start()
 		time.sleep(1)
 		logger.debug("ServiceConnectionThread started")
+		
 		while serviceConnectionThread.running and (timeout > 0):
+			self._detailSubjectProxy.setMessage( _('Timeout: %ds') % timeout )
 			cancellableAfter -= 1
 			if (cancellableAfter == 0):
 				self._notificationServer.addSubject(choiceSubject)
-			logger.debug("Waiting for ServiceConnectionThread (timeout: %d)..." % timeout)
+				logger.debug("Waiting for ServiceConnectionThread (timeout: %d, alive: %s) " % (timeout, serviceConnectionThread.isAlive()))
 			time.sleep(1)
 			timeout -= 1
 		
+		self._detailSubjectProxy.setMessage('')
 		self._notificationServer.removeSubject(choiceSubject)
 		
 		if serviceConnectionThread.cancelled:
