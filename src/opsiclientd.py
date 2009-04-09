@@ -1317,6 +1317,7 @@ class CacheService(threading.Thread):
 		#self._backend = BackendManager(backend = self._backend, authRequired=False, configFile='/etc/opsi/backendManager.d/50_interface.conf')
 		self._backend.workDirectOnly(True)
 		
+		# TODO: url
 		self._repository = getRepository(	#url        = self._opsiclientd.getConfigValue('depot_server', 'url'),
 							url          = 'webdavs://%s:4447/opsi-depot' % self._opsiclientd.getConfigValue('depot_server', 'depot_id'),
 							username     = self._hostId,
