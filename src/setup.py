@@ -77,15 +77,16 @@ excludes = [	"pywin", "pywin.debugger", "pywin.debugger.dbgcon",
 ]
 
 data_files = [
-	('lib',                      [	'C:\\Programme\\python25\\lib\\site-packages\\Pythonwin\\MFC71.DLL',
-					 SYS_DIR + '\\msvcm90.dll']),
-	('notifier',                 [	'windows\\helpers\\notifier\\event.ini',
-					'windows\\helpers\\notifier\\action.ini',
-					'windows\\helpers\\notifier\\action.bmp',
-					'windows\\helpers\\notifier\\event.bmp',
-					'windows\\helpers\\notifier\\opsi.ico']),
-	('opsiclientd',              [	'windows\\opsiclientd.conf']),
-	('opsiclientd\\static_html', [	'..\\static_html\\favicon.ico', '..\\static_html\\index.html', '..\\static_html\\opsi_logo.png'])
+	('lib',                           [	'C:\\Programme\\python25\\lib\\site-packages\\Pythonwin\\MFC71.DLL',
+						SYS_DIR + '\\msvcm90.dll']),
+	('notifier',                      [	'windows\\helpers\\notifier\\event.ini',
+						'windows\\helpers\\notifier\\action.ini',
+						'windows\\helpers\\notifier\\action.bmp',
+						'windows\\helpers\\notifier\\event.bmp',
+						'windows\\helpers\\notifier\\opsi.ico']),
+	('opsiclientd',                   [	'windows\\opsiclientd.conf']),
+	('opsiclientd\\static_html',      [	'..\\static_html\\favicon.ico', '..\\static_html\\index.html', '..\\static_html\\opsi_logo.png']),
+	('opsiclientd\\backendManager.d', [	'..\\cache_service.conf'])
 ]
 #data_files += tree("static_html")
 
