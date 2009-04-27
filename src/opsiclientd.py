@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.5.4'
+__version__ = '0.5.5'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -521,13 +521,13 @@ class PosixControlPipe(ControlPipe):
 		self._pipeName = "/var/run/opsiclientd/fifo"
 	
 	def createPipe(self):
-		logger.debug("Creating pipe %s" % self._pipeName)
+		logger.debug2("Creating pipe %s" % self._pipeName)
 		if not os.path.exists( os.path.dirname(self._pipeName) ):
 			os.mkdir( os.path.dirname(self._pipeName) )
 		if os.path.exists(self._pipeName):
 			os.unlink(self._pipeName)
 		os.mkfifo(self._pipeName)
-		logger.debug("Pipe %s created" % self._pipeName)
+		logger.debug2("Pipe %s created" % self._pipeName)
 	
 	def run(self):
 		self._running = True
@@ -535,17 +535,17 @@ class PosixControlPipe(ControlPipe):
 			self.createPipe()
 			while self._running:
 				try:
-					logger.debug("Opening named pipe %s" % self._pipeName)
+					logger.debug2("Opening named pipe %s" % self._pipeName)
 					self._pipe = os.open(self._pipeName, os.O_RDONLY)
-					logger.debug("Reading from pipe %s" % self._pipeName)
+					logger.debug2("Reading from pipe %s" % self._pipeName)
 					rpc = os.read(self._pipe, self._bufferSize)
 					os.close(self._pipe)
 					if not rpc:
 						logger.error("No rpc from pipe")
 						continue
-					logger.info("Received rpc from pipe '%s'" % rpc)
+					logger.debug("Received rpc from pipe '%s'" % rpc)
 					result = self.executeRpc(rpc)
-					logger.debug("Opening named pipe %s" % self._pipeName)
+					logger.debug2("Opening named pipe %s" % self._pipeName)
 					timeout = 3
 					ta = 0.0
 					while (ta < timeout):
@@ -560,9 +560,9 @@ class PosixControlPipe(ControlPipe):
 					if (ta >= timeout):
 						logger.error("Failed to write to pipe (timed out after %d seconds)" % timeout)
 						continue
-					logger.debug("Writing to pipe")
+					logger.debug2("Writing to pipe")
 					written = os.write(self._pipe, result)
-					logger.debug("Number of bytes written: %d" % written)
+					logger.debug2("Number of bytes written: %d" % written)
 					if (len(result) != written):
 						logger.error("Failed to write all bytes to pipe (%d/%d)" % (written, len(result)))
 				
@@ -967,9 +967,9 @@ class ControlServerJsonRpcWorker(JsonRpcWorker):
 			self.result['result'] = None
 			return
 		
-		logger.info('Got result...')
+		logger.debug('Got result...')
 		duration = round(time.time() - start, 3)
-		logger.info('Took %0.3fs to process %s(%s)' % (duration, method, str(params)[1:-1]))
+		logger.debug('Took %0.3fs to process %s(%s)' % (duration, method, str(params)[1:-1]))
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                       JSON INTERFACE WORKER                                       -
@@ -1665,9 +1665,9 @@ class CacheServiceJsonRpcWorker(JsonRpcWorker):
 			self.result['result'] = None
 			return
 		
-		logger.info('Got result...')
+		logger.debug('Got result...')
 		duration = round(time.time() - start, 3)
-		logger.info('Took %0.3fs to process %s(%s)' % (duration, method, str(params)[1:-1]))
+		logger.debug('Took %0.3fs to process %s(%s)' % (duration, method, str(params)[1:-1]))
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1823,8 +1823,7 @@ class EventProcessingThread(KillableThread):
 		self.eventCancelled = False
 		self.waiting = False
 		self.waitCancelled = False
-	
-	
+		
 	def startNotifierApplication(self, command, desktop=''):
 		if not command:
 			raise ValueError("No command given")
@@ -1957,6 +1956,7 @@ class EventProcessingThread(KillableThread):
 				self.opsiclientd.processShutdownRequests()
 				if self.event.writeLogToService:
 					self.opsiclientd.writeLogToService()
+				# Disconnect has to be called, even if connect failed!
 				self.opsiclientd.disconnectConfigServer()
 				if notifierApplicationPid:
 					self.stopNotifierApplication(notifierApplicationPid)
@@ -2009,6 +2009,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._startupTime = time.time()
 		self._running = False
 		self._configService = None
+		self._configServiceException = None
 		self._processingEvent = False
 		self._blockLogin = True
 		self._currentActiveDesktopName = None
@@ -2046,7 +2047,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			'config_service': {
 				'server_id':              '',
 				'url':                    '',
-				'connection_timeout':     30,
+				'connection_timeout':     10,
 				'user_cancellable_after': 0,
 			},
 			'depot_server': {
@@ -2141,7 +2142,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		option = str(option).strip().lower()
 		value = value.strip()
 		
-		logger.info("Setting config value '%s' of section '%s'" % (option, section))
+		logger.info("Setting config value %s.%s" % (section, option))
 		logger.debug("setConfigValue(%s, %s, %s)" % (section, option, value))
 		
 		if option not in ('action_processor_command') and (value == ''):
@@ -2309,8 +2310,6 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.notice("Writing log to service")
 		try:
 			self._statusSubject.setMessage( _("Writing log to service") )
-			if not self._configService:
-				raise Exception("not connected")
 			
 			f = open(self._config['global']['log_file'])
 			data = f.read()
@@ -2672,62 +2671,71 @@ class Opsiclientd(EventListener, threading.Thread):
 			# Already connected
 			return
 		
-		choiceSubject = ChoiceSubject(id = 'choice')
-		choiceSubject.setChoices([ 'Stop connection' ])
+		if self._configServiceException:
+			# Exception will be cleared on disconnect
+			raise Exception("Connect failed, will not retry")
 		
-		logger.debug("Creating ServiceConnectionThread")
-		serviceConnectionThread = ServiceConnectionThread(
-					configServiceUrl    = self._config['config_service']['url'],
-					username            = self._config['global']['host_id'],
-					password            = self._config['global']['opsi_host_key'],
-					notificationServer  = self._notificationServer,
-					statusObject        = self._statusSubject )
-		
-		choiceSubject.setCallbacks( [ serviceConnectionThread.stopConnectionCallback ] )
-		
-		cancellableAfter = int(self._config['config_service']['user_cancellable_after'])
-		if (cancellableAfter < 1):
-			self._notificationServer.addSubject(choiceSubject)
-		
-		timeout = int(self._config['config_service']['connection_timeout'])
-		logger.info("Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
-		serviceConnectionThread.start()
-		time.sleep(1)
-		logger.debug("ServiceConnectionThread started")
-		
-		while serviceConnectionThread.running and (timeout > 0):
-			self._detailSubjectProxy.setMessage( _('Timeout: %ds') % timeout )
-			cancellableAfter -= 1
-			if (cancellableAfter == 0):
-				self._notificationServer.addSubject(choiceSubject)
-				logger.debug("Waiting for ServiceConnectionThread (timeout: %d, alive: %s) " % (timeout, serviceConnectionThread.isAlive()))
-			time.sleep(1)
-			timeout -= 1
-		
-		self._detailSubjectProxy.setMessage('')
-		self._notificationServer.removeSubject(choiceSubject)
-		
-		if serviceConnectionThread.cancelled:
-			logger.error("ServiceConnectionThread canceled by user")
-			raise CanceledByUserError("Failed to connect to config service '%s': cancelled by user" % \
-						self._config['config_service']['url'] )
-		elif serviceConnectionThread.running:
-			logger.error("ServiceConnectionThread timed out after %d seconds" % self._config['config_service']['connection_timeout'])
-			serviceConnectionThread.stop()
-			raise Exception("Failed to connect to config service '%s': timed out after %d seconds" % \
-						(self._config['config_service']['url'], self._config['config_service']['connection_timeout']) )
+		try:
+			choiceSubject = ChoiceSubject(id = 'choice')
+			choiceSubject.setChoices([ 'Stop connection' ])
 			
-		if not serviceConnectionThread.connected:
-			raise Exception("Failed to connect to config service '%s': reason unknown" % self._config['config_service']['url'])
-		
-		if (serviceConnectionThread.getUsername() != self._config['global']['host_id']):
-			self._config['global']['host_id'] = serviceConnectionThread.getUsername()
-			logger.info("Updated host_id to '%s'" % self._config['global']['host_id'])
-		self._configService = serviceConnectionThread.configService
-		self._config['config_service']['server_id'] = self._configService.getServerId(self._config['global']['host_id'])
-		logger.info("Updated config_service.host_id to '%s'" % self._config['config_service']['server_id'])
+			logger.debug("Creating ServiceConnectionThread")
+			serviceConnectionThread = ServiceConnectionThread(
+						configServiceUrl    = self._config['config_service']['url'],
+						username            = self._config['global']['host_id'],
+						password            = self._config['global']['opsi_host_key'],
+						notificationServer  = self._notificationServer,
+						statusObject        = self._statusSubject )
+			
+			choiceSubject.setCallbacks( [ serviceConnectionThread.stopConnectionCallback ] )
+			
+			cancellableAfter = int(self._config['config_service']['user_cancellable_after'])
+			if (cancellableAfter < 1):
+				self._notificationServer.addSubject(choiceSubject)
+			
+			timeout = int(self._config['config_service']['connection_timeout'])
+			logger.info("Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
+			serviceConnectionThread.start()
+			time.sleep(1)
+			logger.debug("ServiceConnectionThread started")
+			
+			while serviceConnectionThread.running and (timeout > 0):
+				logger.debug("Waiting for ServiceConnectionThread (timeout: %d, alive: %s) " % (timeout, serviceConnectionThread.isAlive()))
+				self._detailSubjectProxy.setMessage( _('Timeout: %ds') % timeout )
+				cancellableAfter -= 1
+				if (cancellableAfter == 0):
+					self._notificationServer.addSubject(choiceSubject)
+				time.sleep(1)
+				timeout -= 1
+			
+			self._detailSubjectProxy.setMessage('')
+			self._notificationServer.removeSubject(choiceSubject)
+			
+			if serviceConnectionThread.cancelled:
+				logger.error("ServiceConnectionThread canceled by user")
+				raise CanceledByUserError("Failed to connect to config service '%s': cancelled by user" % \
+							self._config['config_service']['url'] )
+			elif serviceConnectionThread.running:
+				logger.error("ServiceConnectionThread timed out after %d seconds" % self._config['config_service']['connection_timeout'])
+				serviceConnectionThread.stop()
+				raise Exception("Failed to connect to config service '%s': timed out after %d seconds" % \
+							(self._config['config_service']['url'], self._config['config_service']['connection_timeout']) )
+				
+			if not serviceConnectionThread.connected:
+				raise Exception("Failed to connect to config service '%s': reason unknown" % self._config['config_service']['url'])
+			
+			if (serviceConnectionThread.getUsername() != self._config['global']['host_id']):
+				self._config['global']['host_id'] = serviceConnectionThread.getUsername()
+				logger.info("Updated host_id to '%s'" % self._config['global']['host_id'])
+			self._configService = serviceConnectionThread.configService
+			self._config['config_service']['server_id'] = self._configService.getServerId(self._config['global']['host_id'])
+			logger.info("Updated config_service.host_id to '%s'" % self._config['config_service']['server_id'])
+		except Exception, e:
+			self._configServiceException = e
+			raise
 		
 	def disconnectConfigServer(self):
+		self._configServiceException = None
 		self._configService = None
 	
 	def getPossibleMethods(self):
