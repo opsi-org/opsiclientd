@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.5.5'
+__version__ = '0.5.6.6'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -70,7 +70,7 @@ from OPSI.Backend.BackendManager import BackendManager
 
 # Create logger instance
 logger = Logger()
-logger.setLogFormat('[%l] [%D]  %M  (%F|%N)')
+logger.setLogFormat('[%l] [%D]   %M     (%F|%N)')
 
 # Possible event types
 EVENT_TYPE_PRODUCT_SYNC_COMPLETED = 'product sync completed'
@@ -160,7 +160,7 @@ class Event(threading.Thread):
 		self._occured = 0
 		self._eventListeners = []
 		
-		logger.setLogFormat('[%l] [%D] [event ' + str(self._name) + ']  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [event ' + str(self._name) + ']   %M  (%F|%N)', object=self)
 		
 		self.message = str(self.__dict__.get('message', ''))
 		
@@ -215,7 +215,7 @@ class Event(threading.Thread):
 		self.cacheProducts = bool(self.__dict__.get('cacheProducts', False))
 		self.cacheMaxBandwidth = int(self.__dict__.get('cacheMaxBandwidth', 0))
 		self.requiresCachedProducts = bool(self.__dict__.get('requiresCachedProducts', False))
-		self.cacheConfig = bool(self.__dict__.get('cacheConfig', False))
+		self.syncConfig = bool(self.__dict__.get('syncConfig', False))
 		self.useCachedConfig = bool(self.__dict__.get('useCachedConfig', False))
 		
 	def __str__(self):
@@ -473,7 +473,7 @@ class EventListener(object):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlPipe(threading.Thread):
 	def __init__(self, opsiclientd):
-		logger.setLogFormat('[%l] [%D] [control pipe]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [control pipe]   %M     (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._pipe = None
@@ -584,7 +584,7 @@ class PosixControlPipe(ControlPipe):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class NTControlPipeConnection(threading.Thread):
 	def __init__(self, ntControlPipe, pipe, bufferSize):
-		logger.setLogFormat('[%l] [%D] [control pipe]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [control pipe]   %M     (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._ntControlPipe = ntControlPipe
 		self._pipe = pipe
@@ -754,7 +754,7 @@ class ControlServerResourceRoot(resource.Resource):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServerResourceJsonRpc(resource.Resource):
 	def __init__(self, opsiclientd):
-		logger.setLogFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [control server]   %M     (%F|%N)', object=self)
 		resource.Resource.__init__(self)
 		self._opsiclientd = opsiclientd
 		
@@ -781,7 +781,7 @@ class ControlServerResourceJsonRpc(resource.Resource):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 	def __init__(self, opsiclientd):
-		logger.setLogFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [control server]   %M     (%F|%N)', object=self)
 		ControlServerResourceJsonRpc.__init__(self, opsiclientd)
 	
 	def http_POST(self, request):
@@ -950,7 +950,7 @@ class JsonRpcWorker(object):
 class ControlServerJsonRpcWorker(JsonRpcWorker):
 	def __init__(self, request, opsiclientd, method = 'POST'):
 		JsonRpcWorker.__init__(self, request, opsiclientd, method)
-		logger.setLogFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [control server]   %M     (%F|%N)', object=self)
 	
 	def _realRpc(self):
 		method = self.rpc.get('method')
@@ -1214,7 +1214,7 @@ class ControlServerJsonInterfaceWorker(ControlServerJsonRpcWorker):
 class CacheService(threading.Thread):
 	def __init__(self, opsiclientd):
 		threading.Thread.__init__(self)
-		logger.setLogFormat('[%l] [%D] [cache service]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [cache service]   %M     (%F|%N)', object=self)
 		self._opsiclientd = opsiclientd
 		self._storageDir = self._opsiclientd._config['cache_service']['storage_dir']
 		self._cacheBackendBaseDir  = os.path.join(self._storageDir, 'cache_backend')
@@ -1227,9 +1227,9 @@ class CacheService(threading.Thread):
 			'product':  {},
 			'config':   {}
 		}
-		self._cacheConfigRequested = False
+		self._syncConfigRequested = False
 		self._cacheProductsRequested = False
-		self._cacheConfigEnded = threading.Event()
+		self._syncConfigEnded = threading.Event()
 		self._cacheProductsEnded = threading.Event()
 		self._currentProductProgressObserver = None
 		self._overallProductProgressObserver = None
@@ -1317,13 +1317,13 @@ class CacheService(threading.Thread):
 		
 		logger.info("Creating cache backend")
 		self._cacheBackend = File31Backend(args = self._cacheBackendArgs)
-		logger.setLogFormat('[%l] [%D] [cache service]  %M  (%F|%N)', object = self._cacheBackend)
+		logger.setLogFormat('[%l] [%D] [cache service]   %M     (%F|%N)', object = self._cacheBackend)
 		self._cacheBackend.createOpsiBase()
 		#self._cacheBackend = BackendManager(backend = self._cacheBackend, authRequired = False, configFile = self._opsiclientd.getConfigValue('cache_service', 'backend_manager_config'))
 		
 		logger.info("Creating work backend")
 		self._workBackend = File31Backend(args = self._workBackendArgs)
-		logger.setLogFormat('[%l] [%D] [cache service]  %M  (%F|%N)', object = self._workBackend)
+		logger.setLogFormat('[%l] [%D] [cache service]   %M     (%F|%N)', object = self._workBackend)
 		self._workBackend.createOpsiBase()
 		#self._workBackend = BackendManager(backend = self._workBackend, authRequired = False, configFile = self._opsiclientd.getConfigValue('cache_service', 'backend_manager_config'))
 		
@@ -1335,9 +1335,9 @@ class CacheService(threading.Thread):
 						'workBackend':          self._workBackend,
 						'storageDir':           self._storageDir
 					} )
-		logger.setLogFormat('[%l] [%D] [cache service]  %M  (%F|%N)', object = self._offlineBackend)
+		logger.setLogFormat('[%l] [%D] [cache service]   %M     (%F|%N)', object = self._offlineBackend)
 		self._backend = BackendManager(backend = self._offlineBackend, authRequired = False, configFile = self._opsiclientd.getConfigValue('cache_service', 'backend_manager_config'))
-		logger.setLogFormat('[%l] [%D] [cache service]  %M  (%F|%N)', object = self._backend)
+		logger.setLogFormat('[%l] [%D] [cache service]   %M     (%F|%N)', object = self._backend)
 		
 		# TODO: url
 		self._repository = getRepository(	#url        = self._opsiclientd.getConfigValue('depot_server', 'url'),
@@ -1353,7 +1353,7 @@ class CacheService(threading.Thread):
 			logger.info("CacheService not initiated")
 			return False
 		if not self._state['config']:
-			logger.info("Config not cached")
+			logger.info("Config not synced")
 			return False
 		if not self._state['config'].get('sync_completed'):
 			logger.debug("Config sync not completed: %s" % self._state['config'])
@@ -1366,7 +1366,7 @@ class CacheService(threading.Thread):
 			logger.info("CacheService not initiated")
 			return False
 		if not self._state['product']:
-			logger.info("Nothing cached")
+			logger.info("No products cached")
 			return False
 		productSyncCompleted = True
 		for (productId, state) in self._state['product'].items():
@@ -1428,15 +1428,15 @@ class CacheService(threading.Thread):
 					return False
 			return True
 	
-	def cacheConfig(self, productIds, waitForEnding=False):
+	def syncConfig(self, productIds, waitForEnding=False):
 		if not self._initiated:
-			raise Exception("Cannot cache config: not initiated")
+			raise Exception("Cannot sync config: not initiated")
 		self._productIds = productIds
-		self._cacheConfigRequested = True
-		self._cacheConfigEnded.clear()
+		self._syncConfigRequested = True
+		self._syncConfigEnded.clear()
 		if waitForEnding:
-			self._cacheConfigEnded = threading.Event()
-			self._cacheConfigEnded.wait()
+			self._syncConfigEnded = threading.Event()
+			self._syncConfigEnded.wait()
 			return bool(self._state['config']['sync_failed'])
 	
 	def workWithLocalConfig(self):
@@ -1450,22 +1450,22 @@ class CacheService(threading.Thread):
 		self._running = True
 		while self._running:
 			try:
-				if self._cacheConfigRequested:
-					self._cacheConfigRequested = False
+				if self._syncConfigRequested:
+					self._syncConfigRequested = False
 					
 					try:
-						logger.notice("Caching config (products: %s)" % ', '.join(self._productIds))
+						logger.notice("Syncing config (products: %s)" % ', '.join(self._productIds))
 						if not self._initiated:
-							raise Exception("Cannot cache config: not initiated")
+							raise Exception("Cannot sync config: not initiated")
 						
 						self._remoteBackend.possibleMethods = []
 						self._remoteBackend._connect()
 						modules = self._remoteBackend.getOpsiInformation_hash()['modules']
 						if not modules.get('vpn'):
-							raise Exception("Cannot cache config: VPN module currently disabled")
+							raise Exception("Cannot sync config: VPN module currently disabled")
 						
 						if not modules.get('valid'):
-							raise Exception("Cannot cache config: modules file invalid")
+							raise Exception("Cannot sync config: modules file invalid")
 						
 						logger.info("Verifying modules file signature")
 						import base64, md5, twisted.conch.ssh.keys
@@ -1480,8 +1480,8 @@ class CacheService(threading.Thread):
 							if (val == False): val = 'no'
 							if (val == True):  val = 'yes'
 							data += module.lower().strip() + ' = ' + val + '\r\n'
-						if not bool(publicKey.verify(md5.new(data).digest(), [ modules['signature'] ])):
-							logger.error("Cannot cache config: modules file invalid")
+						if not bool(publicKey.verify(md5.new(data).digest(), [ long(modules['signature']) ])):
+							logger.error("Cannot sync config: modules file invalid")
 							continue
 						logger.info("Modules file signature verified")
 						
@@ -1493,9 +1493,9 @@ class CacheService(threading.Thread):
 						depotId = self._opsiclientd.getConfigValue('depot_server', 'depot_id')
 						
 						logger.notice("Executing cached method calls")
-						self._offlineBackend._writebackCache()
+						self._offlineBackend._writebackCache(currentProgressObserver = self._currentConfigProgressObserver)
 						
-						logger.notice("Building cache")
+						logger.notice("Building config cache")
 						self._offlineBackend._buildCache(
 								serverIds  = [ None ],
 								depotIds   = [ depotId ],
@@ -1506,13 +1506,13 @@ class CacheService(threading.Thread):
 								overallProgressObserver = self._overallConfigProgressObserver )
 						self._state['config']['sync_completed'] = time.time()
 						
-						logger.notice("Config cached")
+						logger.notice("Config synced")
 					except Exception, e:
 						logger.logException(e)
-						logger.error("Failed to cache config: %s" % e)
+						logger.error("Failed to sync config: %s" % e)
 						self._state['config']['sync_failed'] = str(e)
 					self.writeStateFile()
-					self._cacheConfigEnded.set()
+					self._syncConfigEnded.set()
 				
 				if self._cacheProductsRequested:
 					self._cacheProductsRequested = False
@@ -1544,7 +1544,7 @@ class CacheService(threading.Thread):
 							if (val == False): val = 'no'
 							if (val == True):  val = 'yes'
 							data += module.lower().strip() + ' = ' + val + '\r\n'
-						if not bool(publicKey.verify(md5.new(data).digest(), [ modules['signature'] ])):
+						if not bool(publicKey.verify(md5.new(data).digest(), [ long(modules['signature']) ])):
 							logger.error("Cannot cache config: modules file invalid")
 							continue
 						logger.info("Modules file signature verified")
@@ -1619,7 +1619,7 @@ class CacheService(threading.Thread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class CacheServiceResourceJsonRpc(resource.Resource):
 	def __init__(self, opsiclientd):
-		logger.setLogFormat('[%l] [%D] [cached config server]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [cached cfg server]   %M     (%F|%N)', object=self)
 		resource.Resource.__init__(self)
 		self._opsiclientd = opsiclientd
 		
@@ -1648,7 +1648,7 @@ class CacheServiceResourceJsonRpc(resource.Resource):
 class CacheServiceJsonRpcWorker(JsonRpcWorker):
 	def __init__(self, request, opsiclientd, method = 'POST'):
 		JsonRpcWorker.__init__(self, request, opsiclientd, method)
-		logger.setLogFormat('[%l] [%D] [cached config server]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [cached cfg server]   %M     (%F|%N)', object=self)
 	
 	def _realRpc(self):
 		method = self.rpc.get('method')
@@ -1675,7 +1675,7 @@ class CacheServiceJsonRpcWorker(JsonRpcWorker):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServer(threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
-		logger.setLogFormat('[%l] [%D] [control server]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [control server]   %M     (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._httpsPort = httpsPort
@@ -1745,7 +1745,7 @@ class ControlServer(threading.Thread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, notificationServer, statusObject):
-		logger.setLogFormat('[%l] [%D] [service connection]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [service connection]   %M     (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username
@@ -1813,7 +1813,7 @@ class ServiceConnectionThread(KillableThread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class EventProcessingThread(KillableThread):
 	def __init__(self, opsiclientd, event):
-		logger.setLogFormat('[%l] [%D] [event processing]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [event processing]   %M     (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		
 		self.opsiclientd = opsiclientd
@@ -1886,7 +1886,7 @@ class EventProcessingThread(KillableThread):
 					if self.opsiclientd._cacheService.getConfigSyncCompleted():
 						logger.notice("Event '%s' requires cached config and config sync is done" % self.event)
 						self.opsiclientd._cacheService.workWithLocalConfig()
-						cacheConfigServiceUrl = 'https://localhost:%s/rpc' % self.opsiclientd.getConfigValue('control_server', 'port')
+						cacheConfigServiceUrl = 'https://127.0.0.1:%s/rpc' % self.opsiclientd.getConfigValue('control_server', 'port')
 						logger.notice("Setting config service url to cache service url '%s'" % cacheConfigServiceUrl)
 						self.opsiclientd.setConfigValue('config_service', 'url', cacheConfigServiceUrl)
 					else:
@@ -1999,7 +1999,7 @@ class EventProcessingThread(KillableThread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
-		logger.setLogFormat('[%l] [%D] [opsiclientd]  %M  (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [opsiclientd]   %M     (%F|%N)', object=self)
 		logger.debug("Opsiclient initiating")
 		
 		EventListener.__init__(self)
@@ -2072,8 +2072,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			},
 			'opsiclientd_notifier': {
 				'command':                '',
+				'block_notifier_command': '',
 			},
 			'action_processor': {
+				'run_as_user':            'pcpatch',
 				'local_dir':              '',
 				'remote_dir':             '',
 				'filename':               '',
@@ -2105,7 +2107,23 @@ class Opsiclientd(EventListener, threading.Thread):
 	
 	def setBlockLogin(self, blockLogin):
 		self._blockLogin = bool(blockLogin)
-	
+		if hasattr(self, '_blockLoginNotifyPid') and self._blockLoginNotifyPid:
+			logger.info("Terminating login blocker notifier (pid: %s)" % self._blockLoginNotifyPid)
+			#self.closeProcessWindows(self._blockLoginNotifyPid)
+			#time.sleep(3)
+			System.terminateProcess(processId = self._blockLoginNotifyPid)
+			
+		if self._blockLogin:
+			command = self.getConfigValue('opsiclientd_notifier', 'block_notifier_command')
+			if command:
+				logger.info("Starting login blocker notifier")
+				self._blockLoginNotifyPid = System.runCommandInSession(
+					command = command,
+					sessionId = None,
+					desktop = 'winlogon',
+					waitForProcessEnding = False)[2]
+			
+			
 	def getNotificationServer(self):
 		return self._notificationServer
 	
@@ -2311,6 +2329,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		try:
 			self._statusSubject.setMessage( _("Writing log to service") )
 			
+			if not self._configService:
+				raise Exception("Not connected to config service")
 			f = open(self._config['global']['log_file'])
 			data = f.read()
 			f.close()
@@ -2432,8 +2452,8 @@ class Opsiclientd(EventListener, threading.Thread):
 						args['cacheMaxBandwidth'] = int(value)
 					elif (key == 'requires_cached_products'):
 						args['requiresCachedProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
-					elif (key == 'cache_config'):
-						args['cacheConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'sync_config'):
+						args['syncConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'use_cached_config'):
 						args['useCachedConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'update_action_processor'):
@@ -2516,6 +2536,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.comment("Working directory: %s" % os.getcwd())
 			logger.notice("Using host id '%s'" % self._config['global']['host_id'])
 			
+			self.setBlockLogin(True)
+			
 			self._clientIdSubject.setMessage(self._config['global']['host_id'])
 			self._opsiclientdInfoSubject.setMessage("opsiclientd %s" % __version__)
 			self.setActionProcessorInfo()
@@ -2567,8 +2589,8 @@ class Opsiclientd(EventListener, threading.Thread):
 									self._detailSubjectProxy,
 									self._currentProgressSubjectProxy,
 									self._overallProgressSubjectProxy ] )
-				logger.setLogFormat('[%l] [%D] [notification server]  %M  (%F|%N)', object=self._notificationServer)
-				logger.setLogFormat('[%l] [%D] [notification server]  %M  (%F|%N)', object=self._notificationServer.getObserver())
+				logger.setLogFormat('[%l] [%D] [notification server]   %M     (%F|%N)', object=self._notificationServer)
+				logger.setLogFormat('[%l] [%D] [notification server]   %M     (%F|%N)', object=self._notificationServer.getObserver())
 				self._notificationServer.start()
 				logger.notice("Notification server started")
 			except Exception, e:
@@ -2589,7 +2611,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			time.sleep(5)
 			if not self._processingEvent:
 				logger.notice("No events processing, unblocking login")
-				self._blockLogin = False
+				self.setBlockLogin(False)
 			
 			# TODO: passive wait?
 			while self._running:
@@ -2599,7 +2621,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			
 		except Exception, e:
 			logger.logException(e)
-			self._blockLogin = False
+			self.setBlockLogin(False)
 		
 		self._running = False
 		
@@ -2795,7 +2817,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				return self._blockLogin
 			
 			elif (method == 'setBlockLogin'):
-				self._blockLogin = bool(params[0])
+				self.setBlockLogin(bool(params[0]))
 				logger.notice("rpc setBlockLogin: blockLogin set to '%s'" % self._blockLogin)
 				if self._blockLogin:
 					return "Login blocker is on"
@@ -3048,14 +3070,14 @@ class OpsiclientdNT(Opsiclientd):
 			else:
 				logger.notice("Start processing action requests")
 				
-				if not event.useCachedConfig and event.cacheConfig:
-					logger.notice("Caching config for products: %s" % productIds)
+				if not event.useCachedConfig and event.syncConfig:
+					logger.notice("Syncing config (products: %s)" % productIds)
 					self._cacheService.init()
-					self._statusSubject.setMessage( _("Caching config") )
+					self._statusSubject.setMessage( _("Syncing config") )
 					self._cacheService.setCurrentConfigProgressObserver(self._currentProgressSubjectProxy)
 					self._cacheService.setOverallConfigProgressObserver(self._overallProgressSubjectProxy)
-					self._cacheService.cacheConfig(productIds = productIds, waitForEnding = True)
-					self._statusSubject.setMessage( _("Config cached") )
+					self._cacheService.syncConfig(productIds = productIds, waitForEnding = True)
+					self._statusSubject.setMessage( _("Config synced") )
 					self._currentProgressSubjectProxy.setState(0)
 					self._overallProgressSubjectProxy.setState(0)
 					
@@ -3204,8 +3226,8 @@ class OpsiclientdNT5(OpsiclientdNT):
 		
 		depotShareMounted = False
 		userCreated = False
-		username = 'pcpatch'
-		password = Tools.randomString(16)
+		username = self.getConfigValue('action_processor', 'run_as_user')
+		password = '$!?' + Tools.randomString(16) + '§/%'
 		imp = None
 		try:
 			logger.notice("Creating local user '%s'" % username)
@@ -3218,14 +3240,14 @@ class OpsiclientdNT5(OpsiclientdNT):
 			imp = System.Impersonate(username = username, password = password, desktop = actionProcessorDesktop)
 			imp.start(logonType = 'INTERACTIVE', newDesktop = True)
 			
-			if (self._config['depot_server']['url'].split('/')[2] != 'localhost'):
+			if self.getConfigValue('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost'):
 				logger.notice("Mounting depot share")
-				self._statusSubject.setMessage( _("Mounting depot share %s" % self._config['depot_server']['url']) )
+				self._statusSubject.setMessage( _("Mounting depot share %s" % self.getConfigValue('depot_server', 'url')) )
 				
 				encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
 				pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
 				
-				System.mount(self._config['depot_server']['url'], self._config['depot_server']['drive'], username="pcpatch", password=pcpatchPassword)
+				System.mount(self.getConfigValue('depot_server', 'url'), self.getConfigValue('depot_server', 'drive'), username="pcpatch", password=pcpatchPassword)
 				depotShareMounted = True
 				
 				if event.updateActionProcessor:
@@ -3268,7 +3290,7 @@ class OpsiclientdNT5(OpsiclientdNT):
 		finally:
 			if depotShareMounted:
 				logger.notice("Unmounting depot share")
-				System.umount(self._config['depot_server']['drive'])
+				System.umount(self.getConfigValue('depot_server', 'drive'))
 			if imp:
 				imp.end()
 			if userCreated:
@@ -3293,14 +3315,14 @@ class OpsiclientdNT6(OpsiclientdNT):
 		
 		depotShareMounted = False
 		try:
-			if (self._config['depot_server']['url'].split('/')[2] != 'localhost'):
+			if self.getConfigValue('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost'):
 				logger.notice("Mounting depot share")
-				self._statusSubject.setMessage( _("Mounting depot share %s" % self._config['depot_server']['url']) )
+				self._statusSubject.setMessage( _("Mounting depot share %s" % self.getConfigValue('depot_server', 'url')) )
 				
 				encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
 				pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
 				
-				System.mount(self._config['depot_server']['url'], self._config['depot_server']['drive'], username="pcpatch", password=pcpatchPassword)
+				System.mount(self.getConfigValue('depot_server', 'url'), self.getConfigValue('depot_server', 'drive'), username="pcpatch", password=pcpatchPassword)
 				depotShareMounted = True
 				
 				if event.updateActionProcessor:
@@ -3322,7 +3344,7 @@ class OpsiclientdNT6(OpsiclientdNT):
 		finally:
 			if depotShareMounted:
 				logger.notice("Unmounting depot share")
-				System.umount(self._config['depot_server']['drive'])
+				System.umount(self.getConfigValue('depot_server', 'drive'))
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          OPSICLIENTD NT7                                          -
@@ -3340,9 +3362,12 @@ class OpsiclientdNT7(OpsiclientdNT):
 		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
 			actionProcessorDesktop = 'winlogon'
 		
+		if not (self.getConfigValue('action_processor', 'run_as_user') == 'pcpatch'):
+			logger.warning("Cannot run action processor as user '%s' on nt7, running as 'pcpatch'" % self.getConfigValue('action_processor', 'run_as_user'))
+		
 		pcpatchPassword = ''
 		
-		if (self._config['depot_server']['url'].split('/')[2] != 'localhost') and event.updateActionProcessor:
+		if self.getConfigValue('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost') and event.updateActionProcessor:
 			logger.notice("Updating action processor")
 			imp = None
 			depotShareMounted = False
@@ -3350,13 +3375,13 @@ class OpsiclientdNT7(OpsiclientdNT):
 				imp = System.Impersonate(username = 'pcpatch', password = pcpatchPassword)
 				imp.start(logonType = 'NEW_CREDENTIALS')
 				
-				logger.notice("Mounting depot share %s" %  self._config['depot_server']['url'])
-				self._statusSubject.setMessage(_("Mounting depot share %s") % self._config['depot_server']['url'])
+				logger.notice("Mounting depot share %s" %  self.getConfigValue('depot_server', 'url'))
+				self._statusSubject.setMessage(_("Mounting depot share %s") % self.getConfigValue('depot_server', 'url'))
 				
 				encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
 				pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
 				
-				System.mount(self._config['depot_server']['url'], self._config['depot_server']['drive'], username='pcpatch', password=pcpatchPassword)
+				System.mount(self.getConfigValue('depot_server', 'url'), self.getConfigValue('depot_server', 'drive'), username='pcpatch', password=pcpatchPassword)
 				depotShareMounted = True
 				
 				self.updateActionProcessor()
@@ -3367,7 +3392,7 @@ class OpsiclientdNT7(OpsiclientdNT):
 			if depotShareMounted:
 				try:
 					logger.notice("Unmounting depot share")
-					System.umount(self._config['depot_server']['drive'])
+					System.umount(self.getConfigValue('depot_server', 'drive'))
 				except:
 					pass
 			if imp:
@@ -3379,7 +3404,7 @@ class OpsiclientdNT7(OpsiclientdNT):
 		command = '%system.program_files_dir%\\opsi.org\\preloginloader\\action_processor_starter.exe ' \
 			+ '"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
 			+ '"%global.log_file%" "%global.log_level%" ' \
-			+ '"' + self._config['depot_server']['url'] + '" "' + self._config['depot_server']['drive'] + '" ' \
+			+ '"' + self.getConfigValue('depot_server', 'url') + '" "' + self.getConfigValue('depot_server', 'drive') + '" ' \
 			+ '"pcpatch" "' + pcpatchPassword + '" ' \
 			+ '"' + actionProcessorDesktop + '" "' + self.fillPlaceholders(event.actionProcessorCommand).replace('"', '\\"') + '"'
 		command = self.fillPlaceholders(command)
@@ -3534,6 +3559,7 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			"""
 			Gets called from windows to start service
 			"""
+			startTime = time.time()
 			logger.debug("OpsiclientdServiceFramework SvcDoRun")
 			# Write to event log
 			self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
@@ -3563,6 +3589,8 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			opsiclientd.start()
 			# Write to event log
 			self.ReportServiceStatus(win32service.SERVICE_RUNNING)
+			
+			logger.debug("Took %0.2f seconds to report service running status" % (time.time() - startTime))
 			
 			# Wait for stop event
 			self._stopEvent.wait()

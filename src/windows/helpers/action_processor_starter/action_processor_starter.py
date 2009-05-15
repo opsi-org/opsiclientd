@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2'
+__version__ = '0.2.1'
 
 # Imports
 import sys, os
@@ -56,7 +56,7 @@ logger.setFileFormat('[%l] [%D] [' + os.path.basename(sys.argv[0]) + ']  %M  (%F
 
 logger.confidential("Called with arguments: %s" % ', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, username, password, actionProcessorCommand)) )
 
-be = JSONRPCBackend(username = hostId, password = hostKey, address = 'https://localhost:%s/rpc' % controlServerPort)
+be = JSONRPCBackend(username = hostId, password = hostKey, address = 'https://localhost:%s/opsiclientd' % controlServerPort)
 
 imp = None
 depotShareMounted = False
