@@ -434,8 +434,10 @@ class OpsiDialogWindow(SubjectsObserver):
 		self.setWindowAlpha(self.alpha)
 		self.alpha += 25
 		if (self.alpha > 255):
+			self.alpha = 255
+			self.setWindowAlpha(self.alpha)
 			timer.kill_timer(id)
-	
+		
 	def fadeout(self):
 		self.setWindowAlpha(self.alpha)
 		self.alpha -= 25
