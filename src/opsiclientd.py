@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.5.6.6'
+__version__ = '0.5.6.9'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -2107,23 +2107,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	
 	def setBlockLogin(self, blockLogin):
 		self._blockLogin = bool(blockLogin)
-		if hasattr(self, '_blockLoginNotifyPid') and self._blockLoginNotifyPid:
-			logger.info("Terminating login blocker notifier (pid: %s)" % self._blockLoginNotifyPid)
-			#self.closeProcessWindows(self._blockLoginNotifyPid)
-			#time.sleep(3)
-			System.terminateProcess(processId = self._blockLoginNotifyPid)
-			
-		if self._blockLogin:
-			command = self.getConfigValue('opsiclientd_notifier', 'block_notifier_command')
-			if command:
-				logger.info("Starting login blocker notifier")
-				self._blockLoginNotifyPid = System.runCommandInSession(
-					command = command,
-					sessionId = None,
-					desktop = 'winlogon',
-					waitForProcessEnding = False)[2]
-			
-			
+		
 	def getNotificationServer(self):
 		return self._notificationServer
 	
@@ -2512,12 +2496,30 @@ class Opsiclientd(EventListener, threading.Thread):
 			timeout = None
 		class WaitForGUI(EventListener):
 			def __init__(self):
+				self._waitApp = self.getConfigValue('global', 'wait_for_gui_application')
+				self._waitAppPid = None
+				if self._waitApp:
+					logger.info("Starting wait for GUI app")
+					try:
+						self._waitAppPid = System.runCommandInSession(
+							command = self._waitApp,
+							sessionId = None,
+							desktop = 'winlogon',
+							waitForProcessEnding = False)[2]
+					except Exception, e:
+						logger.error("Failed to start wait for GUI app: %s" % e)
 				self._guiStarted = threading.Event()
 				event = GUIStartupEvent("wait_for_gui")
 				event.addEventListener(self)
 				event.start()
 			
 			def processEvent(self, event):
+				if self._waitAppPid:
+					try:
+						logger.info("Terminating wait for GUI app: %s" % e)
+						System.terminateProcess(processId = self._waitAppPid)
+					except Exception, e:
+						logger.warning("Failed to terminate wait for GUI app: %s" % e)
 				self._guiStarted.set()
 				
 			def wait(self, timeout=None):
@@ -2626,6 +2628,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._running = False
 		
 	def stop(self):
+		logger.notice("opsiclientd is going down")
+		self.setBlockLogin(False)
+		
 		# Stop cache service
 		if self._cacheService:
 			self._cacheService.stop()
