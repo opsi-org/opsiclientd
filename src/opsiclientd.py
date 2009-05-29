@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.5.6.9'
+__version__ = '0.5.7'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -243,7 +243,7 @@ class Event(threading.Thread):
 					logger.debug("Waiting %d seconds before firing event '%s'" % (self.notificationDelay, self))
 					time.sleep(self.notificationDelay)
 				self.fire()
-			logger.info("Event '%s' deactivated" % self)
+			logger.info("Event '%s' now deactivated after %d occurrences" % (self, self._occured))
 		except Exception, e:
 			logger.error("Failure in event '%s': %s" % (self, e))
 			logger.logException(e)
@@ -360,8 +360,8 @@ class GUIStartupEvent(Event):
 					import wmi, pythoncom
 					break
 				except Exception, e:
-					logger.warning("Failed to import: %s, retrying in 5 seconds" % e)
-					sleep(5)
+					logger.warning("Failed to import: %s, retrying in 2 seconds" % e)
+					sleep(2)
 			pythoncom.CoInitialize()
 			try:
 				c = wmi.WMI()
@@ -1467,6 +1467,9 @@ class CacheService(threading.Thread):
 						if not modules.get('valid'):
 							raise Exception("Cannot sync config: modules file invalid")
 						
+						if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
+							raise Exception("Cannot sync config: modules file signature expired")
+						
 						logger.info("Verifying modules file signature")
 						import base64, md5, twisted.conch.ssh.keys
 						publicKey = twisted.conch.ssh.keys.getPublicKeyObject(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP'))
@@ -1481,8 +1484,7 @@ class CacheService(threading.Thread):
 							if (val == True):  val = 'yes'
 							data += module.lower().strip() + ' = ' + val + '\r\n'
 						if not bool(publicKey.verify(md5.new(data).digest(), [ long(modules['signature']) ])):
-							logger.error("Cannot sync config: modules file invalid")
-							continue
+							raise Exception("Cannot sync config: modules file invalid")
 						logger.info("Modules file signature verified")
 						
 						self._state['config'] = {
@@ -1531,6 +1533,9 @@ class CacheService(threading.Thread):
 						if not modules.get('valid'):
 							raise Exception("Cannot cache config: modules file invalid")
 						
+						if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
+							raise Exception("Cannot sync config: modules file signature expired")
+						
 						logger.info("Verifying modules file signature")
 						import base64, md5, twisted.conch.ssh.keys
 						publicKey = twisted.conch.ssh.keys.getPublicKeyObject(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP'))
@@ -1545,8 +1550,7 @@ class CacheService(threading.Thread):
 							if (val == True):  val = 'yes'
 							data += module.lower().strip() + ' = ' + val + '\r\n'
 						if not bool(publicKey.verify(md5.new(data).digest(), [ long(modules['signature']) ])):
-							logger.error("Cannot cache config: modules file invalid")
-							continue
+							raise Exception("Cannot cache config: modules file invalid")
 						logger.info("Modules file signature verified")
 						
 						logger.info("Synchronizing %d product(s):" % len(self._productIds))
@@ -2311,14 +2315,14 @@ class Opsiclientd(EventListener, threading.Thread):
 	def writeLogToService(self):
 		logger.notice("Writing log to service")
 		try:
-			self._statusSubject.setMessage( _("Writing log to service") )
-			
 			if not self._configService:
 				raise Exception("Not connected to config service")
+			self._statusSubject.setMessage( _("Writing log to service") )
 			f = open(self._config['global']['log_file'])
 			data = f.read()
+			data += "-------------------- submitted part of log file ends here, see the rest of log file on client --------------------\n"
 			f.close()
-			# Do not jsonrpc request
+			# Do not log jsonrpc request
 			logger.setFileLevel(LOG_WARNING)
 			self._configService.writeLog('clientconnect', data, self._config['global']['host_id'])
 			logger.setFileLevel(self._config['global']['log_level'])
@@ -2483,6 +2487,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		for event in self._events.values():
 			event.addEventListener(self)
 			event.start()
+			logger.notice("Event '%s' started" % event)
 	
 	def getEvents(self, eventType=''):
 		events = []
@@ -2495,8 +2500,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not timeout:
 			timeout = None
 		class WaitForGUI(EventListener):
-			def __init__(self):
-				self._waitApp = self.getConfigValue('global', 'wait_for_gui_application')
+			def __init__(self, waitApp = None):
+				self._waitApp = waitApp
 				self._waitAppPid = None
 				if self._waitApp:
 					logger.info("Starting wait for GUI app")
@@ -2516,7 +2521,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			def processEvent(self, event):
 				if self._waitAppPid:
 					try:
-						logger.info("Terminating wait for GUI app: %s" % e)
+						logger.info("Terminating wait for GUI app (pid %s)" % self._waitAppPid)
 						System.terminateProcess(processId = self._waitAppPid)
 					except Exception, e:
 						logger.warning("Failed to terminate wait for GUI app: %s" % e)
@@ -2524,8 +2529,10 @@ class Opsiclientd(EventListener, threading.Thread):
 				
 			def wait(self, timeout=None):
 				self._guiStarted.wait(timeout)
+				if not self._guiStarted.isSet():
+					logger.warning("Timed out after %d seconds while waiting for GUI" % timeout)
 				
-		WaitForGUI().wait(timeout)
+		WaitForGUI(self.getConfigValue('global', 'wait_for_gui_application')).wait(timeout)
 		
 	def run(self):
 		self._running = True
@@ -2708,9 +2715,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			
 			logger.debug("Creating ServiceConnectionThread")
 			serviceConnectionThread = ServiceConnectionThread(
-						configServiceUrl    = self._config['config_service']['url'],
-						username            = self._config['global']['host_id'],
-						password            = self._config['global']['opsi_host_key'],
+						configServiceUrl    = self.getConfigValue('config_service', 'url'),
+						username            = self.getConfigValue('global', 'host_id'),
+						password            = self.getConfigValue('global', 'opsi_host_key'),
 						notificationServer  = self._notificationServer,
 						statusObject        = self._statusSubject )
 			
@@ -2757,13 +2764,48 @@ class Opsiclientd(EventListener, threading.Thread):
 			self._configService = serviceConnectionThread.configService
 			self._config['config_service']['server_id'] = self._configService.getServerId(self._config['global']['host_id'])
 			logger.info("Updated config_service.host_id to '%s'" % self._config['config_service']['server_id'])
+			
+			if self.getConfigValue('config_service', 'url').split('/')[2] not in ('127.0.0.1', 'localhost'):
+				
+				try:
+					modules = self._configService.getOpsiInformation_hash()['modules']
+					if not modules.get('vista'):
+						raise Exception("Vista module currently disabled")
+					
+					if not modules.get('valid'):
+						raise Exception("Modules file invalid")
+					
+					if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
+						raise Exception("Modules file signature expired")
+					
+					logger.info("Verifying modules file signature")
+					import base64, md5, twisted.conch.ssh.keys
+					publicKey = twisted.conch.ssh.keys.getPublicKeyObject(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP'))
+					data = ''
+					mks = modules.keys()
+					mks.sort()
+					for module in mks:
+						if module in ('valid', 'signature'):
+							continue
+						val = modules[module]
+						if (val == False): val = 'no'
+						if (val == True):  val = 'yes'
+						data += module.lower().strip() + ' = ' + val + '\r\n'
+					if not bool(publicKey.verify(md5.new(data).digest(), [ long(modules['signature']) ])):
+						raise Exception("Modules file invalid")
+					logger.info("Modules file signature verified")
+				except Exception, e:
+					logger.critical(e)
+					self.writeLogToService()
+					raise
 		except Exception, e:
+			self._configService = None
 			self._configServiceException = e
 			raise
 		
 	def disconnectConfigServer(self):
-		self._configServiceException = None
 		self._configService = None
+		self._configServiceException = None
 	
 	def getPossibleMethods(self):
 		return self._possibleMethods
