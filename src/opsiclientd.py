@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.5.7'
+__version__ = '0.5.7.4'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
@@ -408,6 +408,7 @@ class CustomEvent(Event):
 			(wmi, pythoncom) = (None, None)
 			while True:
 				try:
+					logger.debug2("import wmi, pythoncom")
 					import wmi, pythoncom
 					break
 				except Exception, e:
@@ -415,18 +416,14 @@ class CustomEvent(Event):
 					sleep(5)
 			pythoncom.CoInitialize()
 			try:
-				while True:
-					try:
-						import wmi
-						break
-					except Exception, e:
-						logger.warning("Failed to import wmi: %s, retrying in 5 seconds" % e)
-						sleep(5)
 				c = wmi.WMI()
 				logger.info("watching for wql: %s" % self.wql)
 				watcher = c.watch_for(raw_wql=self.wql, wmi_class='')
-				self.wqlResult = watcher()
-				logger.info("got wmi object: %s" % self.wqlResult)
+				self.wqlResult = watcher(timeout_ms = -1)
+				logger.debug2("watcher done")
+				logger.info("got wmi object: %s %s" % (self.wqlResult.event_type, self.wqlResult.timestamp) )
+				for p in self.wqlResult.properties:
+					logger.info("     %s: %s" % (p, getattr(self.wqlResult, p)))
 			except Exception, e:
 				pythoncom.CoUninitialize()
 				logger.error("Failed to activate event '%s': %s" % (self, e))
@@ -436,7 +433,7 @@ class CustomEvent(Event):
 			# Not yet supported
 			e = threading.Event()
 			e.wait()
-	
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          EVENT LISTENER                                           -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1793,6 +1790,11 @@ class ServiceConnectionThread(KillableThread):
 				except Exception, e:
 					self._statusSubject.setMessage("Failed to connect to config server '%s': %s" % (self._configServiceUrl, e))
 					logger.error("Failed to connect to config server '%s': %s" % (self._configServiceUrl, e))
+					fqdn = System.getFQDN().lower()
+					if (self._username != fqdn) and (fqdn.count('.') >= 2):
+						logger.notice("Connect failed with username '%s', got fqdn '%s' from os, trying fqdn" \
+								% (self._username, fqdn))
+						self._username = fqdn
 					time.sleep(3)
 			
 		except Exception, e:
@@ -1956,17 +1958,21 @@ class EventProcessingThread(KillableThread):
 				self.opsiclientd.processProductActionRequests(self.event)
 			
 			finally:
-				self.opsiclientd.getEventSubject().setMessage("")
-				self.opsiclientd.processShutdownRequests()
-				if self.event.writeLogToService:
-					self.opsiclientd.writeLogToService()
-				# Disconnect has to be called, even if connect failed!
-				self.opsiclientd.disconnectConfigServer()
-				if notifierApplicationPid:
-					self.stopNotifierApplication(notifierApplicationPid)
+				try:
+					self.opsiclientd.getEventSubject().setMessage("")
+					self.opsiclientd.processShutdownRequests()
+					if self.event.writeLogToService:
+						self.opsiclientd.writeLogToService()
+					# Disconnect has to be called, even if connect failed!
+					self.opsiclientd.disconnectConfigServer()
+					if notifierApplicationPid:
+						self.stopNotifierApplication(notifierApplicationPid)
+				except Exception, e:
+					logger.logException(e)
 				if (not self.opsiclientd._rebootRequested and not self.opsiclientd._shutdownRequested) \
 				    or (sys.getwindowsversion()[0] < 6):
 					# Windows NT < 6 can't shutdown while pgina.dll is blocking login!
+					# On other systems we keep blocking until shutdown is done
 					self.opsiclientd.setBlockLogin(False)
 				if self.event.useCachedConfig:
 					# Set config service url back to previous url
@@ -2247,7 +2253,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				for (option, value) in value.items():
 					if (section == 'config_service') and option in ('host', 'port'):
 						continue
-					if (section == 'global') and option in ('config_file', 'host_id'):
+					if (section == 'global') and option in ('config_file'):
 						# Do not store these options
 						continue
 					value = str(value)
@@ -2764,6 +2770,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			self._configService = serviceConnectionThread.configService
 			self._config['config_service']['server_id'] = self._configService.getServerId(self._config['global']['host_id'])
 			logger.info("Updated config_service.host_id to '%s'" % self._config['config_service']['server_id'])
+			self.updateConfigFile()
 			
 			if self.getConfigValue('config_service', 'url').split('/')[2] not in ('127.0.0.1', 'localhost'):
 				
