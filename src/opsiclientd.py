@@ -32,10 +32,10 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.5.7.4'
+__version__ = '0.5.8'
 
 # Imports
-import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp
+import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp, codecs
 import copy as pycopy
 from OpenSSL import SSL
 
@@ -77,9 +77,10 @@ EVENT_TYPE_PRODUCT_SYNC_COMPLETED = 'product sync completed'
 EVENT_TYPE_DAEMON_STARTUP = 'daemon startup'
 EVENT_TYPE_DAEMON_SHUTDOWN = 'daemon shutdown'
 EVENT_TYPE_GUI_STARTUP = 'gui startup'
-EVENT_TYPE_PANIC = 'panic event'
+EVENT_TYPE_PANIC = 'panic'
 EVENT_TYPE_PROCESS_ACTION_REQUESTS = 'process action requests'
 EVENT_TYPE_TIMER = 'timer'
+EVENT_TYPE_USER_LOGIN = 'user login'
 EVENT_TYPE_CUSTOM = 'custom'
 
 # Message translation
@@ -149,7 +150,7 @@ class Event(threading.Thread):
 		threading.Thread.__init__(self)
 		
 		if not type in (EVENT_TYPE_PRODUCT_SYNC_COMPLETED, EVENT_TYPE_DAEMON_STARTUP, EVENT_TYPE_DAEMON_SHUTDOWN, EVENT_TYPE_GUI_STARTUP,
-				EVENT_TYPE_TIMER, EVENT_TYPE_PROCESS_ACTION_REQUESTS, EVENT_TYPE_CUSTOM, EVENT_TYPE_PANIC):
+				EVENT_TYPE_TIMER, EVENT_TYPE_PROCESS_ACTION_REQUESTS, EVENT_TYPE_USER_LOGIN, EVENT_TYPE_CUSTOM, EVENT_TYPE_PANIC):
 			raise TypeError("Unknown event type '%s'" % type)
 		if not name:
 			raise TypeError("Name not given")
@@ -173,13 +174,15 @@ class Event(threading.Thread):
 		
 		# wql
 		self.wql = str(self.__dict__.get('wql', ''))
-		self.wqlResult = None
+		self.wqlResult = {}
 		#if self._type is EVENT_TYPE_CUSTOM and not self.wql:
 		#	raise Exception("Custom event needs wql param")
 		if (not self._type is EVENT_TYPE_CUSTOM) and self.wql:
 			logger.error("Ignoring wql param because event type is '%s'" % self._type)
 			self.wql = ''
 		
+		# maximum number of events of this type which are allowed to be processed concurrently (0 = unlimited)
+		self.maxConcurrent = bool(self.__dict__.get('maxConcurrent', 1))
 		self.userCancelable = bool(self.__dict__.get('userCancelable', False))
 		self.blockLogin = bool(self.__dict__.get('blockLogin', False))
 		self.logoffCurrentUser = bool(self.__dict__.get('logoffCurrentUser', False))
@@ -226,6 +229,9 @@ class Event(threading.Thread):
 	
 	def getName(self):
 		return self._name
+	
+	def getActionProcessorCommand(self):
+		return self.actionProcessorCommand
 	
 	def activate(self):
 		return
@@ -340,9 +346,58 @@ class DaemonShutdownEvent(Event):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         GUI STARTUP EVENT                                         -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class GUIStartupEvent(Event):
+class WMIEvent(Event):
+	def __init__(self, type, name, **kwargs):
+		Event.__init__(self, type, name, **kwargs)
+		self.wql = None
+		self.processName = None
+	
+	def activate(self):
+		if not self.wql:
+			logger.error("Cannot activate wmi event without wql set")
+			e = threading.Event()
+			e.wait()
+		
+		(wmi, pythoncom) = (None, None)
+		while True:
+			try:
+				import wmi, pythoncom
+				break
+			except Exception, e:
+				logger.warning("Failed to import: %s, retrying in 2 seconds" % e)
+				time.sleep(2)
+		pythoncom.CoInitialize()
+		try:
+			c = wmi.WMI(privileges=["Security"])
+			watcher = c.watch_for(raw_wql=self.wql, wmi_class='')
+			if self.processName and System.getPid(self.processName):
+				logger.info("Process '%s' is running on activation of event %s => firing" % (self.processName, self))
+				return
+			logger.info("watching for wql: %s" % self.wql)
+			self.wqlResult = {}
+			wqlResult = watcher(timeout_ms = -1)
+			logger.info("got wmi object: %s" % wqlResult)
+			for p in wqlResult.properties:
+				self.wqlResult[p] = getattr(wqlResult, p)
+				logger.info("     %s: %s" % (p, getattr(wqlResult, p)))
+		except Exception, e:
+			logger.error("Failed to activate event '%s': %s" % (self, e))
+			pythoncom.CoUninitialize()
+			raise
+		pythoncom.CoUninitialize()
+	
+	def getActionProcessorCommand(self):
+		actionProcessorCommand = self.actionProcessorCommand
+		for (key, value) in self.wqlResult.items():
+			actionProcessorCommand = actionProcessorCommand.replace('%' + 'event.' + key.lower() + '%', value)
+		return actionProcessorCommand
+	
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                         GUI STARTUP EVENT                                         -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class GUIStartupEvent(WMIEvent):
 	def __init__(self, name, **kwargs):
-		Event.__init__(self, EVENT_TYPE_GUI_STARTUP, name, **kwargs)
+		WMIEvent.__init__(self, EVENT_TYPE_GUI_STARTUP, name, **kwargs)
 		self.maxRepetitions = 0
 		self.processName = None
 		if   (os.name == 'nt') and (sys.getwindowsversion()[0] == 5):
@@ -351,37 +406,47 @@ class GUIStartupEvent(Event):
 			self.processName = 'LogonUI.exe'
 		if self.processName:
 			self.wql = "SELECT * FROM __InstanceCreationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_Process' AND TargetInstance.Name = '%s'" % self.processName
-		
-	def activate(self):
-		if self.wql:
-			(wmi, pythoncom) = (None, None)
-			while True:
-				try:
-					import wmi, pythoncom
-					break
-				except Exception, e:
-					logger.warning("Failed to import: %s, retrying in 2 seconds" % e)
-					sleep(2)
-			pythoncom.CoInitialize()
-			try:
-				c = wmi.WMI()
-				watcher = c.watch_for(raw_wql=self.wql, wmi_class='')
-				if self.processName and System.getPid(self.processName):
-					logger.info("Process '%s' is running on activation of event %s => firing" % (self.processName, self))
-					return
-				logger.info("watching for wql: %s" % self.wql)
-				self.wqlResult = watcher()
-				logger.info("got wmi object: %s" % self.wqlResult)
-			except Exception, e:
-				logger.error("Failed to activate event '%s': %s" % (self, e))
-				pythoncom.CoUninitialize()
-				raise
-			pythoncom.CoUninitialize()
-		else:
-			# Not yet supported
-			return
-		
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                          USER LOGIN EVENT                                         -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class UserLoginEvent(WMIEvent):
+	def __init__(self, name, **kwargs):
+		WMIEvent.__init__(self, EVENT_TYPE_USER_LOGIN, name, **kwargs)
+		self.blockLogin = False
+		self.logoffCurrentUser = False
+		self.lockWorkstation = False
+		self.username = None
+		if (os.name == 'nt'):
+			self.wql = "SELECT * FROM __InstanceCreationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_NTLogEvent' AND TargetInstance.Logfile = 'Security' AND TargetInstance.EventCode = 528"
 	
+	def activate(self):
+		WMIEvent.activate(self)
+		isUser = False
+		for attr in self.wqlResult.get('InsertionStrings', []):
+			if (attr.strip() == 'User32'):
+				isUser = True
+				break
+		if not isUser:
+			logger.notice("Not a user login, reactivating")
+			self.username = None
+			return self.activate()
+		
+		self.username = self.wqlResult.get('User')
+		if not self.username:
+			logger.notice("No username found, reactivating")
+			self.username = None
+			return self.activate()
+		
+		logger.notice("User '%s' logged in" % self.username)
+		
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                           CUSTOM EVENT                                            -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class CustomEvent(WMIEvent):
+	def __init__(self, name, **kwargs):
+		WMIEvent.__init__(self, EVENT_TYPE_CUSTOM, name, **kwargs)
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                   PROCESS ACTION REQUESTS EVENT                                   -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -395,44 +460,6 @@ class ProcessActionRequestEvent(Event):
 class TimerEvent(Event):
 	def __init__(self, name, **kwargs):
 		Event.__init__(self, EVENT_TYPE_TIMER, name, **kwargs)
-	
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                           CUSTOM EVENT                                            -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class CustomEvent(Event):
-	def __init__(self, name, **kwargs):
-		Event.__init__(self, EVENT_TYPE_CUSTOM, name, **kwargs)
-	
-	def activate(self):
-		if self.wql:
-			(wmi, pythoncom) = (None, None)
-			while True:
-				try:
-					logger.debug2("import wmi, pythoncom")
-					import wmi, pythoncom
-					break
-				except Exception, e:
-					logger.warning("Failed to import: %s, retrying in 5 seconds" % e)
-					sleep(5)
-			pythoncom.CoInitialize()
-			try:
-				c = wmi.WMI()
-				logger.info("watching for wql: %s" % self.wql)
-				watcher = c.watch_for(raw_wql=self.wql, wmi_class='')
-				self.wqlResult = watcher(timeout_ms = -1)
-				logger.debug2("watcher done")
-				logger.info("got wmi object: %s %s" % (self.wqlResult.event_type, self.wqlResult.timestamp) )
-				for p in self.wqlResult.properties:
-					logger.info("     %s: %s" % (p, getattr(self.wqlResult, p)))
-			except Exception, e:
-				pythoncom.CoUninitialize()
-				logger.error("Failed to activate event '%s': %s" % (self, e))
-				raise
-			pythoncom.CoUninitialize()
-		else:
-			# Not yet supported
-			e = threading.Event()
-			e.wait()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          EVENT LISTENER                                           -
@@ -2020,7 +2047,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._running = False
 		self._configService = None
 		self._configServiceException = None
-		self._processingEvent = False
+		self._processingEvents = []
+		self._processingEventsLock = threading.Lock()
 		self._blockLogin = True
 		self._currentActiveDesktopName = None
 		self._events = {}
@@ -2048,7 +2076,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				'config_file':            'opsiclientd.conf',
 				'log_file':               'opsiclientd.log',
 				'log_level':              LOG_NOTICE,
-				'host_id':                System.getFQDN(),
+				'host_id':                System.getFQDN().lower(),
 				'opsi_host_key':          '',
 				'wait_before_reboot':     3,
 				'wait_before_shutdown':   3,
@@ -2165,6 +2193,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			if (len(value) != 32):
 				raise ValueError("Bad opsi host key, length != 32")
 			logger.addConfidentialString(value)
+		
+		if option in ('server_id', 'depot_id', 'host_id'):
+			value = value.lower()
 		
 		if section in ('system'):
 			return
@@ -2324,13 +2355,13 @@ class Opsiclientd(EventListener, threading.Thread):
 			if not self._configService:
 				raise Exception("Not connected to config service")
 			self._statusSubject.setMessage( _("Writing log to service") )
-			f = open(self._config['global']['log_file'])
+			f = codecs.open(self._config['global']['log_file'], 'r', 'utf-8', 'replace')
 			data = f.read()
-			data += "-------------------- submitted part of log file ends here, see the rest of log file on client --------------------\n"
+			data += u"-------------------- submitted part of log file ends here, see the rest of log file on client --------------------\n"
 			f.close()
 			# Do not log jsonrpc request
 			logger.setFileLevel(LOG_WARNING)
-			self._configService.writeLog('clientconnect', data, self._config['global']['host_id'])
+			self._configService.writeLog('clientconnect', data.replace(u'\ufffd', u'?').encode('utf-8'), self._config['global']['host_id'])
 			logger.setFileLevel(self._config['global']['log_level'])
 		except Exception, e:
 			logger.error("Failed to write log to service: %s" % e)
@@ -2426,6 +2457,8 @@ class Opsiclientd(EventListener, threading.Thread):
 						args['warningTime'] = int(value)
 					elif (key == 'wql'):
 						args['wql'] = value
+					elif (key == 'max_concurrent'):
+						args['maxConcurrent'] = int(value)
 					elif (key == 'user_cancelable'):
 						args['userCancelable'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'block_login'):
@@ -2479,6 +2512,8 @@ class Opsiclientd(EventListener, threading.Thread):
 					self._events[eventName] = DaemonShutdownEvent(eventName, **args)
 				elif (event['args']['type'] == EVENT_TYPE_GUI_STARTUP):
 					self._events[eventName] = GUIStartupEvent(eventName, **args)
+				elif (event['args']['type'] == EVENT_TYPE_USER_LOGIN):
+					self._events[eventName] = UserLoginEvent(eventName, **args)
 				elif (event['args']['type'] == EVENT_TYPE_TIMER):
 					self._events[eventName] = TimerEvent(eventName, **args)
 				elif (event['args']['type'] == EVENT_TYPE_CUSTOM):
@@ -2624,7 +2659,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			
 			# Wait some more seconds for events to fire
 			time.sleep(5)
-			if not self._processingEvent:
+			if not self._processingEvents:
 				logger.notice("No events processing, unblocking login")
 				self.setBlockLogin(False)
 			
@@ -2688,20 +2723,46 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._actionProcessorInfoSubject.setMessage("")
 	
 	def processEvent(self, event):
+		# Always process events of type EVENT_TYPE_PANIC
+		if self._processingEvents and (event.getType() != EVENT_TYPE_PANIC):
+			if (event.maxConcurrent == 1):
+				# Event does not allow to process multiple events of the same type at the same time
+				logger.error("Not processing event %s: Already processing event and no concurrent events of this type allowed" % event)
+				return
+			
+			processingEventsOfSameType = 0
+			processingEventsOfOtherType = 0
+			for ev in self._processingEvents:
+				logger.info("Currently processing event: %s" % ev)
+				if (ev.getType() == event.getType()):
+					processingEventsOfSameType += 1
+				else:
+					processingEventsOfOtherType += 1
+			
+			if (processingEventsOfOtherType > 0):
+				logger.error("Not processing event %s: Already processing event of an other type" % event)
+				return
+			
+			if (event.maxConcurrent != 0) and (processingEventsOfSameType >= event.maxConcurrent):
+				logger.error("Not processing event %s: Already processing %d event(s) of the same type" % processingEventsOfSameType)
+				return
+		
 		logger.notice("Processing event %s" % event)
 		self._statusSubject.setMessage( _("Processing event %s") % event )
 		
-		if self._processingEvent and (event._type != EVENT_TYPE_PANIC):
-			logger.error("Already processing event")
-			return
-		self._processingEvent = True
+		self._processingEventsLock.acquire()
+		self._processingEvents.append(event)
+		self._processingEventsLock.release()
 		
-		eventProcessingThread = EventProcessingThread(self, event)
-		eventProcessingThread.start()
-		eventProcessingThread.join()
-		logger.notice("Done processing event '%s'" % event)
-		
-		self._processingEvent = False
+		try:
+			eventProcessingThread = EventProcessingThread(self, event)
+			eventProcessingThread.start()
+			eventProcessingThread.join()
+			logger.notice("Done processing event '%s'" % event)
+		finally:
+			self._processingEventsLock.acquire()
+			self._processingEvents.remove(event)
+			self._processingEventsLock.release()
 	
 	def processProductActionRequests(self, event):
 		logger.error("processProductActionRequests not implemented")
@@ -2765,7 +2826,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				raise Exception("Failed to connect to config service '%s': reason unknown" % self._config['config_service']['url'])
 			
 			if (serviceConnectionThread.getUsername() != self._config['global']['host_id']):
-				self._config['global']['host_id'] = serviceConnectionThread.getUsername()
+				self._config['global']['host_id'] = serviceConnectionThread.getUsername().lower()
 				logger.info("Updated host_id to '%s'" % self._config['global']['host_id'])
 			self._configService = serviceConnectionThread.configService
 			self._config['config_service']['server_id'] = self._configService.getServerId(self._config['global']['host_id'])
@@ -3166,7 +3227,7 @@ class OpsiclientdNT(Opsiclientd):
 					self._currentProgressSubjectProxy.setState(0)
 					self._overallProgressSubjectProxy.setState(0)
 				
-				if event.actionProcessorCommand:
+				if event.getActionProcessorCommand():
 					self._statusSubject.setMessage( _("Starting actions") )
 					self.runProductActions(event)
 					self._statusSubject.setMessage( _("Actions completed") )
@@ -3336,7 +3397,7 @@ class OpsiclientdNT5(OpsiclientdNT):
 						logger.debug("   %s=%s" % (k,v))
 				except Exception, e:
 					logger.error("Failed to set environment: %s" % e)
-			imp.runCommand(command = self.fillPlaceholders(event.actionProcessorCommand), waitForProcessEnding = True)
+			imp.runCommand(command = self.fillPlaceholders(event.getActionProcessorCommand()), waitForProcessEnding = True)
 			
 			logger.notice("Action processor ended")
 			self._statusSubject.setMessage( _("Action processor ended") )
@@ -3390,7 +3451,7 @@ class OpsiclientdNT6(OpsiclientdNT):
 			logger.notice("Starting action processor in session '%s' on desktop '%s'" % (activeSessionId, actionProcessorDesktop))
 			self._statusSubject.setMessage( _("Starting action processor") )
 			
-			System.runCommandInSession(command = self.fillPlaceholders(event.actionProcessorCommand), sessionId = activeSessionId, desktop = actionProcessorDesktop, waitForProcessEnding = True)
+			System.runCommandInSession(command = self.fillPlaceholders(event.getActionProcessorCommand()), sessionId = activeSessionId, desktop = actionProcessorDesktop, waitForProcessEnding = True)
 			
 			logger.notice("Action processor ended")
 			self._statusSubject.setMessage( _("Action processor ended") )
@@ -3460,7 +3521,7 @@ class OpsiclientdNT7(OpsiclientdNT):
 			+ '"%global.log_file%" "%global.log_level%" ' \
 			+ '"' + self.getConfigValue('depot_server', 'url') + '" "' + self.getConfigValue('depot_server', 'drive') + '" ' \
 			+ '"pcpatch" "' + pcpatchPassword + '" ' \
-			+ '"' + actionProcessorDesktop + '" "' + self.fillPlaceholders(event.actionProcessorCommand).replace('"', '\\"') + '"'
+			+ '"' + actionProcessorDesktop + '" "' + self.fillPlaceholders(event.getActionProcessorCommand()).replace('"', '\\"') + '"'
 		command = self.fillPlaceholders(command)
 		
 		System.runCommandInSession(command = command, desktop = actionProcessorDesktop, waitForProcessEnding = True)
