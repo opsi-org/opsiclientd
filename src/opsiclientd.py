@@ -1857,18 +1857,27 @@ class EventProcessingThread(KillableThread):
 		self.waiting = False
 		self.waitCancelled = False
 		
-	def startNotifierApplication(self, command, desktop=''):
+	def startNotifierApplication(self, command, desktop = None):
 		if not command:
 			raise ValueError("No command given")
 		
-		activeSessionId = System.getActiveConsoleSessionId()
+		sessionId = None
+		if isinstance(self.event, UserLoginEvent):
+			userSessionsIds = System.getUserSessionIds(self.event.username)
+			if userSessionsIds:
+				sessionId = userSessionsIds[0]
+		if not sessionId:
+			sessionId = System.getActiveConsoleSessionId()
 		if not desktop or desktop.lower() not in ('winlogon', 'default'):
-			desktop = self.opsiclientd.getCurrentActiveDesktopName()
+			if isinstance(self.event, UserLoginEvent):
+				desktop = 'default'
+			else:
+				desktop = self.opsiclientd.getCurrentActiveDesktopName(sessionId)
 		if not desktop or desktop.lower() not in ('winlogon', 'default'):
 			desktop = 'winlogon'
 		
-		logger.notice("Starting notifier application in session '%s' on desktop '%s'" % (activeSessionId, desktop))
-		processId = System.runCommandInSession(command = command, sessionId = activeSessionId, desktop = desktop, waitForProcessEnding=False)[2]
+		logger.notice("Starting notifier application in session '%s' on desktop '%s'" % (sessionId, desktop))
+		processId = System.runCommandInSession(command = command, sessionId = sessionId, desktop = desktop, waitForProcessEnding=False)[2]
 		time.sleep(3)
 		return processId
 		
@@ -1940,8 +1949,8 @@ class EventProcessingThread(KillableThread):
 					try:
 						if self.event.eventNotifierCommand:
 							notifierApplicationPid = self.startNotifierApplication(
-										command = self.event.eventNotifierCommand,
-										desktop = self.event.eventNotifierDesktop )
+											command = self.event.eventNotifierCommand,
+											desktop = self.event.eventNotifierDesktop )
 							
 						timeout = int(self.event.warningTime)
 						while(timeout > 0) and not self.eventCancelled and not self.waitCancelled:
@@ -2050,7 +2059,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._processingEvents = []
 		self._processingEventsLock = threading.Lock()
 		self._blockLogin = True
-		self._currentActiveDesktopName = None
+		self._currentActiveDesktopName = {}
 		self._events = {}
 		
 		self._statusApplicationProcess = None
@@ -2137,8 +2146,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			{ 'name': 'shutdown',                        'params': [ '*wait' ],                      'availability': ['server'] },
 			{ 'name': 'reboot',                          'params': [ '*wait' ],                      'availability': ['server'] },
 			{ 'name': 'uptime',                          'params': [ ],                              'availability': ['server'] },
-			{ 'name': 'getCurrentActiveDesktopName',     'params': [ ],                              'availability': ['server'] },
-			{ 'name': 'setCurrentActiveDesktopName',     'params': [ 'desktop' ],                    'availability': ['server'] },
+			{ 'name': 'getCurrentActiveDesktopName',     'params': [ '*sessionId' ],                 'availability': ['server'] },
+			{ 'name': 'setCurrentActiveDesktopName',     'params': [ 'sessionId', 'desktop' ],       'availability': ['server'] },
 			{ 'name': 'setConfigValue',                  'params': [ 'section', 'option', 'value' ], 'availability': ['server'] },
 			{ 'name': 'updateConfigFile',                'params': [ ],                              'availability': ['server'] },
 		]
@@ -3020,9 +3029,17 @@ class Opsiclientd(EventListener, threading.Thread):
 				return desktop
 			
 			elif (method == 'setCurrentActiveDesktopName'):
-				self._currentActiveDesktopName = str(params[0])
-				logger.notice("rpc setCurrentActiveDesktopName: current active desktop name set to '%s'" % params[0])
-			
+				if (len(params) < 2):
+					raise ValueError("sessionId or desktop missing")
+				sessionId = str(params[0])
+				desktop = str(params[1])
+				if not sessionId:
+					raise ValueError("No sessionId given")
+				if not desktop:
+					raise ValueError("No desktop given")
+				self._currentActiveDesktopName[sessionId] = desktop
+				logger.notice("rpc setCurrentActiveDesktopName: current active desktop name for session %s set to '%s'" % (sessionId, desktop))
+				
 			elif (method == 'setConfigValue'):
 				if (len(params) < 3):
 					raise ValueError("section, option or value missing")
@@ -3038,13 +3055,16 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.logException(e)
 			raise
 	
-	def getCurrentActiveDesktopName(self):
+	def getCurrentActiveDesktopName(self, sessionId=None):
 		if not (self._config.has_key('opsiclientd_rpc') and self._config['opsiclientd_rpc'].has_key('command')):
 			raise Exception("opsiclientd_rpc command not defined")
-		rpc = 'setCurrentActiveDesktopName(System.getActiveDesktopName())'
+		
+		if sessionId is None:
+			sessionId = System.getActiveConsoleSessionId()
+		rpc = 'setCurrentActiveDesktopName("%s", System.getActiveDesktopName())' % sessionId
 		cmd = '%s "%s"' % (self.getConfigValue('opsiclientd_rpc', 'command'), rpc)
-		System.runCommandInSession(command = cmd, waitForProcessEnding = True)
-		return self._currentActiveDesktopName
+		System.runCommandInSession(command = cmd, sessionId = System.getActiveConsoleSessionId(), waitForProcessEnding = True)
+		return self._currentActiveDesktopName.get(sessionId)
 	
 	def closeProcessWindows(self, processId):
 		if not (self._config.has_key('opsiclientd_rpc') and self._config['opsiclientd_rpc'].has_key('command')):
