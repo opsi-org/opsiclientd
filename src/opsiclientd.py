@@ -1857,19 +1857,21 @@ class EventProcessingThread(KillableThread):
 		self.waiting = False
 		self.waitCancelled = False
 		
+		self.isLoginEvent = isinstance(self.event, UserLoginEvent)
+		
 	def startNotifierApplication(self, command, desktop = None):
 		if not command:
 			raise ValueError("No command given")
 		
 		sessionId = None
-		if isinstance(self.event, UserLoginEvent):
+		if self.isLoginEvent:
 			userSessionsIds = System.getUserSessionIds(self.event.username)
 			if userSessionsIds:
 				sessionId = userSessionsIds[0]
 		if not sessionId:
 			sessionId = System.getActiveConsoleSessionId()
 		if not desktop or desktop.lower() not in ('winlogon', 'default'):
-			if isinstance(self.event, UserLoginEvent):
+			if self.isLoginEvent:
 				desktop = 'default'
 			else:
 				desktop = self.opsiclientd.getCurrentActiveDesktopName(sessionId)
