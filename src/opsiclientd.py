@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.5.8'
+__version__ = '0.5.8.1'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp, codecs
@@ -142,6 +142,43 @@ class CanceledByUserError(opsiclientdError):
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 '''
 
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                        EVENTOCCURENCE                                             -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class EventOccurence(threading.Thread):
+	def __init__(self, event):
+		threading.Thread.__init__(self)
+		self.event = event.copy()
+		logger.setLogFormat('[%l] [%D] [event ' + str(self.event._name) + ']   %M  (%F|%N)', object=self)
+		
+	def run(self):
+		logger.info("Event '%s' occured" % self.event)
+		if (self.event.notificationDelay > 0):
+			logger.debug("Waiting %d seconds before firing event '%s'" % (self.event.notificationDelay, self))
+			time.sleep(self.event.notificationDelay)
+		self.fire()
+	
+	def fire(self):
+		logger.notice("Firing event '%s'" % self.event)
+		
+		class ProcessEventThread(threading.Thread):
+			def __init__(self, eventListener, event):
+				threading.Thread.__init__(self)
+				self._eventListener = eventListener
+				self._event = event
+			
+			def run(self):
+				try:
+					self._eventListener.processEvent(self._event)
+				except Exception, e:
+					logger.logException(e)
+		
+		logger.info("Starting ProcessEventThreads for listeners: %s" % self.event._eventListeners)
+		for l in self.event._eventListeners:
+			# Create a new thread for each event listener
+			ProcessEventThread(l, self.event).start()
+		
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                            EVENT                                                  -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -224,6 +261,11 @@ class Event(threading.Thread):
 	def __str__(self):
 		return "<event: %s>" % self._name
 	
+	def copy(self):
+		copy = Event(self._type, self._name, **self.__dict__)
+		copy._eventListeners = self._eventListeners
+		return copy
+		
 	def getType(self):
 		return self._type
 	
@@ -244,11 +286,8 @@ class Event(threading.Thread):
 					time.sleep(self.activationDelay)
 				logger.info("Activating event '%s'" % self)
 				self.activate()
-				logger.info("Event '%s' occured" % self)
-				if (self.notificationDelay > 0):
-					logger.debug("Waiting %d seconds before firing event '%s'" % (self.notificationDelay, self))
-					time.sleep(self.notificationDelay)
-				self.fire()
+				EventOccurence(self).start()
+				self._occured += 1
 			logger.info("Event '%s' now deactivated after %d occurrences" % (self, self._occured))
 		except Exception, e:
 			logger.error("Failure in event '%s': %s" % (self, e))
@@ -263,27 +302,7 @@ class Event(threading.Thread):
 				return
 		
 		self._eventListeners.append(eventListener)
-		
-	def fire(self):
-		class ProcessEventThread(threading.Thread):
-			def __init__(self, eventListener, event):
-				threading.Thread.__init__(self)
-				self._eventListener = eventListener
-				self._event = event
-			
-			def run(self):
-				try:
-					self._eventListener.processEvent(self._event)
-				except Exception, e:
-					logger.logException(e)
-		
-		logger.notice("Firing event '%s'" % self)
-		self._occured += 1
-		for l in self._eventListeners:
-			# Create a new thread for each event listener
-			ProcessEventThread(l, self).start()
-
-
+	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                            PANIC EVENT                                            -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -308,6 +327,11 @@ class PanicEvent(Event):
 		self.actionProcessorDesktop = 'winlogon'
 		self.serviceOptions = {}
 	
+	def copy(self):
+		copy = PanicEvent(self._name, **self.__dict__)
+		copy._eventListeners = self._eventListeners
+		return copy
+		
 	def activate(self):
 		e = threading.Event()
 		e.wait()
@@ -318,6 +342,11 @@ class PanicEvent(Event):
 class ProductSyncCompletedEvent(Event):
 	def __init__(self, name, **kwargs):
 		Event.__init__(self, EVENT_TYPE_PRODUCT_SYNC_COMPLETED, name, **kwargs)
+	
+	def copy(self):
+		copy = ProductSyncCompletedEvent(self._name, **self.__dict__)
+		copy._eventListeners = self._eventListeners
+		return copy
 	
 	def activate(self):
 		e = threading.Event()
@@ -331,6 +360,11 @@ class DaemonStartupEvent(Event):
 		Event.__init__(self, EVENT_TYPE_DAEMON_STARTUP, name, **kwargs)
 		self.maxRepetitions = 0
 	
+	def copy(self):
+		copy = DaemonStartupEvent(self._name, **self.__dict__)
+		copy._eventListeners = self._eventListeners
+		return copy
+	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                       DAEMON SHUTDOWN EVENT                                       -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -338,6 +372,11 @@ class DaemonShutdownEvent(Event):
 	def __init__(self, name, **kwargs):
 		Event.__init__(self, EVENT_TYPE_DAEMON_SHUTDOWN, name, **kwargs)
 		self.maxRepetitions = 0
+	
+	def copy(self):
+		copy = DaemonShutdownEvent(self._name, **self.__dict__)
+		copy._eventListeners = self._eventListeners
+		return copy
 	
 	def activate(self):
 		e = threading.Event()
@@ -351,6 +390,12 @@ class WMIEvent(Event):
 		Event.__init__(self, type, name, **kwargs)
 		self.wql = None
 		self.processName = None
+	
+	def copy(self):
+		copy = WMIEvent(self._name, **self.__dict__)
+		copy._eventListeners = self._eventListeners
+		copy.wqlResult = self.wqlResult
+		return copy
 	
 	def activate(self):
 		if not self.wql:
@@ -389,7 +434,7 @@ class WMIEvent(Event):
 	def getActionProcessorCommand(self):
 		actionProcessorCommand = self.actionProcessorCommand
 		for (key, value) in self.wqlResult.items():
-			actionProcessorCommand = actionProcessorCommand.replace('%' + 'event.' + key.lower() + '%', value)
+			actionProcessorCommand = actionProcessorCommand.replace('%' + 'event.' + key.lower() + '%', unicode(value))
 		return actionProcessorCommand
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -406,7 +451,13 @@ class GUIStartupEvent(WMIEvent):
 			self.processName = 'LogonUI.exe'
 		if self.processName:
 			self.wql = "SELECT * FROM __InstanceCreationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_Process' AND TargetInstance.Name = '%s'" % self.processName
-
+	
+	def copy(self):
+		copy = GUIStartupEvent(self._name, **self.__dict__)
+		copy._eventListeners = self._eventListeners
+		copy.wqlResult = self.wqlResult
+		return copy
+	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          USER LOGIN EVENT                                         -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -419,6 +470,13 @@ class UserLoginEvent(WMIEvent):
 		self.username = None
 		if (os.name == 'nt'):
 			self.wql = "SELECT * FROM __InstanceCreationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_NTLogEvent' AND TargetInstance.Logfile = 'Security' AND TargetInstance.EventCode = 528"
+	
+	def copy(self):
+		copy = UserLoginEvent(self._name, **self.__dict__)
+		copy._eventListeners = self._eventListeners
+		copy.wqlResult = self.wqlResult
+		copy.username = self.username
+		return copy
 	
 	def activate(self):
 		WMIEvent.activate(self)
@@ -446,21 +504,37 @@ class UserLoginEvent(WMIEvent):
 class CustomEvent(WMIEvent):
 	def __init__(self, name, **kwargs):
 		WMIEvent.__init__(self, EVENT_TYPE_CUSTOM, name, **kwargs)
-
+	
+	def copy(self):
+		copy = CustomEvent(self._name, **self.__dict__)
+		copy._eventListeners = self._eventListeners
+		copy.wqlResult = self.wqlResult
+		return copy
+	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                   PROCESS ACTION REQUESTS EVENT                                   -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ProcessActionRequestEvent(Event):
 	def __init__(self, name, **kwargs):
 		Event.__init__(self, EVENT_TYPE_PROCESS_ACTION_REQUESTS, name, **kwargs)
-
+	
+	def copy(self):
+		copy = ProcessActionRequestEvent(self._name, **self.__dict__)
+		copy._eventListeners = self._eventListeners
+		return copy
+	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                            TIMER EVENT                                            -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class TimerEvent(Event):
 	def __init__(self, name, **kwargs):
 		Event.__init__(self, EVENT_TYPE_TIMER, name, **kwargs)
-
+	
+	def copy(self):
+		copy = TimerEvent(self._name, **self.__dict__)
+		copy._eventListeners = self._eventListeners
+		return copy
+	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          EVENT LISTENER                                           -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -470,7 +544,7 @@ class EventListener(object):
 	
 	def processEvent(event):
 		logger.warning("%s: processEvent() not implemented" % self)
-
+	
 
 
 
@@ -1858,6 +1932,8 @@ class EventProcessingThread(KillableThread):
 		self.waitCancelled = False
 		
 		self.isLoginEvent = isinstance(self.event, UserLoginEvent)
+		if self.isLoginEvent:
+			logger.info("Event is user login event")
 		
 	def startNotifierApplication(self, command, desktop = None):
 		if not command:
@@ -3355,10 +3431,22 @@ class OpsiclientdNT5(OpsiclientdNT):
 	def runProductActions(self, event):
 		logger.debug("runProductActions(): running on NT5")
 		
+		sessionId = None
 		actionProcessorDesktop = event.actionProcessorDesktop
+		
+		if isinstance(event, UserLoginEvent):
+			userSessionsIds = System.getUserSessionIds(event.username)
+			if userSessionsIds:
+				sessionId = userSessionsIds[0]
+		if not sessionId:
+			sessionId = System.getActiveConsoleSessionId()
+		
 		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
-			actionProcessorDesktop = self.getCurrentActiveDesktopName()
-		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
+			if isinstance(event, UserLoginEvent):
+				actionProcessorDesktop = 'default'
+			else:
+				actionProcessorDesktop = self.getCurrentActiveDesktopName(sessionId)
+		if not actionProcessorDesktop or desktop.lower() not in ('winlogon', 'default'):
 			actionProcessorDesktop = 'winlogon'
 		
 		depotShareMounted = False
