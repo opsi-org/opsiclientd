@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.5.8.1'
+__version__ = '0.5.9'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp, codecs
@@ -157,10 +157,6 @@ class EventOccurence(threading.Thread):
 		if (self.event.notificationDelay > 0):
 			logger.debug("Waiting %d seconds before firing event '%s'" % (self.event.notificationDelay, self))
 			time.sleep(self.event.notificationDelay)
-		self.fire()
-	
-	def fire(self):
-		logger.notice("Firing event '%s'" % self.event)
 		
 		class ProcessEventThread(threading.Thread):
 			def __init__(self, eventListener, event):
@@ -278,6 +274,10 @@ class Event(threading.Thread):
 	def activate(self):
 		return
 	
+	def fire(self):
+		logger.notice("Firing event '%s'" % self)
+		EventOccurence(self).start()
+		
 	def run(self):
 		try:
 			while (self.maxRepetitions < 0) or (self._occured <= self.maxRepetitions):
@@ -286,7 +286,7 @@ class Event(threading.Thread):
 					time.sleep(self.activationDelay)
 				logger.info("Activating event '%s'" % self)
 				self.activate()
-				EventOccurence(self).start()
+				self.fire()
 				self._occured += 1
 			logger.info("Event '%s' now deactivated after %d occurrences" % (self, self._occured))
 		except Exception, e:
@@ -1946,6 +1946,7 @@ class EventProcessingThread(KillableThread):
 				sessionId = userSessionsIds[0]
 		if not sessionId:
 			sessionId = System.getActiveConsoleSessionId()
+		
 		if not desktop or desktop.lower() not in ('winlogon', 'default'):
 			if self.isLoginEvent:
 				desktop = 'default'
@@ -2168,6 +2169,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				'wait_before_reboot':     3,
 				'wait_before_shutdown':   3,
 				'wait_for_gui_timeout':   120,
+				'impersonate_user':      'pcpatch',
 			},
 			'config_service': {
 				'server_id':              '',
@@ -2200,7 +2202,6 @@ class Opsiclientd(EventListener, threading.Thread):
 				'block_notifier_command': '',
 			},
 			'action_processor': {
-				'run_as_user':            'pcpatch',
 				'local_dir':              '',
 				'remote_dir':             '',
 				'filename':               '',
@@ -3109,10 +3110,12 @@ class Opsiclientd(EventListener, threading.Thread):
 			elif (method == 'setCurrentActiveDesktopName'):
 				if (len(params) < 2):
 					raise ValueError("sessionId or desktop missing")
-				sessionId = str(params[0])
+				sessionId = 0
+				try:
+					sessionId = int(params[0])
+				except Exception, e:
+					raise ValueError("Bad sessionId given: %s" % e)
 				desktop = str(params[1])
-				if not sessionId:
-					raise ValueError("No sessionId given")
 				if not desktop:
 					raise ValueError("No desktop given")
 				self._currentActiveDesktopName[sessionId] = desktop
@@ -3142,7 +3145,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		rpc = 'setCurrentActiveDesktopName("%s", System.getActiveDesktopName())' % sessionId
 		cmd = '%s "%s"' % (self.getConfigValue('opsiclientd_rpc', 'command'), rpc)
 		System.runCommandInSession(command = cmd, sessionId = System.getActiveConsoleSessionId(), waitForProcessEnding = True)
-		return self._currentActiveDesktopName.get(sessionId)
+		desktop = self._currentActiveDesktopName.get(sessionId)
+		logger.debug("Returning current active dektop name '%s' for session %s" % (desktop, sessionId))
+		return desktop
 	
 	def closeProcessWindows(self, processId):
 		if not (self._config.has_key('opsiclientd_rpc') and self._config['opsiclientd_rpc'].has_key('command')):
@@ -3370,7 +3375,81 @@ class OpsiclientdNT(Opsiclientd):
 				self._shutdownRequested = True
 				self._statusSubject.setMessage(_("Shutting down machine"))
 				self._shutdownMachine()
+	
+	def runProductActions(self, event):
+		sessionId = None
+		# action prcessor desktop can be one of current / winlogon / default
+		desktop = event.actionProcessorDesktop
 		
+		# Choose session for action processor
+		if isinstance(event, UserLoginEvent):
+			userSessionsIds = System.getUserSessionIds(event.username)
+			if userSessionsIds:
+				sessionId = userSessionsIds[0]
+		if not sessionId:
+			# Default session is console session
+			sessionId = System.getActiveConsoleSessionId()
+		
+		# Choose desktop for action processor
+		if not desktop or desktop.lower() not in ('winlogon', 'default'):
+			if isinstance(event, UserLoginEvent):
+				desktop = 'default'
+			else:
+				desktop = self.getCurrentActiveDesktopName(sessionId)
+		
+		if not desktop or desktop.lower() not in ('winlogon', 'default'):
+			# Default desktop is winlogon
+			desktop = 'winlogon'
+		
+		
+		username = self.getConfigValue('global', 'impersonate_user')
+		encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
+		password = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
+		logger.addConfidentialString(password)
+		
+		depotShareMounted = False
+		imp = None
+		if self.getConfigValue('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost') and event.updateActionProcessor:
+			logger.notice("Updating action processor")
+			imp = None
+			depotShareMounted = False
+			try:
+				imp = System.Impersonate(username = username, password = password)
+				imp.start(logonType = 'NEW_CREDENTIALS')
+				
+				logger.notice("Mounting depot share %s" %  self.getConfigValue('depot_server', 'url'))
+				self._statusSubject.setMessage(_("Mounting depot share %s") % self.getConfigValue('depot_server', 'url'))
+				
+				System.mount(self.getConfigValue('depot_server', 'url'), self.getConfigValue('depot_server', 'drive'), username = username, password = password)
+				depotShareMounted = True
+				
+				self.updateActionProcessor()
+			
+			except Exception, e:
+				logger.error("Failed to update action processor: %s" % e)
+			
+			if depotShareMounted:
+				try:
+					logger.notice("Unmounting depot share")
+					System.umount(self.getConfigValue('depot_server', 'drive'))
+				except:
+					pass
+			if imp:
+				try:
+					imp.end()
+				except:
+					pass
+			
+		command = '%system.program_files_dir%\\opsi.org\\preloginloader\\action_processor_starter.exe ' \
+			+ '"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
+			+ '"%global.log_file%" "%global.log_level%" ' \
+			+ '"' + self.getConfigValue('depot_server', 'url') + '" "' + self.getConfigValue('depot_server', 'drive') + '" ' \
+			+ '"' + username + '" "' + password + '" ' \
+			+ '"' + desktop + '" "' + self.fillPlaceholders(event.getActionProcessorCommand()).replace('"', '\\"') + '"'
+		command = self.fillPlaceholders(command)
+		
+		System.runCommandInSession(command = command, desktop = desktop, waitForProcessEnding = True)
+	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          OPSICLIENTD NT5                                          -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -3428,99 +3507,105 @@ class OpsiclientdNT5(OpsiclientdNT):
 		
 		_rebootThread(wait = self._config['global']['wait_before_reboot']).start()
 	
-	def runProductActions(self, event):
-		logger.debug("runProductActions(): running on NT5")
-		
-		sessionId = None
-		actionProcessorDesktop = event.actionProcessorDesktop
-		
-		if isinstance(event, UserLoginEvent):
-			userSessionsIds = System.getUserSessionIds(event.username)
-			if userSessionsIds:
-				sessionId = userSessionsIds[0]
-		if not sessionId:
-			sessionId = System.getActiveConsoleSessionId()
-		
-		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
-			if isinstance(event, UserLoginEvent):
-				actionProcessorDesktop = 'default'
-			else:
-				actionProcessorDesktop = self.getCurrentActiveDesktopName(sessionId)
-		if not actionProcessorDesktop or desktop.lower() not in ('winlogon', 'default'):
-			actionProcessorDesktop = 'winlogon'
-		
-		depotShareMounted = False
-		userCreated = False
-		username = self.getConfigValue('action_processor', 'run_as_user')
-		password = '$!?' + Tools.randomString(16) + '§/%'
-		imp = None
-		try:
-			logger.notice("Creating local user '%s'" % username)
-			if System.existsUser(username = username):
-				System.deleteUser(username = username)
-			System.createUser(username = username, password = password, groups = [ System.getAdminGroupName() ])
-			userCreated = True
-			
-			# Impersonate
-			imp = System.Impersonate(username = username, password = password, desktop = actionProcessorDesktop)
-			imp.start(logonType = 'INTERACTIVE', newDesktop = True)
-			
-			if self.getConfigValue('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost'):
-				logger.notice("Mounting depot share")
-				self._statusSubject.setMessage( _("Mounting depot share %s" % self.getConfigValue('depot_server', 'url')) )
-				
-				encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
-				pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
-				
-				System.mount(self.getConfigValue('depot_server', 'url'), self.getConfigValue('depot_server', 'drive'), username="pcpatch", password=pcpatchPassword)
-				depotShareMounted = True
-				
-				if event.updateActionProcessor:
-					logger.notice("Updating action processor")
-					try:
-						self.updateActionProcessor()
-					except Exception, e:
-						logger.error("Failed to update action processor: %s" % e)
-				
-			logger.notice("Starting action processor as user '%s' on desktop '%s'" % (username, actionProcessorDesktop))
-			self._statusSubject.setMessage( _("Starting action processor") )
-			
-			if self._setEnvironment:
-				try:
-					logger.debug("Current environment:")
-					for (k, v) in os.environ.items():
-						logger.debug("   %s=%s" % (k,v))
-					logger.debug("Updating environment")
-					hostname = os.environ['COMPUTERNAME']
-					(homeDrive, homeDir) = os.environ['USERPROFILE'].split('\\')[0:2]
-					# TODO: Anwendungsdaten
-					os.environ['APPDATA']     = '%s\\%s\\%s\\Anwendungsdaten' % (homeDrive, homeDir, username)
-					os.environ['HOMEDRIVE']   = homeDrive
-					os.environ['HOMEPATH']    = '\\%s\\%s' % (homeDir, username)
-					os.environ['LOGONSERVER'] = '\\\\%s' % hostname
-					os.environ['SESSIONNAME'] = 'Console'
-					os.environ['USERDOMAIN']  = '%s' % hostname
-					os.environ['USERNAME']    = username
-					os.environ['USERPROFILE'] = '%s\\%s\\%s' % (homeDrive, homeDir, username)
-					logger.debug("Updated environment:")
-					for (k, v) in os.environ.items():
-						logger.debug("   %s=%s" % (k,v))
-				except Exception, e:
-					logger.error("Failed to set environment: %s" % e)
-			imp.runCommand(command = self.fillPlaceholders(event.getActionProcessorCommand()), waitForProcessEnding = True)
-			
-			logger.notice("Action processor ended")
-			self._statusSubject.setMessage( _("Action processor ended") )
-			
-		finally:
-			if depotShareMounted:
-				logger.notice("Unmounting depot share")
-				System.umount(self.getConfigValue('depot_server', 'drive'))
-			if imp:
-				imp.end()
-			if userCreated:
-				logger.notice("Deleting local user '%s'" % username)
-				System.deleteUser(username = username)
+	#def runProductActions(self, event):
+	#	logger.debug("runProductActions(): running on NT5")
+	#	
+	#	sessionId = None
+	#	actionProcessorDesktop = event.actionProcessorDesktop
+	#	
+	#	if isinstance(event, UserLoginEvent):
+	#		userSessionsIds = System.getUserSessionIds(event.username)
+	#		if userSessionsIds:
+	#			sessionId = userSessionsIds[0]
+	#	if not sessionId:
+	#		sessionId = System.getActiveConsoleSessionId()
+	#	
+	#	if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
+	#		if isinstance(event, UserLoginEvent):
+	#			actionProcessorDesktop = 'default'
+	#		else:
+	#			actionProcessorDesktop = self.getCurrentActiveDesktopName(sessionId)
+	#	if not actionProcessorDesktop or desktop.lower() not in ('winlogon', 'default'):
+	#		actionProcessorDesktop = 'winlogon'
+	#	
+	#	depotShareMounted = False
+	#	userCreated = False
+	#	username = self.getConfigValue('action_processor', 'run_as_user')
+	#	password = '$!?' + Tools.randomString(16) + '§/%'
+	#	imp = None
+	#	try:
+	#		logger.notice("Creating local user '%s'" % username)
+	#		if System.existsUser(username = username):
+	#			System.deleteUser(username = username)
+	#		System.createUser(username = username, password = password, groups = [ System.getAdminGroupName() ])
+	#		userCreated = True
+	#		
+	#		# Impersonate
+	#		imp = System.Impersonate(username = username, password = password, desktop = actionProcessorDesktop)
+	#		imp.start(logonType = 'INTERACTIVE', newDesktop = True)
+	#		
+	#		if self.getConfigValue('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost'):
+	#			logger.notice("Mounting depot share")
+	#			self._statusSubject.setMessage( _("Mounting depot share %s" % self.getConfigValue('depot_server', 'url')) )
+	#			
+	#			encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
+	#			pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
+	#			
+	#			System.mount(
+	#				self.getConfigValue('depot_server', 'url'),
+	#				self.getConfigValue('depot_server', 'drive'),
+	#				username = self.getConfigValue('depot_server', 'username'),
+	#				password = pcpatchPassword
+	#			)
+	#			
+	#			depotShareMounted = True
+	#			
+	#			if event.updateActionProcessor:
+	#				logger.notice("Updating action processor")
+	#				try:
+	#					self.updateActionProcessor()
+	#				except Exception, e:
+	#					logger.error("Failed to update action processor: %s" % e)
+	#			
+	#		logger.notice("Starting action processor as user '%s' on desktop '%s'" % (username, actionProcessorDesktop))
+	#		self._statusSubject.setMessage( _("Starting action processor") )
+	#		
+	#		if self._setEnvironment:
+	#			try:
+	#				logger.debug("Current environment:")
+	#				for (k, v) in os.environ.items():
+	#					logger.debug("   %s=%s" % (k,v))
+	#				logger.debug("Updating environment")
+	#				hostname = os.environ['COMPUTERNAME']
+	#				(homeDrive, homeDir) = os.environ['USERPROFILE'].split('\\')[0:2]
+	#				# TODO: Anwendungsdaten
+	#				os.environ['APPDATA']     = '%s\\%s\\%s\\Anwendungsdaten' % (homeDrive, homeDir, username)
+	#				os.environ['HOMEDRIVE']   = homeDrive
+	#				os.environ['HOMEPATH']    = '\\%s\\%s' % (homeDir, username)
+	#				os.environ['LOGONSERVER'] = '\\\\%s' % hostname
+	#				os.environ['SESSIONNAME'] = 'Console'
+	#				os.environ['USERDOMAIN']  = '%s' % hostname
+	#				os.environ['USERNAME']    = username
+	#				os.environ['USERPROFILE'] = '%s\\%s\\%s' % (homeDrive, homeDir, username)
+	#				logger.debug("Updated environment:")
+	#				for (k, v) in os.environ.items():
+	#					logger.debug("   %s=%s" % (k,v))
+	#			except Exception, e:
+	#				logger.error("Failed to set environment: %s" % e)
+	#		imp.runCommand(command = self.fillPlaceholders(event.getActionProcessorCommand()), waitForProcessEnding = True)
+	#		
+	#		logger.notice("Action processor ended")
+	#		self._statusSubject.setMessage( _("Action processor ended") )
+	#		
+	#	finally:
+	#		if depotShareMounted:
+	#			logger.notice("Unmounting depot share")
+	#			System.umount(self.getConfigValue('depot_server', 'drive'))
+	#		if imp:
+	#			imp.end()
+	#		if userCreated:
+	#			logger.notice("Deleting local user '%s'" % username)
+	#			System.deleteUser(username = username)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          OPSICLIENTD NT6                                          -
@@ -3529,47 +3614,52 @@ class OpsiclientdNT6(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
 	
-	def runProductActions(self, event):
-		logger.debug("runProductActions(): running on NT6")
-		
-		actionProcessorDesktop = event.actionProcessorDesktop
-		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
-			actionProcessorDesktop = self.getCurrentActiveDesktopName()
-		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
-			actionProcessorDesktop = 'winlogon'
-		
-		depotShareMounted = False
-		try:
-			if self.getConfigValue('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost'):
-				logger.notice("Mounting depot share")
-				self._statusSubject.setMessage( _("Mounting depot share %s" % self.getConfigValue('depot_server', 'url')) )
-				
-				encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
-				pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
-				
-				System.mount(self.getConfigValue('depot_server', 'url'), self.getConfigValue('depot_server', 'drive'), username="pcpatch", password=pcpatchPassword)
-				depotShareMounted = True
-				
-				if event.updateActionProcessor:
-					logger.notice("Updating action processor")
-					try:
-						self.updateActionProcessor()
-					except Exception, e:
-						logger.error("Failed to update action processor: %s" % e)
-				
-			activeSessionId = System.getActiveConsoleSessionId()
-			logger.notice("Starting action processor in session '%s' on desktop '%s'" % (activeSessionId, actionProcessorDesktop))
-			self._statusSubject.setMessage( _("Starting action processor") )
-			
-			System.runCommandInSession(command = self.fillPlaceholders(event.getActionProcessorCommand()), sessionId = activeSessionId, desktop = actionProcessorDesktop, waitForProcessEnding = True)
-			
-			logger.notice("Action processor ended")
-			self._statusSubject.setMessage( _("Action processor ended") )
-			
-		finally:
-			if depotShareMounted:
-				logger.notice("Unmounting depot share")
-				System.umount(self.getConfigValue('depot_server', 'drive'))
+	#def runProductActions(self, event):
+	#	logger.debug("runProductActions(): running on NT6")
+	#	
+	#	actionProcessorDesktop = event.actionProcessorDesktop
+	#	if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
+	#		actionProcessorDesktop = self.getCurrentActiveDesktopName()
+	#	if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
+	#		actionProcessorDesktop = 'winlogon'
+	#	
+	#	depotShareMounted = False
+	#	try:
+	#		if self.getConfigValue('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost'):
+	#			logger.notice("Mounting depot share")
+	#			self._statusSubject.setMessage( _("Mounting depot share %s" % self.getConfigValue('depot_server', 'url')) )
+	#			
+	#			encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
+	#			pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
+	#			
+	#			System.mount(
+	#				self.getConfigValue('depot_server', 'url'),
+	#				self.getConfigValue('depot_server', 'drive'),
+	#				username = self.getConfigValue('depot_server', 'username'),
+	#				password = pcpatchPassword
+	#			)
+	#			depotShareMounted = True
+	#			
+	#			if event.updateActionProcessor:
+	#				logger.notice("Updating action processor")
+	#				try:
+	#					self.updateActionProcessor()
+	#				except Exception, e:
+	#					logger.error("Failed to update action processor: %s" % e)
+	#			
+	#		activeSessionId = System.getActiveConsoleSessionId()
+	#		logger.notice("Starting action processor in session '%s' on desktop '%s'" % (activeSessionId, actionProcessorDesktop))
+	#		self._statusSubject.setMessage( _("Starting action processor") )
+	#		
+	#		System.runCommandInSession(command = self.fillPlaceholders(event.getActionProcessorCommand()), sessionId = activeSessionId, desktop = actionProcessorDesktop, waitForProcessEnding = True)
+	#		
+	#		logger.notice("Action processor ended")
+	#		self._statusSubject.setMessage( _("Action processor ended") )
+	#		
+	#	finally:
+	#		if depotShareMounted:
+	#			logger.notice("Unmounting depot share")
+	#			System.umount(self.getConfigValue('depot_server', 'drive'))
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          OPSICLIENTD NT7                                          -
@@ -3578,63 +3668,68 @@ class OpsiclientdNT7(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
 	
-	def runProductActions(self, event):
-		logger.debug("runProductActions(): running on NT7")
-		
-		actionProcessorDesktop = event.actionProcessorDesktop
-		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
-			actionProcessorDesktop = self.getCurrentActiveDesktopName()
-		if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
-			actionProcessorDesktop = 'winlogon'
-		
-		if not (self.getConfigValue('action_processor', 'run_as_user') == 'pcpatch'):
-			logger.warning("Cannot run action processor as user '%s' on nt7, running as 'pcpatch'" % self.getConfigValue('action_processor', 'run_as_user'))
-		
-		pcpatchPassword = ''
-		
-		if self.getConfigValue('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost') and event.updateActionProcessor:
-			logger.notice("Updating action processor")
-			imp = None
-			depotShareMounted = False
-			try:
-				imp = System.Impersonate(username = 'pcpatch', password = pcpatchPassword)
-				imp.start(logonType = 'NEW_CREDENTIALS')
-				
-				logger.notice("Mounting depot share %s" %  self.getConfigValue('depot_server', 'url'))
-				self._statusSubject.setMessage(_("Mounting depot share %s") % self.getConfigValue('depot_server', 'url'))
-				
-				encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
-				pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
-				
-				System.mount(self.getConfigValue('depot_server', 'url'), self.getConfigValue('depot_server', 'drive'), username='pcpatch', password=pcpatchPassword)
-				depotShareMounted = True
-				
-				self.updateActionProcessor()
-			
-			except Exception, e:
-				logger.error("Failed to update action processor: %s" % e)
-		
-			if depotShareMounted:
-				try:
-					logger.notice("Unmounting depot share")
-					System.umount(self.getConfigValue('depot_server', 'drive'))
-				except:
-					pass
-			if imp:
-				try:
-					imp.end()
-				except:
-					pass
-			
-		command = '%system.program_files_dir%\\opsi.org\\preloginloader\\action_processor_starter.exe ' \
-			+ '"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
-			+ '"%global.log_file%" "%global.log_level%" ' \
-			+ '"' + self.getConfigValue('depot_server', 'url') + '" "' + self.getConfigValue('depot_server', 'drive') + '" ' \
-			+ '"pcpatch" "' + pcpatchPassword + '" ' \
-			+ '"' + actionProcessorDesktop + '" "' + self.fillPlaceholders(event.getActionProcessorCommand()).replace('"', '\\"') + '"'
-		command = self.fillPlaceholders(command)
-		
-		System.runCommandInSession(command = command, desktop = actionProcessorDesktop, waitForProcessEnding = True)
+	#def runProductActions(self, event):
+	#	logger.debug("runProductActions(): running on NT7")
+	#	
+	#	actionProcessorDesktop = event.actionProcessorDesktop
+	#	if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
+	#		actionProcessorDesktop = self.getCurrentActiveDesktopName()
+	#	if not actionProcessorDesktop or actionProcessorDesktop.lower() not in ('winlogon', 'default'):
+	#		actionProcessorDesktop = 'winlogon'
+	#	
+	#	if not (self.getConfigValue('action_processor', 'run_as_user') == 'pcpatch'):
+	#		logger.warning("Cannot run action processor as user '%s' on nt7, running as 'pcpatch'" % self.getConfigValue('action_processor', 'run_as_user'))
+	#	
+	#	pcpatchPassword = ''
+	#	
+	#	if self.getConfigValue('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost') and event.updateActionProcessor:
+	#		logger.notice("Updating action processor")
+	#		imp = None
+	#		depotShareMounted = False
+	#		try:
+	#			imp = System.Impersonate(username = 'pcpatch', password = pcpatchPassword)
+	#			imp.start(logonType = 'NEW_CREDENTIALS')
+	#			
+	#			logger.notice("Mounting depot share %s" %  self.getConfigValue('depot_server', 'url'))
+	#			self._statusSubject.setMessage(_("Mounting depot share %s") % self.getConfigValue('depot_server', 'url'))
+	#			
+	#			encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
+	#			pcpatchPassword = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
+	#			
+	#			System.mount(
+	#				self.getConfigValue('depot_server', 'url'),
+	#				self.getConfigValue('depot_server', 'drive'),
+	#				username = self.getConfigValue('depot_server', 'username'),
+	#				password = pcpatchPassword
+	#			)
+	#			depotShareMounted = True
+	#			
+	#			self.updateActionProcessor()
+	#		
+	#		except Exception, e:
+	#			logger.error("Failed to update action processor: %s" % e)
+	#	
+	#		if depotShareMounted:
+	#			try:
+	#				logger.notice("Unmounting depot share")
+	#				System.umount(self.getConfigValue('depot_server', 'drive'))
+	#			except:
+	#				pass
+	#		if imp:
+	#			try:
+	#				imp.end()
+	#			except:
+	#				pass
+	#		
+	#	command = '%system.program_files_dir%\\opsi.org\\preloginloader\\action_processor_starter.exe ' \
+	#		+ '"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
+	#		+ '"%global.log_file%" "%global.log_level%" ' \
+	#		+ '"' + self.getConfigValue('depot_server', 'url') + '" "' + self.getConfigValue('depot_server', 'drive') + '" ' \
+	#		+ '"pcpatch" "' + pcpatchPassword + '" ' \
+	#		+ '"' + actionProcessorDesktop + '" "' + self.fillPlaceholders(event.getActionProcessorCommand()).replace('"', '\\"') + '"'
+	#	command = self.fillPlaceholders(command)
+	#	
+	#	System.runCommandInSession(command = command, desktop = actionProcessorDesktop, waitForProcessEnding = True)
 		
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         OPSICLIENTD INIT                                          -
