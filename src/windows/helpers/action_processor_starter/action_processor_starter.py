@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2.1'
+__version__ = '0.2.3'
 
 # Imports
 import sys, os
@@ -43,32 +43,48 @@ from OPSI.Backend.JSONRPC import JSONRPCBackend
 #for i in range(len(sys.argv)):
 #	print "%d: %s" % (i, sys.argv[i])
 
-if (len(sys.argv) != 12):
-	print "Usage: %s <hostId> <hostKey> <controlServerPort> <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <username> <password> <actionProcessorDesktop> <actionProcessorCommand>" % os.path.basename(sys.argv[0])
+if (len(sys.argv) != 14):
+	print "Usage: %s <hostId> <hostKey> <controlServerPort> <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <depotServerUsername> <depotServerPassword> <actionProcessorDesktop> <actionProcessorCommand> <runAsUser> <runAsPassword>" % os.path.basename(sys.argv[0])
 	sys.exit(1)
-(hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, username, password, actionProcessorDesktop, actionProcessorCommand) = sys.argv[1:]
+(hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, actionProcessorDesktop, actionProcessorCommand, runAsUser, runAsPassword) = sys.argv[1:]
 
 logger = Logger()
+if hostKey:
+	logger.addConfidentialString(hostKey)
+if depotServerPassword:
+	logger.addConfidentialString(depotServerPassword)
+if runAsPassword:
+	logger.addConfidentialString(runAsPassword)
 logger.setConsoleLevel(LOG_NONE)
 logger.setLogFile(logFile)
 logger.setFileLevel(int(logLevel))
 logger.setFileFormat('[%l] [%D] [' + os.path.basename(sys.argv[0]) + ']  %M  (%F|%N)')
 
-logger.confidential("Called with arguments: %s" % ', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, username, password, actionProcessorCommand)) )
-
-be = JSONRPCBackend(username = hostId, password = hostKey, address = 'https://localhost:%s/opsiclientd' % controlServerPort)
+logger.debug("Called with arguments: %s" % ', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, actionProcessorCommand, runAsUser, runAsPassword)) )
 
 imp = None
 depotShareMounted = False
+be = None
+
 try:
-	imp = System.Impersonate(username = username, password = password, desktop = actionProcessorDesktop)
-	imp.start(logonType = 'NEW_CREDENTIALS')
+	be = JSONRPCBackend(username = hostId, password = hostKey, address = 'https://localhost:%s/opsiclientd' % controlServerPort)
 	
+	if runAsUser:
+		logger.info("Impersonating user '%s'" % runAsUser)
+		imp = System.Impersonate(username = runAsUser, password = runAsPassword, desktop = actionProcessorDesktop)
+		imp.start(logonType = 'INTERACTIVE', newDesktop = True)
+	
+	else:
+		logger.info("Impersonating network account '%s'" % depotServerUsername)
+		imp = System.Impersonate(username = depotServerUsername, password = depotServerPassword, desktop = actionProcessorDesktop)
+		imp.start(logonType = 'NEW_CREDENTIALS')
+		
 	if (depotRemoteUrl.split('/')[2] != 'localhost'):
 		logger.notice("Mounting depot share %s" % depotRemoteUrl)
 		be.setStatusMessage("Mounting depot share %s" % depotRemoteUrl)
 		
-		System.mount(depotRemoteUrl, depotDrive, username = username, password = password)
+		System.mount(depotRemoteUrl, depotDrive, username = depotServerUsername, password = depotServerPassword)
+		#System.mount(depotRemoteUrl, depotDrive)
 		depotShareMounted = True
 	
 	logger.notice("Starting action processor")
@@ -82,7 +98,8 @@ try:
 except Exception, e:
 	logger.logException(e)
 	error = "Failed to process action requests: %s" % e
-	be.setStatusMessage(error)
+	if be:
+		be.setStatusMessage(error)
 	logger.error(error)
 	
 if depotShareMounted:
@@ -96,7 +113,6 @@ if imp:
 		imp.end()
 	except:
 		pass
-
 
 
 
