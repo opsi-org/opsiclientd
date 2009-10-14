@@ -602,9 +602,9 @@ class ControlPipe(threading.Thread):
 			# Execute method
 			start = time.time()
 			result['result'] = self._opsiclientd.executePipeRpc(method, params)
-			logger.debug('Got result...')
+			logger.debug2('Got result...')
 			duration = round(time.time() - start, 3)
-			logger.info('Took %0.3fs to process %s(%s)' % (duration, method, str(params)[1:-1]))
+			logger.debug('Took %0.3fs to process %s(%s)' % (duration, method, str(params)[1:-1]))
 		except Exception, e:
 			logger.error(e)
 			result['error'] = { 'class': e.__class__.__name__, 'message': str(e) }
@@ -641,7 +641,7 @@ class PosixControlPipe(ControlPipe):
 					if not rpc:
 						logger.error("No rpc from pipe")
 						continue
-					logger.debug("Received rpc from pipe '%s'" % rpc)
+					logger.debug2("Received rpc from pipe '%s'" % rpc)
 					result = self.executeRpc(rpc)
 					logger.debug2("Opening named pipe %s" % self._pipeName)
 					timeout = 3
@@ -695,20 +695,20 @@ class NTControlPipeConnection(threading.Thread):
 			chBuf = create_string_buffer(self._bufferSize)
 			cbRead = c_ulong(0)
 			while self._running:
-				logger.debug("Reading fom pipe")
+				logger.debug2("Reading fom pipe")
 				fReadSuccess = windll.kernel32.ReadFile(self._pipe, chBuf, self._bufferSize, byref(cbRead), None)
 				if ((fReadSuccess == 1) or (cbRead.value != 0)):
-					logger.info("Received rpc from pipe '%s'" % chBuf.value)
+					logger.debug("Received rpc from pipe '%s'" % chBuf.value)
 					result =  "%s\0" % self._ntControlPipe.executeRpc(chBuf.value)
 					cbWritten = c_ulong(0)
-					logger.debug("Writing to pipe")
+					logger.debug2("Writing to pipe")
 					fWriteSuccess = windll.kernel32.WriteFile(
 									self._pipe,
 									c_char_p(result),
 									len(result),
 									byref(cbWritten),
 									None )
-					logger.debug("Number of bytes written: %d" % cbWritten.value)
+					logger.debug2("Number of bytes written: %d" % cbWritten.value)
 					if not fWriteSuccess:
 						logger.error("Could not reply to the client's request from the pipe")
 						break
@@ -1955,8 +1955,23 @@ class EventProcessingThread(KillableThread):
 		if not desktop or desktop.lower() not in ('winlogon', 'default'):
 			desktop = 'winlogon'
 		
-		logger.notice("Starting notifier application in session '%s' on desktop '%s'" % (sessionId, desktop))
-		processId = System.runCommandInSession(command = command, sessionId = sessionId, desktop = desktop, waitForProcessEnding=False)[2]
+		processId = None
+		while True:
+			try:
+				logger.notice("Starting notifier application in session '%s' on desktop '%s'" % (sessionId, desktop))
+				processId = System.runCommandInSession(command = command, sessionId = sessionId, desktop = desktop, waitForProcessEnding=False)[2]
+				break
+			except Exception, e:
+				logger.error(e)
+				if (e[0] == 233) and (sys.getwindowsversion()[0] == 5) and (sessionId != 0):
+					# No process is on the other end
+					# Problem with pipe \\\\.\\Pipe\\TerminalServer\\SystemExecSrvr\\<sessionid>
+					# After logging off from a session other than 0 csrss.exe does not create this pipe or CreateRemoteProcessW is not able to read the pipe.
+					logger.info("Retrying to run command on winlogon desktop of session 0")
+					sessionId = 0
+					desktop = 'winlogon'
+				else:
+					raise
 		time.sleep(3)
 		return processId
 		
@@ -1964,14 +1979,13 @@ class EventProcessingThread(KillableThread):
 		if not processId:
 			raise ValueError("No process id given")
 		
-		logger.notice("Stopping notifier application")
+		logger.notice("Stopping notifier application (pid %s)" % processId)
 		try:
 			self.opsiclientd.closeProcessWindows(processId)
 			time.sleep(3)
 			System.terminateProcess(processId = processId)
 		except Exception, e:
-			#logger.error("Failed to stop notifier application: %s" % e)
-			pass
+			logger.warning("Failed to stop notifier application: %s" % e)
 		
 	def run(self):
 		try:
@@ -2169,7 +2183,6 @@ class Opsiclientd(EventListener, threading.Thread):
 				'wait_before_reboot':     3,
 				'wait_before_shutdown':   3,
 				'wait_for_gui_timeout':   120,
-				'impersonate_user':      'pcpatch',
 			},
 			'config_service': {
 				'server_id':              '',
@@ -2181,6 +2194,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				'depot_id':               '',
 				'url':                    '',
 				'drive':                  '',
+				'username':               'pcpatch',
 			},
 			'cache_service': {
 				'storage_dir':            'cache_service',
@@ -2206,6 +2220,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				'remote_dir':             '',
 				'filename':               '',
 				'command':                '',
+				'run_as_user':            '',
 			}
 		}
 		
@@ -2260,6 +2275,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		value = self._config[section][option]
 		if not raw and type(value) in (unicode, str) and (value.count('%') >= 2):
 			value = self.fillPlaceholders(value)
+		if type(value) is str:
+			value = unicode(value)
 		return value
 		
 	def setConfigValue(self, section, option, value):
@@ -2268,7 +2285,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		section = str(section).strip().lower()
 		option = str(option).strip().lower()
-		value = value.strip()
+		value = unicode(value.strip())
 		
 		logger.info("Setting config value %s.%s" % (section, option))
 		logger.debug("setConfigValue(%s, %s, %s)" % (section, option, value))
@@ -2469,7 +2486,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				
 				if (newString != string):
 					string = self.fillPlaceholders(newString, escaped)
-		return string
+		return unicode(string)
 	
 	def createEvents(self):
 		self._events['panic'] = PanicEvent('panic')
@@ -2634,14 +2651,25 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._waitAppPid = None
 				if self._waitApp:
 					logger.info("Starting wait for GUI app")
-					try:
-						self._waitAppPid = System.runCommandInSession(
-							command = self._waitApp,
-							sessionId = None,
-							desktop = 'winlogon',
-							waitForProcessEnding = False)[2]
-					except Exception, e:
-						logger.error("Failed to start wait for GUI app: %s" % e)
+					sessionId = System.getActiveConsoleSessionId()
+					while True:
+						try:
+							self._waitAppPid = System.runCommandInSession(
+									command = self._waitApp,
+									sessionId = sessionId,
+									desktop = 'winlogon',
+									waitForProcessEnding = False)[2]
+							break
+						except Exception, e:
+							logger.error(e)
+							if (e[0] == 233) and (sys.getwindowsversion()[0] == 5) and (sessionId != 0):
+								# No process is on the other end
+								# Problem with pipe \\\\.\\Pipe\\TerminalServer\\SystemExecSrvr\\<sessionid>
+								# After logging off from a session other than 0 csrss.exe does not create this pipe or CreateRemoteProcessW is not able to read the pipe.
+								logger.info("Retrying to run command in session 0")
+								sessionId = 0
+							else:
+								logger.error("Failed to start wait for GUI app: %s" % e)
 				self._guiStarted = threading.Event()
 				event = GUIStartupEvent("wait_for_gui")
 				event.addEventListener(self)
@@ -3144,7 +3172,12 @@ class Opsiclientd(EventListener, threading.Thread):
 			sessionId = System.getActiveConsoleSessionId()
 		rpc = 'setCurrentActiveDesktopName("%s", System.getActiveDesktopName())' % sessionId
 		cmd = '%s "%s"' % (self.getConfigValue('opsiclientd_rpc', 'command'), rpc)
-		System.runCommandInSession(command = cmd, sessionId = System.getActiveConsoleSessionId(), waitForProcessEnding = True)
+		
+		try:
+			System.runCommandInSession(command = cmd, sessionId = System.getActiveConsoleSessionId(), waitForProcessEnding = True)
+		except Exception, e:
+			logger.error(e)
+		
 		desktop = self._currentActiveDesktopName.get(sessionId)
 		logger.debug("Returning current active dektop name '%s' for session %s" % (desktop, sessionId))
 		return desktop
@@ -3152,9 +3185,24 @@ class Opsiclientd(EventListener, threading.Thread):
 	def closeProcessWindows(self, processId):
 		if not (self._config.has_key('opsiclientd_rpc') and self._config['opsiclientd_rpc'].has_key('command')):
 			raise Exception("opsiclientd_rpc command not defined")
+		sessionId = System.getActiveConsoleSessionId()
 		rpc = 'exit(); System.closeProcessWindows(processId = %s)' % processId
 		cmd = '%s "%s"' % (self.getConfigValue('opsiclientd_rpc', 'command'), rpc)
-		System.runCommandInSession(command = cmd, waitForProcessEnding = False)
+		while True:
+			try:
+				System.runCommandInSession(command = cmd, sessionId = sessionId, waitForProcessEnding = False)
+				break
+			except Exception, e:
+				logger.error(e)
+				if (e[0] == 233) and (sys.getwindowsversion()[0] == 5) and (sessionId != 0):
+					# No process is on the other end
+					# Problem with pipe \\\\.\\Pipe\\TerminalServer\\SystemExecSrvr\\<sessionid>
+					# After logging off from a session other than 0 csrss.exe does not create this pipe or CreateRemoteProcessW is not able to read the pipe.
+					logger.info("Retrying to run command in session 0")
+					sessionId = 0
+				else:
+					raise
+		
 	
 	def processShutdownRequests(self):
 		pass
@@ -3378,7 +3426,7 @@ class OpsiclientdNT(Opsiclientd):
 	
 	def runProductActions(self, event):
 		sessionId = None
-		# action prcessor desktop can be one of current / winlogon / default
+		# action processor desktop can be one of current / winlogon / default
 		desktop = event.actionProcessorDesktop
 		
 		# Choose session for action processor
@@ -3402,25 +3450,33 @@ class OpsiclientdNT(Opsiclientd):
 			desktop = 'winlogon'
 		
 		
-		username = self.getConfigValue('global', 'impersonate_user')
-		encryptedPassword = self._configService.getPcpatchPassword(self._config['global']['host_id'])
-		password = Tools.blowfishDecrypt(self._config['global']['opsi_host_key'], encryptedPassword)
-		logger.addConfidentialString(password)
+		depotServerUsername = self.getConfigValue('depot_server', 'username')
+		runAsUser = self.getConfigValue('action_processor', 'run_as_user')
+		runAsPassword = ''
+		if (runAsUser.find('\\') != -1):
+			logger.warning("Ignoring domain part of username to run as '%s'" % runAsUser)
+			runAsUser = runAsUser.split('\\', -1)
 		
-		depotShareMounted = False
-		imp = None
+		encryptedDepotServerPassword = self._configService.getPcpatchPassword(self.getConfigValue('global', 'host_id'))
+		depotServerPassword = Tools.blowfishDecrypt(self.getConfigValue('global', 'opsi_host_key'), encryptedDepotServerPassword)
+		logger.addConfidentialString(depotServerPassword)
+		
+		# Update action processor
 		if self.getConfigValue('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost') and event.updateActionProcessor:
 			logger.notice("Updating action processor")
 			imp = None
 			depotShareMounted = False
 			try:
-				imp = System.Impersonate(username = username, password = password)
+				# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
+				# The new logon session has the same local identifier but uses different credentials for other network connections.
+				imp = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
 				imp.start(logonType = 'NEW_CREDENTIALS')
 				
 				logger.notice("Mounting depot share %s" %  self.getConfigValue('depot_server', 'url'))
 				self._statusSubject.setMessage(_("Mounting depot share %s") % self.getConfigValue('depot_server', 'url'))
 				
-				System.mount(self.getConfigValue('depot_server', 'url'), self.getConfigValue('depot_server', 'drive'), username = username, password = password)
+				#System.mount(self.getConfigValue('depot_server', 'url'), self.getConfigValue('depot_server', 'drive'), username = depotServerUsername, password = depotServerPassword)
+				System.mount(self.getConfigValue('depot_server', 'url'), self.getConfigValue('depot_server', 'drive'))
 				depotShareMounted = True
 				
 				self.updateActionProcessor()
@@ -3432,30 +3488,65 @@ class OpsiclientdNT(Opsiclientd):
 				try:
 					logger.notice("Unmounting depot share")
 					System.umount(self.getConfigValue('depot_server', 'drive'))
-				except:
-					pass
+				except Exception, e:
+					logger.warning(e)
 			if imp:
 				try:
 					imp.end()
-				except:
-					pass
-			
-		command = '%system.program_files_dir%\\opsi.org\\preloginloader\\action_processor_starter.exe ' \
-			+ '"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
-			+ '"%global.log_file%" "%global.log_level%" ' \
-			+ '"' + self.getConfigValue('depot_server', 'url') + '" "' + self.getConfigValue('depot_server', 'drive') + '" ' \
-			+ '"' + username + '" "' + password + '" ' \
-			+ '"' + desktop + '" "' + self.fillPlaceholders(event.getActionProcessorCommand()).replace('"', '\\"') + '"'
-		command = self.fillPlaceholders(command)
+				except Exception, e:
+					logger.warning(e)
 		
-		System.runCommandInSession(command = command, desktop = desktop, waitForProcessEnding = True)
-	
+		# Run action processor
+		localUserCreated = False
+		try:
+			if runAsUser:
+				logger.notice("Creating local user '%s'" % runAsUser)
+				
+				runAsPassword = u'$!?' + unicode(Tools.randomString(16)) + u'§/%'
+				logger.addConfidentialString(runAsPassword)
+				
+				if System.existsUser(username = runAsUser):
+					System.deleteUser(username = runAsUser)
+				System.createUser(username = runAsUser, password = runAsPassword, groups = [ System.getAdminGroupName() ])
+				localUserCreated = True
+			
+			command = u'%system.program_files_dir%\\opsi.org\\preloginloader\\action_processor_starter.exe ' \
+				+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
+				+ u'"%global.log_file%" "%global.log_level%" ' \
+				+ u'"' + self.getConfigValue('depot_server', 'url') + u'" "' + self.getConfigValue('depot_server', 'drive') + u'" ' \
+				+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
+				+ u'"' + desktop + u'" "' + self.fillPlaceholders(event.getActionProcessorCommand()).replace('"', '\\"') + u'" ' \
+				+ u'"' + runAsUser + u'" "' + runAsPassword + u'"'
+			command = self.fillPlaceholders(command)
+			
+			while True:
+				try:
+					logger.notice("Starting action processor in session '%s' on desktop '%s'" % (sessionId, desktop))
+					System.runCommandInSession(command = command, sessionId = sessionId, desktop = desktop, waitForProcessEnding = True)
+					break
+				except Exception, e:
+					logger.error(e)
+					if (e[0] == 233) and (sys.getwindowsversion()[0] == 5) and (sessionId != 0):
+						# No process is on the other end
+						# Problem with pipe \\\\.\\Pipe\\TerminalServer\\SystemExecSrvr\\<sessionid>
+						# After logging off from a session other than 0 csrss.exe does not create this pipe or CreateRemoteProcessW is not able to read the pipe.
+						logger.info("Retrying to run command on winlogon desktop of session 0")
+						sessionId = 0
+						desktop = 'winlogon'
+					else:
+						raise
+		finally:
+			if localUserCreated:
+				logger.notice("Deleting local user '%s'" % runAsUser)
+				System.deleteUser(username = runAsUser)
+		
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          OPSICLIENTD NT5                                          -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class OpsiclientdNT5(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
+		#self._config['action_processor']['run_as_user'] = 'pcpatch'
 		if (sys.getwindowsversion()[1] == 0):
 			# NT 5.0 / win2k
 			# If reboot/shutdown is triggered while pgina.dll is
