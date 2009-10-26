@@ -55,7 +55,7 @@ logger = Logger()
 logFile = 'notifier.log'
 transparentColor = (0,0,0)
 host = '127.0.0.1'
-port = 4442
+port = 0
 skin = 'skin.ini'
 
 BYTE = c_ubyte
@@ -97,7 +97,9 @@ class OpsiDialogWindow(SubjectsObserver):
 		
 		self.loadSkin()
 		
-		self._notificationClient = NotificationClient(host, port, self)
+		self._notificationClient = None
+		if port:
+			self._notificationClient = NotificationClient(host, port, self)
 		
 	def _registerWndClass(self):
 		message_map = {}
@@ -428,7 +430,8 @@ class OpsiDialogWindow(SubjectsObserver):
 						self.skin['form']['height'],
 						win32con.SWP_SHOWWINDOW )
 		
-		threading.Timer(0.01, self._notificationClient.start).start()
+		if self._notificationClient:
+			threading.Timer(0.01, self._notificationClient.start).start()
 		
 	def fadein(self, id, time):
 		self.setWindowAlpha(self.alpha)
@@ -572,7 +575,8 @@ class OpsiDialogWindow(SubjectsObserver):
 	
 	def onDestroy(self, hwnd, msg, wparam, lparam):
 		logger.notice("Exiting...")
-		self._notificationClient.stop()
+		if self._notificationClient:
+			self._notificationClient.stop()
 		win32gui.PostQuitMessage(0) # Terminate the app.
 	
 	def onCommand(self, hwnd, msg, wparam, lparam):
@@ -592,8 +596,9 @@ class OpsiDialogWindow(SubjectsObserver):
 				choiceIndex = values.get('choiceIndex')
 				logger.info("Button subjectId: %s, choiceIndex: %s" % (subjectId, choiceIndex))
 				if (subjectId and (choiceIndex >= 0)):
-					self._notificationClient.setSelectedIndex(subjectId, choiceIndex)
-					self._notificationClient.selectChoice(subjectId)
+					if self._notificationClient:
+						self._notificationClient.setSelectedIndex(subjectId, choiceIndex)
+						self._notificationClient.selectChoice(subjectId)
 			
 			elif (values.get('type') == 'label'):
 				cwnd = win32ui.CreateWindowFromHandle(self.hwnd)
