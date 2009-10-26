@@ -43,10 +43,10 @@ from OPSI.Backend.JSONRPC import JSONRPCBackend
 #for i in range(len(sys.argv)):
 #	print "%d: %s" % (i, sys.argv[i])
 
-if (len(sys.argv) != 14):
-	print "Usage: %s <hostId> <hostKey> <controlServerPort> <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <depotServerUsername> <depotServerPassword> <actionProcessorDesktop> <actionProcessorCommand> <runAsUser> <runAsPassword>" % os.path.basename(sys.argv[0])
+if (len(sys.argv) != 15):
+	print "Usage: %s <hostId> <hostKey> <controlServerPort> <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <depotServerUsername> <depotServerPassword> <sessionId> <actionProcessorDesktop> <actionProcessorCommand> <runAsUser> <runAsPassword>" % os.path.basename(sys.argv[0])
 	sys.exit(1)
-(hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, actionProcessorDesktop, actionProcessorCommand, runAsUser, runAsPassword) = sys.argv[1:]
+(hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, runAsUser, runAsPassword) = sys.argv[1:]
 
 logger = Logger()
 if hostKey:
@@ -60,7 +60,7 @@ logger.setLogFile(logFile)
 logger.setFileLevel(int(logLevel))
 logger.setFileFormat('[%l] [%D] [' + os.path.basename(sys.argv[0]) + ']  %M  (%F|%N)')
 
-logger.debug("Called with arguments: %s" % ', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, actionProcessorCommand, runAsUser, runAsPassword)) )
+logger.debug("Called with arguments: %s" % ', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, runAsUser, runAsPassword)) )
 
 imp = None
 depotShareMounted = False
@@ -81,25 +81,28 @@ try:
 		
 	if (depotRemoteUrl.split('/')[2] != 'localhost'):
 		logger.notice("Mounting depot share %s" % depotRemoteUrl)
-		be.setStatusMessage("Mounting depot share %s" % depotRemoteUrl)
+		be.setStatusMessage(sessionId, "Mounting depot share %s" % depotRemoteUrl)
 		
 		System.mount(depotRemoteUrl, depotDrive, username = depotServerUsername, password = depotServerPassword)
 		#System.mount(depotRemoteUrl, depotDrive)
 		depotShareMounted = True
 	
 	logger.notice("Starting action processor")
-	be.setStatusMessage("Starting action processor")
+	be.setStatusMessage(sessionId, "Starting action processor")
 	
 	imp.runCommand(actionProcessorCommand)
 	
 	logger.notice("Action processor ended")
-	be.setStatusMessage("Action processor ended")
+	be.setStatusMessage(sessionId, "Action processor ended")
 	
 except Exception, e:
 	logger.logException(e)
 	error = "Failed to process action requests: %s" % e
 	if be:
-		be.setStatusMessage(error)
+		try:
+			be.setStatusMessage(sessionId, error)
+		except:
+			pass
 	logger.error(error)
 	
 if depotShareMounted:
