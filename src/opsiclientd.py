@@ -1796,6 +1796,7 @@ class ControlServer(threading.Thread):
 		self._staticDir = staticDir
 		self._root = None
 		self._running = False
+		self._server = None
 		logger.info("ControlServer initiated")
 		
 	def run(self):
@@ -1804,7 +1805,7 @@ class ControlServer(threading.Thread):
 			logger.info("creating root resource")
 			self.createRoot()
 			self._site = server.Site(self._root)
-			reactor.listenSSL(
+			self._server = reactor.listenSSL(
 				self._httpsPort,
 				HTTPFactory(self._site),
 				SSLContext(self._sslServerKeyFile, self._sslServerCertFile) )
@@ -1818,8 +1819,7 @@ class ControlServer(threading.Thread):
 		self._running = False
 	
 	def stop(self):
-		if reactor and reactor.running:
-			reactor.stop()
+		self._server.stopListening()
 		self._running = False
 		
 	def createRoot(self):
@@ -1870,6 +1870,9 @@ class ServiceConnectionThread(KillableThread):
 		if not self._configServiceUrl:
 			raise Exception("No config service url given")
 	
+	def setStatusMessage(self, message):
+		self._statusSubject.setMessage(message)
+	
 	def getUsername(self):
 		return self._username
 	
@@ -1910,9 +1913,6 @@ class ServiceConnectionThread(KillableThread):
 		except Exception, e:
 			logger.logException(e)
 		self.running = False
-	
-	def setStatusMessage(self, message):
-		self._statusSubject.setMessage(message)
 	
 	def stopConnectionCallback(self, choiceSubject):
 		logger.notice("Connection cancelled by user")
@@ -2120,11 +2120,16 @@ class EventProcessingThread(KillableThread):
 					self.writeLogToService()
 					raise
 		except Exception, e:
-			self._configService = None
+			self.disconnectConfigServer()
 			self._configServiceException = e
 			raise
 		
 	def disconnectConfigServer(self):
+		if self._configService:
+			try:
+				self._configService.exit()
+			except Exception, e:
+				logger.error("Failed to disconnect config service: %s" % e)
 		self._configService = None
 		self._configServiceException = None
 	
@@ -2655,7 +2660,8 @@ class EventProcessingThread(KillableThread):
 				# Stop notification server thread
 				if self._notificationServer:
 					try:
-						self._notificationServer.stop()
+						logger.info("Stopping notification server")
+						self._notificationServer.stop(stopReactor = False)
 					except Exception, e:
 						logger.logException(e)
 		except Exception, e:
@@ -3251,8 +3257,10 @@ class Opsiclientd(EventListener, threading.Thread):
 		if self._controlServer:
 			self._controlServer.stop()
 		
+		if reactor and reactor.running:
+			reactor.stop()
 		self._running = False
-	
+		
 	def authenticate(self, username, password):
 		if (username == self.getConfigValue('global', 'host_id')) and (password == self.getConfigValue('global', 'opsi_host_key')):
 			return True
