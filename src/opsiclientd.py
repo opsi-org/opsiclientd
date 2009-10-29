@@ -49,6 +49,8 @@ if (os.name == 'posix'):
 if (os.name == 'nt'):
 	import win32serviceutil, win32service
 	from ctypes import *
+	wmi = None
+	pythoncom = None
 
 # Twisted imports
 from twisted.internet import defer, threads, reactor
@@ -73,15 +75,15 @@ logger = Logger()
 logger.setLogFormat('[%l] [%D]   %M     (%F|%N)')
 
 # Possible event types
-EVENT_TYPE_PRODUCT_SYNC_COMPLETED = 'product sync completed'
-EVENT_TYPE_DAEMON_STARTUP = 'daemon startup'
-EVENT_TYPE_DAEMON_SHUTDOWN = 'daemon shutdown'
-EVENT_TYPE_GUI_STARTUP = 'gui startup'
-EVENT_TYPE_PANIC = 'panic'
-EVENT_TYPE_PROCESS_ACTION_REQUESTS = 'process action requests'
-EVENT_TYPE_TIMER = 'timer'
-EVENT_TYPE_USER_LOGIN = 'user login'
-EVENT_TYPE_CUSTOM = 'custom'
+EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED = 'product sync completed'
+EVENT_CONFIG_TYPE_DAEMON_STARTUP = 'daemon startup'
+EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN = 'daemon shutdown'
+EVENT_CONFIG_TYPE_GUI_STARTUP = 'gui startup'
+EVENT_CONFIG_TYPE_PANIC = 'panic'
+EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS = 'process action requests'
+EVENT_CONFIG_TYPE_TIMER = 'timer'
+EVENT_CONFIG_TYPE_USER_LOGIN = 'user login'
+EVENT_CONFIG_TYPE_CUSTOM = 'custom'
 
 # Message translation
 def _(msg):
@@ -144,159 +146,229 @@ class CanceledByUserError(opsiclientdError):
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                        EVENTOCCURENCE                                             -
+# -                                         EVENT CONFIG                                              -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class EventOccurence(threading.Thread):
-	def __init__(self, event, eventInfo):
-		threading.Thread.__init__(self)
-		self.event = event
-		self.eventInfo = eventInfo
-		logger.setLogFormat('[%l] [%D] [event ' + str(self.event._name) + ']   %M  (%F|%N)', object=self)
-		if isinstance(self.event, UserLoginEvent):
-			logger.notice("User '%s' logged in" % self.eventInfo.get('User'))
-		
-	def run(self):
-		logger.info("Event '%s' occured" % self.event)
-		if (self.event.notificationDelay > 0):
-			logger.debug("Waiting %d seconds before firing event '%s'" % (self.event.notificationDelay, self))
-			time.sleep(self.event.notificationDelay)
-		
-		class ProcessEventThread(threading.Thread):
-			def __init__(self, eventListener, eventOccurence):
-				threading.Thread.__init__(self)
-				self._eventListener = eventListener
-				self._eventOccurence = eventOccurence
-			
-			def run(self):
-				try:
-					self._eventListener.processEventOccurence(self._eventOccurence)
-				except Exception, e:
-					logger.logException(e)
-		
-		logger.info("Starting ProcessEventThreads for listeners: %s" % self.event._eventListeners)
-		for l in self.event._eventListeners:
-			# Create a new thread for each event listener
-			ProcessEventThread(l, self).start()
+def EventConfigFactory(type, name, **kwargs):
+	if   (type == EVENT_CONFIG_TYPE_PANIC):
+		return PanicEventConfig(name, **kwargs)
+	elif (type == EVENT_CONFIG_TYPE_DAEMON_STARTUP):
+		return DaemonStartupEventConfig(name, **kwargs)
+	elif (type == EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN):
+		return DaemonShutdownEventConfig(name, **kwargs)
+	elif (type == EVENT_CONFIG_TYPE_GUI_STARTUP):
+		return GUIStartupEventConfig(name, **kwargs)
+	elif (type == EVENT_CONFIG_TYPE_TIMER):
+		return TimerEventConfig(name, **kwargs)
+	elif (type == EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED):
+		return ProductSyncCompletedEventConfig(name, **kwargs)
+	elif (type == EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS):
+		return ProcessActionRequestsEventConfig(name, **kwargs)
+	elif (type == EVENT_CONFIG_TYPE_USER_LOGIN):
+		return UserLoginEventConfig(name, **kwargs)
+	elif (type == EVENT_CONFIG_TYPE_CUSTOM):
+		return CustomEventConfig(name, **kwargs)
+	else:
+		raise TypeError("Unknown event config type '%s'" % type)
 	
-	def getActionProcessorCommand(self):
-		actionProcessorCommand = self.event.actionProcessorCommand
-		for (key, value) in self.eventInfo.items():
-			actionProcessorCommand = actionProcessorCommand.replace('%' + 'event.' + key.lower() + '%', unicode(value))
-		return actionProcessorCommand
-	
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                            EVENT                                                  -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Event(threading.Thread):
-	def __init__(self, type, name, **kwargs):
-		threading.Thread.__init__(self)
+class EventConfig():
+	def __init__(self, name, **kwargs):
 		
-		if not type in (EVENT_TYPE_PRODUCT_SYNC_COMPLETED, EVENT_TYPE_DAEMON_STARTUP, EVENT_TYPE_DAEMON_SHUTDOWN, EVENT_TYPE_GUI_STARTUP,
-				EVENT_TYPE_TIMER, EVENT_TYPE_PROCESS_ACTION_REQUESTS, EVENT_TYPE_USER_LOGIN, EVENT_TYPE_CUSTOM, EVENT_TYPE_PANIC):
-			raise TypeError("Unknown event type '%s'" % type)
 		if not name:
 			raise TypeError("Name not given")
+		self._name = str(name)
 		
-		self.__dict__.update(kwargs)
-		self._type = type
-		self._name = name
-		self._occured = 0
-		self._eventListeners = []
+		logger.setLogFormat('[%l] [%D] [event config ' + self._name + ']   %M  (%F|%N)', object=self)
 		
-		logger.setLogFormat('[%l] [%D] [event ' + str(self._name) + ']   %M  (%F|%N)', object=self)
-		
-		self.message = str(self.__dict__.get('message', ''))
-		
-		self.maxRepetitions = int(self.__dict__.get('maxRepetitions', -1))
+		self.message                =  str ( kwargs.get('message',                  ''        ) )
+		self.maxRepetitions         =  int ( kwargs.get('maxRepetitions',           1         ) )
 		# wait <activationDelay> seconds before event gets active
-		self.activationDelay = int(self.__dict__.get('activationDelay', 0))
+		self.activationDelay        =  int ( kwargs.get('activationDelay',          0         ) )
 		# wait <notificationDelay> seconds before event is fired
-		self.notificationDelay = int(self.__dict__.get('notificationDelay', 0))
-		self.warningTime = int(self.__dict__.get('warningTime', 0))
+		self.notificationDelay      =  int ( kwargs.get('notificationDelay',        0         ) )
+		self.warningTime            =  int ( kwargs.get('warningTime',              0         ) )
+		self.userCancelable         = bool ( kwargs.get('userCancelable',           False     ) )
+		self.blockLogin             = bool ( kwargs.get('blockLogin',               False     ) )
+		self.logoffCurrentUser      = bool ( kwargs.get('logoffCurrentUser',        False     ) )
+		self.lockWorkstation        = bool ( kwargs.get('lockWorkstation',          False     ) )
+		self.getConfigFromService   = bool ( kwargs.get('getConfigFromService',     True      ) )
+		self.updateConfigFile       = bool ( kwargs.get('updateConfigFile',         True      ) )
+		self.writeLogToService      = bool ( kwargs.get('writeLogToService',        True      ) )
+		self.updateActionProcessor  = bool ( kwargs.get('updateActionProcessor',    True      ) )
+		self.eventNotifierCommand   =  str ( kwargs.get('eventNotifierCommand',     ''        ) )
+		self.eventNotifierDesktop   =  str ( kwargs.get('eventNotifierDesktop',     'current' ) )
+		self.actionNotifierCommand  =  str ( kwargs.get('actionNotifierCommand',    ''        ) )
+		self.actionNotifierDesktop  =  str ( kwargs.get('actionNotifierDesktop',    'current' ) )
+		self.actionProcessorCommand =  str ( kwargs.get('actionProcessorCommand',   ''        ) )
+		self.actionProcessorDesktop =  str ( kwargs.get('actionProcessorDesktop',   'current' ) )
+		self.serviceOptions         = dict ( kwargs.get('serviceOptions',           {}        ) )
+		self.cacheProducts          = bool ( kwargs.get('cacheProducts',            False     ) )
+		self.cacheMaxBandwidth      =  int ( kwargs.get('cacheMaxBandwidth',        0         ) )
+		self.requiresCachedProducts = bool ( kwargs.get('requiresCachedProducts',   False     ) )
+		self.syncConfig             = bool ( kwargs.get('syncConfig',               False     ) )
+		self.useCachedConfig        = bool ( kwargs.get('useCachedConfig',          False     ) )
 		
-		# wql
-		self.wql = str(self.__dict__.get('wql', ''))
-		self.eventInfo = {}
-		#if self._type is EVENT_TYPE_CUSTOM and not self.wql:
-		#	raise Exception("Custom event needs wql param")
-		if (not self._type is EVENT_TYPE_CUSTOM) and self.wql:
-			logger.info("Ignoring wql param because event type is '%s'" % self._type)
-			self.wql = ''
-		
-		## maximum number of events of this type which are allowed to be processed concurrently (0 = unlimited)
-		#self.maxConcurrent = bool(self.__dict__.get('maxConcurrent', 1))
-		self.userCancelable = bool(self.__dict__.get('userCancelable', False))
-		self.blockLogin = bool(self.__dict__.get('blockLogin', False))
-		self.logoffCurrentUser = bool(self.__dict__.get('logoffCurrentUser', False))
-		self.lockWorkstation = bool(self.__dict__.get('lockWorkstation', False))
-		self.getConfigFromService = bool(self.__dict__.get('getConfigFromService', True))
-		self.updateConfigFile = bool(self.__dict__.get('updateConfigFile', True))
-		self.writeLogToService = bool(self.__dict__.get('writeLogToService', True))
-		self.updateActionProcessor = bool(self.__dict__.get('updateActionProcessor', True))
-		
-		self.eventNotifierCommand = str(self.__dict__.get('eventNotifierCommand'))
-		
-		self.eventNotifierDesktop = str(self.__dict__.get('eventNotifierDesktop', 'current'))
 		if not self.eventNotifierDesktop in ('winlogon', 'default', 'current'):
 			logger.error("Bad value '%s' for eventNotifierDesktop" % self.eventNotifierDesktop)
 			self.eventNotifierDesktop = 'current'
-		
-		self.actionNotifierCommand = str(self.__dict__.get('actionNotifierCommand'))
-		
-		self.actionNotifierDesktop = str(self.__dict__.get('actionNotifierDesktop', 'current'))
 		if not self.actionNotifierDesktop in ('winlogon', 'default', 'current'):
 			logger.error("Bad value '%s' for actionNotifierDesktop" % self.actionNotifierDesktop)
 			self.actionNotifierDesktop = 'current'
-		
-		self.actionProcessorCommand = str(self.__dict__.get('actionProcessorCommand'))
-		
-		self.actionProcessorDesktop = str(self.__dict__.get('actionProcessorDesktop', 'current'))
 		if not self.actionProcessorDesktop in ('winlogon', 'default', 'current'):
 			logger.error("Bad value '%s' for actionProcessorDesktop" % self.actionProcessorDesktop)
 			self.actionProcessorDesktop = 'current'
 		
-		self.serviceOptions = self.__dict__.get('serviceOptions', {})
-		
-		self.cacheProducts = bool(self.__dict__.get('cacheProducts', False))
-		self.cacheMaxBandwidth = int(self.__dict__.get('cacheMaxBandwidth', 0))
-		self.requiresCachedProducts = bool(self.__dict__.get('requiresCachedProducts', False))
-		self.syncConfig = bool(self.__dict__.get('syncConfig', False))
-		self.useCachedConfig = bool(self.__dict__.get('useCachedConfig', False))
-		
-		#if (self.maxConcurrent > 1):
-		#	# Do NOT update action processor!
-		#	self.updateActionProcessor = False
-			
 	def __str__(self):
-		return "<event: %s>" % self._name
-	
-	def getType(self):
-		return self._type
+		return "<event config: %s>" % self._name
 	
 	def getName(self):
 		return self._name
 	
-	def activate(self):
-		self.eventInfo = {}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                         PANIC EVENT CONFIG                                        -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class PanicEventConfig(EventConfig):
+	def __init__(self, name, **kwargs):
+		Event.__init__(self, name, **kwargs)
+		self.maxRepetitions         = -1
+		self.message                = 'Panic event'
+		self.activationDelay        = 0
+		self.notificationDelay      = 0
+		self.warningTime            = 0
+		self.userCancelable         = False
+		self.blockLogin             = False
+		self.logoffCurrentUser      = False
+		self.lockWorkstation        = False
+		self.getConfigFromService   = False
+		self.updateConfigFile       = False
+		self.writeLogToService      = False
+		self.updateActionProcessor  = False
+		self.eventNotifierCommand   = None
+		self.actionNotifierCommand  = None
+		self.actionProcessorDesktop = 'winlogon'
+		self.serviceOptions         = {}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                     DAEMON STARTUP EVENT CONFIG                                   -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class DaemonStartupEventConfig(EventConfig):
+	def __init__(self, name, **kwargs):
+		EventConfig.__init__(self, name, **kwargs)
+		self.maxRepetitions = 0
 	
-	def fire(self):
-		logger.notice("Firing event '%s'" % self)
-		EventOccurence(self, dict(self.eventInfo)).start()
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                    DAEMON SHUTDOWN EVENT CONFIG                                   -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class DaemonShutdownEventConfig(EventConfig):
+	def __init__(self, name, **kwargs):
+		EventConfig.__init__(self, name, **kwargs)
+		self.maxRepetitions = 0
+	
+	def activate(self):
+		Event.activate(self)
+		e = threading.Event()
+		e.wait()
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                          WMI EVENT CONFIG                                         -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class WMIEventConfig(EventConfig):
+	def __init__(self, name, **kwargs):
+		EventConfig.__init__(self, name, **kwargs)
+		self.wql = str( kwargs.get('wql', '') )
 		
-	def run(self):
-		try:
-			while (self.maxRepetitions < 0) or (self._occured <= self.maxRepetitions):
-				if (self.activationDelay > 0):
-					logger.debug("Waiting %d seconds before activation of event '%s'" % (self.activationDelay, self))
-					time.sleep(self.activationDelay)
-				logger.info("Activating event '%s'" % self)
-				self.activate()
-				self.fire()
-				self._occured += 1
-			logger.info("Event '%s' now deactivated after %d occurrences" % (self, self._occured))
-		except Exception, e:
-			logger.error("Failure in event '%s': %s" % (self, e))
-			logger.logException(e)
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                      GUI STARTUP EVENT CONFIG                                     -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class GUIStartupEventConfig(WMIEventConfig):
+	def __init__(self, name, **kwargs):
+		WMIEventConfig.__init__(self, name, **kwargs)
+		self.maxRepetitions = 0
+		self.processName = None
+		
+	
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                         TIMER EVENT CONFIG                                        -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class TimerEventConfig(EventConfig):
+	def __init__(self, name, **kwargs):
+		EventConfig.__init__(self, name, **kwargs)
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                PRODUCT SYNC COMPLETED EVENT CONFIG                                -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class ProductSyncCompletedEventConfig(EventConfig):
+	def __init__(self, name, **kwargs):
+		EventConfig.__init__(self, name, **kwargs)
+	
+	def activate(self):
+		Event.activate(self)
+		e = threading.Event()
+		e.wait()
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                               PROCESS ACTION REQUESTS EVENT CONFIG                                -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class ProcessActionRequestsEventConfig(EventConfig):
+	def __init__(self, name, **kwargs):
+		EventConfig.__init__(self, name, **kwargs)
+	
+	def activate(self):
+		Event.activate(self)
+		e = threading.Event()
+		e.wait()
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                       USER LOGIN EVENT CONFIG                                     -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class UserLoginEventConfig(WMIEventConfig):
+	def __init__(self, name, **kwargs):
+		WMIEventConfig.__init__(self, name, **kwargs)
+		self.blockLogin        = False
+		self.logoffCurrentUser = False
+		self.lockWorkstation   = False
+		
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                        CUSTOM EVENT CONFIG                                        -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class CustomEventConfig(WMIEvent):
+	def __init__(self, name, **kwargs):
+		WMIEvent.__init__(self, name, **kwargs)
+	
+
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                          EVENT GENERATOR                                          -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+def EventGeneratorFactory(eventConfig):
+	if   isinstance(eventConfig, PanicEventConfig):
+		return PanicEventGenerator(eventConfig)
+	elif isinstance(eventConfig, DaemonStartupEventConfig):
+		return DaemonStartupEventGenerator(eventConfig)
+	elif isinstance(eventConfig, DaemonShutdownEventConfig):
+		return DaemonShutdownEventGenerator(eventConfig)
+	elif isinstance(eventConfig, GUIStartupEventConfig):
+		return GUIStartupEventGenerator(eventConfig)
+	elif isinstance(eventConfig, TimerEventConfig):
+		return TimerEventGenerator(eventConfig)
+	elif isinstance(eventConfig, ProductSyncCompletedEventConfig):
+		return ProductSyncCompletedEventGenerator(eventConfig)
+	elif isinstance(eventConfig, ProcessActionRequestsEventConfig):
+		return ProcessActionRequestsEventGenerator(eventConfig)
+	elif isinstance(eventConfig, UserLoginEventConfig):
+		return UserLoginEventGenerator(eventConfig)
+	elif isinstance(eventConfig, CustomEventConfig):
+		return CustomEventGenerator(eventConfig)
+	else:
+		raise TypeError("Unhandled event config '%s'" % eventConfig)
+
+class EventGenerator(threading.Thread):
+	def __init__(self, eventConfig):
+		threading.Thread.__init__(self)
+		self._eventConfig = eventConfig
+		self._eventListeners = []
+		self._eventsOccured = 0
 		
 	def addEventListener(self, eventListener):
 		if not isinstance(eventListener, EventListener):
@@ -308,86 +380,105 @@ class Event(threading.Thread):
 		
 		self._eventListeners.append(eventListener)
 	
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                            PANIC EVENT                                            -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class PanicEvent(Event):
-	def __init__(self, name):
-		Event.__init__(self, EVENT_TYPE_PANIC, name)
-		self.maxRepetitions = -1
-		self.message = 'Panic event'
-		self.activationDelay = 0
-		self.notificationDelay = 0
-		self.warningTime = 0
-		self.userCancelable = False
-		self.blockLogin = False
-		self.logoffCurrentUser = False
-		self.lockWorkstation = False
-		self.getConfigFromService = False
-		self.updateConfigFile = False
-		self.writeLogToService = False
-		self.updateActionProcessor = False
-		self.eventNotifierCommand = None
-		self.actionNotifierCommand = None
-		self.actionProcessorDesktop = 'winlogon'
-		self.serviceOptions = {}
-	
-	def activate(self):
-		Event.activate(self)
-		e = threading.Event()
-		e.wait()
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                        SYNC COMPLETED EVENT                                       -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class ProductSyncCompletedEvent(Event):
-	def __init__(self, name, **kwargs):
-		Event.__init__(self, EVENT_TYPE_PRODUCT_SYNC_COMPLETED, name, **kwargs)
-	
-	def activate(self):
-		Event.activate(self)
-		e = threading.Event()
-		e.wait()
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                        DAEMON STARTUP EVENT                                       -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class DaemonStartupEvent(Event):
-	def __init__(self, name, **kwargs):
-		Event.__init__(self, EVENT_TYPE_DAEMON_STARTUP, name, **kwargs)
-		self.maxRepetitions = 0
-	
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                       DAEMON SHUTDOWN EVENT                                       -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class DaemonShutdownEvent(Event):
-	def __init__(self, name, **kwargs):
-		Event.__init__(self, EVENT_TYPE_DAEMON_SHUTDOWN, name, **kwargs)
-		self.maxRepetitions = 0
-	
-	def activate(self):
-		Event.activate(self)
-		e = threading.Event()
-		e.wait()
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                         GUI STARTUP EVENT                                         -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class WMIEvent(Event):
-	def __init__(self, type, name, **kwargs):
-		Event.__init__(self, type, name, **kwargs)
-		self.wql = None
-		self.processName = None
-	
-	def activate(self):
-		Event.activate(self)
-		logger.info("Activating event '%s'" % self)
-		if not self.wql:
-			logger.error("Cannot activate wmi event without wql set")
-			e = threading.Event()
-			e.wait()
+	def createEvent(self, eventInfo={}):
+		return Event(eventConfig = self._eventConfig, eventInfo = eventInfo)
 		
-		(wmi, pythoncom) = (None, None)
+	def initialize(self):
+		pass
+	
+	def getNextEvent(self):
+		e = threading.Event()
+		e.wait()
+	
+	def cleanup(self):
+		pass
+	
+	def fireEvent(self, event=None):
+		if not event:
+			event = self.createEvent()
+		
+		logger.info("Firing event '%s'" % event)
+		class FireEventThread(threading.Thread):
+			def __init__(self, eventListener, event):
+				threading.Thread.__init__(self)
+				self._eventListener = eventListener
+				self._event = event
+			
+			def run(self):
+				if (self._eventConfig.notificationDelay > 0):
+					logger.debug("Waiting %d seconds before notifying listener '%s' of event '%s'" \
+						% (self._event.eventConfig.notificationDelay, self._eventListener, self._event))
+					time.sleep(self._event.eventConfig.notificationDelay)
+				try:
+					self._eventListener.processEvent(self._event)
+				except Exception, e:
+					logger.logException(e)
+		
+		logger.info("Starting FireEventThread for listeners: %s" % self._eventListeners)
+		for l in self._eventListeners:
+			# Create a new thread for each event listener
+			FireEventThread(l, event).start()
+	
+	def run(self):
+		try:
+			logger.info("Initializing event generator '%s'" % self)
+			self.initialize()
+			
+			if (self._eventConfig.activationDelay > 0):
+				logger.debug("Waiting %d seconds before activation of event generator '%s'" % \
+					(self._eventConfig.activationDelay, self))
+				time.sleep(self.activationDelay)
+			
+			logger.info("Activating event generator '%s'" % self)
+			while (self._eventConfig.maxRepetitions < 0) or (self._eventsOccured <= self._eventConfig.maxRepetitions):
+				event = self.getNextEvent()
+				if event:
+					self._eventsOccured += 1
+					self.fireEvent(event)
+			logger.info("Event generator '%s' now deactivated after %d event occurrences" % (self, self._eventsOccured))
+			
+		except Exception, e:
+			logger.error("Failure in event generator '%s': %s" % (self, e))
+			logger.logException(e)
+		
+		try:
+			self.cleanup()
+		except Exception, e:
+			logger.error("Failed to clean up: %s" % e)
+
+class PanicEventGenerator(EventGenerator):
+	def __init__(self, eventConfig):
+		EventGenerator.__init__(self, eventConfig)
+	
+	def createEvent(self, eventInfo={}):
+		return PanicEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+	
+class DaemonStartupEventGenerator(EventGenerator):
+	def __init__(self, eventConfig):
+		EventGenerator.__init__(self, eventConfig)
+	
+	def createEvent(self, eventInfo={}):
+		return DaemonStartupEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+	
+class DaemonShutdownEventGenerator(EventGenerator):
+	def __init__(self, eventConfig):
+		EventGenerator.__init__(self, eventConfig)
+	
+	def createEvent(self, eventInfo={}):
+		return DaemonShutdownEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+	
+class WMIEventGenerator(EventGenerator):
+	def __init__(self, eventConfig):
+		EventGenerator.__init__(self, eventConfig)
+		self._wql = self._eventConfig.wql
+		self._watcher = None
+		
+	def initialize(self):
+		if not (os.name == 'nt'):
+			return
+		
+		global wmi
+		global pythoncom
 		while not (wmi and pythoncom):
 			try:
 				if not wmi:
@@ -400,95 +491,166 @@ class WMIEvent(Event):
 				logger.warning("Failed to import: %s, retrying in 2 seconds" % e)
 				time.sleep(2)
 		pythoncom.CoInitialize()
-		try:
+		if self._wql:
 			logger.debug("Creating wmi object")
 			c = wmi.WMI(privileges = ["Security"])
-			watcher = c.watch_for(raw_wql = self.wql, wmi_class = '')
-			if self.processName and System.getPid(self.processName):
-				logger.info("Process '%s' is running on activation of event %s => firing" % (self.processName, self))
-				return
-			logger.info("watching for wql: %s" % self.wql)
-			wqlResult = watcher(timeout_ms = -1)
-			#logger.info("got wmi object: %s" % wqlResult)
-			logger.info("Event info:")
-			for p in wqlResult.properties:
-				value = getattr(wqlResult, p)
-				if type(value) is tuple:
-					self.eventInfo[p] = []
-					for v in value:
-						self.eventInfo[p].append(v)
-				else:
-					self.eventInfo[p] = value
-				logger.info("     %s: %s" % (p, self.eventInfo[p]))
-		except Exception, e:
-			logger.error("Failed to activate event '%s': %s" % (self, e))
+			logger.info("Watching for wql: %s" % self._wql)
+			self._watcher = c.watch_for(raw_wql = self._wql, wmi_class = '')
+	
+	def getNextEvent(self):
+		if not self._watcher:
+			logger.error("Nothing to watch for")
+			e = threading.Event()
+			e.wait()
+			return None
+		wqlResult = self._watcher(timeout_ms = -1)
+		eventInfo = {}
+		for p in wqlResult.properties:
+			value = getattr(wqlResult, p)
+			if type(value) is tuple:
+				eventInfo[p] = []
+				for v in value:
+					eventInfo[p].append(v)
+			else:
+				eventInfo[p] = value
+		return self.createEvent(eventInfo)
+	
+	def cleanup(self):
+		if pythoncom:
 			pythoncom.CoUninitialize()
-			raise
-		pythoncom.CoUninitialize()
 	
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                         GUI STARTUP EVENT                                         -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class GUIStartupEvent(WMIEvent):
-	def __init__(self, name, **kwargs):
-		WMIEvent.__init__(self, EVENT_TYPE_GUI_STARTUP, name, **kwargs)
-		self.maxRepetitions = 0
-		self.processName = None
+class GUIStartupEventGenerator(WMIEventGenerator):
+	def __init__(self, eventConfig):
+		WMIEventGenerator.__init__(self, eventConfig)
 		if   (os.name == 'nt') and (sys.getwindowsversion()[0] == 5):
-			self.processName = 'winlogon.exe'
+			self.guiProcessName = 'winlogon.exe'
 		elif (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
-			self.processName = 'LogonUI.exe'
-		if self.processName:
-			self.wql = "SELECT * FROM __InstanceCreationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_Process' AND TargetInstance.Name = '%s'" % self.processName
+			self.guiProcessName = 'LogonUI.exe'
+		else:
+			raise Exception("OS unsupported")
+		self._wql = "SELECT * FROM __InstanceCreationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_Process' AND TargetInstance.Name = '%s'" % self.guiProcessName
 	
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                          USER LOGIN EVENT                                         -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class UserLoginEvent(WMIEvent):
-	def __init__(self, name, **kwargs):
-		WMIEvent.__init__(self, EVENT_TYPE_USER_LOGIN, name, **kwargs)
-		self.blockLogin = False
-		self.logoffCurrentUser = False
-		self.lockWorkstation = False
-		if (os.name == 'nt'):
-			self.wql = "SELECT * FROM __InstanceCreationEvent WITHIN 5 WHERE TargetInstance ISA 'Win32_NTLogEvent' AND TargetInstance.Logfile = 'Security' AND TargetInstance.EventCode = 528"
 	
-	def activate(self):
-		WMIEvent.activate(self)
-		isUser = False
-		for attr in self.eventInfo.get('InsertionStrings', []):
+	def createEvent(self, eventInfo={}):
+		return GUIStartupEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+	
+	def getNextEvent(self):
+		if (self._eventsOccured <= 0) and System.getPid(self.guiProcessName):
+			logger.info("Process '%s' is running" % self.guiProcessName)
+			return None
+		return WMIEventGenerator.getNextEvent(self)
+
+class TimerEventGenerator(EventGenerator):
+	def __init__(self, eventConfig):
+		EventGenerator.__init__(self, eventConfig)
+	
+	def createEvent(self, eventInfo={}):
+		return TimerEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+	
+class ProductSyncCompletedEventGenerator(EventGenerator):
+	def __init__(self, eventConfig):
+		EventGenerator.__init__(self, eventConfig)
+	
+	def createEvent(self, eventInfo={}):
+		return ProductSyncCompletedEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+	
+class ProcessActionRequestsEventGenerator(EventGenerator):
+	def __init__(self, eventConfig):
+		EventGenerator.__init__(self, eventConfig)
+	
+	def createEvent(self, eventInfo={}):
+		return ProcessActionRequestsEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+	
+class UserLoginEventGenerator(WMIEventGenerator):
+	def __init__(self, eventConfig):
+		WMIEventGenerator.__init__(self, eventConfig)
+		# We do not use wql because then we need to poll (WITHIN)
+		# This could lead to missed events
+		self._wql = ''
+	
+	def initialize(self):
+		WMIEventGenerator.initialize(self)
+		if not (os.name == 'nt'):
+			return
+		logger.debug("Creating wmi object")
+		c = wmi.WMI(privileges = ["Security"])
+		logger.info("Watching for Win32_NTLogEvent, Logfile = Security, EventCode = 528")
+		self._watcher = c.Win32_NTLogEvent.watch_for(notification_type = "Creation", Logfile = "Security", EventCode = 528)
+	
+	def createEvent(self, eventInfo={}):
+		logger.notice("User '%s' logged in" % self.eventInfo.get('User'))
+		return UserLoginEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+	
+	def getNextEvent(self):
+		event = WMIEventGenerator.getNextEvent(self)
+		for attr in event.eventInfo.get('InsertionStrings', []):
 			if (attr.strip() == 'User32'):
-				isUser = True
-				break
-		if not isUser:
-			logger.notice("Not a user login, reactivating")
-			return self.activate()
+				return event
+		return None
+	
+class CustomEventGenerator(EventGenerator):
+	def __init__(self, eventConfig):
+		EventGenerator.__init__(self, eventConfig)
+	
+	def createEvent(self, eventInfo={}):
+		return CustomEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+	
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                            EVENT                                                  -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class Event():
+	def __init__(self, eventConfig, eventInfo={}):
+		self.eventConfig = eventConfig
+		self.eventInfo = eventInfo
+		logger.setLogFormat('[%l] [%D] [event ' + self.eventConfig.getName() + ']   %M  (%F|%N)', object=self)
 		
-		if not self.eventInfo.get('User'):
-			logger.notice("No username found, reactivating")
-			return self.activate()
-	
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                           CUSTOM EVENT                                            -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class CustomEvent(WMIEvent):
-	def __init__(self, name, **kwargs):
-		WMIEvent.__init__(self, EVENT_TYPE_CUSTOM, name, **kwargs)
-	
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                   PROCESS ACTION REQUESTS EVENT                                   -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class ProcessActionRequestEvent(Event):
-	def __init__(self, name, **kwargs):
-		Event.__init__(self, EVENT_TYPE_PROCESS_ACTION_REQUESTS, name, **kwargs)
-	
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                            TIMER EVENT                                            -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class TimerEvent(Event):
-	def __init__(self, name, **kwargs):
-		Event.__init__(self, EVENT_TYPE_TIMER, name, **kwargs)
-	
+		logger.info("Event info:")
+		for (key, value) in self.eventInfo:
+			logger.info("     %s: %s" % (key, value))
+		
+	def getActionProcessorCommand(self):
+		actionProcessorCommand = self.event.actionProcessorCommand
+		for (key, value) in self.eventInfo.items():
+			actionProcessorCommand = actionProcessorCommand.replace('%' + 'event.' + key.lower() + '%', unicode(value))
+		return actionProcessorCommand
+
+class PanicEvent():
+	def __init__(self, eventConfig, eventInfo={}):
+		Event.__init__(self, eventConfig, eventInfo)
+
+class DaemonStartupEvent():
+	def __init__(self, eventConfig, eventInfo={}):
+		Event.__init__(self, eventConfig, eventInfo)
+
+class DaemonShutdownEvent():
+	def __init__(self, eventConfig, eventInfo={}):
+		Event.__init__(self, eventConfig, eventInfo)
+
+class GUIStartupEvent():
+	def __init__(self, eventConfig, eventInfo={}):
+		Event.__init__(self, eventConfig, eventInfo)
+
+class TimerEvent():
+	def __init__(self, eventConfig, eventInfo={}):
+		Event.__init__(self, eventConfig, eventInfo)
+
+class ProductSyncCompletedEvent():
+	def __init__(self, eventConfig, eventInfo={}):
+		Event.__init__(self, eventConfig, eventInfo)
+
+class ProcessActionRequestsEvent():
+	def __init__(self, eventConfig, eventInfo={}):
+		Event.__init__(self, eventConfig, eventInfo)
+
+class UserLoginEvent():
+	def __init__(self, eventConfig, eventInfo={}):
+		Event.__init__(self, eventConfig, eventInfo)
+
+class CustomEvent():
+	def __init__(self, eventConfig, eventInfo={}):
+		Event.__init__(self, eventConfig, eventInfo)
+
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          EVENT LISTENER                                           -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -496,8 +658,8 @@ class EventListener(object):
 	def __init__(self):
 		logger.debug("EventListener initiated")
 	
-	def processEventOccurence(eventOccurence):
-		logger.warning("%s: processEventOccurence() not implemented" % self)
+	def processEvent(event):
+		logger.warning("%s: processEvent() not implemented" % self)
 	
 
 
@@ -1644,9 +1806,9 @@ class CacheService(threading.Thread):
 								raise Exception(self._state['product'][productId]['sync_failed'])
 						
 						logger.notice("All products cached: %s" % ', '.join(self._productIds))
-						for event in self._opsiclientd.getEvents(EVENT_TYPE_PRODUCT_SYNC_COMPLETED):
-							event.fire()
-					
+						for eventGenerator in self.getEventGenerators(generatorClass = ProductSyncCompletedEventGenerator):
+							eventGenerator.fireEvent()
+						
 					except Exception, e:
 						logger.logException(e)
 						logger.error("Failed to cache products: %s" % e)
@@ -1875,12 +2037,12 @@ class ServiceConnectionThread(KillableThread):
 # -                                      EVENT PROCESSING THREAD                                      -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class EventProcessingThread(KillableThread):
-	def __init__(self, opsiclientd, eventOccurence):
+	def __init__(self, opsiclientd, event):
 		logger.setLogFormat('[%l] [%D] [event processing]   %M     (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		
 		self.opsiclientd = opsiclientd
-		self.eventOccurence = eventOccurence
+		self.event = event
 		
 		self.running = False
 		self.eventCancelled = False
@@ -1906,13 +2068,13 @@ class EventProcessingThread(KillableThread):
 		self._currentProgressSubjectProxy = ProgressSubjectProxy('currentProgress')
 		self._overallProgressSubjectProxy = ProgressSubjectProxy('overallProgress')
 		
-		self._statusSubject.setMessage( _("Processing event occurence %s") % self.eventOccurence )
+		self._statusSubject.setMessage( _("Processing event %s") % self.event )
 		self._serviceUrlSubject.setMessage(self.opsiclientd.getConfigValue('config_service', 'url'))
 		self._clientIdSubject.setMessage(self.opsiclientd.getConfigValue('global', 'host_id'))
 		self._opsiclientdInfoSubject.setMessage("opsiclientd %s" % __version__)
 		self._actionProcessorInfoSubject.setMessage("")
 		
-		self.isLoginEvent = isinstance(self.eventOccurence.event, UserLoginEvent)
+		self.isLoginEvent = isinstance(self.event, UserLoginEvent)
 		if self.isLoginEvent:
 			logger.info("Event is user login event")
 		
@@ -1927,7 +2089,7 @@ class EventProcessingThread(KillableThread):
 		if not self._sessionId:
 			sessionId = None
 			if self.isLoginEvent:
-				userSessionsIds = System.getUserSessionIds(self.eventOccurence.eventInfo["User"])
+				userSessionsIds = System.getUserSessionIds(self.event.eventInfo["User"])
 				if userSessionsIds:
 					sessionId = userSessionsIds[0]
 			if not sessionId:
@@ -2026,7 +2188,7 @@ class EventProcessingThread(KillableThread):
 			self.opsiclientd.setConfigValue('config_service', 'server_id', self._configService.getServerId(self.opsiclientd.getConfigValue('global', 'host_id')))
 			logger.info("Updated config_service.host_id to '%s'" % self.opsiclientd.getConfigValue('config_service', 'server_id'))
 			
-			if self.eventOccurence.event.updateConfigFile:
+			if self.event.eventConfig.updateConfigFile:
 				self.setStatusMessage( _("Updating config file") )
 				self.opsiclientd.updateConfigFile()
 			
@@ -2285,14 +2447,14 @@ class EventProcessingThread(KillableThread):
 			self.connectConfigServer()
 			productStates = []
 			if (self._configService.getLocalBootProductStates_hash.func_code.co_argcount == 2):
-				if self.eventOccurence.event.serviceOptions:
+				if self.event.eventConfig.serviceOptions:
 					logger.warning("Service cannot handle service options in method getLocalBootProductStates_hash")
 				productStates = self._configService.getLocalBootProductStates_hash(self.opsiclientd.getConfigValue('global', 'host_id'))
 				productStates = productStates.get(self.opsiclientd.getConfigValue('global', 'host_id'), [])
 			else:
 				productStates = self._configService.getLocalBootProductStates_hash(
 							self.opsiclientd.getConfigValue('global', 'host_id'),
-							self.eventOccurence.event.serviceOptions )
+							self.event.eventConfig.serviceOptions )
 				productStates = productStates.get(self.opsiclientd.getConfigValue('global', 'host_id'), [])
 			
 			logger.notice("Got product action requests from configservice")
@@ -2309,7 +2471,7 @@ class EventProcessingThread(KillableThread):
 			else:
 				logger.notice("Start processing action requests")
 				
-				if not self.eventOccurence.event.useCachedConfig and self.eventOccurence.event.syncConfig:
+				if not self.event.eventConfig.useCachedConfig and self.event.eventConfig.syncConfig:
 					logger.notice("Syncing config (products: %s)" % productIds)
 					self._cacheService.init()
 					self.setStatusMessage( _("Syncing config") )
@@ -2329,11 +2491,11 @@ class EventProcessingThread(KillableThread):
 				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsurl",    "<deprecated>")
 				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsdrive",  "<deprecated>")
 				
-				#if self.eventOccurence.event.cacheProducts:
-				#	logger.notice("Caching products: %s (max bandwidth: %d bit/s)" % (productIds, self.eventOccurence.event.cacheMaxBandwidth))
+				#if self.event.eventConfig.cacheProducts:
+				#	logger.notice("Caching products: %s (max bandwidth: %d bit/s)" % (productIds, self.event.eventConfig.cacheMaxBandwidth))
 				#	self._cacheService.init()
-				#	if self.eventOccurence.event.cacheMaxBandwidth:
-				#		self.setStatusMessage( _("Caching products (%d kbit/s)") % (self.eventOccurence.event.cacheMaxBandwidth/1000) )
+				#	if self.event.eventConfig.cacheMaxBandwidth:
+				#		self.setStatusMessage( _("Caching products (%d kbit/s)") % (self.event.eventConfig.cacheMaxBandwidth/1000) )
 				#	else:
 				#		self.setStatusMessage( _("Caching products") )
 				#	self._cacheService.setCurrentProductProgressObserver(self._currentProgressSubjectProxy)
@@ -2341,7 +2503,7 @@ class EventProcessingThread(KillableThread):
 				#	self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
 				#	
 				#	try:
-				#		if not self._cacheService.cacheProducts(productIds, maxBandwidth=self.eventOccurence.event.cacheMaxBandwidth, waitForEnding=True):
+				#		if not self._cacheService.cacheProducts(productIds, maxBandwidth=self.event.eventConfig.cacheMaxBandwidth, waitForEnding=True):
 				#			raise Exception("Failed to cache products")
 				#	finally:
 				#		self._detailSubjectProxy.setMessage("")
@@ -2351,7 +2513,7 @@ class EventProcessingThread(KillableThread):
 				#	self._currentProgressSubjectProxy.setState(0)
 				#	self._overallProgressSubjectProxy.setState(0)
 				
-				if self.eventOccurence.getActionProcessorCommand():
+				if self.event.getActionProcessorCommand():
 					self.setStatusMessage( _("Starting actions") )
 					self.runProductActions()
 					self.setStatusMessage( _("Actions completed") )
@@ -2365,11 +2527,11 @@ class EventProcessingThread(KillableThread):
 	
 	def runProductActions(self):
 		# action processor desktop can be one of current / winlogon / default
-		desktop = self.eventOccurence.event.actionProcessorDesktop
+		desktop = self.event.eventConfig.actionProcessorDesktop
 		
 		# Choose desktop for action processor
 		if not desktop or desktop.lower() not in ('winlogon', 'default'):
-			if isinstance(self.eventOccurence.event, UserLoginEvent):
+			if self.isLoginEvent:
 				desktop = 'default'
 			else:
 				desktop = self.opsiclientd.getCurrentActiveDesktopName(self.getSessionId())
@@ -2391,7 +2553,7 @@ class EventProcessingThread(KillableThread):
 		logger.addConfidentialString(depotServerPassword)
 		
 		# Update action processor
-		if self.opsiclientd.getConfigValue('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost') and self.eventOccurence.event.updateActionProcessor:
+		if self.opsiclientd.getConfigValue('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost') and self.event.eventConfig.updateActionProcessor:
 			logger.notice("Updating action processor")
 			imp = None
 			depotShareMounted = False
@@ -2445,7 +2607,7 @@ class EventProcessingThread(KillableThread):
 				+ u'"' + self.opsiclientd.getConfigValue('depot_server', 'url') + u'" "' + self.opsiclientd.getConfigValue('depot_server', 'drive') + u'" ' \
 				+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
 				+ u'"' + unicode(self.getSessionId()) + u'" "' + desktop + '" ' \
-				+ u'"' + self.opsiclientd.fillPlaceholders(self.eventOccurence.getActionProcessorCommand()).replace('"', '\\"') + u'" ' \
+				+ u'"' + self.opsiclientd.fillPlaceholders(self.event.getActionProcessorCommand()).replace('"', '\\"') + u'" ' \
 				+ u'"' + runAsUser + u'" "' + runAsPassword + u'"'
 			command = self.opsiclientd.fillPlaceholders(command)
 			
@@ -2481,7 +2643,7 @@ class EventProcessingThread(KillableThread):
 	
 	def run(self):
 		try:
-			logger.notice("============= EventProcessingThread for occurcence of event '%s' started =============" % self.eventOccurence.event)
+			logger.notice("============= EventProcessingThread for occurcence of event '%s' started =============" % self.event)
 			self.running = True
 			self.eventCancelled = False
 			self.waiting = False
@@ -2495,39 +2657,39 @@ class EventProcessingThread(KillableThread):
 				self.startNotificationServer()
 				self.setActionProcessorInfo()
 				
-				if self.eventOccurence.event.requiresCachedProducts:
+				if self.event.eventConfig.requiresCachedProducts:
 					# Event needs cached products => initialize cache service
 					self.opsiclientd._cacheService.init()
 					if self.opsiclientd._cacheService.getProductSyncCompleted():
-						logger.notice("Event '%s' requires cached products and product sync is done" % self.eventOccurence.event)
+						logger.notice("Event '%s' requires cached products and product sync is done" % self.event)
 						cacheDepotDir = (self.opsiclientd.getConfigValue('cache_service', 'storage_dir') + '\\install').replace('\\', '/').replace('//', '/')
 						cacheDepotDrive = cacheDepotDir.split('/')[0]
 						cacheDepotUrl = 'smb://localhost/noshare/' + ('/'.join(cacheDepotDir.split('/')[1:]))
 						self.opsiclientd.setConfigValue('depot_server', 'url', cacheDepotUrl)
 						self.opsiclientd.setConfigValue('depot_server', 'drive', cacheDepotDrive)
 					else:
-						logger.notice("Event '%s' requires cached products but product sync is not done, exiting" % self.eventOccurence.event)
+						logger.notice("Event '%s' requires cached products but product sync is not done, exiting" % self.event)
 						self.running = False
 						return
 				
-				if self.eventOccurence.event.useCachedConfig:
+				if self.event.eventConfig.useCachedConfig:
 					# Event needs cached config => initialize cache service
 					self.opsiclientd._cacheService.init()
 					if self.opsiclientd._cacheService.getConfigSyncCompleted():
-						logger.notice("Event '%s' requires cached config and config sync is done" % self.eventOccurence.event)
+						logger.notice("Event '%s' requires cached config and config sync is done" % self.event)
 						self.opsiclientd._cacheService.workWithLocalConfig()
 						cacheConfigServiceUrl = 'https://127.0.0.1:%s/rpc' % self.opsiclientd.getConfigValue('control_server', 'port')
 						logger.notice("Setting config service url to cache service url '%s'" % cacheConfigServiceUrl)
 						self.opsiclientd.setConfigValue('config_service', 'url', cacheConfigServiceUrl)
 					else:
-						logger.notice("Event '%s' requires cached config but config sync is not done, exiting" % self.eventOccurence.event)
+						logger.notice("Event '%s' requires cached config but config sync is not done, exiting" % self.event)
 						self.running = False
 						return
 				
-				self.setStatusMessage(self.eventOccurence.event.message)
-				if self.eventOccurence.event.warningTime:
+				self.setStatusMessage(self.event.eventConfig.message)
+				if self.event.eventConfig.warningTime:
 					choiceSubject = ChoiceSubject(id = 'choice')
-					if self.eventOccurence.event.userCancelable:
+					if self.event.eventConfig.userCancelable:
 						choiceSubject.setChoices([ 'Abort', 'Start now' ])
 						choiceSubject.setCallbacks( [ self.abortEventCallback, self.startEventCallback ] )
 					else:
@@ -2535,16 +2697,16 @@ class EventProcessingThread(KillableThread):
 						choiceSubject.setCallbacks( [ self.startEventCallback ] )
 					self.opsiclientd.getNotificationServer().addSubject(choiceSubject)
 					try:
-						if self.eventOccurence.event.eventNotifierCommand:
+						if self.event.eventConfig.eventNotifierCommand:
 							self.startNotifierApplication(
-									command = self.eventOccurence.event.eventNotifierCommand,
-									desktop = self.eventOccurence.event.eventNotifierDesktop )
+									command = self.event.eventConfig.eventNotifierCommand,
+									desktop = self.event.eventConfig.eventNotifierDesktop )
 							
-						timeout = int(self.eventOccurence.event.warningTime)
+						timeout = int(self.event.eventConfig.warningTime)
 						while(timeout > 0) and not self.eventCancelled and not self.waitCancelled:
 							self.waiting = True
-							logger.info("Notifying user of event %s" % self.eventOccurence.event)
-							self.setStatusMessage("Event %s: processing will start in %d seconds" % (self.eventOccurence.event.getName(), timeout))
+							logger.info("Notifying user of event %s" % self.event)
+							self.setStatusMessage("Event %s: processing will start in %d seconds" % (self.event.eventConfig.getName(), timeout))
 							timeout -= 1
 							time.sleep(1)
 						
@@ -2555,26 +2717,26 @@ class EventProcessingThread(KillableThread):
 						self.stopNotifierApplication()
 						self.opsiclientd.getNotificationServer().removeSubject(choiceSubject)
 				
-				self.setStatusMessage(_("Processing event %s") % self.eventOccurence.event.getName())
+				self.setStatusMessage(_("Processing event %s") % self.event.eventConfig.getName())
 				
-				if self.eventOccurence.event.blockLogin:
+				if self.event.eventConfig.blockLogin:
 					self.opsiclientd.setBlockLogin(True)
-				if self.eventOccurence.event.logoffCurrentUser:
+				if self.event.eventConfig.logoffCurrentUser:
 					System.logoffCurrentUser()
 					time.sleep(15)
-				elif self.eventOccurence.event.lockWorkstation:
+				elif self.event.eventConfig.lockWorkstation:
 					System.lockWorkstation()
 					time.sleep(15)
 				
-				if self.eventOccurence.event.actionNotifierCommand:
+				if self.event.eventConfig.actionNotifierCommand:
 					self.startNotifierApplication(
-						command = self.eventOccurence.event.actionNotifierCommand,
-						desktop = self.eventOccurence.event.actionNotifierDesktop )
+						command = self.event.eventConfig.actionNotifierCommand,
+						desktop = self.event.eventConfig.actionNotifierDesktop )
 				
-				if not self.eventOccurence.event.useCachedConfig:
-					if self.eventOccurence.event.getConfigFromService:
+				if not self.event.eventConfig.useCachedConfig:
+					if self.event.eventConfig.getConfigFromService:
 						self.getConfigFromService()
-					if self.eventOccurence.event.updateConfigFile:
+					if self.event.eventConfig.updateConfigFile:
 						self.opsiclientd.updateConfigFile()
 					
 				self.processProductActionRequests()
@@ -2586,7 +2748,7 @@ class EventProcessingThread(KillableThread):
 				except Exception, e:
 					logger.logException(e)
 				
-				if self.eventOccurence.event.writeLogToService:
+				if self.event.eventConfig.writeLogToService:
 					try:
 						self.writeLogToService()
 					except Exception, e:
@@ -2608,7 +2770,7 @@ class EventProcessingThread(KillableThread):
 					# Windows NT < 6 can't shutdown while pgina.dll is blocking login!
 					# On other systems we keep blocking until shutdown is done
 					self.opsiclientd.setBlockLogin(False)
-				if self.eventOccurence.event.useCachedConfig:
+				if self.event.eventConfig.useCachedConfig:
 					# Set config service url back to previous url
 					logger.notice("Setting config service url back to '%s'" % configServiceUrl)
 					self.opsiclientd.setConfigValue('config_service', 'url', configServiceUrl)
@@ -2625,11 +2787,11 @@ class EventProcessingThread(KillableThread):
 					except Exception, e:
 						logger.logException(e)
 		except Exception, e:
-			logger.error("Failed to process occurence of event %s: %s" % (self.eventOccurence.event, e))
+			logger.error("Failed to process event %s: %s" % (self.event, e))
 			logger.logException(e)
 		
 		self.running = False
-		logger.notice("============= EventProcessingThread for occurence of event '%s' ended =============" % self.eventOccurence.event)
+		logger.notice("============= EventProcessingThread for event '%s' ended =============" % self.event)
 		
 	def abortEventCallback(self, choiceSubject):
 		logger.notice("Event aborted by user")
@@ -2659,11 +2821,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		self._startupTime = time.time()
 		self._running = False
-		self._eventOccurenceProcessingThreads = []
-		self._eventOccurenceProcessingThreadsLock = threading.Lock()
+		self._eventProcessingThreads = []
+		self._eventProcessingThreadsLock = threading.Lock()
 		self._blockLogin = True
 		self._currentActiveDesktopName = {}
-		self._events = {}
+		self._eventGenerators = {}
 		
 		self._statusApplicationProcess = None
 		
@@ -2926,66 +3088,70 @@ class Opsiclientd(EventListener, threading.Thread):
 					string = self.fillPlaceholders(newString, escaped)
 		return unicode(string)
 	
-	def createEvents(self):
-		self._events['panic'] = PanicEvent('panic')
-		self._events['panic'].actionProcessorCommand = self.getConfigValue('action_processor', 'command', raw=True)
+	def createEventGenerators(self):
+		self._eventGenerators['panic'] = EventGeneratorFactory(
+			PanicEventConfig('panic', actionProcessorCommand = self.getConfigValue('action_processor', 'command', raw=True))
+		)
 		
-		events = {}
+		eventConfigs = {}
 		for (section, options) in self._config.items():
 			section = section.lower()
 			if section.startswith('event_'):
-				eventName = section.split('_', 1)[1]
-				if not eventName:
-					logger.error("No event name defined in section '%s'" % section)
+				eventConfigName = section.split('_', 1)[1]
+				if not eventConfigName:
+					logger.error("No event config name defined in section '%s'" % section)
 					continue
-				if eventName in self._events.keys():
-					logger.error("Event '%s' already defined" % eventName)
+				if eventConfigName in self._eventGenerators.keys():
+					logger.error("Event config '%s' already defined" % eventConfigName)
 					continue
-				events[eventName] = {
+				eventConfigs[eventConfigName] = {
 					'active': True,
 					'args':   {},
 					'super':  None }
 				try:
 					for key in options.keys():
 						if   (key.lower() == 'active'):
-							events[eventName]['active'] = not options[key].lower() in ('0', 'false', 'off', 'no')
+							eventConfigs[eventConfigName]['active'] = not options[key].lower() in ('0', 'false', 'off', 'no')
 						elif (key.lower() == 'super'):
-							events[eventName]['super'] = options[key]
+							eventConfigs[eventConfigName]['super'] = options[key]
 						else:
-							events[eventName]['args'][key.lower()] = options[key]
+							eventConfigs[eventConfigName]['args'][key.lower()] = options[key]
 				except Exception, e:
-					logger.error("Failed to parse event '%s': %s" % (eventName, e))
+					logger.error("Failed to parse event config '%s': %s" % (eventConfigName, e))
 		
-		def __inheritArgsFromSuperEvents(eventsCopy, args, superEventName):
-			if not superEventName in eventsCopy.keys():
-				logger.error("Event '%s': Super event '%s' not found" % (eventName, superEventName))
+		def __inheritArgsFromSuperEvents(eventConfigsCopy, args, superEventConfigName):
+			if not superEventConfigName in eventConfigsCopy.keys():
+				logger.error("Super event '%s' not found" % superEventConfigName)
 				return args
-			superArgs = pycopy.deepcopy(eventsCopy[superEventName]['args'])
-			if eventsCopy[superEventName]['super']:
-				__inheritArgsFromSuperEvents(eventsCopy, superArgs, eventsCopy[superEventName]['super'])
+			superArgs = pycopy.deepcopy(eventConfigsCopy[superEventConfigName]['args'])
+			if eventConfigsCopy[superEventConfigName]['super']:
+				__inheritArgsFromSuperEvents(eventConfigsCopy, superArgs, eventConfigsCopy[superEventConfigName]['super'])
 			superArgs.update(args)
 			return superArgs
 		
-		eventsCopy = pycopy.deepcopy(events)
-		for eventName in events.keys():
-			if events[eventName]['super']:
-				events[eventName]['args'] = __inheritArgsFromSuperEvents(eventsCopy, events[eventName]['args'], events[eventName]['super'])
+		eventConfigsCopy = pycopy.deepcopy(eventConfigs)
+		for eventConfigName in events.keys():
+			if eventConfigs[eventConfigName]['super']:
+				eventConfigs[eventConfigName]['args'] = __inheritArgsFromSuperEvents(
+										eventConfigsCopy,
+										eventConfigs[eventConfigName]['args'],
+										eventConfigs[eventConfigName]['super'])
 		
-		for (eventName, event) in events.items():
+		for (eventConfigName, eventConfig) in eventConfigs.items():
 			try:
-				if not event['active']:
-					logger.notice("Event '%s' is deactivated" % eventName)
+				if not eventConfig['active']:
+					logger.notice("Event config '%s' is deactivated" % eventConfigName)
 					continue
 				
-				if not event['args'].get('type'):
-					logger.error("Event '%s': event type not set" % eventName)
+				if not eventConfig['args'].get('type'):
+					logger.error("Event config '%s': event type not set" % eventConfigName)
 					continue
 				
-				#if not event['args'].get('action_processor_command'):
-				#	event['args']['action_processor_command'] = self.getConfigValue('action_processor', 'command')
+				#if not eventConfig['args'].get('action_processor_command'):
+				#	eventConfig['args']['action_processor_command'] = self.getConfigValue('action_processor', 'command')
 				
 				args = {}
-				for (key, value) in event['args'].items():
+				for (key, value) in eventConfig['args'].items():
 					if   (key == 'type'):
 						continue
 					elif (key == 'message'):
@@ -3043,42 +3209,29 @@ class Opsiclientd(EventListener, threading.Thread):
 					elif (key == 'service_options'):
 						args['serviceOptions'] = eval(value)
 					else:
-						logger.error("Skipping unknown option '%s' in definition of event '%s'" % (key, eventName))
+						logger.error("Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigName))
 				
-				logger.info("\nEvent '" + eventName + "' args:\n" + Tools.objectToBeautifiedText(args) + "\n")
+				logger.info("\nEvent config '" + eventConfigName + "' args:\n" + Tools.objectToBeautifiedText(args) + "\n")
 				
-				if   (event['args']['type'] == EVENT_TYPE_PRODUCT_SYNC_COMPLETED):
-					self._events[eventName] = ProductSyncCompletedEvent(eventName, **args)
-				elif (event['args']['type'] == EVENT_TYPE_DAEMON_STARTUP):
-					self._events[eventName] = DaemonStartupEvent(eventName, **args)
-				elif (event['args']['type'] == EVENT_TYPE_DAEMON_SHUTDOWN):
-					self._events[eventName] = DaemonShutdownEvent(eventName, **args)
-				elif (event['args']['type'] == EVENT_TYPE_GUI_STARTUP):
-					self._events[eventName] = GUIStartupEvent(eventName, **args)
-				elif (event['args']['type'] == EVENT_TYPE_USER_LOGIN):
-					self._events[eventName] = UserLoginEvent(eventName, **args)
-				elif (event['args']['type'] == EVENT_TYPE_TIMER):
-					self._events[eventName] = TimerEvent(eventName, **args)
-				elif (event['args']['type'] == EVENT_TYPE_CUSTOM):
-					self._events[eventName] = CustomEvent(eventName, **args)
-				else:
-					raise ValueError("Unhandled event type '%s' in definition of event '%s'" % (event['args']['type'], eventName))
-				logger.notice("%s event '%s' created" % (event['args']['type'], eventName))
+				self._eventGenerators[eventConfigName] = EventGeneratorFactory(
+					EventConfigFactory(eventName, eventConfig['args']['type'], **args)
+				)
+				logger.notice("%s event generator '%s' created" % (eventConfig['args']['type'], eventConfigName))
 				
 			except Exception, e:
 					logger.error("Failed to create event '%s': %s" % (eventName, e))
 		
-		for event in self._events.values():
-			event.addEventListener(self)
-			event.start()
-			logger.notice("Event '%s' started" % event)
-	
-	def getEvents(self, eventType=''):
-		events = []
-		for event in self._events.values():
-			if not eventType or (event.getType() == eventType):
-				events.append(event)
-		return events
+		for eventGenerator in self._eventGenerators.values():
+			eventGenerator.addEventListener(self)
+			eventGenerator.start()
+			logger.notice("Event generator '%s' started" % eventGenerator)
+		
+	def getEventGenerators(self, generatorClass=None):
+		eventGenerators = []
+		for eventGenerator in self._eventGenerators.values():
+			if not generatorClass or isinstance(eventGenerator, generatorClass):
+				eventGenerators.append(eventGenerator)
+		return eventGenerators
 		
 	def waitForGUI(self, timeout=None):
 		if not timeout:
@@ -3109,11 +3262,11 @@ class Opsiclientd(EventListener, threading.Thread):
 							else:
 								logger.error("Failed to start wait for GUI app: %s" % e)
 				self._guiStarted = threading.Event()
-				event = GUIStartupEvent("wait_for_gui")
-				event.addEventListener(self)
-				event.start()
+				eventGenerator = EventGeneratorFactory(GUIStartupEvent("wait_for_gui"))
+				eventGenerator.addEventListener(self)
+				eventGenerator.start()
 			
-			def processEventOccurence(self, eventOccurence):
+			def processEvent(self, event):
 				if self._waitAppPid:
 					try:
 						logger.info("Terminating wait for GUI app (pid %s)" % self._waitAppPid)
@@ -3174,10 +3327,10 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to start cache service: %s" % e)
 				raise
 			
-			# Create events
-			self.createEvents()
-			for event in self.getEvents(EVENT_TYPE_DAEMON_STARTUP):
-				event.fire()
+			# Create event genartors
+			self.createEventGenerators()
+			for eventGenerator in self.getEventGenerators(generatorClass = DaemonStartupEventGenerator):
+				eventGenerator.fireEvent()
 			
 			# Wait until gui starts up
 			logger.notice("Waiting for gui startup (timeout: %d seconds)" % self.getConfigValue('global', 'wait_for_gui_timeout'))
@@ -3186,15 +3339,15 @@ class Opsiclientd(EventListener, threading.Thread):
 			
 			# Wait some more seconds for events to fire
 			time.sleep(5)
-			if not self._eventOccurenceProcessingThreads:
+			if not self._eventProcessingThreads:
 				logger.notice("No events processing, unblocking login")
 				self.setBlockLogin(False)
 			
 			# TODO: passive wait?
 			while self._running:
 				time.sleep(1)
-			for event in self.getEvents(EVENT_TYPE_DAEMON_SHUTDOWN):
-				event.fire()
+			for eventGenerator in self.getEventGenerators(generatorClass = DaemonShutdownEventGenerator):
+				eventGenerator.fireEvent()
 			
 		except Exception, e:
 			logger.logException(e)
@@ -3234,62 +3387,39 @@ class Opsiclientd(EventListener, threading.Thread):
 				return True
 		raise Exception("Invalid credentials")
 	
-	def processEventOccurence(self, eventOccurence):
-		# Always process events of type EVENT_TYPE_PANIC
-		#if self._eventOccurenceProcessingThreads and (eventOccurence.event.getType() != EVENT_TYPE_PANIC):
-		#	#if (eventOccurence.event.maxConcurrent == 1):
-		#	#	# Event does not allow to process multiple events of the same type at the same time
-		#	#	logger.error("Not processing event %s: Already processing event and no concurrent events of this type allowed" % eventOccurence.event)
-		#	#	return
-		#	#
-		#	#processingEventsOfSameType = 0
-		#	#processingEventsOfOtherType = 0
-		#	#for ev in self._eventOccurenceProcessingThreads:
-		#	#	logger.info("Currently processing event occurence: %s" % ev)
-		#	#	if (ev.event.getType() == eventOccurence.event.getType()):
-		#	#		processingEventsOfSameType += 1
-		#	#	else:
-		#	#		processingEventsOfOtherType += 1
-		#	#
-		#	#if (processingEventsOfOtherType > 0):
-		#	#	logger.error("Not processing event %s: Already processing event of an other type" % eventOccurence.event)
-		#	#	return
-		#	#
-		#	#if (event.maxConcurrent != 0) and (processingEventsOfSameType >= eventOccurence.event.maxConcurrent):
-		#	#	logger.error("Not processing event %s: Already processing %d event(s) of the same type" % processingEventsOfSameType)
-		#	#	return
+	def processEvent(self, event):
 		
-		logger.notice("Processing event occurence %s" % eventOccurence)
+		logger.notice("Processing event %s" % event)
 		
 		eventProcessingThread = None
-		self._eventOccurenceProcessingThreadsLock.acquire()
+		self._eventProcessingThreadsLock.acquire()
 		try:
-			eventProcessingThread = EventProcessingThread(self, eventOccurence)
+			eventProcessingThread = EventProcessingThread(self, event)
 			
-			# Always process events of type EVENT_TYPE_PANIC
-			if (eventOccurence.event.getType() != EVENT_TYPE_PANIC):
-				for ept in self._eventOccurenceProcessingThreads:
+			# Always process panic events
+			if not isinstance(event, PanicEvent):
+				for ept in self._eventProcessingThreads:
 					if (ept.getSessionId() == eventProcessingThread.getSessionId()):
-						raise Exception("Already processing an other event occurence in session %s" % eventProcessingThread.getSessionId())
+						raise Exception("Already processing an other event in session %s" % eventProcessingThread.getSessionId())
 		
 		except Exception, e:
-			self._eventOccurenceProcessingThreadsLock.release()
+			self._eventProcessingThreadsLock.release()
 			raise
 		
-		self._eventOccurenceProcessingThreads.append(eventProcessingThread)
-		self._eventOccurenceProcessingThreadsLock.release()
+		self._eventProcessingThreads.append(eventProcessingThread)
+		self._eventProcessingThreadsLock.release()
 		
 		try:
 			eventProcessingThread.start()
 			eventProcessingThread.join()
-			logger.notice("Done processing event occurence '%s'" % eventOccurence)
+			logger.notice("Done processing event '%s'" % event)
 		finally:
-			self._eventOccurenceProcessingThreadsLock.acquire()
-			self._eventOccurenceProcessingThreads.remove(eventProcessingThread)
-			self._eventOccurenceProcessingThreadsLock.release()
+			self._eventProcessingThreadsLock.acquire()
+			self._eventProcessingThreads.remove(eventProcessingThread)
+			self._eventProcessingThreadsLock.release()
 	
-	def getEventOccurenceProcessingThread(self, sessionId):
-		for ept in self._eventOccurenceProcessingThreads:
+	def getEventProcessingThread(self, sessionId):
+		for ept in self._eventProcessingThreads:
 			if (int(ept.getSessionId()) == int(sessionId)):
 				return ept
 		raise Exception("Event processing thread for session %s not found" % sessionId)
@@ -3385,10 +3515,10 @@ class Opsiclientd(EventListener, threading.Thread):
 				if not params[0]:
 					raise ValueError("No event name given")
 				name = params[0]
-				if not name in self._events.keys():
-					raise ValueError("Event '%s' not in list of known events: %s" % (name, ', '.join(self._events.keys())))
+				if not name in self._eventGenerators.keys():
+					raise ValueError("Event '%s' not in list of known events: %s" % (name, ', '.join(self._eventGenerators.keys())))
 				logger.notice("Firing event '%s'" % name)
-				self._events[name].fire()
+				self._eventGenerators[name].fire()
 			
 			elif (method == 'setStatusMessage'):
 				if (len(params) < 2):
@@ -3397,7 +3527,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				message = params[1]
 				if not type(message) in (str, unicode):
 					message = ""
-				ept = self.getEventOccurenceProcessingThread(sessionId)
+				ept = self.getEventProcessingThread(sessionId)
 				logger.notice("rpc setStatusMessage: Setting status message to '%s'" % message)
 				ept.setStatusMessage(message)
 			
