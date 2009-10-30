@@ -90,6 +90,25 @@ def _(msg):
 	return msg
 
 
+importWmiAndPythoncomLock = threading.Lock()
+def importWmiAndPythoncom():
+	if not (wmi and pythoncom):
+		logger.info("Need to import wmi / pythoncom")
+		importWmiAndPythoncomLock.acquire()
+		global wmi
+		global pythoncom
+		while not (wmi and pythoncom):
+			try:
+				if not wmi:
+					logger.debug("Importing wmi")
+					import wmi
+				if not pythoncom:
+					logger.debug("Importing pythoncom")
+					import pythoncom
+			except Exception, e:
+				logger.warning("Failed to import: %s, retrying in 2 seconds" % e)
+				time.sleep(2)
+		importWmiAndPythoncomLock.release()
 
 '''
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -170,7 +189,7 @@ def EventConfigFactory(type, name, **kwargs):
 	else:
 		raise TypeError("Unknown event config type '%s'" % type)
 	
-class EventConfig():
+class EventConfig(object):
 	def __init__(self, name, **kwargs):
 		
 		if not name:
@@ -228,7 +247,7 @@ class EventConfig():
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class PanicEventConfig(EventConfig):
 	def __init__(self, name, **kwargs):
-		Event.__init__(self, name, **kwargs)
+		EventConfig.__init__(self, name, **kwargs)
 		self.maxRepetitions         = -1
 		self.message                = 'Panic event'
 		self.activationDelay        = 0
@@ -254,7 +273,7 @@ class DaemonStartupEventConfig(EventConfig):
 	def __init__(self, name, **kwargs):
 		EventConfig.__init__(self, name, **kwargs)
 		self.maxRepetitions = 0
-	
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                    DAEMON SHUTDOWN EVENT CONFIG                                   -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -262,11 +281,6 @@ class DaemonShutdownEventConfig(EventConfig):
 	def __init__(self, name, **kwargs):
 		EventConfig.__init__(self, name, **kwargs)
 		self.maxRepetitions = 0
-	
-	def activate(self):
-		Event.activate(self)
-		e = threading.Event()
-		e.wait()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          WMI EVENT CONFIG                                         -
@@ -275,7 +289,7 @@ class WMIEventConfig(EventConfig):
 	def __init__(self, name, **kwargs):
 		EventConfig.__init__(self, name, **kwargs)
 		self.wql = str( kwargs.get('wql', '') )
-		
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                      GUI STARTUP EVENT CONFIG                                     -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -284,8 +298,6 @@ class GUIStartupEventConfig(WMIEventConfig):
 		WMIEventConfig.__init__(self, name, **kwargs)
 		self.maxRepetitions = 0
 		self.processName = None
-		
-	
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         TIMER EVENT CONFIG                                        -
@@ -300,11 +312,6 @@ class TimerEventConfig(EventConfig):
 class ProductSyncCompletedEventConfig(EventConfig):
 	def __init__(self, name, **kwargs):
 		EventConfig.__init__(self, name, **kwargs)
-	
-	def activate(self):
-		Event.activate(self)
-		e = threading.Event()
-		e.wait()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                               PROCESS ACTION REQUESTS EVENT CONFIG                                -
@@ -312,11 +319,6 @@ class ProductSyncCompletedEventConfig(EventConfig):
 class ProcessActionRequestsEventConfig(EventConfig):
 	def __init__(self, name, **kwargs):
 		EventConfig.__init__(self, name, **kwargs)
-	
-	def activate(self):
-		Event.activate(self)
-		e = threading.Event()
-		e.wait()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                       USER LOGIN EVENT CONFIG                                     -
@@ -331,12 +333,9 @@ class UserLoginEventConfig(WMIEventConfig):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                        CUSTOM EVENT CONFIG                                        -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class CustomEventConfig(WMIEvent):
+class CustomEventConfig(WMIEventConfig):
 	def __init__(self, name, **kwargs):
-		WMIEvent.__init__(self, name, **kwargs)
-	
-
-
+		WMIEventConfig.__init__(self, name, **kwargs)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          EVENT GENERATOR                                          -
@@ -369,6 +368,7 @@ class EventGenerator(threading.Thread):
 		self._eventConfig = eventConfig
 		self._eventListeners = []
 		self._eventsOccured = 0
+		logger.setLogFormat('[%l] [%D] [event generator ' + self._eventConfig.getName() + ']   %M  (%F|%N)', object=self)
 		
 	def addEventListener(self, eventListener):
 		if not isinstance(eventListener, EventListener):
@@ -398,18 +398,23 @@ class EventGenerator(threading.Thread):
 			event = self.createEvent()
 		
 		logger.info("Firing event '%s'" % event)
+		logger.info("Event info:")
+		for (key, value) in event.eventInfo.items():
+			logger.info("     %s: %s" % (key, value))
+		
 		class FireEventThread(threading.Thread):
 			def __init__(self, eventListener, event):
 				threading.Thread.__init__(self)
 				self._eventListener = eventListener
 				self._event = event
-			
+				
 			def run(self):
-				if (self._eventConfig.notificationDelay > 0):
+				if (self._event.eventConfig.notificationDelay > 0):
 					logger.debug("Waiting %d seconds before notifying listener '%s' of event '%s'" \
 						% (self._event.eventConfig.notificationDelay, self._eventListener, self._event))
 					time.sleep(self._event.eventConfig.notificationDelay)
 				try:
+					logger.info("Calling processEvent on listener %s" % self._eventListener)
 					self._eventListener.processEvent(self._event)
 				except Exception, e:
 					logger.logException(e)
@@ -418,7 +423,7 @@ class EventGenerator(threading.Thread):
 		for l in self._eventListeners:
 			# Create a new thread for each event listener
 			FireEventThread(l, event).start()
-	
+		
 	def run(self):
 		try:
 			logger.info("Initializing event generator '%s'" % self)
@@ -477,19 +482,7 @@ class WMIEventGenerator(EventGenerator):
 		if not (os.name == 'nt'):
 			return
 		
-		global wmi
-		global pythoncom
-		while not (wmi and pythoncom):
-			try:
-				if not wmi:
-					logger.debug("Importing wmi")
-					import wmi
-				if not pythoncom:
-					logger.debug("Importing pythoncom")
-					import pythoncom
-			except Exception, e:
-				logger.warning("Failed to import: %s, retrying in 2 seconds" % e)
-				time.sleep(2)
+		importWmiAndPythoncom()
 		pythoncom.CoInitialize()
 		if self._wql:
 			logger.debug("Creating wmi object")
@@ -516,8 +509,8 @@ class WMIEventGenerator(EventGenerator):
 		return self.createEvent(eventInfo)
 	
 	def cleanup(self):
-		if pythoncom:
-			pythoncom.CoUninitialize()
+		importWmiAndPythoncom()
+		pythoncom.CoUninitialize()
 	
 class GUIStartupEventGenerator(WMIEventGenerator):
 	def __init__(self, eventConfig):
@@ -537,7 +530,7 @@ class GUIStartupEventGenerator(WMIEventGenerator):
 	def getNextEvent(self):
 		if (self._eventsOccured <= 0) and System.getPid(self.guiProcessName):
 			logger.info("Process '%s' is running" % self.guiProcessName)
-			return None
+			return self.createEvent()
 		return WMIEventGenerator.getNextEvent(self)
 
 class TimerEventGenerator(EventGenerator):
@@ -572,20 +565,23 @@ class UserLoginEventGenerator(WMIEventGenerator):
 		WMIEventGenerator.initialize(self)
 		if not (os.name == 'nt'):
 			return
+		importWmiAndPythoncom()
+		pythoncom.CoInitialize()
 		logger.debug("Creating wmi object")
 		c = wmi.WMI(privileges = ["Security"])
 		logger.info("Watching for Win32_NTLogEvent, Logfile = Security, EventCode = 528")
 		self._watcher = c.Win32_NTLogEvent.watch_for(notification_type = "Creation", Logfile = "Security", EventCode = 528)
 	
 	def createEvent(self, eventInfo={}):
-		logger.notice("User '%s' logged in" % self.eventInfo.get('User'))
 		return UserLoginEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
 	
 	def getNextEvent(self):
 		event = WMIEventGenerator.getNextEvent(self)
 		for attr in event.eventInfo.get('InsertionStrings', []):
 			if (attr.strip() == 'User32'):
+				logger.notice("User '%s' logged in" % event.eventInfo.get('User'))
 				return event
+		logger.debug("Not a user login: %s" % event.eventInfo.get('User'))
 		return None
 	
 class CustomEventGenerator(EventGenerator):
@@ -598,55 +594,51 @@ class CustomEventGenerator(EventGenerator):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                            EVENT                                                  -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class Event():
+class Event(object):
 	def __init__(self, eventConfig, eventInfo={}):
 		self.eventConfig = eventConfig
 		self.eventInfo = eventInfo
 		logger.setLogFormat('[%l] [%D] [event ' + self.eventConfig.getName() + ']   %M  (%F|%N)', object=self)
 		
-		logger.info("Event info:")
-		for (key, value) in self.eventInfo:
-			logger.info("     %s: %s" % (key, value))
-		
 	def getActionProcessorCommand(self):
-		actionProcessorCommand = self.event.actionProcessorCommand
+		actionProcessorCommand = self.eventConfig.actionProcessorCommand
 		for (key, value) in self.eventInfo.items():
 			actionProcessorCommand = actionProcessorCommand.replace('%' + 'event.' + key.lower() + '%', unicode(value))
 		return actionProcessorCommand
 
-class PanicEvent():
+class PanicEvent(Event):
 	def __init__(self, eventConfig, eventInfo={}):
 		Event.__init__(self, eventConfig, eventInfo)
 
-class DaemonStartupEvent():
+class DaemonStartupEvent(Event):
 	def __init__(self, eventConfig, eventInfo={}):
 		Event.__init__(self, eventConfig, eventInfo)
 
-class DaemonShutdownEvent():
+class DaemonShutdownEvent(Event):
 	def __init__(self, eventConfig, eventInfo={}):
 		Event.__init__(self, eventConfig, eventInfo)
 
-class GUIStartupEvent():
+class GUIStartupEvent(Event):
 	def __init__(self, eventConfig, eventInfo={}):
 		Event.__init__(self, eventConfig, eventInfo)
 
-class TimerEvent():
+class TimerEvent(Event):
 	def __init__(self, eventConfig, eventInfo={}):
 		Event.__init__(self, eventConfig, eventInfo)
 
-class ProductSyncCompletedEvent():
+class ProductSyncCompletedEvent(Event):
 	def __init__(self, eventConfig, eventInfo={}):
 		Event.__init__(self, eventConfig, eventInfo)
 
-class ProcessActionRequestsEvent():
+class ProcessActionRequestsEvent(Event):
 	def __init__(self, eventConfig, eventInfo={}):
 		Event.__init__(self, eventConfig, eventInfo)
 
-class UserLoginEvent():
+class UserLoginEvent(Event):
 	def __init__(self, eventConfig, eventInfo={}):
 		Event.__init__(self, eventConfig, eventInfo)
 
-class CustomEvent():
+class CustomEvent(Event):
 	def __init__(self, eventConfig, eventInfo={}):
 		Event.__init__(self, eventConfig, eventInfo)
 
@@ -2871,7 +2863,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			},
 			'notification_server': {
 				'interface':              '127.0.0.1',
-				'first_port':             44000,
+				'start_port':             44000,
 			},
 			'opsiclientd_notifier': {
 				'command':                '',
@@ -3130,7 +3122,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			return superArgs
 		
 		eventConfigsCopy = pycopy.deepcopy(eventConfigs)
-		for eventConfigName in events.keys():
+		for eventConfigName in eventConfigs.keys():
 			if eventConfigs[eventConfigName]['super']:
 				eventConfigs[eventConfigName]['args'] = __inheritArgsFromSuperEvents(
 										eventConfigsCopy,
@@ -3214,12 +3206,12 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.info("\nEvent config '" + eventConfigName + "' args:\n" + Tools.objectToBeautifiedText(args) + "\n")
 				
 				self._eventGenerators[eventConfigName] = EventGeneratorFactory(
-					EventConfigFactory(eventName, eventConfig['args']['type'], **args)
+					EventConfigFactory(eventConfig['args']['type'], eventConfigName, **args)
 				)
 				logger.notice("%s event generator '%s' created" % (eventConfig['args']['type'], eventConfigName))
 				
 			except Exception, e:
-					logger.error("Failed to create event '%s': %s" % (eventName, e))
+				logger.error("Failed to create event generator '%s': %s" % (eventConfigName, e))
 		
 		for eventGenerator in self._eventGenerators.values():
 			eventGenerator.addEventListener(self)
@@ -3262,11 +3254,12 @@ class Opsiclientd(EventListener, threading.Thread):
 							else:
 								logger.error("Failed to start wait for GUI app: %s" % e)
 				self._guiStarted = threading.Event()
-				eventGenerator = EventGeneratorFactory(GUIStartupEvent("wait_for_gui"))
+				eventGenerator = EventGeneratorFactory(GUIStartupEventConfig("wait_for_gui"))
 				eventGenerator.addEventListener(self)
 				eventGenerator.start()
 			
 			def processEvent(self, event):
+				logger.info("GUI started")
 				if self._waitAppPid:
 					try:
 						logger.info("Terminating wait for GUI app (pid %s)" % self._waitAppPid)

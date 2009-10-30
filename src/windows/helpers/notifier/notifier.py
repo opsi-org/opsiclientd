@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.4.5.1'
+__version__ = '0.4.6'
 
 # Imports
 import threading, time, sys, os, getopt
@@ -52,7 +52,7 @@ from OPSI.Logger import *
 logger = Logger()
 
 # Globals
-logFile = 'notifier.log'
+logFile = ''
 transparentColor = (0,0,0)
 host = '127.0.0.1'
 port = 0
@@ -737,21 +737,19 @@ if (__name__ == "__main__"):
 		except:
 			pass
 		
-		if os.path.exists(logFile):
-			logger.notice("Deleting old log file: %s" % logFile)
-			os.unlink(logFile)
-		logger.notice("Opening log file: %s" % logFile)
-		logger.setLogFile(logFile)
-		logger.setFileLevel(LOG_DEBUG)
-		
 		logger.notice("Commandline: %s" % ' '.join(sys.argv))
 		
 		# Process command line arguments
 		try:
-			(opts, args) = getopt.getopt(sys.argv[1:], "h:p:s:", [ "host=", "port=", "skin=" ])
+			(opts, args) = getopt.getopt(sys.argv[1:], "h:p:s:l:", [ "host=", "port=", "skin=", "log-file=" ])
 		except getopt.GetoptError:
 			usage()
 			sys.exit(1)
+		
+		global logFile
+		global host
+		global port
+		global skin
 		
 		for (opt, arg) in opts:
 			logger.info("Processing option %s:%s" % (opt, arg))
@@ -761,8 +759,16 @@ if (__name__ == "__main__"):
 				port = int(arg)
 			elif opt in ("-s", "--skin"):
 				skin = arg
+			elif opt in ("-l", "--log-file"):
+				logFile = arg
+				if os.path.exists(logFile):
+					logger.notice("Deleting old log file: %s" % logFile)
+					os.unlink(logFile)
+				logger.notice("Opening log file: %s" % logFile)
+				logger.setLogFile(logFile)
+				logger.setFileLevel(LOG_DEBUG)
 		
-		logger.notice("Host: %s, port: %s, skin: %s" % (host, port, skin))
+		logger.notice("Host: %s, port: %s, skin: %s, logfile: %s" % (host, port, skin, logFile))
 		w = OpsiDialogWindow()
 		w.CreateWindow()
 		# PumpMessages runs until PostQuitMessage() is called by someone.
