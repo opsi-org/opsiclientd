@@ -198,33 +198,35 @@ class EventConfig(object):
 		
 		logger.setLogFormat('[%l] [%D] [event config ' + self._name + ']   %M  (%F|%N)', object=self)
 		
-		self.message                =  str ( kwargs.get('message',                  ''        ) )
-		self.maxRepetitions         =  int ( kwargs.get('maxRepetitions',           1         ) )
+		self.message                    =  str ( kwargs.get('message',                    ''        ) )
+		self.maxRepetitions             =  int ( kwargs.get('maxRepetitions',             1         ) )
 		# wait <activationDelay> seconds before event gets active
-		self.activationDelay        =  int ( kwargs.get('activationDelay',          0         ) )
+		self.activationDelay            =  int ( kwargs.get('activationDelay',            0         ) )
 		# wait <notificationDelay> seconds before event is fired
-		self.notificationDelay      =  int ( kwargs.get('notificationDelay',        0         ) )
-		self.warningTime            =  int ( kwargs.get('warningTime',              0         ) )
-		self.userCancelable         = bool ( kwargs.get('userCancelable',           False     ) )
-		self.blockLogin             = bool ( kwargs.get('blockLogin',               False     ) )
-		self.logoffCurrentUser      = bool ( kwargs.get('logoffCurrentUser',        False     ) )
-		self.lockWorkstation        = bool ( kwargs.get('lockWorkstation',          False     ) )
-		self.getConfigFromService   = bool ( kwargs.get('getConfigFromService',     True      ) )
-		self.updateConfigFile       = bool ( kwargs.get('updateConfigFile',         True      ) )
-		self.writeLogToService      = bool ( kwargs.get('writeLogToService',        True      ) )
-		self.updateActionProcessor  = bool ( kwargs.get('updateActionProcessor',    True      ) )
-		self.eventNotifierCommand   =  str ( kwargs.get('eventNotifierCommand',     ''        ) )
-		self.eventNotifierDesktop   =  str ( kwargs.get('eventNotifierDesktop',     'current' ) )
-		self.actionNotifierCommand  =  str ( kwargs.get('actionNotifierCommand',    ''        ) )
-		self.actionNotifierDesktop  =  str ( kwargs.get('actionNotifierDesktop',    'current' ) )
-		self.actionProcessorCommand =  str ( kwargs.get('actionProcessorCommand',   ''        ) )
-		self.actionProcessorDesktop =  str ( kwargs.get('actionProcessorDesktop',   'current' ) )
-		self.serviceOptions         = dict ( kwargs.get('serviceOptions',           {}        ) )
-		self.cacheProducts          = bool ( kwargs.get('cacheProducts',            False     ) )
-		self.cacheMaxBandwidth      =  int ( kwargs.get('cacheMaxBandwidth',        0         ) )
-		self.requiresCachedProducts = bool ( kwargs.get('requiresCachedProducts',   False     ) )
-		self.syncConfig             = bool ( kwargs.get('syncConfig',               False     ) )
-		self.useCachedConfig        = bool ( kwargs.get('useCachedConfig',          False     ) )
+		self.notificationDelay          =  int ( kwargs.get('notificationDelay',          0         ) )
+		self.warningTime                =  int ( kwargs.get('warningTime',                0         ) )
+		self.userCancelable             = bool ( kwargs.get('userCancelable',             False     ) )
+		self.blockLogin                 = bool ( kwargs.get('blockLogin',                 False     ) )
+		self.logoffCurrentUser          = bool ( kwargs.get('logoffCurrentUser',          False     ) )
+		self.lockWorkstation            = bool ( kwargs.get('lockWorkstation',            False     ) )
+		self.getConfigFromService       = bool ( kwargs.get('getConfigFromService',       True      ) )
+		self.updateConfigFile           = bool ( kwargs.get('updateConfigFile',           True      ) )
+		self.writeLogToService          = bool ( kwargs.get('writeLogToService',          True      ) )
+		self.updateActionProcessor      = bool ( kwargs.get('updateActionProcessor',      True      ) )
+		self.eventNotifierCommand       =  str ( kwargs.get('eventNotifierCommand',       ''        ) )
+		self.eventNotifierDesktop       =  str ( kwargs.get('eventNotifierDesktop',       'current' ) )
+		self.actionNotifierCommand      =  str ( kwargs.get('actionNotifierCommand',      ''        ) )
+		self.actionNotifierDesktop      =  str ( kwargs.get('actionNotifierDesktop',      'current' ) )
+		self.actionProcessorCommand     =  str ( kwargs.get('actionProcessorCommand',     ''        ) )
+		self.actionProcessorDesktop     =  str ( kwargs.get('actionProcessorDesktop',     'current' ) )
+		self.preActionProcessorCommand  =  str ( kwargs.get('preActionProcessorCommand',  ''        ) )
+		self.postActionProcessorCommand =  str ( kwargs.get('postActionProcessorCommand', ''        ) )
+		self.serviceOptions             = dict ( kwargs.get('serviceOptions',             {}        ) )
+		self.cacheProducts              = bool ( kwargs.get('cacheProducts',              False     ) )
+		self.cacheMaxBandwidth          =  int ( kwargs.get('cacheMaxBandwidth',          0         ) )
+		self.requiresCachedProducts     = bool ( kwargs.get('requiresCachedProducts',     False     ) )
+		self.syncConfig                 = bool ( kwargs.get('syncConfig',                 False     ) )
+		self.useCachedConfig            = bool ( kwargs.get('useCachedConfig',            False     ) )
 		
 		if not self.eventNotifierDesktop in ('winlogon', 'default', 'current'):
 			logger.error("Bad value '%s' for eventNotifierDesktop" % self.eventNotifierDesktop)
@@ -2030,7 +2032,7 @@ class ServiceConnectionThread(KillableThread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class EventProcessingThread(KillableThread):
 	def __init__(self, opsiclientd, event):
-		logger.setLogFormat('[%l] [%D] [event processing]   %M     (%F|%N)', object=self)
+		logger.setLogFormat('[%l] [%D] [event processing ' + event.eventConfig.getName() + ']   %M     (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		
 		self.opsiclientd = opsiclientd
@@ -2076,15 +2078,19 @@ class EventProcessingThread(KillableThread):
 		
 	def setSessionId(self, sessionId):
 		self._sessionId = int(sessionId)
+		logger.info("Session id set to %s" % self._sessionId)
 		
 	def getSessionId(self):
-		if not self._sessionId:
+		logger.debug("getSessionId()")
+		if self._sessionId is None:
 			sessionId = None
 			if self.isLoginEvent:
+				logger.info("Using session id of user '%s'" % self.event.eventInfo["User"])
 				userSessionsIds = System.getUserSessionIds(self.event.eventInfo["User"])
 				if userSessionsIds:
 					sessionId = userSessionsIds[0]
 			if not sessionId:
+				logger.info("Using active console session id")
 				sessionId = System.getActiveConsoleSessionId()
 			self.setSessionId(sessionId)
 		return self._sessionId
@@ -2093,7 +2099,7 @@ class EventProcessingThread(KillableThread):
 		self._statusSubject.setMessage(message)
 	
 	def startNotificationServer(self):
-		logger.notice("Starting notification server")
+		logger.notice("Starting notification server on port %s" % self._notificationServerPort)
 		try:
 			self._notificationServer = NotificationServer(
 							address  = self.opsiclientd.getConfigValue('notification_server', 'interface'),
@@ -2294,7 +2300,7 @@ class EventProcessingThread(KillableThread):
 		finally:
 			logger.setFileLevel(self.opsiclientd.getConfigValue('global', 'log_level'))
 		
-	def runCommandInSession(self, command, desktop=None, waitForProcessEnding=False):
+	def runCommandInSession(self, command, desktop=None, duplicateFrom='winlogon.exe', waitForProcessEnding=False):
 		
 		sessionId = self.getSessionId()
 		
@@ -2310,7 +2316,7 @@ class EventProcessingThread(KillableThread):
 		while True:
 			try:
 				#logger.notice("Running command in session '%s' on desktop '%s'" % (sessionId, desktop))
-				processId = System.runCommandInSession(command = command, sessionId = sessionId, desktop = desktop, waitForProcessEnding = waitForProcessEnding)[2]
+				processId = System.runCommandInSession(command = command, sessionId = sessionId, desktop = desktop, duplicateFrom = duplicateFrom, waitForProcessEnding = waitForProcessEnding)[2]
 				break
 			except Exception, e:
 				logger.error(e)
@@ -2473,15 +2479,6 @@ class EventProcessingThread(KillableThread):
 					self.setStatusMessage( _("Config synced") )
 					self._currentProgressSubjectProxy.setState(0)
 					self._overallProgressSubjectProxy.setState(0)
-					
-				# Setting some registry values before starting action
-				# Mainly for action processor winst
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depoturl",   self.opsiclientd.getConfigValue('depot_server', 'url'))
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", self.opsiclientd.getConfigValue('depot_server', 'drive'))
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configurl",   "<deprecated>")
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configdrive", "<deprecated>")
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsurl",    "<deprecated>")
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsdrive",  "<deprecated>")
 				
 				#if self.event.eventConfig.cacheProducts:
 				#	logger.notice("Caching products: %s (max bandwidth: %d bit/s)" % (productIds, self.event.eventConfig.cacheMaxBandwidth))
@@ -2507,7 +2504,7 @@ class EventProcessingThread(KillableThread):
 				
 				if self.event.getActionProcessorCommand():
 					self.setStatusMessage( _("Starting actions") )
-					self.runProductActions()
+					self.runActions()
 					self.setStatusMessage( _("Actions completed") )
 				
 		except Exception, e:
@@ -2517,7 +2514,16 @@ class EventProcessingThread(KillableThread):
 		
 		time.sleep(3)
 	
-	def runProductActions(self):
+	def runActions(self):
+		# Setting some registry values before starting action
+		# Mainly for action processor winst
+		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depoturl",   self.opsiclientd.getConfigValue('depot_server', 'url'))
+		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", self.opsiclientd.getConfigValue('depot_server', 'drive'))
+		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configurl",   "<deprecated>")
+		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configdrive", "<deprecated>")
+		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsurl",    "<deprecated>")
+		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsdrive",  "<deprecated>")
+		
 		# action processor desktop can be one of current / winlogon / default
 		desktop = self.event.eventConfig.actionProcessorDesktop
 		
@@ -2593,18 +2599,35 @@ class EventProcessingThread(KillableThread):
 				System.createUser(username = runAsUser, password = runAsPassword, groups = [ System.getAdminGroupName() ])
 				localUserCreated = True
 			
+			duplicateFrom = 'winlogon.exe'
 			command = u'%system.program_files_dir%\\opsi.org\\preloginloader\\action_processor_starter.exe ' \
 				+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
 				+ u'"%global.log_file%" "%global.log_level%" ' \
-				+ u'"' + self.opsiclientd.getConfigValue('depot_server', 'url') + u'" "' + self.opsiclientd.getConfigValue('depot_server', 'drive') + u'" ' \
+				+ u'"%depot_server.url%" "%depot_server.drive%" ' \
 				+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
 				+ u'"' + unicode(self.getSessionId()) + u'" "' + desktop + '" ' \
 				+ u'"' + self.opsiclientd.fillPlaceholders(self.event.getActionProcessorCommand()).replace('"', '\\"') + u'" ' \
 				+ u'"' + runAsUser + u'" "' + runAsPassword + u'"'
 			command = self.opsiclientd.fillPlaceholders(command)
 			
+			#if self.isLoginEvent:
+			#	duplicateFrom = 'explorer.exe'
+			#	command = self.opsiclientd.fillPlaceholders(self.event.getActionProcessorCommand())
+			
+			if self.event.eventConfig.preActionProcessorCommand:
+				logger.notice("Starting pre action processor command '%s' in session '%s' on desktop '%s'" \
+					% (self.event.eventConfig.preActionProcessorCommand, self.getSessionId(), desktop))
+				self.runCommandInSession(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, duplicateFrom = duplicateFrom, waitForProcessEnding = False)
+				time.sleep(10)
+				
 			logger.notice("Starting action processor in session '%s' on desktop '%s'" % (self.getSessionId(), desktop))
-			self.runCommandInSession(command = command, desktop = desktop, waitForProcessEnding = True)
+			self.runCommandInSession(command = command, desktop = desktop, duplicateFrom = duplicateFrom, waitForProcessEnding = True)
+			
+			if self.event.eventConfig.postActionProcessorCommand:
+				logger.notice("Starting post action processor command '%s' in session '%s' on desktop '%s'" \
+					% (self.event.eventConfig.postActionProcessorCommand, self.getSessionId(), desktop))
+				self.runCommandInSession(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, duplicateFrom = duplicateFrom, waitForProcessEnding = False)
+				time.sleep(10)
 		finally:
 			if localUserCreated:
 				logger.notice("Deleting local user '%s'" % runAsUser)
@@ -3027,7 +3050,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	
 	def updateConfigFile(self):
 		''' Get settings from config file '''
-		logger.notice("Trying to write config to file: '%s'" % self.getConfigValue('global', 'config_file'))
+		logger.notice("Updating config file: '%s'" % self.getConfigValue('global', 'config_file'))
 		
 		try:
 			# Read config file
@@ -3200,6 +3223,10 @@ class Opsiclientd(EventListener, threading.Thread):
 						args['actionProcessorDesktop'] = value.lower()
 					elif (key == 'service_options'):
 						args['serviceOptions'] = eval(value)
+					elif (key == 'pre_action_processor_command'):
+						args['preActionProcessorCommand'] = self.fillPlaceholders(value.lower(), escaped=True)
+					elif (key == 'post_action_processor_command'):
+						args['postActionProcessorCommand'] = self.fillPlaceholders(value.lower(), escaped=True)
 					else:
 						logger.error("Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigName))
 				
@@ -3511,7 +3538,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				if not name in self._eventGenerators.keys():
 					raise ValueError("Event '%s' not in list of known events: %s" % (name, ', '.join(self._eventGenerators.keys())))
 				logger.notice("Firing event '%s'" % name)
-				self._eventGenerators[name].fire()
+				self._eventGenerators[name].fireEvent()
 			
 			elif (method == 'setStatusMessage'):
 				if (len(params) < 2):
