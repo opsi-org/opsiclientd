@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2.3'
+__version__ = '0.2.4'
 
 # Imports
 import sys, os
@@ -83,8 +83,10 @@ try:
 		logger.notice("Mounting depot share %s" % depotRemoteUrl)
 		be.setStatusMessage(sessionId, "Mounting depot share %s" % depotRemoteUrl)
 		
-		System.mount(depotRemoteUrl, depotDrive, username = depotServerUsername, password = depotServerPassword)
-		#System.mount(depotRemoteUrl, depotDrive)
+		if runAsUser:
+			System.mount(depotRemoteUrl, depotDrive, username = depotServerUsername, password = depotServerPassword)
+		else:
+			System.mount(depotRemoteUrl, depotDrive)
 		depotShareMounted = True
 	
 	logger.notice("Starting action processor")
