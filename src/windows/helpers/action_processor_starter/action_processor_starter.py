@@ -43,10 +43,10 @@ from OPSI.Backend.JSONRPC import JSONRPCBackend
 #for i in range(len(sys.argv)):
 #	print "%d: %s" % (i, sys.argv[i])
 
-if (len(sys.argv) != 15):
-	print "Usage: %s <hostId> <hostKey> <controlServerPort> <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <depotServerUsername> <depotServerPassword> <sessionId> <actionProcessorDesktop> <actionProcessorCommand> <runAsUser> <runAsPassword>" % os.path.basename(sys.argv[0])
+if (len(sys.argv) != 16):
+	print "Usage: %s <hostId> <hostKey> <controlServerPort> <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <depotServerUsername> <depotServerPassword> <sessionId> <actionProcessorDesktop> <actionProcessorCommand> <actionProcessorTimeout> <runAsUser> <runAsPassword>" % os.path.basename(sys.argv[0])
 	sys.exit(1)
-(hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, runAsUser, runAsPassword) = sys.argv[1:]
+(hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword) = sys.argv[1:]
 
 logger = Logger()
 if hostKey:
@@ -55,12 +55,15 @@ if depotServerPassword:
 	logger.addConfidentialString(depotServerPassword)
 if runAsPassword:
 	logger.addConfidentialString(runAsPassword)
+
 logger.setConsoleLevel(LOG_NONE)
 logger.setLogFile(logFile)
 logger.setFileLevel(int(logLevel))
-logger.setFileFormat('[%l] [%D] [' + os.path.basename(sys.argv[0]) + ']  %M  (%F|%N)')
+logger.setFileFormat('[%l] [%D] [' + os.path.basename(sys.argv[0]) + ']   %M  (%F|%N)')
 
-logger.debug("Called with arguments: %s" % ', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, runAsUser, runAsPassword)) )
+logger.debug("Called with arguments: %s" % ', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword)) )
+
+actionProcessorTimeout = int(actionProcessorTimeout)
 
 imp = None
 depotShareMounted = False
@@ -92,7 +95,7 @@ try:
 	logger.notice("Starting action processor")
 	be.setStatusMessage(sessionId, "Starting action processor")
 	
-	imp.runCommand(actionProcessorCommand)
+	imp.runCommand(actionProcessorCommand, timeoutSeconds = actionProcessorTimeout)
 	
 	logger.notice("Action processor ended")
 	be.setStatusMessage(sessionId, "Action processor ended")

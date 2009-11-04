@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.7'
+__version__ = '0.7.1'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp, codecs
@@ -199,7 +199,7 @@ class EventConfig(object):
 		logger.setLogFormat('[%l] [%D] [event config ' + self._name + ']   %M  (%F|%N)', object=self)
 		
 		self.message                    =  str ( kwargs.get('message',                    ''        ) )
-		self.maxRepetitions             =  int ( kwargs.get('maxRepetitions',             1         ) )
+		self.maxRepetitions             =  int ( kwargs.get('maxRepetitions',             -1        ) )
 		# wait <activationDelay> seconds before event gets active
 		self.activationDelay            =  int ( kwargs.get('activationDelay',            0         ) )
 		# wait <notificationDelay> seconds before event is fired
@@ -213,12 +213,14 @@ class EventConfig(object):
 		self.updateConfigFile           = bool ( kwargs.get('updateConfigFile',           True      ) )
 		self.writeLogToService          = bool ( kwargs.get('writeLogToService',          True      ) )
 		self.updateActionProcessor      = bool ( kwargs.get('updateActionProcessor',      True      ) )
+		self.actionType                 =  str ( kwargs.get('actionType',                 ''        ) )
 		self.eventNotifierCommand       =  str ( kwargs.get('eventNotifierCommand',       ''        ) )
 		self.eventNotifierDesktop       =  str ( kwargs.get('eventNotifierDesktop',       'current' ) )
 		self.actionNotifierCommand      =  str ( kwargs.get('actionNotifierCommand',      ''        ) )
 		self.actionNotifierDesktop      =  str ( kwargs.get('actionNotifierDesktop',      'current' ) )
 		self.actionProcessorCommand     =  str ( kwargs.get('actionProcessorCommand',     ''        ) )
 		self.actionProcessorDesktop     =  str ( kwargs.get('actionProcessorDesktop',     'current' ) )
+		self.actionProcessorTimeout     =  int ( kwargs.get('actionProcessorTimeout',     3*3600    ) )
 		self.preActionProcessorCommand  =  str ( kwargs.get('preActionProcessorCommand',  ''        ) )
 		self.postActionProcessorCommand =  str ( kwargs.get('postActionProcessorCommand', ''        ) )
 		self.serviceOptions             = dict ( kwargs.get('serviceOptions',             {}        ) )
@@ -300,7 +302,7 @@ class GUIStartupEventConfig(WMIEventConfig):
 		WMIEventConfig.__init__(self, name, **kwargs)
 		self.maxRepetitions = 0
 		self.processName = None
-
+	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         TIMER EVENT CONFIG                                        -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2051,6 +2053,7 @@ class EventProcessingThread(KillableThread):
 		self._notificationServer = None
 		
 		self._notifierApplicationPid = None
+		self._depotShareMounted = False
 		
 		self._statusSubject = MessageSubject('status')
 		self._eventSubject = MessageSubject('event')
@@ -2300,7 +2303,7 @@ class EventProcessingThread(KillableThread):
 		finally:
 			logger.setFileLevel(self.opsiclientd.getConfigValue('global', 'log_level'))
 		
-	def runCommandInSession(self, command, desktop=None, duplicateFrom='winlogon.exe', waitForProcessEnding=False):
+	def runCommandInSession(self, command, desktop=None, waitForProcessEnding=False, timeoutSeconds=0):
 		
 		sessionId = self.getSessionId()
 		
@@ -2316,7 +2319,12 @@ class EventProcessingThread(KillableThread):
 		while True:
 			try:
 				#logger.notice("Running command in session '%s' on desktop '%s'" % (sessionId, desktop))
-				processId = System.runCommandInSession(command = command, sessionId = sessionId, desktop = desktop, duplicateFrom = duplicateFrom, waitForProcessEnding = waitForProcessEnding)[2]
+				processId = System.runCommandInSession(
+						command              = command,
+						sessionId            = sessionId,
+						desktop              = desktop,
+						waitForProcessEnding = waitForProcessEnding,
+						timeoutSeconds       = timeoutSeconds)[2]
 				break
 			except Exception, e:
 				logger.error(e)
@@ -2378,60 +2386,159 @@ class EventProcessingThread(KillableThread):
 		except Exception, e:
 			logger.error("Failed to set action processor info: %s" % e)
 	
+	def getDepotserverCredentials(self):
+		self.connectConfigServer()
+		depotServerUsername = self.opsiclientd.getConfigValue('depot_server', 'username')
+		encryptedDepotServerPassword = self._configService.getPcpatchPassword(self.opsiclientd.getConfigValue('global', 'host_id'))
+		depotServerPassword = Tools.blowfishDecrypt(self.opsiclientd.getConfigValue('global', 'opsi_host_key'), encryptedDepotServerPassword)
+		logger.addConfidentialString(depotServerPassword)
+		return (depotServerUsername, depotServerPassword)
+		
+	def mountDepotShare(self, impersonation):
+		if self._depotShareMounted:
+			logger.debug("Depot share already mounted")
+			return
+		
+		logger.notice("Mounting depot share %s" %  self.opsiclientd.getConfigValue('depot_server', 'url'))
+		self.setStatusMessage(_("Mounting depot share %s") % self.opsiclientd.getConfigValue('depot_server', 'url'))
+		
+		if impersonation:
+			System.mount(self.opsiclientd.getConfigValue('depot_server', 'url'), self.opsiclientd.getConfigValue('depot_server', 'drive'))
+		else:
+			(depotServerUsername, depotServerPassword) = self.getDepotserverCredentials()
+			System.mount(self.opsiclientd.getConfigValue('depot_server', 'url'), self.opsiclientd.getConfigValue('depot_server', 'drive'), username = depotServerUsername, password = depotServerPassword)
+		self._depotShareMounted = True
+		
+	def umountDepotShare(self):
+		if not self._depotShareMounted:
+			logger.debug("Depot share not mounted")
+			return
+		try:
+			logger.notice("Unmounting depot share")
+			System.umount(self.opsiclientd.getConfigValue('depot_server', 'drive'))
+			self._depotShareMounted = False
+		except Exception, e:
+			logger.warning(e)
+		
 	def updateActionProcessor(self):
 		logger.notice("Updating action processor")
 		self.setStatusMessage(_("Updating action processor"))
 		
-		self.connectConfigServer()
+		impersonation = None
+		try:
+			# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
+			# The new logon session has the same local identifier but uses different credentials for other network connections.
+			(depotServerUsername, depotServerPassword) = self.getDepotserverCredentials()
+			impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
+			impersonation.start(logonType = 'NEW_CREDENTIALS')
+			
+			self.mountDepotShare(impersonation)
+			
+			actionProcessorFilename = self.opsiclientd.getConfigValue('action_processor', 'filename')
+			actionProcessorLocalDir = self.opsiclientd.getConfigValue('action_processor', 'local_dir')
+			actionProcessorLocalTmpDir = actionProcessorLocalDir + '.tmp'
+			actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
+			actionProcessorLocalTmpFile = os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)
+			
+			actionProcessorRemoteDir = os.path.join(
+							self.opsiclientd.getConfigValue('depot_server', 'drive'),
+							self.opsiclientd.getConfigValue('action_processor', 'remote_dir'))
+			actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
+			
+			if not os.path.exists(actionProcessorLocalFile):
+				logger.notice("Action processor needs update because file '%s' not found" % actionProcessorLocalFile)
+			elif ( abs(os.stat(actionProcessorLocalFile).st_mtime - os.stat(actionProcessorRemoteFile).st_mtime) > 10 ):
+				logger.notice("Action processor needs update because modification time difference is more than 10 seconds")
+			elif not filecmp.cmp(actionProcessorLocalFile, actionProcessorRemoteFile):
+				logger.notice("Action processor needs update because file changed")
+			else:
+				logger.notice("Local action processor exists and seems to be up to date")
+				return actionProcessorLocalFile
+			
+			# Update files
+			logger.notice("Start copying the action processor files")
+			if os.path.exists(actionProcessorLocalTmpDir):
+				logger.info("Deleting dir '%s'" % actionProcessorLocalTmpDir)
+				shutil.rmtree(actionProcessorLocalTmpDir)
+			logger.info("Copying from '%s' to '%s'" % (actionProcessorRemoteDir, actionProcessorLocalTmpDir))
+			shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
+			
+			if not os.path.exists(actionProcessorLocalTmpFile):
+				raise Exception("File '%s' does not exist after copy" % actionProcessorLocalTmpFile)
+			
+			if os.path.exists(actionProcessorLocalDir):
+				logger.info("Deleting dir '%s'" % actionProcessorLocalDir)
+				shutil.rmtree(actionProcessorLocalDir)
+			
+			logger.info("Moving dir '%s' to '%s'" % (actionProcessorLocalTmpDir, actionProcessorLocalDir))
+			shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
+			
+			logger.notice('Local action processor successfully updated')
+			
+			self._configService.setProductInstallationStatus(
+							'opsi-winst',
+							self.opsiclientd.getConfigValue('global', 'host_id'),
+							'installed')
+			
+			self.setActionProcessorInfo()
+			
+			self.umountDepotShare()
+			
+		except Exception, e:
+			logger.error("Failed to update action processor: %s" % e)
 		
-		actionProcessorFilename = self.opsiclientd.getConfigValue('action_processor', 'filename')
-		actionProcessorLocalDir = self.opsiclientd.getConfigValue('action_processor', 'local_dir')
-		actionProcessorLocalTmpDir = actionProcessorLocalDir + '.tmp'
-		actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
-		actionProcessorLocalTmpFile = os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)
-		
-		actionProcessorRemoteDir = os.path.join(
-						self.opsiclientd.getConfigValue('depot_server', 'drive'),
-						self.opsiclientd.getConfigValue('action_processor', 'remote_dir'))
-		actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
-		
-		if not os.path.exists(actionProcessorLocalFile):
-			logger.notice("Action processor needs update because file '%s' not found" % actionProcessorLocalFile)
-		elif ( abs(os.stat(actionProcessorLocalFile).st_mtime - os.stat(actionProcessorRemoteFile).st_mtime) > 10 ):
-			logger.notice("Action processor needs update because modification time difference is more than 10 seconds")
-		elif not filecmp.cmp(actionProcessorLocalFile, actionProcessorRemoteFile):
-			logger.notice("Action processor needs update because file changed")
-		else:
-			logger.notice("Local action processor exists and seems to be up to date")
-			return actionProcessorLocalFile
-		
-		# Update files
-		logger.notice("Start copying the action processor files")
-		if os.path.exists(actionProcessorLocalTmpDir):
-			logger.info("Deleting dir '%s'" % actionProcessorLocalTmpDir)
-			shutil.rmtree(actionProcessorLocalTmpDir)
-		logger.info("Copying from '%s' to '%s'" % (actionProcessorRemoteDir, actionProcessorLocalTmpDir))
-		shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
-		
-		if not os.path.exists(actionProcessorLocalTmpFile):
-			raise Exception("File '%s' does not exist after copy" % actionProcessorLocalTmpFile)
-		
-		if os.path.exists(actionProcessorLocalDir):
-			logger.info("Deleting dir '%s'" % actionProcessorLocalDir)
-			shutil.rmtree(actionProcessorLocalDir)
-		
-		logger.info("Moving dir '%s' to '%s'" % (actionProcessorLocalTmpDir, actionProcessorLocalDir))
-		shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
-		
-		logger.notice('Local action processor successfully updated')
-		
-		self._configService.setProductInstallationStatus(
-						'opsi-winst',
-						self.opsiclientd.getConfigValue('global', 'host_id'),
-						'installed')
-		
-		self.setActionProcessorInfo()
+		if impersonation:
+			try:
+				impersonation.end()
+			except Exception, e:
+				logger.warning(e)
 	
+	def processUserLoginActions(self):
+		self.setStatusMessage(_("Processing login actions"))
+		
+		impersonation = None
+		try:
+			# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
+			# The new logon session has the same local identifier but uses different credentials for other network connections.
+			(depotServerUsername, depotServerPassword) = self.getDepotserverCredentials()
+			impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
+			impersonation.start(logonType = 'NEW_CREDENTIALS')
+			
+			self.mountDepotShare(impersonation)
+			
+			userScripts = []
+			productDir = os.path.join(self.opsiclientd.getConfigValue('depot_server', 'drive'), 'install')
+			for entry in os.listdir(productDir):
+				if not os.path.isdir( os.path.join(productDir, entry) ):
+					continue
+				userScript = os.path.join(productDir, entry, 'userscript.ins')
+				if not os.path.isfile(userScript):
+					continue
+				logger.info("User script found: %s" % userScript)
+				userScripts.append(userScript)
+			
+			self.umountDepotShare()
+			
+			if userScripts:
+				logger.notice("User scripts found, executing")
+				additionalParams = ''
+				for userScript in userScripts:
+					additionalParams += ' "%s"' % userScript
+				self.runActions(additionalParams)
+			else:
+				logger.notice("No user script found, nothing to do")
+			
+		except Exception, e:
+			logger.logException(e)
+			logger.error("Failed to process login actions: %s" % e)
+			self.setStatusMessage( _("Failed to process login actions: %s") % e )
+		
+		if impersonation:
+			try:
+				impersonation.end()
+			except Exception, e:
+				logger.warning(e)
+		
 	def processProductActionRequests(self):
 		self.setStatusMessage(_("Getting action requests from config service"))
 		
@@ -2502,10 +2609,7 @@ class EventProcessingThread(KillableThread):
 				#	self._currentProgressSubjectProxy.setState(0)
 				#	self._overallProgressSubjectProxy.setState(0)
 				
-				if self.event.getActionProcessorCommand():
-					self.setStatusMessage( _("Starting actions") )
-					self.runActions()
-					self.setStatusMessage( _("Actions completed") )
+				self.runActions()
 				
 		except Exception, e:
 			logger.logException(e)
@@ -2514,7 +2618,14 @@ class EventProcessingThread(KillableThread):
 		
 		time.sleep(3)
 	
-	def runActions(self):
+	def runActions(self, additionalParams=''):
+		if not additionalParams:
+			additionalParams = ''
+		if not self.event.getActionProcessorCommand():
+			raise Exception("No action processor command defined")
+		
+		self.setStatusMessage( _("Starting actions") )
+		
 		# Setting some registry values before starting action
 		# Mainly for action processor winst
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depoturl",   self.opsiclientd.getConfigValue('depot_server', 'url'))
@@ -2552,38 +2663,7 @@ class EventProcessingThread(KillableThread):
 		
 		# Update action processor
 		if self.opsiclientd.getConfigValue('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost') and self.event.eventConfig.updateActionProcessor:
-			logger.notice("Updating action processor")
-			imp = None
-			depotShareMounted = False
-			try:
-				# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
-				# The new logon session has the same local identifier but uses different credentials for other network connections.
-				imp = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
-				imp.start(logonType = 'NEW_CREDENTIALS')
-				
-				logger.notice("Mounting depot share %s" %  self.opsiclientd.getConfigValue('depot_server', 'url'))
-				self.setStatusMessage(_("Mounting depot share %s") % self.opsiclientd.getConfigValue('depot_server', 'url'))
-				
-				#System.mount(self.opsiclientd.getConfigValue('depot_server', 'url'), self.opsiclientd.getConfigValue('depot_server', 'drive'), username = depotServerUsername, password = depotServerPassword)
-				System.mount(self.opsiclientd.getConfigValue('depot_server', 'url'), self.opsiclientd.getConfigValue('depot_server', 'drive'))
-				depotShareMounted = True
-				
-				self.updateActionProcessor()
-			
-			except Exception, e:
-				logger.error("Failed to update action processor: %s" % e)
-			
-			if depotShareMounted:
-				try:
-					logger.notice("Unmounting depot share")
-					System.umount(self.opsiclientd.getConfigValue('depot_server', 'drive'))
-				except Exception, e:
-					logger.warning(e)
-			if imp:
-				try:
-					imp.end()
-				except Exception, e:
-					logger.warning(e)
+			self.updateActionProcessor()
 		
 		# Run action processor
 		localUserCreated = False
@@ -2599,40 +2679,41 @@ class EventProcessingThread(KillableThread):
 				System.createUser(username = runAsUser, password = runAsPassword, groups = [ System.getAdminGroupName() ])
 				localUserCreated = True
 			
-			duplicateFrom = 'winlogon.exe'
+			
+			actionProcessorCommand = self.opsiclientd.fillPlaceholders(self.event.getActionProcessorCommand())
+			actionProcessorCommand += additionalParams
+			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 			command = u'%system.program_files_dir%\\opsi.org\\preloginloader\\action_processor_starter.exe ' \
 				+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
 				+ u'"%global.log_file%" "%global.log_level%" ' \
 				+ u'"%depot_server.url%" "%depot_server.drive%" ' \
 				+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
 				+ u'"' + unicode(self.getSessionId()) + u'" "' + desktop + '" ' \
-				+ u'"' + self.opsiclientd.fillPlaceholders(self.event.getActionProcessorCommand()).replace('"', '\\"') + u'" ' \
+				+ u'"' + actionProcessorCommand + u'" ' + unicode(self.event.eventConfig.actionProcessorTimeout) + ' ' \
 				+ u'"' + runAsUser + u'" "' + runAsPassword + u'"'
 			command = self.opsiclientd.fillPlaceholders(command)
-			
-			#if self.isLoginEvent:
-			#	duplicateFrom = 'explorer.exe'
-			#	command = self.opsiclientd.fillPlaceholders(self.event.getActionProcessorCommand())
 			
 			if self.event.eventConfig.preActionProcessorCommand:
 				logger.notice("Starting pre action processor command '%s' in session '%s' on desktop '%s'" \
 					% (self.event.eventConfig.preActionProcessorCommand, self.getSessionId(), desktop))
-				self.runCommandInSession(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, duplicateFrom = duplicateFrom, waitForProcessEnding = False)
+				self.runCommandInSession(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
 				time.sleep(10)
 				
 			logger.notice("Starting action processor in session '%s' on desktop '%s'" % (self.getSessionId(), desktop))
-			self.runCommandInSession(command = command, desktop = desktop, duplicateFrom = duplicateFrom, waitForProcessEnding = True)
+			self.runCommandInSession(command = command, desktop = desktop, waitForProcessEnding = True)
 			
 			if self.event.eventConfig.postActionProcessorCommand:
 				logger.notice("Starting post action processor command '%s' in session '%s' on desktop '%s'" \
 					% (self.event.eventConfig.postActionProcessorCommand, self.getSessionId(), desktop))
-				self.runCommandInSession(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, duplicateFrom = duplicateFrom, waitForProcessEnding = False)
+				self.runCommandInSession(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
 				time.sleep(10)
 		finally:
 			if localUserCreated:
 				logger.notice("Deleting local user '%s'" % runAsUser)
 				System.deleteUser(username = runAsUser)
-	
+		
+		self.setStatusMessage( _("Actions completed") )
+		
 	def setEnvironment(self):
 		try:
 			logger.debug("Current environment:")
@@ -2753,8 +2834,11 @@ class EventProcessingThread(KillableThread):
 						self.getConfigFromService()
 					if self.event.eventConfig.updateConfigFile:
 						self.opsiclientd.updateConfigFile()
-					
-				self.processProductActionRequests()
+				
+				if (self.event.eventConfig.actionType == 'login'):
+					self.processUserLoginActions()
+				else:
+					self.processProductActionRequests()
 			
 			finally:
 				self.setStatusMessage("")
@@ -3209,6 +3293,8 @@ class Opsiclientd(EventListener, threading.Thread):
 						args['useCachedConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'update_action_processor'):
 						args['updateActionProcessor'] = not value.lower() in ('0', 'false', 'off', 'no')
+					elif (key == 'action_type'):
+						args['actionType'] = value.lower()
 					elif (key == 'event_notifier_command'):
 						args['eventNotifierCommand'] = self.fillPlaceholders(value.lower(), escaped=True)
 					elif (key == 'event_notifier_desktop'):
@@ -3221,6 +3307,8 @@ class Opsiclientd(EventListener, threading.Thread):
 						args['actionProcessorCommand'] = value.lower()
 					elif (key == 'action_processor_desktop'):
 						args['actionProcessorDesktop'] = value.lower()
+					elif (key == 'action_processor_timeout'):
+						args['actionProcessorTimeout'] = int(value)
 					elif (key == 'service_options'):
 						args['serviceOptions'] = eval(value)
 					elif (key == 'pre_action_processor_command'):
@@ -3634,7 +3722,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		cmd = '%s "%s"' % (self.getConfigValue('opsiclientd_rpc', 'command'), rpc)
 		
 		try:
-			System.runCommandInSession(command = cmd, sessionId = System.getActiveConsoleSessionId(), waitForProcessEnding = True)
+			System.runCommandInSession(command = cmd, sessionId = System.getActiveConsoleSessionId(), waitForProcessEnding = True, timeoutSeconds = 60)
 		except Exception, e:
 			logger.error(e)
 		
@@ -3779,9 +3867,9 @@ class OpsiclientdNT6(OpsiclientdNT):
 		OpsiclientdNT.__init__(self)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                          OPSICLIENTD NT7                                          -
+# -                                          OPSICLIENTD NT61                                         -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class OpsiclientdNT7(OpsiclientdNT):
+class OpsiclientdNT61(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
 	
@@ -3951,10 +4039,10 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 				# NT5: XP
 				opsiclientd = OpsiclientdNT5()
 			elif (sys.getwindowsversion()[0] == 6):
-				# NT6: Vista / Windows7 beta
+				# NT6: Vista / Windows7
 				if (sys.getwindowsversion()[1] >= 1):
-					# Windows7 beta
-					opsiclientd = OpsiclientdNT7()
+					# Windows7
+					opsiclientd = OpsiclientdNT61()
 				else:
 					opsiclientd = OpsiclientdNT6()
 			else:
