@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
    = = = = = = = = = = = = = = = = = = = = =
-   =            status_window              =
+   =               notifier                =
    = = = = = = = = = = = = = = = = = = = = =
    
-   status_window is part of the desktop management solution opsi
+   notifier is part of the desktop management solution opsi
    (open pc server integration) http://www.opsi.org
    
    Copyright (C) 2008 uib GmbH
@@ -31,11 +31,11 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2.2'
+__version__ = '0.4.6'
 
 # Imports
 import threading, time, sys, os, getopt
-import struct, win32api, win32con, win32ui, commctrl
+import struct, win32api, win32con, win32ui, win32service, commctrl, timer
 from ctypes import *
 try:
 	# Try to use advanced gui
@@ -52,10 +52,10 @@ from OPSI.Logger import *
 logger = Logger()
 
 # Globals
-logFile = 'status_window.log'
+logFile = ''
 transparentColor = (0,0,0)
 host = '127.0.0.1'
-port = 4442
+port = 0
 skin = 'skin.ini'
 
 BYTE = c_ubyte
@@ -79,12 +79,27 @@ class BLENDFUNCTION(Structure):
 class OpsiDialogWindow(SubjectsObserver):
 	def __init__(self):
 		win32gui.InitCommonControls()
-		self.hinst = win32gui.dllhandle
-		self.wndClassName = "OpsiDialog"
+		self.hinst = win32api.GetModuleHandle(None)
+		self.taskbarNotifyEventId = win32con.WM_USER + 20
+		self.hidden = False
+		self.alpha = 255
+		
+		try:
+			try:
+				self.hicon = win32gui.LoadIcon(self.hinst, 1)    ## python.exe and pythonw.exe
+			except win32gui.error:
+				self.hicon = win32gui.LoadIcon(self.hinst, 135)  ## pythonwin's icon
+		except Exception, e:
+			logger.error("Failed to load icon: %s" % e)
+			self.hicon = None
+		
+		self.wndClassName = "opsi status"
 		
 		self.loadSkin()
 		
-		self._notificationClient = NotificationClient(host, port, self)
+		self._notificationClient = None
+		if port:
+			self._notificationClient = NotificationClient(host, port, self)
 		
 	def _registerWndClass(self):
 		message_map = {}
@@ -99,13 +114,8 @@ class OpsiDialogWindow(SubjectsObserver):
 		# C code: wc.cbWndExtra = DLGWINDOWEXTRA + sizeof(HBRUSH) + (sizeof(COLORREF));
 		wc.cbWndExtra = win32con.DLGWINDOWEXTRA + struct.calcsize("Pi")
 		icon_flags = win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE
-		
-		## py.ico went away in python 2.5, load from executable instead
-		this_app=win32api.GetModuleHandle(None)
-		try:
-			wc.hIcon=win32gui.LoadIcon(this_app, 1)    ## python.exe and pythonw.exe
-		except win32gui.error:
-			wc.hIcon=win32gui.LoadIcon(this_app, 135)  ## pythonwin's icon
+		if self.hicon:
+			wc.hIcon = self.hicon
 		try:
 			classAtom = win32gui.RegisterClass(wc)
 		except win32gui.error, err_info:
@@ -114,6 +124,13 @@ class OpsiDialogWindow(SubjectsObserver):
 		return self.wndClassName
 	
 	def loadSkin(self):
+		skinDir = os.path.dirname(skin)
+		
+		def toPath(value):
+			if skinDir:
+				return os.path.join(skinDir, value)
+			return value
+		
 		def toRGB(value):
 			color = value.split(',')
 			return win32api.RGB(int(color[0]), int(color[1]), int(color[2]))
@@ -146,12 +163,18 @@ class OpsiDialogWindow(SubjectsObserver):
 				'type':      'form',
 				'width':     200,
 				'height':    200,
+				'top':       0,
+				'left':      0,
 				'font':      win32gui.LOGFONT(),
 				'fontColor': win32api.RGB(255, 255, 255),
 				'color':     win32api.RGB(255, 255, 255),
 				'text':      'Opsi',
 				'style':     0,
 				'stayOnTop': False,
+				'fadeIn':    False,
+				'fadeOut':   False,
+				'icon':      None,
+				'systray':   False
 			}
 		}
 		
@@ -167,6 +190,8 @@ class OpsiDialogWindow(SubjectsObserver):
 					(type, id) = ('image', item[5:])
 				elif item.startswith('button'):
 					(type, id) = ('button', item[6:])
+				elif item.startswith('progressbar'):
+					(type, id) = ('progressbar', item[11:])
 				else:
 					logger.error("Unkown type '%s' in ini" % item)
 					continue
@@ -183,7 +208,7 @@ class OpsiDialogWindow(SubjectsObserver):
 					'color':     win32api.RGB(255, 255, 255),
 					'text':      '',
 				}
-			
+
 			for (key, value) in ini.items(section):
 				key = key.lower()
 				if    (key == 'color'):         self.skin[item]['color'] = toRGB(value)
@@ -192,10 +217,11 @@ class OpsiDialogWindow(SubjectsObserver):
 				elif  (key == 'closeable') and toBool(value): self.skin[item]['style'] |= win32con.WS_SYSMENU
 				elif  (key == 'resizable') and toBool(value): self.skin[item]['style'] |= win32con.WS_THICKFRAME
 				elif  (key == 'minimizable') and toBool(value): self.skin[item]['style'] |= win32con.WS_MINIMIZEBOX
-				elif  (key == 'left'):          self.skin[item]['left'] = int(int(value)/2)
-				elif  (key == 'top'):           self.skin[item]['top'] = int(int(value)/2)
-				elif  (key == 'width'):         self.skin[item]['width'] = int(int(value)/2)
-				elif  (key == 'height'):        self.skin[item]['height'] = int(int(value)/2)
+				elif  (key == 'systray'):       self.skin[item]['systray'] = toBool(value)
+				elif  (key == 'left'):          self.skin[item]['left'] = int(value)
+				elif  (key == 'top'):           self.skin[item]['top'] = int(value)
+				elif  (key == 'width'):         self.skin[item]['width'] = int(value)
+				elif  (key == 'height'):        self.skin[item]['height'] = int(value)
 				elif  (key == 'fontname'):      self.skin[item]['font'].lfFaceName = value.strip()
 				elif  (key == 'fontsize'):      self.skin[item]['font'].lfHeight = int(value)
 				elif  (key == 'fontweight'):    self.skin[item]['font'].lfWeight = int(value)
@@ -205,12 +231,36 @@ class OpsiDialogWindow(SubjectsObserver):
 				elif  (key == 'fontcolor'):     self.skin[item]['fontColor'] = toRGB(value)
 				elif  (key == 'text'):          self.skin[item]['text'] = value.strip()
 				elif  (key == 'alignment'):     self.skin[item]['alignment'] = toStyle(value, self.skin[item]['type'])
-				elif  (key == 'file'):          self.skin[item]['file'] = value.strip()
+				elif  (key == 'file'):          self.skin[item]['file'] = toPath(value.strip())
+				elif  (key == 'icon'):          self.skin[item]['icon'] = toPath(value)
 				elif  (key == 'active'):        self.skin[item]['active'] = toBool(value)
 				elif  (key == 'stayontop'):     self.skin[item]['stayOnTop'] = toBool(value)
+				elif  (key == 'fadein'):        self.skin[item]['fadeIn'] = toBool(value)
+				elif  (key == 'fadeout'):       self.skin[item]['fadeOut'] = toBool(value)
 				elif  (key == 'subjectid'):     self.skin[item]['subjectId'] = value.strip()
+				elif  (key == 'subjecttype'):   self.skin[item]['subjectType'] = value.strip()
 				elif  (key == 'choiceindex'):   self.skin[item]['choiceIndex'] = int(value)
-			
+				elif  (section.lower() == 'form') and (key == 'hidden') and toBool(value):
+					self.hidden = True
+		
+		desktop = win32gui.GetDesktopWindow()
+		(l, t, r, b) = win32gui.GetWindowRect(desktop)
+		(centreX, centreY) = win32gui.ClientToScreen( desktop, ((r-l)/2, (b-t)/2) )
+		
+		if (self.skin['form']['left'] < 0):
+			self.skin['form']['left'] = centreX*2 - (-1*self.skin['form']['left']) - self.skin['form']['width']
+		if (self.skin['form']['left'] == 0):
+			self.skin['form']['left'] = centreX - int(self.skin['form']['width']/2)
+		if (self.skin['form']['left'] < 0):
+			self.skin['form']['left'] = 0
+		
+		if (self.skin['form']['top'] < 0):
+			self.skin['form']['top'] = centreY*2 - (-1*self.skin['form']['top']) - self.skin['form']['height']
+		if (self.skin['form']['top'] == 0):
+			self.skin['form']['top'] = centreY - int(self.skin['form']['height']/2)
+		if (self.skin['form']['top'] < 0):
+			self.skin['form']['top'] = 0
+		
 	def _getDialogTemplate(self):
 		# dlg item [ type, caption, id, (x,y,cx,cy), style, ex style
 		#
@@ -244,11 +294,11 @@ class OpsiDialogWindow(SubjectsObserver):
 		#style = win32con.WS_POPUP | win32con.WS_VISIBLE | win32con.DS_SETFONT
 		
 		# Window frame and title
-		style = win32con.WS_VISIBLE | win32con.DS_SETFONT |  win32con.WS_POPUP #| win32con.WS_EX_TRANSPARENT
+		style = win32con.DS_SETFONT | win32con.WS_POPUP # win32con.WS_VISIBLE | win32con.WS_EX_TRANSPARENT
 		if self.skin['form']['style']:
 			style |= self.skin['form']['style']
 		dlg = [ [ self.skin['form']['text'],
-			  (0, 0, self.skin['form']['width'], self.skin['form']['height']),
+			  (0, 0, int(self.skin['form']['width']/2), int(self.skin['form']['height']/2)),
 			  style, None,
 			  (self.skin['form']['font'].lfHeight, self.skin['form']['font'].lfFaceName),
 			  None, self.wndClassName ], ]
@@ -257,7 +307,12 @@ class OpsiDialogWindow(SubjectsObserver):
 		for item in self.skin.keys():
 			if self.skin[item].get('font'):
 				self.skin[item]['font'] = win32gui.CreateFontIndirect(self.skin[item]['font'])
-			
+		
+		if self.skin['form'].get('icon'):
+			self.hicon = win32gui.LoadImage(
+				self.hinst, self.skin['form']['icon'], win32con.IMAGE_ICON,
+				0, 0, win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE )
+		
 		dlgId = 100
 		# Images first
 		for (item, values) in self.skin.items():
@@ -278,7 +333,7 @@ class OpsiDialogWindow(SubjectsObserver):
 			style |= win32con.SS_BITMAP
 			dlg.append( [130, values.get('text', ''),
 				dlgId,
-				(values['left'], values['top'], values['width'], values['height']),
+				( int(values['left']/2), int(values['top']/2), int(values['width']/2), int(values['height']/2) ),
 				style ])
 			self.skin[item]['dlgId'] = dlgId
 			dlgId += 1
@@ -294,7 +349,7 @@ class OpsiDialogWindow(SubjectsObserver):
 			if item.startswith('label'):
 				dlg.append( ['Static', values.get('text', ''),
 					dlgId,
-					(values['left'], values['top'], values['width'], values['height']),
+					( int(values['left']/2), int(values['top']/2), int(values['width']/2), int(values['height']/2) ),
 					style ] )
 				self.skin[item]['id'] = item[5:]
 			
@@ -303,8 +358,13 @@ class OpsiDialogWindow(SubjectsObserver):
 				style |= win32con.BS_MULTILINE | win32con.BS_PUSHBUTTON | win32con.MF_GRAYED #| win32con.BS_OWNERDRAW
 				dlg.append( ['Button', values.get('text', ''),
 					dlgId,
-					(values['left'], values['top'], values['width'], values['height']),
+					( int(values['left']/2), int(values['top']/2), int(values['width']/2), int(values['height']/2) ),
 					style ] )
+			
+			elif item.startswith('progressbar'):
+				self.skin[item]['ctrlId'] = dlgId
+				dlgId += 1
+				continue
 			
 			else:
 				continue
@@ -316,9 +376,7 @@ class OpsiDialogWindow(SubjectsObserver):
 		
 	def CreateWindow(self):
 		message_map = {
-			#win32con.WM_SIZE: self.OnSize,
 			win32con.WM_COMMAND:           self.onCommand,
-			#win32con.WM_NOTIFY: self.OnNotify,
 			win32con.WM_INITDIALOG:        self.onInitDialog,
 			win32con.WM_CLOSE:             self.onClose,
 			win32con.WM_DESTROY:           self.onDestroy,
@@ -329,17 +387,101 @@ class OpsiDialogWindow(SubjectsObserver):
 			win32con.WM_CTLCOLORDLG:       self.onCtlColor,
 			win32con.WM_CTLCOLORSCROLLBAR: self.onCtlColor,
 			win32con.WM_CTLCOLORSTATIC:    self.onCtlColor,
-			#win32con.WM_DRAWITEM:          self.onDrawItem,
-			#win32con.WM_PAINT:             self.onPaint,
-			#win32con.WM_ERASEBKGND:        self.onEraseBkgnd,
+			self.taskbarNotifyEventId:     self.onTaskbarNotify,
+			#win32con.WM_DRAWITEM:         self.onDrawItem,
+			#win32con.WM_PAINT:            self.onPaint,
+			#win32con.WM_ERASEBKGND:       self.onEraseBkgnd,
+			#win32con.WM_SIZE: 	       self.onSize,
+			#win32con.WM_NOTIFY: 	       self.onNotify,
 		}
 		self._registerWndClass()
 		
 		template = self._getDialogTemplate()
+		
 		win32gui.CreateDialogIndirect(self.hinst, template, 0, message_map)
+		
+		if self.skin['form']['systray']:
+			self.createTrayIcon()
 		
 		self.setButtonFonts()
 		
+		if self.skin['form']['fadeIn']:
+			self.alpha = 0
+			self.setWindowAlpha(self.alpha)
+			timer.set_timer(50, self.fadein)
+
+		if not self.hidden:
+			if (sys.getwindowsversion()[0] == 6):
+				desktop = win32service.OpenInputDesktop(0, True, win32con.MAXIMUM_ALLOWED)
+				desktopName = win32service.GetUserObjectInformation(desktop, win32service.UOI_NAME)
+				if (desktopName.lower() == "winlogon"):
+					# On NT6 we need this for window to show up on winlogon desktop
+					win32gui.ShowWindow(self.hwnd, win32con.SW_SHOWMINIMIZED)
+					win32gui.ShowWindow(self.hwnd, win32con.SW_SHOWMAXIMIZED)
+			
+			insertAfter = win32con.HWND_TOP
+			if self.skin['form'].get('stayOnTop'):
+				insertAfter = win32con.HWND_TOPMOST
+			win32gui.SetWindowPos(	self.hwnd,
+						insertAfter,
+						self.skin['form']['left'],
+						self.skin['form']['top'],
+						self.skin['form']['width'],
+						self.skin['form']['height'],
+						win32con.SWP_SHOWWINDOW )
+		
+		if self._notificationClient:
+			threading.Timer(0.01, self._notificationClient.start).start()
+		
+	def fadein(self, id, time):
+		self.setWindowAlpha(self.alpha)
+		self.alpha += 25
+		if (self.alpha > 255):
+			self.alpha = 255
+			self.setWindowAlpha(self.alpha)
+			timer.kill_timer(id)
+		
+	def fadeout(self):
+		self.setWindowAlpha(self.alpha)
+		self.alpha -= 25
+		if (self.alpha >= 0):
+			time.sleep(0.05)
+			self.fadeout()
+	
+	def createTrayIcon(self):
+		try:
+			flags = win32gui.NIF_ICON | win32gui.NIF_MESSAGE | win32gui.NIF_TIP
+			notifyInfo = (self.hwnd, 0, flags, self.taskbarNotifyEventId, self.hicon, 'opsi status')
+			win32gui.Shell_NotifyIcon(win32gui.NIM_ADD, notifyInfo)
+		except Exception, e:
+			logger.error("Failed to create tray icon: %s" % e)
+	
+	def removeTrayIcon(self):
+		try:
+			flags = win32gui.NIF_ICON | win32gui.NIF_MESSAGE | win32gui.NIF_TIP
+			notifyInfo = (self.hwnd, 0, flags, self.taskbarNotifyEventId, self.hicon, 'opsi status')
+			win32gui.Shell_NotifyIcon(win32gui.NIM_DELETE, notifyInfo)
+		except Exception, e:
+			logger.error("Failed to remove tray icon: %s" % e)
+	
+	def onTaskbarNotify(self, hwnd, msg, wparam, lparam):
+		if (lparam == win32con.WM_LBUTTONDBLCLK):
+			if self.hidden:
+				# Centre the dialog
+				insertAfter = win32con.HWND_TOP
+				if self.skin['form'].get('stayOnTop'):
+					insertAfter = win32con.HWND_TOPMOST
+				win32gui.SetWindowPos(self.hwnd, insertAfter, self.skin['form']['left'], self.skin['form']['top'], self.skin['form']['width'], self.skin['form']['height'], 0)
+				win32gui.ShowWindow(self.hwnd, win32con.SW_SHOW)
+				self.hidden = False
+			else:
+				win32gui.ShowWindow(self.hwnd, win32con.SW_HIDE)
+				self.hidden = True
+		elif (lparam == win32con.WM_RBUTTONUP):
+			pos = win32api.GetCursorPos()
+			# cmd = self.cMenu.TrackPopupMenu( pos, # win32con.TPM_LEFTALIGN # |win32.TPM_LEFTBUTTON # |win32con.TPM_NONOTIFY # |win32con.TPM_RETURNCMD, None )
+		return 1
+
 	def setButtonFonts(self):
 		for (item, values) in self.skin.items():
 			if (values.get('type') != 'button'):
@@ -379,9 +521,14 @@ class OpsiDialogWindow(SubjectsObserver):
 		font = self.skin['form'].get('font', None)
 		
 		for (item, values) in self.skin.items():
-			if not values.get('dlgId'):
+			handle = None
+			if values.get('dlgId'):
+				handle = win32gui.GetDlgItem(self.hwnd, values['dlgId'])
+			elif values.get('ctrlId'):
+				handle = values['ctrl']
+			else:
 				continue
-			if (win32gui.GetDlgItem(self.hwnd, values['dlgId']) == lparam):
+			if (handle == lparam):
 				logger.debug2("Item found")
 				color = values.get('color', color)
 				fontColor = values.get('fontColor', fontColor)
@@ -400,53 +547,36 @@ class OpsiDialogWindow(SubjectsObserver):
 			return windll.gdi32.GetStockObject(win32con.HOLLOW_BRUSH)
 		else:
 			return windll.gdi32.CreateSolidBrush(color)
-		
+	
 	def onInitDialog(self, hwnd, msg, wparam, lparam):
 		self.hwnd = hwnd
-		# Centre the dialog
-		desktop = win32gui.GetDesktopWindow()
-		l,t,r,b = win32gui.GetWindowRect(self.hwnd)
-		dt_l, dt_t, dt_r, dt_b = win32gui.GetWindowRect(desktop)
-		centre_x, centre_y = win32gui.ClientToScreen( desktop, ( (dt_r-dt_l)/2, (dt_b-dt_t)/2) )
-		#win32gui.MoveWindow(self.hwnd, centre_x-(r/2), centre_y-(b/2), r-l, b-t, 0)
-		insertAfter = win32con.HWND_TOP
-		if self.skin['form'].get('stayOnTop'):
-			insertAfter = win32con.HWND_TOPMOST
-		win32gui.SetWindowPos(hwnd, insertAfter, centre_x-(r/2), centre_y-(b/2), r-l, b-t, 0)
-		
 		for (item, values) in self.skin.items():
 			if (values['type'] == 'image') and values.get('bitmap'):
 				bmCtrl = win32gui.GetDlgItem(self.hwnd, values['dlgId'])
 				win32gui.SendMessage(bmCtrl, win32con.STM_SETIMAGE, win32con.IMAGE_BITMAP, values['bitmap'])
 			if (values['type'] == 'button') and not values.get('active'):
 				win32gui.EnableWindow(win32gui.GetDlgItem(self.hwnd, values['dlgId']), False)
-		
-		
-		
-		# We need this for window to show up on winlogon desktop
-		time.sleep(1)
-		win32gui.ShowWindow(self.hwnd, win32con.SW_SHOWMINIMIZED)
-		time.sleep(1)
-		win32gui.ShowWindow(self.hwnd, win32con.SW_SHOWMAXIMIZED)
-		win32gui.SetWindowPos(hwnd, insertAfter, centre_x-(r/2), centre_y-(b/2), r-l, b-t, win32con.SWP_SHOWWINDOW)
-		
-		#win32gui.ShowWindow(self.hwnd, win32con.SW_SHOWMAXIMIZED)
-		#win32gui.SetActiveWindow(self.hwnd)
-		#win32gui.BringWindowToTop(self.hwnd)
-		#win32gui.SetForegroundWindow(self.hwnd)
-		
-		#self.setWindowAlpha(200)
-		
-		self._timer = threading.Timer(1, self._notificationClient.start)
-		self._timer.start()
-		
-		
+			if (values['type'] == 'progressbar'):
+				values['ctrl'] = win32ui.CreateProgressCtrl()
+				values['ctrl'].CreateWindow(
+					win32con.WS_CHILD | win32con.WS_VISIBLE,
+					( int(values['left']), int(values['top']), int(values['left']+values['width']), int(values['top']+values['height']) ),
+					win32ui.CreateWindowFromHandle(self.hwnd), values['ctrlId'])
+	
 	def onClose(self, hwnd, msg, wparam, lparam):
+		try:
+			if self.skin['form']['fadeOut']:
+				self.alpha = 255
+				self.fadeout()
+			self.removeTrayIcon()
+		except:
+			pass
 		win32gui.DestroyWindow(hwnd)
 	
 	def onDestroy(self, hwnd, msg, wparam, lparam):
 		logger.notice("Exiting...")
-		self._notificationClient.stop()
+		if self._notificationClient:
+			self._notificationClient.stop()
 		win32gui.PostQuitMessage(0) # Terminate the app.
 	
 	def onCommand(self, hwnd, msg, wparam, lparam):
@@ -466,8 +596,9 @@ class OpsiDialogWindow(SubjectsObserver):
 				choiceIndex = values.get('choiceIndex')
 				logger.info("Button subjectId: %s, choiceIndex: %s" % (subjectId, choiceIndex))
 				if (subjectId and (choiceIndex >= 0)):
-					self._notificationClient.setSelectedIndex(subjectId, choiceIndex)
-					self._notificationClient.selectChoice(subjectId)
+					if self._notificationClient:
+						self._notificationClient.setSelectedIndex(subjectId, choiceIndex)
+						self._notificationClient.selectChoice(subjectId)
 			
 			elif (values.get('type') == 'label'):
 				cwnd = win32ui.CreateWindowFromHandle(self.hwnd)
@@ -521,12 +652,16 @@ class OpsiDialogWindow(SubjectsObserver):
 		
 	def messageChanged(self, subject, message):
 		subjectId = subject.get('id')
+		subjectType = subject.get('type')
 		for (item, values) in self.skin.items():
-			if values.get('dlgId') and (values.get('subjectId') == subjectId):
-				logger.info("message changed, subjectId: %s, dlgId: %s" % (subjectId, values['dlgId']))
+			dlgId = values.get('dlgId')
+			if not dlgId:
+				continue
+			if (values.get('subjectId') == subjectId) or (values.get('subjectType') == subjectType):
+				logger.info("message changed, subjectId: %s, dlgId: %s" % (subjectId, dlgId))
 				if (self.skin[item].get('text') != message):
 					self.skin[item]['text'] = message
-					win32gui.SendMessage(self.hwnd, win32con.WM_COMMAND, values['dlgId'], None)
+					win32gui.SendMessage(self.hwnd, win32con.WM_COMMAND, dlgId, None)
 				break
 		
 	def selectedIndexChanged(self, subject, selectedIndex):
@@ -534,6 +669,20 @@ class OpsiDialogWindow(SubjectsObserver):
 	
 	def choicesChanged(self, subject, choices):
 		pass
+	
+	def progressChanged(self, subject, state, percent, timeSpend, timeLeft, speed):
+		subjectId = subject.get('id')
+		subjectType = subject.get('type')
+		for (item, values) in self.skin.items():
+			if (values.get('type') != 'progressbar'):
+				continue
+			ctrlId = values.get('ctrlId')
+			if not ctrlId:
+				continue
+			if (values.get('subjectId') == subjectId) or (not values.get('subjectId') and (values.get('subjectType') == subjectType)):
+				logger.info("progress changed, subjectId: %s, ctrlId: %s, percent: %s" % (subjectId, ctrlId, percent))
+				values['ctrl'].SetRange(0, 100)
+				values['ctrl'].SetPos(int(percent))
 	
 	def subjectsChanged(self, subjects):
 		logger.info("subjectsChanged(%s)" % subjects)
@@ -544,17 +693,28 @@ class OpsiDialogWindow(SubjectsObserver):
 			if (subject['class'] == 'ChoiceSubject'):
 				subjectId = subject.get('id')
 				choices[subjectId] = subject.get('choices', [])
+			#if (subject['class'] == 'ProgressSubject'):
+			#	subjectId = subject.get('id')
+			#	subjectType = subject.get('type')
+			#	for (item, values) in self.skin.items():
+			#		if (values['type'] != 'progressbar') or not values.get('ctrlId'):
+			#			continue
+			#		if (values.get('subjectId') == subjectId) or (not values.get('subjectId') and (values.get('subjectType') == subjectType)):
+			#			values['ctrl'].SetRange(0, subject['end'])
 		
 		for (item, values) in self.skin.items():
 			if (values['type'] != 'button') or not values.get('dlgId') or not values.get('subjectId'):
 				continue
 			if values.get('subjectId') in choices.keys():
 				choiceIndex = values.get('choiceIndex', -1)
-				if (choiceIndex >= 0) and (choiceIndex < len(choices[subjectId])):
+				if (choiceIndex >= 0):
 					dlg = win32gui.GetDlgItem(self.hwnd, values['dlgId'])
-					win32gui.SetWindowText(dlg, choices[subjectId][choiceIndex])
-					
-				win32gui.EnableWindow(win32gui.GetDlgItem(self.hwnd, values.get('dlgId')), True)
+					if (choiceIndex < len(choices[subjectId])):
+						win32gui.SetWindowText(dlg, choices[subjectId][choiceIndex])
+						win32gui.EnableWindow(dlg, True)
+					else:
+						win32gui.SetWindowText(dlg, "")
+						win32gui.EnableWindow(dlg, False)
 			else:
 				win32gui.EnableWindow(win32gui.GetDlgItem(self.hwnd, values.get('dlgId')), False)
 		logger.debug("subjectsChanged() ended")
@@ -572,23 +732,24 @@ if (__name__ == "__main__"):
 	exception = None
 	
 	try:
-		os.chdir(os.path.dirname(sys.argv[0]))
-		
-		if os.path.exists(logFile):
-			logger.notice("Deleting old log file: %s" % logFile)
-			os.unlink(logFile)
-		logger.notice("Opening log file: %s" % logFile)
-		logger.setLogFile(logFile)
-		logger.setFileLevel(LOG_DEBUG)
+		try:
+			os.chdir(os.path.dirname(sys.argv[0]))
+		except:
+			pass
 		
 		logger.notice("Commandline: %s" % ' '.join(sys.argv))
 		
 		# Process command line arguments
 		try:
-			(opts, args) = getopt.getopt(sys.argv[1:], "h:p:s:", [ "host=", "port=", "skin=" ])
+			(opts, args) = getopt.getopt(sys.argv[1:], "h:p:s:l:", [ "host=", "port=", "skin=", "log-file=" ])
 		except getopt.GetoptError:
 			usage()
 			sys.exit(1)
+		
+		global logFile
+		global host
+		global port
+		global skin
 		
 		for (opt, arg) in opts:
 			logger.info("Processing option %s:%s" % (opt, arg))
@@ -598,8 +759,16 @@ if (__name__ == "__main__"):
 				port = int(arg)
 			elif opt in ("-s", "--skin"):
 				skin = arg
+			elif opt in ("-l", "--log-file"):
+				logFile = arg
+				if os.path.exists(logFile):
+					logger.notice("Deleting old log file: %s" % logFile)
+					os.unlink(logFile)
+				logger.notice("Opening log file: %s" % logFile)
+				logger.setLogFile(logFile)
+				logger.setFileLevel(LOG_DEBUG)
 		
-		logger.notice("Host: %s, port: %s, skin: %s" % (host, port, skin))
+		logger.notice("Host: %s, port: %s, skin: %s, logfile: %s" % (host, port, skin, logFile))
 		w = OpsiDialogWindow()
 		w.CreateWindow()
 		# PumpMessages runs until PostQuitMessage() is called by someone.
