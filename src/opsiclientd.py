@@ -585,10 +585,18 @@ class UserLoginEventGenerator(WMIEventGenerator):
 	
 	def getNextEvent(self):
 		event = WMIEventGenerator.getNextEvent(self)
-		for attr in event.eventInfo.get('InsertionStrings', []):
-			if (attr.strip() == 'User32'):
-				logger.notice("User '%s' logged in" % event.eventInfo.get('User'))
+		if (sys.getwindowsversion()[0] <= 5):
+			#event.eventInfo['User'] = event.eventInfo['InsertionStrings'][1] + u'\\' + event.eventInfo['InsertionStrings'][0]
+			if (event.eventInfo['InsertionStrings'][4].strip().lower() == 'user32'):
 				return event
+		else:
+			event.eventInfo['User'] = event.eventInfo['InsertionStrings'][6] + u'\\' + event.eventInfo['InsertionStrings'][5]
+			if (event.eventInfo['InsertionStrings'][9].strip().lower() == 'user32'):
+				return event
+		#for attr in event.eventInfo.get('InsertionStrings', []):
+		#	if (attr.strip() == 'User32'):
+		#		logger.notice("User '%s' logged in" % event.eventInfo.get('User'))
+		#		return event
 		logger.debug("Not a user login: %s" % event.eventInfo.get('User'))
 		return None
 	
