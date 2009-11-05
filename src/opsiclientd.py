@@ -569,12 +569,16 @@ class UserLoginEventGenerator(WMIEventGenerator):
 		WMIEventGenerator.initialize(self)
 		if not (os.name == 'nt'):
 			return
+		
+		eventcode = 528
+		if (sys.getwindowsversion()[0] > 5):
+			eventcode = 4624
 		importWmiAndPythoncom()
 		pythoncom.CoInitialize()
 		logger.debug("Creating wmi object")
 		c = wmi.WMI(privileges = ["Security"])
-		logger.info("Watching for Win32_NTLogEvent, Logfile = Security, EventCode = 528")
-		self._watcher = c.Win32_NTLogEvent.watch_for(notification_type = "Creation", Logfile = "Security", EventCode = 528)
+		logger.info("Watching for Win32_NTLogEvent, Logfile = Security, EventCode = %d" % eventcode)
+		self._watcher = c.Win32_NTLogEvent.watch_for(notification_type = "Creation", Logfile = "Security", EventCode = eventcode)
 	
 	def createEvent(self, eventInfo={}):
 		return UserLoginEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
