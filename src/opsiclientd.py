@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.7.1'
+__version__ = '0.7.2'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp, codecs
@@ -209,6 +209,7 @@ class EventConfig(object):
 		self.blockLogin                 = bool ( kwargs.get('blockLogin',                 False     ) )
 		self.logoffCurrentUser          = bool ( kwargs.get('logoffCurrentUser',          False     ) )
 		self.lockWorkstation            = bool ( kwargs.get('lockWorkstation',            False     ) )
+		self.processShutdownRequests    = bool ( kwargs.get('processShutdownRequests',    True      ) )
 		self.getConfigFromService       = bool ( kwargs.get('getConfigFromService',       True      ) )
 		self.updateConfigFile           = bool ( kwargs.get('updateConfigFile',           True      ) )
 		self.writeLogToService          = bool ( kwargs.get('writeLogToService',          True      ) )
@@ -2664,6 +2665,8 @@ class EventProcessingThread(KillableThread):
 		
 		depotServerUsername = self.opsiclientd.getConfigValue('depot_server', 'username')
 		runAsUser = self.opsiclientd.getConfigValue('action_processor', 'run_as_user')
+		if (runAsUser.lower() == 'system'):
+			runAsUser = ''
 		runAsPassword = ''
 		if (runAsUser.find('\\') != -1):
 			logger.warning("Ignoring domain part of username to run as '%s'" % runAsUser)
@@ -2706,19 +2709,43 @@ class EventProcessingThread(KillableThread):
 			command = self.opsiclientd.fillPlaceholders(command)
 			
 			if self.event.eventConfig.preActionProcessorCommand:
-				logger.notice("Starting pre action processor command '%s' in session '%s' on desktop '%s'" \
-					% (self.event.eventConfig.preActionProcessorCommand, self.getSessionId(), desktop))
-				self.runCommandInSession(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
-				time.sleep(10)
-				
+				impersonation = None
+				try:
+					if runAsUser:
+						impersonation = System.Impersonate(username = runAsUser, password = runAsPassword)
+						impersonation.start(logonType = 'INTERACTIVE', newDesktop = True)
+						
+					logger.notice("Starting pre action processor command '%s' in session '%s' on desktop '%s'" \
+						% (self.event.eventConfig.preActionProcessorCommand, self.getSessionId(), desktop))
+					if impersonation:
+						impersonation.runCommand(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
+					else:
+						self.runCommandInSession(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
+					time.sleep(10)
+				finally:
+					if impersonation:
+						impersonation.end()
+					
 			logger.notice("Starting action processor in session '%s' on desktop '%s'" % (self.getSessionId(), desktop))
 			self.runCommandInSession(command = command, desktop = desktop, waitForProcessEnding = True)
 			
 			if self.event.eventConfig.postActionProcessorCommand:
-				logger.notice("Starting post action processor command '%s' in session '%s' on desktop '%s'" \
-					% (self.event.eventConfig.postActionProcessorCommand, self.getSessionId(), desktop))
-				self.runCommandInSession(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
-				time.sleep(10)
+				impersonation = None
+				try:
+					if runAsUser:
+						impersonation = System.Impersonate(username = runAsUser, password = runAsPassword)
+						impersonation.start(logonType = 'INTERACTIVE', newDesktop = True)
+						
+					logger.notice("Starting post action processor command '%s' in session '%s' on desktop '%s'" \
+						% (self.event.eventConfig.postActionProcessorCommand, self.getSessionId(), desktop))
+					if impersonation:
+						impersonation.runCommand(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
+					else:
+						self.runCommandInSession(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
+					time.sleep(10)
+				finally:
+					if impersonation:
+						impersonation.end()
 		finally:
 			if localUserCreated:
 				logger.notice("Deleting local user '%s'" % runAsUser)
@@ -2854,10 +2881,11 @@ class EventProcessingThread(KillableThread):
 			
 			finally:
 				self.setStatusMessage("")
-				try:
-					self.opsiclientd.processShutdownRequests()
-				except Exception, e:
-					logger.logException(e)
+				if self.event.eventConfig.processShutdownRequests:
+					try:
+						self.opsiclientd.processShutdownRequests()
+					except Exception, e:
+						logger.logException(e)
 				
 				if self.event.eventConfig.writeLogToService:
 					try:
@@ -2992,7 +3020,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				'remote_dir':             '',
 				'filename':               '',
 				'command':                '',
-				'run_as_user':            '',
+				'run_as_user':            'SYSTEM',
 			}
 		}
 		
@@ -3277,8 +3305,6 @@ class Opsiclientd(EventListener, threading.Thread):
 						args['warningTime'] = int(value)
 					elif (key == 'wql'):
 						args['wql'] = value
-					#elif (key == 'max_concurrent'):
-					#	args['maxConcurrent'] = int(value)
 					elif (key == 'user_cancelable'):
 						args['userCancelable'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'block_login'):
@@ -3287,6 +3313,8 @@ class Opsiclientd(EventListener, threading.Thread):
 						args['lockWorkstation'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'logoff_current_user'):
 						args['logoffCurrentUser'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'process_shutdown_requests'):
+						args['processShutdownRequests'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'get_config_from_service'):
 						args['getConfigFromService'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'update_config_file'):
@@ -3817,6 +3845,7 @@ class OpsiclientdNT(Opsiclientd):
 class OpsiclientdNT5(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
+		self._config['action_processor']['run_as_user'] = 'pcpatch'
 		if (sys.getwindowsversion()[1] == 0):
 			# NT 5.0 / win2k
 			# If reboot/shutdown is triggered while pgina.dll is
@@ -3825,7 +3854,6 @@ class OpsiclientdNT5(OpsiclientdNT):
 			# This should be enough time for pgina to stop blocking and leave WlxInitialize
 			self._config['global']['wait_before_reboot'] = 15
 			self._config['global']['wait_before_shutdown'] = 15
-			self._config['action_processor']['run_as_user'] = 'pcpatch'
 		
 	def _shutdownMachine(self):
 		self._shutdownRequested = True
@@ -4013,6 +4041,9 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			"""
 			Initialize service and create stop event
 			"""
+			sys.stdout = logger.getStdout()
+			sys.stderr = logger.getStderr()
+			
 			logger.debug("OpsiclientdServiceFramework initiating")
 			win32serviceutil.ServiceFramework.__init__(self, args)
 			self._stopEvent = threading.Event()
@@ -4046,32 +4077,36 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 				logger.error("Failed to get working directory from registry: %s" % e)
 			os.chdir(workingDirectory)
 			
-			opsiclientd = None
-			if (sys.getwindowsversion()[0] == 5):
-				# NT5: XP
-				opsiclientd = OpsiclientdNT5()
-			elif (sys.getwindowsversion()[0] == 6):
-				# NT6: Vista / Windows7
-				if (sys.getwindowsversion()[1] >= 1):
-					# Windows7
-					opsiclientd = OpsiclientdNT61()
+			try:
+				opsiclientd = None
+				if (sys.getwindowsversion()[0] == 5):
+					# NT5: XP
+					opsiclientd = OpsiclientdNT5()
+				elif (sys.getwindowsversion()[0] == 6):
+					# NT6: Vista / Windows7
+					if (sys.getwindowsversion()[1] >= 1):
+						# Windows7
+						opsiclientd = OpsiclientdNT61()
+					else:
+						opsiclientd = OpsiclientdNT6()
 				else:
-					opsiclientd = OpsiclientdNT6()
-			else:
-				raise Exception("Running windows version not supported")
-			
-			opsiclientd.start()
-			# Write to event log
-			self.ReportServiceStatus(win32service.SERVICE_RUNNING)
-			
-			logger.debug("Took %0.2f seconds to report service running status" % (time.time() - startTime))
-			
-			# Wait for stop event
-			self._stopEvent.wait()
-			
-			# Shutdown opsiclientd
-			opsiclientd.stop()
-			
+					raise Exception("Running windows version not supported")
+				
+				opsiclientd.start()
+				# Write to event log
+				self.ReportServiceStatus(win32service.SERVICE_RUNNING)
+				
+				logger.debug("Took %0.2f seconds to report service running status" % (time.time() - startTime))
+				
+				# Wait for stop event
+				self._stopEvent.wait()
+				
+				# Shutdown opsiclientd
+				opsiclientd.stop()
+			except Exception, e:
+				logger.critical("opsiclientd crash")
+				logger.logException(e)
+				
 			# Write to event log
 			self.ReportServiceStatus(win32service.SERVICE_STOPPED)
 
