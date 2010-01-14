@@ -8,7 +8,7 @@
    opsiclientd is part of the desktop management solution opsi
    (open pc server integration) http://www.opsi.org
    
-   Copyright (C) 2008 uib GmbH
+   Copyright (C) 2010 uib GmbH
    
    http://www.uib.de/
    
@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.7.8'
+__version__ = '0.7.9'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp, codecs, inspect
@@ -715,29 +715,27 @@ class WMIEventGenerator(EventGenerator):
 		importWmiAndPythoncom()
 		pythoncom.CoUninitialize()
 	
-class GUIStartupEventGenerator(WMIEventGenerator):
+class GUIStartupEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
-		WMIEventGenerator.__init__(self, eventConfig)
+		EventGenerator.__init__(self, eventConfig)
 		if   (os.name == 'nt') and (sys.getwindowsversion()[0] == 5):
 			self.guiProcessName = u'winlogon.exe'
 		elif (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
 			self.guiProcessName = u'LogonUI.exe'
 		else:
 			raise Exception(u"OS unsupported")
-		self._wql = u"SELECT * FROM __InstanceCreationEvent WITHIN 1 WHERE TargetInstance ISA 'Win32_Process' AND TargetInstance.Name = '%s'" % self.guiProcessName
-	
 	
 	def createEvent(self, eventInfo={}):
 		return GUIStartupEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
 	
 	def getNextEvent(self):
-		logger.debug(u"Number of events occured so far: %d" % self._eventsOccured)
-		if (self._eventsOccured <= 0):
-			logger.info(u"Getting first event, checking if process '%s' already running" % self.guiProcessName)
+		while True:
+			logger.debug(u"Checking if process '%s' running" % self.guiProcessName)
 			if System.getPid(self.guiProcessName):
 				logger.notice(u"Process '%s' is running" % self.guiProcessName)
 				return self.createEvent()
-		return WMIEventGenerator.getNextEvent(self)
+			time.sleep(5)
+	
 
 class TimerEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
@@ -2424,7 +2422,7 @@ class EventProcessingThread(KillableThread):
 					self.opsiclientd.setConfigValue(section = parts[1], option = parts[2], value = value)
 					
 				except Exception, e:
-					logger.error(u"Failed to process general config key '%s:%s': %s", (key, value, e))
+					logger.error(u"Failed to process general config key '%s:%s': %s" % (key, value, e))
 			
 			logger.notice(u"Got config from service")
 			
@@ -3210,7 +3208,7 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 	
 	def reboot(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
-		logger.notice(u"rpc reboot: rebooting computer in %s seconds" % wait)
+		logger.notice(u"rpc reboot: rebooting computer in %s seconds" % waitSeconds)
 		System.reboot(wait = waitSeconds)
 		
 	def uptime(self):
@@ -3272,60 +3270,63 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._eventGenerators = {}
 		
 		self._statusApplicationProcess = None
+		self._blockLoginNotifierPid = None
 		
 		self._rebootRequested = False
 		self._shutdownRequested = False
 		
 		self._config = {
 			'system': {
-				'program_files_dir':      '',
+				'program_files_dir':        '',
 			},
 			'global': {
-				'config_file':            'opsiclientd.conf',
-				'log_file':               'opsiclientd.log',
-				'log_level':              LOG_NOTICE,
-				'host_id':                System.getFQDN().lower(),
-				'opsi_host_key':          '',
-				'wait_before_reboot':     3,
-				'wait_before_shutdown':   3,
-				'wait_for_gui_timeout':   120,
+				'config_file':              'opsiclientd.conf',
+				'log_file':                 'opsiclientd.log',
+				'log_level':                LOG_NOTICE,
+				'host_id':                  System.getFQDN().lower(),
+				'opsi_host_key':            '',
+				'wait_before_reboot':       3,
+				'wait_before_shutdown':     3,
+				'wait_for_gui_timeout':     120,
+				'wait_for_gui_application': '',
+				'block_login_notifier':     '',
 			},
 			'config_service': {
-				'server_id':              '',
-				'url':                    '',
-				'connection_timeout':     10,
-				'user_cancellable_after': 0,
+				'server_id':                '',
+				'url':                      '',
+				'connection_timeout':       10,
+				'user_cancellable_after':   0,
 			},
 			'depot_server': {
-				'depot_id':               '',
-				'url':                    '',
-				'drive':                  '',
-				'username':               'pcpatch',
+				'depot_id':                 '',
+				'url':                      '',
+				'drive':                    '',
+				'username':                 'pcpatch',
 			},
 			'cache_service': {
-				'storage_dir':            'cache_service',
-				'backend_manager_config': '',
+				'storage_dir':              'cache_service',
+				'backend_manager_config':   '',
 			},
 			'control_server': {
-				'interface':              '0.0.0.0', # TODO
-				'port':                   4441,
-				'ssl_server_key_file':    'opsiclientd.pem',
-				'ssl_server_cert_file':   'opsiclientd.pem',
-				'static_dir':             'static_html',
+				'interface':                '0.0.0.0', # TODO
+				'port':                     4441,
+				'ssl_server_key_file':      'opsiclientd.pem',
+				'ssl_server_cert_file':     'opsiclientd.pem',
+				'static_dir':               'static_html',
 			},
 			'notification_server': {
-				'interface':              '127.0.0.1',
-				'start_port':             44000,
+				'interface':                '127.0.0.1',
+				'start_port':               44000,
 			},
 			'opsiclientd_notifier': {
-				'command':                '',
+				'command':                  '',
 			},
 			'action_processor': {
-				'local_dir':              '',
-				'remote_dir':             '',
-				'filename':               '',
-				'command':                '',
-				'run_as_user':            'SYSTEM',
+				'local_dir':                '',
+				'remote_dir':               '',
+				'filename':                 '',
+				'command':                  '',
+				'run_as_user':              'SYSTEM',
 			}
 		}
 		
@@ -3333,6 +3334,36 @@ class Opsiclientd(EventListener, threading.Thread):
 	def setBlockLogin(self, blockLogin):
 		self._blockLogin = bool(blockLogin)
 		logger.notice(u"Block login now set to '%s'" % self._blockLogin)
+		
+		if (self._blockLogin):
+			if not self._blockLoginNotifierPid and self.getConfigValue('global', 'block_login_notifier'):
+				logger.info(u"Starting block login notifier app")
+				sessionId = System.getActiveConsoleSessionId()
+				while True:
+					try:
+						self._blockLoginNotifierPid = System.runCommandInSession(
+								command = self.getConfigValue('global', 'block_login_notifier'),
+								sessionId = sessionId,
+								desktop = 'winlogon',
+								waitForProcessEnding = False)[2]
+						break
+					except Exception, e:
+						logger.error(e)
+						if (e[0] == 233) and (sys.getwindowsversion()[0] == 5) and (sessionId != 0):
+							# No process is on the other end
+							# Problem with pipe \\\\.\\Pipe\\TerminalServer\\SystemExecSrvr\\<sessionid>
+							# After logging off from a session other than 0 csrss.exe does not create this pipe or CreateRemoteProcessW is not able to read the pipe.
+							logger.info(u"Retrying to run command in session 0")
+							sessionId = 0
+						else:
+							logger.error(u"Failed to start block login notifier app: %s" % e)
+		elif (self._blockLoginNotifierPid):
+			try:
+				logger.info(u"Terminating block login notifier app (pid %s)" % self._blockLoginNotifierPid)
+				System.terminateProcess(processId = self._blockLoginNotifierPid)
+			except Exception, e:
+				logger.warning(u"Failed to terminate block login notifier app: %s" % e)
+			self._blockLoginNotifierPid = None
 		
 	def isRunning(self):
 		return self._running
@@ -3767,7 +3798,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			# Wait until gui starts up
 			logger.notice(u"Waiting for gui startup (timeout: %d seconds)" % self.getConfigValue('global', 'wait_for_gui_timeout'))
 			self.waitForGUI(timeout = self.getConfigValue('global', 'wait_for_gui_timeout'))
-			logger.notice(u"Gui started")
+			logger.notice(u"Done waiting for GUI")
 			
 			# Wait some more seconds for events to fire
 			time.sleep(5)

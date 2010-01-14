@@ -53,7 +53,6 @@ logger = Logger()
 
 # Globals
 logFile = ''
-transparentColor = (0,0,0)
 host = '127.0.0.1'
 port = 0
 skin = 'skin.ini'
@@ -173,6 +172,7 @@ class OpsiDialogWindow(SubjectsObserver):
 				'stayOnTop': False,
 				'fadeIn':    False,
 				'fadeOut':   False,
+				'transparentColor': None,
 				'icon':      None,
 				'systray':   False
 			}
@@ -211,37 +211,42 @@ class OpsiDialogWindow(SubjectsObserver):
 
 			for (key, value) in ini.items(section):
 				key = key.lower()
-				if    (key == 'color'):         self.skin[item]['color'] = toRGB(value)
-				elif  (key == 'transparent'):   self.skin[item]['transparent'] = toBool(value)
+				if    (key == 'color'):            self.skin[item]['color'] = toRGB(value)
+				elif  (key == 'transparent'):      self.skin[item]['transparent'] = toBool(value)
 				elif  (key == 'frame') and toBool(value): self.skin[item]['style'] |= win32con.WS_CAPTION #|= win32con.WS_POPUP
 				elif  (key == 'closeable') and toBool(value): self.skin[item]['style'] |= win32con.WS_SYSMENU
 				elif  (key == 'resizable') and toBool(value): self.skin[item]['style'] |= win32con.WS_THICKFRAME
 				elif  (key == 'minimizable') and toBool(value): self.skin[item]['style'] |= win32con.WS_MINIMIZEBOX
-				elif  (key == 'systray'):       self.skin[item]['systray'] = toBool(value)
-				elif  (key == 'left'):          self.skin[item]['left'] = int(value)
-				elif  (key == 'top'):           self.skin[item]['top'] = int(value)
-				elif  (key == 'width'):         self.skin[item]['width'] = int(value)
-				elif  (key == 'height'):        self.skin[item]['height'] = int(value)
-				elif  (key == 'fontname'):      self.skin[item]['font'].lfFaceName = value.strip()
-				elif  (key == 'fontsize'):      self.skin[item]['font'].lfHeight = int(value)
-				elif  (key == 'fontweight'):    self.skin[item]['font'].lfWeight = int(value)
-				elif  (key == 'fontitalic'):    self.skin[item]['font'].lfItalic = toBool(value)
-				elif  (key == 'fontunderline'): self.skin[item]['font'].lfUnderline = toBool(value)
+				elif  (key == 'systray'):          self.skin[item]['systray'] = toBool(value)
+				elif  (key == 'left'):             self.skin[item]['left'] = int(value)
+				elif  (key == 'top'):              self.skin[item]['top'] = int(value)
+				elif  (key == 'width'):            self.skin[item]['width'] = int(value)
+				elif  (key == 'height'):           self.skin[item]['height'] = int(value)
+				elif  (key == 'fontname'):         self.skin[item]['font'].lfFaceName = value.strip()
+				elif  (key == 'fontsize'):         self.skin[item]['font'].lfHeight = int(value)
+				elif  (key == 'fontweight'):       self.skin[item]['font'].lfWeight = int(value)
+				elif  (key == 'fontitalic'):       self.skin[item]['font'].lfItalic = toBool(value)
+				elif  (key == 'fontunderline'):    self.skin[item]['font'].lfUnderline = toBool(value)
 				elif  (key == 'fontbold') and toBool(value): self.skin[item]['font'].lfWeight = 700
-				elif  (key == 'fontcolor'):     self.skin[item]['fontColor'] = toRGB(value)
-				elif  (key == 'text'):          self.skin[item]['text'] = value.strip()
-				elif  (key == 'alignment'):     self.skin[item]['alignment'] = toStyle(value, self.skin[item]['type'])
-				elif  (key == 'file'):          self.skin[item]['file'] = toPath(value.strip())
-				elif  (key == 'icon'):          self.skin[item]['icon'] = toPath(value)
-				elif  (key == 'active'):        self.skin[item]['active'] = toBool(value)
-				elif  (key == 'stayontop'):     self.skin[item]['stayOnTop'] = toBool(value)
-				elif  (key == 'fadein'):        self.skin[item]['fadeIn'] = toBool(value)
-				elif  (key == 'fadeout'):       self.skin[item]['fadeOut'] = toBool(value)
-				elif  (key == 'subjectid'):     self.skin[item]['subjectId'] = value.strip()
-				elif  (key == 'subjecttype'):   self.skin[item]['subjectType'] = value.strip()
-				elif  (key == 'choiceindex'):   self.skin[item]['choiceIndex'] = int(value)
+				elif  (key == 'fontcolor'):        self.skin[item]['fontColor'] = toRGB(value)
+				elif  (key == 'text'):             self.skin[item]['text'] = value.strip()
+				elif  (key == 'alignment'):        self.skin[item]['alignment'] = toStyle(value, self.skin[item]['type'])
+				elif  (key == 'file'):             self.skin[item]['file'] = toPath(value.strip())
+				elif  (key == 'icon'):             self.skin[item]['icon'] = toPath(value)
+				elif  (key == 'active'):           self.skin[item]['active'] = toBool(value)
+				elif  (key == 'stayontop'):        self.skin[item]['stayOnTop'] = toBool(value)
+				elif  (key == 'fadein'):           self.skin[item]['fadeIn'] = toBool(value)
+				elif  (key == 'fadeout'):          self.skin[item]['fadeOut'] = toBool(value)
+				elif  (key == 'transparentcolor'): self.skin[item]['transparentColor'] = toRGB(value)
+				elif  (key == 'subjectid'):        self.skin[item]['subjectId'] = value.strip()
+				elif  (key == 'subjecttype'):      self.skin[item]['subjectType'] = value.strip()
+				elif  (key == 'choiceindex'):      self.skin[item]['choiceIndex'] = int(value)
 				elif  (section.lower() == 'form') and (key == 'hidden') and toBool(value):
 					self.hidden = True
+
+		if self.skin['form']['transparentColor']:
+			self.skin['form']['fadeIn'] = False
+			self.skin['form']['fadeOut'] = False
 		
 		desktop = win32gui.GetDesktopWindow()
 		(l, t, r, b) = win32gui.GetWindowRect(desktop)
@@ -409,6 +414,9 @@ class OpsiDialogWindow(SubjectsObserver):
 			self.alpha = 0
 			self.setWindowAlpha(self.alpha)
 			timer.set_timer(50, self.fadein)
+
+		if self.skin['form']['transparentColor']:
+			self.setWindowAlpha(0, self.skin['form']['transparentColor'])
 
 		if not self.hidden:
 			if (sys.getwindowsversion()[0] == 6):
@@ -606,43 +614,47 @@ class OpsiDialogWindow(SubjectsObserver):
 				self.refreshDialogItem(dlgId)
 			break
 		
-	def setWindowAlpha(self, alpha):
+	def setWindowAlpha(self, alpha, colorKey=None):
+		# 32-bit X8 R8 G8 B8
+		# 32-bit A8 R8 G8 B8
 		# Set WS_EX_LAYERED
 		style = win32gui.GetWindowLong(self.hwnd, win32con.GWL_EXSTYLE)
 		win32gui.SetWindowLong(self.hwnd, win32con.GWL_EXSTYLE, style | win32con.WS_EX_LAYERED)
-		
-		win32gui.SetLayeredWindowAttributes(self.hwnd, 0, alpha, win32con.LWA_ALPHA);
-		
-		return
-		#screenDC = win32gui.GetDC(win32gui.GetDesktopWindow())
-		hdc = win32gui.CreateCompatibleDC(None)
-		
-		blend = BLENDFUNCTION(win32con.AC_SRC_OVER, 0, alpha, 0)
-		size = SIZE(400,400)
-		pointSrc = POINT(200,0)
-		windll.user32.UpdateLayeredWindow(self.hwnd, None, None, byref(size), hdc, byref(pointSrc), 0, byref(blend), win32con.ULW_ALPHA);
 
-		return
+		if colorKey:
+			win32gui.SetLayeredWindowAttributes(self.hwnd, colorKey, alpha, win32con.LWA_COLORKEY);
+		else:
+			win32gui.SetLayeredWindowAttributes(self.hwnd, 0, alpha, win32con.LWA_ALPHA);
 		
-		screenDC = win32gui.GetDC(win32gui.GetDesktopWindow())
-		cScreenDC = win32gui.CreateCompatibleDC(screenDC)
+		#screenDC = win32gui.GetDC(win32gui.GetDesktopWindow())
+		#hdc = win32gui.CreateCompatibleDC(None)
+		#
+		#blend = BLENDFUNCTION(win32con.AC_SRC_OVER, 0, alpha, 0)
+		#size = SIZE(400,400)
+		#pointSrc = POINT(200,0)
+		#windll.user32.UpdateLayeredWindow(self.hwnd, None, None, byref(size), hdc, byref(pointSrc), 0, byref(blend), win32con.ULW_ALPHA);
+
+		#return
 		
-		win32gui.SelectObject(cScreenDC, self.skin['imagebg']['bitmap'])
-		point1 = POINT(200,0)
-		size1 = SIZE(400,400)
-		point2 = POINT(0,0)
-		blend = BLENDFUNCTION(0, 0, alpha, 1)
-		ret = windll.user32.UpdateLayeredWindow(
-						self.hwnd,
-						screenDC,
-						byref(point1),
-						byref(size1),
-						cScreenDC,
-						byref(point2),
-						win32api.RGB(255,0,0),
-						byref(blend),
-						win32con.ULW_ALPHA)
-		return ret
+		#screenDC = win32gui.GetDC(win32gui.GetDesktopWindow())
+		#cScreenDC = win32gui.CreateCompatibleDC(screenDC)
+		#
+		#win32gui.SelectObject(cScreenDC, self.skin['imagebg']['bitmap'])
+		#point1 = POINT(0,0)
+		#size1 = SIZE(200,200)
+		#point2 = POINT(0,0)
+		#blend = BLENDFUNCTION(0, 0, alpha, 1)
+		#ret = windll.user32.UpdateLayeredWindow(
+		#				self.hwnd,
+		#				screenDC,
+		#				byref(point1),
+		#				byref(size1),
+		#				cScreenDC,
+		#				byref(point2),
+		#				win32api.RGB(255,0,255),
+		#				byref(blend),
+		#				win32con.ULW_ALPHA)
+		#return ret
 	
 	def setStatusMessage(self, message):
 		for (item, values) in self.skin.items():
