@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.7.9'
+__version__ = '0.7.10'
 
 # Imports
 import os, sys, threading, time, json, urllib, base64, socket, re, shutil, filecmp, codecs, inspect
@@ -2969,7 +2969,7 @@ class EventProcessingThread(KillableThread):
 					else:
 						choiceSubject.setChoices([ 'Start now' ])
 						choiceSubject.setCallbacks( [ self.startEventCallback ] )
-					self.opsiclientd.getNotificationServer().addSubject(choiceSubject)
+					self._notificationServer.addSubject(choiceSubject)
 					try:
 						if self.event.eventConfig.eventNotifierCommand:
 							self.startNotifierApplication(
@@ -2989,7 +2989,7 @@ class EventProcessingThread(KillableThread):
 					finally:
 						self.waiting = False
 						self.stopNotifierApplication()
-						self.opsiclientd.getNotificationServer().removeSubject(choiceSubject)
+						self._notificationServer.removeSubject(choiceSubject)
 				
 				self.setStatusMessage(_(u"Processing event %s") % self.event.eventConfig.getName())
 				
