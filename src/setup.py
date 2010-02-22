@@ -122,7 +122,8 @@ setup(
 )
 
 shutil.copy(vc_manifest, os.path.join("dist", "Microsoft.VC90.CRT.manifest"))
-shutil.copy(vc_dll, os.path.join("dist", os.path.basename(vc_dll)))
+shutil.copy(vc_manifest, os.path.join("dist", "lib", "Microsoft.VC90.CRT.manifest"))
+shutil.copy(vc_dll, os.path.join("dist", "lib", os.path.basename(vc_dll)))
 os.unlink(os.path.join("dist", "w9xpopen.exe"))
 
 print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
