@@ -1,19 +1,29 @@
 from distutils.core import setup
 import py2exe, sys, os, shutil
 
-#VC_90_INST_DIR = 'C:\\WINDOWS\\WinSxS\\x86_Microsoft.VC90.CRT_1fc8b3b9a1e18e3b_9.0.21022.8_x-ww_d08d0375'
-#SYS_DIR = 'c:\\windows\\system32'
-#
-#for d in ('build', 'dist'):
-#	if os.path.exists(d):
-#		shutil.rmtree(d)
-#	
-#for dll in ('msvcm90.dll', 'msvcp90.dll', 'msvcr90.dll'):
-#	if not os.path.exists(os.path.join(SYS_DIR, dll)):
-#		shutil.copy2(os.path.join(VC_90_INST_DIR, dll), os.path.join(SYS_DIR, dll))
-#	if not os.path.exists(os.path.join(VC_90_INST_DIR, dll)):
-#		print "Failed to locate vc++ dll '%s'" % dll
-#		sys.exit(1)
+WINSXS_DIR = 'C:\\WINDOWS\\WinSxS'
+
+for d in ('build', 'dist'):
+	if os.path.exists(d):
+		shutil.rmtree(d)
+
+vc_manifest = None
+for entry in os.listdir(os.path.join(WINSXS_DIR, "Manifests")):
+	if entry.lower().startswith("x86_microsoft.vc90.crt_") and entry.lower().endswith("manifest"):
+		vc_manifest = os.path.join(WINSXS_DIR, "Manifests", entry)
+		break
+if not vc_manifest:
+	print "Failed to locate vc++ manifest"
+	sys.exit(1)
+
+vc_dll = None
+for entry in os.listdir(os.path.join(WINSXS_DIR)):
+	if entry.lower().startswith("x86_microsoft.vc90.crt") and os.path.isdir(os.path.join(WINSXS_DIR, entry)):
+		vc_dll = os.path.join(WINSXS_DIR, entry, "msvcr90.dll")
+		break
+if not vc_dll or not os.path.exists(vc_dll):
+	print "Failed to locate vc++ msvcr90.dll"
+	sys.exit(1)
 
 # If run without args, build executables, in quiet mode.
 if (len(sys.argv) == 1):
@@ -77,7 +87,7 @@ excludes = [	"pywin", "pywin.debugger", "pywin.debugger.dbgcon",
 ]
 
 data_files = [
-	('lib',                           [ ]),
+	('lib',                           []),
 	('notifier',                      [	'windows\\helpers\\notifier\\event.ini',
 						'windows\\helpers\\notifier\\action.ini',
 						'windows\\helpers\\notifier\\userlogin.ini',
@@ -110,6 +120,10 @@ setup(
 	service = [ opsiclientd ],
 	windows = [ notifier, opsiclientd_rpc, action_processor_starter ],
 )
+
+shutil.copy(vc_manifest, os.path.join("dist", "Microsoft.VC90.CRT.manifest"))
+shutil.copy(vc_dll, os.path.join("dist", os.path.basename(vc_dll)))
+os.unlink(os.path.join("dist", "w9xpopen.exe"))
 
 print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 print "!!!   On the target machine always replace exe AND lib   !!!"
