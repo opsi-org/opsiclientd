@@ -604,7 +604,7 @@ class OpsiDialogWindow(SubjectsObserver):
 				logger.info(u"Button subjectId: %s, choiceIndex: %s" % (subjectId, choiceIndex))
 				if (subjectId and (choiceIndex >= 0)):
 					if self._notificationClient:
-						self._notificationClient.getSelectedIndexes(subjectId, [ choiceIndex ])
+						self._notificationClient.setSelectedIndexes(subjectId, [ choiceIndex ])
 						self._notificationClient.selectChoice(subjectId)
 			
 			elif (values.get('type') == u'label'):
@@ -716,18 +716,21 @@ class OpsiDialogWindow(SubjectsObserver):
 		for (item, values) in self.skin.items():
 			if (values['type'] != 'button') or not values.get('dlgId') or not values.get('subjectId'):
 				continue
-			if values.get('subjectId') in choices.keys():
-				selectedIndexes = values.get('selectedIndexes', [])
-				if selectedIndexes and (selectedIndexes[0] >= 0):
-					dlg = win32gui.GetDlgItem(self.hwnd, values['dlgId'])
-					if (selectedIndexes[0] < len(choices[subjectId])):
-						win32gui.SetWindowText(dlg, choices[subjectId][selectedIndexes[0]])
-						win32gui.EnableWindow(dlg, True)
-					else:
-						win32gui.SetWindowText(dlg, "")
-						win32gui.EnableWindow(dlg, False)
+			subjectId = values['subjectId']
+			dlgId = values['dlgId']
+			if subjectId in choices.keys() and (values.get('choiceIndex', -1) >= 0):
+				choiceIndex = values['choiceIndex']
+				logger.info(u"Found choice subject '%s' mapped to dlgId %s, choiceIndex %d (choices: %s)" \
+						% (subjectId, dlgId, choiceIndex, choices[subjectId]))
+				dlg = win32gui.GetDlgItem(self.hwnd, dlgId)
+				if (choiceIndex < len(choices[subjectId])):
+					win32gui.SetWindowText(dlg, choices[subjectId][choiceIndex])
+					win32gui.EnableWindow(dlg, True)
+				else:
+					win32gui.SetWindowText(dlg, "")
+					win32gui.EnableWindow(dlg, False)
 			else:
-				win32gui.EnableWindow(win32gui.GetDlgItem(self.hwnd, values.get('dlgId')), False)
+				win32gui.EnableWindow(win32gui.GetDlgItem(self.hwnd, dlgId), False)
 		logger.debug(u"subjectsChanged() ended")
 
 def usage():
