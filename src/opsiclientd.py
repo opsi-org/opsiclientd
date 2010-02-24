@@ -2166,7 +2166,7 @@ class EventProcessingThread(KillableThread):
 		
 		self._notificationServer = None
 		
-		self._notifierApplicationPid = None
+		self._notifierApplicationPid = {}
 		self._depotShareMounted = False
 		
 		self._statusSubject = MessageSubject('status')
@@ -2424,24 +2424,25 @@ class EventProcessingThread(KillableThread):
 		self.setSessionId(sessionId)
 		return processId
 	
-	def startNotifierApplication(self, command, desktop=None):
-		logger.notice(u"Starting notifier application in session '%s'" % self.getSessionId())
-		self._notifierApplicationPid = self.runCommandInSession(command = command.replace('%port%', unicode(self._notificationServerPort)), waitForProcessEnding = False)
+	def startNotifierApplication(self, notifierType, command, desktop=None):
+		logger.notice(u"Starting notifier application type '%s' in session '%s'" % (notifierType, self.getSessionId()))
+		self._notifierApplicationPid[notifierType] = self.runCommandInSession(command = command.replace('%port%', unicode(self._notificationServerPort)), waitForProcessEnding = False)
 		time.sleep(3)
 		
-	def stopNotifierApplication(self):
-		if not self._notifierApplicationPid:
+	def stopNotifierApplication(self, notifierType):
+		if not self._notifierApplicationPid.get(notifierType):
+			logger.info(u"Failed to stop notifier application type '%s': not started" % notifierType)
 			return
 		
-		logger.notice(u"Stopping notifier application (pid %s)" % self._notifierApplicationPid)
+		logger.notice(u"Stopping notifier application (pid %s)" % self._notifierApplicationPid[notifierType])
 		try:
 			try:
 				# Does not work in all cases
-				self.closeProcessWindows(self._notifierApplicationPid)
+				self.closeProcessWindows(self._notifierApplicationPid[notifierType])
 			except:
 				pass
 			time.sleep(3)
-			System.terminateProcess(processId = self._notifierApplicationPid)
+			System.terminateProcess(processId = self._notifierApplicationPid[notifierType])
 		except Exception, e:
 			logger.warning(u"Failed to stop notifier application: %s" % e)
 	
@@ -2899,12 +2900,13 @@ class EventProcessingThread(KillableThread):
 					else:
 						choiceSubject.setChoices([ 'Start now' ])
 						choiceSubject.setCallbacks( [ self.startEventCallback ] )
-					self.opsiclientd.getNotificationServer().addSubject(choiceSubject)
+					self._notificationServer.addSubject(choiceSubject)
 					try:
 						if self.event.eventConfig.eventNotifierCommand:
 							self.startNotifierApplication(
-									command = self.event.eventConfig.eventNotifierCommand,
-									desktop = self.event.eventConfig.eventNotifierDesktop )
+									notifierType = 'event',
+									command      = self.event.eventConfig.eventNotifierCommand,
+									desktop      = self.event.eventConfig.eventNotifierDesktop )
 							
 						timeout = int(self.event.eventConfig.warningTime)
 						while(timeout > 0) and not self.eventCancelled and not self.waitCancelled:
@@ -2918,8 +2920,8 @@ class EventProcessingThread(KillableThread):
 							raise CanceledByUserError(u"Cancelled by user")
 					finally:
 						self.waiting = False
-						self.stopNotifierApplication()
-						self.opsiclientd.getNotificationServer().removeSubject(choiceSubject)
+						self.stopNotifierApplication(notifierType = 'event')
+						self._notificationServer.removeSubject(choiceSubject)
 				
 				self.setStatusMessage(_(u"Processing event %s") % self.event.eventConfig.getName())
 				
@@ -2934,8 +2936,9 @@ class EventProcessingThread(KillableThread):
 				
 				if self.event.eventConfig.actionNotifierCommand:
 					self.startNotifierApplication(
-						command = self.event.eventConfig.actionNotifierCommand,
-						desktop = self.event.eventConfig.actionNotifierDesktop )
+						notifierType = 'action',
+						command      = self.event.eventConfig.actionNotifierCommand,
+						desktop      = self.event.eventConfig.actionNotifierDesktop )
 				
 				if not self.event.eventConfig.useCachedConfig:
 					if self.event.eventConfig.getConfigFromService:
@@ -2969,7 +2972,7 @@ class EventProcessingThread(KillableThread):
 					logger.logException(e)
 				
 				try:
-					self.stopNotifierApplication()
+					self.stopNotifierApplication(notifierType = 'action')
 				except Exception, e:
 					logger.logException(e)
 				
@@ -3746,11 +3749,31 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.notice(u"No events processing, unblocking login")
 				self.setBlockLogin(False)
 			
-			# TODO: passive wait?
 			while self._running:
 				time.sleep(1)
 			for eventGenerator in self.getEventGenerators(generatorClass = DaemonShutdownEventGenerator):
 				eventGenerator.fireEvent()
+			
+			logger.notice(u"opsiclientd is going down")
+			self.setBlockLogin(False)
+			
+			logger.info(u"Stopping cache service")
+			if self._cacheService:
+				self._cacheService.stop()
+			
+			logger.info(u"Stopping control pipe")
+			if self._controlPipe:
+				self._controlPipe.stop()
+			
+			logger.info(u"Stopping control server")
+			if self._controlServer:
+				self._controlServer.stop()
+			
+			if reactor and reactor.running:
+				logger.info(u"Stopping reactor")
+				reactor.stop()
+			
+			logger.info(u"Exiting main thread")
 			
 		except Exception, e:
 			logger.logException(e)
@@ -3759,23 +3782,6 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._running = False
 		
 	def stop(self):
-		logger.notice(u"opsiclientd is going down")
-		self.setBlockLogin(False)
-		
-		# Stop cache service
-		if self._cacheService:
-			self._cacheService.stop()
-		
-		# Stop control pipe thread
-		if self._controlPipe:
-			self._controlPipe.stop()
-		
-		# Stop control server thread
-		if self._controlServer:
-			self._controlServer.stop()
-		
-		if reactor and reactor.running:
-			reactor.stop()
 		self._running = False
 	
 	def processEvent(self, event):
@@ -4109,6 +4115,7 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			"""
 			sys.stdout = logger.getStdout()
 			sys.stderr = logger.getStderr()
+			logger.setConsoleLevel(LOG_NONE)
 			
 			logger.debug(u"OpsiclientdServiceFramework initiating")
 			win32serviceutil.ServiceFramework.__init__(self, args)
