@@ -999,7 +999,11 @@ class ControlPipe(threading.Thread):
 		self._running = False
 		
 	def stop(self):
+		self.closePipe()
 		self._running = False
+	
+	def closePipe(self):
+		return
 	
 	def isRunning(self):
 		return self._running
@@ -1029,6 +1033,13 @@ class PosixControlPipe(ControlPipe):
 			os.unlink(self._pipeName)
 		os.mkfifo(self._pipeName)
 		logger.debug2(u"Pipe %s created" % self._pipeName)
+	
+	def closePipe(self):
+		if self._pipe:
+			try:
+				os.close(self._pipe)
+			except Exception, e:
+				pass
 	
 	def run(self):
 		self._running = True
@@ -1091,7 +1102,14 @@ class NTControlPipeConnection(threading.Thread):
 		self._pipe = pipe
 		self._bufferSize = bufferSize
 		logger.debug(u"NTControlPipeConnection initiated")
-		
+	
+	def closePipe(self):
+		if self._pipe:
+			try:
+				windll.kernel32.CloseHandle(self._pipe)
+			except:
+				pass
+	
 	def run(self):
 		self._running = True
 		try:
@@ -2035,7 +2053,8 @@ class ControlServer(threading.Thread):
 		self._running = False
 	
 	def stop(self):
-		self._server.stopListening()
+		if self._server:
+			self._server.stopListening()
 		self._running = False
 		
 	def createRoot(self):
@@ -2179,7 +2198,7 @@ class EventProcessingThread(KillableThread):
 		self._currentProgressSubjectProxy = ProgressSubjectProxy('currentProgress')
 		self._overallProgressSubjectProxy = ProgressSubjectProxy('overallProgress')
 		
-		self._statusSubject.setMessage( _("Processing event %s") % self.event )
+		self._statusSubject.setMessage( _("Processing event %s") % self.event.eventConfig.getName() )
 		self._serviceUrlSubject.setMessage(self.opsiclientd.getConfigValue('config_service', 'url'))
 		self._clientIdSubject.setMessage(self.opsiclientd.getConfigValue('global', 'host_id'))
 		self._opsiclientdInfoSubject.setMessage("opsiclientd %s" % __version__)
@@ -2214,7 +2233,7 @@ class EventProcessingThread(KillableThread):
 		
 	def setStatusMessage(self, message):
 		self._statusSubject.setMessage(message)
-	
+		
 	def startNotificationServer(self):
 		logger.notice(u"Starting notification server on port %s" % self._notificationServerPort)
 		try:
@@ -2261,18 +2280,20 @@ class EventProcessingThread(KillableThread):
 			
 			choiceSubject.setCallbacks( [ serviceConnectionThread.stopConnectionCallback ] )
 			
-			cancellableAfter = int(self.opsiclientd.getConfigValue('config_service', 'user_cancellable_after'))
+			cancellableAfter = forceInt(self.opsiclientd.getConfigValue('config_service', 'user_cancellable_after'))
+			logger.info(u"User is allowed to cancel connection after %d seconds" % cancellableAfter)
 			if (cancellableAfter < 1):
 				self._notificationServer.addSubject(choiceSubject)
 			
-			timeout = int(self.opsiclientd.getConfigValue('config_service', 'connection_timeout'))
+			timeout = forceInt(self.opsiclientd.getConfigValue('config_service', 'connection_timeout'))
 			logger.info(u"Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
 			serviceConnectionThread.start()
 			time.sleep(1)
 			logger.debug(u"ServiceConnectionThread started")
 			
 			while serviceConnectionThread.running and (timeout > 0):
-				logger.debug(u"Waiting for ServiceConnectionThread (timeout: %d, alive: %s) " % (timeout, serviceConnectionThread.isAlive()))
+				logger.debug(u"Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d) " \
+					% (timeout, serviceConnectionThread.isAlive(), cancellableAfter))
 				self._detailSubjectProxy.setMessage( _(u'Timeout: %ds') % timeout )
 				cancellableAfter -= 1
 				if (cancellableAfter == 0):
@@ -2891,7 +2912,7 @@ class EventProcessingThread(KillableThread):
 						self.running = False
 						return
 				
-				self.setStatusMessage(self.event.eventConfig.message)
+				self._eventSubject.setMessage(self.event.eventConfig.message)
 				if self.event.eventConfig.warningTime:
 					choiceSubject = ChoiceSubject(id = 'choice')
 					if self.event.eventConfig.userCancelable:
@@ -2952,7 +2973,8 @@ class EventProcessingThread(KillableThread):
 					self.processProductActionRequests()
 			
 			finally:
-				self.setStatusMessage("")
+				self.setStatusMessage(u"")
+				self._eventSubject.setMessage(u"")
 				if self.event.eventConfig.processShutdownRequests:
 					try:
 						self.opsiclientd.processShutdownRequests()
@@ -3690,6 +3712,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 	def run(self):
 		self._running = True
+		self._stopped = False
 		
 		self.readConfigFile()
 		
@@ -3749,7 +3772,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.notice(u"No events processing, unblocking login")
 				self.setBlockLogin(False)
 			
-			while self._running:
+			while not self._stopped:
 				time.sleep(1)
 			for eventGenerator in self.getEventGenerators(generatorClass = DaemonShutdownEventGenerator):
 				eventGenerator.fireEvent()
@@ -3760,14 +3783,17 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.info(u"Stopping cache service")
 			if self._cacheService:
 				self._cacheService.stop()
+			self._cacheService.join(5)
 			
 			logger.info(u"Stopping control pipe")
 			if self._controlPipe:
 				self._controlPipe.stop()
+			self._controlPipe.join(5)
 			
 			logger.info(u"Stopping control server")
 			if self._controlServer:
 				self._controlServer.stop()
+			self._controlServer.join(5)
 			
 			if reactor and reactor.running:
 				logger.info(u"Stopping reactor")
@@ -3782,8 +3808,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._running = False
 		
 	def stop(self):
-		self._running = False
-	
+		self._stopped = True
+		while self._running:
+			time.sleep(1)
+		logger.info(u"opsiclientd.stop() returning")
+		
 	def processEvent(self, event):
 		
 		logger.notice(u"Processing event %s" % event)
@@ -4176,10 +4205,11 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 				
 				# Shutdown opsiclientd
 				opsiclientd.stop()
+				logger.notice(u"opsiclientd stopped")
 			except Exception, e:
 				logger.critical(u"opsiclientd crash")
 				logger.logException(e)
-				
+			
 			# Write to event log
 			self.ReportServiceStatus(win32service.SERVICE_STOPPED)
 
