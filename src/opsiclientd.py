@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '3.4.99'
+__version__ = '3.4.99.1'
 
 # Imports
 import os, sys, threading, time, urllib, base64, socket, re, shutil, filecmp, codecs, inspect
@@ -47,7 +47,7 @@ if (os.name == 'posix'):
 		ServiceFramework = object
 
 if (os.name == 'nt'):
-	import win32serviceutil, win32service
+	import win32serviceutil, win32service, win32con, win32api
 	from ctypes import *
 
 wmi = None
@@ -83,6 +83,7 @@ EVENT_CONFIG_TYPE_PANIC = u'panic'
 EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS = u'process action requests'
 EVENT_CONFIG_TYPE_TIMER = u'timer'
 EVENT_CONFIG_TYPE_USER_LOGIN = u'user login'
+EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN = u'system shutdown'
 EVENT_CONFIG_TYPE_CUSTOM = u'custom'
 
 interfacePage = u'''
@@ -343,6 +344,8 @@ def EventConfigFactory(type, name, **kwargs):
 		return ProcessActionRequestsEventConfig(name, **kwargs)
 	elif (type == EVENT_CONFIG_TYPE_USER_LOGIN):
 		return UserLoginEventConfig(name, **kwargs)
+	elif (type == EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN):
+		return SystemShutdownEventConfig(name, **kwargs)
 	elif (type == EVENT_CONFIG_TYPE_CUSTOM):
 		return CustomEventConfig(name, **kwargs)
 	else:
@@ -493,7 +496,15 @@ class UserLoginEventConfig(WMIEventConfig):
 		self.blockLogin        = False
 		self.logoffCurrentUser = False
 		self.lockWorkstation   = False
-		
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                    SYSTEM SHUTDOWN EVENT CONFIG                                   -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class SystemShutdownEventConfig(WMIEventConfig):
+	def __init__(self, name, **kwargs):
+		WMIEventConfig.__init__(self, name, **kwargs)
+		self.maxRepetitions = 0
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                        CUSTOM EVENT CONFIG                                        -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -521,6 +532,8 @@ def EventGeneratorFactory(eventConfig):
 		return ProcessActionRequestsEventGenerator(eventConfig)
 	elif isinstance(eventConfig, UserLoginEventConfig):
 		return UserLoginEventGenerator(eventConfig)
+	elif isinstance(eventConfig, SystemShutdownEventConfig):
+		return SystemShutdownEventGenerator(eventConfig)
 	elif isinstance(eventConfig, CustomEventConfig):
 		return CustomEventGenerator(eventConfig)
 	else:
@@ -778,6 +791,31 @@ class UserLoginEventGenerator(WMIEventGenerator):
 		#		return event
 		logger.debug(u"Not a user login: %s" % event.eventInfo.get('User'))
 		return None
+
+class SystemShutdownEventGenerator(EventGenerator):
+	def __init__(self, eventConfig):
+		EventGenerator.__init__(self, eventConfig)
+		
+	def handle(self, event):
+		logger.notice(u"SystemShutdownEventGenerator.handle(): event %s" % event)
+		if event is win32con.CTRL_SHUTDOWN_EVENT: # CTRL_LOGOFF_EVENT
+			self.createEvent()
+			return True
+		return False
+		
+	def initialize(self):
+		EventGenerator.initialize(self)
+		if not (os.name == 'nt'):
+			return
+		try:
+			result = win32api.SetConsoleCtrlHandler(self.handle, 1)
+			if (result == 0):
+				raise Exception(u"Could not SetConsoleCtrlHandler: %r" % win32api.GetLastError())
+		except Exception, e:
+			logger.logException(e)
+		
+	def createEvent(self, eventInfo={}):
+		return SystemShutdownEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
 	
 class CustomEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
@@ -830,6 +868,10 @@ class ProcessActionRequestsEvent(Event):
 		Event.__init__(self, eventConfig, eventInfo)
 
 class UserLoginEvent(Event):
+	def __init__(self, eventConfig, eventInfo={}):
+		Event.__init__(self, eventConfig, eventInfo)
+
+class SystemShutdownEvent(Event):
 	def __init__(self, eventConfig, eventInfo={}):
 		Event.__init__(self, eventConfig, eventInfo)
 
@@ -3812,7 +3854,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		while self._running:
 			time.sleep(1)
 		logger.info(u"opsiclientd.stop() returning")
-		
+	
 	def processEvent(self, event):
 		
 		logger.notice(u"Processing event %s" % event)
@@ -4142,6 +4184,8 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			"""
 			Initialize service and create stop event
 			"""
+			self.opsiclientd = None
+			
 			sys.stdout = logger.getStdout()
 			sys.stderr = logger.getStderr()
 			logger.setConsoleLevel(LOG_NONE)
@@ -4160,7 +4204,16 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
 			# Fire stop event to stop blocking self._stopEvent.wait()
 			self._stopEvent.set()
-			
+		
+		def SvcShutdown(self):
+			"""
+			Gets called from windows on system shutdown
+			"""
+			logger.debug(u"OpsiclientdServiceFramework SvcShutdown")
+			# Write to event log
+			self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
+			# Fire stop event to stop blocking self._stopEvent.wait()
+			self._stopEvent.set()
 		
 		def SvcDoRun(self):
 			"""
@@ -4180,21 +4233,20 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			os.chdir(workingDirectory)
 			
 			try:
-				opsiclientd = None
 				if (sys.getwindowsversion()[0] == 5):
 					# NT5: XP
-					opsiclientd = OpsiclientdNT5()
+					self.opsiclientd = OpsiclientdNT5()
 				elif (sys.getwindowsversion()[0] == 6):
 					# NT6: Vista / Windows7
 					if (sys.getwindowsversion()[1] >= 1):
 						# Windows7
-						opsiclientd = OpsiclientdNT61()
+						self.opsiclientd = OpsiclientdNT61()
 					else:
-						opsiclientd = OpsiclientdNT6()
+						self.opsiclientd = OpsiclientdNT6()
 				else:
 					raise Exception(u"Running windows version not supported")
 				
-				opsiclientd.start()
+				self.opsiclientd.start()
 				# Write to event log
 				self.ReportServiceStatus(win32service.SERVICE_RUNNING)
 				
@@ -4204,7 +4256,7 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 				self._stopEvent.wait()
 				
 				# Shutdown opsiclientd
-				opsiclientd.stop()
+				self.opsiclientd.stop()
 				logger.notice(u"opsiclientd stopped")
 			except Exception, e:
 				logger.critical(u"opsiclientd crash")
