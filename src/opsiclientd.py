@@ -48,6 +48,8 @@ if (os.name == 'posix'):
 
 if (os.name == 'nt'):
 	import win32serviceutil, win32service, win32con, win32api
+	import win32com.server.policy
+	import win32com.client
 	from ctypes import *
 
 wmi = None
@@ -243,18 +245,18 @@ def _(msg):
 	return msg
 
 importWmiAndPythoncomLock = threading.Lock()
-def importWmiAndPythoncom():
+def importWmiAndPythoncom(importWmi = True, importPythoncom = True):
 	global wmi
 	global pythoncom
-	if not (wmi and pythoncom):
+	if not ((wmi or not importWmi) and (pythoncom or not importPythoncom)):
 		logger.info(u"Need to import wmi / pythoncom")
 		importWmiAndPythoncomLock.acquire()
-		while not (wmi and pythoncom):
+		while not ((wmi or not importWmi) and (pythoncom or not importPythoncom)):
 			try:
-				if not wmi:
+				if not wmi and importWmi:
 					logger.debug(u"Importing wmi")
 					import wmi
-				if not pythoncom:
+				if not pythoncom and importPythoncom:
 					logger.debug(u"Importing pythoncom")
 					import pythoncom
 			except Exception, e:
@@ -322,6 +324,53 @@ class OpsiclientdRpcError(Exception):
 =                                                                                                     =
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 '''
+
+# from Sens.h
+SENSGUID_PUBLISHER = "{5fee1bd6-5b9b-11d1-8dd2-00aa004abd5e}"
+SENSGUID_EVENTCLASS_LOGON = "{d5978630-5b9f-11d1-8dd2-00aa004abd5e}"
+
+# from EventSys.h
+PROGID_EventSystem = "EventSystem.EventSystem"
+PROGID_EventSubscription = "EventSystem.EventSubscription"
+
+IID_ISensLogon = "{d597bab3-5b9f-11d1-8dd2-00aa004abd5e}"
+
+
+class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
+	_com_interfaces_=[IID_ISensLogon]
+	_public_methods_=[
+		'Logon',
+		'Logoff',
+		'StartShell',
+		'DisplayLock',
+		'DisplayUnlock',
+		'StartScreenSaver',
+		'StopScreenSaver'
+	]
+	
+	def __init__(self):
+		self._wrap_(self)
+	
+	def Logon(self, *args):
+		logger.notice(u'(SensLogon) Logon : %s' % [args])
+	
+	def Logoff(self, *args):
+		logger.notice(u'(SensLogon) Logoff : %s' % [args])
+	
+	def StartShell(self, *args):
+		logger.notice(u'(SensLogon) StartShell : %s' % [args])
+	
+	def DisplayLock(self, *args):
+		logger.notice(u'(SensLogon) DisplayLock : %s' % [args])
+	
+	def DisplayUnlock(self, *args):
+		logger.notice(u'(SensLogon) DisplayUnlock : %s' % [args])
+	
+	def StartScreenSaver(self, *args):
+		logger.notice(u'(SensLogon) StartScreenSaver : %s' % [args])
+	
+	def StopScreenSaver(self, *args):
+		logger.notice(u'(SensLogon) StopScreenSaver : %s' % [args])
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -795,26 +844,67 @@ class UserLoginEventGenerator(WMIEventGenerator):
 class SystemShutdownEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
 		EventGenerator.__init__(self, eventConfig)
-		
+		# We do not use wql because then we need to poll (WITHIN)
+		# This could lead to missed events
+		#self._wql = ''
+	
 	def handle(self, event):
 		logger.notice(u"SystemShutdownEventGenerator.handle(): event %s" % event)
-		if event is win32con.CTRL_SHUTDOWN_EVENT: # CTRL_LOGOFF_EVENT
-			self.createEvent()
-			return True
+		#if event is win32con.CTRL_SHUTDOWN_EVENT:
+		#	try:
+		#		System.abortShutdown()
+		#	except Exception, e:
+		#		logger.logException(e)
+		#	self.createEvent()
+		#	return True
 		return False
 		
 	def initialize(self):
 		EventGenerator.initialize(self)
 		if not (os.name == 'nt'):
 			return
-		try:
-			result = win32api.SetConsoleCtrlHandler(self.handle, 1)
-			if (result == 0):
-				raise Exception(u"Could not SetConsoleCtrlHandler: %r" % win32api.GetLastError())
-		except Exception, e:
-			logger.logException(e)
+		#try:
+		#	result = win32api.SetConsoleCtrlHandler(self.handle, 1)
+		#	if (result == 0):
+		#		raise Exception(u"Could not SetConsoleCtrlHandler: %r" % win32api.GetLastError())
+		#except Exception, e:
+		#	logger.logException(e)
+		logger.notice(u'Registring ISensLogon')
 		
+		importWmiAndPythoncom(importWmi = False, importPythoncom = True)
+		pythoncom.CoInitialize()
+		
+		sl = SensLogon()
+		subscription_interface = pythoncom.WrapObject(sl)
+		
+		event_system = win32com.client.Dispatch(PROGID_EventSystem)
+		
+		event_subscription = win32com.client.Dispatch(PROGID_EventSubscription)
+		event_subscription.EventClassID = SENSGUID_EVENTCLASS_LOGON
+		event_subscription.PublisherID = SENSGUID_PUBLISHER
+		event_subscription.SubscriptionName = 'opsiclientd subscription'
+		event_subscription.SubscriberInterface = subscription_interface
+		
+		event_system.Store(PROGID_EventSubscription, event_subscription)
+	
+	def getNextEvent(self):
+		pythoncom.PumpMessages()
+		logevent(u'ISensLogon stopped')
+	
+	def cleanup(self):
+		# Waiting some seconds before exit to avoid Win32 releasing exceptions
+		waitTime = 10
+		logger.info(u"Event generator '%s' cleaning up in %d seconds" % (self, waitTime))
+		time.sleep(waitTime)
+		
+		importWmiAndPythoncom(importWmi = False, importPythoncom = True)
+		pythoncom.CoUninitialize()
+	
 	def createEvent(self, eventInfo={}):
+		#try:
+		#	System.shutdown(0)
+		#except Exception, e:
+		#	logger.logException(e)
 		return SystemShutdownEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
 	
 class CustomEventGenerator(EventGenerator):
@@ -4194,7 +4284,36 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			win32serviceutil.ServiceFramework.__init__(self, args)
 			self._stopEvent = threading.Event()
 			logger.debug(u"OpsiclientdServiceFramework initiated")
-		
+	
+		def GetAcceptedControls(self):
+			# Accept additional events
+			rc = win32serviceutil.ServiceFramework.GetAcceptedControls(self)
+			#| win32service.SERVICE_CONTROL_DEVICEEVENT \
+			rc |= win32service.SERVICE_ACCEPT_PARAMCHANGE \
+			   | win32service.SERVICE_ACCEPT_NETBINDCHANGE \
+			   | win32service.SERVICE_ACCEPT_HARDWAREPROFILECHANGE \
+			   | win32service.SERVICE_ACCEPT_POWEREVENT \
+			   | win32service.SERVICE_ACCEPT_SESSIONCHANGE \
+			   | win32service.SERVICE_CONTROL_PRESHUTDOWN
+			return rc
+	
+		def SvcOtherEx(self, control, event_type, data):
+			if   (control == win32service.SERVICE_CONTROL_DEVICEEVENT):
+				info = win32gui_struct.UnpackDEV_BROADCAST(data)
+				logger.info(u"SVC Device event occurred: %x - %s" % (event_type, info))
+			elif (control == win32service.SERVICE_CONTROL_HARDWAREPROFILECHANGE):
+				logger.info(u"SVC Hardware profile changed: type=%s, data=%s" % (event_type, data))
+			elif (control == win32service.SERVICE_CONTROL_POWEREVENT):
+				logger.info(u"SVC Power event: setting %s" % data)
+			elif (control == win32service.SERVICE_CONTROL_PRESHUTDOWN):
+				logger.info(u"SVC Preshutdown event: setting %s" % data)
+			elif (control == win32service.SERVICE_CONTROL_SESSIONCHANGE):
+				# data is a single elt tuple, but this could potentially grow
+				# in the future if the win32 struct does
+				logger.info(u"SVC Session event: type=%s, data=%s" % (event_type, data))
+			else:
+				logger.info(u"SVC Other event: code=%d, type=%s, data=%s" % (control, evalent_type, data))
+			
 		def SvcStop(self):
 			"""
 			Gets called from windows to stop service
@@ -4236,6 +4355,7 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 				if (sys.getwindowsversion()[0] == 5):
 					# NT5: XP
 					self.opsiclientd = OpsiclientdNT5()
+				
 				elif (sys.getwindowsversion()[0] == 6):
 					# NT6: Vista / Windows7
 					if (sys.getwindowsversion()[1] >= 1):
@@ -4273,7 +4393,6 @@ class OpsiclientdNTInit(object):
 		logger.debug(u"OpsiclientdNTInit")
 		win32serviceutil.HandleCommandLine(OpsiclientdServiceFramework)
 		
-
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                               MAIN                                                -
