@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '3.4.99.3'
+__version__ = '3.4.99.4'
 
 # Imports
 import os, sys, threading, time, urllib, base64, socket, re, shutil, filecmp, codecs, inspect
@@ -1745,415 +1745,54 @@ class CacheService(threading.Thread):
 		logger.setLogFormat(u'[%l] [%D] [cache service]   %M     (%F|%N)', object=self)
 		self._opsiclientd = opsiclientd
 		self._storageDir = self._opsiclientd.getConfigValue('cache_service', 'storage_dir')
-		self._cacheBackendBaseDir  = os.path.join(self._storageDir, 'cache_backend')
-		self._workBackendBaseDir   = os.path.join(self._storageDir, 'work_backend')
-		self._productCacheDir = os.path.join(self._storageDir, 'install')
-		self._productIds = []
-		self._stateFile = os.path.join(self._storageDir, 'sync_state')
-		self._initiated = False
-		self._state = {
-			'product':  {},
-			'config':   {}
-		}
-		self._syncConfigRequested = False
-		self._cacheProductsRequested = False
-		self._syncConfigEnded = threading.Event()
 		self._cacheProductsEnded = threading.Event()
-		self._currentProductProgressObserver = None
-		self._overallProductProgressObserver = None
-		self._currentConfigProgressObserver = None
-		self._overallConfigProgressObserver = None
+		self._stopped = False
 		self._running = False
-	
-	def setCurrentProductProgressObserver(self, currentProductProgressObserver):
-		self._currentProductProgressObserver = currentProductProgressObserver
-	
-	def setOverallProductProgressObserver(self, overallProductProgressObserver):
-		self._overallProductProgressObserver = overallProductProgressObserver
-	
-	def setCurrentConfigProgressObserver(self, currentConfigProgressObserver):
-		self._currentConfigProgressObserver = currentConfigProgressObserver
-	
-	def setOverallConfigProgressObserver(self, overallConfigProgressObserver):
-		self._overallConfigProgressObserver = overallConfigProgressObserver
-	
-	def stop(self):
-		self._running = False
-	
-	def isRunning(self):
-		return self._running
-	
-	def init(self):
-		if self._initiated:
-			logger.info(u"Initializing cache service: already initalized")
-			return
-		logger.notice(u"Initializing cache service")
-		serverId = self._opsiclientd.getConfigValue('config_service', 'server_id')
-		if not serverId:
-			raise Exception(u"Failed to initialize CacheService config_service.server_id not known")
 		
-		self._cacheBackendArgs = {
-			'logDir':                     os.path.join(self._cacheBackendBaseDir, 'logs'),
-			'pckeyFile':                  os.path.join(self._cacheBackendBaseDir, 'pckeys'),
-			'passwdFile':                 os.path.join(self._cacheBackendBaseDir, 'passwd'),
-			'groupsFile':                 os.path.join(self._cacheBackendBaseDir, 'clientgroups.ini'),
-			'licensesFile':               os.path.join(self._cacheBackendBaseDir, 'licenses.ini'),
-			'clientConfigDir':            os.path.join(self._cacheBackendBaseDir, 'clients'),
-			'clientTemplatesDir':         os.path.join(self._cacheBackendBaseDir, 'templates'),
-			'defaultClientTemplateFile':  os.path.join(self._cacheBackendBaseDir, 'templates', 'pcproto.ini'),
-			'globalConfigFile':           os.path.join(self._cacheBackendBaseDir, 'global.ini'),
-			'depotConfigDir':             os.path.join(self._cacheBackendBaseDir, 'depots'),
-			'productLockFile':            os.path.join(self._cacheBackendBaseDir, 'depots', 'product.locks'),
-			'auditInfoDir':               os.path.join(self._cacheBackendBaseDir, 'audit'),
-			'serverId':                   serverId
-		}
-		self._workBackendArgs = {
-			'logDir':                     os.path.join(self._workBackendBaseDir, 'logs'),
-			'pckeyFile':                  os.path.join(self._workBackendBaseDir, 'pckeys'),
-			'passwdFile':                 os.path.join(self._workBackendBaseDir, 'passwd'),
-			'groupsFile':                 os.path.join(self._workBackendBaseDir, 'clientgroups.ini'),
-			'licensesFile':               os.path.join(self._workBackendBaseDir, 'licenses.ini'),
-			'clientConfigDir':            os.path.join(self._workBackendBaseDir, 'clients'),
-			'clientTemplatesDir':         os.path.join(self._workBackendBaseDir, 'templates'),
-			'defaultClientTemplateFile':  os.path.join(self._workBackendBaseDir, 'templates', 'pcproto.ini'),
-			'globalConfigFile':           os.path.join(self._workBackendBaseDir, 'global.ini'),
-			'depotConfigDir':             os.path.join(self._workBackendBaseDir, 'depots'),
-			'productLockFile':            os.path.join(self._workBackendBaseDir, 'depots', 'product.locks'),
-			'auditInfoDir':               os.path.join(self._workBackendBaseDir, 'audit'),
-			'serverId':                   serverId
-		}
-		
-		self._hostId = self._opsiclientd.getConfigValue('global', 'host_id')
-		self._opsiHostKey = self._opsiclientd.getConfigValue('global', 'opsi_host_key')
-		self._address = self._opsiclientd.getConfigValue('config_service', 'url')
-		
-		logger.debug(u"Using hostId: %s" % self._hostId)
-		logger.debug(u"Using depot address: %s" % self._address)
-		logger.debug(u"Using storage dir: %s" % self._storageDir)
-		logger.debug(u"Using cache backend base dir: %s" % self._cacheBackendBaseDir)
-		logger.debug(u"Using work backend base dir: %s" % self._workBackendBaseDir)
-		
-		if not os.path.isdir(self._storageDir):
-			os.mkdir(self._storageDir)
-		if not os.path.isdir(self._cacheBackendBaseDir):
-			os.mkdir(self._cacheBackendBaseDir)
-		if not os.path.isdir(self._workBackendBaseDir):
-			os.mkdir(self._workBackendBaseDir)
-		
-		logger.info(u"Creating remote backend")
-		self._remoteBackend = JSONRPCBackend(address = self._address, username = self._hostId, password = self._opsiHostKey, connectOnInit = False)
-		
-		logger.info(u"Creating cache backend")
-		self._cacheBackend = FileBackend(args = self._cacheBackendArgs)
-		logger.setLogFormat(u'[%l] [%D] [cache service]   %M     (%F|%N)', object = self._cacheBackend)
-		self._cacheBackend.createOpsiBase()
-		#self._cacheBackend = BackendManager(backend = self._cacheBackend, authRequired = False, configFile = self._opsiclientd.getConfigValue('cache_service', 'backend_manager_config'))
-		
-		logger.info(u"Creating work backend")
-		self._workBackend = FileBackend(args = self._workBackendArgs)
-		logger.setLogFormat(u'[%l] [%D] [cache service]   %M     (%F|%N)', object = self._workBackend)
-		self._workBackend.createOpsiBase()
-		#self._workBackend = BackendManager(backend = self._workBackend, authRequired = False, configFile = self._opsiclientd.getConfigValue('cache_service', 'backend_manager_config'))
-		
-		logger.info(u"Creating offline backend")
-		self._offlineBackend = OfflineBackend(
-					args = {
-						'remoteBackend':        self._remoteBackend,
-						'cacheBackend':         self._cacheBackend,
-						'workBackend':          self._workBackend,
-						'storageDir':           self._storageDir
-					} )
-		logger.setLogFormat(u'[%l] [%D] [cache service]   %M     (%F|%N)', object = self._offlineBackend)
-		self._backend = BackendManager(backend = self._offlineBackend, authRequired = False, configFile = self._opsiclientd.getConfigValue('cache_service', 'backend_manager_config'))
-		logger.setLogFormat(u'[%l] [%D] [cache service]   %M     (%F|%N)', object = self._backend)
-		
-		# TODO: url
-		self._repository = getRepository(	#url        = self._opsiclientd.getConfigValue('depot_server', 'url'),
-							url          = 'webdavs://%s:4447/opsi-depot' % self._opsiclientd.getConfigValue('depot_server', 'depot_id'),
-							username     = self._hostId,
-							password     = self._opsiHostKey)
-		self.readStateFile()
-		
-		self._initiated = True
-	
-	def getConfigSyncCompleted(self):
-		if not self._initiated:
-			logger.info(u"CacheService not initiated")
-			return False
-		if not self._state['config']:
-			logger.info(u"Config not synced")
-			return False
-		if not self._state['config'].get('sync_completed'):
-			logger.debug(u"Config sync not completed: %s" % self._state['config'])
-			return False
-		logger.debug(u"Config sync completed on '%s'" % self._state['config']['sync_completed'])
-		return True
-		
-	def getProductSyncCompleted(self):
-		if not self._initiated:
-			logger.info(u"CacheService not initiated")
-			return False
-		if not self._state['product']:
-			logger.info(u"No products cached")
-			return False
-		productSyncCompleted = True
-		for (productId, state) in self._state['product'].items():
-			if state.get('sync_completed'):
-				logger.debug(u"Product '%s': sync completed" % productId)
-			else:
-				productSyncCompleted = False
-				logger.debug(u"Product '%s': sync not completed" % productId)
-		return productSyncCompleted
-		
-	def readStateFile(self):
-		logger.notice(u"Reading cache service state file '%s'" % self._stateFile)
-		if not os.path.exists(self._stateFile):
-			logger.warning(u"Cache service state file '%s' not found" % self._stateFile)
-			return
-		self._state = {
-			'product':  {},
-			'config':   {}
-		}
-		ini = IniFile(self._stateFile).parse()
-		for section in ini.sections():
-			for (k, v) in ini.items(section):
-				if (section.lower() == 'config'):
-					self._state['config'][k] = v
-				elif section.lower().startswith('product_'):
-					productId = section.split('_', 1)[1].lower().strip()
-					if not self._state['product'].has_key(productId):
-						self._state['product'][productId] = {}
-					self._state['product'][productId][k] = v
-		logger.debug(u"CacheService state is now:\n%s" % objectToBeautifiedText(self._state))
-		
-	def writeStateFile(self):
-		logger.notice(u"Writing cache service state file '%s'" % self._stateFile)
-		f = open(self._stateFile, 'w')
-		f.close()
-		iniFile = IniFile(self._stateFile)
-		ini = iniFile.parse()
-		ini.add_section('config')
-		for (k, v) in self._state['config'].items():
-			ini.set('config', k, str(v))
-		for (productId, values) in self._state['product'].items():
-			section = 'product_%s' % productId.lower()
-			ini.add_section(section)
-			for (k, v) in self._state['product'][productId].items():
-				ini.set(section, k, str(v))
-		iniFile.generate(ini)
-		
-	def cacheProducts(self, productIds, maxBandwidth=0, waitForEnding=False):
-		if not self._initiated:
-			raise Exception(u"Cannot cache products: not initiated")
-		self._productIds = productIds
+	def cacheProducts(self, productIds, waitForEnding=False):
+		#if not self._initiated:
+		#	raise Exception(u"Cannot cache products: not initiated")
+		#self._productIds = productIds
 		self._cacheProductsRequested = True
 		self._cacheProductsEnded.clear()
-		self._repository.setMaxBandwidth(maxBandwidth)
+		#self._repository.setMaxBandwidth(maxBandwidth)
 		if waitForEnding:
 			self._cacheProductsEnded = threading.Event()
 			self._cacheProductsEnded.wait()
-			for productId in self._productIds:
-				if self._state['product'][productId]['sync_failed']:
-					return False
-			return True
-	
-	def syncConfig(self, productIds, waitForEnding=False):
-		if not self._initiated:
-			raise Exception(u"Cannot sync config: not initiated")
-		self._productIds = productIds
-		self._syncConfigRequested = True
-		self._syncConfigEnded.clear()
-		if waitForEnding:
-			self._syncConfigEnded = threading.Event()
-			self._syncConfigEnded.wait()
-			return bool(self._state['config']['sync_failed'])
-	
-	def workWithLocalConfig(self):
-		if not self._initiated:
-			raise Exception(u"Cannot work on local config: not initiated")
-		if not self.getConfigSyncCompleted():
-			raise Exception(u"Cannot work on local config: sync not completed")
-		self._offlineBackend._workLocalOnly(True)
+			#for productId in self._productIds:
+			#	if self._state['product'][productId]['sync_failed']:
+			#		return False
+			#return True
 	
 	def run(self):
 		self._running = True
+		while not self._stopped:
+			time.sleep(1)
+		self._running = False
+		
+	def stop(self):
+		self._stopped = True
+		
+	def run_new(self):
+		self._running = True
 		while self._running:
 			try:
-				if self._syncConfigRequested:
-					self._syncConfigRequested = False
-					
-					try:
-						logger.notice(u"Syncing config (products: %s)" % ', '.join(self._productIds))
-						if not self._initiated:
-							raise Exception(u"Cannot sync config: not initiated")
-						
-						self._remoteBackend.possibleMethods = []
-						self._remoteBackend._connect()
-						modules = self._remoteBackend.getOpsiInformation_hash()['modules']
-						if not modules.get('vpn'):
-							raise Exception(u"Cannot sync config: VPN module currently disabled")
-						
-						if not modules.get('valid'):
-							raise Exception(u"Cannot sync config: modules file invalid")
-						
-						if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
-							raise Exception(u"Cannot sync config: modules file signature expired")
-						
-						logger.info(u"Verifying modules file signature")
-						try:
-							from hashlib import md5
-						except ImportError:
-							from md5 import md5
-						import base64, twisted.conch.ssh.keys
-						publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
-						data = ''
-						mks = modules.keys()
-						mks.sort()
-						for module in mks:
-							if module in ('valid', 'signature'):
-								continue
-							val = modules[module]
-							if (val == False): val = 'no'
-							if (val == True):  val = 'yes'
-							data += module.lower().strip() + ' = ' + val + '\r\n'
-						if not bool(publicKey.verify(md5.new(data).digest(), [ long(modules['signature']) ])):
-							raise Exception(u"Cannot sync config: modules file invalid")
-						logger.info(u"Modules file signature verified")
-						
-						self._state['config'] = {
-							'sync_started':    time.time(),
-							'sync_completed':  '',
-							'sync_failed':     ''
-						}
-						depotId = self._opsiclientd.getConfigValue('depot_server', 'depot_id')
-						
-						logger.notice(u"Executing cached method calls")
-						self._offlineBackend._writebackCache(currentProgressObserver = self._currentConfigProgressObserver)
-						
-						logger.notice(u"Building config cache")
-						self._offlineBackend._buildCache(
-								serverIds  = [ None ],
-								depotIds   = [ depotId ],
-								clientIds  = [ self._hostId ],
-								groupIds   = [ None ],
-								productIds = self._productIds,
-								currentProgressObserver = self._currentConfigProgressObserver,
-								overallProgressObserver = self._overallConfigProgressObserver )
-						self._state['config']['sync_completed'] = time.time()
-						
-						logger.notice(u"Config synced")
-					except Exception, e:
-						logger.logException(e)
-						logger.error(u"Failed to sync config: %s" % e)
-						self._state['config']['sync_failed'] = unicode(e)
-					self.writeStateFile()
-					self._syncConfigEnded.set()
-				
 				if self._cacheProductsRequested:
 					self._cacheProductsRequested = False
 					
 					try:
 						logger.notice(u"Caching products: %s" % ', '.join(self._productIds))
-						if not self._initiated:
-							raise Exception(u"Cannot cache products: not initiated")
-						
-						self._remoteBackend.possibleMethods = []
-						self._remoteBackend._connect()
-						modules = self._remoteBackend.getOpsiInformation_hash()['modules']
-						if not modules.get('vpn'):
-							raise Exception(u"Cannot cache config: VPN module currently disabled")
-						
-						if not modules.get('valid'):
-							raise Exception(u"Cannot cache config: modules file invalid")
-						
-						if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
-							raise Exception(u"Cannot sync config: modules file signature expired")
-						
-						logger.info(u"Verifying modules file signature")
-						try:
-							from hashlib import md5
-						except ImportError:
-							from md5 import md5
-						import base64, twisted.conch.ssh.keys
-						publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
-						data = ''
-						mks = modules.keys()
-						mks.sort()
-						for module in mks:
-							if module in ('valid', 'signature'):
-								continue
-							val = modules[module]
-							if (val == False): val = 'no'
-							if (val == True):  val = 'yes'
-							data += module.lower().strip() + ' = ' + val + '\r\n'
-						if not bool(publicKey.verify(md5.new(data).digest(), [ long(modules['signature']) ])):
-							raise Exception(u"Cannot cache config: modules file invalid")
-						logger.info(u"Modules file signature verified")
-						
-						logger.info(u"Synchronizing %d product(s):" % len(self._productIds))
-						for productId in self._productIds:
-							logger.info("   %s" % productId)
-						
-						overallProgressSubject = ProgressSubject(id = 'sync_products_overall', type = 'product_sync', end = len(self._productIds))
-						overallProgressSubject.setMessage( _(u'Synchronizing products') )
-						if self._overallProductProgressObserver: overallProgressSubject.attachObserver(self._overallProductProgressObserver)
-						
-						for productId in self._productIds:
-							logger.notice(u"Syncing files of product '%s'" % productId)
-							if not self._state['product'].has_key(productId):
-								self._state['product'][productId] = {
-									'sync_started':    time.time(),
-								}
-							self._state['product'][productId]['sync_completed'] = ''
-							self._state['product'][productId]['sync_failed'] = ''
-							self.writeStateFile()
-							try:
-								self._productSynchronizer = DepotToLocalDirectorySychronizer(
-									self._repository,
-									self._productCacheDir,
-									[ productId ]
-								)
-								self._productSynchronizer.synchronize(self._currentProductProgressObserver)
-								self._state['product'][productId]['sync_completed'] = time.time()
-								logger.notice(u"Product '%s' synced" % productId)
-							except Exception, e:
-								logger.error("Failed to sync product '%s': %s" % (productId, e))
-								self._state['product'][productId]['sync_failed'] = unicode(e)
-							self.writeStateFile()
-							overallProgressSubject.addToState(1)
-						
-						if self._overallProductProgressObserver: overallProgressSubject.detachObserver(self._overallProductProgressObserver)
-						
-						for productId in self._productIds:
-							if self._state['product'][productId]['sync_failed']:
-								raise Exception(self._state['product'][productId]['sync_failed'])
-						
-						logger.notice(u"All products cached: %s" % ', '.join(self._productIds))
-						for eventGenerator in self.getEventGenerators(generatorClass = ProductSyncCompletedEventGenerator):
-							eventGenerator.fireEvent()
-						
+						#if not self._initiated:
+						#	raise Exception(u"Cannot cache products: not initiated")
 					except Exception, e:
 						logger.logException(e)
-						logger.error(u"Failed to cache products: %s" % e)
-					self.writeStateFile()
+						logger.error(u"Failed to cache product: %s" % e)
+					#self.writeStateFile()
 					self._cacheProductsEnded.set()
-					
-					
 					
 				time.sleep(3)
 			except Exception, e:
 				logger.logException(e)
-		
-	def reset(self):
-		if os.path.exists(self._storageDir):
-			shutil.rmtree(self._storageDir)
-		self._initiated = False
-		self.init()
-		
-	def processRpc(self, method, params):
-		if not self._initiated:
-			raise Exception(u"Cache service not initiated")
-		return eval('self._backend.%s(*params)' % method)
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                              CACHED CONFIG SERVICE RESOURCE JSON RPC                              -
@@ -2885,17 +2524,27 @@ class EventProcessingThread(KillableThread):
 			else:
 				logger.notice(u"Start processing action requests")
 				
-				if not self.event.eventConfig.useCachedConfig and self.event.eventConfig.syncConfig:
-					logger.notice(u"Syncing config (products: %s)" % productIds)
-					self._cacheService.init()
-					self.setStatusMessage( _(u"Syncing config") )
-					self._cacheService.setCurrentConfigProgressObserver(self._currentProgressSubjectProxy)
-					self._cacheService.setOverallConfigProgressObserver(self._overallProgressSubjectProxy)
-					self._cacheService.syncConfig(productIds = productIds, waitForEnding = True)
-					self.setStatusMessage( _(u"Config synced") )
-					self._currentProgressSubjectProxy.setState(0)
-					self._overallProgressSubjectProxy.setState(0)
+				#if not self.event.eventConfig.useCachedConfig and self.event.eventConfig.syncConfig:
+				#	logger.notice(u"Syncing config (products: %s)" % productIds)
+				#	self._cacheService.init()
+				#	self.setStatusMessage( _(u"Syncing config") )
+				#	self._cacheService.setCurrentConfigProgressObserver(self._currentProgressSubjectProxy)
+				#	self._cacheService.setOverallConfigProgressObserver(self._overallProgressSubjectProxy)
+				#	self._cacheService.syncConfig(productIds = productIds, waitForEnding = True)
+				#	self.setStatusMessage( _(u"Config synced") )
+				#	self._currentProgressSubjectProxy.setState(0)
+				#	self._overallProgressSubjectProxy.setState(0)
 				
+				if self.event.eventConfig.cacheProducts:
+					logger.notice(u"Caching products: %s" % productIds)
+					self.setStatusMessage( _(u"Caching products") )
+					try:
+						self._cacheService.cacheProducts(productIds, waitForEnding = True)
+					finally:
+						#self._detailSubjectProxy.setMessage(u"")
+						#self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
+						pass
+					
 				#if self.event.eventConfig.cacheProducts:
 				#	logger.notice(u"Caching products: %s (max bandwidth: %d bit/s)" % (productIds, self.event.eventConfig.cacheMaxBandwidth))
 				#	self._cacheService.init()
@@ -3152,6 +2801,8 @@ class EventProcessingThread(KillableThread):
 				
 				if self.event.eventConfig.blockLogin:
 					self.opsiclientd.setBlockLogin(True)
+				else:
+					self.opsiclientd.setBlockLogin(False)
 				if self.event.eventConfig.logoffCurrentUser:
 					System.logoffCurrentUser()
 					time.sleep(15)
@@ -3354,7 +3005,7 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 		if not command:
 			raise ValueError("No command given")
 		if desktop:
-			desktop = forceUnicode(command)
+			desktop = forceUnicode(desktop)
 		else:
 			desktop = self.opsiclientd.getCurrentActiveDesktopName()
 		logger.notice(u"rpc runCommand: executing command '%s' on desktop '%s'" % (command, desktop))
@@ -3999,9 +3650,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			if self._controlServer:
 				self._controlServer.stop()
 			
-			self._cacheService.join(2)
-			self._controlPipe.join(2)
-			self._controlServer.join(2)
+			#self._cacheService.join(2)
+			#self._controlPipe.join(2)
+			#self._controlServer.join(2)
 			
 			if reactor and reactor.running:
 				logger.info(u"Stopping reactor")
@@ -4454,6 +4105,8 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 				# Shutdown opsiclientd
 				self.opsiclientd.stop()
 				logger.notice(u"opsiclientd stopped")
+				for thread in threading.enumerate():
+					logger.notice(u"Running thread after stop: %s" % thread)
 			except Exception, e:
 				logger.critical(u"opsiclientd crash")
 				logger.logException(e)
