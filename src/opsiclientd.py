@@ -35,7 +35,7 @@
 __version__ = '3.4.99.4'
 
 # Imports
-import os, sys, threading, time, urllib, base64, socket, re, shutil, filecmp, codecs, inspect
+import os, sys, thread, threading, time, urllib, base64, socket, re, shutil, filecmp, codecs, inspect
 import copy as pycopy
 from OpenSSL import SSL
 
@@ -47,7 +47,7 @@ if (os.name == 'posix'):
 		ServiceFramework = object
 
 if (os.name == 'nt'):
-	import win32serviceutil, win32service, win32con, win32api
+	import win32serviceutil, win32service, win32con, win32api, win32event, win32pipe, win32file, pywintypes
 	import win32com.server.policy
 	import win32com.client
 	from ctypes import *
@@ -601,6 +601,10 @@ class EventGenerator(threading.Thread):
 		self._eventConfig = eventConfig
 		self._eventListeners = []
 		self._eventsOccured = 0
+		self._threadId = None
+		self._stopped = False
+		self._event = None
+		self._lastEventOccurence = None
 		logger.setLogFormat(u'[%l] [%D] [event generator ' + self._eventConfig.getName() + ']   %M  (%F|%N)', object=self)
 		
 	def addEventListener(self, eventListener):
@@ -620,15 +624,20 @@ class EventGenerator(threading.Thread):
 		pass
 	
 	def getNextEvent(self):
-		e = threading.Event()
-		e.wait()
+		self._event = threading.Event()
+		self._event.wait()
 	
 	def cleanup(self):
 		pass
 	
 	def fireEvent(self, event=None):
+		if self._stopped:
+			return
+		
 		if not event:
 			event = self.createEvent()
+		
+		self._lastEventOccurence = time.time()
 		
 		logger.info(u"Firing event '%s'" % event)
 		logger.info(u"Event info:")
@@ -659,6 +668,7 @@ class EventGenerator(threading.Thread):
 			FireEventThread(l, event).start()
 		
 	def run(self):
+		self._threadId = thread.get_ident()
 		try:
 			logger.info(u"Initializing event generator '%s'" % self)
 			self.initialize()
@@ -669,7 +679,7 @@ class EventGenerator(threading.Thread):
 				time.sleep(self.activationDelay)
 			
 			logger.info(u"Activating event generator '%s'" % self)
-			while (self._eventConfig.maxRepetitions < 0) or (self._eventsOccured <= self._eventConfig.maxRepetitions):
+			while not self._stopped and ( (self._eventConfig.maxRepetitions < 0) or (self._eventsOccured <= self._eventConfig.maxRepetitions) ):
 				logger.info(u"Getting next event...")
 				event = self.getNextEvent()
 				if event:
@@ -687,6 +697,11 @@ class EventGenerator(threading.Thread):
 			logger.error(u"Failed to clean up: %s" % e)
 		
 		logger.info(u"Event generator '%s' exiting " % self)
+	
+	def stop(self):
+		self._stopped = True
+		if self._event:
+			self._event.set()
 		
 class PanicEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
@@ -739,27 +754,37 @@ class WMIEventGenerator(EventGenerator):
 	def getNextEvent(self):
 		if not self._watcher:
 			logger.error(u"Nothing to watch for")
-			e = threading.Event()
-			e.wait()
+			self._event = threading.Event()
+			self._event.wait()
 			return None
-		wqlResult = self._watcher(timeout_ms = -1)
-		eventInfo = {}
-		for p in wqlResult.properties:
-			value = getattr(wqlResult, p)
-			if type(value) is tuple:
-				eventInfo[p] = []
-				for v in value:
-					eventInfo[p].append(v)
-			else:
-				eventInfo[p] = value
-		return self.createEvent(eventInfo)
-	
-	def cleanup(self):
-		# Waiting some seconds before exit to avoid Win32 releasing exceptions
-		waitTime = 10
-		logger.info(u"Event generator '%s' cleaning up in %d seconds" % (self, waitTime))
-		time.sleep(waitTime)
 		
+		wqlResult = None
+		while not self._stopped:
+			try:
+				wqlResult = self._watcher(timeout_ms=500)
+				break
+			except wmi.x_wmi_timed_out:
+				continue
+		
+		if wqlResult:
+			eventInfo = {}
+			for p in wqlResult.properties:
+				value = getattr(wqlResult, p)
+				if type(value) is tuple:
+					eventInfo[p] = []
+					for v in value:
+						eventInfo[p].append(v)
+				else:
+					eventInfo[p] = value
+			return self.createEvent(eventInfo)
+		
+	def cleanup(self):
+		if self._lastEventOccurence and (time.time() - self._lastEventOccurence < 10):
+			# Waiting some seconds before exit to avoid Win32 releasing exceptions
+			waitTime = int(10 - (time.time() - self._lastEventOccurence))
+			logger.info(u"Event generator '%s' cleaning up in %d seconds" % (self, waitTime))
+			time.sleep(waitTime)
+			
 		importWmiAndPythoncom()
 		pythoncom.CoUninitialize()
 	
@@ -777,13 +802,12 @@ class GUIStartupEventGenerator(EventGenerator):
 		return GUIStartupEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
 	
 	def getNextEvent(self):
-		while True:
+		while not self._stopped:
 			logger.debug(u"Checking if process '%s' running" % self.guiProcessName)
 			if System.getPid(self.guiProcessName):
 				logger.notice(u"Process '%s' is running" % self.guiProcessName)
 				return self.createEvent()
-			time.sleep(5)
-	
+			time.sleep(3)
 
 class TimerEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
@@ -835,20 +859,27 @@ class SensLogonEventGenerator(EventGenerator):
 	
 	def getNextEvent(self):
 		pythoncom.PumpMessages()
-		logevent(u'ISensLogon stopped')
-	
+		logger.info(u"Event generator '%s' now deactivated after %d event occurrences" % (self, self._eventsOccured))
+		self.cleanup()
+		
 	def callback(self, eventType, *args):
 		logger.debug(u"SensLogonEventGenerator event callback: eventType '%s', args: %s" % (eventType, args))
 	
 	def stop(self):
-		# Waiting some seconds before exit to avoid Win32 releasing exceptions
-		waitTime = 10
-		logger.info(u"Event generator '%s' stopping and cleaning up in %d seconds" % (self, waitTime))
-		time.sleep(waitTime)
+		EventGenerator.stop(self)
+		# Post WM_QUIT
+		win32api.PostThreadMessage(self._threadId, 18, 0, 0)
+		
+	def cleanup(self):
+		if self._lastEventOccurence and (time.time() - self._lastEventOccurence < 10):
+			# Waiting some seconds before exit to avoid Win32 releasing exceptions
+			waitTime = int(10 - (time.time() - self._lastEventOccurence))
+			logger.info(u"Event generator '%s' cleaning up in %d seconds" % (self, waitTime))
+			time.sleep(waitTime)
 		
 		importWmiAndPythoncom(importWmi = False, importPythoncom = True)
 		pythoncom.CoUninitialize()
-	
+		
 class UserLoginEventGenerator(SensLogonEventGenerator):
 	def __init__(self, eventConfig):
 		SensLogonEventGenerator.__init__(self, eventConfig)
@@ -861,7 +892,6 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 			self.fireEvent(self.createEvent(eventInfo = {'User': args[0]}))
 			if (self._eventConfig.maxRepetitions > 0) and (self._eventsOccured > self._eventConfig.maxRepetitions):
 				self.stop()
-				logger.info(u"Event generator '%s' now deactivated after %d event occurrences" % (self, self._eventsOccured))
 	
 	def createEvent(self, eventInfo={}):
 		return UserLoginEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
@@ -1127,7 +1157,7 @@ class JsonRpc(object):
 				self.result = eval( "opsiclientdRpcInterface.%s(*params)" % self.getMethodName() )
 			
 			logger.info(u'Got result')
-			logger.debug2(self.result)
+			logger.debug2(u"Result is: %s" % self.result)
 		
 		except Exception, e:
 			logger.logException(e)
@@ -1193,10 +1223,11 @@ class ControlPipe(threading.Thread):
 		self._pipeName = ""
 		self._bufferSize = 4096
 		self._running = False
+		self._stopped = False
 		
 	def stop(self):
 		#self.closePipe()
-		self._running = False
+		self._stopped = True
 	
 	def closePipe(self):
 		return
@@ -1286,64 +1317,6 @@ class PosixControlPipe(ControlPipe):
 		if os.path.exists(self._pipeName):
 			os.unlink(self._pipeName)
 		self._running = False
-		
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                     NT CONTROL PIPE CONNECTION                                    -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class NTControlPipeConnection(threading.Thread):
-	def __init__(self, ntControlPipe, pipe, bufferSize):
-		logger.setLogFormat(u'[%l] [%D] [control pipe]   %M     (%F|%N)', object=self)
-		threading.Thread.__init__(self)
-		self._ntControlPipe = ntControlPipe
-		self._pipe = pipe
-		self._bufferSize = bufferSize
-		logger.debug(u"NTControlPipeConnection initiated")
-	
-	def closePipe(self):
-		if self._pipe:
-			try:
-				windll.kernel32.CloseHandle(self._pipe)
-			except:
-				pass
-	
-	def run(self):
-		self._running = True
-		try:
-			chBuf = create_string_buffer(self._bufferSize)
-			cbRead = c_ulong(0)
-			while self._running:
-				logger.debug2(u"Reading fom pipe")
-				fReadSuccess = windll.kernel32.ReadFile(self._pipe, chBuf, self._bufferSize, byref(cbRead), None)
-				if ((fReadSuccess == 1) or (cbRead.value != 0)):
-					logger.debug(u"Received rpc from pipe '%s'" % chBuf.value)
-					result =  "%s\0" % self._ntControlPipe.executeRpc(chBuf.value)
-					cbWritten = c_ulong(0)
-					logger.debug2(u"Writing to pipe")
-					fWriteSuccess = windll.kernel32.WriteFile(
-									self._pipe,
-									c_char_p(result),
-									len(result),
-									byref(cbWritten),
-									None )
-					logger.debug2(u"Number of bytes written: %d" % cbWritten.value)
-					if not fWriteSuccess:
-						logger.error(u"Could not reply to the client's request from the pipe")
-						break
-					if (len(result) != cbWritten.value):
-						logger.error(u"Failed to write all bytes to pipe (%d/%d)" % (cbWritten.value, len(result)))
-						break
-					break
-				else:
-					logger.error(u"Failed to read from pipe")
-					break
-			
-			windll.kernel32.FlushFileBuffers(self._pipe)
-			windll.kernel32.DisconnectNamedPipe(self._pipe)
-			windll.kernel32.CloseHandle(self._pipe)
-		except Exception, e:
-			logger.error(u"NTControlPipeConnection error: %s" % e)
-		logger.debug(u"NTControlPipeConnection exiting")
-		self._running = False
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          NT CONTROL PIPE                                          -
@@ -1354,54 +1327,71 @@ class NTControlPipe(ControlPipe):
 		threading.Thread.__init__(self)
 		ControlPipe.__init__(self, opsiclientdRpcInterface)
 		self._pipeName = "\\\\.\\pipe\\opsiclientd"
-		
+	
 	def createPipe(self):
 		logger.info(u"Creating pipe %s" % self._pipeName)
-		PIPE_ACCESS_DUPLEX = 0x3
-		PIPE_TYPE_MESSAGE = 0x4
-		PIPE_READMODE_MESSAGE = 0x2
-		PIPE_WAIT = 0
-		PIPE_UNLIMITED_INSTANCES = 255
-		NMPWAIT_USE_DEFAULT_WAIT = 0
-		INVALID_HANDLE_VALUE = -1
-		self._pipe = windll.kernel32.CreateNamedPipeA(
-					self._pipeName,
-					PIPE_ACCESS_DUPLEX,
-					PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
-					PIPE_UNLIMITED_INSTANCES,
-					self._bufferSize,
-					self._bufferSize,
-					NMPWAIT_USE_DEFAULT_WAIT,
-					None )
-		if (self._pipe == INVALID_HANDLE_VALUE):
-			raise Exception(u"Failed to create named pipe")
+		self._pipe = win32pipe.CreateNamedPipe(
+				self._pipeName,
+				win32pipe.PIPE_ACCESS_DUPLEX | win32file.FILE_FLAG_OVERLAPPED,
+				win32pipe.PIPE_TYPE_MESSAGE | win32pipe.PIPE_READMODE_MESSAGE | win32pipe.PIPE_WAIT,
+				win32pipe.PIPE_UNLIMITED_INSTANCES,
+				self._bufferSize,
+				self._bufferSize,
+				5000,
+				None)
 		logger.debug(u"Pipe %s created" % self._pipeName)
-	
+		
 	def run(self):
-		ERROR_PIPE_CONNECTED = 535
 		self._running = True
 		try:
-			while self._running:
+			while not self._stopped:
 				self.createPipe()
-				logger.debug(u"Connecting to named pipe %s" % self._pipeName)
-				# This call is blocking until a client connects
-				fConnected = windll.kernel32.ConnectNamedPipe(self._pipe, None)
-				if ((fConnected == 0) and (windll.kernel32.GetLastError() == ERROR_PIPE_CONNECTED)):
-					fConnected = 1
-				if (fConnected == 1):
-					logger.debug(u"Connected to named pipe %s" % self._pipeName)
-					logger.debug(u"Creating NTControlPipeConnection")
-					cpc = NTControlPipeConnection(self, self._pipe, self._bufferSize)
-					cpc.start()
-					logger.debug(u"NTControlPipeConnection thread started")
-				else:
-					logger.error(u"Failed to connect to pipe")
-					windll.kernel32.CloseHandle(self._pipe)
+				connected = False
+				while not self._stopped:
+					logger.debug2(u"Connecting to named pipe %s" % self._pipeName)
+					overlapped = pywintypes.OVERLAPPED()
+					overlapped.hEvent = win32event.CreateEvent(None, 1, 0, None)
+					fConnected = win32pipe.ConnectNamedPipe(self._pipe, overlapped)
+					waitResult = win32event.WaitForSingleObject(overlapped.hEvent, 3000)
+					logger.debug2(u"Wait for pipe connection result: %s" % waitResult)
+					if (waitResult == win32event.WAIT_OBJECT_0):
+						connected = True
+						logger.debug(u"Connected to named pipe '%s'" % self._pipeName)
+						break
+					elif (waitResult == win32event.WAIT_TIMEOUT):
+						continue
+					else:
+						raise Exception(u"Failed to connect to pipe '%s': %s" (self._pipeName, waitResult))
+				if connected:
+					try:
+						logger.debug2(u"Reading fom pipe")
+						(errCode, readString) = win32file.ReadFile(self._pipe, self._bufferSize, None)
+						if (errCode != 0):
+							raise Exception(u"Failed to read from pipe: %s" % errCode)
+						readString = readString.split('\0')[0].strip()
+						logger.debug(u"Received rpc from pipe '%s'" % readString)
+						result = self.executeRpc(readString)
+						logger.debug(u"Writing rpc result '%s' to pipe" % result)
+						(errCode, nBytesWritten) = win32file.WriteFile(self._pipe, result + '\0', None)
+						win32file.FlushFileBuffers(self._pipe)
+						logger.debug2(u"Number of bytes written: %d" % nBytesWritten)
+						if (errCode != 0):
+							raise Exception(u"Failed to write to pipe: %s" % errCode)
+					except Exception, e:
+						logger.error(u"Failed to cummunicate through pipe: %s" % e)
+					win32pipe.DisconnectNamedPipe(self._pipe)
+				win32api.CloseHandle(self._pipe)
+				self._pipe = None
 		except Exception, e:
 			logger.logException(e)
 		logger.notice(u"ControlPipe exiting")
+		if self._pipe:
+			try:
+				win32api.CloseHandle(self._pipe)
+			except:
+				pass
 		self._running = False
-
+	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                     CONTROL PIPE FACTORY                                          -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -3638,25 +3628,37 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.notice(u"opsiclientd is going down")
 			self.setBlockLogin(False)
 			
-			logger.info(u"Stopping cache service")
-			if self._cacheService:
-				self._cacheService.stop()
+			for eventGenerator in self.getEventGenerators():
+				logger.info(u"Stopping event generator %s" % eventGenerator)
+				eventGenerator.stop()
 			
 			logger.info(u"Stopping control pipe")
 			if self._controlPipe:
 				self._controlPipe.stop()
 			
+			logger.info(u"Stopping cache service")
+			if self._cacheService:
+				self._cacheService.stop()
+			
 			logger.info(u"Stopping control server")
 			if self._controlServer:
 				self._controlServer.stop()
 			
-			#self._cacheService.join(2)
-			#self._controlPipe.join(2)
-			#self._controlServer.join(2)
+			logger.notice(u"Waiting for threads to stop")
+			
+			for eventGenerator in self.getEventGenerators():
+				eventGenerator.join(2)
+			
+			self._cacheService.join(2)
+			self._controlServer.join(2)
+			self._controlPipe.join(2)
 			
 			if reactor and reactor.running:
 				logger.info(u"Stopping reactor")
 				reactor.stop()
+				while reactor.running:
+					logger.debug(u"Waiting for reactor to stop")
+					time.sleep(1)
 			
 			logger.info(u"Exiting main thread")
 			
@@ -4051,34 +4053,35 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			# Fire stop event to stop blocking self._stopEvent.wait()
 			self._stopEvent.set()
 		
-		def SvcShutdown(self):
-			"""
-			Gets called from windows on system shutdown
-			"""
-			logger.debug(u"OpsiclientdServiceFramework SvcShutdown")
-			# Write to event log
-			self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
-			# Fire stop event to stop blocking self._stopEvent.wait()
-			self._stopEvent.set()
+		#def SvcShutdown(self):
+		#	"""
+		#	Gets called from windows on system shutdown
+		#	"""
+		#	logger.debug(u"OpsiclientdServiceFramework SvcShutdown")
+		#	# Write to event log
+		#	self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
+		#	# Fire stop event to stop blocking self._stopEvent.wait()
+		#	self._stopEvent.set()
 		
 		def SvcDoRun(self):
 			"""
 			Gets called from windows to start service
 			"""
-			startTime = time.time()
-			logger.debug(u"OpsiclientdServiceFramework SvcDoRun")
-			# Write to event log
-			self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
-			
-			# Start opsiclientd
-			workingDirectory = os.getcwd()
 			try:
-				workingDirectory = os.path.dirname(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Services\\opsiclientd\\PythonClass", ""))
-			except Exception, e:
-				logger.error(u"Failed to get working directory from registry: %s" % e)
-			os.chdir(workingDirectory)
+				startTime = time.time()
+				logger.debug(u"OpsiclientdServiceFramework SvcDoRun")
+				# Write to event log
+				self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
+				
+				# Start opsiclientd
+				workingDirectory = os.getcwd()
+				try:
+					workingDirectory = os.path.dirname(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Services\\opsiclientd\\PythonClass", ""))
+				except Exception, e:
+					logger.error(u"Failed to get working directory from registry: %s" % e)
+				os.chdir(workingDirectory)
 			
-			try:
+			
 				if (sys.getwindowsversion()[0] == 5):
 					# NT5: XP
 					self.opsiclientd = OpsiclientdNT5()
@@ -4104,15 +4107,20 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 				
 				# Shutdown opsiclientd
 				self.opsiclientd.stop()
+				self.opsiclientd.join(2)
+				
 				logger.notice(u"opsiclientd stopped")
 				for thread in threading.enumerate():
 					logger.notice(u"Running thread after stop: %s" % thread)
+				
+				self.opsiclientd = None
+				
 			except Exception, e:
 				logger.critical(u"opsiclientd crash")
 				logger.logException(e)
 			
-			# Write to event log
-			self.ReportServiceStatus(win32service.SERVICE_STOPPED)
+			# This call sometimes lets windows report a crash of opsiclientd (python 2.6.5)
+			#self.ReportServiceStatus(win32service.SERVICE_STOPPED)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                        OPSICLIENTD NT INIT                                        -
