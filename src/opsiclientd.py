@@ -32,12 +32,13 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '3.4.99.4'
+__version__ = '3.4.99.5'
 
 # Imports
 import os, sys, thread, threading, time, urllib, base64, socket, re, shutil, filecmp, codecs, inspect
 import copy as pycopy
 from OpenSSL import SSL
+from hashlib import md5
 
 if (os.name == 'posix'):
 	from signal import *
@@ -60,12 +61,14 @@ from twisted.internet import defer, threads, reactor
 from OPSI.web2 import resource, stream, server, http, responsecode, static, http_headers
 from OPSI.web2.channel.http import HTTPFactory
 from twisted.python.failure import Failure
+from twisted.conch.ssh import keys
 
 # OPSI imports
 from OPSI.Logger import *
 from OPSI import System
 from OPSI.Util import *
 from OPSI.Util.Message import *
+from OPSI.Util.Repository import *
 from OPSI.Util.File import IniFile
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Backend.File import FileBackend
@@ -895,112 +898,11 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 	
 	def createEvent(self, eventInfo={}):
 		return UserLoginEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
-	
-#class UserLoginEventGeneratorWMI(WMIEventGenerator):
-#	def __init__(self, eventConfig):
-#		WMIEventGenerator.__init__(self, eventConfig)
-#		# We do not use wql because then we need to poll (WITHIN)
-#		# This could lead to missed events
-#		self._wql = ''
-#	
-#	def initialize(self):
-#		WMIEventGenerator.initialize(self)
-#		if not (os.name == 'nt'):
-#			return
-#		
-#		eventcode = 528
-#		if (sys.getwindowsversion()[0] > 5):
-#			eventcode = 4624
-#		importWmiAndPythoncom()
-#		pythoncom.CoInitialize()
-#		logger.debug(u"Creating wmi object")
-#		c = wmi.WMI(privileges = ["Security"])
-#		logger.info(u"Watching for Win32_NTLogEvent, Logfile = Security, EventCode = %d" % eventcode)
-#		self._watcher = c.Win32_NTLogEvent.watch_for(notification_type = "Creation", Logfile = "Security", EventCode = eventcode)
-#	
-#	def createEvent(self, eventInfo={}):
-#		return UserLoginEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
-#	
-#	def getNextEvent(self):
-#		event = WMIEventGenerator.getNextEvent(self)
-#		if (sys.getwindowsversion()[0] <= 5):
-#			#event.eventInfo['User'] = event.eventInfo['InsertionStrings'][1] + u'\\' + event.eventInfo['InsertionStrings'][0]
-#			if (event.eventInfo['InsertionStrings'][4].strip().lower() == 'user32'):
-#				return event
-#		else:
-#			event.eventInfo['User'] = event.eventInfo['InsertionStrings'][6] + u'\\' + event.eventInfo['InsertionStrings'][5]
-#			if (event.eventInfo['InsertionStrings'][9].strip().lower() == 'user32'):
-#				return event
-#		#for attr in event.eventInfo.get('InsertionStrings', []):
-#		#	if (attr.strip() == 'User32'):
-#		#		logger.notice("User '%s' logged in" % event.eventInfo.get('User'))
-#		#		return event
-#		logger.debug(u"Not a user login: %s" % event.eventInfo.get('User'))
-#		return None
 
 class SystemShutdownEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
 		EventGenerator.__init__(self, eventConfig)
-	
-#	def handle(self, event):
-#		logger.notice(u"SystemShutdownEventGenerator.handle(): event %s" % event)
-#		#if event is win32con.CTRL_SHUTDOWN_EVENT:
-#		#	try:
-#		#		System.abortShutdown()
-#		#	except Exception, e:
-#		#		logger.logException(e)
-#		#	self.createEvent()
-#		#	return True
-#		return False
-#		
-#	def initialize(self):
-#		EventGenerator.initialize(self)
-#		if not (os.name == 'nt'):
-#			return
-#		#try:
-#		#	result = win32api.SetConsoleCtrlHandler(self.handle, 1)
-#		#	if (result == 0):
-#		#		raise Exception(u"Could not SetConsoleCtrlHandler: %r" % win32api.GetLastError())
-#		#except Exception, e:
-#		#	logger.logException(e)
-#		logger.notice(u'Registring ISensLogon')
-#		
-#		importWmiAndPythoncom(importWmi = False, importPythoncom = True)
-#		pythoncom.CoInitialize()
-#		
-#		sl = SensLogon()
-#		subscription_interface = pythoncom.WrapObject(sl)
-#		
-#		event_system = win32com.client.Dispatch(PROGID_EventSystem)
-#		
-#		event_subscription = win32com.client.Dispatch(PROGID_EventSubscription)
-#		event_subscription.EventClassID = SENSGUID_EVENTCLASS_LOGON
-#		event_subscription.PublisherID = SENSGUID_PUBLISHER
-#		event_subscription.SubscriptionName = 'opsiclientd subscription'
-#		event_subscription.SubscriberInterface = subscription_interface
-#		
-#		event_system.Store(PROGID_EventSubscription, event_subscription)
-#	
-#	def getNextEvent(self):
-#		pythoncom.PumpMessages()
-#		logevent(u'ISensLogon stopped')
-#	
-#	def cleanup(self):
-#		# Waiting some seconds before exit to avoid Win32 releasing exceptions
-#		waitTime = 10
-#		logger.info(u"Event generator '%s' cleaning up in %d seconds" % (self, waitTime))
-#		time.sleep(waitTime)
-#		
-#		importWmiAndPythoncom(importWmi = False, importPythoncom = True)
-#		pythoncom.CoUninitialize()
-#	
-#	def createEvent(self, eventInfo={}):
-#		#try:
-#		#	System.shutdown(0)
-#		#except Exception, e:
-#		#	logger.logException(e)
-#		return SystemShutdownEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
-	
+
 class CustomEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
 		EventGenerator.__init__(self, eventConfig)
@@ -1226,7 +1128,6 @@ class ControlPipe(threading.Thread):
 		self._stopped = False
 		
 	def stop(self):
-		#self.closePipe()
 		self._stopped = True
 	
 	def closePipe(self):
@@ -1319,6 +1220,64 @@ class PosixControlPipe(ControlPipe):
 		self._running = False
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                     NT CONTROL PIPE CONNECTION                                    -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class NTControlPipeConnection(threading.Thread):
+	def __init__(self, ntControlPipe, pipe, bufferSize):
+		logger.setLogFormat(u'[%l] [%D] [control pipe]   %M     (%F|%N)', object=self)
+		threading.Thread.__init__(self)
+		self._ntControlPipe = ntControlPipe
+		self._pipe = pipe
+		self._bufferSize = bufferSize
+		logger.debug(u"NTControlPipeConnection initiated")
+	
+	def closePipe(self):
+		if self._pipe:
+			try:
+				windll.kernel32.CloseHandle(self._pipe)
+			except:
+				pass
+	
+	def run(self):
+		self._running = True
+		try:
+			chBuf = create_string_buffer(self._bufferSize)
+			cbRead = c_ulong(0)
+			while self._running:
+				logger.debug2(u"Reading fom pipe")
+				fReadSuccess = windll.kernel32.ReadFile(self._pipe, chBuf, self._bufferSize, byref(cbRead), None)
+				if ((fReadSuccess == 1) or (cbRead.value != 0)):
+					logger.debug(u"Received rpc from pipe '%s'" % chBuf.value)
+					result =  "%s\0" % self._ntControlPipe.executeRpc(chBuf.value)
+					cbWritten = c_ulong(0)
+					logger.debug2(u"Writing to pipe")
+					fWriteSuccess = windll.kernel32.WriteFile(
+									self._pipe,
+									c_char_p(result),
+									len(result),
+									byref(cbWritten),
+									None )
+					logger.debug2(u"Number of bytes written: %d" % cbWritten.value)
+					if not fWriteSuccess:
+						logger.error(u"Could not reply to the client's request from the pipe")
+						break
+					if (len(result) != cbWritten.value):
+						logger.error(u"Failed to write all bytes to pipe (%d/%d)" % (cbWritten.value, len(result)))
+						break
+					break
+				else:
+					logger.error(u"Failed to read from pipe")
+					break
+			
+			windll.kernel32.FlushFileBuffers(self._pipe)
+			windll.kernel32.DisconnectNamedPipe(self._pipe)
+			windll.kernel32.CloseHandle(self._pipe)
+		except Exception, e:
+			logger.error(u"NTControlPipeConnection error: %s" % e)
+		logger.debug(u"NTControlPipeConnection exiting")
+		self._running = False
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          NT CONTROL PIPE                                          -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class NTControlPipe(ControlPipe):
@@ -1330,67 +1289,115 @@ class NTControlPipe(ControlPipe):
 	
 	def createPipe(self):
 		logger.info(u"Creating pipe %s" % self._pipeName)
-		self._pipe = win32pipe.CreateNamedPipe(
-				self._pipeName,
-				win32pipe.PIPE_ACCESS_DUPLEX | win32file.FILE_FLAG_OVERLAPPED,
-				win32pipe.PIPE_TYPE_MESSAGE | win32pipe.PIPE_READMODE_MESSAGE | win32pipe.PIPE_WAIT,
-				win32pipe.PIPE_UNLIMITED_INSTANCES,
-				self._bufferSize,
-				self._bufferSize,
-				5000,
-				None)
+		PIPE_ACCESS_DUPLEX = 0x3
+		PIPE_TYPE_MESSAGE = 0x4
+		PIPE_READMODE_MESSAGE = 0x2
+		PIPE_WAIT = 0
+		PIPE_UNLIMITED_INSTANCES = 255
+		NMPWAIT_USE_DEFAULT_WAIT = 0
+		INVALID_HANDLE_VALUE = -1
+		self._pipe = windll.kernel32.CreateNamedPipeA(
+					self._pipeName,
+					PIPE_ACCESS_DUPLEX,
+					PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+					PIPE_UNLIMITED_INSTANCES,
+					self._bufferSize,
+					self._bufferSize,
+					NMPWAIT_USE_DEFAULT_WAIT,
+					None )
+		if (self._pipe == INVALID_HANDLE_VALUE):
+			raise Exception(u"Failed to create named pipe")
 		logger.debug(u"Pipe %s created" % self._pipeName)
-		
+	
+	#def createPipe(self):
+	#	logger.info(u"Creating pipe %s" % self._pipeName)
+	#	self._pipe = win32pipe.CreateNamedPipe(
+	#			self._pipeName,
+	#			win32pipe.PIPE_ACCESS_DUPLEX | win32file.FILE_FLAG_OVERLAPPED,
+	#			win32pipe.PIPE_TYPE_MESSAGE | win32pipe.PIPE_READMODE_MESSAGE | win32pipe.PIPE_WAIT,
+	#			win32pipe.PIPE_UNLIMITED_INSTANCES,
+	#			self._bufferSize,
+	#			self._bufferSize,
+	#			5000,
+	#			None)
+	#	logger.debug(u"Pipe %s created" % self._pipeName)
+	
 	def run(self):
+		ERROR_PIPE_CONNECTED = 535
 		self._running = True
 		try:
-			while not self._stopped:
+			while self._running:
 				self.createPipe()
-				connected = False
-				while not self._stopped:
-					logger.debug2(u"Connecting to named pipe %s" % self._pipeName)
-					overlapped = pywintypes.OVERLAPPED()
-					overlapped.hEvent = win32event.CreateEvent(None, 1, 0, None)
-					fConnected = win32pipe.ConnectNamedPipe(self._pipe, overlapped)
-					waitResult = win32event.WaitForSingleObject(overlapped.hEvent, 3000)
-					logger.debug2(u"Wait for pipe connection result: %s" % waitResult)
-					if (waitResult == win32event.WAIT_OBJECT_0):
-						connected = True
-						logger.debug(u"Connected to named pipe '%s'" % self._pipeName)
-						break
-					elif (waitResult == win32event.WAIT_TIMEOUT):
-						continue
-					else:
-						raise Exception(u"Failed to connect to pipe '%s': %s" (self._pipeName, waitResult))
-				if connected:
-					try:
-						logger.debug2(u"Reading fom pipe")
-						(errCode, readString) = win32file.ReadFile(self._pipe, self._bufferSize, None)
-						if (errCode != 0):
-							raise Exception(u"Failed to read from pipe: %s" % errCode)
-						readString = readString.split('\0')[0].strip()
-						logger.debug(u"Received rpc from pipe '%s'" % readString)
-						result = self.executeRpc(readString)
-						logger.debug(u"Writing rpc result '%s' to pipe" % result)
-						(errCode, nBytesWritten) = win32file.WriteFile(self._pipe, result + '\0', None)
-						win32file.FlushFileBuffers(self._pipe)
-						logger.debug2(u"Number of bytes written: %d" % nBytesWritten)
-						if (errCode != 0):
-							raise Exception(u"Failed to write to pipe: %s" % errCode)
-					except Exception, e:
-						logger.error(u"Failed to cummunicate through pipe: %s" % e)
-					win32pipe.DisconnectNamedPipe(self._pipe)
-				win32api.CloseHandle(self._pipe)
-				self._pipe = None
+				logger.debug(u"Connecting to named pipe %s" % self._pipeName)
+				# This call is blocking until a client connects
+				fConnected = windll.kernel32.ConnectNamedPipe(self._pipe, None)
+				if ((fConnected == 0) and (windll.kernel32.GetLastError() == ERROR_PIPE_CONNECTED)):
+					fConnected = 1
+				if (fConnected == 1):
+					logger.debug(u"Connected to named pipe %s" % self._pipeName)
+					logger.debug(u"Creating NTControlPipeConnection")
+					cpc = NTControlPipeConnection(self, self._pipe, self._bufferSize)
+					cpc.start()
+					logger.debug(u"NTControlPipeConnection thread started")
+				else:
+					logger.error(u"Failed to connect to pipe")
+					windll.kernel32.CloseHandle(self._pipe)
 		except Exception, e:
 			logger.logException(e)
 		logger.notice(u"ControlPipe exiting")
-		if self._pipe:
-			try:
-				win32api.CloseHandle(self._pipe)
-			except:
-				pass
 		self._running = False
+
+	#def run(self):
+	#	self._running = True
+	#	try:
+	#		while not self._stopped:
+	#			self.createPipe()
+	#			connected = False
+	#			while not self._stopped:
+	#				logger.debug2(u"Connecting to named pipe %s" % self._pipeName)
+	#				overlapped = pywintypes.OVERLAPPED()
+	#				#overlapped.hEvent = win32event.CreateEvent(None, 1, 0, None)
+	#				overlapped.hEvent = win32event.CreateEvent(None, 0, 0, None)
+	#				fConnected = win32pipe.ConnectNamedPipe(self._pipe, overlapped)
+	#				waitResult = win32event.WaitForSingleObject(overlapped.hEvent, 3000)
+	#				logger.debug2(u"Wait for pipe connection result: %s" % waitResult)
+	#				if (waitResult == win32event.WAIT_OBJECT_0):
+	#					connected = True
+	#					logger.debug(u"Connected to named pipe '%s'" % self._pipeName)
+	#					break
+	#				elif (waitResult == win32event.WAIT_TIMEOUT):
+	#					continue
+	#				else:
+	#					raise Exception(u"Failed to connect to pipe '%s': %s" (self._pipeName, waitResult))
+	#			if connected:
+	#				try:
+	#					logger.debug2(u"Reading fom pipe")
+	#					(errCode, readString) = win32file.ReadFile(self._pipe, self._bufferSize, None)
+	#					if (errCode != 0):
+	#						raise Exception(u"Failed to read from pipe: %s" % errCode)
+	#					readString = readString.split('\0')[0].strip()
+	#					logger.debug(u"Received rpc from pipe '%s'" % readString)
+	#					result = self.executeRpc(readString)
+	#					logger.debug(u"Writing rpc result '%s' to pipe" % result)
+	#					(errCode, nBytesWritten) = win32file.WriteFile(self._pipe, result + '\0', None)
+	#					win32file.FlushFileBuffers(self._pipe)
+	#					logger.debug2(u"Number of bytes written: %d" % nBytesWritten)
+	#					if (errCode != 0):
+	#						raise Exception(u"Failed to write to pipe: %s" % errCode)
+	#				except Exception, e:
+	#					logger.error(u"Failed to cummunicate through pipe: %s" % e)
+	#				win32pipe.DisconnectNamedPipe(self._pipe)
+	#			win32api.CloseHandle(self._pipe)
+	#			self._pipe = None
+	#	except Exception, e:
+	#		logger.logException(e)
+	#	logger.notice(u"ControlPipe exiting")
+	#	if self._pipe:
+	#		try:
+	#			win32api.CloseHandle(self._pipe)
+	#		except:
+	#			pass
+	#	self._running = False
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                     CONTROL PIPE FACTORY                                          -
@@ -1402,7 +1409,6 @@ def ControlPipeFactory(opsiclientdRpcInterface):
 		return NTControlPipe(opsiclientdRpcInterface)
 	else:
 		raise NotImplemented(u"Unsupported operating system %s" % os.name)
-
 
 
 
@@ -1735,55 +1741,198 @@ class CacheService(threading.Thread):
 		logger.setLogFormat(u'[%l] [%D] [cache service]   %M     (%F|%N)', object=self)
 		self._opsiclientd = opsiclientd
 		self._storageDir = self._opsiclientd.getConfigValue('cache_service', 'storage_dir')
-		self._cacheProductsEnded = threading.Event()
+		self._productCacheDir = os.path.join(self._storageDir, 'depot')
+		
 		self._stopped = False
 		self._running = False
 		
-	def cacheProducts(self, productIds, waitForEnding=False):
-		#if not self._initiated:
-		#	raise Exception(u"Cannot cache products: not initiated")
-		#self._productIds = productIds
-		self._cacheProductsRequested = True
-		self._cacheProductsEnded.clear()
-		#self._repository.setMaxBandwidth(maxBandwidth)
-		if waitForEnding:
-			self._cacheProductsEnded = threading.Event()
-			self._cacheProductsEnded.wait()
-			#for productId in self._productIds:
-			#	if self._state['product'][productId]['sync_failed']:
-			#		return False
-			#return True
-	
-	def run(self):
-		self._running = True
-		while not self._stopped:
-			time.sleep(1)
-		self._running = False
+		self._state = {
+			'product':  {},
+			'config':   {}
+		}
 		
+		self._configService = None
+		self._productIds = []
+		
+		self._cacheProductsRequested = False
+		self._cacheProductsRunning = False
+		self._cacheProductsEnded = threading.Event()
+		
+		self._currentProductSyncProgressObserver = None
+		self._overallProductSyncProgressObserver = None
+		self._initialized = False
+	
+	def initialize(self):
+		if self._initialized:
+			return
+		#self.readStateFile()
+		self._initialized = True
+		if not os.path.exists(self._storageDir):
+			logger.notice(u"Creating cache service storage dir '%s'" % self._storageDir)
+			os.mkdir(self._storageDir)
+		if not os.path.exists(self._productCacheDir):
+			logger.notice(u"Creating cache service product cache dir '%s'" % self._productCacheDir)
+			os.mkdir(self._productCacheDir)
+	
+	def setCurrentProductSyncProgressObserver(self, currentProductSyncProgressObserver):
+		self._currentProductSyncProgressObserver = currentProductSyncProgressObserver
+	
+	def setOverallProductSyncProgressObserver(self, overallProductSyncProgressObserver):
+		self._overallProductSyncProgressObserver = overallProductSyncProgressObserver
+	
+	def getProductCacheDir(self):
+		return self._productCacheDir
+		
+	def getProductSyncCompleted(self):
+		self.initialize()
+		if not self._state['product']:
+			logger.info(u"No products cached")
+			return False
+		productSyncCompleted = True
+		for (productId, state) in self._state['product'].items():
+			if state.get('sync_completed'):
+				logger.debug(u"Product '%s': sync completed" % productId)
+			else:
+				productSyncCompleted = False
+				logger.debug(u"Product '%s': sync not completed" % productId)
+		return productSyncCompleted
+		
+	def cacheProducts(self, configService, productIds, waitForEnding=False):
+		if self._cacheProductsRunning:
+			logger.info(u"Already caching products")
+		else:
+			self.initialize()
+			self._configService = configService
+			self._productIds = productIds
+			self._cacheProductsRequested = True
+			self._cacheProductsEnded.clear()
+			for productId in self._productIds:
+				if not self._state['product'].has_key(productId):
+					self._state['product'][productId] = {'sync_started': '', 'sync_completed': '', 'sync_failure': '' }
+		if waitForEnding:
+			self._cacheProductsEnded.wait()
+			for productId in self._state['product'].keys():
+				if self._state['product'][productId]['sync_failure']:
+					raise Exception(u"Failed to cache product '%s': %s" % (productId, self._state['product'][productId]['sync_failure']))
+	
 	def stop(self):
 		self._stopped = True
 		
-	def run_new(self):
+	def run(self):
 		self._running = True
-		while self._running:
+		while not self._stopped:
 			try:
 				if self._cacheProductsRequested:
 					self._cacheProductsRequested = False
+					self._cacheProductsRunning = True
 					
 					try:
 						logger.notice(u"Caching products: %s" % ', '.join(self._productIds))
-						#if not self._initiated:
-						#	raise Exception(u"Cannot cache products: not initiated")
+						self.initialize()
+						
+						if not self._configService:
+							raise Exception(u"Not connected to config service")
+						
+						modules = None
+						if self._configService.isOpsi35():
+							modules = self._configService.backend_info()['modules']
+						else:
+							modules = self._configService.getOpsiInformation_hash()['modules']
+						
+						if not modules.get('vpn'):
+							raise Exception(u"Cannot sync products: VPN module currently disabled")
+						
+						if not modules.get('customer'):
+							raise Exception(u"Cannot sync products: No customer in modules file")
+							
+						if not modules.get('valid'):
+							raise Exception(u"Cannot sync products: modules file invalid")
+						
+						if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
+							raise Exception(u"Cannot sync products: modules file expired")
+						
+						logger.info(u"Verifying modules file signature")
+						publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
+						data = u''
+						mks = modules.keys()
+						mks.sort()
+						for module in mks:
+							if module in ('valid', 'signature'):
+								continue
+							val = modules[module]
+							if (val == False): val = 'no'
+							if (val == True):  val = 'yes'
+							data += u'%s = %s\r\n' % (module.lower().strip(), val)
+						if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
+							raise Exception(u"Cannot sync products: modules file invalid")
+						logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
+						
+						logger.info(u"Synchronizing %d product(s):" % len(self._productIds))
+						for productId in self._productIds:
+							logger.info("   %s" % productId)
+						
+						overallProgressSubject = ProgressSubject(id = 'sync_products_overall', type = 'product_sync', end = len(self._productIds))
+						overallProgressSubject.setMessage( _(u'Synchronizing products') )
+						if self._overallProductSyncProgressObserver:
+							overallProgressSubject.attachObserver(self._overallProductSyncProgressObserver)
+						
+						for productId in self._productIds:
+							logger.notice(u"Syncing files of product '%s'" % productId)
+							self._state['product'][productId]['sync_started']   = time.time()
+							self._state['product'][productId]['sync_completed'] = ''
+							self._state['product'][productId]['sync_failure']   = ''
+							
+							# TODO: choose depot / url
+							repository = getRepository(
+									#url        = self._opsiclientd.getConfigValue('depot_server', 'url'),
+									url          = 'webdavs://%s:4447/opsi-depot' % self._opsiclientd.getConfigValue('depot_server', 'depot_id'),
+									username     = self._opsiclientd.getConfigValue('global', 'host_id'),
+									password     = self._opsiclientd.getConfigValue('global', 'opsi_host_key')
+							)
+							
+							#self.writeStateFile()
+							try:
+								productSynchronizer = DepotToLocalDirectorySychronizer(
+									sourceDepot          = repository,
+									destinationDirectory = self._productCacheDir,
+									productIds           = [ productId ],
+									maxBandwidth         = 0,
+									dynamicBandwidth     = False
+								)
+								productSynchronizer.synchronize(productProgressObserver = self._currentProductSyncProgressObserver)
+								self._state['product'][productId]['sync_completed'] = time.time()
+								logger.notice(u"Product '%s' synced" % productId)
+							except Exception, e:
+								logger.error("Failed to sync product '%s': %s" % (productId, e))
+								self._state['product'][productId]['sync_failure'] = forceUnicode(e)
+							#self.writeStateFile()
+							overallProgressSubject.addToState(1)
+						
+						if self._overallProductSyncProgressObserver:
+							overallProgressSubject.detachObserver(self._overallProductSyncProgressObserver)
+						
+						#for productId in self._productIds:
+						#	if self._state['product'][productId]['sync_failed']:
+						#		raise Exception(self._state['product'][productId]['sync_failed'])
+						
+						logger.notice(u"All products cached: %s" % ', '.join(self._productIds))
+						#for eventGenerator in self.getEventGenerators(generatorClass = ProductSyncCompletedEventGenerator):
+						#	eventGenerator.fireEvent()
+						
 					except Exception, e:
 						logger.logException(e)
-						logger.error(u"Failed to cache product: %s" % e)
-					#self.writeStateFile()
-					self._cacheProductsEnded.set()
+						logger.error(u"Failed to cache products: %s" % e)
 					
-				time.sleep(3)
+					#self.writeStateFile()
+					self._cacheProductsRunning = False
+					self._cacheProductsEnded.set()
+			
 			except Exception, e:
 				logger.logException(e)
-	
+			time.sleep(3)
+			
+		self._running = False
+		
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                              CACHED CONFIG SERVICE RESOURCE JSON RPC                              -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1989,11 +2138,6 @@ class ServiceConnectionThread(KillableThread):
 				break
 			self.terminate()
 			time.sleep(0.5)
-		#time.sleep(2)
-		#logger.debug(u"Running: %s, alive: %s" % (self.running, self.isAlive()))
-		#if self.running and self.isAlive():
-		#	logger.debug(u"Terminating thread")
-		#	self.terminate()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                      EVENT PROCESSING THREAD                                      -
@@ -2295,7 +2439,7 @@ class EventProcessingThread(KillableThread):
 				self.closeProcessWindows(self._notifierApplicationPid[notifierType])
 			except:
 				pass
-			time.sleep(3)
+			time.sleep(2)
 			System.terminateProcess(processId = self._notifierApplicationPid[notifierType])
 		except Exception, e:
 			logger.warning(u"Failed to stop notifier application: %s" % e)
@@ -2528,35 +2672,33 @@ class EventProcessingThread(KillableThread):
 				if self.event.eventConfig.cacheProducts:
 					logger.notice(u"Caching products: %s" % productIds)
 					self.setStatusMessage( _(u"Caching products") )
+					self.opsiclientd._cacheService.setCurrentProductSyncProgressObserver(self._currentProgressSubjectProxy)
+					self.opsiclientd._cacheService.setOverallProductSyncProgressObserver(self._overallProgressSubjectProxy)
+					self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
 					try:
-						self._cacheService.cacheProducts(productIds, waitForEnding = True)
+						self.opsiclientd._cacheService.cacheProducts(
+							self._configService,
+							productIds,
+							waitForEnding = self.event.eventConfig.requiresCachedProducts)
+						self.setStatusMessage( _(u"Products cached") )
 					finally:
-						#self._detailSubjectProxy.setMessage(u"")
-						#self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
-						pass
-					
-				#if self.event.eventConfig.cacheProducts:
-				#	logger.notice(u"Caching products: %s (max bandwidth: %d bit/s)" % (productIds, self.event.eventConfig.cacheMaxBandwidth))
-				#	self._cacheService.init()
-				#	if self.event.eventConfig.cacheMaxBandwidth:
-				#		self.setStatusMessage( _(u"Caching products (%d kbit/s)") % (self.event.eventConfig.cacheMaxBandwidth/1000) )
-				#	else:
-				#		self.setStatusMessage( _(u"Caching products") )
-				#	self._cacheService.setCurrentProductProgressObserver(self._currentProgressSubjectProxy)
-				#	self._cacheService.setOverallProductProgressObserver(self._overallProgressSubjectProxy)
-				#	self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
-				#	
-				#	try:
-				#		if not self._cacheService.cacheProducts(productIds, maxBandwidth=self.event.eventConfig.cacheMaxBandwidth, waitForEnding=True):
-				#			raise Exception(u"Failed to cache products")
-				#	finally:
-				#		self._detailSubjectProxy.setMessage(u"")
-				#		self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
-				#	
-				#	self.setStatusMessage( _(u"Products cached") )
-				#	self._currentProgressSubjectProxy.setState(0)
-				#	self._overallProgressSubjectProxy.setState(0)
+						self._detailSubjectProxy.setMessage(u"")
+						self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
+						self._currentProgressSubjectProxy.reset()
+						self._overallProgressSubjectProxy.reset()
 				
+				if self.event.eventConfig.requiresCachedProducts:
+					# Event needs cached products => initialize cache service
+					if self.opsiclientd._cacheService.getProductSyncCompleted():
+						logger.notice(u"Event '%s' requires cached products and product sync is done" % self.event.eventConfig.getName())
+						cacheDepotDir = self.opsiclientd._cacheService.getProductCacheDir().replace('\\', '/').replace('//', '/')
+						cacheDepotDrive = cacheDepotDir.split('/')[0]
+						cacheDepotUrl = 'smb://localhost/noshare/' + ('/'.join(cacheDepotDir.split('/')[1:]))
+						self.opsiclientd.setConfigValue('depot_server', 'url', cacheDepotUrl)
+						self.opsiclientd.setConfigValue('depot_server', 'drive', cacheDepotDrive)
+					else:
+						raise Exception(u"Event '%s' requires cached products but product sync is not done, exiting" % self.event.eventConfig.getName())
+						
 				self.runActions()
 				
 		except Exception, e:
@@ -2726,24 +2868,8 @@ class EventProcessingThread(KillableThread):
 				self.startNotificationServer()
 				self.setActionProcessorInfo()
 				
-				if self.event.eventConfig.requiresCachedProducts:
-					# Event needs cached products => initialize cache service
-					self.opsiclientd._cacheService.init()
-					if self.opsiclientd._cacheService.getProductSyncCompleted():
-						logger.notice(u"Event '%s' requires cached products and product sync is done" % self.event)
-						cacheDepotDir = (self.opsiclientd.getConfigValue('cache_service', 'storage_dir') + '\\install').replace('\\', '/').replace('//', '/')
-						cacheDepotDrive = cacheDepotDir.split('/')[0]
-						cacheDepotUrl = 'smb://localhost/noshare/' + ('/'.join(cacheDepotDir.split('/')[1:]))
-						self.opsiclientd.setConfigValue('depot_server', 'url', cacheDepotUrl)
-						self.opsiclientd.setConfigValue('depot_server', 'drive', cacheDepotDrive)
-					else:
-						logger.notice(u"Event '%s' requires cached products but product sync is not done, exiting" % self.event)
-						self.running = False
-						return
-				
 				if self.event.eventConfig.useCachedConfig:
 					# Event needs cached config => initialize cache service
-					self.opsiclientd._cacheService.init()
 					if self.opsiclientd._cacheService.getConfigSyncCompleted():
 						logger.notice(u"Event '%s' requires cached config and config sync is done" % self.event)
 						self.opsiclientd._cacheService.workWithLocalConfig()
@@ -2820,6 +2946,7 @@ class EventProcessingThread(KillableThread):
 			finally:
 				self.setStatusMessage(u"")
 				self._eventSubject.setMessage(u"")
+				
 				if self.event.eventConfig.processShutdownRequests:
 					try:
 						self.opsiclientd.processShutdownRequests()
@@ -2848,6 +2975,7 @@ class EventProcessingThread(KillableThread):
 					# Windows NT < 6 can't shutdown while pgina.dll is blocking login!
 					# On other systems we keep blocking until shutdown is done
 					self.opsiclientd.setBlockLogin(False)
+				
 				if self.event.eventConfig.useCachedConfig:
 					# Set config service url back to previous url
 					logger.notice(u"Setting config service url back to '%s'" % configServiceUrl)
@@ -4003,8 +4131,6 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			"""
 			Initialize service and create stop event
 			"""
-			self.opsiclientd = None
-			
 			sys.stdout = logger.getStdout()
 			sys.stderr = logger.getStderr()
 			logger.setConsoleLevel(LOG_NONE)
@@ -4014,35 +4140,20 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			self._stopEvent = threading.Event()
 			logger.debug(u"OpsiclientdServiceFramework initiated")
 		
-		#def GetAcceptedControls(self):
-		#	# Accept additional events
-		#	rc = win32serviceutil.ServiceFramework.GetAcceptedControls(self)
-		#	#| win32service.SERVICE_CONTROL_DEVICEEVENT \
-		#	rc |= win32service.SERVICE_ACCEPT_PARAMCHANGE \
-		#	   | win32service.SERVICE_ACCEPT_NETBINDCHANGE \
-		#	   | win32service.SERVICE_ACCEPT_HARDWAREPROFILECHANGE \
-		#	   | win32service.SERVICE_ACCEPT_POWEREVENT \
-		#	   | win32service.SERVICE_ACCEPT_SESSIONCHANGE \
-		#	   | win32service.SERVICE_CONTROL_PRESHUTDOWN
-		#	return rc
-		#
-		#def SvcOtherEx(self, control, event_type, data):
-		#	if   (control == win32service.SERVICE_CONTROL_DEVICEEVENT):
-		#		info = win32gui_struct.UnpackDEV_BROADCAST(data)
-		#		logger.info(u"SVC Device event occurred: %x - %s" % (event_type, info))
-		#	elif (control == win32service.SERVICE_CONTROL_HARDWAREPROFILECHANGE):
-		#		logger.info(u"SVC Hardware profile changed: type=%s, data=%s" % (event_type, data))
-		#	elif (control == win32service.SERVICE_CONTROL_POWEREVENT):
-		#		logger.info(u"SVC Power event: setting %s" % data)
-		#	elif (control == win32service.SERVICE_CONTROL_PRESHUTDOWN):
-		#		logger.info(u"SVC Preshutdown event: setting %s" % data)
-		#	elif (control == win32service.SERVICE_CONTROL_SESSIONCHANGE):
-		#		# data is a single elt tuple, but this could potentially grow
-		#		# in the future if the win32 struct does
-		#		logger.info(u"SVC Session event: type=%s, data=%s" % (event_type, data))
-		#	else:
-		#		logger.info(u"SVC Other event: code=%d, type=%s, data=%s" % (control, evalent_type, data))
+		def ReportServiceStatus(self, serviceStatus, waitHint = 5000, win32ExitCode = 0, svcExitCode = 0):
+			# Wrapping because ReportServiceStatus sometimes lets windows report a crash of opsiclientd (python 2.6.5)
+			# invalid handle ...
+			try:
+				win32serviceutil.ServiceFramework.ReportServiceStatus(
+					self, serviceStatus, waitHint = waitHint, win32ExitCode = win32ExitCode, svcExitCode = svcExitCode)
+			except Exception, e:
+				logger.error(u"Failed to report service status %s: %s" % (serviceStatus, e))
 			
+		def SvcInterrogate(self):
+			logger.debug(u"OpsiclientdServiceFramework SvcInterrogate")
+			# Assume we are running, and everyone is happy.
+			self.ReportServiceStatus(win32service.SERVICE_RUNNING)
+		
 		def SvcStop(self):
 			"""
 			Gets called from windows to stop service
@@ -4053,17 +4164,17 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			# Fire stop event to stop blocking self._stopEvent.wait()
 			self._stopEvent.set()
 		
-		#def SvcShutdown(self):
-		#	"""
-		#	Gets called from windows on system shutdown
-		#	"""
-		#	logger.debug(u"OpsiclientdServiceFramework SvcShutdown")
-		#	# Write to event log
-		#	self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
-		#	# Fire stop event to stop blocking self._stopEvent.wait()
-		#	self._stopEvent.set()
+		def SvcShutdown(self):
+			"""
+			Gets called from windows on system shutdown
+			"""
+			logger.debug(u"OpsiclientdServiceFramework SvcShutdown")
+			# Write to event log
+			self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
+			# Fire stop event to stop blocking self._stopEvent.wait()
+			self._stopEvent.set()
 		
-		def SvcDoRun(self):
+		def SvcRun(self):
 			"""
 			Gets called from windows to start service
 			"""
@@ -4084,19 +4195,19 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			
 				if (sys.getwindowsversion()[0] == 5):
 					# NT5: XP
-					self.opsiclientd = OpsiclientdNT5()
+					opsiclientd = OpsiclientdNT5()
 				
 				elif (sys.getwindowsversion()[0] == 6):
 					# NT6: Vista / Windows7
 					if (sys.getwindowsversion()[1] >= 1):
 						# Windows7
-						self.opsiclientd = OpsiclientdNT61()
+						opsiclientd = OpsiclientdNT61()
 					else:
-						self.opsiclientd = OpsiclientdNT6()
+						opsiclientd = OpsiclientdNT6()
 				else:
 					raise Exception(u"Running windows version not supported")
 				
-				self.opsiclientd.start()
+				opsiclientd.start()
 				# Write to event log
 				self.ReportServiceStatus(win32service.SERVICE_RUNNING)
 				
@@ -4106,20 +4217,18 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 				self._stopEvent.wait()
 				
 				# Shutdown opsiclientd
-				self.opsiclientd.stop()
-				self.opsiclientd.join(2)
+				opsiclientd.stop()
+				opsiclientd.join(2)
 				
 				logger.notice(u"opsiclientd stopped")
 				for thread in threading.enumerate():
 					logger.notice(u"Running thread after stop: %s" % thread)
 				
-				self.opsiclientd = None
-				
 			except Exception, e:
 				logger.critical(u"opsiclientd crash")
 				logger.logException(e)
 			
-			# This call sometimes lets windows report a crash of opsiclientd (python 2.6.5)
+			# This call sometimes produces an error in eventlog (invalid handle)
 			#self.ReportServiceStatus(win32service.SERVICE_STOPPED)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
