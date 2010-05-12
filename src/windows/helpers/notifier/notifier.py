@@ -56,6 +56,11 @@ argv = [ unicode(arg, encoding) for arg in sys.argv ]
 logger = Logger()
 
 # Globals
+global logFile
+global host
+global port
+global skin
+
 logFile = u''
 host = u'127.0.0.1'
 port = 0
@@ -760,10 +765,10 @@ if (__name__ == "__main__"):
 			usage()
 			sys.exit(1)
 		
-		global logFile
-		global host
-		global port
-		global skin
+		#global logFile
+		#global host
+		#global port
+		#global skin
 		
 		for (opt, arg) in opts:
 			logger.info(u"Processing option %s:%s" % (opt, arg))
