@@ -105,7 +105,7 @@ setup(
 	windows = [ notifier, opsiclientd_rpc, action_processor_starter ],
 )
 
-#os.unlink(os.path.join("dist", "w9xpopen.exe"))
+os.unlink(os.path.join("dist", "w9xpopen.exe"))
 
 print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 print "!!!   On the target machine always replace exe AND lib   !!!"

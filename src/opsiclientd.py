@@ -32,12 +32,13 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '3.4.99.4'
+__version__ = '3.99.1.0'
 
 # Imports
 import os, sys, thread, threading, time, urllib, base64, socket, re, shutil, filecmp, codecs, inspect
 import copy as pycopy
 from OpenSSL import SSL
+from hashlib import md5
 
 if (os.name == 'posix'):
 	from signal import *
@@ -60,13 +61,16 @@ from twisted.internet import defer, threads, reactor
 from OPSI.web2 import resource, stream, server, http, responsecode, static, http_headers
 from OPSI.web2.channel.http import HTTPFactory
 from twisted.python.failure import Failure
+from twisted.conch.ssh import keys
 
 # OPSI imports
 from OPSI.Logger import *
 from OPSI import System
 from OPSI.Util import *
 from OPSI.Util.Message import *
+from OPSI.Util.Repository import *
 from OPSI.Util.File import IniFile
+from OPSI.Util.File.Opsi import PackageContentFile
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Backend.File import FileBackend
 #from OPSI.Backend.Offline import OfflineBackend
@@ -260,7 +264,7 @@ def importWmiAndPythoncom(importWmi = True, importPythoncom = True):
 					logger.debug(u"Importing pythoncom")
 					import pythoncom
 			except Exception, e:
-				logger.warning(u"Failed to import: %s, retrying in 2 seconds" % e)
+				logger.warning(u"Failed to import: %s, retrying in 2 seconds" % forceUnicode(e))
 				time.sleep(2)
 		importWmiAndPythoncomLock.release()
 
@@ -688,13 +692,13 @@ class EventGenerator(threading.Thread):
 			logger.info(u"Event generator '%s' now deactivated after %d event occurrences" % (self, self._eventsOccured))
 			
 		except Exception, e:
-			logger.error(u"Failure in event generator '%s': %s" % (self, e))
+			logger.error(u"Failure in event generator '%s': %s" % (self, forceUnicode(e)))
 			logger.logException(e)
 		
 		try:
 			self.cleanup()
 		except Exception, e:
-			logger.error(u"Failed to clean up: %s" % e)
+			logger.error(u"Failed to clean up: %s" % forceUnicode(e))
 		
 		logger.info(u"Event generator '%s' exiting " % self)
 	
@@ -745,7 +749,7 @@ class WMIEventGenerator(EventGenerator):
 					self._watcher = c.watch_for(raw_wql = self._wql, wmi_class = '')
 				except Exception, e:
 					try:
-						logger.warning(u"Failed to create wmi watcher: %s" % e)
+						logger.warning(u"Failed to create wmi watcher: %s" % forceUnicode(e))
 					except Exception:
 						logger.warning(u"Failed to create wmi watcher, failed to log exception")
 					time.sleep(1)
@@ -886,7 +890,8 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 	
 	def callback(self, eventType, *args):
 		logger.debug(u"UserLoginEventGenerator event callback: eventType '%s', args: %s" % (eventType, args))
-		if (eventType == 'Logon'):
+		#if (eventType == 'Logon'):
+		if (eventType == 'StartShell'):
 			logger.notice(u"User login detected: %s" % args[0])
 			self._eventsOccured += 1
 			self.fireEvent(self.createEvent(eventInfo = {'User': args[0]}))
@@ -895,112 +900,11 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 	
 	def createEvent(self, eventInfo={}):
 		return UserLoginEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
-	
-#class UserLoginEventGeneratorWMI(WMIEventGenerator):
-#	def __init__(self, eventConfig):
-#		WMIEventGenerator.__init__(self, eventConfig)
-#		# We do not use wql because then we need to poll (WITHIN)
-#		# This could lead to missed events
-#		self._wql = ''
-#	
-#	def initialize(self):
-#		WMIEventGenerator.initialize(self)
-#		if not (os.name == 'nt'):
-#			return
-#		
-#		eventcode = 528
-#		if (sys.getwindowsversion()[0] > 5):
-#			eventcode = 4624
-#		importWmiAndPythoncom()
-#		pythoncom.CoInitialize()
-#		logger.debug(u"Creating wmi object")
-#		c = wmi.WMI(privileges = ["Security"])
-#		logger.info(u"Watching for Win32_NTLogEvent, Logfile = Security, EventCode = %d" % eventcode)
-#		self._watcher = c.Win32_NTLogEvent.watch_for(notification_type = "Creation", Logfile = "Security", EventCode = eventcode)
-#	
-#	def createEvent(self, eventInfo={}):
-#		return UserLoginEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
-#	
-#	def getNextEvent(self):
-#		event = WMIEventGenerator.getNextEvent(self)
-#		if (sys.getwindowsversion()[0] <= 5):
-#			#event.eventInfo['User'] = event.eventInfo['InsertionStrings'][1] + u'\\' + event.eventInfo['InsertionStrings'][0]
-#			if (event.eventInfo['InsertionStrings'][4].strip().lower() == 'user32'):
-#				return event
-#		else:
-#			event.eventInfo['User'] = event.eventInfo['InsertionStrings'][6] + u'\\' + event.eventInfo['InsertionStrings'][5]
-#			if (event.eventInfo['InsertionStrings'][9].strip().lower() == 'user32'):
-#				return event
-#		#for attr in event.eventInfo.get('InsertionStrings', []):
-#		#	if (attr.strip() == 'User32'):
-#		#		logger.notice("User '%s' logged in" % event.eventInfo.get('User'))
-#		#		return event
-#		logger.debug(u"Not a user login: %s" % event.eventInfo.get('User'))
-#		return None
 
 class SystemShutdownEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
 		EventGenerator.__init__(self, eventConfig)
-	
-#	def handle(self, event):
-#		logger.notice(u"SystemShutdownEventGenerator.handle(): event %s" % event)
-#		#if event is win32con.CTRL_SHUTDOWN_EVENT:
-#		#	try:
-#		#		System.abortShutdown()
-#		#	except Exception, e:
-#		#		logger.logException(e)
-#		#	self.createEvent()
-#		#	return True
-#		return False
-#		
-#	def initialize(self):
-#		EventGenerator.initialize(self)
-#		if not (os.name == 'nt'):
-#			return
-#		#try:
-#		#	result = win32api.SetConsoleCtrlHandler(self.handle, 1)
-#		#	if (result == 0):
-#		#		raise Exception(u"Could not SetConsoleCtrlHandler: %r" % win32api.GetLastError())
-#		#except Exception, e:
-#		#	logger.logException(e)
-#		logger.notice(u'Registring ISensLogon')
-#		
-#		importWmiAndPythoncom(importWmi = False, importPythoncom = True)
-#		pythoncom.CoInitialize()
-#		
-#		sl = SensLogon()
-#		subscription_interface = pythoncom.WrapObject(sl)
-#		
-#		event_system = win32com.client.Dispatch(PROGID_EventSystem)
-#		
-#		event_subscription = win32com.client.Dispatch(PROGID_EventSubscription)
-#		event_subscription.EventClassID = SENSGUID_EVENTCLASS_LOGON
-#		event_subscription.PublisherID = SENSGUID_PUBLISHER
-#		event_subscription.SubscriptionName = 'opsiclientd subscription'
-#		event_subscription.SubscriberInterface = subscription_interface
-#		
-#		event_system.Store(PROGID_EventSubscription, event_subscription)
-#	
-#	def getNextEvent(self):
-#		pythoncom.PumpMessages()
-#		logevent(u'ISensLogon stopped')
-#	
-#	def cleanup(self):
-#		# Waiting some seconds before exit to avoid Win32 releasing exceptions
-#		waitTime = 10
-#		logger.info(u"Event generator '%s' cleaning up in %d seconds" % (self, waitTime))
-#		time.sleep(waitTime)
-#		
-#		importWmiAndPythoncom(importWmi = False, importPythoncom = True)
-#		pythoncom.CoUninitialize()
-#	
-#	def createEvent(self, eventInfo={}):
-#		#try:
-#		#	System.shutdown(0)
-#		#except Exception, e:
-#		#	logger.logException(e)
-#		return SystemShutdownEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
-	
+
 class CustomEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
 		EventGenerator.__init__(self, eventConfig)
@@ -1161,7 +1065,7 @@ class JsonRpc(object):
 		
 		except Exception, e:
 			logger.logException(e)
-			logger.error(u'Execution error: %s' % e)
+			logger.error(u'Execution error: %s' % forceUnicode(e))
 			self.exception = e
 			self.traceback = []
 			tb = sys.exc_info()[2]
@@ -1226,7 +1130,6 @@ class ControlPipe(threading.Thread):
 		self._stopped = False
 		
 	def stop(self):
-		#self.closePipe()
 		self._stopped = True
 	
 	def closePipe(self):
@@ -1306,7 +1209,7 @@ class PosixControlPipe(ControlPipe):
 						logger.error("Failed to write all bytes to pipe (%d/%d)" % (written, len(result)))
 				
 				except Exception, e:
-					logger.error(u"Pipe IO error: %s" % e)
+					logger.error(u"Pipe IO error: %s" % forceUnicode(e))
 				try:
 					os.close(self._pipe)
 				except:
@@ -1316,6 +1219,64 @@ class PosixControlPipe(ControlPipe):
 		logger.notice(u"ControlPipe exiting")
 		if os.path.exists(self._pipeName):
 			os.unlink(self._pipeName)
+		self._running = False
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                     NT CONTROL PIPE CONNECTION                                    -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class NTControlPipeConnection(threading.Thread):
+	def __init__(self, ntControlPipe, pipe, bufferSize):
+		logger.setLogFormat(u'[%l] [%D] [control pipe]   %M     (%F|%N)', object=self)
+		threading.Thread.__init__(self)
+		self._ntControlPipe = ntControlPipe
+		self._pipe = pipe
+		self._bufferSize = bufferSize
+		logger.debug(u"NTControlPipeConnection initiated")
+	
+	def closePipe(self):
+		if self._pipe:
+			try:
+				windll.kernel32.CloseHandle(self._pipe)
+			except:
+				pass
+	
+	def run(self):
+		self._running = True
+		try:
+			chBuf = create_string_buffer(self._bufferSize)
+			cbRead = c_ulong(0)
+			while self._running:
+				logger.debug2(u"Reading fom pipe")
+				fReadSuccess = windll.kernel32.ReadFile(self._pipe, chBuf, self._bufferSize, byref(cbRead), None)
+				if ((fReadSuccess == 1) or (cbRead.value != 0)):
+					logger.debug(u"Received rpc from pipe '%s'" % chBuf.value)
+					result =  "%s\0" % self._ntControlPipe.executeRpc(chBuf.value)
+					cbWritten = c_ulong(0)
+					logger.debug2(u"Writing to pipe")
+					fWriteSuccess = windll.kernel32.WriteFile(
+									self._pipe,
+									c_char_p(result),
+									len(result),
+									byref(cbWritten),
+									None )
+					logger.debug2(u"Number of bytes written: %d" % cbWritten.value)
+					if not fWriteSuccess:
+						logger.error(u"Could not reply to the client's request from the pipe")
+						break
+					if (len(result) != cbWritten.value):
+						logger.error(u"Failed to write all bytes to pipe (%d/%d)" % (cbWritten.value, len(result)))
+						break
+					break
+				else:
+					logger.error(u"Failed to read from pipe")
+					break
+			
+			windll.kernel32.FlushFileBuffers(self._pipe)
+			windll.kernel32.DisconnectNamedPipe(self._pipe)
+			windll.kernel32.CloseHandle(self._pipe)
+		except Exception, e:
+			logger.error(u"NTControlPipeConnection error: %s" % forceUnicode(e))
+		logger.debug(u"NTControlPipeConnection exiting")
 		self._running = False
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1330,67 +1291,115 @@ class NTControlPipe(ControlPipe):
 	
 	def createPipe(self):
 		logger.info(u"Creating pipe %s" % self._pipeName)
-		self._pipe = win32pipe.CreateNamedPipe(
-				self._pipeName,
-				win32pipe.PIPE_ACCESS_DUPLEX | win32file.FILE_FLAG_OVERLAPPED,
-				win32pipe.PIPE_TYPE_MESSAGE | win32pipe.PIPE_READMODE_MESSAGE | win32pipe.PIPE_WAIT,
-				win32pipe.PIPE_UNLIMITED_INSTANCES,
-				self._bufferSize,
-				self._bufferSize,
-				5000,
-				None)
+		PIPE_ACCESS_DUPLEX = 0x3
+		PIPE_TYPE_MESSAGE = 0x4
+		PIPE_READMODE_MESSAGE = 0x2
+		PIPE_WAIT = 0
+		PIPE_UNLIMITED_INSTANCES = 255
+		NMPWAIT_USE_DEFAULT_WAIT = 0
+		INVALID_HANDLE_VALUE = -1
+		self._pipe = windll.kernel32.CreateNamedPipeA(
+					self._pipeName,
+					PIPE_ACCESS_DUPLEX,
+					PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+					PIPE_UNLIMITED_INSTANCES,
+					self._bufferSize,
+					self._bufferSize,
+					NMPWAIT_USE_DEFAULT_WAIT,
+					None )
+		if (self._pipe == INVALID_HANDLE_VALUE):
+			raise Exception(u"Failed to create named pipe")
 		logger.debug(u"Pipe %s created" % self._pipeName)
-		
+	
+	#def createPipe(self):
+	#	logger.info(u"Creating pipe %s" % self._pipeName)
+	#	self._pipe = win32pipe.CreateNamedPipe(
+	#			self._pipeName,
+	#			win32pipe.PIPE_ACCESS_DUPLEX | win32file.FILE_FLAG_OVERLAPPED,
+	#			win32pipe.PIPE_TYPE_MESSAGE | win32pipe.PIPE_READMODE_MESSAGE | win32pipe.PIPE_WAIT,
+	#			win32pipe.PIPE_UNLIMITED_INSTANCES,
+	#			self._bufferSize,
+	#			self._bufferSize,
+	#			5000,
+	#			None)
+	#	logger.debug(u"Pipe %s created" % self._pipeName)
+	
 	def run(self):
+		ERROR_PIPE_CONNECTED = 535
 		self._running = True
 		try:
-			while not self._stopped:
+			while self._running:
 				self.createPipe()
-				connected = False
-				while not self._stopped:
-					logger.debug2(u"Connecting to named pipe %s" % self._pipeName)
-					overlapped = pywintypes.OVERLAPPED()
-					overlapped.hEvent = win32event.CreateEvent(None, 1, 0, None)
-					fConnected = win32pipe.ConnectNamedPipe(self._pipe, overlapped)
-					waitResult = win32event.WaitForSingleObject(overlapped.hEvent, 3000)
-					logger.debug2(u"Wait for pipe connection result: %s" % waitResult)
-					if (waitResult == win32event.WAIT_OBJECT_0):
-						connected = True
-						logger.debug(u"Connected to named pipe '%s'" % self._pipeName)
-						break
-					elif (waitResult == win32event.WAIT_TIMEOUT):
-						continue
-					else:
-						raise Exception(u"Failed to connect to pipe '%s': %s" (self._pipeName, waitResult))
-				if connected:
-					try:
-						logger.debug2(u"Reading fom pipe")
-						(errCode, readString) = win32file.ReadFile(self._pipe, self._bufferSize, None)
-						if (errCode != 0):
-							raise Exception(u"Failed to read from pipe: %s" % errCode)
-						readString = readString.split('\0')[0].strip()
-						logger.debug(u"Received rpc from pipe '%s'" % readString)
-						result = self.executeRpc(readString)
-						logger.debug(u"Writing rpc result '%s' to pipe" % result)
-						(errCode, nBytesWritten) = win32file.WriteFile(self._pipe, result + '\0', None)
-						win32file.FlushFileBuffers(self._pipe)
-						logger.debug2(u"Number of bytes written: %d" % nBytesWritten)
-						if (errCode != 0):
-							raise Exception(u"Failed to write to pipe: %s" % errCode)
-					except Exception, e:
-						logger.error(u"Failed to cummunicate through pipe: %s" % e)
-					win32pipe.DisconnectNamedPipe(self._pipe)
-				win32api.CloseHandle(self._pipe)
-				self._pipe = None
+				logger.debug(u"Connecting to named pipe %s" % self._pipeName)
+				# This call is blocking until a client connects
+				fConnected = windll.kernel32.ConnectNamedPipe(self._pipe, None)
+				if ((fConnected == 0) and (windll.kernel32.GetLastError() == ERROR_PIPE_CONNECTED)):
+					fConnected = 1
+				if (fConnected == 1):
+					logger.debug(u"Connected to named pipe %s" % self._pipeName)
+					logger.debug(u"Creating NTControlPipeConnection")
+					cpc = NTControlPipeConnection(self, self._pipe, self._bufferSize)
+					cpc.start()
+					logger.debug(u"NTControlPipeConnection thread started")
+				else:
+					logger.error(u"Failed to connect to pipe")
+					windll.kernel32.CloseHandle(self._pipe)
 		except Exception, e:
 			logger.logException(e)
 		logger.notice(u"ControlPipe exiting")
-		if self._pipe:
-			try:
-				win32api.CloseHandle(self._pipe)
-			except:
-				pass
 		self._running = False
+
+	#def run(self):
+	#	self._running = True
+	#	try:
+	#		while not self._stopped:
+	#			self.createPipe()
+	#			connected = False
+	#			while not self._stopped:
+	#				logger.debug2(u"Connecting to named pipe %s" % self._pipeName)
+	#				overlapped = pywintypes.OVERLAPPED()
+	#				#overlapped.hEvent = win32event.CreateEvent(None, 1, 0, None)
+	#				overlapped.hEvent = win32event.CreateEvent(None, 0, 0, None)
+	#				fConnected = win32pipe.ConnectNamedPipe(self._pipe, overlapped)
+	#				waitResult = win32event.WaitForSingleObject(overlapped.hEvent, 3000)
+	#				logger.debug2(u"Wait for pipe connection result: %s" % waitResult)
+	#				if (waitResult == win32event.WAIT_OBJECT_0):
+	#					connected = True
+	#					logger.debug(u"Connected to named pipe '%s'" % self._pipeName)
+	#					break
+	#				elif (waitResult == win32event.WAIT_TIMEOUT):
+	#					continue
+	#				else:
+	#					raise Exception(u"Failed to connect to pipe '%s': %s" (self._pipeName, waitResult))
+	#			if connected:
+	#				try:
+	#					logger.debug2(u"Reading fom pipe")
+	#					(errCode, readString) = win32file.ReadFile(self._pipe, self._bufferSize, None)
+	#					if (errCode != 0):
+	#						raise Exception(u"Failed to read from pipe: %s" % errCode)
+	#					readString = readString.split('\0')[0].strip()
+	#					logger.debug(u"Received rpc from pipe '%s'" % readString)
+	#					result = self.executeRpc(readString)
+	#					logger.debug(u"Writing rpc result '%s' to pipe" % result)
+	#					(errCode, nBytesWritten) = win32file.WriteFile(self._pipe, result + '\0', None)
+	#					win32file.FlushFileBuffers(self._pipe)
+	#					logger.debug2(u"Number of bytes written: %d" % nBytesWritten)
+	#					if (errCode != 0):
+	#						raise Exception(u"Failed to write to pipe: %s" % errCode)
+	#				except Exception, e:
+	#					logger.error(u"Failed to cummunicate through pipe: %s" % forceUnicode(e))
+	#				win32pipe.DisconnectNamedPipe(self._pipe)
+	#			win32api.CloseHandle(self._pipe)
+	#			self._pipe = None
+	#	except Exception, e:
+	#		logger.logException(e)
+	#	logger.notice(u"ControlPipe exiting")
+	#	if self._pipe:
+	#		try:
+	#			win32api.CloseHandle(self._pipe)
+	#		except:
+	#			pass
+	#	self._running = False
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                     CONTROL PIPE FACTORY                                          -
@@ -1402,7 +1411,6 @@ def ControlPipeFactory(opsiclientdRpcInterface):
 		return NTControlPipe(opsiclientdRpcInterface)
 	else:
 		raise NotImplemented(u"Unsupported operating system %s" % os.name)
-
 
 
 
@@ -1524,7 +1532,7 @@ class Worker:
 			self.opsiclientdRpcInterface._authenticate(user, password)
 			
 		except Exception, e:
-			raise OpsiclientdAuthenticationError(u"Forbidden: %s" % e)
+			raise OpsiclientdAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
 		return result
 		
 	def _getQuery(self, result):
@@ -1589,7 +1597,7 @@ class ControlServerJsonRpcWorker(Worker):
 				raise Exception(u"Got no rpcs")
 		
 		except Exception, e:
-			raise OpsiclientdBadRpcError(u"Failed to decode rpc: %s" % e)
+			raise OpsiclientdBadRpcError(u"Failed to decode rpc: %s" % forceUnicode(e))
 		
 		for rpc in forceList(rpcs):
 			self._rpcs.append(JsonRpc(self.opsiclientdRpcInterface, rpc))
@@ -1735,55 +1743,294 @@ class CacheService(threading.Thread):
 		logger.setLogFormat(u'[%l] [%D] [cache service]   %M     (%F|%N)', object=self)
 		self._opsiclientd = opsiclientd
 		self._storageDir = self._opsiclientd.getConfigValue('cache_service', 'storage_dir')
-		self._cacheProductsEnded = threading.Event()
+		self._tempDir = os.path.join(self._storageDir, 'tmp')
+		self._productCacheDir = os.path.join(self._storageDir, 'depot')
+		self._productCacheMaxSize = forceInt(self._opsiclientd.getConfigValue('cache_service', 'product_cache_max_size'))
+		
 		self._stopped = False
 		self._running = False
 		
-	def cacheProducts(self, productIds, waitForEnding=False):
-		#if not self._initiated:
-		#	raise Exception(u"Cannot cache products: not initiated")
-		#self._productIds = productIds
-		self._cacheProductsRequested = True
-		self._cacheProductsEnded.clear()
-		#self._repository.setMaxBandwidth(maxBandwidth)
-		if waitForEnding:
-			self._cacheProductsEnded = threading.Event()
-			self._cacheProductsEnded.wait()
-			#for productId in self._productIds:
-			#	if self._state['product'][productId]['sync_failed']:
-			#		return False
-			#return True
+		self._state = {
+			'product':  {},
+			'config':   {}
+		}
+		
+		self._configService = None
+		self._productIds = []
+		
+		self._cacheProductsRequested = False
+		self._cacheProductsRunning = False
+		self._cacheProductsEnded = threading.Event()
+		
+		self._currentProductSyncProgressObserver = None
+		self._overallProductSyncProgressObserver = None
+		self._initialized = False
 	
-	def run(self):
-		self._running = True
-		while not self._stopped:
-			time.sleep(1)
-		self._running = False
+	def initialize(self):
+		if self._initialized:
+			return
+		#self.readStateFile()
+		self._initialized = True
+		if not os.path.exists(self._storageDir):
+			logger.notice(u"Creating cache service storage dir '%s'" % self._storageDir)
+			os.mkdir(self._storageDir)
+		if not os.path.exists(self._tempDir):
+			logger.notice(u"Creating cache service temp dir '%s'" % self._tempDir)
+			os.mkdir(self._tempDir)
+		if not os.path.exists(self._productCacheDir):
+			logger.notice(u"Creating cache service product cache dir '%s'" % self._productCacheDir)
+			os.mkdir(self._productCacheDir)
+	
+	def setCurrentProductSyncProgressObserver(self, currentProductSyncProgressObserver):
+		self._currentProductSyncProgressObserver = currentProductSyncProgressObserver
+	
+	def setOverallProductSyncProgressObserver(self, overallProductSyncProgressObserver):
+		self._overallProductSyncProgressObserver = overallProductSyncProgressObserver
+	
+	def getProductCacheDir(self):
+		return self._productCacheDir
+		
+	def getProductSyncCompleted(self):
+		self.initialize()
+		if not self._state['product']:
+			logger.info(u"No products cached")
+			return False
+		productSyncCompleted = True
+		for (productId, state) in self._state['product'].items():
+			if state.get('sync_completed'):
+				logger.debug(u"Product '%s': sync completed" % productId)
+			else:
+				productSyncCompleted = False
+				logger.debug(u"Product '%s': sync not completed" % productId)
+		return productSyncCompleted
+		
+	def cacheProducts(self, configService, productIds, waitForEnding=False):
+		if self._cacheProductsRunning:
+			logger.info(u"Already caching products")
+		else:
+			self.initialize()
+			self._configService = configService
+			self._productIds = productIds
+			self._cacheProductsRequested = True
+			self._cacheProductsEnded.clear()
+			for productId in self._productIds:
+				if not self._state['product'].has_key(productId):
+					self._state['product'][productId] = {'sync_started': '', 'sync_completed': '', 'sync_failure': '' }
+		if waitForEnding:
+			self._cacheProductsEnded.wait()
+			for productId in self._state['product'].keys():
+				if self._state['product'][productId]['sync_failure']:
+					raise Exception(u"Failed to cache product '%s': %s" % (productId, self._state['product'][productId]['sync_failure']))
+	
+	def freeProductCacheSpace(self, neededSpace = 0, neededProducts = []):
+		try:
+			# neededSpace in byte
+			neededSpace    = forceInt(neededSpace)
+			neededProducts = forceProductIdList(neededProducts)
+			
+			maxFreeableSize = 0
+			productDirSizes = {}
+			for product in os.listdir(self._productCacheDir):
+				if not product in neededProducts:
+					productDirSizes[product] = System.getDirectorySize(os.path.join(self._productCacheDir, product))
+					maxFreeableSize += productDirSizes[product]
+			if (maxFreeableSize < neededSpace):
+				raise Exception(u"Needed space: %0.3f MB, maximum freeable space: %0.3f MB" \
+							% ( (float(neededSpace)/(1024*1024)), (float(maxFreeableSize)/(1024*1024)) ) )
+			freedSpace = 0
+			while (freedSpace < neededSpace):
+				deleteProduct = None
+				eldestTime = None
+				for (product, size) in productDirSizes.items():
+					packageContentFile = os.path.join(self._productCacheDir, product, u'%s.files' % product)
+					if not os.path.exists(packageContentFile):
+						logger.info(u"Package content file '%s' not found, deleting product cache to free disk space")
+						deleteProduct = product
+						break
+					mtime = os.path.getmtime(packageContentFile)
+					if not eldestTime:
+						eldestTime = mtime
+						deleteProduct = product
+						continue
+					if (mtime < eldestTime):
+						eldestTime = mtime
+						deleteProduct = product
+				if not deleteProduct:
+					raise Exception(u"Internal error")
+				deleteDir = os.path.join(self._productCacheDir, deleteProduct)
+				logger.notice(u"Deleting product cache directory '%s'" % deleteDir)
+				if not os.path.exists(deleteDir):
+					raise Exception(u"Directory '%s' not found" % deleteDir)
+				shutil.rmtree(deleteDir)
+				freedSpace += productDirSizes[deleteProduct]
+			logger.notice(u"%0.3f MB of product cache freed" % (float(freedSpace)/(1024*1024)))
+		except Exception, e:
+			raise Exception(u"Failed to free enough disk space for product cache: %s" % forceUnicode(e))
 		
 	def stop(self):
 		self._stopped = True
 		
-	def run_new(self):
+	def run(self):
 		self._running = True
-		while self._running:
+		while not self._stopped:
 			try:
 				if self._cacheProductsRequested:
 					self._cacheProductsRequested = False
+					self._cacheProductsRunning = True
 					
 					try:
 						logger.notice(u"Caching products: %s" % ', '.join(self._productIds))
-						#if not self._initiated:
-						#	raise Exception(u"Cannot cache products: not initiated")
+						self.initialize()
+						
+						if not self._configService:
+							raise Exception(u"Not connected to config service")
+						
+						modules = None
+						if self._configService.isOpsi35():
+							modules = self._configService.backend_info()['modules']
+						else:
+							modules = self._configService.getOpsiInformation_hash()['modules']
+						
+						if not modules.get('vpn'):
+							raise Exception(u"Cannot sync products: VPN module currently disabled")
+						
+						if not modules.get('customer'):
+							raise Exception(u"Cannot sync products: No customer in modules file")
+							
+						if not modules.get('valid'):
+							raise Exception(u"Cannot sync products: modules file invalid")
+						
+						if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
+							raise Exception(u"Cannot sync products: modules file expired")
+						
+						logger.info(u"Verifying modules file signature")
+						publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
+						data = u''
+						mks = modules.keys()
+						mks.sort()
+						for module in mks:
+							if module in ('valid', 'signature'):
+								continue
+							val = modules[module]
+							if (val == False): val = 'no'
+							if (val == True):  val = 'yes'
+							data += u'%s = %s\r\n' % (module.lower().strip(), val)
+						if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
+							raise Exception(u"Cannot sync products: modules file invalid")
+						logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
+						
+						logger.info(u"Synchronizing %d product(s):" % len(self._productIds))
+						for productId in self._productIds:
+							logger.info("   %s" % productId)
+						
+						overallProgressSubject = ProgressSubject(id = 'sync_products_overall', type = 'product_sync', end = len(self._productIds))
+						overallProgressSubject.setMessage( _(u'Synchronizing products') )
+						if self._overallProductSyncProgressObserver:
+							overallProgressSubject.attachObserver(self._overallProductSyncProgressObserver)
+						
+						productCacheDirSize = 0
+						if (self._productCacheMaxSize > 0):
+							productCacheDirSize = System.getDirectorySize(self._productCacheDir)
+						diskFreeSpace = System.getDiskSpaceUsage(self._productCacheDir)['available']
+						
+						errorsOccured = []
+						for productId in self._productIds:
+							logger.notice(u"Syncing files of product '%s'" % productId)
+							self._state['product'][productId]['sync_started']   = time.time()
+							self._state['product'][productId]['sync_completed'] = ''
+							self._state['product'][productId]['sync_failure']   = ''
+							
+							# TODO: choose depot / url
+							# self._opsiclientd.getConfigValue('depot_server', 'url')
+							depotUrl = u'webdavs://%s:4447/opsi-depot' % self._opsiclientd.getConfigValue('depot_server', 'depot_id')
+							repository = getRepository(
+									url          = depotUrl,
+									username     = self._opsiclientd.getConfigValue('global', 'host_id'),
+									password     = self._opsiclientd.getConfigValue('global', 'opsi_host_key')
+							)
+							
+							#self.writeStateFile()
+							try:
+								logger.info(u"Downloading package content file of product '%s' from depot '%s'" % (productId, depotUrl))
+								tempPackageContentFile = os.path.join(self._tempDir, u'%s.files' % productId)
+								repository.download(source = u'%s/%s.files' % (productId, productId), destination = tempPackageContentFile)
+								
+								packageContentFile = os.path.join(self._productCacheDir, productId, u'%s.files' % productId)
+								if os.path.exists(packageContentFile) and (md5sum(tempPackageContentFile) == md5sum(packageContentFile)):
+									logger.info(u"Package content file unchanged, assuming that product is up to date")
+									self._state['product'][productId]['sync_completed'] = time.time()
+									overallProgressSubject.addToState(1)
+									continue
+								
+								packageInfo = PackageContentFile(tempPackageContentFile).parse()
+								productSize = 0
+								fileCount = 0
+								for value in packageInfo.values():
+									if value.has_key('size'):
+										fileCount += 1
+										productSize += int(value['size'])
+								
+								logger.info(u"Product '%s' contains %d files with a total size of %0.3f MB" \
+									% ( productId, fileCount, (float(productSize)/(1024*1024)) ) )
+								
+								if (self._productCacheMaxSize > 0) and (productCacheDirSize + productSize > self._productCacheMaxSize):
+									logger.info(u"Product cache dir sizelimit of %0.3f MB exceeded. Current size: %0.3f MB, space needed for product '%s': %0.3f MB" \
+											% ( (float(self._productCacheMaxSize)/(1024*1024)), (float(productCacheDirSize)/(1024*1024)), \
+											    productId, (float(productSize)/(1024*1024)) ) )
+									self.freeProductCacheSpace(neededSpace = productSize, neededProducts = self._productIds)
+									productCacheDirSize = System.getDirectorySize(self._productCacheDir)
+								
+								if (diskFreeSpace < productSize + 500*1024*1024):
+									raise Exception(u"Only %0.3f MB free space available on disk, refusing to cache product files" \
+												% (float(diskFreeSpace)/(1024*1024)))
+								
+								productSynchronizer = DepotToLocalDirectorySychronizer(
+									sourceDepot          = repository,
+									destinationDirectory = self._productCacheDir,
+									productIds           = [ productId ],
+									maxBandwidth         = 0,
+									dynamicBandwidth     = False
+								)
+								productSynchronizer.synchronize(productProgressObserver = self._currentProductSyncProgressObserver)
+								self._state['product'][productId]['sync_completed'] = time.time()
+								logger.notice(u"Product '%s' synced" % productId)
+								productCacheDirSize += productSize
+								diskFreeSpace -= productSize
+							except Exception, e:
+								logger.error("Failed to sync product '%s': %s" % (productId, forceUnicode(e)))
+								errorsOccured.append( u'%s: %s' % (productId, forceUnicode(e)) )
+								self._state['product'][productId]['sync_failure'] = forceUnicode(e)
+							#self.writeStateFile()
+							overallProgressSubject.addToState(1)
+						
+						if self._overallProductSyncProgressObserver:
+							overallProgressSubject.detachObserver(self._overallProductSyncProgressObserver)
+						
+						#for productId in self._productIds:
+						#	if self._state['product'][productId]['sync_failed']:
+						#		raise Exception(self._state['product'][productId]['sync_failed'])
+						
+						if errorsOccured:
+							logger.error(u"Errors occured while caching products %s: %s" % (', '.join(self._productIds), ', '.join(errorsOccured)))
+						else:
+							logger.notice(u"All products cached: %s" % ', '.join(self._productIds))
+						for eventGenerator in self.getEventGenerators(generatorClass = ProductSyncCompletedEventGenerator):
+							eventGenerator.fireEvent()
+						
 					except Exception, e:
 						logger.logException(e)
-						logger.error(u"Failed to cache product: %s" % e)
-					#self.writeStateFile()
-					self._cacheProductsEnded.set()
+						logger.error(u"Failed to cache products: %s" % forceUnicode(e))
 					
-				time.sleep(3)
+					#self.writeStateFile()
+					self._cacheProductsRunning = False
+					self._cacheProductsEnded.set()
+			
 			except Exception, e:
 				logger.logException(e)
-	
+			time.sleep(3)
+			
+		self._running = False
+		
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                              CACHED CONFIG SERVICE RESOURCE JSON RPC                              -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1961,8 +2208,8 @@ class ServiceConnectionThread(KillableThread):
 					self.setStatusMessage(u"Connected to config server '%s'" % self._configServiceUrl)
 					logger.notice(u"Connected to config server '%s'" % self._configServiceUrl)
 				except Exception, e:
-					self.setStatusMessage("Failed to connect to config server '%s': %s" % (self._configServiceUrl, e))
-					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, e))
+					self.setStatusMessage("Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
+					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
 					fqdn = System.getFQDN().lower()
 					if (self._username != fqdn) and (fqdn.count('.') >= 2):
 						logger.notice(u"Connect failed with username '%s', got fqdn '%s' from os, trying fqdn" \
@@ -1989,11 +2236,6 @@ class ServiceConnectionThread(KillableThread):
 				break
 			self.terminate()
 			time.sleep(0.5)
-		#time.sleep(2)
-		#logger.debug(u"Running: %s, alive: %s" % (self.running, self.isAlive()))
-		#if self.running and self.isAlive():
-		#	logger.debug(u"Terminating thread")
-		#	self.terminate()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                      EVENT PROCESSING THREAD                                      -
@@ -2037,7 +2279,8 @@ class EventProcessingThread(KillableThread):
 		self._opsiclientdInfoSubject.setMessage("opsiclientd %s" % __version__)
 		self._actionProcessorInfoSubject.setMessage("")
 		
-		self.isLoginEvent = isinstance(self.event, UserLoginEvent)
+		#self.isLoginEvent = isinstance(self.event, UserLoginEvent)
+		self.isLoginEvent = bool(self.event.eventConfig.actionType == 'login')
 		if self.isLoginEvent:
 			logger.info(u"Event is user login event")
 		
@@ -2055,6 +2298,14 @@ class EventProcessingThread(KillableThread):
 			sessionId = None
 			if self.isLoginEvent:
 				logger.info(u"Using session id of user '%s'" % self.event.eventInfo["User"])
+				#timeout = 30
+				#while True:
+				#	if (win32serviceutil.QueryServiceStatus("TermService")[1] == 4):
+				#		break
+				#	logger.debug(u"TermService not running, waiting...")
+				#	if (timeout <= 0):
+				#		raise Exception(u"Timed out while waiting for TermService")
+				#	timeout -= 1
 				userSessionsIds = System.getUserSessionIds(self.event.eventInfo["User"])
 				if userSessionsIds:
 					sessionId = userSessionsIds[0]
@@ -2088,7 +2339,7 @@ class EventProcessingThread(KillableThread):
 			self._notificationServer.start()
 			logger.notice(u"Notification server started")
 		except Exception, e:
-			logger.error(u"Failed to start notification server: %s" % e)
+			logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
 			raise
 		
 	def connectConfigServer(self):
@@ -2171,7 +2422,7 @@ class EventProcessingThread(KillableThread):
 			try:
 				self._configService.exit()
 			except Exception, e:
-				logger.error(u"Failed to disconnect config service: %s" % e)
+				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(e))
 		self._configService = None
 		self._configServiceException = None
 	
@@ -2204,20 +2455,20 @@ class EventProcessingThread(KillableThread):
 					self.opsiclientd.setConfigValue(section = parts[1], option = parts[2], value = value)
 					
 				except Exception, e:
-					logger.error(u"Failed to process general config key '%s:%s': %s" % (key, value, e))
+					logger.error(u"Failed to process general config key '%s:%s': %s" % (key, value, forceUnicode(e)))
 			
 			logger.notice(u"Got config from service")
 			
 			self.setStatusMessage(_(u"Got config from service"))
 			logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.opsiclientd.getConfig()))
 		#except CanceledByUserError, e:
-		#	logger.error("Failed to get config from service: %s" % e)
+		#	logger.error("Failed to get config from service: %s" % forceUnicode(e))
 		#	raise
 		#except Exception, e:
-		#	logger.error("Failed to get config from service: %s" % e)
+		#	logger.error("Failed to get config from service: %s" % forceUnicode(e))
 		#	logger.logException(e)
 		except Exception, e:
-			logger.error(u"Failed to get config from service: %s" % e)
+			logger.error(u"Failed to get config from service: %s" % forceUnicode(e))
 			raise
 		
 	def writeLogToService(self):
@@ -2295,10 +2546,10 @@ class EventProcessingThread(KillableThread):
 				self.closeProcessWindows(self._notifierApplicationPid[notifierType])
 			except:
 				pass
-			time.sleep(3)
+			time.sleep(2)
 			System.terminateProcess(processId = self._notifierApplicationPid[notifierType])
 		except Exception, e:
-			logger.warning(u"Failed to stop notifier application: %s" % e)
+			logger.warning(u"Failed to stop notifier application: %s" % forceUnicode(e))
 	
 	def closeProcessWindows(self, processId):
 		command = None
@@ -2306,7 +2557,7 @@ class EventProcessingThread(KillableThread):
 			command = '%s "exit(); System.closeProcessWindows(processId = %s)"' \
 					% (self.opsiclientd.getConfigValue('opsiclientd_rpc', 'command'), processId)
 		except Exception, e:
-			raise Exception(u"opsiclientd_rpc command not defined: %s" % e)
+			raise Exception(u"opsiclientd_rpc command not defined: %s" % forceUnicode(e))
 		
 		self.runCommandInSession(command = cmd, waitForProcessEnding = False)
 		
@@ -2322,7 +2573,7 @@ class EventProcessingThread(KillableThread):
 			logger.info(u"Action processor name '%s', version '%s'" % (name, version))
 			self._actionProcessorInfoSubject.setMessage("%s %s" % (name.encode('utf-8'), version.encode('utf-8')))
 		except Exception, e:
-			logger.error(u"Failed to set action processor info: %s" % e)
+			logger.error(u"Failed to set action processor info: %s" % forceUnicode(e))
 	
 	def getDepotserverCredentials(self):
 		self.connectConfigServer()
@@ -2423,7 +2674,7 @@ class EventProcessingThread(KillableThread):
 			self.umountDepotShare()
 			
 		except Exception, e:
-			logger.error(u"Failed to update action processor: %s" % e)
+			logger.error(u"Failed to update action processor: %s" % forceUnicode(e))
 		
 		if impersonation:
 			try:
@@ -2468,8 +2719,8 @@ class EventProcessingThread(KillableThread):
 			
 		except Exception, e:
 			logger.logException(e)
-			logger.error(u"Failed to process login actions: %s" % e)
-			self.setStatusMessage( _(u"Failed to process login actions: %s") % e )
+			logger.error(u"Failed to process login actions: %s" % forceUnicode(e))
+			self.setStatusMessage( _(u"Failed to process login actions: %s") % forceUnicode(e) )
 		
 		if impersonation:
 			try:
@@ -2485,7 +2736,7 @@ class EventProcessingThread(KillableThread):
 			try:
 				bootmode = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\general", "bootmode")
 			except Exception, e:
-				logger.warning(u"Failed to get bootmode from registry: %s" % e)
+				logger.warning(u"Failed to get bootmode from registry: %s" % forceUnicode(e))
 			
 			self.connectConfigServer()
 			productStates = []
@@ -2528,41 +2779,49 @@ class EventProcessingThread(KillableThread):
 				if self.event.eventConfig.cacheProducts:
 					logger.notice(u"Caching products: %s" % productIds)
 					self.setStatusMessage( _(u"Caching products") )
+					self.opsiclientd._cacheService.setCurrentProductSyncProgressObserver(self._currentProgressSubjectProxy)
+					self.opsiclientd._cacheService.setOverallProductSyncProgressObserver(self._overallProgressSubjectProxy)
+					self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
 					try:
-						self._cacheService.cacheProducts(productIds, waitForEnding = True)
+						self.opsiclientd._cacheService.cacheProducts(
+							self._configService,
+							productIds,
+							waitForEnding = self.event.eventConfig.requiresCachedProducts)
+						self.setStatusMessage( _(u"Products cached") )
 					finally:
-						#self._detailSubjectProxy.setMessage(u"")
-						#self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
-						pass
-					
-				#if self.event.eventConfig.cacheProducts:
-				#	logger.notice(u"Caching products: %s (max bandwidth: %d bit/s)" % (productIds, self.event.eventConfig.cacheMaxBandwidth))
-				#	self._cacheService.init()
-				#	if self.event.eventConfig.cacheMaxBandwidth:
-				#		self.setStatusMessage( _(u"Caching products (%d kbit/s)") % (self.event.eventConfig.cacheMaxBandwidth/1000) )
-				#	else:
-				#		self.setStatusMessage( _(u"Caching products") )
-				#	self._cacheService.setCurrentProductProgressObserver(self._currentProgressSubjectProxy)
-				#	self._cacheService.setOverallProductProgressObserver(self._overallProgressSubjectProxy)
-				#	self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
-				#	
-				#	try:
-				#		if not self._cacheService.cacheProducts(productIds, maxBandwidth=self.event.eventConfig.cacheMaxBandwidth, waitForEnding=True):
-				#			raise Exception(u"Failed to cache products")
-				#	finally:
-				#		self._detailSubjectProxy.setMessage(u"")
-				#		self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
-				#	
-				#	self.setStatusMessage( _(u"Products cached") )
-				#	self._currentProgressSubjectProxy.setState(0)
-				#	self._overallProgressSubjectProxy.setState(0)
+						self._detailSubjectProxy.setMessage(u"")
+						self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
+						self._currentProgressSubjectProxy.reset()
+						self._overallProgressSubjectProxy.reset()
 				
-				self.runActions()
+				savedDepotUrl = None
+				savedDepotDrive = None
+				if self.event.eventConfig.requiresCachedProducts:
+					# Event needs cached products => initialize cache service
+					if self.opsiclientd._cacheService.getProductSyncCompleted():
+						logger.notice(u"Event '%s' requires cached products and product sync is done" % self.event.eventConfig.getName())
+						savedDepotUrl = self.opsiclientd.getConfigValue('depot_server', 'url')
+						savedDepotDrive = self.opsiclientd.getConfigValue('depot_server', 'drive')
+						cacheDepotDir = self.opsiclientd._cacheService.getProductCacheDir().replace('\\', '/').replace('//', '/')
+						cacheDepotDrive = cacheDepotDir.split('/')[0]
+						cacheDepotUrl = 'smb://localhost/noshare/' + ('/'.join(cacheDepotDir.split('/')[1:]))
+						self.opsiclientd.setConfigValue('depot_server', 'url', cacheDepotUrl)
+						self.opsiclientd.setConfigValue('depot_server', 'drive', cacheDepotDrive)
+					else:
+						raise Exception(u"Event '%s' requires cached products but product sync is not done, exiting" % self.event.eventConfig.getName())
+				
+				try:
+					self.runActions()
+				finally:
+					if savedDepotUrl:
+						self.opsiclientd.setConfigValue('depot_server', 'url', savedDepotUrl)
+					if savedDepotDrive:
+						self.opsiclientd.setConfigValue('depot_server', 'drive', savedDepotDrive)
 				
 		except Exception, e:
 			logger.logException(e)
-			logger.error(u"Failed to process product action requests: %s" % e)
-			self.setStatusMessage( _(u"Failed to process product action requests: %s") % e )
+			logger.error(u"Failed to process product action requests: %s" % forceUnicode(e))
+			self.setStatusMessage( _(u"Failed to process product action requests: %s") % forceUnicode(e) )
 		
 		time.sleep(3)
 	
@@ -2599,14 +2858,6 @@ class EventProcessingThread(KillableThread):
 		
 		
 		depotServerUsername = self.opsiclientd.getConfigValue('depot_server', 'username')
-		runAsUser = self.opsiclientd.getConfigValue('action_processor', 'run_as_user')
-		if (runAsUser.lower() == 'system'):
-			runAsUser = ''
-		runAsPassword = ''
-		if (runAsUser.find('\\') != -1):
-			logger.warning(u"Ignoring domain part of username to run as '%s'" % runAsUser)
-			runAsUser = runAsUser.split('\\', -1)
-		
 		encryptedDepotServerPassword = self._configService.getPcpatchPassword(self.opsiclientd.getConfigValue('global', 'host_id'))
 		depotServerPassword = blowfishDecrypt(self.opsiclientd.getConfigValue('global', 'opsi_host_key'), encryptedDepotServerPassword)
 		logger.addConfidentialString(depotServerPassword)
@@ -2616,74 +2867,57 @@ class EventProcessingThread(KillableThread):
 			self.updateActionProcessor()
 		
 		# Run action processor
-		localUserCreated = False
-		try:
-			if runAsUser:
-				logger.notice(u"Creating local user '%s'" % runAsUser)
-				
-				runAsPassword = u'$!?' + unicode(randomString(16)) + u'§/%'
-				logger.addConfidentialString(runAsPassword)
-				
-				if System.existsUser(username = runAsUser):
-					System.deleteUser(username = runAsUser)
-				System.createUser(username = runAsUser, password = runAsPassword, groups = [ System.getAdminGroupName() ])
-				localUserCreated = True
-			
-			actionProcessorCommand = self.opsiclientd.fillPlaceholders(self.event.getActionProcessorCommand())
-			actionProcessorCommand += additionalParams
-			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
-			command = u'%system.program_files_dir%\\opsi.org\\preloginloader\\action_processor_starter.exe ' \
-				+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
-				+ u'"%global.log_file%" "%global.log_level%" ' \
-				+ u'"%depot_server.url%" "%depot_server.drive%" ' \
-				+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
-				+ u'"' + unicode(self.getSessionId()) + u'" "' + desktop + '" ' \
-				+ u'"' + actionProcessorCommand + u'" ' + unicode(self.event.eventConfig.actionProcessorTimeout) + ' ' \
-				+ u'"' + runAsUser + u'" "' + runAsPassword + u'"'
-			command = self.opsiclientd.fillPlaceholders(command)
-			
-			if self.event.eventConfig.preActionProcessorCommand:
-				impersonation = None
-				try:
-					if runAsUser:
-						impersonation = System.Impersonate(username = runAsUser, password = runAsPassword)
-						impersonation.start(logonType = 'INTERACTIVE', newDesktop = True)
-						
-					logger.notice(u"Starting pre action processor command '%s' in session '%s' on desktop '%s'" \
-						% (self.event.eventConfig.preActionProcessorCommand, self.getSessionId(), desktop))
-					if impersonation:
-						impersonation.runCommand(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
-					else:
-						self.runCommandInSession(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
-					time.sleep(10)
-				finally:
-					if impersonation:
-						impersonation.end()
+		actionProcessorCommand = self.opsiclientd.fillPlaceholders(self.event.getActionProcessorCommand())
+		actionProcessorCommand += additionalParams
+		actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
+		command = u'%system.program_files_dir%\\opsi.org\\preloginloader\\action_processor_starter.exe ' \
+			+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
+			+ u'"%global.log_file%" "%global.log_level%" ' \
+			+ u'"%depot_server.url%" "%depot_server.drive%" ' \
+			+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
+			+ u'"' + unicode(self.getSessionId()) + u'" "' + desktop + '" ' \
+			+ u'"' + actionProcessorCommand + u'" ' + unicode(self.event.eventConfig.actionProcessorTimeout) + ' ' \
+			+ u'"' + self.opsiclientd._actionProcessorUserName + u'" "' + self.opsiclientd._actionProcessorUserPassword + u'"'
+		command = self.opsiclientd.fillPlaceholders(command)
+		
+		if self.event.eventConfig.preActionProcessorCommand:
+			impersonation = None
+			try:
+				if self.opsiclientd._actionProcessorUserName:
+					impersonation = System.Impersonate(username = self.opsiclientd._actionProcessorUserName, password = self.opsiclientd._actionProcessorUserPassword)
+					impersonation.start(logonType = 'INTERACTIVE', newDesktop = True)
 					
-			logger.notice(u"Starting action processor in session '%s' on desktop '%s'" % (self.getSessionId(), desktop))
-			self.runCommandInSession(command = command, desktop = desktop, waitForProcessEnding = True)
-			
-			if self.event.eventConfig.postActionProcessorCommand:
-				impersonation = None
-				try:
-					if runAsUser:
-						impersonation = System.Impersonate(username = runAsUser, password = runAsPassword)
-						impersonation.start(logonType = 'INTERACTIVE', newDesktop = True)
-						
-					logger.notice(u"Starting post action processor command '%s' in session '%s' on desktop '%s'" \
-						% (self.event.eventConfig.postActionProcessorCommand, self.getSessionId(), desktop))
-					if impersonation:
-						impersonation.runCommand(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
-					else:
-						self.runCommandInSession(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
-					time.sleep(10)
-				finally:
-					if impersonation:
-						impersonation.end()
-		finally:
-			if localUserCreated:
-				logger.notice(u"Deleting local user '%s'" % runAsUser)
-				System.deleteUser(username = runAsUser)
+				logger.notice(u"Starting pre action processor command '%s' in session '%s' on desktop '%s'" \
+					% (self.event.eventConfig.preActionProcessorCommand, self.getSessionId(), desktop))
+				if impersonation:
+					impersonation.runCommand(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
+				else:
+					self.runCommandInSession(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
+				time.sleep(10)
+			finally:
+				if impersonation:
+					impersonation.end()
+				
+		logger.notice(u"Starting action processor in session '%s' on desktop '%s'" % (self.getSessionId(), desktop))
+		self.runCommandInSession(command = command, desktop = desktop, waitForProcessEnding = True)
+		
+		if self.event.eventConfig.postActionProcessorCommand:
+			impersonation = None
+			try:
+				if self.opsiclientd._actionProcessorUserName:
+					impersonation = System.Impersonate(username = self.opsiclientd._actionProcessorUserName, password = self.opsiclientd._actionProcessorUserPassword)
+					impersonation.start(logonType = 'INTERACTIVE', newDesktop = True)
+					
+				logger.notice(u"Starting post action processor command '%s' in session '%s' on desktop '%s'" \
+					% (self.event.eventConfig.postActionProcessorCommand, self.getSessionId(), desktop))
+				if impersonation:
+					impersonation.runCommand(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
+				else:
+					self.runCommandInSession(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
+				time.sleep(10)
+			finally:
+				if impersonation:
+					impersonation.end()
 		
 		self.setStatusMessage( _(u"Actions completed") )
 		
@@ -2708,7 +2942,7 @@ class EventProcessingThread(KillableThread):
 			for (k, v) in os.environ.items():
 				logger.debug(u"   %s=%s" % (k,v))
 		except Exception, e:
-			logger.error(u"Failed to set environment: %s" % e)
+			logger.error(u"Failed to set environment: %s" % forceUnicode(e))
 	
 	def run(self):
 		try:
@@ -2726,24 +2960,8 @@ class EventProcessingThread(KillableThread):
 				self.startNotificationServer()
 				self.setActionProcessorInfo()
 				
-				if self.event.eventConfig.requiresCachedProducts:
-					# Event needs cached products => initialize cache service
-					self.opsiclientd._cacheService.init()
-					if self.opsiclientd._cacheService.getProductSyncCompleted():
-						logger.notice(u"Event '%s' requires cached products and product sync is done" % self.event)
-						cacheDepotDir = (self.opsiclientd.getConfigValue('cache_service', 'storage_dir') + '\\install').replace('\\', '/').replace('//', '/')
-						cacheDepotDrive = cacheDepotDir.split('/')[0]
-						cacheDepotUrl = 'smb://localhost/noshare/' + ('/'.join(cacheDepotDir.split('/')[1:]))
-						self.opsiclientd.setConfigValue('depot_server', 'url', cacheDepotUrl)
-						self.opsiclientd.setConfigValue('depot_server', 'drive', cacheDepotDrive)
-					else:
-						logger.notice(u"Event '%s' requires cached products but product sync is not done, exiting" % self.event)
-						self.running = False
-						return
-				
 				if self.event.eventConfig.useCachedConfig:
 					# Event needs cached config => initialize cache service
-					self.opsiclientd._cacheService.init()
 					if self.opsiclientd._cacheService.getConfigSyncCompleted():
 						logger.notice(u"Event '%s' requires cached config and config sync is done" % self.event)
 						self.opsiclientd._cacheService.workWithLocalConfig()
@@ -2818,13 +3036,7 @@ class EventProcessingThread(KillableThread):
 					self.processProductActionRequests()
 			
 			finally:
-				self.setStatusMessage(u"")
 				self._eventSubject.setMessage(u"")
-				if self.event.eventConfig.processShutdownRequests:
-					try:
-						self.opsiclientd.processShutdownRequests()
-					except Exception, e:
-						logger.logException(e)
 				
 				if self.event.eventConfig.writeLogToService:
 					try:
@@ -2838,16 +3050,34 @@ class EventProcessingThread(KillableThread):
 				except Exception, e:
 					logger.logException(e)
 				
+				if self.event.eventConfig.processShutdownRequests:
+					try:
+						self.opsiclientd.processShutdownRequests()
+					except Exception, e:
+						logger.logException(e)
+				
+				if self.opsiclientd._shutdownRequested:
+					self.setStatusMessage(_("Shutting down machine"))
+				elif self.opsiclientd._rebootRequested:
+					self.setStatusMessage(_("Rebooting machine"))
+				else:
+					self.setStatusMessage(_("Unblocking login"))
+				
 				try:
 					self.stopNotifierApplication(notifierType = 'action')
 				except Exception, e:
 					logger.logException(e)
 				
-				if (not self.opsiclientd._rebootRequested and not self.opsiclientd._shutdownRequested) \
-				    or (sys.getwindowsversion()[0] < 6):
-					# Windows NT < 6 can't shutdown while pgina.dll is blocking login!
-					# On other systems we keep blocking until shutdown is done
+				#if (not self.opsiclientd._rebootRequested and not self.opsiclientd._shutdownRequested) \
+				#    or (sys.getwindowsversion()[0] < 6):
+				#	# Windows NT < 6 can't shutdown while opsigina.dll is blocking login!
+				#	# On other systems we keep blocking
+				#	self.opsiclientd.setBlockLogin(False)
+				if not self.opsiclientd._rebootRequested and not self.opsiclientd._shutdownRequested:
 					self.opsiclientd.setBlockLogin(False)
+				
+				self.setStatusMessage(u"")
+				
 				if self.event.eventConfig.useCachedConfig:
 					# Set config service url back to previous url
 					logger.notice(u"Setting config service url back to '%s'" % configServiceUrl)
@@ -2865,8 +3095,9 @@ class EventProcessingThread(KillableThread):
 					except Exception, e:
 						logger.logException(e)
 		except Exception, e:
-			logger.error(u"Failed to process event %s: %s" % (self.event, e))
+			logger.error(u"Failed to process event %s: %s" % (self.event, forceUnicode(e)))
 			logger.logException(e)
+			self.opsiclientd.setBlockLogin(False)
 		
 		self.running = False
 		logger.notice(u"============= EventProcessingThread for event '%s' ended =============" % self.event)
@@ -2951,6 +3182,7 @@ class OpsiclientdRpcPipeInterface(object):
 	
 	def isShutdownRequested(self):
 		return self.opsiclientd._shutdownRequested
+	
 	
 class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 	def __init__(self, opsiclientd):
@@ -3078,6 +3310,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._currentActiveDesktopName = {}
 		self._eventGenerators = {}
 		
+		self._actionProcessorUserName = u''
+		self._actionProcessorUserPassword = u''
+		
 		self._statusApplicationProcess = None
 		self._blockLoginNotifierPid = None
 		
@@ -3086,56 +3321,57 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		self._config = {
 			'system': {
-				'program_files_dir':        '',
+				'program_files_dir':        u'',
 			},
 			'global': {
-				'config_file':              'opsiclientd.conf',
-				'log_file':                 'opsiclientd.log',
+				'config_file':              u'opsiclientd.conf',
+				'log_file':                 u'opsiclientd.log',
 				'log_level':                LOG_NOTICE,
 				'host_id':                  System.getFQDN().lower(),
-				'opsi_host_key':            '',
-				'wait_before_reboot':       3,
-				'wait_before_shutdown':     3,
+				'opsi_host_key':            u'',
 				'wait_for_gui_timeout':     120,
-				'wait_for_gui_application': '',
-				'block_login_notifier':     '',
+				'wait_for_gui_application': u'',
+				'block_login_notifier':     u'',
 			},
 			'config_service': {
-				'server_id':                '',
-				'url':                      '',
+				'server_id':                u'',
+				'url':                      u'',
 				'connection_timeout':       10,
 				'user_cancellable_after':   0,
 			},
 			'depot_server': {
-				'depot_id':                 '',
-				'url':                      '',
-				'drive':                    '',
-				'username':                 'pcpatch',
+				'depot_id':                 u'',
+				'url':                      u'',
+				'drive':                    u'',
+				'username':                 u'pcpatch',
 			},
 			'cache_service': {
-				'storage_dir':              'cache_service',
-				'backend_manager_config':   '',
+				'storage_dir':              u'c:\\tmp\\cache_service',
+				'product_cache_max_size':   6000000000,
+				'backend_manager_config':   u'',
 			},
 			'control_server': {
 				'interface':                '0.0.0.0', # TODO
 				'port':                     4441,
-				'ssl_server_key_file':      'opsiclientd.pem',
-				'ssl_server_cert_file':     'opsiclientd.pem',
-				'static_dir':               'static_html',
+				'ssl_server_key_file':      u'opsiclientd.pem',
+				'ssl_server_cert_file':     u'opsiclientd.pem',
+				'static_dir':               u'static_html',
 			},
 			'notification_server': {
-				'interface':                '127.0.0.1',
+				'interface':                u'127.0.0.1',
 				'start_port':               44000,
 			},
 			'opsiclientd_notifier': {
-				'command':                  '',
+				'command':                  u'',
 			},
 			'action_processor': {
-				'local_dir':                '',
-				'remote_dir':               '',
-				'filename':                 '',
-				'command':                  '',
-				'run_as_user':              'SYSTEM',
+				'local_dir':                u'',
+				'remote_dir':               u'',
+				'filename':                 u'',
+				'command':                  u'',
+				'run_as_user':              u'SYSTEM',
+				'create_user':              True,
+				'delete_user':              True,
 			}
 		}
 		
@@ -3165,13 +3401,13 @@ class Opsiclientd(EventListener, threading.Thread):
 							logger.info(u"Retrying to run command in session 0")
 							sessionId = 0
 						else:
-							logger.error(u"Failed to start block login notifier app: %s" % e)
+							logger.error(u"Failed to start block login notifier app: %s" % forceUnicode(e))
 		elif (self._blockLoginNotifierPid):
 			try:
 				logger.info(u"Terminating block login notifier app (pid %s)" % self._blockLoginNotifierPid)
 				System.terminateProcess(processId = self._blockLoginNotifierPid)
 			except Exception, e:
-				logger.warning(u"Failed to terminate block login notifier app: %s" % e)
+				logger.warning(u"Failed to terminate block login notifier app: %s" % forceUnicode(e))
 			self._blockLoginNotifierPid = None
 		
 	def isRunning(self):
@@ -3224,7 +3460,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			return
 		
 		if option in ('log_level', 'port', 'wait_for_gui_timeout'):
-			value = int(value)
+			value = forceInt(value)
+		
+		if option in ('create_user', 'delete_user'):
+			value = forceBool(value)
 		
 		if not self._config.has_key(section):
 			self._config[section] = {}
@@ -3260,25 +3499,31 @@ class Opsiclientd(EventListener, threading.Thread):
 			
 			# Read log settings early
 			if config.has_section('global'):
-				if config.has_option('global', 'log_level'):
-					self.setConfigValue('global', 'log_level', config.get('global', 'log_level'))
-				if config.has_option('global', 'log_file'):
-					logFile = config.get('global', 'log_file')
-					for i in (2, 1, 0):
-						slf = None
-						dlf = None
-						try:
-							slf = logFile + '.' + unicode(i-1)
-							if (i <= 0):
-								slf = logFile
-							dlf = logFile + '.' + unicode(i)
-							if os.path.exists(slf):
-								if os.path.exists(dlf):
-									os.unlink(dlf)
-								os.rename(slf, dlf)
-						except Exception, e:
-							logger.error(u"Failed to rename %s to %s: %s" % (slf, dlf, e) )
-					self.setConfigValue('global', 'log_file', logFile)
+				debug = False
+				try:
+					debug = bool(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Services\\opsiclientd", "Debug"))
+				except:
+					pass
+				if not debug:
+					if config.has_option('global', 'log_level'):
+						self.setConfigValue('global', 'log_level', config.get('global', 'log_level'))
+					if config.has_option('global', 'log_file'):
+						logFile = config.get('global', 'log_file')
+						for i in (2, 1, 0):
+							slf = None
+							dlf = None
+							try:
+								slf = logFile + '.' + unicode(i-1)
+								if (i <= 0):
+									slf = logFile
+								dlf = logFile + '.' + unicode(i)
+								if os.path.exists(slf):
+									if os.path.exists(dlf):
+										os.unlink(dlf)
+									os.rename(slf, dlf)
+							except Exception, e:
+								logger.error(u"Failed to rename %s to %s: %s" % (slf, dlf, forceUnicode(e)) )
+						self.setConfigValue('global', 'log_file', logFile)
 			
 			# Process all sections
 			for section in config.sections():
@@ -3290,7 +3535,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				
 		except Exception, e:
 			# An error occured while trying to read the config file
-			logger.error(u"Failed to read config file '%s': %s" % (self.getConfigValue('global', 'config_file'), e))
+			logger.error(u"Failed to read config file '%s': %s" % (self.getConfigValue('global', 'config_file'), forceUnicode(e)))
 			logger.logException(e)
 			return
 		logger.notice(u"Config read")
@@ -3332,7 +3577,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			
 		except Exception, e:
 			# An error occured while trying to write the config file
-			logger.error(u"Failed to write config file '%s': %s" % (self.getConfigValue('global', 'config_file'), e))
+			logger.error(u"Failed to write config file '%s': %s" % (self.getConfigValue('global', 'config_file'), forceUnicode(e)))
 			logger.logException(e)
 	
 	def fillPlaceholders(self, string, escaped=False):
@@ -3381,7 +3626,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						else:
 							eventConfigs[eventConfigName]['args'][key.lower()] = options[key]
 				except Exception, e:
-					logger.error(u"Failed to parse event config '%s': %s" % (eventConfigName, e))
+					logger.error(u"Failed to parse event config '%s': %s" % (eventConfigName, forceUnicode(e)))
 		
 		def __inheritArgsFromSuperEvents(eventConfigsCopy, args, superEventConfigName):
 			if not superEventConfigName in eventConfigsCopy.keys():
@@ -3491,7 +3736,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.notice(u"%s event generator '%s' created" % (eventConfig['args']['type'], eventConfigName))
 				
 			except Exception, e:
-				logger.error(u"Failed to create event generator '%s': %s" % (eventConfigName, e))
+				logger.error(u"Failed to create event generator '%s': %s" % (eventConfigName, forceUnicode(e)))
 		
 		for eventGenerator in self._eventGenerators.values():
 			eventGenerator.addEventListener(self)
@@ -3532,7 +3777,7 @@ class Opsiclientd(EventListener, threading.Thread):
 								logger.info(u"Retrying to run command in session 0")
 								sessionId = 0
 							else:
-								logger.error(u"Failed to start wait for GUI app: %s" % e)
+								logger.error(u"Failed to start wait for GUI app: %s" % forceUnicode(e))
 				self._guiStarted = threading.Event()
 				eventGenerator = EventGeneratorFactory(GUIStartupEventConfig("wait_for_gui"))
 				eventGenerator.addEventListener(self)
@@ -3545,7 +3790,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						logger.info(u"Terminating wait for GUI app (pid %s)" % self._waitAppPid)
 						System.terminateProcess(processId = self._waitAppPid)
 					except Exception, e:
-						logger.warning(u"Failed to terminate wait for GUI app: %s" % e)
+						logger.warning(u"Failed to terminate wait for GUI app: %s" % forceUnicode(e))
 				self._guiStarted.set()
 				
 			def wait(self, timeout=None):
@@ -3554,7 +3799,45 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.warning(u"Timed out after %d seconds while waiting for GUI" % timeout)
 				
 		WaitForGUI(self.getConfigValue('global', 'wait_for_gui_application')).wait(timeout)
+	
+	def createActionProcessorUser(self, recreate = True):
+		if not self.getConfigValue('action_processor', 'create_user'):
+			return
 		
+		runAsUser = self.getConfigValue('action_processor', 'run_as_user')
+		if (runAsUser.lower() == 'system'):
+			self._actionProcessorUserName = u''
+			self._actionProcessorUserPassword = u''
+			return
+		
+		if (runAsUser.find('\\') != -1):
+			logger.warning(u"Ignoring domain part of user to run action processor '%s'" % runAsUser)
+			runAsUser = runAsUser.split('\\', -1)
+		
+		if not recreate and self._actionProcessorUserName and self._actionProcessorUserPassword and System.existsUser(username = runAsUser):
+			return
+		
+		self._actionProcessorUserName = runAsUser
+		logger.notice(u"Creating local user '%s'" % runAsUser)
+		
+		self._actionProcessorUserPassword = u'$!?' + unicode(randomString(16)) + u'§/%'
+		logger.addConfidentialString(self._actionProcessorUserPassword)
+		
+		if System.existsUser(username = runAsUser):
+			System.deleteUser(username = runAsUser)
+		System.createUser(username = runAsUser, password = self._actionProcessorUserPassword, groups = [ System.getAdminGroupName() ])
+	
+	def deleteActionProcessorUser(self):
+		if not self.getConfigValue('action_processor', 'delete_user'):
+			return
+		if not self._actionProcessorUserName:
+			return
+		if not System.existsUser(username = self._actionProcessorUserName):
+			return
+		System.deleteUser(username = self._actionProcessorUserName)
+		self._actionProcessorUserName = u''
+		self._actionProcessorUserPassword = u''
+	
 	def run(self):
 		self._running = True
 		self._stopped = False
@@ -3575,7 +3858,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._controlPipe.start()
 				logger.notice(u"Control pipe started")
 			except Exception, e:
-				logger.error(u"Failed to start control pipe: %s" % e)
+				logger.error(u"Failed to start control pipe: %s" % forceUnicode(e))
 				raise
 			
 			logger.notice(u"Starting control server")
@@ -3589,7 +3872,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._controlServer.start()
 				logger.notice(u"Control server started")
 			except Exception, e:
-				logger.error(u"Failed to start control server: %s" % e)
+				logger.error(u"Failed to start control server: %s" % forceUnicode(e))
 				raise
 			
 			logger.notice(u"Starting cache service")
@@ -3598,7 +3881,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._cacheService.start()
 				logger.notice(u"Cache service started")
 			except Exception, e:
-				logger.error(u"Failed to start cache service: %s" % e)
+				logger.error(u"Failed to start cache service: %s" % forceUnicode(e))
 				raise
 			
 			# Create event generators
@@ -3626,32 +3909,30 @@ class Opsiclientd(EventListener, threading.Thread):
 				eventGenerator.fireEvent()
 			
 			logger.notice(u"opsiclientd is going down")
-			self.setBlockLogin(False)
 			
 			for eventGenerator in self.getEventGenerators():
 				logger.info(u"Stopping event generator %s" % eventGenerator)
 				eventGenerator.stop()
+				eventGenerator.join(2)
 			
-			logger.info(u"Stopping control pipe")
-			if self._controlPipe:
-				self._controlPipe.stop()
+			for ept in self._eventProcessingThreads:
+				logger.info(u"Waiting for event processing thread %s" % ept)
+				ept.join(5)
 			
 			logger.info(u"Stopping cache service")
 			if self._cacheService:
 				self._cacheService.stop()
+				self._cacheService.join(2)
 			
 			logger.info(u"Stopping control server")
 			if self._controlServer:
 				self._controlServer.stop()
+				self._controlServer.join(2)
 			
-			logger.notice(u"Waiting for threads to stop")
-			
-			for eventGenerator in self.getEventGenerators():
-				eventGenerator.join(2)
-			
-			self._cacheService.join(2)
-			self._controlServer.join(2)
-			self._controlPipe.join(2)
+			logger.info(u"Stopping control pipe")
+			if self._controlPipe:
+				self._controlPipe.stop()
+				self._controlPipe.join(2)
 			
 			if reactor and reactor.running:
 				logger.info(u"Stopping reactor")
@@ -3667,12 +3948,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			self.setBlockLogin(False)
 		
 		self._running = False
-		
+	
 	def stop(self):
 		self._stopped = True
-		while self._running:
-			time.sleep(1)
-		logger.info(u"opsiclientd.stop() returning")
 	
 	def processEvent(self, event):
 		
@@ -3686,12 +3964,18 @@ class Opsiclientd(EventListener, threading.Thread):
 			# Always process panic events
 			if not isinstance(event, PanicEvent):
 				for ept in self._eventProcessingThreads:
-					if (ept.getSessionId() == eventProcessingThread.getSessionId()):
-						raise Exception(u"Already processing an other event in session %s" % eventProcessingThread.getSessionId())
+					if (event.eventConfig.actionType != 'login') and (ept.event.eventConfig.actionType != 'login'):
+						raise Exception(u"Already processing an other (non login) event: %s" % ept.event.eventConfig.getName())
+					if (event.eventConfig.actionType == 'login') and (ept.event.eventConfig.actionType == 'login'):
+						if (ept.getSessionId() == eventProcessingThread.getSessionId()):
+							raise Exception(u"Already processing login event '%s' in session %s" \
+										% (ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()))
 		
 		except Exception, e:
 			self._eventProcessingThreadsLock.release()
 			raise
+		
+		self.createActionProcessorUser(recreate = False)
 		
 		self._eventProcessingThreads.append(eventProcessingThread)
 		self._eventProcessingThreadsLock.release()
@@ -3703,8 +3987,13 @@ class Opsiclientd(EventListener, threading.Thread):
 		finally:
 			self._eventProcessingThreadsLock.acquire()
 			self._eventProcessingThreads.remove(eventProcessingThread)
+			try:
+				if not self._eventProcessingThreads:
+					self.deleteActionProcessorUser()
+			except Exception, e:
+				logger.warning(e)
 			self._eventProcessingThreadsLock.release()
-	
+		
 	def getEventProcessingThread(self, sessionId):
 		for ept in self._eventProcessingThreads:
 			if (int(ept.getSessionId()) == int(sessionId)):
@@ -3757,11 +4046,11 @@ class OpsiclientdNT(Opsiclientd):
 		
 	def _shutdownMachine(self):
 		self._shutdownRequested = True
-		System.shutdown(wait = self.getConfigValue('global', 'wait_before_shutdown'))
+		System.shutdown(3)
 	
 	def _rebootMachine(self):
 		self._rebootRequested = True
-		System.reboot(wait = self.getConfigValue('global', 'wait_before_reboot'))
+		System.reboot(3)
 	
 	def processShutdownRequests(self):
 		self._rebootRequested = False
@@ -3770,7 +4059,7 @@ class OpsiclientdNT(Opsiclientd):
 		try:
 			rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
 		except Exception, e:
-			logger.warning(u"Failed to get rebootRequested from registry: %s" % e)
+			logger.warning(u"Failed to get rebootRequested from registry: %s" % forceUnicode(e))
 		logger.info(u"rebootRequested: %s" % rebootRequested)
 		if rebootRequested:
 			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
@@ -3781,22 +4070,18 @@ class OpsiclientdNT(Opsiclientd):
 			else:
 				# Reboot
 				self._rebootRequested = True
-				# TODO:
-				#self.setStatusMessage(_("Rebooting machine"))
 				self._rebootMachine()
 		else:
 			shutdownRequested = 0
 			try:
 				shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
 			except Exception, e:
-				logger.warning(u"Failed to get shutdownRequested from registry: %s" % e)
+				logger.warning(u"Failed to get shutdownRequested from registry: %s" % forceUnicode(e))
 			logger.info(u"shutdownRequested: %s" % shutdownRequested)
 			if shutdownRequested:
 				# Shutdown
 				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
 				self._shutdownRequested = True
-				# TODO:
-				#self.setStatusMessage(_("Shutting down machine"))
 				self._shutdownMachine()
 	
 	
@@ -3808,58 +4093,46 @@ class OpsiclientdNT5(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
 		self._config['action_processor']['run_as_user'] = 'pcpatch'
-		if (sys.getwindowsversion()[1] == 0):
-			# NT 5.0 / win2k
-			# If reboot/shutdown is triggered while pgina.dll is
-			# in function WlxInitialize the system will not reboot/shutdown
-			# For this the default reboot/shutdown wait time is set to 15 seconds
-			# This should be enough time for pgina to stop blocking and leave WlxInitialize
-			self._config['global']['wait_before_reboot'] = 15
-			self._config['global']['wait_before_shutdown'] = 15
 		
 	def _shutdownMachine(self):
 		self._shutdownRequested = True
 		# Running in thread to avoid failure of shutdown (device not ready)
 		class _shutdownThread(threading.Thread):
-			def __init__ (self, wait):
+			def __init__(self):
 				threading.Thread.__init__(self)
-				self.wait = wait
 			
 			def run(self):
 				while(True):
 					try:
-						System.shutdown(wait = self.wait)
+						System.shutdown(0)
 						logger.notice(u"Shutdown initiated")
 						break
 					except Exception, e:
 						# Device not ready?
-						logger.info(u"Failed to initiate shutdown: %s" % e)
+						logger.info(u"Failed to initiate shutdown: %s" % forceUnicode(e))
 						time.sleep(1)
 			
-		_shutdownThread(wait = self.getConfigValue('global', 'wait_before_shutdown')).start()
+		_shutdownThread().start()
 		
 	def _rebootMachine(self):
 		self._rebootRequested = True
 		# Running in thread to avoid failure of reboot (device not ready)
 		class _rebootThread(threading.Thread):
-			def __init__ (self, wait):
+			def __init__(self):
 				threading.Thread.__init__(self)
-				self.wait = wait
 			
 			def run(self):
 				while(True):
 					try:
-						System.reboot(wait = self.wait)
+						System.reboot(0)
 						logger.notice(u"Reboot initiated")
-						break
+						break;
 					except Exception, e:
 						# Device not ready?
-						logger.info(u"Failed to initiate reboot: %s" % e)
+						logger.info(u"Failed to initiate reboot: %s" % forceUnicode(e))
 						time.sleep(1)
 		
-		_rebootThread(wait = self.getConfigValue('global', 'wait_before_reboot')).start()
-	
-	
+		_rebootThread().start()
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          OPSICLIENTD NT6                                          -
@@ -3956,7 +4229,7 @@ class OpsiclientdPosixInit(object):
 				# Parent exits
 				sys.exit(0)
 		except OSError, e:
-			raise Exception(u"First fork failed: %e" % e)
+			raise Exception(u"First fork failed: %e" % forceUnicode(e))
 		
 		# Do not hinder umounts
 		os.chdir("/")
@@ -3969,7 +4242,7 @@ class OpsiclientdPosixInit(object):
 			if (pid > 0):
 				sys.exit(0)
 		except OSError, e:
-			raise Exception(u"Second fork failed: %e" % e)
+			raise Exception(u"Second fork failed: %e" % forceUnicode(e))
 		
 		logger.setConsoleLevel(LOG_NONE)
 		
@@ -4003,8 +4276,6 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			"""
 			Initialize service and create stop event
 			"""
-			self.opsiclientd = None
-			
 			sys.stdout = logger.getStdout()
 			sys.stderr = logger.getStderr()
 			logger.setConsoleLevel(LOG_NONE)
@@ -4014,35 +4285,20 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			self._stopEvent = threading.Event()
 			logger.debug(u"OpsiclientdServiceFramework initiated")
 		
-		#def GetAcceptedControls(self):
-		#	# Accept additional events
-		#	rc = win32serviceutil.ServiceFramework.GetAcceptedControls(self)
-		#	#| win32service.SERVICE_CONTROL_DEVICEEVENT \
-		#	rc |= win32service.SERVICE_ACCEPT_PARAMCHANGE \
-		#	   | win32service.SERVICE_ACCEPT_NETBINDCHANGE \
-		#	   | win32service.SERVICE_ACCEPT_HARDWAREPROFILECHANGE \
-		#	   | win32service.SERVICE_ACCEPT_POWEREVENT \
-		#	   | win32service.SERVICE_ACCEPT_SESSIONCHANGE \
-		#	   | win32service.SERVICE_CONTROL_PRESHUTDOWN
-		#	return rc
-		#
-		#def SvcOtherEx(self, control, event_type, data):
-		#	if   (control == win32service.SERVICE_CONTROL_DEVICEEVENT):
-		#		info = win32gui_struct.UnpackDEV_BROADCAST(data)
-		#		logger.info(u"SVC Device event occurred: %x - %s" % (event_type, info))
-		#	elif (control == win32service.SERVICE_CONTROL_HARDWAREPROFILECHANGE):
-		#		logger.info(u"SVC Hardware profile changed: type=%s, data=%s" % (event_type, data))
-		#	elif (control == win32service.SERVICE_CONTROL_POWEREVENT):
-		#		logger.info(u"SVC Power event: setting %s" % data)
-		#	elif (control == win32service.SERVICE_CONTROL_PRESHUTDOWN):
-		#		logger.info(u"SVC Preshutdown event: setting %s" % data)
-		#	elif (control == win32service.SERVICE_CONTROL_SESSIONCHANGE):
-		#		# data is a single elt tuple, but this could potentially grow
-		#		# in the future if the win32 struct does
-		#		logger.info(u"SVC Session event: type=%s, data=%s" % (event_type, data))
-		#	else:
-		#		logger.info(u"SVC Other event: code=%d, type=%s, data=%s" % (control, evalent_type, data))
+		def ReportServiceStatus(self, serviceStatus, waitHint = 5000, win32ExitCode = 0, svcExitCode = 0):
+			# Wrapping because ReportServiceStatus sometimes lets windows report a crash of opsiclientd (python 2.6.5)
+			# invalid handle ...
+			try:
+				win32serviceutil.ServiceFramework.ReportServiceStatus(
+					self, serviceStatus, waitHint = waitHint, win32ExitCode = win32ExitCode, svcExitCode = svcExitCode)
+			except Exception, e:
+				logger.error(u"Failed to report service status %s: %s" % (serviceStatus, forceUnicode(e)))
 			
+		def SvcInterrogate(self):
+			logger.debug(u"OpsiclientdServiceFramework SvcInterrogate")
+			# Assume we are running, and everyone is happy.
+			self.ReportServiceStatus(win32service.SERVICE_RUNNING)
+		
 		def SvcStop(self):
 			"""
 			Gets called from windows to stop service
@@ -4053,50 +4309,72 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			# Fire stop event to stop blocking self._stopEvent.wait()
 			self._stopEvent.set()
 		
-		#def SvcShutdown(self):
-		#	"""
-		#	Gets called from windows on system shutdown
-		#	"""
-		#	logger.debug(u"OpsiclientdServiceFramework SvcShutdown")
-		#	# Write to event log
-		#	self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
-		#	# Fire stop event to stop blocking self._stopEvent.wait()
-		#	self._stopEvent.set()
+		def SvcShutdown(self):
+			"""
+			Gets called from windows on system shutdown
+			"""
+			logger.debug(u"OpsiclientdServiceFramework SvcShutdown")
+			# Write to event log
+			self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
+			# Fire stop event to stop blocking self._stopEvent.wait()
+			self._stopEvent.set()
 		
-		def SvcDoRun(self):
+		def SvcRun(self):
 			"""
 			Gets called from windows to start service
 			"""
 			try:
+				try:
+					if System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Services\\opsiclientd", "Debug"):
+						debugLogFile = "c:\\tmp\\opsiclientd.log"
+						f = open(debugLogFile, "w")
+						f.write(u"--- Debug log started ---\r\n")
+						f.close()
+						try:
+							logger.setLogFile(debugLogFile)
+							logger.setFileLevel(LOG_CONFIDENTIAL)
+							logger.log(1, u"Logger initialized", raiseException = True)
+						except Exception, e:
+							error = 'unkown error'
+							try:
+								error = str(e)
+							except:
+								pass
+							f = open(debugLogFile, "a+")
+							f.write("Failed to initialize logger: %s\r\n" % error)
+							f.close()
+				except Exception, e:
+					pass
+				
 				startTime = time.time()
+				
 				logger.debug(u"OpsiclientdServiceFramework SvcDoRun")
 				# Write to event log
 				self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
 				
 				# Start opsiclientd
-				workingDirectory = os.getcwd()
-				try:
-					workingDirectory = os.path.dirname(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Services\\opsiclientd\\PythonClass", ""))
-				except Exception, e:
-					logger.error(u"Failed to get working directory from registry: %s" % e)
-				os.chdir(workingDirectory)
-			
-			
+				#workingDirectory = os.getcwd()
+				#try:
+				#	workingDirectory = os.path.dirname(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Services\\opsiclientd\\PythonClass", ""))
+				#except Exception, e:
+				#	logger.error(u"Failed to get working directory from registry: %s" % forceUnicode(e))
+				#os.chdir(workingDirectory)
+				
 				if (sys.getwindowsversion()[0] == 5):
 					# NT5: XP
-					self.opsiclientd = OpsiclientdNT5()
+					opsiclientd = OpsiclientdNT5()
 				
 				elif (sys.getwindowsversion()[0] == 6):
 					# NT6: Vista / Windows7
 					if (sys.getwindowsversion()[1] >= 1):
 						# Windows7
-						self.opsiclientd = OpsiclientdNT61()
+						opsiclientd = OpsiclientdNT61()
 					else:
-						self.opsiclientd = OpsiclientdNT6()
+						opsiclientd = OpsiclientdNT6()
 				else:
 					raise Exception(u"Running windows version not supported")
 				
-				self.opsiclientd.start()
+				opsiclientd.start()
 				# Write to event log
 				self.ReportServiceStatus(win32service.SERVICE_RUNNING)
 				
@@ -4106,20 +4384,18 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 				self._stopEvent.wait()
 				
 				# Shutdown opsiclientd
-				self.opsiclientd.stop()
-				self.opsiclientd.join(2)
+				opsiclientd.stop()
+				opsiclientd.join(15)
 				
 				logger.notice(u"opsiclientd stopped")
 				for thread in threading.enumerate():
 					logger.notice(u"Running thread after stop: %s" % thread)
 				
-				self.opsiclientd = None
-				
 			except Exception, e:
 				logger.critical(u"opsiclientd crash")
 				logger.logException(e)
 			
-			# This call sometimes lets windows report a crash of opsiclientd (python 2.6.5)
+			# This call sometimes produces an error in eventlog (invalid handle)
 			#self.ReportServiceStatus(win32service.SERVICE_STOPPED)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
