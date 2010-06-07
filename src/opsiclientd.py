@@ -809,7 +809,14 @@ class GUIStartupEventGenerator(EventGenerator):
 		while not self._stopped:
 			logger.debug(u"Checking if process '%s' running" % self.guiProcessName)
 			if System.getPid(self.guiProcessName):
-				logger.notice(u"Process '%s' is running" % self.guiProcessName)
+				logger.debug(u"Process '%s' is running" % self.guiProcessName)
+				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
+					logger.debug(u"Checking if process TrustedInstaller.exe running")
+					pid = System.getPid("TrustedInstaller.exe")
+					if pid:
+						logger.debug(u"Waiting for TrustedInstaller.exe (PID %d)" % pid)
+						time.sleep(3)
+						continue
 				return self.createEvent()
 			time.sleep(3)
 
