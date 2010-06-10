@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '3.99.1.0'
+__version__ = '3.99.1.1'
 
 # Imports
 import os, sys, thread, threading, time, urllib, base64, socket, re, shutil, filecmp, codecs, inspect
