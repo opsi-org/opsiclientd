@@ -2949,19 +2949,16 @@ class EventProcessingThread(KillableThread):
 			if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
 				logger.debug(u"Try to read TrustedInstaller Service-Configuration")
 				
-				retries = 0
 				automaticStartup = None
 				
 				# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3 
-				automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start")
+				automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start",True)
 				if (automaticStartup == 2):
 					while True:
 						logger.debug(u"Automatic Startup for Service Trusted Installer is set, try to wait until Upgradeprocess is finished.")
-						retries = retries + 1
 						time.sleep(3)
 						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start")
-						if not (automaticStartup == 2) or (retries >= 20):
-							if (retries >= 20): logger.debug("Maximum Retries by waiting of finishing TrustedInstaller Service Reached. Standard-Processing will be continued.")
+						if not (automaticStartup == 2):
 							break
 					
 			
