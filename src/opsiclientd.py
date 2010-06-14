@@ -2867,6 +2867,22 @@ class EventProcessingThread(KillableThread):
 			self.updateActionProcessor()
 		
 		# Run action processor
+		# Before Running Action Processor check for Trusted Installer
+		if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
+				logger.debug(u"Try to read TrustedInstaller Service-Configuration")
+				
+				automaticStartup = None
+				
+				# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3 
+				automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start",True)
+				if (automaticStartup == 2):
+					while True:
+						logger.debug(u"Automatic Startup for Service Trusted Installer is set, try to wait until Upgradeprocess is finished.")
+						time.sleep(3)
+						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start")
+						if not (automaticStartup == 2):
+							break
+
 		actionProcessorCommand = self.opsiclientd.fillPlaceholders(self.event.getActionProcessorCommand())
 		actionProcessorCommand += additionalParams
 		actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
@@ -2946,22 +2962,6 @@ class EventProcessingThread(KillableThread):
 	
 	def run(self):
 		try:
-			if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
-				logger.debug(u"Try to read TrustedInstaller Service-Configuration")
-				
-				automaticStartup = None
-				
-				# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3 
-				automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start",True)
-				if (automaticStartup == 2):
-					while True:
-						logger.debug(u"Automatic Startup for Service Trusted Installer is set, try to wait until Upgradeprocess is finished.")
-						time.sleep(3)
-						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start")
-						if not (automaticStartup == 2):
-							break
-					
-			
 			logger.notice(u"============= EventProcessingThread for occurcence of event '%s' started =============" % self.event)
 			self.running = True
 			self.eventCancelled = False
