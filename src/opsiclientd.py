@@ -2831,6 +2831,24 @@ class EventProcessingThread(KillableThread):
 		if not self.event.getActionProcessorCommand():
 			raise Exception(u"No action processor command defined")
 		
+		# Before Running Action Processor check for Trusted Installer
+		if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
+			logger.debug(u"Try to read TrustedInstaller service-configuration")
+			try:
+				# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3
+				automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
+				if (automaticStartup == 2):
+					logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
+					self.setStatusMessage( _(u"Waiting for trusted installer") )
+					while True:
+						time.sleep(3)
+						logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
+						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start")
+						if not (automaticStartup == 2):
+							break
+			except Exception, e:
+				logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
+		
 		self.setStatusMessage( _(u"Starting actions") )
 		
 		# Setting some registry values before starting action
@@ -2867,22 +2885,6 @@ class EventProcessingThread(KillableThread):
 			self.updateActionProcessor()
 		
 		# Run action processor
-		# Before Running Action Processor check for Trusted Installer
-		if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
-				logger.debug(u"Try to read TrustedInstaller Service-Configuration")
-				
-				automaticStartup = None
-				
-				# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3 
-				automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start",True)
-				if (automaticStartup == 2):
-					while True:
-						logger.debug(u"Automatic Startup for Service Trusted Installer is set, try to wait until Upgradeprocess is finished.")
-						time.sleep(3)
-						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start")
-						if not (automaticStartup == 2):
-							break
-
 		actionProcessorCommand = self.opsiclientd.fillPlaceholders(self.event.getActionProcessorCommand())
 		actionProcessorCommand += additionalParams
 		actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
