@@ -82,7 +82,9 @@ data_files = [
 						'windows\\helpers\\notifier\\userlogin.bmp',
 						'windows\\helpers\\notifier\\wait_for_gui.bmp',
 						'windows\\helpers\\notifier\\block_login.bmp',
-						'windows\\helpers\\notifier\\opsi.ico']),
+						'windows\\helpers\\notifier\\opsi.ico',
+						'windows\\helpers\\notifier\\message.bmp',
+						'windows\\helpers\\notifier\\message.ini' ]),
 	('opsiclientd',                   [	'windows\\opsiclientd.conf']),
 	('opsiclientd\\static_html',      [	'..\\static_html\\favicon.ico', '..\\static_html\\index.html', '..\\static_html\\opsi_logo.png']),
 	('opsiclientd\\backendManager.d', [	'..\\cache_service.conf'])

@@ -2279,6 +2279,7 @@ class EventProcessingThread(KillableThread):
 		self._opsiclientdInfoSubject.setMessage("opsiclientd %s" % __version__)
 		self._actionProcessorInfoSubject.setMessage("")
 		
+		
 		#self.isLoginEvent = isinstance(self.event, UserLoginEvent)
 		self.isLoginEvent = bool(self.event.eventConfig.actionType == 'login')
 		if self.isLoginEvent:
@@ -3308,6 +3309,11 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 	
 	def updateConfigFile(self):
 		self.opsiclientd.updateConfigFile()
+		
+	def showPopup(self, message):
+		message = forceUnicode(message)
+		self.opsiclientd.showPopup(message)
+		
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                            OPSICLIENTD                                            -
@@ -3336,6 +3342,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		self._rebootRequested = False
 		self._shutdownRequested = False
+		
+		self._popupNotificationServer = None
+		self._popupNotificationPid = {}
 		
 		self._config = {
 			'system': {
@@ -4042,6 +4051,177 @@ class Opsiclientd(EventListener, threading.Thread):
 	
 	def processShutdownRequests(self):
 		pass
+	
+	#Winpop-ersatz
+	def showPopup(self, message):
+		self.stopPopupNotification()
+		
+		popupSubject = MessageSubject('popup_message')
+		choiceSubject = ChoiceSubject(id = 'popup_choice')
+		popupSubject.setMessage(message)
+		
+		logger.notice(u"Starting notification server on port %s" % "30000")
+		try:
+			self._popupNotificationServer = NotificationServer(
+							address  = "127.0.0.1",
+							port     = 30000,
+							subjects = [
+								popupSubject,
+								choiceSubject ] )
+			
+			
+			self._popupNotificationServer.start()
+			logger.notice(u"Notification server started")
+		except Exception, e:
+			logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
+			raise
+		
+		#self._popupNotificationServer.addSubject(choiceSubject)
+		choiceSubject.setCallbacks( [ self.stopPopupCallback ] )
+		
+		sessionIds = System.getActiveSessionIds()
+		
+		#getActiveSessionIds():
+		for sessionId in sessionIds:
+			logger.info(u"Starting Opsi Popup Message notifier app in session %d" % sessionId)
+			try:
+				self._popupNotificationPid[sessionId] = System.runCommandInSession(
+							command = self.fillPlaceholders(u"%system.program_files_dir%\\opsi.org\\preloginloader\\notifier.exe -p 30000 -s notifier\\message.ini", escaped=True),
+							sessionId = sessionId,
+							desktop = 'current',
+							waitForProcessEnding = False)[2]
+			except Exception,e:
+				logger.error(e)
+		
+		'''
+		choiceSubject.setCallbacks( [ serviceConnectionThread.stopConnectionCallback ] )
+			
+			cancellableAfter = forceInt(self.opsiclientd.getConfigValue('config_service', 'user_cancellable_after'))
+			logger.info(u"User is allowed to cancel connection after %d seconds" % cancellableAfter)
+			if (cancellableAfter < 1):
+				self._notificationServer.addSubject(choiceSubject)
+		'''
+	
+	def stopPopupNotification(self):
+		for (sessionId, notifierPid) in self._popupNotificationPid.items():
+			self.stopPopupNotificationApplication(sessionId, notifierPid)
+		
+		if self._popupNotificationServer:
+			try:
+				self._popupNotificationServer.stop(stopReactor = False)
+			except Exception, e:
+				logger.error(u"Failed to stop popup notification server: %s" % e)
+		
+	def stopPopupNotificationApplication(self, sessionId, pid):
+		if sessionId and pid:
+			try:
+				logger.info(u"Terminating Popup notifier app (pid %s)" % pid)
+				System.terminatingProcess(processId = pid)
+			except Exception, e:
+				logger.warning(u"Failed to terminate Popup notifier app: '%s'" % forceUnicode(e))
+
+	
+	def stopPopupCallback(self, choiceSubject):
+		self.stopPopupNotification()
+		
+	#########################################################	
+	#           Helpermethods for showPopup	End		#
+	#########################################################
+	'''
+	
+			
+	def runCommandInSession(self, command, desktop=None, waitForProcessEnding=False, timeoutSeconds=0):
+		
+		sessionId = self.getSessionId()
+		
+		if not desktop or desktop.lower() not in (u'winlogon', u'default'):
+			if self.isLoginEvent:
+				desktop = u'default'
+			else:
+				logger.debug(u"Getting current active desktop name")
+				desktop = self.opsiclientd.getCurrentActiveDesktopName(sessionId)
+				logger.debug(u"Got current active desktop name: %s" % desktop)
+				
+		if not desktop or desktop.lower() not in (u'winlogon', u'default'):
+			desktop = u'winlogon'
+		
+		processId = None
+		while True:
+			try:
+				logger.info("Running command %s in session '%s' on desktop '%s'" % (command, sessionId, desktop))
+				processId = System.runCommandInSession(
+						command              = command,
+						sessionId            = sessionId,
+						desktop              = desktop,
+						waitForProcessEnding = waitForProcessEnding,
+						timeoutSeconds       = timeoutSeconds)[2]
+				break
+			except Exception, e:
+				logger.error(e)
+				if (e[0] == 233) and (sys.getwindowsversion()[0] == 5) and (sessionId != 0):
+					# No process is on the other end
+					# Problem with pipe \\\\.\\Pipe\\TerminalServer\\SystemExecSrvr\\<sessionid>
+					# After logging off from a session other than 0 csrss.exe does not create this pipe or CreateRemoteProcessW is not able to read the pipe.
+					logger.info(u"Retrying to run command on winlogon desktop of session 0")
+					sessionId = 0
+					desktop = 'winlogon'
+				else:
+					raise
+		
+		self.setSessionId(sessionId)
+		return processId
+	
+	def getSessionId(self):
+		logger.debug(u"getSessionId()")
+		if self._sessionId is None:
+			sessionId = None
+			if self.isLoginEvent:
+				logger.info(u"Using session id of user '%s'" % self.event.eventInfo["User"])
+				#timeout = 30
+				#while True:
+				#	if (win32serviceutil.QueryServiceStatus("TermService")[1] == 4):
+				#		break
+				#	logger.debug(u"TermService not running, waiting...")
+				#	if (timeout <= 0):
+				#		raise Exception(u"Timed out while waiting for TermService")
+				#	timeout -= 1
+				userSessionsIds = System.getUserSessionIds(self.event.eventInfo["User"])
+				if userSessionsIds:
+					sessionId = userSessionsIds[0]
+			if not sessionId:
+				logger.info(u"Using active console session id")
+				sessionId = System.getActiveConsoleSessionId()
+			self.setSessionId(sessionId)
+		return self._sessionId
+	
+	def startNotifierApplication(self, notifierType, command, desktop=None):
+		logger.notice(u"Starting notifier application type '%s' in session '%s'" % (notifierType, self.getSessionId()))
+		self._notifierApplicationPid[notifierType] = self.runCommandInSession(command = command.replace('%port%', unicode(self._notificationServerPort)), waitForProcessEnding = False)
+		time.sleep(3)
+		
+		_popupSubject.setMessage(message)
+		
+	def stopNotifierApplication(self, notifierType):
+		if not self._notifierApplicationPid.get(notifierType):
+			logger.info(u"Failed to stop notifier application type '%s': not started" % notifierType)
+			return
+		
+		logger.notice(u"Stopping notifier application (pid %s)" % self._notifierApplicationPid[notifierType])
+		try:
+			try:
+				# Does not work in all cases
+				self.closeProcessWindows(self._notifierApplicationPid[notifierType])
+			except:
+				pass
+			time.sleep(2)
+			System.terminateProcess(processId = self._notifierApplicationPid[notifierType])
+		except Exception, e:
+			logger.warning(u"Failed to stop notifier application: %s" % forceUnicode(e))
+	'''		
+	#########################################################	
+	#           Helpermethods for showPopup	End		#
+	#########################################################
+	
 	
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
