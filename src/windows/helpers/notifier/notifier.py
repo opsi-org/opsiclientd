@@ -615,7 +615,7 @@ class OpsiDialogWindow(SubjectsObserver):
 			elif (values.get('type') == u'label'):
 				cwnd = win32ui.CreateWindowFromHandle(self.hwnd)
 				text = values.get('text', u'')
-				text = text.replace('\\r', '').replace('\\n', '\n').replace('\n', '\r\n')
+				text = text.replace('\\r', '').replace('\r', '').replace('\\n', '\n').replace('\n', '\r\n')
 				cwnd.SetDlgItemText(dlgId, text)
 				self.refreshDialogItem(dlgId)
 			break
