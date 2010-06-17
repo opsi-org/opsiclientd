@@ -4063,10 +4063,10 @@ class Opsiclientd(EventListener, threading.Thread):
 	def showPopup(self, message):
 		port = 30000
 		
-		self.stopPopupNotification()
-		
 		self._popupNotificationLock.acquire()
 		try:
+			self.stopPopupNotification()
+			
 			popupSubject = MessageSubject('popup_message')
 			choiceSubject = ChoiceSubject(id = 'popup_choice')
 			popupSubject.setMessage(message)
@@ -4100,26 +4100,20 @@ class Opsiclientd(EventListener, threading.Thread):
 			self._popupNotificationLock.release()
 		
 	def stopPopupNotification(self):
-		self._popupNotificationLock.acquire()
-		try:
-			for (sessionId, notifierPid) in self._popupNotifierPids.items():
-				try:
-					logger.info(u"Terminating Popup notifier app (pid %s)" % notifierPid)
-					System.terminateProcess(processId = notifierPid)
-				except Exception, e:
-					logger.warning(u"Failed to terminate Popup notifier app: '%s'" % forceUnicode(e))
-			self._popupNotifierPids = {}
-			
-			if self._popupNotificationServer:
-				try:
-					logger.info(u"Stopping Notification Server")
-					self._popupNotificationServer.stop(stopReactor = False)
-				except Exception, e:
-					logger.error(u"Failed to stop popup notification server: %s" % e)
-		finally:
-			self._popupNotificationLock.release()
+		for (sessionId, notifierPid) in self._popupNotifierPids.items():
+			try:
+				logger.info(u"Terminating Popup notifier app (pid %s)" % notifierPid)
+				System.terminateProcess(processId = notifierPid)
+			except Exception, e:
+				logger.warning(u"Failed to terminate Popup notifier app: '%s'" % forceUnicode(e))
+		self._popupNotifierPids = {}
 		
-
+		if self._popupNotificationServer:
+			try:
+				logger.info(u"Stopping Notification Server")
+				self._popupNotificationServer.stop(stopReactor = False)
+			except Exception, e:
+				logger.error(u"Failed to stop popup notification server: %s" % e)
 	
 	def stopPopupCallback(self, choiceSubject):
 		self.stopPopupNotification()
