@@ -4108,6 +4108,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					System.terminateProcess(processId = notifierPid)
 				except Exception, e:
 					logger.warning(u"Failed to terminate Popup notifier app: '%s'" % forceUnicode(e))
+			self._popupNotifierPids = {}
 			
 			if self._popupNotificationServer:
 				try:
