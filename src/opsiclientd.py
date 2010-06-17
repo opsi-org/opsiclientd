@@ -1032,7 +1032,7 @@ class JsonRpc(object):
 		if (len(pString) > 200):
 			pString = pString[:200] + u'...'
 		
-		logger.notice(u"==>>> Executing: %s(%s)" % (self.getMethodName(), pString))
+		logger.notice(u"-----> Executing: %s(%s)" % (self.getMethodName(), pString))
 		
 		self.started = time.time()
 		try:
