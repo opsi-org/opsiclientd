@@ -3290,8 +3290,8 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 		logger.notice(u"rpc setStatusMessage: Setting status message to '%s'" % message)
 		ept.setStatusMessage(message)
 	
-	def getCurrentActiveDesktopName(self):
-		desktop = self.opsiclientd.getCurrentActiveDesktopName()
+	def getCurrentActiveDesktopName(self, sessionId=None):
+		desktop = self.opsiclientd.getCurrentActiveDesktopName(sessionId)
 		logger.notice(u"rpc getCurrentActiveDesktopName: current active desktop name is '%s'" % desktop)
 		return desktop
 	
@@ -4040,11 +4040,15 @@ class Opsiclientd(EventListener, threading.Thread):
 		cmd = '%s "%s"' % (self.getConfigValue('opsiclientd_rpc', 'command'), rpc)
 		
 		try:
-			System.runCommandInSession(command = cmd, sessionId = System.getActiveConsoleSessionId(), waitForProcessEnding = True, timeoutSeconds = 60)
+			System.runCommandInSession(command = cmd, sessionId = sessionId, waitForProcessEnding = True, timeoutSeconds = 60)
 		except Exception, e:
 			logger.error(e)
 		
 		desktop = self._currentActiveDesktopName.get(sessionId)
+		if not desktop:
+			logger.warning(u"Failed to get current active desktop name for session %d, using 'default'" % sessionId)
+			desktop = 'default'
+			self._currentActiveDesktopName[sessionId] = desktop
 		logger.debug(u"Returning current active dektop name '%s' for session %s" % (desktop, sessionId))
 		return desktop
 	
@@ -4077,6 +4081,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			raise
 		
 		#self._popupNotificationServer.addSubject(choiceSubject)
+		choiceSubject.setChoices([ 'Close' ])
 		choiceSubject.setCallbacks( [ self.stopPopupCallback ] )
 		
 		sessionIds = System.getActiveSessionIds()
@@ -4088,7 +4093,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._popupNotificationPid[sessionId] = System.runCommandInSession(
 							command = self.fillPlaceholders(u"%system.program_files_dir%\\opsi.org\\preloginloader\\notifier.exe -p 30000 -s notifier\\message.ini", escaped=True),
 							sessionId = sessionId,
-							desktop = 'current',
+							desktop = self.getCurrentActiveDesktopName(sessionId),
 							waitForProcessEnding = False)[2]
 			except Exception,e:
 				logger.error(e)
@@ -4104,21 +4109,20 @@ class Opsiclientd(EventListener, threading.Thread):
 	
 	def stopPopupNotification(self):
 		for (sessionId, notifierPid) in self._popupNotificationPid.items():
-			self.stopPopupNotificationApplication(sessionId, notifierPid)
+			try:
+				logger.info(u"Terminating Popup notifier app (pid %s)" % notifierPid)
+				System.terminateProcess(processId = notifierPid)
+			except Exception, e:
+				logger.warning(u"Failed to terminate Popup notifier app: '%s'" % forceUnicode(e))
 		
 		if self._popupNotificationServer:
 			try:
 				self._popupNotificationServer.stop(stopReactor = False)
+				time.sleep(3)
 			except Exception, e:
 				logger.error(u"Failed to stop popup notification server: %s" % e)
 		
-	def stopPopupNotificationApplication(self, sessionId, pid):
-		if sessionId and pid:
-			try:
-				logger.info(u"Terminating Popup notifier app (pid %s)" % pid)
-				System.terminatingProcess(processId = pid)
-			except Exception, e:
-				logger.warning(u"Failed to terminate Popup notifier app: '%s'" % forceUnicode(e))
+		
 
 	
 	def stopPopupCallback(self, choiceSubject):
