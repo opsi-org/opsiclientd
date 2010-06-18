@@ -3352,57 +3352,58 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		self._config = {
 			'system': {
-				'program_files_dir':        u'',
+				'program_files_dir': u'',
 			},
 			'global': {
-				'config_file':              u'opsiclientd.conf',
-				'log_file':                 u'opsiclientd.log',
-				'log_level':                LOG_NOTICE,
-				'host_id':                  System.getFQDN().lower(),
-				'opsi_host_key':            u'',
-				'wait_for_gui_timeout':     120,
-				'wait_for_gui_application': u'',
-				'block_login_notifier':     u'',
+				'config_file':                    u'opsiclientd.conf',
+				'log_file':                       u'opsiclientd.log',
+				'log_level':                      LOG_NOTICE,
+				'host_id':                        System.getFQDN().lower(),
+				'opsi_host_key':                  u'',
+				'wait_for_gui_timeout':           120,
+				'wait_for_gui_application':       u'',
+				'block_login_notifier':           u'',
 			},
 			'config_service': {
-				'server_id':                u'',
-				'url':                      u'',
-				'connection_timeout':       10,
-				'user_cancellable_after':   0,
+				'server_id':              u'',
+				'url':                    u'',
+				'connection_timeout':     10,
+				'user_cancellable_after': 0,
 			},
 			'depot_server': {
-				'depot_id':                 u'',
-				'url':                      u'',
-				'drive':                    u'',
-				'username':                 u'pcpatch',
+				'depot_id': u'',
+				'url':      u'',
+				'drive':    u'',
+				'username': u'pcpatch',
 			},
 			'cache_service': {
-				'storage_dir':              u'c:\\tmp\\cache_service',
-				'product_cache_max_size':   6000000000,
-				'backend_manager_config':   u'',
+				'storage_dir':            u'c:\\tmp\\cache_service',
+				'product_cache_max_size': 6000000000,
+				'backend_manager_config': u'',
 			},
 			'control_server': {
-				'interface':                '0.0.0.0', # TODO
-				'port':                     4441,
-				'ssl_server_key_file':      u'opsiclientd.pem',
-				'ssl_server_cert_file':     u'opsiclientd.pem',
-				'static_dir':               u'static_html',
+				'interface':            '0.0.0.0', # TODO
+				'port':                 4441,
+				'ssl_server_key_file':  u'opsiclientd.pem',
+				'ssl_server_cert_file': u'opsiclientd.pem',
+				'static_dir':           u'static_html',
 			},
 			'notification_server': {
-				'interface':                u'127.0.0.1',
-				'start_port':               44000,
+				'interface':  u'127.0.0.1',
+				'start_port': 44000,
+				'popup_port': 45000,
 			},
 			'opsiclientd_notifier': {
-				'command':                  u'',
+				'command': u'',
 			},
 			'action_processor': {
-				'local_dir':                u'',
-				'remote_dir':               u'',
-				'filename':                 u'',
-				'command':                  u'',
-				'run_as_user':              u'SYSTEM',
-				'create_user':              True,
-				'delete_user':              True,
+				'local_dir':   u'',
+				'remote_dir':  u'',
+				'filename':    u'',
+				'command':     u'',
+				'run_as_user': u'SYSTEM',
+				'create_user': True,
+				'delete_user': True,
 			}
 		}
 		
@@ -3490,7 +3491,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		if section in ('system'):
 			return
 		
-		if option in ('log_level', 'port', 'wait_for_gui_timeout'):
+		if option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port'):
 			value = forceInt(value)
 		
 		if option in ('create_user', 'delete_user'):
@@ -4061,14 +4062,21 @@ class Opsiclientd(EventListener, threading.Thread):
 		pass
 	
 	def showPopup(self, message):
-		port = 30000
+		port = self.getConfigValue('notification_server', 'popup_port')
+		if not port:
+			raise Exception(u'notification_server.popup_port not defined')
+		
+		notifierCommand = self.getConfigValue('opsiclientd_notifier', 'command').replace('%port%', forceUnicode(port))
+		if not notifierCommand:
+			raise Exception(u'opsiclientd_notifier.command not defined')
+		notifierCommand += u" -s notifier\\popup.ini"
 		
 		self._popupNotificationLock.acquire()
 		try:
-			self.stopPopupNotification()
+			self.hidePopup()
 			
-			popupSubject = MessageSubject('popup_message')
-			choiceSubject = ChoiceSubject(id = 'popup_choice')
+			popupSubject = MessageSubject('message')
+			choiceSubject = ChoiceSubject(id = 'choice')
 			popupSubject.setMessage(message)
 			
 			logger.notice(u"Starting popup message notification server on port %d" % port)
@@ -4083,40 +4091,39 @@ class Opsiclientd(EventListener, threading.Thread):
 				raise
 			
 			choiceSubject.setChoices([ 'Close' ])
-			choiceSubject.setCallbacks( [ self.stopPopupCallback ] )
+			choiceSubject.setCallbacks( [ self.popupCloseCallback ] )
 			
 			for sessionId in System.getActiveSessionIds():
 				logger.info(u"Starting popup message notifier app in session %d" % sessionId)
 				try:
-					self._popupNotifierPids[sessionId] = System.runCommandInSession(
-								command = self.fillPlaceholders(u"%system.program_files_dir%\\opsi.org\\preloginloader\\notifier.exe" \
-												+ u" -p " + forceUnicode(port) + u" -s notifier\\message.ini", escaped=True),
+					self._popupNotifierPids[sessionId] = System.runCommandInSession(notifierCommand
+								command = notifierCommand,
 								sessionId = sessionId,
 								desktop = self.getCurrentActiveDesktopName(sessionId),
 								waitForProcessEnding = False)[2]
 				except Exception,e:
-					logger.error(e)
+					logger.error(u"Failed to start popup message notifier app in session %d: %s" % (sessionId, forceUnicode(e)))
 		finally:
 			self._popupNotificationLock.release()
 		
-	def stopPopupNotification(self):
+	def hidePopup(self):
 		for (sessionId, notifierPid) in self._popupNotifierPids.items():
 			try:
-				logger.info(u"Terminating Popup notifier app (pid %s)" % notifierPid)
+				logger.info(u"Terminating popup notifier app (pid %s)" % notifierPid)
 				System.terminateProcess(processId = notifierPid)
 			except Exception, e:
-				logger.warning(u"Failed to terminate Popup notifier app: '%s'" % forceUnicode(e))
+				logger.warning(u"Failed to terminate popup notifier app: '%s'" % forceUnicode(e))
 		self._popupNotifierPids = {}
 		
 		if self._popupNotificationServer:
 			try:
-				logger.info(u"Stopping Notification Server")
+				logger.info(u"Stopping popup message notification server")
 				self._popupNotificationServer.stop(stopReactor = False)
 			except Exception, e:
 				logger.error(u"Failed to stop popup notification server: %s" % e)
 	
-	def stopPopupCallback(self, choiceSubject):
-		self.stopPopupNotification()
+	def popupCloseCallback(self, choiceSubject):
+		self.hidePopup()
 	
 	
 	
