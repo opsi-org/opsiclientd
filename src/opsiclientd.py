@@ -1502,7 +1502,8 @@ class Worker:
 		try:
 			failure.raiseException()
 		except Exception, e:
-			error = unicode(e)
+			error = {'class': e.__class__.__name__, 'message': unicode(e)}
+			error = toJson({"id": None, "result": None, "error": error})
 		result.stream = stream.IByteStream(error.encode('utf-8'))
 		return result
 	
@@ -1549,7 +1550,7 @@ class Worker:
 		return result
 		
 	def _handlePostData(self, chunk):
-		logger.debug2(u"_handlePostData %s" % chunk)
+		#logger.debug2(u"_handlePostData %s" % chunk)
 		self.query += chunk
 	
 	def _decodeQuery(self, result):
@@ -4096,7 +4097,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			for sessionId in System.getActiveSessionIds():
 				logger.info(u"Starting popup message notifier app in session %d" % sessionId)
 				try:
-					self._popupNotifierPids[sessionId] = System.runCommandInSession(notifierCommand
+					self._popupNotifierPids[sessionId] = System.runCommandInSession(
 								command = notifierCommand,
 								sessionId = sessionId,
 								desktop = self.getCurrentActiveDesktopName(sessionId),
