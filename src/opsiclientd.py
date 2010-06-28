@@ -32,7 +32,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '3.99.1.1'
+__version__ = '3.99.2'
 
 # Imports
 import os, sys, thread, threading, time, urllib, base64, socket, re, shutil, filecmp, codecs, inspect
@@ -4108,21 +4108,21 @@ class Opsiclientd(EventListener, threading.Thread):
 			self._popupNotificationLock.release()
 		
 	def hidePopup(self):
-		for (sessionId, notifierPid) in self._popupNotifierPids.items():
-			try:
-				logger.info(u"Terminating popup notifier app (pid %s)" % notifierPid)
-				System.terminateProcess(processId = notifierPid)
-			except Exception, e:
-				logger.warning(u"Failed to terminate popup notifier app: '%s'" % forceUnicode(e))
-		self._popupNotifierPids = {}
-		
 		if self._popupNotificationServer:
 			try:
 				logger.info(u"Stopping popup message notification server")
 				self._popupNotificationServer.stop(stopReactor = False)
 			except Exception, e:
 				logger.error(u"Failed to stop popup notification server: %s" % e)
-	
+		
+		#for (sessionId, notifierPid) in self._popupNotifierPids.items():
+		#	try:
+		#		logger.info(u"Terminating popup notifier app (pid %s)" % notifierPid)
+		#		System.terminateProcess(processId = notifierPid)
+		#	except Exception, e:
+		#		logger.warning(u"Failed to terminate popup notifier app: '%s'" % forceUnicode(e))
+		self._popupNotifierPids = {}
+		
 	def popupCloseCallback(self, choiceSubject):
 		self.hidePopup()
 	

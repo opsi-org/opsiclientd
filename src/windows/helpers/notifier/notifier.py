@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '3.5'
+__version__ = '3.99'
 
 # Imports
 import threading, time, sys, os, getopt, locale
@@ -108,6 +108,12 @@ class OpsiDialogWindow(SubjectsObserver):
 		self._notificationClient = None
 		if port:
 			self._notificationClient = NotificationClient(host, port, self)
+			self._notificationClient.addEndConnectionRequestedCallback(self.close)
+	
+	def close(self):
+		if self._notificationClient:
+			self._notificationClient.stop()
+		win32gui.PostQuitMessage(0)
 		
 	def _registerWndClass(self):
 		message_map = {}
@@ -587,10 +593,8 @@ class OpsiDialogWindow(SubjectsObserver):
 	
 	def onDestroy(self, hwnd, msg, wparam, lparam):
 		logger.notice(u"Exiting...")
-		if self._notificationClient:
-			self._notificationClient.stop()
-		win32gui.PostQuitMessage(0) # Terminate the app.
-	
+		self.close()
+		
 	def onCommand(self, hwnd, msg, wparam, lparam):
 		dlgId = win32api.LOWORD(wparam)
 		logger.debug2(u"onCommand dlgId: %s" % dlgId)
@@ -600,9 +604,7 @@ class OpsiDialogWindow(SubjectsObserver):
 			
 			if (values.get('type') == u'button'):
 				if (values['id'] == u'exit'):
-					if self._notificationClient:
-						self._notificationClient.stop()
-					win32gui.PostQuitMessage(0)
+					self.close()
 				
 				subjectId = values.get('subjectId')
 				choiceIndex = values.get('choiceIndex')
