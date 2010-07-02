@@ -7,7 +7,7 @@
    opsiclientd_rpc is part of the desktop management solution opsi
    (open pc server integration) http://www.opsi.org
    
-   Copyright (C) 2008 uib GmbH
+   Copyright (C) 2010 uib GmbH
    
    http://www.uib.de/
    
@@ -31,23 +31,26 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.1'
+__version__ = '3.5'
 
 # Imports
-import sys, os
+import sys, os, locale
 
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 
-if (len(sys.argv) != 5):
-	print "Usage: %s <username> <password> <port> <rpc>" % os.path.basename(sys.argv[0])
+encoding = locale.getpreferredencoding()
+argv = [ unicode(arg, encoding) for arg in sys.argv ]
+
+if (len(argv) != 5):
+	print u"Usage: %s <username> <password> <port> <rpc>" % os.path.basename(argv[0])
 	sys.exit(1)
 
-(username, password, port, rpc) = sys.argv[1:]
+(username, password, port, rpc) = argv[1:]
 try:
-	be = JSONRPCBackend(username = username, password = password, address = 'https://localhost:%s/opsiclientd' % port)
+	be = JSONRPCBackend(username = username, password = password, address = u'https://localhost:%s/opsiclientd' % port)
 	exec 'be.%s' % rpc
-	be.exit()
+	be.backend_exit()
 except:
 	pass
 sys.exit(0)

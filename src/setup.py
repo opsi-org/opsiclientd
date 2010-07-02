@@ -1,19 +1,9 @@
 from distutils.core import setup
-import py2exe, sys, os, shutil
- 
-VC_90_INST_DIR = 'C:\\WINDOWS\\WinSxS\\x86_Microsoft.VC90.CRT_1fc8b3b9a1e18e3b_9.0.21022.8_x-ww_d08d0375'
-SYS_DIR = 'c:\\windows\\system32'
+import py2exe, sys, os, shutil, glob
 
 for d in ('build', 'dist'):
 	if os.path.exists(d):
 		shutil.rmtree(d)
-	
-for dll in ('msvcm90.dll', 'msvcp90.dll', 'msvcr90.dll'):
-	if not os.path.exists(os.path.join(SYS_DIR, dll)):
-		shutil.copy2(os.path.join(VC_90_INST_DIR, dll), os.path.join(SYS_DIR, dll))
-	if not os.path.exists(os.path.join(VC_90_INST_DIR, dll)):
-		print "Failed to locate vc++ dll '%s'" % dll
-		sys.exit(1)
 
 # If run without args, build executables, in quiet mode.
 if (len(sys.argv) == 1):
@@ -48,12 +38,41 @@ opsiclientd = Target(
 	description = "opsi client daemon",
 	script = "opsiclientd.py",
 	modules = ["opsiclientd"],
+	#cmdline_style='pywin32',
 )
+
+# manifest_template = '''
+# <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+# <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+# <assemblyIdentity
+#     version="5.0.0.0"
+#     processorArchitecture="x86"
+#     name="%(prog)s"
+#     type="win32"
+# />
+# <description>%(prog)s Program</description>
+# <dependency>
+#     <dependentAssembly>
+#         <assemblyIdentity
+#             type="win32"
+#             name="Microsoft.Windows.Common-Controls"
+#             version="6.0.0.0"
+#             processorArchitecture="X86"
+#             publicKeyToken="6595b64144ccf1df"
+#             language="*"
+#         />
+#     </dependentAssembly>
+# </dependency>
+# </assembly>
+# '''
+# 
+# RT_MANIFEST = 24
 
 notifier = Target(
 	name = "notifier",
 	description = "opsi notifier",
 	script = "windows\\helpers\\notifier\\notifier.py",
+	# other_resources = [(RT_MANIFEST, 1, manifest_template % dict(prog="notifier"))],
 )
 
 opsiclientd_rpc = Target(
@@ -77,19 +96,23 @@ excludes = [	"pywin", "pywin.debugger", "pywin.debugger.dbgcon",
 ]
 
 data_files = [
-	('lib',                           [	'C:\\Programme\\python25\\lib\\site-packages\\Pythonwin\\MFC71.DLL',
-						SYS_DIR + '\\msvcm90.dll']),
+	('Microsoft.VC90.MFC', glob.glob('Microsoft.VC90.MFC\*.*')),
+	('Microsoft.VC90.CRT', glob.glob('Microsoft.VC90.CRT\*.*')),
+	('lib\\Microsoft.VC90.MFC', glob.glob('Microsoft.VC90.MFC\*.*')),
+	('lib\\Microsoft.VC90.CRT', glob.glob('Microsoft.VC90.CRT\*.*')),
 	('notifier',                      [	'windows\\helpers\\notifier\\event.ini',
 						'windows\\helpers\\notifier\\action.ini',
 						'windows\\helpers\\notifier\\userlogin.ini',
 						'windows\\helpers\\notifier\\wait_for_gui.ini',
 						'windows\\helpers\\notifier\\block_login.ini',
+						'windows\\helpers\\notifier\\popup.ini',
 						'windows\\helpers\\notifier\\event.bmp',
 						'windows\\helpers\\notifier\\action.bmp',
 						'windows\\helpers\\notifier\\userlogin.bmp',
 						'windows\\helpers\\notifier\\wait_for_gui.bmp',
 						'windows\\helpers\\notifier\\block_login.bmp',
-						'windows\\helpers\\notifier\\opsi.ico']),
+						'windows\\helpers\\notifier\\popup.bmp',
+						'windows\\helpers\\notifier\\opsi.ico' ]),
 	('opsiclientd',                   [	'windows\\opsiclientd.conf']),
 	('opsiclientd\\static_html',      [	'..\\static_html\\favicon.ico', '..\\static_html\\index.html', '..\\static_html\\opsi_logo.png']),
 	('opsiclientd\\backendManager.d', [	'..\\cache_service.conf'])
@@ -111,6 +134,8 @@ setup(
 	service = [ opsiclientd ],
 	windows = [ notifier, opsiclientd_rpc, action_processor_starter ],
 )
+
+os.unlink(os.path.join("dist", "w9xpopen.exe"))
 
 print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 print "!!!   On the target machine always replace exe AND lib   !!!"
