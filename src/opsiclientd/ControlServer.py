@@ -33,8 +33,20 @@
 
 __version__ = '4.0'
 
+# Imports
+from OpenSSL import SSL
+
+# Twisted imports
+from twisted.internet import defer, threads, reactor
+from OPSI.web2 import resource, stream, server, http, responsecode, static, http_headers
+from OPSI.web2.channel.http import HTTPFactory
+from twisted.python.failure import Failure
+
 # OPSI imports
 from OPSI.Logger import *
+
+from opsiclientd.ControlPipe import OpsiclientdRpcPipeInterface
+from opsiclientd.CacheService import CacheService
 
 # Get logger instance
 logger = Logger()
@@ -459,6 +471,32 @@ class ControlServerJsonInterfaceWorker(ControlServerJsonRpcWorker):
 		result.stream = stream.IByteStream(html.encode('utf-8'))
 		return result
 	
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                               CACHED CONFIG SERVICE JSON RPC WORKER                               -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class CacheServiceJsonRpcWorker(Worker):
+	def __init__(self, request, opsiclientd, resource):
+		Worker.__init__(self, request, opsiclientd, resource)
+		logger.setLogFormat(u'[%l] [%D] [cached cfg server]   %M     (%F|%N)', object=self)
+	
+	def _realRpc(self):
+		method = self.rpc.get('method')
+		params = self.rpc.get('params')
+		logger.info(u"RPC method: '%s' params: '%s'" % (method, params))
+		
+		try:
+			# Execute method
+			start = time.time()
+			self.result['result'] = self._opsiclientd._cacheService.processRpc(method, params)
+		except Exception, e:
+			logger.logException(e)
+			self.result['error'] = { 'class': e.__class__.__name__, 'message': unicode(e) }
+			self.result['result'] = None
+			return
+		
+		logger.debug(u'Got result...')
+		duration = round(time.time() - start, 3)
+		logger.debug(u'Took %0.3fs to process %s(%s)' % (duration, method, unicode(params)[1:-1]))
 
 
 
@@ -508,6 +546,35 @@ class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 	def __init__(self, opsiclientdRpcInterface):
 		logger.setLogFormat(u'[%l] [%D] [control server]   %M     (%F|%N)', object=self)
 		ControlServerResourceJsonRpc.__init__(self, opsiclientdRpcInterface)
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                              CACHED CONFIG SERVICE RESOURCE JSON RPC                              -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class CacheServiceResourceJsonRpc(resource.Resource):
+	def __init__(self, opsiclientd):
+		logger.setLogFormat(u'[%l] [%D] [cached cfg server]   %M     (%F|%N)', object=self)
+		resource.Resource.__init__(self)
+		self._opsiclientd = opsiclientd
+		
+	def getChild(self, name, request):
+		''' Get the child resource for the requested path. '''
+		if not name:
+			return self
+		return resource.Resource.getChild(self, name, request)
+	
+	def http_POST(self, request):
+		''' Process POST request. '''
+		logger.info(u"CacheServiceResourceJsonRpc: processing POST request")
+		worker = CacheServiceJsonRpcWorker(request, self._opsiclientd, method = 'POST')
+		return worker.process()
+		
+	def http_GET(self, request):
+		''' Process GET request. '''
+		logger.info(u"CacheServiceResourceJsonRpc: processing GET request")
+		worker = CacheServiceJsonRpcWorker(request, self._opsiclientd, method = 'GET')
+		return worker.process()
+
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

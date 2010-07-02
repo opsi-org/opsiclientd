@@ -35,63 +35,21 @@
 __version__ = '4.0'
 
 # Imports
-import os, sys, thread, threading, time, urllib, base64, socket, re, shutil, filecmp, codecs, inspect
-import copy as pycopy
-from OpenSSL import SSL
-from hashlib import md5
-
-# Twisted imports
-from twisted.internet import defer, threads, reactor
-from OPSI.web2 import resource, stream, server, http, responsecode, static, http_headers
-from OPSI.web2.channel.http import HTTPFactory
-from twisted.python.failure import Failure
-from twisted.conch.ssh import keys
+import os
 
 # OPSI imports
 from OPSI.Logger import *
-from OPSI import System
-from OPSI.Util import *
-from OPSI.Util.Message import *
-from OPSI.Util.Repository import *
-from OPSI.Util.File import IniFile
-from OPSI.Util.File.Opsi import PackageContentFile
-from OPSI.Backend.JSONRPC import JSONRPCBackend
-from OPSI.Backend.File import FileBackend
-#from OPSI.Backend.Offline import OfflineBackend
-from OPSI.Backend.BackendManager import BackendManager
 
-################
-from opsiclientd.Exceptions import *
-from opsiclientd.Events import *
+
 if (os.name == 'nt'):
 	from opsiclientd.Windows import *
-################
+if (os.name == 'posix'):
+	from opsiclientd.Posix import *
+
 # Create logger instance
 logger = Logger()
 logger.setLogFormat(u'[%l] [%D]   %M     (%F|%N)')
 
-
-# Message translation
-def _(msg):
-	return msg
-
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                         OPSICLIENTD INIT                                          -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-def OpsiclientdInit():
-	if (os.name == 'posix'):
-		return OpsiclientdPosixInit()
-	
-	# if sys.platform == 'win32':
-	if (os.name == 'nt'):
-		return OpsiclientdNTInit()
-	else:
-		raise NotImplementedError(u"Unsupported operating system %s" % os.name)
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                               MAIN                                                -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 if (__name__ == "__main__"):
 	logger.setConsoleLevel(LOG_WARNING)
 	exception = None
@@ -110,5 +68,11 @@ if (__name__ == "__main__"):
 		print >> sys.stderr, u"ERROR:", unicode(exception)
 		sys.exit(1)
 	sys.exit(0)
+
+
+
+
+
+
 
 

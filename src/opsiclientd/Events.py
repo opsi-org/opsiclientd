@@ -36,6 +36,7 @@ __version__ = '4.0'
 
 # OPSI imports
 from OPSI.Logger import *
+from OPSI.Util import KillableThread
 
 # Get logger instance
 logger = Logger()
