@@ -31,22 +31,23 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '0.2.4'
+__version__ = '3.5'
 
 # Imports
-import sys, os
+import sys, os, locale
 
 from OPSI.Logger import *
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 
-#for i in range(len(sys.argv)):
-#	print "%d: %s" % (i, sys.argv[i])
+encoding = locale.getpreferredencoding()
+argv = [ unicode(arg, encoding) for arg in sys.argv ]
 
-if (len(sys.argv) != 16):
-	print "Usage: %s <hostId> <hostKey> <controlServerPort> <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <depotServerUsername> <depotServerPassword> <sessionId> <actionProcessorDesktop> <actionProcessorCommand> <actionProcessorTimeout> <runAsUser> <runAsPassword>" % os.path.basename(sys.argv[0])
+if (len(argv) != 16):
+	print u"Usage: %s <hostId> <hostKey> <controlServerPort> <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <depotServerUsername> <depotServerPassword> <sessionId> <actionProcessorDesktop> <actionProcessorCommand> <actionProcessorTimeout> <runAsUser> <runAsPassword>" % os.path.basename(argv[0])
 	sys.exit(1)
-(hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword) = sys.argv[1:]
+
+(hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword) = argv[1:]
 
 logger = Logger()
 if hostKey:
@@ -59,9 +60,9 @@ if runAsPassword:
 logger.setConsoleLevel(LOG_NONE)
 logger.setLogFile(logFile)
 logger.setFileLevel(int(logLevel))
-logger.setFileFormat('[%l] [%D] [' + os.path.basename(sys.argv[0]) + ']   %M  (%F|%N)')
+logger.setFileFormat(u'[%l] [%D] [' + os.path.basename(argv[0]) + u']   %M  (%F|%N)')
 
-logger.debug("Called with arguments: %s" % ', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword)) )
+logger.debug(u"Called with arguments: %s" % u', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword)) )
 
 actionProcessorTimeout = int(actionProcessorTimeout)
 
@@ -70,21 +71,21 @@ depotShareMounted = False
 be = None
 
 try:
-	be = JSONRPCBackend(username = hostId, password = hostKey, address = 'https://localhost:%s/opsiclientd' % controlServerPort)
+	be = JSONRPCBackend(username = hostId, password = hostKey, address = u'https://localhost:%s/opsiclientd' % controlServerPort)
 	
 	if runAsUser:
-		logger.info("Impersonating user '%s'" % runAsUser)
+		logger.info(u"Impersonating user '%s'" % runAsUser)
 		imp = System.Impersonate(username = runAsUser, password = runAsPassword, desktop = actionProcessorDesktop)
-		imp.start(logonType = 'INTERACTIVE', newDesktop = True)
+		imp.start(logonType = u'INTERACTIVE', newDesktop = True)
 	
 	else:
-		logger.info("Impersonating network account '%s'" % depotServerUsername)
+		logger.info(u"Impersonating network account '%s'" % depotServerUsername)
 		imp = System.Impersonate(username = depotServerUsername, password = depotServerPassword, desktop = actionProcessorDesktop)
-		imp.start(logonType = 'NEW_CREDENTIALS')
+		imp.start(logonType = u'NEW_CREDENTIALS')
 		
-	if (depotRemoteUrl.split('/')[2] != 'localhost'):
-		logger.notice("Mounting depot share %s" % depotRemoteUrl)
-		be.setStatusMessage(sessionId, "Mounting depot share %s" % depotRemoteUrl)
+	if (depotRemoteUrl.split(u'/')[2] != u'localhost'):
+		logger.notice(u"Mounting depot share %s" % depotRemoteUrl)
+		be.setStatusMessage(sessionId, u"Mounting depot share %s" % depotRemoteUrl)
 		
 		if runAsUser:
 			System.mount(depotRemoteUrl, depotDrive, username = depotServerUsername, password = depotServerPassword)
@@ -92,17 +93,17 @@ try:
 			System.mount(depotRemoteUrl, depotDrive)
 		depotShareMounted = True
 	
-	logger.notice("Starting action processor")
-	be.setStatusMessage(sessionId, "Starting action processor")
+	logger.notice(u"Starting action processor")
+	be.setStatusMessage(sessionId, u"Starting action processor")
 	
 	imp.runCommand(actionProcessorCommand, timeoutSeconds = actionProcessorTimeout)
 	
-	logger.notice("Action processor ended")
-	be.setStatusMessage(sessionId, "Action processor ended")
+	logger.notice(u"Action processor ended")
+	be.setStatusMessage(sessionId, u"Action processor ended")
 	
 except Exception, e:
 	logger.logException(e)
-	error = "Failed to process action requests: %s" % e
+	error = u"Failed to process action requests: %s" % e
 	if be:
 		try:
 			be.setStatusMessage(sessionId, error)
@@ -112,7 +113,7 @@ except Exception, e:
 	
 if depotShareMounted:
 	try:
-		logger.notice("Unmounting depot share")
+		logger.notice(u"Unmounting depot share")
 		System.umount(depotDrive)
 	except:
 		pass
@@ -122,7 +123,11 @@ if imp:
 	except:
 		pass
 
-
+if be:
+	try:
+		be.backend_exit()
+	except:
+		pass
 
 
 
