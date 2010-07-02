@@ -33,8 +33,20 @@
 
 __version__ = '4.0'
 
+
+# Imports
+import copy as pycopy
+
 # OPSI imports
 from OPSI.Logger import *
+from OPSI.Util import KillableThread
+from OPSI.Util.File import IniFile
+from OPSI import System
+
+from opsiclientd.Events import *
+from opsiclientd.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
+from opsiclientd.ControlServer import ControlServer
+from opsiclientd.CacheService import CacheService
 
 # Get logger instance
 logger = Logger()

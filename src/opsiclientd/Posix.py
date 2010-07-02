@@ -40,6 +40,7 @@ from signal import *
 # OPSI imports
 from OPSI.Logger import *
 from OPSI.Types import *
+
 from opsiclientd.Opsiclientd import Opsiclientd
 
 # Get logger instance
@@ -57,7 +58,7 @@ class OpsiclientdPosix(Opsiclientd):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                       OPSICLIENTD POSIX INIT                                      -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class OpsiclientdPosixInit(object):
+class OpsiclientdInit(object):
 	def __init__(self):
 		logger.debug(u"OpsiclientdPosixInit")
 		argv = sys.argv[1:]

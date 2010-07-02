@@ -35,14 +35,15 @@ __version__ = '4.0'
 
 # Imports
 import threading
+from ctypes import *
 import win32serviceutil, win32service, win32con, win32api, win32event, win32pipe, win32file, pywintypes
 import win32com.server.policy
 import win32com.client
-from ctypes import *
 
 # OPSI imports
 from OPSI.Logger import *
-from OPSI.Types import forceUnicode
+from OPSI.System import *
+
 from opsiclientd.Opsiclientd import Opsiclientd
 
 # Get logger instance
@@ -269,9 +270,9 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                        OPSICLIENTD NT INIT                                        -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class OpsiclientdNTInit(object):
+class OpsiclientdInit(object):
 	def __init__(self):
-		logger.debug(u"OpsiclientdNTInit")
+		logger.debug(u"OpsiclientdInit")
 		win32serviceutil.HandleCommandLine(OpsiclientdServiceFramework)
 
 
@@ -390,7 +391,6 @@ class OpsiclientdNT6(OpsiclientdNT):
 class OpsiclientdNT61(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
-
 
 
 

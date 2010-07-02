@@ -40,7 +40,7 @@ from ctypes import *
 # OPSI imports
 from OPSI.Logger import *
 from OPSI.Util import fromJson, toJson
-from opsiclient.JsonRpc import JsonRpc
+from opsiclientd.JsonRpc import JsonRpc
 
 # Get logger instance
 logger = Logger()
