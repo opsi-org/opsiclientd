@@ -46,6 +46,7 @@ from twisted.python.failure import Failure
 # OPSI imports
 from OPSI.Logger import *
 from OPSI.Util import fromJson, toJson
+from OPSI.Types import *
 
 from ocdlib.Exceptions import *
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
