@@ -39,6 +39,7 @@ from ctypes import *
 
 # OPSI imports
 from OPSI.Logger import *
+from OPSI.Types import *
 from OPSI.Util import fromJson, toJson
 from ocdlib.JsonRpc import JsonRpc
 
