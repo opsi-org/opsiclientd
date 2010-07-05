@@ -1144,6 +1144,8 @@ class EventProcessingThread(KillableThread):
 						self.opsiclientd.setConfigValue('depot_server', 'url', self._configService.getDepot_hash(depotId)['depotRemoteUrl'])
 					elif (key.lower() == 'depotdrive'):
 						self.opsiclientd.setConfigValue('depot_server', 'drive', value)
+					elif (key.lower() == 'nextbootserviceurl'):
+						self.opsiclientd.setConfigValue('config_service', 'url', value)
 					else:
 						logger.info(u"Unhandled network config key '%s'" % key)
 					
