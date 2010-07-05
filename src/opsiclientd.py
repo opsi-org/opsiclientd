@@ -41,10 +41,8 @@ import os
 from OPSI.Logger import *
 
 
-#ServiceFramework = None
 if (os.name == 'nt'):
 	from ocdlib.Windows import *
-	#ServiceFramework = OpsiclientdServiceFramework
 if (os.name == 'posix'):
 	from ocdlib.Posix import *
 
@@ -55,6 +53,24 @@ logger.setLogFormat(u'[%l] [%D]   %M     (%F|%N)')
 if (__name__ == "__main__"):
 	logger.setConsoleLevel(LOG_WARNING)
 	exception = None
+	
+	debugLogFile = "c:\\tmp\\opsiclientd.log"
+	f = open(debugLogFile, "w")
+	f.write(u"--- Debug log started ---\r\n")
+	f.close()
+	try:
+		logger.setLogFile(debugLogFile)
+		logger.setFileLevel(LOG_CONFIDENTIAL)
+		logger.log(1, u"Logger initialized", raiseException = True)
+	except Exception, e:
+		error = 'unkown error'
+		try:
+			error = str(e)
+		except:
+			pass
+		f = open(debugLogFile, "a+")
+		f.write("Failed to initialize logger: %s\r\n" % error)
+		f.close()
 	
 	try:
 		OpsiclientdInit()
