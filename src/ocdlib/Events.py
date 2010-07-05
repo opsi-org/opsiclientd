@@ -48,7 +48,6 @@ if (os.name == 'posix'):
 # Get logger instance
 logger = Logger()
 
-
 # Possible event types
 EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED = u'product sync completed'
 EVENT_CONFIG_TYPE_DAEMON_STARTUP = u'daemon startup'
@@ -61,6 +60,10 @@ EVENT_CONFIG_TYPE_USER_LOGIN = u'user login'
 EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN = u'system shutdown'
 EVENT_CONFIG_TYPE_CUSTOM = u'custom'
 
+
+# Message translation
+def _(msg):
+	return msg
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         EVENT CONFIG                                              -
