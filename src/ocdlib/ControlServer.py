@@ -35,6 +35,7 @@ __version__ = '4.0'
 
 # Imports
 from OpenSSL import SSL
+import base64
 
 # Twisted imports
 from twisted.internet import defer, threads, reactor
@@ -311,7 +312,7 @@ class Worker:
 					(user, password) = base64.decodestring(encoded).split(':')
 					logger.confidential(u"Client supplied username '%s' and password '%s'" % (user, password))
 				except Exception:
-					raise Exception(u"Bad Authorization header from '%s'" % self.request.remoteAddr.host)
+					raise Exception(u"Bad authorization header from '%s'" % self.request.remoteAddr.host)
 			
 			logger.notice(u"Authorization request from %s@%s" % (user, self.request.remoteAddr.host))
 			if not user:
