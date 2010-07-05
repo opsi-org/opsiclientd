@@ -900,11 +900,7 @@ class ServiceConnectionThread(KillableThread):
 					logger.notice(u"Connecting to config server '%s' #%d" % (self._configServiceUrl, tryNum))
 					self.setStatusMessage( _(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
 					if (len(self._username.split('.')) < 3):
-						logger.notice(u"Domain missing in username %s, fetching domain from service" % self._username)
-						configService = JSONRPCBackend(address = self._configServiceUrl, username = u'', password = u'')
-						domain = configService.getDomain()
-						self._username += '.' + domain
-						logger.notice(u"Got domain '%s' from service, username expanded to '%s'" % (domain, self._username))
+						raise Exception(u"Domain missing in username '%s'" % self._username)
 					self.configService = JSONRPCBackend(address = self._configServiceUrl, username = self._username, password = self._password)
 					self.configService.authenticated()
 					self.connected = True
