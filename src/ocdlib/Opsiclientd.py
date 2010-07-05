@@ -57,6 +57,9 @@ from ocdlib.CacheService import CacheService
 logger = Logger()
 
 
+# Message translation
+def _(msg):
+	return msg
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                            OPSICLIENTD                                            -
