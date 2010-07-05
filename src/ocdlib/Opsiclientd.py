@@ -1297,7 +1297,7 @@ class EventProcessingThread(KillableThread):
 		if self._configService.isLegacyOpsi():
 			encryptedDepotServerPassword = self._configService.getPcpatchPassword(self.opsiclientd.getConfigValue('global', 'host_id'))
 		else:
-			encryptedDepotServerPassword = self._configService.user_getCredentials(username = u'pcpatch', hostId = clientId)['password']
+			encryptedDepotServerPassword = self._configService.user_getCredentials(username = u'pcpatch', hostId = self.opsiclientd.getConfigValue('global', 'host_id'))['password']
 		depotServerPassword = blowfishDecrypt(self.opsiclientd.getConfigValue('global', 'opsi_host_key'), encryptedDepotServerPassword)
 		logger.addConfidentialString(depotServerPassword)
 		return (depotServerUsername, depotServerPassword)
