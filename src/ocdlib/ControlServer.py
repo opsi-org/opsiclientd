@@ -51,6 +51,7 @@ from OPSI.Types import *
 from ocdlib.Exceptions import *
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.CacheService import CacheService
+from ocdlib.JsonRpc import JsonRpc
 
 # Get logger instance
 logger = Logger()
