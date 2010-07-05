@@ -1103,6 +1103,8 @@ class EventProcessingThread(KillableThread):
 			if not serviceConnectionThread.connected:
 				raise Exception(u"Failed to connect to config service '%s': reason unknown" % self.opsiclientd.getConfigValue('config_service', 'url'))
 			
+			self._configService = serviceConnectionThread.configService
+			
 			if (serviceConnectionThread.getUsername() != self.opsiclientd.getConfigValue('global', 'host_id')):
 				self.opsiclientd.setConfigValue('global', 'host_id', serviceConnectionThread.getUsername().lower())
 				logger.info(u"Updated host_id to '%s'" % self.opsiclientd.getConfigValue('global', 'host_id'))
