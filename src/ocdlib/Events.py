@@ -58,11 +58,6 @@ EVENT_CONFIG_TYPE_USER_LOGIN = u'user login'
 EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN = u'system shutdown'
 EVENT_CONFIG_TYPE_CUSTOM = u'custom'
 
-
-# Message translation
-def _(msg):
-	return msg
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         EVENT CONFIG                                              -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
