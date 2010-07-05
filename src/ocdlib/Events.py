@@ -37,6 +37,7 @@ __version__ = '4.0'
 # OPSI imports
 from OPSI.Logger import *
 from OPSI.Util import KillableThread
+from OPSI.Util.Message import *
 from OPSI import System
 
 if (os.name == 'nt'):
