@@ -35,7 +35,7 @@ __version__ = '4.0'
 
 # Imports
 from OpenSSL import SSL
-import base64
+import base64, urllib
 
 # Twisted imports
 from twisted.internet import defer, threads, reactor
