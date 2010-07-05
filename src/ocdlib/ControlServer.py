@@ -45,8 +45,8 @@ from twisted.python.failure import Failure
 # OPSI imports
 from OPSI.Logger import *
 
-from opsiclientd.ControlPipe import OpsiclientdRpcPipeInterface
-from opsiclientd.CacheService import CacheService
+from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
+from ocdlib.CacheService import CacheService
 
 # Get logger instance
 logger = Logger()

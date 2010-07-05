@@ -41,7 +41,7 @@ from signal import *
 from OPSI.Logger import *
 from OPSI.Types import *
 
-from opsiclientd.Opsiclientd import Opsiclientd
+from ocdlib.Opsiclientd import Opsiclientd
 
 # Get logger instance
 logger = Logger()
