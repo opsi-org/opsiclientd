@@ -48,6 +48,7 @@ from OPSI.Util.Message import *
 from OPSI.Types import *
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
+from OPSI.Object import *
 
 from ocdlib.Events import *
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
@@ -108,7 +109,6 @@ class Opsiclientd(EventListener, threading.Thread):
 				'block_login_notifier':           u'',
 			},
 			'config_service': {
-				'server_id':              u'',
 				'url':                    u'',
 				'connection_timeout':     10,
 				'user_cancellable_after': 0,
@@ -228,7 +228,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				raise ValueError("Bad opsi host key, length != 32")
 			logger.addConfidentialString(value)
 		
-		if option in ('server_id', 'depot_id', 'host_id'):
+		if option in ('depot_id', 'host_id'):
 			value = value.lower()
 		
 		if section in ('system'):
@@ -902,7 +902,10 @@ class ServiceConnectionThread(KillableThread):
 					if (len(self._username.split('.')) < 3):
 						raise Exception(u"Domain missing in username '%s'" % self._username)
 					self.configService = JSONRPCBackend(address = self._configServiceUrl, username = self._username, password = self._password)
-					self.configService.authenticated()
+					if self.configService.isLegacyOpsi():
+						self.configService.authenticated()
+					else:
+						self.configService.accessControl_authenticated()
 					self.connected = True
 					self.setStatusMessage(u"Connected to config server '%s'" % self._configServiceUrl)
 					logger.notice(u"Connected to config server '%s'" % self._configServiceUrl)
@@ -1103,9 +1106,6 @@ class EventProcessingThread(KillableThread):
 			if (serviceConnectionThread.getUsername() != self.opsiclientd.getConfigValue('global', 'host_id')):
 				self.opsiclientd.setConfigValue('global', 'host_id', serviceConnectionThread.getUsername().lower())
 				logger.info(u"Updated host_id to '%s'" % self.opsiclientd.getConfigValue('global', 'host_id'))
-			self._configService = serviceConnectionThread.configService
-			self.opsiclientd.setConfigValue('config_service', 'server_id', self._configService.getServerId(self.opsiclientd.getConfigValue('global', 'host_id')))
-			logger.info(u"Updated config_service.host_id to '%s'" % self.opsiclientd.getConfigValue('config_service', 'server_id'))
 			
 			if self.event.eventConfig.updateConfigFile:
 				self.setStatusMessage( _(u"Updating config file") )
@@ -1133,29 +1133,55 @@ class EventProcessingThread(KillableThread):
 			
 			self.connectConfigServer()
 			
-			for (key, value) in self._configService.getNetworkConfig_hash(self.opsiclientd.getConfigValue('global', 'host_id')).items():
-				if (key.lower() == 'depotid'):
-					depotId = value
-					self.opsiclientd.setConfigValue('depot_server', 'depot_id', depotId)
-					self.opsiclientd.setConfigValue('depot_server', 'url', self._configService.getDepot_hash(depotId)['depotRemoteUrl'])
-				elif (key.lower() == 'depotdrive'):
-					self.opsiclientd.setConfigValue('depot_server', 'drive', value)
-				else:
-					logger.info(u"Unhandled network config key '%s'" % key)
+			if self._configService.isLegacyOpsi():
 				
-			logger.notice(u"Got network config from service")
-			
-			for (key, value) in self._configService.getGeneralConfig_hash(self.opsiclientd.getConfigValue('global', 'host_id')).items():
-				try:
-					parts = key.lower().split('.')
-					if (len(parts) < 3) or (parts[0] != 'opsiclientd'):
+				for (key, value) in self._configService.getNetworkConfig_hash(self.opsiclientd.getConfigValue('global', 'host_id')).items():
+					if (key.lower() == 'depotid'):
+						depotId = value
+						self.opsiclientd.setConfigValue('depot_server', 'depot_id', depotId)
+						self.opsiclientd.setConfigValue('depot_server', 'url', self._configService.getDepot_hash(depotId)['depotRemoteUrl'])
+					elif (key.lower() == 'depotdrive'):
+						self.opsiclientd.setConfigValue('depot_server', 'drive', value)
+					else:
+						logger.info(u"Unhandled network config key '%s'" % key)
+					
+				logger.notice(u"Got network config from service")
+				
+				for (key, value) in self._configService.getGeneralConfig_hash(self.opsiclientd.getConfigValue('global', 'host_id')).items():
+					try:
+						parts = key.lower().split('.')
+						if (len(parts) < 3) or (parts[0] != 'opsiclientd'):
+							continue
+						
+						self.opsiclientd.setConfigValue(section = parts[1], option = parts[2], value = value)
+						
+					except Exception, e:
+						logger.error(u"Failed to process general config key '%s:%s': %s" % (key, value, forceUnicode(e)))
+			else:
+				self._configService.backend_setOptions({"addConfigStateDefaults": True})
+				for configState in self._configService.configState_getObjects(objectId = self.opsiclientd.getConfigValue('global', 'host_id')):
+					logger.info(u"Got config state from service: %s" % configState)
+					
+					if not configState.values:
 						continue
 					
-					self.opsiclientd.setConfigValue(section = parts[1], option = parts[2], value = value)
+					if   (configState.configId == u'clientconfig.configserver.url'):
+						self.opsiclientd.setConfigValue('config_service', 'url', configState.values[0])
+					elif (configState.configId == u'clientconfig.depot.id'):
+						self.opsiclientd.setConfigValue('depot_server', 'depot_id', configState.values[0])
+					elif (configState.configId == u'clientconfig.depot.drive'):
+						self.opsiclientd.setConfigValue('depot_server', 'drive', configState.values[0])
+					elif configState.configId.startswith(u'opsiclientd.'):
+						try:
+							parts = configState.configId.lower().split('.')
+							if (len(parts) < 3):
+								continue
+							
+							self.opsiclientd.setConfigValue(section = parts[1], option = parts[2], value = configState.values[0])
+							
+						except Exception, e:
+							logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
 					
-				except Exception, e:
-					logger.error(u"Failed to process general config key '%s:%s': %s" % (key, value, forceUnicode(e)))
-			
 			logger.notice(u"Got config from service")
 			
 			self.setStatusMessage(_(u"Got config from service"))
@@ -1182,8 +1208,11 @@ class EventProcessingThread(KillableThread):
 			f.close()
 			# Do not log jsonrpc request
 			logger.setFileLevel(LOG_WARNING)
-			self._configService.writeLog('clientconnect', data.replace(u'\ufffd', u'?'), self.opsiclientd.getConfigValue('global', 'host_id'))
-			#self._configService.writeLog('clientconnect', data.replace(u'\ufffd', u'?').encode('utf-8'), self.opsiclientd.getConfigValue('global', 'host_id'))
+			if self._configService.isLegacyOpsi():
+				self._configService.writeLog('clientconnect', data.replace(u'\ufffd', u'?'), self.opsiclientd.getConfigValue('global', 'host_id'))
+				#self._configService.writeLog('clientconnect', data.replace(u'\ufffd', u'?').encode('utf-8'), self.opsiclientd.getConfigValue('global', 'host_id'))
+			else:
+				self._configService.log_write('clientconnect', data.replace(u'\ufffd', u'?'), self.opsiclientd.getConfigValue('global', 'host_id'))
 		finally:
 			logger.setFileLevel(self.opsiclientd.getConfigValue('global', 'log_level'))
 		
@@ -1260,7 +1289,11 @@ class EventProcessingThread(KillableThread):
 	def getDepotserverCredentials(self):
 		self.connectConfigServer()
 		depotServerUsername = self.opsiclientd.getConfigValue('depot_server', 'username')
-		encryptedDepotServerPassword = self._configService.getPcpatchPassword(self.opsiclientd.getConfigValue('global', 'host_id'))
+		encryptedDepotServerPassword = u''
+		if self._configService.isLegacyOpsi():
+			encryptedDepotServerPassword = self._configService.getPcpatchPassword(self.opsiclientd.getConfigValue('global', 'host_id'))
+		else:
+			encryptedDepotServerPassword = self._configService.user_getCredentials(username = u'pcpatch', hostId = clientId)['password']
 		depotServerPassword = blowfishDecrypt(self.opsiclientd.getConfigValue('global', 'opsi_host_key'), encryptedDepotServerPassword)
 		logger.addConfidentialString(depotServerPassword)
 		return (depotServerUsername, depotServerPassword)
@@ -1346,11 +1379,20 @@ class EventProcessingThread(KillableThread):
 			
 			logger.notice(u'Local action processor successfully updated')
 			
-			self._configService.setProductInstallationStatus(
+			if self._configService.isLegacyOpsi():
+				self._configService.setProductInstallationStatus(
 							'opsi-winst',
 							self.opsiclientd.getConfigValue('global', 'host_id'),
 							'installed')
-			
+			else:
+				self._configService.productOnClient_updateObjects([
+					ProductOnClient(
+						productId          = u'opsi-winst',
+						productType        = u'LocalbootProduct',
+						clientId           = self.opsiclientd.getConfigValue('global', 'host_id'),
+						installationStatus = u'installed'
+					)
+				])
 			self.setActionProcessorInfo()
 			
 			self.umountDepotShare()
@@ -1421,25 +1463,36 @@ class EventProcessingThread(KillableThread):
 				logger.warning(u"Failed to get bootmode from registry: %s" % forceUnicode(e))
 			
 			self.connectConfigServer()
-			productStates = []
-			if (self._configService.getLocalBootProductStates_hash.func_code.co_argcount == 2):
-				if self.event.eventConfig.serviceOptions:
-					logger.warning(u"Service cannot handle service options in method getLocalBootProductStates_hash")
-				productStates = self._configService.getLocalBootProductStates_hash(self.opsiclientd.getConfigValue('global', 'host_id'))
-				productStates = productStates.get(self.opsiclientd.getConfigValue('global', 'host_id'), [])
-			else:
-				productStates = self._configService.getLocalBootProductStates_hash(
-							self.opsiclientd.getConfigValue('global', 'host_id'),
-							self.event.eventConfig.serviceOptions )
-				productStates = productStates.get(self.opsiclientd.getConfigValue('global', 'host_id'), [])
-			
-			logger.notice(u"Got product action requests from configservice")
 			productIds = []
-			for productState in productStates:
-				if (productState['actionRequest'] not in ('none', 'undefined')):
-					productIds.append(productState['productId'])
-					logger.notice("   [%2s] product %-20s %s" % (len(productIds), productState['productId'] + ':', productState['actionRequest']))
-			
+			if self._configService.isLegacyOpsi():
+				productStates = []
+				if (self._configService.getLocalBootProductStates_hash.func_code.co_argcount == 2):
+					if self.event.eventConfig.serviceOptions:
+						logger.warning(u"Service cannot handle service options in method getLocalBootProductStates_hash")
+					productStates = self._configService.getLocalBootProductStates_hash(self.opsiclientd.getConfigValue('global', 'host_id'))
+					productStates = productStates.get(self.opsiclientd.getConfigValue('global', 'host_id'), [])
+				else:
+					productStates = self._configService.getLocalBootProductStates_hash(
+								self.opsiclientd.getConfigValue('global', 'host_id'),
+								self.event.eventConfig.serviceOptions )
+					productStates = productStates.get(self.opsiclientd.getConfigValue('global', 'host_id'), [])
+				
+				logger.notice(u"Got product action requests from configservice")
+				
+				for productState in productStates:
+					if (productState['actionRequest'] not in ('none', 'undefined')):
+						productIds.append(productState['productId'])
+						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productState['productId'] + ':', productState['actionRequest']))
+			else:
+				for productOnClient in backend.productOnClient_getObjects(
+							productType   = 'LocalbootProduct',
+							clientId      = self.opsiclientd.getConfigValue('global', 'host_id'),
+							actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+							attributes    = ['actionRequest']):
+					if not productOnClient.productId in productIds:
+						productIds.append(productOnClient.productId)
+						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
+					
 			if (len(productIds) == 0) and (bootmode == 'BKSTD'):
 				logger.notice(u"No product action requests set")
 				self.setStatusMessage( _(u"No product action requests set") )
@@ -1557,10 +1610,7 @@ class EventProcessingThread(KillableThread):
 			desktop = 'winlogon'
 		
 		
-		depotServerUsername = self.opsiclientd.getConfigValue('depot_server', 'username')
-		encryptedDepotServerPassword = self._configService.getPcpatchPassword(self.opsiclientd.getConfigValue('global', 'host_id'))
-		depotServerPassword = blowfishDecrypt(self.opsiclientd.getConfigValue('global', 'opsi_host_key'), encryptedDepotServerPassword)
-		logger.addConfidentialString(depotServerPassword)
+		(depotServerUsername, depotServerPassword) = self.getDepotserverCredentials()
 		
 		# Update action processor
 		if self.opsiclientd.getConfigValue('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost') and self.event.eventConfig.updateActionProcessor:
