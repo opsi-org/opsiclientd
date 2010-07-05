@@ -39,7 +39,7 @@ import os
 
 # OPSI imports
 from OPSI.Logger import *
-import System
+from OPSI import System
 
 if (os.name == 'nt'):
 	from ocdlib.Windows import *
