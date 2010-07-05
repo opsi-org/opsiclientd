@@ -41,6 +41,7 @@ import copy as pycopy
 from OPSI.Logger import *
 from OPSI.Util import KillableThread
 from OPSI.Util.File import IniFile
+from OPSI.Types import *
 from OPSI import System
 
 from ocdlib.Events import *
