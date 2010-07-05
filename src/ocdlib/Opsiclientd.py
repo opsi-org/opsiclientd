@@ -39,7 +39,7 @@ import copy as pycopy
 
 # OPSI imports
 from OPSI.Logger import *
-from OPSI.Util import KillableThread
+from OPSI.Util import *
 from OPSI.Util.File import IniFile
 from OPSI.Types import *
 from OPSI import System
