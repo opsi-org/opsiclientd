@@ -1488,7 +1488,7 @@ class EventProcessingThread(KillableThread):
 						productIds.append(productState['productId'])
 						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productState['productId'] + ':', productState['actionRequest']))
 			else:
-				for productOnClient in backend.productOnClient_getObjects(
+				for productOnClient in self._configService.productOnClient_getObjects(
 							productType   = 'LocalbootProduct',
 							clientId      = self.opsiclientd.getConfigValue('global', 'host_id'),
 							actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
