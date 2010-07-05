@@ -126,7 +126,7 @@ setup(
 			#"bundle_files": 1,
 			"optimize": 2,
 			"excludes": excludes,
-			"packages": ["OPSI", "twisted", "opsiclientd"]
+			"packages": ["OPSI", "twisted", "ocdlib"]
 		}
 	},
 	data_files = data_files,

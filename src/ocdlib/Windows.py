@@ -44,7 +44,7 @@ import win32com.client
 from OPSI.Logger import *
 from OPSI import System
 
-from opsiclientd.Opsiclientd import Opsiclientd
+from ocdlib.Opsiclientd import Opsiclientd
 
 # Get logger instance
 logger = Logger()

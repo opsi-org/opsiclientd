@@ -43,10 +43,10 @@ from OPSI.Util import KillableThread
 from OPSI.Util.File import IniFile
 from OPSI import System
 
-from opsiclientd.Events import *
-from opsiclientd.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
-from opsiclientd.ControlServer import ControlServer
-from opsiclientd.CacheService import CacheService
+from ocdlib.Events import *
+from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
+from ocdlib.ControlServer import ControlServer
+from ocdlib.CacheService import CacheService
 
 # Get logger instance
 logger = Logger()

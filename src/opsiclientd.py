@@ -41,12 +41,12 @@ import os
 from OPSI.Logger import *
 
 
-ServiceFramework = None
+#ServiceFramework = None
 if (os.name == 'nt'):
-	from opsiclientd.Windows import *
-	ServiceFramework = OpsiclientdServiceFramework
+	from ocdlib.Windows import *
+	#ServiceFramework = OpsiclientdServiceFramework
 if (os.name == 'posix'):
-	from opsiclientd.Posix import *
+	from ocdlib.Posix import *
 
 # Create logger instance
 logger = Logger()

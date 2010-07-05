@@ -38,7 +38,7 @@ import sys
 
 # OPSI imports
 from OPSI.Logger import *
-from opsiclientd.Exceptions import *
+from ocdlib.Exceptions import *
 
 # Get logger instance
 logger = Logger()
