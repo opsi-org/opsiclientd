@@ -37,6 +37,9 @@ __version__ = '4.0'
 # Imports
 import copy as pycopy
 
+# Twisted imports
+from twisted.internet import reactor
+
 # OPSI imports
 from OPSI.Logger import *
 from OPSI.Util import *
