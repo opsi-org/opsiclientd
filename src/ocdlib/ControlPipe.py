@@ -34,7 +34,7 @@
 __version__ = '4.0'
 
 # Imports
-import os
+import os, inspect
 from ctypes import *
 
 # OPSI imports
