@@ -41,8 +41,10 @@ import os
 from OPSI.Logger import *
 
 
+ServiceFramework = None
 if (os.name == 'nt'):
 	from opsiclientd.Windows import *
+	ServiceFramework = OpsiclientdServiceFramework
 if (os.name == 'posix'):
 	from opsiclientd.Posix import *
 
