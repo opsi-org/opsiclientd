@@ -47,6 +47,7 @@ from OPSI.Util.File import IniFile
 from OPSI.Util.Message import *
 from OPSI.Types import *
 from OPSI import System
+from OPSI.Backend.JSONRPC import JSONRPCBackend
 
 from ocdlib.Events import *
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
