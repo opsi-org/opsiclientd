@@ -221,11 +221,12 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			else:
 				raise Exception(u"Running windows version not supported")
 			
-			opsiclientd.start()
 			# Write to event log
 			self.ReportServiceStatus(win32service.SERVICE_RUNNING)
 			
 			logger.debug(u"Took %0.2f seconds to report service running status" % (time.time() - startTime))
+			
+			opsiclientd.start()
 			
 			# Wait for stop event
 			self._stopEvent.wait()
