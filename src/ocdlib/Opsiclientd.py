@@ -99,6 +99,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				'program_files_dir': u'',
 			},
 			'global': {
+				'base_dir':                       u'',
 				'config_file':                    u'opsiclientd.conf',
 				'log_file':                       u'opsiclientd.log',
 				'log_level':                      LOG_NOTICE,
