@@ -36,6 +36,7 @@ __version__ = '4.0'
 
 # Imports
 import copy as pycopy
+import shutil
 
 # Twisted imports
 from twisted.internet import reactor
