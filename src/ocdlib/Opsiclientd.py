@@ -1625,7 +1625,7 @@ class EventProcessingThread(KillableThread):
 		actionProcessorCommand = self.opsiclientd.fillPlaceholders(self.event.getActionProcessorCommand())
 		actionProcessorCommand += additionalParams
 		actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
-		command = u'%system.program_files_dir%\\opsi.org\\preloginloader\\action_processor_starter.exe ' \
+		command = u'%global.base_dir%\\action_processor_starter.exe ' \
 			+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
 			+ u'"%global.log_file%" "%global.log_level%" ' \
 			+ u'"%depot_server.url%" "%depot_server.drive%" ' \
