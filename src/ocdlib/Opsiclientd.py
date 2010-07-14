@@ -36,7 +36,7 @@ __version__ = '4.0'
 
 # Imports
 import copy as pycopy
-import shutil
+import sys, os, shutil
 
 # Twisted imports
 from twisted.internet import reactor
@@ -95,12 +95,18 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._popupNotificationServer = None
 		self._popupNotificationLock = threading.Lock()
 		
+		baseDir = u''
+		try:
+			baseDir = os.path.dirname(sys.argv[0])
+		except Exception, e:
+			logger.error(u"Failed to get base dir: %s" % e)
+		
 		self._config = {
 			'system': {
 				'program_files_dir': u'',
 			},
 			'global': {
-				'base_dir':                       u'',
+				'base_dir':                       baseDir,
 				'config_file':                    u'opsiclientd.conf',
 				'log_file':                       u'opsiclientd.log',
 				'log_level':                      LOG_NOTICE,
