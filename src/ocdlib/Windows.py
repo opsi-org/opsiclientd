@@ -206,9 +206,9 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 					logger.setLogFile(debugLogFile)
 					logger.setFileLevel(LOG_CONFIDENTIAL)
 					value = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, u"SYSTEM\\CurrentControlSet\\Services\\opsiclientd", u"Debug")
-					logger.log(1, u"value: %s", value)
+					logger.log(1, u"value: %s" % value)
 					value = forceBool(value)
-					logger.log(1, u"value: %s", value)
+					logger.log(1, u"value: %s" % value)
 					
 					logger.log(1, u"Logger initialized", raiseException = True)
 				except Exception, e:
