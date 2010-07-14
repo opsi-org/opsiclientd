@@ -197,24 +197,25 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			startTime = time.time()
 			
 			try:
-				if forceBool(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, u"SYSTEM\\CurrentControlSet\\Services\\opsiclientd", u"Debug")):
-					debugLogFile = u"c:\\tmp\\opsiclientd.log"
-					f = open(debugLogFile, "w")
-					f.write(u"--- Debug log started ---\r\n")
-					f.close()
+				#if forceBool(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, u"SYSTEM\\CurrentControlSet\\Services\\opsiclientd", u"Debug")):
+				debugLogFile = u"c:\\tmp\\opsiclientd.log"
+				f = open(debugLogFile, "w")
+				f.write(u"--- Debug log started ---\r\n")
+				f.close()
+				try:
+					logger.setLogFile(debugLogFile)
+					logger.setFileLevel(LOG_CONFIDENTIAL)
+					forceBool(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, u"SYSTEM\\CurrentControlSet\\Services\\opsiclientd", u"Debug"))
+					logger.log(1, u"Logger initialized", raiseException = True)
+				except Exception, e:
+					error = 'unkown error'
 					try:
-						logger.setLogFile(debugLogFile)
-						logger.setFileLevel(LOG_CONFIDENTIAL)
-						logger.log(1, u"Logger initialized", raiseException = True)
-					except Exception, e:
-						error = 'unkown error'
-						try:
-							error = str(e)
-						except:
-							pass
-						f = open(debugLogFile, "a+")
-						f.write("Failed to initialize logger: %s\r\n" % error)
-						f.close()
+						error = str(e)
+					except:
+						pass
+					f = open(debugLogFile, "a+")
+					f.write("Failed to initialize logger: %s\r\n" % error)
+					f.close()
 			except Exception, e:
 				pass
 			
