@@ -42,6 +42,7 @@ import win32com.client
 
 # OPSI imports
 from OPSI.Logger import *
+from OPSI.Types import *
 from OPSI import System
 
 from ocdlib.Opsiclientd import Opsiclientd
