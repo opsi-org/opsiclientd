@@ -1078,8 +1078,8 @@ class EventProcessingThread(KillableThread):
 				
 				choiceSubject.setCallbacks( [ serviceConnectionThread.stopConnectionCallback ] )
 				
-				cancelableAfter = forceInt(self.opsiclientd.getConfigValue('config_service', 'user_cancellable_after'))
-				logger.info(u"User is allowed to cancel connection after %d seconds" % cancelableAfter)
+				cancellableAfter = forceInt(self.opsiclientd.getConfigValue('config_service', 'user_cancellable_after'))
+				logger.info(u"User is allowed to cancel connection after %d seconds" % cancellableAfter)
 				if (cancellableAfter < 1):
 					self._notificationServer.addSubject(choiceSubject)
 				
@@ -1091,10 +1091,10 @@ class EventProcessingThread(KillableThread):
 				
 				while serviceConnectionThread.running and (timeout > 0):
 					logger.debug(u"Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d) " \
-						% (timeout, serviceConnectionThread.isAlive(), cancelableAfter))
+						% (timeout, serviceConnectionThread.isAlive(), cancellableAfter))
 					self._detailSubjectProxy.setMessage( _(u'Timeout: %ds') % timeout )
-					cancelableAfter -= 1
-					if (cancelableAfter == 0):
+					cancellableAfter -= 1
+					if (cancellableAfter == 0):
 						self._notificationServer.addSubject(choiceSubject)
 					time.sleep(1)
 					timeout -= 1
