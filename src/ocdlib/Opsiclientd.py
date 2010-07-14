@@ -966,7 +966,6 @@ class EventProcessingThread(KillableThread):
 		self._sessionId = None
 		
 		self._configService = None
-		self._configServiceException = None
 		
 		self._notificationServer = None
 		
@@ -1057,10 +1056,6 @@ class EventProcessingThread(KillableThread):
 			# Already connected
 			return
 		
-		if self._configServiceException:
-			# Exception will be cleared on disconnect
-			raise Exception(u"Connect failed, will not retry")
-		
 		try:
 			for urlIndex in range(len(self.opsiclientd.getConfigValue('config_service', 'url'))):
 				url = self.opsiclientd.getConfigValue('config_service', 'url')[urlIndex]
@@ -1132,7 +1127,6 @@ class EventProcessingThread(KillableThread):
 			
 		except Exception, e:
 			self.disconnectConfigServer()
-			self._configServiceException = e
 			raise
 		
 	def disconnectConfigServer(self):
@@ -1142,15 +1136,15 @@ class EventProcessingThread(KillableThread):
 			except Exception, e:
 				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(e))
 		self._configService = None
-		self._configServiceException = None
 	
 	def getConfigFromService(self):
 		''' Get settings from service '''
 		logger.notice(u"Getting config from service")
 		try:
-			self.setStatusMessage(_(u"Getting config from service"))
+			if not self._configService:
+				raise Exception(u"Not connected to config service")
 			
-			self.connectConfigServer()
+			self.setStatusMessage(_(u"Getting config from service"))
 			
 			if self._configService.isLegacyOpsi():
 				
@@ -1305,7 +1299,9 @@ class EventProcessingThread(KillableThread):
 			logger.error(u"Failed to set action processor info: %s" % forceUnicode(e))
 	
 	def getDepotserverCredentials(self):
-		self.connectConfigServer()
+		if not self._configService:
+			raise Exception(u"Not connected to config service")
+		
 		depotServerUsername = self.opsiclientd.getConfigValue('depot_server', 'username')
 		encryptedDepotServerPassword = u''
 		if self._configService.isLegacyOpsi():
@@ -1480,7 +1476,9 @@ class EventProcessingThread(KillableThread):
 			except Exception, e:
 				logger.warning(u"Failed to get bootmode from registry: %s" % forceUnicode(e))
 			
-			self.connectConfigServer()
+			if not self._configService:
+				raise Exception(u"Not connected to config service")
+			
 			productIds = []
 			if self._configService.isLegacyOpsi():
 				productStates = []
@@ -1793,6 +1791,8 @@ class EventProcessingThread(KillableThread):
 					self.startNotifierApplication(
 						command      = self.event.eventConfig.actionNotifierCommand,
 						desktop      = self.event.eventConfig.actionNotifierDesktop )
+				
+				self.connectConfigServer()
 				
 				if not self.event.eventConfig.useCachedConfig:
 					if self.event.eventConfig.getConfigFromService:
