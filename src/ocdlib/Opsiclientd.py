@@ -1266,10 +1266,13 @@ class EventProcessingThread(KillableThread):
 		self.setSessionId(sessionId)
 		return processId
 	
-	def startNotifierApplication(self, notifierType, command, desktop=None):
+	def startNotifierApplication(self, command, desktop=None):
 		logger.notice(u"Starting notifier application type '%s' in session '%s'" % (notifierType, self.getSessionId()))
-		self.runCommandInSession(command = command.replace('%port%', unicode(self._notificationServerPort)), waitForProcessEnding = False)
-		time.sleep(3)
+		try:
+			self.runCommandInSession(command = command.replace('%port%', unicode(self._notificationServerPort)), waitForProcessEnding = False)
+			time.sleep(3)
+		except Exception, e:
+			logger.error(u"Failed to start notifier application '%s': %s" % (command, e))
 	
 	def closeProcessWindows(self, processId):
 		command = None
@@ -1745,7 +1748,6 @@ class EventProcessingThread(KillableThread):
 					try:
 						if self.event.eventConfig.eventNotifierCommand:
 							self.startNotifierApplication(
-									notifierType = 'event',
 									command      = self.event.eventConfig.eventNotifierCommand,
 									desktop      = self.event.eventConfig.eventNotifierDesktop )
 							
@@ -1783,7 +1785,6 @@ class EventProcessingThread(KillableThread):
 				
 				if self.event.eventConfig.actionNotifierCommand:
 					self.startNotifierApplication(
-						notifierType = 'action',
 						command      = self.event.eventConfig.actionNotifierCommand,
 						desktop      = self.event.eventConfig.actionNotifierDesktop )
 				
