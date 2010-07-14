@@ -111,7 +111,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				'block_login_notifier':           u'',
 			},
 			'config_service': {
-				'url':                    u'',
+				'url':                    [],
 				'connection_timeout':     10,
 				'user_cancellable_after': 0,
 			},
@@ -247,7 +247,13 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._config[section][option] = value
 		
 		if   (section == 'config_service') and (option == 'url'):
-			self.setConfigServiceUrl(self._config[section][option])
+			urls = forceUnicodeList(self._config[section][option].split(u','))
+			self._config[section][option] = []
+			for url in urls:
+				url = url.strip()
+				if not re.search('https?://[^/]+', url):
+					logger.error("Bad config service url '%s'" % url)
+				self._config[section][option].append(url)
 		elif (section == 'config_service') and option in ('connection_timeout', 'user_cancellable_after'):
 			self._config[section][option] = int(self._config[section][option])
 			if (self._config[section][option] < 0):
@@ -257,15 +263,6 @@ class Opsiclientd(EventListener, threading.Thread):
 		elif (section == 'global') and (option == 'log_file'):
 			logger.setLogFile(self._config[section][option])
 	
-	def setConfigServiceUrl(self, url):
-		if not re.search('https?://[^/]+', url):
-			raise ValueError("Bad config service url '%s'" % url)
-		self._config['config_service']['url'] = url
-		self._config['config_service']['host'] = self._config['config_service']['url'].split('/')[2]
-		self._config['config_service']['port'] = '4447'
-		if (self._config['config_service']['host'].find(':') != -1):
-			(self._config['config_service']['host'], self._config['config_service']['port']) = self._config['config_service']['host'].split(':', 1)
-		
 	def readConfigFile(self):
 		''' Get settings from config file '''
 		logger.notice(u"Trying to read config from file: '%s'" % self.getConfigValue('global', 'config_file'))
@@ -290,10 +287,10 @@ class Opsiclientd(EventListener, threading.Thread):
 							slf = None
 							dlf = None
 							try:
-								slf = logFile + '.' + unicode(i-1)
+								slf = logFile + u'.' + unicode(i-1)
 								if (i <= 0):
 									slf = logFile
-								dlf = logFile + '.' + unicode(i)
+								dlf = logFile + u'.' + unicode(i)
 								if os.path.exists(slf):
 									if os.path.exists(dlf):
 										os.unlink(dlf)
@@ -327,21 +324,22 @@ class Opsiclientd(EventListener, threading.Thread):
 			configFile = IniFile(filename = self.getConfigValue('global', 'config_file'), raw = True)
 			config = configFile.parse()
 			changed = False
-			for (section, value) in self._config.items():
-				if not type(value) is dict:
+			for (section, values) in self._config.items():
+				if not type(values) is dict:
 					continue
 				if section in ('system'):
 					continue
 				if not config.has_section(section):
 					config.add_section(section)
 					changed = True
-				for (option, value) in value.items():
-					if (section == 'config_service') and option in ('host', 'port'):
+				for (option, value) in values.items():
+					if (section == 'global') and (option == 'config_file'):
+						# Do not store these option
 						continue
-					if (section == 'global') and option in ('config_file'):
-						# Do not store these options
-						continue
-					value = unicode(value)
+					if type(value) is list:
+						value = u', '.join(forceUnicodeList(value))
+					else:
+						value = forceUnicode(value)
 					if not config.has_option(section, option) or (config.get(section, option) != value):
 						changed = True
 						config.set(section, option, value)
@@ -354,15 +352,15 @@ class Opsiclientd(EventListener, threading.Thread):
 			
 		except Exception, e:
 			# An error occured while trying to write the config file
-			logger.error(u"Failed to write config file '%s': %s" % (self.getConfigValue('global', 'config_file'), forceUnicode(e)))
 			logger.logException(e)
+			logger.error(u"Failed to write config file '%s': %s" % (self.getConfigValue('global', 'config_file'), forceUnicode(e)))
 	
 	def fillPlaceholders(self, string, escaped=False):
 		for (section, values) in self._config.items():
 			if not type(values) is dict:
 				continue
 			for (key, value) in values.items():
-				value = unicode(value)
+				value = forceUnicode(value)
 				if (string.find(u'"%' + unicode(section) + u'.' + unicode(key) + u'%"') != -1) and escaped:
 					if (os.name == 'posix'):
 						value = value.replace('"', '\\"')
@@ -372,7 +370,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				
 				if (newString != string):
 					string = self.fillPlaceholders(newString, escaped)
-		return unicode(string)
+		return forceUnicode(string)
 	
 	def createEventGenerators(self):
 		self._eventGenerators['panic'] = EventGeneratorFactory(
@@ -977,7 +975,7 @@ class EventProcessingThread(KillableThread):
 		self._overallProgressSubjectProxy = ProgressSubjectProxy('overallProgress')
 		
 		self._statusSubject.setMessage( _("Processing event %s") % self.event.eventConfig.getName() )
-		self._serviceUrlSubject.setMessage(self.opsiclientd.getConfigValue('config_service', 'url'))
+		#self._serviceUrlSubject.setMessage(self.opsiclientd.getConfigValue('config_service', 'url'))
 		self._clientIdSubject.setMessage(self.opsiclientd.getConfigValue('global', 'host_id'))
 		self._opsiclientdInfoSubject.setMessage("opsiclientd %s" % __version__)
 		self._actionProcessorInfoSubject.setMessage("")
@@ -1056,64 +1054,73 @@ class EventProcessingThread(KillableThread):
 			raise Exception(u"Connect failed, will not retry")
 		
 		try:
-			choiceSubject = ChoiceSubject(id = 'choice')
-			choiceSubject.setChoices([ 'Stop connection' ])
-			
-			logger.debug(u"Creating ServiceConnectionThread")
-			serviceConnectionThread = ServiceConnectionThread(
-						configServiceUrl    = self.opsiclientd.getConfigValue('config_service', 'url'),
-						username            = self.opsiclientd.getConfigValue('global', 'host_id'),
-						password            = self.opsiclientd.getConfigValue('global', 'opsi_host_key'),
-						statusObject        = self._statusSubject )
-			
-			choiceSubject.setCallbacks( [ serviceConnectionThread.stopConnectionCallback ] )
-			
-			cancellableAfter = forceInt(self.opsiclientd.getConfigValue('config_service', 'user_cancellable_after'))
-			logger.info(u"User is allowed to cancel connection after %d seconds" % cancellableAfter)
-			if (cancellableAfter < 1):
-				self._notificationServer.addSubject(choiceSubject)
-			
-			timeout = forceInt(self.opsiclientd.getConfigValue('config_service', 'connection_timeout'))
-			logger.info(u"Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
-			serviceConnectionThread.start()
-			time.sleep(1)
-			logger.debug(u"ServiceConnectionThread started")
-			
-			while serviceConnectionThread.running and (timeout > 0):
-				logger.debug(u"Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d) " \
-					% (timeout, serviceConnectionThread.isAlive(), cancellableAfter))
-				self._detailSubjectProxy.setMessage( _(u'Timeout: %ds') % timeout )
-				cancellableAfter -= 1
-				if (cancellableAfter == 0):
-					self._notificationServer.addSubject(choiceSubject)
-				time.sleep(1)
-				timeout -= 1
-			
-			self._detailSubjectProxy.setMessage('')
-			self._notificationServer.removeSubject(choiceSubject)
-			
-			if serviceConnectionThread.cancelled:
-				logger.error(u"ServiceConnectionThread canceled by user")
-				raise CanceledByUserError(u"Failed to connect to config service '%s': cancelled by user" % \
-							self.opsiclientd.getConfigValue('config_service', 'url') )
-			elif serviceConnectionThread.running:
-				logger.error(u"ServiceConnectionThread timed out after %d seconds" % self.opsiclientd.getConfigValue('config_service', 'connection_timeout'))
-				serviceConnectionThread.stop()
-				raise Exception(u"Failed to connect to config service '%s': timed out after %d seconds" % \
-							(self.opsiclientd.getConfigValue('config_service', 'url'), self.opsiclientd.getConfigValue('config_service', 'connection_timeout')) )
+			for urlIndex in range(len(self.opsiclientd.getConfigValue('config_service', 'url'))):
+				url = self.opsiclientd.getConfigValue('config_service', 'url')[urlIndex]
+				self._serviceUrlSubject.setMessage(url)
 				
-			if not serviceConnectionThread.connected:
-				raise Exception(u"Failed to connect to config service '%s': reason unknown" % self.opsiclientd.getConfigValue('config_service', 'url'))
-			
-			self._configService = serviceConnectionThread.configService
-			
-			if (serviceConnectionThread.getUsername() != self.opsiclientd.getConfigValue('global', 'host_id')):
-				self.opsiclientd.setConfigValue('global', 'host_id', serviceConnectionThread.getUsername().lower())
-				logger.info(u"Updated host_id to '%s'" % self.opsiclientd.getConfigValue('global', 'host_id'))
-			
-			if self.event.eventConfig.updateConfigFile:
-				self.setStatusMessage( _(u"Updating config file") )
-				self.opsiclientd.updateConfigFile()
+				choiceSubject = ChoiceSubject(id = 'choice')
+				choiceSubject.setChoices([ 'Stop connection' ])
+				
+				logger.debug(u"Creating ServiceConnectionThread")
+				serviceConnectionThread = ServiceConnectionThread(
+							configServiceUrl    = url,
+							username            = self.opsiclientd.getConfigValue('global', 'host_id'),
+							password            = self.opsiclientd.getConfigValue('global', 'opsi_host_key'),
+							statusObject        = self._statusSubject )
+				
+				choiceSubject.setCallbacks( [ serviceConnectionThread.stopConnectionCallback ] )
+				
+				cancelableAfter = forceInt(self.opsiclientd.getConfigValue('config_service', 'user_cancellable_after'))
+				logger.info(u"User is allowed to cancel connection after %d seconds" % cancelableAfter)
+				if (cancellableAfter < 1):
+					self._notificationServer.addSubject(choiceSubject)
+				
+				timeout = forceInt(self.opsiclientd.getConfigValue('config_service', 'connection_timeout'))
+				logger.info(u"Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
+				serviceConnectionThread.start()
+				time.sleep(1)
+				logger.debug(u"ServiceConnectionThread started")
+				
+				while serviceConnectionThread.running and (timeout > 0):
+					logger.debug(u"Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d) " \
+						% (timeout, serviceConnectionThread.isAlive(), cancelableAfter))
+					self._detailSubjectProxy.setMessage( _(u'Timeout: %ds') % timeout )
+					cancelableAfter -= 1
+					if (cancelableAfter == 0):
+						self._notificationServer.addSubject(choiceSubject)
+					time.sleep(1)
+					timeout -= 1
+				
+				self._detailSubjectProxy.setMessage(u'')
+				self._notificationServer.removeSubject(choiceSubject)
+				
+				if serviceConnectionThread.cancelled:
+					logger.error(u"ServiceConnectionThread canceled by user")
+					raise CanceledByUserError(u"Failed to connect to config service '%s': cancelled by user" % url)
+				
+				try:
+					if serviceConnectionThread.running:
+						logger.error(u"ServiceConnectionThread timed out after %d seconds" % self.opsiclientd.getConfigValue('config_service', 'connection_timeout'))
+						serviceConnectionThread.stop()
+						raise Exception(u"Failed to connect to config service '%s': timed out after %d seconds" % \
+									(url, self.opsiclientd.getConfigValue('config_service', 'connection_timeout')) )
+					if not serviceConnectionThread.connected:
+						raise Exception(u"Failed to connect to config service '%s': reason unknown" % self.opsiclientd.getConfigValue('config_service', 'url'))
+				except Exception, e:
+					if ( (urlIndex + 1) > len(self.opsiclientd.getConfigValue('config_service', 'url')) ):
+						raise
+					logger.error(e)
+					continue
+					
+				self._configService = serviceConnectionThread.configService
+				
+				if (serviceConnectionThread.getUsername() != self.opsiclientd.getConfigValue('global', 'host_id')):
+					self.opsiclientd.setConfigValue('global', 'host_id', serviceConnectionThread.getUsername().lower())
+					logger.info(u"Updated host_id to '%s'" % self.opsiclientd.getConfigValue('global', 'host_id'))
+				
+				if self.event.eventConfig.updateConfigFile:
+					self.setStatusMessage( _(u"Updating config file") )
+					self.opsiclientd.updateConfigFile()
 			
 		except Exception, e:
 			self.disconnectConfigServer()
@@ -1147,7 +1154,7 @@ class EventProcessingThread(KillableThread):
 					elif (key.lower() == 'depotdrive'):
 						self.opsiclientd.setConfigValue('depot_server', 'drive', value)
 					elif (key.lower() == 'nextbootserviceurl'):
-						self.opsiclientd.setConfigValue('config_service', 'url', value)
+						self.opsiclientd.setConfigValue('config_service', 'url', [ value ])
 					else:
 						logger.info(u"Unhandled network config key '%s'" % key)
 					
@@ -1172,7 +1179,7 @@ class EventProcessingThread(KillableThread):
 						continue
 					
 					if   (configState.configId == u'clientconfig.configserver.url'):
-						self.opsiclientd.setConfigValue('config_service', 'url', configState.values[0])
+						self.opsiclientd.setConfigValue('config_service', 'url', configState.values)
 					elif (configState.configId == u'clientconfig.depot.id'):
 						self.opsiclientd.setConfigValue('depot_server', 'depot_id', configState.values[0])
 					elif (configState.configId == u'clientconfig.depot.drive'):
@@ -1192,12 +1199,6 @@ class EventProcessingThread(KillableThread):
 			
 			self.setStatusMessage(_(u"Got config from service"))
 			logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.opsiclientd.getConfig()))
-		#except CanceledByUserError, e:
-		#	logger.error("Failed to get config from service: %s" % forceUnicode(e))
-		#	raise
-		#except Exception, e:
-		#	logger.error("Failed to get config from service: %s" % forceUnicode(e))
-		#	logger.logException(e)
 		except Exception, e:
 			logger.error(u"Failed to get config from service: %s" % forceUnicode(e))
 			raise
@@ -1709,7 +1710,7 @@ class EventProcessingThread(KillableThread):
 			self.waitCancelled = False
 			
 			# Store current config service url and depot url
-			configServiceUrl = self.opsiclientd.getConfigValue('config_service', 'url')
+			configServiceUrls = self.opsiclientd.getConfigValue('config_service', 'url')
 			depotServerUrl = self.opsiclientd.getConfigValue('depot_server', 'url')
 			depotDrive = self.opsiclientd.getConfigValue('depot_server', 'drive')
 			try:
@@ -1830,8 +1831,8 @@ class EventProcessingThread(KillableThread):
 				
 				if self.event.eventConfig.useCachedConfig:
 					# Set config service url back to previous url
-					logger.notice(u"Setting config service url back to '%s'" % configServiceUrl)
-					self.opsiclientd.setConfigValue('config_service', 'url', configServiceUrl)
+					logger.notice(u"Setting config service url back to %s" % configServiceUrls)
+					self.opsiclientd.setConfigValue('config_service', 'url', configServiceUrls)
 					logger.notice("Setting depot server url back to '%s'" % depotServerUrl)
 					self.opsiclientd.setConfigValue('depot_server', 'url', depotServerUrl)
 					logger.notice(u"Setting depot drive back to '%s'" % depotDrive)
