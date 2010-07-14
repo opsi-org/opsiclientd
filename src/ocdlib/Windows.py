@@ -195,17 +195,32 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		try:
 			startTime = time.time()
 			
+			try:
+				if forceBool(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, u"SYSTEM\\CurrentControlSet\\Services\\opsiclientd", u"Debug")):
+					debugLogFile = u"c:\\tmp\\opsiclientd.log"
+					f = open(debugLogFile, "w")
+					f.write(u"--- Debug log started ---\r\n")
+					f.close()
+					try:
+						logger.setLogFile(debugLogFile)
+						logger.setFileLevel(LOG_CONFIDENTIAL)
+						logger.log(1, u"Logger initialized", raiseException = True)
+					except Exception, e:
+						error = 'unkown error'
+						try:
+							error = str(e)
+						except:
+							pass
+						f = open(debugLogFile, "a+")
+						f.write("Failed to initialize logger: %s\r\n" % error)
+						f.close()
+			except Exception, e:
+				pass
+			
 			logger.debug(u"OpsiclientdServiceFramework SvcDoRun")
+			
 			# Write to event log
 			self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
-			
-			# Start opsiclientd
-			#workingDirectory = os.getcwd()
-			#try:
-			#	workingDirectory = os.path.dirname(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Services\\opsiclientd\\PythonClass", ""))
-			#except Exception, e:
-			#	logger.error(u"Failed to get working directory from registry: %s" % forceUnicode(e))
-			#os.chdir(workingDirectory)
 			
 			if (sys.getwindowsversion()[0] == 5):
 				# NT5: XP
