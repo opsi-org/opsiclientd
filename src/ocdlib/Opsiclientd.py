@@ -255,9 +255,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._config[section][option] = value
 		
 		if   (section == 'config_service') and (option == 'url'):
-			urls = forceUnicodeList(self._config[section][option].split(u','))
+			urls = self._config[section][option]
+			if not type(urls) is list:
+				urls = forceUnicode(self._config[section][option]).split(u',')
 			self._config[section][option] = []
-			for url in urls:
+			for url in forceUnicodeList(urls):
 				url = url.strip()
 				if not re.search('https?://[^/]+', url):
 					logger.error("Bad config service url '%s'" % url)
