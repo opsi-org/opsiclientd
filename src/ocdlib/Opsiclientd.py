@@ -221,9 +221,10 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not section:
 			section = 'global'
 		
-		section = unicode(section).strip().lower()
-		option = unicode(option).strip().lower()
-		value = unicode(value.strip())
+		section = forceUnicodeLower(section).strip()
+		option = forceUnicodeLower(option).strip()
+		if type(value) in (str, unicode):
+			value = forceUnicode(value).strip()
 		
 		logger.info(u"Setting config value %s.%s" % (section, option))
 		logger.debug(u"setConfigValue(%s, %s, %s)" % (section, option, value))
