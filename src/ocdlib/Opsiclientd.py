@@ -284,10 +284,11 @@ class Opsiclientd(EventListener, threading.Thread):
 			# Read log settings early
 			if config.has_section('global'):
 				debug = False
-				#try:
-				#	debug = bool(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Services\\opsiclientd", "Debug"))
-				#except:
-				#	pass
+				if (os.name == 'nt'):
+					try:
+						debug = forceBool(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Services\\opsiclientd", "Debug"))
+					except:
+						pass
 				if not debug:
 					if config.has_option('global', 'log_level'):
 						self.setConfigValue('global', 'log_level', config.get('global', 'log_level'))
