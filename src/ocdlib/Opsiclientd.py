@@ -179,6 +179,7 @@ class Opsiclientd(EventListener, threading.Thread):
 							sessionId = 0
 						else:
 							logger.error(u"Failed to start block login notifier app: %s" % forceUnicode(e))
+							break
 		elif (self._blockLoginNotifierPid):
 			try:
 				logger.info(u"Terminating block login notifier app (pid %s)" % self._blockLoginNotifierPid)
@@ -553,6 +554,7 @@ class Opsiclientd(EventListener, threading.Thread):
 								sessionId = 0
 							else:
 								logger.error(u"Failed to start wait for GUI app: %s" % forceUnicode(e))
+								break
 				self._guiStarted = threading.Event()
 				eventGenerator = EventGeneratorFactory(GUIStartupEventConfig("wait_for_gui"))
 				eventGenerator.addEventListener(self)
