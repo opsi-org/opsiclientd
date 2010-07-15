@@ -1648,10 +1648,8 @@ class EventProcessingThread(KillableThread):
 			self.updateActionProcessor()
 		
 		# Run action processor
-		actionProcessorCommand = self.event.getActionProcessorCommand()
-		logger.info(u"Event action processor command: %s" % actionProcessorCommand)
+		actionProcessorCommand = self.opsiclientd.fillPlaceholders(self.event.getActionProcessorCommand())
 		actionProcessorCommand = actionProcessorCommand.replace('%service_url%', self._configServiceUrl)
-		actionProcessorCommand = self.opsiclientd.fillPlaceholders(actionProcessorCommand)
 		actionProcessorCommand += additionalParams
 		actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 		command = u'%global.base_dir%\\action_processor_starter.exe ' \
