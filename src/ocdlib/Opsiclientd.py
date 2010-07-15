@@ -970,6 +970,7 @@ class EventProcessingThread(KillableThread):
 		self._sessionId = None
 		
 		self._configService = None
+		self._configServiceUrl = None
 		
 		self._notificationServer = None
 		
@@ -1061,6 +1062,7 @@ class EventProcessingThread(KillableThread):
 			return
 		
 		try:
+			self._configServiceUrl = None
 			for urlIndex in range(len(self.opsiclientd.getConfigValue('config_service', 'url'))):
 				url = self.opsiclientd.getConfigValue('config_service', 'url')[urlIndex]
 				self._serviceUrlSubject.setMessage(url)
@@ -1120,6 +1122,7 @@ class EventProcessingThread(KillableThread):
 					continue
 					
 				self._configService = serviceConnectionThread.configService
+				self._configServiceUrl = url
 				
 				if (serviceConnectionThread.getUsername() != self.opsiclientd.getConfigValue('global', 'host_id')):
 					self.opsiclientd.setConfigValue('global', 'host_id', serviceConnectionThread.getUsername().lower())
@@ -1140,7 +1143,8 @@ class EventProcessingThread(KillableThread):
 			except Exception, e:
 				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(e))
 		self._configService = None
-	
+		self._configServiceUrl = None
+		
 	def getConfigFromService(self):
 		''' Get settings from service '''
 		logger.notice(u"Getting config from service")
@@ -1637,7 +1641,7 @@ class EventProcessingThread(KillableThread):
 			self.updateActionProcessor()
 		
 		# Run action processor
-		actionProcessorCommand = self.opsiclientd.fillPlaceholders(self.event.getActionProcessorCommand())
+		actionProcessorCommand = self.opsiclientd.fillPlaceholders(self.event.getActionProcessorCommand().replace('%service_url%', self._configServiceUrl))
 		actionProcessorCommand += additionalParams
 		actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 		command = u'%global.base_dir%\\action_processor_starter.exe ' \
