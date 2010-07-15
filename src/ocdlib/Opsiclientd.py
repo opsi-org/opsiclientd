@@ -1204,7 +1204,14 @@ class EventProcessingThread(KillableThread):
 							
 						except Exception, e:
 							logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
-					
+				if not self.opsiclientd.getConfigValue('depot_server', 'depot_id'):
+					raise Exception(u"Failed to get depotserver id from service")
+				
+				dep = self._configService.host_getObjects(attributes = ['depotRemoteUrl'], id = self.opsiclientd.getConfigValue('depot_server', 'depot_id'))
+				if not dep:
+					raise Exception(u"Failed to get depotserver info from service")
+				self.opsiclientd.setConfigValue('depot_server', 'url', dep[0].depotRemoteUrl)
+				
 			logger.notice(u"Got config from service")
 			
 			self.setStatusMessage(_(u"Got config from service"))
