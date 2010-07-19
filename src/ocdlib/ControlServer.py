@@ -680,16 +680,20 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 			return data
 		return u""
 	
-	def runCommand(self, command, desktop=None):
+	def runCommand(self, command, sessionId=None, desktop=None):
 		command = forceUnicode(command)
 		if not command:
 			raise ValueError("No command given")
+		if sessionId:
+			sessionId = forceInt(sessionId)
+		else:
+			sessionId = self.opsiclientd.getSessionId()
 		if desktop:
 			desktop = forceUnicode(desktop)
 		else:
 			desktop = self.opsiclientd.getCurrentActiveDesktopName()
-		logger.notice(u"rpc runCommand: executing command '%s' on desktop '%s'" % (command, desktop))
-		System.runCommandInSession(command = command, sessionId = None, desktop = desktop, waitForProcessEnding = False)
+		logger.notice(u"rpc runCommand: executing command '%s' in session %d on desktop '%s'" % (command, sessionId, desktop))
+		System.runCommandInSession(command = command, sessionId = sessionId, desktop = desktop, waitForProcessEnding = False)
 		return u"command '%s' executed" % command
 	
 	def logoffCurrentUser(self):
