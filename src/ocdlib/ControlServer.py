@@ -35,7 +35,7 @@ __version__ = '4.0'
 
 # Imports
 from OpenSSL import SSL
-import base64, urllib
+import base64, urllib, codecs
 
 # Twisted imports
 from twisted.internet import defer, threads, reactor
@@ -47,6 +47,7 @@ from twisted.python.failure import Failure
 from OPSI.Logger import *
 from OPSI.Types import *
 from OPSI.Util import *
+from OPSI import System
 
 from ocdlib.Exceptions import *
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
