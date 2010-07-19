@@ -1024,17 +1024,7 @@ class EventProcessingThread(KillableThread):
 				if userSessionsIds:
 					sessionId = userSessionsIds[0]
 			if not sessionId:
-				#logger.info(u"Using active console session id")
-				#sessionId = System.getActiveConsoleSessionId()
-				sessionIds = System.getActiveSessionIds()
-				if (len(sessionIds) == 0):
-					sessionId = 0
-				elif (len(sessionIds) == 1):
-					sessionId = sessionIds[0]
-				elif 0 in sessionIds:
-					sessionId = 0
-				else:
-					sessionId = sessionIds[0]
+				sessionId = System.getActiveSessionId()
 				
 			self.setSessionId(sessionId)
 		return self._sessionId

@@ -687,15 +687,7 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 		if sessionId:
 			sessionId = forceInt(sessionId)
 		else:
-			sessionIds = System.getActiveSessionIds()
-			if (len(sessionIds) == 0):
-				sessionId = 0
-			elif (len(sessionIds) == 1):
-				sessionId = sessionIds[0]
-			elif 0 in sessionIds:
-				sessionId = 0
-			else:
-				sessionId = sessionIds[0]
+			sessionId = System.getActiveSessionId()
 		if desktop:
 			desktop = forceUnicode(desktop)
 		else:
