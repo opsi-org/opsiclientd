@@ -559,8 +559,8 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 	
 	def callback(self, eventType, *args):
 		logger.debug(u"UserLoginEventGenerator event callback: eventType '%s', args: %s" % (eventType, args))
-		#if (eventType == 'Logon'):
-		if (eventType == 'StartShell'):
+		if (eventType == 'Logon'):
+		#if (eventType == 'StartShell'):
 			logger.notice(u"User login detected: %s" % args[0])
 			self._eventsOccured += 1
 			self.fireEvent(self.createEvent(eventInfo = {'User': args[0]}))
