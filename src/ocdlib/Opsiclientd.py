@@ -56,6 +56,10 @@ from ocdlib.Events import *
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from ocdlib.ControlServer import ControlServer
 from ocdlib.CacheService import CacheService
+if (os.name == 'nt'):
+	from ocdlib.Windows import *
+if (os.name == 'posix'):
+	from ocdlib.Posix import *
 
 # Get logger instance
 logger = Logger()
