@@ -41,11 +41,6 @@ import os
 from OPSI.Logger import *
 from OPSI import System
 
-if (os.name == 'nt'):
-	from ocdlib.Windows import *
-if (os.name == 'posix'):
-	from ocdlib.Posix import *
-
 # Get logger instance
 logger = Logger()
 
@@ -415,6 +410,7 @@ class WMIEventGenerator(EventGenerator):
 		if not (os.name == 'nt'):
 			return
 		
+		from ocdlib.Windows import importWmiAndPythoncom
 		(wmi, pythoncom) = importWmiAndPythoncom()
 		pythoncom.CoInitialize()
 		if self._wql:
@@ -465,6 +461,7 @@ class WMIEventGenerator(EventGenerator):
 			waitTime = int(10 - (time.time() - self._lastEventOccurence))
 			logger.info(u"Event generator '%s' cleaning up in %d seconds" % (self, waitTime))
 			time.sleep(waitTime)
+		from ocdlib.Windows import importWmiAndPythoncom
 		(wmi, pythoncom) = importWmiAndPythoncom()
 		pythoncom.CoUninitialize()
 	
@@ -521,7 +518,7 @@ class SensLogonEventGenerator(EventGenerator):
 		
 		logger.notice(u'Registring ISensLogon')
 		
-		from ocdlib.Windows import importWmiAndPythoncom
+		from ocdlib.Windows import importWmiAndPythoncom, SensLogon
 		(wmi, pythoncom) = importWmiAndPythoncom(importWmi = False, importPythoncom = True)
 		pythoncom.CoInitialize()
 		
@@ -539,6 +536,7 @@ class SensLogonEventGenerator(EventGenerator):
 		event_system.Store(PROGID_EventSubscription, event_subscription)
 	
 	def getNextEvent(self):
+		from ocdlib.Windows import importWmiAndPythoncom
 		(wmi, pythoncom) = importWmiAndPythoncom(importWmi = False, importPythoncom = True)
 		pythoncom.PumpMessages()
 		logger.info(u"Event generator '%s' now deactivated after %d event occurrences" % (self, self._eventsOccured))
@@ -559,6 +557,7 @@ class SensLogonEventGenerator(EventGenerator):
 			logger.info(u"Event generator '%s' cleaning up in %d seconds" % (self, waitTime))
 			time.sleep(waitTime)
 		
+		from ocdlib.Windows import importWmiAndPythoncom
 		(wmi, pythoncom) = importWmiAndPythoncom(importWmi = False, importPythoncom = True)
 		pythoncom.CoUninitialize()
 		
