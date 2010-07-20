@@ -40,6 +40,7 @@ import sys, os, shutil, filecmp
 
 # Twisted imports
 from twisted.internet import reactor
+from twisted.conch.ssh import keys
 
 # OPSI imports
 from OPSI.Logger import *
@@ -1123,6 +1124,41 @@ class EventProcessingThread(KillableThread):
 						raise
 					logger.error(e)
 					continue
+				
+				if (urlIndex > 0):
+					modules = None
+					if serviceConnectionThread.configService.isLegacyOpsi():
+						modules = serviceConnectionThread.configService.getOpsiInformation_hash()['modules']
+					else:
+						modules = serviceConnectionThread.configService.backend_info()['modules']
+					
+					if not modules.get('high_availability'):
+						raise Exception(u"Failed to connect to config service '%s': High availability module currently disabled" % url)
+					
+					if not modules.get('customer'):
+						raise Exception(u"Failed to connect to config service '%s': No customer in modules file" % url)
+						
+					if not modules.get('valid'):
+						raise Exception(u"Failed to connect to config service '%s': modules file invalid" % url)
+					
+					if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
+						raise Exception(u"Failed to connect to config service '%s': modules file expired" % url)
+					
+					logger.info(u"Verifying modules file signature")
+					publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
+					data = u''
+					mks = modules.keys()
+					mks.sort()
+					for module in mks:
+						if module in ('valid', 'signature'):
+							continue
+						val = modules[module]
+						if (val == False): val = 'no'
+						if (val == True):  val = 'yes'
+						data += u'%s = %s\r\n' % (module.lower().strip(), val)
+					if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
+						raise Exception(u"Failed to connect to config service '%s': modules file invalid" % url)
+					logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
 					
 				self._configService = serviceConnectionThread.configService
 				self._configServiceUrl = url
