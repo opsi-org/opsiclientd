@@ -34,6 +34,9 @@
 __version__ = '4.0'
 
 
+# Imports
+import os
+
 # OPSI imports
 from OPSI.Logger import *
 from OPSI import System
