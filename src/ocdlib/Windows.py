@@ -107,7 +107,7 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 	def subscribe(self):
 		(wmi, pythoncom) = importWmiAndPythoncom(importWmi = False)
 		
-		subscription_interface = pythoncom.WrapObject(sl)
+		subscription_interface = pythoncom.WrapObject(self)
 		
 		event_system = win32com.client.Dispatch(PROGID_EventSystem)
 		
