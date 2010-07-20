@@ -1478,49 +1478,58 @@ class EventProcessingThread(KillableThread):
 	
 	def processUserLoginActions(self):
 		self.setStatusMessage(_(u"Processing login actions"))
-		
-		impersonation = None
 		try:
-			# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
-			# The new logon session has the same local identifier but uses different credentials for other network connections.
-			(depotServerUsername, depotServerPassword) = self.getDepotserverCredentials()
-			impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
-			impersonation.start(logonType = 'NEW_CREDENTIALS')
+			if not self._configService:
+				raise Exception(u"Not connected to config service")
 			
-			self.mountDepotShare(impersonation)
+			if self._configService.isLegacyOpsi():
+				raise Exception(u"Opsi >= 4.0 needed")
 			
-			userScripts = []
+			productsByIdAndVersion = {}
+			for product in self._configService.product_getObjects(type = 'LocalbootProduct', userLoginScript = "*.ins"):
+				if not productsByIdAndVersion.has_key(product.id):
+					productsByIdAndVersion[product.id] = {}
+				if not productsByIdAndVersion[product.id].has_key(product.productVersion):
+					productsByIdAndVersion[product.id][product.productVersion] = {}
+				productsByIdAndVersion[product.id][product.productVersion][product.packageVersion] = product
+			
+			if not productsByIdAndVersion:
+				logger.notice(u"No user login script found, nothing to do")
+				return
+			
+			clientToDepotservers = self._configService.configState_getClientToDepotserver(clientIds = self.opsiclientd.getConfigValue('global', 'host_id'))
+			if not clientToDepotservers:
+				raise Exception(u"Failed to get depotserver for client '%s'" % self.opsiclientd.getConfigValue('global', 'host_id'))
+			depotId = clientToDepotservers[0]['depotId']
+			
 			productDir = os.path.join(self.opsiclientd.getConfigValue('depot_server', 'drive'), 'install')
-			for entry in os.listdir(productDir):
-				if not os.path.isdir( os.path.join(productDir, entry) ):
-					continue
-				userScript = os.path.join(productDir, entry, 'userscript.ins')
-				if not os.path.isfile(userScript):
-					continue
-				logger.info(u"User script found: %s" % userScript)
-				userScripts.append(userScript)
 			
-			self.umountDepotShare()
+			userLoginScripts = []
+			for productOnDepot in self._configService.productOnDepot_getIdents(
+							productType = 'LocalbootProduct',
+							depotId     = depotId,
+							returnType  = 'dict'):
+				product = productsByIdAndVersion.get(productOnDepot.productId, {}).get(productOnDepot.productVersion, {}).get(productOnDepot.packageVersion)
+				if not product:
+					continue
+				logger.info(u"User login script '%s' found for product %s_%s-%s" \
+					% (product.userLoginScript, product.id, product.productVersion, product.packageVersion))
+				userScripts.append(os.path.join(productDir, product.userLoginScript))
 			
-			if userScripts:
-				logger.notice(u"User scripts found, executing")
-				additionalParams = ''
-				for userScript in userScripts:
-					additionalParams += ' "%s"' % userScript
-				self.runActions(additionalParams)
-			else:
-				logger.notice(u"No user script found, nothing to do")
+			if not userLoginScripts:
+				logger.notice(u"No user login script found, nothing to do")
+				return
+			
+			logger.notice(u"User login scripts found, executing")
+			additionalParams = ''
+			for userLoginScript in userLoginScripts:
+				additionalParams += ' "%s"' % userLoginScript
+			self.runActions(additionalParams)
 			
 		except Exception, e:
 			logger.logException(e)
 			logger.error(u"Failed to process login actions: %s" % forceUnicode(e))
 			self.setStatusMessage( _(u"Failed to process login actions: %s") % forceUnicode(e) )
-		
-		if impersonation:
-			try:
-				impersonation.end()
-			except Exception, e:
-				logger.warning(e)
 		
 	def processProductActionRequests(self):
 		self.setStatusMessage(_(u"Getting action requests from config service"))
@@ -1638,24 +1647,25 @@ class EventProcessingThread(KillableThread):
 		if not self.event.getActionProcessorCommand():
 			raise Exception(u"No action processor command defined")
 		
-		# Before Running Action Processor check for Trusted Installer
-		if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
-			logger.debug(u"Try to read TrustedInstaller service-configuration")
-			try:
-				# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3
-				automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
-				if (automaticStartup == 2):
-					logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
-					self.setStatusMessage( _(u"Waiting for trusted installer") )
-					while True:
-						time.sleep(3)
-						logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
-						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start")
-						if not (automaticStartup == 2):
-							break
-			except Exception, e:
-				logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
-		
+		if not self.isLoginEvent:
+			# Before Running Action Processor check for Trusted Installer
+			if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
+				logger.debug(u"Try to read TrustedInstaller service-configuration")
+				try:
+					# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3
+					automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
+					if (automaticStartup == 2):
+						logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
+						self.setStatusMessage( _(u"Waiting for trusted installer") )
+						while True:
+							time.sleep(3)
+							logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
+							automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start")
+							if not (automaticStartup == 2):
+								break
+				except Exception, e:
+					logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
+			
 		self.setStatusMessage( _(u"Starting actions") )
 		
 		# Setting some registry values before starting action
