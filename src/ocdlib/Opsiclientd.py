@@ -1518,7 +1518,7 @@ class EventProcessingThread(KillableThread):
 					continue
 				logger.info(u"User login script '%s' found for product %s_%s-%s" \
 					% (product.userLoginScript, product.id, product.productVersion, product.packageVersion))
-				userScripts.append(os.path.join(productDir, product.userLoginScript))
+				userLoginScripts.append(os.path.join(productDir, product.userLoginScript))
 			
 			if not userLoginScripts:
 				logger.notice(u"No user login script found, nothing to do")
