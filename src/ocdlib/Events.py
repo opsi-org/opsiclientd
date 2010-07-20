@@ -513,6 +513,7 @@ class ProcessActionRequestsEventGenerator(EventGenerator):
 class SensLogonEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
 		EventGenerator.__init__(self, eventConfig)
+		from ocdlib.Windows import importWmiAndPythoncom
 		
 	def initialize(self):
 		EventGenerator.initialize(self)
