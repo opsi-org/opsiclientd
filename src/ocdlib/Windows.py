@@ -103,6 +103,21 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 	def __init__(self, callback):
 		self._wrap_(self)
 		self._callback = callback
+	
+	def subscribe(self):
+		(wmi, pythoncom) = importWmiAndPythoncom(importWmi = False)
+		
+		subscription_interface = pythoncom.WrapObject(sl)
+		
+		event_system = win32com.client.Dispatch(PROGID_EventSystem)
+		
+		event_subscription = win32com.client.Dispatch(PROGID_EventSubscription)
+		event_subscription.EventClassID = SENSGUID_EVENTCLASS_LOGON
+		event_subscription.PublisherID = SENSGUID_PUBLISHER
+		event_subscription.SubscriptionName = 'opsiclientd subscription'
+		event_subscription.SubscriberInterface = subscription_interface
+		
+		event_system.Store(PROGID_EventSubscription, event_subscription)
 		
 	def Logon(self, *args):
 		logger.notice(u'Logon : %s' % [args])

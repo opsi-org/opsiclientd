@@ -519,23 +519,12 @@ class SensLogonEventGenerator(EventGenerator):
 		logger.notice(u'Registring ISensLogon')
 		
 		from ocdlib.Windows import importWmiAndPythoncom, SensLogon
-		import win32com
 		
 		(wmi, pythoncom) = importWmiAndPythoncom(importWmi = False, importPythoncom = True)
 		pythoncom.CoInitialize()
 		
 		sl = SensLogon(self.callback)
-		subscription_interface = pythoncom.WrapObject(sl)
-		
-		event_system = win32com.client.Dispatch(PROGID_EventSystem)
-		
-		event_subscription = win32com.client.Dispatch(PROGID_EventSubscription)
-		event_subscription.EventClassID = SENSGUID_EVENTCLASS_LOGON
-		event_subscription.PublisherID = SENSGUID_PUBLISHER
-		event_subscription.SubscriptionName = 'opsiclientd subscription'
-		event_subscription.SubscriberInterface = subscription_interface
-		
-		event_system.Store(PROGID_EventSubscription, event_subscription)
+		sl.subscribe()
 	
 	def getNextEvent(self):
 		from ocdlib.Windows import importWmiAndPythoncom
@@ -550,6 +539,7 @@ class SensLogonEventGenerator(EventGenerator):
 	def stop(self):
 		EventGenerator.stop(self)
 		# Post WM_QUIT
+		import win32api
 		win32api.PostThreadMessage(self._threadId, 18, 0, 0)
 		
 	def cleanup(self):
