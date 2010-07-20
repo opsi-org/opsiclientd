@@ -519,6 +519,8 @@ class SensLogonEventGenerator(EventGenerator):
 		logger.notice(u'Registring ISensLogon')
 		
 		from ocdlib.Windows import importWmiAndPythoncom, SensLogon
+		import win32com
+		
 		(wmi, pythoncom) = importWmiAndPythoncom(importWmi = False, importPythoncom = True)
 		pythoncom.CoInitialize()
 		
