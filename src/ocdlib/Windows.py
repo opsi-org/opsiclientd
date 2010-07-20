@@ -46,6 +46,7 @@ from OPSI.Types import *
 from OPSI import System
 
 from ocdlib.Opsiclientd import Opsiclientd
+from ocdlib.Events import EventGenerator, UserLoginEvent
 
 # Get logger instance
 logger = Logger()
@@ -132,6 +133,72 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 		self._callback('StopScreenSaver', *args)
 
 
+class SensLogonEventGenerator(EventGenerator):
+	def __init__(self, eventConfig):
+		EventGenerator.__init__(self, eventConfig)
+		
+	def initialize(self):
+		EventGenerator.initialize(self)
+		if not (os.name == 'nt'):
+			return
+		
+		logger.notice(u'Registring ISensLogon')
+		
+		importWmiAndPythoncom(importWmi = False, importPythoncom = True)
+		pythoncom.CoInitialize()
+		
+		sl = SensLogon(self.callback)
+		subscription_interface = pythoncom.WrapObject(sl)
+		
+		event_system = win32com.client.Dispatch(PROGID_EventSystem)
+		
+		event_subscription = win32com.client.Dispatch(PROGID_EventSubscription)
+		event_subscription.EventClassID = SENSGUID_EVENTCLASS_LOGON
+		event_subscription.PublisherID = SENSGUID_PUBLISHER
+		event_subscription.SubscriptionName = 'opsiclientd subscription'
+		event_subscription.SubscriberInterface = subscription_interface
+		
+		event_system.Store(PROGID_EventSubscription, event_subscription)
+	
+	def getNextEvent(self):
+		pythoncom.PumpMessages()
+		logger.info(u"Event generator '%s' now deactivated after %d event occurrences" % (self, self._eventsOccured))
+		self.cleanup()
+		
+	def callback(self, eventType, *args):
+		logger.debug(u"SensLogonEventGenerator event callback: eventType '%s', args: %s" % (eventType, args))
+	
+	def stop(self):
+		EventGenerator.stop(self)
+		# Post WM_QUIT
+		win32api.PostThreadMessage(self._threadId, 18, 0, 0)
+		
+	def cleanup(self):
+		if self._lastEventOccurence and (time.time() - self._lastEventOccurence < 10):
+			# Waiting some seconds before exit to avoid Win32 releasing exceptions
+			waitTime = int(10 - (time.time() - self._lastEventOccurence))
+			logger.info(u"Event generator '%s' cleaning up in %d seconds" % (self, waitTime))
+			time.sleep(waitTime)
+		
+		importWmiAndPythoncom(importWmi = False, importPythoncom = True)
+		pythoncom.CoUninitialize()
+
+class UserLoginEventGenerator(SensLogonEventGenerator):
+	def __init__(self, eventConfig):
+		SensLogonEventGenerator.__init__(self, eventConfig)
+	
+	def callback(self, eventType, *args):
+		logger.debug(u"UserLoginEventGenerator event callback: eventType '%s', args: %s" % (eventType, args))
+		#if (eventType == 'Logon'):
+		if (eventType == 'StartShell'):
+			logger.notice(u"User login detected: %s" % args[0])
+			self._eventsOccured += 1
+			self.fireEvent(self.createEvent(eventInfo = {'User': args[0]}))
+			if (self._eventConfig.maxRepetitions > 0) and (self._eventsOccured > self._eventConfig.maxRepetitions):
+				self.stop()
+	
+	def createEvent(self, eventInfo={}):
+		return UserLoginEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                   OPSICLIENTD SERVICE FRAMEWORK                                   -
