@@ -1513,7 +1513,7 @@ class EventProcessingThread(KillableThread):
 							productType = 'LocalbootProduct',
 							depotId     = depotId,
 							returnType  = 'dict'):
-				product = productsByIdAndVersion.get(productOnDepot.productId, {}).get(productOnDepot.productVersion, {}).get(productOnDepot.packageVersion)
+				product = productsByIdAndVersion.get(productOnDepot['productId'], {}).get(productOnDepot['productVersion'], {}).get(productOnDepot['packageVersion'])
 				if not product:
 					continue
 				logger.info(u"User login script '%s' found for product %s_%s-%s" \
