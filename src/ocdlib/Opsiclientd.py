@@ -848,7 +848,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setChoices([ 'Close' ])
 			choiceSubject.setCallbacks( [ self.popupCloseCallback ] )
 			
-			for sessionId in System.getActiveSessionIds():
+			sessionIds = System.getActiveSessionIds()
+			if not sessionIds:
+				sessionIds = [ System.getActiveConsoleSessionId() ]
+			for sessionId in sessionIds:
 				logger.info(u"Starting popup message notifier app in session %d" % sessionId)
 				try:
 					System.runCommandInSession(
