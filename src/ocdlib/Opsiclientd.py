@@ -1275,14 +1275,17 @@ class EventProcessingThread(KillableThread):
 		masterDepot = None
 		slaveDepots = []
 		for depot in self._configService.host_getObjects(type = 'OpsiDepotserver', id = depotIds):
-			if (depot.id == clientToDepotserver['depotId']):
+			if (depot.id == depotIds[0]):
 				masterDepot = depot
 			else:
 				slaveDepots.append(depot)
+		if not masterDepot:
+			raise Exception(u"Failed to get info for master depot '%s'" % depotIds[0])
+		
 		self.opsiclientd.setConfigValue('depot_server', 'depot_id', masterDepot.id)
 		self.opsiclientd.setConfigValue('depot_server', 'url', masterDepot.depotRemoteUrl)
 		
-		if (len(depotIds) > 1):
+		if slaveDepots:
 			try:
 				defaultInterface = None
 				networkInterfaces = System.getNetworkInterfaces()
