@@ -1270,7 +1270,7 @@ class EventProcessingThread(KillableThread):
 		if not clientToDepotservers:
 			raise Exception(u"Failed to get depot config from service")
 		
-		depotIds = clientToDepotservers[0]['depotId']
+		depotIds = [ clientToDepotservers[0]['depotId'] ]
 		depotIds.extend(clientToDepotservers[0].get('slaveDepotIds', []))
 		masterDepot = None
 		slaveDepots = []
