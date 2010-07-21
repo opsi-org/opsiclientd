@@ -1270,8 +1270,8 @@ class EventProcessingThread(KillableThread):
 		if not clientToDepotservers:
 			raise Exception(u"Failed to get depot config from service")
 		
-		depotIds = clientToDepotserver['depotId']
-		depotIds.extend(clientToDepotserver.get('slaveDepotIds', []))
+		depotIds = clientToDepotservers[0]['depotId']
+		depotIds.extend(clientToDepotservers[0].get('slaveDepotIds', []))
 		masterDepot = None
 		slaveDepots = []
 		for depot in self._configService.host_getObjects(type = 'OpsiDepotserver', id = depotIds):
