@@ -1299,7 +1299,7 @@ class EventProcessingThread(KillableThread):
 		
 		if dynamicDepot and slaveDepots:
 			try:
-				modules = serviceConnectionThread.configService.backend_info()['modules']
+				modules = self._configService.backend_info()['modules']
 			
 				if not modules.get('dynamic_depot'):
 					raise Exception(u"Dynamic depot module currently disabled")
