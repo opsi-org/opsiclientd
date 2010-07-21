@@ -1235,8 +1235,6 @@ class EventProcessingThread(KillableThread):
 					
 					if   (configState.configId == u'clientconfig.configserver.url'):
 						self.opsiclientd.setConfigValue('config_service', 'url', configState.values)
-					elif (configState.configId == u'clientconfig.depot.id'):
-						self.opsiclientd.setConfigValue('depot_server', 'depot_id', configState.values[0])
 					elif (configState.configId == u'clientconfig.depot.drive'):
 						self.opsiclientd.setConfigValue('depot_server', 'drive', configState.values[0])
 					elif configState.configId.startswith(u'opsiclientd.'):
@@ -1249,14 +1247,6 @@ class EventProcessingThread(KillableThread):
 							
 						except Exception, e:
 							logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
-				if not self.opsiclientd.getConfigValue('depot_server', 'depot_id'):
-					raise Exception(u"Failed to get depotserver id from service")
-				
-				dep = self._configService.host_getObjects(attributes = ['depotRemoteUrl'], id = self.opsiclientd.getConfigValue('depot_server', 'depot_id'))
-				if not dep:
-					raise Exception(u"Failed to get depotserver info from service")
-				self.opsiclientd.setConfigValue('depot_server', 'url', dep[0].depotRemoteUrl)
-				
 			logger.notice(u"Got config from service")
 			
 			self.setStatusMessage(_(u"Got config from service"))
@@ -1264,6 +1254,63 @@ class EventProcessingThread(KillableThread):
 		except Exception, e:
 			logger.error(u"Failed to get config from service: %s" % forceUnicode(e))
 			raise
+	
+	def selectDepot(self, productIds=[]):
+		logger.notice(u"Selecting depot")
+		if not self._configService:
+			raise Exception(u"Not connected to config service")
+		
+		if self._configService.isLegacyOpsi():
+			return
+		
+		clientToDepotservers = self._configService.configState_getClientToDepotserver(
+				clientIds  = [ self.opsiclientd.getConfigValue('global', 'host_id') ],
+				masterOnly = False,
+				productIds = productIds)
+		if not clientToDepotservers:
+			raise Exception(u"Failed to get depot config from service")
+		
+		depotIds = clientToDepotserver['depotId']
+		depotIds.extend(clientToDepotserver.get('slaveDepotIds', []))
+		masterDepot = None
+		slaveDepots = []
+		for depot in self._configService.host_getObjects(type = 'OpsiDepotserver', id = depotIds):
+			if (depot.id == clientToDepotserver['depotId']):
+				masterDepot = depot
+			else:
+				slaveDepots.append(depot)
+		self.opsiclientd.setConfigValue('depot_server', 'depot_id', masterDepot.id)
+		self.opsiclientd.setConfigValue('depot_server', 'url', masterDepot.depotRemoteUrl)
+		
+		if (len(depotIds) > 1):
+			try:
+				defaultInterface = None
+				networkInterfaces = System.getNetworkInterfaces()
+				if not networkInterfaces:
+					raise Exception(u"No network interfaces found")
+				defaultInterface = networkInterfaces[0]
+				for networkInterface in networkInterfaces:
+					if networkInterface.gatewayList.ipAddress:
+						defaultInterface = networkInterface
+						break
+				networkConfig = {
+					"ipAddress":      forceUnicode(defaultInterface.ipAddressList.ipAddress),
+					"netmask":        forceUnicode(defaultInterface.ipAddressList.ipMask),
+					"defaultGateway": forceUnicode(defaultInterface.gatewayList.ipAddress)
+				}
+				
+				depotSelectionAlgorithm = self._configService.getDepotSelectionAlgorithm()
+				logger.debug2(u"depotSelectionAlgorithm:\n%s" % depotSelectionAlgorithm)
+				exec(depotSelectionAlgorithm)
+				selectedDepot = selectDepot(networkConfig = networkConfig, masterDepot = masterDepot, slaveDepots = slaveDepots)
+				
+				logger.notice(u"Selected depot is: %s" % selectedDepot)
+				self.opsiclientd.setConfigValue('depot_server', 'depot_id', selectedDepot.id)
+				self.opsiclientd.setConfigValue('depot_server', 'url', selectedDepot.depotRemoteUrl)
+				
+			except Exception, e:
+				logger.logException(e)
+				logger.error(u"Failed to select depot: %s" % e)
 		
 	def writeLogToService(self):
 		logger.notice(u"Writing log to service")
@@ -1376,6 +1423,8 @@ class EventProcessingThread(KillableThread):
 		if self._depotShareMounted:
 			logger.debug(u"Depot share already mounted")
 			return
+		if not self.opsiclientd.getConfigValue('depot_server', 'url'):
+			raise Exception(u"Cannot mount depot share, depot_server.url undefined")
 		
 		logger.notice(u"Mounting depot share %s" %  self.opsiclientd.getConfigValue('depot_server', 'url'))
 		self.setStatusMessage(_(u"Mounting depot share %s") % self.opsiclientd.getConfigValue('depot_server', 'url'))
@@ -1584,6 +1633,8 @@ class EventProcessingThread(KillableThread):
 			
 			else:
 				logger.notice(u"Start processing action requests")
+				
+				self.selectDepot(productIds = productIds)
 				
 				#if not self.event.eventConfig.useCachedConfig and self.event.eventConfig.syncConfig:
 				#	logger.notice(u"Syncing config (products: %s)" % productIds)
