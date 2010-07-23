@@ -448,7 +448,7 @@ class OpsiDialogWindow(SubjectsObserver):
 						win32con.SWP_SHOWWINDOW )
 			win32gui.SetFocus(self.hwnd)
 			if self.skin['form'].get('stayOnTop'):
-				win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.WP_NOMOVE|win32con.SWP_NOSIZE)
+				win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE|win32con.SWP_NOSIZE)
 			
 		if self._notificationClient:
 			threading.Timer(0.01, self._notificationClient.start).start()
