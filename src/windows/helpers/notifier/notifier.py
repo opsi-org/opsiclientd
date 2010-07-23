@@ -462,10 +462,10 @@ class OpsiDialogWindow(SubjectsObserver):
 			timer.kill_timer(id)
 		
 	def fadeout(self):
-                self.setWindowAlpha(self.alpha)
+		self.setWindowAlpha(self.alpha)
 		self.alpha -= 25
 		if (self.alpha >= 0):
-                        time.sleep(0.05)
+			time.sleep(0.05)
 			self.fadeout()
 	
 	def createTrayIcon(self):
