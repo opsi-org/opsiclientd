@@ -452,9 +452,6 @@ class OpsiDialogWindow(SubjectsObserver):
 		
 	def fadein(self, id, time):
 		self.setWindowAlpha(self.alpha)
-		if self.skin['form'].get('stayOnTop'):
-			win32gui.SetFocus(self.hwnd)
-			win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE|win32con.SWP_NOSIZE)
 		self.alpha += 25
 		if (self.alpha > 255):
 			self.alpha = 255
@@ -641,6 +638,9 @@ class OpsiDialogWindow(SubjectsObserver):
 			win32gui.SetLayeredWindowAttributes(self.hwnd, colorKey, alpha, win32con.LWA_COLORKEY);
 		else:
 			win32gui.SetLayeredWindowAttributes(self.hwnd, 0, alpha, win32con.LWA_ALPHA);
+		if self.skin['form'].get('stayOnTop'):
+			win32gui.SetFocus(self.hwnd)
+			win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
 		
 		#screenDC = win32gui.GetDC(win32gui.GetDesktopWindow())
 		#hdc = win32gui.CreateCompatibleDC(None)
