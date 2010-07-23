@@ -446,15 +446,15 @@ class OpsiDialogWindow(SubjectsObserver):
 						self.skin['form']['width'],
 						self.skin['form']['height'],
 						win32con.SWP_SHOWWINDOW )
-			win32gui.SetFocus(self.hwnd)
-			if self.skin['form'].get('stayOnTop'):
-				win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE|win32con.SWP_NOSIZE)
 			
 		if self._notificationClient:
 			threading.Timer(0.01, self._notificationClient.start).start()
 		
 	def fadein(self, id, time):
 		self.setWindowAlpha(self.alpha)
+		if self.skin['form'].get('stayOnTop'):
+			win32gui.SetFocus(self.hwnd)
+			win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE|win32con.SWP_NOSIZE)
 		self.alpha += 25
 		if (self.alpha > 255):
 			self.alpha = 255
@@ -584,8 +584,8 @@ class OpsiDialogWindow(SubjectsObserver):
 					win32ui.CreateWindowFromHandle(self.hwnd), values['ctrlId'])
 	
 	def onClose(self, hwnd, msg, wparam, lparam):
-                try:
-                        if self.skin['form']['fadeOut']:
+		try:
+			if self.skin['form']['fadeOut']:
 				self.alpha = 255
 				self.fadeout()
 			self.removeTrayIcon()
@@ -597,7 +597,7 @@ class OpsiDialogWindow(SubjectsObserver):
 		logger.notice("Exiting...")
 		if self._notificationClient:
 			try:
-                                logger.info(u"Stopping notification client")
+				logger.info(u"Stopping notification client")
 				self._notificationClient.stop()
 			except:
 				pass
