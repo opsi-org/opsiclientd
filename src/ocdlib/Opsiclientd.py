@@ -624,6 +624,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			return
 		if not self._actionProcessorUserName:
 			return
+		logger.notice(u"Deleting local user '%s'" % self._actionProcessorUserName)
 		if not System.existsUser(username = self._actionProcessorUserName):
 			return
 		System.deleteUser(username = self._actionProcessorUserName)
