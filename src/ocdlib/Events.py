@@ -438,6 +438,8 @@ class WMIEventGenerator(EventGenerator):
 			return None
 		
 		wqlResult = None
+		from ocdlib.Windows import importWmiAndPythoncom
+		(wmi, pythoncom) = importWmiAndPythoncom()
 		while not self._stopped:
 			try:
 				wqlResult = self._watcher(timeout_ms=500)
