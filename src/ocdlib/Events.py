@@ -409,7 +409,9 @@ class WMIEventGenerator(EventGenerator):
 	def initialize(self):
 		if not (os.name == 'nt'):
 			return
-		
+		if not self._wql:
+                        return
+                
 		from ocdlib.Windows import importWmiAndPythoncom
 		(wmi, pythoncom) = importWmiAndPythoncom()
 		pythoncom.CoInitialize()
@@ -574,9 +576,9 @@ class SystemShutdownEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
 		EventGenerator.__init__(self, eventConfig)
 
-class CustomEventGenerator(EventGenerator):
+class CustomEventGenerator(WMIEventGenerator):
 	def __init__(self, eventConfig):
-		EventGenerator.__init__(self, eventConfig)
+		WMIEventGenerator.__init__(self, eventConfig)
 	
 	def createEvent(self, eventInfo={}):
 		return CustomEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
