@@ -612,7 +612,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._actionProcessorUserName = runAsUser
 		logger.notice(u"Creating local user '%s'" % runAsUser)
 		
-		self._actionProcessorUserPassword = u'$!?' + unicode(randomString(16)) + u'§/%'
+		self._actionProcessorUserPassword = u'$!?' + unicode(randomString(16)) + u'!/%'
 		logger.addConfidentialString(self._actionProcessorUserPassword)
 		
 		if System.existsUser(username = runAsUser):
