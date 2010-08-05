@@ -432,7 +432,7 @@ class WMIEventGenerator(EventGenerator):
 		
 	def getNextEvent(self):
 		if not self._watcher:
-			logger.error(u"Nothing to watch for")
+			logger.info(u"Nothing to watch for")
 			self._event = threading.Event()
 			self._event.wait()
 			return None

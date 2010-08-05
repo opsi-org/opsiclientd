@@ -68,13 +68,7 @@ def importWmiAndPythoncom(importWmi = True, importPythoncom = True):
 					import pythoncom
 				if not wmi and importWmi:
 					logger.debug(u"Importing wmi")
-					if pythoncom:
-						pythoncom.CoInitialize()
-					try:
-						import wmi
-					finally:
-						if pythoncom:
-							pythoncom.CoUnInitialize()
+					import wmi
 			except Exception, e:
 				logger.warning(u"Failed to import: %s, retrying in 2 seconds" % forceUnicode(e))
 				time.sleep(2)
