@@ -410,8 +410,8 @@ class WMIEventGenerator(EventGenerator):
 		if not (os.name == 'nt'):
 			return
 		if not self._wql:
-                        return
-                
+			raise Exception(u"No wql to watch for")
+		
 		from ocdlib.Windows import importWmiAndPythoncom
 		(wmi, pythoncom) = importWmiAndPythoncom()
 		pythoncom.CoInitialize()
@@ -578,8 +578,11 @@ class SystemShutdownEventGenerator(EventGenerator):
 
 class CustomEventGenerator(WMIEventGenerator):
 	def __init__(self, eventConfig):
-		WMIEventGenerator.__init__(self, eventConfig)
-	
+		if hasattr(eventConfig, 'wql'):
+			WMIEventGenerator.__init__(self, eventConfig)
+		else:
+			EventGenerator.__init__(self, eventConfig)
+		
 	def createEvent(self, eventInfo={}):
 		return CustomEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
 	

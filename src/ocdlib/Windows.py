@@ -51,30 +51,34 @@ from ocdlib.Opsiclientd import Opsiclientd
 logger = Logger()
 
 # Globals
-wmiModule = None
-pythoncomModule = None
+wmi = None
+pythoncom = None
 
 importWmiAndPythoncomLock = threading.Lock()
 def importWmiAndPythoncom(importWmi = True, importPythoncom = True):
-	global wmiModule
-	global pythoncomModule
-	if not ((wmiModule or not importWmi) and (pythoncomModule or not importPythoncom)):
+	global wmi
+	global pythoncom
+	if not ((wmi or not importWmi) and (pythoncom or not importPythoncom)):
 		logger.info(u"Need to import wmi / pythoncom")
 		importWmiAndPythoncomLock.acquire()
-		while not ((wmiModule or not importWmi) and (pythoncomModule or not importPythoncom)):
+		while not ((wmi or not importWmi) and (pythoncom or not importPythoncom)):
 			try:
-				if not wmiModule and importWmi:
-					logger.debug(u"Importing wmi")
-					import wmi as wmiModule
-				if not pythoncomModule and importPythoncom:
+				if not pythoncom and importPythoncom:
 					logger.debug(u"Importing pythoncom")
-					import pythoncom as pythoncomModule
+					import pythoncom
+				if not wmi and importWmi:
+					logger.debug(u"Importing wmi")
+					pythoncom.CoInitialize()
+					try:
+						import wmi
+					finally:
+						pythoncom.CoUnInitialize()
 			except Exception, e:
-                                logger.logException(e)
 				logger.warning(u"Failed to import: %s, retrying in 2 seconds" % forceUnicode(e))
 				time.sleep(2)
 		importWmiAndPythoncomLock.release()
-	return (wmiModule, pythoncomModule)
+		
+	return (wmi, pythoncom)
 
 
 # from Sens.h
