@@ -58,6 +58,8 @@ importWmiAndPythoncomLock = threading.Lock()
 def importWmiAndPythoncom(importWmi = True, importPythoncom = True):
 	global wmi
 	global pythoncom
+	if importWmi and not pythoncom:
+		importPythoncom = True
 	if not ((wmi or not importWmi) and (pythoncom or not importPythoncom)):
 		logger.info(u"Need to import wmi / pythoncom")
 		importWmiAndPythoncomLock.acquire()
@@ -68,7 +70,11 @@ def importWmiAndPythoncom(importWmi = True, importPythoncom = True):
 					import pythoncom
 				if not wmi and importWmi:
 					logger.debug(u"Importing wmi")
-					import wmi
+					pythoncom.CoInitialize()
+					try:
+						import wmi
+					finally:
+						pythoncom.CoUninitialize()
 			except Exception, e:
 				logger.warning(u"Failed to import: %s, retrying in 2 seconds" % forceUnicode(e))
 				time.sleep(2)
