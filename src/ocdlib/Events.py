@@ -31,9 +31,6 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '4.0'
-
-
 # OPSI imports
 import os
 
