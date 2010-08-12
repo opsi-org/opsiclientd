@@ -88,6 +88,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._currentActiveDesktopName = {}
 		self._eventGenerators = {}
 		
+		self._isRebootRequested = None
+		self._isShutdownRequested = None
+		
 		self._actionProcessorUserName = u''
 		self._actionProcessorUserPassword = u''
 		
@@ -822,10 +825,12 @@ class Opsiclientd(EventListener, threading.Thread):
 		pass
 	
 	def isRebootRequested(self):
-		return False
+		self._isRebootRequested = False
+		return self._isRebootRequested
 		
 	def isShutdownRequested(self):
-		return False
+		self._isShutdownRequested = False
+		return self._isShutdownRequested
 		
 	def processShutdownRequests(self):
 		reboot = self.isRebootRequested()
@@ -2009,14 +2014,14 @@ class EventProcessingThread(KillableThread):
 					except Exception, e:
 						logger.logException(e)
 				
-				if self.opsiclientd._shutdownRequested:
+				if self.opsiclientd.isShutdownRequested():
 					self.setStatusMessage(_("Shutting down machine"))
-				elif self.opsiclientd._rebootRequested:
+				elif self.opsiclientd.isRebootRequested():
 					self.setStatusMessage(_("Rebooting machine"))
 				else:
 					self.setStatusMessage(_("Unblocking login"))
 				
-				if not self.opsiclientd._rebootRequested and not self.opsiclientd._shutdownRequested:
+				if not self.opsiclientd.isRebootRequested() and not self.opsiclientd.isShutdownRequested():
 					self.opsiclientd.setBlockLogin(False)
 				
 				self.setStatusMessage(u"")
