@@ -31,8 +31,6 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '4.0'
-
 # Imports
 from OpenSSL import SSL
 import base64, urllib, codecs
