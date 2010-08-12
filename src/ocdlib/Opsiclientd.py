@@ -94,9 +94,6 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._statusApplicationProcess = None
 		self._blockLoginNotifierPid = None
 		
-		self._rebootRequested = False
-		self._shutdownRequested = False
-		
 		self._popupNotificationServer = None
 		self._popupNotificationLock = threading.Lock()
 		
@@ -818,9 +815,27 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.debug(u"Returning current active dektop name '%s' for session %s" % (desktop, sessionId))
 		return desktop
 	
-	
-	def processShutdownRequests(self):
+	def shutdownMachine(self):
 		pass
+		
+	def rebootMachine(self):
+		pass
+	
+	def isRebootRequested(self):
+		return False
+		
+	def isShutdownRequested(self):
+		return False
+		
+	def processShutdownRequests(self):
+		reboot = self.isRebootRequested()
+		shutdown = self.isShutdownRequested()
+		if not reboot and not shutdown:
+			return
+		if reboot:
+			self.rebootMachine()
+		elif shutdown:
+			self.shutdownMachine()
 	
 	def showPopup(self, message):
 		port = self.getConfigValue('notification_server', 'popup_port')
