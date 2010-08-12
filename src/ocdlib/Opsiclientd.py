@@ -1764,19 +1764,19 @@ class EventProcessingThread(KillableThread):
 			raise Exception(u"No action processor command defined")
 		
 		if not self.isLoginEvent:
-			# Before Running Action Processor check for Trusted Installer
+			# check for Trusted Installer before Running Action Processor
 			if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
-				logger.debug(u"Try to read TrustedInstaller service-configuration")
+				logger.notice(u"Getting TrustedInstaller service configuration")
 				try:
 					# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3
 					automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
 					if (automaticStartup == 2):
 						logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
-						self.setStatusMessage( _(u"Waiting for trusted installer") )
+						self.setStatusMessage( _(u"Waiting for TrustedInstaller") )
 						while True:
 							time.sleep(3)
 							logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
-							automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start")
+							automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
 							if not (automaticStartup == 2):
 								break
 				except Exception, e:
