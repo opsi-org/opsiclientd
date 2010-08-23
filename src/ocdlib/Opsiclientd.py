@@ -870,7 +870,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
 				raise
 			
-			choiceSubject.setChoices([ 'Close' ])
+			choiceSubject.setChoices([  ])
 			choiceSubject.setCallbacks( [ self.popupCloseCallback ] )
 			
 			sessionIds = System.getActiveSessionIds()
