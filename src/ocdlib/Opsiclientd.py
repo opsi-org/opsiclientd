@@ -856,7 +856,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			self.hidePopup()
 			
 			popupSubject = MessageSubject('message')
-			choiceSubject = ChoiceSubject(id = 'choice')
+			choiceSubject = ChoiceSubject(id = 'Exit')
 			popupSubject.setMessage(message)
 			
 			logger.notice(u"Starting popup message notification server on port %d" % port)
