@@ -43,8 +43,10 @@ logger = Logger()
 languageCode = locale.getdefaultlocale()[0]
 
 def _(string):
+	logger.debug(u"Translate '%s'" % string)
 	if (languageCode == 'de_DE'):
 		if (string == 'Close'):
-			return u'Schliessen'
+			string = u'Schliessen'
+	logger.debug(u"Translated to '%s'" % string)
 	return string
 
