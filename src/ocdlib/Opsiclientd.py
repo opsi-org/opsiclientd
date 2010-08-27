@@ -59,6 +59,7 @@ if (os.name == 'nt'):
 	from ocdlib.Windows import *
 if (os.name == 'posix'):
 	from ocdlib.Posix import *
+from ocdlib.Localization import *
 
 # Get logger instance
 logger = Logger()
@@ -87,8 +88,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._currentActiveDesktopName = {}
 		self._eventGenerators = {}
 		
-		self._isRebootRequested = None
-		self._isShutdownRequested = None
+		self._isRebootTriggered = False
+		self._isShutdownTriggered = False
 		
 		self._actionProcessorUserName = u''
 		self._actionProcessorUserPassword = u''
@@ -824,12 +825,14 @@ class Opsiclientd(EventListener, threading.Thread):
 		pass
 	
 	def isRebootRequested(self):
-		self._isRebootRequested = False
-		return self._isRebootRequested
+		if self._isRebootTriggered:
+			return True
+		return False
 		
 	def isShutdownRequested(self):
-		self._isShutdownRequested = False
-		return self._isShutdownRequested
+		if self._isShutdownTriggered:
+			return True
+		return False
 		
 	def processShutdownRequests(self):
 		reboot = self.isRebootRequested()
@@ -856,7 +859,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			self.hidePopup()
 			
 			popupSubject = MessageSubject('message')
-			choiceSubject = ChoiceSubject(id = 'Exit')
+			choiceSubject = ChoiceSubject(id = 'choice')
 			popupSubject.setMessage(message)
 			
 			logger.notice(u"Starting popup message notification server on port %d" % port)
@@ -870,7 +873,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
 				raise
 			
-			choiceSubject.setChoices([  ])
+			choiceSubject.setChoices([ _('Close') ])
 			choiceSubject.setCallbacks( [ self.popupCloseCallback ] )
 			
 			sessionIds = System.getActiveSessionIds()
