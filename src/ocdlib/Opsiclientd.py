@@ -64,11 +64,6 @@ from ocdlib.Localization import *
 # Get logger instance
 logger = Logger()
 
-
-# Message translation
-def _(msg):
-	return msg
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                            OPSICLIENTD                                            -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
