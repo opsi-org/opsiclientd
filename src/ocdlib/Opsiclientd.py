@@ -59,7 +59,7 @@ if (os.name == 'nt'):
 	from ocdlib.Windows import *
 if (os.name == 'posix'):
 	from ocdlib.Posix import *
-from ocdlib.Localization import *
+from ocdlib.Localization import _
 
 # Get logger instance
 logger = Logger()
