@@ -1439,7 +1439,7 @@ class EventProcessingThread(KillableThread):
 	def startNotifierApplication(self, command, desktop=None):
 		logger.notice(u"Starting notifier application in session '%s'" % self.getSessionId())
 		try:
-			self.runCommandInSession(command = command.replace('%port%', unicode(self._notificationServerPort)), waitForProcessEnding = False)
+			self.runCommandInSession(command = command.replace('%port%', unicode(self._notificationServerPort)), desktop = desktop, waitForProcessEnding = False)
 			time.sleep(3)
 		except Exception, e:
 			logger.error(u"Failed to start notifier application '%s': %s" % (command, e))
