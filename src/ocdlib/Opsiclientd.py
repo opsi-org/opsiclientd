@@ -1200,7 +1200,10 @@ class EventProcessingThread(KillableThread):
 	def disconnectConfigServer(self):
 		if self._configService:
 			try:
-				self._configService.exit()
+				if self._configService.isLegacyOpsi():
+					self._configService.exit()
+				else:
+					self._configService.backend_exit()
 			except Exception, e:
 				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(e))
 		self._configService = None
