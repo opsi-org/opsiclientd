@@ -801,7 +801,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		cmd = '%s "%s"' % (self.getConfigValue('opsiclientd_rpc', 'command'), rpc)
 		
 		try:
-			System.runCommandInSession(command = cmd, sessionId = sessionId, waitForProcessEnding = True, timeoutSeconds = 60)
+			System.runCommandInSession(command = cmd, sessionId = sessionId, desktop = u"winlogon", waitForProcessEnding = True, timeoutSeconds = 60)
 		except Exception, e:
 			logger.error(e)
 		
