@@ -830,14 +830,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		return False
 		
 	def processShutdownRequests(self):
-		reboot = self.isRebootRequested()
-		shutdown = self.isShutdownRequested()
-		if not reboot and not shutdown:
-			return
-		if reboot:
-			self.rebootMachine()
-		elif shutdown:
-			self.shutdownMachine()
+		pass
 	
 	def showPopup(self, message):
 		port = self.getConfigValue('notification_server', 'popup_port')
