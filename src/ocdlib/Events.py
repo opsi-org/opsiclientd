@@ -112,7 +112,7 @@ class EventConfig(object):
 		self.eventNotifierDesktop       =  unicode ( kwargs.get('eventNotifierDesktop',       'current' ) )
 		self.actionNotifierCommand      =  unicode ( kwargs.get('actionNotifierCommand',      ''        ) )
 		self.actionNotifierDesktop      =  unicode ( kwargs.get('actionNotifierDesktop',      'current' ) )
-		self.shutdownNotifierCommand    =  unicode ( kwargs.get('shutdownNotifierDesktop',    ''        ) )
+		self.shutdownNotifierCommand    =  unicode ( kwargs.get('shutdownNotifierCommand',    ''        ) )
 		self.shutdownNotifierDesktop    =  unicode ( kwargs.get('shutdownNotifierDesktop',    'current' ) )
 		self.actionProcessorCommand     =  unicode ( kwargs.get('actionProcessorCommand',     ''        ) )
 		self.actionProcessorDesktop     =  unicode ( kwargs.get('actionProcessorDesktop',     'current' ) )

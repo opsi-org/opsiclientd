@@ -995,7 +995,7 @@ class EventProcessingThread(KillableThread):
 		self.waitCancelled = False
 		
 		self.shutdownCancelled = False
-		self.shutdowWaitCancelled = False
+		self.shutdownWaitCancelled = False
 		
 		self._sessionId = None
 		
@@ -1910,7 +1910,7 @@ class EventProcessingThread(KillableThread):
 			self.eventCancelled = False
 			self.waitCancelled = False
 			self.shutdownCancelled = False
-			self.shutdowWaitCancelled = False
+			self.shutdownWaitCancelled = False
 			
 			# Store current config service url and depot url
 			configServiceUrls = self.opsiclientd.getConfigValue('config_service', 'url')
@@ -2110,7 +2110,7 @@ class EventProcessingThread(KillableThread):
 	
 	def startShutdownCallback(self, choiceSubject):
 		logger.notice(u"Shutdown wait cancelled by user")
-		self.shutdowWaitCancelled = True
+		self.shutdownWaitCancelled = True
 	
 	#def stop(self):
 	#	time.sleep(5)
