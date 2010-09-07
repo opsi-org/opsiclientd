@@ -97,6 +97,8 @@ class EventConfig(object):
 		self.notificationDelay          =      int ( kwargs.get('notificationDelay',          0         ) )
 		self.warningTime                =      int ( kwargs.get('warningTime',                0         ) )
 		self.userCancelable             =     bool ( kwargs.get('userCancelable',             False     ) )
+		self.shutdownWarningTime        =      int ( kwargs.get('shutdownWarningTime',        0         ) )
+		self.shutdownUserCancelable     =     bool ( kwargs.get('shutdownUserCancelable',     False     ) )
 		self.blockLogin                 =     bool ( kwargs.get('blockLogin',                 False     ) )
 		self.logoffCurrentUser          =     bool ( kwargs.get('logoffCurrentUser',          False     ) )
 		self.lockWorkstation            =     bool ( kwargs.get('lockWorkstation',            False     ) )
@@ -110,6 +112,8 @@ class EventConfig(object):
 		self.eventNotifierDesktop       =  unicode ( kwargs.get('eventNotifierDesktop',       'current' ) )
 		self.actionNotifierCommand      =  unicode ( kwargs.get('actionNotifierCommand',      ''        ) )
 		self.actionNotifierDesktop      =  unicode ( kwargs.get('actionNotifierDesktop',      'current' ) )
+		self.shutdownNotifierCommand    =  unicode ( kwargs.get('shutdownNotifierDesktop',    ''        ) )
+		self.shutdownNotifierDesktop    =  unicode ( kwargs.get('shutdownNotifierDesktop',    'current' ) )
 		self.actionProcessorCommand     =  unicode ( kwargs.get('actionProcessorCommand',     ''        ) )
 		self.actionProcessorDesktop     =  unicode ( kwargs.get('actionProcessorDesktop',     'current' ) )
 		self.actionProcessorTimeout     =      int ( kwargs.get('actionProcessorTimeout',     3*3600    ) )
@@ -144,23 +148,24 @@ class EventConfig(object):
 class PanicEventConfig(EventConfig):
 	def __init__(self, name, **kwargs):
 		EventConfig.__init__(self, name, **kwargs)
-		self.maxRepetitions         = -1
-		self.message                = 'Panic event'
-		self.activationDelay        = 0
-		self.notificationDelay      = 0
-		self.warningTime            = 0
-		self.userCancelable         = False
-		self.blockLogin             = False
-		self.logoffCurrentUser      = False
-		self.lockWorkstation        = False
-		self.getConfigFromService   = False
-		self.updateConfigFile       = False
-		self.writeLogToService      = False
-		self.updateActionProcessor  = False
-		self.eventNotifierCommand   = None
-		self.actionNotifierCommand  = None
-		self.actionProcessorDesktop = 'winlogon'
-		self.serviceOptions         = {}
+		self.maxRepetitions          = -1
+		self.message                 = 'Panic event'
+		self.activationDelay         = 0
+		self.notificationDelay       = 0
+		self.warningTime             = 0
+		self.userCancelable          = False
+		self.blockLogin              = False
+		self.logoffCurrentUser       = False
+		self.lockWorkstation         = False
+		self.getConfigFromService    = False
+		self.updateConfigFile        = False
+		self.writeLogToService       = False
+		self.updateActionProcessor   = False
+		self.eventNotifierCommand    = None
+		self.actionNotifierCommand   = None
+		self.shutdownNotifierCommand = None
+		self.actionProcessorDesktop  = 'winlogon'
+		self.serviceOptions          = {}
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                     DAEMON STARTUP EVENT CONFIG                                   -

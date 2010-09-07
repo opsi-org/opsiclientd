@@ -426,10 +426,18 @@ class OpsiclientdRpcPipeInterface(object):
 		return self.opsiclientd._blockLogin
 	
 	def isRebootRequested(self):
-		return self.opsiclientd.isRebootRequested()
+		return self.isRebootTriggered()
 	
 	def isShutdownRequested(self):
-		return self.opsiclientd.isShutdownRequested()
+		return self.isShutdownTriggered()
+	
+	def isRebootTriggered(self):
+		return self.opsiclientd.isRebootTriggered()
+	
+	def isShutdownTriggered(self):
+		return self.opsiclientd.isShutdownTriggered()
+	
+	
 	
 	
 
