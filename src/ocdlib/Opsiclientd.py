@@ -2020,6 +2020,11 @@ class EventProcessingThread(KillableThread):
 						reboot   = self.opsiclientd.isRebootRequested()
 						shutdown = self.opsiclientd.isShutdownRequested()
 						if reboot or shutdown:
+							if reboot:
+								self.setStatusMessage(_(u"Reboot requested"))
+							else:
+								self.setStatusMessage(_(u"Shutdown requested"))
+							
 							if self.event.eventConfig.shutdownWarningTime:
 								choiceSubject = ChoiceSubject(id = 'choice')
 								if self.event.eventConfig.shutdownUserCancelable:
