@@ -822,6 +822,13 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.debug(u"Returning current active dektop name '%s' for session %s" % (desktop, sessionId))
 		return desktop
 	
+	def systemShutdownInitiated(self):
+		if not self.isRebootTriggered() and not self.isShutdownTriggered():
+			# This shutdown was triggered by someone else
+			# Reset shutdown/reboot requests to avoid reboot/shutdown on next boot
+			logger.notice(u"Someone triggered a reboot or a shutdown => clearing reboot request")
+			self.clearRebootRequest()
+	
 	def shutdownMachine(self):
 		pass
 		
@@ -838,6 +845,12 @@ class Opsiclientd(EventListener, threading.Thread):
 			return True
 		return False
 	
+	def clearRebootRequest(self):
+		pass
+		
+	def clearShutdownRequest(self):
+		pass
+		
 	def isRebootRequested(self):
 		return False
 		
