@@ -106,6 +106,7 @@ data_files = [
 						'windows\\helpers\\notifier\\wait_for_gui.ini',
 						'windows\\helpers\\notifier\\block_login.ini',
 						'windows\\helpers\\notifier\\popup.ini',
+						'windows\\helpers\\notifier\\shutdown.ini',
 						'windows\\helpers\\notifier\\event.bmp',
 						'windows\\helpers\\notifier\\action.bmp',
 						'windows\\helpers\\notifier\\userlogin.bmp',
