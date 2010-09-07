@@ -315,7 +315,7 @@ class OpsiclientdNT(Opsiclientd):
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
 		System.reboot(3)
 	
-	def processShutdownRequests(self):
+	def isRebootRequested(self):
 		rebootRequested = 0
 		try:
 			rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
@@ -326,19 +326,17 @@ class OpsiclientdNT(Opsiclientd):
 			# Logout
 			logger.info(u"Logout requested")
 			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
-			return
-		if forceBool(rebootRequested):
-			self.rebootMachine()
-			return
+			return False
+		return forceBool(rebootRequested)
+		
+	def isShutdownRequested(self):
 		shutdownRequested = 0
 		try:
 			shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
 		except Exception, e:
 			logger.warning(u"Failed to get shutdownRequested from registry: %s" % forceUnicode(e))
 		logger.info(u"shutdownRequested: %s" % shutdownRequested)
-		if forceBool(shutdownRequested):
-			self.shutdownMachine()
-		
+		return forceBool(shutdownRequested)
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          OPSICLIENTD NT5                                          -

@@ -459,6 +459,8 @@ class Opsiclientd(EventListener, threading.Thread):
 						args['notificationDelay'] = int(value)
 					elif (key == 'warning_time'):
 						args['warningTime'] = int(value)
+					elif (key == 'shutdown_warning_time'):
+						args['shutdownWarningTime'] = int(value)
 					elif (key == 'wql'):
 						args['wql'] = value
 					elif (key == 'user_cancelable'):
@@ -505,6 +507,10 @@ class Opsiclientd(EventListener, threading.Thread):
 						args['actionProcessorDesktop'] = value.lower()
 					elif (key == 'action_processor_timeout'):
 						args['actionProcessorTimeout'] = int(value)
+					elif (key == 'shutdown_notifier_command'):
+						args['shutdownNotifierCommand'] = self.fillPlaceholders(value.lower(), escaped=True)
+					elif (key == 'shutdown_notifier_desktop'):
+						args['shutdownNotifierDesktop'] = value.lower()
 					elif (key == 'service_options'):
 						args['serviceOptions'] = eval(value)
 					elif (key == 'pre_action_processor_command'):
@@ -819,18 +825,21 @@ class Opsiclientd(EventListener, threading.Thread):
 	def rebootMachine(self):
 		pass
 	
-	def isRebootRequested(self):
+	def isRebootTriggered(self):
 		if self._isRebootTriggered:
 			return True
 		return False
 		
-	def isShutdownRequested(self):
+	def isShutdownTriggered(self):
 		if self._isShutdownTriggered:
 			return True
 		return False
+	
+	def isRebootRequested(self):
+		return False
 		
-	def processShutdownRequests(self):
-		pass
+	def isShutdownRequested(self):
+		return False
 	
 	def showPopup(self, message):
 		port = self.getConfigValue('notification_server', 'popup_port')
@@ -983,8 +992,10 @@ class EventProcessingThread(KillableThread):
 		
 		self.running = False
 		self.eventCancelled = False
-		self.waiting = False
 		self.waitCancelled = False
+		
+		self.shutdownCancelled = False
+		self.shutdowWaitCancelled = False
 		
 		self._sessionId = None
 		
@@ -1572,7 +1583,8 @@ class EventProcessingThread(KillableThread):
 						productId          = u'opsi-winst',
 						productType        = u'LocalbootProduct',
 						clientId           = self.opsiclientd.getConfigValue('global', 'host_id'),
-						installationStatus = u'installed'
+						installationStatus = u'installed',
+						actionResult       = u'successful'
 					)
 				])
 			self.setActionProcessorInfo()
@@ -1896,8 +1908,9 @@ class EventProcessingThread(KillableThread):
 			logger.notice(u"============= EventProcessingThread for occurcence of event '%s' started =============" % self.event)
 			self.running = True
 			self.eventCancelled = False
-			self.waiting = False
 			self.waitCancelled = False
+			self.shutdownCancelled = False
+			self.shutdowWaitCancelled = False
 			
 			# Store current config service url and depot url
 			configServiceUrls = self.opsiclientd.getConfigValue('config_service', 'url')
@@ -1938,16 +1951,14 @@ class EventProcessingThread(KillableThread):
 							
 						timeout = int(self.event.eventConfig.warningTime)
 						while(timeout > 0) and not self.eventCancelled and not self.waitCancelled:
-							self.waiting = True
 							logger.info(u"Notifying user of event %s" % self.event)
 							self.setStatusMessage(u"Event %s: processing will start in %d seconds" % (self.event.eventConfig.getName(), timeout))
 							timeout -= 1
 							time.sleep(1)
 						
 						if self.eventCancelled:
-							raise CanceledByUserError(u"Cancelled by user")
+							raise CanceledByUserError(u"Event cancelled by user")
 					finally:
-						self.waiting = False
 						try:
 							if self._notificationServer:
 								self._notificationServer.requestEndConnections()
@@ -2003,18 +2014,60 @@ class EventProcessingThread(KillableThread):
 				
 				if self.event.eventConfig.processShutdownRequests:
 					try:
-						self.opsiclientd.processShutdownRequests()
+						reboot   = self.isRebootRequested()
+						shutdown = self.isShutdownRequested()
+						if reboot or shutdown:
+							if self.event.eventConfig.shutdownWarningTime:
+								choiceSubject = ChoiceSubject(id = 'choice')
+								if self.event.eventConfig.shutdownUserCancelable:
+									choiceSubject.setChoices([ 'Abort', 'Now' ])
+									choiceSubject.setCallbacks( [ self.abortEventCallback, self.startEventCallback ] )
+								else:
+									choiceSubject.setChoices([ 'Now' ])
+									choiceSubject.setCallbacks( [ self.startEventCallback ] )
+								self._notificationServer.addSubject(choiceSubject)
+								try:
+									if self.event.eventConfig.shutdownNotifierCommand:
+										self.startNotifierApplication(
+												command      = self.event.eventConfig.shutdownNotifierCommand,
+												desktop      = self.event.eventConfig.shutdownNotifierDesktop )
+										
+									timeout = int(self.event.eventConfig.shutdownWarningTime)
+									while(timeout > 0) and not self.shutdownCancelled and not self.shutdownWaitCancelled:
+										if reboot:
+											logger.info(u"Notifying user of reboot")
+											self.setStatusMessage(_(u"Reboot in %d seconds") % timeout)
+										else:
+											logger.info(u"Notifying user of shutdown")
+											self.setStatusMessage(_(u"Shutdown in %d seconds") % timeout)
+										timeout -= 1
+										time.sleep(1)
+									
+									if self.shutdownCancelled:
+										raise CanceledByUserError(u"Shutdown cancelled by user")
+								finally:
+									try:
+										if self._notificationServer:
+											self._notificationServer.requestEndConnections()
+											self._notificationServer.removeSubject(choiceSubject)
+									except Exception, e:
+										logger.logException(e)
+							
+							if reboot:
+								self.rebootMachine()
+							elif shutdown:
+								self.shutdownMachine()
 					except Exception, e:
 						logger.logException(e)
 				
-				if self.opsiclientd.isShutdownRequested():
+				if self.opsiclientd.isShutdownTriggered():
 					self.setStatusMessage(_("Shutting down machine"))
-				elif self.opsiclientd.isRebootRequested():
+				elif self.opsiclientd.isRebootTriggered():
 					self.setStatusMessage(_("Rebooting machine"))
 				else:
 					self.setStatusMessage(_("Unblocking login"))
 				
-				if not self.opsiclientd.isRebootRequested() and not self.opsiclientd.isShutdownRequested():
+				if not self.opsiclientd.isRebootTriggered() and not self.opsiclientd.isShutdownTriggered():
 					self.opsiclientd.setBlockLogin(False)
 				
 				self.setStatusMessage(u"")
@@ -2048,9 +2101,17 @@ class EventProcessingThread(KillableThread):
 		self.eventCancelled = True
 	
 	def startEventCallback(self, choiceSubject):
-		logger.notice(u"Waiting cancelled by user")
+		logger.notice(u"Event wait cancelled by user")
 		self.waitCancelled = True
 	
+	
+	self.abortShutdownCallback(self, choiceSubject):
+		logger.notice(u"Shutdown aborted by user")
+		self.shutdownCancelled = True
+	
+	self.startEventCallback(self, choiceSubject):
+		logger.notice(u"Shutdown wait cancelled by user")
+		self.shutdowWaitCancelled = True
 	
 	#def stop(self):
 	#	time.sleep(5)
