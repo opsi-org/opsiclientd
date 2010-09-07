@@ -24,7 +24,7 @@ class Target:
 		self.company_name = "uib GmbH"
 		self.copyright = "uib GmbH"
 		self.version = ""
-		f = open(self.script, 'r')
+		f = open(os.path.join('ocdlib', 'Opsiclientd.py'), 'r')
 		for line in f.readlines():
 			if (line.find("__version__") != -1):
 				self.version = line.split('=', 1)[1].strip()[1:-1]

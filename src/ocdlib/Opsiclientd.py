@@ -2021,10 +2021,10 @@ class EventProcessingThread(KillableThread):
 								choiceSubject = ChoiceSubject(id = 'choice')
 								if self.event.eventConfig.shutdownUserCancelable:
 									choiceSubject.setChoices([ 'Abort', 'Now' ])
-									choiceSubject.setCallbacks( [ self.abortEventCallback, self.startEventCallback ] )
+									choiceSubject.setCallbacks( [ self.abortShutdownCallback, self.startShutdownCallback ] )
 								else:
 									choiceSubject.setChoices([ 'Now' ])
-									choiceSubject.setCallbacks( [ self.startEventCallback ] )
+									choiceSubject.setCallbacks( [ self.startShutdownCallback ] )
 								self._notificationServer.addSubject(choiceSubject)
 								try:
 									if self.event.eventConfig.shutdownNotifierCommand:
@@ -2108,7 +2108,7 @@ class EventProcessingThread(KillableThread):
 		logger.notice(u"Shutdown aborted by user")
 		self.shutdownCancelled = True
 	
-	def startEventCallback(self, choiceSubject):
+	def startShutdownCallback(self, choiceSubject):
 		logger.notice(u"Shutdown wait cancelled by user")
 		self.shutdowWaitCancelled = True
 	
