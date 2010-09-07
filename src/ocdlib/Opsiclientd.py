@@ -1572,7 +1572,8 @@ class EventProcessingThread(KillableThread):
 						productId          = u'opsi-winst',
 						productType        = u'LocalbootProduct',
 						clientId           = self.opsiclientd.getConfigValue('global', 'host_id'),
-						installationStatus = u'installed'
+						installationStatus = u'installed',
+						actionResult       = u'successful'
 					)
 				])
 			self.setActionProcessorInfo()
