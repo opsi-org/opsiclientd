@@ -2014,8 +2014,8 @@ class EventProcessingThread(KillableThread):
 				
 				if self.event.eventConfig.processShutdownRequests:
 					try:
-						reboot   = self.isRebootRequested()
-						shutdown = self.isShutdownRequested()
+						reboot   = self.opsiclientd.isRebootRequested()
+						shutdown = self.opsiclientd.isShutdownRequested()
 						if reboot or shutdown:
 							if self.event.eventConfig.shutdownWarningTime:
 								choiceSubject = ChoiceSubject(id = 'choice')
@@ -2054,9 +2054,9 @@ class EventProcessingThread(KillableThread):
 										logger.logException(e)
 							
 							if reboot:
-								self.rebootMachine()
+								self.opsiclientd.rebootMachine()
 							elif shutdown:
-								self.shutdownMachine()
+								self.opsiclientd.shutdownMachine()
 					except Exception, e:
 						logger.logException(e)
 				
