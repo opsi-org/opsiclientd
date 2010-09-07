@@ -2104,12 +2104,11 @@ class EventProcessingThread(KillableThread):
 		logger.notice(u"Event wait cancelled by user")
 		self.waitCancelled = True
 	
-	
-	self.abortShutdownCallback(self, choiceSubject):
+	def abortShutdownCallback(self, choiceSubject):
 		logger.notice(u"Shutdown aborted by user")
 		self.shutdownCancelled = True
 	
-	self.startEventCallback(self, choiceSubject):
+	def startEventCallback(self, choiceSubject):
 		logger.notice(u"Shutdown wait cancelled by user")
 		self.shutdowWaitCancelled = True
 	
