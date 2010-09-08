@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2010-09-08 18:37+CEST\n"
+"POT-Creation-Date: 2010-09-08 18:44+CEST\n"
 "PO-Revision-Date: 2010-09-08 16:59+CEST\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -26,6 +26,14 @@ msgstr "Schliessen"
 #: ../src/ocdlib/Opsiclientd.py:962
 msgid "Connecting to config server '%s' #%d"
 msgstr "Verbinde zu Config-Server '%s' #%d"
+
+#: ../src/ocdlib/Opsiclientd.py:971
+msgid "Connected to config server '%s'"
+msgstr "Verbunden mit Config-Server '%s'"
+
+#: ../src/ocdlib/Opsiclientd.py:974
+msgid "Failed to connect to config server '%s': %s"
+msgstr "Verbindung zu Config-Server '%s' fehlgeschlagen: %s"
 
 #: ../src/ocdlib/Opsiclientd.py:1040 ../src/ocdlib/Opsiclientd.py:1988
 msgid "Processing event %s"
@@ -100,6 +108,10 @@ msgstr "Starte Aktionen"
 msgid "Actions completed"
 msgstr "Aktionen abgeschlossen"
 
+#: ../src/ocdlib/Opsiclientd.py:1974
+msgid "Event %s: processing will start in %d seconds"
+msgstr "Ereignis %s: Verarbeitung startet in %d Sekunden"
+
 #: ../src/ocdlib/Opsiclientd.py:2040
 msgid "Reboot requested"
 msgstr "Neustart erforderlich"
@@ -147,4 +159,3 @@ msgstr "Starte action processor"
 #: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:115
 msgid "Action processor ended"
 msgstr "Action processor beendet"
-
