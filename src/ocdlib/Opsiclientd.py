@@ -533,6 +533,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.notice(u"%s event generator '%s' created" % (eventConfig['args']['type'], eventConfigName))
 				
 			except Exception, e:
+				logger.logException(e)
 				logger.error(u"Failed to create event generator '%s': %s" % (eventConfigName, forceUnicode(e)))
 		
 		for eventGenerator in self._eventGenerators.values():
