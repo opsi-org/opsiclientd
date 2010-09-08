@@ -117,7 +117,7 @@ data_files = [
 	('opsiclientd',                   [	'windows\\opsiclientd.conf']),
 	('opsiclientd\\static_html',      [	'..\\static_html\\favicon.ico', '..\\static_html\\index.html', '..\\static_html\\opsi_logo.png']),
 	('opsiclientd\\backendManager.d', [	'..\\cache_service.conf']),
-	('locale\\de\\LC_MESSAGES\\opsiclientd.mo', ['..\\gettext\\opsiclientd_de.mo']),
+	('locale\\de\\LC_MESSAGES',       ['..\\gettext\\opsiclientd_de.mo']),
 ]
 #data_files += tree("static_html")
 
@@ -136,6 +136,13 @@ setup(
 	service = [ opsiclientd ],
 	windows = [ notifier, opsiclientd_rpc, action_processor_starter ],
 )
+for lang in os.listdir(os.path.join("dist", "locale")):
+        dn = os.path.join("dist", "locale", lang, "LC_MESSAGES")
+        for mo in os.listdir(dn):
+                src = os.path.join(dn, mo)
+                if mo.endswith('_%s.mo' % lang):
+                        dst = os.path.join(dn, mo.split('_%s.mo' % lang)[0] + '.mo')
+                        os.rename(src, dst)
 
 os.unlink(os.path.join("dist", "w9xpopen.exe"))
 

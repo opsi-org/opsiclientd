@@ -102,14 +102,13 @@ class Opsiclientd(EventListener, threading.Thread):
 		except Exception, e:
 			logger.error(u"Failed to get base dir: %s" % e)
 		
-		setLocaleDir(os.path.join(baseDir, 'locale'))
-		
 		self._config = {
 			'system': {
 				'program_files_dir': u'',
 			},
 			'global': {
 				'base_dir':                 baseDir,
+                                'locale_dir':               os.path.join(baseDir, 'locale'),
 				'config_file':              u'opsiclientd.conf',
 				'log_file':                 u'opsiclientd.log',
 				'log_level':                LOG_NOTICE,
@@ -328,7 +327,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			return
 		logger.notice(u"Config read")
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self._config))
-	
+        
 	def updateConfigFile(self):
 		''' Get settings from config file '''
 		logger.notice(u"Updating config file: '%s'" % self.getConfigValue('global', 'config_file'))
@@ -645,6 +644,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._stopped = False
 		
 		self.readConfigFile()
+		setLocaleDir(self.getConfigValue('global', 'locale_dir'))
 		
 		try:
 			logger.comment(u"Opsiclientd version: %s" % __version__)
@@ -653,7 +653,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.notice(u"Using host id '%s'" % self.getConfigValue('global', 'host_id'))
 			
 			self.setBlockLogin(True)
-			
+                        
 			logger.notice(u"Starting control pipe")
 			try:
 				self._controlPipe = ControlPipeFactory(OpsiclientdRpcPipeInterface(self))
