@@ -968,10 +968,10 @@ class ServiceConnectionThread(KillableThread):
 					else:
 						self.configService.accessControl_authenticated()
 					self.connected = True
-					self.setStatusMessage(u"Connected to config server '%s'" % self._configServiceUrl)
+					self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
 					logger.notice(u"Connected to config server '%s'" % self._configServiceUrl)
 				except Exception, e:
-					self.setStatusMessage("Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
+					self.setStatusMessage(_(u"Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(e)))
 					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
 					fqdn = System.getFQDN().lower()
 					if (self._username != fqdn) and (fqdn.count('.') >= 2):
@@ -1971,7 +1971,7 @@ class EventProcessingThread(KillableThread):
 						timeout = int(self.event.eventConfig.warningTime)
 						while(timeout > 0) and not self.eventCancelled and not self.waitCancelled:
 							logger.info(u"Notifying user of event %s" % self.event)
-							self.setStatusMessage(u"Event %s: processing will start in %d seconds" % (self.event.eventConfig.getName(), timeout))
+							self.setStatusMessage(_(u"Event %s: processing will start in %d seconds") % (self.event.eventConfig.getName(), timeout))
 							timeout -= 1
 							time.sleep(1)
 						
