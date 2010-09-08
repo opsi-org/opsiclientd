@@ -116,7 +116,7 @@ class OpsiDialogWindow(SubjectsObserver):
 			self._notificationClient.addEndConnectionRequestedCallback(self.close)
 	
 	def close(self):
-                logger.notice(u"OpsiDialogWindow.close()")
+		logger.notice(u"OpsiDialogWindow.close()")
 		win32gui.PostMessage(self.hwnd, win32con.WM_CLOSE, 0, 0)
 		
 	def _registerWndClass(self):
@@ -173,26 +173,26 @@ class OpsiDialogWindow(SubjectsObserver):
 		
 		self.skin = {
 			'form': {
-				'type':      u'form',
-				'width':     200,
-				'height':    200,
-				'top':       0,
-				'left':      0,
-				'font':      win32gui.LOGFONT(),
-				'fontColor': win32api.RGB(255, 255, 255),
-				'color':     win32api.RGB(255, 255, 255),
-				'text':      u'Opsi',
-				'style':     0,
-				'stayOnTop': False,
-				'fadeIn':    False,
-				'fadeOut':   False,
-                                'slideIn':    False,
-				'slideOut':   False,
-                                'animationTime':  1000,
-                                'animationSteps': 25,
+				'type':             u'form',
+				'width':            200,
+				'height':           200,
+				'top':              0,
+				'left':             0,
+				'font':             win32gui.LOGFONT(),
+				'fontColor':        win32api.RGB(255, 255, 255),
+				'color':            win32api.RGB(255, 255, 255),
+				'text':             u'Opsi',
+				'style':            0,
+				'stayOnTop':        False,
+				'fadeIn':           False,
+				'fadeOut':          False,
+				'slideIn':          False,
+				'slideOut':         False,
+				'animationTime':    1000,
+				'animationSteps':   25,
 				'transparentColor': None,
-				'icon':      None,
-				'systray':   False
+				'icon':             None,
+				'systray':          False
 			}
 		}
 		
@@ -265,29 +265,29 @@ class OpsiDialogWindow(SubjectsObserver):
 				elif  (key == 'choiceindex'):      self.skin[item]['choiceIndex'] = forceInt(value)
 				elif  (section.lower() == 'form') and (key == 'hidden') and forceBool(value):
 					self.hidden = True
-
+		
 		if self.skin['form']['transparentColor']:
 			self.skin['form']['fadeIn'] = False
 			self.skin['form']['fadeOut'] = False
-
-                if self.skin['form']['slideIn'] and not self.skin['form']['slideIn'] in ('left', 'right', 'up', 'down'):
-                        self.skin['form']['slideIn'] = False
-                if self.skin['form']['slideOut'] and not self.skin['form']['slideOut'] in ('left', 'right', 'up', 'down'):
-                        self.skin['form']['slideOut'] = False
-                if (self.skin['form']['animationSteps'] > 200):
-                        self.skin['form']['animationSteps'] = 200
-                elif (self.skin['form']['animationSteps'] < 1):
-                        self.skin['form']['animationSteps'] = 1
-                if (self.skin['form']['animationTime'] < 100):
-                        self.skin['form']['animationTime'] = 100
-                
+		
+		if self.skin['form']['slideIn'] and not self.skin['form']['slideIn'] in ('left', 'right', 'up', 'down'):
+			self.skin['form']['slideIn'] = False
+		if self.skin['form']['slideOut'] and not self.skin['form']['slideOut'] in ('left', 'right', 'up', 'down'):
+			self.skin['form']['slideOut'] = False
+		if (self.skin['form']['animationSteps'] > 200):
+			self.skin['form']['animationSteps'] = 200
+		elif (self.skin['form']['animationSteps'] < 1):
+			self.skin['form']['animationSteps'] = 1
+		if (self.skin['form']['animationTime'] < 100):
+			self.skin['form']['animationTime'] = 100
+		
 		desktop = win32gui.GetDesktopWindow()
 		(l, t, r, b) = win32gui.GetWindowRect(desktop)
 		(DesktopCentreX, DesktopCentreY) = win32gui.ClientToScreen( desktop, ((r-l)/2, (b-t)/2) )
 		
 		area = AREA(0, 0, 0, 0)
-                windll.user32.SystemParametersInfoW(win32con.SPI_GETWORKAREA, 0, pointer(area), 0)
-                (l, t, r, b) = (area.left, area.top, area.right, area.bottom)
+		windll.user32.SystemParametersInfoW(win32con.SPI_GETWORKAREA, 0, pointer(area), 0)
+		(l, t, r, b) = (area.left, area.top, area.right, area.bottom)
 		(AvailableCentreX, AvailableCentreY) = win32gui.ClientToScreen( desktop, ((r-l)/2, (b-t)/2) )
 		
 		if (self.skin['form']['left'] < 0):
@@ -295,7 +295,7 @@ class OpsiDialogWindow(SubjectsObserver):
 		elif (self.skin['form']['left'] == 0):
 			self.skin['form']['left'] = AvailableCentreX - int(self.skin['form']['width']/2)
 		else:
-                        self.skin['form']['left'] -= 1
+			self.skin['form']['left'] -= 1
 		if (self.skin['form']['left'] < 0):
 			self.skin['form']['left'] = 0
 		
@@ -304,14 +304,14 @@ class OpsiDialogWindow(SubjectsObserver):
 		elif (self.skin['form']['top'] == 0):
 			self.skin['form']['top'] = AvailableCentreY - int(self.skin['form']['height']/2) + 1
 		else:
-                        self.skin['form']['top'] -= 1
+			self.skin['form']['top'] -= 1
 		if (self.skin['form']['top'] < 0):
 			self.skin['form']['top'] = 0
-
-                self.endLeft = self.startLeft = self.currentLeft = self.skin['form']['left']
-                self.endTop  = self.startTop  = self.currentTop  = self.skin['form']['top']
 		
-				
+		# Needed for animations
+		self.endLeft = self.startLeft = self.currentLeft = self.skin['form']['left']
+		self.endTop  = self.startTop  = self.currentTop  = self.skin['form']['top']
+		
 	def _getDialogTemplate(self):
 		# dlg item [ type, caption, id, (x,y,cx,cy), style, ex style
 		#
@@ -347,7 +347,7 @@ class OpsiDialogWindow(SubjectsObserver):
 		# Window frame and title
 		style = win32con.DS_SETFONT | win32con.WS_POPUP #| win32con.WS_EX_TOOLWINDOW # win32con.WS_VISIBLE | win32con.WS_EX_TRANSPARENT#
 		if self.skin['form']['style']:
-                        style |= self.skin['form']['style']
+			style |= self.skin['form']['style']
 		dlg = [ [ self.skin['form']['text'],
 			  (0, 0, int(self.skin['form']['width']/2), int(self.skin['form']['height']/2)),
 			  style, None,
@@ -458,30 +458,29 @@ class OpsiDialogWindow(SubjectsObserver):
 
 		animate = False
 		if self.skin['form']['fadeIn']:
-                        animate = True
-                        self.alpha = 0
+			animate = True
+			self.alpha = 0
 			self.setWindowAlpha(self.alpha)
-                
-                if self.skin['form']['slideIn']:
-                        animate = True
-                        #area = AREA(0, 0, 0, 0)
-                        #windll.user32.SystemParametersInfoW(win32con.SPI_GETWORKAREA, 0, pointer(area), 0)
-                        #(l, t, r, b) = (area.left, area.top, area.right, area.bottom)
-                        desktop = win32gui.GetDesktopWindow()
-                        (l, t, r, b) = win32gui.GetWindowRect(desktop)
-                        if   (self.skin['form']['slideIn'] == 'right'):
-                                self.startLeft = self.currentLeft = l - self.skin['form']['width']
-                        elif (self.skin['form']['slideIn'] == 'left'):
-                                self.startLeft = self.currentLeft = r
-                        elif (self.skin['form']['slideIn'] == 'up'):
-                                self.startTop = self.currentTop = b
-                        elif (self.skin['form']['slideIn'] == 'down'):
-                                self.startTop = self.currentTop = t - self.skin['form']['height']
-                
+		
+		if self.skin['form']['slideIn']:
+			animate = True
+			#area = AREA(0, 0, 0, 0)
+			#windll.user32.SystemParametersInfoW(win32con.SPI_GETWORKAREA, 0, pointer(area), 0)
+			#(l, t, r, b) = (area.left, area.top, area.right, area.bottom)
+			desktop = win32gui.GetDesktopWindow()
+			(l, t, r, b) = win32gui.GetWindowRect(desktop)
+			if   (self.skin['form']['slideIn'] == 'right'):
+				self.startLeft = self.currentLeft = l - self.skin['form']['width']
+			elif (self.skin['form']['slideIn'] == 'left'):
+				self.startLeft = self.currentLeft = r
+			elif (self.skin['form']['slideIn'] == 'up'):
+				self.startTop = self.currentTop = b
+			elif (self.skin['form']['slideIn'] == 'down'):
+				self.startTop = self.currentTop = t - self.skin['form']['height']
+		
 		if animate:
-                        timer.set_timer(int(self.skin['form']['animationTime']/self.skin['form']['animationSteps']), self.animateIn)
-
-                                        
+			timer.set_timer(int(self.skin['form']['animationTime']/self.skin['form']['animationSteps']), self.animateIn)
+		
 		if self.skin['form']['transparentColor']:
 			self.setWindowAlpha(0, self.skin['form']['transparentColor'])
 
@@ -500,7 +499,7 @@ class OpsiDialogWindow(SubjectsObserver):
 			win32gui.SetWindowPos(	self.hwnd,
 						insertAfter,
 						self.currentLeft,
-                                                self.currentTop,
+						self.currentTop,
 						self.skin['form']['width'],
 						self.skin['form']['height'],
 						win32con.SWP_SHOWWINDOW )
@@ -509,78 +508,78 @@ class OpsiDialogWindow(SubjectsObserver):
 			threading.Timer(0.01, self._notificationClient.start).start()
 
 	def animateIn(self, id, time):
-                if self.skin['form']['fadeIn']:
-                        self.setWindowAlpha(self.alpha)
-                        self.alpha += int(255/self.skin['form']['animationSteps'])
-                        if (self.alpha > 255):
-                                self.alpha = 255
-                
-                if self.skin['form']['slideIn']:
-                        win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, self.currentLeft, self.currentTop, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOSIZE)
-                        if   (self.skin['form']['slideIn'] == 'left'):
-                                self.currentLeft -= int((self.startLeft - self.skin['form']['left'])/self.skin['form']['animationSteps'])
-                                if (self.currentLeft < self.skin['form']['left']):
-                                        self.currentLeft = self.skin['form']['left']
-                        elif (self.skin['form']['slideIn'] == 'right'):
-                                self.currentLeft += int((self.skin['form']['left'] - self.startLeft)/self.skin['form']['animationSteps'])
-                                if (self.currentLeft > self.skin['form']['left']):
-                                        self.currentLeft = self.skin['form']['left']
-                        elif (self.skin['form']['slideIn'] == 'down'):
-                                self.currentTop += int((self.skin['form']['top'] - self.startTop)/self.skin['form']['animationSteps'])
-                                if (self.currentTop > self.skin['form']['top']):
-                                        self.currentTop = self.skin['form']['top']
-                        elif (self.skin['form']['slideIn'] == 'up'):
-                                self.currentTop -= int((self.startTop - self.skin['form']['top'])/self.skin['form']['animationSteps'])
-                                if (self.currentTop < self.skin['form']['top']):
-                                        self.currentTop = self.skin['form']['top']
-                        
-                if (not self.skin['form']['fadeIn'] or (self.alpha == 255)) and \
-                   (not self.skin['form']['slideIn'] \
-                    or (self.skin['form']['slideIn'] in ('left', 'right') and (self.currentLeft == self.skin['form']['left']) \
-                    or (self.skin['form']['slideIn'] in ('up',    'down') and (self.currentTop  == self.skin['form']['top'])))):
-                        if self.skin['form']['fadeIn']:
-                                self.setWindowAlpha(self.alpha)
+		if self.skin['form']['fadeIn']:
+			self.setWindowAlpha(self.alpha)
+			self.alpha += int(255/self.skin['form']['animationSteps'])
+			if (self.alpha > 255):
+				self.alpha = 255
+		
+		if self.skin['form']['slideIn']:
+			win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, self.currentLeft, self.currentTop, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOSIZE)
+			if   (self.skin['form']['slideIn'] == 'left'):
+				self.currentLeft -= int((self.startLeft - self.skin['form']['left'])/self.skin['form']['animationSteps'])
+				if (self.currentLeft < self.skin['form']['left']):
+					self.currentLeft = self.skin['form']['left']
+			elif (self.skin['form']['slideIn'] == 'right'):
+				self.currentLeft += int((self.skin['form']['left'] - self.startLeft)/self.skin['form']['animationSteps'])
+				if (self.currentLeft > self.skin['form']['left']):
+					self.currentLeft = self.skin['form']['left']
+			elif (self.skin['form']['slideIn'] == 'down'):
+				self.currentTop += int((self.skin['form']['top'] - self.startTop)/self.skin['form']['animationSteps'])
+				if (self.currentTop > self.skin['form']['top']):
+					self.currentTop = self.skin['form']['top']
+			elif (self.skin['form']['slideIn'] == 'up'):
+				self.currentTop -= int((self.startTop - self.skin['form']['top'])/self.skin['form']['animationSteps'])
+				if (self.currentTop < self.skin['form']['top']):
+					self.currentTop = self.skin['form']['top']
+			
+		if (not self.skin['form']['fadeIn'] or (self.alpha == 255)) and \
+		   (not self.skin['form']['slideIn'] \
+		    or (self.skin['form']['slideIn'] in ('left', 'right') and (self.currentLeft == self.skin['form']['left']) \
+		    or (self.skin['form']['slideIn'] in ('up',    'down') and (self.currentTop  == self.skin['form']['top'])))):
+			if self.skin['form']['fadeIn']:
+				self.setWindowAlpha(self.alpha)
 			if self.skin['form']['slideIn']:
-                                win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, self.currentLeft, self.currentTop, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOSIZE)
+				win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, self.currentLeft, self.currentTop, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOSIZE)
 			timer.kill_timer(id)
 
 	def animateOut(self):
-                if self.skin['form']['fadeOut']:
-                        self.setWindowAlpha(self.alpha)
-                        self.alpha -= int(255/self.skin['form']['animationSteps'])
-                        if (self.alpha < 0):
-                                self.alpha = 0
-
-                if self.skin['form']['slideOut']:
-                        win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, self.currentLeft, self.currentTop, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOSIZE)
-                        if   (self.skin['form']['slideOut'] == 'left'):
-                                self.currentLeft -= int((self.skin['form']['left'] - self.endLeft)/self.skin['form']['animationSteps'])
-                                if (self.currentLeft < self.endLeft):
-                                        self.currentLeft = self.endLeft
-                        elif (self.skin['form']['slideOut'] == 'right'):
-                                self.currentLeft += int((self.endLeft - self.skin['form']['left'])/self.skin['form']['animationSteps'])
-                                if (self.currentLeft > self.endLeft):
-                                        self.currentLeft = self.endLeft
-                        elif (self.skin['form']['slideOut'] == 'down'):
-                                self.currentTop += int((self.endTop - self.skin['form']['top'])/self.skin['form']['animationSteps'])
-                                if (self.currentTop > self.endTop):
-                                        self.currentTop = self.endTop
-                        elif (self.skin['form']['slideOut'] == 'up'):
-                                self.currentTop -= int((self.skin['form']['top'] - self.endTop)/self.skin['form']['animationSteps'])
-                                if (self.currentTop < self.endTop):
-                                        self.currentTop = self.endTop
-                
-                if (self.skin['form']['fadeOut'] and (self.alpha > 0)) or \
-                   (self.skin['form']['slideOut'] \
-                    and ((self.skin['form']['slideOut'] in ('left', 'right') and (self.currentLeft != self.endLeft) \
-                      or (self.skin['form']['slideOut'] in ('up',    'down') and (self.currentTop  != self.endTop))))):
-                        if self.skin['form']['fadeOut']:
-                                self.setWindowAlpha(self.alpha)
+		if self.skin['form']['fadeOut']:
+			self.setWindowAlpha(self.alpha)
+			self.alpha -= int(255/self.skin['form']['animationSteps'])
+			if (self.alpha < 0):
+				self.alpha = 0
+		
+		if self.skin['form']['slideOut']:
+			win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, self.currentLeft, self.currentTop, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOSIZE)
+			if   (self.skin['form']['slideOut'] == 'left'):
+				self.currentLeft -= int((self.skin['form']['left'] - self.endLeft)/self.skin['form']['animationSteps'])
+				if (self.currentLeft < self.endLeft):
+					self.currentLeft = self.endLeft
+			elif (self.skin['form']['slideOut'] == 'right'):
+				self.currentLeft += int((self.endLeft - self.skin['form']['left'])/self.skin['form']['animationSteps'])
+				if (self.currentLeft > self.endLeft):
+					self.currentLeft = self.endLeft
+			elif (self.skin['form']['slideOut'] == 'down'):
+				self.currentTop += int((self.endTop - self.skin['form']['top'])/self.skin['form']['animationSteps'])
+				if (self.currentTop > self.endTop):
+					self.currentTop = self.endTop
+			elif (self.skin['form']['slideOut'] == 'up'):
+				self.currentTop -= int((self.skin['form']['top'] - self.endTop)/self.skin['form']['animationSteps'])
+				if (self.currentTop < self.endTop):
+					self.currentTop = self.endTop
+		
+		if (self.skin['form']['fadeOut'] and (self.alpha > 0)) or \
+		   (self.skin['form']['slideOut'] \
+		    and ((self.skin['form']['slideOut'] in ('left', 'right') and (self.currentLeft != self.endLeft) \
+		      or (self.skin['form']['slideOut'] in ('up',    'down') and (self.currentTop  != self.endTop))))):
+			if self.skin['form']['fadeOut']:
+				self.setWindowAlpha(self.alpha)
 			if self.skin['form']['slideOut']:
-                                win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, self.currentLeft, self.currentTop, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOSIZE)
-		        time.sleep(float(self.skin['form']['animationTime']/self.skin['form']['animationSteps'])/1000)
-                        self.animateOut()
-        
+				win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, self.currentLeft, self.currentTop, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOSIZE)
+			time.sleep(float(self.skin['form']['animationTime']/self.skin['form']['animationSteps'])/1000)
+			self.animateOut()
+	
 	def fadeout(self):
 		self.setWindowAlpha(self.alpha)
 		self.alpha -= 25
@@ -598,9 +597,7 @@ class OpsiDialogWindow(SubjectsObserver):
 	
 	def removeTrayIcon(self):
 		try:
-			flags = win32gui.NIF_ICON | win32gui.NIF_MESSAGE | win32gui.NIF_TIP
-			notifyInfo = (self.hwnd, 0, flags, self.taskbarNotifyEventId, self.hicon, u'opsi status')
-			win32gui.Shell_NotifyIcon(win32gui.NIM_DELETE, notifyInfo)
+			win32gui.Shell_NotifyIcon(win32gui.NIM_DELETE, (self.hwnd, 0))
 		except Exception, e:
 			logger.error(u"Failed to remove tray icon: %s" % e)
 	
@@ -705,28 +702,29 @@ class OpsiDialogWindow(SubjectsObserver):
 	
 	def onClose(self, hwnd, msg, wparam, lparam):
 		try:
-                        animate = False
+			self.removeTrayIcon()
+			
+			animate = False
 			if self.skin['form']['fadeOut']:
-                                animate = True
+				animate = True
 				self.alpha = 255
 			
-                        if self.skin['form']['slideOut']:
-                                animate = True
-                                desktop = win32gui.GetDesktopWindow()
-                                (l, t, r, b) = win32gui.GetWindowRect(desktop)
-                                if   (self.skin['form']['slideOut'] == 'right'):
-                                        self.endLeft = r
-                                elif (self.skin['form']['slideOut'] == 'left'):
-                                        self.endLeft = l - self.skin['form']['width']
-                                elif (self.skin['form']['slideOut'] == 'up'):
-                                        self.endTop = t - self.skin['form']['height']
-                                elif (self.skin['form']['slideOut'] == 'down'):
-                                        self.endTop = b
-                        
-                        if animate:
-                                self.animateOut()
-                        
-			self.removeTrayIcon()
+			if self.skin['form']['slideOut']:
+				animate = True
+				desktop = win32gui.GetDesktopWindow()
+				(l, t, r, b) = win32gui.GetWindowRect(desktop)
+				if   (self.skin['form']['slideOut'] == 'right'):
+					self.endLeft = r
+				elif (self.skin['form']['slideOut'] == 'left'):
+					self.endLeft = l - self.skin['form']['width']
+				elif (self.skin['form']['slideOut'] == 'up'):
+					self.endTop = t - self.skin['form']['height']
+				elif (self.skin['form']['slideOut'] == 'down'):
+					self.endTop = b
+			
+			if animate:
+				self.animateOut()
+			
 		except:
 			pass
 		win32gui.DestroyWindow(hwnd)
