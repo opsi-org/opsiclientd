@@ -41,15 +41,6 @@ from OPSI.Logger import *
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 
-try:
-	lang = locale.getdefaultlocale()[0].split('_')[0]
-	localedir = os.path.join( os.path.dirname(sys.argv[0]), 'locale')
-	translation = gettext.translation('opsiclientd', localeDir, [lang])
-	_ = translation.ugettext
-except Exception, e:
-	def _(string):
-                return string
-
 encoding = locale.getpreferredencoding()
 
 argv = [ unicode(arg, encoding) for arg in sys.argv ]
@@ -75,8 +66,17 @@ logger.setFileFormat(u'[%l] [%D] [' + os.path.basename(argv[0]) + u']   %M  (%F|
 
 logger.debug(u"Called with arguments: %s" % u', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword)) )
 
-actionProcessorTimeout = int(actionProcessorTimeout)
+try:
+	lang = locale.getdefaultlocale()[0].split('_')[0]
+	localedir = os.path.join( os.path.dirname(sys.argv[0]), 'locale')
+	translation = gettext.translation('opsiclientd', localeDir, [lang])
+	_ = translation.ugettext
+except Exception, e:
+	logger.error(u"Locale not found: %s" % e)
+	def _(string):
+		return string
 
+actionProcessorTimeout = int(actionProcessorTimeout)
 imp = None
 depotShareMounted = False
 be = None
