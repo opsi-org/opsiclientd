@@ -41,7 +41,7 @@ msgstr "Aktualisiere Konfigurationsdatei"
 
 #: ../src/ocdlib/Opsiclientd.py:1242
 msgid "Getting config from service"
-msgstr "Hole Konfiguration von Service"
+msgstr "Frage Konfiguration auf Service ab"
 
 #: ../src/ocdlib/Opsiclientd.py:1296
 msgid "Got config from service"
@@ -113,11 +113,11 @@ msgstr "Später"
 
 #: ../src/ocdlib/Opsiclientd.py:2055 ../src/ocdlib/Opsiclientd.py:2061
 msgid "Reboot now"
-msgstr "Jetzt beu starten"
+msgstr "Jetzt neu starten"
 
 #: ../src/ocdlib/Opsiclientd.py:2057 ../src/ocdlib/Opsiclientd.py:2063
 msgid "Shutdown now"
-msgstr "Jetzt heruntefahren"
+msgstr "Jetzt herunterfahren"
 
 #: ../src/ocdlib/Opsiclientd.py:2075
 msgid "Reboot in %d seconds"

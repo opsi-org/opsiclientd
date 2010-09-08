@@ -137,12 +137,12 @@ setup(
 	windows = [ notifier, opsiclientd_rpc, action_processor_starter ],
 )
 for lang in os.listdir(os.path.join("dist", "locale")):
-        dn = os.path.join("dist", "locale", lang, "LC_MESSAGES")
-        for mo in os.listdir(dn):
-                src = os.path.join(dn, mo)
-                if mo.endswith('_%s.mo' % lang):
-                        dst = os.path.join(dn, mo.split('_%s.mo' % lang)[0] + '.mo')
-                        os.rename(src, dst)
+	dn = os.path.join("dist", "locale", lang, "LC_MESSAGES")
+	for mo in os.listdir(dn):
+		src = os.path.join(dn, mo)
+		if mo.endswith('_%s.mo' % lang):
+			dst = os.path.join(dn, mo.split('_%s.mo' % lang)[0] + '.mo')
+			os.rename(src, dst)
 
 os.unlink(os.path.join("dist", "w9xpopen.exe"))
 

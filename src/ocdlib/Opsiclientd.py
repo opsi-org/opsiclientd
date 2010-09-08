@@ -108,7 +108,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			},
 			'global': {
 				'base_dir':                 baseDir,
-                                'locale_dir':               os.path.join(baseDir, 'locale'),
+				'locale_dir':               os.path.join(baseDir, 'locale'),
 				'config_file':              u'opsiclientd.conf',
 				'log_file':                 u'opsiclientd.log',
 				'log_level':                LOG_NOTICE,
@@ -327,7 +327,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			return
 		logger.notice(u"Config read")
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self._config))
-        
+	
 	def updateConfigFile(self):
 		''' Get settings from config file '''
 		logger.notice(u"Updating config file: '%s'" % self.getConfigValue('global', 'config_file'))
@@ -653,7 +653,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.notice(u"Using host id '%s'" % self.getConfigValue('global', 'host_id'))
 			
 			self.setBlockLogin(True)
-                        
+			
 			logger.notice(u"Starting control pipe")
 			try:
 				self._controlPipe = ControlPipeFactory(OpsiclientdRpcPipeInterface(self))
