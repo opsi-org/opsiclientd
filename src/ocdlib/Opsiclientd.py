@@ -462,10 +462,12 @@ class Opsiclientd(EventListener, threading.Thread):
 						args['warningTime'] = int(value)
 					elif (key == 'shutdown_warning_time'):
 						args['shutdownWarningTime'] = int(value)
+					elif (key == 'shutdown_warning_repetion_time'):
+						args['shutdownWarningRepetionTime'] = int(value)
 					elif (key == 'wql'):
 						args['wql'] = value
 					elif (key == 'user_cancelable'):
-						args['userCancelable'] = not value.lower() in ('0', 'false', 'off', 'no')
+						args['userCancelable'] = int(value)
 					elif (key == 'shutdown_user_cancelable'):
 						args['shutdownUserCancelable'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'block_login'):
@@ -2039,40 +2041,51 @@ class EventProcessingThread(KillableThread):
 								self.setStatusMessage(_(u"Shutdown requested"))
 							
 							if self.event.eventConfig.shutdownWarningTime:
-								choiceSubject = ChoiceSubject(id = 'choice')
-								if self.event.eventConfig.shutdownUserCancelable:
-									choiceSubject.setChoices([ 'Abort', 'Now' ])
-									choiceSubject.setCallbacks( [ self.abortShutdownCallback, self.startShutdownCallback ] )
-								else:
-									choiceSubject.setChoices([ 'Now' ])
-									choiceSubject.setCallbacks( [ self.startShutdownCallback ] )
-								self._notificationServer.addSubject(choiceSubject)
-								try:
-									if self.event.eventConfig.shutdownNotifierCommand:
-										self.startNotifierApplication(
-												command      = self.event.eventConfig.shutdownNotifierCommand,
-												desktop      = self.event.eventConfig.shutdownNotifierDesktop )
-										
-									timeout = int(self.event.eventConfig.shutdownWarningTime)
-									while(timeout > 0) and not self.shutdownCancelled and not self.shutdownWaitCancelled:
-										if reboot:
-											logger.info(u"Notifying user of reboot")
-											self.setStatusMessage(_(u"Reboot in %d seconds") % timeout)
-										else:
-											logger.info(u"Notifying user of shutdown")
-											self.setStatusMessage(_(u"Shutdown in %d seconds") % timeout)
-										timeout -= 1
-										time.sleep(1)
-									
-									if self.shutdownCancelled:
-										raise CanceledByUserError(u"Shutdown cancelled by user")
-								finally:
+								done = False
+								while not done:
+									choiceSubject = ChoiceSubject(id = 'choice')
+									if (self.event.eventConfig.shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable):
+										choiceSubject.setChoices([ 'Abort', 'Now' ])
+										choiceSubject.setCallbacks( [ self.abortShutdownCallback, self.startShutdownCallback ] )
+									else:
+										choiceSubject.setChoices([ 'Now' ])
+										choiceSubject.setCallbacks( [ self.startShutdownCallback ] )
+									self._notificationServer.addSubject(choiceSubject)
 									try:
-										if self._notificationServer:
-											self._notificationServer.requestEndConnections()
-											self._notificationServer.removeSubject(choiceSubject)
-									except Exception, e:
-										logger.logException(e)
+										
+										if self.event.eventConfig.shutdownNotifierCommand:
+											self.startNotifierApplication(
+													command      = self.event.eventConfig.shutdownNotifierCommand,
+													desktop      = self.event.eventConfig.shutdownNotifierDesktop )
+											
+										timeout = int(self.event.eventConfig.shutdownWarningTime)
+										while(timeout > 0) and not self.shutdownCancelled and not self.shutdownWaitCancelled:
+											if reboot:
+												logger.info(u"Notifying user of reboot")
+												self.setStatusMessage(_(u"Reboot in %d seconds") % timeout)
+											else:
+												logger.info(u"Notifying user of shutdown")
+												self.setStatusMessage(_(u"Shutdown in %d seconds") % timeout)
+											timeout -= 1
+											time.sleep(1)
+										
+										if self.shutdownCancelled:
+											self.event.eventConfig.shutdownCancelCounter += 1
+											logger.notice(u"Shutdown cancelled by user for the %d. time (max: %d)" \
+												% (self.event.eventConfig.shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable))
+											
+											if (self.shutdownWarningRepetionTime >= 0):
+												logger.info(u"Shutdown warning will be repeated in %d seconds" % self.shutdownWarningRepetionTime)
+												time.sleep(self.shutdownWarningRepetionTime)
+										else:
+											done = True
+									finally:
+										try:
+											if self._notificationServer:
+												self._notificationServer.requestEndConnections()
+												self._notificationServer.removeSubject(choiceSubject)
+										except Exception, e:
+											logger.logException(e)
 							
 							if reboot:
 								self.opsiclientd.rebootMachine()
