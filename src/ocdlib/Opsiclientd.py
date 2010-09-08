@@ -2075,9 +2075,9 @@ class EventProcessingThread(KillableThread):
 											logger.notice(u"Shutdown cancelled by user for the %d. time (max: %d)" \
 												% (self.event.eventConfig.shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable))
 											
-											if (self.shutdownWarningRepetionTime >= 0):
-												logger.info(u"Shutdown warning will be repeated in %d seconds" % self.shutdownWarningRepetionTime)
-												time.sleep(self.shutdownWarningRepetionTime)
+											if (self.event.eventConfig.shutdownWarningRepetionTime >= 0):
+												logger.info(u"Shutdown warning will be repeated in %d seconds" % self.event.eventConfig.shutdownWarningRepetionTime)
+												time.sleep(self.event.eventConfig.shutdownWarningRepetionTime)
 										else:
 											done = True
 									finally:
