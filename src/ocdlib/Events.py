@@ -286,7 +286,12 @@ class EventGenerator(threading.Thread):
 		self._event = None
 		self._lastEventOccurence = None
 		logger.setLogFormat(u'[%l] [%D] [event generator ' + self._eventConfig.getName() + ']   %M  (%F|%N)', object=self)
-		
+	
+	def __unicode__(self):
+		return u'<%s %s>' % (self.__class__.__name__, self._eventConfig._name)
+	
+	__repr__ = __unicode__
+	
 	def addEventListener(self, eventListener):
 		if not isinstance(eventListener, EventListener):
 			raise TypeError(u"Failed to add event listener, got class %s, need class EventListener" % eventListener.__class__)
