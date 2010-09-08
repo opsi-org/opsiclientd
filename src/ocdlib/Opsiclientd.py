@@ -1928,8 +1928,6 @@ class EventProcessingThread(KillableThread):
 			self.running = True
 			self.eventCancelled = False
 			self.waitCancelled = False
-			self.shutdownCancelled = False
-			self.shutdownWaitCancelled = False
 			
 			# Store current config service url and depot url
 			configServiceUrls = self.opsiclientd.getConfigValue('config_service', 'url')
@@ -2043,6 +2041,8 @@ class EventProcessingThread(KillableThread):
 							
 							if self.event.eventConfig.shutdownWarningTime:
 								done = False
+								self.shutdownCancelled = False
+								self.shutdownWaitCancelled = False
 								while not done:
 									choiceSubject = ChoiceSubject(id = 'choice')
 									if (self.event.eventConfig.shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable):
