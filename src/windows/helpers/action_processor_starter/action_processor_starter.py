@@ -31,16 +31,29 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '3.5'
+__version__ = '4.0'
 
 # Imports
-import sys, os, locale
+import sys, os, locale, gettext
 
+# OPSI imports
 from OPSI.Logger import *
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 
+def _(string):
+	return string
+
+try:
+	lang = locale.getdefaultlocale()[0].split('_')[0]
+	localedir = os.path.join( os.path.dirname(sys.argv[0]), 'locale')
+	translation = gettext.translation('opsiclientd', localeDir, [lang])
+	_ translation.ugettext
+except Exception, e:
+	pass
+
 encoding = locale.getpreferredencoding()
+
 argv = [ unicode(arg, encoding) for arg in sys.argv ]
 
 if (len(argv) != 16):
@@ -85,7 +98,7 @@ try:
 		
 	if (depotRemoteUrl.split(u'/')[2] != u'localhost'):
 		logger.notice(u"Mounting depot share %s" % depotRemoteUrl)
-		be.setStatusMessage(sessionId, u"Mounting depot share %s" % depotRemoteUrl)
+		be.setStatusMessage(sessionId, _(u"Mounting depot share %s") % depotRemoteUrl)
 		
 		if runAsUser:
 			System.mount(depotRemoteUrl, depotDrive, username = depotServerUsername, password = depotServerPassword)
@@ -94,12 +107,12 @@ try:
 		depotShareMounted = True
 	
 	logger.notice(u"Starting action processor")
-	be.setStatusMessage(sessionId, u"Starting action processor")
+	be.setStatusMessage(sessionId, _(u"Starting action processor"))
 	
 	imp.runCommand(actionProcessorCommand, timeoutSeconds = actionProcessorTimeout)
 	
 	logger.notice(u"Action processor ended")
-	be.setStatusMessage(sessionId, u"Action processor ended")
+	be.setStatusMessage(sessionId, _(u"Action processor ended"))
 	
 except Exception, e:
 	logger.logException(e)
