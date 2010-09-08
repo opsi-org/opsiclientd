@@ -68,7 +68,7 @@ logger.debug(u"Called with arguments: %s" % u', '.join((hostId, hostKey, control
 
 try:
 	lang = locale.getdefaultlocale()[0].split('_')[0]
-	localedir = os.path.join( os.path.dirname(sys.argv[0]), 'locale')
+	localeDir = os.path.join( os.path.dirname(sys.argv[0]), 'locale')
 	translation = gettext.translation('opsiclientd', localeDir, [lang])
 	_ = translation.ugettext
 except Exception, e:
