@@ -41,16 +41,14 @@ from OPSI.Logger import *
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 
-def _(string):
-	return string
-
 try:
 	lang = locale.getdefaultlocale()[0].split('_')[0]
 	localedir = os.path.join( os.path.dirname(sys.argv[0]), 'locale')
 	translation = gettext.translation('opsiclientd', localeDir, [lang])
-	_ translation.ugettext
+	_ = translation.ugettext
 except Exception, e:
-	pass
+	def _(string):
+                return string
 
 encoding = locale.getpreferredencoding()
 
