@@ -2052,15 +2052,15 @@ class EventProcessingThread(KillableThread):
 									choiceSubject = ChoiceSubject(id = 'choice')
 									if (self.event.eventConfig.shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable):
 										if reboot:
-											choiceSubject.setChoices([ 'Reboot now', 'Abort' ])
+											choiceSubject.setChoices([ _('Reboot now'), _('Later') ])
 										else:
-											choiceSubject.setChoices([ 'Shutdown now', 'Abort' ])
-										choiceSubject.setCallbacks( [ self.abortShutdownCallback, self.startShutdownCallback ] )
+											choiceSubject.setChoices([ _('Shutdown now'), _('Later') ])
+										choiceSubject.setCallbacks( [ self.startShutdownCallback, self.abortShutdownCallback ] )
 									else:
 										if reboot:
-											choiceSubject.setChoices([ 'Reboot now' ])
+											choiceSubject.setChoices([ _('Reboot now') ])
 										else:
-											choiceSubject.setChoices([ 'Shutdown now' ])
+											choiceSubject.setChoices([ _('Shutdown now') ])
 										choiceSubject.setCallbacks( [ self.startShutdownCallback ] )
 									self._notificationServer.addSubject(choiceSubject)
 									
