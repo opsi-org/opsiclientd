@@ -467,9 +467,9 @@ class Opsiclientd(EventListener, threading.Thread):
 					elif (key == 'wql'):
 						args['wql'] = value
 					elif (key == 'user_cancelable'):
-						args['userCancelable'] = int(value)
+						args['userCancelable'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'shutdown_user_cancelable'):
-						args['shutdownUserCancelable'] = not value.lower() in ('0', 'false', 'off', 'no')
+						args['shutdownUserCancelable'] = int(value)
 					elif (key == 'block_login'):
 						args['blockLogin'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'lock_workstation'):
