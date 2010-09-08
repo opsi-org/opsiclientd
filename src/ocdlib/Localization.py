@@ -32,7 +32,7 @@
 """
 
 # Imports
-import locale
+import gettext
 
 # OPSI imports
 from OPSI.Logger import *
@@ -40,13 +40,14 @@ from OPSI.Logger import *
 # Get logger instance
 logger = Logger()
 
-languageCode = locale.getdefaultlocale()[0]
-
 def _(string):
-	logger.debug(u"Translate '%s'" % string)
-	if (languageCode == 'de_DE'):
-		if (string == 'Close'):
-			string = u'Schliessen'
-	logger.debug(u"Translated to '%s'" % string)
 	return string
+
+def setLocaleDir(path):
+	global _
+	try:
+		t = gettext.translation('opsiclientd', LOCALE_DIR)
+		_ = t.ugettext
+	except Exception, e:
+		logger.error(u"Locale not found: %s" % e)
 

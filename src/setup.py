@@ -116,7 +116,8 @@ data_files = [
 						'windows\\helpers\\notifier\\opsi.ico' ]),
 	('opsiclientd',                   [	'windows\\opsiclientd.conf']),
 	('opsiclientd\\static_html',      [	'..\\static_html\\favicon.ico', '..\\static_html\\index.html', '..\\static_html\\opsi_logo.png']),
-	('opsiclientd\\backendManager.d', [	'..\\cache_service.conf'])
+	('opsiclientd\\backendManager.d', [	'..\\cache_service.conf']),
+	('opsiclientd\\locale\\de\\LC_MESSAGES\\opsiclientd.mo', ['..\\gettext\\opsiclientd_de.mo'),
 ]
 #data_files += tree("static_html")
 

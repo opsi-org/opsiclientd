@@ -60,7 +60,7 @@ if (os.name == 'nt'):
 	from ocdlib.Windows import *
 if (os.name == 'posix'):
 	from ocdlib.Posix import *
-from ocdlib.Localization import _
+from ocdlib.Localization import _, setLocaleDir
 
 # Get logger instance
 logger = Logger()
@@ -101,6 +101,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			baseDir = os.path.dirname(sys.argv[0])
 		except Exception, e:
 			logger.error(u"Failed to get base dir: %s" % e)
+		
+		setLocaleDir(os.path.join(baseDir, 'locale'))
 		
 		self._config = {
 			'system': {
