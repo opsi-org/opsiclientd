@@ -51,6 +51,7 @@ from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Object import *
 
+from ocdlib.Exceptions import *
 from ocdlib.Events import *
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from ocdlib.ControlServer import ControlServer
