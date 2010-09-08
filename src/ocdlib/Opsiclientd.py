@@ -2041,9 +2041,15 @@ class EventProcessingThread(KillableThread):
 							
 							if self.event.eventConfig.shutdownWarningTime:
 								done = False
-								self.shutdownCancelled = False
-								self.shutdownWaitCancelled = False
 								while not done:
+									if reboot:
+										logger.info(u"Notifying user of reboot")
+									else:
+										logger.info(u"Notifying user of shutdown")
+									
+									self.shutdownCancelled = False
+									self.shutdownWaitCancelled = False
+									
 									choiceSubject = ChoiceSubject(id = 'choice')
 									if (self.event.eventConfig.shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable):
 										choiceSubject.setChoices([ 'Abort', 'Now' ])
@@ -2060,12 +2066,10 @@ class EventProcessingThread(KillableThread):
 													desktop      = self.event.eventConfig.shutdownNotifierDesktop )
 											
 										timeout = int(self.event.eventConfig.shutdownWarningTime)
-										while(timeout > 0) and not self.shutdownCancelled and not self.shutdownWaitCancelled:
+										while (timeout > 0) and not self.shutdownCancelled and not self.shutdownWaitCancelled:
 											if reboot:
-												logger.info(u"Notifying user of reboot")
 												self.setStatusMessage(_(u"Reboot in %d seconds") % timeout)
 											else:
-												logger.info(u"Notifying user of shutdown")
 												self.setStatusMessage(_(u"Shutdown in %d seconds") % timeout)
 											timeout -= 1
 											time.sleep(1)
