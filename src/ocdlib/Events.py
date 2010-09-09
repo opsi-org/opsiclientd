@@ -96,7 +96,8 @@ class EventConfig(object):
 		# wait <notificationDelay> seconds before event is fired
 		self.notificationDelay           =      int ( kwargs.get('notificationDelay',           0         ) )
 		self.warningTime                 =      int ( kwargs.get('warningTime',                 0         ) )
-		self.userCancelable              =     bool ( kwargs.get('userCancelable',              False     ) )
+		self.userCancelable              =      int ( kwargs.get('userCancelable',              0         ) )
+		self.cancelCounter               =      int ( kwargs.get('cancelCounter',               0         ) )
 		self.shutdownWarningTime         =      int ( kwargs.get('shutdownWarningTime',         0         ) )
 		self.shutdownWarningRepetionTime =      int ( kwargs.get('shutdownWarningRepetionTime', 3600      ) )
 		self.shutdownUserCancelable      =      int ( kwargs.get('shutdownUserCancelable',      0         ) )
