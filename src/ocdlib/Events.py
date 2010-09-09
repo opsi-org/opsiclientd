@@ -32,7 +32,7 @@
 """
 
 # OPSI imports
-import os
+import os, re
 
 # OPSI imports
 from OPSI.Logger import *
