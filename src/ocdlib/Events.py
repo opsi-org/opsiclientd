@@ -98,6 +98,7 @@ class EventConfig(object):
 		self.warningTime                 =      int ( kwargs.get('warningTime',                 0         ) )
 		self.userCancelable              =      int ( kwargs.get('userCancelable',              0         ) )
 		self.cancelCounter               =      int ( kwargs.get('cancelCounter',               0         ) )
+		self.shutdownWarningMessage      =  unicode ( kwargs.get('shutdownWarningMessage',      ''        ) )
 		self.shutdownWarningTime         =      int ( kwargs.get('shutdownWarningTime',         0         ) )
 		self.shutdownWarningRepetionTime =      int ( kwargs.get('shutdownWarningRepetionTime', 3600      ) )
 		self.shutdownUserCancelable      =      int ( kwargs.get('shutdownUserCancelable',      0         ) )
@@ -156,8 +157,22 @@ class EventConfig(object):
 			s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
 			return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 		for (key, value) in self.__dict__.items():
-			message = message.replace('%' + key + '%', value)
-			message = message.replace('%' + toUnderscore(key) + '%', value)
+			if key.lower().find('message'):
+				continue
+			message = message.replace('%' + key + '%', unicode(value))
+			message = message.replace('%' + toUnderscore(key) + '%', unicode(value))
+		return message
+	
+	def getShutdownWarningMessage(self):
+		message = self.shutdownWarningMessage
+		def toUnderscore(name):
+			s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+			return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+		for (key, value) in self.__dict__.items():
+			if key.lower().find('message'):
+				continue
+			message = message.replace('%' + key + '%', unicode(value))
+			message = message.replace('%' + toUnderscore(key) + '%', unicode(value))
 		return message
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
