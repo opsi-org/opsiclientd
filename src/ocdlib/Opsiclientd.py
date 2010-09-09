@@ -1979,14 +1979,14 @@ class EventProcessingThread(KillableThread):
 						
 						if self.eventCancelled:
 							self.event.eventConfig.cancelCounter += 1
-							self.opsiclientd.setConfigValue(self.event.eventConfig.getName(), 'cancel_counter', self.event.eventConfig.cancelCounter)
+							self.opsiclientd.setConfigValue('event_%s' % self.event.eventConfig.getName(), 'cancel_counter', self.event.eventConfig.cancelCounter)
 							self.opsiclientd.updateConfigFile()
 							logger.notice(u"Event cancelled by user for the %d. time (max: %d)" \
 								% (self.event.eventConfig.cancelCounter, self.event.eventConfig.userCancelable))
 							raise CanceledByUserError(u"Event cancelled by user")
 						else:
 							self.event.eventConfig.cancelCounter = 0
-							self.opsiclientd.setConfigValue(self.event.eventConfig.getName(), 'cancel_counter', self.event.eventConfig.cancelCounter)
+							self.opsiclientd.setConfigValue('event_%s' % self.event.eventConfig.getName(), 'cancel_counter', self.event.eventConfig.cancelCounter)
 							self.opsiclientd.updateConfigFile()
 					finally:
 						try:
