@@ -451,6 +451,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				for (key, value) in eventConfig['args'].items():
 					if   (key == 'type'):
 						continue
+					elif (key == 'wql'):
+						args['wql'] = value
 					elif (key == 'message'):
 						args['message'] = value
 					elif (key == 'max_repetitions'):
@@ -461,14 +463,14 @@ class Opsiclientd(EventListener, threading.Thread):
 						args['notificationDelay'] = int(value)
 					elif (key == 'warning_time'):
 						args['warningTime'] = int(value)
+					elif (key == 'user_cancelable'):
+						args['userCancelable'] = int(value)
+					elif (key == 'cancel_counter'):
+						args['cancelCounter'] = int(value)
 					elif (key == 'shutdown_warning_time'):
 						args['shutdownWarningTime'] = int(value)
 					elif (key == 'shutdown_warning_repetion_time'):
 						args['shutdownWarningRepetionTime'] = int(value)
-					elif (key == 'wql'):
-						args['wql'] = value
-					elif (key == 'user_cancelable'):
-						args['userCancelable'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'shutdown_user_cancelable'):
 						args['shutdownUserCancelable'] = int(value)
 					elif (key == 'block_login'):
@@ -1955,7 +1957,7 @@ class EventProcessingThread(KillableThread):
 				self._eventSubject.setMessage(self.event.eventConfig.message)
 				if self.event.eventConfig.warningTime:
 					choiceSubject = ChoiceSubject(id = 'choice')
-					if self.event.eventConfig.userCancelable:
+					if (self.event.eventConfig.cancelCounter < self.event.eventConfig.userCancelable):
 						choiceSubject.setChoices([ 'Abort', 'Start now' ])
 						choiceSubject.setCallbacks( [ self.abortEventCallback, self.startEventCallback ] )
 					else:
@@ -1976,7 +1978,16 @@ class EventProcessingThread(KillableThread):
 							time.sleep(1)
 						
 						if self.eventCancelled:
+							self.event.eventConfig.cancelCounter += 1
+							self.opsiclientd.setConfigValue(self.event.eventConfig.getName(), 'cancel_counter', self.event.eventConfig.cancelCounter)
+							self.opsiclientd.updateConfigFile()
+							logger.notice(u"Event cancelled by user for the %d. time (max: %d)" \
+								% (self.event.eventConfig.cancelCounter, self.event.eventConfig.userCancelable))
 							raise CanceledByUserError(u"Event cancelled by user")
+						else:
+							self.event.eventConfig.cancelCounter = 0
+							self.opsiclientd.setConfigValue(self.event.eventConfig.getName(), 'cancel_counter', self.event.eventConfig.cancelCounter)
+							self.opsiclientd.updateConfigFile()
 					finally:
 						try:
 							if self._notificationServer:
