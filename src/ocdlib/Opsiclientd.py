@@ -462,7 +462,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						if mLanguage:
 							if (mLanguage == getLanguage()):
 								args['message'] = value
-						elif not args['message']:
+						elif not args.get('message'):
 							args['message'] = value
 					elif key.startswith('shutdown_warning_message'):
 						mLanguage = None
@@ -473,7 +473,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						if mLanguage:
 							if (mLanguage == getLanguage()):
 								args['shutdownWarningMessage'] = value
-						elif not args['shutdownWarningMessage']:
+						elif not args.get('shutdownWarningMessage'):
 							args['shutdownWarningMessage'] = value
 					elif (key == 'max_repetitions'):
 						args['maxRepetitions'] = int(value)
