@@ -60,7 +60,7 @@ if (os.name == 'nt'):
 	from ocdlib.Windows import *
 if (os.name == 'posix'):
 	from ocdlib.Posix import *
-from ocdlib.Localization import _, setLocaleDir
+from ocdlib.Localization import _, setLocaleDir, getLanguage
 
 # Get logger instance
 logger = Logger()
@@ -453,8 +453,17 @@ class Opsiclientd(EventListener, threading.Thread):
 						continue
 					elif (key == 'wql'):
 						args['wql'] = value
-					elif (key == 'message'):
-						args['message'] = value
+					elif (key.startswith('message'):
+						mLanguage = None
+						try:
+							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
+						except:
+							pass
+						if mLanguage:
+							if (mLanguage == getLanguage()):
+								args['message'] = value
+						elif not args['message']:
+							args['message'] = value
 					elif (key == 'max_repetitions'):
 						args['maxRepetitions'] = int(value)
 					elif (key == 'activation_delay'):
