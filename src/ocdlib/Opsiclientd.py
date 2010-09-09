@@ -453,7 +453,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						continue
 					elif (key == 'wql'):
 						args['wql'] = value
-					elif (key.startswith('message'):
+					elif key.startswith('message'):
 						mLanguage = None
 						try:
 							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
