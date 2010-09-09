@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2010-09-08 18:44+CEST\n"
+"POT-Creation-Date: 2010-09-09 16:57+CEST\n"
 "PO-Revision-Date: 2010-09-08 16:59+CEST\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -19,143 +19,151 @@ msgstr ""
 msgid "Synchronizing products"
 msgstr "Synchronisiere Produkte"
 
-#: ../src/ocdlib/Opsiclientd.py:894
+#: ../src/ocdlib/Opsiclientd.py:916
 msgid "Close"
 msgstr "Schliessen"
 
-#: ../src/ocdlib/Opsiclientd.py:962
+#: ../src/ocdlib/Opsiclientd.py:984
 msgid "Connecting to config server '%s' #%d"
 msgstr "Verbinde zu Config-Server '%s' #%d"
 
-#: ../src/ocdlib/Opsiclientd.py:971
+#: ../src/ocdlib/Opsiclientd.py:993
 msgid "Connected to config server '%s'"
 msgstr "Verbunden mit Config-Server '%s'"
 
-#: ../src/ocdlib/Opsiclientd.py:974
+#: ../src/ocdlib/Opsiclientd.py:996
 msgid "Failed to connect to config server '%s': %s"
 msgstr "Verbindung zu Config-Server '%s' fehlgeschlagen: %s"
 
-#: ../src/ocdlib/Opsiclientd.py:1040 ../src/ocdlib/Opsiclientd.py:1988
+#: ../src/ocdlib/Opsiclientd.py:1062 ../src/ocdlib/Opsiclientd.py:2019
 msgid "Processing event %s"
 msgstr "Verarbeite Ereignis %s"
 
-#: ../src/ocdlib/Opsiclientd.py:1147
+#: ../src/ocdlib/Opsiclientd.py:1169
 msgid "Timeout: %ds"
 msgstr "Timeout: %ds"
 
-#: ../src/ocdlib/Opsiclientd.py:1218
+#: ../src/ocdlib/Opsiclientd.py:1240
 msgid "Updating config file"
 msgstr "Aktualisiere Konfigurationsdatei"
 
-#: ../src/ocdlib/Opsiclientd.py:1244
+#: ../src/ocdlib/Opsiclientd.py:1266
 msgid "Getting config from service"
 msgstr "Frage Konfiguration auf Service ab"
 
-#: ../src/ocdlib/Opsiclientd.py:1298
+#: ../src/ocdlib/Opsiclientd.py:1320
 msgid "Got config from service"
 msgstr "Konfiguration von Service erhalten"
 
-#: ../src/ocdlib/Opsiclientd.py:1411
+#: ../src/ocdlib/Opsiclientd.py:1433
 msgid "Writing log to service"
 msgstr "Übertrage Protokoll-Datei zum Service"
 
-#: ../src/ocdlib/Opsiclientd.py:1521
-#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:101
+#: ../src/ocdlib/Opsiclientd.py:1543
+#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:99
 msgid "Mounting depot share %s"
 msgstr "Verbinde mit Depot-Freigabe %s"
 
-#: ../src/ocdlib/Opsiclientd.py:1543
+#: ../src/ocdlib/Opsiclientd.py:1565
 msgid "Updating action processor"
 msgstr "Aktualisiere action processor"
 
-#: ../src/ocdlib/Opsiclientd.py:1625
+#: ../src/ocdlib/Opsiclientd.py:1647
 msgid "Processing login actions"
 msgstr "Starte Anmelde-Aktionen"
 
-#: ../src/ocdlib/Opsiclientd.py:1677
+#: ../src/ocdlib/Opsiclientd.py:1699
 msgid "Failed to process login actions: %s"
 msgstr "Fehler beim Ausführen der Anmelde-Aktionen: %s"
 
-#: ../src/ocdlib/Opsiclientd.py:1680
+#: ../src/ocdlib/Opsiclientd.py:1702
 msgid "Getting action requests from config service"
 msgstr "Frage auszuführende Aktionen beim Config-Service nach"
 
-#: ../src/ocdlib/Opsiclientd.py:1724
+#: ../src/ocdlib/Opsiclientd.py:1746
 msgid "No product action requests set"
 msgstr "Keine Produkt-Aktionen gesetzt"
 
-#: ../src/ocdlib/Opsiclientd.py:1744
+#: ../src/ocdlib/Opsiclientd.py:1766
 msgid "Caching products"
 msgstr "Speichere Produkte zwischen"
 
-#: ../src/ocdlib/Opsiclientd.py:1753
+#: ../src/ocdlib/Opsiclientd.py:1775
 msgid "Products cached"
 msgstr "Produkte zwischengespeichert"
 
-#: ../src/ocdlib/Opsiclientd.py:1787
+#: ../src/ocdlib/Opsiclientd.py:1809
 msgid "Failed to process product action requests: %s"
 msgstr "Fehler beim Ausführen der Produkt-Aktionen: %s"
 
-#: ../src/ocdlib/Opsiclientd.py:1806
+#: ../src/ocdlib/Opsiclientd.py:1828
 msgid "Waiting for TrustedInstaller"
 msgstr "Warte auf den TrustedInstaller"
 
-#: ../src/ocdlib/Opsiclientd.py:1816
+#: ../src/ocdlib/Opsiclientd.py:1838
 msgid "Starting actions"
 msgstr "Starte Aktionen"
 
-#: ../src/ocdlib/Opsiclientd.py:1902
+#: ../src/ocdlib/Opsiclientd.py:1924
 msgid "Actions completed"
 msgstr "Aktionen abgeschlossen"
 
-#: ../src/ocdlib/Opsiclientd.py:1974
+#: ../src/ocdlib/Opsiclientd.py:1981
+msgid "Abort"
+msgstr "Abbrechen"
+
+#: ../src/ocdlib/Opsiclientd.py:1981 ../src/ocdlib/Opsiclientd.py:1984
+msgid "Start now"
+msgstr "Jetzt starten"
+
+#: ../src/ocdlib/Opsiclientd.py:1996
 msgid "Event %s: processing will start in %d seconds"
 msgstr "Ereignis %s: Verarbeitung startet in %d Sekunden"
 
-#: ../src/ocdlib/Opsiclientd.py:2040
+#: ../src/ocdlib/Opsiclientd.py:2071
 msgid "Reboot requested"
 msgstr "Neustart erforderlich"
 
-#: ../src/ocdlib/Opsiclientd.py:2042
+#: ../src/ocdlib/Opsiclientd.py:2073
 msgid "Shutdown requested"
 msgstr "Herunterfahren erforderlich"
 
-#: ../src/ocdlib/Opsiclientd.py:2057 ../src/ocdlib/Opsiclientd.py:2059
+#: ../src/ocdlib/Opsiclientd.py:2090 ../src/ocdlib/Opsiclientd.py:2092
 msgid "Later"
 msgstr "Später"
 
-#: ../src/ocdlib/Opsiclientd.py:2057 ../src/ocdlib/Opsiclientd.py:2063
+#: ../src/ocdlib/Opsiclientd.py:2090 ../src/ocdlib/Opsiclientd.py:2096
 msgid "Reboot now"
 msgstr "Jetzt neu starten"
 
-#: ../src/ocdlib/Opsiclientd.py:2059 ../src/ocdlib/Opsiclientd.py:2065
+#: ../src/ocdlib/Opsiclientd.py:2092 ../src/ocdlib/Opsiclientd.py:2098
 msgid "Shutdown now"
 msgstr "Jetzt herunterfahren"
 
-#: ../src/ocdlib/Opsiclientd.py:2077
+#: ../src/ocdlib/Opsiclientd.py:2110
 msgid "Reboot in %d seconds"
 msgstr "Neustart in %d Sekunden"
 
-#: ../src/ocdlib/Opsiclientd.py:2079
+#: ../src/ocdlib/Opsiclientd.py:2112
 msgid "Shutdown in %d seconds"
 msgstr "Heruntefahren in %d Sekunden"
 
-#: ../src/ocdlib/Opsiclientd.py:2108
+#: ../src/ocdlib/Opsiclientd.py:2142
 msgid "Shutting down machine"
 msgstr "Computer wird heruntergefahren"
 
-#: ../src/ocdlib/Opsiclientd.py:2110
+#: ../src/ocdlib/Opsiclientd.py:2144
 msgid "Rebooting machine"
 msgstr "Computer wird neu gestartet"
 
-#: ../src/ocdlib/Opsiclientd.py:2112
+#: ../src/ocdlib/Opsiclientd.py:2146
 msgid "Unblocking login"
 msgstr "Gebe Anmeldung frei"
 
-#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:110
+#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:108
 msgid "Starting action processor"
 msgstr "Starte action processor"
 
-#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:115
+#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:113
 msgid "Action processor ended"
 msgstr "Action processor beendet"

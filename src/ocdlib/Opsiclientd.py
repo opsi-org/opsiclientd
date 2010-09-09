@@ -1978,10 +1978,10 @@ class EventProcessingThread(KillableThread):
 				if self.event.eventConfig.warningTime:
 					choiceSubject = ChoiceSubject(id = 'choice')
 					if (self.event.eventConfig.cancelCounter < self.event.eventConfig.userCancelable):
-						choiceSubject.setChoices([ 'Abort', 'Start now' ])
+						choiceSubject.setChoices([ _('Abort'), _('Start now') ])
 						choiceSubject.setCallbacks( [ self.abortEventCallback, self.startEventCallback ] )
 					else:
-						choiceSubject.setChoices([ 'Start now' ])
+						choiceSubject.setChoices([ _('Start now') ])
 						choiceSubject.setCallbacks( [ self.startEventCallback ] )
 					self._notificationServer.addSubject(choiceSubject)
 					try:
