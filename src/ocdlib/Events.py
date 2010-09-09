@@ -138,12 +138,27 @@ class EventConfig(object):
 		if not self.actionProcessorDesktop in ('winlogon', 'default', 'current'):
 			logger.error(u"Bad value '%s' for actionProcessorDesktop" % self.actionProcessorDesktop)
 			self.actionProcessorDesktop = 'current'
-		
+	
+	def __unicode__(self):
+		return u"<EventConfig: %s>" % self._name
+	
+	__repr__ = __unicode__
+	
 	def __str__(self):
-		return "<event config: %s>" % self._name
+		return str(self.__unicode__())
 	
 	def getName(self):
 		return self._name
+	
+	def getMessage(self):
+		message = self.message
+		def toUnderscore(name):
+			s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+			return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+		for (key, value) in self.__dict__.items():
+			message = message.replace('%' + key + '%', value)
+			message = message.replace('%' + toUnderscore(key) + '%', value)
+		return message
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         PANIC EVENT CONFIG                                        -

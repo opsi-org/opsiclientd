@@ -1963,7 +1963,7 @@ class EventProcessingThread(KillableThread):
 						self.running = False
 						return
 				
-				self._eventSubject.setMessage(self.event.eventConfig.message)
+				self._eventSubject.setMessage(self.event.eventConfig.getMessage())
 				if self.event.eventConfig.warningTime:
 					choiceSubject = ChoiceSubject(id = 'choice')
 					if (self.event.eventConfig.cancelCounter < self.event.eventConfig.userCancelable):
