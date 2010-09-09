@@ -41,6 +41,14 @@ from OPSI.Logger import *
 logger = Logger()
 
 translation = None
+try:
+	language = locale.getdefaultlocale()[0].split('_')[0]
+except Exception, e:
+	language = 'en'
+
+def getLanguage():
+	return language
+
 def _(string):
 	if not translation:
 		return string
@@ -50,9 +58,8 @@ def setLocaleDir(localeDir):
 	global translation
 	logger.notice(u"Setting locale dir to '%s'" % localeDir)
 	try:
-		lang = locale.getdefaultlocale()[0].split('_')[0]
-		logger.notice(u"Loading translation for language '%s'" % lang)
-		translation = gettext.translation('opsiclientd', localeDir, [lang])
+		logger.notice(u"Loading translation for language '%s'" % language)
+		translation = gettext.translation('opsiclientd', localeDir, [language])
 	except Exception, e:
 		logger.error(u"Locale not found: %s" % e)
 

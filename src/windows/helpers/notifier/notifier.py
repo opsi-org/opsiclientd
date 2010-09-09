@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '3.99'
+__version__ = '4.0'
 
 # Imports
 import threading, time, sys, os, getopt, locale
@@ -51,6 +51,11 @@ from OPSI.Logger import *
 
 encoding = locale.getpreferredencoding()
 argv = [ unicode(arg, encoding) for arg in sys.argv ]
+
+try:
+	language = locale.getdefaultlocale()[0].split('_')[0]
+except Exception, e:
+	language = 'en'
 
 # Create logger instance
 logger = Logger()
@@ -181,7 +186,7 @@ class OpsiDialogWindow(SubjectsObserver):
 				'font':             win32gui.LOGFONT(),
 				'fontColor':        win32api.RGB(255, 255, 255),
 				'color':            win32api.RGB(255, 255, 255),
-				'text':             u'Opsi',
+				'text':             u'',
 				'style':            0,
 				'stayOnTop':        False,
 				'fadeIn':           False,
@@ -247,7 +252,6 @@ class OpsiDialogWindow(SubjectsObserver):
 				elif  (key == 'fontunderline'):    self.skin[item]['font'].lfUnderline = forceBool(value)
 				elif  (key == 'fontbold') and forceBool(value): self.skin[item]['font'].lfWeight = 700
 				elif  (key == 'fontcolor'):        self.skin[item]['fontColor'] = toRGB(value)
-				elif  (key == 'text'):             self.skin[item]['text'] = value.strip()
 				elif  (key == 'alignment'):        self.skin[item]['alignment'] = toStyle(value, self.skin[item]['type'])
 				elif  (key == 'file'):             self.skin[item]['file'] = toPath(value.strip())
 				elif  (key == 'icon'):             self.skin[item]['icon'] = toPath(value)
@@ -265,6 +269,17 @@ class OpsiDialogWindow(SubjectsObserver):
 				elif  (key == 'choiceindex'):      self.skin[item]['choiceIndex'] = forceInt(value)
 				elif  (section.lower() == 'form') and (key == 'hidden') and forceBool(value):
 					self.hidden = True
+				elif  key.startswith('text'):
+					tLanguage = None
+					try:
+						tLanguage = key.split('[')[1].split(']')[0].strip().lower()
+					except:
+						pass
+					if tLanguage:
+						if (tLanguage == language):
+							self.skin[item]['text'] =  value.strip()
+					elif not self.skin[item]['text']:
+						self.skin[item]['text'] = value.strip()
 		
 		if self.skin['form']['transparentColor']:
 			self.skin['form']['fadeIn'] = False
