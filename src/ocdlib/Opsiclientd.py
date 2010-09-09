@@ -464,6 +464,17 @@ class Opsiclientd(EventListener, threading.Thread):
 								args['message'] = value
 						elif not args['message']:
 							args['message'] = value
+					elif key.startswith('shutdown_warning_message'):
+						mLanguage = None
+						try:
+							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
+						except:
+							pass
+						if mLanguage:
+							if (mLanguage == getLanguage()):
+								args['shutdownWarningMessage'] = value
+						elif not args['shutdownWarningMessage']:
+							args['shutdownWarningMessage'] = value
 					elif (key == 'max_repetitions'):
 						args['maxRepetitions'] = int(value)
 					elif (key == 'activation_delay'):
@@ -1039,7 +1050,7 @@ class EventProcessingThread(KillableThread):
 		self._depotShareMounted = False
 		
 		self._statusSubject = MessageSubject('status')
-		self._eventSubject = MessageSubject('event')
+		self._messageSubject = MessageSubject('message')
 		self._serviceUrlSubject = MessageSubject('configServiceUrl')
 		self._clientIdSubject = MessageSubject('clientId')
 		self._actionProcessorInfoSubject = MessageSubject('actionProcessorInfo')
@@ -1102,7 +1113,7 @@ class EventProcessingThread(KillableThread):
 							port     = self._notificationServerPort,
 							subjects = [
 								self._statusSubject,
-								self._eventSubject,
+								self._messageSubject,
 								self._serviceUrlSubject,
 								self._clientIdSubject,
 								self._actionProcessorInfoSubject,
@@ -1963,7 +1974,7 @@ class EventProcessingThread(KillableThread):
 						self.running = False
 						return
 				
-				self._eventSubject.setMessage(self.event.eventConfig.getMessage())
+				self._messageSubject.setMessage(self.event.eventConfig.getMessage())
 				if self.event.eventConfig.warningTime:
 					choiceSubject = ChoiceSubject(id = 'choice')
 					if (self.event.eventConfig.cancelCounter < self.event.eventConfig.userCancelable):
@@ -2037,7 +2048,7 @@ class EventProcessingThread(KillableThread):
 					self.processProductActionRequests()
 			
 			finally:
-				self._eventSubject.setMessage(u"")
+				self._messageSubject.setMessage(u"")
 				
 				if self.event.eventConfig.writeLogToService:
 					try:
@@ -2070,6 +2081,8 @@ class EventProcessingThread(KillableThread):
 									
 									self.shutdownCancelled = False
 									self.shutdownWaitCancelled = False
+									
+									self._messageSubject.setMessage(self.event.eventConfig.getShutdownWarningMessage())
 									
 									choiceSubject = ChoiceSubject(id = 'choice')
 									if (self.event.eventConfig.shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable):
@@ -2107,6 +2120,7 @@ class EventProcessingThread(KillableThread):
 									except Exception, e:
 										logger.logException(e)
 									
+									self._messageSubject.setMessage(u"")
 									if self.shutdownCancelled:
 										self.event.eventConfig.shutdownCancelCounter += 1
 										logger.notice(u"Shutdown cancelled by user for the %d. time (max: %d)" \
