@@ -489,8 +489,8 @@ class Opsiclientd(EventListener, threading.Thread):
 						args['cancelCounter'] = int(value)
 					elif (key == 'shutdown_warning_time'):
 						args['shutdownWarningTime'] = int(value)
-					elif (key == 'shutdown_warning_repetion_time'):
-						args['shutdownWarningRepetionTime'] = int(value)
+					elif (key == 'shutdown_warning_repetition_time'):
+						args['shutdownWarningRepetitionTime'] = int(value)
 					elif (key == 'shutdown_user_cancelable'):
 						args['shutdownUserCancelable'] = int(value)
 					elif (key == 'block_login'):
@@ -2126,9 +2126,9 @@ class EventProcessingThread(KillableThread):
 										logger.notice(u"Shutdown cancelled by user for the %d. time (max: %d)" \
 											% (self.event.eventConfig.shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable))
 										
-										if (self.event.eventConfig.shutdownWarningRepetionTime >= 0):
-											logger.info(u"Shutdown warning will be repeated in %d seconds" % self.event.eventConfig.shutdownWarningRepetionTime)
-											time.sleep(self.event.eventConfig.shutdownWarningRepetionTime)
+										if (self.event.eventConfig.shutdownWarningRepetitionTime >= 0):
+											logger.info(u"Shutdown warning will be repeated in %d seconds" % self.event.eventConfig.shutdownWarningRepetitionTime)
+											time.sleep(self.event.eventConfig.shutdownWarningRepetitionTime)
 											continue
 									break
 							if reboot:
