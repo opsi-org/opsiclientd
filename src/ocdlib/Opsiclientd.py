@@ -121,7 +121,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			'config_service': {
 				'url':                    [],
 				'connection_timeout':     10,
-				'user_cancellable_after': 0,
+				'user_cancelable_after': 0,
 			},
 			'depot_server': {
 				'depot_id': u'',
@@ -266,7 +266,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				if not re.search('https?://[^/]+', url):
 					logger.error("Bad config service url '%s'" % url)
 				self._config[section][option].append(url)
-		elif (section == 'config_service') and option in ('connection_timeout', 'user_cancellable_after'):
+		elif (section == 'config_service') and option in ('connection_timeout', 'user_cancelable_after'):
 			self._config[section][option] = int(self._config[section][option])
 			if (self._config[section][option] < 0):
 				self._config[section][option] = 0
@@ -1153,7 +1153,7 @@ class EventProcessingThread(KillableThread):
 				
 				choiceSubject.setCallbacks( [ serviceConnectionThread.stopConnectionCallback ] )
 				
-				cancellableAfter = forceInt(self.opsiclientd.getConfigValue('config_service', 'user_cancellable_after'))
+				cancellableAfter = forceInt(self.opsiclientd.getConfigValue('config_service', 'user_cancelable_after'))
 				logger.info(u"User is allowed to cancel connection after %d seconds" % cancellableAfter)
 				if (cancellableAfter < 1):
 					self._notificationServer.addSubject(choiceSubject)
