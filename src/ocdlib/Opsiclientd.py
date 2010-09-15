@@ -335,6 +335,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		try:
 			# Read config file
 			configFile = IniFile(filename = self.getConfigValue('global', 'config_file'), raw = True)
+			configFile.setSectionSequence('global', 'config_service', 'depot_server', 'cache_service', 'control_server', 'notification_server', 'opsiclientd_notifier', 'opsiclientd_rpc', 'action_processor')
 			config = configFile.parse()
 			changed = False
 			for (section, values) in self._config.items():
