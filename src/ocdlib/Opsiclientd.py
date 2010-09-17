@@ -990,6 +990,7 @@ class ServiceConnectionThread(KillableThread):
 						self.configService.authenticated()
 					else:
 						self.configService.accessControl_authenticated()
+						self.configService.setDeflate(True)
 					self.connected = True
 					self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
 					logger.notice(u"Connected to config server '%s'" % self._configServiceUrl)
