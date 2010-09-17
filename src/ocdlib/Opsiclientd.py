@@ -1953,6 +1953,8 @@ class EventProcessingThread(KillableThread):
 			self.running = True
 			self.eventCancelled = False
 			self.waitCancelled = False
+			if not self.event.eventConfig.blockLogin:
+				self.opsiclientd.setBlockLogin(False)
 			
 			# Store current config service url and depot url
 			configServiceUrls = self.opsiclientd.getConfigValue('config_service', 'url')
