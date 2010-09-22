@@ -1335,25 +1335,35 @@ class EventProcessingThread(KillableThread):
 		
 		self._configService.backend_setOptions({"addConfigStateDefaults": True})
 		
+		depotIds = []
 		dynamicDepot = False
-		for configState in self._configService.configState_getObjects(configId = 'clientconfig.depot.dynamic', objectId = self.opsiclientd.getConfigValue('global', 'host_id')):
-			if configState.values:
+		for configState in self._configService.configState_getObjects(
+					configId = ['clientconfig.depot.dynamic', 'opsiclientd.depot_server.depot_id'],
+					objectId = self.opsiclientd.getConfigValue('global', 'host_id')):
+			if not configState.values:
+				continue
+			if (configState.configId == 'opsiclientd.depot_server.depot_id'):
+				try:
+					depotIds.append(forceHostId(configState.values[0]))
+					logger.notice(u"Depot was set to '%s' from configState %s" % (depotId, configState))
+				except Exception, e:
+					logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, e))
+			elif (configState.configId == 'clientconfig.depot.dynamic'):
 				dynamicDepot = forceBool(configState.values[0])
-				break
-		
-		if dynamicDepot:
-			logger.info(u"Dynamic depot selection enabled")
-		
-		clientToDepotservers = self._configService.configState_getClientToDepotserver(
-				clientIds  = [ self.opsiclientd.getConfigValue('global', 'host_id') ],
-				masterOnly = (not dynamicDepot),
-				productIds = productIds)
-		if not clientToDepotservers:
-			raise Exception(u"Failed to get depot config from service")
-		
-		depotIds = [ clientToDepotservers[0]['depotId'] ]
-		if dynamicDepot:
-			depotIds.extend(clientToDepotservers[0].get('slaveDepotIds', []))
+		self.opsiclientd.setConfigValue('depot_server', 'depot_id', forceHostId(conf.getValues()[0]))
+		if not depotIds:
+			if dynamicDepot:
+				logger.info(u"Dynamic depot selection enabled")
+			clientToDepotservers = self._configService.configState_getClientToDepotserver(
+					clientIds  = [ self.opsiclientd.getConfigValue('global', 'host_id') ],
+					masterOnly = (not dynamicDepot),
+					productIds = productIds)
+			if not clientToDepotservers:
+				raise Exception(u"Failed to get depot config from service")
+			
+			depotIds = [ clientToDepotservers[0]['depotId'] ]
+			if dynamicDepot:
+				depotIds.extend(clientToDepotservers[0].get('slaveDepotIds', []))
 		masterDepot = None
 		slaveDepots = []
 		for depot in self._configService.host_getObjects(type = 'OpsiDepotserver', id = depotIds):
