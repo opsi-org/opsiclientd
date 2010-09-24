@@ -1350,7 +1350,7 @@ class EventProcessingThread(KillableThread):
 					logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, e))
 			elif (configState.configId == 'clientconfig.depot.dynamic'):
 				dynamicDepot = forceBool(configState.values[0])
-		self.opsiclientd.setConfigValue('depot_server', 'depot_id', forceHostId(conf.getValues()[0]))
+		
 		if not depotIds:
 			if dynamicDepot:
 				logger.info(u"Dynamic depot selection enabled")
