@@ -1333,6 +1333,8 @@ class EventProcessingThread(KillableThread):
 		if self._configService.isLegacyOpsi():
 			return
 		
+		selectedDepot = None
+		
 		self._configService.backend_setOptions({"addConfigStateDefaults": True})
 		
 		depotIds = []
@@ -1374,9 +1376,7 @@ class EventProcessingThread(KillableThread):
 		if not masterDepot:
 			raise Exception(u"Failed to get info for master depot '%s'" % depotIds[0])
 		
-		self.opsiclientd.setConfigValue('depot_server', 'depot_id', masterDepot.id)
-		self.opsiclientd.setConfigValue('depot_server', 'url', masterDepot.depotRemoteUrl)
-		
+		selectedDepot = masterDepot
 		if dynamicDepot and slaveDepots:
 			try:
 				modules = self._configService.backend_info()['modules']
@@ -1429,14 +1429,14 @@ class EventProcessingThread(KillableThread):
 				exec(depotSelectionAlgorithm)
 				selectedDepot = selectDepot(networkConfig = networkConfig, masterDepot = masterDepot, slaveDepots = slaveDepots)
 				
-				logger.notice(u"Selected depot is: %s" % selectedDepot)
-				self.opsiclientd.setConfigValue('depot_server', 'depot_id', selectedDepot.id)
-				self.opsiclientd.setConfigValue('depot_server', 'url', selectedDepot.depotRemoteUrl)
-				
 			except Exception, e:
 				logger.logException(e)
 				logger.error(u"Failed to select depot: %s" % e)
-		
+			
+			logger.notice(u"Selected depot is: %s" % selectedDepot)
+			self.opsiclientd.setConfigValue('depot_server', 'depot_id', selectedDepot.id)
+			self.opsiclientd.setConfigValue('depot_server', 'url', selectedDepot.depotRemoteUrl)
+			
 	def writeLogToService(self):
 		logger.notice(u"Writing log to service")
 		try:
