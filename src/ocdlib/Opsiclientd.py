@@ -1433,9 +1433,9 @@ class EventProcessingThread(KillableThread):
 				logger.logException(e)
 				logger.error(u"Failed to select depot: %s" % e)
 			
-			logger.notice(u"Selected depot is: %s" % selectedDepot)
-			self.opsiclientd.setConfigValue('depot_server', 'depot_id', selectedDepot.id)
-			self.opsiclientd.setConfigValue('depot_server', 'url', selectedDepot.depotRemoteUrl)
+		logger.notice(u"Selected depot is: %s" % selectedDepot)
+		self.opsiclientd.setConfigValue('depot_server', 'depot_id', selectedDepot.id)
+		self.opsiclientd.setConfigValue('depot_server', 'url', selectedDepot.depotRemoteUrl)
 			
 	def writeLogToService(self):
 		logger.notice(u"Writing log to service")
