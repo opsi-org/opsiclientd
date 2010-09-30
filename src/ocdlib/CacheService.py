@@ -55,7 +55,7 @@ class CacheService(threading.Thread):
 		self._storageDir = config.getConfigValue('cache_service', 'storage_dir')
 		self._tempDir = os.path.join(self._storageDir, 'tmp')
 		self._productCacheDir = os.path.join(self._storageDir, 'depot')
-		self._productCacheMaxSize = forceInt(self._opsiclientd.getConfigValue('cache_service', 'product_cache_max_size'))
+		self._productCacheMaxSize = forceInt(config.getConfigValue('cache_service', 'product_cache_max_size'))
 		
 		self._stopped = False
 		self._running = False
