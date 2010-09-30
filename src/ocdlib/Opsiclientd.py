@@ -1073,7 +1073,7 @@ class EventProcessingThread(KillableThread):
 			logger.notice(u"Got config from service")
 			
 			self.setStatusMessage(_(u"Got config from service"))
-			logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.opsiclientd.getConfig()))
+			logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(config.getConfigHash()))
 		except Exception, e:
 			logger.error(u"Failed to get config from service: %s" % forceUnicode(e))
 			raise
