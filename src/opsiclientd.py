@@ -47,7 +47,7 @@ if (os.name == 'posix'):
 
 # Create logger instance
 logger = Logger()
-moduleName = u' %-35s' % (u'opsiclientd')
+moduleName = u' %-30s' % (u'opsiclientd')
 logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)')
 
 if (__name__ == "__main__"):
