@@ -63,7 +63,7 @@ logger.setConsoleLevel(LOG_NONE)
 logger.setLogFile(logFile)
 logger.setFileLevel(int(logLevel))
 moduleName = u' %-30s' % (os.path.basename(argv[0]))
-logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)')
+logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)')
 
 logger.debug(u"Called with arguments: %s" % u', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword)) )
 
