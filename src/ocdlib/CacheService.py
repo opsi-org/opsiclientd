@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
    = = = = = = = = = = = = = = = = = = = = =
-   =   opsiclientd.CacheService            =
+   =   ocdlib.CacheService                 =
    = = = = = = = = = = = = = = = = = = = = =
    
    opsiclientd is part of the desktop management solution opsi
@@ -37,9 +37,10 @@ import threading
 # OPSI imports
 from OPSI.Logger import *
 from OPSI.Types import *
+from ocdlib.Config import Config
 
-# Get logger instance
 logger = Logger()
+config = Config()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                        CACHED CONFIG SERVICE                                      -
@@ -51,7 +52,7 @@ class CacheService(threading.Thread):
 		moduleName = u' %-30s' % (u'cache service')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		self._opsiclientd = opsiclientd
-		self._storageDir = self._opsiclientd.getConfigValue('cache_service', 'storage_dir')
+		self._storageDir = config.getConfigValue('cache_service', 'storage_dir')
 		self._tempDir = os.path.join(self._storageDir, 'tmp')
 		self._productCacheDir = os.path.join(self._storageDir, 'depot')
 		self._productCacheMaxSize = forceInt(self._opsiclientd.getConfigValue('cache_service', 'product_cache_max_size'))
@@ -250,12 +251,12 @@ class CacheService(threading.Thread):
 							self._state['product'][productId]['sync_failure']   = ''
 							
 							# TODO: choose depot / url
-							# self._opsiclientd.getConfigValue('depot_server', 'url')
-							depotUrl = u'webdavs://%s:4447/opsi-depot' % self._opsiclientd.getConfigValue('depot_server', 'depot_id')
+							# config.getConfigValue('depot_server', 'url')
+							depotUrl = u'webdavs://%s:4447/opsi-depot' % config.getConfigValue('depot_server', 'depot_id')
 							repository = getRepository(
 									url          = depotUrl,
-									username     = self._opsiclientd.getConfigValue('global', 'host_id'),
-									password     = self._opsiclientd.getConfigValue('global', 'opsi_host_key')
+									username     = config.getConfigValue('global', 'host_id'),
+									password     = config.getConfigValue('global', 'opsi_host_key')
 							)
 							
 							#self.writeStateFile()
