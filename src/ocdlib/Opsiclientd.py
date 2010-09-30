@@ -71,7 +71,7 @@ logger = Logger()
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
 		moduleName = u' %-30s' % (u'opsiclientd')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		logger.debug(u"Opsiclient initiating")
 		
 		EventListener.__init__(self)
@@ -953,7 +953,7 @@ class Opsiclientd(EventListener, threading.Thread):
 class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, statusObject):
 		moduleName = u' %-30s' % (u'service connection')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username
@@ -1032,7 +1032,7 @@ class ServiceConnectionThread(KillableThread):
 class EventProcessingThread(KillableThread):
 	def __init__(self, opsiclientd, event):
 		moduleName = u' %-30s' % (u'event processing ' + event.eventConfig.getName())
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		
 		self.opsiclientd = opsiclientd
@@ -1127,8 +1127,8 @@ class EventProcessingThread(KillableThread):
 								self._currentProgressSubjectProxy,
 								self._overallProgressSubjectProxy ] )
 			#moduleName = u' %-30s' % (u'notification server')
-			#logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self._notificationServer)
-			#logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self._notificationServer.getObserver())
+			#logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self._notificationServer)
+			#logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self._notificationServer.getObserver())
 			self._notificationServer.start()
 			logger.notice(u"Notification server started")
 		except Exception, e:

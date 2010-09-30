@@ -79,7 +79,7 @@ def ControlPipeFactory(opsiclientdRpcInterface):
 class ControlPipe(threading.Thread):
 	def __init__(self, opsiclientdRpcInterface):
 		moduleName = u' %-30s' % (u'control pipe')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._opsiclientdRpcInterface = opsiclientdRpcInterface
 		self._pipe = None
@@ -186,7 +186,7 @@ class PosixControlPipe(ControlPipe):
 class NTControlPipeConnection(threading.Thread):
 	def __init__(self, ntControlPipe, pipe, bufferSize):
 		moduleName = u' %-30s' % (u'control pipe')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._ntControlPipe = ntControlPipe
 		self._pipe = pipe
@@ -371,7 +371,7 @@ class OpsiclientdRpcPipeInterface(object):
 	def __init__(self, opsiclientd):
 		self.opsiclientd = opsiclientd
 		moduleName = u' %-30s' % (u'opsiclientd')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 	
 	def getInterface(self):
 		methods = {}

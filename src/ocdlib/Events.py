@@ -88,7 +88,7 @@ class EventConfig(object):
 		self._name = unicode(name)
 		
 		moduleName = u' %-30s' % (u'event config ' + self._name)
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		
 		self.message                       =  unicode ( kwargs.get('message',                       ''        ) )
 		self.maxRepetitions                =      int ( kwargs.get('maxRepetitions',                -1        ) )
@@ -318,7 +318,7 @@ class EventGenerator(threading.Thread):
 		self._event = None
 		self._lastEventOccurence = None
 		moduleName = u' %-30s' % (u'event generator ' + self._eventConfig.getName())
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 	
 	def __unicode__(self):
 		return u'<%s %s>' % (self.__class__.__name__, self._eventConfig._name)
@@ -368,7 +368,7 @@ class EventGenerator(threading.Thread):
 				self._eventListener = eventListener
 				self._event = event
 				moduleName = u' %-30s' % (u'event generator ' + self._event.eventConfig.getName())
-				logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
+				logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 				
 			def run(self):
 				if (self._event.eventConfig.notificationDelay > 0):
@@ -636,7 +636,7 @@ class Event(object):
 		self.eventConfig = eventConfig
 		self.eventInfo = eventInfo
 		moduleName = u' %-30s' % (u'event generator ' + self.eventConfig.getName())
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		
 	def getActionProcessorCommand(self):
 		actionProcessorCommand = self.eventConfig.actionProcessorCommand
