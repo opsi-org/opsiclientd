@@ -87,7 +87,8 @@ class EventConfig(object):
 			raise TypeError("Name not given")
 		self._name = unicode(name)
 		
-		logger.setLogFormat(u'[%l] [%D] [event config ' + self._name + ']   %M  (%F|%N)', object=self)
+		moduleName = u' %-35s' % (u'event config ' + self._name)
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 		
 		self.message                       =  unicode ( kwargs.get('message',                       ''        ) )
 		self.maxRepetitions                =      int ( kwargs.get('maxRepetitions',                -1        ) )
@@ -316,7 +317,8 @@ class EventGenerator(threading.Thread):
 		self._stopped = False
 		self._event = None
 		self._lastEventOccurence = None
-		logger.setLogFormat(u'[%l] [%D] [event generator ' + self._eventConfig.getName() + ']   %M  (%F|%N)', object=self)
+		moduleName = u' %-35s' % (u'event generator ' + self._eventConfig.getName())
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 	
 	def __unicode__(self):
 		return u'<%s %s>' % (self.__class__.__name__, self._eventConfig._name)
@@ -365,7 +367,8 @@ class EventGenerator(threading.Thread):
 				threading.Thread.__init__(self)
 				self._eventListener = eventListener
 				self._event = event
-				logger.setLogFormat(u'[%l] [%D] [event generator ' + self._event.eventConfig.getName() + ']   %M  (%F|%N)', object=self)
+				moduleName = u' %-35s' % (u'event generator ' + self._event.eventConfig.getName())
+				logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 				
 			def run(self):
 				if (self._event.eventConfig.notificationDelay > 0):
@@ -632,7 +635,8 @@ class Event(object):
 	def __init__(self, eventConfig, eventInfo={}):
 		self.eventConfig = eventConfig
 		self.eventInfo = eventInfo
-		logger.setLogFormat(u'[%l] [%D] [event ' + self.eventConfig.getName() + ']   %M  (%F|%N)', object=self)
+		moduleName = u' %-35s' % (u'event generator ' + self.eventConfig.getName())
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 		
 	def getActionProcessorCommand(self):
 		actionProcessorCommand = self.eventConfig.actionProcessorCommand
