@@ -87,7 +87,7 @@ class EventConfig(object):
 			raise TypeError("Name not given")
 		self._name = unicode(name)
 		
-		moduleName = u' %-35s' % (u'event config ' + self._name)
+		moduleName = u' %-30s' % (u'event config ' + self._name)
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 		
 		self.message                       =  unicode ( kwargs.get('message',                       ''        ) )
@@ -317,7 +317,7 @@ class EventGenerator(threading.Thread):
 		self._stopped = False
 		self._event = None
 		self._lastEventOccurence = None
-		moduleName = u' %-35s' % (u'event generator ' + self._eventConfig.getName())
+		moduleName = u' %-30s' % (u'event generator ' + self._eventConfig.getName())
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 	
 	def __unicode__(self):
@@ -367,7 +367,7 @@ class EventGenerator(threading.Thread):
 				threading.Thread.__init__(self)
 				self._eventListener = eventListener
 				self._event = event
-				moduleName = u' %-35s' % (u'event generator ' + self._event.eventConfig.getName())
+				moduleName = u' %-30s' % (u'event generator ' + self._event.eventConfig.getName())
 				logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 				
 			def run(self):
@@ -635,7 +635,7 @@ class Event(object):
 	def __init__(self, eventConfig, eventInfo={}):
 		self.eventConfig = eventConfig
 		self.eventInfo = eventInfo
-		moduleName = u' %-35s' % (u'event generator ' + self.eventConfig.getName())
+		moduleName = u' %-30s' % (u'event generator ' + self.eventConfig.getName())
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 		
 	def getActionProcessorCommand(self):

@@ -48,7 +48,7 @@ logger = Logger()
 class JsonRpc(object):
 	def __init__(self, opsiclientdRpcInterface, rpc):
 		self.opsiclientdRpcInterface = opsiclientdRpcInterface
-		moduleName = u' %-35s' % (u'json rpc')
+		moduleName = u' %-30s' % (u'json rpc')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 		self.started   = None
 		self.ended     = None

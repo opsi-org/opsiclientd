@@ -70,7 +70,7 @@ logger = Logger()
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
-		moduleName = u' %-35s' % (u'opsiclientd')
+		moduleName = u' %-30s' % (u'opsiclientd')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 		logger.debug(u"Opsiclient initiating")
 		
@@ -952,7 +952,7 @@ class Opsiclientd(EventListener, threading.Thread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, statusObject):
-		moduleName = u' %-35s' % (u'service connection')
+		moduleName = u' %-30s' % (u'service connection')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
@@ -1031,7 +1031,7 @@ class ServiceConnectionThread(KillableThread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class EventProcessingThread(KillableThread):
 	def __init__(self, opsiclientd, event):
-		moduleName = u' %-35s' % (u'event processing ' + event.eventConfig.getName())
+		moduleName = u' %-30s' % (u'event processing ' + event.eventConfig.getName())
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		
@@ -1126,7 +1126,7 @@ class EventProcessingThread(KillableThread):
 								self._detailSubjectProxy,
 								self._currentProgressSubjectProxy,
 								self._overallProgressSubjectProxy ] )
-			#moduleName = u' %-35s' % (u'notification server')
+			#moduleName = u' %-30s' % (u'notification server')
 			#logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self._notificationServer)
 			#logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self._notificationServer.getObserver())
 			self._notificationServer.start()
