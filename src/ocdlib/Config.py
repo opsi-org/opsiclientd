@@ -36,6 +36,7 @@ import sys
 # OPSI imports
 from OPSI.Logger import *
 from OPSI.Types import *
+from OPSI.Util import objectToBeautifiedText
 from OPSI.Util.File import IniFile
 from OPSI import System
 
