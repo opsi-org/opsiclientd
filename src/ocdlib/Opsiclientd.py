@@ -70,7 +70,8 @@ logger = Logger()
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
-		logger.setLogFormat(u'[%l] [%D] [opsiclientd]   %M     (%F|%N)', object=self)
+		moduleName = u' %-35s' % (u'opsiclientd')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 		logger.debug(u"Opsiclient initiating")
 		
 		EventListener.__init__(self)
@@ -951,7 +952,8 @@ class Opsiclientd(EventListener, threading.Thread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, statusObject):
-		logger.setLogFormat(u'[%l] [%D] [service connection]   %M     (%F|%N)', object=self)
+		moduleName = u' %-35s' % (u'service connection')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username
@@ -1029,7 +1031,8 @@ class ServiceConnectionThread(KillableThread):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class EventProcessingThread(KillableThread):
 	def __init__(self, opsiclientd, event):
-		logger.setLogFormat(u'[%l] [%D] [event processing ' + event.eventConfig.getName() + ']   %M     (%F|%N)', object=self)
+		moduleName = u' %-35s' % (u'event processing ' + event.eventConfig.getName())
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		
 		self.opsiclientd = opsiclientd
@@ -1123,8 +1126,9 @@ class EventProcessingThread(KillableThread):
 								self._detailSubjectProxy,
 								self._currentProgressSubjectProxy,
 								self._overallProgressSubjectProxy ] )
-			#logger.setLogFormat('[%l] [%D] [notification server]   %M     (%F|%N)', object=self._notificationServer)
-			#logger.setLogFormat('[%l] [%D] [notification server]   %M     (%F|%N)', object=self._notificationServer.getObserver())
+			#moduleName = u' %-35s' % (u'notification server')
+			#logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self._notificationServer)
+			#logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self._notificationServer.getObserver())
 			self._notificationServer.start()
 			logger.notice(u"Notification server started")
 		except Exception, e:
@@ -1298,7 +1302,7 @@ class EventProcessingThread(KillableThread):
 			else:
 				self._configService.backend_setOptions({"addConfigStateDefaults": True})
 				for configState in self._configService.configState_getObjects(objectId = self.opsiclientd.getConfigValue('global', 'host_id')):
-					logger.info(u"Got config state from service: %s" % configState)
+					logger.info(u"Got config state from service: configId %s, values %s" % (configState.configId, configState.values))
 					
 					if not configState.values:
 						continue

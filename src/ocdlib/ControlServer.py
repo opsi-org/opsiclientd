@@ -254,7 +254,8 @@ class Worker:
 		self.query     = u''
 		self.resource  = resource
 		self.session   = None
-		logger.setLogFormat(u'[%l] [%D] [control server]   %M     (%F|%N)', object=self)
+		moduleName = u' %-35s' % (u'control server')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 	
 	def process(self):
 		logger.info("Worker %s started processing" % self)
@@ -481,7 +482,8 @@ class ControlServerJsonInterfaceWorker(ControlServerJsonRpcWorker):
 class CacheServiceJsonRpcWorker(Worker):
 	def __init__(self, request, opsiclientd, resource):
 		Worker.__init__(self, request, opsiclientd, resource)
-		logger.setLogFormat(u'[%l] [%D] [cached cfg server]   %M     (%F|%N)', object=self)
+		moduleName = u' %-35s' % (u'cached cfg server')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 	
 	def _realRpc(self):
 		method = self.rpc.get('method')
@@ -520,7 +522,8 @@ class ControlServerResourceJsonRpc(resource.Resource):
 	WorkerClass = ControlServerJsonRpcWorker
 	
 	def __init__(self, opsiclientdRpcInterface):
-		logger.setLogFormat(u'[%l] [%D] [control server]   %M     (%F|%N)', object=self)
+		moduleName = u' %-35s' % (u'control server')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 		resource.Resource.__init__(self)
 		self._opsiclientdRpcInterface = opsiclientdRpcInterface
 		
@@ -548,7 +551,8 @@ class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 	WorkerClass = ControlServerJsonInterfaceWorker
 	
 	def __init__(self, opsiclientdRpcInterface):
-		logger.setLogFormat(u'[%l] [%D] [control server]   %M     (%F|%N)', object=self)
+		moduleName = u' %-35s' % (u'control server')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 		ControlServerResourceJsonRpc.__init__(self, opsiclientdRpcInterface)
 
 
@@ -557,7 +561,8 @@ class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class CacheServiceResourceJsonRpc(resource.Resource):
 	def __init__(self, opsiclientd):
-		logger.setLogFormat(u'[%l] [%D] [cached cfg server]   %M     (%F|%N)', object=self)
+		moduleName = u' %-35s' % (u'cached cfg server')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 		resource.Resource.__init__(self)
 		self._opsiclientd = opsiclientd
 		
@@ -586,7 +591,8 @@ class CacheServiceResourceJsonRpc(resource.Resource):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServer(threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
-		logger.setLogFormat(u'[%l] [%D] [control server]   %M     (%F|%N)', object=self)
+		moduleName = u' %-35s' % (u'control server')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u']   %M     (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._httpsPort = httpsPort
