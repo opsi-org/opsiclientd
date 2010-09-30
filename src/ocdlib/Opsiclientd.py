@@ -814,8 +814,8 @@ class EventProcessingThread(KillableThread):
 		self._overallProgressSubjectProxy = ProgressSubjectProxy('overallProgress')
 		
 		self._statusSubject.setMessage( _("Processing event %s") % self.event.eventConfig.getName() )
-		#self._serviceUrlSubject.setMessage(self.opsiclientd.getConfigValue('config_service', 'url'))
-		self._clientIdSubject.setMessage(self.opsiclientd.getConfigValue('global', 'host_id'))
+		#self._serviceUrlSubject.setMessage(config.getConfigValue('config_service', 'url'))
+		self._clientIdSubject.setMessage(config.getConfigValue('global', 'host_id'))
 		self._opsiclientdInfoSubject.setMessage("opsiclientd %s" % __version__)
 		self._actionProcessorInfoSubject.setMessage("")
 		
@@ -827,7 +827,7 @@ class EventProcessingThread(KillableThread):
 		
 		self.getSessionId()
 		
-		self._notificationServerPort = int(self.opsiclientd.getConfigValue('notification_server', 'start_port')) + int(self.getSessionId())
+		self._notificationServerPort = int(config.getConfigValue('notification_server', 'start_port')) + int(self.getSessionId())
 		
 	def setSessionId(self, sessionId):
 		self._sessionId = int(sessionId)
@@ -1022,7 +1022,7 @@ class EventProcessingThread(KillableThread):
 			
 			if self._configService.isLegacyOpsi():
 				
-				for (key, value) in self._configService.getNetworkConfig_hash(self.opsiclientd.getConfigValue('global', 'host_id')).items():
+				for (key, value) in self._configService.getNetworkConfig_hash(config.getConfigValue('global', 'host_id')).items():
 					if (key.lower() == 'depotid'):
 						depotId = value
 						config.setConfigValue('depot_server', 'depot_id', depotId)
@@ -1050,7 +1050,7 @@ class EventProcessingThread(KillableThread):
 						logger.error(u"Failed to process general config key '%s:%s': %s" % (key, value, forceUnicode(e)))
 			else:
 				self._configService.backend_setOptions({"addConfigStateDefaults": True})
-				for configState in self._configService.configState_getObjects(objectId = self.opsiclientd.getConfigValue('global', 'host_id')):
+				for configState in self._configService.configState_getObjects(objectId = config.getConfigValue('global', 'host_id')):
 					logger.info(u"Got config state from service: configId %s, values %s" % (configState.configId, configState.values))
 					
 					if not configState.values:
@@ -1203,12 +1203,12 @@ class EventProcessingThread(KillableThread):
 			# Do not log jsonrpc request
 			logger.setFileLevel(LOG_WARNING)
 			if self._configService.isLegacyOpsi():
-				self._configService.writeLog('clientconnect', data.replace(u'\ufffd', u'?'), self.opsiclientd.getConfigValue('global', 'host_id'))
-				#self._configService.writeLog('clientconnect', data.replace(u'\ufffd', u'?').encode('utf-8'), self.opsiclientd.getConfigValue('global', 'host_id'))
+				self._configService.writeLog('clientconnect', data.replace(u'\ufffd', u'?'), config.getConfigValue('global', 'host_id'))
+				#self._configService.writeLog('clientconnect', data.replace(u'\ufffd', u'?').encode('utf-8'), config.getConfigValue('global', 'host_id'))
 			else:
-				self._configService.log_write('clientconnect', data.replace(u'\ufffd', u'?'), self.opsiclientd.getConfigValue('global', 'host_id'))
+				self._configService.log_write('clientconnect', data.replace(u'\ufffd', u'?'), config.getConfigValue('global', 'host_id'))
 		finally:
-			logger.setFileLevel(self.opsiclientd.getConfigValue('global', 'log_level'))
+			logger.setFileLevel(config.getConfigValue('global', 'log_level'))
 		
 	def runCommandInSession(self, command, desktop=None, waitForProcessEnding=False, timeoutSeconds=0):
 		
@@ -1290,9 +1290,9 @@ class EventProcessingThread(KillableThread):
 		depotServerUsername = config.getConfigValue('depot_server', 'username')
 		encryptedDepotServerPassword = u''
 		if self._configService.isLegacyOpsi():
-			encryptedDepotServerPassword = self._configService.getPcpatchPassword(self.opsiclientd.getConfigValue('global', 'host_id'))
+			encryptedDepotServerPassword = self._configService.getPcpatchPassword(config.getConfigValue('global', 'host_id'))
 		else:
-			encryptedDepotServerPassword = self._configService.user_getCredentials(username = u'pcpatch', hostId = self.opsiclientd.getConfigValue('global', 'host_id'))['password']
+			encryptedDepotServerPassword = self._configService.user_getCredentials(username = u'pcpatch', hostId = config.getConfigValue('global', 'host_id'))['password']
 		depotServerPassword = blowfishDecrypt(config.getConfigValue('global', 'opsi_host_key'), encryptedDepotServerPassword)
 		logger.addConfidentialString(depotServerPassword)
 		return (depotServerUsername, depotServerPassword)
