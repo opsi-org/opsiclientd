@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
    = = = = = = = = = = = = = = = = = = = = =
-   =   opsiclientd.Windows                 =
+   =   ocdlib.Windows                      =
    = = = = = = = = = = = = = = = = = = = = =
    
    opsiclientd is part of the desktop management solution opsi
@@ -300,14 +300,7 @@ class OpsiclientdInit(object):
 class OpsiclientdNT(Opsiclientd):
 	def __init__(self):
 		Opsiclientd.__init__(self)
-		configDir = os.path.join(self._config['system']['program_files_dir'], u'opsi.org', u'preloginloader', u'opsiclientd')
-		if (len(sys.argv) > 0) and sys.argv[0]:
-			configDir = os.path.join(os.path.dirname(sys.argv[0]), u'opsiclientd')
-		self._config['system']['program_files_dir'] = System.getProgramFilesDir()
-		self._config['cache_service']['storage_dir'] = '%s\\tmp\\cache_service' % System.getSystemDrive()
-		self._config['cache_service']['backend_manager_config'] = os.path.join(configDir, 'backendManager.d')
-		self._config['global']['config_file'] = os.path.join(configDir, 'opsiclientd.conf')
-	
+		
 	def shutdownMachine(self):
 		self._isShutdownTriggered = True
 		self.clearShutdownRequest()
@@ -353,7 +346,6 @@ class OpsiclientdNT(Opsiclientd):
 class OpsiclientdNT5(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
-		self._config['action_processor']['run_as_user'] = 'pcpatch'
 		
 	def shutdownMachine(self):
 		self._isShutdownTriggered = True

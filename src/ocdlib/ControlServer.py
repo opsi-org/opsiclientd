@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
    = = = = = = = = = = = = = = = = = = = = =
-   =   opsiclientd.ControlServer           =
+   =   ocdlib.ControlServer                =
    = = = = = = = = = = = = = = = = = = = = =
    
    opsiclientd is part of the desktop management solution opsi
@@ -51,10 +51,10 @@ from ocdlib.Exceptions import *
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.CacheService import CacheService
 from ocdlib.JsonRpc import JsonRpc
+from ocdlib.Config import Config
 
-# Get logger instance
 logger = Logger()
-
+config = Config()
 
 interfacePage = u'''
 <?xml version="1.0" encoding="UTF-8"?>
@@ -651,7 +651,7 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
 	
 	def _authenticate(self, username, password):
-		if (username == self.opsiclientd.getConfigValue('global', 'host_id')) and (password == self.opsiclientd.getConfigValue('global', 'opsi_host_key')):
+		if (username == config.getConfigValue('global', 'host_id')) and (password == config.getConfigValue('global', 'opsi_host_key')):
 			return True
 		if (os.name == 'nt'):
 			if (username == 'Administrator'):
@@ -678,7 +678,7 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 		logger.notice(u"rpc readLog: reading log of type '%s'" % logType)
 		
 		if (logType == 'opsiclientd'):
-			f = codecs.open(self.opsiclientd.getConfigValue('global', 'log_file'), 'r', 'utf-8', 'replace')
+			f = codecs.open(config.getConfigValue('global', 'log_file'), 'r', 'utf-8', 'replace')
 			data = f.read()
 			f.close()
 			return data
@@ -752,10 +752,10 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 		section = forceUnicode(section)
 		option = forceUnicode(option)
 		value = forceUnicode(value)
-		return self.opsiclientd.setConfigValue(section, option, value)
+		return config.setConfigValue(section, option, value)
 	
 	def updateConfigFile(self):
-		self.opsiclientd.updateConfigFile()
+		config.updateConfigFile()
 		
 	def showPopup(self, message):
 		message = forceUnicode(message)
