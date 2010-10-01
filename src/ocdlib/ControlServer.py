@@ -52,6 +52,7 @@ from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.CacheService import CacheService
 from ocdlib.JsonRpc import JsonRpc
 from ocdlib.Config import Config
+from ocdlib.Events import eventGenerators
 
 logger = Logger()
 config = Config()
@@ -725,10 +726,10 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 	
 	def fireEvent(self, name):
 		name = forceUnicode(name)
-		if not name in self.opsiclientd._eventGenerators.keys():
-			raise ValueError(u"Event '%s' not in list of known events: %s" % (name, ', '.join(self.opsiclientd._eventGenerators.keys())))
+		if not name in eventGenerators.keys():
+			raise ValueError(u"Event '%s' not in list of known events: %s" % (name, ', '.join(eventGenerators.keys())))
 		logger.notice(u"Firing event '%s'" % name)
-		self.opsiclientd._eventGenerators[name].fireEvent()
+		eventGenerators[name].fireEvent()
 		
 	def setStatusMessage(self, sessionId, message):
 		sessionId = forceInt(sessionId)
