@@ -38,6 +38,7 @@ import copy as pycopy
 # OPSI imports
 from OPSI.Logger import *
 from OPSI import System
+from OPSI.Types import *
 
 from ocdlib.Config import *
 from ocdlib.Localization import _, setLocaleDir, getLanguage
