@@ -703,7 +703,7 @@ class EventListener(object):
 # -                                          EVENT GENERATOR                                          -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 eventGenerators = {}
-def createEventGenerators(self):
+def createEventGenerators():
 	global eventGenerators
 	eventGenerators['panic'] = EventGeneratorFactory(
 		PanicEventConfig('panic', actionProcessorCommand = config.get('action_processor', 'command', raw=True))
@@ -883,7 +883,7 @@ def createEventGenerators(self):
 		eventGenerator.start()
 		logger.notice(u"Event generator '%s' started" % eventGenerator)
 	
-def getEventGenerators(self, generatorClass=None):
+def getEventGenerators(generatorClass=None):
 	egs = []
 	for eventGenerator in eventGenerators.values():
 		if not generatorClass or isinstance(eventGenerator, generatorClass):
