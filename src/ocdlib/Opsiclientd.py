@@ -244,7 +244,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			# Create event generators
 			createEventGenerators()
 			
-			for eventGenerator in getEventGenerators().values():
+			for eventGenerator in getEventGenerators():
 				eventGenerator.addEventListener(self)
 				eventGenerator.start()
 				logger.notice(u"Event generator '%s' started" % eventGenerator)
