@@ -52,10 +52,10 @@ class CacheService(threading.Thread):
 		moduleName = u' %-30s' % (u'cache service')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		self._opsiclientd = opsiclientd
-		self._storageDir = config.getConfigValue('cache_service', 'storage_dir')
+		self._storageDir = config.get('cache_service', 'storage_dir')
 		self._tempDir = os.path.join(self._storageDir, 'tmp')
 		self._productCacheDir = os.path.join(self._storageDir, 'depot')
-		self._productCacheMaxSize = forceInt(config.getConfigValue('cache_service', 'product_cache_max_size'))
+		self._productCacheMaxSize = forceInt(config.get('cache_service', 'product_cache_max_size'))
 		
 		self._stopped = False
 		self._running = False
@@ -251,12 +251,12 @@ class CacheService(threading.Thread):
 							self._state['product'][productId]['sync_failure']   = ''
 							
 							# TODO: choose depot / url
-							# config.getConfigValue('depot_server', 'url')
-							depotUrl = u'webdavs://%s:4447/opsi-depot' % config.getConfigValue('depot_server', 'depot_id')
+							# config.get('depot_server', 'url')
+							depotUrl = u'webdavs://%s:4447/opsi-depot' % config.get('depot_server', 'depot_id')
 							repository = getRepository(
 									url          = depotUrl,
-									username     = config.getConfigValue('global', 'host_id'),
-									password     = config.getConfigValue('global', 'opsi_host_key')
+									username     = config.get('global', 'host_id'),
+									password     = config.get('global', 'opsi_host_key')
 							)
 							
 							#self.writeStateFile()

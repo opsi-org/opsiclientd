@@ -68,7 +68,6 @@ class ConfigImplementation(object):
 				'host_id':                  System.getFQDN().lower(),
 				'opsi_host_key':            u'',
 				'wait_for_gui_timeout':     120,
-				'wait_for_gui_application': u'',
 				'block_login_notifier':     u'',
 			},
 			'config_service': {
@@ -122,10 +121,10 @@ class ConfigImplementation(object):
 		if (sys.getwindowsversion()[0] == 5):
 			self._config['action_processor']['run_as_user'] = 'pcpatch'
 		
-	def getConfigHash(self):
+	def getDict(self):
 		return self._config
 	
-	def getConfigValue(self, section, option, raw = False):
+	def get(self, section, option, raw = False):
 		if not section:
 			section = 'global'
 		section = unicode(section).strip().lower()
@@ -137,12 +136,12 @@ class ConfigImplementation(object):
 		
 		value = self._config[section][option]
 		if not raw and type(value) in (unicode, str) and (value.count('%') >= 2):
-			value = self.fillPlaceholders(value)
+			value = self.replace(value)
 		if type(value) is str:
 			value = unicode(value)
 		return value
 	
-	def setConfigValue(self, section, option, value):
+	def set(self, section, option, value):
 		if not section:
 			section = 'global'
 		
@@ -152,7 +151,7 @@ class ConfigImplementation(object):
 			value = forceUnicode(value).strip()
 		
 		logger.info(u"Setting config value %s.%s" % (section, option))
-		logger.debug(u"setConfigValue(%s, %s, %s)" % (section, option, value))
+		logger.debug(u"set(%s, %s, %s)" % (section, option, value))
 		
 		if option not in ('action_processor_command') and (value == ''):
 			logger.warning(u"Refusing to set empty value for config value '%s' of section '%s'" % (option, section))
@@ -198,7 +197,7 @@ class ConfigImplementation(object):
 		elif (section == 'global') and (option == 'log_file'):
 			logger.setLogFile(self._config[section][option])
 	
-	def fillPlaceholders(self, string, escaped=False):
+	def replace(self, string, escaped=False):
 		for (section, values) in self._config.items():
 			if not type(values) is dict:
 				continue
@@ -212,16 +211,16 @@ class ConfigImplementation(object):
 				newString = string.replace(u'%' + unicode(section) + u'.' + unicode(key) + u'%', value)
 				
 				if (newString != string):
-					string = self.fillPlaceholders(newString, escaped)
+					string = self.replace(newString, escaped)
 		return forceUnicode(string)
 	
 	def readConfigFile(self):
 		''' Get settings from config file '''
-		logger.notice(u"Trying to read config from file: '%s'" % self.getConfigValue('global', 'config_file'))
+		logger.notice(u"Trying to read config from file: '%s'" % self.get('global', 'config_file'))
 		
 		try:
 			# Read Config-File
-			config = IniFile(filename = self.getConfigValue('global', 'config_file'), raw = True).parse()
+			config = IniFile(filename = self.get('global', 'config_file'), raw = True).parse()
 			
 			# Read log settings early
 			if config.has_section('global'):
@@ -233,7 +232,7 @@ class ConfigImplementation(object):
 						pass
 				if not debug:
 					if config.has_option('global', 'log_level'):
-						self.setConfigValue('global', 'log_level', config.get('global', 'log_level'))
+						self.set('global', 'log_level', config.get('global', 'log_level'))
 					if config.has_option('global', 'log_file'):
 						logFile = config.get('global', 'log_file')
 						for i in (2, 1, 0):
@@ -250,19 +249,19 @@ class ConfigImplementation(object):
 									os.rename(slf, dlf)
 							except Exception, e:
 								logger.error(u"Failed to rename %s to %s: %s" % (slf, dlf, forceUnicode(e)) )
-						self.setConfigValue('global', 'log_file', logFile)
+						self.set('global', 'log_file', logFile)
 			
 			# Process all sections
 			for section in config.sections():
-				logger.debug(u"Processing section '%s' in config file: '%s'" % (section, self.getConfigValue('global', 'config_file')))
+				logger.debug(u"Processing section '%s' in config file: '%s'" % (section, self.get('global', 'config_file')))
 				
 				for (option, value) in config.items(section):
 					option = option.lower()
-					self.setConfigValue(section.lower(), option, value)
+					self.set(section.lower(), option, value)
 				
 		except Exception, e:
 			# An error occured while trying to read the config file
-			logger.error(u"Failed to read config file '%s': %s" % (self.getConfigValue('global', 'config_file'), forceUnicode(e)))
+			logger.error(u"Failed to read config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
 			logger.logException(e)
 			return
 		logger.notice(u"Config read")
@@ -270,11 +269,11 @@ class ConfigImplementation(object):
 	
 	def updateConfigFile(self):
 		''' Get settings from config file '''
-		logger.notice(u"Updating config file: '%s'" % self.getConfigValue('global', 'config_file'))
+		logger.notice(u"Updating config file: '%s'" % self.get('global', 'config_file'))
 		
 		try:
 			# Read config file
-			configFile = IniFile(filename = self.getConfigValue('global', 'config_file'), raw = True)
+			configFile = IniFile(filename = self.get('global', 'config_file'), raw = True)
 			configFile.setSectionSequence(['global', 'config_service', 'depot_server', 'cache_service', 'control_server', 'notification_server', 'opsiclientd_notifier', 'opsiclientd_rpc', 'action_processor'])
 			config = configFile.parse()
 			changed = False
@@ -300,14 +299,14 @@ class ConfigImplementation(object):
 			if changed:
 				# Write back config file if changed
 				configFile.generate(config)
-				logger.notice(u"Config file '%s' written" % self.getConfigValue('global', 'config_file'))
+				logger.notice(u"Config file '%s' written" % self.get('global', 'config_file'))
 			else:
-				logger.notice(u"No need to write config file '%s', config file is up to date" % self.getConfigValue('global', 'config_file'))
+				logger.notice(u"No need to write config file '%s', config file is up to date" % self.get('global', 'config_file'))
 			
 		except Exception, e:
 			# An error occured while trying to write the config file
 			logger.logException(e)
-			logger.error(u"Failed to write config file '%s': %s" % (self.getConfigValue('global', 'config_file'), forceUnicode(e)))
+			logger.error(u"Failed to write config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
 	
 class Config(ConfigImplementation):
 	# Storage for the instance reference

@@ -37,9 +37,10 @@ import os, re
 # OPSI imports
 from OPSI.Logger import *
 from OPSI import System
+from OPSI.Config import *
 
-# Get logger instance
 logger = Logger()
+config = Config()
 
 # Possible event types
 EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED = u'product sync completed'
@@ -696,4 +697,196 @@ class EventListener(object):
 		logger.warning(u"%s: processEvent() not implemented" % self)
 	
 
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                          EVENT GENERATOR                                          -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+eventGenerators = {}
+def createEventGenerators(self):
+	global eventGenerators
+	eventGenerators['panic'] = EventGeneratorFactory(
+		PanicEventConfig('panic', actionProcessorCommand = config.get('action_processor', 'command', raw=True))
+	)
+	
+	eventConfigs = {}
+	for (section, options) in config.getDict().items():
+		section = section.lower()
+		if section.startswith('event_'):
+			eventConfigName = section.split('_', 1)[1]
+			if not eventConfigName:
+				logger.error(u"No event config name defined in section '%s'" % section)
+				continue
+			if eventConfigName in eventGenerators.keys():
+				logger.error(u"Event config '%s' already defined" % eventConfigName)
+				continue
+			eventConfigs[eventConfigName] = {
+				'active': True,
+				'args':   {},
+				'super':  None }
+			try:
+				for key in options.keys():
+					if   (key.lower() == 'active'):
+						eventConfigs[eventConfigName]['active'] = not options[key].lower() in ('0', 'false', 'off', 'no')
+					elif (key.lower() == 'super'):
+						eventConfigs[eventConfigName]['super'] = options[key]
+					else:
+						eventConfigs[eventConfigName]['args'][key.lower()] = options[key]
+			except Exception, e:
+				logger.error(u"Failed to parse event config '%s': %s" % (eventConfigName, forceUnicode(e)))
+	
+	def __inheritArgsFromSuperEvents(eventConfigsCopy, args, superEventConfigName):
+		if not superEventConfigName in eventConfigsCopy.keys():
+			logger.error(u"Super event '%s' not found" % superEventConfigName)
+			return args
+		superArgs = pycopy.deepcopy(eventConfigsCopy[superEventConfigName]['args'])
+		if eventConfigsCopy[superEventConfigName]['super']:
+			__inheritArgsFromSuperEvents(eventConfigsCopy, superArgs, eventConfigsCopy[superEventConfigName]['super'])
+		superArgs.update(args)
+		return superArgs
+	
+	eventConfigsCopy = pycopy.deepcopy(eventConfigs)
+	for eventConfigName in eventConfigs.keys():
+		if eventConfigs[eventConfigName]['super']:
+			eventConfigs[eventConfigName]['args'] = __inheritArgsFromSuperEvents(
+									eventConfigsCopy,
+									eventConfigs[eventConfigName]['args'],
+									eventConfigs[eventConfigName]['super'])
+	
+	for (eventConfigName, eventConfig) in eventConfigs.items():
+		try:
+			if not eventConfig['active']:
+				logger.notice(u"Event config '%s' is deactivated" % eventConfigName)
+				continue
+			
+			if not eventConfig['args'].get('type'):
+				logger.error(u"Event config '%s': event type not set" % eventConfigName)
+				continue
+			
+			#if not eventConfig['args'].get('action_processor_command'):
+			#	eventConfig['args']['action_processor_command'] = config.get('action_processor', 'command')
+			
+			args = {}
+			for (key, value) in eventConfig['args'].items():
+				if   (key == 'type'):
+					continue
+				elif (key == 'wql'):
+					args['wql'] = value
+				elif key.startswith('message'):
+					mLanguage = None
+					try:
+						mLanguage = key.split('[')[1].split(']')[0].strip().lower()
+					except:
+						pass
+					if mLanguage:
+						if (mLanguage == getLanguage()):
+							args['message'] = value
+					elif not args.get('message'):
+						args['message'] = value
+				elif key.startswith('shutdown_warning_message'):
+					mLanguage = None
+					try:
+						mLanguage = key.split('[')[1].split(']')[0].strip().lower()
+					except:
+						pass
+					if mLanguage:
+						if (mLanguage == getLanguage()):
+							args['shutdownWarningMessage'] = value
+					elif not args.get('shutdownWarningMessage'):
+						args['shutdownWarningMessage'] = value
+				elif (key == 'max_repetitions'):
+					args['maxRepetitions'] = int(value)
+				elif (key == 'activation_delay'):
+					args['activationDelay'] = int(value)
+				elif (key == 'notification_delay'):
+					args['notificationDelay'] = int(value)
+				elif (key == 'warning_time'):
+					args['warningTime'] = int(value)
+				elif (key == 'user_cancelable'):
+					args['userCancelable'] = int(value)
+				elif (key == 'cancel_counter'):
+					args['cancelCounter'] = int(value)
+				elif (key == 'shutdown_warning_time'):
+					args['shutdownWarningTime'] = int(value)
+				elif (key == 'shutdown_warning_repetition_time'):
+					args['shutdownWarningRepetitionTime'] = int(value)
+				elif (key == 'shutdown_user_cancelable'):
+					args['shutdownUserCancelable'] = int(value)
+				elif (key == 'block_login'):
+					args['blockLogin'] = not value.lower() in ('0', 'false', 'off', 'no')
+				elif (key == 'lock_workstation'):
+					args['lockWorkstation'] = value.lower() in ('1', 'true', 'on', 'yes')
+				elif (key == 'logoff_current_user'):
+					args['logoffCurrentUser'] = value.lower() in ('1', 'true', 'on', 'yes')
+				elif (key == 'process_shutdown_requests'):
+					args['processShutdownRequests'] = not value.lower() in ('0', 'false', 'off', 'no')
+				elif (key == 'get_config_from_service'):
+					args['getConfigFromService'] = not value.lower() in ('0', 'false', 'off', 'no')
+				elif (key == 'update_config_file'):
+					args['updateConfigFile'] = not value.lower() in ('0', 'false', 'off', 'no')
+				elif (key == 'write_log_to_service'):
+					args['writeLogToService'] = not value.lower() in ('0', 'false', 'off', 'no')
+				elif (key == 'cache_products'):
+					args['cacheProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
+				elif (key == 'cache_max_bandwidth'):
+					args['cacheMaxBandwidth'] = int(value)
+				elif (key == 'requires_cached_products'):
+					args['requiresCachedProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
+				elif (key == 'sync_config'):
+					args['syncConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
+				elif (key == 'use_cached_config'):
+					args['useCachedConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
+				elif (key == 'update_action_processor'):
+					args['updateActionProcessor'] = not value.lower() in ('0', 'false', 'off', 'no')
+				elif (key == 'action_type'):
+					args['actionType'] = value.lower()
+				elif (key == 'event_notifier_command'):
+					args['eventNotifierCommand'] = config.replace(value.lower(), escaped=True)
+				elif (key == 'event_notifier_desktop'):
+					args['eventNotifierDesktop'] = value.lower()
+				elif (key == 'action_notifier_command'):
+					args['actionNotifierCommand'] = config.replace(value.lower(), escaped=True)
+				elif (key == 'action_notifier_desktop'):
+					args['actionNotifierDesktop'] = value.lower()
+				elif (key == 'action_processor_command'):
+					args['actionProcessorCommand'] = value.lower()
+				elif (key == 'action_processor_desktop'):
+					args['actionProcessorDesktop'] = value.lower()
+				elif (key == 'action_processor_timeout'):
+					args['actionProcessorTimeout'] = int(value)
+				elif (key == 'shutdown_notifier_command'):
+					args['shutdownNotifierCommand'] = config.replace(value.lower(), escaped=True)
+				elif (key == 'shutdown_notifier_desktop'):
+					args['shutdownNotifierDesktop'] = value.lower()
+				elif (key == 'service_options'):
+					args['serviceOptions'] = eval(value)
+				elif (key == 'pre_action_processor_command'):
+					args['preActionProcessorCommand'] = config.replace(value.lower(), escaped=True)
+				elif (key == 'post_action_processor_command'):
+					args['postActionProcessorCommand'] = config.replace(value.lower(), escaped=True)
+				else:
+					logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigName))
+			
+			logger.info(u"\nEvent config '" + eventConfigName + u"' args:\n" + objectToBeautifiedText(args) + u"\n")
+			
+			eventGenerators[eventConfigName] = EventGeneratorFactory(
+				EventConfigFactory(eventConfig['args']['type'], eventConfigName, **args)
+			)
+			logger.notice(u"%s event generator '%s' created" % (eventConfig['args']['type'], eventConfigName))
+			
+		except Exception, e:
+			logger.logException(e)
+			logger.error(u"Failed to create event generator '%s': %s" % (eventConfigName, forceUnicode(e)))
+	
+	for eventGenerator in eventGenerators.values():
+		eventGenerator.addEventListener(self)
+		eventGenerator.start()
+		logger.notice(u"Event generator '%s' started" % eventGenerator)
+	
+def getEventGenerators(self, generatorClass=None):
+	egs = []
+	for eventGenerator in eventGenerators.values():
+		if not generatorClass or isinstance(eventGenerator, generatorClass):
+			egs.append(eventGenerator)
+	return egs
+	
 
