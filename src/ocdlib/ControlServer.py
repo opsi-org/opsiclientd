@@ -651,7 +651,7 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
 	
 	def _authenticate(self, username, password):
-		if (username == config.getConfigValue('global', 'host_id')) and (password == config.getConfigValue('global', 'opsi_host_key')):
+		if (username == config.get('global', 'host_id')) and (password == config.get('global', 'opsi_host_key')):
 			return True
 		if (os.name == 'nt'):
 			if (username == 'Administrator'):
@@ -678,7 +678,7 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 		logger.notice(u"rpc readLog: reading log of type '%s'" % logType)
 		
 		if (logType == 'opsiclientd'):
-			f = codecs.open(config.getConfigValue('global', 'log_file'), 'r', 'utf-8', 'replace')
+			f = codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace')
 			data = f.read()
 			f.close()
 			return data
@@ -748,11 +748,11 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 		self.opsiclientd._currentActiveDesktopName[sessionId] = desktop
 		logger.notice(u"rpc setCurrentActiveDesktopName: current active desktop name for session %s set to '%s'" % (sessionId, desktop))
 	
-	def setConfigValue(self, section, option, value):
+	def set(self, section, option, value):
 		section = forceUnicode(section)
 		option = forceUnicode(option)
 		value = forceUnicode(value)
-		return config.setConfigValue(section, option, value)
+		return config.set(section, option, value)
 	
 	def updateConfigFile(self):
 		config.updateConfigFile()
