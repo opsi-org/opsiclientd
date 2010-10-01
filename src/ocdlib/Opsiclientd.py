@@ -34,7 +34,6 @@
 __version__ = '4.0.20'
 
 # Imports
-import copy as pycopy
 import sys, os, shutil, filecmp
 
 # Twisted imports
