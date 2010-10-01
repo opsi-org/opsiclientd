@@ -37,7 +37,8 @@ import os, re
 # OPSI imports
 from OPSI.Logger import *
 from OPSI import System
-from OPSI.Config import *
+
+from ocdlib.Config import *
 
 logger = Logger()
 config = Config()
