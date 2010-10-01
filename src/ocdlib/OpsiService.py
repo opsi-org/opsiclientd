@@ -37,6 +37,7 @@ from OPSI.Util import *
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 
 from ocdlib.Localization import _, setLocaleDir, getLanguage
+from ocdlib.OpsiCLientd import __version__
 
 logger = Logger()
 
