@@ -31,8 +31,9 @@
    @license: GNU General Public License version 2
 """
 
-# OPSI imports
+# Imports
 import os, re
+import copy as pycopy
 
 # OPSI imports
 from OPSI.Logger import *
