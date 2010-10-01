@@ -40,6 +40,7 @@ from OPSI.Logger import *
 from OPSI import System
 
 from ocdlib.Config import *
+from ocdlib.Localization import _, setLocaleDir, getLanguage
 
 logger = Logger()
 config = Config()
@@ -878,11 +879,6 @@ def createEventGenerators():
 		except Exception, e:
 			logger.logException(e)
 			logger.error(u"Failed to create event generator '%s': %s" % (eventConfigName, forceUnicode(e)))
-	
-	for eventGenerator in eventGenerators.values():
-		eventGenerator.addEventListener(self)
-		eventGenerator.start()
-		logger.notice(u"Event generator '%s' started" % eventGenerator)
 	
 def getEventGenerators(generatorClass=None):
 	egs = []
