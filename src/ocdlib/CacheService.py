@@ -34,11 +34,13 @@
 # Import
 import threading
 from twisted.conch.ssh import keys
+from hashlib import md5
 
 # OPSI imports
 from OPSI.Logger import *
 from OPSI.Types import *
 from OPSI.Util.Repository import *
+from OPSI.Util import md5sum
 from ocdlib.Config import Config
 
 logger = Logger()
