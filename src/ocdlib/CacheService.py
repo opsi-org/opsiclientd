@@ -32,9 +32,9 @@
 """
 
 # Import
-import threading
-from twisted.conch.ssh import keys
+import threading, base64
 from hashlib import md5
+from twisted.conch.ssh import keys
 
 # OPSI imports
 from OPSI.Logger import *
