@@ -312,6 +312,7 @@ class CacheService(threading.Thread):
 								productCacheDirSize += productSize
 								diskFreeSpace -= productSize
 							except Exception, e:
+								logger.logException(e)
 								logger.error("Failed to sync product '%s': %s" % (productId, forceUnicode(e)))
 								errorsOccured.append( u'%s: %s' % (productId, forceUnicode(e)) )
 								self._state['product'][productId]['sync_failure'] = forceUnicode(e)
