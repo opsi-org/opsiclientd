@@ -266,9 +266,10 @@ class CacheService(threading.Thread):
 							
 							#self.writeStateFile()
 							try:
-								logger.info(u"Downloading package content file of product '%s' from depot '%s'" % (productId, repository))
 								tempPackageContentFile = os.path.join(self._tempDir, u'%s.files' % productId)
-								repository.download(source = u'%s/%s.files' % (productId, productId), destination = tempPackageContentFile)
+								packageContentFile = u'%s/%s.files' % (productId, productId)
+								logger.info(u"Downloading package content file '%s' of product '%s' from depot '%s'" % (packageContentFile, productId, repository))
+								repository.download(source = packageContentFile, destination = tempPackageContentFile)
 								
 								packageContentFile = os.path.join(self._productCacheDir, productId, u'%s.files' % productId)
 								if os.path.exists(packageContentFile) and (md5sum(tempPackageContentFile) == md5sum(packageContentFile)):
