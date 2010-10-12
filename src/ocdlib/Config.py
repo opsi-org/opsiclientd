@@ -310,7 +310,7 @@ class ConfigImplementation(object):
 			logger.logException(e)
 			logger.error(u"Failed to write config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
 	
-	def selectDepot(self, configService productIds=[]):
+	def selectDepot(self, configService, productIds=[]):
 		logger.notice(u"Selecting depot")
 		if not configService:
 			raise Exception(u"Not connected to config service")
