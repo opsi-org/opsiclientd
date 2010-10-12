@@ -129,6 +129,11 @@ class CacheService(threading.Thread):
 			self.initialize()
 			self._configService = configService
 			self._productIds = productIds
+			if 'mshotfix' in self._productIds:
+				additionalProductId = getOpsiHotfixName()
+				logger.info(u"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s" % additionalProductId)
+				if not additionalProductId in self._productIds:
+					self._productIds.append(additionalProductId)
 			self._cacheProductsRequested = True
 			self._cacheProductsEnded.clear()
 			for productId in self._productIds:
