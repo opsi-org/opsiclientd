@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
    = = = = = = = = = = = = = = = = = = = = =
-   =   opsiclientd.CacheService            =
+   =   ocdlib.CacheService                 =
    = = = = = = = = = = = = = = = = = = = = =
    
    opsiclientd is part of the desktop management solution opsi
@@ -37,9 +37,11 @@ import threading
 # OPSI imports
 from OPSI.Logger import *
 from OPSI.Types import *
+from OPSI.Repository import *
+from ocdlib.Config import Config
 
-# Get logger instance
 logger = Logger()
+config = Config()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                        CACHED CONFIG SERVICE                                      -
@@ -48,12 +50,13 @@ logger = Logger()
 class CacheService(threading.Thread):
 	def __init__(self, opsiclientd):
 		threading.Thread.__init__(self)
-		logger.setLogFormat(u'[%l] [%D] [cache service]   %M     (%F|%N)', object=self)
+		moduleName = u' %-30s' % (u'cache service')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		self._opsiclientd = opsiclientd
-		self._storageDir = self._opsiclientd.getConfigValue('cache_service', 'storage_dir')
+		self._storageDir = config.get('cache_service', 'storage_dir')
 		self._tempDir = os.path.join(self._storageDir, 'tmp')
 		self._productCacheDir = os.path.join(self._storageDir, 'depot')
-		self._productCacheMaxSize = forceInt(self._opsiclientd.getConfigValue('cache_service', 'product_cache_max_size'))
+		self._productCacheMaxSize = forceInt(config.get('cache_service', 'product_cache_max_size'))
 		
 		self._stopped = False
 		self._running = False
@@ -81,13 +84,13 @@ class CacheService(threading.Thread):
 		self._initialized = True
 		if not os.path.exists(self._storageDir):
 			logger.notice(u"Creating cache service storage dir '%s'" % self._storageDir)
-			os.mkdir(self._storageDir)
+			os.makedirs(self._storageDir)
 		if not os.path.exists(self._tempDir):
 			logger.notice(u"Creating cache service temp dir '%s'" % self._tempDir)
-			os.mkdir(self._tempDir)
+			os.makedirs(sself._tempDir)
 		if not os.path.exists(self._productCacheDir):
 			logger.notice(u"Creating cache service product cache dir '%s'" % self._productCacheDir)
-			os.mkdir(self._productCacheDir)
+			os.makedirs(self._productCacheDir)
 	
 	def setCurrentProductSyncProgressObserver(self, currentProductSyncProgressObserver):
 		self._currentProductSyncProgressObserver = currentProductSyncProgressObserver
@@ -248,14 +251,11 @@ class CacheService(threading.Thread):
 							self._state['product'][productId]['sync_completed'] = ''
 							self._state['product'][productId]['sync_failure']   = ''
 							
-							# TODO: choose depot / url
-							# self._opsiclientd.getConfigValue('depot_server', 'url')
-							depotUrl = u'webdavs://%s:4447/opsi-depot' % self._opsiclientd.getConfigValue('depot_server', 'depot_id')
-							repository = getRepository(
-									url          = depotUrl,
-									username     = self._opsiclientd.getConfigValue('global', 'host_id'),
-									password     = self._opsiclientd.getConfigValue('global', 'opsi_host_key')
-							)
+							self._opsiclientd.selectDepot(productIds = productId)
+							if not config.get('depot_server', 'url'):
+								raise Exception(u"Cannot sync files, depot_server.url undefined")
+							(depotServerUsername, depotServerPassword) = self._opsiclientd.getDepotserverCredentials()
+							repository = getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword)
 							
 							#self.writeStateFile()
 							try:

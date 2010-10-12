@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
    = = = = = = = = = = = = = = = = = = = = =
-   =   opsiclientd.JsonRpc                 =
+   =   ocdlib.JsonRpc                      =
    = = = = = = = = = = = = = = = = = = = = =
    
    opsiclientd is part of the desktop management solution opsi
@@ -48,7 +48,8 @@ logger = Logger()
 class JsonRpc(object):
 	def __init__(self, opsiclientdRpcInterface, rpc):
 		self.opsiclientdRpcInterface = opsiclientdRpcInterface
-		logger.setLogFormat(u'[%l] [%D] [json rpc]   %M     (%F|%N)', object=self)
+		moduleName = u' %-30s' % (u'json rpc')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		self.started   = None
 		self.ended     = None
 		self.type      = rpc.get('type')

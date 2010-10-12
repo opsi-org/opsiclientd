@@ -24,7 +24,7 @@ class Target:
 		self.company_name = "uib GmbH"
 		self.copyright = "uib GmbH"
 		self.version = ""
-		f = open(self.script, 'r')
+		f = open(os.path.join('ocdlib', 'Opsiclientd.py'), 'r')
 		for line in f.readlines():
 			if (line.find("__version__") != -1):
 				self.version = line.split('=', 1)[1].strip()[1:-1]
@@ -106,6 +106,7 @@ data_files = [
 						'windows\\helpers\\notifier\\wait_for_gui.ini',
 						'windows\\helpers\\notifier\\block_login.ini',
 						'windows\\helpers\\notifier\\popup.ini',
+						'windows\\helpers\\notifier\\shutdown.ini',
 						'windows\\helpers\\notifier\\event.bmp',
 						'windows\\helpers\\notifier\\action.bmp',
 						'windows\\helpers\\notifier\\userlogin.bmp',
@@ -115,7 +116,8 @@ data_files = [
 						'windows\\helpers\\notifier\\opsi.ico' ]),
 	('opsiclientd',                   [	'windows\\opsiclientd.conf']),
 	('opsiclientd\\static_html',      [	'..\\static_html\\favicon.ico', '..\\static_html\\index.html', '..\\static_html\\opsi_logo.png']),
-	('opsiclientd\\backendManager.d', [	'..\\cache_service.conf'])
+	('opsiclientd\\backendManager.d', [	'..\\cache_service.conf']),
+	('locale\\de\\LC_MESSAGES',       ['..\\gettext\\opsiclientd_de.mo']),
 ]
 #data_files += tree("static_html")
 
@@ -134,6 +136,13 @@ setup(
 	service = [ opsiclientd ],
 	windows = [ notifier, opsiclientd_rpc, action_processor_starter ],
 )
+for lang in os.listdir(os.path.join("dist", "locale")):
+	dn = os.path.join("dist", "locale", lang, "LC_MESSAGES")
+	for mo in os.listdir(dn):
+		src = os.path.join(dn, mo)
+		if mo.endswith('_%s.mo' % lang):
+			dst = os.path.join(dn, mo.split('_%s.mo' % lang)[0] + '.mo')
+			os.rename(src, dst)
 
 os.unlink(os.path.join("dist", "w9xpopen.exe"))
 

@@ -78,7 +78,8 @@ def ControlPipeFactory(opsiclientdRpcInterface):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlPipe(threading.Thread):
 	def __init__(self, opsiclientdRpcInterface):
-		logger.setLogFormat(u'[%l] [%D] [control pipe]   %M     (%F|%N)', object=self)
+		moduleName = u' %-30s' % (u'control pipe')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._opsiclientdRpcInterface = opsiclientdRpcInterface
 		self._pipe = None
@@ -184,7 +185,8 @@ class PosixControlPipe(ControlPipe):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class NTControlPipeConnection(threading.Thread):
 	def __init__(self, ntControlPipe, pipe, bufferSize):
-		logger.setLogFormat(u'[%l] [%D] [control pipe]   %M     (%F|%N)', object=self)
+		moduleName = u' %-30s' % (u'control pipe')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._ntControlPipe = ntControlPipe
 		self._pipe = pipe
@@ -368,7 +370,8 @@ class NTControlPipe(ControlPipe):
 class OpsiclientdRpcPipeInterface(object):
 	def __init__(self, opsiclientd):
 		self.opsiclientd = opsiclientd
-		logger.setLogFormat(u'[%l] [%D] [opsiclientd]   %M     (%F|%N)', object=self)
+		moduleName = u' %-30s' % (u'opsiclientd')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 	
 	def getInterface(self):
 		methods = {}
@@ -426,10 +429,18 @@ class OpsiclientdRpcPipeInterface(object):
 		return self.opsiclientd._blockLogin
 	
 	def isRebootRequested(self):
-		return self.opsiclientd.isRebootRequested()
+		return self.isRebootTriggered()
 	
 	def isShutdownRequested(self):
-		return self.opsiclientd.isShutdownRequested()
+		return self.isShutdownTriggered()
+	
+	def isRebootTriggered(self):
+		return self.opsiclientd.isRebootTriggered()
+	
+	def isShutdownTriggered(self):
+		return self.opsiclientd.isShutdownTriggered()
+	
+	
 	
 	
 
