@@ -260,7 +260,7 @@ class CacheService(threading.Thread):
 							config.selectDepot(configService = self._configService, productIds = productId)
 							if not config.get('depot_server', 'url'):
 								raise Exception(u"Cannot sync files, depot_server.url undefined")
-							(depotServerUsername, depotServerPassword) = self._opsiclientd.getDepotserverCredentials()
+							(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
 							repository = getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword)
 							
 							#self.writeStateFile()
