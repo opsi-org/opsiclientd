@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
    = = = = = = = = = = = = = = = = = = = = =
-   =   opsiclientd.ControlServer           =
+   =   ocdlib.ControlServer                =
    = = = = = = = = = = = = = = = = = = = = =
    
    opsiclientd is part of the desktop management solution opsi
@@ -51,10 +51,11 @@ from ocdlib.Exceptions import *
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.CacheService import CacheService
 from ocdlib.JsonRpc import JsonRpc
+from ocdlib.Config import Config
+from ocdlib.Events import eventGenerators
 
-# Get logger instance
 logger = Logger()
-
+config = Config()
 
 interfacePage = u'''
 <?xml version="1.0" encoding="UTF-8"?>
@@ -254,7 +255,8 @@ class Worker:
 		self.query     = u''
 		self.resource  = resource
 		self.session   = None
-		logger.setLogFormat(u'[%l] [%D] [control server]   %M     (%F|%N)', object=self)
+		moduleName = u' %-30s' % (u'control server')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 	
 	def process(self):
 		logger.info("Worker %s started processing" % self)
@@ -481,7 +483,8 @@ class ControlServerJsonInterfaceWorker(ControlServerJsonRpcWorker):
 class CacheServiceJsonRpcWorker(Worker):
 	def __init__(self, request, opsiclientd, resource):
 		Worker.__init__(self, request, opsiclientd, resource)
-		logger.setLogFormat(u'[%l] [%D] [cached cfg server]   %M     (%F|%N)', object=self)
+		moduleName = u' %-30s' % (u'cached cfg server')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 	
 	def _realRpc(self):
 		method = self.rpc.get('method')
@@ -520,7 +523,8 @@ class ControlServerResourceJsonRpc(resource.Resource):
 	WorkerClass = ControlServerJsonRpcWorker
 	
 	def __init__(self, opsiclientdRpcInterface):
-		logger.setLogFormat(u'[%l] [%D] [control server]   %M     (%F|%N)', object=self)
+		moduleName = u' %-30s' % (u'control server')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		resource.Resource.__init__(self)
 		self._opsiclientdRpcInterface = opsiclientdRpcInterface
 		
@@ -548,7 +552,8 @@ class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 	WorkerClass = ControlServerJsonInterfaceWorker
 	
 	def __init__(self, opsiclientdRpcInterface):
-		logger.setLogFormat(u'[%l] [%D] [control server]   %M     (%F|%N)', object=self)
+		moduleName = u' %-30s' % (u'control server')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		ControlServerResourceJsonRpc.__init__(self, opsiclientdRpcInterface)
 
 
@@ -557,7 +562,8 @@ class ControlServerResourceInterface(ControlServerResourceJsonRpc):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class CacheServiceResourceJsonRpc(resource.Resource):
 	def __init__(self, opsiclientd):
-		logger.setLogFormat(u'[%l] [%D] [cached cfg server]   %M     (%F|%N)', object=self)
+		moduleName = u' %-30s' % (u'cached cfg server')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		resource.Resource.__init__(self)
 		self._opsiclientd = opsiclientd
 		
@@ -586,7 +592,8 @@ class CacheServiceResourceJsonRpc(resource.Resource):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServer(threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
-		logger.setLogFormat(u'[%l] [%D] [control server]   %M     (%F|%N)', object=self)
+		moduleName = u' %-30s' % (u'control server')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._httpsPort = httpsPort
@@ -645,7 +652,7 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
 	
 	def _authenticate(self, username, password):
-		if (username == self.opsiclientd.getConfigValue('global', 'host_id')) and (password == self.opsiclientd.getConfigValue('global', 'opsi_host_key')):
+		if (username == config.get('global', 'host_id')) and (password == config.get('global', 'opsi_host_key')):
 			return True
 		if (os.name == 'nt'):
 			if (username == 'Administrator'):
@@ -672,7 +679,7 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 		logger.notice(u"rpc readLog: reading log of type '%s'" % logType)
 		
 		if (logType == 'opsiclientd'):
-			f = codecs.open(self.opsiclientd.getConfigValue('global', 'log_file'), 'r', 'utf-8', 'replace')
+			f = codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace')
 			data = f.read()
 			f.close()
 			return data
@@ -719,10 +726,10 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 	
 	def fireEvent(self, name):
 		name = forceUnicode(name)
-		if not name in self.opsiclientd._eventGenerators.keys():
-			raise ValueError(u"Event '%s' not in list of known events: %s" % (name, ', '.join(self.opsiclientd._eventGenerators.keys())))
+		if not name in eventGenerators.keys():
+			raise ValueError(u"Event '%s' not in list of known events: %s" % (name, ', '.join(eventGenerators.keys())))
 		logger.notice(u"Firing event '%s'" % name)
-		self.opsiclientd._eventGenerators[name].fireEvent()
+		eventGenerators[name].fireEvent()
 		
 	def setStatusMessage(self, sessionId, message):
 		sessionId = forceInt(sessionId)
@@ -742,14 +749,14 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 		self.opsiclientd._currentActiveDesktopName[sessionId] = desktop
 		logger.notice(u"rpc setCurrentActiveDesktopName: current active desktop name for session %s set to '%s'" % (sessionId, desktop))
 	
-	def setConfigValue(self, section, option, value):
+	def set(self, section, option, value):
 		section = forceUnicode(section)
 		option = forceUnicode(option)
 		value = forceUnicode(value)
-		return self.opsiclientd.setConfigValue(section, option, value)
+		return config.set(section, option, value)
 	
 	def updateConfigFile(self):
-		self.opsiclientd.updateConfigFile()
+		config.updateConfigFile()
 		
 	def showPopup(self, message):
 		message = forceUnicode(message)

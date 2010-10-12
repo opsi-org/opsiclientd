@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
    = = = = = = = = = = = = = = = = = = = = =
-   =   opsiclientd.Windows                 =
+   =   ocdlib.Windows                      =
    = = = = = = = = = = = = = = = = = = = = =
    
    opsiclientd is part of the desktop management solution opsi
@@ -165,6 +165,7 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		"""
 		Initialize service and create stop event
 		"""
+		self.opsiclientd = None
 		sys.stdout = logger.getStdout()
 		sys.stderr = logger.getStderr()
 		logger.setConsoleLevel(LOG_NONE)
@@ -205,6 +206,8 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		logger.debug(u"OpsiclientdServiceFramework SvcShutdown")
 		# Write to event log
 		self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
+		if self.opsiclientd:
+			self.opsiclientd.systemShutdownInitiated()
 		# Fire stop event to stop blocking self._stopEvent.wait()
 		self._stopEvent.set()
 	
@@ -244,15 +247,15 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			
 			if (sys.getwindowsversion()[0] == 5):
 				# NT5: XP
-				opsiclientd = OpsiclientdNT5()
+				self.opsiclientd = OpsiclientdNT5()
 			
 			elif (sys.getwindowsversion()[0] == 6):
 				# NT6: Vista / Windows7
 				if (sys.getwindowsversion()[1] >= 1):
 					# Windows7
-					opsiclientd = OpsiclientdNT61()
+					self.opsiclientd = OpsiclientdNT61()
 				else:
-					opsiclientd = OpsiclientdNT6()
+					self.opsiclientd = OpsiclientdNT6()
 			else:
 				raise Exception(u"Running windows version not supported")
 			
@@ -261,14 +264,14 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			
 			logger.debug(u"Took %0.2f seconds to report service running status" % (time.time() - startTime))
 			
-			opsiclientd.start()
+			self.opsiclientd.start()
 			
 			# Wait for stop event
 			self._stopEvent.wait()
 			
 			# Shutdown opsiclientd
-			opsiclientd.stop()
-			opsiclientd.join(15)
+			self.opsiclientd.stop()
+			self.opsiclientd.join(15)
 			
 			logger.notice(u"opsiclientd stopped")
 			for thread in threading.enumerate():
@@ -297,25 +300,24 @@ class OpsiclientdInit(object):
 class OpsiclientdNT(Opsiclientd):
 	def __init__(self):
 		Opsiclientd.__init__(self)
-		configDir = os.path.join(self._config['system']['program_files_dir'], u'opsi.org', u'preloginloader', u'opsiclientd')
-		if (len(sys.argv) > 0) and sys.argv[0]:
-			configDir = os.path.join(os.path.dirname(sys.argv[0]), u'opsiclientd')
-		self._config['system']['program_files_dir'] = System.getProgramFilesDir()
-		self._config['cache_service']['storage_dir'] = '%s\\tmp\\cache_service' % System.getSystemDrive()
-		self._config['cache_service']['backend_manager_config'] = os.path.join(configDir, 'backendManager.d')
-		self._config['global']['config_file'] = os.path.join(configDir, 'opsiclientd.conf')
 		
 	def shutdownMachine(self):
 		self._isShutdownTriggered = True
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
+		self.clearShutdownRequest()
 		System.shutdown(3)
 	
 	def rebootMachine(self):
 		self._isRebootTriggered = True
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
+		self.clearRebootRequest()
 		System.reboot(3)
 	
-	def processShutdownRequests(self):
+	def clearRebootRequest(self):
+		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
+		
+	def clearShutdownRequest(self):
+		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
+		
+	def isRebootRequested(self):
 		rebootRequested = 0
 		try:
 			rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
@@ -325,20 +327,18 @@ class OpsiclientdNT(Opsiclientd):
 		if (rebootRequested == 2):
 			# Logout
 			logger.info(u"Logout requested")
-			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
-			return
-		if forceBool(rebootRequested):
-			self.rebootMachine()
-			return
+			self.clearRebootRequest()
+			return False
+		return forceBool(rebootRequested)
+		
+	def isShutdownRequested(self):
 		shutdownRequested = 0
 		try:
 			shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
 		except Exception, e:
 			logger.warning(u"Failed to get shutdownRequested from registry: %s" % forceUnicode(e))
 		logger.info(u"shutdownRequested: %s" % shutdownRequested)
-		if forceBool(shutdownRequested):
-			self.shutdownMachine()
-		
+		return forceBool(shutdownRequested)
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          OPSICLIENTD NT5                                          -
@@ -346,7 +346,6 @@ class OpsiclientdNT(Opsiclientd):
 class OpsiclientdNT5(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
-		self._config['action_processor']['run_as_user'] = 'pcpatch'
 		
 	def shutdownMachine(self):
 		self._isShutdownTriggered = True

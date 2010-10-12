@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
    = = = = = = = = = = = = = = = = = = = = =
-   =   opsiclientd.Events                  =
+   =   ocdlib.Events                       =
    = = = = = = = = = = = = = = = = = = = = =
    
    opsiclientd is part of the desktop management solution opsi
@@ -31,15 +31,20 @@
    @license: GNU General Public License version 2
 """
 
-# OPSI imports
-import os
+# Imports
+import os, re
+import copy as pycopy
 
 # OPSI imports
 from OPSI.Logger import *
 from OPSI import System
+from OPSI.Types import *
 
-# Get logger instance
+from ocdlib.Config import *
+from ocdlib.Localization import _, setLocaleDir, getLanguage
+
 logger = Logger()
+config = Config()
 
 # Possible event types
 EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED = u'product sync completed'
@@ -87,40 +92,49 @@ class EventConfig(object):
 			raise TypeError("Name not given")
 		self._name = unicode(name)
 		
-		logger.setLogFormat(u'[%l] [%D] [event config ' + self._name + ']   %M  (%F|%N)', object=self)
+		moduleName = u' %-30s' % (u'event config ' + self._name)
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		
-		self.message                    =  unicode ( kwargs.get('message',                    ''        ) )
-		self.maxRepetitions             =      int ( kwargs.get('maxRepetitions',             -1        ) )
+		self.message                       =  unicode ( kwargs.get('message',                       ''        ) )
+		self.maxRepetitions                =      int ( kwargs.get('maxRepetitions',                -1        ) )
 		# wait <activationDelay> seconds before event gets active
-		self.activationDelay            =      int ( kwargs.get('activationDelay',            0         ) )
+		self.activationDelay               =      int ( kwargs.get('activationDelay',               0         ) )
 		# wait <notificationDelay> seconds before event is fired
-		self.notificationDelay          =      int ( kwargs.get('notificationDelay',          0         ) )
-		self.warningTime                =      int ( kwargs.get('warningTime',                0         ) )
-		self.userCancelable             =     bool ( kwargs.get('userCancelable',             False     ) )
-		self.blockLogin                 =     bool ( kwargs.get('blockLogin',                 False     ) )
-		self.logoffCurrentUser          =     bool ( kwargs.get('logoffCurrentUser',          False     ) )
-		self.lockWorkstation            =     bool ( kwargs.get('lockWorkstation',            False     ) )
-		self.processShutdownRequests    =     bool ( kwargs.get('processShutdownRequests',    True      ) )
-		self.getConfigFromService       =     bool ( kwargs.get('getConfigFromService',       True      ) )
-		self.updateConfigFile           =     bool ( kwargs.get('updateConfigFile',           True      ) )
-		self.writeLogToService          =     bool ( kwargs.get('writeLogToService',          True      ) )
-		self.updateActionProcessor      =     bool ( kwargs.get('updateActionProcessor',      True      ) )
-		self.actionType                 =  unicode ( kwargs.get('actionType',                 ''        ) )
-		self.eventNotifierCommand       =  unicode ( kwargs.get('eventNotifierCommand',       ''        ) )
-		self.eventNotifierDesktop       =  unicode ( kwargs.get('eventNotifierDesktop',       'current' ) )
-		self.actionNotifierCommand      =  unicode ( kwargs.get('actionNotifierCommand',      ''        ) )
-		self.actionNotifierDesktop      =  unicode ( kwargs.get('actionNotifierDesktop',      'current' ) )
-		self.actionProcessorCommand     =  unicode ( kwargs.get('actionProcessorCommand',     ''        ) )
-		self.actionProcessorDesktop     =  unicode ( kwargs.get('actionProcessorDesktop',     'current' ) )
-		self.actionProcessorTimeout     =      int ( kwargs.get('actionProcessorTimeout',     3*3600    ) )
-		self.preActionProcessorCommand  =  unicode ( kwargs.get('preActionProcessorCommand',  ''        ) )
-		self.postActionProcessorCommand =  unicode ( kwargs.get('postActionProcessorCommand', ''        ) )
-		self.serviceOptions             =     dict ( kwargs.get('serviceOptions',             {}        ) )
-		self.cacheProducts              =     bool ( kwargs.get('cacheProducts',              False     ) )
-		self.cacheMaxBandwidth          =      int ( kwargs.get('cacheMaxBandwidth',          0         ) )
-		self.requiresCachedProducts     =     bool ( kwargs.get('requiresCachedProducts',     False     ) )
-		self.syncConfig                 =     bool ( kwargs.get('syncConfig',                 False     ) )
-		self.useCachedConfig            =     bool ( kwargs.get('useCachedConfig',            False     ) )
+		self.notificationDelay             =      int ( kwargs.get('notificationDelay',             0         ) )
+		self.warningTime                   =      int ( kwargs.get('warningTime',                   0         ) )
+		self.userCancelable                =      int ( kwargs.get('userCancelable',                0         ) )
+		self.cancelCounter                 =      int ( kwargs.get('cancelCounter',                 0         ) )
+		self.shutdownWarningMessage        =  unicode ( kwargs.get('shutdownWarningMessage',        ''        ) )
+		self.shutdownWarningTime           =      int ( kwargs.get('shutdownWarningTime',           0         ) )
+		self.shutdownWarningRepetitionTime =      int ( kwargs.get('shutdownWarningRepetitionTime', 3600      ) )
+		self.shutdownUserCancelable        =      int ( kwargs.get('shutdownUserCancelable',        0         ) )
+		self.shutdownCancelCounter         =      int ( kwargs.get('shutdownCancelCounter',         0         ) )
+		self.blockLogin                    =     bool ( kwargs.get('blockLogin',                    False     ) )
+		self.logoffCurrentUser             =     bool ( kwargs.get('logoffCurrentUser',             False     ) )
+		self.lockWorkstation               =     bool ( kwargs.get('lockWorkstation',               False     ) )
+		self.processShutdownRequests       =     bool ( kwargs.get('processShutdownRequests',       True      ) )
+		self.getConfigFromService          =     bool ( kwargs.get('getConfigFromService',          True      ) )
+		self.updateConfigFile              =     bool ( kwargs.get('updateConfigFile',              True      ) )
+		self.writeLogToService             =     bool ( kwargs.get('writeLogToService',             True      ) )
+		self.updateActionProcessor         =     bool ( kwargs.get('updateActionProcessor',         True      ) )
+		self.actionType                    =  unicode ( kwargs.get('actionType',                    ''        ) )
+		self.eventNotifierCommand          =  unicode ( kwargs.get('eventNotifierCommand',          ''        ) )
+		self.eventNotifierDesktop          =  unicode ( kwargs.get('eventNotifierDesktop',          'current' ) )
+		self.actionNotifierCommand         =  unicode ( kwargs.get('actionNotifierCommand',         ''        ) )
+		self.actionNotifierDesktop         =  unicode ( kwargs.get('actionNotifierDesktop',         'current' ) )
+		self.shutdownNotifierCommand       =  unicode ( kwargs.get('shutdownNotifierCommand',       ''        ) )
+		self.shutdownNotifierDesktop       =  unicode ( kwargs.get('shutdownNotifierDesktop',       'current' ) )
+		self.actionProcessorCommand        =  unicode ( kwargs.get('actionProcessorCommand',        ''        ) )
+		self.actionProcessorDesktop        =  unicode ( kwargs.get('actionProcessorDesktop',        'current' ) )
+		self.actionProcessorTimeout        =      int ( kwargs.get('actionProcessorTimeout',        3*3600    ) )
+		self.preActionProcessorCommand     =  unicode ( kwargs.get('preActionProcessorCommand',     ''        ) )
+		self.postActionProcessorCommand    =  unicode ( kwargs.get('postActionProcessorCommand',    ''        ) )
+		self.serviceOptions                =     dict ( kwargs.get('serviceOptions',                {}        ) )
+		self.cacheProducts                 =     bool ( kwargs.get('cacheProducts',                 False     ) )
+		self.cacheMaxBandwidth             =      int ( kwargs.get('cacheMaxBandwidth',             0         ) )
+		self.requiresCachedProducts        =     bool ( kwargs.get('requiresCachedProducts',        False     ) )
+		self.syncConfig                    =     bool ( kwargs.get('syncConfig',                    False     ) )
+		self.useCachedConfig               =     bool ( kwargs.get('useCachedConfig',               False     ) )
 		
 		if not self.eventNotifierDesktop in ('winlogon', 'default', 'current'):
 			logger.error(u"Bad value '%s' for eventNotifierDesktop" % self.eventNotifierDesktop)
@@ -131,12 +145,41 @@ class EventConfig(object):
 		if not self.actionProcessorDesktop in ('winlogon', 'default', 'current'):
 			logger.error(u"Bad value '%s' for actionProcessorDesktop" % self.actionProcessorDesktop)
 			self.actionProcessorDesktop = 'current'
-		
+	
+	def __unicode__(self):
+		return u"<EventConfig: %s>" % self._name
+	
+	__repr__ = __unicode__
+	
 	def __str__(self):
-		return "<event config: %s>" % self._name
+		return str(self.__unicode__())
 	
 	def getName(self):
 		return self._name
+	
+	def getMessage(self):
+		message = self.message
+		def toUnderscore(name):
+			s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+			return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+		for (key, value) in self.__dict__.items():
+			if (key.lower().find('message') != -1):
+				continue
+			message = message.replace('%' + key + '%', unicode(value))
+			message = message.replace('%' + toUnderscore(key) + '%', unicode(value))
+		return message
+	
+	def getShutdownWarningMessage(self):
+		message = self.shutdownWarningMessage
+		def toUnderscore(name):
+			s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+			return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+		for (key, value) in self.__dict__.items():
+			if (key.lower().find('message') != -1):
+				continue
+			message = message.replace('%' + key + '%', unicode(value))
+			message = message.replace('%' + toUnderscore(key) + '%', unicode(value))
+		return message
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         PANIC EVENT CONFIG                                        -
@@ -144,23 +187,24 @@ class EventConfig(object):
 class PanicEventConfig(EventConfig):
 	def __init__(self, name, **kwargs):
 		EventConfig.__init__(self, name, **kwargs)
-		self.maxRepetitions         = -1
-		self.message                = 'Panic event'
-		self.activationDelay        = 0
-		self.notificationDelay      = 0
-		self.warningTime            = 0
-		self.userCancelable         = False
-		self.blockLogin             = False
-		self.logoffCurrentUser      = False
-		self.lockWorkstation        = False
-		self.getConfigFromService   = False
-		self.updateConfigFile       = False
-		self.writeLogToService      = False
-		self.updateActionProcessor  = False
-		self.eventNotifierCommand   = None
-		self.actionNotifierCommand  = None
-		self.actionProcessorDesktop = 'winlogon'
-		self.serviceOptions         = {}
+		self.maxRepetitions          = -1
+		self.message                 = 'Panic event'
+		self.activationDelay         = 0
+		self.notificationDelay       = 0
+		self.warningTime             = 0
+		self.userCancelable          = False
+		self.blockLogin              = False
+		self.logoffCurrentUser       = False
+		self.lockWorkstation         = False
+		self.getConfigFromService    = False
+		self.updateConfigFile        = False
+		self.writeLogToService       = False
+		self.updateActionProcessor   = False
+		self.eventNotifierCommand    = None
+		self.actionNotifierCommand   = None
+		self.shutdownNotifierCommand = None
+		self.actionProcessorDesktop  = 'winlogon'
+		self.serviceOptions          = {}
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                     DAEMON STARTUP EVENT CONFIG                                   -
@@ -278,8 +322,14 @@ class EventGenerator(threading.Thread):
 		self._stopped = False
 		self._event = None
 		self._lastEventOccurence = None
-		logger.setLogFormat(u'[%l] [%D] [event generator ' + self._eventConfig.getName() + ']   %M  (%F|%N)', object=self)
-		
+		moduleName = u' %-30s' % (u'event generator ' + self._eventConfig.getName())
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+	
+	def __unicode__(self):
+		return u'<%s %s>' % (self.__class__.__name__, self._eventConfig._name)
+	
+	__repr__ = __unicode__
+	
 	def addEventListener(self, eventListener):
 		if not isinstance(eventListener, EventListener):
 			raise TypeError(u"Failed to add event listener, got class %s, need class EventListener" % eventListener.__class__)
@@ -322,7 +372,8 @@ class EventGenerator(threading.Thread):
 				threading.Thread.__init__(self)
 				self._eventListener = eventListener
 				self._event = event
-				logger.setLogFormat(u'[%l] [%D] [event generator ' + self._event.eventConfig.getName() + ']   %M  (%F|%N)', object=self)
+				moduleName = u' %-30s' % (u'event generator ' + self._event.eventConfig.getName())
+				logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 				
 			def run(self):
 				if (self._event.eventConfig.notificationDelay > 0):
@@ -589,7 +640,8 @@ class Event(object):
 	def __init__(self, eventConfig, eventInfo={}):
 		self.eventConfig = eventConfig
 		self.eventInfo = eventInfo
-		logger.setLogFormat(u'[%l] [%D] [event ' + self.eventConfig.getName() + ']   %M  (%F|%N)', object=self)
+		moduleName = u' %-30s' % (u'event generator ' + self.eventConfig.getName())
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		
 	def getActionProcessorCommand(self):
 		actionProcessorCommand = self.eventConfig.actionProcessorCommand
@@ -649,4 +701,194 @@ class EventListener(object):
 		logger.warning(u"%s: processEvent() not implemented" % self)
 	
 
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                          EVENT GENERATOR                                          -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+eventGenerators = {}
+def createEventGenerators():
+	global eventGenerators
+	eventGenerators['panic'] = EventGeneratorFactory(
+		PanicEventConfig('panic', actionProcessorCommand = config.get('action_processor', 'command', raw=True))
+	)
+	
+	eventConfigs = {}
+	for (section, options) in config.getDict().items():
+		section = section.lower()
+		if section.startswith('event_'):
+			eventConfigName = section.split('_', 1)[1]
+			if not eventConfigName:
+				logger.error(u"No event config name defined in section '%s'" % section)
+				continue
+			if eventConfigName in eventGenerators.keys():
+				logger.error(u"Event config '%s' already defined" % eventConfigName)
+				continue
+			eventConfigs[eventConfigName] = {
+				'active': True,
+				'args':   {},
+				'super':  None }
+			try:
+				for key in options.keys():
+					if   (key.lower() == 'active'):
+						eventConfigs[eventConfigName]['active'] = not options[key].lower() in ('0', 'false', 'off', 'no')
+					elif (key.lower() == 'super'):
+						eventConfigs[eventConfigName]['super'] = options[key]
+					else:
+						eventConfigs[eventConfigName]['args'][key.lower()] = options[key]
+			except Exception, e:
+				logger.error(u"Failed to parse event config '%s': %s" % (eventConfigName, forceUnicode(e)))
+	
+	def __inheritArgsFromSuperEvents(eventConfigsCopy, args, superEventConfigName):
+		if not superEventConfigName in eventConfigsCopy.keys():
+			logger.error(u"Super event '%s' not found" % superEventConfigName)
+			return args
+		superArgs = pycopy.deepcopy(eventConfigsCopy[superEventConfigName]['args'])
+		if eventConfigsCopy[superEventConfigName]['super']:
+			__inheritArgsFromSuperEvents(eventConfigsCopy, superArgs, eventConfigsCopy[superEventConfigName]['super'])
+		superArgs.update(args)
+		return superArgs
+	
+	eventConfigsCopy = pycopy.deepcopy(eventConfigs)
+	for eventConfigName in eventConfigs.keys():
+		if eventConfigs[eventConfigName]['super']:
+			eventConfigs[eventConfigName]['args'] = __inheritArgsFromSuperEvents(
+									eventConfigsCopy,
+									eventConfigs[eventConfigName]['args'],
+									eventConfigs[eventConfigName]['super'])
+	
+	for (eventConfigName, eventConfig) in eventConfigs.items():
+		try:
+			if not eventConfig['active']:
+				logger.notice(u"Event config '%s' is deactivated" % eventConfigName)
+				continue
+			
+			if not eventConfig['args'].get('type'):
+				logger.error(u"Event config '%s': event type not set" % eventConfigName)
+				continue
+			
+			#if not eventConfig['args'].get('action_processor_command'):
+			#	eventConfig['args']['action_processor_command'] = config.get('action_processor', 'command')
+			
+			args = {}
+			for (key, value) in eventConfig['args'].items():
+				try:
+					if   (key == 'type'):
+						continue
+					elif (key == 'wql'):
+						args['wql'] = value
+					elif key.startswith('message'):
+						mLanguage = None
+						try:
+							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
+						except:
+							pass
+						if mLanguage:
+							if (mLanguage == getLanguage()):
+								args['message'] = value
+						elif not args.get('message'):
+							args['message'] = value
+					elif key.startswith('shutdown_warning_message'):
+						mLanguage = None
+						try:
+							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
+						except:
+							pass
+						if mLanguage:
+							if (mLanguage == getLanguage()):
+								args['shutdownWarningMessage'] = value
+						elif not args.get('shutdownWarningMessage'):
+							args['shutdownWarningMessage'] = value
+					elif (key == 'max_repetitions'):
+						args['maxRepetitions'] = int(value)
+					elif (key == 'activation_delay'):
+						args['activationDelay'] = int(value)
+					elif (key == 'notification_delay'):
+						args['notificationDelay'] = int(value)
+					elif (key == 'warning_time'):
+						args['warningTime'] = int(value)
+					elif (key == 'user_cancelable'):
+						args['userCancelable'] = int(value)
+					elif (key == 'cancel_counter'):
+						args['cancelCounter'] = int(value)
+					elif (key == 'shutdown_warning_time'):
+						args['shutdownWarningTime'] = int(value)
+					elif (key == 'shutdown_warning_repetition_time'):
+						args['shutdownWarningRepetitionTime'] = int(value)
+					elif (key == 'shutdown_user_cancelable'):
+						args['shutdownUserCancelable'] = int(value)
+					elif (key == 'block_login'):
+						args['blockLogin'] = not value.lower() in ('0', 'false', 'off', 'no')
+					elif (key == 'lock_workstation'):
+						args['lockWorkstation'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'logoff_current_user'):
+						args['logoffCurrentUser'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'process_shutdown_requests'):
+						args['processShutdownRequests'] = not value.lower() in ('0', 'false', 'off', 'no')
+					elif (key == 'get_config_from_service'):
+						args['getConfigFromService'] = not value.lower() in ('0', 'false', 'off', 'no')
+					elif (key == 'update_config_file'):
+						args['updateConfigFile'] = not value.lower() in ('0', 'false', 'off', 'no')
+					elif (key == 'write_log_to_service'):
+						args['writeLogToService'] = not value.lower() in ('0', 'false', 'off', 'no')
+					elif (key == 'cache_products'):
+						args['cacheProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'cache_max_bandwidth'):
+						args['cacheMaxBandwidth'] = int(value)
+					elif (key == 'requires_cached_products'):
+						args['requiresCachedProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'sync_config'):
+						args['syncConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'use_cached_config'):
+						args['useCachedConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'update_action_processor'):
+						args['updateActionProcessor'] = not value.lower() in ('0', 'false', 'off', 'no')
+					elif (key == 'action_type'):
+						args['actionType'] = value.lower()
+					elif (key == 'event_notifier_command'):
+						args['eventNotifierCommand'] = config.replace(value.lower(), escaped=True)
+					elif (key == 'event_notifier_desktop'):
+						args['eventNotifierDesktop'] = value.lower()
+					elif (key == 'action_notifier_command'):
+						args['actionNotifierCommand'] = config.replace(value.lower(), escaped=True)
+					elif (key == 'action_notifier_desktop'):
+						args['actionNotifierDesktop'] = value.lower()
+					elif (key == 'action_processor_command'):
+						args['actionProcessorCommand'] = value.lower()
+					elif (key == 'action_processor_desktop'):
+						args['actionProcessorDesktop'] = value.lower()
+					elif (key == 'action_processor_timeout'):
+						args['actionProcessorTimeout'] = int(value)
+					elif (key == 'shutdown_notifier_command'):
+						args['shutdownNotifierCommand'] = config.replace(value.lower(), escaped=True)
+					elif (key == 'shutdown_notifier_desktop'):
+						args['shutdownNotifierDesktop'] = value.lower()
+					elif (key == 'service_options'):
+						args['serviceOptions'] = eval(value)
+					elif (key == 'pre_action_processor_command'):
+						args['preActionProcessorCommand'] = config.replace(value.lower(), escaped=True)
+					elif (key == 'post_action_processor_command'):
+						args['postActionProcessorCommand'] = config.replace(value.lower(), escaped=True)
+					else:
+						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigName))
+				except Exception, e:
+					logger.error(u"Failed to set event config argument '%s' to '%s': %s" % (key, value, e))
+			
+			logger.info(u"\nEvent config '" + eventConfigName + u"' args:\n" + objectToBeautifiedText(args) + u"\n")
+			
+			eventGenerators[eventConfigName] = EventGeneratorFactory(
+				EventConfigFactory(eventConfig['args']['type'], eventConfigName, **args)
+			)
+			logger.notice(u"%s event generator '%s' created" % (eventConfig['args']['type'], eventConfigName))
+			
+		except Exception, e:
+			logger.logException(e)
+			logger.error(u"Failed to create event generator '%s': %s" % (eventConfigName, forceUnicode(e)))
+	
+def getEventGenerators(generatorClass=None):
+	egs = []
+	for eventGenerator in eventGenerators.values():
+		if not generatorClass or isinstance(eventGenerator, generatorClass):
+			egs.append(eventGenerator)
+	return egs
+	
 

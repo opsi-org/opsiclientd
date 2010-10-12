@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
    = = = = = = = = = = = = = = = = = = = = =
-   =   opsiclientd.Exceptions              =
+   =   ocdlib.Exceptions                   =
    = = = = = = = = = = = = = = = = = = = = =
    
    opsiclientd is part of the desktop management solution opsi
@@ -51,7 +51,7 @@ class OpsiclientdError(Exception):
 			return u"%s" % self.ExceptionShortDescription
 		
 	def __repr__(self):
-		return unicode(self).encode("utf-8")
+		return self.__unicode__.encode("ascii", "replace")
 	
 	__str__ = __repr__
 

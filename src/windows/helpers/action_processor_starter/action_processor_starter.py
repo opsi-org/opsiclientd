@@ -31,16 +31,18 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '3.5'
+__version__ = '4.0'
 
 # Imports
-import sys, os, locale
+import sys, os, locale, gettext
 
+# OPSI imports
 from OPSI.Logger import *
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 
 encoding = locale.getpreferredencoding()
+
 argv = [ unicode(arg, encoding) for arg in sys.argv ]
 
 if (len(argv) != 16):
@@ -60,12 +62,22 @@ if runAsPassword:
 logger.setConsoleLevel(LOG_NONE)
 logger.setLogFile(logFile)
 logger.setFileLevel(int(logLevel))
-logger.setFileFormat(u'[%l] [%D] [' + os.path.basename(argv[0]) + u']   %M  (%F|%N)')
+moduleName = u' %-30s' % (os.path.basename(argv[0]))
+logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)')
 
 logger.debug(u"Called with arguments: %s" % u', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword)) )
 
-actionProcessorTimeout = int(actionProcessorTimeout)
+try:
+	lang = locale.getdefaultlocale()[0].split('_')[0]
+	localeDir = os.path.join( os.path.dirname(sys.argv[0]), 'locale')
+	translation = gettext.translation('opsiclientd', localeDir, [lang])
+	_ = translation.ugettext
+except Exception, e:
+	logger.error(u"Locale not found: %s" % e)
+	def _(string):
+		return string
 
+actionProcessorTimeout = int(actionProcessorTimeout)
 imp = None
 depotShareMounted = False
 be = None
@@ -85,7 +97,7 @@ try:
 		
 	if (depotRemoteUrl.split(u'/')[2] != u'localhost'):
 		logger.notice(u"Mounting depot share %s" % depotRemoteUrl)
-		be.setStatusMessage(sessionId, u"Mounting depot share %s" % depotRemoteUrl)
+		be.setStatusMessage(sessionId, _(u"Mounting depot share %s") % depotRemoteUrl)
 		
 		if runAsUser:
 			System.mount(depotRemoteUrl, depotDrive, username = depotServerUsername, password = depotServerPassword)
@@ -94,12 +106,12 @@ try:
 		depotShareMounted = True
 	
 	logger.notice(u"Starting action processor")
-	be.setStatusMessage(sessionId, u"Starting action processor")
+	be.setStatusMessage(sessionId, _(u"Starting action processor"))
 	
 	imp.runCommand(actionProcessorCommand, timeoutSeconds = actionProcessorTimeout)
 	
 	logger.notice(u"Action processor ended")
-	be.setStatusMessage(sessionId, u"Action processor ended")
+	be.setStatusMessage(sessionId, _(u"Action processor ended"))
 	
 except Exception, e:
 	logger.logException(e)
