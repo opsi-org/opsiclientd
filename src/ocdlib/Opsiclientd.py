@@ -869,20 +869,6 @@ class EventProcessingThread(KillableThread):
 		except Exception, e:
 			logger.error(u"Failed to set action processor info: %s" % forceUnicode(e))
 	
-	def getDepotserverCredentials(self):
-		if not self._configService:
-			raise Exception(u"Not connected to config service")
-		
-		depotServerUsername = config.get('depot_server', 'username')
-		encryptedDepotServerPassword = u''
-		if self._configService.isLegacyOpsi():
-			encryptedDepotServerPassword = self._configService.getPcpatchPassword(config.get('global', 'host_id'))
-		else:
-			encryptedDepotServerPassword = self._configService.user_getCredentials(username = u'pcpatch', hostId = config.get('global', 'host_id'))['password']
-		depotServerPassword = blowfishDecrypt(config.get('global', 'opsi_host_key'), encryptedDepotServerPassword)
-		logger.addConfidentialString(depotServerPassword)
-		return (depotServerUsername, depotServerPassword)
-		
 	def mountDepotShare(self, impersonation):
 		if self._depotShareMounted:
 			logger.debug(u"Depot share already mounted")
@@ -896,7 +882,7 @@ class EventProcessingThread(KillableThread):
 		if impersonation:
 			System.mount(config.get('depot_server', 'url'), config.get('depot_server', 'drive'))
 		else:
-			(depotServerUsername, depotServerPassword) = self.getDepotserverCredentials()
+			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
 			System.mount(config.get('depot_server', 'url'), config.get('depot_server', 'drive'), username = depotServerUsername, password = depotServerPassword)
 		self._depotShareMounted = True
 		
@@ -919,7 +905,7 @@ class EventProcessingThread(KillableThread):
 		try:
 			# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
 			# The new logon session has the same local identifier but uses different credentials for other network connections.
-			(depotServerUsername, depotServerPassword) = self.getDepotserverCredentials()
+			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
 			impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
 			impersonation.start(logonType = 'NEW_CREDENTIALS')
 			
@@ -1212,7 +1198,7 @@ class EventProcessingThread(KillableThread):
 			desktop = 'winlogon'
 		
 		
-		(depotServerUsername, depotServerPassword) = self.getDepotserverCredentials()
+		(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
 		
 		# Update action processor
 		if config.get('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost') and self.event.eventConfig.updateActionProcessor:

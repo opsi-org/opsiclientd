@@ -422,6 +422,20 @@ class ConfigImplementation(object):
 		self.set('depot_server', 'depot_id', selectedDepot.id)
 		self.set('depot_server', 'url', selectedDepot.depotRemoteUrl)
 	
+	def getDepotserverCredentials(self, configService):
+		if not configService:
+			raise Exception(u"Not connected to config service")
+		
+		depotServerUsername = self.get('depot_server', 'username')
+		encryptedDepotServerPassword = u''
+		if configService.isLegacyOpsi():
+			encryptedDepotServerPassword = configService.getPcpatchPassword(self.get('global', 'host_id'))
+		else:
+			encryptedDepotServerPassword = configService.user_getCredentials(username = u'pcpatch', hostId = self.get('global', 'host_id'))['password']
+		depotServerPassword = blowfishDecrypt(self.get('global', 'opsi_host_key'), encryptedDepotServerPassword)
+		logger.addConfidentialString(depotServerPassword)
+		return (depotServerUsername, depotServerPassword)
+	
 class Config(ConfigImplementation):
 	# Storage for the instance reference
 	__instance = None
