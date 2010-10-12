@@ -322,6 +322,7 @@ class CacheService(threading.Thread):
 								logger.error("Failed to sync product '%s': %s" % (productId, forceUnicode(e)))
 								errorsOccured.append( u'%s: %s' % (productId, forceUnicode(e)) )
 								self._state['product'][productId]['sync_failure'] = forceUnicode(e)
+							repository = None
 							#self.writeStateFile()
 							overallProgressSubject.addToState(1)
 						
