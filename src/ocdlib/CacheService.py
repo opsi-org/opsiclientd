@@ -33,6 +33,7 @@
 
 # Import
 import threading
+from twisted.conch.ssh import keys
 
 # OPSI imports
 from OPSI.Logger import *
