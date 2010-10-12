@@ -281,6 +281,7 @@ class CacheService(threading.Thread):
 									logger.info(u"Package content file unchanged, assuming that product is up to date")
 									self._state['product'][productId]['sync_completed'] = time.time()
 									overallProgressSubject.addToState(1)
+									repository = None
 									continue
 								
 								packageInfo = PackageContentFile(tempPackageContentFile).parse()
