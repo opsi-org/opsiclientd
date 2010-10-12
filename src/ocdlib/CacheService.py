@@ -41,6 +41,8 @@ from OPSI.Logger import *
 from OPSI.Types import *
 from OPSI.Util.Repository import *
 from OPSI.Util import md5sum
+from OPSI import System
+
 from ocdlib.Config import Config
 from ocdlib.Localization import _
 
