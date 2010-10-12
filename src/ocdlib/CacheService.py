@@ -37,7 +37,7 @@ import threading
 # OPSI imports
 from OPSI.Logger import *
 from OPSI.Types import *
-from OPSI.Repository import *
+from OPSI.Util.Repository import *
 from ocdlib.Config import Config
 
 logger = Logger()
