@@ -44,6 +44,7 @@ from OPSI.Util import md5sum
 from OPSI import System
 
 from ocdlib.Config import Config
+from ocdlib.Events import *
 from ocdlib.Localization import _
 
 logger = Logger()
@@ -265,7 +266,7 @@ class CacheService(threading.Thread):
 							
 							#self.writeStateFile()
 							try:
-								logger.info(u"Downloading package content file of product '%s' from depot '%s'" % (productId, depotUrl))
+								logger.info(u"Downloading package content file of product '%s' from depot '%s'" % (productId, repository))
 								tempPackageContentFile = os.path.join(self._tempDir, u'%s.files' % productId)
 								repository.download(source = u'%s/%s.files' % (productId, productId), destination = tempPackageContentFile)
 								
@@ -328,9 +329,9 @@ class CacheService(threading.Thread):
 							logger.error(u"Errors occured while caching products %s: %s" % (', '.join(self._productIds), ', '.join(errorsOccured)))
 						else:
 							logger.notice(u"All products cached: %s" % ', '.join(self._productIds))
-						for eventGenerator in self.getEventGenerators(generatorClass = ProductSyncCompletedEventGenerator):
-							eventGenerator.fireEvent()
-						
+							for eventGenerator getEventGenerators(generatorClass = ProductSyncCompletedEventGenerator):
+								eventGenerator.fireEvent()
+							
 					except Exception, e:
 						logger.logException(e)
 						logger.error(u"Failed to cache products: %s" % forceUnicode(e))
