@@ -1128,7 +1128,7 @@ class EventProcessingThread(KillableThread):
 						self._currentProgressSubjectProxy.reset()
 						self._overallProgressSubjectProxy.reset()
 				else:
-					self.selectDepot(productIds = productIds)
+					config.selectDepot(configService = self._configService, productIds = productIds)
 				
 				savedDepotUrl = None
 				savedDepotDrive = None
