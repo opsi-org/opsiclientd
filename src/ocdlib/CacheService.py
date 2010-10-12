@@ -87,7 +87,7 @@ class CacheService(threading.Thread):
 			os.makedirs(self._storageDir)
 		if not os.path.exists(self._tempDir):
 			logger.notice(u"Creating cache service temp dir '%s'" % self._tempDir)
-			os.makedirs(sself._tempDir)
+			os.makedirs(self._tempDir)
 		if not os.path.exists(self._productCacheDir):
 			logger.notice(u"Creating cache service product cache dir '%s'" % self._productCacheDir)
 			os.makedirs(self._productCacheDir)
