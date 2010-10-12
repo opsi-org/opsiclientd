@@ -771,104 +771,107 @@ def createEventGenerators():
 			
 			args = {}
 			for (key, value) in eventConfig['args'].items():
-				if   (key == 'type'):
-					continue
-				elif (key == 'wql'):
-					args['wql'] = value
-				elif key.startswith('message'):
-					mLanguage = None
-					try:
-						mLanguage = key.split('[')[1].split(']')[0].strip().lower()
-					except:
-						pass
-					if mLanguage:
-						if (mLanguage == getLanguage()):
+				try:
+					if   (key == 'type'):
+						continue
+					elif (key == 'wql'):
+						args['wql'] = value
+					elif key.startswith('message'):
+						mLanguage = None
+						try:
+							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
+						except:
+							pass
+						if mLanguage:
+							if (mLanguage == getLanguage()):
+								args['message'] = value
+						elif not args.get('message'):
 							args['message'] = value
-					elif not args.get('message'):
-						args['message'] = value
-				elif key.startswith('shutdown_warning_message'):
-					mLanguage = None
-					try:
-						mLanguage = key.split('[')[1].split(']')[0].strip().lower()
-					except:
-						pass
-					if mLanguage:
-						if (mLanguage == getLanguage()):
+					elif key.startswith('shutdown_warning_message'):
+						mLanguage = None
+						try:
+							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
+						except:
+							pass
+						if mLanguage:
+							if (mLanguage == getLanguage()):
+								args['shutdownWarningMessage'] = value
+						elif not args.get('shutdownWarningMessage'):
 							args['shutdownWarningMessage'] = value
-					elif not args.get('shutdownWarningMessage'):
-						args['shutdownWarningMessage'] = value
-				elif (key == 'max_repetitions'):
-					args['maxRepetitions'] = int(value)
-				elif (key == 'activation_delay'):
-					args['activationDelay'] = int(value)
-				elif (key == 'notification_delay'):
-					args['notificationDelay'] = int(value)
-				elif (key == 'warning_time'):
-					args['warningTime'] = int(value)
-				elif (key == 'user_cancelable'):
-					args['userCancelable'] = int(value)
-				elif (key == 'cancel_counter'):
-					args['cancelCounter'] = int(value)
-				elif (key == 'shutdown_warning_time'):
-					args['shutdownWarningTime'] = int(value)
-				elif (key == 'shutdown_warning_repetition_time'):
-					args['shutdownWarningRepetitionTime'] = int(value)
-				elif (key == 'shutdown_user_cancelable'):
-					args['shutdownUserCancelable'] = int(value)
-				elif (key == 'block_login'):
-					args['blockLogin'] = not value.lower() in ('0', 'false', 'off', 'no')
-				elif (key == 'lock_workstation'):
-					args['lockWorkstation'] = value.lower() in ('1', 'true', 'on', 'yes')
-				elif (key == 'logoff_current_user'):
-					args['logoffCurrentUser'] = value.lower() in ('1', 'true', 'on', 'yes')
-				elif (key == 'process_shutdown_requests'):
-					args['processShutdownRequests'] = not value.lower() in ('0', 'false', 'off', 'no')
-				elif (key == 'get_config_from_service'):
-					args['getConfigFromService'] = not value.lower() in ('0', 'false', 'off', 'no')
-				elif (key == 'update_config_file'):
-					args['updateConfigFile'] = not value.lower() in ('0', 'false', 'off', 'no')
-				elif (key == 'write_log_to_service'):
-					args['writeLogToService'] = not value.lower() in ('0', 'false', 'off', 'no')
-				elif (key == 'cache_products'):
-					args['cacheProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
-				elif (key == 'cache_max_bandwidth'):
-					args['cacheMaxBandwidth'] = int(value)
-				elif (key == 'requires_cached_products'):
-					args['requiresCachedProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
-				elif (key == 'sync_config'):
-					args['syncConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
-				elif (key == 'use_cached_config'):
-					args['useCachedConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
-				elif (key == 'update_action_processor'):
-					args['updateActionProcessor'] = not value.lower() in ('0', 'false', 'off', 'no')
-				elif (key == 'action_type'):
-					args['actionType'] = value.lower()
-				elif (key == 'event_notifier_command'):
-					args['eventNotifierCommand'] = config.replace(value.lower(), escaped=True)
-				elif (key == 'event_notifier_desktop'):
-					args['eventNotifierDesktop'] = value.lower()
-				elif (key == 'action_notifier_command'):
-					args['actionNotifierCommand'] = config.replace(value.lower(), escaped=True)
-				elif (key == 'action_notifier_desktop'):
-					args['actionNotifierDesktop'] = value.lower()
-				elif (key == 'action_processor_command'):
-					args['actionProcessorCommand'] = value.lower()
-				elif (key == 'action_processor_desktop'):
-					args['actionProcessorDesktop'] = value.lower()
-				elif (key == 'action_processor_timeout'):
-					args['actionProcessorTimeout'] = int(value)
-				elif (key == 'shutdown_notifier_command'):
-					args['shutdownNotifierCommand'] = config.replace(value.lower(), escaped=True)
-				elif (key == 'shutdown_notifier_desktop'):
-					args['shutdownNotifierDesktop'] = value.lower()
-				elif (key == 'service_options'):
-					args['serviceOptions'] = eval(value)
-				elif (key == 'pre_action_processor_command'):
-					args['preActionProcessorCommand'] = config.replace(value.lower(), escaped=True)
-				elif (key == 'post_action_processor_command'):
-					args['postActionProcessorCommand'] = config.replace(value.lower(), escaped=True)
-				else:
-					logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigName))
+					elif (key == 'max_repetitions'):
+						args['maxRepetitions'] = int(value)
+					elif (key == 'activation_delay'):
+						args['activationDelay'] = int(value)
+					elif (key == 'notification_delay'):
+						args['notificationDelay'] = int(value)
+					elif (key == 'warning_time'):
+						args['warningTime'] = int(value)
+					elif (key == 'user_cancelable'):
+						args['userCancelable'] = int(value)
+					elif (key == 'cancel_counter'):
+						args['cancelCounter'] = int(value)
+					elif (key == 'shutdown_warning_time'):
+						args['shutdownWarningTime'] = int(value)
+					elif (key == 'shutdown_warning_repetition_time'):
+						args['shutdownWarningRepetitionTime'] = int(value)
+					elif (key == 'shutdown_user_cancelable'):
+						args['shutdownUserCancelable'] = int(value)
+					elif (key == 'block_login'):
+						args['blockLogin'] = not value.lower() in ('0', 'false', 'off', 'no')
+					elif (key == 'lock_workstation'):
+						args['lockWorkstation'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'logoff_current_user'):
+						args['logoffCurrentUser'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'process_shutdown_requests'):
+						args['processShutdownRequests'] = not value.lower() in ('0', 'false', 'off', 'no')
+					elif (key == 'get_config_from_service'):
+						args['getConfigFromService'] = not value.lower() in ('0', 'false', 'off', 'no')
+					elif (key == 'update_config_file'):
+						args['updateConfigFile'] = not value.lower() in ('0', 'false', 'off', 'no')
+					elif (key == 'write_log_to_service'):
+						args['writeLogToService'] = not value.lower() in ('0', 'false', 'off', 'no')
+					elif (key == 'cache_products'):
+						args['cacheProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'cache_max_bandwidth'):
+						args['cacheMaxBandwidth'] = int(value)
+					elif (key == 'requires_cached_products'):
+						args['requiresCachedProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'sync_config'):
+						args['syncConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'use_cached_config'):
+						args['useCachedConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'update_action_processor'):
+						args['updateActionProcessor'] = not value.lower() in ('0', 'false', 'off', 'no')
+					elif (key == 'action_type'):
+						args['actionType'] = value.lower()
+					elif (key == 'event_notifier_command'):
+						args['eventNotifierCommand'] = config.replace(value.lower(), escaped=True)
+					elif (key == 'event_notifier_desktop'):
+						args['eventNotifierDesktop'] = value.lower()
+					elif (key == 'action_notifier_command'):
+						args['actionNotifierCommand'] = config.replace(value.lower(), escaped=True)
+					elif (key == 'action_notifier_desktop'):
+						args['actionNotifierDesktop'] = value.lower()
+					elif (key == 'action_processor_command'):
+						args['actionProcessorCommand'] = value.lower()
+					elif (key == 'action_processor_desktop'):
+						args['actionProcessorDesktop'] = value.lower()
+					elif (key == 'action_processor_timeout'):
+						args['actionProcessorTimeout'] = int(value)
+					elif (key == 'shutdown_notifier_command'):
+						args['shutdownNotifierCommand'] = config.replace(value.lower(), escaped=True)
+					elif (key == 'shutdown_notifier_desktop'):
+						args['shutdownNotifierDesktop'] = value.lower()
+					elif (key == 'service_options'):
+						args['serviceOptions'] = eval(value)
+					elif (key == 'pre_action_processor_command'):
+						args['preActionProcessorCommand'] = config.replace(value.lower(), escaped=True)
+					elif (key == 'post_action_processor_command'):
+						args['postActionProcessorCommand'] = config.replace(value.lower(), escaped=True)
+					else:
+						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigName))
+				except Exception, e:
+					logger.error(u"Failed to set event config argument '%s' to '%s': %s" % (key, value, e))
 			
 			logger.info(u"\nEvent config '" + eventConfigName + u"' args:\n" + objectToBeautifiedText(args) + u"\n")
 			

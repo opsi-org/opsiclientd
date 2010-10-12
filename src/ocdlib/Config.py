@@ -60,19 +60,19 @@ class ConfigImplementation(object):
 				'program_files_dir': u'',
 			},
 			'global': {
-				'base_dir':                 baseDir,
-				'locale_dir':               os.path.join(baseDir, 'locale'),
-				'config_file':              u'opsiclientd.conf',
-				'log_file':                 u'opsiclientd.log',
-				'log_level':                LOG_NOTICE,
-				'host_id':                  System.getFQDN().lower(),
-				'opsi_host_key':            u'',
-				'wait_for_gui_timeout':     120,
-				'block_login_notifier':     u'',
+				'base_dir':             baseDir,
+				'locale_dir':           os.path.join(baseDir, 'locale'),
+				'config_file':          u'opsiclientd.conf',
+				'log_file':             u'opsiclientd.log',
+				'log_level':            LOG_NOTICE,
+				'host_id':              System.getFQDN().lower(),
+				'opsi_host_key':        u'',
+				'wait_for_gui_timeout': 120,
+				'block_login_notifier': u'',
 			},
 			'config_service': {
-				'url':                    [],
-				'connection_timeout':     10,
+				'url':                   [],
+				'connection_timeout':    10,
 				'user_cancelable_after': 0,
 			},
 			'depot_server': {
@@ -82,7 +82,7 @@ class ConfigImplementation(object):
 				'username': u'pcpatch',
 			},
 			'cache_service': {
-				'storage_dir':            u'c:\\tmp\\cache_service',
+				'storage_dir':            u'c:\\opsi\\cache',
 				'product_cache_max_size': 6000000000,
 				'backend_manager_config': u'',
 			},
@@ -114,7 +114,7 @@ class ConfigImplementation(object):
 		
 		if (os.name == 'nt'):
 			self._config['system']['program_files_dir'] = System.getProgramFilesDir()
-			self._config['cache_service']['storage_dir'] = u'%s\\tmp\\cache_service' % System.getSystemDrive()
+			self._config['cache_service']['storage_dir'] = u'%s\\opsi\\cache' % System.getSystemDrive()
 			self._config['cache_service']['backend_manager_config'] = os.path.join(baseDir, u'opsiclientd', 'backendManager.d')
 			self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd', 'opsiclientd.conf')
 			

@@ -37,6 +37,7 @@ import threading
 # OPSI imports
 from OPSI.Logger import *
 from OPSI.Types import *
+from OPSI.Repository import *
 from ocdlib.Config import Config
 
 logger = Logger()
@@ -83,13 +84,13 @@ class CacheService(threading.Thread):
 		self._initialized = True
 		if not os.path.exists(self._storageDir):
 			logger.notice(u"Creating cache service storage dir '%s'" % self._storageDir)
-			os.mkdir(self._storageDir)
+			os.makedirs(self._storageDir)
 		if not os.path.exists(self._tempDir):
 			logger.notice(u"Creating cache service temp dir '%s'" % self._tempDir)
-			os.mkdir(self._tempDir)
+			os.makedirs(sself._tempDir)
 		if not os.path.exists(self._productCacheDir):
 			logger.notice(u"Creating cache service product cache dir '%s'" % self._productCacheDir)
-			os.mkdir(self._productCacheDir)
+			os.makedirs(self._productCacheDir)
 	
 	def setCurrentProductSyncProgressObserver(self, currentProductSyncProgressObserver):
 		self._currentProductSyncProgressObserver = currentProductSyncProgressObserver
@@ -250,14 +251,11 @@ class CacheService(threading.Thread):
 							self._state['product'][productId]['sync_completed'] = ''
 							self._state['product'][productId]['sync_failure']   = ''
 							
-							# TODO: choose depot / url
-							# config.get('depot_server', 'url')
-							depotUrl = u'webdavs://%s:4447/opsi-depot' % config.get('depot_server', 'depot_id')
-							repository = getRepository(
-									url          = depotUrl,
-									username     = config.get('global', 'host_id'),
-									password     = config.get('global', 'opsi_host_key')
-							)
+							self._opsiclientd.selectDepot(productIds = productId)
+							if not config.get('depot_server', 'url'):
+								raise Exception(u"Cannot sync files, depot_server.url undefined")
+							(depotServerUsername, depotServerPassword) = self._opsiclientd.getDepotserverCredentials()
+							repository = getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword)
 							
 							#self.writeStateFile()
 							try:

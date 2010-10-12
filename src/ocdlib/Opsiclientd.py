@@ -886,7 +886,7 @@ class EventProcessingThread(KillableThread):
 		logger.notice(u"Selected depot is: %s" % selectedDepot)
 		config.set('depot_server', 'depot_id', selectedDepot.id)
 		config.set('depot_server', 'url', selectedDepot.depotRemoteUrl)
-			
+		
 	def writeLogToService(self):
 		logger.notice(u"Writing log to service")
 		try:
@@ -1210,8 +1210,6 @@ class EventProcessingThread(KillableThread):
 			else:
 				logger.notice(u"Start processing action requests")
 				
-				self.selectDepot(productIds = productIds)
-				
 				#if not self.event.eventConfig.useCachedConfig and self.event.eventConfig.syncConfig:
 				#	logger.notice(u"Syncing config (products: %s)" % productIds)
 				#	self._cacheService.init()
@@ -1240,6 +1238,8 @@ class EventProcessingThread(KillableThread):
 						self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
 						self._currentProgressSubjectProxy.reset()
 						self._overallProgressSubjectProxy.reset()
+				else:
+					self.selectDepot(productIds = productIds)
 				
 				savedDepotUrl = None
 				savedDepotDrive = None
