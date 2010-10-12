@@ -35,6 +35,7 @@ __version__ = '4.0.20'
 
 # Imports
 import sys, os, shutil, filecmp
+from hashlib import md5
 
 # Twisted imports
 from twisted.internet import reactor
