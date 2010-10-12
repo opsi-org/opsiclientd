@@ -329,7 +329,7 @@ class CacheService(threading.Thread):
 							logger.error(u"Errors occured while caching products %s: %s" % (', '.join(self._productIds), ', '.join(errorsOccured)))
 						else:
 							logger.notice(u"All products cached: %s" % ', '.join(self._productIds))
-							for eventGenerator getEventGenerators(generatorClass = ProductSyncCompletedEventGenerator):
+							for eventGenerator in getEventGenerators(generatorClass = ProductSyncCompletedEventGenerator):
 								eventGenerator.fireEvent()
 							
 					except Exception, e:
