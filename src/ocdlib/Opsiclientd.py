@@ -519,8 +519,8 @@ class EventProcessingThread(KillableThread):
 		self._actionProcessorInfoSubject = MessageSubject('actionProcessorInfo')
 		self._opsiclientdInfoSubject = MessageSubject('opsiclientdInfo')
 		self._detailSubjectProxy = MessageSubjectProxy('detail')
-		self._currentProgressSubjectProxy = ProgressSubjectProxy('currentProgress')
-		self._overallProgressSubjectProxy = ProgressSubjectProxy('overallProgress')
+		self._currentProgressSubjectProxy = ProgressSubjectProxy('currentProgress', fireAlways = False)
+		self._overallProgressSubjectProxy = ProgressSubjectProxy('overallProgress', fireAlways = False)
 		
 		self._statusSubject.setMessage( _("Processing event %s") % self.event.eventConfig.getName() )
 		#self._serviceUrlSubject.setMessage(config.get('config_service', 'url'))
