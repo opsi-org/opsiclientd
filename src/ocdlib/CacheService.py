@@ -271,8 +271,10 @@ class CacheService(threading.Thread):
 							impersonation = None
 							try:
 								(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
-								impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
-								impersonation.start(logonType = 'NEW_CREDENTIALS')
+								#impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
+								#impersonation.start(logonType = 'NEW_CREDENTIALS')
+								impersonation = System.Impersonate(username = self._opsiclientd._actionProcessorUserName, password = self._opsiclientd._actionProcessorUserPassword)
+								impersonation.start(logonType = 'INTERACTIVE')
 								repository = getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword)
 							
 								#self.writeStateFile()
