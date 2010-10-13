@@ -39,6 +39,7 @@ from twisted.conch.ssh import keys
 # OPSI imports
 from OPSI.Logger import *
 from OPSI.Types import *
+from OPSI.Object import *
 from OPSI.Util.Repository import *
 from OPSI.Util import md5sum
 from OPSI import System
