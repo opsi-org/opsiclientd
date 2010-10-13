@@ -291,7 +291,7 @@ class CacheService(threading.Thread):
 									logger.info(u"Package content file unchanged, assuming that product is up to date")
 									self._state['product'][productId]['sync_completed'] = time.time()
 									overallProgressSubject.addToState(1)
-									repository = None
+									repository.disconnect()
 									continue
 								
 								packageInfo = PackageContentFile(tempPackageContentFile).parse()
@@ -333,7 +333,7 @@ class CacheService(threading.Thread):
 								logger.error("Failed to sync product '%s': %s" % (productId, forceUnicode(e)))
 								errorsOccured.append( u'%s: %s' % (productId, forceUnicode(e)) )
 								self._state['product'][productId]['sync_failure'] = forceUnicode(e)
-							repository = None
+							repository.disconnect()
 							#self.writeStateFile()
 							overallProgressSubject.addToState(1)
 							self._configService.productOnClient_updateObjects([
