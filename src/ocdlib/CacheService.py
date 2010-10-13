@@ -263,6 +263,15 @@ class CacheService(threading.Thread):
 							self._state['product'][productId]['sync_completed'] = ''
 							self._state['product'][productId]['sync_failure']   = ''
 							
+							self._configService.productOnClient_updateObjects([
+								ProductOnClient(
+									productId      = productId,
+									productType    = u'LocalbootProduct',
+									clientId       = config.get('global', 'host_id'),
+									actionProgress = u'caching'
+								)
+							])
+							
 							config.selectDepot(configService = self._configService, productIds = productId)
 							if not config.get('depot_server', 'url'):
 								raise Exception(u"Cannot sync files, depot_server.url undefined")
@@ -326,6 +335,14 @@ class CacheService(threading.Thread):
 							repository = None
 							#self.writeStateFile()
 							overallProgressSubject.addToState(1)
+							self._configService.productOnClient_updateObjects([
+								ProductOnClient(
+									productId      = productId,
+									productType    = u'LocalbootProduct',
+									clientId       = config.get('global', 'host_id'),
+									actionProgress = u'cached'
+								)
+							])
 						
 						if self._overallProductSyncProgressObserver:
 							overallProgressSubject.detachObserver(self._overallProductSyncProgressObserver)
