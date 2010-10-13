@@ -266,66 +266,77 @@ class CacheService(threading.Thread):
 							config.selectDepot(configService = self._configService, productIds = productId)
 							if not config.get('depot_server', 'url'):
 								raise Exception(u"Cannot sync files, depot_server.url undefined")
-							(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
-							repository = getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword)
-							
-							#self.writeStateFile()
+								
+								
+							impersonation = None
 							try:
-								tempPackageContentFile = os.path.join(self._tempDir, u'%s.files' % productId)
-								packageContentFile = u'%s/%s.files' % (productId, productId)
-								logger.info(u"Downloading package content file '%s' of product '%s' from depot '%s'" % (packageContentFile, productId, repository))
-								repository.download(source = packageContentFile, destination = tempPackageContentFile)
-								
-								packageContentFile = os.path.join(self._productCacheDir, productId, u'%s.files' % productId)
-								if os.path.exists(packageContentFile) and (md5sum(tempPackageContentFile) == md5sum(packageContentFile)):
-									logger.info(u"Package content file unchanged, assuming that product is up to date")
-									self._state['product'][productId]['sync_completed'] = time.time()
-									overallProgressSubject.addToState(1)
-									repository = None
-									continue
-								
-								packageInfo = PackageContentFile(tempPackageContentFile).parse()
-								productSize = 0
-								fileCount = 0
-								for value in packageInfo.values():
-									if value.has_key('size'):
-										fileCount += 1
-										productSize += int(value['size'])
-								
-								logger.info(u"Product '%s' contains %d files with a total size of %0.3f MB" \
-									% ( productId, fileCount, (float(productSize)/(1024*1024)) ) )
-								
-								if (self._productCacheMaxSize > 0) and (productCacheDirSize + productSize > self._productCacheMaxSize):
-									logger.info(u"Product cache dir sizelimit of %0.3f MB exceeded. Current size: %0.3f MB, space needed for product '%s': %0.3f MB" \
-											% ( (float(self._productCacheMaxSize)/(1024*1024)), (float(productCacheDirSize)/(1024*1024)), \
-											    productId, (float(productSize)/(1024*1024)) ) )
-									self.freeProductCacheSpace(neededSpace = productSize, neededProducts = self._productIds)
-									productCacheDirSize = System.getDirectorySize(self._productCacheDir)
-								
-								if (diskFreeSpace < productSize + 500*1024*1024):
-									raise Exception(u"Only %0.3f MB free space available on disk, refusing to cache product files" \
-												% (float(diskFreeSpace)/(1024*1024)))
-								
-								productSynchronizer = DepotToLocalDirectorySychronizer(
-									sourceDepot          = repository,
-									destinationDirectory = self._productCacheDir,
-									productIds           = [ productId ],
-									maxBandwidth         = 0,
-									dynamicBandwidth     = False
-								)
-								productSynchronizer.synchronize(productProgressObserver = self._currentProductSyncProgressObserver)
-								self._state['product'][productId]['sync_completed'] = time.time()
-								logger.notice(u"Product '%s' synced" % productId)
-								productCacheDirSize += productSize
-								diskFreeSpace -= productSize
-							except Exception, e:
-								logger.logException(e)
-								logger.error("Failed to sync product '%s': %s" % (productId, forceUnicode(e)))
-								errorsOccured.append( u'%s: %s' % (productId, forceUnicode(e)) )
-								self._state['product'][productId]['sync_failure'] = forceUnicode(e)
-							repository = None
-							#self.writeStateFile()
-							overallProgressSubject.addToState(1)
+								(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
+								impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
+								impersonation.start(logonType = 'NEW_CREDENTIALS')
+								repository = getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword)
+							
+								#self.writeStateFile()
+								try:
+									tempPackageContentFile = os.path.join(self._tempDir, u'%s.files' % productId)
+									packageContentFile = u'%s/%s.files' % (productId, productId)
+									logger.info(u"Downloading package content file '%s' of product '%s' from depot '%s'" % (packageContentFile, productId, repository))
+									repository.download(source = packageContentFile, destination = tempPackageContentFile)
+									
+									packageContentFile = os.path.join(self._productCacheDir, productId, u'%s.files' % productId)
+									if os.path.exists(packageContentFile) and (md5sum(tempPackageContentFile) == md5sum(packageContentFile)):
+										logger.info(u"Package content file unchanged, assuming that product is up to date")
+										self._state['product'][productId]['sync_completed'] = time.time()
+										overallProgressSubject.addToState(1)
+									else:
+										packageInfo = PackageContentFile(tempPackageContentFile).parse()
+										productSize = 0
+										fileCount = 0
+										for value in packageInfo.values():
+											if value.has_key('size'):
+												fileCount += 1
+												productSize += int(value['size'])
+										
+										logger.info(u"Product '%s' contains %d files with a total size of %0.3f MB" \
+											% ( productId, fileCount, (float(productSize)/(1024*1024)) ) )
+										
+										if (self._productCacheMaxSize > 0) and (productCacheDirSize + productSize > self._productCacheMaxSize):
+											logger.info(u"Product cache dir sizelimit of %0.3f MB exceeded. Current size: %0.3f MB, space needed for product '%s': %0.3f MB" \
+													% ( (float(self._productCacheMaxSize)/(1024*1024)), (float(productCacheDirSize)/(1024*1024)), \
+													    productId, (float(productSize)/(1024*1024)) ) )
+											self.freeProductCacheSpace(neededSpace = productSize, neededProducts = self._productIds)
+											productCacheDirSize = System.getDirectorySize(self._productCacheDir)
+										
+										if (diskFreeSpace < productSize + 500*1024*1024):
+											raise Exception(u"Only %0.3f MB free space available on disk, refusing to cache product files" \
+														% (float(diskFreeSpace)/(1024*1024)))
+										
+										productSynchronizer = DepotToLocalDirectorySychronizer(
+											sourceDepot          = repository,
+											destinationDirectory = self._productCacheDir,
+											productIds           = [ productId ],
+											maxBandwidth         = 0,
+											dynamicBandwidth     = False
+										)
+										productSynchronizer.synchronize(productProgressObserver = self._currentProductSyncProgressObserver)
+										self._state['product'][productId]['sync_completed'] = time.time()
+										logger.notice(u"Product '%s' synced" % productId)
+										productCacheDirSize += productSize
+										diskFreeSpace -= productSize
+								except Exception, e:
+									logger.logException(e)
+									logger.error("Failed to sync product '%s': %s" % (productId, forceUnicode(e)))
+									errorsOccured.append( u'%s: %s' % (productId, forceUnicode(e)) )
+									self._state['product'][productId]['sync_failure'] = forceUnicode(e)
+								repository = None
+								#self.writeStateFile()
+								overallProgressSubject.addToState(1)
+							
+							finally:
+								if impersonation:
+									try:
+										impersonation.end()
+									except Exception, e:
+										logger.warning(e)
 						
 						if self._overallProductSyncProgressObserver:
 							overallProgressSubject.detachObserver(self._overallProductSyncProgressObserver)
