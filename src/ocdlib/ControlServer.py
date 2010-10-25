@@ -652,10 +652,10 @@ class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
 	
 	def _authenticate(self, username, password):
-		if (username == config.get('global', 'host_id')) and (password == config.get('global', 'opsi_host_key')):
+		if (username.lower() == config.get('global', 'host_id').lower()) and (password == config.get('global', 'opsi_host_key')):
 			return True
 		if (os.name == 'nt'):
-			if (username == 'Administrator'):
+			if (username.lower() == 'administrator'):
 				import win32security
 				# The LogonUser function will raise an Exception on logon failure
 				win32security.LogonUser(username, 'None', password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
