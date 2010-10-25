@@ -319,7 +319,7 @@ class Worker:
 			
 			logger.notice(u"Authorization request from %s@%s" % (user, self.request.remoteAddr.host))
 			if not user:
-				user = socket.getfqdn()
+				user = config.get('global', 'host_id')
 			if not password:
 				raise Exception(u"Cannot authenticate, no password given")
 			
