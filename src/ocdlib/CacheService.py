@@ -294,7 +294,8 @@ class CacheService(threading.Thread):
 									repository.disconnect()
 									continue
 								
-								packageInfo = PackageContentFile(tempPackageContentFile).parse()
+								os.rename(tempPackageContentFile, packageContentFile)
+								packageInfo = PackageContentFile(packageContentFile).parse()
 								productSize = 0
 								fileCount = 0
 								for value in packageInfo.values():
