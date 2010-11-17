@@ -165,7 +165,7 @@ class ConfigImplementation(object):
 			logger.addConfidentialString(value)
 		
 		if option in ('depot_id', 'host_id'):
-			value = value.lower()
+			value = forceHostId(value.replace('_', '-'))
 		
 		if section in ('system'):
 			return
@@ -325,13 +325,23 @@ class ConfigImplementation(object):
 		depotIds = []
 		dynamicDepot = False
 		for configState in configService.configState_getObjects(
-					configId = ['clientconfig.depot.dynamic', 'opsiclientd.depot_server.depot_id'],
+					configId = ['clientconfig.depot.dynamic', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
 					objectId = self.get('global', 'host_id')):
-			if not configState.values:
+			if not configState.values or not configState.values[0]:
 				continue
-			if (configState.configId == 'opsiclientd.depot_server.depot_id'):
+			if   (configState.configId == 'opsiclientd.depot_server.url'):
 				try:
-					depotIds.append(forceHostId(configState.values[0]))
+					depotUrl = forceUrl(configState.values[0])
+					self.set('depot_server', 'depot_id', u'')
+					self.set('depot_server', 'url', depotUrl)
+					logger.notice(u"Depot url was set to '%s' from configState %s" % (depotUrl, configState))
+					return
+				except Exception, e:
+					logger.error(u"Failed to set depot url from values %s in configState %s: %s" % (configState.values, configState, e))
+			elif (configState.configId == 'opsiclientd.depot_server.depot_id'):
+				try:
+					depotId = forceHostId(configState.values[0])
+					depotIds.append(depotId)
 					logger.notice(u"Depot was set to '%s' from configState %s" % (depotId, configState))
 				except Exception, e:
 					logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, e))
