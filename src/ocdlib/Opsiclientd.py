@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '4.0.20'
+__version__ = '4.0.21'
 
 # Imports
 import sys, os, shutil, filecmp, base64
