@@ -1330,10 +1330,13 @@ class EventProcessingThread(KillableThread):
 									desktop      = self.event.eventConfig.eventNotifierDesktop )
 							
 						timeout = int(self.event.eventConfig.warningTime)
-						while(timeout > 0) and not self.eventCancelled and not self.waitCancelled:
+						endTime = time.time() + timeout
+						while (timeout > 0) and not self.eventCancelled and not self.waitCancelled:
+							now = time.time()
 							logger.info(u"Notifying user of event %s" % self.event)
-							self.setStatusMessage(_(u"Event %s: processing will start in %d seconds") % (self.event.eventConfig.getName(), timeout))
-							timeout -= 1
+							self.setStatusMessage(_(u"Event %s: processing will start in %0.0f seconds") % (self.event.eventConfig.getName(), (endTime - now)))
+							if ((endTime - now) <= 0):
+								break
 							time.sleep(1)
 						
 						if self.eventCancelled:
@@ -1444,12 +1447,15 @@ class EventProcessingThread(KillableThread):
 												desktop      = self.event.eventConfig.shutdownNotifierDesktop )
 											
 									timeout = int(self.event.eventConfig.shutdownWarningTime)
+									endTime = time.time() + timeout
 									while (timeout > 0) and not self.shutdownCancelled and not self.shutdownWaitCancelled:
+										now = time.time()
 										if reboot:
-											self.setStatusMessage(_(u"Reboot in %d seconds") % timeout)
+											self.setStatusMessage(_(u"Reboot in %0.0f seconds") % (endTime - now))
 										else:
-											self.setStatusMessage(_(u"Shutdown in %d seconds") % timeout)
-										timeout -= 1
+											self.setStatusMessage(_(u"Shutdown in %0.0f seconds") % (endTime - now))
+										if ((endTime - now) <= 0):
+											break
 										time.sleep(1)
 									
 									try:
