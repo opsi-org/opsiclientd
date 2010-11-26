@@ -84,7 +84,7 @@ class ConfigImplementation(object):
 				'username': u'pcpatch',
 			},
 			'cache_service': {
-				'storage_dir':            u'c:\\opsi\\cache',
+				'storage_dir':            u'c:\\opsi_tmp\\cache',
 				'product_cache_max_size': 6000000000,
 				'backend_manager_config': u'',
 			},
@@ -116,7 +116,7 @@ class ConfigImplementation(object):
 		
 		if (os.name == 'nt'):
 			self._config['system']['program_files_dir'] = System.getProgramFilesDir()
-			self._config['cache_service']['storage_dir'] = u'%s\\opsi\\cache' % System.getSystemDrive()
+			self._config['cache_service']['storage_dir'] = u'%s\\opsi_tmp\\cache' % System.getSystemDrive()
 			self._config['cache_service']['backend_manager_config'] = os.path.join(baseDir, u'opsiclientd', 'backendManager.d')
 			self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd', 'opsiclientd.conf')
 			
