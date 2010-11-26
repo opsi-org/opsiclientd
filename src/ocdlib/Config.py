@@ -362,17 +362,17 @@ class ConfigImplementation(object):
 			if dynamicDepot:
 				depotIds.extend(clientToDepotservers[0].get('slaveDepotIds', []))
 		masterDepot = None
-		slaveDepots = []
+		alternativeDepots = []
 		for depot in configService.host_getObjects(type = 'OpsiDepotserver', id = depotIds):
 			if (depot.id == depotIds[0]):
 				masterDepot = depot
 			else:
-				slaveDepots.append(depot)
+				alternativeDepots.append(depot)
 		if not masterDepot:
 			raise Exception(u"Failed to get info for master depot '%s'" % depotIds[0])
 		
 		selectedDepot = masterDepot
-		if dynamicDepot and slaveDepots:
+		if dynamicDepot and alternativeDepots:
 			try:
 				modules = configService.backend_info()['modules']
 			
@@ -413,7 +413,8 @@ class ConfigImplementation(object):
 					if networkInterface.gatewayList.ipAddress:
 						defaultInterface = networkInterface
 						break
-				networkConfig = {
+				clientConfig = {
+					"clientId":       self.get('global', 'host_id'),
 					"ipAddress":      forceUnicode(defaultInterface.ipAddressList.ipAddress),
 					"netmask":        forceUnicode(defaultInterface.ipAddressList.ipMask),
 					"defaultGateway": forceUnicode(defaultInterface.gatewayList.ipAddress)
@@ -422,7 +423,7 @@ class ConfigImplementation(object):
 				depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()
 				logger.debug2(u"depotSelectionAlgorithm:\n%s" % depotSelectionAlgorithm)
 				exec(depotSelectionAlgorithm)
-				selectedDepot = selectDepot(networkConfig = networkConfig, masterDepot = masterDepot, slaveDepots = slaveDepots)
+				selectedDepot = selectDepot(clientConfig = clientConfig, masterDepot = masterDepot, alternativeDepots = alternativeDepots)
 				
 			except Exception, e:
 				logger.logException(e)
