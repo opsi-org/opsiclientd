@@ -283,7 +283,7 @@ class CacheService(threading.Thread):
 							try:
 								tempPackageContentFile = os.path.join(self._tempDir, u'%s.files' % productId)
 								packageContentFile = u'%s/%s.files' % (productId, productId)
-								logger.info(u"Downloading package content file '%s' of product '%s' from depot '%s'" % (packageContentFile, productId, repository))
+								logger.info(u"Downloading package content file '%s' of product '%s' from depot '%s' to '%s'" % (packageContentFile, productId, repository, tempPackageContentFile))
 								repository.download(source = packageContentFile, destination = tempPackageContentFile)
 								
 								packageContentFile = os.path.join(self._productCacheDir, productId, u'%s.files' % productId)
@@ -294,6 +294,7 @@ class CacheService(threading.Thread):
 									repository.disconnect()
 									continue
 								
+								logger.debug(u"Moving package content file from '%s' to '%s'" % (tempPackageContentFile, packageContentFile))
 								os.rename(tempPackageContentFile, packageContentFile)
 								packageInfo = PackageContentFile(packageContentFile).parse()
 								productSize = 0
