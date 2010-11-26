@@ -294,6 +294,8 @@ class CacheService(threading.Thread):
 									repository.disconnect()
 									continue
 								
+								if not os.path.exists(os.path.join(self._productCacheDir, productId)):
+									os.mkdir(os.path.join(self._productCacheDir, productId))
 								logger.debug(u"Moving package content file from '%s' to '%s'" % (tempPackageContentFile, packageContentFile))
 								os.rename(tempPackageContentFile, packageContentFile)
 								packageInfo = PackageContentFile(packageContentFile).parse()
