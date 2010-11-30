@@ -64,6 +64,8 @@ config = Config()
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class EventProcessingThread(KillableThread):
 	def __init__(self, opsiclientd, event):
+		from ocdlib.Opsiclientd import __version__
+		
 		moduleName = u' %-30s' % (u'event processing ' + event.eventConfig.getName())
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		KillableThread.__init__(self)
