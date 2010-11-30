@@ -44,6 +44,8 @@ if os.path.exists("ocdlibnonfree") and not buildFreeVersion:
 	packages.append("ocdlibnonfree")
 	opsiclientdDescription = u"opsi client daemon (full)"
 
+print "Building %s" % opsiclientdDescription
+
 opsiclientd = Target(
 	name = "opsiclientd",
 	description = opsiclientdDescription,
