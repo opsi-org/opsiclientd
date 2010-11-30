@@ -49,10 +49,13 @@ from OPSI import System
 
 from ocdlib.Exceptions import *
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
-from ocdlib.CacheService import CacheService
 from ocdlib.JsonRpc import JsonRpc
 from ocdlib.Config import Config
 from ocdlib.Events import eventGenerators
+try:
+	from ocdlibnonfree.CacheService import CacheService
+except:
+	from ocdlib.CacheService import CacheService
 
 logger = Logger()
 config = Config()

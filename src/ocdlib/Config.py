@@ -31,9 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-import sys, base64
-from hashlib import md5
-from twisted.conch.ssh import keys
+import sys
 
 # OPSI imports
 from OPSI.Logger import *
@@ -320,6 +318,12 @@ class ConfigImplementation(object):
 		if configService.isLegacyOpsi():
 			return
 		
+		try:
+			import selectDepotserver from ocdlibnonfree as selectDepotserverNonFree
+			return selectDepotserverNonFree(self, configService, productIds)
+		except:
+			pass
+		
 		selectedDepot = None
 		
 		configService.backend_setOptions({"addConfigStateDefaults": True})
@@ -351,8 +355,6 @@ class ConfigImplementation(object):
 				dynamicDepot = forceBool(configState.values[0])
 		
 		if not depotIds:
-			if dynamicDepot:
-				logger.info(u"Dynamic depot selection enabled")
 			clientToDepotservers = configService.configState_getClientToDepotserver(
 					clientIds  = [ self.get('global', 'host_id') ],
 					masterOnly = (not dynamicDepot),
@@ -361,83 +363,17 @@ class ConfigImplementation(object):
 				raise Exception(u"Failed to get depot config from service")
 			
 			depotIds = [ clientToDepotservers[0]['depotId'] ]
-			if dynamicDepot:
-				depotIds.extend(clientToDepotservers[0].get('alternativeDepotIds', []))
 			
 		masterDepot = None
-		alternativeDepots = []
 		for depot in configService.host_getObjects(type = 'OpsiDepotserver', id = depotIds):
 			if (depot.id == depotIds[0]):
 				masterDepot = depot
-			else:
-				alternativeDepots.append(depot)
 		if not masterDepot:
 			raise Exception(u"Failed to get info for master depot '%s'" % depotIds[0])
 		
 		logger.info(u"Master depot for products %s is %s" % (productIds, masterDepot.id))
 		selectedDepot = masterDepot
-		if dynamicDepot:
-			if alternativeDepots:
-				for depot in alternativeDepots:
-					logger.info(u"Alternative depot for products %s is %s" % (productIds, depot.id))
-				
-				try:
-					modules = configService.backend_info()['modules']
-				
-					if not modules.get('dynamic_depot'):
-						raise Exception(u"Dynamic depot module currently disabled")
-					
-					if not modules.get('customer'):
-						raise Exception(u"No customer in modules file")
-						
-					if not modules.get('valid'):
-						raise Exception(u"Modules file invalid")
-					
-					if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
-						raise Exception(u"Modules file expired")
-					
-					logger.info(u"Verifying modules file signature")
-					publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
-					data = u''
-					mks = modules.keys()
-					mks.sort()
-					for module in mks:
-						if module in ('valid', 'signature'):
-							continue
-						val = modules[module]
-						if (val == False): val = 'no'
-						if (val == True):  val = 'yes'
-						data += u'%s = %s\r\n' % (module.lower().strip(), val)
-					if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
-						raise Exception(u"Modules file invalid")
-					logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
-					
-					defaultInterface = None
-					networkInterfaces = System.getNetworkInterfaces()
-					if not networkInterfaces:
-						raise Exception(u"No network interfaces found")
-					defaultInterface = networkInterfaces[0]
-					for networkInterface in networkInterfaces:
-						if networkInterface.gatewayList.ipAddress:
-							defaultInterface = networkInterface
-							break
-					clientConfig = {
-						"clientId":       self.get('global', 'host_id'),
-						"ipAddress":      forceUnicode(defaultInterface.ipAddressList.ipAddress),
-						"netmask":        forceUnicode(defaultInterface.ipAddressList.ipMask),
-						"defaultGateway": forceUnicode(defaultInterface.gatewayList.ipAddress)
-					}
-					
-					depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()
-					logger.debug2(u"depotSelectionAlgorithm:\n%s" % depotSelectionAlgorithm)
-					exec(depotSelectionAlgorithm)
-					selectedDepot = selectDepot(clientConfig = clientConfig, masterDepot = masterDepot, alternativeDepots = alternativeDepots)
-					
-				except Exception, e:
-					logger.logException(e)
-					logger.error(u"Failed to select depot: %s" % e)
-			else:
-				logger.info(u"No alternative depot for products: %s" % productIds)
+		
 		logger.notice(u"Selected depot is: %s" % selectedDepot)
 		self.set('depot_server', 'depot_id', selectedDepot.id)
 		self.set('depot_server', 'url', selectedDepot.depotRemoteUrl)
