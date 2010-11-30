@@ -5,6 +5,11 @@ for d in ('build', 'dist'):
 	if os.path.exists(d):
 		shutil.rmtree(d)
 
+buildFreeVersion = False
+if '--free' in sys.argv:
+	buildFreeVersion = True
+	sys.argv.remove('--free')
+
 # If run without args, build executables, in quiet mode.
 if (len(sys.argv) == 1):
 	sys.argv.append("py2exe")
@@ -35,7 +40,7 @@ class Target:
 
 opsiclientdDescription = "opsi client daemon"
 packages = ["OPSI", "twisted", "ocdlib"]
-if os.path.exists("ocdlibnonfree"):
+if os.path.exists("ocdlibnonfree") and not buildFreeVersion:
 	packages.append("ocdlibnonfree")
 	opsiclientdDescription = u"opsi client daemon (full)"
 
