@@ -33,9 +33,15 @@ class Target:
 		if not self.version:
 			print >> sys.stderr, "Failed to find version of script '%s'" % self.script
 
+opsiclientdDescription = "opsi client daemon"
+packages = ["OPSI", "twisted", "ocdlib"]
+if os.path.exists("ocdlibnonfree"):
+	packages.append("ocdlibnonfree")
+	opsiclientdDescription = u"opsi client daemon (full)"
+
 opsiclientd = Target(
 	name = "opsiclientd",
-	description = "opsi client daemon",
+	description = opsiclientdDescription,
 	script = "opsiclientd.py",
 	modules = ["opsiclientd"],
 	#cmdline_style='pywin32',
@@ -128,7 +134,7 @@ setup(
 			#"bundle_files": 1,
 			"optimize": 2,
 			"excludes": excludes,
-			"packages": ["OPSI", "twisted", "ocdlib"]
+			"packages": packages
 		}
 	},
 	data_files = data_files,
