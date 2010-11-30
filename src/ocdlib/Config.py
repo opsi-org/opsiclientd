@@ -319,7 +319,7 @@ class ConfigImplementation(object):
 			return
 		
 		try:
-			import selectDepotserver from ocdlibnonfree as selectDepotserverNonFree
+			from ocdlibnonfree import selectDepotserver as selectDepotserverNonFree
 			return selectDepotserverNonFree(self, configService, productIds)
 		except:
 			pass
