@@ -40,9 +40,17 @@ class Target:
 
 opsiclientdDescription = "opsi client daemon"
 packages = ["OPSI", "twisted", "ocdlib"]
+excludes = [	"pywin", "pywin.debugger", "pywin.debugger.dbgcon",
+		"pywin.dialogs", "pywin.dialogs.list",
+		"Tkconstants", "Tkinter", "tcl", "_imagingtk",
+		"PIL._imagingtk", "ImageTk", "PIL.ImageTk", "FixTk"
+]
+
 if os.path.exists("ocdlibnonfree") and not buildFreeVersion:
 	packages.append("ocdlibnonfree")
 	opsiclientdDescription = u"opsi client daemon (full)"
+else:
+	excludes.append("ocdlibnonfree")
 
 print "Building %s" % opsiclientdDescription
 
@@ -99,14 +107,6 @@ action_processor_starter = Target(
 	description = "opsi action processor starter",
 	script = "windows\\helpers\\action_processor_starter\\action_processor_starter.py",
 )
-################################################################
-# COM pulls in a lot of stuff which we don't want or need.
-
-excludes = [	"pywin", "pywin.debugger", "pywin.debugger.dbgcon",
-		"pywin.dialogs", "pywin.dialogs.list",
-		"Tkconstants", "Tkinter", "tcl", "_imagingtk",
-		"PIL._imagingtk", "ImageTk", "PIL.ImageTk", "FixTk"
-]
 
 data_files = [
 	('Microsoft.VC90.MFC', glob.glob('Microsoft.VC90.MFC\*.*')),
