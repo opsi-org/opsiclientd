@@ -265,7 +265,7 @@ class CacheService(threading.Thread):
 							if not depotUrl:
 								raise Exception(u"Cannot sync files, depot_server.url undefined")
 							(depotServerUsername, depotServerPassword) = (u'', u'')
-							if (urlsplit(depotUrl)[0] == 'webdav'):
+							if urlsplit(depotUrl)[0].startswith('webdav'):
 								(depotServerUsername, depotServerPassword) = (config.get('global', 'host_id'), config.get('global', 'opsi_host_key'))
 							else:
 								(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
