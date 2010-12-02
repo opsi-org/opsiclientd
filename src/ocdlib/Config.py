@@ -319,10 +319,10 @@ class ConfigImplementation(object):
 			return
 		
 		try:
-			from ocdlibnonfree import selectDepotserver as selectDepotserverNonFree
-			return selectDepotserverNonFree(self, configService, productIds, cifsOnly)
-		except:
-			pass
+			import ocdlibnonfree
+			return ocdlibnonfree.selectDepotserver(self, configService, productIds, cifsOnly)
+		except Exception, e:
+			logger.info(e)
 		
 		selectedDepot = None
 		
