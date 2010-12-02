@@ -324,22 +324,30 @@ class CacheService(threading.Thread):
 								logger.notice(u"Product '%s' synced" % productId)
 								productCacheDirSize += productSize
 								diskFreeSpace -= productSize
+								self._configService.productOnClient_updateObjects([
+									ProductOnClient(
+										productId      = productId,
+										productType    = u'LocalbootProduct',
+										clientId       = config.get('global', 'host_id'),
+										actionProgress = u'cached'
+									)
+								])
 							except Exception, e:
 								logger.logException(e)
 								logger.error("Failed to sync product '%s': %s" % (productId, forceUnicode(e)))
 								errorsOccured.append( u'%s: %s' % (productId, forceUnicode(e)) )
 								self._state['product'][productId]['sync_failure'] = forceUnicode(e)
+								self._configService.productOnClient_updateObjects([
+									ProductOnClient(
+										productId      = productId,
+										productType    = u'LocalbootProduct',
+										clientId       = config.get('global', 'host_id'),
+										actionProgress = u'failed to cache: %s' % forceUnicode(e)
+									)
+								])
 							repository.disconnect()
 							#self.writeStateFile()
 							overallProgressSubject.addToState(1)
-							self._configService.productOnClient_updateObjects([
-								ProductOnClient(
-									productId      = productId,
-									productType    = u'LocalbootProduct',
-									clientId       = config.get('global', 'host_id'),
-									actionProgress = u'cached'
-								)
-							])
 						
 						if self._overallProductSyncProgressObserver:
 							overallProgressSubject.detachObserver(self._overallProductSyncProgressObserver)
