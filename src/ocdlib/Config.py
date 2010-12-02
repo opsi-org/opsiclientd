@@ -330,12 +330,13 @@ class ConfigImplementation(object):
 		
 		depotIds = []
 		dynamicDepot = False
+		depotProtocol = 'cifs'
 		for configState in configService.configState_getObjects(
-					configId = ['clientconfig.depot.dynamic', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
+					configId = ['clientconfig.depot.dynamic', 'clientconfig.depot.protocol', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
 					objectId = self.get('global', 'host_id')):
 			if not configState.values or not configState.values[0]:
 				continue
-			if   (configState.configId == 'opsiclientd.depot_server.url'):
+			if   (configState.configId == 'opsiclientd.depot_server.url') and configState.values:
 				try:
 					depotUrl = forceUrl(configState.values[0])
 					self.set('depot_server', 'depot_id', u'')
@@ -344,16 +345,17 @@ class ConfigImplementation(object):
 					return
 				except Exception, e:
 					logger.error(u"Failed to set depot url from values %s in configState %s: %s" % (configState.values, configState, e))
-			elif (configState.configId == 'opsiclientd.depot_server.depot_id'):
+			elif (configState.configId == 'opsiclientd.depot_server.depot_id') and configState.values:
 				try:
 					depotId = forceHostId(configState.values[0])
 					depotIds.append(depotId)
 					logger.notice(u"Depot was set to '%s' from configState %s" % (depotId, configState))
 				except Exception, e:
 					logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, e))
-			elif (configState.configId == 'clientconfig.depot.dynamic'):
+			elif (configState.configId == 'clientconfig.depot.dynamic') and configState.values:
 				dynamicDepot = forceBool(configState.values[0])
-		
+			elif (configState.configId == 'clientconfig.depot.protocol') and configState.values and configState.values[0] and (configState.values[0] == 'webdav'):
+				depotProtocol = 'webdav'
 		if not depotIds:
 			clientToDepotservers = configService.configState_getClientToDepotserver(
 					clientIds  = [ self.get('global', 'host_id') ],
@@ -376,7 +378,10 @@ class ConfigImplementation(object):
 		
 		logger.notice(u"Selected depot is: %s" % selectedDepot)
 		self.set('depot_server', 'depot_id', selectedDepot.id)
-		self.set('depot_server', 'url', selectedDepot.depotRemoteUrl)
+		if (depotProtocol == 'webdav'):
+			self.set('depot_server', 'url', selectedDepot.depotWebdavUrl)
+		else:
+			self.set('depot_server', 'url', selectedDepot.depotRemoteUrl)
 	
 	def getDepotserverCredentials(self, configService):
 		if not configService:
