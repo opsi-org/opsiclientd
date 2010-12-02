@@ -49,14 +49,14 @@ def selectDepotserver(config, configService, productIds=[], cifsOnly=True):
 	depotProtocol = 'cifs'
 	for configState in configService.configState_getObjects(
 				configId = ['clientconfig.depot.dynamic', 'clientconfig.depot.protocol', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
-				objectId = self.get('global', 'host_id')):
+				objectId = config.get('global', 'host_id')):
 		if not configState.values or not configState.values[0]:
 			continue
 		if   (configState.configId == 'opsiclientd.depot_server.url') and configState.values:
 			try:
 				depotUrl = forceUrl(configState.values[0])
-				self.set('depot_server', 'depot_id', u'')
-				self.set('depot_server', 'url', depotUrl)
+				config.set('depot_server', 'depot_id', u'')
+				config.set('depot_server', 'url', depotUrl)
 				logger.notice(u"Depot url was set to '%s' from configState %s" % (depotUrl, configState))
 				return
 			except Exception, e:
@@ -171,9 +171,9 @@ def selectDepotserver(config, configService, productIds=[], cifsOnly=True):
 	logger.notice(u"Selected depot is: %s" % selectedDepot)
 	config.set('depot_server', 'depot_id', selectedDepot.id)
 	if (depotProtocol == 'webdav') and not cifsOnly:
-		self.set('depot_server', 'url', selectedDepot.depotWebdavUrl)
+		config.set('depot_server', 'url', selectedDepot.depotWebdavUrl)
 	else:
-		self.set('depot_server', 'url', selectedDepot.depotRemoteUrl)
+		config.set('depot_server', 'url', selectedDepot.depotRemoteUrl)
 
 
 
