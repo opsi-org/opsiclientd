@@ -29,7 +29,8 @@ from OPSI.Object import *
 from OPSI.Util.Repository import *
 from OPSI.Util import md5sum
 from OPSI import System
-
+from OPSI.Util.HTTP import urlsplit
+	
 from ocdlib.Config import Config
 from ocdlib.Events import *
 from ocdlib.Localization import _
@@ -260,9 +261,14 @@ class CacheService(threading.Thread):
 							])
 							
 							config.selectDepotserver(configService = self._configService, productIds = [ productId ], cifsOnly = False)
-							if not config.get('depot_server', 'url'):
+							depotUrl = config.get('depot_server', 'url'):
+							if not depotUrl:
 								raise Exception(u"Cannot sync files, depot_server.url undefined")
-							(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
+							(depotServerUsername, depotServerPassword) = (u'', u'')
+							if (urlsplit(depotUrl)[0] == 'webdav'):
+								(depotServerUsername, depotServerPassword) = (config.get('global', 'host_id'), config.get('global', 'opsi_host_key'))
+							else:
+								(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
 							repository = getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword)
 							
 							#self.writeStateFile()
