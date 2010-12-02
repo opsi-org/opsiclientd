@@ -329,10 +329,9 @@ class ConfigImplementation(object):
 		configService.backend_setOptions({"addConfigStateDefaults": True})
 		
 		depotIds = []
-		dynamicDepot = False
 		depotProtocol = 'cifs'
 		for configState in configService.configState_getObjects(
-					configId = ['clientconfig.depot.dynamic', 'clientconfig.depot.protocol', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
+					configId = ['clientconfig.depot.protocol', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
 					objectId = self.get('global', 'host_id')):
 			if not configState.values or not configState.values[0]:
 				continue
@@ -352,14 +351,12 @@ class ConfigImplementation(object):
 					logger.notice(u"Depot was set to '%s' from configState %s" % (depotId, configState))
 				except Exception, e:
 					logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, e))
-			elif (configState.configId == 'clientconfig.depot.dynamic') and configState.values:
-				dynamicDepot = forceBool(configState.values[0])
 			elif (configState.configId == 'clientconfig.depot.protocol') and configState.values and configState.values[0] and (configState.values[0] == 'webdav'):
 				depotProtocol = 'webdav'
 		if not depotIds:
 			clientToDepotservers = configService.configState_getClientToDepotserver(
 					clientIds  = [ self.get('global', 'host_id') ],
-					masterOnly = (not dynamicDepot),
+					masterOnly = True,
 					productIds = productIds)
 			if not clientToDepotservers:
 				raise Exception(u"Failed to get depot config from service")
@@ -373,7 +370,7 @@ class ConfigImplementation(object):
 		if not masterDepot:
 			raise Exception(u"Failed to get info for master depot '%s'" % depotIds[0])
 		
-		logger.info(u"Master depot for products %s is %s" % (productIds, masterDepot.id))
+		logger.info(u"Depot for products %s is %s" % (productIds, masterDepot.id))
 		selectedDepot = masterDepot
 		
 		logger.notice(u"Selected depot is: %s" % selectedDepot)
