@@ -72,9 +72,16 @@ def selectDepotserver(config, configService, productIds=[], cifsOnly=True):
 			dynamicDepot = forceBool(configState.values[0])
 		elif (configState.configId == 'clientconfig.depot.protocol') and configState.values and configState.values[0] and (configState.values[0] == 'webdav'):
 			depotProtocol = 'webdav'
-	if not depotIds:
-		if dynamicDepot:
+	
+	if dynamicDepot:
+		if not depotIds:
 			logger.info(u"Dynamic depot selection enabled")
+		else:
+			logger.info(u"Dynamic depot selection enabled, but depot is already selected")
+	else:
+		logger.info(u"Dynamic depot selection disabled")
+	
+	if not depotIds:
 		clientToDepotservers = configService.configState_getClientToDepotserver(
 				clientIds  = [ config.get('global', 'host_id') ],
 				masterOnly = (not dynamicDepot),
@@ -100,8 +107,9 @@ def selectDepotserver(config, configService, productIds=[], cifsOnly=True):
 	selectedDepot = masterDepot
 	if dynamicDepot:
 		if alternativeDepots:
-			for depot in alternativeDepots:
-				logger.info(u"Alternative depot for products %s is %s" % (productIds, depot.id))
+			logger.info(u"Got alternative depots for products: %s" % productIds)
+			for i in range(len(alternativeDepots)):
+				logger.info(u"%d. alternative depot is %s" % ((i+1), depot.id))
 			
 			try:
 				modules = configService.backend_info()['modules']
