@@ -261,7 +261,7 @@ class CacheService(threading.Thread):
 							])
 							
 							config.selectDepotserver(configService = self._configService, productIds = [ productId ], cifsOnly = False)
-							depotUrl = config.get('depot_server', 'url'):
+							depotUrl = config.get('depot_server', 'url')
 							if not depotUrl:
 								raise Exception(u"Cannot sync files, depot_server.url undefined")
 							(depotServerUsername, depotServerPassword) = (u'', u'')
