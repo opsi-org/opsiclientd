@@ -308,7 +308,7 @@ class ConfigImplementation(object):
 			logger.logException(e)
 			logger.error(u"Failed to write config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
 	
-	def selectDepotserver(self, configService, productIds=[]):
+	def selectDepotserver(self, configService, productIds=[], cifsOnly=True):
 		productIds = forceProductIdList(productIds)
 		
 		logger.notice(u"Selecting depot for products %s" % productIds)
@@ -320,7 +320,7 @@ class ConfigImplementation(object):
 		
 		try:
 			from ocdlibnonfree import selectDepotserver as selectDepotserverNonFree
-			return selectDepotserverNonFree(self, configService, productIds)
+			return selectDepotserverNonFree(self, configService, productIds, cifsOnly)
 		except:
 			pass
 		
@@ -378,7 +378,7 @@ class ConfigImplementation(object):
 		
 		logger.notice(u"Selected depot is: %s" % selectedDepot)
 		self.set('depot_server', 'depot_id', selectedDepot.id)
-		if (depotProtocol == 'webdav'):
+		if (depotProtocol == 'webdav') and not cifsOnly:
 			self.set('depot_server', 'url', selectedDepot.depotWebdavUrl)
 		else:
 			self.set('depot_server', 'url', selectedDepot.depotRemoteUrl)

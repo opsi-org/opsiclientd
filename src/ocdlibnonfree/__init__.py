@@ -30,7 +30,7 @@ from OPSI import System
 # Get logger instance
 logger = Logger()
 
-def selectDepotserver(config, configService, productIds=[]):
+def selectDepotserver(config, configService, productIds=[], cifsOnly=True):
 	productIds = forceProductIdList(productIds)
 	
 	logger.notice(u"Selecting depot for products %s" % productIds)
@@ -162,7 +162,7 @@ def selectDepotserver(config, configService, productIds=[]):
 			logger.info(u"No alternative depot for products: %s" % productIds)
 	logger.notice(u"Selected depot is: %s" % selectedDepot)
 	config.set('depot_server', 'depot_id', selectedDepot.id)
-	if (depotProtocol == 'webdav'):
+	if (depotProtocol == 'webdav') and not cifsOnly:
 		self.set('depot_server', 'url', selectedDepot.depotWebdavUrl)
 	else:
 		self.set('depot_server', 'url', selectedDepot.depotRemoteUrl)
