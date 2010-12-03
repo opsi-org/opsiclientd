@@ -162,7 +162,8 @@ def selectDepotserver(config, configService, productIds=[], cifsOnly=True):
 				logger.debug2(u"depotSelectionAlgorithm:\n%s" % depotSelectionAlgorithm)
 				exec(depotSelectionAlgorithm)
 				selectedDepot = selectDepot(clientConfig = clientConfig, masterDepot = masterDepot, alternativeDepots = alternativeDepots)
-				
+				if not selectedDepot:
+					selectedDepot = masterDepot
 			except Exception, e:
 				logger.logException(e)
 				logger.error(u"Failed to select depot: %s" % e)
