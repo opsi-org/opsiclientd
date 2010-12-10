@@ -289,6 +289,8 @@ class CacheService(threading.Thread):
 								if not os.path.exists(os.path.join(self._productCacheDir, productId)):
 									os.mkdir(os.path.join(self._productCacheDir, productId))
 								logger.debug(u"Moving package content file from '%s' to '%s'" % (tempPackageContentFile, packageContentFile))
+								if os.path.exists(packageContentFile):
+									os.unlink(packageContentFile)
 								os.rename(tempPackageContentFile, packageContentFile)
 								packageInfo = PackageContentFile(packageContentFile).parse()
 								productSize = 0

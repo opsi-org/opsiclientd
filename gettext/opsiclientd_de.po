@@ -146,7 +146,7 @@ msgstr "Neustart in %d Sekunden"
 
 #: ../src/ocdlib/Opsiclientd.py:2112
 msgid "Shutdown in %d seconds"
-msgstr "Heruntefahren in %d Sekunden"
+msgstr "Herunterfahren in %d Sekunden"
 
 #: ../src/ocdlib/Opsiclientd.py:2142
 msgid "Shutting down machine"
