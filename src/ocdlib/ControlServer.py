@@ -77,8 +77,6 @@ class WorkerOpsiclientd(WorkerOpsi):
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		WorkerOpsi.__init__(self, service, request, resource)
 	
-	self.opsiclientdRpcInterface = self.service
-	
 	def _getCredentials(self):
 		(user, password) = self._getAuthorization()
 		if not user:
