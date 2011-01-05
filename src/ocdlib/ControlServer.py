@@ -111,6 +111,9 @@ class WorkerOpsiclientdJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		self._callInstance = self.service
 		self._callInterface = self.service.getInterface()
 	
+	def _generateResponse(self, result):
+		return WorkerOpsiJsonRpc_generateResponse(self, result)
+		
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                       JSON INTERFACE WORKER                                       -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
