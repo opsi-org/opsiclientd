@@ -39,7 +39,7 @@ from ctypes import *
 from OPSI.Logger import *
 from OPSI.Types import *
 from OPSI.Util import fromJson, toJson
-from ocdlib.JsonRpc import JsonRpc
+from OPSI.Service.JsonRpc import JsonRpc
 
 # Get logger instance
 logger = Logger()
@@ -100,7 +100,7 @@ class ControlPipe(threading.Thread):
 	def executeRpc(self, rpc):
 		try:
 			rpc = fromJson(rpc)
-			rpc = JsonRpc(self._opsiclientdRpcInterface, rpc)
+			rpc = JsonRpc(instance = self._opsiclientdRpcInterface, interface = self._opsiclientdRpcInterface.getInterface(), rpc = rpc)
 			rpc.execute()
 			return toJson(rpc.getResponse())
 		except Exception, e:
