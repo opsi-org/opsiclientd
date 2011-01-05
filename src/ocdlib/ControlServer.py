@@ -39,13 +39,14 @@ import base64, urllib, codecs
 from twisted.internet import defer, threads, reactor
 from OPSI.web2 import resource, stream, server, http, responsecode, static, http_headers
 from OPSI.web2.channel.http import HTTPFactory
-from twisted.python.failure import Failure
 
 # OPSI imports
 from OPSI.Logger import *
 from OPSI.Types import *
 from OPSI.Util import *
 from OPSI import System
+from OPSI.Service import SSLContext, OpsiService
+from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface, WorkerOpsiDAV, interfacePage
 
 from ocdlib.Exceptions import *
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
@@ -341,9 +342,10 @@ class ControlServer(threading.Thread):
 		#self._root.putChild("rpc", CacheServiceResourceJsonRpc(self._opsiclientd))
 
 
-class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface):
+class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface, OpsiService):
 	def __init__(self, opsiclientd):
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
+		OpsiService.__init__(self)
 	
 	def _authenticate(self, username, password):
 		if (username.lower() == config.get('global', 'host_id').lower()) and (password == config.get('global', 'opsi_host_key')):
