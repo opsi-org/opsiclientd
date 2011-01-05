@@ -110,7 +110,8 @@ class WorkerOpsiclientdJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 	def _getCallInstance(self, result):
 		self._callInstance = self.service
 		self._callInterface = self.service.getInterface()
-	
+		logger.debug(u"Got call instance '%s' from service '%s' with interface: %s" % (self._callInstance, self.service, self._callInterface))
+		
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                       JSON INTERFACE WORKER                                       -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -342,8 +343,8 @@ class ControlServer(threading.Thread):
 				logger.error(u"Cannot add static content '/': directory '%s' does not exist." % self._staticDir)
 		if not self._root:
 			self._root = ResourceRoot()
-		self._root.putChild("opsiclientd",  ResourceOpsiclientdJsonRpc(self._opsiclientdRpcInterface))
-		self._root.putChild("ocdinterface", ResourceOpsiclientdJsonInterface(self._opsiclientdRpcInterface))
+		self._root.putChild("opsiclientd", ResourceOpsiclientdJsonRpc(self._opsiclientdRpcInterface))
+		self._root.putChild("interface",   ResourceOpsiclientdJsonInterface(self._opsiclientdRpcInterface))
 		#self._root.putChild("rpc", CacheServiceResourceJsonRpc(self._opsiclientd))
 
 
