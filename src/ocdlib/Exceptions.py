@@ -59,17 +59,6 @@ class CanceledByUserError(OpsiclientdError):
 	""" Exception raised if user cancels operation. """
 	ExceptionShortDescription = "Canceled by user error"
 
-class OpsiclientdAuthenticationError(Exception):
-	ExceptionShortDescription = u"Opsiclientd authentication error"
-
-class OpsiclientdBadRpcError(Exception):
-	ExceptionShortDescription = u"Opsiclientd bad rpc error"
-
-class OpsiclientdRpcError(Exception):
-	ExceptionShortDescription = u"Opsiclientd rpc error"
-
-
-
 
 
 
