@@ -294,6 +294,8 @@ class EventProcessingThread(KillableThread):
 						config.set('config_service', 'url', configState.values)
 					elif (configState.configId == u'clientconfig.depot.drive'):
 						config.set('depot_server', 'drive', configState.values[0])
+					elif (configState.configId == u'clientconfig.depot.id'):
+						config.set('depot_server', 'depot_id', configState.values[0])
 					elif configState.configId.startswith(u'opsiclientd.'):
 						try:
 							parts = configState.configId.lower().split('.')
@@ -494,10 +496,21 @@ class EventProcessingThread(KillableThread):
 							config.get('global', 'host_id'),
 							'installed')
 			else:
+				productVersion = None
+				packageVersion = None
+				for productOnDepot in self._configService.productOnDepot_getIdents(
+							productType = 'LocalbootProduct',
+							productId   = 'opsi-winst',
+							depotId     = config.get('depot_server', 'depot_id'),
+							returnType  = 'dict'):
+					productVersion = productOnDepot['productVersion']
+					packageVersion = productOnDepot['packageVersion']
 				self._configService.productOnClient_updateObjects([
 					ProductOnClient(
 						productId          = u'opsi-winst',
 						productType        = u'LocalbootProduct',
+						productVersion     = productVersion,
+						packageVersion     = packageVersion,
 						clientId           = config.get('global', 'host_id'),
 						installationStatus = u'installed',
 						actionResult       = u'successful'
