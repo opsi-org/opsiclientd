@@ -228,13 +228,13 @@ class ControlServerResourceJsonRpc(resource.Resource):
 		self._opsiclientdRpcInterface = opsiclientdRpcInterface
 		
 	def getChild(self, name, request):
-		''' Get the child resource for the requested path. '''
+		""" Get the child resource for the requested path. """
 		if not name:
 			return self
 		return resource.Resource.getChild(self, name, request)
 	
 	def renderHTTP(self, request):
-		''' Process request. '''
+		""" Process request. """
 		try:
 			logger.debug2(u"%s.renderHTTP()" % self.__class__.__name__)
 			if not self.WorkerClass:
@@ -267,19 +267,19 @@ class CacheServiceResourceJsonRpc(resource.Resource):
 		self._opsiclientd = opsiclientd
 		
 	def getChild(self, name, request):
-		''' Get the child resource for the requested path. '''
+		""" Get the child resource for the requested path. """
 		if not name:
 			return self
 		return resource.Resource.getChild(self, name, request)
 	
 	def http_POST(self, request):
-		''' Process POST request. '''
+		""" Process POST request. """
 		logger.info(u"CacheServiceResourceJsonRpc: processing POST request")
 		worker = CacheServiceJsonRpcWorker(request, self._opsiclientd, method = 'POST')
 		return worker.process()
 		
 	def http_GET(self, request):
-		''' Process GET request. '''
+		""" Process GET request. """
 		logger.info(u"CacheServiceResourceJsonRpc: processing GET request")
 		worker = CacheServiceJsonRpcWorker(request, self._opsiclientd, method = 'GET')
 		return worker.process()
