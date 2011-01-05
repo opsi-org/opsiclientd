@@ -110,10 +110,13 @@ class WorkerOpsiclientdJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 	def _getCallInstance(self, result):
 		self._callInstance = self.service
 		self._callInterface = self.service.getInterface()
-		logger.debug(u"Got call instance '%s' from service '%s' with interface: %s" % (self._callInstance, self.service, self._callInterface))
+		#logger.debug2(u"Got call instance '%s' from service '%s' with interface: %s" % (self._callInstance, self.service, self._callInterface))
 	
 	def _processQuery(self, result):
 		return WorkerOpsiJsonRpc._processQuery(self, result)
+	
+	def _generateResponse(self, result):
+		return WorkerOpsiJsonRpc._generateResponse(self, result)
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                       JSON INTERFACE WORKER                                       -
@@ -123,54 +126,13 @@ class WorkerOpsiclientdJsonInterface(WorkerOpsiclientdJsonRpc, WorkerOpsiJsonInt
 		WorkerOpsiclientdJsonRpc.__init__(self, service, request, resource)
 		WorkerOpsiJsonInterface.__init__(self, service, request, resource)
 	
+	def _getCallInstance(self, result):
+		return WorkerOpsiclientdJsonRpc._getCallInstance(self, result)
+	
 	def _generateResponse(self, result):
 		return WorkerOpsiJsonInterface._generateResponse(self, result)
 	
-	def _getCallInstance(self, result):
-		logger.debug(u"Getting call instance")
-		return WorkerOpsiclientdJsonRpc._getCallInstance(self, result)
-		
-	#def _setResponse(self, result):
-	#	logger.info(u"Creating opsiclientd interface page")
-	#	
-	#	javascript  = u"var currentParams = new Array();\n"
-	#	javascript += u"var currentMethod = null;\n"
-	#	currentMethod = u''
-	#	if self._rpcs:
-	#		currentMethod = self._rpcs[0].getMethodName()
-	#		javascript += u"currentMethod = '%s';\n" % currentMethod
-	#		for i in range(len(self._rpcs[0].params)):
-	#			param = self._rpcs[0].params[i]
-	#			javascript += u"currentParams[%d] = '%s';\n" % (i, toJson(param))
-	#	
-	#	selectMethod = u''
-	#	for method in self.opsiclientdRpcInterface.getInterface():
-	#		javascript += u"parameters['%s'] = new Array();\n" % (method['name'])
-	#		for param in range(len(method['params'])):
-	#			javascript += u"parameters['%s'][%s]='%s';\n" % (method['name'], param, method['params'][param])
-	#		selected = u''
-	#		if (method['name'] == currentMethod):
-	#			selected = u' selected'
-	#		selectMethod += '<option%s>%s</option>' % (selected, method['name'])
-	#	
-	#	resultDiv = u'<div id="result">'
-	#	for rpc in self._rpcs:
-	#		resultDiv += '<div class="json">'
-	#		resultDiv += objectToHtml(rpc.getResponse())
-	#		resultDiv += u'</div>'
-	#	resultDiv += u'</div>'
-	#	
-	#	html = interfacePage
-	#	html = html.replace('%javascript%', javascript)
-	#	html = html.replace('%select_method%', selectMethod)
-	#	html = html.replace('%result%', resultDiv)
-	#	
-	#	if not isinstance(result, http.Response):
-	#		result = http.Response()
-	#	result.code = responsecode.OK
-	#	result.stream = stream.IByteStream(html.encode('utf-8'))
-	#	return result
-
+	
 '''
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                               CACHED CONFIG SERVICE JSON RPC WORKER                               -
