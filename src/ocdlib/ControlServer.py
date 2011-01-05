@@ -111,7 +111,10 @@ class WorkerOpsiclientdJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		self._callInstance = self.service
 		self._callInterface = self.service.getInterface()
 		logger.debug(u"Got call instance '%s' from service '%s' with interface: %s" % (self._callInstance, self.service, self._callInterface))
-		
+	
+	def _processQuery(self, result):
+		return WorkerOpsiJsonRpc._processQuery(self, result)
+	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                       JSON INTERFACE WORKER                                       -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
