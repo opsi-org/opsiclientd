@@ -47,6 +47,7 @@ from OPSI.Util import *
 from OPSI import System
 from OPSI.Service import SSLContext, OpsiService
 from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface, WorkerOpsiDAV, interfacePage
+from OPSI.Service.Resource import ResourceOpsi, ResourceOpsiJsonRpc, ResourceOpsiJsonInterface
 
 from ocdlib.Exceptions import *
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
