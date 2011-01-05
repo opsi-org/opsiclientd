@@ -124,6 +124,7 @@ class WorkerOpsiclientdJsonInterface(WorkerOpsiclientdJsonRpc, WorkerOpsiJsonInt
 		return WorkerOpsiJsonInterface._generateResponse(self, result)
 	
 	def _getCallInstance(self, result):
+		logger.debug(u"Getting call instance")
 		return WorkerOpsiclientdJsonRpc._getCallInstance(self, result)
 		
 	#def _setResponse(self, result):
