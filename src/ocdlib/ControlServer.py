@@ -121,6 +121,9 @@ class WorkerOpsiclientdJsonInterface(WorkerOpsiclientdJsonRpc, WorkerOpsiJsonInt
 	
 	def _generateResponse(self, result):
 		return WorkerOpsiJsonInterface._generateResponse(self, result)
+	
+	def _getCallInstance(self, result):
+		return WorkerOpsiclientdJsonRpc._getCallInstance(self, result)
 		
 	#def _setResponse(self, result):
 	#	logger.info(u"Creating opsiclientd interface page")
