@@ -108,8 +108,8 @@ class WorkerOpsiclientdJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 	
 	def _getCallInstance(self, result):
-		self._callInstance = self.service
-		self._callInterface = self.service.getInterface()
+		self._callInstance = self.service._opsiclientdRpcInterface
+		self._callInterface = self.service._opsiclientdRpcInterface.getInterface()
 		#logger.debug2(u"Got call instance '%s' from service '%s' with interface: %s" % (self._callInstance, self.service, self._callInterface))
 	
 	def _processQuery(self, result):
@@ -149,6 +149,7 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 			depotBackend         = False,
 			hostControlBackend   = False
 		)
+		self.service._opsiclientd.getCacheService().getConfigBackend()
 		logger.notice(u'Backend created: %s' % self.session.callInstance)
 		self.session.callInterface = self.session.callInstance.backend_getInterface()
 		return result
@@ -186,8 +187,9 @@ class ResourceCacheServiceJsonRpc(ResourceOpsiJsonRpc):
 
 
 
-class ControlServer(threading.Thread):
+class ControlServer(OpsiService, threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
+		OpsiService.__init__(self)
 		moduleName = u' %-30s' % (u'control server')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		threading.Thread.__init__(self)
@@ -199,7 +201,7 @@ class ControlServer(threading.Thread):
 		self._root = None
 		self._running = False
 		self._server = None
-		self._opsiclientdRpcInterface = OpsiclientdRpcServerInterface(self._opsiclientd)
+		self._opsiclientdRpcInterface = OpsiclientdRpcInterface(self._opsiclientd)
 		logger.info(u"ControlServer initiated")
 		
 	def run(self):
@@ -234,16 +236,14 @@ class ControlServer(threading.Thread):
 				logger.error(u"Cannot add static content '/': directory '%s' does not exist." % self._staticDir)
 		if not self._root:
 			self._root = ResourceRoot()
-		self._root.putChild("opsiclientd", ResourceOpsiclientdJsonRpc(self._opsiclientdRpcInterface))
-		self._root.putChild("interface",   ResourceOpsiclientdJsonInterface(self._opsiclientdRpcInterface))
-		self._root.putChild("rpc", ResourceCacheServiceJsonRpc(self._opsiclientd.getCacheService().getConfigBackend()))
-		
+		self._root.putChild("opsiclientd", ResourceOpsiclientdJsonRpc(self))
+		self._root.putChild("interface",   ResourceOpsiclientdJsonInterface(self))
+		self._root.putChild("rpc", ResourceCacheServiceJsonRpc(self))
 
-class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface, OpsiService):
+class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def __init__(self, opsiclientd):
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
-		OpsiService.__init__(self)
-	
+		
 	def _authenticate(self, username, password):
 		if (username.lower() == config.get('global', 'host_id').lower()) and (password == config.get('global', 'opsi_host_key')):
 			return True
