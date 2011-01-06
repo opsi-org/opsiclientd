@@ -182,7 +182,8 @@ class WorkerCacheServiceJsonInterface(WorkerCacheServiceJsonRpc, WorkerOpsiJsonI
 	def __init__(self, service, request, resource):
 		WorkerCacheServiceJsonRpc.__init__(self, service, request, resource)
 		WorkerOpsiJsonInterface.__init__(self, service, request, resource)
-	
+		self.path = u'rpcinterface'
+		
 	def _getCallInstance(self, result):
 		return WorkerCacheServiceJsonRpc._getCallInstance(self, result)
 	
