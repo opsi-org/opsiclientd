@@ -128,6 +128,27 @@ class CacheService(threading.Thread):
 				productSyncCompleted = False
 				logger.debug(u"Product '%s': sync not completed" % productId)
 		return productSyncCompleted
+	
+	
+	def cacheConfig(self, configService=None):
+		if not configService:
+			serviceConnectionThread = ServiceConnectionThread(
+				configServiceUrl = config.get('config_service', 'url')[0],
+				username         = config.get('global', 'host_id'),
+				password         = config.get('global', 'opsi_host_key') )
+			serviceConnectionThread.start()
+			timeout = 30
+			while serviceConnectionThread.running and (timeout > 0):
+				time.sleep(1)
+				timeout -= 1
+			if serviceConnectionThread.running:
+				serviceConnectionThread.stop()
+				raise Exception(u"Failed to connect to config service '%s': timed out" % url)
+			if not serviceConnectionThread.connected:
+				raise Exception(u"Failed to connect to config service '%s': reason unknown" % url)
+			configService = serviceConnectionThread.configService
+		self._cacheBackend._setServiceBackend(configService)
+		self._cacheBackend._replicateServiceToWorkBackend()
 		
 	def cacheProducts(self, configService, productIds, waitForEnding=False):
 		if self._cacheProductsRunning:

@@ -216,7 +216,7 @@ class EventProcessingThread(KillableThread):
 				raise Exception(u"Failed to connect to config service '%s': timed out after %d seconds" % \
 							(url, config.get('config_service', 'connection_timeout')) )
 			if not serviceConnectionThread.connected:
-				raise Exception(u"Failed to connect to config service '%s': reason unknown" % config.get('config_service', 'url'))
+				raise Exception(u"Failed to connect to config service '%s': reason unknown" % url)
 			
 			self._configService = serviceConnectionThread.configService
 			self._configServiceUrl = url
@@ -820,8 +820,8 @@ class EventProcessingThread(KillableThread):
 					try:
 						if self.event.eventConfig.eventNotifierCommand:
 							self.startNotifierApplication(
-									command      = self.event.eventConfig.eventNotifierCommand,
-									desktop      = self.event.eventConfig.eventNotifierDesktop )
+									command = self.event.eventConfig.eventNotifierCommand,
+									desktop = self.event.eventConfig.eventNotifierDesktop )
 							
 						timeout = int(self.event.eventConfig.warningTime)
 						endTime = time.time() + timeout
