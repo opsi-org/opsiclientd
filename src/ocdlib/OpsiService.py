@@ -60,6 +60,7 @@ class ServiceConnectionThread(KillableThread):
 		self.running = False
 		self.connected = False
 		self.cancelled = False
+		self.connectionError = None
 		if not self._configServiceUrl:
 			raise Exception(u"No config service url given")
 	
@@ -93,9 +94,11 @@ class ServiceConnectionThread(KillableThread):
 						self.configService.accessControl_authenticated()
 						self.configService.setDeflate(True)
 					self.connected = True
+					self.connectionError = None
 					self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
 					logger.notice(u"Connected to config server '%s'" % self._configServiceUrl)
 				except Exception, e:
+					self.connectionError = forceUnicode(e)
 					self.setStatusMessage(_(u"Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(e)))
 					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
 					fqdn = System.getFQDN().lower()

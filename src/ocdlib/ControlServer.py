@@ -132,7 +132,8 @@ class WorkerOpsiclientdJsonInterface(WorkerOpsiclientdJsonRpc, WorkerOpsiJsonInt
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientdJsonRpc.__init__(self, service, request, resource)
 		WorkerOpsiJsonInterface.__init__(self, service, request, resource)
-	
+		self.path = u'interface'
+		
 	def _getCallInstance(self, result):
 		return WorkerOpsiclientdJsonRpc._getCallInstance(self, result)
 	

@@ -216,7 +216,7 @@ class EventProcessingThread(KillableThread):
 				raise Exception(u"Failed to connect to config service '%s': timed out after %d seconds" % \
 							(url, config.get('config_service', 'connection_timeout')) )
 			if not serviceConnectionThread.connected:
-				raise Exception(u"Failed to connect to config service '%s': reason unknown" % url)
+				raise Exception(u"Failed to connect to config service '%s': %s" % (url, serviceConnectionThread.connectionError))
 			
 			self._configService = serviceConnectionThread.configService
 			self._configServiceUrl = url

@@ -149,7 +149,7 @@ class CacheService(threading.Thread):
 				serviceConnectionThread.stop()
 				raise Exception(u"Failed to connect to config service '%s': timed out" % url)
 			if not serviceConnectionThread.connected:
-				raise Exception(u"Failed to connect to config service '%s': reason unknown" % url)
+				raise Exception(u"Failed to connect to config service '%s': %s" % (url, serviceConnectionThread.connectionError))
 			configService = serviceConnectionThread.configService
 		self._cacheBackend._setMasterBackend(configService)
 		self._cacheBackend._replicateMasterToWorkBackend()
