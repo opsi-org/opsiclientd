@@ -30,7 +30,8 @@ from OPSI.Util.Repository import *
 from OPSI.Util import md5sum
 from OPSI import System
 from OPSI.Util.HTTP import urlsplit
-	
+from OPSI.Backend.Cache import CacheBackend
+
 from ocdlib.Config import Config
 from ocdlib.Events import *
 from ocdlib.Localization import _
