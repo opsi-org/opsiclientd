@@ -48,14 +48,14 @@ logger = Logger()
 # -                                     SERVICE CONNECTION THREAD                                     -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ServiceConnectionThread(KillableThread):
-	def __init__(self, configServiceUrl, username, password, statusObject):
+	def __init__(self, configServiceUrl, username, password, statusSubject = None):
 		moduleName = u' %-30s' % (u'service connection')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username
 		self._password = password
-		self._statusSubject = statusObject
+		self._statusSubject = statusSubject
 		self.configService = None
 		self.running = False
 		self.connected = False
@@ -64,8 +64,10 @@ class ServiceConnectionThread(KillableThread):
 			raise Exception(u"No config service url given")
 	
 	def setStatusMessage(self, message):
+		if not self._statusSubject:
+			return
 		self._statusSubject.setMessage(message)
-	
+		
 	def getUsername(self):
 		return self._username
 	
