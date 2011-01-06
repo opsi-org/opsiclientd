@@ -142,6 +142,11 @@ class CacheService(threading.Thread):
 				username         = config.get('global', 'host_id'),
 				password         = config.get('global', 'opsi_host_key') )
 			serviceConnectionThread.start()
+			for i in range(5):
+				if serviceConnectionThread.running:
+					break
+				time.sleep(1)
+			logger.debug(u"ServiceConnectionThread started")
 			timeout = 30
 			while serviceConnectionThread.running and (timeout > 0):
 				time.sleep(1)
