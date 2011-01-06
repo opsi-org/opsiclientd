@@ -118,9 +118,6 @@ class WorkerOpsiclientdJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 	def _generateResponse(self, result):
 		return WorkerOpsiJsonRpc._generateResponse(self, result)
 	
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                       JSON INTERFACE WORKER                                       -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class WorkerOpsiclientdJsonInterface(WorkerOpsiclientdJsonRpc, WorkerOpsiJsonInterface):
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientdJsonRpc.__init__(self, service, request, resource)
@@ -132,41 +129,42 @@ class WorkerOpsiclientdJsonInterface(WorkerOpsiclientdJsonRpc, WorkerOpsiJsonInt
 	def _generateResponse(self, result):
 		return WorkerOpsiJsonInterface._generateResponse(self, result)
 	
+
+class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
+	def __init__(self, service, request, resource):
+		WorkerOpsiclientd.__init__(self, service, request, resource)
+		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 	
-'''
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                               CACHED CONFIG SERVICE JSON RPC WORKER                               -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class CacheServiceJsonRpcWorker(Worker):
-	def __init__(self, request, opsiclientd, resource):
-		Worker.__init__(self, request, opsiclientd, resource)
-		moduleName = u' %-30s' % (u'cached cfg server')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+	def _getBackend(self, result):
+		if self.session.callInstance and self.session.callInterface:
+			return result
+		self.session.callInstance = BackendManager(
+			backend              = self.service,
+			extend               = True,
+			dispatchConfigFile   = None,
+			backendConfigDir     = None,
+			extensionConfigDir   = None,
+			aclFile              = None,
+			accessControlContext = None,
+			depotBackend         = False,
+			hostControlBackend   = False
+		)
+		logger.notice(u'Backend created: %s' % self.session.callInstance)
+		self.session.callInterface = self.session.callInstance.backend_getInterface()
+		return result
 	
-	def _realRpc(self):
-		method = self.rpc.get('method')
-		params = self.rpc.get('params')
-		logger.info(u"RPC method: '%s' params: '%s'" % (method, params))
+	def _getCallInstance(self, result):
+		self._getBackend(result)
+		self._callInstance = self.session.callInstance
+		self._callInterface = self.session.callInterface
+	
+	def _processQuery(self, result):
+		return WorkerOpsiJsonRpc._processQuery(self, result)
 		
-		try:
-			# Execute method
-			start = time.time()
-			self.result['result'] = self._opsiclientd._cacheService.processRpc(method, params)
-		except Exception, e:
-			logger.logException(e)
-			self.result['error'] = { 'class': e.__class__.__name__, 'message': unicode(e) }
-			self.result['result'] = None
-			return
-		
-		logger.debug(u'Got result...')
-		duration = round(time.time() - start, 3)
-		logger.debug(u'Took %0.3fs to process %s(%s)' % (duration, method, unicode(params)[1:-1]))
-'''
+	def _generateResponse(self, result):
+		return WorkerOpsiJsonRpc._generateResponse(self, result)
 
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                    CONTROL SERVER RESOURCE ROOT                                   -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ResourceRoot(resource.Resource):
 	addSlash = True
 	def render(self, request):
@@ -183,84 +181,11 @@ class ResourceOpsiclientdJsonRpc(ResourceOpsiJsonRpc):
 class ResourceOpsiclientdJsonInterface(ResourceOpsiJsonInterface):
 	WorkerClass = WorkerOpsiclientdJsonInterface
 
-#class ResourceControlServerJsonRpc(ResourceOpsiJsonRpc):
-#	WorkerClass = WorkerOpsiconfdJsonRpc
-
-'''
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                 CONTROL SERVER RESOURCE JSON RPC                                  -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class ControlServerResourceJsonRpc(resource.Resource):
-	WorkerClass = ControlServerJsonRpcWorker
-	
-	def __init__(self, opsiclientdRpcInterface):
-		moduleName = u' %-30s' % (u'control server')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
-		resource.Resource.__init__(self)
-		self._opsiclientdRpcInterface = opsiclientdRpcInterface
-		
-	def getChild(self, name, request):
-		""" Get the child resource for the requested path. """
-		if not name:
-			return self
-		return resource.Resource.getChild(self, name, request)
-	
-	def renderHTTP(self, request):
-		""" Process request. """
-		try:
-			logger.debug2(u"%s.renderHTTP()" % self.__class__.__name__)
-			if not self.WorkerClass:
-				raise Exception(u"No worker class defined in resource %s" % self.__class__.__name__)
-			worker = self.WorkerClass(self._opsiclientdRpcInterface, request, self)
-			return worker.process()
-		except Exception, e:
-			logger.logException(e)
-	
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                 CONTROL SERVER RESOURCE INTERFACE                                 -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class ControlServerResourceInterface(ControlServerResourceJsonRpc):
-	WorkerClass = ControlServerJsonInterfaceWorker
-	
-	def __init__(self, opsiclientdRpcInterface):
-		moduleName = u' %-30s' % (u'control server')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
-		ControlServerResourceJsonRpc.__init__(self, opsiclientdRpcInterface)
+class ResourceCacheServiceJsonRpc(ResourceOpsiJsonRpc):
+	WorkerClass = WorkerCacheServiceJsonRpc
 
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                              CACHED CONFIG SERVICE RESOURCE JSON RPC                              -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class CacheServiceResourceJsonRpc(resource.Resource):
-	def __init__(self, opsiclientd):
-		moduleName = u' %-30s' % (u'cached cfg server')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
-		resource.Resource.__init__(self)
-		self._opsiclientd = opsiclientd
-		
-	def getChild(self, name, request):
-		""" Get the child resource for the requested path. """
-		if not name:
-			return self
-		return resource.Resource.getChild(self, name, request)
-	
-	def http_POST(self, request):
-		""" Process POST request. """
-		logger.info(u"CacheServiceResourceJsonRpc: processing POST request")
-		worker = CacheServiceJsonRpcWorker(request, self._opsiclientd, method = 'POST')
-		return worker.process()
-		
-	def http_GET(self, request):
-		""" Process GET request. """
-		logger.info(u"CacheServiceResourceJsonRpc: processing GET request")
-		worker = CacheServiceJsonRpcWorker(request, self._opsiclientd, method = 'GET')
-		return worker.process()
-'''
 
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                           CONTROL SERVER                                          -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlServer(threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
 		moduleName = u' %-30s' % (u'control server')
@@ -311,8 +236,8 @@ class ControlServer(threading.Thread):
 			self._root = ResourceRoot()
 		self._root.putChild("opsiclientd", ResourceOpsiclientdJsonRpc(self._opsiclientdRpcInterface))
 		self._root.putChild("interface",   ResourceOpsiclientdJsonInterface(self._opsiclientdRpcInterface))
-		#self._root.putChild("rpc", CacheServiceResourceJsonRpc(self._opsiclientd))
-
+		self._root.putChild("rpc", ResourceCacheServiceJsonRpc(self._opsiclientd.getCacheService().getConfigBackend()))
+		
 
 class OpsiclientdRpcServerInterface(OpsiclientdRpcPipeInterface, OpsiService):
 	def __init__(self, opsiclientd):
