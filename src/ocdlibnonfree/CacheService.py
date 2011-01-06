@@ -101,7 +101,7 @@ class CacheService(threading.Thread):
 		
 		self._cacheBackend = CacheBackend(
 			workBackend = workBackend,
-			depotId     = config.get('depot_server', 'id'),
+			depotId     = config.get('depot_server', 'depot_id'),
 			clientId    = config.get('global', 'host_id')
 		)
 	
