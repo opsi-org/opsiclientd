@@ -100,9 +100,10 @@ class CacheService(threading.Thread):
 		workBackend.backend_createBase()
 		
 		self._cacheBackend = CacheBackend(
-			workBackend = workBackend,
-			depotId     = config.get('depot_server', 'depot_id'),
-			clientId    = config.get('global', 'host_id')
+			workBackend     = workBackend,
+			depotId         = config.get('depot_server', 'depot_id'),
+			clientId        = config.get('global', 'host_id'),
+			opsiModulesFile = os.path.join(self._configCacheDir, 'modules')
 		)
 	
 	def getConfigBackend(self):
