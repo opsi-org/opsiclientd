@@ -149,8 +149,8 @@ class CacheService(threading.Thread):
 			if not serviceConnectionThread.connected:
 				raise Exception(u"Failed to connect to config service '%s': reason unknown" % url)
 			configService = serviceConnectionThread.configService
-		self._cacheBackend._setServiceBackend(configService)
-		self._cacheBackend._replicateServiceToWorkBackend()
+		self._cacheBackend._setMasterBackend(configService)
+		self._cacheBackend._replicateMasterToWorkBackend()
 		
 	def cacheProducts(self, configService, productIds, waitForEnding=False):
 		if self._cacheProductsRunning:
