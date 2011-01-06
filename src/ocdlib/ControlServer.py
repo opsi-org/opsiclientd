@@ -137,7 +137,6 @@ class WorkerOpsiclientdJsonInterface(WorkerOpsiclientdJsonRpc, WorkerOpsiJsonInt
 	
 	def _generateResponse(self, result):
 		return WorkerOpsiJsonInterface._generateResponse(self, result)
-	
 
 class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 	def __init__(self, service, request, resource):
@@ -173,7 +172,9 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		
 	def _generateResponse(self, result):
 		return WorkerOpsiJsonRpc._generateResponse(self, result)
-
+	
+	def _renderError(self, failure):
+		return WorkerOpsiJsonRpc._renderError(self, result)
 
 class ResourceRoot(resource.Resource):
 	addSlash = True
