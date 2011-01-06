@@ -189,7 +189,10 @@ class EventProcessingThread(KillableThread):
 			timeout = forceInt(config.get('config_service', 'connection_timeout'))
 			logger.info(u"Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
 			serviceConnectionThread.start()
-			time.sleep(1)
+			for i in range(5):
+				if serviceConnectionThread.running:
+					break
+				time.sleep(1)
 			logger.debug(u"ServiceConnectionThread started")
 			
 			while serviceConnectionThread.running and (timeout > 0):
