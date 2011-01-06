@@ -146,10 +146,10 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 	
 	def _getBackend(self, result):
-		#if hasattr(self.session, 'callInstance') and hasattr(self.session, 'callInterface') and self.session.callInstance and self.session.callInterface:
-		#	return result
+		if hasattr(self.session, 'callInstance') and hasattr(self.session, 'callInterface') and self.session.callInstance and self.session.callInterface:
+			return result
 		self.session.callInstance = BackendManager(
-			backend              = self.service,
+			backend              = self.service._opsiclientd.getCacheService().getConfigBackend(),
 			extend               = True,
 			dispatchConfigFile   = None,
 			backendConfigDir     = None,
@@ -159,7 +159,6 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 			depotBackend         = False,
 			hostControlBackend   = False
 		)
-		self.service._opsiclientd.getCacheService().getConfigBackend()
 		logger.notice(u'Backend created: %s' % self.session.callInstance)
 		self.session.callInterface = self.session.callInstance.backend_getInterface()
 		return result
