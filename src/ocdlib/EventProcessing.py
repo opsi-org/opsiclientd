@@ -174,10 +174,10 @@ class EventProcessingThread(KillableThread):
 			
 			logger.debug(u"Creating ServiceConnectionThread")
 			serviceConnectionThread = ServiceConnectionThread(
-						configServiceUrl    = url,
-						username            = config.get('global', 'host_id'),
-						password            = config.get('global', 'opsi_host_key'),
-						statusObject        = self._statusSubject )
+						configServiceUrl = url,
+						username         = config.get('global', 'host_id'),
+						password         = config.get('global', 'opsi_host_key'),
+						statusSubject    = self._statusSubject )
 			
 			choiceSubject.setCallbacks( [ serviceConnectionThread.stopConnectionCallback ] )
 			
