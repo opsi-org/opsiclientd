@@ -177,6 +177,20 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 	def _renderError(self, failure):
 		return WorkerOpsiJsonRpc._renderError(self, result)
 
+
+class WorkerCacheServiceJsonInterface(WorkerCacheServiceJsonRpc, WorkerOpsiJsonInterface):
+	def __init__(self, service, request, resource):
+		WorkerCacheServiceJsonRpc.__init__(self, service, request, resource)
+		WorkerOpsiJsonInterface.__init__(self, service, request, resource)
+	
+	def _getCallInstance(self, result):
+		return WorkerCacheServiceJsonRpc._getCallInstance(self, result)
+	
+	def _generateResponse(self, result):
+		return WorkerOpsiJsonInterface._generateResponse(self, result)
+
+
+
 class ResourceRoot(resource.Resource):
 	addSlash = True
 	def render(self, request):
@@ -196,7 +210,8 @@ class ResourceOpsiclientdJsonInterface(ResourceOpsiJsonInterface):
 class ResourceCacheServiceJsonRpc(ResourceOpsiJsonRpc):
 	WorkerClass = WorkerCacheServiceJsonRpc
 
-
+class ResourceCacheServiceJsonInterface(ResourceOpsiJsonInterface):
+	WorkerClass = WorkerCacheServiceJsonInterface
 
 class ControlServer(OpsiService, threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
@@ -250,6 +265,7 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root.putChild("opsiclientd", ResourceOpsiclientdJsonRpc(self))
 		self._root.putChild("interface",   ResourceOpsiclientdJsonInterface(self))
 		self._root.putChild("rpc", ResourceCacheServiceJsonRpc(self))
+		self._root.putChild("rpcinterface", ResourceCacheServiceJsonInterface(self))
 
 class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def __init__(self, opsiclientd):
