@@ -134,8 +134,9 @@ class CacheService(threading.Thread):
 	def cacheConfig(self, configService=None):
 		self.initialize()
 		if not configService:
+			url = config.get('config_service', 'url')[0]
 			serviceConnectionThread = ServiceConnectionThread(
-				configServiceUrl = config.get('config_service', 'url')[0],
+				configServiceUrl = url,
 				username         = config.get('global', 'host_id'),
 				password         = config.get('global', 'opsi_host_key') )
 			serviceConnectionThread.start()
