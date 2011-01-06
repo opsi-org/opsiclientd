@@ -52,6 +52,7 @@ class CacheService(threading.Thread):
 		self._tempDir = os.path.join(self._storageDir, 'tmp')
 		self._productCacheDir = os.path.join(self._storageDir, 'depot')
 		self._productCacheMaxSize = forceInt(config.get('cache_service', 'product_cache_max_size'))
+		self._configCacheDir = os.path.join(self._storageDir, 'config')
 		
 		self._stopped = False
 		self._running = False
@@ -71,7 +72,9 @@ class CacheService(threading.Thread):
 		self._currentProductSyncProgressObserver = None
 		self._overallProductSyncProgressObserver = None
 		self._initialized = False
-	
+		
+		self._cacheBackend = None
+		
 	def initialize(self):
 		if self._initialized:
 			return
@@ -86,6 +89,21 @@ class CacheService(threading.Thread):
 		if not os.path.exists(self._productCacheDir):
 			logger.notice(u"Creating cache service product cache dir '%s'" % self._productCacheDir)
 			os.makedirs(self._productCacheDir)
+		if not os.path.exists(self._configCacheDir):
+			logger.notice(u"Creating cache service config cache dir '%s'" % self._configCacheDir)
+			os.makedirs(self._configCacheDir)
+		
+		workBackend = SQLiteBackend(database = os.path.join(self._configCacheDir, 'work.sqlite'))
+		workBackend.backend_createBase()
+		
+		self._cacheBackend = CacheBackend(
+			workBackend = workBackend,
+			depotId     = config.get('depot_server', 'id'),
+			clientId    = config.get('global', 'host_id')
+		)
+	
+	def getConfigBackend(self):
+		return self._cacheBackend
 	
 	def setCurrentProductSyncProgressObserver(self, currentProductSyncProgressObserver):
 		self._currentProductSyncProgressObserver = currentProductSyncProgressObserver

@@ -326,6 +326,9 @@ class Opsiclientd(EventListener, threading.Thread):
 	def stop(self):
 		self._stopped = True
 	
+	def getCacheService(self):
+		return self._cacheService
+	
 	def processEvent(self, event):
 		
 		logger.notice(u"Processing event %s" % event)
