@@ -131,6 +131,7 @@ class CacheService(threading.Thread):
 		return productSyncCompleted
 	
 	def cacheConfig(self, configService=None):
+		self.initialize()
 		if not configService:
 			serviceConnectionThread = ServiceConnectionThread(
 				configServiceUrl = config.get('config_service', 'url')[0],
