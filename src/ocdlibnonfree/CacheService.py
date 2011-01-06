@@ -97,6 +97,8 @@ class CacheService(threading.Thread):
 			os.makedirs(self._configCacheDir)
 		
 		workBackend = SQLiteBackend(database = os.path.join(self._configCacheDir, 'work.sqlite'))
+		# @TODO:
+		workBackend._sql.execute('PRAGMA synchronous=OFF')
 		workBackend.backend_createBase()
 		
 		self._cacheBackend = CacheBackend(
