@@ -24,8 +24,6 @@ from OPSI.Types import *
 from OPSI.Object import *
 from OPSI.Backend.Backend import *
 from OPSI.Backend.Replicator import BackendReplicator
-from OPSI.Backend.SQLite import SQLiteBackend
-from OPSI.Backend.JSONRPC import JSONRPCBackend
 
 logger = Logger()
 
