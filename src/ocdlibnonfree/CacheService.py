@@ -35,6 +35,7 @@ from OPSI.Backend.Cache import CacheBackend
 from ocdlib.Config import Config
 from ocdlib.Events import *
 from ocdlib.Localization import _
+from ocdlib.OpsiService import ServiceConnectionThread
 
 logger = Logger()
 config = Config()
@@ -128,7 +129,6 @@ class CacheService(threading.Thread):
 				productSyncCompleted = False
 				logger.debug(u"Product '%s': sync not completed" % productId)
 		return productSyncCompleted
-	
 	
 	def cacheConfig(self, configService=None):
 		if not configService:
