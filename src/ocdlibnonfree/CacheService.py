@@ -101,7 +101,7 @@ class CacheService(threading.Thread):
 		workBackend._sql.execute('PRAGMA synchronous=OFF')
 		workBackend.backend_createBase()
 		
-		self._cacheBackend = CacheBackend(
+		self._cacheBackend = ClientCacheBackend(
 			workBackend     = workBackend,
 			depotId         = config.get('depot_server', 'depot_id'),
 			clientId        = config.get('global', 'host_id'),
