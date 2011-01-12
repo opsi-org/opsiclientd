@@ -328,10 +328,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self.setStatusMessage(_(u"Mounting depot share %s") % config.get('depot_server', 'url'))
 		
 		if impersonation:
-			System.mount(config.get('depot_server', 'url'), config.get('depot_server', 'drive'))
+			System.mount(config.get('depot_server', 'url'), config.getDepotDrive())
 		else:
 			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
-			System.mount(config.get('depot_server', 'url'), config.get('depot_server', 'drive'), username = depotServerUsername, password = depotServerPassword)
+			System.mount(config.get('depot_server', 'url'), config.getDepotDrive(), username = depotServerUsername, password = depotServerPassword)
 		self._depotShareMounted = True
 		
 	def umountDepotShare(self):
@@ -340,7 +340,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			return
 		try:
 			logger.notice(u"Unmounting depot share")
-			System.umount(config.get('depot_server', 'drive'))
+			System.umount(config.getDepotDrive())
 			self._depotShareMounted = False
 		except Exception, e:
 			logger.warning(e)
@@ -366,7 +366,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			actionProcessorLocalTmpFile = os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)
 			
 			actionProcessorRemoteDir = os.path.join(
-							config.get('depot_server', 'drive'),
+							config.getDepotDrive(),
 							config.get('action_processor', 'remote_dir'))
 			actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
 			
@@ -465,7 +465,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				raise Exception(u"Failed to get depotserver for client '%s'" % config.get('global', 'host_id'))
 			depotId = clientToDepotservers[0]['depotId']
 			
-			productDir = os.path.join(config.get('depot_server', 'drive'), 'install')
+			productDir = os.path.join(config.getDepotDrive(), 'install')
 			
 			userLoginScripts = []
 			for productOnDepot in self._configService.productOnDepot_getIdents(
@@ -544,18 +544,33 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			else:
 				logger.notice(u"Start processing action requests")
 				
-				config.selectDepotserver(configService = self._configService, productIds = productIds)
+				if self.event.eventConfig.cacheProducts:
+					logger.notice(u"Caching products: %s" % productIds)
+					self.setStatusMessage( _(u"Caching products") )
+					self.opsiclientd._cacheService.setCurrentProductSyncProgressObserver(self._currentProgressSubjectProxy)
+					self.opsiclientd._cacheService.setOverallProductSyncProgressObserver(self._overallProgressSubjectProxy)
+					self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
+					try:
+						self.opsiclientd._cacheService.triggerCacheProducts(
+							self._configService,
+							productIds,
+							waitForEnding = self.event.eventConfig.requiresCachedProducts)
+						self.setStatusMessage( _(u"Products cached") )
+					finally:
+						self._detailSubjectProxy.setMessage(u"")
+						self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
+						self._currentProgressSubjectProxy.reset()
+						self._overallProgressSubjectProxy.reset()
 				
-				savedDepotUrl = None
-				savedDepotDrive = None
-				
-				try:
-					self.runActions()
-				finally:
-					if savedDepotUrl:
-						config.set('depot_server', 'url', savedDepotUrl)
-					if savedDepotDrive:
-						config.set('depot_server', 'drive', savedDepotDrive)
+				if self.event.eventConfig.requiresCachedProducts:
+					# Event needs cached products => initialize cache service
+					if self.opsiclientd._cacheService.getProductSyncCompleted():
+						logger.notice(u"Event '%s' requires cached products and product sync is done" % self.event.eventConfig.getName())
+					else:
+						raise Exception(u"Event '%s' requires cached products but product sync is not done, exiting" % self.event.eventConfig.getName())
+						
+				config.selectDepotserver(configService = self._configService, event = event, productIds = productIds)
+				self.runActions()
 				
 		except Exception, e:
 			logger.logException(e)
@@ -594,7 +609,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		# Setting some registry values before starting action
 		# Mainly for action processor winst
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depoturl",   config.get('depot_server', 'url'))
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", config.get('depot_server', 'drive'))
+		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", config.getDepotDrive())
 		
 		# action processor desktop can be one of current / winlogon / default
 		desktop = self.event.eventConfig.actionProcessorDesktop
@@ -625,7 +640,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		command = u'%global.base_dir%\\action_processor_starter.exe ' \
 			+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
 			+ u'"%global.log_file%" "%global.log_level%" ' \
-			+ u'"%depot_server.url%" "%depot_server.drive%" ' \
+			+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
 			+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
 			+ u'"' + unicode(self.getSessionId()) + u'" "' + desktop + '" ' \
 			+ u'"' + actionProcessorCommand + u'" ' + unicode(self.event.eventConfig.actionProcessorTimeout) + ' ' \
@@ -696,6 +711,151 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		except Exception, e:
 			logger.error(u"Failed to set environment: %s" % forceUnicode(e))
 	
+	def abortEventCallback(self, choiceSubject):
+		logger.notice(u"Event aborted by user")
+		self.eventCancelled = True
+	
+	def startEventCallback(self, choiceSubject):
+		logger.notice(u"Event wait cancelled by user")
+		self.waitCancelled = True
+	
+	def processEventWarningTime(self):
+		if not self.event.eventConfig.warningTime:
+			return
+		choiceSubject = ChoiceSubject(id = 'choice')
+		if (self.event.eventConfig.cancelCounter < self.event.eventConfig.userCancelable):
+			choiceSubject.setChoices([ _('Abort'), _('Start now') ])
+			choiceSubject.setCallbacks( [ self.abortEventCallback, self.startEventCallback ] )
+		else:
+			choiceSubject.setChoices([ _('Start now') ])
+			choiceSubject.setCallbacks( [ self.startEventCallback ] )
+		self._notificationServer.addSubject(choiceSubject)
+		try:
+			if self.event.eventConfig.eventNotifierCommand:
+				self.startNotifierApplication(
+						command = self.event.eventConfig.eventNotifierCommand,
+						desktop = self.event.eventConfig.eventNotifierDesktop )
+				
+			timeout = int(self.event.eventConfig.warningTime)
+			endTime = time.time() + timeout
+			while (timeout > 0) and not self.eventCancelled and not self.waitCancelled:
+				now = time.time()
+				logger.info(u"Notifying user of event %s" % self.event)
+				self.setStatusMessage(_(u"Event %s: processing will start in %0.0f seconds") % (self.event.eventConfig.getName(), (endTime - now)))
+				if ((endTime - now) <= 0):
+					break
+				time.sleep(1)
+			
+			if self.eventCancelled:
+				self.event.eventConfig.cancelCounter += 1
+				config.set('event_%s' % self.event.eventConfig.getName(), 'cancel_counter', self.event.eventConfig.cancelCounter)
+				config.updateConfigFile()
+				logger.notice(u"Event cancelled by user for the %d. time (max: %d)" \
+					% (self.event.eventConfig.cancelCounter, self.event.eventConfig.userCancelable))
+				raise CanceledByUserError(u"Event cancelled by user")
+			else:
+				self.event.eventConfig.cancelCounter = 0
+				config.set('event_%s' % self.event.eventConfig.getName(), 'cancel_counter', self.event.eventConfig.cancelCounter)
+				config.updateConfigFile()
+		finally:
+			try:
+				if self._notificationServer:
+					self._notificationServer.requestEndConnections()
+					self._notificationServer.removeSubject(choiceSubject)
+			except Exception, e:
+				logger.logException(e)
+	
+		
+	
+	def abortShutdownCallback(self, choiceSubject):
+		logger.notice(u"Shutdown aborted by user")
+		self.shutdownCancelled = True
+	
+	def startShutdownCallback(self, choiceSubject):
+		logger.notice(u"Shutdown wait cancelled by user")
+		self.shutdownWaitCancelled = True
+	
+	def processShutdownRequests(self):
+		if not self.event.eventConfig.processShutdownRequests:
+			return
+		try:
+			reboot   = self.opsiclientd.isRebootRequested()
+			shutdown = self.opsiclientd.isShutdownRequested()
+			if reboot or shutdown:
+				if reboot:
+					self.setStatusMessage(_(u"Reboot requested"))
+				else:
+					self.setStatusMessage(_(u"Shutdown requested"))
+				
+				if self.event.eventConfig.shutdownWarningTime:
+					while True:
+						if reboot:
+							logger.info(u"Notifying user of reboot")
+						else:
+							logger.info(u"Notifying user of shutdown")
+						
+						self.shutdownCancelled = False
+						self.shutdownWaitCancelled = False
+						
+						self._messageSubject.setMessage(self.event.eventConfig.getShutdownWarningMessage())
+						
+						choiceSubject = ChoiceSubject(id = 'choice')
+						if (self.event.eventConfig.shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable):
+							if reboot:
+								choiceSubject.setChoices([ _('Reboot now'), _('Later') ])
+							else:
+								choiceSubject.setChoices([ _('Shutdown now'), _('Later') ])
+							choiceSubject.setCallbacks( [ self.startShutdownCallback, self.abortShutdownCallback ] )
+						else:
+							if reboot:
+								choiceSubject.setChoices([ _('Reboot now') ])
+							else:
+								choiceSubject.setChoices([ _('Shutdown now') ])
+							choiceSubject.setCallbacks( [ self.startShutdownCallback ] )
+						self._notificationServer.addSubject(choiceSubject)
+						
+						if self.event.eventConfig.shutdownNotifierCommand:
+							self.startNotifierApplication(
+									command      = self.event.eventConfig.shutdownNotifierCommand,
+									desktop      = self.event.eventConfig.shutdownNotifierDesktop )
+								
+						timeout = int(self.event.eventConfig.shutdownWarningTime)
+						endTime = time.time() + timeout
+						while (timeout > 0) and not self.shutdownCancelled and not self.shutdownWaitCancelled:
+							now = time.time()
+							if reboot:
+								self.setStatusMessage(_(u"Reboot in %0.0f seconds") % (endTime - now))
+							else:
+								self.setStatusMessage(_(u"Shutdown in %0.0f seconds") % (endTime - now))
+							if ((endTime - now) <= 0):
+								break
+							time.sleep(1)
+						
+						try:
+							if self._notificationServer:
+								self._notificationServer.requestEndConnections()
+								self._notificationServer.removeSubject(choiceSubject)
+						except Exception, e:
+							logger.logException(e)
+						
+						self._messageSubject.setMessage(u"")
+						if self.shutdownCancelled:
+							self.event.eventConfig.shutdownCancelCounter += 1
+							logger.notice(u"Shutdown cancelled by user for the %d. time (max: %d)" \
+								% (self.event.eventConfig.shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable))
+							
+							if (self.event.eventConfig.shutdownWarningRepetitionTime >= 0):
+								logger.info(u"Shutdown warning will be repeated in %d seconds" % self.event.eventConfig.shutdownWarningRepetitionTime)
+								time.sleep(self.event.eventConfig.shutdownWarningRepetitionTime)
+								continue
+						break
+				if reboot:
+					self.opsiclientd.rebootMachine()
+				elif shutdown:
+					self.opsiclientd.shutdownMachine()
+		except Exception, e:
+			logger.logException(e)
+				
 	def run(self):
 		try:
 			logger.notice(u"============= EventProcessingThread for occurcence of event '%s' started =============" % self.event)
@@ -705,59 +865,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if not self.event.eventConfig.blockLogin:
 				self.opsiclientd.setBlockLogin(False)
 			
-			# Store current config service url and depot url
-			configServiceUrls = config.get('config_service', 'url')
-			depotServerUrl = config.get('depot_server', 'url')
-			depotDrive = config.get('depot_server', 'drive')
 			try:
 				self.startNotificationServer()
 				self.setActionProcessorInfo()
-				
 				self._messageSubject.setMessage(self.event.eventConfig.getMessage())
-				if self.event.eventConfig.warningTime:
-					choiceSubject = ChoiceSubject(id = 'choice')
-					if (self.event.eventConfig.cancelCounter < self.event.eventConfig.userCancelable):
-						choiceSubject.setChoices([ _('Abort'), _('Start now') ])
-						choiceSubject.setCallbacks( [ self.abortEventCallback, self.startEventCallback ] )
-					else:
-						choiceSubject.setChoices([ _('Start now') ])
-						choiceSubject.setCallbacks( [ self.startEventCallback ] )
-					self._notificationServer.addSubject(choiceSubject)
-					try:
-						if self.event.eventConfig.eventNotifierCommand:
-							self.startNotifierApplication(
-									command = self.event.eventConfig.eventNotifierCommand,
-									desktop = self.event.eventConfig.eventNotifierDesktop )
-							
-						timeout = int(self.event.eventConfig.warningTime)
-						endTime = time.time() + timeout
-						while (timeout > 0) and not self.eventCancelled and not self.waitCancelled:
-							now = time.time()
-							logger.info(u"Notifying user of event %s" % self.event)
-							self.setStatusMessage(_(u"Event %s: processing will start in %0.0f seconds") % (self.event.eventConfig.getName(), (endTime - now)))
-							if ((endTime - now) <= 0):
-								break
-							time.sleep(1)
-						
-						if self.eventCancelled:
-							self.event.eventConfig.cancelCounter += 1
-							config.set('event_%s' % self.event.eventConfig.getName(), 'cancel_counter', self.event.eventConfig.cancelCounter)
-							config.updateConfigFile()
-							logger.notice(u"Event cancelled by user for the %d. time (max: %d)" \
-								% (self.event.eventConfig.cancelCounter, self.event.eventConfig.userCancelable))
-							raise CanceledByUserError(u"Event cancelled by user")
-						else:
-							self.event.eventConfig.cancelCounter = 0
-							config.set('event_%s' % self.event.eventConfig.getName(), 'cancel_counter', self.event.eventConfig.cancelCounter)
-							config.updateConfigFile()
-					finally:
-						try:
-							if self._notificationServer:
-								self._notificationServer.requestEndConnections()
-								self._notificationServer.removeSubject(choiceSubject)
-						except Exception, e:
-							logger.logException(e)
-				
+				self.processEventWarningTime()
 				self.setStatusMessage(_(u"Processing event %s") % self.event.eventConfig.getName())
 				
 				if self.event.eventConfig.blockLogin:
@@ -803,84 +915,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				except Exception, e:
 					logger.logException(e)
 				
-				if self.event.eventConfig.processShutdownRequests:
-					try:
-						reboot   = self.opsiclientd.isRebootRequested()
-						shutdown = self.opsiclientd.isShutdownRequested()
-						if reboot or shutdown:
-							if reboot:
-								self.setStatusMessage(_(u"Reboot requested"))
-							else:
-								self.setStatusMessage(_(u"Shutdown requested"))
-							
-							if self.event.eventConfig.shutdownWarningTime:
-								while True:
-									if reboot:
-										logger.info(u"Notifying user of reboot")
-									else:
-										logger.info(u"Notifying user of shutdown")
-									
-									self.shutdownCancelled = False
-									self.shutdownWaitCancelled = False
-									
-									self._messageSubject.setMessage(self.event.eventConfig.getShutdownWarningMessage())
-									
-									choiceSubject = ChoiceSubject(id = 'choice')
-									if (self.event.eventConfig.shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable):
-										if reboot:
-											choiceSubject.setChoices([ _('Reboot now'), _('Later') ])
-										else:
-											choiceSubject.setChoices([ _('Shutdown now'), _('Later') ])
-										choiceSubject.setCallbacks( [ self.startShutdownCallback, self.abortShutdownCallback ] )
-									else:
-										if reboot:
-											choiceSubject.setChoices([ _('Reboot now') ])
-										else:
-											choiceSubject.setChoices([ _('Shutdown now') ])
-										choiceSubject.setCallbacks( [ self.startShutdownCallback ] )
-									self._notificationServer.addSubject(choiceSubject)
-									
-									if self.event.eventConfig.shutdownNotifierCommand:
-										self.startNotifierApplication(
-												command      = self.event.eventConfig.shutdownNotifierCommand,
-												desktop      = self.event.eventConfig.shutdownNotifierDesktop )
-											
-									timeout = int(self.event.eventConfig.shutdownWarningTime)
-									endTime = time.time() + timeout
-									while (timeout > 0) and not self.shutdownCancelled and not self.shutdownWaitCancelled:
-										now = time.time()
-										if reboot:
-											self.setStatusMessage(_(u"Reboot in %0.0f seconds") % (endTime - now))
-										else:
-											self.setStatusMessage(_(u"Shutdown in %0.0f seconds") % (endTime - now))
-										if ((endTime - now) <= 0):
-											break
-										time.sleep(1)
-									
-									try:
-										if self._notificationServer:
-											self._notificationServer.requestEndConnections()
-											self._notificationServer.removeSubject(choiceSubject)
-									except Exception, e:
-										logger.logException(e)
-									
-									self._messageSubject.setMessage(u"")
-									if self.shutdownCancelled:
-										self.event.eventConfig.shutdownCancelCounter += 1
-										logger.notice(u"Shutdown cancelled by user for the %d. time (max: %d)" \
-											% (self.event.eventConfig.shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable))
-										
-										if (self.event.eventConfig.shutdownWarningRepetitionTime >= 0):
-											logger.info(u"Shutdown warning will be repeated in %d seconds" % self.event.eventConfig.shutdownWarningRepetitionTime)
-											time.sleep(self.event.eventConfig.shutdownWarningRepetitionTime)
-											continue
-									break
-							if reboot:
-								self.opsiclientd.rebootMachine()
-							elif shutdown:
-								self.opsiclientd.shutdownMachine()
-					except Exception, e:
-						logger.logException(e)
 				
 				if self.opsiclientd.isShutdownTriggered():
 					self.setStatusMessage(_("Shutting down machine"))
@@ -908,22 +942,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		
 		self.running = False
 		logger.notice(u"============= EventProcessingThread for event '%s' ended =============" % self.event)
-		
-	def abortEventCallback(self, choiceSubject):
-		logger.notice(u"Event aborted by user")
-		self.eventCancelled = True
 	
-	def startEventCallback(self, choiceSubject):
-		logger.notice(u"Event wait cancelled by user")
-		self.waitCancelled = True
-	
-	def abortShutdownCallback(self, choiceSubject):
-		logger.notice(u"Shutdown aborted by user")
-		self.shutdownCancelled = True
-	
-	def startShutdownCallback(self, choiceSubject):
-		logger.notice(u"Shutdown wait cancelled by user")
-		self.shutdownWaitCancelled = True
 	
 
 
