@@ -84,7 +84,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		return result
 	
 	def _processQuery(self, result):
-		self._decodeQuery(self, result)
+		self._decodeQuery(result)
 		
 	def _generateResponse(self, result):
 		self.connectConfigService()
