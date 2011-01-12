@@ -93,6 +93,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		productIds = []
 		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = "kiosk"):
 			productIds.append(objectToGroup.objectId)
+		self.disconnectConfigService()
 		
 		html = kioskPage
 		html = html.replace('%result%', forceUnicode(productIds))
