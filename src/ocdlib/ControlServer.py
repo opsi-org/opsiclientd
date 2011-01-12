@@ -146,10 +146,12 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientd.__init__(self, service, request, resource)
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
-	
+		
 	def _getBackend(self, result):
 		if hasattr(self.session, 'callInstance') and hasattr(self.session, 'callInterface') and self.session.callInstance and self.session.callInterface:
 			return result
+		if not self.service._opsiclientd.getCacheService():
+			raise Exception(u'Cache service not running')
 		self.session.callInstance = BackendManager(
 			backend              = self.service._opsiclientd.getCacheService().getConfigBackend(),
 			extend               = True,
@@ -283,6 +285,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
 	
 	def cacheService_cacheConfig(self):
+		if not self.opsiclientd.getCacheService():
+			raise Exception(u"Cache service not running")
 		self.opsiclientd.getCacheService().cacheConfig()
 		
 	def setBlockLogin(self, blockLogin):

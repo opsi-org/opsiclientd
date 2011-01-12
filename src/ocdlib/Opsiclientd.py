@@ -32,7 +32,6 @@
 """
 
 __version__ = '4.0.24'
-__fullversion__ = True
 
 # Imports
 import sys, os
@@ -58,15 +57,15 @@ if (os.name == 'posix'):
 	from ocdlib.Posix import *
 from ocdlib.Localization import _, setLocaleDir, getLanguage
 from ocdlib.Config import Config
+
 try:
-	from ocdlibnonfree.CacheService import CacheService
+	from ocdlibnonfree import __fullversion__
 except:
 	__fullversion__ = False
-	from ocdlib.CacheService import CacheService
+
 try:
 	from ocdlibnonfree.EventProcessing import EventProcessingThread
 except:
-	__fullversion__ = False
 	from ocdlib.EventProcessing import EventProcessingThread
 
 logger = Logger()
@@ -243,14 +242,23 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error(u"Failed to start control server: %s" % forceUnicode(e))
 				raise
 			
-			logger.notice(u"Starting cache service")
+			CacheService = None
 			try:
-				self._cacheService = CacheService(opsiclientd = self)
-				self._cacheService.start()
-				logger.notice(u"Cache service started")
-			except Exception, e:
-				logger.error(u"Failed to start cache service: %s" % forceUnicode(e))
-				raise
+				from ocdlibnonfree.CacheService import CacheService
+			except:
+				pass
+			
+			if CacheService:
+				logger.notice(u"Starting cache service")
+				try:
+					self._cacheService = CacheService(opsiclientd = self)
+					self._cacheService.start()
+					logger.notice(u"Cache service started")
+				except Exception, e:
+					logger.error(u"Failed to start cache service: %s" % forceUnicode(e))
+					raise
+			else:
+				logger.notice(u"Not starting cache service")
 			
 			# Create event generators
 			createEventGenerators()
