@@ -778,7 +778,7 @@ def getEventConfigs():
 						if mLanguage:
 							if (mLanguage == getLanguage()):
 								eventConfigs[eventConfigName]['message'] = value
-						elif not args.get('message'):
+						elif not eventConfigs[eventConfigName].get('message'):
 							eventConfigs[eventConfigName]['message'] = value
 					elif key.startswith('shutdown_warning_message'):
 						mLanguage = None
@@ -789,7 +789,7 @@ def getEventConfigs():
 						if mLanguage:
 							if (mLanguage == getLanguage()):
 								eventConfigs[eventConfigName]['shutdownWarningMessage'] = value
-						elif not args.get('shutdownWarningMessage'):
+						elif not eventConfigs[eventConfigName].get('shutdownWarningMessage'):
 							eventConfigs[eventConfigName]['shutdownWarningMessage'] = value
 					elif (key == 'max_repetitions'):
 						eventConfigs[eventConfigName]['maxRepetitions'] = int(value)
