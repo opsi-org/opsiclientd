@@ -140,20 +140,24 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	def connectionCanceled(self):
 		if self._notificationServer and self._choiceSubject:
 			self._notificationServer.removeSubject(self._choiceSubject)
+		self._detailSubjectProxy.setMessage(u'')
 		ServiceConnection.connectionCanceled(self)
 	
 	def connectionTimedOut(self):
 		if self._notificationServer and self._choiceSubject:
 			self._notificationServer.removeSubject(self._choiceSubject)
+		self._detailSubjectProxy.setMessage(u'')
 		ServiceConnection.connectionTimedOut(self)
 	
 	def connectionEstablished(self):
 		if self._notificationServer and self._choiceSubject:
 			self._notificationServer.removeSubject(self._choiceSubject)
+		self._detailSubjectProxy.setMessage(u'')
 		
 	def connectionFailed(self, error):
 		if self._notificationServer and self._choiceSubject:
 			self._notificationServer.removeSubject(self._choiceSubject)
+		self._detailSubjectProxy.setMessage(u'')
 		ServiceConnection.connectionFailed(self, error)
 		
 	''' ServiceConnection '''
