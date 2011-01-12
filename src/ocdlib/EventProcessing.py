@@ -571,7 +571,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					else:
 						raise Exception(u"Event '%s' requires cached products but product sync is not done, exiting" % self.event.eventConfig.getName())
 						
-				config.selectDepotserver(configService = self._configService, event = event, productIds = productIds)
+				config.selectDepotserver(configService = self._configService, event = self.event, productIds = productIds)
 				self.runActions()
 				
 		except Exception, e:
