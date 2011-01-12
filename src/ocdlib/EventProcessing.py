@@ -216,6 +216,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			self.setStatusMessage(_(u"Getting config from service"))
 			config.getFromService(self._configService)
 			self.setStatusMessage(_(u"Got config from service"))
+			logger.notice(u"Reconfiguring event generators")
+			reconfigureEventGenerators()
 		except Exception, e:
 			logger.error(u"Failed to get config from service: %s" % forceUnicode(e))
 			raise
