@@ -7,7 +7,7 @@
    This module is part of the desktop management solution opsi
    (open pc server integration) http://www.opsi.org
    
-   Copyright (C) 2010 uib GmbH
+   Copyright (C) 2011 uib GmbH
    
    http://www.uib.de/
    
@@ -57,7 +57,10 @@ class CacheService(threading.Thread):
 		
 	def getProductSyncCompleted(self):
 		return False
-		
+	
+	def getConfigSyncCompleted(self):
+		return False
+	
 	def cacheProducts(self, configService, productIds, waitForEnding=False):
 		pass
 	

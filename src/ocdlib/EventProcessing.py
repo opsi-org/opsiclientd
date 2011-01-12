@@ -62,7 +62,7 @@ config = Config()
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                      EVENT PROCESSING THREAD                                      -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class EventProcessingThread(KillableThread):
+class EventProcessingThread(KillableThread, ServiceConnection):
 	def __init__(self, opsiclientd, event):
 		from ocdlib.Opsiclientd import __version__
 		
@@ -82,8 +82,7 @@ class EventProcessingThread(KillableThread):
 		
 		self._sessionId = None
 		
-		self._configService = None
-		self._configServiceUrl = None
+		self._serviceConnection = None
 		
 		self._notificationServer = None
 		
@@ -98,13 +97,13 @@ class EventProcessingThread(KillableThread):
 		self._detailSubjectProxy = MessageSubjectProxy('detail')
 		self._currentProgressSubjectProxy = ProgressSubjectProxy('currentProgress', fireAlways = False)
 		self._overallProgressSubjectProxy = ProgressSubjectProxy('overallProgress', fireAlways = False)
+		self._choiceSubject = None
 		
 		self._statusSubject.setMessage( _("Processing event %s") % self.event.eventConfig.getName() )
 		#self._serviceUrlSubject.setMessage(config.get('config_service', 'url'))
 		self._clientIdSubject.setMessage(config.get('global', 'host_id'))
 		self._opsiclientdInfoSubject.setMessage("opsiclientd %s" % __version__)
 		self._actionProcessorInfoSubject.setMessage("")
-		
 		
 		#self.isLoginEvent = isinstance(self.event, UserLoginEvent)
 		self.isLoginEvent = bool(self.event.eventConfig.actionType == 'login')
@@ -114,7 +113,50 @@ class EventProcessingThread(KillableThread):
 		self.getSessionId()
 		
 		self._notificationServerPort = int(config.get('notification_server', 'start_port')) + int(self.getSessionId())
+	
+	''' ServiceConnection '''
+	def connectionThreadOptions(self):
+		return {'statusSubject': self._statusSubject}
+	
+	def connectionStart(self, configServiceUrl):
+		self._serviceUrlSubject.setMessage(configServiceUrl)
+		cancellableAfter = forceInt(config.get('config_service', 'user_cancelable_after'))
+		if self._notificationServer and (cancellableAfter < 1):
+			logger.info(u"User is allowed to cancel connection after %d seconds" % cancellableAfter)
+			self._choiceSubject = ChoiceSubject(id = 'choice')
+			self._notificationServer.addSubject(self._choiceSubject)
+	
+	def connectionCancelable(self, stopConnectionCallback):
+		if self._notificationServer and self._choiceSubject:
+			self._choiceSubject.setChoices([ 'Stop connection' ])
+			self._choiceSubject.setCallbacks( [ stopConnectionCallback ] )
+			self._notificationServer.addSubject(self._choiceSubject)
+	
+	def connectionTimeoutChanged(self, timeout):
+		if self._detailSubjectProxy:
+			self._detailSubjectProxy.setMessage( _(u'Timeout: %ds') % timeout )
+	
+	def connectionCanceled(self):
+		if self._notificationServer and self._choiceSubject:
+			self._notificationServer.removeSubject(self._choiceSubject)
+		ServiceConnection.connectionCanceled(self)
+	
+	def connectionTimedOut(self):
+		if self._notificationServer and self._choiceSubject:
+			self._notificationServer.removeSubject(self._choiceSubject)
+		ServiceConnection.connectionTimedOut(self)
+	
+	def connectionEstablished(self):
+		if self._notificationServer and self._choiceSubject:
+			self._notificationServer.removeSubject(self._choiceSubject)
 		
+	def connectionFailed(self, error):
+		if self._notificationServer and self._choiceSubject:
+			self._notificationServer.removeSubject(self._choiceSubject)
+		ServiceConnection.connectionFailed(self, error)
+		
+	''' ServiceConnection '''
+	
 	def setSessionId(self, sessionId):
 		self._sessionId = int(sessionId)
 		logger.info(u"Session id set to %s" % self._sessionId)
@@ -158,161 +200,17 @@ class EventProcessingThread(KillableThread):
 		except Exception, e:
 			logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
 			raise
-		
-	def connectConfigServer(self):
-		if self._configService:
-			# Already connected
-			return
-		
-		try:
-			self._configServiceUrl = None
-			url = config.get('config_service', 'url')[0]
-			self._serviceUrlSubject.setMessage(url)
-			
-			choiceSubject = ChoiceSubject(id = 'choice')
-			choiceSubject.setChoices([ 'Stop connection' ])
-			
-			logger.debug(u"Creating ServiceConnectionThread")
-			serviceConnectionThread = ServiceConnectionThread(
-						configServiceUrl = url,
-						username         = config.get('global', 'host_id'),
-						password         = config.get('global', 'opsi_host_key'),
-						statusSubject    = self._statusSubject )
-			
-			choiceSubject.setCallbacks( [ serviceConnectionThread.stopConnectionCallback ] )
-			
-			cancellableAfter = forceInt(config.get('config_service', 'user_cancelable_after'))
-			logger.info(u"User is allowed to cancel connection after %d seconds" % cancellableAfter)
-			if (cancellableAfter < 1):
-				self._notificationServer.addSubject(choiceSubject)
-			
-			timeout = forceInt(config.get('config_service', 'connection_timeout'))
-			logger.info(u"Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
-			serviceConnectionThread.start()
-			for i in range(5):
-				if serviceConnectionThread.running:
-					break
-				time.sleep(1)
-			logger.debug(u"ServiceConnectionThread started")
-			
-			while serviceConnectionThread.running and (timeout > 0):
-				logger.debug(u"Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d) " \
-					% (timeout, serviceConnectionThread.isAlive(), cancellableAfter))
-				self._detailSubjectProxy.setMessage( _(u'Timeout: %ds') % timeout )
-				cancellableAfter -= 1
-				if (cancellableAfter == 0):
-					self._notificationServer.addSubject(choiceSubject)
-				time.sleep(1)
-				timeout -= 1
-			
-			self._detailSubjectProxy.setMessage(u'')
-			self._notificationServer.removeSubject(choiceSubject)
-			
-			if serviceConnectionThread.cancelled:
-				logger.error(u"ServiceConnectionThread canceled by user")
-				raise CanceledByUserError(u"Failed to connect to config service '%s': cancelled by user" % url)
-			
-			
-			if serviceConnectionThread.running:
-				logger.error(u"ServiceConnectionThread timed out after %d seconds" % config.get('config_service', 'connection_timeout'))
-				serviceConnectionThread.stop()
-				raise Exception(u"Failed to connect to config service '%s': timed out after %d seconds" % \
-							(url, config.get('config_service', 'connection_timeout')) )
-			if not serviceConnectionThread.connected:
-				raise Exception(u"Failed to connect to config service '%s': %s" % (url, serviceConnectionThread.connectionError))
-			
-			self._configService = serviceConnectionThread.configService
-			self._configServiceUrl = url
-			
-			if (serviceConnectionThread.getUsername() != config.get('global', 'host_id')):
-				config.set('global', 'host_id', serviceConnectionThread.getUsername().lower())
-				logger.info(u"Updated host_id to '%s'" % config.get('global', 'host_id'))
-			
-			if self.event.eventConfig.updateConfigFile:
-				self.setStatusMessage( _(u"Updating config file") )
-				config.updateConfigFile()
-			
-		except Exception, e:
-			self.disconnectConfigServer()
-			raise
-		
-	def disconnectConfigServer(self):
-		if self._configService:
-			try:
-				if self._configService.isLegacyOpsi():
-					self._configService.exit()
-				else:
-					self._configService.backend_exit()
-			except Exception, e:
-				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(e))
-		self._configService = None
-		self._configServiceUrl = None
-		
+	
 	def getConfigFromService(self):
 		''' Get settings from service '''
 		logger.notice(u"Getting config from service")
 		try:
-			if not self._configService:
-				raise Exception(u"Not connected to config service")
-			
+			if not self.isConfigServiceConnected():
+				logger.warning(u"Cannot get config from service: not connected")
+				return
 			self.setStatusMessage(_(u"Getting config from service"))
-			
-			if self._configService.isLegacyOpsi():
-				
-				for (key, value) in self._configService.getNetworkConfig_hash(config.get('global', 'host_id')).items():
-					if (key.lower() == 'depotid'):
-						depotId = value
-						config.set('depot_server', 'depot_id', depotId)
-						config.set('depot_server', 'url', self._configService.getDepot_hash(depotId)['depotRemoteUrl'])
-					elif (key.lower() == 'depotdrive'):
-						config.set('depot_server', 'drive', value)
-					elif (key.lower() == 'nextbootserviceurl'):
-						if (value.find('/rpc') == -1):
-							value = value + '/rpc'
-						config.set('config_service', 'url', [ value ])
-					else:
-						logger.info(u"Unhandled network config key '%s'" % key)
-					
-				logger.notice(u"Got network config from service")
-				
-				for (key, value) in self._configService.getGeneralConfig_hash(config.get('global', 'host_id')).items():
-					try:
-						parts = key.lower().split('.')
-						if (len(parts) < 3) or (parts[0] != 'opsiclientd'):
-							continue
-						
-						config.set(section = parts[1], option = parts[2], value = value)
-						
-					except Exception, e:
-						logger.error(u"Failed to process general config key '%s:%s': %s" % (key, value, forceUnicode(e)))
-			else:
-				self._configService.backend_setOptions({"addConfigStateDefaults": True})
-				for configState in self._configService.configState_getObjects(objectId = config.get('global', 'host_id')):
-					logger.info(u"Got config state from service: configId %s, values %s" % (configState.configId, configState.values))
-					
-					if not configState.values:
-						continue
-					
-					if   (configState.configId == u'clientconfig.configserver.url'):
-						config.set('config_service', 'url', configState.values)
-					elif (configState.configId == u'clientconfig.depot.drive'):
-						config.set('depot_server', 'drive', configState.values[0])
-					elif (configState.configId == u'clientconfig.depot.id'):
-						config.set('depot_server', 'depot_id', configState.values[0])
-					elif configState.configId.startswith(u'opsiclientd.'):
-						try:
-							parts = configState.configId.lower().split('.')
-							if (len(parts) < 3):
-								continue
-							
-							config.set(section = parts[1], option = parts[2], value = configState.values[0])
-							
-						except Exception, e:
-							logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
-			logger.notice(u"Got config from service")
-			
+			config.getFromService(self._configService)
 			self.setStatusMessage(_(u"Got config from service"))
-			logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(config.getDict()))
 		except Exception, e:
 			logger.error(u"Failed to get config from service: %s" % forceUnicode(e))
 			raise
@@ -320,8 +218,9 @@ class EventProcessingThread(KillableThread):
 	def writeLogToService(self):
 		logger.notice(u"Writing log to service")
 		try:
-			if not self._configService:
-				raise Exception(u"Not connected to config service")
+			if not self.isConfigServiceConnected():
+				logger.warning(u"Cannot write log to service: not connected")
+				return
 			self.setStatusMessage( _(u"Writing log to service") )
 			f = codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace')
 			data = f.read()
@@ -334,8 +233,11 @@ class EventProcessingThread(KillableThread):
 				#self._configService.writeLog('clientconnect', data.replace(u'\ufffd', u'?').encode('utf-8'), config.get('global', 'host_id'))
 			else:
 				self._configService.log_write('clientconnect', data.replace(u'\ufffd', u'?'), config.get('global', 'host_id'))
-		finally:
 			logger.setFileLevel(config.get('global', 'log_level'))
+		except Exception, e:
+			logger.setFileLevel(config.get('global', 'log_level'))
+			logger.error(u"Failed to write log to service: %s" % forceUnicode(e))
+			raise
 		
 	def runCommandInSession(self, command, desktop=None, waitForProcessEnding=False, timeoutSeconds=0):
 		
@@ -688,10 +590,6 @@ class EventProcessingThread(KillableThread):
 		# Mainly for action processor winst
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depoturl",   config.get('depot_server', 'url'))
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", config.get('depot_server', 'drive'))
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configurl",   "<deprecated>")
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configdrive", "<deprecated>")
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsurl",    "<deprecated>")
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsdrive",  "<deprecated>")
 		
 		# action processor desktop can be one of current / winlogon / default
 		desktop = self.event.eventConfig.actionProcessorDesktop
@@ -873,13 +771,13 @@ class EventProcessingThread(KillableThread):
 						command      = self.event.eventConfig.actionNotifierCommand,
 						desktop      = self.event.eventConfig.actionNotifierDesktop )
 				
-				self.connectConfigServer()
+				if not self.isConfigServiceConnected():
+					self.connectConfigService()
 				
-				if not self.event.eventConfig.useCachedConfig:
-					if self.event.eventConfig.getConfigFromService:
-						self.getConfigFromService()
-					if self.event.eventConfig.updateConfigFile:
-						config.updateConfigFile()
+				if self.event.eventConfig.getConfigFromService:
+					self.getConfigFromService()
+				if self.event.eventConfig.updateConfigFile:
+					config.updateConfigFile()
 				
 				if (self.event.eventConfig.actionType == 'login'):
 					self.processUserLoginActions()
@@ -896,8 +794,7 @@ class EventProcessingThread(KillableThread):
 						logger.logException(e)
 				
 				try:
-					# Disconnect has to be called, even if connect failed!
-					self.disconnectConfigServer()
+					self.disconnectConfigService()
 				except Exception, e:
 					logger.logException(e)
 				
