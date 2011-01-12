@@ -242,13 +242,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error(u"Failed to start control server: %s" % forceUnicode(e))
 				raise
 			
-			CacheService = None
 			try:
 				from ocdlibnonfree.CacheService import CacheService
-			except:
-				pass
-			
-			if CacheService:
 				logger.notice(u"Starting cache service")
 				try:
 					self._cacheService = CacheService(opsiclientd = self)
@@ -257,8 +252,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				except Exception, e:
 					logger.error(u"Failed to start cache service: %s" % forceUnicode(e))
 					raise
-			else:
-				logger.notice(u"Not starting cache service")
+			except Exception, e:
+				logger.notice(u"Cache service not started: %s" % e)
 			
 			# Create event generators
 			createEventGenerators()
