@@ -56,9 +56,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		return (user, password)
 		
 	def _authenticate(self, result):
-		if self.session.authenticated:
-			return result
 		if (self.request.remoteAddr.host == '127.0.0.1'):
+			self.session.authenticated = False
 			return result
 		try:
 			(self.session.user, self.session.password) = self._getCredentials()
