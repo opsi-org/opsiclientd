@@ -54,17 +54,20 @@ from ocdlib.Exceptions import *
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.Config import Config
 from ocdlib.Events import eventGenerators
+
+logger = Logger()
+config = Config()
+
 try:
 	from ocdlibnonfree.CacheService import CacheService
 except:
 	from ocdlib.CacheService import CacheService
+
+ResourceSoftwareOnDemand = None
 try:
 	from ocdlibnonfree.SoftwareOnDemand import WorkerSoftwareOnDemand, ResourceSoftwareOnDemand
-except:
-	pass
-
-logger = Logger()
-config = Config()
+except Exception, e:
+	logger.notice(u"Software on demand not avialable: %s" % e)
 
 '''
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
