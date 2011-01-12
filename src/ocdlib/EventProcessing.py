@@ -69,6 +69,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		moduleName = u' %-30s' % (u'event processing ' + event.eventConfig.getName())
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		KillableThread.__init__(self)
+		ServiceConnection.__init__(self)
 		
 		self.opsiclientd = opsiclientd
 		self.event = event
