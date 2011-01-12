@@ -21,12 +21,12 @@
 # OPSI imports
 from OPSI.web2 import responsecode, http, stream
 from OPSI.Logger import *
-from OPSI.Config import Config
 from OPSI.Types import *
 from OPSI.Service.Worker import WorkerOpsi
 from OPSI.Service.Resource import ResourceOpsi
 
 from ocdlib.OpsiService import ServiceConnection
+from ocdlib.Config import Config
 
 logger = Logger()
 config = Config()
