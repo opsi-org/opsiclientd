@@ -864,9 +864,10 @@ def getEventConfigs():
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigName))
 				except Exception, e:
+					logger.logException(e, LOG_DEBUG)
 					logger.error(u"Failed to set event config argument '%s' to '%s': %s" % (key, value, e))
 			
-			logger.info(u"\nEvent config '" + eventConfigName + u"' args:\n" + objectToBeautifiedText(args) + u"\n")
+			logger.info(u"\nEvent config '" + eventConfigName + u"' args:\n" + objectToBeautifiedText(eventConfigs[eventConfigName]) + u"\n")
 		except Exception, e:
 			logger.logException(e)
 	return eventConfigs
