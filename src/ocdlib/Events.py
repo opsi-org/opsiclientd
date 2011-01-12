@@ -888,7 +888,7 @@ def createEventGenerators():
 				EventConfigFactory(eventType, eventConfigName, **eventConfig)
 			)
 			logger.notice(u"%s event generator '%s' created" % (eventType, eventConfigName))
-		except Exception, e
+		except Exception, e:
 			logger.error(u"Failed to create event generator '%s': %s" % (eventConfigName, forceUnicode(e)))
 
 def getEventGenerators(generatorClass=None):
