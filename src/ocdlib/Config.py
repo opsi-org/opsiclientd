@@ -111,6 +111,7 @@ class ConfigImplementation(object):
 				'delete_user': True,
 			}
 		}
+		self._temporaryConfigServiceUrls = []
 		
 		if (os.name == 'nt'):
 			self._config['system']['program_files_dir'] = System.getProgramFilesDir()
@@ -402,7 +403,7 @@ class ConfigImplementation(object):
 		logger.addConfidentialString(depotServerPassword)
 		return (depotServerUsername, depotServerPassword)
 	
-	def getConfigFromService(self, configService):
+	def getFromService(self, configService):
 		''' Get settings from service '''
 		logger.notice(u"Getting config from service")
 		if not configService:

@@ -98,7 +98,7 @@ class ServiceConnection(object):
 	
 	def connectConfigService(self):
 		try:
-			configServiceUrls = config.get('config_service', 'url')
+			configServiceUrls = config.getConfigServiceUrls()
 			if not configServiceUrls:
 				raise Exception(u"No service url defined")
 			
@@ -131,7 +131,7 @@ class ServiceConnection(object):
 				while serviceConnectionThread.running and (timeout > 0):
 					logger.debug(u"Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d) " \
 						% (timeout, serviceConnectionThread.isAlive(), cancellableAfter))
-					connectionTimeoutChanged(timeout)
+					self.connectionTimeoutChanged(timeout)
 					cancellableAfter -= 1
 					if (cancellableAfter == 0):
 						self.connectionCancelable(serviceConnectionThread.stopConnectionCallback)
