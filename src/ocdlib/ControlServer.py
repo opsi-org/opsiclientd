@@ -55,19 +55,14 @@ from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.Config import Config
 from ocdlib.Events import eventGenerators
 
-logger = Logger()
-config = Config()
-
 try:
 	from ocdlibnonfree.CacheService import CacheService
 except:
 	from ocdlib.CacheService import CacheService
 
-ResourceSoftwareOnDemand = None
-try:
-	from ocdlibnonfree.SoftwareOnDemand import WorkerSoftwareOnDemand, ResourceSoftwareOnDemand
-except Exception, e:
-	logger.notice(u"Software on demand not avialable: %s" % e)
+
+logger = Logger()
+config = Config()
 
 '''
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -263,6 +258,12 @@ class ControlServer(OpsiService, threading.Thread):
 		self._running = False
 	
 	def createRoot(self):
+		ResourceSoftwareOnDemand = None
+		try:
+			from ocdlibnonfree.SoftwareOnDemand import WorkerSoftwareOnDemand, ResourceSoftwareOnDemand
+		except Exception, e:
+			logger.notice(u"Software on demand not available: %s" % e)
+		
 		if self._staticDir:
 			if os.path.isdir(self._staticDir):
 				self._root = static.File(self._staticDir)
