@@ -88,6 +88,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 	def _generateResponse(self, result):
 		self.connectConfigService()
+		# @TODO: modules
 		self._configService
 		productIds = []
 		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = "kiosk"):
