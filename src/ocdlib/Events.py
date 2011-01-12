@@ -328,7 +328,7 @@ class EventGenerator(threading.Thread):
 	
 	__repr__ = __unicode__
 	
-	def setEventConfig(eventConfig):
+	def setEventConfig(self, eventConfig):
 		self._eventConfig = eventConfig
 	
 	def addEventListener(self, eventListener):
@@ -906,8 +906,11 @@ def reconfigureEventGenerators():
 	for (eventConfigName, eventGenerator) in eventGenerators.items():
 		eventConfig = eventConfigs.get(eventConfigName)
 		if eventConfig:
-			logger.notice("Reconfiguting event generator '%s'" % eventConfigName)
-			del eventConfig['type']
-			eventGenerator.setEventConfig(eventConfig)
+			try:
+				logger.notice("Reconfiguting event generator '%s'" % eventConfigName)
+				del eventConfig['type']
+				eventGenerator.setEventConfig(eventConfig)
+			except Exception, e:
+				logger.error(u"Failed to reconfigure event generator '%s': %s" % (eventConfigName, e))
 	
 
