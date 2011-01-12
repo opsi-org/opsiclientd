@@ -48,7 +48,7 @@ from OPSI.Object import *
 
 from ocdlib.Exceptions import *
 from ocdlib.Events import *
-from ocdlib.OpsiService import ServiceConnectionThread
+from ocdlib.OpsiService import ServiceConnection
 if (os.name == 'nt'):
 	from ocdlib.Windows import *
 if (os.name == 'posix'):
