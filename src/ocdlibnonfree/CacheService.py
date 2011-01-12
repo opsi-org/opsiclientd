@@ -146,7 +146,7 @@ class CacheService(threading.Thread):
 			return False
 		return False
 	
-	def cacheConfig(self, configService, waitForEnding=False):
+	def triggerCacheConfig(self, configService, waitForEnding=False):
 		if self._cacheConfigRunning:
 			logger.info(u"Already caching config")
 		else:
@@ -183,7 +183,7 @@ class CacheService(threading.Thread):
 			#	if self._state['product'][productId]['sync_failure']:
 			#		raise Exception(u"Failed to cache product '%s': %s" % (productId, self._state['product'][productId]['sync_failure']))
 		
-	def cacheProducts(self, configService, productIds, waitForEnding=False):
+	def triggerCacheProducts(self, configService, productIds, waitForEnding=False):
 		if self._cacheProductsRunning:
 			logger.info(u"Already caching products")
 		else:
@@ -250,6 +250,199 @@ class CacheService(threading.Thread):
 			logger.notice(u"%0.3f MB of product cache freed" % (float(freedSpace)/(1024*1024)))
 		except Exception, e:
 			raise Exception(u"Failed to free enough disk space for product cache: %s" % forceUnicode(e))
+	
+	def cacheProducts(self):
+		self._cacheProductsRunning = True
+		try:
+			logger.notice(u"Caching products: %s" % ', '.join(self._productIds))
+			self.initialize()
+			
+			if not self._configService:
+				raise Exception(u"Not connected to config service")
+			
+			modules = None
+			if self._configService.isOpsi35():
+				modules = self._configService.backend_info()['modules']
+			else:
+				modules = self._configService.getOpsiInformation_hash()['modules']
+			
+			if not modules.get('vpn'):
+				raise Exception(u"Cannot sync products: VPN module currently disabled")
+			
+			if not modules.get('customer'):
+				raise Exception(u"Cannot sync products: No customer in modules file")
+				
+			if not modules.get('valid'):
+				raise Exception(u"Cannot sync products: modules file invalid")
+			
+			if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
+				raise Exception(u"Cannot sync products: modules file expired")
+			
+			logger.info(u"Verifying modules file signature")
+			publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
+			data = u''
+			mks = modules.keys()
+			mks.sort()
+			for module in mks:
+				if module in ('valid', 'signature'):
+					continue
+				val = modules[module]
+				if (val == False): val = 'no'
+				if (val == True):  val = 'yes'
+				data += u'%s = %s\r\n' % (module.lower().strip(), val)
+			if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
+				raise Exception(u"Cannot sync products: modules file invalid")
+			logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
+			
+			logger.info(u"Synchronizing %d product(s):" % len(self._productIds))
+			for productId in self._productIds:
+				logger.info("   %s" % productId)
+			
+			overallProgressSubject = ProgressSubject(id = 'sync_products_overall', type = 'product_sync', end = len(self._productIds))
+			overallProgressSubject.setMessage( _(u'Synchronizing products') )
+			if self._overallProductSyncProgressObserver:
+				overallProgressSubject.attachObserver(self._overallProductSyncProgressObserver)
+			
+			productCacheDirSize = 0
+			if (self._productCacheMaxSize > 0):
+				productCacheDirSize = System.getDirectorySize(self._productCacheDir)
+			diskFreeSpace = System.getDiskSpaceUsage(self._productCacheDir)['available']
+			
+			errorsOccured = []
+			for productId in self._productIds:
+				logger.notice(u"Syncing files of product '%s'" % productId)
+				self._state['product'][productId]['sync_started']   = time.time()
+				self._state['product'][productId]['sync_completed'] = ''
+				self._state['product'][productId]['sync_failure']   = ''
+				
+				self._configService.productOnClient_updateObjects([
+					ProductOnClient(
+						productId      = productId,
+						productType    = u'LocalbootProduct',
+						clientId       = config.get('global', 'host_id'),
+						actionProgress = u'caching'
+					)
+				])
+				
+				config.selectDepotserver(configService = self._configService, productIds = [ productId ], cifsOnly = False)
+				depotUrl = config.get('depot_server', 'url')
+				if not depotUrl:
+					raise Exception(u"Cannot sync files, depot_server.url undefined")
+				(depotServerUsername, depotServerPassword) = (u'', u'')
+				if urlsplit(depotUrl)[0].startswith('webdav'):
+					(depotServerUsername, depotServerPassword) = (config.get('global', 'host_id'), config.get('global', 'opsi_host_key'))
+				else:
+					(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
+				repository = getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword)
+				
+				#self.writeStateFile()
+				try:
+					tempPackageContentFile = os.path.join(self._tempDir, u'%s.files' % productId)
+					packageContentFile = u'%s/%s.files' % (productId, productId)
+					logger.info(u"Downloading package content file '%s' of product '%s' from depot '%s' to '%s'" % (packageContentFile, productId, repository, tempPackageContentFile))
+					repository.download(source = packageContentFile, destination = tempPackageContentFile)
+					
+					packageContentFile = os.path.join(self._productCacheDir, productId, u'%s.files' % productId)
+					if os.path.exists(packageContentFile) and (md5sum(tempPackageContentFile) == md5sum(packageContentFile)):
+						logger.info(u"Package content file unchanged, assuming that product is up to date")
+						self._state['product'][productId]['sync_completed'] = time.time()
+						overallProgressSubject.addToState(1)
+						repository.disconnect()
+						continue
+					
+					if not os.path.exists(os.path.join(self._productCacheDir, productId)):
+						os.mkdir(os.path.join(self._productCacheDir, productId))
+					logger.debug(u"Moving package content file from '%s' to '%s'" % (tempPackageContentFile, packageContentFile))
+					if os.path.exists(packageContentFile):
+						os.unlink(packageContentFile)
+					os.rename(tempPackageContentFile, packageContentFile)
+					packageInfo = PackageContentFile(packageContentFile).parse()
+					productSize = 0
+					fileCount = 0
+					for value in packageInfo.values():
+						if value.has_key('size'):
+							fileCount += 1
+							productSize += int(value['size'])
+					
+					logger.info(u"Product '%s' contains %d files with a total size of %0.3f MB" \
+						% ( productId, fileCount, (float(productSize)/(1024*1024)) ) )
+					
+					if (self._productCacheMaxSize > 0) and (productCacheDirSize + productSize > self._productCacheMaxSize):
+						logger.info(u"Product cache dir sizelimit of %0.3f MB exceeded. Current size: %0.3f MB, space needed for product '%s': %0.3f MB" \
+								% ( (float(self._productCacheMaxSize)/(1024*1024)), (float(productCacheDirSize)/(1024*1024)), \
+								    productId, (float(productSize)/(1024*1024)) ) )
+						self.freeProductCacheSpace(neededSpace = productSize, neededProducts = self._productIds)
+						productCacheDirSize = System.getDirectorySize(self._productCacheDir)
+					
+					if (diskFreeSpace < productSize + 500*1024*1024):
+						raise Exception(u"Only %0.3f MB free space available on disk, refusing to cache product files" \
+									% (float(diskFreeSpace)/(1024*1024)))
+					
+					productSynchronizer = DepotToLocalDirectorySychronizer(
+						sourceDepot          = repository,
+						destinationDirectory = self._productCacheDir,
+						productIds           = [ productId ],
+						maxBandwidth         = 0,
+						dynamicBandwidth     = False
+					)
+					productSynchronizer.synchronize(productProgressObserver = self._currentProductSyncProgressObserver)
+					self._state['product'][productId]['sync_completed'] = time.time()
+					logger.notice(u"Product '%s' synced" % productId)
+					productCacheDirSize += productSize
+					diskFreeSpace -= productSize
+					self._configService.productOnClient_updateObjects([
+						ProductOnClient(
+							productId      = productId,
+							productType    = u'LocalbootProduct',
+							clientId       = config.get('global', 'host_id'),
+							actionProgress = u'cached'
+						)
+					])
+				except Exception, e:
+					logger.logException(e)
+					logger.error("Failed to sync product '%s': %s" % (productId, forceUnicode(e)))
+					errorsOccured.append( u'%s: %s' % (productId, forceUnicode(e)) )
+					self._state['product'][productId]['sync_failure'] = forceUnicode(e)
+					self._configService.productOnClient_updateObjects([
+						ProductOnClient(
+							productId      = productId,
+							productType    = u'LocalbootProduct',
+							clientId       = config.get('global', 'host_id'),
+							actionProgress = u'failed to cache: %s' % forceUnicode(e)
+						)
+					])
+				repository.disconnect()
+				#self.writeStateFile()
+				overallProgressSubject.addToState(1)
+			
+			if self._overallProductSyncProgressObserver:
+				overallProgressSubject.detachObserver(self._overallProductSyncProgressObserver)
+			
+			#for productId in self._productIds:
+			#	if self._state['product'][productId]['sync_failed']:
+			#		raise Exception(self._state['product'][productId]['sync_failed'])
+			
+			if errorsOccured:
+				logger.error(u"Errors occured while caching products %s: %s" % (', '.join(self._productIds), ', '.join(errorsOccured)))
+			else:
+				logger.notice(u"All products cached: %s" % ', '.join(self._productIds))
+				for eventGenerator in getEventGenerators(generatorClass = ProductSyncCompletedEventGenerator):
+					eventGenerator.fireEvent()
+		finally:
+			#self.writeStateFile()
+			self._cacheProductsRunning = False
+			self._cacheProductsEnded.set()
+	
+	def cacheConfig(self):
+		self._cacheConfigRunning = True
+		try:
+			self.initialize()
+			self._cacheBackend._setMasterBackend(self._configService)
+			self._cacheBackend._replicateMasterToWorkBackend()
+		finally:
+			#self.writeStateFile()
+			self._cacheConfigRunning = False
+			self._cacheConfigEnded.set()
 		
 	def stop(self):
 		self._stopped = True
@@ -260,207 +453,22 @@ class CacheService(threading.Thread):
 			try:
 				if self._cacheProductsRequested:
 					self._cacheProductsRequested = False
-					self._cacheProductsRunning = True
-					
 					try:
-						logger.notice(u"Caching products: %s" % ', '.join(self._productIds))
-						self.initialize()
-						
-						if not self._configService:
-							raise Exception(u"Not connected to config service")
-						
-						modules = None
-						if self._configService.isOpsi35():
-							modules = self._configService.backend_info()['modules']
-						else:
-							modules = self._configService.getOpsiInformation_hash()['modules']
-						
-						if not modules.get('vpn'):
-							raise Exception(u"Cannot sync products: VPN module currently disabled")
-						
-						if not modules.get('customer'):
-							raise Exception(u"Cannot sync products: No customer in modules file")
-							
-						if not modules.get('valid'):
-							raise Exception(u"Cannot sync products: modules file invalid")
-						
-						if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
-							raise Exception(u"Cannot sync products: modules file expired")
-						
-						logger.info(u"Verifying modules file signature")
-						publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
-						data = u''
-						mks = modules.keys()
-						mks.sort()
-						for module in mks:
-							if module in ('valid', 'signature'):
-								continue
-							val = modules[module]
-							if (val == False): val = 'no'
-							if (val == True):  val = 'yes'
-							data += u'%s = %s\r\n' % (module.lower().strip(), val)
-						if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
-							raise Exception(u"Cannot sync products: modules file invalid")
-						logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
-						
-						logger.info(u"Synchronizing %d product(s):" % len(self._productIds))
-						for productId in self._productIds:
-							logger.info("   %s" % productId)
-						
-						overallProgressSubject = ProgressSubject(id = 'sync_products_overall', type = 'product_sync', end = len(self._productIds))
-						overallProgressSubject.setMessage( _(u'Synchronizing products') )
-						if self._overallProductSyncProgressObserver:
-							overallProgressSubject.attachObserver(self._overallProductSyncProgressObserver)
-						
-						productCacheDirSize = 0
-						if (self._productCacheMaxSize > 0):
-							productCacheDirSize = System.getDirectorySize(self._productCacheDir)
-						diskFreeSpace = System.getDiskSpaceUsage(self._productCacheDir)['available']
-						
-						errorsOccured = []
-						for productId in self._productIds:
-							logger.notice(u"Syncing files of product '%s'" % productId)
-							self._state['product'][productId]['sync_started']   = time.time()
-							self._state['product'][productId]['sync_completed'] = ''
-							self._state['product'][productId]['sync_failure']   = ''
-							
-							self._configService.productOnClient_updateObjects([
-								ProductOnClient(
-									productId      = productId,
-									productType    = u'LocalbootProduct',
-									clientId       = config.get('global', 'host_id'),
-									actionProgress = u'caching'
-								)
-							])
-							
-							config.selectDepotserver(configService = self._configService, productIds = [ productId ], cifsOnly = False)
-							depotUrl = config.get('depot_server', 'url')
-							if not depotUrl:
-								raise Exception(u"Cannot sync files, depot_server.url undefined")
-							(depotServerUsername, depotServerPassword) = (u'', u'')
-							if urlsplit(depotUrl)[0].startswith('webdav'):
-								(depotServerUsername, depotServerPassword) = (config.get('global', 'host_id'), config.get('global', 'opsi_host_key'))
-							else:
-								(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
-							repository = getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword)
-							
-							#self.writeStateFile()
-							try:
-								tempPackageContentFile = os.path.join(self._tempDir, u'%s.files' % productId)
-								packageContentFile = u'%s/%s.files' % (productId, productId)
-								logger.info(u"Downloading package content file '%s' of product '%s' from depot '%s' to '%s'" % (packageContentFile, productId, repository, tempPackageContentFile))
-								repository.download(source = packageContentFile, destination = tempPackageContentFile)
-								
-								packageContentFile = os.path.join(self._productCacheDir, productId, u'%s.files' % productId)
-								if os.path.exists(packageContentFile) and (md5sum(tempPackageContentFile) == md5sum(packageContentFile)):
-									logger.info(u"Package content file unchanged, assuming that product is up to date")
-									self._state['product'][productId]['sync_completed'] = time.time()
-									overallProgressSubject.addToState(1)
-									repository.disconnect()
-									continue
-								
-								if not os.path.exists(os.path.join(self._productCacheDir, productId)):
-									os.mkdir(os.path.join(self._productCacheDir, productId))
-								logger.debug(u"Moving package content file from '%s' to '%s'" % (tempPackageContentFile, packageContentFile))
-								if os.path.exists(packageContentFile):
-									os.unlink(packageContentFile)
-								os.rename(tempPackageContentFile, packageContentFile)
-								packageInfo = PackageContentFile(packageContentFile).parse()
-								productSize = 0
-								fileCount = 0
-								for value in packageInfo.values():
-									if value.has_key('size'):
-										fileCount += 1
-										productSize += int(value['size'])
-								
-								logger.info(u"Product '%s' contains %d files with a total size of %0.3f MB" \
-									% ( productId, fileCount, (float(productSize)/(1024*1024)) ) )
-								
-								if (self._productCacheMaxSize > 0) and (productCacheDirSize + productSize > self._productCacheMaxSize):
-									logger.info(u"Product cache dir sizelimit of %0.3f MB exceeded. Current size: %0.3f MB, space needed for product '%s': %0.3f MB" \
-											% ( (float(self._productCacheMaxSize)/(1024*1024)), (float(productCacheDirSize)/(1024*1024)), \
-											    productId, (float(productSize)/(1024*1024)) ) )
-									self.freeProductCacheSpace(neededSpace = productSize, neededProducts = self._productIds)
-									productCacheDirSize = System.getDirectorySize(self._productCacheDir)
-								
-								if (diskFreeSpace < productSize + 500*1024*1024):
-									raise Exception(u"Only %0.3f MB free space available on disk, refusing to cache product files" \
-												% (float(diskFreeSpace)/(1024*1024)))
-								
-								productSynchronizer = DepotToLocalDirectorySychronizer(
-									sourceDepot          = repository,
-									destinationDirectory = self._productCacheDir,
-									productIds           = [ productId ],
-									maxBandwidth         = 0,
-									dynamicBandwidth     = False
-								)
-								productSynchronizer.synchronize(productProgressObserver = self._currentProductSyncProgressObserver)
-								self._state['product'][productId]['sync_completed'] = time.time()
-								logger.notice(u"Product '%s' synced" % productId)
-								productCacheDirSize += productSize
-								diskFreeSpace -= productSize
-								self._configService.productOnClient_updateObjects([
-									ProductOnClient(
-										productId      = productId,
-										productType    = u'LocalbootProduct',
-										clientId       = config.get('global', 'host_id'),
-										actionProgress = u'cached'
-									)
-								])
-							except Exception, e:
-								logger.logException(e)
-								logger.error("Failed to sync product '%s': %s" % (productId, forceUnicode(e)))
-								errorsOccured.append( u'%s: %s' % (productId, forceUnicode(e)) )
-								self._state['product'][productId]['sync_failure'] = forceUnicode(e)
-								self._configService.productOnClient_updateObjects([
-									ProductOnClient(
-										productId      = productId,
-										productType    = u'LocalbootProduct',
-										clientId       = config.get('global', 'host_id'),
-										actionProgress = u'failed to cache: %s' % forceUnicode(e)
-									)
-								])
-							repository.disconnect()
-							#self.writeStateFile()
-							overallProgressSubject.addToState(1)
-						
-						if self._overallProductSyncProgressObserver:
-							overallProgressSubject.detachObserver(self._overallProductSyncProgressObserver)
-						
-						#for productId in self._productIds:
-						#	if self._state['product'][productId]['sync_failed']:
-						#		raise Exception(self._state['product'][productId]['sync_failed'])
-						
-						if errorsOccured:
-							logger.error(u"Errors occured while caching products %s: %s" % (', '.join(self._productIds), ', '.join(errorsOccured)))
-						else:
-							logger.notice(u"All products cached: %s" % ', '.join(self._productIds))
-							for eventGenerator in getEventGenerators(generatorClass = ProductSyncCompletedEventGenerator):
-								eventGenerator.fireEvent()
-							
+						self.cacheProducts()
 					except Exception, e:
 						logger.logException(e)
 						logger.error(u"Failed to cache products: %s" % forceUnicode(e))
-					
-					#self.writeStateFile()
-					self._cacheProductsRunning = False
-					self._cacheProductsEnded.set()
 				
 				if self._cacheConfigRequested:
+					self._cacheConfigRequested = False
 					try:
-						self._cacheBackend._setMasterBackend(self._configService)
-						self._cacheBackend._replicateMasterToWorkBackend()
+						self.cacheConfig()
 					except Exception, e:
 						logger.logException(e)
 						logger.error(u"Failed to cache config: %s" % forceUnicode(e))
-					
-					self._cacheConfigRunning = False
-					self._cacheConfigEnded.set()
-					
 			except Exception, e:
 				logger.logException(e)
 			time.sleep(3)
-			
 		self._running = False
-		
+	
 

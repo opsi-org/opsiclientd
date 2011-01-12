@@ -30,10 +30,17 @@ from OPSI import System
 # Get logger instance
 logger = Logger()
 
-def selectDepotserver(config, configService, productIds=[], cifsOnly=True):
+def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True):
 	productIds = forceProductIdList(productIds)
 	
 	logger.notice(u"Selecting depot for products %s" % productIds)
+	
+	if self.event.eventConfig.requiresCachedProducts:
+		cacheDepotDir = os.path.join(config.get('cache_service', 'storage_dir'), 'depot').replace('\\', '/').replace('//', '/')
+		config.setTemporaryDepotDrive(cacheDepotDir.split('/')[0])
+		config.set('depot_server', 'url', 'smb://localhost/noshare/' + ('/'.join(cacheDepotDir.split('/')[1:])))
+		return
+	
 	if not configService:
 		raise Exception(u"Not connected to config service")
 	

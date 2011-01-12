@@ -112,6 +112,7 @@ class ConfigImplementation(object):
 			}
 		}
 		self._temporaryConfigServiceUrls = []
+		self._temporaryDepotDrive = []
 		
 		if (os.name == 'nt'):
 			self._config['system']['program_files_dir'] = System.getProgramFilesDir()
@@ -309,6 +310,14 @@ class ConfigImplementation(object):
 			logger.logException(e)
 			logger.error(u"Failed to write config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
 	
+	def setTemporaryDepotrDrive(self, temporaryDepotDrive):
+		self._temporaryDepotDrive = temporaryDepotDrive
+	
+	def getDepotDrive(self):
+		if self._temporaryDepotDrive:
+			return self._temporaryDepotDrive
+		return self.get('depot_server', 'drive')
+		
 	def setTemporaryConfigServiceUrls(self, temporaryConfigServiceUrls):
 		self._temporaryConfigServiceUrls = forceList(temporaryConfigServiceUrls)
 		
@@ -317,7 +326,7 @@ class ConfigImplementation(object):
 			return self._temporaryConfigServiceUrls
 		return self.get('config_service', 'url')
 	
-	def selectDepotserver(self, configService, productIds=[], cifsOnly=True):
+	def selectDepotserver(self, configService, event, productIds=[], cifsOnly=True):
 		productIds = forceProductIdList(productIds)
 		
 		logger.notice(u"Selecting depot for products %s" % productIds)
@@ -329,7 +338,7 @@ class ConfigImplementation(object):
 		
 		try:
 			import ocdlibnonfree
-			return ocdlibnonfree.selectDepotserver(self, configService, productIds, cifsOnly)
+			return ocdlibnonfree.selectDepotserver(self, configService, event, productIds, cifsOnly)
 		except Exception, e:
 			logger.info(e)
 		
