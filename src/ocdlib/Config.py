@@ -310,7 +310,7 @@ class ConfigImplementation(object):
 			logger.logException(e)
 			logger.error(u"Failed to write config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
 	
-	def setTemporaryDepotrDrive(self, temporaryDepotDrive):
+	def setTemporaryDepotDrive(self, temporaryDepotDrive):
 		self._temporaryDepotDrive = temporaryDepotDrive
 	
 	def getDepotDrive(self):

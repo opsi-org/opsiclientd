@@ -61,7 +61,7 @@ class CacheService(threading.Thread):
 	def getConfigSyncCompleted(self):
 		return False
 	
-	def cacheProducts(self, configService, productIds, waitForEnding=False):
+	def triggerCacheProducts(self, configService, productIds, waitForEnding=False):
 		pass
 	
 	def freeProductCacheSpace(self, neededSpace = 0, neededProducts = []):

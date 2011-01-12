@@ -30,6 +30,8 @@ from OPSI import System
 # Get logger instance
 logger = Logger()
 
+__fullversion__ = True
+
 def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True):
 	productIds = forceProductIdList(productIds)
 	
