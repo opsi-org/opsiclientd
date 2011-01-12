@@ -32,6 +32,7 @@
 """
 
 import sys
+import copy as pycopy
 
 # OPSI imports
 from OPSI.Logger import *
@@ -471,7 +472,6 @@ class ConfigImplementation(object):
 						logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
 		logger.notice(u"Got config from service")
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.getDict()))
-	
 	
 class Config(ConfigImplementation):
 	# Storage for the instance reference
