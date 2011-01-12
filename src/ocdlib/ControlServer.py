@@ -58,6 +58,10 @@ try:
 	from ocdlibnonfree.CacheService import CacheService
 except:
 	from ocdlib.CacheService import CacheService
+try:
+	from ocdlibnonfree.SoftwareOnDemand import WorkerSoftwareOnDemand, ResourceSoftwareOnDemand
+except:
+	pass
 
 logger = Logger()
 config = Config()
@@ -267,7 +271,9 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root.putChild("interface",   ResourceOpsiclientdJsonInterface(self))
 		self._root.putChild("rpc", ResourceCacheServiceJsonRpc(self))
 		self._root.putChild("rpcinterface", ResourceCacheServiceJsonInterface(self))
-
+		if ResourceSoftwareOnDemand:
+			self._root.putChild("swondemand", ResourceSoftwareOnDemand(self))
+		
 class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def __init__(self, opsiclientd):
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
