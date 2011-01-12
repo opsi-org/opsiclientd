@@ -72,6 +72,10 @@ class CacheService(threading.Thread):
 		self._cacheProductsRunning = False
 		self._cacheProductsEnded = threading.Event()
 		
+		self._cacheConfigRequested = False
+		self._cacheConfigRunning = False
+		self._cacheConfigEnded = threading.Event()
+		
 		self._currentProductSyncProgressObserver = None
 		self._overallProductSyncProgressObserver = None
 		self._initialized = False
@@ -135,32 +139,49 @@ class CacheService(threading.Thread):
 				logger.debug(u"Product '%s': sync not completed" % productId)
 		return productSyncCompleted
 	
-	def cacheConfig(self, configService=None):
+	def getConfigSyncCompleted(self):
 		self.initialize()
-		if not configService:
-			url = config.get('config_service', 'url')[0]
-			serviceConnectionThread = ServiceConnectionThread(
-				configServiceUrl = url,
-				username         = config.get('global', 'host_id'),
-				password         = config.get('global', 'opsi_host_key') )
-			serviceConnectionThread.start()
-			for i in range(5):
-				if serviceConnectionThread.running:
-					break
-				time.sleep(1)
-			logger.debug(u"ServiceConnectionThread started")
-			timeout = 30
-			while serviceConnectionThread.running and (timeout > 0):
-				time.sleep(1)
-				timeout -= 1
-			if serviceConnectionThread.running:
-				serviceConnectionThread.stop()
-				raise Exception(u"Failed to connect to config service '%s': timed out" % url)
-			if not serviceConnectionThread.connected:
-				raise Exception(u"Failed to connect to config service '%s': %s" % (url, serviceConnectionThread.connectionError))
-			configService = serviceConnectionThread.configService
-		self._cacheBackend._setMasterBackend(configService)
-		self._cacheBackend._replicateMasterToWorkBackend()
+		if not self._state['config']:
+			logger.info(u"No config cached")
+			return False
+		return False
+	
+	def cacheConfig(self, configService, waitForEnding=False):
+		if self._cacheConfigRunning:
+			logger.info(u"Already caching config")
+		else:
+			self.initialize()
+			self._cacheConfigRequested = True
+			self._cacheConfigEnded.clear()
+			#if not configService:
+			#	url = config.get('config_service', 'url')[0]
+			#	serviceConnectionThread = ServiceConnectionThread(
+			#		configServiceUrl = url,
+			#		username         = config.get('global', 'host_id'),
+			#		password         = config.get('global', 'opsi_host_key') )
+			#	serviceConnectionThread.start()
+			#	for i in range(5):
+			#		if serviceConnectionThread.running:
+			#			break
+			#		time.sleep(1)
+			#	logger.debug(u"ServiceConnectionThread started")
+			#	timeout = 30
+			#	while serviceConnectionThread.running and (timeout > 0):
+			#		time.sleep(1)
+			#		timeout -= 1
+			#	if serviceConnectionThread.running:
+			#		serviceConnectionThread.stop()
+			#		raise Exception(u"Failed to connect to config service '%s': timed out" % url)
+			#	if not serviceConnectionThread.connected:
+			#		raise Exception(u"Failed to connect to config service '%s': %s" % (url, serviceConnectionThread.connectionError))
+			#	configService = serviceConnectionThread.configService
+			#self._cacheBackend._setMasterBackend(configService)
+			#self._cacheBackend._replicateMasterToWorkBackend()
+		if waitForEnding:
+			self._cacheConfigEnded.wait()
+			#for productId in self._state['product'].keys():
+			#	if self._state['product'][productId]['sync_failure']:
+			#		raise Exception(u"Failed to cache product '%s': %s" % (productId, self._state['product'][productId]['sync_failure']))
 		
 	def cacheProducts(self, configService, productIds, waitForEnding=False):
 		if self._cacheProductsRunning:
@@ -424,7 +445,18 @@ class CacheService(threading.Thread):
 					#self.writeStateFile()
 					self._cacheProductsRunning = False
 					self._cacheProductsEnded.set()
-			
+				
+				if self._cacheConfigRequested:
+					try:
+						self._cacheBackend._setMasterBackend(self._configService)
+						self._cacheBackend._replicateMasterToWorkBackend()
+					except Exception, e:
+						logger.logException(e)
+						logger.error(u"Failed to cache config: %s" % forceUnicode(e))
+					
+					self._cacheConfigRunning = False
+					self._cacheConfigEnded.set()
+					
 			except Exception, e:
 				logger.logException(e)
 			time.sleep(3)

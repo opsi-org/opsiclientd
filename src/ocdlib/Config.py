@@ -308,6 +308,14 @@ class ConfigImplementation(object):
 			logger.logException(e)
 			logger.error(u"Failed to write config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
 	
+	def setTemporaryConfigServiceUrls(self, temporaryConfigServiceUrls):
+		self._temporaryConfigServiceUrls = forceList(temporaryConfigServiceUrls)
+		
+	def getConfigServiceUrls(self):
+		if self._temporaryConfigServiceUrls:
+			return self._temporaryConfigServiceUrls
+		return self.get('config_service', 'url')
+	
 	def selectDepotserver(self, configService, productIds=[], cifsOnly=True):
 		productIds = forceProductIdList(productIds)
 		
@@ -393,6 +401,67 @@ class ConfigImplementation(object):
 		depotServerPassword = blowfishDecrypt(self.get('global', 'opsi_host_key'), encryptedDepotServerPassword)
 		logger.addConfidentialString(depotServerPassword)
 		return (depotServerUsername, depotServerPassword)
+	
+	def getConfigFromService(self, configService):
+		''' Get settings from service '''
+		logger.notice(u"Getting config from service")
+		if not configService:
+			raise Exception(u"Config service is undefined")
+		
+		if configService.isLegacyOpsi():
+			for (key, value) in configService.getNetworkConfig_hash(self.get('global', 'host_id')).items():
+				if (key.lower() == 'depotid'):
+					depotId = value
+					self.set('depot_server', 'depot_id', depotId)
+					self.set('depot_server', 'url', configService.getDepot_hash(depotId)['depotRemoteUrl'])
+				elif (key.lower() == 'depotdrive'):
+					self.set('depot_server', 'drive', value)
+				elif (key.lower() == 'nextbootserviceurl'):
+					if (value.find('/rpc') == -1):
+						value = value + '/rpc'
+					self.set('config_service', 'url', [ value ])
+				else:
+					logger.info(u"Unhandled network config key '%s'" % key)
+				
+			logger.notice(u"Got network config from service")
+			
+			for (key, value) in configService.getGeneralConfig_hash(self.get('global', 'host_id')).items():
+				try:
+					parts = key.lower().split('.')
+					if (len(parts) < 3) or (parts[0] != 'opsiclientd'):
+						continue
+					
+					self.set(section = parts[1], option = parts[2], value = value)
+					
+				except Exception, e:
+					logger.error(u"Failed to process general config key '%s:%s': %s" % (key, value, forceUnicode(e)))
+		else:
+			configService.backend_setOptions({"addConfigStateDefaults": True})
+			for configState in configService.configState_getObjects(objectId = self.get('global', 'host_id')):
+				logger.info(u"Got config state from service: configId %s, values %s" % (configState.configId, configState.values))
+				
+				if not configState.values:
+					continue
+				
+				if   (configState.configId == u'clientconfig.configserver.url'):
+					self.set('config_service', 'url', configState.values)
+				elif (configState.configId == u'clientconfig.depot.drive'):
+					self.set('depot_server', 'drive', configState.values[0])
+				elif (configState.configId == u'clientconfig.depot.id'):
+					self.set('depot_server', 'depot_id', configState.values[0])
+				elif configState.configId.startswith(u'opsiclientd.'):
+					try:
+						parts = configState.configId.lower().split('.')
+						if (len(parts) < 3):
+							continue
+						
+						self.set(section = parts[1], option = parts[2], value = configState.values[0])
+						
+					except Exception, e:
+						logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
+		logger.notice(u"Got config from service")
+		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.getDict()))
+	
 	
 class Config(ConfigImplementation):
 	# Storage for the instance reference
