@@ -724,9 +724,10 @@ def getEventConfigs():
 			try:
 				for key in options.keys():
 					preconditions[preconditionName][key] = not options[key].lower() in ('0', 'false', 'off', 'no')
+				logger.info(u"Precondition '%s' created: %s" % (preconditionName, preconditions[preconditionName]))
 			except Exception, e:
 				logger.error(u"Failed to parse precondition '%s': %s" % (preconditionName, forceUnicode(e)))
-	
+			
 	rawEventConfigs = {}
 	for (section, options) in config.getDict().items():
 		section = section.lower()
@@ -788,16 +789,17 @@ def getEventConfigs():
 			#	rawEventConfig['args']['action_processor_command'] = config.get('action_processor', 'command')
 			
 			eventConfigs[eventConfigName] = {}
+			if rawEventConfig.get('precondition'):
+				precondition = preconditions.get(rawEventConfig['precondition'])
+				if not precondition:
+					logger.error(u"Precondition '%s' referenced by event config '%s' not found" % (precondition, eventConfigName))
+				else:
+					eventConfigs[eventConfigName]['preconditions'] = precondition
+			
 			for (key, value) in rawEventConfig['args'].items():
 				try:
 					if   (key == 'type'):
 						eventConfigs[eventConfigName]['type'] = value
-					elif (key == 'precondition'):
-						precondition = preconditions.get(value)
-						if not precondition:
-							logger.error(u"Precondition '%s' referenced by event config '%s' not found" % (precondition, eventConfigName))
-						else:
-							eventConfigs[eventConfigName]['preconditions'] = precondition
 					elif (key == 'wql'):
 						eventConfigs[eventConfigName]['wql'] = value
 					elif key.startswith('message'):
