@@ -339,7 +339,7 @@ class EventGenerator(threading.Thread):
 	def addPreconditionConfig(self, preconditionEventConfig):
 		self._preconditionEventConfigs.append(preconditionEventConfig)
 	
-	def _testPreconditions(self, preconditions):
+	def _preconditionsFulfilled(self, preconditions):
 		for (k, v) in preconditions.values():
 			if (k == 'user_logged_in'):
 				if (bool(v) != bool(System.getActiveSessionIds())):
@@ -359,7 +359,9 @@ class EventGenerator(threading.Thread):
 	def createEvent(self, eventInfo={}):
 		eventConfig = self._eventConfig
 		for pec in self._preconditionEventConfigs:
-			if self._eventConfig._testPreconditions()
+			if self._preconditionsFulfilled(pec['preconditions']):
+				eventConfig = pec
+				break
 		return Event(eventConfig = eventConfig, eventInfo = eventInfo)
 	
 	def initialize(self):
