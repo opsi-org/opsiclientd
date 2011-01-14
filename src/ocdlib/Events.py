@@ -912,9 +912,9 @@ def createEventGenerators():
 	for eventConfigType in ('main', 'precondition'):
 		for (eventConfigName, eventConfig) in getEventConfigs().items():
 			mainEventConfigName = eventConfigName.split('{', 0)
-			if (eventConfigType == 'main') and eventConfig['preconditions']:
+			if (eventConfigType == 'main') and eventConfig.get('preconditions'):
 				continue
-			if (eventConfigType == 'precondition') and not eventConfig['preconditions']:
+			if (eventConfigType == 'precondition') and not eventConfig.get('preconditions'):
 				continue
 			if (eventConfigType == 'main') and mainEventConfigName in eventGenerators.keys():
 				logger.error(u"Event generator '%s' already defined" % mainEventConfigName)
@@ -950,9 +950,9 @@ def reconfigureEventGenerators():
 	for eventConfigType in ('main', 'precondition'):
 		for (eventConfigName, eventConfig) in eventConfigs.items():
 			mainEventConfigName = eventConfigName.split('{', 0)
-			if (eventConfigType == 'main') and eventConfig['preconditions']:
+			if (eventConfigType == 'main') and eventConfig.get('preconditions'):
 				continue
-			if (eventConfigType == 'precondition') and not eventConfig['preconditions']:
+			if (eventConfigType == 'precondition') and not eventConfig.get('preconditions'):
 				continue
 			if (eventConfigType == 'main') and mainEventConfigName not in eventGenerators.keys():
 				continue
