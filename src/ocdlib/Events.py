@@ -340,7 +340,7 @@ class EventGenerator(threading.Thread):
 		self._preconditionEventConfigs.append(preconditionEventConfig)
 	
 	def _preconditionsFulfilled(self, preconditions):
-		for (k, v) in preconditions.values():
+		for (k, v) in preconditions.items():
 			if (k == 'user_logged_in'):
 				if (bool(v) != bool(System.getActiveSessionIds())):
 					return False
@@ -356,17 +356,18 @@ class EventGenerator(threading.Thread):
 		
 		self._eventListeners.append(eventListener)
 	
-	def createEvent(self, eventInfo={}):
-		eventConfig = self._eventConfig
+	def getEventConfig(self):
 		logger.debug(u"Testing preconditions of configs: %s" % self._preconditionEventConfigs)
 		for pec in self._preconditionEventConfigs:
-			if self._preconditionsFulfilled(pec['preconditions']):
+			if self._preconditionsFulfilled(pec.preconditions):
 				logger.notice(u"Preconditions for event config '%s' fulfilled" % pec.getName())
-				eventConfig = pec
-				break
+				return pec
 			else:
 				logger.debug(u"Preconditions for event config '%s' not fulfilled" % pec.getName())
-		return Event(eventConfig = eventConfig, eventInfo = eventInfo)
+		return self._eventConfig
+	
+	def createEvent(self, eventInfo={}):
+		return Event(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
 	
 	def initialize(self):
 		pass
@@ -457,21 +458,21 @@ class PanicEventGenerator(EventGenerator):
 		EventGenerator.__init__(self, eventConfig)
 	
 	def createEvent(self, eventInfo={}):
-		return PanicEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+		return PanicEvent(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
 	
 class DaemonStartupEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
 		EventGenerator.__init__(self, eventConfig)
 	
 	def createEvent(self, eventInfo={}):
-		return DaemonStartupEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+		return DaemonStartupEvent(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
 	
 class DaemonShutdownEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
 		EventGenerator.__init__(self, eventConfig)
 	
 	def createEvent(self, eventInfo={}):
-		return DaemonShutdownEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+		return DaemonShutdownEvent(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
 	
 class WMIEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
@@ -553,7 +554,7 @@ class GUIStartupEventGenerator(EventGenerator):
 			raise Exception(u"OS unsupported")
 	
 	def createEvent(self, eventInfo={}):
-		return GUIStartupEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+		return GUIStartupEvent(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
 	
 	def getNextEvent(self):
 		while not self._stopped:
@@ -568,21 +569,21 @@ class TimerEventGenerator(EventGenerator):
 		EventGenerator.__init__(self, eventConfig)
 	
 	def createEvent(self, eventInfo={}):
-		return TimerEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+		return TimerEvent(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
 	
 class ProductSyncCompletedEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
 		EventGenerator.__init__(self, eventConfig)
 	
 	def createEvent(self, eventInfo={}):
-		return ProductSyncCompletedEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+		return ProductSyncCompletedEvent(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
 	
 class ProcessActionRequestsEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
 		EventGenerator.__init__(self, eventConfig)
 	
 	def createEvent(self, eventInfo={}):
-		return ProcessActionRequestsEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+		return ProcessActionRequestsEvent(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
 
 class SensLogonEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
@@ -645,7 +646,7 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 				self.stop()
 	
 	def createEvent(self, eventInfo={}):
-		return UserLoginEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+		return UserLoginEvent(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
 
 class SystemShutdownEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
@@ -656,7 +657,7 @@ class CustomEventGenerator(WMIEventGenerator):
 		WMIEventGenerator.__init__(self, eventConfig)
 		
 	def createEvent(self, eventInfo={}):
-		return CustomEvent(eventConfig = self._eventConfig, eventInfo = eventInfo)
+		return CustomEvent(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                            EVENT                                                  -
