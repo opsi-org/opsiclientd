@@ -360,8 +360,11 @@ class EventGenerator(threading.Thread):
 		eventConfig = self._eventConfig
 		for pec in self._preconditionEventConfigs:
 			if self._preconditionsFulfilled(pec['preconditions']):
+				logger.notice(u"Preconditions for event config '%s' fulfilled" % pec.getName())
 				eventConfig = pec
 				break
+			else:
+				logger.debug(u"Preconditions for event config '%s' not fulfilled" % pec.getName())
 		return Event(eventConfig = eventConfig, eventInfo = eventInfo)
 	
 	def initialize(self):
