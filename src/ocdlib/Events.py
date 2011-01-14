@@ -97,6 +97,7 @@ class EventConfig(object):
 		self.setConfig(kwargs)
 		
 	def setConfig(self, conf):
+		self.preconditions                 =     dict ( conf.get('preconditions',                 {}        ) )
 		self.message                       =  unicode ( conf.get('message',                       ''        ) )
 		self.maxRepetitions                =      int ( conf.get('maxRepetitions',                -1        ) )
 		# wait <activationDelay> seconds before event gets active
@@ -314,6 +315,7 @@ class EventGenerator(threading.Thread):
 	def __init__(self, eventConfig):
 		threading.Thread.__init__(self)
 		self._eventConfig = eventConfig
+		self._preconditionEventConfigs = []
 		self._eventListeners = []
 		self._eventsOccured = 0
 		self._threadId = None
@@ -330,6 +332,12 @@ class EventGenerator(threading.Thread):
 	
 	def setEventConfig(self, eventConfig):
 		self._eventConfig = eventConfig
+	
+	def setPreconditionConfigs(self, preconditionEventConfigs):
+		self._preconditionEventConfigs = forceList(preconditionEventConfigs)
+	
+	def addPreconditionConfig(self, preconditionEventConfig):
+		self._preconditionEventConfigs.append(preconditionEventConfig)
 	
 	def addEventListener(self, eventListener):
 		if not isinstance(eventListener, EventListener):
@@ -707,6 +715,18 @@ class EventListener(object):
 # -                                          EVENT GENERATOR                                          -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def getEventConfigs():
+	preconditions = {}
+	for (section, options) in config.getDict().items():
+		section = section.lower()
+		if section.startswith('precondition_'):
+			preconditionName = section.split('_', 1)[1]
+			preconditions[preconditionName] = {}
+			try:
+				for key in options.keys():
+					preconditions[preconditionName][key] = not options[key].lower() in ('0', 'false', 'off', 'no')
+			except Exception, e:
+				logger.error(u"Failed to parse precondition '%s': %s" % (preconditionName, forceUnicode(e)))
+	
 	rawEventConfigs = {}
 	for (section, options) in config.getDict().items():
 		section = section.lower()
@@ -716,9 +736,10 @@ def getEventConfigs():
 				logger.error(u"No event config name defined in section '%s'" % section)
 				continue
 			rawEventConfigs[eventConfigName] = {
-				'active': True,
-				'args':   {},
-				'super':  None }
+				'active':       True,
+				'args':         {},
+				'super':        None,
+				'precondition': None}
 			try:
 				for key in options.keys():
 					if   (key.lower() == 'active'):
@@ -727,6 +748,10 @@ def getEventConfigs():
 						rawEventConfigs[eventConfigName]['super'] = options[key]
 					else:
 						rawEventConfigs[eventConfigName]['args'][key.lower()] = options[key]
+				if (eventConfigName.find('{') != -1):
+					(superEventName, precondition) = eventConfigName.split('{', 1)
+					rawEventConfigs[eventConfigName]['super'] = superEventName.strip()
+					rawEventConfigs[eventConfigName]['precondition'] = precondition.replace('}', '').strip()
 			except Exception, e:
 				logger.error(u"Failed to parse event config '%s': %s" % (eventConfigName, forceUnicode(e)))
 	
@@ -767,6 +792,12 @@ def getEventConfigs():
 				try:
 					if   (key == 'type'):
 						eventConfigs[eventConfigName]['type'] = value
+					elif (key == 'precondition'):
+						precondition = preconditions.get(value)
+						if not precondition:
+							logger.error(u"Precondition '%s' referenced by event config '%s' not found" % (precondition, eventConfigName))
+						else:
+							eventConfigs[eventConfigName]['preconditions'] = precondition
 					elif (key == 'wql'):
 						eventConfigs[eventConfigName]['wql'] = value
 					elif key.startswith('message'):
@@ -878,19 +909,32 @@ def createEventGenerators():
 	eventGenerators['panic'] = EventGeneratorFactory(
 		PanicEventConfig('panic', actionProcessorCommand = config.get('action_processor', 'command', raw=True))
 	)
-	for (eventConfigName, eventConfig) in getEventConfigs().items():
-		if eventConfigName in eventGenerators.keys():
-			logger.error(u"Event config '%s' already defined" % eventConfigName)
-			continue
-		try:
-			eventType = eventConfig['type']
-			del eventConfig['type']
-			eventGenerators[eventConfigName] = EventGeneratorFactory(
-				EventConfigFactory(eventType, eventConfigName, **eventConfig)
-			)
-			logger.notice(u"%s event generator '%s' created" % (eventType, eventConfigName))
-		except Exception, e:
-			logger.error(u"Failed to create event generator '%s': %s" % (eventConfigName, forceUnicode(e)))
+	for eventConfigType in ('main', 'precondition'):
+		for (eventConfigName, eventConfig) in getEventConfigs().items():
+			mainEventConfigName = eventConfigName.split('{', 0)
+			if (eventConfigType == 'main') and eventConfig['preconditions']:
+				continue
+			if (eventConfigType == 'precondition') and not eventConfig['preconditions']:
+				continue
+			if (eventConfigType == 'main') and mainEventConfigName in eventGenerators.keys():
+				logger.error(u"Event generator '%s' already defined" % mainEventConfigName)
+				continue
+			try:
+				eventType = eventConfig['type']
+				del eventConfig['type']
+				ec = EventConfigFactory(eventType, eventConfigName, **eventConfig)
+				if (eventConfigType == 'main'):
+					eventGenerators[mainEventConfigName] = EventGeneratorFactory(ec)
+					logger.notice(u"%s event generator '%s' created" % (eventType, mainEventConfigName))
+				else:
+					eventGenerators[mainEventConfigName].addPreconditionConfig(ec)
+					logger.notice(u"Precondition config '%s' added to event generator '%s'" % (eventConfigName, mainEventConfigName))
+					
+			except Exception, e:
+				if (eventConfigType == 'main'):
+					logger.error(u"Failed to create event generator '%s': %s" % (mainEventConfigName, forceUnicode(e)))
+				else:
+					logger.error(u"Failed to add precondition config '%s' to event generator '%s': %s" % (eventConfigName, mainEventConfigName, forceUnicode(e)))
 
 def getEventGenerators(generatorClass=None):
 	global eventGenerators
@@ -903,14 +947,47 @@ def getEventGenerators(generatorClass=None):
 def reconfigureEventGenerators():
 	global eventGenerators
 	eventConfigs = getEventConfigs()
-	for (eventConfigName, eventGenerator) in eventGenerators.items():
-		eventConfig = eventConfigs.get(eventConfigName)
-		if eventConfig:
+	for eventConfigType in ('main', 'precondition'):
+		for (eventConfigName, eventConfig) in eventConfigs.items():
+			mainEventConfigName = eventConfigName.split('{', 0)
+			if (eventConfigType == 'main') and eventConfig['preconditions']:
+				continue
+			if (eventConfigType == 'precondition') and not eventConfig['preconditions']:
+				continue
+			if (eventConfigType == 'main') and mainEventConfigName not in eventGenerators.keys():
+				continue
 			try:
-				logger.notice("Reconfiguting event generator '%s'" % eventConfigName)
+				eventGenerator = eventGenerators.get(mainEventConfigName)
+				if not eventGenerator:
+					raise Exception(u"Event generator '%s' not found" % mainEventConfigName)
 				del eventConfig['type']
-				eventGenerator.setEventConfig(eventConfig)
+				ec = EventConfigFactory(eventType, eventConfigName, **eventConfig)
+				if (eventConfigType == 'main'):
+					eventGenerator.setEventConfig(ec)
+					eventGenerator.setPreconditionConfigs([])
+					logger.notice("Event generator '%s' reconfigured" % mainEventConfigName)
+				else:
+					eventGenerator.addPreconditionConfig(ec)
+					logger.notice(u"Precondition config '%s' added to event generator '%s'" % (eventConfigName, mainEventConfigName))
 			except Exception, e:
-				logger.error(u"Failed to reconfigure event generator '%s': %s" % (eventConfigName, e))
+				if (eventConfigType == 'main'):
+					logger.error(u"Failed to reconfigure event generator '%s': %s" % (mainEventConfigName, forceUnicode(e)))
+				else:
+					logger.error(u"Failed to add precondition config '%s' to event generator '%s': %s" % (eventConfigName, mainEventConfigName, forceUnicode(e)))
 	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
