@@ -311,7 +311,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			return data
 		return u""
 	
-	def runCommand(self, command, sessionId=None, desktop=None):
+	def runCommand(self, command, captureStderr=False):
+		return u''.join(System.execute(cmd = forceUnicode(command), captureStderr = forceBool(captureStderr)))
+	
+	def runCommandInSession(self, command, sessionId=None, desktop=None):
 		command = forceUnicode(command)
 		if not command:
 			raise ValueError("No command given")
