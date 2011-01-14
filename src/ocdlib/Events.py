@@ -911,7 +911,7 @@ def createEventGenerators():
 	)
 	for eventConfigType in ('main', 'precondition'):
 		for (eventConfigName, eventConfig) in getEventConfigs().items():
-			mainEventConfigName = eventConfigName.split('{', 0)
+			mainEventConfigName = eventConfigName.split('{')[0]
 			if (eventConfigType == 'main') and eventConfig.get('preconditions'):
 				continue
 			if (eventConfigType == 'precondition') and not eventConfig.get('preconditions'):
@@ -949,7 +949,7 @@ def reconfigureEventGenerators():
 	eventConfigs = getEventConfigs()
 	for eventConfigType in ('main', 'precondition'):
 		for (eventConfigName, eventConfig) in eventConfigs.items():
-			mainEventConfigName = eventConfigName.split('{', 0)
+			mainEventConfigName = eventConfigName.split('{')[0]
 			if (eventConfigType == 'main') and eventConfig.get('preconditions'):
 				continue
 			if (eventConfigType == 'precondition') and not eventConfig.get('preconditions'):
