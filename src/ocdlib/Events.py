@@ -339,6 +339,13 @@ class EventGenerator(threading.Thread):
 	def addPreconditionConfig(self, preconditionEventConfig):
 		self._preconditionEventConfigs.append(preconditionEventConfig)
 	
+	def _testPreconditions(self, preconditions):
+		for (k, v) in preconditions.values():
+			if (k == 'user_logged_in'):
+				if (bool(v) != bool(System.getActiveSessionIds())):
+					return False
+		return True
+		
 	def addEventListener(self, eventListener):
 		if not isinstance(eventListener, EventListener):
 			raise TypeError(u"Failed to add event listener, got class %s, need class EventListener" % eventListener.__class__)
@@ -350,7 +357,10 @@ class EventGenerator(threading.Thread):
 		self._eventListeners.append(eventListener)
 	
 	def createEvent(self, eventInfo={}):
-		return Event(eventConfig = self._eventConfig, eventInfo = eventInfo)
+		eventConfig = self._eventConfig
+		for pec in self._preconditionEventConfigs:
+			if self._eventConfig._testPreconditions()
+		return Event(eventConfig = eventConfig, eventInfo = eventInfo)
 	
 	def initialize(self):
 		pass
