@@ -567,9 +567,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					
 					if self.event.eventConfig.useCachedProducts:
 						if self.opsiclientd._cacheService.productCacheCompleted(self._configService, productIds):
-							logger.notice(u"Event '%s' requires cached products and product sync is done" % self.event.eventConfig.getName())
+							logger.notice(u"Event '%s' uses cached products and product caching is done" % self.event.eventConfig.getName())
 						else:
-							raise Exception(u"Event '%s' requires cached products but product sync is not done, exiting" % self.event.eventConfig.getName())
+							raise Exception(u"Event '%s' uses cached products but product caching is not done" % self.event.eventConfig.getName())
 					
 				config.selectDepotserver(configService = self._configService, event = self.event, productIds = productIds)
 				self.runActions()
