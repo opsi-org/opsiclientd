@@ -98,7 +98,7 @@ class State(StateImplementation):
 		# Check whether we already have an instance
 		if State.__instance is None:
 			# Create and remember instance
-			Config.__instance = StateImplementation()
+			State.__instance = StateImplementation()
 		
 		# Store instance reference as the only member in the handle
 		self.__dict__['_State__instance'] = State.__instance
