@@ -649,7 +649,7 @@ class ProductCacheService(threading.Thread):
 	
 	def _getRepository(self, productId):
 		configService = self._getConfigService()
-		config.selectDepotserver(configService = configService, productIds = [ productId ], cifsOnly = False)
+		config.selectDepotserver(configService = configService, event = None, productIds = [ productId ], cifsOnly = False)
 		depotUrl = config.get('depot_server', 'url')
 		if not depotUrl:
 			raise Exception(u"Cannot sync files, depot_server.url undefined")
