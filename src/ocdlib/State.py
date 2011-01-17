@@ -67,7 +67,7 @@ class StateImplementation(object):
 			if not os.path.exists(os.path.dirname(self._stateFile)):
 				os.makedirs(os.path.dirname(self._stateFile))
 			f = codecs.open(self._stateFile, 'w', 'utf8')
-			self._state = f.write(jsonstr)
+			f.write(jsonstr)
 			f.close()
 		except Exception, e:
 			logger.error(u"Failed to write state file '%s': %s" % (self._stateFile, e))
