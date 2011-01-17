@@ -536,7 +536,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
 							attributes    = ['actionRequest']):
 					if not productOnClient.productId in productIds:
-						productOnClients.append(productOnClient)
 						productIds.append(productOnClient.productId)
 						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
 					
