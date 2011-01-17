@@ -443,7 +443,7 @@ class CacheService(threading.Thread):
 			logger.info(u"Already caching products")
 		else:
 			self._productCacheService.setConfigService(configService)
-			self._productCacheService.setProductIdsToCache(productIds):
+			self._productCacheService.setProductIdsToCache(productIds)
 		if waitForEnding:
 			time.sleep(3)
 			while self._productCacheService.isRunning() and self._productCacheService.isWorking():
