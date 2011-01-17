@@ -328,7 +328,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		return u"command '%s' executed" % command
 	
 	def execute(self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300):
-		return System.execute(cmd = command, waitForEnding = waitForEnding, aptureStderr = captureStderr, encoding = encoding, timeout = timeout)
+		return System.execute(cmd = command, waitForEnding = waitForEnding, captureStderr = captureStderr, encoding = encoding, timeout = timeout)
 		
 	def logoffCurrentUser(self):
 		logger.notice(u"rpc logoffCurrentUser: logging of current user now")
