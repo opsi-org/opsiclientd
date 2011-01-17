@@ -536,6 +536,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
 							attributes    = ['actionRequest']):
 					if not productOnClient.productId in productIds:
+						productOnClients.append(productOnClient)
 						productIds.append(productOnClient.productId)
 						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
 					
@@ -545,32 +546,31 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			
 			else:
 				logger.notice(u"Start processing action requests")
-				
-				if self.event.eventConfig.cacheProducts:
-					logger.notice(u"Caching products: %s" % productIds)
-					self.setStatusMessage( _(u"Caching products") )
-					#self.opsiclientd._cacheService.setCurrentProductSyncProgressObserver(self._currentProgressSubjectProxy)
-					#self.opsiclientd._cacheService.setOverallProductSyncProgressObserver(self._overallProgressSubjectProxy)
-					#self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
-					try:
-						self.opsiclientd._cacheService.cacheProducts(
-							self._configService,
-							productIds,
-							waitForEnding = self.event.eventConfig.requiresCachedProducts)
-						self.setStatusMessage( _(u"Products cached") )
-					finally:
-						self._detailSubjectProxy.setMessage(u"")
-						#self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
-						#self._currentProgressSubjectProxy.reset()
-						#self._overallProgressSubjectProxy.reset()
-				
-				if self.event.eventConfig.requiresCachedProducts:
-					# Event needs cached products => initialize cache service
-					if self.opsiclientd._cacheService.getProductSyncCompleted():
-						logger.notice(u"Event '%s' requires cached products and product sync is done" % self.event.eventConfig.getName())
-					else:
-						raise Exception(u"Event '%s' requires cached products but product sync is not done, exiting" % self.event.eventConfig.getName())
-						
+				if productIds:
+					if self.event.eventConfig.cacheProducts:
+						logger.notice(u"Caching products: %s" % productIds)
+						self.setStatusMessage( _(u"Caching products") )
+						#self.opsiclientd._cacheService.setCurrentProductSyncProgressObserver(self._currentProgressSubjectProxy)
+						#self.opsiclientd._cacheService.setOverallProductSyncProgressObserver(self._overallProgressSubjectProxy)
+						#self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
+						try:
+							self.opsiclientd._cacheService.cacheProducts(
+								self._configService,
+								productIds,
+								waitForEnding = self.event.eventConfig.useCachedProducts)
+							self.setStatusMessage( _(u"Products cached") )
+						finally:
+							self._detailSubjectProxy.setMessage(u"")
+							#self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
+							#self._currentProgressSubjectProxy.reset()
+							#self._overallProgressSubjectProxy.reset()
+					
+					if self.event.eventConfig.useCachedProducts:
+						if self.opsiclientd._cacheService.productCacheCompleted(self._configService, productIds):
+							logger.notice(u"Event '%s' requires cached products and product sync is done" % self.event.eventConfig.getName())
+						else:
+							raise Exception(u"Event '%s' requires cached products but product sync is not done, exiting" % self.event.eventConfig.getName())
+					
 				config.selectDepotserver(configService = self._configService, event = self.event, productIds = productIds)
 				self.runActions()
 				

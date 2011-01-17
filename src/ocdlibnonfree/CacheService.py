@@ -490,6 +490,34 @@ class ProductCacheService(threading.Thread):
 	
 	def setProductIdsToCache(self, productIds):
 		self._productIdsToCache = forceProductIdList(productIds)
+	
+	def productCacheCompleted(self, configService, productIds):
+		if not productIds:
+			return True
+		
+		clientToDepotservers = configService.configState_getClientToDepotserver(
+				clientIds  = [ config.get('global', 'host_id') ],
+				masterOnly = True,
+				productIds = productIds)
+		if not clientToDepotservers:
+			raise Exception(u"Failed to get depot config from service")
+		depotId = [ clientToDepotservers[0]['depotId'] ]
+		productOnDepots = {}
+		for productOnDepot in configService.produtOnDepot_getObjects(depotId = depotId, productId = productIds):
+			productOnDepots[productOnDepot.productId] = productOnDepot
+		
+		for productId in productIds:
+			productOnDepot = productOnDepots.get(productId)
+			if not productOnDepot:
+				raise Exception(u"Product '%s' not available on depot '%s'" % productId)
+			productState = self._state.get('products', {}).get(productId)
+			if not productState:
+				logger.debug(u"No products cached")
+				return False
+			if not productState.get('completed') or (productState.get('productVersion') != productOnDepot.productVersion) or (productState.get('packageVersion') != productOnDepot.packageVersion):
+				logger.debug(u"Product '%s_%s-%s' not yet cached (got state: %s)" % (productId, productOnDepot.productVersion, productOnDepot.packageVersion, productState))
+				return False
+		return True
 		
 	def setConfigService(self, configService):
 		modules = None
@@ -589,6 +617,9 @@ class ProductCacheService(threading.Thread):
 					raise Exception(u"Directory '%s' not found" % deleteDir)
 				shutil.rmtree(deleteDir)
 				freedSpace += productDirSizes[deleteProduct]
+				if self._state.get('products', {}).get(deleteProduct):
+					del self._state['products'][deleteProduct]
+					state.set('product_cache_service', self._state)
 			logger.notice(u"%0.3f MB of product cache freed" % (float(freedSpace)/(1024*1024)))
 		except Exception, e:
 			raise Exception(u"Failed to free enough disk space for product cache: %s" % forceUnicode(e))
@@ -596,6 +627,7 @@ class ProductCacheService(threading.Thread):
 	def _cacheProducts(self):
 		self._working = True
 		self._state['products_cached'] = False
+		self._state['products'] = {}
 		state.set('product_cache_service', self._state)
 		logger.notice(u"Caching products: %s" % ', '.join(self._productIdsToCache))
 		try:
@@ -650,11 +682,10 @@ class ProductCacheService(threading.Thread):
 	def _getRepository(self, productId):
 		configService = self._getConfigService()
 		config.selectDepotserver(configService = configService, event = None, productIds = [ productId ], cifsOnly = False)
-		depotUrl = config.get('depot_server', 'url')
-		if not depotUrl:
-			raise Exception(u"Cannot sync files, depot_server.url undefined")
+		if not config.get('depot_server', 'url'):
+			raise Exception(u"Cannot cache product files: depot_server.url undefined")
 		(depotServerUsername, depotServerPassword) = (u'', u'')
-		if urlsplit(depotUrl)[0].startswith('webdav'):
+		if urlsplit(config.get('depot_server', 'url'))[0].startswith('webdav'):
 			(depotServerUsername, depotServerPassword) = (config.get('global', 'host_id'), config.get('global', 'opsi_host_key'))
 		else:
 			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = configService)
@@ -667,6 +698,15 @@ class ProductCacheService(threading.Thread):
 		self._setProductCacheState(productId, 'failure',   None)
 		
 		repository = self._getRepository(productId)
+		if not config.get('depot_server', 'depot_id'):
+			raise Exception(u"Cannot cache product files: depot_server.depot_id undefined")
+		productOnDepots = configService.productOnDepot_getObjects(depotId = config.get('depot_server', 'depot_id'), productId = productId)
+		if not productOnDepots:
+			raise Exception(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
+		
+		self._setProductCacheState(productId, 'productVersion', productOnDepots[0].productVersion)
+		self._setProductCacheState(productId, 'packageVersion', productOnDepots[0].packageVersion)
+		
 		try:
 			tempPackageContentFile = os.path.join(self._tempDir, u'%s.files' % productId)
 			packageContentFile = u'%s/%s.files' % (productId, productId)
