@@ -35,7 +35,7 @@ from OPSI.Backend.SQLite import SQLiteBackend
 
 from ocdlib.Config import Config
 from ocdlib.State import State
-from ocdlib.Events import *
+from ocdlib.Events import getEventGenerators
 from ocdlib.Localization import _
 from ocdlib.OpsiService import ServiceConnectionThread
 
@@ -614,7 +614,7 @@ class ProductCacheService(threading.Thread):
 		if errorsOccured:
 			logger.error(u"Errors occured while caching products %s: %s" % (', '.join(self._productIdsToCache), ', '.join(errorsOccured)))
 		else:
-			logger.notice(u"All products cached: %s" % ', '.join(productIds))
+			logger.notice(u"All products cached: %s" % ', '.join(self._productIdsToCache))
 			self._state['products_cached'] = True
 			state.set('product_cache_service', self._state)
 			#for eventGenerator in getEventGenerators(generatorClass = ProductSyncCompletedEventGenerator):
