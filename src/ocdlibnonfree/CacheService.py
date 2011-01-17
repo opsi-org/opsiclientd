@@ -448,7 +448,39 @@ class CacheService(threading.Thread):
 			time.sleep(3)
 			while self._productCacheService.isRunning() and self._productCacheService.isWorking():
 				time.sleep(1)
+	
+	def productCacheCompleted(self, configService, productIds):
+		if not productIds:
+			return True
+		if not self._productCacheService:
+			logger.debug(u"Product cache service not initialized")
+			return False
 		
+		clientToDepotservers = configService.configState_getClientToDepotserver(
+				clientIds  = [ config.get('global', 'host_id') ],
+				masterOnly = True,
+				productIds = productIds)
+		if not clientToDepotservers:
+			raise Exception(u"Failed to get depot config from service")
+		depotId = [ clientToDepotservers[0]['depotId'] ]
+		productOnDepots = {}
+		for productOnDepot in configService.produtOnDepot_getObjects(depotId = depotId, productId = productIds):
+			productOnDepots[productOnDepot.productId] = productOnDepot
+		
+		for productId in productIds:
+			productOnDepot = productOnDepots.get(productId)
+			if not productOnDepot:
+				raise Exception(u"Product '%s' not available on depot '%s'" % productId)
+			productState = self._productCacheService.getState().get('products', {}).get(productId)
+			if not productState:
+				logger.debug(u"No products cached")
+				return False
+			if not productState.get('completed') or (productState.get('productVersion') != productOnDepot.productVersion) or (productState.get('packageVersion') != productOnDepot.packageVersion):
+				logger.debug(u"Product '%s_%s-%s' not yet cached (got state: %s)" % (productId, productOnDepot.productVersion, productOnDepot.packageVersion, productState))
+				return False
+		return True
+	
+	
 class ProductCacheService(threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
@@ -482,6 +514,9 @@ class ProductCacheService(threading.Thread):
 		if pcss:
 			self._state = pcss
 	
+	def getState(self):
+		return self._state
+	
 	def isRunning(self):
 		return self._running
 	
@@ -491,34 +526,6 @@ class ProductCacheService(threading.Thread):
 	def setProductIdsToCache(self, productIds):
 		self._productIdsToCache = forceProductIdList(productIds)
 	
-	def productCacheCompleted(self, configService, productIds):
-		if not productIds:
-			return True
-		
-		clientToDepotservers = configService.configState_getClientToDepotserver(
-				clientIds  = [ config.get('global', 'host_id') ],
-				masterOnly = True,
-				productIds = productIds)
-		if not clientToDepotservers:
-			raise Exception(u"Failed to get depot config from service")
-		depotId = [ clientToDepotservers[0]['depotId'] ]
-		productOnDepots = {}
-		for productOnDepot in configService.produtOnDepot_getObjects(depotId = depotId, productId = productIds):
-			productOnDepots[productOnDepot.productId] = productOnDepot
-		
-		for productId in productIds:
-			productOnDepot = productOnDepots.get(productId)
-			if not productOnDepot:
-				raise Exception(u"Product '%s' not available on depot '%s'" % productId)
-			productState = self._state.get('products', {}).get(productId)
-			if not productState:
-				logger.debug(u"No products cached")
-				return False
-			if not productState.get('completed') or (productState.get('productVersion') != productOnDepot.productVersion) or (productState.get('packageVersion') != productOnDepot.packageVersion):
-				logger.debug(u"Product '%s_%s-%s' not yet cached (got state: %s)" % (productId, productOnDepot.productVersion, productOnDepot.packageVersion, productState))
-				return False
-		return True
-		
 	def setConfigService(self, configService):
 		modules = None
 		if configService.isOpsi35():
