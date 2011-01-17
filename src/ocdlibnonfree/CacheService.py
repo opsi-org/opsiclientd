@@ -603,14 +603,16 @@ class ProductCacheService(threading.Thread):
 			for productId in self._productIdsToCache:
 				try:
 					self._cacheProduct(productId)
-					overallProgressSubject.addToState(1)
+					#overallProgressSubject.addToState(1)
 				except Exception, e:
+					logger.logException(e, LOG_INFO)
 					errorsOccured.append(forceUnicode(e))
 					self._setProductCacheState(productId, 'failure', forceUnicode(e))
 		except Exception, e:
+			logger.logException(e)
 			errorsOccured.append(forceUnicode(e))
 		if errorsOccured:
-			logger.error(u"Errors occured while caching products %s: %s" % (', '.join(productIds), ', '.join(errorsOccured)))
+			logger.error(u"Errors occured while caching products %s: %s" % (', '.join(self._productIdsToCache), ', '.join(errorsOccured)))
 		else:
 			logger.notice(u"All products cached: %s" % ', '.join(productIds))
 			self._state['products_cached'] = True
@@ -627,25 +629,22 @@ class ProductCacheService(threading.Thread):
 		self._state['products'][productId][key] = value
 		state.set('product_cache_service', self._state)
 		if self._getConfigService():
-			if (key == 'started'):
-				self._getConfigService().productOnClient_updateObjects([
-					ProductOnClient(
-						productId      = productId,
-						productType    = u'LocalbootProduct',
-						clientId       = config.get('global', 'host_id'),
-						actionProgress = u'caching'
-					)
-				])
+			actionProgress = None
+			if   (key == 'started'):
+				actionProgress = 'caching'
 			elif (key == 'completed'):
+				actionProgress = 'cached'
+			elif (key == 'failure'):
+				actionProgress = forceUnicode(value)
+			if actionProgress:
 				self._getConfigService().productOnClient_updateObjects([
 					ProductOnClient(
 						productId      = productId,
 						productType    = u'LocalbootProduct',
 						clientId       = config.get('global', 'host_id'),
-						actionProgress = u'cached'
+						actionProgress = actionProgress
 					)
 				])
-		
 	
 	def _getRepository(self):
 		configService = self._getConfigService()
