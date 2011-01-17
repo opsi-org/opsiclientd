@@ -549,20 +549,20 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if self.event.eventConfig.cacheProducts:
 					logger.notice(u"Caching products: %s" % productIds)
 					self.setStatusMessage( _(u"Caching products") )
-					self.opsiclientd._cacheService.setCurrentProductSyncProgressObserver(self._currentProgressSubjectProxy)
-					self.opsiclientd._cacheService.setOverallProductSyncProgressObserver(self._overallProgressSubjectProxy)
-					self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
+					#self.opsiclientd._cacheService.setCurrentProductSyncProgressObserver(self._currentProgressSubjectProxy)
+					#self.opsiclientd._cacheService.setOverallProductSyncProgressObserver(self._overallProgressSubjectProxy)
+					#self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
 					try:
-						self.opsiclientd._cacheService.triggerCacheProducts(
+						self.opsiclientd._cacheService.cacheProducts(
 							self._configService,
 							productIds,
 							waitForEnding = self.event.eventConfig.requiresCachedProducts)
 						self.setStatusMessage( _(u"Products cached") )
 					finally:
 						self._detailSubjectProxy.setMessage(u"")
-						self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
-						self._currentProgressSubjectProxy.reset()
-						self._overallProgressSubjectProxy.reset()
+						#self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
+						#self._currentProgressSubjectProxy.reset()
+						#self._overallProgressSubjectProxy.reset()
 				
 				if self.event.eventConfig.requiresCachedProducts:
 					# Event needs cached products => initialize cache service

@@ -70,6 +70,7 @@ class ConfigImplementation(object):
 				'opsi_host_key':        u'',
 				'wait_for_gui_timeout': 120,
 				'block_login_notifier': u'',
+				'state_file':           u'c:\\opsi.org\\opsiclientd\\state.json'
 			},
 			'config_service': {
 				'url':                   [],
@@ -120,6 +121,7 @@ class ConfigImplementation(object):
 			self._config['cache_service']['storage_dir'] = u'%s\\opsi.org\\cache' % System.getSystemDrive()
 			self._config['cache_service']['backend_manager_config'] = os.path.join(baseDir, u'opsiclientd', 'backendManager.d')
 			self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd', 'opsiclientd.conf')
+			self._config['global']['state_file'] = u'%s\\opsi.org\\opsiclientd\\state.json' % System.getSystemDrive()
 			
 		if (sys.getwindowsversion()[0] == 5):
 			self._config['action_processor']['run_as_user'] = 'pcpatch'
@@ -495,7 +497,7 @@ class Config(ConfigImplementation):
 
 	def __setattr__(self, attr, value):
 		""" Delegate access to implementation """
-	 	return setattr(self.__instance, attr, value)
+		return setattr(self.__instance, attr, value)
 
 
 
