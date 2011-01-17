@@ -311,10 +311,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			return data
 		return u""
 	
-	def runCommand(self, command, captureStderr=False):
-		return u''.join(System.execute(cmd = forceUnicode(command), captureStderr = forceBool(captureStderr)))
 	
-	def runCommandInSession(self, command, sessionId=None, desktop=None):
+	def runCommand(self, command, sessionId=None, desktop=None):
 		command = forceUnicode(command)
 		if not command:
 			raise ValueError("No command given")
@@ -330,6 +328,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		System.runCommandInSession(command = command, sessionId = sessionId, desktop = desktop, waitForProcessEnding = False)
 		return u"command '%s' executed" % command
 	
+	def execute(self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300):
+		return System.execute(cmd = command, waitForEnding = waitForEnding, aptureStderr = captureStderr, encoding = encoding, timeout = timeout)
+		
 	def logoffCurrentUser(self):
 		logger.notice(u"rpc logoffCurrentUser: logging of current user now")
 		System.logoffCurrentUser()

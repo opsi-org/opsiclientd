@@ -41,10 +41,12 @@ from OPSI import System
 from OPSI.Types import *
 
 from ocdlib.Config import *
+from ocdlib.State import State
 from ocdlib.Localization import _, setLocaleDir, getLanguage
 
 logger = Logger()
 config = Config()
+state = State()
 
 # Possible event types
 EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED = u'product sync completed'
@@ -341,9 +343,8 @@ class EventGenerator(threading.Thread):
 	
 	def _preconditionsFulfilled(self, preconditions):
 		for (k, v) in preconditions.items():
-			if (k == 'user_logged_in'):
-				if (bool(v) != bool(System.getActiveSessionIds())):
-					return False
+			if (bool(v) != state.get(k)):
+				return False
 		return True
 		
 	def addEventListener(self, eventListener):
