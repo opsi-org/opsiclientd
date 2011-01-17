@@ -619,6 +619,7 @@ class ProductCacheService(threading.Thread):
 			state.set('product_cache_service', self._state)
 			#for eventGenerator in getEventGenerators(generatorClass = ProductSyncCompletedEventGenerator):
 			#	eventGenerator.fireEvent()
+		self._productIdsToCache = []
 		self._working = False
 	
 	def _setProductCacheState(self, productId, key, value):
@@ -646,7 +647,7 @@ class ProductCacheService(threading.Thread):
 					)
 				])
 	
-	def _getRepository(self):
+	def _getRepository(self, productId):
 		configService = self._getConfigService()
 		config.selectDepotserver(configService = configService, productIds = [ productId ], cifsOnly = False)
 		depotUrl = config.get('depot_server', 'url')
@@ -665,7 +666,7 @@ class ProductCacheService(threading.Thread):
 		self._setProductCacheState(productId, 'completed', None)
 		self._setProductCacheState(productId, 'failure',   None)
 		
-		repository = self._getRepository()
+		repository = self._getRepository(productId)
 		try:
 			tempPackageContentFile = os.path.join(self._tempDir, u'%s.files' % productId)
 			packageContentFile = u'%s/%s.files' % (productId, productId)
