@@ -179,7 +179,7 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		return WorkerOpsiJsonRpc._generateResponse(self, result)
 	
 	def _renderError(self, failure):
-		return WorkerOpsiJsonRpc._renderError(self, result)
+		return WorkerOpsiJsonRpc._renderError(self, failure)
 
 
 class WorkerCacheServiceJsonInterface(WorkerCacheServiceJsonRpc, WorkerOpsiJsonInterface):

@@ -461,6 +461,10 @@ class CacheService(threading.Thread):
 		if not self._configCacheService.isWorking() and self._configCacheService.getState().get('config_cached', False):
 			return True
 		return False
+	
+	def getConfigBackend(self):
+		self.initializeConfigCacheService()
+		self._configCacheService.getWorkBackend()
 		
 	def cacheProducts(self, configService, productIds, waitForEnding = False):
 		self.initializeProductCacheService()
@@ -536,13 +540,13 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			logger.notice(u"Creating config cache dir '%s'" % self._configCacheDir)
 			os.makedirs(self._configCacheDir)
 		
-		workBackend = SQLiteBackend(database = os.path.join(self._configCacheDir, 'work.sqlite'))
+		self._workBackend = SQLiteBackend(database = os.path.join(self._configCacheDir, 'work.sqlite'))
 		# @TODO:
-		workBackend._sql.execute('PRAGMA synchronous=OFF')
-		workBackend.backend_createBase()
+		self._workBackend._sql.execute('PRAGMA synchronous=OFF')
+		self._workBackend.backend_createBase()
 		
 		self._cacheBackend = ClientCacheBackend(
-			workBackend     = workBackend,
+			workBackend     = self._workBackend,
 			depotId         = config.get('depot_server', 'depot_id'),
 			clientId        = config.get('global', 'host_id'),
 			opsiModulesFile = os.path.join(self._configCacheDir, 'cached_modules'),
@@ -552,7 +556,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		ccss = state.get('config_cache_service')
 		if ccss:
 			self._state = ccss
-		
+	
+	def getWorkBackend(self):
+		self._workBackend
+	
 	def getState(self):
 		return self._state
 	
