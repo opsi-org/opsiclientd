@@ -898,6 +898,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						command      = self.event.eventConfig.actionNotifierCommand,
 						desktop      = self.event.eventConfig.actionNotifierDesktop )
 				
+				if self.event.eventConfig.syncConfig:
+					self.opsiclientd.getCacheService().cacheConfig(waitForEnding = self.event.eventConfig.useCachedConfig)
+				
 				if not self.isConfigServiceConnected():
 					self.connectConfigService()
 				
