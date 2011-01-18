@@ -37,7 +37,7 @@ from ocdlib.Config import Config
 from ocdlib.State import State
 from ocdlib.Events import getEventGenerators
 from ocdlib.Localization import _
-from ocdlib.OpsiService import ServiceConnectionThread
+from ocdlib.OpsiService import ServiceConnection
 
 logger = Logger()
 config = Config()
@@ -429,15 +429,25 @@ class CacheService(threading.Thread):
 			time.sleep(3)
 		self._running = False
 '''
-class CacheService(threading.Thread):
+class CacheService(threading.Thread, ServiceConnection):
 	def __init__(self, opsiclientd):
 		threading.Thread.__init__(self)
 		self._productCacheService = None
-	
+		self._configCacheService = None
+		
 	def initializeProductCacheService(self):
 		if not self._productCacheService:
 			self._productCacheService = ProductCacheService()
 			self._productCacheService.start()
+	
+	def initializeConfigCacheService(self):
+		if not self._configCacheService:
+			self._configCacheService = ConfigCacheService()
+			self._configCacheService.start()
+	
+	def cacheConfig(self):
+		self.initializeConfigCacheService()
+		self._configCacheService.cacheConfig()
 		
 	def cacheProducts(self, configService, productIds, waitForEnding = False):
 		self.initializeProductCacheService()
@@ -491,7 +501,92 @@ class CacheService(threading.Thread):
 	def getCurrentProductCacheProgressSubject(self):
 		self.initializeProductCacheService()
 		return self._productCacheService.getCurrentProgressSubject()
+
+
+class ConfigCacheService(threading.Thread):
+	def __init__(self):
+		threading.Thread.__init__(self)
+		ConfigCacheService.__init__(self)
+		moduleName = u' %-30s' % (u'config cache service')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		
+		self._configCacheDir = os.path.join(config.get('cache_service', 'storage_dir'), 'config')
+		
+		self._stopped = False
+		self._running = False
+		self._working = False
+		self._state   = {}
+		
+		self._cacheConfigRequested = False
+		
+		if not os.path.exists(self._configCacheDir):
+			logger.notice(u"Creating config cache dir '%s'" % self._configCacheDir)
+			os.makedirs(self._configCacheDir)
+		
+		workBackend = SQLiteBackend(database = os.path.join(self._configCacheDir, 'work.sqlite'))
+		# @TODO:
+		workBackend._sql.execute('PRAGMA synchronous=OFF')
+		workBackend.backend_createBase()
+		
+		self._cacheBackend = ClientCacheBackend(
+			workBackend     = workBackend,
+			depotId         = config.get('depot_server', 'depot_id'),
+			clientId        = config.get('global', 'host_id'),
+			opsiModulesFile = os.path.join(self._configCacheDir, 'cached_modules'),
+			opsiVersionFile = os.path.join(self._configCacheDir, 'cached_version'),
+		)
+		
+		#pcss = state.get('product_cache_service')
+		#if pcss:
+		#	self._state = pcss
 	
+	def getState(self):
+		return self._state
+	
+	def isRunning(self):
+		return self._running
+	
+	def isWorking(self):
+		return self._working
+	
+	def stop(self):
+		self._stopped = True
+	
+	def run(self):
+		self._running = True
+		logger.notice(u"Config cache service started")
+		try:
+			while not self._stopped:
+				if self._cacheConfigRequested:
+					self._cacheConfig()
+				time.sleep(1)
+		except Exception, e:
+			logger.logException(e)
+		logger.notice(u"Config cache service ended")
+		self._running = False
+	
+	def cacheConfig(self):
+		self._cacheConfigRequested = True
+	
+	def _cacheConfig(self):
+		self._working = True
+		try:
+			self.connectConfigService()
+			try:
+				self._cacheBackend._setMasterBackend(self._configService)
+				self._cacheBackend._replicateMasterToWorkBackend()
+			finally:
+				try:
+					self.disconnectConfigService()
+				except Exception, e2:
+					logger.notice(u"Failed to diconnect from config service: %s" % e2)
+			logger.notice(u"Config cached")
+		except Exception, e:
+			logger.logException(e)
+			logger.error(u"Errors occured while caching config: %s" % e)
+		self._cacheConfigRequested = False
+		self._working = False
+		
 class ProductCacheService(threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
@@ -543,6 +638,22 @@ class ProductCacheService(threading.Thread):
 	def isWorking(self):
 		return self._working
 	
+	def stop(self):
+		self._stopped = True
+	
+	def run(self):
+		self._running = True
+		logger.notice(u"Product cache service started")
+		try:
+			while not self._stopped:
+				if self._productIdsToCache:
+					self._cacheProducts()
+				time.sleep(1)
+		except Exception, e:
+			logger.logException(e)
+		logger.notice(u"Product cache service ended")
+		self._running = False
+	
 	def setProductIdsToCache(self, productIds):
 		self._productIdsToCache = forceProductIdList(productIds)
 	
@@ -586,22 +697,6 @@ class ProductCacheService(threading.Thread):
 		if not self._configService:
 			raise Exception(u"Not connected to config service")
 		return self._configService
-	
-	def stop(self):
-		self._stopped = True
-	
-	def run(self):
-		self._running = True
-		logger.notice(u"Product cache service started")
-		try:
-			while not self._stopped:
-				if self._productIdsToCache:
-					self._cacheProducts()
-				time.sleep(1)
-		except Exception, e:
-			logger.logException(e)
-		logger.notice(u"Product cache service ended")
-		self._running = False
 	
 	def _freeProductCacheSpace(self, neededSpace = 0, neededProducts = []):
 		try:

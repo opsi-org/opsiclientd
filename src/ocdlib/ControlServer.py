@@ -285,10 +285,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
 	
 	def cacheService_cacheConfig(self):
-		if not self.opsiclientd.getCacheService():
-			raise Exception(u"Cache service not running")
-		self.opsiclientd.getCacheService().cacheConfig()
-		
+		return self.opsiclientd.getCacheService().cacheConfig()
+	
+	def cacheService_getProductCacheState(self):
+		return self.opsiclientd.getCacheService().getProductCacheState()
+	
 	def setBlockLogin(self, blockLogin):
 		self.opsiclientd.setBlockLogin(bool(blockLogin))
 		logger.notice(u"rpc setBlockLogin: blockLogin set to '%s'" % self.opsiclientd._blockLogin)
@@ -391,11 +392,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		message = forceUnicode(message)
 		self.opsiclientd.showPopup(message)
 	
-	def cacheService_getProductCacheState(self):
-		return self.opsiclientd.getCacheService().getProductCacheState()
-	
-
-
 
 
 
