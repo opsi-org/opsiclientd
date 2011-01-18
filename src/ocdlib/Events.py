@@ -85,13 +85,13 @@ def EventConfigFactory(type, name, **kwargs):
 	elif (type == EVENT_CONFIG_TYPE_CUSTOM):
 		return CustomEventConfig(name, **kwargs)
 	else:
-		raise TypeError("Unknown event config type '%s'" % type)
+		raise TypeError(u"Unknown event config type '%s'" % type)
 	
 class EventConfig(object):
 	def __init__(self, name, **kwargs):
 		
 		if not name:
-			raise TypeError("Name not given")
+			raise TypeError(u"Name not given")
 		self._name = unicode(name)
 		
 		moduleName = u' %-30s' % (u'event config ' + self._name)

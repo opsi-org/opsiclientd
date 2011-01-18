@@ -445,10 +445,17 @@ class CacheService(threading.Thread):
 			self._configCacheService = ConfigCacheService()
 			self._configCacheService.start()
 	
-	def cacheConfig(self):
+	def cacheConfig(self, waitForEnding = False):
 		self.initializeConfigCacheService()
-		self._configCacheService.cacheConfig()
-		
+		if self._configCacheService.isWorking():
+			logger.info(u"Already caching config")
+		else:
+			self._configCacheService.cacheConfig()
+		if waitForEnding:
+			time.sleep(3)
+			while self._configCacheService.isRunning() and self._configCacheService.isWorking():
+				time.sleep(1)
+	
 	def cacheProducts(self, configService, productIds, waitForEnding = False):
 		self.initializeProductCacheService()
 		if self._productCacheService.isWorking():
