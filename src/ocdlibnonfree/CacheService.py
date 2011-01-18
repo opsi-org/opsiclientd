@@ -480,7 +480,12 @@ class CacheService(threading.Thread):
 				return False
 		return True
 	
-	
+	def getProductCacheState(self):
+		if not self._productCacheService:
+			logger.debug(u"Product cache service not initialized")
+			return False
+		return self._productCacheService.getState()
+		
 class ProductCacheService(threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
@@ -707,6 +712,7 @@ class ProductCacheService(threading.Thread):
 		repository = self._getRepository(productId)
 		if not config.get('depot_server', 'depot_id'):
 			raise Exception(u"Cannot cache product files: depot_server.depot_id undefined")
+		configService = self._getConfigService()
 		productOnDepots = configService.productOnDepot_getObjects(depotId = config.get('depot_server', 'depot_id'), productId = productId)
 		if not productOnDepots:
 			raise Exception(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))

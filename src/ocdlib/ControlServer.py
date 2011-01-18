@@ -390,7 +390,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def showPopup(self, message):
 		message = forceUnicode(message)
 		self.opsiclientd.showPopup(message)
-		
+	
+	def cacheService_getProductCacheState(self):
+		return self.opsiclientd.getCacheService().getProductCacheState()
 	
 
 
