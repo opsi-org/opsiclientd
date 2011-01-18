@@ -464,7 +464,7 @@ class CacheService(threading.Thread):
 	
 	def getConfigBackend(self):
 		self.initializeConfigCacheService()
-		self._configCacheService.getWorkBackend()
+		return self._configCacheService.getWorkBackend()
 		
 	def cacheProducts(self, configService, productIds, waitForEnding = False):
 		self.initializeProductCacheService()
