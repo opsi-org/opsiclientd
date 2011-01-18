@@ -429,7 +429,7 @@ class CacheService(threading.Thread):
 			time.sleep(3)
 		self._running = False
 '''
-class CacheService(threading.Thread, ServiceConnection):
+class CacheService(threading.Thread):
 	def __init__(self, opsiclientd):
 		threading.Thread.__init__(self)
 		self._productCacheService = None
@@ -503,10 +503,10 @@ class CacheService(threading.Thread, ServiceConnection):
 		return self._productCacheService.getCurrentProgressSubject()
 
 
-class ConfigCacheService(threading.Thread):
+class ConfigCacheService(ServiceConnection, threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
-		ConfigCacheService.__init__(self)
+		ServiceConnection.__init__(self)
 		moduleName = u' %-30s' % (u'config cache service')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		
