@@ -484,7 +484,17 @@ class CacheService(threading.Thread):
 		if not self._productCacheService:
 			raise Exception(u"Product cache service not initialized")
 		return self._productCacheService.getState()
-		
+	
+	def getOverallProductCacheProgressSubject(self):
+		if not self._productCacheService:
+			raise Exception(u"Product cache service not initialized")
+		return self._productCacheService.getOverallProgressSubject()
+	
+	def getCurrentProductCacheProgressSubject(self):
+		if not self._productCacheService:
+			raise Exception(u"Product cache service not initialized")
+		return self._productCacheService.getCurrentProgressSubject()
+	
 class ProductCacheService(threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
@@ -504,6 +514,9 @@ class ProductCacheService(threading.Thread):
 		self._productIdsToCache = []
 		self._configService = None
 		
+		self._overallProgressSubject = ProgressSubject(id = 'overall', type = 'product_cache')
+		self._currentProgressSubject = ProgressSubject(id = 'current', type = 'product_cache')
+		
 		if not os.path.exists(self._storageDir):
 			logger.notice(u"Creating cache service storage dir '%s'" % self._storageDir)
 			os.makedirs(self._storageDir)
@@ -517,6 +530,12 @@ class ProductCacheService(threading.Thread):
 		pcss = state.get('product_cache_service')
 		if pcss:
 			self._state = pcss
+	
+	def getOverallProgressSubject(self):
+		return self._overallProgressSubject
+	
+	def getCurrentProgressSubject(self):
+		return self._currentProgressSubject
 	
 	def getState(self):
 		return self._state
@@ -640,17 +659,22 @@ class ProductCacheService(threading.Thread):
 		self._state['products_cached'] = False
 		self._state['products'] = {}
 		state.set('product_cache_service', self._state)
+		
 		logger.notice(u"Caching products: %s" % ', '.join(self._productIdsToCache))
+		self._overallProgressSubject.setEnd(len(self._productIdsToCache))
+		self._overallProgressSubject.setMessage( _(u'Caching products') )
+		
 		try:
 			errorsOccured = []
 			for productId in self._productIdsToCache:
 				try:
+					self._overallProgressSubject.setMessage( _(u'Caching product: %s') % productId )
 					self._cacheProduct(productId)
-					#overallProgressSubject.addToState(1)
 				except Exception, e:
 					logger.logException(e, LOG_INFO)
 					errorsOccured.append(forceUnicode(e))
 					self._setProductCacheState(productId, 'failure', forceUnicode(e))
+				self._overallProgressSubject.addToState(1)
 		except Exception, e:
 			logger.logException(e)
 			errorsOccured.append(forceUnicode(e))
@@ -771,71 +795,12 @@ class ProductCacheService(threading.Thread):
 				maxBandwidth         = 0,
 				dynamicBandwidth     = False
 			)
-			productSynchronizer.synchronize()#productProgressObserver = self._currentProductSyncProgressObserver)
+			productSynchronizer.synchronize(productProgressObserver = self._currentProgressSubject)
 			logger.notice(u"Product '%s' cached" % productId)
 			self._setProductCacheState(productId, 'completed', time.time())
 		finally:
 			repository.disconnect()
-		
-	#def hide(delf):
-	#		logger.notice(u"Caching products: %s" % ', '.join(self._productIds))
-	#		self.initialize()
-	#				
-	#		logger.info(u"Synchronizing %d product(s):" % len(self._productIds))
-	#		for productId in self._productIds:
-	#			logger.info("   %s" % productId)
-	#		
-	#		overallProgressSubject = ProgressSubject(id = 'sync_products_overall', type = 'product_sync', end = len(self._productIds))
-	#		overallProgressSubject.setMessage( _(u'Synchronizing products') )
-	#		if self._overallProductSyncProgressObserver:
-	#			overallProgressSubject.attachObserver(self._overallProductSyncProgressObserver)
-	#		
-	#		
-	#		
-	#		
-	#		for productId in self._productIds:
-	#			
-	#			
-	#			#self.writeStateFile()
-	#			try:
-	#				
-	#			except Exception, e:
-	#				logger.logException(e)
-	#				logger.error("Failed to sync product '%s': %s" % (productId, forceUnicode(e)))
-	#				errorsOccured.append( u'%s: %s' % (productId, forceUnicode(e)) )
-	#				self._state['product'][productId]['sync_failure'] = forceUnicode(e)
-	#				self._configService.productOnClient_updateObjects([
-	#					ProductOnClient(
-	#						productId      = productId,
-	#						productType    = u'LocalbootProduct',
-	#						clientId       = config.get('global', 'host_id'),
-	#						actionProgress = u'failed to cache: %s' % forceUnicode(e)
-	#					)
-	#				])
-	#			repository.disconnect()
-	#			#self.writeStateFile()
-	#			overallProgressSubject.addToState(1)
-	#		
-	#		if self._overallProductSyncProgressObserver:
-	#			overallProgressSubject.detachObserver(self._overallProductSyncProgressObserver)
-	#		
-	#		#for productId in self._productIds:
-	#		#	if self._state['product'][productId]['sync_failed']:
-	#		#		raise Exception(self._state['product'][productId]['sync_failed'])
-	#		
-	#		if errorsOccured:
-	#			logger.error(u"Errors occured while caching products %s: %s" % (', '.join(self._productIds), ', '.join(errorsOccured)))
-	#		else:
-	#			logger.notice(u"All products cached: %s" % ', '.join(self._productIds))
-	#			for eventGenerator in getEventGenerators(generatorClass = ProductSyncCompletedEventGenerator):
-	#				eventGenerator.fireEvent()
-	#	finally:
-	#		#self.writeStateFile()
-	#		self._cacheProductsRunning = False
-	#		self._cacheProductsEnded.set()
 	
-
-
 
 
 
