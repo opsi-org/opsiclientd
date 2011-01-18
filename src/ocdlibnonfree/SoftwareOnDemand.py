@@ -87,7 +87,26 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 	def _generateResponse(self, result):
 		self.connectConfigService()
+		
+		modules = None
+		if configService.isOpsi35():
+			modules = configService.backend_info()['modules']
+		else:
+			modules = configService.getOpsiInformation_hash()['modules']
+		
+		if not modules.get('swondemand'):
+			raise Exception(u"SoftwareOnDemand not available: swondemand module currently disabled")
+		
+		if not modules.get('customer'):
+			raise Exception(u"SoftwareOnDemand not available: No customer in modules file")
+			
+		if not modules.get('valid'):
+			raise Exception(u"SoftwareOnDemand not available: modules file invalid")
+		
+		if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
+			raise Exception(u": modules file expired")
 		# @TODO: modules
+		
 		self._configService
 		productIds = []
 		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = "kiosk"):
