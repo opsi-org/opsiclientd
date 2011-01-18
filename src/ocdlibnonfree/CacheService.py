@@ -456,6 +456,12 @@ class CacheService(threading.Thread):
 			while self._configCacheService.isRunning() and self._configCacheService.isWorking():
 				time.sleep(1)
 	
+	def configCacheCompleted(self):
+		self.initializeConfigCacheService()
+		if not self._configCacheService.isWorking() and self._configCacheService.getState().get('config_cached', False):
+			return True
+		return False
+		
 	def cacheProducts(self, configService, productIds, waitForEnding = False):
 		self.initializeProductCacheService()
 		if self._productCacheService.isWorking():
@@ -543,10 +549,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			opsiVersionFile = os.path.join(self._configCacheDir, 'cached_version'),
 		)
 		
-		#pcss = state.get('product_cache_service')
-		#if pcss:
-		#	self._state = pcss
-	
+		ccss = state.get('config_cache_service')
+		if ccss:
+			self._state = ccss
+		
 	def getState(self):
 		return self._state
 	
@@ -588,6 +594,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				except Exception, e2:
 					logger.notice(u"Failed to diconnect from config service: %s" % e2)
 			logger.notice(u"Config cached")
+			self._state['config_cached'] = True
+			state.set('config_cache_service', self._state)
 		except Exception, e:
 			logger.logException(e)
 			logger.error(u"Errors occured while caching config: %s" % e)

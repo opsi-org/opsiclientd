@@ -901,6 +901,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if self.event.eventConfig.syncConfig:
 					self.opsiclientd.getCacheService().cacheConfig(waitForEnding = self.event.eventConfig.useCachedConfig)
 				
+				if self.event.eventConfig.useCachedConfig:
+					if self.opsiclientd.getCacheService().configCacheCompleted():
+						logger.notice(u"Event '%s' uses cached config and config caching is done" % self.event.eventConfig.getName())
+						config.setTemporaryConfigServiceUrls(['https://localhost:4441/rpc'])
+					else:
+						raise Exception(u"Event '%s' uses cached config but config caching is not done" % self.event.eventConfig.getName())
+				
 				if not self.isConfigServiceConnected():
 					self.connectConfigService()
 				
