@@ -157,8 +157,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		productsHash = {}
 		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = "kiosk"):
 			productIds.append(objectToGroup.objectId)
-		for productId in productIds:
-			productsHash[productId] = self._configService.productOnClient_getObjects(clientId = myClientId, productId = productId)
+		for product in productIds:
+			productsHash[product] = self._configService.productOnClient_getObjects(clientId = myClientId, productId = product)[0]
 		self.disconnectConfigService()
 		
 		html = kioskPage
