@@ -558,7 +558,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			self._state = ccss
 	
 	def getWorkBackend(self):
-		self._workBackend
+		return self._workBackend
 	
 	def getState(self):
 		return self._state
