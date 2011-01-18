@@ -540,9 +540,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			logger.notice(u"Creating config cache dir '%s'" % self._configCacheDir)
 			os.makedirs(self._configCacheDir)
 		
-		self._workBackend = SQLiteBackend(database = os.path.join(self._configCacheDir, 'work.sqlite'))
-		# @TODO:
-		self._workBackend._sql.execute('PRAGMA synchronous=OFF')
+		self._workBackend = SQLiteBackend(database = os.path.join(self._configCacheDir, 'work.sqlite'), synchronous = False)
 		self._workBackend.backend_createBase()
 		
 		self._cacheBackend = ClientCacheBackend(
