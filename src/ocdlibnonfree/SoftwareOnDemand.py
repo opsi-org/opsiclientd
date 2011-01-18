@@ -151,14 +151,18 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		# @TODO: modules
 		
 		
+		myClientId = config.get('global', 'host_id')
 		
 		productIds = []
+		productsHash = {}
 		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = "kiosk"):
 			productIds.append(objectToGroup.objectId)
+		for productId in productIds:
+			productsHash[productId] = self._configService.productOnClient_getObjects(clientId = myClientId, productId = productId)
 		self.disconnectConfigService()
 		
 		html = kioskPage
-		html = html.replace('%result%', forceUnicode(productIds))
+		html = html.replace('%result%', forceUnicode(productsHash))
 		
 		if not isinstance(result, http.Response):
 			result = http.Response()
