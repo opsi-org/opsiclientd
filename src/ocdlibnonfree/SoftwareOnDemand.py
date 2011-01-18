@@ -16,7 +16,9 @@
    @copyright:	uib GmbH <info@uib.de>
    @author: Erol Ülükmen <e.ueluekmen@uib.de>
 """
-
+# Import
+import base64
+from twisted.conch.ssh import keys
 
 # OPSI imports
 from OPSI.web2 import responsecode, http, stream
