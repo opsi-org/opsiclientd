@@ -549,6 +549,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					if self.event.eventConfig.cacheProducts:
 						logger.notice(u"Caching products: %s" % productIds)
 						self.setStatusMessage( _(u"Caching products") )
+						self.opsiclientd.getCacheService().initializeProductCacheService()
 						try:
 							self.opsiclientd.getCacheService().getOverallProductCacheProgressSubject().attachObserver(self._overallProgressSubjectProxy)
 							self.opsiclientd.getCacheService().getCurrentProductCacheProgressSubject().attachObserver(self._currentProgressSubjectProxy)
@@ -556,7 +557,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						except Exception, e:
 							logger.logException(e)
 						try:
-							self.opsiclientd._cacheService.cacheProducts(
+							self.opsiclientd.getCacheService().cacheProducts(
 								self._configService,
 								productIds,
 								waitForEnding = self.event.eventConfig.useCachedProducts)
