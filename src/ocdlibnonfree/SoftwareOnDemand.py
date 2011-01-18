@@ -18,6 +18,7 @@
 """
 # Import
 import base64
+from hashlib import md5
 from twisted.conch.ssh import keys
 
 # OPSI imports
