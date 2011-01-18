@@ -37,7 +37,7 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 	
 	logger.notice(u"Selecting depot for products %s" % productIds)
 	
-	if event and self.event.eventConfig.useCachedProducts:
+	if event and event.eventConfig.useCachedProducts:
 		cacheDepotDir = os.path.join(config.get('cache_service', 'storage_dir'), 'depot').replace('\\', '/').replace('//', '/')
 		config.setTemporaryDepotDrive(cacheDepotDir.split('/')[0])
 		config.set('depot_server', 'url', 'smb://localhost/noshare/' + ('/'.join(cacheDepotDir.split('/')[1:])))
