@@ -482,8 +482,7 @@ class CacheService(threading.Thread):
 	
 	def getProductCacheState(self):
 		if not self._productCacheService:
-			logger.debug(u"Product cache service not initialized")
-			return False
+			raise Exception(u"Product cache service not initialized")
 		return self._productCacheService.getState()
 		
 class ProductCacheService(threading.Thread):
