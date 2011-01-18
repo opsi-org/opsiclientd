@@ -39,7 +39,7 @@ kioskPage = u'''
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-	<title>%(title)s</title>
+	<title>opsi Software On Demand</title>
 	<style>
 	a:link 	      { color: #555555; text-decoration: none; }
 	a:visited     { color: #555555; text-decoration: none; }
@@ -51,7 +51,7 @@ kioskPage = u'''
 	.json         { color: #555555; width: 95%%; float: left; clear: both; margin: 30px; padding: 20px; background-color: #fafafa; border: 1px #abb1ef dashed; font-size: 11px; }
 	.json_key     { color: #9e445a; }
 	.json_label   { color: #abb1ef; margin-top: 20px; margin-bottom: 5px; font-size: 11px; }
-	.title        { color: #555555; font-size: 20px; font-weight: bolder; letter-spacing: 5px; top: 20px; }
+	.title        { color: #555555; font-size: 20px; font-weight: bolder; letter-spacing: 5px; }
 	.button       { color: #9e445a; background-color: #fafafa; border: none; margin-top: 20px; font-weight: bolder; }
 	.box          { background-color: #fafafa; border: 1px #555555 solid; padding: 20px; margin-left: 30px; margin-top: 50px;}
 	</style>
@@ -61,7 +61,7 @@ kioskPage = u'''
 <body>
 	<span id="title">
 		<img src="/opsi_logo.png" />
-		<span sytle="padding: 1px">opsi Software On Demand</span>
+		<span sytle="padding: 1px; top: 5px;">opsi Software On Demand</span>
 	</span>
 %result%
 </body>
