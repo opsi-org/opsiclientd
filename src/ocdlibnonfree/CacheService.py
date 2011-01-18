@@ -434,11 +434,13 @@ class CacheService(threading.Thread):
 		threading.Thread.__init__(self)
 		self._productCacheService = None
 	
-	def cacheProducts(self, configService, productIds, waitForEnding = False):
+	def initializeProductCacheService(self):
 		if not self._productCacheService:
 			self._productCacheService = ProductCacheService()
 			self._productCacheService.start()
 		
+	def cacheProducts(self, configService, productIds, waitForEnding = False):
+		self.initializeProductCacheService()
 		if self._productCacheService.isWorking():
 			logger.info(u"Already caching products")
 		else:
@@ -452,9 +454,7 @@ class CacheService(threading.Thread):
 	def productCacheCompleted(self, configService, productIds):
 		if not productIds:
 			return True
-		if not self._productCacheService:
-			logger.debug(u"Product cache service not initialized")
-			return False
+		self.initializeProductCacheService()
 		
 		clientToDepotservers = configService.configState_getClientToDepotserver(
 				clientIds  = [ config.get('global', 'host_id') ],
@@ -481,18 +481,15 @@ class CacheService(threading.Thread):
 		return True
 	
 	def getProductCacheState(self):
-		if not self._productCacheService:
-			raise Exception(u"Product cache service not initialized")
+		self.initializeProductCacheService()
 		return self._productCacheService.getState()
 	
 	def getOverallProductCacheProgressSubject(self):
-		if not self._productCacheService:
-			raise Exception(u"Product cache service not initialized")
+		self.initializeProductCacheService()
 		return self._productCacheService.getOverallProgressSubject()
 	
 	def getCurrentProductCacheProgressSubject(self):
-		if not self._productCacheService:
-			raise Exception(u"Product cache service not initialized")
+		self.initializeProductCacheService()
 		return self._productCacheService.getCurrentProgressSubject()
 	
 class ProductCacheService(threading.Thread):
