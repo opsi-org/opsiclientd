@@ -47,6 +47,7 @@ class StateImplementation(object):
 		self._state = {}
 		self._stateFile = config.get('global', 'state_file')
 		self._stateLock = threading.Lock()
+		self._readStateFile()
 		
 	def _readStateFile(self):
 		self._stateLock.acquire()

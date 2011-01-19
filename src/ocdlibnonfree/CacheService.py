@@ -521,6 +521,13 @@ class CacheService(threading.Thread):
 		return self._productCacheService.getCurrentProgressSubject()
 
 
+class ConfigCacheServiceBackendExtension(object):
+	def accessControl_authenticated(self):
+		return True
+	
+	def user_getCredentials(self, username = u'pcpatch', hostId = None):
+		return {'password': u'<password>', 'rsaPrivateKey': u'' }
+	
 class ConfigCacheService(ServiceConnection, threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
@@ -551,7 +558,14 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			opsiModulesFile = os.path.join(self._configCacheDir, 'cached_modules'),
 			opsiVersionFile = os.path.join(self._configCacheDir, 'cached_version'),
 		)
-		self._configBackend = ExtendedConfigDataBackend(self._cacheBackend, overwrite = False)
+		
+		self._configBackend = BackendExtender(
+			backend = ExtendedConfigDataBackend(
+				backend   = self._cacheBackend,
+				overwrite = False
+			),
+			extensionClass = ConfigCacheServiceBackendExtension
+		)
 		
 		ccss = state.get('config_cache_service')
 		if ccss:
