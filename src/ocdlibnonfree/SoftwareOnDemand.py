@@ -63,7 +63,24 @@ kioskPage = u'''
 		<img src="/opsi_logo.png" />
 		<span sytle="padding: 1px; top: 5px;">opsi Software On Demand</span>
 	</span>
+	<table border="1">
+  <tr>
+    <th>Anfordern</th>
+    <th>Produkt</th>
+    <th>Installationsstatus</th>
+    <th>Version</th>
+  </tr>
+  
+  <tr>
+    <td>Buletten</td>
+    <td>Frikadellen</td>
+    <td>Fleischpflanzerl</td>
+  </tr>
+
+
 %result%
+
+</table>
 </body>
 '''
 
@@ -154,17 +171,25 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		myClientId = config.get('global', 'host_id')
 		
 		productIds = []
+		tablerows = []
 		productOnClients = {}
 		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = "kiosk"):
 			productIds.append(objectToGroup.objectId)
 		#for product in productIds:
 		#	 = self._configService.productOnClient_getObjects(clientId = myClientId, productId = product)[0]
 		for productOnClient in self._configService.productOnClient_getObjects(clientId = myClientId, productId = productIds):
+			if productOnClients.haskey(productOnClient.productId):
+				continue
+			tablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
+							"Platzhalter f. Combo",
+							productOnClient.productId,
+							productOnClient.installationStatus,
+							productOnClient.productVersion)
 			productOnClients[productOnClient.productId] =  productOnClient
 		self.disconnectConfigService()
 		
 		html = kioskPage
-		html = html.replace('%result%', forceUnicode(productOnClients["firefox"]))
+		html = html.replace('%result%', tablerows)
 		#html = html.replace('%result%', myClientId)
 		
 		if not isinstance(result, http.Response):
