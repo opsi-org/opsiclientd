@@ -182,8 +182,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			productOnClients[productOnClient.productId] =  productOnClient
 		self.disconnectConfigService()
 		
+		table = ''
 		html = kioskPage
-		html = html.replace('%result%', tablerows[0])
+		for row in tablerows:
+			table = table.join(row)
+		html = html.replace('%result%', table)
 		#html = html.replace('%result%', myClientId)
 		
 		if not isinstance(result, http.Response):
