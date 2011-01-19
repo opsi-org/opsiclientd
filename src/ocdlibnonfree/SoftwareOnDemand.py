@@ -69,6 +69,7 @@ kioskPage = u'''
     <th>Produkt</th>
     <th>Installationsstatus</th>
     <th>Version</th>
+    <th>verfuegbare Version</th>
   </tr>
 
 
@@ -163,29 +164,46 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 		
 		myClientId = config.get('global', 'host_id')
+		mydepotServer = config.get('depot_server','depot_id')
 		
 		productIds = []
+		
+		state = ''
+		productVersion = ''
 		tablerows = []
-		productOnClients = {}
+		productOnDepots = {}
+		logger.critical("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = "kiosk"):
+			logger.notice("!!!Produkt gefunden: '%s'" % objectToGroup.objectId)
 			productIds.append(objectToGroup.objectId)
 		#for product in productIds:
 		#	 = self._configService.productOnClient_getObjects(clientId = myClientId, productId = product)[0]
-		for productOnClient in self._configService.productOnClient_getObjects(clientId = myClientId, productId = productIds):
-			if productOnClients.has_key(productOnClient.productId):
+		for productOnDepot in self._configService.productOnDepot_getObjects(depotId = mydepotServer, productId = productIds):
+			productOnClients = self._configService.productOnClient_getObjects(clientId = myClientId, productId = productOnDepot.productId)
+			if productOnClients:
+				state = productOnClients[0].installationStatus
+				productVersion = productOnClients[0].productVersion
+			else:
+				state = 'nicht installiert'
+				
+			if productOnDepots.has_key(productOnDepot.productId):
+				logger.notice("!!!Produkt ist schon vorhanden: '%s'" % productOnDepot.productId)
 				continue
-			tablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
-							'<input type="checkbox" name="%s" value="%s">' % (productOnClient.productId,productOnClient.productId),
-							productOnClient.productId,
-							productOnClient.installationStatus,
-							productOnClient.productVersion))
-			productOnClients[productOnClient.productId] =  productOnClient
+			
+			
+			tablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
+							'<input type="checkbox" name="%s" value="%s">' % (productOnDepot.productId,productOnDepot.productId),
+							productOnDepot.productId,
+							state,
+							productVersion,
+							productOnDepot.productVersion))
+			productOnDepots[productOnDepot.productId] =  productOnDepot
 		self.disconnectConfigService()
 		
 		table = ''
 		html = kioskPage
 		for row in tablerows:
-			table = table.join(row)
+			table += row
 		html = html.replace('%result%', table)
 		#html = html.replace('%result%', myClientId)
 		
