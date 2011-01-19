@@ -153,15 +153,11 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		if not self.service._opsiclientd.getCacheService():
 			raise Exception(u'Cache service not running')
 		
-		class AccessControlExtension(object):
-			def accessControl_authenticated(self):
-				return True
-		
 		self.session.callInstance = BackendManager(
 			backend              = self.service._opsiclientd.getCacheService().getConfigBackend(),
 			dispatchConfigFile   = None,
 			backendConfigDir     = None,
-			extensionClass       = AccessControlExtension,
+			extend               = True,
 			aclFile              = None,
 			accessControlContext = None,
 			depotBackend         = False,
