@@ -551,7 +551,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			opsiModulesFile = os.path.join(self._configCacheDir, 'cached_modules'),
 			opsiVersionFile = os.path.join(self._configCacheDir, 'cached_version'),
 		)
-		self._configBackend = ExtendedConfigDataBackend(self._cacheBackend)
+		self._configBackend = ExtendedConfigDataBackend(self._cacheBackend, overwrite = False)
 		
 		ccss = state.get('config_cache_service')
 		if ccss:
