@@ -573,11 +573,9 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			backend = ExtendedConfigDataBackend(
 				configDataBackend = self._cacheBackend,
 				overwrite         = True,
-				**kwargs
 			),
 			extensionClass = ConfigCacheServiceBackendExtension,
 			overwrite      = True,
-			**kwargs
 		)
 		
 		ccss = state.get('config_cache_service')
