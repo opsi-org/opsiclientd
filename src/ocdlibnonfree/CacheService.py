@@ -30,7 +30,7 @@ from OPSI.Util.Repository import *
 from OPSI.Util import md5sum
 from OPSI import System
 from OPSI.Util.HTTP import urlsplit
-from OPSI.Backend.Backend import ExtendedConfigDataBackend
+from OPSI.Backend.Backend import ExtendedConfigDataBackend, BackendExtender
 from OPSI.Backend.Cache import ClientCacheBackend
 from OPSI.Backend.SQLite import SQLiteBackend
 
