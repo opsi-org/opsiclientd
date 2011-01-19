@@ -532,8 +532,11 @@ class ConfigCacheServiceBackendExtension(object):
 	def accessControl_authenticated(self):
 		return True
 	
-	def user_getCredentials(self, username = u'pcpatch', hostId = None):
-		return {'password': u'<password>', 'rsaPrivateKey': u'' }
+	#def user_getCredentials(self, username = u'pcpatch', hostId = None):
+	#	return {
+	#		'password':      u'<password>',
+	#		'rsaPrivateKey': u''
+	#	}
 	
 class ConfigCacheService(ServiceConnection, threading.Thread):
 	def __init__(self):
@@ -560,7 +563,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		
 		kwargs = {
 			'opsiModulesFile': os.path.join(self._configCacheDir, 'cached_modules'),
-			'opsiVersionFile': os.path.join(self._configCacheDir, 'cached_version')
+			'opsiVersionFile': os.path.join(self._configCacheDir, 'cached_version'),
+			'opsiPasswdFile':  os.path.join(self._configCacheDir, 'cached_passwd'),
 		}
 		self._cacheBackend = ClientCacheBackend(
 			workBackend     = self._workBackend,
