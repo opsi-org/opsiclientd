@@ -65,16 +65,10 @@ kioskPage = u'''
 	</span>
 	<table border="1">
   <tr>
-    <th>Anfordern</th>
+    <th>Installieren/Updaten</th>
     <th>Produkt</th>
     <th>Installationsstatus</th>
     <th>Version</th>
-  </tr>
-  
-  <tr>
-    <td>Buletten</td>
-    <td>Frikadellen</td>
-    <td>Fleischpflanzerl</td>
   </tr>
 
 
@@ -181,7 +175,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			if productOnClients.has_key(productOnClient.productId):
 				continue
 			tablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
-							"Platzhalter f. Combo",
+							'<input type="checkbox" name="%s" value="%s">' % (productOnClient.productId,productOnClient.productId),
 							productOnClient.productId,
 							productOnClient.installationStatus,
 							productOnClient.productVersion))
