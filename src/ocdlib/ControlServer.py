@@ -156,13 +156,12 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		class AccessControlExtension(object):
 			def accessControl_authenticated(self):
 				return True
-		accessControlExtension = AccessControlExtension()
 		
 		self.session.callInstance = BackendManager(
 			backend              = self.service._opsiclientd.getCacheService().getConfigBackend(),
 			dispatchConfigFile   = None,
 			backendConfigDir     = None,
-			extensionObject      = accessControlExtension,
+			extensionClass       = AccessControlExtension,
 			aclFile              = None,
 			accessControlContext = None,
 			depotBackend         = False,
