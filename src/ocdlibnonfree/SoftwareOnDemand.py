@@ -184,7 +184,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							"Platzhalter f. Combo",
 							productOnClient.productId,
 							productOnClient.installationStatus,
-							productOnClient.productVersion)
+							productOnClient.productVersion))
 			productOnClients[productOnClient.productId] =  productOnClient
 		self.disconnectConfigService()
 		
