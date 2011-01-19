@@ -160,10 +160,8 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		
 		self.session.callInstance = BackendManager(
 			backend              = self.service._opsiclientd.getCacheService().getConfigBackend(),
-			extend               = False,
 			dispatchConfigFile   = None,
 			backendConfigDir     = None,
-			extensionConfigDir   = None,
 			extensionObject      = accessControlExtension,
 			aclFile              = None,
 			accessControlContext = None,
