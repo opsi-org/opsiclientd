@@ -162,7 +162,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		self.disconnectConfigService()
 		
 		html = kioskPage
-		html = html.replace('%result%', forceUnicode(productsHash))
+		#html = html.replace('%result%', forceUnicode(productsHash))
+		html = html.replace('%result%', myClientId)
 		
 		if not isinstance(result, http.Response):
 			result = http.Response()
