@@ -562,8 +562,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		
 		self._configBackend = BackendExtender(
 			backend = ExtendedConfigDataBackend(
-				backend   = self._cacheBackend,
-				overwrite = False
+				configDataBackend = self._cacheBackend,
+				overwrite         = False
 			),
 			extensionClass = ConfigCacheServiceBackendExtension
 		)
