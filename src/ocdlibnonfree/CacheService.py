@@ -30,6 +30,7 @@ from OPSI.Util.Repository import *
 from OPSI.Util import md5sum
 from OPSI import System
 from OPSI.Util.HTTP import urlsplit
+from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.Cache import ClientCacheBackend
 from OPSI.Backend.SQLite import SQLiteBackend
 
@@ -550,13 +551,14 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			opsiModulesFile = os.path.join(self._configCacheDir, 'cached_modules'),
 			opsiVersionFile = os.path.join(self._configCacheDir, 'cached_version'),
 		)
+		self._configBackend = ExtendedConfigDataBackend(self._cacheBackend)
 		
 		ccss = state.get('config_cache_service')
 		if ccss:
 			self._state = ccss
 	
 	def getConfigBackend(self):
-		return self._cacheBackend
+		return self._configBackend
 	
 	def getState(self):
 		return self._state
