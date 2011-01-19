@@ -178,7 +178,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		#for product in productIds:
 		#	 = self._configService.productOnClient_getObjects(clientId = myClientId, productId = product)[0]
 		for productOnClient in self._configService.productOnClient_getObjects(clientId = myClientId, productId = productIds):
-			if productOnClients.haskey(productOnClient.productId):
+			if productOnClients.has_key(productOnClient.productId):
 				continue
 			tablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
 							"Platzhalter f. Combo",
