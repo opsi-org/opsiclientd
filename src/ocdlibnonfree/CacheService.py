@@ -572,7 +572,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				overwrite         = False
 			),
 			extensionClass = ConfigCacheServiceBackendExtension,
-			overwrite      = False
+			overwrite      = True
 		)
 		
 		ccss = state.get('config_cache_service')
