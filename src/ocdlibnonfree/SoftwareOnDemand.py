@@ -164,7 +164,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		self.disconnectConfigService()
 		
 		html = kioskPage
-		html = html.replace('%result%', forceUnicode(productOnClients))
+		html = html.replace('%result%', forceUnicode(productOnClients["firefox"]))
 		#html = html.replace('%result%', myClientId)
 		
 		if not isinstance(result, http.Response):
