@@ -436,6 +436,12 @@ class CacheService(threading.Thread):
 		threading.Thread.__init__(self)
 		self._productCacheService = None
 		self._configCacheService = None
+	
+	def stop(self):
+		if self._productCacheService:
+			self._productCacheService.stop()
+		if self._configCacheService:
+			self._configCacheService.stop()
 		
 	def initializeProductCacheService(self):
 		if not self._productCacheService:
@@ -565,7 +571,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				configDataBackend = self._cacheBackend,
 				overwrite         = False
 			),
-			extensionClass = ConfigCacheServiceBackendExtension
+			extensionClass = ConfigCacheServiceBackendExtension,
+			overwrite      = False
 		)
 		
 		ccss = state.get('config_cache_service')
