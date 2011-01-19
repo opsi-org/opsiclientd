@@ -558,21 +558,26 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		self._workBackend = SQLiteBackend(database = os.path.join(self._configCacheDir, 'work.sqlite'), synchronous = False)
 		self._workBackend.backend_createBase()
 		
+		kwargs = {
+			'opsiModulesFile': os.path.join(self._configCacheDir, 'cached_modules'),
+			'opsiVersionFile': os.path.join(self._configCacheDir, 'cached_version')
+		}
 		self._cacheBackend = ClientCacheBackend(
 			workBackend     = self._workBackend,
 			depotId         = config.get('depot_server', 'depot_id'),
 			clientId        = config.get('global', 'host_id'),
-			opsiModulesFile = os.path.join(self._configCacheDir, 'cached_modules'),
-			opsiVersionFile = os.path.join(self._configCacheDir, 'cached_version'),
+			**kwargs
 		)
 		
 		self._configBackend = BackendExtender(
 			backend = ExtendedConfigDataBackend(
 				configDataBackend = self._cacheBackend,
-				overwrite         = False
+				overwrite         = True,
+				**kwargs
 			),
 			extensionClass = ConfigCacheServiceBackendExtension,
-			overwrite      = True
+			overwrite      = True,
+			**kwargs
 		)
 		
 		ccss = state.get('config_cache_service')
