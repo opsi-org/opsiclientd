@@ -109,10 +109,10 @@ action_processor_starter = Target(
 )
 
 data_files = [
-	('Microsoft.VC90.MFC', glob.glob('Microsoft.VC90.MFC\*.*')),
-	('Microsoft.VC90.CRT', glob.glob('Microsoft.VC90.CRT\*.*')),
-	('lib\\Microsoft.VC90.MFC', glob.glob('Microsoft.VC90.MFC\*.*')),
-	('lib\\Microsoft.VC90.CRT', glob.glob('Microsoft.VC90.CRT\*.*')),
+	('Microsoft.VC90.MFC', glob.glob('Microsoft.VC90.MFC\\*.*')),
+	('Microsoft.VC90.CRT', glob.glob('Microsoft.VC90.CRT\\*.*')),
+	('lib\\Microsoft.VC90.MFC', glob.glob('Microsoft.VC90.MFC\\*.*')),
+	('lib\\Microsoft.VC90.CRT', glob.glob('Microsoft.VC90.CRT\\*.*')),
 	('notifier',                      [	'windows\\helpers\\notifier\\event.ini',
 						'windows\\helpers\\notifier\\action.ini',
 						'windows\\helpers\\notifier\\userlogin.ini',
@@ -129,8 +129,8 @@ data_files = [
 						'windows\\helpers\\notifier\\opsi.ico' ]),
 	('opsiclientd',                   [	'windows\\opsiclientd.conf']),
 	('opsiclientd\\static_html',      [	'..\\static_html\\favicon.ico', '..\\static_html\\index.html', '..\\static_html\\opsi_logo.png']),
-	('opsiclientd\\extend.d',         [	'..\\extend.d\\20_legacy.conf']),
 	('locale\\de\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_de.mo']),
+	('opsiclientd\\extend.d', glob.glob('..\\extend.d\*.*')),
 ]
 #data_files += tree("static_html")
 
