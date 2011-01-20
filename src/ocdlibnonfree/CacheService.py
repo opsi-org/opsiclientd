@@ -32,7 +32,7 @@ from OPSI import System
 from OPSI.Util.HTTP import urlsplit
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.BackendManager import BackendExtender
-from OPSI.Backend.Cache import ClientCacheBackend
+from OPSI.Backend.Cache import ClientCacheBackend, BackendChangeListener
 from OPSI.Backend.SQLite import SQLiteBackend
 
 from ocdlib.Config import Config
@@ -538,7 +538,7 @@ class ConfigCacheServiceBackendExtension(object):
 	#		'rsaPrivateKey': u''
 	#	}
 	
-class ConfigCacheService(ServiceConnection, threading.Thread):
+class ConfigCacheService(ServiceConnection, BackendChangeListener, threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
 		ServiceConnection.__init__(self)
@@ -585,11 +585,18 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			extensionClass     = ConfigCacheServiceBackendExtension,
 			extensionConfigDir = config.get('cache_service', 'extension_config_dir')
 		)
+		self._cacheBackend.addBackendChangeListener(self)
 		
 		ccss = state.get('config_cache_service')
 		if ccss:
 			self._state = ccss
 	
+	''' BackendChangeListener '''
+	def backendChanged(self, backend):
+		self._state['cahce_backend_modified'] = True
+		state.set('config_cache_service', self._state)
+	
+	''' public '''
 	def getConfigBackend(self):
 		return self._configBackend
 	
@@ -620,6 +627,27 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 	
 	def cacheConfig(self):
 		self._cacheConfigRequested = True
+	
+	def isSyncRequired(self):
+		if self._state['cahce_backend_modified']:
+			logger.notice(u"Cache backend was modified, sync required")
+			return True
+		try:
+			self.connectConfigService()
+		except Exception, e:
+			logger.error(u"Failed to connect config service: %s" % e)
+			return False
+		if self._configService.productOnClient_getObjects(
+			productType   = 'LocalbootProduct',
+			clientId      = config.get('global', 'host_id'),
+			actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+			attributes    = ['actionRequest']):
+			logger.notice(u"Product action(s) set on config service, sync required")
+			self.disconnectConfigService()
+			return True
+		logger.info(u"No product action set on config service, no sync required")
+		self.disconnectConfigService()
+		return False
 	
 	def _cacheConfig(self):
 		self._working = True
