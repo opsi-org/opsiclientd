@@ -558,17 +558,24 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			logger.notice(u"Creating config cache dir '%s'" % self._configCacheDir)
 			os.makedirs(self._configCacheDir)
 		
-		self._workBackend = SQLiteBackend(database = os.path.join(self._configCacheDir, 'work.sqlite'), synchronous = False)
+		backendArgs = {
+			'opsiModulesFile':         os.path.join(self._configCacheDir, 'cached_modules'),
+			'opsiVersionFile':         os.path.join(self._configCacheDir, 'cached_version'),
+			'opsiPasswdFile':          os.path.join(self._configCacheDir, 'cached_passwd'),
+			'auditHardwareConfigFile': os.path.join(self._configCacheDir, 'cached_opsihwaudit.json')
+		}
+		self._workBackend = SQLiteBackend(
+			database    = os.path.join(self._configCacheDir, 'work.sqlite'),
+			synchronous = False,
+			**backendArgs
+		)
 		self._workBackend.backend_createBase()
 		
 		self._cacheBackend = ClientCacheBackend(
 			workBackend             = self._workBackend,
 			depotId                 = config.get('depot_server', 'depot_id'),
 			clientId                = config.get('global', 'host_id'),
-			opsiModulesFile         = os.path.join(self._configCacheDir, 'cached_modules'),
-			opsiVersionFile         = os.path.join(self._configCacheDir, 'cached_version'),
-			opsiPasswdFile          = os.path.join(self._configCacheDir, 'cached_passwd'),
-			auditHardwareConfigFile = os.path.join(self._configCacheDir, 'cached_opsihwaudit.json')
+			**backendArgs
 		)
 		
 		self._configBackend = BackendExtender(
