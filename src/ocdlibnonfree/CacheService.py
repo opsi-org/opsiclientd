@@ -567,7 +567,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			clientId                = config.get('global', 'host_id'),
 			opsiModulesFile         = os.path.join(self._configCacheDir, 'cached_modules'),
 			opsiVersionFile         = os.path.join(self._configCacheDir, 'cached_version'),
-			opsiPasswdFile          = os.path.join(self._configCacheDir, 'cached_passwd')
+			opsiPasswdFile          = os.path.join(self._configCacheDir, 'cached_passwd'),
 			auditHardwareConfigFile = os.path.join(self._configCacheDir, 'cached_opsihwaudit.conf')
 		)
 		
