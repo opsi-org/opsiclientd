@@ -568,7 +568,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			opsiModulesFile         = os.path.join(self._configCacheDir, 'cached_modules'),
 			opsiVersionFile         = os.path.join(self._configCacheDir, 'cached_version'),
 			opsiPasswdFile          = os.path.join(self._configCacheDir, 'cached_passwd'),
-			auditHardwareConfigFile = os.path.join(self._configCacheDir, 'cached_opsihwaudit.conf')
+			auditHardwareConfigFile = os.path.join(self._configCacheDir, 'cached_opsihwaudit.json')
 		)
 		
 		self._configBackend = BackendExtender(
