@@ -17,7 +17,7 @@
    @author: Erol Ülükmen <e.ueluekmen@uib.de>
 """
 # Import
-import base64
+import base64, cgi
 from hashlib import md5
 from twisted.conch.ssh import keys
 
@@ -186,8 +186,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		if (self.request.method == 'POST'):
 			if not isinstance(result, http.Response):
 				result = http.Response()
+			
+			
 			html = kioskPage
-			html = html.replace('%result%', forceUnicode(self.request))
+			html = html.replace('%result%', forceUnicode(self.query))
 			result.stream = stream.IByteStream(html.encode('utf-8'))
 			return result
 
@@ -217,7 +219,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			
 			
 			tablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
-							'<input type="checkbox" name="%s" value="%s">' % (productOnDepot.productId,productOnDepot.productId),
+							'<input type="checkbox" name="productId" value="%s">' % (productOnDepot.productId,productOnDepot.productId),
 							productOnDepot.productId,
 							state,
 							productVersion,
