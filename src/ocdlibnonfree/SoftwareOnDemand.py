@@ -186,6 +186,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		if (self.request.method == 'POST'):
 			if not isinstance(result, http.Response):
 				result = http.Response()
+			html = kioskPage
 			html = html.replace('%result%', forceUnicode(self.request))
 			result.stream = stream.IByteStream(html.encode('utf-8'))
 			return result
