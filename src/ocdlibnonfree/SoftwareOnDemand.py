@@ -76,19 +76,28 @@ kioskPage = u'''
 		<img src="/opsi_logo.png" />
 		<span sytle="padding: 1px; top: 5px;">opsi Software On Demand</span>
 	</span>
-	<table border="1">
-  <tr>
-    <th>Installieren/Updaten</th>
-    <th>Produkt</th>
-    <th>Installationsstatus</th>
-    <th>Version</th>
-    <th>verfuegbare Version</th>
-  </tr>
+	<form method="post" onsubmit="return onSubmit()">
+		<table border="1">
+			<tr>
+				<th>Installieren/Updaten</th>
+				<th>Produkt</th>
+				<th>Installationsstatus</th>
+				<th>Version</th>
+				<th>verfuegbare Version</th>
+			</tr>
 
 
-%result%
-
-</table>
+			%result%
+			<tr>
+			<td align="center" colspan="2">
+						<input value="ondemand" id="submit" class="button" type="submit" />
+					</td>
+					<td align="center" colspan="2">
+						<input value="onrestart" id="submit" class="button" type="submit" />
+					</td>
+			<tr>
+		</table>
+	
 </body>
 '''
 
@@ -174,7 +183,13 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			raise Exception(u"SoftwareOnDemand not available: modules file invalid")
 		# @TODO: modules
 		
-		
+		if self.query:
+			if not isinstance(result, http.Response):
+				result = http.Response()
+			html = html.replace('%result%', forceUnicode(self.query))
+			result.stream = stream.IByteStream(html.encode('utf-8'))
+			return result
+
 		myClientId = config.get('global', 'host_id')
 		mydepotServer = config.get('depot_server','depot_id')
 		
