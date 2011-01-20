@@ -69,7 +69,7 @@ kioskPage = u'''
 
 
 	]]
-	
+	</script>
 </head>
 <body>
 	<span id="title">
