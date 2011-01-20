@@ -55,14 +55,13 @@ from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.Config import Config
 from ocdlib.Events import eventGenerators
 
-try:
-	from ocdlibnonfree.CacheService import CacheService
-except:
-	from ocdlib.CacheService import CacheService
-
-
 logger = Logger()
 config = Config()
+
+try:
+	from ocdlibnonfree.CacheService import CacheService
+except Exception, e:
+	pass
 
 '''
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
