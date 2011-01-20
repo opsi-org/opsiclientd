@@ -86,7 +86,7 @@ class ConfigImplementation(object):
 			'cache_service': {
 				'storage_dir':            u'c:\\opsi.org\\cache',
 				'product_cache_max_size': 6000000000,
-				'backend_manager_config': u'',
+				'extension_config_dir':   u'',
 			},
 			'control_server': {
 				'interface':            '0.0.0.0', # TODO
@@ -119,7 +119,7 @@ class ConfigImplementation(object):
 		if (os.name == 'nt'):
 			self._config['system']['program_files_dir'] = System.getProgramFilesDir()
 			self._config['cache_service']['storage_dir'] = u'%s\\opsi.org\\cache' % System.getSystemDrive()
-			self._config['cache_service']['backend_manager_config'] = os.path.join(baseDir, u'opsiclientd', 'backendManager.d')
+			self._config['cache_service']['extension_config_dir'] = os.path.join(baseDir, u'opsiclientd', 'extend.d')
 			self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd', 'opsiclientd.conf')
 			self._config['global']['state_file'] = u'%s\\opsi.org\\opsiclientd\\state.json' % System.getSystemDrive()
 			

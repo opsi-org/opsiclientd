@@ -575,11 +575,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		
 		self._configBackend = BackendExtender(
 			backend = ExtendedConfigDataBackend(
-				configDataBackend = self._cacheBackend,
-				overwrite         = True,
+				configDataBackend = self._cacheBackend
 			),
-			extensionClass = ConfigCacheServiceBackendExtension,
-			overwrite      = True,
+			extensionClass     = ConfigCacheServiceBackendExtension,
+			extensionConfigDir = config.get('cache_service', 'extension_config_dir')
 		)
 		
 		ccss = state.get('config_cache_service')
