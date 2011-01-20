@@ -55,28 +55,14 @@ kioskPage = u'''
 	.button       { color: #9e445a; background-color: #fafafa; border: none; margin-top: 20px; font-weight: bolder; }
 	.box          { background-color: #fafafa; border: 1px #555555 solid; padding: 20px; margin-left: 30px; margin-top: 50px;}
 	</style>
-	<script type="text/javascript">
-	<![CDATA[
-		function onSubmit() {
-				var json = '{ "id": 1, "method": ';
-				json += document.getElementById('json_method').firstChild.data;
-				json += ', "params": ';
-				json += document.getElementById('json_params').firstChild.data;
-				json += ' }';
-				window.location.href = '/' + path + '?' + json;
-				return false;
-			}
-
-
-	]]
-	</script>
+	
 </head>
 <body>
 	<span id="title">
 		<img src="/opsi_logo.png" />
 		<span sytle="padding: 1px; top: 5px;">opsi Software On Demand</span>
 	</span>
-	<form method="post" onsubmit="return onSubmit()">
+	<form method="post">
 		<table border="1">
 			<tr>
 				<th>Installieren/Updaten</th>
@@ -97,6 +83,7 @@ kioskPage = u'''
 					</td>
 			<tr>
 		</table>
+	</form>
 	
 </body>
 '''
@@ -183,13 +170,14 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			raise Exception(u"SoftwareOnDemand not available: modules file invalid")
 		# @TODO: modules
 		
-		
 		if not isinstance(result, http.Response):
 			result = http.Response()
-		html = kioskPage
-		html = html.replace('%result%', forceUnicode(self.query))
-		result.stream = stream.IByteStream(html.encode('utf-8'))
-		return result
+		
+		if not self.query:
+			html = kioskPage
+			html = html.replace('%result%', forceUnicode(self.query))
+			result.stream = stream.IByteStream(html.encode('utf-8'))
+			return result
 
 		myClientId = config.get('global', 'host_id')
 		mydepotServer = config.get('depot_server','depot_id')
@@ -231,9 +219,6 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			table += row
 		html = html.replace('%result%', table)
 		#html = html.replace('%result%', myClientId)
-		
-		if not isinstance(result, http.Response):
-			result = http.Response()
 		
 		result.code = responsecode.OK
 		#result.stream = stream.IByteStream((u'Kiosk ' + self.query).encode('utf-8'))
