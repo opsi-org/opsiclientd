@@ -173,7 +173,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		if not isinstance(result, http.Response):
 			result = http.Response()
 		
-		if not self.query:
+		if self.query:
 			html = kioskPage
 			html = html.replace('%result%', forceUnicode(self.query))
 			result.stream = stream.IByteStream(html.encode('utf-8'))
