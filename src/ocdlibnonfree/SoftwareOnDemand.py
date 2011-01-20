@@ -183,15 +183,13 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			raise Exception(u"SoftwareOnDemand not available: modules file invalid")
 		# @TODO: modules
 		
-		if (self.request.method == 'POST'):
-			if not isinstance(result, http.Response):
-				result = http.Response()
-			
-			
-			html = kioskPage
-			html = html.replace('%result%', forceUnicode(self.query))
-			result.stream = stream.IByteStream(html.encode('utf-8'))
-			return result
+		
+		if not isinstance(result, http.Response):
+			result = http.Response()
+		html = kioskPage
+		html = html.replace('%result%', forceUnicode(self.query))
+		result.stream = stream.IByteStream(html.encode('utf-8'))
+		return result
 
 		myClientId = config.get('global', 'host_id')
 		mydepotServer = config.get('depot_server','depot_id')
@@ -219,7 +217,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			
 			
 			tablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
-							'<input type="checkbox" name="productId" value="%s">' % (productOnDepot.productId,productOnDepot.productId),
+							'<input type="checkbox" name="%s" value="%s">' % (productOnDepot.productId,productOnDepot.productId),
 							productOnDepot.productId,
 							state,
 							productVersion,
