@@ -55,7 +55,20 @@ kioskPage = u'''
 	.button       { color: #9e445a; background-color: #fafafa; border: none; margin-top: 20px; font-weight: bolder; }
 	.box          { background-color: #fafafa; border: 1px #555555 solid; padding: 20px; margin-left: 30px; margin-top: 50px;}
 	</style>
-	
+	<script type="text/javascript">
+	<![CDATA[
+		function onSubmit() {
+				var json = '{ "id": 1, "method": ';
+				json += document.getElementById('json_method').firstChild.data;
+				json += ', "params": ';
+				json += document.getElementById('json_params').firstChild.data;
+				json += ' }';
+				window.location.href = '/' + path + '?' + json;
+				return false;
+			}
+
+
+	]]
 	
 </head>
 <body>
@@ -159,7 +172,6 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			data += u'%s = %s\r\n' % (module.lower().strip(), val)
 		if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
 			raise Exception(u"SoftwareOnDemand not available: modules file invalid")
-		logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
 		# @TODO: modules
 		
 		
@@ -172,12 +184,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		productVersion = ''
 		tablerows = []
 		productOnDepots = {}
-		logger.critical("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = "kiosk"):
 			logger.notice("!!!Produkt gefunden: '%s'" % objectToGroup.objectId)
 			productIds.append(objectToGroup.objectId)
-		#for product in productIds:
-		#	 = self._configService.productOnClient_getObjects(clientId = myClientId, productId = product)[0]
 		for productOnDepot in self._configService.productOnDepot_getObjects(depotId = mydepotServer, productId = productIds):
 			productOnClients = self._configService.productOnClient_getObjects(clientId = myClientId, productId = productOnDepot.productId)
 			if productOnClients:
