@@ -183,10 +183,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			raise Exception(u"SoftwareOnDemand not available: modules file invalid")
 		# @TODO: modules
 		
-		if result:
+		if (self.request.method == 'POST'):
 			if not isinstance(result, http.Response):
 				result = http.Response()
-			html = html.replace('%result%', forceUnicode(self.query))
+			html = html.replace('%result%', forceUnicode(self.request))
 			result.stream = stream.IByteStream(html.encode('utf-8'))
 			return result
 
