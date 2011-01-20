@@ -76,10 +76,10 @@ kioskPage = u'''
 			%result%
 			<tr>
 			<td align="center" colspan="2">
-						<input value="ondemand" id="submit" class="button" type="submit" />
+						<input name="ondemand" value="ondemand" id="submit" class="button" type="submit" />
 					</td>
 					<td align="center" colspan="2">
-						<input value="onrestart" id="submit" class="button" type="submit" />
+						<input name="onrestart" value="onrestart" id="submit" class="button" type="submit" />
 					</td>
 			<tr>
 		</table>
