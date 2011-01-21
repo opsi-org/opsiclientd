@@ -158,6 +158,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			
 			#Set Products
 			if productOnClients:
+				logger.notice(u"Now try to set '%d' Products." % len(productOnClients))
 				self._configService.productOnClient_updateObjects(productOnClients)
 			else:
 				logger.notice(u'No Product to set.')
