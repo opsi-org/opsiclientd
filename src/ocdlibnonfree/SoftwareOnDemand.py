@@ -245,10 +245,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					result['products'] = param.split(u'=')[1]
 				
 				if result:
-					result = self._executeQuery(result, myClientId)
+					antwort = self._executeQuery(result, myClientId)
 				
 			html = kioskPage
-			html = html.replace('%result%', forceUnicode(result))
+			html = html.replace('%result%', forceUnicode(antwort))
 			result.stream = stream.IByteStream(html.encode('utf-8'))
 			return result
 
