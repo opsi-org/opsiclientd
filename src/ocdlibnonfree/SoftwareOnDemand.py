@@ -242,7 +242,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						continue
 					if not params.has_key('product'):
 						params['products'] = []
-					params['products'] = params.split(u'=')[1]
+					params['products'] = param.split(u'=')[1]
 				
 				if params:
 					antwort = self._executeQuery(params, myClientId)
