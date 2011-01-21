@@ -172,7 +172,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		# endof: Modules Implementation
 		
 		state = ''
-		checked = ''
+		checked = 'none'
 		productVersion = ''
 		tablerows = []
 		productOnDepots = {}
@@ -201,6 +201,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				productVersion = productOnClients[0].productVersion
 				if productOnClients[0].actionRequest == 'setup':
 					checked = u'checked="checked"'
+				else:
+					checked = productOnClients[0].actionRequest
 			else:
 				state = 'nicht installiert'
 				
