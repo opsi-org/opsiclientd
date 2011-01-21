@@ -234,7 +234,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 		#Query bearbeitung
 		if self.query:
-			if 'action' in self.query and not 'product' in self.query:
+			if 'action' in self.query and 'product' in self.query:
 				result = {}
 				for param in self.query.split(u'&'):
 					if 'action' in param:
