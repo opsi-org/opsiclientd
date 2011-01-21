@@ -76,10 +76,10 @@ kioskPage = u'''
 			%result%
 			<tr>
 			<td align="center" colspan="2">
-						<input name="ondemand" value="ondemand" id="submit" class="button" type="submit" />
+						<input name="action" value="ondemand" id="submit" class="button" type="submit" />
 					</td>
 					<td align="center" colspan="2">
-						<input name="onrestart" value="onrestart" id="submit" class="button" type="submit" />
+						<input name="action" value="onrestart" id="submit" class="button" type="submit" />
 					</td>
 			<tr>
 		</table>
@@ -136,6 +136,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 		self._configService
 		
+		#Modules Implementation
 		modules = None
 		if self._configService.isOpsi35():
 			modules = self._configService.backend_info()['modules']
@@ -168,7 +169,17 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			data += u'%s = %s\r\n' % (module.lower().strip(), val)
 		if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
 			raise Exception(u"SoftwareOnDemand not available: modules file invalid")
-		# @TODO: modules
+		# endof: Modules Implementation
+		
+		state = ''
+		checked = ''
+		productVersion = ''
+		tablerows = []
+		productOnDepots = {}
+		productIds = []
+		myClientId = config.get('global', 'host_id')
+		mydepotServer = config.get('depot_server','depot_id')
+		
 		
 		if not isinstance(result, http.Response):
 			result = http.Response()
@@ -179,15 +190,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			result.stream = stream.IByteStream(html.encode('utf-8'))
 			return result
 
-		myClientId = config.get('global', 'host_id')
-		mydepotServer = config.get('depot_server','depot_id')
 		
-		productIds = []
-		
-		state = ''
-		productVersion = ''
-		tablerows = []
-		productOnDepots = {}
 		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = "kiosk"):
 			logger.notice("!!!Produkt gefunden: '%s'" % objectToGroup.objectId)
 			productIds.append(objectToGroup.objectId)
@@ -196,6 +199,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			if productOnClients:
 				state = productOnClients[0].installationStatus
 				productVersion = productOnClients[0].productVersion
+				if productOnClients[0].actionRequest == 'setup':
+					checked = u'checked="checked"'
 			else:
 				state = 'nicht installiert'
 				
@@ -205,7 +210,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			
 			
 			tablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
-							'<input type="checkbox" name="%s" value="%s">' % (productOnDepot.productId,productOnDepot.productId),
+							'<input type="checkbox" name="%s" value="%s" %s>' % (productOnDepot.productId,productOnDepot.productId,checked),
 							productOnDepot.productId,
 							state,
 							productVersion,
