@@ -25,6 +25,7 @@ from twisted.conch.ssh import keys
 from OPSI.web2 import responsecode, http, stream
 from OPSI.Logger import *
 from OPSI.Types import *
+from OPSI.Object import *
 from OPSI.Service.Worker import WorkerOpsi
 from OPSI.Service.Resource import ResourceOpsi
 
@@ -131,6 +132,51 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 	def _processQuery(self, result):
 		self._decodeQuery(result)
 		
+	def _executeQuery(self, param, clientId):
+		if param:
+			try:
+				logger.debug(u'Try to execute Query')
+				#product On Clients
+				productOnClients = []
+				for productId in param.get('products', []):
+					productOnClient = self._configService.productOnClient_getObjects(clientId = clientId, productId = productId)
+					if productOnClient:
+						productOnClient = productOnClient[0]
+					else:
+						productOnClient = ProductOnClient(
+							productId          = productId,
+							productType        = 'LocalbootProduct',
+							clientId           = clientId,
+							installationStatus = 'not_installed'
+						)
+					
+					if productOnClient.actionRequest == 'setup':
+						logger.notice(u'Product: '%s' is already set on setup, nothing to do.' % productId)
+						continue
+					productOnClient.setActionRequest('setup')
+					productOnClients.append(productOnClient)
+				
+				#Set Products
+				if productOnClients:
+					self._configService.productOnClient_updateObjects(productOnClients)
+				else:
+					logger.notice(u'No Product to set.')
+				
+				if param.get('action') == 'ondemand':
+					#fuehre neues event aus
+				elif param.get('action') == 'onrestart':
+					#ausgabe
+				else:
+					logger.notice(u'No action set, nothing to do.')
+				return 'Alles roger'
+			except Exception,e:
+				logger.error(e)	
+				
+				
+				
+		
+		
+		
 	def _generateResponse(self, result):
 		self.connectConfigService()
 		
@@ -184,23 +230,33 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		if not isinstance(result, http.Response):
 			result = http.Response()
 		
+		#Query bearbeitung
 		if self.query:
+			if 'action' in query and not 'product' in query:
+				result = {}
+				for param in self.query.split(u'&'):
+					if 'action' in param:
+						result['action'] = param.split(u'=')[1]
+						continue
+					if not result.has_key('products'):
+						result['products'] = []
+					result['products'] = param.split(u'=')[1]
+				
+				if result:
+					result = self._executeQuery(result, myClientId)
+				
 			html = kioskPage
-			html = html.replace('%result%', forceUnicode(self.query))
+			html = html.replace('%result%', forceUnicode(result))
 			result.stream = stream.IByteStream(html.encode('utf-8'))
 			return result
 
 		
 		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = "kiosk"):
-			logger.notice("!!!Produkt gefunden: '%s'" % objectToGroup.objectId)
+			logger.debug("!!!Produkt gefunden: '%s'" % objectToGroup.objectId)
 			productIds.append(objectToGroup.objectId)
 		for productOnDepot in self._configService.productOnDepot_getObjects(depotId = mydepotServer, productId = productIds):
 			productOnClients = self._configService.productOnClient_getObjects(clientId = myClientId, productId = productOnDepot.productId)
 			if productOnClients:
-				logger.debug(u">>>>>>>>>>>>> ProductId: '%s'" % productOnClients[0].productId)
-				logger.debug(u">>>>>>>>>>>>> state: '%s'" % productOnClients[0].installationStatus)
-				logger.debug(u">>>>>>>>>>>>> productVersion: '%s'" % productOnClients[0].productVersion)
-				logger.debug(u">>>>>>>>>>>>> actionRequest: '%s'" % productOnClients[0].actionRequest)
 				state = productOnClients[0].installationStatus
 				productVersion = productOnClients[0].productVersion
 				if productOnClients[0].actionRequest == 'setup':
@@ -216,7 +272,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			
 			
 			tablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
-							'<input type="checkbox" name="%s" value="%s" %s>' % (productOnDepot.productId,productOnDepot.productId,checked),
+							'<input type="checkbox" name="product" value="%s" %s>' % (productOnDepot.productId,checked),
 							productOnDepot.productId,
 							state,
 							productVersion,
