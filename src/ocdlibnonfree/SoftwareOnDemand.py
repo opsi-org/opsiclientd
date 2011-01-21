@@ -244,7 +244,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						continue
 					if not params.has_key('product'):
 						params['products'] = []
-					params['products'] = param.split(u'=')[1]
+					params['products'].append(param.split(u'=')[1])
 				
 				if params:
 					logger.debug(u"Parameters from POST: '%s'" % params)
