@@ -133,47 +133,47 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		self._decodeQuery(result)
 		
 	def _executeQuery(self, param, clientId):
-		if param:
-			try:
-				logger.debug(u'Try to execute Query')
-				#product On Clients
-				productOnClients = []
-				for productId in param.get('products', []):
-					productOnClient = self._configService.productOnClient_getObjects(clientId = clientId, productId = productId)
-					if productOnClient:
-						productOnClient = productOnClient[0]
-					else:
-						productOnClient = ProductOnClient(
-							productId          = productId,
-							productType        = 'LocalbootProduct',
-							clientId           = clientId,
-							installationStatus = 'not_installed'
-						)
-					
-					if productOnClient.actionRequest == 'setup':
-						logger.notice(u"Product: '%s' is already set on setup, nothing to do." % productId)
-						continue
-					productOnClient.setActionRequest('setup')
-					productOnClients.append(productOnClient)
-				
-				#Set Products
-				if productOnClients:
-					self._configService.productOnClient_updateObjects(productOnClients)
+		#if param:
+		try:
+			logger.debug(u'Try to execute Query')
+			#product On Clients
+			productOnClients = []
+			for productId in param.get('products', []):
+				productOnClient = self._configService.productOnClient_getObjects(clientId = clientId, productId = productId)
+				if productOnClient:
+					productOnClient = productOnClient[0]
 				else:
-					logger.notice(u'No Product to set.')
+					productOnClient = ProductOnClient(
+						productId          = productId,
+						productType        = 'LocalbootProduct',
+						clientId           = clientId,
+						installationStatus = 'not_installed'
+					)
 				
-				if param.get('action') == 'ondemand':
-					pass
-					#fuehre neues event aus
-				elif param.get('action') == 'onrestart':
-					pass
-					#ausgabe
-				else:
-					logger.notice(u'No action set, nothing to do.')
-				return 'Alles roger'
-			except Exception,e:
-				logger.error(e)	
-				
+				if productOnClient.actionRequest == 'setup':
+					logger.notice(u"Product: '%s' is already set on setup, nothing to do." % productId)
+					continue
+				productOnClient.setActionRequest('setup')
+				productOnClients.append(productOnClient)
+			
+			#Set Products
+			if productOnClients:
+				self._configService.productOnClient_updateObjects(productOnClients)
+			else:
+				logger.notice(u'No Product to set.')
+			
+			if param.get('action') == 'ondemand':
+				pass
+				#fuehre neues event aus
+			elif param.get('action') == 'onrestart':
+				pass
+				#ausgabe
+			else:
+				logger.notice(u'No action set, nothing to do.')
+			return 'Alles roger'
+		except Exception,e:
+			logger.error(e)	
+			
 				
 				
 		
@@ -240,12 +240,14 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					if 'action' in param:
 						result['action'] = param.split(u'=')[1]
 						continue
-					if not result.has_key('products'):
+					if not result.has_key('product'):
 						result['products'] = []
 					result['products'] = param.split(u'=')[1]
 				
 				if result:
 					antwort = self._executeQuery(result, myClientId)
+				else:
+					antwort = u"No Result '%s'" % result
 				
 			html = kioskPage
 			html = html.replace('%result%', forceUnicode(antwort))
