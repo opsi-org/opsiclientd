@@ -246,6 +246,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					params['products'] = param.split(u'=')[1]
 				
 				if params:
+					logger.debug(u"Parameters from POST: '%s'" % params)
 					antwort = self._executeQuery(params, myClientId)
 				else:
 					antwort = u"No Result '%s'" % params
