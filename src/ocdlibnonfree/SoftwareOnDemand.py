@@ -235,24 +235,24 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		#Query bearbeitung
 		if self.query:
 			if 'action' in self.query and 'product' in self.query:
-				result = {}
+				params = {}
 				for param in self.query.split(u'&'):
 					if 'action' in param:
-						result['action'] = param.split(u'=')[1]
+						params['action'] = param.split(u'=')[1]
 						continue
-					if not result.has_key('product'):
-						result['products'] = []
-					result['products'] = param.split(u'=')[1]
+					if not params.has_key('product'):
+						params['products'] = []
+					params['products'] = params.split(u'=')[1]
 				
-				if result:
-					antwort = self._executeQuery(result, myClientId)
+				if params:
+					antwort = self._executeQuery(params, myClientId)
 				else:
-					antwort = u"No Result '%s'" % result
+					antwort = u"No Result '%s'" % params
 				
-			html = kioskPage
-			html = html.replace('%result%', forceUnicode(antwort))
-			result.stream = stream.IByteStream(html.encode('utf-8'))
-			return result
+				html = kioskPage
+				html = html.replace('%result%', forceUnicode(antwort))
+				result.stream = stream.IByteStream(html.encode('utf-8'))
+				return result
 
 		
 		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = "kiosk"):
