@@ -297,6 +297,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		for row in tablerows:
 			table += row
 		
+
 		maintable = maintable.replace('%result%',table)
 		html = html.replace('%result%', maintable)
 		
