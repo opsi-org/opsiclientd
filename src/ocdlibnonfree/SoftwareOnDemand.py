@@ -235,6 +235,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 		#Query bearbeitung
 		if self.query:
+			logger.notice(u"QUERY: '%s'" % self.query)
 			if 'action' in self.query and 'product' in self.query:
 				params = {}
 				for param in self.query.split(u'&'):
