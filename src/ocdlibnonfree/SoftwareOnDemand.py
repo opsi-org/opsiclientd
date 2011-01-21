@@ -296,8 +296,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		html = kioskPage
 		for row in tablerows:
 			table += row
-		html_table = maintaible
-		html_table = maintable.replace('%result%',table)
+		maintable = maintable.replace('%result%',table)
 		html = html.replace('%result%', html_table)
 		
 		#html = html.replace('%result%', myClientId)
