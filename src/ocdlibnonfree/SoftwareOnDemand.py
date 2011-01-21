@@ -198,7 +198,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			productOnClients = self._configService.productOnClient_getObjects(clientId = myClientId, productId = productOnDepot.productId)
 			if productOnClients:
 				logger.notice(u">>>>>>>>>>>>> ProductId: '%s'" % productOnDepot.productId)
-				logger.notice(u">>>>>>>>>>>>> state: '%s%'" % productOnClients[0].installationStatus)
+				logger.notice(u">>>>>>>>>>>>> state: '%s'" % productOnClients[0].installationStatus)
 				logger.notice(u">>>>>>>>>>>>> productVersion: '%s'" % productOnClients[0].productVersion)
 				logger.notice(u">>>>>>>>>>>>> actionRequest: '%s'" % productOnClients[0].actionRequest)
 				state = productOnClients[0].installationStatus
