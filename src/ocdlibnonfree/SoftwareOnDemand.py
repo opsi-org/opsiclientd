@@ -172,7 +172,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		# endof: Modules Implementation
 		
 		state = ''
-		checked = 'none'
+		checked = ''
 		productVersion = ''
 		tablerows = []
 		productOnDepots = {}
@@ -197,16 +197,16 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		for productOnDepot in self._configService.productOnDepot_getObjects(depotId = mydepotServer, productId = productIds):
 			productOnClients = self._configService.productOnClient_getObjects(clientId = myClientId, productId = productOnDepot.productId)
 			if productOnClients:
-				logger.notice(u">>>>>>>>>>>>> ProductId: '%s'" % productOnClients[0].productId)
-				logger.notice(u">>>>>>>>>>>>> state: '%s'" % productOnClients[0].installationStatus)
-				logger.notice(u">>>>>>>>>>>>> productVersion: '%s'" % productOnClients[0].productVersion)
-				logger.notice(u">>>>>>>>>>>>> actionRequest: '%s'" % productOnClients[0].actionRequest)
+				logger.debug(u">>>>>>>>>>>>> ProductId: '%s'" % productOnClients[0].productId)
+				logger.debug(u">>>>>>>>>>>>> state: '%s'" % productOnClients[0].installationStatus)
+				logger.debug(u">>>>>>>>>>>>> productVersion: '%s'" % productOnClients[0].productVersion)
+				logger.debug(u">>>>>>>>>>>>> actionRequest: '%s'" % productOnClients[0].actionRequest)
 				state = productOnClients[0].installationStatus
 				productVersion = productOnClients[0].productVersion
 				if productOnClients[0].actionRequest == 'setup':
 					checked = u'checked="checked"'
 				else:
-					checked = productOnClients[0].actionRequest
+					checked = ''
 			else:
 				state = 'nicht installiert'
 				
@@ -222,6 +222,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							productVersion,
 							productOnDepot.productVersion))
 			productOnDepots[productOnDepot.productId] =  productOnDepot
+			checked = ''
 		self.disconnectConfigService()
 		
 		table = ''
