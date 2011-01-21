@@ -151,7 +151,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						)
 					
 					if productOnClient.actionRequest == 'setup':
-						logger.notice(u'Product: '%s' is already set on setup, nothing to do.' % productId)
+						logger.notice(u"Product: '%s' is already set on setup, nothing to do." % productId)
 						continue
 					productOnClient.setActionRequest('setup')
 					productOnClients.append(productOnClient)
