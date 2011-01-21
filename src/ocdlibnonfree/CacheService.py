@@ -32,7 +32,7 @@ from OPSI import System
 from OPSI.Util.HTTP import urlsplit
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.BackendManager import BackendExtender
-from OPSI.Backend.Cache import ClientCacheBackend, BackendChangeListener
+from OPSI.Backend.Cache import ClientCacheBackend, BackendModificationListener
 from OPSI.Backend.SQLite import SQLiteBackend
 
 from ocdlib.Config import Config
@@ -538,7 +538,7 @@ class ConfigCacheServiceBackendExtension(object):
 	#		'rsaPrivateKey': u''
 	#	}
 	
-class ConfigCacheService(ServiceConnection, BackendChangeListener, threading.Thread):
+class ConfigCacheService(ServiceConnection, BackendModificationListener, threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
 		ServiceConnection.__init__(self)
@@ -592,8 +592,8 @@ class ConfigCacheService(ServiceConnection, BackendChangeListener, threading.Thr
 			self._state = ccss
 	
 	''' BackendChangeListener '''
-	def backendChanged(self, backend):
-		self._state['cahce_backend_modified'] = True
+	def backendModified(self, backend):
+		self._state['cache_backend_modified'] = True
 		state.set('config_cache_service', self._state)
 	
 	''' public '''
@@ -629,7 +629,7 @@ class ConfigCacheService(ServiceConnection, BackendChangeListener, threading.Thr
 		self._cacheConfigRequested = True
 	
 	def isSyncRequired(self):
-		if self._state['cahce_backend_modified']:
+		if self._state['cache_backend_modified']:
 			logger.notice(u"Cache backend was modified, sync required")
 			return True
 		try:
