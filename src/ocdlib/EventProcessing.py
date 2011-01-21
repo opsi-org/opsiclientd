@@ -329,6 +329,16 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		logger.notice(u"Mounting depot share %s" %  config.get('depot_server', 'url'))
 		self.setStatusMessage(_(u"Mounting depot share %s") % config.get('depot_server', 'url'))
 		
+		try:
+			depotHost = config.get('depot_server', 'url').split('/')[2]
+			System.setRegistryValue(
+				System.HKEY_LOCAL_MACHINE,
+				u"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\%s" % depotHost,
+				u"file", 1)
+			logger.info(u"Added depot '%s' to trusted domains" % depotHost)
+		except Exception, e:
+			logger.error(u"Failed to add depot to trusted domains: %s" % e)
+		
 		if impersonation:
 			System.mount(config.get('depot_server', 'url'), config.getDepotDrive())
 		else:
