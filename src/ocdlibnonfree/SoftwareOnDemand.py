@@ -163,8 +163,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					logger.notice(u'No Product to set.')
 				
 				if param.get('action') == 'ondemand':
+					pass
 					#fuehre neues event aus
 				elif param.get('action') == 'onrestart':
+					pass
 					#ausgabe
 				else:
 					logger.notice(u'No action set, nothing to do.')
