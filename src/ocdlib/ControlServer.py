@@ -290,6 +290,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def cacheService_getProductCacheState(self):
 		return self.opsiclientd.getCacheService().getProductCacheState()
 	
+	def cacheService_getConfigModifications(self):
+		return self.opsiclientd.getCacheService().getConfigModifications()
+	
 	def setBlockLogin(self, blockLogin):
 		self.opsiclientd.setBlockLogin(bool(blockLogin))
 		logger.notice(u"rpc setBlockLogin: blockLogin set to '%s'" % self.opsiclientd._blockLogin)
