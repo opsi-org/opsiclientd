@@ -538,7 +538,7 @@ class ConfigCacheServiceBackendExtension(object):
 	#		'rsaPrivateKey': u''
 	#	}
 	
-class ConfigCacheService(ServiceConnection, BackendModificationListener, threading.Thread):
+class ConfigCacheService(ServiceConnection, threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
 		ServiceConnection.__init__(self)
@@ -585,18 +585,16 @@ class ConfigCacheService(ServiceConnection, BackendModificationListener, threadi
 			extensionClass     = ConfigCacheServiceBackendExtension,
 			extensionConfigDir = config.get('cache_service', 'extension_config_dir')
 		)
-		self._cacheBackend.addBackendChangeListener(self)
+		self._backendTracker = SQLiteObjectBackendModificationTracker(
+			database    = os.path.join(self._configCacheDir, 'tracker.sqlite'),
+			synchronous = False
+		)
+		self._cacheBackend.addBackendChangeListener(self._backendTracker)
 		
 		ccss = state.get('config_cache_service')
 		if ccss:
 			self._state = ccss
 	
-	''' BackendChangeListener '''
-	def backendModified(self, backend):
-		self._state['cache_backend_modified'] = True
-		state.set('config_cache_service', self._state)
-	
-	''' public '''
 	def getConfigBackend(self):
 		return self._configBackend
 	
@@ -629,7 +627,7 @@ class ConfigCacheService(ServiceConnection, BackendModificationListener, threadi
 		self._cacheConfigRequested = True
 	
 	def isSyncRequired(self):
-		if self._state['cache_backend_modified']:
+		if self._backendTracker.getModifications():
 			logger.notice(u"Cache backend was modified, sync required")
 			return True
 		try:
