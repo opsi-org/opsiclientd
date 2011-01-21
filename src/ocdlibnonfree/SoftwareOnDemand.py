@@ -64,7 +64,14 @@ kioskPage = u'''
 		<span sytle="padding: 1px; top: 5px;">opsi Software On Demand</span>
 	</span>
 	<form method="post">
-		<table border="1">
+		%result%
+	</form>
+	
+</body>
+'''
+
+maintable = '''
+<table class="box">
 			<tr>
 				<th>Installieren/Updaten</th>
 				<th>Produkt</th>
@@ -84,9 +91,6 @@ kioskPage = u'''
 					</td>
 			<tr>
 		</table>
-	</form>
-	
-</body>
 '''
 
 class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
@@ -292,7 +296,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		html = kioskPage
 		for row in tablerows:
 			table += row
-		html = html.replace('%result%', table)
+		maintable = maintable.replace(%result%)
+		html = html.replace('%result%', maintable)
+		
 		#html = html.replace('%result%', myClientId)
 		
 		result.code = responsecode.OK
