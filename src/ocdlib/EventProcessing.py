@@ -933,7 +933,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			
 			finally:
 				self._messageSubject.setMessage(u"")
-				
 				if self.event.eventConfig.writeLogToService:
 					try:
 						self.writeLogToService()
@@ -945,6 +944,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				except Exception, e:
 					logger.logException(e)
 				
+				config.setTemporaryConfigServiceUrls([])
 				
 				if self.opsiclientd.isShutdownTriggered():
 					self.setStatusMessage(_("Shutting down machine"))
