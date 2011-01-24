@@ -167,6 +167,8 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 					"defaultGateway": forceUnicode(defaultInterface.gatewayList.ipAddress)
 				}
 				
+				logger.info(u"Passing client configuration to depot selection algorithm: %s" % clientConfig)
+				
 				depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()
 				logger.debug2(u"depotSelectionAlgorithm:\n%s" % depotSelectionAlgorithm)
 				exec(depotSelectionAlgorithm)
