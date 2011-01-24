@@ -155,8 +155,12 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 				networkInterfaces = System.getNetworkInterfaces()
 				if not networkInterfaces:
 					raise Exception(u"No network interfaces found")
+				for networkInterface in networkInterfaces:
+					logger.info(u"Found network interface: %s" % networkInterface)
 				defaultInterface = networkInterfaces[0]
 				for networkInterface in networkInterfaces:
+					if (networkInterface.ipAddressList.ipAddress == '0.0.0.0'):
+						continue
 					if networkInterface.gatewayList.ipAddress:
 						defaultInterface = networkInterface
 						break
