@@ -33,7 +33,7 @@ from OPSI.Util.HTTP import urlsplit
 from OPSI.Backend.Backend import ExtendedConfigDataBackend, BackendModificationListener
 from OPSI.Backend.BackendManager import BackendExtender
 from OPSI.Backend.Cache import ClientCacheBackend
-from OPSI.Backend.SQLite import SQLiteBackend
+from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker
 
 from ocdlib.Config import Config
 from ocdlib.State import State
