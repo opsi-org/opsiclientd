@@ -109,7 +109,7 @@ def selectDepotserver(config, configService, productIds=[], cifsOnly=True):
 		if alternativeDepots:
 			logger.info(u"Got alternative depots for products: %s" % productIds)
 			for i in range(len(alternativeDepots)):
-				logger.info(u"%d. alternative depot is %s" % ((i+1), depot.id))
+				logger.info(u"%d. alternative depot is %s" % ((i+1), alternativeDepots[i].id))
 			
 			try:
 				modules = configService.backend_info()['modules']
