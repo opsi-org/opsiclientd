@@ -242,6 +242,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error(u"Failed to start control server: %s" % forceUnicode(e))
 				raise
 			
+			self._cacheService = None
 			try:
 				from ocdlibnonfree.CacheService import CacheService
 				logger.notice(u"Starting cache service")
@@ -330,6 +331,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._stopped = True
 	
 	def getCacheService(self):
+		if not self._cacheService:
+			raise Exception(u"Cache service not started")
 		return self._cacheService
 	
 	def processEvent(self, event):
