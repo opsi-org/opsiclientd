@@ -271,22 +271,23 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 	def _cacheConfig(self):
 		self._working = True
 		try:
-			self.connectConfigService()
-			try:
-				self._cacheBackend._setMasterBackend(self._configService)
-				self._state['config_cached'] = False
-				state.set('config_cache_service', self._state)
-				self._cacheBackend._updateMasterFromWorkBackend(self._backendTracker.getModifications())
-				self._cacheBackend.clearModifications()
-				self._cacheBackend._replicateMasterToWorkBackend()
-			finally:
+			if self.isSyncRequired():
+				self.connectConfigService()
 				try:
-					self.disconnectConfigService()
-				except Exception, e2:
-					logger.notice(u"Failed to diconnect from config service: %s" % e2)
-			logger.notice(u"Config cached")
-			self._state['config_cached'] = True
-			state.set('config_cache_service', self._state)
+					self._cacheBackend._setMasterBackend(self._configService)
+					self._state['config_cached'] = False
+					state.set('config_cache_service', self._state)
+					self._cacheBackend._updateMasterFromWorkBackend(self._backendTracker.getModifications())
+					self._backendTracker.clearModifications()
+					self._cacheBackend._replicateMasterToWorkBackend()
+				finally:
+					try:
+						self.disconnectConfigService()
+					except Exception, e2:
+						logger.notice(u"Failed to diconnect from config service: %s" % e2)
+				logger.notice(u"Config cached")
+				self._state['config_cached'] = True
+				state.set('config_cache_service', self._state)
 		except Exception, e:
 			logger.logException(e)
 			logger.error(u"Errors occured while caching config: %s" % e)
