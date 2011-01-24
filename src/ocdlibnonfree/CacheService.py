@@ -277,6 +277,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				self._state['config_cached'] = False
 				state.set('config_cache_service', self._state)
 				self._cacheBackend._updateMasterFromWorkBackend(self._backendTracker.getModifications())
+				self._cacheBackend.clearModifications()
 				self._cacheBackend._replicateMasterToWorkBackend()
 			finally:
 				try:
