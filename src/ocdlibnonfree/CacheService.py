@@ -183,10 +183,18 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		)
 		self._workBackend.backend_createBase()
 		
+		self._snapshotBackend = SQLiteBackend(
+			database    = os.path.join(self._configCacheDir, 'snapshot.sqlite'),
+			synchronous = False,
+			**backendArgs
+		)
+		self._snapshotBackend.backend_createBase()
+		
 		self._cacheBackend = ClientCacheBackend(
-			workBackend = self._workBackend,
-			depotId     = config.get('depot_server', 'depot_id'),
-			clientId    = config.get('global', 'host_id'),
+			workBackend     = self._workBackend,
+			snapshotBackend = self._snapshotBackend,
+			depotId         = config.get('depot_server', 'depot_id'),
+			clientId        = config.get('global', 'host_id'),
 			**backendArgs
 		)
 		
@@ -268,7 +276,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				self._cacheBackend._setMasterBackend(self._configService)
 				self._state['config_cached'] = False
 				state.set('config_cache_service', self._state)
-				self._cacheBackend._updateMasterFromWorkBackend()
+				self._cacheBackend._updateMasterFromWorkBackend(self._backendTracker.getModifications())
 				self._cacheBackend._replicateMasterToWorkBackend()
 			finally:
 				try:
