@@ -251,21 +251,32 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		if self._backendTracker.getModifications():
 			logger.notice(u"Cache backend was modified, sync required")
 			return True
-		try:
-			self.connectConfigService()
-		except Exception, e:
-			logger.error(u"Failed to connect config service: %s" % e)
-			return False
+		disconnect = False
+		if not self._configService:
+			try:
+				self.connectConfigService()
+				disconnect = True
+			except Exception, e:
+				logger.error(u"Failed to connect config service: %s" % e)
+				return False
 		if self._configService.productOnClient_getObjects(
 			productType   = 'LocalbootProduct',
 			clientId      = config.get('global', 'host_id'),
 			actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
 			attributes    = ['actionRequest']):
 			logger.notice(u"Product action(s) set on config service, sync required")
-			self.disconnectConfigService()
+			if disconnect:
+				try:
+					self.disconnectConfigService()
+				except:
+					pass
 			return True
 		logger.info(u"No product action set on config service, no sync required")
-		self.disconnectConfigService()
+		if disconnect:
+			try:
+				self.disconnectConfigService()
+			except:
+				pass
 		return False
 	
 	def _cacheConfig(self):
