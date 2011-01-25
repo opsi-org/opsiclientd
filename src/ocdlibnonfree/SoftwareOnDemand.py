@@ -70,28 +70,7 @@ kioskPage = u'''
 </body>
 '''
 
-maintable = u'''
-<table class="box">
-			<tr>
-				<th>Installieren/Updaten</th>
-				<th>Produkt</th>
-				<th>Installationsstatus</th>
-				<th>Version</th>
-				<th>verfuegbare Version</th>
-			</tr>
 
-
-			%result%
-			<tr>
-			<td align="center" colspan="2">
-						<input name="action" value="ondemand" id="submit" class="button" type="submit" />
-					</td>
-					<td align="center" colspan="2">
-						<input name="action" value="onrestart" id="submit" class="button" type="submit" />
-					</td>
-			<tr>
-		</table>
-'''
 
 class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 	def __init__(self, service, request, resource):
@@ -297,7 +276,28 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		for row in tablerows:
 			table += row
 		
+		maintable = u'''
+<table class="box">
+			<tr>
+				<th>Installieren/Updaten</th>
+				<th>Produkt</th>
+				<th>Installationsstatus</th>
+				<th>Version</th>
+				<th>verfuegbare Version</th>
+			</tr>
 
+
+			%result%
+			<tr>
+			<td align="center" colspan="2">
+						<input name="action" value="ondemand" id="submit" class="button" type="submit" />
+					</td>
+					<td align="center" colspan="2">
+						<input name="action" value="onrestart" id="submit" class="button" type="submit" />
+					</td>
+			<tr>
+		</table>
+'''
 		maintable = maintable.replace('%result%',table)
 		html = html.replace('%result%', maintable)
 		
