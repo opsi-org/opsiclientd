@@ -177,15 +177,17 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			'auditHardwareConfigFile': os.path.join(self._configCacheDir, 'cached_opsihwaudit.json')
 		}
 		self._workBackend = SQLiteBackend(
-			database    = os.path.join(self._configCacheDir, 'work.sqlite'),
-			synchronous = False,
+			#database    = os.path.join(self._configCacheDir, 'work.sqlite'),
+			#synchronous = False,
+			database    = ':memory:',
 			**backendArgs
 		)
 		self._workBackend.backend_createBase()
 		
 		self._snapshotBackend = SQLiteBackend(
-			database    = os.path.join(self._configCacheDir, 'snapshot.sqlite'),
-			synchronous = False,
+			#database    = os.path.join(self._configCacheDir, 'snapshot.sqlite'),
+			#synchronous = False,
+			database    = ':memory:',
 			**backendArgs
 		)
 		self._snapshotBackend.backend_createBase()
