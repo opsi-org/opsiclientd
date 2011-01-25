@@ -211,7 +211,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			#database             = os.path.join(self._configCacheDir, 'tracker.sqlite'),
 			#synchronous          = False,
 			database    = ':memory:',
-			lastModificationOnly = True
+			#lastModificationOnly = True
 		)
 		self._cacheBackend.addBackendChangeListener(self._backendTracker)
 		
