@@ -213,7 +213,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			database    = ':memory:',
 			lastModificationOnly = True
 		)
-		self._cacheBackend.addBackendChangeListener(self._backendTracker)
+		#self._cacheBackend.addBackendChangeListener(self._backendTracker)
 		
 		ccss = state.get('config_cache_service')
 		if ccss:
