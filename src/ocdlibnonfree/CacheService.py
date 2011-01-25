@@ -177,17 +177,17 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			'auditHardwareConfigFile': os.path.join(self._configCacheDir, 'cached_opsihwaudit.json')
 		}
 		self._workBackend = SQLiteBackend(
-			#database    = os.path.join(self._configCacheDir, 'work.sqlite'),
-			#synchronous = False,
-			database    = ':memory:',
+			#database    = ':memory:',
+			database    = os.path.join(self._configCacheDir, 'work.sqlite'),
+			synchronous = False,
 			**backendArgs
 		)
 		self._workBackend.backend_createBase()
 		
 		self._snapshotBackend = SQLiteBackend(
-			#database    = os.path.join(self._configCacheDir, 'snapshot.sqlite'),
-			#synchronous = False,
-			database    = ':memory:',
+			#database    = ':memory:',
+			database    = os.path.join(self._configCacheDir, 'snapshot.sqlite'),
+			synchronous = False,
 			**backendArgs
 		)
 		self._snapshotBackend.backend_createBase()
@@ -208,10 +208,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			extensionConfigDir = config.get('cache_service', 'extension_config_dir')
 		)
 		self._backendTracker = SQLiteObjectBackendModificationTracker(
-			#database             = os.path.join(self._configCacheDir, 'tracker.sqlite'),
-			#synchronous          = False,
-			database    = ':memory:',
-			#lastModificationOnly = True
+			#database    = ':memory:',
+			database             = os.path.join(self._configCacheDir, 'tracker.sqlite'),
+			synchronous          = False,
+			lastModificationOnly = True
 		)
 		self._cacheBackend.addBackendChangeListener(self._backendTracker)
 		
