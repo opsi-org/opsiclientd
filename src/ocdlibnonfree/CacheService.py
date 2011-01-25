@@ -208,8 +208,9 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			extensionConfigDir = config.get('cache_service', 'extension_config_dir')
 		)
 		self._backendTracker = SQLiteObjectBackendModificationTracker(
-			database             = os.path.join(self._configCacheDir, 'tracker.sqlite'),
-			synchronous          = False,
+			#database             = os.path.join(self._configCacheDir, 'tracker.sqlite'),
+			#synchronous          = False,
+			database    = ':memory:',
 			lastModificationOnly = True
 		)
 		self._cacheBackend.addBackendChangeListener(self._backendTracker)
