@@ -312,14 +312,18 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		try:
 			if not self._configService:
 				self.connectConfigService()
-			if not self._configService.productOnClient_getObjects(
+			productOnClients = self._configService.productOnClient_getObjects(
 				productType   = 'LocalbootProduct',
 				clientId      = config.get('global', 'host_id'),
 				actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
 				attributes    = ['actionRequest']):
+			if not productOnClients:
 				logger.notice(u"No product action(s) set on config service, no sync from server required")
 			else:
-				logger.notice(u"Product action(s) set on config service, sync from server required")
+				productIds = []
+				for productOnClient in productOnClients:
+					productIds.append(productOnClient.productId)
+				logger.notice(u"Product action(s) set on config service (%s), sync from server required", (u','.join(productIds)))
 				try:
 					self._cacheBackend._setMasterBackend(self._configService)
 					self._state['config_cached'] = False
