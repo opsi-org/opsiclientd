@@ -259,10 +259,11 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		logger.notice(u"Config cache service started")
 		try:
 			while not self._stopped:
-				if self._syncConfigToServerRequested and not self._working:
-					self._syncConfigToServer()
-				if self._syncConfigFromServerRequested and not self._working:
-					self._syncConfigFromServer()
+				if not self._working:
+					if self._syncConfigToServerRequested:
+						self._syncConfigToServer()
+					elif self._syncConfigFromServerRequested:
+						self._syncConfigFromServer()
 				time.sleep(1)
 		except Exception, e:
 			logger.logException(e)
@@ -278,6 +279,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 	
 	def _syncConfigToServer(self):
 		self._working = True
+		self._syncConfigToServerRequested = False
 		try:
 			modifications = self._backendTracker.getModifications()
 			if not modifications:
@@ -299,11 +301,11 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					self.disconnectConfigService()
 				except Exception, e:
 					logger.notice(u"Failed to diconnect from config service: %s" % e)
-			self._syncConfigToServerRequested = False
 			self._working = False
 		
 	def _syncConfigFromServer(self):
 		self._working = True
+		self._syncConfigFromServerRequested = False
 		try:
 			if not self._configService:
 				self.connectConfigService()
@@ -333,7 +335,6 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					self.disconnectConfigService()
 				except Exception, e:
 					logger.notice(u"Failed to diconnect from config service: %s" % e)
-			self._syncConfigFromServerRequested = False
 			self._working = False
 		
 class ProductCacheService(threading.Thread):
