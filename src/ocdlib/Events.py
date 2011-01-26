@@ -139,6 +139,7 @@ class EventConfig(object):
 		self.cacheMaxBandwidth             =      int ( conf.get('cacheMaxBandwidth',             0         ) )
 		self.useCachedProducts             =     bool ( conf.get('useCachedProducts',             False     ) )
 		self.syncConfig                    =     bool ( conf.get('syncConfig',                    False     ) )
+		self.postSyncConfig                =     bool ( conf.get('postSyncConfig',                False     ) )
 		self.useCachedConfig               =     bool ( conf.get('useCachedConfig',               False     ) )
 		
 		if not self.eventNotifierDesktop in ('winlogon', 'default', 'current'):
@@ -882,6 +883,8 @@ def getEventConfigs():
 						eventConfigs[eventConfigName]['useCachedProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'sync_config'):
 						eventConfigs[eventConfigName]['syncConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'post_sync_config'):
+						eventConfigs[eventConfigName]['postSyncConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'use_cached_config'):
 						eventConfigs[eventConfigName]['useCachedConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'update_action_processor'):

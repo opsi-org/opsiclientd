@@ -909,7 +909,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						desktop      = self.event.eventConfig.actionNotifierDesktop )
 				
 				if self.event.eventConfig.syncConfig:
-					self.opsiclientd.getCacheService().cacheConfig(waitForEnding = self.event.eventConfig.useCachedConfig)
+					self.opsiclientd.getCacheService().syncConfig(waitForEnding = self.event.eventConfig.useCachedConfig)
 				
 				if self.event.eventConfig.useCachedConfig:
 					if self.opsiclientd.getCacheService().configCacheCompleted():
@@ -945,6 +945,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					logger.logException(e)
 				
 				config.setTemporaryConfigServiceUrls([])
+				
+				if self.event.eventConfig.postSyncConfig:
+					try:
+						self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = True)
+					except Exception, e:
+						logger.logException(e)
 				
 				if self.opsiclientd.isShutdownTriggered():
 					self.setStatusMessage(_("Shutting down machine"))
