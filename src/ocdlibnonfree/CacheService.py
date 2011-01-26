@@ -259,15 +259,12 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		logger.notice(u"Config cache service started")
 		try:
 			while not self._stopped:
-				logger.essential(u"======== working: %s _syncConfigToServerRequested: %s _syncConfigFromServerRequested: %s ======" % (self._working, self._syncConfigToServerRequested, self._syncConfigFromServerRequested))
 				if not self._working:
 					if self._syncConfigToServerRequested:
 						self._syncConfigToServerRequested = False
-						logger.notice(u"============================= syncConfigToServerRequested =========================================")
 						self._syncConfigToServer()
 					elif self._syncConfigFromServerRequested:
 						self._syncConfigFromServerRequested = False
-						logger.notice(u"============================= syncConfigFromServer =========================================")
 						self._syncConfigFromServer()
 				time.sleep(1)
 		except Exception, e:
