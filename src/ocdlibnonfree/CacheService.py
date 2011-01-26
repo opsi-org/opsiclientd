@@ -262,9 +262,11 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				logger.essential(u"======== working: %s _syncConfigToServerRequested: %s _syncConfigFromServerRequested: %s ======" % (self._working, self._syncConfigToServerRequested, self._syncConfigFromServerRequested))
 				if not self._working:
 					if self._syncConfigToServerRequested:
+						self._syncConfigFromServerRequested = False
 						logger.notice(u"============================= syncConfigToServerRequested =========================================")
 						self._syncConfigToServer()
 					elif self._syncConfigFromServerRequested:
+						self._syncConfigToServerRequested = False
 						logger.notice(u"============================= syncConfigFromServer =========================================")
 						self._syncConfigFromServer()
 				time.sleep(1)
@@ -282,7 +284,6 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 	
 	def _syncConfigToServer(self):
 		self._working = True
-		self._syncConfigToServerRequested = False
 		try:
 			modifications = self._backendTracker.getModifications()
 			if not modifications:
@@ -308,7 +309,6 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		
 	def _syncConfigFromServer(self):
 		self._working = True
-		self._syncConfigFromServerRequested = False
 		try:
 			if not self._configService:
 				self.connectConfigService()
