@@ -299,6 +299,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					self.disconnectConfigService()
 				except Exception, e:
 					logger.notice(u"Failed to diconnect from config service: %s" % e)
+			self._syncConfigToServerRequested = False
 			self._working = False
 		
 	def _syncConfigFromServer(self):
@@ -332,8 +333,9 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					self.disconnectConfigService()
 				except Exception, e:
 					logger.notice(u"Failed to diconnect from config service: %s" % e)
+			self._syncConfigFromServerRequested = False
 			self._working = False
-	
+		
 class ProductCacheService(threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
