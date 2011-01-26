@@ -290,22 +290,22 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				logger.notice(u"Cache backend was not modified, no sync to server required")
 			else:
 				logger.notice(u"Cache backend was modified, starting sync to server")
-				try:
-					if not self._configService:
-						self.connectConfigService()
-					self._cacheBackend._setMasterBackend(self._configService)
-					self._cacheBackend._updateMasterFromWorkBackend(modifications)
-					logger.notice(u"Config synced to server")
-				except Exception, e:
-					logger.logException(e)
-					raise Exception(u"Errors occured while syncing config to server: %s" % e)
-		finally:
-			if self._configService:
-				try:
-					self.disconnectConfigService()
-				except Exception, e:
-					logger.notice(u"Failed to diconnect from config service: %s" % e)
-			self._working = False
+				if not self._configService:
+					self.connectConfigService()
+				self._cacheBackend._setMasterBackend(self._configService)
+				self._cacheBackend._updateMasterFromWorkBackend(modifications)
+				logger.notice(u"Config synced to server")
+		except Exception, e:
+			logger.logException(e)
+			logger.error(u"Errors occured while syncing config to server: %s" % e)
+			# Do not sync from server in this case!
+			self._syncConfigFromServerRequested = False
+		if self._configService:
+			try:
+				self.disconnectConfigService()
+			except Exception, e:
+				logger.notice(u"Failed to diconnect from config service: %s" % e)
+		self._working = False
 		
 	def _syncConfigFromServer(self):
 		self._working = True
@@ -324,26 +324,24 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				for productOnClient in productOnClients:
 					productIds.append(productOnClient.productId)
 				logger.notice(u"Product action(s) set on config service (%s), sync from server required" % u','.join(productIds))
-				try:
-					self._cacheBackend._setMasterBackend(self._configService)
-					self._state['config_cached'] = False
-					state.set('config_cache_service', self._state)
-					self._backendTracker.clearModifications()
-					self._cacheBackend._replicateMasterToWorkBackend()
-					logger.notice(u"Config synced from server")
-					self._state['config_cached'] = True
-					state.set('config_cache_service', self._state)
-				except Exception, e:
-					logger.logException(e)
-					raise Exception(u"Errors occured while syncing config from server: %s" % e)
-		finally:
-			if self._configService:
-				try:
-					self.disconnectConfigService()
-				except Exception, e:
-					logger.notice(u"Failed to diconnect from config service: %s" % e)
-			self._working = False
-		
+				self._cacheBackend._setMasterBackend(self._configService)
+				self._state['config_cached'] = False
+				state.set('config_cache_service', self._state)
+				self._backendTracker.clearModifications()
+				self._cacheBackend._replicateMasterToWorkBackend()
+				logger.notice(u"Config synced from server")
+				self._state['config_cached'] = True
+				state.set('config_cache_service', self._state)
+		except Exception, e:
+			logger.logException(e)
+			logger.error(u"Errors occured while syncing config from server: %s" % e)
+		if self._configService:
+			try:
+				self.disconnectConfigService()
+			except Exception, e:
+				logger.notice(u"Failed to diconnect from config service: %s" % e)
+		self._working = False
+	
 class ProductCacheService(threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
