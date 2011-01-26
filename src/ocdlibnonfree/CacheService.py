@@ -323,7 +323,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				productIds = []
 				for productOnClient in productOnClients:
 					productIds.append(productOnClient.productId)
-				logger.notice(u"Product action(s) set on config service (%s), sync from server required", (u','.join(productIds)))
+				logger.notice(u"Product action(s) set on config service (%s), sync from server required" % u','.join(productIds))
 				try:
 					self._cacheBackend._setMasterBackend(self._configService)
 					self._state['config_cached'] = False
