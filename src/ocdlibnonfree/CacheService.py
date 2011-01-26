@@ -318,6 +318,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				clientId      = config.get('global', 'host_id'),
 				actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
 				attributes    = ['actionRequest'])
+			logger.info(u"Product on clients: %s" % productOnClients)
 			if not productOnClients:
 				self._state['config_cached'] = True
 				logger.notice(u"No product action(s) set on config service, no sync from server required")
