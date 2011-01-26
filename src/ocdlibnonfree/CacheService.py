@@ -316,7 +316,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				productType   = 'LocalbootProduct',
 				clientId      = config.get('global', 'host_id'),
 				actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
-				attributes    = ['actionRequest']):
+				attributes    = ['actionRequest'])
 			if not productOnClients:
 				logger.notice(u"No product action(s) set on config service, no sync from server required")
 			else:
