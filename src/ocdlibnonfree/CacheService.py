@@ -259,9 +259,9 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		logger.notice(u"Config cache service started")
 		try:
 			while not self._stopped:
-				if self._syncConfigToServerRequested:
+				if self._syncConfigToServerRequested and not self._working:
 					self._syncConfigToServer()
-				if self._syncConfigFromServerRequested:
+				if self._syncConfigFromServerRequested and not self._working:
 					self._syncConfigFromServer()
 				time.sleep(1)
 		except Exception, e:
@@ -393,7 +393,7 @@ class ProductCacheService(threading.Thread):
 		logger.notice(u"Product cache service started")
 		try:
 			while not self._stopped:
-				if self._productIdsToCache:
+				if self._productIdsToCache and not self._working:
 					self._cacheProducts()
 				time.sleep(1)
 		except Exception, e:
