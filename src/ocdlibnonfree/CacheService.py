@@ -261,8 +261,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			while not self._stopped:
 				if not self._working:
 					if self._syncConfigToServerRequested:
+						logger.notice(u"============================= syncConfigToServerRequested =========================================")
 						self._syncConfigToServer()
 					elif self._syncConfigFromServerRequested:
+						logger.notice(u"============================= syncConfigFromServer =========================================")
 						self._syncConfigFromServer()
 				time.sleep(1)
 		except Exception, e:
