@@ -262,11 +262,11 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				logger.essential(u"======== working: %s _syncConfigToServerRequested: %s _syncConfigFromServerRequested: %s ======" % (self._working, self._syncConfigToServerRequested, self._syncConfigFromServerRequested))
 				if not self._working:
 					if self._syncConfigToServerRequested:
-						self._syncConfigFromServerRequested = False
+						self._syncConfigToServerRequested = False
 						logger.notice(u"============================= syncConfigToServerRequested =========================================")
 						self._syncConfigToServer()
 					elif self._syncConfigFromServerRequested:
-						self._syncConfigToServerRequested = False
+						self._syncConfigFromServerRequested = False
 						logger.notice(u"============================= syncConfigFromServer =========================================")
 						self._syncConfigFromServer()
 				time.sleep(1)
@@ -310,6 +310,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 	def _syncConfigFromServer(self):
 		self._working = True
 		try:
+			self._state['config_cached'] = False
 			if not self._configService:
 				self.connectConfigService()
 			productOnClients = self._configService.productOnClient_getObjects(
@@ -318,6 +319,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
 				attributes    = ['actionRequest'])
 			if not productOnClients:
+				self._state['config_cached'] = True
 				logger.notice(u"No product action(s) set on config service, no sync from server required")
 			else:
 				productIds = []
@@ -325,7 +327,6 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					productIds.append(productOnClient.productId)
 				logger.notice(u"Product action(s) set on config service (%s), sync from server required" % u','.join(productIds))
 				self._cacheBackend._setMasterBackend(self._configService)
-				self._state['config_cached'] = False
 				state.set('config_cache_service', self._state)
 				self._backendTracker.clearModifications()
 				self._cacheBackend._replicateMasterToWorkBackend()
