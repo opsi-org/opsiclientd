@@ -305,6 +305,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					self.connectConfigService()
 				self._cacheBackend._setMasterBackend(self._configService)
 				self._cacheBackend._updateMasterFromWorkBackend(modifications)
+				self._backendTracker.clearModifications()
 				logger.notice(u"Config synced to server")
 		except Exception, e:
 			logger.logException(e)
