@@ -89,6 +89,17 @@ class CacheService(threading.Thread):
 			while self._configCacheService.isRunning() and self._configCacheService.isWorking():
 				time.sleep(1)
 	
+	def syncConfigFromServer(self, waitForEnding = False):
+		self.initializeConfigCacheService()
+		if self._configCacheService.isWorking():
+			logger.info(u"Already syncing config")
+		else:
+			self._configCacheService.syncConfigFromServer()
+		if waitForEnding:
+			time.sleep(3)
+			while self._configCacheService.isRunning() and self._configCacheService.isWorking():
+				time.sleep(1)
+	
 	def configCacheCompleted(self):
 		self.initializeConfigCacheService()
 		if not self._configCacheService.isWorking() and self._configCacheService.getState().get('config_cached', False):
@@ -278,6 +289,9 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		
 	def syncConfigToServer(self):
 		self._syncConfigToServerRequested = True
+	
+	def syncConfigFromServer(self):
+		self._syncConfigFromServerRequested = True
 	
 	def _syncConfigToServer(self):
 		self._working = True

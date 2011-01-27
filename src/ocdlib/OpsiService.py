@@ -35,10 +35,12 @@ import time, base64
 from hashlib import md5
 from twisted.conch.ssh import keys
 import random
+from httplib import HTTPConnection, HTTPSConnection
 
 # OPSI imports
 from OPSI.Logger import *
 from OPSI.Util import *
+from OPSI.Util.HTTP import urlsplit, non_blocking_connect_http, non_blocking_connect_https
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Types import *
 from OPSI import System
@@ -50,6 +52,30 @@ from ocdlib.Exceptions import *
 
 logger = Logger()
 config = Config()
+
+def isConfigServiceReachable(timeout=15):
+	for url in config.getConfigServiceUrls():
+		try:
+			logger.info(u"Trying connection to config service '%s'" % url)
+			(scheme, host, port, baseurl, username, password) = urlsplit(url)
+			conn = None
+			if scheme.endswith('s'):
+				conn = HTTPSConnection(host = host, port = port)
+				non_blocking_connect_https(conn, timeout)
+			else:
+				conn = HTTPConnection(host = host, port = port)
+				non_blocking_connect_http(conn, timeout)
+			if not conn:
+				continue
+			try:
+				conn.sock.close()
+				conn.close()
+			except:
+				pass
+			return True
+		except Exception, e:
+			logger.info(e)
+	return False
 
 class ServiceConnection(object):
 	def __init__(self, loadBalance = False):
@@ -96,6 +122,19 @@ class ServiceConnection(object):
 	def isConfigServiceConnected(self):
 		return bool(self._configService)
 	
+	def isConfigServiceReachable(self, timeout=15):
+		return isConfigServiceReachable(timeout = timeout)
+	
+	def stop(self):
+		logger.debug(u"Stopping thread")
+		self.cancelled = True
+		self.running = False
+		for i in range(10):
+			if not self.isAlive():
+				break
+			self.terminate()
+			time.sleep(0.5)
+			
 	def connectConfigService(self):
 		try:
 			configServiceUrls = config.getConfigServiceUrls()
@@ -205,11 +244,6 @@ class ServiceConnection(object):
 		self._configService = None
 		self._configServiceUrl = None
 	
-
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                     SERVICE CONNECTION THREAD                                     -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, statusSubject = None):
 		moduleName = u' %-30s' % (u'service connection')

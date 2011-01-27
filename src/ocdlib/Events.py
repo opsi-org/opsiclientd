@@ -138,8 +138,10 @@ class EventConfig(object):
 		self.cacheProducts                 =     bool ( conf.get('cacheProducts',                 False     ) )
 		self.cacheMaxBandwidth             =      int ( conf.get('cacheMaxBandwidth',             0         ) )
 		self.useCachedProducts             =     bool ( conf.get('useCachedProducts',             False     ) )
-		self.syncConfig                    =     bool ( conf.get('syncConfig',                    False     ) )
-		self.postSyncConfig                =     bool ( conf.get('postSyncConfig',                False     ) )
+		self.syncConfigToServer            =     bool ( conf.get('syncConfigToServer',            False     ) )
+		self.syncConfigFromServer          =     bool ( conf.get('syncConfigFromServer',          False     ) )
+		self.postSyncConfigToServer        =     bool ( conf.get('postSyncConfigToServer',        False     ) )
+		self.postSyncConfigFromServer      =     bool ( conf.get('postSyncConfigFromServer',      False     ) )
 		self.useCachedConfig               =     bool ( conf.get('useCachedConfig',               False     ) )
 		
 		if not self.eventNotifierDesktop in ('winlogon', 'default', 'current'):
@@ -881,10 +883,14 @@ def getEventConfigs():
 						eventConfigs[eventConfigName]['cacheMaxBandwidth'] = int(value)
 					elif (key == 'use_cached_products'):
 						eventConfigs[eventConfigName]['useCachedProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
-					elif (key == 'sync_config'):
-						eventConfigs[eventConfigName]['syncConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
-					elif (key == 'post_sync_config'):
-						eventConfigs[eventConfigName]['postSyncConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'sync_config_from_server'):
+						eventConfigs[eventConfigName]['syncConfigFromServer'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'sync_config_to_server'):
+						eventConfigs[eventConfigName]['syncConfigToServer'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'post_sync_config_from_server'):
+						eventConfigs[eventConfigName]['postSyncConfigFromServer'] = value.lower() in ('1', 'true', 'on', 'yes')
+					elif (key == 'post_sync_config_to_server'):
+						eventConfigs[eventConfigName]['postSyncConfigToServer'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'use_cached_config'):
 						eventConfigs[eventConfigName]['useCachedConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'update_action_processor'):

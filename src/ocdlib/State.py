@@ -38,11 +38,11 @@ from OPSI.Types import *
 from OPSI import System
 
 from ocdlib.Config import Config
-
+from ocdlib.OpsiService import isConfigServiceReachable
 logger = Logger()
 config = Config()
 
-class StateImplementation(object):
+class StateImplementation(ServiceConnection):
 	def __init__(self):
 		self._state = {}
 		self._stateFile = config.get('global', 'state_file')
@@ -78,6 +78,8 @@ class StateImplementation(object):
 		name = forceUnicode(name)
 		if (name == 'user_logged_in'):
 			return bool(System.getActiveSessionIds())
+		if (name == 'configserver_reachable'):
+			return isConfigServiceReachable(timeout = 15)
 		if self._state.has_key(name):
 			return self._state[name]
 		logger.warning(u"Unknown state name '%s', returning False" % name)
