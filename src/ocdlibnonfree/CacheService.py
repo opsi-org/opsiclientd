@@ -179,8 +179,12 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		moduleName = u' %-30s' % (u'config cache service')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		
-		self._configCacheDir = os.path.join(config.get('cache_service', 'storage_dir'), 'config')
-		
+		self._configCacheDir          = os.path.join(config.get('cache_service', 'storage_dir'), 'config')
+		self._opsiModulesFile         = os.path.join(self._configCacheDir, 'cached_modules')
+		self._opsiVersionFile         = os.path.join(self._configCacheDir, 'cached_version')
+		self._opsiPasswdFile          = os.path.join(self._configCacheDir, 'cached_passwd')
+		self._auditHardwareConfigFile = os.path.join(self._configCacheDir, 'cached_opsihwaudit.json')
+			
 		self._stopped = False
 		self._running = False
 		self._working = False
@@ -194,10 +198,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			os.makedirs(self._configCacheDir)
 		
 		backendArgs = {
-			'opsiModulesFile':         os.path.join(self._configCacheDir, 'cached_modules'),
-			'opsiVersionFile':         os.path.join(self._configCacheDir, 'cached_version'),
-			'opsiPasswdFile':          os.path.join(self._configCacheDir, 'cached_passwd'),
-			'auditHardwareConfigFile': os.path.join(self._configCacheDir, 'cached_opsihwaudit.json')
+			'opsiModulesFile':         self._opsiModulesFile,
+			'opsiVersionFile':         self._opsiVersionFile,
+			'opsiPasswdFile':          self._opsiPasswdFile,
+			'auditHardwareConfigFile': self._auditHardwareConfigFile
 		}
 		self._workBackend = SQLiteBackend(
 			#database    = ':memory:',
