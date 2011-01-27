@@ -228,6 +228,7 @@ class ServiceConnection(object):
 					logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
 				
 				self._configService = serviceConnectionThread.configService
+				self.connectionEstablished()
 		except:
 			self.disconnectConfigService()
 			raise

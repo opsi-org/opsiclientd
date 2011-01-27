@@ -909,10 +909,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						desktop      = self.event.eventConfig.actionNotifierDesktop )
 				
 				if self.event.eventConfig.syncConfigToServer:
+					self.setStatusMessage( _(u"Syncing config to server") )
 					self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = self.event.eventConfig.useCachedConfig)
+					self.setStatusMessage( _(u"Sync completed") )
 				if self.event.eventConfig.syncConfigFromServer:
+					self.setStatusMessage( _(u"Syncing config from server") )
 					self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.event.eventConfig.useCachedConfig)
-				
+					self.setStatusMessage( _(u"Sync completed") )
+					
 				if self.event.eventConfig.useCachedConfig:
 					if self.opsiclientd.getCacheService().configCacheCompleted():
 						logger.notice(u"Event '%s' uses cached config and config caching is done" % self.event.eventConfig.getName())
@@ -949,10 +953,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				config.setTemporaryConfigServiceUrls([])
 				
 				if self.event.eventConfig.postSyncConfigToServer:
+					self.setStatusMessage( _(u"Syncing config to server") )
 					self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = self.opsiclientd.isShutdownTriggered())
+					self.setStatusMessage( _(u"Sync completed") )
 				if self.event.eventConfig.postSyncConfigFromServer:
+					self.setStatusMessage( _(u"Syncing config from server") )
 					self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.opsiclientd.isShutdownTriggered())
-				
+					self.setStatusMessage( _(u"Sync completed") )
+					
 				if self.opsiclientd.isShutdownTriggered():
 					self.setStatusMessage(_("Shutting down machine"))
 				elif self.opsiclientd.isRebootTriggered():
