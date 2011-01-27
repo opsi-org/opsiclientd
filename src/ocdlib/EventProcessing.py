@@ -908,8 +908,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						command      = self.event.eventConfig.actionNotifierCommand,
 						desktop      = self.event.eventConfig.actionNotifierDesktop )
 				
-				if self.event.eventConfig.syncConfig:
-					self.opsiclientd.getCacheService().syncConfig(waitForEnding = self.event.eventConfig.useCachedConfig)
+				if self.event.eventConfig.syncConfigToServer:
+					self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = self.event.eventConfig.useCachedConfig)
+				if self.event.eventConfig.syncConfigFromServer:
+					self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.event.eventConfig.useCachedConfig)
 				
 				if self.event.eventConfig.useCachedConfig:
 					if self.opsiclientd.getCacheService().configCacheCompleted():
@@ -946,11 +948,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				
 				config.setTemporaryConfigServiceUrls([])
 				
-				if self.event.eventConfig.postSyncConfig:
-					try:
-						self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = True)
-					except Exception, e:
-						logger.logException(e)
+				if self.event.eventConfig.postSyncConfigToServer:
+					self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = self.opsiclientd.isShutdownTriggered())
+				if self.event.eventConfig.postSyncConfigFromServer:
+					self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.opsiclientd.isShutdownTriggered())
 				
 				if self.opsiclientd.isShutdownTriggered():
 					self.setStatusMessage(_("Shutting down machine"))
