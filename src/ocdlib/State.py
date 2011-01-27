@@ -42,7 +42,7 @@ from ocdlib.OpsiService import isConfigServiceReachable
 logger = Logger()
 config = Config()
 
-class StateImplementation(ServiceConnection):
+class StateImplementation(object):
 	def __init__(self):
 		self._state = {}
 		self._stateFile = config.get('global', 'state_file')
