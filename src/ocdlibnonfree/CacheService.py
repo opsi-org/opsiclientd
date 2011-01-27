@@ -224,9 +224,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		)
 		
 		self._configBackend = BackendExtender(
-			backend = ExtendedConfigDataBackend(
-				configDataBackend = self._cacheBackend
-			),
+			#backend = ExtendedConfigDataBackend(
+			#	configDataBackend = self._cacheBackend
+			#),
+			backend            = self._cacheBackend,
 			extensionClass     = ConfigCacheServiceBackendExtension,
 			extensionConfigDir = config.get('cache_service', 'extension_config_dir')
 		)
