@@ -35,7 +35,7 @@ from ocdlib.Config import Config
 logger = Logger()
 config = Config()
 
-kioskPage = u'''
+mainpage = u'''
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -55,6 +55,9 @@ kioskPage = u'''
 	.title        { color: #555555; font-size: 20px; font-weight: bolder; letter-spacing: 5px; }
 	.button       { color: #9e445a; background-color: #fafafa; border: none; margin-top: 20px; font-weight: bolder; }
 	.box          { background-color: #fafafa; border: 1px #555555 solid; padding: 20px; margin-left: 30px; margin-top: 50px;}
+	
+	table, td, th {border:1px solid;}
+	th {background-color: #87CEFF,font-family: verdana, arial;}
 	</style>
 	
 </head>
@@ -259,7 +262,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				else:
 					antwort = u"No Result '%s'" % params
 				
-				html = kioskPage
+				html = mainpage
 				html = html.replace('%result%', forceUnicode(antwort))
 				result.stream = stream.IByteStream(html.encode('utf-8'))
 				return result
@@ -296,7 +299,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		self.disconnectConfigService()
 		
 		table = ''
-		html = kioskPage
+		html = mainpage
 		for row in tablerows:
 			table += row
 		
