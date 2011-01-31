@@ -68,6 +68,30 @@ mainpage = u'''
 	
 </body>
 '''
+maintable = u'''
+<table>
+<thead>
+			<tr>
+				<th>Installieren/Updaten</th>
+				<th>Produkt</th>
+				<th>Installationsstatus</th>
+				<th>Version</th>
+				<th>verfuegbare Version</th>
+			</tr>
+</thead>
+<tbody>
+
+			%result%
+</tbody>
+<tfoot>
+			<tr>
+			<td align="center" colspan="2">
+						<input name="action" value="Save" id="submit" class="button" type="submit" />
+					</td>
+			<tr>
+</tfoot>
+		</table>
+'''
 
 answerpage = u'''
 <?xml version="1.0" encoding="UTF-8"?>
@@ -300,30 +324,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		for row in tablerows:
 			table += row
 		
-		maintable = u'''
-<table>
-<thead>
-			<tr>
-				<th>Installieren/Updaten</th>
-				<th>Produkt</th>
-				<th>Installationsstatus</th>
-				<th>Version</th>
-				<th>verfuegbare Version</th>
-			</tr>
-</thead>
-<tbody>
-
-			%result%
-</tbody>
-<tfoot>
-			<tr>
-			<td align="center" colspan="2">
-						<input name="action" value="Save" id="submit" class="button" type="submit" />
-					</td>
-			<tr>
-</tfoot>
-		</table>
-'''
+		
 		maintable = maintable.replace('%result%',table)
 		html = html.replace('%result%', maintable)
 		
