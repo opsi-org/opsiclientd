@@ -114,12 +114,12 @@ class CacheService(threading.Thread):
 		self.initializeConfigCacheService()
 		return self._configCacheService._backendTracker.getModifications()
 	
-	def cacheProducts(self, waitForEnding = False):
+	def cacheProducts(self, waitForEnding = False, productProgressObserver = None, overallProgressObserver = None):
 		self.initializeProductCacheService()
 		if self._productCacheService.isWorking():
 			logger.info(u"Already caching products")
 		else:
-			self._productCacheService.cacheProducts()
+			self._productCacheService.cacheProducts(productProgressObserver = productProgressObserver, overallProgressObserver = overallProgressObserver)
 		if waitForEnding:
 			time.sleep(3)
 			while self._productCacheService.isRunning() and self._productCacheService.isWorking():
@@ -158,13 +158,13 @@ class CacheService(threading.Thread):
 		self.initializeProductCacheService()
 		return self._productCacheService.getState()
 	
-	def getOverallProductCacheProgressSubject(self):
-		self.initializeProductCacheService()
-		return self._productCacheService.getOverallProgressSubject()
-	
-	def getCurrentProductCacheProgressSubject(self):
-		self.initializeProductCacheService()
-		return self._productCacheService.getCurrentProgressSubject()
+	#def getOverallProductCacheProgressSubject(self):
+	#	self.initializeProductCacheService()
+	#	return self._productCacheService.getOverallProgressSubject()
+	#
+	#def getCurrentProductCacheProgressSubject(self):
+	#	self.initializeProductCacheService()
+	#	return self._productCacheService.getCurrentProgressSubject()
 
 
 class ConfigCacheServiceBackendExtension(object):
@@ -370,8 +370,11 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		
 		self._cacheProductsRequested = False
 		
-		self._overallProgressSubject = ProgressSubject(id = 'overall', type = 'product_cache')
-		self._currentProgressSubject = ProgressSubject(id = 'current', type = 'product_cache')
+		self._productProgressObserver = None
+		self._overallProgressObserver = None
+		
+		#self._overallProgressSubject = ProgressSubject(id = 'overall', type = 'product_cache')
+		#self._currentProgressSubject = ProgressSubject(id = 'current', type = 'product_cache')
 		
 		if not os.path.exists(self._storageDir):
 			logger.notice(u"Creating cache service storage dir '%s'" % self._storageDir)
@@ -387,11 +390,11 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		if pcss:
 			self._state = pcss
 	
-	def getOverallProgressSubject(self):
-		return self._overallProgressSubject
-	
-	def getCurrentProgressSubject(self):
-		return self._currentProgressSubject
+	#def getOverallProgressSubject(self):
+	#	return self._overallProgressSubject
+	#
+	#def getCurrentProgressSubject(self):
+	#	return self._currentProgressSubject
 	
 	def getState(self):
 		return self._state
@@ -419,8 +422,10 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		logger.notice(u"Product cache service ended")
 		self._running = False
 	
-	def cacheProducts(self):
+	def cacheProducts(self, productProgressObserver = None, overallProgressObserver = None):
 		self._cacheProductsRequested = True
+		self._productProgressObserver = productProgressObserver
+		self._overallProgressObserver = overallProgressObserver
 	
 	def connectConfigService(self):
 		ServiceConnection.connectConfigService(self, allowTemporaryConfigServiceUrls = False)
@@ -527,20 +532,20 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 				logger.notice(u"No product action request set => no products to cache")
 			else:
 				logger.notice(u"Caching products: %s" % ', '.join(productIds))
-				self._overallProgressSubject.setEnd(len(productIds))
-				self._overallProgressSubject.setMessage( _(u'Caching products') )
+				#self._overallProgressSubject.setEnd(len(productIds))
+				#self._overallProgressSubject.setMessage( _(u'Caching products') )
 				
 				try:
 					errorsOccured = []
 					for productId in productIds:
 						try:
-							self._overallProgressSubject.setMessage( _(u'Caching product: %s') % productId )
+							#self._overallProgressSubject.setMessage( _(u'Caching product: %s') % productId )
 							self._cacheProduct(productId)
 						except Exception, e:
 							logger.logException(e, LOG_INFO)
 							errorsOccured.append(forceUnicode(e))
 							self._setProductCacheState(productId, 'failure', forceUnicode(e))
-						self._overallProgressSubject.addToState(1)
+						#self._overallProgressSubject.addToState(1)
 				except Exception, e:
 					logger.logException(e)
 					errorsOccured.append(forceUnicode(e))
@@ -570,7 +575,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		elif (key == 'completed'):
 			actionProgress = 'cached'
 		elif (key == 'failure'):
-			actionProgress = forceUnicode(value)
+			actionProgress = u"Cache failure: %s" % forceUnicode(value)
 		if actionProgress:
 			self._configService.productOnClient_updateObjects([
 				ProductOnClient(
@@ -663,7 +668,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 				maxBandwidth         = 0,
 				dynamicBandwidth     = False
 			)
-			productSynchronizer.synchronize(productProgressObserver = self._currentProgressSubject)
+			productSynchronizer.synchronize(productProgressObserver = self._productProgressObserver, overallProgressObserver = self._overallProgressObserver)
 			logger.notice(u"Product '%s' cached" % productId)
 			self._setProductCacheState(productId, 'completed', time.time())
 		finally:
