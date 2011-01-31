@@ -52,8 +52,8 @@ mainpage = u'''
 	thead		{ background-color: #6495ed;}
 	tbody tr:hover  {background-color: #87cefa; }
 	tfoot		{text-align: right; }
-	th		{border: 1px solid; }
-	td		{ border: 1px solid; padding: 2px;}
+	
+	td		{ padding: 2px;}
 	</style>
 	
 </head>
@@ -305,7 +305,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 <table>
 <thead>
 			<tr>
-				<th>Installieren/Updaten</th>
+				<th></th>
 				<th>Produkt</th>
 				<th>Installationsstatus</th>
 				<th>Version</th>
