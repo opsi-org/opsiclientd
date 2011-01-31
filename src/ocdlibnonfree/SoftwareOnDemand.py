@@ -325,7 +325,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			table += row
 		
 		
-		maintable = maintable.replace('%result%',table)
+		maintable = self.maintable.replace('%result%',table)
 		html = html.replace('%result%', maintable)
 		
 		#html = html.replace('%result%', myClientId)
