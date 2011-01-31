@@ -324,8 +324,8 @@ class ConfigImplementation(object):
 	def setTemporaryConfigServiceUrls(self, temporaryConfigServiceUrls):
 		self._temporaryConfigServiceUrls = forceList(temporaryConfigServiceUrls)
 		
-	def getConfigServiceUrls(self):
-		if self._temporaryConfigServiceUrls:
+	def getConfigServiceUrls(self, allowTemporaryConfigServiceUrls = True):
+		if allowTemporaryConfigServiceUrls and self._temporaryConfigServiceUrls:
 			return self._temporaryConfigServiceUrls
 		return self.get('config_service', 'url')
 	

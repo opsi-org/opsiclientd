@@ -135,9 +135,9 @@ class ServiceConnection(object):
 			self.terminate()
 			time.sleep(0.5)
 			
-	def connectConfigService(self):
+	def connectConfigService(self, allowTemporaryConfigServiceUrls = True):
 		try:
-			configServiceUrls = config.getConfigServiceUrls()
+			configServiceUrls = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls = allowTemporaryConfigServiceUrls)
 			if not configServiceUrls:
 				raise Exception(u"No service url defined")
 			

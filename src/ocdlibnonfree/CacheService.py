@@ -114,13 +114,12 @@ class CacheService(threading.Thread):
 		self.initializeConfigCacheService()
 		return self._configCacheService._backendTracker.getModifications()
 	
-	def cacheProducts(self, configService, productIds, waitForEnding = False):
+	def cacheProducts(self, waitForEnding = False):
 		self.initializeProductCacheService()
 		if self._productCacheService.isWorking():
 			logger.info(u"Already caching products")
 		else:
-			self._productCacheService.setConfigService(configService)
-			self._productCacheService.setProductIdsToCache(productIds)
+			self._productCacheService.cacheProducts()
 		if waitForEnding:
 			time.sleep(3)
 			while self._productCacheService.isRunning() and self._productCacheService.isWorking():
@@ -359,10 +358,11 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			except Exception, e:
 				logger.notice(u"Failed to diconnect from config service: %s" % e)
 		self._working = False
-	
-class ProductCacheService(threading.Thread):
+
+class ProductCacheService(ServiceConnection, threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
+		ServiceConnection.__init__(self)
 		moduleName = u' %-30s' % (u'product cache service')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		
@@ -376,8 +376,7 @@ class ProductCacheService(threading.Thread):
 		self._working = False
 		self._state   = {}
 		
-		self._productIdsToCache = []
-		self._configService = None
+		self._cacheProductsRequested = False
 		
 		self._overallProgressSubject = ProgressSubject(id = 'overall', type = 'product_cache')
 		self._currentProgressSubject = ProgressSubject(id = 'current', type = 'product_cache')
@@ -419,7 +418,8 @@ class ProductCacheService(threading.Thread):
 		logger.notice(u"Product cache service started")
 		try:
 			while not self._stopped:
-				if self._productIdsToCache and not self._working:
+				if self._cacheProductsRequested and not self._working:
+					self._cacheProductsRequested = False
 					self._cacheProducts()
 				time.sleep(1)
 		except Exception, e:
@@ -427,15 +427,15 @@ class ProductCacheService(threading.Thread):
 		logger.notice(u"Product cache service ended")
 		self._running = False
 	
-	def setProductIdsToCache(self, productIds):
-		self._productIdsToCache = forceProductIdList(productIds)
+	def cacheProducts(self):
+		self._cacheProductsRequested = True
 	
-	def setConfigService(self, configService):
-		modules = None
-		if configService.isOpsi35():
-			modules = configService.backend_info()['modules']
-		else:
-			modules = configService.getOpsiInformation_hash()['modules']
+	def _getConfigService(self):
+		if not self._configService:
+			self.connectConfigService(allowTemporaryConfigServiceUrls = False)
+			if not self._configService:
+				raise Exception(u"Not connected to config service")
+		modules = self._configService.getOpsiInformation_hash()['modules']
 		
 		if not modules.get('vpn'):
 			raise Exception(u"Cannot sync products: VPN module currently disabled")
@@ -464,12 +464,6 @@ class ProductCacheService(threading.Thread):
 		if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
 			raise Exception(u"Cannot sync products: modules file invalid")
 		logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
-		self._configService = configService
-		
-	def _getConfigService(self):
-		if not self._configService:
-			raise Exception(u"Not connected to config service")
-		return self._configService
 	
 	def _freeProductCacheSpace(self, neededSpace = 0, neededProducts = []):
 		try:
@@ -525,33 +519,45 @@ class ProductCacheService(threading.Thread):
 		self._state['products'] = {}
 		state.set('product_cache_service', self._state)
 		
-		logger.notice(u"Caching products: %s" % ', '.join(self._productIdsToCache))
-		self._overallProgressSubject.setEnd(len(self._productIdsToCache))
-		self._overallProgressSubject.setMessage( _(u'Caching products') )
-		
 		try:
-			errorsOccured = []
-			for productId in self._productIdsToCache:
+			configService = self._getConfigService()
+			productIds = []
+			for productOnClient in configService.productOnClient_getObjects(
+					productType   = 'LocalbootProduct',
+					clientId      = config.get('global', 'host_id'),
+					actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+					attributes    = ['actionRequest']):
+			if not productOnClient.productId in productIds:
+				productIds.append(productOnClient.productId)
+			if productIds:
+				logger.notice(u"Caching products: %s" % ', '.join(productIds))
+				self._overallProgressSubject.setEnd(len(productIds))
+				self._overallProgressSubject.setMessage( _(u'Caching products') )
+				
 				try:
-					self._overallProgressSubject.setMessage( _(u'Caching product: %s') % productId )
-					self._cacheProduct(productId)
+					errorsOccured = []
+					for productId in productIds:
+						try:
+							self._overallProgressSubject.setMessage( _(u'Caching product: %s') % productId )
+							self._cacheProduct(productId)
+						except Exception, e:
+							logger.logException(e, LOG_INFO)
+							errorsOccured.append(forceUnicode(e))
+							self._setProductCacheState(productId, 'failure', forceUnicode(e))
+						self._overallProgressSubject.addToState(1)
 				except Exception, e:
-					logger.logException(e, LOG_INFO)
+					logger.logException(e)
 					errorsOccured.append(forceUnicode(e))
-					self._setProductCacheState(productId, 'failure', forceUnicode(e))
-				self._overallProgressSubject.addToState(1)
+				if errorsOccured:
+					logger.error(u"Errors occured while caching products %s: %s" % (', '.join(productIds), ', '.join(errorsOccured)))
+				else:
+					logger.notice(u"All products cached: %s" % ', '.join(productIds))
+					self._state['products_cached'] = True
+					state.set('product_cache_service', self._state)
+					#for eventGenerator in getEventGenerators(generatorClass = ProductSyncCompletedEventGenerator):
+					#	eventGenerator.fireEvent()
 		except Exception, e:
-			logger.logException(e)
-			errorsOccured.append(forceUnicode(e))
-		if errorsOccured:
-			logger.error(u"Errors occured while caching products %s: %s" % (', '.join(self._productIdsToCache), ', '.join(errorsOccured)))
-		else:
-			logger.notice(u"All products cached: %s" % ', '.join(self._productIdsToCache))
-			self._state['products_cached'] = True
-			state.set('product_cache_service', self._state)
-			#for eventGenerator in getEventGenerators(generatorClass = ProductSyncCompletedEventGenerator):
-			#	eventGenerator.fireEvent()
-		self._productIdsToCache = []
+			logger.error(u"Failed to cache products: %s" % e)
 		self._working = False
 	
 	def _setProductCacheState(self, productId, key, value):
