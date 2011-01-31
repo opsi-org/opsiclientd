@@ -274,6 +274,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			if productOnClients:
 				state = productOnClients[0].installationStatus
 				productVersion = productOnClients[0].productVersion
+				if not productVersion: productVersion = ''
 				if productOnClients[0].actionRequest == 'setup':
 					checked = u'checked="checked"'
 					
