@@ -42,22 +42,18 @@ mainpage = u'''
 <head>
 	<title>opsi Software On Demand</title>
 	<style>
-	a:link 	      { color: #555555; text-decoration: none; }
-	a:visited     { color: #555555; text-decoration: none; }
-	a:hover	      { color: #46547f; text-decoration: none; }
-	a:active      { color: #555555; text-decoration: none; }
 	body          { font-family: verdana, arial; font-size: 12px; }
 	#title        { padding: 10px; color: #6276a0; font-size: 20px; letter-spacing: 5px; }
-	input, select { background-color: #fafafa; border: 1px #abb1ef solid; width: 430px; font-family: verdana, arial; }
-	.json         { color: #555555; width: 95%%; float: left; clear: both; margin: 30px; padding: 20px; background-color: #fafafa; border: 1px #abb1ef dashed; font-size: 11px; }
-	.json_key     { color: #9e445a; }
-	.json_label   { color: #abb1ef; margin-top: 20px; margin-bottom: 5px; font-size: 11px; }
+	input, select { background-color: #fafafa; border: 1px #abb1ef solid; font-family: verdana, arial;}
 	.title        { color: #555555; font-size: 20px; font-weight: bolder; letter-spacing: 5px; }
-	.button       { color: #9e445a; background-color: #fafafa; border: none; margin-top: 20px; font-weight: bolder; }
+	.button       { color: #9e445a; background-color: #fafafa; border: 1px solid; font-weight: bolder; }
 	.box          { background-color: #fafafa; border: 1px #555555 solid; padding: 20px; margin-left: 30px; margin-top: 50px;}
-	
-	table, td, th {border:1px solid;}
-	th {background-color: #87CEFF,font-family: verdana, arial;}
+	table		{ margin-top: 10px; border-collapse:collapse;text-align: center; }
+	thead		{ background-color: #6495ed;}
+	tbody tr:hover  {background-color: #87cefa; }
+	tfoot		{text-align: right; }
+	th		{border: 1px solid; }
+	td		{ border: 1px solid; padding: 2px;}
 	</style>
 	
 </head>
@@ -163,6 +159,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				if productOnClient.actionRequest == 'setup':
 					logger.notice(u"Product: '%s' is already set on setup, nothing to do." % productId)
 					continue
+				#TODO Vorbedingung fuer Abhaengige Pakete mit einbauen.
 				productOnClient.setActionRequest('setup')
 				productOnClients.append(productOnClient)
 			
@@ -304,7 +301,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			table += row
 		
 		maintable = u'''
-<table class="box">
+<table>
+<thead>
 			<tr>
 				<th>Installieren/Updaten</th>
 				<th>Produkt</th>
@@ -312,17 +310,18 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				<th>Version</th>
 				<th>verfuegbare Version</th>
 			</tr>
-
+</thead>
+<tbody>
 
 			%result%
+</tbody>
+<tfoot>
 			<tr>
 			<td align="center" colspan="2">
-						<input name="action" value="ondemand" id="submit" class="button" type="submit" />
-					</td>
-					<td align="center" colspan="2">
-						<input name="action" value="onrestart" id="submit" class="button" type="submit" />
+						<input name="action" value="Save" id="submit" class="button" type="submit" />
 					</td>
 			<tr>
+</tfoot>
 		</table>
 '''
 		maintable = maintable.replace('%result%',table)
