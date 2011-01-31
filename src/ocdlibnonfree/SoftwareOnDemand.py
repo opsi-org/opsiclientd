@@ -102,6 +102,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		WorkerOpsi.__init__(self, service, request, resource)
 		ServiceConnection.__init__(self)
+		self.productOnClients = []
+		self.productOnClients_withDependencies = []
 		
 	def _getCredentials(self):
 		(user, password) = self._getAuthorization()
@@ -144,11 +146,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		try:
 			logger.debug(u'Try to execute Query')
 			#product On Clients
-			productOnClients = []
 			for productId in param.get('products', []):
-				productOnClient = self._configService.productOnClient_getObjects(clientId = clientId, productId = productId)
-				if productOnClient:
-					productOnClient = productOnClient[0]
+				self.productOnClient = self._configService.productOnClient_getObjects(clientId = clientId, productId = productId)
+				if self.productOnClient:
+					productOnClient = self.productOnClient[0]
 				else:
 					productOnClient = ProductOnClient(
 						productId          = productId,
@@ -166,11 +167,15 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			
 			#Set Products
 			if productOnClients:
-				logger.notice(u"Now try to set '%d' Products." % len(productOnClients))
-				self._configService.productOnClient_updateObjects(productOnClients)
+				logger.notice(u"Now try to fulfill ProductDependencies.")
+				productOnClients_withDependencies = self._configService.productOnClient_addDependencies(productOnClients)
+				#self._configService.productOnClient_updateObjects(productOnClients_withDependencies)
 			else:
 				logger.notice(u'No Product to set.')
 			
+			if param.get('action') == 'save':
+				return productOnClients_withDependencies
+				
 			if param.get('action') == 'ondemand':
 				pass
 				#fuehre neues event aus
@@ -256,14 +261,44 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				
 				if params:
 					logger.debug(u"Parameters from POST: '%s'" % params)
-					antwort = self._executeQuery(params, myClientId)
-				else:
-					antwort = u"No Result '%s'" % params
+					productOnClients = self._executeQuery(params, myClientId)
 				
-				html = mainpage
-				html = html.replace('%result%', forceUnicode(antwort))
-				result.stream = stream.IByteStream(html.encode('utf-8'))
-				return result
+				if productOnClients:
+					if params['action'] == "save":
+						html = answerpage
+						table = '''
+							<table>
+								<thead>
+									<tr>
+										<th>Produkte die installiert werden</th>
+										<th>Produkt</th>
+										<th>Installationsstatus</th>
+										<th>Version</th>
+										<th>verfuegbare Version</th>
+									</tr>
+								</thead>
+								<tbody>
+
+										%result%
+								</tbody>
+								<tfoot>
+									<tr>
+										<td align="center" colspan="2">
+											<input name="action" value="Save" id="submit" class="button" type="submit" />
+										</td>
+									<tr>
+								</tfoot>
+								</table>
+								'''
+						for productOnClient in productOnClients:
+							tablerows.append("<tr><td>%s</td></tr>" % productOnClient.productId)
+						
+						
+						
+						table = table.replace('%result%', forceUnicode(tablerows))
+						html = html.replace('%result%', forceUnicode(antwort))
+						result.stream = stream.IByteStream(html.encode('utf-8'))
+						return result
 
 		
 		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = "kiosk"):
