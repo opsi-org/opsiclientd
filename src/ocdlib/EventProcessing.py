@@ -556,33 +556,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			else:
 				logger.notice(u"Start processing action requests")
 				if productIds:
-					if self.event.eventConfig.cacheProducts:
-						logger.notice(u"Caching products: %s" % productIds)
-						self.setStatusMessage( _(u"Caching products") )
-						self.opsiclientd.getCacheService().initializeProductCacheService()
-						try:
-							self.opsiclientd.getCacheService().getOverallProductCacheProgressSubject().attachObserver(self._overallProgressSubjectProxy)
-							self.opsiclientd.getCacheService().getCurrentProductCacheProgressSubject().attachObserver(self._currentProgressSubjectProxy)
-							self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
-						except Exception, e:
-							logger.logException(e)
-						try:
-							self.opsiclientd.getCacheService().cacheProducts(
-								self._configService,
-								productIds,
-								waitForEnding = self.event.eventConfig.useCachedProducts)
-							self.setStatusMessage( _(u"Products cached") )
-						finally:
-							self._detailSubjectProxy.setMessage(u"")
-							try:
-								self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
-								self.opsiclientd.getCacheService().getOverallProductCacheProgressSubject().detachObserver(self._overallProgressSubjectProxy)
-								self.opsiclientd.getCacheService().getCurrentProductCacheProgressSubject().detachObserver(self._currentProgressSubjectProxy)
-								self._currentProgressSubjectProxy.reset()
-								self._overallProgressSubjectProxy.reset()
-							except Exception, e:
-								logger.logException(e)
-					
 					if self.event.eventConfig.useCachedProducts:
 						if self.opsiclientd._cacheService.productCacheCompleted(self._configService, productIds):
 							logger.notice(u"Event '%s' uses cached products and product caching is done" % self.event.eventConfig.getName())
@@ -912,6 +885,43 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					self.setStatusMessage( _(u"Syncing config to server") )
 					self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = self.event.eventConfig.useCachedConfig)
 					self.setStatusMessage( _(u"Sync completed") )
+				
+				if self.event.eventConfig.cacheProducts:
+					productIds = []
+					for productOnClient in self._configService.productOnClient_getObjects(
+							productType   = 'LocalbootProduct',
+							clientId      = config.get('global', 'host_id'),
+							actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+							attributes    = ['actionRequest']):
+					if not productOnClient.productId in productIds:
+						productIds.append(productOnClient.productId)
+					if productIds:
+						logger.notice(u"Caching products: %s" % productIds)
+						self.setStatusMessage( _(u"Caching products") )
+						self.opsiclientd.getCacheService().initializeProductCacheService()
+						try:
+							self.opsiclientd.getCacheService().getOverallProductCacheProgressSubject().attachObserver(self._overallProgressSubjectProxy)
+							self.opsiclientd.getCacheService().getCurrentProductCacheProgressSubject().attachObserver(self._currentProgressSubjectProxy)
+							self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
+						except Exception, e:
+							logger.logException(e)
+						try:
+							self.opsiclientd.getCacheService().cacheProducts(
+								self._configService,
+								productIds,
+								waitForEnding = self.event.eventConfig.useCachedProducts)
+							self.setStatusMessage( _(u"Products cached") )
+						finally:
+							self._detailSubjectProxy.setMessage(u"")
+							try:
+								self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
+								self.opsiclientd.getCacheService().getOverallProductCacheProgressSubject().detachObserver(self._overallProgressSubjectProxy)
+								self.opsiclientd.getCacheService().getCurrentProductCacheProgressSubject().detachObserver(self._currentProgressSubjectProxy)
+								self._currentProgressSubjectProxy.reset()
+								self._overallProgressSubjectProxy.reset()
+							except Exception, e:
+								logger.logException(e)
+				
 				if self.event.eventConfig.syncConfigFromServer:
 					self.setStatusMessage( _(u"Syncing config from server") )
 					self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.event.eventConfig.useCachedConfig)
