@@ -276,9 +276,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				productVersion = productOnClients[0].productVersion
 				if productOnClients[0].actionRequest == 'setup':
 					checked = u'checked="checked"'
-					state = 'nicht installiert'
+					
 				else:
 					checked = ''
+					state = 'nicht installiert'
 			else:
 				state = 'nicht installiert'
 				
