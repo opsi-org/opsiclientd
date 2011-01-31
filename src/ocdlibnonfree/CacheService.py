@@ -609,25 +609,28 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		self._setProductCacheState(productId, 'packageVersion', productOnDepots[0].packageVersion)
 		
 		try:
-			tempPackageContentFile = os.path.join(self._tempDir, u'%s.files' % productId)
+			#tempPackageContentFile = os.path.join(self._tempDir, u'%s.files' % productId)
+			#packageContentFile = u'%s/%s.files' % (productId, productId)
+			#logger.info(u"Downloading package content file '%s' of product '%s' from depot '%s' to '%s'" % (packageContentFile, productId, repository, tempPackageContentFile))
+			#repository.download(source = packageContentFile, destination = tempPackageContentFile)
+			#
+			#packageContentFile = os.path.join(self._productCacheDir, productId, u'%s.files' % productId)
+			#if os.path.exists(packageContentFile) and (md5sum(tempPackageContentFile) == md5sum(packageContentFile)):
+			#	logger.info(u"Package content file unchanged, assuming that product is up to date")
+			#	self._setProductCacheState(productId, 'completed', time.time())
+			#	repository.disconnect()
+			#	return
+			#
+			#if not os.path.exists(os.path.join(self._productCacheDir, productId)):
+			#	os.mkdir(os.path.join(self._productCacheDir, productId))
+			#logger.debug(u"Moving package content file from '%s' to '%s'" % (tempPackageContentFile, packageContentFile))
+			#if os.path.exists(packageContentFile):
+			#	os.unlink(packageContentFile)
+			#os.rename(tempPackageContentFile, packageContentFile)
 			packageContentFile = u'%s/%s.files' % (productId, productId)
-			logger.info(u"Downloading package content file '%s' of product '%s' from depot '%s' to '%s'" % (packageContentFile, productId, repository, tempPackageContentFile))
-			repository.download(source = packageContentFile, destination = tempPackageContentFile)
-			
-			packageContentFile = os.path.join(self._productCacheDir, productId, u'%s.files' % productId)
-			if os.path.exists(packageContentFile) and (md5sum(tempPackageContentFile) == md5sum(packageContentFile)):
-				logger.info(u"Package content file unchanged, assuming that product is up to date")
-				self._setProductCacheState(productId, 'completed', time.time())
-				repository.disconnect()
-				return
-			
-			if not os.path.exists(os.path.join(self._productCacheDir, productId)):
-				os.mkdir(os.path.join(self._productCacheDir, productId))
-			logger.debug(u"Moving package content file from '%s' to '%s'" % (tempPackageContentFile, packageContentFile))
-			if os.path.exists(packageContentFile):
-				os.unlink(packageContentFile)
-			os.rename(tempPackageContentFile, packageContentFile)
-			packageInfo = PackageContentFile(packageContentFile).parse()
+			localPackageContentFile = os.path.join(self._productCacheDir, productId, u'%s.files' % productId)
+			repository.download(source = packageContentFile, destination = localPackageContentFile)
+			packageInfo = PackageContentFile(localPackageContentFile).parse()
 			productSize = 0
 			fileCount = 0
 			for value in packageInfo.values():
