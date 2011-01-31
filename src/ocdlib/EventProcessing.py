@@ -932,11 +932,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if self.event.eventConfig.updateConfigFile:
 					config.updateConfigFile()
 				
-				if (self.event.eventConfig.actionType == 'login'):
-					self.processUserLoginActions()
-				else:
-					self.processProductActionRequests()
-			
+				if self.event.eventConfig.processActions:
+					if (self.event.eventConfig.actionType == 'login'):
+						self.processUserLoginActions()
+					else:
+						self.processProductActionRequests()
+				
 			finally:
 				self._messageSubject.setMessage(u"")
 				if self.event.eventConfig.writeLogToService:

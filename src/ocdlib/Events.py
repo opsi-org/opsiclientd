@@ -129,6 +129,7 @@ class EventConfig(object):
 		self.actionNotifierDesktop         =  unicode ( conf.get('actionNotifierDesktop',         'current' ) )
 		self.shutdownNotifierCommand       =  unicode ( conf.get('shutdownNotifierCommand',       ''        ) )
 		self.shutdownNotifierDesktop       =  unicode ( conf.get('shutdownNotifierDesktop',       'current' ) )
+		self.processActions                =     bool ( conf.get('processActions',                True      ) )
 		self.actionProcessorCommand        =  unicode ( conf.get('actionProcessorCommand',        ''        ) )
 		self.actionProcessorDesktop        =  unicode ( conf.get('actionProcessorDesktop',        'current' ) )
 		self.actionProcessorTimeout        =      int ( conf.get('actionProcessorTimeout',        3*3600    ) )
@@ -901,6 +902,8 @@ def getEventConfigs():
 						eventConfigs[eventConfigName]['eventNotifierCommand'] = config.replace(value.lower(), escaped=True)
 					elif (key == 'event_notifier_desktop'):
 						eventConfigs[eventConfigName]['eventNotifierDesktop'] = value.lower()
+					elif (key == 'process_actions'):
+						eventConfigs[eventConfigName]['processActions'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'action_notifier_command'):
 						eventConfigs[eventConfigName]['actionNotifierCommand'] = config.replace(value.lower(), escaped=True)
 					elif (key == 'action_notifier_desktop'):
