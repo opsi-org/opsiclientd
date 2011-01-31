@@ -200,7 +200,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			'opsiModulesFile':         self._opsiModulesFile,
 			'opsiVersionFile':         self._opsiVersionFile,
 			'opsiPasswdFile':          self._opsiPasswdFile,
-			'auditHardwareConfigFile': self._auditHardwareConfigFile
+			'auditHardwareConfigFile': self._auditHardwareConfigFile,
+			'depotId':                 config.get('depot_server', 'depot_id'),
 		}
 		self._workBackend = SQLiteBackend(
 			#database    = ':memory:',
@@ -221,7 +222,6 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		self._cacheBackend = ClientCacheBackend(
 			workBackend     = self._workBackend,
 			snapshotBackend = self._snapshotBackend,
-			depotId         = config.get('depot_server', 'depot_id'),
 			clientId        = config.get('global', 'host_id'),
 			**backendArgs
 		)
