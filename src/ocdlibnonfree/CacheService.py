@@ -315,11 +315,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			logger.error(u"Errors occured while syncing config to server: %s" % e)
 			# Do not sync from server in this case!
 			self._syncConfigFromServerRequested = False
-		if self._configService:
-			try:
-				self.disconnectConfigService()
-			except Exception, e:
-				logger.notice(u"Failed to diconnect from config service: %s" % e)
+		self.disconnectConfigService()
 		self._working = False
 		
 	def _syncConfigFromServer(self):
@@ -352,11 +348,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		except Exception, e:
 			logger.logException(e)
 			logger.error(u"Errors occured while syncing config from server: %s" % e)
-		if self._configService:
-			try:
-				self.disconnectConfigService()
-			except Exception, e:
-				logger.notice(u"Failed to diconnect from config service: %s" % e)
+		self.disconnectConfigService()
 		self._working = False
 
 class ProductCacheService(ServiceConnection, threading.Thread):
@@ -430,41 +422,42 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 	def cacheProducts(self):
 		self._cacheProductsRequested = True
 	
-	def _getConfigService(self):
-		if not self._configService:
-			self.connectConfigService(allowTemporaryConfigServiceUrls = False)
-			if not self._configService:
-				raise Exception(u"Not connected to config service")
-		modules = self._configService.getOpsiInformation_hash()['modules']
-		
-		if not modules.get('vpn'):
-			raise Exception(u"Cannot sync products: VPN module currently disabled")
-		
-		if not modules.get('customer'):
-			raise Exception(u"Cannot sync products: No customer in modules file")
+	def connectConfigService(self):
+		ServiceConnection.connectConfigService(self, allowTemporaryConfigServiceUrls = False)
+		try:
+			modules = self._configService.getOpsiInformation_hash()['modules']
 			
-		if not modules.get('valid'):
-			raise Exception(u"Cannot sync products: modules file invalid")
+			if not modules.get('vpn'):
+				raise Exception(u"Cannot sync products: VPN module currently disabled")
+			
+			if not modules.get('customer'):
+				raise Exception(u"Cannot sync products: No customer in modules file")
+				
+			if not modules.get('valid'):
+				raise Exception(u"Cannot sync products: modules file invalid")
+			
+			if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
+				raise Exception(u"Cannot sync products: modules file expired")
+			
+			logger.info(u"Verifying modules file signature")
+			publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
+			data = u''
+			mks = modules.keys()
+			mks.sort()
+			for module in mks:
+				if module in ('valid', 'signature'):
+					continue
+				val = modules[module]
+				if (val == False): val = 'no'
+				if (val == True):  val = 'yes'
+				data += u'%s = %s\r\n' % (module.lower().strip(), val)
+			if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
+				raise Exception(u"Cannot sync products: modules file invalid")
+			logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
+		except Exception, e:
+			self.disconnectConfigService()
+			raise
 		
-		if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
-			raise Exception(u"Cannot sync products: modules file expired")
-		
-		logger.info(u"Verifying modules file signature")
-		publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
-		data = u''
-		mks = modules.keys()
-		mks.sort()
-		for module in mks:
-			if module in ('valid', 'signature'):
-				continue
-			val = modules[module]
-			if (val == False): val = 'no'
-			if (val == True):  val = 'yes'
-			data += u'%s = %s\r\n' % (module.lower().strip(), val)
-		if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
-			raise Exception(u"Cannot sync products: modules file invalid")
-		logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
-	
 	def _freeProductCacheSpace(self, neededSpace = 0, neededProducts = []):
 		try:
 			# neededSpace in byte
@@ -520,16 +513,19 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		state.set('product_cache_service', self._state)
 		
 		try:
-			configService = self._getConfigService()
+			if not self._configService:
+				self.connectConfigService()
 			productIds = []
-			for productOnClient in configService.productOnClient_getObjects(
+			for productOnClient in self._configService.productOnClient_getObjects(
 					productType   = 'LocalbootProduct',
 					clientId      = config.get('global', 'host_id'),
 					actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
 					attributes    = ['actionRequest']):
-			if not productOnClient.productId in productIds:
-				productIds.append(productOnClient.productId)
-			if productIds:
+				if not productOnClient.productId in productIds:
+					productIds.append(productOnClient.productId)
+			if not productIds:
+				logger.notice(u"No product action request set => no products to cache")
+			else:
 				logger.notice(u"Caching products: %s" % ', '.join(productIds))
 				self._overallProgressSubject.setEnd(len(productIds))
 				self._overallProgressSubject.setMessage( _(u'Caching products') )
@@ -558,6 +554,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 					#	eventGenerator.fireEvent()
 		except Exception, e:
 			logger.error(u"Failed to cache products: %s" % e)
+		self.disconnectConfigService()
 		self._working = False
 	
 	def _setProductCacheState(self, productId, key, value):
@@ -567,34 +564,32 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 			self._state['products'][productId] = {}
 		self._state['products'][productId][key] = value
 		state.set('product_cache_service', self._state)
-		if self._getConfigService():
-			actionProgress = None
-			if   (key == 'started'):
-				actionProgress = 'caching'
-			elif (key == 'completed'):
-				actionProgress = 'cached'
-			elif (key == 'failure'):
-				actionProgress = forceUnicode(value)
-			if actionProgress:
-				self._getConfigService().productOnClient_updateObjects([
-					ProductOnClient(
-						productId      = productId,
-						productType    = u'LocalbootProduct',
-						clientId       = config.get('global', 'host_id'),
-						actionProgress = actionProgress
-					)
-				])
-	
+		actionProgress = None
+		if   (key == 'started'):
+			actionProgress = 'caching'
+		elif (key == 'completed'):
+			actionProgress = 'cached'
+		elif (key == 'failure'):
+			actionProgress = forceUnicode(value)
+		if actionProgress:
+			self._configService.productOnClient_updateObjects([
+				ProductOnClient(
+					productId      = productId,
+					productType    = u'LocalbootProduct',
+					clientId       = config.get('global', 'host_id'),
+					actionProgress = actionProgress
+				)
+			])
+
 	def _getRepository(self, productId):
-		configService = self._getConfigService()
-		config.selectDepotserver(configService = configService, event = None, productIds = [ productId ], cifsOnly = False)
+		config.selectDepotserver(configService = self._configService, event = None, productIds = [ productId ], cifsOnly = False)
 		if not config.get('depot_server', 'url'):
 			raise Exception(u"Cannot cache product files: depot_server.url undefined")
 		(depotServerUsername, depotServerPassword) = (u'', u'')
 		if urlsplit(config.get('depot_server', 'url'))[0].startswith('webdav'):
 			(depotServerUsername, depotServerPassword) = (config.get('global', 'host_id'), config.get('global', 'opsi_host_key'))
 		else:
-			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = configService)
+			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
 		return getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword)
 		
 	def _cacheProduct(self, productId):
@@ -606,8 +601,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		repository = self._getRepository(productId)
 		if not config.get('depot_server', 'depot_id'):
 			raise Exception(u"Cannot cache product files: depot_server.depot_id undefined")
-		configService = self._getConfigService()
-		productOnDepots = configService.productOnDepot_getObjects(depotId = config.get('depot_server', 'depot_id'), productId = productId)
+		productOnDepots = self._configService.productOnDepot_getObjects(depotId = config.get('depot_server', 'depot_id'), productId = productId)
 		if not productOnDepots:
 			raise Exception(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
 		
