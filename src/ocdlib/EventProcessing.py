@@ -521,17 +521,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			
 			productIds = []
 			if self._configService.isLegacyOpsi():
-				productStates = []
-				if (self._configService.getLocalBootProductStates_hash.func_code.co_argcount == 2):
-					if self.event.eventConfig.serviceOptions:
-						logger.warning(u"Service cannot handle service options in method getLocalBootProductStates_hash")
-					productStates = self._configService.getLocalBootProductStates_hash(config.get('global', 'host_id'))
-					productStates = productStates.get(config.get('global', 'host_id'), [])
-				else:
-					productStates = self._configService.getLocalBootProductStates_hash(
-								config.get('global', 'host_id'),
-								self.event.eventConfig.serviceOptions )
-					productStates = productStates.get(config.get('global', 'host_id'), [])
+				productStates = self._configService.getLocalBootProductStates_hash(config.get('global', 'host_id'))
+				productStates = productStates.get(config.get('global', 'host_id'), [])
 				
 				logger.notice(u"Got product action requests from configservice")
 				

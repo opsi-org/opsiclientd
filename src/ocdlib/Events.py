@@ -139,7 +139,7 @@ class EventConfig(object):
 		self.actionProcessorTimeout        =      int ( conf.get('actionProcessorTimeout',        3*3600    ) )
 		self.preActionProcessorCommand     =  unicode ( conf.get('preActionProcessorCommand',     ''        ) )
 		self.postActionProcessorCommand    =  unicode ( conf.get('postActionProcessorCommand',    ''        ) )
-		self.serviceOptions                =     dict ( conf.get('serviceOptions',                {}        ) )
+		#self.serviceOptions                =     dict ( conf.get('serviceOptions',                {}        ) )
 		self.cacheProducts                 =     bool ( conf.get('cacheProducts',                 False     ) )
 		self.cacheMaxBandwidth             =      int ( conf.get('cacheMaxBandwidth',             0         ) )
 		self.useCachedProducts             =     bool ( conf.get('useCachedProducts',             False     ) )
@@ -220,7 +220,7 @@ class PanicEventConfig(EventConfig):
 		self.actionNotifierCommand   = None
 		self.shutdownNotifierCommand = None
 		self.actionProcessorDesktop  = 'winlogon'
-		self.serviceOptions          = {}
+		#self.serviceOptions          = {}
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                     DAEMON STARTUP EVENT CONFIG                                   -
@@ -855,8 +855,6 @@ def getEventConfigs():
 				try:
 					if   (key == 'type'):
 						eventConfigs[eventConfigId]['type'] = value
-					elif (key == 'name'):
-						eventConfigs[eventConfigId]['name'] = value
 					elif (key == 'wql'):
 						eventConfigs[eventConfigId]['wql'] = value
 					elif key.startswith('message'):
@@ -881,6 +879,17 @@ def getEventConfigs():
 								eventConfigs[eventConfigId]['shutdownWarningMessage'] = value
 						elif not eventConfigs[eventConfigId].get('shutdownWarningMessage'):
 							eventConfigs[eventConfigId]['shutdownWarningMessage'] = value
+					elif key.startswith('name'):
+						mLanguage = None
+						try:
+							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
+						except:
+							pass
+						if mLanguage:
+							if (mLanguage == getLanguage()):
+								eventConfigs[eventConfigId]['name'] = value
+						elif not eventConfigs[eventConfigId].get('name'):
+							eventConfigs[eventConfigId]['name'] = value
 					elif (key == 'interval'):
 						eventConfigs[eventConfigId]['interval'] = int(value)
 					elif (key == 'max_repetitions'):
@@ -955,8 +964,8 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['shutdownNotifierCommand'] = config.replace(value.lower(), escaped=True)
 					elif (key == 'shutdown_notifier_desktop'):
 						eventConfigs[eventConfigId]['shutdownNotifierDesktop'] = value.lower()
-					elif (key == 'service_options'):
-						eventConfigs[eventConfigId]['serviceOptions'] = eval(value)
+					#elif (key == 'service_options'):
+					#	eventConfigs[eventConfigId]['serviceOptions'] = eval(value)
 					elif (key == 'pre_action_processor_command'):
 						eventConfigs[eventConfigId]['preActionProcessorCommand'] = config.replace(value.lower(), escaped=True)
 					elif (key == 'post_action_processor_command'):
