@@ -81,7 +81,8 @@ answerpage = u'''
           table.alerts       { text-align: center; font-family: Verdana; font-weight: normal; font-size: 11px; color: #404040; width: 260px; background-color: #fafafa; border: 1px #d79900 solid; border-collapse: collapse; border-spacing: 0px;}
           .alertHd       { border-bottom: 2px solid #d79900; background-color: #fff2ba; text-align: center; font-family: Verdana; font-weight: bold; font-size: 11px; color: #404040;}
           .alertBod p{ text-align: left; font-family: Verdana, sans-serif, Arial; font-weight: normal; font-size: 11px; line-height: 12px; color: #404040; background-color: #fafafa; text-indent: -8px; margin-left: 10px; margin-right: 10px; margin-top: 5px; margin-bottom: 5px;}
-          </head>
+        </style>
+</head>
 <body>
 	<span id="title">
 		<img src="/opsi_logo.png" />
