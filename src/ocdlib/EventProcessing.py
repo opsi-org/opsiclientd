@@ -916,20 +916,21 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					else:
 						raise Exception(u"Event '%s' uses cached config but config caching is not done" % self.event.eventConfig.getId())
 				
-				if not self.isConfigServiceConnected():
-					self.connectConfigService()
-				
-				if self.event.eventConfig.getConfigFromService:
-					self.getConfigFromService()
-				if self.event.eventConfig.updateConfigFile:
-					config.updateConfigFile()
-				
-				if self.event.eventConfig.processActions:
-					if (self.event.eventConfig.actionType == 'login'):
-						self.processUserLoginActions()
-					else:
-						self.processProductActionRequests()
-				
+				if self.event.eventConfig.getConfigFromService or self.event.eventConfig.processActions:
+					if not self.isConfigServiceConnected():
+						self.connectConfigService()
+					
+					if self.event.eventConfig.getConfigFromService:
+						self.getConfigFromService()
+						if self.event.eventConfig.updateConfigFile:
+							config.updateConfigFile()
+					
+					if self.event.eventConfig.processActions:
+						if (self.event.eventConfig.actionType == 'login'):
+							self.processUserLoginActions()
+						else:
+							self.processProductActionRequests()
+					
 			finally:
 				self._messageSubject.setMessage(u"")
 				if self.event.eventConfig.writeLogToService:
