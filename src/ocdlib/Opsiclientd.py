@@ -348,7 +348,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			if not isinstance(event, PanicEvent):
 				for ept in self._eventProcessingThreads:
 					if (event.eventConfig.actionType != 'login') and (ept.event.eventConfig.actionType != 'login'):
-						raise Exception(u"Already processing an other (non login) event: %s" % ept.event.eventConfig.getName())
+						raise Exception(u"Already processing an other (non login) event: %s" % ept.event.eventConfig.getId())
 					if (event.eventConfig.actionType == 'login') and (ept.event.eventConfig.actionType == 'login'):
 						if (ept.getSessionId() == eventProcessingThread.getSessionId()):
 							raise Exception(u"Already processing login event '%s' in session %s" \

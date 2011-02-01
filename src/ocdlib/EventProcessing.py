@@ -66,7 +66,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	def __init__(self, opsiclientd, event):
 		from ocdlib.Opsiclientd import __version__
 		
-		moduleName = u' %-30s' % (u'event processing ' + event.eventConfig.getName())
+		moduleName = u' %-30s' % (u'event processing ' + event.eventConfig.getId())
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		KillableThread.__init__(self)
 		ServiceConnection.__init__(self)
@@ -100,7 +100,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self._overallProgressSubjectProxy = ProgressSubjectProxy('overallProgress', fireAlways = False)
 		self._choiceSubject = None
 		
-		self._statusSubject.setMessage( _("Processing event %s") % self.event.eventConfig.getName() )
+		self._statusSubject.setMessage( _("Processing event %s") % self.event.eventConfig.getId() )
 		#self._serviceUrlSubject.setMessage(config.get('config_service', 'url'))
 		self._clientIdSubject.setMessage(config.get('global', 'host_id'))
 		self._opsiclientdInfoSubject.setMessage("opsiclientd %s" % __version__)
@@ -558,9 +558,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if productIds:
 					if self.event.eventConfig.useCachedProducts:
 						if self.opsiclientd._cacheService.productCacheCompleted(self._configService, productIds):
-							logger.notice(u"Event '%s' uses cached products and product caching is done" % self.event.eventConfig.getName())
+							logger.notice(u"Event '%s' uses cached products and product caching is done" % self.event.eventConfig.getId())
 						else:
-							raise Exception(u"Event '%s' uses cached products but product caching is not done" % self.event.eventConfig.getName())
+							raise Exception(u"Event '%s' uses cached products but product caching is not done" % self.event.eventConfig.getId())
 					
 				config.selectDepotserver(configService = self._configService, event = self.event, productIds = productIds)
 				self.processEventWarningTime(productIds)
@@ -734,22 +734,22 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			endTime = time.time() + timeout
 			while (timeout > 0) and not self.eventCancelled and not self.waitCancelled:
 				now = time.time()
-				logger.info(u"Notifying user of action processing %s" % self.event)
-				self.setStatusMessage(_(u"Event %s: action processing will start in %0.0f seconds") % (self.event.eventConfig.getName(), (endTime - now)))
+				logger.info(u"Notifying user of actions to process %s (%s)" % (self.event, productIds))
+				self.setStatusMessage(_(u"Event %s: action processing will start in %0.0f seconds") % (self.event.eventConfig.getId(), (endTime - now)))
 				if ((endTime - now) <= 0):
 					break
 				time.sleep(1)
 			
 			if self.eventCancelled:
 				self.event.eventConfig.cancelCounter += 1
-				config.set('event_%s' % self.event.eventConfig.getName(), 'cancel_counter', self.event.eventConfig.cancelCounter)
+				config.set('event_%s' % self.event.eventConfig.getId(), 'cancel_counter', self.event.eventConfig.cancelCounter)
 				config.updateConfigFile()
 				logger.notice(u"Action processing cancelled by user for the %d. time (max: %d)" \
 					% (self.event.eventConfig.cancelCounter, self.event.eventConfig.userCancelable))
 				raise CanceledByUserError(u"Action processing cancelled by user")
 			else:
 				self.event.eventConfig.cancelCounter = 0
-				config.set('event_%s' % self.event.eventConfig.getName(), 'cancel_counter', self.event.eventConfig.cancelCounter)
+				config.set('event_%s' % self.event.eventConfig.getId(), 'cancel_counter', self.event.eventConfig.cancelCounter)
 				config.updateConfigFile()
 		finally:
 			try:
@@ -864,7 +864,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				self.setActionProcessorInfo()
 				self._messageSubject.setMessage(self.event.eventConfig.getMessage())
 				
-				self.setStatusMessage(_(u"Processing event %s") % self.event.eventConfig.getName())
+				self.setStatusMessage(_(u"Processing event %s") % self.event.eventConfig.getId())
 				
 				if self.event.eventConfig.blockLogin:
 					self.opsiclientd.setBlockLogin(True)
@@ -922,10 +922,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					
 				if self.event.eventConfig.useCachedConfig:
 					if self.opsiclientd.getCacheService().configCacheCompleted():
-						logger.notice(u"Event '%s' uses cached config and config caching is done" % self.event.eventConfig.getName())
+						logger.notice(u"Event '%s' uses cached config and config caching is done" % self.event.eventConfig.getId())
 						config.setTemporaryConfigServiceUrls(['https://localhost:4441/rpc'])
 					else:
-						raise Exception(u"Event '%s' uses cached config but config caching is not done" % self.event.eventConfig.getName())
+						raise Exception(u"Event '%s' uses cached config but config caching is not done" % self.event.eventConfig.getId())
 				
 				if not self.isConfigServiceConnected():
 					self.connectConfigService()
