@@ -284,8 +284,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def __init__(self, opsiclientd):
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
 	
-	def cacheService_cacheConfig(self):
-		return self.opsiclientd.getCacheService().cacheConfig()
+	def cacheService_syncConfig(self):
+		return self.opsiclientd.getCacheService().syncConfig()
+	
+	def cacheService_getConfigCacheState(self):
+		return self.opsiclientd.getCacheService().getConfigCacheState()
 	
 	def cacheService_getProductCacheState(self):
 		return self.opsiclientd.getCacheService().getProductCacheState()

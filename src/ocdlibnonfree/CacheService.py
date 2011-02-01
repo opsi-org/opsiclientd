@@ -158,6 +158,10 @@ class CacheService(threading.Thread):
 		self.initializeProductCacheService()
 		return self._productCacheService.getState()
 	
+	def getConfigCacheState(self):
+		self.initializeConfigCacheService()
+		return self._configCacheService.getState()
+	
 	#def getOverallProductCacheProgressSubject(self):
 	#	self.initializeProductCacheService()
 	#	return self._productCacheService.getOverallProgressSubject()
