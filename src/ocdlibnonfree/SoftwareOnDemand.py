@@ -293,7 +293,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								</table>
 								'''
 						for productOnClient in productOnClients:
-							tablerows.append("<tr><td>%s</td></tr>" % productOnClient.productId)
+							tablerows.append("<tr><td>%s</td></tr>" % productOnClient)
 						
 						
 						
