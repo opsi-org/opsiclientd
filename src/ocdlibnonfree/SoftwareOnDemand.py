@@ -286,13 +286,14 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 										<td align="center" colspan="2">
 											<input name="action" value="ondemand" id="submit" class="button" type="submit" />
 											<input name="action" value="onrestart" id="submit" class="button" type="submit" />
+											<input name="back" value="Zurück" id="submit" class="button" type="submit" />
 										</td>
 									<tr>
 								</tfoot>
 								</table>
 								'''
 						for productOnClient in productOnClients:
-							tablerows.append('<tr><td>%s<input style="DISPLAY=none"type="checkbox" name="product" value="%s" checked></td></tr>' % (productOnClient.productId,productOnClient.productId))
+							tablerows.append('<tr><td>%s<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td></tr>' % (productOnClient.productId,productOnClient.productId))
 						
 						table = ''
 						for row in tablerows:
