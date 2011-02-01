@@ -257,7 +257,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					if 'action' in param:
 						params['action'] = param.split(u'=')[1]
 						continue
-					if not params.has_key('product'):
+					if not params.has_key('products'):
 						params['products'] = []
 					params['products'].append(param.split(u'=')[1])
 				
