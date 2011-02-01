@@ -264,7 +264,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					productOnClients = self._executeQuery(params, myClientId)
 				
 				if productOnClients:
-					if params['action'] == "save":
+					if params['action'].lower() == "save":
 						html = answerpage
 						table = '''
 							<table>
