@@ -100,7 +100,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self._overallProgressSubjectProxy = ProgressSubjectProxy('overallProgress', fireAlways = False)
 		self._choiceSubject = None
 		
-		self._statusSubject.setMessage( _("Processing event %s") % self.event.eventConfig.getId() )
+		self._statusSubject.setMessage( _("Processing event %s") % self.event.eventConfig.getName() )
 		#self._serviceUrlSubject.setMessage(config.get('config_service', 'url'))
 		self._clientIdSubject.setMessage(config.get('global', 'host_id'))
 		self._opsiclientdInfoSubject.setMessage("opsiclientd %s" % __version__)
@@ -726,7 +726,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			while (timeout > 0) and not self.eventCancelled and not self.waitCancelled:
 				now = time.time()
 				logger.info(u"Notifying user of actions to process %s (%s)" % (self.event, productIds))
-				self.setStatusMessage(_(u"Event %s: action processing will start in %0.0f seconds") % (self.event.eventConfig.getId(), (endTime - now)))
+				self.setStatusMessage(_(u"Event %s: action processing will start in %0.0f seconds") % (self.event.eventConfig.getName(), (endTime - now)))
 				if ((endTime - now) <= 0):
 					break
 				time.sleep(1)
