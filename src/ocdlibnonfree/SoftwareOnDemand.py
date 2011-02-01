@@ -147,8 +147,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			logger.debug(u'Try to execute Query')
 			#product On Clients
 			for productId in param.get('products', []):
-				self.productOnClient = self._configService.productOnClient_getObjects(clientId = clientId, productId = productId)
-				if self.productOnClient:
+				productOnClient = self._configService.productOnClient_getObjects(clientId = clientId, productId = productId)
+				if productOnClient:
 					productOnClient = self.productOnClient[0]
 				else:
 					productOnClient = ProductOnClient(
@@ -163,10 +163,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					continue
 				#TODO Vorbedingung fuer Abhaengige Pakete mit einbauen.
 				productOnClient.setActionRequest('setup')
-				productOnClients.append(productOnClient)
+				self.productOnClients.append(productOnClient)
 			
 			#Set Products
-			if productOnClients:
+			if self.productOnClients:
 				logger.notice(u"Now try to fulfill ProductDependencies.")
 				productOnClients_withDependencies = self._configService.productOnClient_addDependencies(productOnClients)
 				#self._configService.productOnClient_updateObjects(productOnClients_withDependencies)
@@ -264,6 +264,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					productOnClients = self._executeQuery(params, myClientId)
 				
 				if productOnClients:
+					logger.debug(u"Action Save was send.")
 					if params['action'].lower() == "save":
 						html = answerpage
 						table = '''
