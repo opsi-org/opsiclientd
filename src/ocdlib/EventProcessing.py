@@ -160,7 +160,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self._detailSubjectProxy.setMessage(u'')
 		ServiceConnection.connectionFailed(self, error)
 		
-	''' ServiceConnection '''
+	''' / ServiceConnection '''
 	
 	def setSessionId(self, sessionId):
 		self._sessionId = int(sessionId)
@@ -749,8 +749,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					self._notificationServer.removeSubject(choiceSubject)
 			except Exception, e:
 				logger.logException(e)
-	
-		
 	
 	def abortShutdownCallback(self, choiceSubject):
 		logger.notice(u"Shutdown aborted by user")
