@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2010-09-09 16:57+CEST\n"
+"POT-Creation-Date: 2011-02-01 15:43+CET\n"
 "PO-Revision-Date: 2010-09-08 16:59+CEST\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -15,155 +15,176 @@ msgstr ""
 "Generated-By: pygettext.py 1.5\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: ../src/ocdlib/CacheService.py:235
-msgid "Synchronizing products"
-msgstr "Synchronisiere Produkte"
-
-#: ../src/ocdlib/Opsiclientd.py:916
-msgid "Close"
-msgstr "Schliessen"
-
-#: ../src/ocdlib/Opsiclientd.py:984
-msgid "Connecting to config server '%s' #%d"
-msgstr "Verbinde zu Config-Server '%s' #%d"
-
-#: ../src/ocdlib/Opsiclientd.py:993
-msgid "Connected to config server '%s'"
-msgstr "Verbunden mit Config-Server '%s'"
-
-#: ../src/ocdlib/Opsiclientd.py:996
-msgid "Failed to connect to config server '%s': %s"
-msgstr "Verbindung zu Config-Server '%s' fehlgeschlagen: %s"
-
-#: ../src/ocdlib/Opsiclientd.py:1062 ../src/ocdlib/Opsiclientd.py:2019
+#: ../src/ocdlib/EventProcessing.py:103 ../src/ocdlib/EventProcessing.py:858
 msgid "Processing event %s"
 msgstr "Verarbeite Ereignis %s"
 
-#: ../src/ocdlib/Opsiclientd.py:1169
+#: ../src/ocdlib/EventProcessing.py:138
 msgid "Timeout: %ds"
 msgstr "Timeout: %ds"
 
-#: ../src/ocdlib/Opsiclientd.py:1240
-msgid "Updating config file"
-msgstr "Aktualisiere Konfigurationsdatei"
-
-#: ../src/ocdlib/Opsiclientd.py:1266
+#: ../src/ocdlib/EventProcessing.py:216
 msgid "Getting config from service"
 msgstr "Frage Konfiguration auf Service ab"
 
-#: ../src/ocdlib/Opsiclientd.py:1320
+#: ../src/ocdlib/EventProcessing.py:218
 msgid "Got config from service"
 msgstr "Konfiguration von Service erhalten"
 
-#: ../src/ocdlib/Opsiclientd.py:1433
+#: ../src/ocdlib/EventProcessing.py:231
 msgid "Writing log to service"
 msgstr "Übertrage Protokoll-Datei zum Service"
 
-#: ../src/ocdlib/Opsiclientd.py:1543
-#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:99
+#: ../src/ocdlib/EventProcessing.py:330
+#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:100
 msgid "Mounting depot share %s"
 msgstr "Verbinde mit Depot-Freigabe %s"
 
-#: ../src/ocdlib/Opsiclientd.py:1565
+#: ../src/ocdlib/EventProcessing.py:362
 msgid "Updating action processor"
 msgstr "Aktualisiere action processor"
 
-#: ../src/ocdlib/Opsiclientd.py:1647
+#: ../src/ocdlib/EventProcessing.py:455
 msgid "Processing login actions"
 msgstr "Starte Anmelde-Aktionen"
 
-#: ../src/ocdlib/Opsiclientd.py:1699
+#: ../src/ocdlib/EventProcessing.py:507
 msgid "Failed to process login actions: %s"
 msgstr "Fehler beim Ausführen der Anmelde-Aktionen: %s"
 
-#: ../src/ocdlib/Opsiclientd.py:1702
+#: ../src/ocdlib/EventProcessing.py:510
 msgid "Getting action requests from config service"
 msgstr "Frage auszuführende Aktionen beim Config-Service nach"
 
-#: ../src/ocdlib/Opsiclientd.py:1746
+#: ../src/ocdlib/EventProcessing.py:545
 msgid "No product action requests set"
 msgstr "Keine Produkt-Aktionen gesetzt"
 
-#: ../src/ocdlib/Opsiclientd.py:1766
-msgid "Caching products"
-msgstr "Speichere Produkte zwischen"
-
-#: ../src/ocdlib/Opsiclientd.py:1775
-msgid "Products cached"
-msgstr "Produkte zwischengespeichert"
-
-#: ../src/ocdlib/Opsiclientd.py:1809
+#: ../src/ocdlib/EventProcessing.py:563
 msgid "Failed to process product action requests: %s"
 msgstr "Fehler beim Ausführen der Produkt-Aktionen: %s"
 
-#: ../src/ocdlib/Opsiclientd.py:1828
+#: ../src/ocdlib/EventProcessing.py:582
 msgid "Waiting for TrustedInstaller"
 msgstr "Warte auf den TrustedInstaller"
 
-#: ../src/ocdlib/Opsiclientd.py:1838
+#: ../src/ocdlib/EventProcessing.py:592
 msgid "Starting actions"
 msgstr "Starte Aktionen"
 
-#: ../src/ocdlib/Opsiclientd.py:1924
+#: ../src/ocdlib/EventProcessing.py:674
 msgid "Actions completed"
 msgstr "Aktionen abgeschlossen"
 
-#: ../src/ocdlib/Opsiclientd.py:1981
+#: ../src/ocdlib/EventProcessing.py:712
 msgid "Abort"
 msgstr "Abbrechen"
 
-#: ../src/ocdlib/Opsiclientd.py:1981 ../src/ocdlib/Opsiclientd.py:1984
+#: ../src/ocdlib/EventProcessing.py:712 ../src/ocdlib/EventProcessing.py:715
 msgid "Start now"
 msgstr "Jetzt starten"
 
-#: ../src/ocdlib/Opsiclientd.py:1996
-msgid "Event %s: processing will start in %d seconds"
+#: ../src/ocdlib/EventProcessing.py:729
+#, fuzzy
+msgid "Event %s: action processing will start in %0.0f seconds"
 msgstr "Ereignis %s: Verarbeitung startet in %d Sekunden"
 
-#: ../src/ocdlib/Opsiclientd.py:2071
+#: ../src/ocdlib/EventProcessing.py:771
 msgid "Reboot requested"
 msgstr "Neustart erforderlich"
 
-#: ../src/ocdlib/Opsiclientd.py:2073
+#: ../src/ocdlib/EventProcessing.py:773
 msgid "Shutdown requested"
 msgstr "Herunterfahren erforderlich"
 
-#: ../src/ocdlib/Opsiclientd.py:2090 ../src/ocdlib/Opsiclientd.py:2092
+#: ../src/ocdlib/EventProcessing.py:790 ../src/ocdlib/EventProcessing.py:792
 msgid "Later"
 msgstr "Später"
 
-#: ../src/ocdlib/Opsiclientd.py:2090 ../src/ocdlib/Opsiclientd.py:2096
+#: ../src/ocdlib/EventProcessing.py:790 ../src/ocdlib/EventProcessing.py:796
 msgid "Reboot now"
 msgstr "Jetzt neu starten"
 
-#: ../src/ocdlib/Opsiclientd.py:2092 ../src/ocdlib/Opsiclientd.py:2098
+#: ../src/ocdlib/EventProcessing.py:792 ../src/ocdlib/EventProcessing.py:798
 msgid "Shutdown now"
 msgstr "Jetzt herunterfahren"
 
-#: ../src/ocdlib/Opsiclientd.py:2110
-msgid "Reboot in %d seconds"
+#: ../src/ocdlib/EventProcessing.py:812
+#, fuzzy
+msgid "Reboot in %0.0f seconds"
 msgstr "Neustart in %d Sekunden"
 
-#: ../src/ocdlib/Opsiclientd.py:2112
-msgid "Shutdown in %d seconds"
+#: ../src/ocdlib/EventProcessing.py:814
+#, fuzzy
+msgid "Shutdown in %0.0f seconds"
 msgstr "Herunterfahren in %d Sekunden"
 
-#: ../src/ocdlib/Opsiclientd.py:2142
+#: ../src/ocdlib/EventProcessing.py:877 ../src/ocdlib/EventProcessing.py:951
+#, fuzzy
+msgid "Syncing config to server"
+msgstr "Frage Konfiguration auf Service ab"
+
+#: ../src/ocdlib/EventProcessing.py:879 ../src/ocdlib/EventProcessing.py:912
+#: ../src/ocdlib/EventProcessing.py:953 ../src/ocdlib/EventProcessing.py:957
+#, fuzzy
+msgid "Sync completed"
+msgstr "Aktionen abgeschlossen"
+
+#: ../src/ocdlib/EventProcessing.py:882
+msgid "Caching products"
+msgstr "Speichere Produkte zwischen"
+
+#: ../src/ocdlib/EventProcessing.py:897
+msgid "Products cached"
+msgstr "Produkte zwischengespeichert"
+
+#: ../src/ocdlib/EventProcessing.py:910 ../src/ocdlib/EventProcessing.py:955
+#, fuzzy
+msgid "Syncing config from server"
+msgstr "Frage Konfiguration auf Service ab"
+
+#: ../src/ocdlib/EventProcessing.py:960
 msgid "Shutting down machine"
 msgstr "Computer wird heruntergefahren"
 
-#: ../src/ocdlib/Opsiclientd.py:2144
+#: ../src/ocdlib/EventProcessing.py:962
 msgid "Rebooting machine"
 msgstr "Computer wird neu gestartet"
 
-#: ../src/ocdlib/Opsiclientd.py:2146
+#: ../src/ocdlib/EventProcessing.py:964
 msgid "Unblocking login"
 msgstr "Gebe Anmeldung frei"
 
-#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:108
+#: ../src/ocdlib/OpsiService.py:285
+msgid "Connecting to config server '%s' #%d"
+msgstr "Verbinde zu Config-Server '%s' #%d"
+
+#: ../src/ocdlib/OpsiService.py:296
+msgid "Connected to config server '%s'"
+msgstr "Verbunden mit Config-Server '%s'"
+
+#: ../src/ocdlib/OpsiService.py:300
+msgid "Failed to connect to config server '%s': %s"
+msgstr "Verbindung zu Config-Server '%s' fehlgeschlagen: %s"
+
+#: ../src/ocdlib/Opsiclientd.py:475
+msgid "Close"
+msgstr "Schliessen"
+
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:374
+msgid "product"
+msgstr "Produkt"
+
+#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:109
 msgid "Starting action processor"
 msgstr "Starte action processor"
 
-#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:113
+#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:114
 msgid "Action processor ended"
 msgstr "Action processor beendet"
+
+#~ msgid "Synchronizing products"
+#~ msgstr "Synchronisiere Produkte"
+
+#~ msgid "Updating config file"
+#~ msgstr "Aktualisiere Konfigurationsdatei"
