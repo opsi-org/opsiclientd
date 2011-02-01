@@ -170,7 +170,7 @@ class EventConfig(object):
 		return self._id
 	
 	def getName(self):
-		return self._name
+		return self.name
 	
 	def getMessage(self):
 		message = self.message
