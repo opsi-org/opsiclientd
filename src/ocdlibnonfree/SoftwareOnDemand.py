@@ -163,7 +163,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					logger.notice(u"Product: '%s' is already set on setup, nothing to do." % productId)
 					continue
 				#TODO Vorbedingung fuer Abhaengige Pakete mit einbauen.
-				productOnClient.setActionRequest('setup')
+				#productOnClient.setActionRequest('setup')
 				productOnClients.append(productOnClient)
 			
 			#Set Products
@@ -261,11 +261,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					params['products'].append(param.split(u'=')[1])
 				
 				if params:
-					logger.debug(u"Parameters from POST: '%s'" % params)
+					logger.notice(u"Parameters from POST: '%s'" % params)
 					productOnClients = self._executeQuery(params, myClientId)
 				
 				if productOnClients:
-					logger.debug(u"Action Save was send.")
+					logger.notice(u"Action Save was send.")
 					if params['action'].lower() == "save":
 						html = answerpage
 						table = '''
@@ -273,10 +273,6 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								<thead>
 									<tr>
 										<th>Produkte die installiert werden</th>
-										<th>Produkt</th>
-										<th>Installationsstatus</th>
-										<th>Version</th>
-										<th>verfuegbare Version</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -293,7 +289,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								</table>
 								'''
 						for productOnClient in productOnClients:
-							tablerows.append("<tr><td>%s</td></tr>" % productOnClient)
+							tablerows.append("<tr><td>%s</td></tr>" % productOnClient.productId)
 						
 						
 						
