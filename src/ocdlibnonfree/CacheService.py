@@ -632,6 +632,9 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 			#if os.path.exists(packageContentFile):
 			#	os.unlink(packageContentFile)
 			#os.rename(tempPackageContentFile, packageContentFile)
+			
+			if not os.path.exists(os.path.join(self._productCacheDir, productId)):
+				os.mkdir(os.path.join(self._productCacheDir, productId))
 			packageContentFile = u'%s/%s.files' % (productId, productId)
 			localPackageContentFile = os.path.join(self._productCacheDir, productId, u'%s.files' % productId)
 			repository.download(source = packageContentFile, destination = localPackageContentFile)
