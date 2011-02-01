@@ -80,6 +80,10 @@ class StateImplementation(object):
 			return bool(System.getActiveSessionIds())
 		if (name == 'configserver_reachable'):
 			return isConfigServiceReachable(timeout = 15)
+		if (name == 'products_cached'):
+			return self._state.get('product_cache_service', {}).get('products_cached', False)
+		if (name == 'config_cached'):
+			return self._state.get('config_cache_service', {}).get('config_cached', False)
 		if self._state.has_key(name):
 			return self._state[name]
 		logger.warning(u"Unknown state name '%s', returning False" % name)
