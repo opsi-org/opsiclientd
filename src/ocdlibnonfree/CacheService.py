@@ -67,6 +67,10 @@ class CacheService(threading.Thread):
 			self._configCacheService = ConfigCacheService()
 			self._configCacheService.start()
 	
+	def setConfigCacheObsolete():
+		self.initializeConfigCacheService()
+		self._configCacheService.setObsolete()
+		
 	def syncConfig(self, waitForEnding = False):
 		self.initializeConfigCacheService()
 		if self._configCacheService.isWorking():
@@ -262,6 +266,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		state['working'] = self.isWorking()
 		return state
 	
+	def setObsolete(self):
+		self._state['config_cached'] = False
+		state.set('config_cache_service', self._state)
+	
 	def isRunning(self):
 		return self._running
 	
@@ -332,7 +340,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 	def _syncConfigFromServer(self):
 		self._working = True
 		try:
-			self._state['config_cached'] = False
+			self.setObsolete()
 			if not self._configService:
 				self.connectConfigService()
 			productOnClients = self._configService.productOnClient_getObjects(
