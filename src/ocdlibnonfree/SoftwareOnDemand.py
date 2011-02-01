@@ -167,7 +167,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				productOnClients.append(productOnClient)
 			
 			#Set Products
-			if self.productOnClients:
+			if productOnClients:
 				logger.notice(u"Now try to fulfill ProductDependencies.")
 				productOnClients_withDependencies = self._configService.productOnClient_addDependencies(productOnClients)
 				#self._configService.productOnClient_updateObjects(productOnClients_withDependencies)
