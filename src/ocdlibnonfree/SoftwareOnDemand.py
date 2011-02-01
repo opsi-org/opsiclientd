@@ -31,6 +31,8 @@ from OPSI.Service.Resource import ResourceOpsi
 
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.Config import Config
+from ocdlib.Events import SwOnDemandEventGenerator, getEventGenerators
+from ocdlib.Localization import _
 
 logger = Logger()
 config = Config()
@@ -147,7 +149,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		#if param:
 		try:
 			logger.debug(u'Try to execute Query')
-			productOnClients = []
+			productOnClients = self._configService.productOnClient_getObjects(clientId = clientId)
 			#product On Clients
 			for productId in param.get('products', []):
 				productOnClient = self._configService.productOnClient_getObjects(clientId = clientId, productId = productId)
@@ -180,8 +182,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				return productOnClients_withDependencies
 				
 			if param.get('action') == 'ondemand':
-				pass
-				#fuehre neues event aus
+				#erst setup setzen
+				#sw on demand
+				for eventGenerator in getEventGenerators(generatorClass = SwOnDemandEventGenerator):
+					eventGenerator.fireEvent()
+				
 			elif param.get('action') == 'onrestart':
 				pass
 				#ausgabe
@@ -348,7 +353,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 <thead>
 			<tr>
 				<th></th>
-				<th>Produkt</th>
+				<th>%s</th>
 				<th>Installationsstatus</th>
 				<th>Version</th>
 				<th>verfuegbare Version</th>
@@ -366,7 +371,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			<tr>
 </tfoot>
 		</table>
-'''
+''' % (_(u'product'))
 		
 		maintable = maintable.replace('%result%',table)
 		html = html.replace('%result%', maintable)
