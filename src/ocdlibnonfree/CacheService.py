@@ -72,6 +72,7 @@ class CacheService(threading.Thread):
 		if self._configCacheService.isWorking():
 			logger.info(u"Already syncing config")
 		else:
+			logger.info(u"Trigger config sync")
 			self._configCacheService.syncConfig()
 		if waitForEnding:
 			time.sleep(3)
@@ -83,6 +84,7 @@ class CacheService(threading.Thread):
 		if self._configCacheService.isWorking():
 			logger.info(u"Already syncing config")
 		else:
+			logger.info(u"Trigger config sync to server")
 			self._configCacheService.syncConfigToServer()
 		if waitForEnding:
 			time.sleep(3)
@@ -94,6 +96,7 @@ class CacheService(threading.Thread):
 		if self._configCacheService.isWorking():
 			logger.info(u"Already syncing config")
 		else:
+			logger.info(u"Trigger config sync from server")
 			self._configCacheService.syncConfigFromServer()
 		if waitForEnding:
 			time.sleep(3)
@@ -119,6 +122,7 @@ class CacheService(threading.Thread):
 		if self._productCacheService.isWorking():
 			logger.info(u"Already caching products")
 		else:
+			logger.info(u"Trigger product caching")
 			self._productCacheService.cacheProducts(productProgressObserver = productProgressObserver, overallProgressObserver = overallProgressObserver)
 		if waitForEnding:
 			time.sleep(3)
@@ -157,11 +161,11 @@ class CacheService(threading.Thread):
 	def getProductCacheState(self):
 		self.initializeProductCacheService()
 		return self._productCacheService.getState()
-	
+		
 	def getConfigCacheState(self):
 		self.initializeConfigCacheService()
 		return self._configCacheService.getState()
-	
+		
 	#def getOverallProductCacheProgressSubject(self):
 	#	self.initializeProductCacheService()
 	#	return self._productCacheService.getOverallProgressSubject()
@@ -253,7 +257,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		return self._configBackend
 	
 	def getState(self):
-		return self._state
+		state = self._state
+		state['running'] = self.isRunning()
+		state['working'] = self.isWorking()
+		return state
 	
 	def isRunning(self):
 		return self._running
@@ -403,7 +410,10 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 	#	return self._currentProgressSubject
 	
 	def getState(self):
-		return self._state
+		state = self._state
+		state['running'] = self.isRunning()
+		state['working'] = self.isWorking()
+		return state
 	
 	def isRunning(self):
 		return self._running
