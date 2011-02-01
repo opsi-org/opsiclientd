@@ -101,7 +101,7 @@ class EventConfig(object):
 		self.setConfig(kwargs)
 		
 	def setConfig(self, conf):
-		self.name                          =  unicode ( conf.get('name',                          self._id  ) )
+		self.name                          =  unicode ( conf.get('name',            self._id.split('{')[0]  ) )
 		self.preconditions                 =     dict ( conf.get('preconditions',                 {}        ) )
 		self.message                       =  unicode ( conf.get('message',                       ''        ) )
 		self.maxRepetitions                =      int ( conf.get('maxRepetitions',                -1        ) )
