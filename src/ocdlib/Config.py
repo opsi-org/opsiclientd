@@ -158,7 +158,7 @@ class ConfigImplementation(object):
 		logger.info(u"Setting config value %s.%s" % (section, option))
 		logger.debug(u"set(%s, %s, %s)" % (section, option, value))
 		
-		if option not in ('action_processor_command') and (value == ''):
+		if option not in ('action_processor_command',) and (value == ''):
 			logger.warning(u"Refusing to set empty value for config value '%s' of section '%s'" % (option, section))
 			return
 		
@@ -170,7 +170,7 @@ class ConfigImplementation(object):
 		if option in ('depot_id', 'host_id'):
 			value = forceHostId(value.replace('_', '-'))
 		
-		if section in ('system'):
+		if section in ('system',):
 			return
 		
 		if option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port'):
