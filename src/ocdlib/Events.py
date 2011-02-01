@@ -92,7 +92,6 @@ def EventConfigFactory(eventType, eventId, **kwargs):
 	
 class EventConfig(object):
 	def __init__(self, eventId, **kwargs):
-		
 		if not eventId:
 			raise TypeError(u"Event id not given")
 		self._id = unicode(eventId)
@@ -102,7 +101,7 @@ class EventConfig(object):
 		self.setConfig(kwargs)
 		
 	def setConfig(self, conf):
-		self.name                          =     dict ( conf.get('name',                          self._id  ) )
+		self.name                          =  unicode ( conf.get('name',                          self._id  ) )
 		self.preconditions                 =     dict ( conf.get('preconditions',                 {}        ) )
 		self.message                       =  unicode ( conf.get('message',                       ''        ) )
 		self.maxRepetitions                =      int ( conf.get('maxRepetitions',                -1        ) )
