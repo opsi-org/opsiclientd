@@ -298,7 +298,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						
 						
 						table = table.replace('%result%', forceUnicode(tablerows))
-						html = html.replace('%result%', forceUnicode(antwort))
+						html = html.replace('%result%', forceUnicode(table))
 						result.stream = stream.IByteStream(html.encode('utf-8'))
 						return result
 
