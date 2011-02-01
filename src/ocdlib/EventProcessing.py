@@ -543,12 +543,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if (len(productIds) == 0) and (bootmode == 'BKSTD'):
 				logger.notice(u"No product action requests set")
 				self.setStatusMessage( _(u"No product action requests set") )
-			
+				if self.event.eventConfig.useCachedConfig:
+					self.opsiclientd.getCacheService().setConfigCacheObsolete()
 			else:
 				logger.notice(u"Start processing action requests")
 				if productIds:
 					if self.event.eventConfig.useCachedProducts:
-						if self.opsiclientd._cacheService.productCacheCompleted(self._configService, productIds):
+						if self.opsiclientd.getCacheService().productCacheCompleted(self._configService, productIds):
 							logger.notice(u"Event '%s' uses cached products and product caching is done" % self.event.eventConfig.getId())
 						else:
 							raise Exception(u"Event '%s' uses cached products but product caching is not done" % self.event.eventConfig.getId())
