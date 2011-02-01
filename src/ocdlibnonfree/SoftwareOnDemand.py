@@ -145,6 +145,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		#if param:
 		try:
 			logger.debug(u'Try to execute Query')
+			productOnClients = []
 			#product On Clients
 			for productId in param.get('products', []):
 				productOnClient = self._configService.productOnClient_getObjects(clientId = clientId, productId = productId)
@@ -163,7 +164,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					continue
 				#TODO Vorbedingung fuer Abhaengige Pakete mit einbauen.
 				productOnClient.setActionRequest('setup')
-				self.productOnClients.append(productOnClient)
+				productOnClients.append(productOnClient)
 			
 			#Set Products
 			if self.productOnClients:
