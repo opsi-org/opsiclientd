@@ -64,38 +64,38 @@ EVENT_CONFIG_TYPE_CUSTOM = u'custom'
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         EVENT CONFIG                                              -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-def EventConfigFactory(type, id, **kwargs):
-	if   (type == EVENT_CONFIG_TYPE_PANIC):
-		return PanicEventConfig(id, **kwargs)
-	elif (type == EVENT_CONFIG_TYPE_DAEMON_STARTUP):
-		return DaemonStartupEventConfig(id, **kwargs)
-	elif (type == EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN):
-		return DaemonShutdownEventConfig(id, **kwargs)
-	elif (type == EVENT_CONFIG_TYPE_GUI_STARTUP):
-		return GUIStartupEventConfig(id, **kwargs)
-	elif (type == EVENT_CONFIG_TYPE_TIMER):
-		return TimerEventConfig(id, **kwargs)
-	elif (type == EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED):
-		return SyncCompletedEventConfig(id, **kwargs)
-	elif (type == EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS):
-		return ProcessActionRequestsEventConfig(id, **kwargs)
-	elif (type == EVENT_CONFIG_TYPE_USER_LOGIN):
-		return UserLoginEventConfig(id, **kwargs)
-	elif (type == EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN):
-		return SystemShutdownEventConfig(id, **kwargs)
-	elif (type == EVENT_CONFIG_TYPE_CUSTOM):
-		return CustomEventConfig(id, **kwargs)
-	elif (type == EVENT_CONFIG_TYPE_SW_ON_DEMAND):
-		return SwOnDemandEventConfig(id, **kwargs)
+def EventConfigFactory(eventType, eventId, **kwargs):
+	if   (eventType == EVENT_CONFIG_TYPE_PANIC):
+		return PanicEventConfig(eventId, **kwargs)
+	elif (eventType == EVENT_CONFIG_TYPE_DAEMON_STARTUP):
+		return DaemonStartupEventConfig(eventId, **kwargs)
+	elif (eventType == EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN):
+		return DaemonShutdownEventConfig(eventId, **kwargs)
+	elif (eventType == EVENT_CONFIG_TYPE_GUI_STARTUP):
+		return GUIStartupEventConfig(eventId, **kwargs)
+	elif (eventType == EVENT_CONFIG_TYPE_TIMER):
+		return TimerEventConfig(eventId, **kwargs)
+	elif (eventType == EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED):
+		return SyncCompletedEventConfig(eventId, **kwargs)
+	elif (eventType == EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS):
+		return ProcessActionRequestsEventConfig(eventId, **kwargs)
+	elif (eventType == EVENT_CONFIG_TYPE_USER_LOGIN):
+		return UserLoginEventConfig(eventId, **kwargs)
+	elif (eventType == EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN):
+		return SystemShutdownEventConfig(eventId, **kwargs)
+	elif (eventType == EVENT_CONFIG_TYPE_CUSTOM):
+		return CustomEventConfig(eventId, **kwargs)
+	elif (eventType == EVENT_CONFIG_TYPE_SW_ON_DEMAND):
+		return SwOnDemandEventConfig(eventId, **kwargs)
 	else:
-		raise TypeError(u"Unknown event config type '%s'" % type)
+		raise TypeError(u"Unknown event config type '%s'" % eventType)
 	
 class EventConfig(object):
-	def __init__(self, id, **kwargs):
+	def __init__(self, eventId, **kwargs):
 		
-		if not id:
-			raise TypeError(u"Name not given")
-		self._id = unicode(id)
+		if not eventId:
+			raise TypeError(u"Event id not given")
+		self._id = unicode(eventId)
 		
 		moduleName = u' %-30s' % (u'event config ' + self._id)
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
