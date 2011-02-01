@@ -381,10 +381,10 @@ class EventGenerator(threading.Thread):
 		logger.info(u"Testing preconditions of configs: %s" % self._preconditionEventConfigs)
 		for pec in self._preconditionEventConfigs:
 			if self._preconditionsFulfilled(pec.preconditions):
-				logger.notice(u"Preconditions for event config '%s' fulfilled" % pec.getId())
+				logger.notice(u"Preconditions %s for event config '%s' fulfilled" % (pec.preconditions, pec.getId()))
 				return pec
 			else:
-				logger.info(u"Preconditions for event config '%s' not fulfilled" % pec.getId())
+				logger.info(u"Preconditions %s for event config '%s' not fulfilled" % (pec.preconditions, pec.getId()))
 		return self._eventConfig
 	
 	def createEvent(self, eventInfo={}):
