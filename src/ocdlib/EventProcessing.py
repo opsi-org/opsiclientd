@@ -563,6 +563,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							raise Exception(u"Event '%s' uses cached products but product caching is not done" % self.event.eventConfig.getName())
 					
 				config.selectDepotserver(configService = self._configService, event = self.event, productIds = productIds)
+				self.processEventWarningTime(productIds)
 				self.runActions()
 				
 		except Exception, e:
@@ -712,7 +713,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		logger.notice(u"Event wait cancelled by user")
 		self.waitCancelled = True
 	
-	def processEventWarningTime(self):
+	def processEventWarningTime(self, productIds=[]):
 		if not self.event.eventConfig.warningTime:
 			return
 		choiceSubject = ChoiceSubject(id = 'choice')
@@ -733,8 +734,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			endTime = time.time() + timeout
 			while (timeout > 0) and not self.eventCancelled and not self.waitCancelled:
 				now = time.time()
-				logger.info(u"Notifying user of event %s" % self.event)
-				self.setStatusMessage(_(u"Event %s: processing will start in %0.0f seconds") % (self.event.eventConfig.getName(), (endTime - now)))
+				logger.info(u"Notifying user of action processing %s" % self.event)
+				self.setStatusMessage(_(u"Event %s: action processing will start in %0.0f seconds") % (self.event.eventConfig.getName(), (endTime - now)))
 				if ((endTime - now) <= 0):
 					break
 				time.sleep(1)
@@ -743,9 +744,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				self.event.eventConfig.cancelCounter += 1
 				config.set('event_%s' % self.event.eventConfig.getName(), 'cancel_counter', self.event.eventConfig.cancelCounter)
 				config.updateConfigFile()
-				logger.notice(u"Event cancelled by user for the %d. time (max: %d)" \
+				logger.notice(u"Action processing cancelled by user for the %d. time (max: %d)" \
 					% (self.event.eventConfig.cancelCounter, self.event.eventConfig.userCancelable))
-				raise CanceledByUserError(u"Event cancelled by user")
+				raise CanceledByUserError(u"Action processing cancelled by user")
 			else:
 				self.event.eventConfig.cancelCounter = 0
 				config.set('event_%s' % self.event.eventConfig.getName(), 'cancel_counter', self.event.eventConfig.cancelCounter)
@@ -862,7 +863,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				self.startNotificationServer()
 				self.setActionProcessorInfo()
 				self._messageSubject.setMessage(self.event.eventConfig.getMessage())
-				self.processEventWarningTime()
+				
 				self.setStatusMessage(_(u"Processing event %s") % self.event.eventConfig.getName())
 				
 				if self.event.eventConfig.blockLogin:

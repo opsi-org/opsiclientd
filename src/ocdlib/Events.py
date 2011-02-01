@@ -49,7 +49,8 @@ config = Config()
 state = State()
 
 # Possible event types
-EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED = u'product sync completed'
+EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED = u'sync completed'
+EVENT_CONFIG_TYPE_SW_ON_DEMAND = u'sw on demand'
 EVENT_CONFIG_TYPE_DAEMON_STARTUP = u'daemon startup'
 EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN = u'daemon shutdown'
 EVENT_CONFIG_TYPE_GUI_STARTUP = u'gui startup'
@@ -63,42 +64,45 @@ EVENT_CONFIG_TYPE_CUSTOM = u'custom'
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                         EVENT CONFIG                                              -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-def EventConfigFactory(type, name, **kwargs):
+def EventConfigFactory(type, id, **kwargs):
 	if   (type == EVENT_CONFIG_TYPE_PANIC):
-		return PanicEventConfig(name, **kwargs)
+		return PanicEventConfig(id, **kwargs)
 	elif (type == EVENT_CONFIG_TYPE_DAEMON_STARTUP):
-		return DaemonStartupEventConfig(name, **kwargs)
+		return DaemonStartupEventConfig(id, **kwargs)
 	elif (type == EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN):
-		return DaemonShutdownEventConfig(name, **kwargs)
+		return DaemonShutdownEventConfig(id, **kwargs)
 	elif (type == EVENT_CONFIG_TYPE_GUI_STARTUP):
-		return GUIStartupEventConfig(name, **kwargs)
+		return GUIStartupEventConfig(id, **kwargs)
 	elif (type == EVENT_CONFIG_TYPE_TIMER):
-		return TimerEventConfig(name, **kwargs)
+		return TimerEventConfig(id, **kwargs)
 	elif (type == EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED):
-		return ProductSyncCompletedEventConfig(name, **kwargs)
+		return SyncCompletedEventConfig(id, **kwargs)
 	elif (type == EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS):
-		return ProcessActionRequestsEventConfig(name, **kwargs)
+		return ProcessActionRequestsEventConfig(id, **kwargs)
 	elif (type == EVENT_CONFIG_TYPE_USER_LOGIN):
-		return UserLoginEventConfig(name, **kwargs)
+		return UserLoginEventConfig(id, **kwargs)
 	elif (type == EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN):
-		return SystemShutdownEventConfig(name, **kwargs)
+		return SystemShutdownEventConfig(id, **kwargs)
 	elif (type == EVENT_CONFIG_TYPE_CUSTOM):
-		return CustomEventConfig(name, **kwargs)
+		return CustomEventConfig(id, **kwargs)
+	elif (type == EVENT_CONFIG_TYPE_SW_ON_DEMAND):
+		return SwOnDemandEventConfig(id, **kwargs)
 	else:
 		raise TypeError(u"Unknown event config type '%s'" % type)
 	
 class EventConfig(object):
-	def __init__(self, name, **kwargs):
+	def __init__(self, id, **kwargs):
 		
-		if not name:
+		if not id:
 			raise TypeError(u"Name not given")
-		self._name = unicode(name)
+		self._id = unicode(id)
 		
-		moduleName = u' %-30s' % (u'event config ' + self._name)
+		moduleName = u' %-30s' % (u'event config ' + self._id)
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		self.setConfig(kwargs)
 		
 	def setConfig(self, conf):
+		self.name                          =     dict ( conf.get('name',                          self._id  ) )
 		self.preconditions                 =     dict ( conf.get('preconditions',                 {}        ) )
 		self.message                       =  unicode ( conf.get('message',                       ''        ) )
 		self.maxRepetitions                =      int ( conf.get('maxRepetitions',                -1        ) )
@@ -156,20 +160,23 @@ class EventConfig(object):
 			self.actionProcessorDesktop = 'current'
 	
 	def __unicode__(self):
-		return u"<EventConfig: %s>" % self._name
+		return u"<EventConfig: %s>" % self._id
 	
 	__repr__ = __unicode__
 	
 	def __str__(self):
 		return str(self.__unicode__())
 	
+	def getId(self):
+		return self._id
+	
 	def getName(self):
 		return self._name
 	
 	def getMessage(self):
 		message = self.message
-		def toUnderscore(name):
-			s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+		def toUnderscore(value):
+			s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', value)
 			return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 		for (key, value) in self.__dict__.items():
 			if (key.lower().find('message') != -1):
@@ -180,8 +187,8 @@ class EventConfig(object):
 	
 	def getShutdownWarningMessage(self):
 		message = self.shutdownWarningMessage
-		def toUnderscore(name):
-			s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+		def toUnderscore(value):
+			s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', value)
 			return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 		for (key, value) in self.__dict__.items():
 			if (key.lower().find('message') != -1):
@@ -257,7 +264,7 @@ class TimerEventConfig(EventConfig):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                PRODUCT SYNC COMPLETED EVENT CONFIG                                -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-class ProductSyncCompletedEventConfig(EventConfig):
+class SyncCompletedEventConfig(EventConfig):
 	pass
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -291,6 +298,13 @@ class CustomEventConfig(WMIEventConfig):
 	pass
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# -                                     SW ON DEMAND EVENT CONFIG                                     -
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+class SwOnDemandEventConfig(EventConfig):
+	pass
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          EVENT GENERATOR                                          -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def EventGeneratorFactory(eventConfig):
@@ -304,8 +318,8 @@ def EventGeneratorFactory(eventConfig):
 		return GUIStartupEventGenerator(eventConfig)
 	elif isinstance(eventConfig, TimerEventConfig):
 		return TimerEventGenerator(eventConfig)
-	elif isinstance(eventConfig, ProductSyncCompletedEventConfig):
-		return ProductSyncCompletedEventGenerator(eventConfig)
+	elif isinstance(eventConfig, SyncCompletedEventConfig):
+		return SyncCompletedEventGenerator(eventConfig)
 	elif isinstance(eventConfig, ProcessActionRequestsEventConfig):
 		return ProcessActionRequestsEventGenerator(eventConfig)
 	elif isinstance(eventConfig, UserLoginEventConfig):
@@ -314,6 +328,8 @@ def EventGeneratorFactory(eventConfig):
 		return SystemShutdownEventGenerator(eventConfig)
 	elif isinstance(eventConfig, CustomEventConfig):
 		return CustomEventGenerator(eventConfig)
+	elif isinstance(eventConfig, SwOnDemandEventConfig):
+		return SwOnDemandEventGenerator(eventConfig)
 	else:
 		raise TypeError(u"Unhandled event config '%s'" % eventConfig)
 
@@ -328,11 +344,11 @@ class EventGenerator(threading.Thread):
 		self._stopped = False
 		self._event = None
 		self._lastEventOccurence = None
-		moduleName = u' %-30s' % (u'event generator ' + self._eventConfig.getName())
+		moduleName = u' %-30s' % (u'event generator ' + self._eventConfig.getId())
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 	
 	def __unicode__(self):
-		return u'<%s %s>' % (self.__class__.__name__, self._eventConfig._name)
+		return u'<%s %s>' % (self.__class__.__name__, self._eventConfig.getId())
 	
 	__repr__ = __unicode__
 	
@@ -365,10 +381,10 @@ class EventGenerator(threading.Thread):
 		logger.debug(u"Testing preconditions of configs: %s" % self._preconditionEventConfigs)
 		for pec in self._preconditionEventConfigs:
 			if self._preconditionsFulfilled(pec.preconditions):
-				logger.notice(u"Preconditions for event config '%s' fulfilled" % pec.getName())
+				logger.notice(u"Preconditions for event config '%s' fulfilled" % pec.getId())
 				return pec
 			else:
-				logger.debug(u"Preconditions for event config '%s' not fulfilled" % pec.getName())
+				logger.debug(u"Preconditions for event config '%s' not fulfilled" % pec.getId())
 		return self._eventConfig
 	
 	def createEvent(self, eventInfo={}):
@@ -403,7 +419,7 @@ class EventGenerator(threading.Thread):
 				threading.Thread.__init__(self)
 				self._eventListener = eventListener
 				self._event = event
-				moduleName = u' %-30s' % (u'event generator ' + self._event.eventConfig.getName())
+				moduleName = u' %-30s' % (u'event generator ' + self._event.eventConfig.getId())
 				logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 				
 			def run(self):
@@ -575,13 +591,13 @@ class TimerEventGenerator(EventGenerator):
 	
 	def createEvent(self, eventInfo={}):
 		return TimerEvent(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
-	
-class ProductSyncCompletedEventGenerator(EventGenerator):
+
+class SyncCompletedEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
 		EventGenerator.__init__(self, eventConfig)
 	
 	def createEvent(self, eventInfo={}):
-		return ProductSyncCompletedEvent(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
+		return SyncCompletedEvent(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
 	
 class ProcessActionRequestsEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
@@ -663,7 +679,14 @@ class CustomEventGenerator(WMIEventGenerator):
 		
 	def createEvent(self, eventInfo={}):
 		return CustomEvent(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
+
+class SwOnDemandEventGenerator(EventGenerator):
+	def __init__(self, eventConfig):
+		EventGenerator.__init__(self, eventConfig)
 	
+	def createEvent(self, eventInfo={}):
+		return SwOnDemandEvent(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                            EVENT                                                  -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -671,7 +694,7 @@ class Event(object):
 	def __init__(self, eventConfig, eventInfo={}):
 		self.eventConfig = eventConfig
 		self.eventInfo = eventInfo
-		moduleName = u' %-30s' % (u'event generator ' + self.eventConfig.getName())
+		moduleName = u' %-30s' % (u'event generator ' + self.eventConfig.getId())
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		
 	def getActionProcessorCommand(self):
@@ -700,7 +723,7 @@ class TimerEvent(Event):
 	def __init__(self, eventConfig, eventInfo={}):
 		Event.__init__(self, eventConfig, eventInfo)
 
-class ProductSyncCompletedEvent(Event):
+class SyncCompletedEvent(Event):
 	def __init__(self, eventConfig, eventInfo={}):
 		Event.__init__(self, eventConfig, eventInfo)
 
@@ -720,6 +743,9 @@ class CustomEvent(Event):
 	def __init__(self, eventConfig, eventInfo={}):
 		Event.__init__(self, eventConfig, eventInfo)
 
+class SwOnDemandEvent(Event):
+	def __init__(self, eventConfig, eventInfo={}):
+		Event.__init__(self, eventConfig, eventInfo)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                          EVENT LISTENER                                           -
@@ -741,24 +767,24 @@ def getEventConfigs():
 	for (section, options) in config.getDict().items():
 		section = section.lower()
 		if section.startswith('precondition_'):
-			preconditionName = section.split('_', 1)[1]
-			preconditions[preconditionName] = {}
+			preconditionId = section.split('_', 1)[1]
+			preconditions[preconditionId] = {}
 			try:
 				for key in options.keys():
-					preconditions[preconditionName][key] = not options[key].lower() in ('0', 'false', 'off', 'no')
-				logger.info(u"Precondition '%s' created: %s" % (preconditionName, preconditions[preconditionName]))
+					preconditions[preconditionId][key] = not options[key].lower() in ('0', 'false', 'off', 'no')
+				logger.info(u"Precondition '%s' created: %s" % (preconditionId, preconditions[preconditionId]))
 			except Exception, e:
-				logger.error(u"Failed to parse precondition '%s': %s" % (preconditionName, forceUnicode(e)))
+				logger.error(u"Failed to parse precondition '%s': %s" % (preconditionId, forceUnicode(e)))
 			
 	rawEventConfigs = {}
 	for (section, options) in config.getDict().items():
 		section = section.lower()
 		if section.startswith('event_'):
-			eventConfigName = section.split('_', 1)[1]
-			if not eventConfigName:
-				logger.error(u"No event config name defined in section '%s'" % section)
+			eventConfigId = section.split('_', 1)[1]
+			if not eventConfigId:
+				logger.error(u"No event config id defined in section '%s'" % section)
 				continue
-			rawEventConfigs[eventConfigName] = {
+			rawEventConfigs[eventConfigId] = {
 				'active':       True,
 				'args':         {},
 				'super':        None,
@@ -766,64 +792,66 @@ def getEventConfigs():
 			try:
 				for key in options.keys():
 					if   (key.lower() == 'active'):
-						rawEventConfigs[eventConfigName]['active'] = not options[key].lower() in ('0', 'false', 'off', 'no')
+						rawEventConfigs[eventConfigId]['active'] = not options[key].lower() in ('0', 'false', 'off', 'no')
 					elif (key.lower() == 'super'):
-						rawEventConfigs[eventConfigName]['super'] = options[key]
+						rawEventConfigs[eventConfigId]['super'] = options[key]
 					else:
-						rawEventConfigs[eventConfigName]['args'][key.lower()] = options[key]
-				if (eventConfigName.find('{') != -1):
-					(superEventName, precondition) = eventConfigName.split('{', 1)
-					rawEventConfigs[eventConfigName]['super'] = superEventName.strip()
-					rawEventConfigs[eventConfigName]['precondition'] = precondition.replace('}', '').strip()
+						rawEventConfigs[eventConfigId]['args'][key.lower()] = options[key]
+				if (eventConfigId.find('{') != -1):
+					(superEventName, precondition) = eventConfigId.split('{', 1)
+					rawEventConfigs[eventConfigId]['super'] = superEventName.strip()
+					rawEventConfigs[eventConfigId]['precondition'] = precondition.replace('}', '').strip()
 			except Exception, e:
-				logger.error(u"Failed to parse event config '%s': %s" % (eventConfigName, forceUnicode(e)))
+				logger.error(u"Failed to parse event config '%s': %s" % (eventConfigId, forceUnicode(e)))
 	
-	def __inheritArgsFromSuperEvents(rawEventConfigsCopy, args, superEventConfigName):
-		if not superEventConfigName in rawEventConfigsCopy.keys():
-			logger.error(u"Super event '%s' not found" % superEventConfigName)
+	def __inheritArgsFromSuperEvents(rawEventConfigsCopy, args, superEventConfigId):
+		if not superEventConfigId in rawEventConfigsCopy.keys():
+			logger.error(u"Super event '%s' not found" % superEventConfigId)
 			return args
-		superArgs = pycopy.deepcopy(rawEventConfigsCopy[superEventConfigName]['args'])
-		if rawEventConfigsCopy[superEventConfigName]['super']:
-			__inheritArgsFromSuperEvents(rawEventConfigsCopy, superArgs, rawEventConfigsCopy[superEventConfigName]['super'])
+		superArgs = pycopy.deepcopy(rawEventConfigsCopy[superEventConfigId]['args'])
+		if rawEventConfigsCopy[superEventConfigId]['super']:
+			__inheritArgsFromSuperEvents(rawEventConfigsCopy, superArgs, rawEventConfigsCopy[superEventConfigId]['super'])
 		superArgs.update(args)
 		return superArgs
 	
 	rawEventConfigsCopy = pycopy.deepcopy(rawEventConfigs)
-	for eventConfigName in rawEventConfigs.keys():
-		if rawEventConfigs[eventConfigName]['super']:
-			rawEventConfigs[eventConfigName]['args'] = __inheritArgsFromSuperEvents(
+	for eventConfigId in rawEventConfigs.keys():
+		if rawEventConfigs[eventConfigId]['super']:
+			rawEventConfigs[eventConfigId]['args'] = __inheritArgsFromSuperEvents(
 									rawEventConfigsCopy,
-									rawEventConfigs[eventConfigName]['args'],
-									rawEventConfigs[eventConfigName]['super'])
+									rawEventConfigs[eventConfigId]['args'],
+									rawEventConfigs[eventConfigId]['super'])
 	
 	eventConfigs = {}
-	for (eventConfigName, rawEventConfig) in rawEventConfigs.items():
+	for (eventConfigId, rawEventConfig) in rawEventConfigs.items():
 		try:
 			if not rawEventConfig['active']:
-				logger.notice(u"Event config '%s' is deactivated" % eventConfigName)
+				logger.notice(u"Event config '%s' is deactivated" % eventConfigId)
 				continue
 			
 			if not rawEventConfig['args'].get('type'):
-				logger.error(u"Event config '%s': event type not set" % eventConfigName)
+				logger.error(u"Event config '%s': event type not set" % eventConfigId)
 				continue
 			
 			#if not rawEventConfig['args'].get('action_processor_command'):
 			#	rawEventConfig['args']['action_processor_command'] = config.get('action_processor', 'command')
 			
-			eventConfigs[eventConfigName] = {}
+			eventConfigs[eventConfigId] = {}
 			if rawEventConfig.get('precondition'):
 				precondition = preconditions.get(rawEventConfig['precondition'])
 				if not precondition:
-					logger.error(u"Precondition '%s' referenced by event config '%s' not found" % (precondition, eventConfigName))
+					logger.error(u"Precondition '%s' referenced by event config '%s' not found" % (precondition, eventConfigId))
 				else:
-					eventConfigs[eventConfigName]['preconditions'] = precondition
+					eventConfigs[eventConfigId]['preconditions'] = precondition
 			
 			for (key, value) in rawEventConfig['args'].items():
 				try:
 					if   (key == 'type'):
-						eventConfigs[eventConfigName]['type'] = value
+						eventConfigs[eventConfigId]['type'] = value
+					elif (key == 'name'):
+						eventConfigs[eventConfigId]['name'] = value
 					elif (key == 'wql'):
-						eventConfigs[eventConfigName]['wql'] = value
+						eventConfigs[eventConfigId]['wql'] = value
 					elif key.startswith('message'):
 						mLanguage = None
 						try:
@@ -832,9 +860,9 @@ def getEventConfigs():
 							pass
 						if mLanguage:
 							if (mLanguage == getLanguage()):
-								eventConfigs[eventConfigName]['message'] = value
-						elif not eventConfigs[eventConfigName].get('message'):
-							eventConfigs[eventConfigName]['message'] = value
+								eventConfigs[eventConfigId]['message'] = value
+						elif not eventConfigs[eventConfigId].get('message'):
+							eventConfigs[eventConfigId]['message'] = value
 					elif key.startswith('shutdown_warning_message'):
 						mLanguage = None
 						try:
@@ -843,94 +871,94 @@ def getEventConfigs():
 							pass
 						if mLanguage:
 							if (mLanguage == getLanguage()):
-								eventConfigs[eventConfigName]['shutdownWarningMessage'] = value
-						elif not eventConfigs[eventConfigName].get('shutdownWarningMessage'):
-							eventConfigs[eventConfigName]['shutdownWarningMessage'] = value
+								eventConfigs[eventConfigId]['shutdownWarningMessage'] = value
+						elif not eventConfigs[eventConfigId].get('shutdownWarningMessage'):
+							eventConfigs[eventConfigId]['shutdownWarningMessage'] = value
 					elif (key == 'max_repetitions'):
-						eventConfigs[eventConfigName]['maxRepetitions'] = int(value)
+						eventConfigs[eventConfigId]['maxRepetitions'] = int(value)
 					elif (key == 'activation_delay'):
-						eventConfigs[eventConfigName]['activationDelay'] = int(value)
+						eventConfigs[eventConfigId]['activationDelay'] = int(value)
 					elif (key == 'notification_delay'):
-						eventConfigs[eventConfigName]['notificationDelay'] = int(value)
+						eventConfigs[eventConfigId]['notificationDelay'] = int(value)
 					elif (key == 'warning_time'):
-						eventConfigs[eventConfigName]['warningTime'] = int(value)
+						eventConfigs[eventConfigId]['warningTime'] = int(value)
 					elif (key == 'user_cancelable'):
-						eventConfigs[eventConfigName]['userCancelable'] = int(value)
+						eventConfigs[eventConfigId]['userCancelable'] = int(value)
 					elif (key == 'cancel_counter'):
-						eventConfigs[eventConfigName]['cancelCounter'] = int(value)
+						eventConfigs[eventConfigId]['cancelCounter'] = int(value)
 					elif (key == 'shutdown_warning_time'):
-						eventConfigs[eventConfigName]['shutdownWarningTime'] = int(value)
+						eventConfigs[eventConfigId]['shutdownWarningTime'] = int(value)
 					elif (key == 'shutdown_warning_repetition_time'):
-						eventConfigs[eventConfigName]['shutdownWarningRepetitionTime'] = int(value)
+						eventConfigs[eventConfigId]['shutdownWarningRepetitionTime'] = int(value)
 					elif (key == 'shutdown_user_cancelable'):
-						eventConfigs[eventConfigName]['shutdownUserCancelable'] = int(value)
+						eventConfigs[eventConfigId]['shutdownUserCancelable'] = int(value)
 					elif (key == 'block_login'):
-						eventConfigs[eventConfigName]['blockLogin'] = not value.lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['blockLogin'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'lock_workstation'):
-						eventConfigs[eventConfigName]['lockWorkstation'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['lockWorkstation'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'logoff_current_user'):
-						eventConfigs[eventConfigName]['logoffCurrentUser'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['logoffCurrentUser'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'process_shutdown_requests'):
-						eventConfigs[eventConfigName]['processShutdownRequests'] = not value.lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['processShutdownRequests'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'get_config_from_service'):
-						eventConfigs[eventConfigName]['getConfigFromService'] = not value.lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['getConfigFromService'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'update_config_file'):
-						eventConfigs[eventConfigName]['updateConfigFile'] = not value.lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['updateConfigFile'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'write_log_to_service'):
-						eventConfigs[eventConfigName]['writeLogToService'] = not value.lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['writeLogToService'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'cache_products'):
-						eventConfigs[eventConfigName]['cacheProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['cacheProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'cache_max_bandwidth'):
-						eventConfigs[eventConfigName]['cacheMaxBandwidth'] = int(value)
+						eventConfigs[eventConfigId]['cacheMaxBandwidth'] = int(value)
 					elif (key == 'use_cached_products'):
-						eventConfigs[eventConfigName]['useCachedProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['useCachedProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'sync_config_from_server'):
-						eventConfigs[eventConfigName]['syncConfigFromServer'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['syncConfigFromServer'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'sync_config_to_server'):
-						eventConfigs[eventConfigName]['syncConfigToServer'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['syncConfigToServer'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'post_sync_config_from_server'):
-						eventConfigs[eventConfigName]['postSyncConfigFromServer'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['postSyncConfigFromServer'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'post_sync_config_to_server'):
-						eventConfigs[eventConfigName]['postSyncConfigToServer'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['postSyncConfigToServer'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'use_cached_config'):
-						eventConfigs[eventConfigName]['useCachedConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['useCachedConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'update_action_processor'):
-						eventConfigs[eventConfigName]['updateActionProcessor'] = not value.lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['updateActionProcessor'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'action_type'):
-						eventConfigs[eventConfigName]['actionType'] = value.lower()
+						eventConfigs[eventConfigId]['actionType'] = value.lower()
 					elif (key == 'event_notifier_command'):
-						eventConfigs[eventConfigName]['eventNotifierCommand'] = config.replace(value.lower(), escaped=True)
+						eventConfigs[eventConfigId]['eventNotifierCommand'] = config.replace(value.lower(), escaped=True)
 					elif (key == 'event_notifier_desktop'):
-						eventConfigs[eventConfigName]['eventNotifierDesktop'] = value.lower()
+						eventConfigs[eventConfigId]['eventNotifierDesktop'] = value.lower()
 					elif (key == 'process_actions'):
-						eventConfigs[eventConfigName]['processActions'] = not value.lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['processActions'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'action_notifier_command'):
-						eventConfigs[eventConfigName]['actionNotifierCommand'] = config.replace(value.lower(), escaped=True)
+						eventConfigs[eventConfigId]['actionNotifierCommand'] = config.replace(value.lower(), escaped=True)
 					elif (key == 'action_notifier_desktop'):
-						eventConfigs[eventConfigName]['actionNotifierDesktop'] = value.lower()
+						eventConfigs[eventConfigId]['actionNotifierDesktop'] = value.lower()
 					elif (key == 'action_processor_command'):
-						eventConfigs[eventConfigName]['actionProcessorCommand'] = value.lower()
+						eventConfigs[eventConfigId]['actionProcessorCommand'] = value.lower()
 					elif (key == 'action_processor_desktop'):
-						eventConfigs[eventConfigName]['actionProcessorDesktop'] = value.lower()
+						eventConfigs[eventConfigId]['actionProcessorDesktop'] = value.lower()
 					elif (key == 'action_processor_timeout'):
-						eventConfigs[eventConfigName]['actionProcessorTimeout'] = int(value)
+						eventConfigs[eventConfigId]['actionProcessorTimeout'] = int(value)
 					elif (key == 'shutdown_notifier_command'):
-						eventConfigs[eventConfigName]['shutdownNotifierCommand'] = config.replace(value.lower(), escaped=True)
+						eventConfigs[eventConfigId]['shutdownNotifierCommand'] = config.replace(value.lower(), escaped=True)
 					elif (key == 'shutdown_notifier_desktop'):
-						eventConfigs[eventConfigName]['shutdownNotifierDesktop'] = value.lower()
+						eventConfigs[eventConfigId]['shutdownNotifierDesktop'] = value.lower()
 					elif (key == 'service_options'):
-						eventConfigs[eventConfigName]['serviceOptions'] = eval(value)
+						eventConfigs[eventConfigId]['serviceOptions'] = eval(value)
 					elif (key == 'pre_action_processor_command'):
-						eventConfigs[eventConfigName]['preActionProcessorCommand'] = config.replace(value.lower(), escaped=True)
+						eventConfigs[eventConfigId]['preActionProcessorCommand'] = config.replace(value.lower(), escaped=True)
 					elif (key == 'post_action_processor_command'):
-						eventConfigs[eventConfigName]['postActionProcessorCommand'] = config.replace(value.lower(), escaped=True)
+						eventConfigs[eventConfigId]['postActionProcessorCommand'] = config.replace(value.lower(), escaped=True)
 					else:
-						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigName))
+						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
 				except Exception, e:
 					logger.logException(e, LOG_DEBUG)
 					logger.error(u"Failed to set event config argument '%s' to '%s': %s" % (key, value, e))
 			
-			logger.info(u"\nEvent config '" + eventConfigName + u"' args:\n" + objectToBeautifiedText(eventConfigs[eventConfigName]) + u"\n")
+			logger.info(u"\nEvent config '" + eventConfigId + u"' args:\n" + objectToBeautifiedText(eventConfigs[eventConfigId]) + u"\n")
 		except Exception, e:
 			logger.logException(e)
 	return eventConfigs
@@ -942,31 +970,31 @@ def createEventGenerators():
 		PanicEventConfig('panic', actionProcessorCommand = config.get('action_processor', 'command', raw=True))
 	)
 	for eventConfigType in ('main', 'precondition'):
-		for (eventConfigName, eventConfig) in getEventConfigs().items():
-			mainEventConfigName = eventConfigName.split('{')[0]
+		for (eventConfigId, eventConfig) in getEventConfigs().items():
+			mainEventConfigId = eventConfigId.split('{')[0]
 			if (eventConfigType == 'main') and eventConfig.get('preconditions'):
 				continue
 			if (eventConfigType == 'precondition') and not eventConfig.get('preconditions'):
 				continue
-			if (eventConfigType == 'main') and mainEventConfigName in eventGenerators.keys():
-				logger.error(u"Event generator '%s' already defined" % mainEventConfigName)
+			if (eventConfigType == 'main') and mainEventConfigId in eventGenerators.keys():
+				logger.error(u"Event generator '%s' already defined" % mainEventConfigId)
 				continue
 			try:
 				eventType = eventConfig['type']
 				del eventConfig['type']
-				ec = EventConfigFactory(eventType, eventConfigName, **eventConfig)
+				ec = EventConfigFactory(eventType, eventConfigId, **eventConfig)
 				if (eventConfigType == 'main'):
-					eventGenerators[mainEventConfigName] = EventGeneratorFactory(ec)
-					logger.notice(u"%s event generator '%s' created" % (eventType, mainEventConfigName))
+					eventGenerators[mainEventConfigId] = EventGeneratorFactory(ec)
+					logger.notice(u"%s event generator '%s' created" % (eventType, mainEventConfigId))
 				else:
-					eventGenerators[mainEventConfigName].addPreconditionConfig(ec)
-					logger.notice(u"Precondition config '%s' added to event generator '%s'" % (eventConfigName, mainEventConfigName))
+					eventGenerators[mainEventConfigId].addPreconditionConfig(ec)
+					logger.notice(u"Precondition config '%s' added to event generator '%s'" % (eventConfigId, mainEventConfigId))
 					
 			except Exception, e:
 				if (eventConfigType == 'main'):
-					logger.error(u"Failed to create event generator '%s': %s" % (mainEventConfigName, forceUnicode(e)))
+					logger.error(u"Failed to create event generator '%s': %s" % (mainEventConfigId, forceUnicode(e)))
 				else:
-					logger.error(u"Failed to add precondition config '%s' to event generator '%s': %s" % (eventConfigName, mainEventConfigName, forceUnicode(e)))
+					logger.error(u"Failed to add precondition config '%s' to event generator '%s': %s" % (eventConfigId, mainEventConfigId, forceUnicode(e)))
 
 def getEventGenerators(generatorClass=None):
 	global eventGenerators
@@ -980,33 +1008,33 @@ def reconfigureEventGenerators():
 	global eventGenerators
 	eventConfigs = getEventConfigs()
 	for eventConfigType in ('main', 'precondition'):
-		for (eventConfigName, eventConfig) in eventConfigs.items():
-			mainEventConfigName = eventConfigName.split('{')[0]
+		for (eventConfigId, eventConfig) in eventConfigs.items():
+			mainEventConfigId = eventConfigId.split('{')[0]
 			if (eventConfigType == 'main') and eventConfig.get('preconditions'):
 				continue
 			if (eventConfigType == 'precondition') and not eventConfig.get('preconditions'):
 				continue
-			if (eventConfigType == 'main') and mainEventConfigName not in eventGenerators.keys():
+			if (eventConfigType == 'main') and mainEventConfigId not in eventGenerators.keys():
 				continue
 			try:
-				eventGenerator = eventGenerators.get(mainEventConfigName)
+				eventGenerator = eventGenerators.get(mainEventConfigId)
 				if not eventGenerator:
-					raise Exception(u"Event generator '%s' not found" % mainEventConfigName)
+					raise Exception(u"Event generator '%s' not found" % mainEventConfigId)
 				eventType = eventConfig['type']
 				del eventConfig['type']
-				ec = EventConfigFactory(eventType, eventConfigName, **eventConfig)
+				ec = EventConfigFactory(eventType, eventConfigId, **eventConfig)
 				if (eventConfigType == 'main'):
 					eventGenerator.setEventConfig(ec)
 					eventGenerator.setPreconditionConfigs([])
-					logger.notice("Event generator '%s' reconfigured" % mainEventConfigName)
+					logger.notice("Event generator '%s' reconfigured" % mainEventConfigId)
 				else:
 					eventGenerator.addPreconditionConfig(ec)
-					logger.notice(u"Precondition config '%s' added to event generator '%s'" % (eventConfigName, mainEventConfigName))
+					logger.notice(u"Precondition config '%s' added to event generator '%s'" % (eventConfigId, mainEventConfigId))
 			except Exception, e:
 				if (eventConfigType == 'main'):
-					logger.error(u"Failed to reconfigure event generator '%s': %s" % (mainEventConfigName, forceUnicode(e)))
+					logger.error(u"Failed to reconfigure event generator '%s': %s" % (mainEventConfigId, forceUnicode(e)))
 				else:
-					logger.error(u"Failed to add precondition config '%s' to event generator '%s': %s" % (eventConfigName, mainEventConfigName, forceUnicode(e)))
+					logger.error(u"Failed to add precondition config '%s' to event generator '%s': %s" % (eventConfigId, mainEventConfigId, forceUnicode(e)))
 	
 
 
