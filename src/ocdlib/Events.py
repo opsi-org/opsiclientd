@@ -109,6 +109,7 @@ class EventConfig(object):
 		self.activationDelay               =      int ( conf.get('activationDelay',               0         ) )
 		# wait <notificationDelay> seconds before event is fired
 		self.notificationDelay             =      int ( conf.get('notificationDelay',             0         ) )
+		self.interval                      =      int ( conf.get('interval',                      -1        ) )
 		self.warningTime                   =      int ( conf.get('warningTime',                   0         ) )
 		self.userCancelable                =      int ( conf.get('userCancelable',                0         ) )
 		self.cancelCounter                 =      int ( conf.get('cancelCounter',                 0         ) )
@@ -588,6 +589,13 @@ class TimerEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
 		EventGenerator.__init__(self, eventConfig)
 	
+	def getNextEvent(self):
+		self._event = threading.Event()
+		if (self._eventConfig.interval > 0):
+			self._event.wait(self._eventConfig.interval)
+		else:
+			self._event.wait()
+		
 	def createEvent(self, eventInfo={}):
 		return TimerEvent(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
 
@@ -873,6 +881,8 @@ def getEventConfigs():
 								eventConfigs[eventConfigId]['shutdownWarningMessage'] = value
 						elif not eventConfigs[eventConfigId].get('shutdownWarningMessage'):
 							eventConfigs[eventConfigId]['shutdownWarningMessage'] = value
+					elif (key == 'interval'):
+						eventConfigs[eventConfigId]['interval'] = int(value)
 					elif (key == 'max_repetitions'):
 						eventConfigs[eventConfigId]['maxRepetitions'] = int(value)
 					elif (key == 'activation_delay'):

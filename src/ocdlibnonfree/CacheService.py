@@ -37,7 +37,7 @@ from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTr
 
 from ocdlib.Config import Config
 from ocdlib.State import State
-from ocdlib.Events import getEventGenerators
+from ocdlib.Events import SyncCompletedEventGenerator, getEventGenerators
 from ocdlib.Localization import _
 from ocdlib.OpsiService import ServiceConnection
 
@@ -345,6 +345,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				logger.notice(u"Config synced from server")
 				self._state['config_cached'] = True
 				state.set('config_cache_service', self._state)
+				for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
+					eventGenerator.fireEvent()
 		except Exception, e:
 			logger.logException(e)
 			logger.error(u"Errors occured while syncing config from server: %s" % e)
@@ -555,8 +557,8 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 					logger.notice(u"All products cached: %s" % ', '.join(productIds))
 					self._state['products_cached'] = True
 					state.set('product_cache_service', self._state)
-					#for eventGenerator in getEventGenerators(generatorClass = ProductSyncCompletedEventGenerator):
-					#	eventGenerator.fireEvent()
+					for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
+						eventGenerator.fireEvent()
 		except Exception, e:
 			logger.error(u"Failed to cache products: %s" % e)
 		self.disconnectConfigService()
