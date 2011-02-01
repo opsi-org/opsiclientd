@@ -174,7 +174,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			else:
 				logger.notice(u'No Product to set.')
 			
-			if param.get('action') == 'save':
+			if param.get('action') == 'Save':
 				return productOnClients_withDependencies
 				
 			if param.get('action') == 'ondemand':
