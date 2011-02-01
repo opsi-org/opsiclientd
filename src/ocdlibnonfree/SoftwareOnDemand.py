@@ -268,7 +268,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					logger.notice(u"Action Save was send.")
 					if params['action'].lower() == "save":
 						html = answerpage
-						table = '''
+						resulttable = '''
 							<table>
 								<thead>
 									<tr>
@@ -282,7 +282,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								<tfoot>
 									<tr>
 										<td align="center" colspan="2">
-											<input name="action" value="Save" id="submit" class="button" type="submit" />
+											<input name="action" value="ondemand" id="submit" class="button" type="submit" />
+											<input name="action" value="onrestart" id="submit" class="button" type="submit" />
 										</td>
 									<tr>
 								</tfoot>
@@ -291,10 +292,12 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						for productOnClient in productOnClients:
 							tablerows.append("<tr><td>%s</td></tr>" % productOnClient.productId)
 						
+						table = ''
+						for row in tablerows:
+							table += row
 						
-						
-						table = table.replace('%result%', forceUnicode(tablerows))
-						html = html.replace('%result%', forceUnicode(table))
+						resulttable = resulttable.replace('%result%', forceUnicode(table))
+						html = html.replace('%result%', forceUnicode(resulttable))
 						result.stream = stream.IByteStream(html.encode('utf-8'))
 						return result
 
