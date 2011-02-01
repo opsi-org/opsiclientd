@@ -165,7 +165,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					logger.notice(u"Product: '%s' is already set on setup, nothing to do." % productId)
 					continue
 				#TODO Vorbedingung fuer Abhaengige Pakete mit einbauen.
-				#productOnClient.setActionRequest('setup')
+				productOnClient.setActionRequest('setup')
 				productOnClients.append(productOnClient)
 			
 			#Set Products
