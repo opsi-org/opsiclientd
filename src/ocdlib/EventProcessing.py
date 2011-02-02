@@ -993,11 +993,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				
 				if self.event.eventConfig.postSyncConfigToServer:
 					self.setStatusMessage( _(u"Syncing config to server") )
-					self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = self.isShutdownTriggered() or self.isRebootRequested())
+					self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = True)
 					self.setStatusMessage( _(u"Sync completed") )
 				if self.event.eventConfig.postSyncConfigFromServer:
 					self.setStatusMessage( _(u"Syncing config from server") )
-					self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.isShutdownTriggered() or self.isRebootRequested())
+					self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.isShutdownRequested() or self.isRebootRequested())
 					self.setStatusMessage( _(u"Sync completed") )
 				
 				self.processShutdownRequests()
