@@ -543,8 +543,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if (len(productIds) == 0) and (bootmode == 'BKSTD'):
 				logger.notice(u"No product action requests set")
 				self.setStatusMessage( _(u"No product action requests set") )
-				if self.event.eventConfig.useCachedConfig:
-					self.opsiclientd.getCacheService().setConfigCacheObsolete()
+				try:
+					if self.event.eventConfig.useCachedConfig:
+						self.opsiclientd.getCacheService().setConfigCacheObsolete()
+				except Exception, e:
+					logger.error(e)
 			else:
 				logger.notice(u"Start processing action requests")
 				if productIds:
@@ -557,6 +560,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				config.selectDepotserver(configService = self._configService, event = self.event, productIds = productIds)
 				self.processEventWarningTime(productIds)
 				self.runActions()
+				try:
+					if self.event.eventConfig.useCachedConfig and not self._configService.productOnClient_getIdents(
+								productType   = 'LocalbootProduct',
+								clientId      = config.get('global', 'host_id'),
+								actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+								attributes    = ['actionRequest']):
+						self.opsiclientd.getCacheService().setConfigCacheObsolete()
+				except Exception, e:
+					logger.error(e)
 				
 		except Exception, e:
 			logger.logException(e)
