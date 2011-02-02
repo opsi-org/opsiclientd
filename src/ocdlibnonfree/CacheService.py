@@ -690,8 +690,8 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 				sourceDepot          = repository,
 				destinationDirectory = self._productCacheDir,
 				productIds           = [ productId ],
-				maxBandwidth         = 0,
-				dynamicBandwidth     = False
+				maxBandwidth         = self._maxBandwidth,
+				dynamicBandwidth     = self._dynamicBandwidth
 			)
 			productSynchronizer.synchronize(productProgressObserver = self._productProgressObserver, overallProgressObserver = self._overallProgressObserver)
 			logger.notice(u"Product '%s' cached" % productId)
