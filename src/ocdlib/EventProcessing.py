@@ -708,6 +708,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	def processEventWarningTime(self, productIds=[]):
 		if not self.event.eventConfig.warningTime:
 			return
+		self._messageSubject.setMessage(u"%s\n%s: %s" % (self.event.eventConfig.getMessage(), _(u'Products'), u', '.join(productIds)) )
 		choiceSubject = ChoiceSubject(id = 'choice')
 		if (self.event.eventConfig.cancelCounter < self.event.eventConfig.userCancelable):
 			choiceSubject.setChoices([ _('Abort'), _('Start now') ])
