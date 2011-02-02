@@ -760,16 +760,25 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		logger.notice(u"Shutdown wait cancelled by user")
 		self.shutdownWaitCancelled = True
 	
+	def isRebootRequested(self):
+		if self.event.eventConfig.reboot:
+			return True
+		if self.event.eventConfig.processShutdownRequests and self.opsiclientd.isRebootRequested():
+			return True
+		return False
+		
+	def isShutdownRequested(self):
+		if self.event.eventConfig.shutdown:
+			return True
+		if self.event.eventConfig.processShutdownRequests and self.opsiclientd.isShutdownRequested():
+			return True
+		return False
+		
 	def processShutdownRequests(self):
 		try:
-			reboot   = self.event.eventConfig.reboot
-			shutdown = self.event.eventConfig.shutdown
-			if not self.event.eventConfig.processShutdownRequests and not reboot and not shutdown:
-				return
-			if not reboot:
-				reboot = self.opsiclientd.isRebootRequested()
-			if not shutdown:
-				shutdown = self.opsiclientd.isShutdownRequested()
+			
+			shutdown = self.isShutdownRequested()
+			reboot   = self.isRebootRequested()
 			if reboot or shutdown:
 				if reboot:
 					self.setStatusMessage(_(u"Reboot requested"))
@@ -960,13 +969,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				
 				if self.event.eventConfig.postSyncConfigToServer:
 					self.setStatusMessage( _(u"Syncing config to server") )
-					self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = self.opsiclientd.isShutdownTriggered())
+					self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = self.isShutdownTriggered() or self.isRebootRequested())
 					self.setStatusMessage( _(u"Sync completed") )
 				if self.event.eventConfig.postSyncConfigFromServer:
 					self.setStatusMessage( _(u"Syncing config from server") )
-					self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.opsiclientd.isShutdownTriggered())
+					self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.isShutdownTriggered() or self.isRebootRequested())
 					self.setStatusMessage( _(u"Sync completed") )
-					
+				
+				self.processShutdownRequests()
+				
 				if self.opsiclientd.isShutdownTriggered():
 					self.setStatusMessage(_("Shutting down machine"))
 				elif self.opsiclientd.isRebootTriggered():
