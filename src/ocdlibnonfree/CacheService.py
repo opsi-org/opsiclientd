@@ -547,6 +547,12 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 			if not productIds:
 				logger.notice(u"No product action request set => no products to cache")
 			else:
+				if 'mshotfix' in productIds:
+					additionalProductId = System.getOpsiHotfixName()
+					logger.info(u"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s" % additionalProductId)
+					if not additionalProductId in productIds:
+						productIds.append(additionalProductId)
+				
 				logger.notice(u"Caching products: %s" % ', '.join(productIds))
 				#self._overallProgressSubject.setEnd(len(productIds))
 				#self._overallProgressSubject.setMessage( _(u'Caching products') )
