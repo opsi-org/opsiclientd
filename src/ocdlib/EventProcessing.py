@@ -760,11 +760,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self.shutdownWaitCancelled = True
 	
 	def processShutdownRequests(self):
-		if not self.event.eventConfig.processShutdownRequests:
-			return
 		try:
-			reboot   = self.event.eventConfig.reboot or self.opsiclientd.isRebootRequested()
-			shutdown = self.event.eventConfig.shutdown or self.opsiclientd.isShutdownRequested()
+			reboot   = self.event.eventConfig.reboot
+			shutdown = self.event.eventConfig.shutdown
+			if not self.event.eventConfig.processShutdownRequests and not reboot and not shutdown:
+				return
+			if not reboot:
+				reboot = self.opsiclientd.isRebootRequested()
+			if not shutdown:
+				shutdown = self.opsiclientd.isShutdownRequested()
 			if reboot or shutdown:
 				if reboot:
 					self.setStatusMessage(_(u"Reboot requested"))

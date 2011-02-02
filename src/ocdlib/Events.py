@@ -908,9 +908,9 @@ def getEventConfigs():
 					elif (key == 'cancel_counter'):
 						eventConfigs[eventConfigId]['cancelCounter'] = int(value)
 					elif (key == 'shutdown'):
-						eventConfigs[eventConfigId]['shutdown'] = not value.lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['shutdown'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'reboot'):
-						eventConfigs[eventConfigId]['reboot'] = not value.lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['reboot'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'shutdown_warning_time'):
 						eventConfigs[eventConfigId]['shutdownWarningTime'] = int(value)
 					elif (key == 'shutdown_warning_repetition_time'):
