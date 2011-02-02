@@ -763,8 +763,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		if not self.event.eventConfig.processShutdownRequests:
 			return
 		try:
-			reboot   = self.opsiclientd.isRebootRequested()
-			shutdown = self.opsiclientd.isShutdownRequested()
+			reboot   = self.event.eventConfig.reboot or self.opsiclientd.isRebootRequested()
+			shutdown = self.event.eventConfig.shutdown or self.opsiclientd.isShutdownRequested()
 			if reboot or shutdown:
 				if reboot:
 					self.setStatusMessage(_(u"Reboot requested"))

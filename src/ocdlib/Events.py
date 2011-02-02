@@ -113,6 +113,8 @@ class EventConfig(object):
 		self.warningTime                   =      int ( conf.get('warningTime',                   0         ) )
 		self.userCancelable                =      int ( conf.get('userCancelable',                0         ) )
 		self.cancelCounter                 =      int ( conf.get('cancelCounter',                 0         ) )
+		self.shutdown                      =     bool ( conf.get('shutdown',                      False     ) )
+		self.reboot                        =     bool ( conf.get('reboot',                        False     ) )
 		self.shutdownWarningMessage        =  unicode ( conf.get('shutdownWarningMessage',        ''        ) )
 		self.shutdownWarningTime           =      int ( conf.get('shutdownWarningTime',           0         ) )
 		self.shutdownWarningRepetitionTime =      int ( conf.get('shutdownWarningRepetitionTime', 3600      ) )
@@ -905,6 +907,10 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['userCancelable'] = int(value)
 					elif (key == 'cancel_counter'):
 						eventConfigs[eventConfigId]['cancelCounter'] = int(value)
+					elif (key == 'shutdown'):
+						eventConfigs[eventConfigId]['shutdown'] = not value.lower() in ('0', 'false', 'off', 'no')
+					elif (key == 'reboot'):
+						eventConfigs[eventConfigId]['reboot'] = not value.lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'shutdown_warning_time'):
 						eventConfigs[eventConfigId]['shutdownWarningTime'] = int(value)
 					elif (key == 'shutdown_warning_repetition_time'):
