@@ -744,7 +744,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				seconds = (endTime - now)
 				if (seconds >= 60):
 					minutes = int(seconds/60)
-					seconds = int(seconds-(minutes*60))
+					seconds -= minutes*60
+				seconds = int(seonds)
 				if (minutes < 10):
 					minutes = '0%d' % minutes
 				if (seconds < 10):
@@ -846,7 +847,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							seconds = (endTime - now)
 							if (seconds >= 60):
 								minutes = int(seconds/60)
-								seconds = int(seconds-(minutes*60))
+								seconds -= minutes*60
+							seconds = int(seonds)
 							if (minutes < 10):
 								minutes = '0%d' % minutes
 							if (seconds < 10):
