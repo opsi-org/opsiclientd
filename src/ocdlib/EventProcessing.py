@@ -737,7 +737,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					minutes = '0%d' % minutes
 				if (seconds < 10):
 					seconds = '0%d' % seconds
-				self.setStatusMessage(_(u"Event %s: action processing will start in [%s:%s]") % (self.event.eventConfig.getName(), minutes, seconds))
+				self.setStatusMessage(_(u"Event %s: action processing will start in %s:%s") % (self.event.eventConfig.getName(), minutes, seconds))
 				if ((endTime - now) <= 0):
 					break
 				time.sleep(1)
@@ -840,9 +840,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							if (seconds < 10):
 								seconds = '0%d' % seconds
 							if reboot:
-								self.setStatusMessage(_(u"Reboot in [%s:%s]") % (minutes, seconds))
+								self.setStatusMessage(_(u"Reboot in %s:%s") % (minutes, seconds))
 							else:
-								self.setStatusMessage(_(u"Shutdown in [%s:%s]") % (minutes, seconds))
+								self.setStatusMessage(_(u"Shutdown in %s:%s") % (minutes, seconds))
 							if ((endTime - now) <= 0):
 								break
 							time.sleep(1)

@@ -89,8 +89,8 @@ msgid "Start now"
 msgstr "Jetzt starten"
 
 #: ../src/ocdlib/EventProcessing.py:740
-msgid "Event %s: action processing will start in [%s:%s]"
-msgstr "Ereignis %s: Aktionen starten in [%s:%s]"
+msgid "Event %s: action processing will start in %s:%s"
+msgstr "Ereignis %s: Aktionen starten in %s:%s"
 
 #: ../src/ocdlib/EventProcessing.py:793
 msgid "Reboot requested"
@@ -113,12 +113,12 @@ msgid "Shutdown now"
 msgstr "Jetzt herunterfahren"
 
 #: ../src/ocdlib/EventProcessing.py:843
-msgid "Reboot in [%s:%s]"
-msgstr "Neustart in [%s:%s]"
+msgid "Reboot in %s:%s"
+msgstr "Neustart in %s:%s"
 
 #: ../src/ocdlib/EventProcessing.py:845
-msgid "Shutdown in [%s:%s]"
-msgstr "Herunterfahren in [%s:%s]"
+msgid "Shutdown in %s:%s"
+msgstr "Herunterfahren in %s:%s"
 
 #: ../src/ocdlib/EventProcessing.py:909
 msgid "Syncing config with server"
