@@ -620,7 +620,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		return getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword)
 		
 	def _cacheProduct(self, productId):
-		logger.notice(u"Caching product '%s'" % productId)
+		logger.notice(u"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)" % (productId,  self._maxBandwidth, self._dynamicBandwidth))
 		self._setProductCacheState(productId, 'started',   time.time())
 		self._setProductCacheState(productId, 'completed', None)
 		self._setProductCacheState(productId, 'failure',   None)
