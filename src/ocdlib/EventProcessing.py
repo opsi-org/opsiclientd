@@ -906,7 +906,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				
 				if self.event.eventConfig.syncConfigToServer or self.event.eventConfig.syncConfigFromServer:
 					if self.event.eventConfig.syncConfigToServer and self.event.eventConfig.syncConfigFromServer:
-						self.setStatusMessage( _(u"Syncing config to and from server") )
+						self.setStatusMessage( _(u"Syncing config with server") )
 						self.opsiclientd.getCacheService().syncConfig(waitForEnding = self.event.eventConfig.useCachedConfig)
 						self.setStatusMessage( _(u"Sync completed") )
 					

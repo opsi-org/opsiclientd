@@ -121,7 +121,7 @@ msgid "Shutdown in [%s:%s]"
 msgstr "Herunterfahren in [%s:%s]"
 
 #: ../src/ocdlib/EventProcessing.py:909
-msgid "Syncing config to and from server"
+msgid "Syncing config with server"
 msgstr "Synchronisation der Konfiguration mit Server"
 
 #: ../src/ocdlib/EventProcessing.py:911 ../src/ocdlib/EventProcessing.py:916
