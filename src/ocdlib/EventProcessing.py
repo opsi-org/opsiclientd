@@ -206,6 +206,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
 			raise
 	
+	self.stopNotificationServer()
+		if self._notificationServer:
+			try:
+				logger.info(u"Stopping notification server")
+				self._notificationServer.stop(stopReactor = False)
+			except Exception, e:
+				logger.logException(e)
+	
 	def getConfigFromService(self):
 		''' Get settings from service '''
 		logger.notice(u"Getting config from service")
@@ -1012,14 +1020,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					self.opsiclientd.setBlockLogin(False)
 				
 				self.setStatusMessage(u"")
-				
-				# Stop notification server thread
-				if self._notificationServer:
-					try:
-						logger.info(u"Stopping notification server")
-						self._notificationServer.stop(stopReactor = False)
-					except Exception, e:
-						logger.logException(e)
+				self.stopNotificationServer()
 		except Exception, e:
 			logger.error(u"Failed to process event %s: %s" % (self.event, forceUnicode(e)))
 			logger.logException(e)
