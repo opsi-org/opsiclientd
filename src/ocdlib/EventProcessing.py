@@ -728,7 +728,16 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			while (timeout > 0) and not self.eventCancelled and not self.waitCancelled:
 				now = time.time()
 				logger.info(u"Notifying user of actions to process %s (%s)" % (self.event, productIds))
-				self.setStatusMessage(_(u"Event %s: action processing will start in %0.0f seconds") % (self.event.eventConfig.getName(), (endTime - now)))
+				minutes = 0
+				seconds = (endTime - now)
+				if (seconds >= 60):
+					minutes = int(seconds/60)
+					seconds -= (minutes*60)
+				if (minutes < 10):
+					minutes = '0%d' % minutes
+				if (seconds < 10):
+					seconds = '0%d' % seconds
+				self.setStatusMessage(_(u"Event %s: action processing will start in [%s:%s]") % (self.event.eventConfig.getName(), minutes, seconds))
 				if ((endTime - now) <= 0):
 					break
 				time.sleep(1)
@@ -821,10 +830,19 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						endTime = time.time() + timeout
 						while (timeout > 0) and not self.shutdownCancelled and not self.shutdownWaitCancelled:
 							now = time.time()
+							minutes = 0
+							seconds = (endTime - now)
+							if (seconds >= 60):
+								minutes = int(seconds/60)
+								seconds -= (minutes*60)
+							if (minutes < 10):
+								minutes = '0%d' % minutes
+							if (seconds < 10):
+								seconds = '0%d' % seconds
 							if reboot:
-								self.setStatusMessage(_(u"Reboot in %0.0f seconds") % (endTime - now))
+								self.setStatusMessage(_(u"Reboot in [%s:%s]") % (minutes, seconds))
 							else:
-								self.setStatusMessage(_(u"Shutdown in %0.0f seconds") % (endTime - now))
+								self.setStatusMessage(_(u"Shutdown in [%s:%s]") % (minutes, seconds))
 							if ((endTime - now) <= 0):
 								break
 							time.sleep(1)
