@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2011-02-01 15:43+CET\n"
+"POT-Creation-Date: 2011-02-02 13:43+CET\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -15,7 +15,7 @@ msgstr ""
 "Generated-By: pygettext.py 1.5\n"
 
 
-#: ../src/ocdlib/EventProcessing.py:103 ../src/ocdlib/EventProcessing.py:858
+#: ../src/ocdlib/EventProcessing.py:103 ../src/ocdlib/EventProcessing.py:889
 msgid "Processing event %s"
 msgstr ""
 
@@ -60,92 +60,101 @@ msgstr ""
 msgid "No product action requests set"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:563
+#: ../src/ocdlib/EventProcessing.py:564
 msgid "Failed to process product action requests: %s"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:582
+#: ../src/ocdlib/EventProcessing.py:583
 msgid "Waiting for TrustedInstaller"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:592
+#: ../src/ocdlib/EventProcessing.py:593
 msgid "Starting actions"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:674
+#: ../src/ocdlib/EventProcessing.py:675
 msgid "Actions completed"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:712
+#: ../src/ocdlib/EventProcessing.py:711
+msgid "Products"
+msgstr ""
+
+#: ../src/ocdlib/EventProcessing.py:714
 msgid "Abort"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:712 ../src/ocdlib/EventProcessing.py:715
+#: ../src/ocdlib/EventProcessing.py:714 ../src/ocdlib/EventProcessing.py:717
 msgid "Start now"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:729
-msgid "Event %s: action processing will start in %0.0f seconds"
+#: ../src/ocdlib/EventProcessing.py:740
+msgid "Event %s: action processing will start in [%s:%s]"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:771
+#: ../src/ocdlib/EventProcessing.py:793
 msgid "Reboot requested"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:773
+#: ../src/ocdlib/EventProcessing.py:795
 msgid "Shutdown requested"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:790 ../src/ocdlib/EventProcessing.py:792
+#: ../src/ocdlib/EventProcessing.py:812 ../src/ocdlib/EventProcessing.py:814
 msgid "Later"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:790 ../src/ocdlib/EventProcessing.py:796
+#: ../src/ocdlib/EventProcessing.py:812 ../src/ocdlib/EventProcessing.py:818
 msgid "Reboot now"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:792 ../src/ocdlib/EventProcessing.py:798
+#: ../src/ocdlib/EventProcessing.py:814 ../src/ocdlib/EventProcessing.py:820
 msgid "Shutdown now"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:812
-msgid "Reboot in %0.0f seconds"
+#: ../src/ocdlib/EventProcessing.py:843
+msgid "Reboot in [%s:%s]"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:814
-msgid "Shutdown in %0.0f seconds"
+#: ../src/ocdlib/EventProcessing.py:845
+msgid "Shutdown in [%s:%s]"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:877 ../src/ocdlib/EventProcessing.py:951
-msgid "Syncing config to server"
+#: ../src/ocdlib/EventProcessing.py:909
+msgid "Syncing config to and from server"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:879 ../src/ocdlib/EventProcessing.py:912
-#: ../src/ocdlib/EventProcessing.py:953 ../src/ocdlib/EventProcessing.py:957
+#: ../src/ocdlib/EventProcessing.py:911 ../src/ocdlib/EventProcessing.py:916
+#: ../src/ocdlib/EventProcessing.py:921 ../src/ocdlib/EventProcessing.py:991
+#: ../src/ocdlib/EventProcessing.py:995
 msgid "Sync completed"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:882
-msgid "Caching products"
+#: ../src/ocdlib/EventProcessing.py:914 ../src/ocdlib/EventProcessing.py:989
+msgid "Syncing config to server"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:897
-msgid "Products cached"
-msgstr ""
-
-#: ../src/ocdlib/EventProcessing.py:910 ../src/ocdlib/EventProcessing.py:955
+#: ../src/ocdlib/EventProcessing.py:919 ../src/ocdlib/EventProcessing.py:993
 msgid "Syncing config from server"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:960
+#: ../src/ocdlib/EventProcessing.py:924
+msgid "Caching products"
+msgstr ""
+
+#: ../src/ocdlib/EventProcessing.py:939
+msgid "Products cached"
+msgstr ""
+
+#: ../src/ocdlib/EventProcessing.py:1000
 msgid "Shutting down machine"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:962
+#: ../src/ocdlib/EventProcessing.py:1002
 msgid "Rebooting machine"
 msgstr ""
 
-#: ../src/ocdlib/EventProcessing.py:964
+#: ../src/ocdlib/EventProcessing.py:1004
 msgid "Unblocking login"
 msgstr ""
 
