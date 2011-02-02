@@ -144,6 +144,7 @@ class EventConfig(object):
 		#self.serviceOptions                =     dict ( conf.get('serviceOptions',                {}        ) )
 		self.cacheProducts                 =     bool ( conf.get('cacheProducts',                 False     ) )
 		self.cacheMaxBandwidth             =      int ( conf.get('cacheMaxBandwidth',             0         ) )
+		self.cacheDynamicBandwidth         =     bool ( conf.get('cacheDynamicBandwidth',         True      ) )
 		self.useCachedProducts             =     bool ( conf.get('useCachedProducts',             False     ) )
 		self.syncConfigToServer            =     bool ( conf.get('syncConfigToServer',            False     ) )
 		self.syncConfigFromServer          =     bool ( conf.get('syncConfigFromServer',          False     ) )
@@ -935,6 +936,8 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['cacheProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'cache_max_bandwidth'):
 						eventConfigs[eventConfigId]['cacheMaxBandwidth'] = int(value)
+					elif (key == 'cache_dynamic_bandwidth'):
+						eventConfigs[eventConfigId]['cacheDynamicBandwidth'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'use_cached_products'):
 						eventConfigs[eventConfigId]['useCachedProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'sync_config_from_server'):

@@ -923,32 +923,29 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				
 				if self.event.eventConfig.syncConfigFromServer:
 					self.setStatusMessage( _(u"Syncing config from server") )
-					self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.event.eventConfig.useCachedConfig)
-					self.setStatusMessage( _(u"Sync completed") )
+					waitForEnding = self.event.eventConfig.useCachedConfig
+					self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = waitForEnding)
+					if waitForEnding:
+						self.setStatusMessage( _(u"Sync completed") )
 				
 				if self.event.eventConfig.cacheProducts:
 					self.setStatusMessage( _(u"Caching products") )
-					self.opsiclientd.getCacheService().initializeProductCacheService()
-					#try:
-					#	self.opsiclientd.getCacheService().getOverallProductCacheProgressSubject().attachObserver(self._overallProgressSubjectProxy)
-					#	self.opsiclientd.getCacheService().getCurrentProductCacheProgressSubject().attachObserver(self._currentProgressSubjectProxy)
-					#	self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
-					#except Exception, e:
-					#	logger.logException(e)
 					try:
 						self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
+						waitForEnding = self.event.eventConfig.useCachedProducts
 						self.opsiclientd.getCacheService().cacheProducts(
-							waitForEnding           = self.event.eventConfig.useCachedProducts,
+							waitForEnding           = waitForEnding,
 							productProgressObserver = self._currentProgressSubjectProxy,
-							overallProgressObserver = self._overallProgressSubjectProxy
+							overallProgressObserver = self._overallProgressSubjectProxy,
+							dynamicBandwidth        = self.event.eventConfig.cacheDynamicBandwidth,
+							maxBandwidth            = self.event.eventConfig.cacheMaxBandwidth
 						)
-						self.setStatusMessage( _(u"Products cached") )
+						if waitForEnding:
+							self.setStatusMessage( _(u"Products cached") )
 					finally:
 						self._detailSubjectProxy.setMessage(u"")
 						try:
 							self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
-							#self.opsiclientd.getCacheService().getOverallProductCacheProgressSubject().detachObserver(self._overallProgressSubjectProxy)
-							#self.opsiclientd.getCacheService().getCurrentProductCacheProgressSubject().detachObserver(self._currentProgressSubjectProxy)
 							self._currentProgressSubjectProxy.reset()
 							self._overallProgressSubjectProxy.reset()
 						except Exception, e:
