@@ -916,21 +916,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						command      = self.event.eventConfig.actionNotifierCommand,
 						desktop      = self.event.eventConfig.actionNotifierDesktop )
 				
-				if self.event.eventConfig.syncConfigToServer or self.event.eventConfig.syncConfigFromServer:
-					if self.event.eventConfig.syncConfigToServer and self.event.eventConfig.syncConfigFromServer:
-						self.setStatusMessage( _(u"Syncing config with server") )
-						self.opsiclientd.getCacheService().syncConfig(waitForEnding = self.event.eventConfig.useCachedConfig)
-						self.setStatusMessage( _(u"Sync completed") )
-					
-					elif self.event.eventConfig.syncConfigToServer:
-						self.setStatusMessage( _(u"Syncing config to server") )
-						self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = self.event.eventConfig.useCachedConfig)
-						self.setStatusMessage( _(u"Sync completed") )
-					
-					elif self.event.eventConfig.syncConfigFromServer:
-						self.setStatusMessage( _(u"Syncing config from server") )
-						self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.event.eventConfig.useCachedConfig)
-						self.setStatusMessage( _(u"Sync completed") )
+				if self.event.eventConfig.syncConfigToServer:
+					self.setStatusMessage( _(u"Syncing config to server") )
+					self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = True)
+					self.setStatusMessage( _(u"Sync completed") )
+				
+				if self.event.eventConfig.syncConfigFromServer:
+					self.setStatusMessage( _(u"Syncing config from server") )
+					self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.event.eventConfig.useCachedConfig)
+					self.setStatusMessage( _(u"Sync completed") )
 				
 				if self.event.eventConfig.cacheProducts:
 					self.setStatusMessage( _(u"Caching products") )
