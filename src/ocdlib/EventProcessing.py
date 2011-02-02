@@ -113,9 +113,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		
 		self.getSessionId()
 		
-		self._notificationServerStartPort = int(config.get('notification_server', 'start_port')) + (5 * int(self.getSessionId()))
-		self._notificationServerEndPort = int(config.get('notification_server', 'start_port')) + (5 * (int(self.getSessionId()) + 1)) - 1
-		self._notificationServerPort = self._notificationServerStartPort
+		self._notificationServerPort = int(config.get('notification_server', 'start_port')) + int(self.getSessionId())
 	
 	''' ServiceConnection '''
 	def connectionThreadOptions(self):
@@ -211,10 +209,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	def stopNotificationServer(self):
 		if not self._notificationServer:
 			return
-		# Use a different port next time because freeing the last used port takes some time
-		self._notificationServerPort += 1
-		if (self._notificationServerPort > self._notificationServerEndPort):
-			self._notificationServerPort = self._notificationServerStartPort
 		try:
 			logger.info(u"Stopping notification server")
 			self._notificationServer.stop(stopReactor = False)

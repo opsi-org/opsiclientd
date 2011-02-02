@@ -343,19 +343,33 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				self._state['config_cached'] = True
 				logger.notice(u"No product action(s) set on config service, no sync from server required")
 			else:
-				productIds = []
+				localProductOnClientsByProductId = {}
+				for productOnClient in self._cacheBackend.productOnClient_getObjects(
+								productType   = 'LocalbootProduct',
+								clientId      = config.get('global', 'host_id'),
+								actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+								attributes    = ['actionRequest']):
+					localProductOnClientsByProductId[productOnClient.productId] = productOnClient
+				
+				needSync = False
 				for productOnClient in productOnClients:
-					productIds.append(productOnClient.productId)
-				logger.notice(u"Product action(s) set on config service (%s), sync from server required" % u','.join(productIds))
-				self._cacheBackend._setMasterBackend(self._configService)
-				state.set('config_cache_service', self._state)
-				self._backendTracker.clearModifications()
-				self._cacheBackend._replicateMasterToWorkBackend()
-				logger.notice(u"Config synced from server")
-				self._state['config_cached'] = True
-				state.set('config_cache_service', self._state)
-				for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
-					eventGenerator.fireEvent()
+					localProductOnClient = localProductOnClientsByProductId.get(productOnClient.productId)
+					if not localProductOnClient or (localProductOnClient.actionRequest != productOnClient.actionRequest):
+						needSync = True
+						break
+				if not needSync:
+					self._state['config_cached'] = True
+				else:
+					logger.notice(u"Product on client configuration changed on config service, sync from server required")
+					self._cacheBackend._setMasterBackend(self._configService)
+					state.set('config_cache_service', self._state)
+					self._backendTracker.clearModifications()
+					self._cacheBackend._replicateMasterToWorkBackend()
+					logger.notice(u"Config synced from server")
+					self._state['config_cached'] = True
+					state.set('config_cache_service', self._state)
+					for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
+						eventGenerator.fireEvent()
 		except Exception, e:
 			logger.logException(e)
 			logger.error(u"Errors occured while syncing config from server: %s" % e)
