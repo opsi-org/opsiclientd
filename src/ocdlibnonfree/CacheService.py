@@ -67,7 +67,7 @@ class CacheService(threading.Thread):
 			self._configCacheService = ConfigCacheService()
 			self._configCacheService.start()
 	
-	def setConfigCacheObsolete():
+	def setConfigCacheObsolete(self):
 		self.initializeConfigCacheService()
 		self._configCacheService.setObsolete()
 		
