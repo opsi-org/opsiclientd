@@ -121,12 +121,14 @@ class CacheService(threading.Thread):
 		self.initializeConfigCacheService()
 		return self._configCacheService._backendTracker.getModifications()
 	
-	def cacheProducts(self, waitForEnding = False, productProgressObserver = None, overallProgressObserver = None):
+	def cacheProducts(self, waitForEnding = False, productProgressObserver = None, overallProgressObserver = None, dynamicBandwidth = True, maxBandwidth = 0):
 		self.initializeProductCacheService()
 		if self._productCacheService.isWorking():
 			logger.info(u"Already caching products")
 		else:
 			logger.info(u"Trigger product caching")
+			self._productCacheService.setDynamicBandwidth(dynamicBandwidth)
+			self._productCacheService.setMaxBandwidth(maxBandwidth)
 			self._productCacheService.cacheProducts(productProgressObserver = productProgressObserver, overallProgressObserver = overallProgressObserver)
 		if waitForEnding:
 			time.sleep(3)
@@ -169,15 +171,6 @@ class CacheService(threading.Thread):
 	def getConfigCacheState(self):
 		self.initializeConfigCacheService()
 		return self._configCacheService.getState()
-		
-	#def getOverallProductCacheProgressSubject(self):
-	#	self.initializeProductCacheService()
-	#	return self._productCacheService.getOverallProgressSubject()
-	#
-	#def getCurrentProductCacheProgressSubject(self):
-	#	self.initializeProductCacheService()
-	#	return self._productCacheService.getCurrentProgressSubject()
-
 
 class ConfigCacheServiceBackendExtension(object):
 	def accessControl_authenticated(self):
@@ -216,7 +209,6 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			'depotId':                 config.get('depot_server', 'depot_id'),
 		}
 		self._workBackend = SQLiteBackend(
-			#database    = ':memory:',
 			database    = os.path.join(self._configCacheDir, 'work.sqlite'),
 			synchronous = False,
 			**backendArgs
@@ -224,7 +216,6 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		self._workBackend.backend_createBase()
 		
 		self._snapshotBackend = SQLiteBackend(
-			#database    = ':memory:',
 			database    = os.path.join(self._configCacheDir, 'snapshot.sqlite'),
 			synchronous = False,
 			**backendArgs
@@ -246,7 +237,6 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			extensionConfigDir = config.get('cache_service', 'extension_config_dir')
 		)
 		self._backendTracker = SQLiteObjectBackendModificationTracker(
-			#database    = ':memory:',
 			database             = os.path.join(self._configCacheDir, 'tracker.sqlite'),
 			synchronous          = False,
 			lastModificationOnly = True
@@ -391,11 +381,11 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		
 		self._cacheProductsRequested = False
 		
+		self._maxBandwidth = 0
+		self._dynamicBandwidth = True
+		
 		self._productProgressObserver = None
 		self._overallProgressObserver = None
-		
-		#self._overallProgressSubject = ProgressSubject(id = 'overall', type = 'product_cache')
-		#self._currentProgressSubject = ProgressSubject(id = 'current', type = 'product_cache')
 		
 		if not os.path.exists(self._storageDir):
 			logger.notice(u"Creating cache service storage dir '%s'" % self._storageDir)
@@ -411,16 +401,12 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		if pcss:
 			self._state = pcss
 	
-	#def getOverallProgressSubject(self):
-	#	return self._overallProgressSubject
-	#
-	#def getCurrentProgressSubject(self):
-	#	return self._currentProgressSubject
-	
 	def getState(self):
 		state = self._state
 		state['running'] = self.isRunning()
 		state['working'] = self.isWorking()
+		state['maxBandwidth'] = self._maxBandwidth
+		state['dynamicBandwidth'] = self._dynamicBandwidth
 		return state
 	
 	def isRunning(self):
@@ -431,6 +417,12 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 	
 	def stop(self):
 		self._stopped = True
+	
+	def setMaxBandwidth(self, maxBandwidth):
+		self._maxBandwidth = forceInt(maxBandwidth)
+	
+	def setDynamicBandwidth(self, dynamicBandwidth):
+		self._dynamicBandwidth = forceBool(dynamicBandwidth)
 	
 	def run(self):
 		self._running = True
