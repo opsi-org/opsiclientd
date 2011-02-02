@@ -868,7 +868,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				self.setActionProcessorInfo()
 				self._messageSubject.setMessage(self.event.eventConfig.getMessage())
 				
-				self.setStatusMessage(_(u"Processing event %s") % self.event.eventConfig.getId())
+				self.setStatusMessage(_(u"Processing event %s") % self.event.eventConfig.getName())
 				
 				if self.event.eventConfig.blockLogin:
 					self.opsiclientd.setBlockLogin(True)
