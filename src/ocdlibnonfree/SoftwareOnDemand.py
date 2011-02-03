@@ -177,7 +177,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			#Set Products
 			if modified:
 				logger.notice(u"Now try to fulfill ProductDependencies.")
+				for poc in self.productOnClients:
+					logger.info(u"BEFORE: %s" % poc)
 				self.productOnClientsWithDependencies = self._configService.productOnClient_addDependencies(self.productOnClients)
+				for poc in self.productOnClientsWithDependencies:
+					logger.info(u"AFTER: %s" % poc)
 				#self._configService.productOnClient_updateObjects(productOnClients_withDependencies)
 			else:
 				logger.notice(u'No Product to set.')
