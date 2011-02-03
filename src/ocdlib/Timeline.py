@@ -48,17 +48,18 @@ from ocdlib.Config import Config
 logger = Logger()
 config = Config()
 
-# var timeline_data   = %(data)s;
+# var timeline_data = %(data)s;
+# <script src="/timeline/timeline_js/timeline-api.js" type="text/javascript"></script>
+# Timeline_ajax_url   = "/timeline/timeline_ajax/simile-ajax-api.js";
+# Timeline_urlPrefix  = "/timeline/timeline_js/";
+# Timeline_parameters = "bundle=true";
+
 htmlHead = u'''
-<script src="/timeline/timeline_js/timeline-api.js" type="text/javascript"></script>
+<script src="http://static.simile.mit.edu/timeline/api-2.3.0/timeline-api.js?bundle=true" type="text/javascript"></script>
 <script>
-Timeline_ajax_url   = "/timeline/timeline_ajax/simile-ajax-api.js";
-Timeline_urlPrefix  = "/timeline/timeline_js/";
-Timeline_parameters = "bundle=true";
-var timeline_data   = "";
+var timeline_data = %(data)s;
 var tl;
 function onLoad() {
-	alert("onload");
 	var eventSource = new Timeline.DefaultEventSource();
 	var bandInfos = [
 		Timeline.createBandInfo({
