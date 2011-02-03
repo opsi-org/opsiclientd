@@ -57,6 +57,7 @@ if (os.name == 'posix'):
 	from ocdlib.Posix import *
 from ocdlib.Localization import _, setLocaleDir, getLanguage
 from ocdlib.Config import Config
+from ocdlib.Timeline import Timeline
 
 try:
 	from ocdlibnonfree import __fullversion__
@@ -70,6 +71,7 @@ except:
 
 logger = Logger()
 config = Config()
+timeline = Timeline()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                            OPSICLIENTD                                            -
@@ -181,6 +183,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		self._actionProcessorUserName = runAsUser
 		logger.notice(u"Creating local user '%s'" % runAsUser)
+		timeline.addEvent(title = u"Creating local user '%s'" % runAsUser, description = u'', category = u'system')
 		
 		self._actionProcessorUserPassword = u'$!?' + unicode(randomString(16)) + u'!/%'
 		logger.addConfidentialString(self._actionProcessorUserPassword)
@@ -194,9 +197,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			return
 		if not self._actionProcessorUserName:
 			return
-		logger.notice(u"Deleting local user '%s'" % self._actionProcessorUserName)
 		if not System.existsUser(username = self._actionProcessorUserName):
 			return
+		logger.notice(u"Deleting local user '%s'" % self._actionProcessorUserName)
+		timeline.addEvent(title = u"Deleting local user '%s'" % self._actionProcessorUserName, description = u'', category = u'system')
 		System.deleteUser(username = self._actionProcessorUserName)
 		self._actionProcessorUserName = u''
 		self._actionProcessorUserPassword = u''
@@ -209,13 +213,21 @@ class Opsiclientd(EventListener, threading.Thread):
 		setLocaleDir(config.get('global', 'locale_dir'))
 		
 		try:
+			eventTitle = u''
 			if __fullversion__:
-				logger.comment(u"Opsiclientd version: %s (full)" % __version__)
+				eventTitle = u"Opsiclientd version: %s (full) started" % __version__
+				logger.essential(u"Opsiclientd version: %s (full)" % __version__)
 			else:
-				logger.comment(u"Opsiclientd version: %s" % __version__)
-			logger.comment(u"Commandline: %s" % ' '.join(sys.argv))
-			logger.comment(u"Working directory: %s" % os.getcwd())
+				eventTitle = u"Opsiclientd version: %s started" % __version__
+				logger.essential(u"Opsiclientd version: %s" % __version__)
+			eventDescription = "Commandline: %s\n" % ' '.join(sys.argv)
+			logger.essential(u"Commandline: %s" % ' '.join(sys.argv))
+			eventDescription += u"Working directory: %s\n" % os.getcwd()
+			logger.essential(u"Working directory: %s" % os.getcwd())
+			eventDescription += u"Using host id '%s'" % config.get('global', 'host_id')
 			logger.notice(u"Using host id '%s'" % config.get('global', 'host_id'))
+			
+			timeline.addEvent(title = eventTitle, description = eventDescription, category = u'main')
 			
 			self.setBlockLogin(True)
 			

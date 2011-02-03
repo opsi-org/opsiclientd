@@ -70,7 +70,8 @@ class ConfigImplementation(object):
 				'opsi_host_key':        u'',
 				'wait_for_gui_timeout': 120,
 				'block_login_notifier': u'',
-				'state_file':           u'c:\\opsi.org\\opsiclientd\\state.json'
+				'state_file':           u'c:\\opsi.org\\opsiclientd\\state.json',
+				'timeline_db':          u'c:\\opsi.org\\opsiclientd\\timeline.sqlite'
 			},
 			'config_service': {
 				'url':                   [],
@@ -122,7 +123,7 @@ class ConfigImplementation(object):
 			self._config['cache_service']['extension_config_dir'] = os.path.join(baseDir, u'opsiclientd', 'extend.d')
 			self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd', 'opsiclientd.conf')
 			self._config['global']['state_file'] = u'%s\\opsi.org\\opsiclientd\\state.json' % System.getSystemDrive()
-			
+			self._config['global']['timeline_db'] = u'%s\\opsi.org\\opsiclientd\\timeline.sqlite' % System.getSystemDrive()
 		if (sys.getwindowsversion()[0] == 5):
 			self._config['action_processor']['run_as_user'] = 'pcpatch'
 		
