@@ -589,6 +589,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		time.sleep(3)
 	
 	def runActions(self, additionalParams=''):
+		runActionsEventId = timeline.addEvent(
+			title       = u"Running actions"
+			description = u"Running actions",
+			category    = u"run_actions")
+		
 		if not additionalParams:
 			additionalParams = ''
 		if not self.event.getActionProcessorCommand():
@@ -604,12 +609,17 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					if (automaticStartup == 2):
 						logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
 						self.setStatusMessage( _(u"Waiting for TrustedInstaller") )
+						waitEventId = timeline.addEvent(
+								title       = u"Waiting for TrustedInstaller"
+								description = u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
+								category    = u"wait")
 						while True:
 							time.sleep(3)
 							logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
 							automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
 							if not (automaticStartup == 2):
 								break
+						timeline.setEventEnd(eventId = waitEventId)
 				except Exception, e:
 					logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
 			
@@ -694,8 +704,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			finally:
 				if impersonation:
 					impersonation.end()
-		
 		self.setStatusMessage( _(u"Actions completed") )
+		timeline.setEventEnd(eventId = runActionsEventId)
 		
 	def setEnvironment(self):
 		try:
@@ -898,10 +908,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.logException(e)
 		
 	def run(self):
-		self._timelineEventId = None
+		timelineEventId = None
 		try:
 			logger.notice(u"============= EventProcessingThread for occurrcence of event '%s' started =============" % self.event)
-			self._timelineEventId = timeline.addEvent(
+			timelineEventId = timeline.addEvent(
 				title       = u"Processing event %s" % self.event.eventConfig.getName(),
 				description = u"EventProcessingThread for occurrcence of event '%s' started" % self.event.eventConfig.getId(),
 				category    = u"event_processing")
@@ -1036,8 +1046,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		
 		self.running = False
 		logger.notice(u"============= EventProcessingThread for event '%s' ended =============" % self.event)
-		if self._timelineEventId:
-			timeline.setEventEnd(eventId = self._timelineEventId)
+		if timelineEventId:
+			timeline.setEventEnd(eventId = timelineEventId)
 	
 	
 

@@ -155,15 +155,15 @@ class TimelineImplementation(object):
 				event['textColor'] = u"#880000"
 				event['icon'] = TIMELINE_IMAGE_URL + u"dark-red-circle.png"
 			elif event['category'] in ('event_processing', 'event_occurrence'):
-				event['color'] = u"#E6E600"
-				event['textColor'] = u"#E6E600"
+				event['color'] = u"#FF8000"
+				event['textColor'] = u"#FF8000"
 			elif (event['category'] == 'opsiclientd_running'):
 				event['color'] = u"#008800"
 				event['textColor'] = u"#008800"
 				event['icon'] = TIMELINE_IMAGE_URL + u"dull-green-circle.png"
 			elif (event['category'] == 'block_login'):
-				event['color'] = u"#FF8000"
-				event['textColor'] = u"#FF8000"
+				event['color'] = u"#880000"
+				event['textColor'] = u"#880000"
 			elif event['category'] in ('product_caching', 'config_sync'):
 				pass
 			del event['isError']
