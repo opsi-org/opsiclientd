@@ -105,9 +105,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		WorkerOpsi.__init__(self, service, request, resource)
 		ServiceConnection.__init__(self)
-		self.productOnClients = []
-		self.productOnClientsWithDependencies = []
-		
+	
 	def _getCredentials(self):
 		(user, password) = self._getAuthorization()
 		if not user:
@@ -143,9 +141,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 	
 	def _processQuery(self, result):
 		self._decodeQuery(result)
-		
+	
 	def _executeQuery(self, param, clientId):
 		#if param:
+		productOnClients = self._configService.productOnClient_getObjects(clientId = clientId)
+		productOnClientsWithDependencies = []
 		try:
 			logger.debug(u'Try to execute Query')
 			#productOnClients = self._configService.productOnClient_getObjects(clientId = clientId)
@@ -153,8 +153,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			modified = False
 			for productId in param.get('products', []):
 				index = -1
-				for i in range(len(self.productOnClients)):
-					if self.productOnClients[i].productId == productId:
+				for i in range(len(productOnClients)):
+					if productOnClients[i].productId == productId:
 						index = i
 						break
 				#productOnClient = self._configService.productOnClient_getObjects(clientId = clientId, productId = productId)
@@ -165,13 +165,13 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						clientId           = clientId,
 						installationStatus = 'not_installed'
 					)
-					self.productOnClients.append(productOnClient)
+					productOnClients.append(productOnClient)
 					index = len(self.productOnClients) - 1
 				if productOnClient.actionRequest == 'setup':
 					logger.notice(u"Product: '%s' is already set on setup, nothing to do." % productId)
 					continue
 				#TODO Vorbedingung fuer Abhaengige Pakete mit einbauen.
-				self.productOnClients[index].setActionRequest('setup')
+				productOnClients[index].setActionRequest('setup')
 				modified = True
 			
 			#Set Products
@@ -179,15 +179,15 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				logger.notice(u"Now try to fulfill ProductDependencies.")
 				for poc in self.productOnClients:
 					logger.info(u"BEFORE: %s" % poc)
-				self.productOnClientsWithDependencies = self._configService.productOnClient_addDependencies(self.productOnClients)
-				for poc in self.productOnClientsWithDependencies:
+				productOnClientsWithDependencies = self._configService.productOnClient_addDependencies(self.productOnClients)
+				for poc in productOnClientsWithDependencies:
 					logger.info(u"AFTER: %s" % poc)
 				#self._configService.productOnClient_updateObjects(productOnClients_withDependencies)
 			else:
 				logger.notice(u'No Product to set.')
 			
 			if param.get('action') == 'Save':
-				return self.productOnClientsWithDependencies
+				return productOnClientsWithDependencies
 				
 			if param.get('action') == 'ondemand':
 				#erst setup setzen
@@ -327,16 +327,16 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		jsonrpc1 = self._configService.productOnClient_getObjects(clientId = myClientId)
 		jsonrpc2 = self._configService.product_getObjects(id = productIds)
 		jsonrpc3 = self._configService.productOnDepot_getObjects(depotId = mydepotServer, productId = productIds)
-		self.productOnClients = jsonrpc1.waitForResult()
+		productOnClients = jsonrpc1.waitForResult()
 		products = jsonrpc2.waitForResult()
 		productOnDepots = jsonrpc3.waitForResult()
 		self._configService.setAsync(False)
-		for poc in self.productOnClients:
+		for poc in productOnClients:
 			logger.info(u"FROM SERVICE: %s" % poc)
 		
 		for productId in productIds:
 			productOnClient = None
-			for clientobj in self.productOnClients:
+			for clientobj in productOnClients:
 				if clientobj.productId == productId:
 					productOnClient = clientobj
 					break
@@ -349,7 +349,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					product = productObj
 					break
 				
-			#for obj in self.productOnClients:
+			#for obj in productOnClients:
 			#	productOnClient = None
 			#	if obj.productId in productIds:
 			#		productOnClient = obj
