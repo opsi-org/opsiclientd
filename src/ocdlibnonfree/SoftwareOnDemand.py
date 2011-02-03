@@ -96,7 +96,6 @@ answerpage = u'''
 	</form>
 	
 </body>
-
 '''
 
 
@@ -152,7 +151,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			productOnClients = self._configService.productOnClient_getObjects(clientId = clientId)
 			#product On Clients
 			for productId in param.get('products', []):
-				productOnClient = self._configService.productOnClient_getObjects(clientId = clientId, productId = productId)
+				for productOnClientObj in productOnClients;
+					if productOnClientObj.productId == productId:
+						productOnClient = productOnClientObj
+				#productOnClient = self._configService.productOnClient_getObjects(clientId = clientId, productId = productId)
 				if productOnClient:
 					productOnClient = productOnClient[0]
 				else:
@@ -244,11 +246,14 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		state = ''
 		checked = ''
 		productVersion = ''
+		productDescription = ''
+		productAdvice = ''
 		tablerows = []
 		productOnDepots = {}
 		productIds = []
 		myClientId = config.get('global', 'host_id')
 		mydepotServer = config.get('depot_server','depot_id')
+		onDemandGroups = ["kiosk","kiosk1"]
 		
 		
 		if not isinstance(result, http.Response):
@@ -310,35 +315,71 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						return result
 
 		
-		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = "kiosk"):
-			logger.debug("!!!Produkt gefunden: '%s'" % objectToGroup.objectId)
-			productIds.append(objectToGroup.objectId)
-		for productOnDepot in self._configService.productOnDepot_getObjects(depotId = mydepotServer, productId = productIds):
-			productOnClients = self._configService.productOnClient_getObjects(clientId = myClientId, productId = productOnDepot.productId)
-			if productOnClients:
-				state = productOnClients[0].installationStatus
-				productVersion = productOnClients[0].productVersion
-				if not productVersion: productVersion = ''
-				if productOnClients[0].actionRequest == 'setup':
+		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = onDemandGroups):
+			logger.debug(u"Product found: '%s'" % objectToGroup.objectId)
+			if not objectToGroup.objectId in productIds:
+				productIds.append(objectToGroup.objectId)
+		productOnClients = self._configService.productOnClient_getObjects(clientId = myClientId)
+		products = self._configService.product_getObjects(id = productIds)
+		productOnDepots = self._configService.productOnDepot_getObjects(depotId = mydepotServer, productId = productIds):
+		for productId in productIds:
+			productOnClient = None
+			for clientobj in productOnClients:
+				if clientobj.productId == productId:
+					productOnClient = clientobj
+					break
+			for depotobj in productOnDepots:
+				if depotobj in productId:
+					productOnDepot = depotobj
+					break
+			for productobj in products:
+				if productobj.id == productId:
+					product = productObj
+					break
+				
+			#for obj in productOnClients:
+			#	productOnClient = None
+			#	if obj.productId in productIds:
+			#		productOnClient = obj
+			#		break
+			
+			productDescription = product.description
+			productAdvice = product.advice
+			if productOnClient:
+				state = productOnClient.installationStatus
+				productVersion = productOnClient.productVersion
+				if productOnClient.actionRequest == 'setup':
 					checked = u'checked="checked"'
-					
 				else:
 					checked = ''
 					state = 'nicht installiert'
 			else:
 				state = 'nicht installiert'
+				productVersion = ''
 				
-			if productOnDepots.has_key(productOnDepot.productId):
-				logger.notice("!!!Produkt ist schon vorhanden: '%s'" % productOnDepot.productId)
-				continue
+			#if productOnDepots.has_key(productOnDepot.productId):
+			#	logger.notice("!!!Produkt ist schon vorhanden: '%s'" % productOnDepot.productId)
+			#	continue
 			
 			
-			tablerows.append("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>" % (
-							'<input type="checkbox" name="product" value="%s" %s>' % (productOnDepot.productId,checked),
-							productOnDepot.productId,
-							state,
-							productVersion,
-							productOnDepot.productVersion))
+			tablerows.append('''<tr>
+								<td>%s</td>
+								<td>%s</td>
+								<td>%s</td>
+								<td>%s</td>
+								<td>%s</td>
+								<td>%s</td>
+								<td>%s</td>
+							</tr>''' % (
+									'<input type="checkbox" name="product" value="%s" %s>' % (productOnDepot.productId,checked),
+									productId,
+									productDescription,
+									productAdvice,
+									state,
+									productVersion,
+									productOnDepot.productVersion
+									)
+							)
 			productOnDepots[productOnDepot.productId] =  productOnDepot
 			checked = ''
 		self.disconnectConfigService()
@@ -349,29 +390,37 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			table += row
 		
 		maintable = u'''
-<table>
-<thead>
-			<tr>
-				<th></th>
-				<th>%s</th>
-				<th>Installationsstatus</th>
-				<th>Version</th>
-				<th>verfuegbare Version</th>
-			</tr>
-</thead>
-<tbody>
+					<table>
+						<thead>
+							<tr>
+								<th></th>
+								<th>%s</th>
+								<th>%s</th>
+								<th>%s</th>
+								<th>%s</th>
+								<th>%s</th>
+								<th>%s</th>
+							</tr>
+						</thead>
+						<tbody>
 
-			%result%
-</tbody>
-<tfoot>
-			<tr>
-			<td align="center" colspan="2">
-						<input name="action" value="Save" id="submit" class="button" type="submit" />
-					</td>
-			<tr>
-</tfoot>
-		</table>
-''' % (_(u'product'))
+							%result%
+						</tbody>
+						<tfoot>
+							<tr>
+								<td align="center" colspan="2">
+									<input name="action" value="Save" id="submit" class="button" type="submit" />
+								</td>
+							<tr>
+						</tfoot>
+					</table>
+					''' % (_(u'product'),
+						_(u'description'),
+						_(u'advice'),
+						_(u'state'),
+						_(u'version'),
+						_(u'available version')
+						)
 		
 		maintable = maintable.replace('%result%',table)
 		html = html.replace('%result%', maintable)
@@ -386,19 +435,3 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 
 class ResourceSoftwareOnDemand(ResourceOpsi):
 	WorkerClass = WorkerSoftwareOnDemand
-
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
