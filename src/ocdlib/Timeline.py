@@ -101,14 +101,14 @@ function onLoad() {
 			intervalUnit:   Timeline.DateTime.MINUTE,
 			intervalPixels: 100,
 			eventSource:    eventSource,
-			date:           %(date1)s,
+			date:           "%(date1)s"
 		}),
 		Timeline.createBandInfo({
 			width:          "30%%",
 			intervalUnit:   Timeline.DateTime.HOUR,
 			intervalPixels: 300,
 			eventSource:    eventSource,
-			date:           %(date2)s,
+			date:           "%(date2)s"
 		})
 	];
 	bandInfos[1].syncWith = 0;

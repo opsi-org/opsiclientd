@@ -55,9 +55,11 @@ if (os.name == 'posix'):
 	from ocdlib.Posix import *
 from ocdlib.Localization import _, setLocaleDir, getLanguage
 from ocdlib.Config import Config
-	
+from ocdlib.Timeline import Timeline
+
 logger = Logger()
 config = Config()
+timeline = Timeline()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                      EVENT PROCESSING THREAD                                      -
@@ -894,10 +896,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					self.opsiclientd.shutdownMachine()
 		except Exception, e:
 			logger.logException(e)
-				
+		
 	def run(self):
 		try:
 			logger.notice(u"============= EventProcessingThread for occurcence of event '%s' started =============" % self.event)
+			self._timelineEventId = timeline.addEvent(title = 'Processing event %s' % self.event.name, description = u"EventProcessingThread for occurcence of event '%s' started" % self.event, category = u'event')
 			self.running = True
 			self.eventCancelled = False
 			self.waitCancelled = False
@@ -1029,6 +1032,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		
 		self.running = False
 		logger.notice(u"============= EventProcessingThread for event '%s' ended =============" % self.event)
+		timeline.setEventEnd(eventId = self._timelineEventId)
 	
 	
 
