@@ -48,7 +48,7 @@ from ocdlib.Config import Config
 logger = Logger()
 config = Config()
 
-htmlHead = '''
+htmlHead = u'''
 <script src="/timeline-api.js" type="text/javascript"></script>
 <script>
 var timeline_data = %(data)s
@@ -61,14 +61,14 @@ function onLoad() {
 			intervalUnit:   Timeline.DateTime.DAY,
 			intervalPixels: 100,
 			eventSource:    eventSource,
-			date:           Date(%(date)s),
+			date:           Date(%(date1)s),
 		}),
 		Timeline.createBandInfo({
 			width:          "30%",
 			intervalUnit:   Timeline.DateTime.WEEK,
 			intervalPixels: 200,
 			eventSource:    eventSource,
-			date:           Date(%(date)s),
+			date:           Date(%(date2)s),
 		})
 	];
 	bandInfos[1].syncWith = 0;
@@ -101,7 +101,8 @@ class TimelineImplementation(object):
 	def getHtmlHead(self):
 		return htmlHead % {
 			'data': json.dumps({'dateTimeFormat': 'Gregorian', 'events': self.getEvents()}),
-			'date': time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime())
+			'date1': time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime()),
+			'date2': time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime())
 		}
 	
 	def _createDatabase(self):
