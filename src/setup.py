@@ -132,7 +132,7 @@ data_files = [
 	('locale\\de\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_de.mo']),
 	('opsiclientd\\extend.d', glob.glob('..\\extend.d\*.*')),
 ]
-data_files += tree("static_html")
+data_files += tree("..\\static_html")
 print data_files
 
 sys.exit(0)
