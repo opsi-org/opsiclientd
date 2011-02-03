@@ -57,6 +57,7 @@ Timeline_parameters = "bundle=true";
 var timeline_data   = %(data)s;
 var tl;
 function onLoad() {
+	alert("onload");
 	var eventSource = new Timeline.DefaultEventSource();
 	var bandInfos = [
 		Timeline.createBandInfo({
@@ -124,7 +125,7 @@ class TimelineImplementation(object):
 				'link': 'http://www.allposters.com/-sp/Three-Figures-1913-28-Posters_i1349989_.htm'
 				}
 			]
-			};
+			}
 			''',
 			'date1': time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime()),
 			'date2': time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime())
