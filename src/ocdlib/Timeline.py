@@ -99,7 +99,7 @@ function onLoad() {
 		Timeline.createBandInfo({
 			width:          "70%%",
 			intervalUnit:   Timeline.DateTime.MINUTE,
-			intervalPixels: 100,
+			intervalPixels: 300,
 			eventSource:    eventSource,
 			date:           "%(date1)s"
 		}),
