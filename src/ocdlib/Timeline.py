@@ -152,7 +152,7 @@ class TimelineImplementation(object):
 				#event['classname'] = u"error-event"
 				event['textColor'] = u"#660000"
 				event['icon'] = u"dark-red-circle.png"
-			del event['isError']:
+			del event['isError']
 			del event['category']
 			del event['id']
 			events.append(event)
