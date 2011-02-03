@@ -249,7 +249,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		productDescription = ''
 		productAdvice = ''
 		tablerows = []
-		productOnDepots = {}
+		#productOnDepots = {}
 		productIds = []
 		myClientId = config.get('global', 'host_id')
 		mydepotServer = config.get('depot_server','depot_id')
@@ -386,7 +386,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 									productOnDepot.productVersion
 									)
 							)
-			productOnDepots[productOnDepot.productId] =  productOnDepot
+			#productOnDepots[productOnDepot.productId] = productOnDepot
 			checked = ''
 		self.disconnectConfigService()
 		
