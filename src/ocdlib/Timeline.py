@@ -49,6 +49,13 @@ logger = Logger()
 config = Config()
 
 htmlHead = u'''
+<style type="text/css">
+.timeline-default {
+	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
+	font-size: 8pt;
+	border: 1px solid #aaa;
+}
+</style>
 <script>
 Timeline_ajax_url   = "/timeline/timeline_ajax/simile-ajax-api.js";
 Timeline_urlPrefix  = "/timeline/timeline_js/";
