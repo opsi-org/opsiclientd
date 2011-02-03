@@ -113,9 +113,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		if (self._blockLogin):
 			if not self._blockLoginEventId:
 				self._blockLoginEventId = timeline.addEvent(
-				title       = u"Blocking login",
-				description = u"User login blocked",
-				category    = u"block_login")
+					title       = u"Blocking login",
+					description = u"User login blocked",
+					category    = u"block_login")
 			if not self._blockLoginNotifierPid and config.get('global', 'block_login_notifier'):
 				logger.info(u"Starting block login notifier app")
 				sessionId = System.getActiveConsoleSessionId()
@@ -359,9 +359,9 @@ class Opsiclientd(EventListener, threading.Thread):
 	def processEvent(self, event):
 		
 		logger.notice(u"Processing event %s" % event)
-		
 		eventProcessingThread = None
 		self._eventProcessingThreadsLock.acquire()
+		timeline.addEvent(title = u"Event %s" % event.eventConfig.getName(), description = u"Event %s occurred" % event.eventConfig.getId(), category = u"event_occurrence")
 		try:
 			eventProcessingThread = EventProcessingThread(self, event)
 			
