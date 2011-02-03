@@ -47,7 +47,7 @@ from OPSI.Util import *
 from OPSI import System
 from OPSI.Service import SSLContext, OpsiService
 from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface, WorkerOpsiDAV, interfacePage
-from OPSI.Service.Resource import ResourceOpsi, ResourceOpsiJsonRpc, ResourceOpsiJsonInterface
+from OPSI.Service.Resource import ResourceOpsi, ResourceOpsiJsonRpc, ResourceOpsiJsonInterface, ResourceOpsiDAV
 from OPSI.Backend.BackendManager import BackendManager
 
 from ocdlib.Exceptions import *
@@ -334,7 +334,8 @@ class ControlServer(OpsiService, threading.Thread):
 		
 		if self._staticDir:
 			if os.path.isdir(self._staticDir):
-				self._root = static.File(self._staticDir)
+				self._root = ResourceOpsiDAV(self, path = self._staticDir, readOnly = True, authRequired = False)
+				#self._root = static.File(self._staticDir)
 			else:
 				logger.error(u"Cannot add static content '/': directory '%s' does not exist." % self._staticDir)
 		if not self._root:
