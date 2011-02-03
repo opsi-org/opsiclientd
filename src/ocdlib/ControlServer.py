@@ -239,14 +239,9 @@ class WorkerCacheServiceJsonInterface(WorkerCacheServiceJsonRpc, WorkerOpsiJsonI
 
 
 class WorkerOpsiclientdInfo(WorkerOpsiclientd):
-	isLeaf = False
-	
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientd.__init__(self, service, request, resource)
 	
-	def getChild(self, path, request):
-		return self
-
 	def _generateResponse(self, result):
 		logger.info(u"Creating opsiclientd info page")
 		
@@ -284,6 +279,10 @@ class ResourceCacheServiceJsonInterface(ResourceOpsiJsonInterface):
 	WorkerClass = WorkerCacheServiceJsonInterface
 
 class ResourceOpsiclientdInfo(ResourceOpsiclientd):
+	#isLeaf = False
+	#def getChild(self, path, request):
+	#	return self
+	#
 	WorkerClass = WorkerOpsiclientdInfo
 	
 	def __init__(self, service):
@@ -349,7 +348,7 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root.putChild("interface",   ResourceOpsiclientdJsonInterface(self))
 		self._root.putChild("rpc", ResourceCacheServiceJsonRpc(self))
 		self._root.putChild("rpcinterface", ResourceCacheServiceJsonInterface(self))
-		self._root.putChild("info", ResourceOpsiclientdInfo(self))
+		self._root.putChild("info.html", ResourceOpsiclientdInfo(self))
 		if ResourceSoftwareOnDemand:
 			self._root.putChild("swondemand", ResourceSoftwareOnDemand(self))
 		
