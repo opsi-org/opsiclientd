@@ -338,8 +338,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				if depotobj.productId == productId:
 					productOnDepot = depotobj
 					break
-			for productobj in products:
-				if productobj.id == productId:
+			for productObj in products:
+				if productObj.id == productId:
 					product = productObj
 					break
 				
