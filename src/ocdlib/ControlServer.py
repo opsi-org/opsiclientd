@@ -65,6 +65,47 @@ try:
 except Exception, e:
 	pass
 
+
+
+infoPage = u'''
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<title>opsi client daemon</title>
+	
+	<style type="text/css">
+		#title {
+			padding-left:10px;
+			color: #6276a0; 
+			font-size: 20px; 
+			font-weight: bolder; 
+			letter-spacing: 5px;
+		}
+		#links {
+			padding-left:50px;
+			color: #555555;
+			font-size: 14px;
+			letter-spacing: 2px;
+		}
+		a:link 		{ color: #555555; text-decoration: none; }
+		a:visited	{ color: #555555; text-decoration: none; }
+		a:hover		{ color: #46547f; text-decoration: none; }
+		a:active	{ color: #555555; text-decoration: none; }
+	</style>
+	%(head)s
+</head>
+<body onLoad="onLoad()" onResize="onResize()">
+	<div id="opsiclientd-timeline" style="height: 150px; border: 1px solid #aaaaaa"></div>
+	<noscript>
+	This page uses Javascript to show you a Timeline. Please enable Javascript in your browser to see the full page. Thank you.
+	</noscript>
+</body>
+</html>
+'''
+
 '''
 = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 =                                            CONTROL SERVER                                           =
@@ -197,6 +238,23 @@ class WorkerCacheServiceJsonInterface(WorkerCacheServiceJsonRpc, WorkerOpsiJsonI
 		return WorkerOpsiJsonInterface._generateResponse(self, result)
 
 
+class WorkerOpsiclientdInfo(WorkerOpsiclientd):
+	def __init__(self, service, request, resource):
+		WorkerOpsiclientd.__init__(self, service, request, resource)
+	
+	def _generateResponse(self, result):
+		logger.info(u"Creating opsiclientd info page")
+		
+		#if not self.session.isAdmin:
+		#	raise OpsiAuthenticationError(u"Permission denied")
+		
+		html = infoPage % { 'head': timeline.getHtmlHead() }
+		if not isinstance(result, http.Response):
+			result = http.Response()
+		result.code = responsecode.OK
+		result.stream = stream.IByteStream(html.encode('utf-8').strip())
+		return result
+
 
 class ResourceRoot(resource.Resource):
 	addSlash = True
@@ -219,6 +277,12 @@ class ResourceCacheServiceJsonRpc(ResourceOpsiJsonRpc):
 
 class ResourceCacheServiceJsonInterface(ResourceOpsiJsonInterface):
 	WorkerClass = WorkerCacheServiceJsonInterface
+
+class ResourceOpsiclientdInfo(ResourceOpsiclientd):
+	WorkerClass = WorkerOpsiclientdInfo
+	
+	def __init__(self, service):
+		ResourceOpsiclientd.__init__(self, service)
 
 class ControlServer(OpsiService, threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
@@ -279,6 +343,7 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root.putChild("interface",   ResourceOpsiclientdJsonInterface(self))
 		self._root.putChild("rpc", ResourceCacheServiceJsonRpc(self))
 		self._root.putChild("rpcinterface", ResourceCacheServiceJsonInterface(self))
+		self._root.putChild("info", ResourceOpsiclientdInfo(self))
 		if ResourceSoftwareOnDemand:
 			self._root.putChild("swondemand", ResourceSoftwareOnDemand(self))
 		
