@@ -900,10 +900,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	def run(self):
 		self._timelineEventId = None
 		try:
-			logger.notice(u"============= EventProcessingThread for occurcence of event '%s' started =============" % self.event)
+			logger.notice(u"============= EventProcessingThread for occurrcence of event '%s' started =============" % self.event)
 			self._timelineEventId = timeline.addEvent(
 				title       = u"Processing event %s" % self.event.eventConfig.getName(),
-				description = u"EventProcessingThread for occurcence of event '%s' started" % self.event.eventConfig.getId(),
+				description = u"EventProcessingThread for occurrcence of event '%s' started" % self.event.eventConfig.getId(),
 				category    = u"event_processing")
 			self.running = True
 			self.eventCancelled = False
