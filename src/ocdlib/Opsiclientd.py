@@ -104,12 +104,18 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._popupNotificationServer = None
 		self._popupNotificationLock = threading.Lock()
 		
+		self._blockLoginEventId = None
 	
 	def setBlockLogin(self, blockLogin):
 		self._blockLogin = bool(blockLogin)
 		logger.notice(u"Block login now set to '%s'" % self._blockLogin)
 		
 		if (self._blockLogin):
+			if not self._blockLoginEventId:
+				self._blockLoginEventId = timeline.addEvent(
+				title       = u"Blocking login",
+				description = u"User login blocked",
+				category    = u"block_login")
 			if not self._blockLoginNotifierPid and config.get('global', 'block_login_notifier'):
 				logger.info(u"Starting block login notifier app")
 				sessionId = System.getActiveConsoleSessionId()
@@ -132,14 +138,17 @@ class Opsiclientd(EventListener, threading.Thread):
 						else:
 							logger.error(u"Failed to start block login notifier app: %s" % forceUnicode(e))
 							break
-		elif (self._blockLoginNotifierPid):
-			try:
-				logger.info(u"Terminating block login notifier app (pid %s)" % self._blockLoginNotifierPid)
-				System.terminateProcess(processId = self._blockLoginNotifierPid)
-			except Exception, e:
-				logger.warning(u"Failed to terminate block login notifier app: %s" % forceUnicode(e))
-			self._blockLoginNotifierPid = None
-		
+		else:
+			if self._blockLoginEventId:
+				timeline.setEventEnd(eventId = self._blockLoginEventId)
+			if (self._blockLoginNotifierPid):
+				try:
+					logger.info(u"Terminating block login notifier app (pid %s)" % self._blockLoginNotifierPid)
+					System.terminateProcess(processId = self._blockLoginNotifierPid)
+				except Exception, e:
+					logger.warning(u"Failed to terminate block login notifier app: %s" % forceUnicode(e))
+				self._blockLoginNotifierPid = None
+			
 	def isRunning(self):
 		return self._running
 	
