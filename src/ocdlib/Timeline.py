@@ -164,7 +164,8 @@ class TimelineImplementation(object):
 			elif (event['category'] == 'block_login'):
 				event['color'] = u"#FF8000"
 				event['textColor'] = u"#FF8000"
-			
+			elif event['category'] in ('product_caching', 'config_sync'):
+				pass
 			del event['isError']
 			del event['category']
 			del event['id']
