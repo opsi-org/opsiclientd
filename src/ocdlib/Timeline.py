@@ -59,6 +59,7 @@ from ocdlib.Config import Config
 logger = Logger()
 config = Config()
 
+TIMELINE_IMAGE_URL = u'/timeline/timeline_js/images/'
 htmlHead = u'''
 <style type="text/css">
 .timeline-default {
@@ -140,7 +141,7 @@ class TimelineImplementation(object):
 	def getHtmlHead(self):
 		events = []
 		for event in self.getEvents():
-			event['icon'] = u"gray-circle.png"
+			event['icon'] = TIMELINE_IMAGE_URL + u"gray-circle.png"
 			event['start'] = event['start'].replace(u' ', u'T') + '+00:00'
 			if event['end']:
 				event['durationEvent'] = True
@@ -151,7 +152,7 @@ class TimelineImplementation(object):
 			if event['isError']:
 				#event['classname'] = u"error-event"
 				event['textColor'] = u"#660000"
-				event['icon'] = u"dark-red-circle.png"
+				event['icon'] = TIMELINE_IMAGE_URL + u"dark-red-circle.png"
 			del event['isError']
 			del event['category']
 			del event['id']
