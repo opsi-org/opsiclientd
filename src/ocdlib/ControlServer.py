@@ -98,7 +98,7 @@ infoPage = u'''
 	%(head)s
 </head>
 <body onload="onLoad();" onresize="onResize();">
-	<div class="timeline-default" id="opsiclientd-timeline" style="height: 350px; border: 1px solid #aaaaaa"></div>
+	<div class="timeline-default" id="opsiclientd-timeline" style="height: 400px; border: 1px solid #aaaaaa"></div>
 	<noscript>
 	This page uses Javascript to show you a Timeline. Please enable Javascript in your browser to see the full page. Thank you.
 	</noscript>

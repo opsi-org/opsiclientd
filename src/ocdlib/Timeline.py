@@ -65,11 +65,11 @@ htmlHead = u'''
 .timeline-default {
 	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
 	font-size: 8pt;
-	border: 1px solid #aaa;
+	border: 1px solid #111111;
 }
 .timeline-event-bubble-title {
 	font-weight: bold;
-	border-bottom: 1px solid #888;
+	border-bottom: 1px solid #111111;
 	margin-bottom: 0.5em;
 	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
 	font-size: 8pt;
@@ -97,14 +97,14 @@ function onLoad() {
 	var eventSource = new Timeline.DefaultEventSource();
 	var bandInfos = [
 		Timeline.createBandInfo({
-			width:          "50%%",
+			width:          "40%%",
 			intervalUnit:   Timeline.DateTime.MINUTE,
 			intervalPixels: 200,
 			eventSource:    eventSource,
 			date:           "%(date1)s"
 		}),
 		Timeline.createBandInfo({
-			width:          "50%%",
+			width:          "60%%",
 			intervalUnit:   Timeline.DateTime.HOUR,
 			intervalPixels: 300,
 			eventSource:    eventSource,
@@ -155,12 +155,12 @@ class TimelineImplementation(object):
 				event['textColor'] = u"#880000"
 				event['icon'] = TIMELINE_IMAGE_URL + u"dark-red-circle.png"
 			elif event['category'] in ('event_processing', 'event_occurrence'):
+				event['color'] = u"#E6E600"
+				event['textColor'] = u"#111111"
+			elif (event['category'] == 'opsiclientd_running'):
 				event['color'] = u"#008800"
 				event['textColor'] = u"#008800"
 				event['icon'] = TIMELINE_IMAGE_URL + u"dull-green-circle.png"
-			elif (event['category'] == 'opsiclientd_running'):
-				event['color'] = u"#E5E500"
-				#event['textColor'] = u"#E5E500"
 			elif (event['category'] == 'block_login'):
 				event['color'] = u"#FF8000"
 				event['textColor'] = u"#FF8000"
