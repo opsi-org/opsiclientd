@@ -331,6 +331,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		products = jsonrpc2.waitForResult()
 		productOnDepots = jsonrpc3.waitForResult()
 		self._configService.setAsync(False)
+		for poc in self.productOnClients:
+			logger.info(u"FROM SERVICE: %s" % poc)
 		
 		for productId in productIds:
 			productOnClient = None
