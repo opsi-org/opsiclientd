@@ -104,8 +104,12 @@ class TimelineImplementation(object):
 		self._createDatabase()
 	
 	def getHtmlHead(self):
+		events = []
+		for event in self.getEvents():
+			#event['start'] = time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime())
+			events.append(event)
 		return htmlHead % {
-			'data': json.dumps({'dateTimeFormat': 'Gregorian', 'events': self.getEvents()}),
+			'data': json.dumps({'dateTimeFormat': 'iso8601', 'events': events}),
 			'date1': time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime()),
 			'date2': time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime())
 		}
