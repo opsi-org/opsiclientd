@@ -279,10 +279,6 @@ class ResourceCacheServiceJsonInterface(ResourceOpsiJsonInterface):
 	WorkerClass = WorkerCacheServiceJsonInterface
 
 class ResourceOpsiclientdInfo(ResourceOpsiclientd):
-	#isLeaf = False
-	#def getChild(self, path, request):
-	#	return self
-	#
 	WorkerClass = WorkerOpsiclientdInfo
 	
 	def __init__(self, service):

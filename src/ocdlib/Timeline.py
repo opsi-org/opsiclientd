@@ -50,11 +50,11 @@ config = Config()
 
 htmlHead = u'''
 <script>
-Timeline_ajax_url   = "../timeline/timeline_ajax/simile-ajax-api.js";
-Timeline_urlPrefix  = "../timeline/timeline_js/";
+Timeline_ajax_url   = "/timeline/timeline_ajax/simile-ajax-api.js";
+Timeline_urlPrefix  = "/timeline/timeline_js/";
 Timeline_parameters = "bundle=true";
 </script>
-<script src="../timeline/timeline_js/timeline-api.js" type="text/javascript"></script>
+<script src="/timeline/timeline_js/timeline-api.js" type="text/javascript"></script>
 <script>
 var timeline_data = %(data)s;
 var tl;
@@ -105,29 +105,7 @@ class TimelineImplementation(object):
 	
 	def getHtmlHead(self):
 		return htmlHead % {
-			#'data': json.dumps({'dateTimeFormat': 'Gregorian', 'events': self.getEvents()}),
-			'data': '''{
-			'dateTimeFormat': 'iso8601',
-			'wikiURL': "http://simile.mit.edu/shelf/",
-			'wikiSection': "Simile Cubism Timeline",
-			
-			'events' : [
-				{'start': '1924',
-				'title': 'Barfusserkirche',
-				'description': 'by Lyonel Feininger, American/German Painter, 1871-1956',
-				'image': 'http://images.allposters.com/images/AWI/NR096_b.jpg',
-				'link': 'http://www.allposters.com/-sp/Barfusserkirche-1924-Posters_i1116895_.htm'
-				},
-				{'start': '2013',
-				'end': '2029',
-				'title': 'Three Figures',
-				'description': 'by Kasimir Malevich, Ukrainian Painter, 1878-1935',
-				'image': 'http://images.allposters.com/images/BRGPOD/75857_b.jpg',
-				'link': 'http://www.allposters.com/-sp/Three-Figures-1913-28-Posters_i1349989_.htm'
-				}
-			]
-			}
-			''',
+			'data': json.dumps({'dateTimeFormat': 'Gregorian', 'events': self.getEvents()}),
 			'date1': time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime()),
 			'date2': time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime())
 		}
