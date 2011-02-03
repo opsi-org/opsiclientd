@@ -154,7 +154,7 @@ class TimelineImplementation(object):
 				event['color'] = u"#880000"
 				event['textColor'] = u"#880000"
 				event['icon'] = TIMELINE_IMAGE_URL + u"dark-red-circle.png"
-			elif (event['category'] == 'event_processing'):
+			elif event['category'] in ('event_processing', 'event_occurrence'):
 				event['color'] = u"#008800"
 				event['textColor'] = u"#008800"
 				event['icon'] = TIMELINE_IMAGE_URL + u"dull-green-circle.png"
