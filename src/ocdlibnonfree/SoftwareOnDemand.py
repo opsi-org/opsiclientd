@@ -166,7 +166,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						installationStatus = 'not_installed'
 					)
 					self.productOnClients.append(productOnClient)
-					index = len(self.productOnClients)
+					index = len(self.productOnClients) - 1
 				if productOnClient.actionRequest == 'setup':
 					logger.notice(u"Product: '%s' is already set on setup, nothing to do." % productId)
 					continue
@@ -197,8 +197,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			else:
 				logger.notice(u'No action set, nothing to do.')
 			return 'Alles roger'
-		except Exception,e:
-			logger.error(e)
+		except Exception, e:
+			logger.logException(e)
 		
 		
 	def _generateResponse(self, result):
