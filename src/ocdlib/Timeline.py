@@ -48,12 +48,41 @@ from ocdlib.Config import Config
 logger = Logger()
 config = Config()
 
+'''
+Timeline event attributes:
+* icon - url. This image will appear next to the title text in the timeline if (no end date) or (durationEvent = false). If a start and end date are supplied, and durationEvent is true, the icon is not shown. If icon attribute is not set, a default icon from the theme is used.
+* image - url to an image that will be displayed in the bubble
+* link - url. The bubble's title text be a hyper-link to this address.
+* color - color of the text and tape (duration events) to display in the timeline. If the event has durationEvent = false, then the bar's opacity will be applied (default 20%). See durationEvent, above.
+* textColor - color of the label text on the timeline. If not set, then the color attribute will be used.
+* tapeImage and tapeRepeat Sets the background image and repeat style for the event's tape (or 'bar') on the Timeline. Overrides the color setting for the tape. Repeat style should be one of {repeat | repeat-x | repeat-y}, repeat is the default. See the Cubism example for a demonstration. Only applies to duration events.
+* caption - additional event information shown when mouse is hovered over the Timeline tape or label. Uses the html title property. Looks like a tooltip. Plain text only. See the cubism example.
+* classname - added to the HTML classnames for the event's label and tape divs. Eg classname attribute 'hot_event' will result in div classes of 'timeline-event-label hot_event' and 'timeline-event-tape hot_event' for the event's Timeline label and tape, respectively.
+* description - will be displayed inside the bubble with the event's title and image.
+'''
+
 htmlHead = u'''
 <style type="text/css">
-.timeline {
+.timeline-default {
 	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
 	font-size: 8pt;
 	border: 1px solid #aaa;
+}
+.timeline-event-bubble-title {
+	font-weight: bold;
+	border-bottom: 1px solid #888;
+	margin-bottom: 0.5em;
+	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
+	font-size: 8pt;
+}
+.timeline-event-bubble-body {
+	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
+	font-size: 8pt;
+}
+.timeline-event-bubble-time {
+	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
+	font-size: 8pt;
+	margin-top: 10px;
 }
 </style>
 <script>
@@ -113,6 +142,7 @@ class TimelineImplementation(object):
 	def getHtmlHead(self):
 		events = []
 		for event in self.getEvents():
+			event['icon'] = u"gray-circle.png"
 			event['start'] = event['start'].replace(u' ', u'T') + '+00:00'
 			if event['end']:
 				event['durationEvent'] = True
@@ -120,6 +150,10 @@ class TimelineImplementation(object):
 			else:
 				event['durationEvent'] = False
 				del event['end']
+			if event['isError']:
+				event['classname'] = u"error-event"
+				event['icon'] = u"dark-red-circle.png"
+			del event['isError']:
 			del event['category']
 			del event['id']
 			events.append(event)
@@ -149,6 +183,7 @@ class TimelineImplementation(object):
 					`id` integer NOT NULL ''' + self._sql.AUTOINCREMENT + ''',
 					`title` varchar(255) NOT NULL,
 					`category` varchar(64),
+					`isError` bool,
 					`description` varchar(1024),
 					`start` TIMESTAMP,
 					`end` TIMESTAMP,
@@ -160,9 +195,7 @@ class TimelineImplementation(object):
 			self._sql.execute('CREATE INDEX `category` on `EVENT` (`category`);')
 			self._sql.execute('CREATE INDEX `start` on `EVENT` (`start`);')
 	
-	def addEvent(self, title, description=u'', category=None, start=None, end=None):
-		title = forceUnicode(title)
-		description = forceUnicode(description)
+	def addEvent(self, title, description=u'', isError=False, category=None, start=None, end=None):
 		if category:
 			category = forceUnicode(category)
 		if not start:
@@ -171,9 +204,10 @@ class TimelineImplementation(object):
 		if end:
 			end = forceOpsiTimestamp(start)
 		return self._sql.insert('EVENT', {
-			'title':       title,
+			'title':       forceUnicode(title),
 			'category':    category,
-			'description': description,
+			'description': forceUnicode(description),
+			'isError':     forceBool(isError),
 			'start':       start,
 			'end':         end,
 		})
