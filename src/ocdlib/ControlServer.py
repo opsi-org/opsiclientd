@@ -54,9 +54,11 @@ from ocdlib.Exceptions import *
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.Config import Config
 from ocdlib.Events import eventGenerators
+from ocdlib.Timeline import Timeline
 
 logger = Logger()
 config = Config()
+timeline = Timeline()
 
 try:
 	from ocdlibnonfree.CacheService import CacheService
@@ -295,6 +297,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	
 	def cacheService_getConfigModifications(self):
 		return self.opsiclientd.getCacheService().getConfigModifications()
+	
+	def timeline_getEvents(self):
+		return timeline.getEvents()
 	
 	def setBlockLogin(self, blockLogin):
 		self.opsiclientd.setBlockLogin(bool(blockLogin))
