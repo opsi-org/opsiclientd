@@ -156,7 +156,7 @@ class TimelineImplementation(object):
 				event['icon'] = TIMELINE_IMAGE_URL + u"dark-red-circle.png"
 			elif event['category'] in ('event_processing', 'event_occurrence'):
 				event['color'] = u"#E6E600"
-				event['textColor'] = u"#111111"
+				event['textColor'] = u"#E6E600"
 			elif (event['category'] == 'opsiclientd_running'):
 				event['color'] = u"#008800"
 				event['textColor'] = u"#008800"
