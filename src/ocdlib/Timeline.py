@@ -51,7 +51,8 @@ config = Config()
 htmlHead = u'''
 <script src="/timeline-api.js" type="text/javascript"></script>
 <script>
-var timeline_data = %(data)s
+Timeline_parameters='bundle=true';
+var timeline_data = %(data)s;
 var tl;
 function onLoad() {
 	var eventSource = new Timeline.DefaultEventSource();
