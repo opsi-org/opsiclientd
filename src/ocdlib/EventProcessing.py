@@ -590,7 +590,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	
 	def runActions(self, additionalParams=''):
 		runActionsEventId = timeline.addEvent(
-			title       = u"Running actions"
+			title       = u"Running actions",
 			description = u"Running actions",
 			category    = u"run_actions")
 		
@@ -610,7 +610,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
 						self.setStatusMessage( _(u"Waiting for TrustedInstaller") )
 						waitEventId = timeline.addEvent(
-								title       = u"Waiting for TrustedInstaller"
+								title       = u"Waiting for TrustedInstaller",
 								description = u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
 								category    = u"wait")
 						while True:
