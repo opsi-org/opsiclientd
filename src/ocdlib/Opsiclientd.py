@@ -192,7 +192,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		self._actionProcessorUserName = runAsUser
 		logger.notice(u"Creating local user '%s'" % runAsUser)
-		timeline.addEvent(title = u"Creating local user '%s'" % runAsUser, description = u'', category = u'system')
+		#timeline.addEvent(title = u"Creating local user '%s'" % runAsUser, description = u'', category = u'system')
 		
 		self._actionProcessorUserPassword = u'$!?' + unicode(randomString(16)) + u'!/%'
 		logger.addConfidentialString(self._actionProcessorUserPassword)
@@ -209,7 +209,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not System.existsUser(username = self._actionProcessorUserName):
 			return
 		logger.notice(u"Deleting local user '%s'" % self._actionProcessorUserName)
-		timeline.addEvent(title = u"Deleting local user '%s'" % self._actionProcessorUserName, description = u'', category = u'system')
+		#timeline.addEvent(title = u"Deleting local user '%s'" % self._actionProcessorUserName, description = u'', category = u'system')
 		System.deleteUser(username = self._actionProcessorUserName)
 		self._actionProcessorUserName = u''
 		self._actionProcessorUserPassword = u''
