@@ -217,6 +217,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	def run(self):
 		self._running = True
 		self._stopped = False
+		self._opsiclientdRunningEventId = None
 		
 		config.readConfigFile()
 		setLocaleDir(config.get('global', 'locale_dir'))
@@ -236,7 +237,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			eventDescription += u"Using host id '%s'" % config.get('global', 'host_id')
 			logger.notice(u"Using host id '%s'" % config.get('global', 'host_id'))
 			
-			timeline.addEvent(title = eventTitle, description = eventDescription, category = u'main')
+			self._opsiclientdRunningEventId = timeline.addEvent(title = eventTitle, description = eventDescription, category = u'opsiclientd_running')
 			
 			self.setBlockLogin(True)
 			
@@ -347,7 +348,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			self.setBlockLogin(False)
 		
 		self._running = False
-	
+		if self._opsiclientdRunningEventId:
+			timeline.setEventEnd(self._opsiclientdRunningEventId)
+		
 	def stop(self):
 		self._stopped = True
 	

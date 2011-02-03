@@ -97,14 +97,14 @@ function onLoad() {
 	var eventSource = new Timeline.DefaultEventSource();
 	var bandInfos = [
 		Timeline.createBandInfo({
-			width:          "70%%",
+			width:          "50%%",
 			intervalUnit:   Timeline.DateTime.MINUTE,
-			intervalPixels: 300,
+			intervalPixels: 200,
 			eventSource:    eventSource,
 			date:           "%(date1)s"
 		}),
 		Timeline.createBandInfo({
-			width:          "30%%",
+			width:          "50%%",
 			intervalUnit:   Timeline.DateTime.HOUR,
 			intervalPixels: 300,
 			eventSource:    eventSource,
@@ -158,6 +158,9 @@ class TimelineImplementation(object):
 				event['color'] = u"#008800"
 				event['textColor'] = u"#008800"
 				event['icon'] = TIMELINE_IMAGE_URL + u"dull-green-circle.png"
+			elif (event['category'] == 'opsiclientd_running'):
+				event['color'] = u"#E5E500"
+				#event['textColor'] = u"#E5E500"
 			elif (event['category'] == 'block_login'):
 				event['color'] = u"#FF8000"
 				event['textColor'] = u"#FF8000"
