@@ -16,11 +16,11 @@ if (len(sys.argv) == 1):
 	sys.argv.append("-q")
 
 def tree(dst, src):
-	list = [(dst, map(lambda f: os.path.join(root, f), files)) for (root, dirs, files) in os.walk(os.path.normpath(src))]
+	list = [(dst, map(lambda f: os.path.join(dst, f), files)) for (dst, dirs, files) in os.walk(os.path.normpath(src))]
 	new_list = []
-	for (root, files) in list:
-		if (len(files) > 0) and (root.count('.svn') == 0):
-			new_list.append((root, files))
+	for (dst, files) in list:
+		if (len(files) > 0) and (dst.count('.svn') == 0):
+			new_list.append((dst, files))
 	return new_list
 
 class Target:
