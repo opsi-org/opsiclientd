@@ -410,7 +410,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						</thead>
 						<tbody>
 
-							%result%
+							%s
 						</tbody>
 						<tfoot>
 							<tr>
@@ -425,10 +425,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						_(u'advice'),
 						_(u'state'),
 						_(u'version'),
-						_(u'available version')
+						_(u'available version'),
+						table
 						)
 		
-		maintable = maintable.replace('%result%',table)
 		html = html.replace('%result%', maintable)
 		
 		#html = html.replace('%result%', myClientId)
