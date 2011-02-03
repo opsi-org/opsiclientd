@@ -62,16 +62,16 @@ function onLoad() {
 	var eventSource = new Timeline.DefaultEventSource();
 	var bandInfos = [
 		Timeline.createBandInfo({
-			width:          "80%%",
-			intervalUnit:   Timeline.DateTime.HOUR,
+			width:          "70%%",
+			intervalUnit:   Timeline.DateTime.MINUTE,
 			intervalPixels: 200,
 			magnify:        10,
 			eventSource:    eventSource,
 			date:           Date(%(date1)s),
 		}),
 		Timeline.createBandInfo({
-			width:          "20%%",
-			intervalUnit:   Timeline.DateTime.MINUTE,
+			width:          "30%%",
+			intervalUnit:   Timeline.DateTime.HOUR,
 			intervalPixels: 200,
 			magnify:        10,
 			multiple:       5,
