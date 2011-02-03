@@ -242,6 +242,9 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientd.__init__(self, service, request, resource)
 	
+	def getChild(self, path, request):
+		return self
+
 	def _generateResponse(self, result):
 		logger.info(u"Creating opsiclientd info page")
 		
