@@ -108,10 +108,10 @@ class TimelineImplementation(object):
 		for event in self.getEvents():
 			event['start'] = event['start'].replace(u' ', u'T') + '+00:00'
 			if event['end']:
-				res['durationEvent'] = True
+				event['durationEvent'] = True
 				event['end'] = event['end'].replace(u' ', u'T') + '+00:00'
 			else:
-				res['durationEvent'] = False
+				event['durationEvent'] = False
 				del event['end']
 			del event['category']
 			del event['id']
