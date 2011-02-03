@@ -63,14 +63,14 @@ function onLoad() {
 	var bandInfos = [
 		Timeline.createBandInfo({
 			width:          "70%%",
-			intervalUnit:   Timeline.DateTime.DAY,
+			intervalUnit:   Timeline.DateTime.HOUR,
 			intervalPixels: 100,
 			eventSource:    eventSource,
 			date:           Date(%(date1)s),
 		}),
 		Timeline.createBandInfo({
 			width:          "30%%",
-			intervalUnit:   Timeline.DateTime.WEEK,
+			intervalUnit:   Timeline.DateTime.DAY,
 			intervalPixels: 200,
 			eventSource:    eventSource,
 			date:           Date(%(date2)s),
