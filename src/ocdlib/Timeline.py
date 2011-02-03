@@ -49,10 +49,12 @@ logger = Logger()
 config = Config()
 
 htmlHead = u'''
-<script src="/timeline-api.js" type="text/javascript"></script>
+<script src="/timeline/timeline_js/timeline-api.js" type="text/javascript"></script>
 <script>
-Timeline_parameters='bundle=true';
-var timeline_data = %(data)s;
+Timeline_ajax_url   = "/timeline/timeline_ajax/simile-ajax-api.js";
+Timeline_urlPrefix  = "/timeline/timeline_js/";
+Timeline_parameters = "bundle=true";
+var timeline_data   = %(data)s;
 var tl;
 function onLoad() {
 	var eventSource = new Timeline.DefaultEventSource();
