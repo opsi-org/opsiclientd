@@ -50,7 +50,7 @@ config = Config()
 
 htmlHead = u'''
 <style type="text/css">
-.timeline-default {
+.timeline {
 	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
 	font-size: 8pt;
 	border: 1px solid #aaa;
@@ -71,17 +71,14 @@ function onLoad() {
 		Timeline.createBandInfo({
 			width:          "70%%",
 			intervalUnit:   Timeline.DateTime.MINUTE,
-			intervalPixels: 200,
-			magnify:        10,
+			intervalPixels: 100,
 			eventSource:    eventSource,
 			date:           Date(%(date1)s),
 		}),
 		Timeline.createBandInfo({
 			width:          "30%%",
 			intervalUnit:   Timeline.DateTime.HOUR,
-			intervalPixels: 200,
-			magnify:        10,
-			multiple:       5,
+			intervalPixels: 300,
 			eventSource:    eventSource,
 			date:           Date(%(date2)s),
 		})
