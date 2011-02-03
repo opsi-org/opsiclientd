@@ -209,7 +209,7 @@ class TimelineImplementation(object):
 		eventId = forceInt(eventId)
 		if not end:
 			end = timestamp()
-		end = forceOpsiTimestamp(start)
+		end = forceOpsiTimestamp(end)
 		return self._sql.update('EVENT', '`id` = %d' % eventId, { 'end': end })
 	
 	def getEvents(self):
