@@ -74,7 +74,7 @@ function onLoad() {
 			intervalUnit:   Timeline.DateTime.MINUTE,
 			intervalPixels: 200,
 			magnify:        10,
-			multiple:       5
+			multiple:       5,
 			eventSource:    eventSource,
 			date:           Date(%(date2)s),
 		})
