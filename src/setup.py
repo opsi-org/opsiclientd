@@ -15,8 +15,8 @@ if (len(sys.argv) == 1):
 	sys.argv.append("py2exe")
 	sys.argv.append("-q")
 
-def tree(src):
-	list = [(root, map(lambda f: os.path.join(root, f), files)) for (root, dirs, files) in os.walk(os.path.normpath(src))]
+def tree(dst, src):
+	list = [(dst, map(lambda f: os.path.join(root, f), files)) for (root, dirs, files) in os.walk(os.path.normpath(src))]
 	new_list = []
 	for (root, files) in list:
 		if (len(files) > 0) and (root.count('.svn') == 0):
@@ -132,7 +132,7 @@ data_files = [
 	('locale\\de\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_de.mo']),
 	('opsiclientd\\extend.d', glob.glob('..\\extend.d\*.*')),
 ]
-data_files += tree("..\\static_html")
+data_files += tree('opsiclientd\\static_html', '..\\static_html')
 print data_files
 
 sys.exit(0)
