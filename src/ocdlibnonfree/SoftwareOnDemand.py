@@ -151,7 +151,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			productOnClients = self._configService.productOnClient_getObjects(clientId = clientId)
 			#product On Clients
 			for productId in param.get('products', []):
-				for productOnClientObj in productOnClients;
+				for productOnClientObj in productOnClients:
 					if productOnClientObj.productId == productId:
 						productOnClient = productOnClientObj
 				#productOnClient = self._configService.productOnClient_getObjects(clientId = clientId, productId = productId)
