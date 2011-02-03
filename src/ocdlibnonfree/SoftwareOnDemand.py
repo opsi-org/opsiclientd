@@ -313,15 +313,21 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						html = html.replace('%result%', forceUnicode(resulttable))
 						result.stream = stream.IByteStream(html.encode('utf-8'))
 						return result
-
 		
 		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = onDemandGroups):
 			logger.debug(u"Product found: '%s'" % objectToGroup.objectId)
 			if not objectToGroup.objectId in productIds:
 				productIds.append(objectToGroup.objectId)
-		productOnClients = self._configService.productOnClient_getObjects(clientId = myClientId)
-		products = self._configService.product_getObjects(id = productIds)
-		productOnDepots = self._configService.productOnDepot_getObjects(depotId = mydepotServer, productId = productIds):
+		
+		self._configService.setAsync(True)
+		jsonrpc1 = self._configService.productOnClient_getObjects(clientId = myClientId)
+		jsonrpc2 = self._configService.product_getObjects(id = productIds)
+		jsonrpc3 = self._configService.productOnDepot_getObjects(depotId = mydepotServer, productId = productIds)
+		productOnClients = jsonrpc1.waitForResult()
+		products = jsonrpc2.waitForResult()
+		productOnDepots = jsonrpc3.waitForResult()
+		self._configService.setAsync(False)
+		
 		for productId in productIds:
 			productOnClient = None
 			for clientobj in productOnClients:
