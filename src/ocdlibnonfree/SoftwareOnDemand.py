@@ -166,7 +166,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						installationStatus = 'not_installed'
 					)
 					productOnClients.append(productOnClient)
-					index = len(self.productOnClients) - 1
+					index = len(productOnClients) - 1
 				if productOnClient.actionRequest == 'setup':
 					logger.notice(u"Product: '%s' is already set on setup, nothing to do." % productId)
 					continue
