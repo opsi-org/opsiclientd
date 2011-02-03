@@ -239,6 +239,8 @@ class WorkerCacheServiceJsonInterface(WorkerCacheServiceJsonRpc, WorkerOpsiJsonI
 
 
 class WorkerOpsiclientdInfo(WorkerOpsiclientd):
+	isLeaf = False
+	
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientd.__init__(self, service, request, resource)
 	
