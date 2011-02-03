@@ -151,8 +151,13 @@ class TimelineImplementation(object):
 				del event['end']
 			if event['isError']:
 				#event['classname'] = u"error-event"
-				event['textColor'] = u"#660000"
+				event['color'] = u"#880000"
+				event['textColor'] = u"#880000"
 				event['icon'] = TIMELINE_IMAGE_URL + u"dark-red-circle.png"
+			if (event['category'] == 'event_processing'):
+				event['color'] = u"#008800"
+				event['textColor'] = u"#008800"
+				event['icon'] = TIMELINE_IMAGE_URL + u"dull-green-circle.png"
 			del event['isError']
 			del event['category']
 			del event['id']

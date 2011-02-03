@@ -904,7 +904,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			self._timelineEventId = timeline.addEvent(
 				title       = u"Processing event %s" % self.event.eventConfig.getName(),
 				description = u"EventProcessingThread for occurcence of event '%s' started" % self.event,
-				category    = u"event")
+				category    = u"event_processing")
 			self.running = True
 			self.eventCancelled = False
 			self.waitCancelled = False
