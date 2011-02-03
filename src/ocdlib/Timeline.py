@@ -101,14 +101,14 @@ function onLoad() {
 			intervalUnit:   Timeline.DateTime.MINUTE,
 			intervalPixels: 100,
 			eventSource:    eventSource,
-			date:           Date(%(date1)s),
+			date:           %(date1)s,
 		}),
 		Timeline.createBandInfo({
 			width:          "30%%",
 			intervalUnit:   Timeline.DateTime.HOUR,
 			intervalPixels: 300,
 			eventSource:    eventSource,
-			date:           Date(%(date2)s),
+			date:           %(date2)s,
 		})
 	];
 	bandInfos[1].syncWith = 0;
@@ -159,8 +159,8 @@ class TimelineImplementation(object):
 			events.append(event)
 		return htmlHead % {
 			'data': json.dumps({'dateTimeFormat': 'iso8601', 'events': events}),
-			'date1': time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime()),
-			'date2': time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime())
+			'date1': time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime()), #time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime()),
+			'date2': time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime()) #time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime())
 		}
 	
 	def _createDatabase(self):
