@@ -301,7 +301,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								</table>
 								'''
 						for productOnClient in productOnClients:
-							tablerows.append('<tr><td>%s<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td></tr>' % (productOnClient.productId,productOnClient.productId))
+							if productOnClient.getActionRequest() not in ('none', None):
+								tablerows.append('<tr><td>%s<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td></tr>' % (productOnClient.productId,productOnClient.productId))
 						
 						table = ''
 						for row in tablerows:
