@@ -106,20 +106,28 @@ class TimelineImplementation(object):
 	def getHtmlHead(self):
 		events = []
 		for event in self.getEvents():
-			#event['start'] = time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime())
+			event['start'] = event['start'].replace(u' ', u'T') + '+00:00'
+			if event['end']:
+				res['durationEvent'] = True
+				event['end'] = event['end'].replace(u' ', u'T') + '+00:00'
+			else:
+				res['durationEvent'] = False
+				del event['end']
+			del event['category']
+			del event['id']
 			events.append(event)
-		events = [
-			{
-			"start": "2011-02-30T06:00:00+00:00",
-			"end": "2011-02-30T22:00:00+00:00",
-			"title": "My title",
-			"color": "#7FFFD4",
-			"textColor": "#000000",
-			"caption": "1",
-			"trackNum": 1,
-			"description": "bar 1"
-			}
-		]
+		#events = [
+		#	{
+		#	"start": "2011-02-30T06:00:00+00:00",
+		#	"end": "2011-02-30T22:00:00+00:00",
+		#	"title": "My title",
+		#	"color": "#7FFFD4",
+		#	"textColor": "#000000",
+		#	"caption": "1",
+		#	"trackNum": 1,
+		#	"description": "bar 1"
+		#	}
+		#]
 		return htmlHead % {
 			'data': json.dumps({'dateTimeFormat': 'iso8601', 'events': events}),
 			'date1': time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime()),
@@ -171,14 +179,7 @@ class TimelineImplementation(object):
 		return self._sql.update('EVENT', '`id` = %d' % eventId, { 'end': end })
 	
 	def getEvents(self):
-		events = []
-		for res in self._sql.getSet('select * from EVENT'):
-			if res['end']:
-				res['durationEvent'] = True
-			else:
-				res['durationEvent'] = False
-			events.append(res)
-		return events
+		return self._sql.getSet('select * from EVENT')
 	
 class Timeline(TimelineImplementation):
 	# Storage for the instance reference
