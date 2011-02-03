@@ -50,12 +50,11 @@ config = Config()
 
 htmlHead = u'''
 <script>
-Timeline_ajax_url   = "/timeline/timeline_ajax/simile-ajax-api.js";
-Timeline_urlPrefix  = "/timeline/timeline_js/";
+Timeline_ajax_url   = "https://dev-winxp-x86.uib.local:4441/timeline/timeline_ajax/simile-ajax-api.js";
+Timeline_urlPrefix  = "https://dev-winxp-x86.uib.local:4441/timeline/timeline_js/";
 Timeline_parameters = "bundle=true";
 </script>
-<script src="/timeline/timeline_js/timeline-api.js?bundle=true" type="text/javascript"></script>
-<script src="/timeline/timeline_ajax/simile-ajax-api.js?bundle=true" type="text/javascript"></script>
+<script src="https://dev-winxp-x86.uib.local:4441/timeline/timeline_js/timeline-api.js" type="text/javascript"></script>
 <script>
 var timeline_data = %(data)s;
 var tl;
