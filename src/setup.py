@@ -133,9 +133,8 @@ data_files = [
 	('opsiclientd\\extend.d', glob.glob('..\\extend.d\*.*')),
 ]
 data_files += tree('opsiclientd\\static_html', '..\\static_html')
-print data_files
-
-sys.exit(0)
+#print data_files
+#sys.exit(0)
 setup(
 	options = {
 		"py2exe": {
