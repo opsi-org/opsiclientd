@@ -898,9 +898,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.logException(e)
 		
 	def run(self):
+		self._timelineEventId = None
 		try:
 			logger.notice(u"============= EventProcessingThread for occurcence of event '%s' started =============" % self.event)
-			self._timelineEventId = timeline.addEvent(title = 'Processing event %s' % self.event.name, description = u"EventProcessingThread for occurcence of event '%s' started" % self.event, category = u'event')
+			self._timelineEventId = timeline.addEvent(
+				title       = u"Processing event %s" % self.event.eventConfig.getName(),
+				description = u"EventProcessingThread for occurcence of event '%s' started" % self.event,
+				category    = u"event")
 			self.running = True
 			self.eventCancelled = False
 			self.waitCancelled = False
@@ -1032,7 +1036,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		
 		self.running = False
 		logger.notice(u"============= EventProcessingThread for event '%s' ended =============" % self.event)
-		timeline.setEventEnd(eventId = self._timelineEventId)
+		if self._timelineEventId:
+			timeline.setEventEnd(eventId = self._timelineEventId)
 	
 	
 
