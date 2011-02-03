@@ -225,7 +225,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		try:
 			eventTitle = u''
 			if __fullversion__:
-				eventTitle = u"Opsiclientd version: %s (full) started" % __version__
+				eventTitle = u"Opsiclientd version: %s (full) running" % __version__
 				logger.essential(u"Opsiclientd version: %s (full)" % __version__)
 			else:
 				eventTitle = u"Opsiclientd version: %s started" % __version__
