@@ -154,10 +154,14 @@ class TimelineImplementation(object):
 				event['color'] = u"#880000"
 				event['textColor'] = u"#880000"
 				event['icon'] = TIMELINE_IMAGE_URL + u"dark-red-circle.png"
-			if (event['category'] == 'event_processing'):
+			elif (event['category'] == 'event_processing'):
 				event['color'] = u"#008800"
 				event['textColor'] = u"#008800"
 				event['icon'] = TIMELINE_IMAGE_URL + u"dull-green-circle.png"
+			elif (event['category'] == 'block_login'):
+				event['color'] = u"#FF8000"
+				event['textColor'] = u"#FF8000"
+			
 			del event['isError']
 			del event['category']
 			del event['id']
@@ -189,29 +193,35 @@ class TimelineImplementation(object):
 			self._sql.execute('CREATE INDEX `start` on `EVENT` (`start`);')
 	
 	def addEvent(self, title, description=u'', isError=False, category=None, start=None, end=None):
-		if category:
-			category = forceUnicode(category)
-		if not start:
-			start = timestamp()
-		start = forceOpsiTimestamp(start)
-		if end:
-			end = forceOpsiTimestamp(start)
-		return self._sql.insert('EVENT', {
-			'title':       forceUnicode(title),
-			'category':    category,
-			'description': forceUnicode(description),
-			'isError':     forceBool(isError),
-			'start':       start,
-			'end':         end,
-		})
+		try:
+			if category:
+				category = forceUnicode(category)
+			if not start:
+				start = timestamp()
+			start = forceOpsiTimestamp(start)
+			if end:
+				end = forceOpsiTimestamp(start)
+			return self._sql.insert('EVENT', {
+				'title':       forceUnicode(title),
+				'category':    category,
+				'description': forceUnicode(description),
+				'isError':     forceBool(isError),
+				'start':       start,
+				'end':         end,
+			})
+		except Exception, e:
+			logger.error(u"Failed to add event '%s': %s" % (title, e))
 	
 	def setEventEnd(self, eventId, end=None):
-		eventId = forceInt(eventId)
-		if not end:
-			end = timestamp()
-		end = forceOpsiTimestamp(end)
-		return self._sql.update('EVENT', '`id` = %d' % eventId, { 'end': end })
-	
+		try:
+			eventId = forceInt(eventId)
+			if not end:
+				end = timestamp()
+			end = forceOpsiTimestamp(end)
+			return self._sql.update('EVENT', '`id` = %d' % eventId, { 'end': end })
+		except Exception, e:
+			logger.error(u"Failed to set end of event '%s': %s" % (eventId, e))
+		
 	def getEvents(self):
 		return self._sql.getSet('select * from EVENT')
 	
