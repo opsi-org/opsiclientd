@@ -97,7 +97,7 @@ function onLoad() {
 	var eventSource = new Timeline.DefaultEventSource();
 	var bandInfos = [
 		Timeline.createBandInfo({
-			width:          "80%",
+			width:          "80%%",
 			intervalUnit:   Timeline.DateTime.MINUTE,
 			intervalPixels: 200,
 			eventSource:    eventSource,
@@ -105,7 +105,7 @@ function onLoad() {
 			layout:         'original'  // original, overview, detailed
 		}),
 		Timeline.createBandInfo({
-			width:          "10%",
+			width:          "10%%",
 			intervalUnit:   Timeline.DateTime.HOUR,
 			intervalPixels: 300,
 			eventSource:    eventSource,
@@ -113,7 +113,7 @@ function onLoad() {
 			layout:         'overview'  // original, overview, detailed
 		}),
 		Timeline.createBandInfo({
-			width:          "10%",
+			width:          "10%%",
 			intervalUnit:   Timeline.DateTime.DAY,
 			intervalPixels: 600,
 			eventSource:    eventSource,
