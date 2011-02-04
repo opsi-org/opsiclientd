@@ -149,7 +149,8 @@ class TimelineImplementation(object):
 			databaseCharset = 'utf-8'
 		)
 		self._createDatabase()
-	
+		self._cleanupDatabase()
+		
 	def getHtmlHead(self):
 		events = []
 		for event in self.getEvents():
@@ -192,6 +193,9 @@ class TimelineImplementation(object):
 			'date': time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime())
 		}
 	
+	def _cleanupDatabase(self):
+		self._sql.getSet('delete from EVENT where `start` < %d' % timestamp((time.time() - 7*24*3600)))
+		
 	def _createDatabase(self):
 		tables = self._sql.getTables()
 		if not 'EVENT' in tables.keys():
