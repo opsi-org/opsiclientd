@@ -660,7 +660,10 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		self._setProductCacheState(productId, 'completed', None)
 		self._setProductCacheState(productId, 'failure',   None)
 		
-		eventId = timeline.addEvent(title = u"Cache product %s" % productId, description = u"Caching product: %s" % productId, category = u'product_caching')
+		eventId = timeline.addEvent(
+				title       = u"Cache product %s" % productId,
+				description = u"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)" % (productId,  self._maxBandwidth, self._dynamicBandwidth),
+				category    = u'product_caching')
 		
 		repository = self._getRepository(productId)
 		if not config.get('depot_server', 'depot_id'):
