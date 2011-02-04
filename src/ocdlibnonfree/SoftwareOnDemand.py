@@ -45,17 +45,24 @@ mainpage = u'''
 	<title>opsi Software On Demand</title>
 	<style>
 	body          { font-family: verdana, arial; font-size: 12px; }
-	#title        { padding: 10px; color: #6276a0; font-size: 20px; letter-spacing: 5px; }
-	input, select { background-color: #fafafa; border: 1px #abb1ef solid; font-family: verdana, arial;}
-	.title        { color: #555555; font-size: 20px; font-weight: bolder; letter-spacing: 5px; }
-	.button       { color: #9e445a; background-color: #fafafa; border: 1px solid; font-weight: bolder; }
-	.box          { background-color: #fafafa; border: 1px #555555 solid; padding: 20px; margin-left: 30px; margin-top: 50px;}
-	table		{ margin-top: 10px; border-collapse:collapse;text-align: center; }
-	thead		{ background-color: #6495ed;}
-	tbody tr:hover  {background-color: #87cefa; }
-	tfoot		{text-align: right; }
-	
-	td		{ padding: 2px;}
+        #title        { padding: 10px; color: #6276a0; font-size: 20px; letter-spacing: 5px; }
+        input, select { background-color: #fafafa; border: 1px #abb1ef solid; font-family: verdana, arial;}
+        .title        { color: #555555; font-size: 20px; font-weight: bolder; letter-spacing: 5px; }
+        .button       { color: #9e445a; background-color: #fafafa; border: 1px solid; font-weight: bolder; }
+
+        table           { margin-top: 20px; margin-left: 20px; border-collapse:collapse;text-align: center; width: 700px;}
+        thead           { background-color: #6495ed;}
+        tbody tr:hover  {background-color: #87cefa; }
+        tfoot           { margin-top: 50px; }
+        th              { padding: 5px; padding-left: 10px; }
+
+        td              { padding: 5px;}
+        .checkbox       { width: 5px; }
+        .product        { width: 100px; }
+        .descr          { width: 150px; }
+        .advice         { width: 150px; }
+        .state          { width: 75px; }
+        .version        { width: 75px; }
 	</style>
 	
 </head>
@@ -80,6 +87,7 @@ answerpage = u'''
 	<title>opsi Software On Demand</title>
 	<style>
 	   .title        { color: #555555; font-size: 20px; font-weight: bolder; letter-spacing: 5px; }
+	   #title        { padding: 10px; color: #6276a0; font-size: 20px; letter-spacing: 5px; }
 	   .button       { color: #9e445a; background-color: #fafafa; border: 1px solid; font-weight: bolder; }
            table		{ margin-top: 10px; border-collapse:collapse;text-align: center; }
            thead		{ background-color: #6495ed;}
@@ -261,6 +269,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		if not isinstance(result, http.Response):
 			result = http.Response()
 		
+		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = onDemandGroups):
+			logger.debug(u"Product found: '%s'" % objectToGroup.objectId)
+			if not objectToGroup.objectId in productIds:
+				productIds.append(objectToGroup.objectId)
+		
 		#Query bearbeitung
 		if self.query:
 			logger.notice(u"QUERY: '%s'" % self.query)
@@ -287,6 +300,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								<thead>
 									<tr>
 										<th>Produkte die installiert werden</th>
+										<th>Produkte die zus&auml;tzlich installiert werden</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -306,9 +320,24 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								'''
 						for productOnClient in productOnClients:
 							if productOnClient.getActionRequest() not in ('none', None):
-								tablerows.append('<tr><td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td></tr>' \
-									% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
-						
+								if productOnClient.productId in prroductIds:
+									tablerows.append('''<tr>
+												<td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td>
+												<td></td>
+											    </tr>''' \
+											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
+								else:
+									tablerows.append('''<tr>
+												<td></td>
+												<td>%s (%s)</td>
+											    </tr>''' \
+											% (productOnClient.productId, productOnClient.getActionRequest() ))
+						if tablerows:
+							#Try to sort rows:
+							for row in tablerows:
+								
+							
+							
 						table = ''
 						for row in tablerows:
 							table += row
@@ -318,10 +347,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						result.stream = stream.IByteStream(html.encode('utf-8'))
 						return result
 		
-		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = onDemandGroups):
-			logger.debug(u"Product found: '%s'" % objectToGroup.objectId)
-			if not objectToGroup.objectId in productIds:
-				productIds.append(objectToGroup.objectId)
+		
 		
 		self._configService.setAsync(True)
 		jsonrpc1 = self._configService.productOnClient_getObjects(clientId = myClientId)
@@ -375,13 +401,13 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			
 			
 			tablerows.append('''<tr>
-								<td>%s</td>
-								<td>%s</td>
-								<td>%s</td>
-								<td>%s</td>
-								<td>%s</td>
-								<td>%s</td>
-								<td>%s</td>
+								<td class="checkbox">%s</td>
+								<td class="product">%s</td>
+								<td class="descr">%s</td>
+								<td class="advice">%s</td>
+								<td class="state">%s</td>
+								<td class="version">%s</td>
+								<td class="version">%s</td>
 							</tr>''' % (
 									'<input type="checkbox" name="product" value="%s" %s>' % (productOnDepot.productId,checked),
 									productId,
@@ -420,7 +446,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						</tbody>
 						<tfoot>
 							<tr>
-								<td align="center" colspan="2">
+								<td align="center" colspan="7">
 									<input name="action" value="Save" id="submit" class="button" type="submit" />
 								</td>
 							<tr>
