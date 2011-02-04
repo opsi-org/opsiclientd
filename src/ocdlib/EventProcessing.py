@@ -780,6 +780,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					break
 				time.sleep(1)
 			
+			if self.waitCancelled:
+				timeline.addEvent(
+					title       = u"Action processing started by user",
+					description = u"Action processing wait time cancelled by user",
+					category    = u"user_interaction")
+			
 			if self.eventCancelled:
 				self.event.eventConfig.cancelCounter += 1
 				config.set('event_%s' % self.event.eventConfig.getId(), 'cancel_counter', self.event.eventConfig.cancelCounter)
@@ -917,6 +923,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							logger.logException(e)
 						
 						self._messageSubject.setMessage(u"")
+						
+						
+						if self.shutdownWaitCancelled:
+							timeline.addEvent(
+								title       = u"Shutdown started by user",
+								description = u"Shutdown wait time cancelled by user",
+								category    = u"user_interaction")
+						
 						if self.shutdownCancelled:
 							self.event.eventConfig.shutdownCancelCounter += 1
 							logger.notice(u"Shutdown cancelled by user for the %d. time (max: %d)" \
@@ -931,7 +945,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 								time.sleep(self.event.eventConfig.shutdownWarningRepetitionTime)
 								continue
 						break
-					timeline.setEventEnd(waitEventId)
+				timeline.setEventEnd(waitEventId)
 				if reboot:
 					timeline.addEvent(title = u"Rebooting", category = u"system")
 					self.opsiclientd.rebootMachine()
@@ -944,7 +958,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	def run(self):
 		timelineEventId = None
 		try:
-			logger.notice(u"============= EventProcessingThread for occurrcence of event '%s' started =============" % self.event)
+			logger.notice(u"============= EventProcessingThread for occurrcence of event '%s' started =============" % self.event.eventConfig.getId())
 			timelineEventId = timeline.addEvent(
 				title       = u"Processing event %s" % self.event.eventConfig.getName(),
 				description = u"EventProcessingThread for occurrcence of event '%s' started" % self.event.eventConfig.getId(),
@@ -1084,7 +1098,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			self.opsiclientd.setBlockLogin(False)
 		
 		self.running = False
-		logger.notice(u"============= EventProcessingThread for event '%s' ended =============" % self.event)
+		logger.notice(u"============= EventProcessingThread for event '%s' ended =============" % self.event.eventConfig.getId())
 		if timelineEventId:
 			timeline.setEventEnd(eventId = timelineEventId)
 	
