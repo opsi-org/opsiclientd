@@ -741,10 +741,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	def processActionWarningTime(self, productIds=[]):
 		if not self.event.eventConfig.warningTime:
 			return
-		waitEventId = timeline.addEvent(title       = u"Action warning",
-						description = u'Notifying user of actions to process %s (%s)\n' % (self.event.eventConfig.getId(), u', '.join(productIds)) \
-								+ u"warningTime: %s, userCancelable: %s, cancelCounter: %s" % (self.event.eventConfig.warningTime, self.event.eventConfig.userCancelable, self.event.eventConfig.cancelCounter),
-						category    = u"wait")
+		waitEventId = timeline.addEvent(
+				title       = u"Action warning",
+				description = u'Notifying user of actions to process %s (%s)\n' % (self.event.eventConfig.getId(), u', '.join(productIds)) \
+						+ u"warningTime: %s, userCancelable: %s, cancelCounter: %s" % (self.event.eventConfig.warningTime, self.event.eventConfig.userCancelable, self.event.eventConfig.cancelCounter),
+				category    = u"wait")
 		self._messageSubject.setMessage(u"%s\n%s: %s" % (self.event.eventConfig.getMessage(), _(u'Products'), u', '.join(productIds)) )
 		choiceSubject = ChoiceSubject(id = 'choice')
 		if (self.event.eventConfig.cancelCounter < self.event.eventConfig.userCancelable):
@@ -846,27 +847,25 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					timeline.addEvent(title = u"Shutdown requested", category = u"system")
 					self.setStatusMessage(_(u"Shutdown requested"))
 				
-				waitEventId = None
 				if self.event.eventConfig.shutdownWarningTime:
-					if reboot:
-						waitEventId = timeline.addEvent(
-							title       = u"Reboot warning",
-							description = u'Notifying user of reboot\n' \
-									+ u"shutdownWarningTime: %s, shutdownUserCancelable: %s, shutdownCancelCounter: %s" \
-									% (self.event.eventConfig.shutdownWarningTime, self.event.eventConfig.shutdownUserCancelable, self.event.eventConfig.shutdownCancelCounter),
-							category    = u"wait")
-					else:
-						waitEventId = timeline.addEvent(
-							title       = u"Shutdown warning",
-							description = u'Notifying user of shutdown\n' \
-									+ u"shutdownWarningTime: %s, shutdownUserCancelable: %s, shutdownCancelCounter: %s" \
-									% (self.event.eventConfig.shutdownWarningTime, self.event.eventConfig.shutdownUserCancelable, self.event.eventConfig.shutdownCancelCounter),
-							category    = u"wait")
 					while True:
+						waitEventId = None
 						if reboot:
 							logger.info(u"Notifying user of reboot")
+							waitEventId = timeline.addEvent(
+								title       = u"Reboot warning",
+								description = u'Notifying user of reboot\n' \
+										+ u"shutdownWarningTime: %s, shutdownUserCancelable: %s, shutdownCancelCounter: %s" \
+										% (self.event.eventConfig.shutdownWarningTime, self.event.eventConfig.shutdownUserCancelable, self.event.eventConfig.shutdownCancelCounter),
+								category    = u"wait")
 						else:
 							logger.info(u"Notifying user of shutdown")
+							waitEventId = timeline.addEvent(
+								title       = u"Shutdown warning",
+								description = u'Notifying user of shutdown\n' \
+										+ u"shutdownWarningTime: %s, shutdownUserCancelable: %s, shutdownCancelCounter: %s" \
+										% (self.event.eventConfig.shutdownWarningTime, self.event.eventConfig.shutdownUserCancelable, self.event.eventConfig.shutdownCancelCounter),
+								category    = u"wait")
 						
 						self.shutdownCancelled = False
 						self.shutdownWaitCancelled = False
@@ -924,6 +923,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						
 						self._messageSubject.setMessage(u"")
 						
+						timeline.setEventEnd(waitEventId)
 						
 						if self.shutdownWaitCancelled:
 							if reboot:
@@ -958,8 +958,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 								time.sleep(self.event.eventConfig.shutdownWarningRepetitionTime)
 								continue
 						break
-				if waitEventId:
-					timeline.setEventEnd(waitEventId)
 				if reboot:
 					timeline.addEvent(title = u"Rebooting", category = u"system")
 					self.opsiclientd.rebootMachine()
