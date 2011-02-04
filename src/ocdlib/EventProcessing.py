@@ -742,7 +742,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		if not self.event.eventConfig.warningTime:
 			return
 		waitEventId = timeline.addEvent(title       = u"Action warning",
-						description = u"Notifying user of actions to process %s (%s)\n" % (self.event.eventConfig.getId(), productIds) \
+						description = u'Notifying user of actions to process %s (%s)\n' % (self.event.eventConfig.getId(), productIds) \
 								+ u"warningTime: %s, userCancelable: %s, cancelCounter: %s" % (self.event.eventConfig.warningTime, self.event.eventConfig.userCancelable, self.event.eventConfig.cancelCounter),
 						category    = u"wait")
 		self._messageSubject.setMessage(u"%s\n%s: %s" % (self.event.eventConfig.getMessage(), _(u'Products'), u', '.join(productIds)) )
@@ -845,14 +845,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					if reboot:
 						waitEventId = timeline.addEvent(
 							title       = u"Reboot warning",
-							description = u"Notifying user of reboot\n" \
+							description = u'Notifying user of reboot\n' \
 									+ u"shutdownWarningTime: %s, shutdownUserCancelable: %s, shutdownCancelCounter: %s" \
 									% (self.event.eventConfig.shutdownWarningTime, self.event.eventConfig.shutdownUserCancelable, self.event.eventConfig.shutdownCancelCounter),
 							category    = u"wait")
 					else:
 						waitEventId = timeline.addEvent(
 							title       = u"Shutdown warning",
-							description = u"Notifying user of shutdown\n" \
+							description = u'Notifying user of shutdown\n' \
 									+ u"shutdownWarningTime: %s, shutdownUserCancelable: %s, shutdownCancelCounter: %s" \
 									% (self.event.eventConfig.shutdownWarningTime, self.event.eventConfig.shutdownUserCancelable, self.event.eventConfig.shutdownCancelCounter),
 							category    = u"wait")
