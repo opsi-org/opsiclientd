@@ -75,7 +75,7 @@ infoPage = u'''
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 	<title>opsi client daemon</title>
-	
+	<meta http-equiv="refresh" content="60" />
 	<style type="text/css">
 		#title {
 			padding-left:10px;
