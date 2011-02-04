@@ -194,7 +194,10 @@ class TimelineImplementation(object):
 		}
 	
 	def _cleanupDatabase(self):
-		self._sql.getSet('delete from EVENT where `start` < "%s"' % timestamp((time.time() - 7*24*3600)))
+		try:
+			self._sql.execute('delete from EVENT where `start` < "%s"' % timestamp((time.time() - 7*24*3600)))
+		except Exception, e:
+			logger.error(e)
 		
 	def _createDatabase(self):
 		tables = self._sql.getTables()
