@@ -376,17 +376,15 @@ class Opsiclientd(EventListener, threading.Thread):
 						raise Exception(u"Already processing an other (non login) event: %s" % ept.event.eventConfig.getId())
 					if (event.eventConfig.actionType == 'login') and (ept.event.eventConfig.actionType == 'login'):
 						if (ept.getSessionId() == eventProcessingThread.getSessionId()):
-							raise Exception(u"Already processing login event '%s' in session %s" \
-										% (ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()))
-		
-		except Exception, e:
+							logger.notice(u"Already processing login event '%s' in session %s" \
+									% (ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()))
+							self._eventProcessingThreadsLock.release()
+							return
+			self.createActionProcessorUser(recreate = False)
+			
+			self._eventProcessingThreads.append(eventProcessingThread)
+		finally:
 			self._eventProcessingThreadsLock.release()
-			raise
-		
-		self.createActionProcessorUser(recreate = False)
-		
-		self._eventProcessingThreads.append(eventProcessingThread)
-		self._eventProcessingThreadsLock.release()
 		
 		try:
 			eventProcessingThread.start()

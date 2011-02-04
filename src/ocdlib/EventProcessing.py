@@ -1076,6 +1076,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		except Exception, e:
 			logger.error(u"Failed to process event %s: %s" % (self.event, forceUnicode(e)))
 			logger.logException(e)
+			timeline.addEvent(
+				title       = u"Failed to process event %s" % self.event.eventConfig.getName(),
+				description = u"Failed to process event %s: %s" % (self.event, forceUnicode(e)),
+				category    = u"event_processing",
+				isError     = True)
 			self.opsiclientd.setBlockLogin(False)
 		
 		self.running = False
