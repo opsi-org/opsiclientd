@@ -159,7 +159,6 @@ class TimelineImplementation(object):
 			event['icon'] = TIMELINE_IMAGE_URL + u"gray-circle.png"
 			event['start'] = event['start'].replace(u' ', u'T') + '+00:00'
 			if event['end']:
-				event['durationEvent'] = True
 				event['end'] = event['end'].replace(u' ', u'T') + '+00:00'
 			else:
 				event['durationEvent'] = False
@@ -224,7 +223,7 @@ class TimelineImplementation(object):
 			self._sql.execute('CREATE INDEX `category` on `EVENT` (`category`);')
 			self._sql.execute('CREATE INDEX `start` on `EVENT` (`start`);')
 	
-	def addEvent(self, title, description=u'', isError=False, category=None, start=None, end=None):
+	def addEvent(self, title, description=u'', isError=False, category=None, durationEvent=False, start=None, end=None):
 		try:
 			if category:
 				category = forceUnicode(category)
@@ -233,13 +232,15 @@ class TimelineImplementation(object):
 			start = forceOpsiTimestamp(start)
 			if end:
 				end = forceOpsiTimestamp(start)
+				durationEvent = True
 			return self._sql.insert('EVENT', {
-				'title':       forceUnicode(title),
-				'category':    category,
-				'description': forceUnicode(description),
-				'isError':     forceBool(isError),
-				'start':       start,
-				'end':         end,
+				'title':         forceUnicode(title),
+				'category':      category,
+				'description':   forceUnicode(description),
+				'isError':       forceBool(isError),
+				'durationEvent': forceBool(durationEvent),
+				'start':         start,
+				'end':           end,
 			})
 		except Exception, e:
 			logger.error(u"Failed to add event '%s': %s" % (title, e))
@@ -250,7 +251,7 @@ class TimelineImplementation(object):
 			if not end:
 				end = timestamp()
 			end = forceOpsiTimestamp(end)
-			return self._sql.update('EVENT', '`id` = %d' % eventId, { 'end': end })
+			return self._sql.update('EVENT', '`id` = %d' % eventId, { 'end': end, 'durationEvent': True })
 		except Exception, e:
 			logger.error(u"Failed to set end of event '%s': %s" % (eventId, e))
 		

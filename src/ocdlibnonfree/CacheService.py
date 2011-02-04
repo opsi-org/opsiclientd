@@ -315,7 +315,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				logger.notice(u"Cache backend was not modified, no sync to server required")
 			else:
 				logger.notice(u"Cache backend was modified, starting sync to server")
-				eventId = timeline.addEvent(title = u"Config sync to server", description = u'Syncing config to server', category = u'config_sync')
+				eventId = timeline.addEvent(title = u"Config sync to server", description = u'Syncing config to server', category = u'config_sync', durationEvent = True)
 				if not self._configService:
 					self.connectConfigService()
 				self._cacheBackend._setMasterBackend(self._configService)
@@ -365,7 +365,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					self._state['config_cached'] = True
 				else:
 					logger.notice(u"Product on client configuration changed on config service, sync from server required")
-					eventId = timeline.addEvent(title = u"Config sync from server", description = u'Syncing config from server', category = u'config_sync')
+					eventId = timeline.addEvent(title = u"Config sync from server", description = u'Syncing config from server', category = u'config_sync', durationEvent = True)
 					self._cacheBackend._setMasterBackend(self._configService)
 					state.set('config_cache_service', self._state)
 					self._backendTracker.clearModifications()
@@ -430,9 +430,10 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		else:
 			if not self._dynamicBandwidthLimitEvent:
 				self._dynamicBandwidthLimitEvent = timeline.addEvent(
-					title       = u"Dynamic bandwidth limit",
-					description = u"Other traffic detected, bandwidth dynamically limited to %0.2f kByte/s" % (bandwidth/1024),
-					category    = u'user_interaction'
+					title         = u"Dynamic bandwidth limit",
+					description   = u"Other traffic detected, bandwidth dynamically limited to %0.2f kByte/s" % (bandwidth/1024),
+					category      = u'user_interaction',
+					durationEvent = True
 				)
 	
 	def getState(self):
@@ -590,7 +591,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				logger.notice(u"Caching products: %s" % ', '.join(productIds))
 				#self._overallProgressSubject.setEnd(len(productIds))
 				#self._overallProgressSubject.setMessage( _(u'Caching products') )
-				eventId = timeline.addEvent(title = u"Cache products", description = u"Caching products: %s" % ', '.join(productIds), category = u'product_caching')
+				eventId = timeline.addEvent(title = u"Cache products", description = u"Caching products: %s" % ', '.join(productIds), category = u'product_caching', durationEvent = True)
 				try:
 					errorsOccured = []
 					for productId in productIds:
@@ -661,9 +662,10 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		self._setProductCacheState(productId, 'failure',   None)
 		
 		eventId = timeline.addEvent(
-				title       = u"Cache product %s" % productId,
-				description = u"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)" % (productId,  self._maxBandwidth, self._dynamicBandwidth),
-				category    = u'product_caching')
+				title         = u"Cache product %s" % productId,
+				description   = u"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)" % (productId,  self._maxBandwidth, self._dynamicBandwidth),
+				category      = u'product_caching',
+				durationEvent = True)
 		
 		repository = self._getRepository(productId)
 		if not config.get('depot_server', 'depot_id'):

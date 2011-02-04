@@ -590,9 +590,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	
 	def runActions(self, additionalParams=''):
 		runActionsEventId = timeline.addEvent(
-			title       = u"Running actions",
-			description = u"Running actions",
-			category    = u"run_actions")
+			title         = u"Running actions",
+			description   = u"Running actions",
+			category      = u"run_actions",
+			durationEvent = True)
 		
 		if not additionalParams:
 			additionalParams = ''
@@ -610,9 +611,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
 						self.setStatusMessage( _(u"Waiting for TrustedInstaller") )
 						waitEventId = timeline.addEvent(
-								title       = u"Waiting for TrustedInstaller",
-								description = u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
-								category    = u"wait")
+								title         = u"Waiting for TrustedInstaller",
+								description   = u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
+								category      = u"wait",
+								durationEvent = True)
 						while True:
 							time.sleep(3)
 							logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
@@ -742,10 +744,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		if not self.event.eventConfig.warningTime:
 			return
 		waitEventId = timeline.addEvent(
-				title       = u"Action warning",
-				description = u'Notifying user of actions to process %s (%s)\n' % (self.event.eventConfig.getId(), u', '.join(productIds)) \
+				title         = u"Action warning",
+				description   = u'Notifying user of actions to process %s (%s)\n' % (self.event.eventConfig.getId(), u', '.join(productIds)) \
 						+ u"warningTime: %s, userCancelable: %s, cancelCounter: %s" % (self.event.eventConfig.warningTime, self.event.eventConfig.userCancelable, self.event.eventConfig.cancelCounter),
-				category    = u"wait")
+				category      = u"wait",
+				durationEvent = True)
 		self._messageSubject.setMessage(u"%s\n%s: %s" % (self.event.eventConfig.getMessage(), _(u'Products'), u', '.join(productIds)) )
 		choiceSubject = ChoiceSubject(id = 'choice')
 		if (self.event.eventConfig.cancelCounter < self.event.eventConfig.userCancelable):
@@ -853,19 +856,21 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						if reboot:
 							logger.info(u"Notifying user of reboot")
 							waitEventId = timeline.addEvent(
-								title       = u"Reboot warning",
-								description = u'Notifying user of reboot\n' \
+								title         = u"Reboot warning",
+								description   = u'Notifying user of reboot\n' \
 										+ u"shutdownWarningTime: %s, shutdownUserCancelable: %s, shutdownCancelCounter: %s" \
 										% (self.event.eventConfig.shutdownWarningTime, self.event.eventConfig.shutdownUserCancelable, self.event.eventConfig.shutdownCancelCounter),
-								category    = u"wait")
+								category      = u"wait",
+								durationEvent = True)
 						else:
 							logger.info(u"Notifying user of shutdown")
 							waitEventId = timeline.addEvent(
-								title       = u"Shutdown warning",
-								description = u'Notifying user of shutdown\n' \
+								title         = u"Shutdown warning",
+								description   = u'Notifying user of shutdown\n' \
 										+ u"shutdownWarningTime: %s, shutdownUserCancelable: %s, shutdownCancelCounter: %s" \
 										% (self.event.eventConfig.shutdownWarningTime, self.event.eventConfig.shutdownUserCancelable, self.event.eventConfig.shutdownCancelCounter),
-								category    = u"wait")
+								category      = u"wait",
+								durationEvent = True)
 						
 						self.shutdownCancelled = False
 						self.shutdownWaitCancelled = False
@@ -972,9 +977,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		try:
 			logger.notice(u"============= EventProcessingThread for occurrcence of event '%s' started =============" % self.event.eventConfig.getId())
 			timelineEventId = timeline.addEvent(
-				title       = u"Processing event %s" % self.event.eventConfig.getName(),
-				description = u"EventProcessingThread for occurrcence of event '%s' started" % self.event.eventConfig.getId(),
-				category    = u"event_processing")
+				title         = u"Processing event %s" % self.event.eventConfig.getName(),
+				description   = u"EventProcessingThread for occurrcence of event '%s' started" % self.event.eventConfig.getId(),
+				category      = u"event_processing",
+				durationEvent = True)
 			self.running = True
 			self.eventCancelled = False
 			self.waitCancelled = False

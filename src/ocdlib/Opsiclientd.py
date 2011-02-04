@@ -113,9 +113,10 @@ class Opsiclientd(EventListener, threading.Thread):
 		if (self._blockLogin):
 			if not self._blockLoginEventId:
 				self._blockLoginEventId = timeline.addEvent(
-					title       = u"Blocking login",
-					description = u"User login blocked",
-					category    = u"block_login")
+					title         = u"Blocking login",
+					description   = u"User login blocked",
+					category      = u"block_login",
+					durationEvent = True)
 			if not self._blockLoginNotifierPid and config.get('global', 'block_login_notifier'):
 				logger.info(u"Starting block login notifier app")
 				sessionId = System.getActiveConsoleSessionId()
@@ -238,7 +239,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			eventDescription += u"Using host id '%s'" % config.get('global', 'host_id')
 			logger.notice(u"Using host id '%s'" % config.get('global', 'host_id'))
 			
-			self._opsiclientdRunningEventId = timeline.addEvent(title = eventTitle, description = eventDescription, category = u'opsiclientd_running')
+			self._opsiclientdRunningEventId = timeline.addEvent(title = eventTitle, description = eventDescription, category = u'opsiclientd_running', durationEvent = True)
 			
 			self.setBlockLogin(True)
 			
