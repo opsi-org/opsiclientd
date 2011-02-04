@@ -97,22 +97,34 @@ function onLoad() {
 	var eventSource = new Timeline.DefaultEventSource();
 	var bandInfos = [
 		Timeline.createBandInfo({
-			width:          "40%%",
+			width:          "80%",
 			intervalUnit:   Timeline.DateTime.MINUTE,
 			intervalPixels: 200,
 			eventSource:    eventSource,
-			date:           "%(date1)s"
+			date:           "%(date)s",
+			layout:         'original'  // original, overview, detailed
 		}),
 		Timeline.createBandInfo({
-			width:          "60%%",
+			width:          "10%",
 			intervalUnit:   Timeline.DateTime.HOUR,
 			intervalPixels: 300,
 			eventSource:    eventSource,
-			date:           "%(date2)s"
+			date:           "%(date)s",
+			layout:         'overview'  // original, overview, detailed
+		}),
+		Timeline.createBandInfo({
+			width:          "10%",
+			intervalUnit:   Timeline.DateTime.DAY,
+			intervalPixels: 600,
+			eventSource:    eventSource,
+			date:           "%(date)s",
+			layout:         'overview'  // original, overview, detailed
 		})
 	];
 	bandInfos[1].syncWith = 0;
 	bandInfos[1].highlight = true;
+	bandInfos[2].syncWith = 0;
+	bandInfos[2].highlight = true;
 	tl = Timeline.create(document.getElementById("opsiclientd-timeline"), bandInfos);
 	eventSource.loadJSON(timeline_data, '.');
 }
@@ -172,8 +184,7 @@ class TimelineImplementation(object):
 			events.append(event)
 		return htmlHead % {
 			'data': json.dumps({'dateTimeFormat': 'iso8601', 'events': events}),
-			'date1': time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime()), #time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime()),
-			'date2': time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime()) #time.strftime('%Y,%m-1,%d,%H,%M,%S', time.localtime())
+			'date': time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime())
 		}
 	
 	def _createDatabase(self):
