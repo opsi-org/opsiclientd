@@ -173,12 +173,16 @@ class TimelineImplementation(object):
 				event['color'] = u"#80A63D"
 				event['textColor'] = u"#80A63D"
 				event['icon'] = TIMELINE_IMAGE_URL + u"dull-green-circle.png"
-			elif (event['category'] == 'block_login'):
+			elif event['category'] in ('block_login', 'system'):
 				event['color'] = u"#A74141"
 				event['textColor'] = u"#A74141"
+				event['icon'] = TIMELINE_IMAGE_URL + u"dark-red-circle.png"
 			elif event['category'] in ('product_caching', 'config_sync'):
 				event['color'] = u"#6BABDF"
 				event['textColor'] = u"#6BABDF"
+			elif (event['category'] == 'user_interaction'):
+				event['color'] = u"#B46ADF"
+				event['textColor'] = u"#B46ADF"
 			del event['isError']
 			del event['category']
 			del event['id']

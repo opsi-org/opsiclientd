@@ -786,6 +786,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				config.updateConfigFile()
 				logger.notice(u"Action processing cancelled by user for the %d. time (max: %d)" \
 					% (self.event.eventConfig.cancelCounter, self.event.eventConfig.userCancelable))
+				timeline.addEvent(
+					title       = u"Action processing cancelled by user",
+					description = u"Action processing cancelled by user for the %d. time (max: %d)" \
+							% (self.event.eventConfig.cancelCounter, self.event.eventConfig.userCancelable)
+					category    = u"user_interaction")
 				raise CanceledByUserError(u"Action processing cancelled by user")
 			else:
 				self.event.eventConfig.cancelCounter = 0
@@ -916,7 +921,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							self.event.eventConfig.shutdownCancelCounter += 1
 							logger.notice(u"Shutdown cancelled by user for the %d. time (max: %d)" \
 								% (self.event.eventConfig.shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable))
-							
+							timeline.addEvent(
+								title       = u"Shutdown cancelled by user",
+								description = u"Shutdown cancelled by user for the %d. time (max: %d)" \
+										% (self.event.eventConfig.shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable)
+								category    = u"user_interaction")
 							if (self.event.eventConfig.shutdownWarningRepetitionTime >= 0):
 								logger.info(u"Shutdown warning will be repeated in %d seconds" % self.event.eventConfig.shutdownWarningRepetitionTime)
 								time.sleep(self.event.eventConfig.shutdownWarningRepetitionTime)
