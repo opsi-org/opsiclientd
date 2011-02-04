@@ -569,7 +569,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							raise Exception(u"Event '%s' uses cached products but product caching is not done" % self.event.eventConfig.getId())
 					
 				config.selectDepotserver(configService = self._configService, event = self.event, productIds = productIds)
-				self.processEventWarningTime(productIds)
+				self.processActionWarningTime(productIds)
 				self.runActions()
 				try:
 					if self.event.eventConfig.useCachedConfig and not self._configService.productOnClient_getIdents(
@@ -738,9 +738,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		logger.notice(u"Event wait cancelled by user")
 		self.waitCancelled = True
 	
-	def processEventWarningTime(self, productIds=[]):
+	def processActionWarningTime(self, productIds=[]):
 		if not self.event.eventConfig.warningTime:
 			return
+		waitEventId = timeline.addEvent(title       = u"Action warning",
+						description = u"Notifying user of actions to process %s (%s)\n" % (self.event.eventConfig.getId(), productIds) \
+								+ u"warningTime: %s, userCancelable: %s, cancelCounter: %s" % (self.event.eventConfig.warningTime, self.event.eventConfig.userCancelable, self.event.eventConfig.cancelCounter),
+						category    = u"wait")
 		self._messageSubject.setMessage(u"%s\n%s: %s" % (self.event.eventConfig.getMessage(), _(u'Products'), u', '.join(productIds)) )
 		choiceSubject = ChoiceSubject(id = 'choice')
 		if (self.event.eventConfig.cancelCounter < self.event.eventConfig.userCancelable):
@@ -788,6 +792,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				config.set('event_%s' % self.event.eventConfig.getId(), 'cancel_counter', self.event.eventConfig.cancelCounter)
 				config.updateConfigFile()
 		finally:
+			timeline.setEventEnd(waitEventId)
 			try:
 				if self._notificationServer:
 					self._notificationServer.requestEndConnections()
@@ -824,11 +829,28 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			reboot   = self.isRebootRequested()
 			if reboot or shutdown:
 				if reboot:
+					timeline.addEvent(title = u"Reboot requested", category = u"system")
 					self.setStatusMessage(_(u"Reboot requested"))
 				else:
+					timeline.addEvent(title = u"Shutdown requested", category = u"system")
 					self.setStatusMessage(_(u"Shutdown requested"))
 				
 				if self.event.eventConfig.shutdownWarningTime:
+					waitEventId = None
+					if reboot:
+						waitEventId = timeline.addEvent(
+							title       = u"Reboot warning",
+							description = u"Notifying user of reboot\n" \
+									+ u"shutdownWarningTime: %s, shutdownUserCancelable: %s, shutdownCancelCounter: %s" \
+									% (self.event.eventConfig.shutdownWarningTime, self.event.eventConfig.shutdownUserCancelable, self.event.eventConfig.shutdownCancelCounter),
+							category    = u"wait")
+					else:
+						waitEventId = timeline.addEvent(
+							title       = u"Shutdown warning",
+							description = u"Notifying user of shutdown\n" \
+									+ u"shutdownWarningTime: %s, shutdownUserCancelable: %s, shutdownCancelCounter: %s" \
+									% (self.event.eventConfig.shutdownWarningTime, self.event.eventConfig.shutdownUserCancelable, self.event.eventConfig.shutdownCancelCounter),
+							category    = u"wait")
 					while True:
 						if reboot:
 							logger.info(u"Notifying user of reboot")
@@ -900,9 +922,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 								time.sleep(self.event.eventConfig.shutdownWarningRepetitionTime)
 								continue
 						break
+					timeline.setEventEnd(waitEventId)
 				if reboot:
+					timeline.addEvent(title = u"Rebooting", category = u"system")
 					self.opsiclientd.rebootMachine()
 				elif shutdown:
+					timeline.addEvent(title = u"Shutting down", category = u"system")
 					self.opsiclientd.shutdownMachine()
 		except Exception, e:
 			logger.logException(e)
