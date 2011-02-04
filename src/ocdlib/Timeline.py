@@ -161,9 +161,9 @@ class TimelineImplementation(object):
 			event['start'] = event['start'].replace(u' ', u'T') + '+00:00'
 			if event['end']:
 				event['end'] = event['end'].replace(u' ', u'T') + '+00:00'
-			#else:
-			#	if event['durationEvent']:
-			#		event['end'] = now
+			else:
+				if event['durationEvent']:
+					event['end'] = now
 			if event['isError']:
 				#event['classname'] = u"error-event"
 				event['color'] = u"#A74141"
@@ -189,6 +189,9 @@ class TimelineImplementation(object):
 			elif event['category'] in ('user_interaction',):
 				event['color'] = u"#B46ADF"
 				event['textColor'] = u"#B46ADF"
+			elif event['category'] in ('wait',):
+				event['color'] = u"#DFA86C"
+				event['textColor'] = u"#DFA86C"
 			del event['isError']
 			del event['category']
 			del event['id']

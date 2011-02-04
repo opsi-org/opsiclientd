@@ -432,7 +432,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				self._dynamicBandwidthLimitEvent = timeline.addEvent(
 					title         = u"Dynamic bandwidth limit",
 					description   = u"Other traffic detected, bandwidth dynamically limited to %0.2f kByte/s" % (bandwidth/1024),
-					category      = u'user_interaction',
+					category      = u'wait',
 					durationEvent = True
 				)
 	
