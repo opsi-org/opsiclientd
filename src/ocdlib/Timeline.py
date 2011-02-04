@@ -204,6 +204,7 @@ class TimelineImplementation(object):
 	def _cleanupDatabase(self):
 		try:
 			self._sql.execute('delete from EVENT where `start` < "%s"' % timestamp((time.time() - 7*24*3600)))
+			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', { 'durationEvent': False })
 		except Exception, e:
 			logger.error(e)
 		
