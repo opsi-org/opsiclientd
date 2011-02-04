@@ -742,7 +742,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		if not self.event.eventConfig.warningTime:
 			return
 		waitEventId = timeline.addEvent(title       = u"Action warning",
-						description = u'Notifying user of actions to process %s (%s)\n' % (self.event.eventConfig.getId(), productIds) \
+						description = u'Notifying user of actions to process %s (%s)\n' % (self.event.eventConfig.getId(), u', '.join(productIds)) \
 								+ u"warningTime: %s, userCancelable: %s, cancelCounter: %s" % (self.event.eventConfig.warningTime, self.event.eventConfig.userCancelable, self.event.eventConfig.cancelCounter),
 						category    = u"wait")
 		self._messageSubject.setMessage(u"%s\n%s: %s" % (self.event.eventConfig.getMessage(), _(u'Products'), u', '.join(productIds)) )
