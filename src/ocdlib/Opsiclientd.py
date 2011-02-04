@@ -141,6 +141,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		else:
 			if self._blockLoginEventId:
 				timeline.setEventEnd(eventId = self._blockLoginEventId)
+				self._blockLoginEventId = None
 			if (self._blockLoginNotifierPid):
 				try:
 					logger.info(u"Terminating block login notifier app (pid %s)" % self._blockLoginNotifierPid)
