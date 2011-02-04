@@ -382,7 +382,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		self.disconnectConfigService()
 		self._working = False
 
-class ProductCacheService(ServiceConnection, threading.Thread):
+class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
 		ServiceConnection.__init__(self)
@@ -406,6 +406,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		
 		self._productProgressObserver = None
 		self._overallProgressObserver = None
+		self._dynamicBandwidthLimitEvent = None
 		
 		if not os.path.exists(self._storageDir):
 			logger.notice(u"Creating cache service storage dir '%s'" % self._storageDir)
@@ -420,6 +421,19 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		pcss = state.get('product_cache_service')
 		if pcss:
 			self._state = pcss
+		
+	def dynamicBandwidthLimitChanged(self, bandwidth):
+		if (bandwidth <= 0):
+			if self._dynamicBandwidthLimitEvent:
+				timeline.setEventEnd(self._dynamicBandwidthLimitEvent)
+				self._dynamicBandwidthLimitEvent = None
+		else:
+			if not self._dynamicBandwidthLimitEvent:
+				self._dynamicBandwidthLimitEvent = timeline.addEvent(
+					title       = u"Dynamic bandwidth limit",
+					description = u"Other traffic detected, bandwidth dynamically limited to %0.2f kByte/s" % (bandwidth/1024),
+					category    = u'user_interaction'
+				)
 	
 	def getState(self):
 		state = self._state
@@ -716,7 +730,13 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 				maxBandwidth         = self._maxBandwidth,
 				dynamicBandwidth     = self._dynamicBandwidth
 			)
-			productSynchronizer.synchronize(productProgressObserver = self._productProgressObserver, overallProgressObserver = self._overallProgressObserver)
+			if self._dynamicBandwidth:
+				repository.attachObserver(self)
+			try:
+				productSynchronizer.synchronize(productProgressObserver = self._productProgressObserver, overallProgressObserver = self._overallProgressObserver)
+			finally:
+				if self._dynamicBandwidth:
+					repository.detachObserver(self)
 			logger.notice(u"Product '%s' cached" % productId)
 			self._setProductCacheState(productId, 'completed', time.time())
 			timeline.setEventEnd(eventId)
