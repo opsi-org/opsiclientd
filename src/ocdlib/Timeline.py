@@ -163,21 +163,22 @@ class TimelineImplementation(object):
 				del event['end']
 			if event['isError']:
 				#event['classname'] = u"error-event"
-				event['color'] = u"#880000"
-				event['textColor'] = u"#880000"
+				event['color'] = u"#A74141"
+				event['textColor'] = u"#A74141"
 				event['icon'] = TIMELINE_IMAGE_URL + u"dark-red-circle.png"
 			elif event['category'] in ('event_processing', 'event_occurrence'):
-				event['color'] = u"#FF8000"
-				event['textColor'] = u"#FF8000"
+				event['color'] = u"#D7CB1E"
+				event['textColor'] = u"#D7CB1E"
 			elif (event['category'] == 'opsiclientd_running'):
-				event['color'] = u"#008800"
-				event['textColor'] = u"#008800"
+				event['color'] = u"#80A63D"
+				event['textColor'] = u"#80A63D"
 				event['icon'] = TIMELINE_IMAGE_URL + u"dull-green-circle.png"
 			elif (event['category'] == 'block_login'):
-				event['color'] = u"#880000"
-				event['textColor'] = u"#880000"
+				event['color'] = u"#A74141"
+				event['textColor'] = u"#A74141"
 			elif event['category'] in ('product_caching', 'config_sync'):
-				pass
+				event['color'] = u"#6BABDF"
+				event['textColor'] = u"#6BABDF"
 			del event['isError']
 			del event['category']
 			del event['id']
