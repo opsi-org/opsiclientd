@@ -212,6 +212,7 @@ class TimelineImplementation(object):
 					`title` varchar(255) NOT NULL,
 					`category` varchar(64),
 					`isError` bool,
+					`durationEvent` bool,
 					`description` varchar(1024),
 					`start` TIMESTAMP,
 					`end` TIMESTAMP,
