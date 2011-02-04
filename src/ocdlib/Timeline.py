@@ -155,14 +155,15 @@ class TimelineImplementation(object):
 		
 	def getHtmlHead(self):
 		events = []
+		now = time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime()
 		for event in self.getEvents():
 			event['icon'] = TIMELINE_IMAGE_URL + u"gray-circle.png"
 			event['start'] = event['start'].replace(u' ', u'T') + '+00:00'
 			if event['end']:
 				event['end'] = event['end'].replace(u' ', u'T') + '+00:00'
-			else:
-				event['durationEvent'] = False
-				del event['end']
+			#else:
+			#	if event['durationEvent']:
+			#		event['end'] = now
 			if event['isError']:
 				#event['classname'] = u"error-event"
 				event['color'] = u"#A74141"
@@ -194,7 +195,7 @@ class TimelineImplementation(object):
 			events.append(event)
 		return htmlHead % {
 			'data': json.dumps({'dateTimeFormat': 'iso8601', 'events': events}),
-			'date': time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime())
+			'date': now)
 		}
 	
 	def _cleanupDatabase(self):
