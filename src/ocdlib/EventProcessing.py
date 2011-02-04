@@ -846,8 +846,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					timeline.addEvent(title = u"Shutdown requested", category = u"system")
 					self.setStatusMessage(_(u"Shutdown requested"))
 				
+				waitEventId = None
 				if self.event.eventConfig.shutdownWarningTime:
-					waitEventId = None
 					if reboot:
 						waitEventId = timeline.addEvent(
 							title       = u"Reboot warning",
@@ -926,26 +926,40 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						
 						
 						if self.shutdownWaitCancelled:
-							timeline.addEvent(
-								title       = u"Shutdown started by user",
-								description = u"Shutdown wait time cancelled by user",
-								category    = u"user_interaction")
+							if reboot:
+								timeline.addEvent(
+									title       = u"Reboot started by user",
+									description = u"Reboot wait time cancelled by user",
+									category    = u"user_interaction")
+							else:
+								timeline.addEvent(
+									title       = u"Shutdown started by user",
+									description = u"Shutdown wait time cancelled by user",
+									category    = u"user_interaction")
 						
 						if self.shutdownCancelled:
 							self.event.eventConfig.shutdownCancelCounter += 1
 							logger.notice(u"Shutdown cancelled by user for the %d. time (max: %d)" \
 								% (self.event.eventConfig.shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable))
-							timeline.addEvent(
-								title       = u"Shutdown cancelled by user",
-								description = u"Shutdown cancelled by user for the %d. time (max: %d)" \
-										% (self.event.eventConfig.shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable),
-								category    = u"user_interaction")
+							if reboot:
+								timeline.addEvent(
+									title       = u"Reboot cancelled by user",
+									description = u"Reboot cancelled by user for the %d. time (max: %d)" \
+											% (self.event.eventConfig.shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable),
+									category    = u"user_interaction")
+							else:
+								timeline.addEvent(
+									title       = u"Shutdown cancelled by user",
+									description = u"Shutdown cancelled by user for the %d. time (max: %d)" \
+											% (self.event.eventConfig.shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable),
+									category    = u"user_interaction")
 							if (self.event.eventConfig.shutdownWarningRepetitionTime >= 0):
 								logger.info(u"Shutdown warning will be repeated in %d seconds" % self.event.eventConfig.shutdownWarningRepetitionTime)
 								time.sleep(self.event.eventConfig.shutdownWarningRepetitionTime)
 								continue
 						break
-				timeline.setEventEnd(waitEventId)
+				if waitEventId:
+					timeline.setEventEnd(waitEventId)
 				if reboot:
 					timeline.addEvent(title = u"Rebooting", category = u"system")
 					self.opsiclientd.rebootMachine()
