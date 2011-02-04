@@ -189,6 +189,7 @@ class TimelineImplementation(object):
 			elif event['category'] in ('user_interaction',):
 				event['color'] = u"#B46ADF"
 				event['textColor'] = u"#B46ADF"
+				event['icon'] = TIMELINE_IMAGE_URL + u"dull-blue-circle.png"
 			elif event['category'] in ('wait',):
 				event['color'] = u"#DFA86C"
 				event['textColor'] = u"#DFA86C"
