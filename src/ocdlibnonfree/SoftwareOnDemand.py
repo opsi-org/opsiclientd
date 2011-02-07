@@ -258,7 +258,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		productVersion = ''
 		productDescription = ''
 		productAdvice = ''
-		tablerows = []
+		
 		#productOnDepots = {}
 		productIds = []
 		myClientId = config.get('global', 'host_id')
@@ -295,29 +295,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					logger.notice(u"Action Save was send.")
 					if params['action'].lower() == "save":
 						html = answerpage
-						resulttable = '''
-							<table>
-								<thead>
-									<tr>
-										<th>Produkte die installiert werden</th>
-										<th>Produkte die zus&auml;tzlich installiert werden</th>
-									</tr>
-								</thead>
-								<tbody>
-
-										%result%
-								</tbody>
-								<tfoot>
-									<tr>
-										<td align="center" colspan="2">
-											<input name="action" value="ondemand" id="submit" class="button" type="submit" />
-											<input name="action" value="onrestart" id="submit" class="button" type="submit" />
-											<input name="back" value="Zurueck" id="submit" class="button" type="submit" />
-										</td>
-									<tr>
-								</tfoot>
-								</table>
-								'''
+						tablerows = []
+						tableotherrows = []
 						for productOnClient in productOnClients:
 							if productOnClient.getActionRequest() not in ('none', None):
 								if productOnClient.productId in prroductIds:
@@ -327,7 +306,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 											    </tr>''' \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
 								else:
-									tablerows.append('''<tr>
+									tableotherrows.append('''<tr>
 												<td></td>
 												<td>%s (%s)</td>
 											    </tr>''' \
@@ -336,14 +315,63 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							#Try to sort rows:
 							for row in tablerows:
 								pass
-							
-							
 						table = ''
 						for row in tablerows:
 							table += row
+						tableothers = ''
+						for row in tableotherrows:
+							tableothers += row
 						
-						resulttable = resulttable.replace('%result%', forceUnicode(table))
-						html = html.replace('%result%', forceUnicode(resulttable))
+						result_table = '''
+							<table>
+								<thead>
+									<tr>
+										<th>%s</th>
+									</tr>
+								</thead>
+								<tbody>
+
+										%s
+								</tbody>
+								
+								</table>
+								''' % (_(u'selected products'),
+									table)
+								
+						result_other_table = '''
+							<table>
+								<thead>
+									<tr>
+										<th>%s</th>
+									</tr>
+								</thead>
+								<tbody>
+
+										%s
+								</tbody>
+								
+								</table>
+								''' % (_(u'other products'),
+									tableothers)
+								
+						result_table_food = '''
+								<table>
+									<tr>
+										<td align="center" colspan="2">
+											<input name="action" value="ondemand" id="submit" class="button" type="submit" />
+											<input name="action" value="onrestart" id="submit" class="button" type="submit" />
+											<input name="back" value="Zurueck" id="submit" class="button" type="submit" />
+										</td>
+									<tr>
+								</table>
+								'''
+						
+						
+						
+						
+						#resulttable = resulttable.replace('%result%', forceUnicode(table))
+						resulttables = u"%s %s<br>%s" % (result_table,result_other_table, result_table_food)
+						html = html.replace('%result%', forceUnicode(resulttables))
 						result.stream = stream.IByteStream(html.encode('utf-8'))
 						return result
 		
