@@ -362,11 +362,14 @@ class Opsiclientd(EventListener, threading.Thread):
 		return self._cacheService
 	
 	def processEvent(self, event):
-		
 		logger.notice(u"Processing event %s" % event)
 		eventProcessingThread = None
 		self._eventProcessingThreadsLock.acquire()
-		timeline.addEvent(title = u"Event %s" % event.eventConfig.getName(), description = u"Event %s occurred" % event.eventConfig.getId(), category = u"event_occurrence")
+		description = u"Event %s occurred\n" % event.eventConfig.getId()
+		description += u"Config:\n"
+		for (k, v) in event.eventConfig.getConfig():
+			description += u"%s: %s\n"
+		timeline.addEvent(title = u"Event %s" % event.eventConfig.getName(), description = description, category = u"event_occurrence")
 		try:
 			eventProcessingThread = EventProcessingThread(self, event)
 			
