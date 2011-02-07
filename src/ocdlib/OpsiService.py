@@ -285,7 +285,12 @@ class ServiceConnectionThread(KillableThread):
 					self.setStatusMessage( _(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
 					if (len(self._username.split('.')) < 3):
 						raise Exception(u"Domain missing in username '%s'" % self._username)
-					self.configService = JSONRPCBackend(address = self._configServiceUrl, username = self._username, password = self._password, application = 'opsiclientd version %s' % __version__)
+					self.configService = JSONRPCBackend(
+						address       = self._configServiceUrl,
+						username      = self._username,
+						password      = self._password,
+						application   = 'opsiclientd version %s' % __version__,
+						socketTimeout = 3.0)
 					if self.configService.isLegacyOpsi():
 						self.configService.authenticated()
 					else:
