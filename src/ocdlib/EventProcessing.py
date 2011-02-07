@@ -584,7 +584,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.logException(e)
 			logger.error(u"Failed to process product action requests: %s" % forceUnicode(e))
 			self.setStatusMessage( _(u"Failed to process product action requests: %s") % forceUnicode(e) )
-		
+			timeline.addEvent(
+				title       = u"Failed to process product action requests",
+				description = u"Failed to process product action requests: %s" % forceUnicode(e),
+				category    = u"error",
+				isError     = True)
 		time.sleep(3)
 	
 	def runActions(self, additionalParams=''):
@@ -593,120 +597,121 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			description   = u"Running actions",
 			category      = u"run_actions",
 			durationEvent = True)
-		
-		if not additionalParams:
-			additionalParams = ''
-		if not self.event.getActionProcessorCommand():
-			raise Exception(u"No action processor command defined")
-		
-		if not self.isLoginEvent:
-			# check for Trusted Installer before Running Action Processor
-			if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
-				logger.notice(u"Getting TrustedInstaller service configuration")
-				try:
-					# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3
-					automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
-					if (automaticStartup == 2):
-						logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
-						self.setStatusMessage( _(u"Waiting for TrustedInstaller") )
-						waitEventId = timeline.addEvent(
-								title         = u"Waiting for TrustedInstaller",
-								description   = u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
-								category      = u"wait",
-								durationEvent = True)
-						while True:
-							time.sleep(3)
-							logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
-							automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
-							if not (automaticStartup == 2):
-								break
-						timeline.setEventEnd(eventId = waitEventId)
-				except Exception, e:
-					logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
+		try:
+			if not additionalParams:
+				additionalParams = ''
+			if not self.event.getActionProcessorCommand():
+				raise Exception(u"No action processor command defined")
 			
-		self.setStatusMessage( _(u"Starting actions") )
-		
-		# Setting some registry values before starting action
-		# Mainly for action processor winst
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depoturl",   config.get('depot_server', 'url'))
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", config.getDepotDrive())
-		
-		# action processor desktop can be one of current / winlogon / default
-		desktop = self.event.eventConfig.actionProcessorDesktop
-		
-		# Choose desktop for action processor
-		if not desktop or desktop.lower() not in ('winlogon', 'default'):
-			if self.isLoginEvent:
-				desktop = 'default'
-			else:
-				desktop = self.opsiclientd.getCurrentActiveDesktopName(self.getSessionId())
-		
-		if not desktop or desktop.lower() not in ('winlogon', 'default'):
-			# Default desktop is winlogon
-			desktop = 'winlogon'
-		
-		
-		(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
-		
-		# Update action processor
-		if config.get('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost') and self.event.eventConfig.updateActionProcessor:
-			self.updateActionProcessor()
-		
-		# Run action processor
-		actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
-		actionProcessorCommand = actionProcessorCommand.replace('%service_url%', self._configServiceUrl)
-		actionProcessorCommand += additionalParams
-		actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
-		command = u'%global.base_dir%\\action_processor_starter.exe ' \
-			+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
-			+ u'"%global.log_file%" "%global.log_level%" ' \
-			+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
-			+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
-			+ u'"' + unicode(self.getSessionId()) + u'" "' + desktop + '" ' \
-			+ u'"' + actionProcessorCommand + u'" ' + unicode(self.event.eventConfig.actionProcessorTimeout) + ' ' \
-			+ u'"' + self.opsiclientd._actionProcessorUserName + u'" "' + self.opsiclientd._actionProcessorUserPassword + u'"'
-		command = config.replace(command)
-		
-		if self.event.eventConfig.preActionProcessorCommand:
-			impersonation = None
-			try:
-				if self.opsiclientd._actionProcessorUserName:
-					impersonation = System.Impersonate(username = self.opsiclientd._actionProcessorUserName, password = self.opsiclientd._actionProcessorUserPassword)
-					impersonation.start(logonType = 'INTERACTIVE', newDesktop = True)
-					
-				logger.notice(u"Starting pre action processor command '%s' in session '%s' on desktop '%s'" \
-					% (self.event.eventConfig.preActionProcessorCommand, self.getSessionId(), desktop))
-				if impersonation:
-					impersonation.runCommand(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
-				else:
-					self.runCommandInSession(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
-				time.sleep(10)
-			finally:
-				if impersonation:
-					impersonation.end()
+			if not self.isLoginEvent:
+				# check for Trusted Installer before Running Action Processor
+				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
+					logger.notice(u"Getting TrustedInstaller service configuration")
+					try:
+						# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3
+						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
+						if (automaticStartup == 2):
+							logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
+							self.setStatusMessage( _(u"Waiting for TrustedInstaller") )
+							waitEventId = timeline.addEvent(
+									title         = u"Waiting for TrustedInstaller",
+									description   = u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
+									category      = u"wait",
+									durationEvent = True)
+							while True:
+								time.sleep(3)
+								logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
+								automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
+								if not (automaticStartup == 2):
+									break
+							timeline.setEventEnd(eventId = waitEventId)
+					except Exception, e:
+						logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
 				
-		logger.notice(u"Starting action processor in session '%s' on desktop '%s'" % (self.getSessionId(), desktop))
-		self.runCommandInSession(command = command, desktop = desktop, waitForProcessEnding = True)
-		
-		if self.event.eventConfig.postActionProcessorCommand:
-			impersonation = None
-			try:
-				if self.opsiclientd._actionProcessorUserName:
-					impersonation = System.Impersonate(username = self.opsiclientd._actionProcessorUserName, password = self.opsiclientd._actionProcessorUserPassword)
-					impersonation.start(logonType = 'INTERACTIVE', newDesktop = True)
-					
-				logger.notice(u"Starting post action processor command '%s' in session '%s' on desktop '%s'" \
-					% (self.event.eventConfig.postActionProcessorCommand, self.getSessionId(), desktop))
-				if impersonation:
-					impersonation.runCommand(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
+			self.setStatusMessage( _(u"Starting actions") )
+			
+			# Setting some registry values before starting action
+			# Mainly for action processor winst
+			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depoturl",   config.get('depot_server', 'url'))
+			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", config.getDepotDrive())
+			
+			# action processor desktop can be one of current / winlogon / default
+			desktop = self.event.eventConfig.actionProcessorDesktop
+			
+			# Choose desktop for action processor
+			if not desktop or desktop.lower() not in ('winlogon', 'default'):
+				if self.isLoginEvent:
+					desktop = 'default'
 				else:
-					self.runCommandInSession(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
-				time.sleep(10)
-			finally:
-				if impersonation:
-					impersonation.end()
-		self.setStatusMessage( _(u"Actions completed") )
-		timeline.setEventEnd(eventId = runActionsEventId)
+					desktop = self.opsiclientd.getCurrentActiveDesktopName(self.getSessionId())
+			
+			if not desktop or desktop.lower() not in ('winlogon', 'default'):
+				# Default desktop is winlogon
+				desktop = 'winlogon'
+			
+			
+			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
+			
+			# Update action processor
+			if config.get('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost') and self.event.eventConfig.updateActionProcessor:
+				self.updateActionProcessor()
+			
+			# Run action processor
+			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
+			actionProcessorCommand = actionProcessorCommand.replace('%service_url%', self._configServiceUrl)
+			actionProcessorCommand += additionalParams
+			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
+			command = u'%global.base_dir%\\action_processor_starter.exe ' \
+				+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
+				+ u'"%global.log_file%" "%global.log_level%" ' \
+				+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
+				+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
+				+ u'"' + unicode(self.getSessionId()) + u'" "' + desktop + '" ' \
+				+ u'"' + actionProcessorCommand + u'" ' + unicode(self.event.eventConfig.actionProcessorTimeout) + ' ' \
+				+ u'"' + self.opsiclientd._actionProcessorUserName + u'" "' + self.opsiclientd._actionProcessorUserPassword + u'"'
+			command = config.replace(command)
+			
+			if self.event.eventConfig.preActionProcessorCommand:
+				impersonation = None
+				try:
+					if self.opsiclientd._actionProcessorUserName:
+						impersonation = System.Impersonate(username = self.opsiclientd._actionProcessorUserName, password = self.opsiclientd._actionProcessorUserPassword)
+						impersonation.start(logonType = 'INTERACTIVE', newDesktop = True)
+						
+					logger.notice(u"Starting pre action processor command '%s' in session '%s' on desktop '%s'" \
+						% (self.event.eventConfig.preActionProcessorCommand, self.getSessionId(), desktop))
+					if impersonation:
+						impersonation.runCommand(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
+					else:
+						self.runCommandInSession(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
+					time.sleep(10)
+				finally:
+					if impersonation:
+						impersonation.end()
+					
+			logger.notice(u"Starting action processor in session '%s' on desktop '%s'" % (self.getSessionId(), desktop))
+			self.runCommandInSession(command = command, desktop = desktop, waitForProcessEnding = True)
+			
+			if self.event.eventConfig.postActionProcessorCommand:
+				impersonation = None
+				try:
+					if self.opsiclientd._actionProcessorUserName:
+						impersonation = System.Impersonate(username = self.opsiclientd._actionProcessorUserName, password = self.opsiclientd._actionProcessorUserPassword)
+						impersonation.start(logonType = 'INTERACTIVE', newDesktop = True)
+						
+					logger.notice(u"Starting post action processor command '%s' in session '%s' on desktop '%s'" \
+						% (self.event.eventConfig.postActionProcessorCommand, self.getSessionId(), desktop))
+					if impersonation:
+						impersonation.runCommand(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
+					else:
+						self.runCommandInSession(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
+					time.sleep(10)
+				finally:
+					if impersonation:
+						impersonation.end()
+			self.setStatusMessage( _(u"Actions completed") )
+		finally:
+			timeline.setEventEnd(eventId = runActionsEventId)
 		
 	def setEnvironment(self):
 		try:
