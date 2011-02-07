@@ -53,7 +53,7 @@ from ocdlib.Exceptions import *
 logger = Logger()
 config = Config()
 
-def isConfigServiceReachable(timeout=15):
+def isConfigServiceReachable(timeout=5):
 	for url in config.getConfigServiceUrls():
 		try:
 			logger.info(u"Trying connection to config service '%s'" % url)
@@ -286,11 +286,10 @@ class ServiceConnectionThread(KillableThread):
 					if (len(self._username.split('.')) < 3):
 						raise Exception(u"Domain missing in username '%s'" % self._username)
 					self.configService = JSONRPCBackend(
-						address       = self._configServiceUrl,
-						username      = self._username,
-						password      = self._password,
-						application   = 'opsiclientd version %s' % __version__,
-						socketTimeout = 3.0)
+						address     = self._configServiceUrl,
+						username    = self._username,
+						password    = self._password,
+						application = 'opsiclientd version %s' % __version__)
 					if self.configService.isLegacyOpsi():
 						self.configService.authenticated()
 					else:

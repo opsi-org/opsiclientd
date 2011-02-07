@@ -431,8 +431,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		pcss = state.get('product_cache_service')
 		if pcss:
 			self._state = pcss
-		
-	def dynamicBandwidthLimitChanged(self, bandwidth):
+	
+	def dynamicBandwidthLimitChanged(self, repository, bandwidth)
 		if (bandwidth <= 0):
 			if self._dynamicBandwidthLimitEvent:
 				timeline.setEventEnd(self._dynamicBandwidthLimitEvent)
