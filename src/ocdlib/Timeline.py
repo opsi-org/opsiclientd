@@ -164,6 +164,8 @@ class TimelineImplementation(object):
 			else:
 				if event['durationEvent']:
 					event['end'] = now
+			if event['description']:
+				event['description'] = event['description'].replace(u'\n', u'<br />')
 			if event['isError']:
 				#event['classname'] = u"error-event"
 				event['color'] = u"#A74141"
