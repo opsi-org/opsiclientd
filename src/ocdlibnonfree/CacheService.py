@@ -577,6 +577,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		self._state['products_cached'] = False
 		self._state['products'] = {}
 		state.set('product_cache_service', self._state)
+		eventId = None
 		
 		try:
 			if not self._configService:
@@ -622,11 +623,12 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					logger.notice(u"All products cached: %s" % ', '.join(productIds))
 					self._state['products_cached'] = True
 					state.set('product_cache_service', self._state)
-					timeline.setEventEnd(eventId)
 					for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
 						eventGenerator.fireEvent()
 		except Exception, e:
 			logger.error(u"Failed to cache products: %s" % e)
+		if eventId:
+			timeline.setEventEnd(eventId)
 		self.disconnectConfigService()
 		self._working = False
 	
