@@ -18,7 +18,7 @@
 """
 
 # Import
-import threading, base64, time
+import threading, base64, time, codecs
 from hashlib import md5
 from twisted.conch.ssh import keys
 
@@ -321,6 +321,16 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				self._cacheBackend._setMasterBackend(self._configService)
 				self._cacheBackend._updateMasterFromWorkBackend(modifications)
 				self._backendTracker.clearModifications()
+				try:
+					instlog = os.path.join(config.get('global', 'log_dir'), u'instlog.txt')
+					if os.path.isfile(instlog):
+						f = codecs.open(instlog, 'r', 'utf-8')
+						data = f.read()
+						f.close()
+						self._configService.log_write(u'instlog', data = data, objectId = config.get('global', 'host_id'), append = False)
+				except Exception, e:
+					logger.error(u"Failed to sync instlog: %s" % e)
+				
 				logger.notice(u"Config synced to server")
 				timeline.setEventEnd(eventId)
 		except Exception, e:
