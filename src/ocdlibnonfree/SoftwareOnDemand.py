@@ -335,7 +335,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						if tablerows:
 							#Try to sort rows:
 							for row in tablerows:
-								
+								pass
 							
 							
 						table = ''
