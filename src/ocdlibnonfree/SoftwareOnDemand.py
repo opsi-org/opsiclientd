@@ -86,10 +86,11 @@ answerpage = u'''
 <head>
 	<title>opsi Software On Demand</title>
 	<style>
+	   body          { font-family: verdana, arial; font-size: 12px; }
 	   .title        { color: #555555; font-size: 20px; font-weight: bolder; letter-spacing: 5px; }
 	   #title        { padding: 10px; color: #6276a0; font-size: 20px; letter-spacing: 5px; }
 	   .button       { color: #9e445a; background-color: #fafafa; border: 1px solid; font-weight: bolder; }
-           table		{ margin-top: 10px; border-collapse:collapse;text-align: center; }
+           table           { margin-top: 20px; margin-left: 20px; border-collapse:collapse;text-align: center; width: 300px;}
            thead		{ background-color: #6495ed;}
            tfoot		{text-align: right; }
         </style>
@@ -358,13 +359,17 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								<table>
 									<tr>
 										<td align="center" colspan="2">
-											<input name="action" value="ondemand" id="submit" class="button" type="submit" />
-											<input name="action" value="onrestart" id="submit" class="button" type="submit" />
-											<input name="back" value="Zurueck" id="submit" class="button" type="submit" />
+											<input name="action" value="%s" id="ondemand" class="button" type="submit" />
+											<input name="action" value="%s" id="onrestart" class="button" type="submit" />
+											<input name="back" value="%s" id="back" class="button" type="submit" />
 										</td>
 									<tr>
 								</table>
-								'''
+								''' \
+								% (_(u"ondemand"),
+								   _(u"onrestart"),
+								   _(u"back"))
+								
 						
 						
 						
@@ -475,7 +480,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						<tfoot>
 							<tr>
 								<td align="center" colspan="7">
-									<input name="action" value="Save" id="submit" class="button" type="submit" />
+									<input name="action" value="%s" id="submit" class="button" type="submit" />
 								</td>
 							<tr>
 						</tfoot>
@@ -486,7 +491,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						_(u'state'),
 						_(u'version'),
 						_(u'available version'),
-						table
+						table,
+						_(u'save')
 						)
 		
 		html = html.replace('%result%', maintable)
