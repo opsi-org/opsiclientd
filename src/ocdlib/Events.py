@@ -815,6 +815,8 @@ def getEventConfigs():
 						rawEventConfigs[eventConfigId]['active'] = not options[key].lower() in ('0', 'false', 'off', 'no')
 					elif (key.lower() == 'super'):
 						rawEventConfigs[eventConfigId]['super'] = options[key]
+						if rawEventConfigs[eventConfigId]['super'].startswith('event_'):
+							rawEventConfigs[eventConfigId]['super'] = rawEventConfigs[eventConfigId]['super'].split('_', 1)[1]
 					else:
 						rawEventConfigs[eventConfigId]['args'][key.lower()] = options[key]
 				if (eventConfigId.find('{') != -1):
@@ -831,7 +833,7 @@ def getEventConfigs():
 			return args
 		superArgs = pycopy.deepcopy(rawEventConfigsCopy[superEventConfigId]['args'])
 		if rawEventConfigsCopy[superEventConfigId]['super']:
-			__inheritArgsFromSuperEvents(rawEventConfigsCopy, superArgs, rawEventConfigsCopy[superEventConfigId]['super'])
+			superArgs = __inheritArgsFromSuperEvents(rawEventConfigsCopy, superArgs, rawEventConfigsCopy[superEventConfigId]['super'])
 		superArgs.update(args)
 		return superArgs
 	
