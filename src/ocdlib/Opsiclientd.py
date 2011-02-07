@@ -367,7 +367,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._eventProcessingThreadsLock.acquire()
 		description = u"Event %s occurred\n" % event.eventConfig.getId()
 		description += u"Config:\n"
-		config = event.eventConfig.getConfig():
+		config = event.eventConfig.getConfig()
 		configKeys = config.keys()
 		configKeys.sort()
 		for configKey in configKeys:
