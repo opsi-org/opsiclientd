@@ -747,15 +747,16 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	def processActionWarningTime(self, productIds=[]):
 		if not self.event.eventConfig.warningTime:
 			return
+		cancelCounter = state.get('action_processing_cancel_counter', 0)
 		waitEventId = timeline.addEvent(
 				title         = u"Action warning",
 				description   = u'Notifying user of actions to process %s (%s)\n' % (self.event.eventConfig.getId(), u', '.join(productIds)) \
-						+ u"warningTime: %s, userCancelable: %s, cancelCounter: %s" % (self.event.eventConfig.warningTime, self.event.eventConfig.userCancelable, self.event.eventConfig.cancelCounter),
+						+ u"warningTime: %s, userCancelable: %s, cancelCounter: %s" % (self.event.eventConfig.warningTime, self.event.eventConfig.userCancelable, cancelCounter),
 				category      = u"wait",
 				durationEvent = True)
 		self._messageSubject.setMessage(u"%s\n%s: %s" % (self.event.eventConfig.getMessage(), _(u'Products'), u', '.join(productIds)) )
 		choiceSubject = ChoiceSubject(id = 'choice')
-		if (self.event.eventConfig.cancelCounter < self.event.eventConfig.userCancelable):
+		if (cancelCounter < self.event.eventConfig.userCancelable):
 			choiceSubject.setChoices([ _('Abort'), _('Start now') ])
 			choiceSubject.setCallbacks( [ self.abortEventCallback, self.startEventCallback ] )
 		else:
@@ -795,21 +796,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					category    = u"user_interaction")
 			
 			if self.eventCancelled:
-				self.event.eventConfig.cancelCounter += 1
-				config.set('event_%s' % self.event.eventConfig.getId(), 'cancel_counter', self.event.eventConfig.cancelCounter)
-				config.updateConfigFile()
+				cancelCounter += 1
+				state.set('action_processing_cancel_counter', cancelCounter)
 				logger.notice(u"Action processing cancelled by user for the %d. time (max: %d)" \
-					% (self.event.eventConfig.cancelCounter, self.event.eventConfig.userCancelable))
+					% (cancelCounter, self.event.eventConfig.userCancelable))
 				timeline.addEvent(
 					title       = u"Action processing cancelled by user",
 					description = u"Action processing cancelled by user for the %d. time (max: %d)" \
-							% (self.event.eventConfig.cancelCounter, self.event.eventConfig.userCancelable),
+							% (cancelCounter, self.event.eventConfig.userCancelable),
 					category    = u"user_interaction")
 				raise CanceledByUserError(u"Action processing cancelled by user")
 			else:
-				self.event.eventConfig.cancelCounter = 0
-				config.set('event_%s' % self.event.eventConfig.getId(), 'cancel_counter', self.event.eventConfig.cancelCounter)
-				config.updateConfigFile()
+				state.set('action_processing_cancel_counter', 0)
 		finally:
 			timeline.setEventEnd(waitEventId)
 			try:
@@ -856,6 +854,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				
 				if self.event.eventConfig.shutdownWarningTime:
 					while True:
+						shutdownCancelCounter = state.get('shutdown_cancel_counter', 0)
 						waitEventId = None
 						if reboot:
 							logger.info(u"Notifying user of reboot")
@@ -863,7 +862,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 								title         = u"Reboot warning",
 								description   = u'Notifying user of reboot\n' \
 										+ u"shutdownWarningTime: %s, shutdownUserCancelable: %s, shutdownCancelCounter: %s" \
-										% (self.event.eventConfig.shutdownWarningTime, self.event.eventConfig.shutdownUserCancelable, self.event.eventConfig.shutdownCancelCounter),
+										% (self.event.eventConfig.shutdownWarningTime, self.event.eventConfig.shutdownUserCancelable, shutdownCancelCounter),
 								category      = u"wait",
 								durationEvent = True)
 						else:
@@ -872,7 +871,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 								title         = u"Shutdown warning",
 								description   = u'Notifying user of shutdown\n' \
 										+ u"shutdownWarningTime: %s, shutdownUserCancelable: %s, shutdownCancelCounter: %s" \
-										% (self.event.eventConfig.shutdownWarningTime, self.event.eventConfig.shutdownUserCancelable, self.event.eventConfig.shutdownCancelCounter),
+										% (self.event.eventConfig.shutdownWarningTime, self.event.eventConfig.shutdownUserCancelable, shutdownCancelCounter),
 								category      = u"wait",
 								durationEvent = True)
 						
@@ -882,7 +881,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						self._messageSubject.setMessage(self.event.eventConfig.getShutdownWarningMessage())
 						
 						choiceSubject = ChoiceSubject(id = 'choice')
-						if (self.event.eventConfig.shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable):
+						if (shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable):
 							if reboot:
 								choiceSubject.setChoices([ _('Reboot now'), _('Later') ])
 							else:
@@ -947,20 +946,21 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 									category    = u"user_interaction")
 						
 						if self.shutdownCancelled:
-							self.event.eventConfig.shutdownCancelCounter += 1
+							shutdownCancelCounter += 1
+							state.set('shutdown_cancel_counter', shutdownCancelCounter)
 							logger.notice(u"Shutdown cancelled by user for the %d. time (max: %d)" \
-								% (self.event.eventConfig.shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable))
+								% (shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable))
 							if reboot:
 								timeline.addEvent(
 									title       = u"Reboot cancelled by user",
 									description = u"Reboot cancelled by user for the %d. time (max: %d)" \
-											% (self.event.eventConfig.shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable),
+											% (shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable),
 									category    = u"user_interaction")
 							else:
 								timeline.addEvent(
 									title       = u"Shutdown cancelled by user",
 									description = u"Shutdown cancelled by user for the %d. time (max: %d)" \
-											% (self.event.eventConfig.shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable),
+											% (shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable),
 									category    = u"user_interaction")
 							if (self.event.eventConfig.shutdownWarningRepetitionTime >= 0):
 								logger.info(u"Shutdown warning will be repeated in %d seconds" % self.event.eventConfig.shutdownWarningRepetitionTime)
