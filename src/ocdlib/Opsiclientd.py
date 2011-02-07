@@ -367,8 +367,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._eventProcessingThreadsLock.acquire()
 		description = u"Event %s occurred\n" % event.eventConfig.getId()
 		description += u"Config:\n"
-		for (k, v) in event.eventConfig.getConfig().items():
-			description += u"%s: %s\n" % (k, v)
+		config = event.eventConfig.getConfig():
+		configKeys = config.keys()
+		configKeys.sort()
+		for configKey in configKeys:
+			description += u"%s: %s\n" % (configKey, config[configKey])
 		timeline.addEvent(title = u"Event %s" % event.eventConfig.getName(), description = description, category = u"event_occurrence")
 		try:
 			eventProcessingThread = EventProcessingThread(self, event)
