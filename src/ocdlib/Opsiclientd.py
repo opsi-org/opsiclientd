@@ -368,7 +368,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		description = u"Event %s occurred\n" % event.eventConfig.getId()
 		description += u"Config:\n"
 		for (k, v) in event.eventConfig.getConfig().items():
-			description += u"%s: %s\n"
+			description += u"%s: %s\n" % (k, v)
 		timeline.addEvent(title = u"Event %s" % event.eventConfig.getName(), description = description, category = u"event_occurrence")
 		try:
 			eventProcessingThread = EventProcessingThread(self, event)
