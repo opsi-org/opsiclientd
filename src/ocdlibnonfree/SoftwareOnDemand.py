@@ -259,6 +259,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		productDescription = ''
 		productAdvice = ''
 		
+		tablerows = []
+		tableotherrows = []
+		
 		#productOnDepots = {}
 		productIds = []
 		myClientId = config.get('global', 'host_id')
@@ -295,8 +298,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					logger.notice(u"Action Save was send.")
 					if params['action'].lower() == "save":
 						html = answerpage
-						tablerows = []
-						tableotherrows = []
+						
 						for productOnClient in productOnClients:
 							if productOnClient.getActionRequest() not in ('none', None):
 								if productOnClient.productId in prroductIds:
