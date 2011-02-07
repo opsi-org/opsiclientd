@@ -389,13 +389,15 @@ class EventGenerator(threading.Thread):
 	
 	def getEventConfig(self):
 		logger.info(u"Testing preconditions of configs: %s" % self._preconditionEventConfigs)
+		actualConfig = { 'preconditions': {}, 'config': self._eventConfig }
 		for pec in self._preconditionEventConfigs:
 			if self._preconditionsFulfilled(pec.preconditions):
-				logger.notice(u"Preconditions %s for event config '%s' fulfilled" % (pec.preconditions, pec.getId()))
-				return pec
+				logger.info(u"Preconditions %s for event config '%s' fulfilled" % (pec.preconditions, pec.getId()))
+				if (len(pec.preconditions.keys()) > len(actualConfig['preconditions'].keys())):
+					actualConfig = { 'preconditions': pec.preconditions, 'config': pec }
 			else:
 				logger.info(u"Preconditions %s for event config '%s' not fulfilled" % (pec.preconditions, pec.getId()))
-		return self._eventConfig
+		return actualConfig['config']
 	
 	def createEvent(self, eventInfo={}):
 		return Event(eventConfig = self.getEventConfig(), eventInfo = eventInfo)
@@ -817,7 +819,8 @@ def getEventConfigs():
 						rawEventConfigs[eventConfigId]['args'][key.lower()] = options[key]
 				if (eventConfigId.find('{') != -1):
 					(superEventName, precondition) = eventConfigId.split('{', 1)
-					rawEventConfigs[eventConfigId]['super'] = superEventName.strip()
+					if not rawEventConfigs[eventConfigId]['super']:
+						rawEventConfigs[eventConfigId]['super'] = superEventName.strip()
 					rawEventConfigs[eventConfigId]['precondition'] = precondition.replace('}', '').strip()
 			except Exception, e:
 				logger.error(u"Failed to parse event config '%s': %s" % (eventConfigId, forceUnicode(e)))
