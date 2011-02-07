@@ -754,8 +754,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					repository.detachObserver(self)
 			logger.notice(u"Product '%s' cached" % productId)
 			self._setProductCacheState(productId, 'completed', time.time())
-			timeline.setEventEnd(eventId)
 		finally:
+			timeline.setEventEnd(eventId)
 			repository.disconnect()
 	
 
