@@ -304,12 +304,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								if productOnClient.productId in productIds:
 									tablerows.append('''<tr>
 												<td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td>
-												<td></td>
 											    </tr>''' \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
 								else:
 									tableotherrows.append('''<tr>
-												<td></td>
 												<td>%s (%s)</td>
 											    </tr>''' \
 											% (productOnClient.productId, productOnClient.getActionRequest() ))
