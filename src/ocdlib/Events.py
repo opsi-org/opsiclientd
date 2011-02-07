@@ -32,7 +32,7 @@
 """
 
 # Imports
-import os, re
+import os, re, inspect
 import copy as pycopy
 
 # OPSI imports
@@ -99,6 +99,13 @@ class EventConfig(object):
 		moduleName = u' %-30s' % (u'event config ' + self._id)
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		self.setConfig(kwargs)
+	
+	def getConfig(self):
+		config = {}
+		for (k, v) in self.__dict__.items():
+			if not k.startswith('_'):
+				config[k] = v
+		return config
 		
 	def setConfig(self, conf):
 		self.name                          =  unicode ( conf.get('name',            self._id.split('{')[0]  ) )
