@@ -199,10 +199,14 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				return productOnClientsWithDependencies
 				
 			if param.get('action') == 'ondemand':
+				if modified:
+					logger.notice(u"Try to set modified Products")
+					self._configService.productOnClient_updateObjects(productOnClientsWithDependencies)
 				#erst setup setzen
 				#sw on demand
 				for eventGenerator in getEventGenerators(generatorClass = SwOnDemandEventGenerator):
 					eventGenerator.fireEvent()
+				
 				
 			elif param.get('action') == 'onrestart':
 				pass
@@ -267,7 +271,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		productIds = []
 		myClientId = config.get('global', 'host_id')
 		mydepotServer = config.get('depot_server','depot_id')
-		onDemandGroups = ["kiosk","kiosk1"]
+		onDemandGroups = forcelist(config.get('event_software_on_demand', 'groups'))
+		if not onDemandGroups:
+			onDemandGroups = ["kiosk"]
 		
 		
 		if not isinstance(result, http.Response):
