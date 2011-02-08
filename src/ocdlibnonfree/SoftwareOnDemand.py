@@ -273,7 +273,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		mydepotServer = config.get('depot_server','depot_id')
 		onDemandGroups = forceList(config.get('event_software_on_demand', 'groups'))
 		if not onDemandGroups:
-			onDemandGroups = ["kiosk"]
+			onDemandGroups = ["kiosk", "kiosk1"]
 		
 		
 		if not isinstance(result, http.Response):
