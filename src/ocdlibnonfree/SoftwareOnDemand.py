@@ -271,7 +271,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		productIds = []
 		myClientId = config.get('global', 'host_id')
 		mydepotServer = config.get('depot_server','depot_id')
-		onDemandGroups = forcelist(config.get('event_software_on_demand', 'groups'))
+		onDemandGroups = forceList(config.get('event_software_on_demand', 'groups'))
 		if not onDemandGroups:
 			onDemandGroups = ["kiosk"]
 		
