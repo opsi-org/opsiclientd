@@ -156,7 +156,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		productOnClients = self._configService.productOnClient_getObjects(clientId = clientId)
 		productOnClientsWithDependencies = []
 		try:
-			logger.debug(u'Try to execute Query')
+			logger.debug(u"Try to execute Query: '%s'" % param)
 			#productOnClients = self._configService.productOnClient_getObjects(clientId = clientId)
 			#product On Clients
 			modified = False
@@ -273,7 +273,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		mydepotServer = config.get('depot_server','depot_id')
 		onDemandGroups = []
 		show_details = None
-		configs = self._configService.configState_getObjects(	configId=["opsiclientd.event_software_on_demand.product_groups","opsiclientd.event_software_on_demand.show_details" 
+		configs = self._configService.configState_getObjects(	configId=["opsiclientd.event_software_on_demand.product_groups","opsiclientd.event_software_on_demand.show_details"], 
 									objectId = [myClientId,mydepotServer])
 		for swconfig in configs:
 			if "product_groups" in swconfig.getConfigId(): 
