@@ -325,7 +325,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					logger.notice(u"Parameters from POST: '%s'" % params)
 					(productOnClients,productOnClientsWithDependencies) = self._executeQuery(params, myClientId)
 				
-				if productOnClients:
+				if productOnClientsWithDependencies:
 					
 					if params['action'].lower() == "save":
 						logger.notice(u"Action Save was send.")	
@@ -337,7 +337,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						logger.debug("dependencies: '%s'" % dependencies)
 						logger.debug("productIds: '%s'" % productIds)
 						
-						for productOnClient in productOnClients:
+						for productOnClient in productOnClientsWithDependencies:
 							if productOnClient.getActionRequest() not in ('none', None):
 								logger.debug(u"Product: '%s' with action: '%s' to check with known lists." \
 											% (productOnClient.productId,productOnClient.getActionRequest()))
