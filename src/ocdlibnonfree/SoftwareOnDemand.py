@@ -334,6 +334,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						for productDependency in productOnClientsWithDependencies:
 							dependencies.append(productDependency.productId)
 						
+						logger.debug("dependencies: '%s'" % dependencies)
+						logger.debug("productIds: '%s'" % productIds)
+						
 						for productOnClient in productOnClients:
 							if productOnClient.getActionRequest() not in ('none', None):
 								if productOnClient.productId in productIds:
@@ -351,10 +354,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 												<td>%s (%s)</td>
 											    </tr>''' \
 											% (productOnClient.productId, productOnClient.getActionRequest() ))
-						if tablerows:
+						#if tablerows:
 							#Try to sort rows:
-							for row in tablerows:
-								pass
+						#	for row in tablerows:
+						#		pass
+						
 						table = ''
 						for row in tablerows:
 							table += row
@@ -394,7 +398,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								</tbody>
 								
 								</table>
-								''' % (_(u'other products'),
+								''' % (_(u'product dependencies'),
 									tableDependency)
 								
 						result_other_table = '''
