@@ -340,7 +340,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						logger.debug("dependencies: '%s'" % dependencies)
 						logger.debug("productIds: '%s'" % productIds)
 						
-						for productOnClient in productOnClientsWithDependencies:
+						for productOnClient in productOnClients:
 							if productOnClient.getActionRequest() not in ('none', None):
 								logger.debug(u"Product: '%s' with action: '%s' to check with known lists." \
 											% (productOnClient.productId,productOnClient.getActionRequest()))
