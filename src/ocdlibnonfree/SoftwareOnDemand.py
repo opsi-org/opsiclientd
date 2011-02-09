@@ -274,7 +274,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		configs = self._configService.configState_getObjects(configId="opsiclientd.event_software_on_demand.product_groups", objectId = [myClientId,mydepotServer])
 		for swconfig in configs:
 			if swconfig.values:
-				onDemandGroups = forceUnicodeList(swconfig.values.split(","))
+				onDemandGroups = forceUnicodeList(swconfig.values[0].split(","))
 		#onDemandGroups = forceList(config.get('event_software_on_demand', 'product_groups'))
 		logger.debug(u"SoftwareOnDemandGroups from config: '%s'" % onDemandGroups)
 		#if not onDemandGroups:
