@@ -196,7 +196,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				logger.notice(u'No Product to set.')
 			
 			if param.get('action') == 'save':
-				return productOnClientsWithDependencies
+				return (productOnClients,productOnClientsWithDependencies)
 				
 			if param.get('action') == 'ondemand':
 				if modified:
@@ -265,7 +265,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		productAdvice = ''
 		
 		tablerows = []
-		tableotherrows = []
+		tableOtherRows = []
+		tableDependencyRows = []
 		
 		#productOnDepots = {}
 		productIds = []
@@ -273,21 +274,28 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		mydepotServer = config.get('depot_server','depot_id')
 		onDemandGroups = []
 		show_details = None
-		configs = self._configService.configState_getObjects(	configId=["opsiclientd.event_software_on_demand.product_groups","opsiclientd.event_software_on_demand.show_details"], 
-									objectId = [myClientId,mydepotServer])
-		for swconfig in configs:
-			if "product_groups" in swconfig.getConfigId(): 
-				if swconfig.getValues():
-					onDemandGroups = forceUnicodeList(swconfig.getValues()[0].split(","))
-				else:
-					onDemandGroups = None
-			elif "show_details" in swconfig.getConfigId():
-				show_details = forceBool(swconfig.getValues())
-				
-		#onDemandGroups = forceList(config.get('event_software_on_demand', 'product_groups'))
+		configIds = [
+			"opsiclientd.event_software_on_demand.product_groups",
+			"opsiclientd.event_software_on_demand.show_details"
+		]
+		
+		
+		
+		
+		configs = self._configService.configState_getObjects(configId=configIds ,objectId = [myClientId,mydepotServer])
+		if configs:
+			for swconfig in configs:
+				if "product_groups" in swconfig.getConfigId(): 
+					if swconfig.getValues():
+						onDemandGroups = forceUnicodeList(swconfig.getValues()[0].split(","))
+					else:
+						onDemandGroups = None
+				elif "show_details" in swconfig.getConfigId():
+					show_details = forceBool(swconfig.getValues())
+		else:
+			raise Exception("No Configs found")
+		
 		logger.debug(u"SoftwareOnDemandGroups from config: '%s'" % onDemandGroups)
-		#if not onDemandGroups:
-		#	onDemandGroups = ["kiosk", "kiosk1"]
 		
 		
 		if not isinstance(result, http.Response):
@@ -299,7 +307,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				productIds.append(objectToGroup.objectId)
 		
 		html = answerpage
-		#Query bearbeitung
+		
+		#Analyse Query
 		if self.query:
 			logger.notice(u"QUERY: '%s'" % self.query)
 			if 'action' in self.query and 'product' in self.query:
@@ -314,12 +323,16 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				
 				if params:
 					logger.notice(u"Parameters from POST: '%s'" % params)
-					productOnClients = self._executeQuery(params, myClientId)
+					(productOnClients,productOnClientsWithDependencies) = self._executeQuery(params, myClientId)
 				
 				if productOnClients:
-					logger.notice(u"Action Save was send.")
+					
 					if params['action'].lower() == "save":
+						logger.notice(u"Action Save was send.")	
 						
+						dependencies = []
+						for productDependency in productOnClientsWithDependencies:
+							dependency.append(productDependency.productId)
 						
 						for productOnClient in productOnClients:
 							if productOnClient.getActionRequest() not in ('none', None):
@@ -328,8 +341,13 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 												<td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td>
 											    </tr>''' \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
+								elif productOnClient.productId in dependency:
+									tableDependencyRows.append('''<tr>
+												<td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td>
+											    </tr>''' \
+											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
 								else:
-									tableotherrows.append('''<tr>
+									tableOtherRows.append('''<tr>
 												<td>%s (%s)</td>
 											    </tr>''' \
 											% (productOnClient.productId, productOnClient.getActionRequest() ))
@@ -340,8 +358,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						table = ''
 						for row in tablerows:
 							table += row
+						tableDependency = ''
+						for row in tableDependencyRows:
+							tableDependency += row
 						tableothers = ''
-						for row in tableotherrows:
+						for row in tableOtherRows:
 							tableothers += row
 						
 						result_table = '''
@@ -359,6 +380,22 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								</table>
 								''' % (_(u'selected products'),
 									table)
+						
+						result_dependency_table = '''
+							<table>
+								<thead>
+									<tr>
+										<th>%s</th>
+									</tr>
+								</thead>
+								<tbody>
+
+										%s
+								</tbody>
+								
+								</table>
+								''' % (_(u'other products'),
+									tableDependency)
 								
 						result_other_table = '''
 							<table>
@@ -398,7 +435,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						#resulttable = resulttable.replace('%result%', forceUnicode(table))
 						logger.debug(u"Show Details config: '%s'" % show_details) 
 						if show_details:
-							resulttables = u"%s %s<br>%s" % (result_table,result_other_table, result_table_food)
+							resulttables = u"%s %s %s<br>%s" % (result_table,result_dependency_table, result_other_table, result_table_food)
 						else:
 							resulttables = u"%s<br>%s" % (result_table,result_table_food)
 						html = html.replace('%result%', forceUnicode(resulttables))
