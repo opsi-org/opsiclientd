@@ -298,6 +298,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			if not objectToGroup.objectId in productIds:
 				productIds.append(objectToGroup.objectId)
 		
+		html = answerpage
 		#Query bearbeitung
 		if self.query:
 			logger.notice(u"QUERY: '%s'" % self.query)
@@ -318,7 +319,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				if productOnClients:
 					logger.notice(u"Action Save was send.")
 					if params['action'].lower() == "save":
-						html = answerpage
+						
 						
 						for productOnClient in productOnClients:
 							if productOnClient.getActionRequest() not in ('none', None):
