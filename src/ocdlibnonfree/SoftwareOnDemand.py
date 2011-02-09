@@ -354,11 +354,13 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 												<td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td>
 											    </tr>''' \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
-								else:
-									tableOtherRows.append('''<tr>
-												<td>%s (%s)</td>
-											    </tr>''' \
-											% (productOnClient.productId, productOnClient.getActionRequest() ))
+						for productOnClient in productOnClients:
+							if productOnClient.productId in productIds:
+								continue
+							tableOtherRows.append('''<tr>
+										<td>%s (%s)</td>
+									    </tr>''' \
+									    % (productOnClient.productId, productOnClient.getActionRequest() ))
 						#if tablerows:
 							#Try to sort rows:
 						#	for row in tablerows:
