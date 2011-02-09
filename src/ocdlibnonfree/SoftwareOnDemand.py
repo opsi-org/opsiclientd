@@ -277,7 +277,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 									objectId = [myClientId,mydepotServer])
 		for swconfig in configs:
 			if "product_groups" in swconfig.getConfigId(): 
-				onDemandGroups = forceUnicodeList(swconfig.getValues()[0].split(","))
+				if swconfig.getValues():
+					onDemandGroups = forceUnicodeList(swconfig.getValues()[0].split(","))
+				else:
+					onDemandGroups = None
 			elif "show_details" in swconfig.getConfigId():
 				show_details = forceBool(swconfig.getValues())
 				
@@ -392,7 +395,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						
 						
 						#resulttable = resulttable.replace('%result%', forceUnicode(table))
-						
+						logger.debug(u"Show Details config: '%s'" % show_details) 
 						if show_details:
 							resulttables = u"%s %s<br>%s" % (result_table,result_other_table, result_table_food)
 						else:
@@ -458,6 +461,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				else:
 					checked = ''
 					state = 'nicht installiert'
+					productVersion = ''
 			else:
 				state = 'nicht installiert'
 				productVersion = ''
