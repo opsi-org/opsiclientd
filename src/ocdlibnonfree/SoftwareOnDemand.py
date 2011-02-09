@@ -272,9 +272,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		myClientId = config.get('global', 'host_id')
 		mydepotServer = config.get('depot_server','depot_id')
 		configs = self._configService.configState_getObjects(configId="opsiclientd.event_software_on_demand.product_groups", objectId = [myClientId,mydepotServer])
-		for config in configs:
-			if config.values:
-				onDemandGroups = config.values
+		for swconfig in configs:
+			if swconfig.values:
+				onDemandGroups = swconfig.values
 		#onDemandGroups = forceList(config.get('event_software_on_demand', 'product_groups'))
 		logger.debug(u"SoftwareOnDemandGroups from config: '%s'" % onDemandGroups)
 		#if not onDemandGroups:
