@@ -154,6 +154,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 	def _executeQuery(self, param, clientId):
 		#if param:
 		productOnClients = self._configService.productOnClient_getObjects(clientId = clientId)
+		modifiedProductOnClients = []
 		productOnClientsWithDependencies = []
 		try:
 			logger.debug(u"Try to execute Query: '%s'" % param)
@@ -175,12 +176,14 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						installationStatus = 'not_installed'
 					)
 					productOnClients.append(productOnClient)
+					modifiedProductOnClients.append(productOnClient)
 					index = len(productOnClients) - 1
 				if productOnClients[index].getActionRequest() == 'setup':
 					logger.notice(u"Product: '%s' is already set on setup, nothing to do." % productId)
 					continue
 				#TODO Vorbedingung fuer Abhaengige Pakete mit einbauen.
 				productOnClients[index].setActionRequest('setup')
+				modifiedProductOnClients.append(productOnClients[index])
 				modified = True
 			
 			#Set Products
@@ -188,7 +191,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				logger.notice(u"Now try to fulfill ProductDependencies.")
 				for poc in productOnClients:
 					logger.info(u"BEFORE: %s" % poc)
-				productOnClientsWithDependencies = self._configService.productOnClient_addDependencies(productOnClients)
+				productOnClientsWithDependencies = self._configService.productOnClient_addDependencies(modifiedProductOnClients)
 				for poc in productOnClientsWithDependencies:
 					logger.info(u"AFTER: %s" % poc)
 				#self._configService.productOnClient_updateObjects(productOnClients_withDependencies)
