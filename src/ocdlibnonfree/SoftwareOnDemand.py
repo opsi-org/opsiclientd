@@ -271,10 +271,14 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		productIds = []
 		myClientId = config.get('global', 'host_id')
 		mydepotServer = config.get('depot_server','depot_id')
-		onDemandGroups = forceList(config.get('event_software_on_demand', 'product_groups'))
+		configs = self._configService.configState_getObjects(configId="opsiclientd.event_software_on_demand.product_groups", objectId = [myClientId,mydepotServer])
+		for config in configs:
+			if config.values:
+				onDemandGroups = config.values
+		#onDemandGroups = forceList(config.get('event_software_on_demand', 'product_groups'))
 		logger.debug(u"SoftwareOnDemandGroups from config: '%s'" % onDemandGroups)
-		if not onDemandGroups:
-			onDemandGroups = ["kiosk", "kiosk1"]
+		#if not onDemandGroups:
+		#	onDemandGroups = ["kiosk", "kiosk1"]
 		
 		
 		if not isinstance(result, http.Response):
