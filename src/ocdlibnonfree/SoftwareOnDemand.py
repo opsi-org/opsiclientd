@@ -357,10 +357,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						for productOnClient in productOnClients:
 							if productOnClient.productId in productIds:
 								continue
-							tableOtherRows.append('''<tr>
-										<td>%s (%s)</td>
-									    </tr>''' \
-									    % (productOnClient.productId, productOnClient.getActionRequest() ))
+							if productOnClient.getActionRequest() not in ('none', None):
+								tableOtherRows.append('''<tr>
+											<td>%s (%s)</td>
+											</tr>''' \
+											% (productOnClient.productId, productOnClient.getActionRequest() ))
 						#if tablerows:
 							#Try to sort rows:
 						#	for row in tablerows:
