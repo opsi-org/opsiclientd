@@ -195,7 +195,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			else:
 				logger.notice(u'No Product to set.')
 			
-			if param.get('action') == 'Save':
+			if param.get('action') == 'save':
 				return productOnClientsWithDependencies
 				
 			if param.get('action') == 'ondemand':
@@ -271,10 +271,16 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		productIds = []
 		myClientId = config.get('global', 'host_id')
 		mydepotServer = config.get('depot_server','depot_id')
-		configs = self._configService.configState_getObjects(configId="opsiclientd.event_software_on_demand.product_groups", objectId = [myClientId,mydepotServer])
+		onDemandGroups = []
+		show_details = None
+		configs = self._configService.configState_getObjects(	configId=["opsiclientd.event_software_on_demand.product_groups","opsiclientd.event_software_on_demand.show_details" 
+									objectId = [myClientId,mydepotServer])
 		for swconfig in configs:
-			if swconfig.values:
-				onDemandGroups = forceUnicodeList(swconfig.values[0].split(","))
+			if "product_groups" in swconfig.getConfigId(): 
+				onDemandGroups = forceUnicodeList(swconfig.getValues()[0].split(","))
+			elif "show_details" in swconfig.getConfigId():
+				show_details = forceBool(swconfig.getValues())
+				
 		#onDemandGroups = forceList(config.get('event_software_on_demand', 'product_groups'))
 		logger.debug(u"SoftwareOnDemandGroups from config: '%s'" % onDemandGroups)
 		#if not onDemandGroups:
@@ -386,7 +392,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						
 						
 						#resulttable = resulttable.replace('%result%', forceUnicode(table))
-						if forceBool(config.get('event_software_on_demand', 'show_details')):
+						
+						if show_details:
 							resulttables = u"%s %s<br>%s" % (result_table,result_other_table, result_table_food)
 						else:
 							resulttables = u"%s<br>%s" % (result_table,result_table_food)
@@ -395,7 +402,20 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						return result
 		
 		
-		
+		#Fehler ausspucken:
+		if not onDemandGroups:
+			result_error = '''
+				<table>
+					<tr>
+						Keine Gruppe fuer Software OnDemand konfiguriert!
+					
+					<tr>
+			'''
+			html = html.replace('%result%', forceUnicode(result_error))
+			result.stream = stream.IByteStream(html.encode('utf-8'))
+			return result
+			
+			
 		self._configService.setAsync(True)
 		jsonrpc1 = self._configService.productOnClient_getObjects(clientId = myClientId)
 		jsonrpc2 = self._configService.product_getObjects(id = productIds)
