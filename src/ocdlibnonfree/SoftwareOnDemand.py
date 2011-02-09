@@ -332,7 +332,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						
 						dependencies = []
 						for productDependency in productOnClientsWithDependencies:
-							dependency.append(productDependency.productId)
+							dependencies.append(productDependency.productId)
 						
 						for productOnClient in productOnClients:
 							if productOnClient.getActionRequest() not in ('none', None):
@@ -341,7 +341,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 												<td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td>
 											    </tr>''' \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
-								elif productOnClient.productId in dependency:
+								elif productOnClient.productId in dependencies:
 									tableDependencyRows.append('''<tr>
 												<td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td>
 											    </tr>''' \
