@@ -309,35 +309,45 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 	
 	def _syncConfigToServer(self):
 		self._working = True
+		eventId = None
 		try:
 			modifications = self._backendTracker.getModifications()
 			if not modifications:
 				logger.notice(u"Cache backend was not modified, no sync to server required")
 			else:
-				logger.notice(u"Cache backend was modified, starting sync to server")
-				eventId = timeline.addEvent(title = u"Config sync to server", description = u'Syncing config to server', category = u'config_sync', durationEvent = True)
-				if not self._configService:
-					self.connectConfigService()
-				self._cacheBackend._setMasterBackend(self._configService)
-				self._cacheBackend._updateMasterFromWorkBackend(modifications)
-				self._backendTracker.clearModifications()
 				try:
-					instlog = os.path.join(config.get('global', 'log_dir'), u'instlog.txt')
-					if os.path.isfile(instlog):
-						f = codecs.open(instlog, 'r', 'utf-8')
-						data = f.read()
-						f.close()
-						self._configService.log_write(u'instlog', data = data, objectId = config.get('global', 'host_id'), append = False)
+					logger.notice(u"Cache backend was modified, starting sync to server")
+					eventId = timeline.addEvent(title = u"Config sync to server", description = u'Syncing config to server', category = u'config_sync', durationEvent = True)
+					if not self._configService:
+						self.connectConfigService()
+					self._cacheBackend._setMasterBackend(self._configService)
+					self._cacheBackend._updateMasterFromWorkBackend(modifications)
+					self._backendTracker.clearModifications()
+					try:
+						instlog = os.path.join(config.get('global', 'log_dir'), u'instlog.txt')
+						if os.path.isfile(instlog):
+							f = codecs.open(instlog, 'r', 'utf-8')
+							data = f.read()
+							f.close()
+							self._configService.log_write(u'instlog', data = data, objectId = config.get('global', 'host_id'), append = False)
+					except Exception, e:
+						logger.error(u"Failed to sync instlog: %s" % e)
+					
+					logger.notice(u"Config synced to server")
 				except Exception, e:
-					logger.error(u"Failed to sync instlog: %s" % e)
-				
-				logger.notice(u"Config synced to server")
-				timeline.setEventEnd(eventId)
+					logger.logException(e)
+					timeline.addEvent(
+					title       = u"Failed to sync config to server",
+					description = u"Failed to sync config to server: %s" % e,
+					category    = u"config_sync",
+					isError     = True)
+					raise
 		except Exception, e:
-			logger.logException(e)
 			logger.error(u"Errors occured while syncing config to server: %s" % e)
 			# Do not sync from server in this case!
 			self._syncConfigFromServerRequested = False
+		if eventId:
+			timeline.setEventEnd(eventId)
 		self.disconnectConfigService()
 		self._working = False
 		
@@ -357,37 +367,45 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				self._state['config_cached'] = True
 				logger.notice(u"No product action(s) set on config service, no sync from server required")
 			else:
-				localProductOnClientsByProductId = {}
-				for productOnClient in self._cacheBackend.productOnClient_getObjects(
-								productType   = 'LocalbootProduct',
-								clientId      = config.get('global', 'host_id'),
-								actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
-								attributes    = ['actionRequest']):
-					localProductOnClientsByProductId[productOnClient.productId] = productOnClient
-				
-				needSync = False
-				for productOnClient in productOnClients:
-					localProductOnClient = localProductOnClientsByProductId.get(productOnClient.productId)
-					if not localProductOnClient or (localProductOnClient.actionRequest != productOnClient.actionRequest):
-						needSync = True
-						break
-				if not needSync:
-					self._state['config_cached'] = True
-				else:
-					logger.notice(u"Product on client configuration changed on config service, sync from server required")
-					eventId = timeline.addEvent(title = u"Config sync from server", description = u'Syncing config from server', category = u'config_sync', durationEvent = True)
-					self._cacheBackend._setMasterBackend(self._configService)
-					state.set('config_cache_service', self._state)
-					self._backendTracker.clearModifications()
-					self._cacheBackend._replicateMasterToWorkBackend()
-					logger.notice(u"Config synced from server")
-					self._state['config_cached'] = True
-					state.set('config_cache_service', self._state)
-					timeline.setEventEnd(eventId)
-					for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
-						eventGenerator.fireEvent()
+				try:
+					localProductOnClientsByProductId = {}
+					for productOnClient in self._cacheBackend.productOnClient_getObjects(
+									productType   = 'LocalbootProduct',
+									clientId      = config.get('global', 'host_id'),
+									actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+									attributes    = ['actionRequest']):
+						localProductOnClientsByProductId[productOnClient.productId] = productOnClient
+					
+					needSync = False
+					for productOnClient in productOnClients:
+						localProductOnClient = localProductOnClientsByProductId.get(productOnClient.productId)
+						if not localProductOnClient or (localProductOnClient.actionRequest != productOnClient.actionRequest):
+							needSync = True
+							break
+					if not needSync:
+						self._state['config_cached'] = True
+					else:
+						logger.notice(u"Product on client configuration changed on config service, sync from server required")
+						eventId = timeline.addEvent(title = u"Config sync from server", description = u'Syncing config from server', category = u'config_sync', durationEvent = True)
+						self._cacheBackend._setMasterBackend(self._configService)
+						state.set('config_cache_service', self._state)
+						self._backendTracker.clearModifications()
+						self._cacheBackend._replicateMasterToWorkBackend()
+						logger.notice(u"Config synced from server")
+						self._state['config_cached'] = True
+						state.set('config_cache_service', self._state)
+						timeline.setEventEnd(eventId)
+						for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
+							eventGenerator.fireEvent()
+				except Exception, e:
+					logger.logException(e)
+					timeline.addEvent(
+					title       = u"Failed to sync config from server",
+					description = u"Failed to sync config from server: %s" % e,
+					category    = u"config_sync",
+					isError     = True)
+					raise
 		except Exception, e:
-			logger.logException(e)
 			logger.error(u"Errors occured while syncing config from server: %s" % e)
 		self.disconnectConfigService()
 		self._working = False
@@ -627,6 +645,11 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						eventGenerator.fireEvent()
 		except Exception, e:
 			logger.error(u"Failed to cache products: %s" % e)
+			timeline.addEvent(
+				title       = u"Failed to cache products",
+				description = u"Failed to cache products: %s" % e,
+				category    = u"product_caching",
+				isError     = True)
 		if eventId:
 			timeline.setEventEnd(eventId)
 		self.disconnectConfigService()
