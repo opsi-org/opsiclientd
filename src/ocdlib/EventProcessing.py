@@ -946,6 +946,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 									category    = u"user_interaction")
 						
 						if self.shutdownCancelled:
+							self.opsiclientd.setBlockLogin(False)
 							shutdownCancelCounter += 1
 							state.set('shutdown_cancel_counter', shutdownCancelCounter)
 							logger.notice(u"Shutdown cancelled by user for the %d. time (max: %d)" \
