@@ -152,6 +152,12 @@ class TimelineImplementation(object):
 		)
 		self._createDatabase()
 		self._cleanupDatabase()
+		self._stopped = False
+	
+	def stop(self):
+		self._stopped = True
+		end = forceOpsiTimestamp(timestamp())
+		self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', { 'end': end })
 		
 	def getHtmlHead(self):
 		events = []
@@ -233,6 +239,8 @@ class TimelineImplementation(object):
 			self._sql.execute('CREATE INDEX `start` on `EVENT` (`start`);')
 	
 	def addEvent(self, title, description=u'', isError=False, category=None, durationEvent=False, start=None, end=None):
+		if self._stopped:
+			return -1
 		try:
 			if category:
 				category = forceUnicode(category)
@@ -255,6 +263,8 @@ class TimelineImplementation(object):
 			logger.error(u"Failed to add event '%s': %s" % (title, e))
 	
 	def setEventEnd(self, eventId, end=None):
+		if self._stopped:
+			return -1
 		try:
 			eventId = forceInt(eventId)
 			if not end:
@@ -265,6 +275,8 @@ class TimelineImplementation(object):
 			logger.error(u"Failed to set end of event '%s': %s" % (eventId, e))
 		
 	def getEvents(self):
+		if self._stopped:
+			return {}
 		return self._sql.getSet('select * from EVENT')
 	
 class Timeline(TimelineImplementation):
