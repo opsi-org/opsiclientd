@@ -336,6 +336,9 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._controlPipe.stop()
 				self._controlPipe.join(2)
 			
+			logger.info(u"Stopping timeline")
+			timeline.stop()
+			
 			if reactor and reactor.running:
 				logger.info(u"Stopping reactor")
 				reactor.stop()
