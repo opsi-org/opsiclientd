@@ -283,7 +283,7 @@ class ConfigImplementation(object):
 			# Read config file
 			configFile = IniFile(filename = self.get('global', 'config_file'), raw = True)
 			configFile.setSectionSequence(['global', 'config_service', 'depot_server', 'cache_service', 'control_server', 'notification_server', 'opsiclientd_notifier', 'opsiclientd_rpc', 'action_processor'])
-			config = configFile.parse()
+			(config, comments) = configFile.parse(returnComments = True)
 			changed = False
 			for (section, values) in self._config.items():
 				if not type(values) is dict:
@@ -306,7 +306,7 @@ class ConfigImplementation(object):
 						config.set(section, option, value)
 			if changed:
 				# Write back config file if changed
-				configFile.generate(config)
+				configFile.generate(config, comments = comments)
 				logger.notice(u"Config file '%s' written" % self.get('global', 'config_file'))
 			else:
 				logger.notice(u"No need to write config file '%s', config file is up to date" % self.get('global', 'config_file'))
