@@ -759,6 +759,9 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			finally:
 				if self._dynamicBandwidth:
 					repository.detachObserver(self)
+				if self._dynamicBandwidthLimitEvent:
+					timeline.setEventEnd(self._dynamicBandwidthLimitEvent)
+					self._dynamicBandwidthLimitEvent = None
 			logger.notice(u"Product '%s' cached" % productId)
 			self._setProductCacheState(productId, 'completed', time.time())
 		except Exception, e:
