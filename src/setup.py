@@ -163,7 +163,8 @@ setup(
 	data_files = data_files,
 	zipfile = "lib/library.zip",
 	service = [ opsiclientd ],
-	windows = [ notifier, opsiclientd_rpc, action_processor_starter, network_performance ],
+	console = [ network_performance ],
+	windows = [ notifier, opsiclientd_rpc, action_processor_starter ],
 )
 for lang in os.listdir(os.path.join("dist", "locale")):
 	dn = os.path.join("dist", "locale", lang, "LC_MESSAGES")
