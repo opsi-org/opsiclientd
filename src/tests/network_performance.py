@@ -26,16 +26,19 @@
    @license: GNU General Public License version 2
 """
 
-import time
+import time, sys
 from OPSI.System import getDefaultNetworkInterfaceName, NetworkPerformanceCounter
 
-networkPerformanceCounter = NetworkPerformanceCounter(getDefaultNetworkInterfaceName())
 try:
-	while True:
-		inrate  = networkPerformanceCounter.getBytesInPerSecond()
-		outrate = networkPerformanceCounter.getBytesOutPerSecond()
-		print u"in: %0.2f kByte/s, out: %0.2f kByte/s" % ((inrate/1024), (outrate/1024))
-		time.sleep(1)
-finally:
-	networkPerformanceCounter.stop()
+	networkPerformanceCounter = NetworkPerformanceCounter(getDefaultNetworkInterfaceName())
+	try:
+		while True:
+			inrate  = networkPerformanceCounter.getBytesInPerSecond()
+			outrate = networkPerformanceCounter.getBytesOutPerSecond()
+			print u"in: %0.2f kByte/s, out: %0.2f kByte/s" % ((inrate/1024), (outrate/1024))
+			time.sleep(1)
+	finally:
+		networkPerformanceCounter.stop()
+except Exception, e:
+	print >> sys.stderr, u"Error: %s" % e
 
