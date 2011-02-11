@@ -278,14 +278,26 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		onDemandGroups = []
 		show_details = None
 		configIds = [
-			"opsiclientd.event_software_on_demand.product_groups",
-			"opsiclientd.event_software_on_demand.show_details"
+			"software-on-demand.product-group-ids",
+			"software-on-demand.show-details"
 		]
+		configStates = []
+		defaultconfigs = []
+		
+		
+		logger.debug("Try to get configs:"):
+		self._configService.setAsync(True)
+		jsonrpc1 = self._configService.configStates_getObjects(configId = configIds, clientId = myClientId)
+		jsonrpc2 = self._configService.config_getObjects(id = configIds)
+		configStates = jsonrpc1.waitForResult()
+		defaultconfigs = jsonrpc2.waitForResult()
+		self._configService.setAsync(False)
 		
 		
 		
-		
-		configs = self._configService.configState_getObjects(configId=configIds ,objectId = [myClientId,mydepotServer])
+		#configs = self._configService.configState_getObjects(configId=configIds ,objectId = [myClientId,mydepotServer])
+		#TOOOOODOOOOOOO!!!!!!
+			
 		if configs:
 			for swconfig in configs:
 				if "product_groups" in swconfig.getConfigId(): 
