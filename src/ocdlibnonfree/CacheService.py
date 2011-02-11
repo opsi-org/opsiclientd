@@ -701,36 +701,18 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				description   = u"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)" % (productId,  self._maxBandwidth, self._dynamicBandwidth),
 				category      = u'product_caching',
 				durationEvent = True)
-		
-		repository = self._getRepository(productId)
-		if not config.get('depot_server', 'depot_id'):
-			raise Exception(u"Cannot cache product files: depot_server.depot_id undefined")
-		productOnDepots = self._configService.productOnDepot_getObjects(depotId = config.get('depot_server', 'depot_id'), productId = productId)
-		if not productOnDepots:
-			raise Exception(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
-		
-		self._setProductCacheState(productId, 'productVersion', productOnDepots[0].productVersion)
-		self._setProductCacheState(productId, 'packageVersion', productOnDepots[0].packageVersion)
-		
+		repository = None
+		exception = None
 		try:
-			#tempPackageContentFile = os.path.join(self._tempDir, u'%s.files' % productId)
-			#packageContentFile = u'%s/%s.files' % (productId, productId)
-			#logger.info(u"Downloading package content file '%s' of product '%s' from depot '%s' to '%s'" % (packageContentFile, productId, repository, tempPackageContentFile))
-			#repository.download(source = packageContentFile, destination = tempPackageContentFile)
-			#
-			#packageContentFile = os.path.join(self._productCacheDir, productId, u'%s.files' % productId)
-			#if os.path.exists(packageContentFile) and (md5sum(tempPackageContentFile) == md5sum(packageContentFile)):
-			#	logger.info(u"Package content file unchanged, assuming that product is up to date")
-			#	self._setProductCacheState(productId, 'completed', time.time())
-			#	repository.disconnect()
-			#	return
-			#
-			#if not os.path.exists(os.path.join(self._productCacheDir, productId)):
-			#	os.mkdir(os.path.join(self._productCacheDir, productId))
-			#logger.debug(u"Moving package content file from '%s' to '%s'" % (tempPackageContentFile, packageContentFile))
-			#if os.path.exists(packageContentFile):
-			#	os.unlink(packageContentFile)
-			#os.rename(tempPackageContentFile, packageContentFile)
+			repository = self._getRepository(productId)
+			if not config.get('depot_server', 'depot_id'):
+				raise Exception(u"Cannot cache product files: depot_server.depot_id undefined")
+			productOnDepots = self._configService.productOnDepot_getObjects(depotId = config.get('depot_server', 'depot_id'), productId = productId)
+			if not productOnDepots:
+				raise Exception(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
+			
+			self._setProductCacheState(productId, 'productVersion', productOnDepots[0].productVersion)
+			self._setProductCacheState(productId, 'packageVersion', productOnDepots[0].packageVersion)
 			
 			if not os.path.exists(os.path.join(self._productCacheDir, productId)):
 				os.mkdir(os.path.join(self._productCacheDir, productId))
@@ -779,9 +761,21 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					repository.detachObserver(self)
 			logger.notice(u"Product '%s' cached" % productId)
 			self._setProductCacheState(productId, 'completed', time.time())
-		finally:
-			timeline.setEventEnd(eventId)
-			repository.disconnect()
+		except Exception, e:
+			exception = e
+			timeline.addEvent(
+				title       = u"Failed to cache product %s" % productId,
+				description = u"Failed to cache product '%s': %s" % (productId, e),
+				category    = u"product_caching",
+				isError     = True)
+		timeline.setEventEnd(eventId)
+		if repository:
+			try:
+				repository.disconnect()
+			except Exception, e:
+				logger.warning(u"Failed to disconnect from repository: %s" % e)
+		if exception:
+			raise exception
 	
 
 
