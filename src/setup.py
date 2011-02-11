@@ -117,6 +117,12 @@ action_processor_starter = Target(
 	script = "windows\\helpers\\action_processor_starter\\action_processor_starter.py",
 )
 
+network_performance = Target(
+	name = "network_performance",
+	description = "network performance",
+	script = "tests\\network_performance.py",
+)
+
 data_files = [
 	('Microsoft.VC90.MFC', glob.glob('Microsoft.VC90.MFC\\*.*')),
 	('Microsoft.VC90.CRT', glob.glob('Microsoft.VC90.CRT\\*.*')),
@@ -157,7 +163,7 @@ setup(
 	data_files = data_files,
 	zipfile = "lib/library.zip",
 	service = [ opsiclientd ],
-	windows = [ notifier, opsiclientd_rpc, action_processor_starter ],
+	windows = [ notifier, opsiclientd_rpc, action_processor_starter, network_performance ],
 )
 for lang in os.listdir(os.path.join("dist", "locale")):
 	dn = os.path.join("dist", "locale", lang, "LC_MESSAGES")
