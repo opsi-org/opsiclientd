@@ -299,12 +299,12 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		#TOOOOODOOOOOOO!!!!!!
 		if defaultconfigs:
 			for swconfig in defaultconfigs:
-				if "product-group-ids" in swconfig.getConfigId(): 
+				if "product-group-ids" in swconfig.id: 
 					if swconfig.getValues():
 						onDemandGroups = forceUnicodeList(swconfig.getValues()[0].split(","))
 					else:
 						onDemandGroups = None
-				elif "show-details" in swconfig.getConfigId():
+				elif "show-details" in swconfig.id:
 					show_details = forceBool(swconfig.getValues())
 					
 		if configStates:
