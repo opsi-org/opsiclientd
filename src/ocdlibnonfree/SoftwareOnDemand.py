@@ -305,7 +305,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					else:
 						onDemandGroups = None
 				elif "show-details" in swconfig.id:
-					show_details = forceBool(swconfig.getValues())
+					show_details = forceBool(swconfig.defaultValues[0])
 					
 		if configStates:
 			for swconfig in configStates:
