@@ -236,7 +236,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		table = ''
 		for row in rows:
 			table += row
-		table = template % (header, rows)
+		if header:
+			table = template % (header, rows)
+		else:
+			table = template % (rows)
 		return table
 		
 	def _generateResponse(self, result):
