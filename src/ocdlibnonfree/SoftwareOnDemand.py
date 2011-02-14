@@ -326,7 +326,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		#				onDemandGroups = None
 		#		elif "show-details" in swconfig.getConfigId():
 		#			show_details = forceBool(swconfig.getValues())
-		if not onDemandGroups or not show_details:
+		if not onDemandGroups:
 			raise Exception("No Configs found")
 		
 		logger.debug(u"SoftwareOnDemandGroups from config: '%s'" % onDemandGroups)
