@@ -297,17 +297,36 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 		#configs = self._configService.configState_getObjects(configId=configIds ,objectId = [myClientId,mydepotServer])
 		#TOOOOODOOOOOOO!!!!!!
-			
-		if configs:
-			for swconfig in configs:
-				if "product_groups" in swconfig.getConfigId(): 
+		if defaultconfigs:
+			for swconfig in defaultconfigs:
+				if "product-group-ids" in swconfig.getConfigId(): 
 					if swconfig.getValues():
 						onDemandGroups = forceUnicodeList(swconfig.getValues()[0].split(","))
 					else:
 						onDemandGroups = None
-				elif "show_details" in swconfig.getConfigId():
+				elif "show-details" in swconfig.getConfigId():
 					show_details = forceBool(swconfig.getValues())
-		else:
+					
+		if configStates:
+			for swconfig in configStates:
+				if "product-group-ids" in swconfig.getConfigId(): 
+					if swconfig.getValues():
+						onDemandGroups = forceUnicodeList(swconfig.getValues()[0].split(","))
+					else:
+						onDemandGroups = None
+				elif "show-details" in swconfig.getConfigId():
+					show_details = forceBool(swconfig.getValues())
+		
+		if not onDemand or not show_details:
+			for swconfig in defaultconfigs:
+				if "product-group-ids" in swconfig.getConfigId(): 
+					if swconfig.getValues():
+						onDemandGroups = forceUnicodeList(swconfig.getValues()[0].split(","))
+					else:
+						onDemandGroups = None
+				elif "show-details" in swconfig.getConfigId():
+					show_details = forceBool(swconfig.getValues())
+		if not onDemandGroups or not show_details:
 			raise Exception("No Configs found")
 		
 		logger.debug(u"SoftwareOnDemandGroups from config: '%s'" % onDemandGroups)
