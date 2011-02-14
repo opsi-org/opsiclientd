@@ -300,7 +300,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		if defaultconfigs:
 			for swconfig in defaultconfigs:
 				if "product-group-ids" in swconfig.id: 
-					if swconfig.getValues():
+					if swconfig.defaultValues():
 						onDemandGroups = forceUnicodeList(swconfig.defaultValues()[0].split(","))
 					else:
 						onDemandGroups = None
