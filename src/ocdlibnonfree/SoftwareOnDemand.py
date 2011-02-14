@@ -229,16 +229,14 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 	
 	
 	def _generateTable(self, rows, header):
-		if header:
-			template = table_template
-		else:
-			template = table_template_noheader
 		table = ''
 		for row in rows:
 			table += row
 		if header:
+			template = table_template
 			table = template % (header, rows)
 		else:
+			template = table_template_noheader
 			table = template % (rows)
 		return table
 		
@@ -375,22 +373,16 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								logger.debug(u"Product: '%s' with action: '%s' to check with known lists." \
 											% (productOnClient.productId,productOnClient.getActionRequest()))
 								if productOnClient.productId in productIds:
-									tablerows.append('''<tr>
-												<td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td>
-											    </tr>''' \
+									tablerows.append("<tr><td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td></tr>" \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
 								elif productOnClient.productId in dependencies:
-									tableDependencyRows.append('''<tr>
-												<td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td>
-											    </tr>''' \
+									tableDependencyRows.append("<tr><td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td></tr>" \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
 						for productOnClient in productOnClients:
 							if productOnClient.productId in productIds:
 								continue
 							if productOnClient.getActionRequest() not in ('none', None):
-								tableOtherRows.append('''<tr>
-											<td>%s (%s)</td>
-											</tr>''' \
+								tableOtherRows.append("<tr><td>%s (%s)</td></tr>" \
 											% (productOnClient.productId, productOnClient.getActionRequest() ))
 						tableFoodRows = [
 							'<tr><td align="center" colspan="2">',
