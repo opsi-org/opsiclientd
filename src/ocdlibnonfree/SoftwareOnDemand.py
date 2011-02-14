@@ -317,15 +317,15 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				elif "show-details" in swconfig.getConfigId():
 					show_details = forceBool(swconfig.getValues())
 		
-		if not onDemand or not show_details:
-			for swconfig in defaultconfigs:
-				if "product-group-ids" in swconfig.getConfigId(): 
-					if swconfig.getValues():
-						onDemandGroups = forceUnicodeList(swconfig.getValues()[0].split(","))
-					else:
-						onDemandGroups = None
-				elif "show-details" in swconfig.getConfigId():
-					show_details = forceBool(swconfig.getValues())
+		#if not onDemandGroups or not show_details:
+		#	for swconfig in defaultconfigs:
+		#		if "product-group-ids" in swconfig.getConfigId(): 
+		#			if swconfig.getValues():
+		#				onDemandGroups = forceUnicodeList(swconfig.getValues()[0].split(","))
+		#			else:
+		#				onDemandGroups = None
+		#		elif "show-details" in swconfig.getConfigId():
+		#			show_details = forceBool(swconfig.getValues())
 		if not onDemandGroups or not show_details:
 			raise Exception("No Configs found")
 		
