@@ -398,10 +398,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							
 						]
 						
-						result_table = _generateTable(tablerows, _(u'selected products'))
-						result_dependency_table = _generateTable(tableDependency, _(u'product dependencies'))
-						result_other_table = _generateTable(tableothers, _(u'other products'))
-						result_table_food = _generateTable(tableFood, None)
+						result_table = self._generateTable(tablerows, _(u'selected products'))
+						result_dependency_table = self._generateTable(tableDependency, _(u'product dependencies'))
+						result_other_table = self._generateTable(tableothers, _(u'other products'))
+						result_table_food = self._generateTable(tableFood, None)
 
 						#resulttable = resulttable.replace('%result%', forceUnicode(table))
 						logger.debug(u"Show Details config: '%s'" % show_details) 
