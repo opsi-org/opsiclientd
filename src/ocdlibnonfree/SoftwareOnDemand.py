@@ -389,7 +389,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 											<td>%s (%s)</td>
 											</tr>''' \
 											% (productOnClient.productId, productOnClient.getActionRequest() ))
-						tableFood = [
+						tableFoodRows = [
 							'<tr><td align="center" colspan="2">',
 							'<input name="action" value="%s" id="ondemand" class="button" type="submit" />' % _(u"ondemand"),
 							'<input name="action" value="%s" id="onrestart" class="button" type="submit" />' % _(u"onrestart"),
@@ -399,9 +399,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						]
 						
 						result_table = self._generateTable(tablerows, _(u'selected products'))
-						result_dependency_table = self._generateTable(tableDependency, _(u'product dependencies'))
-						result_other_table = self._generateTable(tableothers, _(u'other products'))
-						result_table_food = self._generateTable(tableFood, None)
+						result_dependency_table = self._generateTable(tableDependencyRows, _(u'product dependencies'))
+						result_other_table = self._generateTable(tableOtherRows, _(u'other products'))
+						result_table_food = self._generateTable(tableFoodRows, None)
 
 						#resulttable = resulttable.replace('%result%', forceUnicode(table))
 						logger.debug(u"Show Details config: '%s'" % show_details) 
