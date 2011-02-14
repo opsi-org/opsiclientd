@@ -286,41 +286,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 		
 		logger.debug("Try to get configs:")
-		#self._configService.setAsync(True)
-		#jsonrpc1 = self._configService.configState_getObjects(configId = configIds, objectId = myClientId)
-		#jsonrpc2 = self._configService.config_getObjects(id = configIds)
-		#configStates = jsonrpc1.waitForResult()
-		#defaultconfigs = jsonrpc2.waitForResult()
-		#self._configService.setAsync(False)
-		
-		#backendOptions = self._configService.backend_getOptions()
-		
-		#addConfigStateDefaults = backendOptions["addConfigStateDefaults"]
-		
-		#if not addConfigStateDefaults:
 		self._configService.backend_setOptions({"addConfigStateDefaults":True})
-			
 		configStates = self._configService.configState_getObjects(configId = configIds, objectId = myClientId)
 		
-		
-		
-		#self._configService.backend_setOptions({"addConfigStateDefaults":addConfigStateDefaults})
-
-		
-		
-		#configs = self._configService.configState_getObjects(configId=configIds ,objectId = [myClientId,mydepotServer])
-		#TOOOOODOOOOOOO!!!!!!
-		
-		#if defaultconfigs:
-		#	for swconfig in defaultconfigs:
-		#		if "product-group-ids" in swconfig.id: 
-		#			if swconfig.defaultValues:
-		#				onDemandGroups = forceUnicodeList(swconfig.defaultValues[0].split(","))
-		#			else:
-		#				onDemandGroups = None
-		#		elif "show-details" in swconfig.id:
-		#			show_details = forceBool(swconfig.defaultValues[0])
-					
 		if configStates:
 			for configState in configStates:
 				logger.debug("Config found: '%s'" % configState.toHash()) 
@@ -334,17 +302,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				elif "show-details" in swconfig.getConfigId():
 					show_details = forceBool(swconfig.getValues()[0])
 		
-		#if not onDemandGroups or not show_details:
-		#	for swconfig in defaultconfigs:
-		#		if "product-group-ids" in swconfig.getConfigId(): 
-		#			if swconfig.getValues():
-		#				onDemandGroups = forceUnicodeList(swconfig.getValues()[0].split(","))
-		#			else:
-		#				onDemandGroups = None
-		#		elif "show-details" in swconfig.getConfigId():
-		#			show_details = forceBool(swconfig.getValues())
-		if not onDemandGroups:
-			raise Exception("No Configs found")
+					show_details = forceBool(swconfig.getValues())
+		#if not onDemandGroups:
+		#	raise Exception("No Configs found")
 		
 		logger.debug(u"SoftwareOnDemandGroups from config: '%s'" % onDemandGroups)
 		logger.debug(u"Show-Details from config: '%s'" % show_details)
@@ -363,7 +323,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		#Analyse Query
 		if self.query:
 			logger.notice(u"QUERY: '%s'" % self.query)
-			if 'action' in self.query and 'product' in self.query:
+			if 'action' in self.query or 'product' in self.query:
 				params = {}
 				for param in self.query.split(u'&'):
 					if 'action' in param:
@@ -502,7 +462,18 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						html = html.replace('%result%', forceUnicode(resulttables))
 						result.stream = stream.IByteStream(html.encode('utf-8'))
 						return result
-		
+					elif params['action'].lower() == "ondemand":
+						logger.notice(u"Action ondemand was send.")	
+						
+						html = html.replace('%result%', u"Starting SoftwareOnDemand-Event")
+						result.stream = stream.IByteStream(html.encode('utf-8'))
+						return result
+					elif params['action'].lower() == "onrestart":
+						logger.notice(u"Action onrestart was send.")
+						
+						html = html.replace('%result%', u"Actions will be start after next reboot.")
+						result.stream = stream.IByteStream(html.encode('utf-8'))
+						return result
 		
 		#Fehler ausspucken:
 		if not onDemandGroups:
