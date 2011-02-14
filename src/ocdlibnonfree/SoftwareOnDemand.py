@@ -293,9 +293,14 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		#defaultconfigs = jsonrpc2.waitForResult()
 		#self._configService.setAsync(False)
 		
-		self._configService._configService(addConfigStateDefaults = True)
+		addConfigStateDefaults = self._configService.backend_getOptions(addConfigStateDefaults)
+		
+		if not addConfigStateDefaults:
+			self._configService.backend_setOptions(addConfigStateDefaults = True)
+			
 		configStates = self._configService.configState_getObjects(configId = configIds, objectId = myClientId)
-		self._configService._configService(addConfigStateDefaults = False)
+		
+		self._configService.backend_setOptions(addConfigStateDefaults = addConfigStateDefaults)
 
 		
 		
