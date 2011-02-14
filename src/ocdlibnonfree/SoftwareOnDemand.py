@@ -302,8 +302,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			
 		configStates = self._configService.configState_getObjects(configId = configIds, objectId = myClientId)
 		
-		for configState in configStates:
-			logger.debug("Config found: '%s'" % configState.toHash()) 
+		
 		
 		#self._configService.backend_setOptions({"addConfigStateDefaults":addConfigStateDefaults})
 
@@ -323,6 +322,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		#			show_details = forceBool(swconfig.defaultValues[0])
 					
 		if configStates:
+			for configState in configStates:
+				logger.debug("Config found: '%s'" % configState.toHash()) 
+			
 			for swconfig in configStates:
 				if "product-group-ids" in swconfig.getConfigId(): 
 					if swconfig.getValues():
@@ -330,7 +332,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					else:
 						onDemandGroups = None
 				elif "show-details" in swconfig.getConfigId():
-					show_details = forceBool(swconfig.getValues())
+					show_details = forceBool(swconfig.getValues()[0])
 		
 		#if not onDemandGroups or not show_details:
 		#	for swconfig in defaultconfigs:
@@ -345,6 +347,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			raise Exception("No Configs found")
 		
 		logger.debug(u"SoftwareOnDemandGroups from config: '%s'" % onDemandGroups)
+		logger.debug(u"Show-Details from config: '%s'" % show_details)
 		
 		
 		if not isinstance(result, http.Response):
