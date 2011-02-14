@@ -373,10 +373,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								logger.debug(u"Product: '%s' with action: '%s' to check with known lists." \
 											% (productOnClient.productId,productOnClient.getActionRequest()))
 								if productOnClient.productId in productIds:
-									tablerows.append("<tr><td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td></tr>" \
+									tablerows.append('<tr><td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td></tr>' \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
 								elif productOnClient.productId in dependencies:
-									tableDependencyRows.append("<tr><td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td></tr>" \
+									tableDependencyRows.append('<tr><td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td></tr>' \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
 						for productOnClient in productOnClients:
 							if productOnClient.productId in productIds:
