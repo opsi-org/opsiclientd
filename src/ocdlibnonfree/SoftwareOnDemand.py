@@ -107,6 +107,11 @@ answerpage = u'''
 </body>
 '''
 
+table_template = u"<table><thead><tr><th>%s</th></tr></thead><tbody>%s</tbody></table>"
+
+table_template_noheader = u"<table><thead></thead><tbody>%s</tbody></table>"
+
+
 
 class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 	def __init__(self, service, request, resource):
@@ -212,14 +217,27 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				
 				
 			elif param.get('action') == 'onrestart':
-				pass
-				#ausgabe
+				if modified:
+					logger.notice(u"Try to set modified Products")
+					self._configService.productOnClient_updateObjects(productOnClientsWithDependencies)
 			else:
 				logger.notice(u'No action set, nothing to do.')
 			return (productOnClients,productOnClientsWithDependencies)
 		except Exception, e:
 			logger.logException(e)
 		
+	
+	
+	def _generateTable(self, rows, header)
+		if header:
+			template = table_template
+		else:
+			template = table_template_noheader
+		table = ''
+		for row in rows:
+			table += row
+		table = template % (header, rows)
+		return table
 		
 	def _generateResponse(self, result):
 		self.connectConfigService()
@@ -371,88 +389,20 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 											<td>%s (%s)</td>
 											</tr>''' \
 											% (productOnClient.productId, productOnClient.getActionRequest() ))
-						#if tablerows:
-							#Try to sort rows:
-						#	for row in tablerows:
-						#		pass
+						tableFood = [
+							'<tr><td align="center" colspan="2">',
+							'<input name="action" value="%s" id="ondemand" class="button" type="submit" />' % _(u"ondemand"),
+							'<input name="action" value="%s" id="onrestart" class="button" type="submit" />' % _(u"onrestart"),
+							'<input name="back" value="%s" id="back" class="button" type="submit" />' % _(u"back"),
+							'</td></tr>'
+							
+						]
 						
-						table = ''
-						for row in tablerows:
-							table += row
-						tableDependency = ''
-						for row in tableDependencyRows:
-							tableDependency += row
-						tableothers = ''
-						for row in tableOtherRows:
-							tableothers += row
-						
-						result_table = '''
-							<table>
-								<thead>
-									<tr>
-										<th>%s</th>
-									</tr>
-								</thead>
-								<tbody>
+						result_table = _generateTable(tablerows, _(u'selected products'))
+						result_dependency_table = _generateTable(tableDependency, _(u'product dependencies'))
+						result_other_table = _generateTable(tableothers, _(u'other products'))
+						result_table_food = _generateTable(tableFood, None)
 
-										%s
-								</tbody>
-								
-								</table>
-								''' % (_(u'selected products'),
-									table)
-						
-						result_dependency_table = '''
-							<table>
-								<thead>
-									<tr>
-										<th>%s</th>
-									</tr>
-								</thead>
-								<tbody>
-
-										%s
-								</tbody>
-								
-								</table>
-								''' % (_(u'product dependencies'),
-									tableDependency)
-								
-						result_other_table = '''
-							<table>
-								<thead>
-									<tr>
-										<th>%s</th>
-									</tr>
-								</thead>
-								<tbody>
-
-										%s
-								</tbody>
-								
-								</table>
-								''' % (_(u'other products'),
-									tableothers)
-								
-						result_table_food = '''
-								<table>
-									<tr>
-										<td align="center" colspan="2">
-											<input name="action" value="%s" id="ondemand" class="button" type="submit" />
-											<input name="action" value="%s" id="onrestart" class="button" type="submit" />
-											<input name="back" value="%s" id="back" class="button" type="submit" />
-										</td>
-									<tr>
-								</table>
-								''' \
-								% (_(u"ondemand"),
-								   _(u"onrestart"),
-								   _(u"back"))
-								
-						
-						
-						
-						
 						#resulttable = resulttable.replace('%result%', forceUnicode(table))
 						logger.debug(u"Show Details config: '%s'" % show_details) 
 						if show_details:
