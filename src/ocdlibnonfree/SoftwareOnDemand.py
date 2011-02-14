@@ -287,7 +287,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 		logger.debug("Try to get configs:")
 		self._configService.setAsync(True)
-		jsonrpc1 = self._configService.configState_getObjects(configId = configIds, clientId = myClientId)
+		jsonrpc1 = self._configService.configState_getObjects(objectId = configIds, clientId = myClientId)
 		jsonrpc2 = self._configService.config_getObjects(id = configIds)
 		configStates = jsonrpc1.waitForResult()
 		defaultconfigs = jsonrpc2.waitForResult()
