@@ -216,7 +216,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				#ausgabe
 			else:
 				logger.notice(u'No action set, nothing to do.')
-			return 'Alles roger'
+			return (productOnClients,productOnClientsWithDependencies)
 		except Exception, e:
 			logger.logException(e)
 		
