@@ -228,7 +228,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 	
 	
-	def _generateTable(self, rows, header)
+	def _generateTable(self, rows, header):
 		if header:
 			template = table_template
 		else:
