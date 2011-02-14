@@ -286,26 +286,31 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 		
 		logger.debug("Try to get configs:")
-		self._configService.setAsync(True)
-		jsonrpc1 = self._configService.configState_getObjects(configId = configIds, objectId = myClientId)
-		jsonrpc2 = self._configService.config_getObjects(id = configIds)
-		configStates = jsonrpc1.waitForResult()
-		defaultconfigs = jsonrpc2.waitForResult()
-		self._configService.setAsync(False)
+		#self._configService.setAsync(True)
+		#jsonrpc1 = self._configService.configState_getObjects(configId = configIds, objectId = myClientId)
+		#jsonrpc2 = self._configService.config_getObjects(id = configIds)
+		#configStates = jsonrpc1.waitForResult()
+		#defaultconfigs = jsonrpc2.waitForResult()
+		#self._configService.setAsync(False)
 		
+		self._configService._configService(addConfigStateDefaults = True)
+		configStates = self._configService.configState_getObjects(configId = configIds, objectId = myClientId)
+		self._configService._configService(addConfigStateDefaults = False)
+
 		
 		
 		#configs = self._configService.configState_getObjects(configId=configIds ,objectId = [myClientId,mydepotServer])
 		#TOOOOODOOOOOOO!!!!!!
-		if defaultconfigs:
-			for swconfig in defaultconfigs:
-				if "product-group-ids" in swconfig.id: 
-					if swconfig.defaultValues:
-						onDemandGroups = forceUnicodeList(swconfig.defaultValues[0].split(","))
-					else:
-						onDemandGroups = None
-				elif "show-details" in swconfig.id:
-					show_details = forceBool(swconfig.defaultValues[0])
+		
+		#if defaultconfigs:
+		#	for swconfig in defaultconfigs:
+		#		if "product-group-ids" in swconfig.id: 
+		#			if swconfig.defaultValues:
+		#				onDemandGroups = forceUnicodeList(swconfig.defaultValues[0].split(","))
+		#			else:
+		#				onDemandGroups = None
+		#		elif "show-details" in swconfig.id:
+		#			show_details = forceBool(swconfig.defaultValues[0])
 					
 		if configStates:
 			for swconfig in configStates:
