@@ -302,6 +302,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			
 		configStates = self._configService.configState_getObjects(configId = configIds, objectId = myClientId)
 		
+		for configState in configStates:
+			logger.debug("Config found: '%s'" % configState.toHash()) 
+		
 		#self._configService.backend_setOptions({"addConfigStateDefaults":addConfigStateDefaults})
 
 		
