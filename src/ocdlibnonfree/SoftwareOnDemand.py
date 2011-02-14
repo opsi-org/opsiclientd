@@ -298,11 +298,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		addConfigStateDefaults = backendOptions["addConfigStateDefaults"]
 		
 		if not addConfigStateDefaults:
-			self._configService.backend_setOptions({addConfigStateDefaults:True})
+			self._configService.backend_setOptions({"addConfigStateDefaults":True})
 			
 		configStates = self._configService.configState_getObjects(configId = configIds, objectId = myClientId)
 		
-		#self._configService.backend_setOptions({addConfigStateDefaults:addConfigStateDefaults})
+		self._configService.backend_setOptions({"addConfigStateDefaults":addConfigStateDefaults})
 
 		
 		
