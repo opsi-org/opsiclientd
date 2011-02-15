@@ -44,25 +44,23 @@ mainpage = u'''
 <head>
 	<title>opsi Software On Demand</title>
 	<style>
-	body          { font-family: verdana, arial; font-size: 12px; }
+
+        
+        body          { font-family: verdana, arial; font-size: 12px; }
         #title        { padding: 10px; color: #6276a0; font-size: 20px; letter-spacing: 5px; }
         input, select { background-color: #fafafa; border: 1px #abb1ef solid; font-family: verdana, arial;}
         .title        { color: #555555; font-size: 20px; font-weight: bolder; letter-spacing: 5px; }
-        .button       { color: #9e445a; background-color: #fafafa; border: 1px solid; font-weight: bolder; }
-
-        table           { margin-top: 20px; margin-left: 20px; border-collapse:collapse;text-align: center; width: 700px;}
+        .button       { color: #9e445a; background-color: #fafafa; border: 1px solid;  }
+        table  { margin-top: 20px; margin-left: 20px; border-collapse:collapse;text-align: center; width: 700px; border: solid #555555 1px; background-color: #D5D9F9;}
         thead           { background-color: #6495ed;}
-        tbody tr:hover  {background-color: #87cefa; }
+        .checkbox:hover  { color:#007700; }
         tfoot           { margin-top: 50px; }
         th              { padding: 5px; padding-left: 10px; }
-
         td              { padding: 5px;}
-        .checkbox       { width: 5px; }
-        .product        { width: 100px; }
-        .descr          { width: 150px; }
-        .advice         { width: 150px; }
-        .state          { width: 75px; }
-        .version        { width: 75px; }
+        .productname    { width: 100px; padding-top:20px; padding-left:20px; text-align:left; font-weight: bolder; font-size: 120%; }
+        .key            { padding-left:10px; vertical-align:top; text-align:right; font-style: italic; }
+        .value          { text-align:left; }
+        .checkbox       { border-bottom: solid #555555 1px; text-align:left; padding-bottom:20px; padding-left:20px; }
 	</style>
 	
 </head>
@@ -420,18 +418,18 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						result.stream = stream.IByteStream(html.encode('utf-8'))
 						return result
 		
-		#Fehler ausspucken:
-		if not onDemandGroups:
-			result_error = '''
-				<table>
-					<tr>
-						Keine Gruppe fuer Software OnDemand konfiguriert!
+		#### Fehler ausspucken:
+		#if not onDemandGroups:
+		#	result_error = '''
+		#		<table>
+		#			<tr>
+		#				Keine Gruppe fuer Software OnDemand konfiguriert!
 					
-					<tr>
-			'''
-			html = html.replace('%result%', forceUnicode(result_error))
-			result.stream = stream.IByteStream(html.encode('utf-8'))
-			return result
+		#			<tr>
+		#	'''
+		#	html = html.replace('%result%', forceUnicode(result_error))
+		#	result.stream = stream.IByteStream(html.encode('utf-8'))
+		#	return result
 			
 			
 		self._configService.setAsync(True)
@@ -468,17 +466,23 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			
 			productDescription = product.description
 			productAdvice = product.advice
+			statecolor = "color:#770000"
 			if productOnClient:
 				state = productOnClient.installationStatus
 				productVersion = productOnClient.productVersion
 				if productOnClient.actionRequest == 'setup':
 					checked = u'checked="checked"'
+					statecolor = "color:#007700"
+					state = "%s (Version: %s-%s)" % (	_('installed'), 
+												productOnClient.productVersion,
+												productOnClient.packageVersion
+											   )
 				else:
 					checked = ''
-					state = 'nicht installiert'
+					state = _('not installed')
 					productVersion = ''
 			else:
-				state = 'nicht installiert'
+				state = _('not installed')
 				productVersion = ''
 				
 			#if productOnDepots.has_key(productOnDepot.productId):
@@ -486,24 +490,27 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			#	continue
 			
 			
+			tablerows.append('<tr>	<td colspan="3" class="productname">%s (%s-%s)</td></tr>' \
+						% (product.name, productOnDepot.productVersion, productOnDepot.packageVersion))
+			tablerows.append('''<tr><td></td>
+								<td class="key">%s</td>
+								<td class="value" style="%s">%s</td>''' \
+						% ( _('state'), statecolor, state ) )
+			tablerows.append('''<tr><td></td>
+								<td class="key">%s</td>
+								<td class="value">%s</td>''' \
+						% ( _("description"), product.description.replace('\n','<br />') ) )
+			tablerows.append('''<tr><td></td>
+								<td class="key">%s</td>
+								<td class="value">%s</td>''' \
+						% ( _('advice'), product.advice.replace('\n','<br />') ) )
 			tablerows.append('''<tr>
-								<td class="checkbox">%s</td>
-								<td class="product">%s</td>
-								<td class="descr">%s</td>
-								<td class="advice">%s</td>
-								<td class="state">%s</td>
-								<td class="version">%s</td>
-								<td class="version">%s</td>
-							</tr>''' % (
-									'<input type="checkbox" name="product" value="%s" %s>' % (productOnDepot.productId,checked),
-									productId,
-									productDescription,
-									productAdvice,
-									state,
-									productVersion,
-									productOnDepot.productVersion
-									)
-							)
+								<td colspan="3" class="checkbox">
+									<input type="checkbox" name="product" value="%s">%s
+								</td>
+							</td>''' \
+						% ( productId, _('install') ) )
+				
 			#productOnDepots[productOnDepot.productId] = productOnDepot
 			checked = ''
 		self.disconnectConfigService()
@@ -515,38 +522,16 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 		maintable = u'''
 					<table>
-						<thead>
-							<tr>
-								<th></th>
-								<th>%s</th>
-								<th>%s</th>
-								<th>%s</th>
-								<th>%s</th>
-								<th>%s</th>
-								<th>%s</th>
-							</tr>
-						</thead>
 						<tbody>
-
 							%s
-						</tbody>
-						<tfoot>
 							<tr>
-								<td align="center" colspan="7">
+								<td align="center" colspan="3">
 									<input name="action" value="%s" id="submit" class="button" type="submit" />
 								</td>
 							<tr>
-						</tfoot>
+						</tbody>
 					</table>
-					''' % (_(u'product'),
-						_(u'description'),
-						_(u'advice'),
-						_(u'state'),
-						_(u'version'),
-						_(u'available version'),
-						table,
-						_(u'save')
-						)
+					''' % ( table, _(u'save') )
 		
 		html = html.replace('%result%', maintable)
 		
