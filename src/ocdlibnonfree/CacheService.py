@@ -637,6 +637,11 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					errorsOccured.append(forceUnicode(e))
 				if errorsOccured:
 					logger.error(u"Errors occured while caching products %s: %s" % (', '.join(productIds), ', '.join(errorsOccured)))
+					timeline.addEvent(
+						title       = u"Failed to cache products",
+						description = u"Errors occured while caching products %s: %s" % (', '.join(productIds), ', '.join(errorsOccured)),
+						category    = u"product_caching",
+						isError     = True)
 				else:
 					logger.notice(u"All products cached: %s" % ', '.join(productIds))
 					self._state['products_cached'] = True
@@ -655,7 +660,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		self.disconnectConfigService()
 		self._working = False
 	
-	def _setProductCacheState(self, productId, key, value):
+	def _setProductCacheState(self, productId, key, value, updateProductOnClient = True):
 		if not self._state.has_key('products'):
 			self._state['products'] = {}
 		if not self._state['products'].has_key(productId):
@@ -669,7 +674,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			actionProgress = 'cached'
 		elif (key == 'failure'):
 			actionProgress = u"Cache failure: %s" % forceUnicode(value)
-		if actionProgress:
+		if actionProgress and updateProductOnClient:
 			self._configService.productOnClient_updateObjects([
 				ProductOnClient(
 					productId      = productId,
@@ -693,8 +698,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 	def _cacheProduct(self, productId):
 		logger.notice(u"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)" % (productId,  self._maxBandwidth, self._dynamicBandwidth))
 		self._setProductCacheState(productId, 'started',   time.time())
-		self._setProductCacheState(productId, 'completed', None)
-		self._setProductCacheState(productId, 'failure',   None)
+		self._setProductCacheState(productId, 'completed', None, updateProductOnClient = False)
+		self._setProductCacheState(productId, 'failure',   None, updateProductOnClient = False)
 		
 		eventId = timeline.addEvent(
 				title         = u"Cache product %s" % productId,
@@ -711,8 +716,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			if not productOnDepots:
 				raise Exception(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
 			
-			self._setProductCacheState(productId, 'productVersion', productOnDepots[0].productVersion)
-			self._setProductCacheState(productId, 'packageVersion', productOnDepots[0].packageVersion)
+			self._setProductCacheState(productId, 'productVersion', productOnDepots[0].productVersion, updateProductOnClient = False)
+			self._setProductCacheState(productId, 'packageVersion', productOnDepots[0].packageVersion, updateProductOnClient = False)
 			
 			if not os.path.exists(os.path.join(self._productCacheDir, productId)):
 				os.mkdir(os.path.join(self._productCacheDir, productId))
