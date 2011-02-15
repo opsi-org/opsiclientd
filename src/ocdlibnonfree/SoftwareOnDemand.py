@@ -320,8 +320,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					show_details = forceBool(swconfig.getValues()[0])
 		
 					show_details = forceBool(swconfig.getValues())
-		#if not onDemandGroups:
-		#	raise Exception("No Configs found")
+		if not onDemandGroups:
+			onDemandGroups = ['']
+			#raise Exception("No Configs found")
 		
 		logger.debug(u"SoftwareOnDemandGroups from config: '%s'" % onDemandGroups)
 		logger.debug(u"Show-Details from config: '%s'" % show_details)
