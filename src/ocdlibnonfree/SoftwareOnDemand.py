@@ -154,7 +154,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 	def _processQuery(self, result):
 		self._decodeQuery(result)
 	
-	def _executeQuery(self, param, clientId):
+	def _executeQuery(self, param, od_productIds, clientId):
 		#if param:
 		productOnClients = self._configService.productOnClient_getObjects(clientId = clientId)
 		modifiedProductOnClients = []
@@ -188,6 +188,14 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				productOnClients[index].setActionRequest('setup')
 				modifiedProductOnClients.append(productOnClients[index])
 				modified = True
+			
+			# if product was setup, and user have deselect this product, set the productActionRequest to none
+			for poc in productOnClients;
+				if poc.getProductId() in od_productIds:
+					if not poc.getProductId() in param.get('products', []):
+						poc.setActionRequest('none')
+						modifiedProductOnClients.append(poc)
+						modified = True
 			
 			#Set Products
 			if modified:
@@ -319,7 +327,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				elif "show-details" in swconfig.getConfigId():
 					show_details = forceBool(swconfig.getValues()[0])
 		
-					show_details = forceBool(swconfig.getValues())
+					#show_details = forceBool(swconfig.getValues())
 		if not onDemandGroups:
 			onDemandGroups = ['']
 			#raise Exception("No Configs found")
@@ -353,9 +361,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				
 				if params:
 					logger.notice(u"Parameters from POST: '%s'" % params)
-					(productOnClients,productOnClientsWithDependencies) = self._executeQuery(params, myClientId)
+					(productOnClients,productOnClientsWithDependencies) = self._executeQuery(params, productIds, myClientId)
 				
-				if productOnClientsWithDependencies:
+				if productOnClientsWithDependencies or productOnClients:
 					
 					if params['action'].lower() == "save":
 						logger.notice(u"Action Save was send.")	
@@ -495,16 +503,19 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						% (product.name, productOnDepot.productVersion, productOnDepot.packageVersion))
 			tablerows.append('''<tr><td></td>
 								<td class="key">%s</td>
-								<td class="value" style="%s">%s</td>''' \
-						% ( _('state'), statecolor, state ) )
-			tablerows.append('''<tr><td></td>
-								<td class="key">%s</td>
 								<td class="value">%s</td>''' \
 						% ( _("description"), product.description.replace('\n','<br />') ) )
-			tablerows.append('''<tr><td></td>
-								<td class="key">%s</td>
-								<td class="value">%s</td>''' \
-						% ( _('advice'), product.advice.replace('\n','<br />') ) )
+			
+			if show_details:
+				tablerows.append('''<tr><td></td>
+									<td class="key">%s</td>
+									<td class="value" style="%s">%s</td>''' \
+							% ( _('state'), statecolor, state ) )
+				
+				tablerows.append('''<tr><td></td>
+									<td class="key">%s</td>
+									<td class="value">%s</td>''' \
+							% ( _('advice'), product.advice.replace('\n','<br />') ) )
 			tablerows.append('''<tr>
 								<td colspan="3" class="checkbox">
 									<input type="checkbox" name="product" value="%s">%s
