@@ -190,7 +190,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				modified = True
 			
 			# if product was setup, and user have deselect this product, set the productActionRequest to none
-			for poc in productOnClients;
+			for poc in productOnClients:
 				if poc.getProductId() in od_productIds:
 					if not poc.getProductId() in param.get('products', []):
 						poc.setActionRequest('none')
