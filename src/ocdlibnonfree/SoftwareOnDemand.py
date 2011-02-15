@@ -518,10 +518,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							% ( _('advice'), product.advice.replace('\n','<br />') ) )
 			tablerows.append('''<tr>
 								<td colspan="3" class="checkbox">
-									<input type="checkbox" name="product" value="%s">%s
+									<input type="checkbox" name="product" value="%s" %s>%s
 								</td>
 							</td>''' \
-						% ( productId, _('install') ) )
+						% ( productId, checked, _('install') ) )
 				
 			#productOnDepots[productOnDepot.productId] = productOnDepot
 			checked = ''
