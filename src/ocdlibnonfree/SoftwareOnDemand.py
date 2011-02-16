@@ -481,7 +481,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				productVersion = productOnClient.productVersion
 				if productOnClient.actionRequest == 'setup':
 					checked = u'checked="checked"'
-					if productOnClient.installationStatus:
+					if productOnClient.installationStatus == "installed":
 						statecolor = "color:#007700"
 						state = "%s (Version: %s-%s)" % (	_('installed'), 
 													productOnClient.productVersion,
