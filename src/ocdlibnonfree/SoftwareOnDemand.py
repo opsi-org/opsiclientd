@@ -421,7 +421,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						result.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u"back"))
 						
 						if result:
-							result_table = _generateTable(result)
+							result_table = self._generateTable(result)
 						else:
 							result = '%s' % _('no action found')
 						#resulttable = resulttable.replace('%result%', forceUnicode(table))
