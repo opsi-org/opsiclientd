@@ -403,6 +403,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						#result_table_food = self._generateTable(tableFoodRows) , None)
 						
 						result_table = []
+						result_table.append('<table>')
 						if tableSelectedRows:
 							result_table.append('<tr>	<td colspan="3" class="productname">%s</td></tr>' % _(u'selected products'))
 							for row in tableSelectedRows:
@@ -416,14 +417,18 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								result_table.append('<tr>	<td colspan="3" class="productname">%s</td></tr>' % _(u'other products'))
 								for row in tableOtherRows:
 									result_table.append(row)
-						result_table.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u"ondemand"))
-						result_table.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u"onrestart"))
-						result_table.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u"back"))
-						
+						result_table.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"ondemand"))
+						result_table.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"onrestart"))
+						result_table.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
+						result_table.append('</table>')
 						if result:
 							result_table = self._generateTable(result_table)
 						else:
-							result_table = '%s' % _('no action found')
+							result_table = '%s' % _('''<table>
+													<tr>	<td colspan="3" class="productname>no action found</td></tr>
+													<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>
+												</table>
+												''' % _("back"))
 						#resulttable = resulttable.replace('%result%', forceUnicode(table))
 						html = html.replace('%result%', forceUnicode(result_table))
 						result.stream = stream.IByteStream(html.encode('utf-8'))
