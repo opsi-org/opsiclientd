@@ -432,13 +432,13 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							result_table.append('</table>')
 							
 						if result:
-								result_table = self._generateTable(result_table)
-							else:
-								result_table = '%s' % _('''<table>
-														<tr>	<td colspan="3" class="productname>no action found</td></tr>
-														<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>
-													</table>
-													''' % _("back"))
+							result_table = self._generateTable(result_table)
+						else:
+							result_table = '%s' % _('''	<table>
+												<tr><td colspan="3" class="productname>no action found</td></tr>
+												<tr><td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>
+											</table>
+										''' % _("back"))
 							
 							html = html.replace('%result%', forceUnicode(result_table))
 							result.stream = stream.IByteStream(html.encode('utf-8'))
