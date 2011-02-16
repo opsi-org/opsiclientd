@@ -362,9 +362,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				
 				if productOnClientsWithDependencies or productOnClients:
 					
-					if params['action'].lower() == "save":
-						logger.notice(u"Action Save was send.")	
-						
+					
+					if not params['action'].lower() == "":
 						dependencies = []
 						for productDependency in productOnClientsWithDependencies:
 							dependencies.append(productDependency.productId)
@@ -377,32 +376,17 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								logger.debug(u"Product: '%s' with action: '%s' to check with known lists." \
 											% (productOnClient.productId,productOnClient.getActionRequest()))
 								if productOnClient.productId in productIds:
-									tableSelectedRows.append('<tr><td></td><td class="key">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked><td class="value></td></td></tr>' \
+									tableSelectedRows.append('<tr><td></td><td class="key">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td><td class="value"></td></tr>' \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
 								elif productOnClient.productId in dependencies:
-									tableDependencyRows.append('<tr><td></td><td class="key">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td><td class="value></td></tr>' \
+									tableDependencyRows.append('<tr><td></td><td class="key">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td><td class="value"></td></tr>' \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
 						for productOnClient in productOnClients:
 							if productOnClient.productId in productIds:
 								continue
 							if productOnClient.getActionRequest() not in ('none', None):
-								tableOtherRows.append('<tr><td></td><td class="key">%s (%s)</td><td class="value></td></tr>' \
+								tableOtherRows.append('<tr><td></td><td class="key">%s (%s)</td><td class="value"></td></tr>' \
 											% (productOnClient.productId, productOnClient.getActionRequest() ))
-						#tableFoodRows = [
-						#	'<tr><td align="center" colspan="2">',
-						#	'<input name="action" value="%s" id="ondemand" class="button" type="submit" />' % _(u"ondemand"),
-						#	'<input name="action" value="%s" id="onrestart" class="button" type="submit" />' % _(u"onrestart"),
-						#	'<input name="back" value="%s" id="back" class="button" type="submit" />' % _(u"back"),
-						#	'</td></tr>'
-							
-						#]
-						
-						
-						#result_selected = self._generateTable(tablerows)
-						#result_dependency = self._generateTable(tableDependencyRows)
-						#result_other = self._generateTable(tableOtherRows)
-						#result_table_food = self._generateTable(tableFoodRows) , None)
-						
 						result_table = []
 						result_table.append('<table>')
 						if tableSelectedRows:
@@ -418,34 +402,47 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								result_table.append('<tr>	<td colspan="3" class="productname">%s</td></tr>' % _(u'other products'))
 								for row in tableOtherRows:
 									result_table.append(row)
-						result_table.append('<tr><td align="center" colspan="3" class="buttonarea"><input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"ondemand"))
-						result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"onrestart"))
-						result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
-						result_table.append('</table>')
+						
+						
+						if params['action'].lower() == "save":
+							logger.notice(u"Action Save was send.")	
+							
+							result_table.append('<tr><td align="center" colspan="3" class="buttonarea"><input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"ondemand"))
+							result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"onrestart"))
+							result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
+							result_table.append('</table>')
+							
+							#resulttable = resulttable.replace('%result%', forceUnicode(table))
+							
+						elif params['action'].lower() == "ondemand":
+							logger.notice(u"Action ondemand was send.")	
+							
+							result_table.append('<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Starting SoftwareOnDemand-Event')
+							result_table.append('<tr><td align="center" colspan="3" class="buttonarea">')
+							result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
+							result_table.append('</table>')
+							
+							
+						elif params['action'].lower() == "onrestart":
+							logger.notice(u"Action onrestart was send.")
+							
+							result_table.append('<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Actions will be start after next reboot.')
+							result_table.append('<tr><td align="center" colspan="3" class="buttonarea">')
+							result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
+							result_table.append('</table>')
+							
 						if result:
-							result_table = self._generateTable(result_table)
-						else:
-							result_table = '%s' % _('''<table>
-													<tr>	<td colspan="3" class="productname>no action found</td></tr>
-													<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>
-												</table>
-												''' % _("back"))
-						#resulttable = resulttable.replace('%result%', forceUnicode(table))
-						html = html.replace('%result%', forceUnicode(result_table))
-						result.stream = stream.IByteStream(html.encode('utf-8'))
-						return result
-					elif params['action'].lower() == "ondemand":
-						logger.notice(u"Action ondemand was send.")	
-						
-						html = html.replace('%result%', u"Starting SoftwareOnDemand-Event")
-						result.stream = stream.IByteStream(html.encode('utf-8'))
-						return result
-					elif params['action'].lower() == "onrestart":
-						logger.notice(u"Action onrestart was send.")
-						
-						html = html.replace('%result%', u"Actions will be start after next reboot.")
-						result.stream = stream.IByteStream(html.encode('utf-8'))
-						return result
+								result_table = self._generateTable(result_table)
+							else:
+								result_table = '%s' % _('''<table>
+														<tr>	<td colspan="3" class="productname>no action found</td></tr>
+														<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>
+													</table>
+													''' % _("back"))
+							
+							html = html.replace('%result%', forceUnicode(result_table))
+							result.stream = stream.IByteStream(html.encode('utf-8'))
+							return result
 		
 		#### Fehler ausspucken:
 		#if not onDemandGroups:
