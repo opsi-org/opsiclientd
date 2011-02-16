@@ -286,6 +286,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		productDescription = ''
 		productAdvice = ''
 		
+		tablerows = []
 		tableSelectedRows = []
 		tableOtherRows = []
 		tableDependencyRows = []
