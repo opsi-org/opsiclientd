@@ -402,30 +402,30 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						#result_other = self._generateTable(tableOtherRows)
 						#result_table_food = self._generateTable(tableFoodRows) , None)
 						
-						result = []
+						result_table = []
 						if tableSelectedRows:
-							result.append('<tr>	<td colspan="3" class="productname">%s</td></tr>' % _(u'selected products'))
+							result_table.append('<tr>	<td colspan="3" class="productname">%s</td></tr>' % _(u'selected products'))
 							for row in tableSelectedRows:
-								result.append(row)
+								result_table.append(row)
 						if show_details:
 							if tableDependencyRows:
-								result.append('<tr>	<td colspan="3" class="productname">%s</td></tr>' % _(u'product dependencies'))
+								result_table.append('<tr>	<td colspan="3" class="productname">%s</td></tr>' % _(u'product dependencies'))
 								for row in tableDependencyRows:
-									result.append(row)
+									result_table.append(row)
 							if tableOtherRows:
-								result.append('<tr>	<td colspan="3" class="productname">%s</td></tr>' % _(u'other products'))
+								result_table.append('<tr>	<td colspan="3" class="productname">%s</td></tr>' % _(u'other products'))
 								for row in tableOtherRows:
-									result.append(row)
-						result.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u"ondemand"))
-						result.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u"onrestart"))
-						result.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u"back"))
+									result_table.append(row)
+						result_table.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u"ondemand"))
+						result_table.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u"onrestart"))
+						result_table.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u"back"))
 						
 						if result:
-							result_table = self._generateTable(result)
+							result_table = self._generateTable(result_table)
 						else:
-							result = '%s' % _('no action found')
+							result_table = '%s' % _('no action found')
 						#resulttable = resulttable.replace('%result%', forceUnicode(table))
-						html = html.replace('%result%', forceUnicode(result))
+						html = html.replace('%result%', forceUnicode(result_table))
 						result.stream = stream.IByteStream(html.encode('utf-8'))
 						return result
 					elif params['action'].lower() == "ondemand":
