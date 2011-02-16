@@ -234,16 +234,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 	
 	
-	def _generateTable(self, rows, header):
+	def _generateTable(self, rows):
 		table = ''
 		for row in rows:
 			table += row
-		if header:
-			template = table_template
-			table = template % (header, rows)
-		else:
-			template = table_template_noheader
-			table = template % (rows)
 		return table
 		
 	def _generateResponse(self, result):
@@ -292,7 +286,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		productDescription = ''
 		productAdvice = ''
 		
-		tablerows = []
+		tableSelectedRows = []
 		tableOtherRows = []
 		tableDependencyRows = []
 		
@@ -344,7 +338,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			if not objectToGroup.objectId in productIds:
 				productIds.append(objectToGroup.objectId)
 		
-		html = answerpage
+		html = mainpage
 		
 		#Analyse Query
 		if self.query:
@@ -358,6 +352,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					if not params.has_key('products'):
 						params['products'] = []
 					params['products'].append(param.split(u'=')[1])
+				
 				
 				if params:
 					logger.notice(u"Parameters from POST: '%s'" % params)
@@ -380,38 +375,56 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								logger.debug(u"Product: '%s' with action: '%s' to check with known lists." \
 											% (productOnClient.productId,productOnClient.getActionRequest()))
 								if productOnClient.productId in productIds:
-									tablerows.append('<tr><td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td></tr>' \
+									tableSelectedRows.append('<tr><td></td><td class="key">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td></tr>' \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
 								elif productOnClient.productId in dependencies:
-									tableDependencyRows.append('<tr><td>%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td></tr>' \
+									tableDependencyRows.append('<tr><td></td><td class="key">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td></tr>' \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
 						for productOnClient in productOnClients:
 							if productOnClient.productId in productIds:
 								continue
 							if productOnClient.getActionRequest() not in ('none', None):
-								tableOtherRows.append("<tr><td>%s (%s)</td></tr>" \
+								tableOtherRows.append('<tr><td></td><td class="key">%s (%s)</td></tr>' \
 											% (productOnClient.productId, productOnClient.getActionRequest() ))
-						tableFoodRows = [
-							'<tr><td align="center" colspan="2">',
-							'<input name="action" value="%s" id="ondemand" class="button" type="submit" />' % _(u"ondemand"),
-							'<input name="action" value="%s" id="onrestart" class="button" type="submit" />' % _(u"onrestart"),
-							'<input name="back" value="%s" id="back" class="button" type="submit" />' % _(u"back"),
-							'</td></tr>'
+						#tableFoodRows = [
+						#	'<tr><td align="center" colspan="2">',
+						#	'<input name="action" value="%s" id="ondemand" class="button" type="submit" />' % _(u"ondemand"),
+						#	'<input name="action" value="%s" id="onrestart" class="button" type="submit" />' % _(u"onrestart"),
+						#	'<input name="back" value="%s" id="back" class="button" type="submit" />' % _(u"back"),
+						#	'</td></tr>'
 							
-						]
+						#]
 						
-						result_table = self._generateTable(tablerows, _(u'selected products'))
-						result_dependency_table = self._generateTable(tableDependencyRows, _(u'product dependencies'))
-						result_other_table = self._generateTable(tableOtherRows, _(u'other products'))
-						result_table_food = self._generateTable(tableFoodRows, None)
-
-						#resulttable = resulttable.replace('%result%', forceUnicode(table))
-						logger.debug(u"Show Details config: '%s'" % show_details) 
+						
+						#result_selected = self._generateTable(tablerows)
+						#result_dependency = self._generateTable(tableDependencyRows)
+						#result_other = self._generateTable(tableOtherRows)
+						#result_table_food = self._generateTable(tableFoodRows) , None)
+						
+						result = []
+						if tableSelectedRows:
+							result.append('<tr>	<td colspan="3" class="productname"></td></tr>' % _(u'selected products'))
+							for row in tableSelectedRows:
+								result.append(row)
 						if show_details:
-							resulttables = u"%s %s %s<br>%s" % (result_table,result_dependency_table, result_other_table, result_table_food)
+							if tableDependencyRows:
+								result.append('<tr>	<td colspan="3" class="productname"></td></tr>' % _(u'product dependencies'))
+								for row in tableDependencyRows:
+									result.append(row)
+							if tableOtherRows:
+								result.append('<tr>	<td colspan="3" class="productname"></td></tr>' % _(u'other products'))
+								for row in tableOtherRows:
+									result.append(row)
+						result.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u"ondemand"))
+						result.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u"onrestart"))
+						result.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u"back"))
+						
+						if result:
+							result_table = _generateTable(result)
 						else:
-							resulttables = u"%s<br>%s" % (result_table,result_table_food)
-						html = html.replace('%result%', forceUnicode(resulttables))
+							result = '%s' % _('no action found')
+						#resulttable = resulttable.replace('%result%', forceUnicode(table))
+						html = html.replace('%result%', forceUnicode(result))
 						result.stream = stream.IByteStream(html.encode('utf-8'))
 						return result
 					elif params['action'].lower() == "ondemand":
