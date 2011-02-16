@@ -507,9 +507,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 													productOnClient.productVersion,
 													productOnClient.packageVersion
 												   )
-					else:
-						state = _('not installed')
-						productVersion = ''
+				else:
+					state = _('not installed')
+					productVersion = ''
 			else:
 				state = _('not installed')
 				productVersion = ''
