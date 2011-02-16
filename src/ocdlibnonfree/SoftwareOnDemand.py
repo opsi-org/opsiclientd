@@ -430,7 +430,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							result_table.append('<tr><td align="center" colspan="3" class="buttonarea">')
 							result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
 							result_table.append('</table>')
-							
+						
 						if result:
 							result_table = self._generateTable(result_table)
 						else:
@@ -440,9 +440,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 											</table>
 										''' % _("back"))
 							
-							html = html.replace('%result%', forceUnicode(result_table))
-							result.stream = stream.IByteStream(html.encode('utf-8'))
-							return result
+						html = html.replace('%result%', forceUnicode(result_table))
+						result.stream = stream.IByteStream(html.encode('utf-8'))
+						return result
 		
 		#### Fehler ausspucken:
 		#if not onDemandGroups:
