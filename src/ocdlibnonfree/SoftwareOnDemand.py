@@ -404,16 +404,16 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						
 						result = []
 						if tableSelectedRows:
-							result.append('<tr>	<td colspan="3" class="productname"></td></tr>' % _(u'selected products'))
+							result.append('<tr>	<td colspan="3" class="productname">%s</td></tr>' % _(u'selected products'))
 							for row in tableSelectedRows:
 								result.append(row)
 						if show_details:
 							if tableDependencyRows:
-								result.append('<tr>	<td colspan="3" class="productname"></td></tr>' % _(u'product dependencies'))
+								result.append('<tr>	<td colspan="3" class="productname">%s</td></tr>' % _(u'product dependencies'))
 								for row in tableDependencyRows:
 									result.append(row)
 							if tableOtherRows:
-								result.append('<tr>	<td colspan="3" class="productname"></td></tr>' % _(u'other products'))
+								result.append('<tr>	<td colspan="3" class="productname">%s</td></tr>' % _(u'other products'))
 								for row in tableOtherRows:
 									result.append(row)
 						result.append('<tr>	<td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u"ondemand"))
