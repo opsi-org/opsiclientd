@@ -58,6 +58,7 @@ mainpage = u'''
         th              { padding: 5px; padding-left: 10px; }
         td              { padding: 5px;}
         .productname    { width: 100px; padding-top:20px; padding-left:20px; text-align:left; font-weight: bolder; font-size: 120%; }
+        .product	{ padding-left:10px; vertical-align:top; text-align:left; font-style: italic; }
         .key            { padding-left:10px; vertical-align:top; text-align:right; font-style: italic; }
         .value          { text-align:left; }
         .buttonarea	{ padding: 5px; }
@@ -376,16 +377,18 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								logger.debug(u"Product: '%s' with action: '%s' to check with known lists." \
 											% (productOnClient.productId,productOnClient.getActionRequest()))
 								if productOnClient.productId in productIds:
-									tableSelectedRows.append('<tr><td></td><td class="key">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td><td class="value"></td></tr>' \
+									tableSelectedRows.append('<tr><td></td><td class="product">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td><td class="value"></td></tr>' \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
 								elif productOnClient.productId in dependencies:
-									tableDependencyRows.append('<tr><td></td><td class="key">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td><td class="value"></td></tr>' \
+									tableDependencyRows.append('<tr><td></td><td class="product">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td><td class="value"></td></tr>' \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
 						for productOnClient in productOnClients:
+							if productOnClient in productOnClientsWithDependencies:
+								continue
 							if productOnClient.productId in productIds:
 								continue
 							if productOnClient.getActionRequest() not in ('none', None):
-								tableOtherRows.append('<tr><td></td><td class="key">%s (%s)</td><td class="value"></td></tr>' \
+								tableOtherRows.append('<tr><td></td><td class="product">%s (%s)</td><td class="value"></td></tr>' \
 											% (productOnClient.productId, productOnClient.getActionRequest() ))
 						result_table = []
 						result_table.append('<table>')
