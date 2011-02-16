@@ -60,6 +60,7 @@ mainpage = u'''
         .productname    { width: 100px; padding-top:20px; padding-left:20px; text-align:left; font-weight: bolder; font-size: 120%; }
         .key            { padding-left:10px; vertical-align:top; text-align:right; font-style: italic; }
         .value          { text-align:left; }
+        .buttonarea	{ padding: 5px; }
         .checkbox       { border-bottom: solid #555555 1px; text-align:left; padding-bottom:20px; padding-left:20px; }
 	</style>
 	
@@ -417,7 +418,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								result_table.append('<tr>	<td colspan="3" class="productname">%s</td></tr>' % _(u'other products'))
 								for row in tableOtherRows:
 									result_table.append(row)
-						result_table.append('<tr><td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"ondemand"))
+						result_table.append('<tr><td align="center" colspan="3" class="buttonarea"><input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"ondemand"))
 						result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"onrestart"))
 						result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
 						result_table.append('</table>')
