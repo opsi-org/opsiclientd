@@ -363,7 +363,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				if productOnClientsWithDependencies or productOnClients:
 					
 					
-					if not params['action'].lower() == "":
+					if params['action'].lower() in ("save","ondemand","onrestart"):
 						dependencies = []
 						for productDependency in productOnClientsWithDependencies:
 							dependencies.append(productDependency.productId)
