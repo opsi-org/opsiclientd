@@ -377,16 +377,16 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								logger.debug(u"Product: '%s' with action: '%s' to check with known lists." \
 											% (productOnClient.productId,productOnClient.getActionRequest()))
 								if productOnClient.productId in productIds:
-									tableSelectedRows.append('<tr><td></td><td class="key">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td></tr>' \
+									tableSelectedRows.append('<tr><td></td><td class="key">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked><td class="value></td></td></tr>' \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
 								elif productOnClient.productId in dependencies:
-									tableDependencyRows.append('<tr><td></td><td class="key">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td></tr>' \
+									tableDependencyRows.append('<tr><td></td><td class="key">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td><td class="value></td></tr>' \
 											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
 						for productOnClient in productOnClients:
 							if productOnClient.productId in productIds:
 								continue
 							if productOnClient.getActionRequest() not in ('none', None):
-								tableOtherRows.append('<tr><td></td><td class="key">%s (%s)</td></tr>' \
+								tableOtherRows.append('<tr><td></td><td class="key">%s (%s)</td><td class="value></td></tr>' \
 											% (productOnClient.productId, productOnClient.getActionRequest() ))
 						#tableFoodRows = [
 						#	'<tr><td align="center" colspan="2">',
