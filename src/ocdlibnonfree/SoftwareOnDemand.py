@@ -410,8 +410,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						if params['action'].lower() == "save":
 							logger.notice(u"Action Save was send.")	
 							
-							result_table.append('<tr><td align="center" colspan="3" class="buttonarea"><input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"ondemand"))
-							result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"onrestart"))
+							result_table.append('<tr><td align="center" colspan="3" class="buttonarea"><input name="action" value="%s" id="submit" class="button" type="submit" />   ' % _(u"ondemand"))
+							result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" />   ' % _(u"onrestart"))
 							result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
 							result_table.append('</table>')
 							
