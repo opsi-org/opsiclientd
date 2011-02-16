@@ -417,7 +417,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						elif params['action'].lower() == "ondemand":
 							logger.notice(u"Action ondemand was send.")	
 							
-							result_table.append('<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Starting SoftwareOnDemand-Event')
+							result_table.append('<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Starting SoftwareOnDemand-Event'))
 							result_table.append('<tr><td align="center" colspan="3" class="buttonarea">')
 							result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
 							result_table.append('</table>')
@@ -426,7 +426,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						elif params['action'].lower() == "onrestart":
 							logger.notice(u"Action onrestart was send.")
 							
-							result_table.append('<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Actions will be start after next reboot.')
+							result_table.append('<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Actions will be start after next reboot.'))
 							result_table.append('<tr><td align="center" colspan="3" class="buttonarea">')
 							result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
 							result_table.append('</table>')
