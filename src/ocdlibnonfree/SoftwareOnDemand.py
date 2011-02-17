@@ -229,7 +229,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							self._swOnDemandProductIds.append(objectToGroup.objectId)
 			
 			elif (configState.getConfigId() == "software-on-demand.show-details"):
-				showDetails = forceBool(configState.getValues()[0])
+				self._showDetails = forceBool(configState.getValues()[0])
 	
 	def _processProducts(self):
 		productOnClients = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id'))
