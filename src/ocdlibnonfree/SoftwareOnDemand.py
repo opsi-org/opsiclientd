@@ -315,7 +315,16 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 		if self.query.get('product'):
 			(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies) = self._processProducts()
-		
+			logger.debug(u"Modified productOnClients:")
+			for poc in modifiedProductOnClients:
+				logger.debug(u"   %s" % poc)
+			logger.debug(u"Current productOnClients:")
+			for poc in productOnClients:
+				logger.debug(u"   %s" % poc)
+			logger.debug(u"ProductOnClients with dependencies:")
+			for poc in productOnClientsWithDependencies:
+				logger.debug(u"   %s" % poc)
+			
 		if self.query.get('action') in ('next', 'ondemand', 'onrestart'):
 			html = self._processAction(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies)
 		
