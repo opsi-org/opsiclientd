@@ -48,7 +48,7 @@ mainpage = u'''
 	#title        { padding: 10px; color: #6276a0; font-size: 20px; letter-spacing: 5px; }
 	input, select { background-color: #fafafa; border: 1px #abb1ef solid; font-family: verdana, arial;}
 	.title        { color: #555555; font-size: 20px; font-weight: bolder; letter-spacing: 5px; }
-	.button       { color: #9e445a; background-color: #fafafa; border: 1px solid;  }
+	button       { color: #9e445a; background-color: #fafafa; border: 1px solid;  }
 	table  { margin-top: 20px; margin-left: 20px; border-collapse:collapse;text-align: center; width: 700px; border: solid #555555 1px; background-color: #D5D9F9;}
 	thead           { background-color: #6495ed;}
 	.checkbox:hover  { color:#007700; }
@@ -268,28 +268,26 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				table.extend(tableOtherRows)
 		
 		logger.notice(u"Action '%s' was sent" % self.query.get('action'))
+		buttons = []
 		if (self.query.get('action') == "next"):
-			table.append(u'<tr><td align="center" colspan="3" class="buttonarea"><input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"ondemand"))
-			table.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"onrestart"))
-			table.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
-			table.append(u'</table>')
+			if getEventGenerators(generatorClass = SwOnDemandEventGenerator):
+				buttons.append(u'<button type="submit" id="submit" name="action" value="ondemand">%s</button>' % _(u"process now"))
+			buttons.append(u'<button type="submit" id="submit" name="action" value="onrestart">%s</button>' % _(u"process on next boot"))
 		
 		elif (self.query.get('action') == "ondemand"):
-			table.append(u'<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Starting SoftwareOnDemand-Event'))
-			table.append(u'<tr><td align="center" colspan="3" class="buttonarea">')
-			table.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
-			table.append(u'</table>')
-			
+			table.append(u'<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Starting to process actions now.'))
+		
 		elif (self.query.get('action') == "onrestart"):
-			table.append(u'<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Actions will be start after next reboot.'))
-			table.append(u'<tr><td align="center" colspan="3" class="buttonarea">')
-			table.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
-			table.append(u'</table>')
+			table.append(u'<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Actions will be processed on next boot.'))
 		
 		else:
-			table.append(u'<tr><td colspan="3" class="productname>no action found</td></tr>')
-			table.append(u'<tr><td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _("back"))
-		table.append(u'<table>')
+			table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % (_(u'Nothing selected')))
+		
+		buttons.append(u'<button type="submit" id="submit" name="action" value="onrestart">%s</button>' % _(u"back"))
+		table.append(u'<tr><td align="center" colspan="3" class="buttonarea">')
+		table.extend(buttons)
+		table.append(u'</td></tr>')
+		table.append(u'</table>')
 		
 		html = mainpage.replace('%result%', forceUnicode(u'\n'.join(table)))
 		
@@ -297,7 +295,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			if modifiedProductOnClients:
 				logger.info(u"Updating productOnClients")
 				self._configService.productOnClient_updateObjects(productOnClientsWithDependencies)
-			if (self.query.get('action') == 'onrestart'):
+			if (self.query.get('action') == 'ondemand'):
 				for eventGenerator in getEventGenerators(generatorClass = SwOnDemandEventGenerator):
 					eventGenerator.fireEvent()
 		
