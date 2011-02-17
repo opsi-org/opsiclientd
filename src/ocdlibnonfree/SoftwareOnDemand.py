@@ -245,10 +245,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			for productOnClient in pocs:
 				if productOnClient.actionRequest not in ('none', None) and not productOnClient.productId in productIds:
 					productIds.append(productOnClient.productId)
+					row = u'<tr><td></td><td class="product">%s (%s)</td><td class="value"></td></tr>' \
+						% (productOnClient.productId, productOnClient.actionRequest)
 					if (t == 'selected'):
 						tableSelectedRows.append(row)
-						row = u'<tr><td></td><td class="product">%s (%s)<input type="hidden" name="product" value="%s"></td><td class="value"></td></tr>' \
-						% (productOnClient.productId, productOnClient.actionRequest, productOnClient.productId)
+						tableSelectedRows.append(u'<input type="hidden" name="product" value="%s" />' % productOnClient.productId)
 					elif (t == 'other'):
 						tableOtherRows.append(row)
 					elif (t == 'depend'):
