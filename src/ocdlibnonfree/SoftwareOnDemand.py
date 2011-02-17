@@ -225,7 +225,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				if onDemandGroupIds:
 					for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = onDemandGroupIds):
 						logger.debug(u"On demand product found: '%s'" % objectToGroup.objectId)
-						if not objectToGroup.objectId in productIds:
+						if not objectToGroup.objectId in self._swOnDemandProductIds:
 							self._swOnDemandProductIds.append(objectToGroup.objectId)
 			
 			elif (configState.getConfigId() == "software-on-demand.show-details"):
@@ -361,7 +361,6 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			html = self._processAction(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies)
 		
 		elif self._swOnDemandProductIds:
-			
 			self._configService.setAsync(True)
 			jsonrpc1 = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id'))
 			jsonrpc2 = self._configService.product_getObjects(id = self._swOnDemandProductIds)
