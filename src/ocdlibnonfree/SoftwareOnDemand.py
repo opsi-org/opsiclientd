@@ -291,46 +291,43 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					elif (t == 'depend'):
 						tableDependencyRows.append(row)
 		
-		resultTable = [u'<table>']
+		table = [u'<table>']
 		if tableSelectedRows:
-			resultTable.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % _(u'selected products'))
-			for row in tableSelectedRows:
-				resultTable.append(row)
+			table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % _(u'selected products'))
+			table.extend(rowtableSelectedRows)
 		if self._showDetails:
 			if tableDependencyRows:
-				resultTable.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % _(u'product dependencies'))
-				for row in tableDependencyRows:
-					resultTable.append(row)
+				table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % _(u'product dependencies'))
+				table.extend(tableDependencyRows)
 			if tableOtherRows:
-				resultTable.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % _(u'other products'))
-				for row in tableOtherRows:
-					resultTable.append(row)
+				table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % _(u'other products'))
+				table.extend(tableOtherRows)
 		
 		logger.notice(u"Action '%s' was sent" % self.query.get('action'))
 		if (self.query.get('action') == "save"):
-			resultTable.append(u'<tr><td align="center" colspan="3" class="buttonarea"><input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"ondemand"))
-			resultTable.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"onrestart"))
-			resultTable.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
-			resultTable.append(u'</table>')
+			table.append(u'<tr><td align="center" colspan="3" class="buttonarea"><input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"ondemand"))
+			table.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"onrestart"))
+			table.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
+			table.append(u'</table>')
 		
 		elif (self.query.get('action') == "ondemand"):
-			resultTable.append(u'<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Starting SoftwareOnDemand-Event'))
-			resultTable.append(u'<tr><td align="center" colspan="3" class="buttonarea">')
-			resultTable.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
-			resultTable.append(u'</table>')
+			table.append(u'<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Starting SoftwareOnDemand-Event'))
+			table.append(u'<tr><td align="center" colspan="3" class="buttonarea">')
+			table.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
+			table.append(u'</table>')
 			
 		elif (self.query.get('action') == "onrestart"):
-			resultTable.append(u'<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Actions will be start after next reboot.'))
-			resultTable.append(u'<tr><td align="center" colspan="3" class="buttonarea">')
-			resultTable.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
-			resultTable.append(u'</table>')
+			table.append(u'<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Actions will be start after next reboot.'))
+			table.append(u'<tr><td align="center" colspan="3" class="buttonarea">')
+			table.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
+			table.append(u'</table>')
 		
 		else:
-			resultTable.append(u'<tr><td colspan="3" class="productname>no action found</td></tr>')
-			resultTable.append(u'<tr><td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _("back"))
-		resultTable.append(u'<table>')
+			table.append(u'<tr><td colspan="3" class="productname>no action found</td></tr>')
+			table.append(u'<tr><td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _("back"))
+		table.append(u'<table>')
 		
-		html = html.replace('%result%', forceUnicode(u'\n'.join(resultTable)))
+		html = mainpage.replace('%result%', forceUnicode(u'\n'.join(table)))
 		
 		if self.query.get('action') in ('ondemand', 'onrestart'):
 			if modifiedProductOnClients:
