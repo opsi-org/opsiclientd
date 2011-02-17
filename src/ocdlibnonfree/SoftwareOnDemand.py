@@ -159,8 +159,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		self._decodeQuery(result)
 		query = {}
 		for part in self.query.split('&'):
+			part = part.strip()
+			if not part:
+				continue
 			k = part
-			if part.find('='):
+			if (part.find('=') != -1):
 				(k, v) = part.split('=', 1)
 			k = k.strip().lower()
 			v = v.strip().lower()
