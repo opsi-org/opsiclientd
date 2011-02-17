@@ -365,6 +365,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			logger.info(u"Product on clients: %s" % productOnClients)
 			if not productOnClients:
 				self._state['config_cached'] = True
+				state.set('config_cache_service', self._state)
 				logger.notice(u"No product action(s) set on config service, no sync from server required")
 			else:
 				try:
@@ -384,11 +385,11 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 							break
 					if not needSync:
 						self._state['config_cached'] = True
+						state.set('config_cache_service', self._state)
 					else:
 						logger.notice(u"Product on client configuration changed on config service, sync from server required")
 						eventId = timeline.addEvent(title = u"Config sync from server", description = u'Syncing config from server', category = u'config_sync', durationEvent = True)
 						self._cacheBackend._setMasterBackend(self._configService)
-						state.set('config_cache_service', self._state)
 						self._backendTracker.clearModifications()
 						self._cacheBackend._replicateMasterToWorkBackend()
 						logger.notice(u"Config synced from server")
