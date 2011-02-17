@@ -200,7 +200,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 		for productId in forceProductIdList(self.query.get('product', [])):
 			if not productId in self._swOnDemandProductIds:
-				raise Exception(u"Product '%s' not available for on-demand")
+				raise Exception(u"Product '%s' not available for on-demand" % productId)
 			index = -1
 			for i in range(len(productOnClients)):
 				if (productOnClients[i].productId == productId):
@@ -245,10 +245,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			for productOnClient in pocs:
 				if productOnClient.actionRequest not in ('none', None) and not productOnClient.productId in productIds:
 					productIds.append(productOnClient.productId)
-					row = u'<tr><td></td><td class="product">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td><td class="value"></td></tr>' \
-						% (productOnClient.productId, productOnClient.actionRequest, productOnClient.productId)
 					if (t == 'selected'):
 						tableSelectedRows.append(row)
+						row = u'<tr><td></td><td class="product">%s (%s)<input type="hidden" name="product" value="%s"></td><td class="value"></td></tr>' \
+						% (productOnClient.productId, productOnClient.actionRequest, productOnClient.productId)
 					elif (t == 'other'):
 						tableOtherRows.append(row)
 					elif (t == 'depend'):
