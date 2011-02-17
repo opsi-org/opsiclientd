@@ -44,32 +44,30 @@ mainpage = u'''
 <head>
 	<title>opsi Software On Demand</title>
 	<style>
-
-        
-        body          { font-family: verdana, arial; font-size: 12px; }
-        #title        { padding: 10px; color: #6276a0; font-size: 20px; letter-spacing: 5px; }
-        input, select { background-color: #fafafa; border: 1px #abb1ef solid; font-family: verdana, arial;}
-        .title        { color: #555555; font-size: 20px; font-weight: bolder; letter-spacing: 5px; }
-        .button       { color: #9e445a; background-color: #fafafa; border: 1px solid;  }
-        table  { margin-top: 20px; margin-left: 20px; border-collapse:collapse;text-align: center; width: 700px; border: solid #555555 1px; background-color: #D5D9F9;}
-        thead           { background-color: #6495ed;}
-        .checkbox:hover  { color:#007700; }
-        tfoot           { margin-top: 50px; }
-        th              { padding: 5px; padding-left: 10px; }
-        td              { padding: 5px;}
-        .productname    { width: 100px; padding-top:20px; padding-left:20px; text-align:left; font-weight: bolder; font-size: 120%; }
-        .product	{ padding-left:10px; vertical-align:top; text-align:left; font-style: italic; }
-        .key            { padding-left:10px; vertical-align:top; text-align:right; font-style: italic; }
-        .value          { text-align:left; }
-        .buttonarea	{ padding: 5px; }
-        .checkbox       { border-bottom: solid #555555 1px; text-align:left; padding-bottom:20px; padding-left:20px; }
+	body          { font-family: verdana, arial; font-size: 12px; }
+	#title        { padding: 10px; color: #6276a0; font-size: 20px; letter-spacing: 5px; }
+	input, select { background-color: #fafafa; border: 1px #abb1ef solid; font-family: verdana, arial;}
+	.title        { color: #555555; font-size: 20px; font-weight: bolder; letter-spacing: 5px; }
+	.button       { color: #9e445a; background-color: #fafafa; border: 1px solid;  }
+	table  { margin-top: 20px; margin-left: 20px; border-collapse:collapse;text-align: center; width: 700px; border: solid #555555 1px; background-color: #D5D9F9;}
+	thead           { background-color: #6495ed;}
+	.checkbox:hover  { color:#007700; }
+	tfoot           { margin-top: 50px; }
+	th              { padding: 5px; padding-left: 10px; }
+	td              { padding: 5px;}
+	.productname    { width: 100px; padding-top:20px; padding-left:20px; text-align:left; font-weight: bolder; font-size: 120%; }
+	.product	{ padding-left:10px; vertical-align:top; text-align:left; font-style: italic; }
+	.key            { padding-left:10px; vertical-align:top; text-align:right; font-style: italic; }
+	.value          { text-align:left; }
+	.buttonarea	{ padding: 5px; }
+	.checkbox       { border-bottom: solid #555555 1px; text-align:left; padding-bottom:20px; padding-left:20px; }
 	</style>
-	
+
 </head>
 <body>
 	<span id="title">
 		<img src="/opsi_logo.png" />
-		<span sytle="padding: 1px; top: 5px;">opsi Software On Demand</span>
+		<span sytle="padding: 1px; top: 5px;">opsi software on demand</span>
 	</span>
 	<form method="post">
 		%result%
@@ -77,41 +75,6 @@ mainpage = u'''
 	
 </body>
 '''
-
-
-answerpage = u'''
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-	<title>opsi Software On Demand</title>
-	<style>
-	   body          { font-family: verdana, arial; font-size: 12px; }
-	   .title        { color: #555555; font-size: 20px; font-weight: bolder; letter-spacing: 5px; }
-	   #title        { padding: 10px; color: #6276a0; font-size: 20px; letter-spacing: 5px; }
-	   .button       { color: #9e445a; background-color: #fafafa; border: 1px solid; font-weight: bolder; }
-           table           { margin-top: 20px; margin-left: 20px; border-collapse:collapse;text-align: center; width: 300px;}
-           thead		{ background-color: #6495ed;}
-           tfoot		{text-align: right; }
-        </style>
-</head>
-<body>
-	<span id="title">
-		<img src="/opsi_logo.png" />
-		<span sytle="padding: 1px; top: 5px;">opsi Software On Demand</span>
-	</span>
-	<form method="post">
-		%result%
-	</form>
-	
-</body>
-'''
-
-table_template = u"<table><thead><tr><th>%s</th></tr></thead><tbody>%s</tbody></table>"
-
-table_template_noheader = u"<table><thead></thead><tbody>%s</tbody></table>"
-
-
 
 class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 	def __init__(self, service, request, resource):
@@ -304,7 +267,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				table.extend(tableOtherRows)
 		
 		logger.notice(u"Action '%s' was sent" % self.query.get('action'))
-		if (self.query.get('action') == "save"):
+		if (self.query.get('action') == "next"):
 			table.append(u'<tr><td align="center" colspan="3" class="buttonarea"><input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"ondemand"))
 			table.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"onrestart"))
 			table.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
@@ -354,7 +317,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		if self.query.get('product'):
 			(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies) = self._processProducts()
 		
-		if self.query.get('action') in ('save', 'ondemand', 'onrestart'):
+		if self.query.get('action') in ('next', 'ondemand', 'onrestart'):
 			html = self._processAction(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies)
 		
 		elif self._swOnDemandProductIds:
@@ -417,7 +380,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							% ( _('advice'), advice.replace(u'\n', u'<br />') ) )
 				table.append(u'<tr><td colspan="3" class="checkbox"><input type="checkbox" name="product" value="%s" %s>%s</td></td>' \
 						% ( productId, checked, _('install') ) )
-			table.append(u'<tr><td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u'save'))
+			table.append(u'<tr><td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u'next'))
 			table.append(u'</tbody></table>')
 			html = mainpage.replace('%result%', u'\n'.join(table))
 			
