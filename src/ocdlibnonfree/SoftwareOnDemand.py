@@ -283,7 +283,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		else:
 			table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % (_(u'Nothing selected')))
 		
-		buttons.append(u'<button type="submit" id="submit" name="action" value="onrestart">%s</button>' % _(u"back"))
+		buttons.append(u'<button type="submit" id="submit" name="action" value="back">%s</button>' % _(u"back"))
 		table.append(u'<tr><td align="center" colspan="3" class="buttonarea">')
 		table.extend(buttons)
 		table.append(u'</td></tr>')
