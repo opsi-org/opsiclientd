@@ -198,7 +198,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		productOnClients = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id'))
 		modifiedProductOnClients = []
 		
-		for productId in forceProductIdList(self.query.get('product', [])):
+		productIds = forceProductIdList(self.query.get('product', []))
+		for productId in productIds:
 			if not productId in self._swOnDemandProductIds:
 				raise Exception(u"Product '%s' not available for on-demand" % productId)
 			index = -1
@@ -216,12 +217,18 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				)
 				productOnClients.append(productOnClient)
 				index = len(productOnClients) - 1
-			if (productOnClients[index].getActionRequest() == 'setup'):
-				productOnClients[index].setActionRequest('none')
-			else:
+			if (productOnClients[index].getActionRequest() != 'setup'):
 				productOnClients[index].setActionRequest('setup')
-			modifiedProductOnClients.append(productOnClients[index])
-		
+				modifiedProductOnClients.append(productOnClients[index])
+			
+		for productId in self._swOnDemandProductIds:
+			if not productId in productIds:
+				for i in range(len(productOnClients)):
+					if (productOnClients[i].productId == productId):
+						productOnClients[i].setActionRequest('none')
+						modifiedProductOnClients.append(productOnClients[i])
+						break
+			
 		productOnClientsWithDependencies = []
 		if modifiedProductOnClients:
 			logger.info(u"ProductOnClients modified, adding dependencies")
