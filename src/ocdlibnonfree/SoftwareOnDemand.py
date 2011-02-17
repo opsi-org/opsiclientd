@@ -119,7 +119,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		WorkerOpsi.__init__(self, service, request, resource)
 		ServiceConnection.__init__(self)
-	
+		self._swOnDemandProductIds = []
+		self._showDetails = False
+		
 	def _getCredentials(self):
 		(user, password) = self._getAuthorization()
 		if not user:
@@ -155,99 +157,22 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 	
 	def _processQuery(self, result):
 		self._decodeQuery(result)
-	
-	def _executeQuery(self, param, od_productIds, clientId):
-		#if param:
-		productOnClients = self._configService.productOnClient_getObjects(clientId = clientId)
-		modifiedProductOnClients = []
-		productOnClientsWithDependencies = []
-		try:
-			logger.debug(u"Try to execute Query: '%s'" % param)
-			#productOnClients = self._configService.productOnClient_getObjects(clientId = clientId)
-			#product On Clients
-			modified = False
-			for productId in param.get('products', []):
-				index = -1
-				for i in range(len(productOnClients)):
-					if productOnClients[i].productId == productId:
-						index = i
-						break
-				#productOnClient = self._configService.productOnClient_getObjects(clientId = clientId, productId = productId)
-				if (index == -1):
-					productOnClient = ProductOnClient(
-						productId          = productId,
-						productType        = 'LocalbootProduct',
-						clientId           = clientId,
-						installationStatus = 'not_installed'
-					)
-					productOnClients.append(productOnClient)
-					modifiedProductOnClients.append(productOnClient)
-					index = len(productOnClients) - 1
-				if productOnClients[index].getActionRequest() == 'setup':
-					logger.notice(u"Product: '%s' is already set on setup, nothing to do." % productId)
-					continue
-				#TODO Vorbedingung fuer Abhaengige Pakete mit einbauen.
-				productOnClients[index].setActionRequest('setup')
-				modifiedProductOnClients.append(productOnClients[index])
-				modified = True
-			
-			# if product was setup, and user have deselect this product, set the productActionRequest to none
-			for poc in productOnClients:
-				if poc.getProductId() in od_productIds:
-					if not poc.getProductId() in param.get('products', []):
-						poc.setActionRequest('none')
-						modifiedProductOnClients.append(poc)
-						modified = True
-			
-			#Set Products
-			if modified:
-				logger.notice(u"Now try to fulfill ProductDependencies.")
-				for poc in productOnClients:
-					logger.info(u"BEFORE: %s" % poc)
-				productOnClientsWithDependencies = self._configService.productOnClient_addDependencies(modifiedProductOnClients)
-				for poc in productOnClientsWithDependencies:
-					logger.info(u"AFTER: %s" % poc)
-				#self._configService.productOnClient_updateObjects(productOnClients_withDependencies)
+		query = {}
+		for part in self.query.split('&'):
+			k = part
+			if part.find('='):
+				(k, v) = part.split('=', 1)
+			k = k.strip().lower()
+			v = v.strip().lower()
+			if query.has_key(k):
+				query[k] = forceUnicodeList(query[k])
+				query[k].append(v)
 			else:
-				logger.notice(u'No Product to set.')
-			
-			if param.get('action') == 'save':
-				return (productOnClients,productOnClientsWithDependencies)
-				
-			if param.get('action') == 'ondemand':
-				if modified:
-					logger.notice(u"Try to set modified Products")
-					self._configService.productOnClient_updateObjects(productOnClientsWithDependencies)
-				#erst setup setzen
-				#sw on demand
-				for eventGenerator in getEventGenerators(generatorClass = SwOnDemandEventGenerator):
-					eventGenerator.fireEvent()
-				
-				
-			elif param.get('action') == 'onrestart':
-				if modified:
-					logger.notice(u"Try to set modified Products")
-					self._configService.productOnClient_updateObjects(productOnClientsWithDependencies)
-			else:
-				logger.notice(u'No action set, nothing to do.')
-			return (productOnClients,productOnClientsWithDependencies)
-		except Exception, e:
-			logger.logException(e)
-		
+				query[k] = v
+		self.query = query
 	
-	
-	def _generateTable(self, rows):
-		table = ''
-		for row in rows:
-			table += row
-		return table
-		
-	def _generateResponse(self, result):
-		self.connectConfigService()
-		
-		self._configService
-		
-		#Modules Implementation
+	def connectConfigService(self):
+		ServiceConnection.connectConfigService(self)
 		modules = None
 		if self._configService.isOpsi35():
 			modules = self._configService.backend_info()['modules']
@@ -280,303 +205,226 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			data += u'%s = %s\r\n' % (module.lower().strip(), val)
 		if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
 			raise Exception(u"SoftwareOnDemand not available: modules file invalid")
-		# endof: Modules Implementation
-		
-		state = ''
-		checked = ''
-		productVersion = ''
-		productDescription = ''
-		productAdvice = ''
-		
-		tablerows = []
-		tableSelectedRows = []
-		tableOtherRows = []
-		tableDependencyRows = []
-		
-		#productOnDepots = {}
-		productIds = []
-		myClientId = config.get('global', 'host_id')
-		mydepotServer = config.get('depot_server','depot_id')
-		onDemandGroups = []
-		show_details = None
-		configIds = [
-			"software-on-demand.product-group-ids",
-			"software-on-demand.show-details"
-		]
-		configStates = []
-		defaultconfigs = []
-		
-		
-		logger.debug("Try to get configs:")
-		self._configService.backend_setOptions({"addConfigStateDefaults":True})
-		configStates = self._configService.configState_getObjects(configId = configIds, objectId = myClientId)
-		
-		if configStates:
-			for configState in configStates:
-				logger.debug("Config found: '%s'" % configState.toHash()) 
+	
+	def _getSwOnDemandConfig(self):
+		self._swOnDemandProductIds = []
+		self._showDetails = False
+		logger.debug(u"Getting software-on-demand configs from service")
+		self._configService.backend_setOptions({"addConfigStateDefaults": True})
+		for configState in self._configService.configState_getObjects(
+					configId = ["software-on-demand.product-group-ids", "software-on-demand.show-details"],
+					objectId = config.get('global', 'host_id')):
 			
-			for swconfig in configStates:
-				if "product-group-ids" in swconfig.getConfigId(): 
-					if swconfig.getValues():
-						onDemandGroups = forceUnicodeList(swconfig.getValues()[0].split(","))
-					else:
-						onDemandGroups = None
-				elif "show-details" in swconfig.getConfigId():
-					show_details = forceBool(swconfig.getValues()[0])
+			logger.debug("Config found: '%s'" % configState.toHash())
+			
+			if (configState.getConfigId() == "software-on-demand.product-group-ids"):
+				onDemandGroupIds = forceUnicodeList(configState.getValues())
+				if onDemandGroupIds:
+					for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = onDemandGroupIds):
+						logger.debug(u"On demand product found: '%s'" % objectToGroup.objectId)
+						if not objectToGroup.objectId in productIds:
+							self._swOnDemandProductIds.append(objectToGroup.objectId)
+			
+			elif (configState.getConfigId() == "software-on-demand.show-details"):
+				showDetails = forceBool(configState.getValues()[0])
+	
+	def _processProducts(self):
+		productOnClients = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id'))
+		modifiedProductOnClients = []
 		
-					#show_details = forceBool(swconfig.getValues())
-		if not onDemandGroups:
-			onDemandGroups = ['']
-			#raise Exception("No Configs found")
+		for productId in forceProductIdList(self.query.get('product', [])):
+			if not productId in self._swOnDemandProductIds:
+				raise Exception(u"Product '%s' not available for on-demand")
+			index = -1
+			for i in range(len(productOnClients)):
+				if (productOnClients[i].productId == productId):
+					index = i
+					break
+			if (index == -1):
+				# ProductOnClient does not exist => create
+				productOnClient = ProductOnClient(
+					productId          = productId,
+					productType        = 'LocalbootProduct',
+					clientId           = config.get('global', 'host_id'),
+					installationStatus = 'not_installed'
+				)
+				productOnClients.append(productOnClient)
+				index = len(productOnClients) - 1
+			if (productOnClients[index].getActionRequest() == 'setup'):
+				productOnClients[index].setActionRequest('none')
+			else:
+				productOnClients[index].setActionRequest('setup')
+			modifiedProductOnClients.append(productOnClients[index])
 		
-		logger.debug(u"SoftwareOnDemandGroups from config: '%s'" % onDemandGroups)
-		logger.debug(u"Show-Details from config: '%s'" % show_details)
+		productOnClientsWithDependencies = []
+		if modifiedProductOnClients:
+			logger.info(u"ProductOnClients modified, adding dependencies")
+			productOnClientsWithDependencies = self._configService.productOnClient_addDependencies(productOnClients)
 		
+		return (modifiedProductOnClients, productOnClients, productOnClientsWithDependencies)
+	
+	def _processAction(self, modifiedProductOnClients, productOnClients, productOnClientsWithDependencies):
+		productIds = []
+		tableSelectedRows = []
+		tableDependencyRows = []
+		tableOtherRows = []
+		for t in ('selected', 'other', 'depend'):
+			pocs = []
+			if (t == 'selected'):
+				pocs = modifiedProductOnClients
+			elif (t == 'other'):
+				pocs = productOnClients
+			elif (t == 'depend'):
+				pocs = productOnClientsWithDependencies
+			for productOnClient in pocs:
+				if productOnClient.actionRequest not in ('none', None) and not productOnClient.productId in productIds:
+					productIds.append(productOnClient.productId)
+					row = u'<tr><td></td><td class="product">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td><td class="value"></td></tr>' \
+						% (productOnClient.productId, productOnClient.actionRequest, productOnClient.productId)
+					if (t == 'selected'):
+						tableSelectedRows.append(row)
+					elif (t == 'other'):
+						tableOtherRows.append(row)
+					elif (t == 'depend'):
+						tableDependencyRows.append(row)
 		
+		resultTable = [u'<table>']
+		if tableSelectedRows:
+			resultTable.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % _(u'selected products'))
+			for row in tableSelectedRows:
+				resultTable.append(row)
+		if self._showDetails:
+			if tableDependencyRows:
+				resultTable.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % _(u'product dependencies'))
+				for row in tableDependencyRows:
+					resultTable.append(row)
+			if tableOtherRows:
+				resultTable.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % _(u'other products'))
+				for row in tableOtherRows:
+					resultTable.append(row)
+		
+		logger.notice(u"Action '%s' was sent" % self.query.get('action'))
+		if (self.query.get('action') == "save"):
+			resultTable.append(u'<tr><td align="center" colspan="3" class="buttonarea"><input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"ondemand"))
+			resultTable.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u"onrestart"))
+			resultTable.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
+			resultTable.append(u'</table>')
+		
+		elif (self.query.get('action') == "ondemand"):
+			resultTable.append(u'<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Starting SoftwareOnDemand-Event'))
+			resultTable.append(u'<tr><td align="center" colspan="3" class="buttonarea">')
+			resultTable.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
+			resultTable.append(u'</table>')
+			
+		elif (self.query.get('action') == "onrestart"):
+			resultTable.append(u'<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Actions will be start after next reboot.'))
+			resultTable.append(u'<tr><td align="center" colspan="3" class="buttonarea">')
+			resultTable.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
+			resultTable.append(u'</table>')
+		
+		else:
+			resultTable.append(u'<tr><td colspan="3" class="productname>no action found</td></tr>')
+			resultTable.append(u'<tr><td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _("back"))
+		resultTable.append(u'<table>')
+		
+		html = html.replace('%result%', forceUnicode(u'\n'.join(resultTable)))
+		
+		if self.query.get('action') in ('ondemand', 'onrestart'):
+			if modifiedProductOnClients:
+				logger.info(u"Updating productOnClients")
+				self._configService.productOnClient_updateObjects(productOnClientsWithDependencies)
+			if (self.query.get('action') == 'onrestart'):
+				for eventGenerator in getEventGenerators(generatorClass = SwOnDemandEventGenerator):
+					eventGenerator.fireEvent()
+		
+		return html
+	
+	def _generateResponse(self, result):
 		if not isinstance(result, http.Response):
 			result = http.Response()
 		
-		for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = onDemandGroups):
-			logger.debug(u"Product found: '%s'" % objectToGroup.objectId)
-			if not objectToGroup.objectId in productIds:
-				productIds.append(objectToGroup.objectId)
+		self.connectConfigService()
+		self._getSwOnDemandConfig()
 		
-		html = mainpage
+		productOnClients = []
+		modifiedProductOnClients = []
+		productOnClientsWithDependencies = []
+		html = u''
 		
-		#Analyse Query
-		if self.query:
-			logger.notice(u"QUERY: '%s'" % self.query)
-			if 'action' in self.query or 'product' in self.query:
-				params = {}
-				for param in self.query.split(u'&'):
-					if 'action' in param:
-						params['action'] = param.split(u'=')[1]
-						continue
-					if not params.has_key('products'):
-						params['products'] = []
-					params['products'].append(param.split(u'=')[1])
-				
-				
-				if params:
-					logger.notice(u"Parameters from POST: '%s'" % params)
-					(productOnClients,productOnClientsWithDependencies) = self._executeQuery(params, productIds, myClientId)
-				
-				if productOnClientsWithDependencies or productOnClients:
-					
-					
-					if params['action'].lower() in ("save","ondemand","onrestart"):
-						dependencies = []
-						for productDependency in productOnClientsWithDependencies:
-							dependencies.append(productDependency.productId)
-						
-						logger.debug("dependencies: '%s'" % dependencies)
-						logger.debug("productIds: '%s'" % productIds)
-						
-						for productOnClient in productOnClientsWithDependencies:
-							if productOnClient.getActionRequest() not in ('none', None):
-								logger.debug(u"Product: '%s' with action: '%s' to check with known lists." \
-											% (productOnClient.productId,productOnClient.getActionRequest()))
-								if productOnClient.productId in productIds:
-									tableSelectedRows.append('<tr><td></td><td class="product">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td><td class="value"></td></tr>' \
-											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
-								elif productOnClient.productId in dependencies:
-									tableDependencyRows.append('<tr><td></td><td class="product">%s (%s)<input style="DISPLAY:none" type="checkbox" name="product" value="%s" checked></td><td class="value"></td></tr>' \
-											% (productOnClient.productId, productOnClient.getActionRequest(), productOnClient.productId))
-						for productOnClient in productOnClients:
-							if productOnClient in productOnClientsWithDependencies:
-								continue
-							if productOnClient.productId in productIds:
-								continue
-							if productOnClient.getActionRequest() not in ('none', None):
-								tableOtherRows.append('<tr><td></td><td class="product">%s (%s)</td><td class="value"></td></tr>' \
-											% (productOnClient.productId, productOnClient.getActionRequest() ))
-						result_table = []
-						result_table.append('<table>')
-						if tableSelectedRows:
-							result_table.append('<tr>	<td colspan="3" class="productname">%s</td></tr>' % _(u'selected products'))
-							for row in tableSelectedRows:
-								result_table.append(row)
-						if show_details:
-							if tableDependencyRows:
-								result_table.append('<tr>	<td colspan="3" class="productname">%s</td></tr>' % _(u'product dependencies'))
-								for row in tableDependencyRows:
-									result_table.append(row)
-							if tableOtherRows:
-								result_table.append('<tr>	<td colspan="3" class="productname">%s</td></tr>' % _(u'other products'))
-								for row in tableOtherRows:
-									result_table.append(row)
-						
-						
-						if params['action'].lower() == "save":
-							logger.notice(u"Action Save was send.")	
-							
-							result_table.append('<tr><td align="center" colspan="3" class="buttonarea"><input name="action" value="%s" id="submit" class="button" type="submit" />   ' % _(u"ondemand"))
-							result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" />   ' % _(u"onrestart"))
-							result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
-							result_table.append('</table>')
-							
-							#resulttable = resulttable.replace('%result%', forceUnicode(table))
-							
-						elif params['action'].lower() == "ondemand":
-							logger.notice(u"Action ondemand was send.")	
-							
-							result_table.append('<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Starting SoftwareOnDemand-Event'))
-							result_table.append('<tr><td align="center" colspan="3" class="buttonarea">')
-							result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
-							result_table.append('</table>')
-							
-							
-						elif params['action'].lower() == "onrestart":
-							logger.notice(u"Action onrestart was send.")
-							
-							result_table.append('<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Actions will be start after next reboot.'))
-							result_table.append('<tr><td align="center" colspan="3" class="buttonarea">')
-							result_table.append('<input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>' % _(u"back"))
-							result_table.append('</table>')
-						
-						if result:
-							result_table = self._generateTable(result_table)
-						else:
-							result_table = '%s' % _('''	<table>
-												<tr><td colspan="3" class="productname>no action found</td></tr>
-												<tr><td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td></tr>
-											</table>
-										''' % _("back"))
-							
-						html = html.replace('%result%', forceUnicode(result_table))
-						result.stream = stream.IByteStream(html.encode('utf-8'))
-						return result
+		if self.query.get('product'):
+			(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies) = self._processProducts()
 		
-		#### Fehler ausspucken:
-		#if not onDemandGroups:
-		#	result_error = '''
-		#		<table>
-		#			<tr>
-		#				Keine Gruppe fuer Software OnDemand konfiguriert!
-					
-		#			<tr>
-		#	'''
-		#	html = html.replace('%result%', forceUnicode(result_error))
-		#	result.stream = stream.IByteStream(html.encode('utf-8'))
-		#	return result
+		if self.query.get('action') in ('save', 'ondemand', 'onrestart'):
+			html = self._processAction(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies)
+		
+		elif self._swOnDemandProductIds:
 			
+			self._configService.setAsync(True)
+			jsonrpc1 = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id'))
+			jsonrpc2 = self._configService.product_getObjects(id = self._swOnDemandProductIds)
+			jsonrpc3 = self._configService.productOnDepot_getObjects(depotId = config.get('depot_server', 'depot_id'), productId = self._swOnDemandProductIds)
+			productOnClients = jsonrpc1.waitForResult()
+			products = jsonrpc2.waitForResult()
+			productOnDepots = jsonrpc3.waitForResult()
+			self._configService.setAsync(False)
 			
-		self._configService.setAsync(True)
-		jsonrpc1 = self._configService.productOnClient_getObjects(clientId = myClientId)
-		jsonrpc2 = self._configService.product_getObjects(id = productIds)
-		jsonrpc3 = self._configService.productOnDepot_getObjects(depotId = mydepotServer, productId = productIds)
-		productOnClients = jsonrpc1.waitForResult()
-		products = jsonrpc2.waitForResult()
-		productOnDepots = jsonrpc3.waitForResult()
-		self._configService.setAsync(False)
-		for poc in productOnClients:
-			logger.info(u"FROM SERVICE: %s" % poc)
-		
-		for productId in productIds:
-			productOnClient = None
-			for clientobj in productOnClients:
-				if clientobj.productId == productId:
-					productOnClient = clientobj
-					break
-			for depotobj in productOnDepots:
-				if depotobj.productId == productId:
-					productOnDepot = depotobj
-					break
-			for productObj in products:
-				if productObj.id == productId:
-					product = productObj
-					break
+			table = [u'<table><tbody>']
+			for productId in self._swOnDemandProductIds:
+				productOnClient = None
+				for poc in productOnClients:
+					if (poc.productId == productId):
+						productOnClient = poc
+						break
 				
-			#for obj in productOnClients:
-			#	productOnClient = None
-			#	if obj.productId in productIds:
-			#		productOnClient = obj
-			#		break
-			
-			productDescription = product.description
-			productAdvice = product.advice
-			statecolor = "color:#770000"
-			if productOnClient:
-				state = productOnClient.installationStatus
-				productVersion = productOnClient.productVersion
-				if productOnClient.actionRequest == 'setup':
-					checked = u'checked="checked"'
-				else:
-					checked = ''
-					
-				if state == "installed":
-						statecolor = "color:#007700"
-						state = "%s (Version: %s-%s)" % (	_('installed'), 
-													productOnClient.productVersion,
-													productOnClient.packageVersion
-												   )
-				else:
-					state = _('not installed')
-					productVersion = ''
-			else:
+				product = None
+				for p in products:
+					if (p.id == productId):
+						product = p
+						break
+				if not product:
+					logger.error(u"Product '%s' not found" % productId)
+				
+				productOnDepot = None
+				for pod in productOnDepots:
+					if (pod.productId == productId):
+						productOnDepot = pod
+						break
+				if not productOnDepot:
+					logger.error(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
+				
 				state = _('not installed')
-				productVersion = ''
+				statecolor = u"color:#770000"
+				checked = u''
+				if productOnClient:
+					if (productOnClient.actionRequest == 'setup'):
+						checked = u'checked="checked"'
+					if (productOnClient.installationStatus == "installed"):
+						statecolor = "color:#007700"
+						state = u"%s (%s: %s-%s)" % ( _('installed'), _('version'), productOnClient.productVersion, productOnClient.packageVersion )
+					else:
+						state = _('not installed')
 				
-			#if productOnDepots.has_key(productOnDepot.productId):
-			#	logger.notice("!!!Produkt ist schon vorhanden: '%s'" % productOnDepot.productId)
-			#	continue
-			
-			
-			tablerows.append('<tr>	<td colspan="3" class="productname">%s (%s-%s)</td></tr>' \
+				table.append(u'<tr><td colspan="3" class="productname">%s (%s-%s)</td></tr>' \
 						% (product.name, productOnDepot.productVersion, productOnDepot.packageVersion))
-			tablerows.append('''<tr><td></td>
-								<td class="key">%s</td>
-								<td class="value">%s</td>''' \
-						% ( _("description"), product.description.replace('\n','<br />') ) )
-			
-			if show_details:
-				tablerows.append('''<tr><td></td>
-									<td class="key">%s</td>
-									<td class="value" style="%s">%s</td>''' \
+				description = product.description or u''
+				table.append(u'<tr><td></td><td class="key">%s</td><td class="value">%s</td>' \
+						% ( _(u'description'), description.replace(u'\n', u'<br />') ) )
+				
+				if self._showDetails:
+					table.append(u'<tr><td></td><td class="key">%s</td><td class="value" style="%s">%s</td>' \
 							% ( _('state'), statecolor, state ) )
-				
-				tablerows.append('''<tr><td></td>
-									<td class="key">%s</td>
-									<td class="value">%s</td>''' \
-							% ( _('advice'), product.advice.replace('\n','<br />') ) )
-			tablerows.append('''<tr>
-								<td colspan="3" class="checkbox">
-									<input type="checkbox" name="product" value="%s" %s>%s
-								</td>
-							</td>''' \
+					advice = product.advice or u''
+					table.append(u'<tr><td></td><td class="key">%s</td><td class="value">%s</td>' \
+							% ( _('advice'), advice.replace(u'\n', u'<br />') ) )
+				table.append(u'<tr><td colspan="3" class="checkbox"><input type="checkbox" name="product" value="%s" %s>%s</td></td>' \
 						% ( productId, checked, _('install') ) )
-				
-			#productOnDepots[productOnDepot.productId] = productOnDepot
-			checked = ''
+			table.append(u'<tr><td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u'save'))
+			table.append(u'</tbody></table>')
+			html = mainpage.replace('%result%', u'\n'.join(table))
+			
 		self.disconnectConfigService()
-		
-		table = ''
-		html = mainpage
-		for row in tablerows:
-			table += row
-		
-		maintable = u'''
-					<table>
-						<tbody>
-							%s
-							<tr>
-								<td align="center" colspan="3">
-									<input name="action" value="%s" id="submit" class="button" type="submit" />
-								</td>
-							<tr>
-						</tbody>
-					</table>
-					''' % ( table, _(u'save') )
-		
-		html = html.replace('%result%', maintable)
-		
-		#html = html.replace('%result%', myClientId)
-		
-		result.code = responsecode.OK
-		#result.stream = stream.IByteStream((u'Kiosk ' + self.query).encode('utf-8'))
 		result.stream = stream.IByteStream(html.encode('utf-8'))
 		return result
-	
 
 class ResourceSoftwareOnDemand(ResourceOpsi):
 	WorkerClass = WorkerSoftwareOnDemand
