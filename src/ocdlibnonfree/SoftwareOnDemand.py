@@ -294,7 +294,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		table = [u'<table>']
 		if tableSelectedRows:
 			table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % _(u'selected products'))
-			table.extend(rowtableSelectedRows)
+			table.extend(tableSelectedRows)
 		if self._showDetails:
 			if tableDependencyRows:
 				table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % _(u'product dependencies'))
