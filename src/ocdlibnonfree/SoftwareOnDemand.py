@@ -358,6 +358,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				state = _('not installed')
 				statecolor = u"color:#770000"
 				checked = u''
+				for poc in modifiedProductOnClients:
+					if (poc.productId == productId):
+						if poc.actionRequest not in (None, 'none'):
+							checked = u'checked="checked"'
+						break
 				if productOnClient:
 					if (productOnClient.actionRequest == 'setup'):
 						checked = u'checked="checked"'
