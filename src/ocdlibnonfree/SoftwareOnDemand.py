@@ -264,14 +264,17 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 		table = [u'<table>']
 		if tableSelectedRows:
-			table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % _(u'selected products'))
+			table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' \
+				% _(u'You selected to execute the following product actions:'))
 			table.extend(tableSelectedRows)
 		if self._showDetails:
 			if tableDependencyRows:
-				table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % _(u'product dependencies'))
+				table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' \
+					% _(u'The following product actions have been added to fulfill dependencies:'))
 				table.extend(tableDependencyRows)
 			if tableOtherRows:
-				table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % _(u'other products'))
+				table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' \
+					% _(u'Other pending product actions:'))
 				table.extend(tableOtherRows)
 		
 		logger.notice(u"Action '%s' was sent" % self.query.get('action'))
@@ -353,14 +356,6 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						productOnClient = poc
 						break
 				
-				product = None
-				for p in products:
-					if (p.id == productId):
-						product = p
-						break
-				if not product:
-					logger.error(u"Product '%s' not found" % productId)
-				
 				productOnDepot = None
 				for pod in productOnDepots:
 					if (pod.productId == productId):
@@ -368,6 +363,14 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						break
 				if not productOnDepot:
 					logger.error(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
+				
+				product = None
+				for p in products:
+					if (p.id == productOnDepot.productId) and (p.productVersion == productOnDepot.productVersion) and (p.packageVersion == productOnDepot.packageVersion):
+						product = p
+						break
+				if not product:
+					logger.error(u"Product '%s' not found" % productId)
 				
 				state = _('not installed')
 				statecolor = u"color:#770000"
@@ -389,14 +392,14 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				table.append(u'<tr><td colspan="3" class="productname">%s (%s-%s)</td></tr>' \
 						% (product.name, productOnDepot.productVersion, productOnDepot.packageVersion))
 				description = product.description or u''
-				table.append(u'<tr><td></td><td class="key">%s</td><td class="value">%s</td>' \
+				table.append(u'<tr><td></td><td class="key">%s:</td><td class="value">%s</td>' \
 						% ( _(u'description'), description.replace(u'\n', u'<br />') ) )
 				
 				if self._showDetails:
-					table.append(u'<tr><td></td><td class="key">%s</td><td class="value" style="%s">%s</td>' \
+					table.append(u'<tr><td></td><td class="key">%s:</td><td class="value" style="%s">%s</td>' \
 							% ( _('state'), statecolor, state ) )
 					advice = product.advice or u''
-					table.append(u'<tr><td></td><td class="key">%s</td><td class="value">%s</td>' \
+					table.append(u'<tr><td></td><td class="key">%s:</td><td class="value">%s</td>' \
 							% ( _('advice'), advice.replace(u'\n', u'<br />') ) )
 				table.append(u'<tr><td colspan="3" class="checkbox"><input type="checkbox" name="product" value="%s" %s>%s</td></td>' \
 						% ( productId, checked, _('install') ) )
