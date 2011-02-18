@@ -393,7 +393,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						% ( productId, checked, _('install') ) )
 				html.append(u'</table></div>')
 			html.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u'next'))
-			html = mainpage.replace('%result%', u'\n'.join(</div>))
+			html = mainpage.replace('%result%', u'\n'.join(html))
 			
 		self.disconnectConfigService()
 		result.stream = stream.IByteStream(html.encode('utf-8'))

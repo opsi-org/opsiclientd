@@ -143,13 +143,11 @@ data_files = [
 						'windows\\helpers\\notifier\\popup.bmp',
 						'windows\\helpers\\notifier\\opsi.ico' ]),
 	('opsiclientd',                   [	'windows\\opsiclientd.conf']),
-	#('opsiclientd\\static_html',      [	'..\\static_html\\favicon.ico', '..\\static_html\\index.html', '..\\static_html\\opsi_logo.png']),
 	('locale\\de\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_de.mo']),
 	('opsiclientd\\extend.d', glob.glob('..\\extend.d\*.*')),
 ]
 data_files += tree('opsiclientd\\static_html', '..\\static_html')
-#print data_files
-#sys.exit(0)
+
 setup(
 	options = {
 		"py2exe": {
