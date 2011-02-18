@@ -35,14 +35,28 @@ div.mainpage-link-box {
 	letter-spacing: 2px;
 }
 
-div.infopage-timeline-box {
+#infopage-timeline-box {
 	margin: 30px;
 }
 
-p.infopage-timeline-title {
+#infopage-timeline-title {
 	text-align: left;
 	font-weight: bolder;
 	font-size: 120%;
+}
+
+#infopage-opsiclientd-log-box {
+	margin: 30px;
+}
+
+#infopage-opsiclientd-log-title {
+	text-align: left;
+	font-weight: bolder;
+	font-size: 120%;
+}
+
+#infopage-opsiclientd-log {
+	height: 500px;
 }
 
 div.swondemand-product-box {

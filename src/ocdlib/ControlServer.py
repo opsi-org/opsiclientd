@@ -83,17 +83,17 @@ infoPage = u'''
 		<span sytle="padding: 1px; top: 5px;">opsi client daemon info</span>
 	</span>
 	
-	<div class="infopage-timeline-box">
-		<p class="infopage-timeline-title">Timeline</p>
+	<div id="infopage-timeline-box">
+		<p id="infopage-timeline-title">Timeline</p>
 		<div class="timeline-default" id="opsiclientd-timeline" style="height: 400px; border: 1px solid #aaaaaa"></div>
 		<noscript>
 		This page uses Javascript to show you a Timeline. Please enable Javascript in your browser to see the full page. Thank you.
 		</noscript>
 	</div>
 	
-	<div class="infopage-opsiclientd-log-box">
-		<p class="infopage-opsiclientd-log-title">Log</p>
-		<div class="infopage-opsiclientd-log">
+	<div id="infopage-opsiclientd-log-box">
+		<p id="infopage-opsiclientd-log-title">Log</p>
+		<div id="infopage-opsiclientd-log">
 		%(opsiclient-log)s
 		</div>
 	</div>
