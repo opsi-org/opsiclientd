@@ -76,25 +76,7 @@ infoPage = u'''
 <head>
 	<title>opsi client daemon</title>
 	<meta http-equiv="refresh" content="60" />
-	<style type="text/css">
-		#title {
-			padding-left:10px;
-			color: #6276a0; 
-			font-size: 20px; 
-			font-weight: bolder; 
-			letter-spacing: 5px;
-		}
-		#links {
-			padding-left:50px;
-			color: #555555;
-			font-size: 14px;
-			letter-spacing: 2px;
-		}
-		a:link 		{ color: #555555; text-decoration: none; }
-		a:visited	{ color: #555555; text-decoration: none; }
-		a:hover		{ color: #46547f; text-decoration: none; }
-		a:active	{ color: #555555; text-decoration: none; }
-	</style>
+	<link rel="stylesheet" type="text/css" href="/opsiclientd.css">
 	%(head)s
 </head>
 <body onload="onLoad();" onresize="onResize();">

@@ -392,7 +392,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				html.append(u'       <input type="checkbox" name="product" value="%s" %s />%s</td></tr>' \
 						% ( productId, checked, _('install') ) )
 				html.append(u'</table></div>')
-			html.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u'next'))
+			html.append(u'<div class="swondemand-button-box">')
+			html.append(u'<button class="swondemand-action-button" type="submit" name="action" value="next">%s</button>' % _(u'next'))
+			html.append(u'</div>')
 			html = mainpage.replace('%result%', u'\n'.join(html))
 			
 		self.disconnectConfigService()
