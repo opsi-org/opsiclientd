@@ -267,18 +267,18 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 		buttons = [ u'<button class="swondemand-action-button" type="submit" name="action" value="back">&lt; %s</button>' % _(u"back") ]
 		if (self.query.get('action') == "next"):
-			buttons.append(u'<button class="swondemand-action-button" type="submit" name="action" value="onrestart">%s</button>' % _(u"process on next boot"))
-			if getEventGenerators(generatorClass = SwOnDemandEventGenerator):
-				buttons.append(u'<button class="swondemand-action-button" type="submit" name="action" value="ondemand">%s</button>' % _(u"process now"))
+			if selectedProducts:
+				buttons.append(u'<button class="swondemand-action-button" type="submit" name="action" value="onrestart">%s</button>' % _(u"process on next boot"))
+				if getEventGenerators(generatorClass = SwOnDemandEventGenerator):
+					buttons.append(u'<button class="swondemand-action-button" type="submit" name="action" value="ondemand">%s</button>' % _(u"process now"))
+			else:
+				html.append(u'<div class="swondemand-summary-message-box">%s</div>' % (_(u'Nothing selected')))
 		
 		elif (self.query.get('action') == "ondemand"):
 			html.append(u'<div class="swondemand-summary-message-box">%s</div>' % _(u'Starting to process actions now.'))
 		
 		elif (self.query.get('action') == "onrestart"):
 			html.append(u'<div class="swondemand-summary-message-box">%s</div>' % _(u'Actions will be processed on next boot.'))
-		
-		else:
-			html.append(u'<div class="swondemand-summary-message-box">%s</div>' % (_(u'Nothing selected')))
 		
 		html.append(u'<div class="swondemand-summary-button-box">')
 		html.extend(buttons)
