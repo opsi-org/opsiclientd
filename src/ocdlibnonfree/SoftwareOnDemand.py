@@ -248,7 +248,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 		html = []
 		if selectedProducts:
-			html.appennd(u'<div class="swondemand-summary-box">')
+			html.append(u'<div class="swondemand-summary-box">')
 			html.append(u'<p class="swondemand-summary-title">%s</p><ul>' \
 				% _(u'You selected to execute the following product actions:'))
 			html.extend(selectedProducts)
