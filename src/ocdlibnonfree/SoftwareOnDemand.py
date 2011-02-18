@@ -219,6 +219,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		return (modifiedProductOnClients, productOnClients, productOnClientsWithDependencies)
 	
 	def _processAction(self, modifiedProductOnClients, productOnClients, productOnClientsWithDependencies):
+		logger.notice(u"Action '%s' was sent" % self.query.get('action'))
+		
 		productIds = []
 		selectedProducts = []
 		dependendProducts = []
@@ -244,7 +246,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					elif (t == 'depend'):
 						dependendProducts.append(row)
 		
-		html = []
+		html = [ u'<div class="swondemand-summary-box">' ]
 		if selectedProducts:
 			html.append(u'<p class="swondemand-summary-title">%s</p>' \
 				% _(u'You selected to execute the following product actions:'))
@@ -258,8 +260,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				html.append(u'<p class="swondemand-summary-title">%s</p>' \
 					% _(u'Other pending product actions:'))
 				html.extend(otherProducts)
+		html.append(u'</div>')
 		
-		logger.notice(u"Action '%s' was sent" % self.query.get('action'))
 		buttons = [ u'<button class="swondemand-action-button" type="submit" name="action" value="back">&lt; %s</button>' % _(u"back") ]
 		if (self.query.get('action') == "next"):
 			buttons.append(u'<button class="swondemand-action-button" type="submit" name="action" value="onrestart">%s</button>' % _(u"process on next boot"))
