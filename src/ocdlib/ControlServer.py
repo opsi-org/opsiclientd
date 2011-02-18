@@ -254,7 +254,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 				if match:
 					logLevel = match.group(1)
 				if not logLevel is None:
-					log += u'<span class="loglevel_%s">' % logLevel
+					log += u'<span class="loglevel-%s">' % logLevel
 				log += line.rstrip() \
 					.replace(u'\r', u'')\
 					.replace(u'\t', u'   ')\
