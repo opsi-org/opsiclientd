@@ -260,7 +260,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				html.extend(otherProducts)
 		
 		logger.notice(u"Action '%s' was sent" % self.query.get('action'))
-		buttons = [ u'<button class="swondemand-action-button" type="submit" name="action" value="back">&lt; %s</button>' % _(u"back")) ]
+		buttons = [ u'<button class="swondemand-action-button" type="submit" name="action" value="back">&lt; %s</button>' % _(u"back") ]
 		if (self.query.get('action') == "next"):
 			buttons.append(u'<button class="swondemand-action-button" type="submit" name="action" value="onrestart">%s</button>' % _(u"process on next boot"))
 			if getEventGenerators(generatorClass = SwOnDemandEventGenerator):
