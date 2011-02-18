@@ -85,9 +85,15 @@ div.mainpage-link-box {
 	border: 1px solid #aaaaaa
 }
 
-.loglevel-0 {
-	color: #
-}
+.loglevel-1 { color: #1B8080 }
+.loglevel-2 { color: #7E1B80 }
+.loglevel-3 { color: #801B2C }
+.loglevel-4 { color: #80401B }
+.loglevel-5 { color: #1B801B }
+.loglevel-6 { color: #343434 }
+.loglevel-7 { color: #808080 }
+.loglevel-8 { color: #808080 }
+.loglevel-9 { color: #B4B426 }
 
 div.swondemand-product-box {
 	width: 550px;
