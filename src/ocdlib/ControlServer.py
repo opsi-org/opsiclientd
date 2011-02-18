@@ -76,8 +76,14 @@ infoPage = u'''
 	<meta http-equiv="refresh" content="60" />
 	<link rel="stylesheet" type="text/css" href="/opsiclientd.css" />
 	%(head)s
+	<script type="text/javascript">
+	<![CDATA[
+	var logDiv = document.getElementById("infopage-opsiclientd-log");
+	logDiv.scrollTop = logDiv.scrollHeight;
+	]]>
+	</script>
 </head>
-<body onload="onLoad();" onresize="onResize();">
+<body onload="onLoad(); scrollDownLog();" onresize="onResize();">
 	<span id="title">
 		<img src="/opsi_logo.png" />
 		<span sytle="padding: 1px; top: 5px;">opsi client daemon info</span>
