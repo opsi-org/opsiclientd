@@ -78,12 +78,15 @@ infoPage = u'''
 	%(head)s
 	<script type="text/javascript">
 	<![CDATA[
-	var logDiv = document.getElementById("infopage-opsiclientd-log");
-	logDiv.scrollTop = logDiv.scrollHeight;
+	function onPageLoad(){
+		onLoad();
+		var logDiv = document.getElementById("infopage-opsiclientd-log");
+		logDiv.scrollTop = logDiv.scrollHeight;
+	}
 	]]>
 	</script>
 </head>
-<body onload="onLoad(); scrollDownLog();" onresize="onResize();">
+<body onload="onPageLoad();" onresize="onResize();">
 	<span id="title">
 		<img src="/opsi_logo.png" />
 		<span sytle="padding: 1px; top: 5px;">opsi client daemon info</span>
