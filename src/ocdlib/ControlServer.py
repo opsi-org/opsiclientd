@@ -76,7 +76,7 @@ infoPage = u'''
 <head>
 	<title>opsi client daemon</title>
 	<meta http-equiv="refresh" content="60" />
-	<link rel="stylesheet" type="text/css" href="/opsiclientd.css">
+	<link rel="stylesheet" type="text/css" href="/opsiclientd.css" />
 	%(head)s
 </head>
 <body onload="onLoad();" onresize="onResize();">

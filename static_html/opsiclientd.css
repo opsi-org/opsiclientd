@@ -32,8 +32,8 @@ div.swondemand-product-box {
 	width: 550px;
 	margin: 30px;
 	border: solid #555555 1px;
-	border-radius: 10px;
-	-moz-border-radius: 10px;
+	border-radius: 5px;
+	-moz-border-radius: 5px;
 	background-color: #D7E5FF;
 }
 
@@ -80,8 +80,53 @@ td.swondemand-product-checkbox {
 	background-color: #dddddd;
 }
 
-.swondemand-button-box {
+div.swondemand-button-box {
 	width: 550px;
 	text-align: right;
 	margin-left: 30px;
 }
+
+div.swondemand-summary-button-box {
+	width: 550px;
+	text-align: center;
+	margin-left: 30px;
+}
+
+div.swondemand-summary-box {
+	width: 550px;
+	margin: 30px;
+	padding-left: 20px;
+	padding-bottom: 10px;
+	border: solid #555555 1px;
+	border-radius: 5px;
+	-moz-border-radius: 5px;
+	background-color: #D7E5FF;
+}
+
+p.swondemand-summary-title {
+	text-align: left;
+	font-weight: bolder;
+	font-size: 120%;
+}
+
+p.swondemand-summary-product-action {
+	padding-left: 30px;
+	vertical-align: top;
+	text-align: left;
+}
+
+div.swondemand-summary-message-box {
+	width: 550px;
+	margin: 30px;
+	padding-top: 10px;
+	padding-bottom: 10px;
+	padding-left: 20px;
+	border: solid #555555 1px;
+	border-radius: 5px;
+	-moz-border-radius: 5px;
+	background-color: #dddddd;
+	text-align: left;
+	font-weight: bolder;
+	font-size: 120%;
+}
+
