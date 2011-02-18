@@ -244,23 +244,32 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 		#	raise OpsiAuthenticationError(u"Permission denied")
 		
 		
-		log = None
+		log = u''
+		regex = re.compile('^\[(\d)\].*')
 		try:
 			f = codecs.open(config.get('global', 'log_file'), 'r', 'utf-8')
-			log = f.read()
+			for line in f.readline():
+				logLevel = None
+				match = regex.search(line)
+				if match:
+					logLevel = match.group(1)
+				if not logLevel is None:
+					log += u'<span class="loglevel_%s">' % logLevel
+				log += line.rstrip() \
+					.replace(u'\r', u'')\
+					.replace(u'\t', u'   ')\
+					.replace(u'&',  u'&amp;')\
+					.replace(u'"',  u'&quot;')\
+					.replace(u"'",  u'&apos;')\
+					.replace(u' ',  u'&#x202f;')\
+					.replace(u'<',  u'&lt;')\
+					.replace(u'>',  u'&gt;')
+				log += u'<br />\n'
+				if not logLevel is None:
+					log += u'</span>'
 			f.close()
 		except Exception, e:
-			log = e
-		log = forceUnicode(log)\
-			.replace(u'\r', u'')\
-			.replace(u'\t', u'   ')\
-			.replace(u'&',  u'&amp;')\
-			.replace(u'"',  u'&quot;')\
-			.replace(u"'",  u'&apos;')\
-			.replace(u' ',  u'&#x202f;')\
-			.replace(u'<',  u'&lt;')\
-			.replace(u'>',  u'&gt;')\
-			.replace(u'\n', u'<br />\n')
+			logger.error(e)
 		
 		html = infoPage % {
 			'head': timeline.getHtmlHead(),
