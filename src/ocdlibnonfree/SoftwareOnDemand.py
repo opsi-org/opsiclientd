@@ -246,24 +246,25 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					elif (t == 'depend'):
 						dependendProducts.append(row)
 		
-		html = [ u'<div class="swondemand-summary-box">' ]
+		html = []
 		if selectedProducts:
+			html.appennd(u'<div class="swondemand-summary-box">')
 			html.append(u'<p class="swondemand-summary-title">%s</p><ul>' \
 				% _(u'You selected to execute the following product actions:'))
 			html.extend(selectedProducts)
 			html.append(u'</ul>')
-		if self._showDetails:
-			if dependendProducts:
-				html.append(u'<p class="swondemand-summary-title">%s</p><ul>' \
-					% _(u'The following product actions have been added to fulfill dependencies:'))
-				html.extend(dependendProducts)
-				html.append(u'</ul>')
-			if otherProducts:
-				html.append(u'<p class="swondemand-summary-title">%s</p><ul>' \
-					% _(u'Other pending product actions:'))
-				html.extend(otherProducts)
-				html.append(u'</ul>')
-		html.append(u'</div>')
+			if self._showDetails:
+				if dependendProducts:
+					html.append(u'<p class="swondemand-summary-title">%s</p><ul>' \
+						% _(u'The following product actions have been added to fulfill dependencies:'))
+					html.extend(dependendProducts)
+					html.append(u'</ul>')
+				if otherProducts:
+					html.append(u'<p class="swondemand-summary-title">%s</p><ul>' \
+						% _(u'Other pending product actions:'))
+					html.extend(otherProducts)
+					html.append(u'</ul>')
+			html.append(u'</div>')
 		
 		buttons = [ u'<button class="swondemand-action-button" type="submit" name="action" value="back">&lt; %s</button>' % _(u"back") ]
 		if (self.query.get('action') == "next"):
