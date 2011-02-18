@@ -65,8 +65,6 @@ try:
 except Exception, e:
 	pass
 
-
-
 infoPage = u'''
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
@@ -74,12 +72,16 @@ infoPage = u'''
 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-	<title>opsi client daemon</title>
+	<title>opsi client daemon info</title>
 	<meta http-equiv="refresh" content="60" />
 	<link rel="stylesheet" type="text/css" href="/opsiclientd.css" />
 	%(head)s
 </head>
 <body onload="onLoad();" onresize="onResize();">
+	<span id="title">
+		<img src="/opsi_logo.png" />
+		<span sytle="padding: 1px; top: 5px;">opsi client daemon info</span>
+	</span>
 	<div class="timeline-default" id="opsiclientd-timeline" style="height: 400px; border: 1px solid #aaaaaa"></div>
 	<noscript>
 	This page uses Javascript to show you a Timeline. Please enable Javascript in your browser to see the full page. Thank you.
