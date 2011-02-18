@@ -43,26 +43,7 @@ mainpage = u'''
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 	<title>opsi Software On Demand</title>
-	<style>
-	body          { font-family: verdana, arial; font-size: 12px; }
-	#title        { padding: 10px; color: #6276a0; font-size: 20px; letter-spacing: 5px; }
-	input, select { background-color: #fafafa; border: 1px #abb1ef solid; font-family: verdana, arial;}
-	.title        { color: #555555; font-size: 20px; font-weight: bolder; letter-spacing: 5px; }
-	button       { color: #9e445a; background-color: #fafafa; border: 1px solid;  }
-	table  { margin-top: 20px; margin-left: 20px; border-collapse:collapse;text-align: center; width: 700px; border: solid #555555 1px; background-color: #D5D9F9;}
-	thead           { background-color: #6495ed;}
-	.checkbox:hover  { color:#007700; }
-	tfoot           { margin-top: 50px; }
-	th              { padding: 5px; padding-left: 10px; }
-	td              { padding: 5px;}
-	.productname    { width: 100px; padding-top:20px; padding-left:20px; text-align:left; font-weight: bolder; font-size: 120%; }
-	.product	{ padding-left:10px; vertical-align:top; text-align:left; font-style: italic; }
-	.key            { padding-left:10px; vertical-align:top; text-align:right; font-style: italic; }
-	.value          { text-align:left; }
-	.buttonarea	{ padding: 5px; }
-	.checkbox       { border-bottom: solid #555555 1px; text-align:left; padding-bottom:20px; padding-left:20px; }
-	</style>
-
+	<link rel="stylesheet" type="text/css" href="/opsiclientd.css">
 </head>
 <body>
 	<span id="title">
@@ -348,8 +329,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			productOnDepots = jsonrpc3.waitForResult()
 			self._configService.setAsync(False)
 			
-			table = [u'<table><tbody>']
+			html = []
 			for productId in self._swOnDemandProductIds:
+				html.append(u'<div class="swondemand-product-box"><table>')
 				productOnClient = None
 				for poc in productOnClients:
 					if (poc.productId == productId):
@@ -373,7 +355,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					logger.error(u"Product '%s' not found" % productId)
 				
 				state = _('not installed')
-				statecolor = u"color:#770000"
+				stateclass = u"swondemand-product-state-not_installed"
 				checked = u''
 				for poc in modifiedProductOnClients:
 					if (poc.productId == productId):
@@ -384,28 +366,34 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					if (productOnClient.actionRequest == 'setup'):
 						checked = u'checked="checked"'
 					if (productOnClient.installationStatus == "installed"):
-						statecolor = "color:#007700"
+						stateclass = "swondemand-product-state-installed"
 						state = u"%s (%s: %s-%s)" % ( _('installed'), _('version'), productOnClient.productVersion, productOnClient.packageVersion )
 					else:
 						state = _('not installed')
 				
-				table.append(u'<tr><td colspan="3" class="productname">%s (%s-%s)</td></tr>' \
+				html.append(u'<tr><td colspan="2" class="swondemand-product-name">%s (%s-%s)</td></tr>' \
 						% (product.name, productOnDepot.productVersion, productOnDepot.packageVersion))
 				description = product.description or u''
-				table.append(u'<tr><td></td><td class="key">%s:</td><td class="value">%s</td>' \
-						% ( _(u'description'), description.replace(u'\n', u'<br />') ) )
+				html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'description'))
+				html.append(u'    <td class="swondemand-product-attribute-value">%s</td></tr>' \
+							% description.replace(u'\n', u'<br />') )
 				
 				if self._showDetails:
-					table.append(u'<tr><td></td><td class="key">%s:</td><td class="value" style="%s">%s</td>' \
-							% ( _('state'), statecolor, state ) )
+					html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'state'))
+					html.append(u'    <td class="swondemand-product-attribute-value %s">%s</td></tr>' \
+							% (stateclass, state) )
+					
 					advice = product.advice or u''
-					table.append(u'<tr><td></td><td class="key">%s:</td><td class="value">%s</td>' \
-							% ( _('advice'), advice.replace(u'\n', u'<br />') ) )
-				table.append(u'<tr><td colspan="3" class="checkbox"><input type="checkbox" name="product" value="%s" %s>%s</td></td>' \
+					html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'advice'))
+					html.append(u'    <td class="swondemand-product-attribute-value">%s</td></tr>' \
+							% advice.replace(u'\n', u'<br />') )
+				
+				html.append(u'<tr><td colspan="2" class="swondemand-product-checkbox">')
+				html.append(u'       <input type="checkbox" name="product" value="%s" %s />%s</td></tr>' \
 						% ( productId, checked, _('install') ) )
-			table.append(u'<tr><td align="center" colspan="3"><input name="action" value="%s" id="submit" class="button" type="submit" /></td><tr>' % _(u'next'))
-			table.append(u'</tbody></table>')
-			html = mainpage.replace('%result%', u'\n'.join(table))
+				html.append(u'</table></div>')
+			html.append(u'<input name="action" value="%s" id="submit" class="button" type="submit" />' % _(u'next'))
+			html = mainpage.replace('%result%', u'\n'.join(</div>))
 			
 		self.disconnectConfigService()
 		result.stream = stream.IByteStream(html.encode('utf-8'))
