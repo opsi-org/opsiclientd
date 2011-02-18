@@ -39,11 +39,11 @@ config = Config()
 
 mainpage = u'''
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd" />
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 	<title>opsi Software On Demand</title>
-	<link rel="stylesheet" type="text/css" href="/opsiclientd.css">
+	<link rel="stylesheet" type="text/css" href="/opsiclientd.css" />
 </head>
 <body>
 	<span id="title">
@@ -55,6 +55,7 @@ mainpage = u'''
 	</form>
 	
 </body>
+</html>
 '''
 
 class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
@@ -219,9 +220,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 	
 	def _processAction(self, modifiedProductOnClients, productOnClients, productOnClientsWithDependencies):
 		productIds = []
-		tableSelectedRows = []
-		tableDependencyRows = []
-		tableOtherRows = []
+		selectedProducts = []
+		dependendProducts = []
+		otherProducts = []
 		for t in ('selected', 'other', 'depend'):
 			pocs = []
 			if (t == 'selected'):
@@ -233,54 +234,52 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			for productOnClient in pocs:
 				if productOnClient.actionRequest not in ('none', None) and not productOnClient.productId in productIds:
 					productIds.append(productOnClient.productId)
-					row = u'<tr><td></td><td class="product">%s (%s)</td><td class="value"></td></tr>' \
+					row = u'<p class="swondemand-summary-product-action">%s (%s)</p>' \
 						% (productOnClient.productId, productOnClient.actionRequest)
 					if (t == 'selected'):
-						tableSelectedRows.append(row)
-						tableSelectedRows.append(u'<input type="hidden" name="product" value="%s" />' % productOnClient.productId)
+						selectedProducts.append(row)
+						selectedProducts.append(u'<input type="hidden" name="product" value="%s" />' % productOnClient.productId)
 					elif (t == 'other'):
-						tableOtherRows.append(row)
+						otherProducts.append(row)
 					elif (t == 'depend'):
-						tableDependencyRows.append(row)
+						dependendProducts.append(row)
 		
-		table = [u'<table>']
-		if tableSelectedRows:
-			table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' \
+		html = []
+		if selectedProducts:
+			html.append(u'<p class="swondemand-summary-title">%s</p>' \
 				% _(u'You selected to execute the following product actions:'))
-			table.extend(tableSelectedRows)
+			html.extend(selectedProducts)
 		if self._showDetails:
-			if tableDependencyRows:
-				table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' \
+			if dependendProducts:
+				html.append(u'<p class="swondemand-summary-title">%s</p>' \
 					% _(u'The following product actions have been added to fulfill dependencies:'))
-				table.extend(tableDependencyRows)
-			if tableOtherRows:
-				table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' \
+				html.extend(dependendProducts)
+			if otherProducts:
+				html.append(u'<p class="swondemand-summary-title">%s</p>' \
 					% _(u'Other pending product actions:'))
-				table.extend(tableOtherRows)
+				html.extend(otherProducts)
 		
 		logger.notice(u"Action '%s' was sent" % self.query.get('action'))
-		buttons = []
+		buttons = [ u'<button class="swondemand-action-button" type="submit" name="action" value="back">&lt; %s</button>' % _(u"back")) ]
 		if (self.query.get('action') == "next"):
+			buttons.append(u'<button class="swondemand-action-button" type="submit" name="action" value="onrestart">%s</button>' % _(u"process on next boot"))
 			if getEventGenerators(generatorClass = SwOnDemandEventGenerator):
-				buttons.append(u'<button type="submit" id="submit" name="action" value="ondemand">%s</button>' % _(u"process now"))
-			buttons.append(u'<button type="submit" id="submit" name="action" value="onrestart">%s</button>' % _(u"process on next boot"))
+				buttons.append(u'<button class="swondemand-action-button" type="submit" name="action" value="ondemand">%s</button>' % _(u"process now"))
 		
 		elif (self.query.get('action') == "ondemand"):
-			table.append(u'<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Starting to process actions now.'))
+			html.append(u'<div class="swondemand-summary-message-box">%s</div>' % _(u'Starting to process actions now.'))
 		
 		elif (self.query.get('action') == "onrestart"):
-			table.append(u'<tr><td colspan="3" class="productname" style="color:#007700">%s</td></tr>' % _(u'Actions will be processed on next boot.'))
+			html.append(u'<div class="swondemand-summary-message-box">%s</div>' % _(u'Actions will be processed on next boot.'))
 		
 		else:
-			table.append(u'<tr><td colspan="3" class="productname">%s</td></tr>' % (_(u'Nothing selected')))
+			html.append(u'<div class="swondemand-summary-message-box">%s</div>' % (_(u'Nothing selected')))
 		
-		buttons.append(u'<button type="submit" id="submit" name="action" value="back">%s</button>' % _(u"back"))
-		table.append(u'<tr><td align="center" colspan="3" class="buttonarea">')
-		table.extend(buttons)
-		table.append(u'</td></tr>')
-		table.append(u'</table>')
+		html.append(u'<div class="swondemand-summary-button-box">')
+		html.extend(buttons)
+		html.append(u'</div>')
 		
-		html = mainpage.replace('%result%', forceUnicode(u'\n'.join(table)))
+		html = mainpage.replace('%result%', forceUnicode(u'\n'.join(html)))
 		
 		if self.query.get('action') in ('ondemand', 'onrestart'):
 			if modifiedProductOnClients:
@@ -393,7 +392,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						% ( productId, checked, _('install') ) )
 				html.append(u'</table></div>')
 			html.append(u'<div class="swondemand-button-box">')
-			html.append(u'<button class="swondemand-action-button" type="submit" name="action" value="next">%s</button>' % _(u'next'))
+			html.append(u'<button class="swondemand-action-button" type="submit" name="action" value="next">&gt; %s</button>' % _(u'next'))
 			html.append(u'</div>')
 			html = mainpage.replace('%result%', u'\n'.join(html))
 			
