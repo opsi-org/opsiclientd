@@ -236,7 +236,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			for productOnClient in pocs:
 				if productOnClient.actionRequest not in ('none', None) and not productOnClient.productId in productIds:
 					productIds.append(productOnClient.productId)
-					row = u'<p class="swondemand-summary-product-action">%s (%s)</p>' \
+					row = u'<li class="swondemand-summary-product-action">%s (%s)</li>' \
 						% (productOnClient.productId, productOnClient.actionRequest)
 					if (t == 'selected'):
 						selectedProducts.append(row)
@@ -248,18 +248,21 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 		html = [ u'<div class="swondemand-summary-box">' ]
 		if selectedProducts:
-			html.append(u'<p class="swondemand-summary-title">%s</p>' \
+			html.append(u'<p class="swondemand-summary-title">%s</p><ul>' \
 				% _(u'You selected to execute the following product actions:'))
 			html.extend(selectedProducts)
+			html.append(u'</ul>')
 		if self._showDetails:
 			if dependendProducts:
-				html.append(u'<p class="swondemand-summary-title">%s</p>' \
+				html.append(u'<p class="swondemand-summary-title">%s</p><ul>' \
 					% _(u'The following product actions have been added to fulfill dependencies:'))
 				html.extend(dependendProducts)
+				html.append(u'</ul>')
 			if otherProducts:
-				html.append(u'<p class="swondemand-summary-title">%s</p>' \
+				html.append(u'<p class="swondemand-summary-title">%s</p><ul>' \
 					% _(u'Other pending product actions:'))
 				html.extend(otherProducts)
+				html.append(u'</ul>')
 		html.append(u'</div>')
 		
 		buttons = [ u'<button class="swondemand-action-button" type="submit" name="action" value="back">&lt; %s</button>' % _(u"back") ]
