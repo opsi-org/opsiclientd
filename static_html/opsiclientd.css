@@ -28,8 +28,8 @@ a:active {
 	text-decoration: none;
 }
 
-div.link-box {
-	padding-left: 10px;
+div.mainpage-link-box {
+	padding-top: 20px;
 	color: #555555;
 	font-size: 14px;
 	letter-spacing: 2px;
