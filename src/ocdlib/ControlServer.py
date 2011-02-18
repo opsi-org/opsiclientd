@@ -197,16 +197,6 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		if not self.service._opsiclientd.getCacheService():
 			raise Exception(u'Cache service not running')
 		
-		#self.session.callInstance = BackendManager(
-		#	backend              = self.service._opsiclientd.getCacheService().getConfigBackend(),
-		#	dispatchConfigFile   = None,
-		#	backendConfigDir     = None,
-		#	extend               = True,
-		#	aclFile              = None,
-		#	accessControlContext = None,
-		#	depotBackend         = False,
-		#	hostControlBackend   = False
-		#)
 		self.session.callInstance = self.service._opsiclientd.getCacheService().getConfigBackend()
 		logger.notice(u'Backend created: %s' % self.session.callInstance)
 		self.session.callInterface = self.session.callInstance.backend_getInterface()
@@ -243,6 +233,9 @@ class WorkerCacheServiceJsonInterface(WorkerCacheServiceJsonRpc, WorkerOpsiJsonI
 class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientd.__init__(self, service, request, resource)
+	
+	def _processQuery(self, result):
+		return result
 	
 	def _generateResponse(self, result):
 		logger.info(u"Creating opsiclientd info page")
