@@ -47,6 +47,10 @@ div.mainpage-link-box {
 
 #infopage-opsiclientd-log-box {
 	margin: 30px;
+	overflow: auto;
+	font-family: monospace;
+	font-size: 10px;
+	border: 1px solid #aaaaaa
 }
 
 #infopage-opsiclientd-log-title {
