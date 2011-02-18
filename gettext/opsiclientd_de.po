@@ -171,49 +171,48 @@ msgstr "Schliessen"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:253
 msgid "You selected to execute the following product actions:"
-msgstr ""
+msgstr "Die folgenden Produkt-Aktionen wurden ausgewählt:"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:259
 msgid "The following product actions have been added to fulfill dependencies:"
-msgstr ""
+msgstr "Die folgenden Produkt-Aktionen wurden hinzugefügt um Abhängigkeiten zu erfüllen:"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:264
 msgid "Other pending product actions:"
-msgstr ""
+msgstr "Andere anstehende Produkt-Aktionen:"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:269
 msgid "back"
-msgstr ""
+msgstr "zurück"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:272
 msgid "process on next boot"
-msgstr ""
+msgstr "beim nächsten Systemstart ausführen"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:274
 msgid "process now"
-msgstr ""
+msgstr "sofort ausführen"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:276
 msgid "Nothing selected"
-msgstr ""
+msgstr "Nichts ausgewählt"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:279
-#, fuzzy
 msgid "Starting to process actions now."
-msgstr "Starte action processor"
+msgstr "Beginne mit dem Ausführen der Aktionen."
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:282
 msgid "Actions will be processed on next boot."
-msgstr ""
+msgstr "Die Aktionen werden beim nächsten Systemstart ausgeführt."
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:362
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:377
 msgid "not installed"
-msgstr ""
+msgstr "nicht installiert"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:375
 msgid "installed"
-msgstr ""
+msgstr "installiert"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:375
 msgid "version"
@@ -233,11 +232,11 @@ msgstr "Hinweis"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:398
 msgid "install"
-msgstr ""
+msgstr "installieren"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:401
 msgid "next"
-msgstr ""
+msgstr "weiter"
 
 #: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:109
 msgid "Starting action processor"
@@ -247,11 +246,3 @@ msgstr "Starte action processor"
 msgid "Action processor ended"
 msgstr "Action processor beendet"
 
-#~ msgid "product"
-#~ msgstr "Produkt"
-
-#~ msgid "available version"
-#~ msgstr "Verfügbare Version"
-
-#~ msgid "Syncing config with server"
-#~ msgstr "Synchronisation der Konfiguration mit Server"
