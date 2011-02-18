@@ -77,13 +77,11 @@ infoPage = u'''
 	<link rel="stylesheet" type="text/css" href="/opsiclientd.css" />
 	%(head)s
 	<script type="text/javascript">
-	<![CDATA[
 	function onPageLoad(){
 		onLoad();
 		var logDiv = document.getElementById("infopage-opsiclientd-log");
 		logDiv.scrollTop = logDiv.scrollHeight;
 	}
-	]]>
 	</script>
 </head>
 <body onload="onPageLoad();" onresize="onResize();">
