@@ -61,29 +61,6 @@ config = Config()
 
 TIMELINE_IMAGE_URL = u'/timeline/timeline_js/images/'
 htmlHead = u'''
-<style type="text/css">
-.timeline-default {
-	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
-	font-size: 8pt;
-	border: 1px solid #111111;
-}
-.timeline-event-bubble-title {
-	font-weight: bold;
-	border-bottom: 1px solid #111111;
-	margin-bottom: 0.5em;
-	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
-	font-size: 8pt;
-}
-.timeline-event-bubble-body {
-	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
-	font-size: 8pt;
-}
-.timeline-event-bubble-time {
-	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
-	font-size: 8pt;
-	margin-top: 10px;
-}
-</style>
 <script>
 Timeline_ajax_url   = "/timeline/timeline_ajax/simile-ajax-api.js";
 Timeline_urlPrefix  = "/timeline/timeline_js/";

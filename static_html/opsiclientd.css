@@ -45,12 +45,30 @@ div.mainpage-link-box {
 	font-size: 120%;
 }
 
+.timeline-default {
+	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
+	font-size: 8pt;
+	border: 1px solid #111111;
+}
+.timeline-event-bubble-title {
+	font-weight: bold;
+	border-bottom: 1px solid #111111;
+	margin-bottom: 0.5em;
+	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
+	font-size: 8pt;
+}
+.timeline-event-bubble-body {
+	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
+	font-size: 8pt;
+}
+.timeline-event-bubble-time {
+	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
+	font-size: 8pt;
+	margin-top: 10px;
+}
+
 #infopage-opsiclientd-log-box {
 	margin: 30px;
-	overflow: auto;
-	font-family: monospace;
-	font-size: 10px;
-	border: 1px solid #aaaaaa
 }
 
 #infopage-opsiclientd-log-title {
@@ -61,6 +79,10 @@ div.mainpage-link-box {
 
 #infopage-opsiclientd-log {
 	height: 500px;
+	overflow: auto;
+	font-family: monospace;
+	font-size: 10px;
+	border: 1px solid #aaaaaa
 }
 
 div.swondemand-product-box {
