@@ -92,7 +92,7 @@ infoPage = u'''
 	</div>
 	
 	<div class="infopage-opsiclientd-log-box">
-		<p class="infopage-opsiclientd-log-title">Timeline</p>
+		<p class="infopage-opsiclientd-log-title">Log</p>
 		<div class="infopage-opsiclientd-log">
 		%(opsiclient-log)s
 		</div>
