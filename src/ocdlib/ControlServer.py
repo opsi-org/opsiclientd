@@ -90,6 +90,13 @@ infoPage = u'''
 		This page uses Javascript to show you a Timeline. Please enable Javascript in your browser to see the full page. Thank you.
 		</noscript>
 	</div>
+	
+	<div class="infopage-opsiclientd-log-box">
+		<p class="infopage-opsiclientd-log-title">Timeline</p>
+		<div class="infopage-opsiclientd-log">
+		%(opsiclient-log)s
+		</div>
+	</div>
 </body>
 </html>
 '''
@@ -236,7 +243,29 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 		#if not self.session.isAdmin:
 		#	raise OpsiAuthenticationError(u"Permission denied")
 		
-		html = infoPage % { 'head': timeline.getHtmlHead() }
+		
+		log = None
+		try:
+			f = codecs.open(config.get('global', 'log_file'), 'r', 'utf-8')
+			log = f.read()
+			f.close()
+		except Exception, e:
+			log = e
+		log = forceUnicode(log)\
+			.replace(u'\r', u'')\
+			.replace(u'\t', u'   ')\
+			.replace(u'&',  u'&amp;')\
+			.replace(u'"',  u'&quot;')\
+			.replace(u"'",  u'&apos;')\
+			.replace(u' ',  u'&#x202f;')\
+			.replace(u'<',  u'&lt;')\
+			.replace(u'>',  u'&gt;')\
+			.replace(u'\n', u'<br />\n')
+		
+		html = infoPage % {
+			'head': timeline.getHtmlHead(),
+			'opsiclient-log': log
+		}
 		if not isinstance(result, http.Response):
 			result = http.Response()
 		result.code = responsecode.OK
