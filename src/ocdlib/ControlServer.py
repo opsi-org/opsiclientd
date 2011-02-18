@@ -248,13 +248,17 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 		regex = re.compile('^\[(\d)\].*')
 		try:
 			f = codecs.open(config.get('global', 'log_file'), 'r', 'utf-8')
+			lastLogLevel = 0
 			for line in f.readlines():
-				logLevel = None
+				logLevel = 0
 				match = regex.search(line)
 				if match:
-					logLevel = match.group(1)
-				if not logLevel is None:
+					logLevel = int(match.group(1))
+				if logLevel and (logLevel != lastLogLevel):
+					if lastLogLevel:
+						log += u'</span>'
 					log += u'<span class="loglevel-%s">' % logLevel
+					lastLogLevel = logLevel
 				log += line.rstrip() \
 					.replace(u'\r', u'')\
 					.replace(u'\t', u'   ')\
@@ -265,9 +269,9 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 					.replace(u'<',  u'&lt;')\
 					.replace(u'>',  u'&gt;')
 				log += u'<br />\n'
-				if not logLevel is None:
-					log += u'</span>'
 			f.close()
+			if lastLogLevel:
+				log += u'</span>'
 		except Exception, e:
 			logger.error(e)
 		
