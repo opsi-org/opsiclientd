@@ -1,0 +1,52 @@
+
+body {
+	font-family: verdana, arial;
+	font-size: 12px;
+}
+
+#title {
+	padding: 10px;
+	color: #6276a0;
+	font-size: 20px;
+	letter-spacing: 5px;
+}
+
+div.swondemand-product-box {
+	width: 550px;
+	margin: 30px;
+	border: solid #555555 1px;
+	border-radius: 10px;
+	-moz-border-radius: 10px;
+	background-color: #D7E5FF;
+}
+
+td.swondemand-product-name {
+	padding: 20px;
+	text-align: left;
+	font-weight: bolder;
+	font-size: 120%;
+}
+
+td.swondemand-product-attribute-name {
+	padding-left: 50px;
+	vertical-align: top;
+	text-align: right;
+	font-style: italic;
+}
+
+td.swondemand-product-attribute-value {
+	vertical-align: top;
+	text-align: left;
+}
+
+td.swondemand-product-checkbox {
+	padding: 20px;
+}
+
+.swondemand-product-state-installed {
+	color: #008200;
+}
+
+.swondemand-product-state-not_installed {
+	color: #820000;
+}
