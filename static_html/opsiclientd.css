@@ -35,6 +35,17 @@ div.mainpage-link-box {
 	letter-spacing: 2px;
 }
 
+div.infopage-timeline-box {
+	width: 100%;
+	margin: 30px;
+}
+
+p.infopage-timeline-title {
+	text-align: left;
+	font-weight: bolder;
+	font-size: 120%;
+}
+
 div.swondemand-product-box {
 	width: 550px;
 	margin: 30px;
