@@ -248,7 +248,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 		regex = re.compile('^\[(\d)\].*')
 		try:
 			f = codecs.open(config.get('global', 'log_file'), 'r', 'utf-8')
-			for line in f.readline():
+			for line in f.readlines():
 				logLevel = None
 				match = regex.search(line)
 				if match:
