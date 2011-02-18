@@ -116,7 +116,7 @@ p.swondemand-summary-title {
 	font-size: 120%;
 }
 
-p.swondemand-summary-product-action {
+li.swondemand-summary-product-action {
 	padding-left: 30px;
 	vertical-align: top;
 	text-align: left;
