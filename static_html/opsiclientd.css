@@ -11,6 +11,23 @@ body {
 	letter-spacing: 5px;
 }
 
+a:link {
+	color: #555555;
+	text-decoration: none;
+}
+a:visited {
+	color: #555555;
+	text-decoration: none;
+}
+a:hover {
+	color: #46547f;
+	text-decoration: none;
+}
+a:active {
+	color: #555555;
+	text-decoration: none;
+}
+
 div.swondemand-product-box {
 	width: 550px;
 	margin: 30px;
@@ -49,4 +66,22 @@ td.swondemand-product-checkbox {
 
 .swondemand-product-state-not_installed {
 	color: #820000;
+}
+
+.swondemand-action-button {
+	color: #83384B;
+	background-color: #fafafa;
+	border: solid 1px #83384B;
+	border-radius: 5px;
+	-moz-border-radius: 5px;
+	font-weight: bolder;
+}
+.swondemand-action-button:hover {
+	background-color: #dddddd;
+}
+
+.swondemand-button-box {
+	width: 550px;
+	text-align: right;
+	margin-left: 30px;
 }
