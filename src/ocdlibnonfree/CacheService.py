@@ -110,7 +110,12 @@ class CacheService(threading.Thread):
 				time.sleep(1)
 	
 	def configCacheCompleted(self):
-		self.initializeConfigCacheService()
+		try:
+			self.initializeConfigCacheService()
+		except Exception, e:
+			logger.logException(e, LOG_INFO)
+			logger.error(e)
+			return False
 		if not self._configCacheService.isWorking() and self._configCacheService.getState().get('config_cached', False):
 			return True
 		return False
