@@ -1012,8 +1012,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				
 				if self.event.eventConfig.eventNotifierCommand:
 					self.startNotifierApplication(
-						command      = self.event.eventConfig.eventNotifierCommand,
-						desktop      = self.event.eventConfig.eventNotifierDesktop )
+						command = self.event.eventConfig.eventNotifierCommand,
+						desktop = self.event.eventConfig.eventNotifierDesktop )
 				
 				if self.event.eventConfig.syncConfigToServer:
 					self.setStatusMessage( _(u"Syncing config to server") )
