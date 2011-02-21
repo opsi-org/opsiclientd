@@ -185,75 +185,82 @@ class ConfigCacheServiceBackendExtension(object):
 	
 class ConfigCacheService(ServiceConnection, threading.Thread):
 	def __init__(self):
-		threading.Thread.__init__(self)
-		ServiceConnection.__init__(self)
-		moduleName = u' %-30s' % (u'config cache service')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
-		
-		self._configCacheDir          = os.path.join(config.get('cache_service', 'storage_dir'), 'config')
-		self._opsiModulesFile         = os.path.join(self._configCacheDir, 'cached_modules')
-		self._opsiVersionFile         = os.path.join(self._configCacheDir, 'cached_version')
-		self._opsiPasswdFile          = os.path.join(self._configCacheDir, 'cached_passwd')
-		self._auditHardwareConfigFile = os.path.join(self._configCacheDir, 'cached_opsihwaudit.json')
+		try:
+			threading.Thread.__init__(self)
+			ServiceConnection.__init__(self)
+			moduleName = u' %-30s' % (u'config cache service')
+			logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 			
-		self._stopped = False
-		self._running = False
-		self._working = False
-		self._state   = {}
+			self._configCacheDir          = os.path.join(config.get('cache_service', 'storage_dir'), 'config')
+			self._opsiModulesFile         = os.path.join(self._configCacheDir, 'cached_modules')
+			self._opsiVersionFile         = os.path.join(self._configCacheDir, 'cached_version')
+			self._opsiPasswdFile          = os.path.join(self._configCacheDir, 'cached_passwd')
+			self._auditHardwareConfigFile = os.path.join(self._configCacheDir, 'cached_opsihwaudit.json')
+				
+			self._stopped = False
+			self._running = False
+			self._working = False
+			self._state   = {}
+			
+			self._syncConfigFromServerRequested = False
+			self._syncConfigToServerRequested = False
+			
+			if not os.path.exists(self._configCacheDir):
+				logger.notice(u"Creating config cache dir '%s'" % self._configCacheDir)
+				os.makedirs(self._configCacheDir)
+			
+			backendArgs = {
+				'opsiModulesFile':         self._opsiModulesFile,
+				'opsiVersionFile':         self._opsiVersionFile,
+				'opsiPasswdFile':          self._opsiPasswdFile,
+				'auditHardwareConfigFile': self._auditHardwareConfigFile,
+				'depotId':                 config.get('depot_server', 'depot_id'),
+			}
+			self._workBackend = SQLiteBackend(
+				database    = os.path.join(self._configCacheDir, 'work.sqlite'),
+				synchronous = False,
+				**backendArgs
+			)
+			self._workBackend.backend_createBase()
+			
+			self._snapshotBackend = SQLiteBackend(
+				database    = os.path.join(self._configCacheDir, 'snapshot.sqlite'),
+				synchronous = False,
+				**backendArgs
+			)
+			self._snapshotBackend.backend_createBase()
+			
+			self._cacheBackend = ClientCacheBackend(
+				workBackend     = self._workBackend,
+				snapshotBackend = self._snapshotBackend,
+				clientId        = config.get('global', 'host_id'),
+				**backendArgs
+			)
+			
+			self._configBackend = BackendExtender(
+				backend = ExtendedConfigDataBackend(
+					configDataBackend = self._cacheBackend
+				),
+				extensionClass     = ConfigCacheServiceBackendExtension,
+				extensionConfigDir = config.get('cache_service', 'extension_config_dir')
+			)
+			self._backendTracker = SQLiteObjectBackendModificationTracker(
+				database             = os.path.join(self._configCacheDir, 'tracker.sqlite'),
+				synchronous          = False,
+				lastModificationOnly = True
+			)
+			self._cacheBackend.addBackendChangeListener(self._backendTracker)
+			
+			ccss = state.get('config_cache_service')
+			if ccss:
+				self._state = ccss
+		except Exception, e:
+			try:
+				self.setObsolete()
+			except:
+				pass
+			raise e
 		
-		self._syncConfigFromServerRequested = False
-		self._syncConfigToServerRequested = False
-		
-		if not os.path.exists(self._configCacheDir):
-			logger.notice(u"Creating config cache dir '%s'" % self._configCacheDir)
-			os.makedirs(self._configCacheDir)
-		
-		backendArgs = {
-			'opsiModulesFile':         self._opsiModulesFile,
-			'opsiVersionFile':         self._opsiVersionFile,
-			'opsiPasswdFile':          self._opsiPasswdFile,
-			'auditHardwareConfigFile': self._auditHardwareConfigFile,
-			'depotId':                 config.get('depot_server', 'depot_id'),
-		}
-		self._workBackend = SQLiteBackend(
-			database    = os.path.join(self._configCacheDir, 'work.sqlite'),
-			synchronous = False,
-			**backendArgs
-		)
-		self._workBackend.backend_createBase()
-		
-		self._snapshotBackend = SQLiteBackend(
-			database    = os.path.join(self._configCacheDir, 'snapshot.sqlite'),
-			synchronous = False,
-			**backendArgs
-		)
-		self._snapshotBackend.backend_createBase()
-		
-		self._cacheBackend = ClientCacheBackend(
-			workBackend     = self._workBackend,
-			snapshotBackend = self._snapshotBackend,
-			clientId        = config.get('global', 'host_id'),
-			**backendArgs
-		)
-		
-		self._configBackend = BackendExtender(
-			backend = ExtendedConfigDataBackend(
-				configDataBackend = self._cacheBackend
-			),
-			extensionClass     = ConfigCacheServiceBackendExtension,
-			extensionConfigDir = config.get('cache_service', 'extension_config_dir')
-		)
-		self._backendTracker = SQLiteObjectBackendModificationTracker(
-			database             = os.path.join(self._configCacheDir, 'tracker.sqlite'),
-			synchronous          = False,
-			lastModificationOnly = True
-		)
-		self._cacheBackend.addBackendChangeListener(self._backendTracker)
-		
-		ccss = state.get('config_cache_service')
-		if ccss:
-			self._state = ccss
-	
 	def getConfigBackend(self):
 		return self._configBackend
 	
