@@ -65,11 +65,13 @@ global logFile
 global host
 global port
 global skin
+global notificationClientId
 
 logFile = u''
 host = u'127.0.0.1'
 port = 0
 skin = 'skin.ini'
+notificationClientId = None
 
 BYTE = c_ubyte
 LONG = c_long
@@ -117,7 +119,7 @@ class OpsiDialogWindow(SubjectsObserver):
 		
 		self._notificationClient = None
 		if port:
-			self._notificationClient = NotificationClient(host, port, self)
+			self._notificationClient = NotificationClient(host, port, self, notificationClientId)
 			self._notificationClient.addEndConnectionRequestedCallback(self.close)
 	
 	def close(self):
@@ -911,6 +913,7 @@ def usage():
 	print u"Options:"
 	print u"  -h, --host      Notification server host (default: %s)" % host
 	print u"  -p, --port      Notification server port (default: %s)" % port
+	print u"  -i, --id        Notification client id (default: %s)" % notificationClientId
 	print u"  -s, --skin      Skin to use (default: %s)" % skin
 
 if (__name__ == "__main__"):
@@ -928,15 +931,10 @@ if (__name__ == "__main__"):
 		
 		# Process command line arguments
 		try:
-			(opts, args) = getopt.getopt(argv[1:], "h:p:s:l:", [ "host=", "port=", "skin=", "log-file=" ])
+			(opts, args) = getopt.getopt(argv[1:], "h:p:s:i:l:", [ "host=", "port=", "skin=", "id=", "log-file=" ])
 		except getopt.GetoptError:
 			usage()
 			sys.exit(1)
-		
-		#global logFile
-		#global host
-		#global port
-		#global skin
 		
 		for (opt, arg) in opts:
 			logger.info(u"Processing option %s:%s" % (opt, arg))
@@ -946,6 +944,8 @@ if (__name__ == "__main__"):
 				port = forceInt(arg)
 			elif opt in ("-s", "--skin"):
 				skin = forceFilename(arg)
+			elif opt in ("-i", "--id"):
+				notificationClientId = forceUnicode(arg)
 			elif opt in ("-l", "--log-file"):
 				logFile = forceFilename(arg)
 				if os.path.exists(logFile):
