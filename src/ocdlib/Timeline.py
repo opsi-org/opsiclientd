@@ -68,6 +68,7 @@ Timeline_parameters = "bundle=true";
 </script>
 <script src="/timeline/timeline_js/timeline-api.js" type="text/javascript"></script>
 <script>
+<!--
 var timeline_data = %(data)s;
 var tl;
 function onLoad() {
@@ -115,6 +116,7 @@ function onResize() {
 		}, 500);
 	}
 }
+//-->
 </script>
 '''
 
