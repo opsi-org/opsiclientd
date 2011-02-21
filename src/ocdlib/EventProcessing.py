@@ -856,6 +856,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					self.setStatusMessage(_(u"Shutdown requested"))
 				
 				if self.event.eventConfig.shutdownWarningTime:
+					if self._notificationServer:
+						self._notificationServer.requestEndConnections()
 					while True:
 						shutdownCancelCounter = state.get('shutdown_cancel_counter', 0)
 						waitEventId = None
@@ -900,8 +902,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						
 						if self.event.eventConfig.shutdownNotifierCommand:
 							self.startNotifierApplication(
-									command      = self.event.eventConfig.shutdownNotifierCommand,
-									desktop      = self.event.eventConfig.shutdownNotifierDesktop )
+									command    = self.event.eventConfig.shutdownNotifierCommand,
+									desktop    = self.event.eventConfig.shutdownNotifierDesktop,
+									notifierId = 'shutdown')
 								
 						timeout = int(self.event.eventConfig.shutdownWarningTime)
 						endTime = time.time() + timeout
@@ -1015,8 +1018,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				
 				if self.event.eventConfig.eventNotifierCommand:
 					self.startNotifierApplication(
-						command = self.event.eventConfig.eventNotifierCommand,
-						desktop = self.event.eventConfig.eventNotifierDesktop )
+						command    = self.event.eventConfig.eventNotifierCommand,
+						desktop    = self.event.eventConfig.eventNotifierDesktop,
+						notifierId = 'event')
 				
 				if self.event.eventConfig.syncConfigToServer:
 					self.setStatusMessage( _(u"Syncing config to server") )
