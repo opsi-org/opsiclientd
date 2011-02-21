@@ -1055,8 +1055,9 @@ def createEventGenerators():
 				del eventConfig['type']
 				ec = EventConfigFactory(eventType, eventConfigId, **eventConfig)
 				eventGenerators[mainEventConfigId] = EventGeneratorFactory(ec)
+				logger.notice("Event generator '%s' created" % mainEventConfigId)
 			except Exception, e:
-				logger.error(u"Failed to create event generator '%s': %s" % (eventConfigId, forceUnicode(e)))
+				logger.error(u"Failed to create event generator '%s': %s" % (mainEventConfigId, forceUnicode(e)))
 	
 	for (eventConfigId, eventConfig) in getEventConfigs().items():
 		mainEventConfigId = eventConfigId.split('{')[0]
@@ -1066,8 +1067,9 @@ def createEventGenerators():
 		if not eventGenerators.has_key(mainEventConfigId):
 			try:
 				eventGenerators[mainEventConfigId] = EventGeneratorFactory(ec)
+				logger.notice("Event generator '%s' created" % mainEventConfigId)
 			except Exception, e:
-				logger.error(u"Failed to create event generator '%s': %s" % (eventConfigId, forceUnicode(e)))
+				logger.error(u"Failed to create event generator '%s': %s" % (mainEventConfigId, forceUnicode(e)))
 		
 		try:
 			eventGenerators[mainEventConfigId].addEventConfig(ec)
