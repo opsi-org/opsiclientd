@@ -355,21 +355,21 @@ def EventGeneratorFactory(eventConfig):
 		raise TypeError(u"Unhandled event config '%s'" % eventConfig)
 
 class EventGenerator(threading.Thread):
-	def __init__(self, eventConfig):
+	def __init__(self, generatorConfig):
 		threading.Thread.__init__(self)
 		self._eventConfigs = []
-		self._mainEventConfig = eventConfig
+		self._generatorConfig = generatorConfig
 		self._eventListeners = []
 		self._eventsOccured = 0
 		self._threadId = None
 		self._stopped = False
 		self._event = None
 		self._lastEventOccurence = None
-		moduleName = u' %-30s' % (u'event generator ' + self._mainEventConfig.getId().split('{')[0])
+		moduleName = u' %-30s' % (u'event generator ' + self._generatorConfig.getId())
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 	
 	def __unicode__(self):
-		return u'<%s %s>' % (self.__class__.__name__, self._mainEventConfig.getId())
+		return u'<%s %s>' % (self.__class__.__name__, self._generatorConfig.getId())
 	
 	__repr__ = __unicode__
 	
@@ -468,13 +468,13 @@ class EventGenerator(threading.Thread):
 			logger.info(u"Initializing event generator '%s'" % self)
 			self.initialize()
 			
-			if (self._mainEventConfig.activationDelay > 0):
+			if (self._generatorConfig.activationDelay > 0):
 				logger.debug(u"Waiting %d seconds before activation of event generator '%s'" % \
-					(self._mainEventConfig.activationDelay, self))
-				time.sleep(self.activationDelay)
+					(self._generatorConfig.activationDelay, self))
+				time.sleep(self._generatorConfig.activationDelay)
 			
 			logger.info(u"Activating event generator '%s'" % self)
-			while not self._stopped and ( (self._mainEventConfig.maxRepetitions < 0) or (self._eventsOccured <= self._mainEventConfig.maxRepetitions) ):
+			while not self._stopped and ( (self._generatorConfig.maxRepetitions < 0) or (self._eventsOccured <= self._generatorConfig.maxRepetitions) ):
 				logger.info(u"Getting next event...")
 				event = self.getNextEvent()
 				if event:
@@ -531,7 +531,7 @@ class DaemonShutdownEventGenerator(EventGenerator):
 class WMIEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
 		EventGenerator.__init__(self, eventConfig)
-		self._wql = self._mainEventConfig.wql
+		self._wql = self._generatorConfig.wql
 		self._watcher = None
 		
 	def initialize(self):
@@ -627,8 +627,8 @@ class TimerEventGenerator(EventGenerator):
 	
 	def getNextEvent(self):
 		self._event = threading.Event()
-		if (self._mainEventConfig.interval > 0):
-			self._event.wait(self._mainEventConfig.interval)
+		if (self._generatorConfig.interval > 0):
+			self._event.wait(self._generatorConfig.interval)
 			return self.createEvent()
 		else:
 			self._event.wait()
@@ -716,7 +716,7 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 			logger.notice(u"User login detected: %s" % args[0])
 			self._eventsOccured += 1
 			self.fireEvent(self.createEvent(eventInfo = {'User': args[0]}))
-			if (self._mainEventConfig.maxRepetitions > 0) and (self._eventsOccured > self._mainEventConfig.maxRepetitions):
+			if (self._generatorConfig.maxRepetitions > 0) and (self._eventsOccured > self._generatorConfig.maxRepetitions):
 				self.stop()
 	
 	def createEvent(self, eventInfo={}):
