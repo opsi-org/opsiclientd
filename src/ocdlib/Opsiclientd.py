@@ -160,7 +160,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		class WaitForGUI(EventListener):
 			def __init__(self):
 				self._guiStarted = threading.Event()
-				eventGenerator = EventGeneratorFactory(GUIStartupEventConfig("wait_for_gui"))
+				ec = GUIStartupEventConfig("wait_for_gui")
+				eventGenerator = EventGeneratorFactory(ec)
+				eventGenerator.addEventConfig(ec)
 				eventGenerator.addEventListener(self)
 				eventGenerator.start()
 			
