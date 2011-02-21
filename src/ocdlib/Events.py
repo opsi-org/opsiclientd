@@ -110,16 +110,15 @@ class EventConfig(object):
 	def setConfig(self, conf):
 		self.name                          =  unicode ( conf.get('name',            self._id.split('{')[0]  ) )
 		self.preconditions                 =     dict ( conf.get('preconditions',                 {}        ) )
-		self.message                       =  unicode ( conf.get('message',                       ''        ) )
+		self.actionMessage                 =  unicode ( conf.get('actionMessage',               ''        ) )
 		self.maxRepetitions                =      int ( conf.get('maxRepetitions',                -1        ) )
 		# wait <activationDelay> seconds before event gets active
 		self.activationDelay               =      int ( conf.get('activationDelay',               0         ) )
 		# wait <notificationDelay> seconds before event is fired
 		self.notificationDelay             =      int ( conf.get('notificationDelay',             0         ) )
 		self.interval                      =      int ( conf.get('interval',                      -1        ) )
-		self.warningTime                   =      int ( conf.get('warningTime',                   0         ) )
-		self.userCancelable                =      int ( conf.get('userCancelable',                0         ) )
-		self.cancelCounter                 =      int ( conf.get('cancelCounter',                 0         ) )
+		self.actionWarningTime             =      int ( conf.get('actionWarningTime',             0         ) )
+		self.actionUserCancelable          =      int ( conf.get('actionUserCancelable',          0         ) )
 		self.shutdown                      =     bool ( conf.get('shutdown',                      False     ) )
 		self.reboot                        =     bool ( conf.get('reboot',                        False     ) )
 		self.shutdownWarningMessage        =  unicode ( conf.get('shutdownWarningMessage',        ''        ) )
@@ -183,8 +182,8 @@ class EventConfig(object):
 	def getName(self):
 		return self.name
 	
-	def getMessage(self):
-		message = self.message
+	def getActionMessage(self):
+		actionMessage = self.actionMessage
 		def toUnderscore(value):
 			s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', value)
 			return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
@@ -214,11 +213,11 @@ class PanicEventConfig(EventConfig):
 	def setConfig(self, conf):
 		EventConfig.setConfig(self, conf)
 		self.maxRepetitions          = -1
-		self.message                 = 'Panic event'
+		self.actionMessage                 = 'Panic event'
 		self.activationDelay         = 0
 		self.notificationDelay       = 0
-		self.warningTime             = 0
-		self.userCancelable          = False
+		self.actionWarningTime       = 0
+		self.actionUserCancelable    = False
 		self.blockLogin              = False
 		self.logoffCurrentUser       = False
 		self.lockWorkstation         = False
@@ -848,12 +847,11 @@ def getEventConfigs():
 	eventConfigs = {}
 	for (eventConfigId, rawEventConfig) in rawEventConfigs.items():
 		try:
-			if not rawEventConfig['active']:
-				logger.notice(u"Event config '%s' is deactivated" % eventConfigId)
+			if (rawEventConfig['args'].get('type', 'template').lower() == 'template'):
 				continue
 			
-			if not rawEventConfig['args'].get('type'):
-				logger.error(u"Event config '%s': event type not set" % eventConfigId)
+			if not rawEventConfig['active']:
+				logger.notice(u"Event config '%s' is deactivated" % eventConfigId)
 				continue
 			
 			#if not rawEventConfig['args'].get('action_processor_command'):
@@ -873,7 +871,7 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['type'] = value
 					elif (key == 'wql'):
 						eventConfigs[eventConfigId]['wql'] = value
-					elif key.startswith('message'):
+					elif key.startswith('action_message') or key.startswith('message'):
 						mLanguage = None
 						try:
 							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
@@ -881,9 +879,9 @@ def getEventConfigs():
 							pass
 						if mLanguage:
 							if (mLanguage == getLanguage()):
-								eventConfigs[eventConfigId]['message'] = value
-						elif not eventConfigs[eventConfigId].get('message'):
-							eventConfigs[eventConfigId]['message'] = value
+								eventConfigs[eventConfigId]['actionMessage'] = value
+						elif not eventConfigs[eventConfigId].get('actionMessage'):
+							eventConfigs[eventConfigId]['actionMessage'] = value
 					elif key.startswith('shutdown_warning_message'):
 						mLanguage = None
 						try:
@@ -914,12 +912,10 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['activationDelay'] = int(value)
 					elif (key == 'notification_delay'):
 						eventConfigs[eventConfigId]['notificationDelay'] = int(value)
-					elif (key == 'warning_time'):
-						eventConfigs[eventConfigId]['warningTime'] = int(value)
-					elif (key == 'user_cancelable'):
-						eventConfigs[eventConfigId]['userCancelable'] = int(value)
-					elif (key == 'cancel_counter'):
-						eventConfigs[eventConfigId]['cancelCounter'] = int(value)
+					elif (key == 'action_warning_time') or (key == 'warning_time'):
+						eventConfigs[eventConfigId]['actionWarningTime'] = int(value)
+					elif (key == 'action_user_cancelable') or (key == 'user_cancelable'):
+						eventConfigs[eventConfigId]['actionUserCancelable'] = int(value)
 					elif (key == 'shutdown'):
 						eventConfigs[eventConfigId]['shutdown'] = value.lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'reboot'):
