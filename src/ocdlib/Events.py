@@ -401,7 +401,7 @@ class EventGenerator(threading.Thread):
 		for pec in self._eventConfigs:
 			if self._preconditionsFulfilled(pec.preconditions):
 				logger.info(u"Preconditions %s for event config '%s' fulfilled" % (pec.preconditions, pec.getId()))
-				if (len(pec.preconditions.keys()) > len(actualConfig['preconditions'].keys())):
+				if not actualConfig['config'] or (len(pec.preconditions.keys()) > len(actualConfig['preconditions'].keys())):
 					actualConfig = { 'preconditions': pec.preconditions, 'config': pec }
 			else:
 				logger.info(u"Preconditions %s for event config '%s' not fulfilled" % (pec.preconditions, pec.getId()))
@@ -428,8 +428,7 @@ class EventGenerator(threading.Thread):
 			return
 		
 		if not event:
-			event = self.createEvent()
-		if not event:
+			logger.info(u"No event to fire")
 			return
 		
 		self._lastEventOccurence = time.time()
@@ -479,8 +478,7 @@ class EventGenerator(threading.Thread):
 				logger.info(u"Getting next event...")
 				event = self.getNextEvent()
 				self._eventsOccured += 1
-				if event:
-					self.fireEvent(event)
+				self.fireEvent(event)
 			logger.info(u"Event generator '%s' now deactivated after %d event occurrences" % (self, self._eventsOccured))
 			
 		except Exception, e:

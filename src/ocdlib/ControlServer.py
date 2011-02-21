@@ -466,7 +466,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		if not name in eventGenerators.keys():
 			raise ValueError(u"Event '%s' not in list of known events: %s" % (name, ', '.join(eventGenerators.keys())))
 		logger.notice(u"Firing event '%s'" % name)
-		eventGenerators[name].fireEvent()
+		eventGenerators[name].fireEvent(eventGenerators[name].createEvent())
 		
 	def setStatusMessage(self, sessionId, message):
 		sessionId = forceInt(sessionId)
