@@ -112,10 +112,10 @@ config = Config()
 #						self.running = False
 #						return
 #				
-#				self._messageSubject.setMessage(self.event.eventConfig.getMessage())
+#				self._messageSubject.setMessage(self.event.eventConfig.getActionMessage())
 #				if self.event.eventConfig.warningTime:
 #					choiceSubject = ChoiceSubject(id = 'choice')
-#					if (self.event.eventConfig.cancelCounter < self.event.eventConfig.userCancelable):
+#					if (self.event.eventConfig.cancelCounter < self.event.eventConfig.actionUserCancelable):
 #						choiceSubject.setChoices([ _('Abort'), _('Start now') ])
 #						choiceSubject.setCallbacks( [ self.abortEventCallback, self.startEventCallback ] )
 #					else:
@@ -143,7 +143,7 @@ config = Config()
 #							config.set('event_%s' % self.event.eventConfig.getName(), 'cancel_counter', self.event.eventConfig.cancelCounter)
 #							config.updateConfigFile()
 #							logger.notice(u"Event cancelled by user for the %d. time (max: %d)" \
-#								% (self.event.eventConfig.cancelCounter, self.event.eventConfig.userCancelable))
+#								% (self.event.eventConfig.cancelCounter, self.event.eventConfig.actionUserCancelable))
 #							raise CanceledByUserError(u"Event cancelled by user")
 #						else:
 #							self.event.eventConfig.cancelCounter = 0

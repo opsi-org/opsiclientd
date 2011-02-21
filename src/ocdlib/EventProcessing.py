@@ -745,18 +745,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self.waitCancelled = True
 	
 	def processActionWarningTime(self, productIds=[]):
-		if not self.event.eventConfig.warningTime:
+		if not self.event.eventConfig.actionWarningTime:
 			return
 		cancelCounter = state.get('action_processing_cancel_counter', 0)
 		waitEventId = timeline.addEvent(
 				title         = u"Action warning",
 				description   = u'Notifying user of actions to process %s (%s)\n' % (self.event.eventConfig.getId(), u', '.join(productIds)) \
-						+ u"warningTime: %s, userCancelable: %s, cancelCounter: %s" % (self.event.eventConfig.warningTime, self.event.eventConfig.userCancelable, cancelCounter),
+						+ u"actionWarningTime: %s, actionUserCancelable: %s, cancelCounter: %s" % (self.event.eventConfig.actionWarningTime, self.event.eventConfig.actionUserCancelable, cancelCounter),
 				category      = u"wait",
 				durationEvent = True)
-		self._messageSubject.setMessage(u"%s\n%s: %s" % (self.event.eventConfig.getMessage(), _(u'Products'), u', '.join(productIds)) )
+		self._messageSubject.setMessage(u"%s\n%s: %s" % (self.event.eventConfig.getActionMessage(), _(u'Products'), u', '.join(productIds)) )
 		choiceSubject = ChoiceSubject(id = 'choice')
-		if (cancelCounter < self.event.eventConfig.userCancelable):
+		if (cancelCounter < self.event.eventConfig.actionUserCancelable):
 			choiceSubject.setChoices([ _('Abort'), _('Start now') ])
 			choiceSubject.setCallbacks( [ self.abortEventCallback, self.startEventCallback ] )
 		else:
@@ -769,7 +769,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						command = self.event.eventConfig.eventNotifierCommand,
 						desktop = self.event.eventConfig.eventNotifierDesktop )
 				
-			timeout = int(self.event.eventConfig.warningTime)
+			timeout = int(self.event.eventConfig.actionWarningTime)
 			endTime = time.time() + timeout
 			while (timeout > 0) and not self.eventCancelled and not self.waitCancelled:
 				now = time.time()
@@ -799,11 +799,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				cancelCounter += 1
 				state.set('action_processing_cancel_counter', cancelCounter)
 				logger.notice(u"Action processing cancelled by user for the %d. time (max: %d)" \
-					% (cancelCounter, self.event.eventConfig.userCancelable))
+					% (cancelCounter, self.event.eventConfig.actionUserCancelable))
 				timeline.addEvent(
 					title       = u"Action processing cancelled by user",
 					description = u"Action processing cancelled by user for the %d. time (max: %d)" \
-							% (cancelCounter, self.event.eventConfig.userCancelable),
+							% (cancelCounter, self.event.eventConfig.actionUserCancelable),
 					category    = u"user_interaction")
 				raise CanceledByUserError(u"Action processing cancelled by user")
 			else:
@@ -995,7 +995,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			try:
 				self.startNotificationServer()
 				self.setActionProcessorInfo()
-				self._messageSubject.setMessage(self.event.eventConfig.getMessage())
+				self._messageSubject.setMessage(self.event.eventConfig.getActionMessage())
 				
 				self.setStatusMessage(_(u"Processing event %s") % self.event.eventConfig.getName())
 				
