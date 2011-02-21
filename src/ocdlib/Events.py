@@ -192,6 +192,12 @@ class EventConfig(object):
 				continue
 			message = message.replace('%' + key + '%', unicode(value))
 			message = message.replace('%' + toUnderscore(key) + '%', unicode(value))
+		while True:
+			match = re.search('(%state.[^%]+%)', message)
+			if not match:
+				break
+			name = match.group(1).replace('%state.', '')[:-1]
+			message = message.replace(match.group(1), state.get(name))
 		return message
 	
 	def getShutdownWarningMessage(self):
@@ -204,6 +210,12 @@ class EventConfig(object):
 				continue
 			message = message.replace('%' + key + '%', unicode(value))
 			message = message.replace('%' + toUnderscore(key) + '%', unicode(value))
+		while True:
+			match = re.search('(%state.[^%]+%)', message)
+			if not match:
+				break
+			name = match.group(1).replace('%state.', '')[:-1]
+			message = message.replace(match.group(1), state.get(name))
 		return message
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -213,7 +225,7 @@ class PanicEventConfig(EventConfig):
 	def setConfig(self, conf):
 		EventConfig.setConfig(self, conf)
 		self.maxRepetitions          = -1
-		self.actionMessage                 = 'Panic event'
+		self.actionMessage           = 'Panic event'
 		self.activationDelay         = 0
 		self.notificationDelay       = 0
 		self.actionWarningTime       = 0
