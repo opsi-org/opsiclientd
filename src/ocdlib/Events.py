@@ -197,7 +197,7 @@ class EventConfig(object):
 			if not match:
 				break
 			name = match.group(1).replace('%state.', '')[:-1]
-			message = message.replace(match.group(1), state.get(name))
+			message = message.replace(match.group(1), forceUnicode(state.get(name)))
 		return message
 	
 	def getShutdownWarningMessage(self):
@@ -215,7 +215,7 @@ class EventConfig(object):
 			if not match:
 				break
 			name = match.group(1).replace('%state.', '')[:-1]
-			message = message.replace(match.group(1), state.get(name))
+			message = message.replace(match.group(1), forceUnicode(state.get(name)))
 		return message
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
