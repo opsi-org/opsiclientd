@@ -764,10 +764,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			choiceSubject.setCallbacks( [ self.startEventCallback ] )
 		self._notificationServer.addSubject(choiceSubject)
 		try:
-			if self.event.eventConfig.eventNotifierCommand:
+			if self.event.eventConfig.actionNotifierCommand:
 				self.startNotifierApplication(
-						command = self.event.eventConfig.eventNotifierCommand,
-						desktop = self.event.eventConfig.eventNotifierDesktop )
+						command = self.event.eventConfig.actionNotifierCommand,
+						desktop = self.event.eventConfig.actionNotifierDesktop )
 				
 			timeout = int(self.event.eventConfig.actionWarningTime)
 			endTime = time.time() + timeout
@@ -1010,10 +1010,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					System.lockWorkstation()
 					time.sleep(15)
 				
-				if self.event.eventConfig.actionNotifierCommand:
+				if self.event.eventConfig.eventNotifierCommand:
 					self.startNotifierApplication(
-						command      = self.event.eventConfig.actionNotifierCommand,
-						desktop      = self.event.eventConfig.actionNotifierDesktop )
+						command      = self.event.eventConfig.eventNotifierCommand,
+						desktop      = self.event.eventConfig.eventNotifierDesktop )
 				
 				if self.event.eventConfig.syncConfigToServer:
 					self.setStatusMessage( _(u"Syncing config to server") )
