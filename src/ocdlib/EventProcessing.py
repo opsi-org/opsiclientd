@@ -298,10 +298,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self.setSessionId(sessionId)
 		return processId
 	
-	def startNotifierApplication(self, command, desktop=None):
+	def startNotifierApplication(self, command, desktop=None, notifierId=None):
 		logger.notice(u"Starting notifier application in session '%s'" % self.getSessionId())
 		try:
-			self.runCommandInSession(command = command.replace('%port%', unicode(self._notificationServerPort)), desktop = desktop, waitForProcessEnding = False)
+			self.runCommandInSession(
+				command = command.replace('%port%', forceUnicode(self._notificationServerPort)).replace('%id%', forceUnicode(notifierId)),
+				desktop = desktop, waitForProcessEnding = False)
 			time.sleep(3)
 		except Exception, e:
 			logger.error(u"Failed to start notifier application '%s': %s" % (command, e))
@@ -766,8 +768,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		try:
 			if self.event.eventConfig.actionNotifierCommand:
 				self.startNotifierApplication(
-						command = self.event.eventConfig.actionNotifierCommand,
-						desktop = self.event.eventConfig.actionNotifierDesktop )
+						command    = self.event.eventConfig.actionNotifierCommand,
+						desktop    = self.event.eventConfig.actionNotifierDesktop,
+						notifierId = 'action')
 				
 			timeout = int(self.event.eventConfig.actionWarningTime)
 			endTime = time.time() + timeout
@@ -812,7 +815,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			timeline.setEventEnd(waitEventId)
 			try:
 				if self._notificationServer:
-					self._notificationServer.requestEndConnections()
+					self._notificationServer.requestEndConnections(['action'])
 					self._notificationServer.removeSubject(choiceSubject)
 			except Exception, e:
 				logger.logException(e)
