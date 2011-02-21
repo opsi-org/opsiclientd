@@ -282,7 +282,8 @@ class ConfigImplementation(object):
 		try:
 			# Read config file
 			configFile = IniFile(filename = self.get('global', 'config_file'), raw = True)
-			configFile.setSectionSequence(['global', 'config_service', 'depot_server', 'cache_service', 'control_server', 'notification_server', 'opsiclientd_notifier', 'opsiclientd_rpc', 'action_processor'])
+			#configFile.setSectionSequence(['global', 'config_service', 'depot_server', 'cache_service', 'control_server', 'notification_server', 'opsiclientd_notifier', 'opsiclientd_rpc', 'action_processor'])
+			configFile.setKeepOrdering(True)
 			(config, comments) = configFile.parse(returnComments = True)
 			changed = False
 			for (section, values) in self._config.items():
