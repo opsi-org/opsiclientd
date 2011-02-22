@@ -1006,6 +1006,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				self.opsiclientd.setBlockLogin(False)
 			
 			try:
+				config.setTemporaryDepotDrive(None)
+				config.setTemporaryConfigServiceUrls([])
+				
 				self.startNotificationServer()
 				self.setActionProcessorInfo()
 				self._messageSubject.setMessage(self.event.eventConfig.getActionMessage())
