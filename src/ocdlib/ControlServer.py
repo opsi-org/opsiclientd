@@ -71,7 +71,7 @@ infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
 
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta http-equiv="Content-Type" content="text/xhtml; charset=utf-8" />
 	<title>opsi client daemon info</title>
 	<meta http-equiv="refresh" content="60" />
 	<link rel="stylesheet" type="text/css" href="/opsiclientd.css" />
