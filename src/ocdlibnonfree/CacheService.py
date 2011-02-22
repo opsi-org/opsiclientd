@@ -224,11 +224,14 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 	def initBackends(self):
 		depotId = config.get('depot_server', 'depot_id')
 		if not depotId:
+			connect = False
 			if not self._configService:
 				self.connectConfigService()
+				connect = True
 			config.selectDepotserver(configService = self._configService, productIds = [], masterOnly = True)
 			config.updateConfigFile()
-			self.disconnectConfigService()
+			if connect:
+				self.disconnectConfigService()
 			depotId = config.get('depot_server', 'depot_id')
 			
 		backendArgs = {
