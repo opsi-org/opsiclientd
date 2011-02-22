@@ -276,13 +276,10 @@ class ConfigImplementation(object):
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self._config))
 	
 	def updateConfigFile(self):
-		''' Get settings from config file '''
 		logger.notice(u"Updating config file: '%s'" % self.get('global', 'config_file'))
 		
 		try:
-			# Read config file
 			configFile = IniFile(filename = self.get('global', 'config_file'), raw = True)
-			#configFile.setSectionSequence(['global', 'config_service', 'depot_server', 'cache_service', 'control_server', 'notification_server', 'opsiclientd_notifier', 'opsiclientd_rpc', 'action_processor'])
 			configFile.setKeepOrdering(True)
 			(config, comments) = configFile.parse(returnComments = True)
 			changed = False
@@ -333,7 +330,7 @@ class ConfigImplementation(object):
 			return self._temporaryConfigServiceUrls
 		return self.get('config_service', 'url')
 	
-	def selectDepotserver(self, configService, event, productIds=[], cifsOnly=True):
+	def selectDepotserver(self, configService, event, productIds=[], cifsOnly=True, masterOnly=False):
 		productIds = forceProductIdList(productIds)
 		
 		logger.notice(u"Selecting depot for products %s" % productIds)
@@ -345,7 +342,7 @@ class ConfigImplementation(object):
 		
 		try:
 			import ocdlibnonfree
-			return ocdlibnonfree.selectDepotserver(self, configService, event, productIds, cifsOnly)
+			return ocdlibnonfree.selectDepotserver(self, configService, event, productIds, cifsOnly, masterOnly)
 		except Exception, e:
 			logger.info(e)
 		
