@@ -228,7 +228,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			if not self._configService:
 				self.connectConfigService()
 				connect = True
-			config.selectDepotserver(configService = self._configService, productIds = [], masterOnly = True)
+			config.selectDepotserver(configService = self._configService, event = None, productIds = [], masterOnly = True)
 			config.updateConfigFile()
 			if connect:
 				self.disconnectConfigService()
