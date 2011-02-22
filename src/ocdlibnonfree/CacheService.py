@@ -378,7 +378,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			if not productOnClients:
 				self._state['config_cached'] = True
 				state.set('config_cache_service', self._state)
-				logger.notice(u"No product action(s) set on config service, no sync from server required")
+				logger.notice(u"No product action requests set on config service, no sync from server required")
 			else:
 				try:
 					localProductOnClientsByProductId = {}
@@ -409,7 +409,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 						state.set('config_cache_service', self._state)
 						timeline.setEventEnd(eventId)
 						for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
-							eventGenerator.fireEvent()
+							eventGenerator.createAndFireEvent()
 				except Exception, e:
 					logger.logException(e)
 					timeline.addEvent(
@@ -660,7 +660,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					self._state['products_cached'] = True
 					state.set('product_cache_service', self._state)
 					for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
-						eventGenerator.fireEvent()
+						eventGenerator.createAndFireEvent()
 		except Exception, e:
 			logger.error(u"Failed to cache products: %s" % e)
 			timeline.addEvent(
@@ -714,11 +714,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		self._setProductCacheState(productId, 'completed', None, updateProductOnClient = False)
 		self._setProductCacheState(productId, 'failure',   None, updateProductOnClient = False)
 		
-		eventId = timeline.addEvent(
-				title         = u"Cache product %s" % productId,
-				description   = u"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)" % (productId,  self._maxBandwidth, self._dynamicBandwidth),
-				category      = u'product_caching',
-				durationEvent = True)
+		eventId = None
 		repository = None
 		exception = None
 		try:
@@ -763,6 +759,13 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				raise Exception(u"Only %0.3f MB free space available on disk, refusing to cache product files" \
 							% (float(diskFreeSpace)/(1024*1024)))
 			
+			eventId = timeline.addEvent(
+				title         = u"Cache product %s" % productId,
+				description   = u"Caching product '%s' of size %0.3f MB\nmax bandwidth: %s, dynamic bandwidth: %s" \
+					% (productId,  (float(productSize)/(1024*1024)), self._maxBandwidth, self._dynamicBandwidth),
+				category      = u'product_caching',
+				durationEvent = True)
+			
 			productSynchronizer = DepotToLocalDirectorySychronizer(
 				sourceDepot          = repository,
 				destinationDirectory = self._productCacheDir,
@@ -789,7 +792,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				description = u"Failed to cache product '%s': %s" % (productId, e),
 				category    = u"product_caching",
 				isError     = True)
-		timeline.setEventEnd(eventId)
+		if eventId:
+			timeline.setEventEnd(eventId)
 		if repository:
 			try:
 				repository.disconnect()
