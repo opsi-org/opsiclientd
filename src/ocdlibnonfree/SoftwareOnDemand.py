@@ -315,15 +315,15 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		if not isinstance(result, http.Response):
 			result = http.Response()
 		
-		self.connectConfigService()
-		self._getSwOnDemandConfig()
-		
-		productOnClients = []
-		modifiedProductOnClients = []
-		productOnClientsWithDependencies = []
 		html = u''
-		
 		try:
+			productOnClients = []
+			modifiedProductOnClients = []
+			productOnClientsWithDependencies = []
+			
+			self.connectConfigService()
+			self._getSwOnDemandConfig()
+		
 			if self.query.get('product'):
 				(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies) = self._processProducts()
 				logger.debug(u"Modified productOnClients:")
