@@ -33,9 +33,11 @@ from ocdlib.OpsiService import ServiceConnection
 from ocdlib.Config import Config
 from ocdlib.Events import SwOnDemandEventGenerator, getEventGenerators
 from ocdlib.Localization import _
+from ocdlib.Timeline import Timeline
 
 logger = Logger()
 config = Config()
+timeline = Timeline()
 
 mainpage = u'''
 <?xml version="1.0" encoding="UTF-8"?>
@@ -165,7 +167,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				onDemandGroupIds = forceUnicodeList(configState.getValues())
 				if onDemandGroupIds:
 					for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = onDemandGroupIds):
-						logger.debug(u"On demand product found: '%s'" % objectToGroup.objectId)
+						logger.info(u"On demand product found: '%s'" % objectToGroup.objectId)
 						if not objectToGroup.objectId in self._swOnDemandProductIds:
 							self._swOnDemandProductIds.append(objectToGroup.objectId)
 			
@@ -284,6 +286,18 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		html = mainpage.replace('%result%', forceUnicode(u'\n'.join(html)))
 		
 		if self.query.get('action') in ('ondemand', 'onrestart'):
+			description  = u"Software on demand action '%s' executed\n" % self.query.get('action')
+			description += u'Modified product actions:\n'
+			for poc in modifiedProductOnClients:
+				description += u'   %s: %s\n' % (pos.productId, poc.actionRequest)
+			description += u'Product action updates:\n'
+			for poc in productOnClientsWithDependencies:
+				description += u'   %s: %s\n' % (pos.productId, poc.actionRequest)
+			
+			timeline.addEvent(
+				title       = u"Software on demand",
+				description = description,
+				category    = u"user_interaction")
 			if modifiedProductOnClients:
 				logger.info(u"Updating productOnClients")
 				self._configService.productOnClient_updateObjects(productOnClientsWithDependencies)
