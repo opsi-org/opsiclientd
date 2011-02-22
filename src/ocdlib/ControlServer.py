@@ -265,7 +265,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 					.replace(u'&',  u'&amp;')\
 					.replace(u'"',  u'&quot;')\
 					.replace(u"'",  u'&apos;')\
-					.replace(u' ',  u'&#x202f;')\
+					.replace(u' ',  u'&nbsp;')\
 					.replace(u'<',  u'&lt;')\
 					.replace(u'>',  u'&gt;')
 				log += u'<br />\n'
@@ -466,7 +466,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		if not name in eventGenerators.keys():
 			raise ValueError(u"Event '%s' not in list of known events: %s" % (name, ', '.join(eventGenerators.keys())))
 		logger.notice(u"Firing event '%s'" % name)
-		eventGenerators[name].fireEvent(eventGenerators[name].createEvent())
+		eventGenerators[name].createAndFireEvent()
 		
 	def setStatusMessage(self, sessionId, message):
 		sessionId = forceInt(sessionId)

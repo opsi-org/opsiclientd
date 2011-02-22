@@ -293,7 +293,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				self._configService.productOnClient_updateObjects(productOnClientsWithDependencies)
 			if (self.query.get('action') == 'ondemand'):
 				for eventGenerator in getEventGenerators(generatorClass = SwOnDemandEventGenerator):
-					eventGenerator.fireEvent()
+					eventGenerator.createAndFireEvent()
 		
 		return html
 	

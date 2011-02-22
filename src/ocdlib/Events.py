@@ -407,6 +407,9 @@ class EventGenerator(threading.Thread):
 				logger.info(u"Preconditions %s for event config '%s' not fulfilled" % (pec.preconditions, pec.getId()))
 		return actualConfig['config']
 	
+	def createAndFireEvent(self, eventInfo={}):
+		self.fireEvent(self.createEvent(eventInfo))
+	
 	def createEvent(self, eventInfo={}):
 		eventConfig = self.getEventConfig()
 		if not eventConfig:

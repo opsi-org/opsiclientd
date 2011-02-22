@@ -291,7 +291,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.notice(u"Event generator '%s' started" % eventGenerator)
 			
 			for eventGenerator in getEventGenerators(generatorClass = DaemonStartupEventGenerator):
-				eventGenerator.fireEvent()
+				eventGenerator.createAndFireEvent()
 			
 			if getEventGenerators(generatorClass = GUIStartupEventGenerator):
 				# Wait until gui starts up
@@ -310,7 +310,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				time.sleep(1)
 			
 			for eventGenerator in getEventGenerators(generatorClass = DaemonShutdownEventGenerator):
-				eventGenerator.fireEvent()
+				eventGenerator.createAndFireEvent()
 			
 			logger.notice(u"opsiclientd is going down")
 			
