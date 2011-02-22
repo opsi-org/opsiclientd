@@ -115,7 +115,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		
 		self.getSessionId()
 		
-		self._notificationServerPort = int(config.get('notification_server', 'start_port')) + int(self.getSessionId())
+		self._notificationServerPort = int(config.get('notification_server', 'start_port')) + (3 * int(self.getSessionId()))
 	
 	''' ServiceConnection '''
 	def connectionThreadOptions(self):
@@ -188,26 +188,33 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		
 	def startNotificationServer(self):
 		logger.notice(u"Starting notification server on port %s" % self._notificationServerPort)
-		try:
-			self._notificationServer = NotificationServer(
-							address  = config.get('notification_server', 'interface'),
-							port     = self._notificationServerPort,
-							subjects = [
-								self._statusSubject,
-								self._messageSubject,
-								self._serviceUrlSubject,
-								self._clientIdSubject,
-								self._actionProcessorInfoSubject,
-								self._opsiclientdInfoSubject,
-								self._detailSubjectProxy,
-								self._currentProgressSubjectProxy,
-								self._overallProgressSubjectProxy ] )
-			self._notificationServer.start()
-			logger.notice(u"Notification server started")
-		except Exception, e:
-			logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
-			raise
-	
+		exception = None
+		for i in range(3):
+			try:
+				self._notificationServer = NotificationServer(
+								address  = config.get('notification_server', 'interface'),
+								port     = self._notificationServerPort,
+								subjects = [
+									self._statusSubject,
+									self._messageSubject,
+									self._serviceUrlSubject,
+									self._clientIdSubject,
+									self._actionProcessorInfoSubject,
+									self._opsiclientdInfoSubject,
+									self._detailSubjectProxy,
+									self._currentProgressSubjectProxy,
+									self._overallProgressSubjectProxy ] )
+				self._notificationServer.start()
+				exception = None
+				logger.notice(u"Notification server started")
+				break
+			except Exception, e:
+				exception = e
+				logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
+				self._notificationServerPort += 1
+		if exception:
+			raise exception
+		
 	def stopNotificationServer(self):
 		if not self._notificationServer:
 			return
