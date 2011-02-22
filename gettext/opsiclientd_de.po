@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2011-02-18 15:40+CET\n"
+"POT-Creation-Date: 2011-02-22 13:40+CET\n"
 "PO-Revision-Date: 2010-09-08 16:59+CEST\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -15,7 +15,7 @@ msgstr ""
 "Generated-By: pygettext.py 1.5\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: ../src/ocdlib/EventProcessing.py:105 ../src/ocdlib/EventProcessing.py:1000
+#: ../src/ocdlib/EventProcessing.py:105 ../src/ocdlib/EventProcessing.py:1019
 msgid "Processing event %s"
 msgstr "Verarbeite Ereignis %s"
 
@@ -23,133 +23,133 @@ msgstr "Verarbeite Ereignis %s"
 msgid "Timeout: %ds"
 msgstr "Timeout: %ds"
 
-#: ../src/ocdlib/EventProcessing.py:227
+#: ../src/ocdlib/EventProcessing.py:237
 msgid "Getting config from service"
 msgstr "Frage Konfiguration auf Service ab"
 
-#: ../src/ocdlib/EventProcessing.py:229
+#: ../src/ocdlib/EventProcessing.py:239
 msgid "Got config from service"
 msgstr "Konfiguration von Service erhalten"
 
-#: ../src/ocdlib/EventProcessing.py:242
+#: ../src/ocdlib/EventProcessing.py:252
 msgid "Writing log to service"
 msgstr "Übertrage Protokoll-Datei zum Service"
 
-#: ../src/ocdlib/EventProcessing.py:341
+#: ../src/ocdlib/EventProcessing.py:353
 #: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:100
 msgid "Mounting depot share %s"
 msgstr "Verbinde mit Depot-Freigabe %s"
 
-#: ../src/ocdlib/EventProcessing.py:373
+#: ../src/ocdlib/EventProcessing.py:385
 msgid "Updating action processor"
 msgstr "Aktualisiere action processor"
 
-#: ../src/ocdlib/EventProcessing.py:466
+#: ../src/ocdlib/EventProcessing.py:478
 msgid "Processing login actions"
 msgstr "Starte Anmelde-Aktionen"
 
-#: ../src/ocdlib/EventProcessing.py:518
+#: ../src/ocdlib/EventProcessing.py:530
 msgid "Failed to process login actions: %s"
 msgstr "Fehler beim Ausführen der Anmelde-Aktionen: %s"
 
-#: ../src/ocdlib/EventProcessing.py:521
+#: ../src/ocdlib/EventProcessing.py:533
 msgid "Getting action requests from config service"
 msgstr "Frage auszuführende Aktionen beim Config-Service nach"
 
-#: ../src/ocdlib/EventProcessing.py:556
+#: ../src/ocdlib/EventProcessing.py:568
 msgid "No product action requests set"
 msgstr "Keine Produkt-Aktionen gesetzt"
 
-#: ../src/ocdlib/EventProcessing.py:586
+#: ../src/ocdlib/EventProcessing.py:598
 msgid "Failed to process product action requests: %s"
 msgstr "Fehler beim Ausführen der Produkt-Aktionen: %s"
 
-#: ../src/ocdlib/EventProcessing.py:615
+#: ../src/ocdlib/EventProcessing.py:627
 msgid "Waiting for TrustedInstaller"
 msgstr "Warte auf den TrustedInstaller"
 
-#: ../src/ocdlib/EventProcessing.py:631
+#: ../src/ocdlib/EventProcessing.py:643
 msgid "Starting actions"
 msgstr "Starte Aktionen"
 
-#: ../src/ocdlib/EventProcessing.py:712
+#: ../src/ocdlib/EventProcessing.py:724
 msgid "Actions completed"
 msgstr "Aktionen abgeschlossen"
 
-#: ../src/ocdlib/EventProcessing.py:757
+#: ../src/ocdlib/EventProcessing.py:769
 msgid "Products"
 msgstr "Produkte"
 
-#: ../src/ocdlib/EventProcessing.py:760
+#: ../src/ocdlib/EventProcessing.py:772
 msgid "Abort"
 msgstr "Abbrechen"
 
-#: ../src/ocdlib/EventProcessing.py:760 ../src/ocdlib/EventProcessing.py:763
+#: ../src/ocdlib/EventProcessing.py:772 ../src/ocdlib/EventProcessing.py:775
 msgid "Start now"
 msgstr "Jetzt starten"
 
-#: ../src/ocdlib/EventProcessing.py:787
+#: ../src/ocdlib/EventProcessing.py:800
 msgid "Event %s: action processing will start in %s:%s"
 msgstr "Ereignis %s: Aktionen starten in %s:%s"
 
-#: ../src/ocdlib/EventProcessing.py:850
+#: ../src/ocdlib/EventProcessing.py:863
 msgid "Reboot requested"
 msgstr "Neustart erforderlich"
 
-#: ../src/ocdlib/EventProcessing.py:853
+#: ../src/ocdlib/EventProcessing.py:866
 msgid "Shutdown requested"
 msgstr "Herunterfahren erforderlich"
 
-#: ../src/ocdlib/EventProcessing.py:886 ../src/ocdlib/EventProcessing.py:888
+#: ../src/ocdlib/EventProcessing.py:901 ../src/ocdlib/EventProcessing.py:903
 msgid "Later"
 msgstr "Später"
 
-#: ../src/ocdlib/EventProcessing.py:886 ../src/ocdlib/EventProcessing.py:892
+#: ../src/ocdlib/EventProcessing.py:901 ../src/ocdlib/EventProcessing.py:907
 msgid "Reboot now"
 msgstr "Jetzt neu starten"
 
-#: ../src/ocdlib/EventProcessing.py:888 ../src/ocdlib/EventProcessing.py:894
+#: ../src/ocdlib/EventProcessing.py:903 ../src/ocdlib/EventProcessing.py:909
 msgid "Shutdown now"
 msgstr "Jetzt herunterfahren"
 
-#: ../src/ocdlib/EventProcessing.py:918
+#: ../src/ocdlib/EventProcessing.py:934
 msgid "Reboot in %s:%s"
 msgstr "Neustart in %s:%s"
 
-#: ../src/ocdlib/EventProcessing.py:920
+#: ../src/ocdlib/EventProcessing.py:936
 msgid "Shutdown in %s:%s"
 msgstr "Herunterfahren in %s:%s"
 
-#: ../src/ocdlib/EventProcessing.py:1019 ../src/ocdlib/EventProcessing.py:1091
+#: ../src/ocdlib/EventProcessing.py:1039 ../src/ocdlib/EventProcessing.py:1111
 msgid "Syncing config to server"
 msgstr "Synchronisation der Konfiguration zum Server"
 
-#: ../src/ocdlib/EventProcessing.py:1021 ../src/ocdlib/EventProcessing.py:1028
-#: ../src/ocdlib/EventProcessing.py:1093 ../src/ocdlib/EventProcessing.py:1097
+#: ../src/ocdlib/EventProcessing.py:1041 ../src/ocdlib/EventProcessing.py:1048
+#: ../src/ocdlib/EventProcessing.py:1113 ../src/ocdlib/EventProcessing.py:1117
 msgid "Sync completed"
 msgstr "Synchronisation abgeschlossen"
 
-#: ../src/ocdlib/EventProcessing.py:1024 ../src/ocdlib/EventProcessing.py:1095
+#: ../src/ocdlib/EventProcessing.py:1044 ../src/ocdlib/EventProcessing.py:1115
 msgid "Syncing config from server"
 msgstr "Synchronisation der Konfiguration vom Server"
 
-#: ../src/ocdlib/EventProcessing.py:1031
+#: ../src/ocdlib/EventProcessing.py:1051
 msgid "Caching products"
 msgstr "Speichere Produkte zwischen"
 
-#: ../src/ocdlib/EventProcessing.py:1043
+#: ../src/ocdlib/EventProcessing.py:1063
 msgid "Products cached"
 msgstr "Produkte zwischengespeichert"
 
-#: ../src/ocdlib/EventProcessing.py:1102
+#: ../src/ocdlib/EventProcessing.py:1122
 msgid "Shutting down machine"
 msgstr "Computer wird heruntergefahren"
 
-#: ../src/ocdlib/EventProcessing.py:1104
+#: ../src/ocdlib/EventProcessing.py:1124
 msgid "Rebooting machine"
 msgstr "Computer wird neu gestartet"
 
-#: ../src/ocdlib/EventProcessing.py:1106
+#: ../src/ocdlib/EventProcessing.py:1126
 msgid "Unblocking login"
 msgstr "Gebe Anmeldung frei"
 
@@ -165,76 +165,78 @@ msgstr "Verbunden mit Config-Server '%s'"
 msgid "Failed to connect to config server '%s': %s"
 msgstr "Verbindung zu Config-Server '%s' fehlgeschlagen: %s"
 
-#: ../src/ocdlib/Opsiclientd.py:509
+#: ../src/ocdlib/Opsiclientd.py:511
 msgid "Close"
 msgstr "Schliessen"
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:253
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:249
 msgid "You selected to execute the following product actions:"
 msgstr "Die folgenden Produkt-Aktionen wurden ausgewählt:"
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:259
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:255
 msgid "The following product actions have been added to fulfill dependencies:"
-msgstr "Die folgenden Produkt-Aktionen wurden hinzugefügt um Abhängigkeiten zu erfüllen:"
+msgstr ""
+"Die folgenden Produkt-Aktionen wurden hinzugefügt um Abhängigkeiten zu "
+"erfüllen:"
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:264
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:260
 msgid "Other pending product actions:"
 msgstr "Andere anstehende Produkt-Aktionen:"
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:269
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:265
 msgid "back"
 msgstr "zurück"
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:272
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:268
 msgid "process on next boot"
 msgstr "beim nächsten Systemstart ausführen"
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:274
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:270
 msgid "process now"
 msgstr "sofort ausführen"
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:276
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:272
 msgid "Nothing selected"
 msgstr "Nichts ausgewählt"
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:279
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:275
 msgid "Starting to process actions now."
 msgstr "Beginne mit dem Ausführen der Aktionen."
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:282
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:278
 msgid "Actions will be processed on next boot."
 msgstr "Die Aktionen werden beim nächsten Systemstart ausgeführt."
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:362
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:377
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:358
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:373
 msgid "not installed"
 msgstr "nicht installiert"
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:375
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:371
 msgid "installed"
 msgstr "installiert"
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:375
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:371
 msgid "version"
 msgstr "Version"
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:382
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:378
 msgid "description"
 msgstr "Beschreibung"
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:387
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:383
 msgid "state"
 msgstr "Status"
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:392
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:388
 msgid "advice"
 msgstr "Hinweis"
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:398
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:394
 msgid "install"
 msgstr "installieren"
 
-#: ../src/ocdlibnonfree/SoftwareOnDemand.py:401
+#: ../src/ocdlibnonfree/SoftwareOnDemand.py:397
 msgid "next"
 msgstr "weiter"
 
@@ -245,4 +247,3 @@ msgstr "Starte action processor"
 #: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:114
 msgid "Action processor ended"
 msgstr "Action processor beendet"
-
