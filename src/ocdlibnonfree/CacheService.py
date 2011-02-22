@@ -196,7 +196,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			self._opsiVersionFile         = os.path.join(self._configCacheDir, 'cached_version')
 			self._opsiPasswdFile          = os.path.join(self._configCacheDir, 'cached_passwd')
 			self._auditHardwareConfigFile = os.path.join(self._configCacheDir, 'cached_opsihwaudit.json')
-				
+			
 			self._stopped = False
 			self._running = False
 			self._working = False
@@ -222,12 +222,21 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			raise e
 	
 	def initBackends(self):
+		depotId = config.get('depot_server', 'depot_id')
+		if not depotId:
+			if not self._configService:
+				self.connectConfigService()
+			config.selectDepotserver(configService = self._configService, productIds = [], masterOnly = True)
+			config.updateConfigFile()
+			self.disconnectConfigService()
+			depotId = config.get('depot_server', 'depot_id')
+			
 		backendArgs = {
 			'opsiModulesFile':         self._opsiModulesFile,
 			'opsiVersionFile':         self._opsiVersionFile,
 			'opsiPasswdFile':          self._opsiPasswdFile,
 			'auditHardwareConfigFile': self._auditHardwareConfigFile,
-			'depotId':                 config.get('global', 'host_id'),
+			'depotId':                 depotId,
 		}
 		self._workBackend = SQLiteBackend(
 			database    = os.path.join(self._configCacheDir, 'work.sqlite'),
@@ -372,6 +381,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			self.setObsolete()
 			if not self._configService:
 				self.connectConfigService()
+			
 			productOnClients = self._configService.productOnClient_getObjects(
 				productType   = 'LocalbootProduct',
 				clientId      = config.get('global', 'host_id'),

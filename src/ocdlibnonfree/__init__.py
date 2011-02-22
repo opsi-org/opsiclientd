@@ -32,7 +32,7 @@ logger = Logger()
 
 __fullversion__ = True
 
-def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True):
+def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True, masterOnly=False):
 	productIds = forceProductIdList(productIds)
 	
 	logger.notice(u"Selecting depot for products %s" % productIds)
@@ -77,7 +77,7 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 				logger.notice(u"Depot was set to '%s' from configState %s" % (depotId, configState))
 			except Exception, e:
 				logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, e))
-		elif (configState.configId == 'clientconfig.depot.dynamic') and configState.values:
+		elif not masterOnly and (configState.configId == 'clientconfig.depot.dynamic') and configState.values:
 			dynamicDepot = forceBool(configState.values[0])
 		elif (configState.configId == 'clientconfig.depot.protocol') and configState.values and configState.values[0] and (configState.values[0] == 'webdav'):
 			depotProtocol = 'webdav'
