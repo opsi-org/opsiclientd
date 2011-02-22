@@ -48,11 +48,11 @@ mainpage = u'''<?xml version="1.0" encoding="UTF-8"?>
 	<meta http-equiv="Content-Type" content="text/xhtml; charset=utf-8" />
 </head>
 <body>
-	<span id="title">
-		<img src="/opsi_logo.png" />
-		<span sytle="padding: 1px; top: 5px;">opsi software on demand</span>
-	</span>
-	<form method="post">
+	<p id="title">
+		<img src="/opsi_logo.png" alt="opsi" />
+		<span style="padding: 1px; top: 5px;">opsi software on demand</span>
+	</p>
+	<form action="/swondemand" method="post">
 		%result%
 	</form>
 	
