@@ -121,11 +121,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 	
 	def connectConfigService(self):
 		ServiceConnection.connectConfigService(self)
-		modules = None
-		if self._configService.isOpsi35():
-			modules = self._configService.backend_info()['modules']
-		else:
-			modules = self._configService.getOpsiInformation_hash()['modules']
+		modules = self._configService.backend_info()['modules']
 		
 		if not modules.get('swondemand'):
 			raise Exception(u"SoftwareOnDemand not available: swondemand module currently disabled")
