@@ -407,10 +407,16 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					
 					needSync = False
 					for productOnClient in productOnClients:
-						localProductOnClient = localProductOnClientsByProductId.get(productOnClient.productId)
-						if not localProductOnClient or (localProductOnClient.actionRequest != productOnClient.actionRequest):
+						if not localProductOnClientsByProductId.has_key(productOnClient.productId):
 							needSync = True
 							break
+						if (localProductOnClientsByProductId[productOnClient.productId].actionRequest != productOnClient.actionRequest):
+							needSync = True
+							break
+						del localProductOnClientsByProductId[productOnClient.productId]
+					if not needSync and localProductOnClientsByProductId:
+						needSync = True
+					
 					if not needSync:
 						self._state['config_cached'] = True
 						state.set('config_cache_service', self._state)
