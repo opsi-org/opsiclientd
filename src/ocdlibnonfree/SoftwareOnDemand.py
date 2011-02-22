@@ -323,99 +323,104 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		productOnClientsWithDependencies = []
 		html = u''
 		
-		if self.query.get('product'):
-			(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies) = self._processProducts()
-			logger.debug(u"Modified productOnClients:")
-			for poc in modifiedProductOnClients:
-				logger.debug(u"   %s" % poc)
-			logger.debug(u"Current productOnClients:")
-			for poc in productOnClients:
-				logger.debug(u"   %s" % poc)
-			logger.debug(u"ProductOnClients with dependencies:")
-			for poc in productOnClientsWithDependencies:
-				logger.debug(u"   %s" % poc)
-			
-		if self.query.get('action') in ('next', 'ondemand', 'onrestart'):
-			html = self._processAction(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies)
-		
-		elif self._swOnDemandProductIds:
-			self._configService.setAsync(True)
-			jsonrpc1 = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id'))
-			jsonrpc2 = self._configService.product_getObjects(id = self._swOnDemandProductIds)
-			jsonrpc3 = self._configService.productOnDepot_getObjects(depotId = config.get('depot_server', 'depot_id'), productId = self._swOnDemandProductIds)
-			productOnClients = jsonrpc1.waitForResult()
-			products = jsonrpc2.waitForResult()
-			productOnDepots = jsonrpc3.waitForResult()
-			self._configService.setAsync(False)
-			
-			html = []
-			for productId in self._swOnDemandProductIds:
-				html.append(u'<div class="swondemand-product-box"><table>')
-				productOnClient = None
-				for poc in productOnClients:
-					if (poc.productId == productId):
-						productOnClient = poc
-						break
-				
-				productOnDepot = None
-				for pod in productOnDepots:
-					if (pod.productId == productId):
-						productOnDepot = pod
-						break
-				if not productOnDepot:
-					logger.error(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
-				
-				product = None
-				for p in products:
-					if (p.id == productOnDepot.productId) and (p.productVersion == productOnDepot.productVersion) and (p.packageVersion == productOnDepot.packageVersion):
-						product = p
-						break
-				if not product:
-					logger.error(u"Product '%s' not found" % productId)
-				
-				state = _('not installed')
-				stateclass = u"swondemand-product-state-not_installed"
-				checked = u''
+		try:
+			if self.query.get('product'):
+				(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies) = self._processProducts()
+				logger.debug(u"Modified productOnClients:")
 				for poc in modifiedProductOnClients:
-					if (poc.productId == productId):
-						if poc.actionRequest not in (None, 'none'):
-							checked = u'checked="checked"'
-						break
-				if productOnClient:
-					if (productOnClient.actionRequest == 'setup'):
-						checked = u'checked="checked"'
-					if (productOnClient.installationStatus == "installed"):
-						stateclass = "swondemand-product-state-installed"
-						state = u"%s (%s: %s-%s)" % ( _('installed'), _('version'), productOnClient.productVersion, productOnClient.packageVersion )
-					else:
-						state = _('not installed')
+					logger.debug(u"   %s" % poc)
+				logger.debug(u"Current productOnClients:")
+				for poc in productOnClients:
+					logger.debug(u"   %s" % poc)
+				logger.debug(u"ProductOnClients with dependencies:")
+				for poc in productOnClientsWithDependencies:
+					logger.debug(u"   %s" % poc)
 				
-				html.append(u'<tr><td colspan="2" class="swondemand-product-name">%s (%s-%s)</td></tr>' \
-						% (product.name, productOnDepot.productVersion, productOnDepot.packageVersion))
-				description = product.description or u''
-				html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'description'))
-				html.append(u'    <td class="swondemand-product-attribute-value">%s</td></tr>' \
-							% description.replace(u'\n', u'<br />') )
-				
-				if self._showDetails:
-					html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'state'))
-					html.append(u'    <td class="swondemand-product-attribute-value %s">%s</td></tr>' \
-							% (stateclass, state) )
-					
-					advice = product.advice or u''
-					html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'advice'))
-					html.append(u'    <td class="swondemand-product-attribute-value">%s</td></tr>' \
-							% advice.replace(u'\n', u'<br />') )
-				
-				html.append(u'<tr><td colspan="2" class="swondemand-product-checkbox">')
-				html.append(u'       <input type="checkbox" name="product" value="%s" %s />%s</td></tr>' \
-						% ( productId, checked, _('install') ) )
-				html.append(u'</table></div>')
-			html.append(u'<div class="swondemand-button-box">')
-			html.append(u'<button class="swondemand-action-button" type="submit" name="action" value="next">&gt; %s</button>' % _(u'next'))
-			html.append(u'</div>')
-			html = mainpage.replace('%result%', u'\n'.join(html))
+			if self.query.get('action') in ('next', 'ondemand', 'onrestart'):
+				html = self._processAction(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies)
 			
+			elif self._swOnDemandProductIds:
+				self._configService.setAsync(True)
+				jsonrpc1 = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id'))
+				jsonrpc2 = self._configService.product_getObjects(id = self._swOnDemandProductIds)
+				jsonrpc3 = self._configService.productOnDepot_getObjects(depotId = config.get('depot_server', 'depot_id'), productId = self._swOnDemandProductIds)
+				productOnClients = jsonrpc1.waitForResult()
+				products = jsonrpc2.waitForResult()
+				productOnDepots = jsonrpc3.waitForResult()
+				self._configService.setAsync(False)
+				
+				html = []
+				for productId in self._swOnDemandProductIds:
+					html.append(u'<div class="swondemand-product-box"><table>')
+					productOnClient = None
+					for poc in productOnClients:
+						if (poc.productId == productId):
+							productOnClient = poc
+							break
+					
+					productOnDepot = None
+					for pod in productOnDepots:
+						if (pod.productId == productId):
+							productOnDepot = pod
+							break
+					if not productOnDepot:
+						logger.error(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
+					
+					product = None
+					for p in products:
+						if (p.id == productOnDepot.productId) and (p.productVersion == productOnDepot.productVersion) and (p.packageVersion == productOnDepot.packageVersion):
+							product = p
+							break
+					if not product:
+						logger.error(u"Product '%s' not found" % productId)
+					
+					state = _('not installed')
+					stateclass = u"swondemand-product-state-not_installed"
+					checked = u''
+					for poc in modifiedProductOnClients:
+						if (poc.productId == productId):
+							if poc.actionRequest not in (None, 'none'):
+								checked = u'checked="checked"'
+							break
+					if productOnClient:
+						if (productOnClient.actionRequest == 'setup'):
+							checked = u'checked="checked"'
+						if (productOnClient.installationStatus == "installed"):
+							stateclass = "swondemand-product-state-installed"
+							state = u"%s (%s: %s-%s)" % ( _('installed'), _('version'), productOnClient.productVersion, productOnClient.packageVersion )
+						else:
+							state = _('not installed')
+					
+					html.append(u'<tr><td colspan="2" class="swondemand-product-name">%s (%s-%s)</td></tr>' \
+							% (product.name, productOnDepot.productVersion, productOnDepot.packageVersion))
+					description = product.description or u''
+					html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'description'))
+					html.append(u'    <td class="swondemand-product-attribute-value">%s</td></tr>' \
+								% description.replace(u'\n', u'<br />') )
+					
+					if self._showDetails:
+						html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'state'))
+						html.append(u'    <td class="swondemand-product-attribute-value %s">%s</td></tr>' \
+								% (stateclass, state) )
+						
+						advice = product.advice or u''
+						html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'advice'))
+						html.append(u'    <td class="swondemand-product-attribute-value">%s</td></tr>' \
+								% advice.replace(u'\n', u'<br />') )
+					
+					html.append(u'<tr><td colspan="2" class="swondemand-product-checkbox">')
+					html.append(u'       <input type="checkbox" name="product" value="%s" %s />%s</td></tr>' \
+							% ( productId, checked, _('install') ) )
+					html.append(u'</table></div>')
+				html.append(u'<div class="swondemand-button-box">')
+				html.append(u'<button class="swondemand-action-button" type="submit" name="action" value="next">&gt; %s</button>' % _(u'next'))
+				html.append(u'</div>')
+				html = mainpage.replace('%result%', u'\n'.join(html))
+			else:
+				raise Exception(u"No products found")
+		except Exception, e:
+			html.append(u'<div class="swondemand-summary-message-box">%s</div>' % e)
+		
 		self.disconnectConfigService()
 		result.stream = stream.IByteStream(html.encode('utf-8'))
 		return result
