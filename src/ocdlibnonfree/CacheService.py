@@ -161,7 +161,7 @@ class CacheService(threading.Thread):
 		for productId in productIds:
 			productOnDepot = productOnDepots.get(productId)
 			if not productOnDepot:
-				raise Exception(u"Product '%s' not available on depot '%s'" % productId)
+				raise Exception(u"Product '%s' not available on depot '%s'" % (productId, depotId))
 			productState = self._productCacheService.getState().get('products', {}).get(productId)
 			if not productState:
 				logger.debug(u"No products cached")
@@ -764,7 +764,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			
 			eventId = timeline.addEvent(
 				title         = u"Cache product %s" % productId,
-				description   = u"Caching product '%s' of size %0.3f MB\nmax bandwidth: %s, dynamic bandwidth: %s" \
+				description   = u"Caching product '%s' of size %0.2f MB\nmax bandwidth: %s, dynamic bandwidth: %s" \
 					% (productId,  (float(productSize)/(1024*1024)), self._maxBandwidth, self._dynamicBandwidth),
 				category      = u'product_caching',
 				durationEvent = True)
