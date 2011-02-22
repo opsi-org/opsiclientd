@@ -209,47 +209,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				logger.notice(u"Creating config cache dir '%s'" % self._configCacheDir)
 				os.makedirs(self._configCacheDir)
 			
-			backendArgs = {
-				'opsiModulesFile':         self._opsiModulesFile,
-				'opsiVersionFile':         self._opsiVersionFile,
-				'opsiPasswdFile':          self._opsiPasswdFile,
-				'auditHardwareConfigFile': self._auditHardwareConfigFile,
-				'depotId':                 config.get('depot_server', 'depot_id'),
-			}
-			self._workBackend = SQLiteBackend(
-				database    = os.path.join(self._configCacheDir, 'work.sqlite'),
-				synchronous = False,
-				**backendArgs
-			)
-			self._workBackend.backend_createBase()
-			
-			self._snapshotBackend = SQLiteBackend(
-				database    = os.path.join(self._configCacheDir, 'snapshot.sqlite'),
-				synchronous = False,
-				**backendArgs
-			)
-			self._snapshotBackend.backend_createBase()
-			
-			self._cacheBackend = ClientCacheBackend(
-				workBackend     = self._workBackend,
-				snapshotBackend = self._snapshotBackend,
-				clientId        = config.get('global', 'host_id'),
-				**backendArgs
-			)
-			
-			self._configBackend = BackendExtender(
-				backend = ExtendedConfigDataBackend(
-					configDataBackend = self._cacheBackend
-				),
-				extensionClass     = ConfigCacheServiceBackendExtension,
-				extensionConfigDir = config.get('cache_service', 'extension_config_dir')
-			)
-			self._backendTracker = SQLiteObjectBackendModificationTracker(
-				database             = os.path.join(self._configCacheDir, 'tracker.sqlite'),
-				synchronous          = False,
-				lastModificationOnly = True
-			)
-			self._cacheBackend.addBackendChangeListener(self._backendTracker)
+			self.initBackends()
 			
 			ccss = state.get('config_cache_service')
 			if ccss:
@@ -260,6 +220,49 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			except:
 				pass
 			raise e
+	
+	def initBackends(self):
+		backendArgs = {
+			'opsiModulesFile':         self._opsiModulesFile,
+			'opsiVersionFile':         self._opsiVersionFile,
+			'opsiPasswdFile':          self._opsiPasswdFile,
+			'auditHardwareConfigFile': self._auditHardwareConfigFile,
+			'depotId':                 config.get('global', 'host_id'),
+		}
+		self._workBackend = SQLiteBackend(
+			database    = os.path.join(self._configCacheDir, 'work.sqlite'),
+			synchronous = False,
+			**backendArgs
+		)
+		self._workBackend.backend_createBase()
+		
+		self._snapshotBackend = SQLiteBackend(
+			database    = os.path.join(self._configCacheDir, 'snapshot.sqlite'),
+			synchronous = False,
+			**backendArgs
+		)
+		self._snapshotBackend.backend_createBase()
+		
+		self._cacheBackend = ClientCacheBackend(
+			workBackend     = self._workBackend,
+			snapshotBackend = self._snapshotBackend,
+			clientId        = config.get('global', 'host_id'),
+			**backendArgs
+		)
+		
+		self._configBackend = BackendExtender(
+			backend = ExtendedConfigDataBackend(
+				configDataBackend = self._cacheBackend
+			),
+			extensionClass     = ConfigCacheServiceBackendExtension,
+			extensionConfigDir = config.get('cache_service', 'extension_config_dir')
+		)
+		self._backendTracker = SQLiteObjectBackendModificationTracker(
+			database             = os.path.join(self._configCacheDir, 'tracker.sqlite'),
+			synchronous          = False,
+			lastModificationOnly = True
+		)
+		self._cacheBackend.addBackendChangeListener(self._backendTracker)
 		
 	def getConfigBackend(self):
 		return self._configBackend
