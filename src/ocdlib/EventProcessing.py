@@ -188,7 +188,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		
 	def startNotificationServer(self):
 		logger.notice(u"Starting notification server on port %s" % self._notificationServerPort)
-		exception = None
+		error = None
 		for i in range(3):
 			try:
 				self._notificationServer = NotificationServer(
@@ -205,15 +205,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 									self._currentProgressSubjectProxy,
 									self._overallProgressSubjectProxy ] )
 				self._notificationServer.start()
-				exception = None
+				while not self._notificationServer.isListening() and not self._notificationServer.errorOccurred():
+					time.sleep(1)
+				if self._notificationServer.errorOccurred():
+					raise Exception(self._notificationServer.errorOccurred())
 				logger.notice(u"Notification server started")
 				break
 			except Exception, e:
-				exception = e
-				logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
+				error = forceUnicode(e)
+				logger.error(u"Failed to start notification server: %s" % error)
 				self._notificationServerPort += 1
-		if exception:
-			raise exception
+		if error:
+			raise Exception(u"Failed to start notification server: %s" % error)
 		
 	def stopNotificationServer(self):
 		if not self._notificationServer:
