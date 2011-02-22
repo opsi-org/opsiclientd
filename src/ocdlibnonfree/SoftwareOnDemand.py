@@ -289,10 +289,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			description  = u"Software on demand action '%s' executed\n" % self.query.get('action')
 			description += u'Modified product actions:\n'
 			for poc in modifiedProductOnClients:
-				description += u'   %s: %s\n' % (pos.productId, poc.actionRequest)
+				description += u'   %s: %s\n' % (poc.productId, poc.actionRequest)
 			description += u'Product action updates:\n'
 			for poc in productOnClientsWithDependencies:
-				description += u'   %s: %s\n' % (pos.productId, poc.actionRequest)
+				description += u'   %s: %s\n' % (poc.productId, poc.actionRequest)
 			
 			timeline.addEvent(
 				title       = u"Software on demand",
