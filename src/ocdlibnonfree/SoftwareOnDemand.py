@@ -158,7 +158,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		logger.debug(u"Getting software-on-demand configs from service")
 		self._configService.backend_setOptions({"addConfigStateDefaults": True})
 		for configState in self._configService.configState_getObjects(
-					configId = ["software-on-demand.product-group-ids", "software-on-demand.show-details"],
+					configId = ["software-on-demand.*"],
 					objectId = config.get('global', 'host_id')):
 			
 			logger.debug("Config found: '%s'" % configState.toHash())
@@ -173,6 +173,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			
 			elif (configState.getConfigId() == "software-on-demand.show-details"):
 				self._showDetails = forceBool(configState.getValues()[0])
+			
+			elif (configState.getConfigId() == "software-on-demand.active"):
+				if not forceBool(configState.getValues()[0]):
+					raise Exception(u"Software on demand deactivated")
 	
 	def _processProducts(self):
 		productOnClients = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id'))
