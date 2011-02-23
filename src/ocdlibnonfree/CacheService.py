@@ -389,6 +389,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					try:
 						instlog = os.path.join(config.get('global', 'log_dir'), u'instlog.txt')
 						if os.path.isfile(instlog):
+							logger.info(u"Syncing instlog %s" % instlog)
 							f = codecs.open(instlog, 'r', 'utf-8', 'replace')
 							data = f.read()
 							f.close()
