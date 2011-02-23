@@ -366,6 +366,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			System.mount(config.get('depot_server', 'url'), config.getDepotDrive())
 		else:
 			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
+			if config.get('depot_server', 'username'):
+				depotServerUsername = config.get('depot_server', 'username')
 			System.mount(config.get('depot_server', 'url'), config.getDepotDrive(), username = depotServerUsername, password = depotServerPassword)
 		self._depotShareMounted = True
 		
@@ -389,6 +391,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
 			# The new logon session has the same local identifier but uses different credentials for other network connections.
 			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
+			if config.get('depot_server', 'username'):
+				depotServerUsername = config.get('depot_server', 'username')
 			impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
 			impersonation.start(logonType = 'NEW_CREDENTIALS')
 			
@@ -663,6 +667,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			
 			
 			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
+			if config.get('depot_server', 'username'):
+				depotServerUsername = config.get('depot_server', 'username')
 			
 			# Update action processor
 			if config.get('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost') and self.event.eventConfig.updateActionProcessor:
