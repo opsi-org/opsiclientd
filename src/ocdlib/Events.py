@@ -856,7 +856,7 @@ def getEventConfigs():
 			try:
 				for key in options.keys():
 					if   (key.lower() == 'active'):
-						rawEventConfigs[eventConfigId]['active'] = not options[key].lower() in ('0', 'false', 'off', 'no')
+						rawEventConfigs[eventConfigId]['active'] = not unicode(options[key]).lower() in ('0', 'false', 'off', 'no')
 					elif (key.lower() == 'super'):
 						rawEventConfigs[eventConfigId]['super'] = options[key]
 						if rawEventConfigs[eventConfigId]['super'].startswith('event_'):
