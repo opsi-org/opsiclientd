@@ -962,9 +962,9 @@ def getEventConfigs():
 					elif (key == 'action_user_cancelable') or (key == 'user_cancelable'):
 						eventConfigs[eventConfigId]['actionUserCancelable'] = int(value)
 					elif (key == 'shutdown'):
-						eventConfigs[eventConfigId]['shutdown'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['shutdown'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'reboot'):
-						eventConfigs[eventConfigId]['reboot'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['reboot'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'shutdown_warning_time'):
 						eventConfigs[eventConfigId]['shutdownWarningTime'] = int(value)
 					elif (key == 'shutdown_warning_repetition_time'):
@@ -972,67 +972,67 @@ def getEventConfigs():
 					elif (key == 'shutdown_user_cancelable'):
 						eventConfigs[eventConfigId]['shutdownUserCancelable'] = int(value)
 					elif (key == 'block_login'):
-						eventConfigs[eventConfigId]['blockLogin'] = not value.lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['blockLogin'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'lock_workstation'):
-						eventConfigs[eventConfigId]['lockWorkstation'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['lockWorkstation'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'logoff_current_user'):
-						eventConfigs[eventConfigId]['logoffCurrentUser'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['logoffCurrentUser'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'process_shutdown_requests'):
-						eventConfigs[eventConfigId]['processShutdownRequests'] = not value.lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['processShutdownRequests'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'get_config_from_service'):
-						eventConfigs[eventConfigId]['getConfigFromService'] = not value.lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['getConfigFromService'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'update_config_file'):
-						eventConfigs[eventConfigId]['updateConfigFile'] = not value.lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['updateConfigFile'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'write_log_to_service'):
-						eventConfigs[eventConfigId]['writeLogToService'] = not value.lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['writeLogToService'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'cache_products'):
-						eventConfigs[eventConfigId]['cacheProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['cacheProducts'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'cache_max_bandwidth'):
 						eventConfigs[eventConfigId]['cacheMaxBandwidth'] = int(value)
 					elif (key == 'cache_dynamic_bandwidth'):
-						eventConfigs[eventConfigId]['cacheDynamicBandwidth'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['cacheDynamicBandwidth'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'use_cached_products'):
-						eventConfigs[eventConfigId]['useCachedProducts'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['useCachedProducts'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'sync_config_from_server'):
-						eventConfigs[eventConfigId]['syncConfigFromServer'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['syncConfigFromServer'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'sync_config_to_server'):
-						eventConfigs[eventConfigId]['syncConfigToServer'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['syncConfigToServer'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'post_sync_config_from_server'):
-						eventConfigs[eventConfigId]['postSyncConfigFromServer'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['postSyncConfigFromServer'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'post_sync_config_to_server'):
-						eventConfigs[eventConfigId]['postSyncConfigToServer'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['postSyncConfigToServer'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'use_cached_config'):
-						eventConfigs[eventConfigId]['useCachedConfig'] = value.lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['useCachedConfig'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'update_action_processor'):
-						eventConfigs[eventConfigId]['updateActionProcessor'] = not value.lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['updateActionProcessor'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'action_type'):
-						eventConfigs[eventConfigId]['actionType'] = value.lower()
+						eventConfigs[eventConfigId]['actionType'] = unicode(value).lower()
 					elif (key == 'event_notifier_command'):
-						eventConfigs[eventConfigId]['eventNotifierCommand'] = config.replace(value.lower(), escaped=True)
+						eventConfigs[eventConfigId]['eventNotifierCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'event_notifier_desktop'):
-						eventConfigs[eventConfigId]['eventNotifierDesktop'] = value.lower()
+						eventConfigs[eventConfigId]['eventNotifierDesktop'] = unicode(value).lower()
 					elif (key == 'process_actions'):
-						eventConfigs[eventConfigId]['processActions'] = not value.lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['processActions'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
 					elif (key == 'action_notifier_command'):
-						eventConfigs[eventConfigId]['actionNotifierCommand'] = config.replace(value.lower(), escaped=True)
+						eventConfigs[eventConfigId]['actionNotifierCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'action_notifier_desktop'):
-						eventConfigs[eventConfigId]['actionNotifierDesktop'] = value.lower()
+						eventConfigs[eventConfigId]['actionNotifierDesktop'] = unicode(value).lower()
 					elif (key == 'action_processor_command'):
-						eventConfigs[eventConfigId]['actionProcessorCommand'] = value.lower()
+						eventConfigs[eventConfigId]['actionProcessorCommand'] = unicode(value).lower()
 					elif (key == 'action_processor_desktop'):
-						eventConfigs[eventConfigId]['actionProcessorDesktop'] = value.lower()
+						eventConfigs[eventConfigId]['actionProcessorDesktop'] = unicode(value).lower()
 					elif (key == 'action_processor_timeout'):
 						eventConfigs[eventConfigId]['actionProcessorTimeout'] = int(value)
 					elif (key == 'shutdown_notifier_command'):
-						eventConfigs[eventConfigId]['shutdownNotifierCommand'] = config.replace(value.lower(), escaped=True)
+						eventConfigs[eventConfigId]['shutdownNotifierCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'shutdown_notifier_desktop'):
-						eventConfigs[eventConfigId]['shutdownNotifierDesktop'] = value.lower()
+						eventConfigs[eventConfigId]['shutdownNotifierDesktop'] = unicode(value).lower()
 					#elif (key == 'service_options'):
 					#	eventConfigs[eventConfigId]['serviceOptions'] = eval(value)
 					elif (key == 'pre_action_processor_command'):
-						eventConfigs[eventConfigId]['preActionProcessorCommand'] = config.replace(value.lower(), escaped=True)
+						eventConfigs[eventConfigId]['preActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'post_action_processor_command'):
-						eventConfigs[eventConfigId]['postActionProcessorCommand'] = config.replace(value.lower(), escaped=True)
+						eventConfigs[eventConfigId]['postActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
 				except Exception, e:
