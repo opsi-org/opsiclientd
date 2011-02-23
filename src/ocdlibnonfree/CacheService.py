@@ -439,8 +439,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					for productOnClient in self._cacheBackend.productOnClient_getObjects(
 									productType   = 'LocalbootProduct',
 									clientId      = config.get('global', 'host_id'),
-									# Exclude 'always'!
-									actionRequest = ['setup', 'uninstall', 'update', 'once', 'custom'],
+									actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
 									attributes    = ['actionRequest']):
 						localProductOnClientsByProductId[productOnClient.productId] = productOnClient
 					
