@@ -425,7 +425,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			productOnClients = self._configService.productOnClient_getObjects(
 				productType   = 'LocalbootProduct',
 				clientId      = config.get('global', 'host_id'),
-				actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+				# Exclude 'always'!
+				actionRequest = ['setup', 'uninstall', 'update', 'once', 'custom'],
 				attributes    = ['actionRequest'])
 			logger.info(u"Product on clients: %s" % productOnClients)
 			if not productOnClients:
@@ -438,7 +439,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					for productOnClient in self._cacheBackend.productOnClient_getObjects(
 									productType   = 'LocalbootProduct',
 									clientId      = config.get('global', 'host_id'),
-									actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+									# Exclude 'always'!
+									actionRequest = ['setup', 'uninstall', 'update', 'once', 'custom'],
 									attributes    = ['actionRequest']):
 						localProductOnClientsByProductId[productOnClient.productId] = productOnClient
 					
