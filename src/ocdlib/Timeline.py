@@ -42,7 +42,7 @@
       * description - will be displayed inside the bubble with the event's title and image.
 """
 
-import time
+import time, threading
 from sys import version_info
 if (version_info >= (2,6)):
 	import json
@@ -134,11 +134,16 @@ class TimelineImplementation(object):
 		self._createDatabase()
 		self._cleanupDatabase()
 		self._stopped = False
+		self._dbLock = threading.Lock()
 	
 	def stop(self):
 		self._stopped = True
 		end = forceOpsiTimestamp(timestamp())
-		self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', { 'end': end })
+		self._dbLock.acquire()
+		try:
+			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', { 'end': end })
+		finally:
+			self._dbLock.release()
 		
 	def getHtmlHead(self):
 		events = []
@@ -192,36 +197,43 @@ class TimelineImplementation(object):
 		}
 	
 	def _cleanupDatabase(self):
+		self._dbLock.acquire()
 		try:
 			self._sql.execute('delete from EVENT where `start` < "%s"' % timestamp((time.time() - 7*24*3600)))
 			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', { 'durationEvent': False })
 		except Exception, e:
 			logger.error(e)
+		self._dbLock.release()
 		
 	def _createDatabase(self):
-		tables = self._sql.getTables()
-		if not 'EVENT' in tables.keys():
-			logger.debug(u'Creating table EVENT')
-			table = u'''CREATE TABLE `EVENT` (
-					`id` integer NOT NULL ''' + self._sql.AUTOINCREMENT + ''',
-					`title` varchar(255) NOT NULL,
-					`category` varchar(64),
-					`isError` bool,
-					`durationEvent` bool,
-					`description` varchar(1024),
-					`start` TIMESTAMP,
-					`end` TIMESTAMP,
-					PRIMARY KEY (`id`)
-				) %s;
-				''' % self._sql.getTableCreationOptions('EVENT')
-			logger.debug(table)
-			self._sql.execute(table)
-			self._sql.execute('CREATE INDEX `category` on `EVENT` (`category`);')
-			self._sql.execute('CREATE INDEX `start` on `EVENT` (`start`);')
-	
+		self._dbLock.acquire()
+		try:
+			tables = self._sql.getTables()
+			if not 'EVENT' in tables.keys():
+				logger.debug(u'Creating table EVENT')
+				table = u'''CREATE TABLE `EVENT` (
+						`id` integer NOT NULL ''' + self._sql.AUTOINCREMENT + ''',
+						`title` varchar(255) NOT NULL,
+						`category` varchar(64),
+						`isError` bool,
+						`durationEvent` bool,
+						`description` varchar(1024),
+						`start` TIMESTAMP,
+						`end` TIMESTAMP,
+						PRIMARY KEY (`id`)
+					) %s;
+					''' % self._sql.getTableCreationOptions('EVENT')
+				logger.debug(table)
+				self._sql.execute(table)
+				self._sql.execute('CREATE INDEX `category` on `EVENT` (`category`);')
+				self._sql.execute('CREATE INDEX `start` on `EVENT` (`start`);')
+		finally:
+			self._dbLock.release()
+		
 	def addEvent(self, title, description=u'', isError=False, category=None, durationEvent=False, start=None, end=None):
 		if self._stopped:
 			return -1
+		self._dbLock.acquire()
 		try:
 			if category:
 				category = forceUnicode(category)
@@ -242,10 +254,13 @@ class TimelineImplementation(object):
 			})
 		except Exception, e:
 			logger.error(u"Failed to add event '%s': %s" % (title, e))
-	
+		finally:
+			self._dbLock.release()
+		
 	def setEventEnd(self, eventId, end=None):
 		if self._stopped:
 			return -1
+		self._dbLock.acquire()
 		try:
 			eventId = forceInt(eventId)
 			if not end:
@@ -254,12 +269,18 @@ class TimelineImplementation(object):
 			return self._sql.update('EVENT', '`id` = %d' % eventId, { 'end': end, 'durationEvent': True })
 		except Exception, e:
 			logger.error(u"Failed to set end of event '%s': %s" % (eventId, e))
+		finally:
+			self._dbLock.release()
 		
 	def getEvents(self):
 		if self._stopped:
 			return {}
-		return self._sql.getSet('select * from EVENT')
-	
+		self._dbLock.acquire()
+		try:
+			return self._sql.getSet('select * from EVENT')
+		finally:
+			self._dbLock.release()
+		
 class Timeline(TimelineImplementation):
 	# Storage for the instance reference
 	__instance = None
