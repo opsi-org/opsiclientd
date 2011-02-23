@@ -131,10 +131,10 @@ class TimelineImplementation(object):
 			synchronous     = False,
 			databaseCharset = 'utf-8'
 		)
+		self._dbLock = threading.Lock()
 		self._createDatabase()
 		self._cleanupDatabase()
 		self._stopped = False
-		self._dbLock = threading.Lock()
 	
 	def stop(self):
 		self._stopped = True
