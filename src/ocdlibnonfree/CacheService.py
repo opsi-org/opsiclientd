@@ -389,7 +389,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					try:
 						instlog = os.path.join(config.get('global', 'log_dir'), u'instlog.txt')
 						if os.path.isfile(instlog):
-							f = codecs.open(instlog, 'r', 'utf-8')
+							f = codecs.open(instlog, 'r', 'utf-8', 'replace')
 							data = f.read()
 							f.close()
 							self._configService.log_write(u'instlog', data = data, objectId = config.get('global', 'host_id'), append = False)
