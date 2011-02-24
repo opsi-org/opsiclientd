@@ -35,11 +35,12 @@ __fullversion__ = True
 def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True, masterOnly=False):
 	productIds = forceProductIdList(productIds)
 	
-	logger.notice(u"Selecting depot for products %s" % productIds)
+	logger.notice(u"(fullversion) Selecting depot for products %s" % productIds)
 	
 	if event and event.eventConfig.useCachedProducts:
 		cacheDepotDir = os.path.join(config.get('cache_service', 'storage_dir'), 'depot').replace('\\', '/').replace('//', '/')
-		config.setTemporaryDepotDrive(cacheDepotDir.split('/')[0])
+		logger.notice(u"Using depot cache: %s" % cacheDepotDir)
+		config.setTemporaryDepotDrive(cacheDepotDir.split(':')[0] + u':')
 		config.set('depot_server', 'url', 'smb://localhost/noshare/' + ('/'.join(cacheDepotDir.split('/')[1:])))
 		return
 	
