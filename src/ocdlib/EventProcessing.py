@@ -348,6 +348,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			return
 		if not config.get('depot_server', 'url'):
 			raise Exception(u"Cannot mount depot share, depot_server.url undefined")
+		if (config.get('depot_server', 'url').find('://localhost') != -1):
+			logger.notice(u"No need to mount depot share %s, working on local depot cache" %  config.get('depot_server', 'url'))
 		
 		logger.notice(u"Mounting depot share %s" %  config.get('depot_server', 'url'))
 		self.setStatusMessage(_(u"Mounting depot share %s") % config.get('depot_server', 'url'))
