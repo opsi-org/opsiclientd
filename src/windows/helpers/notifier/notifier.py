@@ -103,7 +103,15 @@ class OpsiDialogWindow(SubjectsObserver):
 		self.taskbarNotifyEventId = win32con.WM_USER + 20
 		self.hidden = False
 		self.alpha = 255
-		
+		self.dpi = 96
+
+                try:
+                        #dpi = win32ui.GetDeviceCaps(win32gui.GetDC(0), win32con.LOGPIXELSY)
+                        self.dpi = win32ui.GetDeviceCaps(win32gui.GetDC(win32gui.GetDesktopWindow()), win32con.LOGPIXELSY)
+                except Exception, e:
+                        logger.error(u"Failed to get dpi: %s" % e)
+                logger.notice("Screen dpi %d" % self.dpi)
+                
 		try:
 			try:
 				self.hicon = win32gui.LoadIcon(self.hinst, 1)    ## python.exe and pythonw.exe
@@ -121,7 +129,7 @@ class OpsiDialogWindow(SubjectsObserver):
 		if port:
 			self._notificationClient = NotificationClient(host, port, self, notificationClientId)
 			self._notificationClient.addEndConnectionRequestedCallback(self.close)
-	
+		                
 	def close(self):
 		logger.notice(u"OpsiDialogWindow.close()")
 		win32gui.PostMessage(self.hwnd, win32con.WM_CLOSE, 0, 0)
@@ -360,7 +368,9 @@ class OpsiDialogWindow(SubjectsObserver):
 		#style = win32con.WS_POPUP | win32con.WS_VISIBLE |  win32con.WS_CAPTION | win32con.WS_SYSMENU | win32con.WS_MINIMIZEBOX | win32con.WS_THICKFRAME | win32con.DS_SETFONT
 		#style = win32con.WS_POPUP | win32con.WS_VISIBLE | win32con.DS_SETFONT | win32con.WS_CAPTION | win32con.WS_SYSMENU | win32con.WS_MINIMIZEBOX | win32con.WS_THICKFRAME
 		#style = win32con.WS_POPUP | win32con.WS_VISIBLE | win32con.DS_SETFONT
-		
+
+		dpiCorrection = float(96)/float(self.dpi)
+                                 
 		# Window frame and title
 		style = win32con.DS_SETFONT | win32con.WS_POPUP #| win32con.WS_EX_TOOLWINDOW # win32con.WS_VISIBLE | win32con.WS_EX_TRANSPARENT#
 		if self.skin['form']['style']:
@@ -415,19 +425,22 @@ class OpsiDialogWindow(SubjectsObserver):
 				style |= values['alignment']
 			
 			if item.startswith('label'):
-				dlg.append( ['Static', values.get('text', ''),
-					dlgId,
-					( int(values['left']/2), int(values['top']/2), int(values['width']/2), int(values['height']/2) ),
-					style ] )
+                                (l, t, r, b) = ( int(values['left']/2), int(values['top']/2), int(values['width']/2), int(values['height']/2) )
+                                l = int(float(l)*dpiCorrection)
+				t = int(float(t)*dpiCorrection)
+				r = int(float(r)*dpiCorrection)
+				b = int(float(b)*dpiCorrection)
+				dlg.append( ['Static', values.get('text', ''), dlgId, (l, t, r, b), style ] )
 				self.skin[item]['id'] = item[5:]
-			
 			elif item.startswith('button'):
 				# win32con.BS_DEFPUSHBUTTON
+				(l, t, r, b) = ( int(values['left']/2), int(values['top']/2), int(values['width']/2), int(values['height']/2) )
+				l = int(float(l)*dpiCorrection)
+				t = int(float(t)*dpiCorrection)
+				r = int(float(r)*dpiCorrection)
+				b = int(float(b)*dpiCorrection)
 				style |= win32con.BS_MULTILINE | win32con.BS_PUSHBUTTON | win32con.MF_GRAYED #| win32con.BS_OWNERDRAW
-				dlg.append( ['Button', values.get('text', ''),
-					dlgId,
-					( int(values['left']/2), int(values['top']/2), int(values['width']/2), int(values['height']/2) ),
-					style ] )
+				dlg.append( ['Button', values.get('text', ''), dlgId, (l, t, r, b), style ] )
 			
 			elif item.startswith('progressbar'):
 				self.skin[item]['ctrlId'] = dlgId
