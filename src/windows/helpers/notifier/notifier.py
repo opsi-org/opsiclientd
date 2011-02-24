@@ -431,6 +431,7 @@ class OpsiDialogWindow(SubjectsObserver):
 				b = int(float(b)*dpiCorrection)
 				dlg.append( ['Static', values.get('text', ''), dlgId, (l, t, r, b), style ] )
 				self.skin[item]['id'] = item[5:]
+			
 			elif item.startswith('button'):
 				# win32con.BS_DEFPUSHBUTTON
 				(l, t, r, b) = ( int(values['left']/2), int(values['top']/2), int(values['width']/2), int(values['height']/2) )
