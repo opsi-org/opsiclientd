@@ -105,13 +105,12 @@ class OpsiDialogWindow(SubjectsObserver):
 		self.alpha = 255
 		self.dpi = 96
 
-                try:
-                        #dpi = win32ui.GetDeviceCaps(win32gui.GetDC(0), win32con.LOGPIXELSY)
-                        self.dpi = win32ui.GetDeviceCaps(win32gui.GetDC(win32gui.GetDesktopWindow()), win32con.LOGPIXELSY)
-                except Exception, e:
-                        logger.error(u"Failed to get dpi: %s" % e)
-                logger.notice("Screen dpi %d" % self.dpi)
-                
+		try:
+			self.dpi = win32ui.GetDeviceCaps(win32gui.GetDC(win32gui.GetDesktopWindow()), win32con.LOGPIXELSY)
+		except Exception, e:
+			logger.error(u"Failed to get dpi: %s" % e)
+		logger.notice(u"Screen dpi %d" % self.dpi)
+		
 		try:
 			try:
 				self.hicon = win32gui.LoadIcon(self.hinst, 1)    ## python.exe and pythonw.exe
@@ -129,7 +128,7 @@ class OpsiDialogWindow(SubjectsObserver):
 		if port:
 			self._notificationClient = NotificationClient(host, port, self, notificationClientId)
 			self._notificationClient.addEndConnectionRequestedCallback(self.close)
-		                
+		
 	def close(self):
 		logger.notice(u"OpsiDialogWindow.close()")
 		win32gui.PostMessage(self.hwnd, win32con.WM_CLOSE, 0, 0)
@@ -370,7 +369,7 @@ class OpsiDialogWindow(SubjectsObserver):
 		#style = win32con.WS_POPUP | win32con.WS_VISIBLE | win32con.DS_SETFONT
 
 		dpiCorrection = float(96)/float(self.dpi)
-                                 
+		
 		# Window frame and title
 		style = win32con.DS_SETFONT | win32con.WS_POPUP #| win32con.WS_EX_TOOLWINDOW # win32con.WS_VISIBLE | win32con.WS_EX_TRANSPARENT#
 		if self.skin['form']['style']:
@@ -425,8 +424,8 @@ class OpsiDialogWindow(SubjectsObserver):
 				style |= values['alignment']
 			
 			if item.startswith('label'):
-                                (l, t, r, b) = ( int(values['left']/2), int(values['top']/2), int(values['width']/2), int(values['height']/2) )
-                                l = int(float(l)*dpiCorrection)
+				(l, t, r, b) = ( int(values['left']/2), int(values['top']/2), int(values['width']/2), int(values['height']/2) )
+				l = int(float(l)*dpiCorrection)
 				t = int(float(t)*dpiCorrection)
 				r = int(float(r)*dpiCorrection)
 				b = int(float(b)*dpiCorrection)
