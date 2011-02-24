@@ -94,8 +94,8 @@ try:
 		logger.info(u"Impersonating network account '%s'" % depotServerUsername)
 		imp = System.Impersonate(username = depotServerUsername, password = depotServerPassword, desktop = actionProcessorDesktop)
 		imp.start(logonType = u'NEW_CREDENTIALS')
-		
-	if (depotRemoteUrl.split(u'/')[2] != u'localhost'):
+	
+	if depotRemoteUrl.split('/')[2] not in ('127.0.0.1', 'localhost'):
 		logger.notice(u"Mounting depot share %s" % depotRemoteUrl)
 		be.setStatusMessage(sessionId, _(u"Mounting depot share %s") % depotRemoteUrl)
 		
