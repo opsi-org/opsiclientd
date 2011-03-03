@@ -957,9 +957,9 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['activationDelay'] = int(value)
 					elif (key == 'notification_delay'):
 						eventConfigs[eventConfigId]['notificationDelay'] = int(value)
-					elif (key == 'action_warning_time') or (key == 'warning_time'):
+					elif (key == 'action_warning_time'):
 						eventConfigs[eventConfigId]['actionWarningTime'] = int(value)
-					elif (key == 'action_user_cancelable') or (key == 'user_cancelable'):
+					elif (key == 'action_user_cancelable'):
 						eventConfigs[eventConfigId]['actionUserCancelable'] = int(value)
 					elif (key == 'shutdown'):
 						eventConfigs[eventConfigId]['shutdown'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')

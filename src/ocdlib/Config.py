@@ -158,6 +158,11 @@ class ConfigImplementation(object):
 		if type(value) in (str, unicode):
 			value = forceUnicode(value).strip()
 		
+		if (option == 'warning_time'):
+			option = 'action_warning_time'
+		elif (option == 'user_cancelable'):
+			option = 'action_user_cancelable'
+		
 		logger.info(u"Setting config value %s.%s" % (section, option))
 		logger.debug(u"set(%s, %s, %s)" % (section, option, value))
 		
