@@ -96,15 +96,18 @@ infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
 		This page uses Javascript to show you a Timeline. Please enable Javascript in your browser to see the full page. Thank you.
 		</noscript>
 	</div>
-	
+</body>
+</html>
+'''
+
+'''
+
 	<div id="infopage-opsiclientd-log-box">
 		<p id="infopage-opsiclientd-log-title">Log</p>
 		<div id="infopage-opsiclientd-log">
 		%(opsiclient-log)s
 		</div>
 	</div>
-</body>
-</html>
 '''
 
 '''
@@ -243,40 +246,40 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 		#	raise OpsiAuthenticationError(u"Permission denied")
 		
 		
-		log = u''
-		regex = re.compile('^\[(\d)\].*')
-		try:
-			f = codecs.open(config.get('global', 'log_file'), 'r', 'utf-8')
-			lastLogLevel = 0
-			for line in f.readlines():
-				logLevel = 0
-				match = regex.search(line)
-				if match:
-					logLevel = int(match.group(1))
-				if logLevel and (logLevel != lastLogLevel):
-					if lastLogLevel:
-						log += u'</span>'
-					log += u'<span class="loglevel-%s">' % logLevel
-					lastLogLevel = logLevel
-				log += line.rstrip() \
-					.replace(u'\r', u'')\
-					.replace(u'\t', u'   ')\
-					.replace(u'&',  u'&amp;')\
-					.replace(u'"',  u'&quot;')\
-					.replace(u"'",  u'&apos;')\
-					.replace(u' ',  u'&nbsp;')\
-					.replace(u'<',  u'&lt;')\
-					.replace(u'>',  u'&gt;')
-				log += u'<br />\n'
-			f.close()
-			if lastLogLevel:
-				log += u'</span>'
-		except Exception, e:
-			logger.error(e)
+		#log = u''
+		#regex = re.compile('^\[(\d)\].*')
+		#try:
+		#	f = codecs.open(config.get('global', 'log_file'), 'r', 'utf-8')
+		#	lastLogLevel = 0
+		#	for line in f.readlines():
+		#		logLevel = 0
+		#		match = regex.search(line)
+		#		if match:
+		#			logLevel = int(match.group(1))
+		#		if logLevel and (logLevel != lastLogLevel):
+		#			if lastLogLevel:
+		#				log += u'</span>'
+		#			log += u'<span class="loglevel-%s">' % logLevel
+		#			lastLogLevel = logLevel
+		#		log += line.rstrip() \
+		#			.replace(u'\r', u'')\
+		#			.replace(u'\t', u'   ')\
+		#			.replace(u'&',  u'&amp;')\
+		#			.replace(u'"',  u'&quot;')\
+		#			.replace(u"'",  u'&apos;')\
+		#			.replace(u' ',  u'&nbsp;')\
+		#			.replace(u'<',  u'&lt;')\
+		#			.replace(u'>',  u'&gt;')
+		#		log += u'<br />\n'
+		#	f.close()
+		#	if lastLogLevel:
+		#		log += u'</span>'
+		#except Exception, e:
+		#	logger.error(e)
 		
 		html = infoPage % {
 			'head': timeline.getHtmlHead(),
-			'opsiclient-log': log
+			#'opsiclient-log': log
 		}
 		if not isinstance(result, http.Response):
 			result = http.Response()
