@@ -78,6 +78,8 @@ class ConfigImplementation(object):
 				'url':                   [],
 				'connection_timeout':    10,
 				'user_cancelable_after': 0,
+				'verify_cert':           False,
+				'cert_dir':              u'c:\\opsi.org\\opsiclientd\\server-certs',
 			},
 			'depot_server': {
 				'depot_id': u'',
@@ -126,6 +128,7 @@ class ConfigImplementation(object):
 			self._config['global']['state_file'] = u'%s\\opsi.org\\opsiclientd\\state.json' % System.getSystemDrive()
 			self._config['global']['timeline_db'] = u'%s\\opsi.org\\opsiclientd\\timeline.sqlite' % System.getSystemDrive()
 			self._config['global']['log_dir'] = u'%s\\tmp' % System.getSystemDrive()
+			self._config['config_service']['cert_dir'] = u'%s\\opsi.org\\opsiclientd\\server-certs' % System.getSystemDrive()
 		if (sys.getwindowsversion()[0] == 5):
 			self._config['action_processor']['run_as_user'] = 'pcpatch'
 		
@@ -184,7 +187,7 @@ class ConfigImplementation(object):
 		if option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port'):
 			value = forceInt(value)
 		
-		if option in ('create_user', 'delete_user'):
+		if option in ('create_user', 'delete_user', 'verify_cert'):
 			value = forceBool(value)
 		
 		if not self._config.has_key(section):
