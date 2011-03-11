@@ -144,16 +144,8 @@ class ServiceConnection(object):
 			if self._loadBalance and (len(configServiceUrls) > 1):
 				random.shuffle(configServiceUrls)
 			
-			certDir = config.get('config_service', 'cert_dir')
-			verifyServerCert = config.get('config_service', 'verify_cert')
-			if not os.path.exists(certDir):
-				os.makedirs(certDir)
-			
 			for urlIndex in range(len(configServiceUrls)):
 				self._configServiceUrl = configServiceUrls[urlIndex]
-				
-				(scheme, host, port, baseurl, username, password) = urlsplit(self._configServiceUrl)
-				serverCertFile = os.path.join(certDir, host + '.pem')
 				
 				kwargs = self.connectionThreadOptions()
 				logger.debug(u"Creating ServiceConnectionThread (url: %s)" % self._configServiceUrl)
@@ -161,8 +153,6 @@ class ServiceConnection(object):
 							configServiceUrl = self._configServiceUrl,
 							username         = config.get('global', 'host_id'),
 							password         = config.get('global', 'opsi_host_key'),
-							serverCertFile   = serverCertFile,
-							verifyServerCert = verifyServerCert,
 							**kwargs)
 				
 				self.connectionStart(self._configServiceUrl)
@@ -287,6 +277,14 @@ class ServiceConnectionThread(KillableThread):
 			self.connected = False
 			self.cancelled = False
 			
+			certDir = config.get('config_service', 'cert_dir')
+			verifyServerCert = config.get('config_service', 'verify_cert')
+			if not os.path.exists(certDir):
+				os.makedirs(certDir)
+			
+			(scheme, host, port, baseurl, username, password) = urlsplit(self._configServiceUrl)
+			serverCertFile = os.path.join(certDir, host + '.pem')
+			
 			tryNum = 0
 			while not self.cancelled and not self.connected:
 				try:
@@ -296,9 +294,11 @@ class ServiceConnectionThread(KillableThread):
 					if (len(self._username.split('.')) < 3):
 						raise Exception(u"Domain missing in username '%s'" % self._username)
 					self.configService = JSONRPCBackend(
-						address     = self._configServiceUrl,
-						username    = self._username,
-						password    = self._password,
+						address          = self._configServiceUrl,
+						username         = self._username,
+						password         = self._password,
+						serverCertFile   = serverCertFile,
+						verifyServerCert = verifyServerCert,
 						application = 'opsiclientd version %s' % __version__)
 					if self.configService.isLegacyOpsi():
 						self.configService.authenticated()
