@@ -309,15 +309,25 @@ class ServiceConnectionThread(KillableThread):
 					self.connectionError = None
 					self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
 					logger.notice(u"Connected to config server '%s'" % self._configServiceUrl)
+				
+				except OpsiServiceVerificationError, e:
+					self.connectionError = forceUnicode(e)
+					self.setStatusMessage(_(u"Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
+					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
+					break
+				
 				except Exception, e:
 					self.connectionError = forceUnicode(e)
 					self.setStatusMessage(_(u"Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(e)))
 					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
-					fqdn = System.getFQDN().lower()
-					if (self._username != fqdn) and (fqdn.count('.') >= 2):
-						logger.notice(u"Connect failed with username '%s', got fqdn '%s' from os, trying fqdn" \
-								% (self._username, fqdn))
-						self._username = fqdn
+					if isinstance(e, OpsiAuthenticationError):
+						fqdn = System.getFQDN().lower()
+						if (self._username != fqdn) and (fqdn.count('.') >= 2):
+							logger.notice(u"Connect failed with username '%s', got fqdn '%s' from os, trying fqdn" \
+									% (self._username, fqdn))
+							self._username = fqdn
+						else:
+							break
 					time.sleep(1)
 					time.sleep(1)
 					time.sleep(1)
