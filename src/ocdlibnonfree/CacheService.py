@@ -684,6 +684,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			if not productIds:
 				logger.notice(u"No product action request set => no products to cache")
 			else:
+				productIds.append('opsi-winst')
 				if 'mshotfix' in productIds:
 					additionalProductId = System.getOpsiHotfixName()
 					logger.info(u"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s" % additionalProductId)
@@ -691,20 +692,16 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						productIds.append(additionalProductId)
 				
 				logger.notice(u"Caching products: %s" % ', '.join(productIds))
-				#self._overallProgressSubject.setEnd(len(productIds))
-				#self._overallProgressSubject.setMessage( _(u'Caching products') )
 				eventId = timeline.addEvent(title = u"Cache products", description = u"Caching products: %s" % ', '.join(productIds), category = u'product_caching', durationEvent = True)
 				try:
 					errorsOccured = []
 					for productId in productIds:
 						try:
-							#self._overallProgressSubject.setMessage( _(u'Caching product: %s') % productId )
 							self._cacheProduct(productId)
 						except Exception, e:
 							logger.logException(e, LOG_INFO)
 							errorsOccured.append(forceUnicode(e))
 							self._setProductCacheState(productId, 'failure', forceUnicode(e))
-						#self._overallProgressSubject.addToState(1)
 				except Exception, e:
 					logger.logException(e)
 					errorsOccured.append(forceUnicode(e))
