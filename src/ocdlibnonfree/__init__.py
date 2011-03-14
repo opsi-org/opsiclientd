@@ -167,6 +167,7 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 						break
 				clientConfig = {
 					"clientId":       config.get('global', 'host_id'),
+					"opsiHostKey":    config.get('global', 'opsi_host_key'),
 					"ipAddress":      forceUnicode(defaultInterface.ipAddressList.ipAddress),
 					"netmask":        forceUnicode(defaultInterface.ipAddressList.ipMask),
 					"defaultGateway": forceUnicode(defaultInterface.gatewayList.ipAddress)
