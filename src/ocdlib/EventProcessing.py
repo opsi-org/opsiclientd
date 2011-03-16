@@ -408,8 +408,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			actionProcessorRemoteDir = None
 			if config.get('depot_server', 'url').split('/')[2] in ('127.0.0.1', 'localhost'):
 				dirname = config.get('action_processor', 'remote_dir')
-				if dirname.startswith(u'\\install'):
-					dirname = dirname.replace(u'\\install', u'', 1)
+				while dirname.startswith('\\'):
+					dirname = dirname.replace(u'\\', u'', 1)
+				if dirname.startswith(u'install\\'):
+					dirname = dirname.replace(u'install\\', u'', 1)
+				while dirname.startswith('\\'):
+					dirname = dirname.replace(u'\\', u'', 1)
 				actionProcessorRemoteDir = os.path.join(
 					self.opsiclientd.getCacheService().getProductCacheDir(),
 					dirname
@@ -419,7 +423,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				actionProcessorRemoteDir = os.path.join(
 					config.getDepotDrive(),
 					config.get('action_processor', 'remote_dir'))
-				logger.notice(u"Updating action processor from '%s'" % actionProcessorRemoteDir)
+				logger.notice(u"Updating action processor from local cache '%s'" % actionProcessorRemoteDir)
 			
 			actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
 			
