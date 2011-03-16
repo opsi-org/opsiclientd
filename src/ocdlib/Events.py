@@ -1098,7 +1098,8 @@ def reconfigureEventGenerators():
 		try:
 			eventGenerator = eventGenerators.get(mainEventConfigId)
 			if not eventGenerator:
-				raise Exception(u"Event generator '%s' not found" % mainEventConfigId)
+				logger.info(u"Cannot reconfigure event generator '%s': not found" % mainEventConfigId)
+				continue
 			eventType = eventConfig['type']
 			del eventConfig['type']
 			ec = EventConfigFactory(eventType, eventConfigId, **eventConfig)
