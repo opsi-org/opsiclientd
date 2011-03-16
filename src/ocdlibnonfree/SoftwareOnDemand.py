@@ -164,7 +164,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			logger.debug("Config found: '%s'" % configState.toHash())
 			
 			if (configState.getConfigId() == "software-on-demand.product-group-ids"):
-				onDemandGroupIds = forceUnicodeList(configState.getValues())
+				onDemandGroupIds = forceUnicodeLowerList(configState.getValues())
 				if onDemandGroupIds:
 					for objectToGroup in self._configService.objectToGroup_getObjects(groupType = "ProductGroup", groupId = onDemandGroupIds):
 						logger.info(u"On demand product found: '%s'" % objectToGroup.objectId)
