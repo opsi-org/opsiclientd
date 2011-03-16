@@ -178,7 +178,12 @@ class CacheService(threading.Thread):
 	def getConfigCacheState(self):
 		self.initializeConfigCacheService()
 		return self._configCacheService.getState()
-
+	
+	def getProductCacheDir(self):
+		self.initializeProductCacheService()
+		return self._productCacheService.getProductCacheDir()
+	
+	
 class ConfigCacheServiceBackendExtension(object):
 	def accessControl_authenticated(self):
 		return True
@@ -522,6 +527,9 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		pcss = state.get('product_cache_service')
 		if pcss:
 			self._state = pcss
+	
+	def getProductCacheDir(self):
+		return self._productCacheDir
 	
 	def dynamicBandwidthLimitChanged(self, repository, bandwidth):
 		if (bandwidth <= 0):
