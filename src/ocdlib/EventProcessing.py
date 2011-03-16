@@ -413,7 +413,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if dirname.startswith(u'\\install'):
 					dirname = dirname.replace(u'\\install', u'', 1)
 				actionProcessorRemoteDir = os.path.join(
-					config.getDepotDrive(),
+					self.opsiclientd.getCacheService().getProductCacheDir(),
 					dirname
 				)
 			actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
