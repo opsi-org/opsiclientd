@@ -396,7 +396,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
 				impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
 				impersonation.start(logonType = 'NEW_CREDENTIALS')
-				
 				self.mountDepotShare(impersonation)
 				mounted = True
 			
@@ -409,6 +408,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			actionProcessorRemoteDir = os.path.join(
 							config.getDepotDrive(),
 							config.get('action_processor', 'remote_dir'))
+			if config.get('depot_server', 'url').split('/')[2] in ('127.0.0.1', 'localhost'):
+				dirname = config.get('action_processor', 'remote_dir')
+				if dirname.startswith(u'\\install'):
+					dirname = dirname.replace(u'\\install', u'', 1)
+				actionProcessorRemoteDir = os.path.join(
+					config.getDepotDrive(),
+					dirname
+				)
 			actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
 			
 			if not os.path.exists(actionProcessorLocalFile):
