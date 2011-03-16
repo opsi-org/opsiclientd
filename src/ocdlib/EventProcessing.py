@@ -480,6 +480,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						packageVersion     = packageVersion,
 						clientId           = config.get('global', 'host_id'),
 						installationStatus = u'installed',
+						actionProgress     = u'',
 						actionResult       = u'successful'
 					)
 				])
