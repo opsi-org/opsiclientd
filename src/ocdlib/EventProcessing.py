@@ -406,7 +406,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			actionProcessorLocalTmpFile = os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)
 			
 			actionProcessorRemoteDir = None
-			if config.get('depot_server', 'url').split('/')[2] in ('127.0.0.1', 'localhost'):
+			if config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
 				dirname = config.get('action_processor', 'remote_dir')
 				while dirname.startswith('\\'):
 					dirname = dirname.replace(u'\\', u'', 1)
@@ -434,7 +434,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			elif not filecmp.cmp(actionProcessorLocalFile, actionProcessorRemoteFile):
 				logger.notice(u"Action processor needs update because file changed")
 			else:
-				logger.notice("Local action processor exists and seems to be up to date")
+				logger.notice(u"Local action processor exists and seems to be up to date")
 				return actionProcessorLocalFile
 			
 			# Update files
