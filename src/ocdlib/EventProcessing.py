@@ -390,7 +390,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		impersonation = None
 		try:
 			mounted = False
-			if config.get('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost'):
+			if config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
+				logger.notice(u"Updating action processor from local cache")
 				# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
 				# The new logon session has the same local identifier but uses different credentials for other network connections.
 				(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
