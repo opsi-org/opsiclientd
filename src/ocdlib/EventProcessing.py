@@ -390,8 +390,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		impersonation = None
 		try:
 			mounted = False
-			if config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
-				logger.notice(u"Updating action processor from local cache")
+			if not config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
 				# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
 				# The new logon session has the same local identifier but uses different credentials for other network connections.
 				(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
@@ -406,9 +405,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
 			actionProcessorLocalTmpFile = os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)
 			
-			actionProcessorRemoteDir = os.path.join(
-							config.getDepotDrive(),
-							config.get('action_processor', 'remote_dir'))
+			actionProcessorRemoteDir = None
 			if config.get('depot_server', 'url').split('/')[2] in ('127.0.0.1', 'localhost'):
 				dirname = config.get('action_processor', 'remote_dir')
 				if dirname.startswith(u'\\install'):
@@ -417,6 +414,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					self.opsiclientd.getCacheService().getProductCacheDir(),
 					dirname
 				)
+				logger.notice(u"Updating action processor from local cache '%s'" % actionProcessorRemoteDir)
+			else:
+				actionProcessorRemoteDir = os.path.join(
+					config.getDepotDrive(),
+					config.get('action_processor', 'remote_dir'))
+				logger.notice(u"Updating action processor from '%s'" % actionProcessorRemoteDir)
+			
 			actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
 			
 			if not os.path.exists(actionProcessorLocalFile):
