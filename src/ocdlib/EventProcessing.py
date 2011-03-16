@@ -389,13 +389,16 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		
 		impersonation = None
 		try:
-			# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
-			# The new logon session has the same local identifier but uses different credentials for other network connections.
-			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
-			impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
-			impersonation.start(logonType = 'NEW_CREDENTIALS')
-			
-			self.mountDepotShare(impersonation)
+			mounted = False
+			if config.get('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost'):
+				# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
+				# The new logon session has the same local identifier but uses different credentials for other network connections.
+				(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
+				impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
+				impersonation.start(logonType = 'NEW_CREDENTIALS')
+				
+				self.mountDepotShare(impersonation)
+				mounted = True
 			
 			actionProcessorFilename = config.get('action_processor', 'filename')
 			actionProcessorLocalDir = config.get('action_processor', 'local_dir')
@@ -466,7 +469,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				])
 			self.setActionProcessorInfo()
 			
-			self.umountDepotShare()
+			if mounted:
+				self.umountDepotShare()
 			
 		except Exception, e:
 			logger.error(u"Failed to update action processor: %s" % forceUnicode(e))
@@ -672,7 +676,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
 			
 			# Update action processor
-			if config.get('depot_server', 'url').split('/')[2] not in ('127.0.0.1', 'localhost') and self.event.eventConfig.updateActionProcessor:
+			if self.event.eventConfig.updateActionProcessor:
 				self.updateActionProcessor()
 			
 			# Run action processor
