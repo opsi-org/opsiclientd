@@ -4,19 +4,18 @@ body {
 	font-size: 12px;
 }
 
-#title-image {
+#title {
+	width: 100%;
+	padding-left: 120px;
+	padding-top: 50px;
+	padding-bottom: 5px;
 	background-image: url(opsi_logo.png);
 	background-repeat: no-repeat;
 	background-position: 0% 0%;
-}
-
-#title-text {
-	padding: 10px;
-	color: #6276a0;
 	font-size: 20px;
 	letter-spacing: 5px;
+	color: #6276a0;
 }
-
 a:link {
 	color: #555555;
 	text-decoration: none;
@@ -35,7 +34,7 @@ a:active {
 }
 
 div.mainpage-link-box {
-	padding-top: 20px;
+	margin-top: 0px;
 	color: #555555;
 	font-size: 14px;
 	letter-spacing: 2px;
