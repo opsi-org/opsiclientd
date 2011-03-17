@@ -166,7 +166,7 @@ if (typeof SimileAjax == "undefined") {
 
     (function() {
         var javascriptFiles = [
-            "jquery-1.2.6.js",
+            "jquery-1.2.6.min.js",
             "platform.js",
             "debug.js",
             "xmlhttp.js",
@@ -184,6 +184,7 @@ if (typeof SimileAjax == "undefined") {
             "window-manager.js"
         ];
         var cssFiles = [
+            "graphics.css"
         ];
         
         if (typeof SimileAjax_urlPrefix == "string") {
