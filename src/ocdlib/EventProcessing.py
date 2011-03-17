@@ -42,6 +42,7 @@ from twisted.conch.ssh import keys
 from OPSI.Logger import *
 from OPSI.Util import *
 from OPSI.Util.Message import *
+from OPSI.Util.Thread import KillableThread
 from OPSI.Types import *
 from OPSI import System
 from OPSI.Object import *

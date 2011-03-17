@@ -40,6 +40,7 @@ from httplib import HTTPConnection, HTTPSConnection
 # OPSI imports
 from OPSI.Logger import *
 from OPSI.Util import *
+from OPSI.Util.Thread import KillableThread
 from OPSI.Util.HTTP import urlsplit, non_blocking_connect_http, non_blocking_connect_https
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Types import *

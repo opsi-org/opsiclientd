@@ -62,15 +62,15 @@ config = Config()
 TIMELINE_IMAGE_URL = u'/timeline/timeline_js/images/'
 htmlHead = u'''
 <script type="text/javascript">
-/* <![CDATA[ */
+// <![CDATA[
 Timeline_ajax_url   = "/timeline/timeline_ajax/simile-ajax-api.js";
 Timeline_urlPrefix  = "/timeline/timeline_js/";
 Timeline_parameters = "bundle=true";
-/* ]]> */
+// ]]>
 </script>
 <script src="/timeline/timeline_js/timeline-api.js" type="text/javascript"></script>
 <script type="text/javascript">
-/* <![CDATA[ */
+// <![CDATA[
 var timeline_data = %(data)s;
 var tl;
 function onLoad() {
@@ -118,7 +118,7 @@ function onResize() {
 		}, 500);
 	}
 }
-/* ]]> */
+// ]]>
 </script>
 '''
 
