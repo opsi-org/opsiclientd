@@ -59,9 +59,6 @@ Version 2.3.0
   1) You will be modifying the classic theme's settings in your html file. 
   2) Set the theme's autoWidth to true
   3) Optionally update the theme's autoWidthAnimationTime setting.
-     band, is used to set how close the bottom of the lowest track is to the 
-     edge of the band's div. The units are total track width. There are two settings,
-     one for overview bands, the second for others.
   4) Optionally update the autoWidthMargin settings in the Theme. The margin, per
      band, is used to set how close the bottom of the lowest track is to the 
      edge of the band's div. The units are total track width. There are two settings,
@@ -146,6 +143,7 @@ Version 2.3.0
   http://localhost:9999/ajax/api - from src/webapp/ajax/api/
   http://localhost:9999/timeline - from src/webapp/site/
   http://localhost:9999/timeline/api - from src/webapp/timeline/api/
+  -- David H rev 1705
 
 * PointHighlightDecorator now uses the width parameter, not CSS.
   Issue is that the Point Highlight Decorator is centered on the point in time
@@ -153,6 +151,43 @@ Version 2.3.0
   don't use CSS for width. Thanks to Christian Thiemann.
 * Revised all examples to use new directory layout. 
   -- LarryK rev 1729
+* Added CompactPainter, which allows for large images and can render
+  image stacks. See the new compact-painter example.
+  -- David H rev 1759
+* Added Timeline.version string in timeline.js. Issue 60.
+  Added Timeline.writeVersion -- a helper that writes out the 
+  current version. Updated examples to use it.
+  Updated build.xml to include Ajax new styles directory.
+  Fixed overview painter to use event's classname attribute if present.
+  Add a test for this to test-example.
+  -- LarryK rev 1813
+* Fixed build.xml to not include .bak files.
+  Moved contents of /site up one level into /webapp -- per David H.
+  Fixed library references in all examples to match new dir layout.
+  -- LarryK rev 1814
+* Added src/misc/fix_svn_props.txt -- used to correctly set props on
+  example files. Enables them to be run in browser from svn repo. 
+  Changed timeline-api to use MIT Simile Ajax v 2.2.0.
+  Changed version to 2.3.0 in anticipation of the release.
+  -- LarryK rev 1821
+* Also need to set mime type to be text/xml for xml src files.
+  -- LarryK rev 1822
+* Bug fix: misspelled className as classname -- LarryK rev 1823
+* Fixed IE-only bug. Chokes on <span id='x' />. Changed to <span id='x'></span> and all is well.
+  Another IE only bug: double class name selectors don't work on 
+  IE. Eg <div class 'foo bar' /> should be selected with css selector .foo.bar (or .bar.foo) 
+  Works everywhere but ie. So added label-, icon-, tape- to className plus className by
+  itself in original_painter. Additional prefixes: highlight- for event-highlight,
+  small- for overview painter. Problem was caught by test-example.
+  -- LarryK rev 1824
+* Updated jetty config file to serve 
+  http://localhost:9999/timeline - from src/webapp/
+  Revised Release Notes for release.
+  -- LarryK rev 1825
+* Changed copyright link to be http://code.google.com/p/simile-widgets/
+  -- LarryK rev 1826
+
+  
 
     
 Version 2.2.0 -- September 23, 2008
