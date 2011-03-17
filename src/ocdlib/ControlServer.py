@@ -78,17 +78,13 @@ infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
 	<script type="text/javascript">
 	function onPageLoad(){
 		onLoad();
-		var logDiv = document.getElementById("infopage-opsiclientd-log");
-		logDiv.scrollTop = logDiv.scrollHeight;
+		//var logDiv = document.getElementById("infopage-opsiclientd-log");
+		//logDiv.scrollTop = logDiv.scrollHeight;
 	}
 	</script>
 </head>
 <body onload="onPageLoad();" onresize="onResize();">
-	<span id="title">
-		<img src="/opsi_logo.png" />
-		<span sytle="padding: 1px; top: 5px;">opsi client daemon info</span>
-	</span>
-	
+	<p id="title">opsi client daemon info</p>
 	<div id="infopage-timeline-box">
 		<p id="infopage-timeline-title">Timeline</p>
 		<div class="timeline-default" id="opsiclientd-timeline" style="height: 400px; border: 1px solid #aaaaaa"></div>
