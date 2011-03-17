@@ -4,7 +4,13 @@ body {
 	font-size: 12px;
 }
 
-#title {
+#title-image {
+	background-image: url(opsi_logo.png);
+	background-repeat: no-repeat;
+	background-position: 0% 0%;
+}
+
+#title-text {
 	padding: 10px;
 	color: #6276a0;
 	font-size: 20px;
