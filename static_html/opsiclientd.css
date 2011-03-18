@@ -128,8 +128,11 @@ td.swondemand-product-attribute-value {
 	text-align: left;
 }
 
-td.swondemand-product-checkbox {
-	padding: 20px;
+td.swondemand-product-setup-radiobox {
+	
+}
+td.swondemand-product-uninstall-radiobox {
+	
 }
 
 .swondemand-product-state-installed {

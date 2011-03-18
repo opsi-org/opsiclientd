@@ -366,10 +366,13 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				self._configService.setAsync(False)
 				
 				html = []
+				combinedProductOnClients = productOnClients
+				combinedProductOnClients.extend(modifiedProductOnClients)
 				for productId in self._swOnDemandProductIds:
 					html.append(u'<div class="swondemand-product-box"><table>')
 					productOnClient = None
-					for poc in productOnClients:
+					
+					for poc in combinedProductOnClients:
 						if (poc.productId == productId):
 							productOnClient = poc
 							break
@@ -395,22 +398,15 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					stateclass = u"swondemand-product-state-not_installed"
 					setupChecked = u''
 					uninstallChecked = u''
-					for poc in modifiedProductOnClients:
-						if (poc.productId == productId):
-							if (poc.actionRequest == 'setup'):
-								setupChecked = u'checked="checked"'
-							if (poc.actionRequest == 'uninstall'):
-								uninstallChecked = u'checked="checked"'
-							installationStatus = poc.installationStatus
-							break
 					if productOnClient:
+						installationStatus = poc.installationStatus
 						if (productOnClient.actionRequest == 'setup'):
-							checked = u'checked="checked"'
+							setupChecked = u'checked="checked"'
+						elif (productOnClient.actionRequest == 'uninstall'):
+							uninstallChecked = u'checked="checked"'
 						if (productOnClient.installationStatus == "installed"):
 							stateclass = "swondemand-product-state-installed"
 							state = u"%s (%s: %s-%s)" % ( _('installed'), _('version'), productOnClient.productVersion, productOnClient.packageVersion )
-						else:
-							state = _('not installed')
 					
 					html.append(u'<tr><td colspan="2" class="swondemand-product-name">%s (%s-%s)</td></tr>' \
 							% (product.name, productOnDepot.productVersion, productOnDepot.packageVersion))
@@ -430,17 +426,17 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 								% advice.replace(u'\n', u'<br />') )
 					
 					if (installationStatus == 'installed'):
-						html.append(u'<tr><td colspan="2" class="swondemand-product-checkbox">')
+						html.append(u'<tr><td colspan="2" class="swondemand-product-setup-radiobox">')
 						html.append(u'       <input type="radio" name="product_%s" value="setup" %s />%s</td></tr>' \
 								% ( productId, setupChecked, _('reinstall') ) )
-					else:
-						html.append(u'<tr><td colspan="2" class="swondemand-product-checkbox">')
-						html.append(u'       <input type="radio" name="product_%s" value="setup" %s />%s</td></tr>' \
-								% ( productId, setupChecked, _('install') ) )
 						if product.uninstallScript:
-							html.append(u'<tr><td colspan="2" class="swondemand-product-checkbox">')
+							html.append(u'<tr><td colspan="2" class="swondemand-product-uninstall-radiobox">')
 							html.append(u'       <input type="radio" name="product_%s" value="uninstall" %s />%s</td></tr>' \
 									% ( productId, uninstallChecked, _('uninstall') ) )
+					else:
+						html.append(u'<tr><td colspan="2" class="swondemand-product-setup-radiobox">')
+						html.append(u'       <input type="radio" name="product_%s" value="setup" %s />%s</td></tr>' \
+								% ( productId, setupChecked, _('install') ) )
 					html.append(u'</table></div>')
 				html.append(u'<div class="swondemand-button-box">')
 				html.append(u'<button class="swondemand-action-button" type="submit" name="action" value="next">&gt; %s</button>' % _(u'next'))
