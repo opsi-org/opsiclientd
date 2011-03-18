@@ -48,15 +48,10 @@ mainpage = u'''<?xml version="1.0" encoding="UTF-8"?>
 	<meta http-equiv="Content-Type" content="text/xhtml; charset=utf-8" />
 	<script type="text/javascript">
 	// <![CDATA[
-	function deselectRadio(obj) {
-		if(obj.className != "select") {
-			obj.checked = true;
-			obj.className = "select";
-		}
-		else {
-			obj.checked = false;
-			obj.className = "notselect";
-		}
+	function uncheckRadio(r) {
+		if(typeof(r.c) == "undefined") r.c = r.checked;
+		r.c = !r.c;
+		r.checked = !r.c;
 	}
 	// ]]>
 	</script>
@@ -452,15 +447,15 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					
 					if (installationStatus == 'installed'):
 						html.append(u'<tr><td colspan="2" class="swondemand-product-setup-radiobox">')
-						html.append(u'       <input type="radio" onclick="deselectRadio(this);" name="product_%s" value="setup" %s />%s</td></tr>' \
+						html.append(u'       <input type="radio" onclick="uncheckRadio(this);" name="product_%s" value="setup" %s />%s</td></tr>' \
 								% ( productId, setupChecked, _('reinstall') ) )
 						if product.uninstallScript:
 							html.append(u'<tr><td colspan="2" class="swondemand-product-uninstall-radiobox">')
-							html.append(u'       <input type="radio" onclick="deselectRadio(this);" name="product_%s" value="uninstall" %s />%s</td></tr>' \
+							html.append(u'       <input type="radio" onclick="uncheckRadio(this);" name="product_%s" value="uninstall" %s />%s</td></tr>' \
 									% ( productId, uninstallChecked, _('uninstall') ) )
 					else:
 						html.append(u'<tr><td colspan="2" class="swondemand-product-setup-radiobox">')
-						html.append(u'       <input type="radio" onclick="deselectRadio(this);" name="product_%s" value="setup" %s />%s</td></tr>' \
+						html.append(u'       <input type="radio" onclick="uncheckRadio(this);" name="product_%s" value="setup" %s />%s</td></tr>' \
 								% ( productId, setupChecked, _('install') ) )
 					html.append(u'</table></div>')
 				html.append(u'<div class="swondemand-button-box">')
