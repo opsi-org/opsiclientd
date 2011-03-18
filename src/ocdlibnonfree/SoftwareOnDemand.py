@@ -117,6 +117,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			else:
 				query[k] = v
 		self.query = query
+		logger.debug(u"Query: %s" % self.query)
 	
 	def connectConfigService(self):
 		ServiceConnection.connectConfigService(self)
@@ -408,7 +409,8 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					setupChecked = u''
 					uninstallChecked = u''
 					if productOnClient:
-						installationStatus = poc.installationStatus
+						logger.debug(u"Product on client to display: %s" % productOnClient)
+						installationStatus = productOnClient.installationStatus
 						if (productOnClient.actionRequest == 'setup'):
 							setupChecked = u'checked="checked"'
 						elif (productOnClient.actionRequest == 'uninstall'):
