@@ -505,6 +505,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		self._working = False
 		self._state   = {}
 		
+		self._impersonation = None
 		self._cacheProductsRequested = False
 		
 		self._maxBandwidth = 0
@@ -769,9 +770,17 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		(depotServerUsername, depotServerPassword) = (u'', u'')
 		if urlsplit(config.get('depot_server', 'url'))[0].startswith('webdav'):
 			(depotServerUsername, depotServerPassword) = (config.get('global', 'host_id'), config.get('global', 'opsi_host_key'))
+			return getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword)
 		else:
+			if self._impersonation:
+				try:
+					self._impersonation.end()
+				except Exception, e:
+					logger.warning(e)
 			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
-		return getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword)
+			self._impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
+			self._impersonation.start(logonType = 'NEW_CREDENTIALS')
+			return getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword, mount = False)
 		
 	def _cacheProduct(self, productId):
 		logger.notice(u"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)" % (productId,  self._maxBandwidth, self._dynamicBandwidth))
@@ -864,6 +873,11 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				repository.disconnect()
 			except Exception, e:
 				logger.warning(u"Failed to disconnect from repository: %s" % e)
+		if self._impersonation:
+			try:
+				self._impersonation.end()
+			except Exception, e:
+				logger.warning(e)
 		if exception:
 			raise exception
 	
