@@ -1121,6 +1121,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						else:
 							self.processProductActionRequests()
 					
+					# After the installation of opsi-client-agent the opsiclientd.conf needs to be updated again
+					if self.event.eventConfig.getConfigFromService:
+						self.getConfigFromService()
+						if self.event.eventConfig.updateConfigFile:
+							config.updateConfigFile()
+					
 			finally:
 				self._messageSubject.setMessage(u"")
 				if self.event.eventConfig.writeLogToService:
