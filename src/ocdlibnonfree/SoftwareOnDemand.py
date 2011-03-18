@@ -242,10 +242,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			if not productId in productIds:
 				for index in range(len(productOnClients)):
 					if (productOnClients[index].productId == productId):
-						productOnClients[index].setActionRequest('none')
-						modifiedProductOnClients = addToModified(modifiedProductOnClients, productOnClients[index])
+						if productOnClients[index].actionRequest in ('setup', 'uninstall'):
+							productOnClients[index].setActionRequest('none')
+							modifiedProductOnClients = addToModified(modifiedProductOnClients, productOnClients[index])
 						break
-			
+		
 		productOnClientsWithDependencies = []
 		if modifiedProductOnClients:
 			logger.info(u"ProductOnClients modified, adding dependencies")
