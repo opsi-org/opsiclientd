@@ -376,15 +376,17 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				productOnDepots = jsonrpc3.waitForResult()
 				self._configService.setAsync(False)
 				
+				
 				html = []
+				combinedProductOnClients = []
+				combinedProductOnClients.extend(modifiedProductOnClients)
 				for productId in self._swOnDemandProductIds:
 					html.append(u'<div class="swondemand-product-box"><table>')
 					productOnClient = None
 					
-					for poc in productOnClients:
+					for poc in combinedProductOnClients:
 						if (poc.productId == productId):
 							productOnClient = poc
-							break
 					
 					productOnDepot = None
 					for pod in productOnDepots:
