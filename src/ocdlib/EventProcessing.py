@@ -436,6 +436,16 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				logger.notice(u"Action processor needs update because file changed")
 			else:
 				logger.notice(u"Local action processor exists and seems to be up to date")
+				if self.event.eventConfig.useCachedProducts:
+					self._configService.productOnClient_updateObjects([
+						ProductOnClient(
+							productId          = u'opsi-winst',
+							productType        = u'LocalbootProduct',
+							clientId           = config.get('global', 'host_id'),
+							installationStatus = u'installed',
+							actionProgress     = u''
+						)
+					])
 				return actionProcessorLocalFile
 			
 			# Update files
