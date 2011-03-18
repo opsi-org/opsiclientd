@@ -176,7 +176,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					raise Exception(u"Software on demand deactivated")
 	
 	def _processProducts(self):
-		productOnClients = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id')
+		productOnClients = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id'))
 		
 		modifiedProductOnClients = []
 		setupProductIds          = []
