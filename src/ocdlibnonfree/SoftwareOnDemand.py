@@ -176,10 +176,24 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					raise Exception(u"Software on demand deactivated")
 	
 	def _processProducts(self):
-		productOnClients = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id'))
-		modifiedProductOnClients = []
+		productOnClients = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id')
 		
-		productIds = forceProductIdList(self.query.get('product', []))
+		modifiedProductOnClients = []
+		setupProductIds          = []
+		uninstallProductIds      = []
+		productIds               = []
+		
+		for (key, value) in self.query.items():
+			if not key.startswith('product_'):
+				continue
+			productId = forceProductId(key.split('product_', 1)[1])
+			if (value == 'setup'):
+				setupProductIds.append(productId)
+				productIds.append(productId)
+			elif (value == 'uninstall'):
+				uninstallProductIds.append(productId)
+				productIds.append(productId)
+		
 		for productId in productIds:
 			if not productId in self._swOnDemandProductIds:
 				raise Exception(u"Product '%s' not available for on-demand" % productId)
@@ -198,8 +212,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				)
 				productOnClients.append(productOnClient)
 				index = len(productOnClients) - 1
-			if (productOnClients[index].getActionRequest() != 'setup'):
+			if (productId in setupProductIds) and (productOnClients[index].getActionRequest() != 'setup'):
 				productOnClients[index].setActionRequest('setup')
+				modifiedProductOnClients.append(productOnClients[index])
+			if (productId in uninstallProductIds) and (productOnClients[index].getActionRequest() != 'uninstall'):
+				productOnClients[index].setActionRequest('uninstall')
 				modifiedProductOnClients.append(productOnClients[index])
 			
 		for productId in self._swOnDemandProductIds:
@@ -320,19 +337,21 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			
 			self.connectConfigService()
 			self._getSwOnDemandConfig()
-		
-			if self.query.get('product'):
-				(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies) = self._processProducts()
-				logger.debug(u"Modified productOnClients:")
-				for poc in modifiedProductOnClients:
-					logger.debug(u"   %s" % poc)
-				logger.debug(u"Current productOnClients:")
-				for poc in productOnClients:
-					logger.debug(u"   %s" % poc)
-				logger.debug(u"ProductOnClients with dependencies:")
-				for poc in productOnClientsWithDependencies:
-					logger.debug(u"   %s" % poc)
-				
+			
+			for key in self.query.keys():
+				if key.startswith('product_'):
+					(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies) = self._processProducts()
+					logger.debug(u"Modified productOnClients:")
+					for poc in modifiedProductOnClients:
+						logger.debug(u"   %s" % poc)
+					logger.debug(u"Current productOnClients:")
+					for poc in productOnClients:
+						logger.debug(u"   %s" % poc)
+					logger.debug(u"ProductOnClients with dependencies:")
+					for poc in productOnClientsWithDependencies:
+						logger.debug(u"   %s" % poc)
+					break
+			
 			if self.query.get('action') in ('next', 'ondemand', 'onrestart'):
 				html = self._processAction(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies)
 			
@@ -371,13 +390,18 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					if not product:
 						logger.error(u"Product '%s' not found" % productId)
 					
+					installationStatus = None
 					state = _('not installed')
 					stateclass = u"swondemand-product-state-not_installed"
-					checked = u''
+					setupChecked = u''
+					uninstallChecked = u''
 					for poc in modifiedProductOnClients:
 						if (poc.productId == productId):
-							if poc.actionRequest not in (None, 'none'):
-								checked = u'checked="checked"'
+							if (poc.actionRequest == 'setup'):
+								setupChecked = u'checked="checked"'
+							if (poc.actionRequest == 'uninstall'):
+								uninstallChecked = u'checked="checked"'
+							installationStatus = poc.installationStatus
 							break
 					if productOnClient:
 						if (productOnClient.actionRequest == 'setup'):
@@ -405,9 +429,18 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						html.append(u'    <td class="swondemand-product-attribute-value">%s</td></tr>' \
 								% advice.replace(u'\n', u'<br />') )
 					
-					html.append(u'<tr><td colspan="2" class="swondemand-product-checkbox">')
-					html.append(u'       <input type="checkbox" name="product" value="%s" %s />%s</td></tr>' \
-							% ( productId, checked, _('install') ) )
+					if (installationStatus == 'installed'):
+						html.append(u'<tr><td colspan="2" class="swondemand-product-checkbox">')
+						html.append(u'       <input type="radio" name="product_%s" value="setup" %s />%s</td></tr>' \
+								% ( productId, setupChecked, _('reinstall') ) )
+					else:
+						html.append(u'<tr><td colspan="2" class="swondemand-product-checkbox">')
+						html.append(u'       <input type="radio" name="product_%s" value="setup" %s />%s</td></tr>' \
+								% ( productId, setupChecked, _('install') ) )
+						if product.uninstallScript:
+							html.append(u'<tr><td colspan="2" class="swondemand-product-checkbox">')
+							html.append(u'       <input type="radio" name="product_%s" value="uninstall" %s />%s</td></tr>' \
+									% ( productId, uninstallChecked, _('uninstall') ) )
 					html.append(u'</table></div>')
 				html.append(u'<div class="swondemand-button-box">')
 				html.append(u'<button class="swondemand-action-button" type="submit" name="action" value="next">&gt; %s</button>' % _(u'next'))
