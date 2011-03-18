@@ -267,7 +267,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						% (productOnClient.productId, productOnClient.actionRequest)
 					if (t == 'selected'):
 						selectedProducts.append(row)
-						selectedProducts.append(u'<input type="hidden" name="product" value="%s" />' % productOnClient.productId)
+						selectedProducts.append(u'<input type="hidden" name="product_%s" value="%s" />' % (productOnClient.productId, productOnClient.actionRequest))
 					elif (t == 'other'):
 						otherProducts.append(row)
 					elif (t == 'depend'):
@@ -376,17 +376,15 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				productOnDepots = jsonrpc3.waitForResult()
 				self._configService.setAsync(False)
 				
-				
 				html = []
-				combinedProductOnClients = []
-				combinedProductOnClients.extend(modifiedProductOnClients)
 				for productId in self._swOnDemandProductIds:
 					html.append(u'<div class="swondemand-product-box"><table>')
 					productOnClient = None
 					
-					for poc in combinedProductOnClients:
+					for poc in productOnClients:
 						if (poc.productId == productId):
 							productOnClient = poc
+							break
 					
 					productOnDepot = None
 					for pod in productOnDepots:
