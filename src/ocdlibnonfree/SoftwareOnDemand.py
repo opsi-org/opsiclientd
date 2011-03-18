@@ -176,9 +176,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				if not forceBool(configState.getValues()[0]):
 					raise Exception(u"Software on demand deactivated")
 	
-	def _processProducts(self):
-		productOnClients = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id'))
-		
+	def _processProducts(self, productOnClients):
 		modifiedProductOnClients = []
 		setupProductIds          = []
 		uninstallProductIds      = []
@@ -343,16 +341,27 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		
 		html = u''
 		try:
-			productOnClients = []
-			modifiedProductOnClients = []
-			productOnClientsWithDependencies = []
-			
 			self.connectConfigService()
 			self._getSwOnDemandConfig()
 			
+			productOnClients = []
+			modifiedProductOnClients = []
+			productOnClientsWithDependencies = []
+			products = []
+			productOnDepots = []
+			if self._swOnDemandProductIds:
+				self._configService.setAsync(True)
+				jsonrpc1 = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id'))
+				jsonrpc2 = self._configService.product_getObjects(id = self._swOnDemandProductIds)
+				jsonrpc3 = self._configService.productOnDepot_getObjects(depotId = config.get('depot_server', 'depot_id'), productId = self._swOnDemandProductIds)
+				productOnClients = jsonrpc1.waitForResult()
+				products = jsonrpc2.waitForResult()
+				productOnDepots = jsonrpc3.waitForResult()
+				self._configService.setAsync(False)
+			
 			for key in self.query.keys():
 				if key.startswith('product_'):
-					(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies) = self._processProducts()
+					(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies) = self._processProducts(productOnClients)
 					logger.debug(u"Modified productOnClients:")
 					for poc in modifiedProductOnClients:
 						logger.debug(u"   %s" % poc)
@@ -367,16 +376,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			if self.query.get('action') in ('next', 'ondemand', 'onrestart'):
 				html = self._processAction(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies)
 			
-			elif self._swOnDemandProductIds:
-				self._configService.setAsync(True)
-				jsonrpc1 = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id'))
-				jsonrpc2 = self._configService.product_getObjects(id = self._swOnDemandProductIds)
-				jsonrpc3 = self._configService.productOnDepot_getObjects(depotId = config.get('depot_server', 'depot_id'), productId = self._swOnDemandProductIds)
-				productOnClients = jsonrpc1.waitForResult()
-				products = jsonrpc2.waitForResult()
-				productOnDepots = jsonrpc3.waitForResult()
-				self._configService.setAsync(False)
-				
+			else:
 				html = []
 				for productId in self._swOnDemandProductIds:
 					html.append(u'<div class="swondemand-product-box"><table>')
