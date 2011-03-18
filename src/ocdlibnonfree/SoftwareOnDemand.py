@@ -376,7 +376,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			if self.query.get('action') in ('next', 'ondemand', 'onrestart'):
 				html = self._processAction(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies)
 			
-			else:
+			elif self._swOnDemandProductIds:
 				html = []
 				for productId in self._swOnDemandProductIds:
 					html.append(u'<div class="swondemand-product-box"><table>')
