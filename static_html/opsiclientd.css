@@ -101,6 +101,7 @@ div.mainpage-link-box {
 .loglevel-9 { color: #B4B426 }
 
 div.swondemand-product-box {
+	padding: 20px;
 	width: 550px;
 	margin: 30px;
 	border: solid #555555 1px;
@@ -110,7 +111,7 @@ div.swondemand-product-box {
 }
 
 td.swondemand-product-name {
-	padding: 20px;
+	padding-bottom: 10px;
 	text-align: left;
 	font-weight: bolder;
 	font-size: 120%;
@@ -129,10 +130,11 @@ td.swondemand-product-attribute-value {
 }
 
 td.swondemand-product-setup-radiobox {
-	
+	padding-top: 20px;
+	color: #008200;
 }
 td.swondemand-product-uninstall-radiobox {
-	
+	color: #820000;
 }
 
 .swondemand-product-state-installed {
