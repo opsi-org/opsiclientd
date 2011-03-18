@@ -183,6 +183,17 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		uninstallProductIds      = []
 		productIds               = []
 		
+		def addToModified(modifiedProductOnClients, productOnClient):
+			remove = -1
+			for i in range(len(modifiedProductOnClients)):
+				if (modifiedProductOnClients[i].productId == productOnClient.productId):
+					remove = i
+					break
+			if (remove > -1):
+				modifiedProductOnClients.pop(remove)
+			modifiedProductOnClients.append(productOnClient)
+			return modifiedProductOnClients
+		
 		for (key, value) in self.query.items():
 			if not key.startswith('product_'):
 				continue
@@ -214,17 +225,17 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				index = len(productOnClients) - 1
 			if (productId in setupProductIds) and (productOnClients[index].getActionRequest() != 'setup'):
 				productOnClients[index].setActionRequest('setup')
-				modifiedProductOnClients.append(productOnClients[index])
+				modifiedProductOnClients = addToModified(modifiedProductOnClients, productOnClients[index])
 			if (productId in uninstallProductIds) and (productOnClients[index].getActionRequest() != 'uninstall'):
 				productOnClients[index].setActionRequest('uninstall')
-				modifiedProductOnClients.append(productOnClients[index])
+				modifiedProductOnClients = addToModified(modifiedProductOnClients, productOnClients[index])
 			
 		for productId in self._swOnDemandProductIds:
 			if not productId in productIds:
-				for i in range(len(productOnClients)):
-					if (productOnClients[i].productId == productId):
-						productOnClients[i].setActionRequest('none')
-						modifiedProductOnClients.append(productOnClients[i])
+				for index in range(len(productOnClients)):
+					if (productOnClients[index].productId == productId):
+						productOnClients[index].setActionRequest('none')
+						modifiedProductOnClients = addToModified(modifiedProductOnClients, productOnClients[index])
 						break
 			
 		productOnClientsWithDependencies = []
@@ -366,13 +377,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				self._configService.setAsync(False)
 				
 				html = []
-				combinedProductOnClients = productOnClients
-				combinedProductOnClients.extend(modifiedProductOnClients)
 				for productId in self._swOnDemandProductIds:
 					html.append(u'<div class="swondemand-product-box"><table>')
 					productOnClient = None
 					
-					for poc in combinedProductOnClients:
+					for poc in productOnClients:
 						if (poc.productId == productId):
 							productOnClient = poc
 							break
