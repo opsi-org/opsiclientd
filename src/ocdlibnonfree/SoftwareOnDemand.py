@@ -48,10 +48,23 @@ mainpage = u'''<?xml version="1.0" encoding="UTF-8"?>
 	<meta http-equiv="Content-Type" content="text/xhtml; charset=utf-8" />
 	<script type="text/javascript">
 	// <![CDATA[
-	function uncheckRadio(r) {
-		if(typeof(r.c) == "undefined") r.c = r.checked;
-		r.c = !r.c;
-		r.checked = !r.c;
+	window.onload = init;
+	function init () {
+		var inputs = document.getElementsByTagName("input");
+		for (var i = 0, input; input = inputs[i]; i++) {
+			if (input.type != "radio")
+				continue;
+			input.onclick = radioclick;
+			input.mostRecentlyChecked = input.checked;
+		}
+	}
+	function radioclick () {
+		this.checked = !this.mostRecentlyChecked;
+		var arr = this.form.elements[this.name];
+		for (var i = 0; i < arr.length; i++) {
+			arr[i].mostRecentlyChecked = false;
+		}
+		this.mostRecentlyChecked = this.checked;
 	}
 	// ]]>
 	</script>
@@ -448,15 +461,15 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					
 					if (installationStatus == 'installed'):
 						html.append(u'<tr><td colspan="2" class="swondemand-product-setup-radiobox">')
-						html.append(u'       <input type="radio" onclick="uncheckRadio(this);" name="product_%s" value="setup" %s />%s</td></tr>' \
+						html.append(u'       <input type="radio" name="product_%s" value="setup" %s />%s</td></tr>' \
 								% ( productId, setupChecked, _('reinstall') ) )
 						if product.uninstallScript:
 							html.append(u'<tr><td colspan="2" class="swondemand-product-uninstall-radiobox">')
-							html.append(u'       <input type="radio" onclick="uncheckRadio(this);" name="product_%s" value="uninstall" %s />%s</td></tr>' \
+							html.append(u'       <input type="radio" name="product_%s" value="uninstall" %s />%s</td></tr>' \
 									% ( productId, uninstallChecked, _('uninstall') ) )
 					else:
 						html.append(u'<tr><td colspan="2" class="swondemand-product-setup-radiobox">')
-						html.append(u'       <input type="radio" onclick="uncheckRadio(this);" name="product_%s" value="setup" %s />%s</td></tr>' \
+						html.append(u'       <input type="radio" name="product_%s" value="setup" %s />%s</td></tr>' \
 								% ( productId, setupChecked, _('install') ) )
 					html.append(u'</table></div>')
 				html.append(u'<div class="swondemand-button-box">')
