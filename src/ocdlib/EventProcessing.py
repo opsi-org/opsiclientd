@@ -78,7 +78,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self.event = event
 		
 		self.running = False
-		self.eventCancelled = False
+		self.actionCancelled = False
 		self.waitCancelled = False
 		
 		self.shutdownCancelled = False
@@ -538,6 +538,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			productDir = os.path.join(config.getDepotDrive(), 'install')
 			
 			userLoginScripts = []
+			productIds = []
 			for productOnDepot in self._configService.productOnDepot_getIdents(
 							productType = 'LocalbootProduct',
 							depotId     = depotId,
@@ -548,6 +549,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				logger.info(u"User login script '%s' found for product %s_%s-%s" \
 					% (product.userLoginScript, product.id, product.productVersion, product.packageVersion))
 				userLoginScripts.append(os.path.join(productDir, product.userLoginScript))
+				productIds.append(product.id)
 			
 			if not userLoginScripts:
 				logger.notice(u"No user login script found, nothing to do")
@@ -557,7 +559,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			additionalParams = ''
 			for userLoginScript in userLoginScripts:
 				additionalParams += ' "%s"' % userLoginScript
-			self.runActions(additionalParams)
+			self.runActions(productIds, additionalParams)
 			
 		except Exception, e:
 			logger.logException(e)
@@ -615,9 +617,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						else:
 							raise Exception(u"Event '%s' uses cached products but product caching is not done" % self.event.eventConfig.getId())
 					
-				config.selectDepotserver(configService = self._configService, event = self.event, productIds = productIds)
 				self.processActionWarningTime(productIds)
-				self.runActions()
+				self.runActions(productIds)
 				try:
 					if self.event.eventConfig.useCachedConfig and not self._configService.productOnClient_getIdents(
 								productType   = 'LocalbootProduct',
@@ -638,13 +639,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				isError     = True)
 		time.sleep(3)
 	
-	def runActions(self, additionalParams=''):
+	def runActions(self, productIds, additionalParams=''):
 		runActionsEventId = timeline.addEvent(
 			title         = u"Running actions",
-			description   = u"Running actions",
+			description   = u"Running actions (%s)" % u", ".join(productIds),
 			category      = u"run_actions",
 			durationEvent = True)
 		try:
+			config.selectDepotserver(configService = self._configService, event = self.event, productIds = productIds)
 			if not additionalParams:
 				additionalParams = ''
 			if not self.event.getActionProcessorCommand():
@@ -787,11 +789,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		except Exception, e:
 			logger.error(u"Failed to set environment: %s" % forceUnicode(e))
 	
-	def abortEventCallback(self, choiceSubject):
+	def abortActionCallback(self, choiceSubject):
 		logger.notice(u"Event aborted by user")
-		self.eventCancelled = True
+		self.actionCancelled = True
 	
-	def startEventCallback(self, choiceSubject):
+	def startActionCallback(self, choiceSubject):
 		logger.notice(u"Event wait cancelled by user")
 		self.waitCancelled = True
 	
@@ -809,10 +811,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		choiceSubject = ChoiceSubject(id = 'choice')
 		if (cancelCounter < self.event.eventConfig.actionUserCancelable):
 			choiceSubject.setChoices([ _('Abort'), _('Start now') ])
-			choiceSubject.setCallbacks( [ self.abortEventCallback, self.startEventCallback ] )
+			choiceSubject.setCallbacks( [ self.abortActionCallback, self.startActionCallback ] )
 		else:
 			choiceSubject.setChoices([ _('Start now') ])
-			choiceSubject.setCallbacks( [ self.startEventCallback ] )
+			choiceSubject.setCallbacks( [ self.startActionCallback ] )
 		self._notificationServer.addSubject(choiceSubject)
 		try:
 			if self.event.eventConfig.actionNotifierCommand:
@@ -823,7 +825,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				
 			timeout = int(self.event.eventConfig.actionWarningTime)
 			endTime = time.time() + timeout
-			while (timeout > 0) and not self.eventCancelled and not self.waitCancelled:
+			while (timeout > 0) and not self.actionCancelled and not self.waitCancelled:
 				now = time.time()
 				logger.info(u"Notifying user of actions to process %s (%s)" % (self.event, productIds))
 				minutes = 0
@@ -847,7 +849,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					description = u"Action processing wait time cancelled by user",
 					category    = u"user_interaction")
 			
-			if self.eventCancelled:
+			if self.actionCancelled:
 				cancelCounter += 1
 				state.set('action_processing_cancel_counter', cancelCounter)
 				logger.notice(u"Action processing cancelled by user for the %d. time (max: %d)" \
@@ -1042,7 +1044,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				category      = u"event_processing",
 				durationEvent = True)
 			self.running = True
-			self.eventCancelled = False
+			self.actionCancelled = False
 			self.waitCancelled = False
 			if not self.event.eventConfig.blockLogin:
 				self.opsiclientd.setBlockLogin(False)
@@ -1131,11 +1133,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						else:
 							self.processProductActionRequests()
 					
-					# After the installation of opsi-client-agent the opsiclientd.conf needs to be updated again
-					if self.event.eventConfig.getConfigFromService:
-						self.getConfigFromService()
-						if self.event.eventConfig.updateConfigFile:
-							config.updateConfigFile()
+						# After the installation of opsi-client-agent the opsiclientd.conf needs to be updated again
+						if self.event.eventConfig.getConfigFromService:
+							self.getConfigFromService()
+							if self.event.eventConfig.updateConfigFile:
+								config.updateConfigFile()
 					
 			finally:
 				self._messageSubject.setMessage(u"")
