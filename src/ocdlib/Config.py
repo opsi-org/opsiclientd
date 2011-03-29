@@ -72,14 +72,14 @@ class ConfigImplementation(object):
 				'wait_for_gui_timeout': 120,
 				'block_login_notifier': u'',
 				'state_file':           u'c:\\opsi.org\\opsiclientd\\state.json',
-				'timeline_db':          u'c:\\opsi.org\\opsiclientd\\timeline.sqlite'
+				'timeline_db':          u'c:\\opsi.org\\opsiclientd\\timeline.sqlite',
+				'verify_cert':          False,
+				'cert_dir':             u'c:\\opsi.org\\opsiclientd\\server-certs'
 			},
 			'config_service': {
 				'url':                   [],
 				'connection_timeout':    10,
-				'user_cancelable_after': 0,
-				'verify_cert':           False,
-				'cert_dir':              u'c:\\opsi.org\\opsiclientd\\server-certs',
+				'user_cancelable_after': 0
 			},
 			'depot_server': {
 				'depot_id': u'',
@@ -128,7 +128,7 @@ class ConfigImplementation(object):
 			self._config['global']['state_file'] = u'%s\\opsi.org\\opsiclientd\\state.json' % System.getSystemDrive()
 			self._config['global']['timeline_db'] = u'%s\\opsi.org\\opsiclientd\\timeline.sqlite' % System.getSystemDrive()
 			self._config['global']['log_dir'] = u'%s\\tmp' % System.getSystemDrive()
-			self._config['config_service']['cert_dir'] = u'%s\\opsi.org\\opsiclientd\\server-certs' % System.getSystemDrive()
+			self._config['global']['cert_dir'] = u'%s\\opsi.org\\opsiclientd\\server-certs' % System.getSystemDrive()
 		if (sys.getwindowsversion()[0] == 5):
 			self._config['action_processor']['run_as_user'] = 'pcpatch'
 		
