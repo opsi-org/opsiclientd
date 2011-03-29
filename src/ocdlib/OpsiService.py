@@ -285,6 +285,8 @@ class ServiceConnectionThread(KillableThread):
 			
 			(scheme, host, port, baseurl, username, password) = urlsplit(self._configServiceUrl)
 			serverCertFile = os.path.join(certDir, host + '.pem')
+			if verifyServerCert:
+				logger.info(u"Server verification enabled, using cert file '%s'" % serverCertFile)
 			
 			tryNum = 0
 			while not self.cancelled and not self.connected:
