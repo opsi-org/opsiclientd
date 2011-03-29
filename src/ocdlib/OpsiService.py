@@ -278,8 +278,8 @@ class ServiceConnectionThread(KillableThread):
 			self.connected = False
 			self.cancelled = False
 			
-			certDir = config.get('global', 'cert_dir')
-			verifyServerCert = config.get('global', 'verify_cert')
+			certDir = config.get('global', 'server_cert_dir')
+			verifyServerCert = config.get('global', 'verify_server_cert')
 			if not os.path.exists(certDir):
 				os.makedirs(certDir)
 			
