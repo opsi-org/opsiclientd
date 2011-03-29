@@ -773,8 +773,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			(depotServerUsername, depotServerPassword) = (config.get('global', 'host_id'), config.get('global', 'opsi_host_key'))
 			kwargs = {}
 			if scheme.startswith('webdavs'):
-				kwargs['verifyServerCert'] = config.get('global', 'verify_cert')
-				certDir = config.get('global', 'cert_dir')
+				kwargs['verifyServerCert'] = config.get('global', 'verify_server_cert')
+				certDir = config.get('global', 'server_cert_dir')
 				if not os.path.exists(certDir):
 					os.makedirs(certDir)
 				kwargs['serverCertFile'] = os.path.join(certDir, host + '.pem')
