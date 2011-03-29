@@ -768,9 +768,17 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		if not config.get('depot_server', 'url'):
 			raise Exception(u"Cannot cache product files: depot_server.url undefined")
 		(depotServerUsername, depotServerPassword) = (u'', u'')
-		if urlsplit(config.get('depot_server', 'url'))[0].startswith('webdav'):
+		(scheme, host, port, baseurl, username, password) = urlsplit(config.get('depot_server', 'url'))
+		if scheme.startswith('webdav'):
 			(depotServerUsername, depotServerPassword) = (config.get('global', 'host_id'), config.get('global', 'opsi_host_key'))
-			return getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword)
+			kwargs = {}
+			if scheme.startswith('webdavs'):
+				kwargs['verifyServerCert'] = config.get('global', 'verify_cert')
+				certDir = config.get('global', 'cert_dir')
+				if not os.path.exists(certDir):
+					os.makedirs(certDir)
+				kwargs['serverCertFile'] = os.path.join(certDir, host + '.pem')
+			return getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword, **kwargs)
 		else:
 			if self._impersonation:
 				try:
