@@ -241,12 +241,22 @@ class Opsiclientd(EventListener, threading.Thread):
 			eventDescription += u"Using host id '%s'" % config.get('global', 'host_id')
 			logger.notice(u"Using host id '%s'" % config.get('global', 'host_id'))
 			
-			logger.notice(u"Starting reactor")
-			reactor.run(installSignalHandlers=0)
+			self.setBlockLogin(True)
+			
+			class ReactorThread(threading.Thread):
+				run(self):
+					logger.notice(u"Starting reactor")
+					reactor.run(installSignalHandlers=0)
+			ReactorThread().start()
+			timeout = 0
+			while not reactor.running:
+				if (timeout >= 10):
+					raise Exception(u"Timed out after %d seconds while waiting for reactor to start" % timeout)
+				logger.debug(u"Waiting for reactor")
+				time.sleep(1)
+				timeout += 1
 			
 			self._opsiclientdRunningEventId = timeline.addEvent(title = eventTitle, description = eventDescription, category = u'opsiclientd_running', durationEvent = True)
-			
-			self.setBlockLogin(True)
 			
 			logger.notice(u"Starting control pipe")
 			try:
