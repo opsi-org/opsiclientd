@@ -244,7 +244,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			self.setBlockLogin(True)
 			
 			class ReactorThread(threading.Thread):
-				run(self):
+				def run(self):
 					logger.notice(u"Starting reactor")
 					reactor.run(installSignalHandlers=0)
 			ReactorThread().start()
