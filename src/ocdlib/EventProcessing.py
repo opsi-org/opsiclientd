@@ -206,8 +206,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 									self._currentProgressSubjectProxy,
 									self._overallProgressSubjectProxy ] )
 				self._notificationServer.start()
+				timeout = 0
 				while not self._notificationServer.isListening() and not self._notificationServer.errorOccurred():
+					if (timeout >= 6):
+						raise Exception(u"Timed out after %d seconds while waiting for notification server to start" % timeout)
 					time.sleep(1)
+					timeout +=1
+				
 				if self._notificationServer.errorOccurred():
 					raise Exception(self._notificationServer.errorOccurred())
 				logger.notice(u"Notification server started")
