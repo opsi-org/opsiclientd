@@ -124,16 +124,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	
 	def connectionStart(self, configServiceUrl):
 		self._serviceUrlSubject.setMessage(configServiceUrl)
-		cancellableAfter = forceInt(config.get('config_service', 'user_cancelable_after'))
-		if self._notificationServer and (cancellableAfter < 1):
-			logger.info(u"User is allowed to cancel connection after %d seconds" % cancellableAfter)
-			self._choiceSubject = ChoiceSubject(id = 'choice')
-			self._notificationServer.addSubject(self._choiceSubject)
+		try:
+			cancellableAfter = forceInt(config.get('config_service', 'user_cancelable_after'))
+			if self._notificationServer and (cancellableAfter > 0):
+				logger.info(u"User is allowed to cancel connection after %d seconds" % cancellableAfter)
+				self._choiceSubject = ChoiceSubject(id = 'choice')
+		except Exception, e:
+			logger.error(e)
 	
 	def connectionCancelable(self, stopConnectionCallback):
 		if self._notificationServer and self._choiceSubject:
 			self._choiceSubject.setChoices([ 'Stop connection' ])
-			self._choiceSubject.setCallbacks( [ stopConnectionCallback ] )
+			self._choiceSubject.setCallbacks([ stopConnectionCallback ])
 			self._notificationServer.addSubject(self._choiceSubject)
 	
 	def connectionTimeoutChanged(self, timeout):
