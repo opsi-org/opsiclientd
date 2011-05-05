@@ -77,10 +77,10 @@ except Exception, e:
 	def _(string):
 		return string
 
-createEnvironment = False
 if runAsUser and createEnvironment.lower() in ('yes', 'true', '1'):
 	createEnvironment = True
-
+else:
+	createEnvironment = False
 actionProcessorTimeout = int(actionProcessorTimeout)
 imp = None
 depotShareMounted = False
