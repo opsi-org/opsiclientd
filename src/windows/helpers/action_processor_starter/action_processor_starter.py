@@ -58,10 +58,6 @@ if depotServerPassword:
 	logger.addConfidentialString(depotServerPassword)
 if runAsPassword:
 	logger.addConfidentialString(runAsPassword)
-if runAsUser and createEnvironment.lower() in ('yes', 'true', '1'):
-	createEnvironment = True
-else:
-	createEnvironment = False
 
 logger.setConsoleLevel(LOG_NONE)
 logger.setLogFile(logFile)
@@ -80,6 +76,10 @@ except Exception, e:
 	logger.error(u"Locale not found: %s" % e)
 	def _(string):
 		return string
+
+createEnvironment = False
+if runAsUser and createEnvironment.lower() in ('yes', 'true', '1'):
+	createEnvironment = True
 
 actionProcessorTimeout = int(actionProcessorTimeout)
 imp = None
