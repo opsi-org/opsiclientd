@@ -87,7 +87,7 @@ try:
 	
 	if runAsUser:
 		logger.info(u"Impersonating user '%s'" % runAsUser)
-		imp = System.Impersonate(username = runAsUser, password = runAsPassword, desktop = actionProcessorDesktop, )
+		imp = System.Impersonate(username = runAsUser, password = runAsPassword, desktop = actionProcessorDesktop)
 		imp.start(logonType = u'INTERACTIVE', newDesktop = True, createEnvironment = True)
 	
 	else:
