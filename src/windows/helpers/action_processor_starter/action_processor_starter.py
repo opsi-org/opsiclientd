@@ -45,11 +45,11 @@ encoding = locale.getpreferredencoding()
 
 argv = [ unicode(arg, encoding) for arg in sys.argv ]
 
-if (len(argv) != 16):
-	print u"Usage: %s <hostId> <hostKey> <controlServerPort> <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <depotServerUsername> <depotServerPassword> <sessionId> <actionProcessorDesktop> <actionProcessorCommand> <actionProcessorTimeout> <runAsUser> <runAsPassword>" % os.path.basename(argv[0])
+if (len(argv) != 17):
+	print u"Usage: %s <hostId> <hostKey> <controlServerPort> <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <depotServerUsername> <depotServerPassword> <sessionId> <actionProcessorDesktop> <actionProcessorCommand> <actionProcessorTimeout> <runAsUser> <runAsPassword> <createEnvironment>" % os.path.basename(argv[0])
 	sys.exit(1)
 
-(hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword) = argv[1:]
+(hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword, createEnvironment) = argv[1:]
 
 logger = Logger()
 if hostKey:
@@ -58,6 +58,10 @@ if depotServerPassword:
 	logger.addConfidentialString(depotServerPassword)
 if runAsPassword:
 	logger.addConfidentialString(runAsPassword)
+if runAsUser and createEnvironment.lower() in ('yes', 'true', '1'):
+	createEnvironment = True
+else:
+	createEnvironment = False
 
 logger.setConsoleLevel(LOG_NONE)
 logger.setLogFile(logFile)
@@ -65,7 +69,7 @@ logger.setFileLevel(int(logLevel))
 moduleName = u' %-30s' % (os.path.basename(argv[0]))
 logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)')
 
-logger.debug(u"Called with arguments: %s" % u', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword)) )
+logger.debug(u"Called with arguments: %s" % u', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword, createEnvironment)) )
 
 try:
 	lang = locale.getdefaultlocale()[0].split('_')[0]
@@ -88,7 +92,7 @@ try:
 	if runAsUser:
 		logger.info(u"Impersonating user '%s'" % runAsUser)
 		imp = System.Impersonate(username = runAsUser, password = runAsPassword, desktop = actionProcessorDesktop)
-		imp.start(logonType = u'INTERACTIVE', newDesktop = True, createEnvironment = True)
+		imp.start(logonType = u'INTERACTIVE', newDesktop = True, createEnvironment = createEnvironment)
 	
 	else:
 		logger.info(u"Impersonating network account '%s'" % depotServerUsername)
