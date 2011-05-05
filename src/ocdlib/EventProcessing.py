@@ -717,6 +717,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				self.updateActionProcessor()
 			
 			# Run action processor
+			createEnvironment = config.get('action_processor', 'create_environment')
 			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
 			actionProcessorCommand = actionProcessorCommand.replace('%service_url%', self._configServiceUrl)
 			actionProcessorCommand += additionalParams
@@ -728,7 +729,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
 				+ u'"' + unicode(self.getSessionId()) + u'" "' + desktop + '" ' \
 				+ u'"' + actionProcessorCommand + u'" ' + unicode(self.event.eventConfig.actionProcessorTimeout) + ' ' \
-				+ u'"' + self.opsiclientd._actionProcessorUserName + u'" "' + self.opsiclientd._actionProcessorUserPassword + u'"'
+				+ u'"' + self.opsiclientd._actionProcessorUserName + u'" "' + self.opsiclientd._actionProcessorUserPassword + '" ' \
+				+ unicode(createEnvironment).lower()
+			
 			command = config.replace(command)
 			
 			if self.event.eventConfig.preActionProcessorCommand:

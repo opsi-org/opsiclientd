@@ -108,13 +108,14 @@ class ConfigImplementation(object):
 				'command': u'',
 			},
 			'action_processor': {
-				'local_dir':   u'',
-				'remote_dir':  u'',
-				'filename':    u'',
-				'command':     u'',
-				'run_as_user': u'SYSTEM',
-				'create_user': True,
-				'delete_user': True,
+				'local_dir':          u'',
+				'remote_dir':         u'',
+				'filename':           u'',
+				'command':            u'',
+				'run_as_user':        u'SYSTEM',
+				'create_user':        True,
+				'delete_user':        True,
+				'create_environment': False,
 			}
 		}
 		self._temporaryConfigServiceUrls = []
@@ -187,7 +188,7 @@ class ConfigImplementation(object):
 		if option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port'):
 			value = forceInt(value)
 		
-		if option in ('create_user', 'delete_user', 'verify_server_cert'):
+		if option in ('create_user', 'delete_user', 'verify_server_cert', 'create_environment', 'active'):
 			value = forceBool(value)
 		
 		if not self._config.has_key(section):
