@@ -428,10 +428,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				)
 				logger.notice(u"Updating action processor from local cache '%s'" % actionProcessorRemoteDir)
 			else:
+				
+				match = re.search('^smb://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
+				if not match:
+					raise Exception("Bad depot-URL '%s'" % config.get('depot_server', 'url'))
+				pn = match.group(3)
 				actionProcessorRemoteDir = os.path.join(
-					config.getDepotDrive(),
-					config.get('action_processor', 'remote_dir'))
-				logger.notice(u"Updating action processor from local cache '%s'" % actionProcessorRemoteDir)
+					config.getDepotDrive(), pn.replace('/', '\\'), config.get('action_processor', 'remote_dir')
+				)
+				logger.notice(u"Updating action processor from depot dir '%s'" % actionProcessorRemoteDir)
 			
 			actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
 			
