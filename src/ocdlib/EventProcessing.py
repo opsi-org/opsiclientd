@@ -454,7 +454,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if self.event.eventConfig.useCachedProducts:
 					self._configService.productOnClient_updateObjects([
 						ProductOnClient(
-	fire						productId          = u'opsi-winst',
+							productId          = u'opsi-winst',
 							productType        = u'LocalbootProduct',
 							clientId           = config.get('global', 'host_id'),
 							installationStatus = u'installed',
