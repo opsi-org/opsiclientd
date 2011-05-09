@@ -437,9 +437,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				while dirname.startswith('\\'):
 					dirname = dirname.replace(u'\\', u'', 1)
 				config.get('action_processor', 'remote_dir')
-				actionProcessorRemoteDir = os.path.join(
-					config.getDepotDrive(), pn.replace('/', '\\'), dirname
-				)
+				if pn:
+					actionProcessorRemoteDir = os.path.join(
+						config.getDepotDrive(), pn.replace('/', '\\'), dirname
+					)
+				else:
+					actionProcessorRemoteDir = os.path.join(
+						config.getDepotDrive(), dirname
+					)
 				logger.notice(u"Updating action processor from depot dir '%s'" % actionProcessorRemoteDir)
 			
 			actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
