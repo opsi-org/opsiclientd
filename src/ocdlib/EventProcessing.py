@@ -432,19 +432,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				match = re.search('^smb://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
 				if not match:
 					raise Exception("Bad depot-URL '%s'" % config.get('depot_server', 'url'))
-				pn = match.group(3)
+				pn = match.group(3).replace('/', '\\')
+				if not pn:
+					pn = '\\'
 				dirname = config.get('action_processor', 'remote_dir')
 				while dirname.startswith('\\'):
 					dirname = dirname.replace(u'\\', u'', 1)
-				config.get('action_processor', 'remote_dir')
-				if pn:
-					actionProcessorRemoteDir = os.path.join(
-						config.getDepotDrive(), pn.replace('/', '\\'), dirname
-					)
-				else:
-					actionProcessorRemoteDir = os.path.join(
-						config.getDepotDrive(), dirname
-					)
+				actionProcessorRemoteDir = os.path.join(config.getDepotDrive(), pn, dirname)
 				logger.notice(u"Updating action processor from depot dir '%s'" % actionProcessorRemoteDir)
 			
 			actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
@@ -460,7 +454,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if self.event.eventConfig.useCachedProducts:
 					self._configService.productOnClient_updateObjects([
 						ProductOnClient(
-							productId          = u'opsi-winst',
+	fire						productId          = u'opsi-winst',
 							productType        = u'LocalbootProduct',
 							clientId           = config.get('global', 'host_id'),
 							installationStatus = u'installed',
