@@ -433,8 +433,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if not match:
 					raise Exception("Bad depot-URL '%s'" % config.get('depot_server', 'url'))
 				pn = match.group(3)
+				dirname = config.get('action_processor', 'remote_dir')
+				while dirname.startswith('\\'):
+					dirname = dirname.replace(u'\\', u'', 1)
+				config.get('action_processor', 'remote_dir')
 				actionProcessorRemoteDir = os.path.join(
-					config.getDepotDrive(), pn.replace('/', '\\'), config.get('action_processor', 'remote_dir')
+					config.getDepotDrive(), pn.replace('/', '\\'), dirname
 				)
 				logger.notice(u"Updating action processor from depot dir '%s'" % actionProcessorRemoteDir)
 			
