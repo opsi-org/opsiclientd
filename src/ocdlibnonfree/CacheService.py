@@ -164,10 +164,10 @@ class CacheService(threading.Thread):
 				raise Exception(u"Product '%s' not available on depot '%s'" % (productId, depotId))
 			productState = self._productCacheService.getState().get('products', {}).get(productId)
 			if not productState:
-				logger.debug(u"No products cached")
+				logger.info(u"No products cached")
 				return False
 			if not productState.get('completed') or (productState.get('productVersion') != productOnDepot.productVersion) or (productState.get('packageVersion') != productOnDepot.packageVersion):
-				logger.debug(u"Product '%s_%s-%s' not yet cached (got state: %s)" % (productId, productOnDepot.productVersion, productOnDepot.packageVersion, productState))
+				logger.info(u"Product '%s_%s-%s' not yet cached (got state: %s)" % (productId, productOnDepot.productVersion, productOnDepot.packageVersion, productState))
 				return False
 		return True
 	
@@ -461,6 +461,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 						needSync = True
 					
 					if not needSync:
+						logger.notice(u"No sync from server required configuration is unchanged")
 						self._state['config_cached'] = True
 						state.set('config_cache_service', self._state)
 					else:
