@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '4.0.57'
+__version__ = '4.0.58'
 
 # Imports
 import sys, os
