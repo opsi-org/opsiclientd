@@ -1153,6 +1153,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					
 						# After the installation of opsi-client-agent the opsiclientd.conf needs to be updated again
 						if self.event.eventConfig.getConfigFromService:
+							config.readConfigFile()
 							self.getConfigFromService()
 							if self.event.eventConfig.updateConfigFile:
 								config.updateConfigFile()
