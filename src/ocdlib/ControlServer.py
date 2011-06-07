@@ -500,7 +500,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		self.opsiclientd.showPopup(message)
 	
 	def deleteServerCerts(self):
-		certDir = config.get('config_service', 'cert_dir')
+		certDir = config.get('global', 'server_cert_dir')
 		if os.path.exists(certDir):
 			for f in os.listdir(certDir):
 				os.remove(os.path.join(certDir, f))

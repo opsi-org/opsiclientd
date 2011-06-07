@@ -779,6 +779,12 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				if not os.path.exists(certDir):
 					os.makedirs(certDir)
 				kwargs['serverCertFile'] = os.path.join(certDir, host + '.pem')
+				
+				if config.get('global', 'verify_server_cert_by_ca'):
+					verifyByCaCertsFile = os.path.join(certDir, 'cacert.pem')
+					if not os.path.exists(verifyByCaCertsFile):
+						raise Exception("CA file '%s' not found" % verifyByCaCertsFile)
+					kwargs['verifyByCaCertsFile'] = verifyByCaCertsFile
 			return getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword, **kwargs)
 		else:
 			if self._impersonation:

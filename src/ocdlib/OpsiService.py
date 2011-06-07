@@ -54,34 +54,6 @@ from ocdlib.Exceptions import *
 logger = Logger()
 config = Config()
 
-
-OPSI_CA = '''-----BEGIN CERTIFICATE-----
-MIIEYTCCA0mgAwIBAgIJAO5oKZZR8dQkMA0GCSqGSIb3DQEBBQUAMH0xCzAJBgNV
-BAYTAkRFMRgwFgYDVQQIEw9SaGVpbmxhbmQtUGZhbHoxDjAMBgNVBAcTBU1haW56
-MREwDwYDVQQKEwh1aWIgR21iSDEVMBMGA1UEAxMMb3BzaSBSb290IENBMRowGAYJ
-KoZIhvcNAQkBFgtpbmZvQHVpYi5kZTAeFw0xMTA2MDExMDI2NTNaFw0yMTA1Mjkx
-MDI2NTNaMH0xCzAJBgNVBAYTAkRFMRgwFgYDVQQIEw9SaGVpbmxhbmQtUGZhbHox
-DjAMBgNVBAcTBU1haW56MREwDwYDVQQKEwh1aWIgR21iSDEVMBMGA1UEAxMMb3Bz
-aSBSb290IENBMRowGAYJKoZIhvcNAQkBFgtpbmZvQHVpYi5kZTCCASIwDQYJKoZI
-hvcNAQEBBQADggEPADCCAQoCggEBAJxU7TXeNrwXPlsermmdRxvPkzaNqE7q9oev
-lTLrdzMFNXekpg7nTMdvMEcPezHgkxrzRnIFrbyCKebVHvYBMYDSMefL0PGdBufW
-vRuQVH5VtdjCZ3SJWHjrLHeV4RCddS/5f1Mx9mxaXuO/0qtpttFQKQ7wHU5a/8eE
-Y2P+ZY7K4s8E/ZA2V3Tu6HxZJIt/JG0HoGrgEShb5hhRlpTVP5gRl/14qaZp9JZq
-Hn7UHMEJlWLb7EXzY7wRIiHmI//V69X9ARrkS5axbDddatlZBEGonSfgObna5YOO
-6Lx5aiq/PyYMEA6YWG+le//KgxexLCf5t5i8PEiFLuBrXCrKDG0CAwEAAaOB4zCB
-4DAdBgNVHQ4EFgQUYr4TyTM6odj+hYr3luci6pnFtzEwgbAGA1UdIwSBqDCBpYAU
-Yr4TyTM6odj+hYr3luci6pnFtzGhgYGkfzB9MQswCQYDVQQGEwJERTEYMBYGA1UE
-CBMPUmhlaW5sYW5kLVBmYWx6MQ4wDAYDVQQHEwVNYWluejERMA8GA1UEChMIdWli
-IEdtYkgxFTATBgNVBAMTDG9wc2kgUm9vdCBDQTEaMBgGCSqGSIb3DQEJARYLaW5m
-b0B1aWIuZGWCCQDuaCmWUfHUJDAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUA
-A4IBAQCFSalk9ngRf+03YW6StULDkuMSRF6oj1A5J3eRZzXTL1uckTseXm5CK13d
-OgxjZtgzD/TiVWoOmxGPVA+YYjLKpVUpPWu6opAG8cy705MeNxfAHLj+mn+joAxn
-qjjH46t2W6hdcz0x86bIVSda97/erARX8ALBreI3e3iIH9D2de8IH5uj6q0UTO/P
-YJHaSeCITO1g+NXisCS/aEfL+yUjXjErQaiRjtyj0aHDxj114GVvbKUOUfHqqa6X
-USZQNXthwmMy0+iIgQLAmBDu9Tz53p+yqHIhS+7eYNfzh2HeIG3EY515ncnZG2Xi
-QuBW/YzuIIiknjESIHBVA6YWeLNR
------END CERTIFICATE-----'''
-
 def isConfigServiceReachable(timeout=5):
 	for url in config.getConfigServiceUrls():
 		try:
@@ -319,10 +291,9 @@ class ServiceConnectionThread(KillableThread):
 			verifyByCaCertsFile = None
 			if config.get('global', 'verify_server_cert_by_ca'):
 				verifyByCaCertsFile = os.path.join(certDir, 'cacert.pem')
-				f = open(verifyByCaCertsFile, 'w')
-				f.write(OPSI_CA)
-				f.close()
-			
+				if not os.path.exists(verifyByCaCertsFile):
+					raise Exception("CA file '%s' not found" % verifyByCaCertsFile)
+				
 			tryNum = 0
 			while not self.cancelled and not self.connected:
 				try:
