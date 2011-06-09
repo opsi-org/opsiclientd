@@ -33,7 +33,7 @@
 
 # Imports
 from OpenSSL import SSL
-import base64, urllib, codecs
+import base64, urllib, codecs, time
 
 # Twisted imports
 from twisted.internet import defer, threads, reactor
@@ -55,6 +55,7 @@ from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.Config import Config
 from ocdlib.Events import eventGenerators
 from ocdlib.Timeline import Timeline
+from ocdlib.OpsiService import ServiceConnection
 
 logger = Logger()
 config = Config()
@@ -504,6 +505,48 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		if os.path.exists(certDir):
 			for f in os.listdir(certDir):
 				os.remove(os.path.join(certDir, f))
+	
+	def stressConfigserver(self, seconds=30):
+		seconds = forceInt(seconds)
+		serviceConnection = ServiceConnection(loadBalance = False)
+		serviceConnection.connectConfigService()
+		start = time.time()
+		try:
+			configService = serviceConnection.getConfigService()
+			while True:
+				configService.host_getObjects()
+				if ((time.time() - start) >= seconds): return
+				configService.product_getObjects()
+				if ((time.time() - start) >= seconds): return
+				configService.productOnDepot_getObjects()
+				if ((time.time() - start) >= seconds): return
+				configService.productOnClient_getObjects()
+				if ((time.time() - start) >= seconds): return
+				configService.config_getObjects()
+				if ((time.time() - start) >= seconds): return
+				configService.configState_getObjects()
+				if ((time.time() - start) >= seconds): return
+				configService.productProperty_getObjects()
+				if ((time.time() - start) >= seconds): return
+				configService.productPropertyState_getObjects()
+				if ((time.time() - start) >= seconds): return
+		finally:
+			serviceConnection.disconnectConfigService()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
