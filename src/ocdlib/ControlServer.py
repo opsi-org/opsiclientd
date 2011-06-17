@@ -509,14 +509,18 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def getActiveSessions(self):
 		sessions = []
 		for session in System.getActiveSessionInformation():
-			session['LogonTime'] = u'%d-%d-%d %d:%d:%d' % (
-				session['LogonTime'].year,
-				session['LogonTime'].month,
-				session['LogonTime'].day,
-				session['LogonTime'].hour,
-				session['LogonTime'].minute,
-				session['LogonTime'].second
-			)
+			year = session['LogonTime'].year
+			month = session['LogonTime'].month
+			if (month < 10: month = '0%d' % month
+			day = session['LogonTime'].day
+			if (day < 10): day = '0%d' % day
+			hour = session['LogonTime'].hour
+			if (hour < 10): hour = '0%d' % hour
+			minute = session['LogonTime'].minute
+			if (minute < 10): minute = '0%d' % minute
+			second = session['LogonTime'].second
+			if (second < 10): second = '0%d' % second
+			session['LogonTime'] = u'%s-%s-%s %s:%s:%s' % (year, month, day, hour, minute, second)
 			session['Sid'] = unicode(session['Sid']).replace(u'PySID:', u'')
 			sessions.append(session)
 		return sessions
