@@ -92,7 +92,7 @@ try:
 	if runAsUser:
 		logger.info(u"Impersonating user '%s'" % runAsUser)
 		imp = System.Impersonate(username = runAsUser, password = runAsPassword, desktop = actionProcessorDesktop)
-		imp.start(logonType = u'INTERACTIVE', newDesktop = False, createEnvironment = createEnvironment)
+		imp.start(logonType = u'INTERACTIVE', newDesktop = True, createEnvironment = createEnvironment)
 	
 	else:
 		logger.info(u"Impersonating network account '%s'" % depotServerUsername)
