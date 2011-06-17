@@ -506,6 +506,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			for f in os.listdir(certDir):
 				os.remove(os.path.join(certDir, f))
 	
+	def getActiveSessions()
+		return System.getActiveSessionInformation()
+	
 	def stressConfigserver(self, seconds=30):
 		seconds = forceInt(seconds)
 		serviceConnection = ServiceConnection(loadBalance = False)
