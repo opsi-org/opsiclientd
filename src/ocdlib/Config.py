@@ -263,7 +263,7 @@ class ConfigImplementation(object):
 					string = self.replace(newString, escaped)
 		return forceUnicode(string)
 	
-	def readConfigFile(self):
+	def readConfigFile(self, keepLog = False):
 		''' Get settings from config file '''
 		logger.notice(u"Trying to read config from file: '%s'" % self.get('global', 'config_file'))
 		
@@ -272,7 +272,7 @@ class ConfigImplementation(object):
 			config = IniFile(filename = self.get('global', 'config_file'), raw = True).parse()
 			
 			# Read log settings early
-			if config.has_section('global'):
+			if not keepLog and config.has_section('global'):
 				debug = False
 				if (os.name == 'nt'):
 					try:
