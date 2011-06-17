@@ -511,7 +511,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		for session in System.getActiveSessionInformation():
 			year = session['LogonTime'].year
 			month = session['LogonTime'].month
-			if (month < 10: month = '0%d' % month
+			if (month < 10): month = '0%d' % month
 			day = session['LogonTime'].day
 			if (day < 10): day = '0%d' % day
 			hour = session['LogonTime'].hour
