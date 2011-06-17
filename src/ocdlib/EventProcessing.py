@@ -747,7 +747,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				try:
 					if self.opsiclientd._actionProcessorUserName:
 						impersonation = System.Impersonate(username = self.opsiclientd._actionProcessorUserName, password = self.opsiclientd._actionProcessorUserPassword)
-						impersonation.start(logonType = 'INTERACTIVE', newDesktop = True)
+						impersonation.start(logonType = 'INTERACTIVE', newDesktop = False)
 						
 					logger.notice(u"Starting pre action processor command '%s' in session '%s' on desktop '%s'" \
 						% (self.event.eventConfig.preActionProcessorCommand, self.getSessionId(), desktop))
@@ -768,7 +768,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				try:
 					if self.opsiclientd._actionProcessorUserName:
 						impersonation = System.Impersonate(username = self.opsiclientd._actionProcessorUserName, password = self.opsiclientd._actionProcessorUserPassword)
-						impersonation.start(logonType = 'INTERACTIVE', newDesktop = True)
+						impersonation.start(logonType = 'INTERACTIVE', newDesktop = False)
 						
 					logger.notice(u"Starting post action processor command '%s' in session '%s' on desktop '%s'" \
 						% (self.event.eventConfig.postActionProcessorCommand, self.getSessionId(), desktop))
