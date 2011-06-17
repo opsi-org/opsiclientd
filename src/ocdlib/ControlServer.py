@@ -507,8 +507,20 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				os.remove(os.path.join(certDir, f))
 	
 	def getActiveSessions(self):
-		return System.getActiveSessionInformation()
-	
+		sessions = []
+		for session in System.getActiveSessionInformation():
+			session['LogonTime'] = u'%d-%d-%d %d:%d:%d' % (
+				session['LogonTime'].year,
+				session['LogonTime'].month,
+				session['LogonTime'].day,
+				session['LogonTime'].hour,
+				session['LogonTime'].minute,
+				session['LogonTime'].second
+			)
+			session['Sid'] = unicode(session['Sid']).replace(u'PySID:', u'')
+			sessions.append(session)
+		return sessions
+		
 	def stressConfigserver(self, seconds=30):
 		seconds = forceInt(seconds)
 		serviceConnection = ServiceConnection(loadBalance = False)
