@@ -69,6 +69,7 @@ opsiclientd = Target(
 	script = "opsiclientd.py",
 	modules = ["opsiclientd"],
 	#cmdline_style='pywin32',
+	icon_resources = [(1, "opsi.ico")]
 )
 
 # manifest_template = '''
@@ -103,24 +104,28 @@ notifier = Target(
 	description = "opsi notifier",
 	script = "windows\\helpers\\notifier\\notifier.py",
 	# other_resources = [(RT_MANIFEST, 1, manifest_template % dict(prog="notifier"))],
+	icon_resources = [(1, "opsi.ico")]
 )
 
 opsiclientd_rpc = Target(
 	name = "opsiclientd_rpc",
 	description = "opsi client daemon rpc tool",
 	script = "windows\\helpers\\opsiclientd_rpc\\opsiclientd_rpc.py",
+	icon_resources = [(1, "opsi.ico")]
 )
 
 action_processor_starter = Target(
 	name = "action_processor_starter",
 	description = "opsi action processor starter",
 	script = "windows\\helpers\\action_processor_starter\\action_processor_starter.py",
+	icon_resources = [(1, "opsi.ico")]
 )
 
 network_performance = Target(
 	name = "network_performance",
 	description = "network performance",
 	script = "tests\\network_performance.py",
+	icon_resources = [(1, "opsi.ico")]
 )
 
 data_files = [
