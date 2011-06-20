@@ -112,15 +112,12 @@ class OpsiDialogWindow(SubjectsObserver):
 		logger.notice(u"Screen dpi %d" % self.dpi)
 		
 		try:
-			try:
-				self.hicon = win32gui.LoadIcon(self.hinst, 1)    ## python.exe and pythonw.exe
-			except win32gui.error:
-				self.hicon = win32gui.LoadIcon(self.hinst, 135)  ## pythonwin's icon
+			self.hicon = win32gui.CreateIconFromResource(win32api.LoadResource(None, win32con.RT_ICON, 1), True)
 		except Exception, e:
 			logger.error(u"Failed to load icon: %s" % e)
 			self.hicon = None
 		
-		self.wndClassName = "opsi status"
+		self.wndClassName = "opsi notifier"
 		
 		self.loadSkin()
 		
@@ -717,6 +714,11 @@ class OpsiDialogWindow(SubjectsObserver):
 	
 	def onInitDialog(self, hwnd, msg, wparam, lparam):
 		self.hwnd = hwnd
+		if self.hicon:
+			try:
+				win32api.SendMessage(win._win.GetSafeHwnd(), win32con.WM_SETICON, 0, self.hicon)
+			except Exception, e:
+				logger.error(u"Failed to set window icon: %s" % e)
 		for (item, values) in self.skin.items():
 			if (values['type'] == u'image') and values.get('bitmap'):
 				bmCtrl = win32gui.GetDlgItem(self.hwnd, values['dlgId'])
