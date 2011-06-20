@@ -386,7 +386,10 @@ class OpsiDialogWindow(SubjectsObserver):
 			self.hicon = win32gui.LoadImage(
 				self.hinst, self.skin['form']['icon'], win32con.IMAGE_ICON,
 				0, 0, win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE )
-		
+			try:
+				win32api.SendMessage(self.hwnd, win32con.WM_SETICON, 0, self.hicon)
+			except Exception, e:
+				logger.error(u"Failed to set window icon: %s" % e)
 		dlgId = 100
 		# Images first
 		for (item, values) in self.skin.items():
@@ -617,7 +620,7 @@ class OpsiDialogWindow(SubjectsObserver):
 	def createTrayIcon(self):
 		try:
 			flags = win32gui.NIF_ICON | win32gui.NIF_MESSAGE | win32gui.NIF_TIP
-			notifyInfo = (self.hwnd, 0, flags, self.taskbarNotifyEventId, self.hicon, u'opsi status')
+			notifyInfo = (self.hwnd, 0, flags, self.taskbarNotifyEventId, self.hicon, u'opsi notifier')
 			win32gui.Shell_NotifyIcon(win32gui.NIM_ADD, notifyInfo)
 		except Exception, e:
 			logger.error(u"Failed to create tray icon: %s" % e)
@@ -716,7 +719,7 @@ class OpsiDialogWindow(SubjectsObserver):
 		self.hwnd = hwnd
 		if self.hicon:
 			try:
-				win32api.SendMessage(win._win.GetSafeHwnd(), win32con.WM_SETICON, 0, self.hicon)
+				win32api.SendMessage(self.hwnd, win32con.WM_SETICON, 0, self.hicon)
 			except Exception, e:
 				logger.error(u"Failed to set window icon: %s" % e)
 		for (item, values) in self.skin.items():
