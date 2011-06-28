@@ -280,20 +280,17 @@ class ServiceConnectionThread(KillableThread):
 			
 			certDir = config.get('global', 'server_cert_dir')
 			verifyServerCert = config.get('global', 'verify_server_cert')
-			if not os.path.exists(certDir):
-				os.makedirs(certDir)
-				
+			
 			(scheme, host, port, baseurl, username, password) = urlsplit(self._configServiceUrl)
 			serverCertFile = os.path.join(certDir, host + '.pem')
 			if verifyServerCert:
 				logger.info(u"Server verification enabled, using cert file '%s'" % serverCertFile)
 			
-			verifyByCaCertsFile = None
-			if config.get('global', 'verify_server_cert_by_ca'):
-				verifyByCaCertsFile = os.path.join(certDir, 'cacert.pem')
-				if not os.path.exists(verifyByCaCertsFile):
-					raise Exception("CA file '%s' not found" % verifyByCaCertsFile)
-				
+			caCertFile = os.path.join(certDir, 'cacert.pem')
+			verifyServerCertByCa = config.get('global', 'verify_server_cert_by_ca')
+			if verifyServerCertByCa:
+				logger.info(u"Server verification by CA enabled, using CA cert file '%s'" % caCertFile)
+			
 			tryNum = 0
 			while not self.cancelled and not self.connected:
 				try:
@@ -303,12 +300,13 @@ class ServiceConnectionThread(KillableThread):
 					if (len(self._username.split('.')) < 3):
 						raise Exception(u"Domain missing in username '%s'" % self._username)
 					self.configService = JSONRPCBackend(
-						address             = self._configServiceUrl,
-						username            = self._username,
-						password            = self._password,
-						serverCertFile      = serverCertFile,
-						verifyServerCert    = verifyServerCert,
-						verifyByCaCertsFile = verifyByCaCertsFile,
+						address              = self._configServiceUrl,
+						username             = self._username,
+						password             = self._password,
+						serverCertFile       = serverCertFile,
+						verifyServerCert     = verifyServerCert,
+						caCertFile           = caCertFile,
+						verifyServerCertByCa = verifyServerCertByCa,
 						application = 'opsiclientd version %s' % __version__)
 					if self.configService.isLegacyOpsi():
 						self.configService.authenticated()
