@@ -240,11 +240,13 @@ class ConfigImplementation(object):
 			logger.setFileLevel(self._config[section][option])
 		elif (section == 'global') and (option == 'log_file'):
 			logger.setLogFile(self._config[section][option])
-		elif (section == 'global') and option in ('verify_server_cert_by_ca', 'server_cert_dir'):
-			if self.get('global', 'verify_server_cert_by_ca') and self.get('global', 'server_cert_dir'):
-				f = open(os.path.join(self.get('global', 'server_cert_dir'), 'cacert.pem'), 'w')
-				f.write(OPSI_CA)
-				f.close()
+		elif (section == 'global') and (option == 'server_cert_dir'):
+			value = forceFilename(value)
+			if not os.path.exists(value):
+				os.makedirs(value)
+			f = open(os.path.join(value, 'cacert.pem'), 'w')
+			f.write(OPSI_CA)
+			f.close()
 		
 	def replace(self, string, escaped=False):
 		for (section, values) in self._config.items():

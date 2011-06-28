@@ -774,17 +774,12 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			(depotServerUsername, depotServerPassword) = (config.get('global', 'host_id'), config.get('global', 'opsi_host_key'))
 			kwargs = {}
 			if scheme.startswith('webdavs'):
-				kwargs['verifyServerCert'] = config.get('global', 'verify_server_cert')
 				certDir = config.get('global', 'server_cert_dir')
-				if not os.path.exists(certDir):
-					os.makedirs(certDir)
+				kwargs['caCertFile'] = os.path.join(certDir, 'cacert.pem')
+				kwargs['verifyServerCert'] = config.get('global', 'verify_server_cert')
 				kwargs['serverCertFile'] = os.path.join(certDir, host + '.pem')
+				kwargs['verifyServerCertByCa'] = config.get('global', 'verify_server_cert_by_ca')
 				
-				if config.get('global', 'verify_server_cert_by_ca'):
-					verifyByCaCertsFile = os.path.join(certDir, 'cacert.pem')
-					if not os.path.exists(verifyByCaCertsFile):
-						raise Exception("CA file '%s' not found" % verifyByCaCertsFile)
-					kwargs['verifyByCaCertsFile'] = verifyByCaCertsFile
 			return getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword, **kwargs)
 		else:
 			if self._impersonation:
