@@ -729,7 +729,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			createEnvironment = config.get('action_processor', 'create_environment')
 			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
 			actionProcessorCommand = actionProcessorCommand.replace('%service_url%', self._configServiceUrl)
-			actionProcessorCommand += additionalParams
+			actionProcessorCommand += u' %s' % additionalParams
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 			command = u'%global.base_dir%\\action_processor_starter.exe ' \
 				+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
