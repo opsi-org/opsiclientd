@@ -571,9 +571,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				return
 			
 			logger.notice(u"User login scripts found, executing")
-			additionalParams = ''
-			for userLoginScript in userLoginScripts:
-				additionalParams += ' "%s"' % userLoginScript
+			#additionalParams = ''
+			#for userLoginScript in userLoginScripts:
+			#	additionalParams += ' "%s"' % userLoginScript
+			additionalParams = u'/usercontext %s' % self.event.eventInfo.get('User')
 			self.runActions(productIds, additionalParams)
 			
 		except Exception, e:
