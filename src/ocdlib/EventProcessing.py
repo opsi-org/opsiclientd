@@ -461,6 +461,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							actionProgress     = u''
 						)
 					])
+				if mounted:
+					self.umountDepotShare()
 				return actionProcessorLocalFile
 			
 			# Update files
