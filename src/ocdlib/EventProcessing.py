@@ -279,15 +279,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		
 		sessionId = self.getSessionId()
 		
-		if not desktop or desktop.lower() not in (u'winlogon', u'default'):
+		if not desktop:
 			if self.isLoginEvent:
 				desktop = u'default'
 			else:
 				logger.debug(u"Getting current active desktop name")
-				desktop = self.opsiclientd.getCurrentActiveDesktopName(sessionId)
+				desktop = forceUnicodeLower(self.opsiclientd.getCurrentActiveDesktopName(sessionId))
 				logger.debug(u"Got current active desktop name: %s" % desktop)
 				
-		if not desktop or desktop.lower() not in (u'winlogon', u'default'):
+		if not desktop:
 			desktop = u'winlogon'
 		
 		processId = None
@@ -309,7 +309,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					# After logging off from a session other than 0 csrss.exe does not create this pipe or CreateRemoteProcessW is not able to read the pipe.
 					logger.info(u"Retrying to run command on winlogon desktop of session 0")
 					sessionId = 0
-					desktop = 'winlogon'
+					desktop = u'winlogon'
 				else:
 					raise
 		
@@ -710,15 +710,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			desktop = self.event.eventConfig.actionProcessorDesktop
 			
 			# Choose desktop for action processor
-			if not desktop or desktop.lower() not in ('winlogon', 'default'):
+			if not desktop:
 				if self.isLoginEvent:
-					desktop = 'default'
+					desktop = u'default'
 				else:
-					desktop = self.opsiclientd.getCurrentActiveDesktopName(self.getSessionId())
+					desktop = forceUnicodeLower(self.opsiclientd.getCurrentActiveDesktopName(self.getSessionId()))
 			
-			if not desktop or desktop.lower() not in ('winlogon', 'default'):
+			if not desktop:
 				# Default desktop is winlogon
-				desktop = 'winlogon'
+				desktop = u'winlogon'
 			
 			
 			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
