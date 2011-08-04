@@ -158,15 +158,15 @@ class EventConfig(object):
 		self.postSyncConfigFromServer      =     bool ( conf.get('postSyncConfigFromServer',      False     ) )
 		self.useCachedConfig               =     bool ( conf.get('useCachedConfig',               False     ) )
 		
-		if not self.eventNotifierDesktop in ('winlogon', 'default', 'current'):
-			logger.error(u"Bad value '%s' for eventNotifierDesktop" % self.eventNotifierDesktop)
-			self.eventNotifierDesktop = 'current'
-		if not self.actionNotifierDesktop in ('winlogon', 'default', 'current'):
-			logger.error(u"Bad value '%s' for actionNotifierDesktop" % self.actionNotifierDesktop)
-			self.actionNotifierDesktop = 'current'
-		if not self.actionProcessorDesktop in ('winlogon', 'default', 'current'):
-			logger.error(u"Bad value '%s' for actionProcessorDesktop" % self.actionProcessorDesktop)
-			self.actionProcessorDesktop = 'current'
+		###if not self.eventNotifierDesktop in ('winlogon', 'default', 'current'):
+		###	logger.error(u"Bad value '%s' for eventNotifierDesktop" % self.eventNotifierDesktop)
+		###	self.eventNotifierDesktop = 'current'
+		###if not self.actionNotifierDesktop in ('winlogon', 'default', 'current'):
+		###	logger.error(u"Bad value '%s' for actionNotifierDesktop" % self.actionNotifierDesktop)
+		###	self.actionNotifierDesktop = 'current'
+		###if not self.actionProcessorDesktop in ('winlogon', 'default', 'current'):
+		###	logger.error(u"Bad value '%s' for actionProcessorDesktop" % self.actionProcessorDesktop)
+		###	self.actionProcessorDesktop = 'current'
 	
 	def __unicode__(self):
 		return u"<EventConfig: %s>" % self._id
