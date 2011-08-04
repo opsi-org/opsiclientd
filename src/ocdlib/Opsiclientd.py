@@ -467,7 +467,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		sessionId = forceInt(sessionId)
 		
 		rpc = "noop(System.switchDesktop('%s'))" % desktop
-		cmd = '%s "%s" "c:\\tmp\\rpc-log.txt"' % (config.get('opsiclientd_rpc', 'command'), rpc)
+		cmd = '%s "%s"' % (config.get('opsiclientd_rpc', 'command'), rpc)
 		
 		try:
 			System.runCommandInSession(command = cmd, sessionId = sessionId, desktop = desktop, waitForProcessEnding = True, timeoutSeconds = 60)
