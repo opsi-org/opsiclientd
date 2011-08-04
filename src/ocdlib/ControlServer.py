@@ -383,6 +383,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def __init__(self, opsiclientd):
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
 	
+	def noop(self, arg):
+		pass
+	
 	def cacheService_syncConfig(self):
 		return self.opsiclientd.getCacheService().syncConfig()
 	
@@ -482,6 +485,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		return desktop
 	
 	def setCurrentActiveDesktopName(self, sessionId, desktop):
+		sessionId = forceInt(sessionId)
+		desktop = forceUnicode(desktop)
+		self.opsiclientd._currentActiveDesktopName[sessionId] = desktop
+		logger.notice(u"rpc setCurrentActiveDesktopName: current active desktop name for session %s set to '%s'" % (sessionId, desktop))
+	
+	def switchDesktop(self, sessionId, desktop):
 		sessionId = forceInt(sessionId)
 		desktop = forceUnicode(desktop)
 		self.opsiclientd._currentActiveDesktopName[sessionId] = desktop

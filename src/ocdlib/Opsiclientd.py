@@ -457,6 +457,23 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.debug(u"Returning current active dektop name '%s' for session %s" % (desktop, sessionId))
 		return desktop
 	
+	def switchDesktop(self, desktop, sessionId=None):
+		if not (config.getDict().has_key('opsiclientd_rpc') and config.getDict()['opsiclientd_rpc'].has_key('command')):
+			raise Exception(u"opsiclientd_rpc command not defined")
+		
+		desktop = forceUnicode(desktop)
+		if sessionId is None:
+			sessionId = System.getActiveConsoleSessionId()
+		sessionId = forceInt(sessionId)
+		
+		rpc = 'noop(System.switchDesktop("%s"))' % desktop
+		cmd = '%s "%s"' % (config.get('opsiclientd_rpc', 'command'), rpc)
+		
+		try:
+			System.runCommandInSession(command = cmd, sessionId = sessionId, desktop = desktop, waitForProcessEnding = True, timeoutSeconds = 60)
+		except Exception, e:
+			logger.error(e)
+	
 	def systemShutdownInitiated(self):
 		if not self.isRebootTriggered() and not self.isShutdownTriggered():
 			# This shutdown was triggered by someone else
