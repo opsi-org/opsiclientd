@@ -37,21 +37,31 @@ __version__ = '4.0'
 import sys, os, locale
 
 from OPSI import System
+from OPSI.Logger import *
 from OPSI.Backend.JSONRPC import JSONRPCBackend
+
+logger = Logger()
 
 encoding = locale.getpreferredencoding()
 argv = [ unicode(arg, encoding) for arg in sys.argv ]
 
-if (len(argv) != 5):
+if (len(argv) < 5):
 	print u"Usage: %s <username> <password> <port> <rpc>" % os.path.basename(argv[0])
 	sys.exit(1)
 
 (username, password, port, rpc) = argv[1:]
+logFile = None
+if len(argv > 5):
+	logFile = argv[5]
+	logger.setLogFile(logFile)
+	logger.setFileLevel(LOG_DEBUG)
 try:
 	be = JSONRPCBackend(username = username, password = password, address = u'https://localhost:%s/opsiclientd' % port)
+	logger.notice(u"Executing: %s" % rpc)
 	exec 'be.%s' % rpc
 	be.backend_exit()
-except:
-	pass
+except Exception, e:
+	logger.logException(e)
+	sys.exit(1)
 sys.exit(0)
 
