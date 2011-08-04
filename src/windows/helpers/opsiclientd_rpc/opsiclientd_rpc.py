@@ -49,7 +49,7 @@ if (len(argv) < 5):
 	print u"Usage: %s <username> <password> <port> <rpc>" % os.path.basename(argv[0])
 	sys.exit(1)
 
-(username, password, port, rpc) = argv[1:]
+(username, password, port, rpc) = argv[1:5]
 logFile = None
 if (len(argv) > 5):
 	logFile = argv[5]
