@@ -279,7 +279,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		
 		sessionId = self.getSessionId()
 		
-		if not desktop:
+		if not desktop or (forceUnicodeLower(desktop) == 'current'):
 			if self.isLoginEvent:
 				desktop = u'default'
 			else:
@@ -710,7 +710,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			desktop = self.event.eventConfig.actionProcessorDesktop
 			
 			# Choose desktop for action processor
-			if not desktop:
+			if not desktop or (forceUnicodeLower(desktop) == 'current'):
 				if self.isLoginEvent:
 					desktop = u'default'
 				else:
