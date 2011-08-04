@@ -51,7 +51,7 @@ if (len(argv) < 5):
 
 (username, password, port, rpc) = argv[1:]
 logFile = None
-if len(argv > 5):
+if (len(argv) > 5):
 	logFile = argv[5]
 	logger.setLogFile(logFile)
 	logger.setFileLevel(LOG_DEBUG)
