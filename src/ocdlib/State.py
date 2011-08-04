@@ -48,6 +48,7 @@ class StateImplementation(object):
 		self._stateFile = config.get('global', 'state_file')
 		self._stateLock = threading.Lock()
 		self._readStateFile()
+		self.set('shutdown_cancel_counter', 0)
 		
 	def _readStateFile(self):
 		self._stateLock.acquire()
