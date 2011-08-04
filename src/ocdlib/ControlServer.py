@@ -490,12 +490,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		self.opsiclientd._currentActiveDesktopName[sessionId] = desktop
 		logger.notice(u"rpc setCurrentActiveDesktopName: current active desktop name for session %s set to '%s'" % (sessionId, desktop))
 	
-	def switchDesktop(self, sessionId, desktop):
-		sessionId = forceInt(sessionId)
-		desktop = forceUnicode(desktop)
-		self.opsiclientd._currentActiveDesktopName[sessionId] = desktop
-		logger.notice(u"rpc setCurrentActiveDesktopName: current active desktop name for session %s set to '%s'" % (sessionId, desktop))
-	
+	def switchDesktop(self, desktop, sessionId=None):
+		self.opsiclientd.switchDesktop(desktop, sessionId)
+		
 	def set(self, section, option, value):
 		section = forceUnicode(section)
 		option = forceUnicode(option)
