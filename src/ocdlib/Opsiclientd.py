@@ -466,7 +466,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			sessionId = System.getActiveConsoleSessionId()
 		sessionId = forceInt(sessionId)
 		
-		rpc = 'noop(System.switchDesktop(\"%s\"))' % desktop
+		rpc = "noop(System.switchDesktop('%s'))" % desktop
 		cmd = '%s "%s" "c:\\tmp\\rpc-log.txt"' % (config.get('opsiclientd_rpc', 'command'), rpc)
 		
 		try:
