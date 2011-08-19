@@ -728,9 +728,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				self.updateActionProcessor()
 			
 			# Run action processor
+			serviceSession = u'none'
+			try:
+				serviceSession = self.getConfigService().jsonrpc_getSessionId()
+				if not serviceSession:
+					serviceSession = u'none'
+			except:
+				pass
+			
 			createEnvironment = config.get('action_processor', 'create_environment')
 			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
 			actionProcessorCommand = actionProcessorCommand.replace('%service_url%', self._configServiceUrl)
+			actionProcessorCommand = actionProcessorCommand.replace('%service_session%', serviceSession)
 			actionProcessorCommand += u' %s' % additionalParams
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 			command = u'%global.base_dir%\\action_processor_starter.exe ' \
