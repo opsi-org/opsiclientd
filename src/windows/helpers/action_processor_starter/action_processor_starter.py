@@ -110,7 +110,7 @@ try:
 		depotShareMounted = True
 	
 	logger.notice(u"Starting action processor")
-	be.setStatusMessage(sessionId, _(u"Starting action processor"))
+	be.setStatusMessage(sessionId, _(u"Action processor is running"))
 	
 	imp.runCommand(actionProcessorCommand, timeoutSeconds = actionProcessorTimeout)
 	

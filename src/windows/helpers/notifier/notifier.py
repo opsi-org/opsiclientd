@@ -545,7 +545,10 @@ class OpsiDialogWindow(SubjectsObserver):
 				self.alpha = 255
 		
 		if self.skin['form']['slideIn']:
-			win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, self.currentLeft, self.currentTop, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOSIZE)
+			insertAfter = win32con.HWND_TOP
+			if self.skin['form'].get('stayOnTop'):
+				insertAfter = win32con.HWND_TOPMOST
+			win32gui.SetWindowPos(self.hwnd, insertAfter, self.currentLeft, self.currentTop, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOSIZE)
 			if   (self.skin['form']['slideIn'] == 'left'):
 				self.currentLeft -= int((self.startLeft - self.skin['form']['left'])/self.skin['form']['animationSteps'])
 				if (self.currentLeft < self.skin['form']['left']):
@@ -570,7 +573,10 @@ class OpsiDialogWindow(SubjectsObserver):
 			if self.skin['form']['fadeIn']:
 				self.setWindowAlpha(self.alpha)
 			if self.skin['form']['slideIn']:
-				win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, self.currentLeft, self.currentTop, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOSIZE)
+				insertAfter = win32con.HWND_TOP
+				if self.skin['form'].get('stayOnTop'):
+					insertAfter = win32con.HWND_TOPMOST
+				win32gui.SetWindowPos(self.hwnd, insertAfter, self.currentLeft, self.currentTop, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOSIZE)
 			timer.kill_timer(id)
 
 	def animateOut(self):
@@ -581,7 +587,10 @@ class OpsiDialogWindow(SubjectsObserver):
 				self.alpha = 0
 		
 		if self.skin['form']['slideOut']:
-			win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, self.currentLeft, self.currentTop, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOSIZE)
+			insertAfter = win32con.HWND_TOP
+			if self.skin['form'].get('stayOnTop'):
+				insertAfter = win32con.HWND_TOPMOST
+			win32gui.SetWindowPos(self.hwnd, insertAfter, self.currentLeft, self.currentTop, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOSIZE)
 			if   (self.skin['form']['slideOut'] == 'left'):
 				self.currentLeft -= int((self.skin['form']['left'] - self.endLeft)/self.skin['form']['animationSteps'])
 				if (self.currentLeft < self.endLeft):
@@ -606,7 +615,10 @@ class OpsiDialogWindow(SubjectsObserver):
 			if self.skin['form']['fadeOut']:
 				self.setWindowAlpha(self.alpha)
 			if self.skin['form']['slideOut']:
-				win32gui.SetWindowPos(self.hwnd, win32con.HWND_TOPMOST, self.currentLeft, self.currentTop, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOSIZE)
+				insertAfter = win32con.HWND_TOP
+				if self.skin['form'].get('stayOnTop'):
+					insertAfter = win32con.HWND_TOPMOST
+				win32gui.SetWindowPos(self.hwnd, insertAfter, self.currentLeft, self.currentTop, 0, 0, win32con.SWP_NOACTIVATE | win32con.SWP_NOSIZE)
 			time.sleep(float(self.skin['form']['animationTime']/self.skin['form']['animationSteps'])/1000)
 			self.animateOut()
 	
