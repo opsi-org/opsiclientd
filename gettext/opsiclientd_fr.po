@@ -1,222 +1,225 @@
+# translation of opsiclientd_fr.po to
 # French translations for PACKAGE package.
 # Copyright (C) 2011 ORGANIZATION
-# Automatically generated, 2011.
 #
+# Automatically generated, 2011.
+# Benoit Mortier <benoit.mortier@opensides.be>, 2011.
 msgid ""
 msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
+"Project-Id-Version: opsiclientd_fr\n"
 "POT-Creation-Date: 2011-08-31 11:40+CEST\n"
-"PO-Revision-Date: 2011-08-31 11:40+CEST\n"
-"Last-Translator: Automatically generated\n"
-"Language-Team: none\n"
+"PO-Revision-Date: 2011-08-31 12:29+0200\n"
+"Last-Translator: Benoit Mortier <benoit.mortier@opensides.be>\n"
+"Language-Team:  <fr@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
 "Language: fr\n"
-"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"Plural-Forms:  nplurals=2; plural=(n > 1);\n"
+"X-Generator: KBabel 1.11.4\n"
 
 #: ../src/ocdlib/EventProcessing.py:106 ../src/ocdlib/EventProcessing.py:1090
 msgid "Processing event %s"
-msgstr ""
+msgstr "Exécute l'événement %s"
 
 #: ../src/ocdlib/EventProcessing.py:143
 msgid "Timeout: %ds"
-msgstr ""
+msgstr "Temps d'attente dépassé: %ds"
 
 #: ../src/ocdlib/EventProcessing.py:245
 msgid "Getting config from service"
-msgstr ""
+msgstr "Réception de la configuration depuis le service"
 
 #: ../src/ocdlib/EventProcessing.py:247
 msgid "Got config from service"
-msgstr ""
+msgstr "Reçu la configuration depuis le service"
 
 #: ../src/ocdlib/EventProcessing.py:260
 msgid "Writing log to service"
-msgstr ""
+msgstr "Ecriture des journaux systèmes depuis le service"
 
 #: ../src/ocdlib/EventProcessing.py:364
 #: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:104
 msgid "Mounting depot share %s"
-msgstr ""
+msgstr "Montage du dépôt %s"
 
 #: ../src/ocdlib/EventProcessing.py:396
 msgid "Updating action processor"
-msgstr ""
+msgstr "Mise à jour du gestionnaire d'actions"
 
 #: ../src/ocdlib/EventProcessing.py:530
 msgid "Processing login actions"
-msgstr ""
+msgstr "Exécution des actions lors de la connexion"
 
 #: ../src/ocdlib/EventProcessing.py:585
 msgid "Failed to process login actions: %s"
-msgstr ""
+msgstr "Echec de l'exécution de des actions à la connexion: %s"
 
 #: ../src/ocdlib/EventProcessing.py:588
 msgid "Getting action requests from config service"
-msgstr ""
+msgstr "Réception des actions depuis le service de configuration"
 
 #: ../src/ocdlib/EventProcessing.py:623
 msgid "No product action requests set"
-msgstr ""
+msgstr "Pas d'installation de produit(s) demandée(s)"
 
 #: ../src/ocdlib/EventProcessing.py:652
 msgid "Failed to process product action requests: %s"
-msgstr ""
+msgstr "Echec de l'exécution des action(s) de produit(s): %s "
 
 #: ../src/ocdlib/EventProcessing.py:682
 msgid "Waiting for TrustedInstaller"
-msgstr ""
+msgstr "Attente de l'installateur certifié"
 
 #: ../src/ocdlib/EventProcessing.py:698
 msgid "Starting actions"
-msgstr ""
+msgstr "Démarrage des actions"
 
 #: ../src/ocdlib/EventProcessing.py:795
 msgid "Actions completed"
-msgstr ""
+msgstr "Action(s) terminée(s)"
 
 #: ../src/ocdlib/EventProcessing.py:840
 msgid "Products"
-msgstr ""
+msgstr "Produits"
 
 #: ../src/ocdlib/EventProcessing.py:843
 msgid "Abort"
-msgstr ""
+msgstr "Annuler"
 
 #: ../src/ocdlib/EventProcessing.py:843 ../src/ocdlib/EventProcessing.py:846
 msgid "Start now"
-msgstr ""
+msgstr "Démarrer maintenant"
 
 #: ../src/ocdlib/EventProcessing.py:871
 msgid "Event %s: action processing will start in %s:%s"
-msgstr ""
+msgstr "Evenement %s: l'action démarrera dans %s: %s"
 
 #: ../src/ocdlib/EventProcessing.py:934
 msgid "Reboot requested"
-msgstr ""
+msgstr "Redémarrage demandé"
 
 #: ../src/ocdlib/EventProcessing.py:937
 msgid "Shutdown requested"
-msgstr ""
+msgstr "Arrêt demandé"
 
 #: ../src/ocdlib/EventProcessing.py:972 ../src/ocdlib/EventProcessing.py:974
 msgid "Later"
-msgstr ""
+msgstr "Plus tard"
 
 #: ../src/ocdlib/EventProcessing.py:972 ../src/ocdlib/EventProcessing.py:978
 msgid "Reboot now"
-msgstr ""
+msgstr "Redémarrage immédiat"
 
 #: ../src/ocdlib/EventProcessing.py:974 ../src/ocdlib/EventProcessing.py:980
 msgid "Shutdown now"
-msgstr ""
+msgstr "Arrêt immédiat"
 
 #: ../src/ocdlib/EventProcessing.py:1005
 msgid "Reboot in %s:%s"
-msgstr ""
+msgstr "Redémarrage dans %s:%s"
 
 #: ../src/ocdlib/EventProcessing.py:1007
 msgid "Shutdown in %s:%s"
-msgstr ""
+msgstr "Arrêt dans %s:%s"
 
 #: ../src/ocdlib/EventProcessing.py:1110 ../src/ocdlib/EventProcessing.py:1189
 msgid "Syncing config to server"
-msgstr ""
+msgstr "Synchronisation de la configuration avec le serveur"
 
 #: ../src/ocdlib/EventProcessing.py:1112 ../src/ocdlib/EventProcessing.py:1119
 #: ../src/ocdlib/EventProcessing.py:1191 ../src/ocdlib/EventProcessing.py:1195
 msgid "Sync completed"
-msgstr ""
+msgstr "Synchronisation terminée"
 
 #: ../src/ocdlib/EventProcessing.py:1115 ../src/ocdlib/EventProcessing.py:1193
 msgid "Syncing config from server"
-msgstr ""
+msgstr "Synchronisation de la configuration depuis le serveur"
 
 #: ../src/ocdlib/EventProcessing.py:1122
 msgid "Caching products"
-msgstr ""
+msgstr "Mise en cache des produits"
 
 #: ../src/ocdlib/EventProcessing.py:1134
 msgid "Products cached"
-msgstr ""
+msgstr "Produits cachés"
 
 #: ../src/ocdlib/EventProcessing.py:1200
 msgid "Shutting down machine"
-msgstr ""
+msgstr "Arrêt de la machine"
 
 #: ../src/ocdlib/EventProcessing.py:1202
 msgid "Rebooting machine"
-msgstr ""
+msgstr "Redémarrage de la machine"
 
 #: ../src/ocdlib/EventProcessing.py:1204
 msgid "Unblocking login"
-msgstr ""
+msgstr "Déverrouillage de la connexion"
 
 #: ../src/ocdlib/OpsiService.py:299
 msgid "Connecting to config server '%s' #%d"
-msgstr ""
+msgstr "Connexion au serveur de configuration '%s' #%d"
 
 #: ../src/ocdlib/OpsiService.py:318
 msgid "Connected to config server '%s'"
-msgstr ""
+msgstr "Connecté au serveur de configuration: '%s'"
 
 #: ../src/ocdlib/OpsiService.py:323
 msgid "Failed to connect to config server '%s': Service verification failure"
-msgstr ""
+msgstr "Erreur de connexion au serveur de configuration '%s': La vérification du service à échoué"
 
 #: ../src/ocdlib/OpsiService.py:329
 msgid "Failed to connect to config server '%s': %s"
-msgstr ""
+msgstr "Echec de la connexion au serveur de configuration '%s': %s"
 
 #: ../src/ocdlib/Opsiclientd.py:541
 msgid "Close"
-msgstr ""
+msgstr "Fermer"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:302
 msgid "You selected to execute the following product actions:"
-msgstr ""
+msgstr "Vous avez sélectionné l'exécution des actions sur les produits suivants:"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:308
 msgid "The following product actions have been added to fulfill dependencies:"
-msgstr ""
+msgstr "Les actions sur les produits suivants on été rajoutés à cause de leur dépendances sur le produit à installer :"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:313
 msgid "Other pending product actions:"
-msgstr ""
+msgstr "Autres actions sur le(s) produit(s) en attente:"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:318
 msgid "back"
-msgstr ""
+msgstr "en arrière"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:321
 msgid "process on next boot"
-msgstr ""
+msgstr "au prochain redémarrage"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:323
 msgid "process now"
-msgstr ""
+msgstr "maintenant"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:325
 msgid "Nothing selected"
-msgstr ""
+msgstr "Rien de sélectionné"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:328
 msgid "Starting to process actions now."
-msgstr ""
+msgstr "Démarrage des actions maintenant."
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:331
 msgid "Actions will be processed on next boot."
-msgstr ""
+msgstr "Les actions seront réalisées au prochain démarrage."
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:430
 msgid "not installed"
-msgstr ""
+msgstr "pas installé"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:443
 msgid "installed"
-msgstr ""
+msgstr "installé"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:443
 msgid "version"
@@ -228,32 +231,33 @@ msgstr ""
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:453
 msgid "state"
-msgstr ""
+msgstr "état"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:458
 msgid "advice"
-msgstr ""
+msgstr "conseil"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:465
 msgid "reinstall"
-msgstr ""
+msgstr "réinstallé"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:469
 msgid "uninstall"
-msgstr ""
+msgstr "désinstallé"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:473
 msgid "install"
-msgstr ""
+msgstr "installé"
 
 #: ../src/ocdlibnonfree/SoftwareOnDemand.py:476
 msgid "next"
-msgstr ""
+msgstr "suivant"
 
 #: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:113
 msgid "Action processor is running"
-msgstr ""
+msgstr "Le gestionnaire d'action est en cours de fonctionnement"
 
 #: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:118
 msgid "Action processor ended"
-msgstr ""
+msgstr "Le gestionnaire d'action est arrêté"
+
