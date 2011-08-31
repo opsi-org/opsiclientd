@@ -7,7 +7,7 @@ dir=${cwd}/$(dirname $0)
 
 cd $dir
 pygettext --extract-all --default-domain=${package_name} ../src
-for lang in de; do
+for lang in de fr; do
     if [ -e ${package_name}_${lang}.po ]; then
 	msgmerge -U ${package_name}_${lang}.po ${package_name}.pot
     else

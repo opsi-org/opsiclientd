@@ -1,19 +1,20 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR ORGANIZATION
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# French translations for PACKAGE package.
+# Copyright (C) 2011 ORGANIZATION
+# Automatically generated, 2011.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "POT-Creation-Date: 2011-08-31 11:40+CEST\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
+"PO-Revision-Date: 2011-08-31 11:40+CEST\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=CHARSET\n"
-"Content-Transfer-Encoding: ENCODING\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
 "Generated-By: pygettext.py 1.5\n"
-
+"Language: fr\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #: ../src/ocdlib/EventProcessing.py:106 ../src/ocdlib/EventProcessing.py:1090
 msgid "Processing event %s"
@@ -249,13 +250,10 @@ msgstr ""
 msgid "next"
 msgstr ""
 
-#:
 #: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:113
 msgid "Action processor is running"
 msgstr ""
 
-#:
 #: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:118
 msgid "Action processor ended"
 msgstr ""
-
