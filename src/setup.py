@@ -149,6 +149,7 @@ data_files = [
 						'windows\\opsi.ico' ]),
 	('opsiclientd',                   [	'windows\\opsiclientd.conf']),
 	('locale\\de\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_de.mo']),
+	('locale\\fr\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_fr.mo']),
 	('opsiclientd\\extend.d', glob.glob('..\\extend.d\*.*')),
 ]
 data_files += tree('opsiclientd\\static_html', '..\\static_html')
