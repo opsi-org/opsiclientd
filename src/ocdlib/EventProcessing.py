@@ -218,6 +218,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if self._notificationServer.errorOccurred():
 					raise Exception(self._notificationServer.errorOccurred())
 				logger.notice(u"Notification server started")
+				error = None
 				break
 			except Exception, e:
 				error = forceUnicode(e)
@@ -319,10 +320,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	def startNotifierApplication(self, command, desktop=None, notifierId=None):
 		logger.notice(u"Starting notifier application in session '%s'" % self.getSessionId())
 		try:
-			self.runCommandInSession(
+			pid = self.runCommandInSession(
 				command = command.replace('%port%', forceUnicode(self._notificationServerPort)).replace('%id%', forceUnicode(notifierId)),
 				desktop = desktop, waitForProcessEnding = False)
 			time.sleep(3)
+			return pid
 		except Exception, e:
 			logger.error(u"Failed to start notifier application '%s': %s" % (command, e))
 	
@@ -846,9 +848,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			choiceSubject.setChoices([ _('Start now') ])
 			choiceSubject.setCallbacks( [ self.startActionCallback ] )
 		self._notificationServer.addSubject(choiceSubject)
+		notifierPid = None
 		try:
 			if self.event.eventConfig.actionNotifierCommand:
-				self.startNotifierApplication(
+				notifierPid = self.startNotifierApplication(
 						command    = self.event.eventConfig.actionNotifierCommand,
 						desktop    = self.event.eventConfig.actionNotifierDesktop,
 						notifierId = 'action')
@@ -898,6 +901,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if self._notificationServer:
 					self._notificationServer.requestEndConnections(['action'])
 					self._notificationServer.removeSubject(choiceSubject)
+				if notifierPid:
+					try:
+						time.sleep(3)
+						System.terminateProcess(processId=notifierPid)
+					except Exception:
+						pass
+					
 			except Exception, e:
 				logger.logException(e)
 	
@@ -980,9 +990,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 								choiceSubject.setChoices([ _('Shutdown now') ])
 							choiceSubject.setCallbacks( [ self.startShutdownCallback ] )
 						self._notificationServer.addSubject(choiceSubject)
-						
+						notifierPid = None
 						if self.event.eventConfig.shutdownNotifierCommand:
-							self.startNotifierApplication(
+							notifierPid = self.startNotifierApplication(
 									command    = self.event.eventConfig.shutdownNotifierCommand,
 									desktop    = self.event.eventConfig.shutdownNotifierDesktop,
 									notifierId = 'shutdown')
@@ -1013,6 +1023,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							if self._notificationServer:
 								self._notificationServer.requestEndConnections()
 								self._notificationServer.removeSubject(choiceSubject)
+							if notifierPid:
+								try:
+									time.sleep(3)
+									System.terminateProcess(processId=notifierPid)
+								except Exception:
+									pass
 						except Exception, e:
 							logger.logException(e)
 						
@@ -1079,6 +1095,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if not self.event.eventConfig.blockLogin:
 				self.opsiclientd.setBlockLogin(False)
 			
+			notifierPid = None
 			try:
 				config.setTemporaryDepotDrive(None)
 				config.setTemporaryConfigServiceUrls([])
@@ -1101,7 +1118,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					time.sleep(15)
 				
 				if self.event.eventConfig.eventNotifierCommand:
-					self.startNotifierApplication(
+					notifierPid = self.startNotifierApplication(
 						command    = self.event.eventConfig.eventNotifierCommand,
 						desktop    = self.event.eventConfig.eventNotifierDesktop,
 						notifierId = 'event')
@@ -1208,6 +1225,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				
 				self.setStatusMessage(u"")
 				self.stopNotificationServer()
+				if notifierPid:
+					try:
+						time.sleep(3)
+						System.terminateProcess(processId=notifierPid)
+					except Exception:
+						pass
 		except Exception, e:
 			logger.error(u"Failed to process event %s: %s" % (self.event, forceUnicode(e)))
 			logger.logException(e)
