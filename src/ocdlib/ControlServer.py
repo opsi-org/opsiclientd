@@ -56,6 +56,7 @@ from ocdlib.Config import Config
 from ocdlib.Events import eventGenerators
 from ocdlib.Timeline import Timeline
 from ocdlib.OpsiService import ServiceConnection
+from ocdlib.SoftwareOnDemand import WorkerSoftwareOnDemand, ResourceSoftwareOnDemand
 
 logger = Logger()
 config = Config()
@@ -357,12 +358,6 @@ class ControlServer(OpsiService, threading.Thread):
 		self._running = False
 	
 	def createRoot(self):
-		ResourceSoftwareOnDemand = None
-		try:
-			from ocdlibnonfree.SoftwareOnDemand import WorkerSoftwareOnDemand, ResourceSoftwareOnDemand
-		except Exception, e:
-			logger.notice(u"Software on demand not available: %s" % e)
-		
 		if self._staticDir:
 			if os.path.isdir(self._staticDir):
 				self._root = ResourceOpsiDAV(self, path = self._staticDir, readOnly = True, authRequired = False)
@@ -376,8 +371,7 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root.putChild("rpc", ResourceCacheServiceJsonRpc(self))
 		self._root.putChild("rpcinterface", ResourceCacheServiceJsonInterface(self))
 		self._root.putChild("info.html", ResourceOpsiclientdInfo(self))
-		if ResourceSoftwareOnDemand:
-			self._root.putChild("swondemand", ResourceSoftwareOnDemand(self))
+		self._root.putChild("swondemand", ResourceSoftwareOnDemand(self))
 		
 class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def __init__(self, opsiclientd):
