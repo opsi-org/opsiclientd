@@ -143,34 +143,6 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 	
 	def connectConfigService(self):
 		ServiceConnection.connectConfigService(self)
-		modules = self._configService.backend_info()['modules']
-		
-		if not modules.get('swondemand'):
-			raise Exception(u"SoftwareOnDemand not available: swondemand module currently disabled")
-		
-		if not modules.get('customer'):
-			raise Exception(u"SoftwareOnDemand not available: No customer in modules file")
-			
-		if not modules.get('valid'):
-			raise Exception(u"SoftwareOnDemand not available: modules file invalid")
-		
-		if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
-			raise Exception(u": modules file expired")
-		
-		logger.info(u"Verifying modules file signature")
-		publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
-		data = u''
-		mks = modules.keys()
-		mks.sort()
-		for module in mks:
-			if module in ('valid', 'signature'):
-				continue
-			val = modules[module]
-			if (val == False): val = 'no'
-			if (val == True):  val = 'yes'
-			data += u'%s = %s\r\n' % (module.lower().strip(), val)
-		if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
-			raise Exception(u"SoftwareOnDemand not available: modules file invalid")
 	
 	def _getSwOnDemandConfig(self):
 		self._swOnDemandProductIds = []
