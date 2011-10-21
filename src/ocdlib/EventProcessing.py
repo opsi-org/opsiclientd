@@ -672,6 +672,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if not self.event.getActionProcessorCommand():
 				raise Exception(u"No action processor command defined")
 			
+			
 			if not self.isLoginEvent:
 				# check for Trusted Installer before Running Action Processor
 				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
@@ -696,6 +697,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							timeline.setEventEnd(eventId = waitEventId)
 					except Exception, e:
 						logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
+			else:
+				#check if run_as_system is set to True
+				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 5):
+					if self.event.eventConfig.has_key("run_as_system"):
+						if self.event.eventConfig.run_as_system:
+							logger.notice(u"RunAsUser SYSTEM is set in configurationfile."
+							self.opsiclientd._actionProcessorUserName = u''
+							self.opsiclientd._actionProcessorUserPassword = u''
 				
 			self.setStatusMessage( _(u"Starting actions") )
 			
