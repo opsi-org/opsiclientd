@@ -304,6 +304,7 @@ class UserLoginEventConfig(WMIEventConfig):
 		self.blockLogin        = False
 		self.logoffCurrentUser = False
 		self.lockWorkstation   = False
+		self.runAsSystem       = False
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                    SYSTEM SHUTDOWN EVENT CONFIG                                   -
