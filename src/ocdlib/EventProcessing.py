@@ -702,7 +702,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 5):
 					if self.event.eventConfig.has_key("run_as_system"):
 						if self.event.eventConfig.run_as_system:
-							logger.notice(u"RunAsUser SYSTEM is set in configurationfile."
+							logger.notice(u"RunAsUser SYSTEM is set in configurationfile.")
 							self.opsiclientd._actionProcessorUserName = u''
 							self.opsiclientd._actionProcessorUserPassword = u''
 				
