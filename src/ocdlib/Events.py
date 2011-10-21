@@ -157,6 +157,7 @@ class EventConfig(object):
 		self.postSyncConfigToServer        =     bool ( conf.get('postSyncConfigToServer',        False     ) )
 		self.postSyncConfigFromServer      =     bool ( conf.get('postSyncConfigFromServer',      False     ) )
 		self.useCachedConfig               =     bool ( conf.get('useCachedConfig',               False     ) )
+		self.runAsSystem                   =     bool ( conf.get('run_as_system',                 False     ) )
 		
 		###if not self.eventNotifierDesktop in ('winlogon', 'default', 'current'):
 		###	logger.error(u"Bad value '%s' for eventNotifierDesktop" % self.eventNotifierDesktop)
