@@ -1034,7 +1034,7 @@ def getEventConfigs():
 					elif (key == 'post_action_processor_command'):
 						eventConfigs[eventConfigId]['postActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'run_as_system'):
-						eventConfigs[eventConfigId]['run_as_system'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['runAsSystem'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
 				except Exception, e:
