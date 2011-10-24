@@ -304,7 +304,6 @@ class UserLoginEventConfig(WMIEventConfig):
 		self.blockLogin        = False
 		self.logoffCurrentUser = False
 		self.lockWorkstation   = False
-		self.runAsSystem       = False
 	
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                    SYSTEM SHUTDOWN EVENT CONFIG                                   -
@@ -1036,6 +1035,7 @@ def getEventConfigs():
 					elif (key == 'post_action_processor_command'):
 						eventConfigs[eventConfigId]['postActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'run_as_system'):
+						logger.debug(u"Debug: run_as_system by set: '%s'" % unicode(value).lower())
 						eventConfigs[eventConfigId]['runAsSystem'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
