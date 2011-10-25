@@ -157,7 +157,6 @@ class EventConfig(object):
 		self.postSyncConfigToServer        =     bool ( conf.get('postSyncConfigToServer',        False     ) )
 		self.postSyncConfigFromServer      =     bool ( conf.get('postSyncConfigFromServer',      False     ) )
 		self.useCachedConfig               =     bool ( conf.get('useCachedConfig',               False     ) )
-		self.run_as_system                 =     bool ( conf.get('run_as_system',                 False     ) )
 		
 		###if not self.eventNotifierDesktop in ('winlogon', 'default', 'current'):
 		###	logger.error(u"Bad value '%s' for eventNotifierDesktop" % self.eventNotifierDesktop)
@@ -1034,8 +1033,6 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['preActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'post_action_processor_command'):
 						eventConfigs[eventConfigId]['postActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
-					elif (key == 'run_as_system'):
-						eventConfigs[eventConfigId]['run_as_system'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
 				except Exception, e:
