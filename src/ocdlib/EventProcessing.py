@@ -698,13 +698,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					except Exception, e:
 						logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
 			else:
-				logger.notice(u"RunAsSystem debug-output")
 				#check if run_as_system is set to True
 				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 5):
-					logger.notice(u"RunAsSystem = '%s'" % self.event.eventConfig.runAsSystem) 
-					if self.event.eventConfig.runAsSystem:
+					if self.event.eventConfig.run_as_system:
 						logger.notice(u"RunAsUser SYSTEM is set in configurationfile.")
-						self.opsiclientd._actionProcessorUserName = u'SYSTEM'
+						self.opsiclientd._actionProcessorUserName = u''
 						self.opsiclientd._actionProcessorUserPassword = u''
 				
 			self.setStatusMessage( _(u"Starting actions") )

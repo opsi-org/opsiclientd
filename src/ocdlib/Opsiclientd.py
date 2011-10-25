@@ -406,7 +406,8 @@ class Opsiclientd(EventListener, threading.Thread):
 									% (ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()))
 							self._eventProcessingThreadsLock.release()
 							return
-			self.createActionProcessorUser(recreate = False)
+			if not (event.eventConfig.actionType == 'login' and event.eventConfig.run_as_system):
+				self.createActionProcessorUser(recreate = False)
 			
 			self._eventProcessingThreads.append(eventProcessingThread)
 		finally:
