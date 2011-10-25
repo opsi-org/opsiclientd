@@ -672,7 +672,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if not self.event.getActionProcessorCommand():
 				raise Exception(u"No action processor command defined")
 			
-			
 			if not self.isLoginEvent:
 				# check for Trusted Installer before Running Action Processor
 				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
@@ -697,13 +696,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							timeline.setEventEnd(eventId = waitEventId)
 					except Exception, e:
 						logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
-			else:
-				#check if run_as_system is set to True
-				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 5):
-					if self.event.eventConfig.run_as_system:
-						logger.notice(u"RunAsUser SYSTEM is set in configurationfile.")
-						self.opsiclientd._actionProcessorUserName = u''
-						self.opsiclientd._actionProcessorUserPassword = u''
 				
 			self.setStatusMessage( _(u"Starting actions") )
 			
@@ -746,12 +738,20 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			except:
 				pass
 			
+			actionProcessorUserName = u''
+			actionProcessorUserPassword = u''
+			if not self.isLoginEvent:
+				actionProcessorUserName = self.opsiclientd._actionProcessorUserName
+				actionProcessorUserPassword = self.opsiclientd._actionProcessorUserPassword
+			
 			createEnvironment = config.get('action_processor', 'create_environment')
+			
 			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
 			actionProcessorCommand = actionProcessorCommand.replace('%service_url%', self._configServiceUrl)
 			actionProcessorCommand = actionProcessorCommand.replace('%service_session%', serviceSession)
 			actionProcessorCommand += u' %s' % additionalParams
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
+			
 			command = u'%global.base_dir%\\action_processor_starter.exe ' \
 				+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
 				+ u'"%global.log_file%" "%global.log_level%" ' \
@@ -759,7 +759,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
 				+ u'"' + unicode(self.getSessionId()) + u'" "' + desktop + '" ' \
 				+ u'"' + actionProcessorCommand + u'" ' + unicode(self.event.eventConfig.actionProcessorTimeout) + ' ' \
-				+ u'"' + self.opsiclientd._actionProcessorUserName + u'" "' + self.opsiclientd._actionProcessorUserPassword + '" ' \
+				+ u'"' + actionProcessorUserName + u'" "' + actionProcessorUserPassword + '" ' \
 				+ unicode(createEnvironment).lower()
 			
 			command = config.replace(command)
@@ -767,8 +767,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if self.event.eventConfig.preActionProcessorCommand:
 				impersonation = None
 				try:
-					if self.opsiclientd._actionProcessorUserName:
-						impersonation = System.Impersonate(username = self.opsiclientd._actionProcessorUserName, password = self.opsiclientd._actionProcessorUserPassword)
+					if actionProcessorUserName:
+						impersonation = System.Impersonate(username = actionProcessorUserName, password = actionProcessorUserPassword)
 						impersonation.start(logonType = 'INTERACTIVE', newDesktop = True)
 						
 					logger.notice(u"Starting pre action processor command '%s' in session '%s' on desktop '%s'" \
@@ -788,8 +788,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if self.event.eventConfig.postActionProcessorCommand:
 				impersonation = None
 				try:
-					if self.opsiclientd._actionProcessorUserName:
-						impersonation = System.Impersonate(username = self.opsiclientd._actionProcessorUserName, password = self.opsiclientd._actionProcessorUserPassword)
+					if actionProcessorUserName:
+						impersonation = System.Impersonate(username = actionProcessorUserName, password = actionProcessorUserPassword)
 						impersonation.start(logonType = 'INTERACTIVE', newDesktop = True)
 						
 					logger.notice(u"Starting post action processor command '%s' in session '%s' on desktop '%s'" \
