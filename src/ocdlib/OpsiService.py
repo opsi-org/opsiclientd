@@ -198,7 +198,9 @@ class ServiceConnection(object):
 					if serviceConnectionThread.configService.isLegacyOpsi():
 						modules = serviceConnectionThread.configService.getOpsiInformation_hash()['modules']
 					else:
-						modules = serviceConnectionThread.configService.backend_info()['modules']
+						backendinfo = serviceConnectionThread.configService.backend_info()
+						modules = backendinfo['modules']
+						helpermodules = backendinfo['realmodules']
 					
 					if not modules.get('high_availability'):
 						self.connectionFailed(u"High availability module currently disabled")
@@ -220,9 +222,16 @@ class ServiceConnection(object):
 					for module in mks:
 						if module in ('valid', 'signature'):
 							continue
-						val = modules[module]
-						if (val == False): val = 'no'
-						if (val == True):  val = 'yes'
+						
+						if helpermodules.has_key(module):
+							val = helpermodules[module]
+							if int(val) > 0:
+								modules[module] = True
+						else:
+							val = modules[module]
+							if (val == False): val = 'no'
+							if (val == True):  val = 'yes'
+						
 						data += u'%s = %s\r\n' % (module.lower().strip(), val)
 					if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
 						self.connectionFailed(u"Modules file invalid")
