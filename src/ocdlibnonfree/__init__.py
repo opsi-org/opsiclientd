@@ -122,7 +122,9 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 				logger.info(u"%d. alternative depot is %s" % ((i+1), alternativeDepots[i].id))
 			
 			try:
-				modules = configService.backend_info()['modules']
+				backendinfo = configService.backend_info()
+				modules = backendinfo['modules']
+				helpermodules = backendinfo['realmodules']
 			
 				if not modules.get('dynamic_depot'):
 					raise Exception(u"Dynamic depot module currently disabled")
@@ -144,9 +146,14 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 				for module in mks:
 					if module in ('valid', 'signature'):
 						continue
-					val = modules[module]
-					if (val == False): val = 'no'
-					if (val == True):  val = 'yes'
+					if helpermodules.has_key(module):
+						val = helpermodules[module]
+						if int(val) > 0:
+							modules[module] = True
+					else:
+						val = modules[module]
+						if (val == False): val = 'no'
+						if (val == True):  val = 'yes'
 					data += u'%s = %s\r\n' % (module.lower().strip(), val)
 				if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
 					raise Exception(u"Modules file invalid")

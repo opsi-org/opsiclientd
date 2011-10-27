@@ -284,7 +284,9 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 	def connectConfigService(self):
 		ServiceConnection.connectConfigService(self, allowTemporaryConfigServiceUrls = False)
 		try:
-			modules = self._configService.backend_info()['modules']
+			backendinfo = self._configService.backend_info()
+			modules = backendinfo['modules']
+			helpermodules = backendinfo['realmodules']
 			
 			if not modules.get('vpn'):
 				raise Exception(u"Cannot sync products: VPN module currently disabled")
@@ -306,9 +308,14 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			for module in mks:
 				if module in ('valid', 'signature'):
 					continue
-				val = modules[module]
-				if (val == False): val = 'no'
-				if (val == True):  val = 'yes'
+				if helpermodules.has_key(module):
+					val = helpermodules[module]
+					if int(val) > 0:
+						modules[module] = True
+				else:
+					val = modules[module]
+					if (val == False): val = 'no'
+					if (val == True):  val = 'yes'
 				data += u'%s = %s\r\n' % (module.lower().strip(), val)
 			if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
 				raise Exception(u"Cannot sync products: modules file invalid")
@@ -592,7 +599,9 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 	def connectConfigService(self):
 		ServiceConnection.connectConfigService(self, allowTemporaryConfigServiceUrls = False)
 		try:
-			modules = self._configService.backend_info()['modules']
+			backendinfo = self._configService.backend_info()
+			modules = backendinfo['modules']
+			helpermodules = backendinfo['realmodules']
 			
 			if not modules.get('vpn'):
 				raise Exception(u"Cannot sync products: VPN module currently disabled")
@@ -614,9 +623,15 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			for module in mks:
 				if module in ('valid', 'signature'):
 					continue
-				val = modules[module]
-				if (val == False): val = 'no'
-				if (val == True):  val = 'yes'
+				if helpermodules.has_key(module):
+					val = helpermodules[module]
+					if int(val) > 0:
+						modules[module] = True
+				else:
+					val = modules[module]
+					if (val == False): val = 'no'
+					if (val == True):  val = 'yes'
+				
 				data += u'%s = %s\r\n' % (module.lower().strip(), val)
 			if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
 				raise Exception(u"Cannot sync products: modules file invalid")
