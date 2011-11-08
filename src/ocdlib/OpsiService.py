@@ -195,6 +195,7 @@ class ServiceConnection(object):
 				
 				if (urlIndex > 0):
 					modules = None
+					helpermodules = {}
 					if serviceConnectionThread.configService.isLegacyOpsi():
 						modules = serviceConnectionThread.configService.getOpsiInformation_hash()['modules']
 					else:
