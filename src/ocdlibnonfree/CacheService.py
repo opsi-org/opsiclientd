@@ -284,6 +284,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 	def connectConfigService(self):
 		ServiceConnection.connectConfigService(self, allowTemporaryConfigServiceUrls = False)
 		try:
+			modules = None
+			helpermodules = {}
 			backendinfo = self._configService.backend_info()
 			modules = backendinfo['modules']
 			helpermodules = backendinfo['realmodules']
