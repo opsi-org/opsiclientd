@@ -122,6 +122,8 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 				logger.info(u"%d. alternative depot is %s" % ((i+1), alternativeDepots[i].id))
 			
 			try:
+				modules = None
+				helpermodules = {}
 				backendinfo = configService.backend_info()
 				modules = backendinfo['modules']
 				helpermodules = backendinfo['realmodules']
