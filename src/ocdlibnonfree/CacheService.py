@@ -220,6 +220,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			if ccss:
 				self._state = ccss
 		except Exception, e:
+			logger.logException(e)
 			try:
 				self.setObsolete()
 			except:
