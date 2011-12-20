@@ -765,43 +765,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			command = config.replace(command)
 			
 			if self.event.eventConfig.preActionProcessorCommand:
-				impersonation = None
-				try:
-					if actionProcessorUserName:
-						impersonation = System.Impersonate(username = actionProcessorUserName, password = actionProcessorUserPassword)
-						impersonation.start(logonType = 'INTERACTIVE', newDesktop = True)
-						
-					logger.notice(u"Starting pre action processor command '%s' in session '%s' on desktop '%s'" \
-						% (self.event.eventConfig.preActionProcessorCommand, self.getSessionId(), desktop))
-					if impersonation:
-						impersonation.runCommand(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
-					else:
-						self.runCommandInSession(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
-					time.sleep(10)
-				finally:
-					if impersonation:
-						impersonation.end()
-					
+				logger.notice(u"Starting pre action processor command '%s' in session '%s' on desktop '%s'" \
+					% (self.event.eventConfig.preActionProcessorCommand, self.getSessionId(), desktop))
+				self.runCommandInSession(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = True)
+				
 			logger.notice(u"Starting action processor in session '%s' on desktop '%s'" % (self.getSessionId(), desktop))
 			self.runCommandInSession(command = command, desktop = desktop, waitForProcessEnding = True)
 			
 			if self.event.eventConfig.postActionProcessorCommand:
-				impersonation = None
-				try:
-					if actionProcessorUserName:
-						impersonation = System.Impersonate(username = actionProcessorUserName, password = actionProcessorUserPassword)
-						impersonation.start(logonType = 'INTERACTIVE', newDesktop = True)
-						
-					logger.notice(u"Starting post action processor command '%s' in session '%s' on desktop '%s'" \
-						% (self.event.eventConfig.postActionProcessorCommand, self.getSessionId(), desktop))
-					if impersonation:
-						impersonation.runCommand(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
-					else:
-						self.runCommandInSession(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, waitForProcessEnding = False)
-					time.sleep(10)
-				finally:
-					if impersonation:
-						impersonation.end()
+				logger.notice(u"Starting post action processor command '%s' in session '%s' on desktop '%s'" \
+					% (self.event.eventConfig.postActionProcessorCommand, self.getSessionId(), desktop))
+				self.runCommandInSession(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, waitForProcessEnding = True)
+			
 			self.setStatusMessage( _(u"Actions completed") )
 		finally:
 			timeline.setEventEnd(eventId = runActionsEventId)
