@@ -672,7 +672,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if not self.event.getActionProcessorCommand():
 				raise Exception(u"No action processor command defined")
 			
-			if not self.isLoginEvent:
+			
+			if self.event.eventConfig['type'] == 'gui startup' and not state.get('user_logged_in', 0):
 				# check for Trusted Installer before Running Action Processor
 				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
 					logger.notice(u"Getting TrustedInstaller service configuration")
@@ -696,7 +697,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							timeline.setEventEnd(eventId = waitEventId)
 					except Exception, e:
 						logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
-				
+			
 			self.setStatusMessage( _(u"Starting actions") )
 			
 			# Setting some registry values before starting action
@@ -1153,6 +1154,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						self.connectConfigService()
 					
 					if self.event.eventConfig.getConfigFromService:
+						config.readConfigFile(keepLog = True)
 						self.getConfigFromService()
 						if self.event.eventConfig.updateConfigFile:
 							config.updateConfigFile()
