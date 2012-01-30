@@ -673,7 +673,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				raise Exception(u"No action processor command defined")
 			
 			
-			if self.event.eventConfig['type'] == 'gui startup' and not state.get('user_logged_in', 0):
+			if self.event.eventConfig.type == 'gui startup' and not state.get('user_logged_in', 0):
 				# check for Trusted Installer before Running Action Processor
 				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
 					logger.notice(u"Getting TrustedInstaller service configuration")
