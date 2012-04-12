@@ -170,10 +170,10 @@ class WorkerOpsiclientd(WorkerOpsi):
 									username, domain, type = win32security.LookupAccountSid(None,membersid)
 									
 									if (self.session.user.lower() == username.lower()):
-									# The LogonUser function will raise an Exception on logon failure
-									win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
-									# No exception raised => user authenticated
-									return result
+										# The LogonUser function will raise an Exception on logon failure
+										win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
+										# No exception raised => user authenticated
+										return result
 								    
 								if memberresume == 0:
 									break
