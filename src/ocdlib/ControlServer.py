@@ -34,6 +34,7 @@
 # Imports
 from OpenSSL import SSL
 import base64, urllib, codecs, time
+import win32security, win32net
 
 # Twisted imports
 from twisted.internet import defer, threads, reactor
@@ -148,12 +149,42 @@ class WorkerOpsiclientd(WorkerOpsi):
 			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
 				return result
 			if (os.name == 'nt'):
-				if (self.session.user.lower() == 'administrator'):
-					import win32security
-					# The LogonUser function will raise an Exception on logon failure
-					win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
-					# No exception raised => user authenticated
-					return result
+				try:
+					# Hack to find and read the local-admin group and his members, 
+					# that should also Work on french installations
+					
+					admingroupsid = "S-1-5-32-544"
+					resume = 0
+					while 1:
+						data, total, resume = win32net.NetLocalGroupEnum(None, 1, resume)
+						for group in data:
+							groupname = group.get("name", "")
+							pysid, string, integer = win32security.LookupAccountName(None, groupname)
+						
+						if admingroupsid in str(pysid):
+							memberresume = 0
+							while 1:
+								memberdata, total, memberresume = win32net.NetLocalGroupGetMembers(None,groupname, 2, resume)
+								for member in memberdata:
+									membersid = member.get("sid","")
+									username, domain, type = win32security.LookupAccountSid(None,membersid)
+									
+									if (self.session.user.lower() == username.lower()):
+									# The LogonUser function will raise an Exception on logon failure
+									win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
+									# No exception raised => user authenticated
+									return result
+								    
+								if memberresume == 0:
+									break
+						if not resume:
+							break
+				except:
+					if (self.session.user.lower() == 'administrator'):
+						# The LogonUser function will raise an Exception on logon failure
+						win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
+						# No exception raised => user authenticated
+						return result
 			
 			raise Exception(u"Invalid credentials")
 		except Exception, e:
@@ -435,10 +466,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	
 	def execute(self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300):
 		return System.execute(cmd = command, waitForEnding = waitForEnding, captureStderr = captureStderr, encoding = encoding, timeout = timeout)
-	
-	def evalExpression(self, expression):
-		return eval(expression)
-	
+		
 	def logoffCurrentUser(self):
 		logger.notice(u"rpc logoffCurrentUser: logging of current user now")
 		System.logoffCurrentUser()
