@@ -725,7 +725,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					errorsOccured = []
 					for productId in productIds:
 						try:
-							self._cacheProduct(productId)
+							self._cacheProduct(productId,productIds)
 						except Exception, e:
 							logger.logException(e, LOG_INFO)
 							errorsOccured.append(forceUnicode(e))
@@ -810,7 +810,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			self._impersonation.start(logonType = 'NEW_CREDENTIALS')
 			return getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword, mount = False)
 		
-	def _cacheProduct(self, productId):
+	def _cacheProduct(self, productId, neededProducts):
 		logger.notice(u"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)" % (productId,  self._maxBandwidth, self._dynamicBandwidth))
 		self._setProductCacheState(productId, 'started',   time.time())
 		self._setProductCacheState(productId, 'completed', None, updateProductOnClient = False)
@@ -853,7 +853,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					logger.info(u"Product cache dir sizelimit of %0.3f MB exceeded. Current size: %0.3f MB, space needed for product '%s': %0.3f MB" \
 							% ( (float(self._productCacheMaxSize)/(1024*1024)), (float(productCacheDirSize)/(1024*1024)), \
 							    productId, (float(productSize)/(1024*1024)) ) )
-					self._freeProductCacheSpace(neededSpace = productSize, neededProducts = self._productIds)
+					self._freeProductCacheSpace(neededSpace = productSize, neededProducts = neededProducts)
 					productCacheDirSize = System.getDirectorySize(self._productCacheDir)
 			
 			diskFreeSpace = System.getDiskSpaceUsage(self._productCacheDir)['available']
