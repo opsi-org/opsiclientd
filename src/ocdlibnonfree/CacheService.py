@@ -853,7 +853,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					logger.info(u"Product cache dir sizelimit of %0.3f MB exceeded. Current size: %0.3f MB, space needed for product '%s': %0.3f MB" \
 							% ( (float(self._productCacheMaxSize)/(1024*1024)), (float(productCacheDirSize)/(1024*1024)), \
 							    productId, (float(productSize)/(1024*1024)) ) )
-					freeSpace = _productCacheMaxSize - productCacheDirSize
+					freeSpace = self._productCacheMaxSize - productCacheDirSize
 					neededSpace = productSize - freeSpace
 					self._freeProductCacheSpace(neededSpace = neededSpace, neededProducts = neededProducts)
 					productCacheDirSize = System.getDirectorySize(self._productCacheDir)
