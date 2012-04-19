@@ -854,7 +854,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 							% ( (float(self._productCacheMaxSize)/(1024*1024)), (float(productCacheDirSize)/(1024*1024)), \
 							    productId, (float(productSize)/(1024*1024)) ) )
 					freeSpace = self._productCacheMaxSize - productCacheDirSize
-					neededSpace = productSize - freeSpace
+					neededSpace = productSize - freeSpace +1024
 					self._freeProductCacheSpace(neededSpace = neededSpace, neededProducts = neededProducts)
 					productCacheDirSize = System.getDirectorySize(self._productCacheDir)
 			
