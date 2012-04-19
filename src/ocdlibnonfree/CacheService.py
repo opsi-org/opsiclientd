@@ -665,7 +665,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				for (product, size) in productDirSizes.items():
 					packageContentFile = os.path.join(self._productCacheDir, product, u'%s.files' % product)
 					if not os.path.exists(packageContentFile):
-						logger.info(u"Package content file '%s' not found, deleting product cache to free disk space")
+						logger.info(u"Package content file '%s' not found, deleting product cache to free disk space" % packageContentFile)
 						deleteProduct = product
 						break
 					mtime = os.path.getmtime(packageContentFile)
@@ -687,6 +687,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				if self._state.get('products', {}).get(deleteProduct):
 					del self._state['products'][deleteProduct]
 					state.set('product_cache_service', self._state)
+				del productDirSizes[deleteProduct]
 			logger.notice(u"%0.3f MB of product cache freed" % (float(freedSpace)/(1024*1024)))
 		except Exception, e:
 			raise Exception(u"Failed to free enough disk space for product cache: %s" % forceUnicode(e))
