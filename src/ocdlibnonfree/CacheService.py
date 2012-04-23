@@ -803,9 +803,9 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					productId          = productId,
 					productType        = u'LocalbootProduct',
 					clientId           = config.get('global', 'host_id'),
-					actionProgress     = actionProgress
-					installationStatus = 'unknown'
-					actionResult       = 'failed'
+					actionProgress     = actionProgress,
+					installationStatus = 'unknown',
+					actionResult       = 'failed',
 					actionRequest      = None
 				)
 			])
