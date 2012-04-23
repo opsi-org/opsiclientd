@@ -715,7 +715,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				logger.notice(u"No product action request set => no products to cache")
 			else:
 				
-				productOnDepots = self._configService.productOnClient_getObjects(
+				productOnDepots = self._configService.productOnDepot_getObjects(
 					depotId   = config.get('depot_server', 'depot_id'), 
 					productId = productIds)
 				
