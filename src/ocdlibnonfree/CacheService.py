@@ -703,22 +703,46 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			if not self._configService:
 				self.connectConfigService()
 			productIds = []
-			for productOnClient in self._configService.productOnClient_getObjects(
+			productOnClients = self._configService.productOnClient_getObjects(
 					productType   = 'LocalbootProduct',
 					clientId      = config.get('global', 'host_id'),
 					actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
-					attributes    = ['actionRequest']):
+					attributes    = ['actionRequest'])
+			for productOnClient in productOnClients:
 				if not productOnClient.productId in productIds:
 					productIds.append(productOnClient.productId)
 			if not productIds:
 				logger.notice(u"No product action request set => no products to cache")
 			else:
+				
+				productOnDepots = self._configService.productOnClient_getObjects(
+					depotId   = config.get('depot_server', 'depot_id'), 
+					productId = productIds)
+				
+				errorProductIds = []
+				for productOnClient in productOnClients:
+					found = False
+					for productOnDepot in productOnDepots:
+						if productOnDepot.productId == productOnClient.productId:
+							found = True
+							break
+					if not found:
+						logger.error(u"Requested product: '%s' not found on configured depot: '%s', please check your configuration, setting product to failed." % (productOnClient.productId, config.get('depot_server', 'depot_id')))
+						self._setProductCacheState(productId, 'failure', u"Requested product: '%s' not found on configured depot: '%s', please check your configuration, setting product to failed."  % (productOnClient.productId, config.get('depot_server', 'depot_id')))
+						errorProductIds.append(productOnClient.productId)
+					
 				productIds.append('opsi-winst')
 				if 'mshotfix' in productIds:
 					additionalProductId = System.getOpsiHotfixName()
 					logger.info(u"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s" % additionalProductId)
 					if not additionalProductId in productIds:
 						productIds.append(additionalProductId)
+				
+				if errorProductIds:
+					for index in range(len(productIds) -1):
+						if productIds[index] in errorProductIds:
+							logger.error(u"ProductId: '%s' will not be cached." % productIds[index])
+							del productIds[index]
 				
 				logger.notice(u"Caching products: %s" % ', '.join(productIds))
 				eventId = timeline.addEvent(title = u"Cache products", description = u"Caching products: %s" % ', '.join(productIds), category = u'product_caching', durationEvent = True)
@@ -776,10 +800,13 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		if actionProgress and updateProductOnClient:
 			self._configService.productOnClient_updateObjects([
 				ProductOnClient(
-					productId      = productId,
-					productType    = u'LocalbootProduct',
-					clientId       = config.get('global', 'host_id'),
-					actionProgress = actionProgress
+					productId          = productId,
+					productType        = u'LocalbootProduct',
+					clientId           = config.get('global', 'host_id'),
+					actionProgress     = actionProgress
+					installationStatus = 'unknown'
+					actionResult       = 'failed'
+					actionRequest      = None
 				)
 			])
 
@@ -855,7 +882,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 							% ( (float(self._productCacheMaxSize)/(1024*1024)), (float(productCacheDirSize)/(1024*1024)), \
 							    productId, (float(productSize)/(1024*1024)) ) )
 					freeSpace = self._productCacheMaxSize - productCacheDirSize
-					neededSpace = productSize - freeSpace +1024
+					neededSpace = productSize - freeSpace + 1024
 					self._freeProductCacheSpace(neededSpace = neededSpace, neededProducts = neededProducts)
 					productCacheDirSize = System.getDirectorySize(self._productCacheDir)
 			
