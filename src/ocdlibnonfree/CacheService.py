@@ -728,7 +728,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 							break
 					if not found:
 						logger.error(u"Requested product: '%s' not found on configured depot: '%s', please check your configuration, setting product to failed." % (productOnClient.productId, config.get('depot_server', 'depot_id')))
-						self._setProductCacheState(productId, 'failure', u"Requested product: '%s' not found on configured depot: '%s', please check your configuration, setting product to failed."  % (productOnClient.productId, config.get('depot_server', 'depot_id')))
+						self._setProductCacheState(productOnClient.productId, 'failure', u"Requested product: '%s' not found on configured depot: '%s', please check your configuration, setting product to failed."  % (productOnClient.productId, config.get('depot_server', 'depot_id')))
 						errorProductIds.append(productOnClient.productId)
 					
 				productIds.append('opsi-winst')
