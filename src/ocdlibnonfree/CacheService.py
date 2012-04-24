@@ -744,7 +744,9 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 							logger.error(u"ProductId: '%s' will not be cached." % productIds[index])
 							del productIds[index]
 							
-				if not len(productIds) == 1 and productIds[0] == 'opsi-winst':
+				if len(productIds) == 1 and productIds[0] == 'opsi-winst':
+					logger.notice(u"Only opsi-winst is set to install, doing nothin, because a up- or downgrade from opsi-winst is only need if a other product is set to setup.")
+				else:
 					logger.notice(u"Caching products: %s" % ', '.join(productIds))
 					eventId = timeline.addEvent(title = u"Cache products", description = u"Caching products: %s" % ', '.join(productIds), category = u'product_caching', durationEvent = True)
 					try:
@@ -772,8 +774,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						state.set('product_cache_service', self._state)
 						for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
 							eventGenerator.createAndFireEvent()
-				else:
-					logger.notice(u"Only opsi-winst is set to install, doing nothin, because a up- or downgrade from opsi-winst is only need if a other product is set to setup.")
+				
 		except Exception, e:
 			logger.error(u"Failed to cache products: %s" % e)
 			timeline.addEvent(
