@@ -743,34 +743,37 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						if productIds[index] in errorProductIds:
 							logger.error(u"ProductId: '%s' will not be cached." % productIds[index])
 							del productIds[index]
-				
-				logger.notice(u"Caching products: %s" % ', '.join(productIds))
-				eventId = timeline.addEvent(title = u"Cache products", description = u"Caching products: %s" % ', '.join(productIds), category = u'product_caching', durationEvent = True)
-				try:
-					errorsOccured = []
-					for productId in productIds:
-						try:
-							self._cacheProduct(productId,productIds)
-						except Exception, e:
-							logger.logException(e, LOG_INFO)
-							errorsOccured.append(forceUnicode(e))
-							self._setProductCacheState(productId, 'failure', forceUnicode(e))
-				except Exception, e:
-					logger.logException(e)
-					errorsOccured.append(forceUnicode(e))
-				if errorsOccured:
-					logger.error(u"Errors occured while caching products %s: %s" % (', '.join(productIds), ', '.join(errorsOccured)))
-					timeline.addEvent(
-						title       = u"Failed to cache products",
-						description = u"Errors occured while caching products %s: %s" % (', '.join(productIds), ', '.join(errorsOccured)),
-						category    = u"product_caching",
-						isError     = True)
+							
+				if not len(productIds) == 1 and productIds[0] == 'opsi-winst':
+					logger.notice(u"Caching products: %s" % ', '.join(productIds))
+					eventId = timeline.addEvent(title = u"Cache products", description = u"Caching products: %s" % ', '.join(productIds), category = u'product_caching', durationEvent = True)
+					try:
+						errorsOccured = []
+						for productId in productIds:
+							try:
+								self._cacheProduct(productId,productIds)
+							except Exception, e:
+								logger.logException(e, LOG_INFO)
+								errorsOccured.append(forceUnicode(e))
+								self._setProductCacheState(productId, 'failure', forceUnicode(e))
+					except Exception, e:
+						logger.logException(e)
+						errorsOccured.append(forceUnicode(e))
+					if errorsOccured:
+						logger.error(u"Errors occured while caching products %s: %s" % (', '.join(productIds), ', '.join(errorsOccured)))
+						timeline.addEvent(
+							title       = u"Failed to cache products",
+							description = u"Errors occured while caching products %s: %s" % (', '.join(productIds), ', '.join(errorsOccured)),
+							category    = u"product_caching",
+							isError     = True)
+					else:
+						logger.notice(u"All products cached: %s" % ', '.join(productIds))
+						self._state['products_cached'] = True
+						state.set('product_cache_service', self._state)
+						for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
+							eventGenerator.createAndFireEvent()
 				else:
-					logger.notice(u"All products cached: %s" % ', '.join(productIds))
-					self._state['products_cached'] = True
-					state.set('product_cache_service', self._state)
-					for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
-						eventGenerator.createAndFireEvent()
+					logger.notice(u"Only opsi-winst is set to install, doing nothin, because a up- or downgrade from opsi-winst is only need if a other product is set to setup.")
 		except Exception, e:
 			logger.error(u"Failed to cache products: %s" % e)
 			timeline.addEvent(
