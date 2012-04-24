@@ -728,7 +728,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 							break
 					if not found:
 						logger.error(u"Requested product: '%s' not found on configured depot: '%s', please check your configuration, setting product to failed." % (productOnClient.productId, config.get('depot_server', 'depot_id')))
-						self._setProductCacheState(productOnClient.productId, 'failure', u"Requested product: '%s' not found on configured depot: '%s', please check your configuration, setting product to failed."  % (productOnClient.productId, config.get('depot_server', 'depot_id')))
+						self._setProductCacheState(productOnClient.productId, u"failure", u"Product not found on configured depot.")
 						errorProductIds.append(productOnClient.productId)
 					
 				productIds.append('opsi-winst')
@@ -794,13 +794,19 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			self._state['products'][productId] = {}
 		self._state['products'][productId][key] = value
 		state.set('product_cache_service', self._state)
-		actionProgress = None
+		actionProgress     = None
+		installationStatus = None
+		actionResult       = None
+		actionRequest      = None
 		if   (key == 'started'):
 			actionProgress = 'caching'
 		elif (key == 'completed'):
 			actionProgress = 'cached'
 		elif (key == 'failure'):
 			actionProgress = u"Cache failure: %s" % forceUnicode(value)
+			installationStatus = u'unknown',
+			actionResult       = u'failed',
+			actionRequest      = u'none'
 		if actionProgress and updateProductOnClient:
 			self._configService.productOnClient_updateObjects([
 				ProductOnClient(
@@ -808,9 +814,9 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					productType        = u'LocalbootProduct',
 					clientId           = config.get('global', 'host_id'),
 					actionProgress     = actionProgress,
-					installationStatus = u'unknown',
-					actionResult       = u'failed',
-					actionRequest      = u'none'
+					installationStatus = installationStatus,
+					actionResult       = actionResult,
+					actionRequest      = actionRequest
 				)
 			])
 
