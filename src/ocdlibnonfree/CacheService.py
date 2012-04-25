@@ -803,9 +803,9 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		elif (key == 'completed'):
 			actionProgress = 'cached'
 		elif (key == 'failure'):
-			actionProgress = u"Cache failure: %s" % forceUnicode(value)
-			installationStatus = u'unknown',
-			actionResult       = u'failed',
+			actionProgress     = u"Cache failure: %s" % forceUnicode(value)
+			installationStatus = u'unknown'
+			actionResult         = u'failed'
 			actionRequest      = u'none'
 		if actionProgress and updateProductOnClient:
 			self._configService.productOnClient_updateObjects([
