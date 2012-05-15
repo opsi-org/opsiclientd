@@ -443,7 +443,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			raise Exception(u"opsiclientd_rpc command not defined")
 		
 		if sessionId is None:
-			sessionId = System.getActiveConsoleSessionId(self._winApiBugCommand)
+			sessionId = System.getActiveConsoleSessionId()
 		rpc = 'setCurrentActiveDesktopName("%s", System.getActiveDesktopName())' % sessionId
 		cmd = '%s "%s"' % (config.get('opsiclientd_rpc', 'command'), rpc)
 		
@@ -466,7 +466,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		desktop = forceUnicode(desktop)
 		if sessionId is None:
-			sessionId = System.getActiveConsoleSessionId(self._winApiBugCommand)
+			sessionId = System.getActiveConsoleSessionId()
 		sessionId = forceInt(sessionId)
 		
 		rpc = "noop(System.switchDesktop('%s'))" % desktop
@@ -546,7 +546,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			
 			sessionIds = System.getActiveSessionIds(self._winApiBugCommand)
 			if not sessionIds:
-				sessionIds = [ System.getActiveConsoleSessionId(self._winApiBugCommand) ]
+				sessionIds = [ System.getActiveConsoleSessionId() ]
 			for sessionId in sessionIds:
 				logger.info(u"Starting popup message notifier app in session %d" % sessionId)
 				try:
