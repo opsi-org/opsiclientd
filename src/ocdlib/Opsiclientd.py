@@ -119,7 +119,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					durationEvent = True)
 			if not self._blockLoginNotifierPid and config.get('global', 'block_login_notifier'):
 				logger.info(u"Starting block login notifier app")
-				sessionId = System.getActiveConsoleSessionId()
+				sessionId = System.getActiveConsoleSessionId(self._winApiBugCommand)
 				while True:
 					try:
 						self._blockLoginNotifierPid = System.runCommandInSession(
@@ -225,6 +225,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		config.readConfigFile()
 		setLocaleDir(config.get('global', 'locale_dir'))
+		
+		#Needed helper-exe for NT5 x64 to get Sessioninformation (WindowsAPIBug)
+		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\sessionhelper\getActiveSessionIds.exe') 
 		
 		try:
 			eventTitle = u''
@@ -440,7 +443,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			raise Exception(u"opsiclientd_rpc command not defined")
 		
 		if sessionId is None:
-			sessionId = System.getActiveConsoleSessionId()
+			sessionId = System.getActiveConsoleSessionId(self._winApiBugCommand)
 		rpc = 'setCurrentActiveDesktopName("%s", System.getActiveDesktopName())' % sessionId
 		cmd = '%s "%s"' % (config.get('opsiclientd_rpc', 'command'), rpc)
 		
@@ -463,7 +466,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 		desktop = forceUnicode(desktop)
 		if sessionId is None:
-			sessionId = System.getActiveConsoleSessionId()
+			sessionId = System.getActiveConsoleSessionId(self._winApiBugCommand)
 		sessionId = forceInt(sessionId)
 		
 		rpc = "noop(System.switchDesktop('%s'))" % desktop
@@ -541,9 +544,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setChoices([ _('Close') ])
 			choiceSubject.setCallbacks( [ self.popupCloseCallback ] )
 			
-			sessionIds = System.getActiveSessionIds()
+			sessionIds = System.getActiveSessionIds(self._winApiBugCommand)
 			if not sessionIds:
-				sessionIds = [ System.getActiveConsoleSessionId() ]
+				sessionIds = [ System.getActiveConsoleSessionId(self._winApiBugCommand) ]
 			for sessionId in sessionIds:
 				logger.info(u"Starting popup message notifier app in session %d" % sessionId)
 				try:
