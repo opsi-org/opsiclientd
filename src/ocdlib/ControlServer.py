@@ -456,7 +456,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		if sessionId:
 			sessionId = forceInt(sessionId)
 		else:
-			sessionId = System.getActiveSessionId()
+			sessionId = System.getActiveSessionId(self.opsiclientd._winApiBugCommand)
 		if desktop:
 			desktop = forceUnicode(desktop)
 		else:
@@ -540,7 +540,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	
 	def getActiveSessions(self):
 		sessions = []
-		for session in System.getActiveSessionInformation():
+		
+		for session in System.getActiveSessionInformation(self.opsiclientd._winApiBugCommand):
 			year = session['LogonTime'].year
 			month = session['LogonTime'].month
 			if (month < 10): month = '0%d' % month

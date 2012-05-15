@@ -46,9 +46,11 @@ class StateImplementation(object):
 	def __init__(self):
 		self._state = {}
 		self._stateFile = config.get('global', 'state_file')
+		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\sessionhelper\getActiveSessionIds.exe') 
 		self._stateLock = threading.Lock()
 		self._readStateFile()
 		self.set('shutdown_cancel_counter', 0)
+		
 		
 	def _readStateFile(self):
 		self._stateLock.acquire()
@@ -78,7 +80,7 @@ class StateImplementation(object):
 	def get(self, name, default = None):
 		name = forceUnicode(name)
 		if (name == 'user_logged_in'):
-			return bool(System.getActiveSessionIds())
+			return bool(System.getActiveSessionIds(self._winApiBugCommand))
 		if (name == 'configserver_reachable'):
 			return isConfigServiceReachable(timeout = 15)
 		if (name == 'products_cached'):
