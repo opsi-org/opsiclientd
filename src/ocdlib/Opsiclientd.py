@@ -119,7 +119,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					durationEvent = True)
 			if not self._blockLoginNotifierPid and config.get('global', 'block_login_notifier'):
 				logger.info(u"Starting block login notifier app")
-				sessionId = System.getActiveConsoleSessionId(self._winApiBugCommand)
+				sessionId = System.getActiveConsoleSessionId()
 				while True:
 					try:
 						self._blockLoginNotifierPid = System.runCommandInSession(
