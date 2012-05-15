@@ -184,7 +184,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if userSessionsIds:
 					sessionId = userSessionsIds[0]
 			if not sessionId:
-				sessionId = System.getActiveSessionId(winApiBug = self._winApiBugCommand)
+				sessionId = System.getActiveSessionId(winApiBugCommand = self._winApiBugCommand)
 				
 			self.setSessionId(sessionId)
 		return self._sessionId
