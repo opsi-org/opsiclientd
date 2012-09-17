@@ -31,7 +31,7 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '4.0'
+__version__ = '4.0.2'
 
 # Imports
 import sys, os, locale
@@ -42,26 +42,39 @@ from OPSI.Backend.JSONRPC import JSONRPCBackend
 
 logger = Logger()
 
-encoding = locale.getpreferredencoding()
-argv = [ unicode(arg, encoding) for arg in sys.argv ]
-
-if (len(argv) < 5):
-	print u"Usage: %s <username> <password> <port> <rpc>" % os.path.basename(argv[0])
-	sys.exit(1)
-
-(username, password, port, rpc) = argv[1:5]
-logFile = None
-if (len(argv) > 5):
-	logFile = argv[5]
-	logger.setLogFile(logFile)
-	logger.setFileLevel(LOG_DEBUG)
 try:
-	be = JSONRPCBackend(username = username, password = password, address = u'https://localhost:%s/opsiclientd' % port)
-	logger.notice(u"Executing: %s" % rpc)
-	exec 'be.%s' % rpc
-	be.backend_exit()
-except Exception, e:
-	logger.logException(e)
+	#reading the opsiclientd.conf for the machine-account
+	basedir = os.getcwd()
+	pathToConf = os.path.join(basedir, "opsicliend\opsiclientd.conf")
+	username = None
+	password = None
+	if os.path.exists(pathToConf):
+		f = open(pathToConf)
+		lines = f.readlines()
+		
+		for line in lines:
+			if line.lower().startswith(u"host_id"):
+				username = line.split("=")[1].strip()
+			elif line.lower().startswith(u"opsi_host_key"):
+				password = line.split("=")[1].strip()
+			if username and password:
+				break
+	
+	# Connect local service
+	be = JSONRPCBackend(username = username, password = password, address = u'https://localhost:4441/opsiclientd')
+	
+	# Trying to fire Event gui_startup
+	be.fireEvent("gui_startup")
+	
+	while True:
+		if be.isEventRunning("gui_startup"):
+			time.sleep(2)
+		else:
+			break
+	sys.exit(0)
+				
+except:
 	sys.exit(1)
-sys.exit(0)
+
+
 

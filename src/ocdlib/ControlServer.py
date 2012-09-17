@@ -504,6 +504,15 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		ept = self.opsiclientd.getEventProcessingThread(sessionId)
 		logger.notice(u"rpc setStatusMessage: Setting status message to '%s'" % message)
 		ept.setStatusMessage(message)
+		
+	def isEventRunning(self, name):
+		sessionId = sessionId = System.getActiveSessionId(self.opsiclientd._winApiBugCommand)
+		ept = self.opsiclientd.getEventProcessingThread(sessionId)
+		if ept.event.eventConfig.getId() == name:
+			return True
+		else:
+			return False
+		
 	
 	def getCurrentActiveDesktopName(self, sessionId=None):
 		desktop = self.opsiclientd.getCurrentActiveDesktopName(sessionId)
