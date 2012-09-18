@@ -39,13 +39,14 @@ import sys, os, locale
 from OPSI import System
 from OPSI.Logger import *
 from OPSI.Backend.JSONRPC import JSONRPCBackend
+import time
 
 logger = Logger()
 
 try:
 	#reading the opsiclientd.conf for the machine-account
 	basedir = os.getcwd()
-	pathToConf = os.path.join(basedir, "opsicliend\opsiclientd.conf")
+	pathToConf = os.path.join(basedir, "opsiclientd\opsiclientd.conf")
 	username = None
 	password = None
 	if os.path.exists(pathToConf):
@@ -65,7 +66,7 @@ try:
 	
 	# Trying to fire Event gui_startup
 	be.fireEvent("gui_startup")
-	
+        time.sleep(4)
 	while True:
 		if be.isEventRunning("gui_startup"):
 			time.sleep(2)
@@ -73,7 +74,8 @@ try:
 			break
 	sys.exit(0)
 				
-except:
+except Exception, e:
+        print e
 	sys.exit(1)
 
 
