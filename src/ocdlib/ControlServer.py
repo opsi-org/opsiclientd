@@ -508,7 +508,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def isEventRunning(self, name):
 		#sessionId = sessionId = System.getActiveSessionId(self.opsiclientd._winApiBugCommand)
 		running = False
-		for ept in self._eventProcessingThreads:
+		for ept in self.opsiclientd._eventProcessingThreads:
 			if ept.event.eventConfig.getId() == name:
 				running = True
 				break
