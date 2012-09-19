@@ -70,6 +70,8 @@ try:
 	while True:
 		if be.isEventRunning("gui_startup"):
 			time.sleep(2)
+		elif be.isEventRunning("gui_startup{user_logged_in}"):
+			time.sleep(2)
 		else:
 			break
 	sys.exit(0)
