@@ -49,6 +49,12 @@ try:
 	pathToConf = os.path.join(basedir, "opsiclientd\opsiclientd.conf")
 	username = None
 	password = None
+	
+	myEvent = "gui_startup"
+	# myEvent = "shutdown_install"
+	if len(sys.argv) > 1: 
+		myEvent = sys.argv[1] 
+		
 	if os.path.exists(pathToConf):
 		f = open(pathToConf)
 		lines = f.readlines()
@@ -64,20 +70,20 @@ try:
 	# Connect local service
 	be = JSONRPCBackend(username = username, password = password, address = u'https://localhost:4441/opsiclientd')
 	
-	# Trying to fire Event gui_startup
-	be.fireEvent("gui_startup")
-        time.sleep(4)
+	# Trying to fire myEvent
+	be.fireEvent(myEvent)
+	time.sleep(4)
 	while True:
-		if be.isEventRunning("gui_startup"):
-			time.sleep(2)
-		elif be.isEventRunning("gui_startup{user_logged_in}"):
-			time.sleep(2)
+		if be.isEventRunning(myEvent):
+			time.sleep(5)
+		elif be.isEventRunning(myEvent+"{user_logged_in}"):
+			time.sleep(5)
 		else:
 			break
 	sys.exit(0)
 				
 except Exception, e:
-        print e
+	print e
 	sys.exit(1)
 
 
