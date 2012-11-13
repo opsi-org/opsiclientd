@@ -541,7 +541,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				raise Exception(u"Opsi >= 4.0 needed")
 			
 			productsByIdAndVersion = {}
-			for product in self._configService.product_getObjects(type = 'LocalbootProduct', userLoginScript = "*.ins"):
+			for product in self._configService.product_getObjects(type = 'LocalbootProduct', userLoginScript = "*.*"):
 				if not productsByIdAndVersion.has_key(product.id):
 					productsByIdAndVersion[product.id] = {}
 				if not productsByIdAndVersion[product.id].has_key(product.productVersion):

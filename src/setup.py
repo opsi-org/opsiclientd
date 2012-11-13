@@ -128,13 +128,6 @@ network_performance = Target(
 	icon_resources = [(1, "windows\\opsi.ico")]
 )
 
-opsiclientd_shutdown_starter = Target(
-	name = "opsiclientd_shutdown_starter",
-	description = "opsi client daemon shutdown-starter tool",
-	script = "windows\\helpers\\opsiclientd_shutdown_starter\\opsiclientd_shutdown_starter.py",
-	icon_resources = [(1, "windows\\opsi.ico")]
-)
-
 data_files = [
 	('Microsoft.VC90.MFC', glob.glob('Microsoft.VC90.MFC\\*.*')),
 	('Microsoft.VC90.CRT', glob.glob('Microsoft.VC90.CRT\\*.*')),
@@ -174,7 +167,7 @@ setup(
 	data_files = data_files,
 	zipfile = "lib/library.zip",
 	service = [ opsiclientd ],
-	console = [ network_performance, opsiclientd_shutdown_starter ],
+	console = [ network_performance ],
 	windows = [ notifier, opsiclientd_rpc, action_processor_starter ],
 )
 for lang in os.listdir(os.path.join("dist", "locale")):
