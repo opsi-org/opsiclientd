@@ -172,7 +172,8 @@ class ServiceConnection(object):
 					logger.debug(u"Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d) " \
 						% (timeout, serviceConnectionThread.isAlive(), cancellableAfter))
 					self.connectionTimeoutChanged(timeout)
-					cancellableAfter -= 1
+					if cancellableAfter > 0:
+						cancellableAfter -= 1
 					if (cancellableAfter == 0):
 						self.connectionCancelable(serviceConnectionThread.stopConnectionCallback)
 					time.sleep(1)
