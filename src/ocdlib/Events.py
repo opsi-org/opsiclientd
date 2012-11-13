@@ -713,8 +713,23 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 	
 	def callback(self, eventType, *args):
 		logger.debug(u"UserLoginEventGenerator event callback: eventType '%s', args: %s" % (eventType, args))
+		if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
+			# Try to find out, if the Login is from the WindowManager (Win8 Bugfix for UserLoginScripts)
+			sessionIds = None
+			sessionId = None
+			sessionData = None
+			
+			sessionIds = System.getUserSessionIds(args[0])
+			if sessionIds:
+				sessionId = sessionIds[0]
+				sessionData = System.getSessionInformation(sessionId)
+				if sessionData.get(u'LogonDomain', '') == u'Window Manager':
+					logger.notice(u"Windows Manager Login detected, no UserLoginAction will be fired.")
+					return
+			
 		if (eventType == 'Logon'):
 		#if (eventType == 'StartShell'):
+			
 			logger.notice(u"User login detected: %s" % args[0])
 			self._eventsOccured += 1
 			self.fireEvent(self.createEvent(eventInfo = {'User': args[0]}))

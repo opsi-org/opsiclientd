@@ -33,7 +33,7 @@
 
 # Imports
 from OpenSSL import SSL
-import base64, urllib, codecs, time
+import base64, urllib, codecs, time, re
 import win32security, win32net
 
 # Twisted imports
@@ -551,16 +551,35 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		sessions = []
 		
 		for session in System.getActiveSessionInformation(self.opsiclientd._winApiBugCommand):
-			year = session['LogonTime'].year
-			month = session['LogonTime'].month
+			year      = 0
+			month   = 0
+			day        = 0
+			hour      = 0
+			minute  = 0
+			second  = 0
+			if isinstance(session,str):
+				match = None
+				pattern = re.compile("^(\d+)/(\d+)/(\d+)\s(\d+):(\d+):(\d+)")
+				match = pattern.match(session)
+				if match:
+					year    = match.group(3)
+					month = match.group(1)
+					day      = match.group(2)
+					hour     = match.group(4)
+					minute = match.group(5)
+					second = match.group(6)
+			else:
+				year    = session['LogonTime'].year
+				month = session['LogonTime'].month
+				day      = session['LogonTime'].day
+				hour     = session['LogonTime'].hour
+				minute = session['LogonTime'].minute
+				second = session['LogonTime'].second
+
 			if (month < 10): month = '0%d' % month
-			day = session['LogonTime'].day
 			if (day < 10): day = '0%d' % day
-			hour = session['LogonTime'].hour
 			if (hour < 10): hour = '0%d' % hour
-			minute = session['LogonTime'].minute
 			if (minute < 10): minute = '0%d' % minute
-			second = session['LogonTime'].second
 			if (second < 10): second = '0%d' % second
 			session['LogonTime'] = u'%s-%s-%s %s:%s:%s' % (year, month, day, hour, minute, second)
 			session['Sid'] = unicode(session['Sid']).replace(u'PySID:', u'')
