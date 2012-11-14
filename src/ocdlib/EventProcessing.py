@@ -581,7 +581,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			additionalParams = ''
 			#for userLoginScript in userLoginScripts:
 			#	additionalParams += ' "%s"' % userLoginScript
-			#additionalParams = u'/usercontext %s' % self.event.eventInfo.get('User')
+			additionalParams = u'/usercontext %s' % self.event.eventInfo.get('User')
 			self.runActions(productIds, additionalParams)
 			
 		except Exception, e:
