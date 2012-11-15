@@ -129,7 +129,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self._serviceUrlSubject.setMessage(configServiceUrl)
 		try:
 			cancellableAfter = forceInt(config.get('config_service', 'user_cancelable_after'))
-			if self._notificationServer and (cancellableAfter > 0):
+			if self._notificationServer and (cancellableAfter >= 0):
 				logger.info(u"User is allowed to cancel connection after %d seconds" % cancellableAfter)
 				self._choiceSubject = ChoiceSubject(id = 'choice')
 		except Exception, e:
