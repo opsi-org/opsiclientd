@@ -180,7 +180,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			sessionId = None
 			if self.isLoginEvent:
 				logger.info(u"Using session id of user '%s'" % self.event.eventInfo["User"])
-				userSessionsIds = System.getUserSessionIds(self.event.eventInfo["User"], self._winApiBugCommand)
+				userSessionsIds = System.getUserSessionIds(self.event.eventInfo["User"], self._winApiBugCommand, onlyNewestId = True)
 				if userSessionsIds:
 					sessionId = userSessionsIds[0]
 			if not sessionId:
