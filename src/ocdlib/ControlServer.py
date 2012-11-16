@@ -557,6 +557,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			hour      = 0
 			minute  = 0
 			second  = 0
+			logger.debug(u"session to check for LogonTime '%s'" % session)
 			if isinstance(session['LogonTime'],str):
 				match = None
 				pattern = re.compile("^(\d+)/(\d+)/(\d+)\s(\d+):(\d+):(\d+)")
