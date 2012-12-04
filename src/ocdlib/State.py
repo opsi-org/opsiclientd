@@ -89,6 +89,8 @@ class StateImplementation(object):
 			return self._state.get('config_cache_service', {}).get('config_cached', default)
 		if (name.find("cancel_counter") != -1):
 			return self._state.get(name, 0)
+		if (name == 'installation_pending'):
+			return bool(self._state.get('installation_pending', False))
 		if self._state.has_key(name):
 			return self._state[name]
 		logger.warning(u"Unknown state name '%s', returning False" % name)
