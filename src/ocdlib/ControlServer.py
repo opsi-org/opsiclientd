@@ -613,6 +613,17 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				if ((time.time() - start) >= seconds): return
 		finally:
 			serviceConnection.disconnectConfigService()
+		
+	def getBackendInfo(self):
+		serviceConnection = ServiceConnection(loadBalance = False)
+		serviceConnection.connectConfigService()
+		backendinfo = None
+		try:
+			configService = serviceConnection.getConfigService()
+			backendinfo = configService.backend_info()
+		finally:
+			serviceConnection.disconnectConfigService()
+			return backendinfo
 
 
 
