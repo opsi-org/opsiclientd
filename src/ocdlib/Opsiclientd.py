@@ -546,7 +546,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setChoices([ _('Close') ])
 			choiceSubject.setCallbacks( [ self.popupCloseCallback ] )
 			
-			sessionIds = System.getActiveSessionIds(self._winApiBugCommand)
+			sessionIds = System.getActiveSessionIds(winApiBugCommand = self._winApiBugCommand)
 			if not sessionIds:
 				sessionIds = [ System.getActiveConsoleSessionId() ]
 			for sessionId in sessionIds:
