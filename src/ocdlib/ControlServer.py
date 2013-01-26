@@ -423,6 +423,15 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	
 	def cacheService_getConfigModifications(self):
 		return self.opsiclientd.getCacheService().getConfigModifications()
+		
+	def cacheService_deleteCache(self):
+		cacheService = self.opsiclientd.getCacheService()
+		cacheService.setConfigCacheObsolete()
+		productCacheDir = cacheService.getProductCacheDir()
+		if os.path.exists(productCacheDir):
+			for product in os.listdir(productCacheDir):
+				shutil.rmtree(product)
+		return u"product cache deleted."
 	
 	def timeline_getEvents(self):
 		return timeline.getEvents()
