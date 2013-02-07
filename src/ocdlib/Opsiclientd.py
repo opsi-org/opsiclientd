@@ -28,10 +28,11 @@
    
    @copyright:	uib GmbH <info@uib.de>
    @author: Jan Schneider <j.schneider@uib.de>
+   @author: Erol Ueluekmen <e.ueluekmen@uib.de>
    @license: GNU General Public License version 2
 """
 
-__version__ = '4.0.75'
+__version__ = '4.0.76'
 
 # Imports
 import sys, os

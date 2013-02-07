@@ -28,6 +28,7 @@
    
    @copyright:	uib GmbH <info@uib.de>
    @author: Jan Schneider <j.schneider@uib.de>
+   @author: Erol Ueluekmen <e.ueluekmen@uib.de>
    @license: GNU General Public License version 2
 """
 
@@ -1048,6 +1049,8 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['preActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'post_action_processor_command'):
 						eventConfigs[eventConfigId]['postActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
+					elif (key == 'action_processor_productIds'):
+						eventConfigs[eventConfigId]['actionProcessorProductIds'] = forceList(config.strip())
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
 				except Exception, e:

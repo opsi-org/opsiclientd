@@ -28,6 +28,7 @@
    
    @copyright:	uib GmbH <info@uib.de>
    @author: Jan Schneider <j.schneider@uib.de>
+   @author: Erol Ueluekmen <e.ueluekmen@uib.de>
    @license: GNU General Public License version 2
 """
 
@@ -603,6 +604,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				raise Exception(u"Not connected to config service")
 			
 			productIds = []
+			if self.event.eventConfig.actionProcessorProductIds:
+				productIds = self.event.eventConfig.actionProcessorProductIds 
 			if self._configService.isLegacyOpsi():
 				productStates = self._configService.getLocalBootProductStates_hash(config.get('global', 'host_id'))
 				productStates = productStates.get(config.get('global', 'host_id'), [])
@@ -614,14 +617,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						productIds.append(productState['productId'])
 						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productState['productId'] + ':', productState['actionRequest']))
 			else:
-				for productOnClient in self._configService.productOnClient_getObjects(
-							productType   = 'LocalbootProduct',
-							clientId      = config.get('global', 'host_id'),
-							actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
-							attributes    = ['actionRequest']):
-					if not productOnClient.productId in productIds:
-						productIds.append(productOnClient.productId)
-						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
+				if not productIds:
+					for productOnClient in self._configService.productOnClient_getObjects(
+								productType   = 'LocalbootProduct',
+								clientId      = config.get('global', 'host_id'),
+								actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+								attributes    = ['actionRequest']):
+						if not productOnClient.productId in productIds:
+							productIds.append(productOnClient.productId)
+							logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
 					
 			if (len(productIds) == 0) and (bootmode == 'BKSTD'):
 				logger.notice(u"No product action requests set")
@@ -764,6 +768,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
 			actionProcessorCommand = actionProcessorCommand.replace('%service_url%', self._configServiceUrl)
 			actionProcessorCommand = actionProcessorCommand.replace('%service_session%', serviceSession)
+			actionProcessorCommand = actionProcessorCommand.replace('%action_processor_productIds%', ",".join(self.event.eventConfig.actionProcessorProductIds))
 			actionProcessorCommand += u' %s' % additionalParams
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 			
