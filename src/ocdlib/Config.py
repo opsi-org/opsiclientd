@@ -198,7 +198,7 @@ class ConfigImplementation(object):
 		logger.info(u"Setting config value %s.%s" % (section, option))
 		logger.debug(u"set(%s, %s, %s)" % (section, option, value))
 		
-		if (option.find('command') == -1) and option.find('productids') == -1) and (value == ''):
+		if (option.find('command') == -1) and (option.find('productids') == -1) and (value == ''):
 			logger.warning(u"Refusing to set empty value for config value '%s' of section '%s'" % (option, section))
 			return
 		
