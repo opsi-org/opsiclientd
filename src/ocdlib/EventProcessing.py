@@ -489,7 +489,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.info(u"Moving dir '%s' to '%s'" % (actionProcessorLocalTmpDir, actionProcessorLocalDir))
 			shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
 			
-			logger.notice(u"Trying to set the right permissions for opsi-winst"):
+			logger.notice(u"Trying to set the right permissions for opsi-winst")
 			setaclcommand = os.path.join(config.get('global', 'base_dir'), 'utilities\setacl.exe'
 			logger.notice(u"make the dacl not inherited")
 			System.execute('"%s" -on "%s" -ot file -actn clear -actn setprot -op "dacl:p_c;sacl:nc" -rec cont_obj' % (setaclcommand,  actionProcessorLocalDir))
