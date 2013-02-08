@@ -765,6 +765,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			
 			createEnvironment = config.get('action_processor', 'create_environment')
 			
+			
 			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
 			actionProcessorCommand = actionProcessorCommand.replace('%service_url%', self._configServiceUrl)
 			actionProcessorCommand = actionProcessorCommand.replace('%service_session%', serviceSession)
