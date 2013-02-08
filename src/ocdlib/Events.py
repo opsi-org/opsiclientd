@@ -1050,7 +1050,7 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['preActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'post_action_processor_command'):
 						eventConfigs[eventConfigId]['postActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
-					elif (key == 'action_processor_productIds'):
+					elif (key == 'action_processor_productids'):
 						eventConfigs[eventConfigId]['actionProcessorProductIds'] = forceList(config.strip())
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
