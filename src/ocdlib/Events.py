@@ -146,7 +146,7 @@ class EventConfig(object):
 		self.actionProcessorCommand        =  unicode ( conf.get('actionProcessorCommand',        ''        ) )
 		self.actionProcessorDesktop        =  unicode ( conf.get('actionProcessorDesktop',        'current' ) )
 		self.actionProcessorTimeout        =      int ( conf.get('actionProcessorTimeout',        3*3600    ) )
-		self.actionProcessorProductIds     =  unicode ( conf.get('actionProcessorProductIds',     ''        ) )
+		self.actionProcessorProductIds     =     list ( conf.get('actionProcessorProductIds',     []        ) )
 		self.preActionProcessorCommand     =  unicode ( conf.get('preActionProcessorCommand',     ''        ) )
 		self.postActionProcessorCommand    =  unicode ( conf.get('postActionProcessorCommand',    ''        ) )
 		#self.serviceOptions                =     dict ( conf.get('serviceOptions',                {}        ) )
