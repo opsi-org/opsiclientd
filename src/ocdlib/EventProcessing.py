@@ -779,7 +779,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
 			actionProcessorCommand = actionProcessorCommand.replace('%service_url%', self._configServiceUrl)
 			actionProcessorCommand = actionProcessorCommand.replace('%service_session%', serviceSession)
-			actionProcessorCommand = actionProcessorCommand.replace('%action_processor_productIds%', ",".join(self.event.eventConfig.actionProcessorProductIds))
+			actionProcessorCommand = actionProcessorCommand.replace('%action_processor_productids%', ",".join(self.event.eventConfig.actionProcessorProductIds))
 			actionProcessorCommand += u' %s' % additionalParams
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 			
