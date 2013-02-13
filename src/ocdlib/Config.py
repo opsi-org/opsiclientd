@@ -380,10 +380,10 @@ class ConfigImplementation(object):
 		logger.notice(u"Selecting depot for products %s" % productIds)
 		
 		if event and event.eventConfig.useCachedProducts:
-			cacheDepotDir = os.path.join(config.get('cache_service', 'storage_dir'), 'depot').replace('\\', '/').replace('//', '/')
+			cacheDepotDir = os.path.join(self.get('cache_service', 'storage_dir'), 'depot').replace('\\', '/').replace('//', '/')
 			logger.notice(u"Using depot cache: %s" % cacheDepotDir)
-			config.setTemporaryDepotDrive(cacheDepotDir.split(':')[0] + u':')
-			config.set('depot_server', 'url', 'smb://localhost/noshare/' + ('/'.join(cacheDepotDir.split('/')[1:])))
+			self.setTemporaryDepotDrive(cacheDepotDir.split(':')[0] + u':')
+			self.set('depot_server', 'url', 'smb://localhost/noshare/' + ('/'.join(cacheDepotDir.split('/')[1:])))
 			return
 		
 		if not configService:
@@ -479,8 +479,8 @@ class ConfigImplementation(object):
 							defaultInterface = networkInterface
 							break
 					clientConfig = {
-						"clientId":       config.get('global', 'host_id'),
-						"opsiHostKey":    config.get('global', 'opsi_host_key'),
+						"clientId":       self.get('global', 'host_id'),
+						"opsiHostKey":    self.get('global', 'opsi_host_key'),
 						"ipAddress":      forceUnicode(defaultInterface.ipAddressList.ipAddress),
 						"netmask":        forceUnicode(defaultInterface.ipAddressList.ipMask),
 						"defaultGateway": forceUnicode(defaultInterface.gatewayList.ipAddress)
