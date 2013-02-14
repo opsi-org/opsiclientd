@@ -649,7 +649,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					logger.error(e)
 			else:
 				#set installation_pending State
-				state.set('installation_pending','true')
+				if not self.event.eventConfig.actionProcessorProductIds:
+					state.set('installation_pending','true')
 				
 				logger.notice(u"Start processing action requests")
 				if productIds:
