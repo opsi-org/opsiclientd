@@ -430,7 +430,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		productCacheDir = cacheService.getProductCacheDir()
 		if os.path.exists(productCacheDir):
 			for product in os.listdir(productCacheDir):
-				System.shutil.rmtree(product)
+				deleteDir = os.path.join(productCacheDir, product)
+				System.shutil.rmtree(deleteDir)
 		return u"product cache deleted."
 	
 	def timeline_getEvents(self):
