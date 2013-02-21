@@ -378,6 +378,7 @@ class ConfigImplementation(object):
 		productIds = forceProductIdList(productIds)
 		
 		logger.notice(u"Selecting depot for products %s" % productIds)
+		logger.notice(u"MasterOnly --> '%s'" % masterOnly)
 		
 		if event and event.eventConfig.useCachedProducts:
 			cacheDepotDir = os.path.join(self.get('cache_service', 'storage_dir'), 'depot').replace('\\', '/').replace('//', '/')
