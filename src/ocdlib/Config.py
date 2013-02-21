@@ -403,7 +403,7 @@ class ConfigImplementation(object):
 					configId = ['clientconfig.depot.protocol', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
 					objectId = self.get('global', 'host_id')):
 			logger.notice("dnydepot DEBUG:")
-			logger.notice(">>>>>>>>>>>")
+			logger.notice(">>>>>>>>>>> '%s'" % self.get('global', 'host_id'))
 			logger.notice("configStateId: '%s'" % configState.configId)
 			logger.notice("configValues: '%s'" % configState.values)
 			
