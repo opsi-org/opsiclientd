@@ -402,6 +402,11 @@ class ConfigImplementation(object):
 		for configState in configService.configState_getObjects(
 					configId = ['clientconfig.depot.protocol', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
 					objectId = self.get('global', 'host_id')):
+			logger.notice("dnydepot DEBUG:")
+			logger.notice(">>>>>>>>>>>")
+			logger.notice("configStateId: '%s'" % configState.configId)
+			logger.notice("configValues: '%s'" % configState.values)
+			
 			if not configState.values or not configState.values[0]:
 				continue
 			if   (configState.configId == 'opsiclientd.depot_server.url') and configState.values:
