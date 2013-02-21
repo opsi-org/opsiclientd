@@ -421,6 +421,7 @@ class ConfigImplementation(object):
 				except Exception, e:
 					logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, e))
 			elif not masterOnly and (configState.configId == 'clientconfig.depot.dynamic') and configState.values:
+				logger.notice("Dynamic Depot -> masterOnly: '%s' and  clientconfig.depot.dynamic: '%s'" % (masterOnly, configState.values[0]))
 				dynamicDepot = forceBool(configState.values[0])
 			elif (configState.configId == 'clientconfig.depot.protocol') and configState.values and configState.values[0] and (configState.values[0] == 'webdav'):
 				depotProtocol = 'webdav'
