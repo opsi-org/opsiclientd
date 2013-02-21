@@ -398,18 +398,13 @@ class ConfigImplementation(object):
 		configService.backend_setOptions({"addConfigStateDefaults": True})
 		
 		depotIds = []
+		configStates = []
 		dynamicDepot = False
 		depotProtocol = 'cifs'
 		configStates = configService.configState_getObjects(
-					configId = ['clientconfig.depot.protocol', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
+					configId = ['clientconfig.depot.dynamic', 'clientconfig.depot.protocol', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
 					objectId = self.get('global', 'host_id'))
-		logger.notice("<<<<< configStates: '%s'" % configStates)
 		for configState in configStates:
-			logger.notice("dnydepot DEBUG:")
-			logger.notice(">>>>>>>>>>> '%s'" % self.get('global', 'host_id'))
-			logger.notice("configStateId: '%s'" % configState.configId)
-			logger.notice("configValues: '%s'" % configState.values)
-			
 			if not configState.values or not configState.values[0]:
 				continue
 			if   (configState.configId == 'opsiclientd.depot_server.url') and configState.values:
@@ -429,7 +424,6 @@ class ConfigImplementation(object):
 				except Exception, e:
 					logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, e))
 			elif not masterOnly and (configState.configId == 'clientconfig.depot.dynamic') and configState.values:
-				logger.notice("Dynamic Depot -> masterOnly: '%s' and  clientconfig.depot.dynamic: '%s'" % (masterOnly, configState.values[0]))
 				dynamicDepot = forceBool(configState.values[0])
 			elif (configState.configId == 'clientconfig.depot.protocol') and configState.values and configState.values[0] and (configState.values[0] == 'webdav'):
 				depotProtocol = 'webdav'
