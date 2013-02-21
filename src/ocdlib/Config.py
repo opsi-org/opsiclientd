@@ -400,9 +400,11 @@ class ConfigImplementation(object):
 		depotIds = []
 		dynamicDepot = False
 		depotProtocol = 'cifs'
-		for configState in configService.configState_getObjects(
+		configStates = configService.configState_getObjects(
 					configId = ['clientconfig.depot.protocol', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
-					objectId = self.get('global', 'host_id')):
+					objectId = self.get('global', 'host_id'))
+		logger.notice("<<<<< configStates: '%s'" % configStates)
+		for configState in configStates:
 			logger.notice("dnydepot DEBUG:")
 			logger.notice(">>>>>>>>>>> '%s'" % self.get('global', 'host_id'))
 			logger.notice("configStateId: '%s'" % configState.configId)
