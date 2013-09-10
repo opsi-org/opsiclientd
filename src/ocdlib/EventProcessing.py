@@ -39,15 +39,11 @@ import sys
 import time
 
 from OPSI.Logger import Logger, LOG_WARNING
-from OPSI.Util import *
-from OPSI.Util.Message import *
 from OPSI.Util.Thread import KillableThread
 from OPSI.Types import forceInt, forceUnicode, forceUnicodeLower
 from OPSI import System
-from OPSI.Object import *
 
 from ocdlib.Config import Config
-from ocdlib.Events import *
 from ocdlib.Exceptions import CanceledByUserError
 from ocdlib.Localization import _
 from ocdlib.OpsiService import ServiceConnection
