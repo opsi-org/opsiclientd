@@ -31,6 +31,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 import os
 import inspect
+import threading
+import time
 from ctypes import *
 
 from OPSI.Logger import Logger
@@ -50,7 +52,7 @@ def ControlPipeFactory(opsiclientdRpcInterface):
 	elif (os.name == 'nt'):
 		return NTControlPipe(opsiclientdRpcInterface)
 	else:
-		raise NotImplemented(u"Unsupported operating system %s" % os.name)
+		raise NotImplementedError(u"Unsupported operating system %s" % os.name)
 
 
 class ControlPipe(threading.Thread):
@@ -97,8 +99,8 @@ class PosixControlPipe(ControlPipe):
 
 	def createPipe(self):
 		logger.debug2(u"Creating pipe %s" % self._pipeName)
-		if not os.path.exists( os.path.dirname(self._pipeName) ):
-			os.mkdir( os.path.dirname(self._pipeName) )
+		if not os.path.exists(os.path.dirname(self._pipeName)):
+			os.mkdir(os.path.dirname(self._pipeName))
 		if os.path.exists(self._pipeName):
 			os.unlink(self._pipeName)
 		os.mkfifo(self._pipeName)
@@ -192,7 +194,7 @@ class NTControlPipeConnection(threading.Thread):
 				fReadSuccess = windll.kernel32.ReadFile(self._pipe, chBuf, self._bufferSize, byref(cbRead), None)
 				if ((fReadSuccess == 1) or (cbRead.value != 0)):
 					logger.debug(u"Received rpc from pipe '%s'" % chBuf.value)
-					result =  "%s\0" % self._ntControlPipe.executeRpc(chBuf.value)
+					result = "%s\0" % self._ntControlPipe.executeRpc(chBuf.value)
 					cbWritten = c_ulong(0)
 					logger.debug2(u"Writing to pipe")
 					fWriteSuccess = windll.kernel32.WriteFile(
@@ -298,10 +300,10 @@ class OpsiclientdRpcPipeInterface(object):
 				for arg in forceList(args):
 					if (arg != 'self'):
 						params.append(arg)
-			if ( defaults != None and len(defaults) > 0 ):
+			if defaults is not None and len(defaults) > 0:
 				offset = len(params) - len(defaults)
 				for i in range(len(defaults)):
-					params[offset+i] = '*' + params[offset+i]
+					params[offset + i] = '*' + params[offset + i]
 
 			if varargs:
 				for arg in forceList(varargs):
@@ -312,7 +314,10 @@ class OpsiclientdRpcPipeInterface(object):
 					params.append('**' + arg)
 
 			logger.debug2(u"Interface method name '%s' params %s" % (methodName, params))
-			methods[methodName] = { 'name': methodName, 'params': params, 'args': args, 'varargs': varargs, 'keywords': keywords, 'defaults': defaults}
+			methods[methodName] = {
+				'name': methodName, 'params': params, 'args': args,
+				'varargs': varargs, 'keywords': keywords, 'defaults': defaults
+			}
 
 		methodList = []
 		methodNames = methods.keys()
