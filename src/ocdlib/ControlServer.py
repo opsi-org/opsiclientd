@@ -31,8 +31,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 @license: GNU General Public License version 2
 """
 import codecs
-import time
+import os
 import re
+import threading
+import time
 
 try:
 	import win32net
@@ -46,20 +48,19 @@ from OPSI.web2 import resource, stream, server, http, responsecode
 from OPSI.web2.channel.http import HTTPFactory
 
 from OPSI.Logger import Logger
-from OPSI.Types import forceUnicode, forceInt
-from OPSI.Util import *
+from OPSI.Types import forceUnicode, forceInt, OpsiAuthenticationError
 from OPSI import System
 from OPSI.Service import SSLContext, OpsiService
 from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface
 from OPSI.Service.Resource import ResourceOpsi, ResourceOpsiJsonRpc, ResourceOpsiJsonInterface, ResourceOpsiDAV
 
-from ocdlib.Exceptions import *
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.Config import Config
 from ocdlib.Events import eventGenerators
 from ocdlib.Timeline import Timeline
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.SoftwareOnDemand import ResourceSoftwareOnDemand
+from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
 logger = Logger()
 config = Config()
@@ -103,15 +104,13 @@ infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
 </html>
 '''
 
-'''
-
-	<div id="infopage-opsiclientd-log-box">
-		<p id="infopage-opsiclientd-log-title">Log</p>
-		<div id="infopage-opsiclientd-log">
-		%(opsiclient-log)s
-		</div>
-	</div>
-'''
+# Snippet to include logs on the web page
+# <div id="infopage-opsiclientd-log-box">
+# 	<p id="infopage-opsiclientd-log-title">Log</p>
+# 	<div id="infopage-opsiclientd-log">
+# 	%(opsiclient-log)s
+# 	</div>
+# </div>
 
 
 class WorkerOpsiclientd(WorkerOpsi):
@@ -140,7 +139,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 
 			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
 				return result
-			if (os.name == 'nt'):
+			if RUNNING_ON_WINDOWS:
 				try:
 					# Hack to find and read the local-admin group and his members,
 					# that should also Work on french installations
