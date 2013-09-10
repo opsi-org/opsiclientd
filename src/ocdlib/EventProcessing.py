@@ -32,28 +32,29 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 @license: GNU General Public License version 2
 """
 
+import codecs
 import filecmp
 import os
+import re
 import shutil
 import sys
 import time
 
 from OPSI.Logger import Logger, LOG_WARNING
+from OPSI.Object import ProductOnClient
 from OPSI.Util.Thread import KillableThread
+from OPSI.Util.Message import (MessageSubject, MessageSubjectProxy,
+							   ProgressSubjectProxy, ChoiceSubject,
+							   NotificationServer)
 from OPSI.Types import forceInt, forceUnicode, forceUnicodeLower
 from OPSI import System
 
 from ocdlib.Config import Config
+from ocdlib.Events import state, reconfigureEventGenerators
 from ocdlib.Exceptions import CanceledByUserError
 from ocdlib.Localization import _
 from ocdlib.OpsiService import ServiceConnection
-from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 from ocdlib.Timeline import Timeline
-
-if RUNNING_ON_WINDOWS:
-	from ocdlib.Windows import *
-else:
-	from ocdlib.Posix import *
 
 logger = Logger()
 config = Config()
@@ -424,7 +425,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				)
 				logger.notice(u"Updating action processor from local cache '%s'" % actionProcessorRemoteDir)
 			else:
-
 				match = re.search('^smb://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
 				if not match:
 					raise Exception("Bad depot-URL '%s'" % config.get('depot_server', 'url'))
@@ -815,6 +815,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.debug(u"Updating environment")
 			hostname = os.environ['COMPUTERNAME']
 			(homeDrive, homeDir) = os.environ['USERPROFILE'].split('\\')[0:2]
+			# TODO: is this correct?
+			username = config.get('global', 'username')
 			# TODO: Anwendungsdaten
 			os.environ['APPDATA']     = '%s\\%s\\%s\\Anwendungsdaten' % (homeDrive, homeDir, username)
 			os.environ['HOMEDRIVE']   = homeDrive
