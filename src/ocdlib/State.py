@@ -1,57 +1,59 @@
 # -*- coding: utf-8 -*-
 """
-   = = = = = = = = = = = = = = = = = = = = =
-   =   ocdlib.State                        =
-   = = = = = = = = = = = = = = = = = = = = =
-   
-   opsiclientd is part of the desktop management solution opsi
-   (open pc server integration) http://www.opsi.org
-   
-   Copyright (C) 2011 uib GmbH
-   
-   http://www.uib.de/
-   
-   All rights reserved.
-   
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as
-   published by the Free Software Foundation.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-   
-   @copyright:	uib GmbH <info@uib.de>
-   @author: Jan Schneider <j.schneider@uib.de>
-   @license: GNU General Public License version 2
+ocdlib.State
+
+opsiclientd is part of the desktop management solution opsi
+(open pc server integration) http://www.opsi.org
+
+Copyright (C) 2011 uib GmbH
+
+http://www.uib.de/
+
+All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 2 as
+published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+@copyright:	uib GmbH <info@uib.de>
+@author: Jan Schneider <j.schneider@uib.de>
+@license: GNU General Public License version 2
 """
 
-import os, json, codecs, threading
+import codecs
+import json
+import os
+import threading
 
-from OPSI.Logger import *
-from OPSI.Types import *
+from OPSI.Logger import Logger
+from OPSI.Types import forceUnicode, forceBool
 from OPSI import System
 
 from ocdlib.Config import Config
 from ocdlib.OpsiService import isConfigServiceReachable
+
 logger = Logger()
 config = Config()
+
 
 class StateImplementation(object):
 	def __init__(self):
 		self._state = {}
 		self._stateFile = config.get('global', 'state_file')
-		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\sessionhelper\getActiveSessionIds.exe') 
+		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\sessionhelper\getActiveSessionIds.exe')
 		self._stateLock = threading.Lock()
 		self._readStateFile()
 		self.set('shutdown_cancel_counter', 0)
-		
-		
+
 	def _readStateFile(self):
 		self._stateLock.acquire()
 		try:
@@ -63,7 +65,7 @@ class StateImplementation(object):
 		except Exception, e:
 			logger.error(u"Failed to read state file '%s': %s" % (self._stateFile, e))
 		self._stateLock.release()
-		
+
 	def _writeStateFile(self):
 		self._stateLock.acquire()
 		try:
@@ -76,7 +78,7 @@ class StateImplementation(object):
 		except Exception, e:
 			logger.error(u"Failed to write state file '%s': %s" % (self._stateFile, e))
 		self._stateLock.release()
-		
+
 	def get(self, name, default = None):
 		name = forceUnicode(name)
 		if (name == 'user_logged_in'):
@@ -95,29 +97,29 @@ class StateImplementation(object):
 			return self._state[name]
 		logger.warning(u"Unknown state name '%s', returning False" % name)
 		return default
-	
+
 	def set(self, name, value):
 		name = forceUnicode(name)
 		logger.debug(u"Setting state '%s' to %s" % (name, value))
 		self._state[name] = value
 		self._writeStateFile()
-		
+
+
 class State(StateImplementation):
 	# Storage for the instance reference
 	__instance = None
-	
+
 	def __init__(self):
 		""" Create singleton instance """
-		
+
 		# Check whether we already have an instance
 		if State.__instance is None:
 			# Create and remember instance
 			State.__instance = StateImplementation()
-		
+
 		# Store instance reference as the only member in the handle
 		self.__dict__['_State__instance'] = State.__instance
-	
-	
+
 	def __getattr__(self, attr):
 		""" Delegate access to implementation """
 		return getattr(self.__instance, attr)
@@ -125,5 +127,3 @@ class State(StateImplementation):
 	def __setattr__(self, attr, value):
 		""" Delegate access to implementation """
 		return setattr(self.__instance, attr, value)
-
-
