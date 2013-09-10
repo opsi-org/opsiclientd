@@ -44,8 +44,7 @@ from OPSI.Logger import Logger, LOG_WARNING
 from OPSI.Object import ProductOnClient
 from OPSI.Util.Thread import KillableThread
 from OPSI.Util.Message import (MessageSubject, MessageSubjectProxy,
-							   ProgressSubjectProxy, ChoiceSubject,
-							   NotificationServer)
+	ProgressSubjectProxy, ChoiceSubject, NotificationServer)
 from OPSI.Types import forceInt, forceUnicode, forceUnicodeLower
 from OPSI import System
 
@@ -54,6 +53,7 @@ from ocdlib.Events import state, reconfigureEventGenerators
 from ocdlib.Exceptions import CanceledByUserError
 from ocdlib.Localization import _
 from ocdlib.OpsiService import ServiceConnection
+from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 from ocdlib.Timeline import Timeline
 
 logger = Logger()
@@ -299,7 +299,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				break
 			except Exception, e:
 				logger.error(e)
-				if (e[0] == 233) and (sys.getwindowsversion()[0] == 5) and (sessionId != 0):
+				if RUNNING_ON_WINDOWS and (e[0] == 233) and (sys.getwindowsversion()[0] == 5) and (sessionId != 0):
 					# No process is on the other end
 					# Problem with pipe \\\\.\\Pipe\\TerminalServer\\SystemExecSrvr\\<sessionid>
 					# After logging off from a session other than 0 csrss.exe does not create this pipe or CreateRemoteProcessW is not able to read the pipe.
