@@ -1,82 +1,62 @@
 # -*- coding: utf-8 -*-
 """
-   = = = = = = = = = = = = = = = = = = = = =
-   =   opsiclientd.Exceptions              =
-   = = = = = = = = = = = = = = = = = = = = =
-   
-   opsiclientd is part of the desktop management solution opsi
-   (open pc server integration) http://www.opsi.org
-   
-   Copyright (C) 2010 uib GmbH
-   
-   http://www.uib.de/
-   
-   All rights reserved.
-   
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as
-   published by the Free Software Foundation.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-   
-   @copyright:	uib GmbH <info@uib.de>
-   @author: Jan Schneider <j.schneider@uib.de>
-   @license: GNU General Public License version 2
+opsiclientd.ControlPipe
+
+opsiclientd is part of the desktop management solution opsi
+(open pc server integration) http://www.opsi.org
+
+Copyright (C) 2010 uib GmbH
+
+http://www.uib.de/
+
+All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 2 as
+published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+@copyright:	uib GmbH <info@uib.de>
+@author: Jan Schneider <j.schneider@uib.de>
+@license: GNU General Public License version 2
 """
 
-# Imports
-import os, inspect
+import os
+import inspect
 from ctypes import *
 
-# OPSI imports
-from OPSI.Logger import *
-from OPSI.Types import *
+from OPSI.Logger import Logger
+from OPSI.Types import forceList, forceUnicode
 from OPSI.Util import fromJson, toJson
 from OPSI.Service.JsonRpc import JsonRpc
 
-# Get logger instance
 logger = Logger()
 
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                     CONTROL PIPE FACTORY                                          -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def ControlPipeFactory(opsiclientdRpcInterface):
+	"""
+	Returns the right implementation of a ControlPipe for the running os.
+	"""
 	if (os.name == 'posix'):
 		return PosixControlPipe(opsiclientdRpcInterface)
-	if (os.name == 'nt'):
+	elif (os.name == 'nt'):
 		return NTControlPipe(opsiclientdRpcInterface)
 	else:
 		raise NotImplemented(u"Unsupported operating system %s" % os.name)
 
 
-
-'''
-= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-=                                            CONTROL PIPES                                            =
-= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-=                                                                                                     =
-=             These classes are used to create named pipes for remote procedure calls                 =
-=                                                                                                     =
-=  The class "ControlPipe" is the base class for a named pipe which handles remote procedure calls    =
-=     PosixControlPipe implements a control pipe for posix operating systems                          =
-=     NTControlPipe implements a control pipe for windows operating systems                           =
-=  The class "ControlPipeFactory" selects the right implementation for the running os                 =
-=                                                                                                     =
-= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-'''
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                        CONTROL PIPE                                               -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlPipe(threading.Thread):
+	"""
+	Base class for a named pipe which handles remote procedure calls.
+	"""
 	def __init__(self, opsiclientdRpcInterface):
 		moduleName = u' %-30s' % (u'control pipe')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
@@ -87,33 +67,34 @@ class ControlPipe(threading.Thread):
 		self._bufferSize = 4096
 		self._running = False
 		self._stopped = False
-		
+
 	def stop(self):
 		self._stopped = True
-	
+
 	def closePipe(self):
 		return
-	
+
 	def isRunning(self):
 		return self._running
-	
+
 	def executeRpc(self, rpc):
 		try:
 			rpc = fromJson(rpc)
-			rpc = JsonRpc(instance = self._opsiclientdRpcInterface, interface = self._opsiclientdRpcInterface.getInterface(), rpc = rpc)
+			rpc = JsonRpc(instance=self._opsiclientdRpcInterface, interface=self._opsiclientdRpcInterface.getInterface(), rpc=rpc)
 			rpc.execute()
 			return toJson(rpc.getResponse())
 		except Exception, e:
 			logger.logException(e)
-		
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                     POSIX CONTROL PIPE                                            -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+
 class PosixControlPipe(ControlPipe):
+	"""
+	PosixControlPipe implements a control pipe for posix operating systems
+	"""
 	def __init__(self, opsiclientdRpcInterface):
 		ControlPipe.__init__(self, opsiclientdRpcInterface)
 		self._pipeName = "/var/run/opsiclientd/fifo"
-	
+
 	def createPipe(self):
 		logger.debug2(u"Creating pipe %s" % self._pipeName)
 		if not os.path.exists( os.path.dirname(self._pipeName) ):
@@ -122,14 +103,14 @@ class PosixControlPipe(ControlPipe):
 			os.unlink(self._pipeName)
 		os.mkfifo(self._pipeName)
 		logger.debug2(u"Pipe %s created" % self._pipeName)
-	
+
 	def closePipe(self):
 		if self._pipe:
 			try:
 				os.close(self._pipe)
-			except Exception, e:
+			except Exception:
 				pass
-	
+
 	def run(self):
 		self._running = True
 		try:
@@ -166,7 +147,7 @@ class PosixControlPipe(ControlPipe):
 					logger.debug2(u"Number of bytes written: %d" % written)
 					if (len(result) != written):
 						logger.error("Failed to write all bytes to pipe (%d/%d)" % (written, len(result)))
-				
+
 				except Exception, e:
 					logger.error(u"Pipe IO error: %s" % forceUnicode(e))
 				try:
@@ -180,10 +161,11 @@ class PosixControlPipe(ControlPipe):
 			os.unlink(self._pipeName)
 		self._running = False
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                     NT CONTROL PIPE CONNECTION                                    -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class NTControlPipeConnection(threading.Thread):
+	"""
+	NTControlPipe implements a control pipe for windows operating systems
+	"""
 	def __init__(self, ntControlPipe, pipe, bufferSize):
 		moduleName = u' %-30s' % (u'control pipe')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
@@ -192,14 +174,14 @@ class NTControlPipeConnection(threading.Thread):
 		self._pipe = pipe
 		self._bufferSize = bufferSize
 		logger.debug(u"NTControlPipeConnection initiated")
-	
+
 	def closePipe(self):
 		if self._pipe:
 			try:
 				windll.kernel32.CloseHandle(self._pipe)
 			except:
 				pass
-	
+
 	def run(self):
 		self._running = True
 		try:
@@ -214,11 +196,12 @@ class NTControlPipeConnection(threading.Thread):
 					cbWritten = c_ulong(0)
 					logger.debug2(u"Writing to pipe")
 					fWriteSuccess = windll.kernel32.WriteFile(
-									self._pipe,
-									c_char_p(result),
-									len(result),
-									byref(cbWritten),
-									None )
+						self._pipe,
+						c_char_p(result),
+						len(result),
+						byref(cbWritten),
+						None
+					)
 					logger.debug2(u"Number of bytes written: %d" % cbWritten.value)
 					if not fWriteSuccess:
 						logger.error(u"Could not reply to the client's request from the pipe")
@@ -230,7 +213,7 @@ class NTControlPipeConnection(threading.Thread):
 				else:
 					logger.error(u"Failed to read from pipe")
 					break
-			
+
 			windll.kernel32.FlushFileBuffers(self._pipe)
 			windll.kernel32.DisconnectNamedPipe(self._pipe)
 			windll.kernel32.CloseHandle(self._pipe)
@@ -239,16 +222,14 @@ class NTControlPipeConnection(threading.Thread):
 		logger.debug(u"NTControlPipeConnection exiting")
 		self._running = False
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                          NT CONTROL PIPE                                          -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class NTControlPipe(ControlPipe):
-	
+
 	def __init__(self, opsiclientdRpcInterface):
 		threading.Thread.__init__(self)
 		ControlPipe.__init__(self, opsiclientdRpcInterface)
 		self._pipeName = "\\\\.\\pipe\\opsiclientd"
-	
+
 	def createPipe(self):
 		logger.info(u"Creating pipe %s" % self._pipeName)
 		PIPE_ACCESS_DUPLEX = 0x3
@@ -259,31 +240,19 @@ class NTControlPipe(ControlPipe):
 		NMPWAIT_USE_DEFAULT_WAIT = 0
 		INVALID_HANDLE_VALUE = -1
 		self._pipe = windll.kernel32.CreateNamedPipeA(
-					self._pipeName,
-					PIPE_ACCESS_DUPLEX,
-					PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
-					PIPE_UNLIMITED_INSTANCES,
-					self._bufferSize,
-					self._bufferSize,
-					NMPWAIT_USE_DEFAULT_WAIT,
-					None )
+			self._pipeName,
+			PIPE_ACCESS_DUPLEX,
+			PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+			PIPE_UNLIMITED_INSTANCES,
+			self._bufferSize,
+			self._bufferSize,
+			NMPWAIT_USE_DEFAULT_WAIT,
+			None
+		)
 		if (self._pipe == INVALID_HANDLE_VALUE):
 			raise Exception(u"Failed to create named pipe")
 		logger.debug(u"Pipe %s created" % self._pipeName)
-	
-	#def createPipe(self):
-	#	logger.info(u"Creating pipe %s" % self._pipeName)
-	#	self._pipe = win32pipe.CreateNamedPipe(
-	#			self._pipeName,
-	#			win32pipe.PIPE_ACCESS_DUPLEX | win32file.FILE_FLAG_OVERLAPPED,
-	#			win32pipe.PIPE_TYPE_MESSAGE | win32pipe.PIPE_READMODE_MESSAGE | win32pipe.PIPE_WAIT,
-	#			win32pipe.PIPE_UNLIMITED_INSTANCES,
-	#			self._bufferSize,
-	#			self._bufferSize,
-	#			5000,
-	#			None)
-	#	logger.debug(u"Pipe %s created" % self._pipeName)
-	
+
 	def run(self):
 		ERROR_PIPE_CONNECTED = 535
 		self._running = True
@@ -309,70 +278,13 @@ class NTControlPipe(ControlPipe):
 		logger.notice(u"ControlPipe exiting")
 		self._running = False
 
-	#def run(self):
-	#	self._running = True
-	#	try:
-	#		while not self._stopped:
-	#			self.createPipe()
-	#			connected = False
-	#			while not self._stopped:
-	#				logger.debug2(u"Connecting to named pipe %s" % self._pipeName)
-	#				overlapped = pywintypes.OVERLAPPED()
-	#				#overlapped.hEvent = win32event.CreateEvent(None, 1, 0, None)
-	#				overlapped.hEvent = win32event.CreateEvent(None, 0, 0, None)
-	#				fConnected = win32pipe.ConnectNamedPipe(self._pipe, overlapped)
-	#				waitResult = win32event.WaitForSingleObject(overlapped.hEvent, 3000)
-	#				logger.debug2(u"Wait for pipe connection result: %s" % waitResult)
-	#				if (waitResult == win32event.WAIT_OBJECT_0):
-	#					connected = True
-	#					logger.debug(u"Connected to named pipe '%s'" % self._pipeName)
-	#					break
-	#				elif (waitResult == win32event.WAIT_TIMEOUT):
-	#					continue
-	#				else:
-	#					raise Exception(u"Failed to connect to pipe '%s': %s" (self._pipeName, waitResult))
-	#			if connected:
-	#				try:
-	#					logger.debug2(u"Reading fom pipe")
-	#					(errCode, readString) = win32file.ReadFile(self._pipe, self._bufferSize, None)
-	#					if (errCode != 0):
-	#						raise Exception(u"Failed to read from pipe: %s" % errCode)
-	#					readString = readString.split('\0')[0].strip()
-	#					logger.debug(u"Received rpc from pipe '%s'" % readString)
-	#					result = self.executeRpc(readString)
-	#					logger.debug(u"Writing rpc result '%s' to pipe" % result)
-	#					(errCode, nBytesWritten) = win32file.WriteFile(self._pipe, result + '\0', None)
-	#					win32file.FlushFileBuffers(self._pipe)
-	#					logger.debug2(u"Number of bytes written: %d" % nBytesWritten)
-	#					if (errCode != 0):
-	#						raise Exception(u"Failed to write to pipe: %s" % errCode)
-	#				except Exception, e:
-	#					logger.error(u"Failed to cummunicate through pipe: %s" % forceUnicode(e))
-	#				win32pipe.DisconnectNamedPipe(self._pipe)
-	#			win32api.CloseHandle(self._pipe)
-	#			self._pipe = None
-	#	except Exception, e:
-	#		logger.logException(e)
-	#	logger.notice(u"ControlPipe exiting")
-	#	if self._pipe:
-	#		try:
-	#			win32api.CloseHandle(self._pipe)
-	#		except:
-	#			pass
-	#	self._running = False
-
-
-
-
-
-
 
 class OpsiclientdRpcPipeInterface(object):
 	def __init__(self, opsiclientd):
 		self.opsiclientd = opsiclientd
 		moduleName = u' %-30s' % (u'opsiclientd')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
-	
+
 	def getInterface(self):
 		methods = {}
 		for member in inspect.getmembers(self, inspect.ismethod):
@@ -390,57 +302,52 @@ class OpsiclientdRpcPipeInterface(object):
 				offset = len(params) - len(defaults)
 				for i in range(len(defaults)):
 					params[offset+i] = '*' + params[offset+i]
-			
+
 			if varargs:
 				for arg in forceList(varargs):
 					params.append('*' + arg)
-			
+
 			if keywords:
 				for arg in forceList(keywords):
 					params.append('**' + arg)
-			
+
 			logger.debug2(u"Interface method name '%s' params %s" % (methodName, params))
 			methods[methodName] = { 'name': methodName, 'params': params, 'args': args, 'varargs': varargs, 'keywords': keywords, 'defaults': defaults}
-		
+
 		methodList = []
 		methodNames = methods.keys()
 		methodNames.sort()
 		for methodName in methodNames:
 			methodList.append(methods[methodName])
 		return methodList
-	
+
 	def getPossibleMethods_listOfHashes(self):
 		return self.getInterface()
-	
+
 	def backend_getInterface(self):
 		return self.getInterface()
-	
+
 	def backend_info(self):
 		return {}
-	
+
 	def exit(self):
 		return
-	
+
 	def backend_exit(self):
 		return
-	
+
 	def getBlockLogin(self):
 		logger.notice(u"rpc getBlockLogin: blockLogin is '%s'" % self.opsiclientd._blockLogin)
 		return self.opsiclientd._blockLogin
-	
+
 	def isRebootRequested(self):
 		return self.isRebootTriggered()
-	
+
 	def isShutdownRequested(self):
 		return self.isShutdownTriggered()
-	
+
 	def isRebootTriggered(self):
 		return self.opsiclientd.isRebootTriggered()
-	
+
 	def isShutdownTriggered(self):
 		return self.opsiclientd.isShutdownTriggered()
-	
-	
-	
-	
-
