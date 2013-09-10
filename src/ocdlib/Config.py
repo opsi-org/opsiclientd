@@ -114,44 +114,44 @@ class ConfigImplementation(object):
 				'program_files_dir': u'',
 			},
 			'global': {
-				'base_dir':                 baseDir,
-				'locale_dir':               os.path.join(baseDir, 'locale'),
-				'config_file':              u'opsiclientd.conf',
-				'log_dir':                  u'c:\\tmp',
-				'log_file':                 u'opsiclientd.log',
-				'log_level':                LOG_NOTICE,
-				'host_id':                  System.getFQDN().lower(),
-				'opsi_host_key':            u'',
-				'wait_for_gui_timeout':     120,
-				'block_login_notifier':     u'',
-				'state_file':               u'c:\\opsi.org\\opsiclientd\\state.json',
-				'timeline_db':              u'c:\\opsi.org\\opsiclientd\\timeline.sqlite',
-				'verify_server_cert':       False,
+				'base_dir': baseDir,
+				'locale_dir': os.path.join(baseDir, 'locale'),
+				'config_file': u'opsiclientd.conf',
+				'log_dir': u'c:\\tmp',
+				'log_file': u'opsiclientd.log',
+				'log_level': LOG_NOTICE,
+				'host_id': System.getFQDN().lower(),
+				'opsi_host_key': u'',
+				'wait_for_gui_timeout': 120,
+				'block_login_notifier': u'',
+				'state_file': u'c:\\opsi.org\\opsiclientd\\state.json',
+				'timeline_db': u'c:\\opsi.org\\opsiclientd\\timeline.sqlite',
+				'verify_server_cert': False,
 				'verify_server_cert_by_ca': False,
-				'server_cert_dir':          u'c:\\opsi.org\\opsiclientd\\server-certs'
+				'server_cert_dir': u'c:\\opsi.org\\opsiclientd\\server-certs'
 			},
 			'config_service': {
-				'url':                   [],
-				'connection_timeout':    10,
+				'url': [],
+				'connection_timeout': 10,
 				'user_cancelable_after': 0
 			},
 			'depot_server': {
 				'depot_id': u'',
-				'url':      u'',
-				'drive':    u'',
+				'url': u'',
+				'drive': u'',
 				'username': u'pcpatch',
 			},
 			'cache_service': {
-				'storage_dir':            u'c:\\opsi.org\\cache',
+				'storage_dir': u'c:\\opsi.org\\cache',
 				'product_cache_max_size': 6000000000,
-				'extension_config_dir':   u'',
+				'extension_config_dir': u'',
 			},
 			'control_server': {
-				'interface':            '0.0.0.0', # TODO
-				'port':                 4441,
-				'ssl_server_key_file':  u'opsiclientd.pem',
+				'interface': '0.0.0.0',  # TODO
+				'port': 4441,
+				'ssl_server_key_file': u'opsiclientd.pem',
 				'ssl_server_cert_file': u'opsiclientd.pem',
-				'static_dir':           u'static_html',
+				'static_dir': u'static_html',
 			},
 			'notification_server': {
 				'interface': u'127.0.0.1',
@@ -162,13 +162,13 @@ class ConfigImplementation(object):
 				'command': u'',
 			},
 			'action_processor': {
-				'local_dir':          u'',
-				'remote_dir':         u'',
-				'filename':           u'',
-				'command':            u'',
-				'run_as_user':        u'SYSTEM',
-				'create_user':        True,
-				'delete_user':        True,
+				'local_dir': u'',
+				'remote_dir': u'',
+				'filename': u'',
+				'command': u'',
+				'run_as_user': u'SYSTEM',
+				'create_user': True,
+				'delete_user': True,
 				'create_environment': False,
 			}
 		}
@@ -207,14 +207,14 @@ class ConfigImplementation(object):
 	def getDict(self):
 		return self._config
 
-	def get(self, section, option, raw = False):
+	def get(self, section, option, raw=False):
 		if not section:
 			section = 'global'
 		section = unicode(section).strip().lower()
 		option = unicode(option).strip().lower()
-		if not self._config.has_key(section):
+		if section not in self._config:
 			raise ValueError(u"No such config section: %s" % section)
-		if not self._config[section].has_key(option):
+		if option not in self._config[section]:
 			raise ValueError(u"No such config option in section '%s': %s" % (section, option))
 
 		value = self._config[section][option]
@@ -262,11 +262,11 @@ class ConfigImplementation(object):
 		if option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active'):
 			value = forceBool(value)
 
-		if not self._config.has_key(section):
+		if section not in self._config:
 			self._config[section] = {}
 		self._config[section][option] = value
 
-		if   (section == 'config_service') and (option == 'url'):
+		if (section == 'config_service') and (option == 'url'):
 			urls = self._config[section][option]
 			if not type(urls) is list:
 				urls = forceUnicode(self._config[section][option]).split(u',')
@@ -344,7 +344,7 @@ class ConfigImplementation(object):
 										os.unlink(dlf)
 									os.rename(slf, dlf)
 							except Exception, e:
-								logger.error(u"Failed to rename %s to %s: %s" % (slf, dlf, forceUnicode(e)) )
+								logger.error(u"Failed to rename %s to %s: %s" % (slf, dlf, forceUnicode(e)))
 						self.set('global', 'log_file', logFile)
 
 			# Process all sections
@@ -367,9 +367,9 @@ class ConfigImplementation(object):
 		logger.notice(u"Updating config file: '%s'" % self.get('global', 'config_file'))
 
 		try:
-			configFile = IniFile(filename = self.get('global', 'config_file'), raw = True)
+			configFile = IniFile(filename=self.get('global', 'config_file'), raw=True)
 			configFile.setKeepOrdering(True)
-			(config, comments) = configFile.parse(returnComments = True)
+			(config, comments) = configFile.parse(returnComments=True)
 			changed = False
 			for (section, values) in self._config.items():
 				if not type(values) is dict:
@@ -392,7 +392,7 @@ class ConfigImplementation(object):
 						config.set(section, option, value)
 			if changed:
 				# Write back config file if changed
-				configFile.generate(config, comments = comments)
+				configFile.generate(config, comments=comments)
 				logger.notice(u"Config file '%s' written" % self.get('global', 'config_file'))
 			else:
 				logger.notice(u"No need to write config file '%s', config file is up to date" % self.get('global', 'config_file'))
@@ -413,7 +413,7 @@ class ConfigImplementation(object):
 	def setTemporaryConfigServiceUrls(self, temporaryConfigServiceUrls):
 		self._temporaryConfigServiceUrls = forceList(temporaryConfigServiceUrls)
 
-	def getConfigServiceUrls(self, allowTemporaryConfigServiceUrls = True):
+	def getConfigServiceUrls(self, allowTemporaryConfigServiceUrls=True):
 		if allowTemporaryConfigServiceUrls and self._temporaryConfigServiceUrls:
 			return self._temporaryConfigServiceUrls
 		return self.get('config_service', 'url')
@@ -446,12 +446,13 @@ class ConfigImplementation(object):
 		dynamicDepot = False
 		depotProtocol = 'cifs'
 		configStates = configService.configState_getObjects(
-					configId = ['clientconfig.depot.dynamic', 'clientconfig.depot.protocol', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
-					objectId = self.get('global', 'host_id'))
+			configId=['clientconfig.depot.dynamic', 'clientconfig.depot.protocol', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
+			objectId=self.get('global', 'host_id')
+		)
 		for configState in configStates:
 			if not configState.values or not configState.values[0]:
 				continue
-			if   (configState.configId == 'opsiclientd.depot_server.url') and configState.values:
+			if (configState.configId == 'opsiclientd.depot_server.url') and configState.values:
 				try:
 					depotUrl = forceUrl(configState.values[0])
 					self.set('depot_server', 'depot_id', u'')
@@ -482,19 +483,20 @@ class ConfigImplementation(object):
 
 		if not depotIds:
 			clientToDepotservers = configService.configState_getClientToDepotserver(
-					clientIds  = [ self.get('global', 'host_id') ],
-					masterOnly = (not dynamicDepot),
-					productIds = productIds)
+				clientIds=[self.get('global', 'host_id')],
+				masterOnly=(not dynamicDepot),
+				productIds=productIds
+			)
 			if not clientToDepotservers:
 				raise Exception(u"Failed to get depot config from service")
 
-			depotIds = [ clientToDepotservers[0]['depotId'] ]
+			depotIds = [clientToDepotservers[0]['depotId']]
 			if dynamicDepot:
 				depotIds.extend(clientToDepotservers[0].get('alternativeDepotIds', []))
 
 		masterDepot = None
 		alternativeDepots = []
-		for depot in configService.host_getObjects(type = 'OpsiDepotserver', id = depotIds):
+		for depot in configService.host_getObjects(type='OpsiDepotserver', id=depotIds):
 			if (depot.id == depotIds[0]):
 				masterDepot = depot
 			else:
@@ -525,10 +527,10 @@ class ConfigImplementation(object):
 							defaultInterface = networkInterface
 							break
 					clientConfig = {
-						"clientId":       self.get('global', 'host_id'),
-						"opsiHostKey":    self.get('global', 'opsi_host_key'),
-						"ipAddress":      forceUnicode(defaultInterface.ipAddressList.ipAddress),
-						"netmask":        forceUnicode(defaultInterface.ipAddressList.ipMask),
+						"clientId": self.get('global', 'host_id'),
+						"opsiHostKey": self.get('global', 'opsi_host_key'),
+						"ipAddress": forceUnicode(defaultInterface.ipAddressList.ipAddress),
+						"netmask": forceUnicode(defaultInterface.ipAddressList.ipMask),
 						"defaultGateway": forceUnicode(defaultInterface.gatewayList.ipAddress)
 					}
 
@@ -561,7 +563,8 @@ class ConfigImplementation(object):
 		if configService.isLegacyOpsi():
 			encryptedDepotServerPassword = configService.getPcpatchPassword(self.get('global', 'host_id'))
 		else:
-			encryptedDepotServerPassword = configService.user_getCredentials(username = u'pcpatch', hostId = self.get('global', 'host_id'))['password']
+			encryptedDepotServerPassword = configService.user_getCredentials(username=u'pcpatch', hostId=self.get('global', 'host_id'))['password']
+
 		depotServerPassword = blowfishDecrypt(self.get('global', 'opsi_host_key'), encryptedDepotServerPassword)
 		logger.addConfidentialString(depotServerPassword)
 		logger.debug(u"Using username '%s' for depot connection" % depotServerUsername)
@@ -584,7 +587,7 @@ class ConfigImplementation(object):
 				elif (key.lower() == 'nextbootserviceurl'):
 					if (value.find('/rpc') == -1):
 						value = value + '/rpc'
-					self.set('config_service', 'url', [ value ])
+					self.set('config_service', 'url', [value])
 				else:
 					logger.info(u"Unhandled network config key '%s'" % key)
 
@@ -596,18 +599,18 @@ class ConfigImplementation(object):
 					if (len(parts) < 3) or (parts[0] != 'opsiclientd'):
 						continue
 
-					self.set(section = parts[1], option = parts[2], value = value)
+					self.set(section=parts[1], option=parts[2], value=value)
 				except Exception, e:
 					logger.error(u"Failed to process general config key '%s:%s': %s" % (key, value, forceUnicode(e)))
 		else:
 			configService.backend_setOptions({"addConfigStateDefaults": True})
-			for configState in configService.configState_getObjects(objectId = self.get('global', 'host_id')):
+			for configState in configService.configState_getObjects(objectId=self.get('global', 'host_id')):
 				logger.info(u"Got config state from service: configId %s, values %s" % (configState.configId, configState.values))
 
 				if not configState.values:
 					continue
 
-				if   (configState.configId == u'clientconfig.configserver.url'):
+				if (configState.configId == u'clientconfig.configserver.url'):
 					self.set('config_service', 'url', configState.values)
 				elif (configState.configId == u'clientconfig.depot.drive'):
 					self.set('depot_server', 'drive', configState.values[0])
@@ -619,7 +622,7 @@ class ConfigImplementation(object):
 						if (len(parts) < 3):
 							continue
 
-						self.set(section = parts[1], option = parts[2], value = configState.values[0])
+						self.set(section=parts[1], option=parts[2], value=configState.values[0])
 					except Exception, e:
 						logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
 		logger.notice(u"Got config from service")
@@ -640,7 +643,6 @@ class Config(ConfigImplementation):
 
 		# Store instance reference as the only member in the handle
 		self.__dict__['_Config__instance'] = Config.__instance
-
 
 	def __getattr__(self, attr):
 		""" Delegate access to implementation """
