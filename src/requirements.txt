@@ -4,7 +4,6 @@ libmagic
 simplejson
 pam
 pyOpenSSL
-MySQL-python
 SQLAlchemy
 M2Crypto
 
