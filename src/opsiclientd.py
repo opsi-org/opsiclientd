@@ -1,9 +1,7 @@
 #! python
 # -*- coding: utf-8 -*-
 """
-= = = = = = = = = = = = = = = = = = = = =
-=   opsi client daemon (opsiclientd)    =
-= = = = = = = = = = = = = = = = = = = = =
+opsi client daemon (opsiclientd)
 
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
@@ -43,23 +41,18 @@ elif os.name == 'posix':
 else:
 	raise NotImplementedError('Trying to run under an unsupported OS.')
 
-# Create logger instance
-logger = Logger()
-moduleName = u' %-30s' % (u'opsiclientd', )
-logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)')
 
 if (__name__ == "__main__"):
+	logger = Logger()
+	moduleName = u' %-30s' % (u'opsiclientd', )
+	logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)')
 	logger.setConsoleLevel(LOG_WARNING)
-	exception = None
 
 	try:
 		OpsiclientdInit()
 	except SystemExit:
 		pass
-	except Exception as e:
-		exception = e
-
-	if exception:
+	except Exception as exception:
 		logger.logException(exception)
 		print >> sys.stderr, u"ERROR:", unicode(exception)
 		sys.exit(1)
