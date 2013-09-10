@@ -38,7 +38,6 @@ import win32serviceutil
 import win32service
 import win32com.server.policy
 import win32com.client
-from ctypes import *
 
 from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG
 from OPSI.Types import forceBool, forceUnicode
@@ -151,9 +150,6 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 		self._callback('StopScreenSaver', *args)
 
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                   OPSICLIENTD SERVICE FRAMEWORK                                   -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 	_svc_name_ = "opsiclientd"
 	_svc_display_name_ = "opsiclientd"
@@ -280,19 +276,13 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		# This call sometimes produces an error in eventlog (invalid handle)
 		#self.ReportServiceStatus(win32service.SERVICE_STOPPED)
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                        OPSICLIENTD NT INIT                                        -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class OpsiclientdInit(object):
 	def __init__(self):
 		logger.debug(u"OpsiclientdInit")
 		win32serviceutil.HandleCommandLine(OpsiclientdServiceFramework)
 
 
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                          OPSICLIENTD NT                                           -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class OpsiclientdNT(Opsiclientd):
 	def __init__(self):
 		Opsiclientd.__init__(self)
@@ -336,9 +326,7 @@ class OpsiclientdNT(Opsiclientd):
 		logger.info(u"shutdownRequested: %s" % shutdownRequested)
 		return forceBool(shutdownRequested)
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                          OPSICLIENTD NT5                                          -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class OpsiclientdNT5(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
@@ -385,16 +373,12 @@ class OpsiclientdNT5(OpsiclientdNT):
 
 		_rebootThread().start()
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                          OPSICLIENTD NT6                                          -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class OpsiclientdNT6(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                          OPSICLIENTD NT61                                         -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class OpsiclientdNT61(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
