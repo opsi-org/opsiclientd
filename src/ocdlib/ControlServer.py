@@ -158,8 +158,8 @@ class WorkerOpsiclientd(WorkerOpsi):
 									memberdata, total, memberresume = win32net.NetLocalGroupGetMembers(None,groupname, 2, resume)
 									logger.notice(memberdata)
 									for member in memberdata:
-										membersid = member.get("sid","")
-										username, domain, type = win32security.LookupAccountSid(None,membersid)
+										membersid = member.get("sid", "")
+										username, domain, type = win32security.LookupAccountSid(None, membersid)
 										if (self.session.user.lower() == username.lower()):
 											# The LogonUser function will raise an Exception on logon failure
 											win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
@@ -280,6 +280,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 
 class ResourceRoot(resource.Resource):
 	addSlash = True
+
 	def render(self, request):
 		''' Process request. '''
 		return http.Response(stream="<html><head><title>opsiclientd</title></head><body></body></html>")
@@ -359,13 +360,14 @@ class ControlServer(OpsiService, threading.Thread):
 	def createRoot(self):
 		if self._staticDir:
 			if os.path.isdir(self._staticDir):
-				self._root = ResourceOpsiDAV(self, path = self._staticDir, readOnly = True, authRequired = False)
+				self._root = ResourceOpsiDAV(self, path=self._staticDir, readOnly=True, authRequired=False)
 			else:
 				logger.error(u"Cannot add static content '/': directory '%s' does not exist." % self._staticDir)
 		if not self._root:
 			self._root = ResourceRoot()
+
 		self._root.putChild("opsiclientd", ResourceOpsiclientdJsonRpc(self))
-		self._root.putChild("interface",   ResourceOpsiclientdJsonInterface(self))
+		self._root.putChild("interface", ResourceOpsiclientdJsonInterface(self))
 		self._root.putChild("rpc", ResourceCacheServiceJsonRpc(self))
 		self._root.putChild("rpcinterface", ResourceCacheServiceJsonInterface(self))
 		self._root.putChild("info.html", ResourceOpsiclientdInfo(self))
@@ -439,11 +441,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		else:
 			desktop = self.opsiclientd.getCurrentActiveDesktopName()
 		logger.notice(u"rpc runCommand: executing command '%s' in session %d on desktop '%s'" % (command, sessionId, desktop))
-		System.runCommandInSession(command = command, sessionId = sessionId, desktop = desktop, waitForProcessEnding = False)
+		System.runCommandInSession(command=command, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False)
 		return u"command '%s' executed" % command
 
 	def execute(self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300):
-		return System.execute(cmd = command, waitForEnding = waitForEnding, captureStderr = captureStderr, encoding = encoding, timeout = timeout)
+		return System.execute(cmd=command, waitForEnding=waitForEnding, captureStderr=captureStderr, encoding=encoding, timeout=timeout)
 
 	def logoffCurrentUser(self):
 		logger.notice(u"rpc logoffCurrentUser: logging of current user now")
@@ -456,12 +458,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def shutdown(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
 		logger.notice(u"rpc shutdown: shutting down computer in %s seconds" % waitSeconds)
-		System.shutdown(wait = waitSeconds)
+		System.shutdown(wait=waitSeconds)
 
 	def reboot(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
 		logger.notice(u"rpc reboot: rebooting computer in %s seconds" % waitSeconds)
-		System.reboot(wait = waitSeconds)
+		System.reboot(wait=waitSeconds)
 
 	def uptime(self):
 		uptime = int(time.time() - self.opsiclientd._startupTime)
@@ -527,71 +529,86 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		sessions = []
 
 		for session in System.getActiveSessionInformation(self.opsiclientd._winApiBugCommand):
-			year      = 0
-			month   = 0
-			day        = 0
-			hour      = 0
-			minute  = 0
-			second  = 0
+			year = 0
+			month = 0
+			day = 0
+			hour = 0
+			minute = 0
+			second = 0
 			logger.debug(u"session to check for LogonTime '%s'" % session)
-			if isinstance(session['LogonTime'],str):
+			if isinstance(session['LogonTime'], str):
 				match = None
 				pattern = re.compile("^(\d+)/(\d+)/(\d+)\s(\d+):(\d+):(\d+)")
 				match = pattern.match(session['LogonTime'])
 				if match:
-					year    = match.group(3)
+					year = match.group(3)
 					month = match.group(1)
-					day      = match.group(2)
-					hour     = match.group(4)
+					day = match.group(2)
+					hour = match.group(4)
 					minute = match.group(5)
 					second = match.group(6)
 			else:
-				year    = session['LogonTime'].year
+				year = session['LogonTime'].year
 				month = session['LogonTime'].month
-				day      = session['LogonTime'].day
-				hour     = session['LogonTime'].hour
+				day = session['LogonTime'].day
+				hour = session['LogonTime'].hour
 				minute = session['LogonTime'].minute
 				second = session['LogonTime'].second
 
-			if (month < 10): month = '0%d' % month
-			if (day < 10): day = '0%d' % day
-			if (hour < 10): hour = '0%d' % hour
-			if (minute < 10): minute = '0%d' % minute
-			if (second < 10): second = '0%d' % second
+			if (month < 10):
+				month = '0%d' % month
+			if (day < 10):
+				day = '0%d' % day
+			if (hour < 10):
+				hour = '0%d' % hour
+			if (minute < 10):
+				minute = '0%d' % minute
+			if (second < 10):
+				second = '0%d' % second
+
 			session['LogonTime'] = u'%s-%s-%s %s:%s:%s' % (year, month, day, hour, minute, second)
 			session['Sid'] = unicode(session['Sid']).replace(u'PySID:', u'')
 			sessions.append(session)
+
 		return sessions
 
 	def stressConfigserver(self, seconds=30):
 		seconds = forceInt(seconds)
-		serviceConnection = ServiceConnection(loadBalance = False)
+		serviceConnection = ServiceConnection(loadBalance=False)
 		serviceConnection.connectConfigService()
 		start = time.time()
 		try:
 			configService = serviceConnection.getConfigService()
 			while True:
 				configService.host_getObjects()
-				if ((time.time() - start) >= seconds): return
+				if ((time.time() - start) >= seconds):
+					return
 				configService.product_getObjects()
-				if ((time.time() - start) >= seconds): return
+				if ((time.time() - start) >= seconds):
+					return
 				configService.productOnDepot_getObjects()
-				if ((time.time() - start) >= seconds): return
+				if ((time.time() - start) >= seconds):
+					return
 				configService.productOnClient_getObjects()
-				if ((time.time() - start) >= seconds): return
+				if ((time.time() - start) >= seconds):
+					return
 				configService.config_getObjects()
-				if ((time.time() - start) >= seconds): return
+				if ((time.time() - start) >= seconds):
+					return
 				configService.configState_getObjects()
-				if ((time.time() - start) >= seconds): return
+				if ((time.time() - start) >= seconds):
+					return
 				configService.productProperty_getObjects()
-				if ((time.time() - start) >= seconds): return
+				if ((time.time() - start) >= seconds):
+					return
 				configService.productPropertyState_getObjects()
-				if ((time.time() - start) >= seconds): return
+				if ((time.time() - start) >= seconds):
+					return
 		finally:
 			serviceConnection.disconnectConfigService()
 
 	def getBackendInfo(self):
-		serviceConnection = ServiceConnection(loadBalance = False)
+		serviceConnection = ServiceConnection(loadBalance=False)
 		serviceConnection.connectConfigService()
 		backendinfo = None
 		try:
