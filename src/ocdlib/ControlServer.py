@@ -2,7 +2,8 @@
 """
 ocdlib.ControlServer
 
-Classes that are used to create a https service which executes remote procedure calls
+Classes that are used to create a https service which executes
+remote procedure calls
 
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
@@ -36,13 +37,6 @@ import re
 import threading
 import time
 
-try:
-	import win32net
-	import win32security
-	RUNNING_ON_WINDOWS = True
-except ImportError:
-	RUNNING_ON_WINDOWS = False
-
 from twisted.internet import reactor
 from OPSI.web2 import resource, stream, server, http, responsecode
 from OPSI.web2.channel.http import HTTPFactory
@@ -52,7 +46,8 @@ from OPSI.Types import forceUnicode, forceInt, OpsiAuthenticationError
 from OPSI import System
 from OPSI.Service import SSLContext, OpsiService
 from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface
-from OPSI.Service.Resource import ResourceOpsi, ResourceOpsiJsonRpc, ResourceOpsiJsonInterface, ResourceOpsiDAV
+from OPSI.Service.Resource import (ResourceOpsi, ResourceOpsiJsonRpc,
+	ResourceOpsiJsonInterface, ResourceOpsiDAV)
 
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.Config import Config
@@ -61,6 +56,11 @@ from ocdlib.Timeline import Timeline
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.SoftwareOnDemand import ResourceSoftwareOnDemand
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
+
+if RUNNING_ON_WINDOWS:
+	import win32net
+	import win32security
+
 
 logger = Logger()
 config = Config()
@@ -155,7 +155,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 							if admingroupsid in str(pysid):
 								memberresume = 0
 								while 1:
-									memberdata, total, memberresume = win32net.NetLocalGroupGetMembers(None,groupname, 2, resume)
+									memberdata, total, memberresume = win32net.NetLocalGroupGetMembers(None, groupname, 2, resume)
 									logger.notice(memberdata)
 									for member in memberdata:
 										membersid = member.get("sid", "")
@@ -339,14 +339,15 @@ class ControlServer(OpsiService, threading.Thread):
 			self._server = reactor.listenSSL(
 				self._httpsPort,
 				HTTPFactory(self._site),
-				SSLContext(self._sslServerKeyFile, self._sslServerCertFile) )
+				SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
+			)
 			logger.notice(u"Control server is accepting HTTPS requests on port %d" % self._httpsPort)
 
 			if not reactor.running:
 				logger.debug(u"Reactor is not running. Starting.")
 				reactor.run(installSignalHandlers=0)
 				logger.debug(u"Reactor run ended.")
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
 
 		logger.notice(u"Control server exiting")
