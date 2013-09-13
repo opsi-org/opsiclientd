@@ -36,6 +36,9 @@ from OPSI.Logger import Logger
 from OPSI.Types import forceUrl, forceUnicode, forceBool, forceHostId, forceProductIdList
 from OPSI import System
 
+
+__version__ = '4.0.77'
+
 logger = Logger()
 
 
