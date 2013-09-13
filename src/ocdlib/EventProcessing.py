@@ -48,6 +48,7 @@ from OPSI.Util.Message import (MessageSubject, MessageSubjectProxy,
 from OPSI.Types import forceInt, forceUnicode, forceUnicodeLower
 from OPSI import System
 
+from ocdlib import __version__
 from ocdlib.Config import Config
 from ocdlib.Events import state, reconfigureEventGenerators
 from ocdlib.Exceptions import CanceledByUserError
@@ -63,8 +64,6 @@ timeline = Timeline()
 
 class EventProcessingThread(KillableThread, ServiceConnection):
 	def __init__(self, opsiclientd, event):
-		from ocdlib.Opsiclientd import __version__
-
 		moduleName = u' %-30s' % (u'event processing ' + event.eventConfig.getId())
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		KillableThread.__init__(self)

@@ -30,8 +30,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 @license: GNU General Public License version 2
 """
 
-__version__ = '4.0.76'
-
 import os
 import sys
 
@@ -44,6 +42,7 @@ from OPSI.Types import forceUnicode, forceInt
 from OPSI import System
 from OPSI.Object import *
 
+from ocdlib import __version__
 from ocdlib.Config import Config
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from ocdlib.ControlServer import ControlServer

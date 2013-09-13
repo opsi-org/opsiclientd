@@ -40,7 +40,8 @@ from signal import signal, SIGHUP, SIGTERM, SIGINT
 from OPSI.Logger import Logger, LOG_NONE, LOG_NOTICE
 from OPSI.Types import forceUnicode
 
-from ocdlib.Opsiclientd import Opsiclientd, __version__
+from ocdlib import __version__
+from ocdlib.Opsiclientd import Opsiclientd
 
 logger = Logger()
 
