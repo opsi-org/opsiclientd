@@ -336,6 +336,24 @@ class ControlServer(OpsiService, threading.Thread):
 			logger.info(u"creating root resource")
 			self.createRoot()
 			self._site = server.Site(self._root)
+
+			logger.debug('Creating SSLContext with the following values:')
+			logger.debug('\t-SSL Server Key File: {path}'.format(path=self._sslServerKeyFile))
+			if not os.path.exists(self._sslServerKeyFile):
+				logger.warning('The SSL server key file "{path}" is missing. '
+								'Please check your configuration.'.format(
+									path=self._sslServerKeyFile
+								)
+				)
+			logger.debug('\t-SSL Server Cert File: {path}'.format(path=self._sslServerCertFile))
+			if not os.path.exists(self._sslServerCertFile):
+				logger.warning('The SSL server certificate file "{path}" is '
+								'missing. Please check your '
+								'configuration.'.format(
+									path=self._sslServerCertFile
+								)
+				)
+
 			self._server = reactor.listenSSL(
 				self._httpsPort,
 				HTTPFactory(self._site),
@@ -345,7 +363,7 @@ class ControlServer(OpsiService, threading.Thread):
 
 			if not reactor.running:
 				logger.debug(u"Reactor is not running. Starting.")
-				reactor.run(installSignalHandlers=0)
+				reactor.run(installSignalHandlers=False)
 				logger.debug(u"Reactor run ended.")
 		except Exception as e:
 			logger.logException(e)
@@ -361,9 +379,11 @@ class ControlServer(OpsiService, threading.Thread):
 	def createRoot(self):
 		if self._staticDir:
 			if os.path.isdir(self._staticDir):
+				logger.debug('Creating ResourceOpsiDAV with path "{0}".'.format(self._staticDir))
 				self._root = ResourceOpsiDAV(self, path=self._staticDir, readOnly=True, authRequired=False)
 			else:
 				logger.error(u"Cannot add static content '/': directory '%s' does not exist." % self._staticDir)
+
 		if not self._root:
 			self._root = ResourceRoot()
 
