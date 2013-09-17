@@ -27,18 +27,15 @@ if RUNS_ON_WINDOWS and len(sys.argv) == 1:
 	sys.argv.append("-q")
 
 opsiClientDeamonVersion = None
-try:
-	with open(os.path.join('ocdlib', '__init__.py'), 'r') as f:
-		for line in f:
-			if "__version__" in line:
-				opsiClientDeamonVersion = line.split('=', 1)[1].strip()[1:-1]
-				break
+fileWithVersion = os.path.join(os.path.dirname(__file__), 'ocdlib', '__init__.py')
+with open(fileWithVersion, 'r') as f:
+	for line in f:
+		if "__version__" in line:
+			opsiClientDeamonVersion = line.split('=', 1)[1].strip()[1:-1]
+			break
 
-	if opsiClientDeamonVersion is None:
-		raise Exception("Failed to find version.")
-except Exception:
-	print 'Unable to determine version.'
-	opsiClientDeamonVersion = '0.0.0a'
+if opsiClientDeamonVersion is None:
+	raise Exception("Failed to find version.")
 
 
 def tree(dst, src):
@@ -157,14 +154,11 @@ else:
 	]
 	data_files += tree(os.path.join('/etc', 'opsi-client-agent', 'opsiclientd', 'static_html'), os.path.join('..', 'static_html'))
 
-# TODO: better Version settings!
-opsiClientDeamonVersion = '0.1a'
-
 setup_options = {
 	"data_files": data_files,
 	"name": "opsiclientd",
 	"version": opsiClientDeamonVersion,
-    "url": 'http://www.opsi.org/',
+	"url": 'http://www.opsi.org/',
 }
 
 if RUNS_ON_WINDOWS:
