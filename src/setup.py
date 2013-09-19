@@ -167,7 +167,7 @@ if RUNS_ON_WINDOWS:
 	opsiclientd = Target(
 		name = "opsiclientd",
 		description = opsiclientdDescription,
-		script = "opsiclientd.py",
+		script = "src\\opsiclientd",
 		modules = ["opsiclientd"],
 		icon_resources = [(1, "windows\\opsi.ico")]
 	)
@@ -215,7 +215,7 @@ if RUNS_ON_WINDOWS:
 	setup_options['console'] = [network_performance]
 	setup_options['windows'] = [notifier, opsiclientd_rpc, 	action_processor_starter]
 else:
-	setup_options['scripts'] = ['opsiclientd.py']
+	setup_options['scripts'] = [os.path.join('scripts', 'opsiclientd')]
 
 setup(**setup_options)
 

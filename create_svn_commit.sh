@@ -13,7 +13,7 @@ test -e $tmpdir && rm -rf $tmpdir
 mkdir $tmpdir
 cp -r gettext static_html ${tmpdir}/
 mkdir ${tmpdir}/src
-cp -r src/ocdlib src/windows src/tests src/setup.py src/opsiclientd.py ${tmpdir}/src
+cp -r src/ocdlib src/windows src/tests src/setup.py src/scripts/opsiclientd ${tmpdir}/src
 
 #cleanup
 find ${tmpdir} -iname "*.pyc"   -exec rm "{}" \;

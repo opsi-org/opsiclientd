@@ -1,0 +1,14 @@
+Source: opsiclientd
+Maintainer: uib GmbH <info@uib.de>
+Section: opsi
+Priority: optional
+Standards-Version: 3.9.2
+X-Python-Version: >= 2.6
+Build-Depends: python-all (>= 2.6.6-3), debhelper (>= 7.4.3), gettext, python-stdeb
+
+Package: opsiclientd
+Architecture: all
+X-Python-Version: >= 2.6
+Depends: ${misc:Depends}, ${python:Depends}, python-opsi (>= 4.0.3.4)
+Description: opsi client daemon (opsiclientd)
+ opsiclientd is part of the desktop management solution opsi (open pc server integration)
