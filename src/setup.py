@@ -117,9 +117,7 @@ def get_locales_target_and_source():
 		]
 
 
-data_files = [
-	(os.path.join('opsiclientd', 'extend.d'), glob.glob(os.path.join('..', 'extend.d', '*.*'))),
-]
+data_files = []
 data_files += get_locales_target_and_source()
 
 if RUNS_ON_WINDOWS:
@@ -146,13 +144,18 @@ if RUNS_ON_WINDOWS:
 			'windows\\opsi.ico'
 			]),
 		('opsiclientd', [os.path.join('windows', 'opsiclientd.conf')]),
+		(os.path.join('opsiclientd', 'extend.d'), glob.glob(os.path.join('..', 'extend.d', '*.*'))),
 	]
 else:
 	data_files += [
 		(
 			os.path.join('/etc', 'opsi-client-agent', 'opsiclientd'),
 			[os.path.join('linux', 'opsiclientd.conf')]
-		)
+		),
+		(
+			os.path.join('/etc', 'opsi-client-agent', 'opsiclientd', 'extend.d'),
+			glob.glob(os.path.join('..', 'extend.d', '*.*'))
+		),
 	]
 	data_files += tree(os.path.join('/etc', 'opsi-client-agent', 'opsiclientd', 'static_html'), os.path.join('..', 'static_html'))
 
