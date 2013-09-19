@@ -26,8 +26,10 @@ if RUNS_ON_WINDOWS and len(sys.argv) == 1:
 	sys.argv.append("py2exe")
 	sys.argv.append("-q")
 
+localDirectory = os.path.dirname(__file__)
+
 opsiClientDeamonVersion = None
-fileWithVersion = os.path.join(os.path.dirname(__file__), 'ocdlib', '__init__.py')
+fileWithVersion = os.path.join(localDirectory, 'ocdlib', '__init__.py')
 with open(fileWithVersion, 'r') as f:
 	for line in f:
 		if "__version__" in line:
@@ -93,13 +95,13 @@ def get_locales_target_and_source():
 			(
 				os.path.join('locale', 'de', 'LC_MESSAGES'),
 				[
-					os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'gettext', 'opsiclientd_de.mo'))
+					os.path.abspath(os.path.join(localDirectory, '..', 'gettext', 'opsiclientd_de.mo'))
 				]
 			),
 			(
 				os.path.join('locale', 'fr', 'LC_MESSAGES'),
 				[
-					os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'gettext', 'opsiclientd_fr.mo'))
+					os.path.abspath(os.path.join(localDirectory, '..', 'gettext', 'opsiclientd_fr.mo'))
 				]
 			),
 		]
@@ -108,8 +110,8 @@ def get_locales_target_and_source():
 			(
 				os.path.join('/etc', 'opsi-client-agent', 'locale'),
 				[
-					os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'gettext', 'opsiclientd_de.mo')),
-					os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'gettext', 'opsiclientd_fr.mo'))
+					os.path.abspath(os.path.join(localDirectory, '..', 'gettext', 'opsiclientd_de.mo')),
+					os.path.abspath(os.path.join(localDirectory, '..', 'gettext', 'opsiclientd_fr.mo'))
 				]
 			)
 		]
