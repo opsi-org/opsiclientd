@@ -33,6 +33,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 """
 import re
 import sys
+import thread
 import threading
 import time
 import copy as pycopy
@@ -433,7 +434,7 @@ class EventGenerator(threading.Thread):
 			FireEventThread(l, event).start()
 
 	def run(self):
-		self._threadId = threading.get_ident()
+		self._threadId = thread.get_ident()
 		try:
 			logger.info(u"Initializing event generator '%s'" % self)
 			self.initialize()
