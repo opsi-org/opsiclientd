@@ -76,6 +76,14 @@ QuBW/YzuIIiknjESIHBVA6YWeLNR
 logger = Logger()
 
 
+def getLogFormat(moduleName):
+	"""
+	Returns a constant logformat for all modules.
+	"""
+	name = u' %-30s' % moduleName
+	return '[%l] [%D] [' + name + u'] %M   (%F|%N)'
+
+
 class SectionNotFoundException(ValueError):
 	pass
 

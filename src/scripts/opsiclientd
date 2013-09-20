@@ -33,6 +33,7 @@ import os
 import sys
 
 from OPSI.Logger import Logger, LOG_WARNING
+from ocdlib.Config import getLogFormat
 
 if os.name == 'nt':
 	from ocdlib.Windows import OpsiclientdInit
@@ -44,8 +45,7 @@ else:
 
 if (__name__ == "__main__"):
 	logger = Logger()
-	moduleName = u' %-30s' % (u'opsiclientd', )
-	logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)')
+	logger.setLogFormat(getLogFormat(u'opsiclientd'))
 	logger.setConsoleLevel(LOG_WARNING)
 
 	try:

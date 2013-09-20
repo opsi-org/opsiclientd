@@ -1,9 +1,7 @@
 #! python
 # -*- coding: utf-8 -*-
 """
-= = = = = = = = = = = = = = = = = = = = =
-=   ocdlib.Posix                        =
-= = = = = = = = = = = = = = = = = = = = =
+ocdlib.Posix
 
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org

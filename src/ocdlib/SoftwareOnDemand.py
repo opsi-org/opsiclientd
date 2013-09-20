@@ -3,29 +3,29 @@
    = = = = = = = = = = = = = = = = = = =
    =   ocdlib.SoftwareOnDemand                 =
    = = = = = = = = = = = = = = = = = = =
-   
+
    opsiclientd is part of the desktop management solution opsi
    (open pc server integration) http://www.opsi.org
-   
+
    Copyright (C) 2010 uib GmbH
-   
+
    http://www.uib.de/
-   
+
    All rights reserved.
-   
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License version 2 as
    published by the Free Software Foundation.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-   
+
    @copyright:	uib GmbH <info@uib.de>
    @author: Erol Ülükmen <e.ueluekmen@uib.de>
    @license: GNU General Public License version 2
@@ -44,7 +44,7 @@ from OPSI.Service.Worker import WorkerOpsi
 from OPSI.Service.Resource import ResourceOpsi
 
 from ocdlib.OpsiService import ServiceConnection
-from ocdlib.Config import Config
+from ocdlib.Config import Config, getLogFormat
 from ocdlib.Events import SwOnDemandEventGenerator, getEventGenerators
 from ocdlib.Localization import _
 from ocdlib.Timeline import Timeline
@@ -88,38 +88,37 @@ mainpage = u'''<?xml version="1.0" encoding="UTF-8"?>
 	<form action="/swondemand" method="post">
 		%result%
 	</form>
-	
+
 </body>
 </html>
 '''
 
 class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 	def __init__(self, service, request, resource):
-		moduleName = u' %-30s' % (u'software on demand')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(getLogFormat(u'software on demand'), object=self)
 		WorkerOpsi.__init__(self, service, request, resource)
 		ServiceConnection.__init__(self)
 		self._swOnDemandProductIds = []
 		self._showDetails = False
-		
+
 	def _getCredentials(self):
 		(user, password) = self._getAuthorization()
 		if not user:
 			user = config.get('global', 'host_id')
 		return (user, password)
-		
+
 	def _authenticate(self, result):
 		if (self.request.remoteAddr.host == '127.0.0.1'):
 			self.session.authenticated = False
 			return result
 		try:
 			(self.session.user, self.session.password) = self._getCredentials()
-			
+
 			logger.notice(u"Authorization request from %s@%s (application: %s)" % (self.session.user, self.session.ip, self.session.userAgent))
-			
+
 			if not self.session.password:
 				raise Exception(u"No password from %s (application: %s)" % (self.session.ip, self.session.userAgent))
-			
+
 			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
 				return result
 			if (os.name == 'nt'):
@@ -129,12 +128,12 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
 					# No exception raised => user authenticated
 					return result
-			
+
 			raise Exception(u"Invalid credentials")
 		except Exception, e:
 			raise OpsiAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
 		return result
-	
+
 	def _processQuery(self, result):
 		self._decodeQuery(result)
 		query = {}
@@ -154,10 +153,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				query[k] = v
 		self.query = query
 		logger.debug(u"Query: %s" % self.query)
-	
+
 	def connectConfigService(self):
 		ServiceConnection.connectConfigService(self)
-	
+
 	def _getSwOnDemandConfig(self):
 		self._swOnDemandProductIds = []
 		self._showDetails = False
@@ -166,9 +165,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		for configState in self._configService.configState_getObjects(
 					configId = ["software-on-demand.*"],
 					objectId = config.get('global', 'host_id')):
-			
+
 			logger.debug("Config found: '%s'" % configState.toHash())
-			
+
 			if (configState.getConfigId() == "software-on-demand.product-group-ids"):
 				onDemandGroupIds = forceUnicodeLowerList(configState.getValues())
 				if onDemandGroupIds:
@@ -176,20 +175,20 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						logger.info(u"On demand product found: '%s'" % objectToGroup.objectId)
 						if not objectToGroup.objectId in self._swOnDemandProductIds:
 							self._swOnDemandProductIds.append(objectToGroup.objectId)
-			
+
 			elif (configState.getConfigId() == "software-on-demand.show-details"):
 				self._showDetails = forceBool(configState.getValues()[0])
-			
+
 			elif (configState.getConfigId() == "software-on-demand.active"):
 				if not forceBool(configState.getValues()[0]):
 					raise Exception(u"Software on demand deactivated")
-	
+
 	def _processProducts(self, productOnClients):
 		modifiedProductOnClients = []
 		setupProductIds          = []
 		uninstallProductIds      = []
 		productIds               = []
-		
+
 		def addToModified(modifiedProductOnClients, productOnClient):
 			remove = -1
 			for i in range(len(modifiedProductOnClients)):
@@ -200,7 +199,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				modifiedProductOnClients.pop(remove)
 			modifiedProductOnClients.append(productOnClient)
 			return modifiedProductOnClients
-		
+
 		for (key, value) in self.query.items():
 			if not key.startswith('product_'):
 				continue
@@ -211,7 +210,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			elif (value == 'uninstall'):
 				uninstallProductIds.append(productId)
 				productIds.append(productId)
-		
+
 		for productId in productIds:
 			if not productId in self._swOnDemandProductIds:
 				raise Exception(u"Product '%s' not available for on-demand" % productId)
@@ -236,7 +235,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			if (productId in uninstallProductIds) and (productOnClients[index].getActionRequest() != 'uninstall'):
 				productOnClients[index].setActionRequest('uninstall')
 				modifiedProductOnClients = addToModified(modifiedProductOnClients, productOnClients[index])
-			
+
 		for productId in self._swOnDemandProductIds:
 			if not productId in productIds:
 				for index in range(len(productOnClients)):
@@ -245,17 +244,17 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							productOnClients[index].setActionRequest('none')
 							modifiedProductOnClients = addToModified(modifiedProductOnClients, productOnClients[index])
 						break
-		
+
 		productOnClientsWithDependencies = []
 		if modifiedProductOnClients:
 			logger.info(u"ProductOnClients modified, adding dependencies")
 			productOnClientsWithDependencies = self._configService.productOnClient_addDependencies(productOnClients)
-		
+
 		return (modifiedProductOnClients, productOnClients, productOnClientsWithDependencies)
-	
+
 	def _processAction(self, modifiedProductOnClients, productOnClients, productOnClientsWithDependencies):
 		logger.notice(u"Action '%s' was sent" % self.query.get('action'))
-		
+
 		productIds = []
 		selectedProducts = []
 		dependendProducts = []
@@ -280,7 +279,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						otherProducts.append(row)
 					elif (t == 'depend'):
 						dependendProducts.append(row)
-		
+
 		html = []
 		if selectedProducts:
 			html.append(u'<div class="swondemand-summary-box">')
@@ -300,7 +299,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					html.extend(otherProducts)
 					html.append(u'</ul>')
 			html.append(u'</div>')
-		
+
 		buttons = [ u'<button class="swondemand-action-button" type="submit" name="action" value="back">&lt; %s</button>' % _(u"back") ]
 		if (self.query.get('action') == "next"):
 			if selectedProducts:
@@ -309,19 +308,19 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					buttons.append(u'<button class="swondemand-action-button" type="submit" name="action" value="ondemand">%s</button>' % _(u"process now"))
 			else:
 				html.append(u'<div class="swondemand-summary-message-box">%s</div>' % (_(u'Nothing selected')))
-		
+
 		elif (self.query.get('action') == "ondemand"):
 			html.append(u'<div class="swondemand-summary-message-box">%s</div>' % _(u'Starting to process actions now.'))
-		
+
 		elif (self.query.get('action') == "onrestart"):
 			html.append(u'<div class="swondemand-summary-message-box">%s</div>' % _(u'Actions will be processed on next boot.'))
-		
+
 		html.append(u'<div class="swondemand-summary-button-box">')
 		html.extend(buttons)
 		html.append(u'</div>')
-		
+
 		html = mainpage.replace('%result%', forceUnicode(u'\n'.join(html)))
-		
+
 		if self.query.get('action') in ('ondemand', 'onrestart'):
 			description  = u"Software on demand action '%s' executed\n" % self.query.get('action')
 			description += u'Modified product actions:\n'
@@ -330,7 +329,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			description += u'Product action updates:\n'
 			for poc in productOnClientsWithDependencies:
 				description += u'   %s: %s\n' % (poc.productId, poc.actionRequest)
-			
+
 			timeline.addEvent(
 				title       = u"Software on demand",
 				description = description,
@@ -341,18 +340,18 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			if (self.query.get('action') == 'ondemand'):
 				for eventGenerator in getEventGenerators(generatorClass = SwOnDemandEventGenerator):
 					eventGenerator.createAndFireEvent()
-		
+
 		return html
-	
+
 	def _generateResponse(self, result):
 		if not isinstance(result, http.Response):
 			result = http.Response()
-		
+
 		html = u''
 		try:
 			self.connectConfigService()
 			self._getSwOnDemandConfig()
-			
+
 			productOnClients = []
 			modifiedProductOnClients = []
 			productOnClientsWithDependencies = []
@@ -367,7 +366,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				products = jsonrpc2.waitForResult()
 				productOnDepots = jsonrpc3.waitForResult()
 				self._configService.setAsync(False)
-			
+
 			for key in self.query.keys():
 				if key.startswith('product_'):
 					(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies) = self._processProducts(productOnClients)
@@ -381,21 +380,21 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					for poc in productOnClientsWithDependencies:
 						logger.debug(u"   %s" % poc)
 					break
-			
+
 			if self.query.get('action') in ('next', 'ondemand', 'onrestart'):
 				html = self._processAction(modifiedProductOnClients, productOnClients, productOnClientsWithDependencies)
-			
+
 			elif self._swOnDemandProductIds:
 				html = []
 				for productId in self._swOnDemandProductIds:
 					html.append(u'<div class="swondemand-product-box"><table>')
 					productOnClient = None
-					
+
 					for poc in productOnClients:
 						if (poc.productId == productId):
 							productOnClient = poc
 							break
-					
+
 					productOnDepot = None
 					for pod in productOnDepots:
 						if (pod.productId == productId):
@@ -403,7 +402,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							break
 					if not productOnDepot:
 						logger.error(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
-					
+
 					product = None
 					for p in products:
 						if (p.id == productOnDepot.productId) and (p.productVersion == productOnDepot.productVersion) and (p.packageVersion == productOnDepot.packageVersion):
@@ -411,7 +410,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							break
 					if not product:
 						logger.error(u"Product '%s' not found" % productId)
-					
+
 					installationStatus = None
 					state = _('not installed')
 					stateclass = u"swondemand-product-state-not_installed"
@@ -427,24 +426,24 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						if (productOnClient.installationStatus == "installed"):
 							stateclass = "swondemand-product-state-installed"
 							state = u"%s (%s: %s-%s)" % ( _('installed'), _('version'), productOnClient.productVersion, productOnClient.packageVersion )
-					
+
 					html.append(u'<tr><td colspan="2" class="swondemand-product-name">%s (%s-%s)</td></tr>' \
 							% (product.name, productOnDepot.productVersion, productOnDepot.packageVersion))
 					description = product.description or u''
 					html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'description'))
 					html.append(u'    <td class="swondemand-product-attribute-value">%s</td></tr>' \
 								% description.replace(u'\n', u'<br />') )
-					
+
 					if self._showDetails:
 						html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'state'))
 						html.append(u'    <td class="swondemand-product-attribute-value %s">%s</td></tr>' \
 								% (stateclass, state) )
-						
+
 						advice = product.advice or u''
 						html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'advice'))
 						html.append(u'    <td class="swondemand-product-attribute-value">%s</td></tr>' \
 								% advice.replace(u'\n', u'<br />') )
-					
+
 					if (installationStatus == 'installed'):
 						html.append(u'<tr><td colspan="2" class="swondemand-product-setup-radiobox">')
 						html.append(u'       <input type="radio" name="product_%s" value="setup" %s />%s</td></tr>' \
@@ -466,7 +465,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				raise Exception(u"No products found")
 		except Exception, e:
 			html = mainpage.replace('%result%', u'<div class="swondemand-summary-message-box">%s</div>' % e)
-		
+
 		self.disconnectConfigService()
 		result.stream = stream.IByteStream(html.encode('utf-8'))
 		return result

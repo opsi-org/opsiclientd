@@ -37,7 +37,7 @@ from OPSI.Types import forceUnicode
 class OpsiclientdError(Exception):
 	ExceptionShortDescription = u"Opsiclientd error"
 
-	def __init__(self, message = u''):
+	def __init__(self, message=u''):
 		self._message = forceUnicode(message)
 
 	def __unicode__(self):

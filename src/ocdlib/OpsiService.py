@@ -1,57 +1,59 @@
 # -*- coding: utf-8 -*-
 """
-   = = = = = = = = = = = = = = = = = = = = =
-   =   ocdlib.OpsiService                  =
-   = = = = = = = = = = = = = = = = = = = = =
+ocdlib.OpsiService
 
-   opsiclientd is part of the desktop management solution opsi
-   (open pc server integration) http://www.opsi.org
+opsiclientd is part of the desktop management solution opsi
+(open pc server integration) http://www.opsi.org
 
-   Copyright (C) 2010 uib GmbH
+Copyright (C) 2010 uib GmbH
 
-   http://www.uib.de/
+http://www.uib.de/
 
-   All rights reserved.
+All rights reserved.
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as
-   published by the Free Software Foundation.
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 2 as
+published by the Free Software Foundation.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-   @copyright:	uib GmbH <info@uib.de>
-   @author: Jan Schneider <j.schneider@uib.de>
-   @license: GNU General Public License version 2
+@copyright:	uib GmbH <info@uib.de>
+@author: Jan Schneider <j.schneider@uib.de>
+@license: GNU General Public License version 2
 """
 
-import time, base64
-from hashlib import md5
-from twisted.conch.ssh import keys
+import base64
 import random
+import time
+from hashlib import md5
 from httplib import HTTPConnection, HTTPSConnection
+from twisted.conch.ssh import keys
 
-from OPSI.Logger import *
+from OPSI.Logger import Logger
 from OPSI.Util import *
 from OPSI.Util.Thread import KillableThread
-from OPSI.Util.HTTP import urlsplit, non_blocking_connect_http, non_blocking_connect_https
+from OPSI.Util.HTTP import (urlsplit, non_blocking_connect_http,
+	non_blocking_connect_https)
 from OPSI.Backend.JSONRPC import JSONRPCBackend
-from OPSI.Types import *
+from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
 from OPSI import System
 
 from ocdlib import __version__
-from ocdlib.Localization import _, setLocaleDir, getLanguage
-from ocdlib.Config import Config
+from ocdlib.Localization import _
+from ocdlib.Config import Config, getLogFormat
 from ocdlib.Exceptions import *
+
 
 logger = Logger()
 config = Config()
+
 
 def isConfigServiceReachable(timeout=5):
 	for url in config.getConfigServiceUrls():
@@ -60,22 +62,25 @@ def isConfigServiceReachable(timeout=5):
 			(scheme, host, port, baseurl, username, password) = urlsplit(url)
 			conn = None
 			if scheme.endswith('s'):
-				conn = HTTPSConnection(host = host, port = port)
+				conn = HTTPSConnection(host=host, port=port)
 				non_blocking_connect_https(conn, timeout)
 			else:
-				conn = HTTPConnection(host = host, port = port)
+				conn = HTTPConnection(host=host, port=port)
 				non_blocking_connect_http(conn, timeout)
 			if not conn:
 				continue
 			try:
 				conn.sock.close()
 				conn.close()
-			except:
+			except Exception:
 				pass
 			return True
-		except Exception, e:
+
+		except Exception as e:
 			logger.info(e)
+
 	return False
+
 
 class ServiceConnection(object):
 	def __init__(self, loadBalance = False):
@@ -123,7 +128,7 @@ class ServiceConnection(object):
 		return bool(self._configService)
 
 	def isConfigServiceReachable(self, timeout=15):
-		return isConfigServiceReachable(timeout = timeout)
+		return isConfigServiceReachable(timeout=timeout)
 
 	def stop(self):
 		logger.debug(u"Stopping thread")
@@ -135,9 +140,9 @@ class ServiceConnection(object):
 			self.terminate()
 			time.sleep(0.5)
 
-	def connectConfigService(self, allowTemporaryConfigServiceUrls = True):
+	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):
 		try:
-			configServiceUrls = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls = allowTemporaryConfigServiceUrls)
+			configServiceUrls = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=allowTemporaryConfigServiceUrls)
 			if not configServiceUrls:
 				raise Exception(u"No service url defined")
 
@@ -150,10 +155,11 @@ class ServiceConnection(object):
 				kwargs = self.connectionThreadOptions()
 				logger.debug(u"Creating ServiceConnectionThread (url: %s)" % self._configServiceUrl)
 				serviceConnectionThread = ServiceConnectionThread(
-							configServiceUrl = self._configServiceUrl,
-							username         = config.get('global', 'host_id'),
-							password         = config.get('global', 'opsi_host_key'),
-							**kwargs)
+					configServiceUrl=self._configServiceUrl,
+					username=config.get('global', 'host_id'),
+					password=config.get('global', 'opsi_host_key'),
+					**kwargs
+				)
 
 				self.connectionStart(self._configServiceUrl)
 
@@ -230,11 +236,13 @@ class ServiceConnection(object):
 								modules[module] = True
 						else:
 							val = modules[module]
-							if (val == False): val = 'no'
-							if (val == True):  val = 'yes'
+							if (val == False):
+								val = 'no'
+							if (val == True):
+								val = 'yes'
 
 						data += u'%s = %s\r\n' % (module.lower().strip(), val)
-					if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
+					if not bool(publicKey.verify(md5(data).digest(), [long(modules['signature'])])):
 						self.connectionFailed(u"Modules file invalid")
 					logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
 
@@ -253,13 +261,14 @@ class ServiceConnection(object):
 					self._configService.backend_exit()
 			except Exception, e:
 				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(e))
+
 		self._configService = None
 		self._configServiceUrl = None
 
+
 class ServiceConnectionThread(KillableThread):
-	def __init__(self, configServiceUrl, username, password, statusSubject = None):
-		moduleName = u' %-30s' % (u'service connection')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+	def __init__(self, configServiceUrl, username, password, statusSubject=None):
+		logger.setLogFormat(getLogFormat(u'service connection'), object=self)
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username
@@ -310,14 +319,16 @@ class ServiceConnectionThread(KillableThread):
 					if (len(self._username.split('.')) < 3):
 						raise Exception(u"Domain missing in username '%s'" % self._username)
 					self.configService = JSONRPCBackend(
-						address              = self._configServiceUrl,
-						username             = self._username,
-						password             = self._password,
-						serverCertFile       = serverCertFile,
-						verifyServerCert     = verifyServerCert,
-						caCertFile           = caCertFile,
-						verifyServerCertByCa = verifyServerCertByCa,
-						application = 'opsiclientd version %s' % __version__)
+						address=self._configServiceUrl,
+						username=self._username,
+						password=self._password,
+						serverCertFile=serverCertFile,
+						verifyServerCert=verifyServerCert,
+						caCertFile=caCertFile,
+						verifyServerCertByCa=verifyServerCertByCa,
+						application='opsiclientd version %s' % __version__
+					)
+
 					if self.configService.isLegacyOpsi():
 						self.configService.authenticated()
 					else:
@@ -354,7 +365,7 @@ class ServiceConnectionThread(KillableThread):
 					time.sleep(1)
 					time.sleep(1)
 
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
 		self.running = False
 
@@ -371,4 +382,3 @@ class ServiceConnectionThread(KillableThread):
 				break
 			self.terminate()
 			time.sleep(0.5)
-

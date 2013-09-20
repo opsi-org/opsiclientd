@@ -43,7 +43,7 @@ from OPSI import System
 from OPSI.Types import forceUnicode, forceList
 from OPSI.Util import objectToBeautifiedText
 
-from ocdlib.Config import Config
+from ocdlib.Config import Config, getLogFormat
 from ocdlib.State import State
 from ocdlib.Localization import getLanguage
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
@@ -99,8 +99,10 @@ class EventConfig(object):
 			raise TypeError(u"Event id not given")
 		self._id = unicode(eventId)
 
-		moduleName = u' %-30s' % (u'event config ' + self._id)
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(
+			getLogFormat(u'event config {0}'.format(self._id)),
+			object=self
+		)
 		self.setConfig(kwargs)
 
 	def getConfig(self):
@@ -333,8 +335,12 @@ class EventGenerator(threading.Thread):
 		self._stopped = False
 		self._event = None
 		self._lastEventOccurence = None
-		moduleName = u' %-30s' % (u'event generator ' + self._generatorConfig.getId())
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(
+			getLogFormat(
+				u'event generator {0}'.format(self._generatorConfig.getId())
+			),
+			object=self
+		)
 
 	def __unicode__(self):
 		return u'<%s %s>' % (self.__class__.__name__, self._generatorConfig.getId())
@@ -414,8 +420,14 @@ class EventGenerator(threading.Thread):
 				threading.Thread.__init__(self)
 				self._eventListener = eventListener
 				self._event = event
-				moduleName = u' %-30s' % (u'event generator ' + self._event.eventConfig.getId())
-				logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+				logger.setLogFormat(
+					getLogFormat(
+						u'event generator {0}'.format(
+							self._event.eventConfig.getId()
+						)
+					),
+					object=self
+				)
 
 			def run(self):
 				if (self._event.eventConfig.notificationDelay > 0):
@@ -765,8 +777,12 @@ class Event(object):
 	def __init__(self, eventConfig, eventInfo={}):
 		self.eventConfig = eventConfig
 		self.eventInfo = eventInfo
-		moduleName = u' %-30s' % (u'event generator ' + self.eventConfig.getId())
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(
+			getLogFormat(
+				u'event generator {0}'.format(self.eventConfig.getId())
+			),
+			object=self
+		)
 
 	def getActionProcessorCommand(self):
 		actionProcessorCommand = self.eventConfig.actionProcessorCommand

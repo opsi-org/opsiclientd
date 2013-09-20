@@ -43,7 +43,7 @@ from OPSI import System
 from OPSI.Object import *
 
 from ocdlib import __version__
-from ocdlib.Config import Config
+from ocdlib.Config import Config, getLogFormat
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from ocdlib.ControlServer import ControlServer
 from ocdlib.Events import *
@@ -73,8 +73,7 @@ timeline = Timeline()
 
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
-		moduleName = u' %-30s' % (u'opsiclientd')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(getLogFormat(u'opsiclientd'), object=self)
 		logger.debug(u"Opsiclient initiating")
 
 		EventListener.__init__(self)

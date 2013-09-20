@@ -5,7 +5,8 @@ from __future__ import unicode_literals
 
 import unittest
 
-from ocdlib.Config import Config, SectionNotFoundException, NoConfigOptionFoundException
+from ocdlib.Config import (Config, getLogFormat,
+    SectionNotFoundException, NoConfigOptionFoundException)
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
 
@@ -73,6 +74,18 @@ class ConfigTestCase(unittest.TestCase):
     def testGettingUnknownOptionFails(self):
         self.assertRaises(NoConfigOptionFoundException, self.config.get, 'global', 'non_existing_option')
 
+
+class LogFormatTestCase(unittest.TestCase):
+    def testContainsModulename(self):
+        modulename = 'asdfghj'
+        self.assertTrue(modulename in getLogFormat(modulename))
+
+    def testFormattingUses30CharactersForName(self):
+        modulename = 'olol'
+        self.assertEquals(
+            '[%l] [%D] [ olol                          ] %M   (%F|%N)',
+            getLogFormat(modulename)
+        )
 
 
 if __name__ == '__main__':
