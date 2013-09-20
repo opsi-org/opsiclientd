@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 
 import unittest
 
-from ocdlib.Config import Config
+from ocdlib.Config import Config, SectionNotFoundException, NoConfigOptionFoundException
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
 
@@ -66,6 +66,12 @@ class ConfigTestCase(unittest.TestCase):
 
         if RUNNING_ON_WINDOWS:
             self.assertNotEqual('', self.config.get('system', 'program_files_dir'))
+
+    def testGettingUnknownSectionFails(self):
+        self.assertRaises(SectionNotFoundException, self.config.get, 'nothing', 'bla')
+
+    def testGettingUnknownOptionFails(self):
+        self.assertRaises(NoConfigOptionFoundException, self.config.get, 'global', 'non_existing_option')
 
 
 

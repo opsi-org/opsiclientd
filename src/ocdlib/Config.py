@@ -76,6 +76,14 @@ QuBW/YzuIIiknjESIHBVA6YWeLNR
 logger = Logger()
 
 
+class SectionNotFoundException(ValueError):
+	pass
+
+
+class NoConfigOptionFoundException(ValueError):
+	pass
+
+
 class ConfigImplementation(object):
 	WINDOWS_DEFAULT_PATHS = {
 		'global': {
@@ -218,9 +226,9 @@ class ConfigImplementation(object):
 		section = unicode(section).strip().lower()
 		option = unicode(option).strip().lower()
 		if section not in self._config:
-			raise ValueError(u"No such config section: %s" % section)
+			raise SectionNotFoundException(u"No such config section: {0}".format(section))
 		if option not in self._config[section]:
-			raise ValueError(u"No such config option in section '%s': %s" % (section, option))
+			raise NoConfigOptionFoundException(u"No such config option in section '{0}': {1}".format(section, option))
 
 		value = self._config[section][option]
 		if not raw and type(value) in (unicode, str) and (value.count('%') >= 2):
