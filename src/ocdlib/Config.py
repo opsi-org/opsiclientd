@@ -223,8 +223,9 @@ class ConfigImplementation(object):
 	def get(self, section, option, raw=False):
 		if not section:
 			section = 'global'
-		section = unicode(section).strip().lower()
-		option = unicode(option).strip().lower()
+
+		section = forceUnicodeLower(section.strip())
+		option = forceUnicodeLower(option.strip())
 		if section not in self._config:
 			raise SectionNotFoundException(u"No such config section: {0}".format(section))
 		if option not in self._config[section]:
@@ -234,7 +235,7 @@ class ConfigImplementation(object):
 		if not raw and type(value) in (unicode, str) and (value.count('%') >= 2):
 			value = self.replace(value)
 		if type(value) is str:
-			value = unicode(value)
+			value = forceUnicode(value)
 		return value
 
 	def set(self, section, option, value):
@@ -311,12 +312,12 @@ class ConfigImplementation(object):
 				continue
 			for (key, value) in values.items():
 				value = forceUnicode(value)
-				if (string.find(u'"%' + unicode(section) + u'.' + unicode(key) + u'%"') != -1) and escaped:
+				if (string.find(u'"%' + forceUnicode(section) + u'.' + forceUnicode(key) + u'%"') != -1) and escaped:
 					if (os.name == 'posix'):
 						value = value.replace('"', '\\"')
 					elif RUNNING_ON_WINDOWS:
 						value = value.replace('"', '^"')
-				newString = string.replace(u'%' + unicode(section) + u'.' + unicode(key) + u'%', value)
+				newString = string.replace(u'%' + forceUnicode(section) + u'.' + forceUnicode(key) + u'%', value)
 
 				if (newString != string):
 					string = self.replace(newString, escaped)
@@ -348,10 +349,10 @@ class ConfigImplementation(object):
 							slf = None
 							dlf = None
 							try:
-								slf = logFile + u'.' + unicode(i-1)
+								slf = logFile + u'.' + forceUnicode(i-1)
 								if (i <= 0):
 									slf = logFile
-								dlf = logFile + u'.' + unicode(i)
+								dlf = logFile + u'.' + forceUnicode(i)
 								if os.path.exists(slf):
 									if os.path.exists(dlf):
 										os.unlink(dlf)
