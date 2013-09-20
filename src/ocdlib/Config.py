@@ -29,6 +29,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 @author: Erol Ueluekmen <e.ueluekmen@uib.de>
 @license: GNU General Public License version 2
 """
+from __future__ import unicode_literals
+
 import os
 import re
 import sys
@@ -100,15 +102,10 @@ class ConfigImplementation(object):
 	}
 
 	def __init__(self):
-		if RUNNING_ON_WINDOWS:
-			baseDir = u''
-			try:
-				baseDir = os.path.dirname(sys.argv[0])
-			except Exception, e:
-				logger.error(u"Failed to get base dir: %s" % e)
-		else:
-			baseDir = os.path.join('/etc', 'opsi-client-agent')
+		baseDir = self._getBaseDirectory()
 
+		self._temporaryConfigServiceUrls = []
+		self._temporaryDepotDrive = []
 		self._config = {
 			'system': {
 				'program_files_dir': u'',
@@ -117,18 +114,14 @@ class ConfigImplementation(object):
 				'base_dir': baseDir,
 				'locale_dir': os.path.join(baseDir, 'locale'),
 				'config_file': u'opsiclientd.conf',
-				'log_dir': u'c:\\tmp',
 				'log_file': u'opsiclientd.log',
 				'log_level': LOG_NOTICE,
 				'host_id': System.getFQDN().lower(),
 				'opsi_host_key': u'',
 				'wait_for_gui_timeout': 120,
 				'block_login_notifier': u'',
-				'state_file': u'c:\\opsi.org\\opsiclientd\\state.json',
-				'timeline_db': u'c:\\opsi.org\\opsiclientd\\timeline.sqlite',
 				'verify_server_cert': False,
 				'verify_server_cert_by_ca': False,
-				'server_cert_dir': u'c:\\opsi.org\\opsiclientd\\server-certs'
 			},
 			'config_service': {
 				'url': [],
@@ -142,7 +135,6 @@ class ConfigImplementation(object):
 				'username': u'pcpatch',
 			},
 			'cache_service': {
-				'storage_dir': u'c:\\opsi.org\\cache',
 				'product_cache_max_size': 6000000000,
 				'extension_config_dir': u'',
 			},
@@ -173,36 +165,49 @@ class ConfigImplementation(object):
 			}
 		}
 
+		self._applySystemSpecificConfiguration()
+
+	@staticmethod
+	def _getBaseDirectory():
+		if RUNNING_ON_WINDOWS:
+			try:
+				# TODO: could this be solved more elegant by using __file__
+				# instead of hoping that we find the program here?
+				baseDir = os.path.dirname(sys.argv[0])
+			except Exception, e:
+				logger.error(u"Failed to get base dir: %s" % e)
+				baseDir = u''
+		else:
+			baseDir = os.path.join('/etc', 'opsi-client-agent')
+
+		return baseDir
+
+	def _applySystemSpecificConfiguration(self):
 		defaultToApply = self.WINDOWS_DEFAULT_PATHS if RUNNING_ON_WINDOWS else self.LINUX_DEFAULT_PATHS
 
 		for key in self._config:
 			if key in defaultToApply:
 				self._config[key].update(defaultToApply[key])
 
-		self._temporaryConfigServiceUrls = []
-		self._temporaryDepotDrive = []
+		baseDir = self._getBaseDirectory()
+		self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd', 'opsiclientd.conf')
+		self._config['cache_service']['extension_config_dir'] = os.path.join(baseDir, u'opsiclientd', 'extend.d')
 
 		if RUNNING_ON_WINDOWS:
-			opsiRootDirectory = System.getProgramFilesDir()
-			self._config['system']['program_files_dir'] = opsiRootDirectory
-			self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd', 'opsiclientd.conf')
-			self._config['global']['server_cert_dir'] = os.path.join('opsi.org', 'opsiclientd', 'server-certs')
+			systemDrive = System.getSystemDrive()
+			logger.debug(
+				'Running on windows: adapting paths to use system drive '
+				'({0}).'.format(systemDrive)
+			)
+			self._config['system']['program_files_dir'] = System.getProgramFilesDir()
+			self._config['cache_service']['storage_dir'] = os.path.join(systemDrive, 'opsi.org', 'cache')
+			self._config['global']['state_file'] = os.path.join(systemDrive, 'opsi.org', 'opsiclientd', 'state.json')
+			self._config['global']['timeline_db'] = os.path.join(systemDrive,  'opsi.org', 'opsiclientd', 'timeline.sqlite')
+			self._config['global']['log_dir'] = os.path.join(systemDrive, 'tmp')
+			self._config['global']['server_cert_dir'] = os.path.join(systemDrive, 'opsi.org', 'opsiclientd', 'server-certs')
 
 			if sys.getwindowsversion()[0] == 5:
 				self._config['action_processor']['run_as_user'] = 'pcpatch'
-		else:
-			# TODO: use the proper paths for *nix here.
-			# TODO: what happens if the user does not have a home?
-			opsiRootDirectory = os.path.expanduser('~')
-			self._config['global']['config_file'] = os.path.join(baseDir, 'opsiclientd.conf')
-			self._config['global']['server_cert_dir'] = os.path.join(baseDir, 'opsi.org', 'opsiclientd', 'server-certs')
-
-		self._config['cache_service']['storage_dir'] = os.path.join(opsiRootDirectory, 'opsi.org', 'cache')
-		self._config['cache_service']['extension_config_dir'] = os.path.join(baseDir, u'opsiclientd', 'extend.d')
-		self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd', 'opsiclientd.conf')
-		self._config['global']['state_file'] = os.path.join(opsiRootDirectory, 'opsi.org', 'opsiclientd', 'state.json')
-		self._config['global']['timeline_db'] = os.path.join(opsiRootDirectory, 'opsi.org', 'opsiclientd', 'timeline.sqlite')
-		self._config['global']['log_dir'] = os.path.join(opsiRootDirectory, 'tmp')
 
 	def getDict(self):
 		return self._config
@@ -651,3 +656,12 @@ class Config(ConfigImplementation):
 	def __setattr__(self, attr, value):
 		""" Delegate access to implementation """
 		return setattr(self.__instance, attr, value)
+
+	def _reset(self):
+		"""
+		Throwing away the Singleton behaviour.
+		Please do only use this in tests.
+		"""
+		Config.__instance = None
+		if '_Config__instance' in self.__dict__:
+			del self.__dict__['_Config__instance']
