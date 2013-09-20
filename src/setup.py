@@ -73,7 +73,7 @@ class Target:
 
 
 opsiclientdDescription = "opsi client daemon"
-packages = ["OPSI", "twisted", "ocdlib"]
+packages = ["ocdlib"]
 excludes = [
 	"pywin", "pywin.debugger", "pywin.debugger.dbgcon",	"pywin.dialogs",
 	"pywin.dialogs.list", "Tkconstants", "Tkinter", "tcl", "_imagingtk",
@@ -169,8 +169,8 @@ setup_options = {
 	"version": opsiClientDeamonVersion,
 	"url": 'http://www.opsi.org/',
 	"author": "uib GmbH <info@uib.de>",
-	"author-email": "info@uib.de",
-	"license": "GNU Affero General Public License Version 3 (AGPLv3)"
+	"author_email": "info@uib.de",
+	"license": "GNU Affero General Public License Version 3 (AGPLv3)",
 }
 
 if RUNS_ON_WINDOWS:
@@ -216,7 +216,7 @@ if RUNS_ON_WINDOWS:
 			"compressed": 1,
 			"optimize": 2,
 			"excludes": excludes,
-			"packages": packages
+			"packages": packages + ["OPSI", "twisted"]
 		}
 	}
 
@@ -226,6 +226,7 @@ if RUNS_ON_WINDOWS:
 	setup_options['windows'] = [notifier, opsiclientd_rpc, 	action_processor_starter]
 else:
 	setup_options['scripts'] = [os.path.join('scripts', 'opsiclientd')]
+	setup_options['packages'] = packages
 
 setup(**setup_options)
 
