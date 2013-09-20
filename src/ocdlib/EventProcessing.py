@@ -334,7 +334,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		except Exception, e:
 			raise Exception(u"opsiclientd_rpc command not defined: %s" % forceUnicode(e))
 
-		self.runCommandInSession(command = cmd, waitForProcessEnding = False)
+		self.runCommandInSession(command=command, waitForProcessEnding=False)
 
 	def setActionProcessorInfo(self):
 		try:
