@@ -162,8 +162,15 @@ else:
 setup_options = {
 	"data_files": data_files,
 	"name": "opsiclientd",
+	"description": (
+		'opsiclientd is part of the desktop management solution opsi (open pc '
+		'server integration) - http://www.opsi.org'
+	),
 	"version": opsiClientDeamonVersion,
 	"url": 'http://www.opsi.org/',
+	"author": "uib GmbH <info@uib.de>",
+	"author-email": "info@uib.de",
+	"license": "GNU Affero General Public License Version 3 (AGPLv3)"
 }
 
 if RUNS_ON_WINDOWS:
