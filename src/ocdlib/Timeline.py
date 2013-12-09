@@ -41,16 +41,10 @@ Timeline event attributes:
   * classname - added to the HTML classnames for the event's label and tape divs. Eg classname attribute 'hot_event' will result in div classes of 'timeline-event-label hot_event' and 'timeline-event-tape hot_event' for the event's Timeline label and tape, respectively.
   * description - will be displayed inside the bubble with the event's title and image.
 """
-
+import json
 import os
 import time
 import threading
-from sys import version_info
-
-if version_info >= (2, 6):
-	import json
-else:
-	import simplejson as json
 
 from OPSI.Logger import Logger
 from OPSI.Types import forceUnicode, forceBool, forceInt, forceOpsiTimestamp
