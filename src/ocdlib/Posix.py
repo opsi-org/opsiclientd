@@ -27,8 +27,11 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 @copyright:	uib GmbH <info@uib.de>
 @author: Jan Schneider <j.schneider@uib.de>
+@author: Niko Wenselowski <n.wenselowski@uib.de>
 @license: GNU General Public License version 2
 """
+from  __future__ import unicode_literals
+
 import getopt
 import os
 import sys
@@ -77,12 +80,11 @@ class OpsiclientdInit(object):
 
 		if not testMode:
 			# Call signalHandler on signal SIGHUP, SIGTERM, SIGINT
-			signal(SIGHUP,  self.signalHandler)
+			signal(SIGHUP, self.signalHandler)
 			signal(SIGTERM, self.signalHandler)
-			signal(SIGINT,  self.signalHandler)
+			signal(SIGINT, self.signalHandler)
 		else:
 			logger.notice(u'Running in test mode!')
-
 
 		if daemon:
 			logger.setConsoleLevel(LOG_NONE)
@@ -112,8 +114,6 @@ class OpsiclientdInit(object):
 		print u""
 
 	def daemonize(self):
-		# TODO: just return? I doubt it!
-		return
 		# Fork to allow the shell to return and to call setsid
 		try:
 			pid = os.fork()
@@ -133,8 +133,8 @@ class OpsiclientdInit(object):
 			pid = os.fork()
 			if (pid > 0):
 				sys.exit(0)
-		except OSError, e:
-			raise Exception(u"Second fork failed: %e" % forceUnicode(e))
+		except OSError as oserr:
+			raise Exception(u"Second fork failed: {0}".format(oserr))
 
 		logger.setConsoleLevel(LOG_NONE)
 
