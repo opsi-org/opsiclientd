@@ -270,15 +270,16 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.notice(u"Starting control server")
 			try:
 				self._controlServer = ControlServer(
-								opsiclientd        = self,
-								httpsPort          = config.get('control_server', 'port'),
-								sslServerKeyFile   = config.get('control_server', 'ssl_server_key_file'),
-								sslServerCertFile  = config.get('control_server', 'ssl_server_cert_file'),
-								staticDir          = config.get('control_server', 'static_dir') )
+					opsiclientd=self,
+					httpsPort=config.get('control_server', 'port'),
+					sslServerKeyFile=config.get('control_server', 'ssl_server_key_file'),
+					sslServerCertFile=config.get('control_server', 'ssl_server_cert_file'),
+					staticDir=config.get('control_server', 'static_dir')
+				)
 				self._controlServer.start()
 				logger.notice(u"Control server started")
-			except Exception, e:
-				logger.error(u"Failed to start control server: %s" % forceUnicode(e))
+			except Exception as e:
+				logger.error(u"Failed to start control server: {0}".format(forceUnicode(e)))
 				raise
 
 			self._cacheService = None
