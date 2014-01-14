@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 """
-   = = = = = = = = = = = = = = = = = = = = = = = = =
-   =   ocdlibnonfree.CacheService                  =
-   = = = = = = = = = = = = = = = = = = = = = = = = =
+ocdlibnonfree.CacheService
+
+opsiclientd is part of the desktop management solution opsi
+(open pc server integration) http://www.opsi.org
    
-   opsiclientd is part of the desktop management solution opsi
-   (open pc server integration) http://www.opsi.org
+Copyright (C) 2014 uib GmbH
    
-   Copyright (C) 2010 uib GmbH
+http://www.uib.de/
    
-   http://www.uib.de/
+All rights reserved.
    
-   All rights reserved.
-   
-   @copyright:	uib GmbH <info@uib.de>
-   @author: Jan Schneider <j.schneider@uib.de>
+@copyright: uib GmbH <info@uib.de>
+@author: Jan Schneider <j.schneider@uib.de>
+@author: Erol Ueluekmen <e.ueluekmen@uib.de>
 """
 
 # Import
@@ -288,6 +287,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			modules = None
 			helpermodules = {}
 			backendinfo = self._configService.backend_info()
+			hostCount = len(self._configService.host_getIdents(type="OpsiClient"))
 			modules = backendinfo['modules']
 			helpermodules = backendinfo['realmodules']
 			
@@ -313,8 +313,11 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					continue
 				if helpermodules.has_key(module):
 					val = helpermodules[module]
-					if int(val) > 0:
-						modules[module] = True
+					if int(val) + 50 <= hostCount:
+						raise Exception(u"UNDERLICENSED: You have more Clients then licensed in modules file.")
+					elif int(val) <= hostCount:
+						logger.warning("WARNING UNDERLICENSED: You have more Clients then licensed in modules file.")
+					modules[module] = True
 				else:
 					val = modules[module]
 					if (val == False): val = 'no'
@@ -948,16 +951,4 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				logger.warning(e)
 		if exception:
 			raise exception
-	
-
-
-
-
-
-
-
-
-
-
-
 
