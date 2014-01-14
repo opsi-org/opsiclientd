@@ -313,11 +313,15 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					continue
 				if helpermodules.has_key(module):
 					val = helpermodules[module]
-					if int(val) + 50 <= hostCount:
-						raise Exception(u"UNDERLICENSED: You have more Clients then licensed in modules file.")
-					elif int(val) <= hostCount:
-						logger.warning("WARNING UNDERLICENSED: You have more Clients then licensed in modules file.")
-					modules[module] = True
+					if module = 'vpn':
+						if int(val) + 50 <= hostCount:
+							raise Exception(u"UNDERLICENSED: You have more Clients then licensed in modules file.")
+						elif int(val) <= hostCount:
+							logger.warning("WARNING UNDERLICENSED: You have more Clients then licensed in modules file.")
+						modules[module] = True
+					else:
+						if int(val) > 0:
+							modules[module] = True
 				else:
 					val = modules[module]
 					if (val == False): val = 'no'
