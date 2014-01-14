@@ -63,12 +63,42 @@ else:
 
 print "Building %s" % opsiclientdDescription
 
+
+manifest_template = '''
+<?xml version="1.0" encoding="utf-8"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+    <security>
+      <requestedPrivileges>
+        <requestedExecutionLevel level="highestAvailable" />
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+  <description>%(prog)s Program</description>
+   <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+        <application>
+            <!-- Windows 8.1 -->
+            <supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}"/>
+            <!-- Windows Vista -->
+            <supportedOS Id="{e2011457-1546-43c5-a5fe-008deee3d3f0}"/>
+            <!-- Windows 7 -->
+            <supportedOS Id="{35138b9a-5d96-4fbd-8e2d-a2440225f93a}"/>
+            <!-- Windows 8 -->
+            <supportedOS Id="{4a2f28e3-53b9-4441-ba9c-d69d4a4a6e38}"/>
+        </application>
+    </compatibility>
+</assembly>
+'''
+ 
+RT_MANIFEST = 24
+
 opsiclientd = Target(
 	name = "opsiclientd",
 	description = opsiclientdDescription,
 	script = "opsiclientd.py",
 	modules = ["opsiclientd"],
 	#cmdline_style='pywin32',
+	other_resources = [(RT_MANIFEST, 1, manifest_template % dict(prog="opsiclientd"))],
 	icon_resources = [(1, "windows\\opsi.ico")]
 )
 
