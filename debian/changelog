@@ -1,0 +1,6 @@
+opsiclientd (4.0.77) UNRELEASED; urgency=low
+
+  * WAN/VPN: Win 8.1 mshotfix support
+  * WAN/VPN: Bugfix for connection loose by productCaching, when using webdav
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 14 Jan 2014 01:08:04 +0100
