@@ -313,7 +313,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					continue
 				if helpermodules.has_key(module):
 					val = helpermodules[module]
-					if module = 'vpn':
+					if module == 'vpn':
 						if int(val) + 50 <= hostCount:
 							raise Exception(u"UNDERLICENSED: You have more Clients then licensed in modules file. Disabling module vpn.")
 						elif int(val) <= hostCount:
