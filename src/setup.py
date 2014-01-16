@@ -116,7 +116,7 @@ opsiclientd = Target(
 	script = "opsiclientd.py",
 	modules = ["opsiclientd"],
 	#cmdline_style='pywin32',
-	other_resources = [(RT_MANIFEST, 1, manifest_template % dict(prog="opsiclientd"))],
+	#other_resources = [(RT_MANIFEST, 1, manifest_template % dict(prog="opsiclientd"))],
 	icon_resources = [(1, "windows\\opsi.ico")]
 )
 
