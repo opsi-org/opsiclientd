@@ -17,7 +17,7 @@ All rights reserved.
 """
 
 # Import
-import threading, base64, time, codecs
+import threading, base64, time, codecs, os
 from hashlib import md5
 from twisted.conch.ssh import keys
 
@@ -740,7 +740,9 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					
 				productIds.append('opsi-winst')
 				if 'mshotfix' in productIds:
-					additionalProductId = System.getOpsiHotfixName()
+					# Windows 8.1 Bugfix, with a helper exe.
+					helper = os.path.join(config.get('global', 'base_dir'), 'utilities\getmsversioninfo.exe')
+					additionalProductId = System.getOpsiHotfixName(helper)
 					logger.info(u"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s" % additionalProductId)
 					if not additionalProductId in productIds:
 						productIds.append(additionalProductId)
