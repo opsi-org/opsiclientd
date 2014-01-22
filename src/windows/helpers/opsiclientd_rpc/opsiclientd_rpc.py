@@ -26,6 +26,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 @copyright: uib GmbH <info@uib.de>
 @author: Jan Schneider <j.schneider@uib.de>
+@author: Erol Ueluekmen <e.ueluekmen@uib.de>
 @license: GNU General Public License version 2
 """
 import locale
@@ -34,9 +35,10 @@ import sys
 
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Logger import Logger, LOG_DEBUG
+from OPSI import System
 
 
-__version__ = '4.0'
+__version__ = '4.0.4.4'
 
 logger = Logger()
 
