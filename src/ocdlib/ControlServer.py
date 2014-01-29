@@ -392,6 +392,20 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root.putChild("info.html", ResourceOpsiclientdInfo(self))
 		self._root.putChild("swondemand", ResourceSoftwareOnDemand(self))
 
+	def __repr__(self):
+		return (
+			'<ControlServer(opsiclientd={opsiclientd}, httpsPort={port}, '
+			'sslServerKeyFile={keyFile}, sslServerCertFile={certFile}, '
+			'staticDir={staticDir})>'.format(
+				opsiclientd=self._opsiclientd,
+				port=self._httpsPort,
+				keyFile=self._sslServerKeyFile,
+				certFile=self._sslServerCertFile,
+				staticDir=self._staticDir
+			)
+		)
+
+
 
 class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def __init__(self, opsiclientd):
