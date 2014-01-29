@@ -30,7 +30,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 @author: Niko Wenselowski <n.wenselowski@uib.de>
 @license: GNU General Public License version 2
 """
-from  __future__ import unicode_literals
+from __future__ import unicode_literals
 
 import getopt
 import os
@@ -69,7 +69,7 @@ class OpsiclientdInit(object):
 		logLevel = LOG_NOTICE
 		for (opt, arg) in opts:
 			if opt == "-v":
-				print u"opsiclientd version %s" % __version__
+				print(u"opsiclientd version %s" % __version__)
 				sys.exit(0)
 			elif opt == "-D":
 				daemon = True
@@ -120,8 +120,8 @@ class OpsiclientdInit(object):
 			if (pid > 0):
 				# Parent exits
 				sys.exit(0)
-		except OSError, e:
-			raise Exception(u"First fork failed: %e" % forceUnicode(e))
+		except OSError as err:
+			raise Exception(u"First fork failed: %e" % forceUnicode(err))
 
 		# Do not hinder umounts
 		os.chdir("/")
