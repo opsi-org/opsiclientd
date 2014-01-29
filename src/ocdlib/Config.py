@@ -107,9 +107,9 @@ class ConfigImplementation(object):
 
 	LINUX_DEFAULT_PATHS = {
 		'global': {
-			'log_dir': os.path.join('/var', 'log', 'opsi-client-agent'),
-			'state_file': os.path.join('/etc', 'opsi-client-agent', 'state.json'),
-			'timeline_db': os.path.join('/etc', 'opsi-client-agent', 'timeline.sqlite'),
+			'log_dir': os.path.join('/var', 'log', 'opsi'),
+			'state_file': os.path.join('/etc', 'opsi-client-agent', 'opsiclientd', 'state.json'),
+			'timeline_db': os.path.join('/etc', 'opsi-client-agent', 'opsiclientd', 'timeline.sqlite'),
 			'server_cert_dir': os.path.join('/var', 'lib', 'opsi-client-agent', 'opsiclientd')
 		},
 		'cache_service': {
