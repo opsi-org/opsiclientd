@@ -224,6 +224,16 @@ class ConfigImplementation(object):
 
 			if sys.getwindowsversion()[0] == 5:
 				self._config['action_processor']['run_as_user'] = 'pcpatch'
+		else:
+			self._config['global']['config_file'] = os.path.join(baseDir, 'opsiclientd', u'opsiclientd.conf')
+			self._config['global']['log_file'] = os.path.join('/var', 'log', 'opsi', 'opsiclientd.log')
+			self._config['control_server']['static_dir'] = '/etc/opsi-client-agent/opsiclientd/static_html'
+
+			sslCertDir = os.path.join('/etc', 'opsi-client-agent')
+
+			for certPath in ('ssl_server_key_file', 'ssl_server_cert_file'):
+				if not sslCertDir in self._config['control_server'][certPath]:
+					self._config['control_server'][certPath] = os.path.join(sslCertDir, self._config['control_server'][certPath])
 
 	def getDict(self):
 		return self._config
