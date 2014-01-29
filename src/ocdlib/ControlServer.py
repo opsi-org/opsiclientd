@@ -361,10 +361,13 @@ class ControlServer(OpsiService, threading.Thread):
 
 			if not reactor.running:
 				logger.debug(u"Reactor is not running. Starting.")
-				reactor.run(installSignalHandlers=False)
+				reactor.run(installSignalHandlers=0)
 				logger.debug(u"Reactor run ended.")
-		except Exception as e:
-			logger.logException(e)
+			else:
+				logger.debug(u"Reactor already running.")
+		except Exception as err:
+			logger.warning('ControlServer {1} caught error: {0}'.format(err, repr(self)))
+			logger.logException(err)
 
 		logger.notice(u"Control server exiting")
 		self._running = False
