@@ -48,8 +48,7 @@ logger = Logger()
 
 
 class OpsiclientdPosix(Opsiclientd):
-	def __init__(self):
-		Opsiclientd.__init__(self)
+	pass
 
 
 class OpsiclientdInit(object):
