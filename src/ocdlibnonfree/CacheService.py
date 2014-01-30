@@ -741,7 +741,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				productIds.append('opsi-winst')
 				if 'mshotfix' in productIds:
 					# Windows 8.1 Bugfix, with a helper exe.
-					helper = os.path.join(config.get('global', 'base_dir'), 'utilities\getmsversioninfo.exe')
+					helper = os.path.join(config.get('global', 'base_dir'), 'utilities\\getmsversioninfo.exe')
 					additionalProductId = System.getOpsiHotfixName(helper)
 					logger.info(u"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s" % additionalProductId)
 					if not additionalProductId in productIds:
