@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-   = = = = = = = = = = = = = = = = = = = = = = = = =
-   =   ocdlibnonfree.CacheService                  =
-   = = = = = = = = = = = = = = = = = = = = = = = = =
-   
-   opsiclientd is part of the desktop management solution opsi
-   (open pc server integration) http://www.opsi.org
-   
-   Copyright (C) 2010 uib GmbH
-   
-   http://www.uib.de/
-   
-   All rights reserved.
-   
-   @copyright:	uib GmbH <info@uib.de>
-   @author: Jan Schneider <j.schneider@uib.de>
+ocdlibnonfree.CacheService
+
+opsiclientd is part of the desktop management solution opsi
+(open pc server integration) http://www.opsi.org
+
+Copyright (C) 2010 uib GmbH
+
+http://www.uib.de/
+
+All rights reserved.
+
+@copyright:	uib GmbH <info@uib.de>
+@author: Jan Schneider <j.schneider@uib.de>
 """
 
 # Import
@@ -47,32 +45,33 @@ config = Config()
 state = State()
 timeline = Timeline()
 
+
 class CacheService(threading.Thread):
 	def __init__(self, opsiclientd):
 		threading.Thread.__init__(self)
 		self._productCacheService = None
 		self._configCacheService = None
-	
+
 	def stop(self):
 		if self._productCacheService:
 			self._productCacheService.stop()
 		if self._configCacheService:
 			self._configCacheService.stop()
-		
+
 	def initializeProductCacheService(self):
 		if not self._productCacheService:
 			self._productCacheService = ProductCacheService()
 			self._productCacheService.start()
-	
+
 	def initializeConfigCacheService(self):
 		if not self._configCacheService:
 			self._configCacheService = ConfigCacheService()
 			self._configCacheService.start()
-	
+
 	def setConfigCacheObsolete(self):
 		self.initializeConfigCacheService()
 		self._configCacheService.setObsolete()
-		
+
 	def syncConfig(self, waitForEnding = False):
 		self.initializeConfigCacheService()
 		if self._configCacheService.isWorking():
@@ -84,7 +83,7 @@ class CacheService(threading.Thread):
 			time.sleep(3)
 			while self._configCacheService.isRunning() and self._configCacheService.isWorking():
 				time.sleep(1)
-	
+
 	def syncConfigToServer(self, waitForEnding = False):
 		self.initializeConfigCacheService()
 		if self._configCacheService.isWorking():
@@ -96,7 +95,7 @@ class CacheService(threading.Thread):
 			time.sleep(3)
 			while self._configCacheService.isRunning() and self._configCacheService.isWorking():
 				time.sleep(1)
-	
+
 	def syncConfigFromServer(self, waitForEnding = False):
 		self.initializeConfigCacheService()
 		if self._configCacheService.isWorking():
@@ -108,7 +107,7 @@ class CacheService(threading.Thread):
 			time.sleep(3)
 			while self._configCacheService.isRunning() and self._configCacheService.isWorking():
 				time.sleep(1)
-	
+
 	def configCacheCompleted(self):
 		try:
 			self.initializeConfigCacheService()
@@ -119,15 +118,15 @@ class CacheService(threading.Thread):
 		if not self._configCacheService.isWorking() and self._configCacheService.getState().get('config_cached', False):
 			return True
 		return False
-	
+
 	def getConfigBackend(self):
 		self.initializeConfigCacheService()
 		return self._configCacheService.getConfigBackend()
-	
+
 	def getConfigModifications(self):
 		self.initializeConfigCacheService()
 		return self._configCacheService._backendTracker.getModifications()
-	
+
 	def cacheProducts(self, waitForEnding = False, productProgressObserver = None, overallProgressObserver = None, dynamicBandwidth = True, maxBandwidth = 0):
 		self.initializeProductCacheService()
 		if self._productCacheService.isWorking():
@@ -141,12 +140,12 @@ class CacheService(threading.Thread):
 			time.sleep(3)
 			while self._productCacheService.isRunning() and self._productCacheService.isWorking():
 				time.sleep(1)
-	
+
 	def productCacheCompleted(self, configService, productIds):
 		if not productIds:
 			return True
 		self.initializeProductCacheService()
-		
+
 		clientToDepotservers = configService.configState_getClientToDepotserver(
 				clientIds  = [ config.get('global', 'host_id') ],
 				masterOnly = True,
@@ -157,7 +156,7 @@ class CacheService(threading.Thread):
 		productOnDepots = {}
 		for productOnDepot in configService.productOnDepot_getObjects(depotId = depotId, productId = productIds):
 			productOnDepots[productOnDepot.productId] = productOnDepot
-		
+
 		for productId in productIds:
 			productOnDepot = productOnDepots.get(productId)
 			if not productOnDepot:
@@ -170,24 +169,25 @@ class CacheService(threading.Thread):
 				logger.info(u"Product '%s_%s-%s' not yet cached (got state: %s)" % (productId, productOnDepot.productVersion, productOnDepot.packageVersion, productState))
 				return False
 		return True
-	
+
 	def getProductCacheState(self):
 		self.initializeProductCacheService()
 		return self._productCacheService.getState()
-		
+
 	def getConfigCacheState(self):
 		self.initializeConfigCacheService()
 		return self._configCacheService.getState()
-	
+
 	def getProductCacheDir(self):
 		self.initializeProductCacheService()
 		return self._productCacheService.getProductCacheDir()
-	
-	
+
+
 class ConfigCacheServiceBackendExtension(object):
 	def accessControl_authenticated(self):
 		return True
-	
+
+
 class ConfigCacheService(ServiceConnection, threading.Thread):
 	def __init__(self):
 		try:
@@ -195,27 +195,27 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			ServiceConnection.__init__(self)
 			moduleName = u' %-30s' % (u'config cache service')
 			logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
-			
+
 			self._configCacheDir          = os.path.join(config.get('cache_service', 'storage_dir'), 'config')
 			self._opsiModulesFile         = os.path.join(self._configCacheDir, 'cached_modules')
 			self._opsiVersionFile         = os.path.join(self._configCacheDir, 'cached_version')
 			self._opsiPasswdFile          = os.path.join(self._configCacheDir, 'cached_passwd')
 			self._auditHardwareConfigFile = os.path.join(self._configCacheDir, 'cached_opsihwaudit.json')
-			
+
 			self._stopped = False
 			self._running = False
 			self._working = False
 			self._state   = {}
-			
+
 			self._syncConfigFromServerRequested = False
 			self._syncConfigToServerRequested = False
-			
+
 			if not os.path.exists(self._configCacheDir):
 				logger.notice(u"Creating config cache dir '%s'" % self._configCacheDir)
 				os.makedirs(self._configCacheDir)
-			
+
 			self.initBackends()
-			
+
 			ccss = state.get('config_cache_service')
 			if ccss:
 				self._state = ccss
@@ -226,7 +226,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			except:
 				pass
 			raise e
-	
+
 	def initBackends(self):
 		depotId = config.get('depot_server', 'depot_id')
 		if not depotId:
@@ -239,7 +239,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			if connect:
 				self.disconnectConfigService()
 			depotId = config.get('depot_server', 'depot_id')
-			
+
 		backendArgs = {
 			'opsiModulesFile':         self._opsiModulesFile,
 			'opsiVersionFile':         self._opsiVersionFile,
@@ -253,21 +253,21 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			**backendArgs
 		)
 		self._workBackend.backend_createBase()
-		
+
 		self._snapshotBackend = SQLiteBackend(
 			database    = os.path.join(self._configCacheDir, 'snapshot.sqlite'),
 			synchronous = False,
 			**backendArgs
 		)
 		self._snapshotBackend.backend_createBase()
-		
+
 		self._cacheBackend = ClientCacheBackend(
 			workBackend     = self._workBackend,
 			snapshotBackend = self._snapshotBackend,
 			clientId        = config.get('global', 'host_id'),
 			**backendArgs
 		)
-		
+
 		self._configBackend = BackendExtender(
 			backend = ExtendedConfigDataBackend(
 				configDataBackend = self._cacheBackend
@@ -281,7 +281,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			lastModificationOnly = True
 		)
 		self._cacheBackend.addBackendChangeListener(self._backendTracker)
-	
+
 	def connectConfigService(self):
 		ServiceConnection.connectConfigService(self, allowTemporaryConfigServiceUrls = False)
 		try:
@@ -290,19 +290,19 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			backendinfo = self._configService.backend_info()
 			modules = backendinfo['modules']
 			helpermodules = backendinfo['realmodules']
-			
+
 			if not modules.get('vpn'):
 				raise Exception(u"Cannot sync products: VPN module currently disabled")
-			
+
 			if not modules.get('customer'):
 				raise Exception(u"Cannot sync products: No customer in modules file")
-				
+
 			if not modules.get('valid'):
 				raise Exception(u"Cannot sync products: modules file invalid")
-			
+
 			if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
 				raise Exception(u"Cannot sync products: modules file expired")
-			
+
 			logger.info(u"Verifying modules file signature")
 			publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
 			data = u''
@@ -326,23 +326,23 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		except Exception, e:
 			self.disconnectConfigService()
 			raise
-	
+
 	def getConfigBackend(self):
 		return self._configBackend
-	
+
 	def getState(self):
 		state = self._state
 		state['running'] = self.isRunning()
 		state['working'] = self.isWorking()
 		return state
-	
+
 	def setObsolete(self):
 		self._state['config_cached'] = False
 		state.set('config_cache_service', self._state)
-	
+
 	def isRunning(self):
 		return self._running
-	
+
 	def isWorking(self):
 		if self._working:
 			return True
@@ -353,10 +353,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		if self._working:
 			return True
 		return False
-	
+
 	def stop(self):
 		self._stopped = True
-	
+
 	def run(self):
 		self._running = True
 		logger.notice(u"Config cache service started")
@@ -374,17 +374,17 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			logger.logException(e)
 		logger.notice(u"Config cache service ended")
 		self._running = False
-	
+
 	def syncConfig(self):
 		self._syncConfigToServerRequested = True
 		self._syncConfigFromServerRequested = True
-		
+
 	def syncConfigToServer(self):
 		self._syncConfigToServerRequested = True
-	
+
 	def syncConfigFromServer(self):
 		self._syncConfigFromServerRequested = True
-	
+
 	def _syncConfigToServer(self):
 		self._working = True
 		eventId = None
@@ -411,7 +411,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 							self._configService.log_write(u'instlog', data = data, objectId = config.get('global', 'host_id'), append = False)
 					except Exception, e:
 						logger.error(u"Failed to sync instlog: %s" % e)
-					
+
 					logger.notice(u"Config synced to server")
 				except Exception, e:
 					logger.logException(e)
@@ -429,14 +429,14 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			timeline.setEventEnd(eventId)
 		self.disconnectConfigService()
 		self._working = False
-		
+
 	def _syncConfigFromServer(self):
 		self._working = True
 		try:
 			self.setObsolete()
 			if not self._configService:
 				self.connectConfigService()
-			
+
 			productOnClients = self._configService.productOnClient_getObjects(
 				productType   = 'LocalbootProduct',
 				clientId      = config.get('global', 'host_id'),
@@ -457,7 +457,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 									actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
 									attributes    = ['actionRequest']):
 						localProductOnClientsByProductId[productOnClient.productId] = productOnClient
-					
+
 					needSync = False
 					for productOnClient in productOnClients:
 						if not localProductOnClientsByProductId.has_key(productOnClient.productId):
@@ -469,7 +469,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 						del localProductOnClientsByProductId[productOnClient.productId]
 					if not needSync and localProductOnClientsByProductId:
 						needSync = True
-					
+
 					if not needSync:
 						logger.notice(u"No sync from server required configuration is unchanged")
 						self._state['config_cached'] = True
@@ -499,33 +499,34 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		self.disconnectConfigService()
 		self._working = False
 
+
 class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Thread):
 	def __init__(self):
 		threading.Thread.__init__(self)
 		ServiceConnection.__init__(self)
 		moduleName = u' %-30s' % (u'product cache service')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
-		
+
 		self._storageDir          = config.get('cache_service', 'storage_dir')
 		self._tempDir             = os.path.join(self._storageDir, 'tmp')
 		self._productCacheDir     = os.path.join(self._storageDir, 'depot')
 		self._productCacheMaxSize = forceInt(config.get('cache_service', 'product_cache_max_size'))
-		
+
 		self._stopped = False
 		self._running = False
 		self._working = False
 		self._state   = {}
-		
+
 		self._impersonation = None
 		self._cacheProductsRequested = False
-		
+
 		self._maxBandwidth = 0
 		self._dynamicBandwidth = True
-		
+
 		self._productProgressObserver = None
 		self._overallProgressObserver = None
 		self._dynamicBandwidthLimitEvent = None
-		
+
 		if not os.path.exists(self._storageDir):
 			logger.notice(u"Creating cache service storage dir '%s'" % self._storageDir)
 			os.makedirs(self._storageDir)
@@ -535,14 +536,14 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		if not os.path.exists(self._productCacheDir):
 			logger.notice(u"Creating cache service product cache dir '%s'" % self._productCacheDir)
 			os.makedirs(self._productCacheDir)
-		
+
 		pcss = state.get('product_cache_service')
 		if pcss:
 			self._state = pcss
-	
+
 	def getProductCacheDir(self):
 		return self._productCacheDir
-	
+
 	def dynamicBandwidthLimitChanged(self, repository, bandwidth):
 		if (bandwidth <= 0):
 			if self._dynamicBandwidthLimitEvent:
@@ -556,7 +557,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					category      = u'wait',
 					durationEvent = True
 				)
-	
+
 	def getState(self):
 		state = self._state
 		state['running'] = self.isRunning()
@@ -564,22 +565,22 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		state['maxBandwidth'] = self._maxBandwidth
 		state['dynamicBandwidth'] = self._dynamicBandwidth
 		return state
-	
+
 	def isRunning(self):
 		return self._running
-	
+
 	def isWorking(self):
 		return self._working
-	
+
 	def stop(self):
 		self._stopped = True
-	
+
 	def setMaxBandwidth(self, maxBandwidth):
 		self._maxBandwidth = forceInt(maxBandwidth)
-	
+
 	def setDynamicBandwidth(self, dynamicBandwidth):
 		self._dynamicBandwidth = forceBool(dynamicBandwidth)
-	
+
 	def run(self):
 		self._running = True
 		logger.notice(u"Product cache service started")
@@ -593,31 +594,31 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			logger.logException(e)
 		logger.notice(u"Product cache service ended")
 		self._running = False
-	
+
 	def cacheProducts(self, productProgressObserver = None, overallProgressObserver = None):
 		self._cacheProductsRequested = True
 		self._productProgressObserver = productProgressObserver
 		self._overallProgressObserver = overallProgressObserver
-	
+
 	def connectConfigService(self):
 		ServiceConnection.connectConfigService(self, allowTemporaryConfigServiceUrls = False)
 		try:
 			backendinfo = self._configService.backend_info()
 			modules = backendinfo['modules']
 			helpermodules = backendinfo['realmodules']
-			
+
 			if not modules.get('vpn'):
 				raise Exception(u"Cannot sync products: VPN module currently disabled")
-			
+
 			if not modules.get('customer'):
 				raise Exception(u"Cannot sync products: No customer in modules file")
-				
+
 			if not modules.get('valid'):
 				raise Exception(u"Cannot sync products: modules file invalid")
-			
+
 			if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
 				raise Exception(u"Cannot sync products: modules file expired")
-			
+
 			logger.info(u"Verifying modules file signature")
 			publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
 			data = u''
@@ -634,7 +635,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					val = modules[module]
 					if (val == False): val = 'no'
 					if (val == True):  val = 'yes'
-				
+
 				data += u'%s = %s\r\n' % (module.lower().strip(), val)
 			if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
 				raise Exception(u"Cannot sync products: modules file invalid")
@@ -642,13 +643,13 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		except Exception, e:
 			self.disconnectConfigService()
 			raise
-		
+
 	def _freeProductCacheSpace(self, neededSpace = 0, neededProducts = []):
 		try:
 			# neededSpace in byte
 			neededSpace    = forceInt(neededSpace)
 			neededProducts = forceProductIdList(neededProducts)
-			
+
 			maxFreeableSize = 0
 			productDirSizes = {}
 			for product in os.listdir(self._productCacheDir):
@@ -691,14 +692,14 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			logger.notice(u"%0.3f MB of product cache freed" % (float(freedSpace)/(1024*1024)))
 		except Exception, e:
 			raise Exception(u"Failed to free enough disk space for product cache: %s" % forceUnicode(e))
-	
+
 	def _cacheProducts(self):
 		self._working = True
 		self._state['products_cached'] = False
 		self._state['products'] = {}
 		state.set('product_cache_service', self._state)
 		eventId = None
-		
+
 		try:
 			if not self._configService:
 				self.connectConfigService()
@@ -714,11 +715,11 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			if not productIds:
 				logger.notice(u"No product action request set => no products to cache")
 			else:
-				
+
 				productOnDepots = self._configService.productOnDepot_getObjects(
-					depotId   = config.get('depot_server', 'depot_id'), 
+					depotId   = config.get('depot_server', 'depot_id'),
 					productId = productIds)
-				
+
 				errorProductIds = []
 				for productOnClient in productOnClients:
 					found = False
@@ -730,20 +731,20 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						logger.error(u"Requested product: '%s' not found on configured depot: '%s', please check your configuration, setting product to failed." % (productOnClient.productId, config.get('depot_server', 'depot_id')))
 						self._setProductCacheState(productOnClient.productId, u"failure", u"Product not found on configured depot.")
 						errorProductIds.append(productOnClient.productId)
-					
+
 				productIds.append('opsi-winst')
 				if 'mshotfix' in productIds:
 					additionalProductId = System.getOpsiHotfixName()
 					logger.info(u"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s" % additionalProductId)
 					if not additionalProductId in productIds:
 						productIds.append(additionalProductId)
-				
+
 				if errorProductIds:
 					for index in range(len(productIds) -1):
 						if productIds[index] in errorProductIds:
 							logger.error(u"ProductId: '%s' will not be cached." % productIds[index])
 							del productIds[index]
-							
+
 				if len(productIds) == 1 and productIds[0] == 'opsi-winst':
 					logger.notice(u"Only opsi-winst is set to install, doing nothin, because a up- or downgrade from opsi-winst is only need if a other product is set to setup.")
 				else:
@@ -774,7 +775,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						state.set('product_cache_service', self._state)
 						for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
 							eventGenerator.createAndFireEvent()
-				
+
 		except Exception, e:
 			logger.error(u"Failed to cache products: %s" % e)
 			timeline.addEvent(
@@ -786,7 +787,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			timeline.setEventEnd(eventId)
 		self.disconnectConfigService()
 		self._working = False
-	
+
 	def _setProductCacheState(self, productId, key, value, updateProductOnClient = True):
 		if not self._state.has_key('products'):
 			self._state['products'] = {}
@@ -835,7 +836,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				kwargs['verifyServerCert'] = config.get('global', 'verify_server_cert')
 				kwargs['serverCertFile'] = os.path.join(certDir, host + '.pem')
 				kwargs['verifyServerCertByCa'] = config.get('global', 'verify_server_cert_by_ca')
-				
+
 			return getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword, **kwargs)
 		else:
 			if self._impersonation:
@@ -847,13 +848,13 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			self._impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
 			self._impersonation.start(logonType = 'NEW_CREDENTIALS')
 			return getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword, mount = False)
-		
+
 	def _cacheProduct(self, productId, neededProducts):
 		logger.notice(u"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)" % (productId,  self._maxBandwidth, self._dynamicBandwidth))
 		self._setProductCacheState(productId, 'started',   time.time())
 		self._setProductCacheState(productId, 'completed', None, updateProductOnClient = False)
 		self._setProductCacheState(productId, 'failure',   None, updateProductOnClient = False)
-		
+
 		eventId = None
 		repository = None
 		exception = None
@@ -864,10 +865,10 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			productOnDepots = self._configService.productOnDepot_getObjects(depotId = config.get('depot_server', 'depot_id'), productId = productId)
 			if not productOnDepots:
 				raise Exception(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
-			
+
 			self._setProductCacheState(productId, 'productVersion', productOnDepots[0].productVersion, updateProductOnClient = False)
 			self._setProductCacheState(productId, 'packageVersion', productOnDepots[0].packageVersion, updateProductOnClient = False)
-			
+
 			if not os.path.exists(os.path.join(self._productCacheDir, productId)):
 				os.mkdir(os.path.join(self._productCacheDir, productId))
 			packageContentFile = u'%s/%s.files' % (productId, productId)
@@ -880,10 +881,10 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				if value.has_key('size'):
 					fileCount += 1
 					productSize += int(value['size'])
-			
+
 			logger.info(u"Product '%s' contains %d files with a total size of %0.3f MB" \
 				% ( productId, fileCount, (float(productSize)/(1024*1024)) ) )
-			
+
 			productCacheDirSize = 0
 			if (self._productCacheMaxSize > 0):
 				productCacheDirSize = System.getDirectorySize(self._productCacheDir)
@@ -895,19 +896,19 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					neededSpace = productSize - freeSpace + 1024
 					self._freeProductCacheSpace(neededSpace = neededSpace, neededProducts = neededProducts)
 					productCacheDirSize = System.getDirectorySize(self._productCacheDir)
-			
+
 			diskFreeSpace = System.getDiskSpaceUsage(self._productCacheDir)['available']
 			if (diskFreeSpace < productSize + 500*1024*1024):
 				raise Exception(u"Only %0.3f MB free space available on disk, refusing to cache product files" \
 							% (float(diskFreeSpace)/(1024*1024)))
-			
+
 			eventId = timeline.addEvent(
 				title         = u"Cache product %s" % productId,
 				description   = u"Caching product '%s' of size %0.2f MB\nmax bandwidth: %s, dynamic bandwidth: %s" \
 					% (productId,  (float(productSize)/(1024*1024)), self._maxBandwidth, self._dynamicBandwidth),
 				category      = u'product_caching',
 				durationEvent = True)
-			
+
 			productSynchronizer = DepotToLocalDirectorySychronizer(
 				sourceDepot          = repository,
 				destinationDirectory = self._productCacheDir,
@@ -948,16 +949,3 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				logger.warning(e)
 		if exception:
 			raise exception
-	
-
-
-
-
-
-
-
-
-
-
-
-
