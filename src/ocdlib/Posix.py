@@ -98,12 +98,16 @@ class OpsiclientdInit(object):
 			time.sleep(1)
 
 	def signalHandler(self, signo, stackFrame):
-		if (signo == SIGHUP):
+		if signo == SIGHUP:
 			return
-		elif (signo == SIGTERM or signo == SIGINT):
+		elif signo == SIGTERM or signo == SIGINT:
 			self._opsiclientd.stop()
 
-	def usage(self):
+	@staticmethod
+	def usage():
+		"""
+		Print the usage.
+		"""
 		print u"\nUsage: %s [-v] [-D]" % os.path.basename(sys.argv[0])
 		print u"Options:"
 		print u"  -v    Show version information and exit"
@@ -113,6 +117,9 @@ class OpsiclientdInit(object):
 		print u""
 
 	def daemonize(self):
+		"""
+		Running as a daemon.
+		"""
 		# Fork to allow the shell to return and to call setsid
 		try:
 			pid = os.fork()
