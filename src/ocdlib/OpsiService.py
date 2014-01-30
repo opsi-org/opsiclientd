@@ -42,13 +42,14 @@ from OPSI.Util.Thread import KillableThread
 from OPSI.Util.HTTP import (urlsplit, non_blocking_connect_http,
 	non_blocking_connect_https)
 from OPSI.Backend.JSONRPC import JSONRPCBackend
-from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
+from OPSI.Types import (OpsiAuthenticationError, OpsiServiceVerificationError,
+	forceBool, forceFqdn, forceInt, forceUnicode)
 from OPSI import System
 
 from ocdlib import __version__
 from ocdlib.Localization import _
 from ocdlib.Config import Config, getLogFormat
-from ocdlib.Exceptions import *
+from ocdlib.Exceptions import CanceledByUserError
 
 
 logger = Logger()
@@ -259,7 +260,7 @@ class ServiceConnection(object):
 					self._configService.exit()
 				else:
 					self._configService.backend_exit()
-			except Exception, e:
+			except Exception as e:
 				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(e))
 
 		self._configService = None
@@ -339,13 +340,13 @@ class ServiceConnectionThread(KillableThread):
 					self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
 					logger.notice(u"Connected to config server '%s'" % self._configServiceUrl)
 
-				except OpsiServiceVerificationError, e:
+				except OpsiServiceVerificationError as e:
 					self.connectionError = forceUnicode(e)
 					self.setStatusMessage(_(u"Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
 					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
 					break
 
-				except Exception, e:
+				except Exception as e:
 					self.connectionError = forceUnicode(e)
 					self.setStatusMessage(_(u"Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(e)))
 					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
@@ -353,7 +354,7 @@ class ServiceConnectionThread(KillableThread):
 						fqdn = System.getFQDN()
 						try:
 							fqdn = forceFqdn(fqdn)
-						except Exception, e:
+						except Exception as e:
 							logger.warning(u"Failed to get fqdn from os, got '%s': %s" % (fqdn, e))
 							break
 						if (self._username != fqdn):
