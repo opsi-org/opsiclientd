@@ -14,11 +14,16 @@ start on runlevel [2345]
 # When to stop the service
 stop on runlevel [016]
 
+# Used for testing:
+# please disable start / stop if you enable manual.
+# manual
+
 # Automatically restart process if crashed
-respawn
+# respawn
 
 # Essentially lets upstart know the process will detach itself to the background
-# expect fork  # Disabled because of current lack of daemonizing
+# expect fork  # If process forks once
+# expect daemon  # If process forks twice (enable if running with -D)
 
 # Start the process
-exec opsiclientd
+exec opsiclientd -l 7 -t
