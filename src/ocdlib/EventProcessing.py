@@ -488,9 +488,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			
 			logger.notice(u"Trying to set the right permissions for opsi-winst")
 			setaclcmd = os.path.join(config.get('global', 'base_dir'), 'utilities', 'setacl.exe')
-			cmd = '"%s" -on "%s" -ot file -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y" -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"' % \			
-						(setaclcmd, actionProcessorLocalDir)
-			System.execute(cmd,shell=False)	
+			winstdir = actionProcessorLocalDir.replace('\\\\','\\')
+			cmd = '"%s" -on "%s" -ot file -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y" -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"' \
+						% (setaclcmd, winstdir)
+			System.execute(cmd,shell=False)
 			
 			logger.notice(u'Local action processor successfully updated')
 			
