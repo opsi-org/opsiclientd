@@ -1,35 +1,32 @@
 # -*- coding: utf-8 -*-
 """
-   = = = = = = = = = = = = = = = = = = = = =
-   =   ocdlib.EventProcessing              =
-   = = = = = = = = = = = = = = = = = = = = =
-   
-   opsiclientd is part of the desktop management solution opsi
-   (open pc server integration) http://www.opsi.org
-   
-   Copyright (C) 2010 uib GmbH
-   
-   http://www.uib.de/
-   
-   All rights reserved.
-   
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as
-   published by the Free Software Foundation.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-   
-   @copyright:	uib GmbH <info@uib.de>
-   @author: Jan Schneider <j.schneider@uib.de>
-   @author: Erol Ueluekmen <e.ueluekmen@uib.de>
-   @license: GNU General Public License version 2
+ocdlib.EventProcessing
+
+opsiclientd is part of the desktop management solution opsi
+(open pc server integration) http://www.opsi.org
+
+Copyright (C) 2014 uib GmbH
+
+http://www.uib.de/
+
+All rights reserved.
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License, version 3
+as published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Affero General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+@copyright: uib GmbH <info@uib.de>
+@author: Jan Schneider <j.schneider@uib.de>
+@author: Erol Ueluekmen <e.ueluekmen@uib.de>
+@license: GNU Affero GPL version 3
 """
 
 # Imports
@@ -489,22 +486,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.info(u"Moving dir '%s' to '%s'" % (actionProcessorLocalTmpDir, actionProcessorLocalDir))
 			shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
 			
-			######### disable this feature for first 4.0.3 Release, because this don't work on win7-x64 properly.
-			#logger.notice(u"Trying to set the right permissions for opsi-winst")
-			#setaclcommand = os.path.join(config.get('global', 'base_dir'), 'utilities\\setacl.exe')
-			#logger.notice(u"make the dacl not inherited")
-			#cmd = '"%s" -on "%s" -ot file -actn clear -actn setprot -op "dacl:p_c;sacl:nc" -rec cont_obj' % (setaclcommand,  actionProcessorLocalDir)
-			#logger.debug("Try to execute '%s'" % cmd) 
-			#System.execute(cmd, shell=False)
-			#logger.notice(u"therefore remove users from dacl")
-			#cmd = '"%s" -on "%s" -ot file -actn trustee -trst n1:S-1-5-32-545;s1:y;ta:remtrst;w:dacl"' % (setaclcommand,  actionProcessorLocalDir)
-			#logger.debug("Try to execute '%s'" % cmd) 
-			#System.execute(cmd,  shell=False)
-			#logger.notice(u"therefore set new rights")
-			#cmd = '"%s" -on "%s" -ot file -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y" -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"' % (setaclcommand,  actionProcessorLocalDir)
-			#logger.debug("Try to execute '%s'" % cmd) 
-			#System.execute(cmd,  shell=False)
-				
+			logger.notice(u"Trying to set the right permissions for opsi-winst")
+			setaclcmd = os.path.join(config.get('global', 'base_dir'), 'utilities', 'setacl.exe')
+			cmd = '"%s" -on "%s" -ot file -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y" -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"' % \			
+						(setaclcmd, actionProcessorLocalDir)
+			System.execute(cmd,shell=False)	
 			
 			logger.notice(u'Local action processor successfully updated')
 			

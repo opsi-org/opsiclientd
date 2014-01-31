@@ -156,7 +156,7 @@ class ConfigImplementation(object):
 			self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd', 'opsiclientd.conf')
 			self._config['global']['state_file'] = u'%s\\opsi.org\\opsiclientd\\state.json' % System.getSystemDrive()
 			self._config['global']['timeline_db'] = u'%s\\opsi.org\\opsiclientd\\timeline.sqlite' % System.getSystemDrive()
-			self._config['global']['log_dir'] = u'%s\\tmp' % System.getSystemDrive()
+			self._config['global']['log_dir'] = u'%s\\opsi.org\\log' % System.getSystemDrive()
 			self._config['global']['server_cert_dir'] = u'%s\\opsi.org\\opsiclientd\\server-certs' % System.getSystemDrive()
 		if (sys.getwindowsversion()[0] == 5):
 			self._config['action_processor']['run_as_user'] = 'pcpatch'
