@@ -23,29 +23,6 @@ class ConfigTestCase(unittest.TestCase):
         self.assertTrue(self.config.LINUX_DEFAULT_PATHS)
 
     def testConfigGetsFilledWithSystemDefaults(self):
-        # WINDOWS_DEFAULT_PATHS = {
-        #     'global': {
-        #         'log_dir': u'c:\\tmp',
-        #         'state_file': u'c:\\opsi.org\\opsiclientd\\state.json',
-        #         'timeline_db': u'c:\\opsi.org\\opsiclientd\\timeline.sqlite',
-        #         'server_cert_dir': u'c:\\opsi.org\\opsiclientd\\server-certs'
-        #     },
-        #     'cache_service': {
-        #         'storage_dir': u'c:\\opsi.org\\cache',
-        #     },
-        # }
-
-        # LINUX_DEFAULT_PATHS = {
-        #     'global': {
-        #         'log_dir': os.path.join('/var', 'log', 'opsi-client-agent'),
-        #         'state_file': os.path.join('/etc', 'opsi-client-agent', 'state.json'),
-        #         'timeline_db': os.path.join('/etc', 'opsi-client-agent', 'timeline.sqlite'),
-        #         'server_cert_dir': os.path.join('/var', 'lib', 'opsi-client-agent', 'opsiclientd')
-        #     },
-        #     'cache_service': {
-        #         'storage_dir': os.path.join('/var', 'cache', 'opsi-client-agent')
-        #     },
-        # }
         self.assertNotEqual('', self.config.get('global', 'log_dir'))
         self.assertNotEqual('', self.config.get('global', 'state_file'))
         self.assertNotEqual('', self.config.get('global', 'timeline_db'))
@@ -53,6 +30,16 @@ class ConfigTestCase(unittest.TestCase):
 
         self.assertNotEqual('', self.config.get('cache_service', 'storage_dir'))
 
+        for section in ('log_dir', 'state_file', 'timeline_db', 'server_cert_dir'):
+            if RUNNING_ON_WINDOWS:
+                self.assertTrue(self.config.get('global', section).startswith('c:'))
+            else:
+                self.assertTrue(self.config.get('global', section).startswith('/'))
+
+        if RUNNING_ON_WINDOWS:
+            self.assertTrue(self.config.get('cache_service', 'storage_dir').startswith('c:'))
+        else:
+            self.assertTrue(self.config.get('cache_service', 'storage_dir').startswith('/'))
 
     def testConfigGetsFilledWithSystemSpecificValues(self):
         self.assertNotEqual('', self.config.get('global', 'config_file'))
