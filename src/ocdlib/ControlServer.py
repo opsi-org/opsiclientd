@@ -608,41 +608,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 		return sessions
 
-	def stressConfigserver(self, seconds=30):
-		seconds = forceInt(seconds)
-		serviceConnection = ServiceConnection(loadBalance=False)
-		serviceConnection.connectConfigService()
-		start = time.time()
-		try:
-			configService = serviceConnection.getConfigService()
-			while True:
-				configService.host_getObjects()
-				if ((time.time() - start) >= seconds):
-					return
-				configService.product_getObjects()
-				if ((time.time() - start) >= seconds):
-					return
-				configService.productOnDepot_getObjects()
-				if ((time.time() - start) >= seconds):
-					return
-				configService.productOnClient_getObjects()
-				if ((time.time() - start) >= seconds):
-					return
-				configService.config_getObjects()
-				if ((time.time() - start) >= seconds):
-					return
-				configService.configState_getObjects()
-				if ((time.time() - start) >= seconds):
-					return
-				configService.productProperty_getObjects()
-				if ((time.time() - start) >= seconds):
-					return
-				configService.productPropertyState_getObjects()
-				if ((time.time() - start) >= seconds):
-					return
-		finally:
-			serviceConnection.disconnectConfigService()
-
 	def getBackendInfo(self):
 		serviceConnection = ServiceConnection(loadBalance=False)
 		serviceConnection.connectConfigService()
