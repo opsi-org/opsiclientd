@@ -1,3 +1,4 @@
+-r requirements-tests.txt
 nose
 nosexcover
 pylint
