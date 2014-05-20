@@ -289,12 +289,18 @@ class SystemShutdownEventConfig(WMIEventConfig):
 		self.maxRepetitions = 0
 
 
-class CustomEventConfig(WMIEventConfig):
-	pass
-
-
 class SwOnDemandEventConfig(EventConfig):
 	pass
+
+
+if RUNNING_ON_WINDOWS:
+	class CustomEventConfig(WMIEventConfig):
+		pass
+else:
+	# On $NotWindows wo do not want to depend on WMI
+	class CustomEventConfig(EventConfig):
+		pass
+
 
 
 def EventGeneratorFactory(eventConfig):
@@ -751,15 +757,24 @@ class SystemShutdownEventGenerator(EventGenerator):
 		EventGenerator.__init__(self, eventConfig)
 
 
-class CustomEventGenerator(WMIEventGenerator):
-	def __init__(self, eventConfig):
-		WMIEventGenerator.__init__(self, eventConfig)
+if RUNNING_ON_WINDOWS:
+	class CustomEventGenerator(WMIEventGenerator):
+		def __init__(self, eventConfig):
+			WMIEventGenerator.__init__(self, eventConfig)
 
-	def createEvent(self, eventInfo={}):
-		eventConfig = self.getEventConfig()
-		if not eventConfig:
-			return None
-		return CustomEvent(eventConfig = eventConfig, eventInfo = eventInfo)
+		def createEvent(self, eventInfo={}):
+			eventConfig = self.getEventConfig()
+			if not eventConfig:
+				return None
+			return CustomEvent(eventConfig = eventConfig, eventInfo = eventInfo)
+else:
+	class CustomEventGenerator(EventGenerator):
+		def createEvent(self, eventInfo={}):
+			eventConfig = self.getEventConfig()
+			if not eventConfig:
+				return None
+			return CustomEvent(eventConfig=eventConfig, eventInfo=eventInfo)
+
 
 
 class SwOnDemandEventGenerator(EventGenerator):
