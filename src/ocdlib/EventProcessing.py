@@ -175,13 +175,19 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		logger.debug(u"getSessionId()")
 		if self._sessionId is None:
 			sessionId = None
-			if self.isLoginEvent:
-				logger.info(u"Using session id of user '%s'" % self.event.eventInfo["User"])
-				userSessionsIds = System.getUserSessionIds(self.event.eventInfo["User"], self._winApiBugCommand, onlyNewestId = True)
-				if userSessionsIds:
-					sessionId = userSessionsIds[0]
-			if not sessionId:
-				sessionId = System.getActiveSessionId(winApiBugCommand = self._winApiBugCommand)
+
+			if RUNNING_ON_WINDOWS:
+				if self.isLoginEvent:
+					logger.info(u"Using session id of user '%s'" % self.event.eventInfo["User"])
+					userSessionsIds = System.getUserSessionIds(self.event.eventInfo["User"], self._winApiBugCommand, onlyNewestId = True)
+					if userSessionsIds:
+						sessionId = userSessionsIds[0]
+				if not sessionId:
+					sessionId = System.getActiveSessionId(winApiBugCommand = self._winApiBugCommand)
+			else:
+				# Reading the parent process id on Linux.
+				sessionId = os.getppid()
+				logger.info(u"Using parent process id {0} as session id.".format(sessionId))
 
 			self.setSessionId(sessionId)
 		return self._sessionId
