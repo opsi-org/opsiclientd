@@ -508,7 +508,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def fireEvent(self, name):
 		name = forceUnicode(name)
-		if not name in eventGenerators.keys():
+		if name not in eventGenerators:
 			raise ValueError(u"Event '%s' not in list of known events: %s" % (name, ', '.join(eventGenerators.keys())))
 		logger.notice(u"Firing event '%s'" % name)
 		eventGenerators[name].createAndFireEvent()

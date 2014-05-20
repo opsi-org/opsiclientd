@@ -1092,7 +1092,7 @@ def createEventGenerators():
 		eventType = eventConfig['type']
 		del eventConfig['type']
 		ec = EventConfigFactory(eventType, eventConfigId, **eventConfig)
-		if not eventGenerators.has_key(mainEventConfigId):
+		if mainEventConfigId not in eventGenerators:
 			try:
 				eventGenerators[mainEventConfigId] = EventGeneratorFactory(ec)
 				logger.notice("Event generator '%s' created" % mainEventConfigId)
