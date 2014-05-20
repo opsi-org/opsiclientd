@@ -185,9 +185,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if not sessionId:
 					sessionId = System.getActiveSessionId(winApiBugCommand = self._winApiBugCommand)
 			else:
-				# Reading the parent process id on Linux.
-				sessionId = os.getppid()
-				logger.info(u"Using parent process id {0} as session id.".format(sessionId))
+				sessionId = System.getActiveSessionId()
+				logger.info(u"Using {0} as session id.".format(sessionId))
 
 			self.setSessionId(sessionId)
 		return self._sessionId
