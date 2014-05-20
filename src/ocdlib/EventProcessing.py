@@ -342,11 +342,17 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			actionProcessorLocalDir = config.get('action_processor', 'local_dir')
 			actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
 			actionProcessorLocalFile = actionProcessorLocalFile
-			info = System.getFileVersionInfo(actionProcessorLocalFile)
-			version = info.get('FileVersion', u'')
-			name = info.get('ProductName', u'')
-			logger.info(u"Action processor name '%s', version '%s'" % (name, version))
-			self._actionProcessorInfoSubject.setMessage("%s %s" % (name.encode('utf-8'), version.encode('utf-8')))
+
+			if RUNNING_ON_WINDOWS:
+				info = System.getFileVersionInfo(actionProcessorLocalFile)
+
+				version = info.get('FileVersion', u'')
+				name = info.get('ProductName', u'')
+				logger.info(u"Action processor name '%s', version '%s'" % (name, version))
+				self._actionProcessorInfoSubject.setMessage("%s %s" % (name.encode('utf-8'), version.encode('utf-8')))
+			else:
+				logger.info(u"Action processor: {filename}".format(actionProcessorLocalFile))
+				self._actionProcessorInfoSubject.setMessage(u"{filename}".format(os.path.basename(actionProcessorLocalFile)))
 		except Exception, e:
 			logger.error(u"Failed to set action processor info: %s" % forceUnicode(e))
 
