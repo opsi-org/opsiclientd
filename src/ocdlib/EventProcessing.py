@@ -220,7 +220,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				logger.notice(u"Notification server started")
 				error = None
 				break
-			except Exception, e:
+			except Exception as e:
 				error = forceUnicode(e)
 				logger.error(u"Failed to start notification server: %s" % error)
 				self._notificationServerPort += 1
@@ -233,7 +233,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		try:
 			logger.info(u"Stopping notification server")
 			self._notificationServer.stop(stopReactor = False)
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
 
 	def getConfigFromService(self):
@@ -248,7 +248,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			self.setStatusMessage(_(u"Got config from service"))
 			logger.notice(u"Reconfiguring event generators")
 			reconfigureEventGenerators()
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Failed to get config from service: %s" % forceUnicode(e))
 			raise
 
@@ -270,7 +270,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			else:
 				self._configService.log_write('clientconnect', data.replace(u'\ufffd', u'?'), config.get('global', 'host_id'))
 			logger.setFileLevel(config.get('global', 'log_level'))
-		except Exception, e:
+		except Exception as e:
 			logger.setFileLevel(config.get('global', 'log_level'))
 			logger.error(u"Failed to write log to service: %s" % forceUnicode(e))
 			raise
