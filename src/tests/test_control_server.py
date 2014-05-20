@@ -19,13 +19,25 @@ class ControlServerFiringEventTestCase(unittest.TestCase):
 		self.configPatcher = mock.patch('ocdlib.Events.config', self.temporaryConfig)
 		self.configPatcher.start()
 
+		self.defaultConfigFile = os.path.join(os.path.dirname(__file__), '..', 'windows', 'opsiclientd.conf')
+
 	def tearDown(self):
 		self.configPatcher.stop()
 		del self.temporaryConfig
+		del self.defaultConfigFile
+
+	def testFiringEvent(self):
+		self.temporaryConfig.set('global', 'config_file', self.defaultConfigFile)
+		self.temporaryConfig.readConfigFile()
+
+		Events.createEventGenerators()
+		configs = Events.getEventConfigs()
+
+		controlServer = OCS.OpsiclientdRpcInterface(None)
+		controlServer.fireEvent('on_demand')
 
 	def testFiringUnknownEventRaisesError(self):
-		defaultConfigFile = os.path.join(os.path.dirname(__file__), '..', 'windows', 'opsiclientd.conf')
-		self.temporaryConfig.set('global', 'config_file', defaultConfigFile)
+		self.temporaryConfig.set('global', 'config_file', self.defaultConfigFile)
 		self.temporaryConfig.readConfigFile()
 
 		controlServer = OCS.OpsiclientdRpcInterface(None)
