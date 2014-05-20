@@ -259,10 +259,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				logger.warning(u"Cannot write log to service: not connected")
 				return
 			self.setStatusMessage( _(u"Writing log to service") )
-			f = codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace')
-			data = f.read()
+			with codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace') as f:
+				data = f.read()
 			data += u"-------------------- submitted part of log file ends here, see the rest of log file on client --------------------\n"
-			f.close()
+
 			# Do not log jsonrpc request
 			logger.setFileLevel(LOG_WARNING)
 			if self._configService.isLegacyOpsi():
