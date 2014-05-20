@@ -278,9 +278,9 @@ class ProcessActionRequestsEventConfig(EventConfig):
 class UserLoginEventConfig(WMIEventConfig):
 	def setConfig(self, conf):
 		WMIEventConfig.setConfig(self, conf)
-		self.blockLogin        = False
+		self.blockLogin = False
 		self.logoffCurrentUser = False
-		self.lockWorkstation   = False
+		self.lockWorkstation = False
 
 
 class SystemShutdownEventConfig(WMIEventConfig):
