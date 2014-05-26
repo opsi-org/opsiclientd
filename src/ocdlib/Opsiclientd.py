@@ -316,7 +316,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			for eventGenerator in getEventGenerators(generatorClass = DaemonStartupEventGenerator):
 				eventGenerator.createAndFireEvent()
 
-			if getEventGenerators(generatorClass = GUIStartupEventGenerator):
+			if RUNNING_ON_WINDOWS and getEventGenerators(generatorClass=GUIStartupEventGenerator):
 				# Wait until gui starts up
 				logger.notice(u"Waiting for gui startup (timeout: %d seconds)" % config.get('global', 'wait_for_gui_timeout'))
 				self.waitForGUI(timeout = config.get('global', 'wait_for_gui_timeout'))
