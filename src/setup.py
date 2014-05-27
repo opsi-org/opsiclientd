@@ -156,6 +156,10 @@ else:
 			os.path.join('/etc', 'opsi-client-agent', 'opsiclientd', 'extend.d'),
 			glob.glob(os.path.join('..', 'extend.d', '*.*'))
 		),
+		(
+			os.path.join('/etc', 'opsi-client-agent'),
+			[os.path.join('linux', 'notifier.py')]
+		),
 	]
 	data_files += tree(os.path.join('/etc', 'opsi-client-agent', 'opsiclientd', 'static_html'), os.path.join('..', 'static_html'))
 
