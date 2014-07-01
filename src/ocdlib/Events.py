@@ -770,6 +770,13 @@ else:
 				return None
 			return CustomEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
+		def getNextEvent(self):
+			self._event = threading.Event()
+			if self._generatorConfig.interval > 0:
+				self._event.wait(self._generatorConfig.interval)
+				return self.createEvent()
+			else:
+				self._event.wait()
 
 
 class SwOnDemandEventGenerator(EventGenerator):
