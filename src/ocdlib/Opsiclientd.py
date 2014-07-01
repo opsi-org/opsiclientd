@@ -553,19 +553,20 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setChoices([ _('Close') ])
 			choiceSubject.setCallbacks( [ self.popupCloseCallback ] )
 
-			sessionIds = System.getActiveSessionIds(winApiBugCommand = self._winApiBugCommand)
-			if not sessionIds:
-				sessionIds = [ System.getActiveConsoleSessionId() ]
-			for sessionId in sessionIds:
-				logger.info(u"Starting popup message notifier app in session %d" % sessionId)
-				try:
-					System.runCommandInSession(
-						command = notifierCommand,
-						sessionId = sessionId,
-						desktop = self.getCurrentActiveDesktopName(sessionId),
-						waitForProcessEnding = False)
-				except Exception, e:
-					logger.error(u"Failed to start popup message notifier app in session %d: %s" % (sessionId, forceUnicode(e)))
+			if RUNNING_ON_WINDOWS:
+				sessionIds = System.getActiveSessionIds(winApiBugCommand = self._winApiBugCommand)
+				if not sessionIds:
+					sessionIds = [ System.getActiveConsoleSessionId() ]
+				for sessionId in sessionIds:
+					logger.info(u"Starting popup message notifier app in session %d" % sessionId)
+					try:
+						System.runCommandInSession(
+							command = notifierCommand,
+							sessionId = sessionId,
+							desktop = self.getCurrentActiveDesktopName(sessionId),
+							waitForProcessEnding = False)
+					except Exception, e:
+						logger.error(u"Failed to start popup message notifier app in session %d: %s" % (sessionId, forceUnicode(e)))
 		finally:
 			self._popupNotificationLock.release()
 
