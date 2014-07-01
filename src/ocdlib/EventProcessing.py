@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-= = = = = = = = = = = = = = = = = = = = =
-=   ocdlib.EventProcessing              =
-= = = = = = = = = = = = = = = = = = = = =
+ocdlib.EventProcessing
 
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
-Copyright (C) 2010 uib GmbH
+Copyright (C) 2010-2014 uib GmbH
 
 http://www.uib.de/
 
@@ -200,18 +198,20 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		for i in range(3):
 			try:
 				self._notificationServer = NotificationServer(
-								address  = config.get('notification_server', 'interface'),
-								port     = self._notificationServerPort,
-								subjects = [
-									self._statusSubject,
-									self._messageSubject,
-									self._serviceUrlSubject,
-									self._clientIdSubject,
-									self._actionProcessorInfoSubject,
-									self._opsiclientdInfoSubject,
-									self._detailSubjectProxy,
-									self._currentProgressSubjectProxy,
-									self._overallProgressSubjectProxy ] )
+					address=config.get('notification_server', 'interface'),
+					port=self._notificationServerPort,
+					subjects=[
+						self._statusSubject,
+						self._messageSubject,
+						self._serviceUrlSubject,
+						self._clientIdSubject,
+						self._actionProcessorInfoSubject,
+						self._opsiclientdInfoSubject,
+						self._detailSubjectProxy,
+						self._currentProgressSubjectProxy,
+						self._overallProgressSubjectProxy
+					]
+				)
 				self._notificationServer.start()
 				timeout = 0
 				while not self._notificationServer.isListening() and not self._notificationServer.errorOccurred():
@@ -229,15 +229,17 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				error = forceUnicode(e)
 				logger.error(u"Failed to start notification server: %s" % error)
 				self._notificationServerPort += 1
+
 		if error:
 			raise Exception(u"Failed to start notification server: %s" % error)
 
 	def stopNotificationServer(self):
 		if not self._notificationServer:
 			return
+
 		try:
 			logger.info(u"Stopping notification server")
-			self._notificationServer.stop(stopReactor = False)
+			self._notificationServer.stop(stopReactor=False)
 		except Exception as e:
 			logger.logException(e)
 
@@ -1109,10 +1111,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		try:
 			logger.notice(u"============= EventProcessingThread for occurrcence of event '%s' started =============" % self.event.eventConfig.getId())
 			timelineEventId = timeline.addEvent(
-				title         = u"Processing event %s" % self.event.eventConfig.getName(),
-				description   = u"EventProcessingThread for occurrcence of event '%s' started" % self.event.eventConfig.getId(),
-				category      = u"event_processing",
-				durationEvent = True)
+				title=u"Processing event %s" % self.event.eventConfig.getName(),
+				description=u"EventProcessingThread for occurrcence of event '%s' started" % self.event.eventConfig.getId(),
+				category=u"event_processing",
+				durationEvent=True
+			)
 			self.running = True
 			self.actionCancelled = False
 			self.waitCancelled = False
@@ -1260,10 +1263,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.error(u"Failed to process event %s: %s" % (self.event, forceUnicode(e)))
 			logger.logException(e)
 			timeline.addEvent(
-				title       = u"Failed to process event %s" % self.event.eventConfig.getName(),
-				description = u"Failed to process event %s: %s" % (self.event, forceUnicode(e)),
-				category    = u"event_processing",
-				isError     = True)
+				title=u"Failed to process event %s" % self.event.eventConfig.getName(),
+				description=u"Failed to process event %s: %s" % (self.event, forceUnicode(e)),
+				category=u"event_processing",
+				isError=True
+			)
 			self.opsiclientd.setBlockLogin(False)
 
 		self.running = False
