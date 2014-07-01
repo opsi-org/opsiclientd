@@ -48,7 +48,7 @@ logger = Logger()
 
 
 class OpsiDialogWindow(SubjectsObserver):
-	def __init__(self):
+	def __init__(self, port=0, host=u'127.0.0.1', notificationClientId=None):
 		self._notificationClient = None
 		if port:
 			self._notificationClient = NotificationClient(host, port, self, notificationClientId)
@@ -98,53 +98,36 @@ class OpsiDialogWindow(SubjectsObserver):
 
 		logger.debug(u"subjectsChanged() ended")
 
-def usage():
-	print u"\nUsage: %s [-h <host>] [-p <port>]" % os.path.basename(argv[0])
-	print u"Options:"
-	print u"  -h, --host      Notification server host (default: %s)" % host
-	print u"  -p, --port      Notification server port (default: %s)" % port
-	print u"  -i, --id        Notification client id (default: %s)" % notificationClientId
-
 
 if (__name__ == "__main__"):
-	# If you write to stdout when running from pythonw.exe program will die !!!
-	logger.setConsoleLevel(LOG_NONE)
+	from OPSI.Util import argparse
+
+	logger.setConsoleLevel(LOG_DEBUG)
 	exception = None
 
 	try:
-		logger.notice(u"Commandline: %s" % ' '.join(argv))
+		parser = argparse.ArgumentParser()
+		parser.add_argument("--host", help="Notification server host", default=u'127.0.0.1')
+		parser.add_argument("-p", "--port", type=int, help="Notification server port", default=0)
+		parser.add_argument("-i", "--id", dest="notificationClientId", help="Notification client id", default=None)
+		parser.add_argument("-l", "--log-file", dest="logFile", help="Log file to use.")
 
-		# Process command line arguments
-		try:
-			(opts, args) = getopt.getopt(argv[1:], "h:p:s:i:l:", ["host=", "port=", "id=", "log-file="])
-		except getopt.GetoptError:
-			usage()
-			sys.exit(1)
+		args = parser.parse_args()
+		args.port = forceUnicode(args.port)
+		args.notificationClientId = forceUnicode(args.notificationClientId)
 
-		for (opt, arg) in opts:
-			logger.info(u"Processing option %s:%s" % (opt, arg))
-			if   opt in ("-a", "--host"):
-				host = forceUnicode(arg)
-			elif opt in ("-p", "--port"):
-				port = forceInt(arg)
-			elif opt in ("-i", "--id"):
-				notificationClientId = forceUnicode(arg)
-			elif opt in ("-l", "--log-file"):
-				logFile = forceFilename(arg)
-				if os.path.exists(logFile):
-					logger.notice(u"Deleting old log file: %s" % logFile)
-					os.unlink(logFile)
-				logger.notice(u"Opening log file: %s" % logFile)
-				logger.setLogFile(logFile)
-				logger.setFileLevel(LOG_DEBUG)
+		if args.logFile:
+			logFile = forceFilename(args.logFile)
+			# TODO: logrotate?
+			if os.path.exists(logFile):
+				logger.notice(u"Deleting old log file: %s" % logFile)
+				os.unlink(logFile)
+			logger.notice(u"Setting log file: %s" % logFile)
+			logger.setLogFile(logFile)
+			logger.setFileLevel(LOG_DEBUG)
 
-		logger.notice(u"Host: %s, port: %s, logfile: %s" % (host, port, logFile))
 		w = OpsiDialogWindow()
-		w.CreateWindow()
-	except Exception as e:
-		exception = e
-
-	if exception:
+	except Exception as exception:
 		logger.logException(exception)
 		tb = sys.exc_info()[2]
 		while (tb != None):
