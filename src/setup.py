@@ -158,7 +158,10 @@ else:
 		),
 		(
 			os.path.join('/etc', 'opsi-client-agent'),
-			[os.path.join('linux', 'notifier.py')]
+			[
+				os.path.join('linux', 'notifier.py'),
+				os.path.join('linux', 'opsiclientd_rpc.py'),
+			]
 		),
 	]
 	data_files += tree(os.path.join('/etc', 'opsi-client-agent', 'opsiclientd', 'static_html'), os.path.join('..', 'static_html'))
