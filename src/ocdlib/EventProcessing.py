@@ -33,6 +33,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 import codecs
 import filecmp
 import os
+import random
 import re
 import shutil
 import sys
@@ -114,7 +115,36 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 		self.getSessionId()
 
-		self._notificationServerPort = int(config.get('notification_server', 'start_port')) + (3 * int(self.getSessionId()))
+		self._notificationServerPort = forceInt(config.get('notification_server', 'start_port'))
+		self.setNotificationServerPort()
+
+	def setNotificationServerPort(self, port=None):
+		"""
+		Set the port to be used by the notification server.
+
+		:param port: The port to use. \
+If this is `None` a random port will be chosen.
+		:type port: int
+		"""
+		def getRandomPortViaSessionID(multiplicator=3):
+			return forceInt(config.get('notification_server', 'start_port')) + (multiplicator * forceInt(self.getSessionId()))
+
+		MAX_ALLOWED_PORT = 65536
+
+		if port is None:
+			port = getRandomPortViaSessionID()
+
+			if port > MAX_ALLOWED_PORT:
+				port = getRandomPortViaSessionID(1)
+			if port > MAX_ALLOWED_PORT or not RUNNING_ON_WINDOWS:
+
+				port = random.randrange(
+					forceInt(config.get('notification_server', 'start_port')),
+					MAX_ALLOWED_PORT
+				)
+
+		logger.debug('Setting port for the NotificationServer to {0}'.format(port))
+		self._notificationServerPort = port
 
 	# ServiceConnection
 	def connectionThreadOptions(self):
@@ -323,6 +353,19 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		return processId
 
 	def startNotifierApplication(self, command, desktop=None, notifierId=None):
+		"""
+		Starts the notifier application and returns the process id if possible.
+
+		:returns: Process ID of the notifier is start was successful. \
+None otherwise.
+		:returntype: int / None
+		"""
+		if RUNNING_ON_WINDOWS:
+			return self._startNotifierApplicationWindows(command, desktop, notifierId)
+		else:
+			return self._startNotifierApplicationPosix(command, notifierId)
+
+	def _startNotifierApplicationWindows(self, command, desktop=None, notifierId=None):
 		logger.notice(u"Starting notifier application in session '%s'" % self.getSessionId())
 		try:
 			pid = self.runCommandInSession(
@@ -330,7 +373,23 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				desktop = desktop, waitForProcessEnding = False)
 			time.sleep(3)
 			return pid
-		except Exception, e:
+		except Exception as e:
+			logger.error(u"Failed to start notifier application '%s': %s" % (command, e))
+
+	def _startNotifierApplicationPosix(self, command, notifierId=None):
+		"""
+		Starting the notifier application on POSIX systems.
+		"""
+		logger.notice(u"Starting notifier application in session '%s'" % self.getSessionId())
+		try:
+			pid = self.runCommandInSession(
+				# TODO: put the replacing into an command itself.
+				command=command.replace('%port%', forceUnicode(self._notificationServerPort)).replace('%id%', forceUnicode(notifierId)),
+				waitForProcessEnding=False
+			)
+			time.sleep(3)
+			return pid
+		except Exception as e:
 			logger.error(u"Failed to start notifier application '%s': %s" % (command, e))
 
 	def closeProcessWindows(self, processId):
