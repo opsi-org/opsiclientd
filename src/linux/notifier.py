@@ -1,9 +1,9 @@
-#! env python
+#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-notifier
+Notification client for the opsiclientd.
 
-notifier is part of the desktop management solution opsi
+It is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
 Copyright (C) 2014 uib GmbH
@@ -44,16 +44,7 @@ from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG
 encoding = locale.getpreferredencoding()
 argv = [unicode(arg, encoding) for arg in sys.argv]
 
-try:
-	language = locale.getdefaultlocale()[0].split('_')[0]
-except Exception, e:
-	language = 'en'
-
 logger = Logger()
-logFile = u''
-host = u'127.0.0.1'
-port = 0
-notificationClientId = None
 
 
 class OpsiDialogWindow(SubjectsObserver):
