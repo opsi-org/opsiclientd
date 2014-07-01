@@ -453,11 +453,21 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		if sessionId is None:
 			sessionId = System.getActiveConsoleSessionId()
-		rpc = 'setCurrentActiveDesktopName("%s", System.getActiveDesktopName())' % sessionId
-		cmd = '%s "%s"' % (config.get('opsiclientd_rpc', 'command'), rpc)
+
+		rpc = 'setCurrentActiveDesktopName("{sessionId}", System.getActiveDesktopName())'.format(sessionId=sessionId)
+		cmd = "{rpc_processor} '{command}'".format(
+			rpc_processor=config.get('opsiclientd_rpc', 'command'),
+			command=rpc
+		)
 
 		try:
-			System.runCommandInSession(command = cmd, sessionId = sessionId, desktop = u"winlogon", waitForProcessEnding = True, timeoutSeconds = 60)
+			System.runCommandInSession(
+				command=cmd,
+				sessionId=sessionId,
+				desktop=u"winlogon",
+				waitForProcessEnding=True,
+				timeoutSeconds=60
+			)
 		except Exception, e:
 			logger.error(e)
 
