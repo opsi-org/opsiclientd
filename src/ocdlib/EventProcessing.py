@@ -419,9 +419,9 @@ None otherwise.
 				logger.info(u"Action processor name '%s', version '%s'" % (name, version))
 				self._actionProcessorInfoSubject.setMessage("%s %s" % (name.encode('utf-8'), version.encode('utf-8')))
 			else:
-				logger.info(u"Action processor: {filename}".format(actionProcessorLocalFile))
-				self._actionProcessorInfoSubject.setMessage(u"{filename}".format(os.path.basename(actionProcessorLocalFile)))
-		except Exception, e:
+				logger.info(u"Action processor: {filename}".format(filename=actionProcessorLocalFile))
+				self._actionProcessorInfoSubject.setMessage(u"{filename}".format(filename=os.path.basename(actionProcessorLocalFile)))
+		except Exception as e:
 			logger.error(u"Failed to set action processor info: %s" % forceUnicode(e))
 
 	def mountDepotShare(self, impersonation):
