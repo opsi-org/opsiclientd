@@ -391,10 +391,12 @@ class EventGenerator(threading.Thread):
 		self.fireEvent(self.createEvent(eventInfo))
 
 	def createEvent(self, eventInfo={}):
+		logger.debug("Creating event config from info: {0}".format(eventInfo))
 		eventConfig = self.getEventConfig()
+		logger.debug("Event config: {0}".format(eventConfig))
 		if not eventConfig:
 			return None
-		return Event(eventConfig = eventConfig, eventInfo = eventInfo)
+		return Event(eventConfig=eventConfig, eventInfo=eventInfo)
 
 	def initialize(self):
 		pass
@@ -407,7 +409,9 @@ class EventGenerator(threading.Thread):
 		pass
 
 	def fireEvent(self, event=None):
+		logger.debug("Trying to fire event {0}".format(event))
 		if self._stopped:
+			logger.debug('{0} is stopped, not firing event.'.format(self))
 			return
 
 		if not event:
@@ -469,7 +473,6 @@ class EventGenerator(threading.Thread):
 				self._eventsOccured += 1
 				self.fireEvent(event)
 			logger.info(u"Event generator '%s' now deactivated after %d event occurrences" % (self, self._eventsOccured))
-
 		except Exception, e:
 			logger.error(u"Failure in event generator '%s': %s" % (self, forceUnicode(e)))
 			logger.logException(e)
