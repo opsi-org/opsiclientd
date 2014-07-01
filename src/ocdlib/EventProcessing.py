@@ -395,10 +395,12 @@ None otherwise.
 	def closeProcessWindows(self, processId):
 		command = None
 		try:
-			command = '%s "exit(); System.closeProcessWindows(processId = %s)"' \
-					% (config.get('opsiclientd_rpc', 'command'), processId)
-		except Exception, e:
-			raise Exception(u"opsiclientd_rpc command not defined: %s" % forceUnicode(e))
+			command = '{command} "exit(); System.closeProcessWindows(processId={pid})"'.format(
+				command=config.get('opsiclientd_rpc', 'command'),
+				pid=processId
+			)
+		except Exception as error:
+			raise Exception(u"opsiclientd_rpc command not defined: {0}".format(forceUnicode(error)))
 
 		self.runCommandInSession(command=command, waitForProcessEnding=False)
 
@@ -1279,13 +1281,13 @@ None otherwise.
 				if self.event.eventConfig.writeLogToService:
 					try:
 						self.writeLogToService()
-					except Exception, e:
-						logger.logException(e)
+					except Exception as error:
+						logger.logException(error)
 
 				try:
 					self.disconnectConfigService()
-				except Exception, e:
-					logger.logException(e)
+				except Exception as error:
+					logger.logException(error)
 
 				config.setTemporaryConfigServiceUrls([])
 
