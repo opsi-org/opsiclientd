@@ -437,21 +437,23 @@ None otherwise.
 		logger.notice(u"Mounting depot share %s" %  config.get('depot_server', 'url'))
 		self.setStatusMessage(_(u"Mounting depot share %s") % config.get('depot_server', 'url'))
 
-		try:
-			depotHost = config.get('depot_server', 'url').split('/')[2]
-			System.setRegistryValue(
-				System.HKEY_LOCAL_MACHINE,
-				u"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\%s" % depotHost,
-				u"file", 1)
-			logger.info(u"Added depot '%s' to trusted domains" % depotHost)
-		except Exception, e:
-			logger.error(u"Failed to add depot to trusted domains: %s" % e)
+		if RUNNING_ON_WINDOWS:
+			try:
+				depotHost = config.get('depot_server', 'url').split('/')[2]
+				System.setRegistryValue(
+					System.HKEY_LOCAL_MACHINE,
+					u"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\%s" % depotHost,
+					u"file", 1)
+				logger.info(u"Added depot '%s' to trusted domains" % depotHost)
+			except Exception as error:
+				logger.error(u"Failed to add depot to trusted domains: %s" % error)
 
 		if impersonation:
 			System.mount(config.get('depot_server', 'url'), config.getDepotDrive())
 		else:
 			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
 			System.mount(config.get('depot_server', 'url'), config.getDepotDrive(), username = depotServerUsername, password = depotServerPassword)
+
 		self._depotShareMounted = True
 
 	def umountDepotShare(self):
@@ -679,8 +681,9 @@ None otherwise.
 			bootmode = ''
 			try:
 				bootmode = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\general", "bootmode")
-			except Exception, e:
-				logger.warning(u"Failed to get bootmode from registry: %s" % forceUnicode(e))
+			except Exception as error:
+				if RUNNING_ON_WINDOWS:
+					logger.warning(u"Failed to get bootmode from registry: %s" % forceUnicode(error))
 
 			if not self._configService:
 				raise Exception(u"Not connected to config service")
@@ -801,14 +804,15 @@ None otherwise.
 
 			self.setStatusMessage( _(u"Starting actions") )
 
-			# Setting some registry values before starting action
-			# Mainly for action processor winst
-			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depoturl",   config.get('depot_server', 'url'))
-			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", config.getDepotDrive())
-			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configurl",   "<deprecated>")
-			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configdrive", "<deprecated>")
-			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsurl",    "<deprecated>")
-			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsdrive",  "<deprecated>")
+			if RUNNING_ON_WINDOWS:
+				# Setting some registry values before starting action
+				# Mainly for action processor winst
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depoturl",   config.get('depot_server', 'url'))
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", config.getDepotDrive())
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configurl",   "<deprecated>")
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configdrive", "<deprecated>")
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsurl",    "<deprecated>")
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsdrive",  "<deprecated>")
 
 			# action processor desktop can be one of current / winlogon / default
 			desktop = self.event.eventConfig.actionProcessorDesktop
