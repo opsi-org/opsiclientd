@@ -134,6 +134,19 @@ class WorkerOpsiclientd(WorkerOpsi):
 			user = config.get('global', 'host_id')
 		return (user, password)
 		
+	def _errback(self, failure):
+		result = WorkerOpsi._errback(self, failure)
+		if (result.code == responsecode.UNAUTHORIZED) and self.request.remoteAddr.host not in (self.service.config['ipAddress'], '127.0.0.1'):
+			if (self.service.config['maxAuthenticationFailures'] > 0):
+				if not self.service.authFailureCount.has_key(self.request.remoteAddr.host):
+					self.service.authFailureCount[self.request.remoteAddr.host] = 0
+				self.service.authFailureCount[self.request.remoteAddr.host] += 1
+				if (self.service.authFailureCount[self.request.remoteAddr.host] > self.service.config['maxAuthenticationFailures']):
+					logger.error(u"%s authentication failures from '%s' in a row, waiting 60 seconds to prevent flooding" \
+							% (self.service.authFailureCount[self.request.remoteAddr.host], self.request.remoteAddr.host))
+					return self._delayResult(60, result)
+		return result
+		
 	def _authenticate(self, result):
 		if self.session.authenticated:
 			return result
