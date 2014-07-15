@@ -1,3 +1,9 @@
+opsiclientd (4.0.78) stable; urgency=low
+
+  * Added sync_time_from_service function.
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 15 Jul 2014 23:08:04 +0100
+
 opsiclientd (4.0.77) stable; urgency=low
 
   * WAN/VPN: Win 8.1 mshotfix support

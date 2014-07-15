@@ -107,7 +107,8 @@ class ConfigImplementation(object):
 			'config_service': {
 				'url':                   [],
 				'connection_timeout':    10,
-				'user_cancelable_after': 0
+				'user_cancelable_after': 0,
+				'sync_time_from_service': False,
 			},
 			'depot_server': {
 				'depot_id': u'',
