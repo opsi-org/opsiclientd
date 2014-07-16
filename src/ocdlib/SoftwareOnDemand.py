@@ -387,7 +387,25 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			
 			elif self._swOnDemandProductIds:
 				html = []
+				# sort productIds by productnames
+				productsByProductName = {}
+				sortedProductIds = []
 				for productId in self._swOnDemandProductIds:
+					found = False
+					for p in products:
+						if (p.productId == productId):
+							found = True
+							if not productsByProductName.has_key(p.name):
+								productsByProductName[p.name] = p
+							break
+					if not found:
+						logger.error(u"Product with productId '%s' not found." % (productId))
+							
+				for name in productsByProductName.keys().sort():
+					sortedProductIds.append(productsByProductName[name].productId)
+					
+				
+				for productId in sortedProductIds:
 					html.append(u'<div class="swondemand-product-box"><table>')
 					productOnClient = None
 					
@@ -403,6 +421,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							break
 					if not productOnDepot:
 						logger.error(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
+						continue
 					
 					product = None
 					for p in products:
