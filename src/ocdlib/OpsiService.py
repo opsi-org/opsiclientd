@@ -193,7 +193,7 @@ class ServiceConnection(object):
 					
 				if serviceConnectionThread.connected and config.get('config_service', 'sync_time_from_service'):
 					logger.info(u"Syncing local system time from service")
-					System.setLocalSystemTime(serviceConnectionThread.getServiceTime(utctime=True)
+					System.setLocalSystemTime(serviceConnectionThread.getServiceTime(utctime=True))
 					
 				if (urlIndex > 0):
 					modules = None
