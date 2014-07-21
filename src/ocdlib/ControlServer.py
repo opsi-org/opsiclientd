@@ -160,7 +160,10 @@ class WorkerOpsiclientd(WorkerOpsi):
 				raise Exception(u"No password from %s (application: %s)" % (self.session.ip, self.session.userAgent))
 			
 			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
+				if self.service.authFailureCount.has_key(self.request.remoteAddr.host):
+					del self.service.authFailureCount[self.request.remoteAddr.host]
 				return result
+				
 			if (os.name == 'nt'):
 				try:
 					# Hack to find and read the local-admin group and his members, 
@@ -186,6 +189,8 @@ class WorkerOpsiclientd(WorkerOpsi):
 											# The LogonUser function will raise an Exception on logon failure
 											win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
 											# No exception raised => user authenticated
+											if self.service.authFailureCount.has_key(self.request.remoteAddr.host):
+												del self.service.authFailureCount[self.request.remoteAddr.host]
 											return result
 								    
 									if memberresume == 0:
@@ -377,6 +382,8 @@ class ControlServer(OpsiService, threading.Thread):
 		self._server = None
 		self._opsiclientdRpcInterface = OpsiclientdRpcInterface(self._opsiclientd)
 		logger.info(u"ControlServer initiated")
+		
+		self.authFailureCount = {}
 		
 	def run(self):
 		self._running = True
