@@ -196,7 +196,7 @@ class ServiceConnection(object):
 					try:
 					    System.setLocalSystemTime(serviceConnectionThread.getServiceTime(utctime=True))
 				    	except Exception as e:
-				    		logger.error(u"Failed to sync time: '%s'", e)
+				    		logger.error(u"Failed to sync time: '%s'" % e)
 					
 				if (urlIndex > 0):
 					modules = None
