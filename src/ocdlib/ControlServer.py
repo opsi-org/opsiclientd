@@ -136,7 +136,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 		
 	def _errback(self, failure):
 		result = WorkerOpsi._errback(self, failure)
-		if (result.code == responsecode.UNAUTHORIZED) and self.request.remoteAddr.host:
+		if (result.code == responsecode.UNAUTHORIZED) and self.request.remoteAddr.host not in ("127.0.0.1"):
 			if (config.get('control_server','maxAuthenticationFailures') > 0):
 				if not self.service.authFailureCount.has_key(self.request.remoteAddr.host):
 					self.service.authFailureCount[self.request.remoteAddr.host] = 0
