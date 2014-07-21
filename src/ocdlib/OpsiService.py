@@ -193,10 +193,10 @@ class ServiceConnection(object):
 					
 				if serviceConnectionThread.connected and config.get('config_service', 'sync_time_from_service'):
 					logger.info(u"Syncing local system time from service")
-                    try:
+					try:
 					    System.setLocalSystemTime(serviceConnectionThread.getServiceTime(utctime=True))
-                    except Exception as e:
-                        logger.error(u"Failed to sync time: '%s'", e)
+				    	except Exception as e:
+				    		logger.error(u"Failed to sync time: '%s'", e)
 					
 				if (urlIndex > 0):
 					modules = None
