@@ -215,7 +215,7 @@ class ConfigImplementation(object):
 		if section in ('system',):
 			return
 		
-		if option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port'):
+		if option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port', 'max_authentication_failures'):
 			value = forceInt(value)
 		
 		if option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active'):
