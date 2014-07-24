@@ -393,7 +393,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				for productId in self._swOnDemandProductIds:
 					found = False
 					for p in products:
-						if (p.productId == productId):
+						if (p.id == productId):
 							found = True
 							if not productsByProductName.has_key(p.name):
 								productsByProductName[p.name] = p
