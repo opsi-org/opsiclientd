@@ -3,8 +3,9 @@ opsiclientd (4.0.78) stable; urgency=low
   * Added sync_time_from_service function.
   * ControlServer: Added Flooding prevention
   * SoftwareOnDemand: Sorting Products by ProductName
+  * WAN/VPN: Workarround timing problem while network reconnect
 
- -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 15 Jul 2014 23:08:04 +0100
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 29 Jul 2014 01:19:04 +0100
 
 opsiclientd (4.0.77) stable; urgency=low
 
