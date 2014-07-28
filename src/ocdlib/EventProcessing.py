@@ -703,6 +703,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					try:
 						# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3
 						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
+						logger.debug2(u">>> TrustedInstaller Service autmaticStartup and type: '%s' '%s'" % (automaticStartup,type(automaticStartup)))
 						if (automaticStartup == 2):
 							logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
 							self.setStatusMessage( _(u"Waiting for TrustedInstaller") )
