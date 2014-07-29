@@ -399,8 +399,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							break
 					if not found:
 						logger.error(u"Product with productId '%s' not found." % (productId))
-
-				for name in productsByProductName.keys().sort():
+				
+				sortedProductIds = productsByProductName.keys()
+				sortedProductIds.sort()
+				for name in sortedProductIds:
 					sortedProductIds.append(productsByProductName[name].id)
 
 
