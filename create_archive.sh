@@ -13,9 +13,9 @@ tmpdir=/tmp/${packagename}-${version}
 
 test -e $tmpdir && rm -rf $tmpdir
 mkdir $tmpdir
-cp -r gettext static_html ${tmpdir}/
+cp -r static_html ${tmpdir}/
 mkdir ${tmpdir}/src
-cp -r src/ocdlib src/windows src/setup.py ${tmpdir}/src
+cp -r src/gettext src/ocdlib src/windows src/setup.py ${tmpdir}/src
 
 find ${tmpdir} -iname "*.pyc"   -exec rm "{}" \;
 find ${tmpdir} -iname "*.marks" -exec rm "{}" \;

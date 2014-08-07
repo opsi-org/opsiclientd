@@ -95,13 +95,13 @@ def get_locales_target_and_source():
 			(
 				os.path.join('locale', 'de', 'LC_MESSAGES'),
 				[
-					os.path.abspath(os.path.join(localDirectory, '..', 'gettext', 'opsiclientd_de.mo'))
+					os.path.abspath(os.path.join(localDirectory, 'gettext', 'opsiclientd_de.mo'))
 				]
 			),
 			(
 				os.path.join('locale', 'fr', 'LC_MESSAGES'),
 				[
-					os.path.abspath(os.path.join(localDirectory, '..', 'gettext', 'opsiclientd_fr.mo'))
+					os.path.abspath(os.path.join(localDirectory, 'gettext', 'opsiclientd_fr.mo'))
 				]
 			),
 		]
@@ -110,8 +110,8 @@ def get_locales_target_and_source():
 			(
 				os.path.join('/etc', 'opsi-client-agent', 'locale'),
 				[
-					os.path.abspath(os.path.join(localDirectory, '..', 'gettext', 'opsiclientd_de.mo')),
-					os.path.abspath(os.path.join(localDirectory, '..', 'gettext', 'opsiclientd_fr.mo'))
+					os.path.abspath(os.path.join(localDirectory, 'gettext', 'opsiclientd_de.mo')),
+					os.path.abspath(os.path.join(localDirectory, 'gettext', 'opsiclientd_fr.mo'))
 				]
 			)
 		]
