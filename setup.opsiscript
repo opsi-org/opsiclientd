@@ -60,7 +60,7 @@ exit $?
 [ShellInAnIcon_install_deps_debian]
 set -x
 apt-get install --yes python-opsi
-apt-get install --yes gettext python-pip
+apt-get install --yes gettext python-apsw python-pip
 exit $?
 
 
