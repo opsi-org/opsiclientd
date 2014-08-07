@@ -44,7 +44,7 @@ Message "Configuring client..."
 ShellInAnIcon_configure_client
 
 Message "Creating client certificate..."
-ExecWith_certificate_creation "/usr/bin/env python"
+ExecWith_certificate_creation "/usr/bin/python"
 
 Message "Installing service in upstart..."
 ShellInAnIcon_install_service_upstart
