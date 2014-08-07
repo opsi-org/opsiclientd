@@ -1,8 +1,0 @@
-pycrypto
-twisted
-libmagic
-simplejson
-pam
-pyOpenSSL
-SQLAlchemy
-M2Crypto
