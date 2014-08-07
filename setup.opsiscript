@@ -100,5 +100,5 @@ initctl reload-configuration
 
 
 [ShellInAnIcon_service_upstart_start]
-initctl restart opsiclientd
+initctl start opsiclientd || initctl restart opsiclientd
 
