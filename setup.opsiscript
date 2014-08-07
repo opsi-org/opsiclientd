@@ -42,6 +42,9 @@ ShellInAnIcon_install_with_pip
 
 ShellInAnIcon_configure_client
 
+Message "Installing service in upstart..."
+ShellInAnIcon_install_service_upstart
+
 [ShellInAnIcon_install_repos_debian]
 set -x
 export DEBIAN_FRONTEND=noninteractive
@@ -74,3 +77,9 @@ exit $?
 set -x
 echo "lolnope"
 exit $?
+
+[ShellInAnIcon_install_service_upstart]
+set -x
+cp "$INST_temporaryDirectory$/debian/opsiclientd.upstart" /etc/init/opsiclientd.conf
+initctl reload-configuration
+
