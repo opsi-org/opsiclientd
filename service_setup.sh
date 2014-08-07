@@ -23,7 +23,7 @@ mkdir -p /tmp/opsiclientd
 mkdir -p /var/log/opsi-client-agent
 cp -r . /tmp/opsiclientd
 chmod u+x /tmp/opsiclientd/opsi-script/32/opsi-script-nogui
-/tmp/opsiclientd/opsi-script/32/opsi-script-nogui -batch /tmp/opsiclientd/setup.ins /var/log/opsi-client-agent/opsi-script/opsiclientd.log 
+/tmp/opsiclientd/opsi-script/32/opsi-script-nogui -batch /tmp/opsiclientd/setup.opsiscript /var/log/opsi-client-agent/opsi-script/opsiclientd.log
 
 echo .
 echo   Installation abgeschlossen
