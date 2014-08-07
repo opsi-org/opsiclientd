@@ -40,10 +40,13 @@ Files_copy_to_temporary_folder
 ChangeDirectory $INST_temporaryDirectory$
 ShellInAnIcon_install_with_pip
 
+Message "Configuring client..."
 ShellInAnIcon_configure_client
 
 Message "Installing service in upstart..."
 ShellInAnIcon_install_service_upstart
+
+Message "Finished."
 
 [ShellInAnIcon_install_repos_debian]
 set -x
