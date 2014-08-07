@@ -1,0 +1,77 @@
+[Actions]
+requiredWinstVersion >= "4.11.4.2"
+ScriptErrorMessages = off
+encoding = utf8
+Message "Installing opsiclientd for Linux..."
+ShowBitmap "%scriptpath%\uninst\opsi.png" "opsiclientd"
+
+; Variables:
+; Config Variables with prefixes
+; GEN = general
+; SHI = share information
+; OCD = opsiclientd
+; OLB = opsiLoginBlocker
+; INST = used while installation
+; Script variables with prefix INST
+
+DefVar $GEN_distrotype$
+DefVar $GEN_OS$
+DefVar $INST_temporaryDirectory$
+
+set $INST_temporaryDirectory$ = "/tmp/opsiclientd-setup"
+set $GEN_OS$ = GetOS
+
+if not ($GEN_OS$ = "Linux")
+        logError "Installation aborted: wrong OS version: only Linux alowed"
+        isFatalError "wrong OS"
+endif
+
+set $GEN_distrotype$ = getLinuxDistroType
+
+if $GEN_distrotype$ = "debian"
+	ShellInAnIcon_install_repos_debian
+	ShellInAnIcon_install_deps_debian
+else
+	LogError "Unsupported distro type"
+endif
+
+Files_copy_to_temporary_folder
+
+ChangeDirectory $INST_temporaryDirectory$
+ShellInAnIcon_install_with_pip
+
+ShellInAnIcon_configure_client
+
+[ShellInAnIcon_install_repos_debian]
+set -x
+export DEBIAN_FRONTEND=noninteractive
+echo "deb http://download.opensuse.org/repositories/home:/uibmz:/opsi:/opsi40-experimental/xUbuntu_12.04 ./" > /etc/apt/sources.list.d/opsi.list
+wget -O - http://download.opensuse.org/repositories/home:/uibmz:/opsi:/opsi40-experimental/xUbuntu_12.04/Release.key | apt-key add -
+apt-get update
+exit $?
+
+
+[ShellInAnIcon_install_deps_debian]
+set -x
+apt-get install --yes python-opsi
+apt-get install --yes python-pip
+exit $?
+
+
+[Files_copy_to_temporary_folder]
+checktargetpath = "$INST_temporaryDirectory$"
+copy -s "%SCRIPTPATH%/*" "$INST_temporaryDirectory$"
+chmod "755" "$INST_temporaryDirectory$/src/setup.py"
+
+
+[ShellInAnIcon_install_with_pip]
+set -x
+pip install -r src/requirements.txt
+pip install src/
+exit $?
+
+
+[ShellInAnIcon_configure_client]
+set -x
+echo "lolnope"
+exit $?
