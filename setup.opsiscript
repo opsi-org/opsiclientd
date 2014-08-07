@@ -78,7 +78,7 @@ chmod "755" "$INST_temporaryDirectory$/src/setup.py"
 
 [ShellInAnIcon_install_with_pip]
 set -x
-pip install src/
+pip install --upgrade src/
 exit $?
 
 
