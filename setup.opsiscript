@@ -43,6 +43,9 @@ ShellInAnIcon_install_with_pip
 Message "Configuring client..."
 ShellInAnIcon_configure_client
 
+Message "Creating client certificate..."
+ExecWith_certificate_creation "/usr/bin/env python"
+
 Message "Installing service in upstart..."
 ShellInAnIcon_install_service_upstart
 
@@ -80,6 +83,12 @@ exit $?
 set -x
 echo "lolnope"
 exit $?
+
+
+[ExecWith_certificate_creation]
+import OPSI.Util.Task.Certificate as cert
+cert.createCertificate(path='/etc/opsi-client-agent/opsiclientd.pem')
+
 
 [ShellInAnIcon_install_service_upstart]
 set -x
