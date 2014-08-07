@@ -121,7 +121,7 @@ data_files = []
 data_files += get_locales_target_and_source()
 
 if RUNS_ON_WINDOWS:
-	data_files += tree(os.path.join('opsiclientd', 'static_html'), 'static_html')
+	data_files += tree('opsiclientd', 'static_html')
 	data_files += [
 		('Microsoft.VC90.MFC', glob.glob('Microsoft.VC90.MFC\\*.*')),
 		('Microsoft.VC90.CRT', glob.glob('Microsoft.VC90.CRT\\*.*')),
@@ -164,7 +164,7 @@ else:
 			]
 		),
 	]
-	data_files += tree(os.path.join('/etc', 'opsi-client-agent', 'opsiclientd', 'static_html'), 'static_html')
+	data_files += tree(os.path.join('/etc', 'opsi-client-agent', 'opsiclientd'), 'static_html')
 
 setup_options = {
 	"data_files": data_files,
