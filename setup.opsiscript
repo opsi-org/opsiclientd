@@ -97,7 +97,7 @@ import OPSI.Util.Task.Certificate as cert
 
 certificatePath = '/etc/opsi-client-agent/opsiclientd.pem'
 
-if os.path.exists(certificatePath)
+if os.path.exists(certificatePath):
     cert.renewCertificate(path=certificatePath)
 else:
     cert.createCertificate(path=certificatePath)
