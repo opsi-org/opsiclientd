@@ -52,7 +52,10 @@ ShellInAnIcon_install_service_upstart
 Message "Starting service..."
 ShellInAnIcon_service_upstart_start
 
+Message "Cleaning up temporary folder"
+ShellInAnIcon_remove_temporary_folder
 Message "Finished."
+
 
 [ShellInAnIcon_install_repos_debian]
 set -x
@@ -109,3 +112,6 @@ initctl reload-configuration
 [ShellInAnIcon_service_upstart_start]
 initctl start opsiclientd || initctl restart opsiclientd
 
+
+[ShellInAnIcon_remove_temporary_folder]
+rm -rf $INST_temporaryDirectory$
