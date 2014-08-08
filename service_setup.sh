@@ -1,4 +1,4 @@
-#! /bin/bash 
+#! /bin/bash
 
 echo .
 echo   Aktueller PC: $HOSTNAME
@@ -18,7 +18,6 @@ echo   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 echo .
 read
 
-
 mkdir -p /tmp/opsiclientd
 mkdir -p /var/log/opsi-client-agent
 cp -r . /tmp/opsiclientd
@@ -29,5 +28,3 @@ echo .
 echo   Installation abgeschlossen
 echo   Installation completed
 echo .
-read
-
