@@ -400,11 +400,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					if not found:
 						logger.error(u"Product with productId '%s' not found." % (productId))
 				
-				sortedProductIds = productsByProductName.keys()
-				sortedProductIds.sort()
-				for name in sortedProductIds:
+				sortedProductName= productsByProductName.keys()
+				sortedProductName.sort()
+				for name in sortedProductName:
 					sortedProductIds.append(productsByProductName[name].id)
-
 
 				for productId in sortedProductIds:
 					html.append(u'<div class="swondemand-product-box"><table>')
