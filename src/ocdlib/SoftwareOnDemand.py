@@ -401,7 +401,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						logger.error(u"Product with productId '%s' not found." % (productId))
 				
 				sortedProductName= productsByProductName.keys()
-				sortedProductName.sort()
+				sortedProductName.sort(key=str.lower)
 				for name in sortedProductName:
 					sortedProductIds.append(productsByProductName[name].id)
 
