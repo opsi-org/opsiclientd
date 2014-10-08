@@ -815,7 +815,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			actionProgress     = u"Cache failure: %s" % forceUnicode(value)
 			installationStatus = u'unknown'
 			actionResult         = u'failed'
-			actionRequest      = u'none'
+			if u"MD5sum mismatch" in forceUnicode(value):
+				actionRequest      = u'none'
 		if actionProgress and updateProductOnClient:
 			self._configService.productOnClient_updateObjects([
 				ProductOnClient(

@@ -665,7 +665,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					if not self._configService.productOnClient_getIdents(
 								productType   = 'LocalbootProduct',
 								clientId      = config.get('global', 'host_id'),
-								actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom']):
+								actionRequest = ['setup', 'uninstall', 'update', 'once', 'custom']):
 						#set installation_pending State to false nothing to do!!!!
 						state.set('installation_pending','false')
 				except Exception, e:
