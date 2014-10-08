@@ -548,6 +548,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				running = True
 				break
 		return running
+		
+	def isInstallationPending(self):
+		return forceBool(self.opsiclientd.isInstallationPending())
 	
 	def getCurrentActiveDesktopName(self, sessionId=None):
 		desktop = self.opsiclientd.getCurrentActiveDesktopName(sessionId)
