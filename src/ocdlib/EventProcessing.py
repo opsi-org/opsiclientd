@@ -667,6 +667,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 								clientId      = config.get('global', 'host_id'),
 								actionRequest = ['setup', 'uninstall', 'update', 'once', 'custom']):
 						#set installation_pending State to false nothing to do!!!!
+						logger.notice("Setting installation pending to false")
 						state.set('installation_pending','false')
 				except Exception, e:
 					logger.error(e)
