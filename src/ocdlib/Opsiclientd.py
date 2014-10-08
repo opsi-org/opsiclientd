@@ -29,7 +29,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 @license: GNU Affero GPL version 3
 """   
 
-__version__ = '4.0.80'
+__version__ = '4.0.81'
 
 # Imports
 import sys, os
@@ -511,6 +511,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		
 	def isShutdownRequested(self):
 		return False
+		
+	def isInstallationPending(self):
+		return state.get('installation_pending', False)
 	
 	def showPopup(self, message):
 		port = config.get('notification_server', 'popup_port')

@@ -1,3 +1,11 @@
+opsiclientd (4.0.81) stable; urgency=low
+
+  * installation_pending will not set, if a product has always actionRequest.
+  * Only reset action request in cacheservice, if md5sum missmatch is detected. (error on server)
+  * Don't fire on_shutdown if installation_pending is detected.
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 8 Oct 2014 11:11:04 +0100
+
 opsiclientd (4.0.78) stable; urgency=low
 
   * Added sync_time_from_service function.
