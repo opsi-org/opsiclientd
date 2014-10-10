@@ -127,7 +127,7 @@ class ConfigImplementation(object):
 				'ssl_server_key_file':  u'opsiclientd.pem',
 				'ssl_server_cert_file': u'opsiclientd.pem',
 				'static_dir':           u'static_html',
-				'maxAuthenticationFailures': 5,
+				'max_authentication_failures': 5,
 			},
 			'notification_server': {
 				'interface':  u'127.0.0.1',

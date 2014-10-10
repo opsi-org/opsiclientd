@@ -138,10 +138,10 @@ class WorkerOpsiclientd(WorkerOpsi):
 		result = WorkerOpsi._errback(self, failure)
 		logger.debug(u"DEBUG: detected host: '%s'" % self.request.remoteAddr.host)
 		logger.debug(u"DEBUG: responsecode: '%s'" % result.code)
-		logger.debug(u"DEBUG: maxAuthenticationFailures config: '%s'" % config.get('control_server','maxAuthenticationFailures'))
+		logger.debug(u"DEBUG: maxAuthenticationFailures config: '%s'" % config.get('control_server','max_authentication_failures'))
 		logger.debug(u"DEBUG: maxAuthenticationFailures config type: '%s'" % type(config.get('control_server','max_authentication_failures')))
 		if (result.code == responsecode.UNAUTHORIZED) and self.request.remoteAddr.host not in ("127.0.0.1"):
-			maxAuthenticationFailures = config.get('control_server','maxAuthenticationFailures')
+			maxAuthenticationFailures = config.get('control_server','max_authentication_failures')
 			if (maxAuthenticationFailures > 0):
 				if not self.service.authFailureCount.has_key(self.request.remoteAddr.host):
 					self.service.authFailureCount[self.request.remoteAddr.host] = 0
