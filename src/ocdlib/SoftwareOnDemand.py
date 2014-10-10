@@ -480,11 +480,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				html.append(u'<div class="swondemand-button-box">')
 				html.append(u'<button class="swondemand-action-button" type="submit" name="action" value="next">&gt; %s</button>' % _(u'next'))
 				html.append(u'</div>')
-				html = mainpage.replace('%result%', u'\n'.join(html))
+				html = mainpage.replace('%result%', u'\n'.join(cgi.escape(html)))
 			else:
 				raise Exception(u"No products found")
 		except Exception, e:
-			html = mainpage.replace('%result%', u'<div class="swondemand-summary-message-box">%s</div>' % e)
+			html = mainpage.replace('%result%', u'<div class="swondemand-summary-message-box">%s</div>' % cgi.escape(e))
 
 		self.disconnectConfigService()
 		result.stream = stream.IByteStream(html.encode('utf-8'))
