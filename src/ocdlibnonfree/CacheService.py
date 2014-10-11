@@ -409,7 +409,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					self._cacheBackend._updateMasterFromWorkBackend(modifications)
 					self._backendTracker.clearModifications()
 					try:
-						instlog = os.path.join(config.get('global', 'log_dir'), u'instlog.txt')
+						instlog = os.path.join(config.get('global', 'log_dir'), u'opsi-script.log')
 						if os.path.isfile(instlog):
 							logger.info(u"Syncing instlog %s" % instlog)
 							f = codecs.open(instlog, 'r', 'utf-8', 'replace')
