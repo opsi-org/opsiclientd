@@ -388,7 +388,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				html = []
 				# sort productIds by productnames
 				productsByProductName = {}
-				sortedProductIds = []
+
 				for productId in self._swOnDemandProductIds:
 					found = False
 					for p in products:
@@ -399,11 +399,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							break
 					if not found:
 						logger.error(u"Product with productId '%s' not found." % (productId))
-				
-				sortedProductName= productsByProductName.keys()
-				sortedProductName.sort(key=str.lower)
-				for name in sortedProductName:
-					sortedProductIds.append(productsByProductName[name].id)
+
+				sortedProductIds = [productsByProductName[name].id for name in
+									sorted(productsByProductName.keys(), key=unicode.lower)]
 
 				for productId in sortedProductIds:
 					html.append(u'<div class="swondemand-product-box"><table>')
