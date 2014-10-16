@@ -410,17 +410,25 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					self._backendTracker.clearModifications()
 					try:
 						instlog = os.path.join(config.get('global', 'log_dir'), u'opsi-script.log')
+						logger.debug(u"Checking if a custom logfile is given in global action_processor section")
+						try:
+							commandParts = config.get('action_processor', 'command').split()
+							if '/logfile' in commandParts:
+								instlog = commandParts[commandParts.index('/logfile') + 1]
+						except Exception as e:
+							pass
+						
 						if os.path.isfile(instlog):
 							logger.info(u"Syncing instlog %s" % instlog)
 							f = codecs.open(instlog, 'r', 'utf-8', 'replace')
 							data = f.read()
 							f.close()
 							self._configService.log_write(u'instlog', data = data, objectId = config.get('global', 'host_id'), append = False)
-					except Exception, e:
+					except Exception as e:
 						logger.error(u"Failed to sync instlog: %s" % e)
 					
 					logger.notice(u"Config synced to server")
-				except Exception, e:
+				except Exception as e:
 					logger.logException(e)
 					timeline.addEvent(
 					title       = u"Failed to sync config to server",
@@ -428,7 +436,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					category    = u"config_sync",
 					isError     = True)
 					raise
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Errors occured while syncing config to server: %s" % e)
 			# Do not sync from server in this case!
 			self._syncConfigFromServerRequested = False

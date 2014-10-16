@@ -1,7 +1,9 @@
 opsiclientd (4.0.82) stable; urgency=low
 
-  * ControlServer: Small fix in Flooding prevention
-  * SoftwareOnDemand: Escaping special characters in HTML-Output
+  * ControlServer: Bugfix in Flooding prevention
+  * SoftwareOnDemand: 
+      Escaping special characters in HTML-Output
+      Bugfix in sort algorithm
   * CacheService: fixing instlogfile sync to server
 
  -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 11 Sep 2014 22:05:04 +0100
