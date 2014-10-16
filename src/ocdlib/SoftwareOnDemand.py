@@ -30,12 +30,11 @@
    @author: Erol Ülükmen <e.ueluekmen@uib.de>
    @license: GNU General Public License version 2
 """
-# Import
-import base64, cgi
+import base64
+import cgi
 from hashlib import md5
 from twisted.conch.ssh import keys
 
-# OPSI imports
 from OPSI.web2 import responsecode, http, stream
 from OPSI.Logger import *
 from OPSI.Types import *
@@ -91,6 +90,7 @@ mainpage = u'''<?xml version="1.0" encoding="UTF-8"?>
 </body>
 </html>
 '''
+
 
 class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 	def __init__(self, service, request, resource):
@@ -489,6 +489,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		self.disconnectConfigService()
 		result.stream = stream.IByteStream(html.encode('utf-8'))
 		return result
+
 
 class ResourceSoftwareOnDemand(ResourceOpsi):
 	WorkerClass = WorkerSoftwareOnDemand
