@@ -392,11 +392,12 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				for productId in self._swOnDemandProductIds:
 					found = False
 					for p in products:
-						if (p.id == productId):
+						if p.id == productId:
 							found = True
-							if not productsByProductName.has_key(p.name):
+							if p.name not in productsByProductName:
 								productsByProductName[p.name] = p
 							break
+
 					if not found:
 						logger.error(u"Product with productId '%s' not found." % (productId))
 
