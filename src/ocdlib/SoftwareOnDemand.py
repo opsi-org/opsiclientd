@@ -451,7 +451,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					description = product.description or u''
 					html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'description'))
 					html.append(u'    <td class="swondemand-product-attribute-value">%s</td></tr>' \
-								% description.replace(u'\n', u'<br />') )
+								% description.replace(u'\n', cgi.escape(u'<br />')) )
 
 					if self._showDetails:
 						html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'state'))
@@ -461,7 +461,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						advice = product.advice or u''
 						html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'advice'))
 						html.append(u'    <td class="swondemand-product-attribute-value">%s</td></tr>' \
-								% advice.replace(u'\n', u'<br />') )
+								% advice.replace(u'\n', cgi.escape(u'<br />')) )
 
 					if (installationStatus == 'installed'):
 						html.append(u'<tr><td colspan="2" class="swondemand-product-setup-radiobox">')
@@ -479,7 +479,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				html.append(u'<div class="swondemand-button-box">')
 				html.append(u'<button class="swondemand-action-button" type="submit" name="action" value="next">&gt; %s</button>' % _(u'next'))
 				html.append(u'</div>')
-				html = mainpage.replace('%result%', cgi.escape(u'\n'.join(html)))
+				html = mainpage.replace('%result%', u'\n'.join(html))
 			else:
 				raise Exception(u"No products found")
 		except Exception, e:
