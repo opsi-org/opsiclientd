@@ -479,7 +479,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				html.append(u'<div class="swondemand-button-box">')
 				html.append(u'<button class="swondemand-action-button" type="submit" name="action" value="next">&gt; %s</button>' % _(u'next'))
 				html.append(u'</div>')
-				html = mainpage.replace('%result%', u'\n'.join(cgi.escape(html)))
+				html = mainpage.replace('%result%', cgi.escape(u'\n'.join(html)))
 			else:
 				raise Exception(u"No products found")
 		except Exception, e:
