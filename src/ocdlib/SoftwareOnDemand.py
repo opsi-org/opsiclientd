@@ -448,7 +448,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 
 					html.append(u'<tr><td colspan="2" class="swondemand-product-name">%s (%s-%s)</td></tr>' \
 							% (product.name, productOnDepot.productVersion, productOnDepot.packageVersion))
-					description = cgi.escape(product.description) or u''
+					description = product.description or u''
 					html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'description'))
 					html.append(u'    <td class="swondemand-product-attribute-value">%s</td></tr>' \
 								% description.replace(u'\n', u'<br />') )
@@ -458,7 +458,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						html.append(u'    <td class="swondemand-product-attribute-value %s">%s</td></tr>' \
 								% (stateclass, state) )
 
-						advice = cgi.escape(product.advice) or u''
+						advice = product.advice or u''
 						html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'advice'))
 						html.append(u'    <td class="swondemand-product-attribute-value">%s</td></tr>' \
 								% advice.replace(u'\n', u'<br />') )
