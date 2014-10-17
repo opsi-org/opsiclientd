@@ -448,20 +448,20 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 
 					html.append(u'<tr><td colspan="2" class="swondemand-product-name">%s (%s-%s)</td></tr>' \
 							% (product.name, productOnDepot.productVersion, productOnDepot.packageVersion))
-					description = product.description or u''
+					description = cgi.escape(product.description) or u''
 					html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'description'))
 					html.append(u'    <td class="swondemand-product-attribute-value">%s</td></tr>' \
-								% description.replace(u'\n', cgi.escape(u'<br />')) )
+								% description.replace(u'\n', u'<br />') )
 
 					if self._showDetails:
 						html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'state'))
 						html.append(u'    <td class="swondemand-product-attribute-value %s">%s</td></tr>' \
 								% (stateclass, state) )
 
-						advice = product.advice or u''
+						advice = cgi.escape(product.advice) or u''
 						html.append(u'<tr><td class="swondemand-product-attribute-name">%s:</td>' % _(u'advice'))
 						html.append(u'    <td class="swondemand-product-attribute-value">%s</td></tr>' \
-								% advice.replace(u'\n', cgi.escape(u'<br />')) )
+								% advice.replace(u'\n', u'<br />') )
 
 					if (installationStatus == 'installed'):
 						html.append(u'<tr><td colspan="2" class="swondemand-product-setup-radiobox">')
