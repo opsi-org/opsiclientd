@@ -24,7 +24,7 @@ stop on runlevel [016]
 
 # Essentially lets upstart know the process will detach itself to the background
 # expect fork  # If process forks once
-# expect daemon  # If process forks twice (enable if running with -D)
+expect daemon  # If process forks twice (enable if running with -D)
 
 # Start the process
-exec opsiclientd -l 7 -t
+exec opsiclientd -D
