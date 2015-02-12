@@ -136,13 +136,13 @@ class WorkerOpsiclientd(WorkerOpsi):
 			if not self.session.password:
 				raise Exception(u"No password from %s (application: %s)" % (self.session.ip, self.session.userAgent))
 
-			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
+			if self.session.user.lower() == config.get('global', 'host_id').lower() and self.session.password == config.get('global', 'opsi_host_key'):
 				return result
+
 			if RUNNING_ON_WINDOWS:
 				try:
 					# Hack to find and read the local-admin group and his members,
 					# that should also Work on french installations
-
 					admingroupsid = "S-1-5-32-544"
 					resume = 0
 					while 1:
