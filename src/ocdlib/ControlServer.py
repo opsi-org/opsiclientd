@@ -178,8 +178,9 @@ class WorkerOpsiclientd(WorkerOpsi):
 						return result
 
 			raise Exception(u"Invalid credentials")
-		except Exception, e:
+		except Exception as e:
 			raise OpsiAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
+
 		return result
 
 
