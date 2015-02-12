@@ -159,7 +159,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 									for member in memberdata:
 										membersid = member.get("sid", "")
 										username, domain, type = win32security.LookupAccountSid(None, membersid)
-										if (self.session.user.lower() == username.lower()):
+										if self.session.user.lower() == username.lower():
 											# The LogonUser function will raise an Exception on logon failure
 											win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
 											# No exception raised => user authenticated
@@ -171,7 +171,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 							break
 				except Exception:
 					# Standardway
-					if (self.session.user.lower() == 'administrator'):
+					if self.session.user.lower() == 'administrator':
 						# The LogonUser function will raise an Exception on logon failure
 						win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
 						# No exception raised => user authenticated
