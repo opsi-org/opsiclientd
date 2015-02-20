@@ -1,3 +1,9 @@
+opsiclientd (4.0.83) stable; urgency=low
+
+  * python-opsi 4.0.5.16-1
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Fri, 20 Feb 2015 10:58:36 +0100
+
 opsiclientd (4.0.82) stable; urgency=low
 
   * ControlServer: Bugfix in Flooding prevention
