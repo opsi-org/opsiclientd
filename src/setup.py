@@ -149,7 +149,7 @@ if RUNS_ON_WINDOWS:
 else:
 	data_files += [
 		(
-			os.path.join('/etc', 'opsi-client-agent', 'opsiclientd'),
+			os.path.join('/etc', 'opsi-client-agent'),
 			[os.path.join('linux', 'opsiclientd.conf')]
 		),
 		(
