@@ -206,10 +206,10 @@ class ConfigImplementation(object):
 				self._config[key].update(defaultToApply[key])
 
 		baseDir = self._getBaseDirectory()
-		self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd', 'opsiclientd.conf')
 		self._config['cache_service']['extension_config_dir'] = os.path.join(baseDir, u'opsiclientd', 'extend.d')
 
 		if RUNNING_ON_WINDOWS:
+			self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd', 'opsiclientd.conf')
 			systemDrive = System.getSystemDrive()
 			logger.debug(
 				'Running on windows: adapting paths to use system drive '
@@ -225,7 +225,7 @@ class ConfigImplementation(object):
 			if sys.getwindowsversion()[0] == 5:
 				self._config['action_processor']['run_as_user'] = 'pcpatch'
 		else:
-			self._config['global']['config_file'] = os.path.join(baseDir, 'opsiclientd', u'opsiclientd.conf')
+			self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd.conf')
 			self._config['global']['log_file'] = os.path.join('/var', 'log', 'opsi', 'opsiclientd.log')
 			self._config['control_server']['static_dir'] = '/etc/opsi-client-agent/opsiclientd/static_html'
 
