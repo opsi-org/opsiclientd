@@ -81,7 +81,7 @@ def getLogFormat(moduleName):
 	Returns a constant logformat for all modules.
 	"""
 	name = u' %-30s' % moduleName
-	return '[%l] [%D] [' + name + u'] %M   (%F|%N)'
+	return u'[%l] [%D] [{name}] %M   (%F|%N)'.format(name=name)
 
 
 class SectionNotFoundException(ValueError):
