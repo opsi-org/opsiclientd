@@ -230,6 +230,13 @@ class ConfigImplementation(object):
 			self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd.conf')
 			self._config['global']['log_file'] = os.path.join('/var', 'log', 'opsi', 'opsiclientd.log')
 
+			if '64' in platform.architecture()[0]:
+				arch = '64'
+			else:
+				arch = '32'
+
+			self._config['action_processor']['remote_dir'] = self._config['action_processor']['remote_dir'].replace('%arch%', arch)
+
 			sslCertDir = os.path.join('/etc', 'opsi-client-agent')
 
 			for certPath in ('ssl_server_key_file', 'ssl_server_cert_file'):
