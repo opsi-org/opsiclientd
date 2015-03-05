@@ -241,7 +241,7 @@ class ConfigImplementation(object):
 			sslCertDir = os.path.join('/etc', 'opsi-client-agent')
 
 			for certPath in ('ssl_server_key_file', 'ssl_server_cert_file'):
-				if not sslCertDir in self._config['control_server'][certPath]:
+				if sslCertDir not in self._config['control_server'][certPath]:
 					self._config['control_server'][certPath] = os.path.join(sslCertDir, self._config['control_server'][certPath])
 
 	def getDict(self):
