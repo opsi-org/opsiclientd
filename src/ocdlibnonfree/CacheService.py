@@ -451,13 +451,36 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			self.setObsolete()
 			if not self._configService:
 				self.connectConfigService()
+				
+			includeProductIds = []
+			excludeProductIds = []
+			excludeProductGroupIds = forceList(config.get('cache_service', 'exclude_product_group_ids').strip().split(","))
+			includeProductGroupIds = forceList(config.get('cache_service', 'include_product_group_ids').strip().split(","))
 			
-			productOnClients = self._configService.productOnClient_getObjects(
+			logger.debug("Given includeProductGroupIds: '%s'" % includeProductGroupIds)
+			logger.debug("Given excludeProductGroupIds: '%s'" % excludeProductGroupIds)
+			
+			if includeProductGroupIds:
+				includeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+							groupType="ProductGroup",
+							groupId=includeProductGroupIds) ]
+				logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
+			
+			elif excludeProductGroupIds:
+				excludeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+							groupType="ProductGroup",
+							groupId=excludeProductGroupIds) ]
+				logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
+			
+			
+			productOnClients = [ poc for poc in self._configService.productOnClient_getObjects(
 				productType   = 'LocalbootProduct',
 				clientId      = config.get('global', 'host_id'),
 				# Exclude 'always'!
 				actionRequest = ['setup', 'uninstall', 'update', 'once', 'custom'],
-				attributes    = ['actionRequest'])
+				attributes    = ['actionRequest'],
+				productId     = includeProductGroupIds) if poc.productId not in excludeProductIds ]
+			
 			logger.info(u"Product on clients: %s" % productOnClients)
 			if not productOnClients:
 				self._state['config_cached'] = True
@@ -717,6 +740,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		try:
 			if not self._configService:
 				self.connectConfigService()
+			if 
 			productIds = []
 			productOnClients = self._configService.productOnClient_getObjects(
 					productType   = 'LocalbootProduct',

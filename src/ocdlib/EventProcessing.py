@@ -622,11 +622,30 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productState['productId'] + ':', productState['actionRequest']))
 			else:
 				if not productIds:
-					for productOnClient in self._configService.productOnClient_getObjects(
+					includeProductGroupIds = self.event.eventConfig.includeProductGroupIds
+					excludeProductGroupIds = self.event.eventConfig.excludeProductGroupIds
+					includeProductIds = []
+					excludeProductIds = []
+					
+					if includeProductGroupIds:
+						includeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+									groupType="ProductGroup",
+									groupId=includeProductGroupIds) ]
+						logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
+					
+					elif excludeProductGroupIds:
+						excludeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+									groupType="ProductGroup",
+									groupId=excludeProductGroupIds) ]
+						logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
+			
+					for productOnClient in [ poc for poc in self._configService.productOnClient_getObjects(
 								productType   = 'LocalbootProduct',
 								clientId      = config.get('global', 'host_id'),
 								actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
-								attributes    = ['actionRequest']):
+								attributes    = ['actionRequest'],
+								productId     = includeProductIds) if poc.productId not in excludeProductIds ]:
+						
 						if not productOnClient.productId in productIds:
 							productIds.append(productOnClient.productId)
 							logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))

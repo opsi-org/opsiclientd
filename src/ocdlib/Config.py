@@ -200,7 +200,7 @@ class ConfigImplementation(object):
 		logger.info(u"Setting config value %s.%s" % (section, option))
 		logger.debug(u"set(%s, %s, %s)" % (section, option, value))
 		
-		if (option.find('command') == -1) and (option.find('productids') == -1) and (value == ''):
+		if (option.find('command') == -1) and (option.find('productids') == -1) and option in ('exclude_product_group_ids', 'include_product_group_ids') and (value == ''):
 			logger.warning(u"Refusing to set empty value for config value '%s' of section '%s'" % (option, section))
 			return
 		
@@ -220,6 +220,9 @@ class ConfigImplementation(object):
 		
 		if option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active', 'sync_time_from_service'):
 			value = forceBool(value)
+		
+		if option in ('exclude_product_group_ids', 'include_product_group_ids'):
+			value = forceList(value)
 		
 		if not self._config.has_key(section):
 			self._config[section] = {}

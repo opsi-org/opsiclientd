@@ -1,3 +1,9 @@
+opsiclientd (4.0.84) UNRELEASED; urgency=medium
+
+  * exclude_product_group_ids and include_product_group_ids added.
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Sat, 07 Feb 2015 01:39:33 +0100
+
 opsiclientd (4.0.82) stable; urgency=low
 
   * ControlServer: Bugfix in Flooding prevention
