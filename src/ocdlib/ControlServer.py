@@ -167,6 +167,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 
 									if memberresume == 0:
 										break
+
 						if not resume:
 							break
 				except Exception:
@@ -453,30 +454,31 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def readLog(self, logType='opsiclientd'):
 		logType = forceUnicode(logType)
-		if not logType in ('opsiclientd'):
+		if logType != 'opsiclientd':
 			raise ValueError(u"Unknown log type '%s'" % logType)
 
 		logger.notice(u"rpc readLog: reading log of type '%s'" % logType)
 
-		if (logType == 'opsiclientd'):
-			f = codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace')
-			data = f.read()
-			f.close()
-			return data
+		if logType == 'opsiclientd':
+			with codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace') as f:
+				return f.read()
 		return u""
 
 	def runCommand(self, command, sessionId=None, desktop=None):
 		command = forceUnicode(command)
 		if not command:
 			raise ValueError("No command given")
+
 		if sessionId:
 			sessionId = forceInt(sessionId)
 		else:
 			sessionId = System.getActiveSessionId(self.opsiclientd._winApiBugCommand)
+
 		if desktop:
 			desktop = forceUnicode(desktop)
 		else:
 			desktop = self.opsiclientd.getCurrentActiveDesktopName()
+
 		logger.notice(u"rpc runCommand: executing command '%s' in session %d on desktop '%s'" % (command, sessionId, desktop))
 		System.runCommandInSession(command=command, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False)
 		return u"command '%s' executed" % command
