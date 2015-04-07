@@ -614,14 +614,14 @@ None otherwise.
 			if mounted:
 				self.umountDepotShare()
 
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Failed to update action processor: %s" % forceUnicode(e))
-
-		if impersonation:
-			try:
-				impersonation.end()
-			except Exception, e:
-				logger.warning(e)
+		finally:
+			if impersonation:
+				try:
+					impersonation.end()
+				except Exception as e:
+					logger.warning(e)
 
 	def processUserLoginActions(self):
 		self.setStatusMessage(_(u"Processing login actions"))
