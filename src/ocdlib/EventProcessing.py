@@ -845,7 +845,6 @@ None otherwise.
 					# TODO: figure out how handling on Linux is done.
 					self.updateActionProcessor()
 
-
 			# Run action processor
 			serviceSession = u'none'
 			try:
@@ -870,15 +869,27 @@ None otherwise.
 			actionProcessorCommand += u' %s' % additionalParams
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 
-			command = u'%global.base_dir%\\action_processor_starter.exe ' \
-				+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
-				+ u'"%global.log_file%" "%global.log_level%" ' \
-				+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
-				+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
-				+ u'"' + unicode(self.getSessionId()) + u'" "' + desktop + '" ' \
-				+ u'"' + actionProcessorCommand + u'" ' + unicode(self.event.eventConfig.actionProcessorTimeout) + ' ' \
-				+ u'"' + actionProcessorUserName + u'" "' + actionProcessorUserPassword + '" ' \
-				+ unicode(createEnvironment).lower()
+			if RUNNING_ON_WINDOWS:
+				# TODO: string building like this is just awful. Improve it!
+				command = u'%global.base_dir%\\action_processor_starter.exe ' \
+					+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
+					+ u'"%global.log_file%" "%global.log_level%" ' \
+					+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
+					+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
+					+ u'"' + unicode(self.getSessionId()) + u'" "' + desktop + '" ' \
+					+ u'"' + actionProcessorCommand + u'" ' + unicode(self.event.eventConfig.actionProcessorTimeout) + ' ' \
+					+ u'"' + actionProcessorUserName + u'" "' + actionProcessorUserPassword + '" ' \
+					+ unicode(createEnvironment).lower()
+			else:
+				try:
+					oss = System.which('opsiscriptstarter')
+				except Exception:
+					logger.warning(
+						u"Failed to find executable for 'opsiscriptstarter'. "
+						u"Using fallback.")
+					oss = '/usr/bin/opsiscriptstarter'
+
+				command = "{oss} --nogui".format(oss)
 
 			command = config.replace(command)
 
