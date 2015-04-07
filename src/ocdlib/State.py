@@ -56,29 +56,26 @@ class StateImplementation(object):
 		self.set('shutdown_cancel_counter', 0)
 
 	def _readStateFile(self):
-		self._stateLock.acquire()
-		try:
-			if os.path.exists(self._stateFile):
-				f = codecs.open(self._stateFile, 'r', 'utf8')
-				jsonstr = f.read()
-				f.close()
-				self._state = json.loads(jsonstr)
-		except Exception, e:
-			logger.error(u"Failed to read state file '%s': %s" % (self._stateFile, e))
-		self._stateLock.release()
+		with self._stateLock:
+			try:
+				if os.path.exists(self._stateFile):
+					with codecs.open(self._stateFile, 'r', 'utf8') as stateFile:
+						jsonstr = stateFile.read()
+
+					self._state = json.loads(jsonstr)
+			except Exception, e:
+				logger.error(u"Failed to read state file '%s': %s" % (self._stateFile, e))
 
 	def _writeStateFile(self):
-		self._stateLock.acquire()
-		try:
-			jsonstr = json.dumps(self._state)
-			if not os.path.exists(os.path.dirname(self._stateFile)):
-				os.makedirs(os.path.dirname(self._stateFile))
-			f = codecs.open(self._stateFile, 'w', 'utf8')
-			f.write(jsonstr)
-			f.close()
-		except Exception, e:
-			logger.error(u"Failed to write state file '%s': %s" % (self._stateFile, e))
-		self._stateLock.release()
+		with self._stateLock:
+			try:
+				if not os.path.exists(os.path.dirname(self._stateFile)):
+					os.makedirs(os.path.dirname(self._stateFile))
+
+				with codecs.open(self._stateFile, 'w', 'utf8') as stateFile:
+					stateFile.write(json.dumps(self._state))
+			except Exception, e:
+				logger.error(u"Failed to write state file '%s': %s" % (self._stateFile, e))
 
 	def get(self, name, default=None):
 		name = forceUnicode(name)
