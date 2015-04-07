@@ -889,7 +889,7 @@ None otherwise.
 						u"Using fallback.")
 					oss = '/usr/bin/opsiscriptstarter'
 
-				command = "{oss} --nogui".format(oss)
+				command = "{oss} --nogui".format(oss=oss)
 
 			command = config.replace(command)
 
