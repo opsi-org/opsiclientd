@@ -475,12 +475,17 @@ None otherwise.
 		try:
 			mounted = False
 			if not config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
-				# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
-				# The new logon session has the same local identifier but uses different credentials for other network connections.
-				(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
-				impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
-				impersonation.start(logonType = 'NEW_CREDENTIALS')
-				self.mountDepotShare(impersonation)
+				if RUNNING_ON_WINDOWS:
+					logger.debug("Mounting with impersonation.")
+					# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
+					# The new logon session has the same local identifier but uses different credentials for other network connections.
+					(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
+					impersonation = System.Impersonate(username=depotServerUsername, password=depotServerPassword)
+					impersonation.start(logonType='NEW_CREDENTIALS')
+					self.mountDepotShare(impersonation)
+				else:
+					logger.debug("Not on windows: mounting without impersonation.")
+					self.mountDepotShare(None)
 				mounted = True
 
 			actionProcessorFilename = config.get('action_processor', 'filename')
