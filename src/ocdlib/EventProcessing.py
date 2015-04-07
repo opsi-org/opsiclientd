@@ -838,7 +838,13 @@ None otherwise.
 
 			# Update action processor
 			if self.event.eventConfig.updateActionProcessor:
-				self.updateActionProcessor()
+				if RUNNING_ON_WINDOWS:
+					# Currently we do the updating of the action
+					# processor on Windows. For Linux we yet have to decide
+					# how we want to handle this process.
+					# TODO: figure out how handling on Linux is done.
+					self.updateActionProcessor()
+
 
 			# Run action processor
 			serviceSession = u'none'
