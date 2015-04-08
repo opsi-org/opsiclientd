@@ -12,7 +12,7 @@ class ExceptionsTestCase(unittest.TestCase):
 		self.assertTrue(OpsiclientdError.ExceptionShortDescription in repr(error))
 
 		errorWithMessage = OpsiclientdError("Something failed.")
-		self.assertFalse(OpsiclientdError.ExceptionShortDescription in repr(errorWithMessage))
+		self.assertTrue(OpsiclientdError.ExceptionShortDescription in repr(errorWithMessage))
 		self.assertTrue("Something failed." in repr(errorWithMessage))
 
 
