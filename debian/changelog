@@ -1,13 +1,15 @@
 opsiclientd (4.0.84) UNRELEASED; urgency=medium
 
   * exclude_product_group_ids and include_product_group_ids added.
+  * Putting quotation marks around the action_processor_starter.exe to
+    avoid unwanted behaviour.
 
  -- Erol Ueluekmen <e.ueluekmen@uib.de>  Sat, 07 Feb 2015 01:39:33 +0100
 
 opsiclientd (4.0.82) stable; urgency=low
 
   * ControlServer: Bugfix in Flooding prevention
-  * SoftwareOnDemand: 
+  * SoftwareOnDemand:
       Escaping special characters in HTML-Output
       Bugfix in sort algorithm
   * CacheService: fixing instlogfile sync to server

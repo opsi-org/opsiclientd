@@ -782,24 +782,24 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					serviceSession = u'none'
 			except:
 				pass
-			
+
 			actionProcessorUserName = u''
 			actionProcessorUserPassword = u''
 			if not self.isLoginEvent:
 				actionProcessorUserName = self.opsiclientd._actionProcessorUserName
 				actionProcessorUserPassword = self.opsiclientd._actionProcessorUserPassword
-			
+
 			createEnvironment = config.get('action_processor', 'create_environment')
-			
-			
+
+
 			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
 			actionProcessorCommand = actionProcessorCommand.replace('%service_url%', self._configServiceUrl)
 			actionProcessorCommand = actionProcessorCommand.replace('%service_session%', serviceSession)
 			actionProcessorCommand = actionProcessorCommand.replace('%action_processor_productids%', ",".join(self.event.eventConfig.actionProcessorProductIds))
 			actionProcessorCommand += u' %s' % additionalParams
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
-			
-			command = u'%global.base_dir%\\action_processor_starter.exe ' \
+
+			command = u'"%global.base_dir%\\action_processor_starter.exe" ' \
 				+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
 				+ u'"%global.log_file%" "%global.log_level%" ' \
 				+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
