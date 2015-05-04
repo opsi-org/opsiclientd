@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+
 import glob
 import os
 import shutil
@@ -86,7 +88,7 @@ if os.path.exists("ocdlibnonfree") and not buildFreeVersion:
 else:
 	excludes.append("ocdlibnonfree")
 
-print "Building %s (Version %s)" % (opsiclientdDescription, opsiClientDeamonVersion)
+print("Building %s (Version %s)" % (opsiclientdDescription, opsiClientDeamonVersion))
 
 
 def get_locales_target_and_source():
@@ -250,6 +252,6 @@ if os.path.exists(locale_path):
 if RUNS_ON_WINDOWS:
 	os.unlink(os.path.join("dist", "w9xpopen.exe"))
 
-	print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-	print "!!!   On the target machine always replace exe AND lib   !!!"
-	print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+	print("!!!   On the target machine always replace exe AND lib   !!!")
+	print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
