@@ -79,7 +79,7 @@ class StateImplementation(object):
 
 	def get(self, name, default=None):
 		name = forceUnicode(name)
-		if (name == 'user_logged_in'):
+		if name == 'user_logged_in':
 			if RUNNING_ON_WINDOWS:
 				return bool(System.getActiveSessionIds(self._winApiBugCommand))
 			else:
