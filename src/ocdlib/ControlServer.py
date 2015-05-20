@@ -8,7 +8,7 @@ remote procedure calls
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
-Copyright (C) 2010 uib GmbH
+Copyright (C) 2010-2015 uib GmbH
 
 http://www.uib.de/
 
@@ -37,8 +37,12 @@ import re
 import threading
 import time
 
+import tornado.platform.twisted
+tornado.platform.twisted.install()  # Has to be above the reactor import.
 from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
+from tornado.ioloop import IOLoop
+
 from OPSI.web2 import resource, stream, server, http, responsecode
 from OPSI.web2.channel.http import HTTPFactory
 
@@ -364,7 +368,7 @@ class ControlServer(OpsiService, threading.Thread):
 
 			if not reactor.running:
 				logger.debug(u"Reactor is not running. Starting.")
-				reactor.run(installSignalHandlers=0)
+				IOLoop.current().start()
 				logger.debug(u"Reactor run ended.")
 			else:
 				logger.debug(u"Reactor already running.")

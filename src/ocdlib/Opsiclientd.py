@@ -38,8 +38,6 @@ import os
 import sys
 from contextlib import contextmanager
 
-from twisted.internet import reactor
-
 from OPSI.Logger import Logger
 from OPSI.Types import forceUnicode, forceInt
 from OPSI.Util import randomString
@@ -53,6 +51,11 @@ from ocdlib.Events import *
 from ocdlib.Localization import _, setLocaleDir
 from ocdlib.Timeline import Timeline
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
+
+# This is at the end to make sure that the tornado-bridge for twisted
+# is installed once we reach this.
+from twisted.internet import reactor
+from tornado.ioloop import IOLoop
 
 
 try:
@@ -429,6 +432,12 @@ class Opsiclientd(EventListener, threading.Thread):
 				else:
 					logger.debug("Reactor still running after {0} seconds.".format(reactorStopTimeout))
 					logger.debug("Exiting anyway.")
+
+			logger.info(u"Stopping tornado IOLoop")
+			try:
+				IOLoop.current().stop()
+			except Exception as error:
+				logger.debug(u"Stopping IOLoop failed: {0}".format(error))
 
 			logger.info(u"Exiting opsiclientd thread")
 
