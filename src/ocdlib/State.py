@@ -5,7 +5,7 @@ ocdlib.State
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
-Copyright (C) 2011 uib GmbH
+Copyright (C) 2011-2015 uib GmbH
 
 http://www.uib.de/
 
@@ -91,7 +91,7 @@ class StateImplementation(object):
 			return self._state.get('product_cache_service', {}).get('products_cached', default)
 		if (name == 'config_cached'):
 			return self._state.get('config_cache_service', {}).get('config_cached', default)
-		if (name.find("cancel_counter") != -1):
+		if "cancel_counter" in name:
 			return self._state.get(name, 0)
 		if (name == 'installation_pending'):
 			return forceBool(self._state.get('installation_pending', False))
