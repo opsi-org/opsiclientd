@@ -13,9 +13,7 @@ buildOptions = {
         "csv",
     ],
     "excludes": [],
-    "include_files": [
-        ("/usr/lib/x86_64-linux-gnu/librsync.so.1", "librsync.so.1"), # TODO: make this dynamic
-    ],
+    "include_files": [],
     "compressed": True,
 }
 
@@ -32,6 +30,15 @@ with open(fileWithVersion, 'r') as f:
 
 if not opsiClientDeamonVersion:
     raise Exception("Failed to find version.")
+
+
+if os.path.exists("/usr/lib/x86_64-linux-gnu/librsync.so.1"):
+    buildOptions['include_files'].append(("/usr/lib/x86_64-linux-gnu/librsync.so.1", "librsync.so.1"))
+elif os.path.exists("/usr/lib/librsync.so.1"):
+    buildOptions['include_files'].append(("/usr/lib/librsync.so.1", "librsync.so.1"))
+else:
+    print("Warning: could not find librsync.so.1!")
+
 
 buildFreeVersion = False
 if '--free' in sys.argv:
