@@ -6,7 +6,7 @@ ocdlib.Posix
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
-Copyright (C) 2010 uib GmbH
+Copyright (C) 2010-2015 uib GmbH
 
 http://www.uib.de/
 
@@ -32,7 +32,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 """
 from __future__ import unicode_literals
 
-import getopt
 import os
 import sys
 import time
@@ -44,6 +43,11 @@ from OPSI.Types import forceUnicode
 from ocdlib import __version__
 from ocdlib.Opsiclientd import Opsiclientd
 
+try:
+	import argparse
+except ImportError:
+	from OPSI.Util import argparse
+
 logger = Logger()
 
 
@@ -54,30 +58,22 @@ class OpsiclientdPosix(Opsiclientd):
 class OpsiclientdInit(object):
 	def __init__(self):
 		logger.debug(u"OpsiclientdPosixInit")
-		argv = sys.argv[1:]
 
-		# Process command line arguments
-		try:
-			(opts, args) = getopt.getopt(argv, "vtDl:")
-		except getopt.GetoptError:
-			self.usage()
-			sys.exit(1)
+		parser = argparse.ArgumentParser()
+		parser.add_argument("-v", action='version', version=__version__)
+		parser.add_argument("-l", "--log-level", dest="logLevel",
+							default=LOG_NOTICE,
+							help="Set the log-level.")
+		parser.add_argument("-t", "--test-mode", dest="testMode",
+							action="store_true", default=False,
+							help="Testmode: Do no register signal handlers.")
+		parser.add_argument("-D", "--daemon", dest="daemon",
+							action="store_true", default=False,
+							help="Daemonize process.")
 
-		daemon = False
-		testMode = False
-		logLevel = LOG_NOTICE
-		for (opt, arg) in opts:
-			if opt == "-v":
-				print(u"opsiclientd version %s" % __version__)
-				sys.exit(0)
-			elif opt == "-D":
-				daemon = True
-			elif opt == "-l":
-				logLevel = int(arg)
-			elif opt == '-t':
-				testMode = True
+		options = parser.parse_args()
 
-		if not testMode:
+		if not options.testMode:
 			# Call signalHandler on signal SIGHUP, SIGTERM, SIGINT
 			signal(SIGHUP, self.signalHandler)
 			signal(SIGTERM, self.signalHandler)
@@ -85,11 +81,11 @@ class OpsiclientdInit(object):
 		else:
 			logger.notice(u'Running in test mode!')
 
-		if daemon:
+		if options.daemon:
 			logger.setConsoleLevel(LOG_NONE)
 			self.daemonize()
 		else:
-			logger.setConsoleLevel(logLevel)
+			logger.setConsoleLevel(options.logLevel)
 
 		# Start opsiclientd
 		self._opsiclientd = OpsiclientdPosix()
