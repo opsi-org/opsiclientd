@@ -11,6 +11,7 @@ buildOptions = {
         "ocdlib",
         "apsw",
         "csv",
+        "encodings",
     ],
     "excludes": [],
     "include_files": [],
