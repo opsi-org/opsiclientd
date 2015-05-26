@@ -8,6 +8,7 @@ from cx_Freeze import setup, Executable
 buildOptions = {
     "packages": [
         "OPSI",
+        "OPSI.web2.dav.method",
         "ocdlib",
         "apsw",
         "csv",
