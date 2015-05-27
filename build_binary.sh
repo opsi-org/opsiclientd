@@ -8,4 +8,6 @@ if [ -e opsiclientd ]; then
 	rm -rf opsiclientd/
 fi
 mv exe.* opsiclientd
-tar -czvvf opsiclientd.tar.gz opsiclientd/
+cd opsiclientd
+tar -czvvf ../opsiclientd.tar.gz *
+echo "Build completed."
