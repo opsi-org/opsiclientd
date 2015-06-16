@@ -740,7 +740,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		try:
 			if not self._configService:
 				self.connectConfigService()
-			if 
+
 			productIds = []
 			productOnClients = self._configService.productOnClient_getObjects(
 					productType   = 'LocalbootProduct',
