@@ -1,5 +1,8 @@
 #! /bin/bash
 
+# Every error leads to a fail
+set -e
+
 cd src/
 python setup-cx-freeze.py build
 cd build/
