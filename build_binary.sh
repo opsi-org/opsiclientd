@@ -27,3 +27,4 @@ mv exe.* opsiclientd
 cd opsiclientd
 tar -czvvf ../opsiclientd.tar.gz *
 echo "Build completed."
+echo "File: $(pwd)/opsiclientd.tar.gz"
