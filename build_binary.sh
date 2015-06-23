@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/bash -e
 
 # This file is part of opsiclientd.
 # Copyright (C) 2013 uib GmbH <info@uib.de>
@@ -15,9 +15,6 @@
 
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-# Every error leads to a fail
-set -e
 
 cd src/
 python setup-cx-freeze.py build
