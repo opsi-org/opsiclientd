@@ -43,6 +43,10 @@ elif os.path.exists("/usr/lib64/librsync.so.1"):
 else:
     print("Warning: could not find librsync.so.1!")
 
+if os.path.exists('/usr/lib64/librsync.so.1.0.2'):
+    buildOptions['include_files'].append(("/usr/lib64/librsync.so.1.0.2", "librsync.so.1.0.2"))
+elif os.path.exists('/usr/lib/librsync.so.1.0.2'):
+    buildOptions['include_files'].append(("/usr/lib/librsync.so.1.0.2", "librsync.so.1.0.2"))
 
 buildFreeVersion = False
 if '--free' in sys.argv:
