@@ -43,7 +43,16 @@ buildOptions = {
         "twisted",
         "zope.interface",  # required by twisted
     ],
-    "excludes": ["tkinter"],
+    "excludes": [
+        "Tkconstants",
+        "Tkinter",
+        "tcl",
+        "_imagingtk",
+        "PIL._imagingtk",
+        "ImageTk",
+        "PIL.ImageTk",
+        "FixTk"
+    ],
     "include_files": [],
     "compressed": True,
     "copy_dependent_files": True,
