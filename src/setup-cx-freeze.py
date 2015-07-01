@@ -41,6 +41,9 @@ buildOptions = {
         "apsw",
         "csv",
         "encodings",
+        "duplicity",
+        "twisted",
+        "zope.interface",  # required by twisted
     ],
     "excludes": [],
     "include_files": [],
