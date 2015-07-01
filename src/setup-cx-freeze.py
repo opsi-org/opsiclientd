@@ -43,7 +43,7 @@ buildOptions = {
         "twisted",
         "zope.interface",  # required by twisted
     ],
-    "excludes": [],
+    "excludes": ["tkinter"],
     "include_files": [],
     "compressed": True,
     "copy_dependent_files": True,
