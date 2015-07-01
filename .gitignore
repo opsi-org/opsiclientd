@@ -4,3 +4,6 @@
 .project
 .pydevproject
 *.egg-info
+
+# Created during build
+opsiclientd.tar.gz
