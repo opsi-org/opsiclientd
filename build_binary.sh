@@ -1,7 +1,7 @@
 #! /bin/bash -e
 
 # This file is part of opsiclientd.
-# Copyright (C) 2013 uib GmbH <info@uib.de>
+# Copyright (C) 2015 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
