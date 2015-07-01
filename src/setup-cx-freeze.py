@@ -48,8 +48,11 @@ buildOptions = {
     "excludes": [],
     "include_files": [],
     "compressed": True,
+    "copy_dependent_files": True,
+    "namespace_packages": [
+        'zope',
+    ]
 }
-
 
 localDirectory = os.path.dirname(__file__)
 
