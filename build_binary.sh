@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+currentPath=$(pwd)
 cd src/
 python setup-cx-freeze.py build
 cd build/
@@ -26,5 +27,6 @@ fi
 mv exe.* opsiclientd
 cd opsiclientd
 tar -czvvf ../opsiclientd.tar.gz *
+mv ../opsiclientd.tar.gz "$currentPath"
 echo "Build completed."
-echo "File: $(pwd)/opsiclientd.tar.gz"
+echo "File: $currentPath/opsiclientd.tar.gz"
