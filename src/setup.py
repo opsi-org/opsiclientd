@@ -1,15 +1,13 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
-
 import glob
 import os
 import shutil
 import sys
 from distutils.core import setup
 
-from .setuplib import getVersion
+from setuplib import getVersion
 
 RUNS_ON_WINDOWS = (sys.platform == 'nt')
 

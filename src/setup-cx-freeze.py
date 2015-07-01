@@ -23,15 +23,13 @@ Setup script for freezing the opsiclientd with cx_Freeze.
 :license: GNU Affero General Public License version 3
 """
 
-from __future__ import absolute_import
-
 import os
 import sys
 
 import duplicity
 from cx_Freeze import setup, Executable
 
-from .setuplib import getVersion
+from setuplib import getVersion
 
 buildOptions = {
     "packages": [
