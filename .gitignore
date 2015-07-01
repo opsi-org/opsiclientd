@@ -7,3 +7,4 @@
 
 # Created during build
 opsiclientd.tar.gz
+src/build/*
