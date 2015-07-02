@@ -5,7 +5,7 @@ import unittest
 from context import SystemCheck as syscheck
 
 
-class Test(unittest.TestCase):
+class RunningOnWindowsTest(unittest.TestCase):
     def test_system_determining(self):
         if os.name == 'nt':
             self.assertTrue(syscheck.RUNNING_ON_WINDOWS)
