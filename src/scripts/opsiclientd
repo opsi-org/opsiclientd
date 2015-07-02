@@ -6,7 +6,7 @@ opsi client daemon (opsiclientd)
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
-Copyright (C) 2010 uib GmbH
+Copyright (C) 2010-2015 uib GmbH
 
 http://www.uib.de/
 
@@ -27,6 +27,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 @copyright:	uib GmbH <info@uib.de>
 @author: Jan Schneider <j.schneider@uib.de>
+@author: Niko Wenselowski <n.wenselowski@uib.de>
 @license: GNU General Public License version 2
 """
 import os
@@ -50,8 +51,6 @@ if (__name__ == "__main__"):
 
 	try:
 		OpsiclientdInit()
-	except SystemExit:
-		pass
 	except Exception as exception:
 		logger.logException(exception)
 		print >> sys.stderr, u"ERROR:", unicode(exception)
