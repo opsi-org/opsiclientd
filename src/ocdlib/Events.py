@@ -177,8 +177,15 @@ if RUNNING_ON_WINDOWS:
 		pass
 else:
 	# On $NotWindows wo do not want to depend on WMI
-	class CustomEventConfig(EventConfig):
-		pass
+	try:
+		from ocdlibnonfree.Events import CustomEventConfig
+	except ImportError as error:
+		logger.critical(
+			u"Unable to import from ocdlibnonfree."
+			u"Is this the full version?"
+		)
+		raise error
+
 
 
 
