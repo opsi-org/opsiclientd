@@ -55,7 +55,6 @@ buildOptions = {
     ],
     "include_files": [],
     "compressed": True,
-    "copy_dependent_files": True,
     "namespace_packages": [
         'zope',
     ]
