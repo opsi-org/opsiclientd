@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import glob
@@ -6,6 +7,7 @@ import shutil
 import sys
 from distutils.core import setup
 
+from setuplib import getVersion
 
 RUNS_ON_WINDOWS = (sys.platform == 'nt')
 
@@ -27,17 +29,7 @@ if RUNS_ON_WINDOWS and len(sys.argv) == 1:
 	sys.argv.append("-q")
 
 localDirectory = os.path.dirname(__file__)
-
-opsiClientDeamonVersion = None
-fileWithVersion = os.path.join(localDirectory, 'ocdlib', '__init__.py')
-with open(fileWithVersion, 'r') as f:
-	for line in f:
-		if "__version__" in line:
-			opsiClientDeamonVersion = line.split('=', 1)[1].strip()[1:-1]
-			break
-
-if opsiClientDeamonVersion is None:
-	raise Exception("Failed to find version.")
+opsiClientDeamonVersion = getVersion()
 
 
 def tree(dst, src):
