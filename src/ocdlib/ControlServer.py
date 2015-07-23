@@ -370,9 +370,10 @@ class ControlServer(OpsiService, threading.Thread):
 		except Exception as err:
 			logger.warning('ControlServer {1} caught error: {0}'.format(err, repr(self)))
 			logger.logException(err)
-
-		logger.notice(u"Control server exiting")
-		self._running = False
+			raise err
+		finally:
+			logger.notice(u"Control server exiting")
+			self._running = False
 
 	def stop(self):
 		if self._server:
