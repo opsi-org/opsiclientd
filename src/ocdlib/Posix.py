@@ -37,7 +37,7 @@ import sys
 import time
 from signal import signal, SIGHUP, SIGTERM, SIGINT
 
-from OPSI.Logger import Logger, LOG_NONE, LOG_NOTICE
+from OPSI.Logger import Logger, LOG_NONE, LOG_NOTICE, LOG_WARNING
 from OPSI.Types import forceUnicode
 
 from ocdlib import __version__
@@ -51,8 +51,14 @@ except ImportError:
 logger = Logger()
 
 
-class OpsiclientdPosix(Opsiclientd):
-	pass
+try:
+    from ocdlibnonfree.Posix import OpsiclientdPosix
+except ImportError:
+    logger.setConsoleLevel(LOG_WARNING)
+    logger.warning("Import of OpsiclientdPosix failed.")
+
+    class OpsiclientdPosix(Opsiclientd):
+	    pass
 
 
 class OpsiclientdInit(object):
