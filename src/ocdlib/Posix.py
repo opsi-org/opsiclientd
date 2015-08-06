@@ -99,19 +99,6 @@ class OpsiclientdInit(object):
 		elif signo == SIGTERM or signo == SIGINT:
 			self._opsiclientd.stop()
 
-	@staticmethod
-	def usage():
-		"""
-		Print the usage.
-		"""
-		print u"\nUsage: %s [-v] [-D]" % os.path.basename(sys.argv[0])
-		print u"Options:"
-		print u"  -v    Show version information and exit"
-		print u"  -D    Causes the server to operate as a daemon"
-		print u"  -l    Set log level (default: 4)"
-		print u"        0=nothing, 1=critical, 2=error, 3=warning, 4=notice, 5=info, 6=debug, 7=debug2, 9=confidential"
-		print u""
-
 	def daemonize(self):
 		"""
 		Running as a daemon.
