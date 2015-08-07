@@ -23,6 +23,9 @@ opsiclientd - Event configuration.
 :author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
+from OPSI.Logger import Logger
+
+logger = Logger()
 
 
 class EventConfig(object):
