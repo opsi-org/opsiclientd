@@ -10,7 +10,8 @@ from ocdlib.EventConfiguration import EventConfig
 
 class EventConfigTestCase(unittest.TestCase):
     def testCreatingNewEventConfig(self):
-        config = EventConfig()
+        config = EventConfig("testevent")
+
 
 if __name__ == '__main__':
     unittest.main()
