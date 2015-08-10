@@ -103,9 +103,10 @@ class EventConfig(object):
 
 	def getConfig(self):
 		config = {}
-		for (k, v) in self.__dict__.items():
-			if not k.startswith('_'):
-				config[k] = v
+		for key, value in self.__dict__.items():
+			if not key.startswith('_'):
+				config[key] = value
+
 		return config
 
 	def __unicode__(self):
