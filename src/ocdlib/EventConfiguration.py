@@ -32,6 +32,11 @@ from OPSI.Logger import Logger
 logger = Logger()
 
 
+def toUnderscore(value):
+	s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', value)
+	return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+
 class EventConfig(object):
 	def __init__(self, eventId, **kwargs):
 		if not eventId:
@@ -119,36 +124,36 @@ class EventConfig(object):
 
 	def getActionMessage(self):
 		message = self.actionMessage
-		def toUnderscore(value):
-			s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', value)
-			return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
 		for (key, value) in self.__dict__.items():
 			if (key.lower().find('message') != -1):
 				continue
 			message = message.replace('%' + key + '%', unicode(value))
 			message = message.replace('%' + toUnderscore(key) + '%', unicode(value))
+
 		while True:
 			match = re.search('(%state.[^%]+%)', message)
 			if not match:
 				break
 			name = match.group(1).replace('%state.', '')[:-1]
 			message = message.replace(match.group(1), forceUnicode(state.get(name)))
+
 		return message
 
 	def getShutdownWarningMessage(self):
 		message = self.shutdownWarningMessage
-		def toUnderscore(value):
-			s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', value)
-			return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
 		for (key, value) in self.__dict__.items():
 			if (key.lower().find('message') != -1):
 				continue
 			message = message.replace('%' + key + '%', unicode(value))
 			message = message.replace('%' + toUnderscore(key) + '%', unicode(value))
+
 		while True:
 			match = re.search('(%state.[^%]+%)', message)
 			if not match:
 				break
 			name = match.group(1).replace('%state.', '')[:-1]
 			message = message.replace(match.group(1), forceUnicode(state.get(name)))
+
 		return message
