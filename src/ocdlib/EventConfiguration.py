@@ -25,9 +25,12 @@ opsiclientd - Event configuration.
 """
 from __future__ import absolute_import
 
+import re
+
 from .Config import getLogFormat
 
 from OPSI.Logger import Logger
+from OPSI.Types import forceUnicode
 
 logger = Logger()
 
