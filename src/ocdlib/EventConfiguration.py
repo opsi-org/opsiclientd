@@ -126,7 +126,7 @@ class EventConfig(object):
 		message = self.actionMessage
 
 		for key, value in self.__dict__.items():
-			if (key.lower().find('message') != -1):
+			if 'message' in key.lower():
 				continue
 			message = message.replace('%' + key + '%', unicode(value))
 			message = message.replace('%' + toUnderscore(key) + '%', unicode(value))
@@ -144,7 +144,7 @@ class EventConfig(object):
 		message = self.shutdownWarningMessage
 
 		for key, value in self.__dict__.items():
-			if (key.lower().find('message') != -1):
+			if 'message' in key.lower():
 				continue
 			message = message.replace('%' + key + '%', unicode(value))
 			message = message.replace('%' + toUnderscore(key) + '%', unicode(value))
