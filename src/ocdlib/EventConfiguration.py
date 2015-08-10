@@ -131,8 +131,9 @@ class EventConfig(object):
 		for key, value in self.__dict__.items():
 			if 'message' in key.lower():
 				continue
-			message = message.replace('%' + key + '%', unicode(value))
-			message = message.replace('%' + toUnderscore(key) + '%', unicode(value))
+
+			message = message.replace('%{0}%'.format(key), unicode(value))
+			message = message.replace('%{0}%'.format(toUnderscore(key)), unicode(value))
 
 		while True:
 			match = re.search('(%state.[^%]+%)', message)
