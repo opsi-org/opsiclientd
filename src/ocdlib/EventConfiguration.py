@@ -125,7 +125,7 @@ class EventConfig(object):
 	def getActionMessage(self):
 		message = self.actionMessage
 
-		for (key, value) in self.__dict__.items():
+		for key, value in self.__dict__.items():
 			if (key.lower().find('message') != -1):
 				continue
 			message = message.replace('%' + key + '%', unicode(value))
@@ -143,7 +143,7 @@ class EventConfig(object):
 	def getShutdownWarningMessage(self):
 		message = self.shutdownWarningMessage
 
-		for (key, value) in self.__dict__.items():
+		for key, value in self.__dict__.items():
 			if (key.lower().find('message') != -1):
 				continue
 			message = message.replace('%' + key + '%', unicode(value))
