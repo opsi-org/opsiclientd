@@ -123,26 +123,12 @@ class EventConfig(object):
 		return self.name
 
 	def getActionMessage(self):
-		message = self.actionMessage
-
-		for key, value in self.__dict__.items():
-			if 'message' in key.lower():
-				continue
-			message = message.replace('%' + key + '%', unicode(value))
-			message = message.replace('%' + toUnderscore(key) + '%', unicode(value))
-
-		while True:
-			match = re.search('(%state.[^%]+%)', message)
-			if not match:
-				break
-			name = match.group(1).replace('%state.', '')[:-1]
-			message = message.replace(match.group(1), forceUnicode(state.get(name)))
-
-		return message
+		return self._replacePlaceholdersInMessage(self.actionMessage)
 
 	def getShutdownWarningMessage(self):
-		message = self.shutdownWarningMessage
+		return self._replacePlaceholdersInMessage(self.shutdownWarningMessage)
 
+	def _replacePlaceholdersInMessage(self, message):
 		for key, value in self.__dict__.items():
 			if 'message' in key.lower():
 				continue
