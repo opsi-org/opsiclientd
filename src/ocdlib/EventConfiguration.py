@@ -32,11 +32,6 @@ from OPSI.Logger import Logger
 logger = Logger()
 
 
-def toUnderscore(value):
-	s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', value)
-	return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
-
-
 class EventConfig(object):
 	def __init__(self, eventId, **kwargs):
 		if not eventId:
@@ -129,6 +124,10 @@ class EventConfig(object):
 		return self._replacePlaceholdersInMessage(self.shutdownWarningMessage)
 
 	def _replacePlaceholdersInMessage(self, message):
+		def toUnderscore(value):
+			s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', value)
+			return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
 		for key, value in self.__dict__.items():
 			if 'message' in key.lower():
 				continue
