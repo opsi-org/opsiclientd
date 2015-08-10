@@ -33,6 +33,7 @@ logger = Logger()
 
 
 class EventConfig(object):
+
 	def __init__(self, eventId, **kwargs):
 		if not eventId:
 			raise TypeError(u"Event id not given")
@@ -44,64 +45,63 @@ class EventConfig(object):
 		)
 		self.setConfig(kwargs)
 
+	def setConfig(self, conf):
+		self.name = unicode(conf.get('name', self._id.split('{')[0))
+		self.preconditions = dict(conf.get('preconditions', {}))
+		self.actionMessage = unicode(conf.get('actionMessage', ''))
+		self.maxRepetitions = int(conf.get('maxRepetitions', -1))
+		# wait <activationDelay> seconds before event gets active
+		self.activationDelay = int(conf.get('activationDelay', 0))
+		# wait <notificationDelay> seconds before event is fired
+		self.notificationDelay = int(conf.get('notificationDelay', 0))
+		self.interval = int(conf.get('interval', -1))
+		self.actionWarningTime = int(conf.get('actionWarningTime', 0))
+		self.actionUserCancelable = int(conf.get('actionUserCancelable', 0))
+		self.shutdown = bool(conf.get('shutdown', False))
+		self.reboot = bool(conf.get('reboot', False))
+		self.shutdownWarningMessage = unicode(conf.get('shutdownWarningMessage', ''))
+		self.shutdownWarningTime = int(conf.get('shutdownWarningTime', 0))
+		self.shutdownWarningRepetitionTime = int(conf.get('shutdownWarningRepetitionTime', 3600))
+		self.shutdownUserCancelable = int(conf.get('shutdownUserCancelable', 0))
+		self.shutdownCancelCounter = int(conf.get('shutdownCancelCounter', 0))
+		self.blockLogin = bool(conf.get('blockLogin', False))
+		self.logoffCurrentUser = bool(conf.get('logoffCurrentUser', False))
+		self.lockWorkstation = bool(conf.get('lockWorkstation', False))
+		self.processShutdownRequests = bool(conf.get('processShutdownRequests', True))
+		self.getConfigFromService = bool(conf.get('getConfigFromService', True))
+		self.updateConfigFile = bool(conf.get('updateConfigFile', True))
+		self.writeLogToService = bool(conf.get('writeLogToService', True))
+		self.updateActionProcessor = bool(conf.get('updateActionProcessor', True))
+		self.actionType = unicode(conf.get('actionType', ''))
+		self.eventNotifierCommand = unicode(conf.get('eventNotifierCommand', ''))
+		self.eventNotifierDesktop = unicode(conf.get('eventNotifierDesktop', 'current'))
+		self.actionNotifierCommand = unicode(conf.get('actionNotifierCommand', ''))
+		self.actionNotifierDesktop = unicode(conf.get('actionNotifierDesktop', 'current'))
+		self.shutdownNotifierCommand = unicode(conf.get('shutdownNotifierCommand', ''))
+		self.shutdownNotifierDesktop = unicode(conf.get('shutdownNotifierDesktop', 'current'))
+		self.processActions = bool(conf.get('processActions', True))
+		self.actionProcessorCommand = unicode(conf.get('actionProcessorCommand', ''))
+		self.actionProcessorDesktop = unicode(conf.get('actionProcessorDesktop', 'current'))
+		self.actionProcessorTimeout = int(conf.get('actionProcessorTimeout', 3 * 3600))
+		self.actionProcessorProductIds = list(conf.get('actionProcessorProductIds', []))
+		self.preActionProcessorCommand = unicode(conf.get('preActionProcessorCommand', ''))
+		self.postActionProcessorCommand = unicode(conf.get('postActionProcessorCommand', ''))
+		self.cacheProducts = bool(conf.get('cacheProducts', False))
+		self.cacheMaxBandwidth = int(conf.get('cacheMaxBandwidth', 0))
+		self.cacheDynamicBandwidth = bool(conf.get('cacheDynamicBandwidth', True))
+		self.useCachedProducts = bool(conf.get('useCachedProducts', False))
+		self.syncConfigToServer = bool(conf.get('syncConfigToServer', False))
+		self.syncConfigFromServer = bool(conf.get('syncConfigFromServer', False))
+		self.postSyncConfigToServer = bool(conf.get('postSyncConfigToServer', False))
+		self.postSyncConfigFromServer = bool(conf.get('postSyncConfigFromServer', False))
+		self.useCachedConfig = bool(conf.get('useCachedConfig', False))
+
 	def getConfig(self):
 		config = {}
 		for (k, v) in self.__dict__.items():
 			if not k.startswith('_'):
 				config[k] = v
 		return config
-
-	def setConfig(self, conf):
-		self.name                          =  unicode ( conf.get('name',            self._id.split('{')[0]  ) )
-		self.preconditions                 =     dict ( conf.get('preconditions',                 {}        ) )
-		self.actionMessage                 =  unicode ( conf.get('actionMessage',               ''        ) )
-		self.maxRepetitions                =      int ( conf.get('maxRepetitions',                -1        ) )
-		# wait <activationDelay> seconds before event gets active
-		self.activationDelay               =      int ( conf.get('activationDelay',               0         ) )
-		# wait <notificationDelay> seconds before event is fired
-		self.notificationDelay             =      int ( conf.get('notificationDelay',             0         ) )
-		self.interval                      =      int ( conf.get('interval',                      -1        ) )
-		self.actionWarningTime             =      int ( conf.get('actionWarningTime',             0         ) )
-		self.actionUserCancelable          =      int ( conf.get('actionUserCancelable',          0         ) )
-		self.shutdown                      =     bool ( conf.get('shutdown',                      False     ) )
-		self.reboot                        =     bool ( conf.get('reboot',                        False     ) )
-		self.shutdownWarningMessage        =  unicode ( conf.get('shutdownWarningMessage',        ''        ) )
-		self.shutdownWarningTime           =      int ( conf.get('shutdownWarningTime',           0         ) )
-		self.shutdownWarningRepetitionTime =      int ( conf.get('shutdownWarningRepetitionTime', 3600      ) )
-		self.shutdownUserCancelable        =      int ( conf.get('shutdownUserCancelable',        0         ) )
-		self.shutdownCancelCounter         =      int ( conf.get('shutdownCancelCounter',         0         ) )
-		self.blockLogin                    =     bool ( conf.get('blockLogin',                    False     ) )
-		self.logoffCurrentUser             =     bool ( conf.get('logoffCurrentUser',             False     ) )
-		self.lockWorkstation               =     bool ( conf.get('lockWorkstation',               False     ) )
-		self.processShutdownRequests       =     bool ( conf.get('processShutdownRequests',       True      ) )
-		self.getConfigFromService          =     bool ( conf.get('getConfigFromService',          True      ) )
-		self.updateConfigFile              =     bool ( conf.get('updateConfigFile',              True      ) )
-		self.writeLogToService             =     bool ( conf.get('writeLogToService',             True      ) )
-		self.updateActionProcessor         =     bool ( conf.get('updateActionProcessor',         True      ) )
-		self.actionType                    =  unicode ( conf.get('actionType',                    ''        ) )
-		self.eventNotifierCommand          =  unicode ( conf.get('eventNotifierCommand',          ''        ) )
-		self.eventNotifierDesktop          =  unicode ( conf.get('eventNotifierDesktop',          'current' ) )
-		self.actionNotifierCommand         =  unicode ( conf.get('actionNotifierCommand',         ''        ) )
-		self.actionNotifierDesktop         =  unicode ( conf.get('actionNotifierDesktop',         'current' ) )
-		self.shutdownNotifierCommand       =  unicode ( conf.get('shutdownNotifierCommand',       ''        ) )
-		self.shutdownNotifierDesktop       =  unicode ( conf.get('shutdownNotifierDesktop',       'current' ) )
-		self.processActions                =     bool ( conf.get('processActions',                True      ) )
-		self.actionProcessorCommand        =  unicode ( conf.get('actionProcessorCommand',        ''        ) )
-		self.actionProcessorDesktop        =  unicode ( conf.get('actionProcessorDesktop',        'current' ) )
-		self.actionProcessorTimeout        =      int ( conf.get('actionProcessorTimeout',        3*3600    ) )
-		self.actionProcessorProductIds     =     list ( conf.get('actionProcessorProductIds',     []        ) )
-		self.preActionProcessorCommand     =  unicode ( conf.get('preActionProcessorCommand',     ''        ) )
-		self.postActionProcessorCommand    =  unicode ( conf.get('postActionProcessorCommand',    ''        ) )
-		#self.serviceOptions                =     dict ( conf.get('serviceOptions',                {}        ) )
-		self.cacheProducts                 =     bool ( conf.get('cacheProducts',                 False     ) )
-		self.cacheMaxBandwidth             =      int ( conf.get('cacheMaxBandwidth',             0         ) )
-		self.cacheDynamicBandwidth         =     bool ( conf.get('cacheDynamicBandwidth',         True      ) )
-		self.useCachedProducts             =     bool ( conf.get('useCachedProducts',             False     ) )
-		self.syncConfigToServer            =     bool ( conf.get('syncConfigToServer',            False     ) )
-		self.syncConfigFromServer          =     bool ( conf.get('syncConfigFromServer',          False     ) )
-		self.postSyncConfigToServer        =     bool ( conf.get('postSyncConfigToServer',        False     ) )
-		self.postSyncConfigFromServer      =     bool ( conf.get('postSyncConfigFromServer',      False     ) )
-		self.useCachedConfig               =     bool ( conf.get('useCachedConfig',               False     ) )
 
 	def __unicode__(self):
 		return u"<EventConfig: %s>" % self._id
