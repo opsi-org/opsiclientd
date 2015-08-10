@@ -28,11 +28,13 @@ from __future__ import absolute_import
 import re
 
 from .Config import getLogFormat
+from .State import State
 
 from OPSI.Logger import Logger
 from OPSI.Types import forceUnicode
 
 logger = Logger()
+state = State()
 
 
 class EventConfig(object):
