@@ -41,7 +41,6 @@ from OPSI.Logger import Logger, LOG_NONE, LOG_NOTICE, LOG_WARNING
 from OPSI.Types import forceUnicode
 
 from ocdlib import __version__
-from ocdlib.Opsiclientd import Opsiclientd
 
 try:
 	import argparse
@@ -56,6 +55,9 @@ try:
 except ImportError:
     logger.setConsoleLevel(LOG_WARNING)
     logger.warning("Import of OpsiclientdPosix failed.")
+
+    from ocdlib.Opsiclientd import Opsiclientd
+
 
     class OpsiclientdPosix(Opsiclientd):
 	    pass
