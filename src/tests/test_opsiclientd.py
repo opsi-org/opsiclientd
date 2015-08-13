@@ -5,11 +5,10 @@
 # http://www.uib.de/
 # All rights reserved.
 
-import unittest
-
 import os
 import shutil
 import tempfile
+import unittest
 from contextlib import contextmanager
 from functools import wraps
 
