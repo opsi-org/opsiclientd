@@ -12,11 +12,11 @@ import unittest
 from contextlib import contextmanager
 from functools import wraps
 
-try:
-    from ocdlibnonfree.Posix import Opsiclientd
-except ImportError as error:
-    print("Failed to import: {0}".format(error))
-    Opsiclientd = None
+# try:
+from ocdlibnonfree.Posix import Opsiclientd
+# except ImportError as error:
+#     print("Failed to import: {0}".format(error))
+#     Opsiclientd = None
 
 
 @contextmanager
@@ -43,7 +43,7 @@ def cd(path):
     os.chdir(old_dir)
 
 
-@unittest.skipIf(Opsiclientd is None, "Unable to find non-free modules.")
+# @unittest.skipIf(Opsiclientd is None, "Unable to find non-free modules.")
 class OpsiclientdRebootCoordinationTestCase(unittest.TestCase):
     def test_requesting_reboot(self):
         with workInTemporaryDirectory() as tempDir:
