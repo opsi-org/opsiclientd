@@ -29,7 +29,11 @@ class OpsiclientdPosix(Opsiclientd):
 
     _PID_DIR = os.path.join("/var", "run", "opsiclientd")
 
-    # TODO: beim init das Verzeichnis erstellen
+    def __init__(self):
+        super().__init__()
+
+        if not os.path.exists(self._PID_DIR):
+            os.mkdir(self._PID_DIR)
 
     def clearRebootRequest(self):
         rebootFile = os.path.join(self._PID_DIR, "reboot")
