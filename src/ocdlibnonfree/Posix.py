@@ -27,7 +27,7 @@ logger = Logger()
 
 class OpsiclientdPosix(Opsiclientd):
 
-    _PID_DIR = os.path.join("/var/", "run", "opsiclientd")
+    _PID_DIR = os.path.join("/var", "run", "opsiclientd")
 
     # TODO: beim init das Verzeichnis erstellen
 
