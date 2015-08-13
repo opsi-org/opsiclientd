@@ -1,13 +1,22 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# Copyright 2015 uib GmbH
+# http://www.uib.de/
+# All rights reserved.
 
 import unittest
-
-from ocdlibnonfree.Posix import Opsiclientd
 
 import os
 import shutil
 import tempfile
 from contextlib import contextmanager
 from functools import wraps
+
+try:
+    from ocdlibnonfree.Posix import Opsiclientd
+except ImportError:
+    Opsiclientd = None
 
 
 @contextmanager
@@ -33,7 +42,7 @@ def cd(path):
     yield
     os.chdir(old_dir)
 
-
+@unittest.skipIf(Opsiclientd is None, "Unable to find non-free modules.")
 class OpsiclientdRebootCoordinationTestCase(unittest.TestCase):
     def test_requesting_reboot(self):
         with workInTemporaryDirectory() as tempDir:
