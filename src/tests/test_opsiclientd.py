@@ -59,3 +59,16 @@ class OpsiclientdRebootCoordinationTestCase(unittest.TestCase):
                 ocd.clearRebootRequest()
                 self.assertFalse(ocd.isRebootRequested())
 
+    def test_requesting_shutdown(self):
+        with workInTemporaryDirectory() as tempDir:
+            with mock.patch('ocdlibnonfree.Posix.Opsiclientd._PID_DIR', tempDir):
+                ocd = Opsiclientd()
+
+                self.assertFalse(ocd.isShutdownRequested())
+
+                rebootFile = os.path.join(tempDir, 'shutdown')
+                with open(rebootFile, 'w'):
+                    pass
+
+                ocd.clearShutdownRequest()
+                self.assertFalse(ocd.isShutdownRequested())
