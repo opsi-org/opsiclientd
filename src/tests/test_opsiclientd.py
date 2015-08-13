@@ -14,7 +14,8 @@ from functools import wraps
 
 try:
     from ocdlibnonfree.Posix import Opsiclientd
-except ImportError:
+except ImportError as error:
+    print("Failed to import: {0}".format(error))
     Opsiclientd = None
 
 
@@ -40,6 +41,7 @@ def cd(path):
     os.chdir(path)
     yield
     os.chdir(old_dir)
+
 
 @unittest.skipIf(Opsiclientd is None, "Unable to find non-free modules.")
 class OpsiclientdRebootCoordinationTestCase(unittest.TestCase):
