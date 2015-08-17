@@ -51,10 +51,6 @@ from ocdlib.Localization import _, setLocaleDir
 from ocdlib.Timeline import Timeline
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
-if RUNNING_ON_WINDOWS:
-	from ocdlib.Windows import *
-else:
-	from ocdlib.Posix import *
 
 try:
 	from ocdlibnonfree import __fullversion__
