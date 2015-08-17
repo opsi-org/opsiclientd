@@ -37,6 +37,7 @@ from twisted.internet import reactor
 
 from OPSI.Logger import Logger
 from OPSI.Types import forceUnicode, forceInt
+from OPSI.Util import randomString
 from OPSI import System
 
 from ocdlib import __version__
