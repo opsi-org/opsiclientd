@@ -12,6 +12,8 @@ import unittest
 from contextlib import contextmanager
 from functools import wraps
 
+import mock
+
 # try:
 from ocdlibnonfree.Posix import Opsiclientd
 # except ImportError as error:
