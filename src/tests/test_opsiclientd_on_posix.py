@@ -53,7 +53,7 @@ class OpsiclientdRebootCoordinationTestCase(unittest.TestCase):
 
     def test_requesting_reboot(self):
         with workInTemporaryDirectory() as tempDir:
-            with mock.patch('ocdlibnonfree.Posix.Opsiclientd._PID_DIR', tempDir):
+            with mock.patch('ocdlibnonfree.Posix.OpsiclientdPosix._PID_DIR', tempDir):
                 ocd = Opsiclientd()
 
                 self.assertFalse(ocd.isRebootRequested())
@@ -67,7 +67,7 @@ class OpsiclientdRebootCoordinationTestCase(unittest.TestCase):
 
     def test_requesting_shutdown(self):
         with workInTemporaryDirectory() as tempDir:
-            with mock.patch('ocdlibnonfree.Posix.Opsiclientd._PID_DIR', tempDir):
+            with mock.patch('ocdlibnonfree.Posix.OpsiclientdPosix._PID_DIR', tempDir):
                 ocd = Opsiclientd()
 
                 self.assertFalse(ocd.isShutdownRequested())
