@@ -408,11 +408,11 @@ class Opsiclientd(EventListener, threading.Thread):
 			# Always process panic events
 			if not isinstance(event, PanicEvent):
 				for ept in self._eventProcessingThreads:
-					if (event.eventConfig.actionType != 'login') and (ept.event.eventConfig.actionType != 'login'):
+					if event.eventConfig.actionType != 'login' and ept.event.eventConfig.actionType != 'login':
 						logger.notice(u"Already processing an other (non login) event: %s" % ept.event.eventConfig.getId())
 						return
-					if (event.eventConfig.actionType == 'login') and (ept.event.eventConfig.actionType == 'login'):
-						if (ept.getSessionId() == eventProcessingThread.getSessionId()):
+					if event.eventConfig.actionType == 'login' and ept.event.eventConfig.actionType == 'login':
+						if ept.getSessionId() == eventProcessingThread.getSessionId():
 							logger.notice(u"Already processing login event '%s' in session %s" \
 									% (ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()))
 							self._eventProcessingThreadsLock.release()
