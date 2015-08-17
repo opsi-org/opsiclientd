@@ -562,8 +562,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
 				raise
 
-			choiceSubject.setChoices([ _('Close') ])
-			choiceSubject.setCallbacks( [ self.popupCloseCallback ] )
+			choiceSubject.setChoices([_('Close')])
+			choiceSubject.setCallbacks([self.popupCloseCallback])
 
 			if RUNNING_ON_WINDOWS:
 				sessionIds = System.getActiveSessionIds(winApiBugCommand=self._winApiBugCommand)
