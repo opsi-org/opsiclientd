@@ -181,7 +181,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			self._actionProcessorUserPassword = u''
 			return
 
-		if (runAsUser.find('\\') != -1):
+		if '\\' in runAsUser:
 			logger.warning(u"Ignoring domain part of user to run action processor '%s'" % runAsUser)
 			runAsUser = runAsUser.split('\\', -1)
 
