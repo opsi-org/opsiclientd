@@ -100,7 +100,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._blockLogin = bool(blockLogin)
 		logger.notice(u"Block login now set to '%s'" % self._blockLogin)
 
-		if (self._blockLogin):
+		if self._blockLogin:
 			if not self._blockLoginEventId:
 				self._blockLoginEventId = timeline.addEvent(
 					title         = u"Blocking login",
@@ -122,7 +122,7 @@ class Opsiclientd(EventListener, threading.Thread):
 							break
 						except Exception, e:
 							logger.error(e)
-							if (e[0] == 233) and (sys.getwindowsversion()[0] == 5) and (sessionId != 0):
+							if e[0] == 233 and sys.getwindowsversion()[0] == 5 and sessionId != 0:
 								# No process is on the other end
 								# Problem with pipe \\\\.\\Pipe\\TerminalServer\\SystemExecSrvr\\<sessionid>
 								# After logging off from a session other than 0 csrss.exe does not create this pipe or CreateRemoteProcessW is not able to read the pipe.
@@ -135,7 +135,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			if self._blockLoginEventId:
 				timeline.setEventEnd(eventId = self._blockLoginEventId)
 				self._blockLoginEventId = None
-			if (self._blockLoginNotifierPid):
+
+			if self._blockLoginNotifierPid:
 				try:
 					logger.info(u"Terminating block login notifier app (pid %s)" % self._blockLoginNotifierPid)
 					System.terminateProcess(processId = self._blockLoginNotifierPid)
@@ -174,7 +175,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			return
 
 		runAsUser = config.get('action_processor', 'run_as_user')
-		if (runAsUser.lower() == 'system'):
+		if runAsUser.lower() == 'system':
 			self._actionProcessorUserName = u''
 			self._actionProcessorUserPassword = u''
 			return
@@ -436,7 +437,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.notice(u"DEBUG: %s " % self._eventProcessingThreads)
 		for ept in self._eventProcessingThreads:
 			logger.notice("DEBUG: %s " % ept.getSessionId())
-			if (int(ept.getSessionId()) == int(sessionId)):
+			if int(ept.getSessionId()) == int(sessionId):
 				return ept
 		raise Exception(u"Event processing thread for session %s not found" % sessionId)
 
