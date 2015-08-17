@@ -47,6 +47,10 @@ def cd(path):
 
 @unittest.skipIf(Opsiclientd is None, "Unable to find non-free modules.")
 class OpsiclientdRebootCoordinationTestCase(unittest.TestCase):
+    """
+    Testing the reboot behaviour on a POSIX machine.
+    """
+
     def test_requesting_reboot(self):
         with workInTemporaryDirectory() as tempDir:
             with mock.patch('ocdlibnonfree.Posix.Opsiclientd._PID_DIR', tempDir):
