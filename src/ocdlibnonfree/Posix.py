@@ -37,14 +37,14 @@ class OpsiclientdPosix(Opsiclientd):
 		try:
 			os.remove(rebootFile)
 		except OSError as err:
-			logger.debug("Failed to remove reboot file {1!r}: {0}".format(err, rebootFile))
+			logger.debug(u"Failed to remove reboot file {1!r}: {0}".format(err, rebootFile))
 
 	def clearShutdownRequest(self):
 		shutdownFile = os.path.join(self._PID_DIR, "shutdown")
 		try:
 			os.remove(shutdownFile)
 		except OSError as err:
-			logger.debug("Failed to remove shutdwn file {1!r}: {0}".format(err, shutdownFile))
+			logger.debug(u"Failed to remove shutdwn file {1!r}: {0}".format(err, shutdownFile))
 
 	def isRebootRequested(self):
 		rebootFile = os.path.join(self._PID_DIR, "reboot")
