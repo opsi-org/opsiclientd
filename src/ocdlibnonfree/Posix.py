@@ -13,12 +13,9 @@ Non-free Posix part of opsiclientd
 
 import os
 import os.path
-import sys
-import time
 
 import OPSI.System as System
-from OPSI.Logger import Logger, LOG_NONE, LOG_NOTICE
-from OPSI.Types import forceUnicode
+from OPSI.Logger import Logger
 
 from ocdlib.Opsiclientd import Opsiclientd
 
