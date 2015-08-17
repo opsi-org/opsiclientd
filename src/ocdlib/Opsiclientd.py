@@ -36,11 +36,8 @@ import sys
 from twisted.internet import reactor
 
 from OPSI.Logger import Logger
-from OPSI.Util import *
-from OPSI.Util.Message import *
 from OPSI.Types import forceUnicode, forceInt
 from OPSI import System
-from OPSI.Object import *
 
 from ocdlib import __version__
 from ocdlib.Config import Config, getLogFormat
