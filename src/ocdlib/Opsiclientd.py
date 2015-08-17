@@ -411,7 +411,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						return
 					if event.eventConfig.actionType == 'login' and ept.event.eventConfig.actionType == 'login':
 						if ept.getSessionId() == eventProcessingThread.getSessionId():
-							logger.notice(u"Already processing login event '%s' in session %s" \
+							logger.notice(u"Already processing login event '%s' in session %s"
 									% (ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()))
 							self._eventProcessingThreadsLock.release()
 							return
