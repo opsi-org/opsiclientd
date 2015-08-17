@@ -295,7 +295,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				from ocdlibnonfree.CacheService import CacheService
 				logger.notice(u"Starting cache service")
 				try:
-					self._cacheService = CacheService(opsiclientd = self)
+					self._cacheService = CacheService(opsiclientd=self)
 					self._cacheService.start()
 					logger.notice(u"Cache service started")
 				except Exception as e:
@@ -318,7 +318,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			if RUNNING_ON_WINDOWS and getEventGenerators(generatorClass=GUIStartupEventGenerator):
 				# Wait until gui starts up
 				logger.notice(u"Waiting for gui startup (timeout: %d seconds)" % config.get('global', 'wait_for_gui_timeout'))
-				self.waitForGUI(timeout = config.get('global', 'wait_for_gui_timeout'))
+				self.waitForGUI(timeout=config.get('global', 'wait_for_gui_timeout'))
 				logger.notice(u"Done waiting for GUI")
 
 				# Wait some more seconds for events to fire
