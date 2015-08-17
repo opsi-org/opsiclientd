@@ -479,7 +479,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		return desktop
 
 	def switchDesktop(self, desktop, sessionId=None):
-		if not (config.getDict().has_key('opsiclientd_rpc') and config.getDict()['opsiclientd_rpc'].has_key('command')):
+		if not ('opsiclientd_rpc' in config.getDict() and 'command' in config.getDict()['opsiclientd_rpc']):
 			raise Exception(u"opsiclientd_rpc command not defined")
 
 		desktop = forceUnicode(desktop)
