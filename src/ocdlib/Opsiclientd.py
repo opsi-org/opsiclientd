@@ -120,7 +120,7 @@ class Opsiclientd(EventListener, threading.Thread):
 									desktop='winlogon',
 									waitForProcessEnding=False)[2]
 							break
-						except Exception, e:
+						except Exception as e:
 							logger.error(e)
 							if e[0] == 233 and sys.getwindowsversion()[0] == 5 and sessionId != 0:
 								# No process is on the other end
@@ -272,7 +272,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._controlPipe = ControlPipeFactory(OpsiclientdRpcPipeInterface(self))
 				self._controlPipe.start()
 				logger.notice(u"Control pipe started")
-			except Exception, e:
+			except Exception as e:
 				logger.error(u"Failed to start control pipe: %s" % forceUnicode(e))
 				raise
 
@@ -300,10 +300,10 @@ class Opsiclientd(EventListener, threading.Thread):
 					self._cacheService = CacheService(opsiclientd = self)
 					self._cacheService.start()
 					logger.notice(u"Cache service started")
-				except Exception, e:
+				except Exception as e:
 					logger.error(u"Failed to start cache service: %s" % forceUnicode(e))
 					raise
-			except Exception, e:
+			except Exception as e:
 				logger.notice(u"Cache service not started: %s" % e)
 
 			# Create event generators
@@ -374,7 +374,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 			logger.info(u"Exiting main thread")
 
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
 			self.setBlockLogin(False)
 
@@ -433,7 +433,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			try:
 				if not self._eventProcessingThreads:
 					self.deleteActionProcessorUser()
-			except Exception, e:
+			except Exception as e:
 				logger.warning(e)
 			self._eventProcessingThreadsLock.release()
 
@@ -469,7 +469,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				waitForProcessEnding=True,
 				timeoutSeconds=60
 			)
-		except Exception, e:
+		except Exception as e:
 			logger.error(e)
 
 		desktop = self._currentActiveDesktopName.get(sessionId)
@@ -558,7 +558,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					subjects=[popupSubject, choiceSubject]
 				)
 				self._popupNotificationServer.start()
-			except Exception, e:
+			except Exception as e:
 				logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
 				raise
 
