@@ -103,10 +103,10 @@ class Opsiclientd(EventListener, threading.Thread):
 		if self._blockLogin:
 			if not self._blockLoginEventId:
 				self._blockLoginEventId = timeline.addEvent(
-					title         = u"Blocking login",
-					description   = u"User login blocked",
-					category      = u"block_login",
-					durationEvent = True)
+					title=u"Blocking login",
+					description=u"User login blocked",
+					category=u"block_login",
+					durationEvent=True)
 			if not self._blockLoginNotifierPid and config.get('global', 'block_login_notifier'):
 				# TODO: System.getActiveConsoleSessionId() is missing on Linux
 				if RUNNING_ON_WINDOWS:
@@ -115,10 +115,10 @@ class Opsiclientd(EventListener, threading.Thread):
 					while True:
 						try:
 							self._blockLoginNotifierPid = System.runCommandInSession(
-									command = config.get('global', 'block_login_notifier'),
-									sessionId = sessionId,
-									desktop = 'winlogon',
-									waitForProcessEnding = False)[2]
+									command=config.get('global', 'block_login_notifier'),
+									sessionId=sessionId,
+									desktop='winlogon',
+									waitForProcessEnding=False)[2]
 							break
 						except Exception, e:
 							logger.error(e)
@@ -133,14 +133,14 @@ class Opsiclientd(EventListener, threading.Thread):
 								break
 		else:
 			if self._blockLoginEventId:
-				timeline.setEventEnd(eventId = self._blockLoginEventId)
+				timeline.setEventEnd(eventId=self._blockLoginEventId)
 				self._blockLoginEventId = None
 
 			if self._blockLoginNotifierPid:
 				try:
 					logger.info(u"Terminating block login notifier app (pid %s)" % self._blockLoginNotifierPid)
-					System.terminateProcess(processId = self._blockLoginNotifierPid)
-				except Exception, e:
+					System.terminateProcess(processId=self._blockLoginNotifierPid)
+				except Exception as e:
 					logger.warning(u"Failed to terminate block login notifier app: %s" % forceUnicode(e))
 				self._blockLoginNotifierPid = None
 
@@ -150,6 +150,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	def waitForGUI(self, timeout=None):
 		if not timeout:
 			timeout = None
+
 		class WaitForGUI(EventListener):
 			def __init__(self):
 				self._guiStarted = threading.Event()
@@ -170,7 +171,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		WaitForGUI().wait(timeout)
 
-	def createActionProcessorUser(self, recreate = True):
+	def createActionProcessorUser(self, recreate=True):
 		if not config.get('action_processor', 'create_user'):
 			return
 
@@ -184,7 +185,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.warning(u"Ignoring domain part of user to run action processor '%s'" % runAsUser)
 			runAsUser = runAsUser.split('\\', -1)
 
-		if not recreate and self._actionProcessorUserName and self._actionProcessorUserPassword and System.existsUser(username = runAsUser):
+		if not recreate and self._actionProcessorUserName and self._actionProcessorUserPassword and System.existsUser(username=runAsUser):
 			return
 
 		self._actionProcessorUserName = runAsUser
@@ -194,20 +195,23 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._actionProcessorUserPassword = u'$!?' + unicode(randomString(16)) + u'!/%'
 		logger.addConfidentialString(self._actionProcessorUserPassword)
 
-		if System.existsUser(username = runAsUser):
-			System.deleteUser(username = runAsUser)
-		System.createUser(username = runAsUser, password = self._actionProcessorUserPassword, groups = [ System.getAdminGroupName() ])
+		if System.existsUser(username=runAsUser):
+			System.deleteUser(username=runAsUser)
+		System.createUser(username=runAsUser, password=self._actionProcessorUserPassword, groups=[System.getAdminGroupName()])
 
 	def deleteActionProcessorUser(self):
 		if not config.get('action_processor', 'delete_user'):
 			return
+
 		if not self._actionProcessorUserName:
 			return
-		if not System.existsUser(username = self._actionProcessorUserName):
+
+		if not System.existsUser(username=self._actionProcessorUserName):
 			return
+
 		logger.notice(u"Deleting local user '%s'" % self._actionProcessorUserName)
 		#timeline.addEvent(title = u"Deleting local user '%s'" % self._actionProcessorUserName, description = u'', category = u'system')
-		System.deleteUser(username = self._actionProcessorUserName)
+		System.deleteUser(username=self._actionProcessorUserName)
 		self._actionProcessorUserName = u''
 		self._actionProcessorUserPassword = u''
 
@@ -397,7 +401,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		configKeys.sort()
 		for configKey in configKeys:
 			description += u"%s: %s\n" % (configKey, config[configKey])
-		timeline.addEvent(title = u"Event %s" % event.eventConfig.getName(), description = description, category = u"event_occurrence")
+		timeline.addEvent(title=u"Event %s" % event.eventConfig.getName(), description=description, category=u"event_occurrence")
 		try:
 			eventProcessingThread = EventProcessingThread(self, event)
 
@@ -413,7 +417,7 @@ class Opsiclientd(EventListener, threading.Thread):
 									% (ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()))
 							self._eventProcessingThreadsLock.release()
 							return
-			self.createActionProcessorUser(recreate = False)
+			self.createActionProcessorUser(recreate=False)
 
 			self._eventProcessingThreads.append(eventProcessingThread)
 		finally:
@@ -489,8 +493,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		cmd = '%s "%s"' % (config.get('opsiclientd_rpc', 'command'), rpc)
 
 		try:
-			System.runCommandInSession(command = cmd, sessionId = sessionId, desktop = desktop, waitForProcessEnding = True, timeoutSeconds = 60)
-		except Exception, e:
+			System.runCommandInSession(command=cmd, sessionId=sessionId, desktop=desktop, waitForProcessEnding=True, timeoutSeconds=60)
+		except Exception as e:
 			logger.error(e)
 
 	def systemShutdownInitiated(self):
@@ -543,15 +547,16 @@ class Opsiclientd(EventListener, threading.Thread):
 			self.hidePopup()
 
 			popupSubject = MessageSubject('message')
-			choiceSubject = ChoiceSubject(id = 'choice')
+			choiceSubject = ChoiceSubject(id='choice')
 			popupSubject.setMessage(message)
 
 			logger.notice(u"Starting popup message notification server on port %d" % port)
 			try:
 				self._popupNotificationServer = NotificationServer(
-								address  = "127.0.0.1",
-								port     = port,
-								subjects = [ popupSubject, choiceSubject ] )
+					address="127.0.0.1",
+					port=port,
+					subjects=[popupSubject, choiceSubject]
+				)
 				self._popupNotificationServer.start()
 			except Exception, e:
 				logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
@@ -561,18 +566,19 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setCallbacks( [ self.popupCloseCallback ] )
 
 			if RUNNING_ON_WINDOWS:
-				sessionIds = System.getActiveSessionIds(winApiBugCommand = self._winApiBugCommand)
+				sessionIds = System.getActiveSessionIds(winApiBugCommand=self._winApiBugCommand)
 				if not sessionIds:
-					sessionIds = [ System.getActiveConsoleSessionId() ]
+					sessionIds = [System.getActiveConsoleSessionId()]
+
 				for sessionId in sessionIds:
 					logger.info(u"Starting popup message notifier app in session %d" % sessionId)
 					try:
 						System.runCommandInSession(
-							command = notifierCommand,
-							sessionId = sessionId,
-							desktop = self.getCurrentActiveDesktopName(sessionId),
-							waitForProcessEnding = False)
-					except Exception, e:
+							command=notifierCommand,
+							sessionId=sessionId,
+							desktop=self.getCurrentActiveDesktopName(sessionId),
+							waitForProcessEnding=False)
+					except Exception as e:
 						logger.error(u"Failed to start popup message notifier app in session %d: %s" % (sessionId, forceUnicode(e)))
 		finally:
 			self._popupNotificationLock.release()
@@ -581,8 +587,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		if self._popupNotificationServer:
 			try:
 				logger.info(u"Stopping popup message notification server")
-				self._popupNotificationServer.stop(stopReactor = False)
-			except Exception, e:
+				self._popupNotificationServer.stop(stopReactor=False)
+			except Exception as e:
 				logger.error(u"Failed to stop popup notification server: %s" % e)
 
 	def popupCloseCallback(self, choiceSubject):
