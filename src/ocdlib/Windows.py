@@ -246,9 +246,10 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 				self.opsiclientd = OpsiclientdNT5()
 
 			elif (sys.getwindowsversion()[0] == 6):
-				# NT6: Vista / Windows7
-				if (sys.getwindowsversion()[1] >= 1):
-					# Windows7
+				# NT6: Vista / Windows7 and later
+				if sys.getwindowsversion()[1] >= 3:  # Windows8.1
+					self.opsiclientd = OpsiclientdNT63()
+				elif sys.getwindowsversion()[1] >= 1:  # Windows7
 					self.opsiclientd = OpsiclientdNT61()
 				else:
 					self.opsiclientd = OpsiclientdNT6()
@@ -397,3 +398,16 @@ class OpsiclientdNT6(OpsiclientdNT):
 class OpsiclientdNT61(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
+
+
+class OpsiclientdNT63(OpsiclientdNT):
+	"OpsiclientdNT for Windows NT 6.3 - Windows 8.1"
+
+	def rebootMachine(self):
+		self._isRebootTriggered = True
+		self.clearRebootRequest()
+		logger.debug("Sleeping 3 seconds before reboot to avoid hanging.")
+		for _ in range(10):
+			time.sleep(0.3)
+		logger.debug("Finished sleeping.")
+		System.reboot(3)
