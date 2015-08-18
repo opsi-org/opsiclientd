@@ -85,17 +85,18 @@ class StateImplementation(object):
 			else:
 				# TODO: find a real fix for this one.
 				return False
-		if (name == 'configserver_reachable'):
+
+		if name == 'configserver_reachable':
 			return isConfigServiceReachable(timeout=15)
-		if (name == 'products_cached'):
+		elif name == 'products_cached':
 			return self._state.get('product_cache_service', {}).get('products_cached', default)
-		if (name == 'config_cached'):
+		elif name == 'config_cached':
 			return self._state.get('config_cache_service', {}).get('config_cached', default)
-		if "cancel_counter" in name:
+		elif "cancel_counter" in name:
 			return self._state.get(name, 0)
-		if (name == 'installation_pending'):
+		elif name == 'installation_pending':
 			return forceBool(self._state.get('installation_pending', False))
-		if name in self._state:
+		elif name in self._state:
 			return self._state[name]
 
 		logger.warning(u"Unknown state name '{0}', returning {1}".format(name, default))
