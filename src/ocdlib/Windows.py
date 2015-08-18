@@ -396,6 +396,8 @@ class OpsiclientdNT6(OpsiclientdNT):
 # -                                          OPSICLIENTD NT61                                         -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class OpsiclientdNT61(OpsiclientdNT):
+	"OpsiclientdNT for Windows NT 6.1 - Windows 7"
+
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
 
