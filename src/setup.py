@@ -105,6 +105,19 @@ else:
 data_files += tree('opsiclientd\\static_html', '..\\static_html')
 
 
+localDirectory = os.path.dirname(__file__)
+
+opsiClientDeamonVersion = None
+fileWithVersion = os.path.join(localDirectory, 'ocdlib', '__init__.py')
+with open(fileWithVersion, 'r') as f:
+	for line in f:
+		if "__version__" in line:
+			opsiClientDeamonVersion = line.split('=', 1)[1].strip()[1:-1]
+			break
+
+if not opsiClientDeamonVersion:
+	raise Exception("Failed to find version.")
+
 setup_options = {
 	"data_files": data_files,
 	"name": "opsiclientd",
