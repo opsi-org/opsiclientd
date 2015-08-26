@@ -1,5 +1,17 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import glob
+import os
+import shutil
+import sys
+
 from distutils.core import setup
-import py2exe, sys, os, shutil, glob
+
+RUNS_ON_WINDOWS = (sys.platform == 'nt')
+
+if RUNS_ON_WINDOWS:
+	import py2exe
 
 for d in ('build', 'dist'):
 	if os.path.exists(d):
