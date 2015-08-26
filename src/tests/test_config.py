@@ -13,7 +13,11 @@ class ConfigTestCase(unittest.TestCase):
         self.config = Config()
 
     def tearDown(self):
-        self.config._reset()
+        try:
+            self.config._reset()
+        except AttributeError:
+            print("Whoops, we are missing something!")
+
         del self.config
 
     def testGettingUnknownSectionFails(self):
