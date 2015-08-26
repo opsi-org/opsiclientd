@@ -37,6 +37,7 @@ from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Logger import Logger, LOG_DEBUG, LOG_WARNING
 from OPSI.Types import forceBool
 
+SECONDS_TO_SLEEP_AFTER_ACTION = 5
 
 logger = Logger()
 if False:
@@ -84,13 +85,13 @@ try:
 	# Trying to fire myEvent
 	be.fireEvent(myEvent)
 	logger.debug(u"Event fired")
-	time.sleep(4)
+	time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 
 	while True:
 		if be.isEventRunning(myEvent):
-			time.sleep(5)
+			time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 		elif be.isEventRunning(myEvent+"{user_logged_in}"):
-			time.sleep(5)
+			time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 		else:
 			break
 
