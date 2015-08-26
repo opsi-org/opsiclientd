@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 
 import unittest
 
-from ocdlib.Config import Config,
+from ocdlib.Config import Config
 
 
 class ConfigTestCase(unittest.TestCase):
