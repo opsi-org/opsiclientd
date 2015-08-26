@@ -37,10 +37,9 @@ from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Logger import Logger, LOG_DEBUG, LOG_WARNING
 from OPSI.Types import forceBool
 
-mydebug = 1
 
 logger = Logger()
-if mydebug:
+if False:
 	logger.setConsoleLevel(LOG_DEBUG)
 else:
 	logger.setConsoleLevel(LOG_WARNING)
