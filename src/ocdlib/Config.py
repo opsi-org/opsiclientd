@@ -160,12 +160,13 @@ class ConfigImplementation(object):
 			self._config['global']['timeline_db'] = u'%s\\opsi.org\\opsiclientd\\timeline.sqlite' % System.getSystemDrive()
 			self._config['global']['log_dir'] = u'%s\\opsi.org\\log' % System.getSystemDrive()
 			self._config['global']['server_cert_dir'] = u'%s\\opsi.org\\opsiclientd\\server-certs' % System.getSystemDrive()
-		if (sys.getwindowsversion()[0] == 5):
-			self._config['action_processor']['run_as_user'] = 'pcpatch'
-		
+
+			if (sys.getwindowsversion()[0] == 5):
+				self._config['action_processor']['run_as_user'] = 'pcpatch'
+
 	def getDict(self):
 		return self._config
-	
+
 	def get(self, section, option, raw = False):
 		if not section:
 			section = 'global'
