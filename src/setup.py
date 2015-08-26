@@ -246,18 +246,18 @@ else:
 
 setup(**setup_options)
 
-for lang in os.listdir(os.path.join("dist", "locale")):
-	dn = os.path.join("dist", "locale", lang, "LC_MESSAGES")
-	for mo in os.listdir(dn):
-		src = os.path.join(dn, mo)
-		if mo.endswith('_%s.mo' % lang):
-			dst = os.path.join(dn, mo.split('_%s.mo' % lang)[0] + '.mo')
-			os.rename(src, dst)
+if os.path.exists(os.path.join("dist", "locale")):
+	for lang in os.listdir(os.path.join("dist", "locale")):
+		dn = os.path.join("dist", "locale", lang, "LC_MESSAGES")
+		for mo in os.listdir(dn):
+			src = os.path.join(dn, mo)
+			if mo.endswith('_%s.mo' % lang):
+				dst = os.path.join(dn, mo.split('_%s.mo' % lang)[0] + '.mo')
+				os.rename(src, dst)
 
 if RUNS_ON_WINDOWS:
 	os.unlink(os.path.join("dist", "w9xpopen.exe"))
 
-print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-print "!!!   On the target machine always replace exe AND lib   !!!"
-print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-
+	print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	print "!!!   On the target machine always replace exe AND lib   !!!"
+	print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
