@@ -39,12 +39,16 @@ import time
 
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
-from OPSI.Logger import Logger
+from OPSI.Logger import Logger, LOG_DEBUG, LOG_WARNING
 from OPSI.Types import forceBool
 
 mydebug = 1
 
 logger = Logger()
+if mydebug:
+	logger.setConsoleLevel(LOG_DEBUG)
+else:
+	logger.setConsoleLevel(LOG_WARNING)
 
 try:
 	myEvent = "gui_startup"  # THIS
@@ -69,7 +73,7 @@ try:
 				if username and password:
 					break
 	except (IOError, OSError) as error:
-		print(error)
+		logger.warning(error)
 
 	# Connect local service
 	be = JSONRPCBackend(
@@ -77,19 +81,17 @@ try:
 		password=password,
 		address=u'https://localhost:4441/opsiclientd'
 	)
-	if mydebug :
-		print u"Backend connected."
+	logger.debug(u"Backend connected.")
 
 	if forceBool(be.isInstallationPending()):
-		if mydebug:
-			print u"State installation pending detected, don't starting shutdown event."
+		logger.debug(u"State installation pending detected, don't starting shutdown event.")
 		os.exit(0)
-		
+
 	# Trying to fire myEvent
 	be.fireEvent(myEvent)
-	if mydebug :
-		print u"Event fired"
+	logger.debug(u"Event fired")
 	time.sleep(4)
+
 	while True:
 		if be.isEventRunning(myEvent):
 			time.sleep(5)
@@ -97,14 +99,10 @@ try:
 			time.sleep(5)
 		else:
 			break
-	if mydebug :
-		time.sleep(10)
-		print u"Task completed."
-	sys.exit(0)
-				
-except Exception, e:
-	print e
+
+	logger.debug(u"Task completed.")
+except Exception as e:
+	logger.critical(e)
 	sys.exit(1)
 
-
-
+sys.exit(0)
