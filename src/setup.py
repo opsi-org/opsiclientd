@@ -59,12 +59,13 @@ class Target:
 		if not self.version:
 			print >> sys.stderr, "Failed to find version of script '%s'" % self.script
 
+
 opsiclientdDescription = "opsi client daemon"
-packages = ["OPSI", "twisted", "ocdlib"]
-excludes = [	"pywin", "pywin.debugger", "pywin.debugger.dbgcon",
-		"pywin.dialogs", "pywin.dialogs.list",
-		"Tkconstants", "Tkinter", "tcl", "_imagingtk",
-		"PIL._imagingtk", "ImageTk", "PIL.ImageTk", "FixTk"
+packages = ["ocdlib"]
+excludes = ["pywin", "pywin.debugger", "pywin.debugger.dbgcon",
+	"pywin.dialogs", "pywin.dialogs.list",
+	"Tkconstants", "Tkinter", "tcl", "_imagingtk",
+	"PIL._imagingtk", "ImageTk", "PIL.ImageTk", "FixTk"
 ]
 
 if os.path.exists("ocdlibnonfree") and not buildFreeVersion:
