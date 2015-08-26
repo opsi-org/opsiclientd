@@ -5,8 +5,7 @@ from __future__ import unicode_literals
 
 import unittest
 
-from ocdlib.Config import (Config,
-    SectionNotFoundException, NoConfigOptionFoundException)
+from ocdlib.Config import Config,
 
 
 class ConfigTestCase(unittest.TestCase):
@@ -18,7 +17,7 @@ class ConfigTestCase(unittest.TestCase):
         del self.config
 
     def testGettingUnknownSectionFails(self):
-        self.assertRaises(SectionNotFoundException, self.config.get, 'nothing', 'bla')
+        self.assertRaises(ValueError, self.config.get, 'nothing', 'bla')
 
     def testGettingUnknownOptionFails(self):
-        self.assertRaises(NoConfigOptionFoundException, self.config.get, 'global', 'non_existing_option')
+        self.assertRaises(ValueError, self.config.get, 'global', 'non_existing_option')
