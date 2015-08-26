@@ -72,7 +72,11 @@ try:
 				break
 	
 	# Connect local service
-	be = JSONRPCBackend(username = username, password = password, address = u'https://localhost:4441/opsiclientd')
+	be = JSONRPCBackend(
+		username=username,
+		password=password,
+		address=u'https://localhost:4441/opsiclientd'
+	)
 	if mydebug :
 		print u"Backend connected."
 
