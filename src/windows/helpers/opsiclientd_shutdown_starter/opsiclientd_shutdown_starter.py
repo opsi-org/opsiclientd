@@ -95,8 +95,8 @@ try:
 			break
 
 	logger.debug(u"Task completed.")
-except Exception as e:
-	logger.critical(e)
+except Exception as error:
+	logger.critical(error)
 	sys.exit(1)
 
 sys.exit(0)
