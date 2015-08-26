@@ -49,7 +49,8 @@ logger = Logger()
 try:
 	#reading the opsiclientd.conf for the machine-account
 	basedir = os.getcwd()
-	pathToConf = os.path.join(basedir, "opsiclientd\opsiclientd.conf")
+	pathToConf = os.path.join(basedir, "opsiclientd", "opsiclientd.conf")
+
 	username = None
 	password = None
 	
