@@ -47,30 +47,30 @@ mydebug = 1
 logger = Logger()
 
 try:
+	myEvent = "gui_startup"  # THIS
+	# myEvent = "shutdown_install"
+	if len(sys.argv) > 1:
+		myEvent = sys.argv[1]
+
 	#reading the opsiclientd.conf for the machine-account
 	basedir = os.getcwd()
 	pathToConf = os.path.join(basedir, "opsiclientd", "opsiclientd.conf")
 
 	username = None
 	password = None
-	
-	myEvent = "gui_startup"
-	# myEvent = "shutdown_install"
-	if len(sys.argv) > 1: 
-		myEvent = sys.argv[1] 
-		
-	if os.path.exists(pathToConf):
-		f = open(pathToConf)
-		lines = f.readlines()
-		
-		for line in lines:
-			if line.lower().startswith(u"host_id"):
-				username = line.split("=")[1].strip()
-			elif line.lower().startswith(u"opsi_host_key"):
-				password = line.split("=")[1].strip()
-			if username and password:
-				break
-	
+	try:
+		with open(pathToConf) as f:
+			for line in f:
+				if line.lower().startswith(u"host_id"):
+					username = line.split("=")[1].strip()
+				elif line.lower().startswith(u"opsi_host_key"):
+					password = line.split("=")[1].strip()
+
+				if username and password:
+					break
+	except (IOError, OSError) as error:
+		print(error)
+
 	# Connect local service
 	be = JSONRPCBackend(
 		username=username,
