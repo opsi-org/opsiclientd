@@ -7,8 +7,9 @@ opsiclientd (4.0.84) UNRELEASED; urgency=medium
 
   [ Niko Wenselowski ]
   * Windows 8.1: Sleeping a short time before triggering the reboot.
+  * Refactored opsiclientd_shutdown_starter.
 
- -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 18 Aug 2015 17:28:14 +0200
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 26 Aug 2015 09:38:02 +0200
 
 opsiclientd (4.0.82) stable; urgency=low
 
