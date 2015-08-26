@@ -31,15 +31,15 @@
    @license: GNU General Public License version 2
 """
 
-__version__ = '4.0.5'
+__version__ = '4.0.6'
 
-# Imports
-import sys, os, time
+import os
+import sys
+import time
 
 from OPSI import System
-from OPSI.Logger import *
 from OPSI.Backend.JSONRPC import JSONRPCBackend
-
+from OPSI.Logger import Logger
 from OPSI.Types import forceBool
 
 mydebug = 1
