@@ -46,8 +46,7 @@ else:
 	logger.setConsoleLevel(LOG_WARNING)
 
 try:
-	myEvent = "gui_startup"  # THIS
-	# myEvent = "shutdown_install"
+	myEvent = "gui_startup"
 	if len(sys.argv) > 1:
 		myEvent = sys.argv[1]
 
@@ -70,7 +69,6 @@ try:
 	except (IOError, OSError) as error:
 		logger.warning(error)
 
-	# Connect local service
 	be = JSONRPCBackend(
 		username=username,
 		password=password,
@@ -82,7 +80,6 @@ try:
 		logger.debug(u"State installation pending detected, don't starting shutdown event.")
 		os.exit(0)
 
-	# Trying to fire myEvent
 	be.fireEvent(myEvent)
 	logger.debug(u"Event fired")
 	time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
