@@ -67,25 +67,25 @@ def main(event):
 	except (IOError, OSError) as error:
 		LOGGER.warning(error)
 
-	be = JSONRPCBackend(
+	backend = JSONRPCBackend(
 		username=username,
 		password=password,
 		address=u'https://localhost:4441/opsiclientd'
 	)
 	LOGGER.debug(u"Backend connected.")
 
-	if forceBool(be.isInstallationPending()):
+	if forceBool(backend.isInstallationPending()):
 		LOGGER.debug(u"State installation pending detected, don't starting shutdown event.")
 		return
 
-	be.fireEvent(event)
+	backend.fireEvent(event)
 	LOGGER.debug(u"Event fired")
 	time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 
 	while True:
-		if be.isEventRunning(event):
+		if backend.isEventRunning(event):
 			time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
-		elif be.isEventRunning("{0}{{user_logged_in}}".format(event)):
+		elif backend.isEventRunning("{0}{{user_logged_in}}".format(event)):
 			time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 		else:
 			break
