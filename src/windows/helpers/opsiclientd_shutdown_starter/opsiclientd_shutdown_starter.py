@@ -83,7 +83,7 @@ def readCredentialsFromConfig(pathToConfig):
 	password = None
 
 	try:
-		with open(pathToConf) as configFile:
+		with open(pathToConfig) as configFile:
 			for line in configFile:
 				if line.lower().startswith(u"host_id"):
 					username = line.split("=")[1].strip()
