@@ -45,17 +45,18 @@ if False:
 else:
 	logger.setConsoleLevel(LOG_WARNING)
 
+myEvent = "gui_startup"
+if len(sys.argv) > 1:
+	myEvent = sys.argv[1]
+
+username = None
+password = None
+
+#reading the opsiclientd.conf for the machine-account
+basedir = os.getcwd()
+pathToConf = os.path.join(basedir, "opsiclientd", "opsiclientd.conf")
+
 try:
-	myEvent = "gui_startup"
-	if len(sys.argv) > 1:
-		myEvent = sys.argv[1]
-
-	#reading the opsiclientd.conf for the machine-account
-	basedir = os.getcwd()
-	pathToConf = os.path.join(basedir, "opsiclientd", "opsiclientd.conf")
-
-	username = None
-	password = None
 	try:
 		with open(pathToConf) as f:
 			for line in f:
