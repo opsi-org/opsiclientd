@@ -45,18 +45,15 @@ if False:
 else:
 	logger.setConsoleLevel(LOG_WARNING)
 
-myEvent = "gui_startup"
-if len(sys.argv) > 1:
-	myEvent = sys.argv[1]
 
-username = None
-password = None
+def main(event):
+	username = None
+	password = None
 
-#reading the opsiclientd.conf for the machine-account
-basedir = os.getcwd()
-pathToConf = os.path.join(basedir, "opsiclientd", "opsiclientd.conf")
+	#reading the opsiclientd.conf for the machine-account
+	basedir = os.getcwd()
+	pathToConf = os.path.join(basedir, "opsiclientd", "opsiclientd.conf")
 
-try:
 	try:
 		with open(pathToConf) as f:
 			for line in f:
@@ -79,23 +76,30 @@ try:
 
 	if forceBool(be.isInstallationPending()):
 		logger.debug(u"State installation pending detected, don't starting shutdown event.")
-		os.exit(0)
+		return
 
-	be.fireEvent(myEvent)
+	be.fireEvent(event)
 	logger.debug(u"Event fired")
 	time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 
 	while True:
-		if be.isEventRunning(myEvent):
+		if be.isEventRunning(event):
 			time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
-		elif be.isEventRunning("{0}{{user_logged_in}}".format(myEvent)):
+		elif be.isEventRunning("{0}{{user_logged_in}}".format(event)):
 			time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 		else:
 			break
 
 	logger.debug(u"Task completed.")
-except Exception as error:
-	logger.critical(error)
-	sys.exit(1)
 
-sys.exit(0)
+
+if __name__ == '__main__':
+	try:
+		myEvent = "gui_startup"
+		if len(sys.argv) > 1:
+			myEvent = sys.argv[1]
+
+		main(myEvent)
+	except Exception as error:
+		logger.critical(error)
+		sys.exit(1)
