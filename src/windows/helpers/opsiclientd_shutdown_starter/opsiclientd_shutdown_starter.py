@@ -88,7 +88,7 @@ try:
 	while True:
 		if be.isEventRunning(myEvent):
 			time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
-		elif be.isEventRunning(myEvent+"{user_logged_in}"):
+		elif be.isEventRunning("{0}{{user_logged_in}}".format(myEvent)):
 			time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 		else:
 			break
