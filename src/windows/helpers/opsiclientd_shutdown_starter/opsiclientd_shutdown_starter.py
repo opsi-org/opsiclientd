@@ -47,25 +47,10 @@ else:
 
 
 def main(event):
-	username = None
-	password = None
-
-	#reading the opsiclientd.conf for the machine-account
 	basedir = os.getcwd()
 	pathToConf = os.path.join(basedir, "opsiclientd", "opsiclientd.conf")
 
-	try:
-		with open(pathToConf) as f:
-			for line in f:
-				if line.lower().startswith(u"host_id"):
-					username = line.split("=")[1].strip()
-				elif line.lower().startswith(u"opsi_host_key"):
-					password = line.split("=")[1].strip()
-
-				if username and password:
-					break
-	except (IOError, OSError) as error:
-		LOGGER.warning(error)
+	username, password = readCredentialsFromConfig(pathToConf)
 
 	backend = JSONRPCBackend(
 		username=username,
@@ -91,6 +76,26 @@ def main(event):
 			break
 
 	LOGGER.debug(u"Task completed.")
+
+
+def readCredentialsFromConfig(pathToConfig):
+	username = None
+	password = None
+
+	try:
+		with open(pathToConf) as f:
+			for line in f:
+				if line.lower().startswith(u"host_id"):
+					username = line.split("=")[1].strip()
+				elif line.lower().startswith(u"opsi_host_key"):
+					password = line.split("=")[1].strip()
+
+				if username and password:
+					break
+	except (IOError, OSError) as error:
+		LOGGER.warning(error)
+
+	return username, password
 
 
 if __name__ == '__main__':
