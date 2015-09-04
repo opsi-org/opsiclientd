@@ -32,7 +32,6 @@ import os
 import sys
 import time
 
-from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Logger import Logger, LOG_DEBUG, LOG_WARNING
 from OPSI.Types import forceBool
