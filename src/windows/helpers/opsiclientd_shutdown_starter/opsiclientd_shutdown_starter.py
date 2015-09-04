@@ -39,11 +39,11 @@ from OPSI.Types import forceBool
 
 SECONDS_TO_SLEEP_AFTER_ACTION = 5
 
-logger = Logger()
+LOGGER = Logger()
 if False:
-	logger.setConsoleLevel(LOG_DEBUG)
+	LOGGER.setConsoleLevel(LOG_DEBUG)
 else:
-	logger.setConsoleLevel(LOG_WARNING)
+	LOGGER.setConsoleLevel(LOG_WARNING)
 
 
 def main(event):
@@ -65,21 +65,21 @@ def main(event):
 				if username and password:
 					break
 	except (IOError, OSError) as error:
-		logger.warning(error)
+		LOGGER.warning(error)
 
 	be = JSONRPCBackend(
 		username=username,
 		password=password,
 		address=u'https://localhost:4441/opsiclientd'
 	)
-	logger.debug(u"Backend connected.")
+	LOGGER.debug(u"Backend connected.")
 
 	if forceBool(be.isInstallationPending()):
-		logger.debug(u"State installation pending detected, don't starting shutdown event.")
+		LOGGER.debug(u"State installation pending detected, don't starting shutdown event.")
 		return
 
 	be.fireEvent(event)
-	logger.debug(u"Event fired")
+	LOGGER.debug(u"Event fired")
 	time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
 
 	while True:
@@ -90,7 +90,7 @@ def main(event):
 		else:
 			break
 
-	logger.debug(u"Task completed.")
+	LOGGER.debug(u"Task completed.")
 
 
 if __name__ == '__main__':
@@ -101,5 +101,5 @@ if __name__ == '__main__':
 
 		main(myEvent)
 	except Exception as error:
-		logger.critical(error)
+		LOGGER.critical(error)
 		sys.exit(1)
