@@ -1,4 +1,4 @@
-opsiclientd (4.0.84) UNRELEASED; urgency=medium
+opsiclientd (4.0.84ubuntu1) UNRELEASED; urgency=medium
 
   [ Erol Ueluekmen ]
   * exclude_product_group_ids and include_product_group_ids added.
@@ -8,8 +8,10 @@ opsiclientd (4.0.84) UNRELEASED; urgency=medium
   [ Niko Wenselowski ]
   * Windows 8.1: Sleeping a short time before triggering the reboot.
   * Refactored opsiclientd_shutdown_starter.
+  * Opsiclient Shutdown Starter now logs to
+    C:\opsi.org\log\opsiclientd_shutdown_starter.log
 
- -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 26 Aug 2015 09:38:02 +0200
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 07 Sep 2015 10:05:12 +0200
 
 opsiclientd (4.0.82) stable; urgency=low
 
