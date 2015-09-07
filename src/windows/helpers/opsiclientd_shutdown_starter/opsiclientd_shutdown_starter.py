@@ -98,7 +98,7 @@ def readCredentialsFromConfig(pathToConfig):
 
 
 if __name__ == '__main__':
-	LOGGER.setLogFile(os.path.join('C:', 'opsi.org', 'log', 'opsiclientd_shutdown_starter.log'))
+	LOGGER.setLogFile(os.path.join('C:\\', 'opsi.org', 'log', 'opsiclientd_shutdown_starter.log'))
 	LOGGER.setFileLevel(LOG_DEBUG)
 
 	try:
