@@ -23,7 +23,7 @@ if '--free' in sys.argv:
 	sys.argv.remove('--free')
 
 # If run without args, build executables, in quiet mode.
-if (len(sys.argv) == 1):
+if RUNS_ON_WINDOWS and len(sys.argv) == 1:
 	sys.argv.append("py2exe")
 	sys.argv.append("-q")
 
