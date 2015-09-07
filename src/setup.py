@@ -8,7 +8,7 @@ import sys
 
 from distutils.core import setup
 
-RUNS_ON_WINDOWS = (sys.platform == 'nt')
+RUNS_ON_WINDOWS = sys.platform in ('nt', 'win32')
 
 if RUNS_ON_WINDOWS:
 	import py2exe
