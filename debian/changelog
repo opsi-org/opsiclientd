@@ -1,4 +1,4 @@
-opsiclientd (4.0.84ubuntu1) UNRELEASED; urgency=medium
+opsiclientd (4.0.84) testing; urgency=medium
 
   [ Erol Ueluekmen ]
   * exclude_product_group_ids and include_product_group_ids added.
