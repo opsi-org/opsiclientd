@@ -1,3 +1,11 @@
+opsiclientd (4.0.85) testing; urgency=medium
+
+  * Refactored opsiclientd_shutdown_starter.
+  * Opsiclient Shutdown Starter now logs to
+    C:\opsi.org\log\opsiclientd_shutdown_starter.log
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 08 Sep 2015 15:03:09 +0200
+
 opsiclientd (4.0.84) testing; urgency=medium
 
   [ Erol Ueluekmen ]
@@ -7,11 +15,8 @@ opsiclientd (4.0.84) testing; urgency=medium
 
   [ Niko Wenselowski ]
   * Windows 8.1: Sleeping a short time before triggering the reboot.
-  * Refactored opsiclientd_shutdown_starter.
-  * Opsiclient Shutdown Starter now logs to
-    C:\opsi.org\log\opsiclientd_shutdown_starter.log
 
- -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 07 Sep 2015 10:05:12 +0200
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 08 Sep 2015 15:02:20 +0200
 
 opsiclientd (4.0.82) stable; urgency=low
 
