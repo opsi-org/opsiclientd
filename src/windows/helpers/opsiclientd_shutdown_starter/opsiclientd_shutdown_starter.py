@@ -62,6 +62,7 @@ def main(event):
 		LOGGER.debug(u"State installation pending detected, don't starting shutdown event.")
 		return
 
+	LOGGER.debug(u"Firing event {0!r}".format(event))
 	backend.fireEvent(event)
 	LOGGER.debug(u"Event fired")
 	time.sleep(SECONDS_TO_SLEEP_AFTER_ACTION)
