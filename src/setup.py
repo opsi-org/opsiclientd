@@ -50,12 +50,13 @@ class Target:
 		self.company_name = "uib GmbH"
 		self.copyright = "uib GmbH"
 		self.version = ""
-		f = open(os.path.join('ocdlib', 'Opsiclientd.py'), 'r')
-		for line in f.readlines():
-			if (line.find("__version__") != -1):
-				self.version = line.split('=', 1)[1].strip()[1:-1]
-				break
-		f.close()
+
+		with open(os.path.join('ocdlib', 'Opsiclientd.py'), 'r') as f:
+			for line in f:
+				if line.startswith("__version__"):
+					self.version = line.split('=', 1)[1].strip()[1:-1]
+					break
+
 		if not self.version:
 			print >> sys.stderr, "Failed to find version of script '%s'" % self.script
 
