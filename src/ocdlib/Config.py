@@ -626,7 +626,8 @@ class ConfigImplementation(object):
 				elif (key.lower() == 'depotdrive'):
 					self.set('depot_server', 'drive', value)
 				elif (key.lower() == 'nextbootserviceurl'):
-					if (value.find('/rpc') == -1):
+					if '/rpc' not in value:
+						logger.debug(u'Appending /rpc to service URL...')
 						value = value + '/rpc'
 					self.set('config_service', 'url', [value])
 				else:
