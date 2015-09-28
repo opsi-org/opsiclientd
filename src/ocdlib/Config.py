@@ -259,9 +259,9 @@ class ConfigImplementation(object):
 			raise NoConfigOptionFoundException(u"No such config option in section '{0}': {1}".format(section, option))
 
 		value = self._config[section][option]
-		if not raw and type(value) in (unicode, str) and (value.count('%') >= 2):
+		if not raw and isinstance(value, (unicode, str)) and (value.count('%') >= 2):
 			value = self.replace(value)
-		if type(value) is str:
+		if isinstance(value, str):
 			value = forceUnicode(value)
 		return value
 
@@ -271,7 +271,7 @@ class ConfigImplementation(object):
 
 		section = forceUnicodeLower(section).strip()
 		option = forceUnicodeLower(option).strip()
-		if type(value) in (str, unicode):
+		if isinstance(value, (str, unicode)):
 			value = forceUnicode(value).strip()
 
 		if (option == 'warning_time'):
