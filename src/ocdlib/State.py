@@ -98,7 +98,7 @@ class StateImplementation(object):
 		elif name in self._state:
 			return self._state[name]
 
-		logger.warning(u"Unknown state name '{0}', returning {1}".format(name, default))
+		logger.warning(u"Unknown state name {0!r}, returning {1}".format(name, default))
 		return default
 
 	def set(self, name, value):
