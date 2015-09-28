@@ -83,8 +83,7 @@ class StateImplementation(object):
 			if RUNNING_ON_WINDOWS:
 				return bool(System.getActiveSessionIds(self._winApiBugCommand))
 			else:
-				# TODO: find a real fix for this one.
-				return False
+				return False  # TODO: find a real fix for this one.
 
 		if name == 'configserver_reachable':
 			return isConfigServiceReachable(timeout=15)
