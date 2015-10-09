@@ -290,7 +290,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.notice(u"Control server started")
 			except Exception as e:
 				logger.error(u"Failed to start control server: {0}".format(forceUnicode(e)))
-				raise
+				raise e
 
 			self._cacheService = None
 			try:
