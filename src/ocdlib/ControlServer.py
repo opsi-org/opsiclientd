@@ -38,6 +38,7 @@ import threading
 import time
 
 from twisted.internet import reactor
+from twisted.internet.error import CannotListenError
 from OPSI.web2 import resource, stream, server, http, responsecode
 from OPSI.web2.channel.http import HTTPFactory
 
@@ -367,6 +368,9 @@ class ControlServer(OpsiService, threading.Thread):
 				logger.debug(u"Reactor run ended.")
 			else:
 				logger.debug(u"Reactor already running.")
+		except CannotListenError as err:
+			logger.critical("Listening on {0} impossible: {1}".format(self._httpsPort, err))
+			raise err
 		except Exception as err:
 			logger.warning('ControlServer {1} caught error: {0}'.format(err, repr(self)))
 			logger.logException(err)
