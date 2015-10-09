@@ -29,7 +29,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 @author: Erol Ueluekmen <e.ueluekmen@uib.de>
 @license: GNU General Public License version 2
 """
-from __future__ import unicode_literals
 
 import os
 import platform

@@ -30,7 +30,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 @author: Niko Wenselowski <n.wenselowski@uib.de>
 @license: GNU General Public License version 2
 """
-from __future__ import unicode_literals
 
 import os
 import sys
