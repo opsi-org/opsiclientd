@@ -71,22 +71,22 @@ class OpsiclientdInit(object):
 		parser.add_argument("-l", "--log-level", dest="logLevel",
 							default=LOG_NOTICE,
 							help="Set the log-level.")
-		parser.add_argument("-t", "--test-mode", dest="testMode",
-							action="store_true", default=False,
-							help="Testmode: Do no register signal handlers.")
+		parser.add_argument('-t', '--no-signal-handlers', dest="signalHandlers",
+							action="store_false", default=True,
+							help="Do no register signal handlers.")
 		parser.add_argument("-D", "--daemon", dest="daemon",
 							action="store_true", default=False,
 							help="Daemonize process.")
 
 		options = parser.parse_args()
 
-		if not options.testMode:
+		if options.signalHandlers:
 			# Call signalHandler on signal SIGHUP, SIGTERM, SIGINT
 			signal(SIGHUP, self.signalHandler)
 			signal(SIGTERM, self.signalHandler)
 			signal(SIGINT, self.signalHandler)
 		else:
-			logger.notice(u'Running in test mode!')
+			logger.notice(u'Not registering any signal handlers.!')
 
 		if options.daemon:
 			logger.setConsoleLevel(LOG_NONE)
