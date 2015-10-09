@@ -103,7 +103,8 @@ class OpsiclientdInit(object):
 	def signalHandler(self, signo, stackFrame):
 		if signo == SIGHUP:
 			return
-		elif signo == SIGTERM or signo == SIGINT:
+		elif signo in (SIGTERM, SIGINT):
+			logger.info('Received singal {0}. Stopping opsiclientd.')
 			self._opsiclientd.stop()
 
 	def daemonize(self):
