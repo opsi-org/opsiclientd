@@ -178,9 +178,9 @@ class ConfigImplementation(object):
 			raise ValueError(u"No such config option in section '%s': %s" % (section, option))
 		
 		value = self._config[section][option]
-		if not raw and type(value) in (unicode, str) and (value.count('%') >= 2):
+		if not raw and isinstance(value, (unicode, str)) and (value.count('%') >= 2):
 			value = self.replace(value)
-		if type(value) is str:
+		if isinstance(value, str):
 			value = unicode(value)
 		return value
 	
@@ -190,7 +190,7 @@ class ConfigImplementation(object):
 		
 		section = forceUnicodeLower(section).strip()
 		option = forceUnicodeLower(option).strip()
-		if type(value) in (str, unicode):
+		if isinstance(value, (str, unicode)):
 			value = forceUnicode(value).strip()
 		
 		if (option == 'warning_time'):
@@ -231,7 +231,7 @@ class ConfigImplementation(object):
 		
 		if   (section == 'config_service') and (option == 'url'):
 			urls = self._config[section][option]
-			if not type(urls) is list:
+			if not isinstance(urls, list):
 				urls = forceUnicode(self._config[section][option]).split(u',')
 			self._config[section][option] = []
 			for url in forceUnicodeList(urls):
@@ -257,7 +257,7 @@ class ConfigImplementation(object):
 		
 	def replace(self, string, escaped=False):
 		for (section, values) in self._config.items():
-			if not type(values) is dict:
+			if not isinstance(values, dict):
 				continue
 			for (key, value) in values.items():
 				value = forceUnicode(value)
@@ -334,7 +334,7 @@ class ConfigImplementation(object):
 			(config, comments) = configFile.parse(returnComments = True)
 			changed = False
 			for (section, values) in self._config.items():
-				if not type(values) is dict:
+				if not isinstance(values, dict):
 					continue
 				if section in ('system'):
 					continue
@@ -345,7 +345,7 @@ class ConfigImplementation(object):
 					if (section == 'global') and (option == 'config_file'):
 						# Do not store these option
 						continue
-					if type(value) is list:
+					if isinstance(value, list):
 						value = u', '.join(forceUnicodeList(value))
 					else:
 						value = forceUnicode(value)

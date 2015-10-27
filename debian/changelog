@@ -1,8 +1,9 @@
 opsiclientd (4.0.86) UNRELEASED; urgency=medium
 
   * opsiclientd_shutdown_starter logs the event it should fire
+  * type checking now with isinstance instead of type.
 
- -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 09 Sep 2015 13:39:51 +0200
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 27 Oct 2015 12:20:51 +0200
 
 opsiclientd (4.0.85) testing; urgency=medium
 
