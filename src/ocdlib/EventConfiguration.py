@@ -110,7 +110,7 @@ class EventConfig(object):
 		return config
 
 	def __unicode__(self):
-		return u"<EventConfig: %s>" % self._id
+		return u"<{0}({1})>".format(self.__class__.__name__, self._id)
 
 	__repr__ = __unicode__
 
