@@ -81,7 +81,7 @@ class OpsiclientdInit(object):
 			signal(SIGTERM, self.signalHandler)
 			signal(SIGINT, self.signalHandler)
 		else:
-			logger.notice(u'Not registering any signal handlers.!')
+			logger.notice(u'Not registering any signal handlers!')
 
 		if options.daemon:
 			logger.setConsoleLevel(LOG_NONE)
