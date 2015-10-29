@@ -351,7 +351,7 @@ class EventGenerator(threading.Thread):
 					(self._generatorConfig.activationDelay, self))
 				time.sleep(self._generatorConfig.activationDelay)
 
-			logger.info(u"Activating event generator '%s'" % self)
+			logger.info(u"Activating event generator {0!r}".format(self))
 			while not self._stopped and ( (self._generatorConfig.maxRepetitions < 0) or (self._eventsOccured <= self._generatorConfig.maxRepetitions) ):
 				logger.info(u"Getting next event...")
 				event = self.getNextEvent()
