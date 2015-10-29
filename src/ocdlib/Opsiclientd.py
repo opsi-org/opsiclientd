@@ -364,7 +364,10 @@ class Opsiclientd(EventListener, threading.Thread):
 
 			logger.info(u"Stopping timeline")
 			timeline.stop()
-
+		except Exception as e:
+			logger.logException(e)
+			self.setBlockLogin(False)
+		finally:
 			if reactor and reactor.running:
 				logger.info(u"Stopping reactor")
 				reactor.stop()
@@ -373,10 +376,6 @@ class Opsiclientd(EventListener, threading.Thread):
 					time.sleep(1)
 
 			logger.info(u"Exiting main thread")
-
-		except Exception as e:
-			logger.logException(e)
-			self.setBlockLogin(False)
 
 		self._running = False
 		if self._opsiclientdRunningEventId:
