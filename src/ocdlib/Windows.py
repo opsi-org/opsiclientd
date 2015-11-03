@@ -302,26 +302,29 @@ class OpsiclientdNT(Opsiclientd):
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
 
 	def isRebootRequested(self):
-		rebootRequested = 0
 		try:
 			rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
-		except Exception, e:
-			logger.warning(u"Failed to get rebootRequested from registry: %s" % forceUnicode(e))
-		logger.info(u"rebootRequested: %s" % rebootRequested)
-		if (rebootRequested == 2):
+		except Exception as error:
+			logger.warning(u"Failed to get RebootRequested from registry: {0}".format(forceUnicode(error)))
+			rebootRequested = 0
+
+		logger.notice(u"Reboot request in Registry: {0}".format(rebootRequested))
+		if rebootRequested == 2:
 			# Logout
 			logger.info(u"Logout requested")
 			self.clearRebootRequest()
 			return False
+
 		return forceBool(rebootRequested)
 
 	def isShutdownRequested(self):
-		shutdownRequested = 0
 		try:
 			shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
-		except Exception, e:
-			logger.warning(u"Failed to get shutdownRequested from registry: %s" % forceUnicode(e))
-		logger.info(u"shutdownRequested: %s" % shutdownRequested)
+		except Exception as error:
+			logger.warning(u"Failed to get shutdownRequested from registry: {0}".format(forceUnicode(error)))
+			shutdownRequested = 0
+
+		logger.notice(u"Shutdown request in Registry: {0}".format(shutdownRequested))
 		return forceBool(shutdownRequested)
 
 
