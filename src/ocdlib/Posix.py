@@ -121,7 +121,7 @@ class OpsiclientdInit(object):
 		# Fork a second time to not remain session leader
 		try:
 			if os.fork() > 0:
-				raise SystemExit(0)  # Parent exit
+				raise SystemExit(0)
 		except OSError as oserr:
 			raise RuntimeError(u"Second fork failed: {0}".format(oserr))
 
