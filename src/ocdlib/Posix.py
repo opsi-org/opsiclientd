@@ -101,48 +101,40 @@ class OpsiclientdInit(object):
 		elif signo in (SIGTERM, SIGINT):
 			logger.info('Received singal {0}. Stopping opsiclientd.')
 			self._opsiclientd.stop()
+			# raise SystemExit(1)
 
-	def daemonize(self):
+	def daemonize(self, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
 		"""
 		Running as a daemon.
 		"""
 		# Fork to allow the shell to return and to call setsid
 		try:
-			pid = os.fork()
-			if (pid > 0):
-				# Parent exits
-				sys.exit(0)
+			if os.fork() > 0:
+				raise SystemExit(0)  # Parent exit
 		except OSError as err:
-			raise Exception(u"First fork failed: %e" % forceUnicode(err))
+			raise RuntimeError(u"First fork failed: %e" % forceUnicode(err))
 
-		# Do not hinder umounts
-		os.chdir("/")
-		# Create a new session
-		os.setsid()
+		os.chdir("/")  # Do not hinder umounts
+		os.umask(0)  # reset file mode mask
+		os.setsid()  # Create a new session
 
 		# Fork a second time to not remain session leader
 		try:
-			pid = os.fork()
-			if (pid > 0):
-				sys.exit(0)
+			if os.fork() > 0:
+				raise SystemExit(0)  # Parent exit
 		except OSError as oserr:
-			raise Exception(u"Second fork failed: {0}".format(oserr))
+			raise RuntimeError(u"Second fork failed: {0}".format(oserr))
 
 		logger.setConsoleLevel(LOG_NONE)
 
-		# Close standard output and standard error.
-		os.close(0)
-		os.close(1)
-		os.close(2)
+		# Replacing file descriptors
+		with open(stdin, 'rb', 0) as f:
+			os.dup2(f.fileno(), sys.stdin.fileno())
+		with open(stdout, 'rb', 0) as f:
+			os.dup2(f.fileno(), sys.stdout.fileno())
+		with open(stderr, 'rb', 0) as f:
+			os.dup2(f.fileno(), sys.stderr.fileno())
 
-		# Open standard input (0)
-		if (hasattr(os, "devnull")):
-			os.open(os.devnull, os.O_RDWR)
-		else:
-			os.open("/dev/null", os.O_RDWR)
-
-		# Duplicate standard input to standard output and standard error.
-		os.dup2(0, 1)
-		os.dup2(0, 2)
+		# Replacing stdout & stderr with our variants
 		sys.stdout = logger.getStdout()
 		sys.stderr = logger.getStderr()
