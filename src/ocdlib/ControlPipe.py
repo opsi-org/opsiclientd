@@ -287,12 +287,12 @@ class OpsiclientdRpcPipeInterface(object):
 
 	def getInterface(self):
 		methods = {}
-		for member in inspect.getmembers(self, inspect.ismethod):
-			methodName = member[0]
+		logger.debug("Collecting interface methods...")
+		for methodName, functionRef in inspect.getmembers(self, inspect.ismethod):
 			if methodName.startswith('_'):
 				# protected / private
 				continue
-			(args, varargs, keywords, defaults) = inspect.getargspec(member[1])
+			args, varargs, keywords, defaults = inspect.getargspec(functionRef)
 			params = []
 			if args:
 				for arg in forceList(args):
@@ -311,7 +311,7 @@ class OpsiclientdRpcPipeInterface(object):
 				for arg in forceList(keywords):
 					params.append('**' + arg)
 
-			logger.debug2(u"Interface method name '%s' params %s" % (methodName, params))
+			logger.debug2(u"Interface method name {0!r} params: {1}".format(methodName, params))
 			methods[methodName] = {
 				'name': methodName, 'params': params, 'args': args,
 				'varargs': varargs, 'keywords': keywords, 'defaults': defaults
