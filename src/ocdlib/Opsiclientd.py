@@ -425,7 +425,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		try:
 			eventProcessingThread.start()
 			eventProcessingThread.join()
-			logger.notice(u"Done processing event '%s'" % event)
+			logger.notice(u"Done processing event {0!r}".format(event))
 		finally:
 			self._eventProcessingThreadsLock.acquire()
 			self._eventProcessingThreads.remove(eventProcessingThread)
