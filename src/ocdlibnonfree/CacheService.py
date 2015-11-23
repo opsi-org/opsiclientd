@@ -454,8 +454,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				
 			includeProductIds = []
 			excludeProductIds = []
-			excludeProductGroupIds = forceList(config.get('cache_service', 'exclude_product_group_ids').strip().split(","))
-			includeProductGroupIds = forceList(config.get('cache_service', 'include_product_group_ids').strip().split(","))
+			excludeProductGroupIds = forceList(config.get('cache_service', 'exclude_product_group_ids'))
+			includeProductGroupIds = forceList(config.get('cache_service', 'include_product_group_ids'))
 			
 			logger.debug("Given includeProductGroupIds: '%s'" % includeProductGroupIds)
 			logger.debug("Given excludeProductGroupIds: '%s'" % excludeProductGroupIds)
@@ -743,8 +743,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				
 			includeProductIds = []
 			excludeProductIds = []
-			excludeProductGroupIds = forceList(config.get('cache_service', 'exclude_product_group_ids').strip().split(","))
-			includeProductGroupIds = forceList(config.get('cache_service', 'include_product_group_ids').strip().split(","))
+			excludeProductGroupIds = forceList(config.get('cache_service', 'exclude_product_group_ids'))
+			includeProductGroupIds = forceList(config.get('cache_service', 'include_product_group_ids'))
 			
 			logger.debug("Given includeProductGroupIds: '%s'" % includeProductGroupIds)
 			logger.debug("Given excludeProductGroupIds: '%s'" % excludeProductGroupIds)
