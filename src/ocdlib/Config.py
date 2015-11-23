@@ -223,7 +223,10 @@ class ConfigImplementation(object):
 			value = forceBool(value)
 		
 		if option in ('exclude_product_group_ids', 'include_product_group_ids'):
-			value = forceList(value)
+                        if not isinstance(value, list):
+                                value = [ x.strip() for x in value.split(",") ]
+                        else:
+		                value = forceList(value)
 		
 		if not self._config.has_key(section):
 			self._config[section] = {}
