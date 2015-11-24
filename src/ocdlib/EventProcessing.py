@@ -622,8 +622,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productState['productId'] + ':', productState['actionRequest']))
 			else:
 				if not productIds:
-					includeProductGroupIds = self.event.eventConfig.includeProductGroupIds
-					excludeProductGroupIds = self.event.eventConfig.excludeProductGroupIds
+					includeProductGroupIds = [ x for x in forceList(self.event.eventConfig.includeProductGroupIds) if x != "" ]
+					excludeProductGroupIds = [ x for x in forceList(self.event.eventConfig.excludeProductGroupIds) if x != "" ]
 					includeProductIds = []
 					excludeProductIds = []
 					
