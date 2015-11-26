@@ -42,6 +42,7 @@ buildOptions = {
         "duplicity",
         "twisted",
         "zope.interface",  # required by twisted
+        "Crypto.Cipher.AES"  # Required by Debian 8
     ],
     "excludes": [
         "Tkconstants",
