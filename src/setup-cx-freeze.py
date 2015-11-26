@@ -60,9 +60,6 @@ buildOptions = {
     "namespace_packages": [
         'zope',
     ]
-    "replacePaths": [
-        (os.getcwd(), '/usr/share/opsiclientd')
-    ]
 }
 
 buildFreeVersion = False
