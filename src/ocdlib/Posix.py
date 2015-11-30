@@ -62,7 +62,7 @@ class OpsiclientdInit(object):
 		logger.debug(u"OpsiclientdPosixInit")
 
 		parser = argparse.ArgumentParser()
-		parser.add_argument("-v", action='version', version=__version__)
+		parser.add_argument("--version", "-V", action='version', version=__version__)
 		parser.add_argument("-l", "--log-level", dest="logLevel",
 							default=LOG_NOTICE,
 							help="Set the log-level.")
