@@ -75,6 +75,8 @@ class OpsiclientdInit(object):
 
 		options = parser.parse_args()
 
+		logger.setConsoleLevel(options.logLevel)
+
 		if options.signalHandlers:
 			# Call signalHandler on signal SIGHUP, SIGTERM, SIGINT
 			signal(SIGHUP, self.signalHandler)
@@ -86,14 +88,12 @@ class OpsiclientdInit(object):
 		if options.daemon:
 			logger.setConsoleLevel(LOG_NONE)
 			self.daemonize()
-		else:
-			logger.setConsoleLevel(options.logLevel)
 
 		# Start opsiclientd
 		self._opsiclientd = OpsiclientdPosix()
 		self._opsiclientd.start()
 		while self._opsiclientd.isRunning():
-			time.sleep(1)
+			time.sleep(0.1)
 
 	def signalHandler(self, signo, stackFrame):
 		if signo == SIGHUP:
