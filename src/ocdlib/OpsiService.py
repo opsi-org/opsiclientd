@@ -37,7 +37,6 @@ from httplib import HTTPConnection, HTTPSConnection
 from twisted.conch.ssh import keys
 
 from OPSI.Logger import Logger
-from OPSI.Util import *
 from OPSI.Util.Thread import KillableThread
 from OPSI.Util.HTTP import (urlsplit, non_blocking_connect_http,
 	non_blocking_connect_https)
