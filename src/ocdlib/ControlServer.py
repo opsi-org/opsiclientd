@@ -626,4 +626,5 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			backendinfo = configService.backend_info()
 		finally:
 			serviceConnection.disconnectConfigService()
-			return backendinfo
+
+		return backendinfo
