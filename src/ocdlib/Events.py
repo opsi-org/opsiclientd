@@ -848,7 +848,7 @@ def getEventConfigs():
 						mLanguage = None
 						try:
 							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
-						except:
+						except Exception:
 							pass
 						if mLanguage:
 							if (mLanguage == getLanguage()):
@@ -859,7 +859,7 @@ def getEventConfigs():
 						mLanguage = None
 						try:
 							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
-						except:
+						except Exception:
 							pass
 						if mLanguage:
 							if (mLanguage == getLanguage()):
@@ -870,7 +870,7 @@ def getEventConfigs():
 						mLanguage = None
 						try:
 							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
-						except:
+						except Exception:
 							pass
 						if mLanguage:
 							if (mLanguage == getLanguage()):

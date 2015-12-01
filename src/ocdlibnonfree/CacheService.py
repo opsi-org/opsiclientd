@@ -219,11 +219,11 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			ccss = state.get('config_cache_service')
 			if ccss:
 				self._state = ccss
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
 			try:
 				self.setObsolete()
-			except:
+			except Exception:
 				pass
 			raise e
 

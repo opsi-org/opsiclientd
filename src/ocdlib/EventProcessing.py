@@ -851,7 +851,7 @@ None otherwise.
 				serviceSession = self.getConfigService().jsonrpc_getSessionId()
 				if not serviceSession:
 					serviceSession = u'none'
-			except:
+			except Exception:
 				pass
 
 			actionProcessorUserName = u''

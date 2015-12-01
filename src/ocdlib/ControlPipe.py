@@ -154,7 +154,7 @@ class PosixControlPipe(ControlPipe):
 					logger.error(u"Pipe IO error: %s" % forceUnicode(e))
 				try:
 					os.close(self._pipe)
-				except:
+				except Exception:
 					pass
 		except Exception, e:
 			logger.logException(e)
@@ -180,7 +180,7 @@ class NTControlPipeConnection(threading.Thread):
 		if self._pipe:
 			try:
 				windll.kernel32.CloseHandle(self._pipe)
-			except:
+			except Exception:
 				pass
 
 	def run(self):

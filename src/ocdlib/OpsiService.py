@@ -248,7 +248,7 @@ class ServiceConnection(object):
 
 				self._configService = serviceConnectionThread.configService
 				self.connectionEstablished()
-		except:
+		except Exception:
 			self.disconnectConfigService()
 			raise
 
