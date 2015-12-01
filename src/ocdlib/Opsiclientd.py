@@ -391,16 +391,16 @@ class Opsiclientd(EventListener, threading.Thread):
 	def processEvent(self, event):
 		logger.notice(u"Processing event %s" % event)
 		eventProcessingThread = None
-		self._eventProcessingThreadsLock.acquire()
-		description = u"Event %s occurred\n" % event.eventConfig.getId()
-		description += u"Config:\n"
-		config = event.eventConfig.getConfig()
-		configKeys = config.keys()
-		configKeys.sort()
-		for configKey in configKeys:
-			description += u"%s: %s\n" % (configKey, config[configKey])
-		timeline.addEvent(title=u"Event %s" % event.eventConfig.getName(), description=description, category=u"event_occurrence")
-		try:
+		with self._eventProcessingThreadsLock:
+			description = u"Event %s occurred\n" % event.eventConfig.getId()
+			description += u"Config:\n"
+			config = event.eventConfig.getConfig()
+			configKeys = config.keys()
+			configKeys.sort()
+			for configKey in configKeys:
+				description += u"%s: %s\n" % (configKey, config[configKey])
+			timeline.addEvent(title=u"Event %s" % event.eventConfig.getName(), description=description, category=u"event_occurrence")
+
 			eventProcessingThread = EventProcessingThread(self, event)
 
 			# Always process panic events
@@ -409,31 +409,29 @@ class Opsiclientd(EventListener, threading.Thread):
 					if event.eventConfig.actionType != 'login' and ept.event.eventConfig.actionType != 'login':
 						logger.notice(u"Already processing an other (non login) event: %s" % ept.event.eventConfig.getId())
 						return
+
 					if event.eventConfig.actionType == 'login' and ept.event.eventConfig.actionType == 'login':
 						if ept.getSessionId() == eventProcessingThread.getSessionId():
 							logger.notice(u"Already processing login event '%s' in session %s"
 									% (ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()))
-							self._eventProcessingThreadsLock.release()
 							return
 			self.createActionProcessorUser(recreate=False)
 
 			self._eventProcessingThreads.append(eventProcessingThread)
-		finally:
-			self._eventProcessingThreadsLock.release()
 
 		try:
 			eventProcessingThread.start()
 			eventProcessingThread.join()
 			logger.notice(u"Done processing event {0!r}".format(event))
 		finally:
-			self._eventProcessingThreadsLock.acquire()
-			self._eventProcessingThreads.remove(eventProcessingThread)
-			try:
+			with self._eventProcessingThreadsLock:
+				self._eventProcessingThreads.remove(eventProcessingThread)
+
 				if not self._eventProcessingThreads:
-					self.deleteActionProcessorUser()
-			except Exception as e:
-				logger.warning(e)
-			self._eventProcessingThreadsLock.release()
+					try:
+						self.deleteActionProcessorUser()
+					except Exception as error:
+						logger.warning(error)
 
 	def getEventProcessingThread(self, sessionId):
 		logger.notice(u"DEBUG: %s " % self._eventProcessingThreads)
