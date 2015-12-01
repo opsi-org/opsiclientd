@@ -227,7 +227,6 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\sessionhelper\getActiveSessionIds.exe')
 
 		try:
-			eventTitle = u''
 			if __fullversion__:
 				# TODO: unterschiedliche Event-Titel: sind die Absicht?
 				eventTitle = u"Opsiclientd version: %s (full) running" % __version__
