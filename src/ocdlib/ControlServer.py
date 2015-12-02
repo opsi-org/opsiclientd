@@ -369,7 +369,7 @@ class ControlServer(OpsiService, threading.Thread):
 			else:
 				logger.debug(u"Reactor already running.")
 		except CannotListenError as err:
-			logger.critical("Listening on port {0} impossible: {1}".format(self._httpsPort, err))
+			logger.critical(u"Listening on port {0} impossible: {1}".format(self._httpsPort, err))
 			logger.logException(err)
 			raise err
 		except Exception as err:
