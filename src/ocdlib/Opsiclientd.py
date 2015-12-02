@@ -376,7 +376,8 @@ class Opsiclientd(EventListener, threading.Thread):
 
 			if reactor and reactor.running:
 				logger.info(u"Stopping reactor")
-				reactor.stop()
+				reactor.callFromThread(reactor.stop)
+
 				while reactor.running:
 					logger.debug(u"Waiting for reactor to stop")
 					time.sleep(1)
