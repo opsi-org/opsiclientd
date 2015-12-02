@@ -364,12 +364,16 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._controlPipe.stop()
 				self._controlPipe.join(2)
 
+			if self._opsiclientdRunningEventId:
+				timeline.setEventEnd(self._opsiclientdRunningEventId)
 			logger.info(u"Stopping timeline")
 			timeline.stop()
 		except Exception as e:
 			logger.logException(e)
 			self.setBlockLogin(False)
 		finally:
+			self._running = False
+
 			if reactor and reactor.running:
 				logger.info(u"Stopping reactor")
 				reactor.stop()
@@ -377,11 +381,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.debug(u"Waiting for reactor to stop")
 					time.sleep(1)
 
-			logger.info(u"Exiting main thread")
-
-		self._running = False
-		if self._opsiclientdRunningEventId:
-			timeline.setEventEnd(self._opsiclientdRunningEventId)
+			logger.info(u"Exiting opsiclientd thread")
 
 	def stop(self):
 		logger.notice(u"Stopping {0}...".format(self))
