@@ -136,7 +136,7 @@ class PosixControlPipe(ControlPipe):
 						try:
 							self._pipe = os.open(self._pipeName, os.O_WRONLY | os.O_NONBLOCK)
 							break
-						except Exception, e:
+						except Exception as e:
 							if not hasattr(e, 'errno') or (e.errno != 6):
 								raise
 							time.sleep(0.01)
@@ -150,13 +150,13 @@ class PosixControlPipe(ControlPipe):
 					if (len(result) != written):
 						logger.error("Failed to write all bytes to pipe (%d/%d)" % (written, len(result)))
 
-				except Exception, e:
+				except Exception as e:
 					logger.error(u"Pipe IO error: %s" % forceUnicode(e))
 				try:
 					os.close(self._pipe)
 				except Exception:
 					pass
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
 		logger.notice(u"ControlPipe exiting")
 		if os.path.exists(self._pipeName):
