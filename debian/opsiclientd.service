@@ -8,8 +8,6 @@ Requires=local-fs.target
 Wants=network-online.target
 
 [Service]
-# TODO: look at opsiclientds installation because mkdir could be
-# in different places
 ExecStartPre=-/usr/bin/mkdir -p /var/run/opsiclientd
 ExecStartPre=-/usr/bin/mkdir -p /var/log/opsi-client-agent
 ExecStart=/usr/bin/opsiclientd
