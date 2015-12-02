@@ -98,6 +98,9 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		self._blockLoginEventId = None
 
+		self._stopEvent = threading.Event()
+		self._stopEvent.clear()
+
 	def setBlockLogin(self, blockLogin):
 		self._blockLogin = bool(blockLogin)
 		logger.notice(u"Block login now set to '%s'" % self._blockLogin)
@@ -217,7 +220,6 @@ class Opsiclientd(EventListener, threading.Thread):
 
 	def run(self):
 		self._running = True
-		self._stopped = False
 		self._opsiclientdRunningEventId = None
 
 		config.readConfigFile()
@@ -330,8 +332,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.notice(u"No events processing, unblocking login")
 				self.setBlockLogin(False)
 
-			while not self._stopped:
-				time.sleep(1)
+			while not self._stopEvent.is_set():
+				self._stopEvent.wait(1)
 
 			for eventGenerator in getEventGenerators(generatorClass=DaemonShutdownEventGenerator):
 				eventGenerator.createAndFireEvent()
@@ -382,7 +384,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			timeline.setEventEnd(self._opsiclientdRunningEventId)
 
 	def stop(self):
-		self._stopped = True
+		logger.notice(u"Stopping {0}...".format(self))
+		self._stopEvent.set()
 
 	def getCacheService(self):
 		if not self._cacheService:
