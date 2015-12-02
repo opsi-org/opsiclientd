@@ -242,6 +242,7 @@ If this is `None` a random port will be chosen.
 						self._overallProgressSubjectProxy
 					]
 				)
+				self._notificationServer.daemon = True
 				self._notificationServer.start()
 				timeout = 0
 				while not self._notificationServer.isListening() and not self._notificationServer.errorOccurred():

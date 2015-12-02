@@ -269,6 +269,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.notice(u"Starting control pipe")
 			try:
 				self._controlPipe = ControlPipeFactory(OpsiclientdRpcPipeInterface(self))
+				self._controlPipe.daemon = True
 				self._controlPipe.start()
 				logger.notice(u"Control pipe started")
 			except Exception as e:
