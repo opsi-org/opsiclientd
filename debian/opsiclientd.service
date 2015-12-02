@@ -15,7 +15,7 @@ ExecStartPre=-/usr/bin/mkdir -p /var/log/opsi-client-agent
 ExecStart=/usr/bin/opsiclientd
 RestartSec=10
 KillMode=process
-TimeoutStopSec=10
+TimeoutStopSec=20
 
 [Install]
 WantedBy=multi-user.target
