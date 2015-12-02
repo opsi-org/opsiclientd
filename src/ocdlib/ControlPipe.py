@@ -97,6 +97,13 @@ class PosixControlPipe(ControlPipe):
 		ControlPipe.__init__(self, opsiclientdRpcInterface)
 		self._pipeName = "/var/run/opsiclientd/fifo"
 
+		self._stopEvent = threading.Event()
+		self._stopEvent.clear()
+
+	def stop(self):
+		logger.debug("Stopping {0}".format(self))
+		self._stopEvent.set()
+
 	def createPipe(self):
 		logger.debug2(u"Creating pipe %s" % self._pipeName)
 		if not os.path.exists(os.path.dirname(self._pipeName)):
@@ -115,9 +122,10 @@ class PosixControlPipe(ControlPipe):
 
 	def run(self):
 		self._running = True
+
 		try:
 			self.createPipe()
-			while self._running:
+			while not self._stopEvent.wait(1):
 				try:
 					logger.debug2(u"Opening named pipe %s" % self._pipeName)
 					self._pipe = os.open(self._pipeName, os.O_RDONLY)
@@ -141,9 +149,11 @@ class PosixControlPipe(ControlPipe):
 								raise
 							time.sleep(0.01)
 							ta += 0.01
+
 					if (ta >= timeout):
 						logger.error(u"Failed to write to pipe (timed out after %d seconds)" % timeout)
 						continue
+
 					logger.debug2(u"Writing to pipe")
 					written = os.write(self._pipe, result)
 					logger.debug2(u"Number of bytes written: %d" % written)
