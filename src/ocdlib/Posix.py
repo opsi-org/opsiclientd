@@ -89,7 +89,7 @@ class OpsiclientdInit(object):
 			logger.setConsoleLevel(LOG_NONE)
 			self.daemonize()
 
-		# Start opsiclientd
+		logger.debug("Starting opsiclientd...")
 		self._opsiclientd = OpsiclientdPosix()
 		self._opsiclientd.start()
 		while self._opsiclientd.isRunning():
