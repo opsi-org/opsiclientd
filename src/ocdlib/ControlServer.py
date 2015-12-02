@@ -371,6 +371,7 @@ class ControlServer(OpsiService, threading.Thread):
 		except CannotListenError as err:
 			logger.critical(u"Listening on port {0} impossible: {1}".format(self._httpsPort, err))
 			logger.logException(err)
+			self._opsiclientd.stop()
 			raise err
 		except Exception as err:
 			logger.warning('ControlServer {1} caught error: {0}'.format(err, repr(self)))
