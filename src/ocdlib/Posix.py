@@ -32,9 +32,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 """
 
 import os
+import signal
 import sys
 import time
-from signal import signal, SIGHUP, SIGTERM, SIGINT
+from signal import SIGALRM, SIGHUP, SIGTERM, SIGINT
 
 from OPSI.Logger import Logger, LOG_NONE, LOG_NOTICE, LOG_WARNING
 from OPSI.Types import forceUnicode
@@ -78,10 +79,11 @@ class OpsiclientdInit(object):
 		logger.setConsoleLevel(options.logLevel)
 
 		if options.signalHandlers:
-			# Call signalHandler on signal SIGHUP, SIGTERM, SIGINT
-			signal(SIGHUP, self.signalHandler)
-			signal(SIGTERM, self.signalHandler)
-			signal(SIGINT, self.signalHandler)
+			logger.debug("Registering signal handlers")
+			signal.signal(SIGHUP, signal.SIG_IGN)  # ignore SIGHUP
+			signal.signal(SIGTERM, self.signalHandler)
+			signal.signal(SIGINT, self.signalHandler)  # aka. KeyboardInterrupt
+			signal.signal(SIGALRM, self.signalHandler)
 		else:
 			logger.notice(u'Not registering any signal handlers!')
 
@@ -96,12 +98,8 @@ class OpsiclientdInit(object):
 			time.sleep(0.1)
 
 	def signalHandler(self, signo, stackFrame):
-		if signo == SIGHUP:
-			return
-		elif signo in (SIGTERM, SIGINT):
-			logger.info('Received singal {0}. Stopping opsiclientd.')
-			self._opsiclientd.stop()
-			# raise SystemExit(1)
+		logger.debug('Received signal {0}. Stopping opsiclientd.'.format(signo))
+		self._opsiclientd.stop()
 
 	def daemonize(self, stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
 		"""
