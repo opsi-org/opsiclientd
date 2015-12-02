@@ -306,7 +306,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			except Exception as e:
 				logger.notice(u"Cache service not started: %s" % e)
 
-			# Create event generators
+			logger.debug("Creating event generators")
 			createEventGenerators()
 
 			for eventGenerator in getEventGenerators():
