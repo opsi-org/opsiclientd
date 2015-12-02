@@ -94,8 +94,16 @@ class OpsiclientdInit(object):
 		logger.debug("Starting opsiclientd...")
 		self._opsiclientd = OpsiclientdPosix()
 		self._opsiclientd.start()
-		while self._opsiclientd.isRunning():
-			time.sleep(0.1)
+
+		try:
+			while self._opsiclientd.is_alive():
+				time.sleep(1)
+
+			logger.debug("Stopping opsiclientd...")
+			self._opsiclientd.join(60)
+			logger.debug("Stopped.")
+		except Exception as e:
+			logger.logException(e)
 
 	def signalHandler(self, signo, stackFrame):
 		logger.debug('Received signal {0}. Stopping opsiclientd.'.format(signo))
