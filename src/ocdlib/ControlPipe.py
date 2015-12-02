@@ -162,16 +162,19 @@ class PosixControlPipe(ControlPipe):
 
 				except Exception as e:
 					logger.error(u"Pipe IO error: %s" % forceUnicode(e))
+
 				try:
 					os.close(self._pipe)
 				except Exception:
 					pass
 		except Exception as e:
 			logger.logException(e)
-		logger.notice(u"ControlPipe exiting")
-		if os.path.exists(self._pipeName):
-			os.unlink(self._pipeName)
-		self._running = False
+		finally:
+			logger.notice(u"ControlPipe exiting")
+			self._running = False
+
+			if os.path.exists(self._pipeName):
+				os.unlink(self._pipeName)
 
 
 class NTControlPipeConnection(threading.Thread):
