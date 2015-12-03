@@ -320,7 +320,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		@contextmanager
 		def getDaemonLoopingContext():
-			with getEventGeneratorContext()
+			with getEventGeneratorContext():
 				for eventGenerator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
 					eventGenerator.createAndFireEvent()
 
