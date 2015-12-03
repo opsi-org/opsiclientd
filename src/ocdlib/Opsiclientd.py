@@ -319,7 +319,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					eventGenerator.join(2)
 
 		@contextmanager
-		def getLoopingContext():
+		def getDaemonLoopingContext():
 			for eventGenerator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
 				eventGenerator.createAndFireEvent()
 
@@ -384,7 +384,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						self._cacheService = cacheService
 
 						with getEventGeneratorContext():
-							with getLoopingContext():
+							with getDaemonLoopingContext():
 								if not self._eventProcessingThreads:
 									logger.notice(u"No events processing, unblocking login")
 									self.setBlockLogin(False)
