@@ -260,7 +260,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					sslServerCertFile=config.get('control_server', 'ssl_server_cert_file'),
 					staticDir=config.get('control_server', 'static_dir')
 				)
-				logger.debug("Current control server: {0}".format(self._controlServer))
+				logger.debug("Current control server: {0}".format(controlServer))
 				controlServer.start()
 				logger.notice(u"Control server started")
 				yield
