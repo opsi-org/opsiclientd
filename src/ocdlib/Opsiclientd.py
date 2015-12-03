@@ -246,8 +246,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				try:
 					controlPipe.stop()
 					controlPipe.join(2)
-				except NameError:
-					pass
+				except (NameError, RuntimeError) as stopError:
+					logger.debug(u"Stopping controlPipe failed: {0}".format(stopError))
 
 		@contextmanager
 		def getControlServer():
@@ -272,8 +272,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				try:
 					controlServer.stop()
 					controlServer.join(2)
-				except NameError:
-					pass
+				except (NameError, RuntimeError) as stopError:
+					logger.debug(u"Stopping controlPipe failed: {0}".format(stopError))
 
 		@contextmanager
 		def getCacheService():
@@ -293,8 +293,8 @@ class Opsiclientd(EventListener, threading.Thread):
 					try:
 						cacheService.stop()
 						cacheService.join(2)
-					except NameError:
-						pass
+					except (NameError, RuntimeError) as stopError:
+						logger.debug(u"Stopping controlPipe failed: {0}".format(stopError))
 			except ImportError:
 				yield None
 			except Exception as e:
