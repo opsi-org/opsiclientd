@@ -378,9 +378,16 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.info(u"Stopping reactor")
 				reactor.callFromThread(reactor.stop)
 
-				while reactor.running:
+				reactorStopTimeout = 60
+				for _ in range(reactorStopTimeout):
+					if not reactor.running:
+						break
+
 					logger.debug(u"Waiting for reactor to stop")
 					time.sleep(1)
+				else:
+					logger.debug("Reactor still running after {0} seconds.".format(reactorStopTimeout))
+					logger.debug("Exiting anyway.")
 
 			logger.info(u"Exiting opsiclientd thread")
 
