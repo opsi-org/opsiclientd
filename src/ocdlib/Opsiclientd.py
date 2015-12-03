@@ -320,23 +320,24 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		@contextmanager
 		def getDaemonLoopingContext():
-			for eventGenerator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
-				eventGenerator.createAndFireEvent()
-
-			if RUNNING_ON_WINDOWS and getEventGenerators(generatorClass=GUIStartupEventGenerator):
-				# Wait until gui starts up
-				logger.notice(u"Waiting for gui startup (timeout: %d seconds)" % config.get('global', 'wait_for_gui_timeout'))
-				self.waitForGUI(timeout=config.get('global', 'wait_for_gui_timeout'))
-				logger.notice(u"Done waiting for GUI")
-
-				# Wait some more seconds for events to fire
-				time.sleep(5)
-
-			try:
-				yield
-			finally:
-				for eventGenerator in getEventGenerators(generatorClass=DaemonShutdownEventGenerator):
+			with getEventGeneratorContext()
+				for eventGenerator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
 					eventGenerator.createAndFireEvent()
+
+				if RUNNING_ON_WINDOWS and getEventGenerators(generatorClass=GUIStartupEventGenerator):
+					# Wait until gui starts up
+					logger.notice(u"Waiting for gui startup (timeout: %d seconds)" % config.get('global', 'wait_for_gui_timeout'))
+					self.waitForGUI(timeout=config.get('global', 'wait_for_gui_timeout'))
+					logger.notice(u"Done waiting for GUI")
+
+					# Wait some more seconds for events to fire
+					time.sleep(5)
+
+				try:
+					yield
+				finally:
+					for eventGenerator in getEventGenerators(generatorClass=DaemonShutdownEventGenerator):
+						eventGenerator.createAndFireEvent()
 
 		try:
 			if __fullversion__:
@@ -383,26 +384,25 @@ class Opsiclientd(EventListener, threading.Thread):
 					with getCacheService() as cacheService:
 						self._cacheService = cacheService
 
-						with getEventGeneratorContext():
-							with getDaemonLoopingContext():
-								if not self._eventProcessingThreads:
-									logger.notice(u"No events processing, unblocking login")
-									self.setBlockLogin(False)
+						with getDaemonLoopingContext():
+							if not self._eventProcessingThreads:
+								logger.notice(u"No events processing, unblocking login")
+								self.setBlockLogin(False)
 
-								try:
-									while not self._stopEvent.is_set():
-										self._stopEvent.wait(1)
-								finally:
-									logger.notice(u"opsiclientd is going down")
+							try:
+								while not self._stopEvent.is_set():
+									self._stopEvent.wait(1)
+							finally:
+								logger.notice(u"opsiclientd is going down")
 
-									for ept in self._eventProcessingThreads:
-										logger.info(u"Waiting for event processing thread %s" % ept)
-										ept.join(5)
+								for ept in self._eventProcessingThreads:
+									logger.info(u"Waiting for event processing thread %s" % ept)
+									ept.join(5)
 
-									if self._opsiclientdRunningEventId:
-										timeline.setEventEnd(self._opsiclientdRunningEventId)
-									logger.info(u"Stopping timeline")
-									timeline.stop()
+								if self._opsiclientdRunningEventId:
+									timeline.setEventEnd(self._opsiclientdRunningEventId)
+								logger.info(u"Stopping timeline")
+								timeline.stop()
 		except Exception as e:
 			logger.logException(e)
 			self.setBlockLogin(False)
