@@ -17,6 +17,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 currentPath=$(pwd)
+if [ -e opsiclientd.tar.gz ]; then
+	echo "Removing old tarfile."
+	rm -f opsiclientd.tar.gz
+fi
 cd src/
 python setup-cx-freeze.py build
 cd build/
