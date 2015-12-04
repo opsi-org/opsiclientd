@@ -263,6 +263,12 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.debug("Current control server: {0}".format(controlServer))
 				controlServer.start()
 				logger.notice(u"Control server started")
+
+				self._stopEvent.wait(1)
+				if self._stopEvent.is_set():
+					# Probably a failure during binding to port.
+					raise RuntimeError("Received stop signal.")
+
 				yield
 			except Exception as e:
 				logger.error(u"Failed to start control server: {0}".format(forceUnicode(e)))
