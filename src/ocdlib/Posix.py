@@ -73,6 +73,8 @@ class OpsiclientdInit(object):
 		parser.add_argument("-D", "--daemon", dest="daemon",
 							action="store_true", default=False,
 							help="Daemonize process.")
+		parser.add_argument("--pid-file", dest="pidFile",
+							help="Write the PID into this file.")
 
 		options = parser.parse_args()
 
@@ -90,6 +92,8 @@ class OpsiclientdInit(object):
 		if options.daemon:
 			logger.setConsoleLevel(LOG_NONE)
 			self.daemonize()
+
+		self.writePIDFile(options.pidFile)
 
 		logger.debug("Starting opsiclientd...")
 		self._opsiclientd = OpsiclientdPosix()
@@ -144,3 +148,9 @@ class OpsiclientdInit(object):
 		# Replacing stdout & stderr with our variants
 		sys.stdout = logger.getStdout()
 		sys.stderr = logger.getStderr()
+
+	@staticmethod
+	def writePIDFile(path):
+		if path:
+			with open(path, 'w') as pidFile:
+				pidFile.write(str(os.getpid()))
