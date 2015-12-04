@@ -51,11 +51,11 @@ logger = Logger()
 
 
 try:
-    from ocdlibnonfree.Posix import OpsiclientdPosix
+	from ocdlibnonfree.Posix import OpsiclientdPosix
 except ImportError:
-    logger.setConsoleLevel(LOG_WARNING)
-    logger.critical("Import of OpsiclientdPosix failed.")
-    raise
+	logger.setConsoleLevel(LOG_WARNING)
+	logger.critical("Import of OpsiclientdPosix failed.")
+	raise
 
 
 class OpsiclientdInit(object):
