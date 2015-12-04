@@ -151,4 +151,4 @@ class OpsiclientdInit(object):
 	def writePIDFile(path):
 		if path:
 			with open(path, 'w') as pidFile:
-				pidFile.write(os.getpid())
+				pidFile.write(str(os.getpid()))
