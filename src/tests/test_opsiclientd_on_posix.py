@@ -5,12 +5,11 @@
 # http://www.uib.de/
 # All rights reserved.
 
+
+from helper import workInTemporaryDirectory
+
 import os
-import shutil
-import tempfile
 import unittest
-from contextlib import contextmanager
-from functools import wraps
 
 import mock
 
@@ -19,30 +18,6 @@ try:
 except ImportError as error:
     print("Failed to import: {0}".format(error))
     Opsiclientd = None
-
-
-@contextmanager
-def workInTemporaryDirectory(tempDir=None):
-    """
-    Creates a temporary folder to work in. Deletes the folder afterwards.
-
-    :param tempDir: use the given dir as temporary directory. Will not \
-be deleted if given.
-    """
-    temporary_folder = tempDir or tempfile.mkdtemp()
-    with cd(temporary_folder):
-        yield temporary_folder
-
-    if not tempDir and os.path.exists(temporary_folder):
-        shutil.rmtree(temporary_folder)
-
-
-@contextmanager
-def cd(path):
-    old_dir = os.getcwd()
-    os.chdir(path)
-    yield
-    os.chdir(old_dir)
 
 
 @unittest.skipIf(Opsiclientd is None, "Unable to find non-free modules.")
