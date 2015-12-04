@@ -35,7 +35,7 @@ import os
 import signal
 import sys
 import time
-from signal import SIGALRM, SIGHUP, SIGTERM, SIGINT
+from signal import SIGHUP, SIGTERM, SIGINT
 
 from OPSI.Logger import Logger, LOG_NONE, LOG_NOTICE, LOG_WARNING
 from OPSI.Types import forceUnicode
@@ -85,7 +85,6 @@ class OpsiclientdInit(object):
 			signal.signal(SIGHUP, signal.SIG_IGN)  # ignore SIGHUP
 			signal.signal(SIGTERM, self.signalHandler)
 			signal.signal(SIGINT, self.signalHandler)  # aka. KeyboardInterrupt
-			signal.signal(SIGALRM, self.signalHandler)
 		else:
 			logger.notice(u'Not registering any signal handlers!')
 
