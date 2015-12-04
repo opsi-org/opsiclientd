@@ -64,13 +64,13 @@ class OpsiclientdInit(object):
 
 		parser = argparse.ArgumentParser()
 		parser.add_argument("--version", "-V", action='version', version=__version__)
-		parser.add_argument("-l", "--log-level", dest="logLevel",
+		parser.add_argument("--log-level", "-l", dest="logLevel",
 							default=LOG_NOTICE,
 							help="Set the log-level.")
-		parser.add_argument('-t', '--no-signal-handlers', dest="signalHandlers",
+		parser.add_argument('--no-signal-handlers', '-t', dest="signalHandlers",
 							action="store_false", default=True,
 							help="Do no register signal handlers.")
-		parser.add_argument("-D", "--daemon", dest="daemon",
+		parser.add_argument("--daemon", "-D", dest="daemon",
 							action="store_true", default=False,
 							help="Daemonize process.")
 		parser.add_argument("--pid-file", dest="pidFile", default=None,
