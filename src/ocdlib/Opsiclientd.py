@@ -36,6 +36,7 @@ should be overridden in the concrete implementation for an OS.
 
 import os
 import sys
+from contextlib import contextmanager
 
 from twisted.internet import reactor
 
@@ -228,6 +229,116 @@ class Opsiclientd(EventListener, threading.Thread):
 		# Needed helper-exe for NT5 x64 to get Sessioninformation (WindowsAPIBug)
 		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\sessionhelper\getActiveSessionIds.exe')
 
+		@contextmanager
+		def getControlPipe():
+			logger.notice(u"Starting control pipe")
+			try:
+				controlPipe = ControlPipeFactory(OpsiclientdRpcPipeInterface(self))
+				controlPipe.daemon = True
+				controlPipe.start()
+				logger.notice(u"Control pipe started")
+				yield
+			except Exception as e:
+				logger.error(u"Failed to start control pipe: %s" % forceUnicode(e))
+				raise
+			finally:
+				logger.info(u"Stopping control pipe")
+				try:
+					controlPipe.stop()
+					controlPipe.join(2)
+				except (NameError, RuntimeError) as stopError:
+					logger.debug(u"Stopping controlPipe failed: {0}".format(stopError))
+
+		@contextmanager
+		def getControlServer():
+			logger.notice(u"Starting control server")
+			try:
+				controlServer = ControlServer(
+					opsiclientd=self,
+					httpsPort=config.get('control_server', 'port'),
+					sslServerKeyFile=config.get('control_server', 'ssl_server_key_file'),
+					sslServerCertFile=config.get('control_server', 'ssl_server_cert_file'),
+					staticDir=config.get('control_server', 'static_dir')
+				)
+				logger.debug("Current control server: {0}".format(controlServer))
+				controlServer.start()
+				logger.notice(u"Control server started")
+				yield
+			except Exception as e:
+				logger.error(u"Failed to start control server: {0}".format(forceUnicode(e)))
+				raise e
+			finally:
+				logger.info(u"Stopping control server")
+				try:
+					controlServer.stop()
+					controlServer.join(2)
+				except (NameError, RuntimeError) as stopError:
+					logger.debug(u"Stopping controlPipe failed: {0}".format(stopError))
+
+		@contextmanager
+		def getCacheService():
+			try:
+				from ocdlibnonfree.CacheService import CacheService
+				logger.notice(u"Starting cache service")
+				try:
+					cacheService = CacheService(opsiclientd=self)
+					cacheService.start()
+					logger.notice(u"Cache service started")
+					yield cacheService
+				except Exception as e:
+					logger.error(u"Failed to start cache service: %s" % forceUnicode(e))
+					raise
+				finally:
+					logger.info(u"Stopping cache service")
+					try:
+						cacheService.stop()
+						cacheService.join(2)
+					except (NameError, RuntimeError) as stopError:
+						logger.debug(u"Stopping controlPipe failed: {0}".format(stopError))
+			except ImportError:
+				yield None
+			except Exception as e:
+				logger.notice(u"Cache service not started: %s" % e)
+
+		@contextmanager
+		def getEventGeneratorContext():
+			logger.debug("Creating event generators")
+			createEventGenerators()
+
+			for eventGenerator in getEventGenerators():
+				eventGenerator.addEventListener(self)
+				eventGenerator.start()
+				logger.notice(u"Event generator '%s' started" % eventGenerator)
+
+			try:
+				yield
+			finally:
+				for eventGenerator in getEventGenerators():
+					logger.info(u"Stopping event generator %s" % eventGenerator)
+					eventGenerator.stop()
+					eventGenerator.join(2)
+
+		@contextmanager
+		def getDaemonLoopingContext():
+			with getEventGeneratorContext():
+				for eventGenerator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
+					eventGenerator.createAndFireEvent()
+
+				if RUNNING_ON_WINDOWS and getEventGenerators(generatorClass=GUIStartupEventGenerator):
+					# Wait until gui starts up
+					logger.notice(u"Waiting for gui startup (timeout: %d seconds)" % config.get('global', 'wait_for_gui_timeout'))
+					self.waitForGUI(timeout=config.get('global', 'wait_for_gui_timeout'))
+					logger.notice(u"Done waiting for GUI")
+
+					# Wait some more seconds for events to fire
+					time.sleep(5)
+
+				try:
+					yield
+				finally:
+					for eventGenerator in getEventGenerators(generatorClass=DaemonShutdownEventGenerator):
+						eventGenerator.createAndFireEvent()
+
 		try:
 			if __fullversion__:
 				# TODO: unterschiedliche Event-Titel: sind die Absicht?
@@ -268,106 +379,30 @@ class Opsiclientd(EventListener, threading.Thread):
 				durationEvent=True
 			)
 
-			logger.notice(u"Starting control pipe")
-			try:
-				self._controlPipe = ControlPipeFactory(OpsiclientdRpcPipeInterface(self))
-				self._controlPipe.daemon = True
-				self._controlPipe.start()
-				logger.notice(u"Control pipe started")
-			except Exception as e:
-				logger.error(u"Failed to start control pipe: %s" % forceUnicode(e))
-				raise
+			with getControlPipe():
+				with getControlServer():
+					with getCacheService() as cacheService:
+						self._cacheService = cacheService
 
-			logger.notice(u"Starting control server")
-			try:
-				self._controlServer = ControlServer(
-					opsiclientd=self,
-					httpsPort=config.get('control_server', 'port'),
-					sslServerKeyFile=config.get('control_server', 'ssl_server_key_file'),
-					sslServerCertFile=config.get('control_server', 'ssl_server_cert_file'),
-					staticDir=config.get('control_server', 'static_dir')
-				)
-				logger.debug("Current control server: {0}".format(self._controlServer))
-				self._controlServer.start()
-				logger.notice(u"Control server started")
-			except Exception as e:
-				logger.error(u"Failed to start control server: {0}".format(forceUnicode(e)))
-				raise e
+						with getDaemonLoopingContext():
+							if not self._eventProcessingThreads:
+								logger.notice(u"No events processing, unblocking login")
+								self.setBlockLogin(False)
 
-			self._cacheService = None
-			try:
-				from ocdlibnonfree.CacheService import CacheService
-				logger.notice(u"Starting cache service")
-				try:
-					self._cacheService = CacheService(opsiclientd=self)
-					self._cacheService.start()
-					logger.notice(u"Cache service started")
-				except Exception as e:
-					logger.error(u"Failed to start cache service: %s" % forceUnicode(e))
-					raise
-			except Exception as e:
-				logger.notice(u"Cache service not started: %s" % e)
+							try:
+								while not self._stopEvent.is_set():
+									self._stopEvent.wait(1)
+							finally:
+								logger.notice(u"opsiclientd is going down")
 
-			logger.debug("Creating event generators")
-			createEventGenerators()
+								for ept in self._eventProcessingThreads:
+									logger.info(u"Waiting for event processing thread %s" % ept)
+									ept.join(5)
 
-			for eventGenerator in getEventGenerators():
-				eventGenerator.addEventListener(self)
-				eventGenerator.start()
-				logger.notice(u"Event generator '%s' started" % eventGenerator)
-
-			for eventGenerator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
-				eventGenerator.createAndFireEvent()
-
-			if RUNNING_ON_WINDOWS and getEventGenerators(generatorClass=GUIStartupEventGenerator):
-				# Wait until gui starts up
-				logger.notice(u"Waiting for gui startup (timeout: %d seconds)" % config.get('global', 'wait_for_gui_timeout'))
-				self.waitForGUI(timeout=config.get('global', 'wait_for_gui_timeout'))
-				logger.notice(u"Done waiting for GUI")
-
-				# Wait some more seconds for events to fire
-				time.sleep(5)
-
-			if not self._eventProcessingThreads:
-				logger.notice(u"No events processing, unblocking login")
-				self.setBlockLogin(False)
-
-			while not self._stopEvent.is_set():
-				self._stopEvent.wait(1)
-
-			for eventGenerator in getEventGenerators(generatorClass=DaemonShutdownEventGenerator):
-				eventGenerator.createAndFireEvent()
-
-			logger.notice(u"opsiclientd is going down")
-
-			for eventGenerator in getEventGenerators():
-				logger.info(u"Stopping event generator %s" % eventGenerator)
-				eventGenerator.stop()
-				eventGenerator.join(2)
-
-			for ept in self._eventProcessingThreads:
-				logger.info(u"Waiting for event processing thread %s" % ept)
-				ept.join(5)
-
-			logger.info(u"Stopping cache service")
-			if self._cacheService:
-				self._cacheService.stop()
-				self._cacheService.join(2)
-
-			logger.info(u"Stopping control server")
-			if self._controlServer:
-				self._controlServer.stop()
-				self._controlServer.join(2)
-
-			logger.info(u"Stopping control pipe")
-			if self._controlPipe:
-				self._controlPipe.stop()
-				self._controlPipe.join(2)
-
-			if self._opsiclientdRunningEventId:
-				timeline.setEventEnd(self._opsiclientdRunningEventId)
-			logger.info(u"Stopping timeline")
-			timeline.stop()
+								if self._opsiclientdRunningEventId:
+									timeline.setEventEnd(self._opsiclientdRunningEventId)
+								logger.info(u"Stopping timeline")
+								timeline.stop()
 		except Exception as e:
 			logger.logException(e)
 			self.setBlockLogin(False)
