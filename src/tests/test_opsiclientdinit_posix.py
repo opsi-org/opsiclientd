@@ -38,7 +38,7 @@ class OpsiclientdRebootCoordinationTestCase(unittest.TestCase):
     def testNotWritingPIDtoEmptyPath(self):
         with workInTemporaryDirectory():
             OpsiclientdInit.writePIDFile(None)
-            self.assertFalse(os.path.exists(targetFile))
+            self.assertFalse([e for e in os.listdir(tempDir)])
 
             OpsiclientdInit.writePIDFile("")
-            self.assertFalse(os.path.exists(targetFile))
+            self.assertFalse([e for e in os.listdir(tempDir)])
