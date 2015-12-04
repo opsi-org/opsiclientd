@@ -91,6 +91,8 @@ class OpsiclientdInit(object):
 			logger.setConsoleLevel(LOG_NONE)
 			self.daemonize()
 
+		self.writePIDFile(options.pidFile)
+
 		logger.debug("Starting opsiclientd...")
 		self._opsiclientd = OpsiclientdPosix()
 		self._opsiclientd.start()
@@ -144,3 +146,9 @@ class OpsiclientdInit(object):
 		# Replacing stdout & stderr with our variants
 		sys.stdout = logger.getStdout()
 		sys.stderr = logger.getStderr()
+
+	@staticmethod
+	def writePIDFile(path):
+		if path:
+			with open(path, 'w') as pidFile:
+				pidFile.write(os.getpid())
