@@ -73,6 +73,8 @@ class OpsiclientdInit(object):
 		parser.add_argument("-D", "--daemon", dest="daemon",
 							action="store_true", default=False,
 							help="Daemonize process.")
+		parser.add_argument("--pid-file", dest="pidFile",
+							help="Write the PID into this file.")
 
 		options = parser.parse_args()
 
