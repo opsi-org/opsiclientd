@@ -108,6 +108,15 @@ class OpsiclientdInit(object):
 			logger.debug("Stopped.")
 		except Exception as e:
 			logger.logException(e)
+		finally:
+			if options.pidFile:
+				logger.debug("Removing PID file...")
+				try:
+					os.remove(options.pidFile)
+					logger.debug("PID file removed.")
+				except OSError as oserr:
+					logger.debug("Removing pid file failed: {0}".format(oserr))
+
 
 	def signalHandler(self, signo, stackFrame):
 		logger.debug('Received signal {0}. Stopping opsiclientd.'.format(signo))
