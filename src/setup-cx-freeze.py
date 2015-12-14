@@ -42,6 +42,8 @@ buildOptions = {
         "duplicity",
         "twisted",
         "zope.interface",  # required by twisted
+        "tornado.platform.twisted",
+        "tornado.ioloop",
     ],
     "excludes": [
         "Tkconstants",
