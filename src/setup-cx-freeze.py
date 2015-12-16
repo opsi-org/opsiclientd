@@ -55,7 +55,8 @@ buildOptions = {
         "ImageTk",
         "PIL.ImageTk",
         "FixTk",
-        "collections.sys"  # Fix for https://bitbucket.org/anthony_tuininga/cx_freeze/issues/127/collectionssys-error
+        "collections.sys",  # Fix for https://bitbucket.org/anthony_tuininga/cx_freeze/issues/127/collectionssys-error
+        "collections.abc",  # Fix for https://bitbucket.org/anthony_tuininga/cx_freeze/issues/127/collectionssys-error
     ],
     "include_files": [],
     "compressed": True,
