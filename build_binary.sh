@@ -32,6 +32,7 @@ mv exe.* opsiclientd
 cd opsiclientd
 echo "Testing created binary..."
 ./opsiclientd -h
+./opsiclientd -V
 echo "Binary test finished"
 tar -czvvf ../opsiclientd.tar.gz *
 mv ../opsiclientd.tar.gz "$currentPath"
