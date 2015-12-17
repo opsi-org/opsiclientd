@@ -43,8 +43,9 @@ buildOptions = {
         "twisted",
         "zope.interface",  # required by twisted
         "tornado",
-        # "tornado.platform.twisted",
-        # "tornado.ioloop",
+        "Crypto.Cipher.AES",  # Required by Debian 8
+        "cffi",  # Required by Debian 8 - see https://github.com/pyca/cryptography/issues/2039#issuecomment-132225074
+        "cryptography",  # Required by Debian 8 - see https://github.com/pyca/cryptography/issues/2039#issuecomment-132225074
     ],
     "excludes": [
         "Tkconstants",
