@@ -420,6 +420,8 @@ class Opsiclientd(EventListener, threading.Thread):
 
 			if reactor and reactor.running:
 				logger.info(u"Stopping reactor")
+				reactor.fireSystemEvent('shutdown')
+				reactor.disconnectAll()
 				reactor.callFromThread(reactor.stop)
 
 				reactorStopTimeout = 60
