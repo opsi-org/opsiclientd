@@ -34,7 +34,7 @@ echo "Testing created binary..."
 ./opsiclientd -h
 ./opsiclientd -V
 echo "Binary test finished"
-tar -czvvf ../opsiclientd.tar.gz *
+tar -czvf ../opsiclientd.tar.gz *
 mv ../opsiclientd.tar.gz "$currentPath"
 echo "Build completed."
 echo "File: $currentPath/opsiclientd.tar.gz"
