@@ -24,6 +24,7 @@ Setup script for freezing the opsiclientd with cx_Freeze.
 """
 
 import os
+import platform
 import sys
 
 import duplicity
@@ -43,8 +44,6 @@ buildOptions = {
         "twisted",
         "zope.interface",  # required by twisted
         "tornado",
-        # "tornado.platform.twisted",
-        # "tornado.ioloop",
     ],
     "excludes": [
         "Tkconstants",
@@ -64,6 +63,13 @@ buildOptions = {
         'zope',
     ]
 }
+
+distribution, version, _ = platform.linux_distribution()
+if distribution.lower().strip() == 'debian' and version.startswith('8'):
+    # Required by Debian 8 - see https://github.com/pyca/cryptography/issues/2039#issuecomment-132225074
+    buildOptions['packages'].append('cffi')
+    buildOptions['packages'].append('Crypto.Cipher.AES')
+    buildOptions['packages'].append('cryptography')
 
 buildFreeVersion = False
 if '--free' in sys.argv:
