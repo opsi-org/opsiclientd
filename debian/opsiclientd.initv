@@ -34,7 +34,7 @@ SCRIPTNAME=/etc/init.d/$NAME
 . /lib/lsb/init-functions
 
 # Making sure that the folder for our PID file exists
-mkdir -p $PIDFILEDIR 
+mkdir -p $PIDFILEDIR
 
 #
 # Function that starts the daemon/service
