@@ -19,7 +19,7 @@
 """
 Pipes for control.
 
-:copyright:uib GmbH <info@uib.de>
+:copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
 :author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
