@@ -117,8 +117,8 @@ class PosixControlPipe(ControlPipe):
 		if self._pipe:
 			try:
 				os.close(self._pipe)
-			except Exception:
-				pass
+			except Exception as error:
+				logger.debug(u"Closing pipe {0!r} failed: {1}".format(self._pipe, forceUnicode(error)))
 
 	def run(self):
 		self._running = True
@@ -167,8 +167,8 @@ class PosixControlPipe(ControlPipe):
 
 				try:
 					os.close(self._pipe)
-				except Exception:
-					pass
+			except Exception as error:
+				logger.debug2(u"Closing pipe {0!r} failed: {1}".format(self._pipe, forceUnicode(error)))
 		except Exception as e:
 			logger.logException(e)
 		finally:
