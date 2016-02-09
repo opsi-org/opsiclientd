@@ -68,6 +68,7 @@ excludes = ["pywin", "pywin.debugger", "pywin.debugger.dbgcon",
 	"Tkconstants", "Tkinter", "tcl", "_imagingtk",
 	"PIL._imagingtk", "ImageTk", "PIL.ImageTk", "FixTk"
 ]
+includes = ["_cffi_backend"]
 
 if os.path.exists("ocdlibnonfree") and not buildFreeVersion:
 	packages.append("ocdlibnonfree")
@@ -233,6 +234,7 @@ if RUNS_ON_WINDOWS:
 			"compressed": 1,
 			"optimize": 2,
 			"excludes": excludes,
+                        "includes": includes,
 			"packages": packages + ["OPSI", "twisted"]
 		}
 	}
