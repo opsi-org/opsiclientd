@@ -8,7 +8,7 @@ remote procedure calls
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
-Copyright (C) 2010-2015 uib GmbH
+Copyright (C) 2010-2016 uib GmbH
 
 http://www.uib.de/
 
@@ -31,14 +31,17 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 @author: Jan Schneider <j.schneider@uib.de>
 @license: GNU General Public License version 2
 """
+import base64
 import codecs
 import os
 import re
 import threading
 import time
+from hashlib import md5
 
 import tornado.platform.twisted
 tornado.platform.twisted.install()  # Has to be above the reactor import.
+from twisted.conch.ssh import keys
 from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
 from tornado.ioloop import IOLoop
@@ -333,7 +336,52 @@ class ControlServer(OpsiService, threading.Thread):
 		self._running = False
 		self._server = None
 		self._opsiclientdRpcInterface = OpsiclientdRpcInterface(self._opsiclientd)
+
+		self.__checkModulesFile()
+
 		logger.info(u"ControlServer initiated")
+
+	def __checkModulesFile(self):
+		logger.debug(u"Checking licensing...")
+		backendinfo = self._opsiclientdRpcInterface.getBackendInfo()
+		modules = backendinfo['modules']
+		helpermodules = backendinfo['realmodules']
+
+		if not modules.get('linux_agent'):
+			raise Exception(u"Linux agent disabled in modules file")
+
+		if not modules.get('customer'):
+			raise Exception(u"No customer in modules file")
+
+		if not modules.get('valid'):
+			raise Exception(u"Modules file invalid")
+
+		if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
+			raise Exception(u"Modules file expired")
+
+		logger.info(u"Verifying modules file signature")
+		publicKey = keys.Key.fromString(data=base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
+		data = u''
+		mks = modules.keys()
+		mks.sort()
+		for module in mks:
+			if module in ('valid', 'signature'):
+				continue
+			if helpermodules.has_key(module):
+				val = helpermodules[module]
+				if int(val) > 0:
+					modules[module] = True
+			else:
+				val = modules[module]
+				if val == False:
+					val = 'no'
+				if val == True:
+					val = 'yes'
+
+			data += u'%s = %s\r\n' % (module.lower().strip(), val)
+		if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
+			raise Exception(u"Modules file invalid")
+		logger.info(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
 
 	def run(self):
 		self._running = True
