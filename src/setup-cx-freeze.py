@@ -70,6 +70,10 @@ if distribution.lower().strip() == 'debian' and version.startswith('8'):
     buildOptions['packages'].append('cffi')
     buildOptions['packages'].append('Crypto.Cipher.AES')
     buildOptions['packages'].append('cryptography')
+elif distribution.lower().strip() == 'suse linux enterprise server' and version.startswith('12'):
+    buildOptions['packages'].append('cffi')
+    buildOptions['packages'].append('Crypto.Cipher.AES')
+    buildOptions['packages'].append('cryptography')
 
 buildFreeVersion = False
 if '--free' in sys.argv:
