@@ -662,8 +662,8 @@ class ConfigImplementation(object):
 								continue
 
 							self.set(section=parts[1], option=parts[2], value=configState.values[0])
-						except Exception, e:
-							logger.error(u"Failed to process configState {0!r}: {1}".format(configState.configId, forceUnicode(e)))
+						except Exception as error:
+							logger.error(u"Failed to process configState {0!r}: {1}".format(configState.configId, forceUnicode(error)))
 				finally:
 					configService.backend_setOptions({"addConfigStateDefaults": defaultSetting})
 
