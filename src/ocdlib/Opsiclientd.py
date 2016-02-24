@@ -350,7 +350,6 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		try:
 			if __fullversion__:
-				# TODO: unterschiedliche Event-Titel: sind die Absicht?
 				eventTitle = u"Opsiclientd version: %s (full) running" % __version__
 				logger.essential(u"Opsiclientd version: %s (full)" % __version__)
 			else:
@@ -364,22 +363,6 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.notice(u"Using host id '%s'" % config.get('global', 'host_id'))
 
 			self.setBlockLogin(True)
-
-			# Deactivated to have this working on linux.
-			# Before removing this block please check on windows
-			# if everything works as expected.
-			# class ReactorThread(threading.Thread):
-			# 	def run(self):
-			# 		logger.notice(u"Starting reactor")
-			# 		reactor.run(installSignalHandlers=0)
-			# ReactorThread().start()
-			# timeout = 0
-			# while not reactor.running:
-			# 	if (timeout >= 10):
-			# 		raise Exception(u"Timed out after %d seconds while waiting for reactor to start" % timeout)
-			# 	logger.debug(u"Waiting for reactor")
-			# 	time.sleep(1)
-			# 	timeout += 1
 
 			self._opsiclientdRunningEventId = timeline.addEvent(
 				title=eventTitle,
