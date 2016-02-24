@@ -657,7 +657,7 @@ class ConfigImplementation(object):
 					elif configState.configId.startswith(u'opsiclientd.'):
 						try:
 							parts = configState.configId.lower().split('.')
-							if (len(parts) < 3):
+							if len(parts) < 3:
 								logger.debug(u"Expected at least 3 parts in {0!r} - skipping.".format(configState.configId))
 								continue
 
