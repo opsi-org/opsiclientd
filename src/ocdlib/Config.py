@@ -658,6 +658,7 @@ class ConfigImplementation(object):
 						try:
 							parts = configState.configId.lower().split('.')
 							if (len(parts) < 3):
+								logger.debug(u"Expected at least 3 parts in {0!r} - skipping.".format(configState.configId))
 								continue
 
 							self.set(section=parts[1], option=parts[2], value=configState.values[0])
