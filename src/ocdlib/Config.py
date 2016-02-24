@@ -1,33 +1,27 @@
 # -*- coding: utf-8 -*-
+
+# This file is part of the desktop management solution opsi
+# Copyright (C) 2010-2016 uib GmbH <info@uib.de>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-ocdlib.Config
+Configuration of opsiclientd.
 
-opsiclientd is part of the desktop management solution opsi
-(open pc server integration) http://www.opsi.org
-
-Copyright (C) 2010 uib GmbH
-
-http://www.uib.de/
-
-All rights reserved.
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License version 2 as
-published by the Free Software Foundation.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-@copyright:	uib GmbH <info@uib.de>
-@author: Jan Schneider <j.schneider@uib.de>
-@author: Erol Ueluekmen <e.ueluekmen@uib.de>
-@license: GNU General Public License version 2
+:author: Jan Schneider <j.schneider@uib.de>
+:author: Erol Ueluekmen <e.ueluekmen@uib.de>
+:author: Niko Wenselowski <n.wenselowski@uib.de>
+:license: GNU Affero General Public License version 3
 """
 
 import os
@@ -644,28 +638,34 @@ class ConfigImplementation(object):
 				except Exception, e:
 					logger.error(u"Failed to process general config key '%s:%s': %s" % (key, value, forceUnicode(e)))
 		else:
+			defaultSetting = configService.backend_getOptions().get('addConfigStateDefaults', False)
 			configService.backend_setOptions({"addConfigStateDefaults": True})
-			for configState in configService.configState_getObjects(objectId=self.get('global', 'host_id')):
-				logger.info(u"Got config state from service: configId %s, values %s" % (configState.configId, configState.values))
+			try:
+				for configState in configService.configState_getObjects(objectId=self.get('global', 'host_id')):
+					logger.info(u"Got config state from service: {0!r}".format(configState))
 
-				if not configState.values:
-					continue
+					if not configState.values:
+						logger.debug(u"No values - skipping {0!r}".format(configState.configId))
+						continue
 
-				if (configState.configId == u'clientconfig.configserver.url'):
-					self.set('config_service', 'url', configState.values)
-				elif (configState.configId == u'clientconfig.depot.drive'):
-					self.set('depot_server', 'drive', configState.values[0])
-				elif (configState.configId == u'clientconfig.depot.id'):
-					self.set('depot_server', 'depot_id', configState.values[0])
-				elif configState.configId.startswith(u'opsiclientd.'):
-					try:
-						parts = configState.configId.lower().split('.')
-						if (len(parts) < 3):
-							continue
+					if configState.configId == u'clientconfig.configserver.url':
+						self.set('config_service', 'url', configState.values)
+					elif configState.configId == u'clientconfig.depot.drive':
+						self.set('depot_server', 'drive', configState.values[0])
+					elif configState.configId == u'clientconfig.depot.id':
+						self.set('depot_server', 'depot_id', configState.values[0])
+					elif configState.configId.startswith(u'opsiclientd.'):
+						try:
+							parts = configState.configId.lower().split('.')
+							if (len(parts) < 3):
+								continue
 
-						self.set(section=parts[1], option=parts[2], value=configState.values[0])
-					except Exception, e:
-						logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
+							self.set(section=parts[1], option=parts[2], value=configState.values[0])
+						except Exception, e:
+							logger.error(u"Failed to process configState {0!r}: {1}".format(configState.configId, forceUnicode(e)))
+				finally:
+					configService.backend_setOptions({"addConfigStateDefaults": defaultSetting})
+
 		logger.notice(u"Got config from service")
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.getDict()))
 
