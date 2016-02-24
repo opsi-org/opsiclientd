@@ -664,8 +664,8 @@ class ConfigImplementation(object):
 							self.set(section=parts[1], option=parts[2], value=configState.values[0])
 						except Exception as error:
 							logger.error(u"Failed to process configState {0!r}: {1}".format(configState.configId, forceUnicode(error)))
-				finally:
-					configService.backend_setOptions({"addConfigStateDefaults": defaultSetting})
+			finally:
+				configService.backend_setOptions({"addConfigStateDefaults": defaultSetting})
 
 		logger.notice(u"Got config from service")
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.getDict()))
