@@ -168,7 +168,7 @@ class ServiceConnection(object):
 				timeout = forceInt(config.get('config_service', 'connection_timeout'))
 				logger.info(u"Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
 				serviceConnectionThread.start()
-				for i in range(5):
+				for _ in range(5):
 					if serviceConnectionThread.running:
 						break
 					time.sleep(1)
