@@ -282,7 +282,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					controlServer.stop()
 					controlServer.join(2)
 				except (NameError, RuntimeError) as stopError:
-					logger.debug(u"Stopping controlPipe failed: {0}".format(stopError))
+					logger.debug(u"Stopping controlServer failed: {0}".format(stopError))
 
 		@contextmanager
 		def getCacheService():
