@@ -351,10 +351,10 @@ class ServiceConnectionThread(KillableThread):
 					self.setStatusMessage(_(u"Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(e)))
 					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
 					if isinstance(e, OpsiAuthenticationError):
-						fqdn = System.getFQDN()
 						try:
 							fqdn = forceFqdn(fqdn)
 						except Exception as e:
+							fqdn = System.getFQDN()
 							logger.warning(u"Failed to get fqdn from os, got '%s': %s" % (fqdn, e))
 							break
 						if (self._username != fqdn):
