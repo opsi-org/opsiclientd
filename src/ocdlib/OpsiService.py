@@ -357,7 +357,8 @@ class ServiceConnectionThread(KillableThread):
 							fqdn = System.getFQDN()
 							logger.warning(u"Failed to get fqdn from os, got '%s': %s" % (fqdn, e))
 							break
-						if (self._username != fqdn):
+
+						if self._username != fqdn:
 							logger.notice(u"Connect failed with username '%s', got fqdn '%s' from os, trying fqdn" % (self._username, fqdn))
 							self._username = fqdn
 						else:
