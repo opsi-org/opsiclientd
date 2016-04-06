@@ -150,7 +150,7 @@ class ServiceConnection(object):
 			if self._loadBalance and (len(configServiceUrls) > 1):
 				random.shuffle(configServiceUrls)
 
-			for urlIndex, configServiceURL in enumerate(configServiceUrls)):
+			for urlIndex, configServiceURL in enumerate(configServiceUrls):
 				self._configServiceUrl = configServiceUrls
 
 				kwargs = self.connectionThreadOptions()
