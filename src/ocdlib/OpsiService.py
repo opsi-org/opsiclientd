@@ -363,10 +363,9 @@ class ServiceConnectionThread(KillableThread):
 							self._username = fqdn
 						else:
 							break
-					time.sleep(1)
-					time.sleep(1)
-					time.sleep(1)
 
+					for _ in range(3):  # Sleeping before the next retry
+						time.sleep(1)
 		except Exception as e:
 			logger.logException(e)
 		self.running = False
