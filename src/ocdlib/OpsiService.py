@@ -292,12 +292,12 @@ class ServiceConnectionThread(KillableThread):
 		return self._username
 
 	def run(self):
-		try:
-			logger.debug(u"ServiceConnectionThread started...")
-			self.running = True
-			self.connected = False
-			self.cancelled = False
+		logger.debug(u"ServiceConnectionThread started...")
+		self.running = True
+		self.connected = False
+		self.cancelled = False
 
+		try:
 			certDir = config.get('global', 'server_cert_dir')
 			verifyServerCert = config.get('global', 'verify_server_cert')
 
