@@ -76,6 +76,7 @@ elif distribution.lower().strip() == 'suse linux enterprise server' and version.
     buildOptions['packages'].append('cryptography')
 elif distribution.lower().strip() == 'ubuntu' and version.startswith('16.'):
     buildOptions['packages'].append('cffi')
+    buildOptions['packages'].append('Crypto.Cipher.AES')
     buildOptions['packages'].append('cryptography')
     buildOptions['packages'].append('pkg_resources._vendor.packaging')
     buildOptions['packages'].append('pkg_resources._vendor.six')
