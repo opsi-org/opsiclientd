@@ -151,7 +151,7 @@ class ServiceConnection(object):
 				random.shuffle(configServiceUrls)
 
 			for urlIndex, configServiceURL in enumerate(configServiceUrls):
-				self._configServiceUrl = configServiceUrls
+				self._configServiceUrl = configServiceURL
 
 				kwargs = self.connectionThreadOptions()
 				logger.debug(u"Creating ServiceConnectionThread (url: %s)" % self._configServiceUrl)
