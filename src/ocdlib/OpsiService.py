@@ -315,7 +315,7 @@ class ServiceConnectionThread(KillableThread):
 			while not self.cancelled and not self.connected:
 				try:
 					tryNum += 1
-					logger.notice(u"Connecting to config server '%s' #%d" % (self._configServiceUrl, tryNum))
+					logger.notice(u"Connecting to config server {0!r} #{1:d}".format(self._configServiceUrl, tryNum))
 					self.setStatusMessage( _(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
 					if (len(self._username.split('.')) < 3):
 						raise Exception(u"Domain missing in username '%s'" % self._username)
