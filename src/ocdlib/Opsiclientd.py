@@ -303,7 +303,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						cacheService.stop()
 						cacheService.join(2)
 					except (NameError, RuntimeError) as stopError:
-						logger.debug(u"Stopping controlPipe failed: {0}".format(stopError))
+						logger.debug(u"Stopping cache service failed: {0}".format(stopError))
 			except ImportError:
 				yield None
 			except Exception as e:
