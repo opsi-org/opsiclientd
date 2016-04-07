@@ -364,6 +364,13 @@ class ServiceConnectionThread(KillableThread):
 						else:
 							break
 
+					if 'is not supported by the backend' in self.connectionError.lower():
+						try:
+							from cryptography.hazmat.backends import default_backend()
+							logger.debug("Got the following crypto backends: {0}".format(default_backend()._backends))
+						except Exception as cryptoCheckError:
+							logger.debug("Failed to get info about installed crypto modules: {0}".format(cryptoCheckError))
+
 					for _ in range(3):  # Sleeping before the next retry
 						time.sleep(1)
 		except Exception as e:
