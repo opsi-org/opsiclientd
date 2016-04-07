@@ -408,7 +408,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				reactor.callFromThread(reactor.stop)
 
 				reactorStopTimeout = 60
-				for _ in range(reactorStopTimeout):
+				for _unused in range(reactorStopTimeout):
 					if not reactor.running:
 						break
 

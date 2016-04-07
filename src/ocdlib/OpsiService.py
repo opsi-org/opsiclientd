@@ -168,7 +168,7 @@ class ServiceConnection(object):
 				timeout = forceInt(config.get('config_service', 'connection_timeout'))
 				logger.info(u"Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
 				serviceConnectionThread.start()
-				for _ in range(5):
+				for _unused in range(5):
 					if serviceConnectionThread.running:
 						break
 					time.sleep(1)
@@ -371,7 +371,7 @@ class ServiceConnectionThread(KillableThread):
 						except Exception as cryptoCheckError:
 							logger.debug("Failed to get info about installed crypto modules: {0}".format(cryptoCheckError))
 
-					for _ in range(3):  # Sleeping before the next retry
+					for _unused in range(3):  # Sleeping before the next retry
 						time.sleep(1)
 		except Exception as e:
 			logger.logException(e)
