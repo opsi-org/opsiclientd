@@ -3,8 +3,9 @@ opsiclientd (4.0.86) UNRELEASED; urgency=medium
   * opsiclientd_shutdown_starter logs the event it should fire
   * type checking now with isinstance instead of type.
   * Improved logmessages if shutdown / reboot request is detected.
+  * Changed license to AGPLv3 in all free parts.
 
- -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 27 Oct 2015 12:20:51 +0200
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 11 Apr 2016 13:34:32 +0200
 
 opsiclientd (4.0.85) testing; urgency=medium
 
