@@ -417,7 +417,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						if (pod.productId == productId):
 							productOnDepot = pod
 							break
-					if not productOnDepot:
+					else:
 						logger.error(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
 						continue
 
@@ -426,7 +426,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						if (p.id == productOnDepot.productId) and (p.productVersion == productOnDepot.productVersion) and (p.packageVersion == productOnDepot.packageVersion):
 							product = p
 							break
-					if not product:
+					else:
 						logger.error(u"Product '%s' not found" % productId)
 
 					for poc in productOnClients:
