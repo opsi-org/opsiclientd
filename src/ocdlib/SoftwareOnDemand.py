@@ -409,8 +409,6 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 									sorted(productsByProductName.keys(), key=unicode.lower)]
 
 				for productId in sortedProductIds:
-					productOnClient = None
-
 					productOnDepot = None
 					for pod in productOnDepots:
 						if (pod.productId == productId):
@@ -428,6 +426,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					else:
 						logger.error(u"Product '%s' not found" % productId)
 
+					productOnClient = None
 					for poc in productOnClients:
 						if (poc.productId == productId):
 							productOnClient = poc
