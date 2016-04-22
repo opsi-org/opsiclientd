@@ -482,9 +482,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				html = mainpage.replace('%result%', u'\n'.join(html))
 			else:
 				raise Exception(u"No products found")
-		except Exception, e:
-			logger.logException(e)
-			html = mainpage.replace('%result%', u'<div class="swondemand-summary-message-box">%s</div>' % e)
+		except Exception as error:
+			logger.logException(error)
+			html = mainpage.replace('%result%', u'<div class="swondemand-summary-message-box">%s</div>' % error)
 
 		self.disconnectConfigService()
 		result.stream = stream.IByteStream(html.encode('utf-8'))
