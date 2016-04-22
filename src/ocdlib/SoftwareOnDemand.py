@@ -409,7 +409,6 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 									sorted(productsByProductName.keys(), key=unicode.lower)]
 
 				for productId in sortedProductIds:
-					html.append(u'<div class="swondemand-product-box"><table>')
 					productOnClient = None
 
 					productOnDepot = None
@@ -450,6 +449,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							stateclass = "swondemand-product-state-installed"
 							state = u"%s (%s: %s-%s)" % ( _('installed'), _('version'), productOnClient.productVersion, productOnClient.packageVersion )
 
+					html.append(u'<div class="swondemand-product-box"><table>')
 					html.append(u'<tr><td colspan="2" class="swondemand-product-name">%s (%s-%s)</td></tr>' \
 							% (product.name, productOnDepot.productVersion, productOnDepot.packageVersion))
 					description = cgi.escape(product.description) or u''
