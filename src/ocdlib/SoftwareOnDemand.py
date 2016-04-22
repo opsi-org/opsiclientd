@@ -390,19 +390,16 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 
 			elif self._swOnDemandProductIds:
 				html = []
+
 				# sort productIds by productnames
 				productsByProductName = {}
-
 				for productId in self._swOnDemandProductIds:
-					found = False
 					for p in products:
 						if p.id == productId:
-							found = True
 							if p.name not in productsByProductName:
 								productsByProductName[p.name] = p
 							break
-
-					if not found:
+					else
 						logger.error(u"Product with productId '%s' not found." % (productId))
 
 				sortedProductIds = [productsByProductName[name].id for name in
