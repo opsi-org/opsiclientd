@@ -412,11 +412,6 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 					html.append(u'<div class="swondemand-product-box"><table>')
 					productOnClient = None
 
-					for poc in productOnClients:
-						if (poc.productId == productId):
-							productOnClient = poc
-							break
-
 					productOnDepot = None
 					for pod in productOnDepots:
 						if (pod.productId == productId):
@@ -433,6 +428,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							break
 					if not product:
 						logger.error(u"Product '%s' not found" % productId)
+
+					for poc in productOnClients:
+						if (poc.productId == productId):
+							productOnClient = poc
+							break
 
 					installationStatus = None
 					state = _('not installed')
