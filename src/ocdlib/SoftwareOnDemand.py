@@ -360,9 +360,12 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			productOnDepots = []
 			if self._swOnDemandProductIds:
 				self._configService.setAsync(True)
-				jsonrpc1 = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id'))
-				jsonrpc2 = self._configService.product_getObjects(id = self._swOnDemandProductIds)
-				jsonrpc3 = self._configService.productOnDepot_getObjects(depotId = config.get('depot_server', 'depot_id'), productId = self._swOnDemandProductIds)
+				jsonrpc1 = self._configService.productOnClient_getObjects(clientId=config.get('global', 'host_id'))
+				jsonrpc2 = self._configService.product_getObjects(id=self._swOnDemandProductIds)
+				jsonrpc3 = self._configService.productOnDepot_getObjects(
+					depotId=config.get('depot_server', 'depot_id'),
+					productId=self._swOnDemandProductIds
+				)
 				productOnClients = jsonrpc1.waitForResult()
 				products = jsonrpc2.waitForResult()
 				productOnDepots = jsonrpc3.waitForResult()
