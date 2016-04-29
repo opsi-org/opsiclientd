@@ -295,6 +295,14 @@ class ServiceConnectionThread(KillableThread):
 			
 			certDir = config.get('global', 'server_cert_dir')
 			verifyServerCert = config.get('global', 'verify_server_cert')
+
+			proxyMode = config.get('config_service', 'proxy_mode')
+			proxyURL = config.get('config_service', 'proxy_url')
+			if proxyMode == 'auto':
+				logger.notice(u'not implemented yet')
+				proxyURL = System.getSystemProxySetting()
+			else proxyMode == 'static':
+				proxyURL = config.get('config_service', 'proxy_url')
 			
 			(scheme, host, port, baseurl, username, password) = urlsplit(self._configServiceUrl)
 			serverCertFile = os.path.join(certDir, host + '.pem')
@@ -322,6 +330,7 @@ class ServiceConnectionThread(KillableThread):
 						verifyServerCert     = verifyServerCert,
 						caCertFile           = caCertFile,
 						verifyServerCertByCa = verifyServerCertByCa,
+						proxyURL	     = proxyURL,
 						application = 'opsiclientd version %s' % __version__)
 					if self.configService.isLegacyOpsi():
 						self.configService.authenticated()
