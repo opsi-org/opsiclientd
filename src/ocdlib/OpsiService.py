@@ -378,7 +378,8 @@ class ServiceConnectionThread(KillableThread):
 						time.sleep(1)
 		except Exception as e:
 			logger.logException(e)
-		self.running = False
+		finally:
+			self.running = False
 
 	def stopConnectionCallback(self, choiceSubject):
 		logger.notice(u"Connection cancelled by user")
