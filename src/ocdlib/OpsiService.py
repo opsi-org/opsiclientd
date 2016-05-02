@@ -161,6 +161,7 @@ class ServiceConnection(object):
 					password=config.get('global', 'opsi_host_key'),
 					**kwargs
 				)
+				serviceConnectionThread.daemon = True
 
 				self.connectionStart(self._configServiceUrl)
 
