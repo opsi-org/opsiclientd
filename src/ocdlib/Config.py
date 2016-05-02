@@ -109,8 +109,8 @@ class ConfigImplementation(object):
 				'connection_timeout':    10,
 				'user_cancelable_after': 0,
 				'sync_time_from_service': False,
-				'proxy_mode': u'static'
-				'prxy_url': None
+				'proxy_mode': u'static',
+				'prxy_url': None,
 			},
 			'depot_server': {
 				'depot_id': u'',
