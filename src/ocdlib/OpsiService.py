@@ -301,7 +301,7 @@ class ServiceConnectionThread(KillableThread):
 			if proxyMode == 'auto':
 				logger.notice(u'not implemented yet')
 				proxyURL = System.getSystemProxySetting()
-			else proxyMode == 'static':
+			elif proxyMode == 'static':
 				proxyURL = config.get('config_service', 'proxy_url')
 			
 			(scheme, host, port, baseurl, username, password) = urlsplit(self._configServiceUrl)
