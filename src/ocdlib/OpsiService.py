@@ -282,33 +282,33 @@ class ServiceConnectionThread(KillableThread):
 		if not self._statusSubject:
 			return
 		self._statusSubject.setMessage(message)
-		
+
 	def getUsername(self):
 		return self._username
-	
+
 	def run(self):
 		try:
 			logger.debug(u"ServiceConnectionThread started...")
 			self.running = True
 			self.connected = False
 			self.cancelled = False
-			
+
 			certDir = config.get('global', 'server_cert_dir')
 			verifyServerCert = config.get('global', 'verify_server_cert')
 
 			proxyMode = config.get('config_service', 'proxy_mode')
 			proxyURL = config.get('config_service', 'proxy_url')
-			if proxyMode == 'auto':
+			if proxyMode == 'system':
 				logger.notice(u'not implemented yet')
 				proxyURL = System.getSystemProxySetting()
 			elif proxyMode == 'static':
 				proxyURL = config.get('config_service', 'proxy_url')
-			
+
 			(scheme, host, port, baseurl, username, password) = urlsplit(self._configServiceUrl)
 			serverCertFile = os.path.join(certDir, host + '.pem')
 			if verifyServerCert:
 				logger.info(u"Server verification enabled, using cert file '%s'" % serverCertFile)
-			
+
 			caCertFile = os.path.join(certDir, 'cacert.pem')
 			verifyServerCertByCa = config.get('global', 'verify_server_cert_by_ca')
 			if verifyServerCertByCa:
