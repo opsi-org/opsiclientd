@@ -110,7 +110,7 @@ class ConfigImplementation(object):
 				'user_cancelable_after': 0,
 				'sync_time_from_service': False,
 				'proxy_mode': u'static',
-				'prxy_url': None,
+				'proxy_url': u'',
 			},
 			'depot_server': {
 				'depot_id': u'',
