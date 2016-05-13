@@ -1,35 +1,36 @@
 # -*- coding: utf-8 -*-
+
+# opsiclientd is part of the desktop management solution opsi
+#    (open pc server integration) http://www.opsi.org
+# Copyright (C) 2010-2016 uib GmbH <info@uib.de>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-   = = = = = = = = = = = = = = = = = = =
-   =   ocdlib.SoftwareOnDemand         =
-   = = = = = = = = = = = = = = = = = = =
+The Functionality for Software-on-Demand
 
-   opsiclientd is part of the desktop management solution opsi
-   (open pc server integration) http://www.opsi.org
+Functionality to work with certificates.
+Certificates play an important role in the encrypted communication
+between servers and clients.
 
-   Copyright (C) 2010-2014 uib GmbH
+.. versionadded:: 4.0.4
 
-   http://www.uib.de/
-
-   All rights reserved.
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as
-   published by the Free Software Foundation.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-   @copyright:	uib GmbH <info@uib.de>
-   @author: Erol Ülükmen <e.ueluekmen@uib.de>
-   @license: GNU General Public License version 2
+:copyright: uib GmbH <info@uib.de>
+:author: Erol Ülükmen <e.ueluekmen@uib.de>
+:author: Niko Wenselowski <n.wenselowski@uib.de>
+:license: GNU Affero General Public License version 3
 """
+
 import base64
 import cgi
 from hashlib import md5
@@ -359,9 +360,12 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			productOnDepots = []
 			if self._swOnDemandProductIds:
 				self._configService.setAsync(True)
-				jsonrpc1 = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id'))
-				jsonrpc2 = self._configService.product_getObjects(id = self._swOnDemandProductIds)
-				jsonrpc3 = self._configService.productOnDepot_getObjects(depotId = config.get('depot_server', 'depot_id'), productId = self._swOnDemandProductIds)
+				jsonrpc1 = self._configService.productOnClient_getObjects(clientId=config.get('global', 'host_id'))
+				jsonrpc2 = self._configService.product_getObjects(id=self._swOnDemandProductIds)
+				jsonrpc3 = self._configService.productOnDepot_getObjects(
+					depotId=config.get('depot_server', 'depot_id'),
+					productId=self._swOnDemandProductIds
+				)
 				productOnClients = jsonrpc1.waitForResult()
 				products = jsonrpc2.waitForResult()
 				productOnDepots = jsonrpc3.waitForResult()
@@ -386,39 +390,28 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 
 			elif self._swOnDemandProductIds:
 				html = []
+
 				# sort productIds by productnames
 				productsByProductName = {}
-
 				for productId in self._swOnDemandProductIds:
-					found = False
 					for p in products:
 						if p.id == productId:
-							found = True
 							if p.name not in productsByProductName:
 								productsByProductName[p.name] = p
 							break
-
-					if not found:
+					else
 						logger.error(u"Product with productId '%s' not found." % (productId))
 
 				sortedProductIds = [productsByProductName[name].id for name in
 									sorted(productsByProductName.keys(), key=unicode.lower)]
 
 				for productId in sortedProductIds:
-					html.append(u'<div class="swondemand-product-box"><table>')
-					productOnClient = None
-
-					for poc in productOnClients:
-						if (poc.productId == productId):
-							productOnClient = poc
-							break
-
 					productOnDepot = None
 					for pod in productOnDepots:
 						if (pod.productId == productId):
 							productOnDepot = pod
 							break
-					if not productOnDepot:
+					else:
 						logger.error(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
 						continue
 
@@ -427,8 +420,14 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						if (p.id == productOnDepot.productId) and (p.productVersion == productOnDepot.productVersion) and (p.packageVersion == productOnDepot.packageVersion):
 							product = p
 							break
-					if not product:
+					else:
 						logger.error(u"Product '%s' not found" % productId)
+
+					productOnClient = None
+					for poc in productOnClients:
+						if (poc.productId == productId):
+							productOnClient = poc
+							break
 
 					installationStatus = None
 					state = _('not installed')
@@ -446,6 +445,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							stateclass = "swondemand-product-state-installed"
 							state = u"%s (%s: %s-%s)" % ( _('installed'), _('version'), productOnClient.productVersion, productOnClient.packageVersion )
 
+					html.append(u'<div class="swondemand-product-box"><table>')
 					html.append(u'<tr><td colspan="2" class="swondemand-product-name">%s (%s-%s)</td></tr>' \
 							% (product.name, productOnDepot.productVersion, productOnDepot.packageVersion))
 					description = cgi.escape(product.description) or u''
@@ -482,9 +482,9 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				html = mainpage.replace('%result%', u'\n'.join(html))
 			else:
 				raise Exception(u"No products found")
-		except Exception, e:
-			logger.logException(e)
-			html = mainpage.replace('%result%', u'<div class="swondemand-summary-message-box">%s</div>' % e)
+		except Exception as error:
+			logger.logException(error)
+			html = mainpage.replace('%result%', u'<div class="swondemand-summary-message-box">%s</div>' % error)
 
 		self.disconnectConfigService()
 		result.stream = stream.IByteStream(html.encode('utf-8'))
