@@ -399,7 +399,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							if p.name not in productsByProductName:
 								productsByProductName[p.name] = p
 							break
-					else
+					else:
 						logger.error(u"Product with productId '%s' not found." % (productId))
 
 				sortedProductIds = [productsByProductName[name].id for name in
