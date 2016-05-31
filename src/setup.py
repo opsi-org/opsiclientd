@@ -68,7 +68,7 @@ excludes = ["pywin", "pywin.debugger", "pywin.debugger.dbgcon",
 	"Tkconstants", "Tkinter", "tcl", "_imagingtk",
 	"PIL._imagingtk", "ImageTk", "PIL.ImageTk", "FixTk"
 ]
-includes = ["_cffi_backend","wmi"]
+includes = ["_cffi_backend","wmi","csv"]
 
 if os.path.exists("ocdlibnonfree") and not buildFreeVersion:
 	packages.append("ocdlibnonfree")
