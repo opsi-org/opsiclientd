@@ -493,3 +493,67 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 
 class ResourceSoftwareOnDemand(ResourceOpsi):
 	WorkerClass = WorkerSoftwareOnDemand
+
+class WorkerKioskInterface(WorkerOpsiclientdJsonRpc, ServiceConnection):
+	def __init__(self, service, request, resource):
+		moduleName = u' %-30s' % (u'software on demand')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		WorkerOpsiclientdJsonRpc.__init__(self, service, request, resource)
+		ServiceConnection.__init__(self)
+
+
+	def _getCredentials(self):
+		(user, password) = self._getAuthorization()
+		if not user:
+			user = config.get('global', 'host_id')
+		return (user, password)
+
+	def _authenticate(self, result):
+		if (self.request.remoteAddr.host == '127.0.0.1'):
+			self.session.authenticated = False
+			return result
+		try:
+			(self.session.user, self.session.password) = self._getCredentials()
+
+			logger.notice(u"Authorization request from %s@%s (application: %s)" % (self.session.user, self.session.ip, self.session.userAgent))
+
+			if not self.session.password:
+				raise Exception(u"No password from %s (application: %s)" % (self.session.ip, self.session.userAgent))
+
+			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
+				return result
+			if (os.name == 'nt'):
+				if (self.session.user.lower() == 'administrator'):
+					import win32security
+					# The LogonUser function will raise an Exception on logon failure
+					win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
+					# No exception raised => user authenticated
+					return result
+
+			raise Exception(u"Invalid credentials")
+		except Exception as e:
+			raise OpsiAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
+		return result
+		
+	def _checkRpcs(self, result):
+		#this method is accisible
+		pass
+		
+	def _executeRpcs(self, result):
+		#here has to excute the rpcs to configService
+		pass
+			
+	def _processQuery(self, result):
+		deferred = defer.Deferred()
+		deferred.addCallback(self._decodeQuery)
+		deferred.addCallback(self._getCallInstance)
+		deferred.addCallback(self._getRpcs)
+		deferred.addCallback(self._checkRpcs)
+		deferred.addCallback(self._executeRpcs)
+		# deferred.addErrback(self._errback)
+		deferred.callback(None)
+		return deferred	
+	
+		
+	def connectConfigService(self):
+		ServiceConnection.connectConfigService(self)
