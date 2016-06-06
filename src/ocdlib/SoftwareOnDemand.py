@@ -534,15 +534,41 @@ class WorkerKioskInterface(WorkerOpsiclientdJsonRpc, ServiceConnection):
 		except Exception as e:
 			raise OpsiAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
 		return result
-		
+
+        def _getRpcs(self, result):
+                try:
+                        rpcs = fromJson(self.query, preventObjectCreation=True)
+                        if not rpcs:
+                                raise Exception(u"Got no rpcs")
+                        self._rpcs = rpcs
+                except Exception as e:
+                        raise OpsiBadRpcError(u"Failed to decode rpc: '%s'" % e)
+                return result
+
+
 	def _checkRpcs(self, result):
 		#this method is accisible
 		pass
-		
+
 	def _executeRpcs(self, result):
-		#here has to excute the rpcs to configService
-		pass
-			
+                try:
+                        self.connectConfigService()
+                        if len(self._rpcs) == 1:
+                                pass # Execute here one request
+                        else:
+                                for rpc in self._rpcs:
+                                        pass
+                                        #execute as async
+                except Exception as e:
+                	logger.error(u"Failed to execute rpcs: %s" % e)
+                finally:
+                	try:
+                		# Disconnect evertime the Configservice
+                		self.disconnectConfigService()
+                	except Exception as e:
+                		pass
+		
+
 	def _processQuery(self, result):
 		deferred = defer.Deferred()
 		deferred.addCallback(self._decodeQuery)
@@ -552,8 +578,13 @@ class WorkerKioskInterface(WorkerOpsiclientdJsonRpc, ServiceConnection):
 		deferred.addCallback(self._executeRpcs)
 		# deferred.addErrback(self._errback)
 		deferred.callback(None)
-		return deferred	
-	
-		
+		return deferred
+
+
 	def connectConfigService(self):
 		ServiceConnection.connectConfigService(self)
+
+class ResourceKioskInterface(ResourceOpsi):
+	WorkerClass = WorkerKioskInterface
+
+
