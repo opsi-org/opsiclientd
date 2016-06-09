@@ -494,10 +494,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 class ResourceSoftwareOnDemand(ResourceOpsi):
 	WorkerClass = WorkerSoftwareOnDemand
 
-class WorkerKioskInterface(WorkerOpsiclientdJsonRpc, ServiceConnection):
+class WorkerKioskInterface(WorkerOpsiclientd, WorkerOpsiclientdJsonRpc, ServiceConnection):
 	def __init__(self, service, request, resource):
 		moduleName = u' %-30s' % (u'software on demand')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		WorkerOpsiclientd.__init__(self, service, request, resource)
 		WorkerOpsiclientdJsonRpc.__init__(self, service, request, resource)
 		ServiceConnection.__init__(self)
 
@@ -547,11 +548,17 @@ class WorkerKioskInterface(WorkerOpsiclientdJsonRpc, ServiceConnection):
 
 
 	def _checkRpcs(self, result):
-		#this method is accisible
-		pass
+		if not self._rpcs:
+			raise Exception("No rpcs to check")
+		for rpc in self._rpcs:
+			if not rpc.method in self._allowedMethods:
+				raise Exception("You are not allowed to execute the method: '%s'" % rpc.method)
+		return result
 
 	def _executeRpcs(self, result):
                 try:
+                	logger.debug(u"Check if kiosk is allowed to execute methods")
+                	self._checkRpcs(result)
                         self.connectConfigService()
                         if len(self._rpcs) == 1:
                                 pass # Execute here one request
@@ -563,7 +570,7 @@ class WorkerKioskInterface(WorkerOpsiclientdJsonRpc, ServiceConnection):
                 	logger.error(u"Failed to execute rpcs: %s" % e)
                 finally:
                 	try:
-                		# Disconnect evertime the Configservice
+                		# Disconnect everytime the Configservice
                 		self.disconnectConfigService()
                 	except Exception as e:
                 		pass
