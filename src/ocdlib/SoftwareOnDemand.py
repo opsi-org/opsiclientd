@@ -494,14 +494,32 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 class ResourceSoftwareOnDemand(ResourceOpsi):
 	WorkerClass = WorkerSoftwareOnDemand
 
-class WorkerKioskInterface(WorkerOpsiclientd, WorkerOpsiclientdJsonRpc, ServiceConnection):
+class WorkerKioskJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc, ServiceConnection):
 	def __init__(self, service, request, resource):
 		moduleName = u' %-30s' % (u'software on demand')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		WorkerOpsiclientd.__init__(self, service, request, resource)
-		WorkerOpsiclientdJsonRpc.__init__(self, service, request, resource)
+		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 		ServiceConnection.__init__(self)
+		
+	def _getAllowedMethods(self, result):
+		self._allowedMethods = [
+			"getGeneralConfigValue",
+			"objectToGroup_getObjects",
+			"getDepotId",
+			"backend_setOptions",
+			"productOnDepot_getObjects",
+			"productDependency_getObjects",
+			"product_getObjects",
+			"productOnClient_getObjects",
+			"setProductActionRequestWithDependencies",
+			"hostControlSafe_fireEvent"
+		]
 
+	def _getCallInstance(self, result):
+		self._getBackend(result)
+		self._callInstance = self._configService
+		self._callInterface = self._configService.getInterface()
 
 	def _getCredentials(self):
 		(user, password) = self._getAuthorization()
@@ -536,62 +554,37 @@ class WorkerKioskInterface(WorkerOpsiclientd, WorkerOpsiclientdJsonRpc, ServiceC
 			raise OpsiAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
 		return result
 
-        def _getRpcs(self, result):
-                try:
-                        rpcs = fromJson(self.query, preventObjectCreation=True)
-                        if not rpcs:
-                                raise Exception(u"Got no rpcs")
-                        self._rpcs = rpcs
-                except Exception as e:
-                        raise OpsiBadRpcError(u"Failed to decode rpc: '%s'" % e)
-                return result
-
-
 	def _checkRpcs(self, result):
 		if not self._rpcs:
 			raise Exception("No rpcs to check")
 		for rpc in self._rpcs:
 			if not rpc.method in self._allowedMethods:
 				raise Exception("You are not allowed to execute the method: '%s'" % rpc.method)
-		return result
-
-	def _executeRpcs(self, result):
-                try:
-                	logger.debug(u"Check if kiosk is allowed to execute methods")
-                	self._checkRpcs(result)
-                        self.connectConfigService()
-                        if len(self._rpcs) == 1:
-                                pass # Execute here one request
-                        else:
-                                for rpc in self._rpcs:
-                                        pass
-                                        #execute as async
-                except Exception as e:
-                	logger.error(u"Failed to execute rpcs: %s" % e)
-                finally:
-                	try:
-                		# Disconnect everytime the Configservice
-                		self.disconnectConfigService()
-                	except Exception as e:
-                		pass
-		
+		return result		
 
 	def _processQuery(self, result):
 		deferred = defer.Deferred()
+		deferred.addCallback(self._openConnection)
 		deferred.addCallback(self._decodeQuery)
 		deferred.addCallback(self._getCallInstance)
 		deferred.addCallback(self._getRpcs)
 		deferred.addCallback(self._checkRpcs)
 		deferred.addCallback(self._executeRpcs)
+		deferred.addCallback(self._closeConnection)
 		# deferred.addErrback(self._errback)
 		deferred.callback(None)
 		return deferred
 
 
-	def connectConfigService(self):
+	def _openConnection(self, result):
 		ServiceConnection.connectConfigService(self)
+		return result
+		
+	def _closeConnection(self, result):
+		self.disconnectConfigService()
+		return result
 
 class ResourceKioskInterface(ResourceOpsi):
-	WorkerClass = WorkerKioskInterface
+	WorkerClass = WorkerKioskJsonRpc
 
 
