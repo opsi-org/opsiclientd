@@ -559,7 +559,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		for rpc in self._rpcs:
 			if not rpc.method in self._allowedMethods:
 				raise Exception("You are not allowed to execute the method: '%s'" % rpc.method)
-		return result		
+		return result
 
 	def _processQuery(self, result):
 		deferred = defer.Deferred()
@@ -578,12 +578,12 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 	def _openConnection(self, result):
 		ServiceConnection.connectConfigService(self)
 		return result
-		
+
 	def _closeConnection(self, result):
 		self.disconnectConfigService()
 		return result
 
-class ResourceKioskInterface(ResourceOpsi):
+class ResourceKioskJsonRpc(ResourceOpsi):
 	WorkerClass = WorkerKioskJsonRpc
 
 
