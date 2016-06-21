@@ -499,6 +499,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 	def __init__(self, service, request, resource):
 		moduleName = u' %-30s' % (u'software on demand')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+                self._allowedMethods = []
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 		ServiceConnection.__init__(self)
 
