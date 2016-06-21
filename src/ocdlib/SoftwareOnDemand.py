@@ -44,7 +44,6 @@ from OPSI.Service.Resource import ResourceOpsi
 
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.Config import Config
-from ocdlib.ControlServer import WorkerOpsiclientd
 from ocdlib.Events import SwOnDemandEventGenerator, getEventGenerators
 from ocdlib.Localization import _
 from ocdlib.Timeline import Timeline
@@ -495,11 +494,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 class ResourceSoftwareOnDemand(ResourceOpsi):
 	WorkerClass = WorkerSoftwareOnDemand
 
-class WorkerKioskJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc, ServiceConnection):
+class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 	def __init__(self, service, request, resource):
 		moduleName = u' %-30s' % (u'software on demand')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
-		WorkerOpsiclientd.__init__(self, service, request, resource)
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 		ServiceConnection.__init__(self)
 
