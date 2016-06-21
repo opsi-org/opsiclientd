@@ -517,7 +517,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		]
 
 	def _getCallInstance(self, result):
-		self._getBackend(result)
+		#self._getBackend(result)
 		self._callInstance = self._configService
 		self._callInterface = self._configService.getInterface()
 
