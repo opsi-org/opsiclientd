@@ -504,7 +504,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		ServiceConnection.__init__(self)
 
 	def _getAllowedMethods(self):
-		return = [
+	    return = [
             "getPossibleMethods_listOfHashes",
             "backend_getInterface",
 			"getGeneralConfigValue",
