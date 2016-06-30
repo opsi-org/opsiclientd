@@ -492,7 +492,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.error(u"processProductActionRequests not implemented")
 
 	def getCurrentActiveDesktopName(self, sessionId=None):
-		if 'opsiclientd_rpc' not in config.getDict() and 'command' not in config.getDict()['opsiclientd_rpc']:
+		if not ('opsiclientd_rpc' in config.getDict() and 'command' in config.getDict()['opsiclientd_rpc']):
 			raise Exception(u"opsiclientd_rpc command not defined")
 
 		if sessionId is None:
