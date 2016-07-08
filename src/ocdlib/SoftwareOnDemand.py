@@ -500,6 +500,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		moduleName = u' %-30s' % (u'software on demand')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		self._allowedMethods = self._getAllowedMethods()
+		self._serviceConnection = None
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 		ServiceConnection.__init__(self)
 
@@ -521,8 +522,8 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 
 	def _getCallInstance(self, result):
 		#self._getBackend(result)
-		self._callInstance = self._configService
-		self._callInterface = self._configService.getInterface()
+		self._callInstance = self._serviceConnection
+		self._callInterface = self._serviceConnection.getInterface()
 
 	def _getCredentials(self):
 		(user, password) = self._getAuthorization()
@@ -580,11 +581,12 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 
 
 	def _openConnection(self, result):
-		ServiceConnection.connectConfigService(self)
+		self._serviceConnection = ServiceConnection.connectConfigService(self)
 		return result
 
 	def _closeConnection(self, result):
 		self.disconnectConfigService()
+		self._serviceConnection = None
 		return result
 
 class ResourceKioskJsonRpc(ResourceOpsi):
