@@ -506,8 +506,9 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 
 	def _getAllowedMethods(self):
 	    return [
-            "getPossibleMethods_listOfHashes",
-            "backend_getInterface",
+			"getPossibleMethods_listOfHashes",
+			"backend_getInterface",
+			"backend_info",
 			"getGeneralConfigValue",
 			"objectToGroup_getObjects",
 			"getDepotId",
@@ -522,8 +523,8 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 
 	def _getCallInstance(self, result):
 		#self._getBackend(result)
-		self._callInstance = self._serviceConnection
-		self._callInterface = self._serviceConnection.getInterface()
+		self._callInstance = self._configService
+		self._callInterface = self._configService.getInterface()
 
 	def _getCredentials(self):
 		(user, password) = self._getAuthorization()
@@ -581,12 +582,11 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 
 
 	def _openConnection(self, result):
-		self._serviceConnection = ServiceConnection.connectConfigService(self)
+		ServiceConnection.connectConfigService(self)
 		return result
 
 	def _closeConnection(self, result):
 		self.disconnectConfigService()
-		self._serviceConnection = None
 		return result
 
 class ResourceKioskJsonRpc(ResourceOpsi):
