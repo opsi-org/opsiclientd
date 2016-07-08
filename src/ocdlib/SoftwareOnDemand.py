@@ -500,15 +500,15 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		moduleName = u' %-30s' % (u'software on demand')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		self._allowedMethods = self._getAllowedMethods()
-		self._serviceConnection = None
+		self._fireEvent = False
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 		ServiceConnection.__init__(self)
 
 	def _getAllowedMethods(self):
 	    return [
-			"getPossibleMethods_listOfHashes",
-			"backend_getInterface",
-			"backend_info",
+			#"getPossibleMethods_listOfHashes",
+			#"backend_getInterface",
+			#"backend_info",
 			"getGeneralConfigValue",
 			"objectToGroup_getObjects",
 			"getDepotId",
@@ -565,6 +565,9 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		for rpc in self._rpcs:
 			if not rpc.method in self._allowedMethods:
 				raise Exception("You are not allowed to execute the method: '%s'" % rpc.method)
+			elif rpc.method == "fireEvent_software_on_demand":
+				self._fireEvent = True
+				self._rpcs.remove(rpc)
 		return result
 
 	def _processQuery(self, result):
@@ -576,7 +579,8 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		deferred.addCallback(self._checkRpcs)
 		deferred.addCallback(self._executeRpcs)
 		deferred.addCallback(self._closeConnection)
-		# deferred.addErrback(self._errback)
+		deferred.addCallback(self._fireEvent)
+		deferred.addErrback(self._errback)
 		deferred.callback(None)
 		return deferred
 
@@ -587,6 +591,12 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 
 	def _closeConnection(self, result):
 		self.disconnectConfigService()
+		return result
+
+	def _fireEvent(self, result):
+		for eventGenerator in getEventGenerators(generatorClass = SwOnDemandEventGenerator):
+			eventGenerator.createAndFireEvent()
+		self._fireEvent = False
 		return result
 
 class ResourceKioskJsonRpc(ResourceOpsi):
