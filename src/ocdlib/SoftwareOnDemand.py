@@ -56,7 +56,7 @@ mainpage = u'''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-	<title>opsi software on demand</title>
+	<title>%(hostname)s opsi software on demand</title>
 	<link rel="stylesheet" type="text/css" href="/opsiclientd.css" />
 	<meta http-equiv="Content-Type" content="text/xhtml; charset=utf-8" />
 	<script type="text/javascript">
@@ -85,7 +85,7 @@ mainpage = u'''<?xml version="1.0" encoding="UTF-8"?>
 <body>
 	<p id="title">opsi software on demand</p>
 	<form action="/swondemand" method="post">
-		%result%
+		%(result)s
 	</form>
 </body>
 </html>
@@ -319,7 +319,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		html.extend(buttons)
 		html.append(u'</div>')
 
-		html = mainpage.replace('%result%', forceUnicode(u'\n'.join(html)))
+		html = mainpage % {
+			'result': forceUnicode(u'\n'.join(html)),
+			'hostname': config.get('global','host_id'),
+		}
 
 		if self.query.get('action') in ('ondemand', 'onrestart'):
 			description  = u"Software on demand action '%s' executed\n" % self.query.get('action')
@@ -479,12 +482,18 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				html.append(u'<div class="swondemand-button-box">')
 				html.append(u'<button class="swondemand-action-button" type="submit" name="action" value="next">&gt; %s</button>' % _(u'next'))
 				html.append(u'</div>')
-				html = mainpage.replace('%result%', u'\n'.join(html))
+				html = mainpage % {
+					'result': u'\n'.join(html),
+					'hostname': config.get('global','host_id')
+				}
 			else:
 				raise Exception(u"No products found")
 		except Exception, e:
 			logger.logException(e)
-			html = mainpage.replace('%result%', u'<div class="swondemand-summary-message-box">%s</div>' % e)
+			html = mainpage % {
+				'result': u'<div class="swondemand-summary-message-box">%s</div>' % e,
+				'hostname': config.get('global','host_id'),
+			}
 
 		self.disconnectConfigService()
 		result.stream = stream.IByteStream(html.encode('utf-8'))
