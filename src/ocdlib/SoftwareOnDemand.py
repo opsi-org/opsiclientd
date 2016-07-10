@@ -579,7 +579,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		deferred.addCallback(self._checkRpcs)
 		deferred.addCallback(self._executeRpcs)
 		deferred.addCallback(self._closeConnection)
-		deferred.addCallback(self._fireEvent)
+		deferred.addCallback(self._checkFireEvent)
 		deferred.addErrback(self._errback)
 		deferred.callback(None)
 		return deferred
@@ -593,10 +593,11 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		self.disconnectConfigService()
 		return result
 
-	def _fireEvent(self, result):
-		for eventGenerator in getEventGenerators(generatorClass = SwOnDemandEventGenerator):
-			eventGenerator.createAndFireEvent()
-		self._fireEvent = False
+	def _checkFireEvent(self, result):
+		if self._fireEvent:
+			for eventGenerator in getEventGenerators(generatorClass = SwOnDemandEventGenerator):
+				eventGenerator.createAndFireEvent()
+			self._fireEvent = False
 		return result
 
 class ResourceKioskJsonRpc(ResourceOpsi):
