@@ -509,6 +509,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 			#"getPossibleMethods_listOfHashes",
 			#"backend_getInterface",
 			#"backend_info",
+			"fireEvent_software_on_demand",
 			"getGeneralConfigValue",
 			"objectToGroup_getObjects",
 			"getDepotId",
