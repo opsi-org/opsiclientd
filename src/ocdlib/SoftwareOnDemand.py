@@ -484,7 +484,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				html.append(u'<button class="swondemand-action-button" type="submit" name="action" value="next">&gt; %s</button>' % _(u'next'))
 				html.append(u'</div>')
 				html = mainpage % {
-					'result': u'\n'.join(html),
+					'result': forceUnicode(u'\n'.join(html)),
 					'hostname': config.get('global','host_id')
 				}
 			else:
@@ -494,6 +494,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			html = mainpage % {
 				'result': u'<div class="swondemand-summary-message-box">%s</div>' % e,
 				'hostname': config.get('global','host_id'),
+			}
 
 		self.disconnectConfigService()
 		result.stream = stream.IByteStream(html.encode('utf-8'))
