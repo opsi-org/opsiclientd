@@ -5,6 +5,7 @@ opsiclientd (4.0.86) UNRELEASED; urgency=medium
   * Improved logmessages if shutdown / reboot request is detected.
   * new opsiclientdkiosk interface implemented
   * based on python-opsi 4.0.7.8-1
+  * Fixed problem with WAN Installation without networkconnection
 
  -- Erol Ueluekmen <e.ueluekmen@uib.de>  Mon, 11 Jun 2016 14:10:51 +0200
 
