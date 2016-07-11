@@ -35,12 +35,13 @@ import base64
 import cgi
 from hashlib import md5
 from twisted.conch.ssh import keys
+from twisted.internet import defer
 
 from OPSI.web2 import responsecode, http, stream
 from OPSI.Logger import *
 from OPSI.Types import *
 from OPSI.Object import *
-from OPSI.Service.Worker import WorkerOpsi
+from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc
 from OPSI.Service.Resource import ResourceOpsi
 
 from ocdlib.OpsiService import ServiceConnection
@@ -493,3 +494,114 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 
 class ResourceSoftwareOnDemand(ResourceOpsi):
 	WorkerClass = WorkerSoftwareOnDemand
+
+class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
+	def __init__(self, service, request, resource):
+		moduleName = u' %-30s' % (u'software on demand')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		self._allowedMethods = self._getAllowedMethods()
+		self._fireEvent = False
+		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
+		ServiceConnection.__init__(self)
+
+	def _getAllowedMethods(self):
+	    return [
+			#"getPossibleMethods_listOfHashes",
+			#"backend_getInterface",
+			#"backend_info",
+			"fireEvent_software_on_demand",
+			"getGeneralConfigValue",
+			"objectToGroup_getObjects",
+			"getDepotId",
+			"backend_setOptions",
+			"productOnDepot_getObjects",
+			"productDependency_getObjects",
+			"product_getObjects",
+			"productOnClient_getObjects",
+			"setProductActionRequestWithDependencies",
+			"hostControlSafe_fireEvent"
+		]
+
+	def _getCallInstance(self, result):
+		#self._getBackend(result)
+		self._callInstance = self._configService
+		self._callInterface = self._configService.getInterface()
+
+	def _getCredentials(self):
+		(user, password) = self._getAuthorization()
+		if not user:
+			user = config.get('global', 'host_id')
+		return (user, password)
+
+	def _authenticate(self, result):
+		if (self.request.remoteAddr.host == '127.0.0.1'):
+			self.session.authenticated = False
+			return result
+		try:
+			(self.session.user, self.session.password) = self._getCredentials()
+
+			logger.notice(u"Authorization request from %s@%s (application: %s)" % (self.session.user, self.session.ip, self.session.userAgent))
+
+			if not self.session.password:
+				raise Exception(u"No password from %s (application: %s)" % (self.session.ip, self.session.userAgent))
+
+			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
+				return result
+			if (os.name == 'nt'):
+				if (self.session.user.lower() == 'administrator'):
+					import win32security
+					# The LogonUser function will raise an Exception on logon failure
+					win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
+					# No exception raised => user authenticated
+					return result
+
+			raise Exception(u"Invalid credentials")
+		except Exception as e:
+			raise OpsiAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
+		return result
+
+	def _checkRpcs(self, result):
+		if not self._rpcs:
+			raise Exception("No rpcs to check")
+		for rpc in self._rpcs:
+			if not rpc.method in self._allowedMethods:
+				raise Exception("You are not allowed to execute the method: '%s'" % rpc.method)
+			elif rpc.method == "fireEvent_software_on_demand":
+				self._fireEvent = True
+				self._rpcs.remove(rpc)
+		return result
+
+	def _processQuery(self, result):
+		deferred = defer.Deferred()
+		deferred.addCallback(self._openConnection)
+		deferred.addCallback(self._decodeQuery)
+		deferred.addCallback(self._getCallInstance)
+		deferred.addCallback(self._getRpcs)
+		deferred.addCallback(self._checkRpcs)
+		deferred.addCallback(self._executeRpcs)
+		deferred.addCallback(self._closeConnection)
+		deferred.addCallback(self._checkFireEvent)
+		deferred.addErrback(self._errback)
+		deferred.callback(None)
+		return deferred
+
+
+	def _openConnection(self, result):
+		ServiceConnection.connectConfigService(self)
+		return result
+
+	def _closeConnection(self, result):
+		self.disconnectConfigService()
+		return result
+
+	def _checkFireEvent(self, result):
+		if self._fireEvent:
+			for eventGenerator in getEventGenerators(generatorClass = SwOnDemandEventGenerator):
+				eventGenerator.createAndFireEvent()
+			self._fireEvent = False
+		return result
+
+class ResourceKioskJsonRpc(ResourceOpsi):
+	WorkerClass = WorkerKioskJsonRpc
+
+

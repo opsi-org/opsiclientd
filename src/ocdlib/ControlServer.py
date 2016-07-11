@@ -57,7 +57,7 @@ from ocdlib.Config import Config
 from ocdlib.Events import eventGenerators
 from ocdlib.Timeline import Timeline
 from ocdlib.OpsiService import ServiceConnection
-from ocdlib.SoftwareOnDemand import WorkerSoftwareOnDemand, ResourceSoftwareOnDemand
+from ocdlib.SoftwareOnDemand import WorkerSoftwareOnDemand, ResourceSoftwareOnDemand, WorkerKioskJsonRpc, ResourceKioskJsonRpc
 
 logger = Logger()
 config = Config()
@@ -429,6 +429,7 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root.putChild("rpcinterface", ResourceCacheServiceJsonInterface(self))
 		self._root.putChild("info.html", ResourceOpsiclientdInfo(self))
 		self._root.putChild("swondemand", ResourceSoftwareOnDemand(self))
+		self._root.putChild("kiosk",ResourceKioskJsonRpc(self))
 		
 class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def __init__(self, opsiclientd):
