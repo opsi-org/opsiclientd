@@ -65,7 +65,7 @@ timeline = Timeline()
 
 try:
 	from ocdlibnonfree.CacheService import CacheService
-except Exception, e:
+except Exception as e:
 	pass
 
 infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
@@ -75,7 +75,7 @@ infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 	<meta http-equiv="Content-Type" content="text/xhtml; charset=utf-8" />
-	<title>opsi client daemon info</title>
+	<title>%(hostname)s opsi client daemon info</title>
 	<link rel="stylesheet" type="text/css" href="/opsiclientd.css" />
 	%(head)s
 	<script type="text/javascript">
@@ -211,7 +211,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 						return result
 			
 			raise Exception(u"Invalid credentials")
-		except Exception, e:
+		except Exception as e:
 			raise OpsiAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
 		return result
 	
@@ -334,6 +334,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 		
 		html = infoPage % {
 			'head': timeline.getHtmlHead(),
+			'hostname': config.get('global', 'host_id'),
 			#'opsiclient-log': log
 		}
 		if not isinstance(result, http.Response):
@@ -404,7 +405,7 @@ class ControlServer(OpsiService, threading.Thread):
 			if not reactor.running:
 				reactor.run(installSignalHandlers=0)
 			
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
 		logger.notice(u"Control server exiting")
 		self._running = False
