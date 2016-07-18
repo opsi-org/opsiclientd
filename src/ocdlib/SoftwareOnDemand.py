@@ -1,45 +1,47 @@
 # -*- coding: utf-8 -*-
+
+# opsiclientd is part of the desktop management solution opsi
+#    (open pc server integration) http://www.opsi.org
+# Copyright (C) 2010-2016 uib GmbH <info@uib.de>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-   = = = = = = = = = = = = = = = = = = =
-   =   ocdlib.SoftwareOnDemand         =
-   = = = = = = = = = = = = = = = = = = =
+The Functionality for Software-on-Demand
 
-   opsiclientd is part of the desktop management solution opsi
-   (open pc server integration) http://www.opsi.org
+Functionality to work with certificates.
+Certificates play an important role in the encrypted communication
+between servers and clients.
 
-   Copyright (C) 2010-2014 uib GmbH
+.. versionadded:: 4.0.4
 
-   http://www.uib.de/
-
-   All rights reserved.
-
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as
-   published by the Free Software Foundation.
-
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-   @copyright:	uib GmbH <info@uib.de>
-   @author: Erol Ülükmen <e.ueluekmen@uib.de>
-   @license: GNU General Public License version 2
+:copyright: uib GmbH <info@uib.de>
+:author: Erol Ülükmen <e.ueluekmen@uib.de>
+:author: Niko Wenselowski <n.wenselowski@uib.de>
+:license: GNU Affero General Public License version 3
 """
+
 import base64
 import cgi
 from hashlib import md5
 from twisted.conch.ssh import keys
+from twisted.internet import defer
 
 from OPSI.web2 import responsecode, http, stream
 from OPSI.Logger import *
 from OPSI.Types import *
 from OPSI.Object import *
-from OPSI.Service.Worker import WorkerOpsi
+from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc
 from OPSI.Service.Resource import ResourceOpsi
 
 from ocdlib.OpsiService import ServiceConnection
@@ -56,7 +58,7 @@ mainpage = u'''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-	<title>opsi software on demand</title>
+	<title>%(hostname)s opsi software on demand</title>
 	<link rel="stylesheet" type="text/css" href="/opsiclientd.css" />
 	<meta http-equiv="Content-Type" content="text/xhtml; charset=utf-8" />
 	<script type="text/javascript">
@@ -85,7 +87,7 @@ mainpage = u'''<?xml version="1.0" encoding="UTF-8"?>
 <body>
 	<p id="title">opsi software on demand</p>
 	<form action="/swondemand" method="post">
-		%result%
+		%(result)s
 	</form>
 </body>
 </html>
@@ -319,7 +321,10 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 		html.extend(buttons)
 		html.append(u'</div>')
 
-		html = mainpage.replace('%result%', forceUnicode(u'\n'.join(html)))
+		html = mainpage % {
+			'result': forceUnicode(u'\n'.join(html)),
+			'hostname': config.get('global','host_id'),
+		}
 
 		if self.query.get('action') in ('ondemand', 'onrestart'):
 			description  = u"Software on demand action '%s' executed\n" % self.query.get('action')
@@ -359,9 +364,12 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			productOnDepots = []
 			if self._swOnDemandProductIds:
 				self._configService.setAsync(True)
-				jsonrpc1 = self._configService.productOnClient_getObjects(clientId = config.get('global', 'host_id'))
-				jsonrpc2 = self._configService.product_getObjects(id = self._swOnDemandProductIds)
-				jsonrpc3 = self._configService.productOnDepot_getObjects(depotId = config.get('depot_server', 'depot_id'), productId = self._swOnDemandProductIds)
+				jsonrpc1 = self._configService.productOnClient_getObjects(clientId=config.get('global', 'host_id'))
+				jsonrpc2 = self._configService.product_getObjects(id=self._swOnDemandProductIds)
+				jsonrpc3 = self._configService.productOnDepot_getObjects(
+					depotId=config.get('depot_server', 'depot_id'),
+					productId=self._swOnDemandProductIds
+				)
 				productOnClients = jsonrpc1.waitForResult()
 				products = jsonrpc2.waitForResult()
 				productOnDepots = jsonrpc3.waitForResult()
@@ -386,39 +394,28 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 
 			elif self._swOnDemandProductIds:
 				html = []
+
 				# sort productIds by productnames
 				productsByProductName = {}
-
 				for productId in self._swOnDemandProductIds:
-					found = False
 					for p in products:
 						if p.id == productId:
-							found = True
 							if p.name not in productsByProductName:
 								productsByProductName[p.name] = p
 							break
-
-					if not found:
+					else:
 						logger.error(u"Product with productId '%s' not found." % (productId))
 
 				sortedProductIds = [productsByProductName[name].id for name in
 									sorted(productsByProductName.keys(), key=unicode.lower)]
 
 				for productId in sortedProductIds:
-					html.append(u'<div class="swondemand-product-box"><table>')
-					productOnClient = None
-
-					for poc in productOnClients:
-						if (poc.productId == productId):
-							productOnClient = poc
-							break
-
 					productOnDepot = None
 					for pod in productOnDepots:
 						if (pod.productId == productId):
 							productOnDepot = pod
 							break
-					if not productOnDepot:
+					else:
 						logger.error(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
 						continue
 
@@ -427,8 +424,14 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 						if (p.id == productOnDepot.productId) and (p.productVersion == productOnDepot.productVersion) and (p.packageVersion == productOnDepot.packageVersion):
 							product = p
 							break
-					if not product:
+					else:
 						logger.error(u"Product '%s' not found" % productId)
+
+					productOnClient = None
+					for poc in productOnClients:
+						if (poc.productId == productId):
+							productOnClient = poc
+							break
 
 					installationStatus = None
 					state = _('not installed')
@@ -446,6 +449,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 							stateclass = "swondemand-product-state-installed"
 							state = u"%s (%s: %s-%s)" % ( _('installed'), _('version'), productOnClient.productVersion, productOnClient.packageVersion )
 
+					html.append(u'<div class="swondemand-product-box"><table>')
 					html.append(u'<tr><td colspan="2" class="swondemand-product-name">%s (%s-%s)</td></tr>' \
 							% (product.name, productOnDepot.productVersion, productOnDepot.packageVersion))
 					description = cgi.escape(product.description) or u''
@@ -479,12 +483,18 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				html.append(u'<div class="swondemand-button-box">')
 				html.append(u'<button class="swondemand-action-button" type="submit" name="action" value="next">&gt; %s</button>' % _(u'next'))
 				html.append(u'</div>')
-				html = mainpage.replace('%result%', u'\n'.join(html))
+				html = mainpage % {
+					'result': forceUnicode(u'\n'.join(html)),
+					'hostname': config.get('global','host_id')
+				}
 			else:
 				raise Exception(u"No products found")
 		except Exception, e:
 			logger.logException(e)
-			html = mainpage.replace('%result%', u'<div class="swondemand-summary-message-box">%s</div>' % e)
+			html = mainpage % {
+				'result': u'<div class="swondemand-summary-message-box">%s</div>' % e,
+				'hostname': config.get('global','host_id'),
+			}
 
 		self.disconnectConfigService()
 		result.stream = stream.IByteStream(html.encode('utf-8'))
@@ -493,3 +503,114 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 
 class ResourceSoftwareOnDemand(ResourceOpsi):
 	WorkerClass = WorkerSoftwareOnDemand
+
+class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
+	def __init__(self, service, request, resource):
+		moduleName = u' %-30s' % (u'software on demand')
+		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		self._allowedMethods = self._getAllowedMethods()
+		self._fireEvent = False
+		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
+		ServiceConnection.__init__(self)
+
+	def _getAllowedMethods(self):
+	    return [
+			#"getPossibleMethods_listOfHashes",
+			#"backend_getInterface",
+			#"backend_info",
+			"fireEvent_software_on_demand",
+			"getGeneralConfigValue",
+			"objectToGroup_getObjects",
+			"getDepotId",
+			"backend_setOptions",
+			"productOnDepot_getObjects",
+			"productDependency_getObjects",
+			"product_getObjects",
+			"productOnClient_getObjects",
+			"setProductActionRequestWithDependencies",
+			"hostControlSafe_fireEvent"
+		]
+
+	def _getCallInstance(self, result):
+		#self._getBackend(result)
+		self._callInstance = self._configService
+		self._callInterface = self._configService.getInterface()
+
+	def _getCredentials(self):
+		(user, password) = self._getAuthorization()
+		if not user:
+			user = config.get('global', 'host_id')
+		return (user, password)
+
+	def _authenticate(self, result):
+		if (self.request.remoteAddr.host == '127.0.0.1'):
+			self.session.authenticated = False
+			return result
+		try:
+			(self.session.user, self.session.password) = self._getCredentials()
+
+			logger.notice(u"Authorization request from %s@%s (application: %s)" % (self.session.user, self.session.ip, self.session.userAgent))
+
+			if not self.session.password:
+				raise Exception(u"No password from %s (application: %s)" % (self.session.ip, self.session.userAgent))
+
+			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
+				return result
+			if (os.name == 'nt'):
+				if (self.session.user.lower() == 'administrator'):
+					import win32security
+					# The LogonUser function will raise an Exception on logon failure
+					win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
+					# No exception raised => user authenticated
+					return result
+
+			raise Exception(u"Invalid credentials")
+		except Exception as e:
+			raise OpsiAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
+		return result
+
+	def _checkRpcs(self, result):
+		if not self._rpcs:
+			raise Exception("No rpcs to check")
+		for rpc in self._rpcs:
+			if not rpc.method in self._allowedMethods:
+				raise Exception("You are not allowed to execute the method: '%s'" % rpc.method)
+			elif rpc.method == "fireEvent_software_on_demand":
+				self._fireEvent = True
+				self._rpcs.remove(rpc)
+		return result
+
+	def _processQuery(self, result):
+		deferred = defer.Deferred()
+		deferred.addCallback(self._openConnection)
+		deferred.addCallback(self._decodeQuery)
+		deferred.addCallback(self._getCallInstance)
+		deferred.addCallback(self._getRpcs)
+		deferred.addCallback(self._checkRpcs)
+		deferred.addCallback(self._executeRpcs)
+		deferred.addCallback(self._closeConnection)
+		deferred.addCallback(self._checkFireEvent)
+		deferred.addErrback(self._errback)
+		deferred.callback(None)
+		return deferred
+
+
+	def _openConnection(self, result):
+		ServiceConnection.connectConfigService(self)
+		return result
+
+	def _closeConnection(self, result):
+		self.disconnectConfigService()
+		return result
+
+	def _checkFireEvent(self, result):
+		if self._fireEvent:
+			for eventGenerator in getEventGenerators(generatorClass = SwOnDemandEventGenerator):
+				eventGenerator.createAndFireEvent()
+			self._fireEvent = False
+		return result
+
+class ResourceKioskJsonRpc(ResourceOpsi):
+	WorkerClass = WorkerKioskJsonRpc
+
+

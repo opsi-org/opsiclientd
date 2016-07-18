@@ -454,8 +454,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				
 			includeProductIds = []
 			excludeProductIds = []
-			excludeProductGroupIds = forceList(config.get('cache_service', 'exclude_product_group_ids').strip().split(","))
-			includeProductGroupIds = forceList(config.get('cache_service', 'include_product_group_ids').strip().split(","))
+			excludeProductGroupIds = [ x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != "" ]
+			includeProductGroupIds = [ x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != "" ]
 			
 			logger.debug("Given includeProductGroupIds: '%s'" % includeProductGroupIds)
 			logger.debug("Given excludeProductGroupIds: '%s'" % excludeProductGroupIds)
@@ -466,7 +466,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 							groupId=includeProductGroupIds) ]
 				logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
 			
-			elif excludeProductGroupIds:
+			if excludeProductGroupIds:
 				excludeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
 							groupType="ProductGroup",
 							groupId=excludeProductGroupIds) ]
@@ -740,13 +740,37 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		try:
 			if not self._configService:
 				self.connectConfigService()
-
+				
+			includeProductIds = []
+			excludeProductIds = []
+			excludeProductGroupIds = [ x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != "" ]
+			includeProductGroupIds = [ x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != "" ]
+			
+			logger.debug("Given includeProductGroupIds: '%s'" % includeProductGroupIds)
+			logger.debug("Given excludeProductGroupIds: '%s'" % excludeProductGroupIds)
+			
+			if includeProductGroupIds:
+				includeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+							groupType="ProductGroup",
+							groupId=includeProductGroupIds) ]
+				logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
+			
+			if excludeProductGroupIds:
+				excludeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+							groupType="ProductGroup",
+							groupId=excludeProductGroupIds) ]
+				logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
+			
 			productIds = []
-			productOnClients = self._configService.productOnClient_getObjects(
-					productType   = 'LocalbootProduct',
-					clientId      = config.get('global', 'host_id'),
-					actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
-					attributes    = ['actionRequest'])
+			productOnClients = [ poc for poc in self._configService.productOnClient_getObjects(
+				productType   = 'LocalbootProduct',
+				clientId      = config.get('global', 'host_id'),
+				actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+				attributes    = ['actionRequest'],
+				productId     = includeProductGroupIds) if poc.productId not in excludeProductIds ]
+
+
+			
 			for productOnClient in productOnClients:
 				if not productOnClient.productId in productIds:
 					productIds.append(productOnClient.productId)

@@ -1055,9 +1055,9 @@ def getEventConfigs():
 					elif (key == 'action_processor_productids'):
 						eventConfigs[eventConfigId]['actionProcessorProductIds'] = forceList(value.strip().split(","))
 					elif (key == 'exclude_product_group_ids'):
-						eventConfigs[eventConfigId]['excludeProductGroupIds'] = forceList(value.strip().split(","))
+						eventConfigs[eventConfigId]['excludeProductGroupIds'] = forceList(value)
 					elif (key == 'include_product_group_ids'):
-						eventConfigs[eventConfigId]['includeProductGroupIds'] = forceList(value.strip().split(","))
+						eventConfigs[eventConfigId]['includeProductGroupIds'] = forceList(value)
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
 				except Exception, e:

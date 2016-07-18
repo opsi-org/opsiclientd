@@ -3,8 +3,11 @@ opsiclientd (4.0.86) UNRELEASED; urgency=medium
   * opsiclientd_shutdown_starter logs the event it should fire
   * type checking now with isinstance instead of type.
   * Improved logmessages if shutdown / reboot request is detected.
+  * new opsiclientdkiosk interface implemented
+  * based on python-opsi 4.0.7.8-1
+  * Fixed problem with WAN Installation without networkconnection
 
- -- Niko Wenselowski <n.wenselowski@uib.de>  Wed, 27 Oct 2015 12:20:51 +0200
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Mon, 11 Jun 2016 14:10:51 +0200
 
 opsiclientd (4.0.85) testing; urgency=medium
 
@@ -25,6 +28,12 @@ opsiclientd (4.0.84) testing; urgency=medium
   * Windows 8.1: Sleeping a short time before triggering the reboot.
 
  -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 08 Sep 2015 15:02:20 +0200
+
+opsiclientd (4.0.83) stable; urgency=low
+
+  * python-opsi 4.0.5.16-1
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Fri, 20 Feb 2015 10:58:36 +0100
 
 opsiclientd (4.0.82) stable; urgency=low
 
