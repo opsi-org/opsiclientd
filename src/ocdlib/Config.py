@@ -102,15 +102,15 @@ class ConfigImplementation(object):
 				'timeline_db':              u'c:\\opsi.org\\opsiclientd\\timeline.sqlite',
 				'verify_server_cert':       False,
 				'verify_server_cert_by_ca': False,
-				'server_cert_dir':          u'c:\\opsi.org\\opsiclientd\\server-certs'
+				'server_cert_dir':          u'c:\\opsi.org\\opsiclientd\\server-certs',
+				'proxy_mode': u'static',
+				'proxy_url': u'',
 			},
 			'config_service': {
 				'url':                   [],
 				'connection_timeout':    10,
 				'user_cancelable_after': 0,
 				'sync_time_from_service': False,
-				'proxy_mode': u'static',
-				'proxy_url': u'',
 			},
 			'depot_server': {
 				'depot_id': u'',

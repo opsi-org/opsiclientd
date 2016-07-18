@@ -296,13 +296,13 @@ class ServiceConnectionThread(KillableThread):
 			certDir = config.get('global', 'server_cert_dir')
 			verifyServerCert = config.get('global', 'verify_server_cert')
 
-			proxyMode = config.get('config_service', 'proxy_mode')
-			proxyURL = config.get('config_service', 'proxy_url')
+			proxyMode = config.get('global', 'proxy_mode')
+			proxyURL = config.get('global', 'proxy_url')
 			if proxyMode == 'system':
 				logger.notice(u'not implemented yet')
 				proxyURL = System.getSystemProxySetting()
 			elif proxyMode == 'static':
-				proxyURL = config.get('config_service', 'proxy_url')
+				proxyURL = config.get('global', 'proxy_url')
 
 			(scheme, host, port, baseurl, username, password) = urlsplit(self._configServiceUrl)
 			serverCertFile = os.path.join(certDir, host + '.pem')
