@@ -429,7 +429,6 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root.putChild("rpc", ResourceCacheServiceJsonRpc(self))
 		self._root.putChild("rpcinterface", ResourceCacheServiceJsonInterface(self))
 		self._root.putChild("info.html", ResourceOpsiclientdInfo(self))
-		self._root.putChild("swondemand", ResourceSoftwareOnDemand(self))
 		self._root.putChild("kiosk",ResourceKioskJsonRpc(self))
 		
 class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
