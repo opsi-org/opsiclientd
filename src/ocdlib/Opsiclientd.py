@@ -5,7 +5,7 @@ ocdlib.Opsiclientd
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
-Copyright (C) 2014 uib GmbH
+Copyright (C) 2014-2016 uib GmbH
 
 http://www.uib.de/
 
@@ -27,9 +27,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 @author: Jan Schneider <j.schneider@uib.de>
 @author: Erol Ueluekmen <e.ueluekmen@uib.de>
 @license: GNU Affero GPL version 3
-"""   
+"""
 
-__version__ = '4.0.83'
+__version__ = '4.0.86'
 
 # Imports
 import sys, os

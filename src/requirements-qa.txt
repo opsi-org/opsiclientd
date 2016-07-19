@@ -1,0 +1,5 @@
+-r requirements-tests.txt
+pytest
+pytest-cov
+pylint
+flake8

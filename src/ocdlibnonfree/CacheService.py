@@ -451,13 +451,36 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			self.setObsolete()
 			if not self._configService:
 				self.connectConfigService()
+				
+			includeProductIds = []
+			excludeProductIds = []
+			excludeProductGroupIds = [ x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != "" ]
+			includeProductGroupIds = [ x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != "" ]
 			
-			productOnClients = self._configService.productOnClient_getObjects(
+			logger.debug("Given includeProductGroupIds: '%s'" % includeProductGroupIds)
+			logger.debug("Given excludeProductGroupIds: '%s'" % excludeProductGroupIds)
+			
+			if includeProductGroupIds:
+				includeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+							groupType="ProductGroup",
+							groupId=includeProductGroupIds) ]
+				logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
+			
+			if excludeProductGroupIds:
+				excludeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+							groupType="ProductGroup",
+							groupId=excludeProductGroupIds) ]
+				logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
+			
+			
+			productOnClients = [ poc for poc in self._configService.productOnClient_getObjects(
 				productType   = 'LocalbootProduct',
 				clientId      = config.get('global', 'host_id'),
 				# Exclude 'always'!
 				actionRequest = ['setup', 'uninstall', 'update', 'once', 'custom'],
-				attributes    = ['actionRequest'])
+				attributes    = ['actionRequest'],
+				productId     = includeProductGroupIds) if poc.productId not in excludeProductIds ]
+			
 			logger.info(u"Product on clients: %s" % productOnClients)
 			if not productOnClients:
 				self._state['config_cached'] = True
@@ -717,12 +740,37 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		try:
 			if not self._configService:
 				self.connectConfigService()
+				
+			includeProductIds = []
+			excludeProductIds = []
+			excludeProductGroupIds = [ x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != "" ]
+			includeProductGroupIds = [ x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != "" ]
+			
+			logger.debug("Given includeProductGroupIds: '%s'" % includeProductGroupIds)
+			logger.debug("Given excludeProductGroupIds: '%s'" % excludeProductGroupIds)
+			
+			if includeProductGroupIds:
+				includeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+							groupType="ProductGroup",
+							groupId=includeProductGroupIds) ]
+				logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
+			
+			if excludeProductGroupIds:
+				excludeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+							groupType="ProductGroup",
+							groupId=excludeProductGroupIds) ]
+				logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
+			
 			productIds = []
-			productOnClients = self._configService.productOnClient_getObjects(
-					productType   = 'LocalbootProduct',
-					clientId      = config.get('global', 'host_id'),
-					actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
-					attributes    = ['actionRequest'])
+			productOnClients = [ poc for poc in self._configService.productOnClient_getObjects(
+				productType   = 'LocalbootProduct',
+				clientId      = config.get('global', 'host_id'),
+				actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+				attributes    = ['actionRequest'],
+				productId     = includeProductGroupIds) if poc.productId not in excludeProductIds ]
+
+
+			
 			for productOnClient in productOnClients:
 				if not productOnClient.productId in productIds:
 					productIds.append(productOnClient.productId)
@@ -853,6 +901,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				kwargs['verifyServerCert'] = config.get('global', 'verify_server_cert')
 				kwargs['serverCertFile'] = os.path.join(certDir, host + '.pem')
 				kwargs['verifyServerCertByCa'] = config.get('global', 'verify_server_cert_by_ca')
+				kwargs['proxy'] = config.get('global', 'proxy_url')
 				
 			return getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword, **kwargs)
 		else:

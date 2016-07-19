@@ -147,6 +147,8 @@ class EventConfig(object):
 		self.actionProcessorDesktop        =  unicode ( conf.get('actionProcessorDesktop',        'current' ) )
 		self.actionProcessorTimeout        =      int ( conf.get('actionProcessorTimeout',        3*3600    ) )
 		self.actionProcessorProductIds     =     list ( conf.get('actionProcessorProductIds',     []        ) )
+		self.excludeProductGroupIds        =     list ( conf.get('excludeProductGroupIds',     []        ) )
+		self.includeProductGroupIds        =     list ( conf.get('includeProductGroupIds',     []        ) )
 		self.preActionProcessorCommand     =  unicode ( conf.get('preActionProcessorCommand',     ''        ) )
 		self.postActionProcessorCommand    =  unicode ( conf.get('postActionProcessorCommand',    ''        ) )
 		#self.serviceOptions                =     dict ( conf.get('serviceOptions',                {}        ) )
@@ -583,7 +585,7 @@ class WMIEventGenerator(EventGenerator):
 			eventInfo = {}
 			for p in wqlResult.properties:
 				value = getattr(wqlResult, p)
-				if type(value) is tuple:
+				if isinstance(value, tuple):
 					eventInfo[p] = []
 					for v in value:
 						eventInfo[p].append(v)
@@ -1052,6 +1054,10 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['postActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'action_processor_productids'):
 						eventConfigs[eventConfigId]['actionProcessorProductIds'] = forceList(value.strip().split(","))
+					elif (key == 'exclude_product_group_ids'):
+						eventConfigs[eventConfigId]['excludeProductGroupIds'] = forceList(value)
+					elif (key == 'include_product_group_ids'):
+						eventConfigs[eventConfigId]['includeProductGroupIds'] = forceList(value)
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
 				except Exception, e:

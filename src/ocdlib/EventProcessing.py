@@ -622,11 +622,30 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productState['productId'] + ':', productState['actionRequest']))
 			else:
 				if not productIds:
-					for productOnClient in self._configService.productOnClient_getObjects(
+					includeProductGroupIds = [ x for x in forceList(self.event.eventConfig.includeProductGroupIds) if x != "" ]
+					excludeProductGroupIds = [ x for x in forceList(self.event.eventConfig.excludeProductGroupIds) if x != "" ]
+					includeProductIds = []
+					excludeProductIds = []
+					
+					if includeProductGroupIds:
+						includeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+									groupType="ProductGroup",
+									groupId=includeProductGroupIds) ]
+						logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
+					
+					elif excludeProductGroupIds:
+						excludeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+									groupType="ProductGroup",
+									groupId=excludeProductGroupIds) ]
+						logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
+			
+					for productOnClient in [ poc for poc in self._configService.productOnClient_getObjects(
 								productType   = 'LocalbootProduct',
 								clientId      = config.get('global', 'host_id'),
 								actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
-								attributes    = ['actionRequest']):
+								attributes    = ['actionRequest'],
+								productId     = includeProductIds) if poc.productId not in excludeProductIds ]:
+						
 						if not productOnClient.productId in productIds:
 							productIds.append(productOnClient.productId)
 							logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
@@ -763,24 +782,24 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					serviceSession = u'none'
 			except:
 				pass
-			
+
 			actionProcessorUserName = u''
 			actionProcessorUserPassword = u''
 			if not self.isLoginEvent:
 				actionProcessorUserName = self.opsiclientd._actionProcessorUserName
 				actionProcessorUserPassword = self.opsiclientd._actionProcessorUserPassword
-			
+
 			createEnvironment = config.get('action_processor', 'create_environment')
-			
-			
+
+
 			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
 			actionProcessorCommand = actionProcessorCommand.replace('%service_url%', self._configServiceUrl)
 			actionProcessorCommand = actionProcessorCommand.replace('%service_session%', serviceSession)
 			actionProcessorCommand = actionProcessorCommand.replace('%action_processor_productids%', ",".join(self.event.eventConfig.actionProcessorProductIds))
 			actionProcessorCommand += u' %s' % additionalParams
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
-			
-			command = u'%global.base_dir%\\action_processor_starter.exe ' \
+
+			command = u'"%global.base_dir%\\action_processor_starter.exe" ' \
 				+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
 				+ u'"%global.log_file%" "%global.log_level%" ' \
 				+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \

@@ -5,7 +5,7 @@ ocdlib.Opsiclientd
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
-Copyright (C) 2014 uib GmbH
+Copyright (C) 2014-2015 uib GmbH
 
 http://www.uib.de/
 
@@ -150,9 +150,6 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 		self._callback('StopScreenSaver', *args)
 
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                   OPSICLIENTD SERVICE FRAMEWORK                                   -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 	_svc_name_ = "opsiclientd"
 	_svc_display_name_ = "opsiclientd"
@@ -246,9 +243,10 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 				self.opsiclientd = OpsiclientdNT5()
 
 			elif (sys.getwindowsversion()[0] == 6):
-				# NT6: Vista / Windows7
-				if (sys.getwindowsversion()[1] >= 1):
-					# Windows7
+				# NT6: Vista / Windows7 and later
+				if sys.getwindowsversion()[1] >= 3:  # Windows8.1
+					self.opsiclientd = OpsiclientdNT63()
+				elif sys.getwindowsversion()[1] >= 1:  # Windows7
 					self.opsiclientd = OpsiclientdNT61()
 				else:
 					self.opsiclientd = OpsiclientdNT6()
@@ -276,22 +274,13 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			logger.critical(u"opsiclientd crash")
 			logger.logException(e)
 
-		# This call sometimes produces an error in eventlog (invalid handle)
-		#self.ReportServiceStatus(win32service.SERVICE_STOPPED)
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                        OPSICLIENTD NT INIT                                        -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class OpsiclientdInit(object):
 	def __init__(self):
 		logger.debug(u"OpsiclientdInit")
 		win32serviceutil.HandleCommandLine(OpsiclientdServiceFramework)
 
 
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                          OPSICLIENTD NT                                           -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class OpsiclientdNT(Opsiclientd):
 	def __init__(self):
 		Opsiclientd.__init__(self)
@@ -313,31 +302,32 @@ class OpsiclientdNT(Opsiclientd):
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
 
 	def isRebootRequested(self):
-		rebootRequested = 0
 		try:
 			rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
-		except Exception, e:
-			logger.warning(u"Failed to get rebootRequested from registry: %s" % forceUnicode(e))
-		logger.info(u"rebootRequested: %s" % rebootRequested)
-		if (rebootRequested == 2):
+		except Exception as error:
+			logger.warning(u"Failed to get RebootRequested from registry: {0}".format(forceUnicode(error)))
+			rebootRequested = 0
+
+		logger.notice(u"Reboot request in Registry: {0}".format(rebootRequested))
+		if rebootRequested == 2:
 			# Logout
 			logger.info(u"Logout requested")
 			self.clearRebootRequest()
 			return False
+
 		return forceBool(rebootRequested)
 
 	def isShutdownRequested(self):
-		shutdownRequested = 0
 		try:
 			shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
-		except Exception, e:
-			logger.warning(u"Failed to get shutdownRequested from registry: %s" % forceUnicode(e))
-		logger.info(u"shutdownRequested: %s" % shutdownRequested)
+		except Exception as error:
+			logger.warning(u"Failed to get shutdownRequested from registry: {0}".format(forceUnicode(error)))
+			shutdownRequested = 0
+
+		logger.notice(u"Shutdown request in Registry: {0}".format(shutdownRequested))
 		return forceBool(shutdownRequested)
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                          OPSICLIENTD NT5                                          -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class OpsiclientdNT5(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
@@ -384,16 +374,27 @@ class OpsiclientdNT5(OpsiclientdNT):
 
 		_rebootThread().start()
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                          OPSICLIENTD NT6                                          -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class OpsiclientdNT6(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                          OPSICLIENTD NT61                                         -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class OpsiclientdNT61(OpsiclientdNT):
+	"OpsiclientdNT for Windows NT 6.1 - Windows 7"
+
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
+
+
+class OpsiclientdNT63(OpsiclientdNT):
+	"OpsiclientdNT for Windows NT 6.3 - Windows 8.1"
+
+	def rebootMachine(self):
+		self._isRebootTriggered = True
+		self.clearRebootRequest()
+		logger.debug("Sleeping 3 seconds before reboot to avoid hanging.")
+		for _ in range(10):
+			time.sleep(0.3)
+		logger.debug("Finished sleeping.")
+		System.reboot(3)
