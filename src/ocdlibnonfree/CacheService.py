@@ -901,7 +901,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				kwargs['verifyServerCert'] = config.get('global', 'verify_server_cert')
 				kwargs['serverCertFile'] = os.path.join(certDir, host + '.pem')
 				kwargs['verifyServerCertByCa'] = config.get('global', 'verify_server_cert_by_ca')
-				kwargs['proxy'] = config.get('global', 'proxy_url')
+				kwargs['proxyURL'] = config.get('global', 'proxy_url')
 				
 			return getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword, **kwargs)
 		else:
