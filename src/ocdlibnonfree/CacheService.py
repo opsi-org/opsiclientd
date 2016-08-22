@@ -111,7 +111,7 @@ class CacheService(threading.Thread):
 	def configCacheCompleted(self):
 		try:
 			self.initializeConfigCacheService()
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e, LOG_INFO)
 			logger.error(e)
 			return False
@@ -218,7 +218,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			ccss = state.get('config_cache_service')
 			if ccss:
 				self._state = ccss
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
 			try:
 				self.setObsolete()
@@ -330,7 +330,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
 				raise Exception(u"Cannot sync products: modules file invalid")
 			logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
-		except Exception, e:
+		except Exception:
 			self.disconnectConfigService()
 			raise
 	
@@ -377,7 +377,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 						self._syncConfigFromServerRequested = False
 						self._syncConfigFromServer()
 				time.sleep(1)
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
 		logger.notice(u"Config cache service ended")
 		self._running = False
@@ -524,7 +524,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 						timeline.setEventEnd(eventId)
 						for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
 							eventGenerator.createAndFireEvent()
-				except Exception, e:
+				except Exception as e:
 					logger.logException(e)
 					timeline.addEvent(
 					title       = u"Failed to sync config from server",
@@ -532,7 +532,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					category    = u"config_sync",
 					isError     = True)
 					raise
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Errors occured while syncing config from server: %s" % e)
 		self.disconnectConfigService()
 		self._working = False
@@ -627,7 +627,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					self._cacheProductsRequested = False
 					self._cacheProducts()
 				time.sleep(1)
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
 		logger.notice(u"Product cache service ended")
 		self._running = False
@@ -677,7 +677,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
 				raise Exception(u"Cannot sync products: modules file invalid")
 			logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
-		except Exception, e:
+		except Exception:
 			self.disconnectConfigService()
 			raise
 		
@@ -727,7 +727,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					state.set('product_cache_service', self._state)
 				del productDirSizes[deleteProduct]
 			logger.notice(u"%0.3f MB of product cache freed" % (float(freedSpace)/(1024*1024)))
-		except Exception, e:
+		except Exception as e:
 			raise Exception(u"Failed to free enough disk space for product cache: %s" % forceUnicode(e))
 	
 	def _cacheProducts(self):
@@ -819,11 +819,11 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						for productId in productIds:
 							try:
 								self._cacheProduct(productId,productIds)
-							except Exception, e:
+							except Exception as e:
 								logger.logException(e, LOG_INFO)
 								errorsOccured.append(forceUnicode(e))
 								self._setProductCacheState(productId, 'failure', forceUnicode(e))
-					except Exception, e:
+					except Exception as e:
 						logger.logException(e)
 						errorsOccured.append(forceUnicode(e))
 					if errorsOccured:
@@ -840,7 +840,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
 							eventGenerator.createAndFireEvent()
 				
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Failed to cache products: %s" % e)
 			timeline.addEvent(
 				title       = u"Failed to cache products",
@@ -901,14 +901,14 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				kwargs['verifyServerCert'] = config.get('global', 'verify_server_cert')
 				kwargs['serverCertFile'] = os.path.join(certDir, host + '.pem')
 				kwargs['verifyServerCertByCa'] = config.get('global', 'verify_server_cert_by_ca')
-				kwargs['proxy'] = config.get('global', 'proxy_url')
+				kwargs['proxyURL'] = config.get('global', 'proxy_url')
 				
 			return getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword, **kwargs)
 		else:
 			if self._impersonation:
 				try:
 					self._impersonation.end()
-				except Exception, e:
+				except Exception as e:
 					logger.warning(e)
 			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
 			self._impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
@@ -994,7 +994,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					self._dynamicBandwidthLimitEvent = None
 			logger.notice(u"Product '%s' cached" % productId)
 			self._setProductCacheState(productId, 'completed', time.time())
-		except Exception, e:
+		except Exception as e:
 			exception = e
 			timeline.addEvent(
 				title       = u"Failed to cache product %s" % productId,
@@ -1006,12 +1006,12 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		if repository:
 			try:
 				repository.disconnect()
-			except Exception, e:
+			except Exception as e:
 				logger.warning(u"Failed to disconnect from repository: %s" % e)
 		if self._impersonation:
 			try:
 				self._impersonation.end()
-			except Exception, e:
+			except Exception as e:
 				logger.warning(e)
 		if exception:
 			raise exception
