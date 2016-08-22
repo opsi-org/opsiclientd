@@ -1,4 +1,11 @@
-opsiclientd (4.0.86) UNRELEASED; urgency=medium
+opsiclientd (4.0.86) stable; urgency=medium
+
+  * verifyServerCert and verifyServerCertbyCA fix
+  * fixes for proxySupport
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Mon, 22 Aug 2016 22:10:51 +0200
+
+opsiclientd (4.0.86) testing; urgency=medium
 
   * opsiclientd_shutdown_starter logs the event it should fire
   * type checking now with isinstance instead of type.
