@@ -80,7 +80,7 @@ class ConfigImplementation(object):
 		baseDir = u''
 		try:
 			baseDir = os.path.dirname(sys.argv[0])
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Failed to get base dir: %s" % e)
 		
 		self._config = {
@@ -225,10 +225,10 @@ class ConfigImplementation(object):
 			value = forceBool(value)
 		
 		if option in ('exclude_product_group_ids', 'include_product_group_ids'):
-                        if not isinstance(value, list):
-                                value = [ x.strip() for x in value.split(",") ]
-                        else:
-		                value = forceList(value)
+			if not isinstance(value, list):
+				value = [ x.strip() for x in value.split(",") ]
+			else:
+				value = forceList(value)
 		
 		if not self._config.has_key(section):
 			self._config[section] = {}
@@ -310,7 +310,7 @@ class ConfigImplementation(object):
 									if os.path.exists(dlf):
 										os.unlink(dlf)
 									os.rename(slf, dlf)
-							except Exception, e:
+							except Exception as e:
 								logger.error(u"Failed to rename %s to %s: %s" % (slf, dlf, forceUnicode(e)) )
 						self.set('global', 'log_file', logFile)
 			
@@ -322,7 +322,7 @@ class ConfigImplementation(object):
 					option = option.lower()
 					self.set(section.lower(), option, value)
 				
-		except Exception, e:
+		except Exception as e:
 			# An error occured while trying to read the config file
 			logger.error(u"Failed to read config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
 			logger.logException(e)
@@ -364,7 +364,7 @@ class ConfigImplementation(object):
 			else:
 				logger.notice(u"No need to write config file '%s', config file is up to date" % self.get('global', 'config_file'))
 			
-		except Exception, e:
+		except Exception as e:
 			# An error occured while trying to write the config file
 			logger.logException(e)
 			logger.error(u"Failed to write config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
@@ -425,14 +425,14 @@ class ConfigImplementation(object):
 					self.set('depot_server', 'url', depotUrl)
 					logger.notice(u"Depot url was set to '%s' from configState %s" % (depotUrl, configState))
 					return
-				except Exception, e:
+				except Exception as e:
 					logger.error(u"Failed to set depot url from values %s in configState %s: %s" % (configState.values, configState, e))
 			elif (configState.configId == 'opsiclientd.depot_server.depot_id') and configState.values:
 				try:
 					depotId = forceHostId(configState.values[0])
 					depotIds.append(depotId)
 					logger.notice(u"Depot was set to '%s' from configState %s" % (depotId, configState))
-				except Exception, e:
+				except Exception as e:
 					logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, e))
 			elif not masterOnly and (configState.configId == 'clientconfig.depot.dynamic') and configState.values:
 				dynamicDepot = forceBool(configState.values[0])
@@ -508,7 +508,7 @@ class ConfigImplementation(object):
 					selectedDepot = selectDepot(clientConfig = clientConfig, masterDepot = masterDepot, alternativeDepots = alternativeDepots)
 					if not selectedDepot:
 						selectedDepot = masterDepot
-				except Exception, e:
+				except Exception as e:
 					logger.logException(e)
 					logger.error(u"Failed to select depot: %s" % e)
 			else:
@@ -566,7 +566,7 @@ class ConfigImplementation(object):
 					
 					self.set(section = parts[1], option = parts[2], value = value)
 					
-				except Exception, e:
+				except Exception as e:
 					logger.error(u"Failed to process general config key '%s:%s': %s" % (key, value, forceUnicode(e)))
 		else:
 			configService.backend_setOptions({"addConfigStateDefaults": True})
@@ -590,7 +590,7 @@ class ConfigImplementation(object):
 						
 						self.set(section = parts[1], option = parts[2], value = configState.values[0])
 						
-					except Exception, e:
+					except Exception as e:
 						logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
 		logger.notice(u"Got config from service")
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.getDict()))
