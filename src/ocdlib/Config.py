@@ -47,30 +47,22 @@ logger = Logger()
 
 
 OPSI_CA = '''-----BEGIN CERTIFICATE-----
-MIIEYTCCA0mgAwIBAgIJAO5oKZZR8dQkMA0GCSqGSIb3DQEBBQUAMH0xCzAJBgNV
-BAYTAkRFMRgwFgYDVQQIEw9SaGVpbmxhbmQtUGZhbHoxDjAMBgNVBAcTBU1haW56
-MREwDwYDVQQKEwh1aWIgR21iSDEVMBMGA1UEAxMMb3BzaSBSb290IENBMRowGAYJ
-KoZIhvcNAQkBFgtpbmZvQHVpYi5kZTAeFw0xMTA2MDExMDI2NTNaFw0yMTA1Mjkx
-MDI2NTNaMH0xCzAJBgNVBAYTAkRFMRgwFgYDVQQIEw9SaGVpbmxhbmQtUGZhbHox
-DjAMBgNVBAcTBU1haW56MREwDwYDVQQKEwh1aWIgR21iSDEVMBMGA1UEAxMMb3Bz
-aSBSb290IENBMRowGAYJKoZIhvcNAQkBFgtpbmZvQHVpYi5kZTCCASIwDQYJKoZI
-hvcNAQEBBQADggEPADCCAQoCggEBAJxU7TXeNrwXPlsermmdRxvPkzaNqE7q9oev
-lTLrdzMFNXekpg7nTMdvMEcPezHgkxrzRnIFrbyCKebVHvYBMYDSMefL0PGdBufW
-vRuQVH5VtdjCZ3SJWHjrLHeV4RCddS/5f1Mx9mxaXuO/0qtpttFQKQ7wHU5a/8eE
-Y2P+ZY7K4s8E/ZA2V3Tu6HxZJIt/JG0HoGrgEShb5hhRlpTVP5gRl/14qaZp9JZq
-Hn7UHMEJlWLb7EXzY7wRIiHmI//V69X9ARrkS5axbDddatlZBEGonSfgObna5YOO
-6Lx5aiq/PyYMEA6YWG+le//KgxexLCf5t5i8PEiFLuBrXCrKDG0CAwEAAaOB4zCB
-4DAdBgNVHQ4EFgQUYr4TyTM6odj+hYr3luci6pnFtzEwgbAGA1UdIwSBqDCBpYAU
-Yr4TyTM6odj+hYr3luci6pnFtzGhgYGkfzB9MQswCQYDVQQGEwJERTEYMBYGA1UE
-CBMPUmhlaW5sYW5kLVBmYWx6MQ4wDAYDVQQHEwVNYWluejERMA8GA1UEChMIdWli
-IEdtYkgxFTATBgNVBAMTDG9wc2kgUm9vdCBDQTEaMBgGCSqGSIb3DQEJARYLaW5m
-b0B1aWIuZGWCCQDuaCmWUfHUJDAMBgNVHRMEBTADAQH/MA0GCSqGSIb3DQEBBQUA
-A4IBAQCFSalk9ngRf+03YW6StULDkuMSRF6oj1A5J3eRZzXTL1uckTseXm5CK13d
-OgxjZtgzD/TiVWoOmxGPVA+YYjLKpVUpPWu6opAG8cy705MeNxfAHLj+mn+joAxn
-qjjH46t2W6hdcz0x86bIVSda97/erARX8ALBreI3e3iIH9D2de8IH5uj6q0UTO/P
-YJHaSeCITO1g+NXisCS/aEfL+yUjXjErQaiRjtyj0aHDxj114GVvbKUOUfHqqa6X
-USZQNXthwmMy0+iIgQLAmBDu9Tz53p+yqHIhS+7eYNfzh2HeIG3EY515ncnZG2Xi
-QuBW/YzuIIiknjESIHBVA6YWeLNR
+MIIC5zCCApGgAwIBAgIJAO51YtOiAvWeMA0GCSqGSIb3DQEBBQUAMIGBMQswCQYD
+VQQGEwJERTEYMBYGA1UECBMPUmhlaW5sYW5kLVBmYWx6MQ4wDAYDVQQHEwVNYWlu
+ejERMA8GA1UEChMIdWliIEdtYkgxGTAXBgNVBAMTEHVpYiBHbWJIIFJvb3QgQ0Ex
+GjAYBgkqhkiG9w0BCQEWC2luZm9AdWliLmRlMB4XDTEwMDgwOTE5NTYyN1oXDTM3
+MTIyNTE5NTYyN1owgYExCzAJBgNVBAYTAkRFMRgwFgYDVQQIEw9SaGVpbmxhbmQt
+UGZhbHoxDjAMBgNVBAcTBU1haW56MREwDwYDVQQKEwh1aWIgR21iSDEZMBcGA1UE
+AxMQdWliIEdtYkggUm9vdCBDQTEaMBgGCSqGSIb3DQEJARYLaW5mb0B1aWIuZGUw
+XDANBgkqhkiG9w0BAQEFAANLADBIAkEA2YhSiYZb/sipeYLGa268IQL81/p5DJ0C
+KoADjraD0fzi+bEPU6XUwJ1jABN0W+jTD3GfbI0kQKzJnNtASrBJRQIDAQABo4Hp
+MIHmMB0GA1UdDgQWBBStzRp7b0D4LxkopjVlUstZt34FNTCBtgYDVR0jBIGuMIGr
+gBStzRp7b0D4LxkopjVlUstZt34FNaGBh6SBhDCBgTELMAkGA1UEBhMCREUxGDAW
+BgNVBAgTD1JoZWlubGFuZC1QZmFsejEOMAwGA1UEBxMFTWFpbnoxETAPBgNVBAoT
+CHVpYiBHbWJIMRkwFwYDVQQDExB1aWIgR21iSCBSb290IENBMRowGAYJKoZIhvcN
+AQkBFgtpbmZvQHVpYi5kZYIJAO51YtOiAvWeMAwGA1UdEwQFMAMBAf8wDQYJKoZI
+hvcNAQEFBQADQQCiX5DqxFFq9jg9JWlg9DsTdA8IIL1ySVm/H3f+l7amJyby8Eht
+CVnpnf44Yozh1Zy3KybtE/wilR5vaiquzGW9
 -----END CERTIFICATE-----'''
 
 class ConfigImplementation(object):
@@ -80,7 +72,7 @@ class ConfigImplementation(object):
 		baseDir = u''
 		try:
 			baseDir = os.path.dirname(sys.argv[0])
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Failed to get base dir: %s" % e)
 		
 		self._config = {
@@ -225,10 +217,10 @@ class ConfigImplementation(object):
 			value = forceBool(value)
 		
 		if option in ('exclude_product_group_ids', 'include_product_group_ids'):
-                        if not isinstance(value, list):
-                                value = [ x.strip() for x in value.split(",") ]
-                        else:
-		                value = forceList(value)
+			if not isinstance(value, list):
+				value = [ x.strip() for x in value.split(",") ]
+			else:
+				value = forceList(value)
 		
 		if not self._config.has_key(section):
 			self._config[section] = {}
@@ -310,7 +302,7 @@ class ConfigImplementation(object):
 									if os.path.exists(dlf):
 										os.unlink(dlf)
 									os.rename(slf, dlf)
-							except Exception, e:
+							except Exception as e:
 								logger.error(u"Failed to rename %s to %s: %s" % (slf, dlf, forceUnicode(e)) )
 						self.set('global', 'log_file', logFile)
 			
@@ -322,7 +314,7 @@ class ConfigImplementation(object):
 					option = option.lower()
 					self.set(section.lower(), option, value)
 				
-		except Exception, e:
+		except Exception as e:
 			# An error occured while trying to read the config file
 			logger.error(u"Failed to read config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
 			logger.logException(e)
@@ -364,7 +356,7 @@ class ConfigImplementation(object):
 			else:
 				logger.notice(u"No need to write config file '%s', config file is up to date" % self.get('global', 'config_file'))
 			
-		except Exception, e:
+		except Exception as e:
 			# An error occured while trying to write the config file
 			logger.logException(e)
 			logger.error(u"Failed to write config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
@@ -425,14 +417,14 @@ class ConfigImplementation(object):
 					self.set('depot_server', 'url', depotUrl)
 					logger.notice(u"Depot url was set to '%s' from configState %s" % (depotUrl, configState))
 					return
-				except Exception, e:
+				except Exception as e:
 					logger.error(u"Failed to set depot url from values %s in configState %s: %s" % (configState.values, configState, e))
 			elif (configState.configId == 'opsiclientd.depot_server.depot_id') and configState.values:
 				try:
 					depotId = forceHostId(configState.values[0])
 					depotIds.append(depotId)
 					logger.notice(u"Depot was set to '%s' from configState %s" % (depotId, configState))
-				except Exception, e:
+				except Exception as e:
 					logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, e))
 			elif not masterOnly and (configState.configId == 'clientconfig.depot.dynamic') and configState.values:
 				dynamicDepot = forceBool(configState.values[0])
@@ -508,7 +500,7 @@ class ConfigImplementation(object):
 					selectedDepot = selectDepot(clientConfig = clientConfig, masterDepot = masterDepot, alternativeDepots = alternativeDepots)
 					if not selectedDepot:
 						selectedDepot = masterDepot
-				except Exception, e:
+				except Exception as e:
 					logger.logException(e)
 					logger.error(u"Failed to select depot: %s" % e)
 			else:
@@ -566,7 +558,7 @@ class ConfigImplementation(object):
 					
 					self.set(section = parts[1], option = parts[2], value = value)
 					
-				except Exception, e:
+				except Exception as e:
 					logger.error(u"Failed to process general config key '%s:%s': %s" % (key, value, forceUnicode(e)))
 		else:
 			configService.backend_setOptions({"addConfigStateDefaults": True})
@@ -590,7 +582,7 @@ class ConfigImplementation(object):
 						
 						self.set(section = parts[1], option = parts[2], value = configState.values[0])
 						
-					except Exception, e:
+					except Exception as e:
 						logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
 		logger.notice(u"Got config from service")
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.getDict()))
