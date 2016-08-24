@@ -584,6 +584,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		certDir = config.get('global', 'server_cert_dir')
 		if os.path.exists(certDir):
 			for f in os.listdir(certDir):
+				if "cacert.pem" in f.strip().lower():
+					continue
 				os.remove(os.path.join(certDir, f))
 	
 	def getActiveSessions(self):
