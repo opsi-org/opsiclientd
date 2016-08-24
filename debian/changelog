@@ -1,4 +1,4 @@
-opsiclientd (4.0.86) stable; urgency=medium
+opsiclientd (4.0.87) stable; urgency=medium
 
   * verifyServerCert and verifyServerCertbyCA fix
   * fixes for proxySupport
