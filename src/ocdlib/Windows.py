@@ -1,36 +1,35 @@
 # -*- coding: utf-8 -*-
 """
-   = = = = = = = = = = = = = = = = = = = = =
-   =   ocdlib.Windows                      =
-   = = = = = = = = = = = = = = = = = = = = =
+ocdlib.Opsiclientd
 
-   opsiclientd is part of the desktop management solution opsi
-   (open pc server integration) http://www.opsi.org
+opsiclientd is part of the desktop management solution opsi
+(open pc server integration) http://www.opsi.org
 
-   Copyright (C) 2010 uib GmbH
+Copyright (C) 2014-2015 uib GmbH
 
-   http://www.uib.de/
+http://www.uib.de/
 
-   All rights reserved.
+All rights reserved.
 
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as
-   published by the Free Software Foundation.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License, version 3
+as published by the Free Software Foundation.
 
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Affero General Public License for more details.
 
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-   @copyright:	uib GmbH <info@uib.de>
-   @author: Jan Schneider <j.schneider@uib.de>
-   @license: GNU General Public License version 2
+@copyright: uib GmbH <info@uib.de>
+@author: Jan Schneider <j.schneider@uib.de>
+@author: Erol Ueluekmen <e.ueluekmen@uib.de>
+@license: GNU Affero GPL version 3
 """
 
+import os
 import sys
 import threading
 import time
@@ -215,8 +214,8 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			startTime = time.time()
 
 			try:
-				debugLogFile = u"c:\\tmp\\opsiclientd.log"
 				try:
+					debugLogFile = os.path.join(System.getSystemDrive(), 'opsi.org', 'log', 'opsiclientd.log')
 					if logger.getLogFile() is None:
 						logger.setLogFile(debugLogFile)
 					logger.setFileLevel(LOG_DEBUG)
@@ -243,9 +242,10 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 				self.opsiclientd = OpsiclientdNT5()
 
 			elif (sys.getwindowsversion()[0] == 6):
-				# NT6: Vista / Windows7
-				if (sys.getwindowsversion()[1] >= 1):
-					# Windows7
+				# NT6: Vista / Windows7 and later
+				if sys.getwindowsversion()[1] >= 3:  # Windows8.1
+					self.opsiclientd = OpsiclientdNT63()
+				elif sys.getwindowsversion()[1] >= 1:  # Windows7
 					self.opsiclientd = OpsiclientdNT61()
 				else:
 					self.opsiclientd = OpsiclientdNT6()
@@ -272,9 +272,6 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		except Exception, e:
 			logger.critical(u"opsiclientd crash")
 			logger.logException(e)
-
-		# This call sometimes produces an error in eventlog (invalid handle)
-		#self.ReportServiceStatus(win32service.SERVICE_STOPPED)
 
 
 class OpsiclientdInit(object):
@@ -304,26 +301,29 @@ class OpsiclientdNT(Opsiclientd):
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
 
 	def isRebootRequested(self):
-		rebootRequested = 0
 		try:
 			rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
-		except Exception, e:
-			logger.warning(u"Failed to get rebootRequested from registry: %s" % forceUnicode(e))
-		logger.info(u"rebootRequested: %s" % rebootRequested)
-		if (rebootRequested == 2):
+		except Exception as error:
+			logger.warning(u"Failed to get RebootRequested from registry: {0}".format(forceUnicode(error)))
+			rebootRequested = 0
+
+		logger.notice(u"Reboot request in Registry: {0}".format(rebootRequested))
+		if rebootRequested == 2:
 			# Logout
 			logger.info(u"Logout requested")
 			self.clearRebootRequest()
 			return False
+
 		return forceBool(rebootRequested)
 
 	def isShutdownRequested(self):
-		shutdownRequested = 0
 		try:
 			shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
-		except Exception, e:
-			logger.warning(u"Failed to get shutdownRequested from registry: %s" % forceUnicode(e))
-		logger.info(u"shutdownRequested: %s" % shutdownRequested)
+		except Exception as error:
+			logger.warning(u"Failed to get shutdownRequested from registry: {0}".format(forceUnicode(error)))
+			shutdownRequested = 0
+
+		logger.notice(u"Shutdown request in Registry: {0}".format(shutdownRequested))
 		return forceBool(shutdownRequested)
 
 
@@ -380,5 +380,20 @@ class OpsiclientdNT6(OpsiclientdNT):
 
 
 class OpsiclientdNT61(OpsiclientdNT):
+	"OpsiclientdNT for Windows NT 6.1 - Windows 7"
+
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
+
+
+class OpsiclientdNT63(OpsiclientdNT):
+	"OpsiclientdNT for Windows NT 6.3 - Windows 8.1"
+
+	def rebootMachine(self):
+		self._isRebootTriggered = True
+		self.clearRebootRequest()
+		logger.debug("Sleeping 3 seconds before reboot to avoid hanging.")
+		for _ in range(10):
+			time.sleep(0.3)
+		logger.debug("Finished sleeping.")
+		System.reboot(3)

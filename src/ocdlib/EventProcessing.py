@@ -11,23 +11,22 @@ http://www.uib.de/
 
 All rights reserved.
 
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License version 2 as
-published by the Free Software Foundation.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License, version 3
+as published by the Free Software Foundation.
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Affero General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-@copyright:	uib GmbH <info@uib.de>
+@copyright: uib GmbH <info@uib.de>
 @author: Jan Schneider <j.schneider@uib.de>
 @author: Erol Ueluekmen <e.ueluekmen@uib.de>
-@license: GNU General Public License version 2
+@license: GNU Affero GPL version 3
 """
 
 import codecs
@@ -564,22 +563,12 @@ None otherwise.
 			logger.info(u"Moving dir '%s' to '%s'" % (actionProcessorLocalTmpDir, actionProcessorLocalDir))
 			shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
 
-			######### disable this feature for first 4.0.3 Release, because this don't work on win7-x64 properly.
-			#logger.notice(u"Trying to set the right permissions for opsi-winst")
-			#setaclcommand = os.path.join(config.get('global', 'base_dir'), 'utilities\\setacl.exe')
-			#logger.notice(u"make the dacl not inherited")
-			#cmd = '"%s" -on "%s" -ot file -actn clear -actn setprot -op "dacl:p_c;sacl:nc" -rec cont_obj' % (setaclcommand,  actionProcessorLocalDir)
-			#logger.debug("Try to execute '%s'" % cmd)
-			#System.execute(cmd, shell=False)
-			#logger.notice(u"therefore remove users from dacl")
-			#cmd = '"%s" -on "%s" -ot file -actn trustee -trst n1:S-1-5-32-545;s1:y;ta:remtrst;w:dacl"' % (setaclcommand,  actionProcessorLocalDir)
-			#logger.debug("Try to execute '%s'" % cmd)
-			#System.execute(cmd,  shell=False)
-			#logger.notice(u"therefore set new rights")
-			#cmd = '"%s" -on "%s" -ot file -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y" -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"' % (setaclcommand,  actionProcessorLocalDir)
-			#logger.debug("Try to execute '%s'" % cmd)
-			#System.execute(cmd,  shell=False)
-
+			logger.notice(u"Trying to set the right permissions for opsi-winst")
+			setaclcmd = os.path.join(config.get('global', 'base_dir'), 'utilities', 'setacl.exe')
+			winstdir = actionProcessorLocalDir.replace('\\\\','\\')
+			cmd = '"%s" -on "%s" -ot file -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y" -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"' \
+						% (setaclcmd, winstdir)
+			System.execute(cmd,shell=False)
 
 			logger.notice(u'Local action processor successfully updated')
 
@@ -709,11 +698,30 @@ None otherwise.
 						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productState['productId'] + ':', productState['actionRequest']))
 			else:
 				if not productIds:
-					for productOnClient in self._configService.productOnClient_getObjects(
+					includeProductGroupIds = [ x for x in forceList(self.event.eventConfig.includeProductGroupIds) if x != "" ]
+					excludeProductGroupIds = [ x for x in forceList(self.event.eventConfig.excludeProductGroupIds) if x != "" ]
+					includeProductIds = []
+					excludeProductIds = []
+
+					if includeProductGroupIds:
+						includeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+									groupType="ProductGroup",
+									groupId=includeProductGroupIds) ]
+						logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
+
+					elif excludeProductGroupIds:
+						excludeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+									groupType="ProductGroup",
+									groupId=excludeProductGroupIds) ]
+						logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
+
+					for productOnClient in [ poc for poc in self._configService.productOnClient_getObjects(
 								productType   = 'LocalbootProduct',
 								clientId      = config.get('global', 'host_id'),
 								actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
-								attributes    = ['actionRequest']):
+								attributes    = ['actionRequest'],
+								productId     = includeProductIds) if poc.productId not in excludeProductIds ]:
+
 						if not productOnClient.productId in productIds:
 							productIds.append(productOnClient.productId)
 							logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
@@ -752,8 +760,9 @@ None otherwise.
 					if not self._configService.productOnClient_getIdents(
 								productType   = 'LocalbootProduct',
 								clientId      = config.get('global', 'host_id'),
-								actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom']):
+								actionRequest = ['setup', 'uninstall', 'update', 'once', 'custom']):
 						#set installation_pending State to false nothing to do!!!!
+						logger.notice("Setting installation pending to false")
 						state.set('installation_pending','false')
 				except Exception, e:
 					logger.error(e)
@@ -790,6 +799,7 @@ None otherwise.
 					try:
 						# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3
 						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
+						logger.debug2(u">>> TrustedInstaller Service autmaticStartup and type: '%s' '%s'" % (automaticStartup,type(automaticStartup)))
 						if (automaticStartup == 2):
 							logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
 							self.setStatusMessage( _(u"Waiting for TrustedInstaller") )
@@ -872,7 +882,7 @@ None otherwise.
 
 			if RUNNING_ON_WINDOWS:
 				# TODO: string building like this is just awful. Improve it!
-				command = u'%global.base_dir%\\action_processor_starter.exe ' \
+				command = u'"%global.base_dir%\\action_processor_starter.exe" ' \
 					+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
 					+ u'"%global.log_file%" "%global.log_level%" ' \
 					+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
