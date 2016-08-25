@@ -104,7 +104,7 @@ class ConfigImplementation(object):
 			'log_dir': os.path.join('/var', 'log', 'opsi'),
 			'state_file': os.path.join('/etc', 'opsi-client-agent', 'opsiclientd', 'state.json'),
 			'timeline_db': os.path.join('/etc', 'opsi-client-agent', 'opsiclientd', 'timeline.sqlite'),
-			'server_cert_dir': os.path.join('/var', 'lib', 'opsi-client-agent', 'opsiclientd')
+			'server_cert_dir': os.path.join('/var', 'lib', 'opsi-client-agent', 'opsiclientd', 'server-certs')
 		},
 		'cache_service': {
 			'storage_dir': os.path.join('/var', 'cache', 'opsi-client-agent')
