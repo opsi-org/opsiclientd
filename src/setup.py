@@ -109,12 +109,15 @@ data_files += tree('opsiclientd\\static_html', '..\\static_html')
 localDirectory = os.path.dirname(__file__)
 
 opsiClientDeamonVersion = None
-fileWithVersion = os.path.join(localDirectory, 'ocdlib', 'Opsiclientd.py')
+fileWithVersion = os.path.join(localDirectory, 'ocdlib', '__init__.py')
 with open(fileWithVersion, 'r') as f:
 	for line in f:
 		if "__version__" in line:
-			opsiClientDeamonVersion = line.split('=', 1)[1].strip()[1:-1]
-			break
+			try:
+				opsiClientDeamonVersion = line.split('=', 1)[1].strip()[1:-1]
+			except IndexError as err:
+				print("Splitting line with version failed: {0!r}".format(err))
+				break
 
 if not opsiClientDeamonVersion:
 	raise Exception("Failed to find version.")
