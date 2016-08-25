@@ -563,12 +563,13 @@ None otherwise.
 			logger.info(u"Moving dir '%s' to '%s'" % (actionProcessorLocalTmpDir, actionProcessorLocalDir))
 			shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
 
-			logger.notice(u"Trying to set the right permissions for opsi-winst")
-			setaclcmd = os.path.join(config.get('global', 'base_dir'), 'utilities', 'setacl.exe')
-			winstdir = actionProcessorLocalDir.replace('\\\\','\\')
-			cmd = '"%s" -on "%s" -ot file -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y" -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"' \
-						% (setaclcmd, winstdir)
-			System.execute(cmd,shell=False)
+			if RUNNING_ON_WINDOWS:
+				logger.notice(u"Trying to set the right permissions for opsi-winst")
+				setaclcmd = os.path.join(config.get('global', 'base_dir'), 'utilities', 'setacl.exe')
+				winstdir = actionProcessorLocalDir.replace('\\\\','\\')
+				cmd = '"%s" -on "%s" -ot file -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y" -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"' \
+							% (setaclcmd, winstdir)
+				System.execute(cmd, shell=False)
 
 			logger.notice(u'Local action processor successfully updated')
 
