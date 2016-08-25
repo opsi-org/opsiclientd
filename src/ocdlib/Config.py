@@ -292,15 +292,13 @@ class ConfigImplementation(object):
 		if option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active', 'sync_time_from_service'):
 			value = forceBool(value)
 
-		if section not in self._config:
-
 		if option in ('exclude_product_group_ids', 'include_product_group_ids'):
 			if not isinstance(value, list):
 				value = [ x.strip() for x in value.split(",") ]
 			else:
 				value = forceList(value)
 
-		if not self._config.has_key(section):
+		if section not in self._config:
 			self._config[section] = {}
 		self._config[section][option] = value
 
