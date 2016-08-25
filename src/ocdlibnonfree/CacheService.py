@@ -5,7 +5,7 @@ ocdlibnonfree.CacheService
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
-Copyright (C) 2010 uib GmbH
+Copyright (C) 2010-2016 uib GmbH
 
 http://www.uib.de/
 
@@ -13,10 +13,11 @@ All rights reserved.
 
 @copyright:	uib GmbH <info@uib.de>
 @author: Jan Schneider <j.schneider@uib.de>
+@author: Erol Ueluekmen <e.ueluekmen@uib.de>
 """
 
 # Import
-import threading, base64, time, codecs
+import threading, base64, time, codecs, os
 from hashlib import md5
 from twisted.conch.ssh import keys
 
@@ -111,7 +112,7 @@ class CacheService(threading.Thread):
 	def configCacheCompleted(self):
 		try:
 			self.initializeConfigCacheService()
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e, LOG_INFO)
 			logger.error(e)
 			return False
@@ -288,6 +289,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			modules = None
 			helpermodules = {}
 			backendinfo = self._configService.backend_info()
+			hostCount = len(self._configService.host_getIdents(type="OpsiClient"))
 			modules = backendinfo['modules']
 			helpermodules = backendinfo['realmodules']
 
@@ -313,8 +315,15 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					continue
 				if helpermodules.has_key(module):
 					val = helpermodules[module]
-					if int(val) > 0:
+					if module == 'vpn':
+						if int(val) + 50 <= hostCount:
+							raise Exception(u"UNDERLICENSED: You have more Clients then licensed in modules file. Disabling module vpn.")
+						elif int(val) <= hostCount:
+							logger.warning("WARNING UNDERLICENSED: You have more Clients then licensed in modules file.")
 						modules[module] = True
+					else:
+						if int(val) > 0:
+							modules[module] = True
 				else:
 					val = modules[module]
 					if (val == False): val = 'no'
@@ -323,7 +332,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
 				raise Exception(u"Cannot sync products: modules file invalid")
 			logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
-		except Exception, e:
+		except Exception:
 			self.disconnectConfigService()
 			raise
 
@@ -370,7 +379,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 						self._syncConfigFromServerRequested = False
 						self._syncConfigFromServer()
 				time.sleep(1)
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
 		logger.notice(u"Config cache service ended")
 		self._running = False
@@ -402,18 +411,26 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					self._cacheBackend._updateMasterFromWorkBackend(modifications)
 					self._backendTracker.clearModifications()
 					try:
-						instlog = os.path.join(config.get('global', 'log_dir'), u'instlog.txt')
+						instlog = os.path.join(config.get('global', 'log_dir'), u'opsi-script.log')
+						logger.debug(u"Checking if a custom logfile is given in global action_processor section")
+						try:
+							commandParts = config.get('action_processor', 'command').split()
+							if '/logfile' in commandParts:
+								instlog = commandParts[commandParts.index('/logfile') + 1]
+						except Exception as e:
+							pass
+
 						if os.path.isfile(instlog):
 							logger.info(u"Syncing instlog %s" % instlog)
 							f = codecs.open(instlog, 'r', 'utf-8', 'replace')
 							data = f.read()
 							f.close()
 							self._configService.log_write(u'instlog', data = data, objectId = config.get('global', 'host_id'), append = False)
-					except Exception, e:
+					except Exception as e:
 						logger.error(u"Failed to sync instlog: %s" % e)
 
 					logger.notice(u"Config synced to server")
-				except Exception, e:
+				except Exception as e:
 					logger.logException(e)
 					timeline.addEvent(
 					title       = u"Failed to sync config to server",
@@ -421,7 +438,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					category    = u"config_sync",
 					isError     = True)
 					raise
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Errors occured while syncing config to server: %s" % e)
 			# Do not sync from server in this case!
 			self._syncConfigFromServerRequested = False
@@ -437,12 +454,35 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			if not self._configService:
 				self.connectConfigService()
 
-			productOnClients = self._configService.productOnClient_getObjects(
+			includeProductIds = []
+			excludeProductIds = []
+			excludeProductGroupIds = [ x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != "" ]
+			includeProductGroupIds = [ x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != "" ]
+
+			logger.debug("Given includeProductGroupIds: '%s'" % includeProductGroupIds)
+			logger.debug("Given excludeProductGroupIds: '%s'" % excludeProductGroupIds)
+
+			if includeProductGroupIds:
+				includeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+							groupType="ProductGroup",
+							groupId=includeProductGroupIds) ]
+				logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
+
+			if excludeProductGroupIds:
+				excludeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+							groupType="ProductGroup",
+							groupId=excludeProductGroupIds) ]
+				logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
+
+
+			productOnClients = [ poc for poc in self._configService.productOnClient_getObjects(
 				productType   = 'LocalbootProduct',
 				clientId      = config.get('global', 'host_id'),
 				# Exclude 'always'!
 				actionRequest = ['setup', 'uninstall', 'update', 'once', 'custom'],
-				attributes    = ['actionRequest'])
+				attributes    = ['actionRequest'],
+				productId     = includeProductGroupIds) if poc.productId not in excludeProductIds ]
+
 			logger.info(u"Product on clients: %s" % productOnClients)
 			if not productOnClients:
 				self._state['config_cached'] = True
@@ -486,7 +526,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 						timeline.setEventEnd(eventId)
 						for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
 							eventGenerator.createAndFireEvent()
-				except Exception, e:
+				except Exception as e:
 					logger.logException(e)
 					timeline.addEvent(
 					title       = u"Failed to sync config from server",
@@ -494,7 +534,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					category    = u"config_sync",
 					isError     = True)
 					raise
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Errors occured while syncing config from server: %s" % e)
 		self.disconnectConfigService()
 		self._working = False
@@ -590,7 +630,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					self._cacheProductsRequested = False
 					self._cacheProducts()
 				time.sleep(1)
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
 		logger.notice(u"Product cache service ended")
 		self._running = False
@@ -640,7 +680,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
 				raise Exception(u"Cannot sync products: modules file invalid")
 			logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
-		except Exception, e:
+		except Exception:
 			self.disconnectConfigService()
 			raise
 
@@ -690,7 +730,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					state.set('product_cache_service', self._state)
 				del productDirSizes[deleteProduct]
 			logger.notice(u"%0.3f MB of product cache freed" % (float(freedSpace)/(1024*1024)))
-		except Exception, e:
+		except Exception as e:
 			raise Exception(u"Failed to free enough disk space for product cache: %s" % forceUnicode(e))
 
 	def _cacheProducts(self):
@@ -703,12 +743,37 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		try:
 			if not self._configService:
 				self.connectConfigService()
+
+			includeProductIds = []
+			excludeProductIds = []
+			excludeProductGroupIds = [ x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != "" ]
+			includeProductGroupIds = [ x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != "" ]
+
+			logger.debug("Given includeProductGroupIds: '%s'" % includeProductGroupIds)
+			logger.debug("Given excludeProductGroupIds: '%s'" % excludeProductGroupIds)
+
+			if includeProductGroupIds:
+				includeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+							groupType="ProductGroup",
+							groupId=includeProductGroupIds) ]
+				logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
+
+			if excludeProductGroupIds:
+				excludeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
+							groupType="ProductGroup",
+							groupId=excludeProductGroupIds) ]
+				logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
+
 			productIds = []
-			productOnClients = self._configService.productOnClient_getObjects(
-					productType   = 'LocalbootProduct',
-					clientId      = config.get('global', 'host_id'),
-					actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
-					attributes    = ['actionRequest'])
+			productOnClients = [ poc for poc in self._configService.productOnClient_getObjects(
+				productType   = 'LocalbootProduct',
+				clientId      = config.get('global', 'host_id'),
+				actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+				attributes    = ['actionRequest'],
+				productId     = includeProductGroupIds) if poc.productId not in excludeProductIds ]
+
+
+
 			for productOnClient in productOnClients:
 				if not productOnClient.productId in productIds:
 					productIds.append(productOnClient.productId)
@@ -734,7 +799,9 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 
 				productIds.append('opsi-winst')
 				if 'mshotfix' in productIds:
-					additionalProductId = System.getOpsiHotfixName()
+					# Windows 8.1 Bugfix, with a helper exe.
+					helper = os.path.join(config.get('global', 'base_dir'), 'utilities', 'getmsversioninfo.exe')
+					additionalProductId = System.getOpsiHotfixName(helper)
 					logger.info(u"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s" % additionalProductId)
 					if not additionalProductId in productIds:
 						productIds.append(additionalProductId)
@@ -755,11 +822,11 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						for productId in productIds:
 							try:
 								self._cacheProduct(productId,productIds)
-							except Exception, e:
+							except Exception as e:
 								logger.logException(e, LOG_INFO)
 								errorsOccured.append(forceUnicode(e))
 								self._setProductCacheState(productId, 'failure', forceUnicode(e))
-					except Exception, e:
+					except Exception as e:
 						logger.logException(e)
 						errorsOccured.append(forceUnicode(e))
 					if errorsOccured:
@@ -775,8 +842,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						state.set('product_cache_service', self._state)
 						for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
 							eventGenerator.createAndFireEvent()
-
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Failed to cache products: %s" % e)
 			timeline.addEvent(
 				title       = u"Failed to cache products",
@@ -807,7 +873,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			actionProgress     = u"Cache failure: %s" % forceUnicode(value)
 			installationStatus = u'unknown'
 			actionResult         = u'failed'
-			actionRequest      = u'none'
+			if u"MD5sum mismatch" in forceUnicode(value):
+				actionRequest      = u'none'
 		if actionProgress and updateProductOnClient:
 			self._configService.productOnClient_updateObjects([
 				ProductOnClient(
@@ -836,13 +903,14 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				kwargs['verifyServerCert'] = config.get('global', 'verify_server_cert')
 				kwargs['serverCertFile'] = os.path.join(certDir, host + '.pem')
 				kwargs['verifyServerCertByCa'] = config.get('global', 'verify_server_cert_by_ca')
+				kwargs['proxyURL'] = config.get('global', 'proxy_url')
 
 			return getRepository(config.get('depot_server', 'url'), username = depotServerUsername, password = depotServerPassword, **kwargs)
 		else:
 			if self._impersonation:
 				try:
 					self._impersonation.end()
-				except Exception, e:
+				except Exception as e:
 					logger.warning(e)
 			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
 			self._impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
@@ -928,7 +996,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					self._dynamicBandwidthLimitEvent = None
 			logger.notice(u"Product '%s' cached" % productId)
 			self._setProductCacheState(productId, 'completed', time.time())
-		except Exception, e:
+		except Exception as e:
 			exception = e
 			timeline.addEvent(
 				title       = u"Failed to cache product %s" % productId,
@@ -940,12 +1008,12 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		if repository:
 			try:
 				repository.disconnect()
-			except Exception, e:
+			except Exception as e:
 				logger.warning(u"Failed to disconnect from repository: %s" % e)
 		if self._impersonation:
 			try:
 				self._impersonation.end()
-			except Exception, e:
+			except Exception as e:
 				logger.warning(e)
 		if exception:
 			raise exception

@@ -459,7 +459,7 @@ class WMIEventGenerator(EventGenerator):
 			eventInfo = {}
 			for p in wqlResult.properties:
 				value = getattr(wqlResult, p)
-				if type(value) is tuple:
+				if isinstance(value, tuple):
 					eventInfo[p] = []
 					for v in value:
 						eventInfo[p].append(v)
@@ -961,6 +961,10 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['postActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'action_processor_productids'):
 						eventConfigs[eventConfigId]['actionProcessorProductIds'] = forceList(value.strip().split(","))
+					elif (key == 'exclude_product_group_ids'):
+						eventConfigs[eventConfigId]['excludeProductGroupIds'] = forceList(value)
+					elif (key == 'include_product_group_ids'):
+						eventConfigs[eventConfigId]['includeProductGroupIds'] = forceList(value)
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
 				except Exception, e:

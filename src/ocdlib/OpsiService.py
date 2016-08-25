@@ -1,32 +1,31 @@
 # -*- coding: utf-8 -*-
+#
+# This module is part of the desktop management solution opsi
+# (open pc server integration) http://www.opsi.org
+#
+# Copyright (C) 2006-2010, 2013-2014 uib GmbH <info@uib.de>
+# All rights reserved.
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-ocdlib.OpsiService
+opsi python library - Posix
 
-opsiclientd is part of the desktop management solution opsi
-(open pc server integration) http://www.opsi.org
+Functions and classes for the use with a POSIX operating system.
 
-Copyright (C) 2010 uib GmbH
-
-http://www.uib.de/
-
-All rights reserved.
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License version 2 as
-published by the Free Software Foundation.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-@copyright:	uib GmbH <info@uib.de>
-@author: Jan Schneider <j.schneider@uib.de>
-@license: GNU General Public License version 2
+:author: Jan Schneider <j.schneider@uib.de>
+:author: Erol Ueluekmen <e.ueluekmen@uib.de>
+:license: GNU Affero General Public License version 3
 """
 
 import base64
@@ -201,6 +200,13 @@ class ServiceConnection(object):
 					logger.info(u"Updated host_id to '%s'" % config.get('global', 'host_id'))
 					config.updateConfigFile()
 
+				if serviceConnectionThread.connected and forceBool(config.get('config_service', 'sync_time_from_service')):
+					logger.info(u"Syncing local system time from service")
+					try:
+						System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True))
+					except Exception as e:
+						logger.error(u"Failed to sync time: '%s'" % e)
+
 				if (urlIndex > 0):
 					modules = None
 					helpermodules = {}
@@ -302,6 +308,14 @@ class ServiceConnectionThread(KillableThread):
 			certDir = config.get('global', 'server_cert_dir')
 			verifyServerCert = config.get('global', 'verify_server_cert')
 
+			proxyMode = config.get('global', 'proxy_mode')
+			proxyURL = config.get('global', 'proxy_url')
+			if proxyMode == 'system':
+				logger.notice(u'not implemented yet')
+				proxyURL = System.getSystemProxySetting()
+			elif proxyMode == 'static':
+				proxyURL = config.get('global', 'proxy_url')
+
 			(scheme, host, port, baseurl, username, password) = urlsplit(self._configServiceUrl)
 			serverCertFile = os.path.join(certDir, host + '.pem')
 			if verifyServerCert:
@@ -330,6 +344,7 @@ class ServiceConnectionThread(KillableThread):
 						verifyServerCert=verifyServerCert,
 						caCertFile=caCertFile,
 						verifyServerCertByCa=verifyServerCertByCa,
+						proxyURL=proxyURL,
 						application='opsiclientd version %s' % __version__
 					)
 

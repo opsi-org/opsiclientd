@@ -47,7 +47,8 @@ from OPSI.web2 import resource, stream, server, http, responsecode
 from OPSI.web2.channel.http import HTTPFactory
 
 from OPSI.Logger import Logger
-from OPSI.Types import forceUnicode, forceInt, OpsiAuthenticationError
+from OPSI.Types import forceBool, forceInt, forceUnicode
+from OPSI.Types import OpsiAuthenticationError
 from OPSI import System
 from OPSI.Service import SSLContext, OpsiService
 from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface
@@ -59,13 +60,12 @@ from ocdlib.Config import Config, getLogFormat
 from ocdlib.Events import eventGenerators
 from ocdlib.Timeline import Timeline
 from ocdlib.OpsiService import ServiceConnection
-from ocdlib.SoftwareOnDemand import ResourceSoftwareOnDemand
+from ocdlib.SoftwareOnDemand import ResourceKioskJsonRpc
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
 if RUNNING_ON_WINDOWS:
 	import win32net
 	import win32security
-
 
 logger = Logger()
 config = Config()
@@ -83,7 +83,7 @@ infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 	<meta http-equiv="Content-Type" content="text/xhtml; charset=utf-8" />
-	<title>opsi client daemon info</title>
+	<title>%(hostname)s opsi client daemon info</title>
 	<link rel="stylesheet" type="text/css" href="/opsiclientd.css" />
 	%(head)s
 	<script type="text/javascript">
@@ -129,6 +129,24 @@ class WorkerOpsiclientd(WorkerOpsi):
 			user = config.get('global', 'host_id')
 		return (user, password)
 
+	def _errback(self, failure):
+		result = WorkerOpsi._errback(self, failure)
+		logger.debug(u"DEBUG: detected host: '%s'" % self.request.remoteAddr.host)
+		logger.debug(u"DEBUG: responsecode: '%s'" % result.code)
+		logger.debug(u"DEBUG: maxAuthenticationFailures config: '%s'" % config.get('control_server','max_authentication_failures'))
+		logger.debug(u"DEBUG: maxAuthenticationFailures config type: '%s'" % type(config.get('control_server','max_authentication_failures')))
+		if (result.code == responsecode.UNAUTHORIZED) and self.request.remoteAddr.host not in ("127.0.0.1"):
+			maxAuthenticationFailures = config.get('control_server','max_authentication_failures')
+			if (maxAuthenticationFailures > 0):
+				if not self.service.authFailureCount.has_key(self.request.remoteAddr.host):
+					self.service.authFailureCount[self.request.remoteAddr.host] = 0
+				self.service.authFailureCount[self.request.remoteAddr.host] += 1
+				if (self.service.authFailureCount[self.request.remoteAddr.host] > maxAuthenticationFailures):
+					logger.error(u"%s authentication failures from '%s' in a row, waiting 60 seconds to prevent flooding" \
+							% (self.service.authFailureCount[self.request.remoteAddr.host], self.request.remoteAddr.host))
+					return self._delayResult(60, result)
+		return result
+
 	def _authenticate(self, result):
 		if self.session.authenticated:
 			return result
@@ -141,7 +159,9 @@ class WorkerOpsiclientd(WorkerOpsi):
 			if not self.session.password:
 				raise Exception(u"No password from %s (application: %s)" % (self.session.ip, self.session.userAgent))
 
-			if self.session.user.lower() == config.get('global', 'host_id').lower() and self.session.password == config.get('global', 'opsi_host_key'):
+			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
+				if self.service.authFailureCount.has_key(self.request.remoteAddr.host):
+					del self.service.authFailureCount[self.request.remoteAddr.host]
 				return result
 
 			if RUNNING_ON_WINDOWS:
@@ -168,6 +188,8 @@ class WorkerOpsiclientd(WorkerOpsi):
 											# The LogonUser function will raise an Exception on logon failure
 											win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
 											# No exception raised => user authenticated
+											if self.service.authFailureCount.has_key(self.request.remoteAddr.host):
+												del self.service.authFailureCount[self.request.remoteAddr.host]
 											return result
 
 									if memberresume == 0:
@@ -198,7 +220,6 @@ class WorkerOpsiclientdJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 	def _getCallInstance(self, result):
 		self._callInstance = self.service._opsiclientdRpcInterface
 		self._callInterface = self.service._opsiclientdRpcInterface.getInterface()
-		#logger.debug2(u"Got call instance '%s' from service '%s' with interface: %s" % (self._callInstance, self.service, self._callInterface))
 
 	def _processQuery(self, result):
 		return WorkerOpsiJsonRpc._processQuery(self, result)
@@ -275,7 +296,8 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 		logger.info(u"Creating opsiclientd info page")
 
 		html = infoPage % {
-			'head': timeline.getHtmlHead()
+			'head': timeline.getHtmlHead(),
+			'hostname': config.get('global', 'host_id'),
 		}
 		if not isinstance(result, http.Response):
 			result = http.Response()
@@ -335,6 +357,7 @@ class ControlServer(OpsiService, threading.Thread):
 		self._opsiclientdRpcInterface = OpsiclientdRpcInterface(self._opsiclientd)
 
 		logger.info(u"ControlServer initiated")
+		self.authFailureCount = {}
 
 	def run(self):
 		self._running = True
@@ -407,7 +430,7 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root.putChild("rpc", ResourceCacheServiceJsonRpc(self))
 		self._root.putChild("rpcinterface", ResourceCacheServiceJsonInterface(self))
 		self._root.putChild("info.html", ResourceOpsiclientdInfo(self))
-		self._root.putChild("swondemand", ResourceSoftwareOnDemand(self))
+		self._root.putChild("kiosk", ResourceKioskJsonRpc(self))
 
 	def __repr__(self):
 		return (
@@ -421,7 +444,6 @@ class ControlServer(OpsiService, threading.Thread):
 				staticDir=self._staticDir
 			)
 		)
-
 
 
 class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
@@ -543,6 +565,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				break
 		return running
 
+	def isInstallationPending(self):
+		return forceBool(self.opsiclientd.isInstallationPending())
+
 	def getCurrentActiveDesktopName(self, sessionId=None):
 		desktop = self.opsiclientd.getCurrentActiveDesktopName(sessionId)
 		logger.notice(u"rpc getCurrentActiveDesktopName: current active desktop name is '%s'" % desktop)
@@ -574,6 +599,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		certDir = config.get('global', 'server_cert_dir')
 		if os.path.exists(certDir):
 			for f in os.listdir(certDir):
+				if "cacert.pem" in f.strip().lower():
+					continue
 				os.remove(os.path.join(certDir, f))
 
 	def getActiveSessions(self):
