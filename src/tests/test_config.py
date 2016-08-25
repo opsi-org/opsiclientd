@@ -1,5 +1,5 @@
-#!/usr/bin/env python
-#-*- coding: utf-8 -*-
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import unittest
 
@@ -13,7 +13,11 @@ class ConfigTestCase(unittest.TestCase):
         self.config = Config()
 
     def tearDown(self):
-        self.config._reset()
+        try:
+            self.config._reset()
+        except AttributeError:
+            print("Whoops, we are missing something!")
+
         del self.config
 
     def testDefaultPathsExistPerOS(self):
@@ -71,7 +75,6 @@ class LogFormatTestCase(unittest.TestCase):
             '[%l] [%D] [ olol                          ] %M   (%F|%N)',
             getLogFormat(modulename)
         )
-
 
 if __name__ == '__main__':
     unittest.main()

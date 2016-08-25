@@ -26,7 +26,6 @@ ocdlib.Opsiclientd
 Basic opsiclientd implementation. This is abstract in some parts that
 should be overridden in the concrete implementation for an OS.
 
-
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
 :author: Erol Ueluekmen <e.ueluekmen@uib.de>
@@ -574,6 +573,9 @@ class Opsiclientd(EventListener, threading.Thread):
 
 	def isShutdownRequested(self):
 		return False
+
+	def isInstallationPending(self):
+		return state.get('installation_pending', False)
 
 	def showPopup(self, message):
 		port = config.get('notification_server', 'popup_port')

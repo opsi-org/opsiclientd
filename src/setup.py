@@ -67,7 +67,7 @@ class Target:
 opsiclientdDescription = "opsi client daemon"
 packages = ["ocdlib"]
 excludes = [
-	"pywin", "pywin.debugger", "pywin.debugger.dbgcon",	"pywin.dialogs",
+	"pywin", "pywin.debugger", "pywin.debugger.dbgcon", "pywin.dialogs",
 	"pywin.dialogs.list", "Tkconstants", "Tkinter", "tcl", "_imagingtk",
 	"PIL._imagingtk", "ImageTk", "PIL.ImageTk", "FixTk"
 ]
@@ -209,6 +209,13 @@ if RUNS_ON_WINDOWS:
 		icon_resources = [(1, "windows\\opsi.ico")]
 	)
 
+	opsiclientd_shutdown_starter = Target(
+		name = "opsiclientd_shutdown_starter",
+		description = "opsi client daemon shutdown-starter tool",
+		script = "windows\\helpers\\opsiclientd_shutdown_starter\\opsiclientd_shutdown_starter.py",
+		icon_resources = [(1, "windows\\opsi.ico")]
+	)
+
 	# These are options required by py2exe
 	setup_options['options'] = {
 		"py2exe": {
@@ -221,7 +228,7 @@ if RUNS_ON_WINDOWS:
 
 	setup_options['zipfile'] = "lib/library.zip"
 	setup_options['service'] = [opsiclientd]
-	setup_options['console'] = [network_performance]
+	setup_options['console'] = [network_performance, opsiclientd_shutdown_starter]
 	setup_options['windows'] = [notifier, opsiclientd_rpc, 	action_processor_starter]
 else:
 	setup_options['scripts'] = [os.path.join('scripts', 'opsiclientd')]

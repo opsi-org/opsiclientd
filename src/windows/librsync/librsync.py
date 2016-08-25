@@ -132,7 +132,8 @@ class DeltaFile(LikeFile):
 
 		"""
 		LikeFile.__init__(self, new_file)
-		if type(signature) is types.StringType: sig_string = signature
+		if isinstance(signature, types.StringType):
+			sig_string = signature
 		else:
 			self.check_file(signature)
 			sig_string = signature.read()
@@ -154,7 +155,7 @@ class PatchedFile(LikeFile):
 		LikeFile.__init__(self, delta_file)
 		if hasattr(basis_file, 'file'):
 			basis_file = basis_file.file
-		if type(basis_file) is not types.FileType:
+		if not isinstance(basis_file, types.FileType):
 			raise TypeError("basis_file must be a (true) file")
 		try: self.maker = _librsync.new_patchmaker(basis_file)
 		except _librsync.librsyncError, e: raise librsyncError(str(e))		
