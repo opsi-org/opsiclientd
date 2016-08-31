@@ -1,3 +1,9 @@
+opsiclientd (4.0.88) stable; urgency=medium
+
+  * opsi Root CA fixed
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Mon, 31 Aug 2016 15:44:51 +0200
+
 opsiclientd (4.0.87) stable; urgency=medium
 
   * verifyServerCert and verifyServerCertbyCA fix

@@ -27,22 +27,31 @@ if RUNS_ON_WINDOWS and len(sys.argv) == 1:
 	sys.argv.append("py2exe")
 	sys.argv.append("-q")
 
+
 def tree(dst, src):
-	list = []
+	unwanted_directories = ('.svn', '.git')
+	found_files = []
 	for (root, dirs, files) in os.walk(os.path.normpath(src)):
-		if '.svn' in (dirs):
-			dirs.remove('.svn')
-		if root.endswith('.svn'):
-			continue
+		for unwanted_directory in unwanted_directories:
+			if unwanted_directory in dirs:
+				dirs.remove(unwanted_directory)
+
+		for unwanted_directory in unwanted_directories:
+			if root.endswith(unwanted_directory):
+				continue
+
 		newfiles = []
 		for f in files:
 			if f.endswith('~'):
 				continue
 			newfiles.append(os.path.join(root, f))
+
 		if not newfiles:
 			continue
-		list.append( (os.path.normpath(os.path.join(dst, root)), newfiles) )
-	return list
+		found_files.append( (os.path.normpath(os.path.join(dst, root)), newfiles) )
+
+	return found_files
+
 
 class Target:
 	def __init__(self, **kw):
