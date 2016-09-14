@@ -37,12 +37,6 @@ import os
 import sys
 from contextlib import contextmanager
 
-from OPSI.Logger import Logger
-from OPSI.Types import forceUnicode, forceInt
-from OPSI.Util import randomString
-
-from OPSI import System
-
 from ocdlib import __version__
 from ocdlib.Config import Config, getLogFormat
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
@@ -52,12 +46,16 @@ from ocdlib.Localization import _, setLocaleDir
 from ocdlib.Timeline import Timeline
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
+from OPSI import System
+from OPSI.Logger import Logger
+from OPSI.Types import forceUnicode, forceInt
+from OPSI.Util import randomString
+from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
+
 # This is at the end to make sure that the tornado-bridge for twisted
 # is installed once we reach this.
 from twisted.internet import reactor
 from tornado.ioloop import IOLoop
-from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
-
 
 try:
 	from ocdlibnonfree import __fullversion__
