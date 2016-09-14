@@ -43,9 +43,6 @@ from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
 from tornado.ioloop import IOLoop
 
-from OPSI.web2 import resource, stream, server, http, responsecode
-from OPSI.web2.channel.http import HTTPFactory
-
 from OPSI.Logger import Logger
 from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Types import OpsiAuthenticationError
@@ -54,6 +51,8 @@ from OPSI.Service import SSLContext, OpsiService
 from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface
 from OPSI.Service.Resource import (ResourceOpsi, ResourceOpsiJsonRpc,
 	ResourceOpsiJsonInterface, ResourceOpsiDAV)
+from OPSI.web2 import resource, stream, server, http, responsecode
+from OPSI.web2.channel.http import HTTPFactory
 
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.Config import Config, getLogFormat
