@@ -40,7 +40,7 @@ from contextlib import contextmanager
 from OPSI.Logger import Logger
 from OPSI.Types import forceUnicode, forceInt
 from OPSI.Util import randomString
-from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
+
 from OPSI import System
 
 from ocdlib import __version__
@@ -56,6 +56,7 @@ from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 # is installed once we reach this.
 from twisted.internet import reactor
 from tornado.ioloop import IOLoop
+from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 
 
 try:
