@@ -20,4 +20,4 @@ from ocdlib.EventConfiguration import EventConfig
 
 
 class CustomEventConfig(EventConfig):
-		pass
+	pass
