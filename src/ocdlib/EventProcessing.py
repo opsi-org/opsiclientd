@@ -43,7 +43,7 @@ from OPSI.Object import ProductOnClient
 from OPSI.Util.Thread import KillableThread
 from OPSI.Util.Message import (MessageSubject, MessageSubjectProxy,
 	ProgressSubjectProxy, ChoiceSubject, NotificationServer)
-from OPSI.Types import forceInt, forceUnicode, forceUnicodeLower
+from OPSI.Types import forceInt, forceList, forceUnicode, forceUnicodeLower
 from OPSI import System
 
 from ocdlib import __version__
