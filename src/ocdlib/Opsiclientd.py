@@ -40,6 +40,7 @@ from contextlib import contextmanager
 from OPSI.Logger import Logger
 from OPSI.Types import forceUnicode, forceInt
 from OPSI.Util import randomString
+from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 from OPSI import System
 
 from ocdlib import __version__
