@@ -89,6 +89,8 @@ class EventConfig(object):
 		self.actionProcessorDesktop = unicode(conf.get('actionProcessorDesktop', 'current'))
 		self.actionProcessorTimeout = int(conf.get('actionProcessorTimeout', 3 * 3600))
 		self.actionProcessorProductIds = list(conf.get('actionProcessorProductIds', []))
+		self.excludeProductGroupIds = list(conf.get('excludeProductGroupIds', []))
+		self.includeProductGroupIds = list(conf.get('includeProductGroupIds', []))
 		self.preActionProcessorCommand = unicode(conf.get('preActionProcessorCommand', ''))
 		self.postActionProcessorCommand = unicode(conf.get('postActionProcessorCommand', ''))
 		self.cacheProducts = bool(conf.get('cacheProducts', False))
