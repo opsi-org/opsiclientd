@@ -37,7 +37,7 @@ from OPSI.Types import forceUrl, forceUnicode, forceBool, forceHostId, forceProd
 from OPSI import System
 
 
-__version__ = '4.0.87-linux-tornado'
+__version__ = '4.0.87-linux-1'
 
 logger = Logger()
 
