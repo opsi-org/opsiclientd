@@ -1,3 +1,10 @@
+opsiclientd (4.0.89) stable; urgency=low
+
+  * do not use proxy if connecting to localhost (WAN-Mode)
+  * based python-opsi 4.0.7.21-1
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 21 Sep 2016 14:58:32 +0200
+
 opsiclientd (4.0.88) stable; urgency=medium
 
   * opsi Root CA fixed
