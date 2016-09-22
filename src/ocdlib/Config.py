@@ -32,6 +32,7 @@
    @license: GNU General Public License version 2
 """
 
+import os
 import sys
 import copy as pycopy
 
