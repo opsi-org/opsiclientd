@@ -1,20 +1,29 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
+import pytest
 
 from ocdlib.EventConfiguration import EventConfig
+from ocdlib.Events import (DaemonShutdownEventConfig, DaemonStartupEventConfig,
+    PanicEventConfig, TimerEventConfig, ProcessActionRequestsEventConfig,
+    SwOnDemandEventConfig, SyncCompletedEventConfig)
 
 
-class EventConfigTestCase(unittest.TestCase):
-    def testCreatingNewEventConfig(self):
-        config = EventConfig("testevent")
+@pytest.fixture(params=[
+    DaemonShutdownEventConfig, DaemonStartupEventConfig, EventConfig,
+    PanicEventConfig, TimerEventConfig, ProcessActionRequestsEventConfig,
+    SwOnDemandEventConfig, SyncCompletedEventConfig
+])
+def configClass(request):
+    yield request.param
 
-    def testAttributesForWhiteAndBlackListExist(self):
-        config = EventConfig("testevent")
 
-        assert hasattr(config, 'excludeProductGroupIds')
-        assert hasattr(config, 'includeProductGroupIds')
+def testCreatingNewEventConfig(configClass):
+    configClass("testevent")
 
-if __name__ == '__main__':
-    unittest.main()
+
+def testAttributesForWhiteAndBlackListExist(configClass):
+    config = configClass("testevent")
+
+    assert hasattr(config, 'excludeProductGroupIds')
+    assert hasattr(config, 'includeProductGroupIds')
