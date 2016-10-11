@@ -71,13 +71,16 @@ class Target:
 
 
 opsiclientdDescription = "opsi client daemon"
-packages = ["ocdlib"]
+packages = ["ocdlib","cryptography"]
 excludes = ["pywin", "pywin.debugger", "pywin.debugger.dbgcon",
 	"pywin.dialogs", "pywin.dialogs.list",
 	"Tkconstants", "Tkinter", "tcl", "_imagingtk",
 	"PIL._imagingtk", "ImageTk", "PIL.ImageTk", "FixTk"
 ]
-includes = ["_cffi_backend","wmi","csv"]
+#includes = ["_cffi_backend","wmi","csv"]
+includes = ["_cffi_backend","wmi","csv","appdirs","packaging",
+            "packaging.version","packaging.specifiers",
+           "packaging.requirements"]
 
 if os.path.exists("ocdlibnonfree") and not buildFreeVersion:
 	packages.append("ocdlibnonfree")
