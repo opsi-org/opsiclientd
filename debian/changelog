@@ -1,3 +1,10 @@
+opsiclientd (4.0.90) stable; urgency=medium
+
+  * based on python 4.0.7.26-1
+  * new plattform dependend build for windows
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 11 Oct 2016 23:32:02 +0200
+
 opsiclientd (4.0.89) stable; urgency=low
 
   * do not use proxy if connecting to localhost (WAN-Mode)
