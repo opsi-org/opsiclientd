@@ -588,7 +588,8 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		deferred.addCallback(self._getRpcs)
 		deferred.addCallback(self._checkRpcs)
 		deferred.addCallback(self._executeRpcs)
-		deferred.addCallback(self._closeConnection)
+		#TODO: Let the connection open and let it expire on server
+		#deferred.addCallback(self._closeConnection)
 		deferred.addCallback(self._checkFireEvent)
 		deferred.addErrback(self._errback)
 		deferred.callback(None)
