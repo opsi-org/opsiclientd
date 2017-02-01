@@ -229,8 +229,8 @@ class ServiceConnection(object):
 					for module in mks:
 						if module in ('valid', 'signature'):
 							continue
-						
-						if helpermodules.has_key(module):
+
+						if module in helpermodules:
 							val = helpermodules[module]
 							if int(val) > 0:
 								modules[module] = True
