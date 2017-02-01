@@ -235,7 +235,7 @@ class ConfigImplementation(object):
 			self._config[section] = {}
 		self._config[section][option] = value
 
-		if   (sectio n== 'config_service') and (option == 'url'):
+		if (section == 'config_service') and (option == 'url'):
 			urls = self._config[section][option]
 			if not isinstance(urls, list):
 				urls = forceUnicode(self._config[section][option]).split(u',')
