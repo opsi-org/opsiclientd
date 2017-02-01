@@ -3,7 +3,7 @@
 # This module is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
 #
-# Copyright (C) 2006-2010, 2013-2014 uib GmbH <info@uib.de>
+# Copyright (C) 2006-2017 uib GmbH <info@uib.de>
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -28,7 +28,8 @@ Functions and classes for the use with a POSIX operating system.
 :license: GNU Affero General Public License version 3
 """
 
-import time, base64
+import base64
+import time
 from hashlib import md5
 from twisted.conch.ssh import keys
 import random
@@ -43,13 +44,14 @@ from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Types import *
 from OPSI import System
 
-from ocdlib.Localization import _, setLocaleDir, getLanguage
+from ocdlib.Localization import _
 from ocdlib.Opsiclientd import __version__
 from ocdlib.Config import Config
 from ocdlib.Exceptions import *
 
 logger = Logger()
 config = Config()
+
 
 def isConfigServiceReachable(timeout=5):
 	for url in config.getConfigServiceUrls():
@@ -58,10 +60,10 @@ def isConfigServiceReachable(timeout=5):
 			(scheme, host, port, baseurl, username, password) = urlsplit(url)
 			conn = None
 			if scheme.endswith('s'):
-				conn = HTTPSConnection(host = host, port = port)
+				conn = HTTPSConnection(host=host, port=port)
 				non_blocking_connect_https(conn, timeout)
 			else:
-				conn = HTTPConnection(host = host, port = port)
+				conn = HTTPConnection(host=host, port=port)
 				non_blocking_connect_http(conn, timeout)
 			if not conn:
 				continue
@@ -75,8 +77,9 @@ def isConfigServiceReachable(timeout=5):
 			logger.info(e)
 	return False
 
+
 class ServiceConnection(object):
-	def __init__(self, loadBalance = False):
+	def __init__(self, loadBalance=False):
 		self._loadBalance = forceBool(loadBalance)
 		self._configServiceUrl = None
 		self._configService = None
@@ -121,7 +124,7 @@ class ServiceConnection(object):
 		return bool(self._configService)
 
 	def isConfigServiceReachable(self, timeout=15):
-		return isConfigServiceReachable(timeout = timeout)
+		return isConfigServiceReachable(timeout=timeout)
 
 	def stop(self):
 		logger.debug(u"Stopping thread")
