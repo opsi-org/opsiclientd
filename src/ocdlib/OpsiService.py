@@ -132,13 +132,13 @@ class ServiceConnection(object):
 				break
 			self.terminate()
 			time.sleep(0.5)
-			
-	def connectConfigService(self, allowTemporaryConfigServiceUrls = True):
+
+	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):
 		try:
-			configServiceUrls = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls = allowTemporaryConfigServiceUrls)
+			configServiceUrls = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=allowTemporaryConfigServiceUrls)
 			if not configServiceUrls:
 				raise Exception(u"No service url defined")
-			
+
 			if self._loadBalance and (len(configServiceUrls) > 1):
 				random.shuffle(configServiceUrls)
 			
@@ -148,13 +148,14 @@ class ServiceConnection(object):
 				kwargs = self.connectionThreadOptions()
 				logger.debug(u"Creating ServiceConnectionThread (url: %s)" % self._configServiceUrl)
 				serviceConnectionThread = ServiceConnectionThread(
-							configServiceUrl = self._configServiceUrl,
-							username         = config.get('global', 'host_id'),
-							password         = config.get('global', 'opsi_host_key'),
-							**kwargs)
-				
+					configServiceUrl=self._configServiceUrl,
+					username=config.get('global', 'host_id'),
+					password=config.get('global', 'opsi_host_key'),
+					**kwargs
+				)
+
 				self.connectionStart(self._configServiceUrl)
-				
+
 				cancellableAfter = forceInt(config.get('config_service', 'user_cancelable_after'))
 				timeout = forceInt(config.get('config_service', 'connection_timeout'))
 				logger.info(u"Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
@@ -207,21 +208,21 @@ class ServiceConnection(object):
 						backendinfo = serviceConnectionThread.configService.backend_info()
 						modules = backendinfo['modules']
 						helpermodules = backendinfo['realmodules']
-					
+
 					if not modules.get('high_availability'):
 						self.connectionFailed(u"High availability module currently disabled")
-					
+
 					if not modules.get('customer'):
 						self.connectionFailed(u"No customer in modules file")
-						
+
 					if not modules.get('valid'):
 						self.connectionFailed(u"Modules file invalid")
-					
+
 					if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
 						self.connectionFailed(u"Modules file expired")
-					
+
 					logger.info(u"Verifying modules file signature")
-					publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
+					publicKey = keys.Key.fromString(data=base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
 					data = u''
 					mks = modules.keys()
 					mks.sort()
@@ -263,7 +264,7 @@ class ServiceConnection(object):
 
 
 class ServiceConnectionThread(KillableThread):
-	def __init__(self, configServiceUrl, username, password, statusSubject = None):
+	def __init__(self, configServiceUrl, username, password, statusSubject=None):
 		moduleName = u' %-30s' % (u'service connection')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		KillableThread.__init__(self)
@@ -324,15 +325,17 @@ class ServiceConnectionThread(KillableThread):
 					if (len(self._username.split('.')) < 3):
 						raise Exception(u"Domain missing in username '%s'" % self._username)
 					self.configService = JSONRPCBackend(
-						address              = self._configServiceUrl,
-						username             = self._username,
-						password             = self._password,
-						serverCertFile       = serverCertFile,
-						verifyServerCert     = verifyServerCert,
-						caCertFile           = caCertFile,
-						verifyServerCertByCa = verifyServerCertByCa,
-						proxyURL	     = proxyURL,
-						application = 'opsiclientd version %s' % __version__)
+						address=self._configServiceUrl,
+						username=self._username,
+						password=self._password,
+						serverCertFile=serverCertFile,
+						verifyServerCert=verifyServerCert,
+						caCertFile=caCertFile,
+						verifyServerCertByCa=verifyServerCertByCa,
+						proxyURL=proxyURL,
+						application='opsiclientd version %s' % __version__
+					)
+
 					if self.configService.isLegacyOpsi():
 						self.configService.authenticated()
 					else:
