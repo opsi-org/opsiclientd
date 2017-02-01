@@ -198,8 +198,8 @@ class ServiceConnection(object):
 					    System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True))
 				    	except Exception as e:
 				    		logger.error(u"Failed to sync time: '%s'" % e)
-					
-				if (urlIndex > 0):
+
+				if urlIndex > 0:
 					modules = None
 					helpermodules = {}
 					if serviceConnectionThread.configService.isLegacyOpsi():
