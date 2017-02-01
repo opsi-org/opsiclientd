@@ -324,6 +324,11 @@ class ServiceConnectionThread(KillableThread):
 					self.setStatusMessage( _(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
 					if (len(self._username.split('.')) < 3):
 						raise Exception(u"Domain missing in username '%s'" % self._username)
+					if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
+						if proxyURL:
+							logger.debug("Connecting to localhost, connecting directly without proxy")
+							proxyURL = None
+
 					self.configService = JSONRPCBackend(
 						address=self._configServiceUrl,
 						username=self._username,
