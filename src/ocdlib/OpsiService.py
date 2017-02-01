@@ -52,6 +52,7 @@ from ocdlib.Exceptions import *
 logger = Logger()
 config = Config()
 
+
 def isConfigServiceReachable(timeout=5):
 	for url in config.getConfigServiceUrls():
 		try:
@@ -59,10 +60,10 @@ def isConfigServiceReachable(timeout=5):
 			(scheme, host, port, baseurl, username, password) = urlsplit(url)
 			conn = None
 			if scheme.endswith('s'):
-				conn = HTTPSConnection(host = host, port = port)
+				conn = HTTPSConnection(host=host, port=port)
 				non_blocking_connect_https(conn, timeout)
 			else:
-				conn = HTTPConnection(host = host, port = port)
+				conn = HTTPConnection(host=host, port=port)
 				non_blocking_connect_http(conn, timeout)
 			if not conn:
 				continue
@@ -76,8 +77,9 @@ def isConfigServiceReachable(timeout=5):
 			logger.info(e)
 	return False
 
+
 class ServiceConnection(object):
-	def __init__(self, loadBalance = False):
+	def __init__(self, loadBalance=False):
 		self._loadBalance = forceBool(loadBalance)
 		self._configServiceUrl = None
 		self._configService = None
@@ -122,7 +124,7 @@ class ServiceConnection(object):
 		return bool(self._configService)
 
 	def isConfigServiceReachable(self, timeout=15):
-		return isConfigServiceReachable(timeout = timeout)
+		return isConfigServiceReachable(timeout=timeout)
 
 	def stop(self):
 		logger.debug(u"Stopping thread")
