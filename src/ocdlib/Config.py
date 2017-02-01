@@ -6,9 +6,9 @@
    
    opsiclientd is part of the desktop management solution opsi
    (open pc server integration) http://www.opsi.org
-   
-   Copyright (C) 2010 uib GmbH
-   
+
+   Copyright (C) 2010-2017 uib GmbH
+
    http://www.uib.de/
    
    All rights reserved.
@@ -32,6 +32,7 @@
    @license: GNU General Public License version 2
 """
 
+import os
 import sys
 import copy as pycopy
 
