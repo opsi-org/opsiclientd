@@ -32,6 +32,7 @@
    @license: GNU General Public License version 2
 """
 
+import os
 import sys
 import copy as pycopy
 
@@ -74,15 +75,15 @@ QuBW/YzuIIiknjESIHBVA6YWeLNR
 -----END CERTIFICATE-----'''
 
 class ConfigImplementation(object):
-	
+
 	def __init__(self):
-		
+
 		baseDir = u''
 		try:
 			baseDir = os.path.dirname(sys.argv[0])
 		except Exception as e:
 			logger.error(u"Failed to get base dir: %s" % e)
-		
+
 		self._config = {
 			'system': {
 				'program_files_dir': u'',
@@ -152,7 +153,7 @@ class ConfigImplementation(object):
 		}
 		self._temporaryConfigServiceUrls = []
 		self._temporaryDepotDrive = []
-		
+
 		if (os.name == 'nt'):
 			self._config['system']['program_files_dir'] = System.getProgramFilesDir()
 			self._config['cache_service']['storage_dir'] = u'%s\\opsi.org\\cache' % System.getSystemDrive()
@@ -178,63 +179,63 @@ class ConfigImplementation(object):
 			raise ValueError(u"No such config section: %s" % section)
 		if not self._config[section].has_key(option):
 			raise ValueError(u"No such config option in section '%s': %s" % (section, option))
-		
+
 		value = self._config[section][option]
 		if not raw and isinstance(value, (unicode, str)) and (value.count('%') >= 2):
 			value = self.replace(value)
 		if isinstance(value, str):
 			value = unicode(value)
 		return value
-	
+
 	def set(self, section, option, value):
 		if not section:
 			section = 'global'
-		
+
 		section = forceUnicodeLower(section).strip()
 		option = forceUnicodeLower(option).strip()
 		if isinstance(value, (str, unicode)):
 			value = forceUnicode(value).strip()
-		
+
 		if (option == 'warning_time'):
 			option = 'action_warning_time'
 		elif (option == 'user_cancelable'):
 			option = 'action_user_cancelable'
-		
+
 		logger.info(u"Setting config value %s.%s" % (section, option))
 		logger.debug(u"set(%s, %s, %s)" % (section, option, value))
-		
+
 		if (option.find('command') == -1) and (option.find('productids') == -1) and (option.find('exclude_product_group_ids') == -1) and (option.find('include_product_group_ids') == -1) and (value == ''):
 			logger.warning(u"Refusing to set empty value for config value '%s' of section '%s'" % (option, section))
 			return
-		
+
 		if (option == 'opsi_host_key'):
 			if (len(value) != 32):
 				raise ValueError("Bad opsi host key, length != 32")
 			logger.addConfidentialString(value)
-		
+
 		if option in ('depot_id', 'host_id'):
 			value = forceHostId(value.replace('_', '-'))
-		
+
 		if section in ('system',):
 			return
-		
+
 		if option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port', 'max_authentication_failures'):
 			value = forceInt(value)
-		
+
 		if option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active', 'sync_time_from_service'):
 			value = forceBool(value)
-		
+
 		if option in ('exclude_product_group_ids', 'include_product_group_ids'):
 			if not isinstance(value, list):
 				value = [ x.strip() for x in value.split(",") ]
 			else:
 				value = forceList(value)
-		
+
 		if not self._config.has_key(section):
 			self._config[section] = {}
 		self._config[section][option] = value
-		
-		if   (section == 'config_service') and (option == 'url'):
+
+		if (section == 'config_service') and (option == 'url'):
 			urls = self._config[section][option]
 			if not isinstance(urls, list):
 				urls = forceUnicode(self._config[section][option]).split(u',')
@@ -259,7 +260,7 @@ class ConfigImplementation(object):
 			f = open(os.path.join(value, 'cacert.pem'), 'w')
 			f.write(OPSI_CA)
 			f.close()
-		
+
 	def replace(self, string, escaped=False):
 		for (section, values) in self._config.items():
 			if not isinstance(values, dict):
@@ -272,19 +273,19 @@ class ConfigImplementation(object):
 					if (os.name == 'nt'):
 						value = value.replace('"', '^"')
 				newString = string.replace(u'%' + unicode(section) + u'.' + unicode(key) + u'%', value)
-				
+
 				if (newString != string):
 					string = self.replace(newString, escaped)
 		return forceUnicode(string)
-	
+
 	def readConfigFile(self, keepLog = False):
 		''' Get settings from config file '''
 		logger.notice(u"Trying to read config from file: '%s'" % self.get('global', 'config_file'))
-		
+
 		try:
 			# Read Config-File
 			config = IniFile(filename = self.get('global', 'config_file'), raw = True).parse()
-			
+
 			# Read log settings early
 			if not keepLog and config.has_section('global'):
 				debug = False
@@ -313,15 +314,15 @@ class ConfigImplementation(object):
 							except Exception as e:
 								logger.error(u"Failed to rename %s to %s: %s" % (slf, dlf, forceUnicode(e)) )
 						self.set('global', 'log_file', logFile)
-			
+
 			# Process all sections
 			for section in config.sections():
 				logger.debug(u"Processing section '%s' in config file: '%s'" % (section, self.get('global', 'config_file')))
-				
+
 				for (option, value) in config.items(section):
 					option = option.lower()
 					self.set(section.lower(), option, value)
-				
+
 		except Exception as e:
 			# An error occured while trying to read the config file
 			logger.error(u"Failed to read config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
@@ -329,10 +330,10 @@ class ConfigImplementation(object):
 			return
 		logger.notice(u"Config read")
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self._config))
-	
+
 	def updateConfigFile(self):
 		logger.notice(u"Updating config file: '%s'" % self.get('global', 'config_file'))
-		
+
 		try:
 			configFile = IniFile(filename = self.get('global', 'config_file'), raw = True)
 			configFile.setKeepOrdering(True)
@@ -435,7 +436,7 @@ class ConfigImplementation(object):
 				dynamicDepot = forceBool(configState.values[0])
 			elif (configState.configId == 'clientconfig.depot.protocol') and configState.values and configState.values[0] and (configState.values[0] == 'webdav'):
 				depotProtocol = 'webdav'
-		
+
 		if dynamicDepot:
 			if not depotIds:
 				logger.info(u"Dynamic depot selection enabled")
@@ -443,7 +444,7 @@ class ConfigImplementation(object):
 				logger.info(u"Dynamic depot selection enabled, but depot is already selected")
 		else:
 			logger.info(u"Dynamic depot selection disabled")
-		
+
 		if not depotIds:
 			clientToDepotservers = configService.configState_getClientToDepotserver(
 					clientIds  = [ self.get('global', 'host_id') ],
@@ -451,11 +452,11 @@ class ConfigImplementation(object):
 					productIds = productIds)
 			if not clientToDepotservers:
 				raise Exception(u"Failed to get depot config from service")
-			
+
 			depotIds = [ clientToDepotservers[0]['depotId'] ]
 			if dynamicDepot:
 				depotIds.extend(clientToDepotservers[0].get('alternativeDepotIds', []))
-			
+
 		masterDepot = None
 		alternativeDepots = []
 		for depot in configService.host_getObjects(type = 'OpsiDepotserver', id = depotIds):
@@ -465,7 +466,7 @@ class ConfigImplementation(object):
 				alternativeDepots.append(depot)
 		if not masterDepot:
 			raise Exception(u"Failed to get info for master depot '%s'" % depotIds[0])
-		
+
 		logger.info(u"Master depot for products %s is %s" % (productIds, masterDepot.id))
 		selectedDepot = masterDepot
 		if dynamicDepot:
@@ -473,9 +474,9 @@ class ConfigImplementation(object):
 				logger.info(u"Got alternative depots for products: %s" % productIds)
 				for i in range(len(alternativeDepots)):
 					logger.info(u"%d. alternative depot is %s" % ((i+1), alternativeDepots[i].id))
-				
+
 				try:
-						
+
 					defaultInterface = None
 					networkInterfaces = System.getNetworkInterfaces()
 					if not networkInterfaces:
@@ -496,9 +497,9 @@ class ConfigImplementation(object):
 						"netmask":        forceUnicode(defaultInterface.ipAddressList.ipMask),
 						"defaultGateway": forceUnicode(defaultInterface.gatewayList.ipAddress)
 					}
-					
+
 					logger.info(u"Passing client configuration to depot selection algorithm: %s" % clientConfig)
-					
+
 					depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()
 					logger.debug2(u"depotSelectionAlgorithm:\n%s" % depotSelectionAlgorithm)
 					exec(depotSelectionAlgorithm)
@@ -557,6 +558,7 @@ class ConfigImplementation(object):
 					self.set(section=parts[1], option=parts[2], value=configState.values[0])
 				except Exception as e:
 					logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
+
 		logger.notice(u"Got config from service")
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.getDict()))
 

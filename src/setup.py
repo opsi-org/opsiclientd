@@ -71,7 +71,7 @@ class Target:
 
 
 opsiclientdDescription = "opsi client daemon"
-packages = ["ocdlib","cryptography"]
+packages = ["ocdlib"]
 excludes = ["pywin", "pywin.debugger", "pywin.debugger.dbgcon",
 	"pywin.dialogs", "pywin.dialogs.list",
 	"Tkconstants", "Tkinter", "tcl", "_imagingtk",
@@ -91,6 +91,8 @@ else:
 print "Building %s" % opsiclientdDescription
 
 if RUNS_ON_WINDOWS:
+	packages.append("cryptography")
+
 	data_files = [
 		('VC90', glob.glob(r'C:\Windows\winsxs\x86_microsoft.vc90.crt_1fc8b3b9a1e18e3b_9.0.21022.8_none_bcb86ed6ac711f91\*.*')),
 		('VC90', glob.glob(r'C:\Windows\winsxs\Manifests\x86_microsoft.vc90.crt_1fc8b3b9a1e18e3b_9.0.21022.8_none_bcb86ed6ac711f91.manifest')),

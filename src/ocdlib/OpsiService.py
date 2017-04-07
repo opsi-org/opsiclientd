@@ -28,7 +28,8 @@ Functions and classes for the use with a POSIX operating system.
 :license: GNU Affero General Public License version 3
 """
 
-import time, base64
+import base64
+import time
 from hashlib import md5
 from twisted.conch.ssh import keys
 import random
@@ -43,13 +44,14 @@ from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Types import *
 from OPSI import System
 
-from ocdlib.Localization import _, setLocaleDir, getLanguage
+from ocdlib.Localization import _
 from ocdlib.Opsiclientd import __version__
 from ocdlib.Config import Config
 from ocdlib.Exceptions import *
 
 logger = Logger()
 config = Config()
+
 
 def isConfigServiceReachable(timeout=5):
 	for url in config.getConfigServiceUrls():
@@ -58,10 +60,10 @@ def isConfigServiceReachable(timeout=5):
 			(scheme, host, port, baseurl, username, password) = urlsplit(url)
 			conn = None
 			if scheme.endswith('s'):
-				conn = HTTPSConnection(host = host, port = port)
+				conn = HTTPSConnection(host=host, port=port)
 				non_blocking_connect_https(conn, timeout)
 			else:
-				conn = HTTPConnection(host = host, port = port)
+				conn = HTTPConnection(host=host, port=port)
 				non_blocking_connect_http(conn, timeout)
 			if not conn:
 				continue
@@ -75,54 +77,55 @@ def isConfigServiceReachable(timeout=5):
 			logger.info(e)
 	return False
 
+
 class ServiceConnection(object):
-	def __init__(self, loadBalance = False):
+	def __init__(self, loadBalance=False):
 		self._loadBalance = forceBool(loadBalance)
 		self._configServiceUrl = None
 		self._configService = None
-	
+
 	def connectionThreadOptions(self):
 		return {}
-	
+
 	def connectionStart(self, configServiceUrl):
 		pass
-	
+
 	def connectionCancelable(self, stopConnectionCallback):
 		pass
-	
+
 	def connectionTimeoutChanged(self, timeout):
 		pass
-	
+
 	def connectionCanceled(self):
 		error = u"Failed to connect to config service '%s': cancelled by user" % self._configServiceUrl
 		logger.error(error)
 		raise CanceledByUserError(error)
-		
+
 	def connectionTimedOut(self):
 		error = u"Failed to connect to config service '%s': timed out after %d seconds" % (self._configServiceUrl, config.get('config_service', 'connection_timeout'))
 		logger.error(error)
 		raise Exception(error)
-	
+
 	def connectionFailed(self, error):
 		error = u"Failed to connect to config service '%s': %s" % (self._configServiceUrl, error)
 		logger.error(error)
 		raise Exception(error)
-	
+
 	def connectionEstablished(self):
 		pass
-	
+
 	def getConfigService(self):
 		return self._configService
-	
+
 	def getConfigServiceUrl(self):
 		return self._configServiceUrl
-	
+
 	def isConfigServiceConnected(self):
 		return bool(self._configService)
-	
+
 	def isConfigServiceReachable(self, timeout=15):
-		return isConfigServiceReachable(timeout = timeout)
-	
+		return isConfigServiceReachable(timeout=timeout)
+
 	def stop(self):
 		logger.debug(u"Stopping thread")
 		self.cancelled = True
@@ -132,29 +135,30 @@ class ServiceConnection(object):
 				break
 			self.terminate()
 			time.sleep(0.5)
-			
-	def connectConfigService(self, allowTemporaryConfigServiceUrls = True):
+
+	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):
 		try:
-			configServiceUrls = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls = allowTemporaryConfigServiceUrls)
+			configServiceUrls = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=allowTemporaryConfigServiceUrls)
 			if not configServiceUrls:
 				raise Exception(u"No service url defined")
-			
+
 			if self._loadBalance and (len(configServiceUrls) > 1):
 				random.shuffle(configServiceUrls)
-			
-			for urlIndex in range(len(configServiceUrls)):
-				self._configServiceUrl = configServiceUrls[urlIndex]
-				
+
+			for urlIndex, url in enumerate(configServiceUrls):
+				self._configServiceUrl = url
+
 				kwargs = self.connectionThreadOptions()
 				logger.debug(u"Creating ServiceConnectionThread (url: %s)" % self._configServiceUrl)
 				serviceConnectionThread = ServiceConnectionThread(
-							configServiceUrl = self._configServiceUrl,
-							username         = config.get('global', 'host_id'),
-							password         = config.get('global', 'opsi_host_key'),
-							**kwargs)
-				
+					configServiceUrl=self._configServiceUrl,
+					username=config.get('global', 'host_id'),
+					password=config.get('global', 'opsi_host_key'),
+					**kwargs
+				)
+
 				self.connectionStart(self._configServiceUrl)
-				
+
 				cancellableAfter = forceInt(config.get('config_service', 'user_cancelable_after'))
 				timeout = forceInt(config.get('config_service', 'connection_timeout'))
 				logger.info(u"Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
@@ -163,7 +167,7 @@ class ServiceConnection(object):
 					if serviceConnectionThread.running:
 						break
 					time.sleep(1)
-				
+
 				logger.debug(u"ServiceConnectionThread started")
 				while serviceConnectionThread.running and (timeout > 0):
 					logger.debug(u"Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d) " \
@@ -198,7 +202,7 @@ class ServiceConnection(object):
 				    	except Exception as e:
 				    		logger.error(u"Failed to sync time: '%s'" % e)
 
-				if (urlIndex > 0):
+				if urlIndex > 0:
 					backendinfo = serviceConnectionThread.configService.backend_info()
 					modules = backendinfo['modules']
 					helpermodules = backendinfo['realmodules']
@@ -216,15 +220,15 @@ class ServiceConnection(object):
 						self.connectionFailed(u"Modules file expired")
 
 					logger.info(u"Verifying modules file signature")
-					publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
+					publicKey = keys.Key.fromString(data=base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
 					data = u''
 					mks = modules.keys()
 					mks.sort()
 					for module in mks:
 						if module in ('valid', 'signature'):
 							continue
-						
-						if helpermodules.has_key(module):
+
+						if module in helpermodules:
 							val = helpermodules[module]
 							if int(val) > 0:
 								modules[module] = True
@@ -253,8 +257,9 @@ class ServiceConnection(object):
 		self._configService = None
 		self._configServiceUrl = None
 
+
 class ServiceConnectionThread(KillableThread):
-	def __init__(self, configServiceUrl, username, password, statusSubject = None):
+	def __init__(self, configServiceUrl, username, password, statusSubject=None):
 		moduleName = u' %-30s' % (u'service connection')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		KillableThread.__init__(self)
@@ -269,7 +274,7 @@ class ServiceConnectionThread(KillableThread):
 		self.connectionError = None
 		if not self._configServiceUrl:
 			raise Exception(u"No config service url given")
-	
+
 	def setStatusMessage(self, message):
 		if not self._statusSubject:
 			return
@@ -305,7 +310,7 @@ class ServiceConnectionThread(KillableThread):
 			verifyServerCertByCa = config.get('global', 'verify_server_cert_by_ca')
 			if verifyServerCertByCa:
 				logger.info(u"Server verification by CA enabled, using CA cert file '%s'" % caCertFile)
-			
+
 			tryNum = 0
 			while not self.cancelled and not self.connected:
 				try:
@@ -320,15 +325,16 @@ class ServiceConnectionThread(KillableThread):
 							proxyURL = None
 
 					self.configService = JSONRPCBackend(
-						address              = self._configServiceUrl,
-						username             = self._username,
-						password             = self._password,
-						serverCertFile       = serverCertFile,
-						verifyServerCert     = verifyServerCert,
-						caCertFile           = caCertFile,
-						verifyServerCertByCa = verifyServerCertByCa,
-						proxyURL	     = proxyURL,
-						application = 'opsiclientd version %s' % __version__)
+						address=self._configServiceUrl,
+						username=self._username,
+						password=self._password,
+						serverCertFile=serverCertFile,
+						verifyServerCert=verifyServerCert,
+						caCertFile=caCertFile,
+						verifyServerCertByCa=verifyServerCertByCa,
+						proxyURL=proxyURL,
+						application='opsiclientd version %s' % __version__
+					)
 
 					self.configService.accessControl_authenticated()
 					self.configService.setDeflate(True)
@@ -360,15 +366,15 @@ class ServiceConnectionThread(KillableThread):
 						else:
 							break
 					time.sleep(3)
-			
+
 		except Exception, e:
 			logger.logException(e)
 		self.running = False
-	
+
 	def stopConnectionCallback(self, choiceSubject):
 		logger.notice(u"Connection cancelled by user")
 		self.stop()
-	
+
 	def stop(self):
 		logger.debug(u"Stopping thread")
 		self.cancelled = True
@@ -378,4 +384,3 @@ class ServiceConnectionThread(KillableThread):
 				break
 			self.terminate()
 			time.sleep(0.5)
-
