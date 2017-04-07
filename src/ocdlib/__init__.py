@@ -4,29 +4,29 @@
    = = = = = = = = = = = = = = = = = = =
    =   Dummy                           =
    = = = = = = = = = = = = = = = = = = =
-   
+
    This module is part of the desktop management solution opsi
    (open pc server integration) http://www.opsi.org
-   
-   Copyright (C) 2010 uib GmbH
-   
+
+   Copyright (C) 2010-2017 uib GmbH
+
    http://www.uib.de/
-   
+
    All rights reserved.
-   
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License version 2 as
    published by the Free Software Foundation.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-   
+
    @copyright:	uib GmbH <info@uib.de>
    @author: Erol Ueluekmen <e.ueluekmen@uib.de>
    @license: GNU General Public License version 2
@@ -44,26 +44,23 @@ logger = Logger()
 
 def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True, masterOnly=False):
 	productIds = forceProductIdList(productIds)
-	
+
 	logger.notice(u"Selecting depot for products %s" % productIds)
-	
+
 	if event and event.eventConfig.useCachedProducts:
 		cacheDepotDir = os.path.join(config.get('cache_service', 'storage_dir'), 'depot').replace('\\', '/').replace('//', '/')
 		logger.notice(u"Using depot cache: %s" % cacheDepotDir)
 		config.setTemporaryDepotDrive(cacheDepotDir.split(':')[0] + u':')
 		config.set('depot_server', 'url', 'smb://localhost/noshare/' + ('/'.join(cacheDepotDir.split('/')[1:])))
 		return
-	
+
 	if not configService:
 		raise Exception(u"Not connected to config service")
-	
-	if configService.isLegacyOpsi():
-		return
-	
+
 	selectedDepot = None
-	
+
 	configService.backend_setOptions({"addConfigStateDefaults": True})
-	
+
 	depotIds = []
 	dynamicDepot = False
 	depotProtocol = 'cifs'

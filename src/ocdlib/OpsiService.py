@@ -3,7 +3,7 @@
 # This module is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
 #
-# Copyright (C) 2006-2010, 2013-2014 uib GmbH <info@uib.de>
+# Copyright (C) 2006-2017 uib GmbH <info@uib.de>
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -175,51 +175,46 @@ class ServiceConnection(object):
 						self.connectionCancelable(serviceConnectionThread.stopConnectionCallback)
 					time.sleep(1)
 					timeout -= 1
-				
+
 				if serviceConnectionThread.cancelled:
 					self.connectionCanceled()
-				
+
 				if serviceConnectionThread.running:
 					serviceConnectionThread.stop()
 					self.connectionTimedOut()
-				
+
 				if not serviceConnectionThread.connected:
 					self.connectionFailed(serviceConnectionThread.connectionError)
-				
+
 				if serviceConnectionThread.connected and (serviceConnectionThread.getUsername() != config.get('global', 'host_id')):
 					config.set('global', 'host_id', serviceConnectionThread.getUsername().lower())
 					logger.info(u"Updated host_id to '%s'" % config.get('global', 'host_id'))
 					config.updateConfigFile()
-					
+
 				if serviceConnectionThread.connected and forceBool(config.get('config_service', 'sync_time_from_service')):
 					logger.info(u"Syncing local system time from service")
 					try:
 					    System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True))
 				    	except Exception as e:
 				    		logger.error(u"Failed to sync time: '%s'" % e)
-					
+
 				if (urlIndex > 0):
-					modules = None
-					helpermodules = {}
-					if serviceConnectionThread.configService.isLegacyOpsi():
-						modules = serviceConnectionThread.configService.getOpsiInformation_hash()['modules']
-					else:
-						backendinfo = serviceConnectionThread.configService.backend_info()
-						modules = backendinfo['modules']
-						helpermodules = backendinfo['realmodules']
-					
+					backendinfo = serviceConnectionThread.configService.backend_info()
+					modules = backendinfo['modules']
+					helpermodules = backendinfo['realmodules']
+
 					if not modules.get('high_availability'):
 						self.connectionFailed(u"High availability module currently disabled")
-					
+
 					if not modules.get('customer'):
 						self.connectionFailed(u"No customer in modules file")
-						
+
 					if not modules.get('valid'):
 						self.connectionFailed(u"Modules file invalid")
-					
+
 					if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
 						self.connectionFailed(u"Modules file expired")
-					
+
 					logger.info(u"Verifying modules file signature")
 					publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
 					data = u''
@@ -237,30 +232,27 @@ class ServiceConnection(object):
 							val = modules[module]
 							if (val == False): val = 'no'
 							if (val == True):  val = 'yes'
-						
+
 						data += u'%s = %s\r\n' % (module.lower().strip(), val)
 					if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
 						self.connectionFailed(u"Modules file invalid")
 					logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
-				
+
 				self._configService = serviceConnectionThread.configService
 				self.connectionEstablished()
 		except:
 			self.disconnectConfigService()
 			raise
-	
+
 	def disconnectConfigService(self):
 		if self._configService:
 			try:
-				if self._configService.isLegacyOpsi():
-					self._configService.exit()
-				else:
-					self._configService.backend_exit()
+				self._configService.backend_exit()
 			except Exception, e:
 				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(e))
 		self._configService = None
 		self._configServiceUrl = None
-	
+
 class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, statusSubject = None):
 		moduleName = u' %-30s' % (u'service connection')
@@ -337,22 +329,20 @@ class ServiceConnectionThread(KillableThread):
 						verifyServerCertByCa = verifyServerCertByCa,
 						proxyURL	     = proxyURL,
 						application = 'opsiclientd version %s' % __version__)
-					if self.configService.isLegacyOpsi():
-						self.configService.authenticated()
-					else:
-						self.configService.accessControl_authenticated()
-						self.configService.setDeflate(True)
+
+					self.configService.accessControl_authenticated()
+					self.configService.setDeflate(True)
 					self.connected = True
 					self.connectionError = None
 					self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
 					logger.notice(u"Connected to config server '%s'" % self._configServiceUrl)
-				
+
 				except OpsiServiceVerificationError, e:
 					self.connectionError = forceUnicode(e)
 					self.setStatusMessage(_(u"Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
 					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
 					break
-				
+
 				except Exception, e:
 					self.connectionError = forceUnicode(e)
 					self.setStatusMessage(_(u"Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(e)))

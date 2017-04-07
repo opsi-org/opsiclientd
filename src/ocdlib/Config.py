@@ -3,29 +3,29 @@
    = = = = = = = = = = = = = = = = = = = = =
    =   ocdlib.Config                       =
    = = = = = = = = = = = = = = = = = = = = =
-   
+
    opsiclientd is part of the desktop management solution opsi
    (open pc server integration) http://www.opsi.org
-   
-   Copyright (C) 2010 uib GmbH
-   
+
+   Copyright (C) 2010-2017 uib GmbH
+
    http://www.uib.de/
-   
+
    All rights reserved.
-   
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License version 2 as
    published by the Free Software Foundation.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-   
+
    @copyright:	uib GmbH <info@uib.de>
    @author: Jan Schneider <j.schneider@uib.de>
    @author: Erol Ueluekmen <e.ueluekmen@uib.de>
@@ -363,51 +363,48 @@ class ConfigImplementation(object):
 				logger.notice(u"Config file '%s' written" % self.get('global', 'config_file'))
 			else:
 				logger.notice(u"No need to write config file '%s', config file is up to date" % self.get('global', 'config_file'))
-			
+
 		except Exception as e:
 			# An error occured while trying to write the config file
 			logger.logException(e)
 			logger.error(u"Failed to write config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
-	
+
 	def setTemporaryDepotDrive(self, temporaryDepotDrive):
 		self._temporaryDepotDrive = temporaryDepotDrive
-	
+
 	def getDepotDrive(self):
 		if self._temporaryDepotDrive:
 			return self._temporaryDepotDrive
 		return self.get('depot_server', 'drive')
-		
+
 	def setTemporaryConfigServiceUrls(self, temporaryConfigServiceUrls):
 		self._temporaryConfigServiceUrls = forceList(temporaryConfigServiceUrls)
-		
+
 	def getConfigServiceUrls(self, allowTemporaryConfigServiceUrls = True):
 		if allowTemporaryConfigServiceUrls and self._temporaryConfigServiceUrls:
 			return self._temporaryConfigServiceUrls
 		return self.get('config_service', 'url')
-	
+
 	def selectDepotserver(self, configService, event, productIds=[], cifsOnly=True, masterOnly=False):
 		productIds = forceProductIdList(productIds)
-		
+
 		logger.notice(u"Selecting depot for products %s" % productIds)
 		logger.notice(u"MasterOnly --> '%s'" % masterOnly)
-		
+
 		if event and event.eventConfig.useCachedProducts:
 			cacheDepotDir = os.path.join(self.get('cache_service', 'storage_dir'), 'depot').replace('\\', '/').replace('//', '/')
 			logger.notice(u"Using depot cache: %s" % cacheDepotDir)
 			self.setTemporaryDepotDrive(cacheDepotDir.split(':')[0] + u':')
 			self.set('depot_server', 'url', 'smb://localhost/noshare/' + ('/'.join(cacheDepotDir.split('/')[1:])))
 			return
-		
+
 		if not configService:
 			raise Exception(u"Not connected to config service")
-		
-		if configService.isLegacyOpsi():
-			return
-		
+
 		selectedDepot = None
-		
+
 		configService.backend_setOptions({"addConfigStateDefaults": True})
-		
+
 		depotIds = []
 		configStates = []
 		dynamicDepot = False
@@ -519,98 +516,66 @@ class ConfigImplementation(object):
 			self.set('depot_server', 'url', selectedDepot.depotWebdavUrl)
 		else:
 			self.set('depot_server', 'url', selectedDepot.depotRemoteUrl)
-	
+
 	def getDepotserverCredentials(self, configService):
 		if not configService:
 			raise Exception(u"Not connected to config service")
-		
+
 		depotServerUsername = self.get('depot_server', 'username')
 		encryptedDepotServerPassword = u''
-		if configService.isLegacyOpsi():
-			encryptedDepotServerPassword = configService.getPcpatchPassword(self.get('global', 'host_id'))
-		else:
-			encryptedDepotServerPassword = configService.user_getCredentials(username = u'pcpatch', hostId = self.get('global', 'host_id'))['password']
+		encryptedDepotServerPassword = configService.user_getCredentials(username = u'pcpatch', hostId = self.get('global', 'host_id'))['password']
 		depotServerPassword = blowfishDecrypt(self.get('global', 'opsi_host_key'), encryptedDepotServerPassword)
 		logger.addConfidentialString(depotServerPassword)
 		logger.debug(u"Using username '%s' for depot connection" % depotServerUsername)
 		return (depotServerUsername, depotServerPassword)
-	
+
 	def getFromService(self, configService):
 		''' Get settings from service '''
 		logger.notice(u"Getting config from service")
 		if not configService:
 			raise Exception(u"Config service is undefined")
-		
-		if configService.isLegacyOpsi():
-			for (key, value) in configService.getNetworkConfig_hash(self.get('global', 'host_id')).items():
-				if (key.lower() == 'depotid'):
-					depotId = value
-					self.set('depot_server', 'depot_id', depotId)
-					self.set('depot_server', 'url', configService.getDepot_hash(depotId)['depotRemoteUrl'])
-				elif (key.lower() == 'depotdrive'):
-					self.set('depot_server', 'drive', value)
-				elif (key.lower() == 'nextbootserviceurl'):
-					if (value.find('/rpc') == -1):
-						value = value + '/rpc'
-					self.set('config_service', 'url', [ value ])
-				else:
-					logger.info(u"Unhandled network config key '%s'" % key)
-				
-			logger.notice(u"Got network config from service")
-			
-			for (key, value) in configService.getGeneralConfig_hash(self.get('global', 'host_id')).items():
+
+		configService.backend_setOptions({"addConfigStateDefaults": True})
+		for configState in configService.configState_getObjects(objectId=self.get('global', 'host_id')):
+			logger.info(u"Got config state from service: configId %s, values %s" % (configState.configId, configState.values))
+
+			if not configState.values:
+				continue
+
+			if configState.configId == u'clientconfig.configserver.url':
+				self.set('config_service', 'url', configState.values)
+			elif configState.configId == u'clientconfig.depot.drive':
+				self.set('depot_server', 'drive', configState.values[0])
+			elif configState.configId == u'clientconfig.depot.id':
+				self.set('depot_server', 'depot_id', configState.values[0])
+			elif configState.configId.startswith(u'opsiclientd.'):
 				try:
-					parts = key.lower().split('.')
-					if (len(parts) < 3) or (parts[0] != 'opsiclientd'):
+					parts = configState.configId.lower().split('.')
+					if (len(parts) < 3):
 						continue
-					
-					self.set(section = parts[1], option = parts[2], value = value)
-					
+
+					self.set(section=parts[1], option=parts[2], value=configState.values[0])
 				except Exception as e:
-					logger.error(u"Failed to process general config key '%s:%s': %s" % (key, value, forceUnicode(e)))
-		else:
-			configService.backend_setOptions({"addConfigStateDefaults": True})
-			for configState in configService.configState_getObjects(objectId = self.get('global', 'host_id')):
-				logger.info(u"Got config state from service: configId %s, values %s" % (configState.configId, configState.values))
-				
-				if not configState.values:
-					continue
-				
-				if   (configState.configId == u'clientconfig.configserver.url'):
-					self.set('config_service', 'url', configState.values)
-				elif (configState.configId == u'clientconfig.depot.drive'):
-					self.set('depot_server', 'drive', configState.values[0])
-				elif (configState.configId == u'clientconfig.depot.id'):
-					self.set('depot_server', 'depot_id', configState.values[0])
-				elif configState.configId.startswith(u'opsiclientd.'):
-					try:
-						parts = configState.configId.lower().split('.')
-						if (len(parts) < 3):
-							continue
-						
-						self.set(section = parts[1], option = parts[2], value = configState.values[0])
-						
-					except Exception as e:
-						logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
+					logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
 		logger.notice(u"Got config from service")
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.getDict()))
-	
+
 class Config(ConfigImplementation):
 	# Storage for the instance reference
 	__instance = None
-	
+
 	def __init__(self):
 		""" Create singleton instance """
-		
+
 		# Check whether we already have an instance
 		if Config.__instance is None:
 			# Create and remember instance
 			Config.__instance = ConfigImplementation()
-		
+
 		# Store instance reference as the only member in the handle
 		self.__dict__['_Config__instance'] = Config.__instance
-	
-	
+
+
 	def __getattr__(self, attr):
 		""" Delegate access to implementation """
 		return getattr(self.__instance, attr)
