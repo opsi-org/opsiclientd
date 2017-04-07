@@ -42,12 +42,9 @@ Timeline event attributes:
   * description - will be displayed inside the bubble with the event's title and image.
 """
 
-import time, threading
-from sys import version_info
-if (version_info >= (2,6)):
-	import json
-else:
-	import simplejson as json
+import json
+import time
+import threading
 
 from OPSI.Logger import *
 from OPSI.Types import *
