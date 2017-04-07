@@ -54,24 +54,22 @@ def ControlPipeFactory(opsiclientdRpcInterface):
 	if (os.name == 'nt'):
 		return NTControlPipe(opsiclientdRpcInterface)
 	else:
-		raise NotImplemented(u"Unsupported operating system %s" % os.name)
+		raise NotImplementedError(u"Unsupported operating system %s" % os.name)
 
 
 
-'''
-= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-=                                            CONTROL PIPES                                            =
-= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-=                                                                                                     =
-=             These classes are used to create named pipes for remote procedure calls                 =
-=                                                                                                     =
-=  The class "ControlPipe" is the base class for a named pipe which handles remote procedure calls    =
-=     PosixControlPipe implements a control pipe for posix operating systems                          =
-=     NTControlPipe implements a control pipe for windows operating systems                           =
-=  The class "ControlPipeFactory" selects the right implementation for the running os                 =
-=                                                                                                     =
-= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-'''
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+# =                                            CONTROL PIPES                                            =
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+# =                                                                                                     =
+# =             These classes are used to create named pipes for remote procedure calls                 =
+# =                                                                                                     =
+# =  The class "ControlPipe" is the base class for a named pipe which handles remote procedure calls    =
+# =     PosixControlPipe implements a control pipe for posix operating systems                          =
+# =     NTControlPipe implements a control pipe for windows operating systems                           =
+# =  The class "ControlPipeFactory" selects the right implementation for the running os                 =
+# =                                                                                                     =
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                        CONTROL PIPE                                               -
