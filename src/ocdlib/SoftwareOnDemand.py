@@ -528,7 +528,8 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 			"product_getObjects",
 			"productOnClient_getObjects",
 			"setProductActionRequestWithDependencies",
-			"hostControlSafe_fireEvent"
+			"hostControlSafe_fireEvent",
+			"getKioskProductInfosForClient",
 		]
 
 	def _getCallInstance(self, result):
