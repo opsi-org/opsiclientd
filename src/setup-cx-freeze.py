@@ -113,5 +113,4 @@ setup(name='opsiclientd',
                    'desktop management solution opsi (open pc server '
                    'integration) - http://www.opsi.org'),
       options={"build_exe": buildOptions},
-      executables=executables
-)
+      executables=executables)
