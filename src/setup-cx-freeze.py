@@ -27,7 +27,7 @@ import os
 import platform
 import sys
 
-import duplicity
+import duplicity  # to make sure this is installed
 from cx_Freeze import setup, Executable
 
 from setuplib import getVersion
