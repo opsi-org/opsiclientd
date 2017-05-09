@@ -74,6 +74,10 @@ elif distribution.lower().strip() == 'suse linux enterprise server' and version.
     buildOptions['packages'].append('cffi')
     buildOptions['packages'].append('Crypto.Cipher.AES')
     buildOptions['packages'].append('cryptography')
+elif distribution.lower().strip() == 'opensuse' and version.startswith('42'):
+    buildOptions['packages'].append('cffi')
+    buildOptions['packages'].append('Crypto.Cipher.AES')
+    buildOptions['packages'].append('cryptography')
 elif distribution.lower().strip() == 'ubuntu' and version.startswith('16.'):
     buildOptions['packages'].append('cffi')
     buildOptions['packages'].append('Crypto.Cipher.AES')
