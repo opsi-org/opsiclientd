@@ -65,7 +65,7 @@ buildOptions = {
 }
 
 distribution, version, _ = platform.linux_distribution()
-if distribution.lower().strip() == 'debian' and version.startswith('8', '9'):
+if distribution.lower().strip() == 'debian' and version.startswith(('8', '9')):
     # Required by Debian 8 - see https://github.com/pyca/cryptography/issues/2039#issuecomment-132225074
     buildOptions['packages'].append('cffi')
     buildOptions['packages'].append('Crypto.Cipher.AES')
