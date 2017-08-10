@@ -1,38 +1,38 @@
 # -*- coding: utf-8 -*-
 """
-   = = = = = = = = = = = = = = = = = = = = =
-   =   opsiclientd.Exceptions              =
-   = = = = = = = = = = = = = = = = = = = = =
-   
-   opsiclientd is part of the desktop management solution opsi
-   (open pc server integration) http://www.opsi.org
-   
-   Copyright (C) 2010 uib GmbH
-   
-   http://www.uib.de/
-   
-   All rights reserved.
-   
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as
-   published by the Free Software Foundation.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-   
-   @copyright:	uib GmbH <info@uib.de>
-   @author: Jan Schneider <j.schneider@uib.de>
-   @license: GNU General Public License version 2
+= = = = = = = = = = = = = = = = = = = = =
+=   opsiclientd.ControlPipe              =
+= = = = = = = = = = = = = = = = = = = = =
+
+opsiclientd is part of the desktop management solution opsi
+(open pc server integration) http://www.opsi.org
+
+Copyright (C) 2010-2017 uib GmbH
+
+http://www.uib.de/
+
+All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 2 as
+published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+@copyright:	uib GmbH <info@uib.de>
+@author: Jan Schneider <j.schneider@uib.de>
+@license: GNU General Public License version 2
 """
 
-# Imports
-import os, inspect
+import inspect
+import os
 from ctypes import *
 
 # OPSI imports
@@ -54,24 +54,22 @@ def ControlPipeFactory(opsiclientdRpcInterface):
 	if (os.name == 'nt'):
 		return NTControlPipe(opsiclientdRpcInterface)
 	else:
-		raise NotImplemented(u"Unsupported operating system %s" % os.name)
+		raise NotImplementedError(u"Unsupported operating system %s" % os.name)
 
 
 
-'''
-= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-=                                            CONTROL PIPES                                            =
-= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-=                                                                                                     =
-=             These classes are used to create named pipes for remote procedure calls                 =
-=                                                                                                     =
-=  The class "ControlPipe" is the base class for a named pipe which handles remote procedure calls    =
-=     PosixControlPipe implements a control pipe for posix operating systems                          =
-=     NTControlPipe implements a control pipe for windows operating systems                           =
-=  The class "ControlPipeFactory" selects the right implementation for the running os                 =
-=                                                                                                     =
-= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-'''
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+# =                                            CONTROL PIPES                                            =
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+# =                                                                                                     =
+# =             These classes are used to create named pipes for remote procedure calls                 =
+# =                                                                                                     =
+# =  The class "ControlPipe" is the base class for a named pipe which handles remote procedure calls    =
+# =     PosixControlPipe implements a control pipe for posix operating systems                          =
+# =     NTControlPipe implements a control pipe for windows operating systems                           =
+# =  The class "ControlPipeFactory" selects the right implementation for the running os                 =
+# =                                                                                                     =
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                        CONTROL PIPE                                               -

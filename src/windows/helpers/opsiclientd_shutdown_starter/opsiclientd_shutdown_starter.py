@@ -26,8 +26,6 @@ Helper to trigger an event on shutdown.
 :license: GNU Affero General Public License version 3
 """
 
-__version__ = '4.0.6'
-
 import os
 import sys
 import time
@@ -35,6 +33,8 @@ import time
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Logger import Logger, LOG_DEBUG, LOG_WARNING
 from OPSI.Types import forceBool
+
+__version__ = '4.0.6'
 
 SECONDS_TO_SLEEP_AFTER_ACTION = 5
 

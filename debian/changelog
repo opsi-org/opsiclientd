@@ -1,3 +1,13 @@
+opsiclientd (4.0.91) stable; urgency=medium
+
+  * based on python-opsi 4.0.7.45-1
+  * support for new kioskclient
+  * increasing default max cachesize for WAN-Module
+  * default wql changed to avoid problems with wlan configurations
+  * new build for win8 and win2012 support
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Mon, 07 Aug 2017 23:11:49 +0200
+
 opsiclientd (4.0.90) stable; urgency=medium
 
   * based on python 4.0.7.26-1

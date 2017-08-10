@@ -1,53 +1,50 @@
 # -*- coding: utf-8 -*-
 """
-   = = = = = = = = = = = = = = = = = = = = =
-   =   ocdlib.Timeline                     =
-   = = = = = = = = = = = = = = = = = = = = =
-   
-   opsiclientd is part of the desktop management solution opsi
-   (open pc server integration) http://www.opsi.org
-   
-   Copyright (C) 2011 uib GmbH
-   
-   http://www.uib.de/
-   
-   All rights reserved.
-   
-   This program is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License version 2 as
-   published by the Free Software Foundation.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program; if not, write to the Free Software
-   Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-   
-   @copyright:	uib GmbH <info@uib.de>
-   @author: Jan Schneider <j.schneider@uib.de>
-   @license: GNU General Public License version 2
-   
-   Timeline event attributes:
-      * icon - url. This image will appear next to the title text in the timeline if (no end date) or (durationEvent = false). If a start and end date are supplied, and durationEvent is true, the icon is not shown. If icon attribute is not set, a default icon from the theme is used.
-      * image - url to an image that will be displayed in the bubble
-      * link - url. The bubble's title text be a hyper-link to this address.
-      * color - color of the text and tape (duration events) to display in the timeline. If the event has durationEvent = false, then the bar's opacity will be applied (default 20%). See durationEvent, above.
-      * textColor - color of the label text on the timeline. If not set, then the color attribute will be used.
-      * tapeImage and tapeRepeat Sets the background image and repeat style for the event's tape (or 'bar') on the Timeline. Overrides the color setting for the tape. Repeat style should be one of {repeat | repeat-x | repeat-y}, repeat is the default. See the Cubism example for a demonstration. Only applies to duration events.
-      * caption - additional event information shown when mouse is hovered over the Timeline tape or label. Uses the html title property. Looks like a tooltip. Plain text only. See the cubism example.
-      * classname - added to the HTML classnames for the event's label and tape divs. Eg classname attribute 'hot_event' will result in div classes of 'timeline-event-label hot_event' and 'timeline-event-tape hot_event' for the event's Timeline label and tape, respectively.
-      * description - will be displayed inside the bubble with the event's title and image.
+= = = = = = = = = = = = = = = = = = = = =
+=   ocdlib.Timeline                     =
+= = = = = = = = = = = = = = = = = = = = =
+
+opsiclientd is part of the desktop management solution opsi
+(open pc server integration) http://www.opsi.org
+
+Copyright (C) 2011-2017 uib GmbH
+
+http://www.uib.de/
+
+All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 2 as
+published by the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+@copyright:	uib GmbH <info@uib.de>
+@author: Jan Schneider <j.schneider@uib.de>
+@license: GNU General Public License version 2
+
+Timeline event attributes:
+  * icon - url. This image will appear next to the title text in the timeline if (no end date) or (durationEvent = false). If a start and end date are supplied, and durationEvent is true, the icon is not shown. If icon attribute is not set, a default icon from the theme is used.
+  * image - url to an image that will be displayed in the bubble
+  * link - url. The bubble's title text be a hyper-link to this address.
+  * color - color of the text and tape (duration events) to display in the timeline. If the event has durationEvent = false, then the bar's opacity will be applied (default 20%). See durationEvent, above.
+  * textColor - color of the label text on the timeline. If not set, then the color attribute will be used.
+  * tapeImage and tapeRepeat Sets the background image and repeat style for the event's tape (or 'bar') on the Timeline. Overrides the color setting for the tape. Repeat style should be one of {repeat | repeat-x | repeat-y}, repeat is the default. See the Cubism example for a demonstration. Only applies to duration events.
+  * caption - additional event information shown when mouse is hovered over the Timeline tape or label. Uses the html title property. Looks like a tooltip. Plain text only. See the cubism example.
+  * classname - added to the HTML classnames for the event's label and tape divs. Eg classname attribute 'hot_event' will result in div classes of 'timeline-event-label hot_event' and 'timeline-event-tape hot_event' for the event's Timeline label and tape, respectively.
+  * description - will be displayed inside the bubble with the event's title and image.
 """
 
-import time, threading
-from sys import version_info
-if (version_info >= (2,6)):
-	import json
-else:
-	import simplejson as json
+import json
+import time
+import threading
 
 from OPSI.Logger import *
 from OPSI.Types import *
