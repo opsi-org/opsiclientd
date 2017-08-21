@@ -1,3 +1,9 @@
+opsiclientd (4.0.92) stable; urgency=medium
+
+  * new version based on python-opsi 4.0.7.48-1
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Mon, 21 Aug 2017 16:10:32 +0200
+
 opsiclientd (4.0.91) stable; urgency=medium
 
   * based on python-opsi 4.0.7.45-1
