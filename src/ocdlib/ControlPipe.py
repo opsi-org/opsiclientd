@@ -1,34 +1,27 @@
 # -*- coding: utf-8 -*-
+
+# opsiclientd is part of the desktop management solution opsi
+# (open pc server integration) http://www.opsi.org
+# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-= = = = = = = = = = = = = = = = = = = = =
-=   opsiclientd.ControlPipe              =
-= = = = = = = = = = = = = = = = = = = = =
+Pipes for remote procedure calls.
 
-opsiclientd is part of the desktop management solution opsi
-(open pc server integration) http://www.opsi.org
-
-Copyright (C) 2010-2017 uib GmbH
-
-http://www.uib.de/
-
-All rights reserved.
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License version 2 as
-published by the Free Software Foundation.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-@copyright:	uib GmbH <info@uib.de>
-@author: Jan Schneider <j.schneider@uib.de>
-@license: GNU General Public License version 2
+:copyright: uib GmbH <info@uib.de>
+:author: Jan Schneider <j.schneider@uib.de>
+:license: GNU Affero General Public License version 3
 """
 
 import inspect
@@ -85,16 +78,16 @@ class ControlPipe(threading.Thread):
 		self._bufferSize = 4096
 		self._running = False
 		self._stopped = False
-		
+
 	def stop(self):
 		self._stopped = True
-	
+
 	def closePipe(self):
 		return
-	
+
 	def isRunning(self):
 		return self._running
-	
+
 	def executeRpc(self, rpc):
 		try:
 			rpc = fromJson(rpc)
@@ -103,7 +96,7 @@ class ControlPipe(threading.Thread):
 			return toJson(rpc.getResponse())
 		except Exception, e:
 			logger.logException(e)
-		
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # -                                     POSIX CONTROL PIPE                                            -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -111,7 +104,7 @@ class PosixControlPipe(ControlPipe):
 	def __init__(self, opsiclientdRpcInterface):
 		ControlPipe.__init__(self, opsiclientdRpcInterface)
 		self._pipeName = "/var/run/opsiclientd/fifo"
-	
+
 	def createPipe(self):
 		logger.debug2(u"Creating pipe %s" % self._pipeName)
 		if not os.path.exists( os.path.dirname(self._pipeName) ):
@@ -120,14 +113,14 @@ class PosixControlPipe(ControlPipe):
 			os.unlink(self._pipeName)
 		os.mkfifo(self._pipeName)
 		logger.debug2(u"Pipe %s created" % self._pipeName)
-	
+
 	def closePipe(self):
 		if self._pipe:
 			try:
 				os.close(self._pipe)
 			except Exception, e:
 				pass
-	
+
 	def run(self):
 		self._running = True
 		try:
@@ -164,7 +157,7 @@ class PosixControlPipe(ControlPipe):
 					logger.debug2(u"Number of bytes written: %d" % written)
 					if (len(result) != written):
 						logger.error("Failed to write all bytes to pipe (%d/%d)" % (written, len(result)))
-				
+
 				except Exception, e:
 					logger.error(u"Pipe IO error: %s" % forceUnicode(e))
 				try:
@@ -190,14 +183,14 @@ class NTControlPipeConnection(threading.Thread):
 		self._pipe = pipe
 		self._bufferSize = bufferSize
 		logger.debug(u"NTControlPipeConnection initiated")
-	
+
 	def closePipe(self):
 		if self._pipe:
 			try:
 				windll.kernel32.CloseHandle(self._pipe)
 			except:
 				pass
-	
+
 	def run(self):
 		self._running = True
 		try:
@@ -228,7 +221,7 @@ class NTControlPipeConnection(threading.Thread):
 				else:
 					logger.error(u"Failed to read from pipe")
 					break
-			
+
 			windll.kernel32.FlushFileBuffers(self._pipe)
 			windll.kernel32.DisconnectNamedPipe(self._pipe)
 			windll.kernel32.CloseHandle(self._pipe)
@@ -241,12 +234,12 @@ class NTControlPipeConnection(threading.Thread):
 # -                                          NT CONTROL PIPE                                          -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class NTControlPipe(ControlPipe):
-	
+
 	def __init__(self, opsiclientdRpcInterface):
 		threading.Thread.__init__(self)
 		ControlPipe.__init__(self, opsiclientdRpcInterface)
 		self._pipeName = "\\\\.\\pipe\\opsiclientd"
-	
+
 	def createPipe(self):
 		logger.info(u"Creating pipe %s" % self._pipeName)
 		PIPE_ACCESS_DUPLEX = 0x3
@@ -268,7 +261,7 @@ class NTControlPipe(ControlPipe):
 		if (self._pipe == INVALID_HANDLE_VALUE):
 			raise Exception(u"Failed to create named pipe")
 		logger.debug(u"Pipe %s created" % self._pipeName)
-	
+
 	#def createPipe(self):
 	#	logger.info(u"Creating pipe %s" % self._pipeName)
 	#	self._pipe = win32pipe.CreateNamedPipe(
@@ -281,7 +274,7 @@ class NTControlPipe(ControlPipe):
 	#			5000,
 	#			None)
 	#	logger.debug(u"Pipe %s created" % self._pipeName)
-	
+
 	def run(self):
 		ERROR_PIPE_CONNECTED = 535
 		self._running = True
@@ -370,7 +363,7 @@ class OpsiclientdRpcPipeInterface(object):
 		self.opsiclientd = opsiclientd
 		moduleName = u' %-30s' % (u'opsiclientd')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
-	
+
 	def getInterface(self):
 		methods = {}
 		for member in inspect.getmembers(self, inspect.ismethod):
@@ -388,57 +381,57 @@ class OpsiclientdRpcPipeInterface(object):
 				offset = len(params) - len(defaults)
 				for i in range(len(defaults)):
 					params[offset+i] = '*' + params[offset+i]
-			
+
 			if varargs:
 				for arg in forceList(varargs):
 					params.append('*' + arg)
-			
+
 			if keywords:
 				for arg in forceList(keywords):
 					params.append('**' + arg)
-			
+
 			logger.debug2(u"Interface method name '%s' params %s" % (methodName, params))
 			methods[methodName] = { 'name': methodName, 'params': params, 'args': args, 'varargs': varargs, 'keywords': keywords, 'defaults': defaults}
-		
+
 		methodList = []
 		methodNames = methods.keys()
 		methodNames.sort()
 		for methodName in methodNames:
 			methodList.append(methods[methodName])
 		return methodList
-	
+
 	def getPossibleMethods_listOfHashes(self):
 		return self.getInterface()
-	
+
 	def backend_getInterface(self):
 		return self.getInterface()
-	
+
 	def backend_info(self):
 		return {}
-	
+
 	def exit(self):
 		return
-	
+
 	def backend_exit(self):
 		return
-	
+
 	def getBlockLogin(self):
 		logger.notice(u"rpc getBlockLogin: blockLogin is '%s'" % self.opsiclientd._blockLogin)
 		return self.opsiclientd._blockLogin
-	
+
 	def isRebootRequested(self):
 		return self.isRebootTriggered()
-	
+
 	def isShutdownRequested(self):
 		return self.isShutdownTriggered()
-	
+
 	def isRebootTriggered(self):
 		return self.opsiclientd.isRebootTriggered()
-	
+
 	def isShutdownTriggered(self):
 		return self.opsiclientd.isShutdownTriggered()
-	
-	
-	
-	
+
+
+
+
 

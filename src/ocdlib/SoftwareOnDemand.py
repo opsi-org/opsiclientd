@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 # opsiclientd is part of the desktop management solution opsi
-#    (open pc server integration) http://www.opsi.org
-# Copyright (C) 2010-2016 uib GmbH <info@uib.de>
+# (open pc server integration) http://www.opsi.org
+# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-The Functionality for Software-on-Demand
+Self-service functionality.
 
 Functionality to work with certificates.
 Certificates play an important role in the encrypted communication
@@ -26,7 +26,7 @@ between servers and clients.
 .. versionadded:: 4.0.4
 
 :copyright: uib GmbH <info@uib.de>
-:author: Erol Ülükmen <e.ueluekmen@uib.de>
+:author: Erol Ueluekmen <e.ueluekmen@uib.de>
 :author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
