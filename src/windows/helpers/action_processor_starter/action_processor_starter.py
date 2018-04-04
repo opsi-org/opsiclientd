@@ -81,35 +81,35 @@ be = None
 
 try:
 	be = JSONRPCBackend(username = hostId, password = hostKey, address = u'https://localhost:%s/opsiclientd' % controlServerPort)
-	
+
 	if runAsUser:
 		logger.info(u"Impersonating user '%s'" % runAsUser)
 		imp = System.Impersonate(username = runAsUser, password = runAsPassword, desktop = actionProcessorDesktop)
 		imp.start(logonType = u'INTERACTIVE', newDesktop = True, createEnvironment = createEnvironment)
-	
+
 	else:
 		logger.info(u"Impersonating network account '%s'" % depotServerUsername)
 		imp = System.Impersonate(username = depotServerUsername, password = depotServerPassword, desktop = actionProcessorDesktop)
 		imp.start(logonType = u'NEW_CREDENTIALS')
-	
+
 	if depotRemoteUrl.split('/')[2] not in ('127.0.0.1', 'localhost'):
 		logger.notice(u"Mounting depot share %s" % depotRemoteUrl)
 		be.setStatusMessage(sessionId, _(u"Mounting depot share %s") % depotRemoteUrl)
-		
+
 		if runAsUser:
 			System.mount(depotRemoteUrl, depotDrive, username = depotServerUsername, password = depotServerPassword)
 		else:
 			System.mount(depotRemoteUrl, depotDrive)
 		depotShareMounted = True
-	
+
 	logger.notice(u"Starting action processor")
 	be.setStatusMessage(sessionId, _(u"Action processor is running"))
-	
+
 	imp.runCommand(actionProcessorCommand, timeoutSeconds = actionProcessorTimeout)
-	
+
 	logger.notice(u"Action processor ended")
 	be.setStatusMessage(sessionId, _(u"Action processor ended"))
-	
+
 except Exception, e:
 	logger.logException(e)
 	error = u"Failed to process action requests: %s" % e
@@ -119,7 +119,7 @@ except Exception, e:
 		except:
 			pass
 	logger.error(error)
-	
+
 if depotShareMounted:
 	try:
 		logger.notice(u"Unmounting depot share")
@@ -137,11 +137,3 @@ if be:
 		be.backend_exit()
 	except:
 		pass
-
-
-
-
-
-
-
-
