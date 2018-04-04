@@ -3,29 +3,29 @@
    = = = = = = = = = = = = = = = = = = = = =
    =   ocdlib.ControlServer                =
    = = = = = = = = = = = = = = = = = = = = =
-   
+
    opsiclientd is part of the desktop management solution opsi
    (open pc server integration) http://www.opsi.org
-   
-   Copyright (C) 2010 uib GmbH
-   
+
+   Copyright (C) 2010-2018 uib GmbH
+
    http://www.uib.de/
-   
+
    All rights reserved.
-   
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License version 2 as
    published by the Free Software Foundation.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-   
+
    @copyright:	uib GmbH <info@uib.de>
    @author: Jan Schneider <j.schneider@uib.de>
    @license: GNU General Public License version 2
@@ -127,13 +127,13 @@ class WorkerOpsiclientd(WorkerOpsi):
 		moduleName = u' %-30s' % (u'control server')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 		WorkerOpsi.__init__(self, service, request, resource)
-	
+
 	def _getCredentials(self):
 		(user, password) = self._getAuthorization()
 		if not user:
 			user = config.get('global', 'host_id')
 		return (user, password)
-		
+
 	def _errback(self, failure):
 		result = WorkerOpsi._errback(self, failure)
 		logger.debug(u"DEBUG: detected host: '%s'" % self.request.remoteAddr.host)
@@ -151,29 +151,29 @@ class WorkerOpsiclientd(WorkerOpsi):
 							% (self.service.authFailureCount[self.request.remoteAddr.host], self.request.remoteAddr.host))
 					return self._delayResult(60, result)
 		return result
-		
+
 	def _authenticate(self, result):
 		if self.session.authenticated:
 			return result
-		
+
 		try:
 			(self.session.user, self.session.password) = self._getCredentials()
-			
+
 			logger.notice(u"Authorization request from %s@%s (application: %s)" % (self.session.user, self.session.ip, self.session.userAgent))
-			
+
 			if not self.session.password:
 				raise Exception(u"No password from %s (application: %s)" % (self.session.ip, self.session.userAgent))
-			
+
 			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
 				if self.service.authFailureCount.has_key(self.request.remoteAddr.host):
 					del self.service.authFailureCount[self.request.remoteAddr.host]
 				return result
-				
+
 			if (os.name == 'nt'):
 				try:
-					# Hack to find and read the local-admin group and his members, 
+					# Hack to find and read the local-admin group and his members,
 					# that should also Work on french installations
-						
+
 					admingroupsid = "S-1-5-32-544"
 					resume = 0
 					while 1:
@@ -181,7 +181,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 						for group in data:
 							groupname = group.get("name", "")
 							pysid, string, integer = win32security.LookupAccountName(None, groupname)
-							
+
 							if admingroupsid in str(pysid):
 								memberresume = 0
 								while 1:
@@ -197,7 +197,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 											if self.service.authFailureCount.has_key(self.request.remoteAddr.host):
 												del self.service.authFailureCount[self.request.remoteAddr.host]
 											return result
-								    
+
 									if memberresume == 0:
 										break
 						if not resume:
@@ -209,37 +209,37 @@ class WorkerOpsiclientd(WorkerOpsi):
 						win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
 						# No exception raised => user authenticated
 						return result
-			
+
 			raise Exception(u"Invalid credentials")
 		except Exception as e:
 			raise OpsiAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
 		return result
-	
+
 class WorkerOpsiclientdJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientd.__init__(self, service, request, resource)
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
-	
+
 	def _getCallInstance(self, result):
 		self._callInstance = self.service._opsiclientdRpcInterface
 		self._callInterface = self.service._opsiclientdRpcInterface.getInterface()
 		#logger.debug2(u"Got call instance '%s' from service '%s' with interface: %s" % (self._callInstance, self.service, self._callInterface))
-	
+
 	def _processQuery(self, result):
 		return WorkerOpsiJsonRpc._processQuery(self, result)
-	
+
 	def _generateResponse(self, result):
 		return WorkerOpsiJsonRpc._generateResponse(self, result)
-	
+
 class WorkerOpsiclientdJsonInterface(WorkerOpsiclientdJsonRpc, WorkerOpsiJsonInterface):
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientdJsonRpc.__init__(self, service, request, resource)
 		WorkerOpsiJsonInterface.__init__(self, service, request, resource)
 		self.path = u'interface'
-		
+
 	def _getCallInstance(self, result):
 		return WorkerOpsiclientdJsonRpc._getCallInstance(self, result)
-	
+
 	def _generateResponse(self, result):
 		return WorkerOpsiJsonInterface._generateResponse(self, result)
 
@@ -247,29 +247,29 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientd.__init__(self, service, request, resource)
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
-		
+
 	def _getBackend(self, result):
 		if hasattr(self.session, 'callInstance') and hasattr(self.session, 'callInterface') and self.session.callInstance and self.session.callInterface:
 			return result
 		if not self.service._opsiclientd.getCacheService():
 			raise Exception(u'Cache service not running')
-		
+
 		self.session.callInstance = self.service._opsiclientd.getCacheService().getConfigBackend()
 		logger.notice(u'Backend created: %s' % self.session.callInstance)
 		self.session.callInterface = self.session.callInstance.backend_getInterface()
 		return result
-	
+
 	def _getCallInstance(self, result):
 		self._getBackend(result)
 		self._callInstance = self.session.callInstance
 		self._callInterface = self.session.callInterface
-	
+
 	def _processQuery(self, result):
 		return WorkerOpsiJsonRpc._processQuery(self, result)
-		
+
 	def _generateResponse(self, result):
 		return WorkerOpsiJsonRpc._generateResponse(self, result)
-	
+
 	def _renderError(self, failure):
 		return WorkerOpsiJsonRpc._renderError(self, failure)
 
@@ -279,10 +279,10 @@ class WorkerCacheServiceJsonInterface(WorkerCacheServiceJsonRpc, WorkerOpsiJsonI
 		WorkerCacheServiceJsonRpc.__init__(self, service, request, resource)
 		WorkerOpsiJsonInterface.__init__(self, service, request, resource)
 		self.path = u'rpcinterface'
-		
+
 	def _getCallInstance(self, result):
 		return WorkerCacheServiceJsonRpc._getCallInstance(self, result)
-	
+
 	def _generateResponse(self, result):
 		return WorkerOpsiJsonInterface._generateResponse(self, result)
 
@@ -290,17 +290,17 @@ class WorkerCacheServiceJsonInterface(WorkerCacheServiceJsonRpc, WorkerOpsiJsonI
 class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientd.__init__(self, service, request, resource)
-	
+
 	def _processQuery(self, result):
 		return result
-	
+
 	def _generateResponse(self, result):
 		logger.info(u"Creating opsiclientd info page")
-		
+
 		#if not self.session.isAdmin:
 		#	raise OpsiAuthenticationError(u"Permission denied")
-		
-		
+
+
 		#log = u''
 		#regex = re.compile('^\[(\d)\].*')
 		#try:
@@ -331,7 +331,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 		#		log += u'</span>'
 		#except Exception, e:
 		#	logger.error(e)
-		
+
 		html = infoPage % {
 			'head': timeline.getHtmlHead(),
 			'hostname': config.get('global', 'host_id'),
@@ -353,7 +353,7 @@ class ResourceRoot(resource.Resource):
 
 class ResourceOpsiclientd(ResourceOpsi):
 	WorkerClass = WorkerOpsiclientd
-	
+
 class ResourceOpsiclientdJsonRpc(ResourceOpsiJsonRpc):
 	WorkerClass = WorkerOpsiclientdJsonRpc
 
@@ -368,7 +368,7 @@ class ResourceCacheServiceJsonInterface(ResourceOpsiJsonInterface):
 
 class ResourceOpsiclientdInfo(ResourceOpsiclientd):
 	WorkerClass = WorkerOpsiclientdInfo
-	
+
 	def __init__(self, service):
 		ResourceOpsiclientd.__init__(self, service)
 
@@ -388,9 +388,9 @@ class ControlServer(OpsiService, threading.Thread):
 		self._server = None
 		self._opsiclientdRpcInterface = OpsiclientdRpcInterface(self._opsiclientd)
 		logger.info(u"ControlServer initiated")
-		
+
 		self.authFailureCount = {}
-		
+
 	def run(self):
 		self._running = True
 		try:
@@ -404,17 +404,17 @@ class ControlServer(OpsiService, threading.Thread):
 			logger.notice(u"Control server is accepting HTTPS requests on port %d" % self._httpsPort)
 			if not reactor.running:
 				reactor.run(installSignalHandlers=0)
-			
+
 		except Exception as e:
 			logger.logException(e)
 		logger.notice(u"Control server exiting")
 		self._running = False
-	
+
 	def stop(self):
 		if self._server:
 			self._server.stopListening()
 		self._running = False
-	
+
 	def createRoot(self):
 		if self._staticDir:
 			if os.path.isdir(self._staticDir):
@@ -430,26 +430,26 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root.putChild("rpcinterface", ResourceCacheServiceJsonInterface(self))
 		self._root.putChild("info.html", ResourceOpsiclientdInfo(self))
 		self._root.putChild("kiosk",ResourceKioskJsonRpc(self))
-		
+
 class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def __init__(self, opsiclientd):
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
-	
+
 	def noop(self, arg):
 		pass
-	
+
 	def cacheService_syncConfig(self):
 		return self.opsiclientd.getCacheService().syncConfig()
-	
+
 	def cacheService_getConfigCacheState(self):
 		return self.opsiclientd.getCacheService().getConfigCacheState()
-	
+
 	def cacheService_getProductCacheState(self):
 		return self.opsiclientd.getCacheService().getProductCacheState()
-	
+
 	def cacheService_getConfigModifications(self):
 		return self.opsiclientd.getCacheService().getConfigModifications()
-		
+
 	def cacheService_deleteCache(self):
 		cacheService = self.opsiclientd.getCacheService()
 		cacheService.setConfigCacheObsolete()
@@ -459,10 +459,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				deleteDir = os.path.join(productCacheDir, product)
 				System.shutil.rmtree(deleteDir)
 		return u"product cache deleted."
-	
+
 	def timeline_getEvents(self):
 		return timeline.getEvents()
-	
+
 	def setBlockLogin(self, blockLogin):
 		self.opsiclientd.setBlockLogin(bool(blockLogin))
 		logger.notice(u"rpc setBlockLogin: blockLogin set to '%s'" % self.opsiclientd._blockLogin)
@@ -470,21 +470,21 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			return u"Login blocker is on"
 		else:
 			return u"Login blocker is off"
-	
+
 	def readLog(self, logType='opsiclientd'):
 		logType = forceUnicode(logType)
 		if not logType in ('opsiclientd'):
 			raise ValueError(u"Unknown log type '%s'" % logType)
-		
+
 		logger.notice(u"rpc readLog: reading log of type '%s'" % logType)
-		
+
 		if (logType == 'opsiclientd'):
 			f = codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace')
 			data = f.read()
 			f.close()
 			return data
 		return u""
-	
+
 	def runCommand(self, command, sessionId=None, desktop=None):
 		command = forceUnicode(command)
 		if not command:
@@ -500,47 +500,47 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		logger.notice(u"rpc runCommand: executing command '%s' in session %d on desktop '%s'" % (command, sessionId, desktop))
 		System.runCommandInSession(command = command, sessionId = sessionId, desktop = desktop, waitForProcessEnding = False)
 		return u"command '%s' executed" % command
-	
+
 	def execute(self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300):
 		return System.execute(cmd = command, waitForEnding = waitForEnding, captureStderr = captureStderr, encoding = encoding, timeout = timeout)
-		
+
 	def logoffCurrentUser(self):
 		logger.notice(u"rpc logoffCurrentUser: logging of current user now")
 		System.logoffCurrentUser()
-	
+
 	def lockWorkstation(self):
 		logger.notice(u"rpc lockWorkstation: locking workstation now")
 		System.lockWorkstation()
-	
+
 	def shutdown(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
 		logger.notice(u"rpc shutdown: shutting down computer in %s seconds" % waitSeconds)
 		System.shutdown(wait = waitSeconds)
-	
+
 	def reboot(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
 		logger.notice(u"rpc reboot: rebooting computer in %s seconds" % waitSeconds)
 		System.reboot(wait = waitSeconds)
-		
+
 	def uptime(self):
 		uptime = int(time.time() - self.opsiclientd._startupTime)
 		logger.notice(u"rpc uptime: opsiclientd is running for %d seconds" % uptime)
 		return uptime
-	
+
 	def fireEvent(self, name):
 		name = forceUnicode(name)
 		if not name in eventGenerators.keys():
 			raise ValueError(u"Event '%s' not in list of known events: %s" % (name, ', '.join(eventGenerators.keys())))
 		logger.notice(u"Firing event '%s'" % name)
 		eventGenerators[name].createAndFireEvent()
-		
+
 	def setStatusMessage(self, sessionId, message):
 		sessionId = forceInt(sessionId)
 		message = forceUnicode(message)
 		ept = self.opsiclientd.getEventProcessingThread(sessionId)
 		logger.notice(u"rpc setStatusMessage: Setting status message to '%s'" % message)
 		ept.setStatusMessage(message)
-		
+
 	def isEventRunning(self, name):
 		#sessionId = sessionId = System.getActiveSessionId(self.opsiclientd._winApiBugCommand)
 		running = False
@@ -549,37 +549,37 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				running = True
 				break
 		return running
-		
+
 	def isInstallationPending(self):
 		return forceBool(self.opsiclientd.isInstallationPending())
-	
+
 	def getCurrentActiveDesktopName(self, sessionId=None):
 		desktop = self.opsiclientd.getCurrentActiveDesktopName(sessionId)
 		logger.notice(u"rpc getCurrentActiveDesktopName: current active desktop name is '%s'" % desktop)
 		return desktop
-	
+
 	def setCurrentActiveDesktopName(self, sessionId, desktop):
 		sessionId = forceInt(sessionId)
 		desktop = forceUnicode(desktop)
 		self.opsiclientd._currentActiveDesktopName[sessionId] = desktop
 		logger.notice(u"rpc setCurrentActiveDesktopName: current active desktop name for session %s set to '%s'" % (sessionId, desktop))
-	
+
 	def switchDesktop(self, desktop, sessionId=None):
 		self.opsiclientd.switchDesktop(desktop, sessionId)
-		
+
 	def set(self, section, option, value):
 		section = forceUnicode(section)
 		option = forceUnicode(option)
 		value = forceUnicode(value)
 		return config.set(section, option, value)
-	
+
 	def updateConfigFile(self):
 		config.updateConfigFile()
-		
+
 	def showPopup(self, message):
 		message = forceUnicode(message)
 		self.opsiclientd.showPopup(message)
-	
+
 	def deleteServerCerts(self):
 		certDir = config.get('global', 'server_cert_dir')
 		if os.path.exists(certDir):
@@ -587,10 +587,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				if "cacert.pem" in f.strip().lower():
 					continue
 				os.remove(os.path.join(certDir, f))
-	
+
 	def getActiveSessions(self):
 		sessions = []
-		
+
 		for session in System.getActiveSessionInformation(self.opsiclientd._winApiBugCommand):
 			year      = 0
 			month   = 0
@@ -627,7 +627,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			session['Sid'] = unicode(session['Sid']).replace(u'PySID:', u'')
 			sessions.append(session)
 		return sessions
-		
+
 	def stressConfigserver(self, seconds=30):
 		seconds = forceInt(seconds)
 		serviceConnection = ServiceConnection(loadBalance = False)
@@ -654,7 +654,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				if ((time.time() - start) >= seconds): return
 		finally:
 			serviceConnection.disconnectConfigService()
-		
+
 	def getBackendInfo(self):
 		serviceConnection = ServiceConnection(loadBalance = False)
 		serviceConnection.connectConfigService()
@@ -665,28 +665,3 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		finally:
 			serviceConnection.disconnectConfigService()
 			return backendinfo
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
