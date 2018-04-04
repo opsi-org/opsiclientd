@@ -439,7 +439,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					isError     = True)
 					raise
 		except Exception as e:
-			logger.error(u"Errors occured while syncing config to server: %s" % e)
+			logger.error(u"Errors occurred while syncing config to server: %s" % e)
 			# Do not sync from server in this case!
 			self._syncConfigFromServerRequested = False
 		if eventId:
@@ -535,7 +535,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					isError     = True)
 					raise
 		except Exception as e:
-			logger.error(u"Errors occured while syncing config from server: %s" % e)
+			logger.error(u"Errors occurred while syncing config from server: %s" % e)
 		self.disconnectConfigService()
 		self._working = False
 
@@ -830,10 +830,10 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						logger.logException(e)
 						errorsOccured.append(forceUnicode(e))
 					if errorsOccured:
-						logger.error(u"Errors occured while caching products %s: %s" % (', '.join(productIds), ', '.join(errorsOccured)))
+						logger.error(u"Errors occurred while caching products %s: %s" % (', '.join(productIds), ', '.join(errorsOccured)))
 						timeline.addEvent(
 							title       = u"Failed to cache products",
-							description = u"Errors occured while caching products %s: %s" % (', '.join(productIds), ', '.join(errorsOccured)),
+							description = u"Errors occurred while caching products %s: %s" % (', '.join(productIds), ', '.join(errorsOccured)),
 							category    = u"product_caching",
 							isError     = True)
 					else:

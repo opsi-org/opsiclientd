@@ -3,6 +3,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
+# Copyright (C) 2014-2017 uib GmbH
 
 # Copyright (C) 2010-2015 uib GmbH
 # http://www.uib.de/

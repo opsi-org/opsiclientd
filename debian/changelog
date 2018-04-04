@@ -1,3 +1,39 @@
+opsiclientd (4.0.92) stable; urgency=medium
+
+  * new version based on python-opsi 4.0.7.48-1
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Mon, 21 Aug 2017 16:10:32 +0200
+
+opsiclientd (4.0.91) stable; urgency=medium
+
+  * based on python-opsi 4.0.7.45-1
+  * support for new kioskclient
+  * increasing default max cachesize for WAN-Module
+  * default wql changed to avoid problems with wlan configurations
+  * new build for win8 and win2012 support
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Mon, 07 Aug 2017 23:11:49 +0200
+
+opsiclientd (4.0.90) stable; urgency=medium
+
+  * based on python 4.0.7.26-1
+  * new plattform dependend build for windows
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 11 Oct 2016 23:32:02 +0200
+
+opsiclientd (4.0.89) stable; urgency=low
+
+  * do not use proxy if connecting to localhost (WAN-Mode)
+  * based python-opsi 4.0.7.21-1
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 21 Sep 2016 14:58:32 +0200
+
+opsiclientd (4.0.88) stable; urgency=medium
+
+  * opsi Root CA fixed
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Mon, 31 Aug 2016 15:44:51 +0200
+
 opsiclientd (4.0.87) stable; urgency=medium
 
   * verifyServerCert and verifyServerCertbyCA fix

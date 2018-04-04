@@ -3,7 +3,7 @@
 # This module is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
 #
-# Copyright (C) 2006-2010, 2013-2014 uib GmbH <info@uib.de>
+# Copyright (C) 2006-2017 uib GmbH <info@uib.de>
 # All rights reserved.
 #
 # This program is free software: you can redistribute it and/or modify
@@ -50,7 +50,6 @@ from ocdlib.Localization import _
 from ocdlib.Config import Config, getLogFormat
 from ocdlib.Exceptions import CanceledByUserError
 
-
 logger = Logger()
 config = Config()
 
@@ -83,7 +82,7 @@ def isConfigServiceReachable(timeout=5):
 
 
 class ServiceConnection(object):
-	def __init__(self, loadBalance = False):
+	def __init__(self, loadBalance=False):
 		self._loadBalance = forceBool(loadBalance)
 		self._configServiceUrl = None
 		self._configService = None
@@ -207,7 +206,7 @@ class ServiceConnection(object):
 					except Exception as e:
 						logger.error(u"Failed to sync time: '%s'" % e)
 
-				if (urlIndex > 0):
+				if urlIndex > 0:
 					modules = None
 					helpermodules = {}
 					if serviceConnectionThread.configService.isLegacyOpsi():
@@ -230,7 +229,7 @@ class ServiceConnection(object):
 						self.connectionFailed(u"Modules file expired")
 
 					logger.info(u"Verifying modules file signature")
-					publicKey = keys.Key.fromString(data = base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
+					publicKey = keys.Key.fromString(data=base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
 					data = u''
 					mks = modules.keys()
 					mks.sort()
@@ -238,7 +237,7 @@ class ServiceConnection(object):
 						if module in ('valid', 'signature'):
 							continue
 
-						if helpermodules.has_key(module):
+						if module in helpermodules:
 							val = helpermodules[module]
 							if int(val) > 0:
 								modules[module] = True
@@ -335,6 +334,11 @@ class ServiceConnectionThread(KillableThread):
 
 					if len(self._username.split('.')) < 3:
 						raise Exception(u"Domain missing in username '%s'" % self._username)
+
+					if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
+						if proxyURL:
+							logger.debug("Connecting to localhost, connecting directly without proxy")
+							proxyURL = None
 
 					self.configService = JSONRPCBackend(
 						address=self._configServiceUrl,

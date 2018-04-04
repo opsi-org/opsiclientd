@@ -53,6 +53,7 @@ def tree(dst, src):
 		if not newfiles:
 			continue
 		found_files.append( (os.path.normpath(os.path.join(dst, root)), newfiles) )
+
 	return found_files
 
 
@@ -113,30 +114,29 @@ data_files = []
 data_files += get_locales_target_and_source()
 
 if RUNS_ON_WINDOWS:
-	data_files += tree('opsiclientd', 'static_html')
-	data_files += [
-		('Microsoft.VC90.MFC', glob.glob('Microsoft.VC90.MFC\\*.*')),
-		('Microsoft.VC90.CRT', glob.glob('Microsoft.VC90.CRT\\*.*')),
-		('lib\\Microsoft.VC90.MFC', glob.glob('Microsoft.VC90.MFC\\*.*')),
-		('lib\\Microsoft.VC90.CRT', glob.glob('Microsoft.VC90.CRT\\*.*')),
-		('notifier', [
-			'windows\\helpers\\notifier\\event.ini',
-			'windows\\helpers\\notifier\\action.ini',
-			'windows\\helpers\\notifier\\userlogin.ini',
-			'windows\\helpers\\notifier\\wait_for_gui.ini',
-			'windows\\helpers\\notifier\\block_login.ini',
-			'windows\\helpers\\notifier\\popup.ini',
-			'windows\\helpers\\notifier\\shutdown.ini',
-			'windows\\helpers\\notifier\\event.bmp',
-			'windows\\helpers\\notifier\\action.bmp',
-			'windows\\helpers\\notifier\\userlogin.bmp',
-			'windows\\helpers\\notifier\\wait_for_gui.bmp',
-			'windows\\helpers\\notifier\\block_login.bmp',
-			'windows\\helpers\\notifier\\popup.bmp',
-			'windows\\opsi.ico'
-			]),
-		('opsiclientd', [os.path.join('windows', 'opsiclientd.conf')]),
-		(os.path.join('opsiclientd', 'extend.d'), glob.glob(os.path.join('..', 'extend.d', '*.*'))),
+	packages.append("cryptography")
+
+	data_files = [
+		('VC90', glob.glob(r'C:\Windows\winsxs\x86_microsoft.vc90.crt_1fc8b3b9a1e18e3b_9.0.21022.8_none_bcb86ed6ac711f91\*.*')),
+		('VC90', glob.glob(r'C:\Windows\winsxs\Manifests\x86_microsoft.vc90.crt_1fc8b3b9a1e18e3b_9.0.21022.8_none_bcb86ed6ac711f91.manifest')),
+		('notifier',                      [	'windows\\helpers\\notifier\\event.ini',
+							'windows\\helpers\\notifier\\action.ini',
+							'windows\\helpers\\notifier\\userlogin.ini',
+							'windows\\helpers\\notifier\\wait_for_gui.ini',
+							'windows\\helpers\\notifier\\block_login.ini',
+							'windows\\helpers\\notifier\\popup.ini',
+							'windows\\helpers\\notifier\\shutdown.ini',
+							'windows\\helpers\\notifier\\event.bmp',
+							'windows\\helpers\\notifier\\action.bmp',
+							'windows\\helpers\\notifier\\userlogin.bmp',
+							'windows\\helpers\\notifier\\wait_for_gui.bmp',
+							'windows\\helpers\\notifier\\block_login.bmp',
+							'windows\\helpers\\notifier\\popup.bmp',
+							'windows\\opsi.ico' ]),
+		('opsiclientd',                   [	'windows\\opsiclientd.conf']),
+		('locale\\de\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_de.mo']),
+		('locale\\fr\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_fr.mo']),
+		('opsiclientd\\extend.d', glob.glob('..\\extend.d\*.*')),
 	]
 else:
 	data_files += [

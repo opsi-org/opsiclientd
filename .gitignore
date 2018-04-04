@@ -10,3 +10,4 @@
 opsiclientd.tar.gz
 src/build/*
 *.sublime-*
+.idea
