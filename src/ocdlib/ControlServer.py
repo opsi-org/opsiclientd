@@ -595,29 +595,30 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		sessions = []
 
 		for session in System.getActiveSessionInformation(self.opsiclientd._winApiBugCommand):
-			year      = 0
-			month   = 0
-			day        = 0
-			hour      = 0
-			minute  = 0
-			second  = 0
-			logger.debug(u"session to check for LogonTime '%s'" % session)
-			if isinstance(session['LogonTime'],str):
+			year = 0
+			month = 0
+			day = 0
+			hour = 0
+			minute = 0
+			second = 0
+			logger.debug(u"session to check for LogonTime {0!r}", session)
+
+			if isinstance(session['LogonTime'], str):
 				match = None
 				pattern = re.compile("^(\d+)/(\d+)/(\d+)\s(\d+):(\d+):(\d+)")
 				match = pattern.match(session['LogonTime'])
 				if match:
-					year    = match.group(3)
+					year = match.group(3)
 					month = match.group(1)
-					day      = match.group(2)
-					hour     = match.group(4)
+					day = match.group(2)
+					hour = match.group(4)
 					minute = match.group(5)
 					second = match.group(6)
 			else:
-				year    = session['LogonTime'].year
+				year = session['LogonTime'].year
 				month = session['LogonTime'].month
-				day      = session['LogonTime'].day
-				hour     = session['LogonTime'].hour
+				day = session['LogonTime'].day
+				hour = session['LogonTime'].hour
 				minute = session['LogonTime'].minute
 				second = session['LogonTime'].second
 
