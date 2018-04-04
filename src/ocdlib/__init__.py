@@ -41,29 +41,28 @@ from OPSI import System
 logger = Logger()
 
 
-
 def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True, masterOnly=False):
 	productIds = forceProductIdList(productIds)
-	
+
 	logger.notice(u"Selecting depot for products %s" % productIds)
-	
+
 	if event and event.eventConfig.useCachedProducts:
 		cacheDepotDir = os.path.join(config.get('cache_service', 'storage_dir'), 'depot').replace('\\', '/').replace('//', '/')
 		logger.notice(u"Using depot cache: %s" % cacheDepotDir)
 		config.setTemporaryDepotDrive(cacheDepotDir.split(':')[0] + u':')
 		config.set('depot_server', 'url', 'smb://localhost/noshare/' + ('/'.join(cacheDepotDir.split('/')[1:])))
 		return
-	
+
 	if not configService:
 		raise Exception(u"Not connected to config service")
-	
+
 	if configService.isLegacyOpsi():
 		return
-	
+
 	selectedDepot = None
-	
+
 	configService.backend_setOptions({"addConfigStateDefaults": True})
-	
+
 	depotIds = []
 	dynamicDepot = False
 	depotProtocol = 'cifs'
@@ -92,7 +91,7 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 			dynamicDepot = forceBool(configState.values[0])
 		elif (configState.configId == 'clientconfig.depot.protocol') and configState.values and configState.values[0] and (configState.values[0] == 'webdav'):
 			depotProtocol = 'webdav'
-	
+
 	if dynamicDepot:
 		if not depotIds:
 			logger.info(u"Dynamic depot selection enabled")
@@ -100,7 +99,7 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 			logger.info(u"Dynamic depot selection enabled, but depot is already selected")
 	else:
 		logger.info(u"Dynamic depot selection disabled")
-	
+
 	if not depotIds:
 		clientToDepotservers = configService.configState_getClientToDepotserver(
 				clientIds  = [ config.get('global', 'host_id') ],
@@ -108,11 +107,11 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 				productIds = productIds)
 		if not clientToDepotservers:
 			raise Exception(u"Failed to get depot config from service")
-		
+
 		depotIds = [ clientToDepotservers[0]['depotId'] ]
 		if dynamicDepot:
 			depotIds.extend(clientToDepotservers[0].get('alternativeDepotIds', []))
-		
+
 	masterDepot = None
 	alternativeDepots = []
 	for depot in configService.host_getObjects(type = 'OpsiDepotserver', id = depotIds):
@@ -122,7 +121,7 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 			alternativeDepots.append(depot)
 	if not masterDepot:
 		raise Exception(u"Failed to get info for master depot '%s'" % depotIds[0])
-	
+
 	logger.info(u"Master depot for products %s is %s" % (productIds, masterDepot.id))
 	selectedDepot = masterDepot
 	if dynamicDepot:
@@ -130,9 +129,9 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 			logger.info(u"Got alternative depots for products: %s" % productIds)
 			for i in range(len(alternativeDepots)):
 				logger.info(u"%d. alternative depot is %s" % ((i+1), alternativeDepots[i].id))
-			
+
 			try:
-					
+
 				defaultInterface = None
 				networkInterfaces = System.getNetworkInterfaces()
 				if not networkInterfaces:
@@ -153,9 +152,9 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 					"netmask":        forceUnicode(defaultInterface.ipAddressList.ipMask),
 					"defaultGateway": forceUnicode(defaultInterface.gatewayList.ipAddress)
 				}
-				
+
 				logger.info(u"Passing client configuration to depot selection algorithm: %s" % clientConfig)
-				
+
 				depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()
 				logger.debug2(u"depotSelectionAlgorithm:\n%s" % depotSelectionAlgorithm)
 				exec(depotSelectionAlgorithm)
@@ -173,6 +172,3 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 		config.set('depot_server', 'url', selectedDepot.depotWebdavUrl)
 	else:
 		config.set('depot_server', 'url', selectedDepot.depotRemoteUrl)
-
-
-
