@@ -622,14 +622,20 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				minute = session['LogonTime'].minute
 				second = session['LogonTime'].second
 
-			if (month < 10): month = '0%d' % month
-			if (day < 10): day = '0%d' % day
-			if (hour < 10): hour = '0%d' % hour
-			if (minute < 10): minute = '0%d' % minute
-			if (second < 10): second = '0%d' % second
+			if month < 10:
+				month = '0%d' % month
+			if day < 10:
+				day = '0%d' % day
+			if hour < 10:
+				hour = '0%d' % hour
+			if minute < 10:
+				minute = '0%d' % minute
+			if second < 10:
+				second = '0%d' % second
 			session['LogonTime'] = u'%s-%s-%s %s:%s:%s' % (year, month, day, hour, minute, second)
 			session['Sid'] = unicode(session['Sid']).replace(u'PySID:', u'')
 			sessions.append(session)
+
 		return sessions
 
 	def stressConfigserver(self, seconds=30):
