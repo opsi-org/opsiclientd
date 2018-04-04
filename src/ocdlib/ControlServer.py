@@ -529,10 +529,13 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def fireEvent(self, name):
 		name = forceUnicode(name)
-		if not name in eventGenerators.keys():
+		try:
+			event = eventGenerators[name]
+		except KeyError:
 			raise ValueError(u"Event '%s' not in list of known events: %s" % (name, ', '.join(eventGenerators.keys())))
+
 		logger.notice(u"Firing event '%s'" % name)
-		eventGenerators[name].createAndFireEvent()
+		event.createAndFireEvent()
 
 	def setStatusMessage(self, sessionId, message):
 		sessionId = forceInt(sessionId)
