@@ -7,7 +7,7 @@
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
-Copyright (C) 2011 uib GmbH
+Copyright (C) 2011-2017 uib GmbH
 
 http://www.uib.de/
 
@@ -41,6 +41,7 @@ Timeline event attributes:
   * classname - added to the HTML classnames for the event's label and tape divs. Eg classname attribute 'hot_event' will result in div classes of 'timeline-event-label hot_event' and 'timeline-event-tape hot_event' for the event's Timeline label and tape, respectively.
   * description - will be displayed inside the bubble with the event's title and image.
 """
+
 import json
 import os
 import time
