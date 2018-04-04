@@ -78,15 +78,15 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 				config.set('depot_server', 'url', depotUrl)
 				logger.notice(u"Depot url was set to '%s' from configState %s" % (depotUrl, configState))
 				return
-			except Exception, e:
-				logger.error(u"Failed to set depot url from values %s in configState %s: %s" % (configState.values, configState, e))
+			except Exception as error:
+				logger.error(u"Failed to set depot url from values %s in configState %s: %s" % (configState.values, configState, error))
 		elif (configState.configId == 'opsiclientd.depot_server.depot_id') and configState.values:
 			try:
 				depotId = forceHostId(configState.values[0])
 				depotIds.append(depotId)
 				logger.notice(u"Depot was set to '%s' from configState %s" % (depotId, configState))
-			except Exception, e:
-				logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, e))
+			except Exception as error:
+				logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, error))
 		elif not masterOnly and (configState.configId == 'clientconfig.depot.dynamic') and configState.values:
 			dynamicDepot = forceBool(configState.values[0])
 		elif (configState.configId == 'clientconfig.depot.protocol') and configState.values and configState.values[0] and (configState.values[0] == 'webdav'):
@@ -161,9 +161,9 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 				selectedDepot = selectDepot(clientConfig = clientConfig, masterDepot = masterDepot, alternativeDepots = alternativeDepots)
 				if not selectedDepot:
 					selectedDepot = masterDepot
-			except Exception, e:
-				logger.logException(e)
-				logger.error(u"Failed to select depot: %s" % e)
+			except Exception as error:
+				logger.logException(error)
+				logger.error(u"Failed to select depot: %s" % error)
 		else:
 			logger.info(u"No alternative depot for products: %s" % productIds)
 	logger.notice(u"Selected depot is: %s" % selectedDepot)
