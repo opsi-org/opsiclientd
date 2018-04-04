@@ -23,15 +23,13 @@ import time
 from hashlib import md5
 from twisted.conch.ssh import keys
 
-# OPSI imports
 from OPSI.Logger import *
 from OPSI.Types import *
 from OPSI.Object import *
 from OPSI.Util.Repository import *
-from OPSI.Util import md5sum
 from OPSI import System
 from OPSI.Util.HTTP import urlsplit
-from OPSI.Backend.Backend import ExtendedConfigDataBackend, BackendModificationListener
+from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.BackendManager import BackendExtender
 from OPSI.Backend.Cache import ClientCacheBackend
 from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker
@@ -39,7 +37,6 @@ from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTr
 from ocdlib.Config import Config
 from ocdlib.State import State
 from ocdlib.Events import SyncCompletedEventGenerator, getEventGenerators
-from ocdlib.Localization import _
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.Timeline import Timeline
 
@@ -47,6 +44,7 @@ logger = Logger()
 config = Config()
 state = State()
 timeline = Timeline()
+
 
 class CacheService(threading.Thread):
 	def __init__(self, opsiclientd):
