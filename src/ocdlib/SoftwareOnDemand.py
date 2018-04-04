@@ -612,7 +612,6 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 			self._fireEvent = False
 		return result
 
+
 class ResourceKioskJsonRpc(ResourceOpsi):
 	WorkerClass = WorkerKioskJsonRpc
-
-

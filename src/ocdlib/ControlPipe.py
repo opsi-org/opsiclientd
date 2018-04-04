@@ -430,8 +430,3 @@ class OpsiclientdRpcPipeInterface(object):
 
 	def isShutdownTriggered(self):
 		return self.opsiclientd.isShutdownTriggered()
-
-
-
-
-

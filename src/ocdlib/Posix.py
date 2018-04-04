@@ -2,7 +2,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2010-2016 uib GmbH <info@uib.de>
+# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -53,20 +53,20 @@ class OpsiclientdInit(object):
 	def __init__(self):
 		logger.debug(u"OpsiclientdPosixInit")
 		argv = sys.argv[1:]
-		
+
 		# Call signalHandler on signal SIGHUP, SIGTERM, SIGINT
 		signal(SIGHUP,  self.signalHandler)
 		signal(SIGTERM, self.signalHandler)
 		signal(SIGINT,  self.signalHandler)
-		
+
 		# Process command line arguments
 		try:
 			(opts, args) = getopt.getopt(argv, "vDl:")
-		
+
 		except getopt.GetoptError:
 			self.usage()
 			sys.exit(1)
-		
+
 		daemon = False
 		logLevel = LOG_NOTICE
 		for (opt, arg) in opts:
@@ -82,20 +82,20 @@ class OpsiclientdInit(object):
 			self.daemonize()
 		else:
 			logger.setConsoleLevel(logLevel)
-		
+
 		# Start opsiclientd
 		self._opsiclientd = OpsiclientdPosix()
 		self._opsiclientd.start()
 		#self._opsiclientd.join()
 		while self._opsiclientd.isRunning():
 			time.sleep(1)
-		
+
 	def signalHandler(self, signo, stackFrame):
 		if (signo == SIGHUP):
 			return
 		if (signo == SIGTERM or signo == SIGINT):
 			self._opsiclientd.stop()
-	
+
 	def usage(self):
 		print u"\nUsage: %s [-v] [-D]" % os.path.basename(sys.argv[0])
 		print u"Options:"
@@ -104,7 +104,7 @@ class OpsiclientdInit(object):
 		print u"  -l    Set log level (default: 4)"
 		print u"        0=nothing, 1=critical, 2=error, 3=warning, 4=notice, 5=info, 6=debug, 7=debug2, 9=confidential"
 		print u""
-	
+
 	def daemonize(self):
 		return
 		# Fork to allow the shell to return and to call setsid
@@ -115,12 +115,12 @@ class OpsiclientdInit(object):
 				sys.exit(0)
 		except OSError, e:
 			raise Exception(u"First fork failed: %e" % forceUnicode(e))
-		
+
 		# Do not hinder umounts
 		os.chdir("/")
 		# Create a new session
 		os.setsid()
-		
+
 		# Fork a second time to not remain session leader
 		try:
 			pid = os.fork()
@@ -128,24 +128,22 @@ class OpsiclientdInit(object):
 				sys.exit(0)
 		except OSError, e:
 			raise Exception(u"Second fork failed: %e" % forceUnicode(e))
-		
+
 		logger.setConsoleLevel(LOG_NONE)
-		
+
 		# Close standard output and standard error.
 		os.close(0)
 		os.close(1)
 		os.close(2)
-		
+
 		# Open standard input (0)
 		if (hasattr(os, "devnull")):
 			os.open(os.devnull, os.O_RDWR)
 		else:
 			os.open("/dev/null", os.O_RDWR)
-		
+
 		# Duplicate standard input to standard output and standard error.
 		os.dup2(0, 1)
 		os.dup2(0, 2)
 		sys.stdout = logger.getStdout()
 		sys.stderr = logger.getStderr()
-
-

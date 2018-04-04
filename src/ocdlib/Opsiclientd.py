@@ -570,5 +570,3 @@ class Opsiclientd(EventListener, threading.Thread):
 
 	def popupCloseCallback(self, choiceSubject):
 		self.hidePopup()
-
-

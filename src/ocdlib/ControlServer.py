@@ -659,7 +659,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			serviceConnection.disconnectConfigService()
 
 	def getBackendInfo(self):
-		serviceConnection = ServiceConnection(loadBalance = False)
+		serviceConnection = ServiceConnection(loadBalance=False)
 		serviceConnection.connectConfigService()
 		backendinfo = None
 		try:
@@ -667,4 +667,5 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			backendinfo = configService.backend_info()
 		finally:
 			serviceConnection.disconnectConfigService()
-			return backendinfo
+
+		return backendinfo

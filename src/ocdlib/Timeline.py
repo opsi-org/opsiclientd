@@ -295,5 +295,3 @@ class Timeline(TimelineImplementation):
 	def __setattr__(self, attr, value):
 		""" Delegate access to implementation """
 		return setattr(self.__instance, attr, value)
-
-

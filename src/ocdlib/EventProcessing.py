@@ -1249,9 +1249,3 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		logger.notice(u"============= EventProcessingThread for event '%s' ended =============" % self.event.eventConfig.getId())
 		if timelineEventId:
 			timeline.setEventEnd(eventId = timelineEventId)
-
-
-
-
-
-
