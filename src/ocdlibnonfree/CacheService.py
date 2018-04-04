@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
+
+# opsiclientd is part of the desktop management solution opsi
+# (open pc server integration) http://www.opsi.org
+
+# Copyright (C) 2014-2018 uib GmbH
+# http://www.uib.de/
+# All rights reserved.
+
 """
 ocdlibnonfree.CacheService
-
-opsiclientd is part of the desktop management solution opsi
-(open pc server integration) http://www.opsi.org
-
-Copyright (C) 2014 uib GmbH
-
-http://www.uib.de/
-
-All rights reserved.
 
 @copyright: uib GmbH <info@uib.de>
 @author: Jan Schneider <j.schneider@uib.de>
@@ -1015,4 +1014,3 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				logger.warning(e)
 		if exception:
 			raise exception
-
