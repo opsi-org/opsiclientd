@@ -2,7 +2,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2010-2016 uib GmbH <info@uib.de>
+# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -24,40 +24,30 @@ Non-standard exceptions.
 :license: GNU Affero General Public License version 3
 """
 
-# OPSI imports
-from OPSI.Logger import *
+from OPSI.Logger import Logger
 from OPSI.Types import forceUnicode
 
-# Get logger instance
 logger = Logger()
+
 
 class OpsiclientdError(Exception):
 	ExceptionShortDescription = u"Opsiclientd error"
-	
-	def __init__(self, message = u''):
+
+	def __init__(self, message=u''):
 		self._message = forceUnicode(message)
-	
+
 	def __unicode__(self):
 		if self._message:
 			return u"%s: %s" % (self.ExceptionShortDescription, self._message)
 		else:
 			return u"%s" % self.ExceptionShortDescription
-		
+
 	def __repr__(self):
 		return self.__unicode__.encode("ascii", "replace")
-	
+
 	__str__ = __repr__
+
 
 class CanceledByUserError(OpsiclientdError):
 	""" Exception raised if user cancels operation. """
 	ExceptionShortDescription = "Canceled by user error"
-
-
-
-
-
-
-
-
-
-
