@@ -72,7 +72,7 @@ class CacheService(threading.Thread):
 		self.initializeConfigCacheService()
 		self._configCacheService.setObsolete()
 
-	def syncConfig(self, waitForEnding = False):
+	def syncConfig(self, waitForEnding=False):
 		self.initializeConfigCacheService()
 		if self._configCacheService.isWorking():
 			logger.info(u"Already syncing config")
@@ -127,7 +127,7 @@ class CacheService(threading.Thread):
 		self.initializeConfigCacheService()
 		return self._configCacheService._backendTracker.getModifications()
 
-	def cacheProducts(self, waitForEnding = False, productProgressObserver = None, overallProgressObserver = None, dynamicBandwidth = True, maxBandwidth = 0):
+	def cacheProducts(self, waitForEnding=False, productProgressObserver=None, overallProgressObserver=None, dynamicBandwidth=True, maxBandwidth=0):
 		self.initializeProductCacheService()
 		if self._productCacheService.isWorking():
 			logger.info(u"Already caching products")
@@ -135,7 +135,7 @@ class CacheService(threading.Thread):
 			logger.info(u"Trigger product caching")
 			self._productCacheService.setDynamicBandwidth(dynamicBandwidth)
 			self._productCacheService.setMaxBandwidth(maxBandwidth)
-			self._productCacheService.cacheProducts(productProgressObserver = productProgressObserver, overallProgressObserver = overallProgressObserver)
+			self._productCacheService.cacheProducts(productProgressObserver=productProgressObserver, overallProgressObserver=overallProgressObserver)
 		if waitForEnding:
 			time.sleep(3)
 			while self._productCacheService.isRunning() and self._productCacheService.isWorking():
