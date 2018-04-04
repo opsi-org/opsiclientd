@@ -402,9 +402,6 @@ class ConfigImplementation(object):
 		if not configService:
 			raise Exception(u"Not connected to config service")
 
-		if configService.isLegacyOpsi():
-			return
-
 		selectedDepot = None
 
 		configService.backend_setOptions({"addConfigStateDefaults": True})
@@ -527,10 +524,7 @@ class ConfigImplementation(object):
 
 		depotServerUsername = self.get('depot_server', 'username')
 		encryptedDepotServerPassword = u''
-		if configService.isLegacyOpsi():
-			encryptedDepotServerPassword = configService.getPcpatchPassword(self.get('global', 'host_id'))
-		else:
-			encryptedDepotServerPassword = configService.user_getCredentials(username = u'pcpatch', hostId = self.get('global', 'host_id'))['password']
+		encryptedDepotServerPassword = configService.user_getCredentials(username = u'pcpatch', hostId = self.get('global', 'host_id'))['password']
 		depotServerPassword = blowfishDecrypt(self.get('global', 'opsi_host_key'), encryptedDepotServerPassword)
 		logger.addConfidentialString(depotServerPassword)
 		logger.debug(u"Using username '%s' for depot connection" % depotServerUsername)
@@ -542,57 +536,29 @@ class ConfigImplementation(object):
 		if not configService:
 			raise Exception(u"Config service is undefined")
 
-		if configService.isLegacyOpsi():
-			for (key, value) in configService.getNetworkConfig_hash(self.get('global', 'host_id')).items():
-				if (key.lower() == 'depotid'):
-					depotId = value
-					self.set('depot_server', 'depot_id', depotId)
-					self.set('depot_server', 'url', configService.getDepot_hash(depotId)['depotRemoteUrl'])
-				elif (key.lower() == 'depotdrive'):
-					self.set('depot_server', 'drive', value)
-				elif (key.lower() == 'nextbootserviceurl'):
-					if (value.find('/rpc') == -1):
-						value = value + '/rpc'
-					self.set('config_service', 'url', [ value ])
-				else:
-					logger.info(u"Unhandled network config key '%s'" % key)
+		configService.backend_setOptions({"addConfigStateDefaults": True})
+		for configState in configService.configState_getObjects(objectId=self.get('global', 'host_id')):
+			logger.info(u"Got config state from service: configId %s, values %s" % (configState.configId, configState.values))
 
-			logger.notice(u"Got network config from service")
+			if not configState.values:
+				continue
 
-			for (key, value) in configService.getGeneralConfig_hash(self.get('global', 'host_id')).items():
+			if configState.configId == u'clientconfig.configserver.url':
+				self.set('config_service', 'url', configState.values)
+			elif configState.configId == u'clientconfig.depot.drive':
+				self.set('depot_server', 'drive', configState.values[0])
+			elif configState.configId == u'clientconfig.depot.id':
+				self.set('depot_server', 'depot_id', configState.values[0])
+			elif configState.configId.startswith(u'opsiclientd.'):
 				try:
-					parts = key.lower().split('.')
-					if (len(parts) < 3) or (parts[0] != 'opsiclientd'):
+					parts = configState.configId.lower().split('.')
+					if (len(parts) < 3):
 						continue
 
-					self.set(section = parts[1], option = parts[2], value = value)
-
+					self.set(section=parts[1], option=parts[2], value=configState.values[0])
 				except Exception as e:
-					logger.error(u"Failed to process general config key '%s:%s': %s" % (key, value, forceUnicode(e)))
-		else:
-			configService.backend_setOptions({"addConfigStateDefaults": True})
-			for configState in configService.configState_getObjects(objectId = self.get('global', 'host_id')):
-				logger.info(u"Got config state from service: configId %s, values %s" % (configState.configId, configState.values))
+					logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
 
-				if not configState.values:
-					continue
-
-				if   (configState.configId == u'clientconfig.configserver.url'):
-					self.set('config_service', 'url', configState.values)
-				elif (configState.configId == u'clientconfig.depot.drive'):
-					self.set('depot_server', 'drive', configState.values[0])
-				elif (configState.configId == u'clientconfig.depot.id'):
-					self.set('depot_server', 'depot_id', configState.values[0])
-				elif configState.configId.startswith(u'opsiclientd.'):
-					try:
-						parts = configState.configId.lower().split('.')
-						if (len(parts) < 3):
-							continue
-
-						self.set(section = parts[1], option = parts[2], value = configState.values[0])
-
-					except Exception as e:
-						logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
 		logger.notice(u"Got config from service")
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.getDict()))
 

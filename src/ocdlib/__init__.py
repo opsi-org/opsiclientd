@@ -54,9 +54,6 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 	if not configService:
 		raise Exception(u"Not connected to config service")
 
-	if configService.isLegacyOpsi():
-		return
-
 	selectedDepot = None
 
 	configService.backend_setOptions({"addConfigStateDefaults": True})

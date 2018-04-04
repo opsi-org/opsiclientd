@@ -5,7 +5,7 @@ ocdlib.EventProcessing
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
-Copyright (C) 2014 uib GmbH
+Copyright (C) 2014-2017 uib GmbH
 
 http://www.uib.de/
 
@@ -266,21 +266,17 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			f.close()
 			# Do not log jsonrpc request
 			logger.setFileLevel(LOG_WARNING)
-			if self._configService.isLegacyOpsi():
-				self._configService.writeLog('clientconnect', data.replace(u'\ufffd', u'?'), config.get('global', 'host_id'))
-				#self._configService.writeLog('clientconnect', data.replace(u'\ufffd', u'?').encode('utf-8'), config.get('global', 'host_id'))
-			else:
-				self._configService.log_write('clientconnect', data.replace(u'\ufffd', u'?'), config.get('global', 'host_id'))
+			self._configService.log_write('clientconnect', data.replace(u'\ufffd', u'?'), config.get('global', 'host_id'))
 			logger.setFileLevel(config.get('global', 'log_level'))
 		except Exception, e:
 			logger.setFileLevel(config.get('global', 'log_level'))
 			logger.error(u"Failed to write log to service: %s" % forceUnicode(e))
 			raise
-		
+
 	def runCommandInSession(self, command, desktop=None, waitForProcessEnding=False, timeoutSeconds=0):
-		
+
 		sessionId = self.getSessionId()
-		
+
 		if not desktop or (forceUnicodeLower(desktop) == 'current'):
 			if self.isLoginEvent:
 				desktop = u'default'
@@ -475,76 +471,67 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				shutil.rmtree(actionProcessorLocalTmpDir)
 			logger.info(u"Copying from '%s' to '%s'" % (actionProcessorRemoteDir, actionProcessorLocalTmpDir))
 			shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
-			
+
 			if not os.path.exists(actionProcessorLocalTmpFile):
 				raise Exception(u"File '%s' does not exist after copy" % actionProcessorLocalTmpFile)
-			
+
 			if os.path.exists(actionProcessorLocalDir):
 				logger.info(u"Deleting dir '%s'" % actionProcessorLocalDir)
 				shutil.rmtree(actionProcessorLocalDir)
-			
+
 			logger.info(u"Moving dir '%s' to '%s'" % (actionProcessorLocalTmpDir, actionProcessorLocalDir))
 			shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
-			
+
 			logger.notice(u"Trying to set the right permissions for opsi-winst")
 			setaclcmd = os.path.join(config.get('global', 'base_dir'), 'utilities', 'setacl.exe')
 			winstdir = actionProcessorLocalDir.replace('\\\\','\\')
 			cmd = '"%s" -on "%s" -ot file -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y" -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"' \
 						% (setaclcmd, winstdir)
 			System.execute(cmd,shell=False)
-			
+
 			logger.notice(u'Local action processor successfully updated')
-			
-			if self._configService.isLegacyOpsi():
-				self._configService.setProductInstallationStatus(
-							'opsi-winst',
-							config.get('global', 'host_id'),
-							'installed')
-			else:
-				productVersion = None
-				packageVersion = None
-				for productOnDepot in self._configService.productOnDepot_getIdents(
-							productType = 'LocalbootProduct',
-							productId   = 'opsi-winst',
-							depotId     = config.get('depot_server', 'depot_id'),
-							returnType  = 'dict'):
-					productVersion = productOnDepot['productVersion']
-					packageVersion = productOnDepot['packageVersion']
-				self._configService.productOnClient_updateObjects([
-					ProductOnClient(
-						productId          = u'opsi-winst',
-						productType        = u'LocalbootProduct',
-						productVersion     = productVersion,
-						packageVersion     = packageVersion,
-						clientId           = config.get('global', 'host_id'),
-						installationStatus = u'installed',
-						actionProgress     = u'',
-						actionResult       = u'successful'
-					)
-				])
+
+			productVersion = None
+			packageVersion = None
+			for productOnDepot in self._configService.productOnDepot_getIdents(
+						productType='LocalbootProduct',
+						productId='opsi-winst',
+						depotId=config.get('depot_server', 'depot_id'),
+						returnType='dict'):
+				productVersion = productOnDepot['productVersion']
+				packageVersion = productOnDepot['packageVersion']
+			self._configService.productOnClient_updateObjects([
+				ProductOnClient(
+					productId=u'opsi-winst',
+					productType=u'LocalbootProduct',
+					productVersion=productVersion,
+					packageVersion=packageVersion,
+					clientId=config.get('global', 'host_id'),
+					installationStatus=u'installed',
+					actionProgress=u'',
+					actionResult=u'successful'
+				)
+			])
 			self.setActionProcessorInfo()
-			
+
 			if mounted:
 				self.umountDepotShare()
-			
+
 		except Exception, e:
 			logger.error(u"Failed to update action processor: %s" % forceUnicode(e))
-		
+
 		if impersonation:
 			try:
 				impersonation.end()
 			except Exception, e:
 				logger.warning(e)
-	
+
 	def processUserLoginActions(self):
 		self.setStatusMessage(_(u"Processing login actions"))
 		try:
 			if not self._configService:
 				raise Exception(u"Not connected to config service")
-			
-			if self._configService.isLegacyOpsi():
-				raise Exception(u"Opsi >= 4.0 needed")
-			
+
 			productsByIdAndVersion = {}
 			for product in self._configService.product_getObjects(type = 'LocalbootProduct', userLoginScript = "*.*"):
 				if not productsByIdAndVersion.has_key(product.id):
@@ -577,79 +564,69 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					% (product.userLoginScript, product.id, product.productVersion, product.packageVersion))
 				userLoginScripts.append(os.path.join(productDir, product.userLoginScript))
 				productIds.append(product.id)
-			
+
 			if not userLoginScripts:
 				logger.notice(u"No user login script found, nothing to do")
 				return
-			
+
 			logger.notice(u"User login scripts found, executing")
 			additionalParams = ''
 			#for userLoginScript in userLoginScripts:
 			#	additionalParams += ' "%s"' % userLoginScript
 			additionalParams = u'/usercontext %s' % self.event.eventInfo.get('User')
 			self.runActions(productIds, additionalParams)
-			
+
 		except Exception, e:
 			logger.logException(e)
 			logger.error(u"Failed to process login actions: %s" % forceUnicode(e))
 			self.setStatusMessage( _(u"Failed to process login actions: %s") % forceUnicode(e) )
-		
+
 	def processProductActionRequests(self):
 		self.setStatusMessage(_(u"Getting action requests from config service"))
-		
+
 		try:
 			bootmode = ''
 			try:
 				bootmode = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\general", "bootmode")
 			except Exception, e:
 				logger.warning(u"Failed to get bootmode from registry: %s" % forceUnicode(e))
-			
+
 			if not self._configService:
 				raise Exception(u"Not connected to config service")
-			
+
 			productIds = []
 			if self.event.eventConfig.actionProcessorProductIds:
-				productIds = self.event.eventConfig.actionProcessorProductIds 
-			if self._configService.isLegacyOpsi():
-				productStates = self._configService.getLocalBootProductStates_hash(config.get('global', 'host_id'))
-				productStates = productStates.get(config.get('global', 'host_id'), [])
-				
-				logger.notice(u"Got product action requests from configservice")
-				
-				for productState in productStates:
-					if (productState['actionRequest'] not in ('none', 'undefined')):
-						productIds.append(productState['productId'])
-						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productState['productId'] + ':', productState['actionRequest']))
-			else:
-				if not productIds:
-					includeProductGroupIds = [ x for x in forceList(self.event.eventConfig.includeProductGroupIds) if x != "" ]
-					excludeProductGroupIds = [ x for x in forceList(self.event.eventConfig.excludeProductGroupIds) if x != "" ]
-					includeProductIds = []
-					excludeProductIds = []
-					
-					if includeProductGroupIds:
-						includeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
-									groupType="ProductGroup",
-									groupId=includeProductGroupIds) ]
-						logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
-					
-					elif excludeProductGroupIds:
-						excludeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
-									groupType="ProductGroup",
-									groupId=excludeProductGroupIds) ]
-						logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
-			
-					for productOnClient in [ poc for poc in self._configService.productOnClient_getObjects(
-								productType   = 'LocalbootProduct',
-								clientId      = config.get('global', 'host_id'),
-								actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
-								attributes    = ['actionRequest'],
-								productId     = includeProductIds) if poc.productId not in excludeProductIds ]:
-						
-						if not productOnClient.productId in productIds:
-							productIds.append(productOnClient.productId)
-							logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
-					
+				productIds = self.event.eventConfig.actionProcessorProductIds
+
+			if not productIds:
+				includeProductGroupIds = [x for x in forceList(self.event.eventConfig.includeProductGroupIds) if x != ""]
+				excludeProductGroupIds = [x for x in forceList(self.event.eventConfig.excludeProductGroupIds) if x != ""]
+				includeProductIds = []
+				excludeProductIds = []
+
+				if includeProductGroupIds:
+					includeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects(
+								groupType="ProductGroup",
+								groupId=includeProductGroupIds)]
+					logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
+
+				elif excludeProductGroupIds:
+					excludeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects(
+								groupType="ProductGroup",
+								groupId=excludeProductGroupIds)]
+					logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
+
+				for productOnClient in [poc for poc in self._configService.productOnClient_getObjects(
+							productType='LocalbootProduct',
+							clientId=config.get('global', 'host_id'),
+							actionRequest=['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+							attributes=['actionRequest'],
+							productId=includeProductIds) if poc.productId not in excludeProductIds]:
+
+					if productOnClient.productId not in productIds:
+						productIds.append(productOnClient.productId)
+						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
+
 			if (len(productIds) == 0) and (bootmode == 'BKSTD'):
 				logger.notice(u"No product action requests set")
 				self.setStatusMessage( _(u"No product action requests set") )

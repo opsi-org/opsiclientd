@@ -198,19 +198,14 @@ class ServiceConnection(object):
 				if serviceConnectionThread.connected and forceBool(config.get('config_service', 'sync_time_from_service')):
 					logger.info(u"Syncing local system time from service")
 					try:
-						System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True))
-					except Exception as e:
-						logger.error(u"Failed to sync time: '%s'" % e)
+					    System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True))
+				    	except Exception as e:
+				    		logger.error(u"Failed to sync time: '%s'" % e)
 
 				if urlIndex > 0:
-					modules = None
-					helpermodules = {}
-					if serviceConnectionThread.configService.isLegacyOpsi():
-						modules = serviceConnectionThread.configService.getOpsiInformation_hash()['modules']
-					else:
-						backendinfo = serviceConnectionThread.configService.backend_info()
-						modules = backendinfo['modules']
-						helpermodules = backendinfo['realmodules']
+					backendinfo = serviceConnectionThread.configService.backend_info()
+					modules = backendinfo['modules']
+					helpermodules = backendinfo['realmodules']
 
 					if not modules.get('high_availability'):
 						self.connectionFailed(u"High availability module currently disabled")
@@ -256,10 +251,7 @@ class ServiceConnection(object):
 	def disconnectConfigService(self):
 		if self._configService:
 			try:
-				if self._configService.isLegacyOpsi():
-					self._configService.exit()
-				else:
-					self._configService.backend_exit()
+				self._configService.backend_exit()
 			except Exception, e:
 				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(e))
 		self._configService = None
@@ -344,11 +336,8 @@ class ServiceConnectionThread(KillableThread):
 						application='opsiclientd version %s' % __version__
 					)
 
-					if self.configService.isLegacyOpsi():
-						self.configService.authenticated()
-					else:
-						self.configService.accessControl_authenticated()
-						self.configService.setDeflate(True)
+					self.configService.accessControl_authenticated()
+					self.configService.setDeflate(True)
 					self.connected = True
 					self.connectionError = None
 					self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
