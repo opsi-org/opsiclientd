@@ -30,12 +30,12 @@ opsiclientd Library.
 @license: GNU General Public License version 2
 """
 
-# OPSI imports
-from OPSI.Logger import *
-from OPSI.Types import *
+import os
+from OPSI.Logger import Logger
+from OPSI.Types import (forceBool, forceHostId, forceProductIdList,
+						forceUnicode, forceUrl)
 from OPSI import System
 
-# Get logger instance
 logger = Logger()
 
 
