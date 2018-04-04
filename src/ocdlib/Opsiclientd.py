@@ -26,7 +26,7 @@ This is where all the parts come together.
 :license: GNU Affero General Public License version 3
 """
 
-__version__ = '4.0.92'
+__version__ = '4.1.1.1'
 
 # Imports
 import sys, os
