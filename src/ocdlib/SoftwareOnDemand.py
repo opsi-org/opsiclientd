@@ -146,7 +146,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				(k, v) = part.split('=', 1)
 			k = k.strip().lower()
 			v = v.strip().lower()
-			if query.has_key(k):
+			if k in query:
 				query[k] = forceUnicodeList(query[k])
 				query[k].append(v)
 			else:
