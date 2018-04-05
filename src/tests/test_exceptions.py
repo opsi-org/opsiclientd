@@ -14,4 +14,4 @@ def testGivingMessages(testClass, errorMessage):
 
 	assert testClass.ExceptionShortDescription in repr(error)
 	if errorMessage:
-		assert errorMessage in repr(errorWithMessage)
+		assert errorMessage in repr(error)
