@@ -2,7 +2,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2010-2016 uib GmbH <info@uib.de>
+# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -847,7 +847,7 @@ def getEventConfigs():
 			preconditions[preconditionId] = {}
 			try:
 				for key in options.keys():
-					preconditions[preconditionId][key] = not options[key].lower() in ('0', 'false', 'off', 'no')
+					preconditions[preconditionId][key] = options[key].lower() not in ('0', 'false', 'off', 'no')
 				logger.info(u"Precondition '%s' created: %s" % (preconditionId, preconditions[preconditionId]))
 			except Exception, e:
 				logger.error(u"Failed to parse precondition '%s': %s" % (preconditionId, forceUnicode(e)))
@@ -868,7 +868,7 @@ def getEventConfigs():
 			try:
 				for key in options.keys():
 					if   (key.lower() == 'active'):
-						rawEventConfigs[eventConfigId]['active'] = not unicode(options[key]).lower() in ('0', 'false', 'off', 'no')
+						rawEventConfigs[eventConfigId]['active'] = unicode(options[key]).lower() not in ('0', 'false', 'off', 'no')
 					elif (key.lower() == 'super'):
 						rawEventConfigs[eventConfigId]['super'] = options[key]
 						if rawEventConfigs[eventConfigId]['super'].startswith('event_'):
@@ -984,19 +984,19 @@ def getEventConfigs():
 					elif (key == 'shutdown_user_cancelable'):
 						eventConfigs[eventConfigId]['shutdownUserCancelable'] = int(value)
 					elif (key == 'block_login'):
-						eventConfigs[eventConfigId]['blockLogin'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['blockLogin'] = unicode(value).lower() not in ('0', 'false', 'off', 'no')
 					elif (key == 'lock_workstation'):
 						eventConfigs[eventConfigId]['lockWorkstation'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'logoff_current_user'):
 						eventConfigs[eventConfigId]['logoffCurrentUser'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'process_shutdown_requests'):
-						eventConfigs[eventConfigId]['processShutdownRequests'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['processShutdownRequests'] = unicode(value).lower() not in ('0', 'false', 'off', 'no')
 					elif (key == 'get_config_from_service'):
-						eventConfigs[eventConfigId]['getConfigFromService'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['getConfigFromService'] = unicode(value).lower() not in ('0', 'false', 'off', 'no')
 					elif (key == 'update_config_file'):
-						eventConfigs[eventConfigId]['updateConfigFile'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['updateConfigFile'] = unicode(value).lower() not in ('0', 'false', 'off', 'no')
 					elif (key == 'write_log_to_service'):
-						eventConfigs[eventConfigId]['writeLogToService'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['writeLogToService'] = unicode(value).lower() not in ('0', 'false', 'off', 'no')
 					elif (key == 'cache_products'):
 						eventConfigs[eventConfigId]['cacheProducts'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'cache_max_bandwidth'):
@@ -1016,7 +1016,7 @@ def getEventConfigs():
 					elif (key == 'use_cached_config'):
 						eventConfigs[eventConfigId]['useCachedConfig'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'update_action_processor'):
-						eventConfigs[eventConfigId]['updateActionProcessor'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['updateActionProcessor'] = unicode(value).lower() not in ('0', 'false', 'off', 'no')
 					elif (key == 'action_type'):
 						eventConfigs[eventConfigId]['actionType'] = unicode(value).lower()
 					elif (key == 'event_notifier_command'):
@@ -1024,7 +1024,7 @@ def getEventConfigs():
 					elif (key == 'event_notifier_desktop'):
 						eventConfigs[eventConfigId]['eventNotifierDesktop'] = unicode(value).lower()
 					elif (key == 'process_actions'):
-						eventConfigs[eventConfigId]['processActions'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['processActions'] = unicode(value).lower() not in ('0', 'false', 'off', 'no')
 					elif (key == 'action_notifier_command'):
 						eventConfigs[eventConfigId]['actionNotifierCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'action_notifier_desktop'):

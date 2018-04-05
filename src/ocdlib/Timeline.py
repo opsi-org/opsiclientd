@@ -200,7 +200,7 @@ class TimelineImplementation(object):
 		self._dbLock.acquire()
 		try:
 			tables = self._sql.getTables()
-			if not 'EVENT' in tables.keys():
+			if 'EVENT' not in tables:
 				logger.debug(u'Creating table EVENT')
 				table = u'''CREATE TABLE `EVENT` (
 						`id` integer NOT NULL ''' + self._sql.AUTOINCREMENT + ''',
