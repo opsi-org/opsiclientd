@@ -83,8 +83,12 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 				logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, error))
 		elif not masterOnly and (configState.configId == 'clientconfig.depot.dynamic') and configState.values:
 			dynamicDepot = forceBool(configState.values[0])
-		elif (configState.configId == 'clientconfig.depot.protocol') and configState.values and configState.values[0] and (configState.values[0] == 'webdav'):
-			depotProtocol = 'webdav'
+		elif configState.configId == 'clientconfig.depot.protocol' and configState.values:
+			try:
+				if configState.values[0] == 'webdav':
+					depotProtocol = 'webdav'
+			except (IndexError, TypeError):
+				pass
 
 	if dynamicDepot:
 		if not depotIds:
