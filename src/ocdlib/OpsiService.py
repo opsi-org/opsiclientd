@@ -314,8 +314,8 @@ class ServiceConnectionThread(KillableThread):
 
 			tryNum = 0
 			while not self.cancelled and not self.connected:
+				tryNum += 1
 				try:
-					tryNum += 1
 					logger.notice(u"Connecting to config server '%s' #%d" % (self._configServiceUrl, tryNum))
 					self.setStatusMessage( _(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
 					if (len(self._username.split('.')) < 3):
