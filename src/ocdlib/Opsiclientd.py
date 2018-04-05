@@ -39,6 +39,7 @@ from OPSI.Util import *
 from OPSI.Util.Message import *
 
 from ocdlib import __version__
+from ocdlib.EventProcessing import EventProcessingThread
 from ocdlib.Events import *
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from ocdlib.ControlServer import ControlServer
@@ -55,11 +56,6 @@ try:
 	from ocdlibnonfree import __fullversion__
 except Exception:
 	__fullversion__ = False
-
-try:
-	from ocdlibnonfree.EventProcessing import EventProcessingThread
-except Exception:
-	from ocdlib.EventProcessing import EventProcessingThread
 
 logger = Logger()
 config = Config()
