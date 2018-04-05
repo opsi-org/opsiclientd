@@ -67,6 +67,7 @@ USZQNXthwmMy0+iIgQLAmBDu9Tz53p+yqHIhS+7eYNfzh2HeIG3EY515ncnZG2Xi
 QuBW/YzuIIiknjESIHBVA6YWeLNR
 -----END CERTIFICATE-----'''
 
+
 class ConfigImplementation(object):
 
 	def __init__(self):
@@ -555,6 +556,7 @@ class ConfigImplementation(object):
 		logger.notice(u"Got config from service")
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.getDict()))
 
+
 class Config(ConfigImplementation):
 	# Storage for the instance reference
 	__instance = None
@@ -569,7 +571,6 @@ class Config(ConfigImplementation):
 
 		# Store instance reference as the only member in the handle
 		self.__dict__['_Config__instance'] = Config.__instance
-
 
 	def __getattr__(self, attr):
 		""" Delegate access to implementation """
