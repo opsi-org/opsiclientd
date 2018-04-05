@@ -2,7 +2,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2010-2016 uib GmbH <info@uib.de>
+# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -24,10 +24,13 @@ Application state.
 :license: GNU Affero General Public License version 3
 """
 
-import os, json, codecs, threading
+import os
+import json
+import codecs
+import threading
 
-from OPSI.Logger import *
-from OPSI.Types import *
+from OPSI.Logger import Logger
+from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
 
 from ocdlib.Config import Config
