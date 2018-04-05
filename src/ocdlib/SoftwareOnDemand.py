@@ -34,6 +34,7 @@ between servers and clients.
 import cgi
 from twisted.internet import defer
 
+from OPSI.Exceptions import OpsiAuthenticationError
 from OPSI.web2 import http, stream
 from OPSI.Logger import *
 from OPSI.Types import *

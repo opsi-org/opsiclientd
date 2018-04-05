@@ -35,6 +35,7 @@ from httplib import HTTPConnection, HTTPSConnection
 from twisted.conch.ssh import keys
 
 # OPSI imports
+from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
 from OPSI.Logger import *
 from OPSI.Util import *
 from OPSI.Util.Thread import KillableThread
