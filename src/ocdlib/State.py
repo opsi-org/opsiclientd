@@ -50,48 +50,48 @@ class StateImplementation(object):
 		self.set('shutdown_cancel_counter', 0)
 
 	def _readStateFile(self):
-		self._stateLock.acquire()
-		try:
-			if os.path.exists(self._stateFile):
-				f = codecs.open(self._stateFile, 'r', 'utf8')
-				jsonstr = f.read()
-				f.close()
-				self._state = json.loads(jsonstr)
-		except Exception, e:
-			logger.error(u"Failed to read state file '%s': %s" % (self._stateFile, e))
-		self._stateLock.release()
+		with self._stateLock:
+			try:
+				if os.path.exists(self._stateFile):
+					with codecs.open(self._stateFile, 'r', 'utf8') as f:
+						jsonstr = f.read()
+
+					self._state = json.loads(jsonstr)
+			except Exception as error:
+				logger.error(u"Failed to read state file '%s': %s" % (self._stateFile, error))
 
 	def _writeStateFile(self):
-		self._stateLock.acquire()
-		try:
-			jsonstr = json.dumps(self._state)
-			if not os.path.exists(os.path.dirname(self._stateFile)):
-				os.makedirs(os.path.dirname(self._stateFile))
-			f = codecs.open(self._stateFile, 'w', 'utf8')
-			f.write(jsonstr)
-			f.close()
-		except Exception, e:
-			logger.error(u"Failed to write state file '%s': %s" % (self._stateFile, e))
-		self._stateLock.release()
+		with self._stateLock:
+			try:
+				jsonstr = json.dumps(self._state)
+				if not os.path.exists(os.path.dirname(self._stateFile)):
+					os.makedirs(os.path.dirname(self._stateFile))
+
+				with codecs.open(self._stateFile, 'w', 'utf8') as f:
+					f.write(jsonstr)
+			except Exception as error:
+				logger.error(u"Failed to write state file '%s': %s" % (self._stateFile, error))
 
 	def get(self, name, default=None):
 		name = forceUnicode(name)
-		if (name == 'user_logged_in'):
+		if name == 'user_logged_in':
 			return bool(System.getActiveSessionIds(self._winApiBugCommand))
-		if (name == 'configserver_reachable'):
+		elif name == 'configserver_reachable':
 			return isConfigServiceReachable(timeout=15)
-		if (name == 'products_cached'):
+		elif name == 'products_cached':
 			return self._state.get('product_cache_service', {}).get('products_cached', default)
-		if (name == 'config_cached'):
+		elif name == 'config_cached':
 			return self._state.get('config_cache_service', {}).get('config_cached', default)
-		if (name.find("cancel_counter") != -1):
+		elif "cancel_counter" in name:
 			return self._state.get(name, 0)
-		if (name == 'installation_pending'):
+		elif name == 'installation_pending':
 			return forceBool(self._state.get('installation_pending', False))
-		if self._state.has_key(name):
+
+		try:
 			return self._state[name]
-		logger.warning(u"Unknown state name '%s', returning False" % name)
-		return default
+		except KeyError:
+			logger.warning(u"Unknown state name {0!r}, returning default {1!r}", name, default)
+			return default
 
 	def set(self, name, value):
 		name = forceUnicode(name)
