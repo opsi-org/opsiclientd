@@ -8,7 +8,7 @@ dir=$(dirname ${cwd}/$(dirname $0))
 cd $dir
 
 packagename="opsiclientd"
-version=$(grep '^__version__' src/ocdlib/Opsiclientd.py | head -n1 | cut -d'=' -f2 | sed s"/\s*'//g")
+version=$(grep '^__version__' src/ocdlib/__init__.py | head -n1 | cut -d'=' -f2 | sed s"/\s*'//g")
 tmpdir=/tmp/${packagename}-${version}
 
 test -e $tmpdir && rm -rf $tmpdir

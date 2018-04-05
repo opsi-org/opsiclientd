@@ -45,7 +45,7 @@ from OPSI.Types import *
 from OPSI import System
 
 from ocdlib.Localization import _
-from ocdlib.Opsiclientd import __version__
+from ocdlib import __version__
 from ocdlib.Config import Config
 from ocdlib.Exceptions import *
 
