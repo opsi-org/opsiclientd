@@ -251,19 +251,6 @@ class NTControlPipe(ControlPipe):
 			raise Exception(u"Failed to create named pipe")
 		logger.debug(u"Pipe %s created" % self._pipeName)
 
-	#def createPipe(self):
-	#	logger.info(u"Creating pipe %s" % self._pipeName)
-	#	self._pipe = win32pipe.CreateNamedPipe(
-	#			self._pipeName,
-	#			win32pipe.PIPE_ACCESS_DUPLEX | win32file.FILE_FLAG_OVERLAPPED,
-	#			win32pipe.PIPE_TYPE_MESSAGE | win32pipe.PIPE_READMODE_MESSAGE | win32pipe.PIPE_WAIT,
-	#			win32pipe.PIPE_UNLIMITED_INSTANCES,
-	#			self._bufferSize,
-	#			self._bufferSize,
-	#			5000,
-	#			None)
-	#	logger.debug(u"Pipe %s created" % self._pipeName)
-
 	def run(self):
 		ERROR_PIPE_CONNECTED = 535
 		self._running = True
@@ -288,63 +275,6 @@ class NTControlPipe(ControlPipe):
 			logger.logException(e)
 		logger.notice(u"ControlPipe exiting")
 		self._running = False
-
-	#def run(self):
-	#	self._running = True
-	#	try:
-	#		while not self._stopped:
-	#			self.createPipe()
-	#			connected = False
-	#			while not self._stopped:
-	#				logger.debug2(u"Connecting to named pipe %s" % self._pipeName)
-	#				overlapped = pywintypes.OVERLAPPED()
-	#				#overlapped.hEvent = win32event.CreateEvent(None, 1, 0, None)
-	#				overlapped.hEvent = win32event.CreateEvent(None, 0, 0, None)
-	#				fConnected = win32pipe.ConnectNamedPipe(self._pipe, overlapped)
-	#				waitResult = win32event.WaitForSingleObject(overlapped.hEvent, 3000)
-	#				logger.debug2(u"Wait for pipe connection result: %s" % waitResult)
-	#				if (waitResult == win32event.WAIT_OBJECT_0):
-	#					connected = True
-	#					logger.debug(u"Connected to named pipe '%s'" % self._pipeName)
-	#					break
-	#				elif (waitResult == win32event.WAIT_TIMEOUT):
-	#					continue
-	#				else:
-	#					raise Exception(u"Failed to connect to pipe '%s': %s" (self._pipeName, waitResult))
-	#			if connected:
-	#				try:
-	#					logger.debug2(u"Reading fom pipe")
-	#					(errCode, readString) = win32file.ReadFile(self._pipe, self._bufferSize, None)
-	#					if (errCode != 0):
-	#						raise Exception(u"Failed to read from pipe: %s" % errCode)
-	#					readString = readString.split('\0')[0].strip()
-	#					logger.debug(u"Received rpc from pipe '%s'" % readString)
-	#					result = self.executeRpc(readString)
-	#					logger.debug(u"Writing rpc result '%s' to pipe" % result)
-	#					(errCode, nBytesWritten) = win32file.WriteFile(self._pipe, result + '\0', None)
-	#					win32file.FlushFileBuffers(self._pipe)
-	#					logger.debug2(u"Number of bytes written: %d" % nBytesWritten)
-	#					if (errCode != 0):
-	#						raise Exception(u"Failed to write to pipe: %s" % errCode)
-	#				except Exception, e:
-	#					logger.error(u"Failed to cummunicate through pipe: %s" % forceUnicode(e))
-	#				win32pipe.DisconnectNamedPipe(self._pipe)
-	#			win32api.CloseHandle(self._pipe)
-	#			self._pipe = None
-	#	except Exception, e:
-	#		logger.logException(e)
-	#	logger.notice(u"ControlPipe exiting")
-	#	if self._pipe:
-	#		try:
-	#			win32api.CloseHandle(self._pipe)
-	#		except:
-	#			pass
-	#	self._running = False
-
-
-
-
-
 
 
 class OpsiclientdRpcPipeInterface(object):
