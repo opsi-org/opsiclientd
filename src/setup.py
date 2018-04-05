@@ -64,7 +64,9 @@ class Target:
 		with open(os.path.join(localDirectory, 'ocdlib', '__init__.py'), 'r') as f:
 			for line in f:
 				if line.startswith("__version__"):
-					self.version = line.split('=', 1)[1].strip()[1:-1]
+					print("Line is: {0!r}".format(line))
+					self.version = line.split('=', 1)[1].strip()
+					self.version = self.version[1:-1]  # Stripping quotation marks
 					break
 
 		if not self.version:
