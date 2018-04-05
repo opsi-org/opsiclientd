@@ -33,13 +33,9 @@ from OPSI.Types import forceList, forceUnicode
 from OPSI.Util import fromJson, toJson
 from OPSI.Service.JsonRpc import JsonRpc
 
-# Get logger instance
 logger = Logger()
 
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                     CONTROL PIPE FACTORY                                          -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 def ControlPipeFactory(opsiclientdRpcInterface):
 	if (os.name == 'posix'):
 		return PosixControlPipe(opsiclientdRpcInterface)
@@ -96,9 +92,7 @@ class ControlPipe(threading.Thread):
 		except Exception, e:
 			logger.logException(e)
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                     POSIX CONTROL PIPE                                            -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class PosixControlPipe(ControlPipe):
 	def __init__(self, opsiclientdRpcInterface):
 		ControlPipe.__init__(self, opsiclientdRpcInterface)
@@ -170,9 +164,7 @@ class PosixControlPipe(ControlPipe):
 			os.unlink(self._pipeName)
 		self._running = False
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                     NT CONTROL PIPE CONNECTION                                    -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class NTControlPipeConnection(threading.Thread):
 	def __init__(self, ntControlPipe, pipe, bufferSize):
 		moduleName = u' %-30s' % (u'control pipe')
@@ -229,9 +221,7 @@ class NTControlPipeConnection(threading.Thread):
 		logger.debug(u"NTControlPipeConnection exiting")
 		self._running = False
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                          NT CONTROL PIPE                                          -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class NTControlPipe(ControlPipe):
 
 	def __init__(self, opsiclientdRpcInterface):
