@@ -21,13 +21,13 @@ def configFile():
 	return os.path.join(os.path.dirname(__file__), '..', 'windows', 'opsiclientd.conf')
 
 
-def testGettingEventConfiguration(config, defaultConfigFile):
+def testGettingEventConfiguration(config, configFile):
 	"""
 	Testing if event configuration can be read from an config file.
 
 	No check if the data is correct.
 	"""
-	config.set('global', 'config_file', defaultConfigFile)
+	config.set('global', 'config_file', configFile)
 	config.readConfigFile()
 
 	configs = Events.getEventConfigs()
