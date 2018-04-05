@@ -40,8 +40,8 @@ import json
 import time
 import threading
 
-from OPSI.Logger import *
-from OPSI.Types import *
+from OPSI.Logger import Logger
+from OPSI.Types import forceBool, forceInt, forceOpsiTimestamp, forceUnicode
 from OPSI.Util import timestamp
 from OPSI.Backend.SQLite import SQLite
 
