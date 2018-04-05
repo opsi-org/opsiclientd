@@ -25,14 +25,11 @@ Processing of events.
 :license: GNU Affero General Public License version 3
 """
 
-# Imports
-import sys, os, shutil, filecmp, base64
-from hashlib import md5
+import sys
+import os
+import shutil
+import filecmp
 
-# Twisted imports
-from twisted.conch.ssh import keys
-
-# OPSI imports
 from OPSI.Logger import *
 from OPSI.Util import *
 from OPSI.Util.Message import *
@@ -44,13 +41,14 @@ from OPSI.Object import *
 from ocdlib.Exceptions import *
 from ocdlib.Events import *
 from ocdlib.OpsiService import ServiceConnection
-if (os.name == 'nt'):
-	from ocdlib.Windows import *
-if (os.name == 'posix'):
-	from ocdlib.Posix import *
-from ocdlib.Localization import _, setLocaleDir, getLanguage
+from ocdlib.Localization import _
 from ocdlib.Config import Config
 from ocdlib.Timeline import Timeline
+
+if (os.name == 'nt'):
+	from ocdlib.Windows import *
+elif (os.name == 'posix'):
+	from ocdlib.Posix import *
 
 logger = Logger()
 config = Config()
