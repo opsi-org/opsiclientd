@@ -2,7 +2,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2010-2016 uib GmbH <info@uib.de>
+# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -358,12 +358,12 @@ class OpsiclientdNT5(OpsiclientdNT):
 				threading.Thread.__init__(self)
 
 			def run(self):
-				while(True):
+				while True:
 					try:
 						System.reboot(0)
 						logger.notice(u"Reboot initiated")
-						break;
-					except Exception, e:
+						break
+					except Exception as e:
 						# Device not ready?
 						logger.info(u"Failed to initiate reboot: %s" % forceUnicode(e))
 						time.sleep(1)
