@@ -32,8 +32,8 @@ import win32net
 
 from twisted.internet import reactor
 
-from OPSI.Logger import *
-from OPSI.Types import *
+from OPSI.Logger import Logger
+from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Util import *
 from OPSI import System
 from OPSI.Service import SSLContext, OpsiService
