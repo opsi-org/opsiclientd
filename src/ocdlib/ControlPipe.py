@@ -26,6 +26,8 @@ Pipes for remote procedure calls.
 
 import inspect
 import os
+import threading
+import time
 from ctypes import *
 
 from OPSI.Logger import Logger
