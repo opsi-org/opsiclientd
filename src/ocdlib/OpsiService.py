@@ -34,9 +34,8 @@ from hashlib import md5
 from httplib import HTTPConnection, HTTPSConnection
 from twisted.conch.ssh import keys
 
-# OPSI imports
 from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
-from OPSI.Logger import *
+from OPSI.Logger import Logger
 from OPSI.Util import *
 from OPSI.Util.Thread import KillableThread
 from OPSI.Util.HTTP import urlsplit, non_blocking_connect_http, non_blocking_connect_https
@@ -47,7 +46,7 @@ from OPSI import System
 from ocdlib.Localization import _
 from ocdlib import __version__
 from ocdlib.Config import Config
-from ocdlib.Exceptions import *
+from ocdlib.Exceptions import CanceledByUserError
 
 logger = Logger()
 config = Config()
