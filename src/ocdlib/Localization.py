@@ -2,7 +2,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2010-2016 uib GmbH <info@uib.de>
+# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -39,14 +39,18 @@ try:
 except Exception, e:
 	language = 'en'
 
+
 def getLanguage():
 	return language
+
 
 def _(string):
 	if not translation:
 		return string
+
 	return translation.ugettext(string)
-	
+
+
 def setLocaleDir(localeDir):
 	global translation
 	logger.notice(u"Setting locale dir to '%s'" % localeDir)
