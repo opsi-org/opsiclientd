@@ -1,24 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import mock
-import os
-
-import pytest
-
-from ocdlib.Config import ConfigImplementation
 import ocdlib.Events as Events
-
-
-@pytest.fixture
-def config():
-	testconfig = ConfigImplementation()
-	with mock.patch('ocdlib.Events.config', testconfig):
-		yield testconfig
-
-
-@pytest.fixture
-def configFile():
-	return os.path.join(os.path.dirname(__file__), '..', 'windows', 'opsiclientd.conf')
 
 
 def testGettingEventConfiguration(config, configFile):
