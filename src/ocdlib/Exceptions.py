@@ -43,7 +43,7 @@ class OpsiclientdError(Exception):
 			return u"%s" % self.ExceptionShortDescription
 
 	def __repr__(self):
-		return self.__unicode__.encode("ascii", "replace")
+		return self.__unicode__().encode("ascii", "replace")
 
 	__str__ = __repr__
 
