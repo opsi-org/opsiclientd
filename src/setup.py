@@ -126,7 +126,7 @@ data_files += tree('opsiclientd\\static_html', '..\\static_html')
 localDirectory = os.path.dirname(__file__)
 
 opsiClientDeamonVersion = None
-fileWithVersion = os.path.join(localDirectory, 'ocdlib', 'Opsiclientd.py')
+fileWithVersion = os.path.join(localDirectory, 'ocdlib', '__init__.py')
 with open(fileWithVersion, 'r') as f:
 	for line in f:
 		if "__version__" in line:
