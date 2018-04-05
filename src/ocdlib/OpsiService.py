@@ -317,7 +317,7 @@ class ServiceConnectionThread(KillableThread):
 				tryNum += 1
 				try:
 					logger.notice(u"Connecting to config server '%s' #%d" % (self._configServiceUrl, tryNum))
-					self.setStatusMessage( _(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
+					self.setStatusMessage(_(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
 					if (len(self._username.split('.')) < 3):
 						raise Exception(u"Domain missing in username '%s'" % self._username)
 					if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
