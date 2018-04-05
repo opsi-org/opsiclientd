@@ -24,11 +24,10 @@ Localisation ofopsiclientd.
 :license: GNU Affero General Public License version 3
 """
 
-# Imports
-import gettext, locale
+import gettext
+import locale
 
-# OPSI imports
-from OPSI.Logger import *
+from OPSI.Logger import Logger
 
 # Get logger instance
 logger = Logger()
