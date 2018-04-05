@@ -28,9 +28,8 @@ import inspect
 import os
 from ctypes import *
 
-# OPSI imports
-from OPSI.Logger import *
-from OPSI.Types import *
+from OPSI.Logger import Logger
+from OPSI.Types import forceList, forceUnicode
 from OPSI.Util import fromJson, toJson
 from OPSI.Service.JsonRpc import JsonRpc
 
