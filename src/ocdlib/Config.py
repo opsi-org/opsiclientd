@@ -287,7 +287,7 @@ class ConfigImplementation(object):
 				if (os.name == 'nt'):
 					try:
 						debug = forceBool(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Services\\opsiclientd", "Debug"))
-					except:
+					except Exception:
 						pass
 				if not debug:
 					if config.has_option('global', 'log_level'):

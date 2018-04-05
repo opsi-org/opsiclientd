@@ -53,12 +53,12 @@ if (os.name == 'posix'):
 
 try:
 	from ocdlibnonfree import __fullversion__
-except:
+except Exception:
 	__fullversion__ = False
 
 try:
 	from ocdlibnonfree.EventProcessing import EventProcessingThread
-except:
+except Exception:
 	from ocdlib.EventProcessing import EventProcessingThread
 
 logger = Logger()

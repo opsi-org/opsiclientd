@@ -222,7 +222,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			logger.logException(e)
 			try:
 				self.setObsolete()
-			except:
+			except Exception:
 				pass
 			raise e
 

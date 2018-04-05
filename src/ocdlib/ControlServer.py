@@ -196,7 +196,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 										break
 						if not resume:
 							break
-				except:
+				except Exception:
 					# Standardway
 					if (self.session.user.lower() == 'administrator'):
 						# The LogonUser function will raise an Exception on logon failure

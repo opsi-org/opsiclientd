@@ -70,7 +70,7 @@ def isConfigServiceReachable(timeout=5):
 			try:
 				conn.sock.close()
 				conn.close()
-			except:
+			except Exception:
 				pass
 			return True
 		except Exception, e:
