@@ -127,8 +127,8 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 			for index, depot in enumerate(alternativeDepots, start=1):
 				logger.info(u"{:d}. alternative depot is {}", index, depot.id)
 
+			defaultInterface = None
 			try:
-				defaultInterface = None
 				networkInterfaces = System.getNetworkInterfaces()
 				if not networkInterfaces:
 					raise Exception(u"No network interfaces found")
