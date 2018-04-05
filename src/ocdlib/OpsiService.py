@@ -29,10 +29,10 @@ Connecting to a opsi service.
 
 import base64
 import time
-from hashlib import md5
-from twisted.conch.ssh import keys
 import random
+from hashlib import md5
 from httplib import HTTPConnection, HTTPSConnection
+from twisted.conch.ssh import keys
 
 # OPSI imports
 from OPSI.Logger import *
