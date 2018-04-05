@@ -53,8 +53,8 @@ class StateImplementation(object):
 		with self._stateLock:
 			try:
 				if os.path.exists(self._stateFile):
-					with codecs.open(self._stateFile, 'r', 'utf8') as f:
-						jsonstr = f.read()
+					with codecs.open(self._stateFile, 'r', 'utf8') as stateFile:
+						jsonstr = stateFile.read()
 
 					self._state = json.loads(jsonstr)
 			except Exception as error:
@@ -67,8 +67,8 @@ class StateImplementation(object):
 				if not os.path.exists(os.path.dirname(self._stateFile)):
 					os.makedirs(os.path.dirname(self._stateFile))
 
-				with codecs.open(self._stateFile, 'w', 'utf8') as f:
-					f.write(jsonstr)
+				with codecs.open(self._stateFile, 'w', 'utf8') as stateFile:
+					stateFile.write(jsonstr)
 			except Exception as error:
 				logger.error(u"Failed to write state file '%s': %s" % (self._stateFile, error))
 
