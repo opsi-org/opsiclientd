@@ -29,7 +29,6 @@ import locale
 
 from OPSI.Logger import Logger
 
-# Get logger instance
 logger = Logger()
 
 translation = None
