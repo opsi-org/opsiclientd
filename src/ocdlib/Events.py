@@ -25,18 +25,17 @@ Events and their configuration.
 :license: GNU Affero General Public License version 3
 """
 
-# Imports
-import os, re, inspect
+import os
+import re
 import copy as pycopy
 
-# OPSI imports
-from OPSI.Logger import *
+from OPSI.Logger import Logger, LOG_DEBUG
 from OPSI import System
 from OPSI.Types import *
 
 from ocdlib.Config import *
 from ocdlib.State import State
-from ocdlib.Localization import _, setLocaleDir, getLanguage
+from ocdlib.Localization import getLanguage
 
 logger = Logger()
 config = Config()
