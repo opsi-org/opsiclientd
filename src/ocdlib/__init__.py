@@ -59,11 +59,13 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 	dynamicDepot = False
 	depotProtocol = 'cifs'
 	for configState in configService.configState_getObjects(
-				configId = ['clientconfig.depot.dynamic', 'clientconfig.depot.protocol', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
-				objectId = config.get('global', 'host_id')):
+			configId=['clientconfig.depot.dynamic', 'clientconfig.depot.protocol', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
+			objectId=config.get('global', 'host_id')):
+
 		if not configState.values or not configState.values[0]:
 			continue
-		if   (configState.configId == 'opsiclientd.depot_server.url') and configState.values:
+
+		if configState.configId == 'opsiclientd.depot_server.url' and configState.values:
 			try:
 				depotUrl = forceUrl(configState.values[0])
 				config.set('depot_server', 'depot_id', u'')
@@ -72,7 +74,7 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 				return
 			except Exception as error:
 				logger.error(u"Failed to set depot url from values %s in configState %s: %s" % (configState.values, configState, error))
-		elif (configState.configId == 'opsiclientd.depot_server.depot_id') and configState.values:
+		elif configState.configId == 'opsiclientd.depot_server.depot_id' and configState.values:
 			try:
 				depotId = forceHostId(configState.values[0])
 				depotIds.append(depotId)
@@ -94,23 +96,26 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 
 	if not depotIds:
 		clientToDepotservers = configService.configState_getClientToDepotserver(
-				clientIds  = [ config.get('global', 'host_id') ],
-				masterOnly = (not dynamicDepot),
-				productIds = productIds)
+			clientIds=[config.get('global', 'host_id')],
+			masterOnly=(not dynamicDepot),
+			productIds=productIds
+		)
+
 		if not clientToDepotservers:
 			raise Exception(u"Failed to get depot config from service")
 
-		depotIds = [ clientToDepotservers[0]['depotId'] ]
+		depotIds = [clientToDepotservers[0]['depotId']]
 		if dynamicDepot:
 			depotIds.extend(clientToDepotservers[0].get('alternativeDepotIds', []))
 
 	masterDepot = None
 	alternativeDepots = []
-	for depot in configService.host_getObjects(type = 'OpsiDepotserver', id = depotIds):
-		if (depot.id == depotIds[0]):
+	for depot in configService.host_getObjects(type='OpsiDepotserver', id=depotIds):
+		if depot.id == depotIds[0]:
 			masterDepot = depot
 		else:
 			alternativeDepots.append(depot)
+
 	if not masterDepot:
 		raise Exception(u"Failed to get info for master depot '%s'" % depotIds[0])
 
@@ -128,20 +133,23 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 				networkInterfaces = System.getNetworkInterfaces()
 				if not networkInterfaces:
 					raise Exception(u"No network interfaces found")
+
 				for networkInterface in networkInterfaces:
 					logger.info(u"Found network interface: %s" % networkInterface)
+
 				defaultInterface = networkInterfaces[0]
 				for networkInterface in networkInterfaces:
-					if (networkInterface.ipAddressList.ipAddress == '0.0.0.0'):
+					if networkInterface.ipAddressList.ipAddress == '0.0.0.0':
 						continue
 					if networkInterface.gatewayList.ipAddress:
 						defaultInterface = networkInterface
 						break
+
 				clientConfig = {
-					"clientId":       config.get('global', 'host_id'),
-					"opsiHostKey":    config.get('global', 'opsi_host_key'),
-					"ipAddress":      forceUnicode(defaultInterface.ipAddressList.ipAddress),
-					"netmask":        forceUnicode(defaultInterface.ipAddressList.ipMask),
+					"clientId": config.get('global', 'host_id'),
+					"opsiHostKey": config.get('global', 'opsi_host_key'),
+					"ipAddress": forceUnicode(defaultInterface.ipAddressList.ipAddress),
+					"netmask": forceUnicode(defaultInterface.ipAddressList.ipMask),
 					"defaultGateway": forceUnicode(defaultInterface.gatewayList.ipAddress)
 				}
 
@@ -150,7 +158,11 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 				depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()
 				logger.debug2(u"depotSelectionAlgorithm:\n%s" % depotSelectionAlgorithm)
 				exec(depotSelectionAlgorithm)
-				selectedDepot = selectDepot(clientConfig = clientConfig, masterDepot = masterDepot, alternativeDepots = alternativeDepots)
+				selectedDepot = selectDepot(
+					clientConfig=clientConfig,
+					masterDepot=masterDepot,
+					alternativeDepots=alternativeDepots
+				)
 				if not selectedDepot:
 					selectedDepot = masterDepot
 			except Exception as error:
