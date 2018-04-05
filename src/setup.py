@@ -52,25 +52,25 @@ def tree(dst, src):
 
 	return found_files
 
+localDirectory = os.path.dirname(__file__)
+opsiClientDeamonVersion = None
+fileWithVersion = os.path.join(localDirectory, 'ocdlib', '__init__.py')
+with open(fileWithVersion, 'r') as f:
+	for line in f:
+		if "__version__" in line:
+			opsiClientDeamonVersion = line.split('=', 1)[1].strip()[1:-1]
+			break
+
+if not opsiClientDeamonVersion:
+	raise Exception("Failed to find version.")
+
 
 class Target:
 	def __init__(self, **kw):
 		self.__dict__.update(kw)
 		self.company_name = "uib GmbH"
 		self.copyright = "uib GmbH"
-		self.version = ""
-
-		localDirectory = os.path.dirname(__file__)
-		with open(os.path.join(localDirectory, 'ocdlib', '__init__.py'), 'r') as f:
-			for line in f:
-				if line.startswith("__version__"):
-					print("Line is: {0!r}".format(line))
-					self.version = line.split('=', 1)[1].strip()
-					self.version = self.version[1:-1]  # Stripping quotation marks
-					break
-
-		if not self.version:
-			print >> sys.stderr, "Failed to find version of script '%s'" % self.script
+		self.version = opsiClientDeamonVersion
 
 
 opsiclientdDescription = "opsi client daemon"
@@ -121,20 +121,6 @@ if RUNS_ON_WINDOWS:
 else:
 	data_files = []
 data_files += tree('opsiclientd\\static_html', '..\\static_html')
-
-
-localDirectory = os.path.dirname(__file__)
-
-opsiClientDeamonVersion = None
-fileWithVersion = os.path.join(localDirectory, 'ocdlib', '__init__.py')
-with open(fileWithVersion, 'r') as f:
-	for line in f:
-		if "__version__" in line:
-			opsiClientDeamonVersion = line.split('=', 1)[1].strip()[1:-1]
-			break
-
-if not opsiClientDeamonVersion:
-	raise Exception("Failed to find version.")
 
 setup_options = {
 	"data_files": data_files,
