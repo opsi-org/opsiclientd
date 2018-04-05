@@ -56,6 +56,5 @@ def setLocaleDir(localeDir):
 	try:
 		logger.notice(u"Loading translation for language '%s'" % language)
 		translation = gettext.translation('opsiclientd', localeDir, [language])
-	except Exception, e:
-		logger.error(u"Locale not found: %s" % e)
-
+	except Exception as error:
+		logger.error(u"Locale not found: %s" % error)
