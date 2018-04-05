@@ -24,17 +24,18 @@ Functionality to work on POSIX-conform systems.
 :license: GNU Affero General Public License version 3
 """
 
-# Imports
-import os, sys, getopt
+
+import getopt
+import os
+import sys
 from signal import *
 
-# OPSI imports
-from OPSI.Logger import *
-from OPSI.Types import *
+from OPSI.Logger import LOG_NONE, LOG_NOTICE, Logger
+from OPSI.Types import forceUnicode
 
+from ocdlib import __version__
 from ocdlib.Opsiclientd import Opsiclientd
 
-# Get logger instance
 logger = Logger()
 
 
