@@ -29,7 +29,9 @@ import os
 import sys
 
 from OPSI.Logger import Logger, LOG_NOTICE
-from OPSI.Types import *
+from OPSI.Types import (forceBool, forceFilename, forceInt, forceHostId,
+	forceList, forceProductIdList, forceUnicode, forceUnicodeLower,
+	forceUnicodeList, forceUrl)
 from OPSI.Util import objectToBeautifiedText, blowfishDecrypt
 from OPSI.Util.File import IniFile
 from OPSI import System
