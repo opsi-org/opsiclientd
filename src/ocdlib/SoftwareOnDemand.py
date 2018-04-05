@@ -31,13 +31,10 @@ between servers and clients.
 :license: GNU Affero General Public License version 3
 """
 
-import base64
 import cgi
-from hashlib import md5
-from twisted.conch.ssh import keys
 from twisted.internet import defer
 
-from OPSI.web2 import responsecode, http, stream
+from OPSI.web2 import http, stream
 from OPSI.Logger import *
 from OPSI.Types import *
 from OPSI.Object import *
