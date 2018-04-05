@@ -27,10 +27,8 @@ Configuring opsiclientd.
 
 import os
 import sys
-import copy as pycopy
 
-# OPSI imports
-from OPSI.Logger import *
+from OPSI.Logger import Logger, LOG_NOTICE
 from OPSI.Types import *
 from OPSI.Util import objectToBeautifiedText, blowfishDecrypt
 from OPSI.Util.File import IniFile
