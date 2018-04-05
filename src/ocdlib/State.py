@@ -35,8 +35,10 @@ from OPSI import System
 
 from ocdlib.Config import Config
 from ocdlib.OpsiService import isConfigServiceReachable
+
 logger = Logger()
 config = Config()
+
 
 class StateImplementation(object):
 	def __init__(self):
@@ -46,7 +48,6 @@ class StateImplementation(object):
 		self._stateLock = threading.Lock()
 		self._readStateFile()
 		self.set('shutdown_cancel_counter', 0)
-
 
 	def _readStateFile(self):
 		self._stateLock.acquire()
@@ -73,12 +74,12 @@ class StateImplementation(object):
 			logger.error(u"Failed to write state file '%s': %s" % (self._stateFile, e))
 		self._stateLock.release()
 
-	def get(self, name, default = None):
+	def get(self, name, default=None):
 		name = forceUnicode(name)
 		if (name == 'user_logged_in'):
 			return bool(System.getActiveSessionIds(self._winApiBugCommand))
 		if (name == 'configserver_reachable'):
-			return isConfigServiceReachable(timeout = 15)
+			return isConfigServiceReachable(timeout=15)
 		if (name == 'products_cached'):
 			return self._state.get('product_cache_service', {}).get('products_cached', default)
 		if (name == 'config_cached'):
