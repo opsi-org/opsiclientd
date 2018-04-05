@@ -26,6 +26,7 @@ Configuring opsiclientd.
 """
 
 import os
+import re
 import sys
 
 from OPSI.Logger import Logger, LOG_NOTICE

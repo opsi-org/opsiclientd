@@ -25,13 +25,15 @@ Server component for controlling opsiclientd.
 """
 
 import codecs
-import time
 import re
+import time
+import threading
 import win32security
 import win32net
 
 from twisted.internet import reactor
 
+from OPSI.Exceptions import OpsiAuthenticationError
 from OPSI.Logger import Logger
 from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Util import *

@@ -25,9 +25,11 @@ Events and their configuration.
 :license: GNU Affero General Public License version 3
 """
 
+import copy as pycopy
 import os
 import re
-import copy as pycopy
+import thread
+import threading
 
 from OPSI.Logger import Logger, LOG_DEBUG
 from OPSI import System
