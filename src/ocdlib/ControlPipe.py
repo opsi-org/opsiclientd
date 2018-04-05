@@ -37,9 +37,9 @@ logger = Logger()
 
 
 def ControlPipeFactory(opsiclientdRpcInterface):
-	if (os.name == 'posix'):
+	if os.name == 'posix':
 		return PosixControlPipe(opsiclientdRpcInterface)
-	if (os.name == 'nt'):
+	elif os.name == 'nt':
 		return NTControlPipe(opsiclientdRpcInterface)
 	else:
 		raise NotImplementedError(u"Unsupported operating system %s" % os.name)
