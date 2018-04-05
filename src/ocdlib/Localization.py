@@ -34,7 +34,8 @@ logger = Logger()
 translation = None
 try:
 	language = locale.getdefaultlocale()[0].split('_')[0]
-except Exception, e:
+except Exception as error:
+	logger.debug("Unable to load localisation: {0!r}", error)
 	language = 'en'
 
 
