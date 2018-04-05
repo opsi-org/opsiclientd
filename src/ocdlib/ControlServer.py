@@ -24,33 +24,32 @@ Server component for controlling opsiclientd.
 :license: GNU Affero General Public License version 3
 """
 
-# Imports
-from OpenSSL import SSL
-import base64, urllib, codecs, time, re
-import win32security, win32net
+import codecs
+import time
+import re
+import win32security
+import win32net
 
-# Twisted imports
-from twisted.internet import defer, threads, reactor
-from OPSI.web2 import resource, stream, server, http, responsecode, static, http_headers
-from OPSI.web2.channel.http import HTTPFactory
+from twisted.internet import reactor
 
-# OPSI imports
 from OPSI.Logger import *
 from OPSI.Types import *
 from OPSI.Util import *
 from OPSI import System
 from OPSI.Service import SSLContext, OpsiService
-from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface, WorkerOpsiDAV, interfacePage
-from OPSI.Service.Resource import ResourceOpsi, ResourceOpsiJsonRpc, ResourceOpsiJsonInterface, ResourceOpsiDAV
-from OPSI.Backend.BackendManager import BackendManager
+from OPSI.Service.Worker import (WorkerOpsi, WorkerOpsiJsonRpc,
+	WorkerOpsiJsonInterface)
+from OPSI.Service.Resource import (ResourceOpsi, ResourceOpsiJsonRpc,
+	ResourceOpsiJsonInterface, ResourceOpsiDAV)
+from OPSI.web2 import resource, stream, server, http, responsecode
+from OPSI.web2.channel.http import HTTPFactory
 
-from ocdlib.Exceptions import *
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.Config import Config
 from ocdlib.Events import eventGenerators
 from ocdlib.Timeline import Timeline
 from ocdlib.OpsiService import ServiceConnection
-from ocdlib.SoftwareOnDemand import WorkerSoftwareOnDemand, ResourceSoftwareOnDemand, WorkerKioskJsonRpc, ResourceKioskJsonRpc
+from ocdlib.SoftwareOnDemand import ResourceKioskJsonRpc
 
 logger = Logger()
 config = Config()
