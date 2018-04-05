@@ -28,6 +28,7 @@ Functionality to work on POSIX-conform systems.
 import getopt
 import os
 import sys
+import time
 from signal import *
 
 from OPSI.Logger import LOG_NONE, LOG_NOTICE, Logger
