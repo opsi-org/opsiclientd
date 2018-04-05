@@ -60,7 +60,8 @@ class Target:
 		self.copyright = "uib GmbH"
 		self.version = ""
 
-		with open(os.path.join('ocdlib', '__init__.py'), 'r') as f:
+		localDirectory = os.path.dirname(__file__)
+		with open(os.path.join(localDirectory, 'ocdlib', '__init__.py'), 'r') as f:
 			for line in f:
 				if line.startswith("__version__"):
 					self.version = line.split('=', 1)[1].strip()[1:-1]
