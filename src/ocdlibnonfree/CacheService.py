@@ -25,6 +25,7 @@ from hashlib import md5
 from twisted.conch.ssh import keys
 
 from OPSI.Logger import LOG_INFO, Logger
+from OPSI.Object import ProductOnClient
 from OPSI.Types import (forceBool, forceInt, forceList, forceProductIdList,
 	forceUnicode)
 from OPSI.Util.Repository import *
