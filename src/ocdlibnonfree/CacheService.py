@@ -240,13 +240,13 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			ccss = state.get('config_cache_service')
 			if ccss:
 				self._state = ccss
-		except Exception as e:
-			logger.logException(e)
+		except Exception as initError:
+			logger.logException(initError)
 			try:
 				self.setObsolete()
 			except Exception:
 				pass
-			raise e
+			raise initError
 
 	def initBackends(self):
 		depotId = config.get('depot_server', 'depot_id')
