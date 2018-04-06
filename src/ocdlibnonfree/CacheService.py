@@ -27,7 +27,6 @@ from twisted.conch.ssh import keys
 from OPSI.Logger import LOG_INFO, Logger
 from OPSI.Types import (forceBool, forceInt, forceList, forceProductIdList,
 	forceUnicode)
-from OPSI.Object import *
 from OPSI.Util.Repository import *
 from OPSI import System
 from OPSI.Util.HTTP import urlsplit
