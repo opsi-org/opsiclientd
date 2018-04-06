@@ -113,7 +113,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 		self._notificationServerPort = int(config.get('notification_server', 'start_port')) + (3 * int(self.getSessionId()))
 
-	''' ServiceConnection '''
+	# ServiceConnection
 	def connectionThreadOptions(self):
 		return {'statusSubject': self._statusSubject}
 
@@ -160,7 +160,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self._detailSubjectProxy.setMessage(u'')
 		ServiceConnection.connectionFailed(self, error)
 
-	''' / ServiceConnection '''
+	# End of ServiceConnection
 
 	def setSessionId(self, sessionId):
 		self._sessionId = int(sessionId)

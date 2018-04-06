@@ -101,16 +101,6 @@ infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
 	</div>
 '''
 
-'''
-= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-=                                            CONTROL SERVER                                           =
-= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-=                                                                                                     =
-=      These classes are used to create a https service which executes remote procedure calls         =
-=                                                                                                     =
-=                                                                                                     =
-= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-'''
 
 class WorkerOpsiclientd(WorkerOpsi):
 	def __init__(self, service, request, resource):
