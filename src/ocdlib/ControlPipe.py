@@ -286,6 +286,7 @@ class OpsiclientdRpcPipeInterface(object):
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 
 	def getInterface(self):
+		# TODO: is reusing the part from python-opsi possible?
 		methods = {}
 		for member in inspect.getmembers(self, inspect.ismethod):
 			methodName = member[0]
@@ -298,7 +299,8 @@ class OpsiclientdRpcPipeInterface(object):
 				for arg in forceList(args):
 					if (arg != 'self'):
 						params.append(arg)
-			if ( defaults != None and len(defaults) > 0 ):
+
+			if defaults:
 				offset = len(params) - len(defaults)
 				for i in range(len(defaults)):
 					params[offset+i] = '*' + params[offset+i]
