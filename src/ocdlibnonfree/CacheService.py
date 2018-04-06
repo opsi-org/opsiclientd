@@ -406,8 +406,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 						self._syncConfigFromServerRequested = False
 						self._syncConfigFromServer()
 				time.sleep(1)
-		except Exception as e:
-			logger.logException(e)
+		except Exception as error:
+			logger.logException(error)
 		logger.notice(u"Config cache service ended")
 		self._running = False
 
