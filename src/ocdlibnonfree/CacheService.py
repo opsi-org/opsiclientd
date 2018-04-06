@@ -961,10 +961,15 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		config.selectDepotserver(configService=self._configService, event=None, productIds=[productId], cifsOnly=False)
 		if not config.get('depot_server', 'url'):
 			raise Exception(u"Cannot cache product files: depot_server.url undefined")
-		(depotServerUsername, depotServerPassword) = (u'', u'')
+
+		depotServerUsername = u''
+		depotServerPassword = u''
+
 		(scheme, host, port, baseurl, username, password) = urlsplit(config.get('depot_server', 'url'))
 		if scheme.startswith('webdav'):
-			(depotServerUsername, depotServerPassword) = (config.get('global', 'host_id'), config.get('global', 'opsi_host_key'))
+			depotServerUsername = config.get('global', 'host_id')
+			depotServerPassword = config.get('global', 'opsi_host_key')
+
 			kwargs = {}
 			if scheme.startswith('webdavs'):
 				certDir = config.get('global', 'server_cert_dir')
