@@ -621,7 +621,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						productIds.append(productOnClient.productId)
 						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
 
-			if (len(productIds) == 0) and (bootmode == 'BKSTD'):
+			if (not productIds) and bootmode == 'BKSTD':
 				logger.notice(u"No product action requests set")
 				self.setStatusMessage( _(u"No product action requests set") )
 				#set installation_pending State to False
