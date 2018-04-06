@@ -25,6 +25,7 @@ Server component for controlling opsiclientd.
 """
 
 import codecs
+import os
 import re
 import time
 import threading
