@@ -306,9 +306,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 
 	def connectConfigService(self):
 		ServiceConnection.connectConfigService(self, allowTemporaryConfigServiceUrls=False)
+
+		modules = None
+		helpermodules = {}
 		try:
-			modules = None
-			helpermodules = {}
 			backendinfo = self._configService.backend_info()
 			hostCount = len(self._configService.host_getIdents(type="OpsiClient"))
 			modules = backendinfo['modules']
