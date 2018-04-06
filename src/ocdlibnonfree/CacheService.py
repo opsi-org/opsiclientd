@@ -535,7 +535,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 
 					needSync = False
 					for productOnClient in productOnClients:
-						if not localProductOnClientsByProductId.has_key(productOnClient.productId):
+						if productOnClient.productId not in localProductOnClientsByProductId:
 							needSync = True
 							break
 						if (localProductOnClientsByProductId[productOnClient.productId].actionRequest != productOnClient.actionRequest):
