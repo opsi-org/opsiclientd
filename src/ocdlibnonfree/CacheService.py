@@ -889,7 +889,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		elif (key == 'completed'):
 			actionProgress = 'cached'
 		elif (key == 'failure'):
-			actionProgress  u"Cache failure: %s" % forceUnicode(value)
+			actionProgress = u"Cache failure: %s" % forceUnicode(value)
 			installationStatus = u'unknown'
 			actionResult = u'failed'
 			if u"MD5sum mismatch" in forceUnicode(value):
