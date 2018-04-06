@@ -243,11 +243,11 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			depotId = config.get('depot_server', 'depot_id')
 
 		backendArgs = {
-			'opsiModulesFile':         self._opsiModulesFile,
-			'opsiVersionFile':         self._opsiVersionFile,
-			'opsiPasswdFile':          self._opsiPasswdFile,
+			'opsiModulesFile': self._opsiModulesFile,
+			'opsiVersionFile': self._opsiVersionFile,
+			'opsiPasswdFile': self._opsiPasswdFile,
 			'auditHardwareConfigFile': self._auditHardwareConfigFile,
-			'depotId':                 depotId,
+			'depotId': depotId,
 		}
 		self._workBackend = SQLiteBackend(
 			database=os.path.join(self._configCacheDir, 'work.sqlite'),
