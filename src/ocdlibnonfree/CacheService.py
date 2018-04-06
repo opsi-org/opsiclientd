@@ -28,7 +28,7 @@ from OPSI.Logger import LOG_INFO, Logger
 from OPSI.Object import ProductOnClient
 from OPSI.Types import (forceBool, forceInt, forceList, forceProductIdList,
 	forceUnicode)
-from OPSI.Util.Repository import *
+from OPSI.Util.Repository import getRepository
 from OPSI import System
 from OPSI.Util.HTTP import urlsplit
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
