@@ -23,7 +23,7 @@ import time
 from hashlib import md5
 from twisted.conch.ssh import keys
 
-from OPSI.Logger import *
+from OPSI.Logger import LOG_INFO, Logger
 from OPSI.Types import *
 from OPSI.Object import *
 from OPSI.Util.Repository import *
