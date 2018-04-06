@@ -41,29 +41,29 @@ encoding = locale.getpreferredencoding()
 
 
 def main():
-    argv = [unicode(arg, encoding) for arg in sys.argv]
+	argv = [unicode(arg, encoding) for arg in sys.argv]
 
-    if (len(argv) < 5):
-        print u"Usage: %s <username> <password> <port> <rpc> [debug_logfile]" % os.path.basename(argv[0])
-        sys.exit(1)
+	if (len(argv) < 5):
+		print u"Usage: %s <username> <password> <port> <rpc> [debug_logfile]" % os.path.basename(argv[0])
+		sys.exit(1)
 
-    (username, password, port, rpc) = argv[1:5]
-    logFile = None
-    if len(argv) > 5:
-        logFile = argv[5]
-        logger.setLogFile(logFile)
-        logger.setFileLevel(LOG_DEBUG)
+	(username, password, port, rpc) = argv[1:5]
+	logFile = None
+	if len(argv) > 5:
+		logFile = argv[5]
+		logger.setLogFile(logFile)
+		logger.setFileLevel(LOG_DEBUG)
 
-    address = u'https://localhost:%s/opsiclientd' % port
+	address = u'https://localhost:%s/opsiclientd' % port
 
-    try:
-        with JSONRPCBackend(username=username, password=password, address=address) as backend:
-            logger.notice(u"Executing: %s" % rpc)
-            exec 'backend.%s' % rpc
-    except Exception as error:
-        logger.logException(error)
-        sys.exit(1)
+	try:
+		with JSONRPCBackend(username=username, password=password, address=address) as backend:
+			logger.notice(u"Executing: %s" % rpc)
+			exec 'backend.%s' % rpc
+	except Exception as error:
+		logger.logException(error)
+		sys.exit(1)
 
 
 if __name__ == '__main__':
-    main()
+	main()
