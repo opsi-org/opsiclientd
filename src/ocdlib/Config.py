@@ -519,7 +519,10 @@ class ConfigImplementation(object):
 
 		depotServerUsername = self.get('depot_server', 'username')
 		encryptedDepotServerPassword = u''
-		encryptedDepotServerPassword = configService.user_getCredentials(username = u'pcpatch', hostId = self.get('global', 'host_id'))['password']
+		encryptedDepotServerPassword = configService.user_getCredentials(
+			username=u'pcpatch',
+			hostId=self.get('global', 'host_id')
+		)['password']
 		depotServerPassword = blowfishDecrypt(self.get('global', 'opsi_host_key'), encryptedDepotServerPassword)
 		logger.addConfidentialString(depotServerPassword)
 		logger.debug(u"Using username '%s' for depot connection" % depotServerUsername)
