@@ -518,7 +518,6 @@ class ConfigImplementation(object):
 			raise Exception(u"Not connected to config service")
 
 		depotServerUsername = self.get('depot_server', 'username')
-		encryptedDepotServerPassword = u''
 		encryptedDepotServerPassword = configService.user_getCredentials(
 			username=u'pcpatch',
 			hostId=self.get('global', 'host_id')
