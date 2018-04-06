@@ -96,6 +96,7 @@ class CacheService(threading.Thread):
 		else:
 			logger.info(u"Trigger config sync to server")
 			self._configCacheService.syncConfigToServer()
+
 		if waitForEnding:
 			time.sleep(3)
 			while self._configCacheService.isRunning() and self._configCacheService.isWorking():
@@ -108,6 +109,7 @@ class CacheService(threading.Thread):
 		else:
 			logger.info(u"Trigger config sync from server")
 			self._configCacheService.syncConfigFromServer()
+
 		if waitForEnding:
 			time.sleep(3)
 			while self._configCacheService.isRunning() and self._configCacheService.isWorking():
@@ -120,8 +122,10 @@ class CacheService(threading.Thread):
 			logger.logException(e, LOG_INFO)
 			logger.error(e)
 			return False
+
 		if not self._configCacheService.isWorking() and self._configCacheService.getState().get('config_cached', False):
 			return True
+
 		return False
 
 	def getConfigBackend(self):
@@ -141,6 +145,7 @@ class CacheService(threading.Thread):
 			self._productCacheService.setDynamicBandwidth(dynamicBandwidth)
 			self._productCacheService.setMaxBandwidth(maxBandwidth)
 			self._productCacheService.cacheProducts(productProgressObserver=productProgressObserver, overallProgressObserver=overallProgressObserver)
+
 		if waitForEnding:
 			time.sleep(3)
 			while self._productCacheService.isRunning() and self._productCacheService.isWorking():
@@ -149,6 +154,7 @@ class CacheService(threading.Thread):
 	def productCacheCompleted(self, configService, productIds):
 		if not productIds:
 			return True
+
 		self.initializeProductCacheService()
 
 		clientToDepotservers = configService.configState_getClientToDepotserver(
@@ -157,6 +163,7 @@ class CacheService(threading.Thread):
 				productIds=productIds)
 		if not clientToDepotservers:
 			raise Exception(u"Failed to get depot config from service")
+
 		depotId = [clientToDepotservers[0]['depotId']]
 		productOnDepots = {}
 		for productOnDepot in configService.productOnDepot_getObjects(depotId=depotId, productId=productIds):
@@ -166,13 +173,16 @@ class CacheService(threading.Thread):
 			productOnDepot = productOnDepots.get(productId)
 			if not productOnDepot:
 				raise Exception(u"Product '%s' not available on depot '%s'" % (productId, depotId))
+
 			productState = self._productCacheService.getState().get('products', {}).get(productId)
 			if not productState:
 				logger.info(u"No products cached")
 				return False
+
 			if not productState.get('completed') or (productState.get('productVersion') != productOnDepot.productVersion) or (productState.get('packageVersion') != productOnDepot.packageVersion):
 				logger.info(u"Product '%s_%s-%s' not yet cached (got state: %s)" % (productId, productOnDepot.productVersion, productOnDepot.packageVersion, productState))
 				return False
+
 		return True
 
 	def getProductCacheState(self):
@@ -239,6 +249,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			if not self._configService:
 				self.connectConfigService()
 				connect = True
+
 			config.selectDepotserver(configService=self._configService, event=None, productIds=[], masterOnly=True)
 			config.updateConfigFile()
 			if connect:
@@ -361,12 +372,15 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 	def isWorking(self):
 		if self._working:
 			return True
+
 		time.sleep(1)
 		if self._working:
 			return True
+
 		time.sleep(1)
 		if self._working:
 			return True
+
 		return False
 
 	def stop(self):
@@ -520,7 +534,9 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 						if (localProductOnClientsByProductId[productOnClient.productId].actionRequest != productOnClient.actionRequest):
 							needSync = True
 							break
+
 						del localProductOnClientsByProductId[productOnClient.productId]
+
 					if not needSync and localProductOnClientsByProductId:
 						needSync = True
 
@@ -543,6 +559,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 						self._state['config_cached'] = True
 						state.set('config_cache_service', self._state)
 						timeline.setEventEnd(eventId)
+
 						for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
 							eventGenerator.createAndFireEvent()
 				except Exception as e:
@@ -731,6 +748,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						logger.info(u"Package content file '%s' not found, deleting product cache to free disk space" % packageContentFile)
 						deleteProduct = product
 						break
+
 					mtime = os.path.getmtime(packageContentFile)
 					if not eldestTime:
 						eldestTime = mtime
@@ -739,18 +757,23 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					if (mtime < eldestTime):
 						eldestTime = mtime
 						deleteProduct = product
+
 				if not deleteProduct:
 					raise Exception(u"Internal error")
+
 				deleteDir = os.path.join(self._productCacheDir, deleteProduct)
 				logger.notice(u"Deleting product cache directory '%s'" % deleteDir)
 				if not os.path.exists(deleteDir):
 					raise Exception(u"Directory '%s' not found" % deleteDir)
+
 				shutil.rmtree(deleteDir)
 				freedSpace += productDirSizes[deleteProduct]
 				if self._state.get('products', {}).get(deleteProduct):
 					del self._state['products'][deleteProduct]
 					state.set('product_cache_service', self._state)
+
 				del productDirSizes[deleteProduct]
+
 			logger.notice(u"%0.3f MB of product cache freed" % (float(freedSpace)/(1024*1024)))
 		except Exception as e:
 			raise Exception(u"Failed to free enough disk space for product cache: %s" % forceUnicode(e))
@@ -813,6 +836,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						if productOnDepot.productId == productOnClient.productId:
 							found = True
 							break
+
 					if not found:
 						logger.error(u"Requested product: '%s' not found on configured depot: '%s', please check your configuration, setting product to failed." % (productOnClient.productId, config.get('depot_server', 'depot_id')))
 						self._setProductCacheState(productOnClient.productId, u"failure", u"Product not found on configured depot.")
@@ -856,6 +880,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					except Exception as e:
 						logger.logException(e)
 						errorsOccured.append(forceUnicode(e))
+
 					if errorsOccured:
 						logger.error(u"Errors occurred while caching products %s: %s" % (', '.join(productIds), ', '.join(errorsOccured)))
 						timeline.addEvent(
@@ -868,6 +893,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						logger.notice(u"All products cached: %s" % ', '.join(productIds))
 						self._state['products_cached'] = True
 						state.set('product_cache_service', self._state)
+
 						for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
 							eventGenerator.createAndFireEvent()
 		except Exception as e:
@@ -877,8 +903,10 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				description=u"Failed to cache products: %s" % e,
 				category=u"product_caching",
 				isError=True)
+
 		if eventId:
 			timeline.setEventEnd(eventId)
+
 		self.disconnectConfigService()
 		self._working = False
 
@@ -905,6 +933,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			actionResult = u'failed'
 			if u"MD5sum mismatch" in forceUnicode(value):
 				actionRequest = u'none'
+
 		if actionProgress and updateProductOnClient:
 			self._configService.productOnClient_updateObjects([
 				ProductOnClient(
@@ -942,6 +971,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					self._impersonation.end()
 				except Exception as e:
 					logger.warning(e)
+
 			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
 			self._impersonation = System.Impersonate(username=depotServerUsername, password=depotServerPassword)
 			self._impersonation.start(logonType='NEW_CREDENTIALS')
@@ -960,6 +990,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			repository = self._getRepository(productId)
 			if not config.get('depot_server', 'depot_id'):
 				raise Exception(u"Cannot cache product files: depot_server.depot_id undefined")
+
 			productOnDepots = self._configService.productOnDepot_getObjects(depotId=config.get('depot_server', 'depot_id'), productId=productId)
 			if not productOnDepots:
 				raise Exception(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
@@ -969,6 +1000,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 
 			if not os.path.exists(os.path.join(self._productCacheDir, productId)):
 				os.mkdir(os.path.join(self._productCacheDir, productId))
+
 			packageContentFile = u'%s/%s.files' % (productId, productId)
 			localPackageContentFile = os.path.join(self._productCacheDir, productId, u'%s.files' % productId)
 			repository.download(source=packageContentFile, destination=localPackageContentFile)
@@ -1035,17 +1067,21 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				category=u"product_caching",
 				isError=True
 			)
+
 		if eventId:
 			timeline.setEventEnd(eventId)
+
 		if repository:
 			try:
 				repository.disconnect()
 			except Exception as e:
 				logger.warning(u"Failed to disconnect from repository: %s" % e)
+
 		if self._impersonation:
 			try:
 				self._impersonation.end()
 			except Exception as e:
 				logger.warning(e)
+
 		if exception:
 			raise exception
