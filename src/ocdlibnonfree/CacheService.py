@@ -120,9 +120,9 @@ class CacheService(threading.Thread):
 	def configCacheCompleted(self):
 		try:
 			self.initializeConfigCacheService()
-		except Exception as e:
-			logger.logException(e, LOG_INFO)
-			logger.error(e)
+		except Exception as cacheInitError:
+			logger.logException(cacheInitError, LOG_INFO)
+			logger.error(cacheInitError)
 			return False
 
 		if not self._configCacheService.isWorking() and self._configCacheService.getState().get('config_cached', False):
