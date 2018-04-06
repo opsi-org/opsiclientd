@@ -174,8 +174,10 @@ class CacheService(threading.Thread):
 		}
 
 		for productId in productIds:
-			productOnDepot = productOnDepots.get(productId)
-			if not productOnDepot:
+			try:
+				productOnDepot = productOnDepots[productId]
+			except KeyError:
+				# TODO: raise more specific exception
 				raise Exception(u"Product '%s' not available on depot '%s'" % (productId, depotId))
 
 			productState = self._productCacheService.getState().get('products', {}).get(productId)
