@@ -167,9 +167,11 @@ class CacheService(threading.Thread):
 			raise Exception(u"Failed to get depot config from service")
 
 		depotId = [clientToDepotservers[0]['depotId']]
-		productOnDepots = {}
-		for productOnDepot in configService.productOnDepot_getObjects(depotId=depotId, productId=productIds):
-			productOnDepots[productOnDepot.productId] = productOnDepot
+		productOnDepots = {
+			productOnDepot.productId: productOnDepot
+			for productOnDepot
+			in configService.productOnDepot_getObjects(depotId=depotId, productId=productIds)
+		}
 
 		for productId in productIds:
 			productOnDepot = productOnDepots.get(productId)
