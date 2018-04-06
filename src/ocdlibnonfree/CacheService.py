@@ -527,7 +527,12 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 						state.set('config_cache_service', self._state)
 					else:
 						logger.notice(u"Product on client configuration changed on config service, sync from server required")
-						eventId = timeline.addEvent(title = u"Config sync from server", description = u'Syncing config from server', category = u'config_sync', durationEvent = True)
+						eventId = timeline.addEvent(
+							title=u"Config sync from server",
+							description=u'Syncing config from server',
+							category=u'config_sync',
+							durationEvent=True
+						)
 						self._cacheBackend._setMasterBackend(self._configService)
 						self._backendTracker.clearModifications()
 						self._cacheBackend._replicateMasterToWorkBackend()
@@ -535,15 +540,16 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 						self._state['config_cached'] = True
 						state.set('config_cache_service', self._state)
 						timeline.setEventEnd(eventId)
-						for eventGenerator in getEventGenerators(generatorClass = SyncCompletedEventGenerator):
+						for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
 							eventGenerator.createAndFireEvent()
 				except Exception as e:
 					logger.logException(e)
 					timeline.addEvent(
-					title       = u"Failed to sync config from server",
-					description = u"Failed to sync config from server: %s" % e,
-					category    = u"config_sync",
-					isError     = True)
+						title=u"Failed to sync config from server",
+						description=u"Failed to sync config from server: %s" % e,
+						category=u"config_sync",
+						isError=True
+					)
 					raise
 		except Exception as e:
 			logger.error(u"Errors occurred while syncing config from server: %s" % e)
@@ -697,7 +703,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			self.disconnectConfigService()
 			raise
 
-	def _freeProductCacheSpace(self, neededSpace = 0, neededProducts=[]):
+	def _freeProductCacheSpace(self, neededSpace=0, neededProducts=[]):
 		try:
 			# neededSpace in byte
 			neededSpace = forceInt(neededSpace)
@@ -819,7 +825,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						productIds.append(additionalProductId)
 
 				if errorProductIds:
-					for index in range(len(productIds) -1):
+					for index in range(len(productIds) - 1):
 						if productIds[index] in errorProductIds:
 							logger.error(u"ProductId: '%s' will not be cached." % productIds[index])
 							del productIds[index]
