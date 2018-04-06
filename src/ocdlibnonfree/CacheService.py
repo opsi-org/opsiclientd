@@ -13,6 +13,7 @@ ocdlibnonfree.CacheService
 @copyright: uib GmbH <info@uib.de>
 @author: Jan Schneider <j.schneider@uib.de>
 @author: Erol Ueluekmen <e.ueluekmen@uib.de>
+@author: Niko Wenselowski <n.wenselowski@uib.de>
 """
 
 import base64
@@ -24,7 +25,8 @@ from hashlib import md5
 from twisted.conch.ssh import keys
 
 from OPSI.Logger import LOG_INFO, Logger
-from OPSI.Types import *
+from OPSI.Types import (forceBool, forceInt, forceList, forceProductIdList,
+	forceUnicode)
 from OPSI.Object import *
 from OPSI.Util.Repository import *
 from OPSI import System
