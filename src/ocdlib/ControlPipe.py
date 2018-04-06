@@ -314,13 +314,21 @@ class OpsiclientdRpcPipeInterface(object):
 					params.append('**' + arg)
 
 			logger.debug2(u"Interface method name '%s' params %s" % (methodName, params))
-			methods[methodName] = { 'name': methodName, 'params': params, 'args': args, 'varargs': varargs, 'keywords': keywords, 'defaults': defaults}
+			methods[methodName] = {
+				'name': methodName,
+				'params': params,
+				'args': args,
+				'varargs': varargs,
+				'keywords': keywords,
+				'defaults': defaults
+			}
 
 		methodList = []
 		methodNames = methods.keys()
 		methodNames.sort()
 		for methodName in methodNames:
 			methodList.append(methods[methodName])
+
 		return methodList
 
 	def getPossibleMethods_listOfHashes(self):
