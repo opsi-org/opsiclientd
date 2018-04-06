@@ -538,7 +538,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 						if productOnClient.productId not in localProductOnClientsByProductId:
 							needSync = True
 							break
-						if (localProductOnClientsByProductId[productOnClient.productId].actionRequest != productOnClient.actionRequest):
+
+						if localProductOnClientsByProductId[productOnClient.productId].actionRequest != productOnClient.actionRequest:
 							needSync = True
 							break
 
@@ -629,7 +630,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		return self._productCacheDir
 
 	def dynamicBandwidthLimitChanged(self, repository, bandwidth):
-		if (bandwidth <= 0):
+		if bandwidth <= 0:
 			if self._dynamicBandwidthLimitEvent:
 				timeline.setEventEnd(self._dynamicBandwidthLimitEvent)
 				self._dynamicBandwidthLimitEvent = None
@@ -742,14 +743,15 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				if product not in neededProducts:
 					productDirSizes[product] = System.getDirectorySize(os.path.join(self._productCacheDir, product))
 					maxFreeableSize += productDirSizes[product]
-			if (maxFreeableSize < neededSpace):
+
+			if maxFreeableSize < neededSpace:
 				raise Exception(u"Needed space: %0.3f MB, maximum freeable space: %0.3f MB" \
 							% ( (float(neededSpace)/(1024*1024)), (float(maxFreeableSize)/(1024*1024)) ) )
 			freedSpace = 0
-			while (freedSpace < neededSpace):
+			while freedSpace < neededSpace:
 				deleteProduct = None
 				eldestTime = None
-				for (product, size) in productDirSizes.items():
+				for product, size in productDirSizes.items():
 					packageContentFile = os.path.join(self._productCacheDir, product, u'%s.files' % product)
 					if not os.path.exists(packageContentFile):
 						logger.info(u"Package content file '%s' not found, deleting product cache to free disk space" % packageContentFile)
@@ -761,7 +763,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						eldestTime = mtime
 						deleteProduct = product
 						continue
-					if (mtime < eldestTime):
+
+					if mtime < eldestTime:
 						eldestTime = mtime
 						deleteProduct = product
 
@@ -932,9 +935,9 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 
 		if key == 'started':
 			actionProgress = 'caching'
-		elif (key == 'completed'):
+		elif key == 'completed':
 			actionProgress = 'cached'
-		elif (key == 'failure'):
+		elif key == 'failure':
 			actionProgress = u"Cache failure: %s" % forceUnicode(value)
 			installationStatus = u'unknown'
 			actionResult = u'failed'
@@ -1023,7 +1026,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				% (productId, fileCount, (float(productSize)/(1024*1024))))
 
 			productCacheDirSize = 0
-			if (self._productCacheMaxSize > 0):
+			if self._productCacheMaxSize > 0:
 				productCacheDirSize = System.getDirectorySize(self._productCacheDir)
 				if (productCacheDirSize + productSize > self._productCacheMaxSize):
 					logger.info(u"Product cache dir sizelimit of %0.3f MB exceeded. Current size: %0.3f MB, space needed for product '%s': %0.3f MB" \
