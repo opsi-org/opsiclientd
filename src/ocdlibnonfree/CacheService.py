@@ -19,6 +19,7 @@ ocdlibnonfree.CacheService
 import base64
 import codecs
 import os
+import shutil
 import threading
 import time
 from hashlib import md5
@@ -28,7 +29,9 @@ from OPSI.Logger import LOG_INFO, Logger
 from OPSI.Object import ProductOnClient
 from OPSI.Types import (forceBool, forceInt, forceList, forceProductIdList,
 	forceUnicode)
+from OPSI.Util.File import PackageContentFile
 from OPSI.Util.Repository import getRepository
+from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, RepositoryObserver
 from OPSI import System
 from OPSI.Util.HTTP import urlsplit
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
