@@ -57,10 +57,6 @@ logger = Logger()
 config = Config()
 timeline = Timeline()
 
-try:
-	from ocdlibnonfree.CacheService import CacheService
-except Exception as e:
-	pass
 
 infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
