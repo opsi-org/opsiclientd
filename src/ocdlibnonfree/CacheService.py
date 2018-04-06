@@ -84,6 +84,8 @@ class CacheService(threading.Thread):
 		else:
 			logger.info(u"Trigger config sync")
 			self._configCacheService.syncConfig()
+
+		# TODO: the following code is used often - make a function out of it.
 		if waitForEnding:
 			time.sleep(3)
 			while self._configCacheService.isRunning() and self._configCacheService.isWorking():
