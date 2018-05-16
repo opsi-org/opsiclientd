@@ -230,14 +230,19 @@ class WorkerOpsiclientdJsonInterface(WorkerOpsiclientdJsonRpc, WorkerOpsiJsonInt
 	def _generateResponse(self, result):
 		return WorkerOpsiJsonInterface._generateResponse(self, result)
 
+
 class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientd.__init__(self, service, request, resource)
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 
 	def _getBackend(self, result):
-		if hasattr(self.session, 'callInstance') and hasattr(self.session, 'callInterface') and self.session.callInstance and self.session.callInterface:
-			return result
+		try:
+			if self.session.callInstance and self.session.callInterface:
+				return result
+		except AttributeError:
+			pass
+
 		if not self.service._opsiclientd.getCacheService():
 			raise Exception(u'Cache service not running')
 
