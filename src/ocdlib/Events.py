@@ -31,9 +31,10 @@ import re
 import thread
 import threading
 
-from OPSI.Logger import Logger, LOG_DEBUG
 from OPSI import System
-from OPSI.Types import *
+from OPSI.Logger import Logger, LOG_DEBUG
+from OPSI.Types import forceList, forceUnicode
+from OPSI.Util import objectToBeautifiedText
 
 from ocdlib.Config import getLogFormat, Config
 from ocdlib.State import State
