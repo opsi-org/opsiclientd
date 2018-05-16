@@ -137,9 +137,10 @@ class PosixControlPipe(ControlPipe):
 						try:
 							self._pipe = os.open(self._pipeName, os.O_WRONLY | os.O_NONBLOCK)
 							break
-						except Exception, e:
+						except Exception as e:
 							if not hasattr(e, 'errno') or (e.errno != 6):
 								raise
+
 							time.sleep(0.01)
 							ta += 0.01
 
@@ -280,8 +281,9 @@ class NTControlPipe(ControlPipe):
 				else:
 					logger.error(u"Failed to connect to pipe")
 					windll.kernel32.CloseHandle(self._pipe)
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
+
 		logger.notice(u"ControlPipe exiting")
 		self._running = False
 
