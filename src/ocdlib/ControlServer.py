@@ -201,6 +201,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 			raise OpsiAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
 		return result
 
+
 class WorkerOpsiclientdJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientd.__init__(self, service, request, resource)
@@ -216,6 +217,7 @@ class WorkerOpsiclientdJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 
 	def _generateResponse(self, result):
 		return WorkerOpsiJsonRpc._generateResponse(self, result)
+
 
 class WorkerOpsiclientdJsonInterface(WorkerOpsiclientdJsonRpc, WorkerOpsiJsonInterface):
 	def __init__(self, service, request, resource):
@@ -332,6 +334,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 
 class ResourceRoot(resource.Resource):
 	addSlash = True
+
 	def render(self, request):
 		''' Process request. '''
 		return http.Response(stream="<html><head><title>opsiclientd</title></head><body></body></html>")
@@ -340,23 +343,29 @@ class ResourceRoot(resource.Resource):
 class ResourceOpsiclientd(ResourceOpsi):
 	WorkerClass = WorkerOpsiclientd
 
+
 class ResourceOpsiclientdJsonRpc(ResourceOpsiJsonRpc):
 	WorkerClass = WorkerOpsiclientdJsonRpc
+
 
 class ResourceOpsiclientdJsonInterface(ResourceOpsiJsonInterface):
 	WorkerClass = WorkerOpsiclientdJsonInterface
 
+
 class ResourceCacheServiceJsonRpc(ResourceOpsiJsonRpc):
 	WorkerClass = WorkerCacheServiceJsonRpc
 
+
 class ResourceCacheServiceJsonInterface(ResourceOpsiJsonInterface):
 	WorkerClass = WorkerCacheServiceJsonInterface
+
 
 class ResourceOpsiclientdInfo(ResourceOpsiclientd):
 	WorkerClass = WorkerOpsiclientdInfo
 
 	def __init__(self, service):
 		ResourceOpsiclientd.__init__(self, service)
+
 
 class ControlServer(OpsiService, threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
