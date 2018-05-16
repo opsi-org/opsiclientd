@@ -37,9 +37,6 @@ import win32net
 from twisted.internet import reactor
 
 # OPSI imports
-from OPSI.Logger import *
-from OPSI.Types import forceBool, forceInt, forceUnicode
-from OPSI.Util import *
 from OPSI import System
 from OPSI.Exceptions import OpsiAuthenticationError
 from OPSI.Logger import Logger
