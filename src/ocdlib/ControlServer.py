@@ -53,7 +53,7 @@ from OPSI.web2 import resource, stream, server, http, responsecode
 from OPSI.web2.channel.http import HTTPFactory
 
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
-from ocdlib.Config import Config
+from ocdlib.Config import getLogFormat, Config
 from ocdlib.Events import eventGenerators
 from ocdlib.Timeline import Timeline
 from ocdlib.OpsiService import ServiceConnection
@@ -100,8 +100,7 @@ infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
 
 class WorkerOpsiclientd(WorkerOpsi):
 	def __init__(self, service, request, resource):
-		moduleName = u' %-30s' % (u'control server')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(getLogFormat(u'control server'), object=self)
 		WorkerOpsi.__init__(self, service, request, resource)
 
 	def _getCredentials(self):
@@ -338,8 +337,7 @@ class ResourceOpsiclientdInfo(ResourceOpsiclientd):
 class ControlServer(OpsiService, threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
 		OpsiService.__init__(self)
-		moduleName = u' %-30s' % (u'control server')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(getLogFormat(u'control server'), object=self)
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._httpsPort = httpsPort

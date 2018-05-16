@@ -43,7 +43,7 @@ from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc
 from OPSI.Service.Resource import ResourceOpsi
 
 from ocdlib.OpsiService import ServiceConnection
-from ocdlib.Config import Config
+from ocdlib.Config import getLogFormat, Config
 from ocdlib.Events import SwOnDemandEventGenerator, getEventGenerators
 from ocdlib.Localization import _
 from ocdlib.Timeline import Timeline
@@ -94,8 +94,7 @@ mainpage = u'''<?xml version="1.0" encoding="UTF-8"?>
 
 class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 	def __init__(self, service, request, resource):
-		moduleName = u' %-30s' % (u'software on demand')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(getLogFormat(u'software on demand'), object=self)
 		WorkerOpsi.__init__(self, service, request, resource)
 		ServiceConnection.__init__(self)
 		self._swOnDemandProductIds = []
@@ -504,8 +503,7 @@ class ResourceSoftwareOnDemand(ResourceOpsi):
 
 class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 	def __init__(self, service, request, resource):
-		moduleName = u' %-30s' % (u'software on demand')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(getLogFormat(u'software on demand'), object=self)
 		self._allowedMethods = self._getAllowedMethods()
 		self._fireEvent = False
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)

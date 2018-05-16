@@ -39,7 +39,7 @@ from OPSI.Backend.BackendManager import BackendExtender
 from OPSI.Backend.Cache import ClientCacheBackend
 from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker
 
-from ocdlib.Config import Config
+from ocdlib.Config import getLogFormat, Config
 from ocdlib.State import State
 from ocdlib.Events import SyncCompletedEventGenerator, getEventGenerators
 from ocdlib.OpsiService import ServiceConnection
@@ -214,8 +214,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		try:
 			threading.Thread.__init__(self)
 			ServiceConnection.__init__(self)
-			moduleName = u' %-30s' % (u'config cache service')
-			logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+			logger.setLogFormat(getLogFormat(u'config cache service'), object=self)
 
 			self._configCacheDir = os.path.join(config.get('cache_service', 'storage_dir'), 'config')
 			self._opsiModulesFile = os.path.join(self._configCacheDir, 'cached_modules')
@@ -589,8 +588,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 	def __init__(self):
 		threading.Thread.__init__(self)
 		ServiceConnection.__init__(self)
-		moduleName = u' %-30s' % (u'product cache service')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(getLogFormat(u'product cache service'), object=self)
 
 		self._storageDir = config.get('cache_service', 'storage_dir')
 		self._tempDir = os.path.join(self._storageDir, 'tmp')

@@ -45,7 +45,7 @@ from OPSI import System
 
 from ocdlib.Localization import _
 from ocdlib import __version__
-from ocdlib.Config import Config
+from ocdlib.Config import getLogFormat, Config
 from ocdlib.Exceptions import CanceledByUserError
 
 logger = Logger()
@@ -261,8 +261,7 @@ class ServiceConnection(object):
 
 class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, statusSubject=None):
-		moduleName = u' %-30s' % (u'service connection')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(getLogFormat(u'service connection'), object=self)
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username

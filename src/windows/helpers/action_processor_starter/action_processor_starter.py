@@ -33,6 +33,7 @@ import sys, os, locale, gettext
 from OPSI.Logger import *
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
+from ocdlib.Config import getLogFormat
 
 encoding = locale.getpreferredencoding()
 
@@ -55,8 +56,7 @@ if runAsPassword:
 logger.setConsoleLevel(LOG_NONE)
 logger.setLogFile(logFile)
 logger.setFileLevel(int(logLevel))
-moduleName = u' %-30s' % (os.path.basename(argv[0]))
-logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)')
+logger.setLogFormat(getLogFormat(os.path.basename(argv[0]))
 
 logger.debug(u"Called with arguments: %s" % u', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword, createEnvironment)) )
 

@@ -42,7 +42,7 @@ from ocdlib.Exceptions import *
 from ocdlib.Events import *
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.Localization import _
-from ocdlib.Config import Config
+from ocdlib.Config import getLogFormat, Config
 from ocdlib.Timeline import Timeline
 
 if (os.name == 'nt'):
@@ -59,10 +59,9 @@ timeline = Timeline()
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class EventProcessingThread(KillableThread, ServiceConnection):
 	def __init__(self, opsiclientd, event):
-		from ocdlib import __version__
+		from ocdlib import __version__  # TODO: Import movable?
 
-		moduleName = u' %-30s' % (u'event processing ' + event.eventConfig.getId())
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(getLogFormat(u'event processing ' + event.eventConfig.getId()), object=self)
 		KillableThread.__init__(self)
 		ServiceConnection.__init__(self)
 

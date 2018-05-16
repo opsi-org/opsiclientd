@@ -44,7 +44,7 @@ from ocdlib.Events import *
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from ocdlib.ControlServer import ControlServer
 from ocdlib.Localization import _, setLocaleDir
-from ocdlib.Config import Config
+from ocdlib.Config import getLogFormat, Config
 from ocdlib.Timeline import Timeline
 
 if (os.name == 'nt'):
@@ -66,8 +66,7 @@ timeline = Timeline()
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
-		moduleName = u' %-30s' % (u'opsiclientd')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(getLogFormat(u'opsiclientd'), object=self)
 		logger.debug(u"Opsiclient initiating")
 
 		EventListener.__init__(self)
