@@ -197,9 +197,9 @@ class ServiceConnection(object):
 				if serviceConnectionThread.connected and forceBool(config.get('config_service', 'sync_time_from_service')):
 					logger.info(u"Syncing local system time from service")
 					try:
-					    System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True))
-				    	except Exception as e:
-				    		logger.error(u"Failed to sync time: '%s'" % e)
+						System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True))
+					except Exception as e:
+						logger.error(u"Failed to sync time: {0!r}", e)
 
 				if urlIndex > 0:
 					backendinfo = serviceConnectionThread.configService.backend_info()
