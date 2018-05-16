@@ -114,7 +114,7 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		# Wrapping because ReportServiceStatus sometimes lets windows
 		# report a crash of opsiclientd (python 2.6.5) invalid handle
 		try:
-			logger.debug('Reporting service status: {status}'.format(status=serviceStatus))
+			logger.debug('Reporting service status: {}', serviceStatus)
 			win32serviceutil.ServiceFramework.ReportServiceStatus(
 				self,
 				serviceStatus,
@@ -123,7 +123,7 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 				svcExitCode=svcExitCode
 			)
 		except Exception as reportStatusError:
-			logger.error(u"Failed to report service status %s: %s" % (serviceStatus, forceUnicode(reportStatusError)))
+			logger.error(u"Failed to report service status {0}: {1}", serviceStatus, forceUnicode(reportStatusError))
 
 	def SvcInterrogate(self):
 		logger.debug(u"OpsiclientdServiceFramework SvcInterrogate")
