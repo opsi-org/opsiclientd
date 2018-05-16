@@ -71,6 +71,7 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 					if not pythoncom and importPythoncom:
 						logger.debug(u"Importing pythoncom")
 						import pythoncom
+
 					if not wmi and importWmi:
 						logger.debug(u"Importing wmi")
 						pythoncom.CoInitialize()
@@ -196,7 +197,6 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 
 			# Write to event log
 			self.ReportServiceStatus(win32service.SERVICE_RUNNING)
-
 			logger.debug(u"Took %0.2f seconds to report service running status" % (time.time() - startTime))
 
 			self.opsiclientd.start()
