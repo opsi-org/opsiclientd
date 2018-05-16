@@ -109,7 +109,7 @@ class PosixControlPipe(ControlPipe):
 		if self._pipe:
 			try:
 				os.close(self._pipe)
-			except Exception, e:
+			except Exception:
 				pass
 
 	def run(self):
