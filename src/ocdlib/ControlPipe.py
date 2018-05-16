@@ -301,34 +301,35 @@ class OpsiclientdRpcPipeInterface(object):
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
 
 	def getInterface(self):
-		# TODO: is reusing the part from python-opsi possible?
+		"""
+		Returns what methods are available and the signatures they use.
+
+		These methods are represented as a dict with the following keys: \
+		*name*, *params*, *args*, *varargs*, *keywords*, *defaults*.
+
+		:returntype: [{},]
+		"""
 		methods = {}
-		for member in inspect.getmembers(self, inspect.ismethod):
-			methodName = member[0]
+		for methodName, function in inspect.getmembers(self, inspect.ismethod):
 			if methodName.startswith('_'):
 				# protected / private
 				continue
-			(args, varargs, keywords, defaults) = inspect.getargspec(member[1])
-			params = []
-			if args:
-				for arg in forceList(args):
-					if (arg != 'self'):
-						params.append(arg)
 
-			if defaults:
+			args, varargs, keywords, defaults = inspect.getargspec(function)
+			params = [arg for arg in args if arg != 'self']
+
+			if defaults is not None:
 				offset = len(params) - len(defaults)
-				for i in range(len(defaults)):
-					params[offset+i] = '*' + params[offset+i]
+				for i in xrange(len(defaults)):
+					index = offset + i
+					params[index] = '*{0}'.format(params[index])
 
-			if varargs:
-				for arg in forceList(varargs):
-					params.append('*' + arg)
+			for (index, element) in enumerate((varargs, keywords), start=1):
+				if element:
+					stars = '*' * index
+					params.extend(['{0}{1}'.format(stars, arg) for arg in forceList(element)])
 
-			if keywords:
-				for arg in forceList(keywords):
-					params.append('**' + arg)
-
-			logger.debug2(u"Interface method name '%s' params %s" % (methodName, params))
+			logger.debug2(u"Interface method: name {0!r}, params {1}", methodName, params)
 			methods[methodName] = {
 				'name': methodName,
 				'params': params,
@@ -338,13 +339,7 @@ class OpsiclientdRpcPipeInterface(object):
 				'defaults': defaults
 			}
 
-		methodList = []
-		methodNames = methods.keys()
-		methodNames.sort()
-		for methodName in methodNames:
-			methodList.append(methods[methodName])
-
-		return methodList
+		return [methods[name] for name in sorted(methods.keys())]
 
 	def getPossibleMethods_listOfHashes(self):
 		return self.getInterface()
