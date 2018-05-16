@@ -440,7 +440,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		return timeline.getEvents()
 
 	def setBlockLogin(self, blockLogin):
-		self.opsiclientd.setBlockLogin(bool(blockLogin))
+		self.opsiclientd.setBlockLogin(forceBool(blockLogin))
 		logger.notice(u"rpc setBlockLogin: blockLogin set to '%s'" % self.opsiclientd._blockLogin)
 		if self.opsiclientd._blockLogin:
 			return u"Login blocker is on"
