@@ -40,7 +40,7 @@ from OPSI.Util import *
 from OPSI.Util.Thread import KillableThread
 from OPSI.Util.HTTP import urlsplit, non_blocking_connect_http, non_blocking_connect_https
 from OPSI.Backend.JSONRPC import JSONRPCBackend
-from OPSI.Types import *
+from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
 from OPSI import System
 
 from ocdlib.Localization import _
