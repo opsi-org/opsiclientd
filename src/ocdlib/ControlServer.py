@@ -444,13 +444,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 		logger.notice(u"rpc readLog: reading log of type {!r}", logType)
 
-		logger.notice(u"rpc readLog: reading log of type '%s'" % logType)
+		if logType == 'opsiclientd':
+			logFile = config.get('global', 'log_file')
+			with codecs.open(logFile, 'r', 'utf-8', 'replace') as log:
+				return log.read()
 
-		if (logType == 'opsiclientd'):
-			f = codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace')
-			data = f.read()
-			f.close()
-			return data
 		return u""
 
 	def runCommand(self, command, sessionId=None, desktop=None):
