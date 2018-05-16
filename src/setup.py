@@ -186,7 +186,7 @@ if RUNS_ON_WINDOWS:
 	opsiclientd = Target(
 		name="opsiclientd",
 		description=opsiclientdDescription,
-		script="opsiclientd.py",
+		script="scripts\\opsiclientd",
 		modules=["opsiclientd"],
 		#cmdline_style='pywin32',
 		#other_resources = [(RT_MANIFEST, 1, manifest_template % dict(prog="opsiclientd"))],
@@ -245,7 +245,7 @@ if RUNS_ON_WINDOWS:
 	setup_options['console'] = [network_performance, opsiclientd_shutdown_starter]
 	setup_options['windows'] = [notifier, opsiclientd_rpc, 	action_processor_starter]
 else:
-	setup_options['scripts'] = []
+	setup_options['scripts'] = [os.path.join('scripts', 'opsiclientd')]
 	setup_options['packages'] = packages
 
 setup(**setup_options)
