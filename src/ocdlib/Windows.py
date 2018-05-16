@@ -33,7 +33,6 @@ import win32serviceutil
 import win32service
 import win32com.server.policy
 import win32com.client
-from ctypes import *
 
 from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG
 from OPSI.Types import forceBool, forceUnicode
