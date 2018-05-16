@@ -87,8 +87,8 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 
 
 class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
-	_com_interfaces_=[IID_ISensLogon]
-	_public_methods_=[
+	_com_interfaces_ = [IID_ISensLogon]
+	_public_methods_ = [
 		'Logon',
 		'Logoff',
 		'StartShell',
@@ -103,7 +103,7 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 		self._callback = callback
 
 	def subscribe(self):
-		(wmi, pythoncom) = importWmiAndPythoncom(importWmi = False)
+		(wmi, pythoncom) = importWmiAndPythoncom(importWmi=False)
 
 		subscription_interface = pythoncom.WrapObject(self)
 
