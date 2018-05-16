@@ -76,11 +76,15 @@ class ControlPipe(threading.Thread):
 	def executeRpc(self, rpc):
 		try:
 			rpc = fromJson(rpc)
-			rpc = JsonRpc(instance = self._opsiclientdRpcInterface, interface = self._opsiclientdRpcInterface.getInterface(), rpc = rpc)
-			rpc.execute()
-			return toJson(rpc.getResponse())
-		except Exception, e:
-			logger.logException(e)
+			jsonrpc = JsonRpc(
+				instance=self._opsiclientdRpcInterface,
+				interface=self._opsiclientdRpcInterface.getInterface(),
+				rpc=rpc
+			)
+			jsonrpc.execute()
+			return toJson(jsonrpc.getResponse())
+		except Exception as rpcError:
+			logger.logException(rpcError)
 
 
 class PosixControlPipe(ControlPipe):
