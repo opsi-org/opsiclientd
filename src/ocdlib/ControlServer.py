@@ -382,19 +382,25 @@ class ControlServer(OpsiService, threading.Thread):
 	def createRoot(self):
 		if self._staticDir:
 			if os.path.isdir(self._staticDir):
-				self._root = ResourceOpsiDAV(self, path = self._staticDir, readOnly = True, authRequired = False)
-				#self._root = static.File(self._staticDir)
+				self._root = ResourceOpsiDAV(
+					self,
+					path=self._staticDir,
+					readOnly=True,
+					authRequired=False
+				)
 			else:
 				logger.error(u"Cannot add static content '/': directory {!r} does not exist.", self._staticDir)
 
 		if not self._root:
 			self._root = ResourceRoot()
+
 		self._root.putChild("opsiclientd", ResourceOpsiclientdJsonRpc(self))
 		self._root.putChild("interface",   ResourceOpsiclientdJsonInterface(self))
 		self._root.putChild("rpc", ResourceCacheServiceJsonRpc(self))
 		self._root.putChild("rpcinterface", ResourceCacheServiceJsonInterface(self))
 		self._root.putChild("info.html", ResourceOpsiclientdInfo(self))
-		self._root.putChild("kiosk",ResourceKioskJsonRpc(self))
+		self._root.putChild("kiosk", ResourceKioskJsonRpc(self))
+
 
 class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def __init__(self, opsiclientd):
@@ -455,20 +461,34 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		command = forceUnicode(command)
 		if not command:
 			raise ValueError("No command given")
+
 		if sessionId:
 			sessionId = forceInt(sessionId)
 		else:
 			sessionId = System.getActiveSessionId(self.opsiclientd._winApiBugCommand)
+
 		if desktop:
 			desktop = forceUnicode(desktop)
 		else:
 			desktop = self.opsiclientd.getCurrentActiveDesktopName()
+
 		logger.notice(u"rpc runCommand: executing command {!r} in session {:d} on desktop {!r}", command, sessionId, desktop)
-		System.runCommandInSession(command = command, sessionId = sessionId, desktop = desktop, waitForProcessEnding = False)
+		System.runCommandInSession(
+			command=command,
+			sessionId=sessionId,
+			desktop=desktop,
+			waitForProcessEnding=False
+		)
 		return u"command '%s' executed" % command
 
 	def execute(self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300):
-		return System.execute(cmd = command, waitForEnding = waitForEnding, captureStderr = captureStderr, encoding = encoding, timeout = timeout)
+		return System.execute(
+			cmd=command,
+			waitForEnding=waitForEnding,
+			captureStderr=captureStderr,
+			encoding=encoding,
+			timeout=timeout
+		)
 
 	def logoffCurrentUser(self):
 		logger.notice(u"rpc logoffCurrentUser: logging of current user now")
@@ -481,12 +501,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def shutdown(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
 		logger.notice(u"rpc shutdown: shutting down computer in {} seconds", waitSeconds)
-		System.shutdown(wait = waitSeconds)
+		System.shutdown(wait=waitSeconds)
 
 	def reboot(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
 		logger.notice(u"rpc reboot: rebooting computer in {} seconds", waitSeconds)
-		System.reboot(wait = waitSeconds)
+		System.reboot(wait=waitSeconds)
 
 	def uptime(self):
 		uptime = int(time.time() - self.opsiclientd._startupTime)
