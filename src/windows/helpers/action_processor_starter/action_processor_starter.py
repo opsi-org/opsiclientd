@@ -56,7 +56,7 @@ if runAsPassword:
 logger.setConsoleLevel(LOG_NONE)
 logger.setLogFile(logFile)
 logger.setFileLevel(int(logLevel))
-logger.setLogFormat(getLogFormat(os.path.basename(argv[0]))
+logger.setLogFormat(getLogFormat(os.path.basename(argv[0])))
 
 logger.debug(u"Called with arguments: %s" % u', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword, createEnvironment)) )
 
