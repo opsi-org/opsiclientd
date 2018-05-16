@@ -148,8 +148,11 @@ class WorkerOpsiclientd(WorkerOpsi):
 				raise Exception(u"No password from %s (application: %s)" % (self.session.ip, self.session.userAgent))
 
 			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
-				if self.service.authFailureCount.has_key(self.request.remoteAddr.host):
+				try:
 					del self.service.authFailureCount[self.request.remoteAddr.host]
+				except KeyError:
+					pass
+
 				return result
 
 			if (os.name == 'nt'):
