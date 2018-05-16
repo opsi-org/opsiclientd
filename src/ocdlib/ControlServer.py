@@ -30,6 +30,7 @@ procedure calls
 import codecs
 import os
 import re
+import shutil
 import time
 import win32security
 import win32net
@@ -431,7 +432,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		if os.path.exists(productCacheDir):
 			for product in os.listdir(productCacheDir):
 				deleteDir = os.path.join(productCacheDir, product)
-				System.shutil.rmtree(deleteDir)
+				shutil.rmtree(deleteDir)
+
 		return u"product cache deleted."
 
 	def timeline_getEvents(self):
