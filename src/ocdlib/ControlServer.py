@@ -28,8 +28,9 @@ procedure calls
 """
 
 import codecs
-import time
+import os
 import re
+import time
 import win32security
 import win32net
 
