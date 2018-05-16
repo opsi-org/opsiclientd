@@ -31,6 +31,7 @@ import codecs
 import os
 import re
 import shutil
+import threading
 import time
 import win32security
 import win32net
