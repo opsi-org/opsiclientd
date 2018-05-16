@@ -19,6 +19,8 @@
 """
 Pipes for remote procedure calls.
 
+The classes are used to create named pipes for remote procedure calls.
+
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
 :license: GNU Affero General Public License version 3
@@ -47,24 +49,10 @@ def ControlPipeFactory(opsiclientdRpcInterface):
 		raise NotImplementedError(u"Unsupported operating system %s" % os.name)
 
 
-
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-# =                                            CONTROL PIPES                                            =
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-# =                                                                                                     =
-# =             These classes are used to create named pipes for remote procedure calls                 =
-# =                                                                                                     =
-# =  The class "ControlPipe" is the base class for a named pipe which handles remote procedure calls    =
-# =     PosixControlPipe implements a control pipe for posix operating systems                          =
-# =     NTControlPipe implements a control pipe for windows operating systems                           =
-# =  The class "ControlPipeFactory" selects the right implementation for the running os                 =
-# =                                                                                                     =
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                        CONTROL PIPE                                               -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class ControlPipe(threading.Thread):
+	"""
+	Base class for a named pipe which handles remote procedure calls.
+	"""
 	def __init__(self, opsiclientdRpcInterface):
 		moduleName = u' %-30s' % (u'control pipe')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
@@ -96,6 +84,10 @@ class ControlPipe(threading.Thread):
 
 
 class PosixControlPipe(ControlPipe):
+	"""
+	Control pipe for posix operating systems
+	"""
+
 	def __init__(self, opsiclientdRpcInterface):
 		ControlPipe.__init__(self, opsiclientdRpcInterface)
 		self._pipeName = "/var/run/opsiclientd/fifo"
@@ -225,6 +217,9 @@ class NTControlPipeConnection(threading.Thread):
 
 
 class NTControlPipe(ControlPipe):
+	"""
+	Control pipe for windows operating systems.
+	"""
 
 	def __init__(self, opsiclientdRpcInterface):
 		threading.Thread.__init__(self)
