@@ -157,9 +157,9 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		"""
 		Gets called from windows to start service
 		"""
-		try:
-			startTime = time.time()
+		startTime = time.time()
 
+		try:
 			try:
 				try:
 					debugLogFile = os.path.join(System.getSystemDrive(), 'opsi.org', 'log', 'opsiclientd.log')
