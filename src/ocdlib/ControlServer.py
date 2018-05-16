@@ -449,7 +449,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def readLog(self, logType='opsiclientd'):
 		logType = forceUnicode(logType)
-		if not logType in ('opsiclientd'):
+		if logType not in ('opsiclientd'):
 			raise ValueError(u"Unknown log type '%s'" % logType)
 
 		logger.notice(u"rpc readLog: reading log of type '%s'" % logType)
