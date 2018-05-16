@@ -28,8 +28,10 @@ Events and their configuration.
 import copy as pycopy
 import os
 import re
+import sys
 import thread
 import threading
+import time
 
 from OPSI import System
 from OPSI.Logger import Logger, LOG_DEBUG
