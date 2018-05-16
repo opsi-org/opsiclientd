@@ -210,7 +210,6 @@ class WorkerOpsiclientdJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 	def _getCallInstance(self, result):
 		self._callInstance = self.service._opsiclientdRpcInterface
 		self._callInterface = self.service._opsiclientdRpcInterface.getInterface()
-		#logger.debug2(u"Got call instance '%s' from service '%s' with interface: %s" % (self._callInstance, self.service, self._callInterface))
 
 	def _processQuery(self, result):
 		return WorkerOpsiJsonRpc._processQuery(self, result)
@@ -285,45 +284,9 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 	def _generateResponse(self, result):
 		logger.info(u"Creating opsiclientd info page")
 
-		#if not self.session.isAdmin:
-		#	raise OpsiAuthenticationError(u"Permission denied")
-
-
-		#log = u''
-		#regex = re.compile('^\[(\d)\].*')
-		#try:
-		#	f = codecs.open(config.get('global', 'log_file'), 'r', 'utf-8')
-		#	lastLogLevel = 0
-		#	for line in f.readlines():
-		#		logLevel = 0
-		#		match = regex.search(line)
-		#		if match:
-		#			logLevel = int(match.group(1))
-		#		if logLevel and (logLevel != lastLogLevel):
-		#			if lastLogLevel:
-		#				log += u'</span>'
-		#			log += u'<span class="loglevel-%s">' % logLevel
-		#			lastLogLevel = logLevel
-		#		log += line.rstrip() \
-		#			.replace(u'\r', u'')\
-		#			.replace(u'\t', u'   ')\
-		#			.replace(u'&',  u'&amp;')\
-		#			.replace(u'"',  u'&quot;')\
-		#			.replace(u"'",  u'&apos;')\
-		#			.replace(u' ',  u'&nbsp;')\
-		#			.replace(u'<',  u'&lt;')\
-		#			.replace(u'>',  u'&gt;')
-		#		log += u'<br />\n'
-		#	f.close()
-		#	if lastLogLevel:
-		#		log += u'</span>'
-		#except Exception, e:
-		#	logger.error(e)
-
 		html = infoPage % {
 			'head': timeline.getHtmlHead(),
 			'hostname': config.get('global', 'host_id'),
-			#'opsiclient-log': log
 		}
 		if not isinstance(result, http.Response):
 			result = http.Response()
