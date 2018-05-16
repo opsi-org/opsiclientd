@@ -560,10 +560,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def deleteServerCerts(self):
 		certDir = config.get('global', 'server_cert_dir')
 		if os.path.exists(certDir):
-			for f in os.listdir(certDir):
-				if "cacert.pem" in f.strip().lower():
+			for filename in os.listdir(certDir):
+				if "cacert.pem" in filename.strip().lower():
 					continue
-				os.remove(os.path.join(certDir, f))
+
+				os.remove(os.path.join(certDir, filename))
 
 	def getActiveSessions(self):
 		sessions = []
