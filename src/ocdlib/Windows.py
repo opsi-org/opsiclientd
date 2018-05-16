@@ -190,8 +190,6 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			elif windowsVersion[0] == 6:  # NT6: Vista / Windows7 and later
 				if windowsVersion[1] >= 3:  # Windows8.1 or newer
 					self.opsiclientd = OpsiclientdNT63()
-				elif windowsVersion[1] >= 1:  # Windows7
-					self.opsiclientd = OpsiclientdNT61()
 				else:
 					self.opsiclientd = OpsiclientdNT6()
 			else:
@@ -316,13 +314,6 @@ class RebootThread(threading.Thread):
 
 
 class OpsiclientdNT6(OpsiclientdNT):
-	def __init__(self):
-		OpsiclientdNT.__init__(self)
-
-
-class OpsiclientdNT61(OpsiclientdNT):
-	"OpsiclientdNT for Windows NT 6.1 - Windows 7"
-
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
 
