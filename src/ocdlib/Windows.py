@@ -271,23 +271,9 @@ class OpsiclientdNT5(OpsiclientdNT):
 	def shutdownMachine(self):
 		self._isShutdownTriggered = True
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
+
 		# Running in thread to avoid failure of shutdown (device not ready)
-		class _shutdownThread(threading.Thread):
-			def __init__(self):
-				threading.Thread.__init__(self)
-
-			def run(self):
-				while(True):
-					try:
-						System.shutdown(0)
-						logger.notice(u"Shutdown initiated")
-						break
-					except Exception, e:
-						# Device not ready?
-						logger.info(u"Failed to initiate shutdown: %s" % forceUnicode(e))
-						time.sleep(1)
-
-		_shutdownThread().start()
+		ShutdownThread().start()
 
 	def rebootMachine(self):
 		self._isRebootTriggered = True
@@ -295,6 +281,22 @@ class OpsiclientdNT5(OpsiclientdNT):
 
 		# Running in thread to avoid failure of reboot (device not ready)
 		RebootThread().start()
+
+
+class ShutdownThread(threading.Thread):
+	def __init__(self):
+		threading.Thread.__init__(self)
+
+	def run(self):
+		while True:
+			try:
+				System.shutdown(0)
+				logger.notice(u"Shutdown initiated")
+				break
+			except Exception as shutdownError:
+				# Device not ready?
+				logger.info(u"Failed to initiate shutdown: {}", forceUnicode(shutdownError))
+				time.sleep(1)
 
 
 class RebootThread(threading.Thread):
