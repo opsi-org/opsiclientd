@@ -184,15 +184,13 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			# Write to event log
 			self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
 
-			if (sys.getwindowsversion()[0] == 5):
-				# NT5: XP
+			windowsVersion = sys.getwindowsversion()
+			if windowsVersion[0] == 5:  # NT5: XP
 				self.opsiclientd = OpsiclientdNT5()
-
-			elif (sys.getwindowsversion()[0] == 6):
-				# NT6: Vista / Windows7 and later
-				if sys.getwindowsversion()[1] >= 3:  # Windows8.1
+			elif windowsVersion[0] == 6:  # NT6: Vista / Windows7 and later
+				if windowsVersion[1] >= 3:  # Windows8.1 or newer
 					self.opsiclientd = OpsiclientdNT63()
-				elif sys.getwindowsversion()[1] >= 1:  # Windows7
+				elif windowsVersion[1] >= 1:  # Windows7
 					self.opsiclientd = OpsiclientdNT61()
 				else:
 					self.opsiclientd = OpsiclientdNT6()
