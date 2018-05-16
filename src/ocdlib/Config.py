@@ -454,11 +454,12 @@ class ConfigImplementation(object):
 
 		masterDepot = None
 		alternativeDepots = []
-		for depot in configService.host_getObjects(type = 'OpsiDepotserver', id = depotIds):
-			if (depot.id == depotIds[0]):
+		for depot in configService.host_getObjects(type='OpsiDepotserver', id=depotIds):
+			if depot.id == depotIds[0]:
 				masterDepot = depot
 			else:
 				alternativeDepots.append(depot)
+
 		if not masterDepot:
 			raise Exception(u"Failed to get info for master depot '%s'" % depotIds[0])
 
