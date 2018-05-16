@@ -41,6 +41,16 @@ from OPSI import System
 
 from ocdlib.Opsiclientd import Opsiclientd
 
+# from Sens.h
+SENSGUID_PUBLISHER = "{5fee1bd6-5b9b-11d1-8dd2-00aa004abd5e}"
+SENSGUID_EVENTCLASS_LOGON = "{d5978630-5b9f-11d1-8dd2-00aa004abd5e}"
+
+# from EventSys.h
+PROGID_EventSystem = "EventSystem.EventSystem"
+PROGID_EventSubscription = "EventSystem.EventSubscription"
+
+IID_ISensLogon = "{d597bab3-5b9f-11d1-8dd2-00aa004abd5e}"
+
 logger = Logger()
 
 wmi = None
@@ -73,17 +83,6 @@ def importWmiAndPythoncom(importWmi = True, importPythoncom = True):
 		importWmiAndPythoncomLock.release()
 
 	return (wmi, pythoncom)
-
-
-# from Sens.h
-SENSGUID_PUBLISHER = "{5fee1bd6-5b9b-11d1-8dd2-00aa004abd5e}"
-SENSGUID_EVENTCLASS_LOGON = "{d5978630-5b9f-11d1-8dd2-00aa004abd5e}"
-
-# from EventSys.h
-PROGID_EventSystem = "EventSystem.EventSystem"
-PROGID_EventSubscription = "EventSystem.EventSubscription"
-
-IID_ISensLogon = "{d597bab3-5b9f-11d1-8dd2-00aa004abd5e}"
 
 
 class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
