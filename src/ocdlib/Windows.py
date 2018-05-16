@@ -150,7 +150,6 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 	_svc_name_ = "opsiclientd"
 	_svc_display_name_ = "opsiclientd"
 	_svc_description_ = "opsi client daemon"
-	#_svc_deps_ = ['Eventlog', 'winmgmt']
 
 	def __init__(self, args):
 		"""
