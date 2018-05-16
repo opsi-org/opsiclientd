@@ -155,13 +155,15 @@ class PosixControlPipe(ControlPipe):
 						logger.error("Failed to write all bytes to pipe ({:d}/{:d})", written, len(result))
 
 				except Exception as e:
-					logger.error(u"Pipe IO error: %s" % forceUnicode(e))
-				try:
-					os.close(self._pipe)
-				except Exception:
-					pass
+					logger.error(u"Pipe IO error: {}", forceUnicode(e))
+				finally:
+					try:
+						os.close(self._pipe)
+					except Exception:
+						pass
 		except Exception as e:
 			logger.logException(e)
+
 		logger.notice(u"ControlPipe exiting")
 		if os.path.exists(self._pipeName):
 			os.unlink(self._pipeName)
