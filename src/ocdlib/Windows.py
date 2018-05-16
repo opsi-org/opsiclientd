@@ -86,64 +86,10 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 	return (wmi, pythoncom)
 
 
-class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
-	_com_interfaces_ = [IID_ISensLogon]
-	_public_methods_ = [
-		'Logon',
-		'Logoff',
-		'StartShell',
-		'DisplayLock',
-		'DisplayUnlock',
-		'StartScreenSaver',
-		'StopScreenSaver'
-	]
-
-	def __init__(self, callback):
-		self._wrap_(self)
-		self._callback = callback
-
-	def subscribe(self):
-		(wmi, pythoncom) = importWmiAndPythoncom(importWmi=False)
-
-		subscription_interface = pythoncom.WrapObject(self)
-
-		event_system = win32com.client.Dispatch(PROGID_EventSystem)
-
-		event_subscription = win32com.client.Dispatch(PROGID_EventSubscription)
-		event_subscription.EventClassID = SENSGUID_EVENTCLASS_LOGON
-		event_subscription.PublisherID = SENSGUID_PUBLISHER
-		event_subscription.SubscriptionName = 'opsiclientd subscription'
-		event_subscription.SubscriberInterface = subscription_interface
-
-		event_system.Store(PROGID_EventSubscription, event_subscription)
-
-	def Logon(self, *args):
-		logger.notice(u'Logon : %s' % [args])
-		self._callback('Logon', *args)
-
-	def Logoff(self, *args):
-		logger.notice(u'Logoff : %s' % [args])
-		self._callback('Logoff', *args)
-
-	def StartShell(self, *args):
-		logger.notice(u'StartShell : %s' % [args])
-		self._callback('StartShell', *args)
-
-	def DisplayLock(self, *args):
-		logger.notice(u'DisplayLock : %s' % [args])
-		self._callback('DisplayLock', *args)
-
-	def DisplayUnlock(self, *args):
-		logger.notice(u'DisplayUnlock : %s' % [args])
-		self._callback('DisplayUnlock', *args)
-
-	def StartScreenSaver(self, *args):
-		logger.notice(u'StartScreenSaver : %s' % [args])
-		self._callback('StartScreenSaver', *args)
-
-	def StopScreenSaver(self, *args):
-		logger.notice(u'StopScreenSaver : %s' % [args])
-		self._callback('StopScreenSaver', *args)
+class OpsiclientdInit(object):
+	def __init__(self):
+		logger.debug(u"OpsiclientdInit")
+		win32serviceutil.HandleCommandLine(OpsiclientdServiceFramework)
 
 
 class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
@@ -275,12 +221,6 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			logger.logException(e)
 
 
-class OpsiclientdInit(object):
-	def __init__(self):
-		logger.debug(u"OpsiclientdInit")
-		win32serviceutil.HandleCommandLine(OpsiclientdServiceFramework)
-
-
 class OpsiclientdNT(Opsiclientd):
 	def __init__(self):
 		Opsiclientd.__init__(self)
@@ -398,3 +338,63 @@ class OpsiclientdNT63(OpsiclientdNT):
 			time.sleep(0.3)
 		logger.debug("Finished sleeping.")
 		System.reboot(3)
+
+
+class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
+	_com_interfaces_ = [IID_ISensLogon]
+	_public_methods_ = [
+		'Logon',
+		'Logoff',
+		'StartShell',
+		'DisplayLock',
+		'DisplayUnlock',
+		'StartScreenSaver',
+		'StopScreenSaver'
+	]
+
+	def __init__(self, callback):
+		self._wrap_(self)
+		self._callback = callback
+
+	def subscribe(self):
+		(wmi, pythoncom) = importWmiAndPythoncom(importWmi=False)
+
+		subscription_interface = pythoncom.WrapObject(self)
+
+		event_system = win32com.client.Dispatch(PROGID_EventSystem)
+
+		event_subscription = win32com.client.Dispatch(PROGID_EventSubscription)
+		event_subscription.EventClassID = SENSGUID_EVENTCLASS_LOGON
+		event_subscription.PublisherID = SENSGUID_PUBLISHER
+		event_subscription.SubscriptionName = 'opsiclientd subscription'
+		event_subscription.SubscriberInterface = subscription_interface
+
+		event_system.Store(PROGID_EventSubscription, event_subscription)
+
+	def Logon(self, *args):
+		logger.notice(u'Logon : %s' % [args])
+		self._callback('Logon', *args)
+
+	def Logoff(self, *args):
+		logger.notice(u'Logoff : %s' % [args])
+		self._callback('Logoff', *args)
+
+	def StartShell(self, *args):
+		logger.notice(u'StartShell : %s' % [args])
+		self._callback('StartShell', *args)
+
+	def DisplayLock(self, *args):
+		logger.notice(u'DisplayLock : %s' % [args])
+		self._callback('DisplayLock', *args)
+
+	def DisplayUnlock(self, *args):
+		logger.notice(u'DisplayUnlock : %s' % [args])
+		self._callback('DisplayUnlock', *args)
+
+	def StartScreenSaver(self, *args):
+		logger.notice(u'StartScreenSaver : %s' % [args])
+		self._callback('StartScreenSaver', *args)
+
+	def StopScreenSaver(self, *args):
+		logger.notice(u'StopScreenSaver : %s' % [args])
+		self._callback('StopScreenSaver', *args)
