@@ -363,8 +363,9 @@ class ControlServer(OpsiService, threading.Thread):
 			self._server = reactor.listenSSL(
 				self._httpsPort,
 				HTTPFactory(self._site),
-				SSLContext(self._sslServerKeyFile, self._sslServerCertFile) )
-			logger.notice(u"Control server is accepting HTTPS requests on port %d" % self._httpsPort)
+				SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
+			)
+			logger.notice(u"Control server is accepting HTTPS requests on port {:d}", self._httpsPort)
 			if not reactor.running:
 				reactor.run(installSignalHandlers=0)
 
@@ -384,7 +385,8 @@ class ControlServer(OpsiService, threading.Thread):
 				self._root = ResourceOpsiDAV(self, path = self._staticDir, readOnly = True, authRequired = False)
 				#self._root = static.File(self._staticDir)
 			else:
-				logger.error(u"Cannot add static content '/': directory '%s' does not exist." % self._staticDir)
+				logger.error(u"Cannot add static content '/': directory {!r} does not exist.", self._staticDir)
+
 		if not self._root:
 			self._root = ResourceRoot()
 		self._root.putChild("opsiclientd", ResourceOpsiclientdJsonRpc(self))
@@ -429,7 +431,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def setBlockLogin(self, blockLogin):
 		self.opsiclientd.setBlockLogin(forceBool(blockLogin))
-		logger.notice(u"rpc setBlockLogin: blockLogin set to '%s'" % self.opsiclientd._blockLogin)
+		logger.notice(u"rpc setBlockLogin: blockLogin set to {!r}", self.opsiclientd._blockLogin)
 		if self.opsiclientd._blockLogin:
 			return u"Login blocker is on"
 		else:
@@ -438,7 +440,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def readLog(self, logType='opsiclientd'):
 		logType = forceUnicode(logType)
 		if logType not in ('opsiclientd', ):
-			raise ValueError(u"Unknown log type '%s'" % logType)
+			raise ValueError(u"Unknown log type {!r}".format(logType))
+
+		logger.notice(u"rpc readLog: reading log of type {!r}", logType)
 
 		logger.notice(u"rpc readLog: reading log of type '%s'" % logType)
 
@@ -461,7 +465,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			desktop = forceUnicode(desktop)
 		else:
 			desktop = self.opsiclientd.getCurrentActiveDesktopName()
-		logger.notice(u"rpc runCommand: executing command '%s' in session %d on desktop '%s'" % (command, sessionId, desktop))
+		logger.notice(u"rpc runCommand: executing command {!r} in session {:d} on desktop {!r}", command, sessionId, desktop)
 		System.runCommandInSession(command = command, sessionId = sessionId, desktop = desktop, waitForProcessEnding = False)
 		return u"command '%s' executed" % command
 
@@ -478,17 +482,17 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def shutdown(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
-		logger.notice(u"rpc shutdown: shutting down computer in %s seconds" % waitSeconds)
+		logger.notice(u"rpc shutdown: shutting down computer in {} seconds", waitSeconds)
 		System.shutdown(wait = waitSeconds)
 
 	def reboot(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
-		logger.notice(u"rpc reboot: rebooting computer in %s seconds" % waitSeconds)
+		logger.notice(u"rpc reboot: rebooting computer in {} seconds", waitSeconds)
 		System.reboot(wait = waitSeconds)
 
 	def uptime(self):
 		uptime = int(time.time() - self.opsiclientd._startupTime)
-		logger.notice(u"rpc uptime: opsiclientd is running for %d seconds" % uptime)
+		logger.notice(u"rpc uptime: opsiclientd is running for {:d} seconds", uptime)
 		return uptime
 
 	def fireEvent(self, name):
@@ -505,11 +509,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		sessionId = forceInt(sessionId)
 		message = forceUnicode(message)
 		ept = self.opsiclientd.getEventProcessingThread(sessionId)
-		logger.notice(u"rpc setStatusMessage: Setting status message to '%s'" % message)
+		logger.notice(u"rpc setStatusMessage: Setting status message to {0!r}", message)
 		ept.setStatusMessage(message)
 
 	def isEventRunning(self, name):
-		#sessionId = sessionId = System.getActiveSessionId(self.opsiclientd._winApiBugCommand)
 		running = False
 		for ept in self.opsiclientd._eventProcessingThreads:
 			if ept.event.eventConfig.getId() == name:
@@ -522,14 +525,14 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def getCurrentActiveDesktopName(self, sessionId=None):
 		desktop = self.opsiclientd.getCurrentActiveDesktopName(sessionId)
-		logger.notice(u"rpc getCurrentActiveDesktopName: current active desktop name is '%s'" % desktop)
+		logger.notice(u"rpc getCurrentActiveDesktopName: current active desktop name is {0}", desktop)
 		return desktop
 
 	def setCurrentActiveDesktopName(self, sessionId, desktop):
 		sessionId = forceInt(sessionId)
 		desktop = forceUnicode(desktop)
 		self.opsiclientd._currentActiveDesktopName[sessionId] = desktop
-		logger.notice(u"rpc setCurrentActiveDesktopName: current active desktop name for session %s set to '%s'" % (sessionId, desktop))
+		logger.notice(u"rpc setCurrentActiveDesktopName: current active desktop name for session {0} set to {1!r}", sessionId, desktop)
 
 	def switchDesktop(self, desktop, sessionId=None):
 		self.opsiclientd.switchDesktop(desktop, sessionId)
