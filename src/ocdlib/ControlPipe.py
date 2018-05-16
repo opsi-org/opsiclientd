@@ -171,6 +171,7 @@ class PosixControlPipe(ControlPipe):
 
 
 class NTControlPipeConnection(threading.Thread):
+
 	def __init__(self, ntControlPipe, pipe, bufferSize):
 		moduleName = u' %-30s' % (u'control pipe')
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
@@ -201,12 +202,13 @@ class NTControlPipeConnection(threading.Thread):
 					cbWritten = c_ulong(0)
 					logger.debug2(u"Writing to pipe")
 					fWriteSuccess = windll.kernel32.WriteFile(
-									self._pipe,
-									c_char_p(result),
-									len(result),
-									byref(cbWritten),
-									None )
-					logger.debug2(u"Number of bytes written: %d" % cbWritten.value)
+						self._pipe,
+						c_char_p(result),
+						len(result),
+						byref(cbWritten),
+						None
+					)
+					logger.debug2(u"Number of bytes written: {:d}", cbWritten.value)
 					if not fWriteSuccess:
 						logger.error(u"Could not reply to the client's request from the pipe")
 						break
@@ -214,6 +216,7 @@ class NTControlPipeConnection(threading.Thread):
 					if len(result) != cbWritten.value:
 						logger.error(u"Failed to write all bytes to pipe ({:d}/{:d})", cbWritten.value, len(result))
 						break
+
 					break
 				else:
 					logger.error(u"Failed to read from pipe")
@@ -249,14 +252,15 @@ class NTControlPipe(ControlPipe):
 		NMPWAIT_USE_DEFAULT_WAIT = 0
 		INVALID_HANDLE_VALUE = -1
 		self._pipe = windll.kernel32.CreateNamedPipeA(
-					self._pipeName,
-					PIPE_ACCESS_DUPLEX,
-					PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
-					PIPE_UNLIMITED_INSTANCES,
-					self._bufferSize,
-					self._bufferSize,
-					NMPWAIT_USE_DEFAULT_WAIT,
-					None )
+			self._pipeName,
+			PIPE_ACCESS_DUPLEX,
+			PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+			PIPE_UNLIMITED_INSTANCES,
+			self._bufferSize,
+			self._bufferSize,
+			NMPWAIT_USE_DEFAULT_WAIT,
+			None
+		)
 		if self._pipe == INVALID_HANDLE_VALUE:
 			raise Exception(u"Failed to create named pipe")
 
