@@ -30,12 +30,15 @@ import inspect
 import os
 import threading
 import time
-from ctypes import byref, c_char_p, c_ulong, create_string_buffer, windll
+from ctypes import byref, c_char_p, c_ulong, create_string_buffer
 
 from OPSI.Logger import Logger
 from OPSI.Types import forceList, forceUnicode
 from OPSI.Util import fromJson, toJson
 from OPSI.Service.JsonRpc import JsonRpc
+
+if os.name == 'nt':
+	from ctypes import windll
 
 logger = Logger()
 
