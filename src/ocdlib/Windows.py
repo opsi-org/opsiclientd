@@ -79,8 +79,8 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 							import wmi
 						finally:
 							pythoncom.CoUninitialize()
-				except Exception as e:
-					logger.warning(u"Failed to import: %s, retrying in 2 seconds" % forceUnicode(e))
+				except Exception as importError:
+					logger.warning(u"Failed to import: {}, retrying in 2 seconds", forceUnicode(importError))
 					time.sleep(2)
 
 	return (wmi, pythoncom)
@@ -168,9 +168,9 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 					logger.setFileLevel(LOG_DEBUG)
 
 					logger.log(1, u"Logger initialized", raiseException=True)
-				except Exception as e:
+				except Exception as serviceRunError:
 					try:
-						error = str(e)
+						error = str(serviceRunError)
 					except Exception:
 						error = 'unkown error'
 
