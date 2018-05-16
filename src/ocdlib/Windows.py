@@ -294,23 +294,25 @@ class OpsiclientdNT5(OpsiclientdNT):
 	def rebootMachine(self):
 		self._isRebootTriggered = True
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
+
 		# Running in thread to avoid failure of reboot (device not ready)
-		class _rebootThread(threading.Thread):
-			def __init__(self):
-				threading.Thread.__init__(self)
+		RebootThread().start()
 
-			def run(self):
-				while True:
-					try:
-						System.reboot(0)
-						logger.notice(u"Reboot initiated")
-						break
-					except Exception as e:
-						# Device not ready?
-						logger.info(u"Failed to initiate reboot: %s" % forceUnicode(e))
-						time.sleep(1)
 
-		_rebootThread().start()
+class RebootThread(threading.Thread):
+	def __init__(self):
+		threading.Thread.__init__(self)
+
+	def run(self):
+		while True:
+			try:
+				System.reboot(0)
+				logger.notice(u"Reboot initiated")
+				break
+			except Exception as rebootError:
+				# Device not ready?
+				logger.info(u"Failed to initiate reboot: {}", forceUnicode(rebootError))
+				time.sleep(1)
 
 
 class OpsiclientdNT6(OpsiclientdNT):
