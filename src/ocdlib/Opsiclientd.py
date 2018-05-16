@@ -26,43 +26,36 @@ This is where all the parts come together.
 :license: GNU Affero General Public License version 3
 """
 
-__version__ = '4.1.1.1'
+import os
+import sys
 
-# Imports
-import sys, os
-
-# Twisted imports
 from twisted.internet import reactor
 
-# OPSI imports
-from OPSI.Logger import *
+from OPSI import System
+from OPSI.Logger import Logger
+from OPSI.Object import *
+from OPSI.Types import forceInt, forceUnicode
 from OPSI.Util import *
 from OPSI.Util.Message import *
-from OPSI.Types import *
-from OPSI import System
-from OPSI.Object import *
 
-from ocdlib.Exceptions import *
+from ocdlib import __version__
+from ocdlib.EventProcessing import EventProcessingThread
 from ocdlib.Events import *
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from ocdlib.ControlServer import ControlServer
+from ocdlib.Localization import _, setLocaleDir
+from ocdlib.Config import Config
+from ocdlib.Timeline import Timeline
+
 if (os.name == 'nt'):
 	from ocdlib.Windows import *
 if (os.name == 'posix'):
 	from ocdlib.Posix import *
-from ocdlib.Localization import _, setLocaleDir, getLanguage
-from ocdlib.Config import Config
-from ocdlib.Timeline import Timeline
 
 try:
 	from ocdlibnonfree import __fullversion__
-except:
+except Exception:
 	__fullversion__ = False
-
-try:
-	from ocdlibnonfree.EventProcessing import EventProcessingThread
-except:
-	from ocdlib.EventProcessing import EventProcessingThread
 
 logger = Logger()
 config = Config()

@@ -25,18 +25,19 @@ Events and their configuration.
 :license: GNU Affero General Public License version 3
 """
 
-# Imports
-import os, re, inspect
 import copy as pycopy
+import os
+import re
+import thread
+import threading
 
-# OPSI imports
-from OPSI.Logger import *
+from OPSI.Logger import Logger, LOG_DEBUG
 from OPSI import System
 from OPSI.Types import *
 
 from ocdlib.Config import *
 from ocdlib.State import State
-from ocdlib.Localization import _, setLocaleDir, getLanguage
+from ocdlib.Localization import getLanguage
 
 logger = Logger()
 config = Config()
@@ -932,7 +933,7 @@ def getEventConfigs():
 						mLanguage = None
 						try:
 							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
-						except:
+						except Exception:
 							pass
 						if mLanguage:
 							if (mLanguage == getLanguage()):
@@ -943,7 +944,7 @@ def getEventConfigs():
 						mLanguage = None
 						try:
 							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
-						except:
+						except Exception:
 							pass
 						if mLanguage:
 							if (mLanguage == getLanguage()):
@@ -954,7 +955,7 @@ def getEventConfigs():
 						mLanguage = None
 						try:
 							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
-						except:
+						except Exception:
 							pass
 						if mLanguage:
 							if (mLanguage == getLanguage()):

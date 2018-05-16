@@ -37,11 +37,12 @@ Event-Timeline.
 """
 
 import json
+import os
 import time
 import threading
 
-from OPSI.Logger import *
-from OPSI.Types import *
+from OPSI.Logger import Logger
+from OPSI.Types import forceBool, forceInt, forceOpsiTimestamp, forceUnicode
 from OPSI.Util import timestamp
 from OPSI.Backend.SQLite import SQLite
 
@@ -113,14 +114,15 @@ function onResize() {
 </script>
 '''
 
+
 class TimelineImplementation(object):
 	def __init__(self):
 		if not os.path.exists(os.path.dirname(config.get('global', 'timeline_db'))):
 			os.makedirs(os.path.dirname(config.get('global', 'timeline_db')))
 		self._sql = SQLite(
-			database        = config.get('global', 'timeline_db'),
-			synchronous     = False,
-			databaseCharset = 'utf-8'
+			database=config.get('global', 'timeline_db'),
+			synchronous=False,
+			databaseCharset='utf-8'
 		)
 		self._dbLock = threading.Lock()
 		self._createDatabase()
@@ -132,7 +134,7 @@ class TimelineImplementation(object):
 		end = forceOpsiTimestamp(timestamp())
 		self._dbLock.acquire()
 		try:
-			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', { 'end': end })
+			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', {'end': end})
 		finally:
 			self._dbLock.release()
 
@@ -191,7 +193,7 @@ class TimelineImplementation(object):
 		self._dbLock.acquire()
 		try:
 			self._sql.execute('delete from EVENT where `start` < "%s"' % timestamp((time.time() - 7*24*3600)))
-			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', { 'durationEvent': False })
+			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', {'durationEvent': False})
 		except Exception, e:
 			logger.error(e)
 		self._dbLock.release()
@@ -257,7 +259,7 @@ class TimelineImplementation(object):
 			if not end:
 				end = timestamp()
 			end = forceOpsiTimestamp(end)
-			return self._sql.update('EVENT', '`id` = %d' % eventId, { 'end': end, 'durationEvent': True })
+			return self._sql.update('EVENT', '`id` = %d' % eventId, {'end': end, 'durationEvent': True})
 		except Exception, e:
 			logger.error(u"Failed to set end of event '%s': %s" % (eventId, e))
 		finally:
@@ -271,6 +273,7 @@ class TimelineImplementation(object):
 			return self._sql.getSet('select * from EVENT')
 		finally:
 			self._dbLock.release()
+
 
 class Timeline(TimelineImplementation):
 	# Storage for the instance reference
@@ -286,7 +289,6 @@ class Timeline(TimelineImplementation):
 
 		# Store instance reference as the only member in the handle
 		self.__dict__['_Timeline__instance'] = Timeline.__instance
-
 
 	def __getattr__(self, attr):
 		""" Delegate access to implementation """

@@ -35,19 +35,23 @@ import win32net
 
 # Twisted imports
 from twisted.internet import reactor
-from OPSI.web2 import resource, stream, server, http, responsecode
-from OPSI.web2.channel.http import HTTPFactory
 
 # OPSI imports
 from OPSI.Logger import *
 from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Util import *
 from OPSI import System
+from OPSI.Exceptions import OpsiAuthenticationError
+from OPSI.Logger import Logger
 from OPSI.Service import SSLContext, OpsiService
-from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface
-from OPSI.Service.Resource import ResourceOpsi, ResourceOpsiJsonRpc, ResourceOpsiJsonInterface, ResourceOpsiDAV
+from OPSI.Service.Worker import (WorkerOpsi, WorkerOpsiJsonRpc,
+	WorkerOpsiJsonInterface)
+from OPSI.Service.Resource import (ResourceOpsi, ResourceOpsiJsonRpc,
+	ResourceOpsiJsonInterface, ResourceOpsiDAV)
+from OPSI.Types import forceBool, forceInt, forceUnicode
+from OPSI.web2 import resource, stream, server, http, responsecode
+from OPSI.web2.channel.http import HTTPFactory
 
-from ocdlib.Exceptions import *
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.Config import Config
 from ocdlib.Events import eventGenerators
@@ -174,7 +178,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 										break
 						if not resume:
 							break
-				except:
+				except Exception:
 					# Standardway
 					if (self.session.user.lower() == 'administrator'):
 						# The LogonUser function will raise an Exception on logon failure

@@ -29,13 +29,13 @@ Connecting to a opsi service.
 
 import base64
 import time
-from hashlib import md5
-from twisted.conch.ssh import keys
 import random
+from hashlib import md5
 from httplib import HTTPConnection, HTTPSConnection
+from twisted.conch.ssh import keys
 
-# OPSI imports
-from OPSI.Logger import *
+from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
+from OPSI.Logger import Logger
 from OPSI.Util import *
 from OPSI.Util.Thread import KillableThread
 from OPSI.Util.HTTP import urlsplit, non_blocking_connect_http, non_blocking_connect_https
@@ -44,9 +44,9 @@ from OPSI.Types import *
 from OPSI import System
 
 from ocdlib.Localization import _
-from ocdlib.Opsiclientd import __version__
+from ocdlib import __version__
 from ocdlib.Config import Config
-from ocdlib.Exceptions import *
+from ocdlib.Exceptions import CanceledByUserError
 
 logger = Logger()
 config = Config()
@@ -69,7 +69,7 @@ def isConfigServiceReachable(timeout=5):
 			try:
 				conn.sock.close()
 				conn.close()
-			except:
+			except Exception:
 				pass
 			return True
 		except Exception, e:
@@ -233,8 +233,10 @@ class ServiceConnection(object):
 								modules[module] = True
 						else:
 							val = modules[module]
-							if (val == False): val = 'no'
-							if (val == True):  val = 'yes'
+							if val == False:
+								val = 'no'
+							elif val == True:
+								val = 'yes'
 
 						data += u'%s = %s\r\n' % (module.lower().strip(), val)
 					if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
@@ -312,10 +314,10 @@ class ServiceConnectionThread(KillableThread):
 
 			tryNum = 0
 			while not self.cancelled and not self.connected:
+				tryNum += 1
 				try:
-					tryNum += 1
 					logger.notice(u"Connecting to config server '%s' #%d" % (self._configServiceUrl, tryNum))
-					self.setStatusMessage( _(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
+					self.setStatusMessage(_(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
 					if (len(self._username.split('.')) < 3):
 						raise Exception(u"Domain missing in username '%s'" % self._username)
 					if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:

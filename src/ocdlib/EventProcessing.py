@@ -25,14 +25,11 @@ Processing of events.
 :license: GNU Affero General Public License version 3
 """
 
-# Imports
-import sys, os, shutil, filecmp, base64
-from hashlib import md5
+import sys
+import os
+import shutil
+import filecmp
 
-# Twisted imports
-from twisted.conch.ssh import keys
-
-# OPSI imports
 from OPSI.Logger import *
 from OPSI.Util import *
 from OPSI.Util.Message import *
@@ -44,13 +41,14 @@ from OPSI.Object import *
 from ocdlib.Exceptions import *
 from ocdlib.Events import *
 from ocdlib.OpsiService import ServiceConnection
-if (os.name == 'nt'):
-	from ocdlib.Windows import *
-if (os.name == 'posix'):
-	from ocdlib.Posix import *
-from ocdlib.Localization import _, setLocaleDir, getLanguage
+from ocdlib.Localization import _
 from ocdlib.Config import Config
 from ocdlib.Timeline import Timeline
+
+if (os.name == 'nt'):
+	from ocdlib.Windows import *
+elif (os.name == 'posix'):
+	from ocdlib.Posix import *
 
 logger = Logger()
 config = Config()
@@ -61,7 +59,7 @@ timeline = Timeline()
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class EventProcessingThread(KillableThread, ServiceConnection):
 	def __init__(self, opsiclientd, event):
-		from ocdlib.Opsiclientd import __version__
+		from ocdlib import __version__
 
 		moduleName = u' %-30s' % (u'event processing ' + event.eventConfig.getId())
 		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
@@ -115,7 +113,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 		self._notificationServerPort = int(config.get('notification_server', 'start_port')) + (3 * int(self.getSessionId()))
 
-	''' ServiceConnection '''
+	# ServiceConnection
 	def connectionThreadOptions(self):
 		return {'statusSubject': self._statusSubject}
 
@@ -162,7 +160,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self._detailSubjectProxy.setMessage(u'')
 		ServiceConnection.connectionFailed(self, error)
 
-	''' / ServiceConnection '''
+	# End of ServiceConnection
 
 	def setSessionId(self, sessionId):
 		self._sessionId = int(sessionId)
@@ -623,7 +621,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						productIds.append(productOnClient.productId)
 						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
 
-			if (len(productIds) == 0) and (bootmode == 'BKSTD'):
+			if (not productIds) and bootmode == 'BKSTD':
 				logger.notice(u"No product action requests set")
 				self.setStatusMessage( _(u"No product action requests set") )
 				#set installation_pending State to False
@@ -753,7 +751,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				serviceSession = self.getConfigService().jsonrpc_getSessionId()
 				if not serviceSession:
 					serviceSession = u'none'
-			except:
+			except Exception:
 				pass
 
 			actionProcessorUserName = u''

@@ -26,12 +26,13 @@ Configuring opsiclientd.
 """
 
 import os
+import re
 import sys
-import copy as pycopy
 
-# OPSI imports
-from OPSI.Logger import *
-from OPSI.Types import *
+from OPSI.Logger import Logger, LOG_NOTICE
+from OPSI.Types import (forceBool, forceFilename, forceInt, forceHostId,
+	forceList, forceProductIdList, forceUnicode, forceUnicodeLower,
+	forceUnicodeList, forceUrl)
 from OPSI.Util import objectToBeautifiedText, blowfishDecrypt
 from OPSI.Util.File import IniFile
 from OPSI import System
@@ -66,6 +67,7 @@ YJHaSeCITO1g+NXisCS/aEfL+yUjXjErQaiRjtyj0aHDxj114GVvbKUOUfHqqa6X
 USZQNXthwmMy0+iIgQLAmBDu9Tz53p+yqHIhS+7eYNfzh2HeIG3EY515ncnZG2Xi
 QuBW/YzuIIiknjESIHBVA6YWeLNR
 -----END CERTIFICATE-----'''
+
 
 class ConfigImplementation(object):
 
@@ -285,7 +287,7 @@ class ConfigImplementation(object):
 				if (os.name == 'nt'):
 					try:
 						debug = forceBool(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Services\\opsiclientd", "Debug"))
-					except:
+					except Exception:
 						pass
 				if not debug:
 					if config.has_option('global', 'log_level'):
@@ -516,8 +518,10 @@ class ConfigImplementation(object):
 			raise Exception(u"Not connected to config service")
 
 		depotServerUsername = self.get('depot_server', 'username')
-		encryptedDepotServerPassword = u''
-		encryptedDepotServerPassword = configService.user_getCredentials(username = u'pcpatch', hostId = self.get('global', 'host_id'))['password']
+		encryptedDepotServerPassword = configService.user_getCredentials(
+			username=u'pcpatch',
+			hostId=self.get('global', 'host_id')
+		)['password']
 		depotServerPassword = blowfishDecrypt(self.get('global', 'opsi_host_key'), encryptedDepotServerPassword)
 		logger.addConfidentialString(depotServerPassword)
 		logger.debug(u"Using username '%s' for depot connection" % depotServerUsername)
@@ -555,6 +559,7 @@ class ConfigImplementation(object):
 		logger.notice(u"Got config from service")
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.getDict()))
 
+
 class Config(ConfigImplementation):
 	# Storage for the instance reference
 	__instance = None
@@ -569,7 +574,6 @@ class Config(ConfigImplementation):
 
 		# Store instance reference as the only member in the handle
 		self.__dict__['_Config__instance'] = Config.__instance
-
 
 	def __getattr__(self, attr):
 		""" Delegate access to implementation """

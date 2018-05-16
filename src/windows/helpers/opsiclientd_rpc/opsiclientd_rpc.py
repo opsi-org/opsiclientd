@@ -2,7 +2,7 @@
 
 # opsiclientd_rpc is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2008-2016 uib GmbH <info@uib.de>
+# Copyright (C) 2008-2018 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -31,33 +31,39 @@ import sys
 
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Logger import Logger, LOG_DEBUG
-from OPSI import System
 
 
-__version__ = '4.0.4.4'
+__version__ = '4.1.1.1'
 
 logger = Logger()
 
 encoding = locale.getpreferredencoding()
-argv = [unicode(arg, encoding) for arg in sys.argv]
 
-if (len(argv) < 5):
-   print u"Usage: %s <username> <password> <port> <rpc> [debug_logfile]" % os.path.basename(argv[0])
-   sys.exit(1)
 
-(username, password, port, rpc) = argv[1:5]
-logFile = None
-if (len(argv) > 5):
-   logFile = argv[5]
-   logger.setLogFile(logFile)
-   logger.setFileLevel(LOG_DEBUG)
-try:
-   be = JSONRPCBackend(username=username, password=password, address=u'https://localhost:%s/opsiclientd' % port)
-   logger.notice(u"Executing: %s" % rpc)
-   exec 'be.%s' % rpc
-   be.backend_exit()
-except Exception, e:
-   logger.logException(e)
-   sys.exit(1)
+def main():
+	argv = [unicode(arg, encoding) for arg in sys.argv]
 
-sys.exit(0)
+	if (len(argv) < 5):
+		print u"Usage: %s <username> <password> <port> <rpc> [debug_logfile]" % os.path.basename(argv[0])
+		sys.exit(1)
+
+	(username, password, port, rpc) = argv[1:5]
+	logFile = None
+	if len(argv) > 5:
+		logFile = argv[5]
+		logger.setLogFile(logFile)
+		logger.setFileLevel(LOG_DEBUG)
+
+	address = u'https://localhost:%s/opsiclientd' % port
+
+	try:
+		with JSONRPCBackend(username=username, password=password, address=address) as backend:
+			logger.notice(u"Executing: %s" % rpc)
+			exec 'backend.%s' % rpc
+	except Exception as error:
+		logger.logException(error)
+		sys.exit(1)
+
+
+if __name__ == '__main__':
+	main()

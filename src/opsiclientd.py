@@ -3,7 +3,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2010-2015 uib GmbH <info@uib.de>
+# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,51 +21,33 @@
 Opsiclientd.
 
 :copyright: uib GmbH <info@uib.de>
-:author: Jan Schneider <e.ueluekmen@uib.de>
+:author: Jan Schneider <j.schneider@uib.de>
+:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
-# Imports
+from __future__ import print_function
+
 import os
+import sys
 
-# OPSI imports
-from OPSI.Logger import *
-from OPSI.Types import *
-from OPSI import System
+from OPSI.Logger import LOG_WARNING, Logger
 
-if (os.name == 'nt'):
-	from ocdlib.Windows import *
-if (os.name == 'posix'):
-	from ocdlib.Posix import *
+if os.name == 'nt':
+	from ocdlib.Windows import OpsiclientdInit
+elif os.name == 'posix':
+	from ocdlib.Posix import OpsiclientdInit
 
-# Create logger instance
 logger = Logger()
-moduleName = u' %-30s' % (u'opsiclientd')
-logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)')
 
-if (__name__ == "__main__"):
+if __name__ == "__main__":
+	moduleName = u' %-30s' % (u'opsiclientd')
+	logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)')
 	logger.setConsoleLevel(LOG_WARNING)
-	exception = None
-	
+
 	try:
 		OpsiclientdInit()
-		
-	except SystemExit, e:
-		pass
-		
-	except Exception, e:
-		exception = e
-	
-	if exception:
+	except Exception as exception:
 		logger.logException(exception)
-		print >> sys.stderr, u"ERROR:", unicode(exception)
+		print(u"ERROR: {}".format(unicode(exception)), file=sys.stderr)
 		sys.exit(1)
-	sys.exit(0)
-
-
-
-
-
-
-
-

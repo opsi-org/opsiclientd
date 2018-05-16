@@ -8,7 +8,7 @@ dir=$(dirname ${cwd}/$(dirname $0))
 cd $dir
 
 packagename="opsiclientd"
-version=$(grep '^__version__' src/ocdlib/Opsiclientd.py | head -n1 | cut -d'=' -f2 | sed s"/\s*'//g")
+version=$(grep '^__version__' src/ocdlib/__init__.py | head -n1 | cut -d'=' -f2 | sed s"/\s*'//g")
 tmpdir=/tmp/${packagename}-${version}
 
 test -e $tmpdir && rm -rf $tmpdir
@@ -20,8 +20,8 @@ cp -r src/ocdlib src/windows src/setup.py ${tmpdir}/src
 find ${tmpdir} -iname "*.pyc"   -exec rm "{}" \;
 find ${tmpdir} -iname "*.marks" -exec rm "{}" \;
 find ${tmpdir} -iname "*~"      -exec rm "{}" \;
-find ${tmpdir} -iname "*.svn"   -exec rm -rf "{}" \; 2>/dev/null
-
+find ${tmpdir} -iname ".git"   -exec rm -rf "{}" \; 2>/dev/null
+find ${tmpdir} -iname ".gitignore"   -exec rm -rf "{}" \; 2>/dev/null
 
 cd ${tmpdir}/..
 tar cjvf ${destdir}/${packagename}-${version}.tar.bz2 ${packagename}-${version}
