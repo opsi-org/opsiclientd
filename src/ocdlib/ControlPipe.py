@@ -30,7 +30,7 @@ import inspect
 import os
 import threading
 import time
-from ctypes import *
+from ctypes import byref, c_char_p, c_ulong, create_string_buffer, windll
 
 from OPSI.Logger import Logger
 from OPSI.Types import forceList, forceUnicode
