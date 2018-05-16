@@ -19,6 +19,9 @@
 """
 Server component for controlling opsiclientd.
 
+These classes are used to create a https service which executes remote
+procedure calls
+
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
 :license: GNU Affero General Public License version 3
@@ -94,26 +97,6 @@ infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
 </html>
 '''
 
-'''
-
-	<div id="infopage-opsiclientd-log-box">
-		<p id="infopage-opsiclientd-log-title">Log</p>
-		<div id="infopage-opsiclientd-log">
-		%(opsiclient-log)s
-		</div>
-	</div>
-'''
-
-'''
-= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-=                                            CONTROL SERVER                                           =
-= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-=                                                                                                     =
-=      These classes are used to create a https service which executes remote procedure calls         =
-=                                                                                                     =
-=                                                                                                     =
-= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-'''
 
 class WorkerOpsiclientd(WorkerOpsi):
 	def __init__(self, service, request, resource):
