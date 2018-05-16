@@ -165,15 +165,20 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		self._stopEvent = threading.Event()
 		logger.debug(u"OpsiclientdServiceFramework initiated")
 
-	def ReportServiceStatus(self, serviceStatus, waitHint = 5000, win32ExitCode = 0, svcExitCode = 0):
-		# Wrapping because ReportServiceStatus sometimes lets windows report a crash of opsiclientd (python 2.6.5)
-		# invalid handle ...
+	def ReportServiceStatus(self, serviceStatus, waitHint=5000, win32ExitCode=0, svcExitCode=0):
+		# Wrapping because ReportServiceStatus sometimes lets windows
+		# report a crash of opsiclientd (python 2.6.5) invalid handle
 		try:
 			logger.debug('Reporting service status: {status}'.format(status=serviceStatus))
 			win32serviceutil.ServiceFramework.ReportServiceStatus(
-				self, serviceStatus, waitHint = waitHint, win32ExitCode = win32ExitCode, svcExitCode = svcExitCode)
-		except Exception as e:
-			logger.error(u"Failed to report service status %s: %s" % (serviceStatus, forceUnicode(e)))
+				self,
+				serviceStatus,
+				waitHint=waitHint,
+				win32ExitCode=win32ExitCode,
+				svcExitCode=svcExitCode
+			)
+		except Exception as reportStatusError:
+			logger.error(u"Failed to report service status %s: %s" % (serviceStatus, forceUnicode(reportStatusError)))
 
 	def SvcInterrogate(self):
 		logger.debug(u"OpsiclientdServiceFramework SvcInterrogate")
