@@ -43,7 +43,7 @@ encoding = locale.getpreferredencoding()
 def main():
 	argv = [unicode(arg, encoding) for arg in sys.argv]
 
-	if (len(argv) < 5):
+	if len(argv) < 5:
 		print u"Usage: %s <username> <password> <port> <rpc> [debug_logfile]" % os.path.basename(argv[0])
 		sys.exit(1)
 
