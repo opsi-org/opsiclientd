@@ -32,6 +32,7 @@ import threading
 import time
 from ctypes import byref, c_char_p, c_ulong, create_string_buffer
 
+from OPSI.Backend import describeInterface
 from OPSI.Logger import Logger
 from OPSI.Types import forceList, forceUnicode
 from OPSI.Util import fromJson, toJson
@@ -304,44 +305,14 @@ class OpsiclientdRpcPipeInterface(object):
 
 	def getInterface(self):
 		"""
-		Returns what methods are available and the signatures they use.
+		Returns what public methods are available and the signatures they use.
 
 		These methods are represented as a dict with the following keys: \
 		*name*, *params*, *args*, *varargs*, *keywords*, *defaults*.
 
 		:returntype: [{},]
 		"""
-		methods = {}
-		for methodName, function in inspect.getmembers(self, inspect.ismethod):
-			if methodName.startswith('_'):
-				# protected / private
-				continue
-
-			args, varargs, keywords, defaults = inspect.getargspec(function)
-			params = [arg for arg in args if arg != 'self']
-
-			if defaults is not None:
-				offset = len(params) - len(defaults)
-				for i in xrange(len(defaults)):
-					index = offset + i
-					params[index] = '*{0}'.format(params[index])
-
-			for (index, element) in enumerate((varargs, keywords), start=1):
-				if element:
-					stars = '*' * index
-					params.extend(['{0}{1}'.format(stars, arg) for arg in forceList(element)])
-
-			logger.debug2(u"Interface method: name {0!r}, params {1}", methodName, params)
-			methods[methodName] = {
-				'name': methodName,
-				'params': params,
-				'args': args,
-				'varargs': varargs,
-				'keywords': keywords,
-				'defaults': defaults
-			}
-
-		return [methods[name] for name in sorted(methods.keys())]
+		return describeInterface(self)
 
 	def getPossibleMethods_listOfHashes(self):
 		return self.getInterface()
