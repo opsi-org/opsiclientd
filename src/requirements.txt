@@ -1,2 +1,2 @@
-python-opsi >= 4.1, <= 4.2
+python-opsi >= 4.1.1.36, <= 4.2
 cryptography
