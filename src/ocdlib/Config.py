@@ -477,7 +477,7 @@ class ConfigImplementation(object):
 			if alternativeDepots:
 				logger.info(u"Got alternative depots for products: %s" % productIds)
 				for i, depot in enumerate(alternativeDepots, start=1):
-					logger.info(u"{:d}. alternative depot is {}", i, depot)
+					logger.info(u"{:d}. alternative depot is {}", i, depot.id)
 
 				try:
 
