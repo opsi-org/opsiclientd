@@ -37,8 +37,9 @@ from OPSI.Types import forceUnicode
 from ocdlib import __version__
 from ocdlib.Opsiclientd import Opsiclientd
 
-logger = Logger()
+__all__ = ('OpsiclientdInit', )
 
+logger = Logger()
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
