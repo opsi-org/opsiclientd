@@ -1,3 +1,9 @@
+opsiclientd (4.0.93.1-linux) testing; urgency=medium
+
+  * Change to / during the execution of the action processor.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 14 Aug 2018 16:00:21 +0200
+
 opsiclientd (4.0.93) stable; urgency=medium
 
   * new languages added
