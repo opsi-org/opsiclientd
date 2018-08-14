@@ -5,7 +5,7 @@ ocdlib.EventProcessing
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
-Copyright (C) 2010-2017 uib GmbH
+Copyright (C) 2010-2018 uib GmbH
 
 http://www.uib.de/
 
@@ -37,6 +37,7 @@ import re
 import shutil
 import sys
 import time
+from contextlib import contextmanager
 
 from OPSI.Logger import Logger, LOG_WARNING
 from OPSI.Object import ProductOnClient
@@ -58,6 +59,24 @@ from ocdlib.Timeline import Timeline
 logger = Logger()
 config = Config()
 timeline = Timeline()
+
+
+@contextmanager
+def cd(path):
+	'Change the current directory to `path` as long as the context exists.'
+
+	old_dir = os.getcwd()
+	os.chdir(path)
+	try:
+		yield
+	finally:
+		os.chdir(old_dir)
+
+
+@contextmanager
+def noop(_unused):
+	"Dummy contextmanager. Does nothing."
+	yield
 
 
 class EventProcessingThread(KillableThread, ServiceConnection):
@@ -910,8 +929,18 @@ None otherwise.
 					% (self.event.eventConfig.preActionProcessorCommand, self.getSessionId(), desktop))
 				self.runCommandInSession(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = True)
 
-			logger.notice(u"Starting action processor in session '%s' on desktop '%s'" % (self.getSessionId(), desktop))
-			self.runCommandInSession(command = command, desktop = desktop, waitForProcessEnding = True)
+			if RUNNING_ON_WINDOWS:
+				changeDirectory = noop
+			else:
+				changeDirectory = cd
+
+			with changeDirectory('/'):
+				logger.notice(u"Starting action processor in session '%s' on desktop '%s'" % (self.getSessionId(), desktop))
+				self.runCommandInSession(
+					command=command,
+					desktop=desktop,
+					waitForProcessEnding=True
+				)
 
 			if self.event.eventConfig.postActionProcessorCommand:
 				logger.notice(u"Starting post action processor command '%s' in session '%s' on desktop '%s'" \
