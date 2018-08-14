@@ -5,7 +5,7 @@ ocdlib.EventProcessing
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
-Copyright (C) 2010-2014 uib GmbH
+Copyright (C) 2010-2017 uib GmbH
 
 http://www.uib.de/
 
@@ -113,7 +113,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\sessionhelper\getActiveSessionIds.exe')
 
 		self.getSessionId()
-
 		self._notificationServerPort = forceInt(config.get('notification_server', 'start_port'))
 		self.setNotificationServerPort()
 
@@ -445,8 +444,8 @@ None otherwise.
 					u"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\%s" % depotHost,
 					u"file", 1)
 				logger.info(u"Added depot '%s' to trusted domains" % depotHost)
-			except Exception as error:
-				logger.error(u"Failed to add depot to trusted domains: %s" % error)
+			except Exception, e:
+				logger.error(u"Failed to add depot to trusted domains: %s" % e)
 
 		if impersonation:
 			System.mount(config.get('depot_server', 'url'), config.getDepotDrive())
@@ -566,7 +565,7 @@ None otherwise.
 			if RUNNING_ON_WINDOWS:
 				logger.notice(u"Trying to set the right permissions for opsi-winst")
 				setaclcmd = os.path.join(config.get('global', 'base_dir'), 'utilities', 'setacl.exe')
-				winstdir = actionProcessorLocalDir.replace('\\\\','\\')
+				winstdir = actionProcessorLocalDir.replace('\\\\', '\\')
 				cmd = '"%s" -on "%s" -ot file -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y" -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"' \
 							% (setaclcmd, winstdir)
 				System.execute(cmd, shell=False)
@@ -708,13 +707,14 @@ None otherwise.
 						includeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
 									groupType="ProductGroup",
 									groupId=includeProductGroupIds) ]
-						logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
 
-					elif excludeProductGroupIds:
+						logger.notice("Only products with productIds: '%s' will be cached." % includeProductIds)
+
+					if excludeProductGroupIds:
 						excludeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
 									groupType="ProductGroup",
 									groupId=excludeProductGroupIds) ]
-						logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
+						logger.notice("Products with productIds: '%s' will be excluded." % excludeProductIds)
 
 					for productOnClient in [ poc for poc in self._configService.productOnClient_getObjects(
 								productType   = 'LocalbootProduct',
