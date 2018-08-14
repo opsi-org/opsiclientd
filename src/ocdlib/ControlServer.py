@@ -105,8 +105,10 @@ class WorkerOpsiclientd(WorkerOpsi):
 
 	def _getCredentials(self):
 		(user, password) = self._getAuthorization()
+
 		if not user:
 			user = config.get('global', 'host_id')
+
 		return (user, password)
 
 	def _errback(self, failure):
@@ -170,11 +172,11 @@ class WorkerOpsiclientd(WorkerOpsi):
 							if admingroupsid in str(pysid):
 								memberresume = 0
 								while 1:
-									memberdata, total, memberresume = win32net.NetLocalGroupGetMembers(None,groupname, 2, resume)
+									memberdata, total, memberresume = win32net.NetLocalGroupGetMembers(None, groupname, 2, resume)
 									logger.notice(memberdata)
 									for member in memberdata:
-										membersid = member.get("sid","")
-										username, domain, type = win32security.LookupAccountSid(None,membersid)
+										membersid = member.get("sid", "")
+										username, domain, type = win32security.LookupAccountSid(None, membersid)
 										if (self.session.user.lower() == username.lower()):
 											# The LogonUser function will raise an Exception on logon failure
 											win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
@@ -393,7 +395,7 @@ class ControlServer(OpsiService, threading.Thread):
 			self._root = ResourceRoot()
 
 		self._root.putChild("opsiclientd", ResourceOpsiclientdJsonRpc(self))
-		self._root.putChild("interface",   ResourceOpsiclientdJsonInterface(self))
+		self._root.putChild("interface", ResourceOpsiclientdJsonInterface(self))
 		self._root.putChild("rpc", ResourceCacheServiceJsonRpc(self))
 		self._root.putChild("rpcinterface", ResourceCacheServiceJsonInterface(self))
 		self._root.putChild("info.html", ResourceOpsiclientdInfo(self))
