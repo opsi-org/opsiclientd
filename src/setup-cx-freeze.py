@@ -76,7 +76,9 @@ elif distribution.lower().strip() == 'debian' and version.startswith('9'):
     buildOptions['packages'].append('Crypto.Cipher.AES')
     buildOptions['packages'].append('cryptography')
 
+    # Changes for cx_Freeze 5.0.2 or newer
     del buildOptions['compressed']  # Not compatible with cx_Freeze 5.0.2
+    buildOptions['zip_include_packages'] = '*'
 elif distribution.lower().strip() == 'suse linux enterprise server' and version.startswith('12'):
     buildOptions['packages'].append('distutils')
     buildOptions['packages'].append('cffi')
