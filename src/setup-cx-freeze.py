@@ -65,6 +65,7 @@ buildOptions = {
 }
 
 distribution, version, _ = platform.linux_distribution()
+print("Running on {!r} version {!r}".format(distribution, version))
 if distribution.lower().strip() == 'debian' and version.startswith('8'):
     # Required by Debian 8 - see https://github.com/pyca/cryptography/issues/2039#issuecomment-132225074
     buildOptions['packages'].append('cffi')
@@ -74,7 +75,8 @@ elif distribution.lower().strip() == 'debian' and version.startswith('9'):
     buildOptions['packages'].append('cffi')
     buildOptions['packages'].append('Crypto.Cipher.AES')
     buildOptions['packages'].append('cryptography')
-    # del buildOptions['compressed']  # Not compatible with cx_Freeze 5.0.2
+
+    del buildOptions['compressed']  # Not compatible with cx_Freeze 5.0.2
 elif distribution.lower().strip() == 'suse linux enterprise server' and version.startswith('12'):
     buildOptions['packages'].append('distutils')
     buildOptions['packages'].append('cffi')
