@@ -58,7 +58,6 @@ buildOptions = {
         "collections.abc",  # Fix for https://bitbucket.org/anthony_tuininga/cx_freeze/issues/127/collectionssys-error
     ],
     "include_files": [],
-    "compressed": True,
     "namespace_packages": [
         'zope',
     ]
@@ -75,8 +74,6 @@ elif distribution.lower().strip() == 'debian' and version.startswith('9'):
     buildOptions['packages'].append('cffi')
     buildOptions['packages'].append('Crypto.Cipher.AES')
     buildOptions['packages'].append('cryptography')
-
-    del buildOptions['compressed']  # Not compatible with cx_Freeze 5.0.2
 elif distribution.lower().strip() == 'suse linux enterprise server' and version.startswith('12'):
     buildOptions['packages'].append('distutils')
     buildOptions['packages'].append('cffi')
