@@ -65,7 +65,6 @@ if RUNNING_ON_WINDOWS:
 
 logger = Logger()
 config = Config()
-timeline = Timeline()
 
 
 infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
@@ -297,6 +296,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 	def _generateResponse(self, result):
 		logger.info(u"Creating opsiclientd info page")
 
+		timeline = Timeline()
 		html = infoPage % {
 			'head': timeline.getHtmlHead(),
 			'hostname': config.get('global', 'host_id'),
@@ -440,6 +440,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		return u"product cache deleted."
 
 	def timeline_getEvents(self):
+		timeline = Timeline()
 		return timeline.getEvents()
 
 	def setBlockLogin(self, blockLogin):
