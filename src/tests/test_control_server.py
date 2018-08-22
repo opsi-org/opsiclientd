@@ -41,4 +41,5 @@ def testGUIStartupEventOnlyOnWindows(preparedConfig, on_windows):
 	configs = Events.getEventConfigs()
 
 	assert configs
-	assert on_windows == ('gui_startup' in configs)
+	if on_windows:
+		assert 'gui_startup' in configs
