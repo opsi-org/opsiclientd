@@ -50,7 +50,6 @@ from ocdlib.Timeline import Timeline
 
 logger = Logger()
 config = Config()
-timeline = Timeline()
 
 mainpage = u'''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -332,6 +331,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			for poc in productOnClientsWithDependencies:
 				description += u'   %s: %s\n' % (poc.productId, poc.actionRequest)
 
+			timeline = Timeline()
 			timeline.addEvent(
 				title       = u"Software on demand",
 				description = description,
