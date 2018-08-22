@@ -33,8 +33,6 @@ import re
 import shutil
 import threading
 import time
-import win32security
-import win32net
 
 # Twisted imports
 from twisted.internet import reactor
@@ -59,9 +57,14 @@ from ocdlib.Timeline import Timeline
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.SoftwareOnDemand import ResourceKioskJsonRpc
 
+RUNNING_ON_WINDOWS = (os.name == 'nt')
+
+if RUNNING_ON_WINDOWS:
+	import win32security
+	import win32net
+
 logger = Logger()
 config = Config()
-timeline = Timeline()
 
 
 infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
@@ -156,7 +159,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 
 				return result
 
-			if (os.name == 'nt'):
+			if RUNNING_ON_WINDOWS:
 				try:
 					# Hack to find and read the local-admin group and his members,
 					# that should also Work on french installations
@@ -293,6 +296,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 	def _generateResponse(self, result):
 		logger.info(u"Creating opsiclientd info page")
 
+		timeline = Timeline()
 		html = infoPage % {
 			'head': timeline.getHtmlHead(),
 			'hostname': config.get('global', 'host_id'),
@@ -436,6 +440,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		return u"product cache deleted."
 
 	def timeline_getEvents(self):
+		timeline = Timeline()
 		return timeline.getEvents()
 
 	def setBlockLogin(self, blockLogin):
