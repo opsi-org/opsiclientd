@@ -23,18 +23,18 @@ The classes are used to create named pipes for remote procedure calls.
 
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
+:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
-import inspect
 import os
 import threading
 import time
 from ctypes import byref, c_char_p, c_ulong, create_string_buffer
 
-from OPSI.Backend import describeInterface
+from OPSI.Backend.Backend import describeInterface
 from OPSI.Logger import Logger
-from OPSI.Types import forceList, forceUnicode
+from OPSI.Types import forceUnicode
 from OPSI.Util import fromJson, toJson
 from OPSI.Service.JsonRpc import JsonRpc
 
