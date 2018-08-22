@@ -12,7 +12,7 @@ import pytest
 @pytest.fixture
 def preparedConfig(config, configFile):
 	config.set('global', 'config_file', configFile)
-	yield
+	yield config
 
 
 def testFiringEvent(preparedConfig):
