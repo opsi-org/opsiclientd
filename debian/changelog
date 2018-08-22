@@ -1,6 +1,7 @@
 opsiclientd (4.1.1.1) UNRELEASED; urgency=medium
 
   * Changed license to AGPLv3 in all free parts.
+  * ControlServer: Removed method stressConfigserver
 
  -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 04 Apr 2018 14:55:32 +0100
 

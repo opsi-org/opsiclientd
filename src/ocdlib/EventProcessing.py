@@ -42,7 +42,7 @@ from ocdlib.Exceptions import *
 from ocdlib.Events import *
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.Localization import _
-from ocdlib.Config import Config
+from ocdlib.Config import getLogFormat, Config
 from ocdlib.Timeline import Timeline
 
 if (os.name == 'nt'):
@@ -59,10 +59,9 @@ timeline = Timeline()
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class EventProcessingThread(KillableThread, ServiceConnection):
 	def __init__(self, opsiclientd, event):
-		from ocdlib import __version__
+		from ocdlib import __version__  # TODO: Import movable?
 
-		moduleName = u' %-30s' % (u'event processing ' + event.eventConfig.getId())
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(getLogFormat(u'event processing ' + event.eventConfig.getId()), object=self)
 		KillableThread.__init__(self)
 		ServiceConnection.__init__(self)
 
@@ -113,7 +112,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 		self._notificationServerPort = int(config.get('notification_server', 'start_port')) + (3 * int(self.getSessionId()))
 
-	''' ServiceConnection '''
+	# ServiceConnection
 	def connectionThreadOptions(self):
 		return {'statusSubject': self._statusSubject}
 
@@ -160,7 +159,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self._detailSubjectProxy.setMessage(u'')
 		ServiceConnection.connectionFailed(self, error)
 
-	''' / ServiceConnection '''
+	# End of ServiceConnection
 
 	def setSessionId(self, sessionId):
 		self._sessionId = int(sessionId)
@@ -621,7 +620,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						productIds.append(productOnClient.productId)
 						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
 
-			if (len(productIds) == 0) and (bootmode == 'BKSTD'):
+			if (not productIds) and bootmode == 'BKSTD':
 				logger.notice(u"No product action requests set")
 				self.setStatusMessage( _(u"No product action requests set") )
 				#set installation_pending State to False

@@ -69,6 +69,14 @@ QuBW/YzuIIiknjESIHBVA6YWeLNR
 -----END CERTIFICATE-----'''
 
 
+def getLogFormat(moduleName):
+	"""
+	Returns a constant logformat for all modules.
+	"""
+	name = u' %-30s' % moduleName
+	return u'[%l] [%D] [{name}] %M   (%F|%N)'.format(name=name)
+
+
 class ConfigImplementation(object):
 
 	def __init__(self):
@@ -454,11 +462,12 @@ class ConfigImplementation(object):
 
 		masterDepot = None
 		alternativeDepots = []
-		for depot in configService.host_getObjects(type = 'OpsiDepotserver', id = depotIds):
-			if (depot.id == depotIds[0]):
+		for depot in configService.host_getObjects(type='OpsiDepotserver', id=depotIds):
+			if depot.id == depotIds[0]:
 				masterDepot = depot
 			else:
 				alternativeDepots.append(depot)
+
 		if not masterDepot:
 			raise Exception(u"Failed to get info for master depot '%s'" % depotIds[0])
 
@@ -467,8 +476,8 @@ class ConfigImplementation(object):
 		if dynamicDepot:
 			if alternativeDepots:
 				logger.info(u"Got alternative depots for products: %s" % productIds)
-				for i in range(len(alternativeDepots)):
-					logger.info(u"%d. alternative depot is %s" % ((i+1), alternativeDepots[i].id))
+				for i, depot in enumerate(alternativeDepots, start=1):
+					logger.info(u"{:d}. alternative depot is {}", i, depot.id)
 
 				try:
 
@@ -518,8 +527,10 @@ class ConfigImplementation(object):
 			raise Exception(u"Not connected to config service")
 
 		depotServerUsername = self.get('depot_server', 'username')
-		encryptedDepotServerPassword = u''
-		encryptedDepotServerPassword = configService.user_getCredentials(username = u'pcpatch', hostId = self.get('global', 'host_id'))['password']
+		encryptedDepotServerPassword = configService.user_getCredentials(
+			username=u'pcpatch',
+			hostId=self.get('global', 'host_id')
+		)['password']
 		depotServerPassword = blowfishDecrypt(self.get('global', 'opsi_host_key'), encryptedDepotServerPassword)
 		logger.addConfidentialString(depotServerPassword)
 		logger.debug(u"Using username '%s' for depot connection" % depotServerUsername)

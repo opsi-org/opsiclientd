@@ -34,20 +34,19 @@ from hashlib import md5
 from httplib import HTTPConnection, HTTPSConnection
 from twisted.conch.ssh import keys
 
-# OPSI imports
 from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
-from OPSI.Logger import *
+from OPSI.Logger import Logger
 from OPSI.Util import *
 from OPSI.Util.Thread import KillableThread
 from OPSI.Util.HTTP import urlsplit, non_blocking_connect_http, non_blocking_connect_https
 from OPSI.Backend.JSONRPC import JSONRPCBackend
-from OPSI.Types import *
+from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
 from OPSI import System
 
 from ocdlib.Localization import _
 from ocdlib import __version__
-from ocdlib.Config import Config
-from ocdlib.Exceptions import *
+from ocdlib.Config import getLogFormat, Config
+from ocdlib.Exceptions import CanceledByUserError
 
 logger = Logger()
 config = Config()
@@ -198,9 +197,9 @@ class ServiceConnection(object):
 				if serviceConnectionThread.connected and forceBool(config.get('config_service', 'sync_time_from_service')):
 					logger.info(u"Syncing local system time from service")
 					try:
-					    System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True))
-				    	except Exception as e:
-				    		logger.error(u"Failed to sync time: '%s'" % e)
+						System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True))
+					except Exception as e:
+						logger.error(u"Failed to sync time: {0!r}", e)
 
 				if urlIndex > 0:
 					backendinfo = serviceConnectionThread.configService.backend_info()
@@ -234,8 +233,10 @@ class ServiceConnection(object):
 								modules[module] = True
 						else:
 							val = modules[module]
-							if (val == False): val = 'no'
-							if (val == True):  val = 'yes'
+							if val == False:
+								val = 'no'
+							elif val == True:
+								val = 'yes'
 
 						data += u'%s = %s\r\n' % (module.lower().strip(), val)
 					if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
@@ -260,8 +261,7 @@ class ServiceConnection(object):
 
 class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, statusSubject=None):
-		moduleName = u' %-30s' % (u'service connection')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(getLogFormat(u'service connection'), object=self)
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username
@@ -313,10 +313,10 @@ class ServiceConnectionThread(KillableThread):
 
 			tryNum = 0
 			while not self.cancelled and not self.connected:
+				tryNum += 1
 				try:
-					tryNum += 1
 					logger.notice(u"Connecting to config server '%s' #%d" % (self._configServiceUrl, tryNum))
-					self.setStatusMessage( _(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
+					self.setStatusMessage(_(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
 					if (len(self._username.split('.')) < 3):
 						raise Exception(u"Domain missing in username '%s'" % self._username)
 					if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:

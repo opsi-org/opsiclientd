@@ -37,8 +37,9 @@ from OPSI.Types import forceUnicode
 from ocdlib import __version__
 from ocdlib.Opsiclientd import Opsiclientd
 
-logger = Logger()
+__all__ = ('OpsiclientdInit', )
 
+logger = Logger()
 
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -72,13 +73,14 @@ class OpsiclientdInit(object):
 		daemon = False
 		logLevel = LOG_NOTICE
 		for (opt, arg) in opts:
-			if   (opt == "-v"):
+			if opt == "-v":
 				print u"opsiclientd version %s" % __version__
 				sys.exit(0)
-			if   (opt == "-D"):
+			elif opt == "-D":
 				daemon = True
-			if   (opt == "-l"):
+			elif opt == "-l":
 				logLevel = int(arg)
+
 		if daemon:
 			logger.setConsoleLevel(LOG_NONE)
 			self.daemonize()
