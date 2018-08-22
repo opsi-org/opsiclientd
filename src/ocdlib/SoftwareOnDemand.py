@@ -333,9 +333,11 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				description += u'   %s: %s\n' % (poc.productId, poc.actionRequest)
 
 			timeline.addEvent(
-				title       = u"Software on demand",
-				description = description,
-				category    = u"user_interaction")
+				title=u"Software on demand",
+				description=description,
+				category=u"user_interaction"
+			)
+
 			if modifiedProductOnClients:
 				logger.info(u"Updating productOnClients")
 				self._configService.productOnClient_updateObjects(productOnClientsWithDependencies)
