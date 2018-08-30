@@ -1,0 +1,260 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR ORGANIZATION
+# 
+# Translators:
+# Lars Juul <lju@eucl.dk>, 2015
+msgid ""
+msgstr ""
+"Project-Id-Version: opsi.org\n"
+"POT-Creation-Date: 2015-02-03 13:08+CET\n"
+"PO-Revision-Date: 2016-03-02 12:50+0000\n"
+"Last-Translator: Lars Juul <lju@eucl.dk>\n"
+"Language-Team: Danish (http://www.transifex.com/opsi-org/opsiorg/language/da/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: ENCODING\n"
+"Generated-By: pygettext.py 1.5\n"
+"Language: da\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: ../src/ocdlib/EventProcessing.py:104 ../src/ocdlib/EventProcessing.py:1118
+msgid "Processing event %s"
+msgstr "Behandler hændelse %s"
+
+#: ../src/ocdlib/EventProcessing.py:144
+msgid "Timeout: %ds"
+msgstr "Time-out: %ds"
+
+#: ../src/ocdlib/EventProcessing.py:247
+msgid "Getting config from service"
+msgstr "Henter konfiguration fra tjeneste"
+
+#: ../src/ocdlib/EventProcessing.py:249
+msgid "Got config from service"
+msgstr "Fik konfiguration fra tjeneste"
+
+#: ../src/ocdlib/EventProcessing.py:262
+msgid "Writing log to service"
+msgstr "Skriver log til tjeneste"
+
+#: ../src/ocdlib/EventProcessing.py:367
+#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:104
+msgid "Mounting depot share %s"
+msgstr "Tilknytter depot lager %s"
+
+#: ../src/ocdlib/EventProcessing.py:399
+msgid "Updating action processor"
+msgstr "Opdaterer handlings processor"
+
+#: ../src/ocdlib/EventProcessing.py:540
+msgid "Processing login actions"
+msgstr "Behandler login handlinger"
+
+#: ../src/ocdlib/EventProcessing.py:595
+msgid "Failed to process login actions: %s"
+msgstr "Det lykkedes ikke at behandle login handlinger: %s"
+
+#: ../src/ocdlib/EventProcessing.py:598
+msgid "Getting action requests from config service"
+msgstr "Henter handlings anmodninger fra konfigurations tjeneste"
+
+#: ../src/ocdlib/EventProcessing.py:636
+msgid "No product action requests set"
+msgstr "Ingen produkt handlings anmodninger sat"
+
+#: ../src/ocdlib/EventProcessing.py:678
+msgid "Failed to process product action requests: %s"
+msgstr "Det lykkedes ikke at behandle produkt handlings anmodningerne"
+
+#: ../src/ocdlib/EventProcessing.py:710
+msgid "Waiting for TrustedInstaller"
+msgstr "Venter på TrustedInstaller"
+
+#: ../src/ocdlib/EventProcessing.py:726
+msgid "Starting actions"
+msgstr "Starter handlinger"
+
+#: ../src/ocdlib/EventProcessing.py:808
+msgid "Actions completed"
+msgstr "Handlinger gennemført"
+
+#: ../src/ocdlib/EventProcessing.py:853
+msgid "Products"
+msgstr "Produkter"
+
+#: ../src/ocdlib/EventProcessing.py:856
+msgid "Abort"
+msgstr "Afbryd"
+
+#: ../src/ocdlib/EventProcessing.py:856 ../src/ocdlib/EventProcessing.py:859
+msgid "Start now"
+msgstr "Start nu"
+
+#: ../src/ocdlib/EventProcessing.py:885
+msgid "Event %s: action processing will start in %s:%s"
+msgstr "Begivenhed %s: handling behandling starter om %s:%s"
+
+#: ../src/ocdlib/EventProcessing.py:955
+msgid "Reboot requested"
+msgstr "Genstart anmodet"
+
+#: ../src/ocdlib/EventProcessing.py:958
+msgid "Shutdown requested"
+msgstr "Nedlukning anmodet"
+
+#: ../src/ocdlib/EventProcessing.py:993 ../src/ocdlib/EventProcessing.py:995
+msgid "Later"
+msgstr "Senere"
+
+#: ../src/ocdlib/EventProcessing.py:993 ../src/ocdlib/EventProcessing.py:999
+msgid "Reboot now"
+msgstr "Genstart nu"
+
+#: ../src/ocdlib/EventProcessing.py:995 ../src/ocdlib/EventProcessing.py:1001
+msgid "Shutdown now"
+msgstr "Nedluk nu"
+
+#: ../src/ocdlib/EventProcessing.py:1026
+msgid "Reboot in %s:%s"
+msgstr "Genstart om %s:%s"
+
+#: ../src/ocdlib/EventProcessing.py:1028
+msgid "Shutdown in %s:%s"
+msgstr "Nedlukning om %s:%s"
+
+#: ../src/ocdlib/EventProcessing.py:1138 ../src/ocdlib/EventProcessing.py:1218
+msgid "Syncing config to server"
+msgstr "Synkronisere konfiguration til server"
+
+#: ../src/ocdlib/EventProcessing.py:1140 ../src/ocdlib/EventProcessing.py:1147
+#: ../src/ocdlib/EventProcessing.py:1220 ../src/ocdlib/EventProcessing.py:1224
+msgid "Sync completed"
+msgstr "Synkronisering komplet"
+
+#: ../src/ocdlib/EventProcessing.py:1143 ../src/ocdlib/EventProcessing.py:1222
+msgid "Syncing config from server"
+msgstr "Synkronisere konfiguration fra server"
+
+#: ../src/ocdlib/EventProcessing.py:1150
+msgid "Caching products"
+msgstr "Cacher produkter"
+
+#: ../src/ocdlib/EventProcessing.py:1162
+msgid "Products cached"
+msgstr "Produkter cachet"
+
+#: ../src/ocdlib/EventProcessing.py:1229
+msgid "Shutting down machine"
+msgstr "Slukker computer"
+
+#: ../src/ocdlib/EventProcessing.py:1231
+msgid "Rebooting machine"
+msgstr "Genstarter computer"
+
+#: ../src/ocdlib/EventProcessing.py:1233
+msgid "Unblocking login"
+msgstr "Fjerner blokering af login"
+
+#: ../src/ocdlib/OpsiService.py:314
+msgid "Connecting to config server '%s' #%d"
+msgstr "Forbinder til konfigurations server '%s' #%d"
+
+#: ../src/ocdlib/OpsiService.py:333
+msgid "Connected to config server '%s'"
+msgstr "Forbundet til konfigurations server '%s'"
+
+#: ../src/ocdlib/OpsiService.py:338
+msgid "Failed to connect to config server '%s': Service verification failure"
+msgstr "Det lykkedes ikke at oprette forbindelse til konfigurations server '%s': service fejl verifikation"
+
+#: ../src/ocdlib/OpsiService.py:344
+msgid "Failed to connect to config server '%s': %s"
+msgstr "Det lykkedes ikke at oprette forbindelse til konfigurations server '%s': %s"
+
+#: ../src/ocdlib/Opsiclientd.py:547
+msgid "Close"
+msgstr "Luk"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:287
+msgid "You selected to execute the following product actions:"
+msgstr "Du har valgt at udføre følgende produkt handlinger:"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:293
+msgid "The following product actions have been added to fulfill dependencies:"
+msgstr "Følgende produkt handlinger er blevet tilføjet for at opfylde afhængigheder:"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:298
+msgid "Other pending product actions:"
+msgstr "Andre ventende produkt handlinger:"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:303
+msgid "back"
+msgstr "tilbage"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:306
+msgid "process on next boot"
+msgstr "Behandl ved næste genstart"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:308
+msgid "process now"
+msgstr "Behandl nu"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:310
+msgid "Nothing selected"
+msgstr "Intet valgt"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:313
+msgid "Starting to process actions now."
+msgstr "Begynder at behandle handlinger nu."
+
+#: ../src/ocdlib/SoftwareOnDemand.py:316
+msgid "Actions will be processed on next boot."
+msgstr "Handlinger vil blive behandlet ved næste genstart."
+
+#: ../src/ocdlib/SoftwareOnDemand.py:434
+msgid "not installed"
+msgstr "ikke installeret"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:447
+msgid "installed"
+msgstr "installeret"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:447
+msgid "version"
+msgstr "version"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:452
+msgid "description"
+msgstr "Beskrivelse"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:457
+msgid "state"
+msgstr "tilstand"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:462
+msgid "advice"
+msgstr "råd"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:469
+msgid "reinstall"
+msgstr "geninstaller"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:473
+msgid "uninstall"
+msgstr "afinstaller"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:477
+msgid "install"
+msgstr "installer"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:480
+msgid "next"
+msgstr "næste"
+
+#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:113
+msgid "Action processor is running"
+msgstr "Handling processor kører"
+
+#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:118
+msgid "Action processor ended"
+msgstr "Action processor sluttede"

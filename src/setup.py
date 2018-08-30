@@ -116,6 +116,9 @@ if RUNS_ON_WINDOWS:
 		('opsiclientd',                   [	'windows\\opsiclientd.conf']),
 		('locale\\de\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_de.mo']),
 		('locale\\fr\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_fr.mo']),
+		('locale\\es\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_es.mo']),
+		('locale\\it\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_it.mo']),
+		('locale\\da\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_da.mo']),
 		('opsiclientd\\extend.d', glob.glob('..\\extend.d\*.*')),
 	]
 else:

@@ -158,7 +158,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			self._notificationServer.removeSubject(self._choiceSubject)
 		self._detailSubjectProxy.setMessage(u'')
 		ServiceConnection.connectionFailed(self, error)
-
 	# End of ServiceConnection
 
 	def setSessionId(self, sessionId):
@@ -505,6 +504,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					actionResult=u'successful'
 				)
 			])
+
 			self.setActionProcessorInfo()
 
 			if mounted:

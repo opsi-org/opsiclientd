@@ -164,9 +164,12 @@ class CacheService(threading.Thread):
 				masterOnly=True,
 				productIds=productIds)
 		if not clientToDepotservers:
-			raise Exception(u"Failed to get depot config from service")
+			#Do not raise Exception and try to continue without checking depot
+			depotId = None
+			#raise Exception(u"Failed to get depot config from service")
+		else:
+			depotId = [ clientToDepotservers[0]['depotId'] ]
 
-		depotId = [clientToDepotservers[0]['depotId']]
 		productOnDepots = {
 			productOnDepot.productId: productOnDepot
 			for productOnDepot

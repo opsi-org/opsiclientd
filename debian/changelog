@@ -5,6 +5,14 @@ opsiclientd (4.1.1.1) UNRELEASED; urgency=medium
 
  -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 04 Apr 2018 14:55:32 +0100
 
+opsiclientd (4.0.93) stable; urgency=medium
+
+  * new languages added
+  * CacheService: Do not check the depotserver
+  * excludeProductGroupIds fix
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 08 Aug 2018 11:33:12 +0200
+
 opsiclientd (4.0.92) stable; urgency=medium
 
   * new version based on python-opsi 4.0.7.48-1

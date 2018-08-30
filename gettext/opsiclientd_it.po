@@ -1,0 +1,260 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR ORGANIZATION
+# 
+# Translators:
+# Tommaso Amici <tommaso.amici@gmail.com>, 2015
+msgid ""
+msgstr ""
+"Project-Id-Version: opsi.org\n"
+"POT-Creation-Date: 2015-02-03 13:08+CET\n"
+"PO-Revision-Date: 2016-03-02 12:50+0000\n"
+"Last-Translator: Niko Wenselowski\n"
+"Language-Team: Italian (http://www.transifex.com/opsi-org/opsiorg/language/it/)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: ENCODING\n"
+"Generated-By: pygettext.py 1.5\n"
+"Language: it\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: ../src/ocdlib/EventProcessing.py:104 ../src/ocdlib/EventProcessing.py:1118
+msgid "Processing event %s"
+msgstr "Processando evento %s"
+
+#: ../src/ocdlib/EventProcessing.py:144
+msgid "Timeout: %ds"
+msgstr "Timeout: %ds"
+
+#: ../src/ocdlib/EventProcessing.py:247
+msgid "Getting config from service"
+msgstr "Ricevendo configurazione dal servizio"
+
+#: ../src/ocdlib/EventProcessing.py:249
+msgid "Got config from service"
+msgstr "Ricevuta configurazione dal servizio"
+
+#: ../src/ocdlib/EventProcessing.py:262
+msgid "Writing log to service"
+msgstr "Inviando log al servizio"
+
+#: ../src/ocdlib/EventProcessing.py:367
+#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:104
+msgid "Mounting depot share %s"
+msgstr ""
+
+#: ../src/ocdlib/EventProcessing.py:399
+msgid "Updating action processor"
+msgstr "Aggiornando l'esecutore dell'azione"
+
+#: ../src/ocdlib/EventProcessing.py:540
+msgid "Processing login actions"
+msgstr "Eseguendo azioni di login"
+
+#: ../src/ocdlib/EventProcessing.py:595
+msgid "Failed to process login actions: %s"
+msgstr "Impossibile eseguire azioni di login: %s"
+
+#: ../src/ocdlib/EventProcessing.py:598
+msgid "Getting action requests from config service"
+msgstr "Ricevendo richieste di azione dal servizio di configurazione"
+
+#: ../src/ocdlib/EventProcessing.py:636
+msgid "No product action requests set"
+msgstr " Nessuna richiesta di azione di prodotto effettuata"
+
+#: ../src/ocdlib/EventProcessing.py:678
+msgid "Failed to process product action requests: %s"
+msgstr "Impossibile eseguire le richieste di azione di prodotto: %s"
+
+#: ../src/ocdlib/EventProcessing.py:710
+msgid "Waiting for TrustedInstaller"
+msgstr "Attendere TrustedInstaller"
+
+#: ../src/ocdlib/EventProcessing.py:726
+msgid "Starting actions"
+msgstr "Inizializando azioni"
+
+#: ../src/ocdlib/EventProcessing.py:808
+msgid "Actions completed"
+msgstr "Azioni completate"
+
+#: ../src/ocdlib/EventProcessing.py:853
+msgid "Products"
+msgstr "Prodotti"
+
+#: ../src/ocdlib/EventProcessing.py:856
+msgid "Abort"
+msgstr "Interrompi"
+
+#: ../src/ocdlib/EventProcessing.py:856 ../src/ocdlib/EventProcessing.py:859
+msgid "Start now"
+msgstr "Comincia ora"
+
+#: ../src/ocdlib/EventProcessing.py:885
+msgid "Event %s: action processing will start in %s:%s"
+msgstr "Evento %s: il processo comincerà in %s:%s"
+
+#: ../src/ocdlib/EventProcessing.py:955
+msgid "Reboot requested"
+msgstr "Riavvio richiesto"
+
+#: ../src/ocdlib/EventProcessing.py:958
+msgid "Shutdown requested"
+msgstr "Spegnimento richiesto"
+
+#: ../src/ocdlib/EventProcessing.py:993 ../src/ocdlib/EventProcessing.py:995
+msgid "Later"
+msgstr "Più tardi"
+
+#: ../src/ocdlib/EventProcessing.py:993 ../src/ocdlib/EventProcessing.py:999
+msgid "Reboot now"
+msgstr "Riavviare ora"
+
+#: ../src/ocdlib/EventProcessing.py:995 ../src/ocdlib/EventProcessing.py:1001
+msgid "Shutdown now"
+msgstr "Spegnere ora"
+
+#: ../src/ocdlib/EventProcessing.py:1026
+msgid "Reboot in %s:%s"
+msgstr "Riavvio in %s:%s"
+
+#: ../src/ocdlib/EventProcessing.py:1028
+msgid "Shutdown in %s:%s"
+msgstr "Spegnimento in %s:%s"
+
+#: ../src/ocdlib/EventProcessing.py:1138 ../src/ocdlib/EventProcessing.py:1218
+msgid "Syncing config to server"
+msgstr "Sincronizzazione della configurazione col server"
+
+#: ../src/ocdlib/EventProcessing.py:1140 ../src/ocdlib/EventProcessing.py:1147
+#: ../src/ocdlib/EventProcessing.py:1220 ../src/ocdlib/EventProcessing.py:1224
+msgid "Sync completed"
+msgstr "Sincronizzazione completata"
+
+#: ../src/ocdlib/EventProcessing.py:1143 ../src/ocdlib/EventProcessing.py:1222
+msgid "Syncing config from server"
+msgstr "Sincronizzazione della configurazione dal server"
+
+#: ../src/ocdlib/EventProcessing.py:1150
+msgid "Caching products"
+msgstr "Creazione della cache dei prodotti in corso"
+
+#: ../src/ocdlib/EventProcessing.py:1162
+msgid "Products cached"
+msgstr "Creazione della cache dei prodotti terminata"
+
+#: ../src/ocdlib/EventProcessing.py:1229
+msgid "Shutting down machine"
+msgstr "Spegnimento in corso"
+
+#: ../src/ocdlib/EventProcessing.py:1231
+msgid "Rebooting machine"
+msgstr "Riavvio in corso"
+
+#: ../src/ocdlib/EventProcessing.py:1233
+msgid "Unblocking login"
+msgstr "Sblocco login"
+
+#: ../src/ocdlib/OpsiService.py:314
+msgid "Connecting to config server '%s' #%d"
+msgstr "Connessione al server di configurazione '%s' #%d in corso"
+
+#: ../src/ocdlib/OpsiService.py:333
+msgid "Connected to config server '%s'"
+msgstr "Connesso al server di configurazione '%s'"
+
+#: ../src/ocdlib/OpsiService.py:338
+msgid "Failed to connect to config server '%s': Service verification failure"
+msgstr "Fallita connessione al server di configurazione '%s': Verifica del servizio fallita"
+
+#: ../src/ocdlib/OpsiService.py:344
+msgid "Failed to connect to config server '%s': %s"
+msgstr "Fallita connessione al server di configurazione '%s': %s"
+
+#: ../src/ocdlib/Opsiclientd.py:547
+msgid "Close"
+msgstr "Chiudi"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:287
+msgid "You selected to execute the following product actions:"
+msgstr "Hai scelto di eseguire le seguenti azioni di prodotto:"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:293
+msgid "The following product actions have been added to fulfill dependencies:"
+msgstr ""
+
+#: ../src/ocdlib/SoftwareOnDemand.py:298
+msgid "Other pending product actions:"
+msgstr "Altre azioni di prodotto in attesa di esecuzione:"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:303
+msgid "back"
+msgstr "indietro"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:306
+msgid "process on next boot"
+msgstr "esegui al prossimo riavvio"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:308
+msgid "process now"
+msgstr "esegui ora"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:310
+msgid "Nothing selected"
+msgstr "Selezione vuota"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:313
+msgid "Starting to process actions now."
+msgstr "Inizio ora ad eseguire le azioni."
+
+#: ../src/ocdlib/SoftwareOnDemand.py:316
+msgid "Actions will be processed on next boot."
+msgstr "Le azioni saranno eseguite al prossimo riavvio."
+
+#: ../src/ocdlib/SoftwareOnDemand.py:434
+msgid "not installed"
+msgstr "non installato"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:447
+msgid "installed"
+msgstr "installato"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:447
+msgid "version"
+msgstr "versione"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:452
+msgid "description"
+msgstr "descrizione"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:457
+msgid "state"
+msgstr "stato"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:462
+msgid "advice"
+msgstr "consigli"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:469
+msgid "reinstall"
+msgstr "reinstalla"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:473
+msgid "uninstall"
+msgstr "disinstalla"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:477
+msgid "install"
+msgstr "installa"
+
+#: ../src/ocdlib/SoftwareOnDemand.py:480
+msgid "next"
+msgstr "successivo"
+
+#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:113
+msgid "Action processor is running"
+msgstr "L'esecuzione dell'azione è in corso"
+
+#: ../src/windows/helpers/action_processor_starter/action_processor_starter.py:118
+msgid "Action processor ended"
+msgstr "L'esecuzione dell'azione è terminata"
