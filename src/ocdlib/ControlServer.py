@@ -305,6 +305,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 		if not isinstance(result, http.Response):
 			result = http.Response()
 		result.code = responsecode.OK
+		result.headers.setHeader('content-type', http_headers.MimeType("text", "html", {"charset": "utf-8"}))
 		result.stream = stream.IByteStream(html.encode('utf-8').strip())
 		return result
 
