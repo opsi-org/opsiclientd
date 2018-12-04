@@ -65,7 +65,26 @@ Timeline_urlPrefix  = "/timeline/timeline_js/";
 Timeline_parameters = "bundle=true";
 // ]]>
 </script>
-<script src="/timeline/timeline_js/timeline-api.js" type="text/javascript"></script>
+<link rel="stylesheet" type="text/css"
+href="timeline/timeline_ajax/styles/graphics.css">
+<link rel="stylesheet" type="text/css"
+href="timeline/timeline_js/timeline-bundle.css">
+<script src="/timeline/timeline_ajax/simile-ajax-bundle.js"
+type="text/javascript"></script>
+<script src="/timeline/timeline_ajax/simile-ajax-api.js"
+type="text/javascript"></script>
+<script src="/timeline/timeline_js/timeline-bundle.js"
+type="text/javascript"></script>
+<script src="/timeline/timeline_js/timeline-api.js"
+type="text/javascript"></script>
+<script src="/timeline/timeline_js/scripts/l10n/en/timeline.js"
+type="text/javascript"></script>
+<script src="/timeline/timeline_js/scripts/l10n/en/labellers.js"
+type="text/javascript"></script>
+<script src="/timeline/timeline_js/timeline/scripts/l10n/de/timeline.js"
+type="text/javascript"></script>
+<script src="/timeline/timeline_js/scripts/l10n/de/labellers.js"
+type="text/javascript"></script>
 <script type="text/javascript">
 // <![CDATA[
 var timeline_data = %(data)s;
@@ -132,7 +151,7 @@ class TimelineImplementation(object):
 		self._createDatabase()
 		self._cleanupDatabase()
 		self._stopped = False
-	
+
 	def stop(self):
 		self._stopped = True
 		end = forceOpsiTimestamp(timestamp())
@@ -141,7 +160,7 @@ class TimelineImplementation(object):
 			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', { 'end': end })
 		finally:
 			self._dbLock.release()
-		
+
 	def getHtmlHead(self):
 		events = []
 		now = time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime())
@@ -192,7 +211,7 @@ class TimelineImplementation(object):
 			'data': json.dumps({'dateTimeFormat': 'iso8601', 'events': events}),
 			'date': now
 		}
-	
+
 	def _cleanupDatabase(self):
 		self._dbLock.acquire()
 		try:
@@ -201,7 +220,7 @@ class TimelineImplementation(object):
 		except Exception, e:
 			logger.error(e)
 		self._dbLock.release()
-		
+
 	def _createDatabase(self):
 		self._dbLock.acquire()
 		try:
@@ -226,7 +245,7 @@ class TimelineImplementation(object):
 				self._sql.execute('CREATE INDEX `start` on `EVENT` (`start`);')
 		finally:
 			self._dbLock.release()
-		
+
 	def addEvent(self, title, description=u'', isError=False, category=None, durationEvent=False, start=None, end=None):
 		if self._stopped:
 			return -1
@@ -253,7 +272,7 @@ class TimelineImplementation(object):
 			logger.error(u"Failed to add event '%s': %s" % (title, e))
 		finally:
 			self._dbLock.release()
-		
+
 	def setEventEnd(self, eventId, end=None):
 		if self._stopped:
 			return -1
@@ -268,7 +287,7 @@ class TimelineImplementation(object):
 			logger.error(u"Failed to set end of event '%s': %s" % (eventId, e))
 		finally:
 			self._dbLock.release()
-		
+
 	def getEvents(self):
 		if self._stopped:
 			return {}
@@ -277,23 +296,23 @@ class TimelineImplementation(object):
 			return self._sql.getSet('select * from EVENT')
 		finally:
 			self._dbLock.release()
-		
+
 class Timeline(TimelineImplementation):
 	# Storage for the instance reference
 	__instance = None
-	
+
 	def __init__(self):
 		""" Create singleton instance """
-		
+
 		# Check whether we already have an instance
 		if Timeline.__instance is None:
 			# Create and remember instance
 			Timeline.__instance = TimelineImplementation()
-		
+
 		# Store instance reference as the only member in the handle
 		self.__dict__['_Timeline__instance'] = Timeline.__instance
-	
-	
+
+
 	def __getattr__(self, attr):
 		""" Delegate access to implementation """
 		return getattr(self.__instance, attr)
@@ -301,5 +320,3 @@ class Timeline(TimelineImplementation):
 	def __setattr__(self, attr, value):
 		""" Delegate access to implementation """
 		return setattr(self.__instance, attr, value)
-
-
