@@ -65,26 +65,8 @@ Timeline_urlPrefix  = "/timeline/timeline_js/";
 Timeline_parameters = "bundle=true";
 // ]]>
 </script>
-<link rel="stylesheet" type="text/css"
-href="timeline/timeline_ajax/styles/graphics.css">
-<link rel="stylesheet" type="text/css"
-href="timeline/timeline_js/timeline-bundle.css">
-<script src="/timeline/timeline_ajax/simile-ajax-bundle.js"
-type="text/javascript"></script>
-<script src="/timeline/timeline_ajax/simile-ajax-api.js"
-type="text/javascript"></script>
-<script src="/timeline/timeline_js/timeline-bundle.js"
-type="text/javascript"></script>
-<script src="/timeline/timeline_js/timeline-api.js"
-type="text/javascript"></script>
-<script src="/timeline/timeline_js/scripts/l10n/en/timeline.js"
-type="text/javascript"></script>
-<script src="/timeline/timeline_js/scripts/l10n/en/labellers.js"
-type="text/javascript"></script>
-<script src="/timeline/timeline_js/timeline/scripts/l10n/de/timeline.js"
-type="text/javascript"></script>
-<script src="/timeline/timeline_js/scripts/l10n/de/labellers.js"
-type="text/javascript"></script>
+<script src="/timeline/timeline_js/timeline-api.js" type="text/javascript">
+</script>
 <script type="text/javascript">
 // <![CDATA[
 var timeline_data = %(data)s;
