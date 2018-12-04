@@ -5,6 +5,12 @@ opsiclientd (4.1.1.1) UNRELEASED; urgency=medium
 
  -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 04 Apr 2018 14:55:32 +0100
 
+opsiclientd (4.0.94) stable; urgency=medium
+
+  * Chrome-Support for timeline (info.html from the client-webserice)
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 04 Dec 2018 16:34:59 +0100
+
 opsiclientd (4.0.93) stable; urgency=medium
 
   * new languages added

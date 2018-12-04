@@ -24,6 +24,7 @@ procedure calls
 
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
+:author: Erol Ueluekmen <e.ueluekmen@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
@@ -67,8 +68,7 @@ logger = Logger()
 config = Config()
 
 
-infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+infoPage = u'''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -304,6 +304,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 		if not isinstance(result, http.Response):
 			result = http.Response()
 		result.code = responsecode.OK
+		result.headers.setHeader('content-type', http_headers.MimeType("text", "html", {"charset": "utf-8"}))
 		result.stream = stream.IByteStream(html.encode('utf-8').strip())
 		return result
 
