@@ -28,8 +28,9 @@ Connecting to a opsi service.
 """
 
 import base64
-import time
+import os
 import random
+import time
 from hashlib import md5
 from httplib import HTTPConnection, HTTPSConnection
 from twisted.conch.ssh import keys
