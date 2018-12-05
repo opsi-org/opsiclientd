@@ -48,7 +48,7 @@ from OPSI.Service.Worker import (WorkerOpsi, WorkerOpsiJsonRpc,
 from OPSI.Service.Resource import (ResourceOpsi, ResourceOpsiJsonRpc,
 	ResourceOpsiJsonInterface, ResourceOpsiDAV)
 from OPSI.Types import forceBool, forceInt, forceUnicode
-from OPSI.web2 import resource, stream, server, http, responsecode
+from OPSI.web2 import resource, stream, server, http, responsecode, http_headers
 from OPSI.web2.channel.http import HTTPFactory
 
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
