@@ -189,7 +189,8 @@ if RUNS_ON_WINDOWS:
 	opsiclientd = Target(
 		name="opsiclientd",
 		description=opsiclientdDescription,
-		modules=['ocdlib.WindowsService'],
+		script="scripts/opsiclientd",
+		modules=['ocdlib.Windows'],
 		#cmdline_style='pywin32',
 		#other_resources = [(RT_MANIFEST, 1, manifest_template % dict(prog="opsiclientd"))],
 		icon_resources=[(1, "windows\\opsi.ico")]
