@@ -7,3 +7,8 @@
 *.egg-info
 *.sublime-*
 .idea
+
+# Folders used during building
+src/build/
+src/dist/
+src/OPSI/
