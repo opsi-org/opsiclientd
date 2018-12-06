@@ -52,22 +52,25 @@ def tree(dst, src):
 
 	return found_files
 
+localDirectory = os.path.dirname(__file__)
+opsiClientDeamonVersion = None
+fileWithVersion = os.path.join(localDirectory, 'ocdlib', '__init__.py')
+with open(fileWithVersion, 'r') as f:
+	for line in f:
+		if "__version__" in line:
+			opsiClientDeamonVersion = line.split('=', 1)[1].strip()[1:-1]
+			break
+
+if not opsiClientDeamonVersion:
+	raise Exception("Failed to find version.")
+
 
 class Target:
 	def __init__(self, **kw):
 		self.__dict__.update(kw)
 		self.company_name = "uib GmbH"
 		self.copyright = "uib GmbH"
-		self.version = ""
-
-		with open(os.path.join('ocdlib', 'Opsiclientd.py'), 'r') as f:
-			for line in f:
-				if line.startswith("__version__"):
-					self.version = line.split('=', 1)[1].strip()[1:-1]
-					break
-
-		if not self.version:
-			print >> sys.stderr, "Failed to find version of script '%s'" % self.script
+		self.version = opsiClientDeamonVersion
 
 
 opsiclientdDescription = "opsi client daemon"
@@ -121,20 +124,6 @@ if RUNS_ON_WINDOWS:
 else:
 	data_files = []
 data_files += tree('opsiclientd\\static_html', '..\\static_html')
-
-
-localDirectory = os.path.dirname(__file__)
-
-opsiClientDeamonVersion = None
-fileWithVersion = os.path.join(localDirectory, 'ocdlib', 'Opsiclientd.py')
-with open(fileWithVersion, 'r') as f:
-	for line in f:
-		if "__version__" in line:
-			opsiClientDeamonVersion = line.split('=', 1)[1].strip()[1:-1]
-			break
-
-if not opsiClientDeamonVersion:
-	raise Exception("Failed to find version.")
 
 setup_options = {
 	"data_files": data_files,
@@ -200,8 +189,8 @@ if RUNS_ON_WINDOWS:
 	opsiclientd = Target(
 		name="opsiclientd",
 		description=opsiclientdDescription,
-		script="opsiclientd.py",
-		modules=["opsiclientd"],
+		script="scripts/opsiclientd",
+		modules=['ocdlib.Windows'],
 		#cmdline_style='pywin32',
 		#other_resources = [(RT_MANIFEST, 1, manifest_template % dict(prog="opsiclientd"))],
 		icon_resources=[(1, "windows\\opsi.ico")]
@@ -259,7 +248,7 @@ if RUNS_ON_WINDOWS:
 	setup_options['console'] = [network_performance, opsiclientd_shutdown_starter]
 	setup_options['windows'] = [notifier, opsiclientd_rpc, 	action_processor_starter]
 else:
-	setup_options['scripts'] = []
+	setup_options['scripts'] = [os.path.join('scripts', 'opsiclientd')]
 	setup_options['packages'] = packages
 
 setup(**setup_options)

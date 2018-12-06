@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 # opsiclientd is part of the desktop management solution opsi
-#    (open pc server integration) http://www.opsi.org
-# Copyright (C) 2010-2016 uib GmbH <info@uib.de>
+# (open pc server integration) http://www.opsi.org
+# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-The Functionality for Software-on-Demand
+Self-service functionality.
 
 Functionality to work with certificates.
 Certificates play an important role in the encrypted communication
@@ -26,18 +26,16 @@ between servers and clients.
 .. versionadded:: 4.0.4
 
 :copyright: uib GmbH <info@uib.de>
-:author: Erol Ülükmen <e.ueluekmen@uib.de>
+:author: Erol Ueluekmen <e.ueluekmen@uib.de>
 :author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
-import base64
 import cgi
-from hashlib import md5
-from twisted.conch.ssh import keys
 from twisted.internet import defer
 
-from OPSI.web2 import responsecode, http, stream
+from OPSI.Exceptions import OpsiAuthenticationError
+from OPSI.web2 import http, stream
 from OPSI.Logger import *
 from OPSI.Types import *
 from OPSI.Object import *
@@ -45,14 +43,13 @@ from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc
 from OPSI.Service.Resource import ResourceOpsi
 
 from ocdlib.OpsiService import ServiceConnection
-from ocdlib.Config import Config
+from ocdlib.Config import getLogFormat, Config
 from ocdlib.Events import SwOnDemandEventGenerator, getEventGenerators
 from ocdlib.Localization import _
 from ocdlib.Timeline import Timeline
 
 logger = Logger()
 config = Config()
-timeline = Timeline()
 
 mainpage = u'''<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -96,8 +93,7 @@ mainpage = u'''<?xml version="1.0" encoding="UTF-8"?>
 
 class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 	def __init__(self, service, request, resource):
-		moduleName = u' %-30s' % (u'software on demand')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(getLogFormat(u'software on demand'), object=self)
 		WorkerOpsi.__init__(self, service, request, resource)
 		ServiceConnection.__init__(self)
 		self._swOnDemandProductIds = []
@@ -148,7 +144,7 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 				(k, v) = part.split('=', 1)
 			k = k.strip().lower()
 			v = v.strip().lower()
-			if query.has_key(k):
+			if k in query:
 				query[k] = forceUnicodeList(query[k])
 				query[k].append(v)
 			else:
@@ -335,10 +331,13 @@ class WorkerSoftwareOnDemand(WorkerOpsi, ServiceConnection):
 			for poc in productOnClientsWithDependencies:
 				description += u'   %s: %s\n' % (poc.productId, poc.actionRequest)
 
+			timeline = Timeline()
 			timeline.addEvent(
-				title       = u"Software on demand",
-				description = description,
-				category    = u"user_interaction")
+				title=u"Software on demand",
+				description=description,
+				category=u"user_interaction"
+			)
+
 			if modifiedProductOnClients:
 				logger.info(u"Updating productOnClients")
 				self._configService.productOnClient_updateObjects(productOnClientsWithDependencies)
@@ -506,15 +505,14 @@ class ResourceSoftwareOnDemand(ResourceOpsi):
 
 class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 	def __init__(self, service, request, resource):
-		moduleName = u' %-30s' % (u'software on demand')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(getLogFormat(u'software on demand'), object=self)
 		self._allowedMethods = self._getAllowedMethods()
 		self._fireEvent = False
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 		ServiceConnection.__init__(self)
 
 	def _getAllowedMethods(self):
-	    return [
+		return [
 			#"getPossibleMethods_listOfHashes",
 			#"backend_getInterface",
 			#"backend_info",
@@ -612,7 +610,6 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 			self._fireEvent = False
 		return result
 
+
 class ResourceKioskJsonRpc(ResourceOpsi):
 	WorkerClass = WorkerKioskJsonRpc
-
-
