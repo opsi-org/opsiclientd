@@ -2,7 +2,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
+# Copyright (C) 2010-2019 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -555,6 +555,8 @@ class ConfigImplementation(object):
 				self.set('depot_server', 'drive', configState.values[0])
 			elif configState.configId == u'clientconfig.depot.id':
 				self.set('depot_server', 'depot_id', configState.values[0])
+			elif configState.configId == u'clientconfig.depot.user':
+				self.set('depot_server', 'username', configState.values[0])
 			elif configState.configId.startswith(u'opsiclientd.'):
 				try:
 					parts = configState.configId.lower().split('.')
