@@ -302,7 +302,7 @@ class ConfigImplementation(object):
 						self.set('global', 'log_level', config.get('global', 'log_level'))
 					if config.has_option('global', 'log_file'):
 						logFile = config.get('global', 'log_file')
-						for i in (2, 1, 0):
+						for i in (9, 8, 7, 6, 5, 4, 3, 2, 1, 0):
 							slf = None
 							dlf = None
 							try:
