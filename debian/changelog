@@ -1,9 +1,14 @@
-opsiclientd (4.1.1.1) UNRELEASED; urgency=medium
+opsiclientd (4.1.1) stable; urgency=medium
 
+  [ Niko Wenselowski ]
   * Changed license to AGPLv3 in all free parts.
   * ControlServer: Removed method stressConfigserver
 
- -- Niko Wenselowski <n.wenselowski@uib.de>  Mon, 04 Apr 2018 14:55:32 +0100
+  [ Erol Ueluekmen ]
+  * Increased number of logfiles for logrotate (fixes #3837)
+  * Fixed clientconfig.depot.user from Hostparameters (fixes #2656)
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 16 Jan 2019 10:34:25 +0100
 
 opsiclientd (4.0.94) stable; urgency=medium
 
