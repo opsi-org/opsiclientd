@@ -5,6 +5,7 @@ opsiclientd (4.1.1) stable; urgency=medium
   * ControlServer: Removed method stressConfigserver
 
   [ Erol Ueluekmen ]
+  * Based on python-opsi: 4.1.1.56-1
   * Increased number of logfiles for logrotate (fixes #3837)
   * Fixed clientconfig.depot.user from Hostparameters (fixes #2656)
 
