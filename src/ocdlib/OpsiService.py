@@ -1,53 +1,53 @@
 # -*- coding: utf-8 -*-
-#
-# This module is part of the desktop management solution opsi
+
+# opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-#
-# Copyright (C) 2006-2017 uib GmbH <info@uib.de>
+
+# Copyright (C) 2006-2018 uib GmbH <info@uib.de>
 # All rights reserved.
-#
+
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
 # published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
-#
+
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-#
+
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-opsi python library - Posix
+Connecting to a opsi service.
 
-Functions and classes for the use with a POSIX operating system.
-
+:copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
 :author: Erol Ueluekmen <e.ueluekmen@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
 import base64
+import os
+import random
 import time
 from hashlib import md5
-from twisted.conch.ssh import keys
-import random
 from httplib import HTTPConnection, HTTPSConnection
+from twisted.conch.ssh import keys
 
-# OPSI imports
-from OPSI.Logger import *
+from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
+from OPSI.Logger import Logger
 from OPSI.Util import *
 from OPSI.Util.Thread import KillableThread
 from OPSI.Util.HTTP import urlsplit, non_blocking_connect_http, non_blocking_connect_https
 from OPSI.Backend.JSONRPC import JSONRPCBackend
-from OPSI.Types import *
+from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
 from OPSI import System
 
 from ocdlib.Localization import _
-from ocdlib.Opsiclientd import __version__
-from ocdlib.Config import Config
-from ocdlib.Exceptions import *
+from ocdlib import __version__
+from ocdlib.Config import getLogFormat, Config
+from ocdlib.Exceptions import CanceledByUserError
 
 logger = Logger()
 config = Config()
@@ -70,7 +70,7 @@ def isConfigServiceReachable(timeout=5):
 			try:
 				conn.sock.close()
 				conn.close()
-			except:
+			except Exception:
 				pass
 			return True
 		except Exception, e:
@@ -200,17 +200,12 @@ class ServiceConnection(object):
 					try:
 						System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True))
 					except Exception as e:
-						logger.error(u"Failed to sync time: '%s'" % e)
+						logger.error(u"Failed to sync time: {0!r}", e)
 
 				if urlIndex > 0:
-					modules = None
-					helpermodules = {}
-					if serviceConnectionThread.configService.isLegacyOpsi():
-						modules = serviceConnectionThread.configService.getOpsiInformation_hash()['modules']
-					else:
-						backendinfo = serviceConnectionThread.configService.backend_info()
-						modules = backendinfo['modules']
-						helpermodules = backendinfo['realmodules']
+					backendinfo = serviceConnectionThread.configService.backend_info()
+					modules = backendinfo['modules']
+					helpermodules = backendinfo['realmodules']
 
 					if not modules.get('high_availability'):
 						self.connectionFailed(u"High availability module currently disabled")
@@ -239,8 +234,10 @@ class ServiceConnection(object):
 								modules[module] = True
 						else:
 							val = modules[module]
-							if (val == False): val = 'no'
-							if (val == True):  val = 'yes'
+							if val == False:
+								val = 'no'
+							elif val == True:
+								val = 'yes'
 
 						data += u'%s = %s\r\n' % (module.lower().strip(), val)
 					if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
@@ -256,10 +253,7 @@ class ServiceConnection(object):
 	def disconnectConfigService(self):
 		if self._configService:
 			try:
-				if self._configService.isLegacyOpsi():
-					self._configService.exit()
-				else:
-					self._configService.backend_exit()
+				self._configService.backend_exit()
 			except Exception, e:
 				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(e))
 		self._configService = None
@@ -268,8 +262,7 @@ class ServiceConnection(object):
 
 class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, statusSubject=None):
-		moduleName = u' %-30s' % (u'service connection')
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(getLogFormat(u'service connection'), object=self)
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username
@@ -321,10 +314,10 @@ class ServiceConnectionThread(KillableThread):
 
 			tryNum = 0
 			while not self.cancelled and not self.connected:
+				tryNum += 1
 				try:
-					tryNum += 1
 					logger.notice(u"Connecting to config server '%s' #%d" % (self._configServiceUrl, tryNum))
-					self.setStatusMessage( _(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
+					self.setStatusMessage(_(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
 					if (len(self._username.split('.')) < 3):
 						raise Exception(u"Domain missing in username '%s'" % self._username)
 					if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
@@ -344,11 +337,8 @@ class ServiceConnectionThread(KillableThread):
 						application='opsiclientd version %s' % __version__
 					)
 
-					if self.configService.isLegacyOpsi():
-						self.configService.authenticated()
-					else:
-						self.configService.accessControl_authenticated()
-						self.configService.setDeflate(True)
+					self.configService.accessControl_authenticated()
+					self.configService.setDeflate(True)
 					self.connected = True
 					self.connectionError = None
 					self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)

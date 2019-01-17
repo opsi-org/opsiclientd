@@ -1,42 +1,35 @@
 # -*- coding: utf-8 -*-
+
+# opsiclientd is part of the desktop management solution opsi
+# (open pc server integration) http://www.opsi.org
+# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-ocdlib.EventProcessing
+Processing of events.
 
-opsiclientd is part of the desktop management solution opsi
-(open pc server integration) http://www.opsi.org
-
-Copyright (C) 2014 uib GmbH
-
-http://www.uib.de/
-
-All rights reserved.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License, version 3
-as published by the Free Software Foundation.
-
-This program is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Affero General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-@copyright: uib GmbH <info@uib.de>
-@author: Jan Schneider <j.schneider@uib.de>
-@author: Erol Ueluekmen <e.ueluekmen@uib.de>
-@license: GNU Affero GPL version 3
+:copyright: uib GmbH <info@uib.de>
+:author: Jan Schneider <j.schneider@uib.de>
+:author: Erol Ueluekmen <e.ueluekmen@uib.de>
+:license: GNU Affero General Public License version 3
 """
 
-# Imports
-import sys, os, shutil, filecmp, base64
-from hashlib import md5
+import sys
+import os
+import shutil
+import filecmp
 
-# Twisted imports
-from twisted.conch.ssh import keys
-
-# OPSI imports
 from OPSI.Logger import *
 from OPSI.Util import *
 from OPSI.Util.Message import *
@@ -48,13 +41,14 @@ from OPSI.Object import *
 from ocdlib.Exceptions import *
 from ocdlib.Events import *
 from ocdlib.OpsiService import ServiceConnection
+from ocdlib.Localization import _
+from ocdlib.Config import getLogFormat, Config
+from ocdlib.Timeline import Timeline
+
 if (os.name == 'nt'):
 	from ocdlib.Windows import *
-if (os.name == 'posix'):
+elif (os.name == 'posix'):
 	from ocdlib.Posix import *
-from ocdlib.Localization import _, setLocaleDir, getLanguage
-from ocdlib.Config import Config
-from ocdlib.Timeline import Timeline
 
 logger = Logger()
 config = Config()
@@ -65,10 +59,9 @@ timeline = Timeline()
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 class EventProcessingThread(KillableThread, ServiceConnection):
 	def __init__(self, opsiclientd, event):
-		from ocdlib.Opsiclientd import __version__
+		from ocdlib import __version__  # TODO: Import movable?
 
-		moduleName = u' %-30s' % (u'event processing ' + event.eventConfig.getId())
-		logger.setLogFormat(u'[%l] [%D] [' + moduleName + u'] %M   (%F|%N)', object=self)
+		logger.setLogFormat(getLogFormat(u'event processing ' + event.eventConfig.getId()), object=self)
 		KillableThread.__init__(self)
 		ServiceConnection.__init__(self)
 
@@ -119,7 +112,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 		self._notificationServerPort = int(config.get('notification_server', 'start_port')) + (3 * int(self.getSessionId()))
 
-	''' ServiceConnection '''
+	# ServiceConnection
 	def connectionThreadOptions(self):
 		return {'statusSubject': self._statusSubject}
 
@@ -165,8 +158,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			self._notificationServer.removeSubject(self._choiceSubject)
 		self._detailSubjectProxy.setMessage(u'')
 		ServiceConnection.connectionFailed(self, error)
-
-	''' / ServiceConnection '''
+	# End of ServiceConnection
 
 	def setSessionId(self, sessionId):
 		self._sessionId = int(sessionId)
@@ -266,11 +258,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			f.close()
 			# Do not log jsonrpc request
 			logger.setFileLevel(LOG_WARNING)
-			if self._configService.isLegacyOpsi():
-				self._configService.writeLog('clientconnect', data.replace(u'\ufffd', u'?'), config.get('global', 'host_id'))
-				#self._configService.writeLog('clientconnect', data.replace(u'\ufffd', u'?').encode('utf-8'), config.get('global', 'host_id'))
-			else:
-				self._configService.log_write('clientconnect', data.replace(u'\ufffd', u'?'), config.get('global', 'host_id'))
+			self._configService.log_write('clientconnect', data.replace(u'\ufffd', u'?'), config.get('global', 'host_id'))
 			logger.setFileLevel(config.get('global', 'log_level'))
 		except Exception, e:
 			logger.setFileLevel(config.get('global', 'log_level'))
@@ -495,33 +483,28 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 			logger.notice(u'Local action processor successfully updated')
 
-			if self._configService.isLegacyOpsi():
-				self._configService.setProductInstallationStatus(
-							'opsi-winst',
-							config.get('global', 'host_id'),
-							'installed')
-			else:
-				productVersion = None
-				packageVersion = None
-				for productOnDepot in self._configService.productOnDepot_getIdents(
-							productType = 'LocalbootProduct',
-							productId   = 'opsi-winst',
-							depotId     = config.get('depot_server', 'depot_id'),
-							returnType  = 'dict'):
-					productVersion = productOnDepot['productVersion']
-					packageVersion = productOnDepot['packageVersion']
-				self._configService.productOnClient_updateObjects([
-					ProductOnClient(
-						productId          = u'opsi-winst',
-						productType        = u'LocalbootProduct',
-						productVersion     = productVersion,
-						packageVersion     = packageVersion,
-						clientId           = config.get('global', 'host_id'),
-						installationStatus = u'installed',
-						actionProgress     = u'',
-						actionResult       = u'successful'
-					)
-				])
+			productVersion = None
+			packageVersion = None
+			for productOnDepot in self._configService.productOnDepot_getIdents(
+						productType='LocalbootProduct',
+						productId='opsi-winst',
+						depotId=config.get('depot_server', 'depot_id'),
+						returnType='dict'):
+				productVersion = productOnDepot['productVersion']
+				packageVersion = productOnDepot['packageVersion']
+			self._configService.productOnClient_updateObjects([
+				ProductOnClient(
+					productId=u'opsi-winst',
+					productType=u'LocalbootProduct',
+					productVersion=productVersion,
+					packageVersion=packageVersion,
+					clientId=config.get('global', 'host_id'),
+					installationStatus=u'installed',
+					actionProgress=u'',
+					actionResult=u'successful'
+				)
+			])
+
 			self.setActionProcessorInfo()
 
 			if mounted:
@@ -541,9 +524,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		try:
 			if not self._configService:
 				raise Exception(u"Not connected to config service")
-
-			if self._configService.isLegacyOpsi():
-				raise Exception(u"Opsi >= 4.0 needed")
 
 			productsByIdAndVersion = {}
 			for product in self._configService.product_getObjects(type = 'LocalbootProduct', userLoginScript = "*.*"):
@@ -610,47 +590,37 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			productIds = []
 			if self.event.eventConfig.actionProcessorProductIds:
 				productIds = self.event.eventConfig.actionProcessorProductIds
-			if self._configService.isLegacyOpsi():
-				productStates = self._configService.getLocalBootProductStates_hash(config.get('global', 'host_id'))
-				productStates = productStates.get(config.get('global', 'host_id'), [])
 
-				logger.notice(u"Got product action requests from configservice")
+			if not productIds:
+				includeProductGroupIds = [x for x in forceList(self.event.eventConfig.includeProductGroupIds) if x != ""]
+				excludeProductGroupIds = [x for x in forceList(self.event.eventConfig.excludeProductGroupIds) if x != ""]
+				includeProductIds = []
+				excludeProductIds = []
 
-				for productState in productStates:
-					if (productState['actionRequest'] not in ('none', 'undefined')):
-						productIds.append(productState['productId'])
-						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productState['productId'] + ':', productState['actionRequest']))
-			else:
-				if not productIds:
-					includeProductGroupIds = [ x for x in forceList(self.event.eventConfig.includeProductGroupIds) if x != "" ]
-					excludeProductGroupIds = [ x for x in forceList(self.event.eventConfig.excludeProductGroupIds) if x != "" ]
-					includeProductIds = []
-					excludeProductIds = []
+				if includeProductGroupIds:
+					includeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects(
+								groupType="ProductGroup",
+								groupId=includeProductGroupIds)]
+					logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
 
-					if includeProductGroupIds:
-						includeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
-									groupType="ProductGroup",
-									groupId=includeProductGroupIds) ]
-						logger.notice("Only products with productIds: '%s' will be cached." % includeProductIds)
+				elif excludeProductGroupIds:
+					excludeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects(
+								groupType="ProductGroup",
+								groupId=excludeProductGroupIds)]
+					logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
 
-					if excludeProductGroupIds:
-						excludeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
-									groupType="ProductGroup",
-									groupId=excludeProductGroupIds) ]
-						logger.notice("Products with productIds: '%s' will be excluded." % excludeProductIds)
+				for productOnClient in [poc for poc in self._configService.productOnClient_getObjects(
+							productType='LocalbootProduct',
+							clientId=config.get('global', 'host_id'),
+							actionRequest=['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+							attributes=['actionRequest'],
+							productId=includeProductIds) if poc.productId not in excludeProductIds]:
 
-					for productOnClient in [ poc for poc in self._configService.productOnClient_getObjects(
-								productType   = 'LocalbootProduct',
-								clientId      = config.get('global', 'host_id'),
-								actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
-								attributes    = ['actionRequest'],
-								productId     = includeProductIds) if poc.productId not in excludeProductIds ]:
+					if productOnClient.productId not in productIds:
+						productIds.append(productOnClient.productId)
+						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
 
-						if not productOnClient.productId in productIds:
-							productIds.append(productOnClient.productId)
-							logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
-
-			if (len(productIds) == 0) and (bootmode == 'BKSTD'):
+			if (not productIds) and bootmode == 'BKSTD':
 				logger.notice(u"No product action requests set")
 				self.setStatusMessage( _(u"No product action requests set") )
 				#set installation_pending State to False
@@ -780,7 +750,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				serviceSession = self.getConfigService().jsonrpc_getSessionId()
 				if not serviceSession:
 					serviceSession = u'none'
-			except:
+			except Exception:
 				pass
 
 			actionProcessorUserName = u''

@@ -1,53 +1,48 @@
 # -*- coding: utf-8 -*-
+
+# opsiclientd is part of the desktop management solution opsi
+# (open pc server integration) http://www.opsi.org
+# Copyright (C) 2011-2018 uib GmbH <info@uib.de>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-= = = = = = = = = = = = = = = = = = = = =
-=   ocdlib.Timeline                     =
-= = = = = = = = = = = = = = = = = = = = =
+Event-Timeline.
 
-opsiclientd is part of the desktop management solution opsi
-(open pc server integration) http://www.opsi.org
+   Timeline event attributes:
+      * icon - url. This image will appear next to the title text in the timeline if (no end date) or (durationEvent = false). If a start and end date are supplied, and durationEvent is true, the icon is not shown. If icon attribute is not set, a default icon from the theme is used.
+      * image - url to an image that will be displayed in the bubble
+      * link - url. The bubble's title text be a hyper-link to this address.
+      * color - color of the text and tape (duration events) to display in the timeline. If the event has durationEvent = false, then the bar's opacity will be applied (default 20%). See durationEvent, above.
+      * textColor - color of the label text on the timeline. If not set, then the color attribute will be used.
+      * tapeImage and tapeRepeat Sets the background image and repeat style for the event's tape (or 'bar') on the Timeline. Overrides the color setting for the tape. Repeat style should be one of {repeat | repeat-x | repeat-y}, repeat is the default. See the Cubism example for a demonstration. Only applies to duration events.
+      * caption - additional event information shown when mouse is hovered over the Timeline tape or label. Uses the html title property. Looks like a tooltip. Plain text only. See the cubism example.
+      * classname - added to the HTML classnames for the event's label and tape divs. Eg classname attribute 'hot_event' will result in div classes of 'timeline-event-label hot_event' and 'timeline-event-tape hot_event' for the event's Timeline label and tape, respectively.
+      * description - will be displayed inside the bubble with the event's title and image.
 
-Copyright (C) 2011-2017 uib GmbH
 
-http://www.uib.de/
-
-All rights reserved.
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License version 2 as
-published by the Free Software Foundation.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-@copyright:	uib GmbH <info@uib.de>
-@author: Jan Schneider <j.schneider@uib.de>
-@license: GNU General Public License version 2
-
-Timeline event attributes:
-  * icon - url. This image will appear next to the title text in the timeline if (no end date) or (durationEvent = false). If a start and end date are supplied, and durationEvent is true, the icon is not shown. If icon attribute is not set, a default icon from the theme is used.
-  * image - url to an image that will be displayed in the bubble
-  * link - url. The bubble's title text be a hyper-link to this address.
-  * color - color of the text and tape (duration events) to display in the timeline. If the event has durationEvent = false, then the bar's opacity will be applied (default 20%). See durationEvent, above.
-  * textColor - color of the label text on the timeline. If not set, then the color attribute will be used.
-  * tapeImage and tapeRepeat Sets the background image and repeat style for the event's tape (or 'bar') on the Timeline. Overrides the color setting for the tape. Repeat style should be one of {repeat | repeat-x | repeat-y}, repeat is the default. See the Cubism example for a demonstration. Only applies to duration events.
-  * caption - additional event information shown when mouse is hovered over the Timeline tape or label. Uses the html title property. Looks like a tooltip. Plain text only. See the cubism example.
-  * classname - added to the HTML classnames for the event's label and tape divs. Eg classname attribute 'hot_event' will result in div classes of 'timeline-event-label hot_event' and 'timeline-event-tape hot_event' for the event's Timeline label and tape, respectively.
-  * description - will be displayed inside the bubble with the event's title and image.
+:copyright: uib GmbH <info@uib.de>
+:author: Jan Schneider <j.schneider@uib.de>
+:license: GNU Affero General Public License version 3
 """
 
 import json
+import os
 import time
 import threading
 
-from OPSI.Logger import *
-from OPSI.Types import *
+from OPSI.Logger import Logger
+from OPSI.Types import forceBool, forceInt, forceOpsiTimestamp, forceUnicode
 from OPSI.Util import timestamp
 from OPSI.Backend.SQLite import SQLite
 
@@ -120,14 +115,15 @@ function onResize() {
 </script>
 '''
 
+
 class TimelineImplementation(object):
 	def __init__(self):
 		if not os.path.exists(os.path.dirname(config.get('global', 'timeline_db'))):
 			os.makedirs(os.path.dirname(config.get('global', 'timeline_db')))
 		self._sql = SQLite(
-			database        = config.get('global', 'timeline_db'),
-			synchronous     = False,
-			databaseCharset = 'utf-8'
+			database=config.get('global', 'timeline_db'),
+			synchronous=False,
+			databaseCharset='utf-8'
 		)
 		self._dbLock = threading.Lock()
 		self._createDatabase()
@@ -139,7 +135,7 @@ class TimelineImplementation(object):
 		end = forceOpsiTimestamp(timestamp())
 		self._dbLock.acquire()
 		try:
-			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', { 'end': end })
+			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', {'end': end})
 		finally:
 			self._dbLock.release()
 
@@ -198,7 +194,7 @@ class TimelineImplementation(object):
 		self._dbLock.acquire()
 		try:
 			self._sql.execute('delete from EVENT where `start` < "%s"' % timestamp((time.time() - 7*24*3600)))
-			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', { 'durationEvent': False })
+			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', {'durationEvent': False})
 		except Exception, e:
 			logger.error(e)
 		self._dbLock.release()
@@ -207,7 +203,7 @@ class TimelineImplementation(object):
 		self._dbLock.acquire()
 		try:
 			tables = self._sql.getTables()
-			if not 'EVENT' in tables.keys():
+			if 'EVENT' not in tables:
 				logger.debug(u'Creating table EVENT')
 				table = u'''CREATE TABLE `EVENT` (
 						`id` integer NOT NULL ''' + self._sql.AUTOINCREMENT + ''',
@@ -264,7 +260,7 @@ class TimelineImplementation(object):
 			if not end:
 				end = timestamp()
 			end = forceOpsiTimestamp(end)
-			return self._sql.update('EVENT', '`id` = %d' % eventId, { 'end': end, 'durationEvent': True })
+			return self._sql.update('EVENT', '`id` = %d' % eventId, {'end': end, 'durationEvent': True})
 		except Exception, e:
 			logger.error(u"Failed to set end of event '%s': %s" % (eventId, e))
 		finally:
@@ -278,6 +274,7 @@ class TimelineImplementation(object):
 			return self._sql.getSet('select * from EVENT')
 		finally:
 			self._dbLock.release()
+
 
 class Timeline(TimelineImplementation):
 	# Storage for the instance reference
@@ -293,7 +290,6 @@ class Timeline(TimelineImplementation):
 
 		# Store instance reference as the only member in the handle
 		self.__dict__['_Timeline__instance'] = Timeline.__instance
-
 
 	def __getattr__(self, attr):
 		""" Delegate access to implementation """
