@@ -31,7 +31,7 @@ from OPSI.Types import (forceBool, forceHostId, forceProductIdList,
 						forceUnicode, forceUrl)
 from OPSI import System
 
-__version__ = '4.1.1.1'
+__version__ = '4.1.1'
 
 logger = Logger()
 
