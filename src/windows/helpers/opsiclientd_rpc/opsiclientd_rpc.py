@@ -32,8 +32,10 @@ import sys
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Logger import Logger, LOG_DEBUG
 
+# Do not remove this import, it's needed by using this module from CLI
+from OPSI import System
 
-__version__ = '4.1.1.1'
+__version__ = '4.1.1.2'
 
 logger = Logger()
 

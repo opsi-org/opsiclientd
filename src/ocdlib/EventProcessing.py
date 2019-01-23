@@ -25,6 +25,7 @@ Processing of events.
 :license: GNU Affero General Public License version 3
 """
 
+import codecs
 import sys
 import os
 import shutil
