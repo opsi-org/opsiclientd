@@ -2,7 +2,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
+# Copyright (C) 2010-2019 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -302,7 +302,7 @@ class ConfigImplementation(object):
 						self.set('global', 'log_level', config.get('global', 'log_level'))
 					if config.has_option('global', 'log_file'):
 						logFile = config.get('global', 'log_file')
-						for i in (2, 1, 0):
+						for i in (9, 8, 7, 6, 5, 4, 3, 2, 1, 0):
 							slf = None
 							dlf = None
 							try:
@@ -555,6 +555,8 @@ class ConfigImplementation(object):
 				self.set('depot_server', 'drive', configState.values[0])
 			elif configState.configId == u'clientconfig.depot.id':
 				self.set('depot_server', 'depot_id', configState.values[0])
+			elif configState.configId == u'clientconfig.depot.user':
+				self.set('depot_server', 'username', configState.values[0])
 			elif configState.configId.startswith(u'opsiclientd.'):
 				try:
 					parts = configState.configId.lower().split('.')
