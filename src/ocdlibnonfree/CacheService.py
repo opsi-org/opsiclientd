@@ -805,7 +805,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					if "win10" in additionalProductId:
 						releaseId = System.getRegistryValue(
 								System.HKEY_LOCAL_MACHINE,
-								"SOFTWARE\\Microsoft\\Windows NT\CurrentVersion,
+								"SOFTWARE\\Microsoft\\Windows NT\CurrentVersion",
 								"ReleaseID")
 						#Setting default to 1507-Build
 						if not releaseId: releaseId = "1507"
