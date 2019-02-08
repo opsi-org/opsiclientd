@@ -1,3 +1,10 @@
+opsiclientd (4.0.95) stable; urgency=medium
+
+  * Hostparameter clientconfig.depot.user fix
+  * WAN/VPN: mshotfix windows 10 build-packages support
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Fri, 08 Feb 2019 11:36:58 +0100
+
 opsiclientd (4.0.94) stable; urgency=medium
 
   * Chrome-Support for timeline (info.html from the client-webserice)
