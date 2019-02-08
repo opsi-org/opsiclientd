@@ -802,6 +802,18 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					# Windows 8.1 Bugfix, with a helper exe.
 					helper = os.path.join(config.get('global', 'base_dir'), 'utilities', 'getmsversioninfo.exe')
 					additionalProductId = System.getOpsiHotfixName(helper)
+					if "win10" in additionalProductId:
+						releaseId = System.getRegistryValue(
+								System.HKEY_LOCAL_MACHINE,
+								"SOFTWARE\\Microsoft\\Windows NT\CurrentVersion,
+								"ReleaseID")
+						#Setting default to 1507-Build
+						if not releaseId: releaseId = "1507"
+						#Splitting Name of ReleaseId Packagename (need os and arch from original name)
+						parts = additionalProductId.split("-")
+						releasePackageName = "mshotfix-win10-%s-%s-glb" % (releaseId, parts[2])
+						if releasePackageName in productOnDepotIds:
+							additionalProductId = releasePackageName
 					logger.info(u"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s" % additionalProductId)
 					if not additionalProductId in productIds:
 						productIds.append(additionalProductId)
