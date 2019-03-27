@@ -784,15 +784,10 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				productOnDepots = self._configService.productOnDepot_getObjects(
 					depotId   = config.get('depot_server', 'depot_id'),
 					productId = productIds)
-
+				productOnDepotIds = [productOnDepot.productId for productOnDepot in productOnDepots]
 				errorProductIds = []
 				for productOnClient in productOnClients:
-					found = False
-					for productOnDepot in productOnDepots:
-						if productOnDepot.productId == productOnClient.productId:
-							found = True
-							break
-					if not found:
+					if not productOnClient.productId in productOnDepotIds:
 						logger.error(u"Requested product: '%s' not found on configured depot: '%s', please check your configuration, setting product to failed." % (productOnClient.productId, config.get('depot_server', 'depot_id')))
 						self._setProductCacheState(productOnClient.productId, u"failure", u"Product not found on configured depot.")
 						errorProductIds.append(productOnClient.productId)
