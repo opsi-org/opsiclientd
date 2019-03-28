@@ -782,8 +782,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			else:
 
 				productOnDepots = self._configService.productOnDepot_getObjects(
-					depotId   = config.get('depot_server', 'depot_id'),
-					productId = productIds)
+					depotId   = config.get('depot_server', 'depot_id'))
+
 				productOnDepotIds = [productOnDepot.productId for productOnDepot in productOnDepots]
 				errorProductIds = []
 				for productOnClient in productOnClients:
