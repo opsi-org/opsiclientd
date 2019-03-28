@@ -809,7 +809,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						releasePackageName = "mshotfix-win10-%s-%s-glb" % (releaseId, parts[1])
 						logger.info(u"Searching for release-packageid: '%s'" % releasePackageName)
 						if releasePackageName in productOnDepotIds:
-							logger.info(u"Releasepackage found on depot" % releasePackageName)
+							logger.info(u"Releasepackage found on depot: '%s'" % releasePackageName)
 							additionalProductId = releasePackageName
 					logger.info(u"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s" % additionalProductId)
 					if not additionalProductId in productIds:
