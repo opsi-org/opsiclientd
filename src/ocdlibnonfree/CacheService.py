@@ -804,10 +804,12 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 								"ReleaseID")
 						#Setting default to 1507-Build
 						if not releaseId: releaseId = "1507"
-						#Splitting Name of ReleaseId Packagename (need os and arch from original name)
-						parts = additionalProductId.split("-")
-						releasePackageName = "mshotfix-win10-%s-%s-glb" % (releaseId, parts[2])
+						#Splitting Name of original Packagename and reverse result to get arch
+						parts = additionalProductId.split("-")[::-1]
+						releasePackageName = "mshotfix-win10-%s-%s-glb" % (releaseId, parts[1])
+						logger.info(u"Searching for release-packageid: '%s'" % releasePackageName)
 						if releasePackageName in productOnDepotIds:
+							logger.info(u"Releasepackage found on depot" % releasePackageName)
 							additionalProductId = releasePackageName
 					logger.info(u"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s" % additionalProductId)
 					if not additionalProductId in productIds:
