@@ -8,7 +8,7 @@ remote procedure calls
 opsiclientd is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
-Copyright (C) 2010-2016 uib GmbH
+Copyright (C) 2010-2019 uib GmbH
 
 http://www.uib.de/
 
@@ -34,6 +34,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 import codecs
 import os
 import re
+import sys
 import threading
 import time
 
@@ -115,6 +116,16 @@ infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
 # 	%(opsiclient-log)s
 # 	</div>
 # </div>
+
+try:
+	fsencoding = sys.getfilesystemencoding()
+	if not fsencoding:
+		raise ValueError("getfilesystemencoding returned {!r}".format(fsencoding))
+except Exception as err:
+	logger.info("Problem getting filesystemencoding: {}", err)
+	defaultEncoding = sys.getdefaultencoding()
+	logger.notice("Patching filesystemencoding to be {!r}", defaultEncoding)
+	sys.getfilesystemencoding = lambda: defaultEncoding
 
 
 class WorkerOpsiclientd(WorkerOpsi):

@@ -6,7 +6,7 @@ ocdlib
 This module is part of the desktop management solution opsi
 (open pc server integration) http://www.opsi.org
 
-Copyright (C) 2010-2018 uib GmbH
+Copyright (C) 2010-2019 uib GmbH
 
 http://www.uib.de/
 
@@ -37,7 +37,7 @@ from OPSI.Types import forceUrl, forceUnicode, forceBool, forceHostId, forceProd
 from OPSI import System
 
 
-__version__ = '4.0.92-linux-1'
+__version__ = '4.0.92-linux-2'
 
 logger = Logger()
 
