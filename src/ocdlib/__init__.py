@@ -37,7 +37,7 @@ from OPSI.Types import forceUrl, forceUnicode, forceBool, forceHostId, forceProd
 from OPSI import System
 
 
-__version__ = '4.0.92-linux-2'
+__version__ = '4.0.94-linux'
 
 logger = Logger()
 
