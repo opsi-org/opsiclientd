@@ -137,6 +137,10 @@ setup_options = {
 	"author": "uib GmbH <info@uib.de>",
 	"author_email": "info@uib.de",
 	"license": "GNU Affero General Public License Version 3 (AGPLv3)",
+    "extras_require": {
+        'test': ['pytest >= 3.0', 'mock'],
+        'qa': ['pytest-cov >= 2.3.1', 'pylint', 'flake8']
+    },
 }
 
 if RUNS_ON_WINDOWS:
