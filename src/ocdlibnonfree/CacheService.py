@@ -3,10 +3,9 @@
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
 
-# Copyright (C) 2014-2018 uib GmbH
+# Copyright (C) 2014-2019 uib GmbH
 # http://www.uib.de/
 # All rights reserved.
-
 """
 ocdlibnonfree.CacheService
 
@@ -36,7 +35,6 @@ from OPSI import System
 from OPSI.Util.HTTP import urlsplit
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.BackendManager import BackendExtender
-from OPSI.Backend.Cache import ClientCacheBackend
 from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker
 
 from ocdlib.Config import getLogFormat, Config
@@ -44,6 +42,8 @@ from ocdlib.State import State
 from ocdlib.Events import SyncCompletedEventGenerator, getEventGenerators
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.Timeline import Timeline
+
+from ocdlibnonfree.CacheBackend import ClientCacheBackend
 
 logger = Logger()
 config = Config()
