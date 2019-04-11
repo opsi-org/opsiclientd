@@ -6,6 +6,8 @@ import pytest
 
 from ocdlib.Config import ConfigImplementation
 
+ON_WINDOWS = os.name == 'nt'
+
 
 @pytest.fixture
 def config():
@@ -16,4 +18,7 @@ def config():
 
 @pytest.fixture
 def configFile():
-	return os.path.join(os.path.dirname(__file__), '..', 'windows', 'opsiclientd.conf')
+	if ON_WINDOWS:
+		return os.path.join(os.path.dirname(__file__), '..', 'windows', 'opsiclientd.conf')
+	else:
+		return os.path.join(os.path.dirname(__file__), '..', 'linux', 'opsiclientd.conf')
