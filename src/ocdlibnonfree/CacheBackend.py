@@ -160,8 +160,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				meth = getattr(self._workBackend, ObjectClass.backendMethodPrefix + '_getObjects')
 				modification['object'] = meth(**filter)[0]
 				modifiedObjects[modification['objectClass']].append(modification)
-			except Exception as e:
-				logger.error(u"Failed to sync backend modification %s: %s" % (modification, e))
+			except Exception as modifyError:
+				logger.error(u"Failed to sync backend modification %s: %s" % (modification, modifyError))
 				continue
 
 		if 'AuditHardwareOnHost' in modifiedObjects:
