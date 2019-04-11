@@ -2,7 +2,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2011-2016 uib GmbH <info@uib.de>
+# Copyright (C) 2011-2019 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -25,19 +25,22 @@ This is where all the parts come together.
 :license: GNU Affero General Public License version 3
 """
 
-import time, sys
+from __future__ import print_function
+
+import sys
+import time
+
 from OPSI.System import getDefaultNetworkInterfaceName, NetworkPerformanceCounter
 
 try:
 	networkPerformanceCounter = NetworkPerformanceCounter(getDefaultNetworkInterfaceName())
 	try:
 		while True:
-			inrate  = networkPerformanceCounter.getBytesInPerSecond()
+			inrate = networkPerformanceCounter.getBytesInPerSecond()
 			outrate = networkPerformanceCounter.getBytesOutPerSecond()
-			print u"in: %0.2f kByte/s, out: %0.2f kByte/s" % ((inrate/1024), (outrate/1024))
+			print(u"in: %0.2f kByte/s, out: %0.2f kByte/s" % ((inrate/1024), (outrate/1024)))
 			time.sleep(1)
 	finally:
 		networkPerformanceCounter.stop()
-except Exception, e:
-	print >> sys.stderr, u"Error: %s" % e
-
+except Exception as e:
+	print(u"Error: %s" % e, file=sys.stderr)
