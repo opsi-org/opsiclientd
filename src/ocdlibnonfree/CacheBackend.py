@@ -270,16 +270,18 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				continue
 			licensePool = licensePools[0]
 			try:
-				licenseOnClient = None
 				for loc in licenseOnClients:
-					if (loc.licensePoolId == licensePool.id):
+					if loc.licensePoolId == licensePool.id:
 						licenseOnClient = loc
+						logger.notice(u"Reusing existing licenseOnClient '%s'" % licenseOnClient)
 						break
-				if licenseOnClient:
-					logger.notice(u"Reusing existing licenseOnClient '%s'" % licenseOnClient)
 				else:
 					logger.notice(u"Acquiring license for product '%s'" % productOnClient.productId)
-					licenseOnClient = self._masterBackend.licenseOnClient_getOrCreateObject(clientId = self._clientId, productId = productOnClient.productId)
+					licenseOnClient = self._masterBackend.licenseOnClient_getOrCreateObject(
+						clientId=self._clientId,
+						productId=productOnClient.productId
+					)
+
 					# Fake deletion for later sync to server
 					self._fireEvent('objectsDeleted', [ licenseOnClient ])
 					self._fireEvent('backendModified')
