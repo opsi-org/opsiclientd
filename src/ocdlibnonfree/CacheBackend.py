@@ -151,10 +151,12 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				identValues = modification['ident'].split(ObjectClass.identSeparator)
 				identAttributes = getIdentAttributes(ObjectClass)
 				filter = {}
-				for i in range(len(identAttributes)):
-					if i >= len(identValues):
-						raise Exception(u"Bad ident '%s' for objectClass '%s'" % (identValues, modification['objectClass']))
-					filter[identAttributes[i]] = identValues[i]
+				for index, attribute in enumerate(identAttributes):
+					if index >= len(identValues):
+						raise BackendUnaccomplishableError(u"Bad ident '%s' for objectClass '%s'" % (identValues, modification['objectClass']))
+
+					filter[attribute] = identValues[index]
+
 				meth = getattr(self._workBackend, ObjectClass.backendMethodPrefix + '_getObjects')
 				modification['object'] = meth(**filter)[0]
 				modifiedObjects[modification['objectClass']].append(modification)
