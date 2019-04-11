@@ -311,7 +311,6 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		for Class in (Backend, ConfigDataBackend):
 			for methodName, funcRef in inspect.getmembers(Class, inspect.ismethod):
 				if methodName.startswith('_') or methodName in ('backend_info', 'user_getCredentials', 'user_setCredentials', 'log_write', 'licenseOnClient_getObjects'):
-				# if methodName.startswith('_') or methodName in ('backend_info', 'user_getCredentials', 'user_setCredentials', 'auditHardware_getConfig', 'log_write'):
 					continue
 
 				(argString, callString) = getArgAndCallString(funcRef)
