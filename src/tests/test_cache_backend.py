@@ -17,7 +17,7 @@ def testBackendRequiresConfiguration():
         ClientCacheBackend()
 
 
-@pytest.mark.skipIf(True, reason="Create propert automated test")
+@pytest.mark.skipif(True, reason="Create propert automated test")
 def testBackend():  # TODO: create a test
     workBackend = SQLiteBackend(database=':memory:')
 
