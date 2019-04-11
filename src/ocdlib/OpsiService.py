@@ -35,22 +35,19 @@ from hashlib import md5
 from httplib import HTTPConnection, HTTPSConnection
 from twisted.conch.ssh import keys
 
+from OPSI import System
 from OPSI.Logger import Logger
 from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
 from OPSI.Util.Thread import KillableThread
 from OPSI.Util.HTTP import (
 	urlsplit, non_blocking_connect_http, non_blocking_connect_https)
 from OPSI.Backend.JSONRPC import JSONRPCBackend
-from OPSI.Types import (OpsiAuthenticationError, OpsiServiceVerificationError,
-	forceBool, forceFqdn, forceInt, forceUnicode)
 from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
-from OPSI import System
 
-from ocdlib import __version__
-from ocdlib.Localization import _
 from ocdlib import __version__
 from ocdlib.Config import getLogFormat, Config
 from ocdlib.Exceptions import CanceledByUserError
+from ocdlib.Localization import _
 
 logger = Logger()
 config = Config()
