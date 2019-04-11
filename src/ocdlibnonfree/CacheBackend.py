@@ -242,24 +242,29 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 		self._workBackend.backend_deleteBase()
 		self._workBackend.backend_createBase()
-		br = BackendReplicator(readBackend = self._masterBackend, writeBackend = self._workBackend)
+		br = BackendReplicator(
+			readBackend=self._masterBackend,
+			writeBackend=self._workBackend
+		)
 		br.replicate(
-			serverIds    = [ ],
-			depotIds     = [ self._depotId ],
-			clientIds    = [ self._clientId ],
-			groupIds     = [ ],
-			productIds   = [ ],
-			productTypes = [ 'LocalbootProduct' ],
-			audit        = False,
-			license      = False)
+			serverIds=[],
+			depotIds=[self._depotId],
+			clientIds=[self._clientId],
+			groupIds=[],
+			productIds=[],
+			productTypes=['LocalbootProduct'],
+			audit=False,
+			license=False
+		)
 
 		self._snapshotBackend.backend_deleteBase()
 
-		licenseOnClients = self._masterBackend.licenseOnClient_getObjects(clientId = self._clientId)
-		for productOnClient in self._workBackend.productOnClient_getObjects(clientId = self._clientId):
+		licenseOnClients = self._masterBackend.licenseOnClient_getObjects(clientId=self._clientId)
+		for productOnClient in self._workBackend.productOnClient_getObjects(clientId=self._clientId):
 			if productOnClient.actionRequest in (None, 'none'):
 				continue
-			licensePools = self._masterBackend.licensePool_getObjects(productIds = [ productOnClient.productId ])
+
+			licensePools = self._masterBackend.licensePool_getObjects(productIds=[productOnClient.productId])
 			if not licensePools:
 				logger.debug(u"No license pool found for product '%s'" % productOnClient.productId)
 				continue
@@ -290,11 +295,18 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				logger.error(u"Failed to acquire license for product '%s': %s" % (productOnClient.productId, e))
 
 		self._snapshotBackend.backend_createBase()
-		br = BackendReplicator(readBackend = self._workBackend, writeBackend = self._snapshotBackend)
+		br = BackendReplicator(
+			readBackend=self._workBackend,
+			writeBackend=self._snapshotBackend
+		)
 		br.replicate()
 
-		password = self._masterBackend.user_getCredentials(username = 'pcpatch', hostId = self._clientId)['password']
-		opsiHostKey = self._workBackend.host_getObjects(id = self._clientId)[0].getOpsiHostKey()
+		password = self._masterBackend.user_getCredentials(
+			username='pcpatch',
+			hostId=self._clientId
+		)
+		password = password['password']
+		opsiHostKey = self._workBackend.host_getObjects(id=self._clientId)[0].getOpsiHostKey()
 		logger.notice(u"Creating opsi passwd file '%s'" % self._opsiPasswdFile)
 		self.user_setCredentials(
 			username='pcpatch',
