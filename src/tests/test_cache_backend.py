@@ -4,8 +4,8 @@ from OPSI.Exceptions import BackendConfigurationError
 
 import pytest
 
-docutils = pytest.importorskip("ocdlibnonfree.CacheBackend")
-from ocdlibnonfree.CacheBackend import ClientCacheBackend
+cacheBackendModule = pytest.importorskip("ocdlibnonfree.CacheBackend")
+ClientCacheBackend = cacheBackendModule.ClientCacheBackend
 
 
 def testBackendRequiresConfiguration(config, configFile):
