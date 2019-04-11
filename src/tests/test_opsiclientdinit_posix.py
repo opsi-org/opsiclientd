@@ -18,7 +18,7 @@ except ImportError as error:
 
 
 @pytest.mark.skipif(OpsiclientdInit is None, reason="Unable to find non-free modules.")
-def testWritingPID(self):
+def testWritingPID():
     currentPID = os.getpid()
 
     with workInTemporaryDirectory() as tempDir:
@@ -32,7 +32,7 @@ def testWritingPID(self):
 
 
 @pytest.mark.skipif(OpsiclientdInit is None, reason="Unable to find non-free modules.")
-def testNotWritingPIDtoEmptyPath(self):
+def testNotWritingPIDtoEmptyPath():
     with workInTemporaryDirectory() as tempDir:
         OpsiclientdInit.writePIDFile(None)
         assert not [e for e in os.listdir(tempDir)]
