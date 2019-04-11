@@ -309,13 +309,12 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 	def _createInstanceMethods(self):
 		for Class in (Backend, ConfigDataBackend):
-			for member in inspect.getmembers(Class, inspect.ismethod):
-				methodName = member[0]
+			for methodName, funcRef in inspect.getmembers(Class, inspect.ismethod):
 				if methodName.startswith('_') or methodName in ('backend_info', 'user_getCredentials', 'user_setCredentials', 'log_write', 'licenseOnClient_getObjects'):
 				# if methodName.startswith('_') or methodName in ('backend_info', 'user_getCredentials', 'user_setCredentials', 'auditHardware_getConfig', 'log_write'):
 					continue
 
-				(argString, callString) = getArgAndCallString(member[1])
+				(argString, callString) = getArgAndCallString(funcRef)
 
 				logger.debug2(u"Adding method '%s' to execute on work backend" % methodName)
 				exec(u'def %s(self, %s): return self._executeMethod("%s", %s)' % (methodName, argString, methodName, callString))
