@@ -1,8 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
-
 import ocdlib.Events as Events
 import ocdlib.ControlServer as OCS
 
