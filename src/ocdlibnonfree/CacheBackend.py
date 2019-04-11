@@ -27,6 +27,7 @@ from OPSI.Backend.Backend import ConfigDataBackend, ModificationTrackingBackend
 from OPSI.Backend.Replicator import BackendReplicator
 from OPSI.Exceptions import BackendConfigurationError
 from OPSI.Logger import Logger
+from OPSI.Object import objectsDiffer
 from OPSI.Object import *
 from OPSI.Types import forceHostId
 from OPSI.Util import blowfishDecrypt
