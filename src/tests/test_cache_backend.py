@@ -8,6 +8,7 @@ cacheBackendModule = pytest.importorskip("ocdlibnonfree.CacheBackend")
 ClientCacheBackend = cacheBackendModule.ClientCacheBackend
 
 
-def testBackendRequiresConfiguration(config, configFile):
+
+def testBackendRequiresConfiguration():
     with pytest.raises(BackendConfigurationError):
         ClientCacheBackend()
