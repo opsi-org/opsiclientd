@@ -130,6 +130,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 						snapshotObj = snapshotObj[0]
 						logger.debug(u"Snapshot object: %s" % snapshotObj.toHash())
 						updateObj = mergeObjectsFunction(snapshotObj, updateObj, masterObj)
+
 				if updateObj:
 					logger.debug(u"Object %s marked for update" % mo['object'])
 					updateObjects.append(updateObj)
@@ -268,6 +269,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			if not licensePools:
 				logger.debug(u"No license pool found for product '%s'" % productOnClient.productId)
 				continue
+
 			licensePool = licensePools[0]
 			try:
 				for loc in licenseOnClients:
@@ -292,6 +294,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				for softwareLicense in self._masterBackend.softwareLicense_getObjects(id=licenseOnClient.softwareLicenseId):
 					for licenseContract in self._masterBackend.licenseContract_getObjects(id=softwareLicense.licenseContractId):
 						self._workBackend.licenseContract_insertObject(licenseContract)
+
 					self._workBackend.softwareLicense_insertObject(softwareLicense)
 				self._workBackend.licenseOnClient_insertObject(licenseOnClient)
 
