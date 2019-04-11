@@ -296,10 +296,10 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 						self._workBackend.licenseContract_insertObject(licenseContract)
 
 					self._workBackend.softwareLicense_insertObject(softwareLicense)
-				self._workBackend.licenseOnClient_insertObject(licenseOnClient)
 
-			except Exception as e:
-				logger.error(u"Failed to acquire license for product '%s': %s" % (productOnClient.productId, e))
+				self._workBackend.licenseOnClient_insertObject(licenseOnClient)
+			except Exception as licenseSyncError:
+				logger.error(u"Failed to acquire license for product '%s': %s" % (productOnClient.productId, licenseSyncError))
 
 		self._snapshotBackend.backend_createBase()
 		br = BackendReplicator(
