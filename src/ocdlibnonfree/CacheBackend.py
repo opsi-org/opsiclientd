@@ -99,23 +99,26 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		for mo in modifiedObjects:
 			masterObj = masterObjects.get(mo['object'].getIdent())
 
-			if (mo['command'].lower() == 'delete'):
+			command = mo['command'].lower()
+			if command == 'delete':
 				if not masterObj:
 					logger.info(u"No need to delete object %s because object has been deleted on server since last sync" % mo['object'])
 					continue
+
 				meth = getattr(self._snapshotBackend, '%s_getObjects' % objectClass.backendMethodPrefix)
 				snapshotObj = meth(**(mo['object'].getIdent(returnType = 'dict')))
 				if not snapshotObj:
 					logger.info(u"Deletion of object %s prevented because object has been created on server since last sync" % mo['object'])
 					continue
+
 				snapshotObj = snapshotObj[0]
 				if objectsDifferFunction(snapshotObj, masterObj):
 					logger.info(u"Deletion of object %s prevented because object has been modified on server since last sync" % mo['object'])
 					continue
+
 				logger.debug(u"Object %s marked for deletion" % mo['object'])
 				deleteObjects.append(mo['object'])
-
-			elif mo['command'].lower() in ('update', 'insert'):
+			elif command in ('update', 'insert'):
 				logger.debug(u"Modified object: %s" % mo['object'].toHash())
 				updateObj = createUpdateObjectFunction(mo['object'])
 
