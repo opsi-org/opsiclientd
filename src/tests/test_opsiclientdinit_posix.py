@@ -1,15 +1,14 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 uib GmbH
+# Copyright 2015-2019 uib GmbH
 # http://www.uib.de/
 # All rights reserved.
 
 import os
-import unittest
 from helper import workInTemporaryDirectory
 
-import mock
+import pytest
 
 try:
     from ocdlib.Posix import OpsiclientdInit
@@ -18,27 +17,25 @@ except ImportError as error:
     OpsiclientdInit = None
 
 
-@unittest.skipIf(OpsiclientdInit is None, "Missing OpsiclientdInit")
-class OpsiclientdRebootCoordinationTestCase(unittest.TestCase):
-    """
-    Testing the reboot behaviour on a POSIX machine.
-    """
-    def testWritingPID(self):
-        currentPID = os.getpid()
+@pytest.mark.skipif(OpsiclientdInit is None, reason="Unable to find non-free modules.")
+def testWritingPID(self):
+    currentPID = os.getpid()
 
-        with workInTemporaryDirectory() as tempDir:
-            targetFile = os.path.join(tempDir, 'pidfile')
-            OpsiclientdInit.writePIDFile(targetFile)
+    with workInTemporaryDirectory() as tempDir:
+        targetFile = os.path.join(tempDir, 'pidfile')
+        OpsiclientdInit.writePIDFile(targetFile)
 
-            with open(targetFile) as f:
-                pid = int(f.read().strip())
+        with open(targetFile) as f:
+            pid = int(f.read().strip())
 
-            self.assertEquals(currentPID, pid)
+        assert currentPID == pid
 
-    def testNotWritingPIDtoEmptyPath(self):
-        with workInTemporaryDirectory() as tempDir:
-            OpsiclientdInit.writePIDFile(None)
-            self.assertFalse([e for e in os.listdir(tempDir)])
 
-            OpsiclientdInit.writePIDFile("")
-            self.assertFalse([e for e in os.listdir(tempDir)])
+@pytest.mark.skipif(OpsiclientdInit is None, reason="Unable to find non-free modules.")
+def testNotWritingPIDtoEmptyPath(self):
+    with workInTemporaryDirectory() as tempDir:
+        OpsiclientdInit.writePIDFile(None)
+        assert not [e for e in os.listdir(tempDir)]
+
+        OpsiclientdInit.writePIDFile("")
+        assert not [e for e in os.listdir(tempDir)]
