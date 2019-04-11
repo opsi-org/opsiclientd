@@ -1,48 +1,42 @@
 # -*- coding: utf-8 -*-
+
+# opsiclientd is part of the desktop management solution opsi
+# (open pc server integration) http://www.opsi.org
+# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-= = = = = = = = = = = = = = = = = = = = =
-=   ocdlib.Events                       =
-= = = = = = = = = = = = = = = = = = = = =
+Events and their configuration.
 
-opsiclientd is part of the desktop management solution opsi
-(open pc server integration) http://www.opsi.org
-
-Copyright (C) 2010 uib GmbH
-
-http://www.uib.de/
-
-All rights reserved.
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License version 2 as
-published by the Free Software Foundation.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-@copyright:	uib GmbH <info@uib.de>
-@author: Jan Schneider <j.schneider@uib.de>
-@author: Erol Ueluekmen <e.ueluekmen@uib.de>
-@license: GNU General Public License version 2
+:copyright: uib GmbH <info@uib.de>
+:author: Jan Schneider <j.schneider@uib.de>
+:author: Erol Ueluekmen <e.ueluekmen@uib.de>
+:license: GNU Affero General Public License version 3
 """
+
+import copy as pycopy
 import sys
 import thread
 import threading
 import time
-import copy as pycopy
 
-from OPSI.Logger import Logger, LOG_DEBUG
 from OPSI import System
-from OPSI.Types import forceUnicode, forceList
+from OPSI.Logger import Logger, LOG_DEBUG
+from OPSI.Types import forceList, forceUnicode
 from OPSI.Util import objectToBeautifiedText
 
-from ocdlib.Config import Config, getLogFormat
+from ocdlib.Config import getLogFormat, Config
 from ocdlib.EventConfiguration import EventConfig
 from ocdlib.State import State
 from ocdlib.Localization import getLanguage
@@ -226,12 +220,7 @@ class EventGenerator(threading.Thread):
 		self._stopped = False
 		self._event = None
 		self._lastEventOccurence = None
-		logger.setLogFormat(
-			getLogFormat(
-				u'event generator {0}'.format(self._generatorConfig.getId())
-			),
-			object=self
-		)
+		logger.setLogFormat(getLogFormat(u'event generator ' + self._generatorConfig.getId()), object=self)
 
 	def __unicode__(self):
 		return u'<%s %s>' % (self.__class__.__name__, self._generatorConfig.getId())
@@ -281,6 +270,7 @@ class EventGenerator(threading.Thread):
 		logger.debug("Event config: {0}".format(eventConfig))
 		if not eventConfig:
 			return None
+
 		return Event(eventConfig=eventConfig, eventInfo=eventInfo)
 
 	def initialize(self):
@@ -315,14 +305,7 @@ class EventGenerator(threading.Thread):
 				threading.Thread.__init__(self)
 				self._eventListener = eventListener
 				self._event = event
-				logger.setLogFormat(
-					getLogFormat(
-						u'event generator {0}'.format(
-							self._event.eventConfig.getId()
-						)
-					),
-					object=self
-				)
+				logger.setLogFormat(getLogFormat(u'event generator ' + self._event.eventConfig.getId()), object=self)
 
 			def run(self):
 				if (self._event.eventConfig.notificationDelay > 0):
@@ -351,7 +334,7 @@ class EventGenerator(threading.Thread):
 					(self._generatorConfig.activationDelay, self))
 				time.sleep(self._generatorConfig.activationDelay)
 
-			logger.info(u"Activating event generator {0!r}".format(self))
+			logger.info(u"Activating event generator '%s'" % self)
 			while not self._stopped and ( (self._generatorConfig.maxRepetitions < 0) or (self._eventsOccured <= self._generatorConfig.maxRepetitions) ):
 				logger.info(u"Getting next event...")
 				event = self.getNextEvent()
@@ -408,82 +391,6 @@ class DaemonShutdownEventGenerator(EventGenerator):
 		return DaemonShutdownEvent(eventConfig = eventConfig, eventInfo = eventInfo)
 
 
-class WMIEventGenerator(EventGenerator):
-	def __init__(self, eventConfig):
-		EventGenerator.__init__(self, eventConfig)
-		self._wql = self._generatorConfig.wql
-		self._watcher = None
-
-	def initialize(self):
-		if not RUNNING_ON_WINDOWS:
-			return
-		if not self._wql:
-			return
-
-		from ocdlib.Windows import importWmiAndPythoncom
-		(wmi, pythoncom) = importWmiAndPythoncom()
-		pythoncom.CoInitialize()
-		if self._wql:
-			while not self._watcher:
-				try:
-					logger.debug(u"Creating wmi object")
-					c = wmi.WMI(privileges = ["Security"])
-					logger.info(u"Watching for wql: %s" % self._wql)
-					self._watcher = c.watch_for(raw_wql = self._wql, wmi_class = '')
-				except Exception, e:
-					try:
-						logger.warning(u"Failed to create wmi watcher: %s" % forceUnicode(e))
-					except Exception:
-						logger.warning(u"Failed to create wmi watcher, failed to log exception")
-					time.sleep(1)
-		logger.debug(u"Initialized")
-
-	def getNextEvent(self):
-		if not self._watcher:
-			logger.info(u"Nothing to watch for")
-			self._event = threading.Event()
-			self._event.wait()
-			return None
-
-		wqlResult = None
-		from ocdlib.Windows import importWmiAndPythoncom
-		(wmi, pythoncom) = importWmiAndPythoncom()
-		while not self._stopped:
-			try:
-				wqlResult = self._watcher(timeout_ms=500)
-				break
-			except wmi.x_wmi_timed_out:
-				continue
-
-		if wqlResult:
-			eventInfo = {}
-			for p in wqlResult.properties:
-				value = getattr(wqlResult, p)
-				if isinstance(value, tuple):
-					eventInfo[p] = []
-					for v in value:
-						eventInfo[p].append(v)
-				else:
-					eventInfo[p] = value
-			return self.createEvent(eventInfo)
-
-
-	def cleanup(self):
-		if self._lastEventOccurence and (time.time() - self._lastEventOccurence < 10):
-			# Waiting some seconds before exit to avoid Win32 releasing exceptions
-			waitTime = int(10 - (time.time() - self._lastEventOccurence))
-			logger.info(u"Event generator '%s' cleaning up in %d seconds" % (self, waitTime))
-			time.sleep(waitTime)
-		try:
-			from ocdlib.Windows import importWmiAndPythoncom
-			(wmi, pythoncom) = importWmiAndPythoncom()
-			pythoncom.CoUninitialize()
-		except ImportError:
-			# Probably not running on Windows.
-			pass
-
-
-
 
 class TimerEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
@@ -524,6 +431,7 @@ class ProcessActionRequestsEventGenerator(EventGenerator):
 		if not eventConfig:
 			return None
 		return ProcessActionRequestsEvent(eventConfig = eventConfig, eventInfo = eventInfo)
+
 
 if RUNNING_ON_WINDOWS:
 	class GUIStartupEventGenerator(EventGenerator):
@@ -637,7 +545,79 @@ if RUNNING_ON_WINDOWS:
 			EventGenerator.__init__(self, eventConfig)
 
 
-if RUNNING_ON_WINDOWS:
+	class WMIEventGenerator(EventGenerator):
+		def __init__(self, eventConfig):
+			EventGenerator.__init__(self, eventConfig)
+			self._wql = self._generatorConfig.wql
+			self._watcher = None
+
+		def initialize(self):
+			if not RUNNING_ON_WINDOWS:
+				return
+			if not self._wql:
+				return
+
+			from ocdlib.Windows import importWmiAndPythoncom
+			(wmi, pythoncom) = importWmiAndPythoncom()
+			pythoncom.CoInitialize()
+			if self._wql:
+				while not self._watcher:
+					try:
+						logger.debug(u"Creating wmi object")
+						c = wmi.WMI(privileges = ["Security"])
+						logger.info(u"Watching for wql: %s" % self._wql)
+						self._watcher = c.watch_for(raw_wql = self._wql, wmi_class = '')
+					except Exception, e:
+						try:
+							logger.warning(u"Failed to create wmi watcher: %s" % forceUnicode(e))
+						except Exception:
+							logger.warning(u"Failed to create wmi watcher, failed to log exception")
+						time.sleep(1)
+			logger.debug(u"Initialized")
+
+		def getNextEvent(self):
+			if not self._watcher:
+				logger.info(u"Nothing to watch for")
+				self._event = threading.Event()
+				self._event.wait()
+				return None
+
+			wqlResult = None
+			from ocdlib.Windows import importWmiAndPythoncom
+			(wmi, pythoncom) = importWmiAndPythoncom()
+			while not self._stopped:
+				try:
+					wqlResult = self._watcher(timeout_ms=500)
+					break
+				except wmi.x_wmi_timed_out:
+					continue
+
+			if wqlResult:
+				eventInfo = {}
+				for p in wqlResult.properties:
+					value = getattr(wqlResult, p)
+					if isinstance(value, tuple):
+						eventInfo[p] = []
+						for v in value:
+							eventInfo[p].append(v)
+					else:
+						eventInfo[p] = value
+				return self.createEvent(eventInfo)
+
+		def cleanup(self):
+			if self._lastEventOccurence and (time.time() - self._lastEventOccurence < 10):
+				# Waiting some seconds before exit to avoid Win32 releasing exceptions
+				waitTime = int(10 - (time.time() - self._lastEventOccurence))
+				logger.info(u"Event generator '%s' cleaning up in %d seconds" % (self, waitTime))
+				time.sleep(waitTime)
+			try:
+				from ocdlib.Windows import importWmiAndPythoncom
+				(wmi, pythoncom) = importWmiAndPythoncom()
+				pythoncom.CoUninitialize()
+			except ImportError:
+				# Probably not running on Windows.
+				pass
+
 	class CustomEventGenerator(WMIEventGenerator):
 		def __init__(self, eventConfig):
 			WMIEventGenerator.__init__(self, eventConfig)
@@ -646,7 +626,7 @@ if RUNNING_ON_WINDOWS:
 			eventConfig = self.getEventConfig()
 			if not eventConfig:
 				return None
-			return CustomEvent(eventConfig = eventConfig, eventInfo = eventInfo)
+			return CustomEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 else:
 	class CustomEventGenerator(EventGenerator):
 		def createEvent(self, eventInfo={}):
@@ -679,12 +659,7 @@ class Event(object):
 	def __init__(self, eventConfig, eventInfo={}):
 		self.eventConfig = eventConfig
 		self.eventInfo = eventInfo
-		logger.setLogFormat(
-			getLogFormat(
-				u'event generator {0}'.format(self.eventConfig.getId())
-			),
-			object=self
-		)
+		logger.setLogFormat(getLogFormat(u'event generator ' + self.eventConfig.getId()), object=self)
 
 	def getActionProcessorCommand(self):
 		actionProcessorCommand = self.eventConfig.actionProcessorCommand
@@ -766,7 +741,7 @@ def getEventConfigs():
 			preconditions[preconditionId] = {}
 			try:
 				for key in options.keys():
-					preconditions[preconditionId][key] = not options[key].lower() in ('0', 'false', 'off', 'no')
+					preconditions[preconditionId][key] = options[key].lower() not in ('0', 'false', 'off', 'no')
 				logger.info(u"Precondition '%s' created: %s" % (preconditionId, preconditions[preconditionId]))
 			except Exception, e:
 				logger.error(u"Failed to parse precondition '%s': %s" % (preconditionId, forceUnicode(e)))
@@ -787,7 +762,7 @@ def getEventConfigs():
 			try:
 				for key in options.keys():
 					if   (key.lower() == 'active'):
-						rawEventConfigs[eventConfigId]['active'] = not unicode(options[key]).lower() in ('0', 'false', 'off', 'no')
+						rawEventConfigs[eventConfigId]['active'] = unicode(options[key]).lower() not in ('0', 'false', 'off', 'no')
 					elif (key.lower() == 'super'):
 						rawEventConfigs[eventConfigId]['super'] = options[key]
 						if rawEventConfigs[eventConfigId]['super'].startswith('event_'):
@@ -900,19 +875,19 @@ def getEventConfigs():
 					elif (key == 'shutdown_user_cancelable'):
 						eventConfigs[eventConfigId]['shutdownUserCancelable'] = int(value)
 					elif (key == 'block_login'):
-						eventConfigs[eventConfigId]['blockLogin'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['blockLogin'] = unicode(value).lower() not in ('0', 'false', 'off', 'no')
 					elif (key == 'lock_workstation'):
 						eventConfigs[eventConfigId]['lockWorkstation'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'logoff_current_user'):
 						eventConfigs[eventConfigId]['logoffCurrentUser'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'process_shutdown_requests'):
-						eventConfigs[eventConfigId]['processShutdownRequests'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['processShutdownRequests'] = unicode(value).lower() not in ('0', 'false', 'off', 'no')
 					elif (key == 'get_config_from_service'):
-						eventConfigs[eventConfigId]['getConfigFromService'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['getConfigFromService'] = unicode(value).lower() not in ('0', 'false', 'off', 'no')
 					elif (key == 'update_config_file'):
-						eventConfigs[eventConfigId]['updateConfigFile'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['updateConfigFile'] = unicode(value).lower() not in ('0', 'false', 'off', 'no')
 					elif (key == 'write_log_to_service'):
-						eventConfigs[eventConfigId]['writeLogToService'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['writeLogToService'] = unicode(value).lower() not in ('0', 'false', 'off', 'no')
 					elif (key == 'cache_products'):
 						eventConfigs[eventConfigId]['cacheProducts'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'cache_max_bandwidth'):
@@ -932,7 +907,7 @@ def getEventConfigs():
 					elif (key == 'use_cached_config'):
 						eventConfigs[eventConfigId]['useCachedConfig'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'update_action_processor'):
-						eventConfigs[eventConfigId]['updateActionProcessor'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['updateActionProcessor'] = unicode(value).lower() not in ('0', 'false', 'off', 'no')
 					elif (key == 'action_type'):
 						eventConfigs[eventConfigId]['actionType'] = unicode(value).lower()
 					elif (key == 'event_notifier_command'):
@@ -940,7 +915,7 @@ def getEventConfigs():
 					elif (key == 'event_notifier_desktop'):
 						eventConfigs[eventConfigId]['eventNotifierDesktop'] = unicode(value).lower()
 					elif (key == 'process_actions'):
-						eventConfigs[eventConfigId]['processActions'] = not unicode(value).lower() in ('0', 'false', 'off', 'no')
+						eventConfigs[eventConfigId]['processActions'] = unicode(value).lower() not in ('0', 'false', 'off', 'no')
 					elif (key == 'action_notifier_command'):
 						eventConfigs[eventConfigId]['actionNotifierCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'action_notifier_desktop'):

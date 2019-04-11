@@ -1,43 +1,38 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+
+# opsiclientd is part of the desktop management solution opsi
+# (open pc server integration) http://www.opsi.org
+# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-ocdlib
+opsiclientd Library.
 
-This module is part of the desktop management solution opsi
-(open pc server integration) http://www.opsi.org
-
-Copyright (C) 2010-2019 uib GmbH
-
-http://www.uib.de/
-
-All rights reserved.
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License version 2 as
-published by the Free Software Foundation.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-@copyright:	uib GmbH <info@uib.de>
-@author: Erol Ueluekmen <e.ueluekmen@uib.de>
-@license: GNU General Public License version 2
+:copyright: uib GmbH <info@uib.de>
+:author: Erol Ueluekmen <e.ueluekmen@uib.de>
+:license: GNU Affero General Public License version 3
 """
 
 import os
 
-from OPSI.Logger import Logger
-from OPSI.Types import forceUrl, forceUnicode, forceBool, forceHostId, forceProductIdList
 from OPSI import System
+from OPSI.Logger import Logger
+from OPSI.Types import (forceBool, forceHostId, forceProductIdList,
+						forceUnicode, forceUrl)
 
-
-__version__ = '4.0.94-linux'
+__version__ = '4.1.1-linux'
 
 logger = Logger()
 
@@ -57,9 +52,6 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 	if not configService:
 		raise Exception(u"Not connected to config service")
 
-	if configService.isLegacyOpsi():
-		return
-
 	selectedDepot = None
 
 	configService.backend_setOptions({"addConfigStateDefaults": True})
@@ -68,10 +60,12 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 	dynamicDepot = False
 	depotProtocol = 'cifs'
 	for configState in configService.configState_getObjects(
-				configId=['clientconfig.depot.dynamic', 'clientconfig.depot.protocol', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
-				objectId=config.get('global', 'host_id')):
+			configId=['clientconfig.depot.dynamic', 'clientconfig.depot.protocol', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
+			objectId=config.get('global', 'host_id')):
+
 		if not configState.values or not configState.values[0]:
 			continue
+
 		if configState.configId == 'opsiclientd.depot_server.url' and configState.values:
 			try:
 				depotUrl = forceUrl(configState.values[0])
@@ -79,19 +73,23 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 				config.set('depot_server', 'url', depotUrl)
 				logger.notice(u"Depot url was set to '%s' from configState %s" % (depotUrl, configState))
 				return
-			except Exception as exc:
-				logger.error(u"Failed to set depot url from values %s in configState %s: %s" % (configState.values, configState, exc))
-		elif (configState.configId == 'opsiclientd.depot_server.depot_id') and configState.values:
+			except Exception as error:
+				logger.error(u"Failed to set depot url from values %s in configState %s: %s" % (configState.values, configState, error))
+		elif configState.configId == 'opsiclientd.depot_server.depot_id' and configState.values:
 			try:
 				depotId = forceHostId(configState.values[0])
 				depotIds.append(depotId)
 				logger.notice(u"Depot was set to '%s' from configState %s" % (depotId, configState))
-			except Exception as exc:
-				logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, exc))
+			except Exception as error:
+				logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, error))
 		elif not masterOnly and (configState.configId == 'clientconfig.depot.dynamic') and configState.values:
 			dynamicDepot = forceBool(configState.values[0])
-		elif (configState.configId == 'clientconfig.depot.protocol') and configState.values and configState.values[0] and (configState.values[0] == 'webdav'):
-			depotProtocol = 'webdav'
+		elif configState.configId == 'clientconfig.depot.protocol' and configState.values:
+			try:
+				if configState.values[0] == 'webdav':
+					depotProtocol = 'webdav'
+			except (IndexError, TypeError):
+				pass
 
 	if dynamicDepot:
 		if not depotIds:
@@ -122,6 +120,7 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 			masterDepot = depot
 		else:
 			alternativeDepots.append(depot)
+
 	if not masterDepot:
 		raise Exception(u"Failed to get info for master depot '%s'" % depotIds[0])
 
@@ -130,23 +129,26 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 	if dynamicDepot:
 		if alternativeDepots:
 			logger.info(u"Got alternative depots for products: %s" % productIds)
-			for i in range(len(alternativeDepots)):
-				logger.info(u"%d. alternative depot is %s" % ((i + 1), alternativeDepots[i].id))
+			for index, depot in enumerate(alternativeDepots, start=1):
+				logger.info(u"{:d}. alternative depot is {}", index, depot.id)
 
+			defaultInterface = None
 			try:
-				defaultInterface = None
 				networkInterfaces = System.getNetworkInterfaces()
 				if not networkInterfaces:
 					raise Exception(u"No network interfaces found")
+
 				for networkInterface in networkInterfaces:
 					logger.info(u"Found network interface: %s" % networkInterface)
+
 				defaultInterface = networkInterfaces[0]
 				for networkInterface in networkInterfaces:
-					if (networkInterface.ipAddressList.ipAddress == '0.0.0.0'):
+					if networkInterface.ipAddressList.ipAddress == '0.0.0.0':
 						continue
 					if networkInterface.gatewayList.ipAddress:
 						defaultInterface = networkInterface
 						break
+
 				clientConfig = {
 					"clientId": config.get('global', 'host_id'),
 					"opsiHostKey": config.get('global', 'opsi_host_key'),
@@ -160,12 +162,16 @@ def selectDepotserver(config, configService, event, productIds=[], cifsOnly=True
 				depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()
 				logger.debug2(u"depotSelectionAlgorithm:\n%s" % depotSelectionAlgorithm)
 				exec(depotSelectionAlgorithm)
-				selectedDepot = selectDepot(clientConfig=clientConfig, masterDepot=masterDepot, alternativeDepots=alternativeDepots)
+				selectedDepot = selectDepot(
+					clientConfig=clientConfig,
+					masterDepot=masterDepot,
+					alternativeDepots=alternativeDepots
+				)
 				if not selectedDepot:
 					selectedDepot = masterDepot
-			except Exception as exc:
-				logger.logException(exc)
-				logger.error(u"Failed to select depot: %s" % exc)
+			except Exception as error:
+				logger.logException(error)
+				logger.error(u"Failed to select depot: %s" % error)
 		else:
 			logger.info(u"No alternative depot for products: %s" % productIds)
 	logger.notice(u"Selected depot is: %s" % selectedDepot)

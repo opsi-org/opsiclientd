@@ -3,10 +3,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2014-2018 uib GmbH
-
-# http://www.uib.de/
-# All rights reserved.
+# Copyright (C) 2010-2019 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,15 +18,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-ocdlib.Opsiclientd
-
 Basic opsiclientd implementation. This is abstract in some parts that
 should be overridden in the concrete implementation for an OS.
 
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
 :author: Erol Ueluekmen <e.ueluekmen@uib.de>
-:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
@@ -62,10 +56,21 @@ try:
 except ImportError:
 	__fullversion__ = False
 
+from twisted.internet import reactor
+
+
+from ocdlib.EventProcessing import EventProcessingThread
+from ocdlib.Events import *
+
+if (os.name == 'nt'):
+	from ocdlib.Windows import *
+if (os.name == 'posix'):
+	from ocdlib.Posix import *
+
 try:
-	from ocdlibnonfree.EventProcessing import EventProcessingThread
-except ImportError:
-	from ocdlib.EventProcessing import EventProcessingThread
+	from ocdlibnonfree import __fullversion__
+except Exception:
+	__fullversion__ = False
 
 logger = Logger()
 config = Config()
@@ -462,7 +467,6 @@ class Opsiclientd(EventListener, threading.Thread):
 									% (ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()))
 							return
 			self.createActionProcessorUser(recreate=False)
-
 			self._eventProcessingThreads.append(eventProcessingThread)
 
 		try:

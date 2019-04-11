@@ -1,20 +1,17 @@
-#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import unittest
-
+import pytest
 from ocdlib.Exceptions import OpsiclientdError
 
 
-class ExceptionsTestCase(unittest.TestCase):
-	def testGivingMessage(self):
-		error = OpsiclientdError()
-		self.assertTrue(OpsiclientdError.ExceptionShortDescription in repr(error))
+@pytest.mark.parametrize("testClass", [OpsiclientdError])
+@pytest.mark.parametrize("errorMessage", [None, "Something failed."])
+def testGivingMessages(testClass, errorMessage):
+	if errorMessage:
+		error = testClass(errorMessage)
+	else:
+		error = testClass()
 
-		errorWithMessage = OpsiclientdError("Something failed.")
-		self.assertTrue(OpsiclientdError.ExceptionShortDescription in repr(errorWithMessage))
-		self.assertTrue("Something failed." in repr(errorWithMessage))
-
-
-if __name__ == '__main__':
-	unittest.main()
+	assert testClass.ExceptionShortDescription in repr(error)
+	if errorMessage:
+		assert errorMessage in repr(error)

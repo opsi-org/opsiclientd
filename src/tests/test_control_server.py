@@ -1,66 +1,45 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import mock
 import os
-import unittest
 
-from ocdlib.Config import ConfigImplementation
 import ocdlib.Events as Events
 import ocdlib.ControlServer as OCS
-import ocdlib.SystemCheck as sc
+
+import pytest
 
 
-# TODO: test ControlServer fire event
+@pytest.fixture
+def preparedConfig(config, configFile):
+	config.set('global', 'config_file', configFile)
+	yield config
 
 
-class ControlServerFiringEventTestCase(unittest.TestCase):
-	def setUp(self):
-		self.temporaryConfig = ConfigImplementation()
-		self.configPatcher = mock.patch('ocdlib.Events.config', self.temporaryConfig)
-		self.configPatcher.start()
+def testFiringEvent(preparedConfig):
+	preparedConfig.readConfigFile()
 
-		if os.name == 'nt':
-			self.defaultConfigFile = os.path.join(os.path.dirname(__file__), '..', 'windows', 'opsiclientd.conf')
-		else:
-			self.defaultConfigFile = os.path.join(os.path.dirname(__file__), '..', 'linux', 'opsiclientd.conf')
+	Events.createEventGenerators()
+	Events.getEventConfigs()
 
-		self.temporaryConfig.set('global', 'config_file', self.defaultConfigFile)
-
-	def tearDown(self):
-		self.configPatcher.stop()
-		del self.temporaryConfig
-		del self.defaultConfigFile
-
-	def testFiringEvent(self):
-		self.temporaryConfig.readConfigFile()
-
-		Events.createEventGenerators()
-		configs = Events.getEventConfigs()
-
-		controlServer = OCS.OpsiclientdRpcInterface(None)
-		controlServer.fireEvent('on_demand')
-
-	def testFiringUnknownEventRaisesError(self):
-		self.temporaryConfig.readConfigFile()
-
-		controlServer = OCS.OpsiclientdRpcInterface(None)
-		self.assertRaises(ValueError, controlServer.fireEvent, 'foobar')
+	controlServer = OCS.OpsiclientdRpcInterface(None)
+	controlServer.fireEvent('on_demand')
 
 
-	def testGUIStartupEventOnlyOnWindows(self):
-		self.temporaryConfig.readConfigFile()
+def testFiringUnknownEventRaisesError(preparedConfig):
+	preparedConfig.readConfigFile()
 
-		Events.createEventGenerators()
-		configs = Events.getEventConfigs()
-
-		self.assertTrue(configs)
-		expected = False
-		if sc.RUNNING_ON_WINDOWS:
-			expected = True
-
-		self.assertEquals(expected, 'gui_startup' in configs)
+	controlServer = OCS.OpsiclientdRpcInterface(None)
+	with pytest.raises(ValueError):
+		controlServer.fireEvent('foobar')
 
 
-if __name__ == '__main__':
-	unittest.main()
+@pytest.mark.parametrize("on_windows", [os.name == 'nt'])
+def testGUIStartupEventOnlyOnWindows(preparedConfig, on_windows):
+	preparedConfig.readConfigFile()
+
+	Events.createEventGenerators()
+	configs = Events.getEventConfigs()
+
+	assert configs
+	if on_windows:
+		assert 'gui_startup' in configs

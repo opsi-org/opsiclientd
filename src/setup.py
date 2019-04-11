@@ -56,6 +56,18 @@ def tree(dst, src):
 
 	return found_files
 
+localDirectory = os.path.dirname(__file__)
+opsiClientDeamonVersion = None
+fileWithVersion = os.path.join(localDirectory, 'ocdlib', '__init__.py')
+with open(fileWithVersion, 'r') as f:
+	for line in f:
+		if "__version__" in line:
+			opsiClientDeamonVersion = line.split('=', 1)[1].strip()[1:-1]
+			break
+
+if not opsiClientDeamonVersion:
+	raise Exception("Failed to find version.")
+
 
 class Target:
 	def __init__(self, **kw):
@@ -141,6 +153,7 @@ if RUNS_ON_WINDOWS:
 		('locale\\da\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_da.mo']),
 		('opsiclientd\\extend.d', glob.glob('..\\extend.d\*.*')),
 	]
+	data_files += tree('opsiclientd\\static_html', '..\\static_html')
 else:
 	data_files += [
 		(
@@ -177,11 +190,13 @@ setup_options = {
 
 if RUNS_ON_WINDOWS:
 	opsiclientd = Target(
-		name = "opsiclientd",
-		description = opsiclientdDescription,
-		script = "src\\opsiclientd",
-		modules = ["opsiclientd"],
-		icon_resources = [(1, "windows\\opsi.ico")]
+		name="opsiclientd",
+		description=opsiclientdDescription,
+		script="scripts/opsiclientd",
+		modules=['ocdlib.Windows'],
+		#cmdline_style='pywin32',
+		#other_resources = [(RT_MANIFEST, 1, manifest_template % dict(prog="opsiclientd"))],
+		icon_resources=[(1, "windows\\opsi.ico")]
 	)
 
 	notifier = Target(
