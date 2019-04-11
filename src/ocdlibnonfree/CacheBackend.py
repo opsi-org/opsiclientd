@@ -90,12 +90,12 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 	def _syncModifiedObjectsWithMaster(self, objectClass, modifiedObjects, getFilter, objectsDifferFunction, createUpdateObjectFunction, mergeObjectsFunction):
 		masterObjects = {}
-		deleteObjects = []
-		updateObjects = []
 		meth = getattr(self._masterBackend, '%s_getObjects' % objectClass.backendMethodPrefix)
 		for obj in meth(**getFilter):
 			masterObjects[obj.getIdent()] = obj
 
+		deleteObjects = []
+		updateObjects = []
 		for mo in modifiedObjects:
 			masterObj = masterObjects.get(mo['object'].getIdent())
 
