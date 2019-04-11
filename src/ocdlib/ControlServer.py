@@ -42,11 +42,9 @@ from twisted.internet.error import CannotListenError
 from tornado.ioloop import IOLoop
 
 from OPSI import System
-from OPSI.Logger import Logger
-from OPSI.Types import forceBool, forceInt, forceUnicode
-from OPSI.Types import OpsiAuthenticationError
 from OPSI.Exceptions import OpsiAuthenticationError
 from OPSI.Logger import Logger
+from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Service import SSLContext, OpsiService
 from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface
 from OPSI.Service.Resource import (ResourceOpsi, ResourceOpsiJsonRpc,
