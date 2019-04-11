@@ -25,7 +25,7 @@ import time
 
 from OPSI.Backend.Backend import ConfigDataBackend, ModificationTrackingBackend
 from OPSI.Backend.Replicator import BackendReplicator
-from OPSI.Exceptions import BackendConfigurationError
+from OPSI.Exceptions import BackendConfigurationError, BackendUnaccomplishableError
 from OPSI.Logger import Logger
 from OPSI.Object import objectsDiffer
 from OPSI.Object import *
@@ -234,7 +234,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 	def _replicateMasterToWorkBackend(self):
 		if not self._masterBackend:
-			raise Exception(u"Master backend undefined")
+			raise BackendConfigurationError(u"Master backend undefined")
 
 		self._cacheBackendInfo(self._masterBackend.backend_info())
 
