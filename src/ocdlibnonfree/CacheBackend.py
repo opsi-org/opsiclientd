@@ -106,7 +106,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					continue
 
 				meth = getattr(self._snapshotBackend, '%s_getObjects' % objectClass.backendMethodPrefix)
-				snapshotObj = meth(**(mo['object'].getIdent(returnType = 'dict')))
+				snapshotObj = meth(**(mo['object'].getIdent(returnType='dict')))
 				if not snapshotObj:
 					logger.info(u"Deletion of object %s prevented because object has been created on server since last sync" % mo['object'])
 					continue
@@ -125,7 +125,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				if masterObj:
 					logger.debug(u"Master object: %s" % masterObj.toHash())
 					meth = getattr(self._snapshotBackend, '%s_getObjects' % objectClass.backendMethodPrefix)
-					snapshotObj = meth(**(updateObj.getIdent(returnType = 'dict')))
+					snapshotObj = meth(**(updateObj.getIdent(returnType='dict')))
 					if snapshotObj:
 						snapshotObj = snapshotObj[0]
 						logger.debug(u"Snapshot object: %s" % snapshotObj.toHash())
@@ -285,7 +285,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					)
 
 					# Fake deletion for later sync to server
-					self._fireEvent('objectsDeleted', [ licenseOnClient ])
+					self._fireEvent('objectsDeleted', [licenseOnClient])
 					self._fireEvent('backendModified')
 
 				for licensePool in self._masterBackend.licensePool_getObjects(id=licenseOnClient.licensePoolId):
