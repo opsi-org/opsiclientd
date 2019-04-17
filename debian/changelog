@@ -1,3 +1,9 @@
+opsiclientd (4.0.96) stable; urgency=medium
+
+  * depot.user config fix
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Thu, 18 Apr 2019 01:55:06 +0200
+
 opsiclientd (4.0.95) stable; urgency=medium
 
   * Hostparameter clientconfig.depot.user fix
