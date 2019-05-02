@@ -57,7 +57,7 @@ class OpsiclientdInit(object):
 		parser = argparse.ArgumentParser()
 		parser.add_argument("--version", "-V", action='version', version=__version__)
 		parser.add_argument("--log-level", "-l", dest="logLevel", type=int,
-							choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+							choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
 							default=LOG_NOTICE,
 							help="Set the log-level.")
 		parser.add_argument('--no-signal-handlers', '-t', dest="signalHandlers",
