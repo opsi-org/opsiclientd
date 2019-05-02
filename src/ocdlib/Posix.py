@@ -62,7 +62,7 @@ class OpsiclientdInit(object):
 							help="Set the log-level.")
 		parser.add_argument('--no-signal-handlers', '-t', dest="signalHandlers",
 							action="store_false", default=True,
-							help="Do no register signal handlers.")
+							help="Do not register signal handlers.")
 		parser.add_argument("--daemon", "-D", dest="daemon",
 							action="store_true", default=False,
 							help="Daemonize process.")
