@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/sh -e
 
 TARGETS="src/ocdlib/ src/ocdlibnonfree/ src/scripts/opsiclientd src/windows/helpers/opsiclientd_rpc/opsiclientd_rpc.py src/windows/helpers/action_processor_starter/action_processor_starter.py src/windows/helpers/opsiclientd_shutdown_starter/opsiclientd_shutdown_starter.py src/linux/notifier.py src/linux/opsiclientd_rpc.py"
 
