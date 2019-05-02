@@ -118,8 +118,10 @@ function onResize() {
 
 class TimelineImplementation(object):
 	def __init__(self):
-		if not os.path.exists(os.path.dirname(config.get('global', 'timeline_db'))):
-			os.makedirs(os.path.dirname(config.get('global', 'timeline_db')))
+		timelineFolder = os.path.dirname(config.get('global', 'timeline_db'))
+		if not os.path.exists(timelineFolder):
+			logger.debug("Creating missing directory {!r}", timelineFolder)
+			os.makedirs(timelineFolder)
 
 		self._sql = SQLite(
 			database=config.get('global', 'timeline_db'),
