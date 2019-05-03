@@ -175,7 +175,7 @@ class ServiceConnection(object):
 					self.connectionTimeoutChanged(timeout)
 					if cancellableAfter > 0:
 						cancellableAfter -= 1
-					if (cancellableAfter == 0):
+					if cancellableAfter == 0:
 						self.connectionCancelable(serviceConnectionThread.stopConnectionCallback)
 					time.sleep(1)
 					timeout -= 1
@@ -318,7 +318,7 @@ class ServiceConnectionThread(KillableThread):
 				try:
 					logger.notice(u"Connecting to config server '%s' #%d" % (self._configServiceUrl, tryNum))
 					self.setStatusMessage(_(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
-					if (len(self._username.split('.')) < 3):
+					if len(self._username.split('.')) < 3:
 						raise Exception(u"Domain missing in username '%s'" % self._username)
 					if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
 						if proxyURL:
