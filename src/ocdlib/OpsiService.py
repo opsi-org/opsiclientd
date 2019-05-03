@@ -343,11 +343,10 @@ class ServiceConnectionThread(KillableThread):
 					self.connectionError = None
 					self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
 					logger.notice(u"Connected to config server '%s'" % self._configServiceUrl)
-
-				except OpsiServiceVerificationError, e:
-					self.connectionError = forceUnicode(e)
+				except OpsiServiceVerificationError as verificationError:
+					self.connectionError = forceUnicode(verificationError)
 					self.setStatusMessage(_(u"Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
-					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
+					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(verificationError)))
 					break
 
 				except Exception, e:
