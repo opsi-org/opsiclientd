@@ -178,7 +178,7 @@ class ServiceConnection(object):
 					self.connectionTimeoutChanged(timeout)
 					if cancellableAfter > 0:
 						cancellableAfter -= 1
-					if (cancellableAfter == 0):
+					if cancellableAfter == 0:
 						self.connectionCancelable(serviceConnectionThread.stopConnectionCallback)
 					time.sleep(1)
 					timeout -= 1
@@ -257,8 +257,8 @@ class ServiceConnection(object):
 		if self._configService:
 			try:
 				self._configService.backend_exit()
-			except Exception, e:
-				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(e))
+			except Exception as exitError:
+				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(exitError))
 
 		self._configService = None
 		self._configServiceUrl = None
@@ -322,7 +322,7 @@ class ServiceConnectionThread(KillableThread):
 				try:
 					logger.notice(u"Connecting to config server '%s' #%d" % (self._configServiceUrl, tryNum))
 					self.setStatusMessage(_(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
-					if (len(self._username.split('.')) < 3):
+					if len(self._username.split('.')) < 3:
 						raise Exception(u"Domain missing in username '%s'" % self._username)
 
 					if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
@@ -348,23 +348,21 @@ class ServiceConnectionThread(KillableThread):
 					self.connectionError = None
 					self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
 					logger.notice(u"Connected to config server '%s'" % self._configServiceUrl)
-
-				except OpsiServiceVerificationError as e:
-					self.connectionError = forceUnicode(e)
+				except OpsiServiceVerificationError as verificationError:
+					self.connectionError = forceUnicode(verificationError)
 					self.setStatusMessage(_(u"Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
-					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
+					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(verificationError)))
 					break
-
-				except Exception as e:
-					self.connectionError = forceUnicode(e)
-					self.setStatusMessage(_(u"Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(e)))
-					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
-					if isinstance(e, OpsiAuthenticationError):
+				except Exception as error:
+					self.connectionError = forceUnicode(error)
+					self.setStatusMessage(_(u"Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(error)))
+					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(error)))
+					if isinstance(error, OpsiAuthenticationError):
 						fqdn = System.getFQDN()
 						try:
 							fqdn = forceFqdn(fqdn)
-						except Exception as e:
-							logger.warning(u"Failed to get fqdn from os, got '%s': %s" % (fqdn, e))
+						except Exception as fqdnError:
+							logger.warning(u"Failed to get fqdn from os, got '%s': %s" % (fqdn, fqdnError))
 							break
 
 						if self._username != fqdn:
@@ -382,8 +380,8 @@ class ServiceConnectionThread(KillableThread):
 
 					for _unused in range(3):  # Sleeping before the next retry
 						time.sleep(1)
-		except Exception as e:
-			logger.logException(e)
+		except Exception as error:
+			logger.logException(error)
 		finally:
 			self.running = False
 
