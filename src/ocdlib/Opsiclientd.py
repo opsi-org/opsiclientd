@@ -56,21 +56,12 @@ try:
 except ImportError:
 	__fullversion__ = False
 
-from twisted.internet import reactor
-
-
 from ocdlib.EventProcessing import EventProcessingThread
-from ocdlib.Events import *
 
 if (os.name == 'nt'):
 	from ocdlib.Windows import *
 if (os.name == 'posix'):
 	from ocdlib.Posix import *
-
-try:
-	from ocdlibnonfree import __fullversion__
-except Exception:
-	__fullversion__ = False
 
 logger = Logger()
 config = Config()
