@@ -254,8 +254,8 @@ class ServiceConnection(object):
 		if self._configService:
 			try:
 				self._configService.backend_exit()
-			except Exception, e:
-				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(e))
+			except Exception as exitError:
+				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(exitError))
 		self._configService = None
 		self._configServiceUrl = None
 
