@@ -36,6 +36,7 @@ from ocdlib.Config import Config, getLogFormat
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from ocdlib.ControlServer import ControlServer
 from ocdlib.Events import *
+from ocdlib.EventProcessing import EventProcessingThread
 from ocdlib.Localization import _, setLocaleDir
 from ocdlib.Timeline import Timeline
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
@@ -56,11 +57,9 @@ try:
 except ImportError:
 	__fullversion__ = False
 
-from ocdlib.EventProcessing import EventProcessingThread
-
-if (os.name == 'nt'):
+if os.name == 'nt':
 	from ocdlib.Windows import *
-if (os.name == 'posix'):
+elif os.name == 'posix':
 	from ocdlib.Posix import *
 
 logger = Logger()
