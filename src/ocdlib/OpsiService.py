@@ -348,12 +348,11 @@ class ServiceConnectionThread(KillableThread):
 					self.setStatusMessage(_(u"Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
 					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(verificationError)))
 					break
-
-				except Exception, e:
-					self.connectionError = forceUnicode(e)
-					self.setStatusMessage(_(u"Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(e)))
-					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
-					if isinstance(e, OpsiAuthenticationError):
+				except Exception as error:
+					self.connectionError = forceUnicode(error)
+					self.setStatusMessage(_(u"Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(error)))
+					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(error)))
+					if isinstance(error, OpsiAuthenticationError):
 						fqdn = System.getFQDN()
 						try:
 							fqdn = forceFqdn(fqdn)
@@ -367,8 +366,9 @@ class ServiceConnectionThread(KillableThread):
 							break
 					time.sleep(3)
 
-		except Exception, e:
-			logger.logException(e)
+		except Exception as error:
+			logger.logException(error)
+
 		self.running = False
 
 	def stopConnectionCallback(self, choiceSubject):
