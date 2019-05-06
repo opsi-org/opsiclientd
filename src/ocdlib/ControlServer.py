@@ -44,10 +44,10 @@ from tornado.ioloop import IOLoop
 from OPSI import System
 from OPSI.Exceptions import OpsiAuthenticationError
 from OPSI.Logger import Logger
-from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Service import SSLContext, OpsiService
 from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface
 from OPSI.Service.Resource import (ResourceOpsi, ResourceOpsiJsonRpc,
+from OPSI.Types import forceBool, forceInt, forceUnicode
 	ResourceOpsiJsonInterface, ResourceOpsiDAV)
 from OPSI.web2 import resource, stream, server, http, responsecode, http_headers
 from OPSI.web2.channel.http import HTTPFactory
