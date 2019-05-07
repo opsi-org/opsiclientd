@@ -782,17 +782,12 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			else:
 
 				productOnDepots = self._configService.productOnDepot_getObjects(
-					depotId   = config.get('depot_server', 'depot_id'),
-					productId = productIds)
+					depotId   = config.get('depot_server', 'depot_id'))
 
+				productOnDepotIds = [productOnDepot.productId for productOnDepot in productOnDepots]
 				errorProductIds = []
 				for productOnClient in productOnClients:
-					found = False
-					for productOnDepot in productOnDepots:
-						if productOnDepot.productId == productOnClient.productId:
-							found = True
-							break
-					if not found:
+					if not productOnClient.productId in productOnDepotIds:
 						logger.error(u"Requested product: '%s' not found on configured depot: '%s', please check your configuration, setting product to failed." % (productOnClient.productId, config.get('depot_server', 'depot_id')))
 						self._setProductCacheState(productOnClient.productId, u"failure", u"Product not found on configured depot.")
 						errorProductIds.append(productOnClient.productId)
@@ -802,6 +797,20 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					# Windows 8.1 Bugfix, with a helper exe.
 					helper = os.path.join(config.get('global', 'base_dir'), 'utilities', 'getmsversioninfo.exe')
 					additionalProductId = System.getOpsiHotfixName(helper)
+					if "win10" in additionalProductId:
+						releaseId = System.getRegistryValue(
+								System.HKEY_LOCAL_MACHINE,
+								"SOFTWARE\\Microsoft\\Windows NT\CurrentVersion",
+								"ReleaseID")
+						#Setting default to 1507-Build
+						if not releaseId: releaseId = "1507"
+						#Splitting Name of original Packagename and reverse result to get arch
+						parts = additionalProductId.split("-")[::-1]
+						releasePackageName = "mshotfix-win10-%s-%s-glb" % (releaseId, parts[1])
+						logger.info(u"Searching for release-packageid: '%s'" % releasePackageName)
+						if releasePackageName in productOnDepotIds:
+							logger.info(u"Releasepackage found on depot: '%s'" % releasePackageName)
+							additionalProductId = releasePackageName
 					logger.info(u"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s" % additionalProductId)
 					if not additionalProductId in productIds:
 						productIds.append(additionalProductId)

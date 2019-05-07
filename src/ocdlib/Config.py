@@ -583,6 +583,8 @@ class ConfigImplementation(object):
 					self.set('depot_server', 'drive', configState.values[0])
 				elif (configState.configId == u'clientconfig.depot.id'):
 					self.set('depot_server', 'depot_id', configState.values[0])
+				elif configState.configId == u'clientconfig.depot.user':
+					self.set('depot_server', 'username', configState.values[0])
 				elif configState.configId.startswith(u'opsiclientd.'):
 					try:
 						parts = configState.configId.lower().split('.')
@@ -619,11 +621,3 @@ class Config(ConfigImplementation):
 	def __setattr__(self, attr, value):
 		""" Delegate access to implementation """
 		return setattr(self.__instance, attr, value)
-
-
-
-
-
-
-
-
