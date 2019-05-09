@@ -1097,5 +1097,5 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			except Exception as e:
 				logger.warning(e)
 
-		if exception:
+		if exception is not None:
 			raise exception
