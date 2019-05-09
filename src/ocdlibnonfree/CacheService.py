@@ -28,7 +28,7 @@ from OPSI.Logger import LOG_INFO, Logger
 from OPSI.Object import ProductOnClient
 from OPSI.Types import (forceBool, forceInt, forceList, forceProductIdList,
 	forceUnicode)
-from OPSI.Util.File import PackageContentFile
+from OPSI.Util.File.Opsi import PackageContentFile
 from OPSI.Util.Repository import getRepository
 from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, RepositoryObserver
 from OPSI import System
