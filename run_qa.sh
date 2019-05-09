@@ -1,6 +1,21 @@
 #! /bin/sh -e
 
-TARGETS="src/ocdlib/ src/ocdlibnonfree/ src/scripts/opsiclientd src/windows/helpers/opsiclientd_rpc/opsiclientd_rpc.py src/windows/helpers/action_processor_starter/action_processor_starter.py src/windows/helpers/opsiclientd_shutdown_starter/opsiclientd_shutdown_starter.py src/linux/notifier.py src/linux/opsiclientd_rpc.py"
+TARGETS="src/ocdlib/ src/ocdlibnonfree/ src/scripts/opsiclientd"
+if [ -e "src/linux/notifier.py" ]; then
+	TARGETS="$TARGETS src/linux/notifier.py"
+fi
+if [ -e "src/linux/opsiclientd_rpc.py" ]; then
+	TARGETS="$TARGETS src/linux/opsiclientd_rpc.py"
+fi
+if [ -e "src/windows/helpers/opsiclientd_rpc/opsiclientd_rpc.py" ]; then
+	TARGETS="$TARGETS src/windows/helpers/opsiclientd_rpc/opsiclientd_rpc.py"
+fi
+if [ -e "src/windows/helpers/opsiclientd_shutdown_starter/opsiclientd_shutdown_starter.py" ]; then
+	TARGETS="$TARGETS src/windows/helpers/opsiclientd_shutdown_starter/opsiclientd_shutdown_starter.py"
+fi
+if [ -e "src/windows/helpers/action_processor_starter/action_processor_starter.py" ]; then
+	TARGETS="$TARGETS src/windows/helpers/action_processor_starter/action_processor_starter.py"
+fi
 
 py.test --junitxml=testreport.xml --cov ocdlib --cov ocdlibnonfree --cov-report xml --quiet src/tests/
 

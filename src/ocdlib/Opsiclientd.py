@@ -34,10 +34,9 @@ from twisted.internet import reactor
 
 from OPSI import System
 from OPSI.Logger import Logger
-from OPSI.Object import *
 from OPSI.Types import forceBool, forceInt, forceUnicode
-from OPSI.Util import *
-from OPSI.Util.Message import *
+from OPSI.Util import randomString
+from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 
 from ocdlib import __version__
 from ocdlib.EventProcessing import EventProcessingThread
@@ -62,9 +61,7 @@ logger = Logger()
 config = Config()
 timeline = Timeline()
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                            OPSICLIENTD                                            -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
 		logger.setLogFormat(getLogFormat(u'opsiclientd'), object=self)
@@ -145,6 +142,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	def waitForGUI(self, timeout=None):
 		if not timeout:
 			timeout = None
+
 		class WaitForGUI(EventListener):
 			def __init__(self):
 				self._guiStarted = threading.Event()
@@ -184,7 +182,6 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		self._actionProcessorUserName = runAsUser
 		logger.notice(u"Creating local user '%s'" % runAsUser)
-		#timeline.addEvent(title = u"Creating local user '%s'" % runAsUser, description = u'', category = u'system')
 
 		self._actionProcessorUserPassword = u'$!?' + unicode(randomString(16)) + u'!/%'
 		logger.addConfidentialString(self._actionProcessorUserPassword)

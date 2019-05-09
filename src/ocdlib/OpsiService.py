@@ -3,7 +3,7 @@
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
 
-# Copyright (C) 2006-2018 uib GmbH <info@uib.de>
+# Copyright (C) 2006-2019 uib GmbH <info@uib.de>
 # All rights reserved.
 
 # This program is free software: you can redistribute it and/or modify
@@ -24,6 +24,7 @@ Connecting to a opsi service.
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
 :author: Erol Ueluekmen <e.ueluekmen@uib.de>
+@author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
@@ -37,7 +38,6 @@ from twisted.conch.ssh import keys
 
 from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
 from OPSI.Logger import Logger
-from OPSI.Util import *
 from OPSI.Util.Thread import KillableThread
 from OPSI.Util.HTTP import urlsplit, non_blocking_connect_http, non_blocking_connect_https
 from OPSI.Backend.JSONRPC import JSONRPCBackend
