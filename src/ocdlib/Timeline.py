@@ -153,7 +153,6 @@ class TimelineImplementation(object):
 			if event['description']:
 				event['description'] = event['description'].replace(u'\n', u'<br />')
 			if event['isError']:
-				#event['classname'] = u"error-event"
 				event['color'] = u"#A74141"
 				event['textColor'] = u"#A74141"
 				event['icon'] = TIMELINE_IMAGE_URL + u"dark-red-circle.png"
