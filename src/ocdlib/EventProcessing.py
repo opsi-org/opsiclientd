@@ -319,14 +319,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.error(u"Failed to start notifier application '%s': %s" % (command, e))
 
 	def closeProcessWindows(self, processId):
-		command = None
 		try:
-			command = '%s "exit(); System.closeProcessWindows(processId = %s)"' \
-					% (config.get('opsiclientd_rpc', 'command'), processId)
-		except Exception, e:
+			command = '%s "exit(); System.closeProcessWindows(processId = %s)"'	% (
+				config.get('opsiclientd_rpc', 'command'),
+				processId
+			)
+		except Exception as e:
 			raise Exception(u"opsiclientd_rpc command not defined: %s" % forceUnicode(e))
 
-		self.runCommandInSession(command = cmd, waitForProcessEnding = False)
+		self.runCommandInSession(command=command, waitForProcessEnding=False)
 
 	def setActionProcessorInfo(self):
 		try:

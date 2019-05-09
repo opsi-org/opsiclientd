@@ -830,7 +830,7 @@ class EventListener(object):
 	def __init__(self):
 		logger.debug(u"EventListener initiated")
 
-	def processEvent(event):
+	def processEvent(self, event):
 		logger.warning(u"%s: processEvent() not implemented" % self)
 
 
