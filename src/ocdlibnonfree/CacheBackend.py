@@ -89,10 +89,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		self._masterBackend = masterBackend
 
 	def _syncModifiedObjectsWithMaster(self, objectClass, modifiedObjects, getFilter, objectsDifferFunction, createUpdateObjectFunction, mergeObjectsFunction):
-		masterObjects = {}
 		meth = getattr(self._masterBackend, '%s_getObjects' % objectClass.backendMethodPrefix)
-		for obj in meth(**getFilter):
-			masterObjects[obj.getIdent()] = obj
+		masterObjects = {obj.getIdent(): obj for obj in meth(**getFilter)}
 
 		deleteObjects = []
 		updateObjects = []
@@ -356,6 +354,3 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			f.write('customer = %s\n' % modules.get('customer', ''))
 			f.write('expires = %s\n' % modules.get('expires', time.strftime("%Y-%m-%d", time.localtime(time.time()))))
 			f.write('signature = %s\n' % modules.get('signature', ''))
-
-		with codecs.open(self._opsiVersionFile, 'w', 'utf-8') as f:
-			f.write(backendInfo.get('opsiVersion', '').strip())

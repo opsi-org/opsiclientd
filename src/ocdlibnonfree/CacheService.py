@@ -221,7 +221,6 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 
 			self._configCacheDir = os.path.join(config.get('cache_service', 'storage_dir'), 'config')
 			self._opsiModulesFile = os.path.join(self._configCacheDir, 'cached_modules')
-			self._opsiVersionFile = os.path.join(self._configCacheDir, 'cached_version')
 			self._opsiPasswdFile = os.path.join(self._configCacheDir, 'cached_passwd')
 			self._auditHardwareConfigFile = os.path.join(self._configCacheDir, 'cached_opsihwaudit.json')
 
@@ -266,7 +265,6 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 
 		backendArgs = {
 			'opsiModulesFile': self._opsiModulesFile,
-			'opsiVersionFile': self._opsiVersionFile,
 			'opsiPasswdFile': self._opsiPasswdFile,
 			'auditHardwareConfigFile': self._auditHardwareConfigFile,
 			'depotId': depotId,
