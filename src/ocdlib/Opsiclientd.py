@@ -60,9 +60,7 @@ logger = Logger()
 config = Config()
 timeline = Timeline()
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                            OPSICLIENTD                                            -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
 		logger.setLogFormat(getLogFormat(u'opsiclientd'), object=self)
@@ -143,6 +141,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	def waitForGUI(self, timeout=None):
 		if not timeout:
 			timeout = None
+
 		class WaitForGUI(EventListener):
 			def __init__(self):
 				self._guiStarted = threading.Event()
@@ -182,7 +181,6 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		self._actionProcessorUserName = runAsUser
 		logger.notice(u"Creating local user '%s'" % runAsUser)
-		#timeline.addEvent(title = u"Creating local user '%s'" % runAsUser, description = u'', category = u'system')
 
 		self._actionProcessorUserPassword = u'$!?' + unicode(randomString(16)) + u'!/%'
 		logger.addConfidentialString(self._actionProcessorUserPassword)
