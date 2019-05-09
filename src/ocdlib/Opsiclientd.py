@@ -24,12 +24,19 @@ should be overridden in the concrete implementation for an OS.
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
 :author: Erol Ueluekmen <e.ueluekmen@uib.de>
+:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
 import os
 import sys
 from contextlib import contextmanager
+
+from OPSI import System
+from OPSI.Logger import Logger
+from OPSI.Types import forceBool, forceInt, forceUnicode
+from OPSI.Util import randomString
+from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 
 from ocdlib import __version__
 from ocdlib.Config import Config, getLogFormat
@@ -40,12 +47,6 @@ from ocdlib.EventProcessing import EventProcessingThread
 from ocdlib.Localization import _, setLocaleDir
 from ocdlib.Timeline import Timeline
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
-
-from OPSI import System
-from OPSI.Logger import Logger
-from OPSI.Types import forceUnicode, forceInt
-from OPSI.Util import randomString
-from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 
 # This is at the end to make sure that the tornado-bridge for twisted
 # is installed once we reach this.
@@ -100,7 +101,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._stopEvent.clear()
 
 	def setBlockLogin(self, blockLogin):
-		self._blockLogin = bool(blockLogin)
+		self._blockLogin = forceBool(blockLogin)
 		logger.notice(u"Block login now set to '%s'" % self._blockLogin)
 
 		if self._blockLogin:

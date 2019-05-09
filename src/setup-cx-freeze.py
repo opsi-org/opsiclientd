@@ -43,7 +43,7 @@ buildOptions = {
         "duplicity",
         "twisted",
         "zope.interface",  # required by twisted
-        "tornado",
+        "tornado == 4.3",
     ],
     "excludes": [
         "Tkconstants",

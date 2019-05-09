@@ -2,7 +2,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2011-2018 uib GmbH <info@uib.de>
+# Copyright (C) 2011-2019 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -33,6 +33,7 @@ Event-Timeline.
 
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
+:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
@@ -136,11 +137,9 @@ class TimelineImplementation(object):
 	def stop(self):
 		self._stopped = True
 		end = forceOpsiTimestamp(timestamp())
-		self._dbLock.acquire()
-		try:
+
+		with self._dbLock:
 			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', {'end': end})
-		finally:
-			self._dbLock.release()
 
 	def getHtmlHead(self):
 		events = []
@@ -156,7 +155,6 @@ class TimelineImplementation(object):
 			if event['description']:
 				event['description'] = event['description'].replace(u'\n', u'<br />')
 			if event['isError']:
-				#event['classname'] = u"error-event"
 				event['color'] = u"#A74141"
 				event['textColor'] = u"#A74141"
 				event['icon'] = TIMELINE_IMAGE_URL + u"dark-red-circle.png"
@@ -194,17 +192,15 @@ class TimelineImplementation(object):
 		}
 
 	def _cleanupDatabase(self):
-		self._dbLock.acquire()
-		try:
-			self._sql.execute('delete from EVENT where `start` < "%s"' % timestamp((time.time() - 7*24*3600)))
-			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', {'durationEvent': False})
-		except Exception, e:
-			logger.error(e)
-		self._dbLock.release()
+		with self._dbLock:
+			try:
+				self._sql.execute('delete from EVENT where `start` < "%s"' % timestamp((time.time() - 7*24*3600)))
+				self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', {'durationEvent': False})
+			except Exception as cleanupError:
+				logger.error(cleanupError)
 
 	def _createDatabase(self):
-		self._dbLock.acquire()
-		try:
+		with self._dbLock:
 			tables = self._sql.getTables()
 			if 'EVENT' not in tables:
 				logger.debug(u'Creating table EVENT')
@@ -224,59 +220,53 @@ class TimelineImplementation(object):
 				self._sql.execute(table)
 				self._sql.execute('CREATE INDEX `category` on `EVENT` (`category`);')
 				self._sql.execute('CREATE INDEX `start` on `EVENT` (`start`);')
-		finally:
-			self._dbLock.release()
 
 	def addEvent(self, title, description=u'', isError=False, category=None, durationEvent=False, start=None, end=None):
 		if self._stopped:
 			return -1
-		self._dbLock.acquire()
-		try:
-			if category:
-				category = forceUnicode(category)
-			if not start:
-				start = timestamp()
-			start = forceOpsiTimestamp(start)
-			if end:
-				end = forceOpsiTimestamp(start)
-				durationEvent = True
-			return self._sql.insert('EVENT', {
-				'title':         forceUnicode(title),
-				'category':      category,
-				'description':   forceUnicode(description),
-				'isError':       forceBool(isError),
-				'durationEvent': forceBool(durationEvent),
-				'start':         start,
-				'end':           end,
-			})
-		except Exception, e:
-			logger.error(u"Failed to add event '%s': %s" % (title, e))
-		finally:
-			self._dbLock.release()
+
+		with self._dbLock:
+			try:
+				if category:
+					category = forceUnicode(category)
+				if not start:
+					start = timestamp()
+				start = forceOpsiTimestamp(start)
+				if end:
+					end = forceOpsiTimestamp(start)
+					durationEvent = True
+				return self._sql.insert('EVENT', {
+					'title':         forceUnicode(title),
+					'category':      category,
+					'description':   forceUnicode(description),
+					'isError':       forceBool(isError),
+					'durationEvent': forceBool(durationEvent),
+					'start':         start,
+					'end':           end,
+				})
+			except Exception as addError:
+				logger.error(u"Failed to add event '%s': %s" % (title, addError))
 
 	def setEventEnd(self, eventId, end=None):
 		if self._stopped:
 			return -1
-		self._dbLock.acquire()
-		try:
-			eventId = forceInt(eventId)
-			if not end:
-				end = timestamp()
-			end = forceOpsiTimestamp(end)
-			return self._sql.update('EVENT', '`id` = %d' % eventId, {'end': end, 'durationEvent': True})
-		except Exception, e:
-			logger.error(u"Failed to set end of event '%s': %s" % (eventId, e))
-		finally:
-			self._dbLock.release()
+
+		with self._dbLock:
+			try:
+				eventId = forceInt(eventId)
+				if not end:
+					end = timestamp()
+				end = forceOpsiTimestamp(end)
+				return self._sql.update('EVENT', '`id` = %d' % eventId, {'end': end, 'durationEvent': True})
+			except Exception as endError:
+				logger.error(u"Failed to set end of event '%s': %s" % (eventId, endError))
 
 	def getEvents(self):
 		if self._stopped:
 			return {}
-		self._dbLock.acquire()
-		try:
+
+		with self._dbLock:
 			return self._sql.getSet('select * from EVENT')
-		finally:
-			self._dbLock.release()
 
 
 class Timeline(TimelineImplementation):

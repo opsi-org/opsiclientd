@@ -3,7 +3,7 @@
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
 
-# Copyright (C) 2006-2018 uib GmbH <info@uib.de>
+# Copyright (C) 2006-2019 uib GmbH <info@uib.de>
 # All rights reserved.
 
 # This program is free software: you can redistribute it and/or modify
@@ -24,6 +24,7 @@ Connecting to a opsi service.
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
 :author: Erol Ueluekmen <e.ueluekmen@uib.de>
+@author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
@@ -133,7 +134,7 @@ class ServiceConnection(object):
 		self.cancelled = True
 		self.running = False
 		for i in range(10):
-			if not self.isAlive():
+			if not self.is_alive():
 				break
 			self.terminate()
 			time.sleep(0.5)
@@ -174,7 +175,7 @@ class ServiceConnection(object):
 				logger.debug(u"ServiceConnectionThread started")
 				while serviceConnectionThread.running and (timeout > 0):
 					logger.debug(u"Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d) " \
-						% (timeout, serviceConnectionThread.isAlive(), cancellableAfter))
+						% (timeout, serviceConnectionThread.is_alive(), cancellableAfter))
 					self.connectionTimeoutChanged(timeout)
 					if cancellableAfter > 0:
 						cancellableAfter -= 1
@@ -394,7 +395,7 @@ class ServiceConnectionThread(KillableThread):
 		self.cancelled = True
 		self.running = False
 		for i in range(10):
-			if not self.isAlive():
+			if not self.is_alive():
 				break
 			self.terminate()
 			time.sleep(0.5)

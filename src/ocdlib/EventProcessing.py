@@ -410,7 +410,6 @@ None otherwise.
 			logger.error(u"Failed to start notifier application '%s': %s" % (command, e))
 
 	def closeProcessWindows(self, processId):
-		command = None
 		try:
 			command = '{command} "exit(); System.closeProcessWindows(processId={pid})"'.format(
 				command=config.get('opsiclientd_rpc', 'command'),

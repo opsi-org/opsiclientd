@@ -186,6 +186,15 @@ setup_options = {
 	"author": "uib GmbH <info@uib.de>",
 	"author_email": "info@uib.de",
 	"license": "GNU Affero General Public License Version 3 (AGPLv3)",
+    "install_requires": [
+        "python-opsi >= 4.1.1.36, <= 4.2",
+        "cryptography",
+        "tornado == 4.3",  # for Tornado twisted bridge
+    ],
+    "extras_require": {
+        'test': ['pytest >= 3.0', 'mock'],
+        'qa': ['pytest-cov >= 2.3.1', 'pylint', 'flake8']
+    },
 }
 
 if RUNS_ON_WINDOWS:
