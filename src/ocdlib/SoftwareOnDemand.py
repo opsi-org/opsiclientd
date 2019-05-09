@@ -74,17 +74,19 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		self._callInterface = self._configService.getInterface()
 
 	def _getCredentials(self):
-		(user, password) = self._getAuthorization()
+		user, password = self._getAuthorization()
 		if not user:
 			user = config.get('global', 'host_id')
+
 		return (user, password)
 
 	def _authenticate(self, result):
-		if (self.request.remoteAddr.host == '127.0.0.1'):
+		if self.request.remoteAddr.host == '127.0.0.1':
 			self.session.authenticated = False
 			return result
+
 		try:
-			(self.session.user, self.session.password) = self._getCredentials()
+			self.session.user, self.session.password = self._getCredentials()
 
 			logger.notice(u"Authorization request from %s@%s (application: %s)" % (self.session.user, self.session.ip, self.session.userAgent))
 
@@ -93,8 +95,9 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 
 			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
 				return result
-			if (os.name == 'nt'):
-				if (self.session.user.lower() == 'administrator'):
+
+			if os.name == 'nt':
+				if self.session.user.lower() == 'administrator':
 					import win32security
 					# The LogonUser function will raise an Exception on logon failure
 					win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
