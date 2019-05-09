@@ -516,6 +516,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 	def _getAllowedMethods(self):
 		return [
 			"backend_setOptions",
+			"configState_getObjects",
 			"fireEvent_software_on_demand",
 			"getDepotId",
 			"getGeneralConfigValue",
