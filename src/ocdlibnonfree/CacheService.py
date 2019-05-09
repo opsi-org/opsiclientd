@@ -3,10 +3,9 @@
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
 
-# Copyright (C) 2014-2018 uib GmbH
+# Copyright (C) 2014-2019 uib GmbH
 # http://www.uib.de/
 # All rights reserved.
-
 """
 ocdlibnonfree.CacheService
 
@@ -27,16 +26,15 @@ from twisted.conch.ssh import keys
 
 from OPSI.Logger import LOG_INFO, Logger
 from OPSI.Object import ProductOnClient
-from OPSI.Types import (forceBool, forceInt, forceList, forceProductIdList,
-	forceUnicode)
-from OPSI.Util.File import PackageContentFile
+from OPSI.Types import (
+	forceBool, forceInt, forceList, forceProductIdList, forceUnicode)
+from OPSI.Util.File.Opsi import PackageContentFile
 from OPSI.Util.Repository import getRepository
 from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, RepositoryObserver
 from OPSI import System
 from OPSI.Util.HTTP import urlsplit
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.BackendManager import BackendExtender
-from OPSI.Backend.Cache import ClientCacheBackend
 from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker
 
 from ocdlib.Config import getLogFormat, Config
@@ -44,6 +42,8 @@ from ocdlib.State import State
 from ocdlib.Events import SyncCompletedEventGenerator, getEventGenerators
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.Timeline import Timeline
+
+from ocdlibnonfree.CacheBackend import ClientCacheBackend
 
 logger = Logger()
 config = Config()
@@ -164,11 +164,10 @@ class CacheService(threading.Thread):
 				masterOnly=True,
 				productIds=productIds)
 		if not clientToDepotservers:
-			#Do not raise Exception and try to continue without checking depot
+			# Do not raise Exception and try to continue without checking depot
 			depotId = None
-			#raise Exception(u"Failed to get depot config from service")
 		else:
-			depotId = [ clientToDepotservers[0]['depotId'] ]
+			depotId = [clientToDepotservers[0]['depotId']]
 
 		productOnDepots = {
 			productOnDepot.productId: productOnDepot
@@ -221,7 +220,6 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 
 			self._configCacheDir = os.path.join(config.get('cache_service', 'storage_dir'), 'config')
 			self._opsiModulesFile = os.path.join(self._configCacheDir, 'cached_modules')
-			self._opsiVersionFile = os.path.join(self._configCacheDir, 'cached_version')
 			self._opsiPasswdFile = os.path.join(self._configCacheDir, 'cached_passwd')
 			self._auditHardwareConfigFile = os.path.join(self._configCacheDir, 'cached_opsihwaudit.json')
 
@@ -266,7 +264,6 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 
 		backendArgs = {
 			'opsiModulesFile': self._opsiModulesFile,
-			'opsiVersionFile': self._opsiVersionFile,
 			'opsiPasswdFile': self._opsiPasswdFile,
 			'auditHardwareConfigFile': self._auditHardwareConfigFile,
 			'depotId': depotId,
@@ -746,8 +743,13 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					maxFreeableSize += productDirSizes[product]
 
 			if maxFreeableSize < neededSpace:
-				raise Exception(u"Needed space: %0.3f MB, maximum freeable space: %0.3f MB" \
-							% ( (float(neededSpace)/(1024*1024)), (float(maxFreeableSize)/(1024*1024)) ) )
+				raise Exception(
+					u"Needed space: %0.3f MB, maximum freeable space: %0.3f MB" % (
+						float(neededSpace) / (1024 * 1024),
+						float(maxFreeableSize) / (1024 * 1024)
+					)
+				)
+
 			freedSpace = 0
 			while freedSpace < neededSpace:
 				deleteProduct = None
@@ -994,7 +996,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			return getRepository(config.get('depot_server', 'url'), username=depotServerUsername, password=depotServerPassword, mount=False)
 
 	def _cacheProduct(self, productId, neededProducts):
-		logger.notice(u"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)" % (productId,  self._maxBandwidth, self._dynamicBandwidth))
+		logger.notice(u"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)" % (productId, self._maxBandwidth, self._dynamicBandwidth))
 		self._setProductCacheState(productId, 'started', time.time())
 		self._setProductCacheState(productId, 'completed', None, updateProductOnClient=False)
 		self._setProductCacheState(productId, 'failure', None, updateProductOnClient=False)
@@ -1028,30 +1030,45 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					fileCount += 1
 					productSize += int(value['size'])
 
-			logger.info(u"Product '%s' contains %d files with a total size of %0.3f MB" \
-				% (productId, fileCount, (float(productSize)/(1024*1024))))
+			logger.info(
+				u"Product '%s' contains %d files with a total size of %0.3f MB" % (
+					productId, fileCount, float(productSize) / (1024 * 1024)
+				)
+			)
 
 			productCacheDirSize = 0
 			if self._productCacheMaxSize > 0:
 				productCacheDirSize = System.getDirectorySize(self._productCacheDir)
-				if (productCacheDirSize + productSize > self._productCacheMaxSize):
-					logger.info(u"Product cache dir sizelimit of %0.3f MB exceeded. Current size: %0.3f MB, space needed for product '%s': %0.3f MB" \
-							% ( (float(self._productCacheMaxSize)/(1024*1024)), (float(productCacheDirSize)/(1024*1024)), \
-							    productId, (float(productSize)/(1024*1024)) ) )
+				if productCacheDirSize + productSize > self._productCacheMaxSize:
+					logger.info(
+						u"Product cache dir sizelimit of %0.3f MB exceeded. Current size: %0.3f MB, space needed for product '%s': %0.3f MB" % (
+							float(self._productCacheMaxSize) / (1024 * 1024),
+							float(productCacheDirSize) / (1024 * 1024),
+							productId,
+							float(productSize) / (1024 * 1024)
+						)
+					)
 					freeSpace = self._productCacheMaxSize - productCacheDirSize
 					neededSpace = productSize - freeSpace + 1024
 					self._freeProductCacheSpace(neededSpace=neededSpace, neededProducts=neededProducts)
 					productCacheDirSize = System.getDirectorySize(self._productCacheDir)
 
 			diskFreeSpace = System.getDiskSpaceUsage(self._productCacheDir)['available']
-			if (diskFreeSpace < productSize + 500*1024*1024):
-				raise Exception(u"Only %0.3f MB free space available on disk, refusing to cache product files" \
-							% (float(diskFreeSpace)/(1024*1024)))
+			if diskFreeSpace < productSize + 500 * 1024 * 1024:
+				raise Exception(
+					u"Only %0.3f MB free space available on disk, refusing to cache product files" % (
+						float(diskFreeSpace) / (1024 * 1024)
+					)
+				)
 
 			eventId = timeline.addEvent(
 				title=u"Cache product %s" % productId,
-				description=u"Caching product '%s' of size %0.2f MB\nmax bandwidth: %s, dynamic bandwidth: %s" \
-					% (productId,  (float(productSize)/(1024*1024)), self._maxBandwidth, self._dynamicBandwidth),
+				description=u"Caching product '%s' of size %0.2f MB\nmax bandwidth: %s, dynamic bandwidth: %s" % (
+					productId,
+					float(productSize) / (1024 * 1024),
+					self._maxBandwidth,
+					self._dynamicBandwidth
+				),
 				category=u'product_caching',
 				durationEvent=True
 			)
@@ -1099,5 +1116,5 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			except Exception as e:
 				logger.warning(e)
 
-		if exception:
+		if exception is not None:
 			raise exception
