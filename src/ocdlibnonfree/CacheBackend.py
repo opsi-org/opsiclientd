@@ -22,6 +22,7 @@ import collections
 import inspect
 import json
 import time
+from types import MethodType
 
 from OPSI.Backend.Backend import (
 	getArgAndCallString, Backend, ConfigDataBackend, ModificationTrackingBackend)
@@ -335,7 +336,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 				logger.debug2(u"Adding method '%s' to execute on work backend" % methodName)
 				exec(u'def %s(self, %s): return self._executeMethod("%s", %s)' % (methodName, argString, methodName, callString))
-				setattr(self, methodName, new.instancemethod(eval(methodName), self, self.__class__))
+				setattr(self, methodName, MethodType(eval(methodName), self))
 
 	def _cacheBackendInfo(self, backendInfo):
 		with codecs.open(self._opsiModulesFile, 'w', 'utf-8') as f:
