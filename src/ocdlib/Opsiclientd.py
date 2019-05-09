@@ -23,7 +23,7 @@ This is where all the parts come together.
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
 :author: Erol Ueluekmen <e.ueluekmen@uib.de>
-@author: Niko Wenselowski <n.wenselowski@uib.de>
+:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
@@ -34,7 +34,7 @@ from twisted.internet import reactor
 
 from OPSI import System
 from OPSI.Logger import Logger
-from OPSI.Types import forceInt, forceUnicode
+from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 
@@ -92,7 +92,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._blockLoginEventId = None
 
 	def setBlockLogin(self, blockLogin):
-		self._blockLogin = bool(blockLogin)
+		self._blockLogin = forceBool(blockLogin)
 		logger.notice(u"Block login now set to '%s'" % self._blockLogin)
 
 		if (self._blockLogin):
