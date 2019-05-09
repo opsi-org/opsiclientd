@@ -107,6 +107,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 			raise Exception(u"Invalid credentials")
 		except Exception as e:
 			raise OpsiAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
+
 		return result
 
 	def _checkRpcs(self, result):
@@ -150,6 +151,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 			for eventGenerator in getEventGenerators(generatorClass=SwOnDemandEventGenerator):
 				eventGenerator.createAndFireEvent()
 			self._fireEvent = False
+
 		return result
 
 
