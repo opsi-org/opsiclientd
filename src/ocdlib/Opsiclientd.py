@@ -2,7 +2,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
+# Copyright (C) 2010-2019 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -23,6 +23,7 @@ This is where all the parts come together.
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
 :author: Erol Ueluekmen <e.ueluekmen@uib.de>
+:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
@@ -34,7 +35,7 @@ from twisted.internet import reactor
 from OPSI import System
 from OPSI.Logger import Logger
 from OPSI.Object import *
-from OPSI.Types import forceInt, forceUnicode
+from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Util import *
 from OPSI.Util.Message import *
 
@@ -94,7 +95,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._blockLoginEventId = None
 
 	def setBlockLogin(self, blockLogin):
-		self._blockLogin = bool(blockLogin)
+		self._blockLogin = forceBool(blockLogin)
 		logger.notice(u"Block login now set to '%s'" % self._blockLogin)
 
 		if (self._blockLogin):
