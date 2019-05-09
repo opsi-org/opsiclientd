@@ -58,7 +58,7 @@ try:
 except ImportError:
 	__fullversion__ = False
 
-if os.name == 'nt':
+if RUNNING_ON_WINDOWS:
 	from ocdlib.Windows import *
 elif os.name == 'posix':
 	from ocdlib.Posix import *

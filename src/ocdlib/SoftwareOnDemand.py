@@ -27,8 +27,6 @@ Self-service functionality.
 :license: GNU Affero General Public License version 3
 """
 
-import os
-
 from twisted.internet import defer
 
 from OPSI.Exceptions import OpsiAuthenticationError
@@ -40,6 +38,7 @@ from OPSI.Service.Resource import ResourceOpsi
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.Config import getLogFormat, Config
 from ocdlib.Events import SwOnDemandEventGenerator, getEventGenerators
+from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
 logger = Logger()
 config = Config()
@@ -96,7 +95,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
 				return result
 
-			if os.name == 'nt':
+			if RUNNING_ON_WINDOWS:
 				if self.session.user.lower() == 'administrator':
 					import win32security
 					# The LogonUser function will raise an Exception on logon failure
