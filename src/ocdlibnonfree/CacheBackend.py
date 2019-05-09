@@ -345,7 +345,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			for (module, state) in modules.items():
 				if helpermodules in ('customer', 'expires'):
 					continue
-				if helpermodules.has_key(module):
+				if module in helpermodules:
 					state = helpermodules[module]
 				else:
 					if state:
