@@ -131,7 +131,7 @@ class ServiceConnection(object):
 		self.cancelled = True
 		self.running = False
 		for i in range(10):
-			if not self.isAlive():
+			if not self.is_alive():
 				break
 			self.terminate()
 			time.sleep(0.5)
@@ -171,7 +171,7 @@ class ServiceConnection(object):
 				logger.debug(u"ServiceConnectionThread started")
 				while serviceConnectionThread.running and (timeout > 0):
 					logger.debug(u"Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d) " \
-						% (timeout, serviceConnectionThread.isAlive(), cancellableAfter))
+						% (timeout, serviceConnectionThread.is_alive(), cancellableAfter))
 					self.connectionTimeoutChanged(timeout)
 					if cancellableAfter > 0:
 						cancellableAfter -= 1
@@ -381,7 +381,7 @@ class ServiceConnectionThread(KillableThread):
 		self.cancelled = True
 		self.running = False
 		for i in range(10):
-			if not self.isAlive():
+			if not self.is_alive():
 				break
 			self.terminate()
 			time.sleep(0.5)
