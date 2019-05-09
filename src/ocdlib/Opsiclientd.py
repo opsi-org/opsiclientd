@@ -35,6 +35,7 @@ from twisted.internet import reactor
 from OPSI import System
 from OPSI.Logger import Logger
 from OPSI.Types import forceInt, forceUnicode
+from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 
 from ocdlib import __version__
