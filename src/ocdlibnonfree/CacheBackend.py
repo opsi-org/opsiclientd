@@ -23,7 +23,8 @@ import inspect
 import json
 import time
 
-from OPSI.Backend.Backend import ConfigDataBackend, ModificationTrackingBackend
+from OPSI.Backend.Backend import (
+	getArgAndCallString, Backend, ConfigDataBackend, ModificationTrackingBackend)
 from OPSI.Backend.Replicator import BackendReplicator
 from OPSI.Exceptions import BackendConfigurationError, BackendUnaccomplishableError
 from OPSI.Logger import Logger
