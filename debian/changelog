@@ -1,3 +1,10 @@
+opsiclientd (4.0.97) stable; urgency=medium
+
+  * Extended KIOSK Mode: Using 'addConfigStateDefaults' in backend_options.
+  * Deactivating TrustedInstaller Detection: Don't work properly and crashes on some Windows10 Installations.
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 26 Jun 2019 14:57:56 +0200
+
 opsiclientd (4.0.96) stable; urgency=medium
 
   * depot.user config fix
