@@ -542,8 +542,19 @@ class ConfigImplementation(object):
 		if not configService:
 			raise Exception(u"Config service is undefined")
 
+		query = {
+			"objectId": self.get('global', 'host_id'),
+			"configId": [
+				'clientconfig.configserver.url',
+				'clientconfig.depot.drive',
+				'clientconfig.depot.id',
+				'clientconfig.depot.user',
+				'opsiclientd.*'  # everything starting with opsiclientd.
+			]
+		}
+
 		configService.backend_setOptions({"addConfigStateDefaults": True})
-		for configState in configService.configState_getObjects(objectId=self.get('global', 'host_id')):
+		for configState in configService.configState_getObjects(**query):
 			logger.info(u"Got config state from service: configId %s, values %s" % (configState.configId, configState.values))
 
 			if not configState.values:
