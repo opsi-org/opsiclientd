@@ -1035,6 +1035,8 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['actionProcessorDesktop'] = unicode(value).lower()
 					elif (key == 'action_processor_timeout'):
 						eventConfigs[eventConfigId]['actionProcessorTimeout'] = int(value)
+					elif (key == 'trusted_installer_detection'):
+						eventConfigs[eventConfigId]['trustedInstallerDetection'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'shutdown_notifier_command'):
 						eventConfigs[eventConfigId]['shutdownNotifierCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'shutdown_notifier_desktop'):
