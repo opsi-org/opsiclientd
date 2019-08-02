@@ -542,11 +542,23 @@ class ConfigImplementation(object):
 		if not configService:
 			raise Exception(u"Config service is undefined")
 
+		query = {
+			"objectId": self.get('global', 'host_id'),
+			"configId": [
+				'clientconfig.configserver.url',
+				'clientconfig.depot.drive',
+				'clientconfig.depot.id',
+				'clientconfig.depot.user',
+				'opsiclientd.*'  # everything starting with opsiclientd.
+			]
+		}
+
 		configService.backend_setOptions({"addConfigStateDefaults": True})
-		for configState in configService.configState_getObjects(objectId=self.get('global', 'host_id')):
+		for configState in configService.configState_getObjects(**query):
 			logger.info(u"Got config state from service: configId %s, values %s" % (configState.configId, configState.values))
 
 			if not configState.values:
+				logger.debug(u"No values - skipping {0!r}".format(configState.configId))
 				continue
 
 			if configState.configId == u'clientconfig.configserver.url':
@@ -560,7 +572,8 @@ class ConfigImplementation(object):
 			elif configState.configId.startswith(u'opsiclientd.'):
 				try:
 					parts = configState.configId.lower().split('.')
-					if (len(parts) < 3):
+					if len(parts) < 3:
+						logger.debug(u"Expected at least 3 parts in {0!r} - skipping.".format(configState.configId))
 						continue
 
 					self.set(section=parts[1], option=parts[2], value=configState.values[0])
