@@ -1059,6 +1059,8 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['excludeProductGroupIds'] = forceList(value)
 					elif (key == 'include_product_group_ids'):
 						eventConfigs[eventConfigId]['includeProductGroupIds'] = forceList(value)
+					elif (key == 'working_window'):
+						eventConfigs[eventConfigId]['workingWindow'] = unicode(value)
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
 				except Exception, e:
