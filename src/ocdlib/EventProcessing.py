@@ -1142,7 +1142,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		timelineEventId = None
 		try:
 			if self.event.eventConfig.workingWindow:
-				if not inWorkingWindow():
+				if not self.inWorkingWindow():
 					return
 			logger.notice(u"============= EventProcessingThread for occurrcence of event '%s' started =============" % self.event.eventConfig.getId())
 			timelineEventId = timeline.addEvent(
