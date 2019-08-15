@@ -1122,8 +1122,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						second=0,
 						microsecond=0)
 			end = datetime.today().replace(
-						hour=int(s_hour),
-						minute=int(s_minute),
+						hour=int(e_hour),
+						minute=int(e_minute),
 						second=0,
 						microsecond=0)
 			if end < start:
@@ -1135,7 +1135,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				logger.info("We are not configured working window, stopping Event")
 				return False
 		except Exception as e:
-			logger.error("Working Window processing failed: {0}".format(forceUnicode(e)))
+			logger.error("Working Window processing failed:")
+			logger.logException(e)
 			return True
 
 	def run(self):
