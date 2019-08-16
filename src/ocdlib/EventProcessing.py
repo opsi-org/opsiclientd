@@ -31,7 +31,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Imports
 import sys, os, shutil, filecmp, base64
-import datetime as dt
+from datetime import datetime as dt
+from datetime import timedelta
 from hashlib import md5
 
 # Twisted imports
@@ -1116,18 +1117,19 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			starttime, endtime = self.event.eventConfig.workingWindow.split("-")
 			s_hour, s_minute = starttime.split(":")
 			e_hour, e_minute = endtime.split(":")
-			start = dt.datetime.today().replace(
+			logger.info("We have now: {0}".format(dt.now()))
+			start = dt.today().replace(
 						hour=int(s_hour),
 						minute=int(s_minute),
 						second=0,
 						microsecond=0)
-			end = dt.datetime.today().replace(
+			end = dt.today().replace(
 						hour=int(e_hour),
 						minute=int(e_minute),
 						second=0,
 						microsecond=0)
 			if end < start:
-				end = end + dt.timedelta(days=1)
+				end = end + timedelta(days=1)
 			if start < dt.datetime.now() < end:
 				logger.info("We are in configured working window")
 				return True
