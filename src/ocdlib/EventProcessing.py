@@ -1130,7 +1130,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						microsecond=0)
 			if end < start:
 				end = end + timedelta(days=1)
-			if start < dt.datetime.now() < end:
+			if start < dt.now() < end:
 				logger.info("We are in configured working window")
 				return True
 			else:
