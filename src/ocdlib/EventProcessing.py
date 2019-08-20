@@ -1117,7 +1117,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			starttime, endtime = self.event.eventConfig.workingWindow.split("-")
 			s_hour, s_minute = starttime.split(":")
 			e_hour, e_minute = endtime.split(":")
-			logger.info("We have now: {0}".format(dt.now()))
+			now = dt.now()
+			logger.notice("We have now: {0}".format(now))
 			start = dt.today().replace(
 						hour=int(s_hour),
 						minute=int(s_minute),
@@ -1130,14 +1131,16 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						microsecond=0)
 			if end < start:
 				end = end + timedelta(days=1)
-			if start < dt.now() < end:
-				logger.info("We are in configured working window")
+				start = start - timedelta(days=1)
+			if start < now() < end:
+				logger.notice("Working Window configuration starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
+				logger.notice("We are in the configured working window")
 				return True
 			else:
-				logger.info("We are not configured working window, stopping Event")
+				logger.notice("We are not in the configured working window, stopping Event")
 				return False
 		except Exception as e:
-			logger.error("Working Window processing failed:")
+			logger.warning("Working Window processing failed: starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
 			logger.logException(e)
 			return True
 
