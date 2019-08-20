@@ -1129,9 +1129,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						minute=int(e_minute),
 						second=0,
 						microsecond=0)
-			if end < start:
-				end = end + timedelta(days=1)
+			if now > start:
 				start = start - timedelta(days=1)
+			elif end < start:
+				end = end + timedelta(days=1)
+
 			if start < now < end:
 				logger.notice("Working Window configuration starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
 				logger.notice("We are in the configured working window")
