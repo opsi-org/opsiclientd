@@ -138,7 +138,7 @@ setup_options = {
 	"author_email": "info@uib.de",
 	"license": "GNU Affero General Public License Version 3 (AGPLv3)",
     "install_requires": [
-        "python-opsi >= 4.1.1.36, <= 4.2",
+        "python-opsi >= 4.1.1.76, <= 4.2",
         "cryptography",
     ],
     "extras_require": {
