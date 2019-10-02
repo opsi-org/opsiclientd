@@ -54,18 +54,19 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 
 	def _getAllowedMethods(self):
 		return [
-			"fireEvent_software_on_demand",
-			"getGeneralConfigValue",
-			"objectToGroup_getObjects",
-			"getDepotId",
 			"backend_setOptions",
-			"productOnDepot_getObjects",
-			"productDependency_getObjects",
-			"product_getObjects",
-			"productOnClient_getObjects",
-			"setProductActionRequestWithDependencies",
-			"hostControlSafe_fireEvent",
+			"configState_getObjects",
+			"fireEvent_software_on_demand",
+			"getDepotId",
+			"getGeneralConfigValue",
 			"getKioskProductInfosForClient",
+			"hostControlSafe_fireEvent",
+			"objectToGroup_getObjects",
+			"product_getObjects",
+			"productDependency_getObjects",
+			"productOnClient_getObjects",
+			"productOnDepot_getObjects",
+			"setProductActionRequestWithDependencies",
 		]
 
 	def _getCallInstance(self, result):
