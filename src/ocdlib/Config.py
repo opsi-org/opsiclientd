@@ -460,6 +460,7 @@ class ConfigImplementation(object):
 	def getConfigServiceUrls(self, allowTemporaryConfigServiceUrls=True):
 		if allowTemporaryConfigServiceUrls and self._temporaryConfigServiceUrls:
 			return self._temporaryConfigServiceUrls
+
 		return self.get('config_service', 'url')
 
 	def selectDepotserver(self, configService, event, productIds=[], cifsOnly=True, masterOnly=False):
@@ -493,22 +494,23 @@ class ConfigImplementation(object):
 		for configState in configStates:
 			if not configState.values or not configState.values[0]:
 				continue
-			if (configState.configId == 'opsiclientd.depot_server.url') and configState.values:
+
+			if configState.configId == 'opsiclientd.depot_server.url' and configState.values:
 				try:
 					depotUrl = forceUrl(configState.values[0])
 					self.set('depot_server', 'depot_id', u'')
 					self.set('depot_server', 'url', depotUrl)
 					logger.notice(u"Depot url was set to '%s' from configState %s" % (depotUrl, configState))
 					return
-				except Exception as e:
-					logger.error(u"Failed to set depot url from values %s in configState %s: %s" % (configState.values, configState, e))
-			elif (configState.configId == 'opsiclientd.depot_server.depot_id') and configState.values:
+				except Exception as error:
+					logger.error(u"Failed to set depot url from values %s in configState %s: %s" % (configState.values, configState, error))
+			elif configState.configId == 'opsiclientd.depot_server.depot_id' and configState.values:
 				try:
 					depotId = forceHostId(configState.values[0])
 					depotIds.append(depotId)
 					logger.notice(u"Depot was set to '%s' from configState %s" % (depotId, configState))
-				except Exception as e:
-					logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, e))
+				except Exception as error:
+					logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, error))
 			elif not masterOnly and (configState.configId == 'clientconfig.depot.dynamic') and configState.values:
 				dynamicDepot = forceBool(configState.values[0])
 			elif (configState.configId == 'clientconfig.depot.protocol') and configState.values and configState.values[0] and (configState.values[0] == 'webdav'):
@@ -525,7 +527,7 @@ class ConfigImplementation(object):
 		if not depotIds:
 			clientToDepotservers = configService.configState_getClientToDepotserver(
 				clientIds=[self.get('global', 'host_id')],
-				masterOnly=(not dynamicDepot),
+				masterOnly=bool(not dynamicDepot),
 				productIds=productIds
 			)
 			if not clientToDepotservers:
@@ -551,23 +553,27 @@ class ConfigImplementation(object):
 		if dynamicDepot:
 			if alternativeDepots:
 				logger.info(u"Got alternative depots for products: %s" % productIds)
-				for i, depot in enumerate(alternativeDepots, start=1):
-					logger.info(u"{:d}. alternative depot is {}", i, depot.id)
+				for index, depot in enumerate(alternativeDepots, start=1):
+					logger.info(u"{:d}. alternative depot is {}", index, depot.id)
 
+				defaultInterface = None
 				try:
-					defaultInterface = None
 					networkInterfaces = System.getNetworkInterfaces()
 					if not networkInterfaces:
 						raise Exception(u"No network interfaces found")
+
 					for networkInterface in networkInterfaces:
 						logger.info(u"Found network interface: %s" % networkInterface)
+
 					defaultInterface = networkInterfaces[0]
 					for networkInterface in networkInterfaces:
-						if (networkInterface.ipAddressList.ipAddress == '0.0.0.0'):
+						if networkInterface.ipAddressList.ipAddress == '0.0.0.0':
 							continue
+
 						if networkInterface.gatewayList.ipAddress:
 							defaultInterface = networkInterface
 							break
+
 					clientConfig = {
 						"clientId": self.get('global', 'host_id'),
 						"opsiHostKey": self.get('global', 'opsi_host_key'),
@@ -581,14 +587,19 @@ class ConfigImplementation(object):
 					depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()
 					logger.debug2(u"depotSelectionAlgorithm:\n%s" % depotSelectionAlgorithm)
 					exec(depotSelectionAlgorithm)
-					selectedDepot = selectDepot(clientConfig=clientConfig, masterDepot=masterDepot, alternativeDepots=alternativeDepots)
+					selectedDepot = selectDepot(
+						clientConfig=clientConfig,
+						masterDepot=masterDepot,
+						alternativeDepots=alternativeDepots
+					)
 					if not selectedDepot:
 						selectedDepot = masterDepot
-				except Exception as e:
-					logger.logException(e)
-					logger.error(u"Failed to select depot: %s" % e)
+				except Exception as error:
+					logger.logException(error)
+					logger.error(u"Failed to select depot: %s" % error)
 			else:
 				logger.info(u"No alternative depot for products: %s" % productIds)
+
 		logger.notice(u"Selected depot is: %s" % selectedDepot)
 		self.set('depot_server', 'depot_id', selectedDepot.id)
 		if (depotProtocol == 'webdav') and not cifsOnly:
