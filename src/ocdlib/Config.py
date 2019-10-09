@@ -214,8 +214,8 @@ class ConfigImplementation(object):
 			logger.warning(u"Refusing to set empty value for config value '%s' of section '%s'" % (option, section))
 			return
 
-		if (option == 'opsi_host_key'):
-			if (len(value) != 32):
+		if option == 'opsi_host_key':
+			if len(value) != 32:
 				raise ValueError("Bad opsi host key, length != 32")
 			logger.addConfidentialString(value)
 		elif option in ('depot_id', 'host_id'):
