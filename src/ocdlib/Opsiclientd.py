@@ -61,10 +61,6 @@ try:
 except ImportError:
 	__fullversion__ = False
 
-if RUNNING_ON_WINDOWS:
-	from ocdlib.Windows import *
-elif os.name == 'posix':
-	from ocdlib.Posix import *
 
 logger = Logger()
 config = Config()
