@@ -47,11 +47,6 @@ from ocdlib.Localization import _, setLocaleDir
 from ocdlib.Config import getLogFormat, Config
 from ocdlib.Timeline import Timeline
 
-if (os.name == 'nt'):
-	from ocdlib.Windows import *
-if (os.name == 'posix'):
-	from ocdlib.Posix import *
-
 try:
 	from ocdlibnonfree import __fullversion__
 except Exception:

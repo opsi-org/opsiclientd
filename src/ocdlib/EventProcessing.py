@@ -46,10 +46,6 @@ from ocdlib.Localization import _
 from ocdlib.Config import getLogFormat, Config
 from ocdlib.Timeline import Timeline
 
-if (os.name == 'nt'):
-	from ocdlib.Windows import *
-elif (os.name == 'posix'):
-	from ocdlib.Posix import *
 
 logger = Logger()
 config = Config()
