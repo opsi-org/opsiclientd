@@ -1,12 +1,14 @@
-#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Copyright 2015-2019 uib GmbH
 # http://www.uib.de/
 # All rights reserved.
 
+from __future__ import absolute_import
+
 import os
-from helper import workInTemporaryDirectory
+
+from .helper import workInTemporaryDirectory
 
 import pytest
 
