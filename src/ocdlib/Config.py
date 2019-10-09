@@ -195,6 +195,9 @@ class ConfigImplementation(object):
 			section = 'global'
 
 		section = forceUnicodeLower(section).strip()
+		if section == 'system':
+			return
+
 		option = forceUnicodeLower(option).strip()
 		if isinstance(value, (str, unicode)):
 			value = forceUnicode(value).strip()
@@ -218,9 +221,6 @@ class ConfigImplementation(object):
 
 		if option in ('depot_id', 'host_id'):
 			value = forceHostId(value.replace('_', '-'))
-
-		if section in ('system',):
-			return
 
 		if option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port', 'max_authentication_failures'):
 			value = forceInt(value)
