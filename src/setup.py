@@ -188,7 +188,7 @@ setup_options = {
 	"license": "GNU Affero General Public License Version 3 (AGPLv3)",
     "install_requires": [
         "python-opsi >= 4.1.1.36, <= 4.2",
-        "cryptography",
+        "cryptography >= 1.0",
         "tornado == 4.3",  # for Tornado twisted bridge
     ],
     "extras_require": {

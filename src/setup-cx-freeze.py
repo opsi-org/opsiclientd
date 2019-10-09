@@ -39,6 +39,7 @@ buildOptions = {
         "ocdlib",
         "apsw",
         "csv",
+        "cryptography",
         "encodings",
         "duplicity",
         "twisted",
@@ -69,24 +70,19 @@ if distribution.lower().strip() == 'debian' and version.startswith('8'):
     # Required by Debian 8 - see https://github.com/pyca/cryptography/issues/2039#issuecomment-132225074
     buildOptions['packages'].append('cffi')
     buildOptions['packages'].append('Crypto.Cipher.AES')
-    buildOptions['packages'].append('cryptography')
 elif distribution.lower().strip() == 'debian' and version.startswith('9'):
     buildOptions['packages'].append('cffi')
     buildOptions['packages'].append('Crypto.Cipher.AES')
-    buildOptions['packages'].append('cryptography')
 elif distribution.lower().strip() == 'suse linux enterprise server' and version.startswith('12'):
     buildOptions['packages'].append('distutils')
     buildOptions['packages'].append('cffi')
     buildOptions['packages'].append('Crypto.Cipher.AES')
-    buildOptions['packages'].append('cryptography')
 elif distribution.lower().strip() == 'opensuse' and version.startswith('42'):
     buildOptions['packages'].append('cffi')
     buildOptions['packages'].append('Crypto.Cipher.AES')
-    buildOptions['packages'].append('cryptography')
 elif distribution.lower().strip() == 'ubuntu' and version.startswith('16.'):
     buildOptions['packages'].append('cffi')
     buildOptions['packages'].append('Crypto.Cipher.AES')
-    buildOptions['packages'].append('cryptography')
     buildOptions['packages'].append('pkg_resources._vendor.packaging')
     buildOptions['packages'].append('pkg_resources._vendor.six')
 
