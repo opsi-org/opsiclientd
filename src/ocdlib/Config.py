@@ -218,17 +218,13 @@ class ConfigImplementation(object):
 			if (len(value) != 32):
 				raise ValueError("Bad opsi host key, length != 32")
 			logger.addConfidentialString(value)
-
-		if option in ('depot_id', 'host_id'):
+		elif option in ('depot_id', 'host_id'):
 			value = forceHostId(value.replace('_', '-'))
-
-		if option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port', 'max_authentication_failures'):
+		elif option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port', 'max_authentication_failures'):
 			value = forceInt(value)
-
-		if option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active', 'sync_time_from_service'):
+		elif option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active', 'sync_time_from_service'):
 			value = forceBool(value)
-
-		if option in ('exclude_product_group_ids', 'include_product_group_ids'):
+		elif option in ('exclude_product_group_ids', 'include_product_group_ids'):
 			if not isinstance(value, list):
 				value = [ x.strip() for x in value.split(",") ]
 			else:
