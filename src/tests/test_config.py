@@ -47,11 +47,7 @@ def cd(path):
 
 @pytest.fixture
 def config():
-    config = Config()
-    try:
-        yield config
-    finally:
-        config._reset()
+    yield Config()
 
 
 def testGettingUnknownSectionFails(config):
