@@ -8,8 +8,6 @@ import shutil
 import tempfile
 from contextlib import contextmanager
 
-from ocdlib.Config import ConfigImplementation as Config
-
 import pytest
 
 
@@ -43,11 +41,6 @@ def cd(path):
         yield
     finally:
         os.chdir(old_dir)
-
-
-@pytest.fixture
-def config():
-    yield Config()
 
 
 def testGettingUnknownSectionFails(config):
