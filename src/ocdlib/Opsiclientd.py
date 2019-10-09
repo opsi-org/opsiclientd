@@ -32,6 +32,10 @@ import os
 import sys
 from contextlib import contextmanager
 
+# Import the ControlServer first because this module installs
+# the tornado-bridge for twisted.
+from ocdlib.ControlServer import ControlServer
+
 from OPSI import System
 from OPSI.Logger import Logger
 from OPSI.Types import forceBool, forceInt, forceUnicode
@@ -41,7 +45,6 @@ from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 from ocdlib import __version__
 from ocdlib.Config import Config, getLogFormat
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
-from ocdlib.ControlServer import ControlServer
 from ocdlib.Events import *
 from ocdlib.EventProcessing import EventProcessingThread
 from ocdlib.Localization import _, setLocaleDir
