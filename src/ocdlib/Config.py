@@ -30,9 +30,10 @@ import re
 import sys
 
 from OPSI.Logger import Logger, LOG_NOTICE
-from OPSI.Types import (forceBool, forceFilename, forceInt, forceHostId,
-	forceList, forceProductIdList, forceUnicode, forceUnicodeLower,
-	forceUnicodeList, forceUrl)
+from OPSI.Types import (
+	forceBool, forceFilename, forceInt, forceHostId, forceList,
+	forceProductIdList, forceUnicode, forceUnicodeLower, forceUnicodeList,
+	forceUrl)
 from OPSI.Util import objectToBeautifiedText, blowfishDecrypt
 from OPSI.Util.File import IniFile
 from OPSI import System
@@ -173,7 +174,7 @@ class ConfigImplementation(object):
 	def getDict(self):
 		return self._config
 
-	def get(self, section, option, raw = False):
+	def get(self, section, option, raw=False):
 		if not section:
 			section = 'global'
 		section = unicode(section).strip().lower()
@@ -226,7 +227,7 @@ class ConfigImplementation(object):
 			value = forceBool(value)
 		elif option in ('exclude_product_group_ids', 'include_product_group_ids'):
 			if not isinstance(value, list):
-				value = [ x.strip() for x in value.split(",") ]
+				value = [x.strip() for x in value.split(",")]
 			else:
 				value = forceList(value)
 
@@ -278,13 +279,13 @@ class ConfigImplementation(object):
 					string = self.replace(newString, escaped)
 		return forceUnicode(string)
 
-	def readConfigFile(self, keepLog = False):
+	def readConfigFile(self, keepLog=False):
 		''' Get settings from config file '''
 		logger.notice(u"Trying to read config from file: '%s'" % self.get('global', 'config_file'))
 
 		try:
 			# Read Config-File
-			config = IniFile(filename = self.get('global', 'config_file'), raw = True).parse()
+			config = IniFile(filename=self.get('global', 'config_file'), raw=True).parse()
 
 			# Read log settings early
 			if not keepLog and config.has_section('global'):
@@ -312,7 +313,7 @@ class ConfigImplementation(object):
 										os.unlink(dlf)
 									os.rename(slf, dlf)
 							except Exception as e:
-								logger.error(u"Failed to rename %s to %s: %s" % (slf, dlf, forceUnicode(e)) )
+								logger.error(u"Failed to rename %s to %s: %s" % (slf, dlf, forceUnicode(e)))
 						self.set('global', 'log_file', logFile)
 
 			# Process all sections
@@ -335,9 +336,9 @@ class ConfigImplementation(object):
 		logger.notice(u"Updating config file: '%s'" % self.get('global', 'config_file'))
 
 		try:
-			configFile = IniFile(filename = self.get('global', 'config_file'), raw = True)
+			configFile = IniFile(filename=self.get('global', 'config_file'), raw=True)
 			configFile.setKeepOrdering(True)
-			(config, comments) = configFile.parse(returnComments = True)
+			(config, comments) = configFile.parse(returnComments=True)
 			changed = False
 			for (section, values) in self._config.items():
 				if not isinstance(values, dict):
@@ -355,12 +356,14 @@ class ConfigImplementation(object):
 						value = u', '.join(forceUnicodeList(value))
 					else:
 						value = forceUnicode(value)
+
 					if not config.has_option(section, option) or (config.get(section, option) != value):
 						changed = True
 						config.set(section, option, value)
+
 			if changed:
 				# Write back config file if changed
-				configFile.generate(config, comments = comments)
+				configFile.generate(config, comments=comments)
 				logger.notice(u"Config file '%s' written" % self.get('global', 'config_file'))
 			else:
 				logger.notice(u"No need to write config file '%s', config file is up to date" % self.get('global', 'config_file'))
