@@ -8,7 +8,7 @@ import shutil
 import tempfile
 from contextlib import contextmanager
 
-from ocdlib.Config import Config
+from ocdlib.Config import ConfigImplementation as Config
 
 import pytest
 
