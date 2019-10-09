@@ -178,9 +178,9 @@ class ConfigImplementation(object):
 			section = 'global'
 		section = unicode(section).strip().lower()
 		option = unicode(option).strip().lower()
-		if not self._config.has_key(section):
+		if section not in self._config:
 			raise ValueError(u"No such config section: %s" % section)
-		if not self._config[section].has_key(option):
+		if option not in self._config[section]:
 			raise ValueError(u"No such config option in section '%s': %s" % (section, option))
 
 		value = self._config[section][option]
@@ -234,8 +234,9 @@ class ConfigImplementation(object):
 			else:
 				value = forceList(value)
 
-		if not self._config.has_key(section):
+		if section not in self._config:
 			self._config[section] = {}
+
 		self._config[section][option] = value
 
 		if (section == 'config_service') and (option == 'url'):
