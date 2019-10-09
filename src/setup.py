@@ -48,7 +48,7 @@ def tree(dst, src):
 
 		if not newfiles:
 			continue
-		found_files.append( (os.path.normpath(os.path.join(dst, root)), newfiles) )
+		found_files.append((os.path.normpath(os.path.join(dst, root)), newfiles))
 
 	return found_files
 
@@ -75,15 +75,15 @@ class Target:
 
 opsiclientdDescription = "opsi client daemon"
 packages = ["ocdlib"]
-excludes = ["pywin", "pywin.debugger", "pywin.debugger.dbgcon",
-	"pywin.dialogs", "pywin.dialogs.list",
-	"Tkconstants", "Tkinter", "tcl", "_imagingtk",
+excludes = [
+	"pywin", "pywin.debugger", "pywin.debugger.dbgcon", "pywin.dialogs",
+	"pywin.dialogs.list", "Tkconstants", "Tkinter", "tcl", "_imagingtk",
 	"PIL._imagingtk", "ImageTk", "PIL.ImageTk", "FixTk"
 ]
-#includes = ["_cffi_backend","wmi","csv"]
-includes = ["_cffi_backend","wmi","csv","appdirs","packaging",
-            "packaging.version","packaging.specifiers",
-           "packaging.requirements"]
+includes = [
+	"_cffi_backend", "wmi", "csv", "appdirs", "packaging",
+	"packaging.version", "packaging.specifiers", "packaging.requirements"
+]
 
 if os.path.exists("ocdlibnonfree") and not buildFreeVersion:
 	packages.append("ocdlibnonfree")
@@ -99,26 +99,28 @@ if RUNS_ON_WINDOWS:
 	data_files = [
 		('VC90', glob.glob(r'C:\Windows\winsxs\x86_microsoft.vc90.crt_1fc8b3b9a1e18e3b_9.0.21022.8_none_bcb86ed6ac711f91\*.*')),
 		('VC90', glob.glob(r'C:\Windows\winsxs\Manifests\x86_microsoft.vc90.crt_1fc8b3b9a1e18e3b_9.0.21022.8_none_bcb86ed6ac711f91.manifest')),
-		('notifier',                      [	'windows\\helpers\\notifier\\event.ini',
-							'windows\\helpers\\notifier\\action.ini',
-							'windows\\helpers\\notifier\\userlogin.ini',
-							'windows\\helpers\\notifier\\wait_for_gui.ini',
-							'windows\\helpers\\notifier\\block_login.ini',
-							'windows\\helpers\\notifier\\popup.ini',
-							'windows\\helpers\\notifier\\shutdown.ini',
-							'windows\\helpers\\notifier\\event.bmp',
-							'windows\\helpers\\notifier\\action.bmp',
-							'windows\\helpers\\notifier\\userlogin.bmp',
-							'windows\\helpers\\notifier\\wait_for_gui.bmp',
-							'windows\\helpers\\notifier\\block_login.bmp',
-							'windows\\helpers\\notifier\\popup.bmp',
-							'windows\\opsi.ico' ]),
-		('opsiclientd',                   [	'windows\\opsiclientd.conf']),
-		('locale\\de\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_de.mo']),
-		('locale\\fr\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_fr.mo']),
-		('locale\\es\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_es.mo']),
-		('locale\\it\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_it.mo']),
-		('locale\\da\\LC_MESSAGES',       [     '..\\gettext\\opsiclientd_da.mo']),
+		('notifier', [
+			'windows\\helpers\\notifier\\event.ini',
+			'windows\\helpers\\notifier\\action.ini',
+			'windows\\helpers\\notifier\\userlogin.ini',
+			'windows\\helpers\\notifier\\wait_for_gui.ini',
+			'windows\\helpers\\notifier\\block_login.ini',
+			'windows\\helpers\\notifier\\popup.ini',
+			'windows\\helpers\\notifier\\shutdown.ini',
+			'windows\\helpers\\notifier\\event.bmp',
+			'windows\\helpers\\notifier\\action.bmp',
+			'windows\\helpers\\notifier\\userlogin.bmp',
+			'windows\\helpers\\notifier\\wait_for_gui.bmp',
+			'windows\\helpers\\notifier\\block_login.bmp',
+			'windows\\helpers\\notifier\\popup.bmp',
+			'windows\\opsi.ico'
+		]),
+		('opsiclientd', ['windows\\opsiclientd.conf']),
+		('locale\\de\\LC_MESSAGES', ['..\\gettext\\opsiclientd_de.mo']),
+		('locale\\fr\\LC_MESSAGES', ['..\\gettext\\opsiclientd_fr.mo']),
+		('locale\\es\\LC_MESSAGES', ['..\\gettext\\opsiclientd_es.mo']),
+		('locale\\it\\LC_MESSAGES', ['..\\gettext\\opsiclientd_it.mo']),
+		('locale\\da\\LC_MESSAGES', ['..\\gettext\\opsiclientd_da.mo']),
 		('opsiclientd\\extend.d', glob.glob('..\\extend.d\*.*')),
 	]
 else:
@@ -137,14 +139,14 @@ setup_options = {
 	"author": "uib GmbH <info@uib.de>",
 	"author_email": "info@uib.de",
 	"license": "GNU Affero General Public License Version 3 (AGPLv3)",
-    "install_requires": [
-        "python-opsi >= 4.1.1.36, <= 4.2",
-        "cryptography",
-    ],
-    "extras_require": {
-        'test': ['pytest >= 3.0', 'mock'],
-        'qa': ['pytest-cov >= 2.3.1', 'pylint', 'flake8']
-    },
+	"install_requires": [
+		"python-opsi >= 4.1.1.36, <= 4.2",
+		"cryptography",
+	],
+	"extras_require": {
+		'test': ['pytest >= 3.0', 'mock'],
+		'qa': ['pytest-cov >= 2.3.1', 'pylint', 'flake8']
+	},
 }
 
 if RUNS_ON_WINDOWS:
@@ -246,7 +248,7 @@ if RUNS_ON_WINDOWS:
 			"compressed": 1,
 			"optimize": 2,
 			"excludes": excludes,
-                        "includes": includes,
+			"includes": includes,
 			"packages": packages + ["OPSI", "twisted"]
 		}
 	}
