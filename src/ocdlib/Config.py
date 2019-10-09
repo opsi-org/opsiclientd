@@ -250,8 +250,8 @@ class ConfigImplementation(object):
 		if not section:
 			section = 'global'
 
-		section = forceUnicodeLower(section.strip())
-		option = forceUnicodeLower(option.strip())
+		section = forceUnicodeLower(section.strip()).lower()
+		option = forceUnicodeLower(option.strip()).lower()
 		if section not in self._config:
 			raise SectionNotFoundException(u"No such config section: {0}".format(section))
 		if option not in self._config[section]:
@@ -269,6 +269,9 @@ class ConfigImplementation(object):
 			section = 'global'
 
 		section = forceUnicodeLower(section).strip()
+		if section == 'system':
+			return
+
 		option = forceUnicodeLower(option).strip()
 		if isinstance(value, (str, unicode)):
 			value = forceUnicode(value).strip()
@@ -285,31 +288,25 @@ class ConfigImplementation(object):
 			logger.warning(u"Refusing to set empty value for config value '%s' of section '%s'" % (option, section))
 			return
 
-		if (option == 'opsi_host_key'):
-			if (len(value) != 32):
+		if option == 'opsi_host_key':
+			if len(value) != 32:
 				raise ValueError("Bad opsi host key, length != 32")
 			logger.addConfidentialString(value)
-
-		if option in ('depot_id', 'host_id'):
+		elif option in ('depot_id', 'host_id'):
 			value = forceHostId(value.replace('_', '-'))
-
-		if section in ('system',):
-			return
-
-		if option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port', 'max_authentication_failures'):
+		elif option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port', 'max_authentication_failures'):
 			value = forceInt(value)
-
-		if option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active', 'sync_time_from_service'):
+		elif option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active', 'sync_time_from_service'):
 			value = forceBool(value)
-
-		if option in ('exclude_product_group_ids', 'include_product_group_ids'):
+		elif option in ('exclude_product_group_ids', 'include_product_group_ids'):
 			if not isinstance(value, list):
-				value = [ x.strip() for x in value.split(",") ]
+				value = [x.strip() for x in value.split(",")]
 			else:
 				value = forceList(value)
 
 		if section not in self._config:
 			self._config[section] = {}
+
 		self._config[section][option] = value
 
 		if (section == 'config_service') and (option == 'url'):
@@ -432,9 +429,11 @@ class ConfigImplementation(object):
 						value = u', '.join(forceUnicodeList(value))
 					else:
 						value = forceUnicode(value)
+
 					if not config.has_option(section, option) or (config.get(section, option) != value):
 						changed = True
 						config.set(section, option, value)
+
 			if changed:
 				# Write back config file if changed
 				configFile.generate(config, comments=comments)

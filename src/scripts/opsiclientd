@@ -43,16 +43,13 @@ else:
 	raise NotImplementedError('Trying to run under an unsupported OS.')
 
 
-if __name__ == "__main__":
-	logger = Logger()
-	logger.setLogFormat(getLogFormat(u'opsiclientd'))
-	logger.setConsoleLevel(LOG_WARNING)
+logger = Logger()
+logger.setLogFormat(getLogFormat(u'opsiclientd'))
+logger.setConsoleLevel(LOG_WARNING)
 
-	try:
-		OpsiclientdInit()
-	except Exception as exception:
-		logger.logException(exception)
-		print("ERROR: {0}".format(forceUnicode(exception).encode('utf-8')), file=sys.stderr)
-		sys.exit(1)
-
-	sys.exit(0)
+try:
+	OpsiclientdInit()
+except Exception as exception:
+	logger.logException(exception)
+	print("ERROR: {0}".format(forceUnicode(exception).encode('utf-8')), file=sys.stderr)
+	sys.exit(1)
