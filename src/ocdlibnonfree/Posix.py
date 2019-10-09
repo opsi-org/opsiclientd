@@ -1,7 +1,6 @@
-#! python
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2010-2015 uib GmbH
+# Copyright (C) 2010-2019 uib GmbH
 # http://www.uib.de/
 # All rights reserved.
 """

@@ -1,45 +1,40 @@
 # -*- coding: utf-8 -*-
+
+# opsiclientd is part of the desktop management solution opsi
+# (open pc server integration) http://www.opsi.org
+# Copyright (C) 2011-2019 uib GmbH <info@uib.de>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-= = = = = = = = = = = = = = = = = = = = =
-=   ocdlib.Timeline                     =
-= = = = = = = = = = = = = = = = = = = = =
+Event-Timeline.
 
-opsiclientd is part of the desktop management solution opsi
-(open pc server integration) http://www.opsi.org
+   Timeline event attributes:
+      * icon - url. This image will appear next to the title text in the timeline if (no end date) or (durationEvent = false). If a start and end date are supplied, and durationEvent is true, the icon is not shown. If icon attribute is not set, a default icon from the theme is used.
+      * image - url to an image that will be displayed in the bubble
+      * link - url. The bubble's title text be a hyper-link to this address.
+      * color - color of the text and tape (duration events) to display in the timeline. If the event has durationEvent = false, then the bar's opacity will be applied (default 20%). See durationEvent, above.
+      * textColor - color of the label text on the timeline. If not set, then the color attribute will be used.
+      * tapeImage and tapeRepeat Sets the background image and repeat style for the event's tape (or 'bar') on the Timeline. Overrides the color setting for the tape. Repeat style should be one of {repeat | repeat-x | repeat-y}, repeat is the default. See the Cubism example for a demonstration. Only applies to duration events.
+      * caption - additional event information shown when mouse is hovered over the Timeline tape or label. Uses the html title property. Looks like a tooltip. Plain text only. See the cubism example.
+      * classname - added to the HTML classnames for the event's label and tape divs. Eg classname attribute 'hot_event' will result in div classes of 'timeline-event-label hot_event' and 'timeline-event-tape hot_event' for the event's Timeline label and tape, respectively.
+      * description - will be displayed inside the bubble with the event's title and image.
 
-Copyright (C) 2011-2017 uib GmbH
 
-http://www.uib.de/
-
-All rights reserved.
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License version 2 as
-published by the Free Software Foundation.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-@copyright:	uib GmbH <info@uib.de>
-@author: Jan Schneider <j.schneider@uib.de>
-@license: GNU General Public License version 2
-
-Timeline event attributes:
-  * icon - url. This image will appear next to the title text in the timeline if (no end date) or (durationEvent = false). If a start and end date are supplied, and durationEvent is true, the icon is not shown. If icon attribute is not set, a default icon from the theme is used.
-  * image - url to an image that will be displayed in the bubble
-  * link - url. The bubble's title text be a hyper-link to this address.
-  * color - color of the text and tape (duration events) to display in the timeline. If the event has durationEvent = false, then the bar's opacity will be applied (default 20%). See durationEvent, above.
-  * textColor - color of the label text on the timeline. If not set, then the color attribute will be used.
-  * tapeImage and tapeRepeat Sets the background image and repeat style for the event's tape (or 'bar') on the Timeline. Overrides the color setting for the tape. Repeat style should be one of {repeat | repeat-x | repeat-y}, repeat is the default. See the Cubism example for a demonstration. Only applies to duration events.
-  * caption - additional event information shown when mouse is hovered over the Timeline tape or label. Uses the html title property. Looks like a tooltip. Plain text only. See the cubism example.
-  * classname - added to the HTML classnames for the event's label and tape divs. Eg classname attribute 'hot_event' will result in div classes of 'timeline-event-label hot_event' and 'timeline-event-tape hot_event' for the event's Timeline label and tape, respectively.
-  * description - will be displayed inside the bubble with the event's title and image.
+:copyright: uib GmbH <info@uib.de>
+:author: Jan Schneider <j.schneider@uib.de>
+:author: Niko Wenselowski <n.wenselowski@uib.de>
+:license: GNU Affero General Public License version 3
 """
 
 import json
@@ -48,7 +43,7 @@ import time
 import threading
 
 from OPSI.Logger import Logger
-from OPSI.Types import forceUnicode, forceBool, forceInt, forceOpsiTimestamp
+from OPSI.Types import forceBool, forceInt, forceOpsiTimestamp, forceUnicode
 from OPSI.Util import timestamp
 from OPSI.Backend.SQLite import SQLite
 
@@ -66,7 +61,8 @@ Timeline_urlPrefix  = "/timeline/timeline_js/";
 Timeline_parameters = "bundle=true";
 // ]]>
 </script>
-<script src="/timeline/timeline_js/timeline-api.js" type="text/javascript"></script>
+<script src="/timeline/timeline_js/timeline-api.js" type="text/javascript">
+</script>
 <script type="text/javascript">
 // <![CDATA[
 var timeline_data = %(data)s;
@@ -120,10 +116,13 @@ function onResize() {
 </script>
 '''
 
+
 class TimelineImplementation(object):
 	def __init__(self):
-		if not os.path.exists(os.path.dirname(config.get('global', 'timeline_db'))):
-			os.makedirs(os.path.dirname(config.get('global', 'timeline_db')))
+		timelineFolder = os.path.dirname(config.get('global', 'timeline_db'))
+		if not os.path.exists(timelineFolder):
+			logger.debug("Creating missing directory {!r}", timelineFolder)
+			os.makedirs(timelineFolder)
 
 		self._sql = SQLite(
 			database=config.get('global', 'timeline_db'),
@@ -138,11 +137,9 @@ class TimelineImplementation(object):
 	def stop(self):
 		self._stopped = True
 		end = forceOpsiTimestamp(timestamp())
-		self._dbLock.acquire()
-		try:
+
+		with self._dbLock:
 			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', {'end': end})
-		finally:
-			self._dbLock.release()
 
 	def getHtmlHead(self):
 		events = []
@@ -158,7 +155,6 @@ class TimelineImplementation(object):
 			if event['description']:
 				event['description'] = event['description'].replace(u'\n', u'<br />')
 			if event['isError']:
-				#event['classname'] = u"error-event"
 				event['color'] = u"#A74141"
 				event['textColor'] = u"#A74141"
 				event['icon'] = TIMELINE_IMAGE_URL + u"dark-red-circle.png"
@@ -196,19 +192,17 @@ class TimelineImplementation(object):
 		}
 
 	def _cleanupDatabase(self):
-		self._dbLock.acquire()
-		try:
-			self._sql.execute('delete from EVENT where `start` < "%s"' % timestamp((time.time() - 7*24*3600)))
-			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', { 'durationEvent': False })
-		except Exception, e:
-			logger.error(e)
-		self._dbLock.release()
+		with self._dbLock:
+			try:
+				self._sql.execute('delete from EVENT where `start` < "%s"' % timestamp((time.time() - 7*24*3600)))
+				self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', {'durationEvent': False})
+			except Exception as cleanupError:
+				logger.error(cleanupError)
 
 	def _createDatabase(self):
-		self._dbLock.acquire()
-		try:
+		with self._dbLock:
 			tables = self._sql.getTables()
-			if not 'EVENT' in tables.keys():
+			if 'EVENT' not in tables:
 				logger.debug(u'Creating table EVENT')
 				table = u'''CREATE TABLE `EVENT` (
 						`id` integer NOT NULL ''' + self._sql.AUTOINCREMENT + ''',
@@ -226,59 +220,54 @@ class TimelineImplementation(object):
 				self._sql.execute(table)
 				self._sql.execute('CREATE INDEX `category` on `EVENT` (`category`);')
 				self._sql.execute('CREATE INDEX `start` on `EVENT` (`start`);')
-		finally:
-			self._dbLock.release()
 
 	def addEvent(self, title, description=u'', isError=False, category=None, durationEvent=False, start=None, end=None):
 		if self._stopped:
 			return -1
-		self._dbLock.acquire()
-		try:
-			if category:
-				category = forceUnicode(category)
-			if not start:
-				start = timestamp()
-			start = forceOpsiTimestamp(start)
-			if end:
-				end = forceOpsiTimestamp(start)
-				durationEvent = True
-			return self._sql.insert('EVENT', {
-				'title':         forceUnicode(title),
-				'category':      category,
-				'description':   forceUnicode(description),
-				'isError':       forceBool(isError),
-				'durationEvent': forceBool(durationEvent),
-				'start':         start,
-				'end':           end,
-			})
-		except Exception, e:
-			logger.error(u"Failed to add event '%s': %s" % (title, e))
-		finally:
-			self._dbLock.release()
+
+		with self._dbLock:
+			try:
+				if category:
+					category = forceUnicode(category)
+				if not start:
+					start = timestamp()
+				start = forceOpsiTimestamp(start)
+				if end:
+					end = forceOpsiTimestamp(start)
+					durationEvent = True
+				return self._sql.insert('EVENT', {
+					'title':         forceUnicode(title),
+					'category':      category,
+					'description':   forceUnicode(description),
+					'isError':       forceBool(isError),
+					'durationEvent': forceBool(durationEvent),
+					'start':         start,
+					'end':           end,
+				})
+			except Exception as addError:
+				logger.error(u"Failed to add event '%s': %s" % (title, addError))
 
 	def setEventEnd(self, eventId, end=None):
 		if self._stopped:
 			return -1
-		self._dbLock.acquire()
-		try:
-			eventId = forceInt(eventId)
-			if not end:
-				end = timestamp()
-			end = forceOpsiTimestamp(end)
-			return self._sql.update('EVENT', '`id` = %d' % eventId, {'end': end, 'durationEvent': True})
-		except Exception, e:
-			logger.error(u"Failed to set end of event '%s': %s" % (eventId, e))
-		finally:
-			self._dbLock.release()
+
+		with self._dbLock:
+			try:
+				eventId = forceInt(eventId)
+				if not end:
+					end = timestamp()
+				end = forceOpsiTimestamp(end)
+				return self._sql.update('EVENT', '`id` = %d' % eventId, {'end': end, 'durationEvent': True})
+			except Exception as endError:
+				logger.error(u"Failed to set end of event '%s': %s" % (eventId, endError))
 
 	def getEvents(self):
 		if self._stopped:
 			return {}
-		self._dbLock.acquire()
-		try:
+
+		with self._dbLock:
 			return self._sql.getSet('select * from EVENT')
-		finally:
-			self._dbLock.release()
+
 
 class Timeline(TimelineImplementation):
 	# Storage for the instance reference

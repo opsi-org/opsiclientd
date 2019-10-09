@@ -1,39 +1,36 @@
 # -*- coding: utf-8 -*-
+
+# opsiclientd is part of the desktop management solution opsi
+# (open pc server integration) http://www.opsi.org
+# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-ocdlib.ControlServer
+Server component for controlling opsiclientd.
 
-Classes that are used to create a https service which executes
-remote procedure calls
+These classes are used to create a https service which executes remote
+procedure calls
 
-opsiclientd is part of the desktop management solution opsi
-(open pc server integration) http://www.opsi.org
-
-Copyright (C) 2010-2019 uib GmbH
-
-http://www.uib.de/
-
-All rights reserved.
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License version 2 as
-published by the Free Software Foundation.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-@copyright:	uib GmbH <info@uib.de>
-@author: Jan Schneider <j.schneider@uib.de>
-@license: GNU General Public License version 2
+:copyright: uib GmbH <info@uib.de>
+:author: Jan Schneider <j.schneider@uib.de>
+:author: Erol Ueluekmen <e.ueluekmen@uib.de>
+:license: GNU Affero General Public License version 3
 """
 import codecs
 import os
 import re
+import shutil
 import sys
 import threading
 import time
@@ -44,15 +41,15 @@ from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
 from tornado.ioloop import IOLoop
 
-from OPSI.Logger import Logger
-from OPSI.Types import forceBool, forceInt, forceUnicode
-from OPSI.Types import OpsiAuthenticationError
 from OPSI import System
+from OPSI.Exceptions import OpsiAuthenticationError
+from OPSI.Logger import Logger
 from OPSI.Service import SSLContext, OpsiService
 from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface
 from OPSI.Service.Resource import (ResourceOpsi, ResourceOpsiJsonRpc,
 	ResourceOpsiJsonInterface, ResourceOpsiDAV)
-from OPSI.web2 import resource, stream, server, http, responsecode
+from OPSI.Types import forceBool, forceInt, forceUnicode
+from OPSI.web2 import resource, stream, server, http, responsecode, http_headers
 from OPSI.web2.channel.http import HTTPFactory
 
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
@@ -69,15 +66,8 @@ if RUNNING_ON_WINDOWS:
 
 logger = Logger()
 config = Config()
-timeline = Timeline()
 
-try:
-	from ocdlibnonfree.CacheService import CacheService
-except ImportError:
-	pass
-
-infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+infoPage = u'''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -109,14 +99,6 @@ infoPage = u'''<?xml version="1.0" encoding="UTF-8"?>
 </html>
 '''
 
-# Snippet to include logs on the web page
-# <div id="infopage-opsiclientd-log-box">
-# 	<p id="infopage-opsiclientd-log-title">Log</p>
-# 	<div id="infopage-opsiclientd-log">
-# 	%(opsiclient-log)s
-# 	</div>
-# </div>
-
 try:
 	fsencoding = sys.getfilesystemencoding()
 	if not fsencoding:
@@ -135,25 +117,34 @@ class WorkerOpsiclientd(WorkerOpsi):
 
 	def _getCredentials(self):
 		(user, password) = self._getAuthorization()
+
 		if not user:
 			user = config.get('global', 'host_id')
+
 		return (user, password)
 
 	def _errback(self, failure):
 		result = WorkerOpsi._errback(self, failure)
-		logger.debug(u"DEBUG: detected host: '%s'" % self.request.remoteAddr.host)
-		logger.debug(u"DEBUG: responsecode: '%s'" % result.code)
-		logger.debug(u"DEBUG: maxAuthenticationFailures config: '%s'" % config.get('control_server','max_authentication_failures'))
-		logger.debug(u"DEBUG: maxAuthenticationFailures config type: '%s'" % type(config.get('control_server','max_authentication_failures')))
-		if (result.code == responsecode.UNAUTHORIZED) and self.request.remoteAddr.host not in ("127.0.0.1"):
-			maxAuthenticationFailures = config.get('control_server','max_authentication_failures')
-			if (maxAuthenticationFailures > 0):
-				if not self.service.authFailureCount.has_key(self.request.remoteAddr.host):
-					self.service.authFailureCount[self.request.remoteAddr.host] = 0
-				self.service.authFailureCount[self.request.remoteAddr.host] += 1
-				if (self.service.authFailureCount[self.request.remoteAddr.host] > maxAuthenticationFailures):
-					logger.error(u"%s authentication failures from '%s' in a row, waiting 60 seconds to prevent flooding" \
-							% (self.service.authFailureCount[self.request.remoteAddr.host], self.request.remoteAddr.host))
+		logger.debug(u"DEBUG: detected host: {!r}", self.request.remoteAddr.host)
+		logger.debug(u"DEBUG: responsecode: {!r}", result.code)
+		logger.debug(u"DEBUG: maxAuthenticationFailures config: {!r}", config.get('control_server', 'max_authentication_failures'))
+		logger.debug(u"DEBUG: maxAuthenticationFailures config type: {!r}", type(config.get('control_server', 'max_authentication_failures')))
+
+		if result.code == responsecode.UNAUTHORIZED and self.request.remoteAddr.host not in ("127.0.0.1"):
+			maxAuthenticationFailures = config.get('control_server', 'max_authentication_failures')
+			if maxAuthenticationFailures > 0:
+				try:
+					self.service.authFailureCount[self.request.remoteAddr.host] += 1
+				except KeyError:
+					self.service.authFailureCount[self.request.remoteAddr.host] = 1
+
+				if self.service.authFailureCount[self.request.remoteAddr.host] > maxAuthenticationFailures:
+					logger.error(
+						u"{0} authentication failures from {0!r} in a row, waiting 60 seconds to prevent flooding",
+						self.service.authFailureCount[self.request.remoteAddr.host],
+						self.request.remoteAddr.host
+					)
+
 					return self._delayResult(60, result)
 		return result
 
@@ -170,8 +161,11 @@ class WorkerOpsiclientd(WorkerOpsi):
 				raise Exception(u"No password from %s (application: %s)" % (self.session.ip, self.session.userAgent))
 
 			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
-				if self.service.authFailureCount.has_key(self.request.remoteAddr.host):
+				try:
 					del self.service.authFailureCount[self.request.remoteAddr.host]
+				except KeyError:
+					pass
+
 				return result
 
 			if RUNNING_ON_WINDOWS:
@@ -198,8 +192,11 @@ class WorkerOpsiclientd(WorkerOpsi):
 											# The LogonUser function will raise an Exception on logon failure
 											win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
 											# No exception raised => user authenticated
-											if self.service.authFailureCount.has_key(self.request.remoteAddr.host):
+											try:
 												del self.service.authFailureCount[self.request.remoteAddr.host]
+											except KeyError:
+												pass
+
 											return result
 
 									if memberresume == 0:
@@ -257,8 +254,12 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 
 	def _getBackend(self, result):
-		if hasattr(self.session, 'callInstance') and hasattr(self.session, 'callInterface') and self.session.callInstance and self.session.callInterface:
-			return result
+		try:
+			if self.session.callInstance and self.session.callInterface:
+				return result
+		except AttributeError:
+			pass
+
 		if not self.service._opsiclientd.getCacheService():
 			raise Exception(u'Cache service not running')
 
@@ -305,6 +306,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 	def _generateResponse(self, result):
 		logger.info(u"Creating opsiclientd info page")
 
+		timeline = Timeline()
 		html = infoPage % {
 			'head': timeline.getHtmlHead(),
 			'hostname': config.get('global', 'host_id'),
@@ -312,6 +314,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 		if not isinstance(result, http.Response):
 			result = http.Response()
 		result.code = responsecode.OK
+		result.headers.setHeader('content-type', http_headers.MimeType("text", "html", {"charset": "utf-8"}))
 		result.stream = stream.IByteStream(html.encode('utf-8').strip())
 		return result
 
@@ -427,10 +430,14 @@ class ControlServer(OpsiService, threading.Thread):
 	def createRoot(self):
 		if self._staticDir:
 			if os.path.isdir(self._staticDir):
-				logger.debug('Creating ResourceOpsiDAV with path "{0}".'.format(self._staticDir))
-				self._root = ResourceOpsiDAV(self, path=self._staticDir, readOnly=True, authRequired=False)
+				self._root = ResourceOpsiDAV(
+					self,
+					path=self._staticDir,
+					readOnly=True,
+					authRequired=False
+				)
 			else:
-				logger.error(u"Cannot add static content '/': directory '%s' does not exist." % self._staticDir)
+				logger.error(u"Cannot add static content '/': directory {!r} does not exist.", self._staticDir)
 
 		if not self._root:
 			self._root = ResourceRoot()
@@ -482,15 +489,17 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		if os.path.exists(productCacheDir):
 			for product in os.listdir(productCacheDir):
 				deleteDir = os.path.join(productCacheDir, product)
-				System.shutil.rmtree(deleteDir)
+				shutil.rmtree(deleteDir)
+
 		return u"product cache deleted."
 
 	def timeline_getEvents(self):
+		timeline = Timeline()
 		return timeline.getEvents()
 
 	def setBlockLogin(self, blockLogin):
-		self.opsiclientd.setBlockLogin(bool(blockLogin))
-		logger.notice(u"rpc setBlockLogin: blockLogin set to '%s'" % self.opsiclientd._blockLogin)
+		self.opsiclientd.setBlockLogin(forceBool(blockLogin))
+		logger.notice(u"rpc setBlockLogin: blockLogin set to {!r}", self.opsiclientd._blockLogin)
 		if self.opsiclientd._blockLogin:
 			return u"Login blocker is on"
 		else:
@@ -501,11 +510,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		if logType != 'opsiclientd':
 			raise ValueError(u"Unknown log type '%s'" % logType)
 
-		logger.notice(u"rpc readLog: reading log of type '%s'" % logType)
+		logger.notice(u"rpc readLog: reading log of type {!r}", logType)
 
 		if logType == 'opsiclientd':
-			with codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace') as f:
-				return f.read()
+			with codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace') as log:
+				return log.read()
+
 		return u""
 
 	def runCommand(self, command, sessionId=None, desktop=None):
@@ -523,12 +533,23 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		else:
 			desktop = self.opsiclientd.getCurrentActiveDesktopName()
 
-		logger.notice(u"rpc runCommand: executing command '%s' in session %d on desktop '%s'" % (command, sessionId, desktop))
-		System.runCommandInSession(command=command, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False)
+		logger.notice(u"rpc runCommand: executing command {!r} in session {:d} on desktop {!r}", command, sessionId, desktop)
+		System.runCommandInSession(
+			command=command,
+			sessionId=sessionId,
+			desktop=desktop,
+			waitForProcessEnding=False
+		)
 		return u"command '%s' executed" % command
 
 	def execute(self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300):
-		return System.execute(cmd=command, waitForEnding=waitForEnding, captureStderr=captureStderr, encoding=encoding, timeout=timeout)
+		return System.execute(
+			cmd=command,
+			waitForEnding=waitForEnding,
+			captureStderr=captureStderr,
+			encoding=encoding,
+			timeout=timeout
+		)
 
 	def logoffCurrentUser(self):
 		logger.notice(u"rpc logoffCurrentUser: logging of current user now")
@@ -540,31 +561,34 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def shutdown(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
-		logger.notice(u"rpc shutdown: shutting down computer in %s seconds" % waitSeconds)
+		logger.notice(u"rpc shutdown: shutting down computer in {} seconds", waitSeconds)
 		System.shutdown(wait=waitSeconds)
 
 	def reboot(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
-		logger.notice(u"rpc reboot: rebooting computer in %s seconds" % waitSeconds)
+		logger.notice(u"rpc reboot: rebooting computer in {} seconds", waitSeconds)
 		System.reboot(wait=waitSeconds)
 
 	def uptime(self):
 		uptime = int(time.time() - self.opsiclientd._startupTime)
-		logger.notice(u"rpc uptime: opsiclientd is running for %d seconds" % uptime)
+		logger.notice(u"rpc uptime: opsiclientd is running for {:d} seconds", uptime)
 		return uptime
 
 	def fireEvent(self, name):
 		name = forceUnicode(name)
-		if name not in eventGenerators:
+		try:
+			event = eventGenerators[name]
+		except KeyError:
 			raise ValueError(u"Event '%s' not in list of known events: %s" % (name, ', '.join(eventGenerators.keys())))
+
 		logger.notice(u"Firing event '%s'" % name)
-		eventGenerators[name].createAndFireEvent()
+		event.createAndFireEvent()
 
 	def setStatusMessage(self, sessionId, message):
 		sessionId = forceInt(sessionId)
 		message = forceUnicode(message)
 		ept = self.opsiclientd.getEventProcessingThread(sessionId)
-		logger.notice(u"rpc setStatusMessage: Setting status message to '%s'" % message)
+		logger.notice(u"rpc setStatusMessage: Setting status message to {0!r}", message)
 		ept.setStatusMessage(message)
 
 	def isEventRunning(self, name):
@@ -580,14 +604,14 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def getCurrentActiveDesktopName(self, sessionId=None):
 		desktop = self.opsiclientd.getCurrentActiveDesktopName(sessionId)
-		logger.notice(u"rpc getCurrentActiveDesktopName: current active desktop name is '%s'" % desktop)
+		logger.notice(u"rpc getCurrentActiveDesktopName: current active desktop name is {0}", desktop)
 		return desktop
 
 	def setCurrentActiveDesktopName(self, sessionId, desktop):
 		sessionId = forceInt(sessionId)
 		desktop = forceUnicode(desktop)
 		self.opsiclientd._currentActiveDesktopName[sessionId] = desktop
-		logger.notice(u"rpc setCurrentActiveDesktopName: current active desktop name for session %s set to '%s'" % (sessionId, desktop))
+		logger.notice(u"rpc setCurrentActiveDesktopName: current active desktop name for session {0} set to {1!r}", sessionId, desktop)
 
 	def switchDesktop(self, desktop, sessionId=None):
 		self.opsiclientd.switchDesktop(desktop, sessionId)
@@ -608,10 +632,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def deleteServerCerts(self):
 		certDir = config.get('global', 'server_cert_dir')
 		if os.path.exists(certDir):
-			for f in os.listdir(certDir):
-				if "cacert.pem" in f.strip().lower():
+			for filename in os.listdir(certDir):
+				if "cacert.pem" in filename.strip().lower():
 					continue
-				os.remove(os.path.join(certDir, f))
+
+				os.remove(os.path.join(certDir, filename))
 
 	def getActiveSessions(self):
 		sessions = []
@@ -623,7 +648,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			hour = 0
 			minute = 0
 			second = 0
-			logger.debug(u"session to check for LogonTime '%s'" % session)
+			logger.debug(u"session to check for LogonTime {0!r}", session)
+
 			if isinstance(session['LogonTime'], str):
 				match = None
 				pattern = re.compile("^(\d+)/(\d+)/(\d+)\s(\d+):(\d+):(\d+)")
@@ -643,17 +669,16 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				minute = session['LogonTime'].minute
 				second = session['LogonTime'].second
 
-			if (month < 10):
+			if month < 10:
 				month = '0%d' % month
-			if (day < 10):
+			if day < 10:
 				day = '0%d' % day
-			if (hour < 10):
+			if hour < 10:
 				hour = '0%d' % hour
-			if (minute < 10):
+			if minute < 10:
 				minute = '0%d' % minute
-			if (second < 10):
+			if second < 10:
 				second = '0%d' % second
-
 			session['LogonTime'] = u'%s-%s-%s %s:%s:%s' % (year, month, day, hour, minute, second)
 			session['Sid'] = unicode(session['Sid']).replace(u'PySID:', u'')
 			sessions.append(session)

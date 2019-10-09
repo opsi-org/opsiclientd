@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-# This file is part of the desktop management solution opsi
-# Copyright (C) 2010-2016 uib GmbH <info@uib.de>
+# opsiclientd is part of the desktop management solution opsi
+# (open pc server integration) http://www.opsi.org
+# Copyright (C) 2010-2019 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,11 +17,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Configuration of opsiclientd.
+Configuring opsiclientd.
 
+:copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
 :author: Erol Ueluekmen <e.ueluekmen@uib.de>
-:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
@@ -249,8 +250,8 @@ class ConfigImplementation(object):
 		if not section:
 			section = 'global'
 
-		section = forceUnicodeLower(section.strip())
-		option = forceUnicodeLower(option.strip())
+		section = forceUnicodeLower(section.strip()).lower()
+		option = forceUnicodeLower(option.strip()).lower()
 		if section not in self._config:
 			raise SectionNotFoundException(u"No such config section: {0}".format(section))
 		if option not in self._config[section]:
@@ -268,6 +269,9 @@ class ConfigImplementation(object):
 			section = 'global'
 
 		section = forceUnicodeLower(section).strip()
+		if section == 'system':
+			return
+
 		option = forceUnicodeLower(option).strip()
 		if isinstance(value, (str, unicode)):
 			value = forceUnicode(value).strip()
@@ -284,31 +288,25 @@ class ConfigImplementation(object):
 			logger.warning(u"Refusing to set empty value for config value '%s' of section '%s'" % (option, section))
 			return
 
-		if (option == 'opsi_host_key'):
-			if (len(value) != 32):
+		if option == 'opsi_host_key':
+			if len(value) != 32:
 				raise ValueError("Bad opsi host key, length != 32")
 			logger.addConfidentialString(value)
-
-		if option in ('depot_id', 'host_id'):
+		elif option in ('depot_id', 'host_id'):
 			value = forceHostId(value.replace('_', '-'))
-
-		if section in ('system',):
-			return
-
-		if option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port', 'max_authentication_failures'):
+		elif option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port', 'max_authentication_failures'):
 			value = forceInt(value)
-
-		if option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active', 'sync_time_from_service'):
+		elif option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active', 'sync_time_from_service'):
 			value = forceBool(value)
-
-		if option in ('exclude_product_group_ids', 'include_product_group_ids'):
+		elif option in ('exclude_product_group_ids', 'include_product_group_ids'):
 			if not isinstance(value, list):
-				value = [ x.strip() for x in value.split(",") ]
+				value = [x.strip() for x in value.split(",")]
 			else:
 				value = forceList(value)
 
 		if section not in self._config:
 			self._config[section] = {}
+
 		self._config[section][option] = value
 
 		if (section == 'config_service') and (option == 'url'):
@@ -376,7 +374,7 @@ class ConfigImplementation(object):
 						self.set('global', 'log_level', config.get('global', 'log_level'))
 					if config.has_option('global', 'log_file'):
 						logFile = config.get('global', 'log_file')
-						for i in (2, 1, 0):
+						for i in (9, 8, 7, 6, 5, 4, 3, 2, 1, 0):
 							slf = None
 							dlf = None
 							try:
@@ -431,9 +429,11 @@ class ConfigImplementation(object):
 						value = u', '.join(forceUnicodeList(value))
 					else:
 						value = forceUnicode(value)
+
 					if not config.has_option(section, option) or (config.get(section, option) != value):
 						changed = True
 						config.set(section, option, value)
+
 			if changed:
 				# Write back config file if changed
 				configFile.generate(config, comments=comments)
@@ -459,6 +459,7 @@ class ConfigImplementation(object):
 	def getConfigServiceUrls(self, allowTemporaryConfigServiceUrls=True):
 		if allowTemporaryConfigServiceUrls and self._temporaryConfigServiceUrls:
 			return self._temporaryConfigServiceUrls
+
 		return self.get('config_service', 'url')
 
 	def selectDepotserver(self, configService, event, productIds=[], cifsOnly=True, masterOnly=False):
@@ -477,9 +478,6 @@ class ConfigImplementation(object):
 		if not configService:
 			raise Exception(u"Not connected to config service")
 
-		if configService.isLegacyOpsi():
-			return
-
 		selectedDepot = None
 
 		configService.backend_setOptions({"addConfigStateDefaults": True})
@@ -495,22 +493,23 @@ class ConfigImplementation(object):
 		for configState in configStates:
 			if not configState.values or not configState.values[0]:
 				continue
-			if (configState.configId == 'opsiclientd.depot_server.url') and configState.values:
+
+			if configState.configId == 'opsiclientd.depot_server.url' and configState.values:
 				try:
 					depotUrl = forceUrl(configState.values[0])
 					self.set('depot_server', 'depot_id', u'')
 					self.set('depot_server', 'url', depotUrl)
 					logger.notice(u"Depot url was set to '%s' from configState %s" % (depotUrl, configState))
 					return
-				except Exception as e:
-					logger.error(u"Failed to set depot url from values %s in configState %s: %s" % (configState.values, configState, e))
-			elif (configState.configId == 'opsiclientd.depot_server.depot_id') and configState.values:
+				except Exception as error:
+					logger.error(u"Failed to set depot url from values %s in configState %s: %s" % (configState.values, configState, error))
+			elif configState.configId == 'opsiclientd.depot_server.depot_id' and configState.values:
 				try:
 					depotId = forceHostId(configState.values[0])
 					depotIds.append(depotId)
 					logger.notice(u"Depot was set to '%s' from configState %s" % (depotId, configState))
-				except Exception as e:
-					logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, e))
+				except Exception as error:
+					logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, error))
 			elif not masterOnly and (configState.configId == 'clientconfig.depot.dynamic') and configState.values:
 				dynamicDepot = forceBool(configState.values[0])
 			elif (configState.configId == 'clientconfig.depot.protocol') and configState.values and configState.values[0] and (configState.values[0] == 'webdav'):
@@ -527,7 +526,7 @@ class ConfigImplementation(object):
 		if not depotIds:
 			clientToDepotservers = configService.configState_getClientToDepotserver(
 				clientIds=[self.get('global', 'host_id')],
-				masterOnly=(not dynamicDepot),
+				masterOnly=bool(not dynamicDepot),
 				productIds=productIds
 			)
 			if not clientToDepotservers:
@@ -540,10 +539,11 @@ class ConfigImplementation(object):
 		masterDepot = None
 		alternativeDepots = []
 		for depot in configService.host_getObjects(type='OpsiDepotserver', id=depotIds):
-			if (depot.id == depotIds[0]):
+			if depot.id == depotIds[0]:
 				masterDepot = depot
 			else:
 				alternativeDepots.append(depot)
+
 		if not masterDepot:
 			raise Exception(u"Failed to get info for master depot '%s'" % depotIds[0])
 
@@ -552,23 +552,27 @@ class ConfigImplementation(object):
 		if dynamicDepot:
 			if alternativeDepots:
 				logger.info(u"Got alternative depots for products: %s" % productIds)
-				for i in range(len(alternativeDepots)):
-					logger.info(u"%d. alternative depot is %s" % ((i+1), alternativeDepots[i].id))
+				for index, depot in enumerate(alternativeDepots, start=1):
+					logger.info(u"{:d}. alternative depot is {}", index, depot.id)
 
+				defaultInterface = None
 				try:
-					defaultInterface = None
 					networkInterfaces = System.getNetworkInterfaces()
 					if not networkInterfaces:
 						raise Exception(u"No network interfaces found")
+
 					for networkInterface in networkInterfaces:
 						logger.info(u"Found network interface: %s" % networkInterface)
+
 					defaultInterface = networkInterfaces[0]
 					for networkInterface in networkInterfaces:
-						if (networkInterface.ipAddressList.ipAddress == '0.0.0.0'):
+						if networkInterface.ipAddressList.ipAddress == '0.0.0.0':
 							continue
+
 						if networkInterface.gatewayList.ipAddress:
 							defaultInterface = networkInterface
 							break
+
 					clientConfig = {
 						"clientId": self.get('global', 'host_id'),
 						"opsiHostKey": self.get('global', 'opsi_host_key'),
@@ -582,14 +586,19 @@ class ConfigImplementation(object):
 					depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()
 					logger.debug2(u"depotSelectionAlgorithm:\n%s" % depotSelectionAlgorithm)
 					exec(depotSelectionAlgorithm)
-					selectedDepot = selectDepot(clientConfig=clientConfig, masterDepot=masterDepot, alternativeDepots=alternativeDepots)
+					selectedDepot = selectDepot(
+						clientConfig=clientConfig,
+						masterDepot=masterDepot,
+						alternativeDepots=alternativeDepots
+					)
 					if not selectedDepot:
 						selectedDepot = masterDepot
-				except Exception as e:
-					logger.logException(e)
-					logger.error(u"Failed to select depot: %s" % e)
+				except Exception as error:
+					logger.logException(error)
+					logger.error(u"Failed to select depot: %s" % error)
 			else:
 				logger.info(u"No alternative depot for products: %s" % productIds)
+
 		logger.notice(u"Selected depot is: %s" % selectedDepot)
 		self.set('depot_server', 'depot_id', selectedDepot.id)
 		if (depotProtocol == 'webdav') and not cifsOnly:
@@ -602,12 +611,10 @@ class ConfigImplementation(object):
 			raise Exception(u"Not connected to config service")
 
 		depotServerUsername = self.get('depot_server', 'username')
-		encryptedDepotServerPassword = u''
-		if configService.isLegacyOpsi():
-			encryptedDepotServerPassword = configService.getPcpatchPassword(self.get('global', 'host_id'))
-		else:
-			encryptedDepotServerPassword = configService.user_getCredentials(username=u'pcpatch', hostId=self.get('global', 'host_id'))['password']
-
+		encryptedDepotServerPassword = configService.user_getCredentials(
+			username=u'pcpatch',
+			hostId=self.get('global', 'host_id')
+		)['password']
 		depotServerPassword = blowfishDecrypt(self.get('global', 'opsi_host_key'), encryptedDepotServerPassword)
 		logger.addConfidentialString(depotServerPassword)
 		logger.debug(u"Using username '%s' for depot connection" % depotServerUsername)
@@ -619,64 +626,32 @@ class ConfigImplementation(object):
 		if not configService:
 			raise Exception(u"Config service is undefined")
 
-		if configService.isLegacyOpsi():
-			for (key, value) in configService.getNetworkConfig_hash(self.get('global', 'host_id')).items():
-				if (key.lower() == 'depotid'):
-					depotId = value
-					self.set('depot_server', 'depot_id', depotId)
-					self.set('depot_server', 'url', configService.getDepot_hash(depotId)['depotRemoteUrl'])
-				elif (key.lower() == 'depotdrive'):
-					self.set('depot_server', 'drive', value)
-				elif (key.lower() == 'nextbootserviceurl'):
-					if '/rpc' not in value:
-						logger.debug(u'Appending /rpc to service URL...')
-						value = value + '/rpc'
-					self.set('config_service', 'url', [value])
-				else:
-					logger.info(u"Unhandled network config key '%s'" % key)
+		configService.backend_setOptions({"addConfigStateDefaults": True})
+		for configState in configService.configState_getObjects(objectId=self.get('global', 'host_id')):
+			logger.info(u"Got config state from service: {0!r}".format(configState))
 
-			logger.notice(u"Got network config from service")
+			if not configState.values:
+				logger.debug(u"No values - skipping {0!r}".format(configState.configId))
+				continue
 
-			for (key, value) in configService.getGeneralConfig_hash(self.get('global', 'host_id')).items():
+			if configState.configId == u'clientconfig.configserver.url':
+				self.set('config_service', 'url', configState.values)
+			elif configState.configId == u'clientconfig.depot.drive':
+				self.set('depot_server', 'drive', configState.values[0])
+			elif configState.configId == u'clientconfig.depot.id':
+				self.set('depot_server', 'depot_id', configState.values[0])
+			elif configState.configId == u'clientconfig.depot.user':
+				self.set('depot_server', 'username', configState.values[0])
+			elif configState.configId.startswith(u'opsiclientd.'):
 				try:
-					parts = key.lower().split('.')
-					if (len(parts) < 3) or (parts[0] != 'opsiclientd'):
+					parts = configState.configId.lower().split('.')
+					if len(parts) < 3:
+						logger.debug(u"Expected at least 3 parts in {0!r} - skipping.".format(configState.configId))
 						continue
 
-					self.set(section=parts[1], option=parts[2], value=value)
+					self.set(section=parts[1], option=parts[2], value=configState.values[0])
 				except Exception as e:
-					logger.error(u"Failed to process general config key '%s:%s': %s" % (key, value, forceUnicode(e)))
-		else:
-			defaultSetting = configService.backend_getOptions().get('addConfigStateDefaults', False)
-			configService.backend_setOptions({"addConfigStateDefaults": True})
-			try:
-				for configState in configService.configState_getObjects(objectId=self.get('global', 'host_id')):
-					logger.info(u"Got config state from service: {0!r}".format(configState))
-
-					if not configState.values:
-						logger.debug(u"No values - skipping {0!r}".format(configState.configId))
-						continue
-
-					if configState.configId == u'clientconfig.configserver.url':
-						self.set('config_service', 'url', configState.values)
-					elif configState.configId == u'clientconfig.depot.drive':
-						self.set('depot_server', 'drive', configState.values[0])
-					elif configState.configId == u'clientconfig.depot.id':
-						self.set('depot_server', 'depot_id', configState.values[0])
-					elif configState.configId.startswith(u'opsiclientd.'):
-						try:
-							parts = configState.configId.lower().split('.')
-							if len(parts) < 3:
-								logger.debug(u"Expected at least 3 parts in {0!r} - skipping.".format(configState.configId))
-								continue
-
-							self.set(section=parts[1], option=parts[2], value=configState.values[0])
-						except Exception as error:
-							logger.error(u"Failed to process configState {0!r}: {1}".format(configState.configId, forceUnicode(error)))
-					else:
-						logger.debug("Skipping non-opsiclientd-config {0!r}".format(configState.configId))
-			finally:
-				configService.backend_setOptions({"addConfigStateDefaults": defaultSetting})
+					logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
 
 		logger.notice(u"Got config from service")
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.getDict()))

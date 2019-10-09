@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright 2015 uib GmbH
+# Copyright 2015-2019 uib GmbH
 # http://www.uib.de/
 # All rights reserved.
 
@@ -9,47 +9,44 @@
 from helper import workInTemporaryDirectory
 
 import os
-import unittest
-
 import mock
 
+import pytest
+
 try:
-    from ocdlibnonfree.Posix import Opsiclientd
+    from ocdlibnonfree.Posix import OpsiclientdPosix
 except ImportError as error:
     print("Failed to import: {0}".format(error))
-    Opsiclientd = None
+    OpsiclientdPosix = None
 
 
-@unittest.skipIf(Opsiclientd is None, "Unable to find non-free modules.")
-class OpsiclientdRebootCoordinationTestCase(unittest.TestCase):
-    """
-    Testing the reboot behaviour on a POSIX machine.
-    """
+@pytest.mark.skipif(OpsiclientdPosix is None, reason="Unable to find non-free modules.")
+def test_requesting_reboot():
+    with workInTemporaryDirectory() as tempDir:
+        with mock.patch('ocdlibnonfree.Posix.OpsiclientdPosix._PID_DIR', tempDir):
+            ocd = OpsiclientdPosix()
 
-    def test_requesting_reboot(self):
-        with workInTemporaryDirectory() as tempDir:
-            with mock.patch('ocdlibnonfree.Posix.OpsiclientdPosix._PID_DIR', tempDir):
-                ocd = Opsiclientd()
+            assert not ocd.isRebootRequested()
 
-                self.assertFalse(ocd.isRebootRequested())
+            rebootFile = os.path.join(tempDir, 'reboot')
+            with open(rebootFile, 'w'):
+                pass
 
-                rebootFile = os.path.join(tempDir, 'reboot')
-                with open(rebootFile, 'w'):
-                    pass
+            ocd.clearRebootRequest()
+            assert not ocd.isRebootRequested()
 
-                ocd.clearRebootRequest()
-                self.assertFalse(ocd.isRebootRequested())
 
-    def test_requesting_shutdown(self):
-        with workInTemporaryDirectory() as tempDir:
-            with mock.patch('ocdlibnonfree.Posix.OpsiclientdPosix._PID_DIR', tempDir):
-                ocd = Opsiclientd()
+@pytest.mark.skipif(OpsiclientdPosix is None, reason="Unable to find non-free modules.")
+def test_requesting_shutdown():
+    with workInTemporaryDirectory() as tempDir:
+        with mock.patch('ocdlibnonfree.Posix.OpsiclientdPosix._PID_DIR', tempDir):
+            ocd = OpsiclientdPosix()
 
-                self.assertFalse(ocd.isShutdownRequested())
+            assert not ocd.isShutdownRequested()
 
-                rebootFile = os.path.join(tempDir, 'shutdown')
-                with open(rebootFile, 'w'):
-                    pass
+            rebootFile = os.path.join(tempDir, 'shutdown')
+            with open(rebootFile, 'w'):
+                pass
 
-                ocd.clearShutdownRequest()
-                self.assertFalse(ocd.isShutdownRequested())
+            ocd.clearShutdownRequest()
+            assert not ocd.isShutdownRequested()

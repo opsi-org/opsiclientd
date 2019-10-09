@@ -1,3 +1,42 @@
+opsiclientd (4.1.1) stable; urgency=medium
+
+  [ Niko Wenselowski ]
+  * Changed license to AGPLv3 in all free parts.
+  * ControlServer: Removed method stressConfigserver
+
+  [ Erol Ueluekmen ]
+  * Based on python-opsi: 4.1.1.56-1
+  * Increased number of logfiles for logrotate (fixes #3837)
+  * Fixed clientconfig.depot.user from Hostparameters (fixes #2656)
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 16 Jan 2019 10:34:25 +0100
+
+opsiclientd (4.0.97) stable; urgency=medium
+
+  * Extended KIOSK Mode: Using 'addConfigStateDefaults' in backend_options.
+  * Deactivating TrustedInstaller Detection: Don't work properly and crashes on some Windows10 Installations.
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 26 Jun 2019 14:57:56 +0200
+
+opsiclientd (4.0.96) stable; urgency=medium
+
+  * depot.user config fix
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Thu, 18 Apr 2019 01:55:06 +0200
+
+opsiclientd (4.0.95) stable; urgency=medium
+
+  * Hostparameter clientconfig.depot.user fix
+  * WAN/VPN: mshotfix windows 10 build-packages support
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Fri, 08 Feb 2019 11:36:58 +0100
+
+opsiclientd (4.0.94) stable; urgency=medium
+
+  * Chrome-Support for timeline (info.html from the client-webserice)
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 04 Dec 2018 16:34:59 +0100
+
 opsiclientd (4.0.94-linux) testing; urgency=medium
 
   * If sys.getfilesystemencoding returns None we change the value to the

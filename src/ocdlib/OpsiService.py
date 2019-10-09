@@ -1,30 +1,30 @@
 # -*- coding: utf-8 -*-
-#
-# This module is part of the desktop management solution opsi
+
+# opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-#
-# Copyright (C) 2006-2017 uib GmbH <info@uib.de>
+
+# Copyright (C) 2006-2019 uib GmbH <info@uib.de>
 # All rights reserved.
-#
+
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
 # published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
-#
+
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-#
+
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-opsi python library - Posix
+Connecting to a opsi service.
 
-Functions and classes for the use with a POSIX operating system.
-
+:copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
 :author: Erol Ueluekmen <e.ueluekmen@uib.de>
+@author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
@@ -36,19 +36,19 @@ from hashlib import md5
 from httplib import HTTPConnection, HTTPSConnection
 from twisted.conch.ssh import keys
 
-from OPSI.Logger import Logger
-from OPSI.Util.Thread import KillableThread
-from OPSI.Util.HTTP import (urlsplit, non_blocking_connect_http,
-	non_blocking_connect_https)
-from OPSI.Backend.JSONRPC import JSONRPCBackend
-from OPSI.Types import (OpsiAuthenticationError, OpsiServiceVerificationError,
-	forceBool, forceFqdn, forceInt, forceUnicode)
 from OPSI import System
+from OPSI.Logger import Logger
+from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
+from OPSI.Util.Thread import KillableThread
+from OPSI.Util.HTTP import (
+	urlsplit, non_blocking_connect_http, non_blocking_connect_https)
+from OPSI.Backend.JSONRPC import JSONRPCBackend
+from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
 
 from ocdlib import __version__
-from ocdlib.Localization import _
-from ocdlib.Config import Config, getLogFormat
+from ocdlib.Config import getLogFormat, Config
 from ocdlib.Exceptions import CanceledByUserError
+from ocdlib.Localization import _
 
 logger = Logger()
 config = Config()
@@ -134,7 +134,7 @@ class ServiceConnection(object):
 		self.cancelled = True
 		self.running = False
 		for i in range(10):
-			if not self.isAlive():
+			if not self.is_alive():
 				break
 			self.terminate()
 			time.sleep(0.5)
@@ -175,11 +175,11 @@ class ServiceConnection(object):
 				logger.debug(u"ServiceConnectionThread started")
 				while serviceConnectionThread.running and (timeout > 0):
 					logger.debug(u"Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d) " \
-						% (timeout, serviceConnectionThread.isAlive(), cancellableAfter))
+						% (timeout, serviceConnectionThread.is_alive(), cancellableAfter))
 					self.connectionTimeoutChanged(timeout)
 					if cancellableAfter > 0:
 						cancellableAfter -= 1
-					if (cancellableAfter == 0):
+					if cancellableAfter == 0:
 						self.connectionCancelable(serviceConnectionThread.stopConnectionCallback)
 					time.sleep(1)
 					timeout -= 1
@@ -204,17 +204,12 @@ class ServiceConnection(object):
 					try:
 						System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True))
 					except Exception as e:
-						logger.error(u"Failed to sync time: '%s'" % e)
+						logger.error(u"Failed to sync time: {0!r}", e)
 
 				if urlIndex > 0:
-					modules = None
-					helpermodules = {}
-					if serviceConnectionThread.configService.isLegacyOpsi():
-						modules = serviceConnectionThread.configService.getOpsiInformation_hash()['modules']
-					else:
-						backendinfo = serviceConnectionThread.configService.backend_info()
-						modules = backendinfo['modules']
-						helpermodules = backendinfo['realmodules']
+					backendinfo = serviceConnectionThread.configService.backend_info()
+					modules = backendinfo['modules']
+					helpermodules = backendinfo['realmodules']
 
 					if not modules.get('high_availability'):
 						self.connectionFailed(u"High availability module currently disabled")
@@ -243,9 +238,9 @@ class ServiceConnection(object):
 								modules[module] = True
 						else:
 							val = modules[module]
-							if (val == False):
+							if val == False:
 								val = 'no'
-							if (val == True):
+							elif val == True:
 								val = 'yes'
 
 						data += u'%s = %s\r\n' % (module.lower().strip(), val)
@@ -262,12 +257,9 @@ class ServiceConnection(object):
 	def disconnectConfigService(self):
 		if self._configService:
 			try:
-				if self._configService.isLegacyOpsi():
-					self._configService.exit()
-				else:
-					self._configService.backend_exit()
-			except Exception as e:
-				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(e))
+				self._configService.backend_exit()
+			except Exception as exitError:
+				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(exitError))
 
 		self._configService = None
 		self._configServiceUrl = None
@@ -327,11 +319,10 @@ class ServiceConnectionThread(KillableThread):
 
 			tryNum = 0
 			while not self.cancelled and not self.connected:
+				tryNum += 1
 				try:
-					tryNum += 1
-					logger.notice(u"Connecting to config server {0!r} #{1:d}".format(self._configServiceUrl, tryNum))
-					self.setStatusMessage( _(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
-
+					logger.notice(u"Connecting to config server '%s' #%d" % (self._configServiceUrl, tryNum))
+					self.setStatusMessage(_(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
 					if len(self._username.split('.')) < 3:
 						raise Exception(u"Domain missing in username '%s'" % self._username)
 
@@ -352,33 +343,27 @@ class ServiceConnectionThread(KillableThread):
 						application='opsiclientd version %s' % __version__
 					)
 
-					if self.configService.isLegacyOpsi():
-						self.configService.authenticated()
-					else:
-						self.configService.accessControl_authenticated()
-						self.configService.setDeflate(True)
-
+					self.configService.accessControl_authenticated()
+					self.configService.setDeflate(True)
 					self.connected = True
 					self.connectionError = None
 					self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
 					logger.notice(u"Connected to config server '%s'" % self._configServiceUrl)
-
-				except OpsiServiceVerificationError as e:
-					self.connectionError = forceUnicode(e)
+				except OpsiServiceVerificationError as verificationError:
+					self.connectionError = forceUnicode(verificationError)
 					self.setStatusMessage(_(u"Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
-					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
+					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(verificationError)))
 					break
-
-				except Exception as e:
-					self.connectionError = forceUnicode(e)
-					self.setStatusMessage(_(u"Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(e)))
-					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(e)))
-					if isinstance(e, OpsiAuthenticationError):
+				except Exception as error:
+					self.connectionError = forceUnicode(error)
+					self.setStatusMessage(_(u"Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(error)))
+					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(error)))
+					if isinstance(error, OpsiAuthenticationError):
 						fqdn = System.getFQDN()
 						try:
 							fqdn = forceFqdn(fqdn)
-						except Exception as e:
-							logger.warning(u"Failed to get fqdn from os, got '%s': %s" % (fqdn, e))
+						except Exception as fqdnError:
+							logger.warning(u"Failed to get fqdn from os, got '%s': %s" % (fqdn, fqdnError))
 							break
 
 						if self._username != fqdn:
@@ -396,8 +381,8 @@ class ServiceConnectionThread(KillableThread):
 
 					for _unused in range(3):  # Sleeping before the next retry
 						time.sleep(1)
-		except Exception as e:
-			logger.logException(e)
+		except Exception as error:
+			logger.logException(error)
 		finally:
 			self.running = False
 
@@ -410,7 +395,7 @@ class ServiceConnectionThread(KillableThread):
 		self.cancelled = True
 		self.running = False
 		for i in range(10):
-			if not self.isAlive():
+			if not self.is_alive():
 				break
 			self.terminate()
 			time.sleep(0.5)

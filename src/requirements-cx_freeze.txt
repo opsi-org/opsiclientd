@@ -1,3 +1,4 @@
--r requirements.txt
+python-opsi >= 4.1.1.36, <= 4.2
 cryptography >= 1.0
+tornado == 4.3
 cffi >= 1.3

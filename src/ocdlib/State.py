@@ -1,41 +1,36 @@
 # -*- coding: utf-8 -*-
+
+# opsiclientd is part of the desktop management solution opsi
+# (open pc server integration) http://www.opsi.org
+# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-ocdlib.State
+Application state.
 
-opsiclientd is part of the desktop management solution opsi
-(open pc server integration) http://www.opsi.org
-
-Copyright (C) 2011-2015 uib GmbH
-
-http://www.uib.de/
-
-All rights reserved.
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License version 2 as
-published by the Free Software Foundation.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-@copyright:	uib GmbH <info@uib.de>
-@author: Jan Schneider <j.schneider@uib.de>
-@license: GNU General Public License version 2
+:copyright: uib GmbH <info@uib.de>
+:author: Jan Schneider <j.schneider@uib.de>
+:license: GNU Affero General Public License version 3
 """
 
-import codecs
-import json
 import os
+import json
+import codecs
 import threading
 
 from OPSI.Logger import Logger
-from OPSI.Types import forceUnicode, forceBool
+from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
 
 from ocdlib.Config import Config
@@ -63,19 +58,20 @@ class StateImplementation(object):
 						jsonstr = stateFile.read()
 
 					self._state = json.loads(jsonstr)
-			except Exception, e:
-				logger.error(u"Failed to read state file '%s': %s" % (self._stateFile, e))
+			except Exception as error:
+				logger.error(u"Failed to read state file '%s': %s" % (self._stateFile, error))
 
 	def _writeStateFile(self):
 		with self._stateLock:
 			try:
+				jsonstr = json.dumps(self._state)
 				if not os.path.exists(os.path.dirname(self._stateFile)):
 					os.makedirs(os.path.dirname(self._stateFile))
 
 				with codecs.open(self._stateFile, 'w', 'utf8') as stateFile:
-					stateFile.write(json.dumps(self._state))
-			except Exception, e:
-				logger.error(u"Failed to write state file '%s': %s" % (self._stateFile, e))
+					stateFile.write(jsonstr)
+			except Exception as error:
+				logger.error(u"Failed to write state file '%s': %s" % (self._stateFile, error))
 
 	def get(self, name, default=None):
 		name = forceUnicode(name)
@@ -84,8 +80,7 @@ class StateImplementation(object):
 				return bool(System.getActiveSessionIds(self._winApiBugCommand))
 			else:
 				return False  # TODO: find a real fix for this one.
-
-		if name == 'configserver_reachable':
+		elif name == 'configserver_reachable':
 			return isConfigServiceReachable(timeout=15)
 		elif name == 'products_cached':
 			return self._state.get('product_cache_service', {}).get('products_cached', default)
@@ -95,11 +90,12 @@ class StateImplementation(object):
 			return self._state.get(name, 0)
 		elif name == 'installation_pending':
 			return forceBool(self._state.get('installation_pending', False))
-		elif name in self._state:
-			return self._state[name]
 
-		logger.warning(u"Unknown state name {0!r}, returning {1}".format(name, default))
-		return default
+		try:
+			return self._state[name]
+		except KeyError:
+			logger.warning(u"Unknown state name {0!r}, returning default {1!r}", name, default)
+			return default
 
 	def set(self, name, value):
 		name = forceUnicode(name)

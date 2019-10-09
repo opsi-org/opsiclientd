@@ -1,32 +1,28 @@
 # -*- coding: utf-8 -*-
+
+# opsiclientd is part of the desktop management solution opsi
+# (open pc server integration) http://www.opsi.org
+# Copyright (C) 2010-2018 uib GmbH <info@uib.de>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-ocdlib.EventProcessing
+Processing of events.
 
-opsiclientd is part of the desktop management solution opsi
-(open pc server integration) http://www.opsi.org
-
-Copyright (C) 2010-2018 uib GmbH
-
-http://www.uib.de/
-
-All rights reserved.
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License, version 3
-as published by the Free Software Foundation.
-
-This program is distributed in the hope that it will be useful, but
-WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Affero General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-@copyright: uib GmbH <info@uib.de>
-@author: Jan Schneider <j.schneider@uib.de>
-@author: Erol Ueluekmen <e.ueluekmen@uib.de>
-@license: GNU Affero GPL version 3
+:copyright: uib GmbH <info@uib.de>
+:author: Jan Schneider <j.schneider@uib.de>
+:author: Erol Ueluekmen <e.ueluekmen@uib.de>
+:license: GNU Affero General Public License version 3
 """
 
 import codecs
@@ -87,6 +83,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			),
 			object=self
 		)
+
 		KillableThread.__init__(self)
 		ServiceConnection.__init__(self)
 
@@ -210,7 +207,7 @@ If this is `None` a random port will be chosen.
 		self._detailSubjectProxy.setMessage(u'')
 		ServiceConnection.connectionFailed(self, error)
 
-	# / ServiceConnection
+	# End of ServiceConnection
 
 	def setSessionId(self, sessionId):
 		self._sessionId = int(sessionId)
@@ -320,10 +317,7 @@ If this is `None` a random port will be chosen.
 
 			# Do not log jsonrpc request
 			logger.setFileLevel(LOG_WARNING)
-			if self._configService.isLegacyOpsi():
-				self._configService.writeLog('clientconnect', data.replace(u'\ufffd', u'?'), config.get('global', 'host_id'))
-			else:
-				self._configService.log_write('clientconnect', data.replace(u'\ufffd', u'?'), config.get('global', 'host_id'))
+			self._configService.log_write('clientconnect', data.replace(u'\ufffd', u'?'), config.get('global', 'host_id'))
 			logger.setFileLevel(config.get('global', 'log_level'))
 		except Exception as e:
 			logger.setFileLevel(config.get('global', 'log_level'))
@@ -411,7 +405,6 @@ None otherwise.
 			logger.error(u"Failed to start notifier application '%s': %s" % (command, e))
 
 	def closeProcessWindows(self, processId):
-		command = None
 		try:
 			command = '{command} "exit(); System.closeProcessWindows(processId={pid})"'.format(
 				command=config.get('opsiclientd_rpc', 'command'),
@@ -591,33 +584,28 @@ None otherwise.
 
 			logger.notice(u'Local action processor successfully updated')
 
-			if self._configService.isLegacyOpsi():
-				self._configService.setProductInstallationStatus(
-							'opsi-winst',
-							config.get('global', 'host_id'),
-							'installed')
-			else:
-				productVersion = None
-				packageVersion = None
-				for productOnDepot in self._configService.productOnDepot_getIdents(
-							productType = 'LocalbootProduct',
-							productId   = 'opsi-winst',
-							depotId     = config.get('depot_server', 'depot_id'),
-							returnType  = 'dict'):
-					productVersion = productOnDepot['productVersion']
-					packageVersion = productOnDepot['packageVersion']
-				self._configService.productOnClient_updateObjects([
-					ProductOnClient(
-						productId          = u'opsi-winst',
-						productType        = u'LocalbootProduct',
-						productVersion     = productVersion,
-						packageVersion     = packageVersion,
-						clientId           = config.get('global', 'host_id'),
-						installationStatus = u'installed',
-						actionProgress     = u'',
-						actionResult       = u'successful'
-					)
-				])
+			productVersion = None
+			packageVersion = None
+			for productOnDepot in self._configService.productOnDepot_getIdents(
+						productType='LocalbootProduct',
+						productId='opsi-winst',
+						depotId=config.get('depot_server', 'depot_id'),
+						returnType='dict'):
+				productVersion = productOnDepot['productVersion']
+				packageVersion = productOnDepot['packageVersion']
+			self._configService.productOnClient_updateObjects([
+				ProductOnClient(
+					productId=u'opsi-winst',
+					productType=u'LocalbootProduct',
+					productVersion=productVersion,
+					packageVersion=packageVersion,
+					clientId=config.get('global', 'host_id'),
+					installationStatus=u'installed',
+					actionProgress=u'',
+					actionResult=u'successful'
+				)
+			])
+
 			self.setActionProcessorInfo()
 
 			if mounted:
@@ -637,9 +625,6 @@ None otherwise.
 		try:
 			if not self._configService:
 				raise Exception(u"Not connected to config service")
-
-			if self._configService.isLegacyOpsi():
-				raise Exception(u"Opsi >= 4.0 needed")
 
 			productsByIdAndVersion = {}
 			for product in self._configService.product_getObjects(type = 'LocalbootProduct', userLoginScript = "*.*"):
@@ -705,48 +690,37 @@ None otherwise.
 			productIds = []
 			if self.event.eventConfig.actionProcessorProductIds:
 				productIds = self.event.eventConfig.actionProcessorProductIds
-			if self._configService.isLegacyOpsi():
-				productStates = self._configService.getLocalBootProductStates_hash(config.get('global', 'host_id'))
-				productStates = productStates.get(config.get('global', 'host_id'), [])
 
-				logger.notice(u"Got product action requests from configservice")
+			if not productIds:
+				includeProductGroupIds = [x for x in forceList(self.event.eventConfig.includeProductGroupIds) if x != ""]
+				excludeProductGroupIds = [x for x in forceList(self.event.eventConfig.excludeProductGroupIds) if x != ""]
+				includeProductIds = []
+				excludeProductIds = []
 
-				for productState in productStates:
-					if (productState['actionRequest'] not in ('none', 'undefined')):
-						productIds.append(productState['productId'])
-						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productState['productId'] + ':', productState['actionRequest']))
-			else:
-				if not productIds:
-					includeProductGroupIds = [ x for x in forceList(self.event.eventConfig.includeProductGroupIds) if x != "" ]
-					excludeProductGroupIds = [ x for x in forceList(self.event.eventConfig.excludeProductGroupIds) if x != "" ]
-					includeProductIds = []
-					excludeProductIds = []
+				if includeProductGroupIds:
+					includeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects(
+								groupType="ProductGroup",
+								groupId=includeProductGroupIds)]
+					logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
 
-					if includeProductGroupIds:
-						includeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
-									groupType="ProductGroup",
-									groupId=includeProductGroupIds) ]
+				elif excludeProductGroupIds:
+					excludeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects(
+								groupType="ProductGroup",
+								groupId=excludeProductGroupIds)]
+					logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
 
-						logger.notice("Only products with productIds: '%s' will be cached." % includeProductIds)
+				for productOnClient in [poc for poc in self._configService.productOnClient_getObjects(
+							productType='LocalbootProduct',
+							clientId=config.get('global', 'host_id'),
+							actionRequest=['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+							attributes=['actionRequest'],
+							productId=includeProductIds) if poc.productId not in excludeProductIds]:
 
-					if excludeProductGroupIds:
-						excludeProductIds = [ obj.objectId for obj in self._configService.objectToGroup_getObjects(
-									groupType="ProductGroup",
-									groupId=excludeProductGroupIds) ]
-						logger.notice("Products with productIds: '%s' will be excluded." % excludeProductIds)
+					if productOnClient.productId not in productIds:
+						productIds.append(productOnClient.productId)
+						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
 
-					for productOnClient in [ poc for poc in self._configService.productOnClient_getObjects(
-								productType   = 'LocalbootProduct',
-								clientId      = config.get('global', 'host_id'),
-								actionRequest = ['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
-								attributes    = ['actionRequest'],
-								productId     = includeProductIds) if poc.productId not in excludeProductIds ]:
-
-						if not productOnClient.productId in productIds:
-							productIds.append(productOnClient.productId)
-							logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
-
-			if (len(productIds) == 0) and (bootmode == 'BKSTD'):
+			if (not productIds) and bootmode == 'BKSTD':
 				logger.notice(u"No product action requests set")
 				self.setStatusMessage( _(u"No product action requests set") )
 				#set installation_pending State to False
@@ -811,32 +785,32 @@ None otherwise.
 			if not self.event.getActionProcessorCommand():
 				raise Exception(u"No action processor command defined")
 
-
-			if self.event.eventConfig.getId() == 'gui_startup' and not state.get('user_logged_in', 0):
+			#TODO: Deactivating Trusted Installer Detection. Have to implemented in a better way in futur versions.
+			#if self.event.eventConfig.getId() == 'gui_startup' and not state.get('user_logged_in', 0):
 				# check for Trusted Installer before Running Action Processor
-				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
-					logger.notice(u"Getting TrustedInstaller service configuration")
-					try:
+			#	if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
+			#		logger.notice(u"Getting TrustedInstaller service configuration")
+			#		try:
 						# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3
-						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
-						logger.debug2(u">>> TrustedInstaller Service autmaticStartup and type: '%s' '%s'" % (automaticStartup,type(automaticStartup)))
-						if (automaticStartup == 2):
-							logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
-							self.setStatusMessage( _(u"Waiting for TrustedInstaller") )
-							waitEventId = timeline.addEvent(
-									title         = u"Waiting for TrustedInstaller",
-									description   = u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
-									category      = u"wait",
-									durationEvent = True)
-							while True:
-								time.sleep(3)
-								logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
-								automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
-								if not (automaticStartup == 2):
-									break
-							timeline.setEventEnd(eventId = waitEventId)
-					except Exception, e:
-						logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
+			#			automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
+			#			logger.debug2(u">>> TrustedInstaller Service autmaticStartup and type: '%s' '%s'" % (automaticStartup,type(automaticStartup)))
+			#			if (automaticStartup == 2):
+			#				logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
+			#				self.setStatusMessage( _(u"Waiting for TrustedInstaller") )
+			#				waitEventId = timeline.addEvent(
+			#						title         = u"Waiting for TrustedInstaller",
+			#						description   = u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
+			#						category      = u"wait",
+			#						durationEvent = True)
+			#				while True:
+			#					time.sleep(3)
+			#					logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
+			#					automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
+			#					if not (automaticStartup == 2):
+			#						break
+			#				timeline.setEventEnd(eventId = waitEventId)
+			#		except Exception, e:
+			#			logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
 
 			self.setStatusMessage( _(u"Starting actions") )
 

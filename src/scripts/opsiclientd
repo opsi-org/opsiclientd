@@ -3,7 +3,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2010-2015 uib GmbH <info@uib.de>
+# Copyright (C) 2010-2019 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -43,16 +43,13 @@ else:
 	raise NotImplementedError('Trying to run under an unsupported OS.')
 
 
-if __name__ == "__main__":
-	logger = Logger()
-	logger.setLogFormat(getLogFormat(u'opsiclientd'))
-	logger.setConsoleLevel(LOG_WARNING)
+logger = Logger()
+logger.setLogFormat(getLogFormat(u'opsiclientd'))
+logger.setConsoleLevel(LOG_WARNING)
 
-	try:
-		OpsiclientdInit()
-	except Exception as exception:
-		logger.logException(exception)
-		print("ERROR: {0}".format(forceUnicode(exception).encode('utf-8')), file=sys.stderr)
-		sys.exit(1)
-
-	sys.exit(0)
+try:
+	OpsiclientdInit()
+except Exception as exception:
+	logger.logException(exception)
+	print("ERROR: {0}".format(forceUnicode(exception).encode('utf-8')), file=sys.stderr)
+	sys.exit(1)

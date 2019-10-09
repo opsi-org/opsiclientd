@@ -3,10 +3,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2014-2018 uib GmbH
-
-# http://www.uib.de/
-# All rights reserved.
+# Copyright (C) 2010-2019 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,8 +18,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-ocdlib.Opsiclientd
-
 Basic opsiclientd implementation. This is abstract in some parts that
 should be overridden in the concrete implementation for an OS.
 
@@ -37,20 +32,24 @@ import os
 import sys
 from contextlib import contextmanager
 
-from ocdlib import __version__
-from ocdlib.Config import Config, getLogFormat
-from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
+# Import the ControlServer first because this module installs
+# the tornado-bridge for twisted.
 from ocdlib.ControlServer import ControlServer
-from ocdlib.Events import *
-from ocdlib.Localization import _, setLocaleDir
-from ocdlib.Timeline import Timeline
-from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
 from OPSI import System
 from OPSI.Logger import Logger
-from OPSI.Types import forceUnicode, forceInt
+from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
+
+from ocdlib import __version__
+from ocdlib.Config import Config, getLogFormat
+from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
+from ocdlib.Events import *
+from ocdlib.EventProcessing import EventProcessingThread
+from ocdlib.Localization import _, setLocaleDir
+from ocdlib.Timeline import Timeline
+from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
 # This is at the end to make sure that the tornado-bridge for twisted
 # is installed once we reach this.
@@ -62,10 +61,6 @@ try:
 except ImportError:
 	__fullversion__ = False
 
-try:
-	from ocdlibnonfree.EventProcessing import EventProcessingThread
-except ImportError:
-	from ocdlib.EventProcessing import EventProcessingThread
 
 logger = Logger()
 config = Config()
@@ -105,7 +100,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._stopEvent.clear()
 
 	def setBlockLogin(self, blockLogin):
-		self._blockLogin = bool(blockLogin)
+		self._blockLogin = forceBool(blockLogin)
 		logger.notice(u"Block login now set to '%s'" % self._blockLogin)
 
 		if self._blockLogin:
@@ -462,7 +457,6 @@ class Opsiclientd(EventListener, threading.Thread):
 									% (ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()))
 							return
 			self.createActionProcessorUser(recreate=False)
-
 			self._eventProcessingThreads.append(eventProcessingThread)
 
 		try:

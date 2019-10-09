@@ -1,17 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import os
-import unittest
-from context import SystemCheck as syscheck
+
+from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
 
-class RunningOnWindowsTest(unittest.TestCase):
-    def test_system_determining(self):
-        if os.name == 'nt':
-            self.assertTrue(syscheck.RUNNING_ON_WINDOWS)
-        else:
-            self.assertFalse(syscheck.RUNNING_ON_WINDOWS)
-
-
-if __name__ == '__main__':
-    unittest.main()
+def test_system_determining():
+        assert RUNNING_ON_WINDOWS == bool(os.name == 'nt')

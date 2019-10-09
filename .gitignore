@@ -11,3 +11,8 @@ opsiclientd.tar.gz
 src/build/*
 *.sublime-*
 .idea
+
+# Folders used during building
+src/build/
+src/dist/
+src/OPSI/

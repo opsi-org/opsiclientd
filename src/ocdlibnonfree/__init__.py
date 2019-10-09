@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
+
+# This module is part of the desktop management solution opsi
+# (open pc server integration) http://www.opsi.org
+
+# Copyright (C) 2010-2019 uib GmbH
+
+# http://www.uib.de/
+
+# All rights reserved.
 """
-ocdlibnonfree
+Non-free parts of opsiclientd.
 
-This module is part of the desktop management solution opsi
-(open pc server integration) http://www.opsi.org
-
-Copyright (C) 2010 uib GmbH
-
-http://www.uib.de/
-
-All rights reserved.
-
-@copyright:	uib GmbH <info@uib.de>
-@author: Jan Schneider <j.schneider@uib.de>
-@author: Erol Ueluekmen <e.ueluekmen@uib.de>
+:copyright: uib GmbH <info@uib.de>
+:author: Jan Schneider <j.schneider@uib.de>
+:author: Erol Ueluekmen <e.ueluekmen@uib.de>
 """
 
 __fullversion__ = True
