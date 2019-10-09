@@ -51,9 +51,7 @@ logger = Logger()
 config = Config()
 timeline = Timeline()
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                      EVENT PROCESSING THREAD                                      -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class EventProcessingThread(KillableThread, ServiceConnection):
 	def __init__(self, opsiclientd, event):
 		from ocdlib import __version__  # TODO: Import movable?
