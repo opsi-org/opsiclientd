@@ -7,9 +7,10 @@ import os
 import shutil
 import tempfile
 from contextlib import contextmanager
-import unittest
 
-from ocdlib.Config import Config
+from ocdlib.Config import ConfigImplementation as Config
+
+import pytest
 
 
 @contextmanager
@@ -44,45 +45,42 @@ def cd(path):
         os.chdir(old_dir)
 
 
-class ConfigTestCase(unittest.TestCase):
-    def setUp(self):
-        self.config = Config()
+@pytest.fixture
+def config():
+    yield Config()
 
-    def tearDown(self):
-        try:
-            self.config._reset()
-        except AttributeError:
-            print("Whoops, we are missing something!")
 
-        del self.config
+def testGettingUnknownSectionFails(config):
+    with pytest.raises(ValueError):
+        config.get('nothing', 'bla')
 
-    def testGettingUnknownSectionFails(self):
-        self.assertRaises(ValueError, self.config.get, 'nothing', 'bla')
 
-    def testGettingUnknownOptionFails(self):
-        self.assertRaises(ValueError, self.config.get, 'global', 'non_existing_option')
+def testGettingUnknownOptionFails(config):
+    with pytest.raises(ValueError):
+        config.get('global', 'non_existing_option')
 
-    def testRotatingLogfile(self):
-        with workInTemporaryDirectory() as tempDir:
-            dummyConfig = os.path.join(tempDir, 'config')
-            logFile = os.path.join(tempDir, 'testlog.log')
 
-            with open(logFile, 'w') as f:
-                pass
+def testRotatingLogfile(config):
+    with workInTemporaryDirectory() as tempDir:
+        dummyConfig = os.path.join(tempDir, 'config')
+        logFile = os.path.join(tempDir, 'testlog.log')
 
-            with open(dummyConfig, 'w') as f:
-                f.write("""[global]
+        with open(logFile, 'w') as f:
+            pass
+
+        with open(dummyConfig, 'w') as f:
+            f.write("""[global]
 log_file = {0}""".format(logFile))
 
-            self.config.set('global', 'config_file', dummyConfig)
-            self.config.set('global', 'log_dir', tempDir)
+        config.set('global', 'config_file', dummyConfig)
+        config.set('global', 'log_dir', tempDir)
 
-            # First rotation
-            self.config.readConfigFile(keepLog=False)
-            print(os.listdir(tempDir))
-            assert os.path.exists(os.path.join(tempDir, 'testlog.log.0'))
+        # First rotation
+        config.readConfigFile(keepLog=False)
+        print(os.listdir(tempDir))
+        assert os.path.exists(os.path.join(tempDir, 'testlog.log.0'))
 
-            # Second rotation
-            self.config.readConfigFile(keepLog=False)
-            print(os.listdir(tempDir))
-            assert os.path.exists(os.path.join(tempDir, 'testlog.log.1'))
+        # Second rotation
+        config.readConfigFile(keepLog=False)
+        print(os.listdir(tempDir))
+        assert os.path.exists(os.path.join(tempDir, 'testlog.log.1'))
