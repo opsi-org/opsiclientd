@@ -17,11 +17,6 @@ def testGettingUnknownSectionFails(config):
         config.get('nothing', 'bla')
 
 
-def testDefaultPathsExistPerOS(config):
-    assert config.WINDOWS_DEFAULT_PATHS
-    assert config.LINUX_DEFAULT_PATHS
-
-
 def testConfigGetsFilledWithSystemDefaults(config):
     assert config.get('global', 'log_dir')
     assert config.get('global', 'state_file')
