@@ -522,10 +522,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				raise Exception(u"Not connected to config service")
 
 			productsByIdAndVersion = {}
-			for product in self._configService.product_getObjects(type = 'LocalbootProduct', userLoginScript = "*.*"):
-				if not productsByIdAndVersion.has_key(product.id):
+			for product in self._configService.product_getObjects(type='LocalbootProduct', userLoginScript="*.*"):
+				if product.id not in productsByIdAndVersion:
 					productsByIdAndVersion[product.id] = {}
-				if not productsByIdAndVersion[product.id].has_key(product.productVersion):
+				if product.productVersion not in productsByIdAndVersion[product.id]:
 					productsByIdAndVersion[product.id][product.productVersion] = {}
 				productsByIdAndVersion[product.id][product.productVersion][product.packageVersion] = product
 
