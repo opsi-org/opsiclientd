@@ -1,88 +1,89 @@
-#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from __future__ import unicode_literals
+from __future__ import absolute_import
 
 import os
-import shutil
-import tempfile
-from contextlib import contextmanager
-import unittest
 
-from ocdlib.Config import Config
+from ocdlib.Config import SectionNotFoundException, NoConfigOptionFoundException
+from ocdlib.Config import getLogFormat
 
+from .helper import workInTemporaryDirectory
 
-@contextmanager
-def workInTemporaryDirectory(tempDir=None):
-    """
-    Creates a temporary folder to work in. Deletes the folder afterwards.
-
-    :param tempDir: use the given dir as temporary directory. Will not \
-be deleted if given.
-    """
-    temporary_folder = tempDir or tempfile.mkdtemp()
-    with cd(temporary_folder):
-        try:
-            yield temporary_folder
-        finally:
-            if not tempDir:
-                try:
-                    shutil.rmtree(temporary_folder)
-                except OSError:
-                    pass
+import pytest
 
 
-@contextmanager
-def cd(path):
-    'Change the current directory to `path` as long as the context exists.'
-
-    old_dir = os.getcwd()
-    os.chdir(path)
-    try:
-        yield
-    finally:
-        os.chdir(old_dir)
+def testGettingUnknownSectionFails(config):
+    with pytest.raises(SectionNotFoundException):
+        config.get('nothing', 'bla')
 
 
-class ConfigTestCase(unittest.TestCase):
-    def setUp(self):
-        self.config = Config()
+def testConfigGetsFilledWithSystemDefaults(config):
+    assert config.get('global', 'log_dir')
+    assert config.get('global', 'state_file')
+    assert config.get('global', 'timeline_db')
+    assert config.get('global', 'server_cert_dir')
 
-    def tearDown(self):
-        try:
-            self.config._reset()
-        except AttributeError:
-            print("Whoops, we are missing something!")
+    assert config.get('cache_service', 'storage_dir')
 
-        del self.config
+    for section in ('log_dir', 'state_file', 'timeline_db', 'server_cert_dir'):
+        assert config.get('global', section).startswith('c:')
 
-    def testGettingUnknownSectionFails(self):
-        self.assertRaises(ValueError, self.config.get, 'nothing', 'bla')
+    assert config.get('cache_service', 'storage_dir').startswith('c:')
 
-    def testGettingUnknownOptionFails(self):
-        self.assertRaises(ValueError, self.config.get, 'global', 'non_existing_option')
 
-    def testRotatingLogfile(self):
-        with workInTemporaryDirectory() as tempDir:
-            dummyConfig = os.path.join(tempDir, 'config')
-            logFile = os.path.join(tempDir, 'testlog.log')
+def testConfigGetsFilledWithSystemSpecificValues(config, onWindows):
+    assert config.get('global', 'config_file')
+    assert config.get('global', 'server_cert_dir')
 
-            with open(logFile, 'w') as f:
-                pass
+    assert config.get('cache_service', 'storage_dir')
+    if onWindows:  # Only filled during runtime
+        assert config.get('cache_service', 'extension_config_dir')
 
-            with open(dummyConfig, 'w') as f:
-                f.write("""[global]
+    assert config.get('global', 'config_file')
+    assert config.get('global', 'state_file')
+    assert config.get('global', 'timeline_db')
+    assert config.get('global', 'log_dir')
+
+    if onWindows:  # Only filled during runtime
+        assert config.get('system', 'program_files_dir')
+
+
+def testGettingUnknownOptionFails(config):
+    with pytest.raises(NoConfigOptionFoundException):
+        config.get('global', 'non_existing_option')
+
+
+def testRotatingLogfile(config):
+    with workInTemporaryDirectory() as tempDir:
+        dummyConfig = os.path.join(tempDir, 'config')
+        logFile = os.path.join(tempDir, 'testlog.log')
+
+        with open(logFile, 'w') as f:
+            pass
+
+        with open(dummyConfig, 'w') as f:
+            f.write("""[global]
 log_file = {0}""".format(logFile))
 
-            self.config.set('global', 'config_file', dummyConfig)
-            self.config.set('global', 'log_dir', tempDir)
+        config.set('global', 'config_file', dummyConfig)
+        config.set('global', 'log_dir', tempDir)
 
-            # First rotation
-            self.config.readConfigFile(keepLog=False)
-            print(os.listdir(tempDir))
-            assert os.path.exists(os.path.join(tempDir, 'testlog.log.0'))
+        # First rotation
+        config.readConfigFile(keepLog=False)
+        print(os.listdir(tempDir))
+        assert os.path.exists(os.path.join(tempDir, 'testlog.log.0'))
 
-            # Second rotation
-            self.config.readConfigFile(keepLog=False)
-            print(os.listdir(tempDir))
-            assert os.path.exists(os.path.join(tempDir, 'testlog.log.1'))
+        # Second rotation
+        config.readConfigFile(keepLog=False)
+        print(os.listdir(tempDir))
+        assert os.path.exists(os.path.join(tempDir, 'testlog.log.1'))
+
+
+def testLogFormatContainsModulename():
+    modulename = 'asdfghj'
+    assert modulename in getLogFormat(modulename)
+
+
+def testLogFormatFormattingUses30CharactersForName():
+    modulename = 'olol'
+    assert '[%l] [%D] [ olol                          ] %M   (%F|%N)' == getLogFormat(modulename)

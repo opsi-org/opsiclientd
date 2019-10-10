@@ -17,3 +17,8 @@ def config():
 @pytest.fixture
 def configFile():
 	return os.path.join(os.path.dirname(__file__), '..', 'windows', 'opsiclientd.conf')
+
+
+@pytest.fixture
+def onWindows():
+	return bool(os.name == 'nt')

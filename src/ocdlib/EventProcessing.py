@@ -46,18 +46,12 @@ from ocdlib.Localization import _
 from ocdlib.Config import getLogFormat, Config
 from ocdlib.Timeline import Timeline
 
-if (os.name == 'nt'):
-	from ocdlib.Windows import *
-elif (os.name == 'posix'):
-	from ocdlib.Posix import *
 
 logger = Logger()
 config = Config()
 timeline = Timeline()
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# -                                      EVENT PROCESSING THREAD                                      -
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 class EventProcessingThread(KillableThread, ServiceConnection):
 	def __init__(self, opsiclientd, event):
 		from ocdlib import __version__  # TODO: Import movable?

@@ -1,25 +1,27 @@
 # -*- coding: utf-8 -*-
 
+from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Exceptions import BackendConfigurationError
 
 import pytest
 
-cacheBackendModule = pytest.importorskip("ocdlibnonfree.CacheBackend")
-ClientCacheBackend = cacheBackendModule.ClientCacheBackend
 
-sqlModule = pytest.importorskip("OPSI.Backend.SQLite")
-SQLiteBackend = sqlModule.SQLiteBackend
+@pytest.fixture(scope="module")
+def clientCacheBackendClass():
+    cacheBackendModule = pytest.importorskip("ocdlibnonfree.CacheBackend")
+    return cacheBackendModule.ClientCacheBackend
 
 
-def testBackendRequiresConfiguration():
+def testBackendRequiresConfiguration(clientCacheBackendClass):
     with pytest.raises(BackendConfigurationError):
-        ClientCacheBackend()
+        clientCacheBackendClass()
 
 
 @pytest.mark.skipif(True, reason="Create propert automated test")
-def testBackend():  # TODO: create a test
-    workBackend = SQLiteBackend(database=':memory:')
+def testBackend(clientCacheBackendClass):  # TODO: create a test
+    sqlModule = pytest.importorskip("OPSI.Backend.SQLite")
+    workBackend = sqlModule.SQLiteBackend(database=':memory:')
 
     serviceBackend = JSONRPCBackend(
         address='https://bonifax.uib.local:4447/rpc',
@@ -27,7 +29,7 @@ def testBackend():  # TODO: create a test
         password='12c1e40a6d3038d3eb2b4d489e978973'
     )
 
-    cb = ClientCacheBackend(
+    cb = clientCacheBackendClass(
         workBackend=workBackend,
         masterBackend=serviceBackend,
         depotId='bonifax.uib.local',
