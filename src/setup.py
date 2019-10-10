@@ -193,7 +193,7 @@ setup_options = {
 	"author_email": "info@uib.de",
 	"license": "GNU Affero General Public License Version 3 (AGPLv3)",
 	"install_requires": [
-		"python-opsi >= 4.1.1.36, <= 4.2",
+		"python-opsi >= 4.1.1.80, <= 4.2",
 		"cryptography >= 1.0",
 		"tornado == 4.3",  # for Tornado twisted bridge
 	],

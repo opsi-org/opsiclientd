@@ -1,3 +1,9 @@
+opsiclientd (4.1.2) stable; urgency=medium
+
+  * TrustedInstaller-Detection now configurable.
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Fri, 02 Aug 2019 14:40:14 +0200
+
 opsiclientd (4.1.1) stable; urgency=medium
 
   [ Niko Wenselowski ]

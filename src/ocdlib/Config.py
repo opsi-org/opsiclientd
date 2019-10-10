@@ -253,9 +253,9 @@ class ConfigImplementation(object):
 		section = forceUnicodeLower(section.strip()).lower()
 		option = forceUnicodeLower(option.strip()).lower()
 		if section not in self._config:
-			raise SectionNotFoundException(u"No such config section: {0}".format(section))
+			raise SectionNotFoundException(u"No such config section: %s" % section)
 		if option not in self._config[section]:
-			raise NoConfigOptionFoundException(u"No such config option in section '{0}': {1}".format(section, option))
+			raise NoConfigOptionFoundException(u"No such config option in section '%s': %s" % (section, option))
 
 		value = self._config[section][option]
 		if not raw and isinstance(value, (unicode, str)) and (value.count('%') >= 2):
@@ -296,7 +296,7 @@ class ConfigImplementation(object):
 			value = forceHostId(value.replace('_', '-'))
 		elif option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port', 'max_authentication_failures'):
 			value = forceInt(value)
-		elif option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active', 'sync_time_from_service'):
+		elif option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active', 'sync_time_from_service', 'trusted_installer_detection'):
 			value = forceBool(value)
 		elif option in ('exclude_product_group_ids', 'include_product_group_ids'):
 			if not isinstance(value, list):
@@ -626,9 +626,20 @@ class ConfigImplementation(object):
 		if not configService:
 			raise Exception(u"Config service is undefined")
 
+		query = {
+			"objectId": self.get('global', 'host_id'),
+			"configId": [
+				'clientconfig.configserver.url',
+				'clientconfig.depot.drive',
+				'clientconfig.depot.id',
+				'clientconfig.depot.user',
+				'opsiclientd.*'  # everything starting with opsiclientd.
+			]
+		}
+
 		configService.backend_setOptions({"addConfigStateDefaults": True})
-		for configState in configService.configState_getObjects(objectId=self.get('global', 'host_id')):
-			logger.info(u"Got config state from service: {0!r}".format(configState))
+		for configState in configService.configState_getObjects(**query):
+			logger.info(u"Got config state from service: %r" % configState)
 
 			if not configState.values:
 				logger.debug(u"No values - skipping {0!r}".format(configState.configId))

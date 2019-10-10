@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import, unicode_literals
+from __future__ import absolute_import
 
 import os
 
@@ -48,6 +48,7 @@ def testConfigGetsFilledWithSystemSpecificValues(config, onWindows):
 
     assert config.get('cache_service', 'storage_dir')
     assert config.get('cache_service', 'extension_config_dir')
+
     assert config.get('global', 'config_file')
     assert config.get('global', 'state_file')
     assert config.get('global', 'timeline_db')

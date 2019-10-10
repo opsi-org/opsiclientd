@@ -627,10 +627,10 @@ None otherwise.
 				raise Exception(u"Not connected to config service")
 
 			productsByIdAndVersion = {}
-			for product in self._configService.product_getObjects(type = 'LocalbootProduct', userLoginScript = "*.*"):
-				if not productsByIdAndVersion.has_key(product.id):
+			for product in self._configService.product_getObjects(type='LocalbootProduct', userLoginScript="*.*"):
+				if product.id not in productsByIdAndVersion:
 					productsByIdAndVersion[product.id] = {}
-				if not productsByIdAndVersion[product.id].has_key(product.productVersion):
+				if product.productVersion not in productsByIdAndVersion[product.id]:
 					productsByIdAndVersion[product.id][product.productVersion] = {}
 				productsByIdAndVersion[product.id][product.productVersion][product.packageVersion] = product
 
@@ -774,45 +774,53 @@ None otherwise.
 
 	def runActions(self, productIds, additionalParams=''):
 		runActionsEventId = timeline.addEvent(
-			title         = u"Running actions",
-			description   = u"Running actions (%s)" % u", ".join(productIds),
-			category      = u"run_actions",
-			durationEvent = True)
+			title=u"Running actions",
+			description=u"Running actions (%s)" % u", ".join(productIds),
+			category=u"run_actions",
+			durationEvent=True
+		)
 		try:
-			config.selectDepotserver(configService = self._configService, event = self.event, productIds = productIds)
+			config.selectDepotserver(
+				configService=self._configService,
+				event=self.event,
+				productIds=productIds
+			)
 			if not additionalParams:
 				additionalParams = ''
 			if not self.event.getActionProcessorCommand():
 				raise Exception(u"No action processor command defined")
 
-			#TODO: Deactivating Trusted Installer Detection. Have to implemented in a better way in futur versions.
-			#if self.event.eventConfig.getId() == 'gui_startup' and not state.get('user_logged_in', 0):
+			# TODO: Deactivating Trusted Installer Detection. Have to implemented in a better way in futur versions.
+			if self.event.eventConfig.getId() == 'gui_startup' and not state.get('user_logged_in', 0) and eventConfig.trustedInstallerDetection:
 				# check for Trusted Installer before Running Action Processor
-			#	if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
-			#		logger.notice(u"Getting TrustedInstaller service configuration")
-			#		try:
+				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
+					logger.notice(u"Getting TrustedInstaller service configuration")
+					try:
 						# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3
-			#			automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
-			#			logger.debug2(u">>> TrustedInstaller Service autmaticStartup and type: '%s' '%s'" % (automaticStartup,type(automaticStartup)))
-			#			if (automaticStartup == 2):
-			#				logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
-			#				self.setStatusMessage( _(u"Waiting for TrustedInstaller") )
-			#				waitEventId = timeline.addEvent(
-			#						title         = u"Waiting for TrustedInstaller",
-			#						description   = u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
-			#						category      = u"wait",
-			#						durationEvent = True)
-			#				while True:
-			#					time.sleep(3)
-			#					logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
-			#					automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
-			#					if not (automaticStartup == 2):
-			#						break
-			#				timeline.setEventEnd(eventId = waitEventId)
-			#		except Exception, e:
-			#			logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
+						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection=False)
+						logger.debug2(u">>> TrustedInstaller Service autmaticStartup and type: '%s' '%s'" % (automaticStartup, type(automaticStartup)))
+						if automaticStartup == 2:
+							logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
+							self.setStatusMessage(_(u"Waiting for TrustedInstaller"))
+							waitEventId = timeline.addEvent(
+								title=u"Waiting for TrustedInstaller",
+								description=u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
+								category=u"wait",
+								durationEvent=True
+							)
 
-			self.setStatusMessage( _(u"Starting actions") )
+							while True:
+								time.sleep(3)
+								logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
+								automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection=False)
+								if not (automaticStartup == 2):
+									break
+
+							timeline.setEventEnd(eventId=waitEventId)
+					except Exception as e:
+						logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
+
+			self.setStatusMessage(_(u"Starting actions"))
 
 			if RUNNING_ON_WINDOWS:
 				# Setting some registry values before starting action
@@ -838,8 +846,7 @@ None otherwise.
 				# Default desktop is winlogon
 				desktop = u'winlogon'
 
-
-			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
+			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
 
 			# Update action processor
 			if self.event.eventConfig.updateActionProcessor:
