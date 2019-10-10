@@ -78,6 +78,14 @@ def getLogFormat(moduleName):
 	return u'[%l] [%D] [{name}] %M   (%F|%N)'.format(name=name)
 
 
+class SectionNotFoundException(ValueError):
+	pass
+
+
+class NoConfigOptionFoundException(ValueError):
+	pass
+
+
 class ConfigImplementation(object):
 
 	def __init__(self):
@@ -180,9 +188,9 @@ class ConfigImplementation(object):
 		section = unicode(section).strip().lower()
 		option = unicode(option).strip().lower()
 		if section not in self._config:
-			raise ValueError(u"No such config section: %s" % section)
+			raise SectionNotFoundException(u"No such config section: %s" % section)
 		if option not in self._config[section]:
-			raise ValueError(u"No such config option in section '%s': %s" % (section, option))
+			raise NoConfigOptionFoundException(u"No such config option in section '%s': %s" % (section, option))
 
 		value = self._config[section][option]
 		if not raw and isinstance(value, (unicode, str)) and (value.count('%') >= 2):
