@@ -35,7 +35,7 @@ import time
 
 from OPSI import System
 from OPSI.Logger import Logger, LOG_DEBUG
-from OPSI.Types import forceList, forceUnicode
+from OPSI.Types import forceBool, forceList, forceUnicode
 from OPSI.Util import objectToBeautifiedText
 
 from ocdlib.Config import getLogFormat, Config
@@ -1036,7 +1036,7 @@ def getEventConfigs():
 					elif (key == 'action_processor_timeout'):
 						eventConfigs[eventConfigId]['actionProcessorTimeout'] = int(value)
 					elif (key == 'trusted_installer_detection'):
-						eventConfigs[eventConfigId]['trustedInstallerDetection'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
+						eventConfigs[eventConfigId]['trustedInstallerDetection'] = forceBool(value)
 					elif (key == 'shutdown_notifier_command'):
 						eventConfigs[eventConfigId]['shutdownNotifierCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'shutdown_notifier_desktop'):
