@@ -1,8 +1,6 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
-
 import ocdlib.Events as Events
 import ocdlib.ControlServer as OCS
 
@@ -33,13 +31,12 @@ def testFiringUnknownEventRaisesError(preparedConfig):
 		controlServer.fireEvent('foobar')
 
 
-@pytest.mark.parametrize("on_windows", [os.name == 'nt'])
-def testGUIStartupEventOnlyOnWindows(preparedConfig, on_windows):
+def testGUIStartupEventOnlyOnWindows(preparedConfig, onWindows):
 	preparedConfig.readConfigFile()
 
 	Events.createEventGenerators()
 	configs = Events.getEventConfigs()
 
 	assert configs
-	if on_windows:
+	if onWindows:
 		assert 'gui_startup' in configs
