@@ -31,12 +31,14 @@ def testConfigGetsFilledWithSystemDefaults(config):
     assert config.get('cache_service', 'storage_dir').startswith('c:')
 
 
-def testConfigGetsFilledWithSystemSpecificValues(config):
+def testConfigGetsFilledWithSystemSpecificValues(config, onWindows):
     assert config.get('global', 'config_file')
     assert config.get('global', 'server_cert_dir')
 
     assert config.get('cache_service', 'storage_dir')
-    assert config.get('cache_service', 'extension_config_dir')
+    if onWindows:
+        assert config.get('cache_service', 'extension_config_dir')
+
     assert config.get('global', 'config_file')
     assert config.get('global', 'state_file')
     assert config.get('global', 'timeline_db')
