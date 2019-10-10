@@ -36,7 +36,7 @@ def testConfigGetsFilledWithSystemSpecificValues(config, onWindows):
     assert config.get('global', 'server_cert_dir')
 
     assert config.get('cache_service', 'storage_dir')
-    if onWindows:
+    if onWindows:  # Only filled during runtime
         assert config.get('cache_service', 'extension_config_dir')
 
     assert config.get('global', 'config_file')
@@ -44,7 +44,8 @@ def testConfigGetsFilledWithSystemSpecificValues(config, onWindows):
     assert config.get('global', 'timeline_db')
     assert config.get('global', 'log_dir')
 
-    assert config.get('system', 'program_files_dir')
+    if onWindows:  # Only filled during runtime
+        assert config.get('system', 'program_files_dir')
 
 
 def testGettingUnknownOptionFails(config):
