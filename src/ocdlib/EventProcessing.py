@@ -670,45 +670,53 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 	def runActions(self, productIds, additionalParams=''):
 		runActionsEventId = timeline.addEvent(
-			title         = u"Running actions",
-			description   = u"Running actions (%s)" % u", ".join(productIds),
-			category      = u"run_actions",
-			durationEvent = True)
+			title=u"Running actions",
+			description=u"Running actions (%s)" % u", ".join(productIds),
+			category=u"run_actions",
+			durationEvent=True
+		)
 		try:
-			config.selectDepotserver(configService = self._configService, event = self.event, productIds = productIds)
+			config.selectDepotserver(
+				configService=self._configService,
+				event=self.event,
+				productIds=productIds
+			)
 			if not additionalParams:
 				additionalParams = ''
 			if not self.event.getActionProcessorCommand():
 				raise Exception(u"No action processor command defined")
 
-			#TODO: Deactivating Trusted Installer Detection. Have to implemented in a better way in futur versions.
+			# TODO: Deactivating Trusted Installer Detection. Have to implemented in a better way in futur versions.
 			if self.event.eventConfig.getId() == 'gui_startup' and not state.get('user_logged_in', 0) and eventConfig.trustedInstallerDetection:
 				# check for Trusted Installer before Running Action Processor
 				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
 					logger.notice(u"Getting TrustedInstaller service configuration")
 					try:
 						# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3
-						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
-						logger.debug2(u">>> TrustedInstaller Service autmaticStartup and type: '%s' '%s'" % (automaticStartup,type(automaticStartup)))
-						if (automaticStartup == 2):
+						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection=False)
+						logger.debug2(u">>> TrustedInstaller Service autmaticStartup and type: '%s' '%s'" % (automaticStartup, type(automaticStartup)))
+						if automaticStartup == 2:
 							logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
-							self.setStatusMessage( _(u"Waiting for TrustedInstaller") )
+							self.setStatusMessage(_(u"Waiting for TrustedInstaller"))
 							waitEventId = timeline.addEvent(
-									title         = u"Waiting for TrustedInstaller",
-									description   = u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
-									category      = u"wait",
-									durationEvent = True)
+								title=u"Waiting for TrustedInstaller",
+								description=u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
+								category=u"wait",
+								durationEvent=True
+							)
+
 							while True:
 								time.sleep(3)
 								logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
-								automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
+								automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection=False)
 								if not (automaticStartup == 2):
 									break
-							timeline.setEventEnd(eventId = waitEventId)
-					except Exception, e:
+
+							timeline.setEventEnd(eventId=waitEventId)
+					except Exception as e:
 						logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
 
-			self.setStatusMessage( _(u"Starting actions") )
+			self.setStatusMessage(_(u"Starting actions"))
 
 			# Setting some registry values before starting action
 			# Mainly for action processor winst
@@ -733,8 +741,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				# Default desktop is winlogon
 				desktop = u'winlogon'
 
-
-			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
+			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
 
 			# Update action processor
 			if self.event.eventConfig.updateActionProcessor:
@@ -756,7 +763,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				actionProcessorUserPassword = self.opsiclientd._actionProcessorUserPassword
 
 			createEnvironment = config.get('action_processor', 'create_environment')
-
 
 			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
 			actionProcessorCommand = actionProcessorCommand.replace('%service_url%', self._configServiceUrl)
