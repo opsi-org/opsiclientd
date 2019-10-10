@@ -2,7 +2,7 @@
 
 import pytest
 
-from ocdlib.EventConfiguration import EventConfig
+from ocdlib.Events import EventConfig
 from ocdlib.Events import (DaemonShutdownEventConfig, DaemonStartupEventConfig,
     PanicEventConfig, TimerEventConfig, ProcessActionRequestsEventConfig,
     SwOnDemandEventConfig, SyncCompletedEventConfig)
