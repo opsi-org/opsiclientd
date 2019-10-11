@@ -29,6 +29,8 @@ This is where all the parts come together.
 
 import os
 import sys
+import threading
+import time
 
 from twisted.internet import reactor
 
@@ -40,7 +42,9 @@ from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 
 from ocdlib import __version__
 from ocdlib.EventProcessing import EventProcessingThread
-from ocdlib.Events import *
+from ocdlib.Events import (
+	DaemonStartupEventGenerator, EventListener, EventGeneratorFactory,
+	GUIStartupEventConfig, PanicEvent, createEventGenerators, getEventGenerators)
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from ocdlib.ControlServer import ControlServer
 from ocdlib.Localization import _, setLocaleDir
