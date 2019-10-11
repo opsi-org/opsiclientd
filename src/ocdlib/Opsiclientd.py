@@ -48,8 +48,8 @@ from ocdlib import __version__
 from ocdlib.Config import Config, getLogFormat
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from ocdlib.Events import (
-	DaemonStartupEventGenerator, DaemonShutdownEventGenerator, EventListener, EventGeneratorFactory,
-	GUIStartupEventConfig, GUIStartupEventGenerator, PanicEvent, createEventGenerators, getEventGenerators)
+	DaemonStartupEventGenerator, DaemonShutdownEventGenerator, EventListener,
+	EventGeneratorFactory, PanicEvent, createEventGenerators, getEventGenerators)
 from ocdlib.EventProcessing import EventProcessingThread
 from ocdlib.Localization import _, setLocaleDir
 from ocdlib.State import State
