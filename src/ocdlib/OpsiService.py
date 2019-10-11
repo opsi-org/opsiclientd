@@ -340,7 +340,7 @@ class ServiceConnectionThread(KillableThread):
 						caCertFile=caCertFile,
 						verifyServerCertByCa=verifyServerCertByCa,
 						proxyURL=proxyURL,
-						application='opsiclientd version %s' % __version__
+						application='opsiclientd/%s' % __version__
 					)
 
 					self.configService.accessControl_authenticated()

@@ -30,6 +30,8 @@ should be overridden in the concrete implementation for an OS.
 
 import os
 import sys
+import threading
+import time
 from contextlib import contextmanager
 
 # Import the ControlServer first because this module installs
@@ -45,9 +47,12 @@ from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 from ocdlib import __version__
 from ocdlib.Config import Config, getLogFormat
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
-from ocdlib.Events import *
+from ocdlib.Events import (
+	DaemonStartupEventGenerator, DaemonShutdownEventGenerator, EventListener, EventGeneratorFactory,
+	GUIStartupEventConfig, GUIStartupEventGenerator, PanicEvent, createEventGenerators, getEventGenerators)
 from ocdlib.EventProcessing import EventProcessingThread
 from ocdlib.Localization import _, setLocaleDir
+from ocdlib.State import State
 from ocdlib.Timeline import Timeline
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
@@ -65,6 +70,7 @@ except ImportError:
 logger = Logger()
 config = Config()
 timeline = Timeline()
+state = State()
 
 
 class Opsiclientd(EventListener, threading.Thread):

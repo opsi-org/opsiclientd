@@ -35,13 +35,14 @@ import sys
 import time
 from contextlib import contextmanager
 
+from OPSI import System
 from OPSI.Logger import Logger, LOG_WARNING
 from OPSI.Object import ProductOnClient
-from OPSI.Util.Thread import KillableThread
-from OPSI.Util.Message import (MessageSubject, MessageSubjectProxy,
-	ProgressSubjectProxy, ChoiceSubject, NotificationServer)
 from OPSI.Types import forceInt, forceList, forceUnicode, forceUnicodeLower
-from OPSI import System
+from OPSI.Util.Message import (
+	ChoiceSubject, MessageSubject, MessageSubjectProxy, NotificationServer,
+	ProgressSubjectProxy)
+from OPSI.Util.Thread import KillableThread
 
 from ocdlib import __version__
 from ocdlib.Config import Config, getLogFormat
@@ -49,11 +50,13 @@ from ocdlib.Events import state, reconfigureEventGenerators
 from ocdlib.Exceptions import CanceledByUserError
 from ocdlib.Localization import _
 from ocdlib.OpsiService import ServiceConnection
+from ocdlib.State import State
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 from ocdlib.Timeline import Timeline
 
 logger = Logger()
 config = Config()
+state = State()
 timeline = Timeline()
 
 
@@ -310,11 +313,20 @@ If this is `None` a random port will be chosen.
 			if not self.isConfigServiceConnected():
 				logger.warning(u"Cannot write log to service: not connected")
 				return
+<<<<<<< HEAD
 			self.setStatusMessage( _(u"Writing log to service") )
 			with codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace') as f:
 				data = f.read()
 			data += u"-------------------- submitted part of log file ends here, see the rest of log file on client --------------------\n"
 
+=======
+			self.setStatusMessage(_(u"Writing log to service"))
+
+			with codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace') as f:
+				data = f.read()
+
+			data += u"-------------------- submitted part of log file ends here, see the rest of log file on client --------------------\n"
+>>>>>>> release/4.1.2
 			# Do not log jsonrpc request
 			logger.setFileLevel(LOG_WARNING)
 			self._configService.log_write('clientconnect', data.replace(u'\ufffd', u'?'), config.get('global', 'host_id'))
