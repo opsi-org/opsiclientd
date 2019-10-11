@@ -313,20 +313,12 @@ If this is `None` a random port will be chosen.
 			if not self.isConfigServiceConnected():
 				logger.warning(u"Cannot write log to service: not connected")
 				return
-<<<<<<< HEAD
-			self.setStatusMessage( _(u"Writing log to service") )
-			with codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace') as f:
-				data = f.read()
-			data += u"-------------------- submitted part of log file ends here, see the rest of log file on client --------------------\n"
-
-=======
 			self.setStatusMessage(_(u"Writing log to service"))
 
 			with codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace') as f:
 				data = f.read()
 
 			data += u"-------------------- submitted part of log file ends here, see the rest of log file on client --------------------\n"
->>>>>>> release/4.1.2
 			# Do not log jsonrpc request
 			logger.setFileLevel(LOG_WARNING)
 			self._configService.log_write('clientconnect', data.replace(u'\ufffd', u'?'), config.get('global', 'host_id'))
