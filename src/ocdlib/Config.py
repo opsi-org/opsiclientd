@@ -258,9 +258,8 @@ class ConfigImplementation(object):
 			value = forceFilename(value)
 			if not os.path.exists(value):
 				os.makedirs(value)
-			f = open(os.path.join(value, 'cacert.pem'), 'w')
-			f.write(OPSI_CA)
-			f.close()
+			with open(os.path.join(value, 'cacert.pem'), 'w') as f:
+				f.write(OPSI_CA)
 
 	def replace(self, string, escaped=False):
 		for (section, values) in self._config.items():
