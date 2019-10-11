@@ -31,11 +31,11 @@ import os
 import shutil
 import filecmp
 
-from OPSI.Logger import *
+from OPSI.Logger import Logger, LOG_WARNING
 from OPSI.Util import *
 from OPSI.Util.Message import *
 from OPSI.Util.Thread import KillableThread
-from OPSI.Types import *
+from OPSI.Types import forceInt, forceList, forceUnicode, forceUnicodeLower
 from OPSI import System
 from OPSI.Object import *
 
