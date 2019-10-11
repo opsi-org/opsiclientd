@@ -26,20 +26,21 @@ Processing of events.
 """
 
 import codecs
-import sys
+import filecmp
 import os
 import shutil
-import filecmp
+import sys
 
-from OPSI.Logger import *
-from OPSI.Util import *
-from OPSI.Util.Message import *
-from OPSI.Util.Thread import KillableThread
-from OPSI.Types import *
 from OPSI import System
-from OPSI.Object import *
+from OPSI.Logger import Logger, LOG_WARNING
+from OPSI.Object import ProductOnClient
+from OPSI.Types import forceInt, forceList, forceUnicode, forceUnicodeLower
+from OPSI.Util.Message import (
+	ChoiceSubject, MessageSubject, MessageSubjectProxy, NotificationServer,
+	ProgressSubjectProxy)
+from OPSI.Util.Thread import KillableThread
 
-from ocdlib.Exceptions import *
+from ocdlib.Exceptions import CanceledByUserError
 from ocdlib.Events import *
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.Localization import _

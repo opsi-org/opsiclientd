@@ -29,6 +29,8 @@ This is where all the parts come together.
 
 import os
 import sys
+import threading
+import time
 
 from twisted.internet import reactor
 
@@ -39,12 +41,15 @@ from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 
 from ocdlib import __version__
-from ocdlib.EventProcessing import EventProcessingThread
-from ocdlib.Events import *
+from ocdlib.Config import getLogFormat, Config
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from ocdlib.ControlServer import ControlServer
+from ocdlib.EventProcessing import EventProcessingThread
+from ocdlib.Events import (
+	DaemonStartupEventGenerator, DaemonShutdownEventGenerator, EventListener, EventGeneratorFactory,
+	GUIStartupEventConfig, GUIStartupEventGenerator, PanicEvent, createEventGenerators, getEventGenerators)
 from ocdlib.Localization import _, setLocaleDir
-from ocdlib.Config import getLogFormat, Config
+from ocdlib.State import State
 from ocdlib.Timeline import Timeline
 
 try:
@@ -55,6 +60,7 @@ except Exception:
 logger = Logger()
 config = Config()
 timeline = Timeline()
+state = State()
 
 
 class Opsiclientd(EventListener, threading.Thread):
