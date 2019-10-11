@@ -41,16 +41,16 @@ from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 
 from ocdlib import __version__
+from ocdlib.Config import getLogFormat, Config
+from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
+from ocdlib.ControlServer import ControlServer
 from ocdlib.EventProcessing import EventProcessingThread
 from ocdlib.Events import (
 	DaemonStartupEventGenerator, DaemonShutdownEventGenerator, EventListener, EventGeneratorFactory,
 	GUIStartupEventConfig, GUIStartupEventGenerator, PanicEvent, createEventGenerators, getEventGenerators)
-from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
-from ocdlib.ControlServer import ControlServer
 from ocdlib.Localization import _, setLocaleDir
-from ocdlib.Config import getLogFormat, Config
-from ocdlib.Timeline import Timeline
 from ocdlib.State import State
+from ocdlib.Timeline import Timeline
 
 try:
 	from ocdlibnonfree import __fullversion__
