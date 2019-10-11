@@ -453,9 +453,9 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 
 						if os.path.isfile(instlog):
 							logger.info(u"Syncing instlog %s" % instlog)
-							f = codecs.open(instlog, 'r', 'utf-8', 'replace')
-							data = f.read()
-							f.close()
+							with codecs.open(instlog, 'r', 'utf-8', 'replace') as f:
+								data = f.read()
+
 							self._configService.log_write(
 								u'instlog',
 								data=data,
