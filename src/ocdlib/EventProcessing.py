@@ -37,7 +37,8 @@ from OPSI.Object import *
 from OPSI.Types import forceInt, forceList, forceUnicode, forceUnicodeLower
 from OPSI.Util import *
 from OPSI.Util.Message import (
-	ChoiceSubject, MessageSubject, MessageSubjectProxy, ProgressSubjectProxy)
+	ChoiceSubject, MessageSubject, MessageSubjectProxy, NotificationServer,
+	ProgressSubjectProxy)
 from OPSI.Util.Thread import KillableThread
 
 from ocdlib.Exceptions import CanceledByUserError
