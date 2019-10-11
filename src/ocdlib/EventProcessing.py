@@ -39,7 +39,7 @@ from OPSI.Types import forceInt, forceList, forceUnicode, forceUnicodeLower
 from OPSI import System
 from OPSI.Object import *
 
-from ocdlib.Exceptions import *
+from ocdlib.Exceptions import CanceledByUserError
 from ocdlib.Events import *
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.Localization import _
