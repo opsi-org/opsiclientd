@@ -43,13 +43,14 @@ from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 from ocdlib import __version__
 from ocdlib.EventProcessing import EventProcessingThread
 from ocdlib.Events import (
-	DaemonStartupEventGenerator, EventListener, EventGeneratorFactory,
-	GUIStartupEventConfig, PanicEvent, createEventGenerators, getEventGenerators)
+	DaemonStartupEventGenerator, DaemonShutdownEventGenerator, EventListener, EventGeneratorFactory,
+	GUIStartupEventConfig, GUIStartupEventGenerator, PanicEvent, createEventGenerators, getEventGenerators)
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from ocdlib.ControlServer import ControlServer
 from ocdlib.Localization import _, setLocaleDir
 from ocdlib.Config import getLogFormat, Config
 from ocdlib.Timeline import Timeline
+from ocdlib.State import State
 
 try:
 	from ocdlibnonfree import __fullversion__
@@ -59,6 +60,7 @@ except Exception:
 logger = Logger()
 config = Config()
 timeline = Timeline()
+state = State()
 
 
 class Opsiclientd(EventListener, threading.Thread):
