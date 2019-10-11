@@ -35,7 +35,6 @@ from OPSI import System
 from OPSI.Logger import Logger, LOG_WARNING
 from OPSI.Object import ProductOnClient
 from OPSI.Types import forceInt, forceList, forceUnicode, forceUnicodeLower
-from OPSI.Util import *
 from OPSI.Util.Message import (
 	ChoiceSubject, MessageSubject, MessageSubjectProxy, NotificationServer,
 	ProgressSubjectProxy)
