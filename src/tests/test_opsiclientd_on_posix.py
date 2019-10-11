@@ -15,12 +15,14 @@ import pytest
 
 try:
     from ocdlibnonfree.Posix import OpsiclientdPosix
+    errorMessage = ""
 except ImportError as error:
     print("Failed to import: {0}".format(error))
+    errorMessage = str(error)
     OpsiclientdPosix = None
 
 
-@pytest.mark.skipif(OpsiclientdPosix is None, reason="Unable to find non-free modules.")
+@pytest.mark.skipif(OpsiclientdPosix is None, reason="Unable to find non-free modules: %s" % errorMessage)
 def test_requesting_reboot():
     with workInTemporaryDirectory() as tempDir:
         with mock.patch('ocdlibnonfree.Posix.OpsiclientdPosix._PID_DIR', tempDir):
@@ -36,7 +38,7 @@ def test_requesting_reboot():
             assert not ocd.isRebootRequested()
 
 
-@pytest.mark.skipif(OpsiclientdPosix is None, reason="Unable to find non-free modules.")
+@pytest.mark.skipif(OpsiclientdPosix is None, reason="Unable to find non-free modules: %s" % errorMessage)
 def test_requesting_shutdown():
     with workInTemporaryDirectory() as tempDir:
         with mock.patch('ocdlibnonfree.Posix.OpsiclientdPosix._PID_DIR', tempDir):
