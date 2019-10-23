@@ -31,6 +31,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 # Imports
 import sys, os, shutil, filecmp, base64
+from datetime import datetime as dt
+from datetime import timedelta
 from hashlib import md5
 
 # Twisted imports
@@ -1110,9 +1112,46 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		except Exception, e:
 			logger.logException(e)
 
+	def inWorkingWindow(self):
+		try:
+			starttime, endtime = self.event.eventConfig.workingWindow.split("-")
+			s_hour, s_minute = starttime.split(":")
+			e_hour, e_minute = endtime.split(":")
+			now = dt.now()
+			logger.notice("We have now: {0}".format(now))
+			start = dt.today().replace(
+						hour=int(s_hour),
+						minute=int(s_minute),
+						second=0,
+						microsecond=0)
+			end = dt.today().replace(
+						hour=int(e_hour),
+						minute=int(e_minute),
+						second=0,
+						microsecond=0)
+			if now < start:
+				start = start - timedelta(days=1)
+			elif end < start:
+				end = end + timedelta(days=1)
+
+			if start < now < end:
+				logger.notice("Working Window configuration starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
+				logger.notice("We are in the configured working window")
+				return True
+			else:
+				logger.notice("We are not in the configured working window, stopping Event")
+				return False
+		except Exception as e:
+			logger.warning("Working Window processing failed: starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
+			logger.logException(e)
+			return True
+
 	def run(self):
 		timelineEventId = None
 		try:
+			if self.event.eventConfig.workingWindow:
+				if not self.inWorkingWindow():
+					return
 			logger.notice(u"============= EventProcessingThread for occurrcence of event '%s' started =============" % self.event.eventConfig.getId())
 			timelineEventId = timeline.addEvent(
 				title         = u"Processing event %s" % self.event.eventConfig.getName(),
