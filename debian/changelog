@@ -1,3 +1,9 @@
+opsiclientd (4.0.98) stable; urgency=medium
+
+  * Event Working-Window Implementation.
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 23 Oct 2019 23:59:57 +0200
+
 opsiclientd (4.0.97) stable; urgency=medium
 
   * Extended KIOSK Mode: Using 'addConfigStateDefaults' in backend_options.
