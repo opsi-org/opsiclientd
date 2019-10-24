@@ -1,6 +1,7 @@
 opsiclientd (4.0.98) stable; urgency=medium
 
   * Event Working-Window Implementation.
+  * Small fix in CacheBackend; Update depotId before caching.
 
  -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 23 Oct 2019 23:59:57 +0200
 
