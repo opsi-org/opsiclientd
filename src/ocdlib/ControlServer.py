@@ -520,7 +520,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def getRunningEvent(self):
 		running = [ept.event.eventConfig.getId() for ept in self.opsiclientd._eventProcessingThreads]
 		if not running:
-			running.appen("Currently no Event is Running.")
+			running.append("Currently no Event is Running.")
 		return running
 
 	def isInstallationPending(self):
@@ -640,7 +640,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			return backendinfo
 
 	def getState(name, default=None):
-		return state.get(name, default)
+		return state.get(name=name, default=default)
 
 	def setState(name, value):
 		return state.set(name, value)
