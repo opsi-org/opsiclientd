@@ -58,9 +58,11 @@ from ocdlib.Events import eventGenerators
 from ocdlib.Timeline import Timeline
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.SoftwareOnDemand import WorkerSoftwareOnDemand, ResourceSoftwareOnDemand, WorkerKioskJsonRpc, ResourceKioskJsonRpc
+from ocdlib.State import State
 
 logger = Logger()
 config = Config()
+state = State()
 timeline = Timeline()
 
 try:
@@ -630,3 +632,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		finally:
 			serviceConnection.disconnectConfigService()
 			return backendinfo
+
+	def getState(name, default=None):
+		return state.get(name, default)
+
+	def setState(name, value):
+		return state.set(name, value)
