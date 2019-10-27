@@ -639,8 +639,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			serviceConnection.disconnectConfigService()
 			return backendinfo
 
-	def getState(name, default=None):
-		return state.get(name=name, default=default)
+	def getState(self, name, default=None):
+		return state.get(name, default)
 
-	def setState(name, value):
+	def setState(self, name, value):
 		return state.set(name, value)
