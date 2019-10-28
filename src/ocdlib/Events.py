@@ -162,6 +162,7 @@ class EventConfig(object):
 		self.postSyncConfigToServer        =     bool ( conf.get('postSyncConfigToServer',        False     ) )
 		self.postSyncConfigFromServer      =     bool ( conf.get('postSyncConfigFromServer',      False     ) )
 		self.useCachedConfig               =     bool ( conf.get('useCachedConfig',               False     ) )
+		self.workingWindow                 =  unicode ( conf.get('workingWindow',                 ''        ) )
 
 		###if not self.eventNotifierDesktop in ('winlogon', 'default', 'current'):
 		###	logger.error(u"Bad value '%s' for eventNotifierDesktop" % self.eventNotifierDesktop)
@@ -1061,6 +1062,8 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['excludeProductGroupIds'] = forceList(value)
 					elif (key == 'include_product_group_ids'):
 						eventConfigs[eventConfigId]['includeProductGroupIds'] = forceList(value)
+					elif (key == 'working_window'):
+						eventConfigs[eventConfigId]['workingWindow'] = unicode(value)
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
 				except Exception, e:

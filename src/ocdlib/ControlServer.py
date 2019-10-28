@@ -33,7 +33,7 @@
 
 # Imports
 from OpenSSL import SSL
-import base64, urllib, codecs, time, re
+import base64, urllib, codecs, time, re, os
 import win32security, win32net
 
 # Twisted imports
@@ -50,6 +50,7 @@ from OPSI.Service import SSLContext, OpsiService
 from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface, WorkerOpsiDAV, interfacePage
 from OPSI.Service.Resource import ResourceOpsi, ResourceOpsiJsonRpc, ResourceOpsiJsonInterface, ResourceOpsiDAV
 from OPSI.Backend.BackendManager import BackendManager
+from OPSI.Backend.Backend import ConfigDataBackend
 
 from ocdlib.Exceptions import *
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
@@ -58,9 +59,11 @@ from ocdlib.Events import eventGenerators
 from ocdlib.Timeline import Timeline
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.SoftwareOnDemand import WorkerSoftwareOnDemand, ResourceSoftwareOnDemand, WorkerKioskJsonRpc, ResourceKioskJsonRpc
+from ocdlib.State import State
 
 logger = Logger()
 config = Config()
+state = State()
 timeline = Timeline()
 
 try:
@@ -450,6 +453,49 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			return data
 		return u""
 
+	def log_read(self, logType='opsiclientd', extension='', maxSize=5000000):
+		"""
+		Return the content of a log.
+
+		:param logType: Type of log. \
+		Currently supported: *opsiclientd*, *opsi-script*, *opsi_loginblocker* or *opsiclientdguard*.
+		:type data: Unicode
+		:param extension: count for history log. Possible Values 0-9
+		:param maxSize: Limit for the size of returned characters in bytes. \
+		Setting this to `0` disables limiting.
+		"""
+		LOG_DIR = os.path.dirname(config.get('global', 'log_file'))
+		LOG_TYPES = [  # possible logtypes
+			'opsiclientd',
+			'opsi-script',
+			'opsi_loginblocker',
+			'opsiclientdguard',
+		]
+		logType = forceUnicode(logType)
+
+		if logType not in LOG_TYPES:
+			raise ValueError(u'Unknown log type {0!r}'.format(logType))
+
+		if extension:
+			extension = forceUnicode(extension)
+			logFile = os.path.join(LOG_DIR, '{0}.log.{1}'.format(logType, extension))
+		else:
+			logFile = os.path.join(LOG_DIR, '{0}.log'.format(logType))
+
+		try:
+			with codecs.open(logFile, 'r', 'utf-8', 'replace') as log:
+				data = log.read()
+		except IOError as ioerr:
+			if ioerr.errno == 2:  # This is "No such file or directory"
+				return u'No such file or directory'
+
+			raise
+
+		if maxSize > 0:
+			return ConfigDataBackend._truncateLogData(data, maxSize)
+
+		return data
+
 	def runCommand(self, command, sessionId=None, desktop=None):
 		command = forceUnicode(command)
 		if not command:
@@ -513,6 +559,16 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			if ept.event.eventConfig.getId() == name:
 				running = True
 				break
+		return running
+
+	def getRunningEvent(self):
+		"""
+		Returns a list with running events.
+
+		"""
+		running = [ept.event.eventConfig.getId() for ept in self.opsiclientd._eventProcessingThreads]
+		if not running:
+			running.append("Currently no Event is Running.")
 		return running
 
 	def isInstallationPending(self):
@@ -630,3 +686,21 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		finally:
 			serviceConnection.disconnectConfigService()
 			return backendinfo
+
+	def getState(self, name, default=None):
+		"""
+		Return a specified state.
+
+		:param name: Name of the state.
+		:param default: Default value if something goes wrong.
+		"""
+		return state.get(name, default)
+
+	def setState(self, name, value):
+		"""
+		Set a specified state.
+
+		:param name: Name of the State.
+		:param value: Value to set the state.
+		"""
+		return state.set(name, value)
