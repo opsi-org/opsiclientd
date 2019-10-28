@@ -2,9 +2,9 @@ opsiclientd (4.0.98) stable; urgency=medium
 
   * Event Working-Window Implementation.
   * Small fix in CacheBackend; Update depotId before caching.
-  * log_read method added
+  * New Controlserver methods: log_read, getRunningEvent, getState, setState added.
 
- -- Erol Ueluekmen <e.ueluekmen@uib.de>  Fri, 25 Oct 2019 23:59:57 +0200
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Mon, 28 Oct 2019 01:16:35 +0100
 
 opsiclientd (4.0.97) stable; urgency=medium
 
