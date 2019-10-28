@@ -59,9 +59,11 @@ from ocdlib.Events import eventGenerators
 from ocdlib.Timeline import Timeline
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.SoftwareOnDemand import WorkerSoftwareOnDemand, ResourceSoftwareOnDemand, WorkerKioskJsonRpc, ResourceKioskJsonRpc
+from ocdlib.State import State
 
 logger = Logger()
 config = Config()
+state = State()
 timeline = Timeline()
 
 try:
@@ -559,6 +561,16 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				break
 		return running
 
+	def getRunningEvent(self):
+		"""
+		Returns a list with running events.
+
+		"""
+		running = [ept.event.eventConfig.getId() for ept in self.opsiclientd._eventProcessingThreads]
+		if not running:
+			running.append("Currently no Event is Running.")
+		return running
+
 	def isInstallationPending(self):
 		return forceBool(self.opsiclientd.isInstallationPending())
 
@@ -674,3 +686,21 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		finally:
 			serviceConnection.disconnectConfigService()
 			return backendinfo
+
+	def getState(self, name, default=None):
+		"""
+		Return a specified state.
+
+		:param name: Name of the state.
+		:param default: Default value if something goes wrong.
+		"""
+		return state.get(name, default)
+
+	def setState(self, name, value):
+		"""
+		Set a specified state.
+
+		:param name: Name of the State.
+		:param value: Value to set the state.
+		"""
+		return state.set(name, value)
