@@ -151,6 +151,7 @@ class EventConfig(object):
 		self.includeProductGroupIds        =     list ( conf.get('includeProductGroupIds',     []        ) )
 		self.preActionProcessorCommand     =  unicode ( conf.get('preActionProcessorCommand',     ''        ) )
 		self.postActionProcessorCommand    =  unicode ( conf.get('postActionProcessorCommand',    ''        ) )
+		self.trustedInstallerCheck         =     bool ( conf.get('trustedInstallerCheck',         True      ) )
 		#self.serviceOptions                =     dict ( conf.get('serviceOptions',                {}        ) )
 		self.cacheProducts                 =     bool ( conf.get('cacheProducts',                 False     ) )
 		self.cacheMaxBandwidth             =      int ( conf.get('cacheMaxBandwidth',             0         ) )
@@ -1053,6 +1054,8 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['preActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'post_action_processor_command'):
 						eventConfigs[eventConfigId]['postActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
+					elif (key == 'trusted_installer_check'):
+						eventConfigs[eventConfigId]['trustedInstallerCheck'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'action_processor_productids'):
 						eventConfigs[eventConfigId]['actionProcessorProductIds'] = forceList(value.strip().split(","))
 					elif (key == 'exclude_product_group_ids'):
