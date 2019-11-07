@@ -4,11 +4,8 @@ TARGETS="src/ocdlib/ src/ocdlibnonfree/ src/scripts/opsiclientd"
 if [ -e "src/linux/notifier.py" ]; then
 	TARGETS="$TARGETS src/linux/notifier.py"
 fi
-if [ -e "src/linux/opsiclientd_rpc.py" ]; then
-	TARGETS="$TARGETS src/linux/opsiclientd_rpc.py"
-fi
-if [ -e "src/windows/helpers/opsiclientd_rpc/opsiclientd_rpc.py" ]; then
-	TARGETS="$TARGETS src/windows/helpers/opsiclientd_rpc/opsiclientd_rpc.py"
+if [ -e "src/scripts/opsiclientd_rpc" ]; then
+	TARGETS="$TARGETS src/linux/opsiclientd_rpc"
 fi
 if [ -e "src/windows/helpers/opsiclientd_shutdown_starter/opsiclientd_shutdown_starter.py" ]; then
 	TARGETS="$TARGETS src/windows/helpers/opsiclientd_shutdown_starter/opsiclientd_shutdown_starter.py"
