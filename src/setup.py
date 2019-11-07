@@ -174,7 +174,7 @@ else:
 			os.path.join('/etc', 'opsi-client-agent'),
 			[
 				os.path.join('linux', 'notifier.py'),
-				os.path.join('linux', 'opsiclientd_rpc.py'),
+				os.path.join('scripts', 'opsiclientd_rpc'),
 			]
 		),
 	]
@@ -224,7 +224,7 @@ if RUNS_ON_WINDOWS:
 	opsiclientd_rpc = Target(
 		name = "opsiclientd_rpc",
 		description = "opsi client daemon rpc tool",
-		script = "windows\\helpers\\opsiclientd_rpc\\opsiclientd_rpc.py",
+		script = "scripts\\opsiclientd_rpc",
 		icon_resources = [(1, "windows\\opsi.ico")]
 	)
 
