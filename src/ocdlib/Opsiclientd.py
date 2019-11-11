@@ -49,9 +49,10 @@ from ocdlib.Config import Config, getLogFormat
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from ocdlib.Events import (
 	DaemonStartupEventGenerator, DaemonShutdownEventGenerator,
-	EventGeneratorFactory, PanicEvent,
+	EventGeneratorFactory,
 	createEventGenerators, getEventGenerators)
 from ocdlib.Events.Basic import EventListener
+from ocdlib.Events.Panic import PanicEvent
 from ocdlib.EventProcessing import EventProcessingThread
 from ocdlib.Localization import _, setLocaleDir
 from ocdlib.State import State

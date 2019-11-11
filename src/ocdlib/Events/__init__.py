@@ -44,6 +44,7 @@ from ocdlib.Localization import getLanguage
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
 from .Basic import Event, EventGenerator
+from .Panic import PanicEventConfig, PanicEventGenerator
 
 logger = Logger()
 config = Config()
@@ -88,29 +89,6 @@ def EventConfigFactory(eventType, eventId, **kwargs):
 		return SwOnDemandEventConfig(eventId, **kwargs)
 	else:
 		raise TypeError(u"Unknown event config type '%s'" % eventType)
-
-
-class PanicEventConfig(EventConfig):
-	def setConfig(self, conf):
-		EventConfig.setConfig(self, conf)
-		self.maxRepetitions          = -1
-		self.actionMessage           = 'Panic event'
-		self.activationDelay         = 0
-		self.notificationDelay       = 0
-		self.actionWarningTime       = 0
-		self.actionUserCancelable    = False
-		self.blockLogin              = False
-		self.logoffCurrentUser       = False
-		self.lockWorkstation         = False
-		self.getConfigFromService    = False
-		self.updateConfigFile        = False
-		self.writeLogToService       = False
-		self.updateActionProcessor   = False
-		self.eventNotifierCommand    = None
-		self.actionNotifierCommand   = None
-		self.shutdownNotifierCommand = None
-		self.actionProcessorDesktop  = 'winlogon'
-		#self.serviceOptions          = {}
 
 
 class DaemonStartupEventConfig(EventConfig):
@@ -208,17 +186,6 @@ def EventGeneratorFactory(eventConfig):
 		return SwOnDemandEventGenerator(eventConfig)
 	else:
 		raise TypeError(u"Unhandled event config '%s'" % eventConfig)
-
-
-class PanicEventGenerator(EventGenerator):
-	def __init__(self, eventConfig):
-		EventGenerator.__init__(self, eventConfig)
-
-	def createEvent(self, eventInfo={}):
-		eventConfig = self.getEventConfig()
-		if not eventConfig:
-			return None
-		return PanicEvent(eventConfig = eventConfig, eventInfo = eventInfo)
 
 
 class DaemonStartupEventGenerator(EventGenerator):
@@ -505,11 +472,6 @@ class SwOnDemandEventGenerator(EventGenerator):
 		if not eventConfig:
 			return None
 		return SwOnDemandEvent(eventConfig = eventConfig, eventInfo = eventInfo)
-
-
-class PanicEvent(Event):
-	def __init__(self, eventConfig, eventInfo={}):
-		Event.__init__(self, eventConfig, eventInfo)
 
 
 class DaemonStartupEvent(Event):
