@@ -39,7 +39,8 @@ from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTr
 
 from ocdlib.Config import getLogFormat, Config
 from ocdlib.State import State
-from ocdlib.Events import SyncCompletedEventGenerator, getEventGenerators
+from ocdlib.Events import getEventGenerators
+from ocdlib.Events.SyncCompleted import SyncCompletedEventGenerator
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.Timeline import Timeline
 

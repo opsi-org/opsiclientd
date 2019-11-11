@@ -53,6 +53,9 @@ from .DaemonShutdown import (
 from .DaemonStartup import (
 	EVENT_CONFIG_TYPE_DAEMON_STARTUP,
 	DaemonStartupEventConfig, DaemonStartupEventGenerator)
+from .SyncCompleted import (
+	EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED,
+	SyncCompletedEventConfig, SyncCompletedEventGenerator)
 from .Timer import (
 	EVENT_CONFIG_TYPE_TIMER, TimerEventConfig, TimerEventGenerator)
 
@@ -61,7 +64,6 @@ config = Config()
 state = State()
 
 # Possible event types
-EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED = u'sync completed'
 EVENT_CONFIG_TYPE_SW_ON_DEMAND = u'sw on demand'
 EVENT_CONFIG_TYPE_GUI_STARTUP = u'gui startup'
 EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS = u'process action requests'
@@ -97,10 +99,6 @@ def EventConfigFactory(eventType, eventId, **kwargs):
 			return SystemShutdownEventConfig(eventId, **kwargs)
 
 	raise TypeError(u"Unknown event config type '%s'" % eventType)
-
-
-class SyncCompletedEventConfig(EventConfig):
-	pass
 
 
 class ProcessActionRequestsEventConfig(EventConfig):
@@ -180,17 +178,6 @@ def EventGeneratorFactory(eventConfig):
 			return GUIStartupEventGenerator(eventConfig)
 
 	raise TypeError(u"Unhandled event config '%s'" % eventConfig)
-
-
-class SyncCompletedEventGenerator(EventGenerator):
-	def __init__(self, eventConfig):
-		EventGenerator.__init__(self, eventConfig)
-
-	def createEvent(self, eventInfo={}):
-		eventConfig = self.getEventConfig()
-		if not eventConfig:
-			return None
-		return SyncCompletedEvent(eventConfig = eventConfig, eventInfo = eventInfo)
 
 
 class ProcessActionRequestsEventGenerator(EventGenerator):
@@ -424,11 +411,6 @@ class SwOnDemandEventGenerator(EventGenerator):
 		if not eventConfig:
 			return None
 		return SwOnDemandEvent(eventConfig = eventConfig, eventInfo = eventInfo)
-
-
-class SyncCompletedEvent(Event):
-	def __init__(self, eventConfig, eventInfo={}):
-		Event.__init__(self, eventConfig, eventInfo)
 
 
 class ProcessActionRequestsEvent(Event):
