@@ -180,10 +180,8 @@ else:
 		raise error
 
 
-
-
 def EventGeneratorFactory(eventConfig):
-	if   isinstance(eventConfig, PanicEventConfig):
+	if isinstance(eventConfig, PanicEventConfig):
 		return PanicEventGenerator(eventConfig)
 	elif isinstance(eventConfig, DaemonStartupEventConfig):
 		return DaemonStartupEventGenerator(eventConfig)
