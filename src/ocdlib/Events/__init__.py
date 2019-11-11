@@ -76,24 +76,26 @@ def EventConfigFactory(eventType, eventId, **kwargs):
 		return DaemonStartupEventConfig(eventId, **kwargs)
 	elif (eventType == EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN):
 		return DaemonShutdownEventConfig(eventId, **kwargs)
-	elif RUNNING_ON_WINDOWS and eventType == EVENT_CONFIG_TYPE_GUI_STARTUP:
-		return GUIStartupEventConfig(eventId, **kwargs)
 	elif (eventType == EVENT_CONFIG_TYPE_TIMER):
 		return TimerEventConfig(eventId, **kwargs)
 	elif (eventType == EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED):
 		return SyncCompletedEventConfig(eventId, **kwargs)
 	elif (eventType == EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS):
 		return ProcessActionRequestsEventConfig(eventId, **kwargs)
-	elif RUNNING_ON_WINDOWS and eventType == EVENT_CONFIG_TYPE_USER_LOGIN:
-		return UserLoginEventConfig(eventId, **kwargs)
-	elif RUNNING_ON_WINDOWS and eventType == EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN:
-		return SystemShutdownEventConfig(eventId, **kwargs)
 	elif (eventType == EVENT_CONFIG_TYPE_CUSTOM):
 		return CustomEventConfig(eventId, **kwargs)
 	elif (eventType == EVENT_CONFIG_TYPE_SW_ON_DEMAND):
 		return SwOnDemandEventConfig(eventId, **kwargs)
-	else:
-		raise TypeError(u"Unknown event config type '%s'" % eventType)
+
+	if RUNNING_ON_WINDOWS:
+		if eventType == EVENT_CONFIG_TYPE_GUI_STARTUP:
+			return GUIStartupEventConfig(eventId, **kwargs)
+		elif eventType == EVENT_CONFIG_TYPE_USER_LOGIN:
+			return UserLoginEventConfig(eventId, **kwargs)
+		elif eventType == EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN:
+			return SystemShutdownEventConfig(eventId, **kwargs)
+
+	raise TypeError(u"Unknown event config type '%s'" % eventType)
 
 
 class TimerEventConfig(EventConfig):
@@ -161,24 +163,26 @@ def EventGeneratorFactory(eventConfig):
 		return DaemonStartupEventGenerator(eventConfig)
 	elif isinstance(eventConfig, DaemonShutdownEventConfig):
 		return DaemonShutdownEventGenerator(eventConfig)
-	elif RUNNING_ON_WINDOWS and isinstance(eventConfig, GUIStartupEventConfig):
-		return GUIStartupEventGenerator(eventConfig)
 	elif isinstance(eventConfig, TimerEventConfig):
 		return TimerEventGenerator(eventConfig)
 	elif isinstance(eventConfig, SyncCompletedEventConfig):
 		return SyncCompletedEventGenerator(eventConfig)
 	elif isinstance(eventConfig, ProcessActionRequestsEventConfig):
 		return ProcessActionRequestsEventGenerator(eventConfig)
-	elif RUNNING_ON_WINDOWS and isinstance(eventConfig, UserLoginEventConfig):
-		return UserLoginEventGenerator(eventConfig)
-	elif RUNNING_ON_WINDOWS and isinstance(eventConfig, SystemShutdownEventConfig):
-		return SystemShutdownEventGenerator(eventConfig)
 	elif isinstance(eventConfig, CustomEventConfig):
 		return CustomEventGenerator(eventConfig)
 	elif isinstance(eventConfig, SwOnDemandEventConfig):
 		return SwOnDemandEventGenerator(eventConfig)
-	else:
-		raise TypeError(u"Unhandled event config '%s'" % eventConfig)
+
+	if RUNNING_ON_WINDOWS:
+		if isinstance(eventConfig, UserLoginEventConfig):
+			return UserLoginEventGenerator(eventConfig)
+		elif isinstance(eventConfig, SystemShutdownEventConfig):
+			return SystemShutdownEventGenerator(eventConfig)
+		elif isinstance(eventConfig, GUIStartupEventConfig):
+			return GUIStartupEventGenerator(eventConfig)
+
+	raise TypeError(u"Unhandled event config '%s'" % eventConfig)
 
 
 class TimerEventGenerator(EventGenerator):
