@@ -53,6 +53,9 @@ from .DaemonShutdown import (
 from .DaemonStartup import (
 	EVENT_CONFIG_TYPE_DAEMON_STARTUP,
 	DaemonStartupEventConfig, DaemonStartupEventGenerator)
+from .SwOnDemand import (
+	EVENT_CONFIG_TYPE_SW_ON_DEMAND,
+	SwOnDemandEventConfig, SwOnDemandEventGenerator)
 from .SyncCompleted import (
 	EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED,
 	SyncCompletedEventConfig, SyncCompletedEventGenerator)
@@ -64,7 +67,6 @@ config = Config()
 state = State()
 
 # Possible event types
-EVENT_CONFIG_TYPE_SW_ON_DEMAND = u'sw on demand'
 EVENT_CONFIG_TYPE_GUI_STARTUP = u'gui startup'
 EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS = u'process action requests'
 EVENT_CONFIG_TYPE_USER_LOGIN = u'user login'
@@ -102,10 +104,6 @@ def EventConfigFactory(eventType, eventId, **kwargs):
 
 
 class ProcessActionRequestsEventConfig(EventConfig):
-	pass
-
-
-class SwOnDemandEventConfig(EventConfig):
 	pass
 
 
@@ -402,17 +400,6 @@ else:
 				self._event.wait()
 
 
-class SwOnDemandEventGenerator(EventGenerator):
-	def __init__(self, eventConfig):
-		EventGenerator.__init__(self, eventConfig)
-
-	def createEvent(self, eventInfo={}):
-		eventConfig = self.getEventConfig()
-		if not eventConfig:
-			return None
-		return SwOnDemandEvent(eventConfig = eventConfig, eventInfo = eventInfo)
-
-
 class ProcessActionRequestsEvent(Event):
 	def __init__(self, eventConfig, eventInfo={}):
 		Event.__init__(self, eventConfig, eventInfo)
@@ -435,11 +422,6 @@ if RUNNING_ON_WINDOWS:
 
 
 class CustomEvent(Event):
-	def __init__(self, eventConfig, eventInfo={}):
-		Event.__init__(self, eventConfig, eventInfo)
-
-
-class SwOnDemandEvent(Event):
 	def __init__(self, eventConfig, eventInfo={}):
 		Event.__init__(self, eventConfig, eventInfo)
 
