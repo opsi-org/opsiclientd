@@ -6,7 +6,7 @@ from ocdlib.EventConfiguration import EventConfig
 from ocdlib.Events.DaemonShutdown import DaemonShutdownEventConfig
 from ocdlib.Events.DaemonStartup import DaemonStartupEventConfig
 from ocdlib.Events.Panic import PanicEventConfig
-from ocdlib.Events.ProcessActionRequestsEventConfig import ProcessActionRequestsEventConfig
+from ocdlib.Events.ProcessActionRequests import ProcessActionRequestsEventConfig
 from ocdlib.Events.SwOnDemand import SwOnDemandEventConfig
 from ocdlib.Events.SyncCompleted import SyncCompletedEventConfig
 from ocdlib.Events.Timer import TimerEventConfig
