@@ -531,7 +531,7 @@ def getEventConfigs():
 						rawEventConfigs[eventConfigId]['args'][key.lower()] = options[key]
 
 				if '{' in eventConfigId:
-					(superEventName, precondition) = eventConfigId.split('{', 1)
+					superEventName, precondition = eventConfigId.split('{', 1)
 					if not rawEventConfigs[eventConfigId]['super']:
 						rawEventConfigs[eventConfigId]['super'] = superEventName.strip()
 					rawEventConfigs[eventConfigId]['precondition'] = precondition.replace('}', '').strip()
