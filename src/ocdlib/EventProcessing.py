@@ -682,31 +682,31 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				raise Exception(u"No action processor command defined")
 
 			#TODO: Deactivating Trusted Installer Detection. Have to implemented in a better way in futur versions.
-			#if self.event.eventConfig.getId() == 'gui_startup' and not state.get('user_logged_in', 0):
+			if self.event.eventConfig.getId() == 'gui_startup' and not state.get('user_logged_in', 0) and self.event.eventConfig.trustedInstallerCheck:
 				# check for Trusted Installer before Running Action Processor
-			#	if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
-			#		logger.notice(u"Getting TrustedInstaller service configuration")
-			#		try:
+				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
+					logger.notice(u"Getting TrustedInstaller service configuration")
+					try:
 						# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3
-			#			automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
-			#			logger.debug2(u">>> TrustedInstaller Service autmaticStartup and type: '%s' '%s'" % (automaticStartup,type(automaticStartup)))
-			#			if (automaticStartup == 2):
-			#				logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
-			#				self.setStatusMessage( _(u"Waiting for TrustedInstaller") )
-			#				waitEventId = timeline.addEvent(
-			#						title         = u"Waiting for TrustedInstaller",
-			#						description   = u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
-			#						category      = u"wait",
-			#						durationEvent = True)
-			#				while True:
-			#					time.sleep(3)
-			#					logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
-			#					automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
-			#					if not (automaticStartup == 2):
-			#						break
-			#				timeline.setEventEnd(eventId = waitEventId)
-			#		except Exception, e:
-			#			logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
+						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
+						logger.debug2(u">>> TrustedInstaller Service autmaticStartup and type: '%s' '%s'" % (automaticStartup,type(automaticStartup)))
+						if (automaticStartup == 2):
+							logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
+							self.setStatusMessage( _(u"Waiting for TrustedInstaller") )
+							waitEventId = timeline.addEvent(
+									title         = u"Waiting for TrustedInstaller",
+									description   = u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
+									category      = u"wait",
+									durationEvent = True)
+							while True:
+								time.sleep(3)
+								logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
+								automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
+								if not (automaticStartup == 2):
+									break
+							timeline.setEventEnd(eventId = waitEventId)
+					except Exception, e:
+						logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
 
 			self.setStatusMessage( _(u"Starting actions") )
 
@@ -1076,9 +1076,46 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		except Exception, e:
 			logger.logException(e)
 
+	def inWorkingWindow(self):
+		try:
+			starttime, endtime = self.event.eventConfig.workingWindow.split("-")
+			s_hour, s_minute = starttime.split(":")
+			e_hour, e_minute = endtime.split(":")
+			now = dt.now()
+			logger.notice("We have now: {0}".format(now))
+			start = dt.today().replace(
+						hour=int(s_hour),
+						minute=int(s_minute),
+						second=0,
+						microsecond=0)
+			end = dt.today().replace(
+						hour=int(e_hour),
+						minute=int(e_minute),
+						second=0,
+						microsecond=0)
+			if now < start:
+				start = start - timedelta(days=1)
+			elif end < start:
+				end = end + timedelta(days=1)
+
+			if start < now < end:
+				logger.notice("Working Window configuration starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
+				logger.notice("We are in the configured working window")
+				return True
+			else:
+				logger.notice("We are not in the configured working window, stopping Event")
+				return False
+		except Exception as e:
+			logger.warning("Working Window processing failed: starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
+			logger.logException(e)
+			return True
+
 	def run(self):
 		timelineEventId = None
 		try:
+			if self.event.eventConfig.workingWindow:
+				if not self.inWorkingWindow():
+					return
 			logger.notice(u"============= EventProcessingThread for occurrcence of event '%s' started =============" % self.event.eventConfig.getId())
 			timelineEventId = timeline.addEvent(
 				title         = u"Processing event %s" % self.event.eventConfig.getName(),

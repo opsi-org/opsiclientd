@@ -11,6 +11,15 @@ opsiclientd (4.1.1) stable; urgency=medium
 
  -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 16 Jan 2019 10:34:25 +0100
 
+opsiclientd (4.0.98) stable; urgency=medium
+
+  * Event Working-Window Implementation.
+  * Small fix in CacheBackend; Update depotId before caching.
+  * New Controlserver methods: log_read, getRunningEvent, getState, setState added.
+  * Check for TrustedInstaller configurable
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Mon, 28 Oct 2019 09:29:47 +0100
+
 opsiclientd (4.0.97) stable; urgency=medium
 
   * Extended KIOSK Mode: Using 'addConfigStateDefaults' in backend_options.

@@ -147,6 +147,7 @@ class EventConfig(object):
 		self.includeProductGroupIds        =     list ( conf.get('includeProductGroupIds',     []        ) )
 		self.preActionProcessorCommand     =  unicode ( conf.get('preActionProcessorCommand',     ''        ) )
 		self.postActionProcessorCommand    =  unicode ( conf.get('postActionProcessorCommand',    ''        ) )
+		self.trustedInstallerCheck         =     bool ( conf.get('trustedInstallerCheck',         True      ) )
 		#self.serviceOptions                =     dict ( conf.get('serviceOptions',                {}        ) )
 		self.cacheProducts                 =     bool ( conf.get('cacheProducts',                 False     ) )
 		self.cacheMaxBandwidth             =      int ( conf.get('cacheMaxBandwidth',             0         ) )
@@ -157,6 +158,7 @@ class EventConfig(object):
 		self.postSyncConfigToServer        =     bool ( conf.get('postSyncConfigToServer',        False     ) )
 		self.postSyncConfigFromServer      =     bool ( conf.get('postSyncConfigFromServer',      False     ) )
 		self.useCachedConfig               =     bool ( conf.get('useCachedConfig',               False     ) )
+		self.workingWindow                 =  unicode ( conf.get('workingWindow',                 ''        ) )
 
 		###if not self.eventNotifierDesktop in ('winlogon', 'default', 'current'):
 		###	logger.error(u"Bad value '%s' for eventNotifierDesktop" % self.eventNotifierDesktop)
@@ -1045,12 +1047,16 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['preActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'post_action_processor_command'):
 						eventConfigs[eventConfigId]['postActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
+					elif (key == 'trusted_installer_check'):
+						eventConfigs[eventConfigId]['trustedInstallerCheck'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'action_processor_productids'):
 						eventConfigs[eventConfigId]['actionProcessorProductIds'] = forceList(value.strip().split(","))
 					elif (key == 'exclude_product_group_ids'):
 						eventConfigs[eventConfigId]['excludeProductGroupIds'] = forceList(value)
 					elif (key == 'include_product_group_ids'):
 						eventConfigs[eventConfigId]['includeProductGroupIds'] = forceList(value)
+					elif (key == 'working_window'):
+						eventConfigs[eventConfigId]['workingWindow'] = unicode(value)
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
 				except Exception, e:

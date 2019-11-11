@@ -491,6 +491,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			if not self._configService:
 				self.connectConfigService()
 
+			self._cacheBackend.depotId = self._configService.getDepotId(config.get('global', 'host_id'))
+
 			includeProductIds = []
 			excludeProductIds = []
 			excludeProductGroupIds = [x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != ""]
