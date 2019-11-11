@@ -597,8 +597,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		"""
 		running = [ept.event.eventConfig.getId() for ept in self.opsiclientd._eventProcessingThreads]
 		if not running:
-			logger.info("Currently no Event is Running.")
-			return []
+			logger.info("Currently no Event is running.")
 		return running
 
 	def isInstallationPending(self):
