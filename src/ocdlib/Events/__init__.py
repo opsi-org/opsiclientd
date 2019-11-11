@@ -511,21 +511,25 @@ def getEventConfigs():
 			if not eventConfigId:
 				logger.error(u"No event config id defined in section '%s'" % section)
 				continue
+
 			rawEventConfigs[eventConfigId] = {
-				'active':       True,
-				'args':         {},
-				'super':        None,
-				'precondition': None}
+				'active': True,
+				'args': {},
+				'super': None,
+				'precondition': None
+			}
+
 			try:
 				for key in options.keys():
-					if   (key.lower() == 'active'):
+					if key.lower() == 'active':
 						rawEventConfigs[eventConfigId]['active'] = unicode(options[key]).lower() not in ('0', 'false', 'off', 'no')
-					elif (key.lower() == 'super'):
+					elif key.lower() == 'super':
 						rawEventConfigs[eventConfigId]['super'] = options[key]
 						if rawEventConfigs[eventConfigId]['super'].startswith('event_'):
 							rawEventConfigs[eventConfigId]['super'] = rawEventConfigs[eventConfigId]['super'].split('_', 1)[1]
 					else:
 						rawEventConfigs[eventConfigId]['args'][key.lower()] = options[key]
+
 				if (eventConfigId.find('{') != -1):
 					(superEventName, precondition) = eventConfigId.split('{', 1)
 					if not rawEventConfigs[eventConfigId]['super']:
