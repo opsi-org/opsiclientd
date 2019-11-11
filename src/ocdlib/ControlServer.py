@@ -590,14 +590,15 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				break
 		return running
 
-	def getRunningEvent(self):
+	def getRunningEvents(self):
 		"""
 		Returns a list with running events.
 
 		"""
 		running = [ept.event.eventConfig.getId() for ept in self.opsiclientd._eventProcessingThreads]
 		if not running:
-			running.append("Currently no Event is Running.")
+			logger.info("Currently no Event is Running.")
+			return []
 		return running
 
 	def isInstallationPending(self):
