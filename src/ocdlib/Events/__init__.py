@@ -53,6 +53,9 @@ from .DaemonShutdown import (
 from .DaemonStartup import (
 	EVENT_CONFIG_TYPE_DAEMON_STARTUP,
 	DaemonStartupEventConfig, DaemonStartupEventGenerator)
+from .ProcessActionRequests import (
+	EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS,
+	ProcessActionRequestsEventConfig, ProcessActionRequestsEventGenerator)
 from .SwOnDemand import (
 	EVENT_CONFIG_TYPE_SW_ON_DEMAND,
 	SwOnDemandEventConfig, SwOnDemandEventGenerator)
@@ -68,7 +71,6 @@ state = State()
 
 # Possible event types
 EVENT_CONFIG_TYPE_GUI_STARTUP = u'gui startup'
-EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS = u'process action requests'
 EVENT_CONFIG_TYPE_USER_LOGIN = u'user login'
 EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN = u'system shutdown'
 EVENT_CONFIG_TYPE_CUSTOM = u'custom'
@@ -101,10 +103,6 @@ def EventConfigFactory(eventType, eventId, **kwargs):
 			return SystemShutdownEventConfig(eventId, **kwargs)
 
 	raise TypeError(u"Unknown event config type '%s'" % eventType)
-
-
-class ProcessActionRequestsEventConfig(EventConfig):
-	pass
 
 
 if RUNNING_ON_WINDOWS:
@@ -176,17 +174,6 @@ def EventGeneratorFactory(eventConfig):
 			return GUIStartupEventGenerator(eventConfig)
 
 	raise TypeError(u"Unhandled event config '%s'" % eventConfig)
-
-
-class ProcessActionRequestsEventGenerator(EventGenerator):
-	def __init__(self, eventConfig):
-		EventGenerator.__init__(self, eventConfig)
-
-	def createEvent(self, eventInfo={}):
-		eventConfig = self.getEventConfig()
-		if not eventConfig:
-			return None
-		return ProcessActionRequestsEvent(eventConfig = eventConfig, eventInfo = eventInfo)
 
 
 if RUNNING_ON_WINDOWS:
@@ -399,10 +386,6 @@ else:
 			else:
 				self._event.wait()
 
-
-class ProcessActionRequestsEvent(Event):
-	def __init__(self, eventConfig, eventInfo={}):
-		Event.__init__(self, eventConfig, eventInfo)
 
 if RUNNING_ON_WINDOWS:
 	class GUIStartupEvent(Event):
