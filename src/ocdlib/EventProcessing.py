@@ -1109,10 +1109,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 			logger.info("Working Window from {0} until {1}".format(start, end))
 			if start < now < end:
-				logger.notice("We are in the configured working window")
+				logger.info("We are in the configured working window")
 				return True
 			else:
-				logger.notice("We are not in the configured working window, stopping Event")
+				logger.info("We are not in the configured working window")
 				return False
 		except Exception as e:
 			logger.warning("Working Window processing failed: starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
