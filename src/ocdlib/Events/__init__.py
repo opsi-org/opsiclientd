@@ -70,7 +70,7 @@ EVENT_CONFIG_TYPE_CUSTOM = u'custom'
 
 
 def EventConfigFactory(eventType, eventId, **kwargs):
-	if   (eventType == EVENT_CONFIG_TYPE_PANIC):
+	if eventType == EVENT_CONFIG_TYPE_PANIC:
 		return PanicEventConfig(eventId, **kwargs)
 	elif (eventType == EVENT_CONFIG_TYPE_DAEMON_STARTUP):
 		return DaemonStartupEventConfig(eventId, **kwargs)
@@ -171,7 +171,7 @@ def EventGeneratorFactory(eventConfig):
 		return ProcessActionRequestsEventGenerator(eventConfig)
 	elif RUNNING_ON_WINDOWS and isinstance(eventConfig, UserLoginEventConfig):
 		return UserLoginEventGenerator(eventConfig)
-	elif RUNNING_ON_WINDOWS and  isinstance(eventConfig, SystemShutdownEventConfig):
+	elif RUNNING_ON_WINDOWS and isinstance(eventConfig, SystemShutdownEventConfig):
 		return SystemShutdownEventGenerator(eventConfig)
 	elif isinstance(eventConfig, CustomEventConfig):
 		return CustomEventGenerator(eventConfig)
