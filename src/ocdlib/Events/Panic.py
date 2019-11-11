@@ -62,8 +62,6 @@ class PanicEventConfig(EventConfig):
 
 
 class PanicEventGenerator(EventGenerator):
-    def __init__(self, eventConfig):
-        EventGenerator.__init__(self, eventConfig)
 
     def createEvent(self, eventInfo={}):
         eventConfig = self.getEventConfig()
@@ -74,5 +72,4 @@ class PanicEventGenerator(EventGenerator):
 
 
 class PanicEvent(Event):
-    def __init__(self, eventConfig, eventInfo={}):
-        Event.__init__(self, eventConfig, eventInfo)
+    pass

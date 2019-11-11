@@ -46,8 +46,6 @@ class DaemonShutdownEventConfig(EventConfig):
 
 
 class DaemonShutdownEventGenerator(EventGenerator):
-    def __init__(self, eventConfig):
-        EventGenerator.__init__(self, eventConfig)
 
     def createEvent(self, eventInfo={}):
         eventConfig = self.getEventConfig()
@@ -61,5 +59,4 @@ class DaemonShutdownEventGenerator(EventGenerator):
 
 
 class DaemonShutdownEvent(Event):
-    def __init__(self, eventConfig, eventInfo={}):
-        Event.__init__(self, eventConfig, eventInfo)
+    pass
