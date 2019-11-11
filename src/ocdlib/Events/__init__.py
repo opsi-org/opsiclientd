@@ -22,6 +22,7 @@ Events and their configuration.
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
 :author: Erol Ueluekmen <e.ueluekmen@uib.de>
+:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
@@ -44,7 +45,8 @@ from ocdlib.Localization import getLanguage
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
 from .Basic import Event, EventGenerator
-from .Panic import PanicEventConfig, PanicEventGenerator
+from .Panic import (
+	EVENT_CONFIG_TYPE_PANIC, PanicEventConfig, PanicEventGenerator)
 
 logger = Logger()
 config = Config()
@@ -56,7 +58,6 @@ EVENT_CONFIG_TYPE_SW_ON_DEMAND = u'sw on demand'
 EVENT_CONFIG_TYPE_DAEMON_STARTUP = u'daemon startup'
 EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN = u'daemon shutdown'
 EVENT_CONFIG_TYPE_GUI_STARTUP = u'gui startup'
-EVENT_CONFIG_TYPE_PANIC = u'panic'
 EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS = u'process action requests'
 EVENT_CONFIG_TYPE_TIMER = u'timer'
 EVENT_CONFIG_TYPE_USER_LOGIN = u'user login'
