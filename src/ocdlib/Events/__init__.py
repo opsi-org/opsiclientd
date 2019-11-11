@@ -677,9 +677,11 @@ def getEventConfigs():
 eventGenerators = {}
 def createEventGenerators():
 	global eventGenerators
-	eventGenerators['panic'] = EventGeneratorFactory(
-		PanicEventConfig('panic', actionProcessorCommand=config.get('action_processor', 'command', raw=True))
+	panicEventConfig = PanicEventConfig(
+		EVENT_CONFIG_TYPE_PANIC,
+		actionProcessorCommand=config.get('action_processor', 'command', raw=True)
 	)
+	eventGenerators[EVENT_CONFIG_TYPE_PANIC] = EventGeneratorFactory(panicEventConfig)
 
 	for (eventConfigId, eventConfig) in getEventConfigs().items():
 		mainEventConfigId = eventConfigId.split('{')[0]
