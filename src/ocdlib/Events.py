@@ -936,12 +936,16 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['preActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
 					elif (key == 'post_action_processor_command'):
 						eventConfigs[eventConfigId]['postActionProcessorCommand'] = config.replace(unicode(value).lower(), escaped=True)
+					elif (key == 'trusted_installer_check'):
+						eventConfigs[eventConfigId]['trustedInstallerCheck'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'action_processor_productids'):
 						eventConfigs[eventConfigId]['actionProcessorProductIds'] = forceList(value.strip().split(","))
 					elif (key == 'exclude_product_group_ids'):
 						eventConfigs[eventConfigId]['excludeProductGroupIds'] = forceList(value)
 					elif (key == 'include_product_group_ids'):
 						eventConfigs[eventConfigId]['includeProductGroupIds'] = forceList(value)
+					elif (key == 'working_window'):
+						eventConfigs[eventConfigId]['workingWindow'] = unicode(value)
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
 				except Exception, e:

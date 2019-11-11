@@ -92,6 +92,7 @@ class EventConfig(object):
 		self.includeProductGroupIds = list(conf.get('includeProductGroupIds', []))
 		self.preActionProcessorCommand = unicode(conf.get('preActionProcessorCommand', ''))
 		self.postActionProcessorCommand = unicode(conf.get('postActionProcessorCommand', ''))
+		self.trustedInstallerCheck = bool(conf.get('trustedInstallerCheck', True))
 		self.cacheProducts = bool(conf.get('cacheProducts', False))
 		self.cacheMaxBandwidth = int(conf.get('cacheMaxBandwidth', 0))
 		self.cacheDynamicBandwidth = bool(conf.get('cacheDynamicBandwidth', True))
@@ -101,6 +102,7 @@ class EventConfig(object):
 		self.postSyncConfigToServer = bool(conf.get('postSyncConfigToServer', False))
 		self.postSyncConfigFromServer = bool(conf.get('postSyncConfigFromServer', False))
 		self.useCachedConfig = bool(conf.get('useCachedConfig', False))
+		self.workingWindow = unicode(conf.get('workingWindow', ''))
 
 	def getConfig(self):
 		config = {}
