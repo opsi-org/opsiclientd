@@ -9,6 +9,7 @@ from ocdlib.Events import (
     SyncCompletedEventConfig
 )
 from ocdlib.Events.Panic import PanicEventConfig
+from .ocdlib.Events.DaemonStartup import DaemonStartupEventConfig
 
 
 @pytest.fixture(params=[
