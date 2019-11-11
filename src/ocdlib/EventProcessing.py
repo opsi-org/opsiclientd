@@ -688,8 +688,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if not self.event.getActionProcessorCommand():
 				raise Exception(u"No action processor command defined")
 
-			# TODO: Deactivating Trusted Installer Detection. Have to implemented in a better way in futur versions.
-			if self.event.eventConfig.getId() == 'gui_startup' and not state.get('user_logged_in', 0) and eventConfig.trustedInstallerDetection:
+			#TODO: Deactivating Trusted Installer Detection. Have to implemented in a better way in futur versions.
+			if self.event.eventConfig.getId() == 'gui_startup' and not state.get('user_logged_in', 0) and self.event.eventConfig.trustedInstallerDetection:
 				# check for Trusted Installer before Running Action Processor
 				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
 					logger.notice(u"Getting TrustedInstaller service configuration")
@@ -1084,9 +1084,46 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		except Exception, e:
 			logger.logException(e)
 
+	def inWorkingWindow(self):
+		try:
+			starttime, endtime = self.event.eventConfig.workingWindow.split("-")
+			s_hour, s_minute = starttime.split(":")
+			e_hour, e_minute = endtime.split(":")
+			now = dt.now()
+			logger.notice("We have now: {0}".format(now))
+			start = dt.today().replace(
+						hour=int(s_hour),
+						minute=int(s_minute),
+						second=0,
+						microsecond=0)
+			end = dt.today().replace(
+						hour=int(e_hour),
+						minute=int(e_minute),
+						second=0,
+						microsecond=0)
+			if now < start:
+				start = start - timedelta(days=1)
+			elif end < start:
+				end = end + timedelta(days=1)
+
+			if start < now < end:
+				logger.notice("Working Window configuration starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
+				logger.notice("We are in the configured working window")
+				return True
+			else:
+				logger.notice("We are not in the configured working window, stopping Event")
+				return False
+		except Exception as e:
+			logger.warning("Working Window processing failed: starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
+			logger.logException(e)
+			return True
+
 	def run(self):
 		timelineEventId = None
 		try:
+			if self.event.eventConfig.workingWindow:
+				if not self.inWorkingWindow():
+					return
 			logger.notice(u"============= EventProcessingThread for occurrcence of event '%s' started =============" % self.event.eventConfig.getId())
 			timelineEventId = timeline.addEvent(
 				title         = u"Processing event %s" % self.event.eventConfig.getName(),
