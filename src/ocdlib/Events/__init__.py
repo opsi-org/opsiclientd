@@ -47,6 +47,9 @@ from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 from .Basic import Event, EventGenerator
 from .Panic import (
 	EVENT_CONFIG_TYPE_PANIC, PanicEventConfig, PanicEventGenerator)
+from .DaemonShutdown import (
+	EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN,
+	DaemonShutdownEventConfig, DaemonShutdownEventGenerator)
 from .DaemonStartup import (
 	EVENT_CONFIG_TYPE_DAEMON_STARTUP,
 	DaemonStartupEventConfig, DaemonStartupEventGenerator)
@@ -58,7 +61,6 @@ state = State()
 # Possible event types
 EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED = u'sync completed'
 EVENT_CONFIG_TYPE_SW_ON_DEMAND = u'sw on demand'
-EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN = u'daemon shutdown'
 EVENT_CONFIG_TYPE_GUI_STARTUP = u'gui startup'
 EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS = u'process action requests'
 EVENT_CONFIG_TYPE_TIMER = u'timer'
@@ -92,12 +94,6 @@ def EventConfigFactory(eventType, eventId, **kwargs):
 		return SwOnDemandEventConfig(eventId, **kwargs)
 	else:
 		raise TypeError(u"Unknown event config type '%s'" % eventType)
-
-
-class DaemonShutdownEventConfig(EventConfig):
-	def setConfig(self, conf):
-		EventConfig.setConfig(self, conf)
-		self.maxRepetitions = 0
 
 
 class TimerEventConfig(EventConfig):
@@ -183,17 +179,6 @@ def EventGeneratorFactory(eventConfig):
 		return SwOnDemandEventGenerator(eventConfig)
 	else:
 		raise TypeError(u"Unhandled event config '%s'" % eventConfig)
-
-
-class DaemonShutdownEventGenerator(EventGenerator):
-	def __init__(self, eventConfig):
-		EventGenerator.__init__(self, eventConfig)
-
-	def createEvent(self, eventInfo={}):
-		eventConfig = self.getEventConfig()
-		if not eventConfig:
-			return None
-		return DaemonShutdownEvent(eventConfig = eventConfig, eventInfo = eventInfo)
 
 
 class TimerEventGenerator(EventGenerator):
@@ -457,11 +442,6 @@ class SwOnDemandEventGenerator(EventGenerator):
 		if not eventConfig:
 			return None
 		return SwOnDemandEvent(eventConfig = eventConfig, eventInfo = eventInfo)
-
-
-class DaemonShutdownEvent(Event):
-	def __init__(self, eventConfig, eventInfo={}):
-		Event.__init__(self, eventConfig, eventInfo)
 
 
 class TimerEvent(Event):
