@@ -30,7 +30,6 @@ from __future__ import absolute_import
 
 import copy as pycopy
 import sys
-import threading
 import time
 
 from OPSI import System
@@ -39,20 +38,21 @@ from OPSI.Types import forceBool, forceList, forceUnicode
 from OPSI.Util import objectToBeautifiedText
 
 from ocdlib.Config import Config
-from ocdlib.EventConfiguration import EventConfig
 from ocdlib.State import State
 from ocdlib.Localization import getLanguage
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
 from .Basic import Event, EventGenerator
-from .Panic import (
-	EVENT_CONFIG_TYPE_PANIC, PanicEventConfig, PanicEventGenerator)
+from .Custom import (
+	EVENT_CONFIG_TYPE_CUSTOM, CustomEventConfig, CustomEventGenerator)
 from .DaemonShutdown import (
 	EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN,
 	DaemonShutdownEventConfig, DaemonShutdownEventGenerator)
 from .DaemonStartup import (
 	EVENT_CONFIG_TYPE_DAEMON_STARTUP,
 	DaemonStartupEventConfig, DaemonStartupEventGenerator)
+from .Panic import (
+	EVENT_CONFIG_TYPE_PANIC, PanicEventConfig, PanicEventGenerator)
 from .ProcessActionRequests import (
 	EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS,
 	ProcessActionRequestsEventConfig, ProcessActionRequestsEventGenerator)
@@ -73,7 +73,6 @@ state = State()
 EVENT_CONFIG_TYPE_GUI_STARTUP = u'gui startup'
 EVENT_CONFIG_TYPE_USER_LOGIN = u'user login'
 EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN = u'system shutdown'
-EVENT_CONFIG_TYPE_CUSTOM = u'custom'
 
 
 def EventConfigFactory(eventType, eventId, **kwargs):
@@ -106,11 +105,7 @@ def EventConfigFactory(eventType, eventId, **kwargs):
 
 
 if RUNNING_ON_WINDOWS:
-	class WMIEventConfig(EventConfig):
-		def setConfig(self, conf):
-			EventConfig.setConfig(self, conf)
-			self.wql = unicode( conf.get('wql', '') )
-
+	from .Windows.WMI import WMIEventConfig
 
 	class GUIStartupEventConfig(WMIEventConfig):
 		def setConfig(self, conf):
@@ -131,20 +126,6 @@ if RUNNING_ON_WINDOWS:
 		def setConfig(self, conf):
 			WMIEventConfig.setConfig(self, conf)
 			self.maxRepetitions = 0
-
-
-	class CustomEventConfig(WMIEventConfig):
-		pass
-else:
-	# On $NotWindows wo do not want to depend on WMI
-	try:
-		from ocdlibnonfree.Events import CustomEventConfig
-	except ImportError as error:
-		logger.critical(
-			u"Unable to import from ocdlibnonfree."
-			u"Is this the full version?"
-		)
-		raise error
 
 
 def EventGeneratorFactory(eventConfig):
@@ -288,105 +269,6 @@ if RUNNING_ON_WINDOWS:
 			EventGenerator.__init__(self, eventConfig)
 
 
-	class WMIEventGenerator(EventGenerator):
-		def __init__(self, eventConfig):
-			EventGenerator.__init__(self, eventConfig)
-			self._wql = self._generatorConfig.wql
-			self._watcher = None
-
-		def initialize(self):
-			if not RUNNING_ON_WINDOWS:
-				return
-			if not self._wql:
-				return
-
-			from ocdlib.Windows import importWmiAndPythoncom
-			(wmi, pythoncom) = importWmiAndPythoncom()
-			pythoncom.CoInitialize()
-			if self._wql:
-				while not self._watcher:
-					try:
-						logger.debug(u"Creating wmi object")
-						c = wmi.WMI(privileges = ["Security"])
-						logger.info(u"Watching for wql: %s" % self._wql)
-						self._watcher = c.watch_for(raw_wql = self._wql, wmi_class = '')
-					except Exception, e:
-						try:
-							logger.warning(u"Failed to create wmi watcher: %s" % forceUnicode(e))
-						except Exception:
-							logger.warning(u"Failed to create wmi watcher, failed to log exception")
-						time.sleep(1)
-			logger.debug(u"Initialized")
-
-		def getNextEvent(self):
-			if not self._watcher:
-				logger.info(u"Nothing to watch for")
-				self._event = threading.Event()
-				self._event.wait()
-				return None
-
-			wqlResult = None
-			from ocdlib.Windows import importWmiAndPythoncom
-			(wmi, pythoncom) = importWmiAndPythoncom()
-			while not self._stopped:
-				try:
-					wqlResult = self._watcher(timeout_ms=500)
-					break
-				except wmi.x_wmi_timed_out:
-					continue
-
-			if wqlResult:
-				eventInfo = {}
-				for p in wqlResult.properties:
-					value = getattr(wqlResult, p)
-					if isinstance(value, tuple):
-						eventInfo[p] = []
-						for v in value:
-							eventInfo[p].append(v)
-					else:
-						eventInfo[p] = value
-				return self.createEvent(eventInfo)
-
-		def cleanup(self):
-			if self._lastEventOccurence and (time.time() - self._lastEventOccurence < 10):
-				# Waiting some seconds before exit to avoid Win32 releasing exceptions
-				waitTime = int(10 - (time.time() - self._lastEventOccurence))
-				logger.info(u"Event generator '%s' cleaning up in %d seconds" % (self, waitTime))
-				time.sleep(waitTime)
-			try:
-				from ocdlib.Windows import importWmiAndPythoncom
-				(wmi, pythoncom) = importWmiAndPythoncom()
-				pythoncom.CoUninitialize()
-			except ImportError:
-				# Probably not running on Windows.
-				pass
-
-	class CustomEventGenerator(WMIEventGenerator):
-		def __init__(self, eventConfig):
-			WMIEventGenerator.__init__(self, eventConfig)
-
-		def createEvent(self, eventInfo={}):
-			eventConfig = self.getEventConfig()
-			if not eventConfig:
-				return None
-			return CustomEvent(eventConfig=eventConfig, eventInfo=eventInfo)
-else:
-	class CustomEventGenerator(EventGenerator):
-		def createEvent(self, eventInfo={}):
-			eventConfig = self.getEventConfig()
-			if not eventConfig:
-				return None
-			return CustomEvent(eventConfig=eventConfig, eventInfo=eventInfo)
-
-		def getNextEvent(self):
-			self._event = threading.Event()
-			if self._generatorConfig.interval > 0:
-				self._event.wait(self._generatorConfig.interval)
-				return self.createEvent()
-			else:
-				self._event.wait()
-
-
 if RUNNING_ON_WINDOWS:
 	class GUIStartupEvent(Event):
 		def __init__(self, eventConfig, eventInfo={}):
@@ -402,11 +284,6 @@ if RUNNING_ON_WINDOWS:
 	class SystemShutdownEvent(Event):
 		def __init__(self, eventConfig, eventInfo={}):
 			Event.__init__(self, eventConfig, eventInfo)
-
-
-class CustomEvent(Event):
-	def __init__(self, eventConfig, eventInfo={}):
-		Event.__init__(self, eventConfig, eventInfo)
 
 
 def getEventConfigs():
