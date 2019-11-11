@@ -1107,8 +1107,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			elif end < start:
 				end = end + timedelta(days=1)
 
+			logger.info("Working Window from {0} until {1}".format(start, end))
 			if start < now < end:
-				logger.notice("Working Window configuration starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
 				logger.notice("We are in the configured working window")
 				return True
 			else:
