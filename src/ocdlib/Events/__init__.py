@@ -500,7 +500,7 @@ def getEventConfigs():
 				for key in options.keys():
 					preconditions[preconditionId][key] = options[key].lower() not in ('0', 'false', 'off', 'no')
 				logger.info(u"Precondition '%s' created: %s" % (preconditionId, preconditions[preconditionId]))
-			except Exception, e:
+			except Exception as e:
 				logger.error(u"Failed to parse precondition '%s': %s" % (preconditionId, forceUnicode(e)))
 
 	rawEventConfigs = {}
