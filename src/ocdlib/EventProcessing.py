@@ -1085,22 +1085,23 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.logException(e)
 
 	def inWorkingWindow(self):
+		def getRelativeDatetime(timestr):
+			hour, minute = timestr.split(":")
+			return dt.today().replace(
+				hour=int(hour),
+				minute=int(minute),
+				second=0,
+				microsecond=0
+			)
+
 		try:
 			starttime, endtime = self.event.eventConfig.workingWindow.split("-")
-			s_hour, s_minute = starttime.split(":")
-			e_hour, e_minute = endtime.split(":")
+			start = getRelativeDatetime(starttime)
+			end = getRelativeDatetime(endtime)
+
 			now = dt.now()
-			logger.notice("We have now: {0}".format(now))
-			start = dt.today().replace(
-						hour=int(s_hour),
-						minute=int(s_minute),
-						second=0,
-						microsecond=0)
-			end = dt.today().replace(
-						hour=int(e_hour),
-						minute=int(e_minute),
-						second=0,
-						microsecond=0)
+			logger.info("Current time: {0}".format(now))
+
 			if now < start:
 				start = start - timedelta(days=1)
 			elif end < start:
