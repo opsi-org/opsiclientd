@@ -32,28 +32,28 @@ from .Basic import Event, EventGenerator
 from ocdlib.EventConfiguration import EventConfig
 
 __all__ = [
-    'EVENT_CONFIG_TYPE_DAEMON_STARTUP', 'DaemonStartupEvent',
-    'DaemonStartupEventConfig', 'DaemonStartupEventGenerator'
+	'EVENT_CONFIG_TYPE_DAEMON_STARTUP', 'DaemonStartupEvent',
+	'DaemonStartupEventConfig', 'DaemonStartupEventGenerator'
 ]
 
 EVENT_CONFIG_TYPE_DAEMON_STARTUP = u'daemon startup'
 
 
 class DaemonStartupEventConfig(EventConfig):
-    def setConfig(self, conf):
-        EventConfig.setConfig(self, conf)
-        self.maxRepetitions = 0
+	def setConfig(self, conf):
+		EventConfig.setConfig(self, conf)
+		self.maxRepetitions = 0
 
 
 class DaemonStartupEventGenerator(EventGenerator):
 
-    def createEvent(self, eventInfo={}):
-        eventConfig = self.getEventConfig()
-        if not eventConfig:
-            return None
+	def createEvent(self, eventInfo={}):
+		eventConfig = self.getEventConfig()
+		if not eventConfig:
+			return None
 
-        return DaemonStartupEvent(eventConfig=eventConfig, eventInfo=eventInfo)
+		return DaemonStartupEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
 class DaemonStartupEvent(Event):
-    pass
+	pass

@@ -32,44 +32,44 @@ from .Basic import Event, EventGenerator
 from ocdlib.EventConfiguration import EventConfig
 
 __all__ = [
-    'EVENT_CONFIG_TYPE_PANIC', 'PanicEvent', 'PanicEventConfig',
-    'PanicEventGenerator'
+	'EVENT_CONFIG_TYPE_PANIC', 'PanicEvent', 'PanicEventConfig',
+	'PanicEventGenerator'
 ]
 
 EVENT_CONFIG_TYPE_PANIC = u'panic'
 
 
 class PanicEventConfig(EventConfig):
-    def setConfig(self, conf):
-        EventConfig.setConfig(self, conf)
-        self.maxRepetitions = -1
-        self.actionMessage = 'Panic event'
-        self.activationDelay = 0
-        self.notificationDelay = 0
-        self.actionWarningTime = 0
-        self.actionUserCancelable = False
-        self.blockLogin = False
-        self.logoffCurrentUser = False
-        self.lockWorkstation = False
-        self.getConfigFromService = False
-        self.updateConfigFile = False
-        self.writeLogToService = False
-        self.updateActionProcessor = False
-        self.eventNotifierCommand = None
-        self.actionNotifierCommand = None
-        self.shutdownNotifierCommand = None
-        self.actionProcessorDesktop = 'winlogon'
+	def setConfig(self, conf):
+		EventConfig.setConfig(self, conf)
+		self.maxRepetitions = -1
+		self.actionMessage = 'Panic event'
+		self.activationDelay = 0
+		self.notificationDelay = 0
+		self.actionWarningTime = 0
+		self.actionUserCancelable = False
+		self.blockLogin = False
+		self.logoffCurrentUser = False
+		self.lockWorkstation = False
+		self.getConfigFromService = False
+		self.updateConfigFile = False
+		self.writeLogToService = False
+		self.updateActionProcessor = False
+		self.eventNotifierCommand = None
+		self.actionNotifierCommand = None
+		self.shutdownNotifierCommand = None
+		self.actionProcessorDesktop = 'winlogon'
 
 
 class PanicEventGenerator(EventGenerator):
 
-    def createEvent(self, eventInfo={}):
-        eventConfig = self.getEventConfig()
-        if not eventConfig:
-            return None
+	def createEvent(self, eventInfo={}):
+		eventConfig = self.getEventConfig()
+		if not eventConfig:
+			return None
 
-        return PanicEvent(eventConfig=eventConfig, eventInfo=eventInfo)
+		return PanicEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
 class PanicEvent(Event):
-    pass
+	pass

@@ -32,31 +32,31 @@ from .Basic import Event, EventGenerator
 from ocdlib.EventConfiguration import EventConfig
 
 __all__ = [
-    'EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN', 'DaemonShutdownEvent',
-    'DaemonShutdownEventConfig', 'DaemonShutdownEventGenerator'
+	'EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN', 'DaemonShutdownEvent',
+	'DaemonShutdownEventConfig', 'DaemonShutdownEventGenerator'
 ]
 
 EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN = u'daemon shutdown'
 
 
 class DaemonShutdownEventConfig(EventConfig):
-    def setConfig(self, conf):
-        EventConfig.setConfig(self, conf)
-        self.maxRepetitions = 0
+	def setConfig(self, conf):
+		EventConfig.setConfig(self, conf)
+		self.maxRepetitions = 0
 
 
 class DaemonShutdownEventGenerator(EventGenerator):
 
-    def createEvent(self, eventInfo={}):
-        eventConfig = self.getEventConfig()
-        if not eventConfig:
-            return None
+	def createEvent(self, eventInfo={}):
+		eventConfig = self.getEventConfig()
+		if not eventConfig:
+			return None
 
-        return DaemonShutdownEvent(
-            eventConfig=eventConfig,
-            eventInfo=eventInfo
-        )
+		return DaemonShutdownEvent(
+			eventConfig=eventConfig,
+			eventInfo=eventInfo
+		)
 
 
 class DaemonShutdownEvent(Event):
-    pass
+	pass

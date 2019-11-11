@@ -32,26 +32,26 @@ from .Basic import Event, EventGenerator
 from ocdlib.EventConfiguration import EventConfig
 
 __all__ = [
-    'EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED', 'SyncCompletedEvent',
-    'SyncCompletedEventConfig', 'SyncCompletedEventGenerator'
+	'EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED', 'SyncCompletedEvent',
+	'SyncCompletedEventConfig', 'SyncCompletedEventGenerator'
 ]
 
 EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED = u'sync completed'
 
 
 class SyncCompletedEventConfig(EventConfig):
-    pass
+	pass
 
 
 class SyncCompletedEventGenerator(EventGenerator):
 
-    def createEvent(self, eventInfo={}):
-        eventConfig = self.getEventConfig()
-        if not eventConfig:
-            return None
+	def createEvent(self, eventInfo={}):
+		eventConfig = self.getEventConfig()
+		if not eventConfig:
+			return None
 
-        return SyncCompletedEvent(eventConfig=eventConfig, eventInfo=eventInfo)
+		return SyncCompletedEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
 class SyncCompletedEvent(Event):
-    pass
+	pass

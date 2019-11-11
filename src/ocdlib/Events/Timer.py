@@ -34,34 +34,34 @@ from .Basic import Event, EventGenerator
 from ocdlib.EventConfiguration import EventConfig
 
 __all__ = [
-    'EVENT_CONFIG_TYPE_TIMER', 'TimerEvent', 'TimerEventConfig',
-    'TimerEventGenerator'
+	'EVENT_CONFIG_TYPE_TIMER', 'TimerEvent', 'TimerEventConfig',
+	'TimerEventGenerator'
 ]
 
 EVENT_CONFIG_TYPE_TIMER = u'timer'
 
 
 class TimerEventConfig(EventConfig):
-    pass
+	pass
 
 
 class TimerEventGenerator(EventGenerator):
 
-    def getNextEvent(self):
-        self._event = threading.Event()
-        if self._generatorConfig.interval > 0:
-            self._event.wait(self._generatorConfig.interval)
-            return self.createEvent()
-        else:
-            self._event.wait()
+	def getNextEvent(self):
+		self._event = threading.Event()
+		if self._generatorConfig.interval > 0:
+			self._event.wait(self._generatorConfig.interval)
+			return self.createEvent()
+		else:
+			self._event.wait()
 
-    def createEvent(self, eventInfo={}):
-        eventConfig = self.getEventConfig()
-        if not eventConfig:
-            return None
+	def createEvent(self, eventInfo={}):
+		eventConfig = self.getEventConfig()
+		if not eventConfig:
+			return None
 
-        return TimerEvent(eventConfig=eventConfig, eventInfo=eventInfo)
+		return TimerEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
 class TimerEvent(Event):
-    pass
+	pass
