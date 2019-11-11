@@ -4,12 +4,13 @@ import pytest
 
 from ocdlib.EventConfiguration import EventConfig
 from ocdlib.Events import (
-    TimerEventConfig, ProcessActionRequestsEventConfig, SwOnDemandEventConfig,
+    ProcessActionRequestsEventConfig, SwOnDemandEventConfig,
     SyncCompletedEventConfig
 )
 from ocdlib.Events.Panic import PanicEventConfig
 from ocdlib.Events.DaemonShutdown import DaemonShutdownEventConfig
 from ocdlib.Events.DaemonStartup import DaemonStartupEventConfig
+from ocdlib.Events.Timer import TimerEventConfig
 
 
 @pytest.fixture(params=[

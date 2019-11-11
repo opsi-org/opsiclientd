@@ -53,6 +53,8 @@ from .DaemonShutdown import (
 from .DaemonStartup import (
 	EVENT_CONFIG_TYPE_DAEMON_STARTUP,
 	DaemonStartupEventConfig, DaemonStartupEventGenerator)
+from .Timer import (
+	EVENT_CONFIG_TYPE_TIMER, TimerEventConfig, TimerEventGenerator)
 
 logger = Logger()
 config = Config()
@@ -63,7 +65,6 @@ EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED = u'sync completed'
 EVENT_CONFIG_TYPE_SW_ON_DEMAND = u'sw on demand'
 EVENT_CONFIG_TYPE_GUI_STARTUP = u'gui startup'
 EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS = u'process action requests'
-EVENT_CONFIG_TYPE_TIMER = u'timer'
 EVENT_CONFIG_TYPE_USER_LOGIN = u'user login'
 EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN = u'system shutdown'
 EVENT_CONFIG_TYPE_CUSTOM = u'custom'
@@ -96,10 +97,6 @@ def EventConfigFactory(eventType, eventId, **kwargs):
 			return SystemShutdownEventConfig(eventId, **kwargs)
 
 	raise TypeError(u"Unknown event config type '%s'" % eventType)
-
-
-class TimerEventConfig(EventConfig):
-	pass
 
 
 class SyncCompletedEventConfig(EventConfig):
@@ -183,25 +180,6 @@ def EventGeneratorFactory(eventConfig):
 			return GUIStartupEventGenerator(eventConfig)
 
 	raise TypeError(u"Unhandled event config '%s'" % eventConfig)
-
-
-class TimerEventGenerator(EventGenerator):
-	def __init__(self, eventConfig):
-		EventGenerator.__init__(self, eventConfig)
-
-	def getNextEvent(self):
-		self._event = threading.Event()
-		if (self._generatorConfig.interval > 0):
-			self._event.wait(self._generatorConfig.interval)
-			return self.createEvent()
-		else:
-			self._event.wait()
-
-	def createEvent(self, eventInfo={}):
-		eventConfig = self.getEventConfig()
-		if not eventConfig:
-			return None
-		return TimerEvent(eventConfig = eventConfig, eventInfo = eventInfo)
 
 
 class SyncCompletedEventGenerator(EventGenerator):
@@ -446,11 +424,6 @@ class SwOnDemandEventGenerator(EventGenerator):
 		if not eventConfig:
 			return None
 		return SwOnDemandEvent(eventConfig = eventConfig, eventInfo = eventInfo)
-
-
-class TimerEvent(Event):
-	def __init__(self, eventConfig, eventInfo={}):
-		Event.__init__(self, eventConfig, eventInfo)
 
 
 class SyncCompletedEvent(Event):
