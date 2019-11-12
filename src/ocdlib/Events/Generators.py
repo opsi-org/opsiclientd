@@ -37,6 +37,11 @@ from .Configs import getEventConfigs
 from .Factories import EventConfigFactory, EventGeneratorFactory
 from .Panic import PanicEventConfig
 
+__all__ = [
+	'createEventGenerators', 'getEventGenerators',
+	'reconfigureEventGenerators',
+]
+
 EVENT_CONFIG_TYPE_PANIC = u'panic'
 
 logger = Logger()

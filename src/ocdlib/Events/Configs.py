@@ -37,6 +37,8 @@ from OPSI.Util import objectToBeautifiedText
 from ocdlib.Config import Config
 from ocdlib.Localization import getLanguage
 
+__all__ = ['getEventConfigs']
+
 logger = Logger()
 config = Config()
 

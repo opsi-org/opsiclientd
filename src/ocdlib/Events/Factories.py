@@ -51,6 +51,8 @@ if RUNNING_ON_WINDOWS:
 	from .Windows.UserLogin import (
 		UserLoginEventConfig, UserLoginEventGenerator)
 
+__all__ = ['EventConfigFactory', 'EventGeneratorFactory']
+
 
 def EventConfigFactory(eventType, eventId, **kwargs):
 	"""
