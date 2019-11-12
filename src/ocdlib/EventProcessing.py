@@ -22,6 +22,7 @@ Processing of events.
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
 :author: Erol Ueluekmen <e.ueluekmen@uib.de>
+:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
@@ -34,6 +35,7 @@ import shutil
 import sys
 import time
 from contextlib import contextmanager
+from datetime import datetime as dt, timedelta
 
 from OPSI import System
 from OPSI.Logger import Logger, LOG_WARNING

@@ -58,15 +58,18 @@ from ocdlib.Config import Config, getLogFormat
 from ocdlib.Events.Generators import getEventGenerator
 from ocdlib.Timeline import Timeline
 from ocdlib.OpsiService import ServiceConnection
+from ocdlib.State import State
 from ocdlib.SoftwareOnDemand import ResourceKioskJsonRpc
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
+from ocdlib.Timeline import Timeline
 
 if RUNNING_ON_WINDOWS:
 	import win32net
 	import win32security
 
-logger = Logger()
 config = Config()
+logger = Logger()
+state = State()
 
 infoPage = u'''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
