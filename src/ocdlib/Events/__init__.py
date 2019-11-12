@@ -265,7 +265,7 @@ def getEventConfigs():
 					elif key == 'action_user_cancelable':
 						eventConfigs[eventConfigId]['actionUserCancelable'] = int(value)
 					elif key == 'shutdown':
-						eventConfigs[eventConfigId]['shutdown'] =  forceBool(value)
+						eventConfigs[eventConfigId]['shutdown'] = forceBool(value)
 					elif key == 'reboot':
 						eventConfigs[eventConfigId]['reboot'] = forceBool(value)
 					elif key == 'shutdown_warning_time':
