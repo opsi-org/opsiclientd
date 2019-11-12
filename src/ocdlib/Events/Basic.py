@@ -183,7 +183,7 @@ class EventGenerator(threading.Thread):
 
 		try:
 			self.cleanup()
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Failed to clean up: %s" % forceUnicode(e))
 
 		logger.info(u"Event generator '%s' exiting " % self)
