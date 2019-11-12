@@ -233,15 +233,17 @@ class TimelineImplementation(object):
 				if end:
 					end = forceOpsiTimestamp(end)
 					durationEvent = True
-				return self._sql.insert('EVENT', {
-					'title':         forceUnicode(title),
-					'category':      category,
-					'description':   forceUnicode(description),
-					'isError':       forceBool(isError),
+
+				event = {
+					'title': forceUnicode(title),
+					'category': category,
+					'description': forceUnicode(description),
+					'isError': forceBool(isError),
 					'durationEvent': forceBool(durationEvent),
-					'start':         start,
-					'end':           end,
-				})
+					'start': start,
+					'end': end,
+				}
+				return self._sql.insert('EVENT', event)
 			except Exception as addError:
 				logger.error(u"Failed to add event '%s': %s" % (title, addError))
 
