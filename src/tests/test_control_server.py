@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import ocdlib.Events as Events
 import ocdlib.ControlServer as OCS
+from ocdlib.Events.Configs import getEventConfigs
+from ocdlib.Events.Generators import createEventGenerators
 
 import pytest
 
@@ -15,8 +16,8 @@ def preparedConfig(config, configFile):
 def testFiringEvent(preparedConfig):
 	preparedConfig.readConfigFile()
 
-	Events.createEventGenerators()
-	Events.getEventConfigs()
+	createEventGenerators()
+	getEventConfigs()
 
 	controlServer = OCS.OpsiclientdRpcInterface(None)
 	controlServer.fireEvent('on_demand')
@@ -33,8 +34,8 @@ def testFiringUnknownEventRaisesError(preparedConfig):
 def testGUIStartupEventOnlyOnWindows(preparedConfig, onWindows):
 	preparedConfig.readConfigFile()
 
-	Events.createEventGenerators()
-	configs = Events.getEventConfigs()
+	createEventGenerators()
+	configs = getEventConfigs()
 
 	assert configs
 	if onWindows:

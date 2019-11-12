@@ -46,7 +46,7 @@ from OPSI.Util.Thread import KillableThread
 
 from ocdlib import __version__
 from ocdlib.Config import Config, getLogFormat
-from ocdlib.Events import state, reconfigureEventGenerators
+from ocdlib.Events.Generators import reconfigureEventGenerators
 from ocdlib.Exceptions import CanceledByUserError
 from ocdlib.Localization import _
 from ocdlib.OpsiService import ServiceConnection

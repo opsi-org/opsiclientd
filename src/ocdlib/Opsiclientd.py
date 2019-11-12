@@ -47,12 +47,11 @@ from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 from ocdlib import __version__
 from ocdlib.Config import Config, getLogFormat
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
-from ocdlib.Events import (
-	EventGeneratorFactory,
-	createEventGenerators, getEventGenerators)
 from ocdlib.Events.Basic import EventListener
 from ocdlib.Events.DaemonShutdown import DaemonShutdownEventGenerator
 from ocdlib.Events.DaemonStartup import DaemonStartupEventGenerator
+from ocdlib.Events.Factories import EventGeneratorFactory
+from ocdlib.Events.Generators import createEventGenerators, getEventGenerators
 from ocdlib.Events.Panic import PanicEvent
 from ocdlib.EventProcessing import EventProcessingThread
 from ocdlib.Localization import _, setLocaleDir
