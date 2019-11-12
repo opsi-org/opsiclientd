@@ -399,13 +399,10 @@ def createEventGenerators():
 
 
 def getEventGenerators(generatorClass=None):
-	global eventGenerators
-	egs = []
-	for eventGenerator in eventGenerators.values():
-		if not generatorClass or isinstance(eventGenerator, generatorClass):
-			egs.append(eventGenerator)
-	return egs
-
+	return [
+		eventGenerator for eventGenerator in eventGenerators.values()
+		if generatorClass is None or isinstance(eventGenerator, generatorClass)
+	]
 
 def reconfigureEventGenerators():
 	global eventGenerators
