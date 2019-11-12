@@ -167,7 +167,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 	def waitForGUI(self, timeout=None):
 		waiter = WaitForGUI()
-		waiter.wait(timeout)
+		waiter.wait(timeout or None)
 
 	def createActionProcessorUser(self, recreate=True):
 		if not config.get('action_processor', 'create_user'):
