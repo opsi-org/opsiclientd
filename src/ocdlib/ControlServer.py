@@ -55,10 +55,10 @@ from OPSI.web2.channel.http import HTTPFactory
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.Config import getLogFormat, Config
 from ocdlib.Events import eventGenerators
-from ocdlib.State import State
-from ocdlib.Timeline import Timeline
 from ocdlib.OpsiService import ServiceConnection
+from ocdlib.State import State
 from ocdlib.SoftwareOnDemand import ResourceKioskJsonRpc
+from ocdlib.Timeline import Timeline
 
 RUNNING_ON_WINDOWS = (os.name == 'nt')
 
