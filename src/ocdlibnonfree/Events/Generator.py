@@ -13,6 +13,8 @@ ocdlibnonfree.Events
 :author: Niko Wenselowski <n.wenselowski@uib.de>
 """
 
+import threading
+
 from ocdlib.Events.Basic import Event, EventGenerator
 
 

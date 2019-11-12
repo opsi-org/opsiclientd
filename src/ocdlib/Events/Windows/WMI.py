@@ -32,6 +32,7 @@ import threading
 import time
 
 from OPSI.Logger import Logger
+from OPSI.Types import forceUnicode
 
 from ..Basic import EventGenerator
 from ocdlib.EventConfiguration import EventConfig
