@@ -215,9 +215,9 @@ def getEventConfigs():
 
 			for (key, value) in rawEventConfig['args'].items():
 				try:
-					if   (key == 'type'):
+					if key == 'type':
 						eventConfigs[eventConfigId]['type'] = value
-					elif (key == 'wql'):
+					elif key == 'wql':
 						eventConfigs[eventConfigId]['wql'] = value
 					elif key.startswith('action_message') or key.startswith('message'):
 						mLanguage = None
@@ -252,99 +252,99 @@ def getEventConfigs():
 								eventConfigs[eventConfigId]['name'] = value
 						elif not eventConfigs[eventConfigId].get('name'):
 							eventConfigs[eventConfigId]['name'] = value
-					elif (key == 'interval'):
+					elif key == 'interval':
 						eventConfigs[eventConfigId]['interval'] = int(value)
-					elif (key == 'max_repetitions'):
+					elif key == 'max_repetitions':
 						eventConfigs[eventConfigId]['maxRepetitions'] = int(value)
-					elif (key == 'activation_delay'):
+					elif key == 'activation_delay':
 						eventConfigs[eventConfigId]['activationDelay'] = int(value)
-					elif (key == 'notification_delay'):
+					elif key == 'notification_delay':
 						eventConfigs[eventConfigId]['notificationDelay'] = int(value)
-					elif (key == 'action_warning_time'):
+					elif key == 'action_warning_time':
 						eventConfigs[eventConfigId]['actionWarningTime'] = int(value)
-					elif (key == 'action_user_cancelable'):
+					elif key == 'action_user_cancelable':
 						eventConfigs[eventConfigId]['actionUserCancelable'] = int(value)
-					elif (key == 'shutdown'):
+					elif key == 'shutdown':
 						eventConfigs[eventConfigId]['shutdown'] =  forceBool(value)
-					elif (key == 'reboot'):
+					elif key == 'reboot':
 						eventConfigs[eventConfigId]['reboot'] = forceBool(value)
-					elif (key == 'shutdown_warning_time'):
+					elif key == 'shutdown_warning_time':
 						eventConfigs[eventConfigId]['shutdownWarningTime'] = int(value)
-					elif (key == 'shutdown_warning_repetition_time'):
+					elif key == 'shutdown_warning_repetition_time':
 						eventConfigs[eventConfigId]['shutdownWarningRepetitionTime'] = int(value)
-					elif (key == 'shutdown_user_cancelable'):
+					elif key == 'shutdown_user_cancelable':
 						eventConfigs[eventConfigId]['shutdownUserCancelable'] = int(value)
-					elif (key == 'block_login'):
+					elif key == 'block_login':
 						eventConfigs[eventConfigId]['blockLogin'] = forceBool(value)
-					elif (key == 'lock_workstation'):
+					elif key == 'lock_workstation':
 						eventConfigs[eventConfigId]['lockWorkstation'] = forceBool(value)
-					elif (key == 'logoff_current_user'):
+					elif key == 'logoff_current_user':
 						eventConfigs[eventConfigId]['logoffCurrentUser'] = forceBool(value)
-					elif (key == 'process_shutdown_requests'):
+					elif key == 'process_shutdown_requests':
 						eventConfigs[eventConfigId]['processShutdownRequests'] = forceBool(value)
-					elif (key == 'get_config_from_service'):
+					elif key == 'get_config_from_service':
 						eventConfigs[eventConfigId]['getConfigFromService'] = forceBool(value)
-					elif (key == 'update_config_file'):
+					elif key == 'update_config_file':
 						eventConfigs[eventConfigId]['updateConfigFile'] = forceBool(value)
-					elif (key == 'write_log_to_service'):
+					elif key == 'write_log_to_service':
 						eventConfigs[eventConfigId]['writeLogToService'] = forceBool(value)
-					elif (key == 'cache_products'):
+					elif key == 'cache_products':
 						eventConfigs[eventConfigId]['cacheProducts'] = forceBool(value)
-					elif (key == 'cache_max_bandwidth'):
+					elif key == 'cache_max_bandwidth':
 						eventConfigs[eventConfigId]['cacheMaxBandwidth'] = int(value)
-					elif (key == 'cache_dynamic_bandwidth'):
+					elif key == 'cache_dynamic_bandwidth':
 						eventConfigs[eventConfigId]['cacheDynamicBandwidth'] = forceBool(value)
-					elif (key == 'use_cached_products'):
+					elif key == 'use_cached_products':
 						eventConfigs[eventConfigId]['useCachedProducts'] = forceBool(value)
-					elif (key == 'sync_config_from_server'):
+					elif key == 'sync_config_from_server':
 						eventConfigs[eventConfigId]['syncConfigFromServer'] = forceBool(value)
-					elif (key == 'sync_config_to_server'):
+					elif key == 'sync_config_to_server':
 						eventConfigs[eventConfigId]['syncConfigToServer'] = forceBool(value)
-					elif (key == 'post_sync_config_from_server'):
+					elif key == 'post_sync_config_from_server':
 						eventConfigs[eventConfigId]['postSyncConfigFromServer'] = forceBool(value)
-					elif (key == 'post_sync_config_to_server'):
+					elif key == 'post_sync_config_to_server':
 						eventConfigs[eventConfigId]['postSyncConfigToServer'] = forceBool(value)
-					elif (key == 'use_cached_config'):
+					elif key == 'use_cached_config':
 						eventConfigs[eventConfigId]['useCachedConfig'] = forceBool(value)
-					elif (key == 'update_action_processor'):
+					elif key == 'update_action_processor':
 						eventConfigs[eventConfigId]['updateActionProcessor'] = forceBool(value)
-					elif (key == 'action_type'):
+					elif key == 'action_type':
 						eventConfigs[eventConfigId]['actionType'] = forceUnicodeLower(value)
-					elif (key == 'event_notifier_command'):
+					elif key == 'event_notifier_command':
 						eventConfigs[eventConfigId]['eventNotifierCommand'] = config.replace(forceUnicodeLower(value), escaped=True)
-					elif (key == 'event_notifier_desktop'):
+					elif key == 'event_notifier_desktop':
 						eventConfigs[eventConfigId]['eventNotifierDesktop'] = forceUnicodeLower(value)
-					elif (key == 'process_actions'):
+					elif key == 'process_actions':
 						eventConfigs[eventConfigId]['processActions'] = forceBool(value)
-					elif (key == 'action_notifier_command'):
+					elif key == 'action_notifier_command':
 						eventConfigs[eventConfigId]['actionNotifierCommand'] = config.replace(forceUnicodeLower(value), escaped=True)
-					elif (key == 'action_notifier_desktop'):
+					elif key == 'action_notifier_desktop':
 						eventConfigs[eventConfigId]['actionNotifierDesktop'] = forceUnicodeLower(value)
-					elif (key == 'action_processor_command'):
+					elif key == 'action_processor_command':
 						eventConfigs[eventConfigId]['actionProcessorCommand'] = forceUnicodeLower(value)
-					elif (key == 'action_processor_desktop'):
+					elif key == 'action_processor_desktop':
 						eventConfigs[eventConfigId]['actionProcessorDesktop'] = forceUnicodeLower(value)
-					elif (key == 'action_processor_timeout'):
+					elif key == 'action_processor_timeout':
 						eventConfigs[eventConfigId]['actionProcessorTimeout'] = int(value)
-					elif (key == 'trusted_installer_detection'):
+					elif key == 'trusted_installer_detection':
 						eventConfigs[eventConfigId]['trustedInstallerDetection'] = forceBool(value)
-					elif (key == 'shutdown_notifier_command'):
+					elif key == 'shutdown_notifier_command':
 						eventConfigs[eventConfigId]['shutdownNotifierCommand'] = config.replace(forceUnicodeLower(value), escaped=True)
-					elif (key == 'shutdown_notifier_desktop'):
+					elif key == 'shutdown_notifier_desktop':
 						eventConfigs[eventConfigId]['shutdownNotifierDesktop'] = forceUnicodeLower(value)
-					elif (key == 'pre_action_processor_command'):
+					elif key == 'pre_action_processor_command':
 						eventConfigs[eventConfigId]['preActionProcessorCommand'] = config.replace(forceUnicodeLower(value), escaped=True)
-					elif (key == 'post_action_processor_command'):
+					elif key == 'post_action_processor_command':
 						eventConfigs[eventConfigId]['postActionProcessorCommand'] = config.replace(forceUnicodeLower(value), escaped=True)
-					elif (key == 'trusted_installer_check'):
+					elif key == 'trusted_installer_check':
 						eventConfigs[eventConfigId]['trustedInstallerCheck'] = forceBool(value)
-					elif (key == 'action_processor_productids'):
+					elif key == 'action_processor_productids':
 						eventConfigs[eventConfigId]['actionProcessorProductIds'] = value.strip().split(",")
-					elif (key == 'exclude_product_group_ids'):
+					elif key == 'exclude_product_group_ids':
 						eventConfigs[eventConfigId]['excludeProductGroupIds'] = forceList(value)
-					elif (key == 'include_product_group_ids'):
+					elif key == 'include_product_group_ids':
 						eventConfigs[eventConfigId]['includeProductGroupIds'] = forceList(value)
-					elif (key == 'working_window'):
+					elif key == 'working_window':
 						eventConfigs[eventConfigId]['workingWindow'] = unicode(value)
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
