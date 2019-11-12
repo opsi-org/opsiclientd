@@ -35,7 +35,6 @@ from OPSI.Types import forceBool, forceList, forceUnicode, forceUnicodeLower
 from OPSI.Util import objectToBeautifiedText
 
 from ocdlib.Config import Config
-from ocdlib.State import State
 from ocdlib.Localization import getLanguage
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
@@ -64,7 +63,6 @@ EVENT_CONFIG_TYPE_PANIC = u'panic'
 
 logger = Logger()
 config = Config()
-state = State()
 
 
 def EventConfigFactory(eventType, eventId, **kwargs):
