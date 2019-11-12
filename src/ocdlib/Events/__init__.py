@@ -44,8 +44,7 @@ from .DaemonShutdown import (
 	DaemonShutdownEventConfig, DaemonShutdownEventGenerator)
 from .DaemonStartup import (
 	DaemonStartupEventConfig, DaemonStartupEventGenerator)
-from .Panic import (
-	EVENT_CONFIG_TYPE_PANIC, PanicEventConfig, PanicEventGenerator)
+from .Panic import PanicEventConfig, PanicEventGenerator
 from .ProcessActionRequests import (
 	ProcessActionRequestsEventConfig, ProcessActionRequestsEventGenerator)
 from .SwOnDemand import SwOnDemandEventConfig, SwOnDemandEventGenerator
@@ -60,6 +59,8 @@ if RUNNING_ON_WINDOWS:
 		SystemShutdownEventConfig, SystemShutdownEventGenerator)
 	from .Windows.UserLogin import (
 		UserLoginEventConfig, UserLoginEventGenerator)
+
+EVENT_CONFIG_TYPE_PANIC = u'panic'
 
 logger = Logger()
 config = Config()

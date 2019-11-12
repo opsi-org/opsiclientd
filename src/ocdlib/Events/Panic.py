@@ -31,12 +31,7 @@ from __future__ import absolute_import
 from .Basic import Event, EventGenerator
 from ocdlib.EventConfiguration import EventConfig
 
-__all__ = [
-	'EVENT_CONFIG_TYPE_PANIC', 'PanicEvent', 'PanicEventConfig',
-	'PanicEventGenerator'
-]
-
-EVENT_CONFIG_TYPE_PANIC = u'panic'
+__all__ = ['PanicEvent', 'PanicEventConfig', 'PanicEventGenerator']
 
 
 class PanicEventConfig(EventConfig):
