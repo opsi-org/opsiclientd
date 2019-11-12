@@ -36,91 +36,13 @@ from OPSI.Util import objectToBeautifiedText
 
 from ocdlib.Config import Config
 from ocdlib.Localization import getLanguage
-from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
-from .Custom import CustomEventConfig, CustomEventGenerator
-from .DaemonShutdown import (
-	DaemonShutdownEventConfig, DaemonShutdownEventGenerator)
-from .DaemonStartup import (
-	DaemonStartupEventConfig, DaemonStartupEventGenerator)
-from .Panic import PanicEventConfig, PanicEventGenerator
-from .ProcessActionRequests import (
-	ProcessActionRequestsEventConfig, ProcessActionRequestsEventGenerator)
-from .SwOnDemand import SwOnDemandEventConfig, SwOnDemandEventGenerator
-from .SyncCompleted import (
-	SyncCompletedEventConfig, SyncCompletedEventGenerator)
-from .Timer import TimerEventConfig, TimerEventGenerator
-
-if RUNNING_ON_WINDOWS:
-	from .Windows.GUIStartup import (
-		GUIStartupEventConfig, GUIStartupEventGenerator)
-	from .Windows.SystemShutdown import (
-		SystemShutdownEventConfig, SystemShutdownEventGenerator)
-	from .Windows.UserLogin import (
-		UserLoginEventConfig, UserLoginEventGenerator)
+from .Factories import EventConfigFactory, EventGeneratorFactory
 
 EVENT_CONFIG_TYPE_PANIC = u'panic'
 
 logger = Logger()
 config = Config()
-
-
-def EventConfigFactory(eventType, eventId, **kwargs):
-	if eventType == EVENT_CONFIG_TYPE_PANIC:
-		return PanicEventConfig(eventId, **kwargs)
-	elif eventType == u'daemon startup':
-		return DaemonStartupEventConfig(eventId, **kwargs)
-	elif eventType == u'daemon shutdown':
-		return DaemonShutdownEventConfig(eventId, **kwargs)
-	elif eventType == u'timer':
-		return TimerEventConfig(eventId, **kwargs)
-	elif eventType == u'sync completed':
-		return SyncCompletedEventConfig(eventId, **kwargs)
-	elif eventType == u'process action requests':
-		return ProcessActionRequestsEventConfig(eventId, **kwargs)
-	elif eventType == u'custom':
-		return CustomEventConfig(eventId, **kwargs)
-	elif eventType == u'sw on demand':
-		return SwOnDemandEventConfig(eventId, **kwargs)
-
-	if RUNNING_ON_WINDOWS:
-		if eventType == u'gui startup':
-			return GUIStartupEventConfig(eventId, **kwargs)
-		elif eventType == u'user login':
-			return UserLoginEventConfig(eventId, **kwargs)
-		elif eventType == u'system shutdown':
-			return SystemShutdownEventConfig(eventId, **kwargs)
-
-	raise TypeError(u"Unknown event config type '%s'" % eventType)
-
-
-def EventGeneratorFactory(eventConfig):
-	if isinstance(eventConfig, PanicEventConfig):
-		return PanicEventGenerator(eventConfig)
-	elif isinstance(eventConfig, DaemonStartupEventConfig):
-		return DaemonStartupEventGenerator(eventConfig)
-	elif isinstance(eventConfig, DaemonShutdownEventConfig):
-		return DaemonShutdownEventGenerator(eventConfig)
-	elif isinstance(eventConfig, TimerEventConfig):
-		return TimerEventGenerator(eventConfig)
-	elif isinstance(eventConfig, SyncCompletedEventConfig):
-		return SyncCompletedEventGenerator(eventConfig)
-	elif isinstance(eventConfig, ProcessActionRequestsEventConfig):
-		return ProcessActionRequestsEventGenerator(eventConfig)
-	elif isinstance(eventConfig, CustomEventConfig):
-		return CustomEventGenerator(eventConfig)
-	elif isinstance(eventConfig, SwOnDemandEventConfig):
-		return SwOnDemandEventGenerator(eventConfig)
-
-	if RUNNING_ON_WINDOWS:
-		if isinstance(eventConfig, UserLoginEventConfig):
-			return UserLoginEventGenerator(eventConfig)
-		elif isinstance(eventConfig, SystemShutdownEventConfig):
-			return SystemShutdownEventGenerator(eventConfig)
-		elif isinstance(eventConfig, GUIStartupEventConfig):
-			return GUIStartupEventGenerator(eventConfig)
-
-	raise TypeError(u"Unhandled event config '%s'" % eventConfig)
 
 
 def getEventConfigs():
