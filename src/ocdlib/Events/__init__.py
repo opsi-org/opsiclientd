@@ -219,7 +219,7 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['type'] = value
 					elif key == 'wql':
 						eventConfigs[eventConfigId]['wql'] = value
-					elif key.startswith('action_message') or key.startswith('message'):
+					elif key.startswith(('action_message', 'message')):
 						mLanguage = None
 						try:
 							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
