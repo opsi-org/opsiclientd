@@ -339,7 +339,7 @@ def getEventConfigs():
 					elif (key == 'trusted_installer_check'):
 						eventConfigs[eventConfigId]['trustedInstallerCheck'] = unicode(value).lower() in ('1', 'true', 'on', 'yes')
 					elif (key == 'action_processor_productids'):
-						eventConfigs[eventConfigId]['actionProcessorProductIds'] = forceList(value.strip().split(","))
+						eventConfigs[eventConfigId]['actionProcessorProductIds'] = value.strip().split(",")
 					elif (key == 'exclude_product_group_ids'):
 						eventConfigs[eventConfigId]['excludeProductGroupIds'] = forceList(value)
 					elif (key == 'include_product_group_ids'):
