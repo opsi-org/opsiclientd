@@ -35,11 +35,8 @@ from .Basic import Event, EventGenerator
 from ocdlib.EventConfiguration import EventConfig
 
 __all__ = [
-	'EVENT_CONFIG_TYPE_SW_ON_DEMAND', 'SwOnDemandEvent',
-	'SwOnDemandEventConfig', 'SwOnDemandEventGenerator'
+	'SwOnDemandEvent', 'SwOnDemandEventConfig', 'SwOnDemandEventGenerator'
 ]
-
-EVENT_CONFIG_TYPE_SW_ON_DEMAND = u'sw on demand'
 
 
 class SwOnDemandEventConfig(EventConfig):

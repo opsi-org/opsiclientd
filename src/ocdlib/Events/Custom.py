@@ -40,9 +40,4 @@ else:
 	from .Posix.Custom import (
 		CustomEvent, CustomEventConfig, CustomEventGenerator)
 
-__all__ = [
-	'EVENT_CONFIG_TYPE_CUSTOM', 'CustomEvent', 'CustomEventConfig',
-	'CustomEventGenerator'
-]
-
-EVENT_CONFIG_TYPE_CUSTOM = u'custom'
+__all__ = ['CustomEvent', 'CustomEventConfig', 'CustomEventGenerator']

@@ -38,11 +38,8 @@ from .SensLogon import SensLogonEventGenerator
 from .WMI import WMIEventConfig
 
 __all__ = [
-	'EVENT_CONFIG_TYPE_USER_LOGIN', 'UserLoginEvent',
-	'UserLoginEventConfig', 'UserLoginEventGenerator'
+	'UserLoginEvent', 'UserLoginEventConfig', 'UserLoginEventGenerator'
 ]
-
-EVENT_CONFIG_TYPE_USER_LOGIN = u'user login'
 
 logger = Logger()
 

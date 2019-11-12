@@ -32,11 +32,9 @@ from .Basic import Event, EventGenerator
 from ocdlib.EventConfiguration import EventConfig
 
 __all__ = [
-	'EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS', 'ProcessActionRequestsEvent',
-	'ProcessActionRequestsEventConfig', 'ProcessActionRequestsEventGenerator'
+	'ProcessActionRequestsEvent', 'ProcessActionRequestsEventConfig',
+	'ProcessActionRequestsEventGenerator'
 ]
-
-EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS = u'process action requests'
 
 
 class ProcessActionRequestsEventConfig(EventConfig):

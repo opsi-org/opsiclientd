@@ -39,37 +39,26 @@ from ocdlib.State import State
 from ocdlib.Localization import getLanguage
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
-from .Custom import (
-	EVENT_CONFIG_TYPE_CUSTOM, CustomEventConfig, CustomEventGenerator)
+from .Custom import CustomEventConfig, CustomEventGenerator
 from .DaemonShutdown import (
-	EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN,
 	DaemonShutdownEventConfig, DaemonShutdownEventGenerator)
 from .DaemonStartup import (
-	EVENT_CONFIG_TYPE_DAEMON_STARTUP,
 	DaemonStartupEventConfig, DaemonStartupEventGenerator)
 from .Panic import (
 	EVENT_CONFIG_TYPE_PANIC, PanicEventConfig, PanicEventGenerator)
 from .ProcessActionRequests import (
-	EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS,
 	ProcessActionRequestsEventConfig, ProcessActionRequestsEventGenerator)
-from .SwOnDemand import (
-	EVENT_CONFIG_TYPE_SW_ON_DEMAND,
-	SwOnDemandEventConfig, SwOnDemandEventGenerator)
+from .SwOnDemand import SwOnDemandEventConfig, SwOnDemandEventGenerator
 from .SyncCompleted import (
-	EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED,
 	SyncCompletedEventConfig, SyncCompletedEventGenerator)
-from .Timer import (
-	EVENT_CONFIG_TYPE_TIMER, TimerEventConfig, TimerEventGenerator)
+from .Timer import TimerEventConfig, TimerEventGenerator
 
 if RUNNING_ON_WINDOWS:
 	from .Windows.GUIStartup import (
-		EVENT_CONFIG_TYPE_GUI_STARTUP,
 		GUIStartupEventConfig, GUIStartupEventGenerator)
 	from .Windows.SystemShutdown import (
-		EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN,
 		SystemShutdownEventConfig, SystemShutdownEventGenerator)
 	from .Windows.UserLogin import (
-		EVENT_CONFIG_TYPE_USER_LOGIN,
 		UserLoginEventConfig, UserLoginEventGenerator)
 
 logger = Logger()
@@ -80,27 +69,27 @@ state = State()
 def EventConfigFactory(eventType, eventId, **kwargs):
 	if eventType == EVENT_CONFIG_TYPE_PANIC:
 		return PanicEventConfig(eventId, **kwargs)
-	elif (eventType == EVENT_CONFIG_TYPE_DAEMON_STARTUP):
+	elif eventType == u'daemon startup':
 		return DaemonStartupEventConfig(eventId, **kwargs)
-	elif (eventType == EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN):
+	elif eventType == u'daemon shutdown':
 		return DaemonShutdownEventConfig(eventId, **kwargs)
-	elif (eventType == EVENT_CONFIG_TYPE_TIMER):
+	elif eventType == u'timer':
 		return TimerEventConfig(eventId, **kwargs)
-	elif (eventType == EVENT_CONFIG_TYPE_PRODUCT_SYNC_COMPLETED):
+	elif eventType == u'sync completed':
 		return SyncCompletedEventConfig(eventId, **kwargs)
-	elif (eventType == EVENT_CONFIG_TYPE_PROCESS_ACTION_REQUESTS):
+	elif eventType == u'process action requests':
 		return ProcessActionRequestsEventConfig(eventId, **kwargs)
-	elif (eventType == EVENT_CONFIG_TYPE_CUSTOM):
+	elif eventType == u'custom':
 		return CustomEventConfig(eventId, **kwargs)
-	elif (eventType == EVENT_CONFIG_TYPE_SW_ON_DEMAND):
+	elif eventType == u'sw on demand':
 		return SwOnDemandEventConfig(eventId, **kwargs)
 
 	if RUNNING_ON_WINDOWS:
-		if eventType == EVENT_CONFIG_TYPE_GUI_STARTUP:
+		if eventType == u'gui startup':
 			return GUIStartupEventConfig(eventId, **kwargs)
-		elif eventType == EVENT_CONFIG_TYPE_USER_LOGIN:
+		elif eventType == u'user login':
 			return UserLoginEventConfig(eventId, **kwargs)
-		elif eventType == EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN:
+		elif eventType == u'system shutdown':
 			return SystemShutdownEventConfig(eventId, **kwargs)
 
 	raise TypeError(u"Unknown event config type '%s'" % eventType)

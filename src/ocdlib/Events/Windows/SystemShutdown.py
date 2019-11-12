@@ -32,11 +32,9 @@ from ..Basic import Event, EventGenerator
 from .WMI import WMIEventConfig
 
 __all__ = [
-	'EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN', 'SystemShutdownEvent',
-	'SystemShutdownEventConfig', 'SystemShutdownEventGenerator'
+	'SystemShutdownEvent', 'SystemShutdownEventConfig',
+	'SystemShutdownEventGenerator'
 ]
-
-EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN = u'system shutdown'
 
 
 class SystemShutdownEventConfig(WMIEventConfig):

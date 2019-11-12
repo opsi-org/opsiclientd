@@ -38,11 +38,8 @@ from ..Basic import Event, EventGenerator
 from .WMI import WMIEventConfig
 
 __all__ = [
-	'EVENT_CONFIG_TYPE_GUI_STARTUP', 'GUIStartupEvent',
-	'GUIStartupEventConfig', 'GUIStartupEventGenerator'
+	'GUIStartupEvent', 'GUIStartupEventConfig', 'GUIStartupEventGenerator'
 ]
-
-EVENT_CONFIG_TYPE_GUI_STARTUP = u'gui startup'
 
 logger = Logger()
 
