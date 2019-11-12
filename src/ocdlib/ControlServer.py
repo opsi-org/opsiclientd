@@ -55,7 +55,7 @@ from OPSI.web2.channel.http import HTTPFactory
 
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.Config import Config, getLogFormat
-from ocdlib.Events import eventGenerators
+from ocdlib.Events.Generators import getEventGenerator
 from ocdlib.Timeline import Timeline
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.SoftwareOnDemand import ResourceKioskJsonRpc
@@ -619,12 +619,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		return uptime
 
 	def fireEvent(self, name):
-		name = forceUnicode(name)
-		try:
-			event = eventGenerators[name]
-		except KeyError:
-			raise ValueError(u"Event '%s' not in list of known events: %s" % (name, ', '.join(eventGenerators.keys())))
-
+		event = getEventGenerator(name)
 		logger.notice(u"Firing event '%s'" % name)
 		event.createAndFireEvent()
 

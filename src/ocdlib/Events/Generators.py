@@ -38,7 +38,7 @@ from .Factories import EventConfigFactory, EventGeneratorFactory
 from .Panic import PanicEventConfig
 
 __all__ = [
-	'createEventGenerators', 'getEventGenerators',
+	'createEventGenerators', 'getEventGenerator', 'getEventGenerators',
 	'reconfigureEventGenerators',
 ]
 
@@ -93,6 +93,26 @@ def getEventGenerators(generatorClass=None):
 		eventGenerator for eventGenerator in _EVENT_GENERATORS.values()
 		if generatorClass is None or isinstance(eventGenerator, generatorClass)
 	]
+
+
+def getEventGenerator(name):
+	"""
+	Get the event generator for the event with the given name.
+
+	:type name: str
+	:rtype: EventGenerator
+	:raises: ValueError if no matching event found.
+	"""
+	name = forceUnicode(name)
+	try:
+		return _EVENT_GENERATORS[name]
+	except KeyError:
+		raise ValueError(
+			u"Event '%s' not in list of known events: %s" % (
+				name,
+				', '.join(_EVENT_GENERATORS.keys())
+			)
+		)
 
 
 def reconfigureEventGenerators():
