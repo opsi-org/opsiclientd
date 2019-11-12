@@ -229,8 +229,9 @@ class TimelineImplementation(object):
 				if not start:
 					start = timestamp()
 				start = forceOpsiTimestamp(start)
+
 				if end:
-					end = forceOpsiTimestamp(start)
+					end = forceOpsiTimestamp(end)
 					durationEvent = True
 				return self._sql.insert('EVENT', {
 					'title':         forceUnicode(title),
