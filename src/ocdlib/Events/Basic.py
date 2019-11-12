@@ -79,9 +79,8 @@ class EventGenerator(threading.Thread):
 		if not isinstance(eventListener, EventListener):
 			raise TypeError(u"Failed to add event listener, got class %s, need class EventListener" % eventListener.__class__)
 
-		for l in self._eventListeners:
-			if (l == eventListener):
-				return
+		if eventListener in self._eventListeners:
+			return
 
 		self._eventListeners.append(eventListener)
 
