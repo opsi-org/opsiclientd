@@ -42,6 +42,7 @@ from twisted.internet.error import CannotListenError
 from tornado.ioloop import IOLoop
 
 from OPSI import System
+from OPSI.Backend.Backend import ConfigDataBackend
 from OPSI.Exceptions import OpsiAuthenticationError
 from OPSI.Logger import Logger
 from OPSI.Service import SSLContext, OpsiService
@@ -642,14 +643,14 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				break
 		return running
 
-	def getRunningEvent(self):
+	def getRunningEvents(self):
 		"""
 		Returns a list with running events.
 
 		"""
 		running = [ept.event.eventConfig.getId() for ept in self.opsiclientd._eventProcessingThreads]
 		if not running:
-			running.append("Currently no Event is Running.")
+			logger.info("Currently no Event is running.")
 		return running
 
 	def isInstallationPending(self):
