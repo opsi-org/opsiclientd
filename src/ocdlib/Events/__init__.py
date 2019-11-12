@@ -220,33 +220,33 @@ def getEventConfigs():
 					elif key == 'wql':
 						eventConfigs[eventConfigId]['wql'] = value
 					elif key.startswith(('action_message', 'message')):
-						mLanguage = None
 						try:
 							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
 						except Exception:
-							pass
+							mLanguage = None
+
 						if mLanguage:
 							if (mLanguage == getLanguage()):
 								eventConfigs[eventConfigId]['actionMessage'] = value
 						elif not eventConfigs[eventConfigId].get('actionMessage'):
 							eventConfigs[eventConfigId]['actionMessage'] = value
 					elif key.startswith('shutdown_warning_message'):
-						mLanguage = None
 						try:
 							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
 						except Exception:
-							pass
+							mLanguage = None
+
 						if mLanguage:
 							if (mLanguage == getLanguage()):
 								eventConfigs[eventConfigId]['shutdownWarningMessage'] = value
 						elif not eventConfigs[eventConfigId].get('shutdownWarningMessage'):
 							eventConfigs[eventConfigId]['shutdownWarningMessage'] = value
 					elif key.startswith('name'):
-						mLanguage = None
 						try:
 							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
 						except Exception:
-							pass
+							mLanguage = None
+
 						if mLanguage:
 							if (mLanguage == getLanguage()):
 								eventConfigs[eventConfigId]['name'] = value
