@@ -38,6 +38,7 @@ from ocdlib.Config import Config
 from ocdlib.Localization import getLanguage
 
 from .Factories import EventConfigFactory, EventGeneratorFactory
+from .Panic import PanicEventConfig
 
 EVENT_CONFIG_TYPE_PANIC = u'panic'
 
