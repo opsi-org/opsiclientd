@@ -226,7 +226,7 @@ def getEventConfigs():
 							mLanguage = None
 
 						if mLanguage:
-							if (mLanguage == getLanguage()):
+							if mLanguage == getLanguage():
 								eventConfigs[eventConfigId]['actionMessage'] = value
 						elif not eventConfigs[eventConfigId].get('actionMessage'):
 							eventConfigs[eventConfigId]['actionMessage'] = value
@@ -237,7 +237,7 @@ def getEventConfigs():
 							mLanguage = None
 
 						if mLanguage:
-							if (mLanguage == getLanguage()):
+							if mLanguage == getLanguage():
 								eventConfigs[eventConfigId]['shutdownWarningMessage'] = value
 						elif not eventConfigs[eventConfigId].get('shutdownWarningMessage'):
 							eventConfigs[eventConfigId]['shutdownWarningMessage'] = value
@@ -248,7 +248,7 @@ def getEventConfigs():
 							mLanguage = None
 
 						if mLanguage:
-							if (mLanguage == getLanguage()):
+							if mLanguage == getLanguage():
 								eventConfigs[eventConfigId]['name'] = value
 						elif not eventConfigs[eventConfigId].get('name'):
 							eventConfigs[eventConfigId]['name'] = value
