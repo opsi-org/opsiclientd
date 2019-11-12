@@ -405,10 +405,10 @@ def getEventGenerators(generatorClass=None):
 	]
 
 def reconfigureEventGenerators():
-	global eventGenerators
 	eventConfigs = getEventConfigs()
 	for eventGenerator in eventGenerators.values():
 		eventGenerator.setEventConfigs([])
+
 	for (eventConfigId, eventConfig) in eventConfigs.items():
 		mainEventConfigId = eventConfigId.split('{')[0]
 		try:
