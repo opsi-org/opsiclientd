@@ -69,9 +69,10 @@ class EventGenerator(threading.Thread):
 		self._eventConfigs.append(eventConfig)
 
 	def _preconditionsFulfilled(self, preconditions):
-		for (k, v) in preconditions.items():
-			if (bool(v) != state.get(k)):
+		for key, value in preconditions.items():
+			if bool(value) != state.get(key):
 				return False
+
 		return True
 
 	def addEventListener(self, eventListener):
