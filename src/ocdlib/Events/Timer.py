@@ -33,12 +33,7 @@ import threading
 from .Basic import Event, EventGenerator
 from ocdlib.EventConfiguration import EventConfig
 
-__all__ = [
-	'EVENT_CONFIG_TYPE_TIMER', 'TimerEvent', 'TimerEventConfig',
-	'TimerEventGenerator'
-]
-
-EVENT_CONFIG_TYPE_TIMER = u'timer'
+__all__ = ['TimerEvent', 'TimerEventConfig', 'TimerEventGenerator']
 
 
 class TimerEventConfig(EventConfig):

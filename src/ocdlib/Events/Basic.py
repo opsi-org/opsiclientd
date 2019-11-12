@@ -69,18 +69,18 @@ class EventGenerator(threading.Thread):
 		self._eventConfigs.append(eventConfig)
 
 	def _preconditionsFulfilled(self, preconditions):
-		for (k, v) in preconditions.items():
-			if (bool(v) != state.get(k)):
+		for key, value in preconditions.items():
+			if bool(value) != state.get(key):
 				return False
+
 		return True
 
 	def addEventListener(self, eventListener):
 		if not isinstance(eventListener, EventListener):
 			raise TypeError(u"Failed to add event listener, got class %s, need class EventListener" % eventListener.__class__)
 
-		for l in self._eventListeners:
-			if (l == eventListener):
-				return
+		if eventListener in self._eventListeners:
+			return
 
 		self._eventListeners.append(eventListener)
 
@@ -165,7 +165,7 @@ class EventGenerator(threading.Thread):
 			logger.info(u"Initializing event generator '%s'" % self)
 			self.initialize()
 
-			if (self._generatorConfig.activationDelay > 0):
+			if self._generatorConfig.activationDelay > 0:
 				logger.debug(u"Waiting %d seconds before activation of event generator '%s'" % \
 					(self._generatorConfig.activationDelay, self))
 				time.sleep(self._generatorConfig.activationDelay)
@@ -183,7 +183,7 @@ class EventGenerator(threading.Thread):
 
 		try:
 			self.cleanup()
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Failed to clean up: %s" % forceUnicode(e))
 
 		logger.info(u"Event generator '%s' exiting " % self)

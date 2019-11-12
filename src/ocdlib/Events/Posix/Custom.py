@@ -17,10 +17,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Software On Demand events.
+Posix-specific custom event.
 
-Usually triggered by the kiosk client on the client.
-
+This does not use WMI.
 
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
@@ -29,31 +28,18 @@ Usually triggered by the kiosk client on the client.
 :license: GNU Affero General Public License version 3
 """
 
-from __future__ import absolute_import
+from OPSI.Logger import Logger
 
-from .Basic import Event, EventGenerator
-from ocdlib.EventConfiguration import EventConfig
+__all__ = ['CustomEvent', 'CustomEventConfig', 'CustomEventGenerator']
 
-__all__ = [
-	'SwOnDemandEvent', 'SwOnDemandEventConfig', 'SwOnDemandEventGenerator'
-]
+logger = Logger()
 
-
-class SwOnDemandEventConfig(EventConfig):
-	pass
-
-
-class SwOnDemandEventGenerator(EventGenerator):
-	def __init__(self, eventConfig):
-		EventGenerator.__init__(self, eventConfig)
-
-	def createEvent(self, eventInfo={}):
-		eventConfig = self.getEventConfig()
-		if not eventConfig:
-			return None
-
-		return SwOnDemandEvent(eventConfig=eventConfig, eventInfo=eventInfo)
-
-
-class SwOnDemandEvent(Event):
-	pass
+try:
+	from ocdlibnonfree.Events.Config import CustomEventConfig
+	from ocdlibnonfree.Events.Generator import CustomEvent, CustomEventGenerator
+except ImportError as error:
+	logger.critical(
+		u"Unable to import from ocdlibnonfree."
+		u"Is this the full version?"
+	)
+	raise error

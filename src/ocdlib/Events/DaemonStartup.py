@@ -32,11 +32,9 @@ from .Basic import Event, EventGenerator
 from ocdlib.EventConfiguration import EventConfig
 
 __all__ = [
-	'EVENT_CONFIG_TYPE_DAEMON_STARTUP', 'DaemonStartupEvent',
-	'DaemonStartupEventConfig', 'DaemonStartupEventGenerator'
+	'DaemonStartupEvent', 'DaemonStartupEventConfig',
+	'DaemonStartupEventGenerator'
 ]
-
-EVENT_CONFIG_TYPE_DAEMON_STARTUP = u'daemon startup'
 
 
 class DaemonStartupEventConfig(EventConfig):

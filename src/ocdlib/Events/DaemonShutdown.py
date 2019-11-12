@@ -32,11 +32,9 @@ from .Basic import Event, EventGenerator
 from ocdlib.EventConfiguration import EventConfig
 
 __all__ = [
-	'EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN', 'DaemonShutdownEvent',
-	'DaemonShutdownEventConfig', 'DaemonShutdownEventGenerator'
+	'DaemonShutdownEvent', 'DaemonShutdownEventConfig',
+	'DaemonShutdownEventGenerator'
 ]
-
-EVENT_CONFIG_TYPE_DAEMON_SHUTDOWN = u'daemon shutdown'
 
 
 class DaemonShutdownEventConfig(EventConfig):

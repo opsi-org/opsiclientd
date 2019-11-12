@@ -17,10 +17,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Software On Demand events.
+Custom event.
 
-Usually triggered by the kiosk client on the client.
-
+This module selects the appropriate custom implementation based on the
+OS it is running on.
 
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
@@ -31,29 +31,13 @@ Usually triggered by the kiosk client on the client.
 
 from __future__ import absolute_import
 
-from .Basic import Event, EventGenerator
-from ocdlib.EventConfiguration import EventConfig
+from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
-__all__ = [
-	'SwOnDemandEvent', 'SwOnDemandEventConfig', 'SwOnDemandEventGenerator'
-]
+if RUNNING_ON_WINDOWS:
+	from .Windows.Custom import (
+		CustomEvent, CustomEventConfig, CustomEventGenerator)
+else:
+	from .Posix.Custom import (
+		CustomEvent, CustomEventConfig, CustomEventGenerator)
 
-
-class SwOnDemandEventConfig(EventConfig):
-	pass
-
-
-class SwOnDemandEventGenerator(EventGenerator):
-	def __init__(self, eventConfig):
-		EventGenerator.__init__(self, eventConfig)
-
-	def createEvent(self, eventInfo={}):
-		eventConfig = self.getEventConfig()
-		if not eventConfig:
-			return None
-
-		return SwOnDemandEvent(eventConfig=eventConfig, eventInfo=eventInfo)
-
-
-class SwOnDemandEvent(Event):
-	pass
+__all__ = ['CustomEvent', 'CustomEventConfig', 'CustomEventGenerator']

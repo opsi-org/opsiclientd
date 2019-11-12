@@ -46,7 +46,7 @@ from OPSI.Util.Thread import KillableThread
 
 from ocdlib import __version__
 from ocdlib.Config import Config, getLogFormat
-from ocdlib.Events import state, reconfigureEventGenerators
+from ocdlib.Events.Generators import reconfigureEventGenerators
 from ocdlib.Exceptions import CanceledByUserError
 from ocdlib.Localization import _
 from ocdlib.OpsiService import ServiceConnection
@@ -1220,33 +1220,34 @@ None otherwise.
 			logger.logException(e)
 
 	def inWorkingWindow(self):
+		def getRelativeDatetime(timestr):
+			hour, minute = timestr.split(":")
+			return dt.today().replace(
+				hour=int(hour),
+				minute=int(minute),
+				second=0,
+				microsecond=0
+			)
+
 		try:
 			starttime, endtime = self.event.eventConfig.workingWindow.split("-")
-			s_hour, s_minute = starttime.split(":")
-			e_hour, e_minute = endtime.split(":")
+			start = getRelativeDatetime(starttime)
+			end = getRelativeDatetime(endtime)
+
 			now = dt.now()
-			logger.notice("We have now: {0}".format(now))
-			start = dt.today().replace(
-						hour=int(s_hour),
-						minute=int(s_minute),
-						second=0,
-						microsecond=0)
-			end = dt.today().replace(
-						hour=int(e_hour),
-						minute=int(e_minute),
-						second=0,
-						microsecond=0)
+			logger.info("Current time: {0}".format(now))
+
 			if now < start:
 				start = start - timedelta(days=1)
 			elif end < start:
 				end = end + timedelta(days=1)
 
+			logger.info("Working Window from {0} until {1}".format(start, end))
 			if start < now < end:
-				logger.notice("Working Window configuration starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
-				logger.notice("We are in the configured working window")
+				logger.info("We are in the configured working window")
 				return True
 			else:
-				logger.notice("We are not in the configured working window, stopping Event")
+				logger.info("We are not in the configured working window")
 				return False
 		except Exception as e:
 			logger.warning("Working Window processing failed: starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
@@ -1258,6 +1259,7 @@ None otherwise.
 		try:
 			if self.event.eventConfig.workingWindow:
 				if not self.inWorkingWindow():
+					logger.notice("We are not in the configured working window, stopping Event")
 					return
 			logger.notice(u"============= EventProcessingThread for occurrcence of event '%s' started =============" % self.event.eventConfig.getId())
 			timelineEventId = timeline.addEvent(

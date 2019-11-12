@@ -10,7 +10,7 @@ from ocdlib.Config import ConfigImplementation
 @pytest.fixture
 def config():
 	testconfig = ConfigImplementation()
-	with mock.patch('ocdlib.Events.config', testconfig):
+	with mock.patch('ocdlib.Events.Configs.config', testconfig):
 		yield testconfig
 
 

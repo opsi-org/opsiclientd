@@ -2,7 +2,7 @@
 
 # opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2010-2019 uib GmbH <info@uib.de>
+# Copyright (C) 2019 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,43 +17,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Software On Demand events.
-
-Usually triggered by the kiosk client on the client.
-
+Windows specific events or implementations.
 
 :copyright: uib GmbH <info@uib.de>
-:author: Jan Schneider <j.schneider@uib.de>
-:author: Erol Ueluekmen <e.ueluekmen@uib.de>
 :author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
-
-from __future__ import absolute_import
-
-from .Basic import Event, EventGenerator
-from ocdlib.EventConfiguration import EventConfig
-
-__all__ = [
-	'SwOnDemandEvent', 'SwOnDemandEventConfig', 'SwOnDemandEventGenerator'
-]
-
-
-class SwOnDemandEventConfig(EventConfig):
-	pass
-
-
-class SwOnDemandEventGenerator(EventGenerator):
-	def __init__(self, eventConfig):
-		EventGenerator.__init__(self, eventConfig)
-
-	def createEvent(self, eventInfo={}):
-		eventConfig = self.getEventConfig()
-		if not eventConfig:
-			return None
-
-		return SwOnDemandEvent(eventConfig=eventConfig, eventInfo=eventInfo)
-
-
-class SwOnDemandEvent(Event):
-	pass

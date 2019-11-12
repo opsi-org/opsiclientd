@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Panic events are used to react to problems.
+Windows-specific Custom event.
 
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
@@ -28,43 +28,25 @@ Panic events are used to react to problems.
 
 from __future__ import absolute_import
 
-from .Basic import Event, EventGenerator
-from ocdlib.EventConfiguration import EventConfig
+from ..Basic import Event
+from .WMI import WMIEventConfig, WMIEventGenerator
 
-__all__ = ['PanicEvent', 'PanicEventConfig', 'PanicEventGenerator']
-
-
-class PanicEventConfig(EventConfig):
-	def setConfig(self, conf):
-		EventConfig.setConfig(self, conf)
-		self.maxRepetitions = -1
-		self.actionMessage = 'Panic event'
-		self.activationDelay = 0
-		self.notificationDelay = 0
-		self.actionWarningTime = 0
-		self.actionUserCancelable = False
-		self.blockLogin = False
-		self.logoffCurrentUser = False
-		self.lockWorkstation = False
-		self.getConfigFromService = False
-		self.updateConfigFile = False
-		self.writeLogToService = False
-		self.updateActionProcessor = False
-		self.eventNotifierCommand = None
-		self.actionNotifierCommand = None
-		self.shutdownNotifierCommand = None
-		self.actionProcessorDesktop = 'winlogon'
+__all__ = ['CustomEvent', 'CustomEventConfig', 'CustomEventGenerator']
 
 
-class PanicEventGenerator(EventGenerator):
+class CustomEventConfig(WMIEventConfig):
+	pass
+
+
+class CustomEventGenerator(WMIEventGenerator):
 
 	def createEvent(self, eventInfo={}):
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None
 
-		return PanicEvent(eventConfig=eventConfig, eventInfo=eventInfo)
+		return CustomEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class PanicEvent(Event):
+class CustomEvent(Event):
 	pass
