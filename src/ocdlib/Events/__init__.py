@@ -33,6 +33,7 @@ from OPSI.Types import forceUnicode
 
 from ocdlib.Config import Config
 
+from .Configs import getEventConfigs
 from .Factories import EventConfigFactory, EventGeneratorFactory
 from .Panic import PanicEventConfig
 
