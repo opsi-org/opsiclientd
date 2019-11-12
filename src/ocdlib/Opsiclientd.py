@@ -187,7 +187,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				if not self._guiStarted.isSet():
 					logger.warning(u"Timed out after %d seconds while waiting for GUI" % timeout)
 
-		WaitForGUI().wait(timeout)
+		waiter = WaitForGUI()
+		waiter.wait(timeout)
 
 	def createActionProcessorUser(self, recreate=True):
 		if not config.get('action_processor', 'create_user'):
