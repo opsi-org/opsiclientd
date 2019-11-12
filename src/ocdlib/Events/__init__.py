@@ -352,7 +352,11 @@ def getEventConfigs():
 					logger.logException(e, LOG_DEBUG)
 					logger.error(u"Failed to set event config argument '%s' to '%s': %s" % (key, value, e))
 
-			logger.info(u"\nEvent config '" + eventConfigId + u"' args:\n" + objectToBeautifiedText(eventConfigs[eventConfigId]) + u"\n")
+			logger.info(
+				u"Event config {!r} args:\n {}",
+				eventConfigId,
+				objectToBeautifiedText(eventConfigs[eventConfigId])
+			)
 		except Exception as e:
 			logger.logException(e)
 	return eventConfigs
