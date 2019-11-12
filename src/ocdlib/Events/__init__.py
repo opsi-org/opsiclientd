@@ -332,7 +332,7 @@ def getEventConfigs():
 					if not rawEventConfigs[eventConfigId]['super']:
 						rawEventConfigs[eventConfigId]['super'] = superEventName.strip()
 					rawEventConfigs[eventConfigId]['precondition'] = precondition.replace('}', '').strip()
-			except Exception, e:
+			except Exception as e:
 				logger.error(u"Failed to parse event config '%s': %s" % (eventConfigId, forceUnicode(e)))
 
 	def __inheritArgsFromSuperEvents(rawEventConfigsCopy, args, superEventConfigId):
@@ -506,12 +506,12 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['workingWindow'] = unicode(value)
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
-				except Exception, e:
+				except Exception as e:
 					logger.logException(e, LOG_DEBUG)
 					logger.error(u"Failed to set event config argument '%s' to '%s': %s" % (key, value, e))
 
 			logger.info(u"\nEvent config '" + eventConfigId + u"' args:\n" + objectToBeautifiedText(eventConfigs[eventConfigId]) + u"\n")
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
 	return eventConfigs
 
@@ -534,7 +534,7 @@ def createEventGenerators():
 				ec = EventConfigFactory(eventType, eventConfigId, **eventConfig)
 				eventGenerators[mainEventConfigId] = EventGeneratorFactory(ec)
 				logger.notice("Event generator '%s' created" % mainEventConfigId)
-			except Exception, e:
+			except Exception as e:
 				logger.error(u"Failed to create event generator '%s': %s" % (mainEventConfigId, forceUnicode(e)))
 
 	for (eventConfigId, eventConfig) in getEventConfigs().items():
@@ -546,13 +546,13 @@ def createEventGenerators():
 			try:
 				eventGenerators[mainEventConfigId] = EventGeneratorFactory(ec)
 				logger.notice("Event generator '%s' created" % mainEventConfigId)
-			except Exception, e:
+			except Exception as e:
 				logger.error(u"Failed to create event generator '%s': %s" % (mainEventConfigId, forceUnicode(e)))
 
 		try:
 			eventGenerators[mainEventConfigId].addEventConfig(ec)
 			logger.notice("Event config '%s' added to event generator '%s'" % (eventConfigId, mainEventConfigId))
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Failed to add event config '%s' to event generator '%s': %s" % (eventConfigId, mainEventConfigId, forceUnicode(e)))
 
 
@@ -582,5 +582,5 @@ def reconfigureEventGenerators():
 			ec = EventConfigFactory(eventType, eventConfigId, **eventConfig)
 			eventGenerator.addEventConfig(ec)
 			logger.notice("Event config '%s' added to event generator '%s'" % (eventConfigId, mainEventConfigId))
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Failed to reconfigure event generator '%s': %s" % (mainEventConfigId, forceUnicode(e)))
