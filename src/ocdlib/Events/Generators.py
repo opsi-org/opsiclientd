@@ -43,20 +43,19 @@ __all__ = [
 ]
 
 EVENT_CONFIG_TYPE_PANIC = u'panic'
+_EVENT_GENERATORS = {}
 
 logger = Logger()
 config = Config()
 
-eventGenerators = {}
-
 
 def createEventGenerators():
-	global eventGenerators
+	global _EVENT_GENERATORS
 	panicEventConfig = PanicEventConfig(
 		EVENT_CONFIG_TYPE_PANIC,
 		actionProcessorCommand=config.get('action_processor', 'command', raw=True)
 	)
-	eventGenerators[EVENT_CONFIG_TYPE_PANIC] = EventGeneratorFactory(panicEventConfig)
+	_EVENT_GENERATORS[EVENT_CONFIG_TYPE_PANIC] = EventGeneratorFactory(panicEventConfig)
 
 	for (eventConfigId, eventConfig) in getEventConfigs().items():
 		mainEventConfigId = eventConfigId.split('{')[0]
@@ -65,7 +64,7 @@ def createEventGenerators():
 				eventType = eventConfig['type']
 				del eventConfig['type']
 				ec = EventConfigFactory(eventType, eventConfigId, **eventConfig)
-				eventGenerators[mainEventConfigId] = EventGeneratorFactory(ec)
+				_EVENT_GENERATORS[mainEventConfigId] = EventGeneratorFactory(ec)
 				logger.notice("Event generator '%s' created" % mainEventConfigId)
 			except Exception as e:
 				logger.error(u"Failed to create event generator '%s': %s" % (mainEventConfigId, forceUnicode(e)))
@@ -75,15 +74,15 @@ def createEventGenerators():
 		eventType = eventConfig['type']
 		del eventConfig['type']
 		ec = EventConfigFactory(eventType, eventConfigId, **eventConfig)
-		if mainEventConfigId not in eventGenerators:
+		if mainEventConfigId not in _EVENT_GENERATORS:
 			try:
-				eventGenerators[mainEventConfigId] = EventGeneratorFactory(ec)
+				_EVENT_GENERATORS[mainEventConfigId] = EventGeneratorFactory(ec)
 				logger.notice("Event generator '%s' created" % mainEventConfigId)
 			except Exception as e:
 				logger.error(u"Failed to create event generator '%s': %s" % (mainEventConfigId, forceUnicode(e)))
 
 		try:
-			eventGenerators[mainEventConfigId].addEventConfig(ec)
+			_EVENT_GENERATORS[mainEventConfigId].addEventConfig(ec)
 			logger.notice("Event config '%s' added to event generator '%s'" % (eventConfigId, mainEventConfigId))
 		except Exception as e:
 			logger.error(u"Failed to add event config '%s' to event generator '%s': %s" % (eventConfigId, mainEventConfigId, forceUnicode(e)))
@@ -91,21 +90,21 @@ def createEventGenerators():
 
 def getEventGenerators(generatorClass=None):
 	return [
-		eventGenerator for eventGenerator in eventGenerators.values()
+		eventGenerator for eventGenerator in _EVENT_GENERATORS.values()
 		if generatorClass is None or isinstance(eventGenerator, generatorClass)
 	]
 
 
 def reconfigureEventGenerators():
 	eventConfigs = getEventConfigs()
-	for eventGenerator in eventGenerators.values():
+	for eventGenerator in _EVENT_GENERATORS.values():
 		eventGenerator.setEventConfigs([])
 
 	for (eventConfigId, eventConfig) in eventConfigs.items():
 		mainEventConfigId = eventConfigId.split('{')[0]
 
 		try:
-			eventGenerator = eventGenerators[mainEventConfigId]
+			eventGenerator = _EVENT_GENERATORS[mainEventConfigId]
 		except KeyError:
 			logger.info(u"Cannot reconfigure event generator '%s': not found" % mainEventConfigId)
 			continue
