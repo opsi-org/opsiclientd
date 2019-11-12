@@ -40,6 +40,7 @@ from twisted.internet import reactor
 
 # OPSI imports
 from OPSI import System
+from OPSI.Backend.Backend import ConfigDataBackend
 from OPSI.Exceptions import OpsiAuthenticationError
 from OPSI.Logger import Logger
 from OPSI.Service import SSLContext, OpsiService
