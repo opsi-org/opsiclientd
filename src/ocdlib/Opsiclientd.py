@@ -166,27 +166,6 @@ class Opsiclientd(EventListener, threading.Thread):
 		return self._running
 
 	def waitForGUI(self, timeout=None):
-		if not timeout:
-			timeout = None
-
-		class WaitForGUI(EventListener):
-			def __init__(self):
-				self._guiStarted = threading.Event()
-				ec = GUIStartupEventConfig("wait_for_gui")
-				eventGenerator = EventGeneratorFactory(ec)
-				eventGenerator.addEventConfig(ec)
-				eventGenerator.addEventListener(self)
-				eventGenerator.start()
-
-			def processEvent(self, event):
-				logger.info(u"GUI started")
-				self._guiStarted.set()
-
-			def wait(self, timeout=None):
-				self._guiStarted.wait(timeout)
-				if not self._guiStarted.isSet():
-					logger.warning(u"Timed out after %d seconds while waiting for GUI" % timeout)
-
 		waiter = WaitForGUI()
 		waiter.wait(timeout)
 
@@ -648,3 +627,22 @@ class Opsiclientd(EventListener, threading.Thread):
 
 	def popupCloseCallback(self, choiceSubject):
 		self.hidePopup()
+
+
+class WaitForGUI(EventListener):
+	def __init__(self):
+		self._guiStarted = threading.Event()
+		ec = GUIStartupEventConfig("wait_for_gui")
+		eventGenerator = EventGeneratorFactory(ec)
+		eventGenerator.addEventConfig(ec)
+		eventGenerator.addEventListener(self)
+		eventGenerator.start()
+
+	def processEvent(self, event):
+		logger.info(u"GUI started")
+		self._guiStarted.set()
+
+	def wait(self, timeout=None):
+		self._guiStarted.wait(timeout)
+		if not self._guiStarted.isSet():
+			logger.warning(u"Timed out after %d seconds while waiting for GUI" % timeout)
