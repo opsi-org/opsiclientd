@@ -28,11 +28,8 @@ Windows-specific Custom event.
 
 from __future__ import absolute_import
 
-import threading
-
-from ..Basic import Event, EventGenerator
+from ..Basic import Event
 from .WMI import WMIEventConfig, WMIEventGenerator
-from ocdlib.EventConfiguration import EventConfig
 
 __all__ = ['CustomEvent', 'CustomEventConfig', 'CustomEventGenerator']
 
