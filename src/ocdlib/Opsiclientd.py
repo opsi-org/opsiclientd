@@ -122,7 +122,9 @@ class Opsiclientd(EventListener, threading.Thread):
 					title=u"Blocking login",
 					description=u"User login blocked",
 					category=u"block_login",
-					durationEvent=True)
+					durationEvent=True
+				)
+
 			if not self._blockLoginNotifierPid and config.get('global', 'block_login_notifier'):
 				# TODO: System.getActiveConsoleSessionId() is missing on Linux
 				if RUNNING_ON_WINDOWS:
