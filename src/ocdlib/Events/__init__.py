@@ -29,10 +29,7 @@ Events and their configuration.
 from __future__ import absolute_import
 
 import copy as pycopy
-import sys
-import time
 
-from OPSI import System
 from OPSI.Logger import Logger, LOG_DEBUG
 from OPSI.Types import forceBool, forceList, forceUnicode
 from OPSI.Util import objectToBeautifiedText
@@ -42,7 +39,6 @@ from ocdlib.State import State
 from ocdlib.Localization import getLanguage
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
-from .Basic import Event, EventGenerator
 from .Custom import (
 	EVENT_CONFIG_TYPE_CUSTOM, CustomEventConfig, CustomEventGenerator)
 from .DaemonShutdown import (
@@ -65,14 +61,20 @@ from .SyncCompleted import (
 from .Timer import (
 	EVENT_CONFIG_TYPE_TIMER, TimerEventConfig, TimerEventGenerator)
 
+if RUNNING_ON_WINDOWS:
+	from .Windows.GUIStartup import (
+		EVENT_CONFIG_TYPE_GUI_STARTUP,
+		GUIStartupEventConfig, GUIStartupEventGenerator)
+	from .Windows.SystemShutdown import (
+		EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN,
+		SystemShutdownEventConfig, SystemShutdownEventGenerator)
+	from .Windows.UserLogin import (
+		EVENT_CONFIG_TYPE_USER_LOGIN,
+		UserLoginEventConfig, UserLoginEventGenerator)
+
 logger = Logger()
 config = Config()
 state = State()
-
-# Possible event types
-EVENT_CONFIG_TYPE_GUI_STARTUP = u'gui startup'
-EVENT_CONFIG_TYPE_USER_LOGIN = u'user login'
-EVENT_CONFIG_TYPE_SYSTEM_SHUTDOWN = u'system shutdown'
 
 
 def EventConfigFactory(eventType, eventId, **kwargs):
@@ -104,30 +106,6 @@ def EventConfigFactory(eventType, eventId, **kwargs):
 	raise TypeError(u"Unknown event config type '%s'" % eventType)
 
 
-if RUNNING_ON_WINDOWS:
-	from .Windows.WMI import WMIEventConfig
-
-	class GUIStartupEventConfig(WMIEventConfig):
-		def setConfig(self, conf):
-			WMIEventConfig.setConfig(self, conf)
-			self.maxRepetitions = 0
-			self.processName = None
-
-
-	class UserLoginEventConfig(WMIEventConfig):
-		def setConfig(self, conf):
-			WMIEventConfig.setConfig(self, conf)
-			self.blockLogin = False
-			self.logoffCurrentUser = False
-			self.lockWorkstation = False
-
-
-	class SystemShutdownEventConfig(WMIEventConfig):
-		def setConfig(self, conf):
-			WMIEventConfig.setConfig(self, conf)
-			self.maxRepetitions = 0
-
-
 def EventGeneratorFactory(eventConfig):
 	if isinstance(eventConfig, PanicEventConfig):
 		return PanicEventGenerator(eventConfig)
@@ -155,135 +133,6 @@ def EventGeneratorFactory(eventConfig):
 			return GUIStartupEventGenerator(eventConfig)
 
 	raise TypeError(u"Unhandled event config '%s'" % eventConfig)
-
-
-if RUNNING_ON_WINDOWS:
-	class GUIStartupEventGenerator(EventGenerator):
-		def __init__(self, eventConfig):
-			EventGenerator.__init__(self, eventConfig)
-			if RUNNING_ON_WINDOWS:
-				if sys.getwindowsversion()[0] == 5:
-					self.guiProcessName = u'winlogon.exe'
-				elif sys.getwindowsversion()[0] == 6:
-					self.guiProcessName = u'LogonUI.exe'
-				else:
-					raise Exception('Windows version unsupported')
-			else:
-				raise Exception(u"OS unsupported")
-
-		def createEvent(self, eventInfo={}):
-			eventConfig = self.getEventConfig()
-			if not eventConfig:
-				return None
-			return GUIStartupEvent(eventConfig = eventConfig, eventInfo = eventInfo)
-
-		def getNextEvent(self):
-			while not self._stopped:
-				logger.debug(u"Checking if process '%s' running" % self.guiProcessName)
-				if System.getPid(self.guiProcessName):
-					logger.debug(u"Process '%s' is running" % self.guiProcessName)
-					return self.createEvent()
-				time.sleep(3)
-
-	class SensLogonEventGenerator(EventGenerator):
-		def __init__(self, eventConfig):
-			EventGenerator.__init__(self, eventConfig)
-
-		def initialize(self):
-			EventGenerator.initialize(self)
-
-			logger.notice(u'Registring ISensLogon')
-
-			from ocdlib.Windows import importWmiAndPythoncom, SensLogon
-
-			(wmi, pythoncom) = importWmiAndPythoncom(importWmi = False, importPythoncom = True)
-			pythoncom.CoInitialize()
-
-			sl = SensLogon(self.callback)
-			sl.subscribe()
-
-		def getNextEvent(self):
-			from ocdlib.Windows import importWmiAndPythoncom
-			(wmi, pythoncom) = importWmiAndPythoncom(importWmi = False, importPythoncom = True)
-			pythoncom.PumpMessages()
-			logger.info(u"Event generator '%s' now deactivated after %d event occurrences" % (self, self._eventsOccured))
-			self.cleanup()
-
-		def callback(self, eventType, *args):
-			logger.debug(u"SensLogonEventGenerator event callback: eventType '%s', args: %s" % (eventType, args))
-
-		def stop(self):
-			EventGenerator.stop(self)
-			# Post WM_QUIT
-			import win32api
-			win32api.PostThreadMessage(self._threadId, 18, 0, 0)
-
-		def cleanup(self):
-			if self._lastEventOccurence and (time.time() - self._lastEventOccurence < 10):
-				# Waiting some seconds before exit to avoid Win32 releasing exceptions
-				waitTime = int(10 - (time.time() - self._lastEventOccurence))
-				logger.info(u"Event generator '%s' cleaning up in %d seconds" % (self, waitTime))
-				time.sleep(waitTime)
-
-			from ocdlib.Windows import importWmiAndPythoncom
-			(wmi, pythoncom) = importWmiAndPythoncom(importWmi = False, importPythoncom = True)
-			pythoncom.CoUninitialize()
-
-
-	class UserLoginEventGenerator(SensLogonEventGenerator):
-		def __init__(self, eventConfig):
-			SensLogonEventGenerator.__init__(self, eventConfig)
-
-		def callback(self, eventType, *args):
-			logger.debug(u"UserLoginEventGenerator event callback: eventType '%s', args: %s" % (eventType, args))
-			if sys.getwindowsversion()[0] == 6:
-				# Try to find out, if the Login is from the WindowManager (Win8 Bugfix for UserLoginScripts)
-				sessionIds = None
-				sessionId = None
-				sessionData = None
-
-				sessionIds = System.getUserSessionIds(args[0])
-				if sessionIds:
-					sessionId = sessionIds[0]
-					sessionData = System.getSessionInformation(sessionId)
-					if sessionData.get(u'LogonDomain', '') == u'Window Manager':
-						logger.notice(u"Windows Manager Login detected, no UserLoginAction will be fired.")
-						return
-
-			if (eventType == 'Logon'):
-				logger.notice(u"User login detected: %s" % args[0])
-				self._eventsOccured += 1
-				self.fireEvent(self.createEvent(eventInfo = {'User': args[0]}))
-				if (self._generatorConfig.maxRepetitions > 0) and (self._eventsOccured > self._generatorConfig.maxRepetitions):
-					self.stop()
-
-		def createEvent(self, eventInfo={}):
-			eventConfig = self.getEventConfig()
-			if not eventConfig:
-				return None
-			return UserLoginEvent(eventConfig = eventConfig, eventInfo = eventInfo)
-
-	# Event config depends on WMI
-	class SystemShutdownEventGenerator(EventGenerator):
-		def __init__(self, eventConfig):
-			EventGenerator.__init__(self, eventConfig)
-
-
-if RUNNING_ON_WINDOWS:
-	class GUIStartupEvent(Event):
-		def __init__(self, eventConfig, eventInfo={}):
-			Event.__init__(self, eventConfig, eventInfo)
-
-
-	class UserLoginEvent(Event):
-		def __init__(self, eventConfig, eventInfo={}):
-			Event.__init__(self, eventConfig, eventInfo)
-
-
-	# Event config depends on WMI
-	class SystemShutdownEvent(Event):
-		def __init__(self, eventConfig, eventInfo={}):
-			Event.__init__(self, eventConfig, eventInfo)
 
 
 def getEventConfigs():

@@ -70,6 +70,9 @@ try:
 except ImportError:
 	__fullversion__ = False
 
+if RUNNING_ON_WINDOWS:
+	from ocdlib.Events.Windows.GUIStartup import (
+		GUIStartupEventConfig, GUIStartupEventGenerator)
 
 logger = Logger()
 config = Config()
