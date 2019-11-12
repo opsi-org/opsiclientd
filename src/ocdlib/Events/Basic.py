@@ -165,7 +165,7 @@ class EventGenerator(threading.Thread):
 			logger.info(u"Initializing event generator '%s'" % self)
 			self.initialize()
 
-			if (self._generatorConfig.activationDelay > 0):
+			if self._generatorConfig.activationDelay > 0:
 				logger.debug(u"Waiting %d seconds before activation of event generator '%s'" % \
 					(self._generatorConfig.activationDelay, self))
 				time.sleep(self._generatorConfig.activationDelay)
