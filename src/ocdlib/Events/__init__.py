@@ -126,6 +126,9 @@ def EventGeneratorFactory(eventConfig):
 
 
 def getEventConfigs():
+	def isActive(value):
+		return value.lower() not in ('0', 'false', 'off', 'no')
+
 	preconditions = {}
 	for (section, options) in config.getDict().items():
 		section = section.lower()
@@ -134,7 +137,7 @@ def getEventConfigs():
 			preconditions[preconditionId] = {}
 			try:
 				for key in options.keys():
-					preconditions[preconditionId][key] = options[key].lower() not in ('0', 'false', 'off', 'no')
+					preconditions[preconditionId][key] = isActive(options[key])
 				logger.info(u"Precondition '%s' created: %s" % (preconditionId, preconditions[preconditionId]))
 			except Exception as e:
 				logger.error(u"Failed to parse precondition '%s': %s" % (preconditionId, forceUnicode(e)))
