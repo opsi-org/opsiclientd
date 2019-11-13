@@ -17,6 +17,8 @@ import threading
 
 from ocdlib.Events.Basic import Event, EventGenerator
 
+__all__ = ['CustomEvent', 'CustomEventGenerator']
+
 
 class CustomEventGenerator(EventGenerator):
     def createEvent(self, eventInfo={}):

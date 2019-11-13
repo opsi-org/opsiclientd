@@ -15,6 +15,8 @@ Non-free event configuration.
 
 from ocdlib.EventConfiguration import EventConfig
 
+__all__ = ['CustomEventConfig']
+
 
 class CustomEventConfig(EventConfig):
 	pass
