@@ -338,7 +338,7 @@ class ServiceConnectionThread(KillableThread):
 					)
 
 					self.configService.accessControl_authenticated()
-					self.configService.setDeflate(True)
+					self.configService.setCompression(True)
 					self.connected = True
 					self.connectionError = None
 					self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
