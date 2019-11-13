@@ -1,4 +1,3 @@
-#! python
 # -*- coding: utf-8 -*-
 
 # opsiclientd is part of the desktop management solution opsi
