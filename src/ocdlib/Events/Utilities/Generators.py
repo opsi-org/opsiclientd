@@ -35,7 +35,7 @@ from ocdlib.Config import Config
 
 from .Configs import getEventConfigs
 from .Factories import EventConfigFactory, EventGeneratorFactory
-from .Panic import PanicEventConfig
+from ..Panic import PanicEventConfig
 
 __all__ = [
 	'createEventGenerators', 'getEventGenerator', 'getEventGenerators',

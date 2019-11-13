@@ -30,25 +30,25 @@ from __future__ import absolute_import
 
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
-from .Custom import CustomEventConfig, CustomEventGenerator
-from .DaemonShutdown import (
+from ..Custom import CustomEventConfig, CustomEventGenerator
+from ..DaemonShutdown import (
 	DaemonShutdownEventConfig, DaemonShutdownEventGenerator)
-from .DaemonStartup import (
+from ..DaemonStartup import (
 	DaemonStartupEventConfig, DaemonStartupEventGenerator)
-from .Panic import PanicEventConfig, PanicEventGenerator
-from .ProcessActionRequests import (
+from ..Panic import PanicEventConfig, PanicEventGenerator
+from ..ProcessActionRequests import (
 	ProcessActionRequestsEventConfig, ProcessActionRequestsEventGenerator)
-from .SwOnDemand import SwOnDemandEventConfig, SwOnDemandEventGenerator
-from .SyncCompleted import (
+from ..SwOnDemand import SwOnDemandEventConfig, SwOnDemandEventGenerator
+from ..SyncCompleted import (
 	SyncCompletedEventConfig, SyncCompletedEventGenerator)
-from .Timer import TimerEventConfig, TimerEventGenerator
+from ..Timer import TimerEventConfig, TimerEventGenerator
 
 if RUNNING_ON_WINDOWS:
-	from .Windows.GUIStartup import (
+	from ..Windows.GUIStartup import (
 		GUIStartupEventConfig, GUIStartupEventGenerator)
-	from .Windows.SystemShutdown import (
+	from ..Windows.SystemShutdown import (
 		SystemShutdownEventConfig, SystemShutdownEventGenerator)
-	from .Windows.UserLogin import (
+	from ..Windows.UserLogin import (
 		UserLoginEventConfig, UserLoginEventGenerator)
 
 __all__ = ['EventConfigFactory', 'EventGeneratorFactory']

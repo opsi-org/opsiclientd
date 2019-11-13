@@ -55,8 +55,7 @@ from OPSI.web2.channel.http import HTTPFactory
 
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.Config import Config, getLogFormat
-from ocdlib.Events.Generators import getEventGenerator
-from ocdlib.Timeline import Timeline
+from ocdlib.Events.Utilities.Generators import getEventGenerator
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.State import State
 from ocdlib.SoftwareOnDemand import ResourceKioskJsonRpc
