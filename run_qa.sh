@@ -5,7 +5,7 @@ if [ -e "src/linux/notifier.py" ]; then
 	TARGETS="$TARGETS src/linux/notifier.py"
 fi
 if [ -e "src/scripts/opsiclientd_rpc" ]; then
-	TARGETS="$TARGETS src/linux/opsiclientd_rpc"
+	TARGETS="$TARGETS src/scripts/opsiclientd_rpc"
 fi
 if [ -e "src/windows/helpers/opsiclientd_shutdown_starter/opsiclientd_shutdown_starter.py" ]; then
 	TARGETS="$TARGETS src/windows/helpers/opsiclientd_shutdown_starter/opsiclientd_shutdown_starter.py"

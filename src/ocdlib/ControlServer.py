@@ -42,6 +42,7 @@ from twisted.internet.error import CannotListenError
 from tornado.ioloop import IOLoop
 
 from OPSI import System
+from OPSI.Backend.Backend import ConfigDataBackend
 from OPSI.Exceptions import OpsiAuthenticationError
 from OPSI.Logger import Logger
 from OPSI.Service import SSLContext, OpsiService
@@ -54,18 +55,20 @@ from OPSI.web2.channel.http import HTTPFactory
 
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
 from ocdlib.Config import Config, getLogFormat
-from ocdlib.Events import eventGenerators
-from ocdlib.Timeline import Timeline
+from ocdlib.Events.Utilities.Generators import getEventGenerator
 from ocdlib.OpsiService import ServiceConnection
+from ocdlib.State import State
 from ocdlib.SoftwareOnDemand import ResourceKioskJsonRpc
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
+from ocdlib.Timeline import Timeline
 
 if RUNNING_ON_WINDOWS:
 	import win32net
 	import win32security
 
-logger = Logger()
 config = Config()
+logger = Logger()
+state = State()
 
 infoPage = u'''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -618,12 +621,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		return uptime
 
 	def fireEvent(self, name):
-		name = forceUnicode(name)
-		try:
-			event = eventGenerators[name]
-		except KeyError:
-			raise ValueError(u"Event '%s' not in list of known events: %s" % (name, ', '.join(eventGenerators.keys())))
-
+		event = getEventGenerator(name)
 		logger.notice(u"Firing event '%s'" % name)
 		event.createAndFireEvent()
 
@@ -642,14 +640,14 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				break
 		return running
 
-	def getRunningEvent(self):
+	def getRunningEvents(self):
 		"""
 		Returns a list with running events.
 
 		"""
 		running = [ept.event.eventConfig.getId() for ept in self.opsiclientd._eventProcessingThreads]
 		if not running:
-			running.append("Currently no Event is Running.")
+			logger.info("Currently no Event is running.")
 		return running
 
 	def isInstallationPending(self):

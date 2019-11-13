@@ -47,9 +47,12 @@ from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 from ocdlib import __version__
 from ocdlib.Config import Config, getLogFormat
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
-from ocdlib.Events import (
-	DaemonStartupEventGenerator, DaemonShutdownEventGenerator, EventListener,
-	EventGeneratorFactory, PanicEvent, createEventGenerators, getEventGenerators)
+from ocdlib.Events.Basic import EventListener
+from ocdlib.Events.DaemonShutdown import DaemonShutdownEventGenerator
+from ocdlib.Events.DaemonStartup import DaemonStartupEventGenerator
+from ocdlib.Events.Panic import PanicEvent
+from ocdlib.Events.Utilities.Factories import EventGeneratorFactory
+from ocdlib.Events.Utilities.Generators import createEventGenerators, getEventGenerators
 from ocdlib.EventProcessing import EventProcessingThread
 from ocdlib.Localization import _, setLocaleDir
 from ocdlib.State import State
@@ -66,6 +69,9 @@ try:
 except ImportError:
 	__fullversion__ = False
 
+if RUNNING_ON_WINDOWS:
+	from ocdlib.Events.Windows.GUIStartup import (
+		GUIStartupEventConfig, GUIStartupEventGenerator)
 
 logger = Logger()
 config = Config()
@@ -115,7 +121,9 @@ class Opsiclientd(EventListener, threading.Thread):
 					title=u"Blocking login",
 					description=u"User login blocked",
 					category=u"block_login",
-					durationEvent=True)
+					durationEvent=True
+				)
+
 			if not self._blockLoginNotifierPid and config.get('global', 'block_login_notifier'):
 				# TODO: System.getActiveConsoleSessionId() is missing on Linux
 				if RUNNING_ON_WINDOWS:
@@ -157,28 +165,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		return self._running
 
 	def waitForGUI(self, timeout=None):
-		if not timeout:
-			timeout = None
-
-		class WaitForGUI(EventListener):
-			def __init__(self):
-				self._guiStarted = threading.Event()
-				ec = GUIStartupEventConfig("wait_for_gui")
-				eventGenerator = EventGeneratorFactory(ec)
-				eventGenerator.addEventConfig(ec)
-				eventGenerator.addEventListener(self)
-				eventGenerator.start()
-
-			def processEvent(self, event):
-				logger.info(u"GUI started")
-				self._guiStarted.set()
-
-			def wait(self, timeout=None):
-				self._guiStarted.wait(timeout)
-				if not self._guiStarted.isSet():
-					logger.warning(u"Timed out after %d seconds while waiting for GUI" % timeout)
-
-		WaitForGUI().wait(timeout)
+		waiter = WaitForGUI()
+		waiter.wait(timeout or None)
 
 	def createActionProcessorUser(self, recreate=True):
 		if not config.get('action_processor', 'create_user'):
@@ -638,3 +626,22 @@ class Opsiclientd(EventListener, threading.Thread):
 
 	def popupCloseCallback(self, choiceSubject):
 		self.hidePopup()
+
+
+class WaitForGUI(EventListener):
+	def __init__(self):
+		self._guiStarted = threading.Event()
+		ec = GUIStartupEventConfig("wait_for_gui")
+		eventGenerator = EventGeneratorFactory(ec)
+		eventGenerator.addEventConfig(ec)
+		eventGenerator.addEventListener(self)
+		eventGenerator.start()
+
+	def processEvent(self, event):
+		logger.info(u"GUI started")
+		self._guiStarted.set()
+
+	def wait(self, timeout=None):
+		self._guiStarted.wait(timeout)
+		if not self._guiStarted.isSet():
+			logger.warning(u"Timed out after %d seconds while waiting for GUI" % timeout)

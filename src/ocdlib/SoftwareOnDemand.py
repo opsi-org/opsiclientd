@@ -37,7 +37,8 @@ from OPSI.Service.Resource import ResourceOpsi
 
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.Config import getLogFormat, Config
-from ocdlib.Events import SwOnDemandEventGenerator, getEventGenerators
+from ocdlib.Events.SwOnDemand import SwOnDemandEventGenerator
+from ocdlib.Events.Utilities.Generators import getEventGenerators
 from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
 logger = Logger()
