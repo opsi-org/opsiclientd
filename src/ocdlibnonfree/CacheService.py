@@ -45,6 +45,11 @@ from ocdlib.Timeline import Timeline
 
 from ocdlibnonfree.CacheBackend import ClientCacheBackend
 
+__all__ = [
+	'CacheService', 'ConfigCacheService', 'ConfigCacheServiceBackendExtension',
+	'ProductCacheService'
+]
+
 logger = Logger()
 config = Config()
 state = State()

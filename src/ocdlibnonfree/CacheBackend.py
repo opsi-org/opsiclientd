@@ -34,6 +34,8 @@ from OPSI.Object import *  # required for dynamic class loading
 from OPSI.Types import forceHostId
 from OPSI.Util import blowfishDecrypt
 
+__all__ = ['ClientCacheBackend']
+
 logger = Logger()
 
 

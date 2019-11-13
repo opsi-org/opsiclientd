@@ -18,6 +18,8 @@ from OPSI.Logger import Logger
 
 from ocdlib.Opsiclientd import Opsiclientd
 
+__all__ = ['OpsiclientdPosix']
+
 logger = Logger()
 
 
