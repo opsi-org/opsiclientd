@@ -7,7 +7,7 @@
 # http://www.uib.de/
 # All rights reserved.
 """
-ocdlibnonfree.Events
+Non-free event configuration.
 
 :copyright:	uib GmbH <info@uib.de>
 :author: Niko Wenselowski <n.wenselowski@uib.de>
