@@ -26,7 +26,8 @@ from types import MethodType
 from OPSI.Backend.Backend import (
 	getArgAndCallString, Backend, ConfigDataBackend, ModificationTrackingBackend)
 from OPSI.Backend.Replicator import BackendReplicator
-from OPSI.Exceptions import BackendConfigurationError, BackendUnaccomplishableError
+from OPSI.Exceptions import (
+	BackendConfigurationError, BackendUnaccomplishableError)
 from OPSI.Logger import Logger
 from OPSI.Object import getIdentAttributes, objectsDiffer
 from OPSI.Object import LicenseOnClient, ProductOnClient

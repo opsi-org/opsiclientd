@@ -30,12 +30,14 @@ from OPSI.Types import (
 from OPSI.Util import getPublicKey
 from OPSI.Util.File.Opsi import PackageContentFile
 from OPSI.Util.Repository import getRepository
-from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, RepositoryObserver
+from OPSI.Util.Repository import (
+	DepotToLocalDirectorySychronizer, RepositoryObserver)
 from OPSI import System
 from OPSI.Util.HTTP import urlsplit
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.BackendManager import BackendExtender
-from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker
+from OPSI.Backend.SQLite import (
+	SQLiteBackend, SQLiteObjectBackendModificationTracker)
 
 from ocdlib.Config import getLogFormat, Config
 from ocdlib.State import State
