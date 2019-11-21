@@ -1,4 +1,3 @@
-#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 # opsiclientd is part of the desktop management solution opsi
@@ -25,4 +24,4 @@ opsiclientd Library.
 :license: GNU Affero General Public License version 3
 """
 
-__version__ = '4.1.1'
+__version__ = '4.1.2'

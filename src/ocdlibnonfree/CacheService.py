@@ -9,7 +9,7 @@
 """
 ocdlibnonfree.CacheService
 
-@copyright: uib GmbH <info@uib.de>
+@copyright:	uib GmbH <info@uib.de>
 @author: Jan Schneider <j.schneider@uib.de>
 @author: Erol Ueluekmen <e.ueluekmen@uib.de>
 @author: Niko Wenselowski <n.wenselowski@uib.de>
@@ -22,28 +22,36 @@ import shutil
 import threading
 import time
 from hashlib import md5
-from twisted.conch.ssh import keys
 
 from OPSI.Logger import LOG_INFO, Logger
 from OPSI.Object import ProductOnClient
 from OPSI.Types import (
 	forceBool, forceInt, forceList, forceProductIdList, forceUnicode)
+from OPSI.Util import getPublicKey
 from OPSI.Util.File.Opsi import PackageContentFile
 from OPSI.Util.Repository import getRepository
-from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, RepositoryObserver
+from OPSI.Util.Repository import (
+	DepotToLocalDirectorySychronizer, RepositoryObserver)
 from OPSI import System
 from OPSI.Util.HTTP import urlsplit
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.BackendManager import BackendExtender
-from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker
+from OPSI.Backend.SQLite import (
+	SQLiteBackend, SQLiteObjectBackendModificationTracker)
 
 from ocdlib.Config import getLogFormat, Config
 from ocdlib.State import State
-from ocdlib.Events import SyncCompletedEventGenerator, getEventGenerators
+from ocdlib.Events.SyncCompleted import SyncCompletedEventGenerator
+from ocdlib.Events.Utilities import getEventGenerators
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.Timeline import Timeline
 
 from ocdlibnonfree.CacheBackend import ClientCacheBackend
+
+__all__ = [
+	'CacheService', 'ConfigCacheService', 'ConfigCacheServiceBackendExtension',
+	'ProductCacheService'
+]
 
 logger = Logger()
 config = Config()
@@ -327,7 +335,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				raise Exception(u"Cannot sync products: modules file expired")
 
 			logger.info(u"Verifying modules file signature")
-			publicKey = keys.Key.fromString(data=base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
+			publicKey = getPublicKey(data=base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP'))
 			data = u''
 			mks = modules.keys()
 			mks.sort()
@@ -453,9 +461,9 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 
 						if os.path.isfile(instlog):
 							logger.info(u"Syncing instlog %s" % instlog)
-							f = codecs.open(instlog, 'r', 'utf-8', 'replace')
-							data = f.read()
-							f.close()
+							with codecs.open(instlog, 'r', 'utf-8', 'replace') as f:
+								data = f.read()
+
 							self._configService.log_write(
 								u'instlog',
 								data=data,
@@ -705,7 +713,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				raise Exception(u"Cannot sync products: modules file expired")
 
 			logger.info(u"Verifying modules file signature")
-			publicKey = keys.Key.fromString(data=base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
+			publicKey = getPublicKey(data=base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP'))
 			data = u''
 			mks = modules.keys()
 			mks.sort()

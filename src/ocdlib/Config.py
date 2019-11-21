@@ -26,21 +26,20 @@ Configuring opsiclientd.
 """
 
 import os
+import platform
 import re
 import sys
 
 from OPSI.Logger import Logger, LOG_NOTICE
 from OPSI.Types import (
-	forceBool, forceFilename, forceInt, forceHostId, forceList,
-	forceProductIdList, forceUnicode, forceUnicodeLower, forceUnicodeList,
-	forceUrl)
+	forceBool, forceHostId, forceInt, forceFilename, forceList,
+	forceProductIdList, forceUnicode, forceUnicodeLower, forceUrl,
+	forceUnicodeList
+)
 from OPSI.Util import objectToBeautifiedText, blowfishDecrypt
 from OPSI.Util.File import IniFile
 from OPSI import System
-
-# Get logger instance
-logger = Logger()
-
+from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
 OPSI_CA = '''-----BEGIN CERTIFICATE-----
 MIIEYTCCA0mgAwIBAgIJAO5oKZZR8dQkMA0GCSqGSIb3DQEBBQUAMH0xCzAJBgNV
@@ -69,6 +68,8 @@ USZQNXthwmMy0+iIgQLAmBDu9Tz53p+yqHIhS+7eYNfzh2HeIG3EY515ncnZG2Xi
 QuBW/YzuIIiknjESIHBVA6YWeLNR
 -----END CERTIFICATE-----'''
 
+logger = Logger()
+
 
 def getLogFormat(moduleName):
 	"""
@@ -78,66 +79,90 @@ def getLogFormat(moduleName):
 	return u'[%l] [%D] [{name}] %M   (%F|%N)'.format(name=name)
 
 
+class SectionNotFoundException(ValueError):
+	pass
+
+
+class NoConfigOptionFoundException(ValueError):
+	pass
+
+
 class ConfigImplementation(object):
+	WINDOWS_DEFAULT_PATHS = {
+		'global': {
+			'log_dir': u'c:\\tmp',
+			'state_file': u'c:\\opsi.org\\opsiclientd\\state.json',
+			'timeline_db': u'c:\\opsi.org\\opsiclientd\\timeline.sqlite',
+			'server_cert_dir': u'c:\\opsi.org\\opsiclientd\\server-certs'
+		},
+		'cache_service': {
+			'storage_dir': u'c:\\opsi.org\\cache',
+		},
+	}
+
+	LINUX_DEFAULT_PATHS = {
+		'global': {
+			'log_dir': os.path.join('/var', 'log', 'opsi'),
+			'state_file': os.path.join('/etc', 'opsi-client-agent', 'opsiclientd', 'state.json'),
+			'timeline_db': os.path.join('/etc', 'opsi-client-agent', 'opsiclientd', 'timeline.sqlite'),
+			'server_cert_dir': os.path.join('/var', 'lib', 'opsi-client-agent', 'opsiclientd', 'server-certs')
+		},
+		'cache_service': {
+			'storage_dir': os.path.join('/var', 'cache', 'opsi-client-agent')
+		},
+	}
 
 	def __init__(self):
+		baseDir = self._getBaseDirectory()
 
-		baseDir = u''
-		try:
-			baseDir = os.path.dirname(sys.argv[0])
-		except Exception as e:
-			logger.error(u"Failed to get base dir: %s" % e)
+		self._temporaryConfigServiceUrls = []
+		self._temporaryDepotDrive = []
 
 		self._config = {
 			'system': {
 				'program_files_dir': u'',
 			},
 			'global': {
-				'base_dir':                 baseDir,
-				'locale_dir':               os.path.join(baseDir, 'locale'),
-				'config_file':              u'opsiclientd.conf',
-				'log_dir':                  u'c:\\tmp',
-				'log_file':                 u'opsiclientd.log',
-				'log_level':                LOG_NOTICE,
-				'host_id':                  System.getFQDN().lower(),
-				'opsi_host_key':            u'',
-				'wait_for_gui_timeout':     120,
-				'block_login_notifier':     u'',
-				'state_file':               u'c:\\opsi.org\\opsiclientd\\state.json',
-				'timeline_db':              u'c:\\opsi.org\\opsiclientd\\timeline.sqlite',
-				'verify_server_cert':       False,
+				'base_dir': baseDir,
+				'locale_dir': os.path.join(baseDir, 'locale'),
+				'config_file': u'opsiclientd.conf',
+				'log_file': u'opsiclientd.log',
+				'log_level': LOG_NOTICE,
+				'host_id': System.getFQDN().lower(),
+				'opsi_host_key': u'',
+				'wait_for_gui_timeout': 120,
+				'block_login_notifier': u'',
+				'verify_server_cert': False,
 				'verify_server_cert_by_ca': False,
-				'server_cert_dir':          u'c:\\opsi.org\\opsiclientd\\server-certs',
 				'proxy_mode': u'static',
 				'proxy_url': u'',
 			},
 			'config_service': {
-				'url':                   [],
-				'connection_timeout':    10,
+				'url': [],
+				'connection_timeout': 10,
 				'user_cancelable_after': 0,
 				'sync_time_from_service': False,
 			},
 			'depot_server': {
 				'depot_id': u'',
-				'url':      u'',
-				'drive':    u'',
+				'url': u'',
+				'drive': u'',
 				'username': u'pcpatch',
 			},
 			'cache_service': {
-				'storage_dir':            u'c:\\opsi.org\\cache',
 				'product_cache_max_size': 6000000000,
-				'extension_config_dir':   u'',
+				'extension_config_dir': u'',
 			},
 			'control_server': {
-				'interface':            '0.0.0.0', # TODO
-				'port':                 4441,
-				'ssl_server_key_file':  u'opsiclientd.pem',
+				'interface': '0.0.0.0',  # TODO
+				'port': 4441,
+				'ssl_server_key_file': u'opsiclientd.pem',
 				'ssl_server_cert_file': u'opsiclientd.pem',
-				'static_dir':           u'static_html',
+				'static_dir': u'static_html',
 				'max_authentication_failures': 5,
 			},
 			'notification_server': {
-				'interface':  u'127.0.0.1',
+				'interface': u'127.0.0.1',
 				'start_port': 44000,
 				'popup_port': 45000,
 			},
@@ -145,31 +170,78 @@ class ConfigImplementation(object):
 				'command': u'',
 			},
 			'action_processor': {
-				'local_dir':          u'',
-				'remote_dir':         u'',
-				'filename':           u'',
-				'command':            u'',
-				'run_as_user':        u'SYSTEM',
-				'create_user':        True,
-				'delete_user':        True,
+				'local_dir': u'',
+				'remote_dir': u'',
+				'filename': u'',
+				'command': u'',
+				'run_as_user': u'SYSTEM',
+				'create_user': True,
+				'delete_user': True,
 				'create_environment': False,
 			}
 		}
-		self._temporaryConfigServiceUrls = []
-		self._temporaryDepotDrive = []
 
-		if (os.name == 'nt'):
-			self._config['system']['program_files_dir'] = System.getProgramFilesDir()
-			self._config['cache_service']['storage_dir'] = u'%s\\opsi.org\\cache' % System.getSystemDrive()
-			self._config['cache_service']['extension_config_dir'] = os.path.join(baseDir, u'opsiclientd', 'extend.d')
+		self._applySystemSpecificConfiguration()
+
+	@staticmethod
+	def _getBaseDirectory():
+		if RUNNING_ON_WINDOWS:
+			try:
+				# TODO: could this be solved more elegant by using __file__
+				# instead of hoping that we find the program here?
+				baseDir = os.path.dirname(sys.argv[0])
+			except Exception, e:
+				logger.error(u"Failed to get base dir: %s" % e)
+				baseDir = u''
+		else:
+			baseDir = os.path.join('/etc', 'opsi-client-agent')
+
+		return baseDir
+
+	def _applySystemSpecificConfiguration(self):
+		defaultToApply = self.WINDOWS_DEFAULT_PATHS if RUNNING_ON_WINDOWS else self.LINUX_DEFAULT_PATHS
+
+		for key in self._config:
+			if key in defaultToApply:
+				self._config[key].update(defaultToApply[key])
+
+		baseDir = self._getBaseDirectory()
+		self._config['cache_service']['extension_config_dir'] = os.path.join(baseDir, u'opsiclientd', 'extend.d')
+
+		if RUNNING_ON_WINDOWS:
+			systemDrive = System.getSystemDrive()
+			logger.debug(
+				'Running on windows: adapting paths to use system drive '
+				'({0}).'.format(systemDrive)
+			)
+
+			self._config['cache_service']['storage_dir'] = os.path.join(systemDrive, 'opsi.org', 'cache')
 			self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd', 'opsiclientd.conf')
-			self._config['global']['state_file'] = u'%s\\opsi.org\\opsiclientd\\state.json' % System.getSystemDrive()
-			self._config['global']['timeline_db'] = u'%s\\opsi.org\\opsiclientd\\timeline.sqlite' % System.getSystemDrive()
-			self._config['global']['log_dir'] = u'%s\\opsi.org\\log' % System.getSystemDrive()
-			self._config['global']['server_cert_dir'] = u'%s\\opsi.org\\opsiclientd\\server-certs' % System.getSystemDrive()
+			self._config['global']['log_dir'] = os.path.join(systemDrive, 'tmp')
+			self._config['global']['state_file'] = os.path.join(systemDrive, 'opsi.org', 'opsiclientd', 'state.json')
+			self._config['global']['server_cert_dir'] = os.path.join(systemDrive, 'opsi.org', 'opsiclientd', 'server-certs')
+			self._config['global']['timeline_db'] = os.path.join(systemDrive,  'opsi.org', 'opsiclientd', 'timeline.sqlite')
+			self._config['system']['program_files_dir'] = System.getProgramFilesDir()
 
-			if (sys.getwindowsversion()[0] == 5):
+			if sys.getwindowsversion()[0] == 5:
 				self._config['action_processor']['run_as_user'] = 'pcpatch'
+		else:
+			self._config['control_server']['static_dir'] = os.path.join(baseDir, 'opsiclientd', 'static_html')
+			self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd.conf')
+			self._config['global']['log_file'] = os.path.join('/var', 'log', 'opsi', 'opsiclientd.log')
+
+			if '64' in platform.architecture()[0]:
+				arch = '64'
+			else:
+				arch = '32'
+
+			self._config['action_processor']['remote_dir'] = self._config['action_processor']['remote_dir'].replace('%arch%', arch)
+
+			sslCertDir = os.path.join('/etc', 'opsi-client-agent')
+
+			for certPath in ('ssl_server_key_file', 'ssl_server_cert_file'):
+				if sslCertDir not in self._config['control_server'][certPath]:
+					self._config['control_server'][certPath] = os.path.join(sslCertDir, self._config['control_server'][certPath])
 
 	def getDict(self):
 		return self._config
@@ -177,18 +249,19 @@ class ConfigImplementation(object):
 	def get(self, section, option, raw=False):
 		if not section:
 			section = 'global'
-		section = unicode(section).strip().lower()
-		option = unicode(option).strip().lower()
+
+		section = forceUnicodeLower(section.strip()).lower()
+		option = forceUnicodeLower(option.strip()).lower()
 		if section not in self._config:
-			raise ValueError(u"No such config section: %s" % section)
+			raise SectionNotFoundException(u"No such config section: %s" % section)
 		if option not in self._config[section]:
-			raise ValueError(u"No such config option in section '%s': %s" % (section, option))
+			raise NoConfigOptionFoundException(u"No such config option in section '%s': %s" % (section, option))
 
 		value = self._config[section][option]
 		if not raw and isinstance(value, (unicode, str)) and (value.count('%') >= 2):
 			value = self.replace(value)
 		if isinstance(value, str):
-			value = unicode(value)
+			value = forceUnicode(value)
 		return value
 
 	def set(self, section, option, value):
@@ -209,7 +282,7 @@ class ConfigImplementation(object):
 			option = 'action_user_cancelable'
 
 		logger.info(u"Setting config value %s.%s" % (section, option))
-		logger.debug(u"set(%s, %s, %s)" % (section, option, value))
+		logger.debug(u"set({0!r}, {1!r}, {2!r})".format(section, option, value))
 
 		if 	(option.find('command') == -1) and (option.find('productids') == -1) and \
 			(option.find('exclude_product_group_ids') == -1) and \
@@ -227,7 +300,7 @@ class ConfigImplementation(object):
 			value = forceHostId(value.replace('_', '-'))
 		elif option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port', 'max_authentication_failures'):
 			value = forceInt(value)
-		elif option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active', 'sync_time_from_service'):
+		elif option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active', 'sync_time_from_service', 'trusted_installer_detection'):
 			value = forceBool(value)
 		elif option in ('exclude_product_group_ids', 'include_product_group_ids'):
 			if not isinstance(value, list):
@@ -262,9 +335,9 @@ class ConfigImplementation(object):
 			value = forceFilename(value)
 			if not os.path.exists(value):
 				os.makedirs(value)
-			f = open(os.path.join(value, 'cacert.pem'), 'w')
-			f.write(OPSI_CA)
-			f.close()
+
+			with open(os.path.join(value, 'cacert.pem'), 'w') as f:
+				f.write(OPSI_CA)
 
 	def replace(self, string, escaped=False):
 		for (section, values) in self._config.items():
@@ -272,12 +345,12 @@ class ConfigImplementation(object):
 				continue
 			for (key, value) in values.items():
 				value = forceUnicode(value)
-				if (string.find(u'"%' + unicode(section) + u'.' + unicode(key) + u'%"') != -1) and escaped:
+				if (string.find(u'"%' + forceUnicode(section) + u'.' + forceUnicode(key) + u'%"') != -1) and escaped:
 					if (os.name == 'posix'):
 						value = value.replace('"', '\\"')
-					if (os.name == 'nt'):
+					elif RUNNING_ON_WINDOWS:
 						value = value.replace('"', '^"')
-				newString = string.replace(u'%' + unicode(section) + u'.' + unicode(key) + u'%', value)
+				newString = string.replace(u'%' + forceUnicode(section) + u'.' + forceUnicode(key) + u'%', value)
 
 				if (newString != string):
 					string = self.replace(newString, escaped)
@@ -294,11 +367,12 @@ class ConfigImplementation(object):
 			# Read log settings early
 			if not keepLog and config.has_section('global'):
 				debug = False
-				if (os.name == 'nt'):
+				if RUNNING_ON_WINDOWS:
 					try:
 						debug = forceBool(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Services\\opsiclientd", "Debug"))
 					except Exception:
 						pass
+
 				if not debug:
 					if config.has_option('global', 'log_level'):
 						self.set('global', 'log_level', config.get('global', 'log_level'))
@@ -308,10 +382,10 @@ class ConfigImplementation(object):
 							slf = None
 							dlf = None
 							try:
-								slf = logFile + u'.' + unicode(i-1)
+								slf = logFile + u'.' + forceUnicode(i-1)
 								if (i <= 0):
 									slf = logFile
-								dlf = logFile + u'.' + unicode(i)
+								dlf = logFile + u'.' + forceUnicode(i)
 								if os.path.exists(slf):
 									if os.path.exists(dlf):
 										os.unlink(dlf)
@@ -327,7 +401,6 @@ class ConfigImplementation(object):
 				for (option, value) in config.items(section):
 					option = option.lower()
 					self.set(section.lower(), option, value)
-
 		except Exception as e:
 			# An error occured while trying to read the config file
 			logger.error(u"Failed to read config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
@@ -371,7 +444,6 @@ class ConfigImplementation(object):
 				logger.notice(u"Config file '%s' written" % self.get('global', 'config_file'))
 			else:
 				logger.notice(u"No need to write config file '%s', config file is up to date" % self.get('global', 'config_file'))
-
 		except Exception as e:
 			# An error occured while trying to write the config file
 			logger.logException(e)
@@ -558,11 +630,23 @@ class ConfigImplementation(object):
 		if not configService:
 			raise Exception(u"Config service is undefined")
 
+		query = {
+			"objectId": self.get('global', 'host_id'),
+			"configId": [
+				'clientconfig.configserver.url',
+				'clientconfig.depot.drive',
+				'clientconfig.depot.id',
+				'clientconfig.depot.user',
+				'opsiclientd.*'  # everything starting with opsiclientd.
+			]
+		}
+
 		configService.backend_setOptions({"addConfigStateDefaults": True})
-		for configState in configService.configState_getObjects(objectId=self.get('global', 'host_id')):
-			logger.info(u"Got config state from service: configId %s, values %s" % (configState.configId, configState.values))
+		for configState in configService.configState_getObjects(**query):
+			logger.info(u"Got config state from service: %r" % configState)
 
 			if not configState.values:
+				logger.debug(u"No values - skipping {0!r}".format(configState.configId))
 				continue
 
 			if configState.configId == u'clientconfig.configserver.url':
@@ -576,7 +660,8 @@ class ConfigImplementation(object):
 			elif configState.configId.startswith(u'opsiclientd.'):
 				try:
 					parts = configState.configId.lower().split('.')
-					if (len(parts) < 3):
+					if len(parts) < 3:
+						logger.debug(u"Expected at least 3 parts in {0!r} - skipping.".format(configState.configId))
 						continue
 
 					self.set(section=parts[1], option=parts[2], value=configState.values[0])
@@ -609,3 +694,12 @@ class Config(ConfigImplementation):
 	def __setattr__(self, attr, value):
 		""" Delegate access to implementation """
 		return setattr(self.__instance, attr, value)
+
+	def _reset(self):
+		"""
+		Throwing away the Singleton behaviour.
+		Please do only use this in tests.
+		"""
+		Config.__instance = None
+		if '_Config__instance' in self.__dict__:
+			del self.__dict__['_Config__instance']

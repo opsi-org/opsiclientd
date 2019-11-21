@@ -1,4 +1,3 @@
-#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # opsiclientd is part of the desktop management solution opsi
@@ -27,13 +26,16 @@ from types import MethodType
 from OPSI.Backend.Backend import (
 	getArgAndCallString, Backend, ConfigDataBackend, ModificationTrackingBackend)
 from OPSI.Backend.Replicator import BackendReplicator
-from OPSI.Exceptions import BackendConfigurationError, BackendUnaccomplishableError
+from OPSI.Exceptions import (
+	BackendConfigurationError, BackendUnaccomplishableError)
 from OPSI.Logger import Logger
 from OPSI.Object import getIdentAttributes, objectsDiffer
 from OPSI.Object import LicenseOnClient, ProductOnClient
 from OPSI.Object import *  # required for dynamic class loading
 from OPSI.Types import forceHostId
 from OPSI.Util import blowfishDecrypt
+
+__all__ = ['ClientCacheBackend']
 
 logger = Logger()
 

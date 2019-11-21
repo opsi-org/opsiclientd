@@ -19,16 +19,16 @@
 """
 Event-Timeline.
 
-   Timeline event attributes:
-      * icon - url. This image will appear next to the title text in the timeline if (no end date) or (durationEvent = false). If a start and end date are supplied, and durationEvent is true, the icon is not shown. If icon attribute is not set, a default icon from the theme is used.
-      * image - url to an image that will be displayed in the bubble
-      * link - url. The bubble's title text be a hyper-link to this address.
-      * color - color of the text and tape (duration events) to display in the timeline. If the event has durationEvent = false, then the bar's opacity will be applied (default 20%). See durationEvent, above.
-      * textColor - color of the label text on the timeline. If not set, then the color attribute will be used.
-      * tapeImage and tapeRepeat Sets the background image and repeat style for the event's tape (or 'bar') on the Timeline. Overrides the color setting for the tape. Repeat style should be one of {repeat | repeat-x | repeat-y}, repeat is the default. See the Cubism example for a demonstration. Only applies to duration events.
-      * caption - additional event information shown when mouse is hovered over the Timeline tape or label. Uses the html title property. Looks like a tooltip. Plain text only. See the cubism example.
-      * classname - added to the HTML classnames for the event's label and tape divs. Eg classname attribute 'hot_event' will result in div classes of 'timeline-event-label hot_event' and 'timeline-event-tape hot_event' for the event's Timeline label and tape, respectively.
-      * description - will be displayed inside the bubble with the event's title and image.
+Timeline event attributes:
+  * icon - url. This image will appear next to the title text in the timeline if (no end date) or (durationEvent = false). If a start and end date are supplied, and durationEvent is true, the icon is not shown. If icon attribute is not set, a default icon from the theme is used.
+  * image - url to an image that will be displayed in the bubble
+  * link - url. The bubble's title text be a hyper-link to this address.
+  * color - color of the text and tape (duration events) to display in the timeline. If the event has durationEvent = false, then the bar's opacity will be applied (default 20%). See durationEvent, above.
+  * textColor - color of the label text on the timeline. If not set, then the color attribute will be used.
+  * tapeImage and tapeRepeat Sets the background image and repeat style for the event's tape (or 'bar') on the Timeline. Overrides the color setting for the tape. Repeat style should be one of {repeat | repeat-x | repeat-y}, repeat is the default. See the Cubism example for a demonstration. Only applies to duration events.
+  * caption - additional event information shown when mouse is hovered over the Timeline tape or label. Uses the html title property. Looks like a tooltip. Plain text only. See the cubism example.
+  * classname - added to the HTML classnames for the event's label and tape divs. Eg classname attribute 'hot_event' will result in div classes of 'timeline-event-label hot_event' and 'timeline-event-tape hot_event' for the event's Timeline label and tape, respectively.
+  * description - will be displayed inside the bubble with the event's title and image.
 
 
 :copyright: uib GmbH <info@uib.de>
@@ -119,8 +119,11 @@ function onResize() {
 
 class TimelineImplementation(object):
 	def __init__(self):
-		if not os.path.exists(os.path.dirname(config.get('global', 'timeline_db'))):
-			os.makedirs(os.path.dirname(config.get('global', 'timeline_db')))
+		timelineFolder = os.path.dirname(config.get('global', 'timeline_db'))
+		if not os.path.exists(timelineFolder):
+			logger.debug("Creating missing directory {!r}", timelineFolder)
+			os.makedirs(timelineFolder)
+
 		self._sql = SQLite(
 			database=config.get('global', 'timeline_db'),
 			synchronous=False,
@@ -229,18 +232,21 @@ class TimelineImplementation(object):
 				if not start:
 					start = timestamp()
 				start = forceOpsiTimestamp(start)
+
 				if end:
-					end = forceOpsiTimestamp(start)
+					end = forceOpsiTimestamp(end)
 					durationEvent = True
-				return self._sql.insert('EVENT', {
-					'title':         forceUnicode(title),
-					'category':      category,
-					'description':   forceUnicode(description),
-					'isError':       forceBool(isError),
+
+				event = {
+					'title': forceUnicode(title),
+					'category': category,
+					'description': forceUnicode(description),
+					'isError': forceBool(isError),
 					'durationEvent': forceBool(durationEvent),
-					'start':         start,
-					'end':           end,
-				})
+					'start': start,
+					'end': end,
+				}
+				return self._sql.insert('EVENT', event)
 			except Exception as addError:
 				logger.error(u"Failed to add event '%s': %s" % (title, addError))
 

@@ -35,6 +35,7 @@ from OPSI import System
 
 from ocdlib.Config import Config
 from ocdlib.OpsiService import isConfigServiceReachable
+from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 
 logger = Logger()
 config = Config()
@@ -75,7 +76,10 @@ class StateImplementation(object):
 	def get(self, name, default=None):
 		name = forceUnicode(name)
 		if name == 'user_logged_in':
-			return bool(System.getActiveSessionIds(self._winApiBugCommand))
+			if RUNNING_ON_WINDOWS:
+				return bool(System.getActiveSessionIds(self._winApiBugCommand))
+			else:
+				return False  # TODO: find a real fix for this one.
 		elif name == 'configserver_reachable':
 			return isConfigServiceReachable(timeout=15)
 		elif name == 'products_cached':

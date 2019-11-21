@@ -94,12 +94,19 @@ class ControlPipe(threading.Thread):
 
 class PosixControlPipe(ControlPipe):
 	"""
-	Control pipe for posix operating systems
+	PosixControlPipe implements a control pipe for posix operating systems
 	"""
 
 	def __init__(self, opsiclientdRpcInterface):
 		ControlPipe.__init__(self, opsiclientdRpcInterface)
 		self._pipeName = "/var/run/opsiclientd/fifo"
+
+		self._stopEvent = threading.Event()
+		self._stopEvent.clear()
+
+	def stop(self):
+		logger.debug("Stopping {0}".format(self))
+		self._stopEvent.set()
 
 	def createPipe(self):
 		logger.debug2(u"Creating pipe {}", self._pipeName)
@@ -116,14 +123,15 @@ class PosixControlPipe(ControlPipe):
 		if self._pipe:
 			try:
 				os.close(self._pipe)
-			except Exception:
-				pass
+			except Exception as error:
+				logger.debug(u"Closing pipe {0!r} failed: {1}".format(self._pipe, forceUnicode(error)))
 
 	def run(self):
 		self._running = True
+
 		try:
 			self.createPipe()
-			while self._running:
+			while not self._stopEvent.wait(1):
 				try:
 					logger.debug2(u"Opening named pipe {}", self._pipeName)
 					self._pipe = os.open(self._pipeName, os.O_RDONLY)
@@ -156,26 +164,32 @@ class PosixControlPipe(ControlPipe):
 					logger.debug2(u"Writing to pipe")
 					written = os.write(self._pipe, result)
 					logger.debug2(u"Number of bytes written: %d" % written)
+
 					if len(result) != written:
 						logger.error("Failed to write all bytes to pipe ({:d}/{:d})", written, len(result))
-
-				except Exception as e:
-					logger.error(u"Pipe IO error: {}", forceUnicode(e))
+				except OSError as oserr:
+					logger.error(u"Pipe OSError: {0}".format(forceUnicode(oserr)))
+				except Exception as pipeError:
+					logger.error(u"Pipe IO error: {}", forceUnicode(pipeError))
 				finally:
 					try:
 						os.close(self._pipe)
-					except Exception:
-						pass
+					except Exception as error:
+						logger.debug2(u"Closing pipe {0!r} failed: {1}".format(self._pipe, forceUnicode(error)))
 		except Exception as e:
 			logger.logException(e)
+		finally:
+			logger.notice(u"ControlPipe exiting")
+			self._running = False
 
-		logger.notice(u"ControlPipe exiting")
-		if os.path.exists(self._pipeName):
-			os.unlink(self._pipeName)
-		self._running = False
+			if os.path.exists(self._pipeName):
+				os.unlink(self._pipeName)
 
 
 class NTControlPipeConnection(threading.Thread):
+	"""
+	NTControlPipe implements a control pipe for windows operating systems
+	"""
 
 	def __init__(self, ntControlPipe, pipe, bufferSize):
 		logger.setLogFormat(getLogFormat(u'control pipe'), object=self)

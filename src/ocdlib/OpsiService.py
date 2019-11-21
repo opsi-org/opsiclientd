@@ -34,20 +34,21 @@ import random
 import time
 from hashlib import md5
 from httplib import HTTPConnection, HTTPSConnection
-from twisted.conch.ssh import keys
 
-from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
+from OPSI import System
 from OPSI.Logger import Logger
+from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
+from OPSI.Util import getPublicKey
 from OPSI.Util.Thread import KillableThread
-from OPSI.Util.HTTP import urlsplit, non_blocking_connect_http, non_blocking_connect_https
+from OPSI.Util.HTTP import (
+	urlsplit, non_blocking_connect_http, non_blocking_connect_https)
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
-from OPSI import System
 
-from ocdlib.Localization import _
 from ocdlib import __version__
 from ocdlib.Config import getLogFormat, Config
 from ocdlib.Exceptions import CanceledByUserError
+from ocdlib.Localization import _
 
 logger = Logger()
 config = Config()
@@ -73,8 +74,10 @@ def isConfigServiceReachable(timeout=5):
 			except Exception:
 				pass
 			return True
-		except Exception, e:
+
+		except Exception as e:
 			logger.info(e)
+
 	return False
 
 
@@ -145,8 +148,8 @@ class ServiceConnection(object):
 			if self._loadBalance and (len(configServiceUrls) > 1):
 				random.shuffle(configServiceUrls)
 
-			for urlIndex, url in enumerate(configServiceUrls):
-				self._configServiceUrl = url
+			for urlIndex, configServiceURL in enumerate(configServiceUrls):
+				self._configServiceUrl = configServiceURL
 
 				kwargs = self.connectionThreadOptions()
 				logger.debug(u"Creating ServiceConnectionThread (url: %s)" % self._configServiceUrl)
@@ -156,6 +159,7 @@ class ServiceConnection(object):
 					password=config.get('global', 'opsi_host_key'),
 					**kwargs
 				)
+				serviceConnectionThread.daemon = True
 
 				self.connectionStart(self._configServiceUrl)
 
@@ -163,7 +167,7 @@ class ServiceConnection(object):
 				timeout = forceInt(config.get('config_service', 'connection_timeout'))
 				logger.info(u"Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
 				serviceConnectionThread.start()
-				for i in range(5):
+				for _unused in range(5):
 					if serviceConnectionThread.running:
 						break
 					time.sleep(1)
@@ -220,7 +224,7 @@ class ServiceConnection(object):
 						self.connectionFailed(u"Modules file expired")
 
 					logger.info(u"Verifying modules file signature")
-					publicKey = keys.Key.fromString(data=base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP')).keyObject
+					publicKey = getPublicKey(data=base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP'))
 					data = u''
 					mks = modules.keys()
 					mks.sort()
@@ -240,13 +244,13 @@ class ServiceConnection(object):
 								val = 'yes'
 
 						data += u'%s = %s\r\n' % (module.lower().strip(), val)
-					if not bool(publicKey.verify(md5(data).digest(), [ long(modules['signature']) ])):
+					if not bool(publicKey.verify(md5(data).digest(), [long(modules['signature'])])):
 						self.connectionFailed(u"Modules file invalid")
 					logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
 
 				self._configService = serviceConnectionThread.configService
 				self.connectionEstablished()
-		except:
+		except Exception:
 			self.disconnectConfigService()
 			raise
 
@@ -256,6 +260,7 @@ class ServiceConnection(object):
 				self._configService.backend_exit()
 			except Exception as exitError:
 				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(exitError))
+
 		self._configService = None
 		self._configServiceUrl = None
 
@@ -285,12 +290,12 @@ class ServiceConnectionThread(KillableThread):
 		return self._username
 
 	def run(self):
-		try:
-			logger.debug(u"ServiceConnectionThread started...")
-			self.running = True
-			self.connected = False
-			self.cancelled = False
+		logger.debug(u"ServiceConnectionThread started...")
+		self.running = True
+		self.connected = False
+		self.cancelled = False
 
+		try:
 			certDir = config.get('global', 'server_cert_dir')
 			verifyServerCert = config.get('global', 'verify_server_cert')
 
@@ -320,6 +325,7 @@ class ServiceConnectionThread(KillableThread):
 					self.setStatusMessage(_(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
 					if len(self._username.split('.')) < 3:
 						raise Exception(u"Domain missing in username '%s'" % self._username)
+
 					if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
 						if proxyURL:
 							logger.debug("Connecting to localhost, connecting directly without proxy")
@@ -334,11 +340,11 @@ class ServiceConnectionThread(KillableThread):
 						caCertFile=caCertFile,
 						verifyServerCertByCa=verifyServerCertByCa,
 						proxyURL=proxyURL,
-						application='opsiclientd version %s' % __version__
+						application='opsiclientd/%s' % __version__
 					)
 
 					self.configService.accessControl_authenticated()
-					self.configService.setDeflate(True)
+					self.configService.setCompression(True)
 					self.connected = True
 					self.connectionError = None
 					self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
@@ -365,12 +371,20 @@ class ServiceConnectionThread(KillableThread):
 							self._username = fqdn
 						else:
 							break
-					time.sleep(3)
 
+					if 'is not supported by the backend' in self.connectionError.lower():
+						try:
+							from cryptography.hazmat.backends import default_backend
+							logger.debug("Got the following crypto backends: {0}".format(default_backend()._backends))
+						except Exception as cryptoCheckError:
+							logger.debug("Failed to get info about installed crypto modules: {0}".format(cryptoCheckError))
+
+					for _unused in range(3):  # Sleeping before the next retry
+						time.sleep(1)
 		except Exception as error:
 			logger.logException(error)
-
-		self.running = False
+		finally:
+			self.running = False
 
 	def stopConnectionCallback(self, choiceSubject):
 		logger.notice(u"Connection cancelled by user")

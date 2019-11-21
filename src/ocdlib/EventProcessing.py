@@ -22,41 +22,73 @@ Processing of events.
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
 :author: Erol Ueluekmen <e.ueluekmen@uib.de>
+:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
 import codecs
-import sys
-import os
-import shutil
 import filecmp
+import os
+import random
+import re
+import shutil
+import sys
+import time
+from contextlib import contextmanager
+from datetime import datetime as dt, timedelta
 
-from OPSI.Logger import *
-from OPSI.Util import *
-from OPSI.Util.Message import *
-from OPSI.Util.Thread import KillableThread
-from OPSI.Types import *
 from OPSI import System
-from OPSI.Object import *
+from OPSI.Logger import Logger, LOG_WARNING
+from OPSI.Object import ProductOnClient
+from OPSI.Types import forceInt, forceList, forceUnicode, forceUnicodeLower
+from OPSI.Util.Message import (
+	ChoiceSubject, MessageSubject, MessageSubjectProxy, NotificationServer,
+	ProgressSubjectProxy)
+from OPSI.Util.Thread import KillableThread
 
-from ocdlib.Exceptions import *
-from ocdlib.Events import *
-from ocdlib.OpsiService import ServiceConnection
+from ocdlib import __version__
+from ocdlib.Config import Config, getLogFormat
+from ocdlib.Events.Utilities.Generators import reconfigureEventGenerators
+from ocdlib.Exceptions import CanceledByUserError
 from ocdlib.Localization import _
-from ocdlib.Config import getLogFormat, Config
+from ocdlib.OpsiService import ServiceConnection
+from ocdlib.State import State
+from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 from ocdlib.Timeline import Timeline
-
 
 logger = Logger()
 config = Config()
+state = State()
 timeline = Timeline()
+
+
+@contextmanager
+def cd(path):
+	'Change the current directory to `path` as long as the context exists.'
+
+	old_dir = os.getcwd()
+	os.chdir(path)
+	try:
+		yield
+	finally:
+		os.chdir(old_dir)
+
+
+@contextmanager
+def noop(_unused):
+	"Dummy contextmanager. Does nothing."
+	yield
 
 
 class EventProcessingThread(KillableThread, ServiceConnection):
 	def __init__(self, opsiclientd, event):
-		from ocdlib import __version__  # TODO: Import movable?
+		logger.setLogFormat(
+			getLogFormat(
+				u'event processing {0}'.format(event.eventConfig.getId())
+			),
+			object=self
+		)
 
-		logger.setLogFormat(getLogFormat(u'event processing ' + event.eventConfig.getId()), object=self)
 		KillableThread.__init__(self)
 		ServiceConnection.__init__(self)
 
@@ -90,12 +122,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self._choiceSubject = None
 
 		self._statusSubject.setMessage( _("Processing event %s") % self.event.eventConfig.getName() )
-		#self._serviceUrlSubject.setMessage(config.get('config_service', 'url'))
 		self._clientIdSubject.setMessage(config.get('global', 'host_id'))
 		self._opsiclientdInfoSubject.setMessage("opsiclientd %s" % __version__)
 		self._actionProcessorInfoSubject.setMessage("")
 
-		#self.isLoginEvent = isinstance(self.event, UserLoginEvent)
 		self.isLoginEvent = bool(self.event.eventConfig.actionType == 'login')
 		if self.isLoginEvent:
 			logger.info(u"Event is user login event")
@@ -104,8 +134,36 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\sessionhelper\getActiveSessionIds.exe')
 
 		self.getSessionId()
+		self._notificationServerPort = forceInt(config.get('notification_server', 'start_port'))
+		self.setNotificationServerPort()
 
-		self._notificationServerPort = int(config.get('notification_server', 'start_port')) + (3 * int(self.getSessionId()))
+	def setNotificationServerPort(self, port=None):
+		"""
+		Set the port to be used by the notification server.
+
+		:param port: The port to use. \
+If this is `None` a random port will be chosen.
+		:type port: int
+		"""
+		def getRandomPortViaSessionID(multiplicator=3):
+			return forceInt(config.get('notification_server', 'start_port')) + (multiplicator * forceInt(self.getSessionId()))
+
+		MAX_ALLOWED_PORT = 65536
+
+		if port is None:
+			port = getRandomPortViaSessionID()
+
+			if port > MAX_ALLOWED_PORT:
+				port = getRandomPortViaSessionID(1)
+			if port > MAX_ALLOWED_PORT or not RUNNING_ON_WINDOWS:
+
+				port = random.randrange(
+					forceInt(config.get('notification_server', 'start_port')),
+					MAX_ALLOWED_PORT
+				)
+
+		logger.debug('Setting port for the NotificationServer to {0}'.format(port))
+		self._notificationServerPort = port
 
 	# ServiceConnection
 	def connectionThreadOptions(self):
@@ -153,6 +211,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			self._notificationServer.removeSubject(self._choiceSubject)
 		self._detailSubjectProxy.setMessage(u'')
 		ServiceConnection.connectionFailed(self, error)
+
 	# End of ServiceConnection
 
 	def setSessionId(self, sessionId):
@@ -163,13 +222,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		logger.debug(u"getSessionId()")
 		if self._sessionId is None:
 			sessionId = None
-			if self.isLoginEvent:
-				logger.info(u"Using session id of user '%s'" % self.event.eventInfo["User"])
-				userSessionsIds = System.getUserSessionIds(self.event.eventInfo["User"], self._winApiBugCommand, onlyNewestId = True)
-				if userSessionsIds:
-					sessionId = userSessionsIds[0]
-			if not sessionId:
-				sessionId = System.getActiveSessionId(winApiBugCommand = self._winApiBugCommand)
+
+			if RUNNING_ON_WINDOWS:
+				if self.isLoginEvent:
+					logger.info(u"Using session id of user '%s'" % self.event.eventInfo["User"])
+					userSessionsIds = System.getUserSessionIds(self.event.eventInfo["User"], self._winApiBugCommand, onlyNewestId = True)
+					if userSessionsIds:
+						sessionId = userSessionsIds[0]
+				if not sessionId:
+					sessionId = System.getActiveSessionId(winApiBugCommand = self._winApiBugCommand)
+			else:
+				sessionId = System.getActiveSessionId()
+				logger.info(u"Using {0} as session id.".format(sessionId))
 
 			self.setSessionId(sessionId)
 		return self._sessionId
@@ -183,18 +247,21 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		for i in range(3):
 			try:
 				self._notificationServer = NotificationServer(
-								address  = config.get('notification_server', 'interface'),
-								port     = self._notificationServerPort,
-								subjects = [
-									self._statusSubject,
-									self._messageSubject,
-									self._serviceUrlSubject,
-									self._clientIdSubject,
-									self._actionProcessorInfoSubject,
-									self._opsiclientdInfoSubject,
-									self._detailSubjectProxy,
-									self._currentProgressSubjectProxy,
-									self._overallProgressSubjectProxy ] )
+					address=config.get('notification_server', 'interface'),
+					port=self._notificationServerPort,
+					subjects=[
+						self._statusSubject,
+						self._messageSubject,
+						self._serviceUrlSubject,
+						self._clientIdSubject,
+						self._actionProcessorInfoSubject,
+						self._opsiclientdInfoSubject,
+						self._detailSubjectProxy,
+						self._currentProgressSubjectProxy,
+						self._overallProgressSubjectProxy
+					]
+				)
+				self._notificationServer.daemon = True
 				self._notificationServer.start()
 				timeout = 0
 				while not self._notificationServer.isListening() and not self._notificationServer.errorOccurred():
@@ -208,20 +275,22 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				logger.notice(u"Notification server started")
 				error = None
 				break
-			except Exception, e:
+			except Exception as e:
 				error = forceUnicode(e)
 				logger.error(u"Failed to start notification server: %s" % error)
 				self._notificationServerPort += 1
+
 		if error:
 			raise Exception(u"Failed to start notification server: %s" % error)
 
 	def stopNotificationServer(self):
 		if not self._notificationServer:
 			return
+
 		try:
 			logger.info(u"Stopping notification server")
-			self._notificationServer.stop(stopReactor = False)
-		except Exception, e:
+			self._notificationServer.stop(stopReactor=False)
+		except Exception as e:
 			logger.logException(e)
 
 	def getConfigFromService(self):
@@ -236,7 +305,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			self.setStatusMessage(_(u"Got config from service"))
 			logger.notice(u"Reconfiguring event generators")
 			reconfigureEventGenerators()
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Failed to get config from service: %s" % forceUnicode(e))
 			raise
 
@@ -246,22 +315,22 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if not self.isConfigServiceConnected():
 				logger.warning(u"Cannot write log to service: not connected")
 				return
-			self.setStatusMessage( _(u"Writing log to service") )
-			f = codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace')
-			data = f.read()
+			self.setStatusMessage(_(u"Writing log to service"))
+
+			with codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace') as f:
+				data = f.read()
+
 			data += u"-------------------- submitted part of log file ends here, see the rest of log file on client --------------------\n"
-			f.close()
 			# Do not log jsonrpc request
 			logger.setFileLevel(LOG_WARNING)
 			self._configService.log_write('clientconnect', data.replace(u'\ufffd', u'?'), config.get('global', 'host_id'))
 			logger.setFileLevel(config.get('global', 'log_level'))
-		except Exception, e:
+		except Exception as e:
 			logger.setFileLevel(config.get('global', 'log_level'))
 			logger.error(u"Failed to write log to service: %s" % forceUnicode(e))
 			raise
 
 	def runCommandInSession(self, command, desktop=None, waitForProcessEnding=False, timeoutSeconds=0):
-
 		sessionId = self.getSessionId()
 
 		if not desktop or (forceUnicodeLower(desktop) == 'current'):
@@ -288,7 +357,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				break
 			except Exception, e:
 				logger.error(e)
-				if (e[0] == 233) and (sys.getwindowsversion()[0] == 5) and (sessionId != 0):
+				if RUNNING_ON_WINDOWS and (e[0] == 233) and (sys.getwindowsversion()[0] == 5) and (sessionId != 0):
 					# No process is on the other end
 					# Problem with pipe \\\\.\\Pipe\\TerminalServer\\SystemExecSrvr\\<sessionid>
 					# After logging off from a session other than 0 csrss.exe does not create this pipe or CreateRemoteProcessW is not able to read the pipe.
@@ -302,6 +371,19 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		return processId
 
 	def startNotifierApplication(self, command, desktop=None, notifierId=None):
+		"""
+		Starts the notifier application and returns the process id if possible.
+
+		:returns: Process ID of the notifier is start was successful. \
+None otherwise.
+		:returntype: int / None
+		"""
+		if RUNNING_ON_WINDOWS:
+			return self._startNotifierApplicationWindows(command, desktop, notifierId)
+		else:
+			return self._startNotifierApplicationPosix(command, notifierId)
+
+	def _startNotifierApplicationWindows(self, command, desktop=None, notifierId=None):
 		logger.notice(u"Starting notifier application in session '%s'" % self.getSessionId())
 		try:
 			pid = self.runCommandInSession(
@@ -309,17 +391,33 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				desktop = desktop, waitForProcessEnding = False)
 			time.sleep(3)
 			return pid
-		except Exception, e:
+		except Exception as e:
+			logger.error(u"Failed to start notifier application '%s': %s" % (command, e))
+
+	def _startNotifierApplicationPosix(self, command, notifierId=None):
+		"""
+		Starting the notifier application on POSIX systems.
+		"""
+		logger.notice(u"Starting notifier application in session '%s'" % self.getSessionId())
+		try:
+			pid = self.runCommandInSession(
+				# TODO: put the replacing into an command itself.
+				command=command.replace('%port%', forceUnicode(self._notificationServerPort)).replace('%id%', forceUnicode(notifierId)),
+				waitForProcessEnding=False
+			)
+			time.sleep(3)
+			return pid
+		except Exception as e:
 			logger.error(u"Failed to start notifier application '%s': %s" % (command, e))
 
 	def closeProcessWindows(self, processId):
 		try:
-			command = '%s "exit(); System.closeProcessWindows(processId = %s)"'	% (
-				config.get('opsiclientd_rpc', 'command'),
-				processId
+			command = '{command} "exit(); System.closeProcessWindows(processId={pid})"'.format(
+				command=config.get('opsiclientd_rpc', 'command'),
+				pid=processId
 			)
-		except Exception as e:
-			raise Exception(u"opsiclientd_rpc command not defined: %s" % forceUnicode(e))
+		except Exception as error:
+			raise Exception(u"opsiclientd_rpc command not defined: {0}".format(forceUnicode(error)))
 
 		self.runCommandInSession(command=command, waitForProcessEnding=False)
 
@@ -329,12 +427,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			actionProcessorLocalDir = config.get('action_processor', 'local_dir')
 			actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
 			actionProcessorLocalFile = actionProcessorLocalFile
-			info = System.getFileVersionInfo(actionProcessorLocalFile)
-			version = info.get('FileVersion', u'')
-			name = info.get('ProductName', u'')
-			logger.info(u"Action processor name '%s', version '%s'" % (name, version))
-			self._actionProcessorInfoSubject.setMessage("%s %s" % (name.encode('utf-8'), version.encode('utf-8')))
-		except Exception, e:
+
+			if RUNNING_ON_WINDOWS:
+				info = System.getFileVersionInfo(actionProcessorLocalFile)
+
+				version = info.get('FileVersion', u'')
+				name = info.get('ProductName', u'')
+				logger.info(u"Action processor name '%s', version '%s'" % (name, version))
+				self._actionProcessorInfoSubject.setMessage("%s %s" % (name.encode('utf-8'), version.encode('utf-8')))
+			else:
+				logger.info(u"Action processor: {filename}".format(filename=actionProcessorLocalFile))
+				self._actionProcessorInfoSubject.setMessage(u"{filename}".format(filename=os.path.basename(actionProcessorLocalFile)))
+		except Exception as e:
 			logger.error(u"Failed to set action processor info: %s" % forceUnicode(e))
 
 	def mountDepotShare(self, impersonation):
@@ -350,21 +454,23 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		logger.notice(u"Mounting depot share %s" %  config.get('depot_server', 'url'))
 		self.setStatusMessage(_(u"Mounting depot share %s") % config.get('depot_server', 'url'))
 
-		try:
-			depotHost = config.get('depot_server', 'url').split('/')[2]
-			System.setRegistryValue(
-				System.HKEY_LOCAL_MACHINE,
-				u"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\%s" % depotHost,
-				u"file", 1)
-			logger.info(u"Added depot '%s' to trusted domains" % depotHost)
-		except Exception, e:
-			logger.error(u"Failed to add depot to trusted domains: %s" % e)
+		if RUNNING_ON_WINDOWS:
+			try:
+				depotHost = config.get('depot_server', 'url').split('/')[2]
+				System.setRegistryValue(
+					System.HKEY_LOCAL_MACHINE,
+					u"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\%s" % depotHost,
+					u"file", 1)
+				logger.info(u"Added depot '%s' to trusted domains" % depotHost)
+			except Exception, e:
+				logger.error(u"Failed to add depot to trusted domains: %s" % e)
 
 		if impersonation:
 			System.mount(config.get('depot_server', 'url'), config.getDepotDrive())
 		else:
 			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
 			System.mount(config.get('depot_server', 'url'), config.getDepotDrive(), username = depotServerUsername, password = depotServerPassword)
+
 		self._depotShareMounted = True
 
 	def umountDepotShare(self):
@@ -386,12 +492,17 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		try:
 			mounted = False
 			if not config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
-				# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
-				# The new logon session has the same local identifier but uses different credentials for other network connections.
-				(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
-				impersonation = System.Impersonate(username = depotServerUsername, password = depotServerPassword)
-				impersonation.start(logonType = 'NEW_CREDENTIALS')
-				self.mountDepotShare(impersonation)
+				if RUNNING_ON_WINDOWS:
+					logger.debug("Mounting with impersonation.")
+					# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
+					# The new logon session has the same local identifier but uses different credentials for other network connections.
+					(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
+					impersonation = System.Impersonate(username=depotServerUsername, password=depotServerPassword)
+					impersonation.start(logonType='NEW_CREDENTIALS')
+					self.mountDepotShare(impersonation)
+				else:
+					logger.debug("Not on windows: mounting without impersonation.")
+					self.mountDepotShare(None)
 				mounted = True
 
 			actionProcessorFilename = config.get('action_processor', 'filename')
@@ -415,7 +526,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				)
 				logger.notice(u"Updating action processor from local cache '%s'" % actionProcessorRemoteDir)
 			else:
-
 				match = re.search('^smb://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
 				if not match:
 					raise Exception("Bad depot-URL '%s'" % config.get('depot_server', 'url'))
@@ -470,12 +580,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.info(u"Moving dir '%s' to '%s'" % (actionProcessorLocalTmpDir, actionProcessorLocalDir))
 			shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
 
-			logger.notice(u"Trying to set the right permissions for opsi-winst")
-			setaclcmd = os.path.join(config.get('global', 'base_dir'), 'utilities', 'setacl.exe')
-			winstdir = actionProcessorLocalDir.replace('\\\\','\\')
-			cmd = '"%s" -on "%s" -ot file -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y" -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"' \
-						% (setaclcmd, winstdir)
-			System.execute(cmd,shell=False)
+			if RUNNING_ON_WINDOWS:
+				logger.notice(u"Trying to set the right permissions for opsi-winst")
+				setaclcmd = os.path.join(config.get('global', 'base_dir'), 'utilities', 'setacl.exe')
+				winstdir = actionProcessorLocalDir.replace('\\\\', '\\')
+				cmd = '"%s" -on "%s" -ot file -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y" -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"' \
+							% (setaclcmd, winstdir)
+				System.execute(cmd, shell=False)
 
 			logger.notice(u'Local action processor successfully updated')
 
@@ -506,14 +617,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if mounted:
 				self.umountDepotShare()
 
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Failed to update action processor: %s" % forceUnicode(e))
-
-		if impersonation:
-			try:
-				impersonation.end()
-			except Exception, e:
-				logger.warning(e)
+		finally:
+			if impersonation:
+				try:
+					impersonation.end()
+				except Exception as e:
+					logger.warning(e)
 
 	def processUserLoginActions(self):
 		self.setStatusMessage(_(u"Processing login actions"))
@@ -522,10 +633,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				raise Exception(u"Not connected to config service")
 
 			productsByIdAndVersion = {}
-			for product in self._configService.product_getObjects(type = 'LocalbootProduct', userLoginScript = "*.*"):
-				if not productsByIdAndVersion.has_key(product.id):
+			for product in self._configService.product_getObjects(type='LocalbootProduct', userLoginScript="*.*"):
+				if product.id not in productsByIdAndVersion:
 					productsByIdAndVersion[product.id] = {}
-				if not productsByIdAndVersion[product.id].has_key(product.productVersion):
+				if product.productVersion not in productsByIdAndVersion[product.id]:
 					productsByIdAndVersion[product.id][product.productVersion] = {}
 				productsByIdAndVersion[product.id][product.productVersion][product.packageVersion] = product
 
@@ -560,8 +671,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 			logger.notice(u"User login scripts found, executing")
 			additionalParams = ''
-			#for userLoginScript in userLoginScripts:
-			#	additionalParams += ' "%s"' % userLoginScript
 			additionalParams = u'/usercontext %s' % self.event.eventInfo.get('User')
 			self.runActions(productIds, additionalParams)
 
@@ -577,8 +686,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			bootmode = ''
 			try:
 				bootmode = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\general", "bootmode")
-			except Exception, e:
-				logger.warning(u"Failed to get bootmode from registry: %s" % forceUnicode(e))
+			except Exception as error:
+				if RUNNING_ON_WINDOWS:
+					logger.warning(u"Failed to get bootmode from registry: %s" % forceUnicode(error))
 
 			if not self._configService:
 				raise Exception(u"Not connected to config service")
@@ -670,54 +780,63 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 	def runActions(self, productIds, additionalParams=''):
 		runActionsEventId = timeline.addEvent(
-			title         = u"Running actions",
-			description   = u"Running actions (%s)" % u", ".join(productIds),
-			category      = u"run_actions",
-			durationEvent = True)
+			title=u"Running actions",
+			description=u"Running actions (%s)" % u", ".join(productIds),
+			category=u"run_actions",
+			durationEvent=True
+		)
 		try:
-			config.selectDepotserver(configService = self._configService, event = self.event, productIds = productIds)
+			config.selectDepotserver(
+				configService=self._configService,
+				event=self.event,
+				productIds=productIds
+			)
 			if not additionalParams:
 				additionalParams = ''
 			if not self.event.getActionProcessorCommand():
 				raise Exception(u"No action processor command defined")
 
 			#TODO: Deactivating Trusted Installer Detection. Have to implemented in a better way in futur versions.
-			if self.event.eventConfig.getId() == 'gui_startup' and not state.get('user_logged_in', 0) and self.event.eventConfig.trustedInstallerCheck:
+			if self.event.eventConfig.getId() == 'gui_startup' and not state.get('user_logged_in', 0) and self.event.eventConfig.trustedInstallerDetection:
 				# check for Trusted Installer before Running Action Processor
 				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
 					logger.notice(u"Getting TrustedInstaller service configuration")
 					try:
 						# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3
-						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
-						logger.debug2(u">>> TrustedInstaller Service autmaticStartup and type: '%s' '%s'" % (automaticStartup,type(automaticStartup)))
-						if (automaticStartup == 2):
+						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection=False)
+						logger.debug2(u">>> TrustedInstaller Service autmaticStartup and type: '%s' '%s'" % (automaticStartup, type(automaticStartup)))
+						if automaticStartup == 2:
 							logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
-							self.setStatusMessage( _(u"Waiting for TrustedInstaller") )
+							self.setStatusMessage(_(u"Waiting for TrustedInstaller"))
 							waitEventId = timeline.addEvent(
-									title         = u"Waiting for TrustedInstaller",
-									description   = u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
-									category      = u"wait",
-									durationEvent = True)
+								title=u"Waiting for TrustedInstaller",
+								description=u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
+								category=u"wait",
+								durationEvent=True
+							)
+
 							while True:
 								time.sleep(3)
 								logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
-								automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection = False)
+								automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection=False)
 								if not (automaticStartup == 2):
 									break
-							timeline.setEventEnd(eventId = waitEventId)
-					except Exception, e:
+
+							timeline.setEventEnd(eventId=waitEventId)
+					except Exception as e:
 						logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
 
-			self.setStatusMessage( _(u"Starting actions") )
+			self.setStatusMessage(_(u"Starting actions"))
 
-			# Setting some registry values before starting action
-			# Mainly for action processor winst
-			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depoturl",   config.get('depot_server', 'url'))
-			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", config.getDepotDrive())
-			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configurl",   "<deprecated>")
-			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configdrive", "<deprecated>")
-			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsurl",    "<deprecated>")
-			System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsdrive",  "<deprecated>")
+			if RUNNING_ON_WINDOWS:
+				# Setting some registry values before starting action
+				# Mainly for action processor winst
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depoturl",   config.get('depot_server', 'url'))
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", config.getDepotDrive())
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configurl",   "<deprecated>")
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configdrive", "<deprecated>")
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsurl",    "<deprecated>")
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsdrive",  "<deprecated>")
 
 			# action processor desktop can be one of current / winlogon / default
 			desktop = self.event.eventConfig.actionProcessorDesktop
@@ -733,12 +852,16 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				# Default desktop is winlogon
 				desktop = u'winlogon'
 
-
-			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
+			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
 
 			# Update action processor
 			if self.event.eventConfig.updateActionProcessor:
-				self.updateActionProcessor()
+				if RUNNING_ON_WINDOWS:
+					# Currently we do the updating of the action
+					# processor on Windows. For Linux we yet have to decide
+					# how we want to handle this process.
+					# TODO: figure out how handling on Linux is done.
+					self.updateActionProcessor()
 
 			# Run action processor
 			serviceSession = u'none'
@@ -757,7 +880,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 			createEnvironment = config.get('action_processor', 'create_environment')
 
-
 			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
 			actionProcessorCommand = actionProcessorCommand.replace('%service_url%', self._configServiceUrl)
 			actionProcessorCommand = actionProcessorCommand.replace('%service_session%', serviceSession)
@@ -765,15 +887,27 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			actionProcessorCommand += u' %s' % additionalParams
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 
-			command = u'"%global.base_dir%\\action_processor_starter.exe" ' \
-				+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
-				+ u'"%global.log_file%" "%global.log_level%" ' \
-				+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
-				+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
-				+ u'"' + unicode(self.getSessionId()) + u'" "' + desktop + '" ' \
-				+ u'"' + actionProcessorCommand + u'" ' + unicode(self.event.eventConfig.actionProcessorTimeout) + ' ' \
-				+ u'"' + actionProcessorUserName + u'" "' + actionProcessorUserPassword + '" ' \
-				+ unicode(createEnvironment).lower()
+			if RUNNING_ON_WINDOWS:
+				# TODO: string building like this is just awful. Improve it!
+				command = u'"%global.base_dir%\\action_processor_starter.exe" ' \
+					+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
+					+ u'"%global.log_file%" "%global.log_level%" ' \
+					+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
+					+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
+					+ u'"' + unicode(self.getSessionId()) + u'" "' + desktop + '" ' \
+					+ u'"' + actionProcessorCommand + u'" ' + unicode(self.event.eventConfig.actionProcessorTimeout) + ' ' \
+					+ u'"' + actionProcessorUserName + u'" "' + actionProcessorUserPassword + '" ' \
+					+ unicode(createEnvironment).lower()
+			else:
+				try:
+					oss = System.which('opsiscriptstarter')
+				except Exception:
+					logger.warning(
+						u"Failed to find executable for 'opsiscriptstarter'. "
+						u"Using fallback.")
+					oss = '/usr/bin/opsiscriptstarter'
+
+				command = "{oss} --nogui".format(oss=oss)
 
 			command = config.replace(command)
 
@@ -782,8 +916,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					% (self.event.eventConfig.preActionProcessorCommand, self.getSessionId(), desktop))
 				self.runCommandInSession(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = True)
 
-			logger.notice(u"Starting action processor in session '%s' on desktop '%s'" % (self.getSessionId(), desktop))
-			self.runCommandInSession(command = command, desktop = desktop, waitForProcessEnding = True)
+			if RUNNING_ON_WINDOWS:
+				changeDirectory = noop
+			else:
+				changeDirectory = cd
+
+			with changeDirectory('/'):
+				logger.notice(u"Starting action processor in session '%s' on desktop '%s'" % (self.getSessionId(), desktop))
+				self.runCommandInSession(
+					command=command,
+					desktop=desktop,
+					waitForProcessEnding=True
+				)
 
 			if self.event.eventConfig.postActionProcessorCommand:
 				logger.notice(u"Starting post action processor command '%s' in session '%s' on desktop '%s'" \
@@ -802,6 +946,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.debug(u"Updating environment")
 			hostname = os.environ['COMPUTERNAME']
 			(homeDrive, homeDir) = os.environ['USERPROFILE'].split('\\')[0:2]
+			# TODO: is this correct?
+			username = config.get('global', 'username')
 			# TODO: Anwendungsdaten
 			os.environ['APPDATA']     = '%s\\%s\\%s\\Anwendungsdaten' % (homeDrive, homeDir, username)
 			os.environ['HOMEDRIVE']   = homeDrive
@@ -931,7 +1077,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 	def processShutdownRequests(self):
 		try:
-
 			shutdown = self.isShutdownRequested()
 			reboot   = self.isRebootRequested()
 			if reboot or shutdown:
@@ -1077,33 +1222,34 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.logException(e)
 
 	def inWorkingWindow(self):
+		def getRelativeDatetime(timestr):
+			hour, minute = timestr.split(":")
+			return dt.today().replace(
+				hour=int(hour),
+				minute=int(minute),
+				second=0,
+				microsecond=0
+			)
+
 		try:
 			starttime, endtime = self.event.eventConfig.workingWindow.split("-")
-			s_hour, s_minute = starttime.split(":")
-			e_hour, e_minute = endtime.split(":")
+			start = getRelativeDatetime(starttime)
+			end = getRelativeDatetime(endtime)
+
 			now = dt.now()
-			logger.notice("We have now: {0}".format(now))
-			start = dt.today().replace(
-						hour=int(s_hour),
-						minute=int(s_minute),
-						second=0,
-						microsecond=0)
-			end = dt.today().replace(
-						hour=int(e_hour),
-						minute=int(e_minute),
-						second=0,
-						microsecond=0)
+			logger.info("Current time: {0}".format(now))
+
 			if now < start:
 				start = start - timedelta(days=1)
 			elif end < start:
 				end = end + timedelta(days=1)
 
+			logger.info("Working Window from {0} until {1}".format(start, end))
 			if start < now < end:
-				logger.notice("Working Window configuration starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
-				logger.notice("We are in the configured working window")
+				logger.info("We are in the configured working window")
 				return True
 			else:
-				logger.notice("We are not in the configured working window, stopping Event")
+				logger.info("We are not in the configured working window")
 				return False
 		except Exception as e:
 			logger.warning("Working Window processing failed: starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
@@ -1115,13 +1261,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		try:
 			if self.event.eventConfig.workingWindow:
 				if not self.inWorkingWindow():
+					logger.notice("We are not in the configured working window, stopping Event")
 					return
 			logger.notice(u"============= EventProcessingThread for occurrcence of event '%s' started =============" % self.event.eventConfig.getId())
 			timelineEventId = timeline.addEvent(
-				title         = u"Processing event %s" % self.event.eventConfig.getName(),
-				description   = u"EventProcessingThread for occurrcence of event '%s' started" % self.event.eventConfig.getId(),
-				category      = u"event_processing",
-				durationEvent = True)
+				title=u"Processing event %s" % self.event.eventConfig.getName(),
+				description=u"EventProcessingThread for occurrcence of event '%s' started" % self.event.eventConfig.getId(),
+				category=u"event_processing",
+				durationEvent=True
+			)
 			self.running = True
 			self.actionCancelled = False
 			self.waitCancelled = False
@@ -1226,13 +1374,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if self.event.eventConfig.writeLogToService:
 					try:
 						self.writeLogToService()
-					except Exception, e:
-						logger.logException(e)
+					except Exception as error:
+						logger.logException(error)
 
 				try:
 					self.disconnectConfigService()
-				except Exception, e:
-					logger.logException(e)
+				except Exception as error:
+					logger.logException(error)
 
 				config.setTemporaryConfigServiceUrls([])
 
@@ -1269,10 +1417,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.error(u"Failed to process event %s: %s" % (self.event, forceUnicode(e)))
 			logger.logException(e)
 			timeline.addEvent(
-				title       = u"Failed to process event %s" % self.event.eventConfig.getName(),
-				description = u"Failed to process event %s: %s" % (self.event, forceUnicode(e)),
-				category    = u"event_processing",
-				isError     = True)
+				title=u"Failed to process event %s" % self.event.eventConfig.getName(),
+				description=u"Failed to process event %s: %s" % (self.event, forceUnicode(e)),
+				category=u"event_processing",
+				isError=True
+			)
 			self.opsiclientd.setBlockLogin(False)
 
 		self.running = False

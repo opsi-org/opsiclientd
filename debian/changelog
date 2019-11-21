@@ -1,3 +1,9 @@
+opsiclientd (4.1.2) stable; urgency=medium
+
+  * TrustedInstaller-Detection now configurable.
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Fri, 02 Aug 2019 14:40:14 +0200
+
 opsiclientd (4.1.1) stable; urgency=medium
 
   [ Niko Wenselowski ]
@@ -45,6 +51,19 @@ opsiclientd (4.0.94) stable; urgency=medium
   * Chrome-Support for timeline (info.html from the client-webserice)
 
  -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 04 Dec 2018 16:34:59 +0100
+
+opsiclientd (4.0.94-linux) testing; urgency=medium
+
+  * If sys.getfilesystemencoding returns None we change the value to the
+    default encoding.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 14 Aug 2018 16:00:21 +0200
+
+opsiclientd (4.0.93.1-linux) testing; urgency=medium
+
+  * Change to / during the execution of the action processor.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 14 Aug 2018 16:00:21 +0200
 
 opsiclientd (4.0.93) stable; urgency=medium
 
@@ -160,6 +179,12 @@ opsiclientd (4.0.78) stable; urgency=low
   * WAN/VPN: Workarround timing problem while network reconnect
 
  -- Erol Ueluekmen <e.ueluekmen@uib.de>  Tue, 29 Jul 2014 01:19:04 +0100
+
+opsiclientd (4.0.77-1) UNRELEASED; urgency=low
+
+  * Initial linux release.
+
+ -- Niko Wenselowski <n.wenselowski@uib.de>  Tue, 19 Sep 2013 12:28:25 +0200
 
 opsiclientd (4.0.77) stable; urgency=low
 

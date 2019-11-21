@@ -1,10 +1,8 @@
-#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
-
-import ocdlib.Events as Events
 import ocdlib.ControlServer as OCS
+from ocdlib.Events.Utilities.Configs import getEventConfigs
+from ocdlib.Events.Utilities.Generators import createEventGenerators
 
 import pytest
 
@@ -18,8 +16,8 @@ def preparedConfig(config, configFile):
 def testFiringEvent(preparedConfig):
 	preparedConfig.readConfigFile()
 
-	Events.createEventGenerators()
-	Events.getEventConfigs()
+	createEventGenerators()
+	getEventConfigs()
 
 	controlServer = OCS.OpsiclientdRpcInterface(None)
 	controlServer.fireEvent('on_demand')
@@ -33,13 +31,12 @@ def testFiringUnknownEventRaisesError(preparedConfig):
 		controlServer.fireEvent('foobar')
 
 
-@pytest.mark.parametrize("on_windows", [os.name == 'nt'])
-def testGUIStartupEventOnlyOnWindows(preparedConfig, on_windows):
+def testGUIStartupEventOnlyOnWindows(preparedConfig, onWindows):
 	preparedConfig.readConfigFile()
 
-	Events.createEventGenerators()
-	configs = Events.getEventConfigs()
+	createEventGenerators()
+	configs = getEventConfigs()
 
 	assert configs
-	if on_windows:
+	if onWindows:
 		assert 'gui_startup' in configs

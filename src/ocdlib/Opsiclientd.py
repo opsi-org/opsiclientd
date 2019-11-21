@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # opsiclientd is part of the desktop management solution opsi
@@ -17,8 +18,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-The opsiclientd itself.
-This is where all the parts come together.
+Basic opsiclientd implementation. This is abstract in some parts that
+should be overridden in the concrete implementation for an OS.
 
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
@@ -29,8 +30,13 @@ This is where all the parts come together.
 
 import os
 import sys
+import threading
+import time
+from contextlib import contextmanager
 
-from twisted.internet import reactor
+# Import the ControlServer first because this module installs
+# the tornado-bridge for twisted.
+from ocdlib.ControlServer import ControlServer
 
 from OPSI import System
 from OPSI.Logger import Logger
@@ -39,22 +45,38 @@ from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 
 from ocdlib import __version__
-from ocdlib.EventProcessing import EventProcessingThread
-from ocdlib.Events import *
+from ocdlib.Config import Config, getLogFormat
 from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
-from ocdlib.ControlServer import ControlServer
+from ocdlib.Events.Basic import EventListener
+from ocdlib.Events.DaemonShutdown import DaemonShutdownEventGenerator
+from ocdlib.Events.DaemonStartup import DaemonStartupEventGenerator
+from ocdlib.Events.Panic import PanicEvent
+from ocdlib.Events.Utilities.Factories import EventGeneratorFactory
+from ocdlib.Events.Utilities.Generators import createEventGenerators, getEventGenerators
+from ocdlib.EventProcessing import EventProcessingThread
 from ocdlib.Localization import _, setLocaleDir
-from ocdlib.Config import getLogFormat, Config
+from ocdlib.State import State
 from ocdlib.Timeline import Timeline
+from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
+
+# This is at the end to make sure that the tornado-bridge for twisted
+# is installed once we reach this.
+from twisted.internet import reactor
+from tornado.ioloop import IOLoop
 
 try:
 	from ocdlibnonfree import __fullversion__
-except Exception:
+except ImportError:
 	__fullversion__ = False
+
+if RUNNING_ON_WINDOWS:
+	from ocdlib.Events.Windows.GUIStartup import (
+		GUIStartupEventConfig, GUIStartupEventGenerator)
 
 logger = Logger()
 config = Config()
 timeline = Timeline()
+state = State()
 
 
 class Opsiclientd(EventListener, threading.Thread):
@@ -86,48 +108,56 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		self._blockLoginEventId = None
 
+		self._stopEvent = threading.Event()
+		self._stopEvent.clear()
+
 	def setBlockLogin(self, blockLogin):
 		self._blockLogin = forceBool(blockLogin)
 		logger.notice(u"Block login now set to '%s'" % self._blockLogin)
 
-		if (self._blockLogin):
+		if self._blockLogin:
 			if not self._blockLoginEventId:
 				self._blockLoginEventId = timeline.addEvent(
-					title         = u"Blocking login",
-					description   = u"User login blocked",
-					category      = u"block_login",
-					durationEvent = True)
+					title=u"Blocking login",
+					description=u"User login blocked",
+					category=u"block_login",
+					durationEvent=True
+				)
+
 			if not self._blockLoginNotifierPid and config.get('global', 'block_login_notifier'):
-				logger.info(u"Starting block login notifier app")
-				sessionId = System.getActiveConsoleSessionId()
-				while True:
-					try:
-						self._blockLoginNotifierPid = System.runCommandInSession(
-								command = config.get('global', 'block_login_notifier'),
-								sessionId = sessionId,
-								desktop = 'winlogon',
-								waitForProcessEnding = False)[2]
-						break
-					except Exception, e:
-						logger.error(e)
-						if (e[0] == 233) and (sys.getwindowsversion()[0] == 5) and (sessionId != 0):
-							# No process is on the other end
-							# Problem with pipe \\\\.\\Pipe\\TerminalServer\\SystemExecSrvr\\<sessionid>
-							# After logging off from a session other than 0 csrss.exe does not create this pipe or CreateRemoteProcessW is not able to read the pipe.
-							logger.info(u"Retrying to run command in session 0")
-							sessionId = 0
-						else:
-							logger.error(u"Failed to start block login notifier app: %s" % forceUnicode(e))
+				# TODO: System.getActiveConsoleSessionId() is missing on Linux
+				if RUNNING_ON_WINDOWS:
+					logger.info(u"Starting block login notifier app")
+					sessionId = System.getActiveConsoleSessionId()
+					while True:
+						try:
+							self._blockLoginNotifierPid = System.runCommandInSession(
+									command=config.get('global', 'block_login_notifier'),
+									sessionId=sessionId,
+									desktop='winlogon',
+									waitForProcessEnding=False)[2]
 							break
+						except Exception as e:
+							logger.error(e)
+							if e[0] == 233 and sys.getwindowsversion()[0] == 5 and sessionId != 0:
+								# No process is on the other end
+								# Problem with pipe \\\\.\\Pipe\\TerminalServer\\SystemExecSrvr\\<sessionid>
+								# After logging off from a session other than 0 csrss.exe does not create this pipe or CreateRemoteProcessW is not able to read the pipe.
+								logger.info(u"Retrying to run command in session 0")
+								sessionId = 0
+							else:
+								logger.error(u"Failed to start block login notifier app: %s" % forceUnicode(e))
+								break
 		else:
 			if self._blockLoginEventId:
-				timeline.setEventEnd(eventId = self._blockLoginEventId)
+				timeline.setEventEnd(eventId=self._blockLoginEventId)
 				self._blockLoginEventId = None
-			if (self._blockLoginNotifierPid):
+
+			if self._blockLoginNotifierPid:
 				try:
 					logger.info(u"Terminating block login notifier app (pid %s)" % self._blockLoginNotifierPid)
-					System.terminateProcess(processId = self._blockLoginNotifierPid)
-				except Exception, e:
+					System.terminateProcess(processId=self._blockLoginNotifierPid)
+				except Exception as e:
 					logger.warning(u"Failed to terminate block login notifier app: %s" % forceUnicode(e))
 				self._blockLoginNotifierPid = None
 
@@ -135,44 +165,24 @@ class Opsiclientd(EventListener, threading.Thread):
 		return self._running
 
 	def waitForGUI(self, timeout=None):
-		if not timeout:
-			timeout = None
+		waiter = WaitForGUI()
+		waiter.wait(timeout or None)
 
-		class WaitForGUI(EventListener):
-			def __init__(self):
-				self._guiStarted = threading.Event()
-				ec = GUIStartupEventConfig("wait_for_gui")
-				eventGenerator = EventGeneratorFactory(ec)
-				eventGenerator.addEventConfig(ec)
-				eventGenerator.addEventListener(self)
-				eventGenerator.start()
-
-			def processEvent(self, event):
-				logger.info(u"GUI started")
-				self._guiStarted.set()
-
-			def wait(self, timeout=None):
-				self._guiStarted.wait(timeout)
-				if not self._guiStarted.isSet():
-					logger.warning(u"Timed out after %d seconds while waiting for GUI" % timeout)
-
-		WaitForGUI().wait(timeout)
-
-	def createActionProcessorUser(self, recreate = True):
+	def createActionProcessorUser(self, recreate=True):
 		if not config.get('action_processor', 'create_user'):
 			return
 
 		runAsUser = config.get('action_processor', 'run_as_user')
-		if (runAsUser.lower() == 'system'):
+		if runAsUser.lower() == 'system':
 			self._actionProcessorUserName = u''
 			self._actionProcessorUserPassword = u''
 			return
 
-		if (runAsUser.find('\\') != -1):
+		if '\\' in runAsUser:
 			logger.warning(u"Ignoring domain part of user to run action processor '%s'" % runAsUser)
 			runAsUser = runAsUser.split('\\', -1)
 
-		if not recreate and self._actionProcessorUserName and self._actionProcessorUserPassword and System.existsUser(username = runAsUser):
+		if not recreate and self._actionProcessorUserName and self._actionProcessorUserPassword and System.existsUser(username=runAsUser):
 			return
 
 		self._actionProcessorUserName = runAsUser
@@ -181,36 +191,152 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._actionProcessorUserPassword = u'$!?' + unicode(randomString(16)) + u'!/%'
 		logger.addConfidentialString(self._actionProcessorUserPassword)
 
-		if System.existsUser(username = runAsUser):
-			System.deleteUser(username = runAsUser)
-		System.createUser(username = runAsUser, password = self._actionProcessorUserPassword, groups = [ System.getAdminGroupName() ])
+		if System.existsUser(username=runAsUser):
+			System.deleteUser(username=runAsUser)
+		System.createUser(username=runAsUser, password=self._actionProcessorUserPassword, groups=[System.getAdminGroupName()])
 
 	def deleteActionProcessorUser(self):
 		if not config.get('action_processor', 'delete_user'):
 			return
+
 		if not self._actionProcessorUserName:
 			return
-		if not System.existsUser(username = self._actionProcessorUserName):
+
+		if not System.existsUser(username=self._actionProcessorUserName):
 			return
+
 		logger.notice(u"Deleting local user '%s'" % self._actionProcessorUserName)
-		#timeline.addEvent(title = u"Deleting local user '%s'" % self._actionProcessorUserName, description = u'', category = u'system')
-		System.deleteUser(username = self._actionProcessorUserName)
+		System.deleteUser(username=self._actionProcessorUserName)
 		self._actionProcessorUserName = u''
 		self._actionProcessorUserPassword = u''
 
 	def run(self):
 		self._running = True
-		self._stopped = False
 		self._opsiclientdRunningEventId = None
 
 		config.readConfigFile()
 		setLocaleDir(config.get('global', 'locale_dir'))
 
-		#Needed helper-exe for NT5 x64 to get Sessioninformation (WindowsAPIBug)
+		# Needed helper-exe for NT5 x64 to get Sessioninformation (WindowsAPIBug)
 		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\sessionhelper\getActiveSessionIds.exe')
 
+		@contextmanager
+		def getControlPipe():
+			logger.notice(u"Starting control pipe")
+			try:
+				controlPipe = ControlPipeFactory(OpsiclientdRpcPipeInterface(self))
+				controlPipe.daemon = True
+				controlPipe.start()
+				logger.notice(u"Control pipe started")
+				yield
+			except Exception as e:
+				logger.error(u"Failed to start control pipe: %s" % forceUnicode(e))
+				raise
+			finally:
+				logger.info(u"Stopping control pipe")
+				try:
+					controlPipe.stop()
+					controlPipe.join(2)
+				except (NameError, RuntimeError) as stopError:
+					logger.debug(u"Stopping controlPipe failed: {0}".format(stopError))
+
+		@contextmanager
+		def getControlServer():
+			logger.notice(u"Starting control server")
+			try:
+				controlServer = ControlServer(
+					opsiclientd=self,
+					httpsPort=config.get('control_server', 'port'),
+					sslServerKeyFile=config.get('control_server', 'ssl_server_key_file'),
+					sslServerCertFile=config.get('control_server', 'ssl_server_cert_file'),
+					staticDir=config.get('control_server', 'static_dir')
+				)
+				logger.debug("Current control server: {0}".format(controlServer))
+				controlServer.start()
+				logger.notice(u"Control server started")
+
+				self._stopEvent.wait(1)
+				if self._stopEvent.is_set():
+					# Probably a failure during binding to port.
+					raise RuntimeError("Received stop signal.")
+
+				yield
+			except Exception as e:
+				logger.error(u"Failed to start control server: {0}".format(forceUnicode(e)))
+				raise e
+			finally:
+				logger.info(u"Stopping control server")
+				try:
+					controlServer.stop()
+					controlServer.join(2)
+				except (NameError, RuntimeError) as stopError:
+					logger.debug(u"Stopping controlServer failed: {0}".format(stopError))
+
+		@contextmanager
+		def getCacheService():
+			try:
+				from ocdlibnonfree.CacheService import CacheService
+				logger.notice(u"Starting cache service")
+				try:
+					cacheService = CacheService(opsiclientd=self)
+					cacheService.start()
+					logger.notice(u"Cache service started")
+					yield cacheService
+				except Exception as e:
+					logger.error(u"Failed to start cache service: %s" % forceUnicode(e))
+					raise
+				finally:
+					logger.info(u"Stopping cache service")
+					try:
+						cacheService.stop()
+						cacheService.join(2)
+					except (NameError, RuntimeError) as stopError:
+						logger.debug(u"Stopping cache service failed: {0}".format(stopError))
+			except ImportError:
+				yield None
+			except Exception as e:
+				logger.notice(u"Cache service not started: %s" % e)
+
+		@contextmanager
+		def getEventGeneratorContext():
+			logger.debug("Creating event generators")
+			createEventGenerators()
+
+			for eventGenerator in getEventGenerators():
+				eventGenerator.addEventListener(self)
+				eventGenerator.start()
+				logger.notice(u"Event generator '%s' started" % eventGenerator)
+
+			try:
+				yield
+			finally:
+				for eventGenerator in getEventGenerators():
+					logger.info(u"Stopping event generator %s" % eventGenerator)
+					eventGenerator.stop()
+					eventGenerator.join(2)
+
+		@contextmanager
+		def getDaemonLoopingContext():
+			with getEventGeneratorContext():
+				for eventGenerator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
+					eventGenerator.createAndFireEvent()
+
+				if RUNNING_ON_WINDOWS and getEventGenerators(generatorClass=GUIStartupEventGenerator):
+					# Wait until gui starts up
+					logger.notice(u"Waiting for gui startup (timeout: %d seconds)" % config.get('global', 'wait_for_gui_timeout'))
+					self.waitForGUI(timeout=config.get('global', 'wait_for_gui_timeout'))
+					logger.notice(u"Done waiting for GUI")
+
+					# Wait some more seconds for events to fire
+					time.sleep(5)
+
+				try:
+					yield
+				finally:
+					for eventGenerator in getEventGenerators(generatorClass=DaemonShutdownEventGenerator):
+						eventGenerator.createAndFireEvent()
+
 		try:
-			eventTitle = u''
 			if __fullversion__:
 				eventTitle = u"Opsiclientd version: %s (full) running" % __version__
 				logger.essential(u"Opsiclientd version: %s (full)" % __version__)
@@ -226,136 +352,71 @@ class Opsiclientd(EventListener, threading.Thread):
 
 			self.setBlockLogin(True)
 
-			class ReactorThread(threading.Thread):
-				def run(self):
-					logger.notice(u"Starting reactor")
-					reactor.run(installSignalHandlers=0)
-			ReactorThread().start()
-			timeout = 0
-			while not reactor.running:
-				if (timeout >= 10):
-					raise Exception(u"Timed out after %d seconds while waiting for reactor to start" % timeout)
-				logger.debug(u"Waiting for reactor")
-				time.sleep(1)
-				timeout += 1
+			self._opsiclientdRunningEventId = timeline.addEvent(
+				title=eventTitle,
+				description=eventDescription,
+				category=u'opsiclientd_running',
+				durationEvent=True
+			)
 
-			self._opsiclientdRunningEventId = timeline.addEvent(title = eventTitle, description = eventDescription, category = u'opsiclientd_running', durationEvent = True)
+			with getControlPipe():
+				with getControlServer():
+					with getCacheService() as cacheService:
+						self._cacheService = cacheService
 
-			logger.notice(u"Starting control pipe")
-			try:
-				self._controlPipe = ControlPipeFactory(OpsiclientdRpcPipeInterface(self))
-				self._controlPipe.start()
-				logger.notice(u"Control pipe started")
-			except Exception, e:
-				logger.error(u"Failed to start control pipe: %s" % forceUnicode(e))
-				raise
+						with getDaemonLoopingContext():
+							if not self._eventProcessingThreads:
+								logger.notice(u"No events processing, unblocking login")
+								self.setBlockLogin(False)
 
-			logger.notice(u"Starting control server")
-			try:
-				self._controlServer = ControlServer(
-								opsiclientd        = self,
-								httpsPort          = config.get('control_server', 'port'),
-								sslServerKeyFile   = config.get('control_server', 'ssl_server_key_file'),
-								sslServerCertFile  = config.get('control_server', 'ssl_server_cert_file'),
-								staticDir          = config.get('control_server', 'static_dir') )
-				self._controlServer.start()
-				logger.notice(u"Control server started")
-			except Exception, e:
-				logger.error(u"Failed to start control server: %s" % forceUnicode(e))
-				raise
+							try:
+								while not self._stopEvent.is_set():
+									self._stopEvent.wait(1)
+							finally:
+								logger.notice(u"opsiclientd is going down")
 
-			self._cacheService = None
-			try:
-				from ocdlibnonfree.CacheService import CacheService
-				logger.notice(u"Starting cache service")
-				try:
-					self._cacheService = CacheService(opsiclientd = self)
-					self._cacheService.start()
-					logger.notice(u"Cache service started")
-				except Exception, e:
-					logger.error(u"Failed to start cache service: %s" % forceUnicode(e))
-					raise
-			except Exception, e:
-				logger.notice(u"Cache service not started: %s" % e)
+								for ept in self._eventProcessingThreads:
+									logger.info(u"Waiting for event processing thread %s" % ept)
+									ept.join(5)
 
-			# Create event generators
-			createEventGenerators()
-
-			for eventGenerator in getEventGenerators():
-				eventGenerator.addEventListener(self)
-				eventGenerator.start()
-				logger.notice(u"Event generator '%s' started" % eventGenerator)
-
-			for eventGenerator in getEventGenerators(generatorClass = DaemonStartupEventGenerator):
-				eventGenerator.createAndFireEvent()
-
-			if getEventGenerators(generatorClass = GUIStartupEventGenerator):
-				# Wait until gui starts up
-				logger.notice(u"Waiting for gui startup (timeout: %d seconds)" % config.get('global', 'wait_for_gui_timeout'))
-				self.waitForGUI(timeout = config.get('global', 'wait_for_gui_timeout'))
-				logger.notice(u"Done waiting for GUI")
-
-				# Wait some more seconds for events to fire
-				time.sleep(5)
-
-			if not self._eventProcessingThreads:
-				logger.notice(u"No events processing, unblocking login")
-				self.setBlockLogin(False)
-
-			while not self._stopped:
-				time.sleep(1)
-
-			for eventGenerator in getEventGenerators(generatorClass = DaemonShutdownEventGenerator):
-				eventGenerator.createAndFireEvent()
-
-			logger.notice(u"opsiclientd is going down")
-
-			for eventGenerator in getEventGenerators():
-				logger.info(u"Stopping event generator %s" % eventGenerator)
-				eventGenerator.stop()
-				eventGenerator.join(2)
-
-			for ept in self._eventProcessingThreads:
-				logger.info(u"Waiting for event processing thread %s" % ept)
-				ept.join(5)
-
-			logger.info(u"Stopping cache service")
-			if self._cacheService:
-				self._cacheService.stop()
-				self._cacheService.join(2)
-
-			logger.info(u"Stopping control server")
-			if self._controlServer:
-				self._controlServer.stop()
-				self._controlServer.join(2)
-
-			logger.info(u"Stopping control pipe")
-			if self._controlPipe:
-				self._controlPipe.stop()
-				self._controlPipe.join(2)
-
-			logger.info(u"Stopping timeline")
-			timeline.stop()
+								if self._opsiclientdRunningEventId:
+									timeline.setEventEnd(self._opsiclientdRunningEventId)
+								logger.info(u"Stopping timeline")
+								timeline.stop()
+		except Exception as e:
+			logger.logException(e)
+			self.setBlockLogin(False)
+		finally:
+			self._running = False
 
 			if reactor and reactor.running:
 				logger.info(u"Stopping reactor")
-				reactor.stop()
-				while reactor.running:
+				reactor.fireSystemEvent('shutdown')
+				reactor.disconnectAll()
+				reactor.callFromThread(reactor.stop)
+
+				reactorStopTimeout = 60
+				for _unused in range(reactorStopTimeout):
+					if not reactor.running:
+						break
+
 					logger.debug(u"Waiting for reactor to stop")
 					time.sleep(1)
+				else:
+					logger.debug("Reactor still running after {0} seconds.".format(reactorStopTimeout))
+					logger.debug("Exiting anyway.")
 
-			logger.info(u"Exiting main thread")
+			logger.info(u"Stopping tornado IOLoop")
+			try:
+				IOLoop.current().stop()
+			except Exception as error:
+				logger.debug(u"Stopping IOLoop failed: {0}".format(error))
 
-		except Exception, e:
-			logger.logException(e)
-			self.setBlockLogin(False)
-
-		self._running = False
-		if self._opsiclientdRunningEventId:
-			timeline.setEventEnd(self._opsiclientdRunningEventId)
+			logger.info(u"Exiting opsiclientd thread")
 
 	def stop(self):
-		self._stopped = True
+		logger.notice(u"Stopping {0}...".format(self))
+		self._stopEvent.set()
 
 	def getCacheService(self):
 		if not self._cacheService:
@@ -365,55 +426,52 @@ class Opsiclientd(EventListener, threading.Thread):
 	def processEvent(self, event):
 		logger.notice(u"Processing event %s" % event)
 		eventProcessingThread = None
-		self._eventProcessingThreadsLock.acquire()
-		description = u"Event %s occurred\n" % event.eventConfig.getId()
-		description += u"Config:\n"
-		config = event.eventConfig.getConfig()
-		configKeys = config.keys()
-		configKeys.sort()
-		for configKey in configKeys:
-			description += u"%s: %s\n" % (configKey, config[configKey])
-		timeline.addEvent(title = u"Event %s" % event.eventConfig.getName(), description = description, category = u"event_occurrence")
-		try:
+		with self._eventProcessingThreadsLock:
+			description = u"Event %s occurred\n" % event.eventConfig.getId()
+			description += u"Config:\n"
+			config = event.eventConfig.getConfig()
+			configKeys = config.keys()
+			configKeys.sort()
+			for configKey in configKeys:
+				description += u"%s: %s\n" % (configKey, config[configKey])
+			timeline.addEvent(title=u"Event %s" % event.eventConfig.getName(), description=description, category=u"event_occurrence")
+
 			eventProcessingThread = EventProcessingThread(self, event)
 
 			# Always process panic events
 			if not isinstance(event, PanicEvent):
 				for ept in self._eventProcessingThreads:
-					if (event.eventConfig.actionType != 'login') and (ept.event.eventConfig.actionType != 'login'):
+					if event.eventConfig.actionType != 'login' and ept.event.eventConfig.actionType != 'login':
 						logger.notice(u"Already processing an other (non login) event: %s" % ept.event.eventConfig.getId())
 						return
-					if (event.eventConfig.actionType == 'login') and (ept.event.eventConfig.actionType == 'login'):
-						if (ept.getSessionId() == eventProcessingThread.getSessionId()):
-							logger.notice(u"Already processing login event '%s' in session %s" \
-									% (ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()))
-							self._eventProcessingThreadsLock.release()
-							return
-			self.createActionProcessorUser(recreate = False)
 
+					if event.eventConfig.actionType == 'login' and ept.event.eventConfig.actionType == 'login':
+						if ept.getSessionId() == eventProcessingThread.getSessionId():
+							logger.notice(u"Already processing login event '%s' in session %s"
+									% (ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()))
+							return
+			self.createActionProcessorUser(recreate=False)
 			self._eventProcessingThreads.append(eventProcessingThread)
-		finally:
-			self._eventProcessingThreadsLock.release()
 
 		try:
 			eventProcessingThread.start()
 			eventProcessingThread.join()
-			logger.notice(u"Done processing event '%s'" % event)
+			logger.notice(u"Done processing event {0!r}".format(event))
 		finally:
-			self._eventProcessingThreadsLock.acquire()
-			self._eventProcessingThreads.remove(eventProcessingThread)
-			try:
+			with self._eventProcessingThreadsLock:
+				self._eventProcessingThreads.remove(eventProcessingThread)
+
 				if not self._eventProcessingThreads:
-					self.deleteActionProcessorUser()
-			except Exception, e:
-				logger.warning(e)
-			self._eventProcessingThreadsLock.release()
+					try:
+						self.deleteActionProcessorUser()
+					except Exception as error:
+						logger.warning(error)
 
 	def getEventProcessingThread(self, sessionId):
 		logger.notice(u"DEBUG: %s " % self._eventProcessingThreads)
 		for ept in self._eventProcessingThreads:
 			logger.notice("DEBUG: %s " % ept.getSessionId())
-			if (int(ept.getSessionId()) == int(sessionId)):
+			if int(ept.getSessionId()) == int(sessionId):
 				return ept
 		raise Exception(u"Event processing thread for session %s not found" % sessionId)
 
@@ -426,12 +484,22 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		if sessionId is None:
 			sessionId = System.getActiveConsoleSessionId()
-		rpc = 'setCurrentActiveDesktopName("%s", System.getActiveDesktopName())' % sessionId
-		cmd = '%s "%s"' % (config.get('opsiclientd_rpc', 'command'), rpc)
+
+		rpc = 'setCurrentActiveDesktopName("{sessionId}", System.getActiveDesktopName())'.format(sessionId=sessionId)
+		cmd = "{rpc_processor} '{command}'".format(
+			rpc_processor=config.get('opsiclientd_rpc', 'command'),
+			command=rpc
+		)
 
 		try:
-			System.runCommandInSession(command = cmd, sessionId = sessionId, desktop = u"winlogon", waitForProcessEnding = True, timeoutSeconds = 60)
-		except Exception, e:
+			System.runCommandInSession(
+				command=cmd,
+				sessionId=sessionId,
+				desktop=u"winlogon",
+				waitForProcessEnding=True,
+				timeoutSeconds=60
+			)
+		except Exception as e:
 			logger.error(e)
 
 		desktop = self._currentActiveDesktopName.get(sessionId)
@@ -455,8 +523,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		cmd = '%s "%s"' % (config.get('opsiclientd_rpc', 'command'), rpc)
 
 		try:
-			System.runCommandInSession(command = cmd, sessionId = sessionId, desktop = desktop, waitForProcessEnding = True, timeoutSeconds = 60)
-		except Exception, e:
+			System.runCommandInSession(command=cmd, sessionId=sessionId, desktop=desktop, waitForProcessEnding=True, timeoutSeconds=60)
+		except Exception as e:
 			logger.error(e)
 
 	def systemShutdownInitiated(self):
@@ -512,36 +580,39 @@ class Opsiclientd(EventListener, threading.Thread):
 			self.hidePopup()
 
 			popupSubject = MessageSubject('message')
-			choiceSubject = ChoiceSubject(id = 'choice')
+			choiceSubject = ChoiceSubject(id='choice')
 			popupSubject.setMessage(message)
 
 			logger.notice(u"Starting popup message notification server on port %d" % port)
 			try:
 				self._popupNotificationServer = NotificationServer(
-								address  = "127.0.0.1",
-								port     = port,
-								subjects = [ popupSubject, choiceSubject ] )
+					address="127.0.0.1",
+					port=port,
+					subjects=[popupSubject, choiceSubject]
+				)
 				self._popupNotificationServer.start()
-			except Exception, e:
+			except Exception as e:
 				logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
 				raise
 
-			choiceSubject.setChoices([ _('Close') ])
-			choiceSubject.setCallbacks( [ self.popupCloseCallback ] )
+			choiceSubject.setChoices([_('Close')])
+			choiceSubject.setCallbacks([self.popupCloseCallback])
 
-			sessionIds = System.getActiveSessionIds(winApiBugCommand = self._winApiBugCommand)
-			if not sessionIds:
-				sessionIds = [ System.getActiveConsoleSessionId() ]
-			for sessionId in sessionIds:
-				logger.info(u"Starting popup message notifier app in session %d" % sessionId)
-				try:
-					System.runCommandInSession(
-						command = notifierCommand,
-						sessionId = sessionId,
-						desktop = self.getCurrentActiveDesktopName(sessionId),
-						waitForProcessEnding = False)
-				except Exception,e:
-					logger.error(u"Failed to start popup message notifier app in session %d: %s" % (sessionId, forceUnicode(e)))
+			if RUNNING_ON_WINDOWS:
+				sessionIds = System.getActiveSessionIds(winApiBugCommand=self._winApiBugCommand)
+				if not sessionIds:
+					sessionIds = [System.getActiveConsoleSessionId()]
+
+				for sessionId in sessionIds:
+					logger.info(u"Starting popup message notifier app in session %d" % sessionId)
+					try:
+						System.runCommandInSession(
+							command=notifierCommand,
+							sessionId=sessionId,
+							desktop=self.getCurrentActiveDesktopName(sessionId),
+							waitForProcessEnding=False)
+					except Exception as e:
+						logger.error(u"Failed to start popup message notifier app in session %d: %s" % (sessionId, forceUnicode(e)))
 		finally:
 			self._popupNotificationLock.release()
 
@@ -549,9 +620,28 @@ class Opsiclientd(EventListener, threading.Thread):
 		if self._popupNotificationServer:
 			try:
 				logger.info(u"Stopping popup message notification server")
-				self._popupNotificationServer.stop(stopReactor = False)
-			except Exception, e:
+				self._popupNotificationServer.stop(stopReactor=False)
+			except Exception as e:
 				logger.error(u"Failed to stop popup notification server: %s" % e)
 
 	def popupCloseCallback(self, choiceSubject):
 		self.hidePopup()
+
+
+class WaitForGUI(EventListener):
+	def __init__(self):
+		self._guiStarted = threading.Event()
+		ec = GUIStartupEventConfig("wait_for_gui")
+		eventGenerator = EventGeneratorFactory(ec)
+		eventGenerator.addEventConfig(ec)
+		eventGenerator.addEventListener(self)
+		eventGenerator.start()
+
+	def processEvent(self, event):
+		logger.info(u"GUI started")
+		self._guiStarted.set()
+
+	def wait(self, timeout=None):
+		self._guiStarted.wait(timeout)
+		if not self._guiStarted.isSet():
+			logger.warning(u"Timed out after %d seconds while waiting for GUI" % timeout)
