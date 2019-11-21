@@ -27,25 +27,26 @@ procedure calls
 :author: Erol Ueluekmen <e.ueluekmen@uib.de>
 :license: GNU Affero General Public License version 3
 """
-
 import codecs
 import os
 import re
 import shutil
+import sys
 import threading
 import time
 
-# Twisted imports
+import tornado.platform.twisted
+tornado.platform.twisted.install()  # Has to be above the reactor import.
 from twisted.internet import reactor
+from twisted.internet.error import CannotListenError
+from tornado.ioloop import IOLoop
 
-# OPSI imports
 from OPSI import System
 from OPSI.Backend.Backend import ConfigDataBackend
 from OPSI.Exceptions import OpsiAuthenticationError
 from OPSI.Logger import Logger
 from OPSI.Service import SSLContext, OpsiService
-from OPSI.Service.Worker import (WorkerOpsi, WorkerOpsiJsonRpc,
-	WorkerOpsiJsonInterface)
+from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface
 from OPSI.Service.Resource import (ResourceOpsi, ResourceOpsiJsonRpc,
 	ResourceOpsiJsonInterface, ResourceOpsiDAV)
 from OPSI.Types import forceBool, forceInt, forceUnicode
@@ -53,18 +54,17 @@ from OPSI.web2 import resource, stream, server, http, responsecode, http_headers
 from OPSI.web2.channel.http import HTTPFactory
 
 from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
-from ocdlib.Config import getLogFormat, Config
-from ocdlib.Events import eventGenerators
+from ocdlib.Config import Config, getLogFormat
+from ocdlib.Events.Utilities.Generators import getEventGenerator
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.State import State
 from ocdlib.SoftwareOnDemand import ResourceKioskJsonRpc
+from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
 from ocdlib.Timeline import Timeline
 
-RUNNING_ON_WINDOWS = (os.name == 'nt')
-
 if RUNNING_ON_WINDOWS:
-	import win32security
 	import win32net
+	import win32security
 
 config = Config()
 logger = Logger()
@@ -101,6 +101,16 @@ infoPage = u'''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 </body>
 </html>
 '''
+
+try:
+	fsencoding = sys.getfilesystemencoding()
+	if not fsencoding:
+		raise ValueError("getfilesystemencoding returned {!r}".format(fsencoding))
+except Exception as err:
+	logger.info("Problem getting filesystemencoding: {}", err)
+	defaultEncoding = sys.getdefaultencoding()
+	logger.notice("Patching filesystemencoding to be {!r}", defaultEncoding)
+	sys.getfilesystemencoding = lambda: defaultEncoding
 
 
 class WorkerOpsiclientd(WorkerOpsi):
@@ -165,7 +175,6 @@ class WorkerOpsiclientd(WorkerOpsi):
 				try:
 					# Hack to find and read the local-admin group and his members,
 					# that should also Work on french installations
-
 					admingroupsid = "S-1-5-32-544"
 					resume = 0
 					while 1:
@@ -182,7 +191,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 									for member in memberdata:
 										membersid = member.get("sid", "")
 										username, domain, type = win32security.LookupAccountSid(None, membersid)
-										if (self.session.user.lower() == username.lower()):
+										if self.session.user.lower() == username.lower():
 											# The LogonUser function will raise an Exception on logon failure
 											win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
 											# No exception raised => user authenticated
@@ -195,11 +204,12 @@ class WorkerOpsiclientd(WorkerOpsi):
 
 									if memberresume == 0:
 										break
+
 						if not resume:
 							break
 				except Exception:
 					# Standardway
-					if (self.session.user.lower() == 'administrator'):
+					if self.session.user.lower() == 'administrator':
 						# The LogonUser function will raise an Exception on logon failure
 						win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
 						# No exception raised => user authenticated
@@ -208,6 +218,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 			raise Exception(u"Invalid credentials")
 		except Exception as e:
 			raise OpsiAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
+
 		return result
 
 
@@ -360,8 +371,8 @@ class ControlServer(OpsiService, threading.Thread):
 		self._running = False
 		self._server = None
 		self._opsiclientdRpcInterface = OpsiclientdRpcInterface(self._opsiclientd)
-		logger.info(u"ControlServer initiated")
 
+		logger.info(u"ControlServer initiated")
 		self.authFailureCount = {}
 
 	def run(self):
@@ -370,19 +381,49 @@ class ControlServer(OpsiService, threading.Thread):
 			logger.info(u"creating root resource")
 			self.createRoot()
 			self._site = server.Site(self._root)
+
+			logger.debug('Creating SSLContext with the following values:')
+			logger.debug('\t-SSL Server Key File: {path}'.format(path=self._sslServerKeyFile))
+			if not os.path.exists(self._sslServerKeyFile):
+				logger.warning('The SSL server key file "{path}" is missing. '
+								'Please check your configuration.'.format(
+									path=self._sslServerKeyFile
+								)
+				)
+			logger.debug('\t-SSL Server Cert File: {path}'.format(path=self._sslServerCertFile))
+			if not os.path.exists(self._sslServerCertFile):
+				logger.warning('The SSL server certificate file "{path}" is '
+								'missing. Please check your '
+								'configuration.'.format(
+									path=self._sslServerCertFile
+								)
+				)
+
 			self._server = reactor.listenSSL(
 				self._httpsPort,
 				HTTPFactory(self._site),
 				SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
 			)
-			logger.notice(u"Control server is accepting HTTPS requests on port {:d}", self._httpsPort)
-			if not reactor.running:
-				reactor.run(installSignalHandlers=0)
+			logger.notice(u"Control server is accepting HTTPS requests on port %d" % self._httpsPort)
 
-		except Exception as e:
-			logger.logException(e)
-		logger.notice(u"Control server exiting")
-		self._running = False
+			if not reactor.running:
+				logger.debug(u"Reactor is not running. Starting.")
+				IOLoop.current().start()
+				logger.debug(u"Reactor run ended.")
+			else:
+				logger.debug(u"Reactor already running.")
+		except CannotListenError as err:
+			logger.critical(u"Listening on port {0} impossible: {1}".format(self._httpsPort, err))
+			logger.logException(err)
+			self._opsiclientd.stop()
+			raise err
+		except Exception as err:
+			logger.warning('ControlServer {1} caught error: {0}'.format(err, repr(self)))
+			logger.logException(err)
+			raise err
+		finally:
+			logger.notice(u"Control server exiting")
+			self._running = False
 
 	def stop(self):
 		if self._server:
@@ -410,6 +451,19 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root.putChild("rpcinterface", ResourceCacheServiceJsonInterface(self))
 		self._root.putChild("info.html", ResourceOpsiclientdInfo(self))
 		self._root.putChild("kiosk", ResourceKioskJsonRpc(self))
+
+	def __repr__(self):
+		return (
+			'<ControlServer(opsiclientd={opsiclientd}, httpsPort={port}, '
+			'sslServerKeyFile={keyFile}, sslServerCertFile={certFile}, '
+			'staticDir={staticDir})>'.format(
+				opsiclientd=self._opsiclientd,
+				port=self._httpsPort,
+				keyFile=self._sslServerKeyFile,
+				certFile=self._sslServerCertFile,
+				staticDir=self._staticDir
+			)
+		)
 
 
 class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
@@ -456,14 +510,13 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def readLog(self, logType='opsiclientd'):
 		logType = forceUnicode(logType)
-		if logType not in ('opsiclientd', ):
-			raise ValueError(u"Unknown log type {!r}".format(logType))
+		if logType != 'opsiclientd':
+			raise ValueError(u"Unknown log type '%s'" % logType)
 
 		logger.notice(u"rpc readLog: reading log of type {!r}", logType)
 
 		if logType == 'opsiclientd':
-			logFile = config.get('global', 'log_file')
-			with codecs.open(logFile, 'r', 'utf-8', 'replace') as log:
+			with codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace') as log:
 				return log.read()
 
 		return u""
@@ -568,12 +621,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		return uptime
 
 	def fireEvent(self, name):
-		name = forceUnicode(name)
-		try:
-			event = eventGenerators[name]
-		except KeyError:
-			raise ValueError(u"Event '%s' not in list of known events: %s" % (name, ', '.join(eventGenerators.keys())))
-
+		event = getEventGenerator(name)
 		logger.notice(u"Firing event '%s'" % name)
 		event.createAndFireEvent()
 

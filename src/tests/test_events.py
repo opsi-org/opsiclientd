@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import ocdlib.Events as Events
+from ocdlib.Events.Utilities.Configs import getEventConfigs
 
 
 def testGettingEventConfiguration(config, configFile):
@@ -12,7 +12,7 @@ def testGettingEventConfiguration(config, configFile):
 	config.set('global', 'config_file', configFile)
 	config.readConfigFile()
 
-	configs = Events.getEventConfigs()
+	configs = getEventConfigs()
 
 	assert configs.keys(), 'no event configurations read'
 	assert configs

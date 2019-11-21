@@ -17,7 +17,12 @@ def testGettingUnknownSectionFails(config):
         config.get('nothing', 'bla')
 
 
-def testConfigGetsFilledWithSystemDefaults(config):
+def testDefaultPathsExistPerOS(config):
+    assert config.WINDOWS_DEFAULT_PATHS
+    assert config.LINUX_DEFAULT_PATHS
+
+
+def testConfigGetsFilledWithSystemDefaults(config, onWindows):
     assert config.get('global', 'log_dir')
     assert config.get('global', 'state_file')
     assert config.get('global', 'timeline_db')
@@ -26,9 +31,15 @@ def testConfigGetsFilledWithSystemDefaults(config):
     assert config.get('cache_service', 'storage_dir')
 
     for section in ('log_dir', 'state_file', 'timeline_db', 'server_cert_dir'):
-        assert config.get('global', section).startswith('c:')
+        if onWindows:
+            assert config.get('global', section).startswith('c:')
+        else:
+            assert config.get('global', section).startswith('/')
 
-    assert config.get('cache_service', 'storage_dir').startswith('c:')
+    if onWindows:
+        assert config.get('cache_service', 'storage_dir').startswith('c:')
+    else:
+        assert config.get('cache_service', 'storage_dir').startswith('/')
 
 
 def testConfigGetsFilledWithSystemSpecificValues(config, onWindows):
@@ -36,15 +47,14 @@ def testConfigGetsFilledWithSystemSpecificValues(config, onWindows):
     assert config.get('global', 'server_cert_dir')
 
     assert config.get('cache_service', 'storage_dir')
-    if onWindows:  # Only filled during runtime
-        assert config.get('cache_service', 'extension_config_dir')
+    assert config.get('cache_service', 'extension_config_dir')
 
     assert config.get('global', 'config_file')
     assert config.get('global', 'state_file')
     assert config.get('global', 'timeline_db')
     assert config.get('global', 'log_dir')
 
-    if onWindows:  # Only filled during runtime
+    if onWindows:
         assert config.get('system', 'program_files_dir')
 
 

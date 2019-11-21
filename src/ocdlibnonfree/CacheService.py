@@ -9,7 +9,7 @@
 """
 ocdlibnonfree.CacheService
 
-@copyright: uib GmbH <info@uib.de>
+@copyright:	uib GmbH <info@uib.de>
 @author: Jan Schneider <j.schneider@uib.de>
 @author: Erol Ueluekmen <e.ueluekmen@uib.de>
 @author: Niko Wenselowski <n.wenselowski@uib.de>
@@ -30,20 +30,28 @@ from OPSI.Types import (
 from OPSI.Util import getPublicKey
 from OPSI.Util.File.Opsi import PackageContentFile
 from OPSI.Util.Repository import getRepository
-from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, RepositoryObserver
+from OPSI.Util.Repository import (
+	DepotToLocalDirectorySychronizer, RepositoryObserver)
 from OPSI import System
 from OPSI.Util.HTTP import urlsplit
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.BackendManager import BackendExtender
-from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker
+from OPSI.Backend.SQLite import (
+	SQLiteBackend, SQLiteObjectBackendModificationTracker)
 
 from ocdlib.Config import getLogFormat, Config
 from ocdlib.State import State
-from ocdlib.Events import SyncCompletedEventGenerator, getEventGenerators
+from ocdlib.Events.SyncCompleted import SyncCompletedEventGenerator
+from ocdlib.Events.Utilities import getEventGenerators
 from ocdlib.OpsiService import ServiceConnection
 from ocdlib.Timeline import Timeline
 
 from ocdlibnonfree.CacheBackend import ClientCacheBackend
+
+__all__ = [
+	'CacheService', 'ConfigCacheService', 'ConfigCacheServiceBackendExtension',
+	'ProductCacheService'
+]
 
 logger = Logger()
 config = Config()

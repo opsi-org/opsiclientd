@@ -10,13 +10,16 @@ from ocdlib.Config import ConfigImplementation
 @pytest.fixture
 def config():
 	testconfig = ConfigImplementation()
-	with mock.patch('ocdlib.Events.config', testconfig):
+	with mock.patch('ocdlib.Events.Utilities.Configs.config', testconfig):
 		yield testconfig
 
 
 @pytest.fixture
-def configFile():
-	return os.path.join(os.path.dirname(__file__), '..', 'windows', 'opsiclientd.conf')
+def configFile(onWindows):
+	if onWindows:
+		return os.path.join(os.path.dirname(__file__), '..', 'windows', 'opsiclientd.conf')
+	else:
+		return os.path.join(os.path.dirname(__file__), '..', 'linux', 'opsiclientd.conf')
 
 
 @pytest.fixture

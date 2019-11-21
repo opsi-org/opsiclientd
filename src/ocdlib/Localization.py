@@ -44,7 +44,7 @@ def getLanguage():
 
 
 def _(string):
-	if not translation:
+	if translation is None:
 		return string
 
 	return translation.ugettext(string)
