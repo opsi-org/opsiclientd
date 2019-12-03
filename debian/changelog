@@ -1,3 +1,9 @@
+opsiclientd (4.0.99) stable; urgency=medium
+
+  * New Build on latest python version.
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 04 Dec 2019 00:52:06 +0100
+
 opsiclientd (4.0.98) stable; urgency=medium
 
   * Event Working-Window Implementation.
