@@ -1129,9 +1129,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						minute=int(e_minute),
 						second=0,
 						microsecond=0)
-			if now < start:
-				start = start - timedelta(days=1)
-			elif end < start:
+			if end < start:
 				end = end + timedelta(days=1)
 
 			if start < now < end:
