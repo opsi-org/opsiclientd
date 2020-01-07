@@ -470,6 +470,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			'opsi-script',
 			'opsi_loginblocker',
 			'opsiclientdguard',
+			'notifier_block_login',
+			'notifier_event'
 		]
 		logType = forceUnicode(logType)
 

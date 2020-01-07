@@ -1,8 +1,9 @@
 opsiclientd (4.0.99) stable; urgency=medium
 
   * New Build on latest python version.
+  * Bugfix in WorkingWindow Implementation.
 
- -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 04 Dec 2019 00:52:06 +0100
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 7 Jan 2020 23:23:06 +0100
 
 opsiclientd (4.0.98) stable; urgency=medium
 
