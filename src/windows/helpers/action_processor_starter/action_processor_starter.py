@@ -34,12 +34,16 @@
 __version__ = '4.0'
 
 # Imports
-import sys, os, locale, gettext
+import sys, os, locale, gettext, codecs
 
 # OPSI imports
 from OPSI.Logger import *
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
+
+# Workarround from https://stackoverflow.com/questions/878972/windows-cmd-encoding-change-causes-python-crash
+# Problem with UTF-8 Beta-Mode of win10
+codecs.register(lambda name: codecs.lookup('utf-8') if name == "cp65001" else None)
 
 encoding = locale.getpreferredencoding()
 
