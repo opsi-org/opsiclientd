@@ -1,9 +1,9 @@
 opsiclientd (4.0.99) stable; urgency=medium
 
-  * New Build on latest python version.
   * Bugfix in WorkingWindow Implementation.
+  * Fix for support of beta utf-8 feature in Win10
 
- -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 7 Jan 2020 23:23:06 +0100
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 21 Jan 2020 02:23:06 +0100
 
 opsiclientd (4.0.98) stable; urgency=medium
 
