@@ -458,7 +458,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		Return the content of a log.
 
 		:param logType: Type of log. \
-		Currently supported: *opsiclientd*, *opsi-script*, *opsi_loginblocker* or *opsiclientdguard*.
+		Currently supported: *opsiclientd*, *opsi-script*, *opsi_loginblocker*, \
+		*opsiclientdguard*,	'notifier_block_login',	'notifier_event', 'opsi-client-agent'
 		:type data: Unicode
 		:param extension: count for history log. Possible Values 0-9
 		:param maxSize: Limit for the size of returned characters in bytes. \
@@ -471,7 +472,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			'opsi_loginblocker',
 			'opsiclientdguard',
 			'notifier_block_login',
-			'notifier_event'
+			'notifier_event',
+			'opsi-client-agent'
 		]
 		logType = forceUnicode(logType)
 
