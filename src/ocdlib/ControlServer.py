@@ -526,7 +526,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		Return the content of a log.
 
 		:param logType: Type of log. \
-		Currently supported: *opsiclientd*, *opsi-script*, *opsi_loginblocker* or *opsiclientdguard*.
+		Currently supported: *opsiclientd*, *opsi-script*, *opsi_loginblocker*, \
+		*opsiclientdguard*,	'notifier_block_login',	'notifier_event', 'opsi-client-agent'
 		:type data: Unicode
 		:param extension: count for history log. Possible Values 0-9
 		:param maxSize: Limit for the size of returned characters in bytes. \
@@ -538,6 +539,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			'opsi-script',
 			'opsi_loginblocker',
 			'opsiclientdguard',
+			'notifier_block_login',
+			'notifier_event',
+			'opsi-client-agent'
 		]
 		logType = forceUnicode(logType)
 
@@ -547,6 +551,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		if extension:
 			extension = forceUnicode(extension)
 			logFile = os.path.join(LOG_DIR, '{0}.log.{1}'.format(logType, extension))
+			if not os.path.exists(logFile):
+				# Try the other format:
+				logFile = os.path.join(LOG_DIR, '{0}_{1}.log'.format(logType, extension))
 		else:
 			logFile = os.path.join(LOG_DIR, '{0}.log'.format(logType))
 

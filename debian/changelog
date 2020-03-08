@@ -16,6 +16,13 @@ opsiclientd (4.1.1) stable; urgency=medium
   * Fixed clientconfig.depot.user from Hostparameters (fixes #2656)
 
  -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 16 Jan 2019 10:34:25 +0100
+ 
+opsiclientd (4.0.99) stable; urgency=medium
+
+  * Bugfix in WorkingWindow Implementation.
+  * Fix for support of beta utf-8 feature in Win10
+
+ -- Erol Ueluekmen <e.ueluekmen@uib.de>  Wed, 21 Jan 2020 02:23:06 +0100
 
 opsiclientd (4.0.98) stable; urgency=medium
 

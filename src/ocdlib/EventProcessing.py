@@ -1237,11 +1237,18 @@ None otherwise.
 			end = getRelativeDatetime(endtime)
 
 			now = dt.now()
-			logger.info("Current time: {0}".format(now))
-
-			if now < start:
-				start = start - timedelta(days=1)
-			elif end < start:
+			logger.notice("We have now: {0}".format(now))
+			start = dt.today().replace(
+						hour=int(s_hour),
+						minute=int(s_minute),
+						second=0,
+						microsecond=0)
+			end = dt.today().replace(
+						hour=int(e_hour),
+						minute=int(e_minute),
+						second=0,
+						microsecond=0)
+			if end < start:
 				end = end + timedelta(days=1)
 
 			logger.info("Working Window from {0} until {1}".format(start, end))
