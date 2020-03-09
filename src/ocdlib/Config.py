@@ -190,7 +190,7 @@ class ConfigImplementation(object):
 				# TODO: could this be solved more elegant by using __file__
 				# instead of hoping that we find the program here?
 				baseDir = os.path.dirname(sys.argv[0])
-			except Exception, e:
+			except Exception as e:
 				logger.error(u"Failed to get base dir: %s" % e)
 				baseDir = u''
 		else:
