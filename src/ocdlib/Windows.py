@@ -213,7 +213,7 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			logger.notice(u"opsiclientd stopped")
 			for thread in threading.enumerate():
 				logger.notice(u"Running thread after stop: %s" % thread)
-		except Exception, e:
+		except Exception as e:
 			logger.critical(u"opsiclientd crash")
 			logger.logException(e)
 
