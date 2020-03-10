@@ -36,7 +36,7 @@ import threading
 import time
 
 import tornado.platform.twisted
-tornado.platform.twisted.install()  # Has to be above the reactor import.
+#tornado.platform.twisted.install()  # Has to be above the reactor import.
 from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
 from tornado.ioloop import IOLoop
@@ -408,7 +408,8 @@ class ControlServer(OpsiService, threading.Thread):
 
 			if not reactor.running:
 				logger.debug(u"Reactor is not running. Starting.")
-				IOLoop.current().start()
+				#IOLoop.current().start()
+				reactor.run(installSignalHandlers=0)
 				logger.debug(u"Reactor run ended.")
 			else:
 				logger.debug(u"Reactor already running.")
