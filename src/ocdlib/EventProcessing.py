@@ -1118,7 +1118,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			s_hour, s_minute = starttime.split(":")
 			e_hour, e_minute = endtime.split(":")
 			now = dt.now()
-			logger.notice("We have now: {0}".format(now))
 			start = dt.today().replace(
 						hour=int(s_hour),
 						minute=int(s_minute),
@@ -1134,8 +1133,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			elif end < start:
 				end = end + timedelta(days=1)
 
+			logger.notice("Working Window configuration starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
 			if start < now < end:
-				logger.notice("Working Window configuration starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
 				logger.notice("We are in the configured working window")
 				return True
 			else:
