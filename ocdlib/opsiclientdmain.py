@@ -35,21 +35,22 @@ from OPSI.Logger import Logger, LOG_WARNING
 from OPSI.Types import forceUnicode
 from ocdlib.Config import getLogFormat
 
-if os.name == 'nt':
-	from ocdlib.Windows import OpsiclientdInit
-elif os.name == 'posix':
-	from ocdlib.Posix import OpsiclientdInit
-else:
-	raise NotImplementedError('Trying to run under an unsupported OS.')
+def main():
+	if os.name == 'nt':
+		from ocdlib.Windows import OpsiclientdInit
+	elif os.name == 'posix':
+		from ocdlib.Posix import OpsiclientdInit
+	else:
+		raise NotImplementedError('Trying to run under an unsupported OS.')
 
 
-logger = Logger()
-logger.setLogFormat(getLogFormat(u'opsiclientd'))
-logger.setConsoleLevel(LOG_WARNING)
+	logger = Logger()
+	logger.setLogFormat(getLogFormat(u'opsiclientd'))
+	logger.setConsoleLevel(LOG_WARNING)
 
-try:
-	OpsiclientdInit()
-except Exception as exception:
-	logger.logException(exception)
-	print("ERROR: {0}".format(forceUnicode(exception).encode('utf-8')), file=sys.stderr)
-	sys.exit(1)
+	try:
+		OpsiclientdInit()
+	except Exception as exception:
+		logger.logException(exception)
+		print("ERROR: {0}".format(forceUnicode(exception).encode('utf-8')), file=sys.stderr)
+		sys.exit(1)
