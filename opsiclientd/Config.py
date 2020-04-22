@@ -258,7 +258,7 @@ class ConfigImplementation(object):
 			raise NoConfigOptionFoundException(u"No such config option in section '%s': %s" % (section, option))
 
 		value = self._config[section][option]
-		if not raw and isinstance(value, (unicode, str)) and (value.count('%') >= 2):
+		if not raw and isinstance(value, str) and (value.count('%') >= 2):
 			value = self.replace(value)
 		if isinstance(value, str):
 			value = forceUnicode(value)
@@ -273,7 +273,7 @@ class ConfigImplementation(object):
 			return
 
 		option = forceUnicodeLower(option).strip()
-		if isinstance(value, (str, unicode)):
+		if isinstance(value, str):
 			value = forceUnicode(value).strip()
 
 		if (option == 'warning_time'):
