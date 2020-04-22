@@ -11,7 +11,7 @@ import platform
 import subprocess
 
 SCRIPTS = [
-	"opsiclientd"
+	"run-opsiclientd"
 ]
 HIDDEN_IMPORTS = [
 ]
@@ -44,16 +44,16 @@ for script in SCRIPTS:
 		spec_o += match.group(4)
 		spec_m.append("(%s_a, '%s', '%s')" % (varname, script, script))
 
-with codecs.open("opsi-client-agent.spec", "w", "utf-8") as f:
+with codecs.open("opsiclientd.spec", "w", "utf-8") as f:
 	f.write(spec_a)
 	f.write("\nMERGE( %s )\n" % ', '.join(spec_m))
 	f.write(spec_o)
 
-subprocess.check_call(["poetry", "run", "pyinstaller", "--log-level", "INFO", "opsi-client-agent.spec"])
+subprocess.check_call(["poetry", "run", "pyinstaller", "--log-level", "INFO", "opsiclientd.spec"])
 
 
-shutil.move("dist/%s" % SCRIPTS[0], "dist/opsi-client-agent")
+shutil.move("dist/%s" % SCRIPTS[0], "dist/opsiclientd")
 for script in SCRIPTS[1:]:
-	shutil.move("dist/%s/%s" % (script, script), "dist/opsi-client-agent/%s" % script)
+	shutil.move("dist/%s/%s" % (script, script), "dist/opsiclientd/%s" % script)
 	shutil.rmtree("dist/%s" % script)
 
