@@ -176,7 +176,7 @@ If this is `None` a random port will be chosen.
 			if self._notificationServer and (cancellableAfter >= 0):
 				logger.info(u"User is allowed to cancel connection after %d seconds" % cancellableAfter)
 				self._choiceSubject = ChoiceSubject(id = 'choice')
-		except Exception, e:
+		except Exception as e:
 			logger.error(e)
 
 	def connectionCancelable(self, stopConnectionCallback):
@@ -355,7 +355,7 @@ If this is `None` a random port will be chosen.
 						waitForProcessEnding = waitForProcessEnding,
 						timeoutSeconds       = timeoutSeconds)[2]
 				break
-			except Exception, e:
+			except Exception as e:
 				logger.error(e)
 				if RUNNING_ON_WINDOWS and (e[0] == 233) and (sys.getwindowsversion()[0] == 5) and (sessionId != 0):
 					# No process is on the other end
@@ -462,7 +462,7 @@ None otherwise.
 					u"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\%s" % depotHost,
 					u"file", 1)
 				logger.info(u"Added depot '%s' to trusted domains" % depotHost)
-			except Exception, e:
+			except Exception as e:
 				logger.error(u"Failed to add depot to trusted domains: %s" % e)
 
 		if impersonation:
@@ -481,7 +481,7 @@ None otherwise.
 			logger.notice(u"Unmounting depot share")
 			System.umount(config.getDepotDrive())
 			self._depotShareMounted = False
-		except Exception, e:
+		except Exception as e:
 			logger.warning(e)
 
 	def updateActionProcessor(self):
@@ -674,7 +674,7 @@ None otherwise.
 			additionalParams = u'/usercontext %s' % self.event.eventInfo.get('User')
 			self.runActions(productIds, additionalParams)
 
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
 			logger.error(u"Failed to process login actions: %s" % forceUnicode(e))
 			self.setStatusMessage( _(u"Failed to process login actions: %s") % forceUnicode(e) )
@@ -734,7 +734,7 @@ None otherwise.
 				try:
 					if self.event.eventConfig.useCachedConfig:
 						self.opsiclientd.getCacheService().setConfigCacheObsolete()
-				except Exception, e:
+				except Exception as e:
 					logger.error(e)
 			else:
 				#set installation_pending State
@@ -764,10 +764,10 @@ None otherwise.
 						#set installation_pending State to false nothing to do!!!!
 						logger.notice("Setting installation pending to false")
 						state.set('installation_pending','false')
-				except Exception, e:
+				except Exception as e:
 					logger.error(e)
 
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
 			logger.error(u"Failed to process product action requests: %s" % forceUnicode(e))
 			self.setStatusMessage( _(u"Failed to process product action requests: %s") % forceUnicode(e) )
@@ -894,10 +894,10 @@ None otherwise.
 					+ u'"%global.log_file%" "%global.log_level%" ' \
 					+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
 					+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
-					+ u'"' + unicode(self.getSessionId()) + u'" "' + desktop + '" ' \
-					+ u'"' + actionProcessorCommand + u'" ' + unicode(self.event.eventConfig.actionProcessorTimeout) + ' ' \
+					+ u'"' + str(self.getSessionId()) + u'" "' + desktop + '" ' \
+					+ u'"' + actionProcessorCommand + u'" ' + str(self.event.eventConfig.actionProcessorTimeout) + ' ' \
 					+ u'"' + actionProcessorUserName + u'" "' + actionProcessorUserPassword + '" ' \
-					+ unicode(createEnvironment).lower()
+					+ str(createEnvironment).lower()
 			else:
 				try:
 					oss = System.which('opsiscriptstarter')
@@ -960,7 +960,7 @@ None otherwise.
 			logger.debug(u"Updated environment:")
 			for (k, v) in os.environ.items():
 				logger.debug(u"   %s=%s" % (k,v))
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Failed to set environment: %s" % forceUnicode(e))
 
 	def abortActionCallback(self, choiceSubject):
@@ -1050,7 +1050,7 @@ None otherwise.
 					except Exception:
 						pass
 
-			except Exception, e:
+			except Exception as e:
 				logger.logException(e)
 
 	def abortShutdownCallback(self, choiceSubject):
@@ -1170,7 +1170,7 @@ None otherwise.
 									System.terminateProcess(processId=notifierPid)
 								except Exception:
 									pass
-						except Exception, e:
+						except Exception as e:
 							logger.logException(e)
 
 						self._messageSubject.setMessage(u"")
@@ -1218,7 +1218,7 @@ None otherwise.
 				elif shutdown:
 					timeline.addEvent(title = u"Shutting down", category = u"system")
 					self.opsiclientd.shutdownMachine()
-		except Exception, e:
+		except Exception as e:
 			logger.logException(e)
 
 	def inWorkingWindow(self):
@@ -1343,7 +1343,7 @@ None otherwise.
 							self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
 							self._currentProgressSubjectProxy.reset()
 							self._overallProgressSubjectProxy.reset()
-						except Exception, e:
+						except Exception as e:
 							logger.logException(e)
 
 				if self.event.eventConfig.useCachedConfig:
@@ -1420,7 +1420,7 @@ None otherwise.
 						System.terminateProcess(processId=notifierPid)
 					except Exception:
 						pass
-		except Exception, e:
+		except Exception as e:
 			logger.error(u"Failed to process event %s: %s" % (self.event, forceUnicode(e)))
 			logger.logException(e)
 			timeline.addEvent(

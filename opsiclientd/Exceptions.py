@@ -36,14 +36,14 @@ class OpsiclientdError(Exception):
 	def __init__(self, message=u''):
 		self._message = forceUnicode(message)
 
-	def __unicode__(self):
+	def __str__(self):
 		if self._message:
 			return u"%s: %s" % (self.ExceptionShortDescription, self._message)
 		else:
 			return u"%s" % self.ExceptionShortDescription
 
 	def __repr__(self):
-		return self.__unicode__().encode("ascii", "replace")
+		return self.__str__()
 
 	__str__ = __repr__
 

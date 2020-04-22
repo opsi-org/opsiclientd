@@ -45,7 +45,7 @@ logger = Logger()
 class WMIEventConfig(EventConfig):
 	def setConfig(self, conf):
 		EventConfig.setConfig(self, conf)
-		self.wql = unicode(conf.get('wql', ''))
+		self.wql = str(conf.get('wql', ''))
 
 
 class WMIEventGenerator(EventGenerator):

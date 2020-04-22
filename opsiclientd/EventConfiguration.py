@@ -41,7 +41,7 @@ class EventConfig(object):
 	def __init__(self, eventId, **kwargs):
 		if not eventId:
 			raise TypeError(u"Event id not given")
-		self._id = unicode(eventId)
+		self._id = str(eventId)
 
 		logger.setLogFormat(
 			getLogFormat(u'event config {0}'.format(self._id)),
@@ -50,9 +50,9 @@ class EventConfig(object):
 		self.setConfig(kwargs)
 
 	def setConfig(self, conf):
-		self.name = unicode(conf.get('name', self._id.split('{')[0]))
+		self.name = str(conf.get('name', self._id.split('{')[0]))
 		self.preconditions = dict(conf.get('preconditions', {}))
-		self.actionMessage = unicode(conf.get('actionMessage', ''))
+		self.actionMessage = str(conf.get('actionMessage', ''))
 		self.maxRepetitions = int(conf.get('maxRepetitions', -1))
 		# wait <activationDelay> seconds before event gets active
 		self.activationDelay = int(conf.get('activationDelay', 0))
@@ -63,7 +63,7 @@ class EventConfig(object):
 		self.actionUserCancelable = int(conf.get('actionUserCancelable', 0))
 		self.shutdown = bool(conf.get('shutdown', False))
 		self.reboot = bool(conf.get('reboot', False))
-		self.shutdownWarningMessage = unicode(conf.get('shutdownWarningMessage', ''))
+		self.shutdownWarningMessage = str(conf.get('shutdownWarningMessage', ''))
 		self.shutdownWarningTime = int(conf.get('shutdownWarningTime', 0))
 		self.shutdownWarningRepetitionTime = int(conf.get('shutdownWarningRepetitionTime', 3600))
 		self.shutdownUserCancelable = int(conf.get('shutdownUserCancelable', 0))
@@ -76,22 +76,22 @@ class EventConfig(object):
 		self.updateConfigFile = bool(conf.get('updateConfigFile', True))
 		self.writeLogToService = bool(conf.get('writeLogToService', True))
 		self.updateActionProcessor = bool(conf.get('updateActionProcessor', True))
-		self.actionType = unicode(conf.get('actionType', ''))
-		self.eventNotifierCommand = unicode(conf.get('eventNotifierCommand', ''))
-		self.eventNotifierDesktop = unicode(conf.get('eventNotifierDesktop', 'current'))
-		self.actionNotifierCommand = unicode(conf.get('actionNotifierCommand', ''))
-		self.actionNotifierDesktop = unicode(conf.get('actionNotifierDesktop', 'current'))
-		self.shutdownNotifierCommand = unicode(conf.get('shutdownNotifierCommand', ''))
-		self.shutdownNotifierDesktop = unicode(conf.get('shutdownNotifierDesktop', 'current'))
+		self.actionType = str(conf.get('actionType', ''))
+		self.eventNotifierCommand = str(conf.get('eventNotifierCommand', ''))
+		self.eventNotifierDesktop = str(conf.get('eventNotifierDesktop', 'current'))
+		self.actionNotifierCommand = str(conf.get('actionNotifierCommand', ''))
+		self.actionNotifierDesktop = str(conf.get('actionNotifierDesktop', 'current'))
+		self.shutdownNotifierCommand = str(conf.get('shutdownNotifierCommand', ''))
+		self.shutdownNotifierDesktop = str(conf.get('shutdownNotifierDesktop', 'current'))
 		self.processActions = bool(conf.get('processActions', True))
-		self.actionProcessorCommand = unicode(conf.get('actionProcessorCommand', ''))
-		self.actionProcessorDesktop = unicode(conf.get('actionProcessorDesktop', 'current'))
+		self.actionProcessorCommand = str(conf.get('actionProcessorCommand', ''))
+		self.actionProcessorDesktop = str(conf.get('actionProcessorDesktop', 'current'))
 		self.actionProcessorTimeout = int(conf.get('actionProcessorTimeout', 3 * 3600))
 		self.actionProcessorProductIds = list(conf.get('actionProcessorProductIds', []))
 		self.excludeProductGroupIds = list(conf.get('excludeProductGroupIds', []))
 		self.includeProductGroupIds = list(conf.get('includeProductGroupIds', []))
-		self.preActionProcessorCommand = unicode(conf.get('preActionProcessorCommand', ''))
-		self.postActionProcessorCommand = unicode(conf.get('postActionProcessorCommand', ''))
+		self.preActionProcessorCommand = str(conf.get('preActionProcessorCommand', ''))
+		self.postActionProcessorCommand = str(conf.get('postActionProcessorCommand', ''))
 		self.trustedInstallerCheck = bool(conf.get('trustedInstallerCheck', True))
 		self.cacheProducts = bool(conf.get('cacheProducts', False))
 		self.cacheMaxBandwidth = int(conf.get('cacheMaxBandwidth', 0))
@@ -102,7 +102,7 @@ class EventConfig(object):
 		self.postSyncConfigToServer = bool(conf.get('postSyncConfigToServer', False))
 		self.postSyncConfigFromServer = bool(conf.get('postSyncConfigFromServer', False))
 		self.useCachedConfig = bool(conf.get('useCachedConfig', False))
-		self.workingWindow = unicode(conf.get('workingWindow', ''))
+		self.workingWindow = str(conf.get('workingWindow', ''))
 
 	def getConfig(self):
 		config = {}
@@ -112,13 +112,13 @@ class EventConfig(object):
 
 		return config
 
-	def __unicode__(self):
+	def __str__(self):
 		return u"<{0}({1})>".format(self.__class__.__name__, self._id)
 
-	__repr__ = __unicode__
+	__repr__ = __str__
 
 	def __str__(self):
-		return str(self.__unicode__())
+		return str(self.__str__())
 
 	def getId(self):
 		return self._id
@@ -141,8 +141,8 @@ class EventConfig(object):
 			if 'message' in key.lower():
 				continue
 
-			message = message.replace('%{0}%'.format(key), unicode(value))
-			message = message.replace('%{0}%'.format(toUnderscore(key)), unicode(value))
+			message = message.replace('%{0}%'.format(key), str(value))
+			message = message.replace('%{0}%'.format(toUnderscore(key)), str(value))
 
 		while True:
 			match = re.search('(%state.[^%]+%)', message)

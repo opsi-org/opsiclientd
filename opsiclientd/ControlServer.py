@@ -739,7 +739,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			if second < 10:
 				second = '0%d' % second
 			session['LogonTime'] = u'%s-%s-%s %s:%s:%s' % (year, month, day, hour, minute, second)
-			session['Sid'] = unicode(session['Sid']).replace(u'PySID:', u'')
+			session['Sid'] = str(session['Sid']).replace(u'PySID:', u'')
 			sessions.append(session)
 
 		return sessions

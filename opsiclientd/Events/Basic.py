@@ -28,7 +28,7 @@ Basic event building blocks.
 
 from __future__ import absolute_import
 
-import thread
+#import thread
 import threading
 import time
 
@@ -57,10 +57,10 @@ class EventGenerator(threading.Thread):
 		self._lastEventOccurence = None
 		logger.setLogFormat(getLogFormat(u'event generator ' + self._generatorConfig.getId()), object=self)
 
-	def __unicode__(self):
+	def __str__(self):
 		return u'<%s %s>' % (self.__class__.__name__, self._generatorConfig.getId())
 
-	__repr__ = __unicode__
+	__repr__ = __str__
 
 	def setEventConfigs(self, eventConfigs):
 		self._eventConfigs = forceList(eventConfigs)
@@ -151,7 +151,7 @@ class EventGenerator(threading.Thread):
 				try:
 					logger.info(u"Calling processEvent on listener %s" % self._eventListener)
 					self._eventListener.processEvent(self._event)
-				except Exception, e:
+				except Exception as e:
 					logger.logException(e)
 
 		logger.info(u"Starting FireEventThread for listeners: %s" % self._eventListeners)
@@ -160,7 +160,7 @@ class EventGenerator(threading.Thread):
 			FireEventThread(l, event).start()
 
 	def run(self):
-		self._threadId = thread.get_ident()
+		#self._threadId = thread.get_ident()
 		try:
 			logger.info(u"Initializing event generator '%s'" % self)
 			self.initialize()
@@ -203,7 +203,7 @@ class Event(object):
 	def getActionProcessorCommand(self):
 		actionProcessorCommand = self.eventConfig.actionProcessorCommand
 		for (key, value) in self.eventInfo.items():
-			actionProcessorCommand = actionProcessorCommand.replace(u'%' + u'event.' + unicode(key.lower()) + u'%', unicode(value))
+			actionProcessorCommand = actionProcessorCommand.replace(u'%' + u'event.' + str(key.lower()) + u'%', unicode(value))
 
 		return actionProcessorCommand
 
