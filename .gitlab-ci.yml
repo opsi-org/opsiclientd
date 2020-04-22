@@ -13,9 +13,10 @@ pyinstaller build:
     - source $HOME/.poetry/env
   script:
     - ./pyinstaller-build.py
-    - mv dist/opsi-client-agent .
+    - mv opsiclientd opsiclientd.src
+    - mv dist/opsiclientd .
   artifacts:
     paths:
-      - opsi-client-agent
+      - opsiclientd
     expire_in: 2 day
 
