@@ -14,6 +14,7 @@ SCRIPTS = [
 	"run-opsiclientd"
 ]
 HIDDEN_IMPORTS = [
+	"csv",
 	"OPSI.web2.dav.method.copymove",
 	"OPSI.web2.dav.method.delete",
 	"OPSI.web2.dav.method.lock",
