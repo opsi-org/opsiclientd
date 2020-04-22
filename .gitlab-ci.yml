@@ -1,0 +1,21 @@
+image: python:3.7-stretch
+
+stages:
+  - build
+
+pyinstaller build:
+  stage: build
+  before_script:
+    - apt update
+    - apt -y upgrade
+    - apt -y install curl tar
+    - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3
+    - source $HOME/.poetry/env
+  script:
+    - ./pyinstaller-build.py
+    - mv dist/opsi-client-agent .
+  artifacts:
+    paths:
+      - opsi-client-agent
+    expire_in: 2 day
+
