@@ -11,8 +11,12 @@ url = "http://pypi.uib.gmbh:8080/simple"
 [tool.poetry.dependencies]
 python = "^3.7"
 python-opsi = "^4.2.0"
+cryptography = "^1.0"
+tornado = "^4.3"
+cffi = "^1.3"
 
 [tool.poetry.dev-dependencies]
+pyinstaller = "^3.6"
 
 [build-system]
 requires = ["poetry>=0.12"]
