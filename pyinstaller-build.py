@@ -66,4 +66,4 @@ shutil.move("dist/%s" % SCRIPTS[0], "dist/opsiclientd")
 for script in SCRIPTS[1:]:
 	shutil.move("dist/%s/%s" % (script, script), "dist/opsiclientd/%s" % script)
 	shutil.rmtree("dist/%s" % script)
-
+shutil.move("dist/opsiclientd/run-opsiclientd", "dist/opsiclientd/opsiclientd")
