@@ -46,7 +46,7 @@ from OPSI.Util.Message import (
 	ProgressSubjectProxy)
 from OPSI.Util.Thread import KillableThread
 
-from ocdlib import __version__
+from opsiclientd import __version__
 from opsiclientd.Config import Config, getLogFormat
 from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
 from opsiclientd.Exceptions import CanceledByUserError

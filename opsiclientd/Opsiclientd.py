@@ -44,7 +44,7 @@ from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 
-from ocdlib import __version__
+from opsiclientd import __version__
 from opsiclientd.Config import Config, getLogFormat
 from opsiclientd.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from opsiclientd.Events.Basic import EventListener
@@ -65,7 +65,7 @@ from twisted.internet import reactor
 from tornado.ioloop import IOLoop
 
 try:
-	from ocdlibnonfree import __fullversion__
+	from opsiclientd.nonfree import __fullversion__
 except ImportError:
 	__fullversion__ = False
 
@@ -275,7 +275,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		@contextmanager
 		def getCacheService():
 			try:
-				from ocdlibnonfree.CacheService import CacheService
+				from opsiclientd.nonfree.CacheService import CacheService
 				logger.notice(u"Starting cache service")
 				try:
 					cacheService = CacheService(opsiclientd=self)

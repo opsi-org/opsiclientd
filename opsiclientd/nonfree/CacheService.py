@@ -7,7 +7,7 @@
 # http://www.uib.de/
 # All rights reserved.
 """
-ocdlibnonfree.CacheService
+opsiclientd.nonfree.CacheService
 
 @copyright:	uib GmbH <info@uib.de>
 @author: Jan Schneider <j.schneider@uib.de>
@@ -39,14 +39,14 @@ from OPSI.Backend.BackendManager import BackendExtender
 from OPSI.Backend.SQLite import (
 	SQLiteBackend, SQLiteObjectBackendModificationTracker)
 
-from ocdlib.Config import getLogFormat, Config
-from ocdlib.State import State
-from ocdlib.Events.SyncCompleted import SyncCompletedEventGenerator
-from ocdlib.Events.Utilities import getEventGenerators
-from ocdlib.OpsiService import ServiceConnection
-from ocdlib.Timeline import Timeline
+from opsiclientd.Config import getLogFormat, Config
+from opsiclientd.State import State
+from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
+from opsiclientd.Events.Utilities import getEventGenerators
+from opsiclientd.OpsiService import ServiceConnection
+from opsiclientd.Timeline import Timeline
 
-from ocdlibnonfree.CacheBackend import ClientCacheBackend
+from opsiclientd.nonfree.CacheBackend import ClientCacheBackend
 
 __all__ = [
 	'CacheService', 'ConfigCacheService', 'ConfigCacheServiceBackendExtension',

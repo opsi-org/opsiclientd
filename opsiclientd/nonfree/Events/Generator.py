@@ -15,7 +15,7 @@ Non-free event generators.
 
 import threading
 
-from ocdlib.Events.Basic import Event, EventGenerator
+from opsiclientd.Events.Basic import Event, EventGenerator
 
 __all__ = ['CustomEvent', 'CustomEventGenerator']
 

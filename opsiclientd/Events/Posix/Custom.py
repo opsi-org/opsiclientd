@@ -39,7 +39,7 @@ try:
 	from opsiclientd.nonfree.Events.Generator import CustomEvent, CustomEventGenerator
 except ImportError as error:
 	logger.critical(
-		u"Unable to import from ocdlibnonfree."
+		u"Unable to import from opsiclientd.nonfree."
 		u"Is this the full version?"
 	)
 	raise error
