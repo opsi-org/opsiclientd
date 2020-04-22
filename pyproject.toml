@@ -18,7 +18,7 @@ cffi = "^1.14.0"
 pyinstaller = "^3.6"
 
 [tool.poetry.scripts]
-opsiclientdtest = "opsiclientd.opsiclientdmain:main"
+opsiclientd = "opsiclientd.opsiclientdmain:main"
 
 [build-system]
 requires = ["poetry>=0.12"]

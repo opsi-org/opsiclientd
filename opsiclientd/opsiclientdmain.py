@@ -33,13 +33,13 @@ import sys
 
 from OPSI.Logger import Logger, LOG_WARNING
 from OPSI.Types import forceUnicode
-from ocdlib.Config import getLogFormat
+from opsiclientd.Config import getLogFormat
 
 def main():
 	if os.name == 'nt':
-		from ocdlib.Windows import OpsiclientdInit
+		from opsiclientd.Windows import OpsiclientdInit
 	elif os.name == 'posix':
-		from ocdlib.Posix import OpsiclientdInit
+		from opsiclientd.Posix import OpsiclientdInit
 	else:
 		raise NotImplementedError('Trying to run under an unsupported OS.')
 

@@ -47,7 +47,7 @@ from OPSI.Types import forceBool, forceInt, forceOpsiTimestamp, forceUnicode
 from OPSI.Util import timestamp
 from OPSI.Backend.SQLite import SQLite
 
-from ocdlib.Config import Config
+from opsiclientd.Config import Config
 
 logger = Logger()
 config = Config()

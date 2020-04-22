@@ -13,7 +13,7 @@ Non-free event configuration.
 :author: Niko Wenselowski <n.wenselowski@uib.de>
 """
 
-from ocdlib.EventConfiguration import EventConfig
+from opsiclientd.EventConfiguration import EventConfig
 
 __all__ = ['CustomEventConfig']
 

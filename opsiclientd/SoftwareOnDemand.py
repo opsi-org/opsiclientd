@@ -35,11 +35,11 @@ from OPSI.Types import forceUnicode
 from OPSI.Service.Worker import WorkerOpsiJsonRpc
 from OPSI.Service.Resource import ResourceOpsi
 
-from ocdlib.OpsiService import ServiceConnection
-from ocdlib.Config import getLogFormat, Config
-from ocdlib.Events.SwOnDemand import SwOnDemandEventGenerator
-from ocdlib.Events.Utilities.Generators import getEventGenerators
-from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd.OpsiService import ServiceConnection
+from opsiclientd.Config import getLogFormat, Config
+from opsiclientd.Events.SwOnDemand import SwOnDemandEventGenerator
+from opsiclientd.Events.Utilities.Generators import getEventGenerators
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 logger = Logger()
 config = Config()

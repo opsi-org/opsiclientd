@@ -34,8 +34,8 @@ from OPSI.Logger import Logger, LOG_DEBUG
 from OPSI.Types import forceBool, forceList, forceUnicode, forceUnicodeLower
 from OPSI.Util import objectToBeautifiedText
 
-from ocdlib.Config import Config
-from ocdlib.Localization import getLanguage
+from opsiclientd.Config import Config
+from opsiclientd.Localization import getLanguage
 
 __all__ = ['getEventConfigs']
 

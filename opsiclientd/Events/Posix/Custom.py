@@ -35,8 +35,8 @@ __all__ = ['CustomEvent', 'CustomEventConfig', 'CustomEventGenerator']
 logger = Logger()
 
 try:
-	from ocdlibnonfree.Events.Config import CustomEventConfig
-	from ocdlibnonfree.Events.Generator import CustomEvent, CustomEventGenerator
+	from opsiclientd.nonfree.Events.Config import CustomEventConfig
+	from opsiclientd.nonfree.Events.Generator import CustomEvent, CustomEventGenerator
 except ImportError as error:
 	logger.critical(
 		u"Unable to import from ocdlibnonfree."

@@ -38,7 +38,7 @@ from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG
 from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
 
-from ocdlib.Opsiclientd import Opsiclientd
+from opsiclientd.Opsiclientd import Opsiclientd
 
 __all__ = ('OpsiclientdInit', )
 

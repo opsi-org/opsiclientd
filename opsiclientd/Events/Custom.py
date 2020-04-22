@@ -31,7 +31,7 @@ OS it is running on.
 
 from __future__ import absolute_import
 
-from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 if RUNNING_ON_WINDOWS:
 	from .Windows.Custom import (

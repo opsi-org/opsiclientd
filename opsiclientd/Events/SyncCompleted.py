@@ -29,7 +29,7 @@ Events for when a sync is completed.
 from __future__ import absolute_import
 
 from .Basic import Event, EventGenerator
-from ocdlib.EventConfiguration import EventConfig
+from opsiclientd.EventConfiguration import EventConfig
 
 __all__ = [
 	'SyncCompletedEvent', 'SyncCompletedEventConfig',

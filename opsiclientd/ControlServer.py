@@ -53,14 +53,14 @@ from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.web2 import resource, stream, server, http, responsecode, http_headers
 from OPSI.web2.channel.http import HTTPFactory
 
-from ocdlib.ControlPipe import OpsiclientdRpcPipeInterface
-from ocdlib.Config import Config, getLogFormat
-from ocdlib.Events.Utilities.Generators import getEventGenerator
-from ocdlib.OpsiService import ServiceConnection
-from ocdlib.State import State
-from ocdlib.SoftwareOnDemand import ResourceKioskJsonRpc
-from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
-from ocdlib.Timeline import Timeline
+from opsiclientd.ControlPipe import OpsiclientdRpcPipeInterface
+from opsiclientd.Config import Config, getLogFormat
+from opsiclientd.Events.Utilities.Generators import getEventGenerator
+from opsiclientd.OpsiService import ServiceConnection
+from opsiclientd.State import State
+from opsiclientd.SoftwareOnDemand import ResourceKioskJsonRpc
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd.Timeline import Timeline
 
 if RUNNING_ON_WINDOWS:
 	import win32net

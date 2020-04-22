@@ -35,8 +35,8 @@ import time
 from OPSI.Logger import Logger
 from OPSI.Types import forceList, forceUnicode
 
-from ocdlib.Config import getLogFormat
-from ocdlib.State import State
+from opsiclientd.Config import getLogFormat
+from opsiclientd.State import State
 
 __all__ = ['Event', 'EventGenerator', 'EventListener']
 

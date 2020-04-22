@@ -29,7 +29,7 @@ Processing action requests.
 from __future__ import absolute_import
 
 from .Basic import Event, EventGenerator
-from ocdlib.EventConfiguration import EventConfig
+from opsiclientd.EventConfiguration import EventConfig
 
 __all__ = [
 	'ProcessActionRequestsEvent', 'ProcessActionRequestsEventConfig',

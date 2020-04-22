@@ -35,7 +35,7 @@ from OPSI.Logger import Logger
 from OPSI.Types import forceUnicode
 
 from ..Basic import EventGenerator
-from ocdlib.EventConfiguration import EventConfig
+from opsiclientd.EventConfiguration import EventConfig
 
 __all__ = ['WMIEventConfig', 'WMIEventGenerator']
 
@@ -58,7 +58,7 @@ class WMIEventGenerator(EventGenerator):
 		if not self._wql:
 			return
 
-		from ocdlib.Windows import importWmiAndPythoncom
+		from opsiclientd.Windows import importWmiAndPythoncom
 		(wmi, pythoncom) = importWmiAndPythoncom()
 		pythoncom.CoInitialize()
 		while not self._watcher:
@@ -83,7 +83,7 @@ class WMIEventGenerator(EventGenerator):
 			return None
 
 		wqlResult = None
-		from ocdlib.Windows import importWmiAndPythoncom
+		from opsiclientd.Windows import importWmiAndPythoncom
 		(wmi, pythoncom) = importWmiAndPythoncom()
 		while not self._stopped:
 			try:
@@ -113,7 +113,7 @@ class WMIEventGenerator(EventGenerator):
 			time.sleep(waitTime)
 
 		try:
-			from ocdlib.Windows import importWmiAndPythoncom
+			from opsiclientd.Windows import importWmiAndPythoncom
 			(wmi, pythoncom) = importWmiAndPythoncom()
 			pythoncom.CoUninitialize()
 		except ImportError:

@@ -16,7 +16,7 @@ import os.path
 import OPSI.System as System
 from OPSI.Logger import Logger
 
-from ocdlib.Opsiclientd import Opsiclientd
+from opsiclientd.Opsiclientd import Opsiclientd
 
 __all__ = ['OpsiclientdPosix']
 

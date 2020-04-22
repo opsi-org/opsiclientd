@@ -47,14 +47,14 @@ from OPSI.Util.Message import (
 from OPSI.Util.Thread import KillableThread
 
 from ocdlib import __version__
-from ocdlib.Config import Config, getLogFormat
-from ocdlib.Events.Utilities.Generators import reconfigureEventGenerators
-from ocdlib.Exceptions import CanceledByUserError
-from ocdlib.Localization import _
-from ocdlib.OpsiService import ServiceConnection
-from ocdlib.State import State
-from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
-from ocdlib.Timeline import Timeline
+from opsiclientd.Config import Config, getLogFormat
+from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
+from opsiclientd.Exceptions import CanceledByUserError
+from opsiclientd.Localization import _
+from opsiclientd.OpsiService import ServiceConnection
+from opsiclientd.State import State
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd.Timeline import Timeline
 
 logger = Logger()
 config = Config()

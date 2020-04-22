@@ -28,7 +28,7 @@ Factories for creation of event configs or generators.
 
 from __future__ import absolute_import
 
-from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 from ..Custom import CustomEventConfig, CustomEventGenerator
 from ..DaemonShutdown import (

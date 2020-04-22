@@ -46,7 +46,7 @@ class SensLogonEventGenerator(EventGenerator):
 
 		logger.notice(u'Registring ISensLogon')
 
-		from ocdlib.Windows import importWmiAndPythoncom, SensLogon
+		from opsiclientd.Windows import importWmiAndPythoncom, SensLogon
 
 		(wmi, pythoncom) = importWmiAndPythoncom(
 			importWmi=False,
@@ -58,7 +58,7 @@ class SensLogonEventGenerator(EventGenerator):
 		sl.subscribe()
 
 	def getNextEvent(self):
-		from ocdlib.Windows import importWmiAndPythoncom
+		from opsiclientd.Windows import importWmiAndPythoncom
 		(wmi, pythoncom) = importWmiAndPythoncom(
 			importWmi=False,
 			importPythoncom=True
@@ -84,7 +84,7 @@ class SensLogonEventGenerator(EventGenerator):
 			logger.info(u"Event generator '%s' cleaning up in %d seconds" % (self, waitTime))
 			time.sleep(waitTime)
 
-		from ocdlib.Windows import importWmiAndPythoncom
+		from opsiclientd.Windows import importWmiAndPythoncom
 		(wmi, pythoncom) = importWmiAndPythoncom(
 			importWmi=False,
 			importPythoncom=True

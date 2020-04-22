@@ -38,7 +38,7 @@ from OPSI.Types import forceUnicode
 from OPSI.Util import fromJson, toJson
 from OPSI.Service.JsonRpc import JsonRpc
 
-from ocdlib.Config import getLogFormat
+from opsiclientd.Config import getLogFormat
 
 if os.name == 'nt':
 	from ctypes import windll

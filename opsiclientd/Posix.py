@@ -34,14 +34,14 @@ from signal import SIGHUP, SIGTERM, SIGINT
 from OPSI.Logger import Logger, LOG_NONE, LOG_NOTICE, LOG_WARNING
 from OPSI.Types import forceUnicode
 
-from ocdlib import __version__
+from opsiclientd import __version__
 
 __all__ = ('OpsiclientdInit', )
 
 logger = Logger()
 
 try:
-	from ocdlibnonfree.Posix import OpsiclientdPosix
+	from opsiclientd.nonfree.Posix import OpsiclientdPosix
 except ImportError:
 	logger.setConsoleLevel(LOG_WARNING)
 	logger.critical("Import of OpsiclientdPosix failed.")

@@ -33,9 +33,9 @@ from OPSI.Logger import Logger
 from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
 
-from ocdlib.Config import Config
-from ocdlib.OpsiService import isConfigServiceReachable
-from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd.Config import Config
+from opsiclientd.OpsiService import isConfigServiceReachable
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 logger = Logger()
 config = Config()

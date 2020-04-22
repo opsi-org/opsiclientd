@@ -31,7 +31,7 @@ from __future__ import absolute_import
 from OPSI.Logger import Logger
 from OPSI.Types import forceUnicode
 
-from ocdlib.Config import Config
+from opsiclientd.Config import Config
 
 from .Configs import getEventConfigs
 from .Factories import EventConfigFactory, EventGeneratorFactory

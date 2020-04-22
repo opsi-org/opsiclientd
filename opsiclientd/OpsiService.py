@@ -33,7 +33,7 @@ import os
 import random
 import time
 from hashlib import md5
-from httplib import HTTPConnection, HTTPSConnection
+from http.client import HTTPConnection, HTTPSConnection
 
 from OPSI import System
 from OPSI.Logger import Logger
@@ -45,10 +45,10 @@ from OPSI.Util.HTTP import (
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
 
-from ocdlib import __version__
-from ocdlib.Config import getLogFormat, Config
-from ocdlib.Exceptions import CanceledByUserError
-from ocdlib.Localization import _
+from opsiclientd import __version__
+from opsiclientd.Config import getLogFormat, Config
+from opsiclientd.Exceptions import CanceledByUserError
+from opsiclientd.Localization import _
 
 logger = Logger()
 config = Config()

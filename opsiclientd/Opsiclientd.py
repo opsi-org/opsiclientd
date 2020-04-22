@@ -36,7 +36,7 @@ from contextlib import contextmanager
 
 # Import the ControlServer first because this module installs
 # the tornado-bridge for twisted.
-from ocdlib.ControlServer import ControlServer
+from opsiclientd.ControlServer import ControlServer
 
 from OPSI import System
 from OPSI.Logger import Logger
@@ -45,19 +45,19 @@ from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 
 from ocdlib import __version__
-from ocdlib.Config import Config, getLogFormat
-from ocdlib.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
-from ocdlib.Events.Basic import EventListener
-from ocdlib.Events.DaemonShutdown import DaemonShutdownEventGenerator
-from ocdlib.Events.DaemonStartup import DaemonStartupEventGenerator
-from ocdlib.Events.Panic import PanicEvent
-from ocdlib.Events.Utilities.Factories import EventGeneratorFactory
-from ocdlib.Events.Utilities.Generators import createEventGenerators, getEventGenerators
-from ocdlib.EventProcessing import EventProcessingThread
-from ocdlib.Localization import _, setLocaleDir
-from ocdlib.State import State
-from ocdlib.Timeline import Timeline
-from ocdlib.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd.Config import Config, getLogFormat
+from opsiclientd.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
+from opsiclientd.Events.Basic import EventListener
+from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventGenerator
+from opsiclientd.Events.DaemonStartup import DaemonStartupEventGenerator
+from opsiclientd.Events.Panic import PanicEvent
+from opsiclientd.Events.Utilities.Factories import EventGeneratorFactory
+from opsiclientd.Events.Utilities.Generators import createEventGenerators, getEventGenerators
+from opsiclientd.EventProcessing import EventProcessingThread
+from opsiclientd.Localization import _, setLocaleDir
+from opsiclientd.State import State
+from opsiclientd.Timeline import Timeline
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 # This is at the end to make sure that the tornado-bridge for twisted
 # is installed once we reach this.
@@ -70,7 +70,7 @@ except ImportError:
 	__fullversion__ = False
 
 if RUNNING_ON_WINDOWS:
-	from ocdlib.Events.Windows.GUIStartup import (
+	from opsiclientd.Events.Windows.GUIStartup import (
 		GUIStartupEventConfig, GUIStartupEventGenerator)
 
 logger = Logger()
