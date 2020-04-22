@@ -8,6 +8,14 @@ version = "0.17"
 
 [[package]]
 category = "main"
+description = "Another Python SQLite Wrapper"
+name = "apsw"
+optional = false
+python-versions = "*"
+version = "3.9.2-r1"
+
+[[package]]
+category = "main"
 description = "Classes Without Boilerplate"
 name = "attrs"
 optional = false
@@ -337,13 +345,16 @@ test = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [metadata]
-content-hash = "67468e32e250bd8f1df2c01b2ae8ba075eba2443bb388765f36bdf763daa3674"
+content-hash = "422cf467f03623a48426e6edc5f668c28bce0e10cb086c8bf4b749363a403ccf"
 python-versions = "^3.7"
 
 [metadata.files]
 altgraph = [
     {file = "altgraph-0.17-py2.py3-none-any.whl", hash = "sha256:c623e5f3408ca61d4016f23a681b9adb100802ca3e3da5e718915a9e4052cebe"},
     {file = "altgraph-0.17.tar.gz", hash = "sha256:1f05a47122542f97028caf78775a095fbe6a2699b5089de8477eb583167d69aa"},
+]
+apsw = [
+    {file = "apsw-3.9.2-r1.tar.gz", hash = "sha256:dab96fd164dde9e59f7f27228291498217fa0e74048e2c08c7059d7e39589270"},
 ]
 attrs = [
     {file = "attrs-19.3.0-py2.py3-none-any.whl", hash = "sha256:08a96c641c3a74e44eb59afb61a24f2cb9f4d7188748e76ba4bb5edfa3cb7d1c"},
