@@ -1,0 +1,6 @@
+#!/usr/bin/python3
+
+from opsiclientd.opsiclientdmain import main
+
+main()
+
