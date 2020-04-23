@@ -1,4 +1,3 @@
-#! /usr/bin/python
 # -*- coding: utf-8 -*-
 
 # opsiclientd_rpc is part of the desktop management solution opsi
@@ -36,7 +35,7 @@ from OPSI.Logger import Logger, LOG_DEBUG
 # Do not remove this import, it's needed by using this module from CLI
 from OPSI import System
 
-__version__ = '4.1.1.2'
+__version__ = '4.2.0.0'
 
 logger = Logger()
 
@@ -44,29 +43,21 @@ encoding = locale.getpreferredencoding()
 
 
 def main():
-	argv = [unicode(arg, encoding) for arg in sys.argv]
-
-	if len(argv) < 5:
-		print u"Usage: %s <username> <password> <port> <rpc> [debug_logfile]" % os.path.basename(argv[0])
+	if len(sys.argv) < 5:
+		print(f"Usage: {os.path.basename(sys.argv[0])} <username> <password> <port> <rpc> [debug_logfile]")
 		sys.exit(1)
 
-	(username, password, port, rpc) = argv[1:5]
-	logFile = None
-	if len(argv) > 5:
-		logFile = argv[5]
-		logger.setLogFile(logFile)
+	(username, password, port, rpc) = sys.argv[1:5]
+	if len(sys.argv) > 5:
+		logger.setLogFile(sys.argv[5])
 		logger.setFileLevel(LOG_DEBUG)
 
-	address = u'https://localhost:%s/opsiclientd' % port
+	address = f"https://localhost:{port}/opsiclientd"
 
 	try:
 		with JSONRPCBackend(username=username, password=password, address=address) as backend:
-			logger.notice(u"Executing: %s" % rpc)
-			exec 'backend.%s' % rpc
+			logger.notice(f"Executing: {rpc}")
+			exec(f"backend.{rpc}")
 	except Exception as error:
 		logger.logException(error)
 		sys.exit(1)
-
-
-if __name__ == '__main__':
-	main()

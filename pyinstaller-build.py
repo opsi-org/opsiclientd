@@ -11,7 +11,8 @@ import platform
 import subprocess
 
 SCRIPTS = [
-	"run-opsiclientd"
+	"run-opsiclientd",
+	"opsiclientd_rpc"
 ]
 HIDDEN_IMPORTS = [
 	"csv",
