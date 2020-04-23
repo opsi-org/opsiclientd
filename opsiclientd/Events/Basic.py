@@ -203,7 +203,7 @@ class Event(object):
 	def getActionProcessorCommand(self):
 		actionProcessorCommand = self.eventConfig.actionProcessorCommand
 		for (key, value) in self.eventInfo.items():
-			actionProcessorCommand = actionProcessorCommand.replace(u'%' + u'event.' + str(key.lower()) + u'%', unicode(value))
+			actionProcessorCommand = actionProcessorCommand.replace(u'%' + u'event.' + str(key.lower()) + u'%', str(value))
 
 		return actionProcessorCommand
 

@@ -76,7 +76,7 @@ def getEventConfigs():
 			try:
 				for key in options.keys():
 					if key.lower() == 'active':
-						rawEventConfigs[eventConfigId]['active'] = unicode(options[key]).lower() not in ('0', 'false', 'off', 'no')
+						rawEventConfigs[eventConfigId]['active'] = str(options[key]).lower() not in ('0', 'false', 'off', 'no')
 					elif key.lower() == 'super':
 						rawEventConfigs[eventConfigId]['super'] = options[key]
 						if rawEventConfigs[eventConfigId]['super'].startswith('event_'):
@@ -260,7 +260,7 @@ def getEventConfigs():
 					elif key == 'include_product_group_ids':
 						eventConfigs[eventConfigId]['includeProductGroupIds'] = forceList(value)
 					elif key == 'working_window':
-						eventConfigs[eventConfigId]['workingWindow'] = unicode(value)
+						eventConfigs[eventConfigId]['workingWindow'] = str(value)
 					else:
 						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
 				except Exception as e:
