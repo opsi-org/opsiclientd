@@ -39,6 +39,10 @@ import tornado.platform.twisted
 #tornado.platform.twisted.install()  # Has to be above the reactor import.
 from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
+from twisted.web.static import File
+from twisted.web import resource, server, http, http_headers
+#from twisted.web.channel.http import HTTPFactory
+
 from tornado.ioloop import IOLoop
 
 from OPSI import System
@@ -47,11 +51,8 @@ from OPSI.Exceptions import OpsiAuthenticationError
 from OPSI.Logger import Logger
 from OPSI.Service import SSLContext, OpsiService
 from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface
-from OPSI.Service.Resource import (ResourceOpsi, ResourceOpsiJsonRpc,
-	ResourceOpsiJsonInterface, ResourceOpsiDAV)
+from OPSI.Service.Resource import ResourceOpsi, ResourceOpsiJsonRpc, ResourceOpsiJsonInterface
 from OPSI.Types import forceBool, forceInt, forceUnicode
-from OPSI.web2 import resource, stream, server, http, responsecode, http_headers
-from OPSI.web2.channel.http import HTTPFactory
 
 from opsiclientd.ControlPipe import OpsiclientdRpcPipeInterface
 from opsiclientd.Config import Config, getLogFormat
@@ -316,10 +317,10 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 		}
 		if not isinstance(result, http.Response):
 			result = http.Response()
-		result.code = responsecode.OK
-		result.headers.setHeader('content-type', http_headers.MimeType("text", "html", {"charset": "utf-8"}))
-		result.stream = stream.IByteStream(html.encode('utf-8').strip())
-		return result
+		self.request.setResponseCode(200)
+		self.request.setHeader('content-type', http_headers.MimeType("text", "html", {"charset": "utf-8"}))
+		self.request.write(html.encode('utf-8').strip())
+		
 
 
 class ResourceRoot(resource.Resource):
@@ -401,7 +402,7 @@ class ControlServer(OpsiService, threading.Thread):
 
 			self._server = reactor.listenSSL(
 				self._httpsPort,
-				HTTPFactory(self._site),
+				self._site,
 				SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
 			)
 			logger.notice(u"Control server is accepting HTTPS requests on port %d" % self._httpsPort)
@@ -434,12 +435,7 @@ class ControlServer(OpsiService, threading.Thread):
 	def createRoot(self):
 		if self._staticDir:
 			if os.path.isdir(self._staticDir):
-				self._root = ResourceOpsiDAV(
-					self,
-					path=self._staticDir,
-					readOnly=True,
-					authRequired=False
-				)
+				self._root = File(self._staticDir)
 			else:
 				logger.error(u"Cannot add static content '/': directory {!r} does not exist.", self._staticDir)
 
