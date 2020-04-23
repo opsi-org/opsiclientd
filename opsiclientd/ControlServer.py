@@ -24,6 +24,7 @@ procedure calls
 
 :copyright: uib GmbH <info@uib.de>
 :author: Jan Schneider <j.schneider@uib.de>
+:author: Erol Ueluekmen <e.ueluekmen@uib.de>
 :license: GNU Affero General Public License version 3
 """
 import codecs
@@ -34,11 +35,23 @@ import sys
 import threading
 import time
 
+import tornado.platform.twisted
+#tornado.platform.twisted.install()  # Has to be above the reactor import.
+from twisted.internet import reactor
+from twisted.internet.error import CannotListenError
+from tornado.ioloop import IOLoop
+
 from OPSI import System
 from OPSI.Backend.Backend import ConfigDataBackend
 from OPSI.Exceptions import OpsiAuthenticationError
 from OPSI.Logger import Logger
+from OPSI.Service import SSLContext, OpsiService
+from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface
+from OPSI.Service.Resource import (ResourceOpsi, ResourceOpsiJsonRpc,
+	ResourceOpsiJsonInterface, ResourceOpsiDAV)
 from OPSI.Types import forceBool, forceInt, forceUnicode
+from OPSI.web2 import resource, stream, server, http, responsecode, http_headers
+from OPSI.web2.channel.http import HTTPFactory
 
 from opsiclientd.ControlPipe import OpsiclientdRpcPipeInterface
 from opsiclientd.Config import Config, getLogFormat
@@ -57,7 +70,7 @@ config = Config()
 logger = Logger()
 state = State()
 
-infoPage = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+infoPage = u'''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 
 <html xmlns="http://www.w3.org/1999/xhtml">
@@ -87,7 +100,7 @@ infoPage = """<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 	</div>
 </body>
 </html>
-"""
+'''
 
 try:
 	fsencoding = sys.getfilesystemencoding()
@@ -99,9 +112,255 @@ except Exception as err:
 	logger.notice("Patching filesystemencoding to be {!r}", defaultEncoding)
 	sys.getfilesystemencoding = lambda: defaultEncoding
 
-class ControlServer(threading.Thread):
+
+class WorkerOpsiclientd(WorkerOpsi):
+	def __init__(self, service, request, resource):
+		logger.setLogFormat(getLogFormat(u'control server'), object=self)
+		WorkerOpsi.__init__(self, service, request, resource)
+
+	def _getCredentials(self):
+		(user, password) = self._getAuthorization()
+
+		if not user:
+			user = config.get('global', 'host_id')
+
+		return (user, password)
+
+	def _errback(self, failure):
+		result = WorkerOpsi._errback(self, failure)
+		logger.debug(u"DEBUG: detected host: {!r}", self.request.remoteAddr.host)
+		logger.debug(u"DEBUG: responsecode: {!r}", result.code)
+		logger.debug(u"DEBUG: maxAuthenticationFailures config: {!r}", config.get('control_server', 'max_authentication_failures'))
+		logger.debug(u"DEBUG: maxAuthenticationFailures config type: {!r}", type(config.get('control_server', 'max_authentication_failures')))
+
+		if result.code == responsecode.UNAUTHORIZED and self.request.remoteAddr.host not in ("127.0.0.1"):
+			maxAuthenticationFailures = config.get('control_server', 'max_authentication_failures')
+			if maxAuthenticationFailures > 0:
+				try:
+					self.service.authFailureCount[self.request.remoteAddr.host] += 1
+				except KeyError:
+					self.service.authFailureCount[self.request.remoteAddr.host] = 1
+
+				if self.service.authFailureCount[self.request.remoteAddr.host] > maxAuthenticationFailures:
+					logger.error(
+						u"{0} authentication failures from {0!r} in a row, waiting 60 seconds to prevent flooding",
+						self.service.authFailureCount[self.request.remoteAddr.host],
+						self.request.remoteAddr.host
+					)
+
+					return self._delayResult(60, result)
+		return result
+
+	def _authenticate(self, result):
+		if self.session.authenticated:
+			return result
+
+		try:
+			(self.session.user, self.session.password) = self._getCredentials()
+
+			logger.notice(u"Authorization request from %s@%s (application: %s)" % (self.session.user, self.session.ip, self.session.userAgent))
+
+			if not self.session.password:
+				raise Exception(u"No password from %s (application: %s)" % (self.session.ip, self.session.userAgent))
+
+			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
+				try:
+					del self.service.authFailureCount[self.request.remoteAddr.host]
+				except KeyError:
+					pass
+
+				return result
+
+			if RUNNING_ON_WINDOWS:
+				try:
+					# Hack to find and read the local-admin group and his members,
+					# that should also Work on french installations
+					admingroupsid = "S-1-5-32-544"
+					resume = 0
+					while 1:
+						data, total, resume = win32net.NetLocalGroupEnum(None, 1, resume)
+						for group in data:
+							groupname = group.get("name", "")
+							pysid, string, integer = win32security.LookupAccountName(None, groupname)
+
+							if admingroupsid in str(pysid):
+								memberresume = 0
+								while 1:
+									memberdata, total, memberresume = win32net.NetLocalGroupGetMembers(None, groupname, 2, resume)
+									logger.notice(memberdata)
+									for member in memberdata:
+										membersid = member.get("sid", "")
+										username, domain, type = win32security.LookupAccountSid(None, membersid)
+										if self.session.user.lower() == username.lower():
+											# The LogonUser function will raise an Exception on logon failure
+											win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
+											# No exception raised => user authenticated
+											try:
+												del self.service.authFailureCount[self.request.remoteAddr.host]
+											except KeyError:
+												pass
+
+											return result
+
+									if memberresume == 0:
+										break
+
+						if not resume:
+							break
+				except Exception:
+					# Standardway
+					if self.session.user.lower() == 'administrator':
+						# The LogonUser function will raise an Exception on logon failure
+						win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
+						# No exception raised => user authenticated
+						return result
+
+			raise Exception(u"Invalid credentials")
+		except Exception as e:
+			raise OpsiAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
+
+		return result
+
+
+class WorkerOpsiclientdJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
+	def __init__(self, service, request, resource):
+		WorkerOpsiclientd.__init__(self, service, request, resource)
+		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
+
+	def _getCallInstance(self, result):
+		self._callInstance = self.service._opsiclientdRpcInterface
+		self._callInterface = self.service._opsiclientdRpcInterface.getInterface()
+
+	def _processQuery(self, result):
+		return WorkerOpsiJsonRpc._processQuery(self, result)
+
+	def _generateResponse(self, result):
+		return WorkerOpsiJsonRpc._generateResponse(self, result)
+
+
+class WorkerOpsiclientdJsonInterface(WorkerOpsiclientdJsonRpc, WorkerOpsiJsonInterface):
+	def __init__(self, service, request, resource):
+		WorkerOpsiclientdJsonRpc.__init__(self, service, request, resource)
+		WorkerOpsiJsonInterface.__init__(self, service, request, resource)
+		self.path = u'interface'
+
+	def _getCallInstance(self, result):
+		return WorkerOpsiclientdJsonRpc._getCallInstance(self, result)
+
+	def _generateResponse(self, result):
+		return WorkerOpsiJsonInterface._generateResponse(self, result)
+
+
+class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
+	def __init__(self, service, request, resource):
+		WorkerOpsiclientd.__init__(self, service, request, resource)
+		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
+
+	def _getBackend(self, result):
+		try:
+			if self.session.callInstance and self.session.callInterface:
+				return result
+		except AttributeError:
+			pass
+
+		if not self.service._opsiclientd.getCacheService():
+			raise Exception(u'Cache service not running')
+
+		self.session.callInstance = self.service._opsiclientd.getCacheService().getConfigBackend()
+		logger.notice(u'Backend created: %s' % self.session.callInstance)
+		self.session.callInterface = self.session.callInstance.backend_getInterface()
+		return result
+
+	def _getCallInstance(self, result):
+		self._getBackend(result)
+		self._callInstance = self.session.callInstance
+		self._callInterface = self.session.callInterface
+
+	def _processQuery(self, result):
+		return WorkerOpsiJsonRpc._processQuery(self, result)
+
+	def _generateResponse(self, result):
+		return WorkerOpsiJsonRpc._generateResponse(self, result)
+
+	def _renderError(self, failure):
+		return WorkerOpsiJsonRpc._renderError(self, failure)
+
+
+class WorkerCacheServiceJsonInterface(WorkerCacheServiceJsonRpc, WorkerOpsiJsonInterface):
+	def __init__(self, service, request, resource):
+		WorkerCacheServiceJsonRpc.__init__(self, service, request, resource)
+		WorkerOpsiJsonInterface.__init__(self, service, request, resource)
+		self.path = u'rpcinterface'
+
+	def _getCallInstance(self, result):
+		return WorkerCacheServiceJsonRpc._getCallInstance(self, result)
+
+	def _generateResponse(self, result):
+		return WorkerOpsiJsonInterface._generateResponse(self, result)
+
+
+class WorkerOpsiclientdInfo(WorkerOpsiclientd):
+	def __init__(self, service, request, resource):
+		WorkerOpsiclientd.__init__(self, service, request, resource)
+
+	def _processQuery(self, result):
+		return result
+
+	def _generateResponse(self, result):
+		logger.info(u"Creating opsiclientd info page")
+
+		timeline = Timeline()
+		html = infoPage % {
+			'head': timeline.getHtmlHead(),
+			'hostname': config.get('global', 'host_id'),
+		}
+		if not isinstance(result, http.Response):
+			result = http.Response()
+		result.code = responsecode.OK
+		result.headers.setHeader('content-type', http_headers.MimeType("text", "html", {"charset": "utf-8"}))
+		result.stream = stream.IByteStream(html.encode('utf-8').strip())
+		return result
+
+
+class ResourceRoot(resource.Resource):
+	addSlash = True
+
+	def render(self, request):
+		''' Process request. '''
+		return http.Response(stream="<html><head><title>opsiclientd</title></head><body></body></html>")
+
+
+class ResourceOpsiclientd(ResourceOpsi):
+	WorkerClass = WorkerOpsiclientd
+
+
+class ResourceOpsiclientdJsonRpc(ResourceOpsiJsonRpc):
+	WorkerClass = WorkerOpsiclientdJsonRpc
+
+
+class ResourceOpsiclientdJsonInterface(ResourceOpsiJsonInterface):
+	WorkerClass = WorkerOpsiclientdJsonInterface
+
+
+class ResourceCacheServiceJsonRpc(ResourceOpsiJsonRpc):
+	WorkerClass = WorkerCacheServiceJsonRpc
+
+
+class ResourceCacheServiceJsonInterface(ResourceOpsiJsonInterface):
+	WorkerClass = WorkerCacheServiceJsonInterface
+
+
+class ResourceOpsiclientdInfo(ResourceOpsiclientd):
+	WorkerClass = WorkerOpsiclientdInfo
+
+	def __init__(self, service):
+		ResourceOpsiclientd.__init__(self, service)
+
+
+class ControlServer(OpsiService, threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
-		logger.setLogFormat(getLogFormat("control server"), object=self)
+		OpsiService.__init__(self)
+		logger.setLogFormat(getLogFormat(u'control server'), object=self)
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._httpsPort = httpsPort
@@ -113,16 +372,100 @@ class ControlServer(threading.Thread):
 		self._server = None
 		self._opsiclientdRpcInterface = OpsiclientdRpcInterface(self._opsiclientd)
 
-		logger.info("ControlServer initiated")
+		logger.info(u"ControlServer initiated")
 		self.authFailureCount = {}
 
 	def run(self):
 		self._running = True
-		while self._running:
-			time.sleep(1)
-	
+		try:
+			logger.info(u"creating root resource")
+			self.createRoot()
+			self._site = server.Site(self._root)
+
+			logger.debug('Creating SSLContext with the following values:')
+			logger.debug('\t-SSL Server Key File: {path}'.format(path=self._sslServerKeyFile))
+			if not os.path.exists(self._sslServerKeyFile):
+				logger.warning('The SSL server key file "{path}" is missing. '
+								'Please check your configuration.'.format(
+									path=self._sslServerKeyFile
+								)
+				)
+			logger.debug('\t-SSL Server Cert File: {path}'.format(path=self._sslServerCertFile))
+			if not os.path.exists(self._sslServerCertFile):
+				logger.warning('The SSL server certificate file "{path}" is '
+								'missing. Please check your '
+								'configuration.'.format(
+									path=self._sslServerCertFile
+								)
+				)
+
+			self._server = reactor.listenSSL(
+				self._httpsPort,
+				HTTPFactory(self._site),
+				SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
+			)
+			logger.notice(u"Control server is accepting HTTPS requests on port %d" % self._httpsPort)
+
+			if not reactor.running:
+				logger.debug(u"Reactor is not running. Starting.")
+				#IOLoop.current().start()
+				reactor.run(installSignalHandlers=0)
+				logger.debug(u"Reactor run ended.")
+			else:
+				logger.debug(u"Reactor already running.")
+		except CannotListenError as err:
+			logger.critical(u"Listening on port {0} impossible: {1}".format(self._httpsPort, err))
+			logger.logException(err)
+			self._opsiclientd.stop()
+			raise err
+		except Exception as err:
+			logger.warning('ControlServer {1} caught error: {0}'.format(err, repr(self)))
+			logger.logException(err)
+			raise err
+		finally:
+			logger.notice(u"Control server exiting")
+			self._running = False
+
 	def stop(self):
+		if self._server:
+			self._server.stopListening()
 		self._running = False
+
+	def createRoot(self):
+		if self._staticDir:
+			if os.path.isdir(self._staticDir):
+				self._root = ResourceOpsiDAV(
+					self,
+					path=self._staticDir,
+					readOnly=True,
+					authRequired=False
+				)
+			else:
+				logger.error(u"Cannot add static content '/': directory {!r} does not exist.", self._staticDir)
+
+		if not self._root:
+			self._root = ResourceRoot()
+
+		self._root.putChild("opsiclientd", ResourceOpsiclientdJsonRpc(self))
+		self._root.putChild("interface", ResourceOpsiclientdJsonInterface(self))
+		self._root.putChild("rpc", ResourceCacheServiceJsonRpc(self))
+		self._root.putChild("rpcinterface", ResourceCacheServiceJsonInterface(self))
+		self._root.putChild("info.html", ResourceOpsiclientdInfo(self))
+		self._root.putChild("kiosk", ResourceKioskJsonRpc(self))
+
+	def __repr__(self):
+		return (
+			'<ControlServer(opsiclientd={opsiclientd}, httpsPort={port}, '
+			'sslServerKeyFile={keyFile}, sslServerCertFile={certFile}, '
+			'staticDir={staticDir})>'.format(
+				opsiclientd=self._opsiclientd,
+				port=self._httpsPort,
+				keyFile=self._sslServerKeyFile,
+				certFile=self._sslServerCertFile,
+				staticDir=self._staticDir
+			)
+		)
+
 
 class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def __init__(self, opsiclientd):
