@@ -129,24 +129,24 @@ class WorkerOpsiclientd(WorkerOpsi):
 
 	def _errback(self, failure):
 		result = WorkerOpsi._errback(self, failure)
-		logger.debug(u"DEBUG: detected host: {!r}", self.request.remoteAddr.host)
-		logger.debug(u"DEBUG: responsecode: {!r}", result.code)
+		logger.debug(u"DEBUG: detected host: {!r}", self.request.getClientIP())
+		logger.debug(u"DEBUG: responsecode: {!r}", self.request.code)
 		logger.debug(u"DEBUG: maxAuthenticationFailures config: {!r}", config.get('control_server', 'max_authentication_failures'))
 		logger.debug(u"DEBUG: maxAuthenticationFailures config type: {!r}", type(config.get('control_server', 'max_authentication_failures')))
 
-		if result.code == responsecode.UNAUTHORIZED and self.request.remoteAddr.host not in ("127.0.0.1"):
+		if self.request.code == 401 and self.request.getClientIP() != "127.0.0.1":
 			maxAuthenticationFailures = config.get('control_server', 'max_authentication_failures')
 			if maxAuthenticationFailures > 0:
 				try:
-					self.service.authFailureCount[self.request.remoteAddr.host] += 1
+					self.service.authFailureCount[self.request.getClientIP()] += 1
 				except KeyError:
-					self.service.authFailureCount[self.request.remoteAddr.host] = 1
+					self.service.authFailureCount[self.request.getClientIP()] = 1
 
-				if self.service.authFailureCount[self.request.remoteAddr.host] > maxAuthenticationFailures:
+				if self.service.authFailureCount[self.request.getClientIP()] > maxAuthenticationFailures:
 					logger.error(
 						u"{0} authentication failures from {0!r} in a row, waiting 60 seconds to prevent flooding",
-						self.service.authFailureCount[self.request.remoteAddr.host],
-						self.request.remoteAddr.host
+						self.service.authFailureCount[self.request.getClientIP()],
+						self.request.getClientIP()
 					)
 
 					return self._delayResult(60, result)
@@ -166,7 +166,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 
 			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
 				try:
-					del self.service.authFailureCount[self.request.remoteAddr.host]
+					del self.service.authFailureCount[self.request.getClientIP()]
 				except KeyError:
 					pass
 
@@ -197,7 +197,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 											win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
 											# No exception raised => user authenticated
 											try:
-												del self.service.authFailureCount[self.request.remoteAddr.host]
+												del self.service.authFailureCount[self.request.getClientIP()]
 											except KeyError:
 												pass
 
@@ -325,11 +325,11 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 
 class ResourceRoot(resource.Resource):
 	addSlash = True
+	#isLeaf = True
 
 	def render(self, request):
 		''' Process request. '''
-		return http.Response(stream="<html><head><title>opsiclientd</title></head><body></body></html>")
-
+		return b"<html><head><title>opsiclientd</title></head><body></body></html>"
 
 class ResourceOpsiclientd(ResourceOpsi):
 	WorkerClass = WorkerOpsiclientd
@@ -435,19 +435,20 @@ class ControlServer(OpsiService, threading.Thread):
 	def createRoot(self):
 		if self._staticDir:
 			if os.path.isdir(self._staticDir):
-				self._root = File(self._staticDir)
+				#self._root = File(self._staticDir)
+				self._root = File(self._staticDir.encode())
 			else:
 				logger.error(u"Cannot add static content '/': directory {!r} does not exist.", self._staticDir)
 
 		if not self._root:
 			self._root = ResourceRoot()
-
-		self._root.putChild("opsiclientd", ResourceOpsiclientdJsonRpc(self))
-		self._root.putChild("interface", ResourceOpsiclientdJsonInterface(self))
-		self._root.putChild("rpc", ResourceCacheServiceJsonRpc(self))
-		self._root.putChild("rpcinterface", ResourceCacheServiceJsonInterface(self))
-		self._root.putChild("info.html", ResourceOpsiclientdInfo(self))
-		self._root.putChild("kiosk", ResourceKioskJsonRpc(self))
+		
+		self._root.putChild(b"opsiclientd", ResourceOpsiclientdJsonRpc(self))
+		self._root.putChild(b"interface", ResourceOpsiclientdJsonInterface(self))
+		self._root.putChild(b"rpc", ResourceCacheServiceJsonRpc(self))
+		self._root.putChild(b"rpcinterface", ResourceCacheServiceJsonInterface(self))
+		self._root.putChild(b"info.html", ResourceOpsiclientdInfo(self))
+		self._root.putChild(b"kiosk", ResourceKioskJsonRpc(self))
 
 	def __repr__(self):
 		return (
