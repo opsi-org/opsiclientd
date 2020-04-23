@@ -430,7 +430,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			description = u"Event %s occurred\n" % event.eventConfig.getId()
 			description += u"Config:\n"
 			config = event.eventConfig.getConfig()
-			configKeys = config.keys()
+			configKeys = list(config.keys())
 			configKeys.sort()
 			for configKey in configKeys:
 				description += u"%s: %s\n" % (configKey, config[configKey])
