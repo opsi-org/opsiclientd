@@ -106,9 +106,6 @@ class PosixControlPipe(ControlPipe):
 
 	def stop(self):
 		logger.debug("Stopping {0}".format(self))
-		self.closePipe()
-		if os.path.exists(self._pipeName):
-			os.unlink(self._pipeName)
 		self._stopEvent.set()
 
 	def createPipe(self):
