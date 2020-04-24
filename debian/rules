@@ -16,7 +16,10 @@ install:
 	cp -a opsiclientd debian/opsiclientd/usr/lib/
 
 	# create symlink in /usr/bin
-	ln -s /usr/lib/opsiclientd/opsiclientd debian/opsiclientd/usr/bin/opsiclientd
+	echo "#!/bin/sh" > debian/opsiclientd/usr/bin/opsiclientd
+	echo "cd /usr/lib/opsiclientd" >> debian/opsiclientd/usr/bin/opsiclientd
+	echo "./opsiclientd \$$@" >> debian/opsiclientd/usr/bin/opsiclientd
+	chmod 755 debian/opsiclientd/usr/bin/opsiclientd
 
 	# copy locales
 	for i in gettext/*.mo; do \
