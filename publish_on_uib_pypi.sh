@@ -18,6 +18,8 @@ if [ -z "${repo_password}" ]; then
 	echo ""
 fi
 
+[ -e ./gettext/update_mo.sh ] && ./gettext/update_mo.sh
+
 whl_name="${pkg_name/-/_}"
 
 poetry build
