@@ -35,15 +35,10 @@ import sys
 import threading
 import time
 
-import tornado.platform.twisted
-tornado.platform.twisted.install()  # Has to be above the reactor import.
 from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
 from twisted.web.static import File
 from twisted.web import resource, server, http, http_headers
-#from twisted.web.channel.http import HTTPFactory
-
-from tornado.ioloop import IOLoop
 
 from OPSI import System
 from OPSI.Backend.Backend import ConfigDataBackend
@@ -404,16 +399,13 @@ class ControlServer(OpsiService, threading.Thread):
 			)
 			logger.notice(u"Control server is accepting HTTPS requests on port %d" % self._httpsPort)
 
-			IOLoop.current().start()
-			"""
 			if not reactor.running:
-				logger.debug(u"Reactor is not running. Starting.")
-				#IOLoop.current().start()
+				logger.debug("Reactor is not running. Starting.")
 				reactor.run(installSignalHandlers=0)
-				logger.debug(u"Reactor run ended.")
+				logger.debug("Reactor run ended.")
 			else:
-				logger.debug(u"Reactor already running.")
-			"""
+				logger.debug("Reactor already running.")
+		
 		except CannotListenError as err:
 			logger.critical("Listening on port {0} impossible: {1}".format(self._httpsPort, err))
 			logger.logException(err)
@@ -434,13 +426,11 @@ class ControlServer(OpsiService, threading.Thread):
 			self._sessionHandler.deleteAllSessions()
 		reactor.fireSystemEvent('shutdown')
 		reactor.disconnectAll()
-		#IOLoop.current().stop()
 		self._running = False
 
 	def createRoot(self):
 		if self._staticDir:
 			if os.path.isdir(self._staticDir):
-				#self._root = File(self._staticDir)
 				self._root = File(self._staticDir.encode())
 			else:
 				logger.error(u"Cannot add static content '/': directory {!r} does not exist.", self._staticDir)

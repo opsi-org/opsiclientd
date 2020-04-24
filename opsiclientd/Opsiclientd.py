@@ -34,10 +34,6 @@ import threading
 import time
 from contextlib import contextmanager
 
-# Import the ControlServer first because this module installs
-# the tornado-bridge for twisted.
-from opsiclientd.ControlServer import ControlServer
-
 from OPSI import System
 from OPSI.Logger import Logger
 from OPSI.Types import forceBool, forceInt, forceUnicode
@@ -47,6 +43,7 @@ from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 from opsiclientd import __version__
 from opsiclientd.Config import Config, getLogFormat
 from opsiclientd.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
+from opsiclientd.ControlServer import ControlServer
 from opsiclientd.Events.Basic import EventListener
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventGenerator
 from opsiclientd.Events.DaemonStartup import DaemonStartupEventGenerator
@@ -58,11 +55,6 @@ from opsiclientd.Localization import _, setLocaleDir
 from opsiclientd.State import State
 from opsiclientd.Timeline import Timeline
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
-
-# This is at the end to make sure that the tornado-bridge for twisted
-# is installed once we reach this.
-from twisted.internet import reactor
-from tornado.ioloop import IOLoop
 
 try:
 	from opsiclientd.nonfree import __fullversion__
