@@ -12,6 +12,7 @@ pyinstaller build:
     - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3
     - source $HOME/.poetry/env
   script:
+    - sed -i s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
     - ./pyinstaller-build.py
     - mv opsiclientd opsiclientd.src
     - mv dist/opsiclientd .
