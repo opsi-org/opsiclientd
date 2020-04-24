@@ -1,5 +1,5 @@
 [Unit]
-Description=Opsi Linux Client Agent
+Description=opsi linux client agent
 After=remote-fs.target
 After=local-fs.target
 After=network-online.target
@@ -8,11 +8,11 @@ Requires=local-fs.target
 Wants=network-online.target
 
 [Service]
-ExecStartPre=-/usr/bin/mkdir -p /var/run/opsiclientd
-ExecStartPre=-/usr/bin/mkdir -p /var/log/opsi-client-agent
+ExecStartPre=-mkdir -p /var/run/opsiclientd
+ExecStartPre=-mkdir -p /var/log/opsi-client-agent
 ExecStart=/usr/bin/opsiclientd
 RestartSec=10
-TimeoutStopSec=30
+TimeoutStopSec=15
 
 [Install]
 WantedBy=multi-user.target
