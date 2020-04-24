@@ -37,7 +37,7 @@ package:deb:
     - test -z "$deps" || apt -y install $deps
     - dpkg-buildpackage -b
     - mkdir deb
-    - mv opsiclientd_*.deb deb/
+    - mv ../opsiclientd_*.deb deb/
 
   artifacts:
     name: 'opsiclientd-deb'
