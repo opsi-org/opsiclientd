@@ -106,6 +106,9 @@ class PosixControlPipe(ControlPipe):
 
 	def stop(self):
 		logger.debug("Stopping {0}".format(self))
+		self.closePipe()
+		if os.path.exists(self._pipeName):
+			os.unlink(self._pipeName)
 		self._stopEvent.set()
 
 	def createPipe(self):
@@ -134,13 +137,20 @@ class PosixControlPipe(ControlPipe):
 			while not self._stopEvent.wait(1):
 				try:
 					logger.debug2(u"Opening named pipe {}", self._pipeName)
-					self._pipe = os.open(self._pipeName, os.O_RDONLY)
+					self._pipe = os.open(self._pipeName, os.O_RDONLY | os.O_NONBLOCK)
 					logger.debug2(u"Reading from pipe {}", self._pipeName)
-					rpc = os.read(self._pipe, self._bufferSize)
+					rpc = ""
+					while True:
+						data = os.read(self._pipe, self._bufferSize)
+						if data:
+							rpc += data
+							time.sleep(0.001)
+						else:
+							if rpc:
+								break
+							else:
+								time.sleep(1) 
 					os.close(self._pipe)
-					if not rpc:
-						logger.error(u"No rpc from pipe")
-						continue
 					logger.debug2(u"Received rpc from pipe: {!r}", rpc)
 					result = self.executeRpc(rpc)
 					logger.debug2(u"Opening named pipe {}", self._pipeName)
