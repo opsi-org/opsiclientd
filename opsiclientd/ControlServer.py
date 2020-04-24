@@ -432,7 +432,9 @@ class ControlServer(OpsiService, threading.Thread):
 			self._server.stopListening()
 		if self._sessionHandler:
 			self._sessionHandler.deleteAllSessions()
-		IOLoop.current().stop()
+		reactor.fireSystemEvent('shutdown')
+		reactor.disconnectAll()
+		#IOLoop.current().stop()
 		self._running = False
 
 	def createRoot(self):
