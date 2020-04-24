@@ -230,15 +230,16 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.notice(u"Control pipe started")
 				yield
 			except Exception as e:
-				logger.error(u"Failed to start control pipe: %s" % forceUnicode(e))
+				logger.error("Failed to start control pipe: {0}", forceUnicode(e))
 				raise
 			finally:
-				logger.info(u"Stopping control pipe")
+				logger.info("Stopping control pipe")
 				try:
 					controlPipe.stop()
 					controlPipe.join(2)
+					logger.info("Control pipe stopped")
 				except (NameError, RuntimeError) as stopError:
-					logger.debug(u"Stopping controlPipe failed: {0}".format(stopError))
+					logger.debug("Stopping controlPipe failed: {0}", stopError)
 
 		@contextmanager
 		def getControlServer():
@@ -269,6 +270,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				try:
 					controlServer.stop()
 					controlServer.join(2)
+					logger.info("Control server stopped")
 				except (NameError, RuntimeError) as stopError:
 					logger.debug(u"Stopping controlServer failed: {0}".format(stopError))
 
@@ -290,6 +292,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					try:
 						cacheService.stop()
 						cacheService.join(2)
+						logger.info("Cache service stopped")
 					except (NameError, RuntimeError) as stopError:
 						logger.debug(u"Stopping cache service failed: {0}".format(stopError))
 			except ImportError:
@@ -305,15 +308,16 @@ class Opsiclientd(EventListener, threading.Thread):
 			for eventGenerator in getEventGenerators():
 				eventGenerator.addEventListener(self)
 				eventGenerator.start()
-				logger.notice(u"Event generator '%s' started" % eventGenerator)
+				logger.notice("Event generator '%s' started" % eventGenerator)
 
 			try:
 				yield
 			finally:
 				for eventGenerator in getEventGenerators():
-					logger.info(u"Stopping event generator %s" % eventGenerator)
+					logger.info("Stopping event generator %s" % eventGenerator)
 					eventGenerator.stop()
 					eventGenerator.join(2)
+					logger.info("Event generator %s stopped" % eventGenerator)
 
 		@contextmanager
 		def getDaemonLoopingContext():
@@ -323,9 +327,9 @@ class Opsiclientd(EventListener, threading.Thread):
 
 				if RUNNING_ON_WINDOWS and getEventGenerators(generatorClass=GUIStartupEventGenerator):
 					# Wait until gui starts up
-					logger.notice(u"Waiting for gui startup (timeout: %d seconds)" % config.get('global', 'wait_for_gui_timeout'))
+					logger.notice("Waiting for gui startup (timeout: %d seconds)" % config.get('global', 'wait_for_gui_timeout'))
 					self.waitForGUI(timeout=config.get('global', 'wait_for_gui_timeout'))
-					logger.notice(u"Done waiting for GUI")
+					logger.notice("Done waiting for GUI")
 
 					# Wait some more seconds for events to fire
 					time.sleep(5)
@@ -334,28 +338,29 @@ class Opsiclientd(EventListener, threading.Thread):
 					yield
 				finally:
 					for eventGenerator in getEventGenerators(generatorClass=DaemonShutdownEventGenerator):
+						logger.info("Create and fire shutdown event generator %s" % eventGenerator)
 						eventGenerator.createAndFireEvent()
 
 		try:
 			if __fullversion__:
-				eventTitle = u"Opsiclientd version: %s (full) running" % __version__
-				logger.essential(u"Opsiclientd version: %s (full)" % __version__)
+				eventTitle = "Opsiclientd version: %s (full) running" % __version__
+				logger.essential("Opsiclientd version: %s (full)" % __version__)
 			else:
-				eventTitle = u"Opsiclientd version: %s started" % __version__
-				logger.essential(u"Opsiclientd version: %s" % __version__)
+				eventTitle = "Opsiclientd version: %s started" % __version__
+				logger.essential("Opsiclientd version: %s" % __version__)
 			eventDescription = "Commandline: %s\n" % ' '.join(sys.argv)
-			logger.essential(u"Commandline: %s" % ' '.join(sys.argv))
-			eventDescription += u"Working directory: %s\n" % os.getcwd()
-			logger.essential(u"Working directory: %s" % os.getcwd())
-			eventDescription += u"Using host id '%s'" % config.get('global', 'host_id')
-			logger.notice(u"Using host id '%s'" % config.get('global', 'host_id'))
+			logger.essential("Commandline: %s" % ' '.join(sys.argv))
+			eventDescription += "Working directory: %s\n" % os.getcwd()
+			logger.essential("Working directory: %s" % os.getcwd())
+			eventDescription += "Using host id '%s'" % config.get('global', 'host_id')
+			logger.notice("Using host id '%s'" % config.get('global', 'host_id'))
 
 			self.setBlockLogin(True)
 
 			self._opsiclientdRunningEventId = timeline.addEvent(
 				title=eventTitle,
 				description=eventDescription,
-				category=u'opsiclientd_running',
+				category="opsiclientd_running",
 				durationEvent=True
 			)
 
@@ -366,22 +371,22 @@ class Opsiclientd(EventListener, threading.Thread):
 
 						with getDaemonLoopingContext():
 							if not self._eventProcessingThreads:
-								logger.notice(u"No events processing, unblocking login")
+								logger.notice("No events processing, unblocking login")
 								self.setBlockLogin(False)
 
 							try:
 								while not self._stopEvent.is_set():
 									self._stopEvent.wait(1)
 							finally:
-								logger.notice(u"opsiclientd is going down")
+								logger.notice("opsiclientd is going down")
 
 								for ept in self._eventProcessingThreads:
-									logger.info(u"Waiting for event processing thread %s" % ept)
+									logger.info("Waiting for event processing thread %s" % ept)
 									ept.join(5)
 
 								if self._opsiclientdRunningEventId:
 									timeline.setEventEnd(self._opsiclientdRunningEventId)
-								logger.info(u"Stopping timeline")
+								logger.info("Stopping timeline")
 								timeline.stop()
 		except Exception as e:
 			logger.logException(e)
@@ -389,6 +394,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		finally:
 			self._running = False
 
+			"""
 			if reactor and reactor.running:
 				logger.info(u"Stopping reactor")
 				reactor.fireSystemEvent('shutdown')
@@ -411,6 +417,10 @@ class Opsiclientd(EventListener, threading.Thread):
 				IOLoop.current().stop()
 			except Exception as error:
 				logger.debug(u"Stopping IOLoop failed: {0}".format(error))
+			"""
+
+			for thread in threading.enumerate():
+				logger.info("Runnning thread on main thread exit: {0}", thread)
 
 			logger.info(u"Exiting opsiclientd thread")
 
