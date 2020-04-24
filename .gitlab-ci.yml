@@ -2,8 +2,9 @@ image: python:3.7-stretch
 
 stages:
   - build
+  - package
 
-pyinstaller build:
+build:pyinstaller:
   stage: build
   before_script:
     - apt update
@@ -18,7 +19,29 @@ pyinstaller build:
     - mv opsiclientd opsiclientd.src
     - mv dist/opsiclientd .
   artifacts:
+    name: 'opsiclientd-pyinstaller'
     paths:
       - opsiclientd
     expire_in: 2 day
 
+package:deb:
+  stage: package
+  dependencies:
+    build:pyinstaller
+  script:
+    - apt update
+    - apt -y upgrade
+    - apt -y install debhelper
+    - deps=$((dpkg-checkbuilddeps 2>&1 | sed "s/dpkg-checkbuilddeps\:\serror\:\sUnmet build dependencies\://g" | sed "s/[\(][^)]*[\)] //g") || echo -n "")
+    - echo $deps
+    - test -z "$deps" || apt -y install $deps
+    - dpkg-buildpackage -b
+    - mkdir deb
+    - mv opsiclientd_*.deb deb/
+
+  artifacts:
+    name: 'opsiclientd-deb'
+    paths:
+      - deb/*
+    expire_in: 2 day
+    

@@ -1,0 +1,6 @@
+etc/opsi-client-agent
+usr/bin
+usr/lib/opsiclientd
+usr/share/opsiclientd
+var/log/opsi-client-agent
+var/run/opsiclientd
