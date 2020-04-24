@@ -14,7 +14,6 @@ pyinstaller build:
   script:
     - sed -i s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
     - poetry update
-    - cat pyproject.toml
     - ./pyinstaller-build.py
     - mv opsiclientd opsiclientd.src
     - mv dist/opsiclientd .
