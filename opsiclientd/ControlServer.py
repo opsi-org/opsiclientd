@@ -36,7 +36,7 @@ import threading
 import time
 
 import tornado.platform.twisted
-#tornado.platform.twisted.install()  # Has to be above the reactor import.
+tornado.platform.twisted.install()  # Has to be above the reactor import.
 from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
 from twisted.web.static import File
@@ -404,6 +404,8 @@ class ControlServer(OpsiService, threading.Thread):
 			)
 			logger.notice(u"Control server is accepting HTTPS requests on port %d" % self._httpsPort)
 
+			IOLoop.current().start()
+			"""
 			if not reactor.running:
 				logger.debug(u"Reactor is not running. Starting.")
 				#IOLoop.current().start()
@@ -411,22 +413,26 @@ class ControlServer(OpsiService, threading.Thread):
 				logger.debug(u"Reactor run ended.")
 			else:
 				logger.debug(u"Reactor already running.")
+			"""
 		except CannotListenError as err:
-			logger.critical(u"Listening on port {0} impossible: {1}".format(self._httpsPort, err))
+			logger.critical("Listening on port {0} impossible: {1}".format(self._httpsPort, err))
 			logger.logException(err)
 			self._opsiclientd.stop()
 			raise err
 		except Exception as err:
-			logger.warning('ControlServer {1} caught error: {0}'.format(err, repr(self)))
+			logger.warning("ControlServer {1} caught error: {0}".format(err, repr(self)))
 			logger.logException(err)
 			raise err
 		finally:
-			logger.notice(u"Control server exiting")
+			logger.notice("Control server exiting")
 			self._running = False
 
 	def stop(self):
 		if self._server:
 			self._server.stopListening()
+		if self._sessionHandler:
+			self._sessionHandler.deleteAllSessions()
+		IOLoop.current().stop()
 		self._running = False
 
 	def createRoot(self):
