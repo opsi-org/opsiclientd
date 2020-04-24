@@ -308,19 +308,16 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 		return result
 
 	def _generateResponse(self, result):
-		logger.info(u"Creating opsiclientd info page")
+		logger.info("Creating opsiclientd info page")
 
 		timeline = Timeline()
 		html = infoPage % {
-			'head': timeline.getHtmlHead(),
-			'hostname': config.get('global', 'host_id'),
+			"head": timeline.getHtmlHead(),
+			"hostname": config.get("global", "host_id"),
 		}
-		if not isinstance(result, http.Response):
-			result = http.Response()
 		self.request.setResponseCode(200)
-		self.request.setHeader('content-type', http_headers.MimeType("text", "html", {"charset": "utf-8"}))
-		self.request.write(html.encode('utf-8').strip())
-		
+		self.request.setHeader("content-type", "text/html; charset=utf-8")
+		self.request.write(html.encode("utf-8").strip())
 
 
 class ResourceRoot(resource.Resource):
