@@ -15,7 +15,7 @@ install:
 	# copy pyinstaller files
 	cp -a opsiclientd debian/opsiclientd/usr/lib/
 
-	# create symlink in /usr/bin
+	# create script in /usr/bin
 	echo "#!/bin/sh" > debian/opsiclientd/usr/bin/opsiclientd
 	echo "cd /usr/lib/opsiclientd" >> debian/opsiclientd/usr/bin/opsiclientd
 	echo "./opsiclientd \$$@" >> debian/opsiclientd/usr/bin/opsiclientd
@@ -30,10 +30,10 @@ install:
 
 	# copy static_html
 	cp -a static_html debian/opsiclientd/usr/share/opsiclientd/
-	find debian/opsiclientd/usr/share/opsiclientd -type f -exec chmod 644 "{}" \;
-	find debian/opsiclientd/usr/share/opsiclientd -type d -exec chmod 755 "{}" \;
+	find debian/opsiclientd/usr/share/opsiclientd/static_html -type f -exec chmod 644 "{}" \;
+	find debian/opsiclientd/usr/share/opsiclientd/static_html -type d -exec chmod 755 "{}" \;
 
-	# copy copnfig file
+	# copy config file
 	install -m 0644 src/linux/opsiclientd.conf -t debian/opsiclientd/etc/opsi-client-agent
 
 	dh_install
