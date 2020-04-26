@@ -120,6 +120,17 @@ version = "17.5.0"
 scripts = ["click (>=6.0)", "twisted (>=16.4.0)"]
 
 [[package]]
+category = "dev"
+description = "Mach-O header analysis and editing"
+name = "macholib"
+optional = false
+python-versions = "*"
+version = "1.14"
+
+[package.dependencies]
+altgraph = ">=0.15"
+
+[[package]]
 category = "main"
 description = "ASN.1 types and codecs"
 name = "pyasn1"
@@ -339,7 +350,7 @@ test = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [metadata]
-content-hash = "ad3bfb1cacf691ecafb3e013c46ca83f62e8e858ffcb8aee3f8a5dd9026c320a"
+content-hash = "024617e95817894e27bdbad1afe87fce03610e4e15c078f0bb087fc215edab06"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -429,6 +440,10 @@ idna = [
 incremental = [
     {file = "incremental-17.5.0-py2.py3-none-any.whl", hash = "sha256:717e12246dddf231a349175f48d74d93e2897244939173b01974ab6661406b9f"},
     {file = "incremental-17.5.0.tar.gz", hash = "sha256:7b751696aaf36eebfab537e458929e194460051ccad279c72b755a167eebd4b3"},
+]
+macholib = [
+    {file = "macholib-1.14-py2.py3-none-any.whl", hash = "sha256:c500f02867515e6c60a27875b408920d18332ddf96b4035ef03beddd782d4281"},
+    {file = "macholib-1.14.tar.gz", hash = "sha256:0c436bc847e7b1d9bda0560351bf76d7caf930fb585a828d13608839ef42c432"},
 ]
 pyasn1 = [
     {file = "pyasn1-0.4.8-py2.4.egg", hash = "sha256:fec3e9d8e36808a28efb59b489e4528c10ad0f480e57dcc32b4de5c9d8c9fdf3"},
