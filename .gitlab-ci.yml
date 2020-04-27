@@ -49,7 +49,7 @@ build:macos-pyinstaller:
       tags:
         - macos
       script:
-        - sed -i s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
+        - sed -ie s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
         - poetry update
         - ./pyinstaller-build.py
         - mv opsiclientd opsiclientd.src
