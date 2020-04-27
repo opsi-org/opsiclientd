@@ -4,22 +4,21 @@ stages:
   - build
   - package
 
-build:pyinstaller:
+build:linux-pyinstaller:
   stage: build
-  before_script:
+  script:
     - apt update
     - apt -y upgrade
     - apt -y install curl
     - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3
     - source $HOME/.poetry/env
-  script:
     - sed -i s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
     - poetry update
     - ./pyinstaller-build.py
     - mv opsiclientd opsiclientd.src
     - mv dist/opsiclientd .
   artifacts:
-    name: 'opsiclientd-pyinstaller'
+    name: 'opsiclientd-linux-pyinstaller'
     paths:
       - opsiclientd
     expire_in: 2 day
@@ -27,7 +26,7 @@ build:pyinstaller:
 package:deb:
   stage: package
   dependencies:
-    - build:pyinstaller
+    - build:linux-pyinstaller
   script:
     - apt update
     - apt -y upgrade
@@ -44,4 +43,19 @@ package:deb:
     paths:
       - deb/*
     expire_in: 2 day
-    
+
+build:macos-pyinstaller:
+      stage: build
+      tags:
+        - macos
+      script:
+        - sed -i s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
+        - poetry update
+        - ./pyinstaller-build.py
+        - mv opsiclientd opsiclientd.src
+        - mv dist/opsiclientd .
+      artifacts:
+        name: 'opsiclientd-macos-pyinstaller'
+        paths:
+          - opsiclientd
+        expire_in: 2 day
