@@ -8,8 +8,8 @@ Requires=local-fs.target
 Wants=network-online.target
 
 [Service]
-ExecStartPre=-/bin/mkdir -p /var/run/opsiclientd
-ExecStartPre=-/bin/mkdir -p /var/log/opsi-client-agent
+ExecStartPre=-/bin/sh -c 'mkdir -p /var/run/opsiclientd'
+ExecStartPre=-/bin/sh -c 'mkdir -p /var/log/opsi-client-agent'
 ExecStart=/usr/bin/opsiclientd
 RestartSec=10
 TimeoutStopSec=15
