@@ -15,16 +15,7 @@ SCRIPTS = [
 	"opsiclientd_rpc"
 ]
 HIDDEN_IMPORTS = [
-	"csv",
-	"OPSI.web2.dav.method.copymove",
-	"OPSI.web2.dav.method.delete",
-	"OPSI.web2.dav.method.lock",
-	"OPSI.web2.dav.method.mkcol",
-	"OPSI.web2.dav.method.propfind",
-	"OPSI.web2.dav.method.proppatch",
-	"OPSI.web2.dav.method.put",
-	"OPSI.web2.dav.method.report_expand",
-	"OPSI.web2.dav.method.report"
+	"csv"
 ]
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
