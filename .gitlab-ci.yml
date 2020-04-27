@@ -49,6 +49,7 @@ build:macos-pyinstaller:
       tags:
         - macos
       script:
+        - source $HOME/.poetry/env
         - sed -ie s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
         - poetry update
         - ./pyinstaller-build.py
