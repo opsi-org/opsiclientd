@@ -147,6 +147,46 @@ class WorkerOpsiclientd(WorkerOpsi):
 					return self._delayResult(60, result)
 		return result
 
+	def _authenticate_windows_user(self, result):
+		user_is_admin = False
+		# The LogonUser function will raise an Exception on logon failure
+		win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
+		# No exception raised => user authenticated
+		
+		# Get local admin group by sid and test if authorizing user is member of this group
+		admingroupsid = "S-1-5-32-544"
+		group_resume = 1
+		while group_resume:
+			group_resume = 0
+			data, total, group_resume = win32net.NetLocalGroupEnum(None, 1, group_resume)
+			for group in data:
+				groupname = group.get("name")
+				if not groupname:
+					continue
+				pysid, string, integer = win32security.LookupAccountName(None, groupname)
+				if admingroupsid in str(pysid):
+					member_resume = 1
+					while member_resume:
+						member_resume = 0
+						memberdata, total, member_resume = win32net.NetLocalGroupGetMembers(None, groupname, 2, member_resume)
+						logger.notice(memberdata)
+						for member in memberdata:
+							member_sid = member.get("sid")
+							if not member_sid:
+								continue
+							username, domain, type = win32security.LookupAccountSid(None, member_sid)
+							if self.session.user.lower() == username.lower():
+								user_is_admin = True
+								group_resume = 0
+								member_resume = 0
+								break
+		
+		#if self.session.user.lower() == 'administrator':
+		#	user_is_admin = True
+		
+		if not user_is_admin:
+			raise Exception("Not an admin user")
+	
 	def _authenticate(self, result):
 		if self.session.authenticated:
 			return result
@@ -154,67 +194,27 @@ class WorkerOpsiclientd(WorkerOpsi):
 		try:
 			(self.session.user, self.session.password) = self._getCredentials()
 
-			logger.notice(u"Authorization request from %s@%s (application: %s)" % (self.session.user, self.session.ip, self.session.userAgent))
+			logger.notice("Authorization request from %s@%s (application: %s)", self.session.user, self.session.ip, self.session.userAgent)
 
 			if not self.session.password:
-				raise Exception(u"No password from %s (application: %s)" % (self.session.ip, self.session.userAgent))
+				raise Exception("No password from %s (application: %s)" % (self.session.ip, self.session.userAgent))
 
-			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
-				try:
-					del self.service.authFailureCount[self.request.getClientIP()]
-				except KeyError:
-					pass
-
-				return result
-
-			if RUNNING_ON_WINDOWS:
-				try:
-					# Hack to find and read the local-admin group and his members,
-					# that should also Work on french installations
-					admingroupsid = "S-1-5-32-544"
-					resume = 0
-					while 1:
-						data, total, resume = win32net.NetLocalGroupEnum(None, 1, resume)
-						for group in data:
-							groupname = group.get("name", "")
-							pysid, string, integer = win32security.LookupAccountName(None, groupname)
-
-							if admingroupsid in str(pysid):
-								memberresume = 0
-								while 1:
-									memberdata, total, memberresume = win32net.NetLocalGroupGetMembers(None, groupname, 2, resume)
-									logger.notice(memberdata)
-									for member in memberdata:
-										membersid = member.get("sid", "")
-										username, domain, type = win32security.LookupAccountSid(None, membersid)
-										if self.session.user.lower() == username.lower():
-											# The LogonUser function will raise an Exception on logon failure
-											win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
-											# No exception raised => user authenticated
-											try:
-												del self.service.authFailureCount[self.request.getClientIP()]
-											except KeyError:
-												pass
-
-											return result
-
-									if memberresume == 0:
-										break
-
-						if not resume:
-							break
-				except Exception:
-					# Standardway
-					if self.session.user.lower() == 'administrator':
-						# The LogonUser function will raise an Exception on logon failure
-						win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
-						# No exception raised => user authenticated
-						return result
-
-			raise Exception(u"Invalid credentials")
+			if self.session.user.lower() == config.get('global', 'host_id').lower():
+				# Auth by opsi host key
+				if self.session.password != config.get('global', 'opsi_host_key'):
+					raise Exception("Wrong opsi host key")
+			elif RUNNING_ON_WINDOWS:
+				self._authenticate_windows_user(result)
+			else:
+				raise Exception("Invalid credentials")
 		except Exception as e:
-			raise OpsiAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
-
+			raise OpsiAuthenticationError("Forbidden: %s" % forceUnicode(e))
+		
+		# Auth ok
+		try:
+			del self.service.authFailureCount[self.request.getClientIP()]
+		except KeyError:
+			pass
 		return result
 
 
