@@ -23,6 +23,7 @@ apsw = "^3.9.2"
 [tool.poetry.dev-dependencies]
 pyinstaller = "^3.6"
 macholib = "^1.14"
+pylint = "^2.5.0"
 
 [tool.poetry.scripts]
 opsiclientd = "opsiclientd.opsiclientdmain:main"
