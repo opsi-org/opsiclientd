@@ -113,7 +113,14 @@ class WorkerOpsiclientd(WorkerOpsi):
 	def __init__(self, service, request, resource):
 		logger.setLogFormat(getLogFormat(u'control server'), object=self)
 		WorkerOpsi.__init__(self, service, request, resource)
-
+		self._auth_module = None
+		if os.name == 'posix':
+			import OPSI.Backend.Manager.Authentication.PAM
+			self._auth_module = OPSI.Backend.Manager.Authentication.PAM.PAMAuthentication()
+		elif os.name == 'nt':
+			import OPSI.Backend.Manager.Authentication.NT
+			self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
+	
 	def _getCredentials(self):
 		(user, password) = self._getAuthorization()
 
@@ -147,6 +154,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 					return self._delayResult(60, result)
 		return result
 
+	"""
 	def _authenticate_windows_user(self, result):
 		user_is_admin = False
 		# The LogonUser function will raise an Exception on logon failure
@@ -186,7 +194,8 @@ class WorkerOpsiclientd(WorkerOpsi):
 		
 		if not user_is_admin:
 			raise Exception("Not an admin user")
-	
+	"""
+
 	def _authenticate(self, result):
 		if self.session.authenticated:
 			return result
@@ -194,7 +203,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 		try:
 			(self.session.user, self.session.password) = self._getCredentials()
 
-			logger.notice("Authorization request from %s@%s (application: %s)", self.session.user, self.session.ip, self.session.userAgent)
+			logger.notice("Authorization request from %s@%s (application: %s)" % (self.session.user, self.session.ip, self.session.userAgent))
 
 			if not self.session.password:
 				raise Exception("No password from %s (application: %s)" % (self.session.ip, self.session.userAgent))
@@ -202,9 +211,14 @@ class WorkerOpsiclientd(WorkerOpsi):
 			if self.session.user.lower() == config.get('global', 'host_id').lower():
 				# Auth by opsi host key
 				if self.session.password != config.get('global', 'opsi_host_key'):
-					raise Exception("Wrong opsi host key")
-			elif RUNNING_ON_WINDOWS:
-				self._authenticate_windows_user(result)
+					raise Exception("Wrong opsi host key")				
+			elif self._auth_module:
+				self._auth_module.authenticate(self.session.user, self.session.password)
+				logger.info("Authentication successful for user '%s', groups '%s' (admin group: %s)" % \
+					(self.session.user, ','.join(self._auth_module.get_groupnames(self.session.user)), self._auth_module.get_admin_groupname())
+				)
+				if not self._auth_module.user_is_admin(self.session.user):
+					raise Exception("Not an admin user")
 			else:
 				raise Exception("Invalid credentials")
 		except Exception as e:

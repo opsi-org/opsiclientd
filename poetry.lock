@@ -168,6 +168,17 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 version = "1.4.3"
 
 [[package]]
+category = "main"
+description = "A strictly RFC 4510 conforming LDAP V3 pure Python client library"
+name = "ldap3"
+optional = false
+python-versions = "*"
+version = "2.7"
+
+[package.dependencies]
+pyasn1 = ">=0.1.8"
+
+[[package]]
 category = "dev"
 description = "Mach-O header analysis and editing"
 name = "macholib"
@@ -292,6 +303,7 @@ version = "4.2.0.16"
 
 [package.dependencies]
 SQLAlchemy = "^1.3.15"
+ldap3 = "^2.7"
 pyCrypto = "^2.6.1"
 pyOpenSSL = "^19.1.0"
 pyasn1 = "^0.4.8"
@@ -571,6 +583,14 @@ lazy-object-proxy = [
     {file = "lazy_object_proxy-1.4.3-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:a6ae12d08c0bf9909ce12385803a543bfe99b95fe01e752536a60af2b7797c62"},
     {file = "lazy_object_proxy-1.4.3-cp38-cp38-win32.whl", hash = "sha256:5541cada25cd173702dbd99f8e22434105456314462326f06dba3e180f203dfd"},
     {file = "lazy_object_proxy-1.4.3-cp38-cp38-win_amd64.whl", hash = "sha256:59f79fef100b09564bc2df42ea2d8d21a64fdcda64979c0fa3db7bdaabaf6239"},
+]
+ldap3 = [
+    {file = "ldap3-2.7-py2.6.egg", hash = "sha256:52ab557b3c4908db4a90bea16731aa714b1b54e039b54fd4c4b83994c6c48c0c"},
+    {file = "ldap3-2.7-py2.7.egg", hash = "sha256:4fd2db72d0412cc16ee86be01332095e86e361329c3579b314231eb2e56c7871"},
+    {file = "ldap3-2.7-py2.py3-none-any.whl", hash = "sha256:81df4ac8b6df10fb1f05b17c18d0cb8c4c344d5a03083c382824960ed959cf5b"},
+    {file = "ldap3-2.7-py3.8.egg", hash = "sha256:298769ab0232b3a3efa1e84881096c24526fe37911c83a11285f222fe4975efd"},
+    {file = "ldap3-2.7.tar.gz", hash = "sha256:17f04298b70bf7ecaa5db8a7d8622b5a962ef7fc2b245b2eea705ac1c24338c0"},
+    {file = "ldap3-2.7.win-amd64.exe", hash = "sha256:53aaae5bf14f3827c69600ddf4d61b88f49c055bb93060e9702c5bafd206c744"},
 ]
 macholib = [
     {file = "macholib-1.14-py2.py3-none-any.whl", hash = "sha256:c500f02867515e6c60a27875b408920d18332ddf96b4035ef03beddd782d4281"},
