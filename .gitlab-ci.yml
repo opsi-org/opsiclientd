@@ -67,7 +67,7 @@ build:windows-pyinstaller:
     - win10
   script:
     - pip install poetry
-    - Get-Content pyproject.toml | %{ $_ -Replace '"^python-opsi = .*"', 'python-opsi = "^4.2"' } | Out-File -Encoding "UTF8" "pyproject.tmp"
+    - Get-Content pyproject.toml | %{ $_ -Replace '"^python-opsi = .*"', 'python-opsi = "^4.2"' } | Out-File -Encoding UTF8NoBOM "pyproject.tmp"
     - Move-Item -Path "pyproject.tmp" -Destination "pyproject.toml" -Force
     - Get-Content pyproject.toml
     - poetry update
