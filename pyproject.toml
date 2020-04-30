@@ -15,8 +15,8 @@ url = "http://pypi.uib.gmbh:8080/simple"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-#python-opsi = "^4.2.0"
-python-opsi = {path = "python-opsi"}
+python-opsi = "^4.2.0"
+#python-opsi = {path = "python-opsi"}
 cffi = "^1.14.0"
 apsw = "^3.9.2"
 
