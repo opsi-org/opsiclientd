@@ -18,8 +18,11 @@ HIDDEN_IMPORTS = [
 	"csv"
 ]
 if platform.system() == "Windows":
-	HIDDEN_IMPORTS.append("win32api")
-	HIDDEN_IMPORTS.append("pythoncom")
+	HIDDEN_IMPORTS.extend([
+		"pythoncom",
+		"win32api",
+		"win32timezone"
+	])
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
