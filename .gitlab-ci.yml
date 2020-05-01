@@ -12,7 +12,7 @@ build:linux-pyinstaller:
     - apt -y install curl
     - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3
     - source $HOME/.poetry/env
-    - sed -i s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
+    - sed -i s'/^python-opsi = .*/python-opsi = "^4.2.0.17"/' pyproject.toml
     - poetry update
     - ./pyinstaller-build.py
     - mv opsiclientd opsiclientd.src
@@ -50,7 +50,7 @@ build:macos-pyinstaller:
         - macos
       script:
         - source $HOME/.poetry/env
-        - sed -ie s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
+        - sed -ie s'/^python-opsi = .*/python-opsi = "^4.2.0.17"/' pyproject.toml
         - poetry update
         - ./pyinstaller-build.py
         - mv opsiclientd opsiclientd.src
@@ -67,7 +67,7 @@ build:windows-pyinstaller:
     - win10
   script:
     - pip install poetry
-    #- Get-Content pyproject.toml | %{ $_ -Replace '"^python-opsi = .*"', 'python-opsi = "^4.2"' } | Out-File -Encoding ASCII "pyproject.tmp"
+    #- Get-Content pyproject.toml | %{ $_ -Replace '"^python-opsi = .*"', 'python-opsi = "^4.2.0.17"' } | Out-File -Encoding ASCII "pyproject.tmp"
     #- Move-Item -Path "pyproject.tmp" -Destination "pyproject.toml" -Force
     #- Get-Content pyproject.toml
     - poetry update
