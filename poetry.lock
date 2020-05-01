@@ -7,14 +7,6 @@ python-versions = "*"
 version = "0.17"
 
 [[package]]
-category = "main"
-description = "Another Python SQLite Wrapper"
-name = "apsw"
-optional = false
-python-versions = "*"
-version = "3.9.2-r1"
-
-[[package]]
 category = "dev"
 description = "An abstract syntax tree for Python with inference support."
 name = "astroid"
@@ -458,16 +450,13 @@ test = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [metadata]
-content-hash = "a7b1ec11817779104ca085c1c9d48714758ed85b9a97f34e053ee8fb7c1bdabc"
+content-hash = "9a287434775c83d1cf9f0c9895e187947eaa408c8e5afc778bdbba24ab539a55"
 python-versions = "^3.7"
 
 [metadata.files]
 altgraph = [
     {file = "altgraph-0.17-py2.py3-none-any.whl", hash = "sha256:c623e5f3408ca61d4016f23a681b9adb100802ca3e3da5e718915a9e4052cebe"},
     {file = "altgraph-0.17.tar.gz", hash = "sha256:1f05a47122542f97028caf78775a095fbe6a2699b5089de8477eb583167d69aa"},
-]
-apsw = [
-    {file = "apsw-3.9.2-r1.tar.gz", hash = "sha256:dab96fd164dde9e59f7f27228291498217fa0e74048e2c08c7059d7e39589270"},
 ]
 astroid = [
     {file = "astroid-2.4.0-py3-none-any.whl", hash = "sha256:2fecea42b20abb1922ed65c7b5be27edfba97211b04b2b6abc6a43549a024ea6"},
