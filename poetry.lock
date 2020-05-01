@@ -110,6 +110,7 @@ version = "0.1.3"
 [[package]]
 category = "dev"
 description = "Clean single-source support for Python 3 and 2"
+marker = "sys_platform == \"windows\""
 name = "future"
 optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
@@ -181,6 +182,7 @@ pyasn1 = ">=0.1.8"
 [[package]]
 category = "dev"
 description = "Mach-O header analysis and editing"
+marker = "sys_platform == \"darwin\""
 name = "macholib"
 optional = false
 python-versions = "*"
@@ -200,6 +202,7 @@ version = "0.6.1"
 [[package]]
 category = "dev"
 description = "Python PE parsing module"
+marker = "sys_platform == \"windows\""
 name = "pefile"
 optional = false
 python-versions = "*"
@@ -309,7 +312,7 @@ description = "The opsi python library"
 name = "python-opsi"
 optional = false
 python-versions = ">=3.6,<4.0"
-version = "4.2.0.17"
+version = "4.2.0.18"
 
 [package.dependencies]
 PyCryptodome = ">=3.9.7,<4.0.0"
@@ -319,6 +322,7 @@ pyOpenSSL = ">=19.1.0,<20.0.0"
 pyasn1 = ">=0.4.8,<0.5.0"
 python-magic = ">=0.4.15,<0.5.0"
 python-pam = ">=1.8.4,<2.0.0"
+pywin32 = ">=227,<228"
 
 [package.dependencies.twisted]
 extras = ["tls"]
@@ -337,8 +341,18 @@ python-versions = "*"
 version = "1.8.4"
 
 [[package]]
+category = "main"
+description = "Python for Window Extensions"
+marker = "sys_platform == \"windows\""
+name = "pywin32"
+optional = false
+python-versions = "*"
+version = "227"
+
+[[package]]
 category = "dev"
 description = ""
+marker = "sys_platform == \"windows\""
 name = "pywin32-ctypes"
 optional = false
 python-versions = "*"
@@ -475,7 +489,7 @@ test = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [metadata]
-content-hash = "a93e33ff7797cf3dcab6ae0a6932341068d4c6da6ad1c1861142244b664245c3"
+content-hash = "8b6a271b9adab24f2a39825bc92b4a8708ecbe69d4df64a65701ce9d9617d3ae"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -706,12 +720,26 @@ python-magic = [
     {file = "python_magic-0.4.15-py2.py3-none-any.whl", hash = "sha256:f2674dcfad52ae6c49d4803fa027809540b130db1dec928cfbb9240316831375"},
 ]
 python-opsi = [
-    {file = "python-opsi-4.2.0.17.tar.gz", hash = "md5:8188e7011af505ce4d73f86e4e3832dc"},
-    {file = "python_opsi-4.2.0.17-py3-none-any.whl", hash = "md5:0b0ec3ad2b6188a961ef6ca80beee6dd"},
+    {file = "python-opsi-4.2.0.18.tar.gz", hash = "md5:f531ef9fdcbf1dd3c6ad04539075ad3a"},
+    {file = "python_opsi-4.2.0.18-py3-none-any.whl", hash = "md5:304baad9e8ac381e223f1375f9706a0c"},
 ]
 python-pam = [
     {file = "python-pam-1.8.4.tar.gz", hash = "sha256:c856d9c89fedb33951dd8a95727ae57c6887b02d065bbdffd2fd9dbc0183909b"},
     {file = "python_pam-1.8.4-py2.py3-none-any.whl", hash = "sha256:8439b470b564ac558585b5a3ffce0fce48d1eeebdff19add48279c33de7da0e0"},
+]
+pywin32 = [
+    {file = "pywin32-227-cp27-cp27m-win32.whl", hash = "sha256:371fcc39416d736401f0274dd64c2302728c9e034808e37381b5e1b22be4a6b0"},
+    {file = "pywin32-227-cp27-cp27m-win_amd64.whl", hash = "sha256:4cdad3e84191194ea6d0dd1b1b9bdda574ff563177d2adf2b4efec2a244fa116"},
+    {file = "pywin32-227-cp35-cp35m-win32.whl", hash = "sha256:f4c5be1a293bae0076d93c88f37ee8da68136744588bc5e2be2f299a34ceb7aa"},
+    {file = "pywin32-227-cp35-cp35m-win_amd64.whl", hash = "sha256:a929a4af626e530383a579431b70e512e736e9588106715215bf685a3ea508d4"},
+    {file = "pywin32-227-cp36-cp36m-win32.whl", hash = "sha256:300a2db938e98c3e7e2093e4491439e62287d0d493fe07cce110db070b54c0be"},
+    {file = "pywin32-227-cp36-cp36m-win_amd64.whl", hash = "sha256:9b31e009564fb95db160f154e2aa195ed66bcc4c058ed72850d047141b36f3a2"},
+    {file = "pywin32-227-cp37-cp37m-win32.whl", hash = "sha256:47a3c7551376a865dd8d095a98deba954a98f326c6fe3c72d8726ca6e6b15507"},
+    {file = "pywin32-227-cp37-cp37m-win_amd64.whl", hash = "sha256:31f88a89139cb2adc40f8f0e65ee56a8c585f629974f9e07622ba80199057511"},
+    {file = "pywin32-227-cp38-cp38-win32.whl", hash = "sha256:7f18199fbf29ca99dff10e1f09451582ae9e372a892ff03a28528a24d55875bc"},
+    {file = "pywin32-227-cp38-cp38-win_amd64.whl", hash = "sha256:7c1ae32c489dc012930787f06244426f8356e129184a02c25aef163917ce158e"},
+    {file = "pywin32-227-cp39-cp39-win32.whl", hash = "sha256:c054c52ba46e7eb6b7d7dfae4dbd987a1bb48ee86debe3f245a2884ece46e295"},
+    {file = "pywin32-227-cp39-cp39-win_amd64.whl", hash = "sha256:f27cec5e7f588c3d1051651830ecc00294f90728d19c3bf6916e6dba93ea357c"},
 ]
 pywin32-ctypes = [
     {file = "pywin32-ctypes-0.2.0.tar.gz", hash = "sha256:24ffc3b341d457d48e8922352130cf2644024a4ff09762a2261fd34c36ee5942"},
