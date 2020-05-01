@@ -17,6 +17,9 @@ SCRIPTS = [
 HIDDEN_IMPORTS = [
 	"csv"
 ]
+if platform.system() == "Windows":
+	HIDDEN_IMPORTS.append("win32api")
+
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 subprocess.check_call(["poetry", "install"])
