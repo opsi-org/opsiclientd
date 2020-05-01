@@ -36,7 +36,7 @@ try:
 	language = locale.getdefaultlocale()[0].split('_')[0]
 except Exception as error:
 	logger.debug("Unable to load localisation: {0!r}", error)
-	language = 'en'
+	language = "en"
 
 
 def getLanguage():
@@ -47,14 +47,14 @@ def _(string):
 	if translation is None:
 		return string
 
-	return translation.ugettext(string)
+	return translation.gettext(string)
 
 
 def setLocaleDir(localeDir):
 	global translation
-	logger.notice(u"Setting locale dir to '%s'" % localeDir)
+	logger.notice("Setting locale dir to '%s'" % localeDir)
 	try:
-		logger.notice(u"Loading translation for language '%s'" % language)
+		logger.notice("Loading translation for language '%s'" % language)
 		translation = gettext.translation('opsiclientd', localeDir, [language])
 	except Exception as error:
-		logger.error(u"Locale not found: %s" % error)
+		logger.error("Locale not found: %s" % error)
