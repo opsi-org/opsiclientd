@@ -54,8 +54,12 @@ with codecs.open("opsiclientd.spec", "w", "utf-8") as f:
 subprocess.check_call(["poetry", "run", "pyinstaller", "--log-level", "INFO", "opsiclientd.spec"])
 
 
+ext = ""
+if platform.system() == "Windows":
+	ext = ".exe"
+
 shutil.move("dist/%s" % SCRIPTS[0], "dist/opsiclientd")
 for script in SCRIPTS[1:]:
-	shutil.move("dist/%s/%s" % (script, script), "dist/opsiclientd/%s" % script)
+	shutil.move("dist/%s/%s%s" % (script, script, ext), "dist/opsiclientd/%s%s" % (script, ext))
 	shutil.rmtree("dist/%s" % script)
-shutil.move("dist/opsiclientd/run-opsiclientd", "dist/opsiclientd/opsiclientd")
+shutil.move("dist/opsiclientd/run-opsiclientd%s" % ext, "dist/opsiclientd/opsiclientd%s" % ext)
