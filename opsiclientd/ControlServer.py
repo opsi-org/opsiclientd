@@ -41,6 +41,7 @@ from twisted.web.static import File
 from twisted.web import resource, server, http, http_headers
 
 from OPSI import System
+from OPSI.Util.Log import truncateLogData
 from OPSI.Backend.Backend import ConfigDataBackend
 from OPSI.Exceptions import OpsiAuthenticationError
 from OPSI.Logger import Logger
@@ -574,7 +575,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			raise
 
 		if maxSize > 0:
-			return ConfigDataBackend._truncateLogData(data, maxSize)
+			return truncateLogData(data, maxSize)
 
 		return data
 
