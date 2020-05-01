@@ -130,16 +130,17 @@ class Opsiclientd(EventListener, threading.Thread):
 									waitForProcessEnding=False)[2]
 							break
 						except Exception as e:
-							logger.error(e)
-							if e[0] == 233 and sys.getwindowsversion()[0] == 5 and sessionId != 0:
-								# No process is on the other end
-								# Problem with pipe \\\\.\\Pipe\\TerminalServer\\SystemExecSrvr\\<sessionid>
-								# After logging off from a session other than 0 csrss.exe does not create this pipe or CreateRemoteProcessW is not able to read the pipe.
-								logger.info(u"Retrying to run command in session 0")
-								sessionId = 0
-							else:
-								logger.error(u"Failed to start block login notifier app: %s" % forceUnicode(e))
-								break
+							# The following code does not work currently ('RuntimeError' object is not subscriptable). Remove?
+							#logger.error(e)
+							#if e[0] == 233 and sys.getwindowsversion()[0] == 5 and sessionId != 0:
+							#	# No process is on the other end
+							#	# Problem with pipe \\\\.\\Pipe\\TerminalServer\\SystemExecSrvr\\<sessionid>
+							#	# After logging off from a session other than 0 csrss.exe does not create this pipe or CreateRemoteProcessW is not able to read the pipe.
+							#	logger.info(u"Retrying to run command in session 0")
+							#	sessionId = 0
+							#else:
+							logger.error(u"Failed to start block login notifier app: %s" % forceUnicode(e))
+							break
 		else:
 			if self._blockLoginEventId:
 				timeline.setEventEnd(eventId=self._blockLoginEventId)
