@@ -19,6 +19,7 @@ HIDDEN_IMPORTS = [
 ]
 if platform.system() == "Windows":
 	HIDDEN_IMPORTS.append("win32api")
+	HIDDEN_IMPORTS.append("pythoncom")
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
