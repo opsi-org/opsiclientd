@@ -1,0 +1,15 @@
+pyinstaller-poetry:
+  one_file: no
+  hidden_imports:
+    all:
+      - csv
+    windows:
+      - pythoncom
+      - win32api
+      - win32timezone
+    linux: []
+    darwin: []
+  scripts:
+    - script: run-opsiclientd
+      binary: opsiclientd
+    - script: opsiclientd_rpc

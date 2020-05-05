@@ -13,8 +13,8 @@ build:linux-pyinstaller:
     - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3
     - source $HOME/.poetry/env
     - sed -i s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
-    - poetry update
-    - ./pyinstaller-build.py
+    - poetry update python-opsi
+    - poetry run opsi-dev-tool -l info --pyinstaller-poetry-build
     - mv opsiclientd opsiclientd.src
     - mv dist/opsiclientd .
   artifacts:
@@ -51,8 +51,8 @@ build:macos-pyinstaller:
       script:
         - source $HOME/.poetry/env
         - sed -ie s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
-        - poetry update
-        - ./pyinstaller-build.py
+        - poetry update python-opsi
+        - poetry run opsi-dev-tool -l info --pyinstaller-poetry-build
         - mv opsiclientd opsiclientd.src
         - mv dist/opsiclientd .
       artifacts:
@@ -70,8 +70,8 @@ build:windows-pyinstaller:
     #- Get-Content pyproject.toml | %{ $_ -Replace '"^python-opsi = .*"', 'python-opsi = "^4.2"' } | Out-File -Encoding ASCII "pyproject.tmp"
     #- Move-Item -Path "pyproject.tmp" -Destination "pyproject.toml" -Force
     #- Get-Content pyproject.toml
-    - poetry update
-    - python pyinstaller-build.py
+    - poetry update python-opsi
+    - poetry run opsi-dev-tool -l info --pyinstaller-poetry-build
     - Move-Item -Path opsiclientd -Destination opsiclientd.src -Force
     - Move-Item -Path dist\opsiclientd -Destination opsiclientd
   artifacts:
