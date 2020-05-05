@@ -419,7 +419,7 @@ description = "The opsi python library"
 name = "python-opsi"
 optional = false
 python-versions = ">=3.6,<4.0"
-version = "4.2.0.22"
+version = "4.2.0.23"
 
 [package.dependencies]
 PyCryptodome = ">=3.9.7,<4.0.0"
@@ -643,7 +643,7 @@ test = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [metadata]
-content-hash = "48cec2dbbd1293c52ce18e490ce222226a3b0582f292ac135ec14b250dbcb5e5"
+content-hash = "6264ac495c46f87904fc840fb99bbdb94249ef67711742dcd2628161ccb55bfc"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -910,8 +910,8 @@ python-magic = [
     {file = "python_magic-0.4.15-py2.py3-none-any.whl", hash = "sha256:f2674dcfad52ae6c49d4803fa027809540b130db1dec928cfbb9240316831375"},
 ]
 python-opsi = [
-    {file = "python-opsi-4.2.0.22.tar.gz", hash = "md5:230522c98736349b7b4ef2fa4cdb9dbd"},
-    {file = "python_opsi-4.2.0.22-py3-none-any.whl", hash = "md5:c9c917f153d94a030de31c1762b64017"},
+    {file = "python-opsi-4.2.0.23.tar.gz", hash = "md5:bb6e40055425580ef0b957dc34cd50c3"},
+    {file = "python_opsi-4.2.0.23-py3-none-any.whl", hash = "md5:56ad9d0d1883c30398cf426efa20ccb5"},
 ]
 python-pam = [
     {file = "python-pam-1.8.4.tar.gz", hash = "sha256:c856d9c89fedb33951dd8a95727ae57c6887b02d065bbdffd2fd9dbc0183909b"},

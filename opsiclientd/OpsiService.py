@@ -34,6 +34,8 @@ import random
 import time
 from hashlib import md5
 from http.client import HTTPConnection, HTTPSConnection
+from Crypto.Hash import MD5
+from Crypto.Signature import pkcs1_15
 
 from OPSI import System
 from OPSI.Logger import Logger
@@ -223,15 +225,14 @@ class ServiceConnection(object):
 					if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
 						self.connectionFailed(u"Modules file expired")
 
-					logger.info(u"Verifying modules file signature")
-					publicKey = getPublicKey(data=base64.decodestring('AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP'))
-					data = u''
-					mks = modules.keys()
+					logger.debug("Verifying modules file signature")
+					publicKey = getPublicKey(data=base64.decodebytes(b"AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP"))
+					data = ""
+					mks = list(modules.keys())
 					mks.sort()
 					for module in mks:
-						if module in ('valid', 'signature'):
+						if module in ("valid", "signature"):
 							continue
-
 						if module in helpermodules:
 							val = helpermodules[module]
 							if int(val) > 0:
@@ -239,12 +240,26 @@ class ServiceConnection(object):
 						else:
 							val = modules[module]
 							if val == False:
-								val = 'no'
+								val = "no"
 							elif val == True:
-								val = 'yes'
+								val = "yes"
+						data += "%s = %s\r\n" % (module.lower().strip(), val)
+					
+					verfied = False
+					if modules["signature"].startswith("{"):
+						s_bytes = int(modules['signature'].split("}", 1)[-1]).to_bytes(256, "big")
+						try:
+							pkcs1_15.new(publicKey).verify(MD5.new(data.encode()), s_bytes)
+							verfied = True
+						except ValueError:
+							# Invalid signature
+							pass
+					else:
+						h_int = int.from_bytes(md5(data.encode()).digest(), "big")
+						s_int = publicKey._encrypt(int(modules["signature"]))
+						verfied = h_int == s_int
 
-						data += u'%s = %s\r\n' % (module.lower().strip(), val)
-					if not bool(publicKey.verify(md5(data).digest(), [long(modules['signature'])])):
+					if not verfied:
 						self.connectionFailed(u"Modules file invalid")
 					logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
 
@@ -359,7 +374,7 @@ class ServiceConnectionThread(KillableThread):
 					self.setStatusMessage(_(u"Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(error)))
 					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(error)))
 					logger.logException(error)
-					
+
 					if isinstance(error, OpsiAuthenticationError):
 						fqdn = System.getFQDN()
 						try:
