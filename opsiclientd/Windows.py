@@ -108,7 +108,7 @@ class OpsiclientdInit(object):
 				debug_log("OpsiclientdInit - pyinstaller", stderr=False)
 				servicemanager.Initialize()
 				servicemanager.PrepareToHostSingle(OpsiclientdService)
-				servicemanager.Initialize(OpsiclientdService._svc_name_, os.path.abspath(servicemanager.__file__))
+				#servicemanager.Initialize(OpsiclientdService._svc_name_, os.path.abspath(servicemanager.__file__))
 				servicemanager.StartServiceCtrlDispatcher()	
 		except Exception as exc:
 			debug_log("ERROR: %s" % exc)
