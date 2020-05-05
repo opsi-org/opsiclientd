@@ -34,8 +34,6 @@ import win32service
 import win32com.server.policy
 import win32com.client
 import servicemanager
-import wmi
-import pythoncom
 
 from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG
 from OPSI.Types import forceBool, forceUnicode
@@ -57,14 +55,10 @@ IID_ISensLogon = "{d597bab3-5b9f-11d1-8dd2-00aa004abd5e}"
 
 logger = Logger()
 
-
-def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
-	return (wmi, pythoncom)
-
-"""
 wmi = None
 pythoncom = None
 importWmiAndPythoncomLock = threading.Lock()
+
 
 def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 	global wmi
@@ -93,7 +87,7 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 					time.sleep(2)
 
 	return (wmi, pythoncom)
-"""
+
 
 class OpsiclientdInit(object):
 	def __init__(self):
