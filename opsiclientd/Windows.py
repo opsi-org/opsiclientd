@@ -33,6 +33,7 @@ import win32serviceutil
 import win32service
 import win32com.server.policy
 import win32com.client
+import servicemanager
 
 from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG
 from OPSI.Types import forceBool, forceUnicode
@@ -92,12 +93,18 @@ class OpsiclientdInit(object):
 	def __init__(self):
 		debug_log("OpsiclientdInit", stderr=False)
 		try:
-			win32serviceutil.HandleCommandLine(OpsiclientdServiceFramework)
+			# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
+			if len(sys.argv) == 1:
+				servicemanager.Initialize()
+				servicemanager.PrepareToHostSingle(OpsiclientdService)
+				servicemanager.StartServiceCtrlDispatcher()
+			else:
+			win32serviceutil.HandleCommandLine(OpsiclientdService)
 		except Exception as exc:
 			debug_log("ERROR: %s" % exc)
 
 
-class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
+class OpsiclientdService(win32serviceutil.ServiceFramework):
 	_svc_name_ = "opsiclientd"
 	_svc_display_name_ = "opsiclientd"
 	_svc_description_ = "opsi client daemon"
@@ -106,16 +113,18 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		"""
 		Initialize service and create stop event
 		"""
+		debug_log("OpsiclientdService.__init__", stderr=False)
 		self.opsiclientd = None
 		try:
 			sys.stdout = logger.getStdout()
 			sys.stderr = logger.getStderr()
 			logger.setConsoleLevel(LOG_NONE)
 
-			logger.debug(u"OpsiclientdServiceFramework initiating")
+			logger.debug(u"OpsiclientdService initiating")
 			win32serviceutil.ServiceFramework.__init__(self, args)
 			self._stopEvent = threading.Event()
-			logger.debug(u"OpsiclientdServiceFramework initiated")
+			logger.debug(u"OpsiclientdService initiated")
+			debug_log("OpsiclientdService initiated", stderr=False)
 		except Exception as exc:
 			debug_log("ERROR: %s" % exc)
 			raise
@@ -124,6 +133,7 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		# Wrapping because ReportServiceStatus sometimes lets windows
 		# report a crash of opsiclientd (python 2.6.5) invalid handle
 		try:
+			debug_log("OpsiclientdService.ReportServiceStatus %s" % serviceStatus, stderr=False)
 			logger.debug('Reporting service status: {}', serviceStatus)
 			win32serviceutil.ServiceFramework.ReportServiceStatus(
 				self,
@@ -137,7 +147,8 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			logger.error("Failed to report service status {0}: {1}", serviceStatus, reportStatusError)
 
 	def SvcInterrogate(self):
-		logger.debug("OpsiclientdServiceFramework SvcInterrogate")
+		debug_log("OpsiclientdService.SvcInterrogate", stderr=False)
+		logger.debug("OpsiclientdService SvcInterrogate")
 		# Assume we are running, and everyone is happy.
 		self.ReportServiceStatus(win32service.SERVICE_RUNNING)
 
@@ -145,7 +156,8 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		"""
 		Gets called from windows to stop service
 		"""
-		logger.debug(u"OpsiclientdServiceFramework SvcStop")
+		debug_log("OpsiclientdService.SvcStop", stderr=False)
+		logger.debug(u"OpsiclientdService SvcStop")
 		# Write to event log
 		self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
 		# Fire stop event to stop blocking self._stopEvent.wait()
@@ -155,7 +167,8 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		"""
 		Gets called from windows on system shutdown
 		"""
-		logger.debug(u"OpsiclientdServiceFramework SvcShutdown")
+		debug_log("OpsiclientdService.SvcShutdown", stderr=False)
+		logger.debug(u"OpsiclientdService SvcShutdown")
 		# Write to event log
 		self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
 		if self.opsiclientd:
@@ -168,7 +181,7 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		Gets called from windows to start service
 		"""
 		try:
-			logger.debug("OpsiclientdServiceFramework SvcRun", stderr=False)
+			logger.debug("OpsiclientdService.SvcRun", stderr=False)
 			startTime = time.time()
 			
 			# Write to event log
