@@ -55,6 +55,13 @@ IID_ISensLogon = "{d597bab3-5b9f-11d1-8dd2-00aa004abd5e}"
 
 logger = Logger()
 
+import wmi
+import pythoncom
+
+def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
+	return (wmi, pythoncom)
+
+"""
 wmi = None
 pythoncom = None
 importWmiAndPythoncomLock = threading.Lock()
@@ -87,7 +94,7 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 					time.sleep(2)
 
 	return (wmi, pythoncom)
-
+"""
 
 class OpsiclientdInit(object):
 	def __init__(self):
