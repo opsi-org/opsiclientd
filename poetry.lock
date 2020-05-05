@@ -643,8 +643,8 @@ test = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [metadata]
-content-hash = "6264ac495c46f87904fc840fb99bbdb94249ef67711742dcd2628161ccb55bfc"
-python-versions = "^3.7"
+content-hash = "997537c52641226f6ff274fe1646f09803c04f990be2940da330b959f071afad"
+python-versions = "^3.6"
 
 [metadata.files]
 altgraph = [

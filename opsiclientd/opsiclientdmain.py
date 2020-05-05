@@ -21,36 +21,26 @@
 opsi client daemon (opsiclientd)
 
 :copyright: uib GmbH <info@uib.de>
-:author: Jan Schneider <j.schneider@uib.de>
-:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
-from __future__ import print_function
-
 import os
 import sys
+import time
 
-from OPSI.Logger import Logger, LOG_WARNING
-from OPSI.Types import forceUnicode
-from opsiclientd.Config import getLogFormat
+from opsiclientd.Opsiclientd import debug_log
 
 def main():
+	debug_log("opsiclientd main at %s" % time.asctime(), stderr=False)
 	if os.name == 'nt':
 		from opsiclientd.Windows import OpsiclientdInit
 	elif os.name == 'posix':
 		from opsiclientd.Posix import OpsiclientdInit
 	else:
-		raise NotImplementedError('Trying to run under an unsupported OS.')
-
-
-	logger = Logger()
-	logger.setLogFormat(getLogFormat(u'opsiclientd'))
-	logger.setConsoleLevel(LOG_WARNING)
-
+		raise NotImplementedError("OS %s not supported." % os.name)
+	
 	try:
 		OpsiclientdInit()
-	except Exception as exception:
-		logger.logException(exception)
-		print("ERROR: {0}".format(forceUnicode(exception).encode('utf-8')), file=sys.stderr)
+	except Exception as exc:
+		debug_log("ERROR: %s" % exc)
 		sys.exit(1)

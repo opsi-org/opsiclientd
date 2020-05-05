@@ -38,7 +38,7 @@ from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG
 from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
 
-from opsiclientd.Opsiclientd import Opsiclientd
+from opsiclientd.Opsiclientd import Opsiclientd, debug_log
 
 __all__ = ('OpsiclientdInit', )
 
@@ -90,8 +90,11 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 
 class OpsiclientdInit(object):
 	def __init__(self):
-		logger.debug(u"OpsiclientdInit")
-		win32serviceutil.HandleCommandLine(OpsiclientdServiceFramework)
+		debug_log("OpsiclientdInit")
+		try:
+			win32serviceutil.HandleCommandLine(OpsiclientdServiceFramework)
+		except Exception as exc:
+			debug_log("ERROR: %s" % exc)
 
 
 class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
@@ -104,14 +107,18 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		Initialize service and create stop event
 		"""
 		self.opsiclientd = None
-		sys.stdout = logger.getStdout()
-		sys.stderr = logger.getStderr()
-		logger.setConsoleLevel(LOG_NONE)
+		try:
+			sys.stdout = logger.getStdout()
+			sys.stderr = logger.getStderr()
+			logger.setConsoleLevel(LOG_NONE)
 
-		logger.debug(u"OpsiclientdServiceFramework initiating")
-		win32serviceutil.ServiceFramework.__init__(self, args)
-		self._stopEvent = threading.Event()
-		logger.debug(u"OpsiclientdServiceFramework initiated")
+			logger.debug(u"OpsiclientdServiceFramework initiating")
+			win32serviceutil.ServiceFramework.__init__(self, args)
+			self._stopEvent = threading.Event()
+			logger.debug(u"OpsiclientdServiceFramework initiated")
+		except Exception as exc:
+			debug_log("ERROR: %s" % exc)
+			raise
 
 	def ReportServiceStatus(self, serviceStatus, waitHint=5000, win32ExitCode=0, svcExitCode=0):
 		# Wrapping because ReportServiceStatus sometimes lets windows
@@ -125,11 +132,12 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 				win32ExitCode=win32ExitCode,
 				svcExitCode=svcExitCode
 			)
-		except Exception as reportStatusError:
-			logger.error(u"Failed to report service status {0}: {1}", serviceStatus, forceUnicode(reportStatusError))
+		except Exception as exc:
+			debug_log("ERROR: %s" % exc)
+			logger.error("Failed to report service status {0}: {1}", serviceStatus, reportStatusError)
 
 	def SvcInterrogate(self):
-		logger.debug(u"OpsiclientdServiceFramework SvcInterrogate")
+		logger.debug("OpsiclientdServiceFramework SvcInterrogate")
 		# Assume we are running, and everyone is happy.
 		self.ReportServiceStatus(win32service.SERVICE_RUNNING)
 
@@ -159,30 +167,10 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		"""
 		Gets called from windows to start service
 		"""
-		startTime = time.time()
-
 		try:
-			try:
-				try:
-					debugLogFile = os.path.join(System.getSystemDrive(), 'opsi.org', 'log', 'opsiclientd.log')
-					if logger.getLogFile() is None:
-						logger.setLogFile(debugLogFile)
-					logger.setFileLevel(LOG_DEBUG)
-
-					logger.log(1, u"Logger initialized", raiseException=True)
-				except Exception as serviceRunError:
-					try:
-						error = str(serviceRunError)
-					except Exception:
-						error = 'unkown error'
-
-					with open(debugLogFile, "a+") as f:
-						f.write("Failed to initialize logger: %s\r\n" % error)
-			except Exception:
-				pass
-
-			logger.debug(u"OpsiclientdServiceFramework SvcDoRun")
-
+			logger.debug("OpsiclientdServiceFramework SvcRun")
+			startTime = time.time()
+			
 			# Write to event log
 			self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
 
@@ -195,8 +183,8 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 				else:
 					self.opsiclientd = OpsiclientdNT6()
 			else:
-				raise Exception(u"Running windows version not supported")
-
+				raise Exception(u"Windows version %s not supported" % str(windowsVersion))
+			
 			# Write to event log
 			self.ReportServiceStatus(win32service.SERVICE_RUNNING)
 			logger.debug(u"Took %0.2f seconds to report service running status" % (time.time() - startTime))
@@ -214,6 +202,7 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 			for thread in threading.enumerate():
 				logger.notice(u"Running thread after stop: %s" % thread)
 		except Exception as e:
+			debug_log("ERROR: %s" % e)
 			logger.critical(u"opsiclientd crash")
 			logger.logException(e)
 

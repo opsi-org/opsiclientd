@@ -32,6 +32,8 @@ import os
 import sys
 import threading
 import time
+import tempfile
+import codecs
 from contextlib import contextmanager
 
 from OPSI import System
@@ -70,6 +72,22 @@ config = Config()
 timeline = Timeline()
 state = State()
 
+_debug_log_started = False
+def debug_log(message, stderr=True):
+	global _debug_log_started
+
+	if stderr:
+		sys.stderr.write("%s\n" % message)
+		sys.stderr.flush()
+	
+	debug_log_file = os.path.join(tempfile.gettempdir(), "opsiclientd.debug")
+	if not _debug_log_started:
+		if os.path.exists(debug_log_file):
+			os.unlink(debug_log_file)
+		_debug_log_started = True
+	with codecs.open(debug_log_file, "a", "utf-8") as f:
+		f.write("%s%s" % (message, os.linesep))
+		f.flush()
 
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
