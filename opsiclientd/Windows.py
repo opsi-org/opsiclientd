@@ -101,17 +101,15 @@ class OpsiclientdInit(object):
 		debug_log("OpsiclientdInit", stderr=False)
 		try:
 			# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
-			if sys.argv[0].endswith(".py" ):
-				debug_log("OpsiclientdInit - python", stderr=False)
-				win32serviceutil.HandleCommandLine(OpsiclientdService)
-			else:
-				debug_log("OpsiclientdInit - pyinstaller", stderr=False)
+			if len(sys.argv) == 1:
 				servicemanager.Initialize()
 				servicemanager.PrepareToHostSingle(OpsiclientdService)
-				#servicemanager.Initialize(OpsiclientdService._svc_name_, os.path.abspath(servicemanager.__file__))
-				servicemanager.StartServiceCtrlDispatcher()	
+				servicemanager.StartServiceCtrlDispatcher()
+			else:
+				win32serviceutil.HandleCommandLine(OpsiclientdService)
 		except Exception as exc:
 			debug_log("ERROR: %s" % exc)
+			
 
 
 class OpsiclientdService(win32serviceutil.ServiceFramework):
