@@ -90,7 +90,7 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 
 class OpsiclientdInit(object):
 	def __init__(self):
-		debug_log("OpsiclientdInit")
+		debug_log("OpsiclientdInit", stderr=False)
 		try:
 			win32serviceutil.HandleCommandLine(OpsiclientdServiceFramework)
 		except Exception as exc:
@@ -168,7 +168,7 @@ class OpsiclientdServiceFramework(win32serviceutil.ServiceFramework):
 		Gets called from windows to start service
 		"""
 		try:
-			logger.debug("OpsiclientdServiceFramework SvcRun")
+			logger.debug("OpsiclientdServiceFramework SvcRun", stderr=False)
 			startTime = time.time()
 			
 			# Write to event log
