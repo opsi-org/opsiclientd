@@ -60,7 +60,7 @@ logger = Logger()
 
 def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 	return (wmi, pythoncom)
- 
+
 """
 wmi = None
 pythoncom = None
@@ -105,7 +105,7 @@ class OpsiclientdInit(object):
 				servicemanager.PrepareToHostSingle(OpsiclientdService)
 				servicemanager.StartServiceCtrlDispatcher()
 			else:
-			win32serviceutil.HandleCommandLine(OpsiclientdService)
+				win32serviceutil.HandleCommandLine(OpsiclientdService)
 		except Exception as exc:
 			debug_log("ERROR: %s" % exc)
 
