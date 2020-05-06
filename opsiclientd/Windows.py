@@ -29,8 +29,8 @@ import os
 import sys
 import threading
 import time
-import win32serviceutil
 import win32service
+import win32serviceutil
 import win32com.server.policy
 import win32com.client
 import servicemanager
@@ -101,17 +101,18 @@ class OpsiclientdInit(object):
 		debug_log("OpsiclientdInit", stderr=False)
 		try:
 			# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
-			if sys.argv[0].endswith(".py" ):
-				debug_log("OpsiclientdInit - python", stderr=False)
-				win32serviceutil.HandleCommandLine(OpsiclientdService)
-			else:
-				debug_log("OpsiclientdInit - pyinstaller", stderr=False)
+			if len(sys.argv) == 1:
+				# Service process
+				debug_log("OpsiclientdInit - Initialize", stderr=False)
 				servicemanager.Initialize()
 				servicemanager.PrepareToHostSingle(OpsiclientdService)
-				servicemanager.Initialize(OpsiclientdService._svc_name_, os.path.abspath(servicemanager.__file__))
-				servicemanager.StartServiceCtrlDispatcher()	
+				servicemanager.StartServiceCtrlDispatcher()
+			else:
+				debug_log("OpsiclientdInit - HandleCommandLine", stderr=False)
+				win32serviceutil.HandleCommandLine(OpsiclientdService)	
 		except Exception as exc:
 			debug_log("ERROR: %s" % exc)
+		debug_log("OpsiclientdInit done", stderr=False)
 
 
 class OpsiclientdService(win32serviceutil.ServiceFramework):
@@ -191,6 +192,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		Gets called from windows to start service
 		"""
 		try:
+			debug_log("OpsiclientdService.SvcRun", stderr=False)
 			logger.debug("OpsiclientdService.SvcRun", stderr=False)
 			startTime = time.time()
 			
@@ -334,7 +336,7 @@ class OpsiclientdNT6(OpsiclientdNT):
 
 
 class OpsiclientdNT63(OpsiclientdNT):
-	"OpsiclientdNT for Windows NT 6.3 - Windows 8.1"
+	"OpsiclientdNT for Windows NT 6.3 - Windows >= 8.1"
 
 	def rebootMachine(self):
 		self._isRebootTriggered = True

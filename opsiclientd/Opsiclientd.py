@@ -34,6 +34,7 @@ import threading
 import time
 import tempfile
 import codecs
+import traceback
 from contextlib import contextmanager
 
 from OPSI import System
@@ -81,6 +82,8 @@ def debug_log(message, stderr=True):
 		sys.stderr.flush()
 	
 	debug_log_file = os.path.join(tempfile.gettempdir(), "opsiclientd.debug")
+	if RUNNING_ON_WINDOWS and os.path.exists("c:\\opsi.org\\log"):
+		debug_log_file = "c:\\opsi.org\\log\\opsiclientd.debug"
 	if not _debug_log_started:
 		if os.path.exists(debug_log_file):
 			os.unlink(debug_log_file)
@@ -91,8 +94,9 @@ def debug_log(message, stderr=True):
 
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
+		debug_log("Opsiclientd initiating", stderr=False)
 		logger.setLogFormat(getLogFormat(u'opsiclientd'), object=self)
-		logger.debug(u"Opsiclient initiating")
+		logger.debug("Opsiclient initiating")
 
 		EventListener.__init__(self)
 		threading.Thread.__init__(self)
@@ -222,6 +226,15 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._actionProcessorUserPassword = u''
 
 	def run(self):
+		try:
+			self._run()
+		except Exception as exc:
+			debug_log("ERROR: %s" % (exc))
+			debug_log("ERROR: %s" % traceback.format_exc())
+			logger.logException(exc)
+	
+	def _run(self):
+		debug_log("Opsiclientd.run", stderr=False)
 		self._running = True
 		self._opsiclientdRunningEventId = None
 
