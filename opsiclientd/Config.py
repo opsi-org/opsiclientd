@@ -199,12 +199,13 @@ class ConfigImplementation(object):
 
 	def _applySystemSpecificConfiguration(self):
 		defaultToApply = self.WINDOWS_DEFAULT_PATHS if RUNNING_ON_WINDOWS else self.LINUX_DEFAULT_PATHS
-
+		baseDir = self._config["global"]["base_dir"]
+		
 		for key in self._config:
 			if key in defaultToApply:
 				self._config[key].update(defaultToApply[key])
 
-		self._config['cache_service']['extension_config_dir'] = os.path.join(self._config["base_dir"], u'opsiclientd', 'extend.d')
+		self._config['cache_service']['extension_config_dir'] = os.path.join(baseDir, u'opsiclientd', 'extend.d')
 
 		if RUNNING_ON_WINDOWS:
 			systemDrive = System.getSystemDrive()
