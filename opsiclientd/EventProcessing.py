@@ -357,6 +357,9 @@ If this is `None` a random port will be chosen.
 				break
 			except Exception as e:
 				logger.error(e)
+				raise
+				"""
+				# This is no longer working with python 3. Do we need it?
 				if RUNNING_ON_WINDOWS and (e[0] == 233) and (sys.getwindowsversion()[0] == 5) and (sessionId != 0):
 					# No process is on the other end
 					# Problem with pipe \\\\.\\Pipe\\TerminalServer\\SystemExecSrvr\\<sessionid>
@@ -366,6 +369,7 @@ If this is `None` a random port will be chosen.
 					desktop = u'winlogon'
 				else:
 					raise
+				"""
 
 		self.setSessionId(sessionId)
 		return processId
