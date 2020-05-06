@@ -12,5 +12,5 @@ pyinstaller-poetry:
   scripts:
     - script: run-opsiclientd
       binary: opsiclientd
-    - script: opsiclientd_rpc
+    #- script: opsiclientd_rpc
   dirname: opsiclientd
