@@ -826,8 +826,8 @@ mccabe = [
     {file = "mccabe-0.6.1.tar.gz", hash = "sha256:dd8d182285a0fe56bace7f45b5e7d1a6ebcbf524e8f3bd87eb0f125271b8831f"},
 ]
 opsi-dev-tools = [
-    {file = "opsi-dev-tools-1.0.2.tar.gz", hash = "md5:6334b2466ccd519acdafc152ec63d43e"},
-    {file = "opsi_dev_tools-1.0.2-py3-none-any.whl", hash = "md5:ecab9f1757f2d584cc7eaa00788fd396"},
+    {file = "opsi-dev-tools-1.0.2.tar.gz", hash = "md5:9e289afe676c8bce3f5b5d20a57b94ce"},
+    {file = "opsi_dev_tools-1.0.2-py3-none-any.whl", hash = "md5:7755ae92ef561640eec6d7de1db96a24"},
 ]
 packaging = [
     {file = "packaging-20.3-py2.py3-none-any.whl", hash = "sha256:82f77b9bee21c1bafbf35a84905d604d5d1223801d639cf3ed140bd651c08752"},
@@ -930,8 +930,8 @@ python-magic = [
     {file = "python_magic-0.4.15-py2.py3-none-any.whl", hash = "sha256:f2674dcfad52ae6c49d4803fa027809540b130db1dec928cfbb9240316831375"},
 ]
 python-opsi = [
-    {file = "python-opsi-4.2.0.24.tar.gz", hash = "md5:a16bddf3c94ed9d8070d66c6bde3693c"},
-    {file = "python_opsi-4.2.0.24-py3-none-any.whl", hash = "md5:a753d90be349808367808652cc903751"},
+    {file = "python-opsi-4.2.0.24.tar.gz", hash = "md5:2b2dd7275bda06dfba118a97e260aa0e"},
+    {file = "python_opsi-4.2.0.24-py3-none-any.whl", hash = "md5:002b1252eb9225f58776e37f8e56af95"},
 ]
 python-pam = [
     {file = "python-pam-1.8.4.tar.gz", hash = "sha256:c856d9c89fedb33951dd8a95727ae57c6887b02d065bbdffd2fd9dbc0183909b"},
