@@ -438,7 +438,7 @@ None otherwise.
 				version = info.get('FileVersion', u'')
 				name = info.get('ProductName', u'')
 				logger.info(u"Action processor name '%s', version '%s'" % (name, version))
-				self._actionProcessorInfoSubject.setMessage("%s %s" % (name.encode('utf-8'), version.encode('utf-8')))
+				self._actionProcessorInfoSubject.setMessage("%s %s" % (name, version))
 			else:
 				logger.info(u"Action processor: {filename}".format(filename=actionProcessorLocalFile))
 				self._actionProcessorInfoSubject.setMessage(u"{filename}".format(filename=os.path.basename(actionProcessorLocalFile)))
