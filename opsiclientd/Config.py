@@ -124,9 +124,9 @@ class ConfigImplementation(object):
 			},
 			'global': {
 				'base_dir': baseDir,
-				'locale_dir': os.path.join(baseDir, 'locale'),
-				'config_file': u'opsiclientd.conf',
-				'log_file': u'opsiclientd.log',
+				'locale_dir': os.path.join(baseDir, "locale"),
+				'config_file': os.path.join(baseDir, "opsiclientd", "opsiclientd.conf"),
+				'log_file': "opsiclientd.log",
 				'log_level': LOG_NOTICE,
 				'host_id': System.getFQDN().lower(),
 				'opsi_host_key': u'',
@@ -156,9 +156,9 @@ class ConfigImplementation(object):
 			'control_server': {
 				'interface': '0.0.0.0',  # TODO
 				'port': 4441,
-				'ssl_server_key_file': u'opsiclientd.pem',
-				'ssl_server_cert_file': u'opsiclientd.pem',
-				'static_dir': u'static_html',
+				'ssl_server_key_file': os.path.join(baseDir, "opsiclientd", "opsiclientd.pem"),
+				'ssl_server_cert_file': os.path.join(baseDir, "opsiclientd", "opsiclientd.pem"),
+				'static_dir': os.path.join(baseDir, "opsiclientd", "static_html"),
 				'max_authentication_failures': 5,
 			},
 			'notification_server': {
@@ -186,13 +186,12 @@ class ConfigImplementation(object):
 	@staticmethod
 	def _getBaseDirectory():
 		if RUNNING_ON_WINDOWS:
-			try:
-				# TODO: could this be solved more elegant by using __file__
-				# instead of hoping that we find the program here?
-				baseDir = os.path.dirname(sys.argv[0])
-			except Exception as e:
-				logger.error(u"Failed to get base dir: %s" % e)
-				baseDir = u''
+			baseDir = os.path.join(os.environ.get("PROGRAMFILES(X86)"), "opsi.org", "opsi-client-agent")
+			if not os.path.exists(baseDir):
+				try:
+					baseDir = os.path.abspath(os.path.dirname(sys.argv[0]))
+				except:
+					baseDir = "."
 		else:
 			baseDir = os.path.join('/etc', 'opsi-client-agent')
 
@@ -205,8 +204,7 @@ class ConfigImplementation(object):
 			if key in defaultToApply:
 				self._config[key].update(defaultToApply[key])
 
-		baseDir = self._getBaseDirectory()
-		self._config['cache_service']['extension_config_dir'] = os.path.join(baseDir, u'opsiclientd', 'extend.d')
+		self._config['cache_service']['extension_config_dir'] = os.path.join(self._config["base_dir"], u'opsiclientd', 'extend.d')
 
 		if RUNNING_ON_WINDOWS:
 			systemDrive = System.getSystemDrive()
