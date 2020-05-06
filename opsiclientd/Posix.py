@@ -35,7 +35,6 @@ from OPSI.Logger import Logger, LOG_NONE, LOG_NOTICE, LOG_WARNING
 from OPSI.Types import forceUnicode
 
 from opsiclientd import __version__
-from opsiclientd.Opsiclientd import debug_log
 
 __all__ = ('OpsiclientdInit', )
 
@@ -44,7 +43,6 @@ logger = Logger()
 try:
 	from opsiclientd.nonfree.Posix import OpsiclientdPosix
 except ImportError as exc:
-	debug_log("ERROR: %s" % exc)
 	raise
 
 

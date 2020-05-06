@@ -26,12 +26,8 @@ opsi client daemon (opsiclientd)
 
 import os
 import sys
-import time
-
-from opsiclientd.Opsiclientd import debug_log
 
 def main():
-	debug_log("opsiclientd main at %s" % time.asctime(), stderr=False)
 	if os.name == 'nt':
 		from opsiclientd.Windows import OpsiclientdInit
 	elif os.name == 'posix':
@@ -42,5 +38,4 @@ def main():
 	try:
 		OpsiclientdInit()
 	except Exception as exc:
-		debug_log("ERROR: %s" % exc)
 		sys.exit(1)

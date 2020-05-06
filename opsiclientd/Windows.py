@@ -28,6 +28,7 @@ Functionality to work on Windows.
 import os
 import sys
 import threading
+import tempfile
 import time
 import win32service
 import win32serviceutil
@@ -39,7 +40,7 @@ from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG
 from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
 
-from opsiclientd.Opsiclientd import Opsiclientd, debug_log
+from opsiclientd.Opsiclientd import Opsiclientd
 
 __all__ = ('OpsiclientdInit', )
 
@@ -98,22 +99,38 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 
 class OpsiclientdInit(object):
 	def __init__(self):
-		debug_log("OpsiclientdInit", stderr=False)
+		self._init_early_log()
+		logger.debug("OpsiclientdInit")
 		try:
 			# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
 			if len(sys.argv) == 1:
 				# Service process
-				debug_log("OpsiclientdInit - Initialize", stderr=False)
+				logger.debug("OpsiclientdInit - Initialize")
 				servicemanager.Initialize()
 				servicemanager.PrepareToHostSingle(OpsiclientdService)
 				servicemanager.StartServiceCtrlDispatcher()
 			else:
-				debug_log("OpsiclientdInit - HandleCommandLine", stderr=False)
+				logger.debug("OpsiclientdInit - HandleCommandLine")
 				win32serviceutil.HandleCommandLine(OpsiclientdService)	
 		except Exception as exc:
-			debug_log("ERROR: %s" % exc)
-		debug_log("OpsiclientdInit done", stderr=False)
-
+			logger.logException(exc)
+	
+	def _init_early_log(self):
+		# Location of the main log file will be read from config file later on
+		if logger.getLogFile() is not None:
+			return
+		
+		early_log_file = os.path.join(tempfile.gettempdir(), "opsiclientd.log")
+		try:
+			default_log_dir = os.path.join(System.getSystemDrive(), "opsi.org", "log")
+			if os.path.isdir(default_log_dir):
+				early_log_file = os.path.join(default_log_dir, "opsiclientd.log")
+		except:
+			pass
+		
+		logger.setLogFile(early_log_file)
+		#logger.setFileLevel(LOG_DEBUG)
+		logger.setFileLevel(LOG_ERROR)
 
 class OpsiclientdService(win32serviceutil.ServiceFramework):
 	_svc_name_ = "opsiclientd"
@@ -124,27 +141,24 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		"""
 		Initialize service and create stop event
 		"""
-		debug_log("OpsiclientdService.__init__", stderr=False)
 		self.opsiclientd = None
 		try:
 			sys.stdout = logger.getStdout()
 			sys.stderr = logger.getStderr()
 			logger.setConsoleLevel(LOG_NONE)
 
-			logger.debug(u"OpsiclientdService initiating")
+			logger.debug("OpsiclientdService initiating")
 			win32serviceutil.ServiceFramework.__init__(self, args)
 			self._stopEvent = threading.Event()
-			logger.debug(u"OpsiclientdService initiated")
-			debug_log("OpsiclientdService initiated", stderr=False)
+			logger.debug("OpsiclientdService initiated")
 		except Exception as exc:
-			debug_log("ERROR: %s" % exc)
+			logger.logException(exc)
 			raise
 
 	def ReportServiceStatus(self, serviceStatus, waitHint=5000, win32ExitCode=0, svcExitCode=0):
 		# Wrapping because ReportServiceStatus sometimes lets windows
 		# report a crash of opsiclientd (python 2.6.5) invalid handle
 		try:
-			debug_log("OpsiclientdService.ReportServiceStatus %s" % serviceStatus, stderr=False)
 			logger.debug('Reporting service status: {}', serviceStatus)
 			win32serviceutil.ServiceFramework.ReportServiceStatus(
 				self,
@@ -154,11 +168,9 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 				svcExitCode=svcExitCode
 			)
 		except Exception as exc:
-			debug_log("ERROR: %s" % exc)
 			logger.error("Failed to report service status {0}: {1}", serviceStatus, reportStatusError)
 
 	def SvcInterrogate(self):
-		debug_log("OpsiclientdService.SvcInterrogate", stderr=False)
 		logger.debug("OpsiclientdService SvcInterrogate")
 		# Assume we are running, and everyone is happy.
 		self.ReportServiceStatus(win32service.SERVICE_RUNNING)
@@ -167,7 +179,6 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		"""
 		Gets called from windows to stop service
 		"""
-		debug_log("OpsiclientdService.SvcStop", stderr=False)
 		logger.debug(u"OpsiclientdService SvcStop")
 		# Write to event log
 		self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
@@ -178,7 +189,6 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		"""
 		Gets called from windows on system shutdown
 		"""
-		debug_log("OpsiclientdService.SvcShutdown", stderr=False)
 		logger.debug(u"OpsiclientdService SvcShutdown")
 		# Write to event log
 		self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
@@ -192,7 +202,6 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		Gets called from windows to start service
 		"""
 		try:
-			debug_log("OpsiclientdService.SvcRun", stderr=False)
 			logger.debug("OpsiclientdService.SvcRun", stderr=False)
 			startTime = time.time()
 			
@@ -227,7 +236,6 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			for thread in threading.enumerate():
 				logger.notice(u"Running thread after stop: %s" % thread)
 		except Exception as e:
-			debug_log("ERROR: %s" % e)
 			logger.critical(u"opsiclientd crash")
 			logger.logException(e)
 
