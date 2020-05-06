@@ -36,7 +36,7 @@ import win32com.server.policy
 import win32com.client
 import servicemanager
 
-from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG
+from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG, LOG_ERROR
 from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
 
@@ -117,20 +117,20 @@ class OpsiclientdInit(object):
 	
 	def _init_early_log(self):
 		# Location of the main log file will be read from config file later on
-		if logger.getLogFile() is not None:
-			return
+		#if logger.getLogFile() is not None:
+		#	return
 		
 		early_log_file = os.path.join(tempfile.gettempdir(), "opsiclientd.log")
 		try:
-			default_log_dir = os.path.join(System.getSystemDrive(), "opsi.org", "log")
+			default_log_dir = os.path.join(System.getSystemDrive() + "\\opsi.org\\log")
 			if os.path.isdir(default_log_dir):
 				early_log_file = os.path.join(default_log_dir, "opsiclientd.log")
 		except:
 			pass
-		
 		logger.setLogFile(early_log_file)
-		#logger.setFileLevel(LOG_DEBUG)
-		logger.setFileLevel(LOG_ERROR)
+		logger.setFileLevel(LOG_DEBUG)
+		#logger.setFileLevel(LOG_ERROR)
+		logger.info("Early log file started")
 
 class OpsiclientdService(win32serviceutil.ServiceFramework):
 	_svc_name_ = "opsiclientd"
