@@ -1,4 +1,6 @@
 pyinstaller-poetry:
+  update_version_in:
+    - opsiclientd/__init__.py
   one_file: no
   hidden_imports:
     all:
@@ -12,5 +14,6 @@ pyinstaller-poetry:
   scripts:
     - script: run-opsiclientd
       binary: opsiclientd
-    #- script: opsiclientd_rpc
+      alt_names:
+        - opsiclientd_rpc
   dirname: opsiclientd
