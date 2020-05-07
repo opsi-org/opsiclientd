@@ -72,4 +72,4 @@ def main():
 	name = os.path.splitext(os.path.basename(sys.argv[0]))[0].lower()
 	if name == "opsiclientd_rpc":
 		return opsiclientd_rpc()
-	return opsiclientd_()
+	return opsiclientd()
