@@ -13,7 +13,7 @@ pyinstaller-poetry:
     darwin: []
   scripts:
     - script: run-opsiclientd
-      binary: opsiclientd
-      alt_names:
+      binaries:
+        - opsiclientd
         - opsiclientd_rpc
   dirname: opsiclientd

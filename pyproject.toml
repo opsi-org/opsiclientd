@@ -27,8 +27,8 @@ macholib = {version = "^1.14", platform = "darwin"}
 opsi-dev-tools = "^1.0.2"
 
 [tool.poetry.scripts]
-opsiclientd = "opsiclientd.opsiclientdmain:main"
-opsiclientd_rpc = "opsiclientd.opsiclientdrpc:main"
+opsiclientd = "opsiclientd.__main__:opsiclientd"
+opsiclientd_rpc = "opsiclientd.__main__:opsiclientd_rpc"
 
 [build-system]
 requires = ["poetry>=0.12"]

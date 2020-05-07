@@ -1,8 +1,9 @@
+#! /usr/bin/python
 # -*- coding: utf-8 -*-
 
-# opsiclientd_rpc is part of the desktop management solution opsi
+# opsiclientd is part of the desktop management solution opsi
 # (open pc server integration) http://www.opsi.org
-# Copyright (C) 2008-2018 uib GmbH <info@uib.de>
+# Copyright (C) 2010-2019 uib GmbH <info@uib.de>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,32 +18,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Helper to make RPC-calls against opsiclientd from the commandline.
+opsi client daemon (opsiclientd)
 
 :copyright: uib GmbH <info@uib.de>
-:author: Jan Schneider <j.schneider@uib.de>
-:author: Erol Ueluekmen <e.ueluekmen@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
-import locale
 import os
 import sys
+import locale
 
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Logger import Logger, LOG_DEBUG
-
 # Do not remove this import, it's needed by using this module from CLI
 from OPSI import System
 
-__version__ = '4.2.0.0'
-
 logger = Logger()
 
-encoding = locale.getpreferredencoding()
-
-
-def main():
+def opsiclientd_rpc():
 	if len(sys.argv) < 5:
 		print(f"Usage: {os.path.basename(sys.argv[0])} <username> <password> <port> <rpc> [debug_logfile]")
 		sys.exit(1)
@@ -61,3 +54,22 @@ def main():
 	except Exception as error:
 		logger.logException(error)
 		sys.exit(1)
+
+def opsiclientd():
+	if os.name == 'nt':
+		from opsiclientd.Windows import OpsiclientdInit
+	elif os.name == 'posix':
+		from opsiclientd.Posix import OpsiclientdInit
+	else:
+		raise NotImplementedError("OS %s not supported." % os.name)
+	
+	try:
+		OpsiclientdInit()
+	except Exception as exc:
+		sys.exit(1)
+
+def main():
+	name = os.path.splitext(os.path.basename(sys.argv[0]))[0].lower()
+	if name == "opsiclientd_rpc":
+		return opsiclientd_rpc()
+	return opsiclientd_()
