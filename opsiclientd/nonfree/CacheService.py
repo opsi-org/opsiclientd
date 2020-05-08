@@ -42,7 +42,7 @@ from OPSI.Backend.SQLite import (
 from opsiclientd.Config import getLogFormat, Config
 from opsiclientd.State import State
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
-from opsiclientd.Events.Utilities import getEventGenerators
+from opsiclientd.Events.Utilities.Generators import getEventGenerators
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.Timeline import Timeline
 

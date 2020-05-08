@@ -28,8 +28,8 @@ Windows-specific Custom event.
 
 from __future__ import absolute_import
 
-from ..Basic import Event
-from .WMI import WMIEventConfig, WMIEventGenerator
+from opsiclientd.Events.Basic import Event
+from opsiclientd.Events.Windows.WMI import WMIEventConfig, WMIEventGenerator
 
 __all__ = ['CustomEvent', 'CustomEventConfig', 'CustomEventGenerator']
 
