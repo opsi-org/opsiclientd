@@ -415,32 +415,30 @@ version = "0.4.18"
 
 [[package]]
 category = "main"
-description = ""
-develop = true
+description = "The opsi python library"
 name = "python-opsi"
 optional = false
-python-versions = "^3.6"
+python-versions = ">=3.6,<4.0"
 version = "4.2.0.24"
 
 [package.dependencies]
-PyCryptodome = "^3.9.7"
-SQLAlchemy = "^1.3.15"
-ldap3 = "^2.7"
-pyOpenSSL = "^19.1.0"
-pyasn1 = "^0.4.8"
-python-magic = "^0.4.15"
-python-pam = "^1.8.4"
-pywin32 = "^227"
-wmi = "^1.5.1"
+PyCryptodome = ">=3.9.7,<4.0.0"
+SQLAlchemy = ">=1.3.15,<2.0.0"
+ldap3 = ">=2.7,<3.0"
+pyOpenSSL = ">=19.1.0,<20.0.0"
+pyasn1 = ">=0.4.8,<0.5.0"
+python-magic = ">=0.4.15,<0.5.0"
+python-pam = ">=1.8.4,<2.0.0"
+pywin32 = ">=227,<228"
+wmi = ">=1.5.1,<2.0.0"
 
 [package.dependencies.twisted]
 extras = ["tls"]
-version = "^20.3.0"
+version = ">=20.3.0,<21.0.0"
 
 [package.source]
-reference = ""
-type = "directory"
-url = "python-opsi"
+reference = "uibpypi"
+url = "http://pypi.uib.gmbh:8080/simple"
 
 [[package]]
 category = "main"
@@ -665,7 +663,7 @@ test = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [metadata]
-content-hash = "d4d0891021feed4a3ce2a11729e223912f2f7d3a785b119b7093e1f2a3b3973d"
+content-hash = "0b1fba6cd3833899092ab7348227acf12db9dbcdb9c567cd8003191adb13eb69"
 python-versions = "^3.6"
 
 [metadata.files]
@@ -931,7 +929,10 @@ python-magic = [
     {file = "python-magic-0.4.18.tar.gz", hash = "sha256:b757db2a5289ea3f1ced9e60f072965243ea43a2221430048fd8cacab17be0ce"},
     {file = "python_magic-0.4.18-py2.py3-none-any.whl", hash = "sha256:356efa93c8899047d1eb7d3eb91e871ba2f5b1376edbaf4cc305e3c872207355"},
 ]
-python-opsi = []
+python-opsi = [
+    {file = "python-opsi-4.2.0.24.tar.gz", hash = "md5:a16bddf3c94ed9d8070d66c6bde3693c"},
+    {file = "python_opsi-4.2.0.24-py3-none-any.whl", hash = "md5:a753d90be349808367808652cc903751"},
+]
 python-pam = [
     {file = "python-pam-1.8.4.tar.gz", hash = "sha256:c856d9c89fedb33951dd8a95727ae57c6887b02d065bbdffd2fd9dbc0183909b"},
     {file = "python_pam-1.8.4-py2.py3-none-any.whl", hash = "sha256:8439b470b564ac558585b5a3ffce0fce48d1eeebdff19add48279c33de7da0e0"},

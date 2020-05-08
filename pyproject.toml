@@ -4,7 +4,6 @@ version = "4.2.0.0"
 description = "opsi client daemon. The service running on opsi clients."
 authors = ["Jan Schneider <j.schneider@uib.de>"]
 include = [
-    "opsiclientd_rpc",
     "run-opsiclientd",
     "gettext/*.mo"
 ]
@@ -24,7 +23,7 @@ pyinstaller = "^3.6"
 pywin32-ctypes = {version = "^0.2.0", platform = "win32"}
 pefile = {version = "^2019.4.18", platform = "win32"}
 macholib = {version = "^1.14", platform = "darwin"}
-opsi-dev-tools = "^1.0.2"
+opsi-dev-tools = "^1.0.3"
 
 [tool.poetry.scripts]
 opsiclientd = "opsiclientd.__main__:opsiclientd"

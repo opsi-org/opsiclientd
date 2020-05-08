@@ -16,6 +16,11 @@ pyinstaller-poetry:
       binaries:
         - opsiclientd
         - opsiclientd_rpc
+  data_files:
+    - src: .venv/lib/python*/site-packages/data/backendManager/extend.d/10_opsi.conf
+      dst: data/extend.d
+    - src: .venv/lib/python*/site-packages/data/backendManager/extend.d/20_legacy.conf
+      dst: data/extend.d
   dirname: opsiclientd
  
 changelog:
