@@ -36,6 +36,7 @@ from OPSI import System
 logger = Logger()
 
 def opsiclientd_rpc():
+	logger.setLogFormat("[%l] [%D] [opsiclientd_rpc] %M   (%F|%N)")
 	if len(sys.argv) < 5:
 		print(f"Usage: {os.path.basename(sys.argv[0])} <username> <password> <port> <rpc> [debug_logfile]")
 		sys.exit(1)
