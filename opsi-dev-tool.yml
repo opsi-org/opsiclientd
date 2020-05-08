@@ -17,3 +17,9 @@ pyinstaller-poetry:
         - opsiclientd
         - opsiclientd_rpc
   dirname: opsiclientd
+ 
+changelog:
+  - python3
+  - pyinstaller
+  - timeline auto update
+
