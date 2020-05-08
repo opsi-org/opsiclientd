@@ -24,7 +24,8 @@ pyinstaller-poetry:
   dirname: opsiclientd
  
 changelog:
-  - Ported to python3
-  - Switched to pyinstaller for packaging
-  - Timeline fetches data using ajax calls and is auto updated every 5 seconds
+  4.2.0.0:
+    - Ported to python3
+    - Switched to pyinstaller for packaging
+    - Timeline fetches data using ajax calls and is auto updated every 5 seconds
 
