@@ -34,8 +34,8 @@ import time
 from OPSI import System
 from OPSI.Logger import Logger
 
-from ..Basic import Event, EventGenerator
-from .WMI import WMIEventConfig
+from opsiclientd.Events.Basic import Event, EventGenerator
+from opsiclientd.Events.Windows.WMI import WMIEventConfig
 
 __all__ = [
 	'GUIStartupEvent', 'GUIStartupEventConfig', 'GUIStartupEventGenerator'

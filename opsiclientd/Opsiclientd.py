@@ -278,30 +278,28 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		@contextmanager
 		def getCacheService():
+			cacheService = None
 			try:
+				logger.notice("Starting cache service")
 				from opsiclientd.nonfree.CacheService import CacheService
-				logger.notice(u"Starting cache service")
-				try:
-					cacheService = CacheService(opsiclientd=self)
-					cacheService.start()
-					logger.notice(u"Cache service started")
-					yield cacheService
-				except Exception as e:
-					logger.error(u"Failed to start cache service: %s" % forceUnicode(e))
-					raise
-				finally:
-					logger.info(u"Stopping cache service")
+				cacheService = CacheService(opsiclientd=self)
+				cacheService.start()
+				logger.notice("Cache service started")
+				yield cacheService
+			except Exception as e:
+				logger.error("Failed to start cache service: %s" % forceUnicode(e))
+				#logger.logException(e)
+				yield None
+			finally:
+				if cacheService:
+					logger.info("Stopping cache service")
 					try:
 						cacheService.stop()
 						cacheService.join(2)
 						logger.info("Cache service stopped")
 					except (NameError, RuntimeError) as stopError:
-						logger.debug(u"Stopping cache service failed: {0}".format(stopError))
-			except ImportError:
-				yield None
-			except Exception as e:
-				logger.notice(u"Cache service not started: %s" % e)
-
+						logger.debug("Failed to stop cache service: {0}".format(stopError))
+		
 		@contextmanager
 		def getEventGeneratorContext():
 			logger.debug("Creating event generators")

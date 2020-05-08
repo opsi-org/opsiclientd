@@ -30,7 +30,7 @@ from __future__ import absolute_import
 
 import threading
 
-from .Basic import Event, EventGenerator
+from opsiclientd.Events.Basic import Event, EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
 
 __all__ = ['TimerEvent', 'TimerEventConfig', 'TimerEventGenerator']

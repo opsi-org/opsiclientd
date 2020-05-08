@@ -32,7 +32,7 @@ import time
 
 from OPSI.Logger import Logger
 
-from ..Basic import EventGenerator
+from opsiclientd.Events.Basic import EventGenerator
 
 __all__ = ['SensLogonEventGenerator']
 

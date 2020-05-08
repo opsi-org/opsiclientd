@@ -33,9 +33,9 @@ from OPSI.Types import forceUnicode
 
 from opsiclientd.Config import Config
 
-from .Configs import getEventConfigs
-from .Factories import EventConfigFactory, EventGeneratorFactory
-from ..Panic import PanicEventConfig
+from opsiclientd.Events.Utilities.Configs import getEventConfigs
+from opsiclientd.Events.Utilities.Factories import EventConfigFactory, EventGeneratorFactory
+from opsiclientd.Events.Panic import PanicEventConfig
 
 __all__ = [
 	'createEventGenerators', 'getEventGenerator', 'getEventGenerators',

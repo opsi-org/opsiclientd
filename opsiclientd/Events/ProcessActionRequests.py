@@ -28,7 +28,7 @@ Processing action requests.
 
 from __future__ import absolute_import
 
-from .Basic import Event, EventGenerator
+from opsiclientd.Events.Basic import Event, EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
 
 __all__ = [

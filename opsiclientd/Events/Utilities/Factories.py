@@ -30,25 +30,25 @@ from __future__ import absolute_import
 
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
-from ..Custom import CustomEventConfig, CustomEventGenerator
-from ..DaemonShutdown import (
+from opsiclientd.Events.Custom import CustomEventConfig, CustomEventGenerator
+from opsiclientd.Events.DaemonShutdown import (
 	DaemonShutdownEventConfig, DaemonShutdownEventGenerator)
-from ..DaemonStartup import (
+from opsiclientd.Events.DaemonStartup import (
 	DaemonStartupEventConfig, DaemonStartupEventGenerator)
-from ..Panic import PanicEventConfig, PanicEventGenerator
-from ..ProcessActionRequests import (
+from opsiclientd.Events.Panic import PanicEventConfig, PanicEventGenerator
+from opsiclientd.Events.ProcessActionRequests import (
 	ProcessActionRequestsEventConfig, ProcessActionRequestsEventGenerator)
-from ..SwOnDemand import SwOnDemandEventConfig, SwOnDemandEventGenerator
-from ..SyncCompleted import (
+from opsiclientd.Events.SwOnDemand import SwOnDemandEventConfig, SwOnDemandEventGenerator
+from opsiclientd.Events.SyncCompleted import (
 	SyncCompletedEventConfig, SyncCompletedEventGenerator)
-from ..Timer import TimerEventConfig, TimerEventGenerator
+from opsiclientd.Events.Timer import TimerEventConfig, TimerEventGenerator
 
 if RUNNING_ON_WINDOWS:
-	from ..Windows.GUIStartup import (
+	from opsiclientd.Events.Windows.GUIStartup import (
 		GUIStartupEventConfig, GUIStartupEventGenerator)
-	from ..Windows.SystemShutdown import (
+	from opsiclientd.Events.Windows.SystemShutdown import (
 		SystemShutdownEventConfig, SystemShutdownEventGenerator)
-	from ..Windows.UserLogin import (
+	from opsiclientd.Events.Windows.UserLogin import (
 		UserLoginEventConfig, UserLoginEventGenerator)
 
 __all__ = ['EventConfigFactory', 'EventGeneratorFactory']

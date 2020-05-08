@@ -33,9 +33,9 @@ import sys
 from OPSI.Logger import Logger
 from OPSI import System
 
-from ..Basic import Event
-from .SensLogon import SensLogonEventGenerator
-from .WMI import WMIEventConfig
+from opsiclientd.Events.Basic import Event
+from opsiclientd.Events.Windows.SensLogon import SensLogonEventGenerator
+from opsiclientd.Events.Windows.WMI import WMIEventConfig
 
 __all__ = [
 	'UserLoginEvent', 'UserLoginEventConfig', 'UserLoginEventGenerator'

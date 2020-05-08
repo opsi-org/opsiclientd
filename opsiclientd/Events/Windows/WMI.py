@@ -34,7 +34,7 @@ import time
 from OPSI.Logger import Logger
 from OPSI.Types import forceUnicode
 
-from ..Basic import EventGenerator
+from opsiclientd.Events.Basic import EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
 
 __all__ = ['WMIEventConfig', 'WMIEventGenerator']

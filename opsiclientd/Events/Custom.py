@@ -34,10 +34,10 @@ from __future__ import absolute_import
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 if RUNNING_ON_WINDOWS:
-	from .Windows.Custom import (
+	from opsiclientd.Events.Windows.Custom import (
 		CustomEvent, CustomEventConfig, CustomEventGenerator)
 else:
-	from .Posix.Custom import (
+	from opsiclientd.Events.Posix.Custom import (
 		CustomEvent, CustomEventConfig, CustomEventGenerator)
 
 __all__ = ['CustomEvent', 'CustomEventConfig', 'CustomEventGenerator']
