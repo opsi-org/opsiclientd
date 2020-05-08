@@ -55,20 +55,32 @@ config = Config()
 TIMELINE_IMAGE_URL = u'/timeline/timeline_js/images/'
 htmlHead = u'''
 <script type="text/javascript">
-// <![CDATA[
 Timeline_ajax_url   = "/timeline/timeline_ajax/simile-ajax-api.js";
 Timeline_urlPrefix  = "/timeline/timeline_js/";
 Timeline_parameters = "bundle=true";
-// ]]>
 </script>
 <script src="/timeline/timeline_js/timeline-api.js" type="text/javascript">
 </script>
 <script type="text/javascript">
-// <![CDATA[
-var timeline_data = %(data)s;
-var tl;
+var timeline_data;
+var timeline;
+var eventSource;
+
+function updateEventData() {
+	var req = new XMLHttpRequest();
+	req.addEventListener("load", function() {
+		timeline_data = JSON.parse(this.responseText);
+		eventSource.clear();
+		eventSource.loadJSON(timeline_data, '.');
+		//timeline.layout();
+		setTimeout(updateEventData, 5000);
+	});
+	req.open("GET", "?get_event_data");
+	req.send();
+}
+
 function onLoad() {
-	var eventSource = new Timeline.DefaultEventSource();
+	eventSource = new Timeline.DefaultEventSource();
 	var bandInfos = [
 		Timeline.createBandInfo({
 			width:          "80%%",
@@ -99,8 +111,8 @@ function onLoad() {
 	bandInfos[1].highlight = true;
 	bandInfos[2].syncWith = 0;
 	bandInfos[2].highlight = true;
-	tl = Timeline.create(document.getElementById("opsiclientd-timeline"), bandInfos);
-	eventSource.loadJSON(timeline_data, '.');
+	timeline = Timeline.create(document.getElementById("opsiclientd-timeline"), bandInfos);
+	updateEventData();
 }
 
 var resizeTimerID = null;
@@ -108,11 +120,10 @@ function onResize() {
 	if (resizeTimerID == null) {
 		resizeTimerID = window.setTimeout(function() {
 			resizeTimerID = null;
-			tl.layout();
+			timeline.layout();
 		}, 500);
 	}
 }
-// ]]>
 </script>
 '''
 
@@ -141,7 +152,7 @@ class TimelineImplementation(object):
 		with self._dbLock:
 			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', {'end': end})
 
-	def getHtmlHead(self):
+	def getEventData(self):
 		events = []
 		now = time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime())
 		for event in self.getEvents():
@@ -186,11 +197,12 @@ class TimelineImplementation(object):
 			del event['category']
 			del event['id']
 			events.append(event)
-		return htmlHead % {
-			'data': json.dumps({'dateTimeFormat': 'iso8601', 'events': events}),
-			'date': now
-		}
-
+		return {'dateTimeFormat': 'iso8601', 'events': events}
+	
+	def getHtmlHead(self):
+		now = time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime())
+		return htmlHead % {'date': now}
+	
 	def _cleanupDatabase(self):
 		with self._dbLock:
 			try:

@@ -34,6 +34,7 @@ import shutil
 import sys
 import threading
 import time
+import json
 
 from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
@@ -318,16 +319,25 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 		return result
 
 	def _generateResponse(self, result):
-		logger.info("Creating opsiclientd info page")
-
+		get_event_data = False
+		if b'?' in self.request.uri:
+			query = self.request.uri.decode().split('?', 1)[1]
+			if query == "get_event_data":
+				get_event_data = True
+		
 		timeline = Timeline()
-		html = infoPage % {
-			"head": timeline.getHtmlHead(),
-			"hostname": config.get("global", "host_id"),
-		}
 		self.request.setResponseCode(200)
-		self.request.setHeader("content-type", "text/html; charset=utf-8")
-		self.request.write(html.encode("utf-8").strip())
+		if get_event_data:
+			self.request.setHeader("content-type", "application/json")
+			self.request.write(json.dumps(timeline.getEventData()).encode("utf-8"))
+		else:
+			logger.info("Creating opsiclientd info page")
+			html = infoPage % {
+				"head": timeline.getHtmlHead(),
+				"hostname": config.get("global", "host_id"),
+			}
+			self.request.setHeader("content-type", "text/html; charset=utf-8")
+			self.request.write(html.encode("utf-8").strip())
 
 
 class ResourceRoot(resource.Resource):
