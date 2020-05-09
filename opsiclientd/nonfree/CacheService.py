@@ -356,21 +356,21 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 									val = "yes"
 					data += "%s = %s\r\n" % (module.lower().strip(), val)
 
-			verfied = False
+			verified = False
 			if modules["signature"].startswith("{"):
 					s_bytes = int(modules['signature'].split("}", 1)[-1]).to_bytes(256, "big")
 					try:
 							pkcs1_15.new(publicKey).verify(MD5.new(data.encode()), s_bytes)
-							verfied = True
+							verified = True
 					except ValueError:
 							# Invalid signature
 							pass
 			else:
 					h_int = int.from_bytes(md5(data.encode()).digest(), "big")
 					s_int = publicKey._encrypt(int(modules["signature"]))
-					verfied = h_int == s_int
+					verified = h_int == s_int
 
-			if not verfied:
+			if not verified:
 				raise Exception("Cannot sync products: modules file invalid")
 			logger.info(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
 		except Exception:
@@ -743,21 +743,21 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 									val = "yes"
 					data += "%s = %s\r\n" % (module.lower().strip(), val)
 
-			verfied = False
+			verified = False
 			if modules["signature"].startswith("{"):
 					s_bytes = int(modules['signature'].split("}", 1)[-1]).to_bytes(256, "big")
 					try:
 							pkcs1_15.new(publicKey).verify(MD5.new(data.encode()), s_bytes)
-							verfied = True
+							verified = True
 					except ValueError:
 							# Invalid signature
 							pass
 			else:
 					h_int = int.from_bytes(md5(data.encode()).digest(), "big")
 					s_int = publicKey._encrypt(int(modules["signature"]))
-					verfied = h_int == s_int
+					verified = h_int == s_int
 
-			if not verfied:
+			if not verified:
 				raise Exception("Cannot sync products: modules file invalid")
 			logger.info("Modules file signature verified (customer: %s)" % modules.get('customer'))
 		except Exception:
