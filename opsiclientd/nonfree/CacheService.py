@@ -590,6 +590,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					raise
 		except Exception as e:
 			logger.error(u"Errors occurred while syncing config from server: %s" % e)
+			logger.logException(e)
 		self.disconnectConfigService()
 		self._working = False
 
