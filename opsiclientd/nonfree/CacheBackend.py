@@ -258,7 +258,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			productIds=[],
 			productTypes=['LocalbootProduct'],
 			audit=False,
-			license=False
+			licenses=False
 		)
 
 		self._snapshotBackend.backend_deleteBase()
