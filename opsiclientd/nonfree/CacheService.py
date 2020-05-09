@@ -931,6 +931,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 							eventGenerator.createAndFireEvent()
 		except Exception as e:
 			logger.error(u"Failed to cache products: %s" % e)
+			logger.logException(e)
 			timeline.addEvent(
 				title=u"Failed to cache products",
 				description=u"Failed to cache products: %s" % e,
