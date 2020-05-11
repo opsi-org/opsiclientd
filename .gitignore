@@ -1,3 +1,7 @@
+/.venv
+/build
+/dist
+
 *~
 *.pyc
 *.pyo
