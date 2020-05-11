@@ -18,9 +18,9 @@ pyinstaller-poetry:
         - opsiclientd_rpc
   data_files:
     # from opsiclientd
-    - src: ${VENV_SITE_PACKAGES}/opsiclientd_data/common/static_html/*
+    - src: opsiclientd_data/common/static_html/*
       dst: opsiclientd_data/static_html/
-    - src: ${VENV_SITE_PACKAGES}/opsiclientd_data/${PLATFORM_SYSTEM}/*
+    - src: opsiclientd_data/${PLATFORM_SYSTEM}/*
       dst: opsiclientd_data/
     # from python-opsi
     - src: ${VENV_SITE_PACKAGES}/python-opsi_data/backendManager/extend.d/10_opsi.conf
