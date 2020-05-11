@@ -1,0 +1,208 @@
+
+body {
+	font-family: verdana, arial;
+	font-size: 12px;
+}
+
+#title {
+	width: 100%;
+	padding-left: 120px;
+	padding-top: 50px;
+	padding-bottom: 5px;
+	background-image: url(opsi_logo.png);
+	background-repeat: no-repeat;
+	background-position: 0% 0%;
+	font-size: 20px;
+	letter-spacing: 5px;
+	color: #6276a0;
+}
+a:link {
+	color: #555555;
+	text-decoration: none;
+}
+a:visited {
+	color: #555555;
+	text-decoration: none;
+}
+a:hover {
+	color: #46547f;
+	text-decoration: none;
+}
+a:active {
+	color: #555555;
+	text-decoration: none;
+}
+
+div.mainpage-link-box {
+	margin-top: 0px;
+	color: #555555;
+	font-size: 14px;
+	letter-spacing: 2px;
+}
+
+#infopage-timeline-box {
+	margin: 30px;
+}
+
+#infopage-timeline-title {
+	text-align: left;
+	font-weight: bolder;
+	font-size: 120%;
+}
+
+.timeline-default {
+	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
+	font-size: 8pt;
+	border: 1px solid #111111;
+}
+.timeline-event-bubble-title {
+	font-weight: bold;
+	border-bottom: 1px solid #111111;
+	margin-bottom: 0.5em;
+	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
+	font-size: 8pt;
+}
+.timeline-event-bubble-body {
+	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
+	font-size: 8pt;
+}
+.timeline-event-bubble-time {
+	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
+	font-size: 8pt;
+	margin-top: 10px;
+}
+
+#infopage-opsiclientd-log-box {
+	margin: 30px;
+}
+
+#infopage-opsiclientd-log-title {
+	text-align: left;
+	font-weight: bolder;
+	font-size: 120%;
+}
+
+#infopage-opsiclientd-log {
+	height: 500px;
+	overflow: scroll;
+	font-family: monospace;
+	font-size: 10px;
+	border: 1px solid #aaaaaa
+}
+
+.loglevel-1 { color: #1B8080 }
+.loglevel-2 { color: #7E1B80 }
+.loglevel-3 { color: #801B2C }
+.loglevel-4 { color: #80401B }
+.loglevel-5 { color: #1B801B }
+.loglevel-6 { color: #343434 }
+.loglevel-7 { color: #808080 }
+.loglevel-8 { color: #808080 }
+.loglevel-9 { color: #B4B426 }
+
+div.swondemand-product-box {
+	padding: 20px;
+	width: 550px;
+	margin: 30px;
+	border: solid #555555 1px;
+	border-radius: 5px;
+	-moz-border-radius: 5px;
+	background-color: #D7E5FF;
+}
+
+td.swondemand-product-name {
+	padding-bottom: 10px;
+	text-align: left;
+	font-weight: bolder;
+	font-size: 120%;
+}
+
+td.swondemand-product-attribute-name {
+	padding-left: 50px;
+	vertical-align: top;
+	text-align: right;
+	font-style: italic;
+}
+
+td.swondemand-product-attribute-value {
+	vertical-align: top;
+	text-align: left;
+}
+
+td.swondemand-product-setup-radiobox {
+	padding-top: 20px;
+	color: #008200;
+}
+td.swondemand-product-uninstall-radiobox {
+	color: #820000;
+}
+
+.swondemand-product-state-installed {
+	color: #008200;
+}
+
+.swondemand-product-state-not_installed {
+	color: #820000;
+}
+
+.swondemand-action-button {
+	color: #83384B;
+	background-color: #fafafa;
+	border: solid 1px #83384B;
+	border-radius: 5px;
+	-moz-border-radius: 5px;
+	font-weight: bolder;
+}
+.swondemand-action-button:hover {
+	background-color: #dddddd;
+}
+
+div.swondemand-button-box {
+	width: 550px;
+	text-align: right;
+	margin-left: 30px;
+}
+
+div.swondemand-summary-button-box {
+	width: 650px;
+	text-align: center;
+	margin-left: 30px;
+}
+
+div.swondemand-summary-box {
+	width: 650px;
+	margin: 30px;
+	padding-left: 20px;
+	padding-bottom: 10px;
+	border: solid #555555 1px;
+	border-radius: 5px;
+	-moz-border-radius: 5px;
+	background-color: #D7E5FF;
+}
+
+p.swondemand-summary-title {
+	padding-top: 10px;
+	text-align: left;
+	font-weight: bolder;
+	font-size: 110%;
+}
+
+li.swondemand-summary-product-action {
+	text-align: left;
+}
+
+div.swondemand-summary-message-box {
+	width: 650px;
+	margin: 30px;
+	padding-top: 10px;
+	padding-bottom: 10px;
+	padding-left: 20px;
+	border: solid #555555 1px;
+	border-radius: 5px;
+	-moz-border-radius: 5px;
+	background-color: #dddddd;
+	text-align: left;
+	font-weight: bolder;
+	font-size: 120%;
+}
+
