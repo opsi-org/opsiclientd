@@ -893,7 +893,7 @@ None otherwise.
 
 			if RUNNING_ON_WINDOWS:
 				# TODO: string building like this is just awful. Improve it!
-				command = u'"%global.base_dir%\\action_processor_starter.exe" ' \
+				command = os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe") + ' ' \
 					+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
 					+ u'"%global.log_file%" "%global.log_level%" ' \
 					+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
