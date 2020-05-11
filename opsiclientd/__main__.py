@@ -53,4 +53,6 @@ def main():
 	name = os.path.splitext(os.path.basename(sys.argv[0]))[0].lower()
 	if name == "opsiclientd_rpc":
 		return opsiclientd_rpc()
+	elif name == "action_processor_starter":
+		return action_processor_starter()
 	return opsiclientd()
