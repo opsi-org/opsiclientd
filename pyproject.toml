@@ -5,7 +5,7 @@ description = "opsi client daemon. The service running on opsi clients."
 authors = ["Jan Schneider <j.schneider@uib.de>"]
 include = [
     "run-opsiclientd",
-    "data/**/*"
+    "opsiclientd_data/**/*"
 ]
 
 [[tool.poetry.source]]
