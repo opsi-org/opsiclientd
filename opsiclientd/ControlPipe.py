@@ -277,7 +277,7 @@ class NTControlPipe(ControlPipe):
 		NMPWAIT_USE_DEFAULT_WAIT = 0
 		INVALID_HANDLE_VALUE = -1
 		self._pipe = windll.kernel32.CreateNamedPipeA(
-			self._pipeName,
+			self._pipeName.encode("ascii"),
 			PIPE_ACCESS_DUPLEX,
 			PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
 			PIPE_UNLIMITED_INSTANCES,
