@@ -42,12 +42,8 @@ def opsiclientd():
 	elif os.name == 'posix':
 		from opsiclientd.Posix import OpsiclientdInit
 	else:
-		raise NotImplementedError("OS %s not supported." % os.name)
-	
-	try:
-		OpsiclientdInit()
-	except Exception as exc:
-		sys.exit(1)
+		raise NotImplementedError("OS %s not supported." % os.name)	
+	OpsiclientdInit()
 
 def main():
 	name = os.path.splitext(os.path.basename(sys.argv[0]))[0].lower()
