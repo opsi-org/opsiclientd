@@ -23,7 +23,7 @@ pyinstaller-poetry:
     - src: ${VENV_SITE_PACKAGES}/data/backendManager/extend.d/20_legacy.conf
       dst: data/extend.d
     # from opsiclientd
-    - src: ${VENV_SITE_PACKAGES}/data/static_html/*
+    - src: ${VENV_SITE_PACKAGES}/data/common/static_html/*
       dst: data/static_html
     - src: ${VENV_SITE_PACKAGES}/data/${PLATFORM_SYSTEM}/*
       dst: data
