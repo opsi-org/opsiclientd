@@ -287,7 +287,7 @@ class NTControlPipe(ControlPipe):
 			None
 		)
 		if self._pipe == INVALID_HANDLE_VALUE:
-			raise Exception(u"Failed to create named pipe")
+			raise Exception(u"Failed to create named pipe: %s" % windll.kernel32.GetLastError())
 
 		logger.debug(u"Pipe {} created", self._pipeName)
 
