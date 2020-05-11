@@ -28,6 +28,7 @@ opsi-dev-tools = "^1.0.4"
 [tool.poetry.scripts]
 opsiclientd = "opsiclientd.__main__:opsiclientd"
 opsiclientd_rpc = "opsiclientd.__main__:opsiclientd_rpc"
+action_processor_starter = "opsiclientd.__main__:action_processor_starter"
 
 [build-system]
 requires = ["poetry>=0.12"]

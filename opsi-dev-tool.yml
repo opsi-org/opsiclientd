@@ -16,6 +16,7 @@ pyinstaller-poetry:
       binaries:
         - opsiclientd
         - opsiclientd_rpc
+        - action_processor_starter
   data_files:
     # from opsiclientd
     - src: opsiclientd_data/common/static_html/*
