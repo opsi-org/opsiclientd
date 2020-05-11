@@ -23,26 +23,26 @@ build:linux-pyinstaller:
       - opsiclientd
     expire_in: 2 day
 
-package:deb:
-  stage: package
-  dependencies:
-    - build:linux-pyinstaller
-  script:
-    - apt update
-    - apt -y upgrade
-    - apt -y install debhelper
-    - deps=$((dpkg-checkbuilddeps 2>&1 | sed "s/dpkg-checkbuilddeps\:\serror\:\sUnmet build dependencies\://g" | sed "s/[\(][^)]*[\)] //g") || echo -n "")
-    - echo $deps
-    - test -z "$deps" || apt -y install $deps
-    - dpkg-buildpackage -b
-    - mkdir deb
-    - mv ../opsiclientd_*.deb deb/
-
-  artifacts:
-    name: 'opsiclientd-deb'
-    paths:
-      - deb/*
-    expire_in: 2 day
+#package:deb:
+#  stage: package
+#  dependencies:
+#    - build:linux-pyinstaller
+#  script:
+#    - apt update
+#    - apt -y upgrade
+#    - apt -y install debhelper
+#    - deps=$((dpkg-checkbuilddeps 2>&1 | sed "s/dpkg-checkbuilddeps\:\serror\:\sUnmet build dependencies\://g" | sed "s/[\(][^)]*[\)] //g") || echo -n "")
+#    - echo $deps
+#    - test -z "$deps" || apt -y install $deps
+#    - dpkg-buildpackage -b
+#    - mkdir deb
+#    - mv ../opsiclientd_*.deb deb/
+#
+#  artifacts:
+#    name: 'opsiclientd-deb'
+#    paths:
+#      - deb/*
+#    expire_in: 2 day
 
 build:macos-pyinstaller:
       stage: build
