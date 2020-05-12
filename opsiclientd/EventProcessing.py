@@ -495,127 +495,132 @@ None otherwise.
 		impersonation = None
 		try:
 			mounted = False
-			if not config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
-				if RUNNING_ON_WINDOWS:
-					logger.debug("Mounting with impersonation.")
-					# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
-					# The new logon session has the same local identifier but uses different credentials for other network connections.
-					(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
-					impersonation = System.Impersonate(username=depotServerUsername, password=depotServerPassword)
-					impersonation.start(logonType='NEW_CREDENTIALS')
-					self.mountDepotShare(impersonation)
+			try:
+				if not config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
+					if RUNNING_ON_WINDOWS:
+						logger.debug("Mounting with impersonation.")
+						# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
+						# The new logon session has the same local identifier but uses different credentials for other network connections.
+						(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
+						impersonation = System.Impersonate(username=depotServerUsername, password=depotServerPassword)
+						impersonation.start(logonType='NEW_CREDENTIALS')
+						self.mountDepotShare(impersonation)
+					else:
+						logger.debug("Not on windows: mounting without impersonation.")
+						self.mountDepotShare(None)
+					mounted = True
+
+				actionProcessorFilename = config.get('action_processor', 'filename')
+				actionProcessorLocalDir = config.get('action_processor', 'local_dir')
+				actionProcessorLocalTmpDir = actionProcessorLocalDir + '.tmp'
+				actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
+				actionProcessorLocalTmpFile = os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)
+
+				actionProcessorRemoteDir = None
+				if config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
+					dirname = config.get('action_processor', 'remote_dir')
+					dirname = dirname.lstrip(os.pathsep)
+					dirname = dirname.lstrip("install" + os.pathsep)
+					dirname = dirname.lstrip(os.pathsep)
+					actionProcessorRemoteDir = os.path.join(
+						self.opsiclientd.getCacheService().getProductCacheDir(),
+						dirname
+					)
+					logger.notice(u"Updating action processor from local cache '%s'" % actionProcessorRemoteDir)
 				else:
-					logger.debug("Not on windows: mounting without impersonation.")
-					self.mountDepotShare(None)
-				mounted = True
+					match = re.search('^(smb|cifs)://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
+					if not match:
+						raise Exception("Bad depot-URL '%s'" % config.get('depot_server', 'url'))
+					pn = match.group(3).replace('/', os.pathsep)
+					if not pn:
+						pn = os.pathsep
+					if not RUNNING_ON_WINDOWS:
+						pn = ''
+					dirname = config.get('action_processor', 'remote_dir')
+					dirname.lstrip(os.pathsep)
+					print("=====================================", config.getDepotDrive(), pn, dirname)
+					actionProcessorRemoteDir = os.path.join(config.getDepotDrive(), pn, dirname)
+					logger.notice(u"Updating action processor from depot dir '%s'" % actionProcessorRemoteDir)
 
-			actionProcessorFilename = config.get('action_processor', 'filename')
-			actionProcessorLocalDir = config.get('action_processor', 'local_dir')
-			actionProcessorLocalTmpDir = actionProcessorLocalDir + '.tmp'
-			actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
-			actionProcessorLocalTmpFile = os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)
+				actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
 
-			actionProcessorRemoteDir = None
-			if config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
-				dirname = config.get('action_processor', 'remote_dir')
-				dirname = dirname.lstrip(os.pathsep)
-				dirname = dirname.lstrip("install" + os.pathsep)
-				dirname = dirname.lstrip(os.pathsep)
-				actionProcessorRemoteDir = os.path.join(
-					self.opsiclientd.getCacheService().getProductCacheDir(),
-					dirname
-				)
-				logger.notice(u"Updating action processor from local cache '%s'" % actionProcessorRemoteDir)
-			else:
-				match = re.search('^smb://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
-				if not match:
-					raise Exception("Bad depot-URL '%s'" % config.get('depot_server', 'url'))
-				pn = match.group(3).replace('/', os.pathsep)
-				if not pn:
-					pn = os.pathsep
-				dirname = config.get('action_processor', 'remote_dir')
-				dirname.lstrip(os.pathsep)
-				actionProcessorRemoteDir = os.path.join(config.getDepotDrive(), pn, dirname)
-				logger.notice(u"Updating action processor from depot dir '%s'" % actionProcessorRemoteDir)
+				if not os.path.exists(actionProcessorLocalFile):
+					logger.notice(u"Action processor needs update because file '%s' not found" % actionProcessorLocalFile)
+				elif ( abs(os.stat(actionProcessorLocalFile).st_mtime - os.stat(actionProcessorRemoteFile).st_mtime) > 10 ):
+					logger.notice(u"Action processor needs update because modification time difference is more than 10 seconds")
+				elif not filecmp.cmp(actionProcessorLocalFile, actionProcessorRemoteFile):
+					logger.notice(u"Action processor needs update because file changed")
+				else:
+					logger.notice(u"Local action processor exists and seems to be up to date")
+					if self.event.eventConfig.useCachedProducts:
+						self._configService.productOnClient_updateObjects([
+							ProductOnClient(
+								productId          = u'opsi-winst',
+								productType        = u'LocalbootProduct',
+								clientId           = config.get('global', 'host_id'),
+								installationStatus = u'installed',
+								actionProgress     = u''
+							)
+						])
+					return actionProcessorLocalFile
 
-			actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
+				# Update files
+				logger.notice(u"Start copying the action processor files")
+				if RUNNING_ON_WINDOWS:
+					if os.path.exists(actionProcessorLocalTmpDir):
+						logger.info(u"Deleting dir '%s'" % actionProcessorLocalTmpDir)
+						shutil.rmtree(actionProcessorLocalTmpDir)
+					logger.info(u"Copying from '%s' to '%s'" % (actionProcessorRemoteDir, actionProcessorLocalTmpDir))
+					shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
 
-			if not os.path.exists(actionProcessorLocalFile):
-				logger.notice(u"Action processor needs update because file '%s' not found" % actionProcessorLocalFile)
-			elif ( abs(os.stat(actionProcessorLocalFile).st_mtime - os.stat(actionProcessorRemoteFile).st_mtime) > 10 ):
-				logger.notice(u"Action processor needs update because modification time difference is more than 10 seconds")
-			elif not filecmp.cmp(actionProcessorLocalFile, actionProcessorRemoteFile):
-				logger.notice(u"Action processor needs update because file changed")
-			else:
-				logger.notice(u"Local action processor exists and seems to be up to date")
-				if self.event.eventConfig.useCachedProducts:
-					self._configService.productOnClient_updateObjects([
-						ProductOnClient(
-							productId          = u'opsi-winst',
-							productType        = u'LocalbootProduct',
-							clientId           = config.get('global', 'host_id'),
-							installationStatus = u'installed',
-							actionProgress     = u''
-						)
-					])
+					if not os.path.exists(actionProcessorLocalTmpFile):
+						raise Exception(u"File '%s' does not exist after copy" % actionProcessorLocalTmpFile)
+
+					if os.path.exists(actionProcessorLocalDir):
+						logger.info(u"Deleting dir '%s'" % actionProcessorLocalDir)
+						shutil.rmtree(actionProcessorLocalDir)
+
+					logger.info(u"Moving dir '%s' to '%s'" % (actionProcessorLocalTmpDir, actionProcessorLocalDir))
+					shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
+
+					logger.notice(u"Trying to set the right permissions for opsi-winst")
+					setaclcmd = os.path.join(config.get('global', 'base_dir'), 'utilities', 'setacl.exe')
+					winstdir = actionProcessorLocalDir.replace('\\\\', '\\')
+					cmd = '"%s" -on "%s" -ot file -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y" -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"' \
+								% (setaclcmd, winstdir)
+					System.execute(cmd, shell=False)
+				else:
+					logger.info(u"Copying from '%s' to '%s'" % (actionProcessorRemoteDir, actionProcessorLocalDir))
+					shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalDir)
+				
+				logger.notice(u'Local action processor successfully updated')
+
+				productVersion = None
+				packageVersion = None
+				for productOnDepot in self._configService.productOnDepot_getIdents(
+							productType='LocalbootProduct',
+							productId='opsi-winst',
+							depotId=config.get('depot_server', 'depot_id'),
+							returnType='dict'):
+					productVersion = productOnDepot['productVersion']
+					packageVersion = productOnDepot['packageVersion']
+				self._configService.productOnClient_updateObjects([
+					ProductOnClient(
+						productId=u'opsi-winst',
+						productType=u'LocalbootProduct',
+						productVersion=productVersion,
+						packageVersion=packageVersion,
+						clientId=config.get('global', 'host_id'),
+						installationStatus=u'installed',
+						actionProgress=u'',
+						actionResult=u'successful'
+					)
+				])
+
+				self.setActionProcessorInfo()
+			finally:
 				if mounted:
 					self.umountDepotShare()
-				return actionProcessorLocalFile
-
-			# Update files
-			logger.notice(u"Start copying the action processor files")
-			if os.path.exists(actionProcessorLocalTmpDir):
-				logger.info(u"Deleting dir '%s'" % actionProcessorLocalTmpDir)
-				shutil.rmtree(actionProcessorLocalTmpDir)
-			logger.info(u"Copying from '%s' to '%s'" % (actionProcessorRemoteDir, actionProcessorLocalTmpDir))
-			shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
-
-			if not os.path.exists(actionProcessorLocalTmpFile):
-				raise Exception(u"File '%s' does not exist after copy" % actionProcessorLocalTmpFile)
-
-			if os.path.exists(actionProcessorLocalDir):
-				logger.info(u"Deleting dir '%s'" % actionProcessorLocalDir)
-				shutil.rmtree(actionProcessorLocalDir)
-
-			logger.info(u"Moving dir '%s' to '%s'" % (actionProcessorLocalTmpDir, actionProcessorLocalDir))
-			shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
-
-			if RUNNING_ON_WINDOWS:
-				logger.notice(u"Trying to set the right permissions for opsi-winst")
-				setaclcmd = os.path.join(config.get('global', 'base_dir'), 'utilities', 'setacl.exe')
-				winstdir = actionProcessorLocalDir.replace('\\\\', '\\')
-				cmd = '"%s" -on "%s" -ot file -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y" -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"' \
-							% (setaclcmd, winstdir)
-				System.execute(cmd, shell=False)
-
-			logger.notice(u'Local action processor successfully updated')
-
-			productVersion = None
-			packageVersion = None
-			for productOnDepot in self._configService.productOnDepot_getIdents(
-						productType='LocalbootProduct',
-						productId='opsi-winst',
-						depotId=config.get('depot_server', 'depot_id'),
-						returnType='dict'):
-				productVersion = productOnDepot['productVersion']
-				packageVersion = productOnDepot['packageVersion']
-			self._configService.productOnClient_updateObjects([
-				ProductOnClient(
-					productId=u'opsi-winst',
-					productType=u'LocalbootProduct',
-					productVersion=productVersion,
-					packageVersion=packageVersion,
-					clientId=config.get('global', 'host_id'),
-					installationStatus=u'installed',
-					actionProgress=u'',
-					actionResult=u'successful'
-				)
-			])
-
-			self.setActionProcessorInfo()
-
-			if mounted:
-				self.umountDepotShare()
 
 		except Exception as e:
 			logger.error(u"Failed to update action processor: %s" % forceUnicode(e))
@@ -856,12 +861,10 @@ None otherwise.
 
 			# Update action processor
 			if self.event.eventConfig.updateActionProcessor:
-				#if RUNNING_ON_WINDOWS:
-				#	# Currently we do the updating of the action
-				#	# processor on Windows. For Linux we yet have to decide
-				#	# how we want to handle this process.
-				#	# TODO: figure out how handling on Linux is done.
-				self.updateActionProcessor()
+				if RUNNING_ON_WINDOWS:
+					# Currently we do the updating of the action
+					# processor on Windows.
+					self.updateActionProcessor()
 
 			# Run action processor
 			serviceSession = u'none'
@@ -887,27 +890,30 @@ None otherwise.
 			actionProcessorCommand += u' %s' % additionalParams
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 
-			#if RUNNING_ON_WINDOWS:
-			# TODO: string building like this is just awful. Improve it!
-			command = os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe") + ' ' \
-				+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
-				+ u'"%global.log_file%" "%global.log_level%" ' \
-				+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
-				+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
-				+ u'"' + str(self.getSessionId()) + u'" "' + desktop + '" ' \
-				+ u'"' + actionProcessorCommand + u'" ' + str(self.event.eventConfig.actionProcessorTimeout) + ' ' \
-				+ u'"' + actionProcessorUserName + u'" "' + actionProcessorUserPassword + '" ' \
-				+ str(createEnvironment).lower()
-			#else:
-			#	try:
-			#		oss = System.which('opsiscriptstarter')
-			#	except Exception:
-			#		logger.warning(
-			#			u"Failed to find executable for 'opsiscriptstarter'. "
-			#			u"Using fallback.")
-			#		oss = '/usr/bin/opsiscriptstarter'
-			#
-			#	command = "{oss} --nogui".format(oss=oss)
+			use_opsiscriptstarter = False
+			if not RUNNING_ON_WINDOWS:
+				use_opsiscriptstarter = True
+			
+			if use_opsiscriptstarter:
+				try:
+					oss = System.which('opsiscriptstarter')
+				except Exception:
+					logger.warning(
+						u"Failed to find executable for 'opsiscriptstarter'. "
+						u"Using fallback.")
+					oss = '/usr/bin/opsiscriptstarter'
+				command = "{oss} --nogui".format(oss=oss)
+			else:
+				# TODO: string building like this is just awful. Improve it!
+				command = os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe") + ' ' \
+					+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
+					+ u'"%global.log_file%" "%global.log_level%" ' \
+					+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
+					+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
+					+ u'"' + str(self.getSessionId()) + u'" "' + desktop + '" ' \
+					+ u'"' + actionProcessorCommand + u'" ' + str(self.event.eventConfig.actionProcessorTimeout) + ' ' \
+					+ u'"' + actionProcessorUserName + u'" "' + actionProcessorUserPassword + '" ' \
+					+ str(createEnvironment).lower()
 
 			command = config.replace(command)
 

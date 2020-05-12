@@ -455,7 +455,10 @@ class ConfigImplementation(object):
 	def getDepotDrive(self):
 		if self._temporaryDepotDrive:
 			return self._temporaryDepotDrive
-		return self.get('depot_server', 'drive')
+		drive = self.get('depot_server', 'drive')
+		if not RUNNING_ON_WINDOWS and not drive.startswith("/"):
+			drive = "/mnt/opsi_depot"
+		return drive
 
 	def setTemporaryConfigServiceUrls(self, temporaryConfigServiceUrls):
 		self._temporaryConfigServiceUrls = forceList(temporaryConfigServiceUrls)
