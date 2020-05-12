@@ -103,8 +103,8 @@ class ConfigImplementation(object):
 	LINUX_DEFAULT_PATHS = {
 		'global': {
 			'log_dir': os.path.join('/var', 'log', 'opsi'),
-			'state_file': os.path.join('/etc', 'opsi-client-agent', 'opsiclientd', 'state.json'),
-			'timeline_db': os.path.join('/etc', 'opsi-client-agent', 'opsiclientd', 'timeline.sqlite'),
+			'state_file': os.path.join('/var', 'lib', 'opsi-client-agent', 'opsiclientd', 'state.json'),
+			'timeline_db': os.path.join('/var', 'lib', 'opsi-client-agent', 'opsiclientd', 'timeline.sqlite'),
 			'server_cert_dir': os.path.join('/var', 'lib', 'opsi-client-agent', 'opsiclientd', 'server-certs')
 		},
 		'cache_service': {
@@ -228,6 +228,7 @@ class ConfigImplementation(object):
 			self._config['control_server']['static_dir'] = os.path.join(baseDir, 'opsiclientd', 'static_html')
 			self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd.conf')
 			self._config['global']['log_file'] = os.path.join('/var', 'log', 'opsi', 'opsiclientd.log')
+			self._config['depot_server']['drive'] = "/mnt/opsi_depot"
 
 			if '64' in platform.architecture()[0]:
 				arch = '64'
