@@ -1105,6 +1105,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						break
 				if reboot:
 					timeline.addEvent(title = u"Rebooting", category = u"system")
+					try:
+						self.opsiclientd.suspendBitlocker()
+					except Exception as e:
+						logger.warning("Suspending Bitlocker Failed.")
 					self.opsiclientd.rebootMachine()
 				elif shutdown:
 					timeline.addEvent(title = u"Shutting down", category = u"system")
