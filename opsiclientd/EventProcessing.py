@@ -518,12 +518,9 @@ None otherwise.
 			actionProcessorRemoteDir = None
 			if config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
 				dirname = config.get('action_processor', 'remote_dir')
-				while dirname.startswith('\\'):
-					dirname = dirname.replace(u'\\', u'', 1)
-				if dirname.startswith(u'install\\'):
-					dirname = dirname.replace(u'install\\', u'', 1)
-				while dirname.startswith('\\'):
-					dirname = dirname.replace(u'\\', u'', 1)
+				dirname = dirname.lstrip(os.pathsep)
+				dirname = dirname.lstrip("install" + os.pathsep)
+				dirname = dirname.lstrip(os.pathsep)
 				actionProcessorRemoteDir = os.path.join(
 					self.opsiclientd.getCacheService().getProductCacheDir(),
 					dirname
@@ -533,12 +530,11 @@ None otherwise.
 				match = re.search('^smb://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
 				if not match:
 					raise Exception("Bad depot-URL '%s'" % config.get('depot_server', 'url'))
-				pn = match.group(3).replace('/', '\\')
+				pn = match.group(3).replace('/', os.pathsep)
 				if not pn:
-					pn = '\\'
+					pn = os.pathsep
 				dirname = config.get('action_processor', 'remote_dir')
-				while dirname.startswith('\\'):
-					dirname = dirname.replace(u'\\', u'', 1)
+				dirname.lstrip(os.pathsep)
 				actionProcessorRemoteDir = os.path.join(config.getDepotDrive(), pn, dirname)
 				logger.notice(u"Updating action processor from depot dir '%s'" % actionProcessorRemoteDir)
 
@@ -860,12 +856,12 @@ None otherwise.
 
 			# Update action processor
 			if self.event.eventConfig.updateActionProcessor:
-				if RUNNING_ON_WINDOWS:
-					# Currently we do the updating of the action
-					# processor on Windows. For Linux we yet have to decide
-					# how we want to handle this process.
-					# TODO: figure out how handling on Linux is done.
-					self.updateActionProcessor()
+				#if RUNNING_ON_WINDOWS:
+				#	# Currently we do the updating of the action
+				#	# processor on Windows. For Linux we yet have to decide
+				#	# how we want to handle this process.
+				#	# TODO: figure out how handling on Linux is done.
+				self.updateActionProcessor()
 
 			# Run action processor
 			serviceSession = u'none'
@@ -891,27 +887,27 @@ None otherwise.
 			actionProcessorCommand += u' %s' % additionalParams
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 
-			if RUNNING_ON_WINDOWS:
-				# TODO: string building like this is just awful. Improve it!
-				command = os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe") + ' ' \
-					+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
-					+ u'"%global.log_file%" "%global.log_level%" ' \
-					+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
-					+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
-					+ u'"' + str(self.getSessionId()) + u'" "' + desktop + '" ' \
-					+ u'"' + actionProcessorCommand + u'" ' + str(self.event.eventConfig.actionProcessorTimeout) + ' ' \
-					+ u'"' + actionProcessorUserName + u'" "' + actionProcessorUserPassword + '" ' \
-					+ str(createEnvironment).lower()
-			else:
-				try:
-					oss = System.which('opsiscriptstarter')
-				except Exception:
-					logger.warning(
-						u"Failed to find executable for 'opsiscriptstarter'. "
-						u"Using fallback.")
-					oss = '/usr/bin/opsiscriptstarter'
-
-				command = "{oss} --nogui".format(oss=oss)
+			#if RUNNING_ON_WINDOWS:
+			# TODO: string building like this is just awful. Improve it!
+			command = os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe") + ' ' \
+				+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
+				+ u'"%global.log_file%" "%global.log_level%" ' \
+				+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
+				+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
+				+ u'"' + str(self.getSessionId()) + u'" "' + desktop + '" ' \
+				+ u'"' + actionProcessorCommand + u'" ' + str(self.event.eventConfig.actionProcessorTimeout) + ' ' \
+				+ u'"' + actionProcessorUserName + u'" "' + actionProcessorUserPassword + '" ' \
+				+ str(createEnvironment).lower()
+			#else:
+			#	try:
+			#		oss = System.which('opsiscriptstarter')
+			#	except Exception:
+			#		logger.warning(
+			#			u"Failed to find executable for 'opsiscriptstarter'. "
+			#			u"Using fallback.")
+			#		oss = '/usr/bin/opsiscriptstarter'
+			#
+			#	command = "{oss} --nogui".format(oss=oss)
 
 			command = config.replace(command)
 
@@ -953,7 +949,7 @@ None otherwise.
 			# TODO: is this correct?
 			username = config.get('global', 'username')
 			# TODO: Anwendungsdaten
-			os.environ['APPDATA']     = '%s\\%s\\%s\\Anwendungsdaten' % (homeDrive, homeDir, username)
+			os.environ['APPDATA']     = '%s\\%s\\%s\\AppData\\Roaming' % (homeDrive, homeDir, username)
 			os.environ['HOMEDRIVE']   = homeDrive
 			os.environ['HOMEPATH']    = '\\%s\\%s' % (homeDir, username)
 			os.environ['LOGONSERVER'] = '\\\\%s' % hostname
