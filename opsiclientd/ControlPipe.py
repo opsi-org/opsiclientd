@@ -222,8 +222,9 @@ class NTControlPipeConnection(threading.Thread):
 				logger.debug2(u"Reading fom pipe")
 				fReadSuccess = windll.kernel32.ReadFile(self._pipe, chBuf, self._bufferSize, byref(cbRead), None)
 				if fReadSuccess == 1 or cbRead.value != 0:
-					logger.debug(u"Received rpc from pipe {!r}", chBuf.value)
-					result = "%s\0" % self._ntControlPipe.executeRpc(chBuf.value)
+					rpc = chBuf.value.decode()
+					logger.debug(u"Received rpc from pipe {!r}", rpc)
+					result = b"%s\0" % self._ntControlPipe.executeRpc(rpc).encode()
 					cbWritten = c_ulong(0)
 					logger.debug2(u"Writing to pipe")
 					fWriteSuccess = windll.kernel32.WriteFile(
