@@ -496,9 +496,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			sessionId = System.getActiveConsoleSessionId()
 
 		rpc = 'setCurrentActiveDesktopName("{sessionId}", System.getActiveDesktopName())'.format(sessionId=sessionId)
-		cmd = "{rpc_processor} '{command}'".format(
+		cmd = '{rpc_processor} "{command}"'.format(
 			rpc_processor=config.get('opsiclientd_rpc', 'command'),
-			command=rpc
+			command=rpc.replace('"', '\\"')
 		)
 
 		try:
