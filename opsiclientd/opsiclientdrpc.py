@@ -43,6 +43,8 @@ def main():
 		logger.setLogFile(sys.argv[4])
 		logger.setFileLevel(LOG_DEBUG)
 
+	logger.debug("argv: %s" % sys.argv)
+	
 	address = f"https://localhost:{port}/opsiclientd"
 
 	try:
