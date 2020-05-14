@@ -93,6 +93,7 @@ class EventConfig(object):
 		self.preActionProcessorCommand = str(conf.get('preActionProcessorCommand', ''))
 		self.postActionProcessorCommand = str(conf.get('postActionProcessorCommand', ''))
 		self.trustedInstallerCheck = bool(conf.get('trustedInstallerCheck', True))
+		self.trustedInstallerDetection = bool(conf.get('trustedInstallerDetection', True))
 		self.cacheProducts = bool(conf.get('cacheProducts', False))
 		self.cacheMaxBandwidth = int(conf.get('cacheMaxBandwidth', 0))
 		self.cacheDynamicBandwidth = bool(conf.get('cacheDynamicBandwidth', True))
