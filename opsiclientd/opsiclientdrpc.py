@@ -34,12 +34,13 @@ logger = Logger()
 def main():
 	logger.setLogFormat("[%l] [%D] [opsiclientd_rpc] %M   (%F|%N)")
 	if len(sys.argv) < 5:
-		print(f"Usage: {os.path.basename(sys.argv[0])} <username> <password> <port> <rpc> [debug_logfile]")
+		print(f"Usage: {os.path.basename(sys.argv[0])} <username> <password> <port> [debug_logfile] <rpc>", file=sys.stderr)
 		sys.exit(1)
 
 	(username, password, port, rpc) = sys.argv[1:5]
 	if len(sys.argv) > 5:
-		logger.setLogFile(sys.argv[5])
+		rpc = sys.argv[5]
+		logger.setLogFile(sys.argv[4])
 		logger.setFileLevel(LOG_DEBUG)
 
 	address = f"https://localhost:{port}/opsiclientd"
@@ -50,4 +51,5 @@ def main():
 			exec(f"backend.{rpc}")
 	except Exception as error:
 		logger.logException(error)
+		print(f"Error: %s" % error, file=sys.stderr)
 		sys.exit(1)
