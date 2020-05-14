@@ -296,7 +296,7 @@ class OpsiclientdNT(Opsiclientd):
 		scriptlet = 'Suspend-BitLocker -MountPoint "%s" -RebootCount 1' % systemDrive
 		windir = os.getenv("SystemRoot")
 		pwrShellCmd = os.path.join(windir,"SysNative\\WindowsPowerShell\v1.0\Powershell.exe")
-		if not os.exists(pwrShellCmd):
+		if not os.path.exists(pwrShellCmd):
 			pwrShellCmd = "powershell"
 
 		cmd = [pwrShellCmd,"-ExecutionPolicy", "Bypass", "-Command", scriptlet]
