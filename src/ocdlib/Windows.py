@@ -302,7 +302,9 @@ class OpsiclientdNT(Opsiclientd):
 		cmd = [pwrShellCmd,"-ExecutionPolicy", "Bypass", "-Command", scriptlet]
 		p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
 		out,err = p.communicate()
+
 		if(err): logger.warning(err)
+		logger.debug("Suspending output '%s'" % out)
 
 	def rebootMachine(self):
 		self._isRebootTriggered = True
