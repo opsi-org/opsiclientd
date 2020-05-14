@@ -261,6 +261,7 @@ If this is `None` a random port will be chosen.
 						self._overallProgressSubjectProxy
 					]
 				)
+				logger.setLogFormat(getLogFormat("notification server"), object=self._notificationServer)
 				self._notificationServer.daemon = True
 				self._notificationServer.start()
 				timeout = 0

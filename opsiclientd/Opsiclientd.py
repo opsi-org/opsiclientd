@@ -600,6 +600,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					port=port,
 					subjects=[popupSubject, choiceSubject]
 				)
+				logger.setLogFormat(getLogFormat("popup notification server"), object=self._popupNotificationServer)
 				self._popupNotificationServer.start()
 			except Exception as e:
 				logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
