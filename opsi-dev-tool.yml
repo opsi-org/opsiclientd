@@ -35,7 +35,7 @@ pyinstaller-poetry:
     darwin:
       - rm -r dist/opsiclientd/site-packages/Crypto/SelfTest
     windows:
-      - rd /s /q dist\opsiclientd\site-packages\Crypto\SelfTest
+      - Remove-Item -Force -Recurse -Path dist\opsiclientd\site-packages\Crypto\SelfTest
 
 changelog:
   4.2.0.0:
