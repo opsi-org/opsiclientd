@@ -27,6 +27,7 @@ Self-service functionality.
 :license: GNU Affero General Public License version 3
 """
 
+import os
 from twisted.internet import defer
 
 from OPSI.Exceptions import OpsiAuthenticationError
@@ -52,6 +53,13 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		self._fireEvent = False
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 		ServiceConnection.__init__(self)
+		self._auth_module = None
+		if os.name == 'posix':
+			import OPSI.Backend.Manager.Authentication.PAM
+			self._auth_module = OPSI.Backend.Manager.Authentication.PAM.PAMAuthentication()
+		elif os.name == 'nt':
+			import OPSI.Backend.Manager.Authentication.NT
+			self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
 
 	def _getAllowedMethods(self):
 		return [
@@ -82,7 +90,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		return (user, password)
 
 	def _authenticate(self, result):
-		if self.request.remoteAddr.host == '127.0.0.1':
+		if self.request.getClientIP() == '127.0.0.1':
 			self.session.authenticated = False
 			return result
 
@@ -97,14 +105,15 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
 				return result
 
-			if RUNNING_ON_WINDOWS:
-				if self.session.user.lower() == 'administrator':
-					import win32security
-					# The LogonUser function will raise an Exception on logon failure
-					win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
-					# No exception raised => user authenticated
-					return result
-
+			if self._auth_module:
+				self._auth_module.authenticate(self.session.user, self.session.password)
+				logger.info("Authentication successful for user '%s', groups '%s' (admin group: %s)" % \
+					(self.session.user, ','.join(self._auth_module.get_groupnames(self.session.user)), self._auth_module.get_admin_groupname())
+				)
+				if not self._auth_module.user_is_admin(self.session.user):
+					raise Exception("Not an admin user")
+				return result
+			
 			raise Exception(u"Invalid credentials")
 		except Exception as e:
 			raise OpsiAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
@@ -135,7 +144,6 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		# TODO: Let the connection open and let it expire on server
 		# deferred.addCallback(self._closeConnection)
 		deferred.addCallback(self._checkFireEvent)
-		deferred.addErrback(self._errback)
 		deferred.callback(None)
 		return deferred
 
