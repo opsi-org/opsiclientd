@@ -29,7 +29,14 @@ pyinstaller-poetry:
     - src: ${VENV_SITE_PACKAGES}/python-opsi_data/backendManager/extend.d/20_legacy.conf
       dst: opsiclientd_data/extend.d/20_legacy.conf
   dirname: opsiclientd
- 
+  after_script:
+    linux:
+      - rm -r dist/opsiclientd/site-packages/Crypto/SelfTest
+    darwin:
+      - rm -r dist/opsiclientd/site-packages/Crypto/SelfTest
+    windows:
+      - rd /s /q dist\opsiclientd\site-packages\Crypto\SelfTest
+
 changelog:
   4.2.0.0:
     - Ported to python3

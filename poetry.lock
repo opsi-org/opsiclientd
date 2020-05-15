@@ -258,7 +258,7 @@ description = "opsi development tools"
 name = "opsi-dev-tools"
 optional = false
 python-versions = ">=3.6,<4.0"
-version = "1.0.4"
+version = "1.0.5"
 
 [package.dependencies]
 colorlog = ">=4.1.0,<5.0.0"
@@ -826,8 +826,8 @@ mccabe = [
     {file = "mccabe-0.6.1.tar.gz", hash = "sha256:dd8d182285a0fe56bace7f45b5e7d1a6ebcbf524e8f3bd87eb0f125271b8831f"},
 ]
 opsi-dev-tools = [
-    {file = "opsi-dev-tools-1.0.4.tar.gz", hash = "md5:0b6f1e530337341211826512174ec62b"},
-    {file = "opsi_dev_tools-1.0.4-py3-none-any.whl", hash = "md5:fc12f1998abe6c643954545c261619d2"},
+    {file = "opsi-dev-tools-1.0.5.tar.gz", hash = "md5:4ffdf7fd22234d3006c326264c5522fc"},
+    {file = "opsi_dev_tools-1.0.5-py3-none-any.whl", hash = "md5:096105cf3c9f8dd362ff7345e65c8c04"},
 ]
 packaging = [
     {file = "packaging-20.3-py2.py3-none-any.whl", hash = "sha256:82f77b9bee21c1bafbf35a84905d604d5d1223801d639cf3ed140bd651c08752"},
