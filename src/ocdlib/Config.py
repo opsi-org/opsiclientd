@@ -106,7 +106,7 @@ class ConfigImplementation(object):
 				'server_cert_dir':          u'c:\\opsi.org\\opsiclientd\\server-certs',
 				'proxy_mode': u'static',
 				'proxy_url': u'',
-				'w10BitlockerSuspendOnReboot:' False,
+				'w10BitlockerSuspendOnReboot': False,
 			},
 			'config_service': {
 				'url':                   [],
