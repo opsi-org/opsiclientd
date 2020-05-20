@@ -29,16 +29,19 @@ import os
 import signal
 import sys
 import time
+import subprocess
 from signal import SIGHUP, SIGTERM, SIGINT
 
 from OPSI.Logger import Logger, LOG_NONE, LOG_NOTICE, LOG_WARNING
 from OPSI.Types import forceUnicode
 
 from opsiclientd import __version__
+from opsiclientd.Config import Config
 
 __all__ = ('OpsiclientdInit', )
 
 logger = Logger()
+config = Config()
 
 try:
 	from opsiclientd.nonfree.Posix import OpsiclientdPosix
@@ -82,6 +85,7 @@ class OpsiclientdInit(object):
 			self.daemonize()
 
 		self.writePIDFile(options.pidFile)
+		self.configure_iptables()
 
 		logger.debug("Starting opsiclientd...")
 		self._opsiclientd = OpsiclientdPosix()
@@ -105,7 +109,12 @@ class OpsiclientdInit(object):
 				except OSError as oserr:
 					logger.debug("Removing pid file failed: {0}".format(oserr))
 
-
+	def configure_iptables(self):
+		for iptables in ("iptables", "ip6tables"):
+			cmd = [iptables, "-A", "INPUT", "-p", "tcp", "--dport", str(config.get('control_server', 'port')), "-j", "ACCEPT"]
+			logger.debug("Running command: {0}", str(cmd))
+			subprocess.call(cmd)
+	
 	def signalHandler(self, signo, stackFrame):
 		logger.debug('Received signal {0}. Stopping opsiclientd.'.format(signo))
 		self._opsiclientd.stop()
