@@ -7,9 +7,7 @@ stages:
 build:linux-pyinstaller:
   stage: build
   script:
-    - apt update
-    - apt -y upgrade
-    - apt -y install curl gettext
+    - apt -y install curl
     - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3
     - source $HOME/.poetry/env
     - sed -i s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
