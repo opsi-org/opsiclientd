@@ -258,12 +258,13 @@ description = "opsi development tools"
 name = "opsi-dev-tools"
 optional = false
 python-versions = ">=3.6,<4.0"
-version = "1.0.5"
+version = "1.0.6"
 
 [package.dependencies]
 colorlog = ">=4.1.0,<5.0.0"
 configargparse = ">=1.2.3,<2.0.0"
 pypi-simple = ">=0.6.0,<0.7.0"
+python-gettext = ">=4.0,<5.0"
 pyyaml = ">=5.3.1,<6.0.0"
 requests = ">=2.23.0,<3.0.0"
 toml = ">=0.10.0,<0.11.0"
@@ -404,6 +405,14 @@ beautifulsoup4 = ">=4.5,<5.0"
 packaging = ">=16"
 requests = ">=2.5,<3.0"
 six = ">=1.4,<2.0"
+
+[[package]]
+category = "dev"
+description = "Python Gettext po to mo file compiler."
+name = "python-gettext"
+optional = false
+python-versions = "*"
+version = "4.0"
 
 [[package]]
 category = "main"
@@ -826,8 +835,8 @@ mccabe = [
     {file = "mccabe-0.6.1.tar.gz", hash = "sha256:dd8d182285a0fe56bace7f45b5e7d1a6ebcbf524e8f3bd87eb0f125271b8831f"},
 ]
 opsi-dev-tools = [
-    {file = "opsi-dev-tools-1.0.5.tar.gz", hash = "md5:4ffdf7fd22234d3006c326264c5522fc"},
-    {file = "opsi_dev_tools-1.0.5-py3-none-any.whl", hash = "md5:096105cf3c9f8dd362ff7345e65c8c04"},
+    {file = "opsi-dev-tools-1.0.6.tar.gz", hash = "md5:1f3c9cbadb0415ee5bd72983baeec435"},
+    {file = "opsi_dev_tools-1.0.6-py3-none-any.whl", hash = "md5:3d51b163df8d5971ffeb3c52be5df2d7"},
 ]
 packaging = [
     {file = "packaging-20.3-py2.py3-none-any.whl", hash = "sha256:82f77b9bee21c1bafbf35a84905d604d5d1223801d639cf3ed140bd651c08752"},
@@ -924,6 +933,9 @@ pyparsing = [
 pypi-simple = [
     {file = "pypi-simple-0.6.0.tar.gz", hash = "sha256:08c8c19dff061974a33fe6fbee812d7eefaa55a80f7576f472472f250a63fb4a"},
     {file = "pypi_simple-0.6.0-py2.py3-none-any.whl", hash = "sha256:fc2ab9aa5c666b8b5a57593b26826301c7801ca9f90931645d7040c525373fbb"},
+]
+python-gettext = [
+    {file = "python-gettext-4.0.tar.gz", hash = "sha256:626b501a51ac892fc3460cf550e60dca121f544eaa46eb69c90ce4682fc7ec02"},
 ]
 python-magic = [
     {file = "python-magic-0.4.18.tar.gz", hash = "sha256:b757db2a5289ea3f1ced9e60f072965243ea43a2221430048fd8cacab17be0ce"},
