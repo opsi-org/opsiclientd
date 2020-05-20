@@ -1,3 +1,10 @@
+locale:
+  languages:
+    - de
+    - fr
+  source_files:
+    - opsiclientd
+
 pyinstaller-poetry:
   update_version_in:
     - opsiclientd/__init__.py
@@ -29,6 +36,7 @@ pyinstaller-poetry:
     - src: ${VENV_SITE_PACKAGES}/python-opsi_data/backendManager/extend.d/20_legacy.conf
       dst: opsiclientd_data/extend.d/20_legacy.conf
   dirname: opsiclientd
+  locale_install: opsiclientd_data/locale
   after_script:
     linux:
       - rm -r dist/opsiclientd/site-packages/Crypto/SelfTest

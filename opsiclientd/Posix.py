@@ -110,11 +110,20 @@ class OpsiclientdInit(object):
 					logger.debug("Removing pid file failed: {0}".format(oserr))
 
 	def configure_iptables(self):
-		for iptables in ("iptables", "ip6tables"):
-			cmd = [iptables, "-A", "INPUT", "-p", "tcp", "--dport", str(config.get('control_server', 'port')), "-j", "ACCEPT"]
-			logger.debug("Running command: {0}", str(cmd))
+		logger.notice("Configure iptables")
+		port = config.get('control_server', 'port')
+		cmds = []
+		if os.path.exists("/usr/bin/firewall-cmd"):
+			# openSUSE Leap
+			cmds.append(["/usr/bin/firewall-cmd", f"--add-port={port}/tcp", "--zone", "public"])
+		else:
+			for iptables in ("iptables", "ip6tables"):
+				cmds.append([iptables, "-A", "INPUT", "-p", "tcp", "--dport", str(port), "-j", "ACCEPT"])
+		
+		for cmd in cmds:
+			logger.info("Running command: {0}", str(cmd))
 			subprocess.call(cmd)
-	
+
 	def signalHandler(self, signo, stackFrame):
 		logger.debug('Received signal {0}. Stopping opsiclientd.'.format(signo))
 		self._opsiclientd.stop()
