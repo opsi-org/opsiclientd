@@ -24,16 +24,21 @@ pyinstaller-poetry:
         - opsiclientd
         - opsiclientd_rpc
         - action_processor_starter
+  before_script:
+    - url=$(git remote -v | grep fetch | cut -f2 | sed s'#/opsiclientd.git.*#/opsi-server.git#')
+    #- branch=$(git rev-parse --abbrev-ref HEAD)
+    - branch=master
+    - GIT_TERMINAL_PROMPT=0 git clone --branch $branch $url
   data_files:
     # from opsiclientd
     - src: opsiclientd_data/common/static_html/*
       dst: opsiclientd_data/static_html/
     - src: opsiclientd_data/${PLATFORM_SYSTEM}/*
       dst: opsiclientd_data/
-    # from python-opsi
-    - src: ${VENV_SITE_PACKAGES}/python-opsi_data/backendManager/extend.d/10_opsi.conf
+    # from opsi-server
+    - src: opsi-server/opsi-server_data/etc/backendManager/extend.d/10_opsi.conf
       dst: opsiclientd_data/extend.d/10_opsi.conf
-    - src: ${VENV_SITE_PACKAGES}/python-opsi_data/backendManager/extend.d/20_legacy.conf
+    - src: opsi-server/opsi-server_data/etc/backendManager/extend.d/20_legacy.conf
       dst: opsiclientd_data/extend.d/20_legacy.conf
   dirname: opsiclientd
   locale_install: opsiclientd_data/locale
