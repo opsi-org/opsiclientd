@@ -14,11 +14,12 @@ build:linux-pyinstaller:
     - poetry update python-opsi
     - poetry run opsi-dev-tool -l info --pyinstaller-poetry-build
     - mv opsiclientd opsiclientd.src
-    - mv dist/opsiclientd .
+    - cd dist/opsiclientd
+    - tar czvf ../../opsiclientd_binaries.tar.gz .
   artifacts:
     name: 'opsiclientd-linux-pyinstaller'
     paths:
-      - opsiclientd
+      - opsiclientd_binaries.tar.gz
     expire_in: 2 day
 
 #package:deb:
