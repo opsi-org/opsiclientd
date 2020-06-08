@@ -124,7 +124,7 @@ class ConfigImplementation(object):
 			},
 			'global': {
 				'base_dir': baseDir,
-				'locale_dir': os.path.join(baseDir, "locale"),
+				'locale_dir': os.path.join(baseDir, "opsiclientd", "locale"),
 				'config_file': os.path.join(baseDir, "opsiclientd", "opsiclientd.conf"),
 				'log_file': "opsiclientd.log",
 				'log_level': LOG_NOTICE,
