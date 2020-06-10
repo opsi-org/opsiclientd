@@ -102,14 +102,21 @@ class ConfigImplementation(object):
 
 	LINUX_DEFAULT_PATHS = {
 		'global': {
-			'log_dir': os.path.join('/var', 'log', 'opsi'),
-			'state_file': os.path.join('/var', 'lib', 'opsi-client-agent', 'opsiclientd', 'state.json'),
-			'timeline_db': os.path.join('/var', 'lib', 'opsi-client-agent', 'opsiclientd', 'timeline.sqlite'),
-			'server_cert_dir': os.path.join('/var', 'lib', 'opsi-client-agent', 'opsiclientd', 'server-certs')
+			'log_dir': "/var/log/opsi",
+			'locale_dir': "/usr/share/opsi-client-agent/opsiclientd/locale",
+			'config_file': "/etc/opsi-client-agent/opsiclientd.conf",
+			'state_file': "/var/lib/opsi-client-agent/opsiclientd/state.json",
+			'timeline_db': "/var/lib/opsi-client-agent/opsiclientd/timeline.sqlite",
+			'server_cert_dir': "/etc/opsi-client-agent/server-certs"
+		},
+		'control_server': {
+			'ssl_server_key_file': "/etc/opsi-client-agent/opsiclientd.pem",
+			'ssl_server_cert_file': "/etc/opsi-client-agent/opsiclientd.pem",
+			'static_dir': "/usr/share/opsi-client-agent/opsiclientd/static_html"
 		},
 		'cache_service': {
-			'storage_dir': os.path.join('/var', 'cache', 'opsi-client-agent')
-		},
+			'storage_dir': "/var/cache/opsi-client-agent"
+		}
 	}
 
 	def __init__(self):
@@ -193,7 +200,7 @@ class ConfigImplementation(object):
 				except:
 					baseDir = "."
 		else:
-			baseDir = os.path.join('/etc', 'opsi-client-agent')
+			baseDir = os.path.join('/usr', 'lib', 'opsi-client-agent')
 
 		return baseDir
 
