@@ -131,7 +131,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.info(u"Event is user login event")
 
 		#Needed helper-exe for NT5 x64 to get Sessioninformation (WindowsAPIBug)
-		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\sessionhelper\getActiveSessionIds.exe')
+		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\\sessionhelper\\getActiveSessionIds.exe')
 
 		self.getSessionId()
 		self._notificationServerPort = forceInt(config.get('notification_server', 'start_port'))

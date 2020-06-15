@@ -728,7 +728,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 			if isinstance(session['LogonTime'], str):
 				match = None
-				pattern = re.compile("^(\d+)/(\d+)/(\d+)\s(\d+):(\d+):(\d+)")
+				pattern = re.compile(r"^(\d+)/(\d+)/(\d+)\s(\d+):(\d+):(\d+)")
 				match = pattern.match(session['LogonTime'])
 				if match:
 					year = match.group(3)

@@ -220,7 +220,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		setLocaleDir(config.get('global', 'locale_dir'))
 
 		# Needed helper-exe for NT5 x64 to get Sessioninformation (WindowsAPIBug)
-		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\sessionhelper\getActiveSessionIds.exe')
+		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\\sessionhelper\\getActiveSessionIds.exe')
 
 		@contextmanager
 		def getControlPipe():
