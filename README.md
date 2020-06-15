@@ -1,8 +1,10 @@
-# Scripts and tools
+![pipeline](https://gitlab.uib.gmbh/uib/opsiclientd/badges/v4.2/pipeline.svg)
+![coverage](https://gitlab.uib.gmbh/uib/opsiclientd/badges/v4.2/coverage.svg)
 
-## pyinstaller-build.py
-This script is used to build executables with pyinstaller.
-It should only be used in a docker container (gitlab ci/cd).
-The docker container should contain an relatively old os (glibc) for a maximum compatibility of the resulting binaries.
-Glibc is backward-compatible, not forward-compatible.
+# opsiclientd
+This is the service which runs on every windows / linux client managed by [opsi](http://www.opsi.org/).
 
+
+## License
+This library is released under the AGPLv3 and the copyright belongs to
+uib GmbH if this is not noted otherwise in the file itself.
