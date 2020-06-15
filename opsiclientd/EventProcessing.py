@@ -162,7 +162,7 @@ If this is `None` a random port will be chosen.
 					MAX_ALLOWED_PORT
 				)
 
-		logger.debug('Setting port for the NotificationServer to {0}'.format(port))
+		logger.info('Setting port for the NotificationServer to {0}'.format(port))
 		self._notificationServerPort = port
 
 	# ServiceConnection
