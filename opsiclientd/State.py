@@ -45,7 +45,7 @@ class StateImplementation(object):
 	def __init__(self):
 		self._state = {}
 		self._stateFile = config.get('global', 'state_file')
-		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\sessionhelper\getActiveSessionIds.exe')
+		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\\sessionhelper\\getActiveSessionIds.exe')
 		self._stateLock = threading.Lock()
 		self._readStateFile()
 		self.set('shutdown_cancel_counter', 0)
