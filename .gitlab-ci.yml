@@ -12,6 +12,7 @@ test:pytest:
     - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3
     - source $HOME/.poetry/env
     - "[ -e coverage.xml ] && rm coverage.xml"
+    - poetry install
     - poetry run pytest -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
 
 build:linux-pyinstaller:
