@@ -17,9 +17,9 @@ def config():
 @pytest.fixture
 def configFile(onWindows):
 	if onWindows:
-		return os.path.join(os.path.dirname(__file__), '..', 'windows', 'opsiclientd.conf')
+		return os.path.join(os.path.dirname(__file__), '..', 'opsiclientd_data', 'windows', 'opsiclientd.conf')
 	else:
-		return os.path.join(os.path.dirname(__file__), '..', 'linux', 'opsiclientd.conf')
+		return os.path.join(os.path.dirname(__file__), '..', 'opsiclientd_data', 'linux', 'opsiclientd.conf')
 
 
 @pytest.fixture

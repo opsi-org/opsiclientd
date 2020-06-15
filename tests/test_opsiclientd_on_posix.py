@@ -25,7 +25,7 @@ except ImportError as error:
 @pytest.mark.skipif(OpsiclientdPosix is None, reason="Unable to find non-free modules: %s" % errorMessage)
 def test_requesting_reboot():
 	with workInTemporaryDirectory() as tempDir:
-		with mock.patch('ocdlibnonfree.Posix.OpsiclientdPosix._PID_DIR', tempDir):
+		with mock.patch('opsiclientd.nonfree.Posix.OpsiclientdPosix._PID_DIR', tempDir):
 			ocd = OpsiclientdPosix()
 
 			assert not ocd.isRebootRequested()
@@ -41,7 +41,7 @@ def test_requesting_reboot():
 @pytest.mark.skipif(OpsiclientdPosix is None, reason="Unable to find non-free modules: %s" % errorMessage)
 def test_requesting_shutdown():
 	with workInTemporaryDirectory() as tempDir:
-		with mock.patch('ocdlibnonfree.Posix.OpsiclientdPosix._PID_DIR', tempDir):
+		with mock.patch('opsiclientd.nonfree.Posix.OpsiclientdPosix._PID_DIR', tempDir):
 			ocd = OpsiclientdPosix()
 
 			assert not ocd.isShutdownRequested()
