@@ -31,22 +31,22 @@ build:linux-pyinstaller:
       - opsiclientd_binaries.tar.gz
     expire_in: 2 day
 
-    build:macos-pyinstaller:
-      stage: build
-      tags:
-        - macos
-      script:
-        - source $HOME/.poetry/env
-        - sed -ie s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
-        - poetry update python-opsi
-        - poetry run opsi-dev-tool -l info --pyinstaller-poetry-build
-        - mv opsiclientd opsiclientd.src
-        - mv dist/opsiclientd .
-      artifacts:
-        name: 'opsiclientd-macos-pyinstaller'
-        paths:
-          - opsiclientd
-        expire_in: 2 day
+build:macos-pyinstaller:
+  stage: build
+  tags:
+    - macos
+  script:
+    - source $HOME/.poetry/env
+    - sed -ie s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
+    - poetry update python-opsi
+    - poetry run opsi-dev-tool -l info --pyinstaller-poetry-build
+    - mv opsiclientd opsiclientd.src
+    - mv dist/opsiclientd .
+  artifacts:
+    name: 'opsiclientd-macos-pyinstaller'
+    paths:
+      - opsiclientd
+    expire_in: 2 day
 
 build:windows-pyinstaller:
   stage: build
