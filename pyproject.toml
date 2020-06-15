@@ -16,6 +16,9 @@ url = "http://pypi.uib.gmbh:8080/simple"
 python = "^3.6"
 python-opsi = "^4.2.0.23"
 #python-opsi = {path = "python-opsi"}
+pywin32 = {platform = "win32", version = "^227"}
+wmi = {platform = "win32", version = "^1.5.1"}
+distro = {platform = "linux", version = "^1.5.0"}
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.5.0"
@@ -24,6 +27,8 @@ pywin32-ctypes = {version = "^0.2.0", platform = "win32"}
 pefile = {version = "^2019.4.18", platform = "win32"}
 macholib = {version = "^1.14", platform = "darwin"}
 opsi-dev-tools = "^1.0.4"
+pytest = "^5.4.3"
+mock = "^4.0.2"
 
 [tool.poetry.scripts]
 opsiclientd = "opsiclientd.__main__:opsiclientd"

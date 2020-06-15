@@ -12,7 +12,7 @@ description = "An abstract syntax tree for Python with inference support."
 name = "astroid"
 optional = false
 python-versions = ">=3.5"
-version = "2.4.1"
+version = "2.4.2"
 
 [package.dependencies]
 lazy-object-proxy = ">=1.4.0,<1.5.0"
@@ -22,6 +22,15 @@ wrapt = ">=1.11,<2.0"
 [package.dependencies.typed-ast]
 python = "<3.8"
 version = ">=1.4.0,<1.5"
+
+[[package]]
+category = "dev"
+description = "Atomic file writes."
+marker = "sys_platform == \"win32\""
+name = "atomicwrites"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+version = "1.4.0"
 
 [[package]]
 category = "main"
@@ -73,7 +82,7 @@ description = "Python package for providing Mozilla's CA Bundle."
 name = "certifi"
 optional = false
 python-versions = "*"
-version = "2020.4.5.1"
+version = "2020.4.5.2"
 
 [[package]]
 category = "main"
@@ -161,6 +170,15 @@ python-versions = "*"
 version = "0.1.3"
 
 [[package]]
+category = "main"
+description = "Distro - an OS platform information API"
+marker = "sys_platform == \"linux\""
+name = "distro"
+optional = false
+python-versions = "*"
+version = "1.5.0"
+
+[[package]]
 category = "dev"
 description = "Clean single-source support for Python 3 and 2"
 marker = "sys_platform == \"win32\""
@@ -187,6 +205,22 @@ name = "idna"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 version = "2.9"
+
+[[package]]
+category = "dev"
+description = "Read metadata from Python packages"
+marker = "python_version < \"3.8\""
+name = "importlib-metadata"
+optional = false
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
+version = "1.6.1"
+
+[package.dependencies]
+zipp = ">=0.5"
+
+[package.extras]
+docs = ["sphinx", "rst.linker"]
+testing = ["packaging", "pep517", "importlib-resources (>=1.3)"]
 
 [[package]]
 category = "main"
@@ -254,6 +288,27 @@ version = "0.6.1"
 
 [[package]]
 category = "dev"
+description = "Rolling backport of unittest.mock for all Pythons"
+name = "mock"
+optional = false
+python-versions = ">=3.6"
+version = "4.0.2"
+
+[package.extras]
+build = ["twine", "wheel", "blurb"]
+docs = ["sphinx"]
+test = ["pytest", "pytest-cov"]
+
+[[package]]
+category = "dev"
+description = "More routines for operating on iterables, beyond itertools"
+name = "more-itertools"
+optional = false
+python-versions = ">=3.5"
+version = "8.4.0"
+
+[[package]]
+category = "dev"
 description = "opsi development tools"
 name = "opsi-dev-tools"
 optional = false
@@ -296,6 +351,30 @@ version = "2019.4.18"
 
 [package.dependencies]
 future = "*"
+
+[[package]]
+category = "dev"
+description = "plugin and hook calling mechanisms for python"
+name = "pluggy"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+version = "0.13.1"
+
+[package.dependencies]
+[package.dependencies.importlib-metadata]
+python = "<3.8"
+version = ">=0.12"
+
+[package.extras]
+dev = ["pre-commit", "tox"]
+
+[[package]]
+category = "dev"
+description = "library with cross-python path, ini-parsing, io, code, log facilities"
+name = "py"
+optional = false
+python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+version = "1.8.1"
 
 [[package]]
 category = "main"
@@ -359,7 +438,7 @@ description = "python code static checker"
 name = "pylint"
 optional = false
 python-versions = ">=3.5.*"
-version = "2.5.2"
+version = "2.5.3"
 
 [package.dependencies]
 astroid = ">=2.4.0,<=2.5"
@@ -405,6 +484,32 @@ beautifulsoup4 = ">=4.5,<5.0"
 packaging = ">=16"
 requests = ">=2.5,<3.0"
 six = ">=1.4,<2.0"
+
+[[package]]
+category = "dev"
+description = "pytest: simple powerful testing with Python"
+name = "pytest"
+optional = false
+python-versions = ">=3.5"
+version = "5.4.3"
+
+[package.dependencies]
+atomicwrites = ">=1.0"
+attrs = ">=17.4.0"
+colorama = "*"
+more-itertools = ">=4.0.0"
+packaging = "*"
+pluggy = ">=0.12,<1.0"
+py = ">=1.5.0"
+wcwidth = "*"
+
+[package.dependencies.importlib-metadata]
+python = "<3.8"
+version = ">=0.12"
+
+[package.extras]
+checkqa-mypy = ["mypy (v0.761)"]
+testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "nose", "requests", "xmlschema"]
 
 [[package]]
 category = "dev"
@@ -629,6 +734,14 @@ secure = ["certifi", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "pyOpenSSL (>=0
 socks = ["PySocks (>=1.5.6,<1.5.7 || >1.5.7,<2.0)"]
 
 [[package]]
+category = "dev"
+description = "Measures the displayed width of unicode strings in a terminal"
+name = "wcwidth"
+optional = false
+python-versions = "*"
+version = "0.2.4"
+
+[[package]]
 category = "main"
 description = "Windows Management Instrumentation"
 marker = "sys_platform == \"win32\""
@@ -656,6 +769,19 @@ python-versions = "*"
 version = "1.12.1"
 
 [[package]]
+category = "dev"
+description = "Backport of pathlib-compatible object wrapper for zip files"
+marker = "python_version < \"3.8\""
+name = "zipp"
+optional = false
+python-versions = ">=3.6"
+version = "3.1.0"
+
+[package.extras]
+docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
+testing = ["jaraco.itertools", "func-timeout"]
+
+[[package]]
 category = "main"
 description = "Interfaces for Python"
 name = "zope.interface"
@@ -672,7 +798,7 @@ test = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [metadata]
-content-hash = "875d6e24bc88f3feffec366c7d6e3874ecbf975c28cab5e89fbf16ca2ca761b7"
+content-hash = "1a7a76080e20e5abf20d48556315c517cdd34a090d060e2d33916380575ba0d8"
 python-versions = "^3.6"
 
 [metadata.files]
@@ -681,8 +807,12 @@ altgraph = [
     {file = "altgraph-0.17.tar.gz", hash = "sha256:1f05a47122542f97028caf78775a095fbe6a2699b5089de8477eb583167d69aa"},
 ]
 astroid = [
-    {file = "astroid-2.4.1-py3-none-any.whl", hash = "sha256:d8506842a3faf734b81599c8b98dcc423de863adcc1999248480b18bd31a0f38"},
-    {file = "astroid-2.4.1.tar.gz", hash = "sha256:4c17cea3e592c21b6e222f673868961bad77e1f985cb1694ed077475a89229c1"},
+    {file = "astroid-2.4.2-py3-none-any.whl", hash = "sha256:bc58d83eb610252fd8de6363e39d4f1d0619c894b0ed24603b881c02e64c7386"},
+    {file = "astroid-2.4.2.tar.gz", hash = "sha256:2f4078c2a41bf377eea06d71c9d2ba4eb8f6b1af2135bec27bbbb7d8f12bb703"},
+]
+atomicwrites = [
+    {file = "atomicwrites-1.4.0-py2.py3-none-any.whl", hash = "sha256:6d1784dea7c0c8d4a5172b6c620f40b6e4cbfdf96d783691f2e1302a7b88e197"},
+    {file = "atomicwrites-1.4.0.tar.gz", hash = "sha256:ae70396ad1a434f9c7046fd2dd196fc04b12f9e91ffb859164193be8b6168a7a"},
 ]
 attrs = [
     {file = "attrs-19.3.0-py2.py3-none-any.whl", hash = "sha256:08a96c641c3a74e44eb59afb61a24f2cb9f4d7188748e76ba4bb5edfa3cb7d1c"},
@@ -698,8 +828,8 @@ beautifulsoup4 = [
     {file = "beautifulsoup4-4.9.1.tar.gz", hash = "sha256:73cc4d115b96f79c7d77c1c7f7a0a8d4c57860d1041df407dd1aae7f07a77fd7"},
 ]
 certifi = [
-    {file = "certifi-2020.4.5.1-py2.py3-none-any.whl", hash = "sha256:1d987a998c75633c40847cc966fcf5904906c920a7f17ef374f5aa4282abd304"},
-    {file = "certifi-2020.4.5.1.tar.gz", hash = "sha256:51fcb31174be6e6664c5f69e3e1691a2d72a1a12e90f872cbdb1567eb47b6519"},
+    {file = "certifi-2020.4.5.2-py2.py3-none-any.whl", hash = "sha256:9cd41137dc19af6a5e03b630eefe7d1f458d964d406342dd3edf625839b944cc"},
+    {file = "certifi-2020.4.5.2.tar.gz", hash = "sha256:5ad7e9a056d25ffa5082862e36f119f7f7cec6457fa07ee2f8c339814b80c9b1"},
 ]
 cffi = [
     {file = "cffi-1.14.0-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:1cae98a7054b5c9391eb3249b86e0e99ab1e02bb0cc0575da191aedadbdf4384"},
@@ -776,6 +906,10 @@ dis3 = [
     {file = "dis3-0.1.3-py3-none-any.whl", hash = "sha256:30b6412d33d738663e8ded781b138f4b01116437f0872aa56aa3adba6aeff218"},
     {file = "dis3-0.1.3.tar.gz", hash = "sha256:9259b881fc1df02ed12ac25f82d4a85b44241854330b1a651e40e0c675cb2d1e"},
 ]
+distro = [
+    {file = "distro-1.5.0-py2.py3-none-any.whl", hash = "sha256:df74eed763e18d10d0da624258524ae80486432cd17392d9c3d96f5e83cd2799"},
+    {file = "distro-1.5.0.tar.gz", hash = "sha256:0e58756ae38fbd8fc3020d54badb8eae17c5b9dcbed388b17bb55b8a5928df92"},
+]
 future = [
     {file = "future-0.18.2.tar.gz", hash = "sha256:b1bead90b70cf6ec3f0710ae53a525360fa360d306a86583adc6bf83a4db537d"},
 ]
@@ -786,6 +920,10 @@ hyperlink = [
 idna = [
     {file = "idna-2.9-py2.py3-none-any.whl", hash = "sha256:a068a21ceac8a4d63dbfd964670474107f541babbd2250d61922f029858365fa"},
     {file = "idna-2.9.tar.gz", hash = "sha256:7588d1c14ae4c77d74036e8c22ff447b26d0fde8f007354fd48a7814db15b7cb"},
+]
+importlib-metadata = [
+    {file = "importlib_metadata-1.6.1-py2.py3-none-any.whl", hash = "sha256:15ec6c0fd909e893e3a08b3a7c76ecb149122fb14b7efe1199ddd4c7c57ea958"},
+    {file = "importlib_metadata-1.6.1.tar.gz", hash = "sha256:0505dd08068cfec00f53a74a0ad927676d7757da81b7436a6eefe4c7cf75c545"},
 ]
 incremental = [
     {file = "incremental-17.5.0-py2.py3-none-any.whl", hash = "sha256:717e12246dddf231a349175f48d74d93e2897244939173b01974ab6661406b9f"},
@@ -834,6 +972,14 @@ mccabe = [
     {file = "mccabe-0.6.1-py2.py3-none-any.whl", hash = "sha256:ab8a6258860da4b6677da4bd2fe5dc2c659cff31b3ee4f7f5d64e79735b80d42"},
     {file = "mccabe-0.6.1.tar.gz", hash = "sha256:dd8d182285a0fe56bace7f45b5e7d1a6ebcbf524e8f3bd87eb0f125271b8831f"},
 ]
+mock = [
+    {file = "mock-4.0.2-py3-none-any.whl", hash = "sha256:3f9b2c0196c60d21838f307f5825a7b86b678cedc58ab9e50a8988187b4d81e0"},
+    {file = "mock-4.0.2.tar.gz", hash = "sha256:dd33eb70232b6118298d516bbcecd26704689c386594f0f3c4f13867b2c56f72"},
+]
+more-itertools = [
+    {file = "more-itertools-8.4.0.tar.gz", hash = "sha256:68c70cc7167bdf5c7c9d8f6954a7837089c6a36bf565383919bb595efb8a17e5"},
+    {file = "more_itertools-8.4.0-py3-none-any.whl", hash = "sha256:b78134b2063dd214000685165d81c154522c3ee0a1c0d4d113c80361c234c5a2"},
+]
 opsi-dev-tools = [
     {file = "opsi-dev-tools-1.0.6.tar.gz", hash = "md5:1f3c9cbadb0415ee5bd72983baeec435"},
     {file = "opsi_dev_tools-1.0.6-py3-none-any.whl", hash = "md5:3d51b163df8d5971ffeb3c52be5df2d7"},
@@ -844,6 +990,14 @@ packaging = [
 ]
 pefile = [
     {file = "pefile-2019.4.18.tar.gz", hash = "sha256:a5d6e8305c6b210849b47a6174ddf9c452b2888340b8177874b862ba6c207645"},
+]
+pluggy = [
+    {file = "pluggy-0.13.1-py2.py3-none-any.whl", hash = "sha256:966c145cd83c96502c3c3868f50408687b38434af77734af1e9ca461a4081d2d"},
+    {file = "pluggy-0.13.1.tar.gz", hash = "sha256:15b2acde666561e1298d71b523007ed7364de07029219b604cf808bfa1c765b0"},
+]
+py = [
+    {file = "py-1.8.1-py2.py3-none-any.whl", hash = "sha256:c20fdd83a5dbc0af9efd622bee9a5564e278f6380fffcacc43ba6f43db2813b0"},
+    {file = "py-1.8.1.tar.gz", hash = "sha256:5e27081401262157467ad6e7f851b7aa402c5852dbcb3dae06768434de5752aa"},
 ]
 pyasn1 = [
     {file = "pyasn1-0.4.8-py2.4.egg", hash = "sha256:fec3e9d8e36808a28efb59b489e4528c10ad0f480e57dcc32b4de5c9d8c9fdf3"},
@@ -919,8 +1073,8 @@ pyinstaller = [
     {file = "PyInstaller-3.6.tar.gz", hash = "sha256:3730fa80d088f8bb7084d32480eb87cbb4ddb64123363763cf8f2a1378c1c4b7"},
 ]
 pylint = [
-    {file = "pylint-2.5.2-py3-none-any.whl", hash = "sha256:dd506acce0427e9e08fb87274bcaa953d38b50a58207170dbf5b36cf3e16957b"},
-    {file = "pylint-2.5.2.tar.gz", hash = "sha256:b95e31850f3af163c2283ed40432f053acbc8fc6eba6a069cb518d9dbf71848c"},
+    {file = "pylint-2.5.3-py3-none-any.whl", hash = "sha256:d0ece7d223fe422088b0e8f13fa0a1e8eb745ebffcb8ed53d3e95394b6101a1c"},
+    {file = "pylint-2.5.3.tar.gz", hash = "sha256:7dd78437f2d8d019717dbf287772d0b2dbdfd13fc016aa7faa08d67bccc46adc"},
 ]
 pyopenssl = [
     {file = "pyOpenSSL-19.1.0-py2.py3-none-any.whl", hash = "sha256:621880965a720b8ece2f1b2f54ea2071966ab00e2970ad2ce11d596102063504"},
@@ -933,6 +1087,10 @@ pyparsing = [
 pypi-simple = [
     {file = "pypi-simple-0.6.0.tar.gz", hash = "sha256:08c8c19dff061974a33fe6fbee812d7eefaa55a80f7576f472472f250a63fb4a"},
     {file = "pypi_simple-0.6.0-py2.py3-none-any.whl", hash = "sha256:fc2ab9aa5c666b8b5a57593b26826301c7801ca9f90931645d7040c525373fbb"},
+]
+pytest = [
+    {file = "pytest-5.4.3-py3-none-any.whl", hash = "sha256:5c0db86b698e8f170ba4582a492248919255fcd4c79b1ee64ace34301fb589a1"},
+    {file = "pytest-5.4.3.tar.gz", hash = "sha256:7979331bfcba207414f5e1263b5a0f8f521d0f457318836a7355531ed1a4c7d8"},
 ]
 python-gettext = [
     {file = "python-gettext-4.0.tar.gz", hash = "sha256:626b501a51ac892fc3460cf550e60dca121f544eaa46eb69c90ce4682fc7ec02"},
@@ -1082,12 +1240,20 @@ urllib3 = [
     {file = "urllib3-1.25.9-py2.py3-none-any.whl", hash = "sha256:88206b0eb87e6d677d424843ac5209e3fb9d0190d0ee169599165ec25e9d9115"},
     {file = "urllib3-1.25.9.tar.gz", hash = "sha256:3018294ebefce6572a474f0604c2021e33b3fd8006ecd11d62107a5d2a963527"},
 ]
+wcwidth = [
+    {file = "wcwidth-0.2.4-py2.py3-none-any.whl", hash = "sha256:79375666b9954d4a1a10739315816324c3e73110af9d0e102d906fdb0aec009f"},
+    {file = "wcwidth-0.2.4.tar.gz", hash = "sha256:8c6b5b6ee1360b842645f336d9e5d68c55817c26d3050f46b235ef2bc650e48f"},
+]
 wmi = [
     {file = "WMI-1.5.1-py2.py3-none-any.whl", hash = "sha256:1d6b085e5c445141c475476000b661f60fff1aaa19f76bf82b7abb92e0ff4942"},
     {file = "WMI-1.5.1.tar.gz", hash = "sha256:b6a6be5711b1b6c8d55bda7a8befd75c48c12b770b9d227d31c1737dbf0d40a6"},
 ]
 wrapt = [
     {file = "wrapt-1.12.1.tar.gz", hash = "sha256:b62ffa81fb85f4332a4f609cab4ac40709470da05643a082ec1eb88e6d9b97d7"},
+]
+zipp = [
+    {file = "zipp-3.1.0-py3-none-any.whl", hash = "sha256:aa36550ff0c0b7ef7fa639055d797116ee891440eac1a56f378e2d3179e0320b"},
+    {file = "zipp-3.1.0.tar.gz", hash = "sha256:c599e4d75c98f6798c509911d08a22e6c021d074469042177c8c86fb92eefd96"},
 ]
 "zope.interface" = [
     {file = "zope.interface-5.1.0-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:645a7092b77fdbc3f68d3cc98f9d3e71510e419f54019d6e282328c0dd140dcd"},
