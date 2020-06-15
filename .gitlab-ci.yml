@@ -14,6 +14,13 @@ test:pytest:
     - "[ -e coverage.xml ] && rm coverage.xml"
     - poetry install
     - poetry run pytest -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
+  coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+)%/'
+  artifacts:
+    name: 'opsiclientd_test'
+    paths:
+      - coverage.xml
+      - testreport.xml
+    expire_in: 14 days
 
 build:linux-pyinstaller:
   stage: build
