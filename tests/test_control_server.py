@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import ocdlib.ControlServer as OCS
-from ocdlib.Events.Utilities.Configs import getEventConfigs
-from ocdlib.Events.Utilities.Generators import createEventGenerators
+import opsiclientd.ControlServer as OCS
+from opsiclientd.Events.Utilities.Configs import getEventConfigs
+from opsiclientd.Events.Utilities.Generators import createEventGenerators
 
 import pytest
 

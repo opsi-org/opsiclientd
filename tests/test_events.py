@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from ocdlib.Events.Utilities.Configs import getEventConfigs
+from opsiclientd.Events.Utilities.Configs import getEventConfigs
 
 
 def testGettingEventConfiguration(config, configFile):

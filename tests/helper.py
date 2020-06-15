@@ -13,23 +13,22 @@ from contextlib import contextmanager
 
 @contextmanager
 def workInTemporaryDirectory(tempDir=None):
-    """
-    Creates a temporary folder to work in. Deletes the folder afterwards.
+	"""
+	Creates a temporary folder to work in. Deletes the folder afterwards.
 
-    :param tempDir: use the given dir as temporary directory. Will not \
-be deleted if given.
-    """
-    temporary_folder = tempDir or tempfile.mkdtemp()
-    with cd(temporary_folder):
-        yield temporary_folder
+	:param tempDir: use the given dir as temporary directory. Will not be deleted if given.
+	"""
+	temporary_folder = tempDir or tempfile.mkdtemp()
+	with cd(temporary_folder):
+		yield temporary_folder
 
-    if not tempDir and os.path.exists(temporary_folder):
-        shutil.rmtree(temporary_folder)
+	if not tempDir and os.path.exists(temporary_folder):
+		shutil.rmtree(temporary_folder)
 
 
 @contextmanager
 def cd(path):
-    old_dir = os.getcwd()
-    os.chdir(path)
-    yield
-    os.chdir(old_dir)
+	old_dir = os.getcwd()
+	os.chdir(path)
+	yield
+	os.chdir(old_dir)

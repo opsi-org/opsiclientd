@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-from ocdlib.Exceptions import OpsiclientdError
+from opsiclientd.Exceptions import OpsiclientdError
 
 
 @pytest.mark.parametrize("testClass", [OpsiclientdError])
