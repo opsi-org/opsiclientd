@@ -37,15 +37,12 @@ class OpsiclientdError(Exception):
 		self._message = forceUnicode(message)
 
 	def __str__(self):
+		_str = self.ExceptionShortDescription
 		if self._message:
-			return u"%s: %s" % (self.ExceptionShortDescription, self._message)
-		else:
-			return u"%s" % self.ExceptionShortDescription
-
-	def __repr__(self):
-		return self.__str__()
-
-	__str__ = __repr__
+			_str += f": {self._message}"
+		return _str
+	
+	__repr__ = __str__
 
 
 class CanceledByUserError(OpsiclientdError):
