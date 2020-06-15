@@ -29,6 +29,7 @@ macholib = {version = "^1.14", platform = "darwin"}
 opsi-dev-tools = "^1.0.4"
 pytest = "^5.4.3"
 mock = "^4.0.2"
+pytest-cov = "^2.10.0"
 
 [tool.poetry.scripts]
 opsiclientd = "opsiclientd.__main__:opsiclientd"
