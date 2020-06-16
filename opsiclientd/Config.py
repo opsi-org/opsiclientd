@@ -90,7 +90,7 @@ class NoConfigOptionFoundException(ValueError):
 class ConfigImplementation(object):
 	WINDOWS_DEFAULT_PATHS = {
 		'global': {
-			'log_dir': u'c:\\tmp',
+			'log_dir': u'c:\\opsi.org\\log',
 			'state_file': u'c:\\opsi.org\\opsiclientd\\state.json',
 			'timeline_db': u'c:\\opsi.org\\opsiclientd\\timeline.sqlite',
 			'server_cert_dir': u'c:\\opsi.org\\opsiclientd\\server-certs'
@@ -116,6 +116,9 @@ class ConfigImplementation(object):
 		},
 		'cache_service': {
 			'storage_dir': "/var/cache/opsi-client-agent"
+		},
+		'depot_server': {
+			'drive': "/mnt/opsi_depot"
 		}
 	}
 
@@ -222,8 +225,8 @@ class ConfigImplementation(object):
 			)
 
 			self._config['cache_service']['storage_dir'] = os.path.join(systemDrive, 'opsi.org', 'cache')
-			self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd', 'opsiclientd.conf')
-			self._config['global']['log_dir'] = os.path.join(systemDrive, 'tmp')
+			self._config['global']['config_file'] = os.path.join(baseDir, 'opsiclientd', 'opsiclientd.conf')
+			self._config['global']['log_dir'] = os.path.join(systemDrive, 'opsi.org', 'log')
 			self._config['global']['state_file'] = os.path.join(systemDrive, 'opsi.org', 'opsiclientd', 'state.json')
 			self._config['global']['server_cert_dir'] = os.path.join(systemDrive, 'opsi.org', 'opsiclientd', 'server-certs')
 			self._config['global']['timeline_db'] = os.path.join(systemDrive,  'opsi.org', 'opsiclientd', 'timeline.sqlite')
@@ -232,11 +235,6 @@ class ConfigImplementation(object):
 			if sys.getwindowsversion()[0] == 5:
 				self._config['action_processor']['run_as_user'] = 'pcpatch'
 		else:
-			self._config['control_server']['static_dir'] = os.path.join(baseDir, 'opsiclientd', 'static_html')
-			self._config['global']['config_file'] = os.path.join(baseDir, u'opsiclientd.conf')
-			self._config['global']['log_file'] = os.path.join('/var', 'log', 'opsi', 'opsiclientd.log')
-			self._config['depot_server']['drive'] = "/mnt/opsi_depot"
-
 			if '64' in platform.architecture()[0]:
 				arch = '64'
 			else:
