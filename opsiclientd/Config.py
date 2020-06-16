@@ -597,7 +597,11 @@ class ConfigImplementation(object):
 
 					depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()
 					logger.debug2(u"depotSelectionAlgorithm:\n%s" % depotSelectionAlgorithm)
-					exec(depotSelectionAlgorithm)
+					
+					currentLocals = locals()
+					exec(depotSelectionAlgorithm, None, currentLocals)
+					selectDepot = currentLocals['selectDepot']
+					
 					selectedDepot = selectDepot(
 						clientConfig=clientConfig,
 						masterDepot=masterDepot,
