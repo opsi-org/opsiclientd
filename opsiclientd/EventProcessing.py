@@ -146,7 +146,13 @@ If this is `None` a random port will be chosen.
 		:type port: int
 		"""
 		def getRandomPortViaSessionID(multiplicator=3):
-			return forceInt(config.get('notification_server', 'start_port')) + (multiplicator * forceInt(self.getSessionId()))
+			sid = self.getSessionId()
+			match = re.search(r"(\d+)", str(sid))
+			if match:
+				sid = int(match.group(1))
+			else:
+				sid = 1
+			return forceInt(config.get('notification_server', 'start_port')) + (multiplicator * sid)
 
 		MAX_ALLOWED_PORT = 65536
 
