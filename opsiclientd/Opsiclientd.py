@@ -480,7 +480,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	def getEventProcessingThread(self, sessionId):
 		logger.notice(u"DEBUG: %s " % self._eventProcessingThreads)
 		for ept in self._eventProcessingThreads:
-			logger.notice("DEBUG: %s " % ept.getSessionId())
+			logger.notice("DEBUG: %s ", ept.getSessionId())
 			if int(ept.getSessionId()) == int(sessionId):
 				return ept
 		raise Exception(u"Event processing thread for session %s not found" % sessionId)
@@ -514,10 +514,10 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		desktop = self._currentActiveDesktopName.get(sessionId)
 		if not desktop:
-			logger.warning(u"Failed to get current active desktop name for session %d, using 'default'" % sessionId)
+			logger.warning(u"Failed to get current active desktop name for session %s, using 'default'", sessionId)
 			desktop = 'default'
 			self._currentActiveDesktopName[sessionId] = desktop
-		logger.debug(u"Returning current active dektop name '%s' for session %s" % (desktop, sessionId))
+		logger.debug(u"Returning current active dektop name '%s' for session %s", desktop, sessionId)
 		return desktop
 
 	def switchDesktop(self, desktop, sessionId=None):
@@ -593,7 +593,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject = ChoiceSubject(id='choice')
 			popupSubject.setMessage(message)
 
-			logger.notice(u"Starting popup message notification server on port %d" % port)
+			logger.notice(u"Starting popup message notification server on port %d", port)
 			try:
 				self._popupNotificationServer = NotificationServer(
 					address="127.0.0.1",
@@ -615,7 +615,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					sessionIds = [System.getActiveConsoleSessionId()]
 
 				for sessionId in sessionIds:
-					logger.info(u"Starting popup message notifier app in session %d" % sessionId)
+					logger.info(u"Starting popup message notifier app in session %s", sessionId)
 					try:
 						System.runCommandInSession(
 							command=notifierCommand,
@@ -623,7 +623,7 @@ class Opsiclientd(EventListener, threading.Thread):
 							desktop=self.getCurrentActiveDesktopName(sessionId),
 							waitForProcessEnding=False)
 					except Exception as e:
-						logger.error(u"Failed to start popup message notifier app in session %d: %s" % (sessionId, forceUnicode(e)))
+						logger.error(u"Failed to start popup message notifier app in session %s: %s", sessionId, forceUnicode(e))
 		finally:
 			self._popupNotificationLock.release()
 
