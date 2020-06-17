@@ -215,7 +215,7 @@ If this is `None` a random port will be chosen.
 	# End of ServiceConnection
 
 	def setSessionId(self, sessionId):
-		self._sessionId = int(sessionId)
+		self._sessionId = sessionId
 		logger.info(u"Session id set to %s" % self._sessionId)
 
 	def getSessionId(self):
