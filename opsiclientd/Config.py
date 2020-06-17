@@ -75,7 +75,7 @@ def getLogFormat(moduleName):
 	"""
 	Returns a constant logformat for all modules.
 	"""
-	name = u' %-30s' % moduleName
+	name = u' %-40s' % moduleName
 	return u'[%l] [%D] [{name}] %M   (%F|%N)'.format(name=name)
 
 
@@ -601,7 +601,7 @@ class ConfigImplementation(object):
 					currentLocals = locals()
 					exec(depotSelectionAlgorithm, None, currentLocals)
 					selectDepot = currentLocals['selectDepot']
-					
+
 					selectedDepot = selectDepot(
 						clientConfig=clientConfig,
 						masterDepot=masterDepot,
