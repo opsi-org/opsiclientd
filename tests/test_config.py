@@ -94,6 +94,6 @@ def testLogFormatContainsModulename():
 	assert modulename in getLogFormat(modulename)
 
 
-def testLogFormatFormattingUses30CharactersForName():
+def testLogFormatFormattingUses40CharactersForName():
 	modulename = 'olol'
-	assert '[%l] [%D] [ olol                          ] %M   (%F|%N)' == getLogFormat(modulename)
+	assert '[%l] [%D] [ olol                                    ] %M   (%F|%N)' == getLogFormat(modulename)
