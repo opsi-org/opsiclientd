@@ -196,7 +196,8 @@ class ConfigImplementation(object):
 	@staticmethod
 	def _getBaseDirectory():
 		if RUNNING_ON_WINDOWS:
-			baseDir = os.path.join(os.environ.get("PROGRAMFILES(X86)"), "opsi.org", "opsi-client-agent")
+			pfp = os.environ.get("PROGRAMFILES(X86)", os.environ.get("PROGRAMFILES"))
+			baseDir = os.path.join(pfp, "opsi.org", "opsi-client-agent")
 			if not os.path.exists(baseDir):
 				try:
 					baseDir = os.path.abspath(os.path.dirname(sys.argv[0]))
