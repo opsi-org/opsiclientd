@@ -1255,15 +1255,15 @@ None otherwise.
 			elif end < start:
 				end = end + timedelta(days=1)
 
-			logger.notice("Working Window configuration: starttime={0} endtime={1} systemtime now={2}".format(start, end, now))
+			logger.info("Working Window configuration: starttime=%s endtime=%s systemtime now=%s", start, end, now)
 			if start < now < end:
-				logger.notice("We are in the configured working window")
+				logger.debug("We are in the configured working window")
 				return True
 			else:
-				logger.notice("We are not in the configured working window, stopping Event")
+				logger.debug("We are not in the configured working window")
 				return False
 		except Exception as e:
-			logger.error("Working Window processing failed: starttime={0} endtime={1} systemtime now={2}".format(start, end, now))
+			logger.error("Working Window processing failed: starttime=%s endtime=%s systemtime now=%s", start, end, now)
 			logger.logException(e)
 			return True
 	
