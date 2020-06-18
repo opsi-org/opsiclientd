@@ -18,9 +18,10 @@ pyinstaller-poetry:
       - win32timezone
     linux: []
     darwin: []
-  #extra_args:
-  #  windows:
-  #    - --noconsole
+  extra_args:
+    windows:
+      # Without --noconsole opsiclientd_rpc and action_processor_starter are opening console windows 
+      - --noconsole
   scripts:
     - script: run-opsiclientd
       binaries:
