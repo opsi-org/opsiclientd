@@ -27,7 +27,6 @@ opsi client daemon (opsiclientd)
 import os
 import sys
 
-
 def opsiclientd_rpc():
 	from opsiclientd.opsiclientdrpc import main
 	main()

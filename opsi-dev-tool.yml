@@ -29,11 +29,13 @@ pyinstaller-poetry:
         - action_processor_starter
   before_script:
     linux:
+      - "[ -e opsi-server ] && rm -rf opsi-server"
       - url=$(git remote -v | grep fetch | cut -f2 | sed s'#/opsiclientd.git.*#/opsi-server.git#')
       #- branch=$(git rev-parse --abbrev-ref HEAD)
       - branch=master
       - GIT_TERMINAL_PROMPT=0 git clone --branch $branch $url
     darwin:
+      - "[ -e opsi-server ] && rm -rf opsi-server"
       - url=$(git remote -v | grep fetch | cut -f2 | sed s'#/opsiclientd.git.*#/opsi-server.git#')
       #- branch=$(git rev-parse --abbrev-ref HEAD)
       - branch=master

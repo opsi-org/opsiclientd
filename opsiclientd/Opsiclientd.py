@@ -76,6 +76,8 @@ state = State()
 
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
+		System.ensureNotAlreadyRunning()
+		
 		logger.setLogFormat(getLogFormat(u'opsiclientd'), object=self)
 		logger.debug("Opsiclient initiating")
 
