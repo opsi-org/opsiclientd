@@ -18,9 +18,9 @@ pyinstaller-poetry:
       - win32timezone
     linux: []
     darwin: []
-  extra_args:
-    windows:
-      - --noconsole
+  #extra_args:
+  #  windows:
+  #    - --noconsole
   scripts:
     - script: run-opsiclientd
       binaries:
