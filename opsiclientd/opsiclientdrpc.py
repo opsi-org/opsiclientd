@@ -29,10 +29,12 @@ from OPSI.Backend.JSONRPC import JSONRPCBackend
 # Do not remove this import, it's needed by using this module from CLI
 from OPSI import System
 
+from opsiclientd.Config import getLogFormat
+
 logger = Logger()
 
 def main():
-	logger.setLogFormat("[%l] [%D] [opsiclientd_rpc] %M   (%F|%N)")
+	logger.setLogFormat(getLogFormat(os.path.basename(sys.argv[0])))
 	if len(sys.argv) < 5:
 		print(f"Usage: {os.path.basename(sys.argv[0])} <username> <password> <port> [debug_logfile] <rpc>", file=sys.stderr)
 		sys.exit(1)
