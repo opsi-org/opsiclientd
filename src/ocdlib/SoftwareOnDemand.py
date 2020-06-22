@@ -515,6 +515,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 
 	def _getAllowedMethods(self):
 		return [
+			"backend_exit",
 			"backend_setOptions",
 			"configState_getObjects",
 			"fireEvent_software_on_demand",
@@ -576,6 +577,8 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 				raise Exception("You are not allowed to execute the method: '%s'" % rpc.method)
 			elif rpc.method == "fireEvent_software_on_demand":
 				self._fireEvent = True
+				self._rpcs.remove(rpc)
+			elif rpc.method == "backend_exit":
 				self._rpcs.remove(rpc)
 		return result
 

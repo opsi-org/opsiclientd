@@ -538,6 +538,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def reboot(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
 		logger.notice(u"rpc reboot: rebooting computer in %s seconds" % waitSeconds)
+		if config.get('global', 'w10BitlockerSuspendOnReboot'):
+			try:
+				logger.notice("Trying to suspend bitlocker before rebooting")
+				self.opsiclientd.suspendBitlocker()
+			except Exception as e:
+				logger.warning("Suspending Bitlocker Failed: '%s'" % e)
 		System.reboot(wait = waitSeconds)
 
 	def uptime(self):
