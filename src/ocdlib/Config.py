@@ -136,6 +136,7 @@ class ConfigImplementation(object):
 				'verify_server_cert_by_ca': False,
 				'proxy_mode': u'static',
 				'proxy_url': u'',
+				'w10BitlockerSuspendOnReboot': False,
 			},
 			'config_service': {
 				'url': [],
@@ -300,7 +301,7 @@ class ConfigImplementation(object):
 			value = forceHostId(value.replace('_', '-'))
 		elif option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port', 'max_authentication_failures'):
 			value = forceInt(value)
-		elif option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active', 'sync_time_from_service', 'trusted_installer_detection'):
+		elif option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active', 'sync_time_from_service', 'trusted_installer_detection', 'w10BitlockerSuspendOnReboot'):
 			value = forceBool(value)
 		elif option in ('exclude_product_group_ids', 'include_product_group_ids'):
 			if not isinstance(value, list):

@@ -1214,6 +1214,12 @@ None otherwise.
 						break
 				if reboot:
 					timeline.addEvent(title = u"Rebooting", category = u"system")
+					if config.get('global', 'w10BitlockerSuspendOnReboot'):
+						try:
+							logger.notice("Trying to suspend Bitlocker before reboot")
+							self.opsiclientd.suspendBitlocker()
+						except Exception as e:
+							logger.warning("Suspending Bitlocker Failed: '%s'" % e)
 					self.opsiclientd.rebootMachine()
 				elif shutdown:
 					timeline.addEvent(title = u"Shutting down", category = u"system")
@@ -1237,7 +1243,6 @@ None otherwise.
 			end = getRelativeDatetime(endtime)
 
 			now = dt.now()
-			logger.notice("We have now: {0}".format(now))
 			start = dt.today().replace(
 						hour=int(s_hour),
 						minute=int(s_minute),
@@ -1248,12 +1253,14 @@ None otherwise.
 						minute=int(e_minute),
 						second=0,
 						microsecond=0)
-			if end < start:
+			if now < start:
+				start = start - timedelta(days=1)
+			elif end < start:
 				end = end + timedelta(days=1)
 
-			logger.info("Working Window from {0} until {1}".format(start, end))
+			logger.notice("Working Window configuration starttime: {0} endtime: {1} systemtime now: {2}".format(start, end, now))
 			if start < now < end:
-				logger.info("We are in the configured working window")
+				logger.notice("We are in the configured working window")
 				return True
 			else:
 				logger.info("We are not in the configured working window")

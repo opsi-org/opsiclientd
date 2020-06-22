@@ -26,6 +26,7 @@ Functionality to work on Windows.
 """
 
 import os
+import subprocess
 import sys
 import threading
 import time
@@ -226,6 +227,21 @@ class OpsiclientdNT(Opsiclientd):
 		self._isShutdownTriggered = True
 		self.clearShutdownRequest()
 		System.shutdown(3)
+
+	def suspendBitlocker(self):
+		systemDrive = os.getenv('SystemDrive') or 'c:'
+		scriptlet = 'Suspend-BitLocker -MountPoint "%s" -RebootCount 1' % systemDrive
+		windir = os.getenv("SystemRoot")
+		pwrShellCmd = os.path.join(windir,"SysNative\\WindowsPowerShell\v1.0\Powershell.exe")
+		if not os.path.exists(pwrShellCmd):
+			pwrShellCmd = "powershell"
+
+		cmd = [pwrShellCmd,"-ExecutionPolicy", "Bypass", "-Command", scriptlet]
+		p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+		out,err = p.communicate()
+
+		if(err): logger.warning(err)
+		logger.debug("Suspending output '%s'" % out)
 
 	def rebootMachine(self):
 		self._isRebootTriggered = True
