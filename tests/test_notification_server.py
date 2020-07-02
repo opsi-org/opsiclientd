@@ -35,7 +35,7 @@ def testNotificationServer(config, configFile):
 	ept._notificationServer.addSubject(choiceSubject)
 
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	sock.connect(("127.0.0.1", ept._notificationServerPort))		
+	sock.connect(("127.0.0.1", ept.notificationServerPort))		
 	try:
 		data = json.loads(sock.recv(10 * 1024))
 		ids = []
