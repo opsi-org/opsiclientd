@@ -582,7 +582,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not port:
 			raise Exception(u'notification_server.popup_port not defined')
 
-		notifierCommand = config.get('opsiclientd_notifier', 'command').replace('%port%', forceUnicode(port))
+		notifierCommand = config.get('opsiclientd_notifier', 'command')
 		if not notifierCommand:
 			raise Exception(u'opsiclientd_notifier.command not defined')
 		notifierCommand += u" -s notifier\\popup.ini"
@@ -599,7 +599,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			try:
 				self._popupNotificationServer = NotificationServer(
 					address="127.0.0.1",
-					port=port,
+					start_port=port,
 					subjects=[popupSubject, choiceSubject]
 				)
 				logger.setLogFormat(getLogFormat("popup notification server"), object=self._popupNotificationServer)
@@ -607,7 +607,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			except Exception as e:
 				logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
 				raise
-
+			
+			notifierCommand = notifierCommand.replace('%port%', forceUnicode(self._popupNotificationServer.port))
+			
 			choiceSubject.setChoices([_('Close')])
 			choiceSubject.setCallbacks([self.popupCloseCallback])
 
