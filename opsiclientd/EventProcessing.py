@@ -134,42 +134,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\\sessionhelper\\getActiveSessionIds.exe')
 
 		self.getSessionId()
-		self._notificationServerPort = forceInt(config.get('notification_server', 'start_port'))
-		self.setNotificationServerPort()
-
-	def setNotificationServerPort(self, port=None):
-		"""
-		Set the port to be used by the notification server.
-
-		:param port: The port to use. \
-If this is `None` a random port will be chosen.
-		:type port: int
-		"""
-		def getRandomPortViaSessionID(multiplicator=3):
-			sid = self.getSessionId()
-			match = re.search(r"(\d+)", str(sid))
-			if match:
-				sid = int(match.group(1))
-			else:
-				sid = 1
-			return forceInt(config.get('notification_server', 'start_port')) + (multiplicator * sid)
-
-		MAX_ALLOWED_PORT = 65536
-
-		if port is None:
-			port = getRandomPortViaSessionID()
-
-			if port > MAX_ALLOWED_PORT:
-				port = getRandomPortViaSessionID(1)
-			if port > MAX_ALLOWED_PORT or not RUNNING_ON_WINDOWS:
-
-				port = random.randrange(
-					forceInt(config.get('notification_server', 'start_port')),
-					MAX_ALLOWED_PORT
-				)
-
-		logger.info('Setting port for the NotificationServer to {0}'.format(port))
-		self._notificationServerPort = port
 
 	# ServiceConnection
 	def connectionThreadOptions(self):
@@ -247,49 +211,49 @@ If this is `None` a random port will be chosen.
 	def setStatusMessage(self, message):
 		self._statusSubject.setMessage(message)
 
+	@property
+	def notificationServerPort(self):
+		if not self._notificationServer:
+			return None
+		return self._notificationServer.port
+	
 	def startNotificationServer(self):
-		logger.notice(u"Starting notification server on port %s" % self._notificationServerPort)
-		error = None
-		for i in range(3):
-			try:
-				self._notificationServer = NotificationServer(
-					address=config.get('notification_server', 'interface'),
-					port=self._notificationServerPort,
-					subjects=[
-						self._statusSubject,
-						self._messageSubject,
-						self._serviceUrlSubject,
-						self._clientIdSubject,
-						self._actionProcessorInfoSubject,
-						self._opsiclientdInfoSubject,
-						self._detailSubjectProxy,
-						self._currentProgressSubjectProxy,
-						self._overallProgressSubjectProxy
-					]
-				)
-				logger.setLogFormat(getLogFormat("notification server"), object=self._notificationServer)
-				self._notificationServer.daemon = True
-				self._notificationServer.start()
-				timeout = 0
-				while not self._notificationServer.isListening() and not self._notificationServer.errorOccurred():
-					if (timeout >= 6):
-						raise Exception(u"Timed out after %d seconds while waiting for notification server to start" % timeout)
-					time.sleep(1)
-					timeout +=1
+		logger.notice("Starting notification server")
+		
+		try:
+			self._notificationServer = NotificationServer(
+				address=config.get('notification_server', 'interface'),
+				start_port=forceInt(config.get('notification_server', 'start_port')),
+				subjects=[
+					self._statusSubject,
+					self._messageSubject,
+					self._serviceUrlSubject,
+					self._clientIdSubject,
+					self._actionProcessorInfoSubject,
+					self._opsiclientdInfoSubject,
+					self._detailSubjectProxy,
+					self._currentProgressSubjectProxy,
+					self._overallProgressSubjectProxy
+				]
+			)
+			logger.setLogFormat(getLogFormat("notification server"), object=self._notificationServer)
+			self._notificationServer.daemon = True
+			self._notificationServer.start()
+			timeout = 0
+			while not self._notificationServer.isListening() and not self._notificationServer.errorOccurred():
+				if (timeout >= 6):
+					raise Exception(u"Timed out after %d seconds while waiting for notification server to start" % timeout)
+				time.sleep(1)
+				timeout +=1
 
-				if self._notificationServer.errorOccurred():
-					raise Exception(self._notificationServer.errorOccurred())
-				logger.notice(u"Notification server started")
-				error = None
-				break
-			except Exception as e:
-				error = forceUnicode(e)
-				logger.error(u"Failed to start notification server: %s" % error)
-				self._notificationServerPort += 1
-
-		if error:
+			if self._notificationServer.errorOccurred():
+				raise Exception(self._notificationServer.errorOccurred())
+			logger.notice(u"Notification server started (listening on port %d)" % self.notificationServerPort)
+		except Exception as e:
+			error = forceUnicode(e)
+			logger.error(u"Failed to start notification server: %s" % error)
 			raise Exception(u"Failed to start notification server: %s" % error)
-
+	
 	def stopNotificationServer(self):
 		if not self._notificationServer:
 			return
@@ -398,7 +362,7 @@ None otherwise.
 		logger.notice(u"Starting notifier application in session '%s'", self.getSessionId())
 		try:
 			pid = self.runCommandInSession(
-				command = command.replace('%port%', forceUnicode(self._notificationServerPort)).replace('%id%', forceUnicode(notifierId)),
+				command = command.replace('%port%', forceUnicode(self.notificationServerPort)).replace('%id%', forceUnicode(notifierId)),
 				desktop = desktop, waitForProcessEnding = False)
 			time.sleep(3)
 			return pid
@@ -413,7 +377,7 @@ None otherwise.
 		try:
 			pid = self.runCommandInSession(
 				# TODO: put the replacing into an command itself.
-				command=command.replace('%port%', forceUnicode(self._notificationServerPort)).replace('%id%', forceUnicode(notifierId)),
+				command=command.replace('%port%', forceUnicode(self.notificationServerPort)).replace('%id%', forceUnicode(notifierId)),
 				waitForProcessEnding=False
 			)
 			time.sleep(3)
