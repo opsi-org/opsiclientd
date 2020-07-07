@@ -42,14 +42,15 @@ import os
 import time
 import threading
 
-from OPSI.Logger import Logger
+#from OPSI.Logger import Logger
+from opsicommon.logging import logger
 from OPSI.Types import forceBool, forceInt, forceOpsiTimestamp, forceUnicode
 from OPSI.Util import timestamp
 from OPSI.Backend.SQLite import SQLite
 
 from opsiclientd.Config import Config
 
-logger = Logger()
+#logger = Logger()
 config = Config()
 
 TIMELINE_IMAGE_URL = u'/timeline/timeline_js/images/'

@@ -29,7 +29,8 @@ import json
 import codecs
 import threading
 
-from OPSI.Logger import Logger
+#from OPSI.Logger import Logger
+from opsicommon.logging import logger
 from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
 
@@ -37,7 +38,7 @@ from opsiclientd.Config import Config
 from opsiclientd.OpsiService import isConfigServiceReachable
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
-logger = Logger()
+#logger = Logger()
 config = Config()
 
 

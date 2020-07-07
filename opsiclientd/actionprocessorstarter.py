@@ -27,13 +27,15 @@ import locale
 import os
 import sys
 
-from OPSI.Logger import LOG_NONE, Logger
+#from OPSI.Logger import LOG_NONE, Logger
+import opsicommon.logging
+from opsicommon.logging import logger, LOG_NONE
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI import System
 
 from opsiclientd.Config import getLogFormat
 
-logger = Logger()
+#logger = Logger()
 
 def main():
 	if len(sys.argv) != 17:
@@ -52,7 +54,8 @@ def main():
 	logger.setConsoleLevel(LOG_NONE)
 	logger.setLogFile(logFile)
 	logger.setFileLevel(int(logLevel))
-	logger.setLogFormat(getLogFormat(os.path.basename(sys.argv[0])))
+	opsicommon.logging.set_context({'instance' : os.path.basename(sys.argv[0])})
+	#logger.setLogFormat(getLogFormat(os.path.basename(sys.argv[0])))
 
 	logger.debug("Called with arguments: %s" % u', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword, createEnvironment)) )
 

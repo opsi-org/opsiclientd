@@ -27,9 +27,10 @@ Localisation ofopsiclientd.
 import gettext
 import locale
 
-from OPSI.Logger import Logger
+#from OPSI.Logger import Logger
+from opsicommon.logging import logger
 
-logger = Logger()
+#logger = Logger()
 
 translation = None
 try:

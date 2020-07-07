@@ -31,7 +31,9 @@ import os
 from twisted.internet import defer
 
 from OPSI.Exceptions import OpsiAuthenticationError
-from OPSI.Logger import Logger
+#from OPSI.Logger import Logger
+import opsicommon.logging
+from opsicommon.logging import logger
 from OPSI.Types import forceUnicode
 from OPSI.Service.Worker import WorkerOpsiJsonRpc
 from OPSI.Service.Resource import ResourceOpsi
@@ -42,13 +44,14 @@ from opsiclientd.Events.SwOnDemand import SwOnDemandEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
-logger = Logger()
+#logger = Logger()
 config = Config()
 
 
 class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 	def __init__(self, service, request, resource):
-		logger.setLogFormat(getLogFormat(u'software on demand'), object=self)
+		#logger.setLogFormat(getLogFormat(u'software on demand'), object=self)
+		opsicommon.logging.set_context({'instance' : 'software on demand'})
 		self._allowedMethods = self._getAllowedMethods()
 		self._fireEvent = False
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)

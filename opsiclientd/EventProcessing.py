@@ -38,7 +38,9 @@ from contextlib import contextmanager
 from datetime import datetime as dt, timedelta
 
 from OPSI import System
-from OPSI.Logger import Logger, LOG_WARNING
+#from OPSI.Logger import Logger, LOG_WARNING
+import opsicommon.logging
+from opsicommon.logging import logger, LOG_WARNING
 from OPSI.Object import ProductOnClient
 from OPSI.Types import forceInt, forceList, forceUnicode, forceUnicodeLower
 from OPSI.Util.Message import (
@@ -56,7 +58,7 @@ from opsiclientd.State import State
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 
-logger = Logger()
+#logger = Logger()
 config = Config()
 state = State()
 timeline = Timeline()
@@ -82,12 +84,13 @@ def noop(_unused):
 
 class EventProcessingThread(KillableThread, ServiceConnection):
 	def __init__(self, opsiclientd, event):
-		logger.setLogFormat(
-			getLogFormat(
-				u'event processing {0}'.format(event.eventConfig.getId())
-			),
-			object=self
-		)
+		#logger.setLogFormat(
+		#	getLogFormat(
+		#		u'event processing {0}'.format(event.eventConfig.getId())
+		#	),
+		#	object=self
+		#)
+		opsicommon.logging.set_context({'instance' : 'event processing {0}'.format(event.eventConfig.getId())})
 
 		KillableThread.__init__(self)
 		ServiceConnection.__init__(self)
@@ -236,7 +239,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					self._overallProgressSubjectProxy
 				]
 			)
-			logger.setLogFormat(getLogFormat("notification server"), object=self._notificationServer)
+			#logger.setLogFormat(getLogFormat("notification server"), object=self._notificationServer)
+			opsicommon.logging.set_context({'instance' : 'notification server'})
 			self._notificationServer.daemon = True
 			self._notificationServer.start()
 			timeout = 0

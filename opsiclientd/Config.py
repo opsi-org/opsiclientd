@@ -30,7 +30,8 @@ import platform
 import re
 import sys
 
-from OPSI.Logger import Logger, LOG_NOTICE
+#from OPSI.Logger import Logger, LOG_NOTICE
+from opsicommon.logging import logger, LOG_NOTICE
 from OPSI.Types import (
 	forceBool, forceHostId, forceInt, forceFilename, forceList,
 	forceProductIdList, forceUnicode, forceUnicodeLower, forceUrl,
@@ -68,7 +69,7 @@ USZQNXthwmMy0+iIgQLAmBDu9Tz53p+yqHIhS+7eYNfzh2HeIG3EY515ncnZG2Xi
 QuBW/YzuIIiknjESIHBVA6YWeLNR
 -----END CERTIFICATE-----'''
 
-logger = Logger()
+#logger = Logger()
 
 
 def getLogFormat(moduleName):

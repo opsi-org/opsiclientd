@@ -38,7 +38,9 @@ from Crypto.Hash import MD5
 from Crypto.Signature import pkcs1_15
 
 from OPSI import System
-from OPSI.Logger import Logger
+#from OPSI.Logger import Logger
+import opsicommon.logging
+from opsicommon.logging import logger
 from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
 from OPSI.Util import getPublicKey
 from OPSI.Util.Thread import KillableThread
@@ -52,7 +54,7 @@ from opsiclientd.Config import getLogFormat, Config
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
 
-logger = Logger()
+#logger = Logger()
 config = Config()
 
 
@@ -282,7 +284,8 @@ class ServiceConnection(object):
 
 class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, statusSubject=None):
-		logger.setLogFormat(getLogFormat(u'service connection'), object=self)
+		#logger.setLogFormat(getLogFormat(u'service connection'), object=self)
+		opsicommon.logging.set_context({'instance' : 'service connection'})
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username

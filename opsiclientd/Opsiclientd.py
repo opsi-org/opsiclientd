@@ -38,7 +38,9 @@ import traceback
 from contextlib import contextmanager
 
 from OPSI import System
-from OPSI.Logger import Logger
+#from OPSI.Logger import Logger
+import opsicommon.logging
+from opsicommon.logging import logger
 from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
@@ -68,7 +70,7 @@ if RUNNING_ON_WINDOWS:
 	from opsiclientd.Events.Windows.GUIStartup import (
 		GUIStartupEventConfig, GUIStartupEventGenerator)
 
-logger = Logger()
+#logger = Logger()
 config = Config()
 timeline = Timeline()
 state = State()
@@ -78,7 +80,9 @@ class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
 		System.ensure_not_already_running("opsiclientd")
 		
-		logger.setLogFormat(getLogFormat(u'opsiclientd'), object=self)
+		#logger.setLogFormat(getLogFormat(u'opsiclientd'), object=self)
+		opsicommon.logging.set_context({'instance' : 'opsiclientd'})
+
 		logger.debug("Opsiclient initiating")
 
 		EventListener.__init__(self)
@@ -602,7 +606,9 @@ class Opsiclientd(EventListener, threading.Thread):
 					start_port=port,
 					subjects=[popupSubject, choiceSubject]
 				)
-				logger.setLogFormat(getLogFormat("popup notification server"), object=self._popupNotificationServer)
+				#logger.setLogFormat(getLogFormat("popup notification server"), object=self._popupNotificationServer)
+				opsicommon.logging.set_context({'instance' : 'popup notification server'})
+
 				self._popupNotificationServer.start()
 			except Exception as e:
 				logger.error(u"Failed to start notification server: %s" % forceUnicode(e))

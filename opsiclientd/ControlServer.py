@@ -45,7 +45,9 @@ from OPSI import System
 from OPSI.Util.Log import truncateLogData
 from OPSI.Backend.Backend import ConfigDataBackend
 from OPSI.Exceptions import OpsiAuthenticationError
-from OPSI.Logger import Logger
+#from OPSI.Logger import Logger
+import opsicommon.logging
+from opsicommon.logging import logger
 from OPSI.Service import SSLContext, OpsiService
 from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface
 from OPSI.Service.Resource import ResourceOpsi, ResourceOpsiJsonRpc, ResourceOpsiJsonInterface
@@ -65,7 +67,7 @@ if RUNNING_ON_WINDOWS:
 	import win32security
 
 config = Config()
-logger = Logger()
+#logger = Logger()
 state = State()
 
 infoPage = u'''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
@@ -113,7 +115,8 @@ except Exception as err:
 
 class WorkerOpsiclientd(WorkerOpsi):
 	def __init__(self, service, request, resource):
-		logger.setLogFormat(getLogFormat(u'control server'), object=self)
+		#logger.setLogFormat(getLogFormat(u'control server'), object=self)
+		opsicommon.logging.set_context({'instance' : 'control server'})
 		WorkerOpsi.__init__(self, service, request, resource)
 		self._auth_module = None
 		if os.name == 'posix':
@@ -378,7 +381,8 @@ class ResourceOpsiclientdInfo(ResourceOpsiclientd):
 class ControlServer(OpsiService, threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
 		OpsiService.__init__(self)
-		logger.setLogFormat(getLogFormat(u'control server'), object=self)
+		#logger.setLogFormat(getLogFormat(u'control server'), object=self)
+		opsicommon.logging.set_context({'instance' : 'control server'})
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._httpsPort = httpsPort

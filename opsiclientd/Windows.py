@@ -36,7 +36,8 @@ import win32com.server.policy
 import win32com.client
 import servicemanager
 
-from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG, LOG_ERROR
+#from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG, LOG_ERROR
+from opsicommon.logging import logger, LOG_NONE, LOG_DEBUG, LOG_ERROR
 from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
 
@@ -54,7 +55,7 @@ PROGID_EventSubscription = "EventSystem.EventSubscription"
 
 IID_ISensLogon = "{d597bab3-5b9f-11d1-8dd2-00aa004abd5e}"
 
-logger = Logger()
+#logger = Logger()
 
 import wmi
 import pythoncom

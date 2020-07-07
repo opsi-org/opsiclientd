@@ -25,7 +25,8 @@ from hashlib import md5
 from Crypto.Hash import MD5
 from Crypto.Signature import pkcs1_15
 
-from OPSI.Logger import LOG_INFO, Logger
+#from OPSI.Logger import LOG_INFO, Logger
+from opsicommon.logging import logger, LOG_INFO
 from OPSI.Object import ProductOnClient
 from OPSI.Types import (
 	forceBool, forceInt, forceList, forceProductIdList, forceUnicode)
@@ -55,7 +56,7 @@ __all__ = [
 	'ProductCacheService'
 ]
 
-logger = Logger()
+#logger = Logger()
 config = Config()
 state = State()
 timeline = Timeline()

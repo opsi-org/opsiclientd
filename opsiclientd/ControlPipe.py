@@ -33,7 +33,9 @@ import time
 from ctypes import byref, c_char_p, c_ulong, create_string_buffer
 
 from OPSI.Backend.Backend import describeInterface
-from OPSI.Logger import Logger
+#from OPSI.Logger import Logger
+import opsicommon.logging
+from opsicommon.logging import logger
 from OPSI.Types import forceUnicode
 from OPSI.Util import fromJson, toJson
 from OPSI.Service.JsonRpc import JsonRpc
@@ -43,7 +45,7 @@ from opsiclientd.Config import getLogFormat
 if os.name == 'nt':
 	from ctypes import windll
 
-logger = Logger()
+#logger = Logger()
 
 
 def ControlPipeFactory(opsiclientdRpcInterface):
@@ -60,7 +62,8 @@ class ControlPipe(threading.Thread):
 	Base class for a named pipe which handles remote procedure calls.
 	"""
 	def __init__(self, opsiclientdRpcInterface):
-		logger.setLogFormat(getLogFormat(u'control pipe'), object=self)
+		#logger.setLogFormat(getLogFormat(u'control pipe'), object=self)
+		opsicommon.logging.set_context({'instance' : 'control pipe'})
 		threading.Thread.__init__(self)
 		self._opsiclientdRpcInterface = opsiclientdRpcInterface
 		self._pipe = None
@@ -199,7 +202,8 @@ class NTControlPipeConnection(threading.Thread):
 	"""
 
 	def __init__(self, ntControlPipe, pipe, bufferSize):
-		logger.setLogFormat(getLogFormat(u'control pipe'), object=self)
+		#logger.setLogFormat(getLogFormat(u'control pipe'), object=self)
+		opsicommon.logging.set_context({'instance' : 'control pipe'})
 		threading.Thread.__init__(self)
 		self._ntControlPipe = ntControlPipe
 		self._pipe = pipe
@@ -323,7 +327,9 @@ class NTControlPipe(ControlPipe):
 class OpsiclientdRpcPipeInterface(object):
 	def __init__(self, opsiclientd):
 		self.opsiclientd = opsiclientd
-		logger.setLogFormat(getLogFormat(u'opsiclientd'), object=self)
+		#logger.setLogFormat(getLogFormat(u'opsiclientd'), object=self)
+		opsicommon.logging.set_context({'instance' : 'opsiclientd'})
+
 
 	def getInterface(self):
 		"""

@@ -32,7 +32,8 @@ import time
 import subprocess
 from signal import SIGHUP, SIGTERM, SIGINT
 
-from OPSI.Logger import Logger, LOG_NONE, LOG_NOTICE, LOG_WARNING
+#from OPSI.Logger import Logger, LOG_NONE, LOG_NOTICE, LOG_WARNING
+from opsicommon.logging import logger, LOG_NONE, LOG_NOTICE, LOG_WARNING
 from OPSI.Types import forceUnicode
 
 from opsiclientd import __version__
@@ -40,7 +41,7 @@ from opsiclientd.Config import Config
 
 __all__ = ('OpsiclientdInit', )
 
-logger = Logger()
+#logger = Logger()
 config = Config()
 
 try:

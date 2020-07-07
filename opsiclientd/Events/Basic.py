@@ -32,7 +32,8 @@ from __future__ import absolute_import
 import threading
 import time
 
-from OPSI.Logger import Logger
+#from OPSI.Logger import Logger
+from opsicommon.logging import logger
 from OPSI.Types import forceList, forceUnicode
 
 from opsiclientd.Config import getLogFormat
@@ -40,7 +41,7 @@ from opsiclientd.State import State
 
 __all__ = ['Event', 'EventGenerator', 'EventListener']
 
-logger = Logger()
+#logger = Logger()
 state = State()
 
 
