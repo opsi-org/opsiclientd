@@ -238,7 +238,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.notice(u"Control pipe started")
 				yield
 			except Exception as e:
-				logger.error("Failed to start control pipe: {0}", forceUnicode(e))
+				logger.error("Failed to start control pipe: %s", forceUnicode(e))
 				raise
 			finally:
 				logger.info("Stopping control pipe")
@@ -247,7 +247,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					controlPipe.join(2)
 					logger.info("Control pipe stopped")
 				except (NameError, RuntimeError) as stopError:
-					logger.debug("Stopping controlPipe failed: {0}", stopError)
+					logger.debug("Stopping controlPipe failed: %s", stopError)
 
 		@contextmanager
 		def getControlServer():
@@ -426,7 +426,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			"""
 
 			for thread in threading.enumerate():
-				logger.info("Runnning thread on main thread exit: {0}", thread)
+				logger.info("Runnning thread on main thread exit: %s", thread)
 
 			logger.info(u"Exiting opsiclientd thread")
 

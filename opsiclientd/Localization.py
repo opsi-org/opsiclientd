@@ -36,7 +36,7 @@ translation = None
 try:
 	language = locale.getdefaultlocale()[0].split('_')[0]
 except Exception as error:
-	logger.debug("Unable to load localisation: {0!r}", error)
+	logger.debug("Unable to load localisation: '%s'", error)
 	language = "en"
 
 

@@ -92,7 +92,7 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 						finally:
 							pythoncom.CoUninitialize()
 				except Exception as importError:
-					logger.warning(u"Failed to import: {}, retrying in 2 seconds", forceUnicode(importError))
+					logger.warning(u"Failed to import: %s, retrying in 2 seconds", forceUnicode(importError))
 					time.sleep(2)
 
 	return (wmi, pythoncom)
@@ -160,7 +160,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		# Wrapping because ReportServiceStatus sometimes lets windows
 		# report a crash of opsiclientd (python 2.6.5) invalid handle
 		try:
-			logger.debug('Reporting service status: {}', serviceStatus)
+			logger.debug('Reporting service status: %s', serviceStatus)
 			win32serviceutil.ServiceFramework.ReportServiceStatus(
 				self,
 				serviceStatus,
@@ -169,7 +169,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 				svcExitCode=svcExitCode
 			)
 		except Exception as exc:
-			logger.error("Failed to report service status {0}: {1}", serviceStatus, reportStatusError)
+			logger.error("Failed to report service status %s: %s", serviceStatus, reportStatusError)
 
 	def SvcInterrogate(self):
 		logger.debug("OpsiclientdService SvcInterrogate")
@@ -319,7 +319,7 @@ class ShutdownThread(threading.Thread):
 				break
 			except Exception as shutdownError:
 				# Device not ready?
-				logger.info(u"Failed to initiate shutdown: {}", forceUnicode(shutdownError))
+				logger.info(u"Failed to initiate shutdown: %s", forceUnicode(shutdownError))
 				time.sleep(1)
 
 
@@ -335,7 +335,7 @@ class RebootThread(threading.Thread):
 				break
 			except Exception as rebootError:
 				# Device not ready?
-				logger.info(u"Failed to initiate reboot: {}", forceUnicode(rebootError))
+				logger.info(u"Failed to initiate reboot: %s", forceUnicode(rebootError))
 				time.sleep(1)
 
 

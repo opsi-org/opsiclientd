@@ -133,7 +133,7 @@ class TimelineImplementation(object):
 	def __init__(self):
 		timelineFolder = os.path.dirname(config.get('global', 'timeline_db'))
 		if not os.path.exists(timelineFolder):
-			logger.debug("Creating missing directory {!r}", timelineFolder)
+			logger.debug("Creating missing directory '%s'", timelineFolder)
 			os.makedirs(timelineFolder)
 
 		self._sql = SQLite(

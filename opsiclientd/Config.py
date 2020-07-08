@@ -567,7 +567,7 @@ class ConfigImplementation(object):
 			if alternativeDepots:
 				logger.info(u"Got alternative depots for products: %s" % productIds)
 				for index, depot in enumerate(alternativeDepots, start=1):
-					logger.info(u"{:d}. alternative depot is {}", index, depot.id)
+					logger.info(u"%d. alternative depot is %s", index, depot.id)
 
 				defaultInterface = None
 				try:

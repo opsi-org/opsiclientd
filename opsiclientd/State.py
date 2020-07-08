@@ -95,7 +95,7 @@ class StateImplementation(object):
 		try:
 			return self._state[name]
 		except KeyError:
-			logger.warning(u"Unknown state name {0!r}, returning default {1!r}", name, default)
+			logger.warning(u"Unknown state name '%s', returning default '%s'", name, default)
 			return default
 
 	def set(self, name, value):

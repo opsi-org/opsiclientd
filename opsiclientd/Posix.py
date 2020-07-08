@@ -122,7 +122,7 @@ class OpsiclientdInit(object):
 				cmds.append([iptables, "-A", "INPUT", "-p", "tcp", "--dport", str(port), "-j", "ACCEPT"])
 		
 		for cmd in cmds:
-			logger.info("Running command: {0}", str(cmd))
+			logger.info("Running command: %s", str(cmd))
 			subprocess.call(cmd)
 
 	def signalHandler(self, signo, stackFrame):
