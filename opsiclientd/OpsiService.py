@@ -284,8 +284,7 @@ class ServiceConnection(object):
 
 class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, statusSubject=None):
-		#logger.setLogFormat(getLogFormat(u'service connection'), object=self)
-		opsicommon.logging.set_context({'instance' : 'service connection'})
+		#logger.setLogFormat(getLogFormat(u'service connection'), object=self)		#moved to run
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username
@@ -308,6 +307,7 @@ class ServiceConnectionThread(KillableThread):
 		return self._username
 
 	def run(self):
+		opsicommon.logging.set_context({'instance' : 'service connection'})
 		logger.debug(u"ServiceConnectionThread started...")
 		self.running = True
 		self.connected = False

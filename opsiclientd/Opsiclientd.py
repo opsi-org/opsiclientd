@@ -80,8 +80,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
 		System.ensure_not_already_running("opsiclientd")
 		
-		#logger.setLogFormat(getLogFormat(u'opsiclientd'), object=self)
-		opsicommon.logging.set_context({'instance' : 'opsiclientd'})
+		#logger.setLogFormat(getLogFormat(u'opsiclientd'), object=self)		#moved to run
 
 		logger.debug("Opsiclient initiating")
 
@@ -213,6 +212,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._actionProcessorUserPassword = u''
 
 	def run(self):
+		opsicommon.logging.set_context({'instance' : 'opsiclientd'})
 		try:
 			self._run()
 		except Exception as exc:

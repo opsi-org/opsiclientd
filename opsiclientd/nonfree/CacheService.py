@@ -26,6 +26,7 @@ from Crypto.Hash import MD5
 from Crypto.Signature import pkcs1_15
 
 #from OPSI.Logger import LOG_INFO, Logger
+import opsicommon.logging
 from opsicommon.logging import logger, LOG_INFO
 from OPSI.Object import ProductOnClient
 from OPSI.Types import (
@@ -227,7 +228,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		try:
 			threading.Thread.__init__(self)
 			ServiceConnection.__init__(self)
-			logger.setLogFormat(getLogFormat(u'config cache service'), object=self)
+			#logger.setLogFormat(getLogFormat(u'config cache service'), object=self)
 
 			self._configCacheDir = os.path.join(config.get('cache_service', 'storage_dir'), 'config')
 			self._opsiModulesFile = os.path.join(self._configCacheDir, 'cached_modules')
@@ -412,6 +413,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		self._stopped = True
 
 	def run(self):
+		opsicommon.logging.set_context({'instance' : 'config cache service'})
 		self._running = True
 		logger.notice(u"Config cache service started")
 		try:
@@ -610,7 +612,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 	def __init__(self):
 		threading.Thread.__init__(self)
 		ServiceConnection.__init__(self)
-		logger.setLogFormat(getLogFormat(u'product cache service'), object=self)
+		#logger.setLogFormat(getLogFormat(u'product cache service'), object=self)
 
 		self._storageDir = config.get('cache_service', 'storage_dir')
 		self._tempDir = os.path.join(self._storageDir, 'tmp')
@@ -687,6 +689,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		self._dynamicBandwidth = forceBool(dynamicBandwidth)
 
 	def run(self):
+		opsicommon.logging.set_context({'instance' : 'product cache service'})
 		self._running = True
 		logger.notice(u"Product cache service started")
 		try:

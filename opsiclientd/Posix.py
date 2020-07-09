@@ -33,6 +33,7 @@ import subprocess
 from signal import SIGHUP, SIGTERM, SIGINT
 
 #from OPSI.Logger import Logger, LOG_NONE, LOG_NOTICE, LOG_WARNING
+import opsicommon.logging
 from opsicommon.logging import logger, LOG_NONE, LOG_NOTICE, LOG_WARNING
 from OPSI.Types import forceUnicode
 
@@ -68,10 +69,13 @@ class OpsiclientdInit(object):
 							help="Daemonize process.")
 		parser.add_argument("--pid-file", dest="pidFile", default=None,
 							help="Write the PID into this file.")
+		parser.add_argument("--log-filter", dest="logFilter", default=None,
+							help="Filter log Record contexti by this value.")
 
 		options = parser.parse_args()
 
 		logger.setConsoleLevel(options.logLevel)
+		opsicommon.logging.set_filter_value(options.logFilter)
 
 		if options.signalHandlers:
 			logger.debug("Registering signal handlers")

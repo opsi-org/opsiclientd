@@ -381,8 +381,7 @@ class ResourceOpsiclientdInfo(ResourceOpsiclientd):
 class ControlServer(OpsiService, threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
 		OpsiService.__init__(self)
-		#logger.setLogFormat(getLogFormat(u'control server'), object=self)
-		opsicommon.logging.set_context({'instance' : 'control server'})
+		#logger.setLogFormat(getLogFormat(u'control server'), object=self)		#moved to run
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._httpsPort = httpsPort
@@ -398,6 +397,7 @@ class ControlServer(OpsiService, threading.Thread):
 		self.authFailureCount = {}
 
 	def run(self):
+		opsicommon.logging.set_context({'instance' : 'control server'})
 		self._running = True
 		try:
 			logger.info(u"creating root resource")

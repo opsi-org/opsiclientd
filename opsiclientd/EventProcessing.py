@@ -90,7 +90,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		#	),
 		#	object=self
 		#)
-		opsicommon.logging.set_context({'instance' : 'event processing {0}'.format(event.eventConfig.getId())})
 
 		KillableThread.__init__(self)
 		ServiceConnection.__init__(self)
@@ -1236,6 +1235,7 @@ None otherwise.
 			return True
 	
 	def run(self):
+		opsicommon.logging.set_context({'instance' : 'event processing {0}'.format(self.event.eventConfig.getId())})
 		timelineEventId = None
 		try:
 			if self.event.eventConfig.workingWindow:

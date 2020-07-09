@@ -62,8 +62,7 @@ class ControlPipe(threading.Thread):
 	Base class for a named pipe which handles remote procedure calls.
 	"""
 	def __init__(self, opsiclientdRpcInterface):
-		#logger.setLogFormat(getLogFormat(u'control pipe'), object=self)
-		opsicommon.logging.set_context({'instance' : 'control pipe'})
+		#logger.setLogFormat(getLogFormat(u'control pipe'), object=self)	#moved to run
 		threading.Thread.__init__(self)
 		self._opsiclientdRpcInterface = opsiclientdRpcInterface
 		self._pipe = None
@@ -71,6 +70,9 @@ class ControlPipe(threading.Thread):
 		self._bufferSize = 4096
 		self._running = False
 		self._stopped = False
+
+	def run(self):
+		opsicommon.logging.set_context({'instance' : 'control pipe'})
 
 	def stop(self):
 		self._stopped = True
@@ -130,6 +132,7 @@ class PosixControlPipe(ControlPipe):
 				logger.debug(u"Closing pipe {0!r} failed: {1}".format(self._pipe, forceUnicode(error)))
 
 	def run(self):
+		opsicommon.logging.set_context({'instance' : 'control pipe'})
 		self._running = True
 
 		try:
@@ -202,8 +205,7 @@ class NTControlPipeConnection(threading.Thread):
 	"""
 
 	def __init__(self, ntControlPipe, pipe, bufferSize):
-		#logger.setLogFormat(getLogFormat(u'control pipe'), object=self)
-		opsicommon.logging.set_context({'instance' : 'control pipe'})
+		#logger.setLogFormat(getLogFormat(u'control pipe'), object=self)		#moved to run
 		threading.Thread.__init__(self)
 		self._ntControlPipe = ntControlPipe
 		self._pipe = pipe
@@ -218,6 +220,7 @@ class NTControlPipeConnection(threading.Thread):
 				pass
 
 	def run(self):
+		opsicommon.logging.set_context({'instance' : 'control pipe'})
 		self._running = True
 		try:
 			chBuf = create_string_buffer(self._bufferSize)
@@ -297,6 +300,7 @@ class NTControlPipe(ControlPipe):
 		logger.debug(u"Pipe %s created", self._pipeName)
 
 	def run(self):
+		opsicommon.logging.set_context({'instance' : 'control pipe'})
 		ERROR_PIPE_CONNECTED = 535
 		self._running = True
 		try:
