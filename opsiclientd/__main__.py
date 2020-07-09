@@ -37,6 +37,7 @@ def action_processor_starter():
 	main()
 
 def opsiclientd():
+	opsicommon.logging.set_format(opsicommon.logging.DEFAULT_COLORED_FORMAT)
 	if os.name == 'nt':
 		from opsiclientd.Windows import OpsiclientdInit
 	elif os.name == 'posix':
@@ -44,7 +45,6 @@ def opsiclientd():
 	else:
 		raise NotImplementedError("OS %s not supported." % os.name)
 
-	opsicommon.logging.set_format(opsicommon.logging.DEFAULT_COLORED_FORMAT)
 	OpsiclientdInit()
 
 def main():
