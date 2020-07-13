@@ -115,8 +115,7 @@ except Exception as err:
 
 class WorkerOpsiclientd(WorkerOpsi):
 	def __init__(self, service, request, resource):
-		#logger.setLogFormat(getLogFormat(u'control server'), object=self)
-		opsicommon.logging.set_context({'instance' : 'control server'})
+		#logger.setLogFormat(getLogFormat(u'control server'), object=self)		#moved to run
 		WorkerOpsi.__init__(self, service, request, resource)
 		self._auth_module = None
 		if os.name == 'posix':
@@ -125,6 +124,10 @@ class WorkerOpsiclientd(WorkerOpsi):
 		elif os.name == 'nt':
 			import OPSI.Backend.Manager.Authentication.NT
 			self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
+
+	def run(self):
+		with opsicommon.logging.log_context({'instance' : 'control server'}):
+			super().run()
 	
 	def _getCredentials(self):
 		(user, password) = self._getAuthorization()
@@ -397,56 +400,56 @@ class ControlServer(OpsiService, threading.Thread):
 		self.authFailureCount = {}
 
 	def run(self):
-		opsicommon.logging.set_context({'instance' : 'control server'})
-		self._running = True
-		try:
-			logger.info(u"creating root resource")
-			self.createRoot()
-			self._site = server.Site(self._root)
+		with opsicommon.logging.log_context({'instance' : 'control server'}):
+			self._running = True
+			try:
+				logger.info(u"creating root resource")
+				self.createRoot()
+				self._site = server.Site(self._root)
 
-			logger.debug('Creating SSLContext with the following values:')
-			logger.debug('\t-SSL Server Key File: {path}'.format(path=self._sslServerKeyFile))
-			if not os.path.exists(self._sslServerKeyFile):
-				logger.warning('The SSL server key file "{path}" is missing. '
-								'Please check your configuration.'.format(
-									path=self._sslServerKeyFile
-								)
+				logger.debug('Creating SSLContext with the following values:')
+				logger.debug('\t-SSL Server Key File: {path}'.format(path=self._sslServerKeyFile))
+				if not os.path.exists(self._sslServerKeyFile):
+					logger.warning('The SSL server key file "{path}" is missing. '
+									'Please check your configuration.'.format(
+										path=self._sslServerKeyFile
+									)
+					)
+				logger.debug('\t-SSL Server Cert File: {path}'.format(path=self._sslServerCertFile))
+				if not os.path.exists(self._sslServerCertFile):
+					logger.warning('The SSL server certificate file "{path}" is '
+									'missing. Please check your '
+									'configuration.'.format(
+										path=self._sslServerCertFile
+									)
+					)
+
+				self._server = reactor.listenSSL(
+					self._httpsPort,
+					self._site,
+					SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
 				)
-			logger.debug('\t-SSL Server Cert File: {path}'.format(path=self._sslServerCertFile))
-			if not os.path.exists(self._sslServerCertFile):
-				logger.warning('The SSL server certificate file "{path}" is '
-								'missing. Please check your '
-								'configuration.'.format(
-									path=self._sslServerCertFile
-								)
-				)
+				logger.notice(u"Control server is accepting HTTPS requests on port %d" % self._httpsPort)
 
-			self._server = reactor.listenSSL(
-				self._httpsPort,
-				self._site,
-				SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
-			)
-			logger.notice(u"Control server is accepting HTTPS requests on port %d" % self._httpsPort)
-
-			if not reactor.running:
-				logger.debug("Reactor is not running. Starting.")
-				reactor.run(installSignalHandlers=0)
-				logger.debug("Reactor run ended.")
-			else:
-				logger.debug("Reactor already running.")
-		
-		except CannotListenError as err:
-			logger.critical("Listening on port {0} impossible: {1}".format(self._httpsPort, err))
-			logger.logException(err)
-			self._opsiclientd.stop()
-			raise err
-		except Exception as err:
-			logger.warning("ControlServer {1} caught error: {0}".format(err, repr(self)))
-			logger.logException(err)
-			raise err
-		finally:
-			logger.notice("Control server exiting")
-			self._running = False
+				if not reactor.running:
+					logger.debug("Reactor is not running. Starting.")
+					reactor.run(installSignalHandlers=0)
+					logger.debug("Reactor run ended.")
+				else:
+					logger.debug("Reactor already running.")
+			
+			except CannotListenError as err:
+				logger.critical("Listening on port {0} impossible: {1}".format(self._httpsPort, err))
+				logger.logException(err)
+				self._opsiclientd.stop()
+				raise err
+			except Exception as err:
+				logger.warning("ControlServer {1} caught error: {0}".format(err, repr(self)))
+				logger.logException(err)
+				raise err
+			finally:
+				logger.notice("Control server exiting")
+				self._running = False
 
 	def stop(self):
 		if self._server:

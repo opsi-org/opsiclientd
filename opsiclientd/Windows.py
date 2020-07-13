@@ -37,6 +37,7 @@ import win32com.client
 import servicemanager
 
 #from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG, LOG_ERROR
+import opsicommon.logging
 from opsicommon.logging import logger, LOG_NONE, LOG_DEBUG, LOG_ERROR
 from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
@@ -101,20 +102,21 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 class OpsiclientdInit(object):
 	def __init__(self):
 		self._init_early_log()
-		logger.debug("OpsiclientdInit")
-		try:
-			# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
-			if len(sys.argv) == 1:
-				# Service process
-				logger.debug("OpsiclientdInit - Initialize")
-				servicemanager.Initialize()
-				servicemanager.PrepareToHostSingle(OpsiclientdService)
-				servicemanager.StartServiceCtrlDispatcher()
-			else:
-				logger.debug("OpsiclientdInit - HandleCommandLine")
-				win32serviceutil.HandleCommandLine(OpsiclientdService)	
-		except Exception as exc:
-			logger.logException(exc)
+		with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
+			logger.debug("OpsiclientdInit")
+			try:
+				# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
+				if len(sys.argv) == 1:
+					# Service process
+					logger.debug("OpsiclientdInit - Initialize")
+					servicemanager.Initialize()
+					servicemanager.PrepareToHostSingle(OpsiclientdService)
+					servicemanager.StartServiceCtrlDispatcher()
+				else:
+					logger.debug("OpsiclientdInit - HandleCommandLine")
+					win32serviceutil.HandleCommandLine(OpsiclientdService)	
+			except Exception as exc:
+				logger.logException(exc)
 	
 	def _init_early_log(self):
 		# Location of the main log file will be read from config file later on

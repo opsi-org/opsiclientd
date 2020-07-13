@@ -37,26 +37,26 @@ from opsiclientd.Config import getLogFormat
 
 def main():
 	#logger.setLogFormat(getLogFormat(os.path.basename(sys.argv[0])))
-	opsicommon.logging.set_context({'instance' : os.path.basename(sys.argv[0])})
-	if len(sys.argv) < 5:
-		print(f"Usage: {os.path.basename(sys.argv[0])} <username> <password> <port> [debug_logfile] <rpc>", file=sys.stderr)
-		sys.exit(1)
+	with opsicommon.logging.log_context({'instance' : os.path.basename(sys.argv[0])}):
+		if len(sys.argv) < 5:
+			print(f"Usage: {os.path.basename(sys.argv[0])} <username> <password> <port> [debug_logfile] <rpc>", file=sys.stderr)
+			sys.exit(1)
 
-	(username, password, port, rpc) = sys.argv[1:5]
-	if len(sys.argv) > 5:
-		rpc = sys.argv[5]
-		logger.setLogFile(sys.argv[4])
-		logger.setFileLevel(LOG_DEBUG)
+		(username, password, port, rpc) = sys.argv[1:5]
+		if len(sys.argv) > 5:
+			rpc = sys.argv[5]
+			logger.setLogFile(sys.argv[4])
+			logger.setFileLevel(LOG_DEBUG)
 
-	logger.debug("argv: %s" % sys.argv)
-	
-	address = f"https://localhost:{port}/opsiclientd"
+		logger.debug("argv: %s" % sys.argv)
+		
+		address = f"https://localhost:{port}/opsiclientd"
 
-	try:
-		with JSONRPCBackend(username=username, password=password, address=address) as backend:
-			logger.notice(f"Executing: {rpc}")
-			exec(f"backend.{rpc}")
-	except Exception as error:
-		logger.logException(error)
-		print(f"Error: %s" % error, file=sys.stderr)
-		sys.exit(1)
+		try:
+			with JSONRPCBackend(username=username, password=password, address=address) as backend:
+				logger.notice(f"Executing: {rpc}")
+				exec(f"backend.{rpc}")
+		except Exception as error:
+			logger.logException(error)
+			print(f"Error: %s" % error, file=sys.stderr)
+			sys.exit(1)

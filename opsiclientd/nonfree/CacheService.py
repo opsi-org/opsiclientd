@@ -228,7 +228,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		try:
 			threading.Thread.__init__(self)
 			ServiceConnection.__init__(self)
-			#logger.setLogFormat(getLogFormat(u'config cache service'), object=self)
+			#logger.setLogFormat(getLogFormat(u'config cache service'), object=self)		#moved to run
 
 			self._configCacheDir = os.path.join(config.get('cache_service', 'storage_dir'), 'config')
 			self._opsiModulesFile = os.path.join(self._configCacheDir, 'cached_modules')
@@ -413,23 +413,23 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		self._stopped = True
 
 	def run(self):
-		opsicommon.logging.set_context({'instance' : 'config cache service'})
-		self._running = True
-		logger.notice(u"Config cache service started")
-		try:
-			while not self._stopped:
-				if not self._working:
-					if self._syncConfigToServerRequested:
-						self._syncConfigToServerRequested = False
-						self._syncConfigToServer()
-					elif self._syncConfigFromServerRequested:
-						self._syncConfigFromServerRequested = False
-						self._syncConfigFromServer()
-				time.sleep(1)
-		except Exception as error:
-			logger.logException(error)
-		logger.notice(u"Config cache service ended")
-		self._running = False
+		with opsicommon.logging.log_context({'instance' : 'config cache service'}):
+			self._running = True
+			logger.notice(u"Config cache service started")
+			try:
+				while not self._stopped:
+					if not self._working:
+						if self._syncConfigToServerRequested:
+							self._syncConfigToServerRequested = False
+							self._syncConfigToServer()
+						elif self._syncConfigFromServerRequested:
+							self._syncConfigFromServerRequested = False
+							self._syncConfigFromServer()
+					time.sleep(1)
+			except Exception as error:
+				logger.logException(error)
+			logger.notice(u"Config cache service ended")
+			self._running = False
 
 	def syncConfig(self):
 		self._syncConfigToServerRequested = True
@@ -612,8 +612,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 	def __init__(self):
 		threading.Thread.__init__(self)
 		ServiceConnection.__init__(self)
-		#logger.setLogFormat(getLogFormat(u'product cache service'), object=self)
-
+		#logger.setLogFormat(getLogFormat(u'product cache service'), object=self)		#moved to run
 		self._storageDir = config.get('cache_service', 'storage_dir')
 		self._tempDir = os.path.join(self._storageDir, 'tmp')
 		self._productCacheDir = os.path.join(self._storageDir, 'depot')
@@ -689,19 +688,19 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		self._dynamicBandwidth = forceBool(dynamicBandwidth)
 
 	def run(self):
-		opsicommon.logging.set_context({'instance' : 'product cache service'})
-		self._running = True
-		logger.notice(u"Product cache service started")
-		try:
-			while not self._stopped:
-				if self._cacheProductsRequested and not self._working:
-					self._cacheProductsRequested = False
-					self._cacheProducts()
-				time.sleep(1)
-		except Exception as e:
-			logger.logException(e)
-		logger.notice(u"Product cache service ended")
-		self._running = False
+		with opsicommon.logging.log_context({'instance' : 'product cache service'}):
+			self._running = True
+			logger.notice(u"Product cache service started")
+			try:
+				while not self._stopped:
+					if self._cacheProductsRequested and not self._working:
+						self._cacheProductsRequested = False
+						self._cacheProducts()
+					time.sleep(1)
+			except Exception as e:
+				logger.logException(e)
+			logger.notice(u"Product cache service ended")
+			self._running = False
 
 	def cacheProducts(self, productProgressObserver=None, overallProgressObserver=None):
 		self._cacheProductsRequested = True

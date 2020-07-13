@@ -70,49 +70,50 @@ class OpsiclientdInit(object):
 		parser.add_argument("--pid-file", dest="pidFile", default=None,
 							help="Write the PID into this file.")
 		parser.add_argument("--log-filter", dest="logFilter", default=None,
-							help="Filter log Record contexti by this value.")
+							help="Filter log Record contexti by this dictionary.")
 
 		options = parser.parse_args()
 
 		logger.setConsoleLevel(options.logLevel)
-		opsicommon.logging.set_filter_value(options.logFilter)
+		opsicommon.logging.set_filter_parse(options.logFilter)
+		with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
 
-		if options.signalHandlers:
-			logger.debug("Registering signal handlers")
-			signal.signal(SIGHUP, signal.SIG_IGN)  # ignore SIGHUP
-			signal.signal(SIGTERM, self.signalHandler)
-			signal.signal(SIGINT, self.signalHandler)  # aka. KeyboardInterrupt
-		else:
-			logger.notice(u'Not registering any signal handlers!')
+			if options.signalHandlers:
+				logger.debug("Registering signal handlers")
+				signal.signal(SIGHUP, signal.SIG_IGN)  # ignore SIGHUP
+				signal.signal(SIGTERM, self.signalHandler)
+				signal.signal(SIGINT, self.signalHandler)  # aka. KeyboardInterrupt
+			else:
+				logger.notice(u'Not registering any signal handlers!')
 
-		if options.daemon:
-			logger.setConsoleLevel(LOG_NONE)
-			self.daemonize()
+			if options.daemon:
+				logger.setConsoleLevel(LOG_NONE)
+				self.daemonize()
 
-		self.writePIDFile(options.pidFile)
-		self.configure_iptables()
+			self.writePIDFile(options.pidFile)
+			self.configure_iptables()
 
-		logger.debug("Starting opsiclientd...")
-		self._opsiclientd = OpsiclientdPosix()
-		self._opsiclientd.start()
+			logger.debug("Starting opsiclientd...")
+			self._opsiclientd = OpsiclientdPosix()
+			self._opsiclientd.start()
 
-		try:
-			while self._opsiclientd.is_alive():
-				time.sleep(1)
+			try:
+				while self._opsiclientd.is_alive():
+					time.sleep(1)
 
-			logger.debug("Stopping opsiclientd...")
-			self._opsiclientd.join(60)
-			logger.debug("Stopped.")
-		except Exception as e:
-			logger.logException(e)
-		finally:
-			if options.pidFile:
-				logger.debug("Removing PID file...")
-				try:
-					os.remove(options.pidFile)
-					logger.debug("PID file removed.")
-				except OSError as oserr:
-					logger.debug("Removing pid file failed: {0}".format(oserr))
+				logger.debug("Stopping opsiclientd...")
+				self._opsiclientd.join(60)
+				logger.debug("Stopped.")
+			except Exception as e:
+				logger.logException(e)
+			finally:
+				if options.pidFile:
+					logger.debug("Removing PID file...")
+					try:
+						os.remove(options.pidFile)
+						logger.debug("PID file removed.")
+					except OSError as oserr:
+						logger.debug("Removing pid file failed: {0}".format(oserr))
 
 	def configure_iptables(self):
 		logger.notice("Configure iptables")

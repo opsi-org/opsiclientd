@@ -212,11 +212,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._actionProcessorUserPassword = u''
 
 	def run(self):
-		opsicommon.logging.set_context({'instance' : 'opsiclientd'})
-		try:
-			self._run()
-		except Exception as exc:
-			logger.logException(exc)
+		with opsicommon.logging.log_context({'instance' : 'opsiclientd'}):
+			try:
+				self._run()
+			except Exception as exc:
+				logger.logException(exc)
 	
 	def _run(self):
 		self._running = True
@@ -607,9 +607,8 @@ class Opsiclientd(EventListener, threading.Thread):
 					subjects=[popupSubject, choiceSubject]
 				)
 				#logger.setLogFormat(getLogFormat("popup notification server"), object=self._popupNotificationServer)
-				opsicommon.logging.set_context({'instance' : 'popup notification server'})
-
-				self._popupNotificationServer.start()
+				with opsicommon.logging.log_context({'instance' : 'popup notification server'}):
+					self._popupNotificationServer.start()
 			except Exception as e:
 				logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
 				raise

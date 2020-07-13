@@ -51,18 +51,18 @@ config = Config()
 class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 	def __init__(self, service, request, resource):
 		#logger.setLogFormat(getLogFormat(u'software on demand'), object=self)
-		opsicommon.logging.set_context({'instance' : 'software on demand'})
-		self._allowedMethods = self._getAllowedMethods()
-		self._fireEvent = False
-		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
-		ServiceConnection.__init__(self)
-		self._auth_module = None
-		if os.name == 'posix':
-			import OPSI.Backend.Manager.Authentication.PAM
-			self._auth_module = OPSI.Backend.Manager.Authentication.PAM.PAMAuthentication()
-		elif os.name == 'nt':
-			import OPSI.Backend.Manager.Authentication.NT
-			self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
+		with opsicommon.logging.log_context({'instance' : 'software on demand'}):
+			self._allowedMethods = self._getAllowedMethods()
+			self._fireEvent = False
+			WorkerOpsiJsonRpc.__init__(self, service, request, resource)
+			ServiceConnection.__init__(self)
+			self._auth_module = None
+			if os.name == 'posix':
+				import OPSI.Backend.Manager.Authentication.PAM
+				self._auth_module = OPSI.Backend.Manager.Authentication.PAM.PAMAuthentication()
+			elif os.name == 'nt':
+				import OPSI.Backend.Manager.Authentication.NT
+				self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
 
 	def _getAllowedMethods(self):
 		return [

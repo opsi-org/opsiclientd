@@ -49,9 +49,9 @@ class EventConfig(object):
 		#	getLogFormat(u'event config {0}'.format(self._id)),
 		#	object=self
 		#)
-		opsicommon.logging.set_context({'instance' : 'event config {0}'.format(self._id)})
-
-		self.setConfig(kwargs)
+		#setting context here only succeds if id is set
+		with opsicommon.logging.log_context({'instance', 'event config {0}'.format(self._id)}):
+			self.setConfig(kwargs)
 
 	def setConfig(self, conf):
 		self.name = str(conf.get('name', self._id.split('{')[0]))
