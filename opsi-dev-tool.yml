@@ -12,6 +12,7 @@ pyinstaller-poetry:
   hidden_imports:
     all:
       - csv
+      - pkg_resources.py2_warn
     windows:
       - pythoncom
       - win32api
@@ -66,10 +67,4 @@ pyinstaller-poetry:
       - rm -r dist/opsiclientd/site-packages/Crypto/SelfTest
     windows:
       - Remove-Item -Force -Recurse -Path dist\opsiclientd\site-packages\Crypto\SelfTest
-
-changelog:
-  4.2.0.0:
-    - Ported to python3
-    - Switched to pyinstaller for packaging
-    - Timeline fetches data using ajax calls and is auto updated every 5 seconds
 
