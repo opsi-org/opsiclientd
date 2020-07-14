@@ -12,12 +12,12 @@ pyinstaller-poetry:
   hidden_imports:
     all:
       - csv
-      - pkg_resources.py2_warn
     windows:
       - pythoncom
       - win32api
       - win32timezone
-    linux: []
+    linux:
+      - pkg_resources.py2_warn
     darwin: []
   extra_args:
     windows:
