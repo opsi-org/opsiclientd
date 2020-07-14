@@ -8,6 +8,7 @@ stages:
 test:pytest:
   stage: test
   script:
+    - mkdir /var/log/opsi-client-agent
     - apt -y install curl
     - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3
     - source $HOME/.poetry/env
