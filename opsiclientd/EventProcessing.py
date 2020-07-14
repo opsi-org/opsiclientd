@@ -49,7 +49,7 @@ from OPSI.Util.Thread import KillableThread
 from opsiclientd import __version__
 from opsiclientd.Config import Config, getLogFormat
 from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
-from opsiclientd.Exceptions import CanceledByUserError
+from opsiclientd.Exceptions import CanceledByUserError, ConfigurationError
 from opsiclientd.Localization import _
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
@@ -1065,6 +1065,8 @@ None otherwise.
 					self.setStatusMessage(_(u"Shutdown requested"))
 
 				if self.event.eventConfig.shutdownWarningTime:
+					if not self.event.eventConfig.shutdownNotifierCommand:
+						raise ConfigurationError(f"Event {self.event.eventConfig.getName()} defines shutdownWarningTime but shutdownNotifierCommand is not set")
 					if self._notificationServer:
 						self._notificationServer.requestEndConnections()
 					while True:
@@ -1108,13 +1110,12 @@ None otherwise.
 								choiceSubject.setChoices([ _('Shutdown now') ])
 							choiceSubject.setCallbacks( [ self.startShutdownCallback ] )
 						self._notificationServer.addSubject(choiceSubject)
-						notifierPid = None
-						if self.event.eventConfig.shutdownNotifierCommand:
-							notifierPid = self.startNotifierApplication(
-									command    = self.event.eventConfig.shutdownNotifierCommand,
-									desktop    = self.event.eventConfig.shutdownNotifierDesktop,
-									notifierId = 'shutdown')
-
+						notifierPid = self.startNotifierApplication(
+							command    = self.event.eventConfig.shutdownNotifierCommand,
+							desktop    = self.event.eventConfig.shutdownNotifierDesktop,
+							notifierId = 'shutdown'
+						)
+						
 						timeout = int(self.event.eventConfig.shutdownWarningTime)
 						endTime = time.time() + timeout
 						while (timeout > 0) and not self.shutdownCancelled and not self.shutdownWaitCancelled:

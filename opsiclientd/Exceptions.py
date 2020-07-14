@@ -48,3 +48,7 @@ class OpsiclientdError(Exception):
 class CanceledByUserError(OpsiclientdError):
 	""" Exception raised if user cancels operation. """
 	ExceptionShortDescription = "Canceled by user error"
+
+class ConfigurationError(OpsiclientdError):
+	""" Exception raised if a configuration is invalid or missing. """
+	ExceptionShortDescription = "Configuration error"
