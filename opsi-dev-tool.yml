@@ -18,7 +18,8 @@ pyinstaller-poetry:
       - win32timezone
     linux:
       - pkg_resources.py2_warn
-    darwin: []
+    darwin:
+      - distro
   extra_args:
     windows:
       # Without --noconsole opsiclientd_rpc and action_processor_starter are opening console windows 
