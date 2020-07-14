@@ -32,8 +32,12 @@ build:linux-pyinstaller:
     - poetry update python-opsi
     - poetry run opsi-dev-tool -l info --pyinstaller-poetry-build
     - mv opsiclientd opsiclientd.src
-    - cd dist/opsiclientd
-    - tar czvf ../../opsiclientd_binaries.tar.gz .
+    - mv dist/opsiclientd .
+    # Check if binary is working
+    - ./opsiclientd/opsiclientd --version
+    # Create archive to include in opsi-linux-client-agent package
+    - cd opsiclientd
+    - tar czvf ../opsiclientd_binaries.tar.gz .
   artifacts:
     name: 'opsiclientd-linux-pyinstaller'
     paths:
@@ -51,6 +55,8 @@ build:macos-pyinstaller:
     - poetry run opsi-dev-tool -l info --pyinstaller-poetry-build
     - mv opsiclientd opsiclientd.src
     - mv dist/opsiclientd .
+    # Check if binary is working
+    - ./opsiclientd/opsiclientd --version
   artifacts:
     name: 'opsiclientd-macos-pyinstaller'
     paths:
@@ -70,6 +76,8 @@ build:windows-pyinstaller:
     - poetry run opsi-dev-tool -l debug --pyinstaller-poetry-build
     - Move-Item -Path opsiclientd -Destination opsiclientd.src -Force
     - Move-Item -Path dist\opsiclientd -Destination opsiclientd
+    # Check if binary is working
+    - opsiclientd\opsiclientd.exe --version
   artifacts:
     name: 'opsiclientd-windows-pyinstaller'
     paths:
