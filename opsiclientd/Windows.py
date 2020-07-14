@@ -36,10 +36,12 @@ import win32com.server.policy
 import win32com.client
 import servicemanager
 
+from OPSI import __version__ as python_opsi_version
+from OPSI import System
 from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG, LOG_ERROR
 from OPSI.Types import forceBool, forceUnicode
-from OPSI import System
 
+from opsiclientd import __version__
 from opsiclientd.Opsiclientd import Opsiclientd
 
 __all__ = ('OpsiclientdInit', )
@@ -109,6 +111,9 @@ class OpsiclientdInit(object):
 				servicemanager.Initialize()
 				servicemanager.PrepareToHostSingle(OpsiclientdService)
 				servicemanager.StartServiceCtrlDispatcher()
+			elif len(sys.argv) == 2 and sys.argv[1] == "--version":
+				print(f"{__version__} [python-opsi={python_opsi_version}]")
+				sys.exit(0)
 			else:
 				logger.debug("OpsiclientdInit - HandleCommandLine")
 				win32serviceutil.HandleCommandLine(OpsiclientdService)	
