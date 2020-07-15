@@ -490,9 +490,9 @@ None otherwise.
 				actionProcessorRemoteDir = None
 				if config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
 					dirname = config.get('action_processor', 'remote_dir')
-					dirname = dirname.lstrip(os.pathsep)
-					dirname = dirname.lstrip("install" + os.pathsep)
-					dirname = dirname.lstrip(os.pathsep)
+					dirname = dirname.lstrip(os.sep)
+					dirname = dirname.lstrip("install" + os.sep)
+					dirname = dirname.lstrip(os.sep)
 					actionProcessorRemoteDir = os.path.join(
 						self.opsiclientd.getCacheService().getProductCacheDir(),
 						dirname
@@ -502,15 +502,13 @@ None otherwise.
 					match = re.search('^(smb|cifs)://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
 					if not match:
 						raise Exception("Bad depot-URL '%s'" % config.get('depot_server', 'url'))
-					pn = match.group(3).replace('/', os.pathsep)
-					if not pn:
-						pn = os.pathsep
-					if not RUNNING_ON_WINDOWS:
-						pn = ''
+					pn = match.group(3).replace('/', os.sep)
+					dd = config.getDepotDrive()
+					if RUNNING_ON_WINDOWS:
+						dd += os.sep
 					dirname = config.get('action_processor', 'remote_dir')
-					dirname.lstrip(os.pathsep)
-					print("=====================================", config.getDepotDrive(), pn, dirname)
-					actionProcessorRemoteDir = os.path.join(config.getDepotDrive(), pn, dirname)
+					dirname.lstrip(os.sep)
+					actionProcessorRemoteDir = os.path.join(dd, pn, dirname)
 					logger.notice(u"Updating action processor from depot dir '%s'" % actionProcessorRemoteDir)
 
 				actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
@@ -625,7 +623,10 @@ None otherwise.
 				raise Exception(u"Failed to get depotserver for client '%s'" % config.get('global', 'host_id'))
 			depotId = clientToDepotservers[0]['depotId']
 
-			productDir = os.path.join(config.getDepotDrive(), 'install')
+			dd = config.getDepotDrive()
+			if RUNNING_ON_WINDOWS:
+				dd += os.sep
+			productDir = os.path.join(dd, "install")
 
 			userLoginScripts = []
 			productIds = []
