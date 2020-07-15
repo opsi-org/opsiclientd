@@ -112,8 +112,9 @@ class OpsiclientdInit(object):
 				servicemanager.PrepareToHostSingle(OpsiclientdService)
 				servicemanager.StartServiceCtrlDispatcher()
 			elif len(sys.argv) == 2 and sys.argv[1] == "--version":
-				print(f"{__version__} [python-opsi={python_opsi_version}]")
-				sys.exit(0)
+				os.execvp("cmd.exe", ["/K", f"echo {__version__} [python-opsi={python_opsi_version}]"])
+				#print(f"{__version__} [python-opsi={python_opsi_version}]")
+				#sys.exit(0)
 			else:
 				logger.debug("OpsiclientdInit - HandleCommandLine")
 				win32serviceutil.HandleCommandLine(OpsiclientdService)	
