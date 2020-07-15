@@ -56,6 +56,7 @@ build:macos-pyinstaller:
     - mv opsiclientd opsiclientd.src
     - mv dist/opsiclientd .
     # Check if binary is working
+    - mkdir /var/lib/opsi-client-agent
     - ./opsiclientd/opsiclientd --version
   artifacts:
     name: 'opsiclientd-macos-pyinstaller'
