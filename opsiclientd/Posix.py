@@ -32,6 +32,7 @@ import time
 import subprocess
 from signal import SIGHUP, SIGTERM, SIGINT
 
+from OPSI import __version__ as python_opsi_version
 #from OPSI.Logger import Logger, LOG_NONE, LOG_NOTICE, LOG_WARNING
 import opsicommon.logging
 from opsicommon.logging import logger, LOG_NONE, LOG_NOTICE, LOG_WARNING

@@ -30,6 +30,8 @@ import sys
 import threading
 import tempfile
 import time
+import win32gui
+import win32con
 import win32service
 import win32serviceutil
 import win32com.server.policy
@@ -41,7 +43,9 @@ import opsicommon.logging
 from opsicommon.logging import logger, LOG_NONE, LOG_DEBUG, LOG_ERROR
 from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
+from OPSI import __version__ as python_opsi_version
 
+from opsiclientd import __version__
 from opsiclientd.Opsiclientd import Opsiclientd
 
 __all__ = ('OpsiclientdInit', )
@@ -112,6 +116,10 @@ class OpsiclientdInit(object):
 					servicemanager.Initialize()
 					servicemanager.PrepareToHostSingle(OpsiclientdService)
 					servicemanager.StartServiceCtrlDispatcher()
+				elif len(sys.argv) == 2 and sys.argv[1] == "--version":
+					#os.execvp("cmd.exe", ["/K", f"echo {__version__} [python-opsi={python_opsi_version}]"])
+					win32gui.MessageBox(None, f"{__version__} [python-opsi={python_opsi_version}]", "opsiclientd", win32con.MB_OK) 
+					sys.exit(0)
 				else:
 					logger.debug("OpsiclientdInit - HandleCommandLine")
 					win32serviceutil.HandleCommandLine(OpsiclientdService)	
