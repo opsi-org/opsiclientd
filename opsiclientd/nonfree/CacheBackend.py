@@ -332,7 +332,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 	def _createInstanceMethods(self):
 		for Class in (Backend, ConfigDataBackend):
-			for methodName, funcRef in inspect.getmembers(Class, inspect.ismethod):
+			for methodName, funcRef in inspect.getmembers(Class, inspect.isfunction):
 				if methodName.startswith('_') or methodName in ('backend_info', 'user_getCredentials', 'user_setCredentials', 'log_write', 'licenseOnClient_getObjects'):
 					continue
 

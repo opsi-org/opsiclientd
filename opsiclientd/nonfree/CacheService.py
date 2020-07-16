@@ -300,7 +300,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			clientId=config.get('global', 'host_id'),
 			**backendArgs
 		)
-
+		
 		self._configBackend = BackendExtender(
 			backend=ExtendedConfigDataBackend(
 				configDataBackend=self._cacheBackend
@@ -308,6 +308,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			extensionClass=ConfigCacheServiceBackendExtension,
 			extensionConfigDir=config.get('cache_service', 'extension_config_dir')
 		)
+		
 		self._backendTracker = SQLiteObjectBackendModificationTracker(
 			database=os.path.join(self._configCacheDir, 'tracker.sqlite'),
 			synchronous=False,
