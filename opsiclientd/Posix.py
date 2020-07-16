@@ -167,10 +167,6 @@ class OpsiclientdInit(object):
 		with open(stderr, 'rb', 0) as f:
 			os.dup2(f.fileno(), sys.stderr.fileno())
 
-		# Replacing stdout & stderr with our variants
-		sys.stdout = logger.getStdout()
-		sys.stderr = logger.getStderr()
-
 	@staticmethod
 	def writePIDFile(path):
 		if path:
