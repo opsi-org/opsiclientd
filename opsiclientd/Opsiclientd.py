@@ -545,7 +545,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				sessionId=sessionId,
 				desktop=u"winlogon",
 				waitForProcessEnding=True,
-				timeoutSeconds=60
+				timeoutSeconds=60,
+				noWindow=True
 			)
 		except Exception as e:
 			logger.error(e)
@@ -571,7 +572,14 @@ class Opsiclientd(EventListener, threading.Thread):
 		cmd = '%s "%s"' % (config.get('opsiclientd_rpc', 'command'), rpc)
 
 		try:
-			System.runCommandInSession(command=cmd, sessionId=sessionId, desktop=desktop, waitForProcessEnding=True, timeoutSeconds=60)
+			System.runCommandInSession(
+				command=cmd,
+				sessionId=sessionId,
+				desktop=desktop,
+				waitForProcessEnding=True,
+				timeoutSeconds=60,
+				noWindow=True
+			)
 		except Exception as e:
 			logger.error(e)
 

@@ -304,7 +304,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.error(u"Failed to write log to service: %s" % forceUnicode(e))
 			raise
 
-	def runCommandInSession(self, command, desktop=None, waitForProcessEnding=False, timeoutSeconds=0):
+	def runCommandInSession(self, command, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False):
 		sessionId = self.getSessionId()
 
 		if not desktop or (forceUnicodeLower(desktop) == 'current'):
@@ -327,7 +327,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						sessionId            = sessionId,
 						desktop              = desktop,
 						waitForProcessEnding = waitForProcessEnding,
-						timeoutSeconds       = timeoutSeconds)[2]
+						timeoutSeconds       = timeoutSeconds,
+						noWindow             = noWindow
+				)[2]
 				break
 			except Exception as e:
 				logger.error(e)
@@ -397,7 +399,7 @@ None otherwise.
 		except Exception as error:
 			raise Exception(u"opsiclientd_rpc command not defined: {0}".format(forceUnicode(error)))
 
-		self.runCommandInSession(command=command, waitForProcessEnding=False)
+		self.runCommandInSession(command=command, waitForProcessEnding=False, noWindow=True)
 
 	def setActionProcessorInfo(self):
 		try:
@@ -915,7 +917,8 @@ None otherwise.
 				self.runCommandInSession(
 					command=command,
 					desktop=desktop,
-					waitForProcessEnding=True
+					waitForProcessEnding=True,
+					noWindow=True
 				)
 
 			if self.event.eventConfig.postActionProcessorCommand:
