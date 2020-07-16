@@ -216,7 +216,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			try:
 				self._run()
 			except Exception as exc:
-				logger.logException(exc)
+				logger.error(exc, exc_info=True)
 	
 	def _run(self):
 		self._running = True
@@ -395,7 +395,7 @@ class Opsiclientd(EventListener, threading.Thread):
 								logger.info("Stopping timeline")
 								timeline.stop()
 		except Exception as e:
-			logger.logException(e)
+			logger.error(e, exc_info=True)
 			self.setBlockLogin(False)
 		finally:
 			self._running = False
