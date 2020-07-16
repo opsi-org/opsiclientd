@@ -69,12 +69,11 @@ class OpsiclientdPosixInit(OpsiclientdInit):
 		parser.add_argument("--pid-file", dest="pidFile", default=None,
 							help="Write the PID into this file.")
 		parser.add_argument("--log-filter", dest="logFilter", default=None,
-							help="Filter log Record contexti by this dictionary.")
+							help="Filter log records contexts (<ctx-name-1>=<val1>[,val2][;ctx-name-2=val3]).")
 
 		options = parser.parse_args()
 
-		opsicommon.logging.init_logging(stderr_level=options.logLevel)
-		opsicommon.logging.set_filter_from_string(options.logFilter)
+		self.init_logging(stderr_level=options.logLevel, log_filter=options.logFilter)
 
 		with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
 

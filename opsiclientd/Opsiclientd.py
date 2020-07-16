@@ -39,7 +39,7 @@ from contextlib import contextmanager
 
 from OPSI import System
 import opsicommon.logging
-from opsicommon.logging import logger, LOG_DEBUG
+from opsicommon.logging import logger, LOG_DEBUG, LOG_NONE
 from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
@@ -77,7 +77,7 @@ state = State()
 
 class OpsiclientdInit():
 
-	def init_logging(self):
+	def init_logging(self, stderr_level: int = LOG_NONE, log_filter: str = None):
 		log_file = os.path.join(tempfile.gettempdir(), "opsiclientd.log")
 		try:
 			default_log_dir = None
@@ -104,7 +104,10 @@ class OpsiclientdInit():
 			except Exception as e:
 				print("Failed to rename %s to %s: %s", slf, dlf, forceUnicode(e), file=sys.stderr)
 		
-		opsicommon.logging.init_logging(log_file=log_file, file_level=LOG_DEBUG)
+		opsicommon.logging.init_logging(stderr_level=stderr_level, log_file=log_file, file_level=LOG_DEBUG)
+		if log_filter:
+			opsicommon.logging.set_filter_from_string(log_filter)
+		
 		logger.essential("Log file started")
 
 class Opsiclientd(EventListener, threading.Thread):
