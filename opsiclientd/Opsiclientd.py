@@ -89,15 +89,14 @@ class OpsiclientdInit():
 				log_file = os.path.join(default_log_dir, "opsiclientd.log")
 		except:
 			pass
+		config.set("global", "log_file", log_file)
 		
 		for i in (9, 8, 7, 6, 5, 4, 3, 2, 1, 0):
-			slf = None
-			dlf = None
+			slf = f"{log_file}.{i-1}"
+			dlf = f"{log_file}.{i}"
+			if (i == 0):
+				slf = log_file
 			try:
-				slf = log_file + f'.{i-1}'
-				if (i <= 0):
-					slf = log_file
-				dlf = log_file + f'.{i}'
 				if os.path.exists(slf):
 					if os.path.exists(dlf):
 						os.unlink(dlf)
