@@ -77,7 +77,7 @@ build:windows-pyinstaller:
     - Move-Item -Path opsiclientd -Destination opsiclientd.src -Force
     - Move-Item -Path dist\opsiclientd -Destination opsiclientd
     # Check if binary is working
-    - opsiclientd\opsiclientd.exe --version
+    #- opsiclientd\opsiclientd.exe --version
   artifacts:
     name: 'opsiclientd-windows-pyinstaller'
     paths:
