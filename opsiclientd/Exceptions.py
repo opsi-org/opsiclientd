@@ -24,10 +24,11 @@ Non-standard exceptions.
 :license: GNU Affero General Public License version 3
 """
 
-from OPSI.Logger import Logger
+#from OPSI.Logger import Logger
+from opsicommon.logging import logger
 from OPSI.Types import forceUnicode
 
-logger = Logger()
+#logger = Logger()
 
 
 class OpsiclientdError(Exception):

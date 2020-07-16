@@ -38,7 +38,9 @@ import traceback
 from contextlib import contextmanager
 
 from OPSI import System
-from OPSI.Logger import Logger
+#from OPSI.Logger import Logger
+import opsicommon.logging
+from opsicommon.logging import logger
 from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
@@ -68,7 +70,7 @@ if RUNNING_ON_WINDOWS:
 	from opsiclientd.Events.Windows.GUIStartup import (
 		GUIStartupEventConfig, GUIStartupEventGenerator)
 
-logger = Logger()
+#logger = Logger()
 config = Config()
 timeline = Timeline()
 state = State()
@@ -78,7 +80,8 @@ class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
 		System.ensure_not_already_running("opsiclientd")
 		
-		logger.setLogFormat(getLogFormat(u'opsiclientd'), object=self)
+		#logger.setLogFormat(getLogFormat(u'opsiclientd'), object=self)		#moved to run
+
 		logger.debug("Opsiclient initiating")
 
 		EventListener.__init__(self)
@@ -209,10 +212,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._actionProcessorUserPassword = u''
 
 	def run(self):
-		try:
-			self._run()
-		except Exception as exc:
-			logger.logException(exc)
+		with opsicommon.logging.log_context({'instance' : 'opsiclientd'}):
+			try:
+				self._run()
+			except Exception as exc:
+				logger.error(exc, exc_info=True)
 	
 	def _run(self):
 		self._running = True
@@ -234,7 +238,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.notice(u"Control pipe started")
 				yield
 			except Exception as e:
-				logger.error("Failed to start control pipe: {0}", forceUnicode(e))
+				logger.error("Failed to start control pipe: %s", forceUnicode(e))
 				raise
 			finally:
 				logger.info("Stopping control pipe")
@@ -243,7 +247,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					controlPipe.join(2)
 					logger.info("Control pipe stopped")
 				except (NameError, RuntimeError) as stopError:
-					logger.debug("Stopping controlPipe failed: {0}", stopError)
+					logger.debug("Stopping controlPipe failed: %s", stopError)
 
 		@contextmanager
 		def getControlServer():
@@ -391,7 +395,7 @@ class Opsiclientd(EventListener, threading.Thread):
 								logger.info("Stopping timeline")
 								timeline.stop()
 		except Exception as e:
-			logger.logException(e)
+			logger.error(e, exc_info=True)
 			self.setBlockLogin(False)
 		finally:
 			self._running = False
@@ -422,7 +426,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			"""
 
 			for thread in threading.enumerate():
-				logger.info("Runnning thread on main thread exit: {0}", thread)
+				logger.info("Runnning thread on main thread exit: %s", thread)
 
 			logger.info(u"Exiting opsiclientd thread")
 
@@ -600,8 +604,9 @@ class Opsiclientd(EventListener, threading.Thread):
 					start_port=port,
 					subjects=[popupSubject, choiceSubject]
 				)
-				logger.setLogFormat(getLogFormat("popup notification server"), object=self._popupNotificationServer)
-				self._popupNotificationServer.start()
+				#logger.setLogFormat(getLogFormat("popup notification server"), object=self._popupNotificationServer)
+				with opsicommon.logging.log_context({'instance' : 'popup notification server'}):
+					self._popupNotificationServer.start()
 			except Exception as e:
 				logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
 				raise

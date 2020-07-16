@@ -29,10 +29,12 @@ import re
 from .Config import getLogFormat
 from .State import State
 
-from OPSI.Logger import Logger
+#from OPSI.Logger import Logger
+import opsicommon.logging
+from opsicommon.logging import logger
 from OPSI.Types import forceUnicode
 
-logger = Logger()
+#logger = Logger()
 state = State()
 
 
@@ -43,11 +45,13 @@ class EventConfig(object):
 			raise TypeError(u"Event id not given")
 		self._id = str(eventId)
 
-		logger.setLogFormat(
-			getLogFormat(u'event config {0}'.format(self._id)),
-			object=self
-		)
-		self.setConfig(kwargs)
+		#logger.setLogFormat(
+		#	getLogFormat(u'event config {0}'.format(self._id)),
+		#	object=self
+		#)
+		#setting context here only succeds if id is set
+		with opsicommon.logging.log_context({'instance', 'event config {0}'.format(self._id)}):
+			self.setConfig(kwargs)
 
 	def setConfig(self, conf):
 		self.name = str(conf.get('name', self._id.split('{')[0]))

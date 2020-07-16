@@ -38,7 +38,9 @@ from Crypto.Hash import MD5
 from Crypto.Signature import pkcs1_15
 
 from OPSI import System
-from OPSI.Logger import Logger
+#from OPSI.Logger import Logger
+import opsicommon.logging
+from opsicommon.logging import logger
 from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
 from OPSI.Util import getPublicKey
 from OPSI.Util.Thread import KillableThread
@@ -52,7 +54,7 @@ from opsiclientd.Config import getLogFormat, Config
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
 
-logger = Logger()
+#logger = Logger()
 config = Config()
 
 
@@ -206,7 +208,7 @@ class ServiceConnection(object):
 					try:
 						System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True))
 					except Exception as e:
-						logger.error(u"Failed to sync time: {0!r}", e)
+						logger.error(u"Failed to sync time: '%s'", e)
 
 				if urlIndex > 0:
 					backendinfo = serviceConnectionThread.configService.backend_info()
@@ -282,7 +284,7 @@ class ServiceConnection(object):
 
 class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, statusSubject=None):
-		logger.setLogFormat(getLogFormat(u'service connection'), object=self)
+		#logger.setLogFormat(getLogFormat(u'service connection'), object=self)		#moved to run
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username
@@ -305,103 +307,104 @@ class ServiceConnectionThread(KillableThread):
 		return self._username
 
 	def run(self):
-		logger.debug(u"ServiceConnectionThread started...")
-		self.running = True
-		self.connected = False
-		self.cancelled = False
+		with opsicommon.logging.log_context({'instance' : 'service connection'}):
+			logger.debug(u"ServiceConnectionThread started...")
+			self.running = True
+			self.connected = False
+			self.cancelled = False
 
-		try:
-			certDir = config.get('global', 'server_cert_dir')
-			verifyServerCert = config.get('global', 'verify_server_cert')
+			try:
+				certDir = config.get('global', 'server_cert_dir')
+				verifyServerCert = config.get('global', 'verify_server_cert')
 
-			proxyMode = config.get('global', 'proxy_mode')
-			proxyURL = config.get('global', 'proxy_url')
-			if proxyMode == 'system':
-				logger.notice(u'not implemented yet')
-				proxyURL = System.getSystemProxySetting()
-			elif proxyMode == 'static':
+				proxyMode = config.get('global', 'proxy_mode')
 				proxyURL = config.get('global', 'proxy_url')
+				if proxyMode == 'system':
+					logger.notice(u'not implemented yet')
+					proxyURL = System.getSystemProxySetting()
+				elif proxyMode == 'static':
+					proxyURL = config.get('global', 'proxy_url')
 
-			(scheme, host, port, baseurl, username, password) = urlsplit(self._configServiceUrl)
-			serverCertFile = os.path.join(certDir, host + '.pem')
-			if verifyServerCert:
-				logger.info(u"Server verification enabled, using cert file '%s'" % serverCertFile)
+				(scheme, host, port, baseurl, username, password) = urlsplit(self._configServiceUrl)
+				serverCertFile = os.path.join(certDir, host + '.pem')
+				if verifyServerCert:
+					logger.info(u"Server verification enabled, using cert file '%s'" % serverCertFile)
 
-			caCertFile = os.path.join(certDir, 'cacert.pem')
-			verifyServerCertByCa = config.get('global', 'verify_server_cert_by_ca')
-			if verifyServerCertByCa:
-				logger.info(u"Server verification by CA enabled, using CA cert file '%s'" % caCertFile)
+				caCertFile = os.path.join(certDir, 'cacert.pem')
+				verifyServerCertByCa = config.get('global', 'verify_server_cert_by_ca')
+				if verifyServerCertByCa:
+					logger.info(u"Server verification by CA enabled, using CA cert file '%s'" % caCertFile)
 
-			tryNum = 0
-			while not self.cancelled and not self.connected:
-				tryNum += 1
-				try:
-					logger.notice(u"Connecting to config server '%s' #%d" % (self._configServiceUrl, tryNum))
-					self.setStatusMessage(_(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
-					if len(self._username.split('.')) < 3:
-						raise Exception(u"Domain missing in username '%s'" % self._username)
+				tryNum = 0
+				while not self.cancelled and not self.connected:
+					tryNum += 1
+					try:
+						logger.notice(u"Connecting to config server '%s' #%d" % (self._configServiceUrl, tryNum))
+						self.setStatusMessage(_(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
+						if len(self._username.split('.')) < 3:
+							raise Exception(u"Domain missing in username '%s'" % self._username)
 
-					if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
-						if proxyURL:
-							logger.debug("Connecting to localhost, connecting directly without proxy")
-							proxyURL = None
+						if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
+							if proxyURL:
+								logger.debug("Connecting to localhost, connecting directly without proxy")
+								proxyURL = None
 
-					self.configService = JSONRPCBackend(
-						address=self._configServiceUrl,
-						username=self._username,
-						password=self._password,
-						serverCertFile=serverCertFile,
-						verifyServerCert=verifyServerCert,
-						caCertFile=caCertFile,
-						verifyServerCertByCa=verifyServerCertByCa,
-						proxyURL=proxyURL,
-						application='opsiclientd/%s' % __version__
-					)
+						self.configService = JSONRPCBackend(
+							address=self._configServiceUrl,
+							username=self._username,
+							password=self._password,
+							serverCertFile=serverCertFile,
+							verifyServerCert=verifyServerCert,
+							caCertFile=caCertFile,
+							verifyServerCertByCa=verifyServerCertByCa,
+							proxyURL=proxyURL,
+							application='opsiclientd/%s' % __version__
+						)
 
-					self.configService.accessControl_authenticated()
-					self.configService.setCompression(True)
-					self.connected = True
-					self.connectionError = None
-					self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
-					logger.notice(u"Connected to config server '%s'" % self._configServiceUrl)
-				except OpsiServiceVerificationError as verificationError:
-					self.connectionError = forceUnicode(verificationError)
-					self.setStatusMessage(_(u"Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
-					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(verificationError)))
-					break
-				except Exception as error:
-					self.connectionError = forceUnicode(error)
-					self.setStatusMessage(_(u"Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(error)))
-					logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(error)))
-					logger.logException(error)
+						self.configService.accessControl_authenticated()
+						self.configService.setCompression(True)
+						self.connected = True
+						self.connectionError = None
+						self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
+						logger.notice(u"Connected to config server '%s'" % self._configServiceUrl)
+					except OpsiServiceVerificationError as verificationError:
+						self.connectionError = forceUnicode(verificationError)
+						self.setStatusMessage(_(u"Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
+						logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(verificationError)))
+						break
+					except Exception as error:
+						self.connectionError = forceUnicode(error)
+						self.setStatusMessage(_(u"Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(error)))
+						logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(error)))
+						logger.logException(error)
 
-					if isinstance(error, OpsiAuthenticationError):
-						fqdn = System.getFQDN()
-						try:
-							fqdn = forceFqdn(fqdn)
-						except Exception as fqdnError:
-							logger.warning(u"Failed to get fqdn from os, got '%s': %s" % (fqdn, fqdnError))
-							break
+						if isinstance(error, OpsiAuthenticationError):
+							fqdn = System.getFQDN()
+							try:
+								fqdn = forceFqdn(fqdn)
+							except Exception as fqdnError:
+								logger.warning(u"Failed to get fqdn from os, got '%s': %s" % (fqdn, fqdnError))
+								break
 
-						if self._username != fqdn:
-							logger.notice(u"Connect failed with username '%s', got fqdn '%s' from os, trying fqdn" % (self._username, fqdn))
-							self._username = fqdn
-						else:
-							break
+							if self._username != fqdn:
+								logger.notice(u"Connect failed with username '%s', got fqdn '%s' from os, trying fqdn" % (self._username, fqdn))
+								self._username = fqdn
+							else:
+								break
 
-					if 'is not supported by the backend' in self.connectionError.lower():
-						try:
-							from cryptography.hazmat.backends import default_backend
-							logger.debug("Got the following crypto backends: {0}".format(default_backend()._backends))
-						except Exception as cryptoCheckError:
-							logger.debug("Failed to get info about installed crypto modules: {0}".format(cryptoCheckError))
+						if 'is not supported by the backend' in self.connectionError.lower():
+							try:
+								from cryptography.hazmat.backends import default_backend
+								logger.debug("Got the following crypto backends: {0}".format(default_backend()._backends))
+							except Exception as cryptoCheckError:
+								logger.debug("Failed to get info about installed crypto modules: {0}".format(cryptoCheckError))
 
-					for _unused in range(3):  # Sleeping before the next retry
-						time.sleep(1)
-		except Exception as error:
-			logger.logException(error)
-		finally:
-			self.running = False
+						for _unused in range(3):  # Sleeping before the next retry
+							time.sleep(1)
+			except Exception as error:
+				logger.logException(error)
+			finally:
+				self.running = False
 
 	def stopConnectionCallback(self, choiceSubject):
 		logger.notice(u"Connection cancelled by user")
