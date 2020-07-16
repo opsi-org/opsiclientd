@@ -346,7 +346,6 @@ toml = ">=0.10.0,<0.11.0"
 
 [package.source]
 reference = "uibpypi"
-type = "legacy"
 url = "http://pypi.uib.gmbh:8080/simple"
 
 [[package]]
@@ -580,7 +579,7 @@ description = "The opsi python library"
 name = "python-opsi"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "4.2.0.36"
+version = "4.2.0.37"
 
 [package.dependencies]
 SQLAlchemy = ">=1.3.15,<2.0.0"
@@ -602,7 +601,6 @@ version = ">=20.3.0,<21.0.0"
 
 [package.source]
 reference = "uibpypi"
-type = "legacy"
 url = "http://pypi.uib.gmbh:8080/simple"
 
 [[package]]
@@ -1210,8 +1208,8 @@ python-magic = [
     {file = "python_magic-0.4.18-py2.py3-none-any.whl", hash = "sha256:356efa93c8899047d1eb7d3eb91e871ba2f5b1376edbaf4cc305e3c872207355"},
 ]
 python-opsi = [
-    {file = "python-opsi-4.2.0.36.tar.gz", hash = "md5:23639b769b317aa2dee2e438784d706d"},
-    {file = "python_opsi-4.2.0.36-py3-none-any.whl", hash = "md5:975dd940940811b48e2d90cab2908434"},
+    {file = "python-opsi-4.2.0.37.tar.gz", hash = "md5:09837b4349a1e3cb0a3dfb5c2b21e2b6"},
+    {file = "python_opsi-4.2.0.37-py3-none-any.whl", hash = "md5:c5fc1afcb0acf07372380f81cbd7fbe2"},
 ]
 python-pam = [
     {file = "python-pam-1.8.4.tar.gz", hash = "sha256:c856d9c89fedb33951dd8a95727ae57c6887b02d065bbdffd2fd9dbc0183909b"},

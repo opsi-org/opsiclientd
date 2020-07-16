@@ -33,9 +33,8 @@ import subprocess
 from signal import SIGHUP, SIGTERM, SIGINT
 
 from OPSI import __version__ as python_opsi_version
-#from OPSI.Logger import Logger, LOG_NONE, LOG_NOTICE, LOG_WARNING
 import opsicommon.logging
-from opsicommon.logging import logger, LOG_NONE, LOG_NOTICE, LOG_WARNING
+from opsicommon.logging import logger, LOG_NONE, LOG_NOTICE, LOG_WARNING 
 from OPSI.Types import forceUnicode
 
 from opsiclientd import __version__
@@ -75,8 +74,9 @@ class OpsiclientdInit(object):
 
 		options = parser.parse_args()
 
-		logger.setConsoleLevel(options.logLevel)
-		opsicommon.logging.set_filter_parse(options.logFilter)
+		opsicommon.logging.init_logging(stderr_level=options.logLevel)
+		opsicommon.logging.set_filter_from_string(options.logFilter)
+
 		with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
 
 			if options.signalHandlers:
