@@ -167,7 +167,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		# Wrapping because ReportServiceStatus sometimes lets windows
 		# report a crash of opsiclientd (python 2.6.5) invalid handle
 		try:
-			logger.debug('Reporting service status: {}', serviceStatus)
+			logger.notice('Reporting service status: {}', serviceStatus)
 			win32serviceutil.ServiceFramework.ReportServiceStatus(
 				self,
 				serviceStatus,
@@ -176,10 +176,10 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 				svcExitCode=svcExitCode
 			)
 		except Exception as exc:
-			logger.error("Failed to report service status {0}: {1}", serviceStatus, reportStatusError)
+			logger.error("Failed to report service status {0}: {1}", serviceStatus, exc)
 
 	def SvcInterrogate(self):
-		logger.debug("OpsiclientdService SvcInterrogate")
+		logger.notice("Handling interrogate request")
 		# Assume we are running, and everyone is happy.
 		self.ReportServiceStatus(win32service.SERVICE_RUNNING)
 
@@ -187,7 +187,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		"""
 		Gets called from windows to stop service
 		"""
-		logger.debug(u"OpsiclientdService SvcStop")
+		logger.notice("Handling stop request")
 		# Write to event log
 		self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
 		# Fire stop event to stop blocking self._stopEvent.wait()
@@ -197,7 +197,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		"""
 		Gets called from windows on system shutdown
 		"""
-		logger.debug(u"OpsiclientdService SvcShutdown")
+		logger.notice("Handling shutdown request")
 		# Write to event log
 		self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
 		if self.opsiclientd:
@@ -210,7 +210,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		Gets called from windows to start service
 		"""
 		try:
-			logger.debug("OpsiclientdService.SvcRun", stderr=False)
+			logger.notice("Handling start request")
 			startTime = time.time()
 			
 			# Write to event log
