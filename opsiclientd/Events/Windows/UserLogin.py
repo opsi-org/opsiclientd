@@ -58,7 +58,7 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 
 	def callback(self, eventType, *args):
 		logger.debug(u"UserLoginEventGenerator event callback: eventType '%s', args: %s" % (eventType, args))
-		if sys.getwindowsversion()[0] == 6:
+		if sys.getwindowsversion().major >= 6:
 			# Try to find out, if the Login is from the WindowManager
 			# (Win8 Bugfix for UserLoginScripts)
 			sessionIds = None

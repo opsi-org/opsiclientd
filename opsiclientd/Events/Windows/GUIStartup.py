@@ -54,9 +54,9 @@ class GUIStartupEventConfig(WMIEventConfig):
 class GUIStartupEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
 		EventGenerator.__init__(self, eventConfig)
-		if sys.getwindowsversion()[0] == 5:
+		if sys.getwindowsversion().major == 5:
 			self.guiProcessName = u'winlogon.exe'
-		elif sys.getwindowsversion()[0] == 6:
+		elif sys.getwindowsversion().major >= 6:
 			self.guiProcessName = u'LogonUI.exe'
 		else:
 			raise Exception('Windows version unsupported')

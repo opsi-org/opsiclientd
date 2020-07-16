@@ -336,7 +336,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				raise
 				"""
 				# This is no longer working with python 3. Do we need it?
-				if RUNNING_ON_WINDOWS and (e[0] == 233) and (sys.getwindowsversion()[0] == 5) and (sessionId != 0):
+				if RUNNING_ON_WINDOWS and (e[0] == 233) and (sys.getwindowsversion().major == 5) and (sessionId != 0):
 					# No process is on the other end
 					# Problem with pipe \\\\.\\Pipe\\TerminalServer\\SystemExecSrvr\\<sessionid>
 					# After logging off from a session other than 0 csrss.exe does not create this pipe or CreateRemoteProcessW is not able to read the pipe.
@@ -792,7 +792,7 @@ None otherwise.
 			#TODO: Deactivating Trusted Installer Detection. Have to implemented in a better way in futur versions.
 			if self.event.eventConfig.getId() == 'gui_startup' and not state.get('user_logged_in', 0) and self.event.eventConfig.trustedInstallerDetection:
 				# check for Trusted Installer before Running Action Processor
-				if (os.name == 'nt') and (sys.getwindowsversion()[0] == 6):
+				if (os.name == 'nt') and (sys.getwindowsversion().major >= 6):
 					logger.notice(u"Getting TrustedInstaller service configuration")
 					try:
 						# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3

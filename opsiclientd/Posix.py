@@ -24,7 +24,6 @@ Functionality to work on POSIX-conform systems.
 :license: GNU Affero General Public License version 3
 """
 
-import argparse
 import os
 import signal
 import sys
@@ -32,12 +31,10 @@ import time
 import subprocess
 from signal import SIGHUP, SIGTERM, SIGINT
 
-from OPSI import __version__ as python_opsi_version
 import opsicommon.logging
 from opsicommon.logging import logger, LOG_NONE, LOG_NOTICE, LOG_WARNING 
 from OPSI.Types import forceUnicode
 
-from opsiclientd import __version__
 from opsiclientd.Config import Config
 from opsiclientd.Opsiclientd import OpsiclientdInit
 
@@ -52,67 +49,63 @@ except ImportError as exc:
 
 class OpsiclientdPosixInit(OpsiclientdInit):
 	def __init__(self):
-		logger.debug(u"OpsiclientdPosixInit")
+		try:
+			super().__init__()
+			logger.debug(u"OpsiclientdPosixInit")
 
-		parser = argparse.ArgumentParser()
-		parser.add_argument("--version", "-V", action='version', version=f"{__version__} [python-opsi={python_opsi_version}]")
-		parser.add_argument("--log-level", "-l", dest="logLevel", type=int,
-							choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-							default=LOG_NOTICE,
-							help="Set the log-level.")
-		parser.add_argument('--no-signal-handlers', '-t', dest="signalHandlers",
-							action="store_false", default=True,
-							help="Do not register signal handlers.")
-		parser.add_argument("--daemon", "-D", dest="daemon",
-							action="store_true", default=False,
-							help="Daemonize process.")
-		parser.add_argument("--pid-file", dest="pidFile", default=None,
-							help="Write the PID into this file.")
-		parser.add_argument("--log-filter", dest="logFilter", default=None,
-							help="Filter log records contexts (<ctx-name-1>=<val1>[,val2][;ctx-name-2=val3]).")
+			self.parser.add_argument('--no-signal-handlers', '-t', dest="signalHandlers",
+								action="store_false", default=True,
+								help="Do not register signal handlers.")
+			self.parser.add_argument("--daemon", "-D", dest="daemon",
+								action="store_true", default=False,
+								help="Daemonize process.")
+			self.parser.add_argument("--pid-file", dest="pidFile", default=None,
+								help="Write the PID into this file.")
+			
+			options = self.parser.parse_args()
 
-		options = parser.parse_args()
+			self.init_logging(stderr_level=options.logLevel, log_filter=options.logFilter)
 
-		self.init_logging(stderr_level=options.logLevel, log_filter=options.logFilter)
+			with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
 
-		with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
+				if options.signalHandlers:
+					logger.debug("Registering signal handlers")
+					signal.signal(SIGHUP, signal.SIG_IGN)  # ignore SIGHUP
+					signal.signal(SIGTERM, self.signalHandler)
+					signal.signal(SIGINT, self.signalHandler)  # aka. KeyboardInterrupt
+				else:
+					logger.notice(u'Not registering any signal handlers!')
 
-			if options.signalHandlers:
-				logger.debug("Registering signal handlers")
-				signal.signal(SIGHUP, signal.SIG_IGN)  # ignore SIGHUP
-				signal.signal(SIGTERM, self.signalHandler)
-				signal.signal(SIGINT, self.signalHandler)  # aka. KeyboardInterrupt
-			else:
-				logger.notice(u'Not registering any signal handlers!')
+				if options.daemon:
+					logger.setConsoleLevel(LOG_NONE)
+					self.daemonize()
 
-			if options.daemon:
-				logger.setConsoleLevel(LOG_NONE)
-				self.daemonize()
+				self.writePIDFile(options.pidFile)
+				self.configure_iptables()
 
-			self.writePIDFile(options.pidFile)
-			self.configure_iptables()
+				logger.debug("Starting opsiclientd...")
+				self._opsiclientd = OpsiclientdPosix()
+				self._opsiclientd.start()
 
-			logger.debug("Starting opsiclientd...")
-			self._opsiclientd = OpsiclientdPosix()
-			self._opsiclientd.start()
+				try:
+					while self._opsiclientd.is_alive():
+						time.sleep(1)
 
-			try:
-				while self._opsiclientd.is_alive():
-					time.sleep(1)
-
-				logger.debug("Stopping opsiclientd...")
-				self._opsiclientd.join(60)
-				logger.debug("Stopped.")
-			except Exception as e:
-				logger.logException(e)
-			finally:
-				if options.pidFile:
-					logger.debug("Removing PID file...")
-					try:
-						os.remove(options.pidFile)
-						logger.debug("PID file removed.")
-					except OSError as oserr:
-						logger.debug("Removing pid file failed: {0}".format(oserr))
+					logger.debug("Stopping opsiclientd...")
+					self._opsiclientd.join(60)
+					logger.debug("Stopped.")
+				except Exception as e:
+					logger.logException(e)
+				finally:
+					if options.pidFile:
+						logger.debug("Removing PID file...")
+						try:
+							os.remove(options.pidFile)
+							logger.debug("PID file removed.")
+						except OSError as oserr:
+							logger.debug("Removing pid file failed: {0}".format(oserr))
+		except Exception as exc:
+			logger.critical(exc, exc_info=True)
 
 	def configure_iptables(self):
 		logger.notice("Configure iptables")

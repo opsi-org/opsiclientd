@@ -35,14 +35,16 @@ import time
 import tempfile
 import codecs
 import traceback
+import argparse
 from contextlib import contextmanager
 
 from OPSI import System
 import opsicommon.logging
-from opsicommon.logging import logger, LOG_DEBUG, LOG_NONE
+from opsicommon.logging import logger, LOG_DEBUG, LOG_NONE, LOG_NOTICE
 from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
+from OPSI import __version__ as python_opsi_version
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config, getLogFormat
@@ -76,6 +78,18 @@ state = State()
 
 
 class OpsiclientdInit():
+	def __init__(self):
+		self.parser = argparse.ArgumentParser()
+		self.parser.add_argument("--version", "-V", action='version', version=f"{__version__} [python-opsi={python_opsi_version}]")
+		self.parser.add_argument("--log-level", "-l", dest="logLevel", type=int,
+								choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+								default=LOG_NOTICE,
+								help="Set the log-level."
+		)
+		self.parser.add_argument("--log-filter", dest="logFilter", default=None,
+								help="Filter log records contexts (<ctx-name-1>=<val1>[,val2][;ctx-name-2=val3])."
+		)
+		
 
 	def init_logging(self, stderr_level: int = LOG_NONE, log_filter: str = None):
 		log_file = os.path.join(tempfile.gettempdir(), "opsiclientd.log")

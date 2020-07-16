@@ -43,9 +43,7 @@ import opsicommon.logging
 from opsicommon.logging import logger, LOG_NONE, LOG_DEBUG, LOG_ERROR
 from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
-from OPSI import __version__ as python_opsi_version
 
-from opsiclientd import __version__
 from opsiclientd.Opsiclientd import Opsiclientd, OpsiclientdInit
 
 # from Sens.h
@@ -67,18 +65,44 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 	return (wmi, pythoncom)
 
 
+def opsiclientd_factory():
+	windowsVersion = sys.getwindowsversion()
+	if windowsVersion.major == 5:  # NT5: XP
+		return OpsiclientdNT5()
+	elif windowsVersion.major >= 6:  # NT6: Vista / Windows7 and later
+		if windowsVersion.minor >= 3:  # Windows8.1 or newer
+			return OpsiclientdNT63()
+		else:
+			return OpsiclientdNT6()
+	raise Exception(f"Windows version {windowsVersion} not supported")
+
+
 class OpsiclientdWindowsInit(OpsiclientdInit):
 	def __init__(self):
 		try:
+			super().__init__()
 			# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
 			if len(sys.argv) == 1:
 				# Service process
 				self.init_logging()
-				with opsicommon.logging.log_context({'instance', 'opsiclientd'}):	
+				with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
 					logger.debug("OpsiclientdInit - Initialize")
+					logger.devel(os.environ)
 					servicemanager.Initialize()
 					servicemanager.PrepareToHostSingle(OpsiclientdService)
 					servicemanager.StartServiceCtrlDispatcher()
+			else:
+				if any(arg in sys.argv[1:] for arg in ("install", "update", "remove", "start", "stop", "restart")):
+					win32serviceutil.HandleCommandLine(OpsiclientdService)
+				else:
+					options = self.parser.parse_args()
+					self.init_logging(stderr_level=options.logLevel, log_filter=options.logFilter)
+					with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
+						logger.devel(os.environ)
+						opsiclientd = opsiclientd_factory()
+						opsiclientd.start()
+
+			"""
 			elif len(sys.argv) == 2 and sys.argv[1] == "--version":
 				os.execvp("cmd.exe", ["/K", f"echo {__version__} [python-opsi={python_opsi_version}]"])
 				#win32gui.MessageBox(None, f"{__version__} [python-opsi={python_opsi_version}]", "opsiclientd", win32con.MB_OK) 
@@ -86,10 +110,11 @@ class OpsiclientdWindowsInit(OpsiclientdInit):
 			else:
 				#logger.debug("OpsiclientdInit - HandleCommandLine")
 				win32serviceutil.HandleCommandLine(OpsiclientdService)	
+			"""
 		except Exception as exc:
-			logger.logException(exc)
+			logger.critical(exc, exc_info=True)
 
-
+		
 class OpsiclientdService(win32serviceutil.ServiceFramework):
 	_svc_name_ = "opsiclientd"
 	_svc_display_name_ = "opsiclientd"
@@ -164,16 +189,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			# Write to event log
 			self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
 
-			windowsVersion = sys.getwindowsversion()
-			if windowsVersion[0] == 5:  # NT5: XP
-				self.opsiclientd = OpsiclientdNT5()
-			elif windowsVersion[0] == 6:  # NT6: Vista / Windows7 and later
-				if windowsVersion[1] >= 3:  # Windows8.1 or newer
-					self.opsiclientd = OpsiclientdNT63()
-				else:
-					self.opsiclientd = OpsiclientdNT6()
-			else:
-				raise Exception(u"Windows version %s not supported" % str(windowsVersion))
+			self.opsiclientd = opsiclientd_factory()
 			
 			# Write to event log
 			self.ReportServiceStatus(win32service.SERVICE_RUNNING)
