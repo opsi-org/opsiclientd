@@ -480,9 +480,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						logger.warning(error)
 
 	def getEventProcessingThread(self, sessionId):
-		logger.notice(u"DEBUG: %s " % self._eventProcessingThreads)
 		for ept in self._eventProcessingThreads:
-			logger.notice("DEBUG: %s ", ept.getSessionId())
 			if int(ept.getSessionId()) == int(sessionId):
 				return ept
 		raise Exception(u"Event processing thread for session %s not found" % sessionId)

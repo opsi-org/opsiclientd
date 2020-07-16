@@ -500,15 +500,17 @@ None otherwise.
 					logger.notice(u"Updating action processor from local cache '%s'" % actionProcessorRemoteDir)
 				else:
 					match = re.search('^(smb|cifs)://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
+					# 1: protocol, 2: netloc, 3: share_name
 					if not match:
 						raise Exception("Bad depot-URL '%s'" % config.get('depot_server', 'url'))
-					pn = match.group(3).replace('/', os.sep)
+					#pn = match.group(3).replace('/', os.sep)
 					dd = config.getDepotDrive()
 					if RUNNING_ON_WINDOWS:
 						dd += os.sep
 					dirname = config.get('action_processor', 'remote_dir')
 					dirname.lstrip(os.sep)
-					actionProcessorRemoteDir = os.path.join(dd, pn, dirname)
+					#actionProcessorRemoteDir = os.path.join(dd, pn, dirname)
+					actionProcessorRemoteDir = os.path.join(dd, dirname)
 					logger.notice(u"Updating action processor from depot dir '%s'" % actionProcessorRemoteDir)
 
 				actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
