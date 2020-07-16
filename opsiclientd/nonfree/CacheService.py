@@ -960,7 +960,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				title=u"Failed to cache products",
 				description=u"Failed to cache products: %s" % e,
 				category=u"product_caching",
-				isError=True)
+				isError=True
+			)
 
 		if eventId:
 			timeline.setEventEnd(eventId)

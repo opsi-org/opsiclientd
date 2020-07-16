@@ -562,8 +562,16 @@ None otherwise.
 					System.execute(cmd, shell=False)
 				else:
 					logger.info(u"Copying from '%s' to '%s'" % (actionProcessorRemoteDir, actionProcessorLocalDir))
-					shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalDir)
-				
+					for fn in os.listdir(actionProcessorRemoteDir):
+						if os.path.isfile(os.path.join(actionProcessorRemoteDir, fn)):
+							shutil.copy2(
+								os.path.join(actionProcessorRemoteDir, fn),
+								os.path.join(actionProcessorLocalDir, fn)
+							)
+						else:
+							logger.warning("Skipping '%s' while updating action processor because it is not a file" \
+								% os.path.join(actionProcessorRemoteDir, fn)
+							)
 				logger.notice(u'Local action processor successfully updated')
 
 				productVersion = None
@@ -594,6 +602,7 @@ None otherwise.
 					self.umountDepotShare()
 
 		except Exception as e:
+			logger.logException(e)
 			logger.error(u"Failed to update action processor: %s" % forceUnicode(e))
 		finally:
 			if impersonation:
@@ -835,11 +844,8 @@ None otherwise.
 
 			# Update action processor
 			if self.event.eventConfig.updateActionProcessor:
-				if RUNNING_ON_WINDOWS:
-					# Currently we do the updating of the action
-					# processor on Windows.
-					self.updateActionProcessor()
-
+				self.updateActionProcessor()
+			
 			# Run action processor
 			serviceSession = u'none'
 			try:
