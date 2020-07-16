@@ -62,7 +62,7 @@ def testGettingUnknownOptionFails(config):
 	with pytest.raises(NoConfigOptionFoundException):
 		config.get('global', 'non_existing_option')
 
-"""
+'''
 def testRotatingLogfile(config):
 	with workInTemporaryDirectory() as tempDir:
 		dummyConfig = os.path.join(tempDir, 'config')
@@ -87,7 +87,7 @@ log_file = {0}""".format(logFile))
 		config.readConfigFile()
 		print(os.listdir(tempDir))
 		assert os.path.exists(os.path.join(tempDir, 'testlog.log.1'))
-"""
+'''
 
 def testLogFormatContainsModulename():
 	modulename = 'asdfghj'
