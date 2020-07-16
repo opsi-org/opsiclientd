@@ -118,7 +118,7 @@ class OpsiclientdInit():
 			except Exception as e:
 				print("Failed to rename %s to %s: %s", slf, dlf, forceUnicode(e), file=sys.stderr)
 		
-		opsicommon.logging.init_logging(stderr_level=stderr_level, log_file=log_file, file_level=LOG_DEBUG)
+		opsicommon.logging.logging_config(stderr_level=stderr_level, log_file=log_file, file_level=LOG_DEBUG)
 		if log_filter:
 			opsicommon.logging.set_filter_from_string(log_filter)
 		

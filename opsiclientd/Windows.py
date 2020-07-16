@@ -40,7 +40,7 @@ import servicemanager
 
 #from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG, LOG_ERROR
 import opsicommon.logging
-from opsicommon.logging import logger, LOG_NONE, LOG_DEBUG, LOG_ERROR
+from opsicommon.logging import logger, logging_config, LOG_NONE, LOG_DEBUG, LOG_ERROR
 from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
 
@@ -82,12 +82,13 @@ class OpsiclientdWindowsInit(OpsiclientdInit):
 		try:
 			super().__init__()
 			# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
-			if len(sys.argv) == 1:
-				# Service process
+			#if len(sys.argv) == 1:
+			if os.environ.get("USERNAME", "$").endswith("$"):
+				# Service process USERNAME="<hostname>$"
 				self.init_logging()
 				with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
-					logger.debug("OpsiclientdInit - Initialize")
-					logger.devel(os.environ)
+					logger.essential("opsiclientd service start")
+					#logger.debug(os.environ)
 					servicemanager.Initialize()
 					servicemanager.PrepareToHostSingle(OpsiclientdService)
 					servicemanager.StartServiceCtrlDispatcher()
@@ -98,7 +99,7 @@ class OpsiclientdWindowsInit(OpsiclientdInit):
 					options = self.parser.parse_args()
 					self.init_logging(stderr_level=options.logLevel, log_filter=options.logFilter)
 					with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
-						logger.devel(os.environ)
+						#logger.debug(os.environ)
 						opsiclientd = opsiclientd_factory()
 						opsiclientd.start()
 
@@ -126,7 +127,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		"""
 		self.opsiclientd = None
 		try:
-			logger.setConsoleLevel(LOG_NONE)
+			logging_config(stderr_level=LOG_NONE)
 			
 			logger.debug("OpsiclientdService initiating")
 			win32serviceutil.ServiceFramework.__init__(self, args)
