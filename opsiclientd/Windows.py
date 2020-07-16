@@ -46,9 +46,7 @@ from OPSI import System
 from OPSI import __version__ as python_opsi_version
 
 from opsiclientd import __version__
-from opsiclientd.Opsiclientd import Opsiclientd
-
-__all__ = ('OpsiclientdInit', )
+from opsiclientd.Opsiclientd import Opsiclientd, OpsiclientdInit
 
 # from Sens.h
 SENSGUID_PUBLISHER = "{5fee1bd6-5b9b-11d1-8dd2-00aa004abd5e}"
@@ -68,80 +66,29 @@ import pythoncom
 def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 	return (wmi, pythoncom)
 
-"""
-wmi = None
-pythoncom = None
-importWmiAndPythoncomLock = threading.Lock()
 
-
-def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
-	global wmi
-	global pythoncom
-	if importWmi and not pythoncom:
-		importPythoncom = True
-
-	if not ((wmi or not importWmi) and (pythoncom or not importPythoncom)):
-		logger.info(u"Need to import wmi / pythoncom")
-		with importWmiAndPythoncomLock:
-			while not ((wmi or not importWmi) and (pythoncom or not importPythoncom)):
-				try:
-					if not pythoncom and importPythoncom:
-						logger.debug(u"Importing pythoncom")
-						import pythoncom
-
-					if not wmi and importWmi:
-						logger.debug(u"Importing wmi")
-						pythoncom.CoInitialize()
-						try:
-							import wmi
-						finally:
-							pythoncom.CoUninitialize()
-				except Exception as importError:
-					logger.warning(u"Failed to import: %s, retrying in 2 seconds", forceUnicode(importError))
-					time.sleep(2)
-
-	return (wmi, pythoncom)
-"""
-
-class OpsiclientdInit(object):
+class OpsiclientdWindowsInit(OpsiclientdInit):
 	def __init__(self):
-		self._init_early_log()
-		with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
-			logger.debug("OpsiclientdInit")
-			try:
-				# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
-				if len(sys.argv) == 1:
-					# Service process
+		try:
+			# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
+			if len(sys.argv) == 1:
+				# Service process
+				self.init_logging()
+				with opsicommon.logging.log_context({'instance', 'opsiclientd'}):	
 					logger.debug("OpsiclientdInit - Initialize")
 					servicemanager.Initialize()
 					servicemanager.PrepareToHostSingle(OpsiclientdService)
 					servicemanager.StartServiceCtrlDispatcher()
-				elif len(sys.argv) == 2 and sys.argv[1] == "--version":
-					os.execvp("cmd.exe", ["/K", f"echo {__version__} [python-opsi={python_opsi_version}]"])
-					#win32gui.MessageBox(None, f"{__version__} [python-opsi={python_opsi_version}]", "opsiclientd", win32con.MB_OK) 
-					#sys.exit(0)
-				else:
-					logger.debug("OpsiclientdInit - HandleCommandLine")
-					win32serviceutil.HandleCommandLine(OpsiclientdService)	
-			except Exception as exc:
-				logger.logException(exc)
-	
-	def _init_early_log(self):
-		# Location of the main log file will be read from config file later on
-		#if logger.getLogFile() is not None:
-		#	return
-		
-		early_log_file = os.path.join(tempfile.gettempdir(), "opsiclientd.log")
-		try:
-			default_log_dir = os.path.join(System.getSystemDrive() + "\\opsi.org\\log")
-			if os.path.isdir(default_log_dir):
-				early_log_file = os.path.join(default_log_dir, "opsiclientd.log")
-		except:
-			pass
-		logger.setLogFile(early_log_file)
-		logger.setFileLevel(LOG_DEBUG)
-		#logger.setFileLevel(LOG_ERROR)
-		logger.info("Early log file started")
+			elif len(sys.argv) == 2 and sys.argv[1] == "--version":
+				os.execvp("cmd.exe", ["/K", f"echo {__version__} [python-opsi={python_opsi_version}]"])
+				#win32gui.MessageBox(None, f"{__version__} [python-opsi={python_opsi_version}]", "opsiclientd", win32con.MB_OK) 
+				#sys.exit(0)
+			else:
+				#logger.debug("OpsiclientdInit - HandleCommandLine")
+				win32serviceutil.HandleCommandLine(OpsiclientdService)	
+		except Exception as exc:
+			logger.logException(exc)
+
 
 class OpsiclientdService(win32serviceutil.ServiceFramework):
 	_svc_name_ = "opsiclientd"

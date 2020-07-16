@@ -30,8 +30,7 @@ import platform
 import re
 import sys
 
-#from OPSI.Logger import Logger, LOG_NOTICE
-from opsicommon.logging import logger, LOG_NOTICE
+from opsicommon.logging import logger, LOG_NOTICE, init_logging
 from OPSI.Types import (
 	forceBool, forceHostId, forceInt, forceFilename, forceList,
 	forceProductIdList, forceUnicode, forceUnicodeLower, forceUrl,
@@ -335,9 +334,9 @@ class ConfigImplementation(object):
 			if (self._config[section][option] < 0):
 				self._config[section][option] = 0
 		elif (section == 'global') and (option == 'log_level'):
-			logger.setFileLevel(self._config[section][option])
-		elif (section == 'global') and (option == 'log_file'):
-			logger.setLogFile(self._config[section][option])
+			init_logging(file_level=self._config[section][option])
+		#elif (section == 'global') and (option == 'log_file'):
+		#	logger.setLogFile(self._config[section][option])
 		elif (section == 'global') and (option == 'server_cert_dir'):
 			value = forceFilename(value)
 			if not os.path.exists(value):
@@ -363,45 +362,21 @@ class ConfigImplementation(object):
 					string = self.replace(newString, escaped)
 		return forceUnicode(string)
 
-	def readConfigFile(self, keepLog=False):
+	def readConfigFile(self):
 		''' Get settings from config file '''
 		logger.notice(u"Trying to read config from file: '%s'" % self.get('global', 'config_file'))
 
 		try:
 			# Read Config-File
 			config = IniFile(filename=self.get('global', 'config_file'), raw=True).parse()
-
+			
 			# Read log settings early
-			if not keepLog and config.has_section('global'):
-				debug = False
-				if RUNNING_ON_WINDOWS:
-					try:
-						debug = forceBool(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\Services\\opsiclientd", "Debug"))
-					except Exception:
-						pass
-
-				if not debug:
-					if config.has_option('global', 'log_level'):
-						self.set('global', 'log_level', config.get('global', 'log_level'))
-					if config.has_option('global', 'log_file'):
-						logFile = config.get('global', 'log_file')
-						for i in (9, 8, 7, 6, 5, 4, 3, 2, 1, 0):
-							slf = None
-							dlf = None
-							try:
-								slf = logFile + u'.' + forceUnicode(i-1)
-								if (i <= 0):
-									slf = logFile
-								dlf = logFile + u'.' + forceUnicode(i)
-								if os.path.exists(slf):
-									if os.path.exists(dlf):
-										os.unlink(dlf)
-									os.rename(slf, dlf)
-							except Exception as e:
-								logger.error(u"Failed to rename %s to %s: %s" % (slf, dlf, forceUnicode(e)))
-						self.set('global', 'log_file', logFile)
-
-			# Process all sections
+			if config.has_section('global'):
+				if config.has_option('global', 'log_level'):
+					self.set('global', 'log_level', config.get('global', 'log_level'))
+				#if config.has_option('global', 'log_file'):
+				#	logFile = config.get('global', 'log_file')
+					
 			for section in config.sections():
 				logger.debug(u"Processing section '%s' in config file: '%s'" % (section, self.get('global', 'config_file')))
 

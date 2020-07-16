@@ -38,9 +38,8 @@ import traceback
 from contextlib import contextmanager
 
 from OPSI import System
-#from OPSI.Logger import Logger
 import opsicommon.logging
-from opsicommon.logging import logger
+from opsicommon.logging import logger, LOG_DEBUG
 from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
@@ -75,6 +74,39 @@ config = Config()
 timeline = Timeline()
 state = State()
 
+
+class OpsiclientdInit():
+
+	def init_logging(self):
+		log_file = os.path.join(tempfile.gettempdir(), "opsiclientd.log")
+		try:
+			default_log_dir = None
+			if RUNNING_ON_WINDOWS:
+				default_log_dir = os.path.join(System.getSystemDrive() + "\\opsi.org\\log")
+			else:
+				default_log_dir = os.path.join("/var/log/opsi-client-agent")
+			if os.path.isdir(default_log_dir):
+				log_file = os.path.join(default_log_dir, "opsiclientd.log")
+		except:
+			pass
+		
+		for i in (9, 8, 7, 6, 5, 4, 3, 2, 1, 0):
+			slf = None
+			dlf = None
+			try:
+				slf = log_file + f'.{i-1}'
+				if (i <= 0):
+					slf = log_file
+				dlf = log_file + f'.{i}'
+				if os.path.exists(slf):
+					if os.path.exists(dlf):
+						os.unlink(dlf)
+					os.rename(slf, dlf)
+			except Exception as e:
+				print("Failed to rename %s to %s: %s", slf, dlf, forceUnicode(e), file=sys.stderr)
+		
+		opsicommon.logging.init_logging(log_file=log_file, file_level=LOG_DEBUG)
+		logger.essential("Log file started")
 
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):

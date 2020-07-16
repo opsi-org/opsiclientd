@@ -39,8 +39,7 @@ from OPSI.Types import forceUnicode
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
-
-__all__ = ('OpsiclientdInit', )
+from opsiclientd.Opsiclientd import OpsiclientdInit
 
 #logger = Logger()
 config = Config()
@@ -51,7 +50,7 @@ except ImportError as exc:
 	raise
 
 
-class OpsiclientdInit(object):
+class OpsiclientdPosixInit(OpsiclientdInit):
 	def __init__(self):
 		logger.debug(u"OpsiclientdPosixInit")
 

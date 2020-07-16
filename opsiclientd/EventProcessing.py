@@ -1340,7 +1340,7 @@ None otherwise.
 							self.connectConfigService()
 
 						if self.event.eventConfig.getConfigFromService:
-							config.readConfigFile(keepLog = True)
+							config.readConfigFile()
 							self.getConfigFromService()
 							if self.event.eventConfig.updateConfigFile:
 								config.updateConfigFile()
@@ -1353,7 +1353,7 @@ None otherwise.
 
 							# After the installation of opsi-client-agent the opsiclientd.conf needs to be updated again
 							if self.event.eventConfig.getConfigFromService:
-								config.readConfigFile(keepLog = True)
+								config.readConfigFile()
 								self.getConfigFromService()
 								if self.event.eventConfig.updateConfigFile:
 									config.updateConfigFile()

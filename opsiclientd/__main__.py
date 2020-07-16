@@ -26,7 +26,6 @@ opsi client daemon (opsiclientd)
 
 import os
 import sys
-import opsicommon.logging
 
 def opsiclientd_rpc():
 	from opsiclientd.opsiclientdrpc import main
@@ -37,16 +36,14 @@ def action_processor_starter():
 	main()
 
 def opsiclientd():
-	opsicommon.logging.set_format(opsicommon.logging.DEFAULT_FORMAT)	#COLORED_
-	with opsicommon.logging.log_context({'instance' : 'opsiclientd'}):
-		if os.name == 'nt':
-			from opsiclientd.Windows import OpsiclientdInit
-		elif os.name == 'posix':
-			from opsiclientd.Posix import OpsiclientdInit
-		else:
-			raise NotImplementedError("OS %s not supported." % os.name)
-
-	OpsiclientdInit()
+	if os.name == 'nt':
+		from opsiclientd.Windows import OpsiclientdWindowsInit
+		OpsiclientdWindowsInit()
+	elif os.name == 'posix':
+		from opsiclientd.Posix import OpsiclientdPosixInit
+		OpsiclientdPosixInit()
+	else:
+		raise NotImplementedError("OS %s not supported." % os.name)
 
 def main():
 	name = os.path.splitext(os.path.basename(sys.argv[0]))[0].lower()
