@@ -38,10 +38,12 @@ import win32com.server.policy
 import win32com.client
 import servicemanager
 
-from OPSI import __version__ as python_opsi_version
-from OPSI import System
-from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG, LOG_ERROR
+#from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG, LOG_ERROR
+import opsicommon.logging
+from opsicommon.logging import logger, LOG_NONE, LOG_DEBUG, LOG_ERROR
 from OPSI.Types import forceBool, forceUnicode
+from OPSI import System
+from OPSI import __version__ as python_opsi_version
 
 from opsiclientd import __version__
 from opsiclientd.Opsiclientd import Opsiclientd
@@ -58,7 +60,7 @@ PROGID_EventSubscription = "EventSystem.EventSubscription"
 
 IID_ISensLogon = "{d597bab3-5b9f-11d1-8dd2-00aa004abd5e}"
 
-logger = Logger()
+#logger = Logger()
 
 import wmi
 import pythoncom
@@ -95,7 +97,7 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 						finally:
 							pythoncom.CoUninitialize()
 				except Exception as importError:
-					logger.warning(u"Failed to import: {}, retrying in 2 seconds", forceUnicode(importError))
+					logger.warning(u"Failed to import: %s, retrying in 2 seconds", forceUnicode(importError))
 					time.sleep(2)
 
 	return (wmi, pythoncom)
@@ -104,24 +106,25 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 class OpsiclientdInit(object):
 	def __init__(self):
 		self._init_early_log()
-		logger.debug("OpsiclientdInit")
-		try:
-			# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
-			if len(sys.argv) == 1:
-				# Service process
-				logger.debug("OpsiclientdInit - Initialize")
-				servicemanager.Initialize()
-				servicemanager.PrepareToHostSingle(OpsiclientdService)
-				servicemanager.StartServiceCtrlDispatcher()
-			elif len(sys.argv) == 2 and sys.argv[1] == "--version":
-				#os.execvp("cmd.exe", ["/K", f"echo {__version__} [python-opsi={python_opsi_version}]"])
-				win32gui.MessageBox(None, f"{__version__} [python-opsi={python_opsi_version}]", "opsiclientd", win32con.MB_OK) 
-				sys.exit(0)
-			else:
-				logger.debug("OpsiclientdInit - HandleCommandLine")
-				win32serviceutil.HandleCommandLine(OpsiclientdService)	
-		except Exception as exc:
-			logger.logException(exc)
+		with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
+			logger.debug("OpsiclientdInit")
+			try:
+				# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
+				if len(sys.argv) == 1:
+					# Service process
+					logger.debug("OpsiclientdInit - Initialize")
+					servicemanager.Initialize()
+					servicemanager.PrepareToHostSingle(OpsiclientdService)
+					servicemanager.StartServiceCtrlDispatcher()
+				elif len(sys.argv) == 2 and sys.argv[1] == "--version":
+					#os.execvp("cmd.exe", ["/K", f"echo {__version__} [python-opsi={python_opsi_version}]"])
+					win32gui.MessageBox(None, f"{__version__} [python-opsi={python_opsi_version}]", "opsiclientd", win32con.MB_OK) 
+					sys.exit(0)
+				else:
+					logger.debug("OpsiclientdInit - HandleCommandLine")
+					win32serviceutil.HandleCommandLine(OpsiclientdService)	
+			except Exception as exc:
+				logger.logException(exc)
 	
 	def _init_early_log(self):
 		# Location of the main log file will be read from config file later on
@@ -167,7 +170,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		# Wrapping because ReportServiceStatus sometimes lets windows
 		# report a crash of opsiclientd (python 2.6.5) invalid handle
 		try:
-			logger.notice('Reporting service status: {}', serviceStatus)
+			logger.debug('Reporting service status: %s', serviceStatus)
 			win32serviceutil.ServiceFramework.ReportServiceStatus(
 				self,
 				serviceStatus,
@@ -176,7 +179,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 				svcExitCode=svcExitCode
 			)
 		except Exception as exc:
-			logger.error("Failed to report service status {0}: {1}", serviceStatus, exc)
+			logger.error("Failed to report service status %s: %s", serviceStatus, reportStatusError)
 
 	def SvcInterrogate(self):
 		logger.notice("Handling interrogate request")
@@ -326,7 +329,7 @@ class ShutdownThread(threading.Thread):
 				break
 			except Exception as shutdownError:
 				# Device not ready?
-				logger.info(u"Failed to initiate shutdown: {}", forceUnicode(shutdownError))
+				logger.info(u"Failed to initiate shutdown: %s", forceUnicode(shutdownError))
 				time.sleep(1)
 
 
@@ -342,7 +345,7 @@ class RebootThread(threading.Thread):
 				break
 			except Exception as rebootError:
 				# Device not ready?
-				logger.info(u"Failed to initiate reboot: {}", forceUnicode(rebootError))
+				logger.info(u"Failed to initiate reboot: %s", forceUnicode(rebootError))
 				time.sleep(1)
 
 

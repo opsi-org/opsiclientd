@@ -27,13 +27,15 @@ import locale
 import os
 import sys
 
-from OPSI.Logger import LOG_NONE, Logger
+#from OPSI.Logger import LOG_NONE, Logger
+import opsicommon.logging
+from opsicommon.logging import logger, LOG_NONE
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI import System
 
 from opsiclientd.Config import getLogFormat
 
-logger = Logger()
+#logger = Logger()
 
 def main():
 	if len(sys.argv) != 17:
@@ -52,83 +54,84 @@ def main():
 	logger.setConsoleLevel(LOG_NONE)
 	logger.setLogFile(logFile)
 	logger.setFileLevel(int(logLevel))
-	logger.setLogFormat(getLogFormat(os.path.basename(sys.argv[0])))
+	#logger.setLogFormat(getLogFormat(os.path.basename(sys.argv[0])))
+	with opsicommon.logging.log_context({'instance' : os.path.basename(sys.argv[0])}):
 
-	logger.debug("Called with arguments: %s" % u', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword, createEnvironment)) )
+		logger.debug("Called with arguments: %s" % u', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword, createEnvironment)) )
 
-	try:
-		lang = locale.getdefaultlocale()[0].split('_')[0]
-		localeDir = os.path.join(os.path.dirname(sys.argv[0]), 'locale')
-		translation = gettext.translation('opsiclientd', localeDir, [lang])
-		_ = translation.ugettext
-	except Exception as e:
-		logger.error("Locale not found: %s" % e)
+		try:
+			lang = locale.getdefaultlocale()[0].split('_')[0]
+			localeDir = os.path.join(os.path.dirname(sys.argv[0]), 'locale')
+			translation = gettext.translation('opsiclientd', localeDir, [lang])
+			_ = translation.ugettext
+		except Exception as e:
+			logger.error("Locale not found: %s" % e)
 
-		def _(string):
-			return string
+			def _(string):
+				return string
 
-	if runAsUser and createEnvironment.lower() in ('yes', 'true', '1'):
-		createEnvironment = True
-	else:
-		createEnvironment = False
-	actionProcessorTimeout = int(actionProcessorTimeout)
-	imp = None
-	depotShareMounted = False
-	be = None
-
-	try:
-		be = JSONRPCBackend(username=hostId, password=hostKey, address="https://localhost:%s/opsiclientd" % controlServerPort)
-
-		if runAsUser:
-			logger.info("Impersonating user '%s'" % runAsUser)
-			imp = System.Impersonate(username=runAsUser, password=runAsPassword, desktop=actionProcessorDesktop)
-			imp.start(logonType="INTERACTIVE", newDesktop=True, createEnvironment=createEnvironment)
+		if runAsUser and createEnvironment.lower() in ('yes', 'true', '1'):
+			createEnvironment = True
 		else:
-			logger.info("Impersonating network account '%s'" % depotServerUsername)
-			imp = System.Impersonate(username=depotServerUsername, password=depotServerPassword, desktop=actionProcessorDesktop)
-			imp.start(logonType="NEW_CREDENTIALS")
+			createEnvironment = False
+		actionProcessorTimeout = int(actionProcessorTimeout)
+		imp = None
+		depotShareMounted = False
+		be = None
 
-		if depotRemoteUrl.split('/')[2] not in ("127.0.0.1", "localhost"):
-			logger.notice("Mounting depot share %s" % depotRemoteUrl)
-			be.setStatusMessage(sessionId, _("Mounting depot share %s") % depotRemoteUrl)
+		try:
+			be = JSONRPCBackend(username=hostId, password=hostKey, address="https://localhost:%s/opsiclientd" % controlServerPort)
 
 			if runAsUser:
-				System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
+				logger.info("Impersonating user '%s'" % runAsUser)
+				imp = System.Impersonate(username=runAsUser, password=runAsPassword, desktop=actionProcessorDesktop)
+				imp.start(logonType="INTERACTIVE", newDesktop=True, createEnvironment=createEnvironment)
 			else:
-				System.mount(depotRemoteUrl, depotDrive)
-			depotShareMounted = True
+				logger.info("Impersonating network account '%s'" % depotServerUsername)
+				imp = System.Impersonate(username=depotServerUsername, password=depotServerPassword, desktop=actionProcessorDesktop)
+				imp.start(logonType="NEW_CREDENTIALS")
 
-		logger.notice("Starting action processor")
-		be.setStatusMessage(sessionId, _("Action processor is running"))
+			if depotRemoteUrl.split('/')[2] not in ("127.0.0.1", "localhost"):
+				logger.notice("Mounting depot share %s" % depotRemoteUrl)
+				be.setStatusMessage(sessionId, _("Mounting depot share %s") % depotRemoteUrl)
 
-		imp.runCommand(actionProcessorCommand, timeoutSeconds=actionProcessorTimeout)
+				if runAsUser:
+					System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
+				else:
+					System.mount(depotRemoteUrl, depotDrive)
+				depotShareMounted = True
 
-		logger.notice("Action processor ended")
-		be.setStatusMessage(sessionId, _("Action processor ended"))
-	except Exception as e:
-		logger.logException(e)
-		error = "Failed to process action requests: %s" % e
-		if be:
+			logger.notice("Starting action processor")
+			be.setStatusMessage(sessionId, _("Action processor is running"))
+
+			imp.runCommand(actionProcessorCommand, timeoutSeconds=actionProcessorTimeout)
+
+			logger.notice("Action processor ended")
+			be.setStatusMessage(sessionId, _("Action processor ended"))
+		except Exception as e:
+			logger.logException(e)
+			error = "Failed to process action requests: %s" % e
+			if be:
+				try:
+					be.setStatusMessage(sessionId, error)
+				except:
+					pass
+			logger.error(error)
+
+		if depotShareMounted:
 			try:
-				be.setStatusMessage(sessionId, error)
+				logger.notice("Unmounting depot share")
+				System.umount(depotDrive)
 			except:
 				pass
-		logger.error(error)
+		if imp:
+			try:
+				imp.end()
+			except:
+				pass
 
-	if depotShareMounted:
-		try:
-			logger.notice("Unmounting depot share")
-			System.umount(depotDrive)
-		except:
-			pass
-	if imp:
-		try:
-			imp.end()
-		except:
-			pass
-
-	if be:
-		try:
-			be.backend_exit()
-		except:
-			pass
+		if be:
+			try:
+				be.backend_exit()
+			except:
+				pass

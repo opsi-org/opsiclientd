@@ -31,7 +31,9 @@ import os
 from twisted.internet import defer
 
 from OPSI.Exceptions import OpsiAuthenticationError
-from OPSI.Logger import Logger
+#from OPSI.Logger import Logger
+import opsicommon.logging
+from opsicommon.logging import logger
 from OPSI.Types import forceUnicode
 from OPSI.Service.Worker import WorkerOpsiJsonRpc
 from OPSI.Service.Resource import ResourceOpsi
@@ -42,24 +44,25 @@ from opsiclientd.Events.SwOnDemand import SwOnDemandEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
-logger = Logger()
+#logger = Logger()
 config = Config()
 
 
 class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 	def __init__(self, service, request, resource):
-		logger.setLogFormat(getLogFormat(u'software on demand'), object=self)
-		self._allowedMethods = self._getAllowedMethods()
-		self._fireEvent = False
-		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
-		ServiceConnection.__init__(self)
-		self._auth_module = None
-		if os.name == 'posix':
-			import OPSI.Backend.Manager.Authentication.PAM
-			self._auth_module = OPSI.Backend.Manager.Authentication.PAM.PAMAuthentication()
-		elif os.name == 'nt':
-			import OPSI.Backend.Manager.Authentication.NT
-			self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
+		#logger.setLogFormat(getLogFormat(u'software on demand'), object=self)
+		with opsicommon.logging.log_context({'instance' : 'software on demand'}):
+			self._allowedMethods = self._getAllowedMethods()
+			self._fireEvent = False
+			WorkerOpsiJsonRpc.__init__(self, service, request, resource)
+			ServiceConnection.__init__(self)
+			self._auth_module = None
+			if os.name == 'posix':
+				import OPSI.Backend.Manager.Authentication.PAM
+				self._auth_module = OPSI.Backend.Manager.Authentication.PAM.PAMAuthentication()
+			elif os.name == 'nt':
+				import OPSI.Backend.Manager.Authentication.NT
+				self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
 
 	def _getAllowedMethods(self):
 		return [

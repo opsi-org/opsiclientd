@@ -14,13 +14,14 @@ import os
 import os.path
 
 import OPSI.System as System
-from OPSI.Logger import Logger
+from opsicommon.logging import logger
+#from OPSI.Logger import Logger
 
 from opsiclientd.Opsiclientd import Opsiclientd
 
 __all__ = ['OpsiclientdPosix']
 
-logger = Logger()
+#logger = Logger()
 
 
 class OpsiclientdPosix(Opsiclientd):

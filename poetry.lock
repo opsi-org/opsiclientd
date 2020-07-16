@@ -346,6 +346,7 @@ toml = ">=0.10.0,<0.11.0"
 
 [package.source]
 reference = "uibpypi"
+type = "legacy"
 url = "http://pypi.uib.gmbh:8080/simple"
 
 [[package]]
@@ -601,6 +602,7 @@ version = ">=20.3.0,<21.0.0"
 
 [package.source]
 reference = "uibpypi"
+type = "legacy"
 url = "http://pypi.uib.gmbh:8080/simple"
 
 [[package]]
@@ -847,7 +849,7 @@ test = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [metadata]
-content-hash = "bb29c560164803fc810ed8430cdd2dfbd6103fb68abccf0c920326d76d236451"
+content-hash = "87e53791f07711a986905d4772957310c2d68722d3ad768be4a192208f3c0d76"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -1208,8 +1210,8 @@ python-magic = [
     {file = "python_magic-0.4.18-py2.py3-none-any.whl", hash = "sha256:356efa93c8899047d1eb7d3eb91e871ba2f5b1376edbaf4cc305e3c872207355"},
 ]
 python-opsi = [
-    {file = "python-opsi-4.2.0.36.tar.gz", hash = "md5:630995b1a3df7a08c4960fb8f29b161f"},
-    {file = "python_opsi-4.2.0.36-py3-none-any.whl", hash = "md5:446ebc959a68ebfd06cdc7c47caef8ae"},
+    {file = "python-opsi-4.2.0.36.tar.gz", hash = "md5:23639b769b317aa2dee2e438784d706d"},
+    {file = "python_opsi-4.2.0.36-py3-none-any.whl", hash = "md5:975dd940940811b48e2d90cab2908434"},
 ]
 python-pam = [
     {file = "python-pam-1.8.4.tar.gz", hash = "sha256:c856d9c89fedb33951dd8a95727ae57c6887b02d065bbdffd2fd9dbc0183909b"},

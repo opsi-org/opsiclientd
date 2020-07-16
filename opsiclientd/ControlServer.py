@@ -45,7 +45,9 @@ from OPSI import System
 from OPSI.Util.Log import truncateLogData
 from OPSI.Backend.Backend import ConfigDataBackend
 from OPSI.Exceptions import OpsiAuthenticationError
-from OPSI.Logger import Logger
+#from OPSI.Logger import Logger
+import opsicommon.logging
+from opsicommon.logging import logger
 from OPSI.Service import SSLContext, OpsiService
 from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface
 from OPSI.Service.Resource import ResourceOpsi, ResourceOpsiJsonRpc, ResourceOpsiJsonInterface
@@ -65,7 +67,7 @@ if RUNNING_ON_WINDOWS:
 	import win32security
 
 config = Config()
-logger = Logger()
+#logger = Logger()
 state = State()
 
 infoPage = u'''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
@@ -105,15 +107,15 @@ try:
 	if not fsencoding:
 		raise ValueError("getfilesystemencoding returned {!r}".format(fsencoding))
 except Exception as err:
-	logger.info("Problem getting filesystemencoding: {}", err)
+	logger.info("Problem getting filesystemencoding: %s", err)
 	defaultEncoding = sys.getdefaultencoding()
-	logger.notice("Patching filesystemencoding to be {!r}", defaultEncoding)
+	logger.notice("Patching filesystemencoding to be '%s'", defaultEncoding)
 	sys.getfilesystemencoding = lambda: defaultEncoding
 
 
 class WorkerOpsiclientd(WorkerOpsi):
 	def __init__(self, service, request, resource):
-		logger.setLogFormat(getLogFormat(u'control server'), object=self)
+		#logger.setLogFormat(getLogFormat(u'control server'), object=self)		#moved to run
 		WorkerOpsi.__init__(self, service, request, resource)
 		self._auth_module = None
 		if os.name == 'posix':
@@ -122,6 +124,10 @@ class WorkerOpsiclientd(WorkerOpsi):
 		elif os.name == 'nt':
 			import OPSI.Backend.Manager.Authentication.NT
 			self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
+
+	def run(self):
+		with opsicommon.logging.log_context({'instance' : 'control server'}):
+			super().run()
 	
 	def _getCredentials(self):
 		(user, password) = self._getAuthorization()
@@ -133,10 +139,10 @@ class WorkerOpsiclientd(WorkerOpsi):
 
 	def _errback(self, failure):
 		result = WorkerOpsi._errback(self, failure)
-		logger.debug(u"DEBUG: detected host: {!r}", self.request.getClientIP())
-		logger.debug(u"DEBUG: responsecode: {!r}", self.request.code)
-		logger.debug(u"DEBUG: maxAuthenticationFailures config: {!r}", config.get('control_server', 'max_authentication_failures'))
-		logger.debug(u"DEBUG: maxAuthenticationFailures config type: {!r}", type(config.get('control_server', 'max_authentication_failures')))
+		logger.debug(u"DEBUG: detected host: '%s'", self.request.getClientIP())
+		logger.debug(u"DEBUG: responsecode: '%s'", self.request.code)
+		logger.debug(u"DEBUG: maxAuthenticationFailures config: '%s'", config.get('control_server', 'max_authentication_failures'))
+		logger.debug(u"DEBUG: maxAuthenticationFailures config type: '%s'", type(config.get('control_server', 'max_authentication_failures')))
 
 		if self.request.code == 401 and self.request.getClientIP() != "127.0.0.1":
 			maxAuthenticationFailures = config.get('control_server', 'max_authentication_failures')
@@ -148,7 +154,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 
 				if self.service.authFailureCount[self.request.getClientIP()] > maxAuthenticationFailures:
 					logger.error(
-						u"{0} authentication failures from {0!r} in a row, waiting 60 seconds to prevent flooding",
+						u"%s authentication failures from '%s' in a row, waiting 60 seconds to prevent flooding",
 						self.service.authFailureCount[self.request.getClientIP()],
 						self.request.getClientIP()
 					)
@@ -378,7 +384,7 @@ class ResourceOpsiclientdInfo(ResourceOpsiclientd):
 class ControlServer(OpsiService, threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
 		OpsiService.__init__(self)
-		logger.setLogFormat(getLogFormat(u'control server'), object=self)
+		#logger.setLogFormat(getLogFormat(u'control server'), object=self)		#moved to run
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._httpsPort = httpsPort
@@ -394,55 +400,56 @@ class ControlServer(OpsiService, threading.Thread):
 		self.authFailureCount = {}
 
 	def run(self):
-		self._running = True
-		try:
-			logger.info(u"creating root resource")
-			self.createRoot()
-			self._site = server.Site(self._root)
+		with opsicommon.logging.log_context({'instance' : 'control server'}):
+			self._running = True
+			try:
+				logger.info(u"creating root resource")
+				self.createRoot()
+				self._site = server.Site(self._root)
 
-			logger.debug('Creating SSLContext with the following values:')
-			logger.debug('\t-SSL Server Key File: {path}'.format(path=self._sslServerKeyFile))
-			if not os.path.exists(self._sslServerKeyFile):
-				logger.warning('The SSL server key file "{path}" is missing. '
-								'Please check your configuration.'.format(
-									path=self._sslServerKeyFile
-								)
+				logger.debug('Creating SSLContext with the following values:')
+				logger.debug('\t-SSL Server Key File: {path}'.format(path=self._sslServerKeyFile))
+				if not os.path.exists(self._sslServerKeyFile):
+					logger.warning('The SSL server key file "{path}" is missing. '
+									'Please check your configuration.'.format(
+										path=self._sslServerKeyFile
+									)
+					)
+				logger.debug('\t-SSL Server Cert File: {path}'.format(path=self._sslServerCertFile))
+				if not os.path.exists(self._sslServerCertFile):
+					logger.warning('The SSL server certificate file "{path}" is '
+									'missing. Please check your '
+									'configuration.'.format(
+										path=self._sslServerCertFile
+									)
+					)
+
+				self._server = reactor.listenSSL(
+					self._httpsPort,
+					self._site,
+					SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
 				)
-			logger.debug('\t-SSL Server Cert File: {path}'.format(path=self._sslServerCertFile))
-			if not os.path.exists(self._sslServerCertFile):
-				logger.warning('The SSL server certificate file "{path}" is '
-								'missing. Please check your '
-								'configuration.'.format(
-									path=self._sslServerCertFile
-								)
-				)
+				logger.notice(u"Control server is accepting HTTPS requests on port %d" % self._httpsPort)
 
-			self._server = reactor.listenSSL(
-				self._httpsPort,
-				self._site,
-				SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
-			)
-			logger.notice(u"Control server is accepting HTTPS requests on port %d" % self._httpsPort)
-
-			if not reactor.running:
-				logger.debug("Reactor is not running. Starting.")
-				reactor.run(installSignalHandlers=0)
-				logger.debug("Reactor run ended.")
-			else:
-				logger.debug("Reactor already running.")
-		
-		except CannotListenError as err:
-			logger.critical("Listening on port {0} impossible: {1}".format(self._httpsPort, err))
-			logger.logException(err)
-			self._opsiclientd.stop()
-			raise err
-		except Exception as err:
-			logger.warning("ControlServer {1} caught error: {0}".format(err, repr(self)))
-			logger.logException(err)
-			raise err
-		finally:
-			logger.notice("Control server exiting")
-			self._running = False
+				if not reactor.running:
+					logger.debug("Reactor is not running. Starting.")
+					reactor.run(installSignalHandlers=0)
+					logger.debug("Reactor run ended.")
+				else:
+					logger.debug("Reactor already running.")
+			
+			except CannotListenError as err:
+				logger.critical("Listening on port {0} impossible: {1}".format(self._httpsPort, err))
+				logger.logException(err)
+				self._opsiclientd.stop()
+				raise err
+			except Exception as err:
+				logger.warning("ControlServer {1} caught error: {0}".format(err, repr(self)))
+				logger.logException(err)
+				raise err
+			finally:
+				logger.notice("Control server exiting")
+				self._running = False
 
 	def stop(self):
 		if self._server:
@@ -458,7 +465,7 @@ class ControlServer(OpsiService, threading.Thread):
 			if os.path.isdir(self._staticDir):
 				self._root = File(self._staticDir.encode())
 			else:
-				logger.error(u"Cannot add static content '/': directory {!r} does not exist.", self._staticDir)
+				logger.error(u"Cannot add static content '/': directory '%s' does not exist.", self._staticDir)
 
 		if not self._root:
 			self._root = ResourceRoot()
@@ -520,7 +527,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def setBlockLogin(self, blockLogin):
 		self.opsiclientd.setBlockLogin(forceBool(blockLogin))
-		logger.notice(u"rpc setBlockLogin: blockLogin set to {!r}", self.opsiclientd._blockLogin)
+		logger.notice(u"rpc setBlockLogin: blockLogin set to '%s'", self.opsiclientd._blockLogin)
 		if self.opsiclientd._blockLogin:
 			return u"Login blocker is on"
 		else:
@@ -531,7 +538,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		if logType != 'opsiclientd':
 			raise ValueError(u"Unknown log type '%s'" % logType)
 
-		logger.notice(u"rpc readLog: reading log of type {!r}", logType)
+		logger.notice(u"rpc readLog: reading log of type '%s'", logType)
 
 		if logType == 'opsiclientd':
 			with codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace') as log:
@@ -604,7 +611,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		else:
 			desktop = self.opsiclientd.getCurrentActiveDesktopName()
 
-		logger.notice(u"rpc runCommand: executing command {!r} in session {:d} on desktop {!r}", command, sessionId, desktop)
+		logger.notice(u"rpc runCommand: executing command '%s' in session %d on desktop '%s'", command, sessionId, desktop)
 		System.runCommandInSession(
 			command=command,
 			sessionId=sessionId,
@@ -632,17 +639,17 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def shutdown(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
-		logger.notice(u"rpc shutdown: shutting down computer in {} seconds", waitSeconds)
+		logger.notice(u"rpc shutdown: shutting down computer in %s seconds", waitSeconds)
 		System.shutdown(wait=waitSeconds)
 
 	def reboot(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
-		logger.notice(u"rpc reboot: rebooting computer in {} seconds", waitSeconds)
+		logger.notice(u"rpc reboot: rebooting computer in %s seconds", waitSeconds)
 		System.reboot(wait=waitSeconds)
 
 	def uptime(self):
 		uptime = int(time.time() - self.opsiclientd._startupTime)
-		logger.notice(u"rpc uptime: opsiclientd is running for {:d} seconds", uptime)
+		logger.notice(u"rpc uptime: opsiclientd is running for %d seconds", uptime)
 		return uptime
 
 	def fireEvent(self, name):
@@ -654,7 +661,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		sessionId = forceInt(sessionId)
 		message = forceUnicode(message)
 		ept = self.opsiclientd.getEventProcessingThread(sessionId)
-		logger.notice(u"rpc setStatusMessage: Setting status message to {0!r}", message)
+		logger.notice(u"rpc setStatusMessage: Setting status message to '%s'", message)
 		ept.setStatusMessage(message)
 
 	def isEventRunning(self, name):
@@ -680,14 +687,14 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def getCurrentActiveDesktopName(self, sessionId=None):
 		desktop = self.opsiclientd.getCurrentActiveDesktopName(sessionId)
-		logger.notice(u"rpc getCurrentActiveDesktopName: current active desktop name is {0}", desktop)
+		logger.notice(u"rpc getCurrentActiveDesktopName: current active desktop name is %s", desktop)
 		return desktop
 
 	def setCurrentActiveDesktopName(self, sessionId, desktop):
 		sessionId = forceInt(sessionId)
 		desktop = forceUnicode(desktop)
 		self.opsiclientd._currentActiveDesktopName[sessionId] = desktop
-		logger.notice(u"rpc setCurrentActiveDesktopName: current active desktop name for session {0} set to {1!r}", sessionId, desktop)
+		logger.notice(u"rpc setCurrentActiveDesktopName: current active desktop name for session %s set to '%s'", sessionId, desktop)
 
 	def switchDesktop(self, desktop, sessionId=None):
 		self.opsiclientd.switchDesktop(desktop, sessionId)
@@ -724,7 +731,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			hour = 0
 			minute = 0
 			second = 0
-			logger.debug(u"session to check for LogonTime {0!r}", session)
+			logger.debug(u"session to check for LogonTime '%s'", session)
 
 			if isinstance(session['LogonTime'], str):
 				match = None
