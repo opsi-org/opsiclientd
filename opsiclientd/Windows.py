@@ -154,10 +154,8 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		"""
 		self.opsiclientd = None
 		try:
-			sys.stdout = logger.getStdout()
-			sys.stderr = logger.getStderr()
 			logger.setConsoleLevel(LOG_NONE)
-
+			
 			logger.debug("OpsiclientdService initiating")
 			win32serviceutil.ServiceFramework.__init__(self, args)
 			self._stopEvent = threading.Event()
