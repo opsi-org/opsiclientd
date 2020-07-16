@@ -51,7 +51,7 @@ from OPSI.Util.Thread import KillableThread
 from opsiclientd import __version__
 from opsiclientd.Config import Config, getLogFormat
 from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
-from opsiclientd.Exceptions import CanceledByUserError
+from opsiclientd.Exceptions import CanceledByUserError, ConfigurationError
 from opsiclientd.Localization import _
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
@@ -493,9 +493,9 @@ None otherwise.
 				actionProcessorRemoteDir = None
 				if config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
 					dirname = config.get('action_processor', 'remote_dir')
-					dirname = dirname.lstrip(os.pathsep)
-					dirname = dirname.lstrip("install" + os.pathsep)
-					dirname = dirname.lstrip(os.pathsep)
+					dirname = dirname.lstrip(os.sep)
+					dirname = dirname.lstrip("install" + os.sep)
+					dirname = dirname.lstrip(os.sep)
 					actionProcessorRemoteDir = os.path.join(
 						self.opsiclientd.getCacheService().getProductCacheDir(),
 						dirname
@@ -505,15 +505,13 @@ None otherwise.
 					match = re.search('^(smb|cifs)://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
 					if not match:
 						raise Exception("Bad depot-URL '%s'" % config.get('depot_server', 'url'))
-					pn = match.group(3).replace('/', os.pathsep)
-					if not pn:
-						pn = os.pathsep
-					if not RUNNING_ON_WINDOWS:
-						pn = ''
+					pn = match.group(3).replace('/', os.sep)
+					dd = config.getDepotDrive()
+					if RUNNING_ON_WINDOWS:
+						dd += os.sep
 					dirname = config.get('action_processor', 'remote_dir')
-					dirname.lstrip(os.pathsep)
-					print("=====================================", config.getDepotDrive(), pn, dirname)
-					actionProcessorRemoteDir = os.path.join(config.getDepotDrive(), pn, dirname)
+					dirname.lstrip(os.sep)
+					actionProcessorRemoteDir = os.path.join(dd, pn, dirname)
 					logger.notice(u"Updating action processor from depot dir '%s'" % actionProcessorRemoteDir)
 
 				actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
@@ -628,7 +626,10 @@ None otherwise.
 				raise Exception(u"Failed to get depotserver for client '%s'" % config.get('global', 'host_id'))
 			depotId = clientToDepotservers[0]['depotId']
 
-			productDir = os.path.join(config.getDepotDrive(), 'install')
+			dd = config.getDepotDrive()
+			if RUNNING_ON_WINDOWS:
+				dd += os.sep
+			productDir = os.path.join(dd, "install")
 
 			userLoginScripts = []
 			productIds = []
@@ -1068,6 +1069,8 @@ None otherwise.
 					self.setStatusMessage(_(u"Shutdown requested"))
 
 				if self.event.eventConfig.shutdownWarningTime:
+					if not self.event.eventConfig.shutdownNotifierCommand:
+						raise ConfigurationError(f"Event {self.event.eventConfig.getName()} defines shutdownWarningTime but shutdownNotifierCommand is not set")
 					if self._notificationServer:
 						self._notificationServer.requestEndConnections()
 					while True:
@@ -1111,13 +1114,12 @@ None otherwise.
 								choiceSubject.setChoices([ _('Shutdown now') ])
 							choiceSubject.setCallbacks( [ self.startShutdownCallback ] )
 						self._notificationServer.addSubject(choiceSubject)
-						notifierPid = None
-						if self.event.eventConfig.shutdownNotifierCommand:
-							notifierPid = self.startNotifierApplication(
-									command    = self.event.eventConfig.shutdownNotifierCommand,
-									desktop    = self.event.eventConfig.shutdownNotifierDesktop,
-									notifierId = 'shutdown')
-
+						notifierPid = self.startNotifierApplication(
+							command    = self.event.eventConfig.shutdownNotifierCommand,
+							desktop    = self.event.eventConfig.shutdownNotifierDesktop,
+							notifierId = 'shutdown'
+						)
+						
 						timeout = int(self.event.eventConfig.shutdownWarningTime)
 						endTime = time.time() + timeout
 						while (timeout > 0) and not self.shutdownCancelled and not self.shutdownWaitCancelled:

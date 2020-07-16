@@ -30,8 +30,8 @@ import sys
 import threading
 import tempfile
 import time
-import win32gui
 import win32con
+import win32gui
 import win32service
 import win32serviceutil
 import win32com.server.policy
@@ -182,7 +182,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			logger.error("Failed to report service status %s: %s", serviceStatus, reportStatusError)
 
 	def SvcInterrogate(self):
-		logger.debug("OpsiclientdService SvcInterrogate")
+		logger.notice("Handling interrogate request")
 		# Assume we are running, and everyone is happy.
 		self.ReportServiceStatus(win32service.SERVICE_RUNNING)
 
@@ -190,7 +190,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		"""
 		Gets called from windows to stop service
 		"""
-		logger.debug(u"OpsiclientdService SvcStop")
+		logger.notice("Handling stop request")
 		# Write to event log
 		self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
 		# Fire stop event to stop blocking self._stopEvent.wait()
@@ -200,7 +200,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		"""
 		Gets called from windows on system shutdown
 		"""
-		logger.debug(u"OpsiclientdService SvcShutdown")
+		logger.notice("Handling shutdown request")
 		# Write to event log
 		self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
 		if self.opsiclientd:
@@ -213,7 +213,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		Gets called from windows to start service
 		"""
 		try:
-			logger.debug("OpsiclientdService.SvcRun", stderr=False)
+			logger.notice("Handling start request")
 			startTime = time.time()
 			
 			# Write to event log
