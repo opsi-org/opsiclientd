@@ -30,6 +30,7 @@ import sys
 import threading
 import tempfile
 import time
+import psutil
 import win32con
 import win32gui
 import win32service
@@ -81,10 +82,10 @@ class OpsiclientdWindowsInit(OpsiclientdInit):
 	def __init__(self):
 		try:
 			super().__init__()
+			parent = psutil.Process(os.getpid()).parent()
 			# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
-			#if len(sys.argv) == 1:
-			if os.environ.get("USERNAME", "$").endswith("$"):
-				# Service process USERNAME="<hostname>$"
+			#if os.environ.get("USERNAME", "$").endswith("$") and len(sys.argv) == 1:
+			if parent and parent.name() == "services.exe":
 				self.init_logging()
 				with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
 					logger.essential("opsiclientd service start")
@@ -99,19 +100,11 @@ class OpsiclientdWindowsInit(OpsiclientdInit):
 					options = self.parser.parse_args()
 					self.init_logging(stderr_level=options.logLevel, log_filter=options.logFilter)
 					with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
+						if parent:
+							logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)
 						#logger.debug(os.environ)
 						opsiclientd = opsiclientd_factory()
 						opsiclientd.start()
-
-			"""
-			elif len(sys.argv) == 2 and sys.argv[1] == "--version":
-				os.execvp("cmd.exe", ["/K", f"echo {__version__} [python-opsi={python_opsi_version}]"])
-				#win32gui.MessageBox(None, f"{__version__} [python-opsi={python_opsi_version}]", "opsiclientd", win32con.MB_OK) 
-				#sys.exit(0)
-			else:
-				#logger.debug("OpsiclientdInit - HandleCommandLine")
-				win32serviceutil.HandleCommandLine(OpsiclientdService)	
-			"""
 		except Exception as exc:
 			logger.critical(exc, exc_info=True)
 
