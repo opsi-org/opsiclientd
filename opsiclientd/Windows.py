@@ -153,7 +153,7 @@ def run_as_system(command):
 	win32security.AdjustTokenPrivileges(hToken, False, newprivs) 
 
 	s = win32process.STARTUPINFO()
-	dwCreationFlags = win32con.NORMAL_PRIORITY_CLASS
+	dwCreationFlags = win32con.CREATE_NEW_CONSOLE
 	(hProcess, hThread, dwProcessId, dwThreadId) = win32process.CreateProcessAsUser(
 		hToken, None, command, None, None, 1, dwCreationFlags, None, None, s)
 

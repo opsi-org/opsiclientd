@@ -24,4 +24,4 @@ opsiclientd Library.
 :license: GNU Affero General Public License version 3
 """
 
-__version__ = '4.2.0.6'
+__version__ = '4.2.0.7'
