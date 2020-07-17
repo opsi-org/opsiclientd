@@ -61,18 +61,19 @@ class WMIEventGenerator(EventGenerator):
 		from opsiclientd.Windows import importWmiAndPythoncom
 		(wmi, pythoncom) = importWmiAndPythoncom()
 		pythoncom.CoInitialize()
-		while not self._watcher:
+		max_attempts = 10
+		for attempt in range(1, 100):
 			try:
 				logger.debug(u"Creating wmi object")
 				c = wmi.WMI(privileges=["Security"])
 				logger.info(u"Watching for wql: %s" % self._wql)
 				self._watcher = c.watch_for(raw_wql=self._wql, wmi_class='')
+				break
 			except Exception as e:
-				try:
-					logger.warning(u"Failed to create wmi watcher: %s" % forceUnicode(e))
-				except Exception:
-					logger.warning(u"Failed to create wmi watcher, failed to log exception")
-				time.sleep(1)
+				logger.warning("Failed to create wmi watcher (wql=%s): %s", self._wql, e, exc_info=True)
+				if attempt >= max_attempts:
+					raise
+				time.sleep(3)
 		logger.debug(u"Initialized")
 
 	def getNextEvent(self):
