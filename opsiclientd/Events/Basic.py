@@ -28,11 +28,9 @@ Basic event building blocks.
 
 from __future__ import absolute_import
 
-#import thread
 import threading
 import time
 
-#from OPSI.Logger import Logger
 import opsicommon.logging
 from opsicommon.logging import logger
 from OPSI.Types import forceList, forceUnicode
@@ -48,7 +46,7 @@ state = State()
 
 class EventGenerator(threading.Thread):
 	def __init__(self, generatorConfig):
-		threading.Thread.__init__(self)
+		threading.Thread.__init__(self, daemon=True)
 		self._eventConfigs = []
 		self._generatorConfig = generatorConfig
 		self._eventListeners = []
@@ -164,7 +162,6 @@ class EventGenerator(threading.Thread):
 
 	def run(self):
 		with opsicommon.logging.log_context({'instance' : 'event generator ' + self._generatorConfig.getId()}):
-			#self._threadId = thread.get_ident()
 			try:
 				logger.info(u"Initializing event generator '%s'" % self)
 				self.initialize()

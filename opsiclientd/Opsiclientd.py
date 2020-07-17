@@ -443,7 +443,8 @@ class Opsiclientd(EventListener, threading.Thread):
 								logger.info("Stopping timeline")
 								timeline.stop()
 		except Exception as e:
-			logger.error(e, exc_info=True)
+			if not self._stopEvent.is_set():
+				logger.error(e, exc_info=True)
 			self.setBlockLogin(False)
 		finally:
 			self._running = False

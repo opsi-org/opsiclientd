@@ -104,7 +104,18 @@ class OpsiclientdWindowsInit(OpsiclientdInit):
 							logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)
 						#logger.debug(os.environ)
 						opsiclientd = opsiclientd_factory()
-						opsiclientd.start()
+						try:
+							opsiclientd.start()
+							while True:
+								time.sleep(1)
+						except KeyboardInterrupt:
+							logger.essential("KeyboardInterrupt #1 -> stop")
+							opsiclientd.stop()
+							try:
+								opsiclientd.join(15)
+							except KeyboardInterrupt:
+								logger.essential("KeyboardInterrupt #2 -> kill process")
+								psutil.Process(os.getpid()).kill()
 		except Exception as exc:
 			logger.critical(exc, exc_info=True)
 

@@ -72,10 +72,7 @@ class SensLogonEventGenerator(EventGenerator):
 
 	def stop(self):
 		EventGenerator.stop(self)
-		# Post WM_QUIT
-		import win32api
-		win32api.PostThreadMessage(self._threadId, 18, 0, 0)
-
+	
 	def cleanup(self):
 		if self._lastEventOccurence and (time.time() - self._lastEventOccurence < 10):
 			# Waiting some seconds before exit to avoid Win32 releasing

@@ -70,10 +70,15 @@ class WMIEventGenerator(EventGenerator):
 				self._watcher = c.watch_for(raw_wql=self._wql, wmi_class='')
 				break
 			except Exception as e:
+				if self._stopped:
+					return
 				logger.warning("Failed to create wmi watcher (wql=%s): %s", self._wql, e, exc_info=True)
 				if attempt >= max_attempts:
 					raise
-				time.sleep(3)
+				for i in range(3):
+					if self._stopped:
+						return
+					time.sleep(1)
 		logger.debug(u"Initialized")
 
 	def getNextEvent(self):
