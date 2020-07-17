@@ -37,9 +37,12 @@ import win32service
 import win32serviceutil
 import win32com.server.policy
 import win32com.client
+import win32api
+import win32security
+import ntsecuritycon
+import win32process
 import servicemanager
 
-#from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG, LOG_ERROR
 import opsicommon.logging
 from opsicommon.logging import logger, logging_config, LOG_NONE, LOG_DEBUG, LOG_ERROR
 from OPSI.Types import forceBool, forceUnicode
@@ -78,6 +81,82 @@ def opsiclientd_factory():
 	raise Exception(f"Windows version {windowsVersion} not supported")
 
 
+def run_as_system(command):
+	currentProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, os.getpid())
+	currentProcessToken = win32security.OpenProcessToken(currentProcess, win32con.MAXIMUM_ALLOWED)
+	duplicatedCurrentProcessToken = win32security.DuplicateTokenEx(
+		ExistingToken=currentProcessToken,
+		DesiredAccess=win32con.MAXIMUM_ALLOWED,
+		ImpersonationLevel=win32security.SecurityImpersonation,
+		TokenType=ntsecuritycon.TokenImpersonation,
+		TokenAttributes=None
+	)
+	id = win32security.LookupPrivilegeValue(None, win32security.SE_DEBUG_NAME)
+	newprivs = [(id, win32security.SE_PRIVILEGE_ENABLED)]
+	win32security.AdjustTokenPrivileges(duplicatedCurrentProcessToken, False, newprivs)
+
+	win32security.SetThreadToken(win32api.GetCurrentThread(), duplicatedCurrentProcessToken)
+
+	currentProcessToken = win32security.OpenThreadToken(win32api.GetCurrentThread(), win32con.MAXIMUM_ALLOWED, False)
+	sessionId = win32security.GetTokenInformation(currentProcessToken, ntsecuritycon.TokenSessionId)
+	
+	pid = None
+	for proc in psutil.process_iter():
+		try:
+			if proc.name() == "lsass.exe":
+				pid = proc.pid
+				break
+		except psutil.AccessDenied:
+			pass
+	if not pid:
+		raise RuntimeError("Failed to get pid of lsass.exe")
+	
+	lsassProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, pid)
+	lsassProcessToken = win32security.OpenProcessToken(
+		lsassProcess,
+		win32con.MAXIMUM_ALLOWED
+	)
+
+	systemToken = win32security.DuplicateTokenEx(
+		ExistingToken=lsassProcessToken,
+		DesiredAccess=win32con.MAXIMUM_ALLOWED,
+		ImpersonationLevel=win32security.SecurityImpersonation,
+		TokenType=ntsecuritycon.TokenImpersonation,
+		TokenAttributes=None
+	)
+	
+	privs = win32security.GetTokenInformation(systemToken, ntsecuritycon.TokenPrivileges)
+	newprivs = []
+	# enable all privileges
+	for privtuple in privs:
+		newprivs.append((privtuple[0], win32security.SE_PRIVILEGE_ENABLED))
+	privs = tuple(newprivs)
+	win32security.AdjustTokenPrivileges(systemToken, False, newprivs) 
+	
+	win32security.SetThreadToken(win32api.GetCurrentThread(), systemToken)
+	
+	hToken = win32security.DuplicateTokenEx(
+		ExistingToken=lsassProcessToken,
+		DesiredAccess=win32con.MAXIMUM_ALLOWED,
+		ImpersonationLevel=win32security.SecurityImpersonation,
+		TokenType=ntsecuritycon.TokenPrimary,
+		TokenAttributes=None
+	)
+	win32security.SetTokenInformation(hToken, ntsecuritycon.TokenSessionId, sessionId)
+	
+	privs = win32security.GetTokenInformation(hToken, ntsecuritycon.TokenPrivileges)
+	newprivs = []
+	# enable all privileges
+	for privtuple in privs:
+		newprivs.append((privtuple[0], win32security.SE_PRIVILEGE_ENABLED))
+	privs = tuple(newprivs)
+	win32security.AdjustTokenPrivileges(hToken, False, newprivs) 
+
+	s = win32process.STARTUPINFO()
+	dwCreationFlags = win32con.NORMAL_PRIORITY_CLASS
+	(hProcess, hThread, dwProcessId, dwThreadId) = win32process.CreateProcessAsUser(
+		hToken, None, command, None, None, 1, dwCreationFlags, None, None, s)
+
 class OpsiclientdWindowsInit(OpsiclientdInit):
 	def __init__(self):
 		try:
@@ -97,6 +176,11 @@ class OpsiclientdWindowsInit(OpsiclientdInit):
 				if any(arg in sys.argv[1:] for arg in ("install", "update", "remove", "start", "stop", "restart")):
 					win32serviceutil.HandleCommandLine(OpsiclientdService)
 				else:
+					if not "--elevated" in sys.argv:
+						command = " ".join(sys.argv) + " --elevated"
+						return run_as_system(command)
+					
+					sys.argv.remove("--elevated")
 					options = self.parser.parse_args()
 					self.init_logging(stderr_level=options.logLevel, log_filter=options.logFilter)
 					with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
