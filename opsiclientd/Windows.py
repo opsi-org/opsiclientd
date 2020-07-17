@@ -184,9 +184,10 @@ class OpsiclientdWindowsInit(OpsiclientdInit):
 					options = self.parser.parse_args()
 					self.init_logging(stderr_level=options.logLevel, log_filter=options.logFilter)
 					with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
+						logger.notice("Running as user: %s", win32api.GetUserName())
 						if parent:
 							logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)
-						#logger.debug(os.environ)
+						logger.debug(os.environ)
 						opsiclientd = opsiclientd_factory()
 						try:
 							opsiclientd.start()
