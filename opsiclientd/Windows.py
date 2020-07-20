@@ -177,7 +177,7 @@ class OpsiclientdWindowsInit(OpsiclientdInit):
 				if any(arg in sys.argv[1:] for arg in ("install", "update", "remove", "start", "stop", "restart")):
 					win32serviceutil.HandleCommandLine(OpsiclientdService)
 				else:
-					if not "--elevated" in sys.argv and not "--help" in sys.argv:
+					if not "--elevated" in sys.argv and not "--help" in sys.argv and not "--version" in sys.argv:
 						if not ctypes.windll.shell32.IsUserAnAdmin() or (parent and parent.name().lower() == "explorer.exe"):
 							"""
 							# workaround permission problems
