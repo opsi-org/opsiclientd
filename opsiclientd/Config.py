@@ -118,7 +118,7 @@ class ConfigImplementation(object):
 			'storage_dir': "/var/cache/opsi-client-agent"
 		},
 		'depot_server': {
-			'drive': "/mnt/opsi_depot"
+			'drive': "/media/opsi_depot"
 		}
 	}
 
@@ -324,6 +324,11 @@ class ConfigImplementation(object):
 			(option.find('working_window') == -1) and (value == ''):
 			logger.warning(u"Refusing to set empty value for config value '%s' of section '%s'" % (option, section))
 			return
+
+		if (section == 'depot_server') and (option == 'drive'):
+			if (RUNNING_ON_LINUX or RUNNING_ON_MACOS) and not value.startswith("/"):
+				logger.warning("Refusing to set depot_server.drive to %s on posix", value)
+				return
 
 		if option == 'opsi_host_key':
 			if len(value) != 32:
