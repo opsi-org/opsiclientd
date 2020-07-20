@@ -34,6 +34,7 @@ import re
 import shutil
 import sys
 import time
+import tempfile
 from contextlib import contextmanager
 from datetime import datetime as dt, timedelta
 
@@ -670,13 +671,15 @@ None otherwise.
 		self.setStatusMessage(_(u"Getting action requests from config service"))
 
 		try:
-			bootmode = ''
-			try:
-				bootmode = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\general", "bootmode")
-			except Exception as error:
-				if RUNNING_ON_WINDOWS:
+			bootmode = ""
+			if RUNNING_ON_WINDOWS:
+				try:
+					bootmode = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\general", "bootmode").upper()
+				except Exception as error:
 					logger.warning(u"Failed to get bootmode from registry: %s" % forceUnicode(error))
-
+			else:
+				bootmode = "BKSTD"
+			
 			if not self._configService:
 				raise Exception(u"Not connected to config service")
 
@@ -841,9 +844,12 @@ None otherwise.
 
 			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
 
+			if not RUNNING_ON_WINDOWS:
+				self.mountDepotShare(None)
+			
 			# Update action processor
 			if self.event.eventConfig.updateActionProcessor:
-				self.updateActionProcessor()
+				self.updateActionProcessor(mount=not self._depotShareMounted)
 			
 			# Run action processor
 			serviceSession = u'none'
@@ -912,8 +918,32 @@ None otherwise.
 				)
 			else:
 				with changeDirectory('/tmp'):
-					self.mountDepotShare(None)
+					credentialfile = None
 					try:
+						(username, password) = (None, None)
+						new_cmd = []
+						cmd = command.split()
+						skip_next = False
+						for i, c in enumerate(cmd):
+							if skip_next:
+								skip_next = False
+								continue
+							if c.strip().lower() == "-username" and len(cmd) > i:
+								username = cmd[i+1].strip()
+								skip_next = True
+							elif c.strip().lower() == "-password" and len(cmd) > i:
+								password = cmd[i+1].strip()
+								skip_next = True
+							else:
+								new_cmd.append(c)
+						if username is not None and password is not None:
+							tf = tempfile.NamedTemporaryFile(delete=False)
+							tf.write(f"username={username}\npassword={password}\n".encode("utf-8"))
+							tf.close()
+							credentialfile = tf.name
+							new_cmd.extend(["-credentialfile", credentialfile])
+							command = " ".join(new_cmd)
+						
 						System.runCommandInSession(
 							command=command,
 							sessionId=self.getSessionId(),
@@ -921,8 +951,9 @@ None otherwise.
 							timeoutSeconds=self.event.eventConfig.actionProcessorTimeout
 						)
 					finally:
-						self.umountDepotShare()
-			
+						if credentialfile and os.path.exists(credentialfile):
+							os.unlink(credentialfile)
+						
 			if self.event.eventConfig.postActionProcessorCommand:
 				logger.notice(u"Starting post action processor command '%s' in session '%s' on desktop '%s'" \
 					% (self.event.eventConfig.postActionProcessorCommand, self.getSessionId(), desktop))
@@ -931,7 +962,8 @@ None otherwise.
 			self.setStatusMessage( _(u"Actions completed") )
 		finally:
 			timeline.setEventEnd(eventId = runActionsEventId)
-
+			self.umountDepotShare()
+	
 	def setEnvironment(self):
 		try:
 			logger.debug(u"Current environment:")
