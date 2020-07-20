@@ -205,7 +205,8 @@ class OpsiclientdWindowsInit(OpsiclientdInit):
 							run_as_system(command)
 						return
 					
-					sys.argv.remove("--elevated")
+					if "--elevated" in sys.argv:
+						sys.argv.remove("--elevated")
 					options = self.parser.parse_args()
 					self.init_logging(stderr_level=options.logLevel, log_filter=options.logFilter)
 					with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
