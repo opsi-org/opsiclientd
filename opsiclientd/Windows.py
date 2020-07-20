@@ -31,6 +31,7 @@ import threading
 import tempfile
 import time
 import psutil
+import ctypes
 import win32con
 import win32gui
 import win32service
@@ -176,9 +177,33 @@ class OpsiclientdWindowsInit(OpsiclientdInit):
 				if any(arg in sys.argv[1:] for arg in ("install", "update", "remove", "start", "stop", "restart")):
 					win32serviceutil.HandleCommandLine(OpsiclientdService)
 				else:
-					if not "--elevated" in sys.argv:
-						command = " ".join(sys.argv) + " --elevated"
-						return run_as_system(command)
+					if not "--elevated" in sys.argv and not "--help" in sys.argv:
+						if not ctypes.windll.shell32.IsUserAnAdmin() or (parent and parent.name().lower() == "explorer.exe"):
+							"""
+							# workaround permission problems
+							# opsiclientd must be started from an elevated cmd.exe
+							from win32com.shell.shell import ShellExecuteEx
+							from win32com.shell import shellcon
+							showCmd = win32con.SW_HIDE
+							lpVerb = 'runas'  # causes UAC elevation prompt.
+							procInfo = ShellExecuteEx(
+								nShow=showCmd,
+								fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
+								lpVerb=lpVerb,
+								lpFile="cmd.exe",
+								lpParameters="/k " + " ".join(sys.argv)
+							)
+							return
+							"""
+							print("opsiclientd.exe must be run from an elevated cmd.exe", file=sys.stderr)
+						else:
+							#opsicommon.logging.logging_config(log_file="c:\\tmp\\opsiclientd-startup.txt", file_level=LOG_DEBUG)
+							#logger.notice("Running as user: %s", win32api.GetUserName())
+							#if parent:
+							#	logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)
+							command = " ".join(sys.argv) + " --elevated"
+							run_as_system(command)
+						return
 					
 					sys.argv.remove("--elevated")
 					options = self.parser.parse_args()
