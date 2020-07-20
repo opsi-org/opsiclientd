@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "opsiclientd"
-version = "4.2.0.7"
+version = "4.2.0.8"
 description = "opsi client daemon. The service running on opsi clients."
 authors = ["Jan Schneider <j.schneider@uib.de>"]
 include = [
@@ -14,7 +14,7 @@ url = "http://pypi.uib.gmbh:8080/simple"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-python-opsi = "^4.2.0.36"
+python-opsi = "^4.2.0.39"
 #python-opsi = {path = "../python-opsi"}
 pywin32 = {platform = "win32", version = "^227"}
 wmi = {platform = "win32", version = "^1.5.1"}
