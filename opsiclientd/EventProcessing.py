@@ -65,7 +65,7 @@ timeline = Timeline()
 
 
 @contextmanager
-def cd(path):
+def changeDirectory(path):
 	'Change the current directory to `path` as long as the context exists.'
 
 	old_dir = os.getcwd()
@@ -74,12 +74,6 @@ def cd(path):
 		yield
 	finally:
 		os.chdir(old_dir)
-
-
-@contextmanager
-def noop(_unused):
-	"Dummy contextmanager. Does nothing."
-	yield
 
 
 class EventProcessingThread(KillableThread, ServiceConnection):
@@ -464,7 +458,7 @@ None otherwise.
 		except Exception as e:
 			logger.warning(e)
 
-	def updateActionProcessor(self):
+	def updateActionProcessor(self, mount=True):
 		logger.notice(u"Updating action processor")
 		self.setStatusMessage(_(u"Updating action processor"))
 
@@ -472,7 +466,7 @@ None otherwise.
 		try:
 			mounted = False
 			try:
-				if not config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
+				if mount and not config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
 					if RUNNING_ON_WINDOWS:
 						logger.debug("Mounting with impersonation.")
 						# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
@@ -876,30 +870,31 @@ None otherwise.
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 
 			use_opsiscriptstarter = False
-			if not RUNNING_ON_WINDOWS:
-				use_opsiscriptstarter = True
+			#if not RUNNING_ON_WINDOWS:
+			#	use_opsiscriptstarter = True
 			
 			if use_opsiscriptstarter:
 				try:
 					oss = System.which('opsiscriptstarter')
 				except Exception:
-					logger.warning(
-						u"Failed to find executable for 'opsiscriptstarter'. "
-						u"Using fallback.")
 					oss = '/usr/bin/opsiscriptstarter'
-				command = "{oss} --nogui".format(oss=oss)
+					logger.warning("Failed to find executable for 'opsiscriptstarter'. Using fallback '%s'", oss)
+				command = f"{oss} --nogui"
 			else:
-				# TODO: string building like this is just awful. Improve it!
-				command = os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe") + ' ' \
-					+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
-					+ u'"%global.log_file%" "%global.log_level%" ' \
-					+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
-					+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
-					+ u'"' + str(self.getSessionId()) + u'" "' + desktop + '" ' \
-					+ u'"' + actionProcessorCommand + u'" ' + str(self.event.eventConfig.actionProcessorTimeout) + ' ' \
-					+ u'"' + actionProcessorUserName + u'" "' + actionProcessorUserPassword + '" ' \
-					+ str(createEnvironment).lower()
-
+				if RUNNING_ON_WINDOWS:
+					# TODO: string building like this is just awful. Improve it!
+					command = os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe") + ' ' \
+						+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
+						+ u'"%global.log_file%" "%global.log_level%" ' \
+						+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
+						+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
+						+ u'"' + str(self.getSessionId()) + u'" "' + desktop + '" ' \
+						+ u'"' + actionProcessorCommand + u'" ' + str(self.event.eventConfig.actionProcessorTimeout) + ' ' \
+						+ u'"' + actionProcessorUserName + u'" "' + actionProcessorUserPassword + '" ' \
+						+ str(createEnvironment).lower()
+				else:
+					command = actionProcessorCommand
+			
 			command = config.replace(command)
 
 			if self.event.eventConfig.preActionProcessorCommand:
@@ -908,19 +903,26 @@ None otherwise.
 				self.runCommandInSession(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = True)
 
 			if RUNNING_ON_WINDOWS:
-				changeDirectory = noop
-			else:
-				changeDirectory = cd
-
-			with changeDirectory('/'):
-				logger.notice(u"Starting action processor in session '%s' on desktop '%s'" % (self.getSessionId(), desktop))
+				logger.notice(u"Starting action processor in session '%s' on desktop '%s'", self.getSessionId(), desktop)
 				self.runCommandInSession(
 					command=command,
 					desktop=desktop,
 					waitForProcessEnding=True,
 					noWindow=True
 				)
-
+			else:
+				with changeDirectory('/tmp'):
+					self.mountDepotShare(None)
+					try:
+						System.runCommandInSession(
+							command=command,
+							sessionId=self.getSessionId(),
+							waitForProcessEnding=True,
+							timeoutSeconds=self.event.eventConfig.actionProcessorTimeout
+						)
+					finally:
+						self.umountDepotShare()
+			
 			if self.event.eventConfig.postActionProcessorCommand:
 				logger.notice(u"Starting post action processor command '%s' in session '%s' on desktop '%s'" \
 					% (self.event.eventConfig.postActionProcessorCommand, self.getSessionId(), desktop))
