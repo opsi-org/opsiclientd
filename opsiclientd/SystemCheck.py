@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import os
+import platform
 
-RUNNING_ON_WINDOWS = (os.name == 'nt')
+RUNNING_ON_WINDOWS = (platform.system().lower() == 'windows')
+RUNNING_ON_LINUX = (platform.system().lower() == 'linux')
+RUNNING_ON_MACOS = (platform.system().lower() == 'darwin')
