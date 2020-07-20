@@ -39,7 +39,7 @@ from OPSI.Types import (
 from OPSI.Util import objectToBeautifiedText, blowfishDecrypt
 from OPSI.Util.File import IniFile
 from OPSI import System
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_LINUX, RUNNING_ON_MACOS
 
 OPSI_CA = '''-----BEGIN CERTIFICATE-----
 MIIEYTCCA0mgAwIBAgIJAO5oKZZR8dQkMA0GCSqGSIb3DQEBBQUAMH0xCzAJBgNV
@@ -119,6 +119,28 @@ class ConfigImplementation(object):
 		},
 		'depot_server': {
 			'drive': "/mnt/opsi_depot"
+		}
+	}
+
+	MACOS_DEFAULT_PATHS = {
+		'global': {
+			'log_dir': "/var/log/opsi",
+			'locale_dir': "/usr/share/opsi-client-agent/opsiclientd/locale",
+			'config_file': "/etc/opsi-client-agent/opsiclientd.conf",
+			'state_file': "/var/lib/opsi-client-agent/opsiclientd/state.json",
+			'timeline_db': "/var/lib/opsi-client-agent/opsiclientd/timeline.sqlite",
+			'server_cert_dir': "/etc/opsi-client-agent/server-certs"
+		},
+		'control_server': {
+			'ssl_server_key_file': "/etc/opsi-client-agent/opsiclientd.pem",
+			'ssl_server_cert_file': "/etc/opsi-client-agent/opsiclientd.pem",
+			'static_dir': "/usr/share/opsi-client-agent/opsiclientd/static_html"
+		},
+		'cache_service': {
+			'storage_dir': "/var/cache/opsi-client-agent"
+		},
+		'depot_server': {
+			'drive': "/Network/opsi_depot"
 		}
 	}
 
@@ -209,7 +231,12 @@ class ConfigImplementation(object):
 		return baseDir
 
 	def _applySystemSpecificConfiguration(self):
-		defaultToApply = self.WINDOWS_DEFAULT_PATHS if RUNNING_ON_WINDOWS else self.LINUX_DEFAULT_PATHS
+		defaultToApply = self.WINDOWS_DEFAULT_PATHS.copy()
+		if RUNNING_ON_LINUX:
+			defaultToApply = self.LINUX_DEFAULT_PATHS.copy()
+		elif RUNNING_ON_MACOS:
+			defaultToApply = self.MACOS_DEFAULT_PATHS.copy()
+		
 		baseDir = self._config["global"]["base_dir"]
 		
 		for key in self._config:
@@ -437,11 +464,8 @@ class ConfigImplementation(object):
 	def getDepotDrive(self):
 		if self._temporaryDepotDrive:
 			return self._temporaryDepotDrive
-		drive = self.get('depot_server', 'drive')
-		if not RUNNING_ON_WINDOWS and not drive.startswith("/"):
-			drive = "/mnt/opsi_depot"
-		return drive
-
+		return self.get('depot_server', 'drive')
+	
 	def setTemporaryConfigServiceUrls(self, temporaryConfigServiceUrls):
 		self._temporaryConfigServiceUrls = forceList(temporaryConfigServiceUrls)
 
