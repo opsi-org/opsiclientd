@@ -648,7 +648,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		notifierCommand = config.get('opsiclientd_notifier', 'command')
 		if not notifierCommand:
 			raise Exception(u'opsiclientd_notifier.command not defined')
-		notifierCommand += u" -s notifier\\popup.ini"
+		notifierCommand += " -s %s" % os.path.join("notifier", "popup.ini")
 
 		self._popupNotificationLock.acquire()
 		try:
@@ -665,14 +665,16 @@ class Opsiclientd(EventListener, threading.Thread):
 					start_port=port,
 					subjects=[popupSubject, choiceSubject]
 				)
+				self._popupNotificationServer.daemon = True
 				#logger.setLogFormat(getLogFormat("popup notification server"), object=self._popupNotificationServer)
 				with opsicommon.logging.log_context({'instance' : 'popup notification server'}):
-					self._popupNotificationServer.start()
+					if not self._popupNotificationServer.start_and_wait(timeout=30):
+						raise Exception("Timed out while waiting for notification server")
 			except Exception as e:
 				logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
 				raise
 			
-			notifierCommand = notifierCommand.replace('%port%', forceUnicode(self._popupNotificationServer.port))
+			notifierCommand = notifierCommand.replace('%port%', self._popupNotificationServer.port).replace('%id%', "popup")
 			
 			choiceSubject.setChoices([_('Close')])
 			choiceSubject.setCallbacks([self.popupCloseCallback])

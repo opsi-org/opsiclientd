@@ -234,14 +234,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			#logger.setLogFormat(getLogFormat("notification server"), object=self._notificationServer)
 			with opsicommon.logging.log_context({'instance' : 'notification server'}):
 				self._notificationServer.daemon = True
-				self._notificationServer.start()
-				timeout = 0
-				while not self._notificationServer.isListening() and not self._notificationServer.errorOccurred():
-					if (timeout >= 6):
-						raise Exception(u"Timed out after %d seconds while waiting for notification server to start" % timeout)
-					time.sleep(1)
-					timeout +=1
-
+				if not self._notificationServer.start_and_wait(timeout=30):
+					if self._notificationServer.errorOccurred():
+						raise Exception(self._notificationServer.errorOccurred())
+					raise Exception("Timed out while waiting for notification server")
 				if self._notificationServer.errorOccurred():
 					raise Exception(self._notificationServer.errorOccurred())
 				logger.notice(u"Notification server started (listening on port %d)" % self.notificationServerPort)
