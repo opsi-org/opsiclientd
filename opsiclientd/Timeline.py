@@ -142,10 +142,12 @@ class TimelineImplementation(object):
 			databaseCharset='utf-8'
 		)
 		self._dbLock = threading.Lock()
+		self._stopped = False
+	
+	def start(self):
 		self._createDatabase()
 		self._cleanupDatabase()
-		self._stopped = False
-
+	
 	def stop(self):
 		self._stopped = True
 		end = forceOpsiTimestamp(timestamp())

@@ -127,7 +127,9 @@ class OpsiclientdInit():
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
 		System.ensure_not_already_running("opsiclientd")
-		
+		state.start()
+		timeline.start()
+
 		#logger.setLogFormat(getLogFormat(u'opsiclientd'), object=self)		#moved to run
 
 		logger.debug("Opsiclient initiating")
