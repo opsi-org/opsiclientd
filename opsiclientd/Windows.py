@@ -31,6 +31,7 @@ import threading
 import tempfile
 import time
 import psutil
+import subprocess
 import ctypes
 import win32con
 import win32gui
@@ -158,6 +159,12 @@ def run_as_system(command):
 	(hProcess, hThread, dwProcessId, dwThreadId) = win32process.CreateProcessAsUser(
 		hToken, None, command, None, None, 1, dwCreationFlags, None, None, s)
 
+def get_integrity_level():
+	currentProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, os.getpid())
+	currentProcessToken = win32security.OpenProcessToken(currentProcess, win32con.MAXIMUM_ALLOWED)
+	sid, i = win32security.GetTokenInformation(currentProcessToken, ntsecuritycon.TokenIntegrityLevel)
+	return win32security.ConvertSidToStringSid(sid)
+
 class OpsiclientdWindowsInit(OpsiclientdInit):
 	def __init__(self):
 		try:
@@ -193,6 +200,7 @@ class OpsiclientdWindowsInit(OpsiclientdInit):
 								lpFile="cmd.exe",
 								lpParameters="/k " + " ".join(sys.argv)
 							)
+							#ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
 							return
 							"""
 							print("opsiclientd.exe must be run from an elevated cmd.exe", file=sys.stderr)
@@ -201,7 +209,7 @@ class OpsiclientdWindowsInit(OpsiclientdInit):
 							#logger.notice("Running as user: %s", win32api.GetUserName())
 							#if parent:
 							#	logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)
-							command = " ".join(sys.argv) + " --elevated"
+							command = subprocess.list2cmdline + " --elevated"
 							run_as_system(command)
 						return
 					
