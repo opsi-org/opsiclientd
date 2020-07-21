@@ -674,7 +674,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
 				raise
 			
-			notifierCommand = notifierCommand.replace('%port%', self._popupNotificationServer.port).replace('%id%', "popup")
+			notifierCommand = notifierCommand.replace('%port%', str(self._popupNotificationServer.port)).replace('%id%', "popup")
 			
 			choiceSubject.setChoices([_('Close')])
 			choiceSubject.setCallbacks([self.popupCloseCallback])
