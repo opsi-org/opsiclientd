@@ -942,6 +942,7 @@ None otherwise.
 							new_cmd.extend(["-credentialfile", credentialfile])
 							command = " ".join(new_cmd)
 						
+						self.setStatusMessage(_("Action processor is running"))
 						System.runCommandInSession(
 							command=command,
 							sessionId=self.getSessionId(),
