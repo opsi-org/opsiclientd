@@ -81,8 +81,11 @@ class OpsiclientdPosixInit(OpsiclientdInit):
 					self.daemonize()
 
 				self.writePIDFile(options.pidFile)
-				self.configure_iptables()
-
+				try:
+					self.configure_iptables()
+				except Exception as e:
+					logger.error("Failed to configure iptabels: %s", e)
+				
 				logger.debug("Starting opsiclientd...")
 				self._opsiclientd = OpsiclientdPosix()
 				self._opsiclientd.start()
