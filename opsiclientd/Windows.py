@@ -163,6 +163,10 @@ def get_integrity_level():
 	currentProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, os.getpid())
 	currentProcessToken = win32security.OpenProcessToken(currentProcess, win32con.MAXIMUM_ALLOWED)
 	sid, i = win32security.GetTokenInformation(currentProcessToken, ntsecuritycon.TokenIntegrityLevel)
+	# S-1-16-0      Untrusted Mandatory Level
+	# S-1-16-4096   Low Mandatory Level
+	# S-1-16-8192   High Mandatory Level
+	# S-1-16-12288  System Mandatory Level
 	return win32security.ConvertSidToStringSid(sid)
 
 class OpsiclientdWindowsInit(OpsiclientdInit):
@@ -170,9 +174,10 @@ class OpsiclientdWindowsInit(OpsiclientdInit):
 		try:
 			super().__init__()
 			parent = psutil.Process(os.getpid()).parent()
+			parent_name = parent.name() if parent else None
 			# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
 			#if os.environ.get("USERNAME", "$").endswith("$") and len(sys.argv) == 1:
-			if parent and parent.name() == "services.exe":
+			if parent_name == "services.exe":
 				self.init_logging()
 				with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
 					logger.essential("opsiclientd service start")
@@ -184,32 +189,47 @@ class OpsiclientdWindowsInit(OpsiclientdInit):
 				if any(arg in sys.argv[1:] for arg in ("install", "update", "remove", "start", "stop", "restart")):
 					win32serviceutil.HandleCommandLine(OpsiclientdService)
 				else:
+					integrity_level = get_integrity_level()
 					if not "--elevated" in sys.argv and not "--help" in sys.argv and not "--version" in sys.argv:
-						if not ctypes.windll.shell32.IsUserAnAdmin() or (parent and parent.name().lower() == "explorer.exe"):
+						executable = os.path.dirname(os.path.realpath(__file__)) + ".exe"
+						args = " ".join(sys.argv[1:])
+						#subprocess.run("whoami /user /priv")
+						#print(integrity_level)
+						if integrity_level != "S-1-16-12288" or parent_name != "cmd.exe":
+							win32serviceutil.HandleCommandLine(OpsiclientdService)
+							#print("opsiclientd.exe must be run as service or from an elevated cmd.exe", file=sys.stderr)
+							return
 							"""
+							#if not ctypes.windll.shell32.IsUserAnAdmin() or (parent and parent.name().lower() == "explorer.exe"):
 							# workaround permission problems
 							# opsiclientd must be started from an elevated cmd.exe
 							from win32com.shell.shell import ShellExecuteEx
 							from win32com.shell import shellcon
-							showCmd = win32con.SW_HIDE
+							#showCmd = win32con.SW_HIDE
+							showCmd = win32con.SW_SHOW
 							lpVerb = 'runas'  # causes UAC elevation prompt.
 							procInfo = ShellExecuteEx(
 								nShow=showCmd,
 								fMask=shellcon.SEE_MASK_NOCLOSEPROCESS,
 								lpVerb=lpVerb,
+								#lpFile=executable,
+								#lpParameters=args
 								lpFile="cmd.exe",
-								lpParameters="/k " + " ".join(sys.argv)
+								lpParameters="" #"/c " + executable + " " + args
 							)
+							#subprocess.run(["powershell.exe", "start", "cmd.exe", "-ArgumentList", "", "-Verb", "Runas"])
+							#subprocess.run(["powershell.exe", "start", "cmd.exe", "-Verb", "Runas"])
+							#subprocess.run(["powershell.exe", "start", executable, "-Verb", "Runas"])
+							#
 							#ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
 							return
 							"""
-							print("opsiclientd.exe must be run from an elevated cmd.exe", file=sys.stderr)
 						else:
 							#opsicommon.logging.logging_config(log_file="c:\\tmp\\opsiclientd-startup.txt", file_level=LOG_DEBUG)
 							#logger.notice("Running as user: %s", win32api.GetUserName())
 							#if parent:
 							#	logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)
-							command = subprocess.list2cmdline + " --elevated"
+							command = executable + " " + args + " --elevated"
 							run_as_system(command)
 						return
 					
