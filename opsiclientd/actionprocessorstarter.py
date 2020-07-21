@@ -21,21 +21,15 @@
 :license: GNU Affero General Public License version 3
 """
 
-import codecs
 import gettext
 import locale
 import os
 import sys
 
-#from OPSI.Logger import LOG_NONE, Logger
 import opsicommon.logging
 from opsicommon.logging import logger, LOG_NONE
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI import System
-
-from opsiclientd.Config import getLogFormat
-
-#logger = Logger()
 
 def main():
 	if len(sys.argv) != 17:
@@ -51,21 +45,18 @@ def main():
 	if runAsPassword:
 		logger.addConfidentialString(runAsPassword)
 
-	logger.setConsoleLevel(LOG_NONE)
-	logger.setLogFile(logFile)
-	logger.setFileLevel(int(logLevel))
-	#logger.setLogFormat(getLogFormat(os.path.basename(sys.argv[0])))
+	opsicommon.logging.init_logging(stderr_level=LOG_NONE, log_file=logFile, file_level=int(logLevel))
+
 	with opsicommon.logging.log_context({'instance' : os.path.basename(sys.argv[0])}):
-
-		logger.debug("Called with arguments: %s" % u', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword, createEnvironment)) )
-
+		logger.debug("Called with arguments: %s", ', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword, createEnvironment)) )
+		
 		try:
 			lang = locale.getdefaultlocale()[0].split('_')[0]
 			localeDir = os.path.join(os.path.dirname(sys.argv[0]), 'locale')
 			translation = gettext.translation('opsiclientd', localeDir, [lang])
 			_ = translation.ugettext
 		except Exception as e:
-			logger.error("Locale not found: %s" % e)
+			logger.error("Locale not found: %s", e)
 
 			def _(string):
 				return string
@@ -80,19 +71,19 @@ def main():
 		be = None
 
 		try:
-			be = JSONRPCBackend(username=hostId, password=hostKey, address="https://localhost:%s/opsiclientd" % controlServerPort)
+			be = JSONRPCBackend(username=hostId, password=hostKey, address=f"https://localhost:{controlServerPort}/opsiclientd")
 
 			if runAsUser:
-				logger.info("Impersonating user '%s'" % runAsUser)
+				logger.info("Impersonating user '%s'", runAsUser)
 				imp = System.Impersonate(username=runAsUser, password=runAsPassword, desktop=actionProcessorDesktop)
 				imp.start(logonType="INTERACTIVE", newDesktop=True, createEnvironment=createEnvironment)
 			else:
-				logger.info("Impersonating network account '%s'" % depotServerUsername)
+				logger.info("Impersonating network account '%s'", depotServerUsername)
 				imp = System.Impersonate(username=depotServerUsername, password=depotServerPassword, desktop=actionProcessorDesktop)
 				imp.start(logonType="NEW_CREDENTIALS")
 
 			if depotRemoteUrl.split('/')[2] not in ("127.0.0.1", "localhost"):
-				logger.notice("Mounting depot share %s" % depotRemoteUrl)
+				logger.notice("Mounting depot share %s", depotRemoteUrl)
 				be.setStatusMessage(sessionId, _("Mounting depot share %s") % depotRemoteUrl)
 
 				if runAsUser:
@@ -110,7 +101,7 @@ def main():
 			be.setStatusMessage(sessionId, _("Action processor ended"))
 		except Exception as e:
 			logger.logException(e)
-			error = "Failed to process action requests: %s" % e
+			error = f"Failed to process action requests: {e}"
 			if be:
 				try:
 					be.setStatusMessage(sessionId, error)
