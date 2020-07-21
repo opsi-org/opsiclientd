@@ -39,7 +39,6 @@ from contextlib import contextmanager
 from datetime import datetime as dt, timedelta
 
 from OPSI import System
-#from OPSI.Logger import Logger, LOG_WARNING
 import opsicommon.logging
 from opsicommon.logging import logger, LOG_WARNING
 from OPSI.Object import ProductOnClient
@@ -59,7 +58,6 @@ from opsiclientd.State import State
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 
-#logger = Logger()
 config = Config()
 state = State()
 timeline = Timeline()
@@ -291,12 +289,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 			data += u"-------------------- submitted part of log file ends here, see the rest of log file on client --------------------\n"
 			# Do not log jsonrpc request
-			logger.setFileLevel(LOG_WARNING)
+			opsicommon.logging.logging_config(file_level=LOG_WARNING)
 			self._configService.log_write('clientconnect', data.replace(u'\ufffd', u'?'), config.get('global', 'host_id'))
-			logger.setFileLevel(config.get('global', 'log_level'))
+			opsicommon.logging.logging_config(file_level=config.get('global', 'log_level'))
 		except Exception as e:
-			logger.setFileLevel(config.get('global', 'log_level'))
-			logger.error(u"Failed to write log to service: %s" % forceUnicode(e))
+			opsicommon.logging.logging_config(file_level=config.get('global', 'log_level'))
+			logger.error(u"Failed to write log to service: %s", e)
 			raise
 
 	def runCommandInSession(self, command, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False):
