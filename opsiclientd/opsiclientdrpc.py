@@ -24,19 +24,13 @@
 import os
 import sys
 
-#from OPSI.Logger import LOG_DEBUG, Logger
 import opsicommon.logging
 from opsicommon.logging import logger, LOG_DEBUG
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 # Do not remove this import, it's needed by using this module from CLI
 from OPSI import System
 
-from opsiclientd.Config import getLogFormat
-
-#logger = Logger()
-
 def main():
-	#logger.setLogFormat(getLogFormat(os.path.basename(sys.argv[0])))
 	with opsicommon.logging.log_context({'instance' : os.path.basename(sys.argv[0])}):
 		if len(sys.argv) < 5:
 			print(f"Usage: {os.path.basename(sys.argv[0])} <username> <password> <port> [debug_logfile] <rpc>", file=sys.stderr)
@@ -45,9 +39,8 @@ def main():
 		(username, password, port, rpc) = sys.argv[1:5]
 		if len(sys.argv) > 5:
 			rpc = sys.argv[5]
-			logger.setLogFile(sys.argv[4])
-			logger.setFileLevel(LOG_DEBUG)
-
+			opsicommon.logging.init_logging(log_file=sys.argv[4], file_level=LOG_DEBUG)
+		
 		logger.debug("argv: %s" % sys.argv)
 		
 		address = f"https://localhost:{port}/opsiclientd"
