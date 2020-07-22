@@ -30,6 +30,8 @@ from OPSI.Backend.JSONRPC import JSONRPCBackend
 # Do not remove this import, it's needed by using this module from CLI
 from OPSI import System
 
+from opsiclientd import __version__, DEFAULT_STDERR_LOG_FORMAT, DEFAULT_FILE_LOG_FORMAT
+
 def main():
 	with opsicommon.logging.log_context({'instance' : os.path.basename(sys.argv[0])}):
 		if len(sys.argv) < 5:
@@ -39,7 +41,11 @@ def main():
 		(username, password, port, rpc) = sys.argv[1:5]
 		if len(sys.argv) > 5:
 			rpc = sys.argv[5]
-			opsicommon.logging.init_logging(log_file=sys.argv[4], file_level=LOG_DEBUG)
+			opsicommon.logging.init_logging(
+				log_file=sys.argv[4],
+				file_level=LOG_DEBUG,
+				file_format=DEFAULT_FILE_LOG_FORMAT
+			)
 		
 		logger.debug("argv: %s" % sys.argv)
 		
@@ -51,5 +57,5 @@ def main():
 				exec(f"backend.{rpc}")
 		except Exception as error:
 			logger.logException(error)
-			print(f"Error: %s" % error, file=sys.stderr)
+			print(f"Error: {error}", file=sys.stderr)
 			sys.exit(1)

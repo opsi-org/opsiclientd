@@ -3,13 +3,11 @@
 from __future__ import absolute_import
 
 import os
+import pytest
 
 from opsiclientd.Config import SectionNotFoundException, NoConfigOptionFoundException
-from opsiclientd.Config import getLogFormat
 
 from .helper import workInTemporaryDirectory
-
-import pytest
 
 
 def testGettingUnknownSectionFails(config):
@@ -88,12 +86,3 @@ log_file = {0}""".format(logFile))
 		print(os.listdir(tempDir))
 		assert os.path.exists(os.path.join(tempDir, 'testlog.log.1'))
 '''
-
-def testLogFormatContainsModulename():
-	modulename = 'asdfghj'
-	assert modulename in getLogFormat(modulename)
-
-
-def testLogFormatFormattingUses40CharactersForName():
-	modulename = 'olol'
-	assert '[%l] [%D] [ olol                                    ] %M   (%F|%N)' == getLogFormat(modulename)

@@ -49,7 +49,7 @@ from OPSI.Util.Message import (
 from OPSI.Util.Thread import KillableThread
 
 from opsiclientd import __version__
-from opsiclientd.Config import Config, getLogFormat
+from opsiclientd.Config import Config
 from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
 from opsiclientd.Exceptions import CanceledByUserError, ConfigurationError
 from opsiclientd.Localization import _
@@ -77,13 +77,6 @@ def changeDirectory(path):
 
 class EventProcessingThread(KillableThread, ServiceConnection):
 	def __init__(self, opsiclientd, event):
-		#logger.setLogFormat(
-		#	getLogFormat(
-		#		u'event processing {0}'.format(event.eventConfig.getId())
-		#	),
-		#	object=self
-		#)		#moved to run
-
 		KillableThread.__init__(self)
 		ServiceConnection.__init__(self)
 
@@ -231,7 +224,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					self._overallProgressSubjectProxy
 				]
 			)
-			#logger.setLogFormat(getLogFormat("notification server"), object=self._notificationServer)
 			with opsicommon.logging.log_context({'instance' : 'notification server'}):
 				self._notificationServer.daemon = True
 				if not self._notificationServer.start_and_wait(timeout=30):

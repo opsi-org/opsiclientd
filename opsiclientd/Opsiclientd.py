@@ -46,8 +46,8 @@ from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 from OPSI import __version__ as python_opsi_version
 
-from opsiclientd import __version__
-from opsiclientd.Config import Config, getLogFormat
+from opsiclientd import __version__, DEFAULT_STDERR_LOG_FORMAT, DEFAULT_FILE_LOG_FORMAT
+from opsiclientd.Config import Config
 from opsiclientd.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from opsiclientd.ControlServer import ControlServer
 from opsiclientd.Events.Basic import EventListener
@@ -71,11 +71,9 @@ if RUNNING_ON_WINDOWS:
 	from opsiclientd.Events.Windows.GUIStartup import (
 		GUIStartupEventConfig, GUIStartupEventGenerator)
 
-#logger = Logger()
 config = Config()
 timeline = Timeline()
 state = State()
-
 
 class OpsiclientdInit():
 	def __init__(self):
@@ -118,7 +116,13 @@ class OpsiclientdInit():
 			except Exception as e:
 				print("Failed to rename %s to %s: %s", slf, dlf, forceUnicode(e), file=sys.stderr)
 		
-		opsicommon.logging.logging_config(stderr_level=stderr_level, log_file=log_file, file_level=LOG_DEBUG)
+		opsicommon.logging.init_logging(
+			stderr_level=stderr_level,
+			stderr_format=DEFAULT_STDERR_LOG_FORMAT,
+			log_file=log_file,
+			file_level=LOG_DEBUG,
+			file_format=DEFAULT_FILE_LOG_FORMAT
+		)
 		if log_filter:
 			opsicommon.logging.set_filter_from_string(log_filter)
 		
@@ -129,8 +133,6 @@ class Opsiclientd(EventListener, threading.Thread):
 		System.ensure_not_already_running("opsiclientd")
 		state.start()
 		timeline.start()
-
-		#logger.setLogFormat(getLogFormat(u'opsiclientd'), object=self)		#moved to run
 
 		logger.debug("Opsiclient initiating")
 
@@ -666,7 +668,6 @@ class Opsiclientd(EventListener, threading.Thread):
 					subjects=[popupSubject, choiceSubject]
 				)
 				self._popupNotificationServer.daemon = True
-				#logger.setLogFormat(getLogFormat("popup notification server"), object=self._popupNotificationServer)
 				with opsicommon.logging.log_context({'instance' : 'popup notification server'}):
 					if not self._popupNotificationServer.start_and_wait(timeout=30):
 						raise Exception("Timed out while waiting for notification server")

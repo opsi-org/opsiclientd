@@ -63,7 +63,7 @@ class OpsiclientdPosixInit(OpsiclientdInit):
 								help="Write the PID into this file.")
 			
 			options = self.parser.parse_args()
-
+			
 			self.init_logging(stderr_level=options.logLevel, log_filter=options.logFilter)
 
 			with opsicommon.logging.log_context({'instance', 'opsiclientd'}):

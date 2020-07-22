@@ -30,7 +30,7 @@ import platform
 import re
 import sys
 
-from opsicommon.logging import logger, LOG_NOTICE, init_logging
+from opsicommon.logging import logger, LOG_NOTICE, logging_config
 from OPSI.Types import (
 	forceBool, forceHostId, forceInt, forceFilename, forceList,
 	forceProductIdList, forceUnicode, forceUnicodeLower, forceUrl,
@@ -67,17 +67,6 @@ YJHaSeCITO1g+NXisCS/aEfL+yUjXjErQaiRjtyj0aHDxj114GVvbKUOUfHqqa6X
 USZQNXthwmMy0+iIgQLAmBDu9Tz53p+yqHIhS+7eYNfzh2HeIG3EY515ncnZG2Xi
 QuBW/YzuIIiknjESIHBVA6YWeLNR
 -----END CERTIFICATE-----'''
-
-#logger = Logger()
-
-
-def getLogFormat(moduleName):
-	"""
-	Returns a constant logformat for all modules.
-	"""
-	name = u' %-40s' % moduleName
-	return u'[%l] [%D] [{name}] %M   (%F|%N)'.format(name=name)
-
 
 class SectionNotFoundException(ValueError):
 	pass
@@ -366,7 +355,7 @@ class ConfigImplementation(object):
 			if (self._config[section][option] < 0):
 				self._config[section][option] = 0
 		elif (section == 'global') and (option == 'log_level'):
-			init_logging(file_level=self._config[section][option])
+			logging_config(file_level=self._config[section][option])
 		#elif (section == 'global') and (option == 'log_file'):
 		#	logger.setLogFile(self._config[section][option])
 		elif (section == 'global') and (option == 'server_cert_dir'):

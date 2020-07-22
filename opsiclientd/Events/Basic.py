@@ -35,7 +35,6 @@ import opsicommon.logging
 from opsicommon.logging import logger
 from OPSI.Types import forceList, forceUnicode
 
-from opsiclientd.Config import getLogFormat
 from opsiclientd.State import State
 
 __all__ = ['Event', 'EventGenerator', 'EventListener']
@@ -55,8 +54,7 @@ class EventGenerator(threading.Thread):
 		self._stopped = False
 		self._event = None
 		self._lastEventOccurence = None
-		#logger.setLogFormat(getLogFormat(u'event generator ' + self._generatorConfig.getId()), object=self)		#moved to run
-
+		
 	def __str__(self):
 		return u'<%s %s>' % (self.__class__.__name__, self._generatorConfig.getId())
 
@@ -141,8 +139,7 @@ class EventGenerator(threading.Thread):
 				threading.Thread.__init__(self)
 				self._eventListener = eventListener
 				self._event = event
-				#logger.setLogFormat(getLogFormat(u'event generator ' + self._event.eventConfig.getId()), object=self)		#moved to run
-
+			
 			def run(self):
 				with opsicommon.logging.log_context({'instance' : 'event generator ' + self._event.eventConfig.getId()}):
 					if (self._event.eventConfig.notificationDelay > 0):
@@ -198,10 +195,8 @@ class Event(object):
 	def __init__(self, eventConfig, eventInfo={}):
 		self.eventConfig = eventConfig
 		self.eventInfo = eventInfo
-		#logger.setLogFormat(getLogFormat(u'event generator ' + self.eventConfig.getId()), object=self)
 		#opsicommon.logging.set_context({'instance' : 'event generator ' + self.eventConfig.getId()})
-
-
+	
 	def getActionProcessorCommand(self):
 		actionProcessorCommand = self.eventConfig.actionProcessorCommand
 		for (key, value) in self.eventInfo.items():

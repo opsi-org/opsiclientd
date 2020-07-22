@@ -25,7 +25,6 @@ from hashlib import md5
 from Crypto.Hash import MD5
 from Crypto.Signature import pkcs1_15
 
-#from OPSI.Logger import LOG_INFO, Logger
 import opsicommon.logging
 from opsicommon.logging import logger, LOG_INFO
 from OPSI.Object import ProductOnClient
@@ -43,7 +42,7 @@ from OPSI.Backend.BackendManager import BackendExtender
 from OPSI.Backend.SQLite import (
 	SQLiteBackend, SQLiteObjectBackendModificationTracker)
 
-from opsiclientd.Config import getLogFormat, Config
+from opsiclientd.Config import Config
 from opsiclientd.State import State
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
@@ -57,7 +56,6 @@ __all__ = [
 	'ProductCacheService'
 ]
 
-#logger = Logger()
 config = Config()
 state = State()
 timeline = Timeline()
@@ -228,8 +226,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		try:
 			threading.Thread.__init__(self)
 			ServiceConnection.__init__(self)
-			#logger.setLogFormat(getLogFormat(u'config cache service'), object=self)		#moved to run
-
+			
 			self._configCacheDir = os.path.join(config.get('cache_service', 'storage_dir'), 'config')
 			self._opsiModulesFile = os.path.join(self._configCacheDir, 'cached_modules')
 			self._opsiPasswdFile = os.path.join(self._configCacheDir, 'cached_passwd')
@@ -613,7 +610,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 	def __init__(self):
 		threading.Thread.__init__(self)
 		ServiceConnection.__init__(self)
-		#logger.setLogFormat(getLogFormat(u'product cache service'), object=self)		#moved to run
+		
 		self._storageDir = config.get('cache_service', 'storage_dir')
 		self._tempDir = os.path.join(self._storageDir, 'tmp')
 		self._productCacheDir = os.path.join(self._storageDir, 'depot')

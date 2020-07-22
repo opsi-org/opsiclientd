@@ -31,6 +31,8 @@ from opsicommon.logging import logger, LOG_NONE
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI import System
 
+from opsiclientd import __version__, DEFAULT_STDERR_LOG_FORMAT, DEFAULT_FILE_LOG_FORMAT
+
 def main():
 	if len(sys.argv) != 17:
 		print("Usage: %s <hostId> <hostKey> <controlServerPort> <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <depotServerUsername> <depotServerPassword> <sessionId> <actionProcessorDesktop> <actionProcessorCommand> <actionProcessorTimeout> <runAsUser> <runAsPassword> <createEnvironment>" % os.path.basename(sys.argv[0]))
@@ -45,8 +47,14 @@ def main():
 	if runAsPassword:
 		logger.addConfidentialString(runAsPassword)
 
-	opsicommon.logging.init_logging(stderr_level=LOG_NONE, log_file=logFile, file_level=int(logLevel))
-
+	opsicommon.logging.init_logging(
+		stderr_level=LOG_NONE,
+		stderr_format=DEFAULT_STDERR_LOG_FORMAT,
+		log_file=logFile,
+		file_level=int(logLevel),
+		file_format=DEFAULT_FILE_LOG_FORMAT
+	)
+	
 	with opsicommon.logging.log_context({'instance' : os.path.basename(sys.argv[0])}):
 		logger.debug("Called with arguments: %s", ', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword, createEnvironment)) )
 		
