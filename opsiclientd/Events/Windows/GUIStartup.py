@@ -48,16 +48,16 @@ class GUIStartupEventConfig(WMIEventConfig):
 	def setConfig(self, conf):
 		WMIEventConfig.setConfig(self, conf)
 		self.maxRepetitions = 0
-		self.processName = None
+		self.processNames = []
 
 
 class GUIStartupEventGenerator(EventGenerator):
 	def __init__(self, eventConfig):
 		EventGenerator.__init__(self, eventConfig)
 		if sys.getwindowsversion().major == 5:
-			self.guiProcessName = u'winlogon.exe'
+			self.guiProcessNames = ['winlogon.exe']
 		elif sys.getwindowsversion().major >= 6:
-			self.guiProcessName = u'LogonUI.exe'
+			self.guiProcessNames = ['LogonUI.exe', 'Explorer.exe']
 		else:
 			raise Exception('Windows version unsupported')
 
@@ -70,10 +70,11 @@ class GUIStartupEventGenerator(EventGenerator):
 
 	def getNextEvent(self):
 		while not self._stopped:
-			logger.debug(u"Checking if process '%s' running", self.guiProcessName)
-			if System.getPid(self.guiProcessName):
-				logger.debug(u"Process '%s' is running", self.guiProcessName)
-				return self.createEvent()
+			for guiProcessName in self.guiProcessNames:
+				logger.debug(u"Checking if process '%s' running", guiProcessName)
+				if System.getPid(guiProcessName):
+					logger.debug(u"Process '%s' is running", guiProcessName)
+					return self.createEvent()
 			for i in range(3):
 				if self._stopped:
 					break
