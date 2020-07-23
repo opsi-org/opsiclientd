@@ -70,7 +70,8 @@ def getEventConfigs():
 				'active': True,
 				'args': {},
 				'super': None,
-				'precondition': None
+				'precondition': None,
+				'name': eventConfigId.split("{")[0]
 			}
 
 			try:
@@ -165,8 +166,8 @@ def getEventConfigs():
 						if mLanguage:
 							if mLanguage == getLanguage():
 								eventConfigs[eventConfigId]['name'] = value
-						elif not eventConfigs[eventConfigId].get('name'):
-							eventConfigs[eventConfigId]['name'] = value
+						#elif not eventConfigs[eventConfigId].get('name'):
+						eventConfigs[eventConfigId]['name'] = value
 					elif key == 'interval':
 						eventConfigs[eventConfigId]['interval'] = int(value)
 					elif key == 'max_repetitions':
