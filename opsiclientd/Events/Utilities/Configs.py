@@ -69,10 +69,11 @@ def getEventConfigs():
 
 			rawEventConfigs[eventConfigId] = {
 				'active': True,
-				'args': {},
+				'args': {
+					'name': eventConfigId.split("{")[0]
+				},
 				'super': None,
-				'precondition': None,
-				'name': eventConfigId.split("{")[0]
+				'precondition': None
 			}
 
 			try:
