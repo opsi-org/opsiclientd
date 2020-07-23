@@ -19,12 +19,12 @@ pyinstaller-poetry:
     linux:
       - pkg_resources.py2_warn
     darwin: []
-    extra_args:
-      windows:
-        - --manifest
-        - windows-manifest.xml
-        ## Without --noconsole opsiclientd_rpc and action_processor_starter are opening console windows 
-        #- --noconsole
+  extra_args:
+    windows:
+      - --manifest
+      - opsiclientd-windows.manifest
+      ## Without --noconsole opsiclientd_rpc and action_processor_starter are opening console windows 
+      #- --noconsole
   scripts:
     - script: run-opsiclientd
       binaries:
