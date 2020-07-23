@@ -29,6 +29,7 @@ Event configuration utilities.
 from __future__ import absolute_import
 
 import copy as pycopy
+import pprint
 
 from OPSI.Logger import Logger, LOG_DEBUG
 from OPSI.Types import forceBool, forceList, forceUnicode, forceUnicodeLower
@@ -167,7 +168,8 @@ def getEventConfigs():
 							if mLanguage == getLanguage():
 								eventConfigs[eventConfigId]['name'] = value
 						#elif not eventConfigs[eventConfigId].get('name'):
-						eventConfigs[eventConfigId]['name'] = value
+						else:
+							eventConfigs[eventConfigId]['name'] = value
 					elif key == 'interval':
 						eventConfigs[eventConfigId]['interval'] = int(value)
 					elif key == 'max_repetitions':
@@ -269,11 +271,11 @@ def getEventConfigs():
 					logger.error(u"Failed to set event config argument '%s' to '%s': %s" % (key, value, e))
 
 			logger.info(
-				u"Event config '%s' args:\n %s",
+				u"Event config '%s' args:\n%s",
 				eventConfigId,
-				objectToBeautifiedText(eventConfigs[eventConfigId])
+				pprint.pformat(eventConfigs[eventConfigId], indent=4, width=300, compact=False)
 			)
 		except Exception as e:
 			logger.logException(e)
-
+	
 	return eventConfigs
