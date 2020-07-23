@@ -118,21 +118,21 @@ class EventGenerator(threading.Thread):
 		pass
 
 	def fireEvent(self, event=None):
-		logger.debug("Trying to fire event {0}".format(event))
+		logger.debug("Trying to fire event %s", event)
 		if self._stopped:
-			logger.debug('{0} is stopped, not firing event.'.format(self))
+			logger.debug('%s is stopped, not firing event.', self)
 			return
 
 		if not event:
-			logger.info(u"No event to fire")
+			logger.info("No event to fire")
 			return
 
 		self._lastEventOccurence = time.time()
 
-		logger.info(u"Firing event '%s'" % event)
-		logger.info(u"Event info:")
+		logger.info("Firing event '%s'", event)
+		logger.info("Event info:")
 		for (key, value) in event.eventInfo.items():
-			logger.info(u"     %s: %s" % (key, value))
+			logger.info(u"     %s: %s", key, value)
 
 		class FireEventThread(threading.Thread):
 			def __init__(self, eventListener, event):
@@ -143,55 +143,57 @@ class EventGenerator(threading.Thread):
 			def run(self):
 				with opsicommon.logging.log_context({'instance' : 'event generator ' + self._event.eventConfig.getId()}):
 					if (self._event.eventConfig.notificationDelay > 0):
-						logger.debug(u"Waiting %d seconds before notifying listener '%s' of event '%s'" \
-							% (self._event.eventConfig.notificationDelay, self._eventListener, self._event))
+						logger.debug("Waiting %d seconds before notifying listener '%s' of event '%s'",
+							self._event.eventConfig.notificationDelay, self._eventListener, self._event
+						)
 						time.sleep(self._event.eventConfig.notificationDelay)
 					try:
-						logger.info(u"Calling processEvent on listener %s" % self._eventListener)
+						logger.info("Calling processEvent on listener %s", self._eventListener)
 						self._eventListener.processEvent(self._event)
 					except Exception as e:
 						logger.logException(e)
 
-		logger.info(u"Starting FireEventThread for listeners: %s" % self._eventListeners)
+		logger.info("Starting FireEventThread for listeners: %s", self._eventListeners)
 		for l in self._eventListeners:
 			# Create a new thread for each event listener
 			FireEventThread(l, event).start()
 
 	def run(self):
-		with opsicommon.logging.log_context({'instance' : 'event generator ' + self._generatorConfig.getId()}):
+		with opsicommon.logging.log_context({'instance' : f'event generator {self._generatorConfig.getId()}'}):
 			try:
-				logger.info(u"Initializing event generator '%s'" % self)
+				logger.info("Initializing event generator '%s'", self)
 				self.initialize()
 
 				if self._generatorConfig.activationDelay > 0:
-					logger.debug(u"Waiting %d seconds before activation of event generator '%s'" % \
-						(self._generatorConfig.activationDelay, self))
+					logger.debug("Waiting %d seconds before activation of event generator '%s'",
+						self._generatorConfig.activationDelay, self
+					)
 					time.sleep(self._generatorConfig.activationDelay)
 
-				logger.info(u"Activating event generator '%s'" % self)
+				logger.info("Activating event generator '%s'", self)
 				while not self._stopped and (
 					(self._generatorConfig.maxRepetitions < 0) or
 					(self._eventsOccured <= self._generatorConfig.maxRepetitions)
 				):
-					logger.info(u"Getting next event...")
+					logger.info("Getting next event...")
 					event = self.getNextEvent()
 					self._eventsOccured += 1
-					logger.info(u"Got new event %s (%d/%d)", event, self._eventsOccured, self._generatorConfig.maxRepetitions)
+					logger.info("Got new event %s (%d/%d)", event, self._eventsOccured, self._generatorConfig.maxRepetitions)
 					if event:
 						self.fireEvent(event)
 					for i in range(10):
 						if self._stopped:
 							break
 						time.sleep(1)
-				logger.notice(u"Event generator '%s' now deactivated after %d event occurrences", self, self._eventsOccured)
+				logger.notice("Event generator '%s' now deactivated after %d event occurrences", self, self._eventsOccured)
 			except Exception as e:
-				logger.error(u"Failure in event generator '%s': %s", self, e, exc_info=True)
+				logger.error("Failure in event generator '%s': %s", self, e, exc_info=True)
 			try:
 				self.cleanup()
 			except Exception as e:
-				logger.error(u"Failed to clean up: %s" % forceUnicode(e))
+				logger.error("Failed to clean up: %s", e)
 
-			logger.info(u"Event generator '%s' exiting " % self)
+			logger.info("Event generator '%s' exiting ", self)
 
 	def stop(self):
 		self._stopped = True
