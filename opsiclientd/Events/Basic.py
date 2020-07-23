@@ -175,8 +175,9 @@ class EventGenerator(threading.Thread):
 				):
 					logger.info(u"Getting next event...")
 					event = self.getNextEvent()
+					self._eventsOccured += 1
+					logger.info(u"Got new event %s (%d/%d)", event, self._eventsOccured, self._generatorConfig.maxRepetitions)
 					if event:
-						self._eventsOccured += 1
 						self.fireEvent(event)
 					for i in range(10):
 						if self._stopped:
