@@ -312,6 +312,9 @@ class WorkerCacheServiceJsonInterface(WorkerCacheServiceJsonRpc, WorkerOpsiJsonI
 
 	def _generateResponse(self, result):
 		return WorkerOpsiJsonInterface._generateResponse(self, result)
+	
+	def _renderError(self, failure):
+		return WorkerOpsiJsonInterface._generateResponse(self, failure)
 
 
 class WorkerOpsiclientdInfo(WorkerOpsiclientd):
