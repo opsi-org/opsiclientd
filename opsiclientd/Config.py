@@ -240,7 +240,7 @@ class ConfigImplementation(object):
 				'Running on windows: adapting paths to use system drive '
 				'({0}).'.format(systemDrive)
 			)
-
+			systemDrive += "\\"
 			self._config['cache_service']['storage_dir'] = os.path.join(systemDrive, 'opsi.org', 'cache')
 			self._config['global']['config_file'] = os.path.join(baseDir, 'opsiclientd', 'opsiclientd.conf')
 			self._config['global']['log_dir'] = os.path.join(systemDrive, 'opsi.org', 'log')
@@ -248,7 +248,7 @@ class ConfigImplementation(object):
 			self._config['global']['server_cert_dir'] = os.path.join(systemDrive, 'opsi.org', 'opsiclientd', 'server-certs')
 			self._config['global']['timeline_db'] = os.path.join(systemDrive,  'opsi.org', 'opsiclientd', 'timeline.sqlite')
 			self._config['system']['program_files_dir'] = System.getProgramFilesDir()
-
+			
 			if sys.getwindowsversion()[0] == 5:
 				self._config['action_processor']['run_as_user'] = 'pcpatch'
 		else:
