@@ -113,7 +113,7 @@ class EventGenerator(threading.Thread):
 	def getNextEvent(self):
 		self._event = threading.Event()
 		self._event.wait()
-
+	
 	def cleanup(self):
 		pass
 
@@ -169,13 +169,20 @@ class EventGenerator(threading.Thread):
 					time.sleep(self._generatorConfig.activationDelay)
 
 				logger.info(u"Activating event generator '%s'" % self)
-				while not self._stopped and ( (self._generatorConfig.maxRepetitions < 0) or (self._eventsOccured <= self._generatorConfig.maxRepetitions) ):
+				while not self._stopped and (
+					(self._generatorConfig.maxRepetitions < 0) or
+					(self._eventsOccured <= self._generatorConfig.maxRepetitions)
+				):
 					logger.info(u"Getting next event...")
 					event = self.getNextEvent()
 					if event:
 						self._eventsOccured += 1
 						self.fireEvent(event)
-				logger.notice(u"Event generator '%s' now deactivated after %d event occurrences" % (self, self._eventsOccured))
+					for i in range(10):
+						if self._stopped:
+							break
+						time.sleep(1)
+				logger.notice(u"Event generator '%s' now deactivated after %d event occurrences", self, self._eventsOccured)
 			except Exception as e:
 				logger.error(u"Failure in event generator '%s': %s", self, e, exc_info=True)
 			try:
