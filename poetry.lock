@@ -580,7 +580,7 @@ description = "The opsi python library"
 name = "python-opsi"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "4.2.0.42"
+version = "4.2.0.43"
 
 [package.dependencies]
 SQLAlchemy = ">=1.3.15,<2.0.0"
@@ -1073,8 +1073,8 @@ mysqlclient = [
     {file = "mysqlclient-1.4.6.tar.gz", hash = "sha256:f3fdaa9a38752a3b214a6fe79d7cae3653731a53e577821f9187e67cbecb2e16"},
 ]
 opsi-dev-tools = [
-    {file = "opsi-dev-tools-1.0.14.tar.gz", hash = "md5:6a533a80e5c56007ac060e151161ef2d"},
-    {file = "opsi_dev_tools-1.0.14-py3-none-any.whl", hash = "md5:5ed5d889f1d0948eab7bca8c4ae48c72"},
+    {file = "opsi-dev-tools-1.0.14.tar.gz", hash = "md5:1c4bc9c7cc4308050cfa6edc51d09318"},
+    {file = "opsi_dev_tools-1.0.14-py3-none-any.whl", hash = "md5:b5057517d89867a1a3d4dcb8dd9f2b96"},
 ]
 packaging = [
     {file = "packaging-20.4-py2.py3-none-any.whl", hash = "sha256:998416ba6962ae7fbd6596850b80e17859a5753ba17c32284f67bfff33784181"},
@@ -1209,8 +1209,8 @@ python-magic = [
     {file = "python_magic-0.4.18-py2.py3-none-any.whl", hash = "sha256:356efa93c8899047d1eb7d3eb91e871ba2f5b1376edbaf4cc305e3c872207355"},
 ]
 python-opsi = [
-    {file = "python-opsi-4.2.0.42.tar.gz", hash = "md5:244c2481d89aa6a47b7210a1dab3c5c3"},
-    {file = "python_opsi-4.2.0.42-py3-none-any.whl", hash = "md5:f1d2afde72c3cb7dd4099fffe59c7226"},
+    {file = "python-opsi-4.2.0.43.tar.gz", hash = "md5:bf17c8e6f2106e6a4e1bc4a0e402dceb"},
+    {file = "python_opsi-4.2.0.43-py3-none-any.whl", hash = "md5:70c74702f37607b3af5216626c616b3d"},
 ]
 python-pam = [
     {file = "python-pam-1.8.4.tar.gz", hash = "sha256:c856d9c89fedb33951dd8a95727ae57c6887b02d065bbdffd2fd9dbc0183909b"},
