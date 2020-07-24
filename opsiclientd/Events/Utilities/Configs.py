@@ -255,8 +255,6 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['preActionProcessorCommand'] = config.replace(forceUnicodeLower(value), escaped=True)
 					elif key == 'post_action_processor_command':
 						eventConfigs[eventConfigId]['postActionProcessorCommand'] = config.replace(forceUnicodeLower(value), escaped=True)
-					elif key == 'trusted_installer_check':
-						eventConfigs[eventConfigId]['trustedInstallerCheck'] = forceBool(value)
 					elif key == 'action_processor_productids':
 						eventConfigs[eventConfigId]['actionProcessorProductIds'] = value.strip().split(",")
 					elif key == 'exclude_product_group_ids':

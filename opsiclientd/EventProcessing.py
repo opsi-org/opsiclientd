@@ -775,7 +775,7 @@ None otherwise.
 			#TODO: Deactivating Trusted Installer Detection. Have to implemented in a better way in futur versions.
 			if self.event.eventConfig.getId() == 'gui_startup' and not state.get('user_logged_in', 0) and self.event.eventConfig.trustedInstallerDetection:
 				# check for Trusted Installer before Running Action Processor
-				if (os.name == 'nt') and (sys.getwindowsversion().major >= 6):
+				if RUNNING_ON_WINDOWS and sys.getwindowsversion().major >= 6:
 					logger.notice(u"Getting TrustedInstaller service configuration")
 					try:
 						# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3
