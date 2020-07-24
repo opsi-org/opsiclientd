@@ -889,18 +889,22 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				productIds.append('opsi-winst')
 				if 'mshotfix' in productIds:
 					# Windows 8.1 Bugfix, with a helper exe.
-					helper = os.path.join(config.get('global', 'base_dir'), 'utilities', 'getmsversioninfo.exe')
+					# Helper seems not to be needed with Python 3
+					helper = None #os.path.join(config.get('global', 'base_dir'), 'utilities', 'getmsversioninfo.exe')
 					additionalProductId = System.getOpsiHotfixName(helper)
 					if "win10" in additionalProductId:
 						releaseId = System.getRegistryValue(
-								System.HKEY_LOCAL_MACHINE,
-								"SOFTWARE\\Microsoft\\Windows NT\CurrentVersion",
-								"ReleaseID")
+							System.HKEY_LOCAL_MACHINE,
+							"SOFTWARE\\Microsoft\\Windows NT\CurrentVersion",
+							"ReleaseID"
+						)
 						#Setting default to 1507-Build
-						if not releaseId: releaseId = "1507"
+						if not releaseId:
+							releaseId = "1507"
 						#Splitting Name of original Packagename and reverse result to get arch
 						parts = additionalProductId.split("-")[::-1]
 						releasePackageName = "mshotfix-win10-%s-%s-glb" % (releaseId, parts[1])
+
 						logger.info(u"Searching for release-packageid: '%s'" % releasePackageName)
 						if releasePackageName in productOnDepotIds:
 							logger.info(u"Releasepackage found on depot: '%s'" % releasePackageName)
