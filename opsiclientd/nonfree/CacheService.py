@@ -780,9 +780,10 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 
 			if maxFreeableSize < neededSpace:
 				raise Exception(
-					u"Needed space: %0.3f MB, maximum freeable space: %0.3f MB" % (
-						float(neededSpace) / (1024 * 1024),
-						float(maxFreeableSize) / (1024 * 1024)
+					u"Needed space: %0.3f MB, maximum freeable space: %0.3f MB (max product cache size: %0.0f MB)" % (
+						float(neededSpace) / (1000 * 1000),
+						float(maxFreeableSize) / (1000 * 1000),
+						float(self._productCacheMaxSize) / (1000 * 1000)
 					)
 				)
 
@@ -823,7 +824,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 
 				del productDirSizes[deleteProduct]
 
-			logger.notice(u"%0.3f MB of product cache freed" % (float(freedSpace)/(1024*1024)))
+			logger.notice(u"%0.3f MB of product cache freed" % (float(freedSpace)/(1000*1000)))
 		except Exception as e:
 			raise Exception(u"Failed to free enough disk space for product cache: %s" % forceUnicode(e))
 
@@ -1083,7 +1084,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 
 			logger.info(
 				u"Product '%s' contains %d files with a total size of %0.3f MB" % (
-					productId, fileCount, float(productSize) / (1024 * 1024)
+					productId, fileCount, float(productSize) / (1000 * 1000)
 				)
 			)
 
@@ -1093,22 +1094,22 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				if productCacheDirSize + productSize > self._productCacheMaxSize:
 					logger.info(
 						u"Product cache dir sizelimit of %0.3f MB exceeded. Current size: %0.3f MB, space needed for product '%s': %0.3f MB" % (
-							float(self._productCacheMaxSize) / (1024 * 1024),
-							float(productCacheDirSize) / (1024 * 1024),
+							float(self._productCacheMaxSize) / (1000 * 1000),
+							float(productCacheDirSize) / (1000 * 1000),
 							productId,
-							float(productSize) / (1024 * 1024)
+							float(productSize) / (1000 * 1000)
 						)
 					)
 					freeSpace = self._productCacheMaxSize - productCacheDirSize
-					neededSpace = productSize - freeSpace + 1024
+					neededSpace = productSize - freeSpace + 1000
 					self._freeProductCacheSpace(neededSpace=neededSpace, neededProducts=neededProducts)
 					productCacheDirSize = System.getDirectorySize(self._productCacheDir)
 
 			diskFreeSpace = System.getDiskSpaceUsage(self._productCacheDir)['available']
-			if diskFreeSpace < productSize + 500 * 1024 * 1024:
+			if diskFreeSpace < productSize + 500 * 1000 * 1000:
 				raise Exception(
 					u"Only %0.3f MB free space available on disk, refusing to cache product files" % (
-						float(diskFreeSpace) / (1024 * 1024)
+						float(diskFreeSpace) / (1000 * 1000)
 					)
 				)
 
@@ -1116,7 +1117,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				title=u"Cache product %s" % productId,
 				description=u"Caching product '%s' of size %0.2f MB\nmax bandwidth: %s, dynamic bandwidth: %s" % (
 					productId,
-					float(productSize) / (1024 * 1024),
+					float(productSize) / (1000 * 1000),
 					self._maxBandwidth,
 					self._dynamicBandwidth
 				),
