@@ -13,19 +13,19 @@ from .helper import workInTemporaryDirectory
 import pytest
 
 try:
-	from opsiclientd.Posix import OpsiclientdPosixInit
+	from opsiclientd.linux.main import main, write_pid_file
 except ImportError as error:
 	print("Failed to import: {0}".format(error))
-	OpsiclientdInit = None
+	main = None
 
 
-@pytest.mark.skipif(OpsiclientdPosixInit is None, reason="Unable to find non-free modules.")
+@pytest.mark.skipif(main is None, reason="Unable to find non-free modules.")
 def testWritingPID():
 	currentPID = os.getpid()
 
 	with workInTemporaryDirectory() as tempDir:
 		targetFile = os.path.join(tempDir, 'pidfile')
-		OpsiclientdPosixInit.writePIDFile(targetFile)
+		write_pid_file(targetFile)
 
 		with open(targetFile) as f:
 			pid = int(f.read().strip())
@@ -33,11 +33,11 @@ def testWritingPID():
 		assert currentPID == pid
 
 
-@pytest.mark.skipif(OpsiclientdPosixInit is None, reason="Unable to find non-free modules.")
+@pytest.mark.skipif(main is None, reason="Unable to find non-free modules.")
 def testNotWritingPIDtoEmptyPath():
 	with workInTemporaryDirectory() as tempDir:
-		OpsiclientdPosixInit.writePIDFile(None)
+		write_pid_file(None)
 		assert not [e for e in os.listdir(tempDir)]
 
-		OpsiclientdPosixInit.writePIDFile("")
+		write_pid_file("")
 		assert not [e for e in os.listdir(tempDir)]
