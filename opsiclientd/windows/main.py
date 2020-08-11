@@ -140,7 +140,7 @@ def main():
 			handle_commandline()
 		else:
 			integrity_level = get_integrity_level()
-			if not "--elevated" in sys.argv and not "--help" in sys.argv and not "--version" in sys.argv:
+			if not "--elevated" in sys.argv and not "--help" in sys.argv and not "--version" in sys.argv and parent_name != "python.exe":
 				executable = os.path.dirname(os.path.realpath(__file__)) + ".exe"
 				args = " ".join(sys.argv[1:])
 				#subprocess.run("whoami /user /priv")
