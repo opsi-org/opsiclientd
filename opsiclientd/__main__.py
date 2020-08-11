@@ -26,24 +26,31 @@ opsi client daemon (opsiclientd)
 
 import os
 import sys
+import platform
 
 def opsiclientd_rpc():
-	from opsiclientd.opsiclientdrpc import main
-	main()
+	from opsiclientd.opsiclientdrpc import main as _main
+	_main()
 
 def action_processor_starter():
-	from opsiclientd.actionprocessorstarter import main
-	main()
+	from opsiclientd.actionprocessorstarter import main as _main
+	_main()
 
 def opsiclientd():
-	if os.name == 'nt':
-		from opsiclientd.Windows import OpsiclientdWindowsInit
-		OpsiclientdWindowsInit()
-	elif os.name == 'posix':
-		from opsiclientd.Posix import OpsiclientdPosixInit
-		OpsiclientdPosixInit()
+	from opsicommon.logging import logger
+	_main = None
+	if platform.system().lower() == 'windows':
+		from opsiclientd.windows.main import main as _main
+	elif platform.system().lower() == 'linux':
+		from opsiclientd.linux.main import main as _main
+	elif platform.system().lower() == 'darwin':
+		from opsiclientd.darwin.main import main as _main
 	else:
-		raise NotImplementedError("OS %s not supported." % os.name)
+		raise NotImplementedError("OS %s not supported." % os.name)	
+	try:
+		_main()
+	except Exception as e:
+		logger.critical(e, exc_info=True)
 
 def main():
 	name = os.path.splitext(os.path.basename(sys.argv[0]))[0].lower()

@@ -46,7 +46,7 @@ from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 from OPSI import __version__ as python_opsi_version
 
-from opsiclientd import __version__, DEFAULT_STDERR_LOG_FORMAT, DEFAULT_FILE_LOG_FORMAT
+from opsiclientd import __version__, config
 from opsiclientd.Config import Config
 from opsiclientd.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from opsiclientd.ControlServer import ControlServer
@@ -71,62 +71,8 @@ if RUNNING_ON_WINDOWS:
 	from opsiclientd.Events.Windows.GUIStartup import (
 		GUIStartupEventConfig, GUIStartupEventGenerator)
 
-config = Config()
 timeline = Timeline()
 state = State()
-
-class OpsiclientdInit():
-	def __init__(self):
-		self.parser = argparse.ArgumentParser()
-		self.parser.add_argument("--version", "-V", action='version', version=f"{__version__} [python-opsi={python_opsi_version}]")
-		self.parser.add_argument("--log-level", "-l", dest="logLevel", type=int,
-								choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-								default=LOG_NOTICE,
-								help="Set the log-level."
-		)
-		self.parser.add_argument("--log-filter", dest="logFilter", default=None,
-								help="Filter log records contexts (<ctx-name-1>=<val1>[,val2][;ctx-name-2=val3])."
-		)
-		
-
-	def init_logging(self, stderr_level: int = LOG_NONE, log_filter: str = None):
-		log_file = os.path.join(tempfile.gettempdir(), "opsiclientd.log")
-		try:
-			default_log_dir = None
-			if RUNNING_ON_WINDOWS:
-				default_log_dir = os.path.join(System.getSystemDrive() + "\\opsi.org\\log")
-			else:
-				default_log_dir = os.path.join("/var/log/opsi-client-agent")
-			if os.path.isdir(default_log_dir):
-				log_file = os.path.join(default_log_dir, "opsiclientd.log")
-		except:
-			pass
-		config.set("global", "log_file", log_file)
-		
-		for i in (9, 8, 7, 6, 5, 4, 3, 2, 1, 0):
-			slf = f"{log_file}.{i-1}"
-			dlf = f"{log_file}.{i}"
-			if (i == 0):
-				slf = log_file
-			try:
-				if os.path.exists(slf):
-					if os.path.exists(dlf):
-						os.unlink(dlf)
-					os.rename(slf, dlf)
-			except Exception as e:
-				print("Failed to rename %s to %s: %s", slf, dlf, forceUnicode(e), file=sys.stderr)
-		
-		opsicommon.logging.init_logging(
-			stderr_level=stderr_level,
-			stderr_format=DEFAULT_STDERR_LOG_FORMAT,
-			log_file=log_file,
-			file_level=LOG_DEBUG,
-			file_format=DEFAULT_FILE_LOG_FORMAT
-		)
-		if log_filter:
-			opsicommon.logging.set_filter_from_string(log_filter)
-		
-		logger.essential("Log file started")
 
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self):
