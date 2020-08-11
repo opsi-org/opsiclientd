@@ -107,7 +107,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			
 			self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
 			self.ReportServiceStatus(win32service.SERVICE_RUNNING)
-			logger.debug("Took %0.2f seconds to report service running status" % (time.time() - startTime))
+			logger.debug("Took %0.2f seconds to report service running status", (time.time() - startTime))
 
 			from .opsiclientd import opsiclientd_factory
 			self.opsiclientd = opsiclientd_factory()

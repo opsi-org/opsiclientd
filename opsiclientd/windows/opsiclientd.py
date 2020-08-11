@@ -44,12 +44,36 @@ PROGID_EventSubscription = "EventSystem.EventSubscription"
 
 IID_ISensLogon = "{d597bab3-5b9f-11d1-8dd2-00aa004abd5e}"
 
-import wmi
-import pythoncom
-
+wmi = None
+pythoncom = None
+importWmiAndPythoncomLock = threading.Lock()
 def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
-	return (wmi, pythoncom)
+	global wmi
+	global pythoncom
+	if importWmi and not pythoncom:
+		importPythoncom = True
 
+	if not ((wmi or not importWmi) and (pythoncom or not importPythoncom)):
+		logger.info("Importing wmi / pythoncom")
+		with importWmiAndPythoncomLock:
+			while not ((wmi or not importWmi) and (pythoncom or not importPythoncom)):
+				try:
+					if not pythoncom and importPythoncom:
+						logger.debug("Importing pythoncom")
+						import pythoncom
+
+					if not wmi and importWmi:
+						logger.debug("Importing wmi")
+						pythoncom.CoInitialize()
+						try:
+							import wmi
+						finally:
+							pythoncom.CoUninitialize()
+				except Exception as importError:
+					logger.warning("Failed to import: %s, retrying in 2 seconds", importError)
+					time.sleep(2)
+
+	return (wmi, pythoncom)
 
 def opsiclientd_factory():
 	windowsVersion = sys.getwindowsversion()
