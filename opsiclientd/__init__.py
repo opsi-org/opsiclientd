@@ -69,19 +69,6 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 		log_dir = tempfile.gettempdir()
 	log_file = os.path.join(log_dir, "opsiclientd.log")
 	
-	"""
-	try:
-		default_log_dir = None
-		if RUNNING_ON_WINDOWS:
-			default_log_dir = os.path.join(System.getSystemDrive() + "\\opsi.org\\log")
-		else:
-			default_log_dir = os.path.join("/var/log/opsi-client-agent")
-		if os.path.isdir(default_log_dir):
-			log_file = os.path.join(default_log_dir, "opsiclientd.log")
-	except:
-		pass
-	"""
-
 	config.set("global", "log_file", log_file)
 	
 	for i in (9, 8, 7, 6, 5, 4, 3, 2, 1, 0):
