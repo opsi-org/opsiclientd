@@ -6,8 +6,6 @@ locale:
     - opsiclientd
 
 pyinstaller-poetry:
-  update_version_in:
-    - opsiclientd/__init__.py
   one_file: no
   hidden_imports:
     all:
