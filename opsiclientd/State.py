@@ -29,7 +29,7 @@ import json
 import codecs
 import threading
 
-#from OPSI.Logger import Logger
+from opsicommon.utils import Singleton
 from opsicommon.logging import logger
 from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
@@ -38,11 +38,9 @@ from opsiclientd.Config import Config
 from opsiclientd.OpsiService import isConfigServiceReachable
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
-#logger = Logger()
 config = Config()
 
-
-class StateImplementation(object):
+class State(metaclass=Singleton):
 	def __init__(self):
 		self._state = {}
 		self._stateFile = config.get('global', 'state_file')
@@ -105,27 +103,3 @@ class StateImplementation(object):
 		logger.debug(u"Setting state '%s' to %s" % (name, value))
 		self._state[name] = value
 		self._writeStateFile()
-
-
-class State(StateImplementation):
-	# Storage for the instance reference
-	__instance = None
-
-	def __init__(self):
-		""" Create singleton instance """
-
-		# Check whether we already have an instance
-		if State.__instance is None:
-			# Create and remember instance
-			State.__instance = StateImplementation()
-
-		# Store instance reference as the only member in the handle
-		self.__dict__['_State__instance'] = State.__instance
-
-	def __getattr__(self, attr):
-		""" Delegate access to implementation """
-		return getattr(self.__instance, attr)
-
-	def __setattr__(self, attr, value):
-		""" Delegate access to implementation """
-		return setattr(self.__instance, attr, value)

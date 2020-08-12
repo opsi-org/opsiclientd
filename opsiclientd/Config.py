@@ -31,6 +31,7 @@ import re
 import sys
 
 from opsicommon.logging import logger, LOG_NOTICE, logging_config
+from opsicommon.utils import Singleton
 from OPSI.Types import (
 	forceBool, forceHostId, forceInt, forceFilename, forceList,
 	forceProductIdList, forceUnicode, forceUnicodeLower, forceUrl,
@@ -76,7 +77,7 @@ class NoConfigOptionFoundException(ValueError):
 	pass
 
 
-class ConfigImplementation(object):
+class Config(metaclass=Singleton):
 	WINDOWS_DEFAULT_PATHS = {
 		'global': {
 			'log_dir': u'c:\\opsi.org\\log',
@@ -677,36 +678,3 @@ class ConfigImplementation(object):
 
 		logger.notice(u"Got config from service")
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.getDict()))
-
-
-class Config(ConfigImplementation):
-	# Storage for the instance reference
-	__instance = None
-
-	def __init__(self):
-		""" Create singleton instance """
-
-		# Check whether we already have an instance
-		if Config.__instance is None:
-			# Create and remember instance
-			Config.__instance = ConfigImplementation()
-
-		# Store instance reference as the only member in the handle
-		self.__dict__['_Config__instance'] = Config.__instance
-
-	def __getattr__(self, attr):
-		""" Delegate access to implementation """
-		return getattr(self.__instance, attr)
-
-	def __setattr__(self, attr, value):
-		""" Delegate access to implementation """
-		return setattr(self.__instance, attr, value)
-
-	def _reset(self):
-		"""
-		Throwing away the Singleton behaviour.
-		Please do only use this in tests.
-		"""
-		Config.__instance = None
-		if '_Config__instance' in self.__dict__:
-			del self.__dict__['_Config__instance']

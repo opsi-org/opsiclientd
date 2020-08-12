@@ -42,8 +42,8 @@ import os
 import time
 import threading
 
-#from OPSI.Logger import Logger
 from opsicommon.logging import logger
+from opsicommon.utils import Singleton
 from OPSI.Types import forceBool, forceInt, forceOpsiTimestamp, forceUnicode
 from OPSI.Util import timestamp
 from OPSI.Backend.SQLite import SQLite
@@ -129,7 +129,7 @@ function onResize() {
 '''
 
 
-class TimelineImplementation(object):
+class Timeline(metaclass=Singleton):
 	def __init__(self):
 		timelineFolder = os.path.dirname(config.get('global', 'timeline_db'))
 		if not os.path.exists(timelineFolder):
@@ -285,27 +285,3 @@ class TimelineImplementation(object):
 
 		with self._dbLock:
 			return self._sql.getSet('select * from EVENT')
-
-
-class Timeline(TimelineImplementation):
-	# Storage for the instance reference
-	__instance = None
-
-	def __init__(self):
-		""" Create singleton instance """
-
-		# Check whether we already have an instance
-		if Timeline.__instance is None:
-			# Create and remember instance
-			Timeline.__instance = TimelineImplementation()
-
-		# Store instance reference as the only member in the handle
-		self.__dict__['_Timeline__instance'] = Timeline.__instance
-
-	def __getattr__(self, attr):
-		""" Delegate access to implementation """
-		return getattr(self.__instance, attr)
-
-	def __setattr__(self, attr, value):
-		""" Delegate access to implementation """
-		return setattr(self.__instance, attr, value)
