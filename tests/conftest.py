@@ -4,12 +4,12 @@ import os
 import mock
 import pytest
 
-from opsiclientd.Config import ConfigImplementation
+from opsiclientd.Config import Config
 
 
 @pytest.fixture
 def config():
-	testconfig = ConfigImplementation()
+	testconfig = Config()
 	with mock.patch('opsiclientd.Events.Utilities.Configs.config', testconfig):
 		yield testconfig
 
