@@ -7,7 +7,6 @@
 Non-free Posix part of opsiclientd
 
 :copyright: uib GmbH <info@uib.de>
-:author: Niko Wenselowski <n.wenselowski@uib.de>
 """
 
 import os
@@ -15,14 +14,10 @@ import os.path
 
 import OPSI.System as System
 from opsicommon.logging import logger
-#from OPSI.Logger import Logger
 
 from opsiclientd.Opsiclientd import Opsiclientd
 
 __all__ = ['OpsiclientdPosix']
-
-#logger = Logger()
-
 
 class OpsiclientdPosix(Opsiclientd):
 
@@ -36,17 +31,19 @@ class OpsiclientdPosix(Opsiclientd):
 
 	def clearRebootRequest(self):
 		rebootFile = os.path.join(self._PID_DIR, "reboot")
-		try:
-			os.remove(rebootFile)
-		except OSError as err:
-			logger.debug(u"Failed to remove reboot file {1!r}: {0}".format(err, rebootFile))
+		if os.path.exists(rebootFile):
+			try:
+				os.remove(rebootFile)
+			except OSError as err:
+				logger.error("Failed to remove reboot file %s: %s", err, rebootFile)
 
 	def clearShutdownRequest(self):
 		shutdownFile = os.path.join(self._PID_DIR, "shutdown")
-		try:
-			os.remove(shutdownFile)
-		except OSError as err:
-			logger.debug(u"Failed to remove shutdwn file {1!r}: {0}".format(err, shutdownFile))
+		if os.path.exists(shutdownFile):
+			try:
+				os.remove(shutdownFile)
+			except OSError as err:
+				logger.error("Failed to remove shutdown file %s: %s", err, shutdownFile)
 
 	def isRebootRequested(self):
 		rebootFile = os.path.join(self._PID_DIR, "reboot")
