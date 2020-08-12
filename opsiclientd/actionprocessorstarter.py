@@ -62,9 +62,9 @@ def main():
 			lang = locale.getdefaultlocale()[0].split('_')[0]
 			localeDir = os.path.join(os.path.dirname(sys.argv[0]), 'locale')
 			translation = gettext.translation('opsiclientd', localeDir, [lang])
-			_ = translation.ugettext
-		except Exception as e:
-			logger.error("Locale not found: %s", e)
+			_ = translation.gettext
+		except Exception as error:
+			logger.error("Failed to load locale: %s", error)
 
 			def _(string):
 				return string

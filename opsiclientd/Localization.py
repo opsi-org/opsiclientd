@@ -27,16 +27,13 @@ Localisation ofopsiclientd.
 import gettext
 import locale
 
-#from OPSI.Logger import Logger
 from opsicommon.logging import logger
-
-#logger = Logger()
 
 translation = None
 try:
 	language = locale.getdefaultlocale()[0].split('_')[0]
 except Exception as error:
-	logger.debug("Unable to load localisation: '%s'", error)
+	logger.debug("Unable to load localisation: %s", error)
 	language = "en"
 
 
@@ -58,4 +55,4 @@ def setLocaleDir(localeDir):
 		logger.notice("Loading translation for language '%s'" % language)
 		translation = gettext.translation('opsiclientd', localeDir, [language])
 	except Exception as error:
-		logger.error("Locale not found: %s" % error)
+		logger.error("Failed to load locale: %s", error)
