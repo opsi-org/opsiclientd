@@ -13,7 +13,7 @@ from .helper import workInTemporaryDirectory
 import pytest
 
 try:
-	from opsiclientd.linux.main import main, write_pid_file
+	from opsiclientd.posix.main import main, write_pid_file
 except ImportError as error:
 	print("Failed to import: {0}".format(error))
 	main = None
