@@ -41,10 +41,8 @@ def opsiclientd():
 	_main = None
 	if platform.system().lower() == 'windows':
 		from opsiclientd.windows.main import main as _main
-	elif platform.system().lower() == 'linux':
-		from opsiclientd.linux.main import main as _main
-	elif platform.system().lower() == 'darwin':
-		from opsiclientd.darwin.main import main as _main
+	elif platform.system().lower() in ('linux', 'darwin'):
+		from opsiclientd.posix.main import main as _main
 	else:
 		raise NotImplementedError("OS %s not supported." % os.name)	
 	try:

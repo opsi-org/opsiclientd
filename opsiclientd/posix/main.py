@@ -32,6 +32,7 @@ import opsicommon.logging
 from opsicommon.logging import logger, logging_config, LOG_NONE
 
 from opsiclientd import config, parser, init_logging
+from opsiclientd.SystemCheck import RUNNING_ON_LINUX, RUNNING_ON_DARWIN
 
 from opsiclientd.nonfree.Posix import OpsiclientdPosix
 
@@ -97,6 +98,8 @@ def write_pid_file(path):
 
 def main():
 	global opsiclientd
+	log_dir = "/var/log/opsi-client-agent"
+	
 	parser.add_argument(
 		"--no-signal-handlers", "-t",
 		dest="signalHandlers",
@@ -120,7 +123,7 @@ def main():
 	
 	options = parser.parse_args()
 	
-	init_logging(log_dir="/var/log/opsi-client-agent", stderr_level=options.logLevel, log_filter=options.logFilter)
+	init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
 
 	with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
 
@@ -137,10 +140,11 @@ def main():
 			daemonize()
 
 		write_pid_file(options.pidFile)
-		try:
-			configure_iptables()
-		except Exception as e:
-			logger.error("Failed to configure iptabels: %s", e)
+		if RUNNING_ON_LINUX:
+			try:
+				configure_iptables()
+			except Exception as e:
+				logger.error("Failed to configure iptabels: %s", e)
 		
 		logger.debug("Starting opsiclientd...")
 		opsiclientd = OpsiclientdPosix()

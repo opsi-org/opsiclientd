@@ -39,7 +39,7 @@ from OPSI.Types import (
 from OPSI.Util import objectToBeautifiedText, blowfishDecrypt
 from OPSI.Util.File import IniFile
 from OPSI import System
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_LINUX, RUNNING_ON_MACOS
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_LINUX, RUNNING_ON_DARWIN
 
 OPSI_CA = '''-----BEGIN CERTIFICATE-----
 MIIEYTCCA0mgAwIBAgIJAO5oKZZR8dQkMA0GCSqGSIb3DQEBBQUAMH0xCzAJBgNV
@@ -223,7 +223,7 @@ class ConfigImplementation(object):
 		defaultToApply = self.WINDOWS_DEFAULT_PATHS.copy()
 		if RUNNING_ON_LINUX:
 			defaultToApply = self.LINUX_DEFAULT_PATHS.copy()
-		elif RUNNING_ON_MACOS:
+		elif RUNNING_ON_DARWIN:
 			defaultToApply = self.MACOS_DEFAULT_PATHS.copy()
 		
 		baseDir = self._config["global"]["base_dir"]
@@ -315,7 +315,7 @@ class ConfigImplementation(object):
 			return
 
 		if (section == 'depot_server') and (option == 'drive'):
-			if (RUNNING_ON_LINUX or RUNNING_ON_MACOS) and not value.startswith("/"):
+			if (RUNNING_ON_LINUX or RUNNING_ON_DARWIN) and not value.startswith("/"):
 				logger.warning("Refusing to set depot_server.drive to %s on posix", value)
 				return
 
