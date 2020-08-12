@@ -43,11 +43,12 @@ config = Config()
 class State(metaclass=Singleton):
 	def __init__(self):
 		self._state = {}
-		self._stateFile = config.get('global', 'state_file')
+		self._stateFile = None
 		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\\sessionhelper\\getActiveSessionIds.exe')
 		self._stateLock = threading.Lock()
 	
 	def start(self):
+		self._stateFile = config.get('global', 'state_file')
 		self._readStateFile()
 		self.set('shutdown_cancel_counter', 0)
 

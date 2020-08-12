@@ -50,7 +50,6 @@ from OPSI.Backend.SQLite import SQLite
 
 from opsiclientd.Config import Config
 
-#logger = Logger()
 config = Config()
 
 TIMELINE_IMAGE_URL = u'/timeline/timeline_js/images/'
@@ -131,16 +130,7 @@ function onResize() {
 
 class Timeline(metaclass=Singleton):
 	def __init__(self):
-		timelineFolder = os.path.dirname(config.get('global', 'timeline_db'))
-		if not os.path.exists(timelineFolder):
-			logger.debug("Creating missing directory '%s'", timelineFolder)
-			os.makedirs(timelineFolder)
-
-		self._sql = SQLite(
-			database=config.get('global', 'timeline_db'),
-			synchronous=False,
-			databaseCharset='utf-8'
-		)
+		self._sql = None
 		self._dbLock = threading.Lock()
 		self._stopped = False
 	
@@ -215,6 +205,17 @@ class Timeline(metaclass=Singleton):
 				logger.error(cleanupError)
 
 	def _createDatabase(self):
+		timelineDB = config.get('global', 'timeline_db')
+		timelineFolder = os.path.dirname(timelineDB)
+		if not os.path.exists(timelineFolder):
+			logger.debug("Creating missing directory '%s'", timelineFolder)
+			os.makedirs(timelineFolder)
+
+		self._sql = SQLite(
+			database=timelineDB,
+			synchronous=False,
+			databaseCharset='utf-8'
+		)
 		with self._dbLock:
 			tables = self._sql.getTables()
 			if 'EVENT' not in tables:
