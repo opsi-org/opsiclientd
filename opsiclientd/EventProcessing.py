@@ -191,11 +191,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					sessionId = System.getActiveSessionId(winApiBugCommand = self._winApiBugCommand)
 			else:
 				sessionId = System.getActiveSessionId()
-				logger.info(u"Using {0} as session id.".format(sessionId))
-
-			self.setSessionId(sessionId)
+			
+			if sessionId:
+				self.setSessionId(sessionId)
+			else:
+				logger.warning("Failed to get session id")
 		return self._sessionId
-
+	
 	def setStatusMessage(self, message):
 		self._statusSubject.setMessage(message)
 
