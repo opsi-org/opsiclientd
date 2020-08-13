@@ -55,7 +55,7 @@ from opsiclientd.Exceptions import CanceledByUserError, ConfigurationError
 from opsiclientd.Localization import _
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_DARWIN, RUNNING_ON_LINUX
 from opsiclientd.Timeline import Timeline
 
 config = Config()
@@ -197,7 +197,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			else:
 				logger.warning("Failed to get session id")
 		return self._sessionId
-	
+
 	def setStatusMessage(self, message):
 		self._statusSubject.setMessage(message)
 
@@ -548,7 +548,7 @@ None otherwise.
 					cmd = '"%s" -on "%s" -ot file -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y" -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"' \
 								% (setaclcmd, winstdir)
 					System.execute(cmd, shell=False)
-				else:
+				elif RUNNING_ON_LINUX:
 					logger.info(u"Copying from '%s' to '%s'" % (actionProcessorRemoteDir, actionProcessorLocalDir))
 					for fn in os.listdir(actionProcessorRemoteDir):
 						if os.path.isfile(os.path.join(actionProcessorRemoteDir, fn)):
@@ -560,7 +560,11 @@ None otherwise.
 							logger.warning("Skipping '%s' while updating action processor because it is not a file" \
 								% os.path.join(actionProcessorRemoteDir, fn)
 							)
-				logger.notice(u'Local action processor successfully updated')
+				else:
+					logger.error("Update of action processor not implemented on this os")
+					return
+				
+				logger.notice("Local action processor successfully updated")
 
 				productVersion = None
 				packageVersion = None
