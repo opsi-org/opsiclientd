@@ -36,6 +36,7 @@ import tempfile
 import codecs
 import traceback
 import argparse
+import platform
 from contextlib import contextmanager
 
 from OPSI import System
@@ -345,12 +346,10 @@ class Opsiclientd(EventListener, threading.Thread):
 						eventGenerator.createAndFireEvent()
 
 		try:
-			if __fullversion__:
-				eventTitle = f"Opsiclientd version: {__version__} (full) running"
-				logger.essential(f"Opsiclientd version: {__version__} (full)")
-			else:
-				eventTitle = f"Opsiclientd version: {__version__} started"
-				logger.essential(f"Opsiclientd version: {__version__}")
+			eventTitle = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}]" \
+				f" ({'full' if __fullversion__ else 'open'})" \
+				f" running on {platform.system()}"
+			logger.essential(eventTitle)
 			eventDescription = f"Commandline: {' '.join(sys.argv)}\n"
 			logger.essential(f"Commandline: {' '.join(sys.argv)}")
 			eventDescription += f"Working directory: {os.getcwd()}\n"
