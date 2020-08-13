@@ -115,7 +115,7 @@ class Config(metaclass=Singleton):
 	MACOS_DEFAULT_PATHS = {
 		'global': {
 			'log_dir': "/var/log/opsi",
-			'locale_dir': "/usr/share/opsi-client-agent/opsiclientd/locale",
+			'locale_dir': "/usr/local/share/opsi-client-agent/opsiclientd/locale",
 			'config_file': "/etc/opsi-client-agent/opsiclientd.conf",
 			'state_file': "/var/lib/opsi-client-agent/opsiclientd/state.json",
 			'timeline_db': "/var/lib/opsi-client-agent/opsiclientd/timeline.sqlite",
@@ -124,7 +124,7 @@ class Config(metaclass=Singleton):
 		'control_server': {
 			'ssl_server_key_file': "/etc/opsi-client-agent/opsiclientd.pem",
 			'ssl_server_cert_file': "/etc/opsi-client-agent/opsiclientd.pem",
-			'static_dir': "/usr/share/opsi-client-agent/opsiclientd/static_html"
+			'static_dir': "/usr/local/share/opsi-client-agent/opsiclientd/static_html"
 		},
 		'cache_service': {
 			'storage_dir': "/var/cache/opsi-client-agent"
