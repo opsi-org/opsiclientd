@@ -438,14 +438,10 @@ class ControlServer(OpsiService, threading.Thread):
 					logger.debug("Reactor already running.")
 			
 			except CannotListenError as err:
-				logger.critical("Listening on port {0} impossible: {1}".format(self._httpsPort, err))
-				logger.logException(err)
+				logger.critical("Failed to listen on port %s: %s", self._httpsPort, err, exc_info=True)
 				self._opsiclientd.stop()
-				raise err
 			except Exception as err:
-				logger.warning("ControlServer {1} caught error: {0}".format(err, repr(self)))
-				logger.logException(err)
-				raise err
+				logger.error("ControlServer error: %s", err, exc_info=True)
 			finally:
 				logger.notice("Control server exiting")
 				self._running = False

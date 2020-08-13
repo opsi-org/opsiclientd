@@ -136,7 +136,7 @@ def main():
 			logger.notice("Not registering any signal handlers!")
 
 		if options.daemon:
-			logger.setConsoleLevel(LOG_NONE)
+			logging_config(stderr_level=LOG_NONE)
 			daemonize()
 
 		write_pid_file(options.pidFile)
