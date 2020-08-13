@@ -94,4 +94,4 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 	if log_filter:
 		opsicommon.logging.set_filter_from_string(log_filter)
 	
-	logger.essential("Log file started")
+	logger.essential("Log file %s started", log_file)
