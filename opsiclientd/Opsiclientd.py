@@ -228,15 +228,15 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		@contextmanager
 		def getControlPipe():
-			logger.notice(u"Starting control pipe")
+			logger.notice("Starting control pipe")
 			try:
 				controlPipe = ControlPipeFactory(OpsiclientdRpcPipeInterface(self))
 				controlPipe.daemon = True
 				controlPipe.start()
-				logger.notice(u"Control pipe started")
+				logger.notice("Control pipe started")
 				yield
 			except Exception as e:
-				logger.error("Failed to start control pipe: %s", forceUnicode(e))
+				logger.error("Failed to start control pipe: %s", e, exc_info=True)
 				raise
 			finally:
 				logger.info("Stopping control pipe")
@@ -258,9 +258,9 @@ class Opsiclientd(EventListener, threading.Thread):
 					sslServerCertFile=config.get('control_server', 'ssl_server_cert_file'),
 					staticDir=config.get('control_server', 'static_dir')
 				)
-				logger.debug("Current control server: {0}".format(controlServer))
+				logger.debug("Current control server: %s", controlServer)
 				controlServer.start()
-				logger.notice(u"Control server started")
+				logger.notice("Control server started")
 
 				self._stopEvent.wait(1)
 				if self._stopEvent.is_set():
@@ -269,16 +269,16 @@ class Opsiclientd(EventListener, threading.Thread):
 
 				yield
 			except Exception as e:
-				logger.error(u"Failed to start control server: {0}".format(forceUnicode(e)))
+				logger.error("Failed to start control server: %s", e, exc_info=True)
 				raise e
 			finally:
-				logger.info(u"Stopping control server")
+				logger.info("Stopping control server")
 				try:
 					controlServer.stop()
 					controlServer.join(2)
 					logger.info("Control server stopped")
 				except (NameError, RuntimeError) as stopError:
-					logger.debug(u"Stopping controlServer failed: {0}".format(stopError))
+					logger.debug("Stopping controlServer failed: %s", stopError)
 
 		@contextmanager
 		def getCacheService():
@@ -291,8 +291,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.notice("Cache service started")
 				yield cacheService
 			except Exception as e:
-				logger.error("Failed to start cache service: %s" % forceUnicode(e))
-				#logger.logException(e)
+				logger.error("Failed to start cache service: %s", e, exc_info=True)
 				yield None
 			finally:
 				if cacheService:
@@ -302,7 +301,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						cacheService.join(2)
 						logger.info("Cache service stopped")
 					except (NameError, RuntimeError) as stopError:
-						logger.debug("Failed to stop cache service: {0}".format(stopError))
+						logger.debug("Failed to stop cache service: %s", stopError)
 		
 		@contextmanager
 		def getEventGeneratorContext():
@@ -312,16 +311,16 @@ class Opsiclientd(EventListener, threading.Thread):
 			for eventGenerator in getEventGenerators():
 				eventGenerator.addEventListener(self)
 				eventGenerator.start()
-				logger.notice("Event generator '%s' started" % eventGenerator)
+				logger.notice("Event generator '%s' started", eventGenerator)
 
 			try:
 				yield
 			finally:
 				for eventGenerator in getEventGenerators():
-					logger.info("Stopping event generator %s" % eventGenerator)
+					logger.info("Stopping event generator %s", eventGenerator)
 					eventGenerator.stop()
 					eventGenerator.join(2)
-					logger.info("Event generator %s stopped" % eventGenerator)
+					logger.info("Event generator %s stopped", eventGenerator)
 
 		@contextmanager
 		def getDaemonLoopingContext():
@@ -331,7 +330,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 				if RUNNING_ON_WINDOWS and getEventGenerators(generatorClass=GUIStartupEventGenerator):
 					# Wait until gui starts up
-					logger.notice("Waiting for gui startup (timeout: %d seconds)" % config.get('global', 'wait_for_gui_timeout'))
+					logger.notice("Waiting for gui startup (timeout: %d seconds)", config.get('global', 'wait_for_gui_timeout'))
 					self.waitForGUI(timeout=config.get('global', 'wait_for_gui_timeout'))
 					logger.notice("Done waiting for GUI")
 
@@ -342,22 +341,22 @@ class Opsiclientd(EventListener, threading.Thread):
 					yield
 				finally:
 					for eventGenerator in getEventGenerators(generatorClass=DaemonShutdownEventGenerator):
-						logger.info("Create and fire shutdown event generator %s" % eventGenerator)
+						logger.info("Create and fire shutdown event generator %s", eventGenerator)
 						eventGenerator.createAndFireEvent()
 
 		try:
 			if __fullversion__:
-				eventTitle = "Opsiclientd version: %s (full) running" % __version__
-				logger.essential("Opsiclientd version: %s (full)" % __version__)
+				eventTitle = f"Opsiclientd version: {__version__} (full) running"
+				logger.essential(f"Opsiclientd version: {__version__} (full)")
 			else:
-				eventTitle = "Opsiclientd version: %s started" % __version__
-				logger.essential("Opsiclientd version: %s" % __version__)
-			eventDescription = "Commandline: %s\n" % ' '.join(sys.argv)
-			logger.essential("Commandline: %s" % ' '.join(sys.argv))
-			eventDescription += "Working directory: %s\n" % os.getcwd()
-			logger.essential("Working directory: %s" % os.getcwd())
-			eventDescription += "Using host id '%s'" % config.get('global', 'host_id')
-			logger.notice("Using host id '%s'" % config.get('global', 'host_id'))
+				eventTitle = f"Opsiclientd version: {__version__} started"
+				logger.essential(f"Opsiclientd version: {__version__}")
+			eventDescription = f"Commandline: {' '.join(sys.argv)}\n"
+			logger.essential(f"Commandline: {' '.join(sys.argv)}")
+			eventDescription += f"Working directory: {os.getcwd()}\n"
+			logger.essential(f"Working directory: {os.getcwd()}")
+			eventDescription += f"Using host id '{config.get('global', 'host_id')}'"
+			logger.notice(f"Using host id '{config.get('global', 'host_id')}'")
 
 			self.setBlockLogin(True)
 
@@ -385,7 +384,7 @@ class Opsiclientd(EventListener, threading.Thread):
 								logger.notice("opsiclientd is going down")
 
 								for ept in self._eventProcessingThreads:
-									logger.info("Waiting for event processing thread %s" % ept)
+									logger.info("Waiting for event processing thread %s", ept)
 									ept.join(5)
 
 								if self._opsiclientdRunningEventId:
@@ -427,29 +426,33 @@ class Opsiclientd(EventListener, threading.Thread):
 			for thread in threading.enumerate():
 				logger.info("Runnning thread on main thread exit: %s", thread)
 
-			logger.info(u"Exiting opsiclientd thread")
+			logger.info("Exiting opsiclientd thread")
 
 	def stop(self):
-		logger.notice(u"Stopping {0}...".format(self))
+		logger.notice("Stopping %s...", self)
 		self._stopEvent.set()
 
 	def getCacheService(self):
 		if not self._cacheService:
-			raise Exception(u"Cache service not started")
+			raise Exception("Cache service not started")
 		return self._cacheService
 
 	def processEvent(self, event):
-		logger.notice(u"Processing event %s" % event)
+		logger.notice("Processing event %s", event)
 		eventProcessingThread = None
 		with self._eventProcessingThreadsLock:
-			description = u"Event %s occurred\n" % event.eventConfig.getId()
-			description += u"Config:\n"
+			description = f"Event {event.eventConfig.getId()} occurred\n"
+			description += "Config:\n"
 			config = event.eventConfig.getConfig()
 			configKeys = list(config.keys())
 			configKeys.sort()
 			for configKey in configKeys:
-				description += u"%s: %s\n" % (configKey, config[configKey])
-			timeline.addEvent(title=u"Event %s" % event.eventConfig.getName(), description=description, category=u"event_occurrence")
+				description += f"{configKey}: {config[configKey]}\n"
+			timeline.addEvent(
+				title=f"Event {event.eventConfig.getName()}",
+				description=description,
+				category="event_occurrence"
+			)
 
 			eventProcessingThread = EventProcessingThread(self, event)
 
@@ -457,13 +460,14 @@ class Opsiclientd(EventListener, threading.Thread):
 			if not isinstance(event, PanicEvent):
 				for ept in self._eventProcessingThreads:
 					if event.eventConfig.actionType != 'login' and ept.event.eventConfig.actionType != 'login':
-						logger.notice(u"Already processing an other (non login) event: %s" % ept.event.eventConfig.getId())
+						logger.notice("Already processing an other (non login) event: %s", ept.event.eventConfig.getId())
 						return
 
 					if event.eventConfig.actionType == 'login' and ept.event.eventConfig.actionType == 'login':
 						if ept.getSessionId() == eventProcessingThread.getSessionId():
-							logger.notice(u"Already processing login event '%s' in session %s"
-									% (ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()))
+							logger.notice("Already processing login event '%s' in session %s",
+								ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()
+							)
 							return
 			self.createActionProcessorUser(recreate=False)
 			self._eventProcessingThreads.append(eventProcessingThread)
@@ -471,7 +475,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		try:
 			eventProcessingThread.start()
 			eventProcessingThread.join()
-			logger.notice(u"Done processing event {0!r}".format(event))
+			logger.notice("Done processing event %s", event)
 		finally:
 			with self._eventProcessingThreadsLock:
 				self._eventProcessingThreads.remove(eventProcessingThread)
@@ -486,10 +490,10 @@ class Opsiclientd(EventListener, threading.Thread):
 		for ept in self._eventProcessingThreads:
 			if int(ept.getSessionId()) == int(sessionId):
 				return ept
-		raise Exception(u"Event processing thread for session %s not found" % sessionId)
+		raise Exception(f"Event processing thread for session {sessionId} not found")
 
 	def processProductActionRequests(self, event):
-		logger.error(u"processProductActionRequests not implemented")
+		logger.error("processProductActionRequests not implemented")
 
 	def getCurrentActiveDesktopName(self, sessionId=None):
 		if not RUNNING_ON_WINDOWS:
@@ -500,17 +504,13 @@ class Opsiclientd(EventListener, threading.Thread):
 		if sessionId is None:
 			sessionId = System.getActiveConsoleSessionId()
 
-		rpc = 'setCurrentActiveDesktopName("{sessionId}", System.getActiveDesktopName())'.format(sessionId=sessionId)
-		cmd = '{rpc_processor} "{command}"'.format(
-			rpc_processor=config.get('opsiclientd_rpc', 'command'),
-			command=rpc.replace('"', '\\"')
-		)
-
+		rpc = f"setCurrentActiveDesktopName(\"{sessionId}\", System.getActiveDesktopName())"
+		cmd = '%s "%s"' % (config.get('opsiclientd_rpc', 'command'), rpc.replace('"', '\\"'))
 		try:
 			System.runCommandInSession(
 				command=cmd,
 				sessionId=sessionId,
-				desktop=u"winlogon",
+				desktop="winlogon",
 				waitForProcessEnding=True,
 				timeoutSeconds=60,
 				noWindow=True
@@ -520,22 +520,22 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		desktop = self._currentActiveDesktopName.get(sessionId)
 		if not desktop:
-			logger.warning(u"Failed to get current active desktop name for session %s, using 'default'", sessionId)
-			desktop = 'default'
+			logger.warning("Failed to get current active desktop name for session %s, using 'default'", sessionId)
+			desktop = "default"
 			self._currentActiveDesktopName[sessionId] = desktop
-		logger.debug(u"Returning current active dektop name '%s' for session %s", desktop, sessionId)
+		logger.debug("Returning current active dektop name '%s' for session %s", desktop, sessionId)
 		return desktop
 
 	def switchDesktop(self, desktop, sessionId=None):
 		if not ('opsiclientd_rpc' in config.getDict() and 'command' in config.getDict()['opsiclientd_rpc']):
-			raise Exception(u"opsiclientd_rpc command not defined")
+			raise Exception("opsiclientd_rpc command not defined")
 
 		desktop = forceUnicode(desktop)
 		if sessionId is None:
 			sessionId = System.getActiveConsoleSessionId()
 		sessionId = forceInt(sessionId)
 
-		rpc = "noop(System.switchDesktop('%s'))" % desktop
+		rpc = f"noop(System.switchDesktop('{desktop}'))"
 		cmd = '%s "%s"' % (config.get('opsiclientd_rpc', 'command'), rpc)
 
 		try:
@@ -554,7 +554,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not self.isRebootTriggered() and not self.isShutdownTriggered():
 			# This shutdown was triggered by someone else
 			# Reset shutdown/reboot requests to avoid reboot/shutdown on next boot
-			logger.notice(u"Someone triggered a reboot or a shutdown => clearing reboot request")
+			logger.notice("Someone triggered a reboot or a shutdown => clearing reboot request")
 			self.clearRebootRequest()
 
 	def shutdownMachine(self):
@@ -591,11 +591,11 @@ class Opsiclientd(EventListener, threading.Thread):
 	def showPopup(self, message):
 		port = config.get('notification_server', 'popup_port')
 		if not port:
-			raise Exception(u'notification_server.popup_port not defined')
+			raise Exception('notification_server.popup_port not defined')
 
 		notifierCommand = config.get('opsiclientd_notifier', 'command')
 		if not notifierCommand:
-			raise Exception(u'opsiclientd_notifier.command not defined')
+			raise Exception('opsiclientd_notifier.command not defined')
 		notifierCommand += " -s %s" % os.path.join("notifier", "popup.ini")
 
 		self._popupNotificationLock.acquire()
@@ -606,7 +606,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject = ChoiceSubject(id='choice')
 			popupSubject.setMessage(message)
 
-			logger.notice(u"Starting popup message notification server on port %d", port)
+			logger.notice("Starting popup message notification server on port %d", port)
 			try:
 				self._popupNotificationServer = NotificationServer(
 					address="127.0.0.1",
@@ -618,7 +618,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					if not self._popupNotificationServer.start_and_wait(timeout=30):
 						raise Exception("Timed out while waiting for notification server")
 			except Exception as e:
-				logger.error(u"Failed to start notification server: %s" % forceUnicode(e))
+				logger.error("Failed to start notification server: %s", e)
 				raise
 			
 			notifierCommand = notifierCommand.replace('%port%', str(self._popupNotificationServer.port)).replace('%id%', "popup")
@@ -632,7 +632,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					sessionIds = [System.getActiveConsoleSessionId()]
 
 				for sessionId in sessionIds:
-					logger.info(u"Starting popup message notifier app in session %s", sessionId)
+					logger.info("Starting popup message notifier app in session %s", sessionId)
 					try:
 						System.runCommandInSession(
 							command=notifierCommand,
@@ -640,17 +640,17 @@ class Opsiclientd(EventListener, threading.Thread):
 							desktop=self.getCurrentActiveDesktopName(sessionId),
 							waitForProcessEnding=False)
 					except Exception as e:
-						logger.error(u"Failed to start popup message notifier app in session %s: %s", sessionId, forceUnicode(e))
+						logger.error("Failed to start popup message notifier app in session %s: %s", sessionId, e)
 		finally:
 			self._popupNotificationLock.release()
 
 	def hidePopup(self):
 		if self._popupNotificationServer:
 			try:
-				logger.info(u"Stopping popup message notification server")
+				logger.info("Stopping popup message notification server")
 				self._popupNotificationServer.stop(stopReactor=False)
 			except Exception as e:
-				logger.error(u"Failed to stop popup notification server: %s" % e)
+				logger.error("Failed to stop popup notification server: %s", e)
 
 	def popupCloseCallback(self, choiceSubject):
 		self.hidePopup()
@@ -666,10 +666,10 @@ class WaitForGUI(EventListener):
 		eventGenerator.start()
 
 	def processEvent(self, event):
-		logger.info(u"GUI started")
+		logger.info("GUI started")
 		self._guiStarted.set()
 
 	def wait(self, timeout=None):
 		self._guiStarted.wait(timeout)
 		if not self._guiStarted.isSet():
-			logger.warning(u"Timed out after %d seconds while waiting for GUI" % timeout)
+			logger.warning("Timed out after %d seconds while waiting for GUI", timeout)
