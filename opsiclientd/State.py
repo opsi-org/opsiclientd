@@ -28,6 +28,7 @@ import os
 import json
 import codecs
 import threading
+import psutil
 
 from opsicommon.utils import Singleton
 from opsicommon.logging import logger
@@ -36,7 +37,7 @@ from OPSI import System
 
 from opsiclientd.Config import Config
 from opsiclientd.OpsiService import isConfigServiceReachable
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_DARWIN, RUNNING_ON_LINUX
 
 config = Config()
 
@@ -80,8 +81,18 @@ class State(metaclass=Singleton):
 		if name == 'user_logged_in':
 			if RUNNING_ON_WINDOWS:
 				return bool(System.getActiveSessionIds(self._winApiBugCommand))
-			else:
-				return False  # TODO: find a real fix for this one.
+			elif RUNNING_ON_LINUX:
+				for proc in psutil.process_iter():
+					try:
+						env = proc.environ()
+						if env.get("DISPLAY") and proc.uids()[0] >= 1000:
+							return True
+					except psutil.AccessDenied as e:
+						pass
+				return False
+			elif RUNNING_ON_DARWIN:
+				# TODO
+				return True
 		elif name == 'configserver_reachable':
 			return isConfigServiceReachable(timeout=15)
 		elif name == 'products_cached':
