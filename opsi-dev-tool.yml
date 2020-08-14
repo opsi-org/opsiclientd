@@ -4,6 +4,7 @@ locale:
     - fr
   source_files:
     - opsiclientd
+  install: opsiclientd_data/locale
 
 pyinstaller-poetry:
   one_file: no
@@ -59,7 +60,6 @@ pyinstaller-poetry:
     - src: opsi-server/opsi-server_data/etc/backendManager/extend.d/20_legacy.conf
       dst: opsiclientd_data/extend.d/
   dirname: opsiclientd
-  locale_install: opsiclientd_data/locale
   after_script:
     linux:
       - rm -r dist/opsiclientd/site-packages/Crypto/SelfTest
