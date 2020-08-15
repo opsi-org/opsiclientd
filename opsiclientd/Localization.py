@@ -37,10 +37,11 @@ except Exception as error:
 
 try:
 	logger.notice("Loading translation for language '%s'" % language)
-	sp = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+	sp = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 	if os.path.exists(os.path.join(sp, "site-packages")):
 		sp = os.path.join(sp, "site-packages")
-	translation = gettext.translation('opsiclientd', os.path.join(sp, 'opsiclientd_data', 'locale'), [language])
+	sp = os.path.join(sp, 'opsiclientd_data', 'locale')
+	translation = gettext.translation('opsiclientd', sp, [language])
 	_ = translation.gettext
 except Exception as error:
 	logger.error("Failed to load locale from %s: %s", sp, error, exc_info=True)

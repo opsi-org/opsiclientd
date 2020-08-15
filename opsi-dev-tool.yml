@@ -54,9 +54,6 @@ pyinstaller-poetry:
       dst: opsiclientd_data/static_html/
     - src: opsiclientd_data/${PLATFORM_SYSTEM}/*
       dst: opsiclientd_data/
-    # from python-opsi
-    #- src: ${VENV_SITE_PACKAGES}/python-opsi_data/locale/**
-    #  dst: opsiclientd_data/locale/
     # from opsi-server
     - src: opsi-server/opsi-server_data/etc/backendManager/extend.d/10_opsi.conf
       dst: opsiclientd_data/extend.d/
@@ -64,10 +61,14 @@ pyinstaller-poetry:
       dst: opsiclientd_data/extend.d/
   dirname: opsiclientd
   after_script:
+    # opsiclientd_data should be moved not copied
+    # need to adapt opsi-client-agent opsi-script first
     linux:
+      - cp -a dist/opsiclientd/opsiclientd_data dist/opsiclientd/site-packages/
       - rm -r dist/opsiclientd/site-packages/Crypto/SelfTest
     darwin:
+      - cp -a dist/opsiclientd/opsiclientd_data dist/opsiclientd/site-packages/
       - rm -r dist/opsiclientd/site-packages/Crypto/SelfTest
     windows:
+      - Copy-Item -Path dist\opsi-utils\opsi-utils_data -Destination dist\opsi-utils\site-packages\opsi-utils_data -Recurse
       - Remove-Item -Force -Recurse -Path dist\opsiclientd\site-packages\Crypto\SelfTest
-
