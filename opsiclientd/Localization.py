@@ -20,39 +20,34 @@
 Localisation ofopsiclientd.
 
 :copyright: uib GmbH <info@uib.de>
-:author: Jan Schneider <j.schneider@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
+import os
 import gettext
 import locale
 
 from opsicommon.logging import logger
 
-translation = None
 try:
 	language = locale.getdefaultlocale()[0].split('_')[0]
 except Exception as error:
-	logger.debug("Unable to load localisation: %s", error)
+	logger.debug("Failed to find default language: %s", error)
 	language = "en"
 
+try:
+	logger.notice("Loading translation for language '%s'" % language)
+	sp = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+	if os.path.exists(os.path.join(sp, "site-packages")):
+		sp = os.path.join(sp, "site-packages")
+	translation = gettext.translation('opsiclientd', os.path.join(sp, 'opsiclientd_data', 'locale'), [language])
+	_ = translation.gettext
+except Exception as error:
+	logger.error("Failed to load locale from %s: %s", sp, error, exc_info=True)
+
+	def _(string):
+		""" Fallback function """
+		return string
 
 def getLanguage():
 	return language
-
-
-def _(string):
-	if translation is None:
-		return string
-
-	return translation.gettext(string)
-
-
-def setLocaleDir(localeDir):
-	global translation
-	logger.notice("Setting locale dir to '%s'" % localeDir)
-	try:
-		logger.notice("Loading translation for language '%s'" % language)
-		translation = gettext.translation('opsiclientd', localeDir, [language])
-	except Exception as error:
-		logger.error("Failed to load locale: %s", error)

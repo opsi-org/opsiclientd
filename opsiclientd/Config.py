@@ -93,7 +93,6 @@ class Config(metaclass=Singleton):
 	LINUX_DEFAULT_PATHS = {
 		'global': {
 			'log_dir': "/var/log/opsi",
-			'locale_dir': "/usr/share/opsi-client-agent/opsiclientd/locale",
 			'config_file': "/etc/opsi-client-agent/opsiclientd.conf",
 			'state_file': "/var/lib/opsi-client-agent/opsiclientd/state.json",
 			'timeline_db': "/var/lib/opsi-client-agent/opsiclientd/timeline.sqlite",
@@ -115,7 +114,6 @@ class Config(metaclass=Singleton):
 	MACOS_DEFAULT_PATHS = {
 		'global': {
 			'log_dir': "/var/log/opsi",
-			'locale_dir': "/usr/local/share/opsi-client-agent/opsiclientd/locale",
 			'config_file': "/etc/opsi-client-agent/opsiclientd.conf",
 			'state_file': "/var/lib/opsi-client-agent/opsiclientd/state.json",
 			'timeline_db': "/var/lib/opsi-client-agent/opsiclientd/timeline.sqlite",
@@ -146,7 +144,6 @@ class Config(metaclass=Singleton):
 			},
 			'global': {
 				'base_dir': baseDir,
-				'locale_dir': os.path.join(baseDir, "opsiclientd", "locale"),
 				'config_file': os.path.join(baseDir, "opsiclientd", "opsiclientd.conf"),
 				'log_file': "opsiclientd.log",
 				'log_level': LOG_NOTICE,

@@ -58,7 +58,7 @@ from opsiclientd.Events.Panic import PanicEvent
 from opsiclientd.Events.Utilities.Factories import EventGeneratorFactory
 from opsiclientd.Events.Utilities.Generators import createEventGenerators, getEventGenerators
 from opsiclientd.EventProcessing import EventProcessingThread
-from opsiclientd.Localization import _, setLocaleDir
+from opsiclientd.Localization import _
 from opsiclientd.State import State
 from opsiclientd.Timeline import Timeline
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
@@ -222,8 +222,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._opsiclientdRunningEventId = None
 
 		config.readConfigFile()
-		setLocaleDir(config.get('global', 'locale_dir'))
-
+		
 		# Needed helper-exe for NT5 x64 to get Sessioninformation (WindowsAPIBug)
 		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\\sessionhelper\\getActiveSessionIds.exe')
 

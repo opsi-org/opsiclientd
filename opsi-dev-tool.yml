@@ -55,8 +55,8 @@ pyinstaller-poetry:
     - src: opsiclientd_data/${PLATFORM_SYSTEM}/*
       dst: opsiclientd_data/
     # from python-opsi
-    - src: ${VENV_SITE_PACKAGES}/python-opsi_data/locale/**
-      dst: opsiclientd_data/locale/
+    #- src: ${VENV_SITE_PACKAGES}/python-opsi_data/locale/**
+    #  dst: opsiclientd_data/locale/
     # from opsi-server
     - src: opsi-server/opsi-server_data/etc/backendManager/extend.d/10_opsi.conf
       dst: opsiclientd_data/extend.d/
