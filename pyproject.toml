@@ -25,7 +25,6 @@ distro = {platform = "linux", version = "^1.5.0"}
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.5.0"
-pyinstaller = "^3.6"
 pywin32-ctypes = {version = "^0.2.0", platform = "win32"}
 pefile = {version = "^2019.4.18", platform = "win32"}
 macholib = {version = "^1.14", platform = "darwin"}
@@ -33,6 +32,7 @@ opsi-dev-tools = "^1.0.4"
 pytest = "^5.4.3"
 mock = "^4.0.2"
 pytest-cov = "^2.10.0"
+pyinstaller = "^4.0"
 
 [tool.poetry.scripts]
 opsiclientd = "opsiclientd.__main__:opsiclientd"
