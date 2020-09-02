@@ -181,7 +181,11 @@ def main():
 					#if parent:
 					#	logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)
 					command = executable + " " + args + " --elevated"
-					run_as_system(command)
+					try:
+						run_as_system(command)
+					except Exception as e:
+						print("Failed to run %s as system: %s", command, e, file=sys.stderr)
+						raise
 				return
 			
 			if "--elevated" in sys.argv:
