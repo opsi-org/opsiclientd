@@ -276,7 +276,7 @@ class Config(metaclass=Singleton):
 			raise SectionNotFoundException(u"No such config section: %s" % section)
 		if option not in self._config[section]:
 			raise NoConfigOptionFoundException(u"No such config option in section '%s': %s" % (section, option))
-
+		
 		value = self._config[section][option]
 		if not raw and isinstance(value, str) and (value.count('%') >= 2):
 			value = self.replace(value)
@@ -333,6 +333,11 @@ class Config(metaclass=Singleton):
 			else:
 				value = forceList(value)
 
+		if RUNNING_ON_WINDOWS and (option.endswith("_dir") or option.endswith("_file")):
+			if ":" in value and ":\\" not in value:
+				logger.warning("Correcting path '%s' to '%s'", value, value.replace(":", ":\\"))
+				value = value.replace(":", ":\\")
+		
 		if section not in self._config:
 			self._config[section] = {}
 

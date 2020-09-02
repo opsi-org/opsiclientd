@@ -121,11 +121,15 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			self.opsiclientd.join(15)
 
 			logger.notice("opsiclientd stopped")
-			servicemanager.LogMsg(
-				servicemanager.EVENTLOG_INFORMATION_TYPE,
-				servicemanager.PYS_SERVICE_STOPPED,
-				(self._svc_name_, '')
-			)
+			try:
+				servicemanager.LogMsg(
+					servicemanager.EVENTLOG_INFORMATION_TYPE,
+					servicemanager.PYS_SERVICE_STOPPED,
+					(self._svc_name_, '')
+				)
+			except Exception as e:
+				# Errors can occur if windows is shutting down
+				logger.info(e, exc_info=True)
 			for thread in threading.enumerate():
 				logger.notice("Running thread after stop: %s", thread)
 		except Exception as e:
