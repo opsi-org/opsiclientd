@@ -24,7 +24,7 @@ opsiclientd Library.
 :license: GNU Affero General Public License version 3
 """
 
-__version__ = '4.2.0.18'
+__version__ = '4.2.0.19'
 
 import os
 import sys
@@ -82,7 +82,7 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 					os.unlink(dlf)
 				os.rename(slf, dlf)
 		except Exception as e:
-			print("Failed to rename %s to %s: %s", slf, dlf, e, file=sys.stderr)
+			logger.error("Failed to rename %s to %s: %s", slf, dlf, e, file=sys.stderr)
 	
 	opsicommon.logging.init_logging(
 		stderr_level=stderr_level,

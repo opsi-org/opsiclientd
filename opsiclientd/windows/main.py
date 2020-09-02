@@ -141,7 +141,7 @@ def main():
 		else:
 			integrity_level = get_integrity_level()
 			if not "--elevated" in sys.argv and not "--help" in sys.argv and not "--version" in sys.argv and parent_name != "python.exe":
-				executable = os.path.dirname(os.path.realpath(__file__)) + ".exe"
+				executable = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + ".exe"
 				args = " ".join(sys.argv[1:])
 				#subprocess.run("whoami /user /priv")
 				#print(integrity_level)
@@ -184,7 +184,7 @@ def main():
 					try:
 						run_as_system(command)
 					except Exception as e:
-						print("Failed to run %s as system: %s", command, e, file=sys.stderr)
+						print(f"Failed to run {command} as system: {e}", file=sys.stderr)
 						raise
 				return
 			
