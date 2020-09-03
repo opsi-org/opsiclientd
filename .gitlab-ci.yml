@@ -32,8 +32,8 @@ build:linux-pyinstaller:
     - sed -i s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
     - poetry update python-opsi
     - poetry run opsi-dev-tool -l info --pyinstaller-poetry-build
-    - if test "$CI_COMMIT_TAG"; then poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd/; fi
-    - if ! test "$CI_COMMIT_TAG"; then poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd/ "$CI_JOB_ID"; fi
+    - '[ "$CI_COMMIT_TAG" = "" ] && poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd/'
+    - '[ "$CI_COMMIT_TAG" = "" ] || poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd/ "$CI_JOB_ID"'
     - mv opsiclientd opsiclientd.src
     - mv dist/opsiclientd .
     # Check if binary is working
@@ -56,8 +56,8 @@ build:macos-pyinstaller:
     - sed -ie s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
     - poetry update python-opsi
     - poetry run opsi-dev-tool -l info --pyinstaller-poetry-build
-    - if test "$CI_COMMIT_TAG"; then poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd/; fi
-    - if ! test "$CI_COMMIT_TAG"; then poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd/ "$CI_JOB_ID"; fi
+    - '[ "$CI_COMMIT_TAG" = "" ] && poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd/'
+    - '[ "$CI_COMMIT_TAG" = "" ] || poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd/ "$CI_JOB_ID"'
     - mv opsiclientd opsiclientd.src
     - mv dist/opsiclientd .
     # Check if binary is working
