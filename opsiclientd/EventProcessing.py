@@ -841,7 +841,10 @@ None otherwise.
 			
 			# Update action processor
 			if self.event.eventConfig.updateActionProcessor:
-				self.updateActionProcessor(mount=not self._depotShareMounted)
+				if RUNNING_ON_DARWIN:
+					logger.warning("Update of action processor currently not implemented for MacOS")
+				else:
+					self.updateActionProcessor(mount=not self._depotShareMounted)
 			
 			# Run action processor
 			serviceSession = u'none'
