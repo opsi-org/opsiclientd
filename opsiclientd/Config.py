@@ -128,7 +128,7 @@ class Config(metaclass=Singleton):
 			'storage_dir': "/var/cache/opsi-client-agent"
 		},
 		'depot_server': {
-			'drive': "/Volumes/opsi_depot"
+			'drive': "/var/lib/opsi-client-agent/opsi_depot"
 		}
 	}
 
