@@ -599,7 +599,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		if sessionId:
 			sessionId = forceInt(sessionId)
 		else:
-			sessionId = System.getActiveSessionId(self.opsiclientd._winApiBugCommand)
+			sessionId = System.getActiveSessionId()
 
 		if desktop:
 			desktop = forceUnicode(desktop)
@@ -719,7 +719,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def getActiveSessions(self):
 		sessions = []
 
-		for session in System.getActiveSessionInformation(self.opsiclientd._winApiBugCommand):
+		for session in System.getActiveSessionInformation():
 			year = 0
 			month = 0
 			day = 0

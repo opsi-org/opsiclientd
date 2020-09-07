@@ -118,9 +118,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		if self.isLoginEvent:
 			logger.info(u"Event is user login event")
 
-		#Needed helper-exe for NT5 x64 to get Sessioninformation (WindowsAPIBug)
-		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\\sessionhelper\\getActiveSessionIds.exe')
-
 		self.getSessionId()
 
 	# ServiceConnection
@@ -184,11 +181,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if RUNNING_ON_WINDOWS:
 				if self.isLoginEvent:
 					logger.info(u"Using session id of user '%s'" % self.event.eventInfo["User"])
-					userSessionsIds = System.getUserSessionIds(self.event.eventInfo["User"], self._winApiBugCommand, onlyNewestId = True)
+					userSessionsIds = System.getUserSessionIds(self.event.eventInfo["User"], onlyNewestId = True)
 					if userSessionsIds:
 						sessionId = userSessionsIds[0]
 				if not sessionId:
-					sessionId = System.getActiveSessionId(winApiBugCommand = self._winApiBugCommand)
+					sessionId = System.getActiveSessionId()
 			else:
 				sessionId = System.getActiveSessionId()
 			

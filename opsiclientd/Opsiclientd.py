@@ -223,9 +223,6 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		config.readConfigFile()
 		
-		# Needed helper-exe for NT5 x64 to get Sessioninformation (WindowsAPIBug)
-		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\\sessionhelper\\getActiveSessionIds.exe')
-
 		@contextmanager
 		def getControlPipe():
 			logger.notice("Starting control pipe")
@@ -625,7 +622,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setCallbacks([self.popupCloseCallback])
 
 			if RUNNING_ON_WINDOWS:
-				sessionIds = System.getActiveSessionIds(winApiBugCommand=self._winApiBugCommand)
+				sessionIds = System.getActiveSessionIds()
 				if not sessionIds:
 					sessionIds = [System.getActiveConsoleSessionId()]
 
