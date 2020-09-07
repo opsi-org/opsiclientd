@@ -45,7 +45,6 @@ class State(metaclass=Singleton):
 	def __init__(self):
 		self._state = {}
 		self._stateFile = None
-		self._winApiBugCommand = os.path.join(config.get('global', 'base_dir'), 'utilities\\sessionhelper\\getActiveSessionIds.exe')
 		self._stateLock = threading.Lock()
 	
 	def start(self):
@@ -80,7 +79,7 @@ class State(metaclass=Singleton):
 		name = forceUnicode(name)
 		if name == 'user_logged_in':
 			if RUNNING_ON_WINDOWS:
-				return bool(System.getActiveSessionIds(self._winApiBugCommand))
+				return bool(System.getActiveSessionIds())
 			elif RUNNING_ON_LINUX:
 				for proc in psutil.process_iter():
 					try:
