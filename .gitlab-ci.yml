@@ -14,7 +14,7 @@ viruscheck:virustotal:
     - dir
     - Invoke-WebRequest -UseBasicParsing -Uri "$OPSIDEVTOOLS_URL_WINDOWS" -OutFile opsi-dev-tools.zip
     - Expand-Archive opsi-dev-tools.zip -DestinationPath opsi-dev-tools
-    - opsi-dev-tools\opsi-dev-tool.exe -l debug --virustotal-analysis opsiclientd-windows-pyinstaller\opsiclientd\opsiclientd.exe
+    - opsi-dev-tools\opsi-dev-tool.exe -l debug --virustotal-analysis opsiclientd-windows-pyinstaller\opsiclientd.exe
 
 test:pytest:
   stage: test
@@ -46,16 +46,16 @@ build:linux-pyinstaller:
     - '[ "$CI_COMMIT_TAG" = "" ] && poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd "$CI_JOB_ID"'
     - '[ "$CI_COMMIT_TAG" = "" ] || poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd'
     - mv opsiclientd opsiclientd.src
-    - mv dist/opsiclientd .
+    - mv dist/opsiclientd opsiclientd-linux-pyinstaller
     # Check if binary is working
-    - ./opsiclientd/opsiclientd --version
+    - ./opsiclientd-linux-pyinstaller/opsiclientd --version
     # Create archive to include in opsi-linux-client-agent package
-    - cd opsiclientd
-    - tar czvf ../opsiclientd_binaries.tar.gz .
+    #- cd opsiclientd
+    #- tar czvf ../opsiclientd_binaries.tar.gz .
   artifacts:
-    name: 'opsiclientd-linux-pyinstaller'
+    #name: 'opsiclientd-linux-pyinstaller'
     paths:
-      - opsiclientd_binaries.tar.gz
+      - opsiclientd-linux-pyinstaller
     expire_in: 2 day
 
 build:macos-pyinstaller:
@@ -70,13 +70,13 @@ build:macos-pyinstaller:
     - '[ "$CI_COMMIT_TAG" = "" ] && poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd "$CI_JOB_ID"'
     - '[ "$CI_COMMIT_TAG" = "" ] || poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd'
     - mv opsiclientd opsiclientd.src
-    - mv dist/opsiclientd .
+    - mv dist/opsiclientd opsiclientd-macos-pyinstaller
     # Check if binary is working
-    - ./opsiclientd/opsiclientd --version
+    - ./opsiclientd-macos-pyinstaller/opsiclientd --version
   artifacts:
-    name: 'opsiclientd-macos-pyinstaller'
+    #name: 'opsiclientd-macos-pyinstaller'
     paths:
-      - opsiclientd
+      - opsiclientd-macos-pyinstaller
     expire_in: 2 day
 
 build:windows-pyinstaller:
@@ -93,11 +93,11 @@ build:windows-pyinstaller:
     - if (! $CI_COMMIT_TAG) {poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd "$CI_JOB_ID"}
     - if ($CI_COMMIT_TAG) {poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd}
     - Move-Item -Path opsiclientd -Destination opsiclientd.src -Force
-    - Move-Item -Path dist\opsiclientd -Destination opsiclientd
+    - Move-Item -Path dist\opsiclientd -Destination opsiclientd-windows-pyinstaller
     # Check if binary is working
-    - opsiclientd\opsiclientd.exe --version
+    - opsiclientd-windows-pyinstaller\opsiclientd.exe --version
   artifacts:
-    name: 'opsiclientd-windows-pyinstaller'
+    #name: 'opsiclientd-windows-pyinstaller'
     paths:
-      - opsiclientd
+      - opsiclientd-windows-pyinstaller
     expire_in: 2 day
