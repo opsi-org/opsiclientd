@@ -11,7 +11,7 @@ viruscheck:virustotal:
   tags:
     - win10
   script:
-    - Invoke-WebRequest http://binaryindex.uib.gmbh/stable/opsi-dev-tools/windows/opsi-dev-tools_windows_1.0.26.zip > opsi-dev-tools.zip
+    - Invoke-WebRequest -UseBasicParsing -Uri http://binaryindex.uib.gmbh/stable/opsi-dev-tools/windows/opsi-dev-tools_windows_1.0.26.zip -OutFile opsi-dev-tools.zip
     - Expand-Archive opsi-dev-tools.zip -DestinationPath opsi-dev-tools
     - opsi-dev-tools\opsi-dev-tool.exe -l debug --virustotal-analysis opsiclientd-windows-pyinstaller\opsiclientd.exe
 
