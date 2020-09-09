@@ -14,7 +14,7 @@ viruscheck:virustotal:
     - dir
     - Invoke-WebRequest -UseBasicParsing -Uri "$OPSIDEVTOOLS_URL_WINDOWS" -OutFile opsi-dev-tools.zip
     - Expand-Archive opsi-dev-tools.zip -DestinationPath opsi-dev-tools
-    - opsi-dev-tools\opsi-dev-tool.exe -l debug --virustotal-analysis opsiclientd-windows-pyinstaller\opsiclientd.exe
+    - opsi-dev-tools\opsi-dev-tool.exe -l debug --virustotal-analysis opsiclientd-windows-pyinstaller\opsiclientd.exe || true
 
 test:pytest:
   stage: test
