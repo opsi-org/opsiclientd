@@ -64,8 +64,8 @@ def main():
 			translation = gettext.translation('opsiclientd', localeDir, [lang])
 			_ = translation.gettext
 		except Exception as error:
-			logger.error("Failed to load locale: %s", error)
-
+			logger.debug("Failed to load locale for %s from %s: %s", lang, localeDir, error)
+			
 			def _(string):
 				return string
 
