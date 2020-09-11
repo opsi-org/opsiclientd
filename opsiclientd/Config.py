@@ -250,13 +250,6 @@ class Config(metaclass=Singleton):
 			if sys.getwindowsversion()[0] == 5:
 				self._config['action_processor']['run_as_user'] = 'pcpatch'
 		else:
-			if '64' in platform.architecture()[0]:
-				arch = '64'
-			else:
-				arch = '32'
-
-			self._config['action_processor']['remote_dir'] = self._config['action_processor']['remote_dir'].replace('%arch%', arch)
-
 			sslCertDir = os.path.join('/etc', 'opsi-client-agent')
 
 			for certPath in ('ssl_server_key_file', 'ssl_server_cert_file'):
@@ -332,11 +325,15 @@ class Config(metaclass=Singleton):
 				value = [x.strip() for x in value.split(",")]
 			else:
 				value = forceList(value)
-
+		
 		if RUNNING_ON_WINDOWS and (option.endswith("_dir") or option.endswith("_file")):
 			if ":" in value and ":\\" not in value:
 				logger.warning("Correcting path '%s' to '%s'", value, value.replace(":", ":\\"))
 				value = value.replace(":", ":\\")
+		
+		if option.endswith("_dir") or option.endswith("_file"):
+			arch = '64' if '64' in platform.architecture()[0] else '32'
+			value = value.replace('%arch%', arch)
 		
 		if section not in self._config:
 			self._config[section] = {}
