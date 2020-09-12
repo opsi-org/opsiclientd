@@ -43,17 +43,15 @@ build:linux-pyinstaller:
     - sed -i s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
     - poetry update python-opsi
     - poetry run opsi-dev-tool -l info --pyinstaller-poetry-build
-    - '[ "$CI_COMMIT_TAG" = "" ] && poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd "$CI_JOB_ID"'
-    - '[ "$CI_COMMIT_TAG" = "" ] || poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd'
     - mv opsiclientd opsiclientd.src
     - mv dist/opsiclientd opsiclientd-linux-pyinstaller
     # Check if binary is working
     - ./opsiclientd-linux-pyinstaller/opsiclientd --version
-    # Create archive to include in opsi-linux-client-agent package
-    #- cd opsiclientd
-    #- tar czvf ../opsiclientd_binaries.tar.gz .
+    # Push to biaryindex
+    - '[ "$CI_COMMIT_TAG" = "" ] && poetry run opsi-dev-tool -l info --binary-push opsiclientd-linux-pyinstaller "$CI_JOB_ID"'
+    - '[ "$CI_COMMIT_TAG" = "" ] || poetry run opsi-dev-tool -l info --binary-push opsiclientd-linux-pyinstaller'
   artifacts:
-    #name: 'opsiclientd-linux-pyinstaller'
+    name: 'opsiclientd-linux-pyinstaller'
     paths:
       - opsiclientd-linux-pyinstaller
     expire_in: 2 day
@@ -67,16 +65,17 @@ build:macos-pyinstaller:
     - sed -ie s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
     - poetry update python-opsi
     - poetry run opsi-dev-tool -l info --pyinstaller-poetry-build
-    - '[ "$CI_COMMIT_TAG" = "" ] && poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd "$CI_JOB_ID"'
-    - '[ "$CI_COMMIT_TAG" = "" ] || poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd'
     - mv opsiclientd opsiclientd.src
-    - mv dist/opsiclientd opsiclientd-macos-pyinstaller
+    - mv dist/opsiclientd opsiclientd-darwin-pyinstaller
     # Check if binary is working
-    - ./opsiclientd-macos-pyinstaller/opsiclientd --version
+    - ./opsiclientd-darwin-pyinstaller/opsiclientd --version
+    # Push to biaryindex
+    - '[ "$CI_COMMIT_TAG" = "" ] && poetry run opsi-dev-tool -l info --binary-push opsiclientd-darwin-pyinstaller "$CI_JOB_ID"'
+    - '[ "$CI_COMMIT_TAG" = "" ] || poetry run opsi-dev-tool -l info --binary-push opsiclientd-darwin-pyinstaller'
   artifacts:
-    #name: 'opsiclientd-macos-pyinstaller'
+    name: 'opsiclientd-darwin-pyinstaller'
     paths:
-      - opsiclientd-macos-pyinstaller
+      - opsiclientd-darwin-pyinstaller
     expire_in: 2 day
 
 build:windows-pyinstaller:
@@ -90,14 +89,15 @@ build:windows-pyinstaller:
     #- Get-Content pyproject.toml
     - poetry update python-opsi
     - poetry run opsi-dev-tool -l debug --pyinstaller-poetry-build
-    - if (! $CI_COMMIT_TAG) {poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd "$CI_JOB_ID"}
-    - if ($CI_COMMIT_TAG) {poetry run opsi-dev-tool -l info --binary-push dist/opsiclientd}
     - Move-Item -Path opsiclientd -Destination opsiclientd.src -Force
     - Move-Item -Path dist\opsiclientd -Destination opsiclientd-windows-pyinstaller
     # Check if binary is working
     - opsiclientd-windows-pyinstaller\opsiclientd.exe --version
+    # Push to biaryindex
+    - if (! $CI_COMMIT_TAG) {poetry run opsi-dev-tool -l info --binary-push opsiclientd-windows-pyinstaller "$CI_JOB_ID"}
+    - if ($CI_COMMIT_TAG) {poetry run opsi-dev-tool -l info --binary-push opsiclientd-windows-pyinstaller}
   artifacts:
-    #name: 'opsiclientd-windows-pyinstaller'
+    name: 'opsiclientd-windows-pyinstaller'
     paths:
       - opsiclientd-windows-pyinstaller
     expire_in: 2 day

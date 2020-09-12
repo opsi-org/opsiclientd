@@ -429,7 +429,14 @@ None otherwise.
 			System.mount(config.get('depot_server', 'url'), config.getDepotDrive())
 		else:
 			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
-			System.mount(config.get('depot_server', 'url'), config.getDepotDrive(), username = depotServerUsername, password = depotServerPassword)
+			options = {}
+			if RUNNING_ON_LINUX or RUNNING_ON_DARWIN:
+				options["ro"] = ""
+			System.mount(
+				config.get('depot_server', 'url'), config.getDepotDrive(),
+				username = depotServerUsername, password = depotServerPassword,
+				**options
+			)
 
 		self._depotShareMounted = True
 
@@ -484,10 +491,10 @@ None otherwise.
 					)
 					logger.notice(u"Updating action processor from local cache '%s'" % actionProcessorRemoteDir)
 				else:
-					match = re.search('^(smb|cifs)://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
-					# 1: protocol, 2: netloc, 3: share_name
-					if not match:
-						raise Exception("Bad depot-URL '%s'" % config.get('depot_server', 'url'))
+					#match = re.search('^(smb|cifs)://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
+					## 1: protocol, 2: netloc, 3: share_name
+					#if not match:
+					#	raise Exception("Bad depot-URL '%s'" % config.get('depot_server', 'url'))
 					#pn = match.group(3).replace('/', os.sep)
 					dd = config.getDepotDrive()
 					if RUNNING_ON_WINDOWS:
@@ -930,8 +937,8 @@ None otherwise.
 							else:
 								new_cmd.append(c)
 						if username is not None and password is not None:
-							tf = tempfile.NamedTemporaryFile(delete=False)
-							tf.write(f"username={username}\npassword={password}\n".encode("utf-8"))
+							tf = tempfile.NamedTemporaryFile(mode="w", delete=False, encoding="utf-8")
+							tf.write(f"username={username}\npassword={password}\n")
 							tf.close()
 							credentialfile = tf.name
 							new_cmd.extend(["-credentialfile", credentialfile])
