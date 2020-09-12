@@ -294,8 +294,8 @@ class Config(metaclass=Singleton):
 		elif (option == 'user_cancelable'):
 			option = 'action_user_cancelable'
 
-		logger.info(u"Setting config value %s.%s" % (section, option))
-		logger.debug(u"set({0!r}, {1!r}, {2!r})".format(section, option, value))
+		logger.info(u"Setting config value %s.%s to '%s'", section, option, value)
+		#logger.debug(u"set(%s, %s, %s)", section, option, value)
 
 		if 	(option.find('command') == -1) and (option.find('productids') == -1) and \
 			(option.find('exclude_product_group_ids') == -1) and \
@@ -469,7 +469,7 @@ class Config(metaclass=Singleton):
 
 		return self.get('config_service', 'url')
 
-	def selectDepotserver(self, configService, event, productIds=[], cifsOnly=True, masterOnly=False):
+	def selectDepotserver(self, configService, event, productIds=[], cifsOnly=False, masterOnly=False):
 		productIds = forceProductIdList(productIds)
 
 		logger.notice(u"Selecting depot for products %s" % productIds)
@@ -520,7 +520,10 @@ class Config(metaclass=Singleton):
 			elif not masterOnly and (configState.configId == 'clientconfig.depot.dynamic') and configState.values:
 				dynamicDepot = forceBool(configState.values[0])
 			elif (configState.configId == 'clientconfig.depot.protocol') and configState.values and configState.values[0] and (configState.values[0] == 'webdav'):
-				depotProtocol = 'webdav'
+				if cifsOnly:
+					logger.info("Not using webdav protocol, because cifs only is set")
+				else:
+					depotProtocol = 'webdav'
 
 		if dynamicDepot:
 			if not depotIds:
@@ -610,14 +613,17 @@ class Config(metaclass=Singleton):
 			else:
 				logger.info(u"No alternative depot for products: %s" % productIds)
 
-		logger.notice(u"Selected depot is: %s" % selectedDepot)
+		logger.notice(u"Selected depot is '%s', protocol '%s'", selectedDepot, depotProtocol)
 		self.set('depot_server', 'depot_id', selectedDepot.id)
-		if (depotProtocol == 'webdav') and not cifsOnly:
+		if (depotProtocol == 'webdav'):
 			self.set('depot_server', 'url', selectedDepot.depotWebdavUrl)
 		else:
 			self.set('depot_server', 'url', selectedDepot.depotRemoteUrl)
 
 	def getDepotserverCredentials(self, configService):
+		if self.get('depot_server', 'url').startswith("webdav"):
+			return (self.get('global', 'host_id'), self.get('global', 'opsi_host_key'))
+		
 		if not configService:
 			raise Exception(u"Not connected to config service")
 

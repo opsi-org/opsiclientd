@@ -768,7 +768,8 @@ None otherwise.
 			config.selectDepotserver(
 				configService=self._configService,
 				event=self.event,
-				productIds=productIds
+				productIds=productIds,
+				cifsOnly=False if RUNNING_ON_LINUX else True
 			)
 			if not additionalParams:
 				additionalParams = ''
