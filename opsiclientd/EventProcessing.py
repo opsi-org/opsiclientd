@@ -944,6 +944,9 @@ None otherwise.
 							new_cmd.extend(["-credentialfile", credentialfile])
 							command = " ".join(new_cmd)
 						
+						if not os.access(command, os.X_OK):
+							os.chmod(command, 0o0755)
+						
 						self.setStatusMessage(_("Action processor is running"))
 						System.runCommandInSession(
 							command=command,
