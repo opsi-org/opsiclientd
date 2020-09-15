@@ -41,6 +41,7 @@ import json
 import os
 import time
 import threading
+import sqlite3
 
 from opsicommon.logging import logger
 from opsicommon.utils import Singleton
@@ -135,7 +136,13 @@ class Timeline(metaclass=Singleton):
 		self._stopped = False
 	
 	def start(self):
-		self._createDatabase()
+		db_file = config.get('global', 'timeline_db')
+		logger.notice("Starting timeline (database location: %s)", db_file)
+		try:
+			self._createDatabase()
+		except sqlite3.DatabaseError as e:
+			logger.error("Failed to connect to database %s: %s, recreating database", db_file, e)
+			self._createDatabase(delete_existing=True)
 		self._cleanupDatabase()
 	
 	def stop(self):
@@ -204,13 +211,17 @@ class Timeline(metaclass=Singleton):
 			except Exception as cleanupError:
 				logger.error(cleanupError)
 
-	def _createDatabase(self):
+	def _createDatabase(self, delete_existing=False):
 		timelineDB = config.get('global', 'timeline_db')
 		timelineFolder = os.path.dirname(timelineDB)
 		if not os.path.exists(timelineFolder):
 			logger.debug("Creating missing directory '%s'", timelineFolder)
 			os.makedirs(timelineFolder)
 
+		if delete_existing and os.path.exists(timelineDB):
+			logger.notice("Deleting an recreating timeline database: %s", timelineDB)
+			os.remove(timelineDB)
+		
 		self._sql = SQLite(
 			database=timelineDB,
 			synchronous=False,
@@ -265,7 +276,7 @@ class Timeline(metaclass=Singleton):
 				return self._sql.insert('EVENT', event)
 			except Exception as addError:
 				logger.error(u"Failed to add event '%s': %s" % (title, addError))
-
+	
 	def setEventEnd(self, eventId, end=None):
 		if self._stopped:
 			return -1
