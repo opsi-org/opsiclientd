@@ -13,7 +13,7 @@ viruscheck:virustotal:
   script:
     - Invoke-WebRequest -UseBasicParsing -Uri "$OPSIDEVTOOLS_URL_WINDOWS" -OutFile opsi-dev-tools.zip
     - Expand-Archive opsi-dev-tools.zip -DestinationPath opsi-dev-tools
-    - '$proc = (Start-Process -FilePath "opsi-dev-tools\opsi-dev-tool.exe" -ArgumentList "-l debug --virustotal-analysis opsiclientd-windows-pyinstaller\opsiclientd.exe --output-type json" -PassThru -Wait)'
+    - '$proc = (Start-Process -FilePath "opsi-dev-tools\opsi-dev-tool.exe" -ArgumentList "-l debug --virustotal-analysis opsiclientd-windows-x86\opsiclientd.exe --output-type json" -PassThru -Wait)'
     - 'Write-Host "VirusTotal analysis finished with exit code: $($proc.ExitCode)"'
 
 test:pytest:
@@ -34,7 +34,7 @@ test:pytest:
       - testreport.xml
     expire_in: 14 days
 
-build:linux-pyinstaller:
+build:pyinstaller-linux-x64:
   stage: build
   script:
     - apt -y install curl
@@ -44,19 +44,19 @@ build:linux-pyinstaller:
     - poetry update python-opsi
     - poetry run opsi-dev-tool -l info --pyinstaller-poetry-build
     - mv opsiclientd opsiclientd.src
-    - mv dist/opsiclientd opsiclientd-linux-pyinstaller
+    - mv dist/opsiclientd opsiclientd-linux-x64
     # Check if binary is working
-    - ./opsiclientd-linux-pyinstaller/opsiclientd --version
+    - ./opsiclientd-linux-x64/opsiclientd --version
     # Push to biaryindex
-    - '[ "$CI_COMMIT_TAG" = "" ] && poetry run opsi-dev-tool -l info --binary-push opsiclientd-linux-pyinstaller "$CI_JOB_ID"'
-    - '[ "$CI_COMMIT_TAG" = "" ] || poetry run opsi-dev-tool -l info --binary-push opsiclientd-linux-pyinstaller'
+    - '[ "$CI_COMMIT_TAG" = "" ] && poetry run opsi-dev-tool -l info --binary-push opsiclientd-linux-x64 "$CI_JOB_ID"'
+    - '[ "$CI_COMMIT_TAG" = "" ] || poetry run opsi-dev-tool -l info --binary-push opsiclientd-linux-x64'
   artifacts:
-    name: 'opsiclientd-linux-pyinstaller'
+    name: opsiclientd-linux-x64
     paths:
-      - opsiclientd-linux-pyinstaller
+      - opsiclientd-linux-x64
     expire_in: 2 day
 
-build:macos-pyinstaller:
+build:pyinstaller-darwin-x86:
   stage: build
   tags:
     - macos
@@ -66,19 +66,19 @@ build:macos-pyinstaller:
     - poetry update python-opsi
     - poetry run opsi-dev-tool -l info --pyinstaller-poetry-build
     - mv opsiclientd opsiclientd.src
-    - mv dist/opsiclientd opsiclientd-darwin-pyinstaller
+    - mv dist/opsiclientd opsiclientd-darwin-x86
     # Check if binary is working
-    - ./opsiclientd-darwin-pyinstaller/opsiclientd --version
+    - ./opsiclientd-darwin-x86/opsiclientd --version
     # Push to biaryindex
-    - '[ "$CI_COMMIT_TAG" = "" ] && poetry run opsi-dev-tool -l info --binary-push opsiclientd-darwin-pyinstaller "$CI_JOB_ID"'
-    - '[ "$CI_COMMIT_TAG" = "" ] || poetry run opsi-dev-tool -l info --binary-push opsiclientd-darwin-pyinstaller'
+    - '[ "$CI_COMMIT_TAG" = "" ] && poetry run opsi-dev-tool -l info --binary-push opsiclientd-darwin-x86 "$CI_JOB_ID"'
+    - '[ "$CI_COMMIT_TAG" = "" ] || poetry run opsi-dev-tool -l info --binary-push opsiclientd-darwin-x86'
   artifacts:
-    name: 'opsiclientd-darwin-pyinstaller'
+    name: opsiclientd-darwin-x86
     paths:
-      - opsiclientd-darwin-pyinstaller
+      - opsiclientd-darwin-x86
     expire_in: 2 day
 
-build:windows-pyinstaller:
+build:pyinstaller-windows-x86:
   stage: build
   tags:
     - win10
@@ -90,14 +90,14 @@ build:windows-pyinstaller:
     - poetry update python-opsi
     - poetry run opsi-dev-tool -l debug --pyinstaller-poetry-build
     - Move-Item -Path opsiclientd -Destination opsiclientd.src -Force
-    - Move-Item -Path dist\opsiclientd -Destination opsiclientd-windows-pyinstaller
+    - Move-Item -Path dist\opsiclientd -Destination opsiclientd-windows-x86
     # Check if binary is working
-    - opsiclientd-windows-pyinstaller\opsiclientd.exe --version
+    - opsiclientd-windows-x86\opsiclientd.exe --version
     # Push to biaryindex
-    - if (! $CI_COMMIT_TAG) {poetry run opsi-dev-tool -l info --binary-push opsiclientd-windows-pyinstaller "$CI_JOB_ID"}
-    - if ($CI_COMMIT_TAG) {poetry run opsi-dev-tool -l info --binary-push opsiclientd-windows-pyinstaller}
+    - if (! $CI_COMMIT_TAG) {poetry run opsi-dev-tool -l info --binary-push opsiclientd-windows-x86 "$CI_JOB_ID"}
+    - if ($CI_COMMIT_TAG) {poetry run opsi-dev-tool -l info --binary-push opsiclientd-windows-x86}
   artifacts:
-    name: 'opsiclientd-windows-pyinstaller'
+    name: opsiclientd-windows-x86
     paths:
-      - opsiclientd-windows-pyinstaller
+      - opsiclientd-windows-x86
     expire_in: 2 day
