@@ -82,7 +82,7 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 					os.unlink(dlf)
 				os.rename(slf, dlf)
 		except Exception as e:
-			logger.error("Failed to rename %s to %s: %s", slf, dlf, e, file=sys.stderr)
+			logger.error("Failed to rename %s to %s: %s", slf, dlf, e)
 	
 	opsicommon.logging.init_logging(
 		stderr_level=stderr_level,
