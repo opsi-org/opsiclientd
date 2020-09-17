@@ -35,6 +35,7 @@ import shutil
 import sys
 import time
 import tempfile
+import psutil
 from contextlib import contextmanager
 from datetime import datetime as dt, timedelta
 
@@ -489,7 +490,7 @@ None otherwise.
 						self.opsiclientd.getCacheService().getProductCacheDir(),
 						dirname
 					)
-					logger.notice(u"Updating action processor from local cache '%s'" % actionProcessorRemoteDir)
+					logger.notice("Updating action processor from local cache '%s'", actionProcessorRemoteDir)
 				else:
 					#match = re.search('^(smb|cifs)://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
 					## 1: protocol, 2: netloc, 3: share_name
@@ -503,57 +504,66 @@ None otherwise.
 					dirname.lstrip(os.sep)
 					#actionProcessorRemoteDir = os.path.join(dd, pn, dirname)
 					actionProcessorRemoteDir = os.path.join(dd, dirname)
-					logger.notice(u"Updating action processor from depot dir '%s'" % actionProcessorRemoteDir)
+					logger.notice("Updating action processor from depot dir '%s'", actionProcessorRemoteDir)
 
 				actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
 
 				if not os.path.exists(actionProcessorLocalFile):
-					logger.notice(u"Action processor needs update because file '%s' not found" % actionProcessorLocalFile)
+					logger.notice("Action processor needs update because file '%s' not found", actionProcessorLocalFile)
 				elif ( abs(os.stat(actionProcessorLocalFile).st_mtime - os.stat(actionProcessorRemoteFile).st_mtime) > 10 ):
-					logger.notice(u"Action processor needs update because modification time difference is more than 10 seconds")
+					logger.notice("Action processor needs update because modification time difference is more than 10 seconds")
 				elif not filecmp.cmp(actionProcessorLocalFile, actionProcessorRemoteFile):
-					logger.notice(u"Action processor needs update because file changed")
+					logger.notice("Action processor needs update because file changed")
 				else:
-					logger.notice(u"Local action processor exists and seems to be up to date")
+					logger.notice("Local action processor exists and seems to be up to date")
 					if self.event.eventConfig.useCachedProducts:
 						self._configService.productOnClient_updateObjects([
 							ProductOnClient(
-								productId          = u'opsi-winst',
-								productType        = u'LocalbootProduct',
+								productId          = 'opsi-winst',
+								productType        = 'LocalbootProduct',
 								clientId           = config.get('global', 'host_id'),
-								installationStatus = u'installed',
-								actionProgress     = u''
+								installationStatus = 'installed',
+								actionProgress     = ''
 							)
 						])
 					return actionProcessorLocalFile
 
 				# Update files
-				logger.notice(u"Start copying the action processor files")
+				logger.notice("Start copying the action processor files")
 				if RUNNING_ON_WINDOWS:
+					logger.info("Checking if action processor files are in use")
+					for proc in psutil.process_iter():
+						try:
+							full_path = proc.exe()
+							if full_path and not os.path.relpath(full_path, actionProcessorLocalDir).startswith(".."):
+								raise Exception(f"Action processor files are in use by process '{full_path}''")
+						except (PermissionError, psutil.AccessDenied, ValueError) as e:
+							pass
+					
 					if os.path.exists(actionProcessorLocalTmpDir):
-						logger.info(u"Deleting dir '%s'" % actionProcessorLocalTmpDir)
+						logger.info("Deleting dir '%s'", actionProcessorLocalTmpDir)
 						shutil.rmtree(actionProcessorLocalTmpDir)
-					logger.info(u"Copying from '%s' to '%s'" % (actionProcessorRemoteDir, actionProcessorLocalTmpDir))
+					logger.info("Copying from '%s' to '%s'", actionProcessorRemoteDir, actionProcessorLocalTmpDir)
 					shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
 
 					if not os.path.exists(actionProcessorLocalTmpFile):
-						raise Exception(u"File '%s' does not exist after copy" % actionProcessorLocalTmpFile)
+						raise Exception("File '%s' does not exist after copy", actionProcessorLocalTmpFile)
 
 					if os.path.exists(actionProcessorLocalDir):
-						logger.info(u"Deleting dir '%s'" % actionProcessorLocalDir)
+						logger.info("Deleting dir '%s'", actionProcessorLocalDir)
 						shutil.rmtree(actionProcessorLocalDir)
 
-					logger.info(u"Moving dir '%s' to '%s'" % (actionProcessorLocalTmpDir, actionProcessorLocalDir))
+					logger.info("Moving dir '%s' to '%s'", actionProcessorLocalTmpDir, actionProcessorLocalDir)
 					shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
 
-					logger.notice(u"Trying to set the right permissions for opsi-winst")
+					logger.notice("Trying to set the right permissions for opsi-winst")
 					setaclcmd = os.path.join(config.get('global', 'base_dir'), 'utilities', 'setacl.exe')
 					winstdir = actionProcessorLocalDir.replace('\\\\', '\\')
 					cmd = '"%s" -on "%s" -ot file -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y" -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"' \
 								% (setaclcmd, winstdir)
 					System.execute(cmd, shell=False)
 				elif RUNNING_ON_LINUX:
-					logger.info(u"Copying from '%s' to '%s'" % (actionProcessorRemoteDir, actionProcessorLocalDir))
+					logger.info("Copying from '%s' to '%s'", actionProcessorRemoteDir, actionProcessorLocalDir)
 					for fn in os.listdir(actionProcessorRemoteDir):
 						if os.path.isfile(os.path.join(actionProcessorRemoteDir, fn)):
 							shutil.copy2(
@@ -561,8 +571,8 @@ None otherwise.
 								os.path.join(actionProcessorLocalDir, fn)
 							)
 						else:
-							logger.warning("Skipping '%s' while updating action processor because it is not a file" \
-								% os.path.join(actionProcessorRemoteDir, fn)
+							logger.warning("Skipping '%s' while updating action processor because it is not a file",
+								os.path.join(actionProcessorRemoteDir, fn)
 							)
 				else:
 					logger.error("Update of action processor not implemented on this os")
@@ -598,8 +608,7 @@ None otherwise.
 					self.umountDepotShare()
 
 		except Exception as e:
-			logger.logException(e)
-			logger.error(u"Failed to update action processor: %s" % forceUnicode(e))
+			logger.error("Failed to update action processor: %s", e, exc_info=True)
 		finally:
 			if impersonation:
 				try:
