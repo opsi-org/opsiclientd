@@ -187,13 +187,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						sessionId = userSessionsIds[0]
 				if not sessionId:
 					sessionId = System.getActiveSessionId()
+				if not sessionId:
+					logger.warning("Failed to get session id")
 			else:
 				sessionId = System.getActiveSessionId()
 			
 			if sessionId:
 				self.setSessionId(sessionId)
-			else:
-				logger.warning("Failed to get session id")
 		return self._sessionId
 
 	def setStatusMessage(self, message):
