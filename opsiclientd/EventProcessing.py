@@ -953,8 +953,8 @@ None otherwise.
 							new_cmd.extend(["-credentialfile", credentialfile])
 							command = " ".join(new_cmd)
 						
-						if not os.access(command, os.X_OK):
-							os.chmod(command, 0o0755)
+						if cmd and cmd[0] and os.path.isfile(cmd[0]) and not os.access(cmd[0], os.X_OK):
+							os.chmod(cmd[0], 0o0755)
 						
 						self.setStatusMessage(_("Action processor is running"))
 						System.runCommandInSession(
