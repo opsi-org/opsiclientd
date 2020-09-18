@@ -23,6 +23,9 @@ pyinstaller-poetry:
       - opsiclientd-windows.manifest
       ## Without --noconsole opsiclientd_rpc and action_processor_starter are opening console windows 
       #- --noconsole
+    darwin:
+      - --exclude-module
+      - tkinter
   scripts:
     - script: run-opsiclientd
       binaries:
