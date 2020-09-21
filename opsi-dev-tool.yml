@@ -52,9 +52,9 @@ pyinstaller-poetry:
       - git clone --branch $branch $url
   data_files:
     # from opsiclientd
-    - src: opsiclientd_data/common/static_html/*
+    - src: opsiclientd_data/common/static_html/**
       dst: opsiclientd_data/static_html/
-    - src: opsiclientd_data/${PLATFORM_SYSTEM}/*
+    - src: opsiclientd_data/${PLATFORM_SYSTEM}/**
       dst: opsiclientd_data/
     # from opsi-server
     - src: opsi-server/opsi-server_data/etc/backendManager/extend.d/10_opsi.conf
