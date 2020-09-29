@@ -87,13 +87,13 @@ class CacheService(threading.Thread):
 		self.initializeConfigCacheService()
 		self._configCacheService.setObsolete()
 
-	def syncConfig(self, waitForEnding=False):
+	def syncConfig(self, waitForEnding=False, force=False):
 		self.initializeConfigCacheService()
 		if self._configCacheService.isWorking():
 			logger.info(u"Already syncing config")
 		else:
 			logger.info(u"Trigger config sync")
-			self._configCacheService.syncConfig()
+			self._configCacheService.syncConfig(force)
 
 		# TODO: the following code is used often - make a function out of it.
 		if waitForEnding:
