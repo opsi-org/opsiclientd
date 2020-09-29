@@ -493,8 +493,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def noop(self, arg):
 		pass
 
-	def cacheService_syncConfig(self):
-		return self.opsiclientd.getCacheService().syncConfig()
+	def cacheService_syncConfig(self, force=False):
+		return self.opsiclientd.getCacheService().syncConfig(force)
 
 	def cacheService_getConfigCacheState(self):
 		return self.opsiclientd.getCacheService().getConfigCacheState()

@@ -239,6 +239,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 
 			self._syncConfigFromServerRequested = False
 			self._syncConfigToServerRequested = False
+			self._forceSync = False
 
 			if not os.path.exists(self._configCacheDir):
 				logger.notice(u"Creating config cache dir '%s'" % self._configCacheDir)
@@ -429,7 +430,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			logger.notice(u"Config cache service ended")
 			self._running = False
 
-	def syncConfig(self):
+	def syncConfig(self, force=False):
+		self._forceSync = bool(force)
 		self._syncConfigToServerRequested = True
 		self._syncConfigFromServerRequested = True
 
@@ -554,26 +556,33 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 						localProductOnClientsByProductId[productOnClient.productId] = productOnClient
 
 					needSync = False
-					for productOnClient in productOnClients:
-						if productOnClient.productId not in localProductOnClientsByProductId:
-							needSync = True
-							break
-
-						if localProductOnClientsByProductId[productOnClient.productId].actionRequest != productOnClient.actionRequest:
-							needSync = True
-							break
-
-						del localProductOnClientsByProductId[productOnClient.productId]
-
-					if not needSync and localProductOnClientsByProductId:
+					if self._forceSync:
 						needSync = True
+					else:
+						for productOnClient in productOnClients:
+							if productOnClient.productId not in localProductOnClientsByProductId:
+								needSync = True
+								break
+
+							if localProductOnClientsByProductId[productOnClient.productId].actionRequest != productOnClient.actionRequest:
+								needSync = True
+								break
+
+							del localProductOnClientsByProductId[productOnClient.productId]
+
+						if not needSync and localProductOnClientsByProductId:
+							needSync = True
 
 					if not needSync:
 						logger.notice(u"No sync from server required configuration is unchanged")
 						self._state['config_cached'] = True
 						state.set('config_cache_service', self._state)
 					else:
-						logger.notice(u"Product on client configuration changed on config service, sync from server required")
+						if self._forceSync:
+							logger.notice(u"Forced sync from server")
+							self._forceSync = False
+						else:
+							logger.notice(u"Product on client configuration changed on config service, sync from server required")
 						eventId = timeline.addEvent(
 							title=u"Config sync from server",
 							description=u'Syncing config from server',
