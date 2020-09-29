@@ -875,10 +875,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				logger.notice(u"No product action request set => no products to cache")
 			else:
 				depotId = config.get('depot_server', 'depot_id')
-				productOnDepots = self._configService.productOnDepot_getObjects(
-					depotId=depotId,
-					productId=productIds)
-
+				# Get all productOnDepots!
+				productOnDepots = self._configService.productOnDepot_getObjects(depotId=depotId)
 				productOnDepotIds = [productOnDepot.productId for productOnDepot in productOnDepots]
 				logger.debug("Product ids on depot %s: %s", depotId, productOnDepotIds)
 				errorProductIds = []
