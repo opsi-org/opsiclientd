@@ -334,7 +334,7 @@ description = "opsi development tools"
 name = "opsi-dev-tools"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "1.0.31"
+version = "1.0.34"
 
 [package.dependencies]
 bs4 = ">=0.0.1,<0.0.2"
@@ -1112,8 +1112,8 @@ mysqlclient = [
     {file = "mysqlclient-1.4.6.tar.gz", hash = "sha256:f3fdaa9a38752a3b214a6fe79d7cae3653731a53e577821f9187e67cbecb2e16"},
 ]
 opsi-dev-tools = [
-    {file = "opsi-dev-tools-1.0.31.tar.gz", hash = "md5:b8c9cfed5ec5993b415799482408da5d"},
-    {file = "opsi_dev_tools-1.0.31-py3-none-any.whl", hash = "md5:368b85c915fc6dcbc3185e439486a70a"},
+    {file = "opsi-dev-tools-1.0.34.tar.gz", hash = "md5:b2e0ceb21e5d9b46b959eedf0a1b5285"},
+    {file = "opsi_dev_tools-1.0.34-py3-none-any.whl", hash = "md5:ead7f936a4e853c24c67ad6d8f690e77"},
 ]
 packaging = [
     {file = "packaging-20.4-py2.py3-none-any.whl", hash = "sha256:998416ba6962ae7fbd6596850b80e17859a5753ba17c32284f67bfff33784181"},
