@@ -947,7 +947,6 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 							try:
 								self._cacheProduct(productId, productIds)
 							except Exception as e:
-								logger.logException(e, LOG_INFO)
 								errorsOccured.append(forceUnicode(e))
 								self._setProductCacheState(productId, 'failure', forceUnicode(e))
 					except Exception as e:
@@ -1155,6 +1154,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			logger.notice(u"Product '%s' cached" % productId)
 			self._setProductCacheState(productId, 'completed', time.time())
 		except Exception as e:
+			logger.error("Failed to cache product %s: %s" % productId, e, exc_info=True)
 			exception = e
 			timeline.addEvent(
 				title=u"Failed to cache product %s" % productId,
