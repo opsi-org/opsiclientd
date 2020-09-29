@@ -874,12 +874,13 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			if not productIds:
 				logger.notice(u"No product action request set => no products to cache")
 			else:
-
+				depotId = config.get('depot_server', 'depot_id')
 				productOnDepots = self._configService.productOnDepot_getObjects(
-					depotId=config.get('depot_server', 'depot_id'),
+					depotId=depotId,
 					productId=productIds)
 
 				productOnDepotIds = [productOnDepot.productId for productOnDepot in productOnDepots]
+				logger.debug("Product ids on depot %s: %s", depotId, productOnDepotIds)
 				errorProductIds = []
 				for productOnClient in productOnClients:
 					if not productOnClient.productId in productOnDepotIds:
@@ -908,8 +909,10 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 
 						logger.info(u"Searching for release-packageid: '%s'" % releasePackageName)
 						if releasePackageName in productOnDepotIds:
-							logger.info(u"Releasepackage found on depot: '%s'" % releasePackageName)
+							logger.info(u"Releasepackage '%s' found on depot '%s'", releasePackageName, depotId)
 							additionalProductId = releasePackageName
+						else:
+							logger.info(u"Releasepackage '%s' not found on depot '%s'", releasePackageName, depotId)
 					logger.info(u"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s" % additionalProductId)
 					if additionalProductId not in productIds:
 						productIds.append(additionalProductId)
