@@ -334,7 +334,7 @@ description = "opsi development tools"
 name = "opsi-dev-tools"
 optional = false
 python-versions = ">=3.7,<4.0"
-version = "1.0.31"
+version = "1.0.33"
 
 [package.dependencies]
 bs4 = ">=0.0.1,<0.0.2"
@@ -890,7 +890,6 @@ testing = ["coverage (>=5.0.3)", "zope.event", "zope.testing"]
 
 [metadata]
 content-hash = "8cf180159988e7f8787db88cb59db6322779949f437a30bf57cd22c4e0105847"
-lock-version = "1.0"
 python-versions = "^3.7"
 
 [metadata.files]
@@ -1112,8 +1111,8 @@ mysqlclient = [
     {file = "mysqlclient-1.4.6.tar.gz", hash = "sha256:f3fdaa9a38752a3b214a6fe79d7cae3653731a53e577821f9187e67cbecb2e16"},
 ]
 opsi-dev-tools = [
-    {file = "opsi-dev-tools-1.0.31.tar.gz", hash = "md5:b8c9cfed5ec5993b415799482408da5d"},
-    {file = "opsi_dev_tools-1.0.31-py3-none-any.whl", hash = "md5:368b85c915fc6dcbc3185e439486a70a"},
+    {file = "opsi-dev-tools-1.0.33.tar.gz", hash = "md5:5c8364e2a5efa93f6c98f5c350095ff9"},
+    {file = "opsi_dev_tools-1.0.33-py3-none-any.whl", hash = "md5:763dcd36f1da753fe5142716b1b2e900"},
 ]
 packaging = [
     {file = "packaging-20.4-py2.py3-none-any.whl", hash = "sha256:998416ba6962ae7fbd6596850b80e17859a5753ba17c32284f67bfff33784181"},
@@ -1252,8 +1251,8 @@ python-magic = [
     {file = "python_magic-0.4.18-py2.py3-none-any.whl", hash = "sha256:356efa93c8899047d1eb7d3eb91e871ba2f5b1376edbaf4cc305e3c872207355"},
 ]
 python-opsi = [
-    {file = "python-opsi-4.2.0.77.tar.gz", hash = "md5:90c5b31d2c4d7a51200cdb9e40e8ff7f"},
-    {file = "python_opsi-4.2.0.77-py3-none-any.whl", hash = "md5:a4d529ed38e636b700d47bdf5fc1643d"},
+    {file = "python-opsi-4.2.0.77.tar.gz", hash = "md5:d7716ee2f8e25dd03bbc831f6131baa4"},
+    {file = "python_opsi-4.2.0.77-py3-none-any.whl", hash = "md5:b69edcc3e0cc67b78a57933ee0fc9130"},
 ]
 python-pam = [
     {file = "python-pam-1.8.4.tar.gz", hash = "sha256:c856d9c89fedb33951dd8a95727ae57c6887b02d065bbdffd2fd9dbc0183909b"},
