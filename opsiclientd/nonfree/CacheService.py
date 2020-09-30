@@ -87,13 +87,13 @@ class CacheService(threading.Thread):
 		self.initializeConfigCacheService()
 		self._configCacheService.setObsolete()
 
-	def syncConfig(self, waitForEnding=False):
+	def syncConfig(self, waitForEnding=False, force=False):
 		self.initializeConfigCacheService()
 		if self._configCacheService.isWorking():
 			logger.info(u"Already syncing config")
 		else:
 			logger.info(u"Trigger config sync")
-			self._configCacheService.syncConfig()
+			self._configCacheService.syncConfig(force)
 
 		# TODO: the following code is used often - make a function out of it.
 		if waitForEnding:
@@ -947,7 +947,6 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 							try:
 								self._cacheProduct(productId, productIds)
 							except Exception as e:
-								logger.logException(e, LOG_INFO)
 								errorsOccured.append(forceUnicode(e))
 								self._setProductCacheState(productId, 'failure', forceUnicode(e))
 					except Exception as e:
@@ -1155,6 +1154,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			logger.notice(u"Product '%s' cached" % productId)
 			self._setProductCacheState(productId, 'completed', time.time())
 		except Exception as e:
+			logger.error("Failed to cache product %s: %s" % productId, e, exc_info=True)
 			exception = e
 			timeline.addEvent(
 				title=u"Failed to cache product %s" % productId,
