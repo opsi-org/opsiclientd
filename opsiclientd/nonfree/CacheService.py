@@ -933,11 +933,12 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				if len(productIds) == 1 and productIds[0] == 'opsi-winst':
 					logger.notice(u"Only opsi-winst is set to install, doing nothin, because a up- or downgrade from opsi-winst is only need if a other product is set to setup.")
 				else:
-					logger.notice(u"Caching products: %s" % ', '.join(productIds))
+					p_list = ', '.join(productIds)
+					logger.notice("Caching products: %s", p_list)
 					eventId = timeline.addEvent(
-						title=u"Cache products",
-						description=u"Caching products: %s" % ', '.join(productIds),
-						category=u'product_caching',
+						title="Cache products",
+						description=f"Caching products: {p_list}",
+						category='product_caching',
 						durationEvent=True
 					)
 
@@ -947,34 +948,34 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 							try:
 								self._cacheProduct(productId, productIds)
 							except Exception as e:
-								errorsOccured.append(forceUnicode(e))
+								errorsOccured.append(str(e))
 								self._setProductCacheState(productId, 'failure', forceUnicode(e))
 					except Exception as e:
-						logger.logException(e)
+						logger.error("%s", e, exc_info=True)
 						errorsOccured.append(forceUnicode(e))
 
 					if errorsOccured:
-						logger.error(u"Errors occurred while caching products %s: %s" % (', '.join(productIds), ', '.join(errorsOccured)))
+						e_list = ', '.join(errorsOccured)
+						logger.error("Errors occurred while caching products %s: %s" % p_list, e_list)
 						timeline.addEvent(
-							title=u"Failed to cache products",
-							description=u"Errors occurred while caching products %s: %s" % (', '.join(productIds), ', '.join(errorsOccured)),
-							category=u"product_caching",
+							title="Failed to cache products",
+							description=f"Errors occurred while caching products {p_list}: {e_list}",
+							category="product_caching",
 							isError=True
 						)
 					else:
-						logger.notice(u"All products cached: %s" % ', '.join(productIds))
+						logger.notice("All products cached: %s", p_list)
 						self._state['products_cached'] = True
 						state.set('product_cache_service', self._state)
 
 						for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
 							eventGenerator.createAndFireEvent()
 		except Exception as e:
-			logger.error(u"Failed to cache products: %s" % e)
-			logger.logException(e)
+			logger.error("Failed to cache products: %s", e, exc_info=True)
 			timeline.addEvent(
-				title=u"Failed to cache products",
-				description=u"Failed to cache products: %s" % e,
-				category=u"product_caching",
+				title="Failed to cache products",
+				description=f"Failed to cache products: {e}",
+				category="product_caching",
 				isError=True
 			)
 
@@ -1057,7 +1058,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			return getRepository(config.get('depot_server', 'url'), username=depotServerUsername, password=depotServerPassword, mount=False)
 
 	def _cacheProduct(self, productId, neededProducts):
-		logger.notice(u"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)" % (productId, self._maxBandwidth, self._dynamicBandwidth))
+		logger.notice("Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)", productId, self._maxBandwidth, self._dynamicBandwidth)
 		self._setProductCacheState(productId, 'started', time.time())
 		self._setProductCacheState(productId, 'completed', None, updateProductOnClient=False)
 		self._setProductCacheState(productId, 'failure', None, updateProductOnClient=False)
@@ -1068,20 +1069,20 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		try:
 			repository = self._getRepository(productId)
 			if not config.get('depot_server', 'depot_id'):
-				raise Exception(u"Cannot cache product files: depot_server.depot_id undefined")
+				raise Exception("Cannot cache product files: depot_server.depot_id undefined")
 
 			productOnDepots = self._configService.productOnDepot_getObjects(depotId=config.get('depot_server', 'depot_id'), productId=productId)
 			if not productOnDepots:
-				raise Exception(u"Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
-
+				raise Exception("Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
+			
 			self._setProductCacheState(productId, 'productVersion', productOnDepots[0].productVersion, updateProductOnClient=False)
 			self._setProductCacheState(productId, 'packageVersion', productOnDepots[0].packageVersion, updateProductOnClient=False)
 
 			if not os.path.exists(os.path.join(self._productCacheDir, productId)):
 				os.mkdir(os.path.join(self._productCacheDir, productId))
 
-			packageContentFile = u'%s/%s.files' % (productId, productId)
-			localPackageContentFile = os.path.join(self._productCacheDir, productId, u'%s.files' % productId)
+			packageContentFile = f'{productId}/{productId}.files'
+			localPackageContentFile = os.path.join(self._productCacheDir, productId, f'{productId}.files')
 			repository.download(source=packageContentFile, destination=localPackageContentFile)
 			packageInfo = PackageContentFile(localPackageContentFile).parse()
 			productSize = 0
@@ -1092,9 +1093,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					productSize += int(value['size'])
 
 			logger.info(
-				u"Product '%s' contains %d files with a total size of %0.3f MB" % (
-					productId, fileCount, float(productSize) / (1000 * 1000)
-				)
+				"Product '%s' contains %d files with a total size of %0.3f MB",
+				productId, fileCount, float(productSize) / (1000 * 1000)
 			)
 
 			productCacheDirSize = 0
@@ -1102,12 +1102,11 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				productCacheDirSize = System.getDirectorySize(self._productCacheDir)
 				if productCacheDirSize + productSize > self._productCacheMaxSize:
 					logger.info(
-						u"Product cache dir sizelimit of %0.3f MB exceeded. Current size: %0.3f MB, space needed for product '%s': %0.3f MB" % (
-							float(self._productCacheMaxSize) / (1000 * 1000),
-							float(productCacheDirSize) / (1000 * 1000),
-							productId,
-							float(productSize) / (1000 * 1000)
-						)
+						"Product cache dir sizelimit of %0.3f MB exceeded. Current size: %0.3f MB, space needed for product '%s': %0.3f MB",
+						float(self._productCacheMaxSize) / (1000 * 1000),
+						float(productCacheDirSize) / (1000 * 1000),
+						productId,
+						float(productSize) / (1000 * 1000)
 					)
 					freeSpace = self._productCacheMaxSize - productCacheDirSize
 					neededSpace = productSize - freeSpace + 1000
@@ -1117,20 +1116,20 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			diskFreeSpace = System.getDiskSpaceUsage(self._productCacheDir)['available']
 			if diskFreeSpace < productSize + 500 * 1000 * 1000:
 				raise Exception(
-					u"Only %0.3f MB free space available on disk, refusing to cache product files" % (
+					"Only %0.3f MB free space available on disk, refusing to cache product files" % (
 						float(diskFreeSpace) / (1000 * 1000)
 					)
 				)
 
 			eventId = timeline.addEvent(
-				title=u"Cache product %s" % productId,
-				description=u"Caching product '%s' of size %0.2f MB\nmax bandwidth: %s, dynamic bandwidth: %s" % (
+				title=f"Cache product {productId}",
+				description="Caching product '%s' of size %0.2f MB\nmax bandwidth: %s, dynamic bandwidth: %s" % (
 					productId,
 					float(productSize) / (1000 * 1000),
 					self._maxBandwidth,
 					self._dynamicBandwidth
 				),
-				category=u'product_caching',
+				category='product_caching',
 				durationEvent=True
 			)
 
@@ -1151,15 +1150,15 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				if self._dynamicBandwidthLimitEvent:
 					timeline.setEventEnd(self._dynamicBandwidthLimitEvent)
 					self._dynamicBandwidthLimitEvent = None
-			logger.notice(u"Product '%s' cached" % productId)
+			logger.notice(f"Product '%s' cached", productId)
 			self._setProductCacheState(productId, 'completed', time.time())
 		except Exception as e:
-			logger.error("Failed to cache product %s: %s" % productId, e, exc_info=True)
+			logger.error("Failed to cache product %s: %s", productId, e, exc_info=True)
 			exception = e
 			timeline.addEvent(
-				title=u"Failed to cache product %s" % productId,
-				description=u"Failed to cache product '%s': %s" % (productId, e),
-				category=u"product_caching",
+				title=f"Failed to cache product {productId}",
+				description=f"Failed to cache product '{productId}': {e}",
+				category="product_caching",
 				isError=True
 			)
 
@@ -1170,7 +1169,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			try:
 				repository.disconnect()
 			except Exception as e:
-				logger.warning(u"Failed to disconnect from repository: %s" % e)
+				logger.warning(u"Failed to disconnect from repository: %s", e)
 
 		if self._impersonation:
 			try:
