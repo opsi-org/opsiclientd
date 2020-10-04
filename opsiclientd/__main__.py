@@ -40,6 +40,12 @@ def opsiclientd():
 	from opsicommon.logging import logger
 	_main = None
 	if platform.system().lower() == 'windows':
+		# This is a workaround for the problem that opsi-script failes to replace the whole binary dir while opsiclientd is running
+		_dir = os.path.join(os.path.abspath(os.path.basename(sys.argv[0])), "cryptography\\hazmat\\bindings")
+		_old = os.path.join(_dir, "_openssl.cp37-win32.pyd")
+		_new = os.path.join(_dir, "_openssl.pyd")
+		if os.path.isfile(_old) and os.path.isfile(_new):
+			os.remove(_old)
 		from opsiclientd.windows.main import main as _main
 	elif platform.system().lower() in ('linux', 'darwin'):
 		from opsiclientd.posix.main import main as _main
