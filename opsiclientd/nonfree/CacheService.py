@@ -200,7 +200,7 @@ class CacheService(threading.Thread):
 			if not productState.get('completed') or (productState.get('productVersion') != productOnDepot.productVersion) or (productState.get('packageVersion') != productOnDepot.packageVersion):
 				logger.info(
 					"Product '%s_%s-%s' not yet cached (got state: %s)",
-					productId, productOnDepot.productVersion, productOnDepot.packageVersion, productState)
+					productId, productOnDepot.productVersion, productOnDepot.packageVersion, productState
 				)
 				return False
 
