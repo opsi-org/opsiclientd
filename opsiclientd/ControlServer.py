@@ -635,13 +635,13 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def shutdown(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
 		logger.notice(u"rpc shutdown: shutting down computer in %s seconds", waitSeconds)
-		System.shutdown(wait=waitSeconds)
+		self.opsiclientd.shutdownMachine(waitSeconds)
 
 	def reboot(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
 		logger.notice(u"rpc reboot: rebooting computer in %s seconds", waitSeconds)
-		System.reboot(wait=waitSeconds)
-
+		self.opsiclientd.rebootMachine(waitSeconds)
+	
 	def uptime(self):
 		uptime = int(time.time() - self.opsiclientd._startupTime)
 		logger.notice(u"rpc uptime: opsiclientd is running for %d seconds", uptime)

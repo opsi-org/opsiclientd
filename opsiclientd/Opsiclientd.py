@@ -552,12 +552,16 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.notice("Someone triggered a reboot or a shutdown => clearing reboot request")
 			self.clearRebootRequest()
 
-	def shutdownMachine(self):
-		pass
+	def rebootMachine(self, waitSeconds=3):
+		self._isRebootTriggered = True
+		self.clearRebootRequest()
+		System.reboot(wait=waitSeconds)
 
-	def rebootMachine(self):
-		pass
-
+	def shutdownMachine(self, waitSeconds=3):
+		self._isShutdownTriggered = True
+		self.clearShutdownRequest()
+		System.shutdown(wait=waitSeconds)
+	
 	def isRebootTriggered(self):
 		if self._isRebootTriggered:
 			return True

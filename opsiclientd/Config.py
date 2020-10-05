@@ -155,6 +155,7 @@ class Config(metaclass=Singleton):
 				'verify_server_cert_by_ca': False,
 				'proxy_mode': u'static',
 				'proxy_url': u'',
+				'suspend_bitlocker_on_reboot': False,
 			},
 			'config_service': {
 				'url': [],
@@ -318,7 +319,13 @@ class Config(metaclass=Singleton):
 			value = forceHostId(value.replace('_', '-'))
 		elif option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port', 'max_authentication_failures'):
 			value = forceInt(value)
-		elif option in ('create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment', 'active', 'sync_time_from_service', 'trusted_installer_detection'):
+		elif option in (
+			'create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment',
+			'active', 'sync_time_from_service', 'suspend_bitlocker_on_reboot', 'w10BitlockerSuspendOnReboot'
+		):
+			if option == 'w10BitlockerSuspendOnReboot':
+				# legacy name
+				option = 'suspend_bitlocker_on_reboot'
 			value = forceBool(value)
 		elif option in ('exclude_product_group_ids', 'include_product_group_ids'):
 			if not isinstance(value, list):

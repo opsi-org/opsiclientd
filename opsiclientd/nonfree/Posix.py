@@ -53,12 +53,3 @@ class OpsiclientdPosix(Opsiclientd):
 		shutdownFile = os.path.join(self._PID_DIR, "shutdown")
 		return os.path.exists(shutdownFile)
 
-	def rebootMachine(self):
-		self._isRebootTriggered = True
-		self.clearRebootRequest()
-		System.reboot(wait=3)
-
-	def shutdownMachine(self):
-		self._isShutdownTriggered = True
-		self.clearShutdownRequest()
-		System.shutdown(wait=3)

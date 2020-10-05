@@ -21,9 +21,11 @@
 :license: GNU Affero General Public License version 3
 """
 
+import os
 import sys
-import threading
 import time
+import threading
+import subprocess
 import win32com.server.policy
 import win32com.client
 
@@ -33,6 +35,7 @@ from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
 
 from opsiclientd.Opsiclientd import Opsiclientd
+from opsiclientd import config
 
 # from Sens.h
 SENSGUID_PUBLISHER = "{5fee1bd6-5b9b-11d1-8dd2-00aa004abd5e}"
@@ -91,15 +94,17 @@ class OpsiclientdNT(Opsiclientd):
 	def __init__(self):
 		Opsiclientd.__init__(self)
 
-	def shutdownMachine(self):
-		self._isShutdownTriggered = True
-		self.clearShutdownRequest()
-		System.shutdown(3)
-
-	def rebootMachine(self):
-		self._isRebootTriggered = True
-		self.clearRebootRequest()
-		System.reboot(3)
+	def suspendBitlocker(self):
+		logger.notice("Suspending bitlocker for one reboot if active")
+		try:
+			System.execute("powershell.exe -ExecutionPolicy Bypass -Command 'Get-BitLockerVolume | Suspend-BitLocker -RebootCount 1'")
+		except Exception as e:
+			logger.warning("Failed to suspend bitlocker: %s", e)
+	
+	def rebootMachine(self, waitSeconds=3):
+		if config.get('global', 'suspend_bitlocker_on_reboot'):
+			self.suspendBitlocker()
+		super().rebootMachine(waitSeconds)
 
 	def clearRebootRequest(self):
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
