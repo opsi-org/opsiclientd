@@ -98,13 +98,13 @@ class OpsiclientdNT(Opsiclientd):
 		logger.notice("Suspending bitlocker for one reboot if active")
 		try:
 			result = System.execute(
-				"powershell.exe -ExecutionPolicy Bypass -Command 'Get-BitLockerVolume | Suspend-BitLocker -RebootCount 1'",
+				"powershell.exe -ExecutionPolicy Bypass -Command \"Get-BitLockerVolume | Suspend-BitLocker -RebootCount 1\"",
 				captureStderr=True,
 				waitForEnding=True
 			)
 			logger.info(result)
 		except Exception as e:
-			logger.debug("Failed to suspend bitlocker: %s", e)
+			logger.info("Failed to suspend bitlocker: %s", e)
 	
 	def rebootMachine(self, waitSeconds=3):
 		if config.get('global', 'suspend_bitlocker_on_reboot'):
