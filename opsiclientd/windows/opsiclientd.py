@@ -99,7 +99,7 @@ class OpsiclientdNT(Opsiclientd):
 		try:
 			System.execute("powershell.exe -ExecutionPolicy Bypass -Command 'Get-BitLockerVolume | Suspend-BitLocker -RebootCount 1'")
 		except Exception as e:
-			logger.warning("Failed to suspend bitlocker: %s", e)
+			logger.debug("Failed to suspend bitlocker: %s", e)
 	
 	def rebootMachine(self, waitSeconds=3):
 		if config.get('global', 'suspend_bitlocker_on_reboot'):
