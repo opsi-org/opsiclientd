@@ -115,7 +115,9 @@ class Opsiclientd(EventListener, threading.Thread):
 	def restart(self, waitSeconds=0, arguments=[]):
 		def _restart(waitSeconds=0, arguments=[]):
 			time.sleep(waitSeconds)
-			os.execvp(sys.argv[0], sys.argv + (arguments or []))
+			arguments = sys.argv + (arguments or [])
+			logger.notice("Executing: %s", arguments)
+			os.execvp(sys.argv[0], arguments)
 		logger.notice("Will restart in %d seconds", waitSeconds)
 		threading.Thread(target=_restart, args=(waitSeconds, arguments)).start()
 	
