@@ -425,7 +425,7 @@ class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 			logger.info("Installing '%s' into '%s'", bin_dir, inst_dir)
 			shutil.copytree(bin_dir, inst_dir)
 			
-			self.service._opsiclientd.restart(5, {"OPSICLIENTD_DISABLED_EVENT_TYPES": "gui_startup"})
+			self.service._opsiclientd.restart(5)
 	
 	def _getQuery(self, result):
 		pass

@@ -114,23 +114,15 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		self._cacheService = None
 
-	def restart(self, waitSeconds=0, env_vars={}):
-		def _restart(waitSeconds=0, env_vars={}):
+	def restart(self, waitSeconds=0):
+		def _restart(waitSeconds=0):
 			time.sleep(waitSeconds)
-			env = dict(os.environ)
-			if env_vars:
-				logger.notice("Setting environment variables: %s", env_vars)
-				env.update(env_vars)
 			logger.notice("Executing: %s", sys.argv)
-			logger.debug("Using environment: %s", env)
-			if RUNNING_ON_WINDOWS:
-				pid = subprocess.Popen(sys.argv, env=env)
-				#os.spawnve(os.P_NOWAIT, sys.argv[0], sys.argv, env)
-				os._exit(0)
-			else:
-				os.execvpe(sys.argv[0], sys.argv, env)
+			restart_marker = os.path.join(os.path.dirname(sys.argv[0]), ".opsiclient_restart")
+			open(restart_marker, "w").close()
+			os.execvp(sys.argv[0], sys.argv)
 		logger.notice("Will restart in %d seconds", waitSeconds)
-		threading.Thread(target=_restart, args=(waitSeconds, env_vars)).start()
+		threading.Thread(target=_restart, args=(waitSeconds, )).start()
 	
 	def setBlockLogin(self, blockLogin):
 		self._blockLogin = forceBool(blockLogin)

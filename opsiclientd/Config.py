@@ -202,7 +202,7 @@ class Config(metaclass=Singleton):
 			}
 		}
 		
-		self._applyEnvironmentVariables()
+		self._check_restart_marker()
 		self._applySystemSpecificConfiguration()
 
 	@staticmethod
@@ -220,12 +220,13 @@ class Config(metaclass=Singleton):
 
 		return baseDir
 	
-	def _applyEnvironmentVariables(self):
-		val = os.environ.get("OPSICLIENTD_DISABLED_EVENT_TYPES", "")
-		if val:
-			self.disabledEventTypes = [ t.strip().replace("_", " ") for t in val.split(",") ]
-			logger.notice("Event types disabled by environment var: %s", self.disabledEventTypes)
-
+	def _check_restart_marker(self):
+		restart_marker = os.path.join(os.path.dirname(sys.argv[0]), ".opsiclient_restart")
+		if os.path.exists(restart_marker):
+			logger.notice("Restart marker found")
+			os.remove(restart_marker)
+			self.disabledEventTypes = ["gui startup"]
+	
 	def _applySystemSpecificConfiguration(self):
 		defaultToApply = self.WINDOWS_DEFAULT_PATHS.copy()
 		if RUNNING_ON_LINUX:
