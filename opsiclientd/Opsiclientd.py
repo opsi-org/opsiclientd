@@ -121,7 +121,12 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.notice("Setting environment variables: %s", env_vars)
 				env.update(env_vars)
 			logger.notice("Executing: %s", sys.argv)
-			os.execvpe(sys.argv[0], sys.argv, env)
+			logger.debug("Using environment: %s", env)
+			if RUNNING_ON_WINDOWS:
+				os.spawnve(os.P_NOWAIT, sys.argv[0], sys.argv, env)
+				os._exit(0)
+			else:
+				os.execvpe(sys.argv[0], sys.argv, env)
 		logger.notice("Will restart in %d seconds", waitSeconds)
 		threading.Thread(target=_restart, args=(waitSeconds, env_vars)).start()
 	
