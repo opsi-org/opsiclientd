@@ -38,6 +38,7 @@ import traceback
 import argparse
 import platform
 import psutil
+import subprocess
 from contextlib import contextmanager
 
 from OPSI import System
@@ -123,7 +124,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.notice("Executing: %s", sys.argv)
 			logger.debug("Using environment: %s", env)
 			if RUNNING_ON_WINDOWS:
-				os.spawnve(os.P_NOWAIT, sys.argv[0], sys.argv, env)
+				pid = subprocess.Popen(sys.argv, env=env)
+				#os.spawnve(os.P_NOWAIT, sys.argv[0], sys.argv, env)
 				os._exit(0)
 			else:
 				os.execvpe(sys.argv[0], sys.argv, env)
