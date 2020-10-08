@@ -224,7 +224,10 @@ class Config(metaclass=Singleton):
 		restart_marker = os.path.join(os.path.dirname(sys.argv[0]), ".opsiclient_restart")
 		if os.path.exists(restart_marker):
 			logger.notice("Restart marker found")
-			os.remove(restart_marker)
+			try:
+				os.remove(restart_marker)
+			except Exception as e:
+				logger.error(e)
 			self.disabledEventTypes = ["gui startup"]
 	
 	def _applySystemSpecificConfiguration(self):

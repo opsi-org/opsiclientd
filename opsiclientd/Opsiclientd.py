@@ -118,8 +118,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		def _restart(waitSeconds=0):
 			time.sleep(waitSeconds)
 			logger.notice("Executing: %s", sys.argv)
-			restart_marker = os.path.join(os.path.dirname(sys.argv[0]), ".opsiclient_restart")
-			open(restart_marker, "w").close()
+			try:
+				restart_marker = os.path.join(os.path.dirname(sys.argv[0]), ".opsiclient_restart")
+				open(restart_marker, "w").close()
+			except Exception as e:
+				logger.error(e)
 			os.execvp(sys.argv[0], sys.argv)
 		logger.notice("Will restart in %d seconds", waitSeconds)
 		threading.Thread(target=_restart, args=(waitSeconds, )).start()
