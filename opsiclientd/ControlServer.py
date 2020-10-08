@@ -424,8 +424,7 @@ class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 					logger.info("Failed to remove %s: %s", move_dir, move_error)
 			logger.info("Installing '%s' into '%s'", bin_dir, inst_dir)
 			shutil.copytree(bin_dir, inst_dir)
-			#os.rename(bin_dir, inst_dir)
-
+			
 			self.service._opsiclientd.restart(5, {"OPSICLIENTD_DISABLED_EVENT_TYPES": "gui_startup"})
 	
 	def _getQuery(self, result):

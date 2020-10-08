@@ -37,7 +37,7 @@ import opsicommon.logging
 from opsicommon.logging import logger, LOG_NONE
 from OPSI import System
 
-from opsiclientd import init_logging, config, parser
+from opsiclientd import init_logging, parser
 
 def run_as_system(command):
 	currentProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, os.getpid())
