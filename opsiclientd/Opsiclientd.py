@@ -37,6 +37,7 @@ import codecs
 import traceback
 import argparse
 import platform
+import psutil
 from contextlib import contextmanager
 
 from OPSI import System
@@ -353,17 +354,21 @@ class Opsiclientd(EventListener, threading.Thread):
 						eventGenerator.createAndFireEvent()
 
 		try:
+			parent = psutil.Process(os.getpid()).parent()
+			parent_name = parent.name() if parent else None
 			eventTitle = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}]" \
 				f" ({'full' if __fullversion__ else 'open'})" \
 				f" running on {platform.system()}"
 			logger.essential(eventTitle)
-			eventDescription = f"Commandline: {' '.join(sys.argv)}\n"
+			eventDescription = f"Parent process: {parent_name}\n"
+			logger.essential(f"Parent process: {parent_name}")
+			eventDescription += f"Commandline: {' '.join(sys.argv)}\n"
 			logger.essential(f"Commandline: {' '.join(sys.argv)}")
 			eventDescription += f"Working directory: {os.getcwd()}\n"
 			logger.essential(f"Working directory: {os.getcwd()}")
 			eventDescription += f"Using host id '{config.get('global', 'host_id')}'"
 			logger.notice(f"Using host id '{config.get('global', 'host_id')}'")
-
+			
 			self.setBlockLogin(True)
 
 			self._opsiclientdRunningEventId = timeline.addEvent(
