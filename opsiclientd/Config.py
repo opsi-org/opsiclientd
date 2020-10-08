@@ -222,6 +222,7 @@ class Config(metaclass=Singleton):
 	def process_commandline_arguments(self, options):
 		if options.disabledEventTypes:
 			self.disabledEventTypes = [ t.replace("_", " ") for t in options.disabledEventTypes ]
+			logger.notice("Event types disabled by commandline arguments: %s", self.disabledEventTypes)
 	
 	def _applySystemSpecificConfiguration(self):
 		defaultToApply = self.WINDOWS_DEFAULT_PATHS.copy()
