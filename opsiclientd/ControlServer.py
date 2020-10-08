@@ -407,7 +407,7 @@ class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 				raise RuntimeError("Invalid archive")
 			
 			binary = os.path.join(bin_dir, os.path.basename(sys.argv[0]))
-			logger.info("Testing new binary")
+			logger.info("Testing new binary: %s", binary)
 			out = subprocess.check_output([binary, "--version"])
 			logger.info(out)
 			
