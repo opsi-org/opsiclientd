@@ -126,6 +126,9 @@ def get_integrity_level():
 
 def main():
 	log_dir = os.path.join(System.getSystemDrive() + "\\opsi.org\\log")
+	import codecs
+	with codecs.open(os.path.join(log_dir, "start_%d.txt" % os.getpid()), "w", "utf-8") as f:
+		f.write("%s\n%s\n" % (sys.argv, dict(os.environ)))
 	parent = psutil.Process(os.getpid()).parent()
 	parent_name = parent.name() if parent else None
 	# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
