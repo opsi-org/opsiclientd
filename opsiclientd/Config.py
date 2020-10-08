@@ -202,7 +202,6 @@ class Config(metaclass=Singleton):
 			}
 		}
 		
-		self._check_restart_marker()
 		self._applySystemSpecificConfiguration()
 
 	@staticmethod
@@ -220,8 +219,8 @@ class Config(metaclass=Singleton):
 
 		return baseDir
 	
-	def _check_restart_marker(self):
-		restart_marker = os.path.join(os.path.dirname(sys.argv[0]), ".opsiclient_restart")
+	def check_restart_marker(self):
+		restart_marker = os.path.join(os.path.dirname(sys.argv[0]), ".opsiclientd_restart")
 		if os.path.exists(restart_marker):
 			logger.notice("Restart marker found")
 			try:

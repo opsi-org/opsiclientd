@@ -118,7 +118,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		def _restart(waitSeconds=0):
 			time.sleep(waitSeconds)
 			try:
-				restart_marker = os.path.join(os.path.dirname(sys.argv[0]), ".opsiclient_restart")
+				restart_marker = os.path.join(os.path.dirname(sys.argv[0]), ".opsiclientd_restart")
 				logger.notice("Writing restart marker %s", restart_marker)
 				open(restart_marker, "w").close()
 			except Exception as e:
@@ -240,6 +240,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._opsiclientdRunningEventId = None
 
 		config.readConfigFile()
+		config.check_restart_marker()
 		
 		@contextmanager
 		def getControlPipe():
