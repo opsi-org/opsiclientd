@@ -19,7 +19,9 @@ viruscheck:virustotal:
     name: 'opsiclientd_viruscheck'
     paths:
       - viruscheck.txt
-    expire_in: 14 days
+    expire_in: 14 
+  only:
+    - tags
 
 test:pytest:
   stage: test
