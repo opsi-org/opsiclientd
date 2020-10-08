@@ -126,7 +126,6 @@ def main():
 	init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
 	
 	with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
-		logger.info("Cmdline: %s", sys.argv)
 		config.process_commandline_arguments(options)
 
 		if options.signalHandlers:
