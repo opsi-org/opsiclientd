@@ -112,12 +112,12 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		self._cacheService = None
 
-	def restart(self, waitSeconds=0):
-		def _restart(waitSeconds=waitSeconds):
+	def restart(self, waitSeconds=0, arguments=[]):
+		def _restart(waitSeconds=0, arguments=[]):
 			time.sleep(waitSeconds)
-			os.execvp(sys.argv[0], sys.argv)
+			os.execvp(sys.argv[0], sys.argv + (arguments or []))
 		logger.notice("Will restart in %d seconds", waitSeconds)
-		threading.Thread(target=_restart, args=(waitSeconds,)).start()
+		threading.Thread(target=_restart, args=(waitSeconds, arguments)).start()
 	
 	def setBlockLogin(self, blockLogin):
 		self._blockLogin = forceBool(blockLogin)

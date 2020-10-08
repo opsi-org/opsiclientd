@@ -62,7 +62,13 @@ parser.add_argument(
 	default=None,
 	help="Filter log records contexts (<ctx-name-1>=<val1>[,val2][;ctx-name-2=val3])."
 )
-		
+parser.add_argument(
+	"--disabled-event-types",
+	dest="disabledEventTypes",
+	nargs="*",
+	default=[],
+	help="Temporary disable EVENT_TYPE"
+)
 
 def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = None):
 	if not os.path.isdir(log_dir):

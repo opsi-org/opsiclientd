@@ -137,6 +137,7 @@ class Config(metaclass=Singleton):
 
 		self._temporaryConfigServiceUrls = []
 		self._temporaryDepotDrive = []
+		self.disabledEventTypes = []
 
 		self._config = {
 			'system': {
@@ -218,6 +219,10 @@ class Config(metaclass=Singleton):
 
 		return baseDir
 
+	def process_commandline_arguments(self, options):
+		if options.disabledEventTypes:
+			self.disabledEventTypes = [ t.replace("_", " ") for t in options.disabledEventTypes ]
+	
 	def _applySystemSpecificConfiguration(self):
 		defaultToApply = self.WINDOWS_DEFAULT_PATHS.copy()
 		if RUNNING_ON_LINUX:

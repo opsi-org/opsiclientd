@@ -37,7 +37,7 @@ import opsicommon.logging
 from opsicommon.logging import logger, LOG_NONE
 from OPSI import System
 
-from opsiclientd import init_logging, parser
+from opsiclientd import init_logging, config, parser
 
 def run_as_system(command):
 	currentProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, os.getpid())
@@ -193,6 +193,7 @@ def main():
 			options = parser.parse_args()
 			init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
 			with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
+				config.process_commandline_arguments(options)
 				logger.notice("Running as user: %s", win32api.GetUserName())
 				if parent:
 					logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)

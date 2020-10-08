@@ -124,9 +124,10 @@ def main():
 	options = parser.parse_args()
 	
 	init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
-
+	
 	with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
-
+		config.process_commandline_arguments(options)
+		
 		if options.signalHandlers:
 			logger.debug("Registering signal handlers")
 			signal.signal(SIGHUP, signal.SIG_IGN)  # ignore SIGHUP

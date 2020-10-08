@@ -58,6 +58,10 @@ def createEventGenerators():
 	_EVENT_GENERATORS[EVENT_CONFIG_TYPE_PANIC] = EventGeneratorFactory(panicEventConfig)
 
 	for (eventConfigId, eventConfig) in getEventConfigs().items():
+		if eventConfig['type'] in config.disabledEventTypes:
+			logger.notice("Event %s of type %s is disabled", eventConfigId, eventConfig['type'])
+			continue
+		
 		mainEventConfigId = eventConfigId.split('{')[0]
 		if (mainEventConfigId == eventConfigId):
 			try:
@@ -70,6 +74,10 @@ def createEventGenerators():
 				logger.error(u"Failed to create event generator '%s': %s" % (mainEventConfigId, forceUnicode(e)))
 
 	for (eventConfigId, eventConfig) in getEventConfigs().items():
+		if eventConfig['type'] in config.disabledEventTypes:
+			logger.notice("Event %s of type %s is disabled", eventConfigId, eventConfig['type'])
+			continue
+		
 		mainEventConfigId = eventConfigId.split('{')[0]
 		eventType = eventConfig['type']
 		del eventConfig['type']
