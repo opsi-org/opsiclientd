@@ -371,6 +371,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			eventDescription += f"Using host id '{config.get('global', 'host_id')}'"
 			logger.notice(f"Using host id '{config.get('global', 'host_id')}'")
 
+			logger.debug("Environment: %s", os.environ)
+
 			self.setBlockLogin(True)
 
 			self._opsiclientdRunningEventId = timeline.addEvent(
