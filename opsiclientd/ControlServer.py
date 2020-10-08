@@ -411,8 +411,8 @@ class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 			out = subprocess.check_output([binary, "--version"])
 			logger.info(out)
 			
+			move_dir = inst_dir + "_old"
 			logger.info("Moving current installation dir '%s' to '%s'", inst_dir, move_dir)
-			move_dir = inst_dir + "_updated"
 			if os.path.exists(move_dir):
 				shutil.rmtree(move_dir)
 			os.rename(inst_dir, move_dir)
@@ -425,7 +425,7 @@ class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 			logger.info("Installing '%s' into '%s'", bin_dir, inst_dir)
 			shutil.copytree(bin_dir, inst_dir)
 			#os.rename(bin_dir, inst_dir)
-			
+
 			self.service._opsiclientd.restart(5)
 	
 	def _getQuery(self, result):
