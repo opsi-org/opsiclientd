@@ -193,6 +193,7 @@ def main():
 			options = parser.parse_args()
 			init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
 			with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
+				logger.info("Cmdline: %s", sys.argv)
 				config.process_commandline_arguments(options)
 				logger.notice("Running as user: %s", win32api.GetUserName())
 				if parent:
