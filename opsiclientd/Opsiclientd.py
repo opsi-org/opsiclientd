@@ -116,11 +116,12 @@ class Opsiclientd(EventListener, threading.Thread):
 	def restart(self, waitSeconds=0, env_vars={}):
 		def _restart(waitSeconds=0, env_vars={}):
 			time.sleep(waitSeconds)
+			env = dict(os.environ)
 			if env_vars:
 				logger.notice("Setting environment variables: %s", env_vars)
-				os.environ.update(env_vars)
+				env.update(env_vars)
 			logger.notice("Executing: %s", sys.argv)
-			os.execvp(sys.argv[0], sys.argv)
+			os.execvpe(sys.argv[0], sys.argv, env)
 		logger.notice("Will restart in %d seconds", waitSeconds)
 		threading.Thread(target=_restart, args=(waitSeconds, env_vars)).start()
 	
