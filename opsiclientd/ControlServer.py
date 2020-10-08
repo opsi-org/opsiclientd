@@ -35,6 +35,11 @@ import sys
 import threading
 import time
 import json
+import urllib
+import email
+import tempfile
+import platform
+import subprocess
 
 from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
@@ -346,6 +351,100 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 			self.request.write(html.encode("utf-8").strip())
 
 
+class WorkerOpsiclientdUpload(WorkerOpsiclientd):
+	def __init__(self, service, request, resource):
+		WorkerOpsiclientd.__init__(self, service, request, resource)
+	
+	def self_update(self):
+		test_file = "base_library.zip"
+		inst_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+		if not os.path.exists(os.path.join(inst_dir, test_file)):
+			raise RuntimeError(f"File not found: {os.path.join(inst_dir, test_file)}")
+		
+		filename = None
+		file_data = self.request.content.read()
+		if self.request.getHeader("Content-Type") == "multipart/form-data":
+			headers = b""
+			for k, v in self.request.requestHeaders.getAllRawHeaders():
+				headers += k + b": " + v[0] + b"\r\n"
+			
+			msg = email.message_from_bytes(headers + b"\r\n\r\n" + file_data)
+			fpart = None
+			if msg.is_multipart():
+				for part in msg.walk():
+					if part.get_filename():
+						filename = part.get_filename()
+						file_data = fpart.get_payload(decode=True)
+						break
+		else:
+			filename = self.request.getHeader("Content-Disposition")
+			if filename:
+				filename = filename.split(';')[0].split('=', 1)[1]
+		
+		if filename:
+			filename = filename.split("/")[-1].split("\\")[-1]
+		
+		if not filename:
+			raise RuntimeError("Filename missing")
+		
+		logger.info("Processing file %s", filename)
+		with tempfile.TemporaryDirectory() as tmpdir:
+			tmpfile = os.path.join(tmpdir, filename)
+			with open(tmpfile, "wb") as f:
+				f.write(file_data)
+			
+			destination = os.path.join(tmpdir, "content")
+			shutil.unpack_archive(filename=tmpfile, extract_dir=destination)
+			
+			bin_dir = destination
+			if not os.path.exists(os.path.join(bin_dir, test_file)):
+				bin_dir = None
+				for fn in os.listdir(destination):
+					if os.path.exists(os.path.join(destination, fn, test_file)):
+						bin_dir = os.path.join(destination, fn)
+						break
+			if not bin_dir:
+				raise RuntimeError("Invalid archive")
+			
+			binary = os.path.join(bin_dir, os.path.basename(sys.argv[0]))
+			logger.info("Testing new binary")
+			out = subprocess.check_output([binary, "--version"])
+			logger.info(out)
+			
+			move_dir = inst_dir + "_updated"
+			if os.path.exists(move_dir):
+				shutil.rmtree(move_dir)
+			os.rename(inst_dir, move_dir)
+
+			if False:
+				try:
+					shutil.rmtree(move_dir)
+				except Exception as move_error:
+					logger.info("Failed to remove %s: %s", move_dir, move_error)
+			logger.info("Installing '%s' into '%s'", bin_dir, inst_dir)
+			os.rename(bin_dir, inst_dir)
+			self.service._opsiclientd.restart(5)
+	
+	def _getQuery(self, result):
+		pass
+	
+	def _processQuery(self, result):
+		path = urllib.parse.unquote(self.request.path.decode("utf-8"))
+		if path.startswith("/upload/update/opsiclientd"):
+			try:
+				self.self_update()
+			except Exception as e:
+				logger.error(e, exc_info=True)
+				raise
+		else:
+			raise ValueError("Invalid path")
+
+	def _generateResponse(self, result):
+		self.request.setResponseCode(200)
+		self.request.setHeader("content-type", "text/plain; charset=utf-8")
+		self.request.write("ok".encode("utf-8"))
+
+
 class ResourceRoot(resource.Resource):
 	addSlash = True
 	#isLeaf = True
@@ -379,6 +478,9 @@ class ResourceOpsiclientdInfo(ResourceOpsiclientd):
 
 	def __init__(self, service):
 		ResourceOpsiclientd.__init__(self, service)
+
+class ResourceOpsiclientdUpload(ResourceOpsiclientd):
+	WorkerClass = WorkerOpsiclientdUpload
 
 
 class ControlServer(OpsiService, threading.Thread):
@@ -471,6 +573,7 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root.putChild(b"rpcinterface", ResourceCacheServiceJsonInterface(self))
 		self._root.putChild(b"info.html", ResourceOpsiclientdInfo(self))
 		self._root.putChild(b"kiosk", ResourceKioskJsonRpc(self))
+		self._root.putChild(b"upload", ResourceOpsiclientdUpload(self))
 
 	def __repr__(self):
 		return (
