@@ -117,6 +117,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	def restart(self, waitSeconds=0):
 		def _restart(waitSeconds=0):
 			time.sleep(waitSeconds)
+			timeline.addEvent(title = "opsiclientd restart", category = "system")
 			try:
 				restart_marker = os.path.join(os.path.dirname(sys.argv[0]), ".opsiclientd_restart")
 				logger.notice("Writing restart marker %s", restart_marker)
@@ -241,7 +242,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		config.readConfigFile()
 		config.check_restart_marker()
-		
+
 		@contextmanager
 		def getControlPipe():
 			logger.notice("Starting control pipe")
