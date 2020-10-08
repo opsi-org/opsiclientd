@@ -201,7 +201,8 @@ class Config(metaclass=Singleton):
 				'create_environment': False,
 			}
 		}
-
+		
+		self._applyEnvironmentVariables()
 		self._applySystemSpecificConfiguration()
 
 	@staticmethod
@@ -218,12 +219,13 @@ class Config(metaclass=Singleton):
 			baseDir = os.path.join('/usr', 'lib', 'opsi-client-agent')
 
 		return baseDir
-
-	def process_commandline_arguments(self, options):
-		if options.disabledEventTypes:
-			self.disabledEventTypes = [ t.replace("_", " ") for t in options.disabledEventTypes ]
-			logger.notice("Event types disabled by commandline arguments: %s", self.disabledEventTypes)
 	
+	def _applyEnvironmentVariables(self):
+		val = os.environ.get("OPSICLIENTD_DISABLED_EVENT_TYPES", "")
+		if val:
+			self.disabledEventTypes = [ t.strip().replace("_", " ") for t in val.split(",") ]
+			logger.notice("Event types disabled by environment var: %s", self.disabledEventTypes)
+
 	def _applySystemSpecificConfiguration(self):
 		defaultToApply = self.WINDOWS_DEFAULT_PATHS.copy()
 		if RUNNING_ON_LINUX:

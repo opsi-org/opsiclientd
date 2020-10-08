@@ -113,14 +113,16 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		self._cacheService = None
 
-	def restart(self, waitSeconds=0, arguments=[]):
-		def _restart(waitSeconds=0, arguments=[]):
+	def restart(self, waitSeconds=0, env_vars={}):
+		def _restart(waitSeconds=0, env_vars={}):
 			time.sleep(waitSeconds)
-			arguments = sys.argv + (arguments or [])
-			logger.notice("Executing: %s", arguments)
-			os.execvp(sys.argv[0], arguments)
+			if env_vars:
+				logger.notice("Setting environment variables: %s", env_vars)
+				os.environ.update(env_vars)
+			logger.notice("Executing: %s", sys.argv)
+			os.execvp(sys.argv[0], sys.argv)
 		logger.notice("Will restart in %d seconds", waitSeconds)
-		threading.Thread(target=_restart, args=(waitSeconds, arguments)).start()
+		threading.Thread(target=_restart, args=(waitSeconds, env_vars)).start()
 	
 	def setBlockLogin(self, blockLogin):
 		self._blockLogin = forceBool(blockLogin)
@@ -368,7 +370,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.essential(f"Working directory: {os.getcwd()}")
 			eventDescription += f"Using host id '{config.get('global', 'host_id')}'"
 			logger.notice(f"Using host id '{config.get('global', 'host_id')}'")
-			
+
 			self.setBlockLogin(True)
 
 			self._opsiclientdRunningEventId = timeline.addEvent(

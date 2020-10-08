@@ -426,7 +426,7 @@ class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 			shutil.copytree(bin_dir, inst_dir)
 			#os.rename(bin_dir, inst_dir)
 
-			self.service._opsiclientd.restart(5, ["--disabled-event-types", "gui_startup"])
+			self.service._opsiclientd.restart(5, {"OPSICLIENTD_DISABLED_EVENT_TYPES": "gui_startup"})
 	
 	def _getQuery(self, result):
 		pass
