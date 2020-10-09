@@ -34,10 +34,10 @@ import re
 import shutil
 import sys
 import time
+import datetime
 import tempfile
 import psutil
 from contextlib import contextmanager
-from datetime import datetime as dt, timedelta
 
 from OPSI import System
 import opsicommon.logging
@@ -1260,35 +1260,29 @@ None otherwise.
 
 	def inWorkingWindow(self):
 		try:
-			starttime, endtime = self.event.eventConfig.workingWindow.split("-")
-			s_hour, s_minute = starttime.split(":")[0:2]
-			e_hour, e_minute = endtime.split(":")[0:2]
-			now = dt.now()
-			start = dt.today().replace(
-						hour=int(s_hour),
-						minute=int(s_minute),
-						second=0,
-						microsecond=0)
-			end = dt.today().replace(
-						hour=int(e_hour),
-						minute=int(e_minute),
-						second=0,
-						microsecond=0)
-			if now < start:
-				start = start - timedelta(days=1)
-			elif end < start:
-				end = end + timedelta(days=1)
-
-			logger.info("Working Window configuration: starttime=%s endtime=%s systemtime now=%s", start, end, now)
-			if start < now < end:
-				logger.debug("We are in the configured working window")
+			start_str, end_str = self.event.eventConfig.workingWindow.split("-")
+			start = datetime.time(int(start_str.split(":")[0]), int(start_str.split(":")[1]))
+			end = datetime.time(int(end_str.split(":")[0]), int(end_str.split(":")[1]))
+			now = datetime.datetime.now().time()
+			
+			logger.debug("Working window configuration: start=%s, end=%s, now=%s", start, end, now)
+			
+			in_window = False
+			if start <= end:
+				in_window = (now >= start and now <= end)
+			else:
+				# Crosses midnight
+				in_window = (now >= start or now <= end)
+			
+			if in_window:
+				logger.info("Current time %s is within the configured working window (%s-%s)", now, start, end)
 				return True
 			else:
-				logger.debug("We are not in the configured working window")
+				logger.info("Current time %s is otside the configured working window (%s-%s)", now, start, end)
 				return False
+			
 		except Exception as e:
-			logger.error("Working Window processing failed: starttime=%s endtime=%s systemtime now=%s", start, end, now)
-			logger.logException(e)
+			logger.error("Working window processing failed (start=%s, end=%s, now=%s): %s", start_str, end_str, now, e, exc_info=True)
 			return True
 	
 	def run(self):
