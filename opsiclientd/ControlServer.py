@@ -827,7 +827,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def getBackendInfo(self):
 		serviceConnection = ServiceConnection(loadBalance=False)
-		serviceConnection.connectConfigService()self_update_from_url
+		serviceConnection.connectConfigService()
+		backendinfo = None
+		try:
+			configService = serviceConnection.getConfigService()
+			backendinfo = configService.backend_info()
 		finally:
 			serviceConnection.disconnectConfigService()
 
