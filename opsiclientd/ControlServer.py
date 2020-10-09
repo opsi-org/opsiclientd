@@ -355,12 +355,8 @@ class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientd.__init__(self, service, request, resource)
 	
-	def self_update(self):
-		test_file = "base_library.zip"
-		inst_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-		if not os.path.exists(os.path.join(inst_dir, test_file)):
-			raise RuntimeError(f"File not found: {os.path.join(inst_dir, test_file)}")
-		
+	def self_update_from_upload(self):
+		logger.notice("Self-update from upload")
 		filename = None
 		file_data = self.request.content.read()
 		if self.request.getHeader("Content-Type") == "multipart/form-data":
@@ -373,9 +369,7 @@ class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 			if msg.is_multipart():
 				for part in msg.walk():
 					if part.get_filename():
-						filename = part.get_filename()
-						file_data = fpart.get_payload(decode=True)
-						break
+						filename = part.get_ftmpfile
 		else:
 			filename = self.request.getHeader("Content-Disposition")
 			if filename:
@@ -387,45 +381,11 @@ class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 		if not filename:
 			raise RuntimeError("Filename missing")
 		
-		logger.info("Processing file %s", filename)
 		with tempfile.TemporaryDirectory() as tmpdir:
 			tmpfile = os.path.join(tmpdir, filename)
 			with open(tmpfile, "wb") as f:
 				f.write(file_data)
-			
-			destination = os.path.join(tmpdir, "content")
-			shutil.unpack_archive(filename=tmpfile, extract_dir=destination)
-			
-			bin_dir = destination
-			if not os.path.exists(os.path.join(bin_dir, test_file)):
-				bin_dir = None
-				for fn in os.listdir(destination):
-					if os.path.exists(os.path.join(destination, fn, test_file)):
-						bin_dir = os.path.join(destination, fn)
-						break
-			if not bin_dir:
-				raise RuntimeError("Invalid archive")
-			
-			binary = os.path.join(bin_dir, os.path.basename(sys.argv[0]))
-			logger.info("Testing new binary: %s", binary)
-			out = subprocess.check_output([binary, "--version"])
-			logger.info(out)
-			
-			move_dir = inst_dir + "_old"
-			logger.info("Moving current installation dir '%s' to '%s'", inst_dir, move_dir)
-			if os.path.exists(move_dir):
-				shutil.rmtree(move_dir)
-			os.rename(inst_dir, move_dir)
-
-			if False:
-				try:
-					shutil.rmtree(move_dir)
-				except Exception as move_error:
-					logger.info("Failed to remove %s: %s", move_dir, move_error)
-			logger.info("Installing '%s' into '%s'", bin_dir, inst_dir)
-			shutil.copytree(bin_dir, inst_dir)
-			
-			self.service._opsiclientd.restart(5)
+			self.service._opsiclientd.self_update_from_file(tmpfile)
 	
 	def _getQuery(self, result):
 		pass
@@ -434,7 +394,7 @@ class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 		path = urllib.parse.unquote(self.request.path.decode("utf-8"))
 		if path.startswith("/upload/update/opsiclientd"):
 			try:
-				self.self_update()
+				self.self_update_from_upload()
 			except Exception as e:
 				logger.error(e, exc_info=True)
 				raise
@@ -847,10 +807,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			else:
 				year = session['LogonTime'].year
 				month = session['LogonTime'].month
-				day = session['LogonTime'].day
-				hour = session['LogonTime'].hour
-				minute = session['LogonTime'].minute
-				second = session['LogonTime'].second
+				day = session['LogonTime'].dayself_update_from_url
 
 			if month < 10:
 				month = '0%d' % month
@@ -870,11 +827,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def getBackendInfo(self):
 		serviceConnection = ServiceConnection(loadBalance=False)
-		serviceConnection.connectConfigService()
-		backendinfo = None
-		try:
-			configService = serviceConnection.getConfigService()
-			backendinfo = configService.backend_info()
+		serviceConnection.connectConfigService()self_update_from_url
 		finally:
 			serviceConnection.disconnectConfigService()
 
@@ -897,3 +850,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		:param value: Value to set the state.
 		"""
 		return state.set(name, value)
+	
+	def updateComponent(self, component, url):
+		if component != "opsiclientd":
+			raise ValueError(f"Invalid component {component}")
+		self.service._opsiclientd.self_update_from_url(url)
+	
