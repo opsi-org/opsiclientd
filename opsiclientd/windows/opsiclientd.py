@@ -145,7 +145,12 @@ class OpsiclientdNT(Opsiclientd):
 		return forceBool(shutdownRequested)
 
 	def isWindowsInstallerBusy(self):
-		if not self._ms_update_installer: 
+		if not self._ms_update_installer:
+			(wmi, pythoncom) = importWmiAndPythoncom(
+				importWmi=False,
+				importPythoncom=True
+			)
+			pythoncom.CoInitialize()
 			session = win32com.client.Dispatch("Microsoft.Update.Session")
 			self._ms_update_installer = session.CreateUpdateInstaller()
 		return self._ms_update_installer.isBusy

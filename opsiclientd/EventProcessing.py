@@ -796,9 +796,8 @@ None otherwise.
 			if self.event.eventConfig.getId() == 'gui_startup' and not state.get('user_logged_in', 0) and self.event.eventConfig.trustedInstallerDetection:
 				# check for Trusted Installer before Running Action Processor
 				if RUNNING_ON_WINDOWS and sys.getwindowsversion().major >= 6:
-					logger.notice("Getting windows installer status")
-					self.opsiclientd.isWindowsInstallerBusy()
 					try:
+						logger.notice("Getting windows installer status")
 						if self.opsiclientd.isWindowsInstallerBusy():
 							logger.notice("Windows installer is running, waiting until upgrade process is finished")
 							self.setStatusMessage(_("Waiting for TrustedInstaller"))
