@@ -812,7 +812,10 @@ None otherwise.
 								time.sleep(10)
 								logger.debug("Windows installer is running, waiting until upgrade process is finished")
 
+							logger.notice("Windows installer finished")
 							timeline.setEventEnd(eventId=waitEventId)
+						else:
+							logger.notice("Windows installer not running")
 					except Exception as e:
 						logger.error("Failed to get windows installer status: %s" % e)
 
