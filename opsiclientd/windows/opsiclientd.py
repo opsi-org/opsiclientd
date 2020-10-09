@@ -93,6 +93,7 @@ def opsiclientd_factory():
 class OpsiclientdNT(Opsiclientd):
 	def __init__(self):
 		Opsiclientd.__init__(self)
+		self._ms_update_installer = None
 
 	def suspendBitlocker(self):
 		logger.notice("Suspending bitlocker for one reboot if active")
@@ -143,6 +144,11 @@ class OpsiclientdNT(Opsiclientd):
 		logger.notice(u"Shutdown request in Registry: {0}".format(shutdownRequested))
 		return forceBool(shutdownRequested)
 
+	def isWindowsInstallerBusy(self):
+		if not self._ms_update_installer: 
+			session = win32com.client.Dispatch("Microsoft.Update.Session")
+			self._ms_update_installer = session.CreateUpdateInstaller()
+		return self._ms_update_installer.isBusy
 
 class OpsiclientdNT5(OpsiclientdNT):
 	def __init__(self):

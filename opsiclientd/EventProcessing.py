@@ -796,31 +796,26 @@ None otherwise.
 			if self.event.eventConfig.getId() == 'gui_startup' and not state.get('user_logged_in', 0) and self.event.eventConfig.trustedInstallerDetection:
 				# check for Trusted Installer before Running Action Processor
 				if RUNNING_ON_WINDOWS and sys.getwindowsversion().major >= 6:
-					logger.notice(u"Getting TrustedInstaller service configuration")
+					logger.notice("Getting windows installer status")
+					self.opsiclientd.isWindowsInstallerBusy()
 					try:
-						# Trusted Installer "Start" Key in Registry: 2 = automatic Start: Registry: 3 = manuell Start; Default: 3
-						automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection=False)
-						logger.debug2(u">>> TrustedInstaller Service autmaticStartup and type: '%s' '%s'" % (automaticStartup, type(automaticStartup)))
-						if automaticStartup == 2:
-							logger.notice(u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished")
-							self.setStatusMessage(_(u"Waiting for TrustedInstaller"))
+						if self.opsiclientd.isWindowsInstallerBusy():
+							logger.notice("Windows installer is running, waiting until upgrade process is finished")
+							self.setStatusMessage(_("Waiting for TrustedInstaller"))
 							waitEventId = timeline.addEvent(
-								title=u"Waiting for TrustedInstaller",
-								description=u"Automatic startup for service Trusted Installer is set, waiting until upgrade process is finished",
-								category=u"wait",
-								durationEvent=True
+								title = "Waiting for TrustedInstaller",
+								description = "Windows installer is running, waiting until upgrade process is finished",
+								category = "wait",
+								durationEvent = True
 							)
-
-							while True:
-								time.sleep(3)
-								logger.debug(u"Checking if automatic startup for service Trusted Installer is set")
-								automaticStartup = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\TrustedInstaller", "Start", reflection=False)
-								if not (automaticStartup == 2):
-									break
+							
+							while self.opsiclientd.isWindowsInstallerBusy():
+								time.sleep(10)
+								logger.debug("Windows installer is running, waiting until upgrade process is finished")
 
 							timeline.setEventEnd(eventId=waitEventId)
 					except Exception as e:
-						logger.error(u"Failed to read TrustedInstaller service-configuration: %s" % e)
+						logger.error("Failed to get windows installer status: %s" % e)
 
 			self.setStatusMessage(_(u"Starting actions"))
 
