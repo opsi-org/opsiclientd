@@ -792,32 +792,35 @@ None otherwise.
 			if not self.event.getActionProcessorCommand():
 				raise Exception(u"No action processor command defined")
 
-			#TODO: Deactivating Trusted Installer Detection. Have to implemented in a better way in futur versions.
-			if self.event.eventConfig.getId() == 'gui_startup' and not state.get('user_logged_in', 0) and self.event.eventConfig.trustedInstallerDetection:
-				# check for Trusted Installer before Running Action Processor
-				if RUNNING_ON_WINDOWS and sys.getwindowsversion().major >= 6:
-					try:
-						logger.notice("Getting windows installer status")
-						if self.opsiclientd.isWindowsInstallerBusy():
-							logger.notice("Windows installer is running, waiting until upgrade process is finished")
-							self.setStatusMessage(_("Waiting for TrustedInstaller"))
-							waitEventId = timeline.addEvent(
-								title = "Waiting for TrustedInstaller",
-								description = "Windows installer is running, waiting until upgrade process is finished",
-								category = "wait",
-								durationEvent = True
-							)
-							
-							while self.opsiclientd.isWindowsInstallerBusy():
-								time.sleep(10)
-								logger.debug("Windows installer is running, waiting until upgrade process is finished")
+			if (
+				RUNNING_ON_WINDOWS and
+				sys.getwindowsversion().major >= 6 and
+				self.event.eventConfig.name == 'gui_startup' and
+				self.event.eventConfig.trustedInstallerDetection
+			):
+				# Wait for windows installer before Running Action Processor
+				try:
+					logger.notice("Getting windows installer status")
+					if self.opsiclientd.isWindowsInstallerBusy():
+						logger.notice("Windows installer is running, waiting until upgrade process is finished")
+						self.setStatusMessage(_("Waiting for TrustedInstaller"))
+						waitEventId = timeline.addEvent(
+							title = "Waiting for TrustedInstaller",
+							description = "Windows installer is running, waiting until upgrade process is finished",
+							category = "wait",
+							durationEvent = True
+						)
+						
+						while self.opsiclientd.isWindowsInstallerBusy():
+							time.sleep(10)
+							logger.debug("Windows installer is running, waiting until upgrade process is finished")
 
-							logger.notice("Windows installer finished")
-							timeline.setEventEnd(eventId=waitEventId)
-						else:
-							logger.notice("Windows installer not running")
-					except Exception as e:
-						logger.error("Failed to get windows installer status: %s" % e)
+						logger.notice("Windows installer finished")
+						timeline.setEventEnd(eventId=waitEventId)
+					else:
+						logger.notice("Windows installer not running")
+				except Exception as e:
+					logger.error("Failed to get windows installer status: %s" % e)
 
 			self.setStatusMessage(_(u"Starting actions"))
 
