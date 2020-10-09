@@ -1281,7 +1281,7 @@ None otherwise.
 				logger.info("Current time %s is within the configured working window (%s-%s)", now, start, end)
 				return True
 			else:
-				logger.info("Current time %s is otside the configured working window (%s-%s)", now, start, end)
+				logger.info("Current time %s is outside the configured working window (%s-%s)", now, start, end)
 				return False
 			
 		except Exception as e:
