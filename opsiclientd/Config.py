@@ -264,7 +264,7 @@ class Config(metaclass=Singleton):
 				self._config['action_processor']['run_as_user'] = 'pcpatch'
 
 			try:
-				confserver = "https://"+self._config['control_server']['interface']+":"+self._config['control_server']['port']
+				confserver = "https://"+self._config['control_server']['interface']+":"+str(self._config['control_server']['port'])
 				logger.debug("confserver = %s", confserver)
 
 				with JSONRPCBackend(username=self._config['global']['host_id'],
