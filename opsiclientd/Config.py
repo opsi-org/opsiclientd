@@ -41,6 +41,7 @@ from OPSI.Util import objectToBeautifiedText, blowfishDecrypt
 from OPSI.Util.File import IniFile
 from OPSI import System
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_LINUX, RUNNING_ON_DARWIN
+from OPSI.Backend.JSONRPC import JSONRPCBackend
 
 OPSI_CA = '''-----BEGIN CERTIFICATE-----
 MIIEYTCCA0mgAwIBAgIJAO5oKZZR8dQkMA0GCSqGSIb3DQEBBQUAMH0xCzAJBgNV
@@ -261,6 +262,31 @@ class Config(metaclass=Singleton):
 			
 			if sys.getwindowsversion()[0] == 5:
 				self._config['action_processor']['run_as_user'] = 'pcpatch'
+
+			try:
+				logger.debug("confserver = %s", self.getConfigServiceUrls()[0])
+
+				with JSONRPCBackend(username=self._config.get('global', 'host_id'), password=self._config.get('global', 'opsi_host_key'), address=self.getConfigServiceUrls()[0], application='opsiclientd config request') as backend:
+					config_id = "opsiclientd.global.suspend_bitlocker_on_reboot"
+
+					#requesting general config for bitlocker_suspend
+					result = backend.config_getObjects(id=config_id)
+					if result:
+						logger.debug("overriding suspend_bitlocker_on_reboot value %s to %s (config)",
+										self._config['global']['suspend_bitlocker_on_reboot'],
+										result[0].defaultValues[0])
+						self._config['global']['suspend_bitlocker_on_reboot'] = result[0].defaultValues[0]
+
+					#requesting specific configState for bitlocker_suspend
+					result = backend.configState_getObjects(configId=config_id, objectId=self._config.get('global', 'host_id'))
+					if result:
+						logger.debug("overriding suspend_bitlocker_on_reboot value %s to %s (configState)",
+										self._config['global']['suspend_bitlocker_on_reboot'],
+										result[0].defaultValues[0])
+						self._config['global']['suspend_bitlocker_on_reboot'] = result[0].values[0]
+			except ValueError as e:
+				logger.error("Could not access config or configState suspend_bitlocker_on_reboot from backend.")
+
 		else:
 			sslCertDir = os.path.join('/etc', 'opsi-client-agent')
 
@@ -673,7 +699,7 @@ class Config(metaclass=Singleton):
 		}
 
 		configService.backend_setOptions({"addConfigStateDefaults": True})
-		for configState in configService.configState_getObjects(**query):
+		for in configService.configState_getObjects(**query):
 			logger.info(u"Got config state from service: %r" % configState)
 
 			if not configState.values:
