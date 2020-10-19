@@ -699,7 +699,7 @@ class Config(metaclass=Singleton):
 		}
 
 		configService.backend_setOptions({"addConfigStateDefaults": True})
-		for in configService.configState_getObjects(**query):
+		for configState in configService.configState_getObjects(**query):
 			logger.info(u"Got config state from service: %r" % configState)
 
 			if not configState.values:
