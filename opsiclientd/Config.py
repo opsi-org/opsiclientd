@@ -264,11 +264,11 @@ class Config(metaclass=Singleton):
 				self._config['action_processor']['run_as_user'] = 'pcpatch'
 
 			try:
-				confserver = "https://"+self._config.get('control_server', 'interface')+":"+self._config.get('control_server', 'port')
+				confserver = "https://"+self._config['control_server']['interface']+":"+self._config['control_server']['port']
 				logger.debug("confserver = %s", confserver)
 
-				with JSONRPCBackend(username=self._config.get('global', 'host_id'),
-										password=self._config.get('global', 'opsi_host_key'),
+				with JSONRPCBackend(username=self._config['global']['host_id'],
+										password=self._config['global']['opsi_host_key'],
 										address=confserver,
 										application='opsiclientd config request') as backend:
 					config_id = "opsiclientd.global.suspend_bitlocker_on_reboot"
@@ -282,7 +282,7 @@ class Config(metaclass=Singleton):
 						self._config['global']['suspend_bitlocker_on_reboot'] = result[0].defaultValues[0]
 
 					#requesting specific configState for bitlocker_suspend
-					result = backend.configState_getObjects(configId=config_id, objectId=self._config.get('global', 'host_id'))
+					result = backend.configState_getObjects(configId=config_id, objectId=self._config['global']['host_id'])
 					if result:
 						logger.debug("overriding suspend_bitlocker_on_reboot value %s to %s (configState)",
 										self._config['global']['suspend_bitlocker_on_reboot'],
