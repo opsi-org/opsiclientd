@@ -264,9 +264,13 @@ class Config(metaclass=Singleton):
 				self._config['action_processor']['run_as_user'] = 'pcpatch'
 
 			try:
-				logger.debug("confserver = %s", self.getConfigServiceUrls()[0])
+				confserver = "https://"+self._config.get('control_server', 'interface')+":"+self._config.get('control_server', 'port')
+				logger.debug("confserver = %s", confserver)
 
-				with JSONRPCBackend(username=self._config.get('global', 'host_id'), password=self._config.get('global', 'opsi_host_key'), address=self.getConfigServiceUrls()[0], application='opsiclientd config request') as backend:
+				with JSONRPCBackend(username=self._config.get('global', 'host_id'),
+										password=self._config.get('global', 'opsi_host_key'),
+										address=confserver,
+										application='opsiclientd config request') as backend:
 					config_id = "opsiclientd.global.suspend_bitlocker_on_reboot"
 
 					#requesting general config for bitlocker_suspend
