@@ -262,35 +262,6 @@ class Config(metaclass=Singleton):
 			
 			if sys.getwindowsversion()[0] == 5:
 				self._config['action_processor']['run_as_user'] = 'pcpatch'
-
-			try:
-				confserver = "https://"+self._config['control_server']['interface']+":"+str(self._config['control_server']['port'])
-				logger.debug("confserver = %s", confserver)
-
-				with JSONRPCBackend(username=self._config['global']['host_id'],
-										password=self._config['global']['opsi_host_key'],
-										address=confserver,
-										application='opsiclientd config request') as backend:
-					config_id = "opsiclientd.global.suspend_bitlocker_on_reboot"
-
-					#requesting general config for bitlocker_suspend
-					result = backend.config_getObjects(id=config_id)
-					if result:
-						logger.debug("overriding suspend_bitlocker_on_reboot value %s to %s (config)",
-										self._config['global']['suspend_bitlocker_on_reboot'],
-										result[0].defaultValues[0])
-						self._config['global']['suspend_bitlocker_on_reboot'] = result[0].defaultValues[0]
-
-					#requesting specific configState for bitlocker_suspend
-					result = backend.configState_getObjects(configId=config_id, objectId=self._config['global']['host_id'])
-					if result:
-						logger.debug("overriding suspend_bitlocker_on_reboot value %s to %s (configState)",
-										self._config['global']['suspend_bitlocker_on_reboot'],
-										result[0].defaultValues[0])
-						self._config['global']['suspend_bitlocker_on_reboot'] = result[0].values[0]
-			except ValueError as e:
-				logger.error("Could not access config or configState suspend_bitlocker_on_reboot from backend.")
-
 		else:
 			sslCertDir = os.path.join('/etc', 'opsi-client-agent')
 
@@ -698,6 +669,7 @@ class Config(metaclass=Singleton):
 				'clientconfig.depot.drive',
 				'clientconfig.depot.id',
 				'clientconfig.depot.user',
+				'clientconfig.suspend_bitlocker_on_reboot',
 				'opsiclientd.*'  # everything starting with opsiclientd.
 			]
 		}
@@ -718,6 +690,9 @@ class Config(metaclass=Singleton):
 				self.set('depot_server', 'depot_id', configState.values[0])
 			elif configState.configId == u'clientconfig.depot.user':
 				self.set('depot_server', 'username', configState.values[0])
+			elif configState.configId == u'clientconfig.suspend_bitlocker_on_reboot':
+				self.set('global', 'suspend_bitlocker_on_reboot', configState.values[0])
+
 			elif configState.configId.startswith(u'opsiclientd.'):
 				try:
 					parts = configState.configId.lower().split('.')
