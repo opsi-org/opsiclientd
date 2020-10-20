@@ -117,7 +117,9 @@ class OpsiclientdNT(Opsiclientd):
 			logger.error("Failed to suspend bitlocker: %s", e)
 	
 	def rebootMachine(self, waitSeconds=3):
+		logger.devel("rebootMachine NT called")
 		if config.get('global', 'suspend_bitlocker_on_reboot'):
+			logger.devel("call suspendBitlocker")
 			self.suspendBitlocker()
 		super().rebootMachine(waitSeconds)
 
