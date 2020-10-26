@@ -1,7 +1,14 @@
 
 body {
-	font-family: verdana, arial;
 	font-size: 12px;
+	width: calc(100vw - 10px);
+	height: calc(100vh - 10px);
+	margin: 0px;
+	padding: 0px;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 12px;
+	background-color: #eeeeee;
+	color: #3a3a3a;
 }
 
 #title {
@@ -206,3 +213,34 @@ div.swondemand-summary-message-box {
 	font-size: 120%;
 }
 
+/* Log viewer */
+.LEVEL_SECRET { color: #795b00; }
+.LEVEL_TRACE { color: #636d6e; }
+.LEVEL_DEBUG { color: #94a3a5; }
+.LEVEL_INFO { color: #eeeeee; }
+.LEVEL_NOTICE { color: #859900; }
+.LEVEL_WARNING { color: #b58900; }
+.LEVEL_ERROR { color: #dc322b; }
+.LEVEL_CRITICAL { color: #c74b16; }
+.LEVEL_ESSENTIAL { color: #2aa198; }
+
+#log-settings {
+	margin: 15px 0px 0px 10px;
+}
+
+#log-container {
+	width: 100%;
+	height: calc(100% - 40px);
+	margin: 10px;
+	overflow: scroll;
+	/*line-height: 0.9;*/
+	background-color: black;
+	color:white;
+}
+.log-line {
+	display: inline-table;
+	font-family: monospace;
+	white-space: pre;
+	clear: both;
+	float: left;
+}
