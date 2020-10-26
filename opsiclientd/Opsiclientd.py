@@ -634,7 +634,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			self.clearRebootRequest()
 
 	def rebootMachine(self, waitSeconds=3):
-		logger.devel("rebootMachine NT called")
+		logger.error("rebootMachine has been called (for DEBUG!)")
 		self._isRebootTriggered = True
 		self.clearRebootRequest()
 		System.reboot(wait=waitSeconds)
