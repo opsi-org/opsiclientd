@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>opsiclientd</title>
+	<link rel="stylesheet" href="opsiclientd.css" />
+	<script src="/javascript/log_viewer.js"></script>
+	<script src="/javascript/msgpack.js"></script>
+</head>
+<body>
+	<script>
+		startLog();
+	</script>
+	<!--
+	<label for="log-channel">Log channel:</label>
+	<select id="log-channel">
+		<option value="">*all</option>
+	</select>
+	-->
+	<div id="log-settings">
+		Font size:
+		<button id="decrease-font-size" onclick="change_font_size(-1);">-</button>
+		<button id="increase-font-size" onclick="change_font_size(+1);">+</button>
+	</div>
+	<div id="log-container" style="font-size: 14px;" />
+</body>
+</html>
