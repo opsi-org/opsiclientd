@@ -83,10 +83,7 @@ def opsiclientd_factory():
 	if windowsVersion.major == 5:  # NT5: XP
 		return OpsiclientdNT5()
 	elif windowsVersion.major >= 6:  # NT6: Vista / Windows7 and later
-		if windowsVersion.minor >= 3:  # Windows8.1 or newer
-			return OpsiclientdNT63()
-		else:
-			return OpsiclientdNT6()
+		return OpsiclientdNT6()
 	raise Exception(f"Windows version {windowsVersion} not supported")
 
 
@@ -220,19 +217,6 @@ class RebootThread(threading.Thread):
 class OpsiclientdNT6(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
-
-
-class OpsiclientdNT63(OpsiclientdNT):
-	"OpsiclientdNT for Windows NT 6.3 - Windows >= 8.1"
-
-	def rebootMachine(self):
-		self._isRebootTriggered = True
-		self.clearRebootRequest()
-		logger.debug("Sleeping 3 seconds before reboot to avoid hanging.")
-		for _ in range(10):
-			time.sleep(0.3)
-		logger.debug("Finished sleeping.")
-		System.reboot(3)
 
 
 class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
