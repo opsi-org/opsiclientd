@@ -22,6 +22,8 @@ python-opsi = "^4.2.0.39"
 pywin32 = {platform = "win32", version = "^227"}
 wmi = {platform = "win32", version = "^1.5.1"}
 distro = {platform = "linux", version = "^1.5.0"}
+autobahn = "^20.7.1"
+msgpack = "^1.0.0"
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.5.0"
