@@ -40,11 +40,14 @@ import email
 import tempfile
 import platform
 import subprocess
+import msgpack
 
 from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
 from twisted.web.static import File
 from twisted.web import resource, server, http, http_headers
+from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
+from autobahn.twisted.resource import WebSocketResource
 
 from OPSI import System
 from OPSI.Util.Log import truncateLogData
@@ -235,6 +238,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 			raise OpsiAuthenticationError("Forbidden: %s" % forceUnicode(e))
 		
 		# Auth ok
+		self.session.authenticated = True
 		try:
 			del self.service.authFailureCount[self.request.getClientIP()]
 		except KeyError:
@@ -537,6 +541,14 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root.putChild(b"kiosk", ResourceKioskJsonRpc(self))
 		self._root.putChild(b"upload", ResourceOpsiclientdUpload(self))
 
+		log_ws_factory = WebSocketServerFactory()
+		log_ws_factory.protocol = LogWebSocketServerProtocol
+		log_ws_factory.control_server = self
+		log_ws_resource = WebSocketResource(log_ws_factory)
+		ws = resource.Resource()
+		ws.putChild(b"log_viewer", WebSocketResource(log_ws_factory))
+		self._root.putChild(b"ws", ws)
+
 	def __repr__(self):
 		return (
 			'<ControlServer(opsiclientd={opsiclientd}, httpsPort={port}, '
@@ -550,6 +562,53 @@ class ControlServer(OpsiService, threading.Thread):
 			)
 		)
 
+class RequestAdapter():
+	def __init__(self, connection_request):
+		self.connection_request = connection_request
+	
+	def __getattr__(self, name):
+		return getattr(self.connection_request, name)
+
+	def getClientIP(self):
+		return self.connection_request.peer.split(":")[1]
+
+	def getAllHeaders(self):
+		return self.connection_request.headers
+	
+	def getHeader(self, name):
+		return self.connection_request.headers.get(name)
+
+class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
+	def onConnect(self, request):
+		self.service = self.factory.control_server
+		self.request = RequestAdapter(request)
+		logger.devel("Client connecting: {}".format(self.request.peer))
+		self._getSession(None)
+		if not self.session or not self.session.authenticated:
+			logger.error("No valid session supplied")
+			raise OpsiAuthenticationError("Forbidden")
+
+	def onOpen(self):
+		logger.devel("WebSocket connection open.")
+		record = msgpack.packb({
+			"created": time.time(),
+			"context": {},
+			"levelname": "info",
+			"opsilevel": 6,
+			"msg": "Log message",
+			"exc_text": None
+		})
+		self.sendMessage(record, True)
+
+	def onMessage(self, payload, isBinary):
+		if isBinary:
+			logger.devel("Binary message received: {} bytes".format(len(payload)))
+		else:
+			logger.devel("Text message received: {}".format(payload.decode('utf8')))
+		self.sendMessage(payload, isBinary)
+
+	def onClose(self, wasClean, code, reason):
+		logger.info("WebSocket connection closed: %s", reason)
 
 class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def __init__(self, opsiclientd):
