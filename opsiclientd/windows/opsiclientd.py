@@ -96,7 +96,7 @@ class OpsiclientdNT(Opsiclientd):
 		logger.notice("Suspending bitlocker for one reboot if active")
 		try:
 			result = System.execute(
-				"powershell.exe -ExecutionPolicy Bypass -Command \"(manage-bde -status) -or (Get-BitLockerVolume | Suspend-BitLocker -RebootCount 1)\"",
+				"powershell.exe -ExecutionPolicy Bypass -Command \"if (Get-BitLockerVolume) {Get-BitLockerVolume | Suspend-BitLocker -RebootCount 1}\"",
 				captureStderr=True,
 				waitForEnding=True
 			)
