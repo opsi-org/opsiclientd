@@ -595,12 +595,14 @@ class LogReaderThread(threading.Thread):
 		self.send_time = 0
 	
 	def send_buffer(self):
+		if not self.buffer:
+			return
 		self.websocket_protocol.sendMessage(self.buffer, True)
 		self.send_time = time.time()
 		self.buffer = b""
 	
 	def send_buffer_if_needed(self):
-		if len(self.buffer) > self.max_buffer_size or time.time() - self.send_time > self.max_delay:
+		if self.buffer and len(self.buffer) > self.max_buffer_size or time.time() - self.send_time > self.max_delay:
 			self.send_buffer()
 	
 	def parse_log_line(self, line):
@@ -610,7 +612,7 @@ class LogReaderThread(threading.Thread):
 		context = {}
 		cnum = 0
 		for val in match.group(3).split(","):
-			context[cnum] = val
+			context[cnum] = val.strip()
 		opsilevel = int(match.group(1))
 		lvl = logging._opsiLevelToLevel[opsilevel]
 		levelname = logging._levelToName[lvl]
@@ -656,26 +658,22 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
 		self.request = RequestAdapter(request)
 		self.log_reader_thread = None
 
-		logger.devel("Client connecting: {}".format(self.request.peer))
+		logger.info("Client connecting to log websocket: {}".format(self.request.peer))
 		self._getSession(None)
 		if not self.session or not self.session.authenticated:
 			logger.error("No valid session supplied")
 			raise OpsiAuthenticationError("Forbidden")
 
 	def onOpen(self):
-		logger.devel("WebSocket connection open.")
+		logger.info("Log websocket connection opened.")
 		self.log_reader_thread = LogReaderThread(config.get("global", "log_file"), self)
 		self.log_reader_thread.start()
 	
 	def onMessage(self, payload, isBinary):
-		if isBinary:
-			logger.devel("Binary message received: {} bytes".format(len(payload)))
-		else:
-			logger.devel("Text message received: {}".format(payload.decode('utf8')))
-		self.sendMessage(payload, isBinary)
+		pass
 
 	def onClose(self, wasClean, code, reason):
-		logger.info("WebSocket connection closed: %s", reason)
+		logger.info("Log websocket connection closed: %s", reason)
 		if self.log_reader_thread:
 			self.log_reader_thread.stop()
 

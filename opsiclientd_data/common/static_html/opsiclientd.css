@@ -239,8 +239,15 @@ div.swondemand-summary-message-box {
 }
 .log-line {
 	display: inline-table;
-	font-family: monospace;
-	white-space: pre;
+	white-space: nowrap;
 	clear: both;
 	float: left;
+}
+.log-line-hidden {
+	display: none;
+}
+.log-line > span {
+	margin-right: 1em;
+	white-space: pre;
+	font-family: monospace;
 }

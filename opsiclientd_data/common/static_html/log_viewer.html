@@ -17,7 +17,13 @@
 	</select>
 	-->
 	<div id="log-settings">
-		Font size:
+		<label for="log-context-filter">Filter by context:</label>
+		<input id="log-context-filter" type="text" onchange="applyContextFilter(this.value);"/>
+
+		<label for="log-message-filter">Filter by message:</label>
+		<input id="log-message-filter" type="text" onchange="applyMessageFilter(this.value);"/>
+
+		<label>Font size:</label>
 		<button id="decrease-font-size" onclick="change_font_size(-1);">-</button>
 		<button id="increase-font-size" onclick="change_font_size(+1);">+</button>
 	</div>
