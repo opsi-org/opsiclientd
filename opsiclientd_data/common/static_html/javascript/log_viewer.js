@@ -41,16 +41,16 @@ function addRecordToLog(record) {
 	let elOpsiLevel = document.createElement('span');
 	elOpsiLevel.classList.add("log-record-opsilevel");
 	elOpsiLevel.classList.add("LEVEL_" + record.levelname);
-	elOpsiLevel.appendChild(document.createTextNode("[" + record.opsilevel + "]"));
+	elOpsiLevel.appendChild(document.createTextNode("[" + record.opsilevel + "] "));
 
 	let elDate = document.createElement('span');
 	elDate.classList.add("log-record-date");
 	elDate.classList.add("LEVEL_" + record.levelname);
-	elDate.appendChild(document.createTextNode("[" + time + "]"));
+	elDate.appendChild(document.createTextNode("[" + time + "] "));
 
 	let elContext = document.createElement('span');
 	elContext.classList.add("log-record-context");
-	elContext.appendChild(document.createTextNode("[" + context.padEnd(16, ' ') + "]"));
+	elContext.appendChild(document.createTextNode("[" + context.padEnd(16, ' ') + "] "));
 	
 	let elMessage = document.createElement('span');
 	elMessage.classList.add("log-record-message");

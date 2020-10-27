@@ -247,7 +247,6 @@ div.swondemand-summary-message-box {
 	display: none;
 }
 .log-line > span {
-	margin-right: 1em;
 	white-space: pre;
 	font-family: monospace;
 }
