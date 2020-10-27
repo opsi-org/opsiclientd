@@ -41,6 +41,8 @@ import tempfile
 import platform
 import subprocess
 import msgpack
+import datetime
+import logging
 
 from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
@@ -578,10 +580,82 @@ class RequestAdapter():
 	def getHeader(self, name):
 		return self.connection_request.headers.get(name)
 
+class LogReaderThread(threading.Thread):
+	line_regex = re.compile("^\[(\d)\]\s+\[([\d\-\:\. ]+)\]\s+\[([^\]]*)\]\s(.*)$")
+	max_delay = 0.2
+	max_buffer_size = 16*1024
+	
+	def __init__(self, filename, websocket_protocol):
+		super().__init__()
+		self.daemon = True
+		self.should_stop = False
+		self.filename = filename
+		self.websocket_protocol = websocket_protocol
+		self.buffer = b""
+		self.send_time = 0
+	
+	def send_buffer(self):
+		self.websocket_protocol.sendMessage(self.buffer, True)
+		self.send_time = time.time()
+		self.buffer = b""
+	
+	def send_buffer_if_needed(self):
+		if len(self.buffer) > self.max_buffer_size or time.time() - self.send_time > self.max_delay:
+			self.send_buffer()
+	
+	def parse_log_line(self, line):
+		match = self.line_regex.search(line.strip())
+		if not match:
+			return
+		context = {}
+		cnum = 0
+		for val in match.group(3).split(","):
+			context[cnum] = val
+		opsilevel = int(match.group(1))
+		lvl = logging._opsiLevelToLevel[opsilevel]
+		levelname = logging._levelToName[lvl]
+		created = datetime.datetime.strptime(match.group(2), "%Y-%m-%d %H:%M:%S.%f")
+		return {
+			"created": created.timestamp(),
+			"context": context,
+			"levelname": levelname,
+			"opsilevel": opsilevel,
+			"msg": match.group(4),
+			"exc_text": None
+		}
+	
+	def add_log_line(self, line):
+		if not line:
+			return
+		record = self.parse_log_line(line)
+		if record:
+			self.buffer += msgpack.packb(record)
+			self.send_buffer_if_needed()
+	
+	def stop(self):
+		self.should_stop = True
+	
+	def run(self):
+		with codecs.open(self.filename, "r", "utf-8") as f:
+			while not self.should_stop:
+				line = f.readline()
+				if not line:
+					break
+				self.add_log_line(line)
+			while not self.should_stop:
+				line = f.readline()
+				if not line:
+					self.send_buffer_if_needed()
+					time.sleep(0.1)
+					continue
+				self.add_log_line(line)
+	
 class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
 	def onConnect(self, request):
 		self.service = self.factory.control_server
 		self.request = RequestAdapter(request)
+		self.log_reader_thread = None
+
 		logger.devel("Client connecting: {}".format(self.request.peer))
 		self._getSession(None)
 		if not self.session or not self.session.authenticated:
@@ -590,16 +664,9 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
 
 	def onOpen(self):
 		logger.devel("WebSocket connection open.")
-		record = msgpack.packb({
-			"created": time.time(),
-			"context": {},
-			"levelname": "info",
-			"opsilevel": 6,
-			"msg": "Log message",
-			"exc_text": None
-		})
-		self.sendMessage(record, True)
-
+		self.log_reader_thread = LogReaderThread(config.get("global", "log_file"), self)
+		self.log_reader_thread.start()
+	
 	def onMessage(self, payload, isBinary):
 		if isBinary:
 			logger.devel("Binary message received: {} bytes".format(len(payload)))
@@ -609,6 +676,8 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
 
 	def onClose(self, wasClean, code, reason):
 		logger.info("WebSocket connection closed: %s", reason)
+		if self.log_reader_thread:
+			self.log_reader_thread.stop()
 
 class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def __init__(self, opsiclientd):
