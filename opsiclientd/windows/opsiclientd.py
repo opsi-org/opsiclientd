@@ -105,7 +105,9 @@ class OpsiclientdNT(Opsiclientd):
 	
 	def rebootMachine(self, waitSeconds=3):
 		if config.get('global', 'suspend_bitlocker_on_reboot'):
-			self.suspendBitlocker()
+			windowsVersion = sys.getwindowsversion()
+			if (windowsVersion.major == 6 and windowsVersion.minor >= 4) or windowsVersion.major > 6:	#Win10 and later
+				self.suspendBitlocker()
 		super().rebootMachine(waitSeconds)
 
 	def clearRebootRequest(self):
