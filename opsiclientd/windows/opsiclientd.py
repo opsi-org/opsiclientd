@@ -98,7 +98,8 @@ class OpsiclientdNT(Opsiclientd):
 			result = System.execute(
 				"powershell.exe -ExecutionPolicy Bypass -Command \"if (Get-BitLockerVolume) {Get-BitLockerVolume | Suspend-BitLocker -RebootCount 1}\"",
 				captureStderr=True,
-				waitForEnding=True
+				waitForEnding=True,
+				timeout=20
 			)
 		except Exception as e:
 			logger.error("Failed to suspend bitlocker: %s", e, exc_info=True)
