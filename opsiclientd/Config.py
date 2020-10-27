@@ -668,6 +668,7 @@ class Config(metaclass=Singleton):
 				'clientconfig.depot.drive',
 				'clientconfig.depot.id',
 				'clientconfig.depot.user',
+				'clientconfig.suspend_bitlocker_on_reboot',
 				'opsiclientd.*'  # everything starting with opsiclientd.
 			]
 		}
@@ -688,6 +689,9 @@ class Config(metaclass=Singleton):
 				self.set('depot_server', 'depot_id', configState.values[0])
 			elif configState.configId == u'clientconfig.depot.user':
 				self.set('depot_server', 'username', configState.values[0])
+			elif configState.configId == u'clientconfig.suspend_bitlocker_on_reboot':
+				self.set('global', 'suspend_bitlocker_on_reboot', configState.values[0])
+
 			elif configState.configId.startswith(u'opsiclientd.'):
 				try:
 					parts = configState.configId.lower().split('.')
