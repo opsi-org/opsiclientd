@@ -5,6 +5,7 @@ var MAX_LOG_LINES = 5000;
 var ws;
 var contextFilterRegex = null;
 var messageFilterRegex = null;
+var levelFilter = 9;
 var logLineId = 0;
 
 function addRecordToLog(record) {
@@ -60,7 +61,10 @@ function addRecordToLog(record) {
 	div.appendChild(elDate);
 	div.appendChild(elContext);
 	div.appendChild(elMessage);
-	if (contextFilterRegex && (!elContext.innerText.match(contextFilterRegex))) {
+	if (levelFilter && record.opsilevel > levelFilter) {
+		div.classList.add("log-line-hidden");
+	}
+	else if (contextFilterRegex && (!elContext.innerText.match(contextFilterRegex))) {
 		div.classList.add("log-line-hidden");
 	}
 	else if (messageFilterRegex && (!elMessage.innerText.match(messageFilterRegex))) {
@@ -80,7 +84,7 @@ function applyContextFilter(filter=null) {
 		contextFilterRegex = new RegExp(filter, 'i');
 	}
 	else {
-		contextFilterRegex = null;
+		contextFilterRegex = null;	startLog();
 	}
 	applyFilter();
 }
@@ -95,9 +99,28 @@ function applyMessageFilter(filter=null) {
 	applyFilter();
 }
 
+function applyLevelFilter(filter=null) {
+	if (filter) {
+		levelFilter = parseInt(filter);
+		if (levelFilter < 1) levelFilter = 1;
+		else if (levelFilter > 9) levelFilter = 9; 
+	}
+	else {
+		levelFilter = null;
+	}
+	applyFilter();
+}
+
 function applyFilter() {
 	let container = document.getElementById("log-container");
 	let filteredIds = [];
+	if (levelFilter && levelFilter < 9) {
+		container.querySelectorAll(".log-record-opsilevel").forEach(function(el) {
+			if (parseInt(el.innerText.replace(/\D/g, '')) > levelFilter && !filteredIds.includes(el.parentElement.id)) {
+				filteredIds.push(el.parentElement.id);
+			}
+		});
+	}
 	if (contextFilterRegex) {
 		container.querySelectorAll(".log-record-context").forEach(function(el) {
 			if (!el.innerText.match(contextFilterRegex) && !filteredIds.includes(el.parentElement.id)) {
@@ -168,9 +191,13 @@ function startLog() {
 		
 	};
 	
-	ws.onclose = function() {
+	ws.onclose = function(event) {
 		// websocket is closed.
 		console.log("Websocket conection closed");
+		if (event.code == 4401) {
+			document.getElementById("log-container").innerHTML =
+				`<div class="LEVEL_ERROR" style="margin: 10px; font-size: 20px">${event.reason}</div>`;
+		}
 	};
 }
 

@@ -583,7 +583,7 @@ class RequestAdapter():
 class LogReaderThread(threading.Thread):
 	line_regex = re.compile("^\[(\d)\]\s+\[([\d\-\:\. ]+)\]\s+\[([^\]]*)\]\s(.*)$")
 	max_delay = 0.2
-	max_buffer_size = 16*1024
+	max_buffer_size = 64*1024
 	
 	def __init__(self, filename, websocket_protocol):
 		super().__init__()
@@ -660,14 +660,17 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
 
 		logger.info("Client connecting to log websocket: {}".format(self.request.peer))
 		self._getSession(None)
-		if not self.session or not self.session.authenticated:
-			logger.error("No valid session supplied")
-			raise OpsiAuthenticationError("Forbidden")
 
 	def onOpen(self):
 		logger.info("Log websocket connection opened.")
-		self.log_reader_thread = LogReaderThread(config.get("global", "log_file"), self)
-		self.log_reader_thread.start()
+		if not self.session or not self.session.authenticated:
+			logger.error("No valid session supplied")
+			#self.sendMessage(json.dumps({'cmd': 'AUTHENTICATION_REQUIRED'}))
+			# raise OpsiAuthenticationError("Forbidden")
+			self.sendClose(code=4401, reason="Unauthorized")
+		else:
+			self.log_reader_thread = LogReaderThread(config.get("global", "log_file"), self)
+			self.log_reader_thread.start()
 	
 	def onMessage(self, payload, isBinary):
 		pass
