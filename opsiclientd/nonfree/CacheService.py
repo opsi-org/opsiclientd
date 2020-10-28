@@ -164,6 +164,7 @@ class CacheService(threading.Thread):
 				time.sleep(1)
 
 	def productCacheCompleted(self, configService, productIds):
+		logger.debug("productCacheCompleted: configService=%s productIds=%s", configService, productIds)
 		if not productIds:
 			return True
 
@@ -173,6 +174,7 @@ class CacheService(threading.Thread):
 				clientIds=[config.get('global', 'host_id')],
 				masterOnly=True,
 				productIds=productIds)
+		logger.trace("productCacheCompleted: clientToDepotservers=%s", clientToDepotservers)
 		if not clientToDepotservers:
 			# Do not raise Exception and try to continue without checking depot
 			depotId = None
@@ -184,6 +186,10 @@ class CacheService(threading.Thread):
 			for productOnDepot
 			in configService.productOnDepot_getObjects(depotId=depotId, productId=productIds)
 		}
+		logger.trace("productCacheCompleted: productOnDepots=%s", productOnDepots)
+
+		pcsState = self._productCacheService.getState()
+		logger.trace("productCacheCompleted: productCacheService state=%s", pcsState)
 
 		for productId in productIds:
 			try:
@@ -192,7 +198,7 @@ class CacheService(threading.Thread):
 				# TODO: raise more specific exception
 				raise Exception(f"Product '{productId}' not available on depot '{depotId}'")
 
-			productState = self._productCacheService.getState().get('products', {}).get(productId)
+			productState = pcsState.get('products', {}).get(productId)
 			if not productState:
 				logger.info("No products cached")
 				return False
