@@ -121,9 +121,15 @@ class Opsiclientd(EventListener, threading.Thread):
 		filename = url.split('/')[-1]
 		with tempfile.TemporaryDirectory() as tmpdir:
 			filename = os.path.join(tmpdir, filename)
-			with urllib.request.urlopen(url) as response:
-				with open(filename, 'wb') as f:
-					f.write(response.read())
+			if url.startswith("file://"):
+				src = url[7:]
+				if RUNNING_ON_WINDOWS:
+					src = src.lstrip('/').replace('/', '\\')
+				shutil.copy(src, filename)
+			else:
+				with urllib.request.urlopen(url) as response:
+					with open(filename, 'wb') as f:
+						f.write(response.read())
 			self.self_update_from_file(filename)
 	
 	def self_update_from_file(self, filename):
