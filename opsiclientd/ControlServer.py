@@ -638,7 +638,7 @@ class LogReaderThread(threading.Thread):
 		self.should_stop = True
 	
 	def run(self):
-		with codecs.open(self.filename, "r", "utf-8") as f:
+		with codecs.open(self.filename, "r", encoding="utf-8", errors="replace") as f:
 			while not self.should_stop:
 				line = f.readline()
 				if not line:
