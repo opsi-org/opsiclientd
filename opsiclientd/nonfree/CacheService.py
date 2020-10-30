@@ -189,7 +189,8 @@ class CacheService(threading.Thread):
 		logger.trace("productCacheCompleted: productOnDepots=%s", productOnDepots)
 
 		pcsState = self._productCacheService.getState()
-		logger.trace("productCacheCompleted: productCacheService state=%s", pcsState)
+		logger.debug("productCacheCompleted: productCacheService state=%s", pcsState)
+		productCacheState = pcsState.get('products', {})
 
 		for productId in productIds:
 			try:
@@ -198,14 +199,21 @@ class CacheService(threading.Thread):
 				# TODO: raise more specific exception
 				raise Exception(f"Product '{productId}' not available on depot '{depotId}'")
 
-			productState = pcsState.get('products', {}).get(productId)
+			productState = productCacheState.get(productId)
 			if not productState:
-				logger.info("No products cached")
+				logger.info(
+					"Caching of product '%s_%s-%s' not yet started",
+					productId, productOnDepot.productVersion, productOnDepot.packageVersion
+				)
 				return False
 
-			if not productState.get('completed') or (productState.get('productVersion') != productOnDepot.productVersion) or (productState.get('packageVersion') != productOnDepot.packageVersion):
+			if (
+				not productState.get('completed') or
+				(productState.get('productVersion') != productOnDepot.productVersion) or
+				(productState.get('packageVersion') != productOnDepot.packageVersion)
+			):
 				logger.info(
-					"Product '%s_%s-%s' not yet cached (got state: %s)",
+					"Caching of product '%s_%s-%s' not yet completed (got state: %s)",
 					productId, productOnDepot.productVersion, productOnDepot.packageVersion, productState
 				)
 				return False
