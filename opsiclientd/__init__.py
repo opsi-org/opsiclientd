@@ -34,8 +34,10 @@ import argparse
 import opsicommon.logging
 from opsicommon.logging import logger, logging_config, LOG_NONE, LOG_DEBUG, LOG_ERROR, LOG_NOTICE
 from OPSI import __version__ as python_opsi_version
+from OPSI.System import execute
 
 from opsiclientd.Config import Config
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 DEFAULT_STDERR_LOG_FORMAT = "%(log_color)s[%(opsilevel)d] [%(asctime)s.%(msecs)03d]%(reset)s [%(contextstring)-40s] %(message)s   (%(filename)s:%(lineno)d)"
 DEFAULT_FILE_LOG_FORMAT = DEFAULT_STDERR_LOG_FORMAT.replace("%(log_color)s", "").replace("%(reset)s", "")
@@ -94,3 +96,14 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 		opsicommon.logging.set_filter_from_string(log_filter)
 	
 	logger.essential("Log file %s started", log_file)
+
+def check_signature(binary):
+	if not RUNNING_ON_WINDOWS:
+		return True		#Not yet implemented
+
+	cmd = f"signtool verify /pa '{binary}'"
+	result = execute(cmd)
+	logger.debug(result)
+	if re.search(r".*Successfully verified:", result):
+		return True
+	raise ValueError("Invalid Signature!")

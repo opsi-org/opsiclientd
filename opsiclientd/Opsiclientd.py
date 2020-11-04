@@ -153,8 +153,12 @@ class Opsiclientd(EventListener, threading.Thread):
 						break
 			if not bin_dir:
 				raise RuntimeError("Invalid archive")
+
 			
 			binary = os.path.join(bin_dir, os.path.basename(sys.argv[0]))
+
+			check_signature(binary)		#TODO: also check opsiclientd_rpc.exe actionprocessor.exe?
+
 			logger.info("Testing new binary: %s", binary)
 			out = subprocess.check_output([binary, "--version"])
 			logger.info(out)
