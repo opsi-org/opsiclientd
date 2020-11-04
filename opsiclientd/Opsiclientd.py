@@ -204,7 +204,6 @@ class Opsiclientd(EventListener, threading.Thread):
 				)
 
 			if not self._blockLoginNotifierPid and config.get('global', 'block_login_notifier'):
-				# TODO: System.getActiveConsoleSessionId() is missing on Linux
 				if RUNNING_ON_WINDOWS:
 					logger.info(u"Starting block login notifier app")
 					sessionId = System.getActiveConsoleSessionId()
