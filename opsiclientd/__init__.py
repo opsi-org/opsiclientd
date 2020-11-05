@@ -104,10 +104,10 @@ def check_signature(binary):
 
 	windowsVersion = sys.getwindowsversion()
 	if windowsVersion.major < 6 or (windowsVersion.major == 6 and windowsVersion.minor < 4):
-		return True		# Get-AuthenticodeSignature is only definde for versions since 2016
+		return True		# Get-AuthenticodeSignature is only defined for versions since 2016
 
 	#cmd = f"signtool verify /pa '{binary}'"
-	cmd = f'powershell.exe -ExecutionPolicy Bypass -Command "(Get-AuthenticodeSignature \'{binary}\').Status -eq \'Valid\'"',
+	cmd = f'powershell.exe -ExecutionPolicy Bypass -Command \"(Get-AuthenticodeSignature "{binary}").Status -eq "Valid"\"'
 
 	result = execute(cmd, captureStderr=True, waitForEnding=True, timeout=20)
 	logger.debug(result)
