@@ -98,14 +98,20 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 	logger.essential("Log file %s started", log_file)
 
 def check_signature(binary):
-	logger.devel("check_signature is called")
+	logger.info("check_signature is called")
 	if not RUNNING_ON_WINDOWS:
 		return True		#Not yet implemented
 
-	cmd = f"signtool verify /pa '{binary}'"
-	result = execute(cmd)
+	windowsVersion = sys.getwindowsversion()
+	if windowsVersion.major < 6 or (windowsVersion.major == 6 and windowsVersion.minor < 4):
+		return True		# Get-AuthenticodeSignature is only definde for versions since 2016
+
+	#cmd = f"signtool verify /pa '{binary}'"
+	cmd = f"powershell.exe -ExecutionPolicy Bypass -Command \"(Get-AuthenticodeSignature {binary}).Status -eq 'Valid'\"",
+
+	result = execute(cmd, captureStderr=True, waitForEnding=True, timeout=20)
 	logger.debug(result)
-	if re.search(r".*Successfully verified:", result):
+	if re.search(r"True", result):
 		logger.debug("Successfully verified %s", binary)
 		return True
 	raise ValueError("Invalid Signature!")
