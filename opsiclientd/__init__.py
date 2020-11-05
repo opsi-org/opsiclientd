@@ -111,7 +111,7 @@ def check_signature(binary):
 
 	result = execute(cmd, captureStderr=True, waitForEnding=True, timeout=20)
 	logger.debug(result)
-	if re.search(r"True", result):
-		logger.debug("Successfully verified %s", binary)
+	if "True" in result:
+		logger.notice("Successfully verified %s", binary)
 		return True
 	raise ValueError("Invalid Signature!")
