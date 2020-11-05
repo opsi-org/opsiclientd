@@ -51,7 +51,7 @@ from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 from OPSI import __version__ as python_opsi_version
 
-from opsiclientd import __version__, config
+from opsiclientd import __version__, config, check_signature
 from opsiclientd.Config import Config
 from opsiclientd.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from opsiclientd.ControlServer import ControlServer
