@@ -98,6 +98,7 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 	logger.essential("Log file %s started", log_file)
 
 def check_signature(binary):
+	logger.devel("check_signature is called")
 	if not RUNNING_ON_WINDOWS:
 		return True		#Not yet implemented
 
@@ -105,5 +106,6 @@ def check_signature(binary):
 	result = execute(cmd)
 	logger.debug(result)
 	if re.search(r".*Successfully verified:", result):
+		logger.debug("Successfully verified %s", binary)
 		return True
 	raise ValueError("Invalid Signature!")
