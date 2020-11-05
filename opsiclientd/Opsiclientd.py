@@ -154,7 +154,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			if not bin_dir:
 				raise RuntimeError("Invalid archive")
 
-				binary = os.path.join(bin_dir, os.path.basename(sys.argv[0]))
+			binary = os.path.join(bin_dir, os.path.basename(sys.argv[0]))
 				
 			try:
 				check_signature(binary)		#TODO: also check opsiclientd_rpc.exe actionprocessor.exe?
