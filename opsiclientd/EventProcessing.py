@@ -345,7 +345,7 @@ None otherwise.
 			return self._startNotifierApplicationPosix(command, notifierId)
 
 	def _startNotifierApplicationWindows(self, command, desktop=None, notifierId=None):
-		logger.notice(u"Starting notifier application in session '%s'", self.getSessionId())
+		logger.notice(u"Starting notifier application in session '%s' on desktop '%s'", self.getSessionId(), desktop)
 		try:
 			pid = self.runCommandInSession(
 				command = command.replace('%port%', forceUnicode(self.notificationServerPort)).replace('%id%', forceUnicode(notifierId)),
@@ -359,7 +359,7 @@ None otherwise.
 		"""
 		Starting the notifier application on POSIX systems.
 		"""
-		logger.notice(u"Starting notifier application in session '%s'", self.getSessionId())
+		logger.notice(u"Starting notifier application in session '%s' on desktop '%s'", self.getSessionId(), desktop)
 		try:
 			pid = self.runCommandInSession(
 				# TODO: put the replacing into an command itself.
