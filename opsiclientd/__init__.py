@@ -24,7 +24,7 @@ opsiclientd Library.
 :license: GNU Affero General Public License version 3
 """
 
-__version__ = '4.2.0.33'
+__version__ = '4.2.0.36'
 
 import os
 import sys
@@ -34,8 +34,10 @@ import argparse
 import opsicommon.logging
 from opsicommon.logging import logger, logging_config, LOG_NONE, LOG_DEBUG, LOG_ERROR, LOG_NOTICE
 from OPSI import __version__ as python_opsi_version
+from OPSI.System import execute
 
 from opsiclientd.Config import Config
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 DEFAULT_STDERR_LOG_FORMAT = "%(log_color)s[%(opsilevel)d] [%(asctime)s.%(msecs)03d]%(reset)s [%(contextstring)-40s] %(message)s   (%(filename)s:%(lineno)d)"
 DEFAULT_FILE_LOG_FORMAT = DEFAULT_STDERR_LOG_FORMAT.replace("%(log_color)s", "").replace("%(reset)s", "")
@@ -94,3 +96,24 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 		opsicommon.logging.set_filter_from_string(log_filter)
 	
 	logger.essential("Log file %s started", log_file)
+
+def check_signature(bin_dir):
+	logger.info("check_signature is called")
+	if not RUNNING_ON_WINDOWS:
+		return		#Not yet implemented
+
+	windowsVersion = sys.getwindowsversion()
+	if windowsVersion.major < 6 or (windowsVersion.major == 6 and windowsVersion.minor < 4):
+		return		# Get-AuthenticodeSignature is only defined for versions since 2016
+
+	binary_list = [os.path.join(bin_dir, "opsiclientd.exe"),
+					os.path.join(bin_dir, "opsiclientd_rpc.exe"),
+					os.path.join(bin_dir, "action_processor_starter.exe")]
+	for binary in binary_list:
+		cmd = f'powershell.exe -ExecutionPolicy Bypass -Command \"(Get-AuthenticodeSignature \'{binary}\').Status -eq \'Valid\'\"'
+
+		result = execute(cmd, captureStderr=True, waitForEnding=True, timeout=20)
+		logger.debug(result)
+		if not "True" in result:
+			raise ValueError(f"Invalid Signature of file {binary}")
+	logger.notice("Successfully verified %s", binary_list)

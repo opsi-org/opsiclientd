@@ -51,7 +51,7 @@ from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 from OPSI import __version__ as python_opsi_version
 
-from opsiclientd import __version__, config
+from opsiclientd import __version__, config, check_signature
 from opsiclientd.Config import Config
 from opsiclientd.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
 from opsiclientd.ControlServer import ControlServer
@@ -153,8 +153,16 @@ class Opsiclientd(EventListener, threading.Thread):
 						break
 			if not bin_dir:
 				raise RuntimeError("Invalid archive")
-			
+
+			try:
+				check_signature(bin_dir)
+			except Exception as e:
+				logger.error("Could not verify signature!\n%s", e, exc_info=True)
+				logger.error("Not performing self_update.")
+				raise RuntimeError("Invalid signature")
+
 			binary = os.path.join(bin_dir, os.path.basename(sys.argv[0]))
+
 			logger.info("Testing new binary: %s", binary)
 			out = subprocess.check_output([binary, "--version"])
 			logger.info(out)
