@@ -116,4 +116,4 @@ def check_signature(bin_dir):
 		logger.debug(result)
 		if not "True" in result:
 			raise ValueError(f"Invalid Signature of file {binary}")
-	logger.notice("Successfully verified %s", binary)
+	logger.notice("Successfully verified %s", binary_list)

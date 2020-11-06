@@ -158,8 +158,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				check_signature(bin_dir)
 			except Exception as e:
 				logger.error("Could not verify signature!\n%s", e, exc_info=True)
-				#logger.error("Not performing self_update.")
-				#raise RuntimeError("Invalid signature")
+				logger.error("Not performing self_update.")
+				raise RuntimeError("Invalid signature")
 
 			binary = os.path.join(bin_dir, os.path.basename(sys.argv[0]))
 
