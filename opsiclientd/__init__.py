@@ -97,7 +97,7 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 	
 	logger.essential("Log file %s started", log_file)
 
-def check_signature(binary):
+def check_signature(bin_dir):
 	logger.info("check_signature is called")
 	if not RUNNING_ON_WINDOWS:
 		return		#Not yet implemented
