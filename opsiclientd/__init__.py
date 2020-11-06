@@ -100,18 +100,20 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 def check_signature(binary):
 	logger.info("check_signature is called")
 	if not RUNNING_ON_WINDOWS:
-		return True		#Not yet implemented
+		return		#Not yet implemented
 
 	windowsVersion = sys.getwindowsversion()
 	if windowsVersion.major < 6 or (windowsVersion.major == 6 and windowsVersion.minor < 4):
-		return True		# Get-AuthenticodeSignature is only defined for versions since 2016
+		return		# Get-AuthenticodeSignature is only defined for versions since 2016
 
-	#cmd = f"signtool verify /pa '{binary}'"
-	cmd = f'powershell.exe -ExecutionPolicy Bypass -Command \"(Get-AuthenticodeSignature \'{binary}\').Status -eq \'Valid\'\"'
+	binary_list = [os.path.join(bin_dir, "opsiclientd.exe"),
+					os.path.join(bin_dir, "opsiclientd_rpc.exe",
+					os.path.join(bin_dir, "action_processor_starter.exe"]
+	for binary in binary_list:
+		cmd = f'powershell.exe -ExecutionPolicy Bypass -Command \"(Get-AuthenticodeSignature \'{binary}\').Status -eq \'Valid\'\"'
 
-	result = execute(cmd, captureStderr=True, waitForEnding=True, timeout=20)
-	logger.debug(result)
-	if "True" in result:
-		logger.notice("Successfully verified %s", binary)
-		return True
-	raise ValueError("Invalid Signature!")
+		result = execute(cmd, captureStderr=True, waitForEnding=True, timeout=20)
+		logger.debug(result)
+		if not "True" in result:
+			raise ValueError(f"Invalid Signature of file {binary}")
+	logger.notice("Successfully verified %s", binary)
