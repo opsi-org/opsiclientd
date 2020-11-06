@@ -1032,9 +1032,9 @@ None otherwise.
 		notifierPids = []
 		try:
 			if self.event.eventConfig.actionNotifierCommand:
-				desktops = ["winlogon", "default"]
-				if self.event.eventConfig.actionNotifierDesktop != "all":
-					desktops = [self.event.eventConfig.actionNotifierDesktop]
+				desktops = [self.event.eventConfig.actionNotifierDesktop]
+				if RUNNING_ON_WINDOWS and self.event.eventConfig.actionNotifierDesktop == "all":
+					desktops = ["winlogon", "default"]
 				for desktop in desktops:
 					notifierPids.append(
 						self.startNotifierApplication(
@@ -1182,9 +1182,9 @@ None otherwise.
 						self._notificationServer.addSubject(choiceSubject)
 						notifierPids = []
 
-						desktops = ["winlogon", "default"]
-						if self.event.eventConfig.shutdownNotifierDesktop != "all":
-							desktops = [self.event.eventConfig.shutdownNotifierDesktop]
+						desktops = [self.event.eventConfig.shutdownNotifierDesktop]
+						if RUNNING_ON_WINDOWS and self.event.eventConfig.shutdownNotifierDesktop == "all":
+							desktops = ["winlogon", "default"]
 						for desktop in desktops:
 							notifierPids.append(
 								self.startNotifierApplication(
@@ -1349,9 +1349,9 @@ None otherwise.
 						time.sleep(15)
 
 					if self.event.eventConfig.eventNotifierCommand:
-						desktops = ["winlogon", "default"]
-						if self.event.eventConfig.eventNotifierDesktop != "all":
-							desktops = [self.event.eventConfig.eventNotifierDesktop]
+						desktops = [self.event.eventConfig.eventNotifierDesktop]
+						if RUNNING_ON_WINDOWS and self.event.eventConfig.eventNotifierDesktop == "all":
+							desktops = ["winlogon", "default"]
 						for desktop in desktops:
 							notifierPids.append(
 								self.startNotifierApplication(
