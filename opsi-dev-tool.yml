@@ -32,7 +32,7 @@ pyinstaller-poetry:
         - opsiclientd
         - opsiclientd_rpc
         - action_processor_starter
-  icon: opsiclientd_data/common/static_html/favicon.ico
+  icon: opsiclientd_data/windows/opsi.ico
   before_script:
     linux:
       - "[ -e opsi-server ] && rm -rf opsi-server"
