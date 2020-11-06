@@ -107,8 +107,8 @@ def check_signature(binary):
 		return		# Get-AuthenticodeSignature is only defined for versions since 2016
 
 	binary_list = [os.path.join(bin_dir, "opsiclientd.exe"),
-					os.path.join(bin_dir, "opsiclientd_rpc.exe",
-					os.path.join(bin_dir, "action_processor_starter.exe"]
+					os.path.join(bin_dir, "opsiclientd_rpc.exe"),
+					os.path.join(bin_dir, "action_processor_starter.exe")]
 	for binary in binary_list:
 		cmd = f'powershell.exe -ExecutionPolicy Bypass -Command \"(Get-AuthenticodeSignature \'{binary}\').Status -eq \'Valid\'\"'
 
