@@ -1029,14 +1029,21 @@ None otherwise.
 			choiceSubject.setChoices([ _('Start now') ])
 			choiceSubject.setCallbacks( [ self.startActionCallback ] )
 		self._notificationServer.addSubject(choiceSubject)
-		notifierPid = None
+		notifierPids = []
 		try:
 			if self.event.eventConfig.actionNotifierCommand:
-				notifierPid = self.startNotifierApplication(
-						command    = self.event.eventConfig.actionNotifierCommand,
-						desktop    = self.event.eventConfig.actionNotifierDesktop,
-						notifierId = 'action')
-
+				desktops = ["winlogon", "default"]
+				if self.event.eventConfig.actionNotifierDesktop != "all":
+					desktops = [self.event.eventConfig.actionNotifierDesktop]
+				for desktop in desktops:
+					notifierPids.append(
+						self.startNotifierApplication(
+							command    = self.event.eventConfig.actionNotifierCommand,
+							desktop    = desktop,
+							notifierId = 'action'
+						)
+					)
+			
 			timeout = int(self.event.eventConfig.actionWarningTime)
 			endTime = time.time() + timeout
 			while (timeout > 0) and not self.actionCancelled and not self.waitCancelled:
@@ -1082,10 +1089,11 @@ None otherwise.
 				if self._notificationServer:
 					self._notificationServer.requestEndConnections(['action'])
 					self._notificationServer.removeSubject(choiceSubject)
-				if notifierPid:
+				if notifierPids:
 					try:
 						time.sleep(3)
-						System.terminateProcess(processId=notifierPid)
+						for notifierPid in notifierPids:
+							System.terminateProcess(processId=notifierPid)
 					except Exception:
 						pass
 
@@ -1172,12 +1180,20 @@ None otherwise.
 								choiceSubject.setChoices([ _('Shutdown now') ])
 							choiceSubject.setCallbacks( [ self.startShutdownCallback ] )
 						self._notificationServer.addSubject(choiceSubject)
-						notifierPid = self.startNotifierApplication(
-							command    = self.event.eventConfig.shutdownNotifierCommand,
-							desktop    = self.event.eventConfig.shutdownNotifierDesktop,
-							notifierId = 'shutdown'
-						)
-						
+						notifierPids = []
+
+						desktops = ["winlogon", "default"]
+						if self.event.eventConfig.shutdownNotifierDesktop != "all":
+							desktops = [self.event.eventConfig.shutdownNotifierDesktop]
+						for desktop in desktops:
+							notifierPids.append(
+								self.startNotifierApplication(
+									command    = self.event.eventConfig.shutdownNotifierCommand,
+									desktop    = desktop,
+									notifierId = 'shutdown'
+								)
+							)
+
 						timeout = int(self.event.eventConfig.shutdownWarningTime)
 						endTime = time.time() + timeout
 						while (timeout > 0) and not self.shutdownCancelled and not self.shutdownWaitCancelled:
@@ -1204,10 +1220,11 @@ None otherwise.
 							if self._notificationServer:
 								self._notificationServer.requestEndConnections()
 								self._notificationServer.removeSubject(choiceSubject)
-							if notifierPid:
+							if notifierPids:
 								try:
 									time.sleep(3)
-									System.terminateProcess(processId=notifierPid)
+									for notifierPid in notifierPids:
+										System.terminateProcess(processId=notifierPid)
 								except Exception:
 									pass
 						except Exception as e:
@@ -1309,7 +1326,7 @@ None otherwise.
 				if not self.event.eventConfig.blockLogin:
 					self.opsiclientd.setBlockLogin(False)
 
-				notifierPid = None
+				notifierPids = []
 				try:
 					config.setTemporaryDepotDrive(None)
 					config.setTemporaryConfigServiceUrls([])
@@ -1332,10 +1349,17 @@ None otherwise.
 						time.sleep(15)
 
 					if self.event.eventConfig.eventNotifierCommand:
-						notifierPid = self.startNotifierApplication(
-							command    = self.event.eventConfig.eventNotifierCommand,
-							desktop    = self.event.eventConfig.eventNotifierDesktop,
-							notifierId = 'event')
+						desktops = ["winlogon", "default"]
+						if self.event.eventConfig.eventNotifierDesktop != "all":
+							desktops = [self.event.eventConfig.eventNotifierDesktop]
+						for desktop in desktops:
+							notifierPids.append(
+								self.startNotifierApplication(
+									command    = self.event.eventConfig.eventNotifierCommand,
+									desktop    = desktop,
+									notifierId = 'event'
+								)
+							)
 
 					if self.event.eventConfig.syncConfigToServer:
 						self.setStatusMessage( _(u"Syncing config to server") )
@@ -1440,10 +1464,11 @@ None otherwise.
 
 					self.setStatusMessage(u"")
 					self.stopNotificationServer()
-					if notifierPid:
+					if notifierPids:
 						try:
 							time.sleep(3)
-							System.terminateProcess(processId=notifierPid)
+							for notifierPid in notifierPids:
+								System.terminateProcess(processId=notifierPid)
 						except Exception:
 							pass
 			except Exception as e:
