@@ -101,6 +101,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		deleteObjects = []
 		updateObjects = []
 		for mo in modifiedObjects:
+			logger.debug("Processing modified object: %s", mo)
 			masterObj = masterObjects.get(mo['object'].getIdent())
 
 			command = mo['command'].lower()
@@ -149,6 +150,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 	def _updateMasterFromWorkBackend(self, modifications=[]):
 		modifiedObjects = collections.defaultdict(list)
+		logger.info("Updating master from work backend (%d modifications)", len(modifications))
 
 		for modification in modifications:
 			try:
@@ -196,6 +198,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					updateObj.targetConfiguration = None
 				return updateObj
 
+			logger.debug("Syncing modified ProductOnClients with master: %s", modifiedObjects['ProductOnClient'])
 			self._syncModifiedObjectsWithMaster(ProductOnClient, modifiedObjects['ProductOnClient'], {"clientId": self._clientId}, objectsDifferFunction, createUpdateObjectFunction, mergeObjectsFunction)
 
 		if 'LicenseOnClient' in modifiedObjects:
