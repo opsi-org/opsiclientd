@@ -922,11 +922,13 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					helper = None #os.path.join(config.get('global', 'base_dir'), 'utilities', 'getmsversioninfo.exe')
 					additionalProductId = System.getOpsiHotfixName(helper)
 					if "win10" in additionalProductId:
-						releaseId = System.getRegistryValue(
-							System.HKEY_LOCAL_MACHINE,
-							"SOFTWARE\\Microsoft\\Windows NT\CurrentVersion",
-							"ReleaseID"
-						)
+						releaseId = None
+						try:
+							subKey = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"
+							valueName = "ReleaseID"
+							releaseId = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, subKey, valueName)
+						except Exception as regErr:
+							logger.error("Failed to read registry value %s %s: %s", subKey, valueName, regErr)
 						#Setting default to 1507-Build
 						if not releaseId:
 							releaseId = "1507"
