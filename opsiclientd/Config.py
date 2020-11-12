@@ -331,7 +331,10 @@ class Config(metaclass=Singleton):
 		elif option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port', 'max_authentication_failures'):
 			value = forceInt(value)
 		elif option.endswith('_warning_time') or option.endswith('_user_cancelable'):
-			value = forceInt(value or 0)
+			try:
+				value = forceInt(value)
+			except ValueError:
+				value = 0
 		elif option in (
 			'create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment',
 			'active', 'sync_time_from_service', 'suspend_bitlocker_on_reboot', 'w10BitlockerSuspendOnReboot'
