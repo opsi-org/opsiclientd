@@ -359,7 +359,7 @@ None otherwise.
 		"""
 		Starting the notifier application on POSIX systems.
 		"""
-		logger.notice(u"Starting notifier application in session '%s' on desktop '%s'", self.getSessionId(), desktop)
+		logger.notice(u"Starting notifier application in session '%s'", self.getSessionId())
 		try:
 			pid = self.runCommandInSession(
 				# TODO: put the replacing into an command itself.
