@@ -30,7 +30,7 @@ from opsicommon.logging import logger, LOG_INFO
 from OPSI.Object import ProductOnClient
 from OPSI.Types import (
 	forceBool, forceInt, forceList, forceProductIdList, forceUnicode)
-from OPSI.Util import getPublicKey
+from OPSI.Util import getPublicKey, timestamp
 from OPSI.Util.File.Opsi import PackageContentFile
 from OPSI.Util.Repository import getRepository
 from OPSI.Util.Repository import (
@@ -1035,17 +1035,29 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				actionRequest = 'none'
 
 		if actionProgress and updateProductOnClient:
-			self._configService.productOnClient_updateObjects([
-				ProductOnClient(
+			poc = self._configService.productOnClient_getObjects(
+				productId=productId,
+				productType='LocalbootProduct',
+				clientId=config.get('global', 'host_id')
+			)
+			if poc:
+				poc = poc[0]
+			else:
+				poc = ProductOnClient(
 					productId=productId,
 					productType='LocalbootProduct',
-					clientId=config.get('global', 'host_id'),
-					actionProgress=actionProgress,
-					installationStatus=installationStatus,
-					actionResult=actionResult,
-					actionRequest=actionRequest
+					clientId=config.get('global', 'host_id')
 				)
-			])
+			poc.actionProgress = actionProgress
+			poc.installationStatus = installationStatus
+			poc.actionResult = actionResult
+			poc.actionRequest = actionRequest
+			if actionProgress in ('caching', 'cached'):
+				# Do not modify modificationTime, see CacheBackend ProductOnClient mergeObjectsFunction
+				pass
+			else:
+				poc.modificationTime = timestamp()
+			self._configService.productOnClient_updateObjects([poc])
 
 	def _getRepository(self, productId):
 		config.selectDepotserver(configService=self._configService, event=None, productIds=[productId], cifsOnly=False)
