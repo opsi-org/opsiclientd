@@ -1057,6 +1057,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				pass
 			else:
 				poc.modificationTime = timestamp()
+			logger.info("Updating productOnClient %s, modificationTime=%s", poc, poc.modificationTime)
 			self._configService.productOnClient_updateObjects([poc])
 
 	def _getRepository(self, productId):
