@@ -192,7 +192,9 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				return modifiedObj.clone(identOnly=False)
 
 			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):
-				snapshotProductIdents = sorted(snapshotBackend.product_getIdents(id=snapshotObj.productId))
+				snapshotProductIdents = sorted(
+					[product.ident for product in snapshotBackend.product_getObjects(["id"], id=snapshotObj.productId)]
+				)
 				masterProductIdents = sorted(masterBackend.product_getIdents(id=snapshotObj.productId))
 				
 				logger.info("Syncing ProductOnClient %s (product versions local=%s, server=%s)",
