@@ -1042,6 +1042,10 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			)
 			if poc:
 				poc = poc[0]
+				logger.info(
+					"Got productOnClient from service: %s, actionProgress=%s, actionResult=%s, modificationTime=%s",
+					poc, poc.actionProgress, poc.actionResult, poc.modificationTime
+				)
 			else:
 				poc = ProductOnClient(
 					productId=productId,
@@ -1052,12 +1056,13 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			poc.installationStatus = installationStatus
 			poc.actionResult = actionResult
 			poc.actionRequest = actionRequest
-			if actionProgress in ('caching', 'cached'):
-				# Do not modify modificationTime, see CacheBackend ProductOnClient mergeObjectsFunction
-				pass
-			else:
+			# Do not modify modificationTime, see CacheBackend ProductOnClient mergeObjectsFunction
+			if actionResult == "failed":
 				poc.modificationTime = timestamp()
-			logger.info("Updating productOnClient %s, modificationTime=%s", poc, poc.modificationTime)
+			logger.info(
+				"Updating productOnClient %s, actionProgress=%s, actionResult=%s, modificationTime=%s",
+				poc, poc.actionProgress, poc.actionResult, poc.modificationTime
+			)
 			self._configService.productOnClient_updateObjects([poc])
 
 	def _getRepository(self, productId):
