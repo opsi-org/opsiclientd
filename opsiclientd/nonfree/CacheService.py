@@ -30,7 +30,7 @@ from opsicommon.logging import logger, LOG_INFO
 from OPSI.Object import ProductOnClient
 from OPSI.Types import (
 	forceBool, forceInt, forceList, forceProductIdList, forceUnicode)
-from OPSI.Util import getPublicKey, timestamp
+from OPSI.Util import getPublicKey
 from OPSI.Util.File.Opsi import PackageContentFile
 from OPSI.Util.Repository import getRepository
 from OPSI.Util.Repository import (
@@ -1035,35 +1035,17 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				actionRequest = 'none'
 
 		if actionProgress and updateProductOnClient:
-			poc = self._configService.productOnClient_getObjects(
-				productId=productId,
-				productType='LocalbootProduct',
-				clientId=config.get('global', 'host_id')
-			)
-			if poc:
-				poc = poc[0]
-				logger.info(
-					"Got productOnClient from service: %s, actionProgress=%s, actionResult=%s, modificationTime=%s",
-					poc, poc.actionProgress, poc.actionResult, poc.modificationTime
-				)
-			else:
-				poc = ProductOnClient(
+			self._configService.productOnClient_updateObjects([
+				ProductOnClient(
 					productId=productId,
 					productType='LocalbootProduct',
-					clientId=config.get('global', 'host_id')
+					clientId=config.get('global', 'host_id'),
+					actionProgress=actionProgress,
+					installationStatus=installationStatus,
+					actionResult=actionResult,
+					actionRequest=actionRequest
 				)
-			poc.actionProgress = actionProgress
-			poc.installationStatus = installationStatus
-			poc.actionResult = actionResult
-			poc.actionRequest = actionRequest
-			# Do not modify modificationTime, see CacheBackend ProductOnClient mergeObjectsFunction
-			if actionResult == "failed":
-				poc.modificationTime = timestamp()
-			logger.info(
-				"Updating productOnClient %s, actionProgress=%s, actionResult=%s, modificationTime=%s",
-				poc, poc.actionProgress, poc.actionResult, poc.modificationTime
-			)
-			self._configService.productOnClient_updateObjects([poc])
+			])
 
 	def _getRepository(self, productId):
 		config.selectDepotserver(configService=self._configService, event=None, productIds=[productId], cifsOnly=False)

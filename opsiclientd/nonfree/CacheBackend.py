@@ -134,7 +134,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					if snapshotObj:
 						snapshotObj = snapshotObj[0]
 						logger.debug(u"Snapshot object: %s" % snapshotObj.toHash())
-						updateObj = mergeObjectsFunction(snapshotObj, updateObj, masterObj)
+						updateObj = mergeObjectsFunction(snapshotObj, updateObj, masterObj, self._snapshotBackend, self._workBackend, self._masterBackend)
 
 				if updateObj:
 					logger.debug(u"Object %s marked for update" % mo['object'])
@@ -191,21 +191,29 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			def createUpdateObjectFunction(modifiedObj):
 				return modifiedObj.clone(identOnly=False)
 
-			def mergeObjectsFunction(snapshotObj, updateObj, masterObj):
-				if masterObj.modificationTime not in (snapshotObj.modificationTime, updateObj.modificationTime):
-					logger.info(u"Modification time of %s changed on server since last sync, not updating actionRequest (s:%s/u:%s/m:%s)",
-						snapshotObj, snapshotObj.modificationTime, updateObj.modificationTime, masterObj.modificationTime
+			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):
+				snapshotProduct = snapshotBackend.product_getObjects(id=snapshotObj.productId)[0]
+				masterProduct = masterBackend.product_getObjects(id=snapshotObj.productId)[0]
+				
+				if snapshotProduct.productVersion != masterProduct.productVersion or snapshotProduct.packageVersion != masterProduct.packageVersion:
+					logger.info("Product %s changed on server since last sync, not updating actionRequest (local=%s-%s, server=%s-%s)",
+						snapshotProduct.id,
+						snapshotProduct.productVersion, snapshotProduct.packageVersion,
+						masterProduct.productVersion, masterProduct.packageVersion
 					)
 					updateObj.actionRequest = None
 					updateObj.targetConfiguration = None
-				else:
-					logger.info(u"Modification time of %s not changed on server since last sync, updating actionRequest to %s (s:%s/u:%s/m:%s)",
-						snapshotObj, updateObj.actionRequest, snapshotObj.modificationTime, updateObj.modificationTime, masterObj.modificationTime
-					)
 				return updateObj
-
+			
 			logger.debug("Syncing modified ProductOnClients with master: %s", modifiedObjects['ProductOnClient'])
-			self._syncModifiedObjectsWithMaster(ProductOnClient, modifiedObjects['ProductOnClient'], {"clientId": self._clientId}, objectsDifferFunction, createUpdateObjectFunction, mergeObjectsFunction)
+			self._syncModifiedObjectsWithMaster(
+				ProductOnClient,
+				modifiedObjects['ProductOnClient'],
+				{"clientId": self._clientId},
+				objectsDifferFunction,
+				createUpdateObjectFunction,
+				mergeObjectsFunction
+			)
 
 		if 'LicenseOnClient' in modifiedObjects:
 			def objectsDifferFunction(snapshotObj, masterObj):
@@ -214,10 +222,17 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			def createUpdateObjectFunction(modifiedObj):
 				return modifiedObj.clone(identOnly=False)
 
-			def mergeObjectsFunction(snapshotObj, updateObj, masterObj):
+			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):
 				return updateObj
 
-			self._syncModifiedObjectsWithMaster(LicenseOnClient, modifiedObjects['LicenseOnClient'], {"clientId": self._clientId}, objectsDifferFunction, createUpdateObjectFunction, mergeObjectsFunction)
+			self._syncModifiedObjectsWithMaster(
+				LicenseOnClient,
+				modifiedObjects['LicenseOnClient'],
+				{"clientId": self._clientId},
+				objectsDifferFunction,
+				createUpdateObjectFunction,
+				mergeObjectsFunction
+			)
 
 		for objectClassName in ('ProductPropertyState', 'ConfigState'):
 			def objectsDifferFunction(snapshotObj, masterObj):
@@ -226,7 +241,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			def createUpdateObjectFunction(modifiedObj):
 				return modifiedObj.clone()
 
-			def mergeObjectsFunction(snapshotObj, updateObj, masterObj):
+			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):
 				if len(snapshotObj.values) != len(masterObj.values):
 					logger.info(u"Values of %s changed on server since last sync, not updating values" % snapshotObj)
 					return None
@@ -246,7 +261,14 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				return updateObj
 
 			if objectClassName in modifiedObjects:
-				self._syncModifiedObjectsWithMaster(eval(objectClassName), modifiedObjects[objectClassName], {"objectId": self._clientId}, objectsDifferFunction, createUpdateObjectFunction, mergeObjectsFunction)
+				self._syncModifiedObjectsWithMaster(
+					eval(objectClassName),
+					modifiedObjects[objectClassName],
+					{"objectId": self._clientId},
+					objectsDifferFunction,
+					createUpdateObjectFunction,
+					mergeObjectsFunction
+				)
 
 	def _replicateMasterToWorkBackend(self):
 		if not self._masterBackend:
