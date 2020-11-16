@@ -116,6 +116,8 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		self._cacheService = None
 
+		self._selfUpdating = False
+
 	def self_update_from_url(self, url):
 		logger.notice("Self-update from url: %s", url)
 		filename = url.split('/')[-1]
@@ -140,48 +142,54 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not os.path.exists(os.path.join(inst_dir, test_file)):
 			raise RuntimeError(f"File not found: {os.path.join(inst_dir, test_file)}")
 		
-		with tempfile.TemporaryDirectory() as tmpdir:
-			destination = os.path.join(tmpdir, "content")
-			shutil.unpack_archive(filename=filename, extract_dir=destination)
-			
-			bin_dir = destination
-			if not os.path.exists(os.path.join(bin_dir, test_file)):
-				bin_dir = None
-				for fn in os.listdir(destination):
-					if os.path.exists(os.path.join(destination, fn, test_file)):
-						bin_dir = os.path.join(destination, fn)
-						break
-			if not bin_dir:
-				raise RuntimeError("Invalid archive")
+		if self._selfUpdating:
+			raise RuntimeError("Self-update already running")
+		self._selfUpdating = True
+		try:
+			with tempfile.TemporaryDirectory() as tmpdir:
+				destination = os.path.join(tmpdir, "content")
+				shutil.unpack_archive(filename=filename, extract_dir=destination)
+				
+				bin_dir = destination
+				if not os.path.exists(os.path.join(bin_dir, test_file)):
+					bin_dir = None
+					for fn in os.listdir(destination):
+						if os.path.exists(os.path.join(destination, fn, test_file)):
+							bin_dir = os.path.join(destination, fn)
+							break
+				if not bin_dir:
+					raise RuntimeError("Invalid archive")
 
-			try:
-				check_signature(bin_dir)
-			except Exception as e:
-				logger.error("Could not verify signature!\n%s", e, exc_info=True)
-				logger.error("Not performing self_update.")
-				raise RuntimeError("Invalid signature")
-
-			binary = os.path.join(bin_dir, os.path.basename(sys.argv[0]))
-
-			logger.info("Testing new binary: %s", binary)
-			out = subprocess.check_output([binary, "--version"])
-			logger.info(out)
-			
-			move_dir = inst_dir + "_old"
-			logger.info("Moving current installation dir '%s' to '%s'", inst_dir, move_dir)
-			if os.path.exists(move_dir):
-				shutil.rmtree(move_dir)
-			os.rename(inst_dir, move_dir)
-
-			if False:
 				try:
+					check_signature(bin_dir)
+				except Exception as e:
+					logger.error("Could not verify signature!\n%s", e, exc_info=True)
+					logger.error("Not performing self_update.")
+					raise RuntimeError("Invalid signature")
+
+				binary = os.path.join(bin_dir, os.path.basename(sys.argv[0]))
+
+				logger.info("Testing new binary: %s", binary)
+				out = subprocess.check_output([binary, "--version"])
+				logger.info(out)
+				
+				move_dir = inst_dir + "_old"
+				logger.info("Moving current installation dir '%s' to '%s'", inst_dir, move_dir)
+				if os.path.exists(move_dir):
 					shutil.rmtree(move_dir)
-				except Exception as move_error:
-					logger.info("Failed to remove %s: %s", move_dir, move_error)
-			logger.info("Installing '%s' into '%s'", bin_dir, inst_dir)
-			shutil.copytree(bin_dir, inst_dir)
-			
-			self.restart(5)
+				os.rename(inst_dir, move_dir)
+
+				if False:
+					try:
+						shutil.rmtree(move_dir)
+					except Exception as move_error:
+						logger.info("Failed to remove %s: %s", move_dir, move_error)
+				logger.info("Installing '%s' into '%s'", bin_dir, inst_dir)
+				shutil.copytree(bin_dir, inst_dir)
+				
+				self.restart(5)
+		finally:
+			self._selfUpdating = False
 	
 	def restart(self, waitSeconds=0):
 		def _restart(waitSeconds=0):
