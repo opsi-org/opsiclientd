@@ -198,6 +198,10 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					)
 					updateObj.actionRequest = None
 					updateObj.targetConfiguration = None
+				else:
+					logger.info(u"Modification time of %s not changed on server since last sync, updating actionRequest to %s (s:%s/u:%s/m:%s)",
+						snapshotObj, updateObj.actionRequest, snapshotObj.modificationTime, updateObj.modificationTime, masterObj.modificationTime
+					)
 				return updateObj
 
 			logger.debug("Syncing modified ProductOnClients with master: %s", modifiedObjects['ProductOnClient'])
