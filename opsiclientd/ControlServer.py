@@ -43,7 +43,6 @@ import subprocess
 import msgpack
 import datetime
 import logging
-import pytz
 
 from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
@@ -618,7 +617,7 @@ class LogReaderThread(threading.Thread):
 		lvl = logging._opsiLevelToLevel[opsilevel]
 		levelname = logging._levelToName[lvl]
 		created = datetime.datetime.strptime(match.group(2), "%Y-%m-%d %H:%M:%S.%f")
-		created = created.replace(tzinfo=pytz.timezone("UTC"))
+		created = created.replace(tzinfo=datetime.timezone.utc)
 		return {
 			"created": created.timestamp(),
 			"context": context,
