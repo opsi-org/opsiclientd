@@ -197,6 +197,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		return self._sessionId
 
 	def setStatusMessage(self, message):
+		logger.info("Setting status message to: %s", message)
 		self._statusSubject.setMessage(message)
 
 	@property
