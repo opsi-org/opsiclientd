@@ -192,19 +192,19 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				return modifiedObj.clone(identOnly=False)
 
 			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):
-				snapshotProduct = snapshotBackend.product_getObjects(id=snapshotObj.productId)[0]
-				masterProduct = masterBackend.product_getObjects(id=snapshotObj.productId)[0]
+				snapshotProductIdents = sorted(snapshotBackend.product_getIdents(id=snapshotObj.productId))
+				masterProductIdents = sorted(masterBackend.product_getIdents(id=snapshotObj.productId))
 				
-				logger.info("Syncing ProductOnClient %s (product versions local=%s-%s, server=%s-%s)",
+				logger.info("Syncing ProductOnClient %s (product versions local=%s, server=%s)",
 					updateObj,
-					snapshotProduct.productVersion, snapshotProduct.packageVersion,
-					masterProduct.productVersion, masterProduct.packageVersion
+					snapshotProductIdents,
+					masterProductIdents
 				)
-				if snapshotProduct.productVersion != masterProduct.productVersion or snapshotProduct.packageVersion != masterProduct.packageVersion:
-					logger.notice("Product %s changed on server since last sync, not updating actionRequest (local=%s-%s, server=%s-%s)",
-						snapshotProduct.id,
-						snapshotProduct.productVersion, snapshotProduct.packageVersion,
-						masterProduct.productVersion, masterProduct.packageVersion
+				if snapshotProductIdents != masterProductIdents:
+					logger.notice("Product %s changed on server since last sync, not updating actionRequest (local=%s, server=%s)",
+						snapshotObj.productId,
+						snapshotProductIdents,
+						masterProductIdents
 					)
 					updateObj.actionRequest = None
 					updateObj.targetConfiguration = None
