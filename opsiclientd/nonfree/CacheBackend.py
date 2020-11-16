@@ -195,8 +195,13 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				snapshotProduct = snapshotBackend.product_getObjects(id=snapshotObj.productId)[0]
 				masterProduct = masterBackend.product_getObjects(id=snapshotObj.productId)[0]
 				
+				logger.info("Syncing ProductOnClient %s (product versions local=%s-%s, server=%s-%s)",
+					updateObj,
+					snapshotProduct.productVersion, snapshotProduct.packageVersion,
+					masterProduct.productVersion, masterProduct.packageVersion
+				)
 				if snapshotProduct.productVersion != masterProduct.productVersion or snapshotProduct.packageVersion != masterProduct.packageVersion:
-					logger.info("Product %s changed on server since last sync, not updating actionRequest (local=%s-%s, server=%s-%s)",
+					logger.notice("Product %s changed on server since last sync, not updating actionRequest (local=%s-%s, server=%s-%s)",
 						snapshotProduct.id,
 						snapshotProduct.productVersion, snapshotProduct.packageVersion,
 						masterProduct.productVersion, masterProduct.packageVersion
@@ -204,7 +209,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					updateObj.actionRequest = None
 					updateObj.targetConfiguration = None
 				return updateObj
-			
+
 			logger.debug("Syncing modified ProductOnClients with master: %s", modifiedObjects['ProductOnClient'])
 			self._syncModifiedObjectsWithMaster(
 				ProductOnClient,
