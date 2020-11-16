@@ -192,8 +192,10 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				return modifiedObj.clone(identOnly=False)
 
 			def mergeObjectsFunction(snapshotObj, updateObj, masterObj):
-				if snapshotObj.modificationTime != masterObj.modificationTime:
-					logger.info(u"Modification time of %s changed on server since last sync, not updating actionRequest" % snapshotObj)
+				if masterObj.modificationTime not in (snapshotObj.modificationTime, updateObj.modificationTime):
+					logger.info(u"Modification time of %s changed on server since last sync, not updating actionRequest (%s/%s/%s)",
+						snapshotObj, snapshotObj.modificationTime, updateObj.modificationTime, masterObj.modificationTime
+					)
 					updateObj.actionRequest = None
 					updateObj.targetConfiguration = None
 				return updateObj
