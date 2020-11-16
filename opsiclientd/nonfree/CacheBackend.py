@@ -193,7 +193,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 			def mergeObjectsFunction(snapshotObj, updateObj, masterObj):
 				if masterObj.modificationTime not in (snapshotObj.modificationTime, updateObj.modificationTime):
-					logger.info(u"Modification time of %s changed on server since last sync, not updating actionRequest (%s/%s/%s)",
+					logger.info(u"Modification time of %s changed on server since last sync, not updating actionRequest (s:%s/u:%s/m:%s)",
 						snapshotObj, snapshotObj.modificationTime, updateObj.modificationTime, masterObj.modificationTime
 					)
 					updateObj.actionRequest = None
