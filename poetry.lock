@@ -603,16 +603,8 @@ optional = false
 python-versions = "*"
 
 [[package]]
-name = "python-magic"
-version = "0.4.18"
-description = "File type identification using libmagic"
-category = "main"
-optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-
-[[package]]
 name = "python-opsi"
-version = "4.2.0.96"
+version = "4.2.0.97"
 description = "The opsi python library"
 category = "main"
 optional = false
@@ -629,7 +621,6 @@ ldap3 = ">=2.8.1,<3.0.0"
 ruyaml = ">=0.19.2,<0.20.0"
 psutil = ">=5.7.0,<6.0.0"
 wmi = {version = ">=1.5.1,<2.0.0", markers = "sys_platform == \"win32\""}
-python-magic = ">=0.4.15,<0.5.0"
 pywin32 = {version = ">=227,<228", markers = "sys_platform == \"win32\""}
 pycryptodome = ">=3.9.7,<4.0.0"
 pyasn1 = ">=0.4.8,<0.5.0"
@@ -1307,13 +1298,9 @@ pytest-cov = [
 python-gettext = [
     {file = "python-gettext-4.0.tar.gz", hash = "sha256:626b501a51ac892fc3460cf550e60dca121f544eaa46eb69c90ce4682fc7ec02"},
 ]
-python-magic = [
-    {file = "python-magic-0.4.18.tar.gz", hash = "sha256:b757db2a5289ea3f1ced9e60f072965243ea43a2221430048fd8cacab17be0ce"},
-    {file = "python_magic-0.4.18-py2.py3-none-any.whl", hash = "sha256:356efa93c8899047d1eb7d3eb91e871ba2f5b1376edbaf4cc305e3c872207355"},
-]
 python-opsi = [
-    {file = "python-opsi-4.2.0.96.tar.gz", hash = "md5:aa8333efc4ff3dcb25bc0b6c43ef62cc"},
-    {file = "python_opsi-4.2.0.96-py3-none-any.whl", hash = "md5:a873add18a183e202583a60e95f52d55"},
+    {file = "python-opsi-4.2.0.97.tar.gz", hash = "md5:1d86eefe566b927939f4bb7900a10927"},
+    {file = "python_opsi-4.2.0.97-py3-none-any.whl", hash = "md5:cc76a7f021516b3ea59a4bc9976dfa51"},
 ]
 python-pam = [
     {file = "python-pam-1.8.4.tar.gz", hash = "sha256:c856d9c89fedb33951dd8a95727ae57c6887b02d065bbdffd2fd9dbc0183909b"},
