@@ -265,13 +265,11 @@ def getEventConfigs():
 						eventConfigs[eventConfigId]['workingWindow'] = str(value)
 					else:
 						logger.error("Skipping unknown option '%s' in definition of event '%s'", key, eventConfigId)
-						event_section = f"event_{eventConfigId.split('{')[0]}"
-						if config.has_option(event_section, key):
-							logger.info("Removing config option %s.%s", event_section, key)
-							config.del_option(event_section, key)
-						else:
-							logger.info("Config option %s.%s not found", event_section, key)
-
+						for section in list(config.getDict()):
+							if section.startswith("event_") and config.has_option(section, key):
+								logger.info("Removing config option %s.%s", section, key)
+								config.del_option(section, key)
+				
 				except Exception as e:
 					logger.debug(e, exc_info=True)
 					logger.error("Failed to set event config argument '%s' to '%s': %s", key, value, e)
