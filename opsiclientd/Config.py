@@ -271,6 +271,16 @@ class Config(metaclass=Singleton):
 	def getDict(self):
 		return self._config
 
+	def has_option(self, section, option):
+		if not section in self._config:
+			return False
+		if not option in self._config[section]:
+			return False
+		return True
+
+	def del_option(self, section, option):
+		del self._config[section][option]
+
 	def get(self, section, option, raw=False):
 		if not section:
 			section = 'global'

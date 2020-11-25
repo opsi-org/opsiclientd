@@ -264,17 +264,20 @@ def getEventConfigs():
 					elif key == 'working_window':
 						eventConfigs[eventConfigId]['workingWindow'] = str(value)
 					else:
-						logger.error(u"Skipping unknown option '%s' in definition of event '%s'" % (key, eventConfigId))
+						logger.error("Skipping unknown option '%s' in definition of event '%s'", key, eventConfigId)
+						if config.has_option(f"event_{eventConfigId}", key):
+							config.del_option(f"event_{eventConfigId}", key)
+
 				except Exception as e:
-					logger.logException(e, LOG_DEBUG)
-					logger.error(u"Failed to set event config argument '%s' to '%s': %s" % (key, value, e))
+					logger.debug(e, exc_info=True)
+					logger.error("Failed to set event config argument '%s' to '%s': %s", key, value, e)
 
 			logger.info(
-				u"Event config '%s' args:\n%s",
+				"Event config '%s' args:\n%s",
 				eventConfigId,
 				pprint.pformat(eventConfigs[eventConfigId], indent=4, width=300, compact=False)
 			)
 		except Exception as e:
-			logger.logException(e)
+			logger.error(e, exc_info=True)
 	
 	return eventConfigs
