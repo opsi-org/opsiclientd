@@ -163,7 +163,7 @@ class CacheService(threading.Thread):
 			while self._productCacheService.isRunning() and self._productCacheService.isWorking():
 				time.sleep(1)
 
-	def productCacheCompleted(self, configService, productIds):
+	def productCacheCompleted(self, configService, productIds, checkCachedProductVersion=False):
 		logger.debug("productCacheCompleted: configService=%s productIds=%s", configService, productIds)
 		if not productIds:
 			return True
@@ -211,17 +211,26 @@ class CacheService(threading.Thread):
 				)
 				return False
 
-			if (
-				not productState.get('completed') or
-				(productState.get('productVersion') != productOnDepot.productVersion) or
-				(productState.get('packageVersion') != productOnDepot.packageVersion)
-			):
+			if not productState.get('completed'):
 				logger.info(
 					"Caching of product '%s_%s-%s' not yet completed (got state: %s)",
 					productId, productOnDepot.productVersion, productOnDepot.packageVersion, productState
 				)
 				return False
-
+			
+			if (
+				(productState.get('productVersion') != productOnDepot.productVersion) or
+				(productState.get('packageVersion') != productOnDepot.packageVersion)
+			):
+				logger.warning(
+					"Product '%s_%s-%s' on depot but different version cached (got state: %s)",
+					productId, productOnDepot.productVersion, productOnDepot.packageVersion, productState
+				)
+				if checkCachedProductVersion:
+					return False
+				else:
+					logger.warning("Ignoring version difference")
+				
 		return True
 
 	def getProductCacheState(self):
