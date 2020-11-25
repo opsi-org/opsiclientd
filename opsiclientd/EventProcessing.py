@@ -849,8 +849,15 @@ None otherwise.
 				# Default desktop is winlogon
 				desktop = u'winlogon'
 
-			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
-
+			depotServerUsername = ''
+			depotServerPassword = ''
+			try:
+				(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
+			except Exception as e:
+				if not event.eventConfig.useCachedProducts:
+					raise
+				logger.error("Failed to get depotserver credentials, continuing because event uses cached products", exc_info=True)
+			
 			if not RUNNING_ON_WINDOWS:
 				self.mountDepotShare(None)
 			
