@@ -170,6 +170,7 @@ class CacheService(threading.Thread):
 
 		self.initializeProductCacheService()
 
+		"""
 		clientToDepotservers = configService.configState_getClientToDepotserver(
 				clientIds=[config.get('global', 'host_id')],
 				masterOnly=True,
@@ -180,7 +181,10 @@ class CacheService(threading.Thread):
 			depotId = None
 		else:
 			depotId = [clientToDepotservers[0]['depotId']]
-
+		"""
+		# Use same depot as in ProductCacheService._cacheProducts
+		depotId = config.get('depot_server', 'depot_id')
+		
 		productOnDepots = {
 			productOnDepot.productId: productOnDepot
 			for productOnDepot
