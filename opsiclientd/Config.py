@@ -477,7 +477,7 @@ class Config(metaclass=Singleton):
 						config.set(section, option, value)
 						changed = True
 				
-				for option in config.options:
+				for option in config.options():
 					if option not in values:
 						logger.info("Removing obsolete config option: %s.%s", section, option)
 						config.remove_option(section, option)
