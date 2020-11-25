@@ -28,7 +28,6 @@ from OPSI.Backend.Backend import (
 from OPSI.Backend.Replicator import BackendReplicator
 from OPSI.Exceptions import (
 	BackendConfigurationError, BackendUnaccomplishableError)
-#from OPSI.Logger import Logger
 from opsicommon.logging import logger
 from OPSI.Object import getIdentAttributes, objectsDiffer
 from OPSI.Object import LicenseOnClient, ProductOnClient
@@ -36,9 +35,11 @@ from OPSI.Object import *  # required for dynamic class loading
 from OPSI.Types import forceHostId
 from OPSI.Util import blowfishDecrypt
 
+from opsiclientd.Config import Config
+
 __all__ = ['ClientCacheBackend']
 
-#logger = Logger()
+config = Config()
 
 
 class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
@@ -350,13 +351,26 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		)
 		br.replicate()
 
+		if self._clientId != config.get('global', 'host_id'):
+			logger.error(
+				"Client id '%s' does not match config global.host_id '%s'",
+				self._clientId, config.get('global', 'host_id')
+			)
+		opsiHostKey = self._workBackend.host_getObjects(id=self._clientId)[0].getOpsiHostKey()
+		if opsiHostKey != config.get('global', 'opsi_host_key'):
+			logger.error(
+				"Host key '%s' from work backend does not match config global.opsi_host_key '%s'",
+				opsiHostKey, config.get('global', 'opsi_host_key')
+			)
+		
 		password = self._masterBackend.user_getCredentials(
 			username='pcpatch',
 			hostId=self._clientId
 		)
 		password = password['password']
-		opsiHostKey = self._workBackend.host_getObjects(id=self._clientId)[0].getOpsiHostKey()
-		logger.notice(u"Creating opsi passwd file '%s'" % self._opsiPasswdFile)
+		logger.notice("Creating opsi passwd file '%s' using opsi host key '%s...'",
+			self._opsiPasswdFile, opsiHostKey[:10]
+		)
 		self.user_setCredentials(
 			username='pcpatch',
 			password=blowfishDecrypt(opsiHostKey, password)
