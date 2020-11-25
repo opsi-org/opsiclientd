@@ -449,8 +449,10 @@ class Config(metaclass=Singleton):
 				if section in ('system'):
 					continue
 				if not config.has_section(section):
+					logger.debug("Config changed - new section: %s", section)
 					config.add_section(section)
 					changed = True
+				
 				for (option, value) in values.items():
 					if (section == 'global') and (option == 'config_file'):
 						# Do not store these option
@@ -460,9 +462,26 @@ class Config(metaclass=Singleton):
 					else:
 						value = forceUnicode(value)
 
-					if not config.has_option(section, option) or (config.get(section, option) != value):
-						changed = True
+					if not config.has_option(section, option):
+						logger.debug(
+							"Config changed - new option: %s.%s = %s",
+							section, option, value
+						)
 						config.set(section, option, value)
+						changed = True
+					elif config.get(section, option) != value:
+						logger.debug(
+							"Config changed - changed value: %s.%s = %s => %s",
+							section, option, config.get(section, option), value
+						)
+						config.set(section, option, value)
+						changed = True
+				
+				for option in config.options:
+					if option not in values:
+						logger.info("Removing obsolete config option: %s.%s", section, option)
+						config.remove_option(section, option)
+						changed = True
 
 			if changed:
 				# Write back config file if changed
@@ -472,7 +491,7 @@ class Config(metaclass=Singleton):
 				logger.notice(u"No need to write config file '%s', config file is up to date" % self.get('global', 'config_file'))
 		except Exception as e:
 			# An error occured while trying to write the config file
-			logger.logException(e)
+			logger.error(e, exc_info=True)
 			logger.error(u"Failed to write config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
 
 	def setTemporaryDepotDrive(self, temporaryDepotDrive):
