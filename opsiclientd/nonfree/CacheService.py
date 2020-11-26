@@ -994,7 +994,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 
 					if errorsOccured:
 						e_list = ', '.join(errorsOccured)
-						logger.error("Errors occurred while caching products %s: %s" % p_list, e_list)
+						logger.error("Errors occurred while caching products %s: %s", p_list, e_list)
 						timeline.addEvent(
 							title="Failed to cache products",
 							description=f"Errors occurred while caching products {p_list}: {e_list}",
