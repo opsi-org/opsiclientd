@@ -854,7 +854,7 @@ None otherwise.
 			try:
 				(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
 			except Exception as e:
-				if not event.eventConfig.useCachedProducts:
+				if not self.event.eventConfig.useCachedProducts:
 					raise
 				logger.error("Failed to get depotserver credentials, continuing because event uses cached products", exc_info=True)
 			
