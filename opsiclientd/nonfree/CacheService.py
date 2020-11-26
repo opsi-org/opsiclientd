@@ -873,8 +873,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		self._state['products'] = {}
 		state.set('product_cache_service', self._state)
 		
-		num_processing_steps = 2
-		for processing_step in range(1, num_processing_steps+1):
+		num_processing_steps = 1
+		for processing_step in range(1, num_processing_steps + 1):
 			eventId = None
 			logger.info("Start caching products (processing step %d)", processing_step)
 			try:
