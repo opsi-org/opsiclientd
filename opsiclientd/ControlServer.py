@@ -618,12 +618,14 @@ class LogReaderThread(threading.Thread):
 		self.send_time = time.time()
 		self.record_buffer = []
 	
-	def send_buffer_if_needed(self):
+	def send_buffer_if_needed(self, max_delay=None):
+		if max_delay is None:
+			max_delay = self.max_delay
 		if (
 			self.record_buffer and
 			(
 				len(self.record_buffer) > self.max_record_buffer_size or
-				time.time() - self.send_time > self.max_delay
+				time.time() - self.send_time > max_delay
 			)
 		):
 			self.send_buffer()
@@ -632,7 +634,7 @@ class LogReaderThread(threading.Thread):
 		match = self.record_start_regex.search(line)
 		if not match:
 			if self.record_buffer:
-				self.record_buffer[-1].msg += line
+				self.record_buffer[-1]["msg"] += f"\n{line.rstrip()}"
 			return
 		context = {}
 		cnum = 0
@@ -663,6 +665,8 @@ class LogReaderThread(threading.Thread):
 	
 	def run(self):
 		with codecs.open(self.filename, "r", encoding="utf-8", errors="replace") as f:
+			# Start sending big bunches (high delay)
+			max_delay = 3
 			line_buffer = []
 			no_line_count = 0
 			while not self.should_stop:
@@ -676,15 +680,16 @@ class LogReaderThread(threading.Thread):
 						for i in range(len(line_buffer) - 1):
 							self.add_log_line(line_buffer[i])
 						line_buffer = [line_buffer[-1]]
-						self.send_buffer_if_needed()
+						self.send_buffer_if_needed(max_delay)
 				else:
+					max_delay = self.max_delay
 					no_line_count += 1
 					if no_line_count > 1:
 						# Add all lines
 						for line in line_buffer:
 							self.add_log_line(line)
 						line_buffer = []
-						self.send_buffer_if_needed()
+						self.send_buffer_if_needed(max_delay)
 					time.sleep(self.max_delay / 3)
 
 class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
