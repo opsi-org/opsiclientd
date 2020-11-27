@@ -1279,12 +1279,6 @@ None otherwise.
 						break
 				if reboot:
 					timeline.addEvent(title = u"Rebooting", category = u"system")
-					if config.get('global', 'w10BitlockerSuspendOnReboot'):
-						try:
-							logger.notice("Trying to suspend Bitlocker before reboot")
-							self.opsiclientd.suspendBitlocker()
-						except Exception as e:
-							logger.warning("Suspending Bitlocker Failed: '%s'" % e)
 					self.opsiclientd.rebootMachine()
 				elif shutdown:
 					timeline.addEvent(title = u"Shutting down", category = u"system")
