@@ -1,3 +1,7 @@
+/.venv
+/build
+/dist
+
 *~
 *.pyc
 *.pyo
@@ -5,6 +9,7 @@
 .project
 .pydevproject
 *.egg-info
+*.mo
 
 # Created during build
 opsiclientd.tar.gz

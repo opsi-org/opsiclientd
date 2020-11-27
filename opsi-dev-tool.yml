@@ -1,0 +1,76 @@
+locale:
+  languages:
+    - de
+    - fr
+  source_files:
+    - opsiclientd
+  install: opsiclientd_data/locale
+
+pyinstaller-poetry:
+  one_file: no
+  hidden_imports:
+    all:
+      - csv
+      # OPSI.Util.Ping needed for dynamic depot selection
+      - OPSI.Util.Ping
+    windows:
+      - pythoncom
+      - win32api
+      - win32timezone
+    linux: []
+    darwin: []
+  extra_args:
+    windows:
+      - --manifest
+      - opsiclientd-windows.manifest
+      ## Without --noconsole opsiclientd_rpc and action_processor_starter are opening console windows 
+      #- --noconsole
+    darwin:
+      - --exclude-module
+      - tkinter
+  scripts:
+    - script: run-opsiclientd
+      binaries:
+        - opsiclientd
+        - opsiclientd_rpc
+        - action_processor_starter
+  icon: opsiclientd_data/windows/opsi.ico
+  before_script:
+    linux:
+      - "[ -e opsi-server ] && rm -rf opsi-server"
+      - url=$(git remote -v | grep fetch | cut -f2 | sed s'#/opsiclientd.git.*#/opsi-server.git#')
+      #- branch=$(git rev-parse --abbrev-ref HEAD)
+      - branch=master
+      - GIT_TERMINAL_PROMPT=0 git clone --branch $branch $url
+    darwin:
+      - "[ -e opsi-server ] && rm -rf opsi-server"
+      - url=$(git remote -v | grep fetch | cut -f2 | sed s'#/opsiclientd.git.*#/opsi-server.git#')
+      #- branch=$(git rev-parse --abbrev-ref HEAD)
+      - branch=master
+      - GIT_TERMINAL_PROMPT=0 git clone --branch $branch $url
+    windows:
+      - $url = git remote -v | where { $_ -match "fetch"} | % { $_ -replace "origin\s+", "" } | % { $_ -replace "/opsiclientd.git.*", "/opsi-server.git" }
+      - $branch = "master"
+      - $env:GIT_TERMINAL_PROMPT = 0
+      - git clone --branch $branch $url
+  data_files:
+    # from opsiclientd
+    - src: opsiclientd_data/common/static_html/**
+      dst: opsiclientd_data/static_html/
+    - src: opsiclientd_data/${PLATFORM_SYSTEM}/**
+      dst: opsiclientd_data/
+    # from opsi-server
+    - src: opsi-server/opsi-server_data/etc/backendManager/extend.d/10_opsi.conf
+      dst: opsiclientd_data/extend.d/
+    - src: opsi-server/opsi-server_data/etc/backendManager/extend.d/20_legacy.conf
+      dst: opsiclientd_data/extend.d/
+  dirname: opsiclientd
+  after_script:
+    # opsiclientd_data should be moved not copied
+    # need to adapt opsi-client-agent opsi-script first
+    linux:
+      - cp -a dist/opsiclientd/opsiclientd_data dist/opsiclientd/site-packages/
+    darwin:
+      - cp -a dist/opsiclientd/opsiclientd_data dist/opsiclientd/site-packages/
+    windows:
+      - Copy-Item -Path dist\opsiclientd\opsiclientd_data -Destination dist\opsiclientd\site-packages\opsiclientd_data -Recurse
