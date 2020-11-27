@@ -540,9 +540,10 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root.putChild(b"rpc", ResourceCacheServiceJsonRpc(self))
 		self._root.putChild(b"rpcinterface", ResourceCacheServiceJsonInterface(self))
 		self._root.putChild(b"info.html", ResourceOpsiclientdInfo(self))
-		self._root.putChild(b"kiosk", ResourceKioskJsonRpc(self))
 		self._root.putChild(b"upload", ResourceOpsiclientdUpload(self))
-
+		if config.get('control_server', 'kiosk_api_active'):
+			self._root.putChild(b"kiosk", ResourceKioskJsonRpc(self))
+		
 		log_ws_factory = WebSocketServerFactory()
 		log_ws_factory.protocol = LogWebSocketServerProtocol
 		log_ws_factory.control_server = self

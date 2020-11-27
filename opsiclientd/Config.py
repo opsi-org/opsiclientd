@@ -181,6 +181,7 @@ class Config(metaclass=Singleton):
 				'ssl_server_cert_file': os.path.join(baseDir, "opsiclientd", "opsiclientd.pem"),
 				'static_dir': os.path.join(baseDir, "opsiclientd", "static_html"),
 				'max_authentication_failures': 5,
+				'kiosk_api_active': True
 			},
 			'notification_server': {
 				'interface': u'127.0.0.1',
@@ -347,7 +348,8 @@ class Config(metaclass=Singleton):
 				value = 0
 		elif option in (
 			'create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment',
-			'active', 'sync_time_from_service', 'suspend_bitlocker_on_reboot', 'w10BitlockerSuspendOnReboot'
+			'active', 'sync_time_from_service', 'suspend_bitlocker_on_reboot', 'w10BitlockerSuspendOnReboot',
+			'kiosk_api_active'
 		):
 			if option == 'w10BitlockerSuspendOnReboot':
 				# legacy name
@@ -425,12 +427,9 @@ class Config(metaclass=Singleton):
 			config = IniFile(filename=self.get('global', 'config_file'), raw=True).parse()
 			
 			# Read log settings early
-			if config.has_section('global'):
-				if config.has_option('global', 'log_level'):
-					self.set('global', 'log_level', config.get('global', 'log_level'))
-				#if config.has_option('global', 'log_file'):
-				#	logFile = config.get('global', 'log_file')
-					
+			if config.has_section('global') and config.has_option('global', 'log_level'):
+				self.set('global', 'log_level', config.get('global', 'log_level'))
+			
 			for section in config.sections():
 				logger.debug(u"Processing section '%s' in config file: '%s'" % (section, self.get('global', 'config_file')))
 
