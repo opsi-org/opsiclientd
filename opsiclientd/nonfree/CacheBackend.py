@@ -169,7 +169,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				modification['object'] = meth(**objectFilter)[0]
 				modifiedObjects[modification['objectClass']].append(modification)
 			except Exception as modifyError:
-				logger.error(u"Failed to sync backend modification %s: %s" % (modification, modifyError))
+				logger.error("Failed to sync backend modification %s: %s", modification, modifyError, exc_info=True)
 				continue
 
 		if 'AuditHardwareOnHost' in modifiedObjects:
@@ -193,13 +193,23 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				return modifiedObj.clone(identOnly=False)
 
 			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):
+				depotId = config.get('depot_server', 'depot_id')
+
 				masterVersions = sorted([
 					f"{p.productVersion}-{p.packageVersion}" for p in
-					masterBackend.product_getObjects(["productVersion", "packageVersion"], id=snapshotObj.productId)
+					masterBackend.productOnDepot_getObjects(
+						["productVersion", "packageVersion"],
+						productId=snapshotObj.productId,
+						depotId=depotId
+					)
 				])
 				snapshotVersions = sorted([
 					f"{p.productVersion}-{p.packageVersion}" for p in
-					snapshotBackend.product_getObjects(["productVersion", "packageVersion"], id=snapshotObj.productId)
+					snapshotBackend.productOnDepot_getObjects(
+						["productVersion", "packageVersion"],
+						productId=snapshotObj.productId,
+						depotId=depotId
+					)
 				])
 				
 				logger.info("Syncing ProductOnClient %s (product versions local=%s, server=%s)",
