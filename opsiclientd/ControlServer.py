@@ -582,9 +582,9 @@ class RequestAdapter():
 		return self.connection_request.headers.get(name)
 
 class LogReaderThread(threading.Thread):
-	line_regex = re.compile("^\[(\d)\]\s+\[([\d\-\:\. ]+)\]\s+\[([^\]]*)\]\s(.*)$")
+	record_start_regex = re.compile("^\[(\d)\]\s+\[([\d\-\:\. ]+)\]\s+\[([^\]]*)\]\s(.*)$")
 	max_delay = 0.2
-	max_buffer_size = 64*1024
+	max_record_buffer_size = 500
 	
 	def __init__(self, filename, websocket_protocol):
 		super().__init__()
@@ -592,23 +592,34 @@ class LogReaderThread(threading.Thread):
 		self.should_stop = False
 		self.filename = filename
 		self.websocket_protocol = websocket_protocol
-		self.buffer = b""
+		self.record_buffer = []
 		self.send_time = 0
 	
 	def send_buffer(self):
-		if not self.buffer:
+		if not self.record_buffer:
 			return
-		self.websocket_protocol.sendMessage(self.buffer, True)
+		data = b""
+		for record in self.record_buffer:
+			data += msgpack.packb(record)
+		self.websocket_protocol.sendMessage(data, True)
 		self.send_time = time.time()
-		self.buffer = b""
+		self.record_buffer = []
 	
 	def send_buffer_if_needed(self):
-		if self.buffer and len(self.buffer) > self.max_buffer_size or time.time() - self.send_time > self.max_delay:
+		if (
+			self.record_buffer and
+			(
+				len(self.record_buffer) > self.max_record_buffer_size or
+				time.time() - self.send_time > self.max_delay
+			)
+		):
 			self.send_buffer()
-	
+
 	def parse_log_line(self, line):
-		match = self.line_regex.search(line.strip())
+		match = self.record_start_regex.search(line)
 		if not match:
+			if self.record_buffer:
+				self.record_buffer[-1].msg += line
 			return
 		context = {}
 		cnum = 0
@@ -632,27 +643,37 @@ class LogReaderThread(threading.Thread):
 			return
 		record = self.parse_log_line(line)
 		if record:
-			self.buffer += msgpack.packb(record)
-			self.send_buffer_if_needed()
+			self.record_buffer.append(record)
 	
 	def stop(self):
 		self.should_stop = True
 	
 	def run(self):
 		with codecs.open(self.filename, "r", encoding="utf-8", errors="replace") as f:
+			line_buffer = []
+			no_line_count = 0
 			while not self.should_stop:
 				line = f.readline()
-				if not line:
-					break
-				self.add_log_line(line)
-			while not self.should_stop:
-				line = f.readline()
-				if not line:
-					self.send_buffer_if_needed()
-					time.sleep(0.1)
-					continue
-				self.add_log_line(line)
-	
+				if line:
+					no_line_count = 0
+					line_buffer.append(line)
+					if len(line_buffer) >= 2 and self.record_start_regex.search(line_buffer[-1]):
+						# Last line is a new record, not continuation text
+						# Add all lines, except the last one
+						for i in range(len(line_buffer) - 1):
+							self.add_log_line(line_buffer[i])
+						line_buffer = [line_buffer[-1]]
+						self.send_buffer_if_needed()
+				else:
+					no_line_count += 1
+					if no_line_count > 1:
+						# Add all lines
+						for line in line_buffer:
+							self.add_log_line(line)
+						line_buffer = []
+						self.send_buffer_if_needed()
+					time.sleep(self.max_delay / 3)
+
 class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
 	def onConnect(self, request):
 		self.service = self.factory.control_server
