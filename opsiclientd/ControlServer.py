@@ -78,10 +78,8 @@ if RUNNING_ON_WINDOWS:
 config = Config()
 state = State()
 
-infoPage = u'''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
-"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-
-<html xmlns="http://www.w3.org/1999/xhtml">
+infoPage = '''<!DOCTYPE html>
+<html>
 <head>
 	<meta http-equiv="Content-Type" content="text/xhtml; charset=utf-8" />
 	<title>%(hostname)s opsi client daemon info</title>
@@ -106,6 +104,43 @@ infoPage = u'''<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
 		This page uses Javascript to show you a Timeline. Please enable Javascript in your browser to see the full page. Thank you.
 		</noscript>
 	</div>
+</body>
+</html>
+'''
+
+logViewerPage = '''<!DOCTYPE html>
+<html>
+<head>
+	<title>opsiclientd - log viewer</title>
+	<link rel="stylesheet" href="/opsiclientd.css" />
+	<script src="/javascript/log_viewer.js"></script>
+	<script src="/javascript/msgpack.js"></script>
+</head>
+<body>
+	<script>
+		startLog();
+	</script>
+	<!--
+	<label for="log-channel">Log channel:</label>
+	<select id="log-channel">
+		<option value="">*all</option>
+	</select>
+	-->
+	<div id="log-settings">
+		<label for="log-level-filter">Filter by level:</label>
+		<input id="log-level-filter" type="number" min="1" max="9" value="9" onchange="applyLevelFilter(this.value);">
+		
+		<label for="log-context-filter">Filter by context:</label>
+		<input id="log-context-filter" type="text" onchange="applyContextFilter(this.value);"/>
+
+		<label for="log-message-filter">Filter by message:</label>
+		<input id="log-message-filter" type="text" onchange="applyMessageFilter(this.value);"/>
+
+		<label>Font size:</label>
+		<button id="decrease-font-size" onclick="change_font_size(-1);">-</button>
+		<button id="increase-font-size" onclick="change_font_size(+1);">+</button>
+	</div>
+	<div id="log-container" style="font-size: 14px;" />
 </body>
 </html>
 '''
@@ -168,48 +203,6 @@ class WorkerOpsiclientd(WorkerOpsi):
 
 					return self._delayResult(60, result)
 		return result
-
-	"""
-	def _authenticate_windows_user(self, result):
-		user_is_admin = False
-		# The LogonUser function will raise an Exception on logon failure
-		win32security.LogonUser(self.session.user, 'None', self.session.password, win32security.LOGON32_LOGON_NETWORK, win32security.LOGON32_PROVIDER_DEFAULT)
-		# No exception raised => user authenticated
-		
-		# Get local admin group by sid and test if authorizing user is member of this group
-		admingroupsid = "S-1-5-32-544"
-		group_resume = 1
-		while group_resume:
-			group_resume = 0
-			data, total, group_resume = win32net.NetLocalGroupEnum(None, 1, group_resume)
-			for group in data:
-				groupname = group.get("name")
-				if not groupname:
-					continue
-				pysid, string, integer = win32security.LookupAccountName(None, groupname)
-				if admingroupsid in str(pysid):
-					member_resume = 1
-					while member_resume:
-						member_resume = 0
-						memberdata, total, member_resume = win32net.NetLocalGroupGetMembers(None, groupname, 2, member_resume)
-						logger.notice(memberdata)
-						for member in memberdata:
-							member_sid = member.get("sid")
-							if not member_sid:
-								continue
-							username, domain, type = win32security.LookupAccountSid(None, member_sid)
-							if self.session.user.lower() == username.lower():
-								user_is_admin = True
-								group_resume = 0
-								member_resume = 0
-								break
-		
-		#if self.session.user.lower() == 'administrator':
-		#	user_is_admin = True
-		
-		if not user_is_admin:
-			raise Exception("Not an admin user")
-	"""
 
 	def _authenticate(self, result):
 		if self.session.authenticated:
@@ -412,6 +405,19 @@ class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 		self.request.setHeader("content-type", "text/plain; charset=utf-8")
 		self.request.write("ok".encode("utf-8"))
 
+class WorkerOpsiclientdLogViewer(WorkerOpsiclientd):
+	def __init__(self, service, request, resource):
+		WorkerOpsiclientd.__init__(self, service, request, resource)
+
+	def _processQuery(self, result):
+		return result
+
+	def _generateResponse(self, result):
+		logger.info("Creating log viewer page")
+		self.request.setResponseCode(200)
+		self.request.setHeader("content-type", "text/html; charset=utf-8")
+		self.request.write(logViewerPage.encode("utf-8").strip())
+
 
 class ResourceRoot(resource.Resource):
 	addSlash = True
@@ -443,6 +449,12 @@ class ResourceCacheServiceJsonInterface(ResourceOpsiJsonInterface):
 
 class ResourceOpsiclientdInfo(ResourceOpsiclientd):
 	WorkerClass = WorkerOpsiclientdInfo
+
+	def __init__(self, service):
+		ResourceOpsiclientd.__init__(self, service)
+
+class ResourceOpsiclientdLogViewer(ResourceOpsiclientd):
+	WorkerClass = WorkerOpsiclientdLogViewer
 
 	def __init__(self, service):
 		ResourceOpsiclientd.__init__(self, service)
@@ -540,6 +552,7 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root.putChild(b"rpc", ResourceCacheServiceJsonRpc(self))
 		self._root.putChild(b"rpcinterface", ResourceCacheServiceJsonInterface(self))
 		self._root.putChild(b"info.html", ResourceOpsiclientdInfo(self))
+		self._root.putChild(b"log_viewer.html", ResourceOpsiclientdLogViewer(self))
 		self._root.putChild(b"upload", ResourceOpsiclientdUpload(self))
 		if config.get('control_server', 'kiosk_api_active'):
 			self._root.putChild(b"kiosk", ResourceKioskJsonRpc(self))
