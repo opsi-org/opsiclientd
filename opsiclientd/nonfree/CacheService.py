@@ -872,51 +872,47 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		self._state['products_cached'] = False
 		self._state['products'] = {}
 		state.set('product_cache_service', self._state)
-		
-		num_processing_steps = 2
-		for processing_step in range(1, num_processing_steps+1):
-			eventId = None
-			logger.info("Start caching products (processing step %d)", processing_step)
-			try:
-				if not self._configService:
-					self.connectConfigService()
+		eventId = None
 
-				includeProductIds = []
-				excludeProductIds = []
-				excludeProductGroupIds = [x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != ""]
-				includeProductGroupIds = [x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != ""]
+		try:
+			if not self._configService:
+				self.connectConfigService()
 
-				logger.debug("Given includeProductGroupIds: '%s'" % includeProductGroupIds)
-				logger.debug("Given excludeProductGroupIds: '%s'" % excludeProductGroupIds)
+			includeProductIds = []
+			excludeProductIds = []
+			excludeProductGroupIds = [x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != ""]
+			includeProductGroupIds = [x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != ""]
 
-				if includeProductGroupIds:
-					includeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects(
-						groupType="ProductGroup",
-						groupId=includeProductGroupIds)]
-					logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
+			logger.debug("Given includeProductGroupIds: '%s'" % includeProductGroupIds)
+			logger.debug("Given excludeProductGroupIds: '%s'" % excludeProductGroupIds)
 
-				if excludeProductGroupIds:
-					excludeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects(
-						groupType="ProductGroup",
-						groupId=excludeProductGroupIds)]
-					logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
+			if includeProductGroupIds:
+				includeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects(
+					groupType="ProductGroup",
+					groupId=includeProductGroupIds)]
+				logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
 
-				productIds = []
-				productOnClients = [poc for poc in self._configService.productOnClient_getObjects(
-						productType='LocalbootProduct',
-						clientId=config.get('global', 'host_id'),
-						actionRequest=['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
-						attributes=['actionRequest'],
-						productId=includeProductGroupIds)
-					if poc.productId not in excludeProductIds]
+			if excludeProductGroupIds:
+				excludeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects(
+					groupType="ProductGroup",
+					groupId=excludeProductGroupIds)]
+				logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
 
-				for productOnClient in productOnClients:
-					if productOnClient.productId not in productIds:
-						productIds.append(productOnClient.productId)
-				if not productIds:
-					logger.notice("No product action request set => no products to cache")
-					break
-				
+			productIds = []
+			productOnClients = [poc for poc in self._configService.productOnClient_getObjects(
+					productType='LocalbootProduct',
+					clientId=config.get('global', 'host_id'),
+					actionRequest=['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+					attributes=['actionRequest'],
+					productId=includeProductGroupIds)
+				if poc.productId not in excludeProductIds]
+
+			for productOnClient in productOnClients:
+				if productOnClient.productId not in productIds:
+					productIds.append(productOnClient.productId)
+			if not productIds:
+				logger.notice("No product action request set => no products to cache")
+			else:
 				depotId = config.get('depot_server', 'depot_id')
 				# Get all productOnDepots!
 				productOnDepots = self._configService.productOnDepot_getObjects(depotId=depotId)
@@ -932,12 +928,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						self._setProductCacheState(productOnClient.productId, "failure", "Product not found on configured depot.")
 						errorProductIds.append(productOnClient.productId)
 
-				if "opsi-winst" in productOnDepotIds:
-					productIds.append("opsi-winst")
-				if "opsi-script" in productOnDepotIds:
-					productIds.append("opsi-script")
-				
-				if "mshotfix" in productIds:
+				productIds.append('opsi-winst')
+				if 'mshotfix' in productIds:
 					# Windows 8.1 Bugfix, with a helper exe.
 					# Helper seems not to be needed with Python 3
 					helper = None #os.path.join(config.get('global', 'base_dir'), 'utilities', 'getmsversioninfo.exe')
@@ -976,69 +968,57 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 							logger.error("ProductId: '%s' will not be cached.", productIds[index])
 							del productIds[index]
 
-				only_opsi_script = True
-				for productId in productIds:
-					if productId not in ("opsi-script", "opsi-winst"):
-						only_opsi_script = False
-						break
-				
-				if only_opsi_script:
+				if len(productIds) == 1 and productIds[0] == 'opsi-winst':
 					logger.notice("Only opsi-winst is set to install, doing nothin, because a up- or downgrade from opsi-winst is only need if a other product is set to setup.")
-					break
-				
-				p_list = ', '.join(productIds)
-				logger.notice("Caching products (#%d): %s", processing_step, p_list)
-				eventId = timeline.addEvent(
-					title="Cache products",
-					description=f"Caching products (#{processing_step}): {p_list}",
-					category='product_caching',
-					durationEvent=True
-				)
-
-				try:
-					errorsOccured = []
-					for productId in productIds:
-						try:
-							self._cacheProduct(productId, productIds)
-						except Exception as e:
-							errorsOccured.append(str(e))
-							self._setProductCacheState(productId, 'failure', forceUnicode(e))
-				except Exception as e:
-					logger.error("%s", e, exc_info=True)
-					errorsOccured.append(forceUnicode(e))
-
-				if errorsOccured:
-					e_list = ', '.join(errorsOccured)
-					logger.error(
-						"Errors occurred while caching products (#%d) %s: %s",
-						processing_step, p_list, e_list
-					)
-					timeline.addEvent(
-						title="Failed to cache products",
-						description=f"Errors occurred while caching products (#{processing_step}) {p_list}: {e_list}",
-						category="product_caching",
-						isError=True
-					)
 				else:
-					logger.notice("All products cached (#%d): %s", processing_step, p_list)
-					if processing_step == num_processing_steps:
+					p_list = ', '.join(productIds)
+					logger.notice("Caching products: %s", p_list)
+					eventId = timeline.addEvent(
+						title="Cache products",
+						description=f"Caching products: {p_list}",
+						category='product_caching',
+						durationEvent=True
+					)
+
+					try:
+						errorsOccured = []
+						for productId in productIds:
+							try:
+								self._cacheProduct(productId, productIds)
+							except Exception as e:
+								errorsOccured.append(str(e))
+								self._setProductCacheState(productId, 'failure', forceUnicode(e))
+					except Exception as e:
+						logger.error("%s", e, exc_info=True)
+						errorsOccured.append(forceUnicode(e))
+
+					if errorsOccured:
+						e_list = ', '.join(errorsOccured)
+						logger.error("Errors occurred while caching products %s: %s", p_list, e_list)
+						timeline.addEvent(
+							title="Failed to cache products",
+							description=f"Errors occurred while caching products {p_list}: {e_list}",
+							category="product_caching",
+							isError=True
+						)
+					else:
+						logger.notice("All products cached: %s", p_list)
 						self._state['products_cached'] = True
 						state.set('product_cache_service', self._state)
-						
+
 						for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
 							eventGenerator.createAndFireEvent()
-				
-			except Exception as e:
-				logger.error("Failed to cache products: %s", e, exc_info=True)
-				timeline.addEvent(
-					title="Failed to cache products",
-					description=f"Failed to cache products (#{processing_step}): {e}",
-					category="product_caching",
-					isError=True
-				)
+		except Exception as e:
+			logger.error("Failed to cache products: %s", e, exc_info=True)
+			timeline.addEvent(
+				title="Failed to cache products",
+				description=f"Failed to cache products: {e}",
+				category="product_caching",
+				isError=True
+			)
 
-			if eventId:
-				timeline.setEventEnd(eventId)
+		if eventId:
+			timeline.setEventEnd(eventId)
 
 		self.disconnectConfigService()
 		self._working = False
