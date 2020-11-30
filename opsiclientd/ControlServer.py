@@ -981,8 +981,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			else:
 				year = session['LogonTime'].year
 				month = session['LogonTime'].month
-				day = session['LogonTime'].dayself_update_from_url
-
+				day = session['LogonTime'].day
+			
 			if month < 10:
 				month = '0%d' % month
 			if day < 10:
