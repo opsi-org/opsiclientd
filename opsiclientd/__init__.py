@@ -24,7 +24,7 @@ opsiclientd Library.
 :license: GNU Affero General Public License version 3
 """
 
-__version__ = '4.2.0.36'
+__version__ = '4.2.0.49'
 
 import os
 import sys
