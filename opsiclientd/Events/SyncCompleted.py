@@ -47,7 +47,7 @@ class SyncCompletedEventGenerator(EventGenerator):
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None
-
+	
 		return SyncCompletedEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 

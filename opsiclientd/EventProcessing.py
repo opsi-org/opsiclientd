@@ -52,6 +52,7 @@ from OPSI.Util.Thread import KillableThread
 from opsiclientd import __version__
 from opsiclientd.Config import Config
 from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
+from opsiclientd.Events.SyncCompleted import SyncCompletedEvent
 from opsiclientd.Exceptions import CanceledByUserError, ConfigurationError
 from opsiclientd.Localization import _
 from opsiclientd.OpsiService import ServiceConnection
@@ -1172,8 +1173,16 @@ None otherwise.
 						self.shutdownCancelled = False
 						self.shutdownWaitCancelled = False
 
-						self._messageSubject.setMessage(self.event.eventConfig.getShutdownWarningMessage())
-
+						shutdownWarningMessage = self.event.eventConfig.getShutdownWarningMessage()
+						if isinstance(self.event, SyncCompletedEvent):
+							try:
+								producIds = list(self.opsiclientd.getCacheService().getProductCacheState()["products"])
+								if producIds:
+									shutdownWarningMessage += f"\n{_(u'Products')}: {', '.join(productIds)}"
+							except Exception as stateErr:
+								logger.error(stateErr, exc_info=True)
+						self._messageSubject.setMessage(shutdownWarningMessage)
+						
 						choiceSubject = ChoiceSubject(id = 'choice')
 						if (shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable):
 							if reboot:
