@@ -1176,8 +1176,8 @@ None otherwise.
 						shutdownWarningMessage = self.event.eventConfig.getShutdownWarningMessage()
 						if isinstance(self.event, SyncCompletedEvent):
 							try:
-								producIds = list(self.opsiclientd.getCacheService().getProductCacheState()["products"])
-								if producIds:
+								productIds = list(self.opsiclientd.getCacheService().getProductCacheState()["products"])
+								if productIds:
 									shutdownWarningMessage += f"\n{_(u'Products')}: {', '.join(productIds)}"
 							except Exception as stateErr:
 								logger.error(stateErr, exc_info=True)
