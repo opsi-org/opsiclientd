@@ -380,11 +380,16 @@ class ServiceConnectionThread(KillableThread):
 						self.configService.setCompression(True)
 						self.connected = True
 						self.connectionError = None
+						serverVersion = self.configService.serverVersion
 						self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
-						logger.notice("Connected to config server '%s'", self._configServiceUrl)
-
-						sv = self.configService.serverVersion
-						if sv and (sv[0] > 4 or (sv[0] == 4 and sv[1] > 1)):
+						logger.notice(
+							"Connected to config server '%s' (name=%s, version=%s)",
+							self._configServiceUrl,
+							self.configService.serverName,
+							serverVersion
+						)
+						
+						if serverVersion and (serverVersion[0] > 4 or (serverVersion[0] == 4 and serverVersion[1] > 1)):
 							if not os.path.exists(caCertFile) or verifyServerCertByCa:
 								# Renew CA if not exists or connection is verified
 								self.updateCACert()
