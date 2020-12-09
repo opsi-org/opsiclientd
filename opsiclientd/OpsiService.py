@@ -51,7 +51,7 @@ from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
 
 from opsiclientd import __version__
-from opsiclientd.Config import Config
+from opsiclientd.Config import Config, OPSI_CA
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
 
@@ -358,8 +358,10 @@ class ServiceConnectionThread(KillableThread):
 						self.setStatusMessage(_(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
 						if len(self._username.split('.')) < 3:
 							raise Exception(u"Domain missing in username '%s'" % self._username)
-
+						
+						compression = True
 						if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
+							compression = False
 							if proxyURL:
 								logger.debug("Connecting to localhost, connecting directly without proxy")
 								proxyURL = None
@@ -374,7 +376,7 @@ class ServiceConnectionThread(KillableThread):
 							verifyServerCertByCa=verifyServerCertByCa,
 							proxyURL=proxyURL,
 							application='opsiclientd/%s' % __version__,
-							compression=True
+							compression=compression
 						)
 
 						self.configService.accessControl_authenticated()
@@ -391,9 +393,16 @@ class ServiceConnectionThread(KillableThread):
 						)
 
 						if serverVersion and (serverVersion[0] > 4 or (serverVersion[0] == 4 and serverVersion[1] > 1)):
-							if not os.path.exists(caCertFile) or verifyServerCertByCa:
+							curCA = ""
+							if os.path.exists(caCertFile):
+								with open(caCertFile, 'r') as f:
+									curCA = f.read()
+							if not os.path.exists(caCertFile) or curCA == OPSI_CA or verifyServerCertByCa:
 								# Renew CA if not exists or connection is verified
 								self.updateCACert()
+						else:
+							with open(caCertFile, 'w') as f:
+								f.write(OPSI_CA)
 					except OpsiServiceVerificationError as verificationError:
 						self.connectionError = forceUnicode(verificationError)
 						self.setStatusMessage(_(u"Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)

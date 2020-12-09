@@ -398,9 +398,6 @@ class Config(metaclass=Singleton):
 			if not os.path.exists(value):
 				os.makedirs(value)
 
-			with open(os.path.join(value, 'cacert.pem'), 'w') as f:
-				f.write(OPSI_CA)
-
 	def replace(self, string, escaped=False):
 		for (section, values) in self._config.items():
 			if not isinstance(values, dict):
