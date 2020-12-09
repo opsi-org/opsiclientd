@@ -315,7 +315,7 @@ class ServiceConnectionThread(KillableThread):
 			if response.status != 200:
 				raise RuntimeError(f"Failed to fetch opsi-cacert.pem: {response.status} - {response.data}")
 			caCert = crypto.load_certificate(crypto.FILETYPE_PEM, response.data.decode("utf-8"))
-			with open(os.path.join(certDir, 'cacert.pem'), "w") as f:
+			with open(os.path.join(certDir, 'cacert.pem'), "wb") as f:
 				f.write(crypto.dump_certificate(crypto.FILETYPE_PEM, caCert))
 			logger.info("CA cert updated successfully")
 		except Exception as sslCAErr:
