@@ -373,7 +373,8 @@ class ServiceConnectionThread(KillableThread):
 							caCertFile=caCertFile,
 							verifyServerCertByCa=verifyServerCertByCa,
 							proxyURL=proxyURL,
-							application='opsiclientd/%s' % __version__
+							application='opsiclientd/%s' % __version__,
+							compression=True
 						)
 
 						self.configService.accessControl_authenticated()
@@ -388,7 +389,7 @@ class ServiceConnectionThread(KillableThread):
 							self.configService.serverName,
 							serverVersion
 						)
-						
+
 						if serverVersion and (serverVersion[0] > 4 or (serverVersion[0] == 4 and serverVersion[1] > 1)):
 							if not os.path.exists(caCertFile) or verifyServerCertByCa:
 								# Renew CA if not exists or connection is verified
