@@ -876,7 +876,7 @@ reference = "uibpypi"
 
 [[package]]
 name = "python-opsi"
-version = "4.2.0.104"
+version = "4.2.0.105"
 description = "The opsi python library"
 category = "main"
 optional = false
@@ -886,6 +886,7 @@ python-versions = ">=3.7,<4.0"
 colorlog = ">=4.2.1,<5.0.0"
 distro = {version = ">=1.5.0,<2.0.0", markers = "sys_platform == \"linux\""}
 ldap3 = ">=2.8.1,<3.0.0"
+lz4 = ">=3.1.1,<4.0.0"
 mysqlclient = {version = ">=1.4.6,<2.0.0", markers = "sys_platform == \"linux\""}
 pefile = ">=2019.4.18,<2020.0.0"
 psutil = ">=5.7.0,<6.0.0"
@@ -1682,8 +1683,8 @@ python-gettext = [
     {file = "python-gettext-4.0.tar.gz", hash = "sha256:626b501a51ac892fc3460cf550e60dca121f544eaa46eb69c90ce4682fc7ec02"},
 ]
 python-opsi = [
-    {file = "python-opsi-4.2.0.104.tar.gz", hash = "md5:e9e81de84708a5c5426dcd7a8b1fcbd1"},
-    {file = "python_opsi-4.2.0.104-py3-none-any.whl", hash = "md5:4e9e91d443411b55c267cf178ea69de9"},
+    {file = "python-opsi-4.2.0.105.tar.gz", hash = "md5:46f186d5a34f209395a178045260adc3"},
+    {file = "python_opsi-4.2.0.105-py3-none-any.whl", hash = "md5:ba67e17f28a7615aad8d70543a58d38f"},
 ]
 python-pam = [
     {file = "python-pam-1.8.4.tar.gz", hash = "sha256:c856d9c89fedb33951dd8a95727ae57c6887b02d065bbdffd2fd9dbc0183909b"},
