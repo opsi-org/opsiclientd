@@ -30,12 +30,14 @@ Connecting to a opsi service.
 
 import base64
 import os
+import re
 import random
 import time
 from hashlib import md5
 from http.client import HTTPConnection, HTTPSConnection
 from Crypto.Hash import MD5
 from Crypto.Signature import pkcs1_15
+from OpenSSL import crypto
 
 from OPSI import System
 import opsicommon.logging
@@ -294,7 +296,7 @@ class ServiceConnectionThread(KillableThread):
 		self.connectionError = None
 		if not self._configServiceUrl:
 			raise Exception(u"No config service url given")
-
+		
 	def setStatusMessage(self, message):
 		if not self._statusSubject:
 			return
@@ -303,6 +305,22 @@ class ServiceConnectionThread(KillableThread):
 	def getUsername(self):
 		return self._username
 
+	def updateCACert(self):
+		logger.info("Updating CA cert")
+		try:
+			certDir = config.get('global', 'server_cert_dir')
+			if not os.path.isdir(certDir):
+				os.makedirs(certDir)
+			response = self.configService.httpRequest("GET", "/ssl/opsi-cacert.pem")
+			if response.status != 200:
+				raise RuntimeError(f"Failed to fetch opsi-cacert.pem: {response.status} - {response.data}")
+			caCert = crypto.load_certificate(crypto.FILETYPE_PEM, response.data)
+			with open(os.path.join(certDir, 'cacert.pem'), "w") as f:
+				f.write(crypto.dump_certificate(crypto.FILETYPE_PEM, caCert))
+			logger.info("CA cert updated successfully")
+		except Exception as sslCAErr:
+			logger.warning("Failed to load CA: %s", sslCAErr)
+	
 	def run(self):
 		with opsicommon.logging.log_context({'instance' : 'service connection'}):
 			logger.debug(u"ServiceConnectionThread started...")
@@ -363,7 +381,13 @@ class ServiceConnectionThread(KillableThread):
 						self.connected = True
 						self.connectionError = None
 						self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
-						logger.notice(u"Connected to config server '%s'" % self._configServiceUrl)
+						logger.notice("Connected to config server '%s'", self._configServiceUrl)
+
+						sv = self.configService.serverVersion
+						if sv and (sv[0] > 4 or (sv[0] == 4 and sv[1] > 1)):
+							if not os.path.exists(caCertFile) or verifyServerCertByCa:
+								# Renew CA if not exists or connection is verified
+								self.updateCACert()
 					except OpsiServiceVerificationError as verificationError:
 						self.connectionError = forceUnicode(verificationError)
 						self.setStatusMessage(_(u"Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
