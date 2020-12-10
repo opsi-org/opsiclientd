@@ -86,13 +86,11 @@ infoPage = '''<!DOCTYPE html>
 	<link rel="stylesheet" type="text/css" href="/opsiclientd.css" />
 	%(head)s
 	<script type="text/javascript">
-	// <![CDATA[
 	function onPageLoad(){
 		onLoad();
 		//var logDiv = document.getElementById("infopage-opsiclientd-log");
 		//logDiv.scrollTop = logDiv.scrollHeight;
 	}
-	// ]]>
 	</script>
 </head>
 <body onload="onPageLoad();" onresize="onResize();">
@@ -933,11 +931,20 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def switchDesktop(self, desktop, sessionId=None):
 		self.opsiclientd.switchDesktop(desktop, sessionId)
 
-	def set(self, section, option, value):
+	def getConfig(self):
+		return config.getDict()
+	
+	def getConfigValue(self, section, option):
+		section = forceUnicode(section)
+		option = forceUnicode(option)
+		return config.get(section, option)
+	
+	def setConfigValue(self, section, option, value):
 		section = forceUnicode(section)
 		option = forceUnicode(option)
 		value = forceUnicode(value)
 		return config.set(section, option, value)
+	set = setConfigValue
 
 	def updateConfigFile(self):
 		config.updateConfigFile()
