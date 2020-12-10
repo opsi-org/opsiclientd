@@ -943,8 +943,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		option = forceUnicode(option)
 		value = forceUnicode(value)
 		return config.set(section, option, value)
-	set = setConfigValue
-
+	
+	def set(self, section, option, value):
+		# Legacy method
+		return self.setConfigValue(section, option, value)
+	
 	def updateConfigFile(self):
 		config.updateConfigFile()
 
