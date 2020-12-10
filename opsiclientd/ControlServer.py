@@ -947,6 +947,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def set(self, section, option, value):
 		# Legacy method
 		return self.setConfigValue(section, option, value)
+
+	def readConfigFile(self):
+		config.readConfigFile()
 	
 	def updateConfigFile(self):
 		config.updateConfigFile()
