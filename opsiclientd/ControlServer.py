@@ -134,6 +134,9 @@ logViewerPage = '''<!DOCTYPE html>
 		<label for="log-message-filter">Filter by message:</label>
 		<input id="log-message-filter" type="text" onchange="applyMessageFilter(this.value);"/>
 
+		<label for="collapse-all">Collapse multi-line:</label>
+		<input type="checkbox" id="collapse-all" onclick="collapseAll(this.checked);" checked>
+		
 		<label>Font size:</label>
 		<button id="decrease-font-size" onclick="change_font_size(-1);">-</button>
 		<button id="increase-font-size" onclick="change_font_size(+1);">+</button>
@@ -595,7 +598,7 @@ class RequestAdapter():
 class LogReaderThread(threading.Thread):
 	record_start_regex = re.compile("^\[(\d)\]\s+\[([\d\-\:\. ]+)\]\s+\[([^\]]*)\]\s(.*)$")
 	max_delay = 0.2
-	max_record_buffer_size = 500
+	max_record_buffer_size = 2500
 	
 	def __init__(self, filename, websocket_protocol):
 		super().__init__()
@@ -703,8 +706,6 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
 		logger.info("Log websocket connection opened.")
 		if not self.session or not self.session.authenticated:
 			logger.error("No valid session supplied")
-			#self.sendMessage(json.dumps({'cmd': 'AUTHENTICATION_REQUIRED'}))
-			# raise OpsiAuthenticationError("Forbidden")
 			self.sendClose(code=4401, reason="Unauthorized")
 		else:
 			self.log_reader_thread = LogReaderThread(config.get("global", "log_file"), self)

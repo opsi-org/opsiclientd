@@ -107,112 +107,6 @@ div.mainpage-link-box {
 .loglevel-8 { color: #808080 }
 .loglevel-9 { color: #B4B426 }
 
-div.swondemand-product-box {
-	padding: 20px;
-	width: 550px;
-	margin: 30px;
-	border: solid #555555 1px;
-	border-radius: 5px;
-	-moz-border-radius: 5px;
-	background-color: #D7E5FF;
-}
-
-td.swondemand-product-name {
-	padding-bottom: 10px;
-	text-align: left;
-	font-weight: bolder;
-	font-size: 120%;
-}
-
-td.swondemand-product-attribute-name {
-	padding-left: 50px;
-	vertical-align: top;
-	text-align: right;
-	font-style: italic;
-}
-
-td.swondemand-product-attribute-value {
-	vertical-align: top;
-	text-align: left;
-}
-
-td.swondemand-product-setup-radiobox {
-	padding-top: 20px;
-	color: #008200;
-}
-td.swondemand-product-uninstall-radiobox {
-	color: #820000;
-}
-
-.swondemand-product-state-installed {
-	color: #008200;
-}
-
-.swondemand-product-state-not_installed {
-	color: #820000;
-}
-
-.swondemand-action-button {
-	color: #83384B;
-	background-color: #fafafa;
-	border: solid 1px #83384B;
-	border-radius: 5px;
-	-moz-border-radius: 5px;
-	font-weight: bolder;
-}
-.swondemand-action-button:hover {
-	background-color: #dddddd;
-}
-
-div.swondemand-button-box {
-	width: 550px;
-	text-align: right;
-	margin-left: 30px;
-}
-
-div.swondemand-summary-button-box {
-	width: 650px;
-	text-align: center;
-	margin-left: 30px;
-}
-
-div.swondemand-summary-box {
-	width: 650px;
-	margin: 30px;
-	padding-left: 20px;
-	padding-bottom: 10px;
-	border: solid #555555 1px;
-	border-radius: 5px;
-	-moz-border-radius: 5px;
-	background-color: #D7E5FF;
-}
-
-p.swondemand-summary-title {
-	padding-top: 10px;
-	text-align: left;
-	font-weight: bolder;
-	font-size: 110%;
-}
-
-li.swondemand-summary-product-action {
-	text-align: left;
-}
-
-div.swondemand-summary-message-box {
-	width: 650px;
-	margin: 30px;
-	padding-top: 10px;
-	padding-bottom: 10px;
-	padding-left: 20px;
-	border: solid #555555 1px;
-	border-radius: 5px;
-	-moz-border-radius: 5px;
-	background-color: #dddddd;
-	text-align: left;
-	font-weight: bolder;
-	font-size: 120%;
-}
-
 /* Log viewer */
 .LEVEL_SECRET { color: #6e5a00; }
 .LEVEL_TRACE { color: #8b8f8a; }
@@ -237,16 +131,58 @@ div.swondemand-summary-message-box {
 	background-color: black;
 	color:white;
 }
+
 .log-line {
 	display: inline-table;
 	white-space: nowrap;
 	clear: both;
 	float: left;
+	font-family: monospace;
+	height: 1.2em;
 }
+
 .log-line-hidden {
 	display: none;
 }
-.log-line > span {
+
+.log-record {
+	display: flow-root;
 	white-space: pre;
-	font-family: monospace;
+}
+
+.log-record-control {
+	display: inline-flex;
+	float: left;
+	width: 5em;
+	user-select: none;
+	overflow: hidden;
+	max-height: 1.0em;
+}
+
+.log-record-collapse {
+	display: inline-block;
+	margin-top: -0.2em;
+	padding-left: 5px;
+	width: 1em;
+}
+
+.log-line-multiline > * > .log-record-collapse::after {
+	content: "⯆";
+}
+
+.log-line-multiline-collapsed > * > .log-record-collapse::after {
+	content: "⯈";
+}
+
+.log-record-line-id {
+	display: inline-block;
+	width: 3em;
+	text-align: right;
+	color: #666666;
+}
+
+.log-line-multiline-collapsed > * > .log-record-message {
+	display: inline-flex;
+	height: 1.1em;
+	overflow: hidden;
 }
