@@ -394,8 +394,8 @@ None otherwise.
 			if RUNNING_ON_WINDOWS:
 				info = System.getFileVersionInfo(actionProcessorLocalFile)
 
-				version = info.get('FileDescription', u'')
-				name = info.get('ProductName', u'')
+				version = info.get('FileVersion', u'')
+				name = info.get('FileDescription', u'')
 				logger.info(u"Action processor name '%s', version '%s'" % (name, version))
 				self._actionProcessorInfoSubject.setMessage("%s %s" % (name, version))
 			else:
