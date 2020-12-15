@@ -702,7 +702,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		notifierCommand += " -s %s" % os.path.join("notifier", "popup.ini")
 		
 		if addTimestamp:
-			message = "=== " + time.strftime("%Y-%m-%d %H:%M:%S") + "\n" + message
+			message = "=== " + time.strftime("%Y-%m-%d %H:%M:%S") + " ===\n" + message
 
 		self._popupNotificationLock.acquire()
 		try:
