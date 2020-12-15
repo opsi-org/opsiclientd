@@ -689,7 +689,9 @@ class Opsiclientd(EventListener, threading.Thread):
 	def isInstallationPending(self):
 		return state.get('installation_pending', False)
 
-	def showPopup(self, message):
+	def showPopup(self, message, mode='prepend', addTimestamp=True):
+		if not mode in ('prepend', 'append', 'replace'):
+			mode = 'prepend'
 		port = config.get('notification_server', 'popup_port')
 		if not port:
 			raise Exception('notification_server.popup_port not defined')
@@ -698,12 +700,28 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not notifierCommand:
 			raise Exception('opsiclientd_notifier.command not defined')
 		notifierCommand += " -s %s" % os.path.join("notifier", "popup.ini")
+		
+		if addTimestamp:
+			message = "--- " + time.strftime("%a, %d %b %Y %H:%M:%S") + " ---\n" + message
 
 		self._popupNotificationLock.acquire()
 		try:
+			if mode in ('prepend', 'append') and self._popupNotificationServer:
+				# Already runnning
+				try:
+					for subject in self._popupNotificationServer.getSubjects():
+						if subject.id == 'message':
+							if mode == 'prepend':
+								message = message + "\n" + subject.getMessage()
+							else:
+								message = subject.getMessage() + "\n" + message
+							break
+				except Exception as getMsgErr:
+					logger.warning(getMsgErr, exc_info=True)
+
 			self.hidePopup()
 
-			popupSubject = MessageSubject('message')
+			popupSubject = MessageSubject(id='message')
 			choiceSubject = ChoiceSubject(id='choice')
 			popupSubject.setMessage(message)
 
@@ -750,6 +768,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			try:
 				logger.info("Stopping popup message notification server")
 				self._popupNotificationServer.stop(stopReactor=False)
+				self._popupNotificationServer = None
 			except Exception as e:
 				logger.error("Failed to stop popup notification server: %s", e)
 
