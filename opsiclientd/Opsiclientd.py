@@ -778,8 +778,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			try:
 				logger.info("Stopping popup message notification server")
 
-				self._popupNotificationServer.requestEndConnections()
-				##############self._popupNotificationServer.stop(stopReactor=False)
+				self._popupNotificationServer.stop(stopReactor=False)
 			except Exception as e:
 				logger.error("Failed to stop popup notification server: %s", e)
 
