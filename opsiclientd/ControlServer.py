@@ -963,7 +963,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def showPopup(self, message, mode='prepend', addTimestamp=True):
 		message = forceUnicode(message)
-		self.opsiclientd.showPopup(message, addTimestamp, append)
+		self.opsiclientd.showPopup(message, mode, addTimestamp)
 
 	def deleteServerCerts(self):
 		certDir = config.get('global', 'server_cert_dir')
