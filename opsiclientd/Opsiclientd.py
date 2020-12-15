@@ -702,7 +702,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		notifierCommand += " -s %s" % os.path.join("notifier", "popup.ini")
 		
 		if addTimestamp:
-			message = "--- " + time.strftime("%a, %d %b %Y %H:%M:%S") + " ---\n" + message
+			message = "--- " + time.strftime("%Y-%m-%d %H:%M:%S") + " ---\n" + message
 
 		self._popupNotificationLock.acquire()
 		try:
@@ -710,7 +710,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				# Already runnning
 				try:
 					for subject in self._popupNotificationServer.getSubjects():
-						if subject.id == 'message':
+						if subject.getId() == 'message':
 							if mode == 'prepend':
 								message = message + "\n" + subject.getMessage()
 							else:
