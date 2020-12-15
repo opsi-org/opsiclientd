@@ -287,8 +287,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.error(u"Failed to write log to service: %s", e)
 			raise
 
-	def runCommandInSession(self, command, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False):
-		sessionId = self.getSessionId()
+	def runCommandInSession(self, command, sessionId=None, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False):
+		if sessionId is None:
+			sessionId = self.getSessionId()
 
 		if not desktop or (forceUnicodeLower(desktop) == 'current'):
 			if self.isLoginEvent:
@@ -333,42 +334,19 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self.setSessionId(sessionId)
 		return processId
 
-	def startNotifierApplication(self, command, desktop=None, notifierId=None):
-		"""
-		Starts the notifier application and returns the process id if possible.
-
-		:returns: Process ID of the notifier is start was successful. \
-None otherwise.
-		:returntype: int / None
-		"""
-		if RUNNING_ON_WINDOWS:
-			return self._startNotifierApplicationWindows(command, desktop, notifierId)
-		else:
-			return self._startNotifierApplicationPosix(command, notifierId)
-
-	def _startNotifierApplicationWindows(self, command, desktop=None, notifierId=None):
-		logger.notice(u"Starting notifier application in session '%s' on desktop '%s'", self.getSessionId(), desktop)
+	def startNotifierApplication(self, command, sessionId=None, desktop=None, notifierId=None):
+		if sessionId is None:
+			sessionId = self.getSessionId()
+		
+		logger.notice(u"Starting notifier application in session '%s' on desktop '%s'", sessionId, desktop)
 		try:
 			pid = self.runCommandInSession(
+				sessionId = sessionId,
 				command = command.replace('%port%', forceUnicode(self.notificationServerPort)).replace('%id%', forceUnicode(notifierId)),
-				desktop = desktop, waitForProcessEnding = False)
-			time.sleep(3)
-			return pid
-		except Exception as e:
-			logger.error(u"Failed to start notifier application '%s': %s" % (command, e))
-
-	def _startNotifierApplicationPosix(self, command, notifierId=None):
-		"""
-		Starting the notifier application on POSIX systems.
-		"""
-		logger.notice(u"Starting notifier application in session '%s'", self.getSessionId())
-		try:
-			pid = self.runCommandInSession(
-				# TODO: put the replacing into an command itself.
-				command=command.replace('%port%', forceUnicode(self.notificationServerPort)).replace('%id%', forceUnicode(notifierId)),
-				waitForProcessEnding=False
+				desktop = desktop,
+				waitForProcessEnding = False
 			)
-			time.sleep(3)
+			#time.sleep(3)
 			return pid
 		except Exception as e:
 			logger.error(u"Failed to start notifier application '%s': %s" % (command, e))
@@ -924,7 +902,11 @@ None otherwise.
 			if self.event.eventConfig.preActionProcessorCommand:
 				logger.notice(u"Starting pre action processor command '%s' in session '%s' on desktop '%s'" \
 					% (self.event.eventConfig.preActionProcessorCommand, self.getSessionId(), desktop))
-				self.runCommandInSession(command = self.event.eventConfig.preActionProcessorCommand, desktop = desktop, waitForProcessEnding = True)
+				self.runCommandInSession(
+					command = self.event.eventConfig.preActionProcessorCommand,
+					desktop = desktop,
+					waitForProcessEnding = True
+				)
 
 			if RUNNING_ON_WINDOWS:
 				logger.notice(u"Starting action processor in session '%s' on desktop '%s'", self.getSessionId(), desktop)
@@ -979,7 +961,11 @@ None otherwise.
 			if self.event.eventConfig.postActionProcessorCommand:
 				logger.notice(u"Starting post action processor command '%s' in session '%s' on desktop '%s'" \
 					% (self.event.eventConfig.postActionProcessorCommand, self.getSessionId(), desktop))
-				self.runCommandInSession(command = self.event.eventConfig.postActionProcessorCommand, desktop = desktop, waitForProcessEnding = True)
+				self.runCommandInSession(
+					command = self.event.eventConfig.postActionProcessorCommand,
+					desktop = desktop,
+					waitForProcessEnding = True
+				)
 
 			self.setStatusMessage( _(u"Actions completed") )
 		finally:

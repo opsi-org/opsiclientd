@@ -229,7 +229,8 @@ class Opsiclientd(EventListener, threading.Thread):
 									command=config.get('global', 'block_login_notifier'),
 									sessionId=sessionId,
 									desktop='winlogon',
-									waitForProcessEnding=False)[2]
+									waitForProcessEnding=False
+							)[2]
 							break
 						except Exception as e:
 							# The following code does not work currently ('RuntimeError' object is not subscriptable). Remove?
@@ -749,21 +750,26 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setChoices([_('Close')])
 			choiceSubject.setCallbacks([self.popupCloseCallback])
 
-			if RUNNING_ON_WINDOWS:
-				sessionIds = System.getActiveSessionIds()
-				if not sessionIds:
-					sessionIds = [System.getActiveConsoleSessionId()]
-
-				for sessionId in sessionIds:
-					logger.info("Starting popup message notifier app in session %s", sessionId)
+			sessionIds = System.getActiveSessionIds()
+			if not sessionIds:
+				sessionIds = [System.getActiveConsoleSessionId()]
+			for sessionId in sessionIds:
+				desktops = [None]
+				if RUNNING_ON_WINDOWS:
+					desktops = ["default", "winlogon"]
+				for desktop in desktops:
 					try:
 						System.runCommandInSession(
 							command=notifierCommand,
 							sessionId=sessionId,
-							desktop=self.getCurrentActiveDesktopName(sessionId),
-							waitForProcessEnding=False)
+							desktop=desktop,
+							waitForProcessEnding=False
+					)
 					except Exception as e:
-						logger.error("Failed to start popup message notifier app in session %s: %s", sessionId, e)
+						logger.error(
+							"Failed to start popup message notifier app in session %s on desktop %s: %s",
+							sessionId, desktop, e
+						)
 		finally:
 			self._popupNotificationLock.release()
 
