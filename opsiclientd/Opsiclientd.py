@@ -706,7 +706,11 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		self._popupNotificationLock.acquire()
 		try:
-			if mode in ('prepend', 'append') and self._popupNotificationServer:
+			if (
+					mode in ('prepend', 'append') and
+					self._popupNotificationServer and
+					self._popupNotificationServer.isListening()
+			):
 				# Already runnning
 				try:
 					for subject in self._popupNotificationServer.getSubjects():
@@ -768,7 +772,6 @@ class Opsiclientd(EventListener, threading.Thread):
 			try:
 				logger.info("Stopping popup message notification server")
 				self._popupNotificationServer.stop(stopReactor=False)
-				self._popupNotificationServer = None
 			except Exception as e:
 				logger.error("Failed to stop popup notification server: %s", e)
 
