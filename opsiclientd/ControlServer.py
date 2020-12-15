@@ -257,6 +257,9 @@ class WorkerOpsiclientdJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 	def _generateResponse(self, result):
 		return WorkerOpsiJsonRpc._generateResponse(self, result)
 
+	def _renderError(self, failure):
+		return WorkerOpsiJsonRpc._renderError(self, failure)
+
 
 class WorkerOpsiclientdJsonInterface(WorkerOpsiclientdJsonRpc, WorkerOpsiJsonInterface):
 	def __init__(self, service, request, resource):
@@ -955,9 +958,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def updateConfigFile(self):
 		config.updateConfigFile()
 
-	def showPopup(self, message):
+	def showPopup(self, message, mode='prepend', addTimestamp=True):
 		message = forceUnicode(message)
-		self.opsiclientd.showPopup(message)
+		self.opsiclientd.showPopup(message, addTimestamp, append)
 
 	def deleteServerCerts(self):
 		certDir = config.get('global', 'server_cert_dir')
