@@ -594,9 +594,11 @@ class Config(metaclass=Singleton):
 			if dynamicDepot:
 				depotIds.extend(clientToDepotservers[0].get('alternativeDepotIds', []))
 
+		logger.debug("Fetching depot servers %s from config service", depotIds)
 		masterDepot = None
 		alternativeDepots = []
 		for depot in configService.host_getObjects(type='OpsiDepotserver', id=depotIds):
+			logger.trace("Depot: %s", depot)
 			if depot.id == depotIds[0]:
 				masterDepot = depot
 			else:
