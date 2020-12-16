@@ -482,6 +482,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				logger.notice("Cache backend was not modified, no sync to server required")
 			else:
 				try:
+					logger.debug("Tracked modifications: %s", modifications)
 					logger.notice("Cache backend was modified, starting sync to server")
 					eventId = timeline.addEvent(
 						title="Config sync to server",
