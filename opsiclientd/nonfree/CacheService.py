@@ -496,9 +496,6 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					self._cacheBackend._updateMasterFromWorkBackend(modifications)
 					logger.info("Clearing modifications in tracker")
 					self._backendTracker.clearModifications()
-					modificationsLeft = self._backendTracker.getModifications()
-					if modificationsLeft:
-						logger.warning("Failed to clear modifications in tracker: %s", modificationsLeft)
 					try:
 						instlog = os.path.join(config.get('global', 'log_dir'), 'opsi-script.log')
 						logger.debug("Checking if a custom logfile is given in global action_processor section")
