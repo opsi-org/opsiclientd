@@ -114,6 +114,10 @@ class CacheService(threading.Thread):
 			while self._configCacheService.isRunning() and self._configCacheService.isWorking():
 				time.sleep(1)
 
+	def isConfigCacheServiceWorking(self):
+		self.initializeConfigCacheService()
+		return self._configCacheService.isWorking()
+	
 	def syncConfigFromServer(self, waitForEnding=False):
 		self.initializeConfigCacheService()
 		if self._configCacheService.isWorking():
@@ -149,6 +153,10 @@ class CacheService(threading.Thread):
 		self.initializeConfigCacheService()
 		return self._configCacheService._backendTracker.getModifications()
 
+	def isProductCacheServiceWorking(self):
+		self.initializeProductCacheService()
+		return self._productCacheService.isWorking()
+	
 	def cacheProducts(self, waitForEnding=False, productProgressObserver=None, overallProgressObserver=None, dynamicBandwidth=True, maxBandwidth=0):
 		self.initializeProductCacheService()
 		if self._productCacheService.isWorking():

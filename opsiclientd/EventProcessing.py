@@ -1367,40 +1367,47 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 								)
 							)
 
-					if self.event.eventConfig.syncConfigToServer:
-						self.setStatusMessage( _("Syncing config to server") )
-						self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = True)
-						self.setStatusMessage( _("Sync completed") )
+					if self.event.eventConfig.syncConfigToServer or self.event.eventConfig.syncConfigFromServer:
+						if self.opsiclientd.getCacheService().isConfigCacheServiceWorking():
+							logger.info("Already syncing config")
+						else:
+							if self.event.eventConfig.syncConfigToServer:
+								self.setStatusMessage( _("Syncing config to server") )
+								self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = True)
+								self.setStatusMessage( _("Sync completed") )
 
-					if self.event.eventConfig.syncConfigFromServer:
-						self.setStatusMessage( _("Syncing config from server") )
-						waitForEnding = self.event.eventConfig.useCachedConfig
-						self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = waitForEnding)
-						if waitForEnding:
-							self.setStatusMessage( _("Sync completed") )
+							if self.event.eventConfig.syncConfigFromServer:
+								self.setStatusMessage( _("Syncing config from server") )
+								waitForEnding = self.event.eventConfig.useCachedConfig
+								self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = waitForEnding)
+								if waitForEnding:
+									self.setStatusMessage( _("Sync completed") )
 
 					if self.event.eventConfig.cacheProducts:
-						self.setStatusMessage( _("Caching products") )
-						try:
-							self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
-							waitForEnding = self.event.eventConfig.useCachedProducts
-							self.opsiclientd.getCacheService().cacheProducts(
-								waitForEnding           = waitForEnding,
-								productProgressObserver = self._currentProgressSubjectProxy,
-								overallProgressObserver = self._overallProgressSubjectProxy,
-								dynamicBandwidth        = self.event.eventConfig.cacheDynamicBandwidth,
-								maxBandwidth            = self.event.eventConfig.cacheMaxBandwidth
-							)
-							if waitForEnding:
-								self.setStatusMessage( _("Products cached") )
-						finally:
-							self._detailSubjectProxy.setMessage("")
+						if self.opsiclientd.getCacheService().isProductCacheServiceWorking():
+							logger.info("Already caching products")
+						else:
+							self.setStatusMessage( _("Caching products") )
 							try:
-								self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
-								self._currentProgressSubjectProxy.reset()
-								self._overallProgressSubjectProxy.reset()
-							except Exception as e:
-								logger.logException(e)
+								self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
+								waitForEnding = self.event.eventConfig.useCachedProducts
+								self.opsiclientd.getCacheService().cacheProducts(
+									waitForEnding           = waitForEnding,
+									productProgressObserver = self._currentProgressSubjectProxy,
+									overallProgressObserver = self._overallProgressSubjectProxy,
+									dynamicBandwidth        = self.event.eventConfig.cacheDynamicBandwidth,
+									maxBandwidth            = self.event.eventConfig.cacheMaxBandwidth
+								)
+								if waitForEnding:
+									self.setStatusMessage( _("Products cached") )
+							finally:
+								self._detailSubjectProxy.setMessage("")
+								try:
+									self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
+									self._currentProgressSubjectProxy.reset()
+									self._overallProgressSubjectProxy.reset()
+								except Exception as e:
+									logger.logException(e)
 
 					if self.event.eventConfig.useCachedConfig:
 						if self.opsiclientd.getCacheService().configCacheCompleted():
