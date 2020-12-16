@@ -627,6 +627,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 							durationEvent=True
 						)
 						self._cacheBackend._setMasterBackend(self._configService)
+						logger.info("Clearing modifications in tracker")
 						self._backendTracker.clearModifications()
 						self._cacheBackend._replicateMasterToWorkBackend()
 						logger.notice("Config synced from server")
