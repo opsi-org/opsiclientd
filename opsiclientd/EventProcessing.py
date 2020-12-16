@@ -1376,7 +1376,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						if waitForEnding:
 							self.setStatusMessage( _(u"Sync completed") )
 
-					if self.event.eventConfig.cacheProducts:
+					if sel.event.eventConfig.cacheProducts:
 						self.setStatusMessage( _(u"Caching products") )
 						try:
 							self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)

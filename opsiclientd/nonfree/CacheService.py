@@ -105,9 +105,9 @@ class CacheService(threading.Thread):
 		self.initializeConfigCacheService()
 		if self._configCacheService.isWorking():
 			logger.info("Already syncing config")
-		else:
-			logger.info("Trigger config sync to server")
-			self._configCacheService.syncConfigToServer()
+			return
+		logger.info("Trigger config sync to server")
+		self._configCacheService.syncConfigToServer()
 
 		if waitForEnding:
 			time.sleep(3)
@@ -118,9 +118,10 @@ class CacheService(threading.Thread):
 		self.initializeConfigCacheService()
 		if self._configCacheService.isWorking():
 			logger.info("Already syncing config")
-		else:
-			logger.info("Trigger config sync from server")
-			self._configCacheService.syncConfigFromServer()
+			return
+		
+		logger.info("Trigger config sync from server")
+		self._configCacheService.syncConfigFromServer()
 
 		if waitForEnding:
 			time.sleep(3)
@@ -152,11 +153,12 @@ class CacheService(threading.Thread):
 		self.initializeProductCacheService()
 		if self._productCacheService.isWorking():
 			logger.info("Already caching products")
-		else:
-			logger.info("Trigger product caching")
-			self._productCacheService.setDynamicBandwidth(dynamicBandwidth)
-			self._productCacheService.setMaxBandwidth(maxBandwidth)
-			self._productCacheService.cacheProducts(productProgressObserver=productProgressObserver, overallProgressObserver=overallProgressObserver)
+			return
+		
+		logger.info("Trigger product caching")
+		self._productCacheService.setDynamicBandwidth(dynamicBandwidth)
+		self._productCacheService.setMaxBandwidth(maxBandwidth)
+		self._productCacheService.cacheProducts(productProgressObserver=productProgressObserver, overallProgressObserver=overallProgressObserver)
 
 		if waitForEnding:
 			time.sleep(3)
