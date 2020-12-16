@@ -93,9 +93,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.89809149"
-     inkscape:cx="203.06307"
-     inkscape:cy="69.892536"
+     inkscape:zoom="0.71593888"
+     inkscape:cx="34.657266"
+     inkscape:cy="-21.959949"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -123,24 +123,24 @@
      inkscape:groupmode="layer"
      id="layer1">
     <rect
-       style="fill:#3a6e9c;fill-opacity:1;stroke:none;stroke-width:1.13526201;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:#3a6e9c;fill-opacity:1;stroke:none;stroke-width:1.13526;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="rect3920"
        width="1024"
        height="768"
-       x="-360.16696"
-       y="-292.77191" />
+       x="-440.48175"
+       y="-381.59964" />
     <rect
-       style="fill:#e3e3e3;fill-opacity:1;stroke:#555555;stroke-width:1.00061;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:#e3e3e3;fill-opacity:1;stroke:#555555;stroke-width:0.707528;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="rect3132"
-       width="798.99939"
-       height="598.99939"
-       x="-233.71317"
-       y="-215.40475"
+       width="599.29248"
+       height="399.29248"
+       x="-233.8597"
+       y="-215.55128"
        inkscape:export-xdpi="96"
        inkscape:export-ydpi="96" />
     <path
-       style="fill:#fcffff;fill-opacity:1;stroke:#9fa8af;stroke-width:1;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
-       d="M -222.78229,-169.29082 H 553.93818 V 344.83649 H -222.78229 Z"
+       style="fill:#fcffff;fill-opacity:1;stroke:#9fa8af;stroke-width:0.9;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       d="m -223.71346,-167.2886 h 579 v 318.99999 h -579 z"
        id="rect3922"
        sodipodi:nodetypes="ccccc" />
     <rect
@@ -148,8 +148,8 @@
        id="rect4043"
        width="119.2564"
        height="14.256397"
-       x="105.94974"
-       y="356.29422" />
+       x="6.1583443"
+       y="160.43329" />
     <g
        id="g1635"
        transform="matrix(0.03364105,0,0,-0.03364105,-223.00261,-173.85169)">
