@@ -1309,18 +1309,21 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			return True
 	
 	def run(self):
-		with opsicommon.logging.log_context({'instance' : 'event processing {0}'.format(self.event.eventConfig.getId())}):
+		with opsicommon.logging.log_context({'instance' : f'event processing {self.event.eventConfig.getId()}'}):
 			timelineEventId = None
 			try:
 				if self.event.eventConfig.workingWindow:
 					if not self.inWorkingWindow():
 						logger.notice("We are not in the configured working window, stopping Event")
 						return
-				logger.notice(u"============= EventProcessingThread for occurrcence of event '%s' started =============" % self.event.eventConfig.getId())
+				logger.notice(
+					"============= EventProcessingThread for occurrcence of event '%s' started =============",
+					self.event.eventConfig.getId()
+				)
 				timelineEventId = timeline.addEvent(
-					title=u"Processing event %s" % self.event.eventConfig.getName(),
-					description=u"EventProcessingThread for occurrcence of event '%s' started" % self.event.eventConfig.getId(),
-					category=u"event_processing",
+					title=f"Processing event {self.event.eventConfig.getName()}",
+					description=f"EventProcessingThread for occurrcence of event '{self.event.eventConfig.getId()}' started",
+					category="event_processing",
 					durationEvent=True
 				)
 				self.running = True
@@ -1365,19 +1368,19 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							)
 
 					if self.event.eventConfig.syncConfigToServer:
-						self.setStatusMessage( _(u"Syncing config to server") )
+						self.setStatusMessage( _("Syncing config to server") )
 						self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = True)
-						self.setStatusMessage( _(u"Sync completed") )
+						self.setStatusMessage( _("Sync completed") )
 
 					if self.event.eventConfig.syncConfigFromServer:
-						self.setStatusMessage( _(u"Syncing config from server") )
+						self.setStatusMessage( _("Syncing config from server") )
 						waitForEnding = self.event.eventConfig.useCachedConfig
 						self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = waitForEnding)
 						if waitForEnding:
-							self.setStatusMessage( _(u"Sync completed") )
+							self.setStatusMessage( _("Sync completed") )
 
-					if sel.event.eventConfig.cacheProducts:
-						self.setStatusMessage( _(u"Caching products") )
+					if self.event.eventConfig.cacheProducts:
+						self.setStatusMessage( _("Caching products") )
 						try:
 							self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
 							waitForEnding = self.event.eventConfig.useCachedProducts
@@ -1389,9 +1392,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 								maxBandwidth            = self.event.eventConfig.cacheMaxBandwidth
 							)
 							if waitForEnding:
-								self.setStatusMessage( _(u"Products cached") )
+								self.setStatusMessage( _("Products cached") )
 						finally:
-							self._detailSubjectProxy.setMessage(u"")
+							self._detailSubjectProxy.setMessage("")
 							try:
 								self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
 								self._currentProgressSubjectProxy.reset()
@@ -1401,10 +1404,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 					if self.event.eventConfig.useCachedConfig:
 						if self.opsiclientd.getCacheService().configCacheCompleted():
-							logger.notice(u"Event '%s' uses cached config and config caching is done" % self.event.eventConfig.getId())
+							logger.notice("Event '%s' uses cached config and config caching is done", self.event.eventConfig.getId())
 							config.setTemporaryConfigServiceUrls(['https://localhost:4441/rpc'])
 						else:
-							raise Exception(u"Event '%s' uses cached config but config caching is not done" % self.event.eventConfig.getId())
+							raise Exception(f"Event '{self.event.eventConfig.getId()}' uses cached config but config caching is not done")
 
 					if self.event.eventConfig.getConfigFromService or self.event.eventConfig.processActions:
 						if not self.isConfigServiceConnected():
@@ -1430,7 +1433,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 									config.updateConfigFile()
 
 				finally:
-					self._messageSubject.setMessage(u"")
+					self._messageSubject.setMessage("")
 					if self.event.eventConfig.writeLogToService:
 						try:
 							self.writeLogToService()
@@ -1445,13 +1448,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					config.setTemporaryConfigServiceUrls([])
 
 					if self.event.eventConfig.postSyncConfigToServer:
-						self.setStatusMessage( _(u"Syncing config to server") )
+						self.setStatusMessage( _("Syncing config to server") )
 						self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = True)
-						self.setStatusMessage( _(u"Sync completed") )
+						self.setStatusMessage( _("Sync completed") )
 					if self.event.eventConfig.postSyncConfigFromServer:
-						self.setStatusMessage( _(u"Syncing config from server") )
+						self.setStatusMessage( _("Syncing config from server") )
 						self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.isShutdownRequested() or self.isRebootRequested())
-						self.setStatusMessage( _(u"Sync completed") )
+						self.setStatusMessage( _("Sync completed") )
 
 					self.processShutdownRequests()
 
@@ -1465,7 +1468,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					if not self.opsiclientd.isRebootTriggered() and not self.opsiclientd.isShutdownTriggered():
 						self.opsiclientd.setBlockLogin(False)
 
-					self.setStatusMessage(u"")
+					self.setStatusMessage("")
 					self.stopNotificationServer()
 					if notifierPids:
 						try:
@@ -1475,17 +1478,20 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						except Exception:
 							pass
 			except Exception as e:
-				logger.error(u"Failed to process event %s: %s" % (self.event, forceUnicode(e)))
+				logger.error("Failed to process event %s: %s", self.event, forceUnicode(e))
 				logger.logException(e)
 				timeline.addEvent(
-					title=u"Failed to process event %s" % self.event.eventConfig.getName(),
-					description=u"Failed to process event %s: %s" % (self.event, forceUnicode(e)),
-					category=u"event_processing",
+					title=f"Failed to process event {self.event.eventConfig.getName()}",
+					description=f"Failed to process event {self.event}: {e}",
+					category="event_processing",
 					isError=True
 				)
 				self.opsiclientd.setBlockLogin(False)
 
 			self.running = False
-			logger.notice(u"============= EventProcessingThread for event '%s' ended =============" % self.event.eventConfig.getId())
+			logger.notice(
+				"============= EventProcessingThread for event '%s' ended =============",
+				self.event.eventConfig.getId()
+			)
 			if timelineEventId:
 				timeline.setEventEnd(eventId = timelineEventId)
