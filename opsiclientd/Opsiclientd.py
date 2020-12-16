@@ -118,6 +118,9 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		self._selfUpdating = False
 
+		self._argv = list(sys.argv)
+		self._argv[0] = os.path.abspath(self._argv[0])
+
 	def self_update_from_url(self, url):
 		logger.notice("Self-update from url: %s", url)
 		filename = url.split('/')[-1]
@@ -167,7 +170,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.error("Not performing self_update.")
 					raise RuntimeError("Invalid signature")
 
-				binary = os.path.join(bin_dir, os.path.basename(sys.argv[0]))
+				binary = os.path.join(bin_dir, os.path.basename(self._argv[0]))
 
 				logger.info("Testing new binary: %s", binary)
 				out = subprocess.check_output([binary, "--version"])
@@ -193,24 +196,23 @@ class Opsiclientd(EventListener, threading.Thread):
 	
 	def restart(self, waitSeconds=0):
 		def _restart(waitSeconds=0):
-			argv = sys.argv
-			argv[0] = os.path.abspath(argv[0])
 			time.sleep(waitSeconds)
 			timeline.addEvent(title = "opsiclientd restart", category = "system")
 			try:
-				restart_marker = os.path.join(os.path.dirname(argv[0]), ".opsiclientd_restart")
+				restart_marker = os.path.join(os.path.dirname(self._argv[0]), ".opsiclientd_restart")
 				logger.notice("Writing restart marker %s", restart_marker)
 				open(restart_marker, "w").close()
 			except Exception as e:
 				logger.error(e)
-			logger.notice("Executing: %s", argv)
-			os.execvp(argv[0], argv)
+			logger.notice("Executing: %s", self._argv)
+			os.chdir(os.path.dirname(self._argv[0]))
+			os.execvp(self._argv[0], self._argv)
 		logger.notice("Will restart in %d seconds", waitSeconds)
 		threading.Thread(target=_restart, args=(waitSeconds, )).start()
 	
 	def setBlockLogin(self, blockLogin):
 		self._blockLogin = forceBool(blockLogin)
-		logger.notice(u"Block login now set to '%s'" % self._blockLogin)
+		logger.notice("Block login now set to '%s'", self._blockLogin)
 
 		if self._blockLogin:
 			if not self._blockLoginEventId:
