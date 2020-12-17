@@ -274,8 +274,12 @@ class Timeline(metaclass=Singleton):
 					'end': end,
 				}
 				return self._sql.insert('EVENT', event)
+			except sqlite3.DatabaseError as dbError:
+				logger.error("Failed to add event '%s': %s, recreating database", title, dbError)
+				self._createDatabase(delete_existing=True)
+				return self._sql.insert('EVENT', event)
 			except Exception as addError:
-				logger.error(u"Failed to add event '%s': %s" % (title, addError))
+				logger.error("Failed to add event '%s': %s", title, addError)
 	
 	def setEventEnd(self, eventId, end=None):
 		if self._stopped:
