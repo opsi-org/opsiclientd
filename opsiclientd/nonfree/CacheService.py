@@ -210,9 +210,10 @@ class CacheService(threading.Thread):
 			try:
 				productOnDepot = productOnDepots[productId]
 			except KeyError:
-				# TODO: raise more specific exception
-				raise Exception(f"Product '{productId}' not available on depot '{depotId}'")
-
+				# Problem with cached config
+				self.setConfigCacheObsolete()
+				raise Exception(f"Config cache problem: product '{productId}' not available on depot '{depotId}'")
+			
 			productState = productCacheState.get(productId)
 			if not productState:
 				logger.info(
