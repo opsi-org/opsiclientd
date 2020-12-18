@@ -397,11 +397,18 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				raise Exception("Cannot sync products: modules file invalid")
 			logger.info("Modules file signature verified (customer: %s)", modules.get('customer'))
 
-			config.set(
-				'depot_server', 'master_depot_id',
-				self._configService.getDepotId(config.get('global', 'host_id'))
-			)
-			config.updateConfigFile()
+			if (
+				"localhost" not in self._configService._configServiceUrl and
+				"127.0.0.1" not in self._configService._configServiceUrl
+			):
+				try:
+					config.set(
+						'depot_server', 'master_depot_id',
+						self._configService.getDepotId(config.get('global', 'host_id'))
+					)
+					config.updateConfigFile()
+				except Exception as e:
+					logger.warning(e)
 		except Exception:
 			self.disconnectConfigService()
 			raise
@@ -805,12 +812,19 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			if not verified:
 				raise Exception("Cannot sync products: modules file invalid")
 			logger.info("Modules file signature verified (customer: %s)" % modules.get('customer'))
-
-			config.set(
-				'depot_server', 'master_depot_id',
-				self._configService.getDepotId(config.get('global', 'host_id'))
-			)
-			config.updateConfigFile()
+			
+			if (
+				"localhost" not in self._configService._configServiceUrl and
+				"127.0.0.1" not in self._configService._configServiceUrl
+			):
+				try:
+					config.set(
+						'depot_server', 'master_depot_id',
+						self._configService.getDepotId(config.get('global', 'host_id'))
+					)
+					config.updateConfigFile()
+				except Exception as e:
+					logger.warning(e)
 		except Exception:
 			self.disconnectConfigService()
 			raise

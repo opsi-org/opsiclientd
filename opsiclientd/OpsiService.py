@@ -210,11 +210,18 @@ class ServiceConnection(object):
 					except Exception as e:
 						logger.error(u"Failed to sync time: '%s'", e)
 
-				config.set(
-					'depot_server', 'master_depot_id',
-					serviceConnectionThread.configService.getDepotId(config.get('global', 'host_id'))
-				)
-				config.updateConfigFile()
+				if (
+					"localhost" not in serviceConnectionThread.configService._configServiceUrl and
+					"127.0.0.1" not in serviceConnectionThread.configService._configServiceUrl
+				):
+					try:
+						config.set(
+							'depot_server', 'master_depot_id',
+							serviceConnectionThread.configService.getDepotId(config.get('global', 'host_id'))
+						)
+						config.updateConfigFile()
+					except Exception as e:
+						logger.warning(e)
 				
 				if urlIndex > 0:
 					backendinfo = serviceConnectionThread.configService.backend_info()
