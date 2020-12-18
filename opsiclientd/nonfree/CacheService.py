@@ -397,10 +397,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				raise Exception("Cannot sync products: modules file invalid")
 			logger.info("Modules file signature verified (customer: %s)", modules.get('customer'))
 
-			if (
-				"localhost" not in self._configService._configServiceUrl and
-				"127.0.0.1" not in self._configService._configServiceUrl
-			):
+			if self._configService._host not in ("localhost", "127.0.0.1"):
 				try:
 					config.set(
 						'depot_server', 'master_depot_id',
@@ -813,10 +810,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				raise Exception("Cannot sync products: modules file invalid")
 			logger.info("Modules file signature verified (customer: %s)" % modules.get('customer'))
 			
-			if (
-				"localhost" not in self._configService._configServiceUrl and
-				"127.0.0.1" not in self._configService._configServiceUrl
-			):
+			if self._configService._host not in ("localhost", "127.0.0.1"):
 				try:
 					config.set(
 						'depot_server', 'master_depot_id',
