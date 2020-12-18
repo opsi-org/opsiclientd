@@ -86,6 +86,10 @@ class CacheService(threading.Thread):
 	def setConfigCacheObsolete(self):
 		self.initializeConfigCacheService()
 		self._configCacheService.setObsolete()
+	
+	def setConfigCacheFaulty(self):
+		self.initializeConfigCacheService()
+		self._configCacheService.setFaulty()
 
 	def syncConfig(self, waitForEnding=False, force=False):
 		self.initializeConfigCacheService()
@@ -198,7 +202,7 @@ class CacheService(threading.Thread):
 				productOnDepot = productOnDepots[productId]
 			except KeyError:
 				# Problem with cached config
-				self.setConfigCacheObsolete()
+				self.setConfigCacheFaulty()
 				raise Exception(f"Config cache problem: product '{productId}' not available on depot '{masterDepotId}'")
 			
 			productState = productCacheState.get(productId)
@@ -414,6 +418,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 	def setObsolete(self):
 		self._state['config_cached'] = False
 		state.set('config_cache_service', self._state)
+
+	def setFaulty(self):
+		self._forceSync = True
+		self.setObsolete()
 
 	def isRunning(self):
 		return self._running
