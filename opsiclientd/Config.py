@@ -441,6 +441,10 @@ class Config(metaclass=Singleton):
 			logger.error(u"Failed to read config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
 			logger.logException(e)
 			return
+		
+		if not self.get("depot_server", "master_depot_id"):
+			self.set("depot_server", "master_depot_id", self.get("depot_server", "depot_id"))
+		
 		logger.notice(u"Config read")
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self._config))
 
