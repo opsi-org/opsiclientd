@@ -195,14 +195,12 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				return modifiedObj.clone(identOnly=False)
 
 			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):
-				depotId = config.get('depot_server', 'depot_id')
-
 				masterVersions = sorted([
 					f"{p.productVersion}-{p.packageVersion}" for p in
 					masterBackend.productOnDepot_getObjects(
 						["productVersion", "packageVersion"],
 						productId=snapshotObj.productId,
-						depotId=depotId
+						depotId=self._depotId
 					)
 				])
 				snapshotVersions = sorted([
@@ -210,7 +208,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					snapshotBackend.productOnDepot_getObjects(
 						["productVersion", "packageVersion"],
 						productId=snapshotObj.productId,
-						depotId=depotId
+						depotId=self._depotId
 					)
 				])
 				

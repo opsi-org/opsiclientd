@@ -180,25 +180,12 @@ class CacheService(threading.Thread):
 
 		self.initializeProductCacheService()
 
-		"""
-		clientToDepotservers = configService.configState_getClientToDepotserver(
-				clientIds=[config.get('global', 'host_id')],
-				masterOnly=True,
-				productIds=productIds)
-		logger.trace("productCacheCompleted: clientToDepotservers=%s", clientToDepotservers)
-		if not clientToDepotservers:
-			# Do not raise Exception and try to continue without checking depot
-			depotId = None
-		else:
-			depotId = [clientToDepotservers[0]['depotId']]
-		"""
-		# Use same depot as in ProductCacheService._cacheProducts
-		depotId = config.get('depot_server', 'depot_id')
+		masterDepotId = config.get('depot_server', 'master_depot_id')
 		
 		productOnDepots = {
 			productOnDepot.productId: productOnDepot
 			for productOnDepot
-			in configService.productOnDepot_getObjects(depotId=depotId, productId=productIds)
+			in configService.productOnDepot_getObjects(depotId=masterDepotId, productId=productIds)
 		}
 		logger.trace("productCacheCompleted: productOnDepots=%s", productOnDepots)
 
@@ -212,7 +199,7 @@ class CacheService(threading.Thread):
 			except KeyError:
 				# Problem with cached config
 				self.setConfigCacheObsolete()
-				raise Exception(f"Config cache problem: product '{productId}' not available on depot '{depotId}'")
+				raise Exception(f"Config cache problem: product '{productId}' not available on depot '{masterDepotId}'")
 			
 			productState = productCacheState.get(productId)
 			if not productState:
@@ -300,24 +287,14 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			raise initError
 
 	def initBackends(self):
-		depotId = config.get('depot_server', 'depot_id')
-		if not depotId:
-			connect = False
-			if not self._configService:
-				self.connectConfigService()
-				connect = True
-			
-			config.selectDepotserver(configService=self._configService, event=None, productIds=[], masterOnly=True, cifsOnly=True)
-			config.updateConfigFile()
-			if connect:
-				self.disconnectConfigService()
-			depotId = config.get('depot_server', 'depot_id')
+		clientId = config.get('global', 'host_id')
+		masterDepotId = config.get('depot_server', 'master_depot_id')
 
 		backendArgs = {
 			'opsiModulesFile': self._opsiModulesFile,
 			'opsiPasswdFile': self._opsiPasswdFile,
 			'auditHardwareConfigFile': self._auditHardwareConfigFile,
-			'depotId': depotId,
+			'depotId': masterDepotId,
 		}
 		self._workBackend = SQLiteBackend(
 			database=os.path.join(self._configCacheDir, 'work.sqlite'),
@@ -336,7 +313,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		self._cacheBackend = ClientCacheBackend(
 			workBackend=self._workBackend,
 			snapshotBackend=self._snapshotBackend,
-			clientId=config.get('global', 'host_id'),
+			clientId=clientId,
 			**backendArgs
 		)
 		
@@ -415,6 +392,12 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			if not verified:
 				raise Exception("Cannot sync products: modules file invalid")
 			logger.info("Modules file signature verified (customer: %s)", modules.get('customer'))
+
+			config.set(
+				'depot_server', 'master_depot_id',
+				self._configService.getDepotId(config.get('global', 'host_id'))
+			)
+			config.updateConfigFile()
 		except Exception:
 			self.disconnectConfigService()
 			raise
@@ -555,7 +538,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			if not self._configService:
 				self.connectConfigService()
 
-			self._cacheBackend.depotId = self._configService.getDepotId(config.get('global', 'host_id'))
+			self._cacheBackend.depotId = config.get('depot_server', 'master_depot_id')
 
 			includeProductIds = []
 			excludeProductIds = []
@@ -814,10 +797,16 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			if not verified:
 				raise Exception("Cannot sync products: modules file invalid")
 			logger.info("Modules file signature verified (customer: %s)" % modules.get('customer'))
+
+			config.set(
+				'depot_server', 'master_depot_id',
+				self._configService.getDepotId(config.get('global', 'host_id'))
+			)
+			config.updateConfigFile()
 		except Exception:
 			self.disconnectConfigService()
 			raise
-
+	
 	def _freeProductCacheSpace(self, neededSpace=0, neededProducts=[]):
 		try:
 			# neededSpace in byte
@@ -927,17 +916,17 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			if not productIds:
 				logger.notice("No product action request set => no products to cache")
 			else:
-				depotId = config.get('depot_server', 'depot_id')
+				masterDepotId = config.get('depot_server', 'master_depot_id')
 				# Get all productOnDepots!
-				productOnDepots = self._configService.productOnDepot_getObjects(depotId=depotId)
+				productOnDepots = self._configService.productOnDepot_getObjects(depotId=masterDepotId)
 				productOnDepotIds = [productOnDepot.productId for productOnDepot in productOnDepots]
-				logger.debug("Product ids on depot %s: %s", depotId, productOnDepotIds)
+				logger.debug("Product ids on depot %s: %s", masterDepotId, productOnDepotIds)
 				errorProductIds = []
 				for productOnClient in productOnClients:
 					if not productOnClient.productId in productOnDepotIds:
 						logger.error(
 							"Requested product: '%s' not found on configured depot: '%s', please check your configuration, setting product to failed.",
-							productOnClient.productId, config.get('depot_server', 'depot_id')
+							productOnClient.productId, masterDepotId
 						)
 						self._setProductCacheState(productOnClient.productId, "failure", "Product not found on configured depot.")
 						errorProductIds.append(productOnClient.productId)
@@ -965,10 +954,10 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 
 						logger.info("Searching for release-packageid: '%s'", releasePackageName)
 						if releasePackageName in productOnDepotIds:
-							logger.info("Releasepackage '%s' found on depot '%s'", releasePackageName, depotId)
+							logger.info("Releasepackage '%s' found on depot '%s'", releasePackageName, masterDepotId)
 							additionalProductId = releasePackageName
 						else:
-							logger.info("Releasepackage '%s' not found on depot '%s'", releasePackageName, depotId)
+							logger.info("Releasepackage '%s' not found on depot '%s'", releasePackageName, masterDepotId)
 					logger.info(
 						"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s",
 						additionalProductId
@@ -1120,12 +1109,16 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		exception = None
 		try:
 			repository = self._getRepository(productId)
-			if not config.get('depot_server', 'depot_id'):
-				raise Exception("Cannot cache product files: depot_server.depot_id undefined")
+			masterDepotId = config.get('depot_server', 'master_depot_id')
+			if not masterDepotId:
+				raise ValueError("Cannot cache product files: depot_server.master_depot_id undefined")
 
-			productOnDepots = self._configService.productOnDepot_getObjects(depotId=config.get('depot_server', 'depot_id'), productId=productId)
+			productOnDepots = self._configService.productOnDepot_getObjects(
+				depotId=masterDepotId,
+				productId=productId
+			)
 			if not productOnDepots:
-				raise Exception("Product '%s' not found on depot '%s'" % (productId, config.get('depot_server', 'depot_id')))
+				raise Exception("Product '%s' not found on depot '%s'" % (productId, masterDepotId))
 			
 			self._setProductCacheState(productId, 'productVersion', productOnDepots[0].productVersion, updateProductOnClient=False)
 			self._setProductCacheState(productId, 'packageVersion', productOnDepots[0].packageVersion, updateProductOnClient=False)

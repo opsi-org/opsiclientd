@@ -165,6 +165,9 @@ class Config(metaclass=Singleton):
 				'sync_time_from_service': False,
 			},
 			'depot_server': {
+				# The id of the depot the client is assigned to
+				'master_depot_id': u'',
+				# The id of the depot currently set as (dynamic) depot
 				'depot_id': u'',
 				'url': u'',
 				'drive': u'',
