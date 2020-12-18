@@ -211,8 +211,8 @@ class ServiceConnection(object):
 						logger.error(u"Failed to sync time: '%s'", e)
 
 				if (
-					"localhost" not in serviceConnectionThread.configService._configServiceUrl and
-					"127.0.0.1" not in serviceConnectionThread.configService._configServiceUrl
+					"localhost" not in configServiceURL and
+					"127.0.0.1" not in configServiceURL
 				):
 					try:
 						config.set(
