@@ -659,10 +659,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		threading.Thread.__init__(self)
 		ServiceConnection.__init__(self)
 		
-		self._storageDir = config.get('cache_service', 'storage_dir')
-		self._tempDir = os.path.join(self._storageDir, 'tmp')
-		self._productCacheDir = os.path.join(self._storageDir, 'depot')
-		self._productCacheMaxSize = forceInt(config.get('cache_service', 'product_cache_max_size'))
+		self._updateConfig()
 
 		self._stopped = False
 		self._running = False
@@ -692,6 +689,12 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		pcss = state.get('product_cache_service')
 		if pcss:
 			self._state = pcss
+
+	def _updateConfig(self):
+		self._storageDir = config.get('cache_service', 'storage_dir')
+		self._tempDir = os.path.join(self._storageDir, 'tmp')
+		self._productCacheDir = os.path.join(self._storageDir, 'depot')
+		self._productCacheMaxSize = forceInt(config.get('cache_service', 'product_cache_max_size'))
 
 	def getProductCacheDir(self):
 		return self._productCacheDir
@@ -887,6 +890,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			raise Exception(f"Failed to free enough disk space for product cache: {e}")
 
 	def _cacheProducts(self):
+		self._updateConfig()
 		self._working = True
 		self._state['products_cached'] = False
 		self._state['products'] = {}
