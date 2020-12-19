@@ -1172,7 +1172,11 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			productCacheDirSize = 0
 			if self._productCacheMaxSize > 0:
 				productCacheDirSize = System.getDirectorySize(self._productCacheDir)
-				if productCacheDirSize + productSize > self._productCacheMaxSize:
+				curProductSize = 0
+				curProductCacheDir = os.path.join(self._productCacheDir, productId)
+				if os.path.exists(curProductCacheDir):
+					curProductSize = System.getDirectorySize(curProductCacheDir)
+				if productCacheDirSize + productSize - curProductSize > self._productCacheMaxSize:
 					logger.info(
 						"Product cache dir sizelimit of %0.3f MB exceeded. Current size: %0.3f MB, space needed for product '%s': %0.3f MB",
 						float(self._productCacheMaxSize) / (1000 * 1000),
