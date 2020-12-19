@@ -187,9 +187,16 @@ class CacheService(threading.Thread):
 		self.initializeProductCacheService()
 
 		masterDepotId = config.get('depot_server', 'master_depot_id')
-		if workingWithCachedConfig and not configService.host_getObjects(id=masterDepotId):
-			self.setConfigCacheFaulty()
-			raise Exception(f"Config cache problem: depot '{masterDepotId}' not available in config cache (depot switched since last sync from server?)")
+		if workingWithCachedConfig:
+			depotIds = []
+			for depot in configService.host_getObjects(type="OpsiDepotserver"):
+				depotIds.append(depot.id)
+			if not masterDepotId in depotIds:
+				self.setConfigCacheFaulty()
+				raise Exception(
+					f"Config cache problem: depot '{masterDepotId}' not available in cached depots: {depotIds}."
+					" Probably the depot was switched after the last config sync from server."
+				)
 		
 		productOnDepots = {
 			productOnDepot.productId: productOnDepot
@@ -557,41 +564,60 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			if not self._configService:
 				self.connectConfigService()
 
-			self._cacheBackend.depotId = config.get('depot_server', 'master_depot_id')
-
-			includeProductIds = []
-			excludeProductIds = []
-			excludeProductGroupIds = [x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != ""]
-			includeProductGroupIds = [x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != ""]
-
-			logger.debug("Given includeProductGroupIds: '%s'" % includeProductGroupIds)
-			logger.debug("Given excludeProductGroupIds: '%s'" % excludeProductGroupIds)
-
-			if includeProductGroupIds:
-				includeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds)]
-				logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
-
-			if excludeProductGroupIds:
-				excludeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds)]
-				logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
-
-			productOnClients = [poc for poc in self._configService.productOnClient_getObjects(
-					productType='LocalbootProduct',
-					clientId=config.get('global', 'host_id'),
-					# Exclude 'always'!
-					actionRequest=['setup', 'uninstall', 'update', 'once', 'custom'],
-					attributes=['actionRequest'],
-					productId=includeProductGroupIds)
-				if poc.productId not in excludeProductIds
-			]
-
-			logger.info("Product on clients: %s", productOnClients)
-			if not productOnClients:
-				self._state['config_cached'] = True
-				state.set('config_cache_service', self._state)
-				logger.notice("No product action requests set on config service, no sync from server required")
-			else:
+			masterDepotId = config.get('depot_server', 'master_depot_id')
+			
+			needSync = False
+			if self._forceSync:
+				logger.notice("Forced sync from server")
+				needSync = True
+			
+			if not needSync:
+				cachedDepotIds = []
 				try:
+					for depot in self._cacheBackend.host_getObjects(type="OpsiDepotserver"):
+						cachedDepotIds.append(depot.id)
+				except Exception as depError:
+					logger.warning(depError)
+				if cachedDepotIds and masterDepotId not in cachedDepotIds:
+					logger.notice(
+						f"Depot '{masterDepotId}' not available in cached depots: {cachedDepotIds}."
+						" Probably the depot was switched after the last config sync from server. New sync needed."
+					)
+					needSync = True
+			
+			self._cacheBackend.depotId = masterDepotId
+			
+			if not needSync:
+				includeProductIds = []
+				excludeProductIds = []
+				excludeProductGroupIds = [x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != ""]
+				includeProductGroupIds = [x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != ""]
+
+				logger.debug("Given includeProductGroupIds: '%s'" % includeProductGroupIds)
+				logger.debug("Given excludeProductGroupIds: '%s'" % excludeProductGroupIds)
+
+				if includeProductGroupIds:
+					includeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds)]
+					logger.debug("Only products with productIds: '%s' will be cached." % includeProductIds)
+
+				if excludeProductGroupIds:
+					excludeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds)]
+					logger.debug("Products with productIds: '%s' will be excluded." % excludeProductIds)
+
+				productOnClients = [poc for poc in self._configService.productOnClient_getObjects(
+						productType='LocalbootProduct',
+						clientId=config.get('global', 'host_id'),
+						# Exclude 'always'!
+						actionRequest=['setup', 'uninstall', 'update', 'once', 'custom'],
+						attributes=['actionRequest'],
+						productId=includeProductGroupIds)
+					if poc.productId not in excludeProductIds
+				]
+
+				logger.info("Product on clients: %s", productOnClients)
+				if not productOnClients:
+					logger.notice("No product action requests set on config service, no sync from server required")
+				else:
 					localProductOnClientsByProductId = {}
 					for productOnClient in self._cacheBackend.productOnClient_getObjects(
 									productType='LocalbootProduct',
@@ -600,51 +626,48 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 									attributes=['actionRequest']):
 						localProductOnClientsByProductId[productOnClient.productId] = productOnClient
 
-					needSync = False
-					if self._forceSync:
-						needSync = True
-					else:
-						for productOnClient in productOnClients:
-							if productOnClient.productId not in localProductOnClientsByProductId:
-								needSync = True
-								break
-
-							if localProductOnClientsByProductId[productOnClient.productId].actionRequest != productOnClient.actionRequest:
-								needSync = True
-								break
-
-							del localProductOnClientsByProductId[productOnClient.productId]
-
-						if not needSync and localProductOnClientsByProductId:
+					for productOnClient in list(productOnClients):
+						if productOnClient.productId not in localProductOnClientsByProductId:
+							# ProductOnClient not cached
 							needSync = True
+							break
 
-					if not needSync:
-						logger.notice("No sync from server required configuration is unchanged")
-						self._state['config_cached'] = True
-						state.set('config_cache_service', self._state)
+						if localProductOnClientsByProductId[productOnClient.productId].actionRequest != productOnClient.actionRequest:
+							# ProductOnClient actionRequest changed
+							needSync = True
+							break
+
+						del localProductOnClientsByProductId[productOnClient.productId]
+
+					if not needSync and localProductOnClientsByProductId:
+						# Obsolete ProductOnClients found
+						needSync = True
+					
+					if needSync:
+						logger.notice("Product on client configuration changed on config service, sync from server required")
 					else:
-						if self._forceSync:
-							logger.notice("Forced sync from server")
-							self._forceSync = False
-						else:
-							logger.notice("Product on client configuration changed on config service, sync from server required")
-						eventId = timeline.addEvent(
-							title="Config sync from server",
-							description='Syncing config from server',
-							category='config_sync',
-							durationEvent=True
-						)
-						self._cacheBackend._setMasterBackend(self._configService)
-						logger.info("Clearing modifications in tracker")
-						self._backendTracker.clearModifications()
-						self._cacheBackend._replicateMasterToWorkBackend()
-						logger.notice("Config synced from server")
-						self._state['config_cached'] = True
-						state.set('config_cache_service', self._state)
-						timeline.setEventEnd(eventId)
+						logger.notice("Product on client configuration not changed on config service, sync from server not required")
+			
+			if needSync:
+				try:
+					self._forceSync = False
+					eventId = timeline.addEvent(
+						title="Config sync from server",
+						description='Syncing config from server',
+						category='config_sync',
+						durationEvent=True
+					)
+					self._cacheBackend._setMasterBackend(self._configService)
+					logger.info("Clearing modifications in tracker")
+					self._backendTracker.clearModifications()
+					self._cacheBackend._replicateMasterToWorkBackend()
+					logger.notice("Config synced from server")
+					self._state['config_cached'] = True
+					state.set('config_cache_service', self._state)
+					timeline.setEventEnd(eventId)
 
-						for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
-							eventGenerator.createAndFireEvent()
+					for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
+						eventGenerator.createAndFireEvent()
 				except Exception as e:
 					logger.logException(e)
 					timeline.addEvent(
@@ -654,9 +677,13 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 						isError=True
 					)
 					raise
+			else:
+				self._state['config_cached'] = True
+				state.set('config_cache_service', self._state)
+		
 		except Exception as e:
-			logger.error("Errors occurred while syncing config from server: %s", e)
-			logger.logException(e)
+			logger.error("Errors occurred while syncing config from server: %s", e, exc_info=True)
+		
 		self.disconnectConfigService()
 		self._working = False
 
