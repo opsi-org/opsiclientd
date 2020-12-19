@@ -581,7 +581,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				if cachedDepotIds and masterDepotId not in cachedDepotIds:
 					logger.notice(
 						f"Depot '{masterDepotId}' not available in cached depots: {cachedDepotIds}."
-						" Probably the depot was switched after the last config sync from server. New sync needed."
+						" Probably the depot was switched after the last config sync from server. New sync required."
 					)
 					needSync = True
 			

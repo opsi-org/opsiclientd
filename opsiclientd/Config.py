@@ -449,7 +449,7 @@ class Config(metaclass=Singleton):
 		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self._config))
 
 	def updateConfigFile(self):
-		logger.notice(u"Updating config file: '%s'" % self.get('global', 'config_file'))
+		logger.info(u"Updating config file: '%s'" % self.get('global', 'config_file'))
 
 		try:
 			configFile = IniFile(filename=self.get('global', 'config_file'), raw=True)
@@ -501,7 +501,7 @@ class Config(metaclass=Singleton):
 				configFile.generate(config, comments=comments)
 				logger.notice(u"Config file '%s' written" % self.get('global', 'config_file'))
 			else:
-				logger.notice(u"No need to write config file '%s', config file is up to date" % self.get('global', 'config_file'))
+				logger.info(u"No need to write config file '%s', config file is up to date" % self.get('global', 'config_file'))
 		except Exception as e:
 			# An error occured while trying to write the config file
 			logger.error(e, exc_info=True)
