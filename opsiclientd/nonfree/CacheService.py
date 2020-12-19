@@ -182,9 +182,14 @@ class CacheService(threading.Thread):
 		if not productIds:
 			return True
 
+		workingWithCachedConfig = bool(configService._host in ("localhost", "127.0.0.1"))
+
 		self.initializeProductCacheService()
 
 		masterDepotId = config.get('depot_server', 'master_depot_id')
+		if workingWithCachedConfig and not configService.host_getObjects(id=masterDepotId):
+			self.setConfigCacheFaulty()
+			raise Exception(f"Config cache problem: depot '{masterDepotId}' not available in config cache (depot switched since last sync from server?)")
 		
 		productOnDepots = {
 			productOnDepot.productId: productOnDepot
@@ -202,8 +207,10 @@ class CacheService(threading.Thread):
 				productOnDepot = productOnDepots[productId]
 			except KeyError:
 				# Problem with cached config
-				self.setConfigCacheFaulty()
-				raise Exception(f"Config cache problem: product '{productId}' not available on depot '{masterDepotId}'")
+				if workingWithCachedConfig:
+					self.setConfigCacheFaulty()
+					raise Exception(f"Config cache problem: product '{productId}' not available on depot '{masterDepotId}'")
+				raise Exception(f"Product '{productId}' not available on depot '{masterDepotId}'")
 			
 			productState = productCacheState.get(productId)
 			if not productState:
