@@ -29,6 +29,7 @@ import os
 import platform
 import re
 import sys
+import netifaces
 
 from opsicommon.logging import logger, LOG_NOTICE, logging_config
 from opsicommon.utils import Singleton
@@ -582,11 +583,11 @@ class Config(metaclass=Singleton):
 
 		if dynamicDepot:
 			if not depotIds:
-				logger.info(u"Dynamic depot selection enabled")
+				logger.info("Dynamic depot selection enabled")
 			else:
-				logger.info(u"Dynamic depot selection enabled, but depot is already selected")
+				logger.info("Dynamic depot selection enabled, but depot is already selected")
 		else:
-			logger.info(u"Dynamic depot selection disabled")
+			logger.info("Dynamic depot selection disabled")
 
 		if not depotIds:
 			clientToDepotservers = configService.configState_getClientToDepotserver(
@@ -595,7 +596,7 @@ class Config(metaclass=Singleton):
 				productIds=productIds
 			)
 			if not clientToDepotservers:
-				raise Exception(u"Failed to get depot config from service")
+				raise Exception("Failed to get depot config from service")
 
 			depotIds = [clientToDepotservers[0]['depotId']]
 			if dynamicDepot:
@@ -612,46 +613,37 @@ class Config(metaclass=Singleton):
 				alternativeDepots.append(depot)
 
 		if not masterDepot:
-			raise Exception(u"Failed to get info for master depot '%s'" % depotIds[0])
-
-		logger.info(u"Master depot for products %s is %s" % (productIds, masterDepot.id))
+			raise Exception(f"Failed to get info for master depot '{depotIds[0]}'")
+		
+		logger.info("Master depot for products %s is %s", productIds, masterDepot.id)
 		selectedDepot = masterDepot
 		if dynamicDepot:
 			if alternativeDepots:
-				logger.info(u"Got alternative depots for products: %s" % productIds)
+				logger.info("Got alternative depots for products: %s", productIds)
 				for index, depot in enumerate(alternativeDepots, start=1):
-					logger.info(u"%d. alternative depot is %s", index, depot.id)
-
-				defaultInterface = None
+					logger.info("%d. alternative depot is %s", index, depot.id)
+				
 				try:
-					networkInterfaces = System.getNetworkInterfaces()
-					if not networkInterfaces:
-						raise Exception(u"No network interfaces found")
-
-					for networkInterface in networkInterfaces:
-						logger.info(u"Found network interface: %s" % networkInterface)
-
-					defaultInterface = networkInterfaces[0]
-					for networkInterface in networkInterfaces:
-						if networkInterface.ipAddressList.ipAddress == '0.0.0.0':
-							continue
-
-						if networkInterface.gatewayList.ipAddress:
-							defaultInterface = networkInterface
-							break
-
 					clientConfig = {
 						"clientId": self.get('global', 'host_id'),
 						"opsiHostKey": self.get('global', 'opsi_host_key'),
-						"ipAddress": forceUnicode(defaultInterface.ipAddressList.ipAddress),
-						"netmask": forceUnicode(defaultInterface.ipAddressList.ipMask),
-						"defaultGateway": forceUnicode(defaultInterface.gatewayList.ipAddress)
+						"ipAddress": None,
+						"netmask": None,
+						"defaultGateway": None
 					}
-
-					logger.info(u"Passing client configuration to depot selection algorithm: %s" % clientConfig)
+					try:
+						gateways = netifaces.gateways()
+						clientConfig["defaultGateway"], iface_name = gateways['default'][netifaces.AF_INET]
+						addr = netifaces.ifaddresses(iface_name)[netifaces.AF_INET][0]
+						clientConfig["netmask"] = addr["netmask"]
+						clientConfig["ipAddress"] = addr["addr"]
+					except Exception as gwe:
+						raise RuntimeError(f"Failed to get network interface with default gateway: {gwe}")
+					
+					logger.info("Passing client configuration to depot selection algorithm: %s", clientConfig)
 
 					depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()
-					logger.debug2(u"depotSelectionAlgorithm:\n%s" % depotSelectionAlgorithm)
+					logger.trace("depotSelectionAlgorithm:\n%s", depotSelectionAlgorithm)
 					
 					currentLocals = locals()
 					exec(depotSelectionAlgorithm, None, currentLocals)
@@ -666,11 +658,11 @@ class Config(metaclass=Singleton):
 						selectedDepot = masterDepot
 				except Exception as error:
 					logger.logException(error)
-					logger.error(u"Failed to select depot: %s" % error)
+					logger.error("Failed to select depot: %s", error, exc_info=True)
 			else:
-				logger.info(u"No alternative depot for products: %s" % productIds)
+				logger.info("No alternative depot for products: %s", productIds)
 
-		logger.notice(u"Selected depot is '%s', protocol '%s'", selectedDepot, depotProtocol)
+		logger.notice("Selected depot is '%s', protocol '%s'", selectedDepot, depotProtocol)
 		self.set('depot_server', 'depot_id', selectedDepot.id)
 		if (depotProtocol == 'webdav'):
 			self.set('depot_server', 'url', selectedDepot.depotWebdavUrl)
