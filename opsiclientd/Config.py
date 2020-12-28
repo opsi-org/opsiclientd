@@ -674,7 +674,7 @@ class Config(metaclass=Singleton):
 			return (self.get('global', 'host_id'), self.get('global', 'opsi_host_key'))
 		
 		if not configService:
-			raise Exception(u"Not connected to config service")
+			raise Exception("Not connected to config service")
 
 		depotServerUsername = self.get('depot_server', 'username')
 		encryptedDepotServerPassword = configService.user_getCredentials(
