@@ -166,9 +166,16 @@ class PosixControlDomainSocket(ControlPipe):
 	
 	def waitForClient(self):
 		logger.info("Waiting for client to connected to %s", self._socketName)
-		self._connection, client_address = self._socket.accept()
-		logger.notice("Client %s connected to %s", client_address, self._socketName)
-		self._clientConnected = True
+		self._connection.settimeout(2.0)
+		while True:
+			try:
+				self._connection, client_address = self._socket.accept()
+				logger.notice("Client %s connected to %s", client_address, self._socketName)
+				self._clientConnected = True
+				return
+			except socket.timeout as e:
+				if self._stopEvent.wait(1):
+					return
 	
 	def clientDisconnected(self):
 		self._clientConnected = False
@@ -182,11 +189,8 @@ class PosixControlDomainSocket(ControlPipe):
 			if not data:
 				self.clientDisconnected()
 			return data.decode("utf-8")
-		except socket.timeout as e:
-			logger.trace(
-				"Failed to read from socket (timed out after %d seconds)",
-				self._readTimeout
-			)
+		except Exception as e:
+			logger.trace("Failed to read from socket: %s", e)
 	
 	def writePipe(self, data):
 		if not data:
@@ -197,12 +201,8 @@ class PosixControlDomainSocket(ControlPipe):
 		self._connection.settimeout(self._writeTimeout)
 		try:
 			self._connection.sendall(data)
-			return True
-		except socket.timeout as e:
-			logger.trace(
-				"Failed to write to socket (timed out after %d seconds)",
-				self._writeTimeout
-			)
+		except Exception as e:
+			raise RuntimeError(f"Failed to write to socket: {e}")
 
 
 class NTControlPipe(ControlPipe):
@@ -263,7 +263,7 @@ class NTControlPipe(ControlPipe):
 			raise RuntimeError("Failed to connect to pipe")
 	
 	def readPipe(self):
-		logger.notice("Reading from pipe")
+		logger.trace("Reading from pipe")
 		chBuf = create_string_buffer(self._bufferSize)
 		cbRead = c_ulong(0)
 		fReadSuccess = windll.kernel32.ReadFile(
@@ -273,15 +273,15 @@ class NTControlPipe(ControlPipe):
 			byref(cbRead),
 			None
 		)
-		logger.notice("Read %d bytes from pipe", cbRead.value)
+		logger.trace("Read %d bytes from pipe", cbRead.value)
 		if fReadSuccess == 1 or cbRead.value != 0:
 			return chBuf.value.decode()
-		logger.error("Failed to read from pipe")
+		logger.trace("Failed to read from pipe")
 	
 	def writePipe(self, data):
 		if not data:
 			return
-		logger.notice("Writing to pipe")
+		logger.trace("Writing to pipe")
 		if not type(data) is bytes:
 			data = data.encode("utf-8")
 		if not data.endswith(b"\0"):
@@ -298,13 +298,12 @@ class NTControlPipe(ControlPipe):
 		windll.kernel32.FlushFileBuffers(self._pipe)
 		logger.trace("Wrote %d bytes to pipe", cbWritten.value)
 		if not fWriteSuccess:
-			logger.error("Failed to write to pipe")
-			return False
+			raise RuntimeError("Failed to write to pipe")
 		if len(data) != cbWritten.value:
-			logger.error("Failed to write all bytes to pipe (%d/%d)", cbWritten.value, len(data))
-			return False
-		return True
-
+			raise RuntimeError(
+				f"Failed to write all bytes to pipe ({cbWritten.value}/{len(data)})",
+			)
+		
 
 class OpsiclientdRpcPipeInterface(object):
 	def __init__(self, opsiclientd):
