@@ -53,22 +53,60 @@ def ControlPipeFactory(opsiclientd):
 		raise NotImplementedError(f"Unsupported operating system: {os.name}")
 
 
+class ClientConnection(threading.Thread):
+	def __init__(self, controller, connection):
+		threading.Thread.__init__(self)
+		self._controller = controller
+		self._connection = connection
+		self._readTimeout = 1
+		self._writeTimeout = 1
+		self._clientInfo = []
+		self._shouldStop = False
+	
+	def run(self):
+		with opsicommon.logging.log_context({'instance' : 'control pipe connection'}):
+			#while self._clientConnected and not self._stopEvent.is_set():
+			#with self._comLock:
+			try:
+				while not self._shouldStop:
+					request = self.read()
+					if request:
+						logger.info("Received request '%s'", request)
+						response = self._controller.processIncomingRpc(request)
+						logger.info("Sending response '%s'", response)
+						self.write(response)
+					time.sleep(0.5)
+			except Exception as e:
+				logger.error(e, exc_info=True)
+			finally:
+				self.clientDisconnected()
+	
+	def read(self):
+		return ""
+
+	def write(self, data):
+		return False
+	
+	def clientDisconnected(self):
+		self._shouldStop = True
+		self._controller.clientDisconnected(self)
+
+
 class ControlPipe(threading.Thread):
 	"""
 	Base class for a named pipe which handles remote procedure calls.
 	"""
+	connection_class = ClientConnection
+
 	def __init__(self, opsiclientd):
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd 
 		self._opsiclientdRpcInterface = OpsiclientdRpcPipeInterface(self._opsiclientd)
 		self._bufferSize = 4096
-		self._readTimeout = 1
-		self._writeTimeout = 1
 		self._running = False
 		self._stopEvent = threading.Event()
 		self._stopEvent.clear()
-		self._clientConnected = False
-		self._clientInfo = []
+		self._clients = []
 		self._comLock = threading.Lock()
 
 	def run(self):
@@ -77,16 +115,10 @@ class ControlPipe(threading.Thread):
 			while not self._stopEvent.is_set():
 				try:
 					self.createPipe()
-					self.waitForClient()
-					while self._clientConnected and not self._stopEvent.is_set():
-						with self._comLock:
-							request = self.readPipe()
-							if request:
-								logger.info("Received request '%s'", request)
-								response = self.processIncomingRpc(request)
-								logger.info("Sending response '%s'", response)
-								self.writePipe(response)
-						time.sleep(0.5)
+					client = self.waitForClient()
+					connection = self.connection_class(self, client)
+					self._clients.append(connection)
+					connection.start()
 				except Exception as e:
 					logger.error(e, exc_info=True)
 			self._running = False
@@ -104,26 +136,20 @@ class ControlPipe(threading.Thread):
 	def waitForClient(self):
 		pass
 	
-	def clientDisconnected(self):
-		logger.info("Client disconnected")
-		self._clientConnected = False
-		self._clientInfo = []
-
-	def readPipe(self):
-		return ""
-
-	def writePipe(self, data):
-		return False
-
+	def clientDisconnected(self, client):
+		if client in self._clients:
+			logger.info("Client %s disconnected", client)
+			self._clients.remove(client)
+	
 	def isRunning(self):
 		return self._running
 
 	def executeRpc(self, method, *params):
-		if not self._clientConnected:
-			raise RuntimeError("Cannot execute rpc, no client connected")
+		#if not self._clientConnected:
+		#	raise RuntimeError("Cannot execute rpc, no client connected")
 		if not self._clientInfo:
 			raise RuntimeError("Cannot execute rpc, not supported by client")
-		
+		"""
 		with self._comLock:
 			request = toJson({
 				"id": 1,
@@ -136,7 +162,8 @@ class ControlPipe(threading.Thread):
 			if response:
 				logger.info("Received response '%s'", response)
 				return fromJson(response)
-
+		"""
+	
 	def processIncomingRpc(self, rpc):
 		try:
 			rpc = fromJson(rpc)
@@ -146,12 +173,14 @@ class ControlPipe(threading.Thread):
 				rpc=rpc
 			)
 			jsonrpc.execute()
+			"""
 			if rpc.get("method") == "registerClient":
 				self._clientInfo = rpc.get("params", [])
 				threading.Timer(1.0,
 					self.executeRpc,
 					args=['blockLogin', self._opsiclientd._blockLogin]
 				).start()
+			"""
 			return toJson(jsonrpc.getResponse())
 		except Exception as rpcError:
 			logger.error(rpcError, exc_info=True)
@@ -161,17 +190,41 @@ class ControlPipe(threading.Thread):
 			})
 
 
+class PosixClientConnection(ClientConnection):
+	def read(self):
+		logger.trace("Reading from connection %s", self._connection)
+		self._connection.settimeout(self._readTimeout)
+		try:
+			data = self._connection.recv(4096)
+			if not data:
+				self.clientDisconnected()
+			return data.decode("utf-8")
+		except Exception as err:
+			logger.trace("Failed to read from socket: %s", err)
+	
+	def write(self, data):
+		if not data or not self._connection:
+			return
+		logger.trace("Writing to connection %s", self._connection)
+		if not isinstance(data, bytes):
+			data = data.encode("utf-8")
+		self._connection.settimeout(self._writeTimeout)
+		try:
+			self._connection.sendall(data)
+		except Exception as err:
+			raise RuntimeError(f"Failed to write to socket: {err}")
+
 class PosixControlDomainSocket(ControlPipe):
 	"""
 	PosixControlDomainSocket implements a control socket for posix operating systems
 	"""
+	connection_class = PosixClientConnection
 	
 	def __init__(self, opsiclientd):
 		ControlPipe.__init__(self, opsiclientd)
 		self._socketName = "/var/run/opsiclientd/socket"
 		self._socket = None
-		self._connection = None
-	
+		
 	def createPipe(self):
 		logger.trace("Creating socket %s", self._socketName)
 		self.removePipe()
@@ -182,15 +235,10 @@ class PosixControlDomainSocket(ControlPipe):
 		logger.trace("Socket %s created", self._socketName)
 
 	def removePipe(self):
-		if self._connection:
-			try:
-				self._connection.close()
-			except Exception as error:
-				pass
 		if self._socket:
 			try:
 				self._socket.close()
-			except Exception as error:
+			except Exception as err:
 				pass
 		if os.path.exists(self._socketName):
 			os.remove(self._socketName)
@@ -200,47 +248,63 @@ class PosixControlDomainSocket(ControlPipe):
 		self._socket.settimeout(2.0)
 		while True:
 			try:
-				self._connection, client_address = self._socket.accept()
+				connection, client_address = self._socket.accept()
 				logger.notice("Client %s connected to %s", client_address, self._socketName)
-				self._clientConnected = True
-				return
-			except socket.timeout as e:
+				return connection
+			except socket.timeout as err:
 				if self._stopEvent.is_set():
 					return
 	
-	def clientDisconnected(self):
-		ControlPipe.clientDisconnected(self)
-		self._connection = None
 
+class NTPipeClientConnection(ClientConnection):
 	def readPipe(self):
-		logger.trace("Reading from socket %s", self._socketName)
-		self._connection.settimeout(self._readTimeout)
-		try:
-			data = self._connection.recv(4096)
-			if not data:
-				self.clientDisconnected()
-			return data.decode("utf-8")
-		except Exception as e:
-			logger.trace("Failed to read from socket: %s", e)
+		logger.trace("Reading from pipe")
+		chBuf = create_string_buffer(self._controller._bufferSize)
+		cbRead = c_ulong(0)
+		fReadSuccess = windll.kernel32.ReadFile(
+			self._connection,
+			chBuf,
+			self._controller._bufferSize,
+			byref(cbRead),
+			None
+		)
+		logger.trace("Read %d bytes from pipe", cbRead.value)
+		if fReadSuccess == 1 or cbRead.value != 0:
+			return chBuf.value.decode()
+		logger.trace("Failed to read from pipe")
 	
 	def writePipe(self, data):
-		if not data or not self._connection:
+		if not data:
 			return
-		logger.trace("Writing to socket %s", self._socketName)
-		if not type(data) is bytes:
+		logger.trace("Writing to pipe")
+		if not isinstance(data, bytes):
 			data = data.encode("utf-8")
-		self._connection.settimeout(self._writeTimeout)
-		try:
-			self._connection.sendall(data)
-		except Exception as e:
-			raise RuntimeError(f"Failed to write to socket: {e}")
+		data += b"\0"
 
+		cbWritten = c_ulong(0)
+		fWriteSuccess = windll.kernel32.WriteFile(
+			self._connection,
+			c_char_p(data),
+			len(data),
+			byref(cbWritten),
+			None
+		)
+		windll.kernel32.FlushFileBuffers(self._connection)
+		#logger.trace("Wrote %d bytes to pipe", cbWritten.value)
+		logger.notice("Wrote %d bytes to pipe", cbWritten.value)
+		if not fWriteSuccess:
+			raise RuntimeError("Failed to write to pipe")
+		if len(data) != cbWritten.value:
+			raise RuntimeError(
+				f"Failed to write all bytes to pipe ({cbWritten.value}/{len(data)})",
+			)
 
 class NTControlPipe(ControlPipe):
 	"""
 	Control pipe for windows operating systems.
 	"""
-	
+	connection_class = NTPipeClientConnection
+
 	def __init__(self, opsiclientd):
 		ControlPipe.__init__(self, opsiclientd)
 		self._pipeName = "\\\\.\\pipe\\opsiclientd"
@@ -274,6 +338,7 @@ class NTControlPipe(ControlPipe):
 	def removePipe(self):
 		if self._pipe:
 			try:
+				windll.kernel32.FlushFileBuffers(self._pipe)
 				windll.kernel32.DisconnectNamedPipe(self._pipe)
 				windll.kernel32.CloseHandle(self._pipe)
 			except Exception as e:
@@ -289,52 +354,11 @@ class NTControlPipe(ControlPipe):
 
 		if fConnected == 1:
 			logger.notice("Client connected to %s", self._pipeName)
-			self._clientConnected = True
-		else:
-			raise RuntimeError("Failed to connect to pipe")
-	
-	def readPipe(self):
-		logger.trace("Reading from pipe")
-		chBuf = create_string_buffer(self._bufferSize)
-		cbRead = c_ulong(0)
-		fReadSuccess = windll.kernel32.ReadFile(
-			self._pipe,
-			chBuf,
-			self._bufferSize,
-			byref(cbRead),
-			None
-		)
-		logger.trace("Read %d bytes from pipe", cbRead.value)
-		if fReadSuccess == 1 or cbRead.value != 0:
-			return chBuf.value.decode()
-		logger.trace("Failed to read from pipe")
-	
-	def writePipe(self, data):
-		if not data:
-			return
-		logger.trace("Writing to pipe")
-		if not type(data) is bytes:
-			data = data.encode("utf-8")
-		data += b"\0"
-
-		cbWritten = c_ulong(0)
-		fWriteSuccess = windll.kernel32.WriteFile(
-			self._pipe,
-			c_char_p(data),
-			len(data),
-			byref(cbWritten),
-			None
-		)
-		#windll.kernel32.FlushFileBuffers(self._pipe)
-		#logger.trace("Wrote %d bytes to pipe", cbWritten.value)
-		logger.notice("Wrote %d bytes to pipe", cbWritten.value)
-		if not fWriteSuccess:
-			raise RuntimeError("Failed to write to pipe")
-		if len(data) != cbWritten.value:
-			raise RuntimeError(
-				f"Failed to write all bytes to pipe ({cbWritten.value}/{len(data)})",
-			)
+			return self._pipe
 		
+		windll.kernel32.CloseHandle(self._pipe)
+		raise RuntimeError("Failed to connect to pipe")
+
 
 class OpsiclientdRpcPipeInterface(object):
 	def __init__(self, opsiclientd):
