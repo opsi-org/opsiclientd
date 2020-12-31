@@ -259,9 +259,9 @@ class NTControlPipe(ControlPipe):
 		if fConnected == 1:
 			logger.notice("Client connected to %s", self._pipeName)
 			self._clientConnected = True
-		
-		raise RuntimeError("Failed to connect to pipe")
-		
+		else:
+			raise RuntimeError("Failed to connect to pipe")
+	
 	def readPipe(self):
 		logger.notice("Reading from pipe")
 		chBuf = create_string_buffer(self._bufferSize)
