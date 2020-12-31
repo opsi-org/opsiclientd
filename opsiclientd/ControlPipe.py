@@ -44,11 +44,11 @@ if os.name == 'nt':
 	from ctypes import windll
 
 
-def ControlPipeFactory(opsiclientdRpcInterface):
+def ControlPipeFactory(opsiclientd):
 	if os.name == 'posix':
-		return PosixControlDomainSocket(opsiclientdRpcInterface)
+		return PosixControlDomainSocket(opsiclientd)
 	elif os.name == 'nt':
-		return NTControlPipe(opsiclientdRpcInterface)
+		return NTControlPipe(opsiclientd)
 	else:
 		raise NotImplementedError(f"Unsupported operating system: {os.name}")
 
@@ -57,9 +57,10 @@ class ControlPipe(threading.Thread):
 	"""
 	Base class for a named pipe which handles remote procedure calls.
 	"""
-	def __init__(self, opsiclientdRpcInterface):
+	def __init__(self, opsiclientd):
 		threading.Thread.__init__(self)
-		self._opsiclientdRpcInterface = opsiclientdRpcInterface
+		self._opsiclientd = opsiclientd 
+		self._opsiclientdRpcInterface = OpsiclientdRpcPipeInterface(self._opsiclientd)
 		self._bufferSize = 4096
 		self._readTimeout = 1
 		self._writeTimeout = 1
@@ -67,21 +68,24 @@ class ControlPipe(threading.Thread):
 		self._stopEvent = threading.Event()
 		self._stopEvent.clear()
 		self._clientConnected = False
+		self._clientInfo = []
+		self._comLock = threading.Lock()
 
 	def run(self):
 		with opsicommon.logging.log_context({'instance' : 'control pipe'}):
 			self._running = True
-			while not self._stopEvent.wait(1):
+			while not self._stopEvent.is_set():
 				try:
 					self.createPipe()
 					self.waitForClient()
-					while self._clientConnected:
-						request = self.readPipe()
-						if request:
-							logger.info("Received request '%s'", request)
-							response = self.rpcFromClient(request)
-							logger.info("Sending response '%s'", response)
-							self.writePipe(response)
+					while self._clientConnected and not self._stopEvent.is_set():
+						with self._comLock:
+							request = self.readPipe()
+							if request:
+								logger.info("Received request '%s'", request)
+								response = self.processIncomingRpc(request)
+								logger.info("Sending response '%s'", response)
+								self.writePipe(response)
 						time.sleep(0.5)
 				except Exception as e:
 					logger.error(e, exc_info=True)
@@ -102,6 +106,7 @@ class ControlPipe(threading.Thread):
 	
 	def clientDisconnected(self):
 		self._clientConnected = False
+		self._clientInfo = []
 
 	def readPipe(self):
 		return ""
@@ -112,7 +117,26 @@ class ControlPipe(threading.Thread):
 	def isRunning(self):
 		return self._running
 
-	def rpcFromClient(self, rpc):
+	def executeRpc(self, method, *params):
+		if not self._clientConnected:
+			raise RuntimeError("Cannot execute rpc, no client connected")
+		if not self._clientInfo:
+			raise RuntimeError("Cannot execute rpc, not supported by client")
+		
+		with self._comLock:
+			request = toJson({
+				"id": 1,
+				"method": method,
+				"params": params
+			})
+			logger.info("Sending request '%s'", request)
+			self.writePipe(request)
+			response = self.readPipe()
+			if response:
+				logger.info("Received response '%s'", response)
+				return fromJson(response)
+
+	def processIncomingRpc(self, rpc):
 		try:
 			rpc = fromJson(rpc)
 			jsonrpc = JsonRpc(
@@ -121,6 +145,12 @@ class ControlPipe(threading.Thread):
 				rpc=rpc
 			)
 			jsonrpc.execute()
+			if rpc.get("method") == "registerClient":
+				self._clientInfo = rpc.get("params", [])
+				threading.Timer(1.0,
+					self.executeRpc,
+					args=['blockLogin', self._opsiclientd._blockLogin]
+				).start()
 			return toJson(jsonrpc.getResponse())
 		except Exception as rpcError:
 			logger.error(rpcError, exc_info=True)
@@ -135,8 +165,8 @@ class PosixControlDomainSocket(ControlPipe):
 	PosixControlDomainSocket implements a control socket for posix operating systems
 	"""
 	
-	def __init__(self, opsiclientdRpcInterface):
-		ControlPipe.__init__(self, opsiclientdRpcInterface)
+	def __init__(self, opsiclientd):
+		ControlPipe.__init__(self, opsiclientd)
 		self._socketName = "/var/run/opsiclientd/socket"
 		self._socket = None
 		self._connection = None
@@ -166,7 +196,7 @@ class PosixControlDomainSocket(ControlPipe):
 	
 	def waitForClient(self):
 		logger.info("Waiting for client to connected to %s", self._socketName)
-		self._connection.settimeout(2.0)
+		self._socket.settimeout(2.0)
 		while True:
 			try:
 				self._connection, client_address = self._socket.accept()
@@ -174,11 +204,11 @@ class PosixControlDomainSocket(ControlPipe):
 				self._clientConnected = True
 				return
 			except socket.timeout as e:
-				if self._stopEvent.wait(1):
+				if self._stopEvent.is_set():
 					return
 	
 	def clientDisconnected(self):
-		self._clientConnected = False
+		ControlPipe.clientDisconnected(self)
 		self._connection = None
 
 	def readPipe(self):
@@ -193,7 +223,7 @@ class PosixControlDomainSocket(ControlPipe):
 			logger.trace("Failed to read from socket: %s", e)
 	
 	def writePipe(self, data):
-		if not data:
+		if not data or not self._connection:
 			return
 		logger.trace("Writing to socket %s", self._socketName)
 		if not type(data) is bytes:
@@ -210,8 +240,8 @@ class NTControlPipe(ControlPipe):
 	Control pipe for windows operating systems.
 	"""
 	
-	def __init__(self, opsiclientdRpcInterface):
-		ControlPipe.__init__(self, opsiclientdRpcInterface)
+	def __init__(self, opsiclientd):
+		ControlPipe.__init__(self, opsiclientd)
 		self._pipeName = "\\\\.\\pipe\\opsiclientd"
 		self._pipe = None
 	
@@ -350,3 +380,6 @@ class OpsiclientdRpcPipeInterface(object):
 
 	def isShutdownTriggered(self):
 		return self.opsiclientd.isShutdownTriggered()
+	
+	def registerClient(self, name, version):
+		return f"client {name}/{version} registered"

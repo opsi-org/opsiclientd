@@ -53,7 +53,7 @@ from OPSI import __version__ as python_opsi_version
 
 from opsiclientd import __version__, config, check_signature
 from opsiclientd.Config import Config
-from opsiclientd.ControlPipe import ControlPipeFactory, OpsiclientdRpcPipeInterface
+from opsiclientd.ControlPipe import ControlPipeFactory
 from opsiclientd.ControlServer import ControlServer
 from opsiclientd.Events.Basic import EventListener
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventGenerator
@@ -115,6 +115,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._stopEvent.clear()
 
 		self._cacheService = None
+		self._controlPipe = None
 
 		self._selfUpdating = False
 
@@ -260,7 +261,16 @@ class Opsiclientd(EventListener, threading.Thread):
 				except Exception as e:
 					logger.warning(u"Failed to terminate block login notifier app: %s" % forceUnicode(e))
 				self._blockLoginNotifierPid = None
+		
+		if self._controlPipe:
+			try:
+				self._controlPipe.executeRpc("blockLogin", self._blockLogin)
+			except Exception as rpcError:
+				logger.debug(rpcError)
 
+	def loginUser(self, username, password):
+		self._controlPipe.executeRpc("loginUser", username, password)
+	
 	def isRunning(self):
 		return self._running
 
@@ -328,9 +338,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		def getControlPipe():
 			logger.notice("Starting control pipe")
 			try:
-				controlPipe = ControlPipeFactory(OpsiclientdRpcPipeInterface(self))
-				controlPipe.daemon = True
-				controlPipe.start()
+				self._controlPipe = ControlPipeFactory(self)
+				self._controlPipe.daemon = True
+				self._controlPipe.start()
 				logger.notice("Control pipe started")
 				yield
 			except Exception as e:
@@ -339,8 +349,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			finally:
 				logger.info("Stopping control pipe")
 				try:
-					controlPipe.stop()
-					controlPipe.join(2)
+					self._controlPipe.stop()
+					self._controlPipe.join(2)
 					logger.info("Control pipe stopped")
 				except (NameError, RuntimeError) as stopError:
 					logger.debug("Stopping controlPipe failed: %s", stopError)
