@@ -142,13 +142,13 @@ class PosixControlDomainSocket(ControlPipe):
 		self._connection = None
 	
 	def createPipe(self):
-		logger.debug2("Creating socket %s", self._socketName)
+		logger.trace("Creating socket %s", self._socketName)
 		self.removePipe()
 		self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 		self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self._socket.bind(self._socketName)
 		self._socket.listen(1)
-		logger.debug2("Socket %s created", self._socketName)
+		logger.trace("Socket %s created", self._socketName)
 
 	def removePipe(self):
 		if self._connection:
@@ -175,7 +175,7 @@ class PosixControlDomainSocket(ControlPipe):
 		self._connection = None
 
 	def readPipe(self):
-		logger.debug2("Reading from socket %s", self._socketName)
+		logger.trace("Reading from socket %s", self._socketName)
 		self._connection.settimeout(self._readTimeout)
 		try:
 			data = self._connection.recv(4096)
@@ -183,7 +183,7 @@ class PosixControlDomainSocket(ControlPipe):
 				self.clientDisconnected()
 			return data.decode("utf-8")
 		except socket.timeout as e:
-			logger.debug2(
+			logger.trace(
 				"Failed to read from socket (timed out after %d seconds)",
 				self._readTimeout
 			)
@@ -191,7 +191,7 @@ class PosixControlDomainSocket(ControlPipe):
 	def writePipe(self, data):
 		if not data:
 			return
-		logger.debug2("Writing to socket %s", self._socketName)
+		logger.trace("Writing to socket %s", self._socketName)
 		if not type(data) is bytes:
 			data = data.encode("utf-8")
 		self._connection.settimeout(self._writeTimeout)
@@ -199,7 +199,7 @@ class PosixControlDomainSocket(ControlPipe):
 			self._connection.sendall(data)
 			return True
 		except socket.timeout as e:
-			logger.debug2(
+			logger.trace(
 				"Failed to write to socket (timed out after %d seconds)",
 				self._writeTimeout
 			)
@@ -264,6 +264,7 @@ class NTControlPipe(ControlPipe):
 		raise RuntimeError("Failed to connect to pipe")
 		
 	def readPipe(self):
+		logger.notice("Reading from pipe")
 		chBuf = create_string_buffer(self._bufferSize)
 		cbRead = c_ulong(0)
 		fReadSuccess = windll.kernel32.ReadFile(
@@ -273,13 +274,15 @@ class NTControlPipe(ControlPipe):
 			byref(cbRead),
 			None
 		)
+		logger.notice("Read %d bytes from pipe", cbRead.value)
 		if fReadSuccess == 1 or cbRead.value != 0:
 			return chBuf.value.decode()
+		logger.error("Failed to read from pipe")
 	
 	def writePipe(self, data):
 		if not data:
 			return
-		logger.debug2("Writing to pipe")
+		logger.notice("Writing to pipe")
 		if not type(data) is bytes:
 			data = data.encode("utf-8")
 		if not data.endswith(b"\0"):
@@ -294,7 +297,7 @@ class NTControlPipe(ControlPipe):
 			None
 		)
 		windll.kernel32.FlushFileBuffers(self._pipe)
-		logger.debug2("Number of bytes written: %s", cbWritten.value)
+		logger.trace("Wrote %d bytes to pipe", cbWritten.value)
 		if not fWriteSuccess:
 			logger.error("Failed to write to pipe")
 			return False
