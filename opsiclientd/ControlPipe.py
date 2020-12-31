@@ -105,6 +105,7 @@ class ControlPipe(threading.Thread):
 		pass
 	
 	def clientDisconnected(self):
+		logger.info("Client disconnected")
 		self._clientConnected = False
 		self._clientInfo = []
 
@@ -325,8 +326,9 @@ class NTControlPipe(ControlPipe):
 			byref(cbWritten),
 			None
 		)
-		windll.kernel32.FlushFileBuffers(self._pipe)
-		logger.trace("Wrote %d bytes to pipe", cbWritten.value)
+		#windll.kernel32.FlushFileBuffers(self._pipe)
+		#logger.trace("Wrote %d bytes to pipe", cbWritten.value)
+		logger.notice("Wrote %d bytes to pipe", cbWritten.value)
 		if not fWriteSuccess:
 			raise RuntimeError("Failed to write to pipe")
 		if len(data) != cbWritten.value:
