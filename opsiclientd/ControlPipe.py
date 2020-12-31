@@ -315,8 +315,7 @@ class NTControlPipe(ControlPipe):
 		logger.trace("Writing to pipe")
 		if not type(data) is bytes:
 			data = data.encode("utf-8")
-		if not data.endswith(b"\0"):
-			data += b"\0"
+		data += b"\0"
 
 		cbWritten = c_ulong(0)
 		fWriteSuccess = windll.kernel32.WriteFile(
