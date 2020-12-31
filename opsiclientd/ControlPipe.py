@@ -258,8 +258,7 @@ class NTControlPipe(ControlPipe):
 
 		if fConnected == 1:
 			logger.notice("Client connected to %s", self._pipeName)
-			self.clientConnected = True
-			return True
+			self._clientConnected = True
 		
 		raise RuntimeError("Failed to connect to pipe")
 		
