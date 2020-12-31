@@ -68,11 +68,13 @@ class ClientConnection(threading.Thread):
 		)
 	
 	def run(self):
+		logger.info("%s run", self.__class__.__name__)
 		with opsicommon.logging.log_context({'instance' : 'control pipe connection'}):
 			#while self._clientConnected and not self._stopEvent.is_set():
 			#with self._comLock:
 			try:
 				while not self._shouldStop:
+					logger.info("%s reading", self.__class__.__name__)
 					request = self.read()
 					if request:
 						logger.info("Received request '%s'", request)
@@ -122,7 +124,9 @@ class ControlPipe(threading.Thread):
 					client = self.waitForClient()
 					logger.info("connection_class: %s", self.connection_class)
 					connection = self.connection_class(self, client)
+					logger.info("connection created: %s", connection)
 					self._clients.append(connection)
+					logger.info("connection start")
 					connection.start()
 				except Exception as e:
 					logger.error(e, exc_info=True)
