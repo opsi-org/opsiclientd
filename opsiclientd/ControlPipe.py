@@ -30,6 +30,7 @@ The classes are used to create named pipes for remote procedure calls.
 import os
 import threading
 import time
+import socket
 from ctypes import byref, c_char_p, c_ulong, create_string_buffer
 
 from OPSI.Backend.Backend import describeInterface
@@ -45,11 +46,11 @@ if os.name == 'nt':
 
 def ControlPipeFactory(opsiclientdRpcInterface):
 	if os.name == 'posix':
-		return PosixControlPipe(opsiclientdRpcInterface)
+		return PosixControlDomainSocket(opsiclientdRpcInterface)
 	elif os.name == 'nt':
 		return NTControlPipe(opsiclientdRpcInterface)
 	else:
-		raise NotImplementedError(u"Unsupported operating system %s" % os.name)
+		raise NotImplementedError(f"Unsupported operating system: {os.name}")
 
 
 class ControlPipe(threading.Thread):
@@ -59,26 +60,59 @@ class ControlPipe(threading.Thread):
 	def __init__(self, opsiclientdRpcInterface):
 		threading.Thread.__init__(self)
 		self._opsiclientdRpcInterface = opsiclientdRpcInterface
-		self._pipe = None
-		self._pipeName = ""
 		self._bufferSize = 4096
+		self._readTimeout = 1
+		self._writeTimeout = 1
 		self._running = False
-		self._stopped = False
+		self._stopEvent = threading.Event()
+		self._stopEvent.clear()
+		self._clientConnected = False
 
-	def run():
+	def run(self):
 		with opsicommon.logging.log_context({'instance' : 'control pipe'}):
-			super().run()
-
+			self._running = True
+			while not self._stopEvent.wait(1):
+				try:
+					self.createPipe()
+					self.waitForClient()
+					while self._clientConnected:
+						request = self.readPipe()
+						if request:
+							logger.info("Received request '%s'", request)
+							response = self.rpcFromClient(request)
+							logger.info("Sending response '%s'", response)
+							self.writePipe(response)
+						time.sleep(0.5)
+				except Exception as e:
+					logger.error(e, exc_info=True)
+			self._running = False
+	
 	def stop(self):
-		self._stopped = True
+		logger.debug("Stopping %s", self)
+		self._stopEvent.set()
+	
+	def createPipe(self):
+		pass
+	
+	def removePipe(self):
+		pass
+	
+	def waitForClient(self):
+		pass
+	
+	def clientDisconnected(self):
+		self._clientConnected = False
 
-	def closePipe(self):
-		return
+	def readPipe(self):
+		return ""
+
+	def writePipe(self, data):
+		return False
 
 	def isRunning(self):
 		return self._running
 
-	def executeRpc(self, rpc):
+	def rpcFromClient(self, rpc):
 		try:
 			rpc = fromJson(rpc)
 			jsonrpc = JsonRpc(
@@ -89,188 +123,101 @@ class ControlPipe(threading.Thread):
 			jsonrpc.execute()
 			return toJson(jsonrpc.getResponse())
 		except Exception as rpcError:
-			logger.logException(rpcError)
+			logger.error(rpcError, exc_info=True)
+			return toJson({
+				"id": None,
+				"error": str(rpcError)
+			})
 
 
-class PosixControlPipe(ControlPipe):
+class PosixControlDomainSocket(ControlPipe):
 	"""
-	PosixControlPipe implements a control pipe for posix operating systems
+	PosixControlDomainSocket implements a control socket for posix operating systems
 	"""
-
+	
 	def __init__(self, opsiclientdRpcInterface):
 		ControlPipe.__init__(self, opsiclientdRpcInterface)
-		self._pipeName = "/var/run/opsiclientd/fifo"
-
-		self._stopEvent = threading.Event()
-		self._stopEvent.clear()
-
-	def stop(self):
-		logger.debug("Stopping {0}".format(self))
-		self._stopEvent.set()
-
+		self._socketName = "/var/run/opsiclientd/socket"
+		self._socket = None
+		self._connection = None
+	
 	def createPipe(self):
-		logger.debug2(u"Creating pipe %s", self._pipeName)
-		if not os.path.exists(os.path.dirname(self._pipeName)):
-			os.mkdir(os.path.dirname(self._pipeName))
+		logger.debug2("Creating socket %s", self._socketName)
+		self.removePipe()
+		self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+		self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		self._socket.bind(self._socketName)
+		self._socket.listen(1)
+		logger.debug2("Socket %s created", self._socketName)
 
-		if os.path.exists(self._pipeName):
-			os.unlink(self._pipeName)
-
-		os.mkfifo(self._pipeName)
-		logger.debug2(u"Pipe %s created", self._pipeName)
-
-	def closePipe(self):
-		if self._pipe:
+	def removePipe(self):
+		if self._connection:
 			try:
-				os.close(self._pipe)
+				self._connection.close()
 			except Exception as error:
-				logger.debug(u"Closing pipe {0!r} failed: {1}".format(self._pipe, forceUnicode(error)))
-
-	def run(self):
-		with opsicommon.logging.log_context({'instance' : 'control pipe'}):
-			self._running = True
-
-			try:
-				self.createPipe()
-				while not self._stopEvent.wait(1):
-					try:
-						logger.debug2(u"Opening named pipe %s", self._pipeName)
-						self._pipe = os.open(self._pipeName, os.O_RDONLY | os.O_NONBLOCK)
-						logger.debug2(u"Reading from pipe %s", self._pipeName)
-						rpc = ""
-						while True:
-							data = os.read(self._pipe, self._bufferSize)
-							if data:
-								rpc += data
-								time.sleep(0.001)
-							else:
-								if rpc:
-									break
-								else:
-									time.sleep(1) 
-						os.close(self._pipe)
-						logger.debug2(u"Received rpc from pipe: '%s'", rpc)
-						result = self.executeRpc(rpc)
-						logger.debug2(u"Opening named pipe %s", self._pipeName)
-						timeout = 3
-						ta = 0.0
-						while ta < timeout:
-							try:
-								self._pipe = os.open(self._pipeName, os.O_WRONLY | os.O_NONBLOCK)
-								break
-							except Exception as e:
-								if not hasattr(e, 'errno') or (e.errno != 6):
-									raise
-
-								time.sleep(0.01)
-								ta += 0.01
-
-						if ta >= timeout:
-							logger.error(u"Failed to write to pipe (timed out after %d seconds)", timeout)
-							continue
-
-						logger.debug2(u"Writing to pipe")
-						written = os.write(self._pipe, result)
-						logger.debug2(u"Number of bytes written: %d" % written)
-
-						if len(result) != written:
-							logger.error("Failed to write all bytes to pipe (%d/%d)", written, len(result))
-					except OSError as oserr:
-						logger.error(u"Pipe OSError: {0}".format(forceUnicode(oserr)))
-					except Exception as pipeError:
-						logger.error(u"Pipe IO error: %s", forceUnicode(pipeError))
-					finally:
-						try:
-							os.close(self._pipe)
-						except Exception as error:
-							logger.debug2(u"Closing pipe {0!r} failed: {1}".format(self._pipe, forceUnicode(error)))
-			except Exception as e:
-				logger.logException(e)
-			finally:
-				logger.notice(u"ControlPipe exiting")
-				self._running = False
-
-				if os.path.exists(self._pipeName):
-					os.unlink(self._pipeName)
-
-
-class NTControlPipeConnection(threading.Thread):
-	"""
-	NTControlPipe implements a control pipe for windows operating systems
-	"""
-
-	def __init__(self, ntControlPipe, pipe, bufferSize):
-		threading.Thread.__init__(self)
-		self._ntControlPipe = ntControlPipe
-		self._pipe = pipe
-		self._bufferSize = bufferSize
-		logger.debug(u"NTControlPipeConnection initiated")
-
-	def closePipe(self):
-		if self._pipe:
-			try:
-				windll.kernel32.CloseHandle(self._pipe)
-			except Exception:
 				pass
-
-	def run(self):
-		with opsicommon.logging.log_context({'instance' : 'control pipe'}):
-			self._running = True
+		if self._socket:
 			try:
-				chBuf = create_string_buffer(self._bufferSize)
-				cbRead = c_ulong(0)
-				while self._running:
-					logger.debug2(u"Reading fom pipe")
-					fReadSuccess = windll.kernel32.ReadFile(self._pipe, chBuf, self._bufferSize, byref(cbRead), None)
-					if fReadSuccess == 1 or cbRead.value != 0:
-						rpc = chBuf.value.decode()
-						logger.debug(u"Received rpc from pipe '%s'", rpc)
-						result = b"%s\0" % self._ntControlPipe.executeRpc(rpc).encode()
-						cbWritten = c_ulong(0)
-						logger.debug2(u"Writing to pipe")
-						fWriteSuccess = windll.kernel32.WriteFile(
-							self._pipe,
-							c_char_p(result),
-							len(result),
-							byref(cbWritten),
-							None
-						)
-						logger.debug2(u"Number of bytes written: %s", cbWritten.value)
-						if not fWriteSuccess:
-							logger.error(u"Could not reply to the client's request from the pipe")
-							break
+				self._socket.close()
+			except Exception as error:
+				pass
+		if os.path.exists(self._socketName):
+			os.remove(self._socketName)
+	
+	def waitForClient(self):
+		logger.info("Waiting for client to connected to %s", self._socketName)
+		self._connection, client_address = self._socket.accept()
+		logger.notice("Client %s connected to %s", client_address, self._socketName)
+		self._clientConnected = True
+	
+	def clientDisconnected(self):
+		self._clientConnected = False
+		self._connection = None
 
-						if len(result) != cbWritten.value:
-							logger.error(u"Failed to write all bytes to pipe (%d/%d)", cbWritten.value, len(result))
-							break
-
-						break
-					else:
-						logger.error(u"Failed to read from pipe")
-						break
-
-				windll.kernel32.FlushFileBuffers(self._pipe)
-				windll.kernel32.DisconnectNamedPipe(self._pipe)
-				windll.kernel32.CloseHandle(self._pipe)
-			except Exception as e:
-				logger.error(u"NTControlPipeConnection error: %s", forceUnicode(e))
-
-			logger.debug(u"NTControlPipeConnection exiting")
-			self._running = False
+	def readPipe(self):
+		logger.debug2("Reading from socket %s", self._socketName)
+		self._connection.settimeout(self._readTimeout)
+		try:
+			data = self._connection.recv(4096)
+			if not data:
+				self.clientDisconnected()
+			return data.decode("utf-8")
+		except socket.timeout as e:
+			logger.debug2(
+				"Failed to read from socket (timed out after %d seconds)",
+				self._readTimeout
+			)
+	
+	def writePipe(self, data):
+		if not data:
+			return
+		logger.debug2("Writing to socket %s", self._socketName)
+		if not type(data) is bytes:
+			data = data.encode("utf-8")
+		self._connection.settimeout(self._writeTimeout)
+		try:
+			self._connection.sendall(data)
+			return True
+		except socket.timeout as e:
+			logger.debug2(
+				"Failed to write to socket (timed out after %d seconds)",
+				self._writeTimeout
+			)
 
 
 class NTControlPipe(ControlPipe):
 	"""
 	Control pipe for windows operating systems.
 	"""
-
+	
 	def __init__(self, opsiclientdRpcInterface):
-		threading.Thread.__init__(self)
 		ControlPipe.__init__(self, opsiclientdRpcInterface)
 		self._pipeName = "\\\\.\\pipe\\opsiclientd"
-
+		self._pipe = None
+	
 	def createPipe(self):
-		logger.info(u"Creating pipe %s", self._pipeName)
+		logger.info("Creating pipe %s", self._pipeName)
+		self.removePipe()
 		PIPE_ACCESS_DUPLEX = 0x3
 		PIPE_TYPE_MESSAGE = 0x4
 		PIPE_READMODE_MESSAGE = 0x2
@@ -289,37 +236,72 @@ class NTControlPipe(ControlPipe):
 			None
 		)
 		if self._pipe == INVALID_HANDLE_VALUE:
-			raise Exception(u"Failed to create named pipe: %s" % windll.kernel32.GetLastError())
+			raise Exception(f"Failed to create named pipe: {windll.kernel32.GetLastError()}")
 
-		logger.debug(u"Pipe %s created", self._pipeName)
+		logger.debug("Pipe %s created", self._pipeName)
 
-	def run(self):
-		with opsicommon.logging.log_context({'instance' : 'control pipe'}):
-			ERROR_PIPE_CONNECTED = 535
-			self._running = True
+	def removePipe(self):
+		if self._pipe:
 			try:
-				while self._running:
-					self.createPipe()
-					logger.debug(u"Connecting to named pipe %s", self._pipeName)
-					# This call is blocking until a client connects
-					fConnected = windll.kernel32.ConnectNamedPipe(self._pipe, None)
-					if fConnected == 0 and windll.kernel32.GetLastError() == ERROR_PIPE_CONNECTED:
-						fConnected = 1
-
-					if fConnected == 1:
-						logger.debug(u"Connected to named pipe %s", self._pipeName)
-						logger.debug(u"Creating NTControlPipeConnection")
-						cpc = NTControlPipeConnection(self, self._pipe, self._bufferSize)
-						cpc.start()
-						logger.debug(u"NTControlPipeConnection thread started")
-					else:
-						logger.error(u"Failed to connect to pipe")
-						windll.kernel32.CloseHandle(self._pipe)
+				windll.kernel32.DisconnectNamedPipe(self._pipe)
+				windll.kernel32.CloseHandle(self._pipe)
 			except Exception as e:
-				logger.logException(e)
+				pass
+	
+	def waitForClient(self):
+		logger.info("Waiting for client to connected to %s", self._pipeName)
+		# This call is blocking until a client connects
+		fConnected = windll.kernel32.ConnectNamedPipe(self._pipe, None)
+		if fConnected == 0 and windll.kernel32.GetLastError() == 535:
+			# ERROR_PIPE_CONNECTED
+			fConnected = 1
 
-			logger.notice(u"ControlPipe exiting")
-			self._running = False
+		if fConnected == 1:
+			logger.notice("Client connected to %s", self._pipeName)
+			self.clientConnected = True
+			return True
+		
+		raise RuntimeError("Failed to connect to pipe")
+		
+	def readPipe(self):
+		chBuf = create_string_buffer(self._bufferSize)
+		cbRead = c_ulong(0)
+		fReadSuccess = windll.kernel32.ReadFile(
+			self._pipe,
+			chBuf,
+			self._bufferSize,
+			byref(cbRead),
+			None
+		)
+		if fReadSuccess == 1 or cbRead.value != 0:
+			return chBuf.value.decode()
+	
+	def writePipe(self, data):
+		if not data:
+			return
+		logger.debug2("Writing to pipe")
+		if not type(data) is bytes:
+			data = data.encode("utf-8")
+		if not data.endswith(b"\0"):
+			data += b"\0"
+
+		cbWritten = c_ulong(0)
+		fWriteSuccess = windll.kernel32.WriteFile(
+			self._pipe,
+			c_char_p(data),
+			len(data),
+			byref(cbWritten),
+			None
+		)
+		windll.kernel32.FlushFileBuffers(self._pipe)
+		logger.debug2("Number of bytes written: %s", cbWritten.value)
+		if not fWriteSuccess:
+			logger.error("Failed to write to pipe")
+			return False
+		if len(data) != cbWritten.value:
+			logger.error("Failed to write all bytes to pipe (%d/%d)", cbWritten.value, len(data))
+			return False
+		return True
 
 
 class OpsiclientdRpcPipeInterface(object):
@@ -353,7 +335,7 @@ class OpsiclientdRpcPipeInterface(object):
 		return
 
 	def getBlockLogin(self):
-		logger.notice(u"rpc getBlockLogin: blockLogin is %s", self.opsiclientd._blockLogin)
+		logger.notice("rpc getBlockLogin: blockLogin is %s", self.opsiclientd._blockLogin)
 		return self.opsiclientd._blockLogin
 
 	def isRebootRequested(self):
