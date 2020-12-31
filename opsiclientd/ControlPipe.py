@@ -62,6 +62,10 @@ class ClientConnection(threading.Thread):
 		self._writeTimeout = 1
 		self._clientInfo = []
 		self._shouldStop = False
+		logger.info(
+			"%s created controller=%s connection=%s",
+			self.__class__.__name__, self._controller, self._connection
+		)
 	
 	def run(self):
 		with opsicommon.logging.log_context({'instance' : 'control pipe connection'}):
@@ -116,6 +120,7 @@ class ControlPipe(threading.Thread):
 				try:
 					self.createPipe()
 					client = self.waitForClient()
+					logger.info("connection_class: %s", self.connection_class)
 					connection = self.connection_class(self, client)
 					self._clients.append(connection)
 					connection.start()
@@ -147,9 +152,9 @@ class ControlPipe(threading.Thread):
 	def executeRpc(self, method, *params):
 		#if not self._clientConnected:
 		#	raise RuntimeError("Cannot execute rpc, no client connected")
+		"""
 		if not self._clientInfo:
 			raise RuntimeError("Cannot execute rpc, not supported by client")
-		"""
 		with self._comLock:
 			request = toJson({
 				"id": 1,
@@ -258,7 +263,7 @@ class PosixControlDomainSocket(ControlPipe):
 
 class NTPipeClientConnection(ClientConnection):
 	def readPipe(self):
-		logger.trace("Reading from pipe")
+		logger.notice("Reading from pipe")
 		chBuf = create_string_buffer(self._controller._bufferSize)
 		cbRead = c_ulong(0)
 		fReadSuccess = windll.kernel32.ReadFile(
@@ -276,7 +281,7 @@ class NTPipeClientConnection(ClientConnection):
 	def writePipe(self, data):
 		if not data:
 			return
-		logger.trace("Writing to pipe")
+		logger.notice("Writing to pipe")
 		if not isinstance(data, bytes):
 			data = data.encode("utf-8")
 		data += b"\0"
