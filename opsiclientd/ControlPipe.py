@@ -344,7 +344,8 @@ class NTPipeClientConnection(ClientConnection):
 		windll.kernel32.FlushFileBuffers(self._connection)
 		#logger.trace("Wrote %d bytes to pipe", cbWritten.value)
 		if not fWriteSuccess:
-			raise RuntimeError("Failed to write to pipe")
+			error = windll.kernel32.GetLastError()
+			raise RuntimeError(f"Failed to write to pipe (error: {error})")
 		if len(data) != cbWritten.value:
 			raise RuntimeError(
 				f"Failed to write all bytes to pipe ({cbWritten.value}/{len(data)})",
