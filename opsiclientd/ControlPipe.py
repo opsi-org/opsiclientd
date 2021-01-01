@@ -118,28 +118,32 @@ class ControlPipe(threading.Thread):
 	def run(self):
 		with opsicommon.logging.log_context({'instance' : 'control pipe'}):
 			self._running = True
-			while not self._stopEvent.is_set():
-				try:
-					self.createPipe()
-					client = self.waitForClient()
-					logger.info("connection_class: %s", self.connection_class)
-					connection = self.connection_class(self, client)
-					logger.info("connection created: %s", connection)
-					self._clients.append(connection)
-					logger.info("connection start")
-					connection.start()
-				except Exception as e:
-					logger.error(e, exc_info=True)
-			self._running = False
+			self.setup()
+			try:
+				while not self._stopEvent.is_set():
+					try:
+						client = self.waitForClient()
+						logger.info("connection_class: %s", self.connection_class)
+						connection = self.connection_class(self, client)
+						logger.info("connection created: %s", connection)
+						self._clients.append(connection)
+						logger.info("connection start")
+						connection.start()
+					except Exception as e:
+						logger.error(e, exc_info=True)
+						self.setup()
+			finally:
+				self._running = False
+				self.teardown()
 	
 	def stop(self):
 		logger.debug("Stopping %s", self)
 		self._stopEvent.set()
 	
-	def createPipe(self):
+	def setup(self):
 		pass
 	
-	def removePipe(self):
+	def teardown(self):
 		pass
 	
 	def waitForClient(self):
@@ -234,16 +238,16 @@ class PosixControlDomainSocket(ControlPipe):
 		self._socketName = "/var/run/opsiclientd/socket"
 		self._socket = None
 		
-	def createPipe(self):
+	def setup(self):
 		logger.trace("Creating socket %s", self._socketName)
-		self.removePipe()
+		self.teardown()
 		self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 		self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self._socket.bind(self._socketName)
 		self._socket.listen(1)
 		logger.trace("Socket %s created", self._socketName)
 
-	def removePipe(self):
+	def teardown(self):
 		if self._socket:
 			try:
 				self._socket.close()
@@ -319,9 +323,22 @@ class NTControlPipe(ControlPipe):
 		self._pipeName = "\\\\.\\pipe\\opsiclientd"
 		self._pipe = None
 	
-	def createPipe(self):
+	def setup(self):
+		pass
+
+	def teardown(self):
+		if self._pipe:
+			try:
+				windll.kernel32.FlushFileBuffers(self._pipe)
+				windll.kernel32.DisconnectNamedPipe(self._pipe)
+				windll.kernel32.CloseHandle(self._pipe)
+			except Exception as e:
+				pass
+	
+	def waitForClient(self):
+		logger.info("Waiting for client to connected to %s", self._pipeName)
+		
 		logger.info("Creating pipe %s", self._pipeName)
-		self.removePipe()
 		PIPE_ACCESS_DUPLEX = 0x3
 		PIPE_TYPE_MESSAGE = 0x4
 		PIPE_READMODE_MESSAGE = 0x2
@@ -343,18 +360,7 @@ class NTControlPipe(ControlPipe):
 			raise Exception(f"Failed to create named pipe: {windll.kernel32.GetLastError()}")
 
 		logger.debug("Pipe %s created", self._pipeName)
-
-	def removePipe(self):
-		if self._pipe:
-			try:
-				windll.kernel32.FlushFileBuffers(self._pipe)
-				windll.kernel32.DisconnectNamedPipe(self._pipe)
-				windll.kernel32.CloseHandle(self._pipe)
-			except Exception as e:
-				pass
-	
-	def waitForClient(self):
-		logger.info("Waiting for client to connected to %s", self._pipeName)
+		
 		# This call is blocking until a client connects
 		fConnected = windll.kernel32.ConnectNamedPipe(self._pipe, None)
 		if fConnected == 0 and windll.kernel32.GetLastError() == 535:
