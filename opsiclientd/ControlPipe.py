@@ -291,6 +291,7 @@ class PosixControlDomainSocket(ControlPipe):
 	
 
 class NTPipeClientConnection(ClientConnection):
+	"""
 	def read(self):
 		logger.notice("Reading from pipe")
 		chBuf = create_string_buffer(self._controller._bufferSize)
@@ -313,6 +314,32 @@ class NTPipeClientConnection(ClientConnection):
 			#break
 		else:
 			logger.trace("Failed to read from pipe")
+	"""
+
+	def read(self):
+		data = b""
+		while True:
+			logger.notice("Reading from pipe")
+			chBuf = create_string_buffer(self._controller._bufferSize)
+			cbRead = c_ulong(0)
+			fReadSuccess = windll.kernel32.ReadFile(
+				self._connection,
+				chBuf,
+				self._controller._bufferSize,
+				byref(cbRead),
+				None
+			)
+			logger.trace("Read %d bytes from pipe", cbRead.value)
+			#if fReadSuccess == 1 or cbRead.value != 0:
+			if cbRead.value > 0:
+				data += chBuf.value
+			
+			if windll.kernel32.GetLastError() == 234: # ERROR_MORE_DATA
+				continue			
+			if windll.kernel32.GetLastError() == 109: # ERROR_BROKEN_PIPE
+				self.clientDisconnected()
+
+			return data.decode()
 	
 	def write(self, data):
 		if not data:
@@ -339,38 +366,6 @@ class NTPipeClientConnection(ClientConnection):
 			raise RuntimeError(
 				f"Failed to write all bytes to pipe ({cbWritten.value}/{len(data)})",
 			)
-	
-	"""
-	def read(self):
-		data = b""
-		while True:
-			logger.notice("Reading from pipe")
-			buf = create_string_buffer(self._controller._bufferSize)
-			bytes_read = c_ulong(0)
-			ret_val = windll.kernel32.ReadFile(
-				self._connection,
-				buf,
-				self._controller._bufferSize,
-				byref(bytes_read),
-				None
-			)
-			logger.trace("Read %d bytes from pipe", bytes_read.value)
-
-			if bytes_read.value > 0:
-				data += buf.value
-			elif data:
-				return data.decode(self._encoding)
-			elif windll.kernel32.GetLastError() == 234: # ERROR_MORE_DATA
-				continue
-			elif windll.kernel32.GetLastError() == 109: # ERROR_BROKEN_PIPE
-				self.clientDisconnected()
-				break
-			else:
-				logger.trace("Failed to read from pipe")
-				break
-	
-	
-	"""
 
 class NTControlPipe(ControlPipe):
 	"""
