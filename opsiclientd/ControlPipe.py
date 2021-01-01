@@ -60,6 +60,7 @@ class ClientConnection(threading.Thread):
 		self._connection = connection
 		self._readTimeout = 1
 		self._writeTimeout = 1
+		self._encoding = "utf-8"
 		self.clientInfo = []
 		self._stopEvent = threading.Event()
 		self._stopEvent.clear()
@@ -150,11 +151,14 @@ class ControlPipe(threading.Thread):
 				while not self._stopEvent.is_set():
 					try:
 						client = self.waitForClient()
+						if self._stopEvent.is_set():
+							break
 						logger.info("connection_class: %s", self.connection_class)
 						connection = self.connection_class(self, client)
 						logger.info("connection created: %s", connection)
 						self._clients.append(connection)
 						logger.info("connection start")
+						connection.daemon = True
 						connection.start()
 					except Exception as err1:
 						logger.error(err1, exc_info=True)
@@ -221,7 +225,7 @@ class PosixClientConnection(ClientConnection):
 			data = self._connection.recv(4096)
 			if not data:
 				self.clientDisconnected()
-			return data.decode("utf-8")
+			return data.decode(self._encoding)
 		except Exception as err:
 			logger.trace("Failed to read from socket: %s", err)
 	
@@ -230,7 +234,7 @@ class PosixClientConnection(ClientConnection):
 			return
 		logger.trace("Writing to connection %s", self._connection)
 		if not isinstance(data, bytes):
-			data = data.encode("utf-8")
+			data = data.encode(self._encoding)
 		self._connection.settimeout(self._writeTimeout)
 		try:
 			self._connection.sendall(data)
@@ -298,7 +302,12 @@ class NTPipeClientConnection(ClientConnection):
 			if bytes_read.value > 0:
 				data += buf.raw[:bytes_read.value]
 			elif data:
-				return data.decode("utf-8")
+				try:
+					data = data.decode(self._encoding)
+				except UnicodeDecodeError:
+					self._encoding = "cp1252"
+					data = data.decode(self._encoding)
+				return data
 			elif windll.kernel32.GetLastError() == 234: # ERROR_MORE_DATA
 				continue
 			elif windll.kernel32.GetLastError() == 109: # ERROR_BROKEN_PIPE
@@ -313,7 +322,7 @@ class NTPipeClientConnection(ClientConnection):
 			return
 		logger.notice("Writing to pipe")
 		if not isinstance(data, bytes):
-			data = data.encode("utf-8")
+			data = data.encode(self._encoding)
 		data += b"\0"
 
 		cbWritten = c_ulong(0)
