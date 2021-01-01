@@ -131,32 +131,33 @@ class ClientConnection(threading.Thread):
 			})
 	
 	def executeRpc(self, method, *params):
-		rpc_id = 1
-		if not self.clientInfo:
-			return {
+		with log_context({'instance' : 'control pipe'}):
+			rpc_id = 1
+			if not self.clientInfo:
+				return {
+					"id": rpc_id,
+					"error": f"Cannot execute rpc, not supported by client {self}",
+					"result": None
+				}
+			
+			request = toJson({
 				"id": rpc_id,
-				"error": f"Cannot execute rpc, not supported by client {self}",
-				"result": None
-			}
-		
-		request = toJson({
-			"id": rpc_id,
-			"method": method,
-			"params": params
-		})
-		try:
-			with self.comLock:
-				logger.info("Sending request '%s' to client %s", request, self)
-				self.write(request)
-				response = self.read()
-				if not response:
-					logger.warning("No response received from client %s", self)
-					return {"id": rpc_id, "error": None, "result": None}
-				logger.info("Received response '%s' from client %s", response, self)
-				return fromJson(response)
-		except Exception as client_err:
-			logger.error(client_err, exc_info=True)
-			return {"id": rpc_id, "error": str(client_err), "result": None}
+				"method": method,
+				"params": params
+			})
+			try:
+				with self.comLock:
+					logger.info("Sending request '%s' to client %s", request, self)
+					self.write(request)
+					response = self.read()
+					if not response:
+						logger.warning("No response received from client %s", self)
+						return {"id": rpc_id, "error": None, "result": None}
+					logger.info("Received response '%s' from client %s", response, self)
+					return fromJson(response)
+			except Exception as client_err:
+				logger.error(client_err, exc_info=True)
+				return {"id": rpc_id, "error": str(client_err), "result": None}
 
 class ControlPipe(threading.Thread):
 	"""
@@ -220,7 +221,7 @@ class ControlPipe(threading.Thread):
 		return self._running
 
 	def executeRpc(self, method, *params):
-		with log_context({'instance' : 'control pipe connection'}):
+		with log_context({'instance' : 'control pipe'}):
 			if not self._clients:
 				raise RuntimeError("Cannot execute rpc, no client connected")
 			
