@@ -266,7 +266,7 @@ class PosixControlDomainSocket(ControlPipe):
 	
 
 class NTPipeClientConnection(ClientConnection):
-	def readPipe(self):
+	def read(self):
 		logger.notice("Reading from pipe")
 		chBuf = create_string_buffer(self._controller._bufferSize)
 		cbRead = c_ulong(0)
@@ -282,7 +282,7 @@ class NTPipeClientConnection(ClientConnection):
 			return chBuf.value.decode()
 		logger.trace("Failed to read from pipe")
 	
-	def writePipe(self, data):
+	def write(self, data):
 		if not data:
 			return
 		logger.notice("Writing to pipe")
