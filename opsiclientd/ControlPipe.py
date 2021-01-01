@@ -292,33 +292,27 @@ class PosixControlDomainSocket(ControlPipe):
 
 class NTPipeClientConnection(ClientConnection):
 	def read(self):
-		data = b""
-		while True:
-			logger.notice("Reading from pipe")
-			chBuf = create_string_buffer(self._controller._bufferSize)
-			cbRead = c_ulong(0)
-			fReadSuccess = windll.kernel32.ReadFile(
-				self._connection,
-				chBuf,
-				self._controller._bufferSize,
-				byref(cbRead),
-				None
-			)
-			logger.trace("Read %d bytes from pipe", cbRead.value)
-			if fReadSuccess == 1 or cbRead.value != 0:
-				data += chBuf.value
-				continue
-
-			if data:
-				return data.decode()
-			#if windll.kernel32.GetLastError() == 234: # ERROR_MORE_DATA
-			#	continue
-			if windll.kernel32.GetLastError() == 109: # ERROR_BROKEN_PIPE
-				self.clientDisconnected()
-				break
-			
+		logger.notice("Reading from pipe")
+		chBuf = create_string_buffer(self._controller._bufferSize)
+		cbRead = c_ulong(0)
+		fReadSuccess = windll.kernel32.ReadFile(
+			self._connection,
+			chBuf,
+			self._controller._bufferSize,
+			byref(cbRead),
+			None
+		)
+		logger.trace("Read %d bytes from pipe", cbRead.value)
+		if fReadSuccess == 1 or cbRead.value != 0:
+			return chBuf.value.decode()
+		
+		#if windll.kernel32.GetLastError() == 234: # ERROR_MORE_DATA
+		#	continue
+		if windll.kernel32.GetLastError() == 109: # ERROR_BROKEN_PIPE
+			self.clientDisconnected()
+			#break
+		else:
 			logger.trace("Failed to read from pipe")
-			break
 	
 	def write(self, data):
 		if not data:
