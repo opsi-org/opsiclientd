@@ -62,6 +62,7 @@ class ClientConnection(threading.Thread):
 		self._writeTimeout = 1
 		self._encoding = "utf-8"
 		self.clientInfo = []
+		self.comLock = threading.Lock()
 		self._stopEvent = threading.Event()
 		self._stopEvent.clear()
 		logger.info(
@@ -72,16 +73,16 @@ class ClientConnection(threading.Thread):
 	def run(self):
 		logger.info("%s run", self.__class__.__name__)
 		with opsicommon.logging.log_context({'instance' : 'control pipe connection'}):
-			#with self._comLock:
 			try:
 				while not self._stopEvent.is_set():
-					logger.info("%s reading", self.__class__.__name__)
-					request = self.read()
-					if request:
-						logger.info("Received request '%s'", request)
-						response = self.processIncomingRpc(request)
-						logger.info("Sending response '%s'", response)
-						self.write(response)
+					with self.comLock:
+						logger.info("%s reading", self.__class__.__name__)
+						request = self.read()
+						if request:
+							logger.info("Received request '%s'", request)
+							response = self.processIncomingRpc(request)
+							logger.info("Sending response '%s'", response)
+							self.write(response)
 					time.sleep(0.5)
 			except Exception as e:
 				logger.error(e, exc_info=True)
@@ -141,7 +142,6 @@ class ControlPipe(threading.Thread):
 		self._stopEvent = threading.Event()
 		self._stopEvent.clear()
 		self._clients = []
-		self._comLock = threading.Lock()
 
 	def run(self):
 		with opsicommon.logging.log_context({'instance' : 'control pipe'}):
@@ -195,25 +195,32 @@ class ControlPipe(threading.Thread):
 		if not self._clients:
 			raise RuntimeError("Cannot execute rpc, no client connected")
 		
+		request = toJson({
+			"id": 1,
+			"method": method,
+			"params": params
+		})
+		
 		results = []
+		errors = 0
 		for client in self._clients:
 			try:
 				if not client.clientInfo:
 					raise RuntimeError(f"Cannot execute rpc, not supported by client {client}")
-				#with self._comLock:
-				request = toJson({
-					"id": 1,
-					"method": method,
-					"params": params
-				})
-				logger.info("Sending request '%s'", request)
-				client.write(request)
-				response = client.read()
-				if response:
-					logger.info("Received response '%s'", response)
-					results.append(fromJson(response))
+				with client.comLock:
+					logger.info("Sending request '%s'", request)
+					client.write(request)
+					response = client.read()
+					if response:
+						logger.info("Received response '%s'", response)
+						results.append(fromJson(response))
 			except Exception as client_err:
+				errors += 1
 				results.append({"error": str(client_err)})
+		
+		if errors == len(results):
+			raise RuntimeError(", ".join([r["error"] for r in results]))
+		
 		return results
 
 
@@ -285,27 +292,33 @@ class PosixControlDomainSocket(ControlPipe):
 
 class NTPipeClientConnection(ClientConnection):
 	def read(self):
-		logger.notice("Reading from pipe")
-		chBuf = create_string_buffer(self._controller._bufferSize)
-		cbRead = c_ulong(0)
-		fReadSuccess = windll.kernel32.ReadFile(
-			self._connection,
-			chBuf,
-			self._controller._bufferSize,
-			byref(cbRead),
-			None
-		)
-		logger.trace("Read %d bytes from pipe", cbRead.value)
-		if fReadSuccess == 1 or cbRead.value != 0:
-			return chBuf.value.decode()
-		
-		#if windll.kernel32.GetLastError() == 234: # ERROR_MORE_DATA
-		#	continue
-		if windll.kernel32.GetLastError() == 109: # ERROR_BROKEN_PIPE
-			self.clientDisconnected()
-			#break
-		else:
+		data = b""
+		while True:
+			logger.notice("Reading from pipe")
+			chBuf = create_string_buffer(self._controller._bufferSize)
+			cbRead = c_ulong(0)
+			fReadSuccess = windll.kernel32.ReadFile(
+				self._connection,
+				chBuf,
+				self._controller._bufferSize,
+				byref(cbRead),
+				None
+			)
+			logger.trace("Read %d bytes from pipe", cbRead.value)
+			if fReadSuccess == 1 or cbRead.value != 0:
+				data += chBuf.value
+				continue
+
+			if data:
+				return data.decode()
+			#if windll.kernel32.GetLastError() == 234: # ERROR_MORE_DATA
+			#	continue
+			if windll.kernel32.GetLastError() == 109: # ERROR_BROKEN_PIPE
+				self.clientDisconnected()
+				break
+			
 			logger.trace("Failed to read from pipe")
+			break
 	
 	def write(self, data):
 		if not data:
