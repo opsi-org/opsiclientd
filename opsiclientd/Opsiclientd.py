@@ -269,7 +269,10 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.debug(rpcError)
 
 	def loginUser(self, username, password):
-		self._controlPipe.executeRpc("loginUser", username, password)
+		for response in self._controlPipe.executeRpc("loginUser", username, password):
+			if not response.get("error") and response.get("result"):
+				return True
+			return False
 	
 	def isRunning(self):
 		return self._running
