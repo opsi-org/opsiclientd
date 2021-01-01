@@ -323,7 +323,6 @@ class NTPipeClientConnection(ClientConnection):
 		)
 		if fSuccess != 1:
 			error = windll.kernel32.GetLastError()
-			logger.error(error)
 			if error == 109: # ERROR_BROKEN_PIPE
 				self.clientDisconnected()
 	
