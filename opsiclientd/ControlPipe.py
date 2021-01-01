@@ -73,7 +73,9 @@ class ClientConnection(threading.Thread):
 		with log_context({'instance' : 'control pipe'}):
 			try:
 				while not self._stopEvent.is_set():
-					if not self.clientInfo:
+					if self.clientInfo:
+						self.checkConnection()
+					else:
 						# Old protocol
 						with self.comLock:
 							request = self.read()
@@ -97,6 +99,9 @@ class ClientConnection(threading.Thread):
 	def write(self, data):
 		return False
 	
+	def checkConnection(self):
+		pass
+
 	def clientDisconnected(self):
 		self.stop()
 		self._controller.clientDisconnected(self)
@@ -163,7 +168,7 @@ class ControlPipe(threading.Thread):
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd 
 		self._opsiclientdRpcInterface = OpsiclientdRpcPipeInterface(self._opsiclientd)
-		self._bufferSize = 4096
+		self.bufferSize = 4096
 		self._running = False
 		self._stopEvent = threading.Event()
 		self._stopEvent.clear()
@@ -234,6 +239,10 @@ class ControlPipe(threading.Thread):
 
 
 class PosixClientConnection(ClientConnection):
+	def checkConnection(self):
+		# TODO
+		pass
+
 	def read(self):
 		logger.trace("Reading from connection %s", self._connection)
 		self._connection.settimeout(self._readTimeout)
@@ -300,16 +309,34 @@ class PosixControlDomainSocket(ControlPipe):
 	
 
 class NTPipeClientConnection(ClientConnection):
+	def checkConnection(self):
+		chBuf = create_string_buffer(self._controller.bufferSize)
+		cbRead = c_ulong(0)
+		cbAvailable = c_ulong(0)
+		fSuccess = windll.kernel32.PeekNamedPipe(
+			self._connection,
+			chBuf,
+			self._controller.bufferSize,
+			byref(cbRead),
+			byref(cbAvailable),
+			None
+		)
+		if fSuccess != 1:
+			error = windll.kernel32.GetLastError()
+			logger.error(error)
+			if error == 109: # ERROR_BROKEN_PIPE
+				self.clientDisconnected()
+	
 	def read(self):
 		data = b""
 		while True:
 			logger.trace("Reading from pipe")
-			chBuf = create_string_buffer(self._controller._bufferSize)
+			chBuf = create_string_buffer(self._controller.bufferSize)
 			cbRead = c_ulong(0)
-			fReadSuccess = windll.kernel32.ReadFile(
+			fSuccess = windll.kernel32.ReadFile(
 				self._connection,
 				chBuf,
-				self._controller._bufferSize,
+				self._controller.bufferSize,
 				byref(cbRead),
 				None
 			)
@@ -317,7 +344,7 @@ class NTPipeClientConnection(ClientConnection):
 			if cbRead.value > 0:
 				data += chBuf.value
 			
-			if fReadSuccess != 1:
+			if fSuccess != 1:
 				if windll.kernel32.GetLastError() == 234: # ERROR_MORE_DATA
 					continue			
 				if windll.kernel32.GetLastError() == 109: # ERROR_BROKEN_PIPE
@@ -334,7 +361,7 @@ class NTPipeClientConnection(ClientConnection):
 		data += b"\0"
 
 		cbWritten = c_ulong(0)
-		fWriteSuccess = windll.kernel32.WriteFile(
+		fSuccess = windll.kernel32.WriteFile(
 			self._connection,
 			c_char_p(data),
 			len(data),
@@ -342,9 +369,12 @@ class NTPipeClientConnection(ClientConnection):
 			None
 		)
 		windll.kernel32.FlushFileBuffers(self._connection)
-		#logger.trace("Wrote %d bytes to pipe", cbWritten.value)
-		if not fWriteSuccess:
+		logger.trace("Wrote %d bytes to pipe", cbWritten.value)
+		if not fSuccess:
 			error = windll.kernel32.GetLastError()
+			if error in (232, 109): # ERROR_NO_DATA, ERROR_BROKEN_PIPE
+				self.clientDisconnected()
+				return
 			raise RuntimeError(f"Failed to write to pipe (error: {error})")
 		if len(data) != cbWritten.value:
 			raise RuntimeError(
@@ -388,8 +418,8 @@ class NTControlPipe(ControlPipe):
 			PIPE_ACCESS_DUPLEX,
 			PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
 			PIPE_UNLIMITED_INSTANCES,
-			self._bufferSize,
-			self._bufferSize,
+			self.bufferSize,
+			self.bufferSize,
 			NMPWAIT_USE_DEFAULT_WAIT,
 			None
 		)
