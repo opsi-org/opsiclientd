@@ -178,11 +178,8 @@ class ControlPipe(threading.Thread):
 						client = self.waitForClient()
 						if self._stopEvent.is_set():
 							break
-						logger.info("connection_class: %s", self.connection_class)
 						connection = self.connection_class(self, client)
-						logger.info("connection created: %s", connection)
 						self._clients.append(connection)
-						logger.info("connection start")
 						connection.daemon = True
 						connection.start()
 					except Exception as err1:
@@ -288,7 +285,7 @@ class PosixControlDomainSocket(ControlPipe):
 			os.remove(self._socketName)
 	
 	def waitForClient(self):
-		logger.info("Waiting for client to connected to %s", self._socketName)
+		logger.info("Waiting for client to connect to %s", self._socketName)
 		self._socket.settimeout(2.0)
 		while True:
 			try:
@@ -375,9 +372,7 @@ class NTControlPipe(ControlPipe):
 				pass
 	
 	def waitForClient(self):
-		logger.info("Waiting for client to connected to %s", self._pipeName)
-		
-		logger.info("Creating pipe %s", self._pipeName)
+		logger.debug("Creating pipe %s", self._pipeName)
 		PIPE_ACCESS_DUPLEX = 0x3
 		PIPE_TYPE_MESSAGE = 0x4
 		PIPE_READMODE_MESSAGE = 0x2
@@ -400,6 +395,7 @@ class NTControlPipe(ControlPipe):
 
 		logger.debug("Pipe %s created", self._pipeName)
 		
+		logger.info("Waiting for client to connect to %s", self._pipeName)
 		# This call is blocking until a client connects
 		fConnected = windll.kernel32.ConnectNamedPipe(self._pipe, None)
 		if fConnected == 0 and windll.kernel32.GetLastError() == 535:
@@ -410,8 +406,9 @@ class NTControlPipe(ControlPipe):
 			logger.notice("Client connected to %s", self._pipeName)
 			return self._pipe
 		
+		error = windll.kernel32.GetLastError()
 		windll.kernel32.CloseHandle(self._pipe)
-		raise RuntimeError("Failed to connect to pipe")
+		raise RuntimeError(f"Failed to connect to pipe (error: {error})")
 
 
 class OpsiclientdRpcPipeInterface(object):
@@ -445,7 +442,6 @@ class OpsiclientdRpcPipeInterface(object):
 		return
 
 	def getBlockLogin(self):
-		logger.notice("rpc getBlockLogin: blockLogin is %s", self.opsiclientd._blockLogin)
 		return self.opsiclientd._blockLogin
 
 	def isRebootRequested(self):
