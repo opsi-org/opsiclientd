@@ -74,13 +74,15 @@ class ClientConnection(threading.Thread):
 		with opsicommon.logging.log_context({'instance' : 'control pipe connection'}):
 			try:
 				while not self._stopEvent.is_set():
-					with self.comLock:
-						request = self.read()
-						if request:
-							logger.info("Received request '%s' from %s", request, self)
-							response = self.processIncomingRpc(request)
-							logger.info("Sending response '%s' to %s", response, self)
-							self.write(response)
+					if not self.clientInfo:
+						# Old protocol
+						with self.comLock:
+							request = self.read()
+							if request:
+								logger.info("Received request '%s' from %s", request, self)
+								response = self.processIncomingRpc(request)
+								logger.info("Sending response '%s' to %s", response, self)
+								self.write(response)
 					time.sleep(0.5)
 			except Exception as e:
 				logger.error(e, exc_info=True)
