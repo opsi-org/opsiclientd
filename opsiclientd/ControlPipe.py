@@ -34,8 +34,7 @@ import socket
 from ctypes import byref, c_char_p, c_ulong, create_string_buffer
 
 from OPSI.Backend.Backend import describeInterface
-import opsicommon.logging
-from opsicommon.logging import logger
+from opsicommon.logging import logger, log_context
 from OPSI.Types import forceUnicode
 from OPSI.Util import fromJson, toJson
 from OPSI.Service.JsonRpc import JsonRpc
@@ -71,7 +70,7 @@ class ClientConnection(threading.Thread):
 		)
 	
 	def run(self):
-		with opsicommon.logging.log_context({'instance' : 'control pipe connection'}):
+		with log_context({'instance' : 'control pipe'}):
 			try:
 				while not self._stopEvent.is_set():
 					if not self.clientInfo:
@@ -171,7 +170,7 @@ class ControlPipe(threading.Thread):
 		self._clients = []
 
 	def run(self):
-		with opsicommon.logging.log_context({'instance' : 'control pipe'}):
+		with log_context({'instance' : 'control pipe'}):
 			self._running = True
 			self.setup()
 			try:
@@ -216,21 +215,22 @@ class ControlPipe(threading.Thread):
 		return self._running
 
 	def executeRpc(self, method, *params):
-		if not self._clients:
-			raise RuntimeError("Cannot execute rpc, no client connected")
-		
-		responses = []
-		errors = []
-		for client in self._clients:
-			response = client.executeRpc(method, *params)
-			responses.append(response)
-			if response.get("error"):
-				errors.append(response["error"])
-		
-		if len(errors) == len(responses):
-			raise RuntimeError(", ".join(errors))
-		
-		return responses
+		with log_context({'instance' : 'control pipe connection'}):
+			if not self._clients:
+				raise RuntimeError("Cannot execute rpc, no client connected")
+			
+			responses = []
+			errors = []
+			for client in self._clients:
+				response = client.executeRpc(method, *params)
+				responses.append(response)
+				if response.get("error"):
+					errors.append(response["error"])
+			
+			if len(errors) == len(responses):
+				raise RuntimeError(", ".join(errors))
+			
+			return responses
 
 
 class PosixClientConnection(ClientConnection):

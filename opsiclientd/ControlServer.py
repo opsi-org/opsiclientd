@@ -1051,7 +1051,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def updateComponent(self, component, url):
 		if component != "opsiclientd":
 			raise ValueError(f"Invalid component {component}")
-		self.opsiclientd.self_update_from_url(url)
+		return self.opsiclientd.self_update_from_url(url)
 	
 	def loginUser(self, username, password):
-		self.opsiclientd.loginUser(username, password)
+		return self.opsiclientd.loginUser(username, password)
