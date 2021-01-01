@@ -298,14 +298,21 @@ class NTPipeClientConnection(ClientConnection):
 		logger.trace("Read %d bytes from pipe", cbRead.value)
 		if fReadSuccess == 1 or cbRead.value != 0:
 			return chBuf.value.decode()
-		logger.trace("Failed to read from pipe")
+		
+		#if windll.kernel32.GetLastError() == 234: # ERROR_MORE_DATA
+		#	continue
+		if windll.kernel32.GetLastError() == 109: # ERROR_BROKEN_PIPE
+			self.clientDisconnected()
+			#break
+		else:
+			logger.trace("Failed to read from pipe")
 	
 	def write(self, data):
 		if not data:
 			return
 		logger.notice("Writing to pipe")
 		if not isinstance(data, bytes):
-			data = data.encode("utf-8")
+			data = data.encode(self._encoding)
 		data += b"\0"
 
 		cbWritten = c_ulong(0)
@@ -325,6 +332,7 @@ class NTPipeClientConnection(ClientConnection):
 			raise RuntimeError(
 				f"Failed to write all bytes to pipe ({cbWritten.value}/{len(data)})",
 			)
+	
 	"""
 	def read(self):
 		data = b""
@@ -354,31 +362,7 @@ class NTPipeClientConnection(ClientConnection):
 				logger.trace("Failed to read from pipe")
 				break
 	
-	def write(self, data):
-		if not data:
-			return
-		logger.notice("Writing to pipe")
-		if not isinstance(data, bytes):
-			data = data.encode(self._encoding)
-		data += b"\0"
-
-		cbWritten = c_ulong(0)
-		fWriteSuccess = windll.kernel32.WriteFile(
-			self._connection,
-			c_char_p(data),
-			len(data),
-			byref(cbWritten),
-			None
-		)
-		windll.kernel32.FlushFileBuffers(self._connection)
-		#logger.trace("Wrote %d bytes to pipe", cbWritten.value)
-		logger.notice("Wrote %d bytes to pipe", cbWritten.value)
-		if not fWriteSuccess:
-			raise RuntimeError("Failed to write to pipe")
-		if len(data) != cbWritten.value:
-			raise RuntimeError(
-				f"Failed to write all bytes to pipe ({cbWritten.value}/{len(data)})",
-			)
+	
 	"""
 
 class NTControlPipe(ControlPipe):
