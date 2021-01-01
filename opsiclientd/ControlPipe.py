@@ -300,14 +300,9 @@ class NTPipeClientConnection(ClientConnection):
 			logger.trace("Read %d bytes from pipe", bytes_read.value)
 
 			if bytes_read.value > 0:
-				data += buf.raw[:bytes_read.value]
+				data += buf.value
 			elif data:
-				try:
-					data = data.decode(self._encoding)
-				except UnicodeDecodeError:
-					self._encoding = "cp1252"
-					data = data.decode(self._encoding)
-				return data
+				return data.decode(self._encoding)
 			elif windll.kernel32.GetLastError() == 234: # ERROR_MORE_DATA
 				continue
 			elif windll.kernel32.GetLastError() == 109: # ERROR_BROKEN_PIPE
