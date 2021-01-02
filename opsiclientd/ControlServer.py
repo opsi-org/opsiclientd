@@ -1088,6 +1088,14 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		#user_info["flags"] |= win32netcon.UF_DONT_EXPIRE_PASSWD
 		#win32net.NetUserSetInfo(None, user_info["name"], 1, user_info)
 
+		sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
+		local_admin_group_name = win32security.LookupAccountSid(None, sid)[0]
+		try:
+			win32net.NetLocalGroupAddMembers(None, local_admin_group_name, 3, [{"domainandname": user_info["name"]}])
+		except pywintypes.error as e:
+			if (e.winerror != 1378): # 1378 already a group member
+				raise
+		
 		logon = win32security.LogonUser(
 			user_info["name"], None, user_info["password"],
 			win32security.LOGON32_LOGON_INTERACTIVE, win32security.LOGON32_PROVIDER_DEFAULT
