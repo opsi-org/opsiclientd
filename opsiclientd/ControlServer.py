@@ -1115,24 +1115,41 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 					#print(user_info_4)
 					#print(user_info_4["user_sid"])
 					#time.sleep(10)
+
+					str_sid = win32security.ConvertSidToStringSid(user_info_4["user_sid"])
+					if True:
+						reg_key = winreg.OpenKey(
+							winreg.HKEY_USERS,
+							str_sid + r'\Software\Microsoft\Windows NT\CurrentVersion\Winlogon',
+							0,
+							winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY
+						)
+						with reg_key:
+							key = "Shell"
+							try:
+								winreg.DeleteValue(reg_key, key)
+							except FileNotFoundError:
+								pass
+							winreg.SetValueEx(reg_key, key, 0, winreg.REG_SZ, command)
+					else:
+						reg_key = winreg.OpenKey(
+							winreg.HKEY_LOCAL_MACHINE,
+							r'Software\Microsoft\Windows\CurrentVersion\RunOnce',
+							0,
+							winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY
+						)
+						with reg_key:
+							key = "000 opsi tasks"
+							try:
+								winreg.DeleteValue(reg_key, key)
+							except FileNotFoundError:
+								pass
+							winreg.SetValueEx(reg_key, key, 0, winreg.REG_SZ, command)
+					
 				finally:
 					win32profile.UnloadUserProfile(logon, hkey)
 			finally:
 				logon.close()
-					
-			reg_key = winreg.OpenKey(
-				winreg.HKEY_LOCAL_MACHINE,
-				r'Software\Microsoft\Windows\CurrentVersion\RunOnce',
-				0,
-				winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY
-			)
-			with reg_key:
-				key = "000 opsi tasks"
-				try:
-					winreg.DeleteValue(reg_key, key)
-				except FileNotFoundError:
-					pass
-				winreg.SetValueEx(reg_key, key, 0, winreg.REG_SZ, command)
 			
 			System.lockWorkstation()
 			time.sleep(3)
