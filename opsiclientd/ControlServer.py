@@ -1056,7 +1056,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def loginUser(self, username, password):
 		return self.opsiclientd.loginUser(username, password)
 
-	def userTest(self):
+	def runAsOpsiSetupAdmin(self, command="powershell.exe -ExecutionPolicy ByPass"):
 		try:
 			# https://bugs.python.org/file46988/issue.py
 			import win32netcon
@@ -1132,7 +1132,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 					winreg.DeleteValue(reg_key, key)
 				except FileNotFoundError:
 					pass
-				winreg.SetValueEx(reg_key, key, 0, winreg.REG_SZ, "powershell.exe -ExecutionPolicy ByPass")
+				winreg.SetValueEx(reg_key, key, 0, winreg.REG_SZ, command)
 			
 			System.lockWorkstation()
 			time.sleep(3)
