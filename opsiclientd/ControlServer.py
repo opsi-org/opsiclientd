@@ -1062,10 +1062,15 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		import win32net
 		import win32profile
 		import win32security
+		import winreg
+
+		for pdir in glob.glob("c:\\users\\opsisetupadmin*"):
+			shutil.rmtree(pdir)
 
 		user_info = {
 			"name": "opsisetupadmin",
 			"full_name": "opsi setup admin",
+			"comment": "auto created by opsi",
 			"password": "Chahl6je3w",
 			"priv": win32netcon.USER_PRIV_USER,
 			"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD
@@ -1101,6 +1106,20 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				win32profile.UnloadUserProfile(logon, hkey)
 		finally:
 			logon.close()
+				
+		reg_key = winreg.OpenKey(
+			winreg.HKEY_LOCAL_MACHINE,
+			r'Software\Microsoft\Windows\CurrentVersion\RunOnce',
+			0,
+			winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY
+		)
+		with reg_key:
+			key = "000 opsi tasks"
+			try:
+				winreg.DeleteValue(reg_key, key)
+			except FileNotFoundError:
+				pass
+			winreg.SetValueEx(reg_key, key, 0, winreg.REG_SZ, "powershell.exe -ExecutionPolicy ByPass")
 		
 		System.lockWorkstation()
 		time.sleep(3)
