@@ -1063,6 +1063,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		import win32profile
 		import win32security
 		import winreg
+		import glob
 
 		for pdir in glob.glob("c:\\users\\opsisetupadmin*"):
 			shutil.rmtree(pdir)
