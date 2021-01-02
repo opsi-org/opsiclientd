@@ -1055,3 +1055,54 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	
 	def loginUser(self, username, password):
 		return self.opsiclientd.loginUser(username, password)
+
+	def userTest(self):
+		# https://bugs.python.org/file46988/issue.py
+		import win32netcon
+		import win32net
+		import win32profile
+		import win32security
+
+		user_info = {
+			"name": "opsisetupadmin",
+			"full_name": "opsi setup admin",
+			"password": "Chahl6je3w",
+			"priv": win32netcon.USER_PRIV_USER,
+			"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD
+		}
+
+		try:
+			win32net.NetUserDel(None, user_info["name"])
+		except:
+			pass
+		win32net.NetUserAdd(None, 1, user_info)
+
+		#user_info = win32net.NetUserGetInfo(None, user_info["name"], 1)
+		#user_info["password"] = "new_password"
+		#user_info["flags"] |= win32netcon.UF_DONT_EXPIRE_PASSWD
+		#win32net.NetUserSetInfo(None, user_info["name"], 1, user_info)
+
+		logon = win32security.LogonUser(
+			user_info["name"], None, user_info["password"],
+			win32security.LOGON32_LOGON_INTERACTIVE, win32security.LOGON32_PROVIDER_DEFAULT
+		)
+		try:
+			profile_data = {
+				"UserName": user_info["name"]
+			}
+			hkey = win32profile.LoadUserProfile(logon, profile_data)
+			try:
+				env = win32profile.CreateEnvironmentBlock(logon, False)
+				user_info_4 = win32net.NetUserGetInfo(None, user_info["name"], 4)
+				#print(user_info_4)
+				#print(user_info_4["user_sid"])
+				#time.sleep(10)
+			finally:
+				win32profile.UnloadUserProfile(logon, hkey)
+		finally:
+			logon.close()
+		
+		System.lockWorkstation()
+		time.sleep(3)
+		self.opsiclientd.loginUser(user_info["name"], user_info["password"])
+		
