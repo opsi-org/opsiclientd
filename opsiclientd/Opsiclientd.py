@@ -674,11 +674,21 @@ class Opsiclientd(EventListener, threading.Thread):
 
 	def rebootMachine(self, waitSeconds=3):
 		self._isRebootTriggered = True
+		if self._controlPipe:
+			try:
+				self._controlPipe.executeRpc("rebootTriggered", True)
+			except Exception as rpcError:
+				logger.debug(rpcError)
 		self.clearRebootRequest()
 		System.reboot(wait=waitSeconds)
 
 	def shutdownMachine(self, waitSeconds=3):
 		self._isShutdownTriggered = True
+		if self._controlPipe:
+			try:
+				self._controlPipe.executeRpc("shutdownTriggered", True)
+			except Exception as rpcError:
+				logger.debug(rpcError)
 		self.clearShutdownRequest()
 		System.shutdown(wait=waitSeconds)
 	
