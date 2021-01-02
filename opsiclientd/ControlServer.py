@@ -1057,80 +1057,87 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		return self.opsiclientd.loginUser(username, password)
 
 	def userTest(self):
-		# https://bugs.python.org/file46988/issue.py
-		import win32netcon
-		import win32net
-		import win32profile
-		import win32security
-		import winreg
-		import glob
-
-		for pdir in glob.glob("c:\\users\\opsisetupadmin*"):
-			shutil.rmtree(pdir)
-
-		user_info = {
-			"name": "opsisetupadmin",
-			"full_name": "opsi setup admin",
-			"comment": "auto created by opsi",
-			"password": "Chahl6je3w",
-			"priv": win32netcon.USER_PRIV_USER,
-			"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD
-		}
-
 		try:
-			win32net.NetUserDel(None, user_info["name"])
-		except:
-			pass
-		win32net.NetUserAdd(None, 1, user_info)
+			# https://bugs.python.org/file46988/issue.py
+			import win32netcon
+			import win32net
+			import win32profile
+			import win32security
+			import winreg
+			import glob
 
-		#user_info = win32net.NetUserGetInfo(None, user_info["name"], 1)
-		#user_info["password"] = "new_password"
-		#user_info["flags"] |= win32netcon.UF_DONT_EXPIRE_PASSWD
-		#win32net.NetUserSetInfo(None, user_info["name"], 1, user_info)
+			for pdir in glob.glob("c:\\users\\opsisetupadmin*"):
+				try:
+					shutil.rmtree(pdir)
+				except Exception as rm_err:
+					logger.warning("Failed to delete %s: %s", pdir, rm_err)
 
-		sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
-		local_admin_group_name = win32security.LookupAccountSid(None, sid)[0]
-		try:
-			win32net.NetLocalGroupAddMembers(None, local_admin_group_name, 3, [{"domainandname": user_info["name"]}])
-		except pywintypes.error as e:
-			if (e.winerror != 1378): # 1378 already a group member
-				raise
-		
-		logon = win32security.LogonUser(
-			user_info["name"], None, user_info["password"],
-			win32security.LOGON32_LOGON_INTERACTIVE, win32security.LOGON32_PROVIDER_DEFAULT
-		)
-		try:
-			profile_data = {
-				"UserName": user_info["name"]
+			user_info = {
+				"name": "opsisetupadmin",
+				"full_name": "opsi setup admin",
+				"comment": "auto created by opsi",
+				"password": "Chahl6je3w",
+				"priv": win32netcon.USER_PRIV_USER,
+				"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD
 			}
-			hkey = win32profile.LoadUserProfile(logon, profile_data)
+
 			try:
-				env = win32profile.CreateEnvironmentBlock(logon, False)
-				user_info_4 = win32net.NetUserGetInfo(None, user_info["name"], 4)
-				#print(user_info_4)
-				#print(user_info_4["user_sid"])
-				#time.sleep(10)
-			finally:
-				win32profile.UnloadUserProfile(logon, hkey)
-		finally:
-			logon.close()
-				
-		reg_key = winreg.OpenKey(
-			winreg.HKEY_LOCAL_MACHINE,
-			r'Software\Microsoft\Windows\CurrentVersion\RunOnce',
-			0,
-			winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY
-		)
-		with reg_key:
-			key = "000 opsi tasks"
-			try:
-				winreg.DeleteValue(reg_key, key)
-			except FileNotFoundError:
+				win32net.NetUserDel(None, user_info["name"])
+			except:
 				pass
-			winreg.SetValueEx(reg_key, key, 0, winreg.REG_SZ, "powershell.exe -ExecutionPolicy ByPass")
-		
-		System.lockWorkstation()
-		time.sleep(3)
-		self.opsiclientd.loginUser(user_info["name"], user_info["password"])
+			win32net.NetUserAdd(None, 1, user_info)
+
+			#user_info = win32net.NetUserGetInfo(None, user_info["name"], 1)
+			#user_info["password"] = "new_password"
+			#user_info["flags"] |= win32netcon.UF_DONT_EXPIRE_PASSWD
+			#win32net.NetUserSetInfo(None, user_info["name"], 1, user_info)
+
+			sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
+			local_admin_group_name = win32security.LookupAccountSid(None, sid)[0]
+			try:
+				win32net.NetLocalGroupAddMembers(None, local_admin_group_name, 3, [{"domainandname": user_info["name"]}])
+			except pywintypes.error as e:
+				if (e.winerror != 1378): # 1378 already a group member
+					raise
+			
+			logon = win32security.LogonUser(
+				user_info["name"], None, user_info["password"],
+				win32security.LOGON32_LOGON_INTERACTIVE, win32security.LOGON32_PROVIDER_DEFAULT
+			)
+			try:
+				profile_data = {
+					"UserName": user_info["name"]
+				}
+				hkey = win32profile.LoadUserProfile(logon, profile_data)
+				try:
+					env = win32profile.CreateEnvironmentBlock(logon, False)
+					user_info_4 = win32net.NetUserGetInfo(None, user_info["name"], 4)
+					#print(user_info_4)
+					#print(user_info_4["user_sid"])
+					#time.sleep(10)
+				finally:
+					win32profile.UnloadUserProfile(logon, hkey)
+			finally:
+				logon.close()
+					
+			reg_key = winreg.OpenKey(
+				winreg.HKEY_LOCAL_MACHINE,
+				r'Software\Microsoft\Windows\CurrentVersion\RunOnce',
+				0,
+				winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY
+			)
+			with reg_key:
+				key = "000 opsi tasks"
+				try:
+					winreg.DeleteValue(reg_key, key)
+				except FileNotFoundError:
+					pass
+				winreg.SetValueEx(reg_key, key, 0, winreg.REG_SZ, "powershell.exe -ExecutionPolicy ByPass")
+			
+			System.lockWorkstation()
+			time.sleep(3)
+			self.opsiclientd.loginUser(user_info["name"], user_info["password"])
+		except Exception as e:
+			logger.error(e, exc_info=True)
+			raise
 		
