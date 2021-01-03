@@ -1068,21 +1068,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			import winreg
 			import glob
 			import stat
-
-			def on_delete_error(func, path, exc_info):
-				logger.warning("delete error: %s, %s, %s", func, path, exc_info)
-				os.chmod(path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
-				#if not os.access(path, os.W_OK):
-				#	# Is the error an access error ?
-				#	os.chmod(path, stat.S_IWUSR)
-				func(path)
-				#else:
-				#	raise
-			
+		
 			for pdir in glob.glob("c:\\users\\opsisetupadmin*"):
 				try:
 					subprocess.call(['takeown', '/d', 'Y', '/r', '/f', pdir])
-					shutil.rmtree(pdir, onerror=on_delete_error)
+					subprocess.call(['del', '/s', '/f', pdir])
 				except Exception as rm_err:
 					logger.warning("Failed to delete %s: %s", pdir, rm_err)
 
