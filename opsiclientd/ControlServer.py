@@ -604,7 +604,7 @@ class RequestAdapter():
 class LogReaderThread(threading.Thread):
 	record_start_regex = re.compile("^\[(\d)\]\s+\[([\d\-\:\. ]+)\]\s+\[([^\]]*)\]\s(.*)$")
 	max_delay = 0.2
-	max_record_buffer_size = 2500
+	max_record_buffer_size = 10000
 	
 	def __init__(self, filename, websocket_protocol):
 		super().__init__()
@@ -705,7 +705,9 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
 		self.request = RequestAdapter(request)
 		self.log_reader_thread = None
 
-		logger.info("Client connecting to log websocket: {}".format(self.request.peer))
+		logger.info("Client connecting to log websocket: %s (%s - %s)",
+			self.request.peer, self.request.uri.decode(), self.request.args
+		)
 		self._getSession(None)
 
 	def onOpen(self):
@@ -1068,13 +1070,14 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			import stat
 
 			def on_delete_error(func, path, exc_info):
-				logger.warning("delete error: %s, %s, %s, %s", func, path, exc_info, os.access(path, os.W_OK))
-				if not os.access(path, os.W_OK):
-					# Is the error an access error ?
-					os.chmod(path, stat.S_IWUSR)
-					func(path)
-				else:
-					raise
+				logger.warning("delete error: %s, %s, %s, %s", func, path, exc_info)
+				os.chmod(path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
+				#if not os.access(path, os.W_OK):
+				#	# Is the error an access error ?
+				#	os.chmod(path, stat.S_IWUSR)
+				func(path)
+				#else:
+				#	raise
 			
 			for pdir in glob.glob("c:\\users\\opsisetupadmin*"):
 				try:
