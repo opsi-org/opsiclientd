@@ -222,6 +222,12 @@ class ControlPipe(threading.Thread):
 
 	def getClientInfo(self):
 		return [c.clientInfo for c in self._clients]
+
+	def credentialProviderConnected(self):
+		for clientInfo in self.getClientInfo():
+			if clientInfo:
+				return True
+		return False
 	
 	def executeRpc(self, method, *params):
 		with log_context({'instance' : 'control pipe'}):

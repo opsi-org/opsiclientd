@@ -1072,7 +1072,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			for pdir in glob.glob("c:\\users\\opsisetupadmin*"):
 				try:
 					subprocess.call(['takeown', '/d', 'Y', '/r', '/f', pdir])
-					subprocess.call(['del', '/s', '/f', pdir])
+					subprocess.call(['del', '/s', '/f', pdir], shell=True)
 				except Exception as rm_err:
 					logger.warning("Failed to delete %s: %s", pdir, rm_err)
 
@@ -1080,7 +1080,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				"name": "opsisetupadmin",
 				"full_name": "opsi setup admin",
 				"comment": "auto created by opsi",
-				"password": "Chahl6je3w",
+				"password": "Chahl6je3w",e
 				"priv": win32netcon.USER_PRIV_USER,
 				"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD
 			}
@@ -1155,16 +1155,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			finally:
 				logon.close()
 			
-			credProvConnected = False
-			if self.opsiclientd._controlPipe:
-				for clientInfo in self.opsiclientd._controlPipe.getClientInfo():
-					if clientInfo:
-						credProvConnected = True
-						break
-			
-			if not credProvConnected:
+			if not self.opsiclientd._controlPipe.credentialProviderConnected():
 				System.lockWorkstation()
-				time.sleep(3)
+				for i in range(10):
+					if self.opsiclientd._controlPipe.credentialProviderConnected():
+						break
+					time.sleep(0.3)
 			
 			self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 		except Exception as e:
