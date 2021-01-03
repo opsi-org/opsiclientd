@@ -706,7 +706,7 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
 		self.log_reader_thread = None
 
 		logger.info("Client connecting to log websocket: %s (%s - %s)",
-			self.request.peer, self.request.uri.decode(), self.request.args
+			self.request.peer, self.request.path, self.request.params
 		)
 		self._getSession(None)
 
