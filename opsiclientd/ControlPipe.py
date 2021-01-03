@@ -220,6 +220,9 @@ class ControlPipe(threading.Thread):
 	def isRunning(self):
 		return self._running
 
+	def getClientInfo(self):
+		return [c.clientInfo for c in self._clients]
+	
 	def executeRpc(self, method, *params):
 		with log_context({'instance' : 'control pipe'}):
 			if not self._clients:

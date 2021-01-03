@@ -1151,8 +1151,17 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			finally:
 				logon.close()
 			
-			System.lockWorkstation()
-			time.sleep(3)
+			credProvConnected = False
+			if self.opsiclientd._controlPipe:
+				for clientInfo in self.opsiclientd._controlPipe.getClientInfo():
+					if clientInfo:
+						credProvConnected = True
+						break
+			
+			if not credProvConnected:
+				System.lockWorkstation()
+				time.sleep(3)
+			
 			self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 		except Exception as e:
 			logger.error(e, exc_info=True)
