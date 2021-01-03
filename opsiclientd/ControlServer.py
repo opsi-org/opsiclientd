@@ -606,12 +606,13 @@ class LogReaderThread(threading.Thread):
 	max_delay = 0.2
 	max_record_buffer_size = 10000
 	
-	def __init__(self, filename, websocket_protocol):
+	def __init__(self, filename, websocket_protocol, num_records=-1):
 		super().__init__()
 		self.daemon = True
 		self.should_stop = False
 		self.filename = filename
 		self.websocket_protocol = websocket_protocol
+		self.num_records = int(num_records)
 		self.record_buffer = []
 		self.send_time = 0
 	
@@ -705,9 +706,7 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
 		self.request = RequestAdapter(request)
 		self.log_reader_thread = None
 
-		logger.info("Client connecting to log websocket: %s (%s - %s)",
-			self.request.peer, self.request.path, self.request.params
-		)
+		logger.info("Client connecting to log websocket: %s", self.request.peer)
 		self._getSession(None)
 
 	def onOpen(self):
@@ -716,7 +715,8 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
 			logger.error("No valid session supplied")
 			self.sendClose(code=4401, reason="Unauthorized")
 		else:
-			self.log_reader_thread = LogReaderThread(config.get("global", "log_file"), self)
+			num_records = int(self.request.params.get("num_records", [-1])[0])
+			self.log_reader_thread = LogReaderThread(config.get("global", "log_file"), self, num_records)
 			self.log_reader_thread.start()
 	
 	def onMessage(self, payload, isBinary):
@@ -1081,6 +1081,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			
 			for pdir in glob.glob("c:\\users\\opsisetupadmin*"):
 				try:
+					subprocess.call(['takeown', '/d', 'Y', '/r', '/f', pdir])
 					shutil.rmtree(pdir, onerror=on_delete_error)
 				except Exception as rm_err:
 					logger.warning("Failed to delete %s: %s", pdir, rm_err)
