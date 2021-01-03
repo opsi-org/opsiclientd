@@ -1068,6 +1068,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			import stat
 
 			def on_delete_error(func, path, exc_info):
+				logger.warning("delete error: %s, %s, %s, %s", func, path, exc_info, os.access(path, os.W_OK))
 				if not os.access(path, os.W_OK):
 					# Is the error an access error ?
 					os.chmod(path, stat.S_IWUSR)
