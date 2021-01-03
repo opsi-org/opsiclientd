@@ -1080,7 +1080,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				"name": "opsisetupadmin",
 				"full_name": "opsi setup admin",
 				"comment": "auto created by opsi",
-				"password": "Chahl6je3w",e
+				"password": "Chahl6je3w",
 				"priv": win32netcon.USER_PRIV_USER,
 				"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD
 			}
