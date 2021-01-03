@@ -1072,7 +1072,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			for pdir in glob.glob("c:\\users\\opsisetupadmin*"):
 				try:
 					subprocess.call(['takeown', '/d', 'Y', '/r', '/f', pdir])
-					subprocess.call(['del', '/s', '/f', pdir], shell=True)
+					subprocess.call(['del', '/s', '/f', '/q',pdir], shell=True)
 				except Exception as rm_err:
 					logger.warning("Failed to delete %s: %s", pdir, rm_err)
 
