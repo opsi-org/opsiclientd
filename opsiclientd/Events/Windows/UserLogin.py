@@ -62,22 +62,7 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 			# TODO: username currently hardcoded
 			logger.info("Login of user %s detected, no UserLoginAction will be fired.", args[0])
 			return
-
-		if sys.getwindowsversion().major >= 6:
-			# Try to find out, if the Login is from the WindowManager
-			# (Win8 Bugfix for UserLoginScripts)
-			sessionIds = None
-			sessionId = None
-			sessionData = None
-
-			sessionIds = System.getUserSessionIds(args[0])
-			if sessionIds:
-				sessionId = sessionIds[0]
-				sessionData = System.getSessionInformation(sessionId)
-				if sessionData.get('LogonDomain', '') == 'Window Manager':
-					logger.notice("Windows Manager Login detected, no UserLoginAction will be fired.")
-					return
-
+		
 		if eventType == 'Logon':
 			logger.notice("User login detected: %s", args[0])
 			self._eventsOccured += 1

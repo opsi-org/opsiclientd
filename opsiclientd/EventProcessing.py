@@ -173,26 +173,27 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 	def setSessionId(self, sessionId):
 		self._sessionId = sessionId
-		logger.info(u"Session id set to %s" % self._sessionId)
+		logger.info("Session id set to %s", self._sessionId)
 
 	def getSessionId(self):
-		logger.debug(u"getSessionId()")
+		logger.debug("getSessionId()")
 		if self._sessionId is None:
 			sessionId = None
 
 			if RUNNING_ON_WINDOWS:
 				if self.isLoginEvent:
 					logger.info(u"Using session id of user '%s'" % self.event.eventInfo["User"])
-					userSessionsIds = System.getUserSessionIds(self.event.eventInfo["User"], onlyNewestId = True)
+					userSessionsIds = System.getUserSessionIds(self.event.eventInfo["User"])
 					if userSessionsIds:
 						sessionId = userSessionsIds[0]
-				if not sessionId:
+				if sessionId is None:
 					sessionId = System.getActiveSessionId()
-				if not sessionId:
+				if sessionId is None:
+					sessionId = System.getActiveConsoleSessionId()
+				if sessionId is None:
 					logger.warning("Failed to get session id")
 			else:
 				sessionId = System.getActiveSessionId()
-			
 			if sessionId:
 				self.setSessionId(sessionId)
 		return self._sessionId

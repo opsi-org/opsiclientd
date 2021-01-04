@@ -851,6 +851,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			sessionId = forceInt(sessionId)
 		else:
 			sessionId = System.getActiveSessionId()
+			if sessionId is None:
+				sessionId = System.getActiveConsoleSessionId()
 
 		if desktop:
 			desktop = forceUnicode(desktop)
@@ -987,48 +989,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				os.remove(os.path.join(certDir, filename))
 
 	def getActiveSessions(self):
-		sessions = []
-
-		for session in System.getActiveSessionInformation():
-			year = 0
-			month = 0
-			day = 0
-			hour = 0
-			minute = 0
-			second = 0
-			logger.debug(u"session to check for LogonTime '%s'", session)
-
-			if isinstance(session['LogonTime'], str):
-				match = None
-				pattern = re.compile(r"^(\d+)/(\d+)/(\d+)\s(\d+):(\d+):(\d+)")
-				match = pattern.match(session['LogonTime'])
-				if match:
-					year = match.group(3)
-					month = match.group(1)
-					day = match.group(2)
-					hour = match.group(4)
-					minute = match.group(5)
-					second = match.group(6)
-			else:
-				year = session['LogonTime'].year
-				month = session['LogonTime'].month
-				day = session['LogonTime'].day
-			
-			if month < 10:
-				month = '0%d' % month
-			if day < 10:
-				day = '0%d' % day
-			if hour < 10:
-				hour = '0%d' % hour
-			if minute < 10:
-				minute = '0%d' % minute
-			if second < 10:
-				second = '0%d' % second
-			session['LogonTime'] = u'%s-%s-%s %s:%s:%s' % (year, month, day, hour, minute, second)
-			session['Sid'] = str(session['Sid']).replace(u'PySID:', u'')
-			sessions.append(session)
-
-		return sessions
+		return System.getActiveSessionInformation()
 
 	def getBackendInfo(self):
 		serviceConnection = ServiceConnection(loadBalance=False)

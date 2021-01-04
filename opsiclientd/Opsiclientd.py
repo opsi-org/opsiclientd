@@ -218,15 +218,16 @@ class Opsiclientd(EventListener, threading.Thread):
 		if self._blockLogin:
 			if not self._blockLoginEventId:
 				self._blockLoginEventId = timeline.addEvent(
-					title=u"Blocking login",
-					description=u"User login blocked",
-					category=u"block_login",
+					title="Blocking login",
+					description="User login blocked",
+					category="block_login",
 					durationEvent=True
 				)
 
 			if not self._blockLoginNotifierPid and config.get('global', 'block_login_notifier'):
 				if RUNNING_ON_WINDOWS:
-					logger.info(u"Starting block login notifier app")
+					logger.info("Starting block login notifier app")
+					# Start block login notifier on physical console
 					sessionId = System.getActiveConsoleSessionId()
 					while True:
 						try:
@@ -238,15 +239,6 @@ class Opsiclientd(EventListener, threading.Thread):
 							)[2]
 							break
 						except Exception as e:
-							# The following code does not work currently ('RuntimeError' object is not subscriptable). Remove?
-							#logger.error(e)
-							#if e[0] == 233 and sys.getwindowsversion()[0] == 5 and sessionId != 0:
-							#	# No process is on the other end
-							#	# Problem with pipe \\\\.\\Pipe\\TerminalServer\\SystemExecSrvr\\<sessionid>
-							#	# After logging off from a session other than 0 csrss.exe does not create this pipe or CreateRemoteProcessW is not able to read the pipe.
-							#	logger.info(u"Retrying to run command in session 0")
-							#	sessionId = 0
-							#else:
 							logger.error(u"Failed to start block login notifier app: %s" % forceUnicode(e))
 							break
 		else:
@@ -591,7 +583,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			raise Exception(u"opsiclientd_rpc command not defined")
 
 		if sessionId is None:
-			sessionId = System.getActiveConsoleSessionId()
+			sessionId = System.getActiveSessionId()
+			if sessionId is None:
+				sessionId = System.getActiveConsoleSessionId()
 
 		rpc = f"setCurrentActiveDesktopName(\"{sessionId}\", System.getActiveDesktopName())"
 		cmd = '%s "%s"' % (config.get('opsiclientd_rpc', 'command'), rpc.replace('"', '\\"'))
@@ -621,7 +615,9 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		desktop = forceUnicode(desktop)
 		if sessionId is None:
-			sessionId = System.getActiveConsoleSessionId()
+			sessionId = System.getActiveSessionId()
+			if sessionId is None:
+				sessionId = System.getActiveConsoleSessionId()
 		sessionId = forceInt(sessionId)
 
 		rpc = f"noop(System.switchDesktop('{desktop}'))"

@@ -247,7 +247,7 @@ class OpsiclientdNT(Opsiclientd):
 		user_info_4 = win32net.NetUserGetInfo(None, user_info["name"], 4)
 		user_info_4["password"] = user_info["password"]
 		return user_info_4
-	
+
 
 class OpsiclientdNT5(OpsiclientdNT):
 	def __init__(self):
