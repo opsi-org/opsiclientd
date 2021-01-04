@@ -1063,6 +1063,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			import win32netcon
 			import win32net
 			import win32security
+			import pywintypes
 			import winreg
 			import glob
 			import stat
