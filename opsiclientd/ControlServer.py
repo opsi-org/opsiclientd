@@ -1159,7 +1159,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			user_info_4["password"] = user_info["password"]
 			return user_info_4
 
-	def runAsOpsiSetupAdmin(self, command="powershell.exe -ExecutionPolicy ByPass"):
+	def runAsOpsiSetupAdmin(self, command="powershell.exe -ExecutionPolicy ByPass", login=True):
 		try:
 			# https://bugs.python.org/file46988/issue.py
 			import win32profile
@@ -1174,9 +1174,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				win32security.LOGON32_PROVIDER_DEFAULT
 			)
 			try:
+				# This will create the user home dir and ntuser.dat gets loaded
 				hkey = win32profile.LoadUserProfile(logon, {"UserName": user_info["name"]})
 				try:
-					env = win32profile.CreateEnvironmentBlock(logon, False)
+					#env = win32profile.CreateEnvironmentBlock(logon, False)
 					str_sid = win32security.ConvertSidToStringSid(user_info["user_sid"])
 					reg_key = winreg.OpenKey(
 						winreg.HKEY_USERS,
@@ -1210,7 +1211,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 						break
 					time.sleep(0.5)
 			
-			self.opsiclientd.loginUser(user_info["name"], user_info["password"])
+			if login:
+				self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 		except Exception as e:
 			logger.error(e, exc_info=True)
 			raise
