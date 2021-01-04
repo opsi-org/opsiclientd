@@ -884,11 +884,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				command = f"{oss} --nogui"
 			else:
 				if RUNNING_ON_WINDOWS:
-					if config.get('global', 'use_opsi_setup_admin'):
-						user_info = self.opsiclientd.createOpsiSetupAdmin()
-						createEnvironment = True
-						actionProcessorUserName = user_info["name"]
-						actionProcessorUserPassword = user_info["password"]
+					try:
+						if config.get('global', 'use_opsi_setup_admin'):
+							user_info = self.opsiclientd.createOpsiSetupAdmin()
+							createEnvironment = True
+							actionProcessorUserName = user_info["name"]
+							actionProcessorUserPassword = user_info["password"]
+					except Exception as configErr:
+						pass
 					
 					# TODO: string building like this is just awful. Improve it!
 					command = os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe") + ' ' \
