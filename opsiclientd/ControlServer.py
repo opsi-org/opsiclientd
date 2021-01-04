@@ -1058,33 +1058,27 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def loginUser(self, username, password):
 		return self.opsiclientd.loginUser(username, password)
 
-	def runAsOpsiSetupAdmin(self, command="powershell.exe -ExecutionPolicy ByPass"):
-		try:
+	def _createOpsiSetupAdmin(self, delete_existing=False):
 			# https://bugs.python.org/file46988/issue.py
 			import win32netcon
 			import win32net
-			import win32profile
 			import win32security
 			import winreg
 			import glob
 			import stat
-		
-			for pdir in glob.glob("c:\\users\\opsisetupadmin*"):
-				try:
-					subprocess.call(['takeown', '/d', 'Y', '/r', '/f', pdir])
-					subprocess.call(['del', '/s', '/f', '/q',pdir], shell=True)
-				except Exception as rm_err:
-					logger.warning("Failed to delete %s: %s", pdir, rm_err)
+			import random
+			import string
 
 			user_info = {
 				"name": "opsisetupadmin",
 				"full_name": "opsi setup admin",
 				"comment": "auto created by opsi",
-				"password": "Chahl6je3w",
+				"password": ''.join((random.choice(string.ascii_letters + string.digits) for i in range(12))),
 				"priv": win32netcon.USER_PRIV_USER,
 				"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD
 			}
-			
+
+			# Hide user from login
 			try:
 				winreg.CreateKeyEx(
 					winreg.HKEY_LOCAL_MACHINE,
@@ -1111,17 +1105,36 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY # sysnative
 			) as reg_key:
 				winreg.SetValueEx(reg_key, user_info["name"], 0, winreg.REG_DWORD, 0)
-
+			
+			# Test if user exists
+			user_exists = False
 			try:
-				win32net.NetUserDel(None, user_info["name"])
-			except:
+				win32net.NetUserGetInfo(None, user_info["name"], 1)
+				user_exists = True
+			except Exception as user_err:
 				pass
-			win32net.NetUserAdd(None, 1, user_info)
-
-			#user_info = win32net.NetUserGetInfo(None, user_info["name"], 1)
-			#user_info["password"] = "new_password"
-			#user_info["flags"] |= win32netcon.UF_DONT_EXPIRE_PASSWD
-			#win32net.NetUserSetInfo(None, user_info["name"], 1, user_info)
+			
+			if user_exists:
+				if delete_existing:
+					# Delete user
+					win32net.NetUserDel(None, user_info["name"])
+				
+					for pdir in glob.glob(f"c:\\users\\{user_info['name']}*"):
+						try:
+							subprocess.call(['takeown', '/d', 'Y', '/r', '/f', pdir])
+							subprocess.call(['del', '/s', '/f', '/q',pdir], shell=True)
+						except Exception as rm_err:
+							logger.warning("Failed to delete %s: %s", pdir, rm_err)
+					user_exists = False
+				else:
+					# Update user (password)
+					#user_info_update = win32net.NetUserGetInfo(None, user_info["name"], 1)
+					#user_info_update["password"] = user_info["password"]
+					win32net.NetUserSetInfo(None, user_info["name"], 1, user_info)
+			
+			if not user_exists:		
+				# Create user
+				win32net.NetUserAdd(None, 1, user_info)
 
 			sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
 			local_admin_group_name = win32security.LookupAccountSid(None, sid)[0]
@@ -1131,42 +1144,49 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				if (e.winerror != 1378): # 1378 already a group member
 					raise
 			
+			user_info_4 = win32net.NetUserGetInfo(None, user_info["name"], 4)
+			user_info_4["password"] = user_info["password"]
+			return user_info_4
+
+	def runAsOpsiSetupAdmin(self, command="powershell.exe -ExecutionPolicy ByPass"):
+		try:
+			# https://bugs.python.org/file46988/issue.py
+			import win32profile
+			import win32security
+			import winreg
+			
+			user_info = self._createOpsiSetupAdmin()
+				
 			logon = win32security.LogonUser(
 				user_info["name"], None, user_info["password"],
-				win32security.LOGON32_LOGON_INTERACTIVE, win32security.LOGON32_PROVIDER_DEFAULT
+				win32security.LOGON32_LOGON_INTERACTIVE,
+				win32security.LOGON32_PROVIDER_DEFAULT
 			)
 			try:
-				profile_data = {
-					"UserName": user_info["name"]
-				}
-				hkey = win32profile.LoadUserProfile(logon, profile_data)
+				hkey = win32profile.LoadUserProfile(logon, {"UserName": user_info["name"]})
 				try:
 					env = win32profile.CreateEnvironmentBlock(logon, False)
-					user_info_4 = win32net.NetUserGetInfo(None, user_info["name"], 4)
-					#print(user_info_4)
-					#print(user_info_4["user_sid"])
-					#time.sleep(10)
-
-					str_sid = win32security.ConvertSidToStringSid(user_info_4["user_sid"])
-					if True:
-						reg_key = winreg.OpenKey(
-							winreg.HKEY_USERS,
-							str_sid + r'\Software\Microsoft\Windows NT\CurrentVersion\Winlogon',
-							0,
-							winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY
-						)
-						with reg_key:
-							winreg.SetValueEx(reg_key, "Shell", 0, winreg.REG_SZ, command)
-					else:
-						reg_key = winreg.OpenKey(
-							winreg.HKEY_LOCAL_MACHINE,
-							r'Software\Microsoft\Windows\CurrentVersion\RunOnce',
-							0,
-							winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY
-						)
-						with reg_key:
-							winreg.SetValueEx(reg_key, "000 opsi tasks", 0, winreg.REG_SZ, command)
+					str_sid = win32security.ConvertSidToStringSid(user_info["user_sid"])
+					reg_key = winreg.OpenKey(
+						winreg.HKEY_USERS,
+						str_sid + r'\Software\Microsoft\Windows NT\CurrentVersion\Winlogon',
+						0,
+						winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY
+					)
+					with reg_key:
+						winreg.SetValueEx(reg_key, "Shell", 0, winreg.REG_SZ, command)
 					
+					"""
+					reg_key = winreg.OpenKey(
+						winreg.HKEY_LOCAL_MACHINE,
+						r'Software\Microsoft\Windows\CurrentVersion\RunOnce',
+						0,
+						winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY
+					)
+					with reg_key:
+						winreg.SetValueEx(reg_key, "000 opsi tasks", 0, winreg.REG_SZ, command)
+					"""
+
 				finally:
 					win32profile.UnloadUserProfile(logon, hkey)
 			finally:
@@ -1174,10 +1194,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			
 			if not self.opsiclientd._controlPipe.credentialProviderConnected():
 				System.lockWorkstation()
-				for i in range(10):
+				for i in range(20):
 					if self.opsiclientd._controlPipe.credentialProviderConnected():
 						break
-					time.sleep(0.3)
+					time.sleep(0.5)
 			
 			self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 		except Exception as e:
