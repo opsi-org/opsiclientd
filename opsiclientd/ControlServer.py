@@ -1068,106 +1068,15 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def loginUser(self, username, password):
 		return self.opsiclientd.loginUser(username, password)
 
-	def _createOpsiSetupAdmin(self, delete_existing=False):
-			# https://bugs.python.org/file46988/issue.py
-			import win32netcon
-			import win32net
-			import win32security
-			import pywintypes
-			import winreg
-			import glob
-			import stat
-			import random
-			import string
-
-			user_info = {
-				"name": "opsisetupadmin",
-				"full_name": "opsi setup admin",
-				"comment": "auto created by opsi",
-				"password": ''.join((random.choice(string.ascii_letters + string.digits) for i in range(12))),
-				"priv": win32netcon.USER_PRIV_USER,
-				"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD
-			}
-
-			# Hide user from login
-			try:
-				winreg.CreateKeyEx(
-					winreg.HKEY_LOCAL_MACHINE,
-					r'Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts',
-					0,
-					winreg.KEY_WOW64_64KEY | winreg.KEY_ALL_ACCESS # sysnative
-				)
-			except WindowsError:
-				pass
-			try:
-				winreg.CreateKeyEx(
-					winreg.HKEY_LOCAL_MACHINE,
-					r'Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList',
-					0,
-					winreg.KEY_WOW64_64KEY | winreg.KEY_ALL_ACCESS # sysnative
-				)
-			except WindowsError:
-				pass
-			
-			with winreg.OpenKey(
-				winreg.HKEY_LOCAL_MACHINE,
-				r'Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList',
-				0,
-				winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY # sysnative
-			) as reg_key:
-				winreg.SetValueEx(reg_key, user_info["name"], 0, winreg.REG_DWORD, 0)
-			
-			# Test if user exists
-			user_exists = False
-			try:
-				win32net.NetUserGetInfo(None, user_info["name"], 1)
-				user_exists = True
-			except Exception as user_err:
-				pass
-			
-			if user_exists:
-				if delete_existing:
-					# Delete user
-					win32net.NetUserDel(None, user_info["name"])
-				
-					for pdir in glob.glob(f"c:\\users\\{user_info['name']}*"):
-						try:
-							subprocess.call(['takeown', '/d', 'Y', '/r', '/f', pdir])
-							subprocess.call(['del', '/s', '/f', '/q',pdir], shell=True)
-						except Exception as rm_err:
-							logger.warning("Failed to delete %s: %s", pdir, rm_err)
-					user_exists = False
-				else:
-					# Update user password
-					user_info_update = win32net.NetUserGetInfo(None, user_info["name"], 1)
-					user_info_update["password"] = user_info["password"]
-					win32net.NetUserSetInfo(None, user_info["name"], 1, user_info_update)
-			
-			if not user_exists:		
-				# Create user
-				win32net.NetUserAdd(None, 1, user_info)
-
-			sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
-			local_admin_group_name = win32security.LookupAccountSid(None, sid)[0]
-			try:
-				win32net.NetLocalGroupAddMembers(None, local_admin_group_name, 3, [{"domainandname": user_info["name"]}])
-			except pywintypes.error as e:
-				if (e.winerror != 1378): # 1378 already a group member
-					raise
-			
-			user_info_4 = win32net.NetUserGetInfo(None, user_info["name"], 4)
-			user_info_4["password"] = user_info["password"]
-			return user_info_4
-
-	def runAsOpsiSetupAdmin(self, command="powershell.exe -ExecutionPolicy ByPass", login=True):
+	def runAsOpsiSetupAdmin(self, command="powershell.exe -ExecutionPolicy ByPass"):
 		try:
 			# https://bugs.python.org/file46988/issue.py
 			import win32profile
 			import win32security
 			import winreg
 			
-			user_info = self._createOpsiSetupAdmin()
-				
+			user_info = self.opsiclientd.createOpsiSetupAdmin()
+			
 			logon = win32security.LogonUser(
 				user_info["name"], None, user_info["password"],
 				win32security.LOGON32_LOGON_INTERACTIVE,
@@ -1211,8 +1120,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 						break
 					time.sleep(0.5)
 			
-			if login:
-				self.opsiclientd.loginUser(user_info["name"], user_info["password"])
+			self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 		except Exception as e:
 			logger.error(e, exc_info=True)
 			raise
