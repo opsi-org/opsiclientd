@@ -209,7 +209,7 @@ function applyFilter() {
 	});
 }
 
-function startLog() {
+function startLog(numRecords=0) {
 	var start_time = Math.round(Date.now()-10000); // millseconds
 	var client = null;
 	var params = []
@@ -218,6 +218,9 @@ function startLog() {
 	}
 	if (client) {
 		params.push("client=" + client);
+	}
+	if (numRecords > 0) {
+		params.push("num_records=" + numRecords);
 	}
 
 	var loc = window.location;

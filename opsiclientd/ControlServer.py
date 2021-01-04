@@ -116,7 +116,7 @@ logViewerPage = '''<!DOCTYPE html>
 </head>
 <body>
 	<script>
-		startLog();
+		startLog(20000);
 	</script>
 	<!--
 	<label for="log-channel">Log channel:</label>
@@ -606,15 +606,16 @@ class LogReaderThread(threading.Thread):
 	max_delay = 0.2
 	max_record_buffer_size = 2500
 	
-	def __init__(self, filename, websocket_protocol, num_records=-1):
+	def __init__(self, filename, websocket_protocol, num_tail_records=-1):
 		super().__init__()
 		self.daemon = True
 		self.should_stop = False
 		self.filename = filename
 		self.websocket_protocol = websocket_protocol
-		self.num_records = int(num_records)
+		self.num_tail_records = int(num_tail_records)
 		self.record_buffer = []
 		self.send_time = 0
+		self._initial_read = False
 	
 	def send_buffer(self):
 		if not self.record_buffer:
@@ -627,6 +628,8 @@ class LogReaderThread(threading.Thread):
 		self.record_buffer = []
 	
 	def send_buffer_if_needed(self, max_delay=None):
+		if self._initial_read and self.num_tail_records > 0:
+			return
 		if max_delay is None:
 			max_delay = self.max_delay
 		if (
@@ -673,6 +676,7 @@ class LogReaderThread(threading.Thread):
 	
 	def run(self):
 		with codecs.open(self.filename, "r", encoding="utf-8", errors="replace") as f:
+			self._initial_read = True
 			# Start sending big bunches (high delay)
 			max_delay = 3
 			line_buffer = []
@@ -688,9 +692,15 @@ class LogReaderThread(threading.Thread):
 						for i in range(len(line_buffer) - 1):
 							self.add_log_line(line_buffer[i])
 						line_buffer = [line_buffer[-1]]
-						self.send_buffer_if_needed(max_delay)
+						if self.num_tail_records > 0:
+							while len(self.record_buffer) >= self.num_tail_records:
+								self.record_buffer.pop(0)
+						else:
+							self.send_buffer_if_needed(max_delay)
 				else:
-					max_delay = self.max_delay
+					if self._initial_read:
+						self._initial_read = False
+						max_delay = self.max_delay
 					no_line_count += 1
 					if no_line_count > 1:
 						# Add all lines
@@ -715,8 +725,8 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
 			logger.error("No valid session supplied")
 			self.sendClose(code=4401, reason="Unauthorized")
 		else:
-			num_records = int(self.request.params.get("num_records", [-1])[0])
-			self.log_reader_thread = LogReaderThread(config.get("global", "log_file"), self, num_records)
+			num_tail_records = int(self.request.params.get("num_records", [-1])[0])
+			self.log_reader_thread = LogReaderThread(config.get("global", "log_file"), self, num_tail_records)
 			self.log_reader_thread.start()
 	
 	def onMessage(self, payload, isBinary):
