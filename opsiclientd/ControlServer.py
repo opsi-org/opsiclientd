@@ -1127,10 +1127,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 							logger.warning("Failed to delete %s: %s", pdir, rm_err)
 					user_exists = False
 				else:
-					# Update user (password)
-					#user_info_update = win32net.NetUserGetInfo(None, user_info["name"], 1)
-					#user_info_update["password"] = user_info["password"]
-					win32net.NetUserSetInfo(None, user_info["name"], 1, user_info)
+					# Update user password
+					user_info_update = win32net.NetUserGetInfo(None, user_info["name"], 1)
+					user_info_update["password"] = user_info["password"]
+					win32net.NetUserSetInfo(None, user_info["name"], 1, user_info_update)
 			
 			if not user_exists:		
 				# Create user
