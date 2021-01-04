@@ -276,6 +276,7 @@ class Timeline(metaclass=Singleton):
 				return self._sql.insert('EVENT', event)
 			except sqlite3.DatabaseError as dbError:
 				logger.error("Failed to add event '%s': %s, recreating database", title, dbError)
+				self._sql.delete_db()
 				self._createDatabase(delete_existing=True)
 				return self._sql.insert('EVENT', event)
 			except Exception as addError:
