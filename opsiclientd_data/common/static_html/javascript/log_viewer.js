@@ -210,6 +210,7 @@ function applyFilter() {
 }
 
 function startLog(numRecords=0) {
+	logLineId = 0;
 	var start_time = Math.round(Date.now()-10000); // millseconds
 	var client = null;
 	var params = []
