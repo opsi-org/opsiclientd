@@ -604,7 +604,7 @@ class RequestAdapter():
 class LogReaderThread(threading.Thread):
 	record_start_regex = re.compile("^\[(\d)\]\s+\[([\d\-\:\. ]+)\]\s+\[([^\]]*)\]\s(.*)$")
 	max_delay = 0.2
-	max_record_buffer_size = 10000
+	max_record_buffer_size = 2500
 	
 	def __init__(self, filename, websocket_protocol, num_records=-1):
 		super().__init__()
@@ -1090,7 +1090,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 					winreg.HKEY_LOCAL_MACHINE,
 					r'Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts',
 					0,
-					_winreg.KEY_WOW64_64KEY | _winreg.KEY_ALL_ACCESS # sysnative
+					winreg.KEY_WOW64_64KEY | winreg.KEY_ALL_ACCESS # sysnative
 				)
 			except WindowsError:
 				pass
@@ -1099,7 +1099,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 					winreg.HKEY_LOCAL_MACHINE,
 					r'Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList',
 					0,
-					_winreg.KEY_WOW64_64KEY | _winreg.KEY_ALL_ACCESS # sysnative
+					winreg.KEY_WOW64_64KEY | winreg.KEY_ALL_ACCESS # sysnative
 				)
 			except WindowsError:
 				pass
