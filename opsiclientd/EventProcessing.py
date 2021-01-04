@@ -885,7 +885,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			else:
 				if RUNNING_ON_WINDOWS:
 					if config.get('global', 'use_opsi_setup_admin'):
-						user_info = self.createOpsiSetupAdmin()
+						user_info = self.opsiclientd.createOpsiSetupAdmin()
 						createEnvironment = True
 						actionProcessorUserName = user_info["name"]
 						actionProcessorUserPassword = user_info["password"]
