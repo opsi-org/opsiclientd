@@ -512,32 +512,6 @@ class Opsiclientd(EventListener, threading.Thread):
 			self.setBlockLogin(False)
 		finally:
 			self._running = False
-
-			"""
-			if reactor and reactor.running:
-				logger.info(u"Stopping reactor")
-				reactor.fireSystemEvent('shutdown')
-				reactor.disconnectAll()
-				reactor.callFromThread(reactor.stop)
-
-				reactorStopTimeout = 60
-				for _unused in range(reactorStopTimeout):
-					if not reactor.running:
-						break
-
-					logger.debug(u"Waiting for reactor to stop")
-					time.sleep(1)
-				else:
-					logger.debug("Reactor still running after {0} seconds.".format(reactorStopTimeout))
-					logger.debug("Exiting anyway.")
-
-			logger.info(u"Stopping tornado IOLoop")
-			try:
-				IOLoop.current().stop()
-			except Exception as error:
-				logger.debug(u"Stopping IOLoop failed: {0}".format(error))
-			"""
-
 			for thread in threading.enumerate():
 				logger.info("Runnning thread on main thread exit: %s", thread)
 
