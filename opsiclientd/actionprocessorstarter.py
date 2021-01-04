@@ -35,10 +35,20 @@ from opsiclientd import __version__, DEFAULT_STDERR_LOG_FORMAT, DEFAULT_FILE_LOG
 
 def main():
 	if len(sys.argv) != 17:
-		print("Usage: %s <hostId> <hostKey> <controlServerPort> <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <depotServerUsername> <depotServerPassword> <sessionId> <actionProcessorDesktop> <actionProcessorCommand> <actionProcessorTimeout> <runAsUser> <runAsPassword> <createEnvironment>" % os.path.basename(sys.argv[0]))
+		print(
+			f"Usage: {os.path.basename(sys.argv[0])} <hostId> <hostKey> <controlServerPort>"
+			" <logFile> <logLevel> <depotRemoteUrl> <depotDrive> <depotServerUsername> <depotServerPassword>"
+			" <sessionId> <actionProcessorDesktop> <actionProcessorCommand> <actionProcessorTimeout>"
+			" <runAsUser> <runAsPassword> <createEnvironment>"
+		)
 		sys.exit(1)
 
-	(hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword, createEnvironment) = sys.argv[1:]
+	(
+		hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl,
+		depotDrive, depotServerUsername, depotServerPassword, sessionId,
+		actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout,
+		runAsUser, runAsPassword, createEnvironment
+	) = sys.argv[1:]
 
 	if hostKey:
 		logger.addConfidentialString(hostKey)
@@ -56,7 +66,15 @@ def main():
 	)
 	
 	with opsicommon.logging.log_context({'instance' : os.path.basename(sys.argv[0])}):
-		logger.debug("Called with arguments: %s", ', '.join((hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl, depotDrive, depotServerUsername, depotServerPassword, sessionId, actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout, runAsUser, runAsPassword, createEnvironment)) )
+		logger.debug(
+			"Called with arguments: %s",
+			', '.join((
+				hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl,
+				depotDrive, depotServerUsername, depotServerPassword, sessionId,
+				actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout,
+				runAsUser, runAsPassword, createEnvironment
+			))
+		)
 		
 		try:
 			lang = locale.getdefaultlocale()[0].split('_')[0]
@@ -84,7 +102,7 @@ def main():
 			if runAsUser:
 				logger.info("Impersonating user '%s'", runAsUser)
 				imp = System.Impersonate(username=runAsUser, password=runAsPassword, desktop=actionProcessorDesktop)
-				imp.start(logonType="INTERACTIVE", newDesktop=True, createEnvironment=createEnvironment)
+				imp.start(logonType="INTERACTIVE", newDesktop=False, createEnvironment=createEnvironment)
 			else:
 				logger.info("Impersonating network account '%s'", depotServerUsername)
 				imp = System.Impersonate(username=depotServerUsername, password=depotServerPassword, desktop=actionProcessorDesktop)
