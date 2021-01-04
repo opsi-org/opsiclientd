@@ -1018,6 +1018,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	def processActionWarningTime(self, productIds=[]):
 		if not self.event.eventConfig.actionWarningTime:
 			return
+		logger.info(u"Notifying user of actions to process %s (%s)" % (self.event, productIds))
 		cancelCounter = state.get('action_processing_cancel_counter', 0)
 		waitEventId = timeline.addEvent(
 				title         = u"Action warning",
@@ -1053,7 +1054,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			endTime = time.time() + timeout
 			while (timeout > 0) and not self.actionCancelled and not self.waitCancelled:
 				now = time.time()
-				logger.info(u"Notifying user of actions to process %s (%s)" % (self.event, productIds))
 				minutes = 0
 				seconds = (endTime - now)
 				if (seconds >= 60):
