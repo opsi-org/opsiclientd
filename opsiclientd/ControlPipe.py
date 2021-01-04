@@ -174,6 +174,7 @@ class ControlPipe(threading.Thread):
 		self._stopEvent = threading.Event()
 		self._stopEvent.clear()
 		self._clients = []
+		self._clientLock = threading.Lock()
 
 	def run(self):
 		with log_context({'instance' : 'control pipe'}):
@@ -185,10 +186,11 @@ class ControlPipe(threading.Thread):
 						client = self.waitForClient()
 						if self._stopEvent.is_set():
 							break
-						connection = self.connection_class(self, client)
-						self._clients.append(connection)
-						connection.daemon = True
-						connection.start()
+						with self._clientLock:
+							connection = self.connection_class(self, client)
+							self._clients.append(connection)
+							connection.daemon = True
+							connection.start()
 					except Exception as err1:
 						logger.error(err1, exc_info=True)
 						self.setup()
@@ -199,8 +201,9 @@ class ControlPipe(threading.Thread):
 	
 	def stop(self):
 		logger.debug("Stopping %s", self)
-		for client in self._clients:
-			client.stop()
+		with self._clientLock:
+			for client in self._clients:
+				client.stop()
 		self._stopEvent.set()
 	
 	def setup(self):
@@ -213,9 +216,10 @@ class ControlPipe(threading.Thread):
 		pass
 	
 	def clientDisconnected(self, client):
-		if client in self._clients:
-			logger.info("Client %s disconnected", client)
-			self._clients.remove(client)
+		with self._clientLock:
+			if client in self._clients:
+				logger.info("Client %s disconnected", client)
+				self._clients.remove(client)
 	
 	def isRunning(self):
 		return self._running
