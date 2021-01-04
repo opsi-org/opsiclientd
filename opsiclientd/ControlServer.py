@@ -1192,7 +1192,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 			win32security.ImpersonateLoggedOnUser(userToken)
 
-			System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
+			#System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
 
 			hPrc = win32process.CreateProcessAsUser(
 									userToken,
