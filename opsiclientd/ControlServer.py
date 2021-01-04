@@ -1084,6 +1084,33 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				"priv": win32netcon.USER_PRIV_USER,
 				"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD
 			}
+			
+			try:
+				winreg.CreateKeyEx(
+					winreg.HKEY_LOCAL_MACHINE,
+					r'Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts',
+					0,
+					_winreg.KEY_WOW64_64KEY | _winreg.KEY_ALL_ACCESS # sysnative
+				)
+			except WindowsError:
+				pass
+			try:
+				winreg.CreateKey(
+					winreg.HKEY_LOCAL_MACHINE,
+					r'Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList',
+					0,
+					_winreg.KEY_WOW64_64KEY | _winreg.KEY_ALL_ACCESS # sysnative
+				)
+			except WindowsError:
+				pass
+			
+			with winreg.OpenKey(
+				winreg.HKEY_LOCAL_MACHINE,
+				r'Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList',
+				0,
+				winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY # sysnative
+			) as reg_key:
+				winreg.SetValueEx(reg_key, user_info["name"], 0, winreg.REG_DWORD, 0)
 
 			try:
 				win32net.NetUserDel(None, user_info["name"])
@@ -1129,12 +1156,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 							winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY
 						)
 						with reg_key:
-							key = "Shell"
-							try:
-								winreg.DeleteValue(reg_key, key)
-							except FileNotFoundError:
-								pass
-							winreg.SetValueEx(reg_key, key, 0, winreg.REG_SZ, command)
+							winreg.SetValueEx(reg_key, "Shell", 0, winreg.REG_SZ, command)
 					else:
 						reg_key = winreg.OpenKey(
 							winreg.HKEY_LOCAL_MACHINE,
@@ -1143,12 +1165,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 							winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY
 						)
 						with reg_key:
-							key = "000 opsi tasks"
-							try:
-								winreg.DeleteValue(reg_key, key)
-							except FileNotFoundError:
-								pass
-							winreg.SetValueEx(reg_key, key, 0, winreg.REG_SZ, command)
+							winreg.SetValueEx(reg_key, "000 opsi tasks", 0, winreg.REG_SZ, command)
 					
 				finally:
 					win32profile.UnloadUserProfile(logon, hkey)
