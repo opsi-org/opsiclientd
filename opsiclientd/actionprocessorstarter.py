@@ -137,7 +137,7 @@ def runAsTest(command, username, password, maxWait=120000):
 		startupInfo.hStdOutput = stdOutWr
 		startupInfo.hStdError = stdErrWr
 
-		win32security.ImpersonateLoggedOnUser(userToken)
+		#win32security.ImpersonateLoggedOnUser(userToken)
 
 		#System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
 
