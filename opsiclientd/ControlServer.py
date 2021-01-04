@@ -1095,7 +1095,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			except WindowsError:
 				pass
 			try:
-				winreg.CreateKey(
+				winreg.CreateKeyEx(
 					winreg.HKEY_LOCAL_MACHINE,
 					r'Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList',
 					0,
