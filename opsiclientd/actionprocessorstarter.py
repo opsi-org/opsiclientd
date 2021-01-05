@@ -153,6 +153,20 @@ def runAsTest(command, username, password, maxWait=120000):
 				# Set modified DACL for winsta0
 				win32security.SetSecurityInfo(hWinSta, win32security.SE_WINDOW_OBJECT, win32security.DACL_SECURITY_INFORMATION,
 												None, None, daclWinSta, None)
+				
+
+				#############################
+				secDescWinSta = win32security.GetUserObjectSecurity(hWinSta, win32security.OWNER_SECURITY_INFORMATION
+																				| win32security.DACL_SECURITY_INFORMATION
+																				| win32con.GROUP_SECURITY_INFORMATION)
+				daclWinSta = secDescWinSta.GetSecurityDescriptorDacl()
+				ace_count = daclWinSta.GetAceCount()
+				logger.notice("after winsta ace_count: %s", ace_count)
+				for i in range(0, ace_count):
+					arev, aaccess, ausersid = daclWinSta.GetAce(i)
+					auser, agroup, atype  = win32security.LookupAccountSid('', ausersid)
+					logger.notice("after winsta ace-> %s - %s - %s - %s - %s - %s", ausersid, auser, agroup, atype, arev, aaccess)
+				#############################
 
 				# Set access rights to desktop
 				#hDesktop = win32service.OpenDesktop("winlogon", 0, False, win32con.READ_CONTROL
@@ -171,11 +185,11 @@ def runAsTest(command, username, password, maxWait=120000):
 					daclDesktop = win32security.ACL()
 				
 				ace_count = daclDesktop.GetAceCount()
-				logger.notice("desktop ace_count: %s", ace_count)
+				logger.notice("new ace_count: %s", ace_count)
 				for i in range(0, ace_count):
 					arev, aaccess, ausersid = daclDesktop.GetAce(i)
 					auser, agroup, atype  = win32security.LookupAccountSid('', ausersid)
-					logger.notice("desktop ace-> %s - %s - %s - %s - %s - %s", ausersid, auser, agroup, atype, arev, aaccess)
+					logger.notice("new ace-> %s - %s - %s - %s - %s - %s", ausersid, auser, agroup, atype, arev, aaccess)
 
 				# Add ACEs to DACL for specific user group
 				daclDesktop.AddAccessAllowedAce(win32security.ACL_REVISION_DS, GENERIC_ACCESS, userSid)
@@ -183,6 +197,21 @@ def runAsTest(command, username, password, maxWait=120000):
 				# Set modified DACL for desktop
 				win32security.SetSecurityInfo(hDesktop, win32security.SE_WINDOW_OBJECT, win32security.DACL_SECURITY_INFORMATION,
 												None, None, daclDesktop, None)
+
+
+				##############################
+				secDescDesktop = win32security.GetUserObjectSecurity(hDesktop, win32security.OWNER_SECURITY_INFORMATION
+																				| win32security.DACL_SECURITY_INFORMATION
+																				| win32con.GROUP_SECURITY_INFORMATION )
+				# Get DACL from security descriptor
+				daclDesktop = secDescDesktop.GetSecurityDescriptorDacl()
+				ace_count = daclDesktop.GetAceCount()
+				logger.notice("new desktop ace_count: %s", ace_count)
+				for i in range(0, ace_count):
+					arev, aaccess, ausersid = daclDesktop.GetAce(i)
+					auser, agroup, atype  = win32security.LookupAccountSid('', ausersid)
+					logger.notice("new desktop ace-> %s - %s - %s - %s - %s - %s", ausersid, auser, agroup, atype, arev, aaccess)
+				##############################
 
 				# Setup stdin, stdOut and stderr
 				"""
