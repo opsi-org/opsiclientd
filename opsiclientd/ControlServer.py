@@ -877,10 +877,16 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			timeout=timeout
 		)
 
+	def logoffSession(self, session_id = None, username = None):
+		return System.logoffSession(session_id=session_id, username=username)
+	
 	def logoffCurrentUser(self):
 		logger.notice(u"rpc logoffCurrentUser: logging of current user now")
 		System.logoffCurrentUser()
-
+	
+	def lockSession(self, session_id = None, username = None):
+		return System.lockSession(session_id=session_id, username=username)
+	
 	def lockWorkstation(self):
 		logger.notice(u"rpc lockWorkstation: locking workstation now")
 		System.lockWorkstation()
@@ -1037,7 +1043,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				if self.opsiclientd._controlPipe.credentialProviderConnected():
 					break
 				time.sleep(0.5)
-		return self.opsiclientd.loginUser(user_info["username"], user_info["password"])
+		return self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 
 	def runAsOpsiSetupAdmin(self, command="powershell.exe -ExecutionPolicy ByPass"):
 		try:
