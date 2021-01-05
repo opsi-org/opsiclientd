@@ -126,7 +126,9 @@ def runAsTest(command, username, password, maxWait=120000):
 			profile = win32profile.LoadUserProfile(userToken, {"UserName": username})
 			try:
 				# Set access rights to window station
-				hWinSta = win32service.OpenWindowStation("winsta0", False, win32con.READ_CONTROL | win32con.WRITE_DAC )
+				#hWinSta = win32service.OpenWindowStation("winsta0", False, win32con.READ_CONTROL | win32con.WRITE_DAC )
+				#hWinSta.SetProcessWindowStation()
+				
 				# Get security descriptor by winsta0-handle
 				secDescWinSta = win32security.GetUserObjectSecurity(hWinSta, win32security.OWNER_SECURITY_INFORMATION
 																				| win32security.DACL_SECURITY_INFORMATION
@@ -144,10 +146,10 @@ def runAsTest(command, username, password, maxWait=120000):
 												None, None, daclWinSta, None)
 
 				# Set access rights to desktop
-				hDesktop = win32service.OpenDesktop("winlogon", 0, False, win32con.READ_CONTROL
-																			| win32con.WRITE_DAC
-																			| win32con.DESKTOP_WRITEOBJECTS
-																			| win32con.DESKTOP_READOBJECTS)
+				#hDesktop = win32service.OpenDesktop("winlogon", 0, False, win32con.READ_CONTROL
+				#															| win32con.WRITE_DAC
+				#															| win32con.DESKTOP_WRITEOBJECTS
+				#															| win32con.DESKTOP_READOBJECTS)
 				# Get security descriptor by desktop-handle
 				secDescDesktop = win32security.GetUserObjectSecurity(hDesktop, win32security.OWNER_SECURITY_INFORMATION
 																				| win32security.DACL_SECURITY_INFORMATION
@@ -165,6 +167,7 @@ def runAsTest(command, username, password, maxWait=120000):
 												None, None, daclDesktop, None)
 
 				# Setup stdin, stdOut and stderr
+				"""
 				secAttrs = win32security.SECURITY_ATTRIBUTES()
 				secAttrs.bInheritHandle = 1
 				stdOutRd, stdOutWr = win32pipe.CreatePipe(secAttrs, 0)
@@ -174,7 +177,7 @@ def runAsTest(command, username, password, maxWait=120000):
 				tmp = win32api.DuplicateHandle(ppid, stdOutRd, ppid, 0, 0, win32con.DUPLICATE_SAME_ACCESS)
 				win32file.CloseHandle(stdOutRd)
 				stdOutRd = tmp
-
+				"""
 				environment = win32profile.CreateEnvironmentBlock(userToken, False)
 				logger.notice("environment-> %s", environment)
 
@@ -185,9 +188,10 @@ def runAsTest(command, username, password, maxWait=120000):
 				#startupInfo.hStdError = stdErrWr
 				startupInfo.lpDesktop = 'winsta0\\winlogon'
 
-				securityAttributes = win32security.SECURITY_ATTRIBUTES()
-				securityAttributes.bInheritHandle = 1
-				
+				#securityAttributes = win32security.SECURITY_ATTRIBUTES()
+				#securityAttributes.bInheritHandle = 1
+				securityAttributes = None
+
 				win32security.ImpersonateLoggedOnUser(userToken)
 
 				#System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
@@ -207,8 +211,11 @@ def runAsTest(command, username, password, maxWait=120000):
 				"""
 				win32file.CloseHandle(stdErrWr)
 				win32file.CloseHandle(stdOutWr)
+				"""
+
 				win32security.RevertToSelf()
 
+				"""
 				# Wait for process to complete
 				stdOutBuf = os.fdopen(msvcrt.open_osfhandle(stdOutRd, 0), "rb")
 				stdErrBuf = os.fdopen(msvcrt.open_osfhandle(stdErrRd, 0), "rb")
