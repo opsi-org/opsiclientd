@@ -312,16 +312,17 @@ def runAsTest(command, username, password, maxWait=120000):
 				win32security.AdjustTokenPrivileges(userTokenDup, 0, newPrivileges)
 				
 				(hProcess, hThread, dwProcessId, dwThreadId) = win32process.CreateProcessAsUser(
-										userTokenDup,
-										None,               # appName
-										command,            # commandLine
-										securityAttributes,               # processAttributes
-										securityAttributes,               # threadAttributes
-										1,                  # bInheritHandles
-										win32process.CREATE_NEW_CONSOLE, # dwCreationFlags
-										environment,        # newEnvironment
-										profileDir,         # currentDirectory
-										startupInfo)[0]
+					userTokenDup,
+					None,               # appName
+					command,            # commandLine
+					securityAttributes,               # processAttributes
+					securityAttributes,               # threadAttributes
+					1,                  # bInheritHandles
+					win32process.CREATE_NEW_CONSOLE, # dwCreationFlags
+					environment,        # newEnvironment
+					profileDir,         # currentDirectory
+					startupInfo
+				)
 				
 				win32event.WaitForSingleObject(hProcess, 600000)
 
