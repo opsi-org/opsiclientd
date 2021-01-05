@@ -77,7 +77,7 @@ def runAsTest(command, username, password, maxWait=120000):
 		curr_desktop = win32service.GetThreadDesktop(win32api.GetCurrentThreadId())
 		curr_desktop_name = win32service.GetUserObjectInformation(curr_desktop, win32con.UOI_NAME)
 		logger.notice("curr_desktop_name-> %s", curr_desktop_name)
-		
+
 		window_list = curr_desktop.EnumDesktopWindows()
 		for window in window_list:
 			logger.notice("window-> %s", win32gui.GetWindowText(window))
@@ -85,8 +85,9 @@ def runAsTest(command, username, password, maxWait=120000):
 		winsta = win32service.GetProcessWindowStation()
 		desktop_list = winsta.EnumDesktops()
 		for desk in desktop_list:
-			desk_name = win32service.GetUserObjectInformation(desk, win32con.UOI_NAME)
-			logger.notice("desktop-> %s", desk_name)
+			logger.notice("desktop-> %s", desk)
+			#desk_name = win32service.GetUserObjectInformation(desk, win32con.UOI_NAME)
+			#logger.notice("desktop-> %s", desk_name)
 		
 
 		startupInfo1 = win32process.STARTUPINFO()
