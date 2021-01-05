@@ -161,11 +161,11 @@ def runAsTest(command, username, password, maxWait=120000):
 																				| win32con.GROUP_SECURITY_INFORMATION)
 				daclWinSta = secDescWinSta.GetSecurityDescriptorDacl()
 				ace_count = daclWinSta.GetAceCount()
-				logger.notice("after winsta ace_count: %s", ace_count)
+				logger.notice("new winsta ace_count: %s", ace_count)
 				for i in range(0, ace_count):
 					arev, aaccess, ausersid = daclWinSta.GetAce(i)
 					auser, agroup, atype  = win32security.LookupAccountSid('', ausersid)
-					logger.notice("after winsta ace-> %s - %s - %s - %s - %s - %s", ausersid, auser, agroup, atype, arev, aaccess)
+					logger.notice("new winsta ace-> %s - %s - %s - %s - %s - %s", ausersid, auser, agroup, atype, arev, aaccess)
 				#############################
 
 				# Set access rights to desktop
@@ -185,11 +185,11 @@ def runAsTest(command, username, password, maxWait=120000):
 					daclDesktop = win32security.ACL()
 				
 				ace_count = daclDesktop.GetAceCount()
-				logger.notice("new ace_count: %s", ace_count)
+				logger.notice("desktop ace_count: %s", ace_count)
 				for i in range(0, ace_count):
 					arev, aaccess, ausersid = daclDesktop.GetAce(i)
 					auser, agroup, atype  = win32security.LookupAccountSid('', ausersid)
-					logger.notice("new ace-> %s - %s - %s - %s - %s - %s", ausersid, auser, agroup, atype, arev, aaccess)
+					logger.notice("desktop ace-> %s - %s - %s - %s - %s - %s", ausersid, auser, agroup, atype, arev, aaccess)
 
 				# Add ACEs to DACL for specific user group
 				daclDesktop.AddAccessAllowedAce(win32security.ACL_REVISION_DS, GENERIC_ACCESS, userSid)
@@ -341,7 +341,7 @@ def main():
 				return string
 
 		if runAsUser:
-			return runAsTest("taskmgr.exe", runAsUser, runAsPassword, maxWait=120000)
+			return runAsTest("cmd.exe", runAsUser, runAsPassword, maxWait=120000)
 		
 		if runAsUser and createEnvironment.lower() in ('yes', 'true', '1'):
 			createEnvironment = True
