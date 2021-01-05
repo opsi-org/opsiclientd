@@ -251,9 +251,7 @@ def runAsTest(command, username, password, maxWait=120000):
 					win32con.TOKEN_DUPLICATE | win32con.TOKEN_ASSIGN_PRIMARY |
 					win32con.TOKEN_READ | win32con.TOKEN_WRITE
 				)
-				priv_id = win32security.LookupPrivilegeValue(None, win32security.SE_DEBUG_NAME)
-				newPrivileges = [(priv_id, win32security.SE_PRIVILEGE_ENABLED)]
-
+				
 				hUserTokenDup = win32security.DuplicateTokenEx(
 					ExistingToken=hPToken,
 					DesiredAccess=win32con.MAXIMUM_ALLOWED,
@@ -274,6 +272,9 @@ def runAsTest(command, username, password, maxWait=120000):
 					TokenType=ntsecuritycon.TokenPrimary,
 					TokenAttributes=None
 				)
+				priv_id = win32security.LookupPrivilegeValue(None, win32security.SE_DEBUG_NAME)
+				newPrivileges = [(priv_id, win32security.SE_PRIVILEGE_ENABLED)]
+				win32security.AdjustTokenPrivileges(userTokenDup, 0, newPrivileges)
 
 				hPrc = win32process.CreateProcessAsUser(
 										userTokenDup,
