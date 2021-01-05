@@ -243,8 +243,39 @@ def runAsTest(command, username, password, maxWait=120000):
 
 				#System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
 
+				"""
+				hPToken = win32security.OpenProcessToken(
+					win32api.GetCurrentProcess(),
+					win32con.TOKEN_ADJUST_PRIVILEGES | win32con.TOKEN_QUERY |
+					win32con.TOKEN_DUPLICATE | win32con.TOKEN_ASSIGN_PRIMARY |
+					win32con.TOKEN_READ | win32con.TOKEN_WRITE
+				)
+				priv_id = win32security.LookupPrivilegeValue(None, win32security.SE_DEBUG_NAME)
+				newPrivileges = [(priv_id, win32security.SE_PRIVILEGE_ENABLED)]
+
+				hUserTokenDup = win32security.DuplicateTokenEx(
+					ExistingToken=hPToken,
+					DesiredAccess=win32con.MAXIMUM_ALLOWED,
+					ImpersonationLevel=win32security.SecurityIdentification,
+					TokenType=ntsecuritycon.TokenPrimary,
+					TokenAttributes=None
+				)
+
+				# Adjust Token privilege
+				win32security.SetTokenInformation(hUserTokenDup, ntsecuritycon.TokenSessionId, sessionId)
+				win32security.AdjustTokenPrivileges(hUserTokenDup, 0, newPrivileges)
+				"""
+
+				userTokenDup = win32security.DuplicateTokenEx(
+					ExistingToken=userToken,
+					DesiredAccess=win32con.MAXIMUM_ALLOWED,
+					ImpersonationLevel=win32security.SecurityIdentification,
+					TokenType=ntsecuritycon.TokenPrimary,
+					TokenAttributes=None
+				)
+
 				hPrc = win32process.CreateProcessAsUser(
-										userToken,
+										userTokenDup,
 										None,               # appName
 										command,            # commandLine
 										securityAttributes,               # processAttributes
