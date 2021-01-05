@@ -305,10 +305,10 @@ def runAsTest(command, username, password, maxWait=120000):
 					win32security.SE_MANAGE_VOLUME_NAME
 				):
 
-					priv_id = win32security.LookupPrivilegeValue(None, win32security.SE_DEBUG_NAME)
-					newPrivileges.append((priv_id, priv))
+					priv_id = win32security.LookupPrivilegeValue(None, priv)
+					newPrivileges.append((priv_id, win32security.SE_PRIVILEGE_ENABLED))
 				win32security.AdjustTokenPrivileges(userTokenDup, 0, newPrivileges)
-
+				
 				(hProcess, hThread, dwProcessId, dwThreadId) = win32process.CreateProcessAsUser(
 										userTokenDup,
 										None,               # appName
