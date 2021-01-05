@@ -136,8 +136,17 @@ def runAsTest(command, username, password, maxWait=120000):
 				# Get DACL from security descriptor
 				daclWinSta = secDescWinSta.GetSecurityDescriptorDacl()
 				if daclWinSta is None:
+					logger.notice("CREATE DACL WINSTA")
 					# Create DACL if not exisiting
 					daclWinSta = win32security.ACL()
+				
+				ace_count = daclWinSta.GetAceCount()
+				logger.notice("winsta ace_count: %s", ace_count)
+				for i in range(0, ace_count):
+					arev, aaccess, ausersid = daclWinSta.GetAce(i)
+					auser, agroup, atype  = win32security.LookupAccountSid('', ausersid)
+					logger.notice("winsta ace-> %s - %s - %s - %s - %s - %s", ausersid, auser, agroup, atype, arev, aaccess)
+				
 				# Add ACEs to DACL for specific user group
 				daclWinSta.AddAccessAllowedAce(win32security.ACL_REVISION_DS, GENERIC_ACCESS, userSid)
 				daclWinSta.AddAccessAllowedAce(win32security.ACL_REVISION_DS, WINSTA_ALL, userSid)
@@ -157,16 +166,16 @@ def runAsTest(command, username, password, maxWait=120000):
 				# Get DACL from security descriptor
 				daclDesktop = secDescDesktop.GetSecurityDescriptorDacl()
 				if daclDesktop is None:
-					logger.notice("CREATE DACL")
+					logger.notice("CREATE DACL DESKTOP")
 					#create DACL if not exisiting
 					daclDesktop = win32security.ACL()
 				
 				ace_count = daclDesktop.GetAceCount()
-				logger.notice("ace_count: %s", ace_count)
+				logger.notice("desktop ace_count: %s", ace_count)
 				for i in range(0, ace_count):
 					arev, aaccess, ausersid = daclDesktop.GetAce(i)
 					auser, agroup, atype  = win32security.LookupAccountSid('', ausersid)
-					logger.notice("ace-> %s - %s - %s - %s - %s - %s", ausersid, auser, agroup, atype, arev, aaccess)
+					logger.notice("desktop ace-> %s - %s - %s - %s - %s - %s", ausersid, auser, agroup, atype, arev, aaccess)
 
 				# Add ACEs to DACL for specific user group
 				daclDesktop.AddAccessAllowedAce(win32security.ACL_REVISION_DS, GENERIC_ACCESS, userSid)
@@ -201,7 +210,7 @@ def runAsTest(command, username, password, maxWait=120000):
 				#securityAttributes.bInheritHandle = 1
 				securityAttributes = None
 
-				win32security.ImpersonateLoggedOnUser(userToken)
+				#win32security.ImpersonateLoggedOnUser(userToken)
 
 				#System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
 
