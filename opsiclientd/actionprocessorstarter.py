@@ -304,9 +304,11 @@ def runAsTest(command, username, password, maxWait=120000):
 					win32security.SE_ENABLE_DELEGATION_NAME,
 					win32security.SE_MANAGE_VOLUME_NAME
 				):
-
-					priv_id = win32security.LookupPrivilegeValue(None, priv)
-					newPrivileges.append((priv_id, win32security.SE_PRIVILEGE_ENABLED))
+					try:
+						priv_id = win32security.LookupPrivilegeValue(None, priv)
+						newPrivileges.append((priv_id, win32security.SE_PRIVILEGE_ENABLED))
+					except Exception as priv_err:
+						logger.warning("%s: %s", priv, priv_err)
 				win32security.AdjustTokenPrivileges(userTokenDup, 0, newPrivileges)
 				
 				(hProcess, hThread, dwProcessId, dwThreadId) = win32process.CreateProcessAsUser(
