@@ -184,7 +184,7 @@ def runAsTest(command, username, password, maxWait=120000):
 				#startupInfo.hStdOutput = stdOutWr
 				#startupInfo.hStdError = stdErrWr
 				startupInfo.lpDesktop = 'winsta0\\winlogon'
-				#win32security.ImpersonateLoggedOnUser(userToken)
+				win32security.ImpersonateLoggedOnUser(userToken)
 
 				#System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
 
@@ -203,7 +203,7 @@ def runAsTest(command, username, password, maxWait=120000):
 				"""
 				win32file.CloseHandle(stdErrWr)
 				win32file.CloseHandle(stdOutWr)
-				#win32security.RevertToSelf()
+				win32security.RevertToSelf()
 
 				# Wait for process to complete
 				stdOutBuf = os.fdopen(msvcrt.open_osfhandle(stdOutRd, 0), "rb")
