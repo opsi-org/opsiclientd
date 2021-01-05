@@ -78,7 +78,7 @@ def runAsTest(command, username, password, maxWait=120000):
 		curr_desktop_name = win32service.GetUserObjectInformation(hDesktop, win32con.UOI_NAME)
 		logger.notice("curr_desktop_name-> %s", curr_desktop_name)
 
-		window_list = curr_desktop.EnumDesktopWindows()
+		window_list = hDesktop.EnumDesktopWindows()
 		for window in window_list:
 			logger.notice("window-> %s", win32gui.GetWindowText(window))
 		
@@ -182,7 +182,7 @@ def runAsTest(command, username, password, maxWait=120000):
 			startupInfo.hStdError = stdErrWr
 			startupInfo.lpDesktop = 'winsta0\\winlogon'
 			#win32security.ImpersonateLoggedOnUser(userToken)
-			
+
 			#System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
 
 			hPrc = win32process.CreateProcessAsUser(
