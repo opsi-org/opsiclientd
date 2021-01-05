@@ -184,6 +184,10 @@ def runAsTest(command, username, password, maxWait=120000):
 				#startupInfo.hStdOutput = stdOutWr
 				#startupInfo.hStdError = stdErrWr
 				startupInfo.lpDesktop = 'winsta0\\winlogon'
+
+				securityAttributes = win32security.SECURITY_ATTRIBUTES()
+				securityAttributes.bInheritHandle = 1
+				
 				win32security.ImpersonateLoggedOnUser(userToken)
 
 				#System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
@@ -192,8 +196,8 @@ def runAsTest(command, username, password, maxWait=120000):
 										userToken,
 										None,               # appName
 										command,            # commandLine
-										None,               # processAttributes
-										None,               # threadAttributes
+										securityAttributes,               # processAttributes
+										securityAttributes,               # threadAttributes
 										0,                  # bInheritHandles
 										win32process.CREATE_NEW_CONSOLE, # dwCreationFlags
 										environment,        # newEnvironment
