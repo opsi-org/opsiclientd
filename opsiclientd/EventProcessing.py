@@ -903,7 +903,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						f' "{self.getSessionId()}" "{desktop}" '
 						f' "{actionProcessorCommand}" "{self.event.eventConfig.actionProcessorTimeout}"'
 						f' "{actionProcessorUserName}" "{actionProcessorUserPassword}"'
-						f' "{createEnvironment).lower()}"'
+						f' "{createEnvironment.lower()}"'
 					)
 				else:
 					command = actionProcessorCommand
