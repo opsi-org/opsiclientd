@@ -280,7 +280,7 @@ def main():
 				return string
 
 		if runAsUser:
-			return runAsTest("powershell.exe", runAsUser, runAsPassword, maxWait=120000)
+			return runAsTest("cmd.exe", runAsUser, runAsPassword, maxWait=120000)
 		
 		if runAsUser and createEnvironment.lower() in ('yes', 'true', '1'):
 			createEnvironment = True
