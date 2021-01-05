@@ -187,7 +187,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					if userSessionsIds:
 						sessionId = userSessionsIds[0]
 				if sessionId is None:
-					sessionId = System.getActiveSessionId()
+					# Prefer active sessions
+					sessions = []
+					for session in System.getActiveSessionInformation():
+						if session.get("StateName") == "active":
+							sessions.insert(0, session["SessionId"])
+						else:
+							sessions.append(session["SessionId"])
+					if sessions:
+						sessionId = sessions[0]
 				if sessionId is None:
 					sessionId = System.getActiveConsoleSessionId()
 				if sessionId is None:
