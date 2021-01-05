@@ -157,8 +157,17 @@ def runAsTest(command, username, password, maxWait=120000):
 				# Get DACL from security descriptor
 				daclDesktop = secDescDesktop.GetSecurityDescriptorDacl()
 				if daclDesktop is None:
+					logger.notice("CREATE DACL")
 					#create DACL if not exisiting
 					daclDesktop = win32security.ACL()
+				
+				ace_count = daclDesktop.GetAceCount()
+				logger.notice("ace_count: %s", ace_count)
+				for i in range(0, ace_count):
+					arev, aaccess, ausersid = daclDesktop.GetAce(i)
+					auser, agroup, atype  = win32security.LookupAccountSid('', ausersid)
+					logger.notice("ace-> %s - %s - %s - %s - %s - %s", ausersid, auser, agroup, atype, arev, aaccess)
+
 				# Add ACEs to DACL for specific user group
 				daclDesktop.AddAccessAllowedAce(win32security.ACL_REVISION_DS, GENERIC_ACCESS, userSid)
 				daclDesktop.AddAccessAllowedAce(win32security.ACL_REVISION_DS, DESKTOP_ALL, userSid)
