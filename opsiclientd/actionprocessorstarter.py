@@ -176,6 +176,7 @@ def runAsTest(command, username, password, maxWait=120000):
 				stdOutRd = tmp
 
 				environment = win32profile.CreateEnvironmentBlock(userToken, False)
+				logger.notice("environment-> %s", environment)
 
 				startupInfo = win32process.STARTUPINFO()
 
@@ -279,7 +280,7 @@ def main():
 				return string
 
 		if runAsUser:
-			return runAsTest("C:\\Windows\\System32\\cmd.exe", runAsUser, runAsPassword, maxWait=120000)
+			return runAsTest("powershell.exe", runAsUser, runAsPassword, maxWait=120000)
 		
 		if runAsUser and createEnvironment.lower() in ('yes', 'true', '1'):
 			createEnvironment = True
