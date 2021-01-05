@@ -187,15 +187,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					if userSessionsIds:
 						sessionId = userSessionsIds[0]
 				if sessionId is None:
-					# Prefer active sessions
-					sessions = []
+					# Prefer active console/rdp sessions
 					for session in System.getActiveSessionInformation():
 						if session.get("StateName") == "active":
-							sessions.insert(0, session["SessionId"])
-						else:
-							sessions.append(session["SessionId"])
-					if sessions:
-						sessionId = sessions[0]
+							sessionId = session["SessionId"]
+							break
 				if sessionId is None:
 					sessionId = System.getActiveConsoleSessionId()
 				if sessionId is None:
@@ -911,7 +907,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						f' "{self.getSessionId()}" "{desktop}" '
 						f' "{actionProcessorCommand}" "{self.event.eventConfig.actionProcessorTimeout}"'
 						f' "{actionProcessorUserName}" "{actionProcessorUserPassword}"'
-						f' "{createEnvironment.lower()}"'
+						f' "{str(createEnvironment).lower()}"'
 					)
 				else:
 					command = actionProcessorCommand
