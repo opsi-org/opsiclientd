@@ -74,16 +74,16 @@ def runAsTest(command, username, password, maxWait=120000):
 		session_id = win32ts.ProcessIdToSessionId(os.getpid())
 		logger.notice("session_id-> %s", session_id)
 
-		curr_desktop = win32service.GetThreadDesktop(win32api.GetCurrentThreadId())
-		curr_desktop_name = win32service.GetUserObjectInformation(curr_desktop, win32con.UOI_NAME)
+		hDesktop = win32service.GetThreadDesktop(win32api.GetCurrentThreadId())
+		curr_desktop_name = win32service.GetUserObjectInformation(hDesktop, win32con.UOI_NAME)
 		logger.notice("curr_desktop_name-> %s", curr_desktop_name)
 
 		window_list = curr_desktop.EnumDesktopWindows()
 		for window in window_list:
 			logger.notice("window-> %s", win32gui.GetWindowText(window))
 		
-		winsta = win32service.GetProcessWindowStation()
-		desktop_list = winsta.EnumDesktops()
+		hWinSta = win32service.GetProcessWindowStation()
+		desktop_list = hWinSta.EnumDesktops()
 		for desk in desktop_list:
 			logger.notice("desktop-> %s", desk)
 			#desk_name = win32service.GetUserObjectInformation(desk, win32con.UOI_NAME)
@@ -93,6 +93,7 @@ def runAsTest(command, username, password, maxWait=120000):
 		startupInfo1 = win32process.STARTUPINFO()
 		startupInfo1.lpDesktop = 'winsta0\\winlogon'
 
+		"""
 		procInfo = win32process.CreateProcess(
 			None,
 			command,
@@ -104,9 +105,12 @@ def runAsTest(command, username, password, maxWait=120000):
 			None,
 			startupInfo1
 		)
+		"""
 
 		# maxWait = Maximum execution time in ms
 		userSid = win32security.LookupAccountName(None, username)[0]
+		logger.notice("userSid-> %s", userSid)
+
 		# Login as domain user and create new session
 		userToken = win32security.LogonUser(username, None, password,
 											win32con.LOGON32_LOGON_INTERACTIVE,
@@ -114,97 +118,105 @@ def runAsTest(command, username, password, maxWait=120000):
 		rc = win32api.GetLastError()
 		if userToken is None or rc != 0:
 			raise Exception(f"LogonUser failed with error {rc}")
-		profileDir = win32profile.GetUserProfileDirectory(userToken)
-		tokenUser = win32security.GetTokenInformation(userToken, win32security.TokenUser)
 
-		# Set access rights to window station
-		hWinSta = win32service.OpenWindowStation("winsta0", False, win32con.READ_CONTROL | win32con.WRITE_DAC )
-		# Get security descriptor by winsta0-handle
-		secDescWinSta = win32security.GetUserObjectSecurity(hWinSta, win32security.OWNER_SECURITY_INFORMATION
-																		| win32security.DACL_SECURITY_INFORMATION
-																		| win32con.GROUP_SECURITY_INFORMATION)
-		# Get DACL from security descriptor
-		daclWinSta = secDescWinSta.GetSecurityDescriptorDacl()
-		if daclWinSta is None:
-			# Create DACL if not exisiting
-			daclWinSta = win32security.ACL()
-		# Add ACEs to DACL for specific user group
-		daclWinSta.AddAccessAllowedAce(win32security.ACL_REVISION_DS, GENERIC_ACCESS, userSid)
-		daclWinSta.AddAccessAllowedAce(win32security.ACL_REVISION_DS, WINSTA_ALL, userSid)
-		# Set modified DACL for winsta0
-		win32security.SetSecurityInfo(hWinSta, win32security.SE_WINDOW_OBJECT, win32security.DACL_SECURITY_INFORMATION,
-										None, None, daclWinSta, None)
+		try:
+			profileDir = win32profile.GetUserProfileDirectory(userToken)
+			tokenUser = win32security.GetTokenInformation(userToken, win32security.TokenUser)
 
-		# Set access rights to desktop
-		hDesktop = win32service.OpenDesktop("default", 0, False, win32con.READ_CONTROL
-																	| win32con.WRITE_DAC
-																	| win32con.DESKTOP_WRITEOBJECTS
-																	| win32con.DESKTOP_READOBJECTS)
-		# Get security descriptor by desktop-handle
-		secDescDesktop = win32security.GetUserObjectSecurity(hDesktop, win32security.OWNER_SECURITY_INFORMATION
-																		| win32security.DACL_SECURITY_INFORMATION
-																		| win32con.GROUP_SECURITY_INFORMATION )
-		# Get DACL from security descriptor
-		daclDesktop = secDescDesktop.GetSecurityDescriptorDacl()
-		if daclDesktop is None:
-			#create DACL if not exisiting
-			daclDesktop = win32security.ACL()
-		# Add ACEs to DACL for specific user group
-		daclDesktop.AddAccessAllowedAce(win32security.ACL_REVISION_DS, GENERIC_ACCESS, userSid)
-		daclDesktop.AddAccessAllowedAce(win32security.ACL_REVISION_DS, DESKTOP_ALL, userSid)
-		# Set modified DACL for desktop
-		win32security.SetSecurityInfo(hDesktop, win32security.SE_WINDOW_OBJECT, win32security.DACL_SECURITY_INFORMATION,
-										None, None, daclDesktop, None)
+			# Set access rights to window station
+			#hWinSta = win32service.OpenWindowStation("winsta0", False, win32con.READ_CONTROL | win32con.WRITE_DAC )
+			# Get security descriptor by winsta0-handle
+			secDescWinSta = win32security.GetUserObjectSecurity(hWinSta, win32security.OWNER_SECURITY_INFORMATION
+																			| win32security.DACL_SECURITY_INFORMATION
+																			| win32con.GROUP_SECURITY_INFORMATION)
+			# Get DACL from security descriptor
+			daclWinSta = secDescWinSta.GetSecurityDescriptorDacl()
+			if daclWinSta is None:
+				# Create DACL if not exisiting
+				daclWinSta = win32security.ACL()
+			# Add ACEs to DACL for specific user group
+			daclWinSta.AddAccessAllowedAce(win32security.ACL_REVISION_DS, GENERIC_ACCESS, userSid)
+			daclWinSta.AddAccessAllowedAce(win32security.ACL_REVISION_DS, WINSTA_ALL, userSid)
+			# Set modified DACL for winsta0
+			win32security.SetSecurityInfo(hWinSta, win32security.SE_WINDOW_OBJECT, win32security.DACL_SECURITY_INFORMATION,
+											None, None, daclWinSta, None)
 
-		# Setup stdin, stdOut and stderr
-		secAttrs = win32security.SECURITY_ATTRIBUTES()
-		secAttrs.bInheritHandle = 1
-		stdOutRd, stdOutWr = win32pipe.CreatePipe(secAttrs, 0)
-		stdErrRd, stdErrWr = win32pipe.CreatePipe(secAttrs, 0)
+			# Set access rights to desktop
+			#hDesktop = win32service.OpenDesktop("default", 0, False, win32con.READ_CONTROL
+			#															| win32con.WRITE_DAC
+			#															| win32con.DESKTOP_WRITEOBJECTS
+			#															| win32con.DESKTOP_READOBJECTS)
+			# Get security descriptor by desktop-handle
+			secDescDesktop = win32security.GetUserObjectSecurity(hDesktop, win32security.OWNER_SECURITY_INFORMATION
+																			| win32security.DACL_SECURITY_INFORMATION
+																			| win32con.GROUP_SECURITY_INFORMATION )
+			# Get DACL from security descriptor
+			daclDesktop = secDescDesktop.GetSecurityDescriptorDacl()
+			if daclDesktop is None:
+				#create DACL if not exisiting
+				daclDesktop = win32security.ACL()
+			# Add ACEs to DACL for specific user group
+			daclDesktop.AddAccessAllowedAce(win32security.ACL_REVISION_DS, GENERIC_ACCESS, userSid)
+			daclDesktop.AddAccessAllowedAce(win32security.ACL_REVISION_DS, DESKTOP_ALL, userSid)
+			# Set modified DACL for desktop
+			win32security.SetSecurityInfo(hDesktop, win32security.SE_WINDOW_OBJECT, win32security.DACL_SECURITY_INFORMATION,
+											None, None, daclDesktop, None)
 
-		ppid = win32api.GetCurrentProcess()
-		tmp = win32api.DuplicateHandle(ppid, stdOutRd, ppid, 0, 0, win32con.DUPLICATE_SAME_ACCESS)
-		win32file.CloseHandle(stdOutRd)
-		stdOutRd = tmp
+			# Setup stdin, stdOut and stderr
+			secAttrs = win32security.SECURITY_ATTRIBUTES()
+			secAttrs.bInheritHandle = 1
+			stdOutRd, stdOutWr = win32pipe.CreatePipe(secAttrs, 0)
+			stdErrRd, stdErrWr = win32pipe.CreatePipe(secAttrs, 0)
 
-		environment = win32profile.CreateEnvironmentBlock(userToken, False)
+			ppid = win32api.GetCurrentProcess()
+			tmp = win32api.DuplicateHandle(ppid, stdOutRd, ppid, 0, 0, win32con.DUPLICATE_SAME_ACCESS)
+			win32file.CloseHandle(stdOutRd)
+			stdOutRd = tmp
 
-		startupInfo = win32process.STARTUPINFO()
-		startupInfo.dwFlags = win32con.STARTF_USESTDHANDLES
-		startupInfo.hStdOutput = stdOutWr
-		startupInfo.hStdError = stdErrWr
+			environment = win32profile.CreateEnvironmentBlock(userToken, False)
 
-		#win32security.ImpersonateLoggedOnUser(userToken)
+			startupInfo = win32process.STARTUPINFO()
 
-		#System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
+			startupInfo.dwFlags = win32con.STARTF_USESTDHANDLES
+			startupInfo.hStdOutput = stdOutWr
+			startupInfo.hStdError = stdErrWr
+			startupInfo.lpDesktop = 'winsta0\\winlogon'
+			#win32security.ImpersonateLoggedOnUser(userToken)
+			
+			#System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
 
-		hPrc = win32process.CreateProcessAsUser(
-								userToken,
-								None,               # appName
-								command,            # commandLine
-								None,               # processAttributes
-								None,               # threadAttributes
-								1,                  # bInheritHandles
-								win32process.CREATE_NEW_CONSOLE, # dwCreationFlags
-								environment,        # newEnvironment
-								profileDir,         # currentDirectory
-								startupInfo)[0]
+			hPrc = win32process.CreateProcessAsUser(
+									userToken,
+									None,               # appName
+									command,            # commandLine
+									None,               # processAttributes
+									None,               # threadAttributes
+									1,                  # bInheritHandles
+									win32process.CREATE_NEW_CONSOLE, # dwCreationFlags
+									environment,        # newEnvironment
+									profileDir,         # currentDirectory
+									startupInfo)[0]
 
-		win32file.CloseHandle(stdErrWr)
-		win32file.CloseHandle(stdOutWr)
-		win32security.RevertToSelf()
+			win32file.CloseHandle(stdErrWr)
+			win32file.CloseHandle(stdOutWr)
+			win32security.RevertToSelf()
 
-		# Wait for process to complete
-		stdOutBuf = os.fdopen(msvcrt.open_osfhandle(stdOutRd, 0), "rb")
-		stdErrBuf = os.fdopen(msvcrt.open_osfhandle(stdErrRd, 0), "rb")
-		win32event.WaitForSingleObject(hPrc, maxWait)
-		stdOut = stdOutBuf.read()
-		stdErr = stdErrBuf.read()
-		rc = win32process.GetExitCodeProcess(hPrc)
+			# Wait for process to complete
+			stdOutBuf = os.fdopen(msvcrt.open_osfhandle(stdOutRd, 0), "rb")
+			stdErrBuf = os.fdopen(msvcrt.open_osfhandle(stdErrRd, 0), "rb")
+			win32event.WaitForSingleObject(hPrc, maxWait)
+			stdOut = stdOutBuf.read()
+			stdErr = stdErrBuf.read()
+			rc = win32process.GetExitCodeProcess(hPrc)
 
-		logger.notice(rc)
-		logger.notice(stdOut.decode("utf-8"))
-		logger.notice(stdErr.decode("utf-8"))
+			logger.notice(rc)
+			logger.notice(stdOut.decode("utf-8"))
+			logger.notice(stdErr.decode("utf-8"))
+
+			# win32profile.UnloadUserProfile(logon, hkey)
+		finally:
+			userToken.close()
+	
 	except Exception as e:
 		logger.error(e, exc_info=True)
 		raise
