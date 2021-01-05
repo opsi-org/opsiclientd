@@ -1029,8 +1029,20 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def loginUser(self, username, password):
 		return self.opsiclientd.loginUser(username, password)
 
+	def loginOpsiSetupAdmin(self):
+		System.lockWorkstation()
+		user_info = self.opsiclientd.createOpsiSetupAdmin()
+		if not self.opsiclientd._controlPipe.credentialProviderConnected():
+			for i in range(20):
+				if self.opsiclientd._controlPipe.credentialProviderConnected():
+					break
+				time.sleep(0.5)
+		return self.opsiclientd.loginUser(user_info["username"], user_info["password"])
+
 	def runAsOpsiSetupAdmin(self, command="powershell.exe -ExecutionPolicy ByPass"):
 		try:
+			System.lockWorkstation()
+			
 			# https://bugs.python.org/file46988/issue.py
 			import win32profile
 			import win32security
@@ -1075,7 +1087,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				logon.close()
 			
 			if not self.opsiclientd._controlPipe.credentialProviderConnected():
-				System.lockWorkstation()
 				for i in range(20):
 					if self.opsiclientd._controlPipe.credentialProviderConnected():
 						break
