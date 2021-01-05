@@ -50,6 +50,7 @@ def runAsTest(command, username, password, maxWait=120000):
 		import win32service
 		import win32ts
 		import win32gui
+		import ntsecuritycon
 
 		#user_info = self.opsiclientd.createOpsiSetupAdmin()
 
