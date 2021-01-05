@@ -75,6 +75,7 @@ def runAsTest(command, username, password, maxWait=120000):
 		session_id = win32ts.ProcessIdToSessionId(os.getpid())
 		logger.notice("session_id-> %s", session_id)
 
+		"""
 		hDesktop = win32service.GetThreadDesktop(win32api.GetCurrentThreadId())
 		curr_desktop_name = win32service.GetUserObjectInformation(hDesktop, win32con.UOI_NAME)
 		logger.notice("curr_desktop_name-> %s", curr_desktop_name)
@@ -89,7 +90,7 @@ def runAsTest(command, username, password, maxWait=120000):
 			logger.notice("desktop-> %s", desk)
 			#desk_name = win32service.GetUserObjectInformation(desk, win32con.UOI_NAME)
 			#logger.notice("desktop-> %s", desk_name)
-		
+		"""
 
 		startupInfo1 = win32process.STARTUPINFO()
 		startupInfo1.lpDesktop = 'winsta0\\winlogon'
@@ -127,8 +128,8 @@ def runAsTest(command, username, password, maxWait=120000):
 			profile = win32profile.LoadUserProfile(userToken, {"UserName": username})
 			try:
 				# Set access rights to window station
-				#hWinSta = win32service.OpenWindowStation("winsta0", False, win32con.READ_CONTROL | win32con.WRITE_DAC )
-				#hWinSta.SetProcessWindowStation()
+				hWinSta = win32service.OpenWindowStation("winsta0", False, win32con.READ_CONTROL | win32con.WRITE_DAC )
+				hWinSta.SetProcessWindowStation()
 				
 				# Get security descriptor by winsta0-handle
 				secDescWinSta = win32security.GetUserObjectSecurity(hWinSta, win32security.OWNER_SECURITY_INFORMATION
@@ -170,10 +171,12 @@ def runAsTest(command, username, password, maxWait=120000):
 				#############################
 
 				# Set access rights to desktop
+				hDesktop = win32service.OpenDesktop("default", 0, 0, win32con.MAXIMUM_ALLOWED)
 				#hDesktop = win32service.OpenDesktop("winlogon", 0, False, win32con.READ_CONTROL
 				#															| win32con.WRITE_DAC
 				#															| win32con.DESKTOP_WRITEOBJECTS
 				#															| win32con.DESKTOP_READOBJECTS)
+				hDesktop.SwitchDesktop()
 				# Get security descriptor by desktop-handle
 				secDescDesktop = win32security.GetUserObjectSecurity(hDesktop, win32security.OWNER_SECURITY_INFORMATION
 																				| win32security.DACL_SECURITY_INFORMATION
@@ -234,7 +237,7 @@ def runAsTest(command, username, password, maxWait=120000):
 				#startupInfo.dwFlags = win32con.STARTF_USESTDHANDLES
 				#startupInfo.hStdOutput = stdOutWr
 				#startupInfo.hStdError = stdErrWr
-				startupInfo.lpDesktop = 'winsta0\\winlogon'
+				startupInfo.lpDesktop = 'winsta0\\default'
 
 				securityAttributes = win32security.SECURITY_ATTRIBUTES()
 				securityAttributes.bInheritHandle = 1
