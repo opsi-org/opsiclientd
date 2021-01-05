@@ -235,9 +235,9 @@ def runAsTest(command, username, password, maxWait=120000):
 				#startupInfo.hStdError = stdErrWr
 				startupInfo.lpDesktop = 'winsta0\\winlogon'
 
-				#securityAttributes = win32security.SECURITY_ATTRIBUTES()
-				#securityAttributes.bInheritHandle = 1
-				securityAttributes = None
+				securityAttributes = win32security.SECURITY_ATTRIBUTES()
+				securityAttributes.bInheritHandle = 1
+				#securityAttributes = None
 
 				#win32security.ImpersonateLoggedOnUser(userToken)
 
@@ -249,7 +249,7 @@ def runAsTest(command, username, password, maxWait=120000):
 										command,            # commandLine
 										securityAttributes,               # processAttributes
 										securityAttributes,               # threadAttributes
-										0,                  # bInheritHandles
+										1,                  # bInheritHandles
 										win32process.CREATE_NEW_CONSOLE, # dwCreationFlags
 										environment,        # newEnvironment
 										profileDir,         # currentDirectory
