@@ -239,9 +239,9 @@ def runAsTest(command, username, password, maxWait=120000):
 				#startupInfo.hStdError = stdErrWr
 				startupInfo.lpDesktop = 'winsta0\\default'
 
-				securityAttributes = win32security.SECURITY_ATTRIBUTES()
-				securityAttributes.bInheritHandle = 1
-				#securityAttributes = None
+				#securityAttributes = win32security.SECURITY_ATTRIBUTES()
+				#securityAttributes.bInheritHandle = 1
+				securityAttributes = None
 
 				#win32security.ImpersonateLoggedOnUser(userToken)
 
@@ -314,19 +314,31 @@ def runAsTest(command, username, password, maxWait=120000):
 						logger.warning("%s: %s", priv, priv_err)
 				win32security.AdjustTokenPrivileges(userTokenDup, 0, newPrivileges)
 				
+				(hProcess, hThread, dwProcessId, dwThreadId) = win32process.CreateProcess(
+					None,
+					command,
+					securityAttributes,
+					securityAttributes,
+					True,
+					win32con.CREATE_NEW_CONSOLE,
+					environment,
+					profileDir,
+					startupInfo
+				)
+				"""
 				(hProcess, hThread, dwProcessId, dwThreadId) = win32process.CreateProcessAsUser(
 					userTokenDup,
 					None,               # appName
 					command,            # commandLine
 					securityAttributes,               # processAttributes
 					securityAttributes,               # threadAttributes
-					1,                  # bInheritHandles
+					True,                  # bInheritHandles
 					win32process.CREATE_NEW_CONSOLE, # dwCreationFlags
 					environment,        # newEnvironment
 					profileDir,         # currentDirectory
 					startupInfo
 				)
-				
+				"""
 				win32event.WaitForSingleObject(hProcess, 600000)
 
 				"""
