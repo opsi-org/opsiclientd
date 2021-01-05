@@ -126,7 +126,7 @@ def runAsTest(command, username, password, maxWait=120000):
 			profile = win32profile.LoadUserProfile(userToken, {"UserName": username})
 			try:
 				# Set access rights to window station
-				#hWinSta = win32service.OpenWindowStation("winsta0", False, win32con.READ_CONTROL | win32con.WRITE_DAC )
+				hWinSta = win32service.OpenWindowStation("winsta0", False, win32con.READ_CONTROL | win32con.WRITE_DAC )
 				# Get security descriptor by winsta0-handle
 				secDescWinSta = win32security.GetUserObjectSecurity(hWinSta, win32security.OWNER_SECURITY_INFORMATION
 																				| win32security.DACL_SECURITY_INFORMATION
@@ -144,10 +144,10 @@ def runAsTest(command, username, password, maxWait=120000):
 												None, None, daclWinSta, None)
 
 				# Set access rights to desktop
-				#hDesktop = win32service.OpenDesktop("default", 0, False, win32con.READ_CONTROL
-				#															| win32con.WRITE_DAC
-				#															| win32con.DESKTOP_WRITEOBJECTS
-				#															| win32con.DESKTOP_READOBJECTS)
+				hDesktop = win32service.OpenDesktop("winlogon", 0, False, win32con.READ_CONTROL
+																			| win32con.WRITE_DAC
+																			| win32con.DESKTOP_WRITEOBJECTS
+																			| win32con.DESKTOP_READOBJECTS)
 				# Get security descriptor by desktop-handle
 				secDescDesktop = win32security.GetUserObjectSecurity(hDesktop, win32security.OWNER_SECURITY_INFORMATION
 																				| win32security.DACL_SECURITY_INFORMATION
@@ -200,6 +200,7 @@ def runAsTest(command, username, password, maxWait=120000):
 										profileDir,         # currentDirectory
 										startupInfo)[0]
 
+				"""
 				win32file.CloseHandle(stdErrWr)
 				win32file.CloseHandle(stdOutWr)
 				#win32security.RevertToSelf()
@@ -210,11 +211,13 @@ def runAsTest(command, username, password, maxWait=120000):
 				win32event.WaitForSingleObject(hPrc, maxWait)
 				stdOut = stdOutBuf.read()
 				stdErr = stdErrBuf.read()
-				rc = win32process.GetExitCodeProcess(hPrc)
+				"""
 
+				rc = win32process.GetExitCodeProcess(hPrc)
+				
 				logger.notice(rc)
-				logger.notice(stdOut.decode("utf-8"))
-				logger.notice(stdErr.decode("utf-8"))
+				#logger.notice(stdOut.decode("utf-8"))
+				#logger.notice(stdErr.decode("utf-8"))
 			
 			finally:
 				win32profile.UnloadUserProfile(userToken, profile)
