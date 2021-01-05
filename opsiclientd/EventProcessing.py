@@ -885,6 +885,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				command = f"{oss} --nogui"
 			else:
 				if RUNNING_ON_WINDOWS:
+					"""
 					try:
 						if config.get('global', 'use_opsi_setup_admin').lower() in ("true", "yes", "1"):
 							user_info = self.opsiclientd.createOpsiSetupAdmin()
@@ -893,25 +894,27 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							actionProcessorUserPassword = user_info["password"]
 					except Exception as configErr:
 						pass
-					
-					# TODO: string building like this is just awful. Improve it!
-					command = os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe") + ' ' \
-						+ u'"%global.host_id%" "%global.opsi_host_key%" "%control_server.port%" ' \
-						+ u'"%global.log_file%" "%global.log_level%" ' \
-						+ u'"%depot_server.url%" "' + config.getDepotDrive() + '" ' \
-						+ u'"' + depotServerUsername + u'" "' + depotServerPassword + '" ' \
-						+ u'"' + str(self.getSessionId()) + u'" "' + desktop + '" ' \
-						+ u'"' + actionProcessorCommand + u'" ' + str(self.event.eventConfig.actionProcessorTimeout) + ' ' \
-						+ u'"' + actionProcessorUserName + u'" "' + actionProcessorUserPassword + '" ' \
-						+ str(createEnvironment).lower()
+					"""
+					command = (
+						os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe") +
+						r' "%global.host_id%" "%global.opsi_host_key%" "%control_server.port%"'
+						r' "%global.log_file%" "%global.log_level%" "%depot_server.url%"'
+						f' "{config.getDepotDrive()}" "{depotServerUsername}" "{depotServerPassword}"'
+						f' "{self.getSessionId()}" "{desktop}" '
+						f' "{actionProcessorCommand}" "{self.event.eventConfig.actionProcessorTimeout}"'
+						f' "{actionProcessorUserName}" "{actionProcessorUserPassword}"'
+						f' "{createEnvironment).lower()}"'
+					)
 				else:
 					command = actionProcessorCommand
 			
 			command = config.replace(command)
 
 			if self.event.eventConfig.preActionProcessorCommand:
-				logger.notice(u"Starting pre action processor command '%s' in session '%s' on desktop '%s'" \
-					% (self.event.eventConfig.preActionProcessorCommand, self.getSessionId(), desktop))
+				logger.notice(
+					"Starting pre action processor command '%s' in session '%s' on desktop '%s'",
+					self.event.eventConfig.preActionProcessorCommand, self.getSessionId(), desktop
+				)
 				self.runCommandInSession(
 					command = self.event.eventConfig.preActionProcessorCommand,
 					desktop = desktop,
@@ -919,7 +922,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				)
 
 			if RUNNING_ON_WINDOWS:
-				logger.notice(u"Starting action processor in session '%s' on desktop '%s'", self.getSessionId(), desktop)
+				logger.notice(
+					"Starting action processor in session '%s' on desktop '%s'",
+					self.getSessionId(), desktop
+				)
 				self.runCommandInSession(
 					command=command,
 					desktop=desktop,
