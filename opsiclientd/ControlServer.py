@@ -1033,6 +1033,13 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		return self.opsiclientd.self_update_from_url(url)
 	
 	def loginUser(self, username, password):
+		System.lockWorkstation()
+		user_info = self.opsiclientd.createOpsiSetupAdmin()
+		if not self.opsiclientd._controlPipe.credentialProviderConnected():
+			for i in range(20):
+				if self.opsiclientd._controlPipe.credentialProviderConnected():
+					break
+				time.sleep(0.5)
 		return self.opsiclientd.loginUser(username, password)
 
 	def loginOpsiSetupAdmin(self):
