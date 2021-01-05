@@ -272,11 +272,44 @@ def runAsTest(command, username, password, maxWait=120000):
 					TokenType=ntsecuritycon.TokenPrimary,
 					TokenAttributes=None
 				)
-				priv_id = win32security.LookupPrivilegeValue(None, win32security.SE_DEBUG_NAME)
-				newPrivileges = [(priv_id, win32security.SE_PRIVILEGE_ENABLED)]
+
+				newPrivileges = []
+				for priv in (
+					win32security.SE_CREATE_TOKEN_NAME,
+					win32security.SE_ASSIGNPRIMARYTOKEN_NAME,
+					win32security.SE_LOCK_MEMORY_NAME,
+					win32security.SE_INCREASE_QUOTA_NAME,
+					win32security.SE_UNSOLICITED_INPUT_NAME,
+					win32security.SE_MACHINE_ACCOUNT_NAME,
+					win32security.SE_TCB_NAME,
+					win32security.SE_SECURITY_NAME,
+					win32security.SE_TAKE_OWNERSHIP_NAME,
+					win32security.SE_LOAD_DRIVER_NAME,
+					win32security.SE_SYSTEM_PROFILE_NAME,
+					win32security.SE_SYSTEMTIME_NAME,
+					win32security.SE_PROF_SINGLE_PROCESS_NAME,
+					win32security.SE_INC_BASE_PRIORITY_NAME,
+					win32security.SE_CREATE_PAGEFILE_NAME,
+					win32security.SE_CREATE_PERMANENT_NAME,
+					win32security.SE_BACKUP_NAME,
+					win32security.SE_RESTORE_NAME,
+					win32security.SE_SHUTDOWN_NAME,
+					win32security.SE_DEBUG_NAME,
+					win32security.SE_AUDIT_NAME,
+					win32security.SE_SYSTEM_ENVIRONMENT_NAME,
+					win32security.SE_CHANGE_NOTIFY_NAME,
+					win32security.SE_REMOTE_SHUTDOWN_NAME,
+					win32security.SE_UNDOCK_NAME,
+					win32security.SE_SYNC_AGENT_NAME,
+					win32security.SE_ENABLE_DELEGATION_NAME,
+					win32security.SE_MANAGE_VOLUME_NAME
+				):
+
+					priv_id = win32security.LookupPrivilegeValue(None, win32security.SE_DEBUG_NAME)
+					newPrivileges.append((priv_id, priv))
 				win32security.AdjustTokenPrivileges(userTokenDup, 0, newPrivileges)
 
-				hPrc = win32process.CreateProcessAsUser(
+				(hProcess, hThread, dwProcessId, dwThreadId) = win32process.CreateProcessAsUser(
 										userTokenDup,
 										None,               # appName
 										command,            # commandLine
@@ -287,6 +320,8 @@ def runAsTest(command, username, password, maxWait=120000):
 										environment,        # newEnvironment
 										profileDir,         # currentDirectory
 										startupInfo)[0]
+				
+				win32event.WaitForSingleObject(hProcess, 600000)
 
 				"""
 				win32file.CloseHandle(stdErrWr)
