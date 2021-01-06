@@ -55,8 +55,7 @@ from OPSI import System
 from OPSI.Util.Log import truncateLogData
 from OPSI.Backend.Backend import ConfigDataBackend
 from OPSI.Exceptions import OpsiAuthenticationError
-import opsicommon.logging
-from opsicommon.logging import logger
+from opsicommon.logging import logger, log_context, secret_filter
 from OPSI.Service import SSLContext, OpsiService
 from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface
 from OPSI.Service.Resource import ResourceOpsi, ResourceOpsiJsonRpc, ResourceOpsiJsonInterface
@@ -169,7 +168,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 			self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
 
 	def run(self):
-		with opsicommon.logging.log_context({'instance' : 'control server'}):
+		with log_context({'instance' : 'control server'}):
 			super().run()
 	
 	def _getCredentials(self):
@@ -488,7 +487,7 @@ class ControlServer(OpsiService, threading.Thread):
 		self.authFailureCount = {}
 
 	def run(self):
-		with opsicommon.logging.log_context({'instance' : 'control server'}):
+		with log_context({'instance' : 'control server'}):
 			self._running = True
 			try:
 				logger.info(u"creating root resource")
@@ -1033,6 +1032,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		return self.opsiclientd.self_update_from_url(url)
 	
 	def loginUser(self, username, password):
+		secret_filter.add_secrets([password])
 		return self.opsiclientd.loginUser(username, password)
 
 	def loginOpsiSetupAdmin(self):
