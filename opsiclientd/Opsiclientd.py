@@ -261,10 +261,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.debug(rpcError)
 
 	def loginUser(self, username, password):
-		for response in self._controlPipe.executeRpc("loginUser", username, password):
-			if not response.get("error") and response.get("result"):
-				return True
-			return False
+		raise NotImplementedError(f"Not implemented on {platform.system()}")
 	
 	def isRunning(self):
 		return self._running

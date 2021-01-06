@@ -26,6 +26,8 @@ import sys
 import time
 import threading
 import subprocess
+
+from twisted.internet import protocol
 import win32com.server.policy
 import win32com.client
 import win32netcon
@@ -165,6 +167,20 @@ class OpsiclientdNT(Opsiclientd):
 			session = win32com.client.Dispatch("Microsoft.Update.Session")
 			self._ms_update_installer = session.CreateUpdateInstaller()
 		return self._ms_update_installer.isBusy
+	
+	def loginUser(self, username, password):
+		for session_id in System.getActiveSessionIds(protocol="console"):
+			System.lockSession(session_id)
+		for i in range(20):
+			if self._controlPipe.credentialProviderConnected():
+				break
+			time.sleep(0.5)
+		if not self._controlPipe.credentialProviderConnected():
+			raise RuntimeError("opsi credential provider not connected")
+		for response in self._controlPipe.executeRpc("loginUser", username, password):
+			if not response.get("error") and response.get("result"):
+				return True
+			return False
 	
 	def createOpsiSetupAdmin(self, delete_existing=False):
 		# https://bugs.python.org/file46988/issue.py
