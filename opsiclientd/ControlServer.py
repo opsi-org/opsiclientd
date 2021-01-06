@@ -1036,7 +1036,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		return self.opsiclientd.loginUser(username, password)
 
 	def loginOpsiSetupAdmin(self):
-		user_info = self.createOpsiSetupAdmin()
+		user_info = self.opsiclientd.createOpsiSetupAdmin()
 		return self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 
 	def runAsOpsiSetupAdmin(self, command="powershell.exe -ExecutionPolicy ByPass"):
