@@ -172,12 +172,12 @@ class OpsiclientdNT(Opsiclientd):
 		for session_id in System.getActiveSessionIds(protocol="console"):
 			System.lockSession(session_id)
 		for i in range(20):
-			if self._controlPipe.credentialProviderConnected():
+			if self._controlPipe.credentialProviderConnected(login_capable=True):
 				break
 			time.sleep(0.5)
-		if not self._controlPipe.credentialProviderConnected():
-			raise RuntimeError("opsi credential provider not connected")
-		logger.info("Opsi credential provider connected, calling loginUser")
+		if not self._controlPipe.credentialProviderConnected(login_capable=True):
+			raise RuntimeError("No login capable opsi credential provider connected")
+		logger.info("Login capable opsi credential provider connected, calling loginUser")
 		for response in self._controlPipe.executeRpc("loginUser", username, password):
 			if not response.get("error") and response.get("result"):
 				return True

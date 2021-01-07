@@ -65,6 +65,7 @@ class ClientConnection(threading.Thread):
 		self.comLock = threading.Lock()
 		self._stopEvent = threading.Event()
 		self._stopEvent.clear()
+		self.login_capable = False
 		logger.trace(
 			"%s created controller=%s connection=%s",
 			self.__class__.__name__, self._controller, self._connection
@@ -120,6 +121,7 @@ class ClientConnection(threading.Thread):
 			if rpc.get("method") == "registerClient":
 				# New client protocol
 				self.clientInfo = rpc.get("params", [])
+				self.login_capable = True
 				logger.info("Client %s info set to: %s", self, self.clientInfo)
 				return toJson({
 					"id": rpc.get("id"),
@@ -168,7 +170,11 @@ class ClientConnection(threading.Thread):
 						logger.warning("No response for method '%s' received from client %s", request["method"], self)
 						return {"id": rpc_id, "error": None, "result": None}
 					logger.info("Received response '%s' from client %s", response_json, self)
-					return fromJson(response_json)
+					response = fromJson(response_json)
+					if method == "loginUser" and response.get("result"):
+						# Credential provider can only handle one successful login
+						self.login_capable = False
+					return response
 				finally:
 					if with_lock:
 						self.comLock.release()
@@ -244,9 +250,9 @@ class ControlPipe(threading.Thread):
 	def getClientInfo(self):
 		return [c.clientInfo for c in self._clients]
 
-	def credentialProviderConnected(self):
-		for clientInfo in self.getClientInfo():
-			if clientInfo:
+	def credentialProviderConnected(self, login_capable=None):
+		for client in self._clients:
+			if client.clientInfo and (login_capable is None or login_capable == client.login_capable):
 				return True
 		return False
 	
@@ -255,9 +261,14 @@ class ControlPipe(threading.Thread):
 			if not self._clients:
 				raise RuntimeError("Cannot execute rpc, no client connected")
 			
+			if method == "loginUser" and not self.credentialProviderConnected(login_capable=True):
+				raise RuntimeError("Cannot execute rpc, no login capable opsi credential provider connected")
+			
 			responses = []
 			errors = []
 			for client in self._clients:
+				if method == "loginUser" and not client.login_capable:
+					continue
 				response = client.executeRpc(method, params)
 				responses.append(response)
 				if response.get("error"):
