@@ -1032,9 +1032,13 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		return self.opsiclientd.self_update_from_url(url)
 	
 	def loginUser(self, username, password):
-		secret_filter.add_secrets([password])
-		return self.opsiclientd.loginUser(username, password)
-
+		try:
+			secret_filter.add_secrets([password])
+			return self.opsiclientd.loginUser(username, password)
+		except Exception as e:
+			logger.error(e, exc_info=True)
+			raise
+	
 	def loginOpsiSetupAdmin(self):
 		user_info = self.opsiclientd.createOpsiSetupAdmin()
 		return self.opsiclientd.loginUser(user_info["name"], user_info["password"])
