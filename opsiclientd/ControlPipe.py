@@ -84,6 +84,10 @@ class ClientConnection(threading.Thread):
 								response = self.processIncomingRpc(request)
 								logger.info("Sending response '%s' to %s", response, self)
 								self.write(response)
+
+								if self.clientInfo:
+									# Switch to new protocol
+									self.executeRpc('blockLogin', [self._controller._opsiclientd._blockLogin], with_lock=False)
 					time.sleep(0.5)
 			except Exception as e:
 				logger.error(e, exc_info=True)
@@ -118,10 +122,6 @@ class ClientConnection(threading.Thread):
 			if rpc.get("method") == "registerClient":
 				# New client protocol
 				self.clientInfo = rpc.get("params", [])
-				threading.Timer(1.0,
-					self.executeRpc,
-					args=['blockLogin', self._controller._opsiclientd._blockLogin]
-				).start()
 			return toJson(jsonrpc.getResponse())
 		except Exception as rpcError:
 			logger.error(rpcError, exc_info=True)
@@ -130,7 +130,7 @@ class ClientConnection(threading.Thread):
 				"error": str(rpcError)
 			})
 	
-	def executeRpc(self, method, *params):
+	def executeRpc(self, method, params=[], with_lock=True):
 		with log_context({'instance' : 'control pipe'}):
 			rpc_id = 1
 			if not self.clientInfo:
@@ -146,7 +146,9 @@ class ClientConnection(threading.Thread):
 				"params": params
 			})
 			try:
-				with self.comLock:
+				if with_lock:
+					self.comLock.acquire()
+				try:
 					logger.info("Sending request '%s' to client %s", request, self)
 					self.write(request)
 					response = self.read()
@@ -155,6 +157,9 @@ class ClientConnection(threading.Thread):
 						return {"id": rpc_id, "error": None, "result": None}
 					logger.info("Received response '%s' from client %s", response, self)
 					return fromJson(response)
+				finally:
+					if with_lock:
+						self.comLock.release()
 			except Exception as client_err:
 				logger.error(client_err, exc_info=True)
 				return {"id": rpc_id, "error": str(client_err), "result": None}
@@ -241,7 +246,7 @@ class ControlPipe(threading.Thread):
 			responses = []
 			errors = []
 			for client in self._clients:
-				response = client.executeRpc(method, *params)
+				response = client.executeRpc(method, params)
 				responses.append(response)
 				if response.get("error"):
 					errors.append(response["error"])
