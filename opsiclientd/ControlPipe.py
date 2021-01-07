@@ -359,7 +359,9 @@ class NTPipeClientConnection(ClientConnection):
 			
 			if fSuccess != 1:
 				if windll.kernel32.GetLastError() == 234: # ERROR_MORE_DATA
-					continue			
+					continue
+				if data:
+					return data.decode()			
 				if windll.kernel32.GetLastError() == 109: # ERROR_BROKEN_PIPE
 					self.clientDisconnected()
 
