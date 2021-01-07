@@ -464,7 +464,7 @@ class NTControlPipe(ControlPipe):
 		if fConnected == 1:
 			logger.notice("Client connected to %s", self._pipeName)
 			self._client_id += 1
-			return (self._pipe, f"pipe #{self._client_id}")
+			return (self._pipe, f"#{self._client_id}")
 		
 		error = windll.kernel32.GetLastError()
 		windll.kernel32.CloseHandle(self._pipe)
