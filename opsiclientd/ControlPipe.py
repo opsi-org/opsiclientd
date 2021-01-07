@@ -117,17 +117,23 @@ class ClientConnection(threading.Thread):
 	def processIncomingRpc(self, rpc):
 		try:
 			rpc = fromJson(rpc)
-			jsonrpc = JsonRpc(
-				instance=self._controller._opsiclientdRpcInterface,
-				interface=self._controller._opsiclientdRpcInterface.getInterface(),
-				rpc=rpc
-			)
-			jsonrpc.execute()
 			if rpc.get("method") == "registerClient":
 				# New client protocol
 				self.clientInfo = rpc.get("params", [])
-				logger.info("Client info set to: %s", self.clientInfo)
-			return toJson(jsonrpc.getResponse())
+				logger.info("Client %s info set to: %s", self, self.clientInfo)
+				return toJson({
+					"id": rpc.get("id"),
+					"result": f"client {'/'.join(self.clientInfo)}/{self.id} registered",
+					"error": None
+				})
+			else:
+				jsonrpc = JsonRpc(
+					instance=self._controller._opsiclientdRpcInterface,
+					interface=self._controller._opsiclientdRpcInterface.getInterface(),
+					rpc=rpc
+				)
+				jsonrpc.execute()
+				return toJson(jsonrpc.getResponse())
 		except Exception as rpcError:
 			logger.error(rpcError, exc_info=True)
 			return toJson({
@@ -516,5 +522,3 @@ class OpsiclientdRpcPipeInterface(object):
 	def isShutdownTriggered(self):
 		return self.opsiclientd.isShutdownTriggered()
 	
-	def registerClient(self, name, version):
-		return f"client {name}/{version} registered"

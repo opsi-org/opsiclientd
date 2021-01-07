@@ -172,7 +172,6 @@ class OpsiclientdNT(Opsiclientd):
 		for session_id in System.getActiveSessionIds(protocol="console"):
 			System.lockSession(session_id)
 		for i in range(20):
-			logger.info("Check if opsi credential provider is connected")
 			if self._controlPipe.credentialProviderConnected():
 				break
 			time.sleep(0.5)
