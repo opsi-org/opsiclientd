@@ -212,6 +212,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		threading.Thread(target=_restart, args=(waitSeconds, )).start()
 	
 	def setBlockLogin(self, blockLogin):
+		blockLogin = forceBool(blockLogin)
+		if self._blockLogin == blockLogin:
+			return
 		self._blockLogin = forceBool(blockLogin)
 		logger.notice("Block login now set to '%s'", self._blockLogin)
 
