@@ -157,12 +157,12 @@ class ClientConnection(threading.Thread):
 					request_json = toJson(request)
 					logger.info("Sending request '%s' to client %s", request_json, self)
 					self.write(request_json)
-					response = self.read()
-					if not response:
+					response_json = self.read()
+					if not response_json:
 						logger.warning("No response for method '%s' received from client %s", request["method"], self)
 						return {"id": rpc_id, "error": None, "result": None}
-					logger.info("Received response '%s' from client %s", response, self)
-					return fromJson(response)
+					logger.info("Received response '%s' from client %s", response_json, self)
+					return fromJson(response_json)
 				finally:
 					if with_lock:
 						self.comLock.release()
@@ -224,7 +224,7 @@ class ControlPipe(threading.Thread):
 		pass
 	
 	def waitForClient(self):
-		pass
+		return (None, None)
 	
 	def clientDisconnected(self, client):
 		with self._clientLock:
