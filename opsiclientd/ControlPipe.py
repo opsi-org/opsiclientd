@@ -172,7 +172,9 @@ class ClientConnection(threading.Thread):
 					logger.info("Received response '%s' from client %s", response_json, self)
 					response = fromJson(response_json)
 					if method == "loginUser" and response.get("result"):
-						# Credential provider can only handle one successful login
+						# Credential provider can only handle one successful login.
+						# Ensure, that the credential provider is not used for a
+						# second login if it keeps the pipe connection open.
 						self.login_capable = False
 					return response
 				finally:
