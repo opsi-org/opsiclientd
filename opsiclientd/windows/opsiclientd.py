@@ -177,6 +177,7 @@ class OpsiclientdNT(Opsiclientd):
 			time.sleep(0.5)
 		if not self._controlPipe.credentialProviderConnected():
 			raise RuntimeError("opsi credential provider not connected")
+		logger.info("Opsi credential provider connected, calling loginUser")
 		for response in self._controlPipe.executeRpc("loginUser", username, password):
 			if not response.get("error") and response.get("result"):
 				return True
