@@ -53,10 +53,11 @@ def ControlPipeFactory(opsiclientd):
 
 
 class ClientConnection(threading.Thread):
-	def __init__(self, controller, connection):
+	def __init__(self, controller, connection, id):
 		threading.Thread.__init__(self)
 		self._controller = controller
 		self._connection = connection
+		self.id = id
 		self._readTimeout = 1
 		self._writeTimeout = 1
 		self._encoding = "utf-8"
@@ -68,6 +69,9 @@ class ClientConnection(threading.Thread):
 			"%s created controller=%s connection=%s",
 			self.__class__.__name__, self._controller, self._connection
 		)
+	
+	def __str__(self):
+		return f"<{self.__class__.__name__} {self.id}>"
 	
 	def run(self):
 		with log_context({'instance' : 'control pipe'}):
@@ -122,6 +126,7 @@ class ClientConnection(threading.Thread):
 			if rpc.get("method") == "registerClient":
 				# New client protocol
 				self.clientInfo = rpc.get("params", [])
+				logger.info("Client info set to: %s", self.clientInfo)
 			return toJson(jsonrpc.getResponse())
 		except Exception as rpcError:
 			logger.error(rpcError, exc_info=True)
@@ -140,20 +145,21 @@ class ClientConnection(threading.Thread):
 					"result": None
 				}
 			
-			request = toJson({
+			request = {
 				"id": rpc_id,
 				"method": method,
 				"params": params
-			})
+			}
 			try:
 				if with_lock:
 					self.comLock.acquire()
 				try:
-					logger.info("Sending request '%s' to client %s", request, self)
-					self.write(request)
+					request_json = toJson(request)
+					logger.info("Sending request '%s' to client %s", request_json, self)
+					self.write(request_json)
 					response = self.read()
 					if not response:
-						logger.warning("No response received from client %s", self)
+						logger.warning("No response for method '%s' received from client %s", request["method"], self)
 						return {"id": rpc_id, "error": None, "result": None}
 					logger.info("Received response '%s' from client %s", response, self)
 					return fromJson(response)
@@ -188,11 +194,11 @@ class ControlPipe(threading.Thread):
 			try:
 				while not self._stopEvent.is_set():
 					try:
-						client = self.waitForClient()
+						client, client_id = self.waitForClient()
 						if self._stopEvent.is_set():
 							break
 						with self._clientLock:
-							connection = self.connection_class(self, client)
+							connection = self.connection_class(self, client, client_id)
 							self._clients.append(connection)
 							connection.daemon = True
 							connection.start()
@@ -321,12 +327,11 @@ class PosixControlDomainSocket(ControlPipe):
 			try:
 				connection, client_address = self._socket.accept()
 				logger.notice("Client %s connected to %s", client_address, self._socketName)
-				return connection
+				return (connection, client_address)
 			except socket.timeout as err:
 				if self._stopEvent.is_set():
-					return
+					return (None, None)
 	
-
 class NTPipeClientConnection(ClientConnection):
 	def checkConnection(self):
 		chBuf = create_string_buffer(self._controller.bufferSize)
@@ -411,6 +416,7 @@ class NTControlPipe(ControlPipe):
 		ControlPipe.__init__(self, opsiclientd)
 		self._pipeName = "\\\\.\\pipe\\opsiclientd"
 		self._pipe = None
+		self._client_id = 0
 	
 	def setup(self):
 		pass
@@ -457,7 +463,8 @@ class NTControlPipe(ControlPipe):
 
 		if fConnected == 1:
 			logger.notice("Client connected to %s", self._pipeName)
-			return self._pipe
+			self._client_id += 1
+			return (self._pipe, f"pipe #{self._client_id}")
 		
 		error = windll.kernel32.GetLastError()
 		windll.kernel32.CloseHandle(self._pipe)
