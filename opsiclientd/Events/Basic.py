@@ -182,7 +182,7 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 						self._eventsOccured += 1
 						logger.info("Got new event: %s (%d/%d)", event, self._eventsOccured, self._generatorConfig.maxRepetitions + 1)
 						self.fireEvent(event)
-					for i in range(10): # pylint: disable=unused-variable
+					for _unused in range(10):
 						if self._stopped:
 							break
 						time.sleep(1)

@@ -46,6 +46,8 @@ class TimerEventGenerator(EventGenerator):
 		self._event = threading.Event()
 		if self._generatorConfig.interval > 0:
 			self._event.wait(self._generatorConfig.interval)
+			if self._stopped:
+				return None
 			return self.createEvent()
 		self._event.wait()
 		return None
