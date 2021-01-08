@@ -31,20 +31,21 @@ from opsicommon.logging import logger
 
 try:
 	language = locale.getdefaultlocale()[0].split('_')[0]
-except Exception as error:
-	logger.debug("Failed to find default language: %s", error)
-	language = "en"
+except Exception as err: # pylint: disable=broad-except
+	logger.debug("Failed to find default language: %s", err)
+	language = "en" # pylint: disable=invalid-name
 
+sp = None # pylint: disable=invalid-name
 try:
-	logger.debug("Loading translation for language '%s'" % language)
+	logger.debug("Loading translation for language '%s'", language)
 	sp = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 	if os.path.exists(os.path.join(sp, "site-packages")):
 		sp = os.path.join(sp, "site-packages")
 	sp = os.path.join(sp, 'opsiclientd_data', 'locale')
 	translation = gettext.translation('opsiclientd', sp, [language])
 	_ = translation.gettext
-except Exception as error:
-	logger.debug("Failed to load locale for %s from %s: %s", language, sp, error)
+except Exception as err: # pylint: disable=broad-except
+	logger.debug("Failed to load locale for %s from %s: %s", language, sp, err)
 
 	def _(string):
 		""" Fallback function """

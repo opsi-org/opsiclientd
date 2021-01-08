@@ -42,7 +42,7 @@ from OPSI.Util.Message import NotificationClient, SubjectsObserver
 from OPSI.Logger import Logger, LOG_NONE, LOG_DEBUG
 
 encoding = locale.getpreferredencoding()
-argv = [unicode(arg, encoding) for arg in sys.argv]
+argv = sys.argv
 
 logger = Logger()
 
@@ -127,15 +127,15 @@ if (__name__ == "__main__"):
 			logger.setFileLevel(LOG_DEBUG)
 
 		w = OpsiDialogWindow()
-	except Exception as exception:
-		logger.logException(exception)
+	except Exception as err: # pylint: disable=broad-except
+		logger.error(err, exc_info=True)
 		tb = sys.exc_info()[2]
-		while (tb != None):
+		while tb is not None:
 			f = tb.tb_frame
 			c = f.f_code
-			print >> sys.stderr, u"     line %s in '%s' in file '%s'" % (tb.tb_lineno, c.co_name, c.co_filename)
+			print("     line %s in '%s' in file '%s'" % (tb.tb_lineno, c.co_name, c.co_filename), file=sys.stderr)
 			tb = tb.tb_next
-		print >> sys.stderr, u"ERROR: %s" % exception
+		print(f"ERROR: {err}", file=sys.stderr)
 		sys.exit(1)
 
 	sys.exit(0)

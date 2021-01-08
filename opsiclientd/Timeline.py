@@ -20,24 +20,29 @@
 Event-Timeline.
 
 Timeline event attributes:
-  * icon - url. This image will appear next to the title text in the timeline if (no end date) or (durationEvent = false). If a start and end date are supplied, and durationEvent is true, the icon is not shown. If icon attribute is not set, a default icon from the theme is used.
+  * icon - url. This image will appear next to the title text in the timeline if (no end date) or (durationEvent = false).
+    If a start and end date are supplied, and durationEvent is true, the icon is not shown.
+	If icon attribute is not set, a default icon from the theme is used.
   * image - url to an image that will be displayed in the bubble
   * link - url. The bubble's title text be a hyper-link to this address.
-  * color - color of the text and tape (duration events) to display in the timeline. If the event has durationEvent = false, then the bar's opacity will be applied (default 20%). See durationEvent, above.
+  * color - color of the text and tape (duration events) to display in the timeline.
+    If the event has durationEvent = false, then the bar's opacity will be applied (default 20%). See durationEvent, above.
   * textColor - color of the label text on the timeline. If not set, then the color attribute will be used.
-  * tapeImage and tapeRepeat Sets the background image and repeat style for the event's tape (or 'bar') on the Timeline. Overrides the color setting for the tape. Repeat style should be one of {repeat | repeat-x | repeat-y}, repeat is the default. See the Cubism example for a demonstration. Only applies to duration events.
-  * caption - additional event information shown when mouse is hovered over the Timeline tape or label. Uses the html title property. Looks like a tooltip. Plain text only. See the cubism example.
-  * classname - added to the HTML classnames for the event's label and tape divs. Eg classname attribute 'hot_event' will result in div classes of 'timeline-event-label hot_event' and 'timeline-event-tape hot_event' for the event's Timeline label and tape, respectively.
+  * tapeImage and tapeRepeat Sets the background image and repeat style for the event's tape (or 'bar') on the Timeline.
+    Overrides the color setting for the tape. Repeat style should be one of {repeat | repeat-x | repeat-y}, repeat is the default.
+	See the Cubism example for a demonstration. Only applies to duration events.
+  * caption - additional event information shown when mouse is hovered over the Timeline tape or label. Uses the html title property.
+    Looks like a tooltip. Plain text only. See the cubism example.
+  * classname - added to the HTML classnames for the event's label and tape divs.
+    Eg classname attribute 'hot_event' will result in div classes of 'timeline-event-label hot_event' and 'timeline-event-tape hot_event'
+	for the event's Timeline label and tape, respectively.
   * description - will be displayed inside the bubble with the event's title and image.
 
 
 :copyright: uib GmbH <info@uib.de>
-:author: Jan Schneider <j.schneider@uib.de>
-:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
-import json
 import os
 import time
 import threading
@@ -53,8 +58,8 @@ from opsiclientd.Config import Config
 
 config = Config()
 
-TIMELINE_IMAGE_URL = u'/timeline/timeline_js/images/'
-htmlHead = u'''
+TIMELINE_IMAGE_URL = '/timeline/timeline_js/images/'
+HTML_HEAD = '''
 <script type="text/javascript">
 Timeline_ajax_url   = "/timeline/timeline_ajax/simile-ajax-api.js";
 Timeline_urlPrefix  = "/timeline/timeline_js/";
@@ -130,26 +135,27 @@ function onResize() {
 
 
 class Timeline(metaclass=Singleton):
+	""" Timeline """
 	def __init__(self):
 		self._sql = None
-		self._dbLock = threading.Lock()
+		self._db_lock = threading.Lock()
 		self._stopped = False
-	
+
 	def start(self):
 		db_file = config.get('global', 'timeline_db')
 		logger.notice("Starting timeline (database location: %s)", db_file)
 		try:
 			self._createDatabase()
-		except sqlite3.DatabaseError as e:
-			logger.error("Failed to connect to database %s: %s, recreating database", db_file, e)
+		except sqlite3.DatabaseError as err:
+			logger.error("Failed to connect to database %s: %s, recreating database", db_file, err)
 			self._createDatabase(delete_existing=True)
 		self._cleanupDatabase()
-	
+
 	def stop(self):
 		self._stopped = True
 		end = forceOpsiTimestamp(timestamp())
 
-		with self._dbLock:
+		with self._db_lock:
 			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', {'end': end})
 
 	def getEventData(self):
@@ -198,18 +204,18 @@ class Timeline(metaclass=Singleton):
 			del event['id']
 			events.append(event)
 		return {'dateTimeFormat': 'iso8601', 'events': events}
-	
+
 	def getHtmlHead(self):
 		now = time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime())
-		return htmlHead % {'date': now}
-	
+		return HTML_HEAD % {'date': now}
+
 	def _cleanupDatabase(self):
-		with self._dbLock:
+		with self._db_lock:
 			try:
 				self._sql.execute('delete from EVENT where `start` < "%s"' % timestamp((time.time() - 7*24*3600)))
 				self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', {'durationEvent': False})
-			except Exception as cleanupError:
-				logger.error(cleanupError)
+			except Exception as cleanup_error: # pylint: disable=broad-except
+				logger.error(cleanup_error)
 
 	def _createDatabase(self, delete_existing=False):
 		timelineDB = config.get('global', 'timeline_db')
@@ -221,13 +227,13 @@ class Timeline(metaclass=Singleton):
 		if delete_existing and os.path.exists(timelineDB):
 			logger.notice("Deleting an recreating timeline database: %s", timelineDB)
 			os.remove(timelineDB)
-		
+
 		self._sql = SQLite(
 			database=timelineDB,
 			synchronous=False,
 			databaseCharset='utf-8'
 		)
-		with self._dbLock:
+		with self._db_lock:
 			tables = self._sql.getTables()
 			if 'EVENT' not in tables:
 				logger.debug(u'Creating table EVENT')
@@ -252,7 +258,7 @@ class Timeline(metaclass=Singleton):
 		if self._stopped:
 			return -1
 
-		with self._dbLock:
+		with self._db_lock:
 			try:
 				if category:
 					category = forceUnicode(category)
@@ -273,32 +279,33 @@ class Timeline(metaclass=Singleton):
 					'start': start,
 					'end': end,
 				}
-				return self._sql.insert('EVENT', event)
-			except sqlite3.DatabaseError as dbError:
-				logger.error("Failed to add event '%s': %s, recreating database", title, dbError)
-				self._sql.delete_db()
-				self._createDatabase(delete_existing=True)
-				return self._sql.insert('EVENT', event)
-			except Exception as addError:
-				logger.error("Failed to add event '%s': %s", title, addError)
-	
+				try:
+					return self._sql.insert('EVENT', event)
+				except sqlite3.DatabaseError as db_error:
+					logger.error("Failed to add event '%s': %s, recreating database", title, db_error)
+					self._sql.delete_db()
+					self._createDatabase(delete_existing=True)
+					return self._sql.insert('EVENT', event)
+			except Exception as add_error: # pylint: disable=broad-except
+				logger.error("Failed to add event '%s': %s", title, add_error)
+
 	def setEventEnd(self, eventId, end=None):
 		if self._stopped:
 			return -1
 
-		with self._dbLock:
+		with self._db_lock:
 			try:
 				eventId = forceInt(eventId)
 				if not end:
 					end = timestamp()
 				end = forceOpsiTimestamp(end)
 				return self._sql.update('EVENT', '`id` = %d' % eventId, {'end': end, 'durationEvent': True})
-			except Exception as endError:
-				logger.error(u"Failed to set end of event '%s': %s" % (eventId, endError))
+			except Exception as end_error: # pylint: disable=broad-except
+				logger.error("Failed to set end of event '%s': %s", eventId, end_error)
 
 	def getEvents(self):
 		if self._stopped:
 			return {}
 
-		with self._dbLock:
+		with self._db_lock:
 			return self._sql.getSet('select * from EVENT')

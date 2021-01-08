@@ -213,14 +213,14 @@ argument-naming-style=snake_case
 
 # Regular expression matching correct argument names. Overrides argument-
 # naming-style.
-#argument-rgx=
+argument-rgx=[a-z_][a-zA-Z0-9_]{2,30}$   # CHANGED: allow legacy naming
 
 # Naming style matching correct attribute names.
 attr-naming-style=snake_case
 
 # Regular expression matching correct attribute names. Overrides attr-naming-
 # style.
-#attr-rgx=
+attr-rgx=[_]{0,2}[a-z][a-zA-Z_]{2,30}$   # CHANGED: allow legacy naming
 
 # Bad variable names which should always be refused, separated by a comma.
 bad-names=foo,
@@ -264,7 +264,7 @@ function-naming-style=snake_case
 
 # Regular expression matching correct function names. Overrides function-
 # naming-style.
-#function-rgx=
+function-rgx=[_]{0,2}[a-z][a-zA-Z0-9_]{2,}$   # CHANGED: allow legacy naming
 
 # Good variable names which should always be accepted, separated by a comma.
 good-names=i,
@@ -293,14 +293,14 @@ method-naming-style=snake_case
 
 # Regular expression matching correct method names. Overrides method-naming-
 # style.
-#method-rgx=
+method-rgx=(([_]{0,2}[a-z][a-zA-Z0-9]{2,})|([a-zA-Z_]{2,}_[a-zA-Z]{2,})|(__.*__))$   # CHANGED: allow legacy naming
 
 # Naming style matching correct module names.
-module-naming-style=snake_case,PascalCase # CHANGED: allow legacy naming
+module-naming-style=snake_case
 
 # Regular expression matching correct module names. Overrides module-naming-
 # style.
-#module-rgx=
+module-rgx=[_a-zA-Z]+   # CHANGED: allow legacy naming
 
 # Colon-delimited sets of names that determine each other's naming style when
 # the name regexes allow several styles.
@@ -308,7 +308,7 @@ name-group=
 
 # Regular expression which should only match function or class names that do
 # not require a docstring.
-no-docstring-rgx=^_
+no-docstring-rgx=.*   # CHANGED: ^_ => .* # disabled for old project
 
 # List of decorators that produce properties, such as abc.abstractproperty. Add
 # to this list to register other decorators that produce valid properties.
@@ -320,7 +320,7 @@ variable-naming-style=snake_case
 
 # Regular expression matching correct variable names. Overrides variable-
 # naming-style.
-#variable-rgx=
+variable-rgx=[_]{0,2}[a-zA-Z0-9_]{2,30}$   # CHANGED: allow legacy naming
 
 
 [SIMILARITIES]
@@ -467,10 +467,10 @@ indent-after-paren=4
 
 # String used as indentation unit. This is usually "    " (4 spaces) or "\t" (1
 # tab).
-indent-string='    '
+indent-string='\t'   # CHANGED: '    ' => '\t' # using tabs
 
 # Maximum number of characters on a single line.
-max-line-length=100
+max-line-length=140   # CHANGED: 100 => 140
 
 # Maximum number of lines in a module.
 max-module-lines=1000

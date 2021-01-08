@@ -22,9 +22,6 @@ Posix-specific custom event.
 This does not use WMI.
 
 :copyright: uib GmbH <info@uib.de>
-:author: Jan Schneider <j.schneider@uib.de>
-:author: Erol Ueluekmen <e.ueluekmen@uib.de>
-:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
@@ -39,7 +36,7 @@ try:
 	from opsiclientd.nonfree.Events.Generator import CustomEvent, CustomEventGenerator
 except ImportError as error:
 	logger.critical(
-		u"Unable to import from opsiclientd.nonfree."
-		u"Is this the full version?"
+		"Unable to import from opsiclientd.nonfree."
+		"Is this the full version?"
 	)
 	raise error

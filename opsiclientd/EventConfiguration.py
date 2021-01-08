@@ -18,19 +18,17 @@
 """
 opsiclientd - Event configuration.
 
-
-:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 from __future__ import absolute_import
 
 import re
 
-from .State import State
-
-import opsicommon.logging
-from opsicommon.logging import logger
 from OPSI.Types import forceUnicode
+
+from opsicommon.logging import log_context
+
+from .State import State
 
 state = State()
 
@@ -38,11 +36,11 @@ class EventConfig(object):
 
 	def __init__(self, eventId, **kwargs):
 		if not eventId:
-			raise TypeError(u"Event id not given")
-		self._id = str(eventId)
+			raise TypeError("Event id not given")
+		self._id = str(eventId) # pylint: disable=invalid-name
 
 		# Setting context here only succeeds if id is set
-		with opsicommon.logging.log_context({'instance', 'event config {0}'.format(self._id)}):
+		with log_context({'instance', f'event config {self._id}'}):
 			self.setConfig(kwargs)
 
 	def setConfig(self, conf):
@@ -109,12 +107,9 @@ class EventConfig(object):
 		return config
 
 	def __str__(self):
-		return u"<{0}({1})>".format(self.__class__.__name__, self._id)
+		return f"<{self.__class__.__name__} {self._id}>"
 
 	__repr__ = __str__
-
-	def __str__(self):
-		return str(self.__str__())
 
 	def getId(self):
 		return self._id

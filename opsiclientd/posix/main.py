@@ -32,12 +32,12 @@ import opsicommon.logging
 from opsicommon.logging import logger, logging_config, LOG_NONE
 
 from opsiclientd import config, parser, init_logging
-from opsiclientd.SystemCheck import RUNNING_ON_LINUX, RUNNING_ON_DARWIN
+from opsiclientd.SystemCheck import RUNNING_ON_LINUX
 
 from opsiclientd.nonfree.Posix import OpsiclientdPosix
 
 
-opsiclientd = None
+opsiclientd = None # pylint: disable=invalid-name
 
 def configure_iptables():
 	logger.notice("Configure iptables")
@@ -49,12 +49,12 @@ def configure_iptables():
 	else:
 		for iptables in ("iptables", "ip6tables"):
 			cmds.append([iptables, "-A", "INPUT", "-p", "tcp", "--dport", str(port), "-j", "ACCEPT"])
-	
+
 	for cmd in cmds:
 		logger.info("Running command: %s", str(cmd))
 		subprocess.call(cmd)
 
-def signal_handler(signo, stackFrame):
+def signal_handler(signo, stackFrame): # pylint: disable=unused-argument
 	logger.debug("Received signal %s, stopping opsiclientd", signo)
 	if opsiclientd:
 		opsiclientd.stop()
@@ -67,9 +67,9 @@ def daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
 	try:
 		if os.fork() > 0:
 			raise SystemExit(0)  # Parent exit
-	except OSError as e:
-		raise RuntimeError(f"First fork failed: {e}")
-	
+	except OSError as err:
+		raise RuntimeError(f"First fork failed: {err}") from err
+
 	os.chdir("/")  # Do not hinder umounts
 	os.umask(0)  # reset file mode mask
 	os.setsid()  # Create a new session
@@ -78,18 +78,18 @@ def daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
 	try:
 		if os.fork() > 0:
 			raise SystemExit(0)
-	except OSError as e:
-		raise RuntimeError(f"Second fork failed: {e}")
-	
+	except OSError as err:
+		raise RuntimeError(f"Second fork failed: {err}") from err
+
 	logging_config(stderr_level=LOG_NONE)
 
 	# Replacing file descriptors
-	with open(stdin, 'rb', 0) as f:
-		os.dup2(f.fileno(), sys.stdin.fileno())
-	with open(stdout, 'rb', 0) as f:
-		os.dup2(f.fileno(), sys.stdout.fileno())
-	with open(stderr, 'rb', 0) as f:
-		os.dup2(f.fileno(), sys.stderr.fileno())
+	with open(stdin, 'rb', 0) as file:
+		os.dup2(file.fileno(), sys.stdin.fileno())
+	with open(stdout, 'rb', 0) as file:
+		os.dup2(file.fileno(), sys.stdout.fileno())
+	with open(stderr, 'rb', 0) as file:
+		os.dup2(file.fileno(), sys.stderr.fileno())
 
 def write_pid_file(path):
 	if path:
@@ -97,9 +97,9 @@ def write_pid_file(path):
 			pidFile.write(str(os.getpid()))
 
 def main():
-	global opsiclientd
+	global opsiclientd # pylint: disable=global-statement,invalid-name
 	log_dir = "/var/log/opsi-client-agent"
-	
+
 	parser.add_argument(
 		"--no-signal-handlers", "-t",
 		dest="signalHandlers",
@@ -120,11 +120,11 @@ def main():
 		default=None,
 		help="Write the PID into this file."
 	)
-	
+
 	options = parser.parse_args()
-	
+
 	init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
-	
+
 	with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
 		if options.signalHandlers:
 			logger.debug("Registering signal handlers")
@@ -142,10 +142,10 @@ def main():
 		if RUNNING_ON_LINUX:
 			try:
 				configure_iptables()
-			except Exception as e:
-				logger.error("Failed to configure iptabels: %s", e)
-		
-		logger.debug("Starting opsiclientd...")
+			except Exception as err:  # pylint: disable=broad-except
+				logger.error("Failed to configure iptabels: %s", err)
+
+		logger.debug("Starting opsiclientd")
 		opsiclientd = OpsiclientdPosix()
 		opsiclientd.start()
 
@@ -153,18 +153,16 @@ def main():
 			while opsiclientd.is_alive():
 				time.sleep(1)
 
-			logger.debug("Stopping opsiclientd...")
+			logger.debug("Stopping opsiclientd")
 			opsiclientd.join(60)
-			logger.debug("Stopped.")
-		except Exception as e:
-			logger.logException(e)
+			logger.debug("Stopped")
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error(err, exc_info=True)
 		finally:
 			if options.pidFile:
-				logger.debug("Removing PID file...")
+				logger.debug("Removing PID file")
 				try:
 					os.remove(options.pidFile)
-					logger.debug("PID file removed.")
+					logger.debug("PID file removed")
 				except OSError as oserr:
 					logger.debug("Removing pid file failed: %s", oserr)
-
-	

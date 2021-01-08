@@ -115,7 +115,7 @@ def getEventConfigs():
 	eventConfigs = {}
 	for (eventConfigId, rawEventConfig) in rawEventConfigs.items():
 		try:
-			if (rawEventConfig['args'].get('type', 'template').lower() == 'template'):
+			if rawEventConfig['args'].get('type', 'template').lower() == 'template':
 				continue
 
 			if not rawEventConfig['active']:
@@ -267,7 +267,7 @@ def getEventConfigs():
 							if section.startswith("event_") and config.has_option(section, key):
 								logger.info("Removing config option %s.%s", section, key)
 								config.del_option(section, key)
-				
+
 				except Exception as err1: # pylint: disable=broad-except
 					logger.debug(err1, exc_info=True)
 					logger.error("Failed to set event config argument '%s' to '%s': %s", key, value, err1)
@@ -279,5 +279,5 @@ def getEventConfigs():
 			)
 		except Exception as err2: # pylint: disable=broad-except
 			logger.error(err2, exc_info=True)
-	
+
 	return eventConfigs

@@ -46,7 +46,7 @@ class State(metaclass=Singleton):
 		self._state = {}
 		self._stateFile = None
 		self._stateLock = threading.Lock()
-	
+
 	def start(self):
 		self._stateFile = config.get('global', 'state_file')
 		self._readStateFile()
@@ -60,8 +60,8 @@ class State(metaclass=Singleton):
 						jsonstr = stateFile.read()
 
 					self._state = json.loads(jsonstr)
-			except Exception as error:
-				logger.error(u"Failed to read state file '%s': %s" % (self._stateFile, error))
+			except Exception as error: # pylint: disable=broad-except
+				logger.error("Failed to read state file '%s': %s", self._stateFile, error)
 
 	def _writeStateFile(self):
 		with self._stateLock:
@@ -72,8 +72,8 @@ class State(metaclass=Singleton):
 
 				with codecs.open(self._stateFile, 'w', 'utf8') as stateFile:
 					stateFile.write(jsonstr)
-			except Exception as error:
-				logger.error(u"Failed to write state file '%s': %s" % (self._stateFile, error))
+			except Exception as error: # pylint: disable=broad-except
+				logger.error("Failed to write state file '%s': %s", self._stateFile, error)
 
 	def get(self, name, default=None):
 		name = forceUnicode(name)
@@ -86,7 +86,7 @@ class State(metaclass=Singleton):
 						env = proc.environ()
 						if env.get("DISPLAY") and proc.uids()[0] >= 1000:
 							return True
-					except psutil.AccessDenied as e:
+					except psutil.AccessDenied:
 						pass
 				return False
 			elif RUNNING_ON_DARWIN:
@@ -111,6 +111,6 @@ class State(metaclass=Singleton):
 
 	def set(self, name, value):
 		name = forceUnicode(name)
-		logger.debug(u"Setting state '%s' to %s" % (name, value))
+		logger.debug("Setting state '%s' to %s", name, value)
 		self._state[name] = value
 		self._writeStateFile()

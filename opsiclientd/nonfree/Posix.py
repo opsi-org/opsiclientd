@@ -12,7 +12,6 @@ Non-free Posix part of opsiclientd
 import os
 import os.path
 
-import OPSI.System as System
 from opsicommon.logging import logger
 
 from opsiclientd.Opsiclientd import Opsiclientd
@@ -53,3 +52,5 @@ class OpsiclientdPosix(Opsiclientd):
 		shutdownFile = os.path.join(self._PID_DIR, "shutdown")
 		return os.path.exists(shutdownFile)
 
+	def loginUser(self, username, password):
+		raise NotImplementedError("Not implemented on posix")

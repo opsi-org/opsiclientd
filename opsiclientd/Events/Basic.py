@@ -55,7 +55,7 @@ class EventGenerator(threading.Thread):
 		self._stopped = False
 		self._event = None
 		self._lastEventOccurence = None
-	
+
 	def __str__(self):
 		return f'<{self.__class__.__name__} {self._generatorConfig.getId()}>'
 
@@ -115,7 +115,7 @@ class EventGenerator(threading.Thread):
 		self._event = threading.Event()
 		self._event.wait()
 		return None
-	
+
 	def cleanup(self):
 		pass
 
@@ -141,10 +141,10 @@ class EventGenerator(threading.Thread):
 				threading.Thread.__init__(self)
 				self._eventListener = eventListener
 				self._event = event
-			
+
 			def run(self):
 				with opsicommon.logging.log_context({'instance' : 'event generator ' + self._event.eventConfig.getId()}):
-					if (self._event.eventConfig.notificationDelay > 0):
+					if self._event.eventConfig.notificationDelay > 0:
 						logger.debug("Waiting %d seconds before notifying listener '%s' of event '%s'",
 							self._event.eventConfig.notificationDelay, self._eventListener, self._event
 						)
@@ -156,9 +156,9 @@ class EventGenerator(threading.Thread):
 						logger.error(err, exc_info=True)
 
 		logger.info("Starting FireEventThread for listeners: %s", self._eventListeners)
-		for l in self._eventListeners:
+		for listener in self._eventListeners:
 			# Create a new thread for each event listener
-			FireEventThread(l, event).start()
+			FireEventThread(listener, event).start()
 
 	def run(self):
 		with opsicommon.logging.log_context({'instance' : f'event generator {self._generatorConfig.getId()}'}):
@@ -208,7 +208,7 @@ class Event(object):
 	def __init__(self, eventConfig, eventInfo={}): # pylint: disable=dangerous-default-value
 		self.eventConfig = eventConfig
 		self.eventInfo = eventInfo
-	
+
 	def getActionProcessorCommand(self):
 		actionProcessorCommand = self.eventConfig.actionProcessorCommand
 		for (key, value) in self.eventInfo.items():

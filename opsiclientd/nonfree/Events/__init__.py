@@ -12,5 +12,4 @@
 Non-free events of opsiclientd.
 
 :copyright: uib GmbH <info@uib.de>
-:author: Niko Wenselowski <n.wenselowski@uib.de>
 """

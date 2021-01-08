@@ -30,9 +30,9 @@ Connecting to a opsi service.
 
 import base64
 import os
-import re
 import random
 import time
+import socket
 from hashlib import md5
 from http.client import HTTPConnection, HTTPSConnection
 from Crypto.Hash import MD5
@@ -40,15 +40,17 @@ from Crypto.Signature import pkcs1_15
 from OpenSSL import crypto
 
 from OPSI import System
-import opsicommon.logging
-from opsicommon.logging import logger
 from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
 from OPSI.Util import getPublicKey
 from OPSI.Util.Thread import KillableThread
 from OPSI.Util.HTTP import (
-	urlsplit, non_blocking_connect_http, non_blocking_connect_https)
+	urlsplit, non_blocking_connect_http, non_blocking_connect_https
+)
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
+
+import opsicommon.logging
+from opsicommon.logging import logger
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config, OPSI_CA
@@ -61,8 +63,8 @@ config = Config()
 def isConfigServiceReachable(timeout=5):
 	for url in config.getConfigServiceUrls():
 		try:
-			logger.info(u"Trying connection to config service '%s'" % url)
-			(scheme, host, port, baseurl, username, password) = urlsplit(url)
+			logger.info("Trying connection to config service '%s'", url)
+			(scheme, host, port) = urlsplit(url)[:3]
 			conn = None
 			if scheme.endswith('s'):
 				conn = HTTPSConnection(host=host, port=port)
@@ -75,12 +77,12 @@ def isConfigServiceReachable(timeout=5):
 			try:
 				conn.sock.close()
 				conn.close()
-			except Exception:
+			except socket.error:
 				pass
 			return True
 
-		except Exception as e:
-			logger.info(e)
+		except Exception as err: # pylint: disable=broad-except
+			logger.info(err)
 
 	return False
 
@@ -104,17 +106,19 @@ class ServiceConnection(object):
 		pass
 
 	def connectionCanceled(self):
-		error = u"Failed to connect to config service '%s': cancelled by user" % self._configServiceUrl
+		error = "Failed to connect to config service '%s': cancelled by user" % self._configServiceUrl
 		logger.error(error)
 		raise CanceledByUserError(error)
 
 	def connectionTimedOut(self):
-		error = u"Failed to connect to config service '%s': timed out after %d seconds" % (self._configServiceUrl, config.get('config_service', 'connection_timeout'))
+		error = "Failed to connect to config service '%s': timed out after %d seconds" % (
+			self._configServiceUrl, config.get('config_service', 'connection_timeout')
+		)
 		logger.error(error)
 		raise Exception(error)
 
 	def connectionFailed(self, error):
-		error = u"Failed to connect to config service '%s': %s" % (self._configServiceUrl, error)
+		error = "Failed to connect to config service '%s': %s" % (self._configServiceUrl, error)
 		logger.error(error)
 		raise Exception(error)
 
@@ -134,14 +138,15 @@ class ServiceConnection(object):
 		return isConfigServiceReachable(timeout=timeout)
 
 	def stop(self):
-		logger.debug(u"Stopping thread")
-		self.cancelled = True
-		self.running = False
-		for i in range(10):
-			if not self.is_alive():
-				break
-			self.terminate()
-			time.sleep(0.5)
+		logger.warning("stop() not implemented")
+		#logger.debug(u"Stopping thread")
+		#self.cancelled = True
+		#self.running = False
+		#for i in range(10):
+		#	if not self.is_alive():
+		#		break
+		#	self.terminate()
+		#	time.sleep(0.5)
 
 	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):
 		try:
@@ -156,7 +161,7 @@ class ServiceConnection(object):
 				self._configServiceUrl = configServiceURL
 
 				kwargs = self.connectionThreadOptions()
-				logger.debug(u"Creating ServiceConnectionThread (url: %s)" % self._configServiceUrl)
+				logger.debug("Creating ServiceConnectionThread (url: %s)", self._configServiceUrl)
 				serviceConnectionThread = ServiceConnectionThread(
 					configServiceUrl=self._configServiceUrl,
 					username=config.get('global', 'host_id'),
@@ -169,17 +174,18 @@ class ServiceConnection(object):
 
 				cancellableAfter = forceInt(config.get('config_service', 'user_cancelable_after'))
 				timeout = forceInt(config.get('config_service', 'connection_timeout'))
-				logger.info(u"Starting ServiceConnectionThread, timeout is %d seconds" % timeout)
+				logger.info("Starting ServiceConnectionThread, timeout is %d seconds", timeout)
 				serviceConnectionThread.start()
 				for _unused in range(5):
 					if serviceConnectionThread.running:
 						break
 					time.sleep(1)
 
-				logger.debug(u"ServiceConnectionThread started")
+				logger.debug("ServiceConnectionThread started")
 				while serviceConnectionThread.running and (timeout > 0):
-					logger.debug(u"Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d) " \
-						% (timeout, serviceConnectionThread.is_alive(), cancellableAfter))
+					logger.debug("Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d)",
+						timeout, serviceConnectionThread.is_alive(), cancellableAfter
+					)
 					self.connectionTimeoutChanged(timeout)
 					if cancellableAfter > 0:
 						cancellableAfter -= 1
@@ -200,15 +206,15 @@ class ServiceConnection(object):
 
 				if serviceConnectionThread.connected and (serviceConnectionThread.getUsername() != config.get('global', 'host_id')):
 					config.set('global', 'host_id', serviceConnectionThread.getUsername().lower())
-					logger.info(u"Updated host_id to '%s'" % config.get('global', 'host_id'))
+					logger.info("Updated host_id to '%s'", config.get('global', 'host_id'))
 					config.updateConfigFile()
 
 				if serviceConnectionThread.connected and forceBool(config.get('config_service', 'sync_time_from_service')):
-					logger.info(u"Syncing local system time from service")
+					logger.info("Syncing local system time from service")
 					try:
-						System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True))
-					except Exception as e:
-						logger.error(u"Failed to sync time: '%s'", e)
+						System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True)) # pylint: disable=no-member
+					except Exception as err: # pylint: disable=broad-except
+						logger.error("Failed to sync time: '%s'", err)
 
 				if (
 					"localhost" not in configServiceURL and
@@ -217,31 +223,34 @@ class ServiceConnection(object):
 					try:
 						config.set(
 							'depot_server', 'master_depot_id',
-							serviceConnectionThread.configService.getDepotId(config.get('global', 'host_id'))
+							serviceConnectionThread.configService.getDepotId(config.get('global', 'host_id')) # pylint: disable=no-member
 						)
 						config.updateConfigFile()
-					except Exception as e:
-						logger.warning(e)
-				
+					except Exception as err: # pylint: disable=broad-except
+						logger.warning(err)
+
 				if urlIndex > 0:
 					backendinfo = serviceConnectionThread.configService.backend_info()
 					modules = backendinfo['modules']
 					helpermodules = backendinfo['realmodules']
 
 					if not modules.get('high_availability'):
-						self.connectionFailed(u"High availability module currently disabled")
+						self.connectionFailed("High availability module currently disabled")
 
 					if not modules.get('customer'):
-						self.connectionFailed(u"No customer in modules file")
+						self.connectionFailed("No customer in modules file")
 
 					if not modules.get('valid'):
-						self.connectionFailed(u"Modules file invalid")
+						self.connectionFailed("Modules file invalid")
 
-					if (modules.get('expires', '') != 'never') and (time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0):
-						self.connectionFailed(u"Modules file expired")
+					if (
+						modules.get('expires', '') != 'never' and
+						time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0
+					):
+						self.connectionFailed("Modules file expired")
 
 					logger.debug("Verifying modules file signature")
-					publicKey = getPublicKey(data=base64.decodebytes(b"AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP"))
+					publicKey = getPublicKey(data=base64.decodebytes(b"AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP")) # pylint: disable=line-too-long
 					data = ""
 					mks = list(modules.keys())
 					mks.sort()
@@ -253,13 +262,9 @@ class ServiceConnection(object):
 							if int(val) > 0:
 								modules[module] = True
 						else:
-							val = modules[module]
-							if val == False:
-								val = "no"
-							elif val == True:
-								val = "yes"
+							val = "yes" if modules[module] else "no"
 						data += "%s = %s\r\n" % (module.lower().strip(), val)
-					
+
 					verified = False
 					if modules["signature"].startswith("{"):
 						s_bytes = int(modules['signature'].split("}", 1)[-1]).to_bytes(256, "big")
@@ -271,7 +276,7 @@ class ServiceConnection(object):
 							pass
 					else:
 						h_int = int.from_bytes(md5(data.encode()).digest(), "big")
-						s_int = publicKey._encrypt(int(modules["signature"]))
+						s_int = publicKey._encrypt(int(modules["signature"])) # pylint: disable=protected-access
 						verified = h_int == s_int
 
 					if not verified:
@@ -288,8 +293,8 @@ class ServiceConnection(object):
 		if self._configService:
 			try:
 				self._configService.backend_exit()
-			except Exception as exitError:
-				logger.error(u"Failed to disconnect config service: %s" % forceUnicode(exitError))
+			except Exception as exit_error: # pylint: disable=broad-except
+				logger.error("Failed to disconnect config service: %s", exit_error)
 
 		self._configService = None
 		self._configServiceUrl = None
@@ -309,7 +314,7 @@ class ServiceConnectionThread(KillableThread):
 		self.connectionError = None
 		if not self._configServiceUrl:
 			raise Exception(u"No config service url given")
-		
+
 	def setStatusMessage(self, message):
 		if not self._statusSubject:
 			return
@@ -328,15 +333,15 @@ class ServiceConnectionThread(KillableThread):
 			if response.status != 200:
 				raise RuntimeError(f"Failed to fetch opsi-cacert.pem: {response.status} - {response.data}")
 			caCert = crypto.load_certificate(crypto.FILETYPE_PEM, response.data.decode("utf-8"))
-			with open(os.path.join(certDir, 'cacert.pem'), "wb") as f:
-				f.write(crypto.dump_certificate(crypto.FILETYPE_PEM, caCert))
+			with open(os.path.join(certDir, 'cacert.pem'), "wb") as file:
+				file.write(crypto.dump_certificate(crypto.FILETYPE_PEM, caCert))
 			logger.info("CA cert updated successfully")
-		except Exception as sslCAErr:
+		except Exception as sslCAErr: # pylint: disable=broad-except
 			logger.warning("Failed to load CA: %s", sslCAErr)
-	
+
 	def run(self):
 		with opsicommon.logging.log_context({'instance' : 'service connection'}):
-			logger.debug(u"ServiceConnectionThread started...")
+			logger.debug("ServiceConnectionThread started...")
 			self.running = True
 			self.connected = False
 			self.cancelled = False
@@ -349,29 +354,29 @@ class ServiceConnectionThread(KillableThread):
 				proxyURL = config.get('global', 'proxy_url')
 				if proxyMode == 'system':
 					logger.notice(u'not implemented yet')
-					proxyURL = System.getSystemProxySetting()
+					proxyURL = System.getSystemProxySetting() # pylint: disable=assignment-from-no-return
 				elif proxyMode == 'static':
 					proxyURL = config.get('global', 'proxy_url')
 
-				(scheme, host, port, baseurl, username, password) = urlsplit(self._configServiceUrl)
+				host = urlsplit(self._configServiceUrl)[1]
 				serverCertFile = os.path.join(certDir, host + '.pem')
 				if verifyServerCert:
-					logger.info(u"Server verification enabled, using cert file '%s'" % serverCertFile)
+					logger.info("Server verification enabled, using cert file '%s'", serverCertFile)
 
 				caCertFile = os.path.join(certDir, 'cacert.pem')
 				verifyServerCertByCa = config.get('global', 'verify_server_cert_by_ca')
 				if verifyServerCertByCa:
-					logger.info(u"Server verification by CA enabled, using CA cert file '%s'" % caCertFile)
+					logger.info("Server verification by CA enabled, using CA cert file '%s'", caCertFile)
 
 				tryNum = 0
 				while not self.cancelled and not self.connected:
 					tryNum += 1
 					try:
-						logger.notice(u"Connecting to config server '%s' #%d" % (self._configServiceUrl, tryNum))
-						self.setStatusMessage(_(u"Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
+						logger.notice("Connecting to config server '%s' #%d", self._configServiceUrl, tryNum)
+						self.setStatusMessage(_("Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
 						if len(self._username.split('.')) < 3:
-							raise Exception(u"Domain missing in username '%s'" % self._username)
-						
+							raise Exception(f"Domain missing in username '{self._username}'")
+
 						compression = True
 						if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
 							compression = False
@@ -392,7 +397,7 @@ class ServiceConnectionThread(KillableThread):
 							compression=compression
 						)
 
-						self.configService.accessControl_authenticated()
+						self.configService.accessControl_authenticated() # pylint: disable=no-member
 						self.configService.setCompression(True)
 						self.connected = True
 						self.connectionError = None
@@ -408,62 +413,62 @@ class ServiceConnectionThread(KillableThread):
 						if serverVersion and (serverVersion[0] > 4 or (serverVersion[0] == 4 and serverVersion[1] > 1)):
 							curCA = ""
 							if os.path.exists(caCertFile):
-								with open(caCertFile, 'r') as f:
-									curCA = f.read()
+								with open(caCertFile, 'r') as file:
+									curCA = file.read()
 							if not os.path.exists(caCertFile) or curCA == OPSI_CA or verifyServerCertByCa:
 								# Renew CA if not exists or connection is verified
 								self.updateCACert()
 						else:
-							with open(caCertFile, 'w') as f:
-								f.write(OPSI_CA)
+							with open(caCertFile, 'w') as file:
+								file.write(OPSI_CA)
 					except OpsiServiceVerificationError as verificationError:
 						self.connectionError = forceUnicode(verificationError)
-						self.setStatusMessage(_(u"Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
-						logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(verificationError)))
+						self.setStatusMessage(_("Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
+						logger.error("Failed to connect to config server '%s': %s", self._configServiceUrl, verificationError)
 						break
-					except Exception as error:
+					except Exception as error: # pylint: disable=broad-except
 						self.connectionError = forceUnicode(error)
-						self.setStatusMessage(_(u"Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(error)))
-						logger.error(u"Failed to connect to config server '%s': %s" % (self._configServiceUrl, forceUnicode(error)))
-						logger.logException(error)
+						self.setStatusMessage(_("Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(error)))
+						logger.error("Failed to connect to config server '%s': %s", self._configServiceUrl, error)
+						logger.error(error, exc_info=True)
 
 						if isinstance(error, OpsiAuthenticationError):
 							fqdn = System.getFQDN()
 							try:
 								fqdn = forceFqdn(fqdn)
-							except Exception as fqdnError:
-								logger.warning(u"Failed to get fqdn from os, got '%s': %s" % (fqdn, fqdnError))
+							except Exception as fqdnError: # pylint: disable=broad-except
+								logger.warning("Failed to get fqdn from os, got '%s': %s", fqdn, fqdnError)
 								break
 
 							if self._username != fqdn:
-								logger.notice(u"Connect failed with username '%s', got fqdn '%s' from os, trying fqdn" % (self._username, fqdn))
+								logger.notice("Connect failed with username '%s', got fqdn '%s' from os, trying fqdn", self._username, fqdn)
 								self._username = fqdn
 							else:
 								break
 
 						if 'is not supported by the backend' in self.connectionError.lower():
 							try:
-								from cryptography.hazmat.backends import default_backend
-								logger.debug("Got the following crypto backends: {0}".format(default_backend()._backends))
-							except Exception as cryptoCheckError:
-								logger.debug("Failed to get info about installed crypto modules: {0}".format(cryptoCheckError))
+								from cryptography.hazmat.backends import default_backend  # pylint: disable=import-outside-toplevel
+								logger.debug("Got the following crypto backends: %s", default_backend()._backends) # pylint: disable=no-member,protected-access
+							except Exception as cryptoCheckError: # pylint: disable=broad-except
+								logger.debug("Failed to get info about installed crypto modules: %s", cryptoCheckError)
 
 						for _unused in range(3):  # Sleeping before the next retry
 							time.sleep(1)
-			except Exception as error:
-				logger.logException(error)
+			except Exception as err:# pylint: disable=broad-except
+				logger.error(err, exc_info=True)
 			finally:
 				self.running = False
 
-	def stopConnectionCallback(self, choiceSubject):
-		logger.notice(u"Connection cancelled by user")
+	def stopConnectionCallback(self, choiceSubject): # pylint: disable=unused-argument
+		logger.notice("Connection cancelled by user")
 		self.stop()
 
 	def stop(self):
-		logger.debug(u"Stopping thread")
+		logger.debug("Stopping thread")
 		self.cancelled = True
 		self.running = False
-		for i in range(10):
+		for _unused in range(10):
 			if not self.is_alive():
 				break
 			self.terminate()

@@ -20,9 +20,6 @@
 Handling of WMI queries with events
 
 :copyright: uib GmbH <info@uib.de>
-:author: Jan Schneider <j.schneider@uib.de>
-:author: Erol Ueluekmen <e.ueluekmen@uib.de>
-:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
@@ -32,7 +29,6 @@ import threading
 import time
 
 from OPSI.Logger import Logger
-from OPSI.Types import forceUnicode
 
 from opsiclientd.Events.Basic import EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
@@ -49,15 +45,15 @@ class WMIEventConfig(EventConfig):
 
 
 class WMIEventGenerator(EventGenerator):
-	def __init__(self, eventConfig):
-		EventGenerator.__init__(self, eventConfig)
+	def __init__(self, opsiclientd, eventConfig):
+		EventGenerator.__init__(self, opsiclientd, eventConfig)
 		self._wql = self._generatorConfig.wql
 		self._watcher = None
 
 	def initialize(self):
 		if self._opsiclientd.is_stopping():
 			return
-		
+
 		if not self._wql:
 			return
 
@@ -68,9 +64,9 @@ class WMIEventGenerator(EventGenerator):
 		for attempt in range(1, 100):
 			try:
 				logger.debug("Creating wmi object")
-				c = wmi.WMI(privileges=["Security"])
+				con = wmi.WMI(privileges=["Security"])
 				logger.info("Watching for wql: %s", self._wql)
-				self._watcher = c.watch_for(raw_wql=self._wql, wmi_class='')
+				self._watcher = con.watch_for(raw_wql=self._wql, wmi_class='')
 				break
 			except Exception as err: # pylint: disable=broad-except
 				if self._stopped:
@@ -87,7 +83,7 @@ class WMIEventGenerator(EventGenerator):
 	def getNextEvent(self):
 		if self._opsiclientd.is_stopping():
 			return None
-		
+
 		if not self._watcher:
 			logger.info("Nothing to watch for")
 			self._event = threading.Event()
@@ -95,8 +91,8 @@ class WMIEventGenerator(EventGenerator):
 			return None
 
 		wqlResult = None
-		from opsiclientd.windows.opsiclientd import importWmiAndPythoncom
-		(wmi, pythoncom) = importWmiAndPythoncom()
+		from opsiclientd.windows.opsiclientd import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
+		(wmi, _pythoncom) = importWmiAndPythoncom()
 		while not self._stopped:
 			try:
 				wqlResult = self._watcher(timeout_ms=500)
@@ -106,30 +102,30 @@ class WMIEventGenerator(EventGenerator):
 
 		if wqlResult:
 			eventInfo = {}
-			for p in wqlResult.properties:
-				value = getattr(wqlResult, p)
+			for prop in wqlResult.properties:
+				value = getattr(wqlResult, prop)
 				if isinstance(value, tuple):
-					eventInfo[p] = []
-					for v in value:
-						eventInfo[p].append(v)
+					eventInfo[prop] = []
+					for val in value:
+						eventInfo[prop].append(val)
 				else:
-					eventInfo[p] = value
+					eventInfo[prop] = value
 
 			return self.createEvent(eventInfo)
 
 	def cleanup(self):
 		if self._opsiclientd.is_stopping():
 			return
-		
+
 		if self._lastEventOccurence and (time.time() - self._lastEventOccurence < 10):
 			# Waiting some seconds before exit to avoid Win32 releasing exceptions
 			waitTime = int(10 - (time.time() - self._lastEventOccurence))
-			logger.info(u"Event generator '%s' cleaning up in %d seconds" % (self, waitTime))
+			logger.info("Event generator '%s' cleaning up in %d seconds", self, waitTime)
 			time.sleep(waitTime)
 
 		try:
-			from opsiclientd.windows.opsiclientd import importWmiAndPythoncom
-			(wmi, pythoncom) = importWmiAndPythoncom()
+			from opsiclientd.windows.opsiclientd import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
+			(_wmi, pythoncom) = importWmiAndPythoncom()
 			pythoncom.CoUninitialize()
 		except ImportError:
 			# Probably not running on Windows.

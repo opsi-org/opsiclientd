@@ -46,9 +46,9 @@ class SensLogonEventGenerator(EventGenerator):
 
 		logger.notice(u'Registring ISensLogon')
 
-		from opsiclientd.windows.opsiclientd import importWmiAndPythoncom, SensLogon
+		from opsiclientd.windows.opsiclientd import importWmiAndPythoncom, SensLogon # pylint: disable=import-outside-toplevel
 
-		(wmi, pythoncom) = importWmiAndPythoncom(
+		(_wmi, pythoncom) = importWmiAndPythoncom(
 			importWmi=False,
 			importPythoncom=True
 		)
@@ -58,31 +58,31 @@ class SensLogonEventGenerator(EventGenerator):
 		sl.subscribe()
 
 	def getNextEvent(self):
-		from opsiclientd.windows.opsiclientd import importWmiAndPythoncom
-		(wmi, pythoncom) = importWmiAndPythoncom(
+		from opsiclientd.windows.opsiclientd import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
+		(_wmi, pythoncom) = importWmiAndPythoncom(
 			importWmi=False,
 			importPythoncom=True
 		)
 		pythoncom.PumpMessages()
-		logger.info(u"Event generator '%s' now deactivated after %d event occurrences" % (self, self._eventsOccured))
+		logger.info("Event generator '%s' now deactivated after %d event occurrences", self, self._eventsOccured)
 		self.cleanup()
 
 	def callback(self, eventType, *args):
-		logger.debug(u"SensLogonEventGenerator event callback: eventType '%s', args: %s" % (eventType, args))
+		logger.debug("SensLogonEventGenerator event callback: eventType '%s', args: %s", eventType, args)
 
 	def stop(self):
 		EventGenerator.stop(self)
-	
+
 	def cleanup(self):
 		if self._lastEventOccurence and (time.time() - self._lastEventOccurence < 10):
 			# Waiting some seconds before exit to avoid Win32 releasing
 			# exceptions
 			waitTime = int(10 - (time.time() - self._lastEventOccurence))
-			logger.info(u"Event generator '%s' cleaning up in %d seconds" % (self, waitTime))
+			logger.info("Event generator '%s' cleaning up in %d seconds", self, waitTime)
 			time.sleep(waitTime)
 
-		from opsiclientd.windows.opsiclientd import importWmiAndPythoncom
-		(wmi, pythoncom) = importWmiAndPythoncom(
+		from opsiclientd.windows.opsiclientd import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
+		(_wmi, pythoncom) = importWmiAndPythoncom(
 			importWmi=False,
 			importPythoncom=True
 		)

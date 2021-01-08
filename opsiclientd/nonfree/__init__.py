@@ -12,8 +12,6 @@
 Non-free parts of opsiclientd.
 
 :copyright: uib GmbH <info@uib.de>
-:author: Jan Schneider <j.schneider@uib.de>
-:author: Erol Ueluekmen <e.ueluekmen@uib.de>
 """
 
 __fullversion__ = True

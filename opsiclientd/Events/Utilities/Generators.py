@@ -50,7 +50,7 @@ config = Config()
 
 
 def createEventGenerators(opsiclientd):
-	global _EVENT_GENERATORS
+	global _EVENT_GENERATORS # pylint: disable=global-statement
 	panicEventConfig = PanicEventConfig(
 		EVENT_CONFIG_TYPE_PANIC,
 		actionProcessorCommand=config.get('action_processor', 'command', raw=True)
@@ -63,7 +63,7 @@ def createEventGenerators(opsiclientd):
 			continue
 
 		mainEventConfigId = eventConfigId.split('{')[0]
-		if (mainEventConfigId == eventConfigId):
+		if mainEventConfigId == eventConfigId:
 			try:
 				eventType = eventConfig['type']
 				del eventConfig['type']
@@ -77,7 +77,7 @@ def createEventGenerators(opsiclientd):
 		if eventConfig['type'] in config.disabledEventTypes:
 			logger.notice("Event %s of type %s is disabled", eventConfigId, eventConfig['type'])
 			continue
-		
+
 		mainEventConfigId = eventConfigId.split('{')[0]
 		eventType = eventConfig['type']
 		del eventConfig['type']

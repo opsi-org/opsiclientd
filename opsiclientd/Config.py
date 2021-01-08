@@ -206,7 +206,7 @@ class Config(metaclass=Singleton):
 				'create_environment': False,
 			}
 		}
-		
+
 		self._applySystemSpecificConfiguration()
 
 	@staticmethod
@@ -217,32 +217,32 @@ class Config(metaclass=Singleton):
 			if not os.path.exists(baseDir):
 				try:
 					baseDir = os.path.abspath(os.path.dirname(sys.argv[0]))
-				except:
+				except Exception: # pylint: disable=broad-except
 					baseDir = "."
 		else:
 			baseDir = os.path.join('/usr', 'lib', 'opsi-client-agent')
 
 		return baseDir
-	
+
 	def check_restart_marker(self):
 		restart_marker = os.path.join(os.path.dirname(sys.argv[0]), ".opsiclientd_restart")
 		if os.path.exists(restart_marker):
 			logger.notice("Restart marker found")
 			try:
 				os.remove(restart_marker)
-			except Exception as e:
-				logger.error(e)
+			except Exception as err: # pylint: disable=broad-except
+				logger.error(err)
 			self.disabledEventTypes = ["gui startup"]
-	
+
 	def _applySystemSpecificConfiguration(self):
 		defaultToApply = self.WINDOWS_DEFAULT_PATHS.copy()
 		if RUNNING_ON_LINUX:
 			defaultToApply = self.LINUX_DEFAULT_PATHS.copy()
 		elif RUNNING_ON_DARWIN:
 			defaultToApply = self.MACOS_DEFAULT_PATHS.copy()
-		
+
 		baseDir = self._config["global"]["base_dir"]
-		
+
 		for key in self._config:
 			if key in defaultToApply:
 				self._config[key].update(defaultToApply[key])
@@ -251,10 +251,7 @@ class Config(metaclass=Singleton):
 
 		if RUNNING_ON_WINDOWS:
 			systemDrive = System.getSystemDrive()
-			logger.debug(
-				'Running on windows: adapting paths to use system drive '
-				'({0}).'.format(systemDrive)
-			)
+			logger.debug("Running on windows: adapting paths to use system drive (%s)", systemDrive)
 			systemDrive += "\\"
 			self._config['cache_service']['storage_dir'] = os.path.join(systemDrive, 'opsi.org', 'cache')
 			self._config['global']['config_file'] = os.path.join(baseDir, 'opsiclientd', 'opsiclientd.conf')
@@ -263,8 +260,8 @@ class Config(metaclass=Singleton):
 			self._config['global']['server_cert_dir'] = os.path.join(systemDrive, 'opsi.org', 'opsiclientd', 'server-certs')
 			self._config['global']['timeline_db'] = os.path.join(systemDrive,  'opsi.org', 'opsiclientd', 'timeline.sqlite')
 			self._config['system']['program_files_dir'] = System.getProgramFilesDir()
-			
-			if sys.getwindowsversion()[0] == 5:
+
+			if sys.getwindowsversion()[0] == 5: # pylint: disable=no-member
 				self._config['action_processor']['run_as_user'] = 'pcpatch'
 		else:
 			sslCertDir = os.path.join('/etc', 'opsi-client-agent')
@@ -296,7 +293,7 @@ class Config(metaclass=Singleton):
 			raise SectionNotFoundException(u"No such config section: %s" % section)
 		if option not in self._config[section]:
 			raise NoConfigOptionFoundException(u"No such config option in section '%s': %s" % (section, option))
-		
+
 		value = self._config[section][option]
 		if not raw and isinstance(value, str) and (value.count('%') >= 2):
 			value = self.replace(value)
@@ -316,20 +313,19 @@ class Config(metaclass=Singleton):
 		if isinstance(value, str):
 			value = forceUnicode(value).strip()
 
-		if (option == 'warning_time'):
+		if option == 'warning_time':
 			option = 'action_warning_time'
-		elif (option == 'user_cancelable'):
+		elif option == 'user_cancelable':
 			option = 'action_user_cancelable'
 
-		logger.info(u"Setting config value %s.%s to '%s'", section, option, value)
-		#logger.debug(u"set(%s, %s, %s)", section, option, value)
+		logger.info("Setting config value %s.%s to '%s'", section, option, value)
 
 		if 	(option.find('command') == -1) and (option.find('productids') == -1) and \
 			(option.find('exclude_product_group_ids') == -1) and \
 			(option.find('include_product_group_ids') == -1) and \
 			(option.find('proxy_url') == -1) and \
 			(option.find('working_window') == -1) and (value == ''):
-			logger.warning(u"Refusing to set empty value for config value '%s' of section '%s'" % (option, section))
+			logger.warning("Refusing to set empty value for config value '%s' of section '%s'", option, section)
 			return
 
 		if (section == 'depot_server') and (option == 'drive'):
@@ -364,22 +360,22 @@ class Config(metaclass=Singleton):
 				value = [x.strip() for x in value.split(",")]
 			else:
 				value = forceList(value)
-		
+
 		if RUNNING_ON_WINDOWS and (option.endswith("_dir") or option.endswith("_file")):
 			if ":" in value and ":\\" not in value:
 				logger.warning("Correcting path '%s' to '%s'", value, value.replace(":", ":\\"))
 				value = value.replace(":", ":\\")
-		
+
 		if option.endswith("_dir") or option.endswith("_file"):
 			arch = '64' if '64' in platform.architecture()[0] else '32'
 			value = value.replace('%arch%', arch)
-		
+
 		if section not in self._config:
 			self._config[section] = {}
 
 		self._config[section][option] = value
 
-		if (section == 'config_service') and (option == 'url'):
+		if section == 'config_service' and option == 'url':
 			urls = self._config[section][option]
 			if not isinstance(urls, list):
 				urls = forceUnicode(self._config[section][option]).split(u',')
@@ -387,17 +383,15 @@ class Config(metaclass=Singleton):
 			for url in forceUnicodeList(urls):
 				url = url.strip()
 				if not re.search('https?://[^/]+', url):
-					logger.error("Bad config service url '%s'" % url)
+					logger.error("Bad config service url '%s'", url)
 				self._config[section][option].append(url)
-		elif (section == 'config_service') and option in ('connection_timeout', 'user_cancelable_after'):
+		elif section == 'config_service' and option in ('connection_timeout', 'user_cancelable_after'):
 			self._config[section][option] = int(self._config[section][option])
-			if (self._config[section][option] < 0):
+			if self._config[section][option] < 0:
 				self._config[section][option] = 0
-		elif (section == 'global') and (option == 'log_level'):
+		elif section == 'global' and option == 'log_level':
 			logging_config(file_level=self._config[section][option])
-		#elif (section == 'global') and (option == 'log_file'):
-		#	logger.setLogFile(self._config[section][option])
-		elif (section == 'global') and (option == 'server_cert_dir'):
+		elif section == 'global' and option == 'server_cert_dir':
 			value = forceFilename(value)
 			if not os.path.exists(value):
 				os.makedirs(value)
@@ -408,49 +402,49 @@ class Config(metaclass=Singleton):
 				continue
 			for (key, value) in values.items():
 				value = forceUnicode(value)
-				if (string.find(u'"%' + forceUnicode(section) + u'.' + forceUnicode(key) + u'%"') != -1) and escaped:
-					if (os.name == 'posix'):
+				if string.find('"%' + forceUnicode(section) + '.' + forceUnicode(key) + '%"') != -1 and escaped:
+					if os.name == 'posix':
 						value = value.replace('"', '\\"')
 					elif RUNNING_ON_WINDOWS:
 						value = value.replace('"', '^"')
-				newString = string.replace(u'%' + forceUnicode(section) + u'.' + forceUnicode(key) + u'%', value)
+				newString = string.replace('%' + forceUnicode(section) + '.' + forceUnicode(key) + '%', value)
 
-				if (newString != string):
+				if newString != string:
 					string = self.replace(newString, escaped)
 		return forceUnicode(string)
 
 	def readConfigFile(self):
 		''' Get settings from config file '''
-		logger.notice(u"Trying to read config from file: '%s'" % self.get('global', 'config_file'))
+		logger.notice("Trying to read config from file: '%s'", self.get('global', 'config_file'))
 
 		try:
 			# Read Config-File
 			config = IniFile(filename=self.get('global', 'config_file'), raw=True).parse()
-			
+
 			# Read log settings early
 			if config.has_section('global') and config.has_option('global', 'log_level'):
 				self.set('global', 'log_level', config.get('global', 'log_level'))
-			
+
 			for section in config.sections():
-				logger.debug(u"Processing section '%s' in config file: '%s'" % (section, self.get('global', 'config_file')))
+				logger.debug("Processing section '%s' in config file: '%s'", section, self.get('global', 'config_file'))
 
 				for (option, value) in config.items(section):
 					option = option.lower()
 					self.set(section.lower(), option, value)
-		except Exception as e:
+		except Exception as err: # pylint: disable=broad-except
 			# An error occured while trying to read the config file
-			logger.error(u"Failed to read config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
-			logger.logException(e)
+			logger.error("Failed to read config file '%s': %s", self.get('global', 'config_file'), err)
+			logger.error(err, exc_info=True)
 			return
-		
+
 		if not self.get("depot_server", "master_depot_id"):
 			self.set("depot_server", "master_depot_id", self.get("depot_server", "depot_id"))
-		
-		logger.notice(u"Config read")
-		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self._config))
+
+		logger.notice("Config read")
+		logger.debug("Config is now:\n %s", objectToBeautifiedText(self._config))
 
 	def updateConfigFile(self):
-		logger.info(u"Updating config file: '%s'" % self.get('global', 'config_file'))
+		logger.info("Updating config file: '%s'", self.get('global', 'config_file'))
 
 		try:
 			configFile = IniFile(filename=self.get('global', 'config_file'), raw=True)
@@ -460,13 +454,13 @@ class Config(metaclass=Singleton):
 			for (section, values) in self._config.items():
 				if not isinstance(values, dict):
 					continue
-				if section in ('system'):
+				if section == 'system':
 					continue
 				if not config.has_section(section):
 					logger.debug("Config changed - new section: %s", section)
 					config.add_section(section)
 					changed = True
-				
+
 				for (option, value) in values.items():
 					if (section == 'global') and (option == 'config_file'):
 						# Do not store these option
@@ -490,7 +484,7 @@ class Config(metaclass=Singleton):
 						)
 						config.set(section, option, value)
 						changed = True
-				
+
 				for option in config.options(section):
 					if option not in values:
 						logger.info("Removing obsolete config option: %s.%s", section, option)
@@ -500,13 +494,13 @@ class Config(metaclass=Singleton):
 			if changed:
 				# Write back config file if changed
 				configFile.generate(config, comments=comments)
-				logger.notice(u"Config file '%s' written" % self.get('global', 'config_file'))
+				logger.notice("Config file '%s' written", self.get('global', 'config_file'))
 			else:
-				logger.info(u"No need to write config file '%s', config file is up to date" % self.get('global', 'config_file'))
-		except Exception as e:
+				logger.info("No need to write config file '%s', config file is up to date", self.get('global', 'config_file'))
+		except Exception as err: # pylint: disable=broad-except
 			# An error occured while trying to write the config file
-			logger.error(e, exc_info=True)
-			logger.error(u"Failed to write config file '%s': %s" % (self.get('global', 'config_file'), forceUnicode(e)))
+			logger.error(err, exc_info=True)
+			logger.error("Failed to write config file '%s': %s", self.get('global', 'config_file'), err)
 
 	def setTemporaryDepotDrive(self, temporaryDepotDrive):
 		self._temporaryDepotDrive = temporaryDepotDrive
@@ -515,7 +509,7 @@ class Config(metaclass=Singleton):
 		if self._temporaryDepotDrive:
 			return self._temporaryDepotDrive
 		return self.get('depot_server', 'drive')
-	
+
 	def setTemporaryConfigServiceUrls(self, temporaryConfigServiceUrls):
 		self._temporaryConfigServiceUrls = forceList(temporaryConfigServiceUrls)
 
@@ -525,11 +519,11 @@ class Config(metaclass=Singleton):
 
 		return self.get('config_service', 'url')
 
-	def selectDepotserver(self, configService, event, productIds=[], cifsOnly=False, masterOnly=False):
+	def selectDepotserver(self, configService, event, productIds=[], cifsOnly=False, masterOnly=False): # pylint: disable=dangerous-default-value
 		productIds = forceProductIdList(productIds)
 
-		logger.notice(u"Selecting depot for products %s" % productIds)
-		logger.notice(u"MasterOnly --> '%s'" % masterOnly)
+		logger.notice("Selecting depot for products %s", productIds)
+		logger.notice("MasterOnly --> '%s'", masterOnly)
 
 		if event and event.eventConfig.useCachedProducts:
 			cacheDepotDir = os.path.join(self.get('cache_service', 'storage_dir'), 'depot').replace('\\', '/').replace('//', '/')
@@ -550,7 +544,10 @@ class Config(metaclass=Singleton):
 		dynamicDepot = False
 		depotProtocol = 'cifs'
 		configStates = configService.configState_getObjects(
-			configId=['clientconfig.depot.dynamic', 'clientconfig.depot.protocol', 'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'],
+			configId=[
+				'clientconfig.depot.dynamic', 'clientconfig.depot.protocol',
+				'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'
+			],
 			objectId=self.get('global', 'host_id')
 		)
 		for configState in configStates:
@@ -562,20 +559,25 @@ class Config(metaclass=Singleton):
 					depotUrl = forceUrl(configState.values[0])
 					self.set('depot_server', 'depot_id', u'')
 					self.set('depot_server', 'url', depotUrl)
-					logger.notice(u"Depot url was set to '%s' from configState %s" % (depotUrl, configState))
+					logger.notice("Depot url was set to '%s' from configState %s", depotUrl, configState)
 					return
-				except Exception as error:
-					logger.error(u"Failed to set depot url from values %s in configState %s: %s" % (configState.values, configState, error))
+				except Exception as err: # pylint: disable=broad-except
+					logger.error("Failed to set depot url from values %s in configState %s: %s", configState.values, configState, err)
 			elif configState.configId == 'opsiclientd.depot_server.depot_id' and configState.values:
 				try:
 					depotId = forceHostId(configState.values[0])
 					depotIds.append(depotId)
-					logger.notice(u"Depot was set to '%s' from configState %s" % (depotId, configState))
-				except Exception as error:
-					logger.error(u"Failed to set depot id from values %s in configState %s: %s" % (configState.values, configState, error))
+					logger.notice("Depot was set to '%s' from configState %s", depotId, configState)
+				except Exception as err: # pylint: disable=broad-except
+					logger.error("Failed to set depot id from values %s in configState %s: %s", configState.values, configState, err)
 			elif not masterOnly and (configState.configId == 'clientconfig.depot.dynamic') and configState.values:
 				dynamicDepot = forceBool(configState.values[0])
-			elif (configState.configId == 'clientconfig.depot.protocol') and configState.values and configState.values[0] and (configState.values[0] == 'webdav'):
+			elif (
+				configState.configId == 'clientconfig.depot.protocol' and
+				configState.values and
+				configState.values[0] and
+				configState.values[0] == 'webdav'
+			):
 				if cifsOnly:
 					logger.info("Not using webdav protocol, because cifs only is set")
 				else:
@@ -614,7 +616,7 @@ class Config(metaclass=Singleton):
 
 		if not masterDepot:
 			raise Exception(f"Failed to get info for master depot '{depotIds[0]}'")
-		
+
 		logger.info("Master depot for products %s is %s", productIds, masterDepot.id)
 		selectedDepot = masterDepot
 		if dynamicDepot:
@@ -622,7 +624,7 @@ class Config(metaclass=Singleton):
 				logger.info("Got alternative depots for products: %s", productIds)
 				for index, depot in enumerate(alternativeDepots, start=1):
 					logger.info("%d. alternative depot is %s", index, depot.id)
-				
+
 				try:
 					clientConfig = {
 						"clientId": self.get('global', 'host_id'),
@@ -632,21 +634,21 @@ class Config(metaclass=Singleton):
 						"defaultGateway": None
 					}
 					try:
-						gateways = netifaces.gateways()
-						clientConfig["defaultGateway"], iface_name = gateways['default'][netifaces.AF_INET]
-						addr = netifaces.ifaddresses(iface_name)[netifaces.AF_INET][0]
+						gateways = netifaces.gateways() # pylint: disable=c-extension-no-member
+						clientConfig["defaultGateway"], iface_name = gateways['default'][netifaces.AF_INET] # pylint: disable=c-extension-no-member
+						addr = netifaces.ifaddresses(iface_name)[netifaces.AF_INET][0] # pylint: disable=c-extension-no-member
 						clientConfig["netmask"] = addr["netmask"]
 						clientConfig["ipAddress"] = addr["addr"]
 					except Exception as gwe:
-						raise RuntimeError(f"Failed to get network interface with default gateway: {gwe}")
-					
+						raise RuntimeError(f"Failed to get network interface with default gateway: {gwe}") from gwe
+
 					logger.info("Passing client configuration to depot selection algorithm: %s", clientConfig)
 
 					depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()
 					logger.trace("depotSelectionAlgorithm:\n%s", depotSelectionAlgorithm)
-					
+
 					currentLocals = locals()
-					exec(depotSelectionAlgorithm, None, currentLocals)
+					exec(depotSelectionAlgorithm, None, currentLocals) # pylint: disable=exec-used
 					selectDepot = currentLocals['selectDepot']
 
 					selectedDepot = selectDepot(
@@ -656,15 +658,14 @@ class Config(metaclass=Singleton):
 					)
 					if not selectedDepot:
 						selectedDepot = masterDepot
-				except Exception as error:
-					logger.logException(error)
-					logger.error("Failed to select depot: %s", error, exc_info=True)
+				except Exception as err: # pylint: disable=broad-except
+					logger.error("Failed to select depot: %s", err, exc_info=True)
 			else:
 				logger.info("No alternative depot for products: %s", productIds)
 
 		logger.notice("Selected depot is '%s', protocol '%s'", selectedDepot, depotProtocol)
 		self.set('depot_server', 'depot_id', selectedDepot.id)
-		if (depotProtocol == 'webdav'):
+		if depotProtocol == 'webdav':
 			self.set('depot_server', 'url', selectedDepot.depotWebdavUrl)
 		else:
 			self.set('depot_server', 'url', selectedDepot.depotRemoteUrl)
@@ -672,7 +673,7 @@ class Config(metaclass=Singleton):
 	def getDepotserverCredentials(self, configService):
 		if self.get('depot_server', 'url').startswith("webdav"):
 			return (self.get('global', 'host_id'), self.get('global', 'opsi_host_key'))
-		
+
 		if not configService:
 			raise Exception("Not connected to config service")
 
@@ -683,7 +684,7 @@ class Config(metaclass=Singleton):
 		)['password']
 		depotServerPassword = blowfishDecrypt(self.get('global', 'opsi_host_key'), encryptedDepotServerPassword)
 		logger.addConfidentialString(depotServerPassword)
-		logger.debug(u"Using username '%s' for depot connection" % depotServerUsername)
+		logger.debug("Using username '%s' for depot connection", depotServerUsername)
 		return (depotServerUsername, depotServerPassword)
 
 	def getFromService(self, configService):
@@ -706,33 +707,33 @@ class Config(metaclass=Singleton):
 
 		configService.backend_setOptions({"addConfigStateDefaults": True})
 		for configState in configService.configState_getObjects(**query):
-			logger.info(u"Got config state from service: %r" % configState)
+			logger.info("Got config state from service: %r", configState)
 
 			if not configState.values:
-				logger.debug(u"No values - skipping {0!r}".format(configState.configId))
+				logger.debug("No values - skipping %s", configState.configId)
 				continue
 
-			if configState.configId == u'clientconfig.configserver.url':
+			if configState.configId == 'clientconfig.configserver.url':
 				self.set('config_service', 'url', configState.values)
-			elif configState.configId == u'clientconfig.depot.drive':
+			elif configState.configId == 'clientconfig.depot.drive':
 				self.set('depot_server', 'drive', configState.values[0])
-			elif configState.configId == u'clientconfig.depot.id':
+			elif configState.configId == 'clientconfig.depot.id':
 				self.set('depot_server', 'depot_id', configState.values[0])
-			elif configState.configId == u'clientconfig.depot.user':
+			elif configState.configId == 'clientconfig.depot.user':
 				self.set('depot_server', 'username', configState.values[0])
-			elif configState.configId == u'clientconfig.suspend_bitlocker_on_reboot':
+			elif configState.configId == 'clientconfig.suspend_bitlocker_on_reboot':
 				self.set('global', 'suspend_bitlocker_on_reboot', configState.values[0])
 
-			elif configState.configId.startswith(u'opsiclientd.'):
+			elif configState.configId.startswith('opsiclientd.'):
 				try:
 					parts = configState.configId.lower().split('.')
 					if len(parts) < 3:
-						logger.debug(u"Expected at least 3 parts in {0!r} - skipping.".format(configState.configId))
+						logger.debug("Expected at least 3 parts in %s - skipping.", configState.configId)
 						continue
 
 					self.set(section=parts[1], option=parts[2], value=configState.values[0])
-				except Exception as e:
-					logger.error(u"Failed to process configState '%s': %s" % (configState.configId, forceUnicode(e)))
+				except Exception as err: # pylint: disable=broad-except
+					logger.error("Failed to process configState '%s': %s", configState.configId, err)
 
-		logger.notice(u"Got config from service")
-		logger.debug(u"Config is now:\n %s" % objectToBeautifiedText(self.getDict()))
+		logger.notice("Got config from service")
+		logger.debug("Config is now:\n %s", objectToBeautifiedText(self.getDict()))

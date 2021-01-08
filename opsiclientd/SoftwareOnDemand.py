@@ -22,8 +22,6 @@ Self-service functionality.
 .. versionadded:: 4.0.4
 
 :copyright: uib GmbH <info@uib.de>
-:author: Erol Ueluekmen <e.ueluekmen@uib.de>
-:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
@@ -31,33 +29,31 @@ import os
 from twisted.internet import defer
 
 from OPSI.Exceptions import OpsiAuthenticationError
-import opsicommon.logging
-from opsicommon.logging import logger
-from OPSI.Types import forceUnicode
 from OPSI.Service.Worker import WorkerOpsiJsonRpc
 from OPSI.Service.Resource import ResourceOpsi
+
+from opsicommon.logging import logger, log_context
 
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.Config import Config
 from opsiclientd.Events.SwOnDemand import SwOnDemandEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
-config = Config()
+config = Config() # pylint: disable=invalid-name
 
 class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 	def __init__(self, service, request, resource):
-		with opsicommon.logging.log_context({'instance' : 'software on demand'}):
+		with log_context({'instance' : 'software on demand'}):
 			self._allowedMethods = self._getAllowedMethods()
 			self._fireEvent = False
 			WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 			ServiceConnection.__init__(self)
 			self._auth_module = None
 			if os.name == 'posix':
-				import OPSI.Backend.Manager.Authentication.PAM
+				import OPSI.Backend.Manager.Authentication.PAM # pylint: disable=import-outside-toplevel
 				self._auth_module = OPSI.Backend.Manager.Authentication.PAM.PAMAuthentication()
 			elif os.name == 'nt':
-				import OPSI.Backend.Manager.Authentication.NT
+				import OPSI.Backend.Manager.Authentication.NT # pylint: disable=import-outside-toplevel
 				self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
 
 	def _getAllowedMethods(self):
@@ -96,26 +92,34 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		try:
 			self.session.user, self.session.password = self._getCredentials()
 
-			logger.notice(u"Authorization request from %s@%s (application: %s)" % (self.session.user, self.session.ip, self.session.userAgent))
+			logger.notice(
+				"Authorization request from %s@%s (application: %s)",
+				self.session.user, self.session.ip, self.session.userAgent
+			)
 
 			if not self.session.password:
-				raise Exception(u"No password from %s (application: %s)" % (self.session.ip, self.session.userAgent))
+				raise Exception(f"No password from {self.session.ip} (application: {self.session.userAgent})")
 
-			if (self.session.user.lower() == config.get('global', 'host_id').lower()) and (self.session.password == config.get('global', 'opsi_host_key')):
+			if (
+				self.session.user.lower() == config.get('global', 'host_id').lower() and
+				self.session.password == config.get('global', 'opsi_host_key')
+			):
 				return result
 
 			if self._auth_module:
 				self._auth_module.authenticate(self.session.user, self.session.password)
-				logger.info("Authentication successful for user '%s', groups '%s' (admin group: %s)" % \
-					(self.session.user, ','.join(self._auth_module.get_groupnames(self.session.user)), self._auth_module.get_admin_groupname())
+				logger.info("Authentication successful for user '%s', groups '%s' (admin group: %s)",
+					self.session.user,
+					','.join(self._auth_module.get_groupnames(self.session.user)),
+					self._auth_module.get_admin_groupname()
 				)
 				if not self._auth_module.user_is_admin(self.session.user):
 					raise Exception("Not an admin user")
 				return result
-			
-			raise Exception(u"Invalid credentials")
-		except Exception as e:
-			raise OpsiAuthenticationError(u"Forbidden: %s" % forceUnicode(e))
+
+			raise Exception("Invalid credentials")
+		except Exception as err: # pylint: disable=broad-except
+			raise OpsiAuthenticationError(f"Forbidden: {err}") from err
 
 		return result
 

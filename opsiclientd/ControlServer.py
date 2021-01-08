@@ -27,6 +27,9 @@ procedure calls
 :author: Erol Ueluekmen <e.ueluekmen@uib.de>
 :license: GNU Affero General Public License version 3
 """
+
+# pylint: disable=too-many-lines
+
 import codecs
 import os
 import re
@@ -39,27 +42,27 @@ import urllib
 import email
 import tempfile
 import platform
-import subprocess
-import msgpack
 import datetime
 import logging
+import msgpack
 
 from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
 from twisted.web.static import File
-from twisted.web import resource, server, http, http_headers
+from twisted.web.resource import Resource
+from twisted.web import server
 from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
 from autobahn.twisted.resource import WebSocketResource
 
 from OPSI import System
 from OPSI.Util.Log import truncateLogData
-from OPSI.Backend.Backend import ConfigDataBackend
 from OPSI.Exceptions import OpsiAuthenticationError
-from opsicommon.logging import logger, log_context, secret_filter
 from OPSI.Service import SSLContext, OpsiService
 from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface
 from OPSI.Service.Resource import ResourceOpsi, ResourceOpsiJsonRpc, ResourceOpsiJsonInterface
 from OPSI.Types import forceBool, forceInt, forceUnicode
+
+from opsicommon.logging import logger, log_context, secret_filter
 
 from opsiclientd.ControlPipe import OpsiclientdRpcPipeInterface
 from opsiclientd.Config import Config
@@ -73,7 +76,7 @@ from opsiclientd.Timeline import Timeline
 config = Config()
 state = State()
 
-infoPage = '''<!DOCTYPE html>
+INFO_PAGE = '''<!DOCTYPE html>
 <html>
 <head>
 	<meta http-equiv="Content-Type" content="text/xhtml; charset=utf-8" />
@@ -101,7 +104,7 @@ infoPage = '''<!DOCTYPE html>
 </html>
 '''
 
-logViewerPage = '''<!DOCTYPE html>
+LOG_VIEWER_PAGE = '''<!DOCTYPE html>
 <html>
 <head>
 	<title>opsiclientd - log viewer</title>
@@ -122,7 +125,7 @@ logViewerPage = '''<!DOCTYPE html>
 	<div id="log-settings">
 		<label for="log-level-filter">Filter by level:</label>
 		<input id="log-level-filter" type="number" min="1" max="9" value="9" onchange="applyLevelFilter(this.value);">
-		
+
 		<label for="log-context-filter">Filter by context:</label>
 		<input id="log-context-filter" type="text" onchange="applyContextFilter(this.value);"/>
 
@@ -131,7 +134,7 @@ logViewerPage = '''<!DOCTYPE html>
 
 		<label for="collapse-all">Collapse multi-line:</label>
 		<input type="checkbox" id="collapse-all" onclick="collapseAll(this.checked);" checked>
-		
+
 		<label>Font size:</label>
 		<button id="decrease-font-size" onclick="change_font_size(-1);">-</button>
 		<button id="increase-font-size" onclick="change_font_size(+1);">+</button>
@@ -145,7 +148,7 @@ try:
 	fsencoding = sys.getfilesystemencoding()
 	if not fsencoding:
 		raise ValueError("getfilesystemencoding returned {!r}".format(fsencoding))
-except Exception as err:
+except Exception as err: # pylint: disable=broad-except
 	logger.info("Problem getting filesystemencoding: %s", err)
 	defaultEncoding = sys.getdefaultencoding()
 	logger.notice("Patching filesystemencoding to be '%s'", defaultEncoding)
@@ -157,16 +160,16 @@ class WorkerOpsiclientd(WorkerOpsi):
 		WorkerOpsi.__init__(self, service, request, resource)
 		self._auth_module = None
 		if os.name == 'posix':
-			import OPSI.Backend.Manager.Authentication.PAM
+			import OPSI.Backend.Manager.Authentication.PAM # pylint: disable=import-outside-toplevel
 			self._auth_module = OPSI.Backend.Manager.Authentication.PAM.PAMAuthentication()
 		elif os.name == 'nt':
-			import OPSI.Backend.Manager.Authentication.NT
+			import OPSI.Backend.Manager.Authentication.NT # pylint: disable=import-outside-toplevel
 			self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
 
 	def run(self):
 		with log_context({'instance' : 'control server'}):
-			super().run()
-	
+			super().run() # pylint: disable=no-member
+
 	def _getCredentials(self):
 		(user, password) = self._getAuthorization()
 
@@ -176,7 +179,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 		return (user, password)
 
 	def _errback(self, failure):
-		result = WorkerOpsi._errback(self, failure)
+		result = WorkerOpsi._errback(self, failure) # pylint: disable=assignment-from-none
 		logger.debug(u"DEBUG: detected host: '%s'", self.request.getClientIP())
 		logger.debug(u"DEBUG: responsecode: '%s'", self.request.code)
 		logger.debug(u"DEBUG: maxAuthenticationFailures config: '%s'", config.get('control_server', 'max_authentication_failures'))
@@ -215,19 +218,21 @@ class WorkerOpsiclientd(WorkerOpsi):
 			if self.session.user.lower() == config.get('global', 'host_id').lower():
 				# Auth by opsi host key
 				if self.session.password != config.get('global', 'opsi_host_key'):
-					raise Exception("Wrong opsi host key")				
+					raise Exception("Wrong opsi host key")
 			elif self._auth_module:
 				self._auth_module.authenticate(self.session.user, self.session.password)
-				logger.info("Authentication successful for user '%s', groups '%s' (admin group: %s)" % \
-					(self.session.user, ','.join(self._auth_module.get_groupnames(self.session.user)), self._auth_module.get_admin_groupname())
+				logger.info("Authentication successful for user '%s', groups '%s' (admin group: %s)",
+					self.session.user,
+					','.join(self._auth_module.get_groupnames(self.session.user)),
+					self._auth_module.get_admin_groupname()
 				)
 				if not self._auth_module.user_is_admin(self.session.user):
 					raise Exception("Not an admin user")
 			else:
 				raise Exception("Invalid credentials")
-		except Exception as e:
-			raise OpsiAuthenticationError("Forbidden: %s" % forceUnicode(e))
-		
+		except Exception as err: # pylint: disable=broad-except
+			raise OpsiAuthenticationError(f"Forbidden: {err}") from err
+
 		# Auth ok
 		self.session.authenticated = True
 		try:
@@ -243,8 +248,8 @@ class WorkerOpsiclientdJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 
 	def _getCallInstance(self, result):
-		self._callInstance = self.service._opsiclientdRpcInterface
-		self._callInterface = self.service._opsiclientdRpcInterface.getInterface()
+		self._callInstance = self.service._opsiclientdRpcInterface # pylint: disable=protected-access
+		self._callInterface = self.service._opsiclientdRpcInterface.getInterface() # pylint: disable=protected-access
 
 	def _processQuery(self, result):
 		return WorkerOpsiJsonRpc._processQuery(self, result)
@@ -267,7 +272,7 @@ class WorkerOpsiclientdJsonInterface(WorkerOpsiclientdJsonRpc, WorkerOpsiJsonInt
 
 	def _generateResponse(self, result):
 		return WorkerOpsiJsonInterface._generateResponse(self, result)
-	
+
 	def _renderError(self, failure):
 		return WorkerOpsiJsonInterface._generateResponse(self, failure)
 
@@ -284,10 +289,10 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		except AttributeError:
 			pass
 
-		if not self.service._opsiclientd.getCacheService():
+		if not self.service._opsiclientd.getCacheService(): # pylint: disable=protected-access
 			raise Exception(u'Cache service not running')
 
-		self.session.callInstance = self.service._opsiclientd.getCacheService().getConfigBackend()
+		self.session.callInstance = self.service._opsiclientd.getCacheService().getConfigBackend() # pylint: disable=protected-access
 		logger.notice(u'Backend created: %s' % self.session.callInstance)
 		self.session.callInterface = self.session.callInstance.backend_getInterface()
 		return result
@@ -318,7 +323,7 @@ class WorkerCacheServiceJsonInterface(WorkerCacheServiceJsonRpc, WorkerOpsiJsonI
 
 	def _generateResponse(self, result):
 		return WorkerOpsiJsonInterface._generateResponse(self, result)
-	
+
 	def _renderError(self, failure):
 		return WorkerOpsiJsonInterface._generateResponse(self, failure)
 
@@ -336,7 +341,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 			query = self.request.uri.decode().split('?', 1)[1]
 			if query == "get_event_data":
 				get_event_data = True
-		
+
 		timeline = Timeline()
 		self.request.setResponseCode(200)
 		if get_event_data:
@@ -344,7 +349,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 			self.request.write(json.dumps(timeline.getEventData()).encode("utf-8"))
 		else:
 			logger.info("Creating opsiclientd info page")
-			html = infoPage % {
+			html = INFO_PAGE % {
 				"head": timeline.getHtmlHead(),
 				"hostname": config.get("global", "host_id"),
 			}
@@ -355,18 +360,17 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientd.__init__(self, service, request, resource)
-	
+
 	def self_update_from_upload(self):
 		logger.notice("Self-update from upload")
 		filename = None
 		file_data = self.request.content.read()
 		if self.request.getHeader("Content-Type") == "multipart/form-data":
 			headers = b""
-			for k, v in self.request.requestHeaders.getAllRawHeaders():
-				headers += k + b": " + v[0] + b"\r\n"
-			
+			for key, value in self.request.requestHeaders.getAllRawHeaders():
+				headers += key + b": " + value[0] + b"\r\n"
+
 			msg = email.message_from_bytes(headers + b"\r\n\r\n" + file_data)
-			fpart = None
 			if msg.is_multipart():
 				for part in msg.walk():
 					if part.get_filename():
@@ -375,29 +379,29 @@ class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 			filename = self.request.getHeader("Content-Disposition")
 			if filename:
 				filename = filename.split(';')[0].split('=', 1)[1]
-		
+
 		if filename:
 			filename = filename.split("/")[-1].split("\\")[-1]
-		
+
 		if not filename:
 			raise RuntimeError("Filename missing")
-		
+
 		with tempfile.TemporaryDirectory() as tmpdir:
 			tmpfile = os.path.join(tmpdir, filename)
-			with open(tmpfile, "wb") as f:
-				f.write(file_data)
-			self.service._opsiclientd.self_update_from_file(tmpfile)
-	
+			with open(tmpfile, "wb") as file:
+				file.write(file_data)
+			self.service._opsiclientd.self_update_from_file(tmpfile) # pylint: disable=protected-access
+
 	def _getQuery(self, result):
 		pass
-	
+
 	def _processQuery(self, result):
 		path = urllib.parse.unquote(self.request.path.decode("utf-8"))
 		if path.startswith("/upload/update/opsiclientd"):
 			try:
 				self.self_update_from_upload()
-			except Exception as e:
-				logger.error(e, exc_info=True)
+			except Exception as err: # pylint: disable=broad-except
+				logger.error(err, exc_info=True)
 				raise
 		else:
 			raise ValueError("Invalid path")
@@ -418,10 +422,10 @@ class WorkerOpsiclientdLogViewer(WorkerOpsiclientd):
 		logger.info("Creating log viewer page")
 		self.request.setResponseCode(200)
 		self.request.setHeader("content-type", "text/html; charset=utf-8")
-		self.request.write(logViewerPage.encode("utf-8").strip())
+		self.request.write(LOG_VIEWER_PAGE.encode("utf-8").strip())
 
 
-class ResourceRoot(resource.Resource):
+class ResourceRoot(Resource):
 	addSlash = True
 	#isLeaf = True
 
@@ -477,54 +481,52 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root = None
 		self._running = False
 		self._server = None
+		self._site = None
 		self._opsiclientdRpcInterface = OpsiclientdRpcInterface(self._opsiclientd)
 
-		logger.info(u"ControlServer initiated")
+		logger.info("ControlServer initiated")
 		self.authFailureCount = {}
 
 	def run(self):
 		with log_context({'instance' : 'control server'}):
 			self._running = True
 			try:
-				logger.info(u"creating root resource")
+				logger.info("creating root resource")
 				self.createRoot()
 				self._site = server.Site(self._root)
 
 				logger.debug('Creating SSLContext with the following values:')
-				logger.debug('\t-SSL Server Key File: {path}'.format(path=self._sslServerKeyFile))
+				logger.debug('\t-SSL Server Key File: %s', self._sslServerKeyFile)
 				if not os.path.exists(self._sslServerKeyFile):
-					logger.warning('The SSL server key file "{path}" is missing. '
-									'Please check your configuration.'.format(
-										path=self._sslServerKeyFile
-									)
+					logger.warning(
+						"The SSL server key file '%s' is missing, please check your configuration",
+						self._sslServerKeyFile
 					)
-				logger.debug('\t-SSL Server Cert File: {path}'.format(path=self._sslServerCertFile))
+				logger.debug("\t-SSL Server Cert File '%s'", self._sslServerCertFile)
 				if not os.path.exists(self._sslServerCertFile):
-					logger.warning('The SSL server certificate file "{path}" is '
-									'missing. Please check your '
-									'configuration.'.format(
-										path=self._sslServerCertFile
-									)
+					logger.warning(
+						"The SSL server certificate file '%s' is missing, please check your configuration",
+						self._sslServerCertFile
 					)
 
-				self._server = reactor.listenSSL(
+				self._server = reactor.listenSSL( # pylint: disable=no-member
 					self._httpsPort,
 					self._site,
 					SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
 				)
-				logger.notice(u"Control server is accepting HTTPS requests on port %d" % self._httpsPort)
+				logger.notice("Control server is accepting HTTPS requests on port %d", self._httpsPort)
 
-				if not reactor.running:
+				if not reactor.running: # pylint: disable=no-member
 					logger.debug("Reactor is not running. Starting.")
-					reactor.run(installSignalHandlers=0)
+					reactor.run(installSignalHandlers=0) # pylint: disable=no-member
 					logger.debug("Reactor run ended.")
 				else:
 					logger.debug("Reactor already running.")
-			
+
 			except CannotListenError as err:
 				logger.critical("Failed to listen on port %s: %s", self._httpsPort, err, exc_info=True)
 				self._opsiclientd.stop()
-			except Exception as err:
+			except Exception as err: # pylint: disable=broad-except
 				logger.error("ControlServer error: %s", err, exc_info=True)
 			finally:
 				logger.notice("Control server exiting")
@@ -535,8 +537,8 @@ class ControlServer(OpsiService, threading.Thread):
 			self._server.stopListening()
 		if self._sessionHandler:
 			self._sessionHandler.deleteAllSessions()
-		reactor.fireSystemEvent('shutdown')
-		reactor.disconnectAll()
+		reactor.fireSystemEvent('shutdown') # pylint: disable=no-member
+		reactor.disconnectAll() # pylint: disable=no-member
 		self._running = False
 
 	def createRoot(self):
@@ -548,7 +550,7 @@ class ControlServer(OpsiService, threading.Thread):
 
 		if not self._root:
 			self._root = ResourceRoot()
-		
+
 		self._root.putChild(b"opsiclientd", ResourceOpsiclientdJsonRpc(self))
 		self._root.putChild(b"interface", ResourceOpsiclientdJsonInterface(self))
 		self._root.putChild(b"rpc", ResourceCacheServiceJsonRpc(self))
@@ -558,12 +560,11 @@ class ControlServer(OpsiService, threading.Thread):
 		self._root.putChild(b"upload", ResourceOpsiclientdUpload(self))
 		if config.get('control_server', 'kiosk_api_active'):
 			self._root.putChild(b"kiosk", ResourceKioskJsonRpc(self))
-		
+
 		log_ws_factory = WebSocketServerFactory()
 		log_ws_factory.protocol = LogWebSocketServerProtocol
 		log_ws_factory.control_server = self
-		log_ws_resource = WebSocketResource(log_ws_factory)
-		ws = resource.Resource()
+		ws = Resource()
 		ws.putChild(b"log_viewer", WebSocketResource(log_ws_factory))
 		self._root.putChild(b"ws", ws)
 
@@ -583,7 +584,7 @@ class ControlServer(OpsiService, threading.Thread):
 class RequestAdapter():
 	def __init__(self, connection_request):
 		self.connection_request = connection_request
-	
+
 	def __getattr__(self, name):
 		return getattr(self.connection_request, name)
 
@@ -592,15 +593,15 @@ class RequestAdapter():
 
 	def getAllHeaders(self):
 		return self.connection_request.headers
-	
+
 	def getHeader(self, name):
 		return self.connection_request.headers.get(name)
 
 class LogReaderThread(threading.Thread):
-	record_start_regex = re.compile("^\[(\d)\]\s+\[([\d\-\:\. ]+)\]\s+\[([^\]]*)\]\s(.*)$")
+	record_start_regex = re.compile(r"^\[(\d)\]\s+\[([\d\-\:\. ]+)\]\s+\[([^\]]*)\]\s(.*)$")
 	max_delay = 0.2
 	max_record_buffer_size = 2500
-	
+
 	def __init__(self, filename, websocket_protocol, num_tail_records=-1):
 		super().__init__()
 		self.daemon = True
@@ -611,7 +612,7 @@ class LogReaderThread(threading.Thread):
 		self.record_buffer = []
 		self.send_time = 0
 		self._initial_read = False
-	
+
 	def send_buffer(self):
 		if not self.record_buffer:
 			return
@@ -621,7 +622,7 @@ class LogReaderThread(threading.Thread):
 		self.websocket_protocol.sendMessage(data, True)
 		self.send_time = time.time()
 		self.record_buffer = []
-	
+
 	def send_buffer_if_needed(self, max_delay=None):
 		if self._initial_read and self.num_tail_records > 0:
 			return
@@ -647,8 +648,8 @@ class LogReaderThread(threading.Thread):
 		for val in match.group(3).split(","):
 			context[cnum] = val.strip()
 		opsilevel = int(match.group(1))
-		lvl = logging._opsiLevelToLevel[opsilevel]
-		levelname = logging._levelToName[lvl]
+		lvl = logging._opsiLevelToLevel[opsilevel] # pylint: disable=no-member,protected-access
+		levelname = logging._levelToName[lvl] # pylint: disable=no-member,protected-access
 		created = datetime.datetime.strptime(match.group(2), "%Y-%m-%d %H:%M:%S.%f")
 		return {
 			"created": created.timestamp(),
@@ -658,26 +659,26 @@ class LogReaderThread(threading.Thread):
 			"msg": match.group(4),
 			"exc_text": None
 		}
-	
+
 	def add_log_line(self, line):
 		if not line:
 			return
 		record = self.parse_log_line(line)
 		if record:
 			self.record_buffer.append(record)
-	
+
 	def stop(self):
 		self.should_stop = True
-	
+
 	def run(self):
-		with codecs.open(self.filename, "r", encoding="utf-8", errors="replace") as f:
+		with codecs.open(self.filename, "r", encoding="utf-8", errors="replace") as file:
 			self._initial_read = True
 			# Start sending big bunches (high delay)
 			max_delay = 3
 			line_buffer = []
 			no_line_count = 0
 			while not self.should_stop:
-				line = f.readline()
+				line = file.readline()
 				if line:
 					no_line_count = 0
 					line_buffer.append(line)
@@ -707,9 +708,9 @@ class LogReaderThread(threading.Thread):
 
 class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
 	def onConnect(self, request):
-		self.service = self.factory.control_server
+		self.service = self.factory.control_server # pylint: disable=no-member
 		self.request = RequestAdapter(request)
-		self.log_reader_thread = None
+		self.log_reader_thread = None # pylint: disable=attribute-defined-outside-init
 
 		logger.info("Client connecting to log websocket: %s", self.request.peer)
 		self._getSession(None)
@@ -721,9 +722,9 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
 			self.sendClose(code=4401, reason="Unauthorized")
 		else:
 			num_tail_records = int(self.request.params.get("num_records", [-1])[0])
-			self.log_reader_thread = LogReaderThread(config.get("global", "log_file"), self, num_tail_records)
+			self.log_reader_thread = LogReaderThread(config.get("global", "log_file"), self, num_tail_records) # pylint: disable=attribute-defined-outside-init
 			self.log_reader_thread.start()
-	
+
 	def onMessage(self, payload, isBinary):
 		pass
 
@@ -760,7 +761,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				deleteDir = os.path.join(productCacheDir, product)
 				shutil.rmtree(deleteDir)
 
-		return u"product cache deleted."
+		return "product cache deleted."
 
 	def timeline_getEvents(self):
 		timeline = Timeline()
@@ -768,24 +769,24 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def setBlockLogin(self, blockLogin):
 		self.opsiclientd.setBlockLogin(forceBool(blockLogin))
-		logger.notice(u"rpc setBlockLogin: blockLogin set to '%s'", self.opsiclientd._blockLogin)
-		if self.opsiclientd._blockLogin:
-			return u"Login blocker is on"
+		logger.notice("rpc setBlockLogin: blockLogin set to '%s'", self.opsiclientd._blockLogin) # pylint: disable=protected-access
+		if self.opsiclientd._blockLogin: # pylint: disable=protected-access
+			return "Login blocker is on"
 		else:
-			return u"Login blocker is off"
+			return "Login blocker is off"
 
 	def readLog(self, logType='opsiclientd'):
 		logType = forceUnicode(logType)
 		if logType != 'opsiclientd':
-			raise ValueError(u"Unknown log type '%s'" % logType)
+			raise ValueError(f"Unknown log type '{logType}'")
 
-		logger.notice(u"rpc readLog: reading log of type '%s'", logType)
+		logger.notice("rpc readLog: reading log of type '%s'", logType)
 
 		if logType == 'opsiclientd':
 			with codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace') as log:
 				return log.read()
 
-		return u""
+		return ""
 
 	def log_read(self, logType='opsiclientd', extension='', maxSize=5000000):
 		"""
@@ -874,14 +875,14 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def logoffSession(self, session_id = None, username = None):
 		return System.logoffSession(session_id=session_id, username=username)
-	
+
 	def logoffCurrentUser(self):
 		logger.notice(u"rpc logoffCurrentUser: logging of current user now")
 		System.logoffCurrentUser()
-	
+
 	def lockSession(self, session_id = None, username = None):
 		return System.lockSession(session_id=session_id, username=username)
-	
+
 	def lockWorkstation(self):
 		logger.notice(u"rpc lockWorkstation: locking workstation now")
 		System.lockWorkstation()
@@ -895,14 +896,14 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		waitSeconds = forceInt(waitSeconds)
 		logger.notice(u"rpc reboot: rebooting computer in %s seconds", waitSeconds)
 		self.opsiclientd.rebootMachine(waitSeconds)
-	
+
 	def restart(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
 		logger.notice(u"rpc restart: restarting opsiclientd in %s seconds", waitSeconds)
 		self.opsiclientd.restart(waitSeconds)
-	
+
 	def uptime(self):
-		uptime = int(time.time() - self.opsiclientd._startupTime)
+		uptime = int(time.time() - self.opsiclientd._startupTime) # pylint: disable=protected-access
 		logger.notice(u"rpc uptime: opsiclientd is running for %d seconds", uptime)
 		return uptime
 
@@ -920,7 +921,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def isEventRunning(self, name):
 		running = False
-		for ept in self.opsiclientd._eventProcessingThreads:
+		for ept in self.opsiclientd._eventProcessingThreads: # pylint: disable=protected-access
 			if ept.event.eventConfig.getId() == name:
 				running = True
 				break
@@ -930,7 +931,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		"""
 		Returns a list with running events.
 		"""
-		running = [ept.event.eventConfig.getId() for ept in self.opsiclientd._eventProcessingThreads]
+		running = [ept.event.eventConfig.getId() for ept in self.opsiclientd._eventProcessingThreads] # pylint: disable=protected-access
 		if not running:
 			logger.debug("Currently no event is running.")
 		return running
@@ -940,39 +941,45 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def getCurrentActiveDesktopName(self, sessionId=None):
 		desktop = self.opsiclientd.getCurrentActiveDesktopName(sessionId)
-		logger.notice(u"rpc getCurrentActiveDesktopName: current active desktop name is %s", desktop)
+		logger.notice(
+			"rpc getCurrentActiveDesktopName: current active desktop name is %s",
+			desktop
+		)
 		return desktop
 
 	def setCurrentActiveDesktopName(self, sessionId, desktop):
 		sessionId = forceInt(sessionId)
 		desktop = forceUnicode(desktop)
-		self.opsiclientd._currentActiveDesktopName[sessionId] = desktop
-		logger.notice(u"rpc setCurrentActiveDesktopName: current active desktop name for session %s set to '%s'", sessionId, desktop)
+		self.opsiclientd._currentActiveDesktopName[sessionId] = desktop # pylint: disable=protected-access
+		logger.notice(
+			"rpc setCurrentActiveDesktopName: current active desktop name for session %s set to '%s'",
+			sessionId, desktop
+		)
 
 	def switchDesktop(self, desktop, sessionId=None):
 		self.opsiclientd.switchDesktop(desktop, sessionId)
 
 	def getConfig(self):
 		return config.getDict()
-	
+
 	def getConfigValue(self, section, option):
 		section = forceUnicode(section)
 		option = forceUnicode(option)
 		return config.get(section, option)
-	
+
 	def setConfigValue(self, section, option, value):
 		section = forceUnicode(section)
 		option = forceUnicode(option)
 		value = forceUnicode(value)
 		return config.set(section, option, value)
-	
+
 	def set(self, section, option, value):
 		# Legacy method
 		return self.setConfigValue(section, option, value)
 
 	def readConfigFile(self):
 		config.readConfigFile()
-	
+
 	def updateConfigFile(self):
 		config.updateConfigFile()
 
@@ -1021,20 +1028,20 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		:param value: Value to set the state.
 		"""
 		return state.set(name, value)
-	
+
 	def updateComponent(self, component, url):
 		if component != "opsiclientd":
 			raise ValueError(f"Invalid component {component}")
 		return self.opsiclientd.self_update_from_url(url)
-	
+
 	def loginUser(self, username, password):
 		try:
 			secret_filter.add_secrets([password])
 			return self.opsiclientd.loginUser(username, password)
-		except Exception as e:
-			logger.error(e, exc_info=True)
+		except Exception as err: # pylint: disable=broad-except
+			logger.error(err, exc_info=True)
 			raise
-	
+
 	def loginOpsiSetupAdmin(self):
 		System.logoffSession("opsisetupadmin")
 		user_info = self.opsiclientd.createOpsiSetupAdmin()
@@ -1046,13 +1053,13 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			if not RUNNING_ON_WINDOWS:
 				raise NotImplementedError(f"Not implemented on {platform.system()}")
 			# pyright: reportMissingImports=false
-			import win32profile
-			import win32security
-			import winreg
-			
+			import win32profile # pylint: disable=import-error,import-outside-toplevel
+			import win32security # pylint: disable=import-error,import-outside-toplevel
+			import winreg # pylint: disable=import-error,import-outside-toplevel
+
 			System.logoffSession("opsisetupadmin")
 			user_info = self.opsiclientd.createOpsiSetupAdmin()
-			
+
 			logon = win32security.LogonUser(
 				user_info["name"], None, user_info["password"],
 				win32security.LOGON32_LOGON_INTERACTIVE,
@@ -1072,30 +1079,18 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 					)
 					with reg_key:
 						winreg.SetValueEx(reg_key, "Shell", 0, winreg.REG_SZ, command)
-					
-					"""
-					reg_key = winreg.OpenKey(
-						winreg.HKEY_LOCAL_MACHINE,
-						r'Software\Microsoft\Windows\CurrentVersion\RunOnce',
-						0,
-						winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY
-					)
-					with reg_key:
-						winreg.SetValueEx(reg_key, "000 opsi tasks", 0, winreg.REG_SZ, command)
-					"""
-
 				finally:
 					win32profile.UnloadUserProfile(logon, hkey)
 			finally:
 				logon.close()
-			
-			if not self.opsiclientd._controlPipe.credentialProviderConnected():
-				for i in range(20):
-					if self.opsiclientd._controlPipe.credentialProviderConnected():
+
+			if not self.opsiclientd._controlPipe.credentialProviderConnected(): # pylint: disable=protected-access
+				for _unused in range(20):
+					if self.opsiclientd._controlPipe.credentialProviderConnected(): # pylint: disable=protected-access
 						break
 					time.sleep(0.5)
-			
+
 			self.opsiclientd.loginUser(user_info["name"], user_info["password"])
-		except Exception as e:
-			logger.error(e, exc_info=True)
+		except Exception as err: # pylint: disable=broad-except
+			logger.error(err, exc_info=True)
 			raise

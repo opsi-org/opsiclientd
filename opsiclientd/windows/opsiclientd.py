@@ -21,30 +21,27 @@
 :license: GNU Affero General Public License version 3
 """
 
-import os
 import sys
 import time
 import threading
 import subprocess
-
-from twisted.internet import protocol
-# pyright: reportMissingImports=false
-import win32com.server.policy
-import win32com.client
-import win32netcon
-import win32net
-import win32security
-import pywintypes
-import winreg
 import glob
-import stat
 import random
 import string
 
-import opsicommon.logging
-from opsicommon.logging import logger, logging_config, LOG_NONE, LOG_DEBUG, LOG_ERROR
-from OPSI.Types import forceBool, forceUnicode
+# pyright: reportMissingImports=false
+import winreg # pylint: disable=import-error
+import win32com.server.policy # pylint: disable=import-error
+import win32com.client # pylint: disable=import-error
+import win32netcon # pylint: disable=import-error
+import win32net # pylint: disable=import-error
+import win32security # pylint: disable=import-error
+import pywintypes # pylint: disable=import-error
+
+from OPSI.Types import forceBool
 from OPSI import System
+
+from opsicommon.logging import logger
 
 from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd import config
@@ -54,17 +51,17 @@ SENSGUID_PUBLISHER = "{5fee1bd6-5b9b-11d1-8dd2-00aa004abd5e}"
 SENSGUID_EVENTCLASS_LOGON = "{d5978630-5b9f-11d1-8dd2-00aa004abd5e}"
 
 # from EventSys.h
-PROGID_EventSystem = "EventSystem.EventSystem"
-PROGID_EventSubscription = "EventSystem.EventSubscription"
+PROGID_EventSystem = "EventSystem.EventSystem" # pylint: disable=invalid-name
+PROGID_EventSubscription = "EventSystem.EventSubscription" # pylint: disable=invalid-name
 
-IID_ISensLogon = "{d597bab3-5b9f-11d1-8dd2-00aa004abd5e}"
+IID_ISensLogon = "{d597bab3-5b9f-11d1-8dd2-00aa004abd5e}" # pylint: disable=invalid-name
 
-wmi = None
-pythoncom = None
+wmi = None # pylint: disable=invalid-name
+pythoncom = None # pylint: disable=invalid-name
 importWmiAndPythoncomLock = threading.Lock()
 def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
-	global wmi
-	global pythoncom
+	global wmi # pylint: disable=global-statement,invalid-name
+	global pythoncom # pylint: disable=global-statement,invalid-name
 	if importWmi and not pythoncom:
 		importPythoncom = True
 
@@ -75,13 +72,13 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 				try:
 					if not pythoncom and importPythoncom:
 						logger.debug("Importing pythoncom")
-						import pythoncom
+						import pythoncom # pylint: disable=import-error,import-outside-toplevel,redefined-outer-name
 
 					if not wmi and importWmi:
 						logger.debug("Importing wmi")
 						pythoncom.CoInitialize()
 						try:
-							import wmi
+							import wmi # pylint: disable=import-error,import-outside-toplevel,redefined-outer-name
 						finally:
 							pythoncom.CoUninitialize()
 				except Exception as import_error: # pylint: disable=broad-except
@@ -91,7 +88,7 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 	return (wmi, pythoncom)
 
 def opsiclientd_factory():
-	windowsVersion = sys.getwindowsversion()
+	windowsVersion = sys.getwindowsversion() # pylint: disable=no-member
 	if windowsVersion.major == 5:  # NT5: XP
 		return OpsiclientdNT5()
 	elif windowsVersion.major >= 6:  # NT6: Vista / Windows7 and later
@@ -107,7 +104,7 @@ class OpsiclientdNT(Opsiclientd):
 	def suspendBitlocker(self):
 		logger.notice("Suspending bitlocker for one reboot if active")
 		try:
-			result = System.execute(
+			System.execute(
 				"powershell.exe -ExecutionPolicy Bypass -Command \""
 				"foreach($v in Get-BitLockerVolume)"
 				"{if ($v.EncryptionPercentage -gt 0)"
@@ -116,13 +113,13 @@ class OpsiclientdNT(Opsiclientd):
 				waitForEnding=True,
 				timeout=20
 			)
-		except Exception as e: # pylint: disable=broad-except
-			logger.error("Failed to suspend bitlocker: %s", e, exc_info=True)
-	
+		except Exception as err: # pylint: disable=broad-except
+			logger.error("Failed to suspend bitlocker: %s", err, exc_info=True)
+
 	def rebootMachine(self, waitSeconds=3):
 		if config.get('global', 'suspend_bitlocker_on_reboot'):
-			windowsVersion = sys.getwindowsversion()
-			if (windowsVersion.major == 6 and windowsVersion.minor >= 4) or windowsVersion.major > 6:	#Win10 and later
+			windowsVersion = sys.getwindowsversion() # pylint: disable=no-member
+			if (windowsVersion.major == 6 and windowsVersion.minor >= 4) or windowsVersion.major > 6: # Win10 and later
 				self.suspendBitlocker()
 		super().rebootMachine(waitSeconds)
 
@@ -160,19 +157,19 @@ class OpsiclientdNT(Opsiclientd):
 
 	def isWindowsInstallerBusy(self):
 		if not self._ms_update_installer:
-			(wmi, pythoncom) = importWmiAndPythoncom(
+			(_wmi, _pythoncom) = importWmiAndPythoncom(
 				importWmi=False,
 				importPythoncom=True
 			)
-			pythoncom.CoInitialize()
+			_pythoncom.CoInitialize()
 			session = win32com.client.Dispatch("Microsoft.Update.Session")
 			self._ms_update_installer = session.CreateUpdateInstaller()
 		return self._ms_update_installer.isBusy
-	
+
 	def loginUser(self, username, password):
 		for session_id in System.getActiveSessionIds(protocol="console"):
 			System.lockSession(session_id)
-		for i in range(20):
+		for _unused in range(20):
 			if self._controlPipe.credentialProviderConnected(login_capable=True):
 				break
 			time.sleep(0.5)
@@ -183,10 +180,10 @@ class OpsiclientdNT(Opsiclientd):
 			if not response.get("error") and response.get("result"):
 				return True
 			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {response.get('error')}")
-	
+
 	def createOpsiSetupAdmin(self, delete_existing=False):
 		# https://bugs.python.org/file46988/issue.py
-		
+
 		user_info = {
 			"name": "opsisetupadmin",
 			"full_name": "opsi setup admin",
@@ -195,7 +192,7 @@ class OpsiclientdNT(Opsiclientd):
 			"priv": win32netcon.USER_PRIV_USER,
 			"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD
 		}
-		
+
 		# Hide user from login
 		try:
 			winreg.CreateKeyEx(
@@ -204,7 +201,7 @@ class OpsiclientdNT(Opsiclientd):
 				0,
 				winreg.KEY_WOW64_64KEY | winreg.KEY_ALL_ACCESS # sysnative
 			)
-		except WindowsError:
+		except WindowsError: # pylint: disable=undefined-variable
 			pass
 		try:
 			winreg.CreateKeyEx(
@@ -213,9 +210,9 @@ class OpsiclientdNT(Opsiclientd):
 				0,
 				winreg.KEY_WOW64_64KEY | winreg.KEY_ALL_ACCESS # sysnative
 			)
-		except WindowsError:
+		except WindowsError: # pylint: disable=undefined-variable
 			pass
-		
+
 		with winreg.OpenKey(
 			winreg.HKEY_LOCAL_MACHINE,
 			r'Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList',
@@ -223,7 +220,7 @@ class OpsiclientdNT(Opsiclientd):
 			winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY # sysnative
 		) as reg_key:
 			winreg.SetValueEx(reg_key, user_info["name"], 0, winreg.REG_DWORD, 0)
-		
+
 		# Test if user exists
 		user_exists = False
 		try:
@@ -231,12 +228,12 @@ class OpsiclientdNT(Opsiclientd):
 			user_exists = True
 		except Exception: # pylint: disable=broad-except
 			pass
-		
+
 		if user_exists:
 			if delete_existing:
 				# Delete user
 				win32net.NetUserDel(None, user_info["name"])
-			
+
 				for pdir in glob.glob(f"c:\\users\\{user_info['name']}*"):
 					try:
 						subprocess.call(['takeown', '/d', 'Y', '/r', '/f', pdir])
@@ -249,8 +246,8 @@ class OpsiclientdNT(Opsiclientd):
 				user_info_update = win32net.NetUserGetInfo(None, user_info["name"], 1)
 				user_info_update["password"] = user_info["password"]
 				win32net.NetUserSetInfo(None, user_info["name"], 1, user_info_update)
-		
-		if not user_exists:		
+
+		if not user_exists:
 			# Create user
 			win32net.NetUserAdd(None, 1, user_info)
 
@@ -258,10 +255,10 @@ class OpsiclientdNT(Opsiclientd):
 		local_admin_group_name = win32security.LookupAccountSid(None, sid)[0]
 		try:
 			win32net.NetLocalGroupAddMembers(None, local_admin_group_name, 3, [{"domainandname": user_info["name"]}])
-		except pywintypes.error as e:
-			if (e.winerror != 1378): # 1378 already a group member
+		except pywintypes.error as err:
+			if err.winerror != 1378: # 1378 already a group member
 				raise
-		
+
 		user_info_4 = win32net.NetUserGetInfo(None, user_info["name"], 4)
 		user_info_4["password"] = user_info["password"]
 		return user_info_4
@@ -271,14 +268,14 @@ class OpsiclientdNT5(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
 
-	def shutdownMachine(self):
+	def shutdownMachine(self, waitSeconds=3):
 		self._isShutdownTriggered = True
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
 
 		# Running in thread to avoid failure of shutdown (device not ready)
 		ShutdownThread().start()
 
-	def rebootMachine(self):
+	def rebootMachine(self, waitSeconds=3):
 		self._isRebootTriggered = True
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
 
@@ -340,9 +337,9 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 		self._callback = callback
 
 	def subscribe(self):
-		(wmi, pythoncom) = importWmiAndPythoncom(importWmi=False)
+		(_wmi, _pythoncom) = importWmiAndPythoncom(importWmi=False)
 
-		subscription_interface = pythoncom.WrapObject(self)
+		subscription_interface = _pythoncom.WrapObject(self)
 
 		event_system = win32com.client.Dispatch(PROGID_EventSystem)
 
@@ -354,30 +351,30 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 
 		event_system.Store(PROGID_EventSubscription, event_subscription)
 
-	def Logon(self, *args):
-		logger.notice(u'Logon : %s' % [args])
+	def Logon(self, *args): # pylint: disable=invalid-name
+		logger.notice('Logon: %s', args)
 		self._callback('Logon', *args)
 
-	def Logoff(self, *args):
-		logger.notice(u'Logoff : %s' % [args])
+	def Logoff(self, *args): # pylint: disable=invalid-name
+		logger.notice('Logoff: %s', args)
 		self._callback('Logoff', *args)
 
-	def StartShell(self, *args):
-		logger.notice(u'StartShell : %s' % [args])
+	def StartShell(self, *args): # pylint: disable=invalid-name
+		logger.notice('StartShell: %s', args)
 		self._callback('StartShell', *args)
 
-	def DisplayLock(self, *args):
-		logger.notice(u'DisplayLock : %s' % [args])
+	def DisplayLock(self, *args): # pylint: disable=invalid-name
+		logger.notice('DisplayLock: %s', args)
 		self._callback('DisplayLock', *args)
 
-	def DisplayUnlock(self, *args):
-		logger.notice(u'DisplayUnlock : %s' % [args])
+	def DisplayUnlock(self, *args): # pylint: disable=invalid-name
+		logger.notice('DisplayUnlock: %s', args)
 		self._callback('DisplayUnlock', *args)
 
-	def StartScreenSaver(self, *args):
-		logger.notice(u'StartScreenSaver : %s' % [args])
+	def StartScreenSaver(self, *args): # pylint: disable=invalid-name
+		logger.notice('StartScreenSaver: %s', args)
 		self._callback('StartScreenSaver', *args)
 
-	def StopScreenSaver(self, *args):
-		logger.notice(u'StopScreenSaver : %s' % [args])
+	def StopScreenSaver(self, *args): # pylint: disable=invalid-name
+		logger.notice('StopScreenSaver: %s', args)
 		self._callback('StopScreenSaver', *args)

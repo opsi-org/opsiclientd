@@ -54,7 +54,7 @@ if RUNNING_ON_WINDOWS:
 __all__ = ['EventConfigFactory', 'EventGeneratorFactory']
 
 
-def EventConfigFactory(eventType, eventId, **kwargs):
+def EventConfigFactory(eventType, eventId, **kwargs): # pylint: disable=invalid-name
 	"""
 	Get an event config for the given type.
 
@@ -95,7 +95,7 @@ def EventConfigFactory(eventType, eventId, **kwargs):
 	raise TypeError(u"Unknown event config type '%s'" % eventType)
 
 
-def EventGeneratorFactory(opsiclientd, eventConfig):
+def EventGeneratorFactory(opsiclientd, eventConfig): # pylint: disable=invalid-name
 	"""
 	Get an event generator matching the given config type.
 

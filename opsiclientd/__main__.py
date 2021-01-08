@@ -29,26 +29,26 @@ import sys
 import platform
 
 def opsiclientd_rpc():
-	from opsiclientd.opsiclientdrpc import main as _main
+	from opsiclientd.opsiclientdrpc import main as _main # pylint: disable=import-outside-toplevel
 	_main()
 
 def action_processor_starter():
-	from opsiclientd.actionprocessorstarter import main as _main
+	from opsiclientd.actionprocessorstarter import main as _main # pylint: disable=import-outside-toplevel
 	_main()
 
 def opsiclientd():
-	from opsicommon.logging import logger
+	from opsicommon.logging import logger # pylint: disable=import-outside-toplevel
 	_main = None
 	if platform.system().lower() == 'windows':
-		from opsiclientd.windows.main import main as _main
+		from opsiclientd.windows.main import main as _main # pylint: disable=import-outside-toplevel
 	elif platform.system().lower() in ('linux', 'darwin'):
-		from opsiclientd.posix.main import main as _main
+		from opsiclientd.posix.main import main as _main # pylint: disable=import-outside-toplevel
 	else:
-		raise NotImplementedError("OS %s not supported." % os.name)	
+		raise NotImplementedError(f"OS {os.name} not supported.")
 	try:
 		_main()
-	except Exception as e:
-		logger.critical(e, exc_info=True)
+	except Exception as err: # pylint: disable=broad-except
+		logger.critical(err, exc_info=True)
 
 def main():
 	name = os.path.splitext(os.path.basename(sys.argv[0]))[0].lower()

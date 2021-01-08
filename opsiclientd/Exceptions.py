@@ -20,21 +20,16 @@
 Non-standard exceptions.
 
 :copyright: uib GmbH <info@uib.de>
-:author: Jan Schneider <j.schneider@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
-#from OPSI.Logger import Logger
-from opsicommon.logging import logger
 from OPSI.Types import forceUnicode
 
-#logger = Logger()
-
-
 class OpsiclientdError(Exception):
-	ExceptionShortDescription = u"Opsiclientd error"
+	ExceptionShortDescription = "Opsiclientd error"
 
-	def __init__(self, message=u''):
+	def __init__(self, message=''):
+		Exception.__init__(self)
 		self._message = forceUnicode(message)
 
 	def __str__(self):
@@ -42,7 +37,7 @@ class OpsiclientdError(Exception):
 		if self._message:
 			_str += f": {self._message}"
 		return _str
-	
+
 	__repr__ = __str__
 
 

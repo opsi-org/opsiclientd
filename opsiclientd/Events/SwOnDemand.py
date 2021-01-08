@@ -44,10 +44,10 @@ class SwOnDemandEventConfig(EventConfig):
 
 
 class SwOnDemandEventGenerator(EventGenerator):
-	def __init__(self, eventConfig):
-		EventGenerator.__init__(self, eventConfig)
+	def __init__(self, opsiclientd, eventConfig):
+		EventGenerator.__init__(self, opsiclientd, eventConfig)
 
-	def createEvent(self, eventInfo={}):
+	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None

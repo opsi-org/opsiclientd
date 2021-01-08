@@ -28,10 +28,7 @@ Events that get active once a system shuts down or restarts.
 
 from __future__ import absolute_import
 
-import sys
-
 from OPSI.Logger import Logger
-from OPSI import System
 
 from opsiclientd.Events.Basic import Event
 from opsiclientd.Events.Windows.SensLogon import SensLogonEventGenerator
@@ -53,16 +50,16 @@ class UserLoginEventConfig(WMIEventConfig):
 
 
 class UserLoginEventGenerator(SensLogonEventGenerator):
-	def __init__(self, eventConfig):
-		SensLogonEventGenerator.__init__(self, eventConfig)
+	def __init__(self, opsiclientd, eventConfig):
+		SensLogonEventGenerator.__init__(self, opsiclientd, eventConfig)
 
 	def callback(self, eventType, *args):
-		logger.debug(u"UserLoginEventGenerator event callback: eventType '%s', args: %s" % (eventType, args))
+		logger.debug("UserLoginEventGenerator event callback: eventType '%s', args: %s", eventType, args)
 		if args[0].split("\\")[-1] == "opsisetupadmin":
 			# TODO: username currently hardcoded
 			logger.info("Login of user %s detected, no UserLoginAction will be fired.", args[0])
 			return
-		
+
 		if eventType == 'Logon':
 			logger.notice("User login detected: %s", args[0])
 			self._eventsOccured += 1
@@ -70,7 +67,7 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 			if (self._generatorConfig.maxRepetitions > 0) and (self._eventsOccured > self._generatorConfig.maxRepetitions):
 				self.stop()
 
-	def createEvent(self, eventInfo={}):
+	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None

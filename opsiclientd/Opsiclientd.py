@@ -22,37 +22,30 @@ Basic opsiclientd implementation. This is abstract in some parts that
 should be overridden in the concrete implementation for an OS.
 
 :copyright: uib GmbH <info@uib.de>
-:author: Jan Schneider <j.schneider@uib.de>
-:author: Erol Ueluekmen <e.ueluekmen@uib.de>
-:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
+from contextlib import contextmanager
 import os
 import sys
 import threading
 import time
 import tempfile
-import codecs
-import traceback
-import argparse
 import platform
-import psutil
 import subprocess
 import urllib.request
 import shutil
-from contextlib import contextmanager
+import psutil
 
 from OPSI import System
-import opsicommon.logging
-from opsicommon.logging import logger, LOG_DEBUG, LOG_NONE, LOG_NOTICE
 from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 from OPSI import __version__ as python_opsi_version
 
+from opsicommon.logging import logger, log_context
+
 from opsiclientd import __version__, config, check_signature
-from opsiclientd.Config import Config
 from opsiclientd.ControlPipe import ControlPipeFactory
 from opsiclientd.ControlServer import ControlServer
 from opsiclientd.Events.Basic import EventListener
@@ -110,6 +103,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._popupNotificationLock = threading.Lock()
 
 		self._blockLoginEventId = None
+		self._opsiclientdRunningEventId = None
 
 		self._stopEvent = threading.Event()
 		self._stopEvent.clear()
@@ -134,10 +128,10 @@ class Opsiclientd(EventListener, threading.Thread):
 				shutil.copy(src, filename)
 			else:
 				with urllib.request.urlopen(url) as response:
-					with open(filename, 'wb') as f:
-						f.write(response.read())
+					with open(filename, 'wb') as file:
+						file.write(response.read())
 			self.self_update_from_file(filename)
-	
+
 	def self_update_from_file(self, filename):
 		logger.notice("Self-update from file %s", filename)
 
@@ -145,7 +139,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		inst_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 		if not os.path.exists(os.path.join(inst_dir, test_file)):
 			raise RuntimeError(f"File not found: {os.path.join(inst_dir, test_file)}")
-		
+
 		if self._selfUpdating:
 			raise RuntimeError("Self-update already running")
 		self._selfUpdating = True
@@ -153,7 +147,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			with tempfile.TemporaryDirectory() as tmpdir:
 				destination = os.path.join(tmpdir, "content")
 				shutil.unpack_archive(filename=filename, extract_dir=destination)
-				
+
 				bin_dir = destination
 				if not os.path.exists(os.path.join(bin_dir, test_file)):
 					bin_dir = None
@@ -166,17 +160,17 @@ class Opsiclientd(EventListener, threading.Thread):
 
 				try:
 					check_signature(bin_dir)
-				except Exception as e:
-					logger.error("Could not verify signature!\n%s", e, exc_info=True)
+				except Exception as err: # pylint: disable=broad-except
+					logger.error("Could not verify signature!\n%s", err, exc_info=True)
 					logger.error("Not performing self_update.")
-					raise RuntimeError("Invalid signature")
+					raise RuntimeError("Invalid signature") from err
 
 				binary = os.path.join(bin_dir, os.path.basename(self._argv[0]))
 
 				logger.info("Testing new binary: %s", binary)
 				out = subprocess.check_output([binary, "--version"])
 				logger.info(out)
-				
+
 				move_dir = inst_dir + "_old"
 				logger.info("Moving current installation dir '%s' to '%s'", inst_dir, move_dir)
 				if os.path.exists(move_dir):
@@ -185,11 +179,11 @@ class Opsiclientd(EventListener, threading.Thread):
 
 				logger.info("Installing '%s' into '%s'", bin_dir, inst_dir)
 				shutil.copytree(bin_dir, inst_dir)
-				
+
 				self.restart(5)
 		finally:
 			self._selfUpdating = False
-	
+
 	def restart(self, waitSeconds=0):
 		def _restart(waitSeconds=0):
 			time.sleep(waitSeconds)
@@ -205,7 +199,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			os.execvp(self._argv[0], self._argv)
 		logger.notice("Will restart in %d seconds", waitSeconds)
 		threading.Thread(target=_restart, args=(waitSeconds, )).start()
-	
+
 	def setBlockLogin(self, blockLogin):
 		blockLogin = forceBool(blockLogin)
 		if self._blockLogin == blockLogin:
@@ -251,7 +245,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				except Exception as err: # pylint: disable=broad-except
 					logger.warning("Failed to terminate block login notifier app: %s", err)
 				self._blockLoginNotifierPid = None
-		
+
 		if self._controlPipe:
 			try:
 				self._controlPipe.executeRpc("blockLogin", self._blockLogin)
@@ -260,17 +254,17 @@ class Opsiclientd(EventListener, threading.Thread):
 
 	def loginUser(self, username, password):
 		raise NotImplementedError(f"Not implemented on {platform.system()}")
-	
+
 	def isRunning(self):
 		return self._running
 
 	def is_stopping(self):
 		return self._stopEvent.is_set()
-	
+
 	def waitForGUI(self, timeout=None):
-		waiter = WaitForGUI()
+		waiter = WaitForGUI(self)
 		waiter.wait(timeout or None)
-	
+
 	def createActionProcessorUser(self, recreate=True):
 		if not config.get('action_processor', 'create_user'):
 			return
@@ -314,12 +308,12 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._actionProcessorUserPassword = u''
 
 	def run(self):
-		with opsicommon.logging.log_context({'instance' : 'opsiclientd'}):
+		with log_context({'instance' : 'opsiclientd'}):
 			try:
 				self._run()
 			except Exception as err: # pylint: disable=broad-except
 				logger.error(err, exc_info=True)
-	
+
 	def _run(self):
 		self._running = True
 		self._opsiclientdRunningEventId = None
@@ -336,8 +330,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._controlPipe.start()
 				logger.notice("Control pipe started")
 				yield
-			except Exception as e:
-				logger.error("Failed to start control pipe: %s", e, exc_info=True)
+			except Exception as err: # pylint: disable=broad-except
+				logger.error("Failed to start control pipe: %s", err, exc_info=True)
 				raise
 			finally:
 				logger.info("Stopping control pipe")
@@ -370,9 +364,9 @@ class Opsiclientd(EventListener, threading.Thread):
 					raise RuntimeError("Received stop signal.")
 
 				yield
-			except Exception as e:
-				logger.error("Failed to start control server: %s", e, exc_info=True)
-				raise e
+			except Exception as err: # pylint: disable=broad-except
+				logger.error("Failed to start control server: %s", err, exc_info=True)
+				raise err
 			finally:
 				if control_server:
 					logger.info("Stopping control server")
@@ -388,7 +382,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			cache_service = None
 			try:
 				logger.notice("Starting cache service")
-				from opsiclientd.nonfree.CacheService import CacheService
+				from opsiclientd.nonfree.CacheService import CacheService # pylint: disable=import-outside-toplevel
 				cache_service = CacheService(opsiclientd=self)
 				cache_service.start()
 				logger.notice("Cache service started")
@@ -405,7 +399,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						logger.info("Cache service stopped")
 					except (NameError, RuntimeError) as stop_err:
 						logger.debug("Failed to stop cache service: %s", stop_err)
-		
+
 		@contextmanager
 		def getEventGeneratorContext():
 			logger.debug("Creating event generators")
@@ -524,11 +518,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		with self._eventProcessingThreadsLock:
 			description = f"Event {event.eventConfig.getId()} occurred\n"
 			description += "Config:\n"
-			config = event.eventConfig.getConfig()
-			configKeys = list(config.keys())
+			_config = event.eventConfig.getConfig()
+			configKeys = list(_config.keys())
 			configKeys.sort()
 			for configKey in configKeys:
-				description += f"{configKey}: {config[configKey]}\n"
+				description += f"{configKey}: {_config[configKey]}\n"
 			timeline.addEvent(
 				title=f"Event {event.eventConfig.getName()}",
 				description=description,
@@ -564,8 +558,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				if not self._eventProcessingThreads:
 					try:
 						self.deleteActionProcessorUser()
-					except Exception as error:
-						logger.warning(error)
+					except Exception as err: # pylint: disable=broad-except
+						logger.warning(err)
 
 	def getEventProcessingThread(self, sessionId):
 		for ept in self._eventProcessingThreads:
@@ -573,7 +567,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				return ept
 		raise Exception(f"Event processing thread for session {sessionId} not found")
 
-	def processProductActionRequests(self, event):
+	def processProductActionRequests(self, event): # pylint: disable=unused-argument
 		logger.error("processProductActionRequests not implemented")
 
 	def getCurrentActiveDesktopName(self, sessionId=None):
@@ -598,8 +592,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				timeoutSeconds=60,
 				noWindow=True
 			)
-		except Exception as e:
-			logger.error(e)
+		except Exception as err: # pylint: disable=broad-except
+			logger.error(err)
 
 		desktop = self._currentActiveDesktopName.get(sessionId)
 		if not desktop:
@@ -632,8 +626,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				timeoutSeconds=60,
 				noWindow=True
 			)
-		except Exception as e:
-			logger.error(e)
+		except Exception as err: # pylint: disable=broad-except
+			logger.error(err)
 
 	def systemShutdownInitiated(self):
 		if not self.isRebootTriggered() and not self.isShutdownTriggered():
@@ -647,8 +641,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		if self._controlPipe:
 			try:
 				self._controlPipe.executeRpc("rebootTriggered", True)
-			except Exception as rpcError:
-				logger.debug(rpcError)
+			except Exception as err: # pylint: disable=broad-except
+				logger.debug(err)
 		self.clearRebootRequest()
 		System.reboot(wait=waitSeconds)
 
@@ -657,11 +651,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		if self._controlPipe:
 			try:
 				self._controlPipe.executeRpc("shutdownTriggered", True)
-			except Exception as rpcError:
-				logger.debug(rpcError)
+			except Exception as err: # pylint: disable=broad-except
+				logger.debug(err)
 		self.clearShutdownRequest()
 		System.shutdown(wait=waitSeconds)
-	
+
 	def isRebootTriggered(self):
 		if self._isRebootTriggered:
 			return True
@@ -688,7 +682,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		return state.get('installation_pending', False)
 
 	def showPopup(self, message, mode='prepend', addTimestamp=True):
-		if not mode in ('prepend', 'append', 'replace'):
+		if mode not in ('prepend', 'append', 'replace'):
 			mode = 'prepend'
 		port = config.get('notification_server', 'popup_port')
 		if not port:
@@ -698,7 +692,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not notifierCommand:
 			raise Exception('opsiclientd_notifier.command not defined')
 		notifierCommand += " -s %s" % os.path.join("notifier", "popup.ini")
-		
+
 		if addTimestamp:
 			message = "=== " + time.strftime("%Y-%m-%d %H:%M:%S") + " ===\n" + message
 
@@ -718,8 +712,8 @@ class Opsiclientd(EventListener, threading.Thread):
 							else:
 								message = subject.getMessage() + "\n\n" + message
 							break
-				except Exception as getMsgErr:
-					logger.warning(getMsgErr, exc_info=True)
+				except Exception as err: # pylint: disable=broad-except
+					logger.warning(err, exc_info=True)
 
 			self.hidePopup()
 
@@ -735,15 +729,15 @@ class Opsiclientd(EventListener, threading.Thread):
 					subjects=[popupSubject, choiceSubject]
 				)
 				self._popupNotificationServer.daemon = True
-				with opsicommon.logging.log_context({'instance' : 'popup notification server'}):
+				with log_context({'instance' : 'popup notification server'}):
 					if not self._popupNotificationServer.start_and_wait(timeout=30):
 						raise Exception("Timed out while waiting for notification server")
-			except Exception as e:
-				logger.error("Failed to start notification server: %s", e)
+			except Exception as err: # pylint: disable=broad-except
+				logger.error("Failed to start notification server: %s", err)
 				raise
-			
+
 			notifierCommand = notifierCommand.replace('%port%', str(self._popupNotificationServer.port)).replace('%id%', "popup")
-			
+
 			choiceSubject.setChoices([_('Close')])
 			choiceSubject.setCallbacks([self.popupCloseCallback])
 
@@ -762,10 +756,10 @@ class Opsiclientd(EventListener, threading.Thread):
 							desktop=desktop,
 							waitForProcessEnding=False
 					)
-					except Exception as e:
+					except Exception as err: # pylint: disable=broad-except
 						logger.error(
 							"Failed to start popup message notifier app in session %s on desktop %s: %s",
-							sessionId, desktop, e
+							sessionId, desktop, err
 						)
 		finally:
 			self._popupNotificationLock.release()
@@ -776,18 +770,18 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.info("Stopping popup message notification server")
 
 				self._popupNotificationServer.stop(stopReactor=False)
-			except Exception as e:
-				logger.error("Failed to stop popup notification server: %s", e)
+			except Exception as err: # pylint: disable=broad-except
+				logger.error("Failed to stop popup notification server: %s", err)
 
-	def popupCloseCallback(self, choiceSubject):
+	def popupCloseCallback(self, choiceSubject): # pylint: disable=unused-argument
 		self.hidePopup()
 
 
 class WaitForGUI(EventListener):
-	def __init__(self):
+	def __init__(self, opsiclientd): # pylint: disable=super-init-not-called
 		self._guiStarted = threading.Event()
 		ec = GUIStartupEventConfig("wait_for_gui")
-		eventGenerator = EventGeneratorFactory(ec)
+		eventGenerator = EventGeneratorFactory(opsiclientd, ec)
 		eventGenerator.addEventConfig(ec)
 		eventGenerator.addEventListener(self)
 		eventGenerator.start()

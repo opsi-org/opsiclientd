@@ -21,7 +21,7 @@ __all__ = ['CustomEvent', 'CustomEventGenerator']
 
 
 class CustomEventGenerator(EventGenerator):
-	def createEvent(self, eventInfo={}):
+	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None

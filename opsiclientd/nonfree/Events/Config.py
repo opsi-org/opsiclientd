@@ -10,7 +10,6 @@
 Non-free event configuration.
 
 :copyright:	uib GmbH <info@uib.de>
-:author: Niko Wenselowski <n.wenselowski@uib.de>
 """
 
 from opsiclientd.EventConfiguration import EventConfig

@@ -20,7 +20,6 @@
 opsiclientd Library.
 
 :copyright: uib GmbH <info@uib.de>
-:author: Erol Ueluekmen <e.ueluekmen@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
@@ -31,15 +30,17 @@ import sys
 import tempfile
 import argparse
 
-import opsicommon.logging
-from opsicommon.logging import logger, logging_config, LOG_NONE, LOG_DEBUG, LOG_ERROR, LOG_NOTICE
+from opsicommon.logging import (
+	logger, logging_config, set_filter_from_string, init_logging as oc_init_logging,
+	LOG_NONE, LOG_DEBUG, LOG_ERROR, LOG_NOTICE
+)
 from OPSI import __version__ as python_opsi_version
 from OPSI.System import execute
 
 from opsiclientd.Config import Config
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
-DEFAULT_STDERR_LOG_FORMAT = "%(log_color)s[%(opsilevel)d] [%(asctime)s.%(msecs)03d]%(reset)s [%(contextstring)-40s] %(message)s   (%(filename)s:%(lineno)d)"
+DEFAULT_STDERR_LOG_FORMAT = "%(log_color)s[%(opsilevel)d] [%(asctime)s.%(msecs)03d]%(reset)s [%(contextstring)-40s] %(message)s   (%(filename)s:%(lineno)d)" # pylint: disable=line-too-long
 DEFAULT_FILE_LOG_FORMAT = DEFAULT_STDERR_LOG_FORMAT.replace("%(log_color)s", "").replace("%(reset)s", "")
 
 config = Config()
@@ -69,23 +70,23 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 	if not os.path.isdir(log_dir):
 		log_dir = tempfile.gettempdir()
 	log_file = os.path.join(log_dir, "opsiclientd.log")
-	
+
 	config.set("global", "log_file", log_file)
-	
+
 	for i in (9, 8, 7, 6, 5, 4, 3, 2, 1, 0):
 		slf = f"{log_file}.{i-1}"
 		dlf = f"{log_file}.{i}"
-		if (i == 0):
+		if i == 0:
 			slf = log_file
 		try:
 			if os.path.exists(slf):
 				if os.path.exists(dlf):
 					os.unlink(dlf)
 				os.rename(slf, dlf)
-		except Exception as e:
-			logger.error("Failed to rename %s to %s: %s", slf, dlf, e)
-	
-	opsicommon.logging.init_logging(
+		except Exception as err: # pylint: disable=broad-except
+			logger.error("Failed to rename %s to %s: %s", slf, dlf, err)
+
+	oc_init_logging(
 		stderr_level=stderr_level,
 		stderr_format=DEFAULT_STDERR_LOG_FORMAT,
 		log_file=log_file,
@@ -93,22 +94,24 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 		file_format=DEFAULT_FILE_LOG_FORMAT
 	)
 	if log_filter:
-		opsicommon.logging.set_filter_from_string(log_filter)
-	
+		set_filter_from_string(log_filter)
+
 	logger.essential("Log file %s started", log_file)
 
 def check_signature(bin_dir):
 	logger.info("check_signature is called")
 	if not RUNNING_ON_WINDOWS:
-		return		#Not yet implemented
+		return # Not yet implemented
 
-	windowsVersion = sys.getwindowsversion()
+	windowsVersion = sys.getwindowsversion() # pylint: disable=no-member
 	if windowsVersion.major < 6 or (windowsVersion.major == 6 and windowsVersion.minor < 4):
-		return		# Get-AuthenticodeSignature is only defined for versions since 2016
+		return # Get-AuthenticodeSignature is only defined for versions since 2016
 
-	binary_list = [os.path.join(bin_dir, "opsiclientd.exe"),
-					os.path.join(bin_dir, "opsiclientd_rpc.exe"),
-					os.path.join(bin_dir, "action_processor_starter.exe")]
+	binary_list = [
+		os.path.join(bin_dir, "opsiclientd.exe"),
+		os.path.join(bin_dir, "opsiclientd_rpc.exe"),
+		os.path.join(bin_dir, "action_processor_starter.exe")
+	]
 	for binary in binary_list:
 		cmd = f'powershell.exe -ExecutionPolicy Bypass -Command \"(Get-AuthenticodeSignature \'{binary}\').Status -eq \'Valid\'\"'
 
