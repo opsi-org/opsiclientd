@@ -41,6 +41,8 @@ from OPSI.Service.JsonRpc import JsonRpc
 
 if os.name == 'nt':
 	from ctypes import windll
+else:
+	windll = None
 
 
 def ControlPipeFactory(opsiclientd):
@@ -94,7 +96,7 @@ class ClientConnection(threading.Thread):
 									# Switch to new protocol
 									self.executeRpc('blockLogin', [self._controller._opsiclientd._blockLogin], with_lock=False)
 					time.sleep(0.5)
-			except Exception as e:
+			except Exception as e: # pylint: disable=broad-except
 				logger.error(e, exc_info=True)
 			finally:
 				self.clientDisconnected()
@@ -136,11 +138,11 @@ class ClientConnection(threading.Thread):
 				)
 				jsonrpc.execute()
 				return toJson(jsonrpc.getResponse())
-		except Exception as rpcError:
-			logger.error(rpcError, exc_info=True)
+		except Exception as rpc_error: # pylint: disable=broad-except
+			logger.error(rpc_error, exc_info=True)
 			return toJson({
 				"id": None,
-				"error": str(rpcError)
+				"error": str(rpc_error)
 			})
 	
 	def executeRpc(self, method, params=[], with_lock=True):
@@ -180,7 +182,7 @@ class ClientConnection(threading.Thread):
 				finally:
 					if with_lock:
 						self.comLock.release()
-			except Exception as client_err:
+			except Exception as client_err: # pylint: disable=broad-except
 				logger.error(client_err, exc_info=True)
 				return {"id": rpc_id, "error": str(client_err), "result": None}
 
@@ -216,10 +218,10 @@ class ControlPipe(threading.Thread):
 							self._clients.append(connection)
 							connection.daemon = True
 							connection.start()
-					except Exception as err1:
+					except Exception as err1: # pylint: disable=broad-except
 						logger.error(err1, exc_info=True)
 						self.setup()
-			except Exception as err2:
+			except Exception as err2: # pylint: disable=broad-except
 				logger.error(err2, exc_info=True)
 			self._running = False
 			self.teardown()
@@ -295,7 +297,7 @@ class PosixClientConnection(ClientConnection):
 			if not data:
 				self.clientDisconnected()
 			return data.decode(self._encoding)
-		except Exception as err:
+		except Exception as err: # pylint: disable=broad-except
 			logger.trace("Failed to read from socket: %s", err)
 	
 	def write(self, data):
@@ -307,8 +309,8 @@ class PosixClientConnection(ClientConnection):
 		self._connection.settimeout(self._writeTimeout)
 		try:
 			self._connection.sendall(data)
-		except Exception as err:
-			raise RuntimeError(f"Failed to write to socket: {err}")
+		except Exception as err: # pylint: disable=broad-except
+			raise RuntimeError(f"Failed to write to socket: {err}") from err
 
 class PosixControlDomainSocket(ControlPipe):
 	"""
@@ -334,7 +336,7 @@ class PosixControlDomainSocket(ControlPipe):
 		if self._socket:
 			try:
 				self._socket.close()
-			except Exception as err:
+			except socket.error:
 				pass
 		if os.path.exists(self._socketName):
 			os.remove(self._socketName)
@@ -347,7 +349,7 @@ class PosixControlDomainSocket(ControlPipe):
 				connection, client_address = self._socket.accept()
 				logger.notice("Client %s connected to %s", client_address, self._socketName)
 				return (connection, client_address)
-			except socket.timeout as err:
+			except socket.timeout:
 				if self._stopEvent.is_set():
 					return (None, None)
 	
@@ -446,7 +448,7 @@ class NTControlPipe(ControlPipe):
 				windll.kernel32.FlushFileBuffers(self._pipe)
 				windll.kernel32.DisconnectNamedPipe(self._pipe)
 				windll.kernel32.CloseHandle(self._pipe)
-			except Exception as e:
+			except Exception: # pylint: disable=broad-except
 				pass
 	
 	def waitForClient(self):

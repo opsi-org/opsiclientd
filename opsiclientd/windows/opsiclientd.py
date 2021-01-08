@@ -28,6 +28,7 @@ import threading
 import subprocess
 
 from twisted.internet import protocol
+# pyright: reportMissingImports=false
 import win32com.server.policy
 import win32com.client
 import win32netcon
@@ -83,8 +84,8 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 							import wmi
 						finally:
 							pythoncom.CoUninitialize()
-				except Exception as importError:
-					logger.warning("Failed to import: %s, retrying in 2 seconds", importError)
+				except Exception as import_error: # pylint: disable=broad-except
+					logger.warning("Failed to import: %s, retrying in 2 seconds", import_error)
 					time.sleep(2)
 
 	return (wmi, pythoncom)
@@ -115,7 +116,7 @@ class OpsiclientdNT(Opsiclientd):
 				waitForEnding=True,
 				timeout=20
 			)
-		except Exception as e:
+		except Exception as e: # pylint: disable=broad-except
 			logger.error("Failed to suspend bitlocker: %s", e, exc_info=True)
 	
 	def rebootMachine(self, waitSeconds=3):
@@ -134,14 +135,14 @@ class OpsiclientdNT(Opsiclientd):
 	def isRebootRequested(self):
 		try:
 			rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
-		except Exception as error:
-			logger.warning(u"Failed to get RebootRequested from registry: {0}".format(forceUnicode(error)))
+		except Exception as error: # pylint: disable=broad-except
+			logger.warning("Failed to get RebootRequested from registry: %s", error)
 			rebootRequested = 0
 
-		logger.notice(u"Reboot request in Registry: {0}".format(rebootRequested))
+		logger.notice("Reboot request in Registry: %s", rebootRequested)
 		if rebootRequested == 2:
 			# Logout
-			logger.info(u"Logout requested")
+			logger.info("Logout requested")
 			self.clearRebootRequest()
 			return False
 
@@ -150,11 +151,11 @@ class OpsiclientdNT(Opsiclientd):
 	def isShutdownRequested(self):
 		try:
 			shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
-		except Exception as error:
-			logger.warning(u"Failed to get shutdownRequested from registry: {0}".format(forceUnicode(error)))
+		except Exception as error: # pylint: disable=broad-except
+			logger.warning("Failed to get shutdownRequested from registry: %s", error)
 			shutdownRequested = 0
 
-		logger.notice(u"Shutdown request in Registry: {0}".format(shutdownRequested))
+		logger.notice("Shutdown request in Registry: %s", shutdownRequested)
 		return forceBool(shutdownRequested)
 
 	def isWindowsInstallerBusy(self):
@@ -228,7 +229,7 @@ class OpsiclientdNT(Opsiclientd):
 		try:
 			win32net.NetUserGetInfo(None, user_info["name"], 1)
 			user_exists = True
-		except Exception as user_err:
+		except Exception: # pylint: disable=broad-except
 			pass
 		
 		if user_exists:
@@ -240,7 +241,7 @@ class OpsiclientdNT(Opsiclientd):
 					try:
 						subprocess.call(['takeown', '/d', 'Y', '/r', '/f', pdir])
 						subprocess.call(['del', '/s', '/f', '/q',pdir], shell=True)
-					except Exception as rm_err:
+					except subprocess.CalledProcessError as rm_err:
 						logger.warning("Failed to delete %s: %s", pdir, rm_err)
 				user_exists = False
 			else:
@@ -295,9 +296,9 @@ class ShutdownThread(threading.Thread):
 				System.shutdown(0)
 				logger.notice("Shutdown initiated")
 				break
-			except Exception as e:
+			except Exception as err: # pylint: disable=broad-except
 				# Device not ready?
-				logger.info("Failed to initiate shutdown: %s", e)
+				logger.info("Failed to initiate shutdown: %s", err)
 				time.sleep(1)
 
 
@@ -311,9 +312,9 @@ class RebootThread(threading.Thread):
 				System.reboot(0)
 				logger.notice("Reboot initiated")
 				break
-			except Exception as e:
+			except Exception as err: # pylint: disable=broad-except
 				# Device not ready?
-				logger.info("Failed to initiate reboot: %s", e)
+				logger.info("Failed to initiate reboot: %s", err)
 				time.sleep(1)
 
 

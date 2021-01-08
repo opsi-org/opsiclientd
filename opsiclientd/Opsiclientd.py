@@ -183,11 +183,6 @@ class Opsiclientd(EventListener, threading.Thread):
 					shutil.rmtree(move_dir)
 				os.rename(inst_dir, move_dir)
 
-				if False:
-					try:
-						shutil.rmtree(move_dir)
-					except Exception as move_error:
-						logger.info("Failed to remove %s: %s", move_dir, move_error)
 				logger.info("Installing '%s' into '%s'", bin_dir, inst_dir)
 				shutil.copytree(bin_dir, inst_dir)
 				
@@ -203,8 +198,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				restart_marker = os.path.join(os.path.dirname(self._argv[0]), ".opsiclientd_restart")
 				logger.notice("Writing restart marker %s", restart_marker)
 				open(restart_marker, "w").close()
-			except Exception as e:
-				logger.error(e)
+			except Exception as err: # pylint: disable=broad-except
+				logger.error(err)
 			logger.notice("Executing: %s", self._argv)
 			os.chdir(os.path.dirname(self._argv[0]))
 			os.execvp(self._argv[0], self._argv)
@@ -241,8 +236,8 @@ class Opsiclientd(EventListener, threading.Thread):
 									waitForProcessEnding=False
 							)[2]
 							break
-						except Exception as e:
-							logger.error(u"Failed to start block login notifier app: %s" % forceUnicode(e))
+						except Exception as err: # pylint: disable=broad-except
+							logger.error("Failed to start block login notifier app: %s", err)
 							break
 		else:
 			if self._blockLoginEventId:
@@ -251,17 +246,17 @@ class Opsiclientd(EventListener, threading.Thread):
 
 			if self._blockLoginNotifierPid:
 				try:
-					logger.info(u"Terminating block login notifier app (pid %s)" % self._blockLoginNotifierPid)
+					logger.info("Terminating block login notifier app (pid %s)", self._blockLoginNotifierPid)
 					System.terminateProcess(processId=self._blockLoginNotifierPid)
-				except Exception as e:
-					logger.warning(u"Failed to terminate block login notifier app: %s" % forceUnicode(e))
+				except Exception as err: # pylint: disable=broad-except
+					logger.warning("Failed to terminate block login notifier app: %s", err)
 				self._blockLoginNotifierPid = None
 		
 		if self._controlPipe:
 			try:
 				self._controlPipe.executeRpc("blockLogin", self._blockLogin)
-			except Exception as rpcError:
-				logger.debug(rpcError)
+			except Exception as rpc_error: # pylint: disable=broad-except
+				logger.debug(rpc_error)
 
 	def loginUser(self, username, password):
 		raise NotImplementedError(f"Not implemented on {platform.system()}")
@@ -269,6 +264,9 @@ class Opsiclientd(EventListener, threading.Thread):
 	def isRunning(self):
 		return self._running
 
+	def is_stopping(self):
+		return self._stopEvent.is_set()
+	
 	def waitForGUI(self, timeout=None):
 		waiter = WaitForGUI()
 		waiter.wait(timeout or None)
@@ -277,28 +275,28 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not config.get('action_processor', 'create_user'):
 			return
 
-		runAsUser = config.get('action_processor', 'run_as_user')
-		if runAsUser.lower() == 'system':
+		run_as_user = config.get('action_processor', 'run_as_user')
+		if run_as_user.lower() == 'system':
 			self._actionProcessorUserName = u''
 			self._actionProcessorUserPassword = u''
 			return
 
-		if '\\' in runAsUser:
-			logger.warning(u"Ignoring domain part of user to run action processor '%s'" % runAsUser)
-			runAsUser = runAsUser.split('\\', -1)
+		if '\\' in run_as_user:
+			logger.warning(u"Ignoring domain part of user to run action processor '%s'", run_as_user)
+			run_as_user = run_as_user.split('\\', -1)
 
-		if not recreate and self._actionProcessorUserName and self._actionProcessorUserPassword and System.existsUser(username=runAsUser):
+		if not recreate and self._actionProcessorUserName and self._actionProcessorUserPassword and System.existsUser(username=run_as_user):
 			return
 
-		self._actionProcessorUserName = runAsUser
-		logger.notice(u"Creating local user '%s'" % runAsUser)
+		self._actionProcessorUserName = run_as_user
+		logger.notice(u"Creating local user '%s'" % run_as_user)
 
 		self._actionProcessorUserPassword = u'$!?' + str(randomString(16)) + u'!/%'
 		logger.addConfidentialString(self._actionProcessorUserPassword)
 
-		if System.existsUser(username=runAsUser):
-			System.deleteUser(username=runAsUser)
-		System.createUser(username=runAsUser, password=self._actionProcessorUserPassword, groups=[System.getAdminGroupName()])
+		if System.existsUser(username=run_as_user):
+			System.deleteUser(username=run_as_user)
+		System.createUser(username=run_as_user, password=self._actionProcessorUserPassword, groups=[System.getAdminGroupName()])
 
 	def deleteActionProcessorUser(self):
 		if not config.get('action_processor', 'delete_user'):
@@ -310,7 +308,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not System.existsUser(username=self._actionProcessorUserName):
 			return
 
-		logger.notice(u"Deleting local user '%s'" % self._actionProcessorUserName)
+		logger.notice("Deleting local user '%s'", self._actionProcessorUserName)
 		System.deleteUser(username=self._actionProcessorUserName)
 		self._actionProcessorUserName = u''
 		self._actionProcessorUserPassword = u''
@@ -319,8 +317,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		with opsicommon.logging.log_context({'instance' : 'opsiclientd'}):
 			try:
 				self._run()
-			except Exception as exc:
-				logger.error(exc, exc_info=True)
+			except Exception as err: # pylint: disable=broad-except
+				logger.error(err, exc_info=True)
 	
 	def _run(self):
 		self._running = True
@@ -352,17 +350,18 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		@contextmanager
 		def getControlServer():
-			logger.notice(u"Starting control server")
+			logger.notice("Starting control server")
+			control_server = None
 			try:
-				controlServer = ControlServer(
+				control_server = ControlServer(
 					opsiclientd=self,
 					httpsPort=config.get('control_server', 'port'),
 					sslServerKeyFile=config.get('control_server', 'ssl_server_key_file'),
 					sslServerCertFile=config.get('control_server', 'ssl_server_cert_file'),
 					staticDir=config.get('control_server', 'static_dir')
 				)
-				logger.debug("Current control server: %s", controlServer)
-				controlServer.start()
+				logger.debug("Current control server: %s", control_server)
+				control_server.start()
 				logger.notice("Control server started")
 
 				self._stopEvent.wait(1)
@@ -375,41 +374,42 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to start control server: %s", e, exc_info=True)
 				raise e
 			finally:
-				logger.info("Stopping control server")
-				try:
-					controlServer.stop()
-					controlServer.join(2)
-					logger.info("Control server stopped")
-				except (NameError, RuntimeError) as stopError:
-					logger.debug("Stopping controlServer failed: %s", stopError)
+				if control_server:
+					logger.info("Stopping control server")
+					try:
+						control_server.stop()
+						control_server.join(2)
+						logger.info("Control server stopped")
+					except (NameError, RuntimeError) as stopError:
+						logger.debug("Stopping controlServer failed: %s", stopError)
 
 		@contextmanager
 		def getCacheService():
-			cacheService = None
+			cache_service = None
 			try:
 				logger.notice("Starting cache service")
 				from opsiclientd.nonfree.CacheService import CacheService
-				cacheService = CacheService(opsiclientd=self)
-				cacheService.start()
+				cache_service = CacheService(opsiclientd=self)
+				cache_service.start()
 				logger.notice("Cache service started")
-				yield cacheService
-			except Exception as e:
-				logger.error("Failed to start cache service: %s", e, exc_info=True)
+				yield cache_service
+			except Exception as err: # pylint: disable=broad-except
+				logger.error("Failed to start cache service: %s", err, exc_info=True)
 				yield None
 			finally:
-				if cacheService:
+				if cache_service:
 					logger.info("Stopping cache service")
 					try:
-						cacheService.stop()
-						cacheService.join(2)
+						cache_service.stop()
+						cache_service.join(2)
 						logger.info("Cache service stopped")
-					except (NameError, RuntimeError) as stopError:
-						logger.debug("Failed to stop cache service: %s", stopError)
+					except (NameError, RuntimeError) as stop_err:
+						logger.debug("Failed to stop cache service: %s", stop_err)
 		
 		@contextmanager
 		def getEventGeneratorContext():
 			logger.debug("Creating event generators")
-			createEventGenerators()
+			createEventGenerators(self)
 
 			for eventGenerator in getEventGenerators():
 				eventGenerator.addEventListener(self)
@@ -428,8 +428,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		@contextmanager
 		def getDaemonLoopingContext():
 			with getEventGeneratorContext():
-				for eventGenerator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
-					eventGenerator.createAndFireEvent()
+				for event_generator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
+					event_generator.createAndFireEvent()
 
 				if RUNNING_ON_WINDOWS and getEventGenerators(generatorClass=GUIStartupEventGenerator):
 					# Wait until gui starts up
@@ -443,24 +443,24 @@ class Opsiclientd(EventListener, threading.Thread):
 				try:
 					yield
 				finally:
-					for eventGenerator in getEventGenerators(generatorClass=DaemonShutdownEventGenerator):
-						logger.info("Create and fire shutdown event generator %s", eventGenerator)
-						eventGenerator.createAndFireEvent()
+					for event_generator in getEventGenerators(generatorClass=DaemonShutdownEventGenerator):
+						logger.info("Create and fire shutdown event generator %s", event_generator)
+						event_generator.createAndFireEvent()
 
 		try:
 			parent = psutil.Process(os.getpid()).parent()
 			parent_name = parent.name() if parent else None
-			eventTitle = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}]" \
+			event_title = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}]" \
 				f" ({'full' if __fullversion__ else 'open'})" \
 				f" running on {platform.system()}"
-			logger.essential(eventTitle)
-			eventDescription = f"Parent process: {parent_name}\n"
+			logger.essential(event_title)
+			event_description = f"Parent process: {parent_name}\n"
 			logger.essential(f"Parent process: {parent_name}")
-			eventDescription += f"Commandline: {' '.join(sys.argv)}\n"
+			event_description += f"Commandline: {' '.join(sys.argv)}\n"
 			logger.essential(f"Commandline: {' '.join(sys.argv)}")
-			eventDescription += f"Working directory: {os.getcwd()}\n"
+			event_description += f"Working directory: {os.getcwd()}\n"
 			logger.essential(f"Working directory: {os.getcwd()}")
-			eventDescription += f"Using host id '{config.get('global', 'host_id')}'"
+			event_description += f"Using host id '{config.get('global', 'host_id')}'"
 			logger.notice(f"Using host id '{config.get('global', 'host_id')}'")
 
 			logger.debug("Environment: %s", os.environ)
@@ -468,8 +468,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			self.setBlockLogin(True)
 
 			self._opsiclientdRunningEventId = timeline.addEvent(
-				title=eventTitle,
-				description=eventDescription,
+				title=event_title,
+				description=event_description,
 				category="opsiclientd_running",
 				durationEvent=True
 			)
@@ -498,9 +498,9 @@ class Opsiclientd(EventListener, threading.Thread):
 									timeline.setEventEnd(self._opsiclientdRunningEventId)
 								logger.info("Stopping timeline")
 								timeline.stop()
-		except Exception as e:
+		except Exception as err: # pylint: disable=broad-except
 			if not self._stopEvent.is_set():
-				logger.error(e, exc_info=True)
+				logger.error(err, exc_info=True)
 			self.setBlockLogin(False)
 		finally:
 			self._running = False
@@ -510,12 +510,12 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.info("Exiting opsiclientd thread")
 
 	def stop(self):
-		logger.notice("Stopping %s...", self)
+		logger.notice("Stopping %s", self)
 		self._stopEvent.set()
 
 	def getCacheService(self):
 		if not self._cacheService:
-			raise Exception("Cache service not started")
+			raise RuntimeError("Cache service not started")
 		return self._cacheService
 
 	def processEvent(self, event):

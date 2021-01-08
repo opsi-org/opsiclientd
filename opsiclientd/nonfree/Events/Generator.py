@@ -21,21 +21,21 @@ __all__ = ['CustomEvent', 'CustomEventGenerator']
 
 
 class CustomEventGenerator(EventGenerator):
-    def createEvent(self, eventInfo={}):
-        eventConfig = self.getEventConfig()
-        if not eventConfig:
-            return None
+	def createEvent(self, eventInfo={}):
+		eventConfig = self.getEventConfig()
+		if not eventConfig:
+			return None
 
-        return CustomEvent(eventConfig=eventConfig, eventInfo=eventInfo)
+		return CustomEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
-    def getNextEvent(self):
-        self._event = threading.Event()
-        if self._generatorConfig.interval > 0:
-            self._event.wait(self._generatorConfig.interval)
-            return self.createEvent()
-        else:
-            self._event.wait()
+	def getNextEvent(self):
+		self._event = threading.Event()
+		if self._generatorConfig.interval > 0:
+			self._event.wait(self._generatorConfig.interval)
+			return self.createEvent()
+		else:
+			self._event.wait()
 
 
 class CustomEvent(Event):
-    pass
+	pass

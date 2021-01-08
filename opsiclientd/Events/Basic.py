@@ -33,7 +33,7 @@ import time
 
 import opsicommon.logging
 from opsicommon.logging import logger
-from OPSI.Types import forceList, forceUnicode
+from OPSI.Types import forceList
 
 from opsiclientd.State import State
 
@@ -44,19 +44,20 @@ state = State()
 
 
 class EventGenerator(threading.Thread):
-	def __init__(self, generatorConfig):
+	def __init__(self, opsiclientd, generatorConfig):
 		threading.Thread.__init__(self, daemon=True)
-		self._eventConfigs = []
+		self._opsiclientd = opsiclientd
 		self._generatorConfig = generatorConfig
+		self._eventConfigs = []
 		self._eventListeners = []
 		self._eventsOccured = 0
 		self._threadId = None
 		self._stopped = False
 		self._event = None
 		self._lastEventOccurence = None
-		
+	
 	def __str__(self):
-		return u'<%s %s>' % (self.__class__.__name__, self._generatorConfig.getId())
+		return f'<{self.__class__.__name__} {self._generatorConfig.getId()}>'
 
 	__repr__ = __str__
 
@@ -83,25 +84,25 @@ class EventGenerator(threading.Thread):
 		self._eventListeners.append(eventListener)
 
 	def getEventConfig(self):
-		logger.info(u"Testing preconditions of configs: %s" % self._eventConfigs)
+		logger.info("Testing preconditions of configs: %s", self._eventConfigs)
 		actualConfig = {'preconditions': {}, 'config': None}
 		for pec in self._eventConfigs:
 			if self._preconditionsFulfilled(pec.preconditions):
-				logger.info(u"Preconditions %s for event config '%s' fulfilled" % (pec.preconditions, pec.getId()))
+				logger.info("Preconditions %s for event config '%s' fulfilled", pec.preconditions, pec.getId())
 				if not actualConfig['config'] or (len(pec.preconditions.keys()) > len(actualConfig['preconditions'].keys())):
 					actualConfig = {'preconditions': pec.preconditions, 'config': pec}
 			else:
-				logger.info(u"Preconditions %s for event config '%s' not fulfilled" % (pec.preconditions, pec.getId()))
+				logger.info("Preconditions %s for event config '%s' not fulfilled", pec.preconditions, pec.getId())
 
 		return actualConfig['config']
 
-	def createAndFireEvent(self, eventInfo={}):
+	def createAndFireEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
 		self.fireEvent(self.createEvent(eventInfo))
 
-	def createEvent(self, eventInfo={}):
-		logger.debug("Creating event config from info: {0}".format(eventInfo))
+	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
+		logger.debug("Creating event config from info: %s", eventInfo)
 		eventConfig = self.getEventConfig()
-		logger.debug("Event config: {0}".format(eventConfig))
+		logger.debug("Event config: %s", eventConfig)
 		if not eventConfig:
 			return None
 
@@ -113,6 +114,7 @@ class EventGenerator(threading.Thread):
 	def getNextEvent(self):
 		self._event = threading.Event()
 		self._event.wait()
+		return None
 	
 	def cleanup(self):
 		pass
@@ -150,8 +152,8 @@ class EventGenerator(threading.Thread):
 					try:
 						logger.info("Calling processEvent on listener %s", self._eventListener)
 						self._eventListener.processEvent(self._event)
-					except Exception as e:
-						logger.logException(e)
+					except Exception as err: # pylint: disable=broad-except
+						logger.error(err, exc_info=True)
 
 		logger.info("Starting FireEventThread for listeners: %s", self._eventListeners)
 		for l in self._eventListeners:
@@ -176,22 +178,22 @@ class EventGenerator(threading.Thread):
 					(self._eventsOccured <= self._generatorConfig.maxRepetitions)
 				):
 					logger.info("Getting next event...")
-					event = self.getNextEvent()
-					self._eventsOccured += 1
-					logger.info("Got new event: %s (%d/%d)", event, self._eventsOccured, self._generatorConfig.maxRepetitions + 1)
+					event = self.getNextEvent() # pylint: disable=assignment-from-none
 					if event:
+						self._eventsOccured += 1
+						logger.info("Got new event: %s (%d/%d)", event, self._eventsOccured, self._generatorConfig.maxRepetitions + 1)
 						self.fireEvent(event)
-					for i in range(10):
+					for i in range(10): # pylint: disable=unused-variable
 						if self._stopped:
 							break
 						time.sleep(1)
 				logger.notice("Event generator '%s' now deactivated after %d event occurrences", self, self._eventsOccured)
-			except Exception as e:
-				logger.error("Failure in event generator '%s': %s", self, e, exc_info=True)
+			except Exception as err: # pylint: disable=broad-except
+				logger.error("Failure in event generator '%s': %s", self, err, exc_info=True)
 			try:
 				self.cleanup()
-			except Exception as e:
-				logger.error("Failed to clean up: %s", e)
+			except Exception as err: # pylint: disable=broad-except
+				logger.error("Failed to clean up: %s", err)
 
 			logger.info("Event generator '%s' exiting ", self)
 
@@ -202,10 +204,10 @@ class EventGenerator(threading.Thread):
 
 
 class Event(object):
-	def __init__(self, eventConfig, eventInfo={}):
+	""" Basic event class """
+	def __init__(self, eventConfig, eventInfo={}): # pylint: disable=dangerous-default-value
 		self.eventConfig = eventConfig
 		self.eventInfo = eventInfo
-		#opsicommon.logging.set_context({'instance' : 'event generator ' + self.eventConfig.getId()})
 	
 	def getActionProcessorCommand(self):
 		actionProcessorCommand = self.eventConfig.actionProcessorCommand
@@ -217,7 +219,7 @@ class Event(object):
 
 class EventListener(object):
 	def __init__(self):
-		logger.debug(u"EventListener initiated")
+		logger.debug("EventListener initiated")
 
-	def processEvent(self, event):
-		logger.warning(u"%s: processEvent() not implemented" % self)
+	def processEvent(self, event): # pylint: disable=unused-argument
+		logger.warning("%s: processEvent() not implemented", self)

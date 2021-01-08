@@ -70,10 +70,6 @@ from opsiclientd.SoftwareOnDemand import ResourceKioskJsonRpc
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 
-if RUNNING_ON_WINDOWS:
-	import win32net
-	import win32security
-
 config = Config()
 state = State()
 
@@ -1047,6 +1043,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def runAsOpsiSetupAdmin(self, command="powershell.exe -ExecutionPolicy ByPass"):
 		try:
 			# https://bugs.python.org/file46988/issue.py
+			if not RUNNING_ON_WINDOWS:
+				raise NotImplementedError(f"Not implemented on {platform.system()}")
+			# pyright: reportMissingImports=false
 			import win32profile
 			import win32security
 			import winreg

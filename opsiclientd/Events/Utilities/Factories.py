@@ -95,7 +95,7 @@ def EventConfigFactory(eventType, eventId, **kwargs):
 	raise TypeError(u"Unknown event config type '%s'" % eventType)
 
 
-def EventGeneratorFactory(eventConfig):
+def EventGeneratorFactory(opsiclientd, eventConfig):
 	"""
 	Get an event generator matching the given config type.
 
@@ -103,28 +103,28 @@ def EventGeneratorFactory(eventConfig):
 	:rtype: EventGenerator
 	"""
 	if isinstance(eventConfig, PanicEventConfig):
-		return PanicEventGenerator(eventConfig)
+		return PanicEventGenerator(opsiclientd, eventConfig)
 	elif isinstance(eventConfig, DaemonStartupEventConfig):
-		return DaemonStartupEventGenerator(eventConfig)
+		return DaemonStartupEventGenerator(opsiclientd, eventConfig)
 	elif isinstance(eventConfig, DaemonShutdownEventConfig):
-		return DaemonShutdownEventGenerator(eventConfig)
+		return DaemonShutdownEventGenerator(opsiclientd, eventConfig)
 	elif isinstance(eventConfig, TimerEventConfig):
-		return TimerEventGenerator(eventConfig)
+		return TimerEventGenerator(opsiclientd, eventConfig)
 	elif isinstance(eventConfig, SyncCompletedEventConfig):
-		return SyncCompletedEventGenerator(eventConfig)
+		return SyncCompletedEventGenerator(opsiclientd, eventConfig)
 	elif isinstance(eventConfig, ProcessActionRequestsEventConfig):
-		return ProcessActionRequestsEventGenerator(eventConfig)
+		return ProcessActionRequestsEventGenerator(opsiclientd, eventConfig)
 	elif isinstance(eventConfig, CustomEventConfig):
-		return CustomEventGenerator(eventConfig)
+		return CustomEventGenerator(opsiclientd, eventConfig)
 	elif isinstance(eventConfig, SwOnDemandEventConfig):
-		return SwOnDemandEventGenerator(eventConfig)
+		return SwOnDemandEventGenerator(opsiclientd, eventConfig)
 
 	if RUNNING_ON_WINDOWS:
 		if isinstance(eventConfig, UserLoginEventConfig):
-			return UserLoginEventGenerator(eventConfig)
+			return UserLoginEventGenerator(opsiclientd, eventConfig)
 		elif isinstance(eventConfig, SystemShutdownEventConfig):
-			return SystemShutdownEventGenerator(eventConfig)
+			return SystemShutdownEventGenerator(opsiclientd, eventConfig)
 		elif isinstance(eventConfig, GUIStartupEventConfig):
-			return GUIStartupEventGenerator(eventConfig)
+			return GUIStartupEventGenerator(opsiclientd, eventConfig)
 
 	raise TypeError(u"Unhandled event config '%s'" % eventConfig)

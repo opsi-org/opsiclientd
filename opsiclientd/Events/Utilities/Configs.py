@@ -31,9 +31,8 @@ from __future__ import absolute_import
 import copy as pycopy
 import pprint
 
-from OPSI.Logger import Logger, LOG_DEBUG
-from OPSI.Types import forceBool, forceList, forceUnicode, forceUnicodeLower
-from OPSI.Util import objectToBeautifiedText
+from OPSI.Logger import Logger
+from OPSI.Types import forceBool, forceList, forceUnicodeLower
 
 from opsiclientd.Config import Config
 from opsiclientd.Localization import getLanguage
@@ -54,9 +53,9 @@ def getEventConfigs():
 			try:
 				for key in options.keys():
 					preconditions[preconditionId][key] = forceBool(options[key])
-				logger.info(u"Precondition '%s' created: %s" % (preconditionId, preconditions[preconditionId]))
-			except Exception as e:
-				logger.error(u"Failed to parse precondition '%s': %s" % (preconditionId, forceUnicode(e)))
+				logger.info("Precondition '%s' created: %s", preconditionId, preconditions[preconditionId])
+			except Exception as err: # pylint: disable=broad-except
+				logger.error("Failed to parse precondition '%s': %s", preconditionId, err)
 
 	rawEventConfigs = {}
 	for (section, options) in config.getDict().items():
@@ -64,7 +63,7 @@ def getEventConfigs():
 		if section.startswith('event_'):
 			eventConfigId = section.split('_', 1)[1]
 			if not eventConfigId:
-				logger.error(u"No event config id defined in section '%s'" % section)
+				logger.error("No event config id defined in section '%s'", section)
 				continue
 
 			rawEventConfigs[eventConfigId] = {
@@ -92,12 +91,12 @@ def getEventConfigs():
 					if not rawEventConfigs[eventConfigId]['super']:
 						rawEventConfigs[eventConfigId]['super'] = superEventName.strip()
 					rawEventConfigs[eventConfigId]['precondition'] = precondition.replace('}', '').strip()
-			except Exception as e:
-				logger.error(u"Failed to parse event config '%s': %s" % (eventConfigId, forceUnicode(e)))
+			except Exception as err: # pylint: disable=broad-except
+				logger.error("Failed to parse event config '%s': %s", eventConfigId, err)
 
 	def __inheritArgsFromSuperEvents(rawEventConfigsCopy, args, superEventConfigId):
 		if not superEventConfigId in rawEventConfigsCopy.keys():
-			logger.error(u"Super event '%s' not found" % superEventConfigId)
+			logger.error("Super event '%s' not found", superEventConfigId)
 			return args
 		superArgs = pycopy.deepcopy(rawEventConfigsCopy[superEventConfigId]['args'])
 		if rawEventConfigsCopy[superEventConfigId]['super']:
@@ -106,7 +105,7 @@ def getEventConfigs():
 		return superArgs
 
 	rawEventConfigsCopy = pycopy.deepcopy(rawEventConfigs)
-	for eventConfigId in rawEventConfigs.keys():
+	for eventConfigId in rawEventConfigs:
 		if rawEventConfigs[eventConfigId]['super']:
 			rawEventConfigs[eventConfigId]['args'] = __inheritArgsFromSuperEvents(
 									rawEventConfigsCopy,
@@ -127,7 +126,7 @@ def getEventConfigs():
 			if rawEventConfig.get('precondition'):
 				precondition = preconditions.get(rawEventConfig['precondition'])
 				if not precondition:
-					logger.error(u"Precondition '%s' referenced by event config '%s' not found" % (precondition, eventConfigId))
+					logger.error("Precondition '%s' referenced by event config '%s' not found", precondition, eventConfigId)
 				else:
 					eventConfigs[eventConfigId]['preconditions'] = precondition
 
@@ -140,7 +139,7 @@ def getEventConfigs():
 					elif key.startswith(('action_message', 'message')):
 						try:
 							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
-						except Exception:
+						except Exception: # pylint: disable=broad-except
 							mLanguage = None
 
 						if mLanguage:
@@ -151,7 +150,7 @@ def getEventConfigs():
 					elif key.startswith('shutdown_warning_message'):
 						try:
 							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
-						except Exception:
+						except Exception: # pylint: disable=broad-except
 							mLanguage = None
 
 						if mLanguage:
@@ -162,13 +161,12 @@ def getEventConfigs():
 					elif key.startswith('name'):
 						try:
 							mLanguage = key.split('[')[1].split(']')[0].strip().lower()
-						except Exception:
+						except Exception: # pylint: disable=broad-except
 							mLanguage = None
 
 						if mLanguage:
 							if mLanguage == getLanguage():
 								eventConfigs[eventConfigId]['name'] = value
-						#elif not eventConfigs[eventConfigId].get('name'):
 						else:
 							eventConfigs[eventConfigId]['name'] = value
 					elif key == 'interval':
@@ -270,16 +268,16 @@ def getEventConfigs():
 								logger.info("Removing config option %s.%s", section, key)
 								config.del_option(section, key)
 				
-				except Exception as e:
-					logger.debug(e, exc_info=True)
-					logger.error("Failed to set event config argument '%s' to '%s': %s", key, value, e)
+				except Exception as err1: # pylint: disable=broad-except
+					logger.debug(err1, exc_info=True)
+					logger.error("Failed to set event config argument '%s' to '%s': %s", key, value, err1)
 
 			logger.info(
 				"Event config '%s' args:\n%s",
 				eventConfigId,
 				pprint.pformat(eventConfigs[eventConfigId], indent=4, width=300, compact=False)
 			)
-		except Exception as e:
-			logger.error(e, exc_info=True)
+		except Exception as err2: # pylint: disable=broad-except
+			logger.error(err2, exc_info=True)
 	
 	return eventConfigs

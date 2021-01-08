@@ -312,12 +312,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			try:
 				logger.info("Running command %s in session '%s' on desktop '%s'", command, sessionId, desktop)
 				processId = System.runCommandInSession(
-						command              = command,
-						sessionId            = sessionId,
-						desktop              = desktop,
-						waitForProcessEnding = waitForProcessEnding,
-						timeoutSeconds       = timeoutSeconds,
-						noWindow             = noWindow
+						command=command,
+						sessionId=sessionId,
+						desktop=desktop,
+						waitForProcessEnding=waitForProcessEnding,
+						timeoutSeconds=timeoutSeconds,
+						noWindow=noWindow
 				)[2]
 				break
 			except Exception as e:
@@ -1302,6 +1302,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.logException(e)
 
 	def inWorkingWindow(self):
+		start_str, end_str, now = (None, None, None)
 		try:
 			start_str, end_str = self.event.eventConfig.workingWindow.split("-")
 			start = datetime.time(int(start_str.split(":")[0]), int(start_str.split(":")[1]))

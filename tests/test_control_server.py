@@ -16,7 +16,7 @@ def preparedConfig(config, configFile):
 def testFiringEvent(preparedConfig):
 	preparedConfig.readConfigFile()
 
-	createEventGenerators()
+	createEventGenerators(None)
 	getEventConfigs()
 
 	controlServer = OCS.OpsiclientdRpcInterface(None)
@@ -34,7 +34,7 @@ def testFiringUnknownEventRaisesError(preparedConfig):
 def testGUIStartupEventOnlyOnWindows(preparedConfig, onWindows):
 	preparedConfig.readConfigFile()
 
-	createEventGenerators()
+	createEventGenerators(None)
 	configs = getEventConfigs()
 
 	assert configs
