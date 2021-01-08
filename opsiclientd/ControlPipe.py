@@ -340,7 +340,7 @@ class PosixControlDomainSocket(ControlPipe):
 			os.remove(self._socketName)
 	
 	def waitForClient(self):
-		logger.info("Waiting for client to connect to %s", self._socketName)
+		logger.debug("Waiting for client to connect to %s", self._socketName)
 		self._socket.settimeout(2.0)
 		while True:
 			try:
@@ -450,7 +450,7 @@ class NTControlPipe(ControlPipe):
 				pass
 	
 	def waitForClient(self):
-		logger.debug("Creating pipe %s", self._pipeName)
+		logger.trace("Creating pipe %s", self._pipeName)
 		PIPE_ACCESS_DUPLEX = 0x3
 		PIPE_TYPE_MESSAGE = 0x4
 		PIPE_READMODE_MESSAGE = 0x2
@@ -471,9 +471,7 @@ class NTControlPipe(ControlPipe):
 		if self._pipe == INVALID_HANDLE_VALUE:
 			raise Exception(f"Failed to create named pipe: {windll.kernel32.GetLastError()}")
 
-		logger.debug("Pipe %s created", self._pipeName)
-		
-		logger.info("Waiting for client to connect to %s", self._pipeName)
+		logger.debug("Pipe %s created, waiting for client to connect", self._pipeName)
 		# This call is blocking until a client connects
 		fConnected = windll.kernel32.ConnectNamedPipe(self._pipe, None)
 		if fConnected == 0 and windll.kernel32.GetLastError() == 535:
