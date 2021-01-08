@@ -1040,6 +1040,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			raise
 	
 	def loginOpsiSetupAdmin(self):
+		System.logoffSession("opsisetupadmin")
 		user_info = self.opsiclientd.createOpsiSetupAdmin()
 		return self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 
@@ -1050,6 +1051,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			import win32security
 			import winreg
 			
+			System.logoffSession("opsisetupadmin")
 			user_info = self.opsiclientd.createOpsiSetupAdmin()
 			
 			logon = win32security.LogonUser(
