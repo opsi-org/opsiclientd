@@ -81,5 +81,5 @@ class GUIStartupEventGenerator(EventGenerator):
 				time.sleep(1)
 
 
-class GUIStartupEvent(Event):
+class GUIStartupEvent(Event): # pylint: disable=too-few-public-methods
 	pass

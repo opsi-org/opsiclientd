@@ -14,32 +14,30 @@ opsiclientd.nonfree.CacheService
 
 # pylint: disable=too-many-lines
 
-import base64
 import codecs
 import os
 import shutil
 import threading
 import time
-from hashlib import md5
-from Crypto.Hash import MD5
-from Crypto.Signature import pkcs1_15
 
-from opsicommon.logging import logger, log_context
 from OPSI.Object import ProductOnClient
 from OPSI.Types import (
 	forceBool, forceInt, forceList, forceProductIdList, forceUnicode
 )
-from OPSI.Util import getPublicKey
 from OPSI.Util.File.Opsi import PackageContentFile
 from OPSI.Util.Repository import getRepository
 from OPSI.Util.Repository import (
-	DepotToLocalDirectorySychronizer, RepositoryObserver)
+	DepotToLocalDirectorySychronizer, RepositoryObserver
+)
 from OPSI import System
 from OPSI.Util.HTTP import urlsplit
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.BackendManager import BackendExtender
 from OPSI.Backend.SQLite import (
-	SQLiteBackend, SQLiteObjectBackendModificationTracker)
+	SQLiteBackend, SQLiteObjectBackendModificationTracker
+)
+
+from opsicommon.logging import logger, log_context
 
 from opsiclientd.Config import Config
 from opsiclientd.State import State
@@ -48,6 +46,7 @@ from opsiclientd.Events.Utilities.Generators import getEventGenerators
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.Timeline import Timeline
 
+from opsiclientd.nonfree import verify_modules
 from opsiclientd.nonfree.CacheBackend import ClientCacheBackend
 
 __all__ = [
@@ -160,7 +159,7 @@ class CacheService(threading.Thread):
 		self.initializeProductCacheService()
 		return self._productCacheService.isWorking()
 
-	def cacheProducts(
+	def cacheProducts( # pylint: disable=too-many-arguments
 		self, waitForEnding=False, productProgressObserver=None, overallProgressObserver=None,
 		dynamicBandwidth=True, maxBandwidth=0
 	):
@@ -246,8 +245,7 @@ class CacheService(threading.Thread):
 				)
 				if checkCachedProductVersion:
 					return False
-				else:
-					logger.warning("Ignoring version difference")
+				logger.warning("Ignoring version difference")
 
 		return True
 
@@ -264,12 +262,12 @@ class CacheService(threading.Thread):
 		return self._productCacheService.getProductCacheDir()
 
 
-class ConfigCacheServiceBackendExtension(object):
-	def accessControl_authenticated(self):
+class ConfigCacheServiceBackendExtension: # pylint: disable=too-few-public-methods
+	def accessControl_authenticated(self): # pylint: disable=no-self-use
 		return True
 
 
-class ConfigCacheService(ServiceConnection, threading.Thread):
+class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable=too-many-instance-attributes
 	def __init__(self):
 		try:
 			threading.Thread.__init__(self)
@@ -352,64 +350,15 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		)
 		self._cacheBackend.addBackendChangeListener(self._backendTracker)
 
-	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):
+	def connectConfigService(self, allowTemporaryConfigServiceUrls=True): # pylint: disable=too-many-branches,too-many-statements
 		ServiceConnection.connectConfigService(self, allowTemporaryConfigServiceUrls=False)
 
-		modules = None
-		helpermodules = {}
 		try:
-			backendinfo = self._configService.backend_info()
-			modules = backendinfo['modules']
-			helpermodules = backendinfo['realmodules']
-
-			if not modules.get('vpn'):
-				raise Exception("Cannot sync products: VPN module currently disabled")
-
-			if not modules.get('customer'):
-				raise Exception("Cannot sync products: No customer in modules file")
-
-			if not modules.get('valid'):
-				raise Exception("Cannot sync products: modules file invalid")
-
-			if (
-				modules.get('expires', '') != 'never' and
-				time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0
-			):
-				raise Exception("Cannot sync products: modules file expired")
-
-			logger.info("Verifying modules file signature")
-			publicKey = getPublicKey(data=base64.decodebytes(b"AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP"))# pylint: disable=line-too-long
-			data = ""
-			mks = list(modules.keys())
-			mks.sort()
-			for module in mks:
-				if module in ("valid", "signature"):
-					continue
-				if module in helpermodules:
-					val = helpermodules[module]
-					if int(val) > 0:
-						modules[module] = True
-				else:
-					val = "yes" if modules[module] else "no"
-				data += "%s = %s\r\n" % (module.lower().strip(), val)
-
-			verified = False
-			if modules["signature"].startswith("{"):
-				s_bytes = int(modules['signature'].split("}", 1)[-1]).to_bytes(256, "big")
-				try:
-					pkcs1_15.new(publicKey).verify(MD5.new(data.encode()), s_bytes)
-					verified = True
-				except ValueError:
-					# Invalid signature
-					pass
-			else:
-				h_int = int.from_bytes(md5(data.encode()).digest(), "big")
-				s_int = publicKey._encrypt(int(modules["signature"])) # pylint: disable=protected-access
-				verified = h_int == s_int
-
-			if not verified:
-				raise Exception("Cannot sync products: modules file invalid")
-			logger.info("Modules file signature verified (customer: %s)", modules.get('customer'))
+			backend_info = self._configService.backend_info()
+			try:
+				verify_modules(backend_info, ['vpn'])
+			except RuntimeError as err:
+				raise RuntimeError("Cannot sync products: {err}") from err
 
 			try:
 				if self._configService._host not in ("localhost", "127.0.0.1"): # pylint: disable=protected-access
@@ -494,7 +443,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 	def _syncConfigToServer(self):
 		self._working = True
 		eventId = None
-		try:
+		try: # pylint: disable=too-many-nested-blocks
 			modifications = self._backendTracker.getModifications()
 			if not modifications:
 				logger.notice("Cache backend was not modified, no sync to server required")
@@ -557,7 +506,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		self.disconnectConfigService()
 		self._working = False
 
-	def _syncConfigFromServer(self):
+	def _syncConfigFromServer(self): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		self._working = True
 		try:
 			self.setObsolete()
@@ -696,7 +645,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		self._working = False
 
 
-class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Thread):
+class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Thread): # pylint: disable=too-many-instance-attributes
 	def __init__(self):
 		threading.Thread.__init__(self)
 		ServiceConnection.__init__(self)
@@ -798,61 +747,14 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		self._productProgressObserver = productProgressObserver
 		self._overallProgressObserver = overallProgressObserver
 
-	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):
+	def connectConfigService(self, allowTemporaryConfigServiceUrls=True): # pylint: disable=too-many-branches,too-many-statements
 		ServiceConnection.connectConfigService(self, allowTemporaryConfigServiceUrls=False)
 		try:
-			backendinfo = self._configService.backend_info()
-			modules = backendinfo['modules']
-			helpermodules = backendinfo['realmodules']
-
-			if not modules.get('vpn'):
-				raise Exception("Cannot sync products: VPN module currently disabled")
-
-			if not modules.get('customer'):
-				raise Exception("Cannot sync products: No customer in modules file")
-
-			if not modules.get('valid'):
-				raise Exception("Cannot sync products: modules file invalid")
-
-			if (
-				modules.get('expires', '') != 'never' and
-				time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0
-			):
-				raise Exception("Cannot sync products: modules file expired")
-
-			logger.info("Verifying modules file signature")
-			publicKey = getPublicKey(data=base64.decodebytes(b"AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP")) # pylint: disable=line-too-long
-			data = ""
-			mks = list(modules.keys())
-			mks.sort()
-			for module in mks:
-				if module in ("valid", "signature"):
-					continue
-				if module in helpermodules:
-					val = helpermodules[module]
-					if int(val) > 0:
-						modules[module] = True
-				else:
-					val = "yes" if modules[module] else "no"
-				data += "%s = %s\r\n" % (module.lower().strip(), val)
-
-			verified = False
-			if modules["signature"].startswith("{"):
-				s_bytes = int(modules['signature'].split("}", 1)[-1]).to_bytes(256, "big")
-				try:
-					pkcs1_15.new(publicKey).verify(MD5.new(data.encode()), s_bytes)
-					verified = True
-				except ValueError:
-					# Invalid signature
-					pass
-			else:
-				h_int = int.from_bytes(md5(data.encode()).digest(), "big")
-				s_int = publicKey._encrypt(int(modules["signature"]))# pylint: disable=protected-access
-				verified = h_int == s_int
-
-			if not verified:
-				raise Exception("Cannot sync products: modules file invalid")
-			logger.info("Modules file signature verified (customer: %s)", modules.get('customer'))
+			backend_info = self._configService.backend_info()
+			try:
+				verify_modules(backend_info, ['vpn'])
+			except RuntimeError as err:
+				raise RuntimeError("Cannot cache config: {err}") from err
 
 			try:
 				if self._configService._host not in ("localhost", "127.0.0.1"):# pylint: disable=protected-access
@@ -930,7 +832,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		except Exception as err:
 			raise Exception(f"Failed to free enough disk space for product cache: {err}") from err
 
-	def _cacheProducts(self):
+	def _cacheProducts(self): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		self._updateConfig()
 		self._working = True
 		self._state['products_cached'] = False
@@ -938,7 +840,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		state.set('product_cache_service', self._state)
 		eventId = None
 
-		try:
+		try: # pylint: disable=too-many-nested-blocks
 			if not self._configService:
 				self.connectConfigService()
 
@@ -1152,19 +1054,19 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				kwargs['proxyURL'] = config.get('global', 'proxy_url')
 
 			return getRepository(config.get('depot_server', 'url'), username=depotServerUsername, password=depotServerPassword, **kwargs)
-		else:
-			if self._impersonation:
-				try:
-					self._impersonation.end()
-				except Exception as err: # pylint: disable=broad-except
-					logger.warning(err)
 
-			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
-			self._impersonation = System.Impersonate(username=depotServerUsername, password=depotServerPassword)
-			self._impersonation.start(logonType='NEW_CREDENTIALS')
-			return getRepository(config.get('depot_server', 'url'), username=depotServerUsername, password=depotServerPassword, mount=False)
+		if self._impersonation:
+			try:
+				self._impersonation.end()
+			except Exception as err: # pylint: disable=broad-except
+				logger.warning(err)
 
-	def _cacheProduct(self, productId, neededProducts):
+		(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
+		self._impersonation = System.Impersonate(username=depotServerUsername, password=depotServerPassword)
+		self._impersonation.start(logonType='NEW_CREDENTIALS')
+		return getRepository(config.get('depot_server', 'url'), username=depotServerUsername, password=depotServerPassword, mount=False)
+
+	def _cacheProduct(self, productId, neededProducts): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		logger.notice("Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)", productId, self._maxBandwidth, self._dynamicBandwidth)
 		self._setProductCacheState(productId, 'started', time.time())
 		self._setProductCacheState(productId, 'completed', None, updateProductOnClient=False)

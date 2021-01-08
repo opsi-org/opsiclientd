@@ -33,7 +33,7 @@ from opsicommon.logging import logger, init_logging, log_context, LOG_NONE
 
 from opsiclientd import __version__, DEFAULT_STDERR_LOG_FORMAT, DEFAULT_FILE_LOG_FORMAT
 
-def main():
+def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 	if len(sys.argv) != 17:
 		print(
 			f"Usage: {os.path.basename(sys.argv[0])} <hostId> <hostKey> <controlServerPort>"
@@ -89,10 +89,7 @@ def main():
 			def _(string):
 				return string
 
-		if runAsUser and createEnvironment.lower() in ('yes', 'true', '1'):
-			createEnvironment = True
-		else:
-			createEnvironment = False
+		createEnvironment = bool(runAsUser and createEnvironment.lower() in ('yes', 'true', '1'))
 		actionProcessorTimeout = int(actionProcessorTimeout)
 		imp = None
 		depotShareMounted = False

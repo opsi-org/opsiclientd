@@ -55,5 +55,5 @@ class SwOnDemandEventGenerator(EventGenerator):
 		return SwOnDemandEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class SwOnDemandEvent(Event):
+class SwOnDemandEvent(Event): # pylint: disable=too-few-public-methods
 	pass

@@ -32,29 +32,36 @@ from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 from opsiclientd.Events.Custom import CustomEventConfig, CustomEventGenerator
 from opsiclientd.Events.DaemonShutdown import (
-	DaemonShutdownEventConfig, DaemonShutdownEventGenerator)
+	DaemonShutdownEventConfig, DaemonShutdownEventGenerator
+)
 from opsiclientd.Events.DaemonStartup import (
-	DaemonStartupEventConfig, DaemonStartupEventGenerator)
+	DaemonStartupEventConfig, DaemonStartupEventGenerator
+)
 from opsiclientd.Events.Panic import PanicEventConfig, PanicEventGenerator
 from opsiclientd.Events.ProcessActionRequests import (
-	ProcessActionRequestsEventConfig, ProcessActionRequestsEventGenerator)
+	ProcessActionRequestsEventConfig, ProcessActionRequestsEventGenerator
+)
 from opsiclientd.Events.SwOnDemand import SwOnDemandEventConfig, SwOnDemandEventGenerator
 from opsiclientd.Events.SyncCompleted import (
-	SyncCompletedEventConfig, SyncCompletedEventGenerator)
+	SyncCompletedEventConfig, SyncCompletedEventGenerator
+)
 from opsiclientd.Events.Timer import TimerEventConfig, TimerEventGenerator
 
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.Events.Windows.GUIStartup import (
-		GUIStartupEventConfig, GUIStartupEventGenerator)
+		GUIStartupEventConfig, GUIStartupEventGenerator
+	)
 	from opsiclientd.Events.Windows.SystemShutdown import (
-		SystemShutdownEventConfig, SystemShutdownEventGenerator)
+		SystemShutdownEventConfig, SystemShutdownEventGenerator
+	)
 	from opsiclientd.Events.Windows.UserLogin import (
-		UserLoginEventConfig, UserLoginEventGenerator)
+		UserLoginEventConfig, UserLoginEventGenerator
+	)
 
 __all__ = ['EventConfigFactory', 'EventGeneratorFactory']
 
 
-def EventConfigFactory(eventType, eventId, **kwargs): # pylint: disable=invalid-name
+def EventConfigFactory(eventType, eventId, **kwargs): # pylint: disable=invalid-name,too-many-return-statements
 	"""
 	Get an event config for the given type.
 
@@ -67,35 +74,35 @@ def EventConfigFactory(eventType, eventId, **kwargs): # pylint: disable=invalid-
 	:type eventId: str
 	:rtype: EventConfig
 	"""
-	if eventType == u'panic':
+	if eventType == 'panic':
 		return PanicEventConfig(eventId, **kwargs)
-	elif eventType == u'daemon startup':
+	if eventType == 'daemon startup':
 		return DaemonStartupEventConfig(eventId, **kwargs)
-	elif eventType == u'daemon shutdown':
+	if eventType == 'daemon shutdown':
 		return DaemonShutdownEventConfig(eventId, **kwargs)
-	elif eventType == u'timer':
+	if eventType == 'timer':
 		return TimerEventConfig(eventId, **kwargs)
-	elif eventType == u'sync completed':
+	if eventType == 'sync completed':
 		return SyncCompletedEventConfig(eventId, **kwargs)
-	elif eventType == u'process action requests':
+	if eventType == 'process action requests':
 		return ProcessActionRequestsEventConfig(eventId, **kwargs)
-	elif eventType == u'custom':
+	if eventType == 'custom':
 		return CustomEventConfig(eventId, **kwargs)
-	elif eventType == u'sw on demand':
+	if eventType == 'sw on demand':
 		return SwOnDemandEventConfig(eventId, **kwargs)
 
 	if RUNNING_ON_WINDOWS:
-		if eventType == u'gui startup':
+		if eventType == 'gui startup':
 			return GUIStartupEventConfig(eventId, **kwargs)
-		elif eventType == u'user login':
+		if eventType == 'user login':
 			return UserLoginEventConfig(eventId, **kwargs)
-		elif eventType == u'system shutdown':
+		if eventType == 'system shutdown':
 			return SystemShutdownEventConfig(eventId, **kwargs)
 
-	raise TypeError(u"Unknown event config type '%s'" % eventType)
+	raise TypeError(f"Unknown event config type '{eventType}'")
 
 
-def EventGeneratorFactory(opsiclientd, eventConfig): # pylint: disable=invalid-name
+def EventGeneratorFactory(opsiclientd, eventConfig): # pylint: disable=invalid-name,too-many-return-statements
 	"""
 	Get an event generator matching the given config type.
 
@@ -104,27 +111,27 @@ def EventGeneratorFactory(opsiclientd, eventConfig): # pylint: disable=invalid-n
 	"""
 	if isinstance(eventConfig, PanicEventConfig):
 		return PanicEventGenerator(opsiclientd, eventConfig)
-	elif isinstance(eventConfig, DaemonStartupEventConfig):
+	if isinstance(eventConfig, DaemonStartupEventConfig):
 		return DaemonStartupEventGenerator(opsiclientd, eventConfig)
-	elif isinstance(eventConfig, DaemonShutdownEventConfig):
+	if isinstance(eventConfig, DaemonShutdownEventConfig):
 		return DaemonShutdownEventGenerator(opsiclientd, eventConfig)
-	elif isinstance(eventConfig, TimerEventConfig):
+	if isinstance(eventConfig, TimerEventConfig):
 		return TimerEventGenerator(opsiclientd, eventConfig)
-	elif isinstance(eventConfig, SyncCompletedEventConfig):
+	if isinstance(eventConfig, SyncCompletedEventConfig):
 		return SyncCompletedEventGenerator(opsiclientd, eventConfig)
-	elif isinstance(eventConfig, ProcessActionRequestsEventConfig):
+	if isinstance(eventConfig, ProcessActionRequestsEventConfig):
 		return ProcessActionRequestsEventGenerator(opsiclientd, eventConfig)
-	elif isinstance(eventConfig, CustomEventConfig):
+	if isinstance(eventConfig, CustomEventConfig):
 		return CustomEventGenerator(opsiclientd, eventConfig)
-	elif isinstance(eventConfig, SwOnDemandEventConfig):
+	if isinstance(eventConfig, SwOnDemandEventConfig):
 		return SwOnDemandEventGenerator(opsiclientd, eventConfig)
 
 	if RUNNING_ON_WINDOWS:
 		if isinstance(eventConfig, UserLoginEventConfig):
 			return UserLoginEventGenerator(opsiclientd, eventConfig)
-		elif isinstance(eventConfig, SystemShutdownEventConfig):
+		if isinstance(eventConfig, SystemShutdownEventConfig):
 			return SystemShutdownEventGenerator(opsiclientd, eventConfig)
-		elif isinstance(eventConfig, GUIStartupEventConfig):
+		if isinstance(eventConfig, GUIStartupEventConfig):
 			return GUIStartupEventGenerator(opsiclientd, eventConfig)
 
-	raise TypeError(u"Unhandled event config '%s'" % eventConfig)
+	raise TypeError(f"Unhandled event config '{eventConfig}'")

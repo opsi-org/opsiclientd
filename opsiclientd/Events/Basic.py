@@ -43,7 +43,7 @@ __all__ = ['Event', 'EventGenerator', 'EventListener']
 state = State()
 
 
-class EventGenerator(threading.Thread):
+class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attributes
 	def __init__(self, opsiclientd, generatorConfig):
 		threading.Thread.__init__(self, daemon=True)
 		self._opsiclientd = opsiclientd
@@ -67,7 +67,7 @@ class EventGenerator(threading.Thread):
 	def addEventConfig(self, eventConfig):
 		self._eventConfigs.append(eventConfig)
 
-	def _preconditionsFulfilled(self, preconditions):
+	def _preconditionsFulfilled(self, preconditions): # pylint: disable=no-self-use
 		for key, value in preconditions.items():
 			if bool(value) != state.get(key):
 				return False
@@ -114,7 +114,6 @@ class EventGenerator(threading.Thread):
 	def getNextEvent(self):
 		self._event = threading.Event()
 		self._event.wait()
-		return None
 
 	def cleanup(self):
 		pass
@@ -178,7 +177,7 @@ class EventGenerator(threading.Thread):
 					(self._eventsOccured <= self._generatorConfig.maxRepetitions)
 				):
 					logger.info("Getting next event...")
-					event = self.getNextEvent() # pylint: disable=assignment-from-none
+					event = self.getNextEvent() # pylint: disable=assignment-from-none,assignment-from-no-return
 					if event:
 						self._eventsOccured += 1
 						logger.info("Got new event: %s (%d/%d)", event, self._eventsOccured, self._generatorConfig.maxRepetitions + 1)
@@ -203,7 +202,7 @@ class EventGenerator(threading.Thread):
 			self._event.set()
 
 
-class Event(object):
+class Event: # pylint: disable=too-few-public-methods
 	""" Basic event class """
 	def __init__(self, eventConfig, eventInfo={}): # pylint: disable=dangerous-default-value
 		self.eventConfig = eventConfig
@@ -217,7 +216,7 @@ class Event(object):
 		return actionProcessorCommand
 
 
-class EventListener(object):
+class EventListener: # pylint: disable=too-few-public-methods
 	def __init__(self):
 		logger.debug("EventListener initiated")
 

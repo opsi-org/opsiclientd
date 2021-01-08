@@ -56,5 +56,5 @@ class DaemonShutdownEventGenerator(EventGenerator):
 		)
 
 
-class DaemonShutdownEvent(Event):
+class DaemonShutdownEvent(Event): # pylint: disable=too-few-public-methods
 	pass

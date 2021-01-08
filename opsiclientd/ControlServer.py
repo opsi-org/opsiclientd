@@ -469,8 +469,8 @@ class ResourceOpsiclientdUpload(ResourceOpsiclientd):
 	WorkerClass = WorkerOpsiclientdUpload
 
 
-class ControlServer(OpsiService, threading.Thread):
-	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
+class ControlServer(OpsiService, threading.Thread): # pylint: disable=too-many-instance-attributes
+	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None): # pylint: disable=too-many-arguments
 		OpsiService.__init__(self)
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
@@ -597,7 +597,7 @@ class RequestAdapter():
 	def getHeader(self, name):
 		return self.connection_request.headers.get(name)
 
-class LogReaderThread(threading.Thread):
+class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-attributes
 	record_start_regex = re.compile(r"^\[(\d)\]\s+\[([\d\-\:\. ]+)\]\s+\[([^\]]*)\]\s(.*)$")
 	max_delay = 0.2
 	max_record_buffer_size = 2500
@@ -642,7 +642,7 @@ class LogReaderThread(threading.Thread):
 		if not match:
 			if self.record_buffer:
 				self.record_buffer[-1]["msg"] += f"\n{line.rstrip()}"
-			return
+			return None
 		context = {}
 		cnum = 0
 		for val in match.group(3).split(","):
@@ -706,7 +706,7 @@ class LogReaderThread(threading.Thread):
 						self.send_buffer_if_needed(max_delay)
 					time.sleep(self.max_delay / 3)
 
-class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
+class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi): # pylint: disable=too-many-ancestors
 	def onConnect(self, request):
 		self.service = self.factory.control_server # pylint: disable=no-member
 		self.request = RequestAdapter(request)
@@ -733,7 +733,7 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi):
 		if self.log_reader_thread:
 			self.log_reader_thread.stop()
 
-class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
+class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=too-many-public-methods
 	def __init__(self, opsiclientd):
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
 
@@ -763,7 +763,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 		return "product cache deleted."
 
-	def timeline_getEvents(self):
+	def timeline_getEvents(self): # pylint: disable=no-self-use
 		timeline = Timeline()
 		return timeline.getEvents()
 
@@ -772,10 +772,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		logger.notice("rpc setBlockLogin: blockLogin set to '%s'", self.opsiclientd._blockLogin) # pylint: disable=protected-access
 		if self.opsiclientd._blockLogin: # pylint: disable=protected-access
 			return "Login blocker is on"
-		else:
-			return "Login blocker is off"
+		return "Login blocker is off"
 
-	def readLog(self, logType='opsiclientd'):
+	def readLog(self, logType='opsiclientd'): # pylint: disable=no-self-use
 		logType = forceUnicode(logType)
 		if logType != 'opsiclientd':
 			raise ValueError(f"Unknown log type '{logType}'")
@@ -788,7 +787,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 		return ""
 
-	def log_read(self, logType='opsiclientd', extension='', maxSize=5000000):
+	def log_read(self, logType='opsiclientd', extension='', maxSize=5000000): # pylint: disable=no-self-use
 		"""
 		Return the content of a log.
 
@@ -864,7 +863,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		)
 		return u"command '%s' executed" % command
 
-	def execute(self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300):
+	def execute(self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300): # pylint: disable=no-self-use,too-many-arguments
 		return System.execute(
 			cmd=command,
 			waitForEnding=waitForEnding,
@@ -873,17 +872,17 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			timeout=timeout
 		)
 
-	def logoffSession(self, session_id = None, username = None):
+	def logoffSession(self, session_id = None, username = None): # pylint: disable=no-self-use
 		return System.logoffSession(session_id=session_id, username=username)
 
-	def logoffCurrentUser(self):
+	def logoffCurrentUser(self): # pylint: disable=no-self-use
 		logger.notice(u"rpc logoffCurrentUser: logging of current user now")
 		System.logoffCurrentUser()
 
-	def lockSession(self, session_id = None, username = None):
+	def lockSession(self, session_id = None, username = None): # pylint: disable=no-self-use
 		return System.lockSession(session_id=session_id, username=username)
 
-	def lockWorkstation(self):
+	def lockWorkstation(self): # pylint: disable=no-self-use
 		logger.notice(u"rpc lockWorkstation: locking workstation now")
 		System.lockWorkstation()
 
@@ -907,7 +906,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		logger.notice(u"rpc uptime: opsiclientd is running for %d seconds", uptime)
 		return uptime
 
-	def fireEvent(self, name):
+	def fireEvent(self, name): # pylint: disable=no-self-use
 		event = getEventGenerator(name)
 		logger.notice(u"Firing event '%s'" % name)
 		event.createAndFireEvent()
@@ -959,15 +958,15 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def switchDesktop(self, desktop, sessionId=None):
 		self.opsiclientd.switchDesktop(desktop, sessionId)
 
-	def getConfig(self):
+	def getConfig(self): # pylint: disable=no-self-use
 		return config.getDict()
 
-	def getConfigValue(self, section, option):
+	def getConfigValue(self, section, option): # pylint: disable=no-self-use
 		section = forceUnicode(section)
 		option = forceUnicode(option)
 		return config.get(section, option)
 
-	def setConfigValue(self, section, option, value):
+	def setConfigValue(self, section, option, value): # pylint: disable=no-self-use
 		section = forceUnicode(section)
 		option = forceUnicode(option)
 		value = forceUnicode(value)
@@ -977,17 +976,17 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		# Legacy method
 		return self.setConfigValue(section, option, value)
 
-	def readConfigFile(self):
+	def readConfigFile(self): # pylint: disable=no-self-use
 		config.readConfigFile()
 
-	def updateConfigFile(self):
+	def updateConfigFile(self): # pylint: disable=no-self-use
 		config.updateConfigFile()
 
 	def showPopup(self, message, mode='prepend', addTimestamp=True):
 		message = forceUnicode(message)
 		self.opsiclientd.showPopup(message, mode, addTimestamp)
 
-	def deleteServerCerts(self):
+	def deleteServerCerts(self): # pylint: disable=no-self-use
 		certDir = config.get('global', 'server_cert_dir')
 		if os.path.exists(certDir):
 			for filename in os.listdir(certDir):
@@ -996,10 +995,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 				os.remove(os.path.join(certDir, filename))
 
-	def getActiveSessions(self):
+	def getActiveSessions(self): # pylint: disable=no-self-use
 		return System.getActiveSessionInformation()
 
-	def getBackendInfo(self):
+	def getBackendInfo(self): # pylint: disable=no-self-use
 		serviceConnection = ServiceConnection(loadBalance=False)
 		serviceConnection.connectConfigService()
 		backendinfo = None
@@ -1011,7 +1010,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 		return backendinfo
 
-	def getState(self, name, default=None):
+	def getState(self, name, default=None): # pylint: disable=no-self-use
 		"""
 		Return a specified state.
 
@@ -1020,7 +1019,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		"""
 		return state.get(name, default)
 
-	def setState(self, name, value):
+	def setState(self, name, value): # pylint: disable=no-self-use
 		"""
 		Set a specified state.
 

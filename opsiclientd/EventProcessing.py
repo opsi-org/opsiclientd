@@ -78,7 +78,7 @@ def changeDirectory(path):
 		os.chdir(old_dir)
 
 
-class EventProcessingThread(KillableThread, ServiceConnection):
+class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disable=too-many-instance-attributes,too-many-public-methods
 	def __init__(self, opsiclientd, event):
 		KillableThread.__init__(self)
 		ServiceConnection.__init__(self)
@@ -292,7 +292,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.error("Failed to write log to service: %s", err)
 			raise
 
-	def runCommandInSession(self, command, sessionId=None, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False):
+	def runCommandInSession(self, command, sessionId=None, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False): # pylint: disable=too-many-arguments
 		if sessionId is None:
 			sessionId = self.getSessionId()
 
@@ -424,12 +424,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		except Exception as err: # pylint: disable=broad-except
 			logger.warning(err)
 
-	def updateActionProcessor(self, mount=True):
+	def updateActionProcessor(self, mount=True): # pylint: disable=too-many-locals,inconsistent-return-statements,too-many-branches,too-many-statements
 		logger.notice("Updating action processor")
 		self.setStatusMessage(_("Updating action processor"))
 
 		impersonation = None
-		try:
+		try: # pylint: disable=too-many-nested-blocks
 			mounted = False
 			try:
 				if mount and not config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
@@ -650,7 +650,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.error("Failed to process login actions: %s", err, exc_info=True)
 			self.setStatusMessage(_("Failed to process login actions: %s") % forceUnicode(err))
 
-	def processProductActionRequests(self):
+	def processProductActionRequests(self): # pylint: disable=too-many-branches,too-many-statements
 		self.setStatusMessage(_("Getting action requests from config service"))
 
 		try:
@@ -744,17 +744,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.error("Failed to process product action requests: %s", err, exc_info=True)
 			self.setStatusMessage(_("Failed to process product action requests: %s") % forceUnicode(err))
 			timeline.addEvent(
-				title       = "Failed to process product action requests",
-				description = f"Failed to process product action requests: {err}",
-				category    = "error",
-				isError     = True)
+				title="Failed to process product action requests",
+				description=f"Failed to process product action requests: {err}",
+				category="error",
+				isError=True
+			)
 		time.sleep(3)
 
-	def runActions(self, productIds, additionalParams=''):
+	def runActions(self, productIds, additionalParams=''): # pylint: disable=too-many-nested-blocks,too-many-locals,too-many-branches,too-many-statements
 		runActionsEventId = timeline.addEvent(
-			title=u"Running actions",
-			description=u"Running actions (%s)" % u", ".join(productIds),
-			category=u"run_actions",
+			title="Running actions",
+			description=f"Running actions {u', '.join(productIds)}",
+			category="run_actions",
 			durationEvent=True
 		)
 		try:
@@ -762,7 +763,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				configService=self._configService,
 				event=self.event,
 				productIds=productIds,
-				cifsOnly=False if RUNNING_ON_LINUX else True
+				cifsOnly=not RUNNING_ON_LINUX
 			)
 			if not additionalParams:
 				additionalParams = ''
@@ -965,7 +966,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			timeline.setEventEnd(eventId = runActionsEventId)
 			self.umountDepotShare()
 
-	def setEnvironment(self):
+	def setEnvironment(self): # pylint: disable=no-self-use
 		try:
 			logger.debug("Current environment:")
 			for (key, value) in os.environ.items():
@@ -998,7 +999,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		logger.notice("Event wait cancelled by user")
 		self.waitCancelled = True
 
-	def processActionWarningTime(self, productIds=[]): # pylint: disable=dangerous-default-value
+	def processActionWarningTime(self, productIds=[]): # pylint: disable=dangerous-default-value,too-many-branches,too-many-statements
 		if not self.event.eventConfig.actionWarningTime:
 			return
 		logger.info("Notifying user of actions to process %s (%s)", self.event, productIds)
@@ -1081,8 +1082,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					),
 					category="user_interaction")
 				raise CanceledByUserError("Action processing cancelled by user")
-			else:
-				state.set('action_processing_cancel_counter', 0)
+			state.set('action_processing_cancel_counter', 0)
 		finally:
 			timeline.setEventEnd(waitEventId)
 			try:
@@ -1122,8 +1122,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			return True
 		return False
 
-	def processShutdownRequests(self):
-		try:
+	def processShutdownRequests(self): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+		try: # pylint: disable=too-many-nested-blocks
 			shutdown = self.isShutdownRequested()
 			reboot   = self.isRebootRequested()
 			if reboot or shutdown:
@@ -1311,17 +1311,17 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 			in_window = False
 			if start <= end:
-				in_window = (now >= start and now <= end)
+				in_window = start <= now <= end
 			else:
 				# Crosses midnight
-				in_window = (now >= start or now <= end)
+				in_window = now >= start or now <= end
 
 			if in_window:
 				logger.info("Current time %s is within the configured working window (%s-%s)", now, start, end)
 				return True
-			else:
-				logger.info("Current time %s is outside the configured working window (%s-%s)", now, start, end)
-				return False
+
+			logger.info("Current time %s is outside the configured working window (%s-%s)", now, start, end)
+			return False
 
 		except Exception as err: # pylint: disable=broad-except
 			logger.error(
@@ -1330,10 +1330,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			)
 			return True
 
-	def run(self):
+	def run(self): # pylint: disable=too-many-branches,too-many-statements
 		with log_context({'instance' : f'event processing {self.event.eventConfig.getId()}'}):
 			timelineEventId = None
-			try:
+			try: # pylint: disable=too-many-nested-blocks
 				if self.event.eventConfig.workingWindow:
 					if not self.inWorkingWindow():
 						logger.notice("We are not in the configured working window, stopping Event")

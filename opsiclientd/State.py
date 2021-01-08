@@ -75,12 +75,12 @@ class State(metaclass=Singleton):
 			except Exception as error: # pylint: disable=broad-except
 				logger.error("Failed to write state file '%s': %s", self._stateFile, error)
 
-	def get(self, name, default=None):
+	def get(self, name, default=None): # pylint: disable=too-many-return-statements,too-many-branches
 		name = forceUnicode(name)
 		if name == 'user_logged_in':
 			if RUNNING_ON_WINDOWS:
 				return bool(System.getActiveSessionIds())
-			elif RUNNING_ON_LINUX:
+			if RUNNING_ON_LINUX:
 				for proc in psutil.process_iter():
 					try:
 						env = proc.environ()
@@ -89,24 +89,25 @@ class State(metaclass=Singleton):
 					except psutil.AccessDenied:
 						pass
 				return False
-			elif RUNNING_ON_DARWIN:
+			if RUNNING_ON_DARWIN:
 				# TODO
 				return True
-		elif name == 'configserver_reachable':
+			return False
+		if name == 'configserver_reachable':
 			return isConfigServiceReachable(timeout=15)
-		elif name == 'products_cached':
+		if name == 'products_cached':
 			return self._state.get('product_cache_service', {}).get('products_cached', default)
-		elif name == 'config_cached':
+		if name == 'config_cached':
 			return self._state.get('config_cache_service', {}).get('config_cached', default)
-		elif "cancel_counter" in name:
+		if "cancel_counter" in name:
 			return self._state.get(name, 0)
-		elif name == 'installation_pending':
+		if name == 'installation_pending':
 			return forceBool(self._state.get('installation_pending', False))
 
 		try:
 			return self._state[name]
 		except KeyError:
-			logger.warning(u"Unknown state name '%s', returning default '%s'", name, default)
+			logger.warning("Unknown state name '%s', returning default '%s'", name, default)
 			return default
 
 	def set(self, name, value):

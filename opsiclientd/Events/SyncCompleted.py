@@ -51,5 +51,5 @@ class SyncCompletedEventGenerator(EventGenerator):
 		return SyncCompletedEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class SyncCompletedEvent(Event):
+class SyncCompletedEvent(Event): # pylint: disable=too-few-public-methods
 	pass

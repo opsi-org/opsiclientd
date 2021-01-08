@@ -53,5 +53,5 @@ class DaemonStartupEventGenerator(EventGenerator):
 		return DaemonStartupEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class DaemonStartupEvent(Event):
+class DaemonStartupEvent(Event): # pylint: disable=too-few-public-methods
 	pass

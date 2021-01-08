@@ -54,5 +54,5 @@ class ProcessActionRequestsEventGenerator(EventGenerator):
 		)
 
 
-class ProcessActionRequestsEvent(Event):
+class ProcessActionRequestsEvent(Event): # pylint: disable=too-few-public-methods
 	pass

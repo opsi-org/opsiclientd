@@ -10,7 +10,6 @@
 Non-free event generators.
 
 :copyright:	uib GmbH <info@uib.de>
-:author: Niko Wenselowski <n.wenselowski@uib.de>
 """
 
 import threading
@@ -33,9 +32,9 @@ class CustomEventGenerator(EventGenerator):
 		if self._generatorConfig.interval > 0:
 			self._event.wait(self._generatorConfig.interval)
 			return self.createEvent()
-		else:
-			self._event.wait()
+		self._event.wait()
+		return None
 
 
-class CustomEvent(Event):
+class CustomEvent(Event): # pylint: disable=too-few-public-methods
 	pass

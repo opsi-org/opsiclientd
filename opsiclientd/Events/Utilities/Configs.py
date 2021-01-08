@@ -43,7 +43,7 @@ logger = Logger()
 config = Config()
 
 
-def getEventConfigs():
+def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 	preconditions = {}
 	for (section, options) in config.getDict().items():
 		section = section.lower()
@@ -58,7 +58,7 @@ def getEventConfigs():
 				logger.error("Failed to parse precondition '%s': %s", preconditionId, err)
 
 	rawEventConfigs = {}
-	for (section, options) in config.getDict().items():
+	for (section, options) in config.getDict().items(): # pylint: disable=too-many-nested-blocks
 		section = section.lower()
 		if section.startswith('event_'):
 			eventConfigId = section.split('_', 1)[1]
@@ -113,13 +113,13 @@ def getEventConfigs():
 									rawEventConfigs[eventConfigId]['super'])
 
 	eventConfigs = {}
-	for (eventConfigId, rawEventConfig) in rawEventConfigs.items():
+	for (eventConfigId, rawEventConfig) in rawEventConfigs.items(): # pylint: disable=too-many-nested-blocks
 		try:
 			if rawEventConfig['args'].get('type', 'template').lower() == 'template':
 				continue
 
 			if not rawEventConfig['active']:
-				logger.notice(u"Event config '%s' is deactivated" % eventConfigId)
+				logger.notice("Event config '%s' is deactivated" % eventConfigId)
 				continue
 
 			eventConfigs[eventConfigId] = {'preconditions': {}}

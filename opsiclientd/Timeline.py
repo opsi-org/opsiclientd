@@ -205,7 +205,7 @@ class Timeline(metaclass=Singleton):
 			events.append(event)
 		return {'dateTimeFormat': 'iso8601', 'events': events}
 
-	def getHtmlHead(self):
+	def getHtmlHead(self): # pylint: disable=no-self-use
 		now = time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime())
 		return HTML_HEAD % {'date': now}
 
@@ -254,7 +254,7 @@ class Timeline(metaclass=Singleton):
 				self._sql.execute('CREATE INDEX `category` on `EVENT` (`category`);')
 				self._sql.execute('CREATE INDEX `start` on `EVENT` (`start`);')
 
-	def addEvent(self, title, description=u'', isError=False, category=None, durationEvent=False, start=None, end=None):
+	def addEvent(self, title, description=u'', isError=False, category=None, durationEvent=False, start=None, end=None): # pylint: disable=too-many-arguments
 		if self._stopped:
 			return -1
 

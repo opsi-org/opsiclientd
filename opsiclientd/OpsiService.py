@@ -28,20 +28,15 @@ Connecting to a opsi service.
 :license: GNU Affero General Public License version 3
 """
 
-import base64
 import os
 import random
 import time
 import socket
-from hashlib import md5
 from http.client import HTTPConnection, HTTPSConnection
-from Crypto.Hash import MD5
-from Crypto.Signature import pkcs1_15
 from OpenSSL import crypto
 
 from OPSI import System
 from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
-from OPSI.Util import getPublicKey
 from OPSI.Util.Thread import KillableThread
 from OPSI.Util.HTTP import (
 	urlsplit, non_blocking_connect_http, non_blocking_connect_https
@@ -56,6 +51,7 @@ from opsiclientd import __version__
 from opsiclientd.Config import Config, OPSI_CA
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
+from opsiclientd.nonfree import verify_modules
 
 config = Config()
 
@@ -87,22 +83,22 @@ def isConfigServiceReachable(timeout=5):
 	return False
 
 
-class ServiceConnection(object):
+class ServiceConnection:
 	def __init__(self, loadBalance=False):
 		self._loadBalance = forceBool(loadBalance)
 		self._configServiceUrl = None
 		self._configService = None
 
-	def connectionThreadOptions(self):
+	def connectionThreadOptions(self): # pylint: disable=no-self-use
 		return {}
 
-	def connectionStart(self, configServiceUrl):
+	def connectionStart(self, configServiceUrl): # pylint: disable=no-self-use
 		pass
 
-	def connectionCancelable(self, stopConnectionCallback):
+	def connectionCancelable(self, stopConnectionCallback): # pylint: disable=no-self-use
 		pass
 
-	def connectionTimeoutChanged(self, timeout):
+	def connectionTimeoutChanged(self, timeout): # pylint: disable=no-self-use
 		pass
 
 	def connectionCanceled(self):
@@ -134,10 +130,10 @@ class ServiceConnection(object):
 	def isConfigServiceConnected(self):
 		return bool(self._configService)
 
-	def isConfigServiceReachable(self, timeout=15):
+	def isConfigServiceReachable(self, timeout=15): # pylint: disable=no-self-use
 		return isConfigServiceReachable(timeout=timeout)
 
-	def stop(self):
+	def stop(self): # pylint: disable=no-self-use
 		logger.warning("stop() not implemented")
 		#logger.debug(u"Stopping thread")
 		#self.cancelled = True
@@ -148,11 +144,11 @@ class ServiceConnection(object):
 		#	self.terminate()
 		#	time.sleep(0.5)
 
-	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):
-		try:
+	def connectConfigService(self, allowTemporaryConfigServiceUrls=True): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+		try: # pylint: disable=too-many-nested-blocks
 			configServiceUrls = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=allowTemporaryConfigServiceUrls)
 			if not configServiceUrls:
-				raise Exception(u"No service url defined")
+				raise Exception("No service url defined")
 
 			if self._loadBalance and (len(configServiceUrls) > 1):
 				random.shuffle(configServiceUrls)
@@ -230,58 +226,11 @@ class ServiceConnection(object):
 						logger.warning(err)
 
 				if urlIndex > 0:
-					backendinfo = serviceConnectionThread.configService.backend_info()
-					modules = backendinfo['modules']
-					helpermodules = backendinfo['realmodules']
-
-					if not modules.get('high_availability'):
-						self.connectionFailed("High availability module currently disabled")
-
-					if not modules.get('customer'):
-						self.connectionFailed("No customer in modules file")
-
-					if not modules.get('valid'):
-						self.connectionFailed("Modules file invalid")
-
-					if (
-						modules.get('expires', '') != 'never' and
-						time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0
-					):
-						self.connectionFailed("Modules file expired")
-
-					logger.debug("Verifying modules file signature")
-					publicKey = getPublicKey(data=base64.decodebytes(b"AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDojY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDUlk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP")) # pylint: disable=line-too-long
-					data = ""
-					mks = list(modules.keys())
-					mks.sort()
-					for module in mks:
-						if module in ("valid", "signature"):
-							continue
-						if module in helpermodules:
-							val = helpermodules[module]
-							if int(val) > 0:
-								modules[module] = True
-						else:
-							val = "yes" if modules[module] else "no"
-						data += "%s = %s\r\n" % (module.lower().strip(), val)
-
-					verified = False
-					if modules["signature"].startswith("{"):
-						s_bytes = int(modules['signature'].split("}", 1)[-1]).to_bytes(256, "big")
-						try:
-							pkcs1_15.new(publicKey).verify(MD5.new(data.encode()), s_bytes)
-							verified = True
-						except ValueError:
-							# Invalid signature
-							pass
-					else:
-						h_int = int.from_bytes(md5(data.encode()).digest(), "big")
-						s_int = publicKey._encrypt(int(modules["signature"])) # pylint: disable=protected-access
-						verified = h_int == s_int
-
-					if not verified:
-						self.connectionFailed(u"Modules file invalid")
-					logger.notice(u"Modules file signature verified (customer: %s)" % modules.get('customer'))
+					backend_info = serviceConnectionThread.configService.backend_info()
+					try:
+						verify_modules(backend_info, ['high_availability'])
+					except RuntimeError as err:
+						self.connectionFailed(err)
 
 				self._configService = serviceConnectionThread.configService
 				self.connectionEstablished()
@@ -300,7 +249,7 @@ class ServiceConnection(object):
 		self._configServiceUrl = None
 
 
-class ServiceConnectionThread(KillableThread):
+class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instance-attributes
 	def __init__(self, configServiceUrl, username, password, statusSubject=None):
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
@@ -339,14 +288,14 @@ class ServiceConnectionThread(KillableThread):
 		except Exception as sslCAErr: # pylint: disable=broad-except
 			logger.warning("Failed to load CA: %s", sslCAErr)
 
-	def run(self):
+	def run(self): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		with opsicommon.logging.log_context({'instance' : 'service connection'}):
 			logger.debug("ServiceConnectionThread started...")
 			self.running = True
 			self.connected = False
 			self.cancelled = False
 
-			try:
+			try: # pylint: disable=too-many-nested-blocks
 				certDir = config.get('global', 'server_cert_dir')
 				verifyServerCert = config.get('global', 'verify_server_cert')
 

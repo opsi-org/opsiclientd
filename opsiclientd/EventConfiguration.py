@@ -32,7 +32,7 @@ from .State import State
 
 state = State()
 
-class EventConfig(object):
+class EventConfig: # pylint: disable=too-many-instance-attributes
 
 	def __init__(self, eventId, **kwargs):
 		if not eventId:
@@ -43,7 +43,7 @@ class EventConfig(object):
 		with log_context({'instance', f'event config {self._id}'}):
 			self.setConfig(kwargs)
 
-	def setConfig(self, conf):
+	def setConfig(self, conf): # pylint: disable=too-many-statements
 		self.name = str(conf.get('name', self._id.split('{')[0]))
 		self.preconditions = dict(conf.get('preconditions', {}))
 		self.actionMessage = str(conf.get('actionMessage', ''))

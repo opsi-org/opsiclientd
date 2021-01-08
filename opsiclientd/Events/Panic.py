@@ -34,7 +34,7 @@ from opsiclientd.EventConfiguration import EventConfig
 __all__ = ['PanicEvent', 'PanicEventConfig', 'PanicEventGenerator']
 
 
-class PanicEventConfig(EventConfig):
+class PanicEventConfig(EventConfig): # pylint: disable=too-many-instance-attributes
 	def setConfig(self, conf):
 		EventConfig.setConfig(self, conf)
 		self.maxRepetitions = -1
@@ -66,5 +66,5 @@ class PanicEventGenerator(EventGenerator):
 		return PanicEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class PanicEvent(Event):
+class PanicEvent(Event): # pylint: disable=too-few-public-methods
 	pass

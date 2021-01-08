@@ -47,5 +47,5 @@ class SystemShutdownEventGenerator(EventGenerator):
 	pass
 
 
-class SystemShutdownEvent(Event):
+class SystemShutdownEvent(Event): # pylint: disable=too-few-public-methods
 	pass

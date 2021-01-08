@@ -56,7 +56,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 				import OPSI.Backend.Manager.Authentication.NT # pylint: disable=import-outside-toplevel
 				self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
 
-	def _getAllowedMethods(self):
+	def _getAllowedMethods(self): # pylint: disable=no-self-use
 		return [
 			"backend_setOptions",
 			"configState_getObjects",
@@ -130,7 +130,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		for rpc in self._rpcs:
 			if rpc.method not in self._allowedMethods:
 				raise Exception("You are not allowed to execute the method: '%s'" % rpc.method)
-			elif rpc.method == "fireEvent_software_on_demand":
+			if rpc.method == "fireEvent_software_on_demand":
 				self._fireEvent = True
 				self._rpcs.remove(rpc)
 

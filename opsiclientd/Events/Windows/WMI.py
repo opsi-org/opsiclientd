@@ -57,7 +57,7 @@ class WMIEventGenerator(EventGenerator):
 		if not self._wql:
 			return
 
-		from opsiclientd.windows.opsiclientd import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
+		from opsiclientd.windows import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
 		(wmi, pythoncom) = importWmiAndPythoncom()
 		pythoncom.CoInitialize()
 		max_attempts = 10
@@ -91,7 +91,7 @@ class WMIEventGenerator(EventGenerator):
 			return None
 
 		wqlResult = None
-		from opsiclientd.windows.opsiclientd import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
+		from opsiclientd.windows import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
 		(wmi, _pythoncom) = importWmiAndPythoncom()
 		while not self._stopped:
 			try:
@@ -124,7 +124,7 @@ class WMIEventGenerator(EventGenerator):
 			time.sleep(waitTime)
 
 		try:
-			from opsiclientd.windows.opsiclientd import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
+			from opsiclientd.windows import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
 			(_wmi, pythoncom) = importWmiAndPythoncom()
 			pythoncom.CoUninitialize()
 		except ImportError:

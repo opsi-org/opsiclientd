@@ -38,7 +38,7 @@ from OPSI import System
 
 from opsiclientd import init_logging, parser
 
-def run_as_system(command):
+def run_as_system(command): # pylint: disable=too-many-locals
 	currentProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, os.getpid())
 	currentProcessToken = win32security.OpenProcessToken(currentProcess, win32con.MAXIMUM_ALLOWED)
 	duplicatedCurrentProcessToken = win32security.DuplicateTokenEx(
@@ -149,13 +149,13 @@ def main():
 					handle_commandline()
 					#print("opsiclientd.exe must be run as service or from an elevated cmd.exe", file=sys.stderr)
 					return
-				else:
-					command = executable + " " + args + " --elevated"
-					try:
-						run_as_system(command)
-					except Exception as err: # pylint: disable=broad-except
-						print(f"Failed to run {command} as system: {err}", file=sys.stderr)
-						raise
+
+				command = executable + " " + args + " --elevated"
+				try:
+					run_as_system(command)
+				except Exception as err: # pylint: disable=broad-except
+					print(f"Failed to run {command} as system: {err}", file=sys.stderr)
+					raise
 				return
 
 			if "--elevated" in sys.argv:

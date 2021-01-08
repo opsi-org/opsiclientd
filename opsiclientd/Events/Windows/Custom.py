@@ -48,5 +48,5 @@ class CustomEventGenerator(WMIEventGenerator):
 		return CustomEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class CustomEvent(Event):
+class CustomEvent(Event): # pylint: disable=too-few-public-methods
 	pass

@@ -23,7 +23,7 @@ class OpsiclientdPosix(Opsiclientd):
 	_PID_DIR = os.path.join("/var", "run", "opsiclientd")
 
 	def __init__(self):
-		super(OpsiclientdPosix, self).__init__()
+		super().__init__()
 
 		if not os.path.exists(self._PID_DIR):
 			os.makedirs(self._PID_DIR)

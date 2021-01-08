@@ -20,8 +20,5 @@
 Events and their configuration.
 
 :copyright: uib GmbH <info@uib.de>
-:author: Jan Schneider <j.schneider@uib.de>
-:author: Erol Ueluekmen <e.ueluekmen@uib.de>
-:author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """

@@ -47,8 +47,8 @@ class TimerEventGenerator(EventGenerator):
 		if self._generatorConfig.interval > 0:
 			self._event.wait(self._generatorConfig.interval)
 			return self.createEvent()
-		else:
-			self._event.wait()
+		self._event.wait()
+		return None
 
 	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
 		eventConfig = self.getEventConfig()
@@ -58,5 +58,5 @@ class TimerEventGenerator(EventGenerator):
 		return TimerEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class TimerEvent(Event):
+class TimerEvent(Event): # pylint: disable=too-few-public-methods
 	pass

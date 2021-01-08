@@ -48,13 +48,12 @@ else:
 def ControlPipeFactory(opsiclientd): # pylint: disable=invalid-name
 	if os.name == 'posix':
 		return PosixControlDomainSocket(opsiclientd)
-	elif os.name == 'nt':
+	if os.name == 'nt':
 		return NTControlPipe(opsiclientd)
-	else:
-		raise NotImplementedError(f"Unsupported operating system: {os.name}")
+	raise NotImplementedError(f"Unsupported operating system: {os.name}")
 
 
-class ClientConnection(threading.Thread):
+class ClientConnection(threading.Thread): # pylint: disable=too-many-instance-attributes
 	def __init__(self, controller, connection, client_id):
 		threading.Thread.__init__(self)
 		self._controller = controller
@@ -104,10 +103,10 @@ class ClientConnection(threading.Thread):
 	def stop(self):
 		self._stopEvent.set()
 
-	def read(self):
+	def read(self): # pylint: disable=no-self-use
 		return ""
 
-	def write(self, data): # pylint: disable=unused-argument
+	def write(self, data): # pylint: disable=unused-argument,no-self-use
 		return False
 
 	def checkConnection(self):
@@ -130,14 +129,13 @@ class ClientConnection(threading.Thread):
 					"result": f"client {'/'.join(self.clientInfo)}/{self.client_id} registered",
 					"error": None
 				})
-			else:
-				jsonrpc = JsonRpc(
-					instance=self._controller._opsiclientdRpcInterface, # pylint: disable=protected-access
-					interface=self._controller._opsiclientdRpcInterface.getInterface(), # pylint: disable=protected-access
-					rpc=rpc
-				)
-				jsonrpc.execute()
-				return toJson(jsonrpc.getResponse())
+			jsonrpc = JsonRpc(
+				instance=self._controller._opsiclientdRpcInterface, # pylint: disable=protected-access
+				interface=self._controller._opsiclientdRpcInterface.getInterface(), # pylint: disable=protected-access
+				rpc=rpc
+			)
+			jsonrpc.execute()
+			return toJson(jsonrpc.getResponse())
 		except Exception as rpc_error: # pylint: disable=broad-except
 			logger.error(rpc_error, exc_info=True)
 			return toJson({
@@ -240,7 +238,7 @@ class ControlPipe(threading.Thread):
 	def teardown(self):
 		pass
 
-	def waitForClient(self):
+	def waitForClient(self): # pylint: disable=no-self-use
 		return (None, None)
 
 	def clientDisconnected(self, client):
@@ -491,7 +489,7 @@ class NTControlPipe(ControlPipe):
 		raise RuntimeError(f"Failed to connect to pipe (error: {error})")
 
 
-class OpsiclientdRpcPipeInterface(object):
+class OpsiclientdRpcPipeInterface:
 	def __init__(self, opsiclientd):
 		self.opsiclientd = opsiclientd
 
@@ -512,13 +510,13 @@ class OpsiclientdRpcPipeInterface(object):
 	def backend_getInterface(self):
 		return self.getInterface()
 
-	def backend_info(self):
+	def backend_info(self): # pylint: disable=no-self-use
 		return {}
 
-	def exit(self):
+	def exit(self): # pylint: disable=no-self-use
 		return
 
-	def backend_exit(self):
+	def backend_exit(self): # pylint: disable=no-self-use
 		return
 
 	def getBlockLogin(self):

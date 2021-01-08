@@ -72,7 +72,7 @@ if RUNNING_ON_WINDOWS:
 timeline = Timeline()
 state = State()
 
-class Opsiclientd(EventListener, threading.Thread):
+class Opsiclientd(EventListener, threading.Thread): # pylint: disable=too-many-instance-attributes,too-many-public-methods
 	def __init__(self):
 		System.ensure_not_already_running("opsiclientd")
 		state.start()
@@ -200,7 +200,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.notice("Will restart in %d seconds", waitSeconds)
 		threading.Thread(target=_restart, args=(waitSeconds, )).start()
 
-	def setBlockLogin(self, blockLogin):
+	def setBlockLogin(self, blockLogin): # pylint: disable=too-many-branches
 		blockLogin = forceBool(blockLogin)
 		if self._blockLogin == blockLogin:
 			return
@@ -314,7 +314,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			except Exception as err: # pylint: disable=broad-except
 				logger.error(err, exc_info=True)
 
-	def _run(self):
+	def _run(self): # pylint: disable=too-many-statements
 		self._running = True
 		self._opsiclientdRunningEventId = None
 
@@ -567,12 +567,13 @@ class Opsiclientd(EventListener, threading.Thread):
 				return ept
 		raise Exception(f"Event processing thread for session {sessionId} not found")
 
-	def processProductActionRequests(self, event): # pylint: disable=unused-argument
+	def processProductActionRequests(self, event): # pylint: disable=unused-argument,no-self-use
 		logger.error("processProductActionRequests not implemented")
 
 	def getCurrentActiveDesktopName(self, sessionId=None):
 		if not RUNNING_ON_WINDOWS:
-			return
+			return None
+
 		if not ('opsiclientd_rpc' in config.getDict() and 'command' in config.getDict()['opsiclientd_rpc']):
 			raise Exception(u"opsiclientd_rpc command not defined")
 
@@ -603,7 +604,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.debug("Returning current active dektop name '%s' for session %s", desktop, sessionId)
 		return desktop
 
-	def switchDesktop(self, desktop, sessionId=None):
+	def switchDesktop(self, desktop, sessionId=None): # pylint: disable=no-self-use
 		if not ('opsiclientd_rpc' in config.getDict() and 'command' in config.getDict()['opsiclientd_rpc']):
 			raise Exception("opsiclientd_rpc command not defined")
 
@@ -666,22 +667,22 @@ class Opsiclientd(EventListener, threading.Thread):
 			return True
 		return False
 
-	def clearRebootRequest(self):
+	def clearRebootRequest(self): # pylint: disable=no-self-use
 		pass
 
-	def clearShutdownRequest(self):
+	def clearShutdownRequest(self): # pylint: disable=no-self-use
 		pass
 
-	def isRebootRequested(self):
+	def isRebootRequested(self): # pylint: disable=no-self-use
 		return False
 
-	def isShutdownRequested(self):
+	def isShutdownRequested(self): # pylint: disable=no-self-use
 		return False
 
-	def isInstallationPending(self):
+	def isInstallationPending(self): # pylint: disable=no-self-use
 		return state.get('installation_pending', False)
 
-	def showPopup(self, message, mode='prepend', addTimestamp=True):
+	def showPopup(self, message, mode='prepend', addTimestamp=True): # pylint: disable=too-many-branches,too-many-statements
 		if mode not in ('prepend', 'append', 'replace'):
 			mode = 'prepend'
 		port = config.get('notification_server', 'popup_port')
@@ -697,7 +698,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			message = "=== " + time.strftime("%Y-%m-%d %H:%M:%S") + " ===\n" + message
 
 		self._popupNotificationLock.acquire()
-		try:
+		try: # pylint: disable=too-many-nested-blocks
 			if (
 					mode in ('prepend', 'append') and
 					self._popupNotificationServer and

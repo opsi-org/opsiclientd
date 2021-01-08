@@ -15,3 +15,76 @@ Non-free parts of opsiclientd.
 """
 
 __fullversion__ = True
+
+import time
+import base64
+from hashlib import md5
+from Crypto.Hash import MD5
+from Crypto.Signature import pkcs1_15
+
+from OPSI.Util import getPublicKey
+
+from opsicommon.logging import logger
+
+def verify_modules(backend_info, needed_modules=None): # pylint: disable=too-many-branches
+	logger.debug("Verifying modules file signature")
+	modules = backend_info['modules']
+	helpermodules = backend_info['realmodules']
+	needed_modules = needed_modules or []
+
+	if not modules.get('customer'):
+		raise RuntimeError("No customer in modules file")
+
+	if not modules.get('valid'):
+		raise RuntimeError("Modules file invalid")
+
+	for needed_module in needed_modules:
+		if not modules.get(needed_module):
+			raise RuntimeError("Module {needed_module} currently disabled")
+
+	if (
+		modules.get('expires', '') != 'never' and
+		time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0
+	):
+		raise Exception("Modules file expired")
+
+	publicKey = getPublicKey(
+		data=base64.decodebytes(
+			b"AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDo"
+			b"jY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8"
+			b"S+IizWCYwfqYoYTMLgB0i+6TCAfJj3mNgCrDZkQ24+rOFS4a8RrjamEz/b81noWl9IntllK1hySkR+LbulfTGALHgHkDU"
+			b"lk0OSu+zBPw/hcDSOMiDQvvHfmR4quGyLPbQ2FOVm1TzE0bQPR+Bhx4V8Eo2kNYstG2eJELrz7J1TJI0rCjpB+FQjYPsP"
+		)
+	)
+	data = ""
+	mks = list(modules.keys())
+	mks.sort()
+	for module in mks:
+		if module in ("valid", "signature"):
+			continue
+		if module in helpermodules:
+			val = helpermodules[module]
+			if int(val) > 0:
+				modules[module] = True
+		else:
+			val = "yes" if modules[module] else "no"
+		data += "%s = %s\r\n" % (module.lower().strip(), val)
+
+	verified = False
+	if modules["signature"].startswith("{"):
+		s_bytes = int(modules['signature'].split("}", 1)[-1]).to_bytes(256, "big")
+		try:
+			pkcs1_15.new(publicKey).verify(MD5.new(data.encode()), s_bytes)
+			verified = True
+		except ValueError:
+			# Invalid signature
+			pass
+	else:
+		h_int = int.from_bytes(md5(data.encode()).digest(), "big")
+		s_int = publicKey._encrypt(int(modules["signature"])) # pylint: disable=protected-access
+		verified = h_int == s_int
+
+	if not verified:
+		raise Exception("Modules file invalid")
+
+	logger.info("Modules file signature verified (customer: %s)", modules.get('customer'))

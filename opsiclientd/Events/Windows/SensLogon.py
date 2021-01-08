@@ -46,7 +46,7 @@ class SensLogonEventGenerator(EventGenerator):
 
 		logger.notice(u'Registring ISensLogon')
 
-		from opsiclientd.windows.opsiclientd import importWmiAndPythoncom, SensLogon # pylint: disable=import-outside-toplevel
+		from opsiclientd.windows import importWmiAndPythoncom, SensLogon # pylint: disable=import-outside-toplevel
 
 		(_wmi, pythoncom) = importWmiAndPythoncom(
 			importWmi=False,
@@ -58,7 +58,7 @@ class SensLogonEventGenerator(EventGenerator):
 		sl.subscribe()
 
 	def getNextEvent(self):
-		from opsiclientd.windows.opsiclientd import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
+		from opsiclientd.windows import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
 		(_wmi, pythoncom) = importWmiAndPythoncom(
 			importWmi=False,
 			importPythoncom=True
@@ -67,7 +67,7 @@ class SensLogonEventGenerator(EventGenerator):
 		logger.info("Event generator '%s' now deactivated after %d event occurrences", self, self._eventsOccured)
 		self.cleanup()
 
-	def callback(self, eventType, *args):
+	def callback(self, eventType, *args): # pylint: disable=no-self-use
 		logger.debug("SensLogonEventGenerator event callback: eventType '%s', args: %s", eventType, args)
 
 	def stop(self):
@@ -81,7 +81,7 @@ class SensLogonEventGenerator(EventGenerator):
 			logger.info("Event generator '%s' cleaning up in %d seconds", self, waitTime)
 			time.sleep(waitTime)
 
-		from opsiclientd.windows.opsiclientd import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
+		from opsiclientd.windows import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
 		(_wmi, pythoncom) = importWmiAndPythoncom(
 			importWmi=False,
 			importPythoncom=True

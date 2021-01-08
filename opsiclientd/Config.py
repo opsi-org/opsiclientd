@@ -301,7 +301,7 @@ class Config(metaclass=Singleton):
 			value = forceUnicode(value)
 		return value
 
-	def set(self, section, option, value):
+	def set(self, section, option, value): # pylint: disable=too-many-branches,too-many-statements
 		if not section:
 			section = 'global'
 
@@ -320,11 +320,15 @@ class Config(metaclass=Singleton):
 
 		logger.info("Setting config value %s.%s to '%s'", section, option, value)
 
-		if 	(option.find('command') == -1) and (option.find('productids') == -1) and \
-			(option.find('exclude_product_group_ids') == -1) and \
-			(option.find('include_product_group_ids') == -1) and \
-			(option.find('proxy_url') == -1) and \
-			(option.find('working_window') == -1) and (value == ''):
+		if 	( # pylint: disable=too-many-boolean-expressions
+			option.find('command') == -1 and
+			option.find('productids') == -1 and
+			option.find('exclude_product_group_ids') == -1 and
+			option.find('include_product_group_ids') == -1 and
+			option.find('proxy_url') == -1 and
+			option.find('working_window') == -1 and
+			value == ''
+		):
 			logger.warning("Refusing to set empty value for config value '%s' of section '%s'", option, section)
 			return
 
@@ -443,7 +447,7 @@ class Config(metaclass=Singleton):
 		logger.notice("Config read")
 		logger.debug("Config is now:\n %s", objectToBeautifiedText(self._config))
 
-	def updateConfigFile(self):
+	def updateConfigFile(self): # pylint: disable=too-many-branches
 		logger.info("Updating config file: '%s'", self.get('global', 'config_file'))
 
 		try:
@@ -519,7 +523,7 @@ class Config(metaclass=Singleton):
 
 		return self.get('config_service', 'url')
 
-	def selectDepotserver(self, configService, event, productIds=[], cifsOnly=False, masterOnly=False): # pylint: disable=dangerous-default-value
+	def selectDepotserver(self, configService, event, productIds=[], cifsOnly=False, masterOnly=False): # pylint: disable=dangerous-default-value,too-many-arguments,too-many-locals,too-many-branches,too-many-statements
 		productIds = forceProductIdList(productIds)
 
 		logger.notice("Selecting depot for products %s", productIds)
@@ -527,13 +531,13 @@ class Config(metaclass=Singleton):
 
 		if event and event.eventConfig.useCachedProducts:
 			cacheDepotDir = os.path.join(self.get('cache_service', 'storage_dir'), 'depot').replace('\\', '/').replace('//', '/')
-			logger.notice(u"Using depot cache: %s" % cacheDepotDir)
+			logger.notice("Using depot cache: %s" % cacheDepotDir)
 			self.setTemporaryDepotDrive(cacheDepotDir.split(':')[0] + u':')
 			self.set('depot_server', 'url', 'smb://localhost/noshare/' + ('/'.join(cacheDepotDir.split('/')[1:])))
 			return
 
 		if not configService:
-			raise Exception(u"Not connected to config service")
+			raise Exception("Not connected to config service")
 
 		selectedDepot = None
 

@@ -43,7 +43,7 @@ __all__ = ['ClientCacheBackend']
 config = Config()
 
 
-class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
+class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pylint: disable=too-many-instance-attributes
 
 	def __init__(self, **kwargs): # pylint: disable=super-init-not-called
 		ConfigDataBackend.__init__(self, **kwargs)
@@ -96,7 +96,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 	def _setMasterBackend(self, masterBackend):
 		self._masterBackend = masterBackend
 
-	def _syncModifiedObjectsWithMaster(
+	def _syncModifiedObjectsWithMaster( # pylint: disable=too-many-arguments,too-many-locals
 		self, objectClass, modifiedObjects, getFilter, objectsDifferFunction, createUpdateObjectFunction, mergeObjectsFunction
 	):
 		meth = getattr(self._masterBackend, f'{objectClass.backendMethodPrefix}_getObjects')
@@ -152,7 +152,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			meth = getattr(self._masterBackend, f'{objectClass.backendMethodPrefix}_updateObjects')
 			meth(updateObjects)
 
-	def _updateMasterFromWorkBackend(self, modifications=[]): # pylint: disable=dangerous-default-value
+	def _updateMasterFromWorkBackend(self, modifications=[]): # pylint: disable=dangerous-default-value,too-many-locals
 		modifiedObjects = collections.defaultdict(list)
 		logger.info("Updating master from work backend (%d modifications)", len(modifications))
 
@@ -197,7 +197,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			def createUpdateObjectFunction(modifiedObj):
 				return modifiedObj.clone(identOnly=False)
 
-			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend): # pylint: disable=unused-argument
+			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend): # pylint: disable=unused-argument,too-many-arguments
 				masterVersions = sorted([
 					f"{p.productVersion}-{p.packageVersion}" for p in
 					masterBackend.productOnDepot_getObjects(
@@ -243,7 +243,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			def createUpdateObjectFunction(modifiedObj): # pylint: disable=function-redefined
 				return modifiedObj.clone(identOnly=False)
 
-			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend): # pylint: disable=function-redefined,unused-argument
+			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend): # pylint: disable=function-redefined,unused-argument,too-many-arguments
 				return updateObj
 
 			self._syncModifiedObjectsWithMaster(
@@ -262,7 +262,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			def createUpdateObjectFunction(modifiedObj): # pylint: disable=function-redefined
 				return modifiedObj.clone()
 
-			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend): # pylint: disable=function-redefined,unused-argument
+			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend): # pylint: disable=function-redefined,unused-argument,too-many-arguments
 				if len(snapshotObj.values) != len(masterObj.values):
 					logger.info("Values of %s changed on server since last sync, not updating values", snapshotObj)
 					return None
@@ -291,9 +291,9 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					mergeObjectsFunction
 				)
 
-	def _replicateMasterToWorkBackend(self):
+	def _replicateMasterToWorkBackend(self): # pylint: disable=too-many-branches
 		if not self._masterBackend:
-			raise BackendConfigurationError(u"Master backend undefined")
+			raise BackendConfigurationError("Master backend undefined")
 
 		self._cacheBackendInfo(self._masterBackend.backend_info())
 

@@ -46,52 +46,11 @@ from opsicommon.logging import logger
 from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd import config
 
-# from Sens.h
-SENSGUID_PUBLISHER = "{5fee1bd6-5b9b-11d1-8dd2-00aa004abd5e}"
-SENSGUID_EVENTCLASS_LOGON = "{d5978630-5b9f-11d1-8dd2-00aa004abd5e}"
-
-# from EventSys.h
-PROGID_EventSystem = "EventSystem.EventSystem" # pylint: disable=invalid-name
-PROGID_EventSubscription = "EventSystem.EventSubscription" # pylint: disable=invalid-name
-
-IID_ISensLogon = "{d597bab3-5b9f-11d1-8dd2-00aa004abd5e}" # pylint: disable=invalid-name
-
-wmi = None # pylint: disable=invalid-name
-pythoncom = None # pylint: disable=invalid-name
-importWmiAndPythoncomLock = threading.Lock()
-def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
-	global wmi # pylint: disable=global-statement,invalid-name
-	global pythoncom # pylint: disable=global-statement,invalid-name
-	if importWmi and not pythoncom:
-		importPythoncom = True
-
-	if not ((wmi or not importWmi) and (pythoncom or not importPythoncom)):
-		logger.info("Importing wmi / pythoncom")
-		with importWmiAndPythoncomLock:
-			while not ((wmi or not importWmi) and (pythoncom or not importPythoncom)):
-				try:
-					if not pythoncom and importPythoncom:
-						logger.debug("Importing pythoncom")
-						import pythoncom # pylint: disable=import-error,import-outside-toplevel,redefined-outer-name
-
-					if not wmi and importWmi:
-						logger.debug("Importing wmi")
-						pythoncom.CoInitialize()
-						try:
-							import wmi # pylint: disable=import-error,import-outside-toplevel,redefined-outer-name
-						finally:
-							pythoncom.CoUninitialize()
-				except Exception as import_error: # pylint: disable=broad-except
-					logger.warning("Failed to import: %s, retrying in 2 seconds", import_error)
-					time.sleep(2)
-
-	return (wmi, pythoncom)
-
 def opsiclientd_factory():
 	windowsVersion = sys.getwindowsversion() # pylint: disable=no-member
 	if windowsVersion.major == 5:  # NT5: XP
 		return OpsiclientdNT5()
-	elif windowsVersion.major >= 6:  # NT6: Vista / Windows7 and later
+	if windowsVersion.major >= 6:  # NT6: Vista / Windows7 and later
 		return OpsiclientdNT6()
 	raise Exception(f"Windows version {windowsVersion} not supported")
 
@@ -101,7 +60,7 @@ class OpsiclientdNT(Opsiclientd):
 		Opsiclientd.__init__(self)
 		self._ms_update_installer = None
 
-	def suspendBitlocker(self):
+	def suspendBitlocker(self): # pylint: disable=no-self-use
 		logger.notice("Suspending bitlocker for one reboot if active")
 		try:
 			System.execute(
@@ -157,6 +116,7 @@ class OpsiclientdNT(Opsiclientd):
 
 	def isWindowsInstallerBusy(self):
 		if not self._ms_update_installer:
+			from opsiclientd.windows import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
 			(_wmi, _pythoncom) = importWmiAndPythoncom(
 				importWmi=False,
 				importPythoncom=True
@@ -181,7 +141,7 @@ class OpsiclientdNT(Opsiclientd):
 				return True
 			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {response.get('error')}")
 
-	def createOpsiSetupAdmin(self, delete_existing=False):
+	def createOpsiSetupAdmin(self, delete_existing=False): # pylint: disable=no-self-use
 		# https://bugs.python.org/file46988/issue.py
 
 		user_info = {
@@ -318,63 +278,3 @@ class RebootThread(threading.Thread):
 class OpsiclientdNT6(OpsiclientdNT):
 	def __init__(self):
 		OpsiclientdNT.__init__(self)
-
-
-class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
-	_com_interfaces_ = [IID_ISensLogon]
-	_public_methods_ = [
-		'Logon',
-		'Logoff',
-		'StartShell',
-		'DisplayLock',
-		'DisplayUnlock',
-		'StartScreenSaver',
-		'StopScreenSaver'
-	]
-
-	def __init__(self, callback):
-		self._wrap_(self)
-		self._callback = callback
-
-	def subscribe(self):
-		(_wmi, _pythoncom) = importWmiAndPythoncom(importWmi=False)
-
-		subscription_interface = _pythoncom.WrapObject(self)
-
-		event_system = win32com.client.Dispatch(PROGID_EventSystem)
-
-		event_subscription = win32com.client.Dispatch(PROGID_EventSubscription)
-		event_subscription.EventClassID = SENSGUID_EVENTCLASS_LOGON
-		event_subscription.PublisherID = SENSGUID_PUBLISHER
-		event_subscription.SubscriptionName = 'opsiclientd subscription'
-		event_subscription.SubscriberInterface = subscription_interface
-
-		event_system.Store(PROGID_EventSubscription, event_subscription)
-
-	def Logon(self, *args): # pylint: disable=invalid-name
-		logger.notice('Logon: %s', args)
-		self._callback('Logon', *args)
-
-	def Logoff(self, *args): # pylint: disable=invalid-name
-		logger.notice('Logoff: %s', args)
-		self._callback('Logoff', *args)
-
-	def StartShell(self, *args): # pylint: disable=invalid-name
-		logger.notice('StartShell: %s', args)
-		self._callback('StartShell', *args)
-
-	def DisplayLock(self, *args): # pylint: disable=invalid-name
-		logger.notice('DisplayLock: %s', args)
-		self._callback('DisplayLock', *args)
-
-	def DisplayUnlock(self, *args): # pylint: disable=invalid-name
-		logger.notice('DisplayUnlock: %s', args)
-		self._callback('DisplayUnlock', *args)
-
-	def StartScreenSaver(self, *args): # pylint: disable=invalid-name
-		logger.notice('StartScreenSaver: %s', args)
-		self._callback('StartScreenSaver', *args)
-
-	def StopScreenSaver(self, *args): # pylint: disable=invalid-name
-		logger.notice('StopScreenSaver: %s', args)
-		self._callback('StopScreenSaver', *args)

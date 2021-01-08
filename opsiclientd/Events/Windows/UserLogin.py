@@ -75,5 +75,5 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 		return UserLoginEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class UserLoginEvent(Event):
+class UserLoginEvent(Event): # pylint: disable=too-few-public-methods
 	pass
