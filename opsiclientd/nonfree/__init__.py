@@ -67,7 +67,9 @@ def verify_modules(backend_info, needed_modules=None): # pylint: disable=too-man
 			if int(val) > 0:
 				modules[module] = True
 		else:
-			val = "yes" if modules[module] else "no"
+			val = modules[module]
+			if isinstance(val, bool):
+				val = "yes" if val else "no"
 		data += "%s = %s\r\n" % (module.lower().strip(), val)
 
 	verified = False
