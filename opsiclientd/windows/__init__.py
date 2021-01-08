@@ -24,6 +24,7 @@
 import time
 import threading
 import win32com.client # pylint: disable=import-error
+import win32com.server.policy # pylint: disable=import-error
 
 from opsicommon.logging import logger
 
