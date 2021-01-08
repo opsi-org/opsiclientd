@@ -32,6 +32,7 @@ test:pytest:
     - source $HOME/.poetry/env
     - "[ -e coverage.xml ] && rm coverage.xml"
     - poetry install
+    - poetry run pylint --errors-only opsiclientd
     - poetry run pytest -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+)%/'
   artifacts:
