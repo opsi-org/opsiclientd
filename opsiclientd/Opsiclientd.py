@@ -202,8 +202,7 @@ class Opsiclientd(EventListener, threading.Thread): # pylint: disable=too-many-i
 
 	def setBlockLogin(self, blockLogin): # pylint: disable=too-many-branches
 		blockLogin = forceBool(blockLogin)
-		if self._blockLogin == blockLogin:
-			return
+		changed = self._blockLogin == blockLogin
 		self._blockLogin = forceBool(blockLogin)
 		logger.notice("Block login now set to '%s'", self._blockLogin)
 
@@ -246,7 +245,7 @@ class Opsiclientd(EventListener, threading.Thread): # pylint: disable=too-many-i
 					logger.warning("Failed to terminate block login notifier app: %s", err)
 				self._blockLoginNotifierPid = None
 
-		if self._controlPipe:
+		if changed and self._controlPipe:
 			try:
 				self._controlPipe.executeRpc("blockLogin", self._blockLogin)
 			except Exception as rpc_error: # pylint: disable=broad-except
