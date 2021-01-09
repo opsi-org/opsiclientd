@@ -93,22 +93,38 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 			self.licenseOnClient_insertObject(licenseOnClient)
 		return licenseOnClients
 
+	def config_getObjects(self, attributes=[], **filter): # pylint: disable=dangerous-default-value,redefined-builtin
+		configs = self._backend.config_getObjects(attributes, **filter)
+		for idx, _config in enumerate(configs):
+			if _config.id == 'clientconfig.depot.id':
+				configs[idx].defaultValues = [self._depotId]
+		logger.info("config_getObjects returning %s", configs)
+		return configs
+
 	def configState_getObjects(self, attributes=[], **filter): # pylint: disable=dangerous-default-value,redefined-builtin
 		config_states = self._backend.configState_getObjects(attributes, **filter)
 		for idx, config_state in enumerate(config_states):
 			if config_state.configId == 'clientconfig.depot.id':
 				config_states[idx].values = [self._depotId]
+
+		#	cf = ConfigState(
+		#		configId='clientconfig.depot.id',
+		#		objectId=self._clientId,
+		#		values=[self._depotId]
+		#	)
+		#	{'objectId': ['js-client2.uib.local'], 'configId': 'clientconfig.depot.id'}
+
 		logger.info("configState_getObjects returning %s", config_states)
 		return config_states
 
-	def configState_getClientToDepotserver(self, depotIds=[], clientIds=[], masterOnly=True, productIds=[]): # pylint: disable=dangerous-default-value,unused-argument
-		result = [{
-			'depotId': self._depotId,
-			'clientId': self._clientId,
-			'alternativeDepotIds': []
-		}]
-		logger.info("configState_getClientToDepotserver returning %s", result)
-		return result
+	#def configState_getClientToDepotserver(self, depotIds=[], clientIds=[], masterOnly=True, productIds=[]): # pylint: disable=dangerous-default-value,unused-argument
+	#	result = [{
+	#		'depotId': self._depotId,
+	#		'clientId': self._clientId,
+	#		'alternativeDepotIds': []
+	#	}]
+	#	logger.info("configState_getClientToDepotserver returning %s", result)
+	#	return result
 
 	def _setMasterBackend(self, masterBackend):
 		self._masterBackend = masterBackend
@@ -418,7 +434,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 				if methodName.startswith('_') or methodName in (
 					'backend_info', 'user_getCredentials', 'user_setCredentials',
 					'log_write', 'licenseOnClient_getObjects',
-					'configState_getObjects', 'configState_getClientToDepotserver'
+					'configState_getObjects', 'config_getObjects'
 				):
 					continue
 
