@@ -94,7 +94,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 		return licenseOnClients
 
 	def configState_getObjects(self, attributes=[], **filter): # pylint: disable=dangerous-default-value,redefined-builtin
-		config_states = self._backend.configState_getObjects(self, attributes, **filter)
+		config_states = self._backend.configState_getObjects(attributes, **filter)
 		for idx, config_state in enumerate(config_states):
 			if config_state['configId'] == 'clientconfig.depot.id':
 				config_states[idx]['values'] = [self._depotId]
