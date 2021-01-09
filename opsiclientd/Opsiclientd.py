@@ -202,8 +202,7 @@ class Opsiclientd(EventListener, threading.Thread): # pylint: disable=too-many-i
 
 	def setBlockLogin(self, blockLogin): # pylint: disable=too-many-branches
 		blockLogin = forceBool(blockLogin)
-		changed = self._blockLogin == blockLogin
-		self._blockLogin = forceBool(blockLogin)
+		changed = self._blockLogin != blockLogin
 		logger.notice("Block login now set to '%s'", self._blockLogin)
 
 		if self._blockLogin:

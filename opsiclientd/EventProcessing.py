@@ -834,6 +834,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				if not self.event.eventConfig.useCachedProducts:
 					raise
 				logger.error("Failed to get depotserver credentials, continuing because event uses cached products", exc_info=True)
+				depotServerUsername = 'pcpatch'
 
 			if not RUNNING_ON_WINDOWS:
 				self.mountDepotShare(None)
