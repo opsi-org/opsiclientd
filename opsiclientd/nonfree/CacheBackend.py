@@ -407,7 +407,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 		for Class in (Backend, ConfigDataBackend):
 			for methodName, funcRef in inspect.getmembers(Class, inspect.isfunction):
 				if methodName.startswith('_') or methodName in (
-					'backend_info', 'user_getCredentials', 'user_setCredentials', 'log_write', 'licenseOnClient_getObjects'
+					'backend_info', 'user_getCredentials', 'user_setCredentials',
+					'log_write', 'licenseOnClient_getObjects', 'configState_getObjects'
 				):
 					continue
 
