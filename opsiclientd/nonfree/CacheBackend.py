@@ -71,18 +71,17 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 				self._backendInfo = value
 
 		if not self._workBackend:
-			raise BackendConfigurationError(u"Work backend undefined")
+			raise BackendConfigurationError("Work backend undefined")
 		if not self._snapshotBackend:
-			raise BackendConfigurationError(u"Snapshot backend undefined")
+			raise BackendConfigurationError("Snapshot backend undefined")
 		if not self._clientId:
-			raise BackendConfigurationError(u"Client id undefined")
+			raise BackendConfigurationError("Client id undefined")
 		if not self._depotId:
-			raise BackendConfigurationError(u"Depot id undefined")
+			raise BackendConfigurationError("Depot id undefined")
 
 		self._workBackend._setContext(self)
 		self._backend = self._workBackend
 		self._createInstanceMethods()
-		self._backend.configState_getClientToDepotserver = self.configState_getClientToDepotserver
 
 	def log_write(self, logType, data, objectId=None, append=False):
 		pass
@@ -94,14 +93,13 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 			self.licenseOnClient_insertObject(licenseOnClient)
 		return licenseOnClients
 
-	def configState_getClientToDepotserver(self, depotIds=[], clientIds=[], masterOnly=True, productIds=[]): # pylint: disable=dangerous-default-value,unused-argument
-		result = [{
-			'depotId': self._depotId,
-			'clientId': self._clientId,
-			'alternativeDepotIds': []
-		}]
-		logger.info("configState_getClientToDepotserver returning %s", result)
-		return result
+	def configState_getObjects(self, attributes=[], **filter): # pylint: disable=dangerous-default-value,redefined-builtin
+		config_states = self._backend.configState_getObjects(self, attributes, **filter)
+		for idx, config_state in enumerate(config_states):
+			if config_state['configId'] == 'clientconfig.depot.id':
+				config_states[idx]['values'] = [self._depotId]
+		logger.info("configState_getObjects returning %s", config_states)
+		return config_states
 
 	def _setMasterBackend(self, masterBackend):
 		self._masterBackend = masterBackend
