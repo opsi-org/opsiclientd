@@ -96,8 +96,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 	def configState_getObjects(self, attributes=[], **filter): # pylint: disable=dangerous-default-value,redefined-builtin
 		config_states = self._backend.configState_getObjects(attributes, **filter)
 		for idx, config_state in enumerate(config_states):
-			if config_state['configId'] == 'clientconfig.depot.id':
-				config_states[idx]['values'] = [self._depotId]
+			if config_state.configId == 'clientconfig.depot.id':
+				config_states[idx].values = [self._depotId]
 		logger.info("configState_getObjects returning %s", config_states)
 		return config_states
 
