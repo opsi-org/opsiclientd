@@ -82,6 +82,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 		self._workBackend._setContext(self)
 		self._backend = self._workBackend
 		self._createInstanceMethods()
+		self._backend.configState_getClientToDepotserver = self.configState_getClientToDepotserver
 
 	def log_write(self, logType, data, objectId=None, append=False):
 		pass
