@@ -94,6 +94,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 		return licenseOnClients
 
 	def getDepotId(self, clientId): # pylint: disable=unused-argument
+		logger.info("getDepotId returning %s", self._depotId)
 		return self._depotId
 
 	def _setMasterBackend(self, masterBackend):
