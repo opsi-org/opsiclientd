@@ -101,6 +101,15 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 		logger.info("configState_getObjects returning %s", config_states)
 		return config_states
 
+	def configState_getClientToDepotserver(self, depotIds=[], clientIds=[], masterOnly=True, productIds=[]): # pylint: disable=dangerous-default-value,unused-argument
+		result = [{
+			'depotId': self._depotId,
+			'clientId': self._clientId,
+			'alternativeDepotIds': []
+		}]
+		logger.info("configState_getClientToDepotserver returning %s", result)
+		return result
+
 	def _setMasterBackend(self, masterBackend):
 		self._masterBackend = masterBackend
 
@@ -408,7 +417,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 			for methodName, funcRef in inspect.getmembers(Class, inspect.isfunction):
 				if methodName.startswith('_') or methodName in (
 					'backend_info', 'user_getCredentials', 'user_setCredentials',
-					'log_write', 'licenseOnClient_getObjects', 'configState_getObjects'
+					'log_write', 'licenseOnClient_getObjects',
+					'configState_getObjects', 'configState_getClientToDepotserver'
 				):
 					continue
 
