@@ -93,9 +93,14 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 			self.licenseOnClient_insertObject(licenseOnClient)
 		return licenseOnClients
 
-	def getDepotId(self, clientId): # pylint: disable=unused-argument
-		logger.info("getDepotId returning %s", self._depotId)
-		return self._depotId
+	def configState_getClientToDepotserver(self, depotIds=[], clientIds=[], masterOnly=True, productIds=[]): # pylint: disable=dangerous-default-value,unused-argument
+		result = [{
+			'depotId': self._depotId,
+			'clientId': self._clientId,
+			'alternativeDepotIds': []
+		}]
+		logger.info("configState_getClientToDepotserver returning %s", result)
+		return result
 
 	def _setMasterBackend(self, masterBackend):
 		self._masterBackend = masterBackend
