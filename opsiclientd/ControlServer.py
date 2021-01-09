@@ -989,7 +989,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				os.remove(os.path.join(certDir, filename))
 
 	def getActiveSessions(self): # pylint: disable=no-self-use
-		return System.getActiveSessionInformation()
+		sessions = System.getActiveSessionInformation()
+		for session in sessions:
+			session["LogonDomain"] = session.get("DomainName")
+		return sessions
 
 	def getBackendInfo(self): # pylint: disable=no-self-use
 		serviceConnection = ServiceConnection(loadBalance=False)
