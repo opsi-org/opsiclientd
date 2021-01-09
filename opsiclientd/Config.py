@@ -81,13 +81,13 @@ class NoConfigOptionFoundException(ValueError):
 class Config(metaclass=Singleton):
 	WINDOWS_DEFAULT_PATHS = {
 		'global': {
-			'log_dir': u'c:\\opsi.org\\log',
-			'state_file': u'c:\\opsi.org\\opsiclientd\\state.json',
-			'timeline_db': u'c:\\opsi.org\\opsiclientd\\timeline.sqlite',
-			'server_cert_dir': u'c:\\opsi.org\\opsiclientd\\server-certs'
+			'log_dir': 'c:\\opsi.org\\log',
+			'state_file': 'c:\\opsi.org\\opsiclientd\\state.json',
+			'timeline_db': 'c:\\opsi.org\\opsiclientd\\timeline.sqlite',
+			'server_cert_dir': 'c:\\opsi.org\\opsiclientd\\server-certs'
 		},
 		'cache_service': {
-			'storage_dir': u'c:\\opsi.org\\cache',
+			'storage_dir': 'c:\\opsi.org\\cache',
 		},
 	}
 
@@ -142,7 +142,7 @@ class Config(metaclass=Singleton):
 
 		self._config = {
 			'system': {
-				'program_files_dir': u'',
+				'program_files_dir': '',
 			},
 			'global': {
 				'base_dir': baseDir,
@@ -150,13 +150,13 @@ class Config(metaclass=Singleton):
 				'log_file': "opsiclientd.log",
 				'log_level': LOG_NOTICE,
 				'host_id': System.getFQDN().lower(),
-				'opsi_host_key': u'',
+				'opsi_host_key': '',
 				'wait_for_gui_timeout': 120,
-				'block_login_notifier': u'',
+				'block_login_notifier': '',
 				'verify_server_cert': False,
 				'verify_server_cert_by_ca': False,
-				'proxy_mode': u'static',
-				'proxy_url': u'',
+				'proxy_mode': 'static',
+				'proxy_url': '',
 				'suspend_bitlocker_on_reboot': False,
 			},
 			'config_service': {
@@ -167,16 +167,16 @@ class Config(metaclass=Singleton):
 			},
 			'depot_server': {
 				# The id of the depot the client is assigned to
-				'master_depot_id': u'',
+				'master_depot_id': '',
 				# The id of the depot currently set as (dynamic) depot
-				'depot_id': u'',
-				'url': u'',
-				'drive': u'',
-				'username': u'pcpatch',
+				'depot_id': '',
+				'url': '',
+				'drive': '',
+				'username': 'pcpatch',
 			},
 			'cache_service': {
 				'product_cache_max_size': 6000000000,
-				'extension_config_dir': u'',
+				'extension_config_dir': '',
 			},
 			'control_server': {
 				'interface': '0.0.0.0',  # TODO
@@ -188,19 +188,19 @@ class Config(metaclass=Singleton):
 				'kiosk_api_active': True
 			},
 			'notification_server': {
-				'interface': u'127.0.0.1',
+				'interface': '127.0.0.1',
 				'start_port': 44000,
 				'popup_port': 45000,
 			},
 			'opsiclientd_notifier': {
-				'command': u'',
+				'command': '',
 			},
 			'action_processor': {
-				'local_dir': u'',
-				'remote_dir': u'',
-				'filename': u'',
-				'command': u'',
-				'run_as_user': u'SYSTEM',
+				'local_dir': '',
+				'remote_dir': '',
+				'filename': '',
+				'command': '',
+				'run_as_user': 'SYSTEM',
 				'create_user': True,
 				'delete_user': True,
 				'create_environment': False,
@@ -247,7 +247,7 @@ class Config(metaclass=Singleton):
 			if key in defaultToApply:
 				self._config[key].update(defaultToApply[key])
 
-		self._config['cache_service']['extension_config_dir'] = os.path.join(baseDir, u'opsiclientd', 'extend.d')
+		self._config['cache_service']['extension_config_dir'] = os.path.join(baseDir, 'opsiclientd', 'extend.d')
 
 		if RUNNING_ON_WINDOWS:
 			systemDrive = System.getSystemDrive()
@@ -290,9 +290,9 @@ class Config(metaclass=Singleton):
 		section = forceUnicodeLower(section.strip()).lower()
 		option = forceUnicodeLower(option.strip()).lower()
 		if section not in self._config:
-			raise SectionNotFoundException(u"No such config section: %s" % section)
+			raise SectionNotFoundException("No such config section: %s" % section)
 		if option not in self._config[section]:
-			raise NoConfigOptionFoundException(u"No such config option in section '%s': %s" % (section, option))
+			raise NoConfigOptionFoundException("No such config option in section '%s': %s" % (section, option))
 
 		value = self._config[section][option]
 		if not raw and isinstance(value, str) and (value.count('%') >= 2):
@@ -382,7 +382,7 @@ class Config(metaclass=Singleton):
 		if section == 'config_service' and option == 'url':
 			urls = self._config[section][option]
 			if not isinstance(urls, list):
-				urls = forceUnicode(self._config[section][option]).split(u',')
+				urls = forceUnicode(self._config[section][option]).split(',')
 			self._config[section][option] = []
 			for url in forceUnicodeList(urls):
 				url = url.strip()
@@ -470,7 +470,7 @@ class Config(metaclass=Singleton):
 						# Do not store these option
 						continue
 					if isinstance(value, list):
-						value = u', '.join(forceUnicodeList(value))
+						value = ', '.join(forceUnicodeList(value))
 					else:
 						value = forceUnicode(value)
 
@@ -532,7 +532,7 @@ class Config(metaclass=Singleton):
 		if event and event.eventConfig.useCachedProducts:
 			cacheDepotDir = os.path.join(self.get('cache_service', 'storage_dir'), 'depot').replace('\\', '/').replace('//', '/')
 			logger.notice("Using depot cache: %s" % cacheDepotDir)
-			self.setTemporaryDepotDrive(cacheDepotDir.split(':')[0] + u':')
+			self.setTemporaryDepotDrive(cacheDepotDir.split(':')[0] + ':')
 			self.set('depot_server', 'url', 'smb://localhost/noshare/' + ('/'.join(cacheDepotDir.split('/')[1:])))
 			return
 
@@ -561,7 +561,7 @@ class Config(metaclass=Singleton):
 			if configState.configId == 'opsiclientd.depot_server.url' and configState.values:
 				try:
 					depotUrl = forceUrl(configState.values[0])
-					self.set('depot_server', 'depot_id', u'')
+					self.set('depot_server', 'depot_id', '')
 					self.set('depot_server', 'url', depotUrl)
 					logger.notice("Depot url was set to '%s' from configState %s", depotUrl, configState)
 					return
@@ -683,7 +683,7 @@ class Config(metaclass=Singleton):
 
 		depotServerUsername = self.get('depot_server', 'username')
 		encryptedDepotServerPassword = configService.user_getCredentials(
-			username=u'pcpatch',
+			username='pcpatch',
 			hostId=self.get('global', 'host_id')
 		)['password']
 		depotServerPassword = blowfishDecrypt(self.get('global', 'opsi_host_key'), encryptedDepotServerPassword)
@@ -693,9 +693,9 @@ class Config(metaclass=Singleton):
 
 	def getFromService(self, configService):
 		''' Get settings from service '''
-		logger.notice(u"Getting config from service")
+		logger.notice("Getting config from service")
 		if not configService:
-			raise Exception(u"Config service is undefined")
+			raise Exception("Config service is undefined")
 
 		query = {
 			"objectId": self.get('global', 'host_id'),

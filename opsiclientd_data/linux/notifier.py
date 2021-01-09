@@ -55,7 +55,7 @@ class OpsiDialogWindow(SubjectsObserver):
 			self._notificationClient.addEndConnectionRequestedCallback(self.close)
 
 	def close(self):
-		logger.notice(u"OpsiDialogWindow.close()")
+		logger.notice("OpsiDialogWindow.close()")
 
 	def setStatusMessage(self, message):
 		self.messageChanged({'id': "status", 'type': "faketype"}, message)
@@ -63,7 +63,7 @@ class OpsiDialogWindow(SubjectsObserver):
 	def messageChanged(self, subject, message):
 		subjectId = subject.get('id')
 		subjectType = subject.get('type')
-		logger.info(u"message changed, subjectId: {0}, subjectType {1}, message: {2}".format(subjectId, subjectType, message))
+		logger.info("message changed, subjectId: %s, subjectType %s, message: %s", subjectId, subjectType, message)
 
 	def selectedIndexesChanged(self, subject, selectedIndexes):
 		pass
@@ -82,12 +82,12 @@ class OpsiDialogWindow(SubjectsObserver):
 			if not ctrlId:
 				continue
 			if (values.get('subjectId') == subjectId) or (not values.get('subjectId') and (values.get('subjectType') == subjectType)):
-				logger.info(u"progress changed, subjectId: %s, ctrlId: %s, percent: %s" % (subjectId, ctrlId, percent))
+				logger.info("progress changed, subjectId: %s, ctrlId: %s, percent: %s" % (subjectId, ctrlId, percent))
 				values['ctrl'].SetRange(0, 100)
 				values['ctrl'].SetPos(int(percent))
 
 	def subjectsChanged(self, subjects):
-		logger.info(u"subjectsChanged(%s)" % subjects)
+		logger.info("subjectsChanged(%s)" % subjects)
 		choices = {}
 		for subject in subjects:
 			if (subject['class'] == 'MessageSubject'):
@@ -96,7 +96,7 @@ class OpsiDialogWindow(SubjectsObserver):
 				subjectId = subject.get('id')
 				choices[subjectId] = subject.get('choices', [])
 
-		logger.debug(u"subjectsChanged() ended")
+		logger.debug("subjectsChanged() ended")
 
 
 if (__name__ == "__main__"):
@@ -120,9 +120,9 @@ if (__name__ == "__main__"):
 			logFile = forceFilename(args.logFile)
 			# TODO: logrotate?
 			if os.path.exists(logFile):
-				logger.notice(u"Deleting old log file: %s" % logFile)
+				logger.notice("Deleting old log file: %s" % logFile)
 				os.unlink(logFile)
-			logger.notice(u"Setting log file: %s" % logFile)
+			logger.notice("Setting log file: %s" % logFile)
 			logger.setLogFile(logFile)
 			logger.setFileLevel(LOG_DEBUG)
 

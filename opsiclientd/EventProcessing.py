@@ -119,7 +119,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 		self.isLoginEvent = bool(self.event.eventConfig.actionType == 'login')
 		if self.isLoginEvent:
-			logger.info(u"Event is user login event")
+			logger.info("Event is user login event")
 
 		self.getSessionId()
 
@@ -240,7 +240,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					raise Exception("Timed out while waiting for notification server")
 				if self._notificationServer.errorOccurred():
 					raise Exception(self._notificationServer.errorOccurred())
-				logger.notice(u"Notification server started (listening on port %d)" % self.notificationServerPort)
+				logger.notice("Notification server started (listening on port %d)" % self.notificationServerPort)
 		except Exception as err: # pylint: disable=broad-except
 			logger.error("Failed to start notification server: %s", err)
 			raise Exception(f"Failed to start notification server: {err}") from err
@@ -331,7 +331,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		if sessionId is None:
 			sessionId = self.getSessionId()
 
-		logger.notice(u"Starting notifier application in session '%s' on desktop '%s'", sessionId, desktop)
+		logger.notice("Starting notifier application in session '%s' on desktop '%s'", sessionId, desktop)
 		try:
 			pid = self.runCommandInSession(
 				sessionId = sessionId,
@@ -346,10 +346,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 	def closeProcessWindows(self, processId):
 		try:
-			command = '{command} "exit(); System.closeProcessWindows(processId={pid})"'.format(
-				command=config.get('opsiclientd_rpc', 'command'),
-				pid=processId
-			)
+			opsiclientd_rpc = config.get('opsiclientd_rpc', 'command')
+			command = f'{opsiclientd_rpc} "exit(); System.closeProcessWindows(processId={processId})"'
 		except Exception as err: # pylint: disable=broad-except
 			raise Exception(f"opsiclientd_rpc command not defined: {err}") from err
 
@@ -595,7 +593,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		self.setStatusMessage(_("Processing login actions"))
 		try:
 			if not self._configService:
-				raise Exception(u"Not connected to config service")
+				raise Exception("Not connected to config service")
 
 			productsByIdAndVersion = {}
 			for product in self._configService.product_getObjects(type='LocalbootProduct', userLoginScript="*.*"): # pylint: disable=no-member
@@ -606,12 +604,12 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				productsByIdAndVersion[product.id][product.productVersion][product.packageVersion] = product
 
 			if not productsByIdAndVersion:
-				logger.notice(u"No user login script found, nothing to do")
+				logger.notice("No user login script found, nothing to do")
 				return
 
 			clientToDepotservers = self._configService.configState_getClientToDepotserver(clientIds = config.get('global', 'host_id')) # pylint: disable=no-member
 			if not clientToDepotservers:
-				raise Exception(u"Failed to get depotserver for client '%s'" % config.get('global', 'host_id'))
+				raise Exception("Failed to get depotserver for client '%s'" % config.get('global', 'host_id'))
 			depotId = clientToDepotservers[0]['depotId']
 
 			dd = config.getDepotDrive()
@@ -700,8 +698,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
 
 			if (not productIds) and bootmode == 'BKSTD':
-				logger.notice(u"No product action requests set")
-				self.setStatusMessage( _(u"No product action requests set") )
+				logger.notice("No product action requests set")
+				self.setStatusMessage( _("No product action requests set") )
 				#set installation_pending State to False
 				state.set('installation_pending','false')
 				try:
@@ -714,13 +712,13 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				if not self.event.eventConfig.actionProcessorProductIds:
 					state.set('installation_pending','true')
 
-				logger.notice(u"Start processing action requests")
+				logger.notice("Start processing action requests")
 				if productIds:
 					if self.event.eventConfig.useCachedProducts:
 						if self.opsiclientd.getCacheService().productCacheCompleted(self._configService, productIds):
-							logger.notice(u"Event '%s' uses cached products and product caching is done" % self.event.eventConfig.getId())
+							logger.notice("Event '%s' uses cached products and product caching is done" % self.event.eventConfig.getId())
 						else:
-							raise Exception(u"Event '%s' uses cached products but product caching is not done" % self.event.eventConfig.getId())
+							raise Exception("Event '%s' uses cached products but product caching is not done" % self.event.eventConfig.getId())
 
 				self.processActionWarningTime(productIds)
 				self.runActions(productIds)
@@ -768,7 +766,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			if not additionalParams:
 				additionalParams = ''
 			if not self.event.getActionProcessorCommand():
-				raise Exception(u"No action processor command defined")
+				raise Exception("No action processor command defined")
 
 			if (
 				RUNNING_ON_WINDOWS and
@@ -954,7 +952,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 							os.unlink(credentialfile)
 
 			if self.event.eventConfig.postActionProcessorCommand:
-				logger.notice(u"Starting post action processor command '%s' in session '%s' on desktop '%s'" \
+				logger.notice("Starting post action processor command '%s' in session '%s' on desktop '%s'" \
 					% (self.event.eventConfig.postActionProcessorCommand, self.getSessionId(), desktop))
 				self.runCommandInSession(
 					command = self.event.eventConfig.postActionProcessorCommand,
@@ -1016,7 +1014,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			category="wait",
 			durationEvent=True
 		)
-		self._messageSubject.setMessage(u"%s\n%s: %s" % (
+		self._messageSubject.setMessage("%s\n%s: %s" % (
 			self.event.eventConfig.getActionMessage(),
 			_("Products"),
 			', '.join(productIds))
@@ -1073,7 +1071,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			if self.actionCancelled:
 				cancelCounter += 1
 				state.set('action_processing_cancel_counter', cancelCounter)
-				logger.notice(u"Action processing cancelled by user for the %d. time (max: %d)",
+				logger.notice("Action processing cancelled by user for the %d. time (max: %d)",
 					cancelCounter, self.event.eventConfig.actionUserCancelable
 				)
 				timeline.addEvent(
@@ -1106,7 +1104,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		self.shutdownCancelled = True
 
 	def startShutdownCallback(self, choiceSubject): # pylint: disable=unused-argument
-		logger.notice(u"Shutdown wait cancelled by user")
+		logger.notice("Shutdown wait cancelled by user")
 		self.shutdownWaitCancelled = True
 
 	def isRebootRequested(self):
@@ -1129,11 +1127,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			reboot   = self.isRebootRequested()
 			if reboot or shutdown:
 				if reboot:
-					timeline.addEvent(title = u"Reboot requested", category = u"system")
-					self.setStatusMessage(_(u"Reboot requested"))
+					timeline.addEvent(title = "Reboot requested", category = "system")
+					self.setStatusMessage(_("Reboot requested"))
 				else:
-					timeline.addEvent(title = u"Shutdown requested", category = u"system")
-					self.setStatusMessage(_(u"Shutdown requested"))
+					timeline.addEvent(title = "Shutdown requested", category = "system")
+					self.setStatusMessage(_("Shutdown requested"))
 
 				if self.event.eventConfig.shutdownWarningTime:
 					if not self.event.eventConfig.shutdownNotifierCommand:
@@ -1257,33 +1255,37 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						if self.shutdownWaitCancelled:
 							if reboot:
 								timeline.addEvent(
-									title       = "Reboot started by user",
-									description = "Reboot wait time cancelled by user",
-									category    = "user_interaction")
+									title="Reboot started by user",
+									description="Reboot wait time cancelled by user",
+									category="user_interaction"
+								)
 							else:
 								timeline.addEvent(
-									title       = "Shutdown started by user",
-									description = "Shutdown wait time cancelled by user",
-									category    = "user_interaction")
+									title="Shutdown started by user",
+									description="Shutdown wait time cancelled by user",
+									category="user_interaction"
+								)
 
 						if self.shutdownCancelled:
 							self.opsiclientd.setBlockLogin(False)
 							shutdownCancelCounter += 1
 							state.set('shutdown_cancel_counter', shutdownCancelCounter)
-							logger.notice(u"Shutdown cancelled by user for the %d. time (max: %d)" \
+							logger.notice("Shutdown cancelled by user for the %d. time (max: %d)" \
 								% (shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable))
 							if reboot:
 								timeline.addEvent(
-									title       = u"Reboot cancelled by user",
-									description = u"Reboot cancelled by user for the %d. time (max: %d)" \
+									title="Reboot cancelled by user",
+									description="Reboot cancelled by user for the %d. time (max: %d)" \
 											% (shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable),
-									category    = u"user_interaction")
+									category="user_interaction"
+								)
 							else:
 								timeline.addEvent(
-									title       = u"Shutdown cancelled by user",
-									description = u"Shutdown cancelled by user for the %d. time (max: %d)" \
+									title="Shutdown cancelled by user",
+									description="Shutdown cancelled by user for the %d. time (max: %d)" \
 											% (shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable),
-									category    = u"user_interaction")
+									category="user_interaction"
+								)
 							if self.event.eventConfig.shutdownWarningRepetitionTime >= 0:
 								logger.info("Shutdown warning will be repeated in %d seconds",
 									self.event.eventConfig.shutdownWarningRepetitionTime
@@ -1364,7 +1366,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					self.setActionProcessorInfo()
 					self._messageSubject.setMessage(self.event.eventConfig.getActionMessage())
 
-					self.setStatusMessage(_(u"Processing event %s") % self.event.eventConfig.getName())
+					self.setStatusMessage(_("Processing event %s") % self.event.eventConfig.getName())
 
 					if self.event.eventConfig.blockLogin:
 						self.opsiclientd.setBlockLogin(True)

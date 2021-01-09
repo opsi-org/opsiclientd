@@ -93,8 +93,8 @@ class Opsiclientd(EventListener, threading.Thread): # pylint: disable=too-many-i
 		self._isRebootTriggered = False
 		self._isShutdownTriggered = False
 
-		self._actionProcessorUserName = u''
-		self._actionProcessorUserPassword = u''
+		self._actionProcessorUserName = ''
+		self._actionProcessorUserPassword = ''
 
 		self._statusApplicationProcess = None
 		self._blockLoginNotifierPid = None
@@ -270,21 +270,21 @@ class Opsiclientd(EventListener, threading.Thread): # pylint: disable=too-many-i
 
 		run_as_user = config.get('action_processor', 'run_as_user')
 		if run_as_user.lower() == 'system':
-			self._actionProcessorUserName = u''
-			self._actionProcessorUserPassword = u''
+			self._actionProcessorUserName = ''
+			self._actionProcessorUserPassword = ''
 			return
 
 		if '\\' in run_as_user:
-			logger.warning(u"Ignoring domain part of user to run action processor '%s'", run_as_user)
+			logger.warning("Ignoring domain part of user to run action processor '%s'", run_as_user)
 			run_as_user = run_as_user.split('\\', -1)
 
 		if not recreate and self._actionProcessorUserName and self._actionProcessorUserPassword and System.existsUser(username=run_as_user):
 			return
 
 		self._actionProcessorUserName = run_as_user
-		logger.notice(u"Creating local user '%s'" % run_as_user)
+		logger.notice("Creating local user '%s'" % run_as_user)
 
-		self._actionProcessorUserPassword = u'$!?' + str(randomString(16)) + u'!/%'
+		self._actionProcessorUserPassword = '$!?' + str(randomString(16)) + '!/%'
 		logger.addConfidentialString(self._actionProcessorUserPassword)
 
 		if System.existsUser(username=run_as_user):
@@ -303,8 +303,8 @@ class Opsiclientd(EventListener, threading.Thread): # pylint: disable=too-many-i
 
 		logger.notice("Deleting local user '%s'", self._actionProcessorUserName)
 		System.deleteUser(username=self._actionProcessorUserName)
-		self._actionProcessorUserName = u''
-		self._actionProcessorUserPassword = u''
+		self._actionProcessorUserName = ''
+		self._actionProcessorUserPassword = ''
 
 	def run(self):
 		with log_context({'instance' : 'opsiclientd'}):
@@ -574,7 +574,7 @@ class Opsiclientd(EventListener, threading.Thread): # pylint: disable=too-many-i
 			return None
 
 		if not ('opsiclientd_rpc' in config.getDict() and 'command' in config.getDict()['opsiclientd_rpc']):
-			raise Exception(u"opsiclientd_rpc command not defined")
+			raise Exception("opsiclientd_rpc command not defined")
 
 		if sessionId is None:
 			sessionId = System.getActiveSessionId()

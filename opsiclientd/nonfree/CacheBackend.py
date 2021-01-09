@@ -98,7 +98,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 		for idx, _config in enumerate(configs):
 			if _config.id == 'clientconfig.depot.id':
 				configs[idx].defaultValues = [self._depotId]
-		logger.info("config_getObjects returning %s", configs)
+		logger.trace("config_getObjects returning %s", configs)
 		return configs
 
 	def configState_getObjects(self, attributes=[], **filter): # pylint: disable=dangerous-default-value,redefined-builtin
@@ -106,25 +106,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 		for idx, config_state in enumerate(config_states):
 			if config_state.configId == 'clientconfig.depot.id':
 				config_states[idx].values = [self._depotId]
-
-		#	cf = ConfigState(
-		#		configId='clientconfig.depot.id',
-		#		objectId=self._clientId,
-		#		values=[self._depotId]
-		#	)
-		#	{'objectId': ['js-client2.uib.local'], 'configId': 'clientconfig.depot.id'}
-
-		logger.info("configState_getObjects returning %s", config_states)
+		logger.trace("configState_getObjects returning %s", config_states)
 		return config_states
-
-	#def configState_getClientToDepotserver(self, depotIds=[], clientIds=[], masterOnly=True, productIds=[]): # pylint: disable=dangerous-default-value,unused-argument
-	#	result = [{
-	#		'depotId': self._depotId,
-	#		'clientId': self._clientId,
-	#		'alternativeDepotIds': []
-	#	}]
-	#	logger.info("configState_getClientToDepotserver returning %s", result)
-	#	return result
 
 	def _setMasterBackend(self, masterBackend):
 		self._masterBackend = masterBackend
@@ -197,7 +180,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 				objectFilter = {}
 				for index, attribute in enumerate(identAttributes):
 					if index >= len(identValues):
-						raise BackendUnaccomplishableError(u"Bad ident '%s' for objectClass '%s'" % (identValues, modification['objectClass']))
+						raise BackendUnaccomplishableError("Bad ident '%s' for objectClass '%s'" % (identValues, modification['objectClass']))
 
 					objectFilter[attribute] = identValues[index]
 
@@ -440,8 +423,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 
 				(argString, callString) = getArgAndCallString(funcRef)
 
-				logger.debug2(u"Adding method '%s' to execute on work backend" % methodName)
-				exec(u'def %s(self, %s): return self._executeMethod("%s", %s)' % (methodName, argString, methodName, callString)) # pylint: disable=exec-used
+				logger.debug2("Adding method '%s' to execute on work backend" % methodName)
+				exec('def %s(self, %s): return self._executeMethod("%s", %s)' % (methodName, argString, methodName, callString)) # pylint: disable=exec-used
 				setattr(self, methodName, MethodType(eval(methodName), self)) # pylint: disable=eval-used
 
 	def _cacheBackendInfo(self, backendInfo):

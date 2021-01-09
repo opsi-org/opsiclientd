@@ -71,9 +71,9 @@ class GUIStartupEventGenerator(EventGenerator):
 	def getNextEvent(self):
 		while not self._stopped:
 			for guiProcessName in self.guiProcessNames:
-				logger.debug(u"Checking if process '%s' running", guiProcessName)
+				logger.debug("Checking if process '%s' running", guiProcessName)
 				if System.getPid(guiProcessName):
-					logger.debug(u"Process '%s' is running", guiProcessName)
+					logger.debug("Process '%s' is running", guiProcessName)
 					return self.createEvent()
 			for _i in range(3):
 				if self._stopped:

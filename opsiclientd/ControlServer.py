@@ -147,7 +147,7 @@ LOG_VIEWER_PAGE = '''<!DOCTYPE html>
 try:
 	fsencoding = sys.getfilesystemencoding()
 	if not fsencoding:
-		raise ValueError("getfilesystemencoding returned {!r}".format(fsencoding))
+		raise ValueError(f"getfilesystemencoding returned {fsencoding}")
 except Exception as err: # pylint: disable=broad-except
 	logger.info("Problem getting filesystemencoding: %s", err)
 	defaultEncoding = sys.getdefaultencoding()
@@ -180,10 +180,10 @@ class WorkerOpsiclientd(WorkerOpsi):
 
 	def _errback(self, failure):
 		result = WorkerOpsi._errback(self, failure) # pylint: disable=assignment-from-none
-		logger.debug(u"DEBUG: detected host: '%s'", self.request.getClientIP())
-		logger.debug(u"DEBUG: responsecode: '%s'", self.request.code)
-		logger.debug(u"DEBUG: maxAuthenticationFailures config: '%s'", config.get('control_server', 'max_authentication_failures'))
-		logger.debug(u"DEBUG: maxAuthenticationFailures config type: '%s'", type(config.get('control_server', 'max_authentication_failures')))
+		logger.debug("DEBUG: detected host: '%s'", self.request.getClientIP())
+		logger.debug("DEBUG: responsecode: '%s'", self.request.code)
+		logger.debug("DEBUG: maxAuthenticationFailures config: '%s'", config.get('control_server', 'max_authentication_failures'))
+		logger.debug("DEBUG: maxAuthenticationFailures config type: '%s'", type(config.get('control_server', 'max_authentication_failures')))
 
 		if self.request.code == 401 and self.request.getClientIP() != "127.0.0.1":
 			maxAuthenticationFailures = config.get('control_server', 'max_authentication_failures')
@@ -195,7 +195,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 
 				if self.service.authFailureCount[self.request.getClientIP()] > maxAuthenticationFailures:
 					logger.error(
-						u"%s authentication failures from '%s' in a row, waiting 60 seconds to prevent flooding",
+						"%s authentication failures from '%s' in a row, waiting 60 seconds to prevent flooding",
 						self.service.authFailureCount[self.request.getClientIP()],
 						self.request.getClientIP()
 					)
@@ -265,7 +265,7 @@ class WorkerOpsiclientdJsonInterface(WorkerOpsiclientdJsonRpc, WorkerOpsiJsonInt
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientdJsonRpc.__init__(self, service, request, resource)
 		WorkerOpsiJsonInterface.__init__(self, service, request, resource)
-		self.path = u'interface'
+		self.path = 'interface'
 
 	def _getCallInstance(self, result):
 		return WorkerOpsiclientdJsonRpc._getCallInstance(self, result)
@@ -290,10 +290,10 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 			pass
 
 		if not self.service._opsiclientd.getCacheService(): # pylint: disable=protected-access
-			raise Exception(u'Cache service not running')
+			raise Exception('Cache service not running')
 
 		self.session.callInstance = self.service._opsiclientd.getCacheService().getConfigBackend() # pylint: disable=protected-access
-		logger.notice(u'Backend created: %s' % self.session.callInstance)
+		logger.notice('Backend created: %s' % self.session.callInstance)
 		self.session.callInterface = self.session.callInstance.backend_getInterface()
 		return result
 
@@ -316,7 +316,7 @@ class WorkerCacheServiceJsonInterface(WorkerCacheServiceJsonRpc, WorkerOpsiJsonI
 	def __init__(self, service, request, resource):
 		WorkerCacheServiceJsonRpc.__init__(self, service, request, resource)
 		WorkerOpsiJsonInterface.__init__(self, service, request, resource)
-		self.path = u'rpcinterface'
+		self.path = 'rpcinterface'
 
 	def _getCallInstance(self, result):
 		return WorkerCacheServiceJsonRpc._getCallInstance(self, result)
@@ -546,7 +546,7 @@ class ControlServer(OpsiService, threading.Thread): # pylint: disable=too-many-i
 			if os.path.isdir(self._staticDir):
 				self._root = File(self._staticDir.encode())
 			else:
-				logger.error(u"Cannot add static content '/': directory '%s' does not exist.", self._staticDir)
+				logger.error("Cannot add static content '/': directory '%s' does not exist.", self._staticDir)
 
 		if not self._root:
 			self._root = ResourceRoot()
@@ -570,15 +570,9 @@ class ControlServer(OpsiService, threading.Thread): # pylint: disable=too-many-i
 
 	def __repr__(self):
 		return (
-			'<ControlServer(opsiclientd={opsiclientd}, httpsPort={port}, '
-			'sslServerKeyFile={keyFile}, sslServerCertFile={certFile}, '
-			'staticDir={staticDir})>'.format(
-				opsiclientd=self._opsiclientd,
-				port=self._httpsPort,
-				keyFile=self._sslServerKeyFile,
-				certFile=self._sslServerCertFile,
-				staticDir=self._staticDir
-			)
+			f'<ControlServer(opsiclientd={self._opsiclientd}, httpsPort={self._httpsPort}, '
+			f'sslServerKeyFile={self._sslServerKeyFile}, sslServerCertFile={self._sslServerCertFile}, '
+			f'staticDir={self._staticDir})>'
 		)
 
 class RequestAdapter():
@@ -812,24 +806,23 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		logType = forceUnicode(logType)
 
 		if logType not in LOG_TYPES:
-			raise ValueError(u'Unknown log type {0!r}'.format(logType))
+			raise ValueError(f'Unknown log type {logType}')
 
 		if extension:
 			extension = forceUnicode(extension)
-			logFile = os.path.join(LOG_DIR, '{0}.log.{1}'.format(logType, extension))
+			logFile = os.path.join(LOG_DIR, f'{logType}.log.{extension}')
 			if not os.path.exists(logFile):
 				# Try the other format:
-				logFile = os.path.join(LOG_DIR, '{0}_{1}.log'.format(logType, extension))
+				logFile = os.path.join(LOG_DIR, f'{logType}_{extension}.log')
 		else:
-			logFile = os.path.join(LOG_DIR, '{0}.log'.format(logType))
+			logFile = os.path.join(LOG_DIR, f'{logType}.log')
 
 		try:
 			with codecs.open(logFile, 'r', 'utf-8', 'replace') as log:
 				data = log.read()
 		except IOError as ioerr:
 			if ioerr.errno == 2:  # This is "No such file or directory"
-				return u'No such file or directory'
-
+				return 'No such file or directory'
 			raise
 
 		if maxSize > 0:
@@ -854,14 +847,14 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		else:
 			desktop = self.opsiclientd.getCurrentActiveDesktopName()
 
-		logger.notice(u"rpc runCommand: executing command '%s' in session %d on desktop '%s'", command, sessionId, desktop)
+		logger.notice("rpc runCommand: executing command '%s' in session %d on desktop '%s'", command, sessionId, desktop)
 		System.runCommandInSession(
 			command=command,
 			sessionId=sessionId,
 			desktop=desktop,
 			waitForProcessEnding=False
 		)
-		return u"command '%s' executed" % command
+		return "command '%s' executed" % command
 
 	def execute(self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300): # pylint: disable=no-self-use,too-many-arguments
 		return System.execute(
@@ -876,46 +869,46 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		return System.logoffSession(session_id=session_id, username=username)
 
 	def logoffCurrentUser(self): # pylint: disable=no-self-use
-		logger.notice(u"rpc logoffCurrentUser: logging of current user now")
+		logger.notice("rpc logoffCurrentUser: logging of current user now")
 		System.logoffCurrentUser()
 
 	def lockSession(self, session_id = None, username = None): # pylint: disable=no-self-use
 		return System.lockSession(session_id=session_id, username=username)
 
 	def lockWorkstation(self): # pylint: disable=no-self-use
-		logger.notice(u"rpc lockWorkstation: locking workstation now")
+		logger.notice("rpc lockWorkstation: locking workstation now")
 		System.lockWorkstation()
 
 	def shutdown(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
-		logger.notice(u"rpc shutdown: shutting down computer in %s seconds", waitSeconds)
+		logger.notice("rpc shutdown: shutting down computer in %s seconds", waitSeconds)
 		self.opsiclientd.shutdownMachine(waitSeconds)
 
 	def reboot(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
-		logger.notice(u"rpc reboot: rebooting computer in %s seconds", waitSeconds)
+		logger.notice("rpc reboot: rebooting computer in %s seconds", waitSeconds)
 		self.opsiclientd.rebootMachine(waitSeconds)
 
 	def restart(self, waitSeconds=0):
 		waitSeconds = forceInt(waitSeconds)
-		logger.notice(u"rpc restart: restarting opsiclientd in %s seconds", waitSeconds)
+		logger.notice("rpc restart: restarting opsiclientd in %s seconds", waitSeconds)
 		self.opsiclientd.restart(waitSeconds)
 
 	def uptime(self):
 		uptime = int(time.time() - self.opsiclientd._startupTime) # pylint: disable=protected-access
-		logger.notice(u"rpc uptime: opsiclientd is running for %d seconds", uptime)
+		logger.notice("rpc uptime: opsiclientd is running for %d seconds", uptime)
 		return uptime
 
 	def fireEvent(self, name): # pylint: disable=no-self-use
 		event = getEventGenerator(name)
-		logger.notice(u"Firing event '%s'" % name)
+		logger.notice("Firing event '%s'" % name)
 		event.createAndFireEvent()
 
 	def setStatusMessage(self, sessionId, message):
 		sessionId = forceInt(sessionId)
 		message = forceUnicode(message)
 		ept = self.opsiclientd.getEventProcessingThread(sessionId)
-		logger.notice(u"rpc setStatusMessage: Setting status message to '%s'", message)
+		logger.notice("rpc setStatusMessage: Setting status message to '%s'", message)
 		ept.setStatusMessage(message)
 
 	def isEventRunning(self, name):

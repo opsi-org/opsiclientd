@@ -76,7 +76,7 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 
 	def addEventListener(self, eventListener):
 		if not isinstance(eventListener, EventListener):
-			raise TypeError(u"Failed to add event listener, got class %s, need class EventListener" % eventListener.__class__)
+			raise TypeError("Failed to add event listener, got class %s, need class EventListener" % eventListener.__class__)
 
 		if eventListener in self._eventListeners:
 			return
@@ -133,7 +133,7 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 		logger.info("Firing event '%s'", event)
 		logger.info("Event info:")
 		for (key, value) in event.eventInfo.items():
-			logger.info(u"     %s: %s", key, value)
+			logger.info("     %s: %s", key, value)
 
 		class FireEventThread(threading.Thread):
 			def __init__(self, eventListener, event):
@@ -211,7 +211,7 @@ class Event: # pylint: disable=too-few-public-methods
 	def getActionProcessorCommand(self):
 		actionProcessorCommand = self.eventConfig.actionProcessorCommand
 		for (key, value) in self.eventInfo.items():
-			actionProcessorCommand = actionProcessorCommand.replace(u'%' + u'event.' + str(key.lower()) + u'%', str(value))
+			actionProcessorCommand = actionProcessorCommand.replace('%' + 'event.' + str(key.lower()) + '%', str(value))
 
 		return actionProcessorCommand
 

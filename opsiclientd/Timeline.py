@@ -162,43 +162,43 @@ class Timeline(metaclass=Singleton):
 		events = []
 		now = time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime())
 		for event in self.getEvents():
-			event['icon'] = TIMELINE_IMAGE_URL + u"gray-circle.png"
-			event['start'] = event['start'].replace(u' ', u'T') + '+00:00'
+			event['icon'] = TIMELINE_IMAGE_URL + "gray-circle.png"
+			event['start'] = event['start'].replace(' ', 'T') + '+00:00'
 			if event['end']:
-				event['end'] = event['end'].replace(u' ', u'T') + '+00:00'
+				event['end'] = event['end'].replace(' ', 'T') + '+00:00'
 			else:
 				if event['durationEvent']:
 					event['end'] = now
 			if event['description']:
-				event['description'] = event['description'].replace(u'\n', u'<br />')
+				event['description'] = event['description'].replace('\n', '<br />')
 			if event['isError']:
-				event['color'] = u"#A74141"
-				event['textColor'] = u"#A74141"
-				event['icon'] = TIMELINE_IMAGE_URL + u"dark-red-circle.png"
+				event['color'] = "#A74141"
+				event['textColor'] = "#A74141"
+				event['icon'] = TIMELINE_IMAGE_URL + "dark-red-circle.png"
 			elif event['category'] in ('event_processing', 'event_occurrence'):
-				event['color'] = u"#D7CB1E"
-				event['textColor'] = u"#D7CB1E"
+				event['color'] = "#D7CB1E"
+				event['textColor'] = "#D7CB1E"
 			elif event['category'] in ('opsiclientd_running',):
-				event['color'] = u"#80A63D"
-				event['textColor'] = u"#80A63D"
-				event['icon'] = TIMELINE_IMAGE_URL + u"dull-green-circle.png"
+				event['color'] = "#80A63D"
+				event['textColor'] = "#80A63D"
+				event['icon'] = TIMELINE_IMAGE_URL + "dull-green-circle.png"
 			elif event['category'] in ('block_login', 'system'):
-				event['color'] = u"#A74141"
-				event['textColor'] = u"#A74141"
-				event['icon'] = TIMELINE_IMAGE_URL + u"dark-red-circle.png"
+				event['color'] = "#A74141"
+				event['textColor'] = "#A74141"
+				event['icon'] = TIMELINE_IMAGE_URL + "dark-red-circle.png"
 			elif event['category'] in ('product_caching',):
-				event['color'] = u"#6BABDF"
-				event['textColor'] = u"#6BABDF"
+				event['color'] = "#6BABDF"
+				event['textColor'] = "#6BABDF"
 			elif event['category'] in ('config_sync',):
-				event['color'] = u"#69DFD0"
-				event['textColor'] = u"#69DFD0"
+				event['color'] = "#69DFD0"
+				event['textColor'] = "#69DFD0"
 			elif event['category'] in ('user_interaction',):
-				event['color'] = u"#B46ADF"
-				event['textColor'] = u"#B46ADF"
-				event['icon'] = TIMELINE_IMAGE_URL + u"dull-blue-circle.png"
+				event['color'] = "#B46ADF"
+				event['textColor'] = "#B46ADF"
+				event['icon'] = TIMELINE_IMAGE_URL + "dull-blue-circle.png"
 			elif event['category'] in ('wait',):
-				event['color'] = u"#DFA86C"
-				event['textColor'] = u"#DFA86C"
+				event['color'] = "#DFA86C"
+				event['textColor'] = "#DFA86C"
 			del event['isError']
 			del event['category']
 			del event['id']
@@ -236,8 +236,8 @@ class Timeline(metaclass=Singleton):
 		with self._db_lock:
 			tables = self._sql.getTables()
 			if 'EVENT' not in tables:
-				logger.debug(u'Creating table EVENT')
-				table = u'''CREATE TABLE `EVENT` (
+				logger.debug('Creating table EVENT')
+				table = '''CREATE TABLE `EVENT` (
 						`id` integer NOT NULL ''' + self._sql.AUTOINCREMENT + ''',
 						`title` varchar(255) NOT NULL,
 						`category` varchar(64),
@@ -254,7 +254,7 @@ class Timeline(metaclass=Singleton):
 				self._sql.execute('CREATE INDEX `category` on `EVENT` (`category`);')
 				self._sql.execute('CREATE INDEX `start` on `EVENT` (`start`);')
 
-	def addEvent(self, title, description=u'', isError=False, category=None, durationEvent=False, start=None, end=None): # pylint: disable=too-many-arguments
+	def addEvent(self, title, description='', isError=False, category=None, durationEvent=False, start=None, end=None): # pylint: disable=too-many-arguments
 		if self._stopped:
 			return -1
 

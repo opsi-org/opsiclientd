@@ -132,8 +132,8 @@ class EventConfig: # pylint: disable=too-many-instance-attributes
 			if 'message' in key.lower():
 				continue
 
-			message = message.replace('%{0}%'.format(key), str(value))
-			message = message.replace('%{0}%'.format(toUnderscore(key)), str(value))
+			message = message.replace(f'%{key}%', str(value))
+			message = message.replace(f'%{toUnderscore(key)}%', str(value))
 
 		while True:
 			match = re.search('(%state.[^%]+%)', message)

@@ -135,7 +135,7 @@ class ServiceConnection:
 
 	def stop(self): # pylint: disable=no-self-use
 		logger.warning("stop() not implemented")
-		#logger.debug(u"Stopping thread")
+		#logger.debug("Stopping thread")
 		#self.cancelled = True
 		#self.running = False
 		#for i in range(10):
@@ -262,7 +262,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 		self.cancelled = False
 		self.connectionError = None
 		if not self._configServiceUrl:
-			raise Exception(u"No config service url given")
+			raise Exception("No config service url given")
 
 	def setStatusMessage(self, message):
 		if not self._statusSubject:
@@ -302,7 +302,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 				proxyMode = config.get('global', 'proxy_mode')
 				proxyURL = config.get('global', 'proxy_url')
 				if proxyMode == 'system':
-					logger.notice(u'not implemented yet')
+					logger.notice("not implemented yet")
 					proxyURL = System.getSystemProxySetting() # pylint: disable=assignment-from-no-return
 				elif proxyMode == 'static':
 					proxyURL = config.get('global', 'proxy_url')
@@ -351,7 +351,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 						self.connected = True
 						self.connectionError = None
 						serverVersion = self.configService.serverVersion
-						self.setStatusMessage(_(u"Connected to config server '%s'") % self._configServiceUrl)
+						self.setStatusMessage(_("Connected to config server '%s'") % self._configServiceUrl)
 						logger.notice(
 							"Connected to config server '%s' (name=%s, version=%s)",
 							self._configServiceUrl,
