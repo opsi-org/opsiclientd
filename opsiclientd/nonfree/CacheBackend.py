@@ -162,11 +162,19 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 
 		if deleteObjects:
 			meth = getattr(self._masterBackend, f'{objectClass.backendMethodPrefix}_deleteObjects')
-			meth(deleteObjects)
+			try:
+				meth(deleteObjects)
+			except Exception as delete_err:
+				logger.error("Failed to delete objects %s: %s", deleteObjects, delete_err)
+				raise
 
 		if updateObjects:
 			meth = getattr(self._masterBackend, f'{objectClass.backendMethodPrefix}_updateObjects')
-			meth(updateObjects)
+			try:
+				meth(updateObjects)
+			except Exception as update_err:
+				logger.error("Failed to update objects %s: %s", updateObjects, update_err)
+				raise
 
 	def _updateMasterFromWorkBackend(self, modifications=[]): # pylint: disable=dangerous-default-value,too-many-locals
 		modifiedObjects = collections.defaultdict(list)
