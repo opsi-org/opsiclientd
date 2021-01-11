@@ -141,7 +141,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 					logger.info("Deletion of object %s prevented because object has been modified on server since last sync", mo['object'])
 					continue
 
-				logger.debug("Object %s marked for deletion", mo['object'])
+				logger.info("Object %s marked for deletion", mo['object'])
 				deleteObjects.append(mo['object'])
 			elif command in ('update', 'insert'):
 				logger.debug("Modified object: %s", mo['object'].toHash())
@@ -157,7 +157,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 						updateObj = mergeObjectsFunction(snapshotObj, updateObj, masterObj, self._snapshotBackend, self._workBackend, self._masterBackend)
 
 				if updateObj:
-					logger.debug("Object %s marked for update", mo['object'])
+					logger.info("Object %s marked for update", mo['object'])
 					updateObjects.append(updateObj)
 
 		if deleteObjects:
