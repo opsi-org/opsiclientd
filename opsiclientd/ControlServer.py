@@ -179,7 +179,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 		return (user, password)
 
 	def _errback(self, failure):
-		result = WorkerOpsi._errback(self, failure) # pylint: disable=assignment-from-none
+		WorkerOpsi._errback(self, failure)
 		logger.debug("DEBUG: detected host: '%s'", self.request.getClientIP())
 		logger.debug("DEBUG: responsecode: '%s'", self.request.code)
 		logger.debug("DEBUG: maxAuthenticationFailures config: '%s'", config.get('control_server', 'max_authentication_failures'))
@@ -188,26 +188,32 @@ class WorkerOpsiclientd(WorkerOpsi):
 		if self.request.code == 401 and self.request.getClientIP() != "127.0.0.1":
 			maxAuthenticationFailures = config.get('control_server', 'max_authentication_failures')
 			if maxAuthenticationFailures > 0:
-				try:
-					self.service.authFailureCount[self.request.getClientIP()] += 1
-				except KeyError:
-					self.service.authFailureCount[self.request.getClientIP()] = 1
+				client_ip = self.request.getClientIP()
+				if client_ip not in self.service.authFailures:
+					self.service.authFailures[client_ip] = {
+						"count": 0,
+						"blocked_time": 0
+					}
+				self.service.authFailures[client_ip]["count"] += 1
+				if self.service.authFailures[client_ip]["count"] > maxAuthenticationFailures:
+					self.service.authFailures[client_ip]["blocked_time"] = time.time()
 
-				if self.service.authFailureCount[self.request.getClientIP()] > maxAuthenticationFailures:
-					logger.error(
-						"%s authentication failures from '%s' in a row, waiting 60 seconds to prevent flooding",
-						self.service.authFailureCount[self.request.getClientIP()],
-						self.request.getClientIP()
-					)
-
-					return self._delayResult(60, result)
-		return result
-
-	def _authenticate(self, result):
+	def _authenticate(self, result): #pylint: disable=too-many-branches
 		if self.session.authenticated:
 			return result
 
 		try:
+			maxAuthenticationFailures = config.get('control_server', 'max_authentication_failures')
+			if maxAuthenticationFailures > 0:
+				client_ip = self.request.getClientIP()
+				if client_ip in self.service.authFailures and self.service.authFailures[client_ip]["blocked_time"]:
+					if time.time() - self.service.authFailures[client_ip]["blocked_time"] > 60:
+						# Unblock after 60 seconds
+						del self.service.authFailures[client_ip]
+					else:
+						self.service.authFailures[client_ip]["blocked_time"] = time.time()
+						raise Exception(f"{client_ip} blocked")
+
 			(self.session.user, self.session.password) = self._getCredentials()
 
 			logger.notice("Authorization request from %s@%s (application: %s)" % (self.session.user, self.session.ip, self.session.userAgent))
@@ -235,10 +241,11 @@ class WorkerOpsiclientd(WorkerOpsi):
 
 		# Auth ok
 		self.session.authenticated = True
-		try:
-			del self.service.authFailureCount[self.request.getClientIP()]
-		except KeyError:
-			pass
+
+		client_ip = self.request.getClientIP()
+		if client_ip in self.service.authFailures:
+			del self.service.authFailures[client_ip]
+
 		return result
 
 
@@ -485,7 +492,7 @@ class ControlServer(OpsiService, threading.Thread): # pylint: disable=too-many-i
 		self._opsiclientdRpcInterface = OpsiclientdRpcInterface(self._opsiclientd)
 
 		logger.info("ControlServer initiated")
-		self.authFailureCount = {}
+		self.authFailures = {}
 
 	def run(self):
 		with log_context({'instance' : 'control server'}):

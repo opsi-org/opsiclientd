@@ -35,7 +35,6 @@ from OPSI import __version__ as python_opsi_version
 from opsicommon.logging import (
 	logger, init_logging, log_context, secret_filter, LOG_DEBUG, LOG_NONE
 )
-from opsicommon.logging.constants import LOG_TRACE
 
 from opsiclientd import __version__, DEFAULT_FILE_LOG_FORMAT
 
@@ -114,7 +113,7 @@ def main():
 					password = get_opsi_host_key()
 					secret_filter.add_secrets([password])
 				except Exception as err: # pylint: disable=broad-except
-					raise RuntimeError(f"Failed to read opsi host key from config file: {err}")
+					raise RuntimeError(f"Failed to read opsi host key from config file: {err}") from err
 
 		except DeprecationWarning:
 			# Fallback to legacy comandline arguments
@@ -123,7 +122,7 @@ def main():
 			secret_filter.add_secrets([password])
 			address = f"https://localhost:{port}/opsiclientd"
 			if len(sys.argv) > 5:
-				log_level = LOG_TRACE #LOG_DEBUG
+				log_level = LOG_DEBUG
 				log_file = sys.argv[4]
 				rpc = sys.argv[5]
 
@@ -146,7 +145,7 @@ def main():
 				address=address
 			) as jsonrpc: # pylint: disable=unused-variable
 				logger.notice(f"Executing: {rpc}")
-				result = eval(f"jsonrpc.{rpc}") # pylint: disable=exec-used
+				result = eval(f"jsonrpc.{rpc}") # pylint: disable=eval-used
 				print(result)
 		except Exception as err: # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
