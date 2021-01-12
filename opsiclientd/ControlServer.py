@@ -1045,7 +1045,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			raise
 
 	def loginOpsiSetupAdmin(self):
-		System.logoffSession("opsisetupadmin")
+		System.logoffSession(username="opsisetupadmin")
 		user_info = self.opsiclientd.createOpsiSetupAdmin()
 		return self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 
