@@ -55,6 +55,9 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 
 	def callback(self, eventType, *args):
 		logger.debug("UserLoginEventGenerator event callback: eventType '%s', args: %s", eventType, args)
+		if self._opsiclientd.is_stopping():
+			return
+
 		if args[0].split("\\")[-1] == "opsisetupadmin":
 			# TODO: username currently hardcoded
 			logger.info("Login of user %s detected, no UserLoginAction will be fired.", args[0])

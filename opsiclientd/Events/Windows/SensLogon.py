@@ -44,7 +44,7 @@ class SensLogonEventGenerator(EventGenerator):
 	def initialize(self):
 		EventGenerator.initialize(self)
 
-		logger.notice(u'Registring ISensLogon')
+		logger.notice("Registring ISensLogon")
 
 		from opsiclientd.windows import importWmiAndPythoncom, SensLogon # pylint: disable=import-outside-toplevel
 
