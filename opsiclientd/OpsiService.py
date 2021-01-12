@@ -44,8 +44,8 @@ from OPSI.Util.HTTP import (
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
 
-import opsicommon.logging
-from opsicommon.logging import logger
+from opsicommon.logging import logger, log_context
+from opsicommon.ssl import install_ca
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config, OPSI_CA
@@ -274,29 +274,39 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 
 	def updateCACert(self):
 		logger.info("Updating CA cert")
+		ca_cert_file = None
 		try:
-			certDir = config.get('global', 'server_cert_dir')
-			if not os.path.isdir(certDir):
-				os.makedirs(certDir)
+			cert_dir = config.get('global', 'server_cert_dir')
+			ca_cert_file = os.path.join(cert_dir, 'cacert.pem')
+			if not os.path.isdir(cert_dir):
+				os.makedirs(cert_dir)
+
 			response = self.configService.httpRequest("GET", "/ssl/opsi-cacert.pem")
 			if response.status != 200:
 				raise RuntimeError(f"Failed to fetch opsi-cacert.pem: {response.status} - {response.data}")
-			caCert = crypto.load_certificate(crypto.FILETYPE_PEM, response.data.decode("utf-8"))
-			with open(os.path.join(certDir, 'cacert.pem'), "wb") as file:
-				file.write(crypto.dump_certificate(crypto.FILETYPE_PEM, caCert))
-			logger.info("CA cert updated successfully")
-		except Exception as sslCAErr: # pylint: disable=broad-except
-			logger.warning("Failed to load CA: %s", sslCAErr)
+			ca_cert = crypto.load_certificate(crypto.FILETYPE_PEM, response.data.decode("utf-8"))
+			with open(ca_cert_file, "wb") as file:
+				file.write(crypto.dump_certificate(crypto.FILETYPE_PEM, ca_cert))
+			logger.info("CA cert file %s successfully updated", ca_cert_file)
+		except Exception as ssl_ca_err: # pylint: disable=broad-except
+			logger.error("Failed to update CA cert: %s", ssl_ca_err)
+
+		if ca_cert_file:
+			try:
+				install_ca(ca_cert_file)
+				logger.info("CA cert file %s successfully installed into system cert store", ca_cert_file)
+			except Exception as install_err: # pylint: disable=broad-except
+				logger.error("Failed to install CA into system cert store: %s", install_err)
 
 	def run(self): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-		with opsicommon.logging.log_context({'instance' : 'service connection'}):
+		with log_context({'instance' : 'service connection'}):
 			logger.debug("ServiceConnectionThread started...")
 			self.running = True
 			self.connected = False
 			self.cancelled = False
 
 			try: # pylint: disable=too-many-nested-blocks
-				certDir = config.get('global', 'server_cert_dir')
+				cert_dir = config.get('global', 'server_cert_dir')
 				verifyServerCert = config.get('global', 'verify_server_cert')
 
 				proxyMode = config.get('global', 'proxy_mode')
@@ -308,11 +318,11 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 					proxyURL = config.get('global', 'proxy_url')
 
 				host = urlsplit(self._configServiceUrl)[1]
-				serverCertFile = os.path.join(certDir, host + '.pem')
+				serverCertFile = os.path.join(cert_dir, host + '.pem')
 				if verifyServerCert:
 					logger.info("Server verification enabled, using cert file '%s'", serverCertFile)
 
-				caCertFile = os.path.join(certDir, 'cacert.pem')
+				caCertFile = os.path.join(cert_dir, 'cacert.pem')
 				verifyServerCertByCa = config.get('global', 'verify_server_cert_by_ca')
 				if verifyServerCertByCa:
 					logger.info("Server verification by CA enabled, using CA cert file '%s'", caCertFile)
