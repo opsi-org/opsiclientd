@@ -1059,7 +1059,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			import win32security # pylint: disable=import-error,import-outside-toplevel
 			import winreg # pylint: disable=import-error,import-outside-toplevel
 
-			System.logoffSession("opsisetupadmin")
+			System.logoffSession(username="opsisetupadmin")
 			user_info = self.opsiclientd.createOpsiSetupAdmin()
 
 			logon = win32security.LogonUser(
