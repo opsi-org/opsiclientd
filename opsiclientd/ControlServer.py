@@ -627,8 +627,6 @@ class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-att
 		self.record_buffer = []
 
 	def send_buffer_if_needed(self, max_delay=None):
-		if self._initial_read and self.num_tail_records > 0:
-			return
 		if max_delay is None:
 			max_delay = self.max_delay
 		if (
@@ -719,14 +717,9 @@ class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-att
 						for i in range(len(line_buffer) - 1):
 							self.add_log_line(line_buffer[i])
 						line_buffer = [line_buffer[-1]]
-						if self.num_tail_records > 0:
-							while len(self.record_buffer) >= self.num_tail_records:
-								self.record_buffer.pop(0)
-						else:
-							self.send_buffer_if_needed(max_delay)
+						self.send_buffer_if_needed(max_delay)
 				else:
 					if self._initial_read:
-						logger.info("Initial read completed")
 						self._initial_read = False
 						max_delay = self.max_delay
 					no_line_count += 1

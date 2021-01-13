@@ -73,12 +73,12 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 
 	config.set("global", "log_file", log_file)
 
-	log_file_without_ext, ext = os.path.splitext(log_file)
+	log_file_without_ext, ext = os.path.splitext(log_file) # ext contains '.'
 
 	for i in (9, 8, 7, 6, 5, 4, 3, 2, 1, 0):
-		slf = f"{log_file_without_ext}_{i-1}.{ext}"
-		olf = f"{log_file_without_ext}.{ext}.{i-1}" # old format
-		dlf = f"{log_file_without_ext}_{i}.{ext}"
+		slf = f"{log_file_without_ext}_{i-1}{ext}"
+		olf = f"{log_file_without_ext}{ext}.{i-1}" # old format
+		dlf = f"{log_file_without_ext}_{i}{ext}"
 		if i == 0:
 			slf = log_file
 		try:
