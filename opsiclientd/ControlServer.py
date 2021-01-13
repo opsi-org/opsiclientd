@@ -696,40 +696,43 @@ class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-att
 		self._file.seek(record_to_position.get(start_record, 0))
 
 	def run(self):
-		with codecs.open(self.filename, "r", encoding="utf-8", errors="replace") as self._file:
-			logger.debug("Start reading log file %s", self.filename)
-			self._set_start_position()
+		try:
+			with codecs.open(self.filename, "r", encoding="utf-8", errors="replace") as self._file:
+				logger.debug("Start reading log file %s", self.filename)
+				self._set_start_position()
 
-			self._initial_read = True
-			# Start sending big bunches (high delay)
-			max_delay = 3
-			line_buffer = []
-			no_line_count = 0
+				self._initial_read = True
+				# Start sending big bunches (high delay)
+				max_delay = 3
+				line_buffer = []
+				no_line_count = 0
 
-			while not self.should_stop:
-				line = self._file.readline()
-				if line:
-					no_line_count = 0
-					line_buffer.append(line)
-					if len(line_buffer) >= 2 and self.is_record_start_regex.match(line_buffer[-1]):
-						# Last line is a new record, not continuation text
-						# Add all lines, except the last one
-						for i in range(len(line_buffer) - 1):
-							self.add_log_line(line_buffer[i])
-						line_buffer = [line_buffer[-1]]
-						self.send_buffer_if_needed(max_delay)
-				else:
-					if self._initial_read:
-						self._initial_read = False
-						max_delay = self.max_delay
-					no_line_count += 1
-					if no_line_count > 1:
-						# Add all lines
-						for line in line_buffer:
-							self.add_log_line(line)
-						line_buffer = []
-						self.send_buffer_if_needed(max_delay)
-					time.sleep(self.max_delay / 3)
+				while not self.should_stop:
+					line = self._file.readline()
+					if line:
+						no_line_count = 0
+						line_buffer.append(line)
+						if len(line_buffer) >= 2 and self.is_record_start_regex.match(line_buffer[-1]):
+							# Last line is a new record, not continuation text
+							# Add all lines, except the last one
+							for i in range(len(line_buffer) - 1):
+								self.add_log_line(line_buffer[i])
+							line_buffer = [line_buffer[-1]]
+							self.send_buffer_if_needed(max_delay)
+					else:
+						if self._initial_read:
+							self._initial_read = False
+							max_delay = self.max_delay
+						no_line_count += 1
+						if no_line_count > 1:
+							# Add all lines
+							for line in line_buffer:
+								self.add_log_line(line)
+							line_buffer = []
+							self.send_buffer_if_needed(max_delay)
+						time.sleep(self.max_delay / 3)
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error("Error in log reader thread: %s", err, exc_info=True)
 
 class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi): # pylint: disable=too-many-ancestors
 	def onConnect(self, request):
@@ -748,6 +751,7 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi): # pylint:
 		else:
 			num_tail_records = int(self.request.params.get("num_records", [-1])[0])
 			self.log_reader_thread = LogReaderThread(config.get("global", "log_file"), self, num_tail_records) # pylint: disable=attribute-defined-outside-init
+			logger.info("Starting log reader thread")
 			self.log_reader_thread.start()
 
 	def onMessage(self, payload, isBinary):
