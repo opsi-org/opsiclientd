@@ -1005,7 +1005,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		if not self.event.eventConfig.actionWarningTime:
 			return
 		logger.info("Notifying user of actions to process %s (%s)", self.event, productIds)
-		cancelCounter = state.get(f'action_processing_cancel_counter_{self.event.name}', 0)
+		cancelCounter = state.get(f'action_processing_cancel_counter_{self.event.eventConfig.name}', 0)
 		waitEventId = timeline.addEvent(
 			title="Action warning",
 			description=(
@@ -1073,7 +1073,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 			if self.actionCancelled:
 				cancelCounter += 1
-				state.set(f'action_processing_cancel_counter_{self.event.name}', cancelCounter)
+				state.set(f'action_processing_cancel_counter_{self.event.eventConfig.name}', cancelCounter)
 				logger.notice("Action processing cancelled by user for the %d. time (max: %d)",
 					cancelCounter, self.event.eventConfig.actionUserCancelable
 				)
@@ -1084,7 +1084,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					),
 					category="user_interaction")
 				raise CanceledByUserError("Action processing cancelled by user")
-			state.set(f'action_processing_cancel_counter_{self.event.name}', 0)
+			state.set(f'action_processing_cancel_counter_{self.event.eventConfig.name}', 0)
 		finally:
 			timeline.setEventEnd(waitEventId)
 			try:

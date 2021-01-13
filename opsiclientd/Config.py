@@ -685,7 +685,7 @@ class Config(metaclass=Singleton):
 			else:
 				logger.info("No alternative depot for products: %s", productIds)
 
-		logger.notice("Selected depot is '%s', protocol '%s'", selectedDepot, depotProtocol)
+		logger.notice("Selected depot for mode '%s' is '%s', protocol '%s'", mode, selectedDepot, depotProtocol)
 		self.set('depot_server', 'depot_id', selectedDepot.id)
 		if depotProtocol == 'webdav':
 			self.set('depot_server', 'url', selectedDepot.depotWebdavUrl)
