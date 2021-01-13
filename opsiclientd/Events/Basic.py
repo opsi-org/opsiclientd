@@ -186,7 +186,8 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 						if self._stopped:
 							break
 						time.sleep(1)
-				logger.notice("Event generator '%s' now deactivated after %d event occurrences", self, self._eventsOccured)
+				if not self._stopped:
+					logger.notice("Event generator '%s' now deactivated after %d event occurrences", self, self._eventsOccured)
 			except Exception as err: # pylint: disable=broad-except
 				logger.error("Failure in event generator '%s': %s", self, err, exc_info=True)
 			try:
