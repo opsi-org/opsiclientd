@@ -31,7 +31,7 @@ import re
 import sys
 import netifaces
 
-from opsicommon.logging import logger, LOG_NOTICE, logging_config
+from opsicommon.logging import logger, LOG_NOTICE, logging_config, secret_filter
 from opsicommon.utils import Singleton
 from OPSI.Types import (
 	forceBool, forceHostId, forceInt, forceFilename, forceList,
@@ -318,16 +318,19 @@ class Config(metaclass=Singleton):
 		elif option == 'user_cancelable':
 			option = 'action_user_cancelable'
 
+		if option == 'opsi_host_key':
+			secret_filter.add_secrets(value)
+
 		logger.info("Setting config value %s.%s to '%s'", section, option, value)
 
 		if 	( # pylint: disable=too-many-boolean-expressions
+			value == '' and
 			option.find('command') == -1 and
 			option.find('productids') == -1 and
 			option.find('exclude_product_group_ids') == -1 and
 			option.find('include_product_group_ids') == -1 and
 			option.find('proxy_url') == -1 and
-			option.find('working_window') == -1 and
-			value == ''
+			option.find('working_window') == -1
 		):
 			logger.warning("Refusing to set empty value for config value '%s' of section '%s'", option, section)
 			return
@@ -340,7 +343,6 @@ class Config(metaclass=Singleton):
 		if option == 'opsi_host_key':
 			if len(value) != 32:
 				raise ValueError("Bad opsi host key, length != 32")
-			logger.addConfidentialString(value)
 		elif option in ('depot_id', 'host_id'):
 			value = forceHostId(value.replace('_', '-'))
 		elif option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port', 'max_authentication_failures'):

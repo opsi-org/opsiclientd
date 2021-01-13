@@ -1069,7 +1069,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 
 	def loginUser(self, username, password):
 		try:
-			secret_filter.add_secrets([password])
+			secret_filter.add_secrets(password)
 			return self.opsiclientd.loginUser(username, password)
 		except Exception as err: # pylint: disable=broad-except
 			logger.error(err, exc_info=True)

@@ -111,7 +111,7 @@ def main():
 			if not username and not password:
 				try:
 					password = get_opsi_host_key()
-					secret_filter.add_secrets([password])
+					secret_filter.add_secrets(password)
 				except Exception as err: # pylint: disable=broad-except
 					raise RuntimeError(f"Failed to read opsi host key from config file: {err}") from err
 
@@ -119,7 +119,7 @@ def main():
 			# Fallback to legacy comandline arguments
 			# <username> <password> <port> [debug-log-file] <rpc>
 			(username, password, port, rpc) = sys.argv[1:5] # pylint: disable=unbalanced-tuple-unpacking
-			secret_filter.add_secrets([password])
+			secret_filter.add_secrets(password)
 			address = f"https://localhost:{port}/opsiclientd"
 			if len(sys.argv) > 5:
 				log_level = LOG_DEBUG
