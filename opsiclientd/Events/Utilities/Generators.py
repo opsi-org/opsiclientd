@@ -50,50 +50,68 @@ config = Config()
 
 
 def createEventGenerators(opsiclientd):
+	enabled_events = {}
 	global _EVENT_GENERATORS # pylint: disable=global-statement
 	panicEventConfig = PanicEventConfig(
 		EVENT_CONFIG_TYPE_PANIC,
 		actionProcessorCommand=config.get('action_processor', 'command', raw=True)
 	)
 	_EVENT_GENERATORS[EVENT_CONFIG_TYPE_PANIC] = EventGeneratorFactory(opsiclientd, panicEventConfig)
+	enabled_events[EVENT_CONFIG_TYPE_PANIC] = True
 
+	# Create event generators for events without preconditions
 	for (eventConfigId, eventConfig) in getEventConfigs().items():
-		if eventConfig['type'] in config.disabledEventTypes:
-			logger.notice("Event %s of type %s is disabled", eventConfigId, eventConfig['type'])
+		mainEventConfigId = eventConfigId.split('{')[0]
+		if mainEventConfigId != eventConfigId:
 			continue
 
-		mainEventConfigId = eventConfigId.split('{')[0]
-		if mainEventConfigId == eventConfigId:
-			try:
-				eventType = eventConfig['type']
-				del eventConfig['type']
-				ec = EventConfigFactory(eventType, eventConfigId, **eventConfig)
-				_EVENT_GENERATORS[mainEventConfigId] = EventGeneratorFactory(opsiclientd, ec)
-				logger.notice("Event generator '%s' created", mainEventConfigId)
-			except Exception as err: # pylint: disable=broad-except
-				logger.error("Failed to create event generator '%s': %s", mainEventConfigId, err)
-
-	for (eventConfigId, eventConfig) in getEventConfigs().items():
+		enabled_events[eventConfigId] = False
 		if eventConfig['type'] in config.disabledEventTypes:
-			logger.notice("Event %s of type %s is disabled", eventConfigId, eventConfig['type'])
+			logger.info("Event %s of type %s is disabled", eventConfigId, eventConfig['type'])
 			continue
 
+		try:
+			eventType = eventConfig['type']
+			del eventConfig['type']
+			ec = EventConfigFactory(eventType, eventConfigId, **eventConfig)
+			_EVENT_GENERATORS[eventConfigId] = EventGeneratorFactory(opsiclientd, ec)
+			logger.info("Event generator '%s' created", eventConfigId)
+			enabled_events[eventConfigId] = True
+		except Exception as err: # pylint: disable=broad-except
+			logger.error("Failed to create event generator '%s': %s", mainEventConfigId, err)
+
+	# Create event generators for events with preconditions
+	for (eventConfigId, eventConfig) in getEventConfigs().items():
 		mainEventConfigId = eventConfigId.split('{')[0]
+		if not mainEventConfigId in enabled_events:
+			enabled_events[mainEventConfigId] = False
+		if not eventConfigId in enabled_events:
+			enabled_events[eventConfigId] = False
+
+		if eventConfig['type'] in config.disabledEventTypes:
+			logger.info("Event %s of type %s is disabled", eventConfigId, eventConfig['type'])
+			continue
+
 		eventType = eventConfig['type']
 		del eventConfig['type']
 		ec = EventConfigFactory(eventType, eventConfigId, **eventConfig)
 		if mainEventConfigId not in _EVENT_GENERATORS:
 			try:
 				_EVENT_GENERATORS[mainEventConfigId] = EventGeneratorFactory(opsiclientd, ec)
-				logger.notice("Event generator '%s' created", mainEventConfigId)
+				logger.info("Event generator '%s' created", mainEventConfigId)
+				enabled_events[mainEventConfigId] = True
 			except Exception as err: # pylint: disable=broad-except
 				logger.error("Failed to create event generator '%s': %s", mainEventConfigId, err)
 
 		try:
 			_EVENT_GENERATORS[mainEventConfigId].addEventConfig(ec)
-			logger.notice("Event config '%s' added to event generator '%s'", eventConfigId, mainEventConfigId)
+			logger.info("Event config '%s' added to event generator '%s'", eventConfigId, mainEventConfigId)
+			enabled_events[eventConfigId] = True
 		except Exception as err: # pylint: disable=broad-except
 			logger.error("Failed to add event config '%s' to event generator '%s': %s", eventConfigId, mainEventConfigId, err)
+
+	logger.notice("Configured events: %s", ", ".join(sorted(list(enabled_events))))
+	logger.notice("Enabled events: %s", ", ".join(sorted([evt_id for evt_id in enabled_events if enabled_events[evt_id]])))
 
 def getEventGenerators(generatorClass=None):
 	return [

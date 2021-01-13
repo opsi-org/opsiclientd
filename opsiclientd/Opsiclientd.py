@@ -407,7 +407,7 @@ class Opsiclientd(EventListener, threading.Thread): # pylint: disable=too-many-i
 			for eventGenerator in getEventGenerators():
 				eventGenerator.addEventListener(self)
 				eventGenerator.start()
-				logger.notice("Event generator '%s' started", eventGenerator)
+				logger.info("Event generator '%s' started", eventGenerator)
 
 			try:
 				yield

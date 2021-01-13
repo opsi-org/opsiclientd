@@ -119,7 +119,7 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 				continue
 
 			if not rawEventConfig['active']:
-				logger.notice("Event config '%s' is deactivated" % eventConfigId)
+				logger.info("Event config '%s' is deactivated" % eventConfigId)
 				continue
 
 			eventConfigs[eventConfigId] = {'preconditions': {}}
