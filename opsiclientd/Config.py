@@ -29,6 +29,7 @@ import os
 import platform
 import re
 import sys
+from urllib.parse import urlparse
 import netifaces
 
 from opsicommon.logging import logger, LOG_NOTICE, logging_config, secret_filter
@@ -693,7 +694,8 @@ class Config(metaclass=Singleton):
 			self.set('depot_server', 'url', selectedDepot.depotRemoteUrl)
 
 	def getDepotserverCredentials(self, configService):
-		if self.get('depot_server', 'url').startswith("webdav"):
+		url = urlparse(self.get('depot_server', 'url'))
+		if url.scheme in ("webdav", "webdavs", "http", "https"):
 			return (self.get('global', 'host_id'), self.get('global', 'opsi_host_key'))
 
 		if not configService:

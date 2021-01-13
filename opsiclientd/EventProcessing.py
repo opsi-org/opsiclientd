@@ -37,8 +37,8 @@ import sys
 import time
 import datetime
 import tempfile
-import psutil
 from urllib.parse import urlparse
+import psutil
 
 from OPSI import System
 from OPSI.Object import ProductOnClient
@@ -387,13 +387,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		self.setStatusMessage(_("Mounting depot share %s") % config.get('depot_server', 'url'))
 
 		mount_options = {}
-		(mount_username, mount_password) = config.getDepotserverCredentials(configService = self._configService)
-		url = urlparse(config.get('depot_server', 'url'))
-		if url.scheme in ("webdavs", "https"):
-			mount_username = config.get('global', 'host_id')
-			mount_password = config.get('global', 'opsi_host_key')
+		(mount_username, mount_password) = config.getDepotserverCredentials(configService=self._configService)
 
 		if RUNNING_ON_WINDOWS:
+			url = urlparse(config.get('depot_server', 'url'))
 			try:
 
 				if url.scheme in ("smb", "cifs"):
@@ -457,18 +454,19 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		try: # pylint: disable=too-many-nested-blocks
 			mounted = False
 			try:
-				if mount and not config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
+				url = urlparse(config.get('depot_server', 'url'))
+				if mount and url.hostname.lower() not in ('127.0.0.1', 'localhost'):
+					impersonation = None
 					if RUNNING_ON_WINDOWS:
-						logger.debug("Mounting with impersonation.")
 						# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
 						# The new logon session has the same local identifier but uses different credentials for other network connections.
-						(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
-						impersonation = System.Impersonate(username=depotServerUsername, password=depotServerPassword)
-						impersonation.start(logonType='NEW_CREDENTIALS')
-						self.mountDepotShare(impersonation)
-					else:
-						logger.debug("Not on windows: mounting without impersonation.")
-						self.mountDepotShare(None)
+						(mount_username, mount_password) = config.getDepotserverCredentials(configService=self._configService)
+						if url.scheme in ("smb", "cifs"):
+							impersonation = System.Impersonate(username=mount_username, password=mount_password)
+							impersonation.start(logonType='NEW_CREDENTIALS')
+
+					logger.debug("Not on windows: mounting %s impersonation", "with" if impersonation else "without")
+					self.mountDepotShare(impersonation)
 					mounted = True
 
 				actionProcessorFilename = config.get('action_processor', 'filename')
@@ -478,7 +476,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				actionProcessorLocalTmpFile = os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)
 
 				actionProcessorRemoteDir = None
-				if config.get('depot_server', 'url').split('/')[2].lower() in ('127.0.0.1', 'localhost'):
+				if url.hostname.lower() in ('127.0.0.1', 'localhost'):
 					dirname = config.get('action_processor', 'remote_dir')
 					dirname = dirname.lstrip(os.sep)
 					dirname = dirname.lstrip("install" + os.sep)
