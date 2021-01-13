@@ -1006,6 +1006,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			return
 		logger.info("Notifying user of actions to process %s (%s)", self.event, productIds)
 		cancelCounter = state.get(f'action_processing_cancel_counter_{self.event.eventConfig.name}', 0)
+		# State action_processing_cancel_counter without appended event name is needed for notification server
+		state.set('action_processing_cancel_counter', cancelCounter)
+
 		waitEventId = timeline.addEvent(
 			title="Action warning",
 			description=(
