@@ -145,29 +145,29 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 	def connectionTimeoutChanged(self, timeout):
 		if self._detailSubjectProxy:
-			self._detailSubjectProxy.setMessage( _(u'Timeout: %ds') % timeout )
+			self._detailSubjectProxy.setMessage( _('Timeout: %ds') % timeout )
 
 	def connectionCanceled(self):
 		if self._notificationServer and self._choiceSubject:
 			self._notificationServer.removeSubject(self._choiceSubject)
-		self._detailSubjectProxy.setMessage(u'')
+		self._detailSubjectProxy.setMessage('')
 		ServiceConnection.connectionCanceled(self)
 
 	def connectionTimedOut(self):
 		if self._notificationServer and self._choiceSubject:
 			self._notificationServer.removeSubject(self._choiceSubject)
-		self._detailSubjectProxy.setMessage(u'')
+		self._detailSubjectProxy.setMessage('')
 		ServiceConnection.connectionTimedOut(self)
 
 	def connectionEstablished(self):
 		if self._notificationServer and self._choiceSubject:
 			self._notificationServer.removeSubject(self._choiceSubject)
-		self._detailSubjectProxy.setMessage(u'')
+		self._detailSubjectProxy.setMessage('')
 
 	def connectionFailed(self, error):
 		if self._notificationServer and self._choiceSubject:
 			self._notificationServer.removeSubject(self._choiceSubject)
-		self._detailSubjectProxy.setMessage(u'')
+		self._detailSubjectProxy.setMessage('')
 		ServiceConnection.connectionFailed(self, error)
 
 	# End of ServiceConnection
@@ -305,7 +305,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				logger.debug("Got current active desktop name: %s", desktop)
 
 		if not desktop:
-			desktop = u'winlogon'
+			desktop = 'winlogon'
 
 		processId = None
 		while True:
@@ -567,14 +567,14 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					packageVersion = productOnDepot['packageVersion']
 				self._configService.productOnClient_updateObjects([ # pylint: disable=no-member
 					ProductOnClient(
-						productId=u'opsi-winst',
-						productType=u'LocalbootProduct',
+						productId='opsi-winst',
+						productType='LocalbootProduct',
 						productVersion=productVersion,
 						packageVersion=packageVersion,
 						clientId=config.get('global', 'host_id'),
-						installationStatus=u'installed',
-						actionProgress=u'',
-						actionResult=u'successful'
+						installationStatus='installed',
+						actionProgress='',
+						actionResult='successful'
 					)
 				])
 
@@ -698,7 +698,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 					if productOnClient.productId not in productIds:
 						productIds.append(productOnClient.productId)
-						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + u':', productOnClient.actionRequest))
+						logger.notice("   [%2s] product %-20s %s" % (len(productIds), productOnClient.productId + ':', productOnClient.actionRequest))
 
 			if (not productIds) and bootmode == 'BKSTD':
 				logger.notice("No product action requests set")
@@ -755,7 +755,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 	def runActions(self, productIds, additionalParams=''): # pylint: disable=too-many-nested-blocks,too-many-locals,too-many-branches,too-many-statements
 		runActionsEventId = timeline.addEvent(
 			title="Running actions",
-			description=f"Running actions {u', '.join(productIds)}",
+			description=f"Running actions {', '.join(productIds)}",
 			category="run_actions",
 			durationEvent=True
 		)
@@ -819,13 +819,13 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			# Choose desktop for action processor
 			if not desktop or (forceUnicodeLower(desktop) == 'current'):
 				if self.isLoginEvent:
-					desktop = u'default'
+					desktop = 'default'
 				else:
 					desktop = forceUnicodeLower(self.opsiclientd.getCurrentActiveDesktopName(self.getSessionId()))
 
 			if not desktop:
 				# Default desktop is winlogon
-				desktop = u'winlogon'
+				desktop = 'winlogon'
 
 			depotServerUsername = ''
 			depotServerPassword = ''
@@ -848,7 +848,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					self.updateActionProcessor(mount=not self._depotShareMounted)
 
 			# Run action processor
-			serviceSession = u'none'
+			serviceSession = 'none'
 			try:
 				serviceSession = self.getConfigService().jsonrpc_getSessionId()
 				if not serviceSession:
@@ -871,7 +871,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				'%action_processor_productids%',
 				",".join(self.event.eventConfig.actionProcessorProductIds)
 			)
-			actionProcessorCommand += u' %s' % additionalParams
+			actionProcessorCommand += ' %s' % additionalParams
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 
 			if RUNNING_ON_WINDOWS:
@@ -1005,11 +1005,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		if not self.event.eventConfig.actionWarningTime:
 			return
 		logger.info("Notifying user of actions to process %s (%s)", self.event, productIds)
-		cancelCounter = state.get('action_processing_cancel_counter', 0)
+		cancelCounter = state.get(f'action_processing_cancel_counter_{self.event.name}', 0)
 		waitEventId = timeline.addEvent(
 			title="Action warning",
 			description=(
-				f"Notifying user of actions to process {self.event.eventConfig.getId()} ({u', '.join(productIds)})\n"
+				f"Notifying user of actions to process {self.event.eventConfig.getId()} ({', '.join(productIds)})\n"
 				f"actionWarningTime: {self.event.eventConfig.actionWarningTime}, "
 				f"actionUserCancelable: {self.event.eventConfig.actionUserCancelable}, "
 				f"cancelCounter: {cancelCounter}"
@@ -1073,7 +1073,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 			if self.actionCancelled:
 				cancelCounter += 1
-				state.set('action_processing_cancel_counter', cancelCounter)
+				state.set(f'action_processing_cancel_counter_{self.event.name}', cancelCounter)
 				logger.notice("Action processing cancelled by user for the %d. time (max: %d)",
 					cancelCounter, self.event.eventConfig.actionUserCancelable
 				)
@@ -1084,7 +1084,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					),
 					category="user_interaction")
 				raise CanceledByUserError("Action processing cancelled by user")
-			state.set('action_processing_cancel_counter', 0)
+			state.set(f'action_processing_cancel_counter_{self.event.name}', 0)
 		finally:
 			timeline.setEventEnd(waitEventId)
 			try:
@@ -1182,7 +1182,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 							try:
 								productIds = list(self.opsiclientd.getCacheService().getProductCacheState()["products"])
 								if productIds:
-									shutdownWarningMessage += f"\n{_(u'Products')}: {', '.join(productIds)}"
+									shutdownWarningMessage += f"\n{_('Products')}: {', '.join(productIds)}"
 							except Exception as stateErr: # pylint: disable=broad-except
 								logger.error(stateErr, exc_info=True)
 						self._messageSubject.setMessage(shutdownWarningMessage)
