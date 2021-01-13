@@ -1032,7 +1032,12 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			])
 
 	def _getRepository(self, productId):
-		config.selectDepotserver(configService=self._configService, event=None, productIds=[productId], cifsOnly=False)
+		config.selectDepotserver(
+			configService=self._configService,
+			mode="sync",
+			event=None,
+			productIds=[productId]
+		)
 		if not config.get('depot_server', 'url'):
 			raise Exception("Cannot cache product files: depot_server.url undefined")
 

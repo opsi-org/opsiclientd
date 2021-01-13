@@ -762,9 +762,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		try:
 			config.selectDepotserver(
 				configService=self._configService,
+				mode="mount",
 				event=self.event,
-				productIds=productIds,
-				cifsOnly=not RUNNING_ON_LINUX
+				productIds=productIds
 			)
 			if not additionalParams:
 				additionalParams = ''

@@ -525,7 +525,8 @@ class Config(metaclass=Singleton):
 
 		return self.get('config_service', 'url')
 
-	def selectDepotserver(self, configService, event, productIds=[], cifsOnly=False, masterOnly=False): # pylint: disable=dangerous-default-value,too-many-arguments,too-many-locals,too-many-branches,too-many-statements
+	def selectDepotserver(self, configService, mode="mount", event=None, productIds=[], masterOnly=False): # pylint: disable=dangerous-default-value,too-many-arguments,too-many-locals,too-many-branches,too-many-statements,redefined-builtin
+		assert mode in ("mount", "sync")
 		productIds = forceProductIdList(productIds)
 
 		logger.notice("Selecting depot for products %s", productIds)
@@ -549,9 +550,12 @@ class Config(metaclass=Singleton):
 		configStates = []
 		dynamicDepot = False
 		depotProtocol = 'cifs'
+		protocol = None
+		sync_protocol = None
 		configStates = configService.configState_getObjects(
 			configId=[
 				'clientconfig.depot.dynamic', 'clientconfig.depot.protocol',
+				'clientconfig.depot.sync_protocol',
 				'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'
 			],
 			objectId=self.get('global', 'host_id')
@@ -578,16 +582,28 @@ class Config(metaclass=Singleton):
 					logger.error("Failed to set depot id from values %s in configState %s: %s", configState.values, configState, err)
 			elif not masterOnly and (configState.configId == 'clientconfig.depot.dynamic') and configState.values:
 				dynamicDepot = forceBool(configState.values[0])
-			elif (
-				configState.configId == 'clientconfig.depot.protocol' and
-				configState.values and
-				configState.values[0] and
-				configState.values[0] == 'webdav'
-			):
-				if cifsOnly:
-					logger.info("Not using webdav protocol, because cifs only is set")
+
+			elif configState.configId == 'clientconfig.depot.protocol' and configState.values:
+				protocol = configState.values[0]
+			elif configState.configId == 'clientconfig.depot.sync_protocol' and configState.values:
+				sync_protocol = configState.values[0]
+
+		if not sync_protocol:
+			# old behaviour
+			if protocol:
+				if protocol == "webdav" and mode == "mount" and not RUNNING_ON_LINUX:
+					logger.info("Not using webdav protocol (not running on linux and not sync mode)")
 				else:
-					depotProtocol = 'webdav'
+					depotProtocol = protocol
+		else:
+			if mode == "mount" and protocol:
+				depotProtocol = protocol
+			if mode == "sync" and sync_protocol:
+				depotProtocol = sync_protocol
+
+		if depotProtocol not in ("webdav", "cifs"):
+			logger.error("Invalid protocol %s specified, using cifs", depotProtocol)
+			depotProtocol = "cifs"
 
 		if dynamicDepot:
 			if not depotIds:
