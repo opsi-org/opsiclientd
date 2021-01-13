@@ -840,6 +840,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					desktop = 'default'
 				else:
 					desktop = forceUnicodeLower(self.opsiclientd.getCurrentActiveDesktopName(self.getSessionId()))
+					if desktop and desktop.lower() == 'screen-saver':
+						desktop = 'default'
 
 			if not desktop:
 				# Default desktop is winlogon
