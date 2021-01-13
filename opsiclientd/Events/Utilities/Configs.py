@@ -118,15 +118,16 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 			if rawEventConfig['args'].get('type', 'template').lower() == 'template':
 				continue
 
-			if not rawEventConfig['active']:
-				logger.info("Event config '%s' is deactivated" % eventConfigId)
-				continue
+			eventConfigs[eventConfigId] = {
+				'active': rawEventConfig['active'],
+				'preconditions': {}
+			}
 
-			eventConfigs[eventConfigId] = {'preconditions': {}}
 			if rawEventConfig.get('precondition'):
 				precondition = preconditions.get(rawEventConfig['precondition'])
 				if not precondition:
-					logger.error("Precondition '%s' referenced by event config '%s' not found", precondition, eventConfigId)
+					logger.error("Precondition '%s' referenced by event config '%s' not, deactivating event", precondition, eventConfigId)
+					eventConfigs[eventConfigId]['active'] = False
 				else:
 					eventConfigs[eventConfigId]['preconditions'] = precondition
 

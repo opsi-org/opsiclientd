@@ -27,6 +27,7 @@ Functions to create, reconfigure and get event generators.
 """
 
 from __future__ import absolute_import
+import copy
 
 from OPSI.Logger import Logger
 from OPSI.Types import forceUnicode
@@ -59,14 +60,15 @@ def createEventGenerators(opsiclientd):
 	_EVENT_GENERATORS[EVENT_CONFIG_TYPE_PANIC] = EventGeneratorFactory(opsiclientd, panicEventConfig)
 	enabled_events[EVENT_CONFIG_TYPE_PANIC] = True
 
+	event_configs = getEventConfigs()
 	# Create event generators for events without preconditions
-	for (eventConfigId, eventConfig) in getEventConfigs().items():
+	for (eventConfigId, eventConfig) in copy.deepcopy(event_configs).items():
 		mainEventConfigId = eventConfigId.split('{')[0]
 		if mainEventConfigId != eventConfigId:
 			continue
 
 		enabled_events[eventConfigId] = False
-		if eventConfig['type'] in config.disabledEventTypes:
+		if not eventConfig['active'] or eventConfig['type'] in config.disabledEventTypes:
 			logger.info("Event %s of type %s is disabled", eventConfigId, eventConfig['type'])
 			continue
 
@@ -81,14 +83,14 @@ def createEventGenerators(opsiclientd):
 			logger.error("Failed to create event generator '%s': %s", mainEventConfigId, err)
 
 	# Create event generators for events with preconditions
-	for (eventConfigId, eventConfig) in getEventConfigs().items():
+	for (eventConfigId, eventConfig) in copy.deepcopy(event_configs).items():
 		mainEventConfigId = eventConfigId.split('{')[0]
 		if not mainEventConfigId in enabled_events:
 			enabled_events[mainEventConfigId] = False
 		if not eventConfigId in enabled_events:
 			enabled_events[eventConfigId] = False
 
-		if eventConfig['type'] in config.disabledEventTypes:
+		if not eventConfig['active'] or eventConfig['type'] in config.disabledEventTypes:
 			logger.info("Event %s of type %s is disabled", eventConfigId, eventConfig['type'])
 			continue
 
