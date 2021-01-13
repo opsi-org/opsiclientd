@@ -599,7 +599,8 @@ class RequestAdapter():
 		return self.connection_request.headers.get(name)
 
 class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-attributes
-	record_start_regex = re.compile(r"^\[(\d)\]\s+\[([\d\-\:\. ]+)\]\s+\[([^\]]*)\]\s(.*)$")
+	record_start_regex = re.compile(r"^\[(\d)\]\s\[([\d\-\:\. ]+)\]\s\[([^\]]*)\]\s(.*)$")
+	is_record_start_regex = re.compile(r"^\[\d\]\s\[") # should speed up matching
 	max_delay = 0.2
 	max_record_buffer_size = 2500
 
@@ -612,6 +613,7 @@ class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-att
 		self.num_tail_records = int(num_tail_records)
 		self.record_buffer = []
 		self.send_time = 0
+		self._file = None
 		self._initial_read = False
 
 	def send_buffer(self):
@@ -639,7 +641,7 @@ class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-att
 			self.send_buffer()
 
 	def parse_log_line(self, line):
-		match = self.record_start_regex.search(line)
+		match = self.record_start_regex.match(line)
 		if not match:
 			if self.record_buffer:
 				self.record_buffer[-1]["msg"] += f"\n{line.rstrip()}"
@@ -671,19 +673,47 @@ class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-att
 	def stop(self):
 		self.should_stop = True
 
+	def _set_start_position(self):
+		self._file.seek(0)
+		if self.num_tail_records <= 0:
+			return
+
+		record_to_position = {}
+		record_number = 0
+		position = 0
+		while True:
+			position = self._file.tell()
+			line = self._file.readline()
+			if not line:
+				break
+			if self.is_record_start_regex.match():
+				record_number += 1
+				record_to_position[record_number] = position
+
+		if self.num_tail_records <= record_number:
+			self._file.seek(0)
+			return
+
+		start_record = record_number - self.num_tail_records + 1
+		self._file.seek(record_to_position.get(start_record, 0))
+
 	def run(self):
-		with codecs.open(self.filename, "r", encoding="utf-8", errors="replace") as file:
+		with codecs.open(self.filename, "r", encoding="utf-8", errors="replace") as self._file:
+			logger.debug("Start reading log file %s", self.filename)
+			self._set_start_position()
+
 			self._initial_read = True
 			# Start sending big bunches (high delay)
 			max_delay = 3
 			line_buffer = []
 			no_line_count = 0
+
 			while not self.should_stop:
-				line = file.readline()
+				line = self._file.readline()
 				if line:
 					no_line_count = 0
 					line_buffer.append(line)
-					if len(line_buffer) >= 2 and self.record_start_regex.search(line_buffer[-1]):
+					if len(line_buffer) >= 2 and self.is_record_start_regex.match(line_buffer[-1]):
 						# Last line is a new record, not continuation text
 						# Add all lines, except the last one
 						for i in range(len(line_buffer) - 1):
@@ -696,6 +726,7 @@ class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-att
 							self.send_buffer_if_needed(max_delay)
 				else:
 					if self._initial_read:
+						logger.info("Initial read completed")
 						self._initial_read = False
 						max_delay = self.max_delay
 					no_line_count += 1
@@ -717,7 +748,7 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi): # pylint:
 		self._getSession(None)
 
 	def onOpen(self):
-		logger.info("Log websocket connection opened.")
+		logger.info("Log websocket connection opened (params: %s)", self.request.params)
 		if not self.session or not self.session.authenticated:
 			logger.error("No valid session supplied")
 			self.sendClose(code=4401, reason="Unauthorized")
