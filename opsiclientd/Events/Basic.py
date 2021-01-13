@@ -178,7 +178,7 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 				):
 					logger.info("Getting next event...")
 					event = self.getNextEvent() # pylint: disable=assignment-from-none,assignment-from-no-return
-					self._eventsOccured += 1
+					self._eventsOccured += 1 # Count as occured, even if event is None!
 					if event:
 						logger.info("Got new event: %s (%d/%d)", event, self._eventsOccured, self._generatorConfig.maxRepetitions + 1)
 						self.fireEvent(event)
