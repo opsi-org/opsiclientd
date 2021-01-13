@@ -38,6 +38,7 @@ import time
 import datetime
 import tempfile
 import psutil
+from urllib.parse import urlparse
 
 from OPSI import System
 from OPSI.Object import ProductOnClient
@@ -385,32 +386,51 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		logger.notice("Mounting depot share %s", config.get('depot_server', 'url'))
 		self.setStatusMessage(_("Mounting depot share %s") % config.get('depot_server', 'url'))
 
+		mount_options = {}
+		(mount_username, mount_password) = config.getDepotserverCredentials(configService = self._configService)
+		url = urlparse(config.get('depot_server', 'url'))
+		if url.scheme in ("webdavs", "https"):
+			mount_username = config.get('global', 'host_id')
+			mount_password = config.get('global', 'opsi_host_key')
+
 		if RUNNING_ON_WINDOWS:
 			try:
-				depotHost = config.get('depot_server', 'url').split('/')[2]
-				System.setRegistryValue(
-					System.HKEY_LOCAL_MACHINE,
-					f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\{depotHost}",
-					"file", 1)
-				logger.info("Added depot '%s' to trusted domains", depotHost)
+
+				if url.scheme in ("smb", "cifs"):
+					System.setRegistryValue(
+						System.HKEY_LOCAL_MACHINE,
+						f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\{url.hostname}",
+						"file", 1
+					)
+				elif url.scheme in ("webdavs", "https"):
+					System.setRegistryValue(
+						System.HKEY_LOCAL_MACHINE,
+						f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\{url.hostname}@SSL@{url.port}",
+						"file", 1
+					)
+					System.setRegistryValue(
+						System.HKEY_LOCAL_MACHINE,
+						"SYSTEM\\CurrentControlSet\\Services\\WebClient\\Parameters",
+						"FileSizeLimitInBytes", 0xffffffff
+					)
+				logger.info("Added depot '%s' to trusted domains", url.hostname)
 			except Exception as err: # pylint: disable=broad-except
 				logger.error("Failed to add depot to trusted domains: %s", err)
 
-		if impersonation:
-			System.mount(config.get('depot_server', 'url'), config.getDepotDrive())
-		else:
-			(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService = self._configService)
-			options = {}
-			if RUNNING_ON_LINUX or RUNNING_ON_DARWIN:
-				options["ro"] = ""
-			System.mount(
-				config.get('depot_server', 'url'), config.getDepotDrive(),
-				username = depotServerUsername, password = depotServerPassword,
-				**options
-			)
-			if RUNNING_ON_LINUX:
-				os.chown(config.getDepotDrive(), os.getuid(), -1)
-				os.chmod(config.getDepotDrive(), 0o700)
+			if url.scheme in ("smb", "cifs") and impersonation:
+				mount_username = None
+				mount_password = None
+		elif RUNNING_ON_LINUX or RUNNING_ON_DARWIN:
+			mount_options["ro"] = ""
+
+		System.mount(
+			config.get('depot_server', 'url'), config.getDepotDrive(),
+			username=mount_username, password=mount_password,
+			**mount_options
+		)
+		if RUNNING_ON_LINUX:
+			os.chown(config.getDepotDrive(), os.getuid(), -1)
+			os.chmod(config.getDepotDrive(), 0o700)
 
 		self._depotShareMounted = True
 
