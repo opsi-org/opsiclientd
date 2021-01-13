@@ -684,7 +684,7 @@ class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-att
 			line = self._file.readline()
 			if not line:
 				break
-			if self.is_record_start_regex.match():
+			if self.is_record_start_regex.match(line):
 				record_number += 1
 				record_to_position[record_number] = position
 
