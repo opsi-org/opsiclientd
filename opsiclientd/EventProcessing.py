@@ -408,6 +408,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				username = depotServerUsername, password = depotServerPassword,
 				**options
 			)
+			if RUNNING_ON_LINUX:
+				os.chown(config.getDepotDrive(), os.getuid(), -1)
+				os.chmod(config.getDepotDrive(), 0o700)
 
 		self._depotShareMounted = True
 
