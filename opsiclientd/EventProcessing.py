@@ -420,10 +420,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		elif RUNNING_ON_LINUX or RUNNING_ON_DARWIN:
 			mount_options["ro"] = ""
 
-		logger.info(
-			"Mounting depot share '%s' to '%s' with username '%s'",
-			config.get('depot_server', 'url'), config.getDepotDrive(), mount_username
-		)
 		System.mount(
 			config.get('depot_server', 'url'), config.getDepotDrive(),
 			username=mount_username, password=mount_password,

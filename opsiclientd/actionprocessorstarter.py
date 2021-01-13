@@ -104,7 +104,7 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 				logger.info("Impersonating user '%s'", runAsUser)
 				imp = System.Impersonate(username=runAsUser, password=runAsPassword, desktop=actionProcessorDesktop)
 				imp.start(logonType="INTERACTIVE", newDesktop=False, createEnvironment=createEnvironment)
-			elif depot_url.scheme in ("smb", "cifs"):
+			else:
 				logger.info("Impersonating network account '%s'", depotServerUsername)
 				imp = System.Impersonate(username=depotServerUsername, password=depotServerPassword, desktop=actionProcessorDesktop)
 				imp.start(logonType="NEW_CREDENTIALS")
