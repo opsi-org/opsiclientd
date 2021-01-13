@@ -105,15 +105,19 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 				imp = System.Impersonate(username=runAsUser, password=runAsPassword, desktop=actionProcessorDesktop)
 				imp.start(logonType="INTERACTIVE", newDesktop=False, createEnvironment=createEnvironment)
 			else:
-				logger.info("Impersonating network account '%s'", depotServerUsername)
-				imp = System.Impersonate(username=depotServerUsername, password=depotServerPassword, desktop=actionProcessorDesktop)
+				username = depotServerUsername
+				password = depotServerPassword
+				if depot_url.scheme in ("http", "https", "webdav", "webdavs"):
+					username = 'pcpatch'
+				logger.info("Impersonating network account '%s'", username)
+				imp = System.Impersonate(username=username, password=password, desktop=actionProcessorDesktop)
 				imp.start(logonType="NEW_CREDENTIALS")
 
 			if depot_url.hostname.lower() in ("127.0.0.1", "localhost"):
 				logger.notice("Mounting depot share %s", depotRemoteUrl)
 				be.setStatusMessage(sessionId, _("Mounting depot share %s") % depotRemoteUrl) # pylint: disable=no-member
 
-				if runAsUser or depot_url.scheme not in ("smb", "cifs"):
+				if runAsUser or depot_url.scheme in ("http", "https", "webdav", "webdavs"):
 					System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
 				else:
 					System.mount(depotRemoteUrl, depotDrive)
