@@ -192,8 +192,7 @@ class ServiceConnection:
 
 				if serviceConnectionThread.cancelled:
 					self.connectionCanceled()
-
-				if serviceConnectionThread.running:
+				elif serviceConnectionThread.running:
 					serviceConnectionThread.stop()
 					self.connectionTimedOut()
 
@@ -388,8 +387,8 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 					except Exception as error: # pylint: disable=broad-except
 						self.connectionError = forceUnicode(error)
 						self.setStatusMessage(_("Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(error)))
-						logger.error("Failed to connect to config server '%s': %s", self._configServiceUrl, error)
-						logger.error(error, exc_info=True)
+						logger.info("Failed to connect to config server '%s': %s", self._configServiceUrl, error)
+						logger.debug(error, exc_info=True)
 
 						if isinstance(error, OpsiAuthenticationError):
 							fqdn = System.getFQDN()
