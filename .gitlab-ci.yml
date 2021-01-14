@@ -30,6 +30,7 @@ test:pytest:
     - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3
     - source $HOME/.poetry/env
     - "[ -e coverage.xml ] && rm coverage.xml"
+    - poetry install
     - mkdir -p /var/log/opsi-client-agent
     - mkdir -p /etc/opsi-client-agent
     - cp opsiclientd_data/linux/opsiclientd.conf /etc/opsi-client-agent/opsiclientd.conf
@@ -39,7 +40,6 @@ test:pytest:
     - openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes -keyout /etc/opsi-client-agent/opsiclientd.pem -out /etc/opsi-client-agent/opsiclientd.pem -subj "/CN=testclient.opsi.org"
     - poetry run opsiclientd &
     - sleep 10
-    - poetry install
     - poetry run pylint --errors-only opsiclientd
     - poetry run pytest -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+)%/'

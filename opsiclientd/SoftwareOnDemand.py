@@ -121,8 +121,6 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		except Exception as err: # pylint: disable=broad-except
 			raise OpsiAuthenticationError(f"Forbidden: {err}") from err
 
-		return result
-
 	def _checkRpcs(self, result):
 		if not self._rpcs:
 			raise Exception("No rpcs to check")
@@ -138,8 +136,8 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 
 	def _processQuery(self, result):
 		deferred = defer.Deferred()
-		deferred.addCallback(self._openConnection)
 		deferred.addCallback(self._decodeQuery)
+		deferred.addCallback(self._openConnection)
 		deferred.addCallback(self._getCallInstance)
 		deferred.addCallback(self._getRpcs)
 		deferred.addCallback(self._checkRpcs)

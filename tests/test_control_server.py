@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import pytest
+import ssl
+import socket
 import requests
+import netifaces
 
 from opsiclientd import ControlServer
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
@@ -44,10 +47,56 @@ def test_index_page(opsiclient_url):
 	req = requests.get(f"{opsiclient_url}", verify=False)
 	assert req.status_code == 200
 
-"""
-def test_jsonrpc_endpoints(opsiclient_url):
+def test_jsonrpc_endpoints(opsiclient_url, opsiclient_auth):
+	rpc = {"id":1, "method": "invalid", "params":[]}
 	for endpoint in ("opsiclientd", "rpc"):
-		#req = requests.get(opsiclient_url, auth=(auth_data), verify=False)
-		req = requests.get(f"{opsiclient_url}/{endpoint}", verify=False)
-		assert req.status_code == 200
-"""
+		response = requests.post(f"{opsiclient_url}/{endpoint}", verify=False, json=rpc)
+		assert response.status_code == 401
+
+	response = requests.post(f"{opsiclient_url}/opsiclientd", auth=opsiclient_auth, verify=False, json=rpc)
+	assert response.status_code == 200
+	rpc_response = response.json()
+	assert rpc_response.get("id") == rpc["id"]
+	assert rpc_response.get("result") is None
+	assert rpc_response.get("error") is not None
+
+def test_kiosk_auth(opsiclient_url):
+	# Kiosk allows connection from 127.0.0.1 without auth
+	response = requests.post(
+		f"{opsiclient_url}/kiosk",
+		verify=False,
+		headers={"Content-Encoding": "gzip"},
+		data="fail"
+	)
+	assert response.status_code == 500 # Not 401
+	assert "Not a gzipped file" in response.text
+
+	# "X-Forwarded-For" must not be accepted
+	address = None
+	interfaces = netifaces.interfaces()
+	for interface in interfaces:
+		addresses = netifaces.ifaddresses(interface)
+		addr = addresses.get(netifaces.AF_INET, [{}])[0].get("addr")
+		if addr and addr != "127.0.0.1":
+			address = addr
+			break
+	assert address is not None, "Failed to find non loopback ip address"
+
+	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+		context = ssl.create_default_context()
+		context.check_hostname = False
+		context.verify_mode = ssl.CERT_NONE
+		with context.wrap_socket(sock) as ssock:
+			ssock.connect((address, 4441))
+			ssock.send(
+				b"POST /kiosk HTTP/1.1\r\n"
+				b"Accept-Encoding: data/json\r\n"
+				b"Content-Encoding: gzip\r\n"
+				b"X-Forwarded-For: 127.0.0.1\r\n"
+				b"Content-length: 8\r\n"
+				b"\r\n"
+				b"xxxxxxxx"
+			)
+			http_code = int(ssock.recv(1024).split(b" ", 2)[1])
+			assert http_code == 401 # "X-Forwarded-For" not accepted
+
