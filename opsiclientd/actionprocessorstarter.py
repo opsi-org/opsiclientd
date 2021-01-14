@@ -104,20 +104,16 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 				logger.info("Impersonating user '%s'", runAsUser)
 				imp = System.Impersonate(username=runAsUser, password=runAsPassword, desktop=actionProcessorDesktop)
 				imp.start(logonType="INTERACTIVE", newDesktop=False, createEnvironment=createEnvironment)
-			else:
-				username = depotServerUsername
-				password = depotServerPassword
-				if depot_url.scheme in ("http", "https", "webdav", "webdavs"):
-					username = 'pcpatch'
-				logger.info("Impersonating network account '%s'", username)
-				imp = System.Impersonate(username=username, password=password, desktop=actionProcessorDesktop)
+			elif depot_url.scheme in ("smb", "cifs"):
+				logger.info("Impersonating network account '%s'", depotServerUsername)
+				imp = System.Impersonate(username=depotServerUsername, password=depotServerPassword, desktop=actionProcessorDesktop)
 				imp.start(logonType="NEW_CREDENTIALS")
 
 			if depot_url.hostname.lower() in ("127.0.0.1", "localhost"):
 				logger.notice("Mounting depot share %s", depotRemoteUrl)
 				be.setStatusMessage(sessionId, _("Mounting depot share %s") % depotRemoteUrl) # pylint: disable=no-member
 
-				if runAsUser or depot_url.scheme in ("http", "https", "webdav", "webdavs"):
+				if runAsUser or depot_url.scheme not in ("smb", "cifs"):
 					System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
 				else:
 					System.mount(depotRemoteUrl, depotDrive)
@@ -126,7 +122,10 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 			logger.notice("Starting action processor")
 			be.setStatusMessage(sessionId, _("Action processor is running")) # pylint: disable=no-member
 
-			imp.runCommand(actionProcessorCommand, timeoutSeconds=actionProcessorTimeout)
+			if imp:
+				imp.runCommand(actionProcessorCommand, timeoutSeconds=actionProcessorTimeout)
+			else:
+				System.execute(actionProcessorCommand, waitForEnding=True, timeout=actionProcessorTimeout)
 
 			logger.notice("Action processor ended")
 			be.setStatusMessage(sessionId, _("Action processor ended")) # pylint: disable=no-member
