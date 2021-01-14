@@ -29,8 +29,8 @@ def configFile(onWindows):
 	if onWindows:
 		return os.path.join(os.path.dirname(__file__), '..', 'opsiclientd_data', 'windows', 'opsiclientd.conf')
 	else:
-		if os.path.exists("/etc/opsi/opsiclientd.conf"):
-			return "/etc/opsi/opsiclientd.conf"
+		if os.path.exists("/etc/opsi-client-agent/opsiclientd.conf"):
+			return "/etc/opsi-client-agent/opsiclientd.conf"
 		return os.path.join(os.path.dirname(__file__), '..', 'opsiclientd_data', 'linux', 'opsiclientd.conf')
 
 
