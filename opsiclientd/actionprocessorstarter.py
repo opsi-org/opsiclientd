@@ -109,7 +109,7 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 				imp = System.Impersonate(username=depotServerUsername, password=depotServerPassword, desktop=actionProcessorDesktop)
 				imp.start(logonType="NEW_CREDENTIALS")
 
-			if depot_url.hostname.lower() in ("127.0.0.1", "localhost"):
+			if depot_url.hostname.lower() not in ("127.0.0.1", "localhost"):
 				logger.notice("Mounting depot share %s", depotRemoteUrl)
 				be.setStatusMessage(sessionId, _("Mounting depot share %s") % depotRemoteUrl) # pylint: disable=no-member
 
