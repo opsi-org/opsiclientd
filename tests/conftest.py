@@ -15,8 +15,6 @@ def opsiclient_url():
 def opsiclientd_auth(configFile):
 	conf = configparser.ConfigParser()
 	conf.read(configFile)
-	with open(configFile) as f:
-		raise Exception(f.read())
 	return (conf.get("global", "host_id"), conf.get("global", "opsi_host_key"))
 
 @pytest.fixture

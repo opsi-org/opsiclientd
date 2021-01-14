@@ -23,6 +23,18 @@ viruscheck:virustotal:
   only:
     - tags
 
+.run_opsiclientd: &run_opsiclientd |
+  mkdir -p /var/log/opsi-client-agent
+  mkdir -p /etc/opsi-client-agent
+  cp opsiclientd_data/linux/opsiclientd.conf /etc/opsi-client-agent/opsiclientd.conf
+  sed -i s'/url =.*/url = /' /etc/opsi-client-agent/opsiclientd.conf
+  sed -i s'/host_id =.*/host_id = testclient.opsi.org/' /etc/opsi-client-agent/opsiclientd.conf
+  sed -i s'/opsi_host_key =.*/opsi_host_key = opsiopsiopsiopsiopsiopsiopsiopsi/' /etc/opsi-client-agent/opsiclientd.conf
+  sed -i s'#static_dir =.*#static_dir = uib/opsiclientd/opsiclientd_data/common/static_html#' /etc/opsi-client-agent/opsiclientd.conf
+  cat /etc/opsi-client-agent/opsiclientd.conf
+  openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes -keyout /etc/opsi-client-agent/opsiclientd.pem -out /etc/opsi-client-agent/opsiclientd.pem -subj "/CN=testclient.opsi.org"
+  poetry run opsiclientd -l 1 &
+
 test:pytest:
   stage: test
   script:
@@ -31,17 +43,7 @@ test:pytest:
     - source $HOME/.poetry/env
     - "[ -e coverage.xml ] && rm coverage.xml"
     - poetry install
-    - mkdir -p /var/log/opsi-client-agent
-    - mkdir -p /etc/opsi-client-agent
-    - cp opsiclientd_data/linux/opsiclientd.conf /etc/opsi-client-agent/opsiclientd.conf
-    - sed -i s'/url = .*/url = /' /etc/opsi-client-agent/opsiclientd.conf
-    - sed -i s'/host_id = .*/host_id = testclient.opsi.org/' /etc/opsi-client-agent/opsiclientd.conf
-    - sed -i s'/opsi_host_key = .*/opsi_host_key = opsiopsiopsiopsiopsiopsiopsiopsi/' /etc/opsi-client-agent/opsiclientd.conf
-    - sed -i s'#static_dir = .*#static_dir = uib/opsiclientd/opsiclientd_data/common/static_html#' /etc/opsi-client-agent/opsiclientd.conf
-    - cat /etc/opsi-client-agent/opsiclientd.conf
-    - openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes -keyout /etc/opsi-client-agent/opsiclientd.pem -out /etc/opsi-client-agent/opsiclientd.pem -subj "/CN=testclient.opsi.org"
-    - poetry run opsiclientd -l 1 &
-    - sleep 10
+    - *run_opsiclientd
     - poetry run pylint --errors-only opsiclientd
     - poetry run pytest -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+)%/'
