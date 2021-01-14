@@ -322,8 +322,8 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 					logger.info("Server verification enabled, using cert file '%s'", serverCertFile)
 
 				caCertFile = os.path.join(cert_dir, 'cacert.pem')
-				verifyServerCertByCa = config.get('global', 'verify_server_cert_by_ca')
-				if verifyServerCertByCa:
+				verify_server_cert_by_ca = config.get('global', 'verify_server_cert_by_ca')
+				if verify_server_cert_by_ca:
 					logger.info("Server verification by CA enabled, using CA cert file '%s'", caCertFile)
 
 				tryNum = 0
@@ -341,6 +341,11 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 							if proxyURL:
 								logger.debug("Connecting to localhost, connecting directly without proxy")
 								proxyURL = None
+
+						verifyServerCertByCa = verify_server_cert_by_ca
+						if not os.path.exists(caCertFile):
+							logger.error("Server should be verified by CA, but CA '%s' not found, skipping verification", caCertFile)
+							verifyServerCertByCa = False
 
 						self.configService = JSONRPCBackend(
 							address=self._configServiceUrl,
@@ -373,7 +378,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 							if os.path.exists(caCertFile):
 								with open(caCertFile, 'r') as file:
 									curCA = file.read()
-							if not os.path.exists(caCertFile) or curCA == OPSI_CA or verifyServerCertByCa:
+							if not os.path.exists(caCertFile) or curCA == OPSI_CA or verify_server_cert_by_ca:
 								# Renew CA if not exists or connection is verified
 								self.updateCACert()
 						else:
