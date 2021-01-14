@@ -47,14 +47,14 @@ def test_index_page(opsiclient_url):
 	req = requests.get(f"{opsiclient_url}", verify=False)
 	assert req.status_code == 200
 
-def test_jsonrpc_endpoints(opsiclient_url, opsiclient_auth, configFile):
+def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth, configFile):
 	rpc = {"id":1, "method": "invalid", "params":[]}
 	for endpoint in ("opsiclientd", "rpc"):
 		response = requests.post(f"{opsiclient_url}/{endpoint}", verify=False, json=rpc)
 		assert response.status_code == 401
 
-	response = requests.post(f"{opsiclient_url}/opsiclientd", auth=opsiclient_auth, verify=False, json=rpc)
-	assert response.status_code == 200, f"auth failed: {opsiclient_auth} / {configFile}"
+	response = requests.post(f"{opsiclient_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
+	assert response.status_code == 200, f"auth failed: {opsiclientd_auth} / {configFile}"
 	rpc_response = response.json()
 	assert rpc_response.get("id") == rpc["id"]
 	assert rpc_response.get("result") is None
