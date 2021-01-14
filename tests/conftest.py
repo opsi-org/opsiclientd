@@ -6,6 +6,9 @@ import pytest
 
 from opsiclientd.Config import Config
 
+@pytest.fixture
+def opsiclient_url():
+	return "https://localhost:4441"
 
 @pytest.fixture
 def config():
