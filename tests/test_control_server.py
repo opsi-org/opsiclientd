@@ -54,7 +54,7 @@ def test_jsonrpc_endpoints(opsiclient_url, opsiclient_auth):
 		assert response.status_code == 401
 
 	response = requests.post(f"{opsiclient_url}/opsiclientd", auth=opsiclient_auth, verify=False, json=rpc)
-	assert response.status_code == 200
+	assert response.status_code == 200, f"auth failed: {opsiclient_auth}"
 	rpc_response = response.json()
 	assert rpc_response.get("id") == rpc["id"]
 	assert rpc_response.get("result") is None
