@@ -36,7 +36,7 @@ test:pytest:
     - sed -i s'/url = .*/url = /' /etc/opsi-client-agent/opsiclientd.conf
     - sed -i s'/host_id = .*/host_id = testclient.opsi.org/' /etc/opsi-client-agent/opsiclientd.conf
     - sed -i s'/opsi_host_key = .*/opsi_host_key = opsiopsiopsiopsiopsiopsiopsiopsi/' /etc/opsi-client-agent/opsiclientd.conf
-    - openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes -keyout opsiclientd.pem -out opsiclientd.pem -subj "/CN=testclient.opsi.org" /etc/opsi-client-agent/opsiclientd.pem
+    - openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes -keyout /etc/opsi-client-agent/opsiclientd.pem -out /etc/opsi-client-agent/opsiclientd.pem -subj "/CN=testclient.opsi.org"
     - poetry run opsiclientd &
     - sleep 10
     - poetry install
