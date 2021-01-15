@@ -3,6 +3,7 @@
 import pytest
 import ssl
 import socket
+import codecs
 import requests
 import netifaces
 
@@ -41,6 +42,23 @@ def test_gui_startup_event_on_windows_only(prepared_config, onWindows): # pylint
 	assert configs
 	if onWindows:
 		assert 'gui_startup' in configs
+
+def test_log_reader_start_position(tmpdir):
+	log_lines = 20
+	for num_tail_records in (5, 10, 19, 20, 21):
+		log_file = tmpdir.join("opsiclientd.log")
+		with codecs.open(log_file, "w", encoding="utf-8", errors="replace") as file:
+			for i in range(log_lines):
+				file.write(f"[5] [2021-01-02 11:12:13.456] [opsiclientd] log line {i+1}   (opsiclientd.py:123)\n")
+
+		lrt = ControlServer.LogReaderThread(log_file, None, num_tail_records)
+		start_position = lrt._get_start_position()
+		with codecs.open(log_file, "r", encoding="utf-8", errors="replace") as file:
+			file.seek(start_position)
+			data = file.read()
+			assert data.startswith("[5]")
+			assert data.count("\n") == num_tail_records if log_lines > num_tail_records else log_lines
+
 
 # Tests using running opsiclientd
 def test_index_page(opsiclient_url):

@@ -613,7 +613,6 @@ class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-att
 		self.num_tail_records = int(num_tail_records)
 		self.record_buffer = []
 		self.send_time = 0
-		self._file = None
 		self._initial_read = False
 
 	def send_buffer(self):
@@ -671,36 +670,39 @@ class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-att
 	def stop(self):
 		self.should_stop = True
 
-	def _set_start_position(self):
-		self._file.seek(0)
+	def _get_start_position(self):
 		if self.num_tail_records <= 0:
-			return
+			return 0
 
 		record_to_position = {}
 		record_number = 0
-		position = 0
-		while True:
-			position = self._file.tell()
-			line = self._file.readline()
-			if not line:
-				break
-			if self.is_record_start_regex.match(line):
-				record_number += 1
-				record_to_position[record_number] = position
+		with open(self.filename, "rb") as file:
+			position = 0
+			for line in file:
+				if self.is_record_start_regex.match(line.decode("utf-8", "replace")):
+					record_number += 1
+					record_to_position[record_number] = position
+				position += len(line)
 
-		if self.num_tail_records <= record_number:
-			self._file.seek(0)
-			return
+		if record_number <= self.num_tail_records:
+			start_record = 1
+			start_position = 0
+		else:
+			start_record = record_number - self.num_tail_records + 1
+			start_position = record_to_position.get(start_record, 0)
 
-		start_record = record_number - self.num_tail_records + 1
-		self._file.seek(record_to_position.get(start_record, 0))
+		logger.info(
+			"Setting log file start position to %d, record %d/%d",
+			start_position, start_record, record_number
+		)
+		return start_position
 
 	def run(self):
 		try:
-			with codecs.open(self.filename, "r", encoding="utf-8", errors="replace") as self._file:
+			start_position = self._get_start_position()
+			with codecs.open(self.filename, "r", encoding="utf-8", errors="replace") as file:
 				logger.debug("Start reading log file %s", self.filename)
-				self._set_start_position()
-
+				file.seek(start_position)
 				self._initial_read = True
 				# Start sending big bunches (high delay)
 				max_delay = 3
@@ -708,7 +710,7 @@ class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-att
 				no_line_count = 0
 
 				while not self.should_stop:
-					line = self._file.readline()
+					line = file.readline()
 					if line:
 						no_line_count = 0
 						line_buffer.append(line)
