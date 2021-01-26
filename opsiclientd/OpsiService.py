@@ -280,9 +280,9 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 			if not os.path.isdir(cert_dir):
 				os.makedirs(cert_dir)
 
-			response = self.configService.httpRequest("GET", "/ssl/opsi-cacert.pem")
+			response = self.configService.httpRequest("GET", "/ssl/opsi-ca-cert.pem")
 			if response.status != 200:
-				raise RuntimeError(f"Failed to fetch opsi-cacert.pem: {response.status} - {response.data}")
+				raise RuntimeError(f"Failed to fetch opsi-ca-cert.pem: {response.status} - {response.data}")
 			ca_cert = crypto.load_certificate(crypto.FILETYPE_PEM, response.data.decode("utf-8"))
 			with open(ca_cert_file, "wb") as file:
 				file.write(crypto.dump_certificate(crypto.FILETYPE_PEM, ca_cert))
