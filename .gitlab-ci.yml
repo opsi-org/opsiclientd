@@ -35,7 +35,7 @@ viruscheck:virustotal:
   openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes -keyout /etc/opsi-client-agent/opsiclientd.pem -out /etc/opsi-client-agent/opsiclientd.pem -subj "/CN=testclient.opsi.org"
   poetry run opsiclientd -l 1 &
 
-test:pytest:
+test:pylint-pytest:
   stage: test
   script:
     - apt -y install curl openssl
@@ -44,7 +44,7 @@ test:pytest:
     - "[ -e coverage.xml ] && rm coverage.xml"
     - poetry install
     - *run_opsiclientd
-    - poetry run pylint --errors-only opsiclientd
+    - poetry run pylint --disable=R,C opsiclientd
     - poetry run pytest -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+)%/'
   artifacts:
