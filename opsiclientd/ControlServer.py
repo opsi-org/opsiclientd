@@ -648,8 +648,8 @@ class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-att
 		for val in match.group(3).split(","):
 			context[cnum] = val.strip()
 		opsilevel = int(match.group(1))
-		lvl = logging._opsiLevelToLevel[opsilevel] # pylint: disable=no-member,protected-access
-		levelname = logging._levelToName[lvl] # pylint: disable=no-member,protected-access
+		lvl = logging.opsi_level_to_level[opsilevel]
+		levelname = logging.level_to_name[lvl]
 		created = datetime.datetime.strptime(match.group(2), "%Y-%m-%d %H:%M:%S.%f")
 		return {
 			"created": created.timestamp(),
