@@ -43,7 +43,6 @@ import email
 import tempfile
 import platform
 import datetime
-import logging
 import msgpack
 
 from twisted.internet import reactor
@@ -62,8 +61,10 @@ from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInt
 from OPSI.Service.Resource import ResourceOpsi, ResourceOpsiJsonRpc, ResourceOpsiJsonInterface
 from OPSI.Types import forceBool, forceInt, forceUnicode
 
-from opsicommon.logging import logger, log_context, secret_filter
-
+from opsicommon.logging import (
+	logger, log_context, secret_filter,
+	OPSI_LEVEL_TO_LEVEL, LEVEL_TO_NAME
+)
 from opsiclientd.ControlPipe import OpsiclientdRpcPipeInterface
 from opsiclientd.Config import Config
 from opsiclientd.Events.Utilities.Generators import getEventGenerator
@@ -648,8 +649,8 @@ class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-att
 		for val in match.group(3).split(","):
 			context[cnum] = val.strip()
 		opsilevel = int(match.group(1))
-		lvl = logging.opsi_level_to_level[opsilevel]  # pylint: disable=no-member
-		levelname = logging.level_to_name[lvl]  # pylint: disable=no-member
+		lvl = OPSI_LEVEL_TO_LEVEL[opsilevel]
+		levelname = LEVEL_TO_NAME[lvl]
 		created = datetime.datetime.strptime(match.group(2), "%Y-%m-%d %H:%M:%S.%f")
 		return {
 			"created": created.timestamp(),
