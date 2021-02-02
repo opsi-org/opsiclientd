@@ -276,7 +276,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 		ca_cert_file = None
 		try:
 			cert_dir = config.get('global', 'server_cert_dir')
-			ca_cert_file = os.path.join(cert_dir, 'cacert.pem')
+			ca_cert_file = os.path.join(cert_dir, 'opsi-ca-cert.pem')
 			if not os.path.isdir(cert_dir):
 				os.makedirs(cert_dir)
 
@@ -321,7 +321,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 				if verifyServerCert:
 					logger.info("Server verification enabled, using cert file '%s'", serverCertFile)
 
-				caCertFile = os.path.join(cert_dir, 'cacert.pem')
+				caCertFile = os.path.join(cert_dir, 'opsi-ca-cert.pem')
 				verify_server_cert_by_ca = config.get('global', 'verify_server_cert_by_ca')
 				if verify_server_cert_by_ca:
 					logger.info("Server verification by CA enabled, using CA cert file '%s'", caCertFile)
