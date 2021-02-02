@@ -498,6 +498,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					logger.notice("Updating action processor from depot dir '%s'", actionProcessorRemoteDir)
 
 				actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
+				if "opsi-winst" in actionProcessorLocalDir:
+					action_processor_product = "opsi-winst"
+				else:
+					action_processor_product = "opsi-script"
 
 				if not os.path.exists(actionProcessorLocalFile):
 					logger.notice("Action processor needs update because file '%s' not found", actionProcessorLocalFile)
@@ -510,7 +514,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					if self.event.eventConfig.useCachedProducts:
 						self._configService.productOnClient_updateObjects([ # pylint: disable=no-member
 							ProductOnClient(
-								productId          = 'opsi-winst',
+								productId          = action_processor_product,
 								productType        = 'LocalbootProduct',
 								clientId           = config.get('global', 'host_id'),
 								installationStatus = 'installed',
@@ -547,11 +551,12 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					logger.info("Moving dir '%s' to '%s'", actionProcessorLocalTmpDir, actionProcessorLocalDir)
 					shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
 
-					logger.notice("Trying to set the right permissions for opsi-winst")
+					logger.notice("Trying to set the right permissions for opsi-script")
+					#TODO: change to icacls
 					setaclcmd = os.path.join(config.get('global', 'base_dir'), 'utilities', 'setacl.exe')
-					winstdir = actionProcessorLocalDir.replace('\\\\', '\\')
+					opsi_script_dir = actionProcessorLocalDir.replace('\\\\', '\\')
 					cmd = (
-						f'"{setaclcmd}" -on "{winstdir}" -ot file'
+						f'"{setaclcmd}" -on "{opsi_script_dir}" -ot file'
 						' -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y"'
 						' -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"'
 					)
@@ -568,6 +573,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 							logger.warning("Skipping '%s' while updating action processor because it is not a file",
 								os.path.join(actionProcessorRemoteDir, fn)
 							)
+					#TODO: also update lib, skin, locales
 				else:
 					logger.error("Update of action processor not implemented on this os")
 					return
@@ -578,14 +584,14 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				packageVersion = None
 				for productOnDepot in self._configService.productOnDepot_getIdents( # pylint: disable=no-member
 							productType='LocalbootProduct',
-							productId='opsi-winst',
+							productId=action_processor_product,
 							depotId=config.get('depot_server', 'depot_id'),
 							returnType='dict'):
 					productVersion = productOnDepot['productVersion']
 					packageVersion = productOnDepot['packageVersion']
 				self._configService.productOnClient_updateObjects([ # pylint: disable=no-member
 					ProductOnClient(
-						productId='opsi-winst',
+						productId=action_processor_product,
 						productType='LocalbootProduct',
 						productVersion=productVersion,
 						packageVersion=packageVersion,
@@ -823,7 +829,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 			if RUNNING_ON_WINDOWS:
 				# Setting some registry values before starting action
-				# Mainly for action processor winst
+				# Mainly for action processor
 				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depoturl",   config.get('depot_server', 'url'))
 				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", config.getDepotDrive())
 				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configurl",   "<deprecated>")

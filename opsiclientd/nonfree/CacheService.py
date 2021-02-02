@@ -880,6 +880,11 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				logger.notice("No product action request set => no products to cache")
 			else:
 				masterDepotId = config.get('depot_server', 'master_depot_id')
+				if 'opsi-winst' in config.get('action_processor', 'local_dir'):
+					action_processor_name = 'opsi-winst'
+				else:
+					action_processor_name = 'opsi-script'
+
 				# Get all productOnDepots!
 				productOnDepots = self._configService.productOnDepot_getObjects(depotId=masterDepotId) # pylint: disable=no-member
 				productOnDepotIds = [productOnDepot.productId for productOnDepot in productOnDepots]
@@ -894,7 +899,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 						self._setProductCacheState(productOnClient.productId, "failure", "Product not found on configured depot.")
 						errorProductIds.append(productOnClient.productId)
 
-				productIds.append('opsi-winst')
+				productIds.append(action_processor_name)
 				if 'mshotfix' in productIds:
 					# Windows 8.1 Bugfix, with a helper exe.
 					# Helper seems not to be needed with Python 3
@@ -936,10 +941,10 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 							logger.error("ProductId: '%s' will not be cached.", productIds[index])
 							del productIds[index]
 
-				if len(productIds) == 1 and productIds[0] == 'opsi-winst':
+				if len(productIds) == 1 and productIds[0] == action_processor_name:
 					logger.notice(
-						"Only opsi-winst is set to install, doing nothing, "
-						"because a up- or downgrade from opsi-winst is only need if a other product is set to setup."
+						"Only opsi-script is set to install, doing nothing, "
+						"because a up- or downgrade from opsi-script is only need if a other product is set to setup."
 					)
 				else:
 					p_list = ', '.join(productIds)
