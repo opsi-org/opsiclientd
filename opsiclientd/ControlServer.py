@@ -23,8 +23,6 @@ These classes are used to create a https service which executes remote
 procedure calls
 
 :copyright: uib GmbH <info@uib.de>
-:author: Jan Schneider <j.schneider@uib.de>
-:author: Erol Ueluekmen <e.ueluekmen@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
@@ -43,6 +41,7 @@ import email
 import tempfile
 import platform
 import datetime
+from OpenSSL import crypto
 import msgpack
 
 from twisted.internet import reactor
@@ -1021,10 +1020,18 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		certDir = config.get('global', 'server_cert_dir')
 		if os.path.exists(certDir):
 			for filename in os.listdir(certDir):
-				if "cacert.pem" in filename.strip().lower():
+				if "opsi-ca-cert.pem" in filename.strip().lower():
 					continue
-
 				os.remove(os.path.join(certDir, filename))
+
+	def updateOpsiCaCert(self, ca_cert): # pylint: disable=no-self-use
+		cert_dir = config.get('global', 'server_cert_dir')
+		ca_cert_file = os.path.join(cert_dir, 'opsi-ca-cert.pem')
+		ca_cert = crypto.load_certificate(crypto.FILETYPE_PEM, ca_cert)
+		if not os.path.isdir(cert_dir):
+			os.makedirs(cert_dir)
+		with open(ca_cert_file, "wb") as file:
+			file.write(crypto.dump_certificate(crypto.FILETYPE_PEM, ca_cert))
 
 	def getActiveSessions(self): # pylint: disable=no-self-use
 		sessions = System.getActiveSessionInformation()
