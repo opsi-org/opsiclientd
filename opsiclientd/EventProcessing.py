@@ -523,6 +523,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						])
 					return actionProcessorLocalFile
 
+				if not RUNNING_ON_WINDOWS and not RUNNING_ON_LINUX:		# TODO: implement for macos
+					logger.error("Update of action processor not implemented on this os")
+					return
+
 				# Update files
 				logger.notice("Start copying the action processor files")
 				if RUNNING_ON_WINDOWS:
@@ -535,22 +539,23 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						except (PermissionError, psutil.AccessDenied, ValueError):
 							pass
 
-					if os.path.exists(actionProcessorLocalTmpDir):
-						logger.info("Deleting dir '%s'", actionProcessorLocalTmpDir)
-						shutil.rmtree(actionProcessorLocalTmpDir)
-					logger.info("Copying from '%s' to '%s'", actionProcessorRemoteDir, actionProcessorLocalTmpDir)
-					shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
+				if os.path.exists(actionProcessorLocalTmpDir):
+					logger.info("Deleting dir '%s'", actionProcessorLocalTmpDir)
+					shutil.rmtree(actionProcessorLocalTmpDir)
+				logger.info("Copying from '%s' to '%s'", actionProcessorRemoteDir, actionProcessorLocalTmpDir)
+				shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
 
-					if not os.path.exists(actionProcessorLocalTmpFile):
-						raise Exception(f"File '{actionProcessorLocalTmpFile}' does not exist after copy")
+				if not os.path.exists(actionProcessorLocalTmpFile):
+					raise Exception(f"File '{actionProcessorLocalTmpFile}' does not exist after copy")
 
-					if os.path.exists(actionProcessorLocalDir):
-						logger.info("Deleting dir '%s'", actionProcessorLocalDir)
-						shutil.rmtree(actionProcessorLocalDir)
+				if os.path.exists(actionProcessorLocalDir):
+					logger.info("Deleting dir '%s'", actionProcessorLocalDir)
+					shutil.rmtree(actionProcessorLocalDir)
 
-					logger.info("Moving dir '%s' to '%s'", actionProcessorLocalTmpDir, actionProcessorLocalDir)
-					shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
+				logger.info("Moving dir '%s' to '%s'", actionProcessorLocalTmpDir, actionProcessorLocalDir)
+				shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
 
+				if RUNNING_ON_WINDOWS:
 					logger.notice("Trying to set the right permissions for opsi-script")
 					#TODO: change to icacls
 					setaclcmd = os.path.join(config.get('global', 'base_dir'), 'utilities', 'setacl.exe')
@@ -562,21 +567,12 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					)
 					System.execute(cmd, shell=False)
 				elif RUNNING_ON_LINUX:
-					logger.info("Copying from '%s' to '%s'", actionProcessorRemoteDir, actionProcessorLocalDir)
-					for fn in os.listdir(actionProcessorRemoteDir):
-						if os.path.isfile(os.path.join(actionProcessorRemoteDir, fn)):
-							shutil.copy2(
-								os.path.join(actionProcessorRemoteDir, fn),
-								os.path.join(actionProcessorLocalDir, fn)
-							)
-						else:
-							logger.warning("Skipping '%s' while updating action processor because it is not a file",
-								os.path.join(actionProcessorRemoteDir, fn)
-							)
-					#TODO: also update lib, skin, locales
-				else:
-					logger.error("Update of action processor not implemented on this os")
-					return
+					symlink = os.path.join("/usr/bin", actionProcessorFilename)
+					logger.info("Making symlink '%s' to '%s'", symlink, actionProcessorLocalFile)
+					if os.path.exists(symlink):
+						logger.info("replacing old '%s'", symlink)
+						os.remove(symlink)
+					os.symlink(actionProcessorLocalFile, symlink)
 
 				logger.notice("Local action processor successfully updated")
 
