@@ -419,6 +419,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				mount_password = None
 		elif RUNNING_ON_LINUX or RUNNING_ON_DARWIN:
 			mount_options["ro"] = ""
+			mount_options["dir_mode"] = "0700"
+			mount_options["file_mode"] = "0700"
 
 		if RUNNING_ON_LINUX:
 			try:
