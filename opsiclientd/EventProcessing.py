@@ -422,13 +422,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			mount_options["dir_mode"] = "0700"
 			mount_options["file_mode"] = "0700"
 
-		if RUNNING_ON_LINUX:
-			try:
-				os.chown(config.getDepotDrive(), os.getuid(), -1)
-				os.chmod(config.getDepotDrive(), 0o700)
-			except Exception as err: # pylint: disable=broad-except
-				logger.error("Failed to set permissions on mount point '%s': %s", config.getDepotDrive(), err)
-
 		System.mount(
 			config.get('depot_server', 'url'), config.getDepotDrive(),
 			username=mount_username, password=mount_password,
