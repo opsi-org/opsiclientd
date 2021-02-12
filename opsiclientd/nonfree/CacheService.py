@@ -606,6 +606,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 						logger.notice("Product on client configuration not changed on config service, sync from server not required")
 
 			if needSync:
+				eventId = None
 				try:
 					self._forceSync = False
 					eventId = timeline.addEvent(
@@ -633,6 +634,9 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 						category="config_sync",
 						isError=True
 					)
+					if eventId:
+						timeline.setEventEnd(eventId)
+					self.setObsolete()
 					raise
 			else:
 				self._state['config_cached'] = True

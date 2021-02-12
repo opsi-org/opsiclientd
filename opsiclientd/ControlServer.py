@@ -792,7 +792,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				deleteDir = os.path.join(productCacheDir, product)
 				shutil.rmtree(deleteDir)
 
-		return "product cache deleted."
+		return "config and product cache deleted"
 
 	def timeline_getEvents(self): # pylint: disable=no-self-use
 		timeline = Timeline()
