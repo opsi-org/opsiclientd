@@ -730,7 +730,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						if self.opsiclientd.getCacheService().productCacheCompleted(self._configService, productIds):
 							logger.notice("Event '%s' uses cached products and product caching is done", self.event.eventConfig.getId())
 						else:
-							raise Exception("Event '%s' uses cached products but product caching is not done", self.event.eventConfig.getId())
+							raise Exception(
+								f"Event '{self.event.eventConfig.getId()}' uses cached products but product caching is not done"
+							)
 
 				self.processActionWarningTime(productIds)
 				self.runActions(productIds)
@@ -1013,7 +1015,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		logger.notice("Event wait cancelled by user")
 		self.waitCancelled = True
 
-	def processActionWarningTime(self, productIds=[]): # pylint: disable=dangerous-default-value,too-many-branches,too-many-statements
+	def processActionWarningTime(self, productIds=[]): # pylint: disable=dangerous-default-value,too-many-branches,too-many-statements,too-many-locals
 		if not self.event.eventConfig.actionWarningTime:
 			return
 		logger.info("Notifying user of actions to process %s (%s)", self.event, productIds)
