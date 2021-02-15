@@ -1524,7 +1524,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								self.event.eventConfig.postEventCommand,
 								shell=True,
 								stderr=subprocess.STDOUT
-							).decode("utf-8", errors="replace")
+							)
 							logger.info("Post event command '%s' output: %s",
 								self.event.eventConfig.postEventCommand,
 								output.decode(os.device_encoding(1), errors="replace")
