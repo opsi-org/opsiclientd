@@ -636,7 +636,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 					)
 					if eventId:
 						timeline.setEventEnd(eventId)
-					self.setObsolete()
+					self.setFaulty()
 					raise
 			else:
 				self._state['config_cached'] = True
