@@ -183,7 +183,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			for session in System.getActiveSessionInformation():
 				if session.get("StateName") == "active":
 					session_id = session["SessionId"]
-					logger.info("Using session id of user '%s': %s", self.event.eventInfo["User"], session_id)
+					logger.info("Using session id of user '%s': %s", session.get("UserName"), session_id)
 					return session_id
 
 			session_id = System.getActiveConsoleSessionId()
