@@ -1519,6 +1519,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						logger.notice("Running post event command '%s'",
 							self.event.eventConfig.postEventCommand
 						)
+						encoding = "cp850" if RUNNING_ON_WINDOWS else "utf-8"
 						try:
 							output = subprocess.check_output(
 								self.event.eventConfig.postEventCommand,
@@ -1527,13 +1528,13 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 							)
 							logger.info("Post event command '%s' output: %s",
 								self.event.eventConfig.postEventCommand,
-								output.decode(os.device_encoding(1), errors="replace")
+								output.decode(encoding, errors="replace")
 							)
 						except subprocess.CalledProcessError as err:
 							logger.error("Post event command '%s' returned exit code %s: %s",
 								self.event.eventConfig.postEventCommand,
 								err.returncode,
-								err.output.decode(os.device_encoding(1), errors="replace")
+								err.output.decode(encoding, errors="replace")
 							)
 
 					self.processShutdownRequests()
