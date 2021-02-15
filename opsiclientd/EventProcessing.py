@@ -1525,15 +1525,15 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								shell=True,
 								stderr=subprocess.STDOUT
 							).decode("utf-8", errors="replace")
-							logger.debug("Post event command '%s' output: %s",
+							logger.info("Post event command '%s' output: %s",
 								self.event.eventConfig.postEventCommand,
-								output.decode("utf-8", errors="replace")
+								output.decode(os.device_encoding(1), errors="replace")
 							)
 						except subprocess.CalledProcessError as err:
 							logger.error("Post event command '%s' returned exit code %s: %s",
 								self.event.eventConfig.postEventCommand,
 								err.returncode,
-								err.output.decode("utf-8", errors="replace")
+								err.output.decode(os.device_encoding(1), errors="replace")
 							)
 
 					self.processShutdownRequests()
