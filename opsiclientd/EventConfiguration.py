@@ -86,6 +86,7 @@ class EventConfig: # pylint: disable=too-many-instance-attributes
 		self.includeProductGroupIds = list(conf.get('includeProductGroupIds', []))
 		self.preActionProcessorCommand = str(conf.get('preActionProcessorCommand', ''))
 		self.postActionProcessorCommand = str(conf.get('postActionProcessorCommand', ''))
+		self.postEventCommand = str(conf.get('postEventCommand', ''))
 		self.trustedInstallerDetection = bool(conf.get('trustedInstallerDetection', True))
 		self.cacheProducts = bool(conf.get('cacheProducts', False))
 		self.cacheMaxBandwidth = int(conf.get('cacheMaxBandwidth', 0))

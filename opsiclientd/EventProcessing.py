@@ -37,6 +37,7 @@ import sys
 import time
 import datetime
 import tempfile
+import subprocess
 from urllib.parse import urlparse
 import psutil
 
@@ -1511,6 +1512,27 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						self.setStatusMessage( _("Syncing config from server") )
 						self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.isShutdownRequested() or self.isRebootRequested())
 						self.setStatusMessage( _("Sync completed") )
+
+					if self.event.eventConfig.postEventCommand:
+						logger.notice("Running post event command '%s'",
+							self.event.eventConfig.postEventCommand
+						)
+						try:
+							output = subprocess.check_output(
+								self.event.eventConfig.postEventCommand,
+								shell=True,
+								stderr=subprocess.STDOUT
+							).decode("utf-8", errors="replace")
+							logger.debug("Post event command '%s' output: %s",
+								self.event.eventConfig.postEventCommand,
+								output.decode("utf-8", errors="replace")
+							)
+						except subprocess.CalledProcessError as err:
+							logger.error("Post event command '%s' returned exit code %s: %s",
+								self.event.eventConfig.postEventCommand,
+								err.returncode,
+								err.output.decode("utf-8", errors="replace")
+							)
 
 					self.processShutdownRequests()
 

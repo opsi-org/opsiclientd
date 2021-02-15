@@ -254,6 +254,8 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 						eventConfigs[eventConfigId]['preActionProcessorCommand'] = config.replace(forceUnicodeLower(value), escaped=True)
 					elif key == 'post_action_processor_command':
 						eventConfigs[eventConfigId]['postActionProcessorCommand'] = config.replace(forceUnicodeLower(value), escaped=True)
+					elif key == 'post_event_command':
+						eventConfigs[eventConfigId]['postEventCommand'] = config.replace(forceUnicodeLower(value), escaped=True)
 					elif key == 'action_processor_productids':
 						eventConfigs[eventConfigId]['actionProcessorProductIds'] = value.strip().split(",")
 					elif key == 'exclude_product_group_ids':
