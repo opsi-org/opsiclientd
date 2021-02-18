@@ -1332,6 +1332,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 	def inWorkingWindow(self):
 		start_str, end_str, now = (None, None, None)
 		try:
+			# Working window is specified like: 07:00-22:00
 			start_str, end_str = self.event.eventConfig.workingWindow.split("-")
 			start = datetime.time(int(start_str.split(":")[0]), int(start_str.split(":")[1]))
 			end = datetime.time(int(end_str.split(":")[0]), int(end_str.split(":")[1]))
