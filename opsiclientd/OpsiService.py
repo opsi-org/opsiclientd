@@ -22,18 +22,18 @@
 Connecting to a opsi service.
 
 :copyright: uib GmbH <info@uib.de>
-:author: Jan Schneider <j.schneider@uib.de>
-:author: Erol Ueluekmen <e.ueluekmen@uib.de>
-@author: Niko Wenselowski <n.wenselowski@uib.de>
 :license: GNU Affero General Public License version 3
 """
 
 import os
+import re
 import random
 import time
 import socket
 from http.client import HTTPConnection, HTTPSConnection
-from OpenSSL import crypto
+from OpenSSL.crypto import (
+	FILETYPE_PEM, dump_certificate, load_certificate
+)
 
 from OPSI import System
 from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
@@ -48,7 +48,7 @@ from opsicommon.logging import logger, log_context
 from opsicommon.ssl import install_ca
 
 from opsiclientd import __version__
-from opsiclientd.Config import Config, OPSI_CA
+from opsiclientd.Config import Config, UIB_OPSI_CA
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
 from opsiclientd.nonfree import verify_modules
@@ -271,6 +271,31 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 	def getUsername(self):
 		return self._username
 
+	def prepare_ca_cert_file(self):  # pylint: disable=no-self-use
+		cert_dir = config.get('global', 'server_cert_dir')
+		ca_cert_file = os.path.join(cert_dir, 'opsi-ca-cert.pem')
+
+		certs = ""
+		if os.path.exists(ca_cert_file):
+			# Read all certs from file except UIB_OPSI_CA
+			uib_opsi_ca_cert = load_certificate(FILETYPE_PEM, UIB_OPSI_CA.encode("ascii"))
+			with open(ca_cert_file, "r") as file:
+				for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", file.read(), re.DOTALL):
+					cert = load_certificate(FILETYPE_PEM, match.group(1).encode("ascii"))
+					if cert.get_subject().CN != uib_opsi_ca_cert.get_subject().CN:
+						certs += dump_certificate(FILETYPE_PEM, cert).decode("ascii")
+		if not certs:
+			if os.path.exists(ca_cert_file):
+				# Accept all server certs on the next connection attempt
+				os.remove(ca_cert_file)
+			return
+
+		if config.get('global', 'trust_uib_opsi_ca'):
+			certs += UIB_OPSI_CA
+
+		with open(ca_cert_file, "w") as file:
+			file.write(certs)
+
 	def updateCACert(self):
 		logger.info("Updating CA cert")
 		ca_cert_file = None
@@ -283,9 +308,11 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 			response = self.configService.httpRequest("GET", "/ssl/opsi-ca-cert.pem")
 			if response.status != 200:
 				raise RuntimeError(f"Failed to fetch opsi-ca-cert.pem: {response.status} - {response.data}")
-			ca_cert = crypto.load_certificate(crypto.FILETYPE_PEM, response.data.decode("utf-8"))
-			with open(ca_cert_file, "wb") as file:
-				file.write(crypto.dump_certificate(crypto.FILETYPE_PEM, ca_cert))
+			ca_cert = load_certificate(FILETYPE_PEM, response.data.decode("utf-8"))
+			with open(ca_cert_file, "w") as file:
+				file.write(dump_certificate(FILETYPE_PEM, ca_cert).decode("ascii"))
+				if config.get('global', 'trust_uib_opsi_ca'):
+					file.write(UIB_OPSI_CA)
 			logger.info("CA cert file %s successfully updated", ca_cert_file)
 		except Exception as ssl_ca_err: # pylint: disable=broad-except
 			logger.error("Failed to update CA cert: %s", ssl_ca_err)
@@ -305,9 +332,6 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 			self.cancelled = False
 
 			try: # pylint: disable=too-many-nested-blocks
-				cert_dir = config.get('global', 'server_cert_dir')
-				verifyServerCert = config.get('global', 'verify_server_cert')
-
 				proxyMode = config.get('global', 'proxy_mode')
 				proxyURL = config.get('global', 'proxy_url')
 				if proxyMode == 'system':
@@ -316,15 +340,23 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 				elif proxyMode == 'static':
 					proxyURL = config.get('global', 'proxy_url')
 
-				host = urlsplit(self._configServiceUrl)[1]
-				serverCertFile = os.path.join(cert_dir, host + '.pem')
-				if verifyServerCert:
-					logger.info("Server verification enabled, using cert file '%s'", serverCertFile)
+				verify_server_cert = config.get('global', 'verify_server_cert') or config.get('global', 'verify_server_cert_by_ca')
+				cert_dir = config.get('global', 'server_cert_dir')
+				ca_cert_file = os.path.join(cert_dir, 'opsi-ca-cert.pem')
 
-				caCertFile = os.path.join(cert_dir, 'opsi-ca-cert.pem')
-				verify_server_cert_by_ca = config.get('global', 'verify_server_cert_by_ca')
-				if verify_server_cert_by_ca:
-					logger.info("Server verification by CA enabled, using CA cert file '%s'", caCertFile)
+				self.prepare_ca_cert_file()
+
+				compression = True
+				if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
+					compression = False
+					verify_server_cert = False
+					proxyURL = None
+
+				if verify_server_cert:
+					if os.path.exists(ca_cert_file):
+						logger.info("Server verification enabled, using CA cert file '%s'", ca_cert_file)
+					else:
+						logger.error("Server verification enabled, but CA cert file '%s' not found, skipping verification", ca_cert_file)
 
 				tryNum = 0
 				while not self.cancelled and not self.connected:
@@ -335,26 +367,12 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 						if len(self._username.split('.')) < 3:
 							raise Exception(f"Domain missing in username '{self._username}'")
 
-						compression = True
-						if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
-							compression = False
-							if proxyURL:
-								logger.debug("Connecting to localhost, connecting directly without proxy")
-								proxyURL = None
-
-						verifyServerCertByCa = verify_server_cert_by_ca
-						if not os.path.exists(caCertFile):
-							logger.error("Server should be verified by CA, but CA '%s' not found, skipping verification", caCertFile)
-							verifyServerCertByCa = False
-
 						self.configService = JSONRPCBackend(
 							address=self._configServiceUrl,
 							username=self._username,
 							password=self._password,
-							serverCertFile=serverCertFile,
-							verifyServerCert=verifyServerCert,
-							caCertFile=caCertFile,
-							verifyServerCertByCa=verifyServerCertByCa,
+							verifyServerCert=verify_server_cert,
+							caCertFile=ca_cert_file,
 							proxyURL=proxyURL,
 							application='opsiclientd/%s' % __version__,
 							compression=compression
@@ -374,16 +392,9 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 						)
 
 						if serverVersion and (serverVersion[0] > 4 or (serverVersion[0] == 4 and serverVersion[1] > 1)):
-							curCA = ""
-							if os.path.exists(caCertFile):
-								with open(caCertFile, 'r') as file:
-									curCA = file.read()
-							if not os.path.exists(caCertFile) or curCA == OPSI_CA or verify_server_cert_by_ca:
+							if not os.path.exists(ca_cert_file) or verify_server_cert:
 								# Renew CA if not exists or connection is verified
 								self.updateCACert()
-						else:
-							with open(caCertFile, 'w') as file:
-								file.write(OPSI_CA)
 					except OpsiServiceVerificationError as verificationError:
 						self.connectionError = forceUnicode(verificationError)
 						self.setStatusMessage(_("Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
