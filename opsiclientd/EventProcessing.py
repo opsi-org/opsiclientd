@@ -891,7 +891,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			actionProcessorCommand += f" {additionalParams}"
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 
-			logger.develop("calling action processor with additionalParams %s", additionalParams)
+			logger.essential("calling action processor with additionalParams %s", additionalParams)
 
 			if RUNNING_ON_WINDOWS:
 				command = (
