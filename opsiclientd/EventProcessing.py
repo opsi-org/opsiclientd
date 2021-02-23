@@ -677,7 +677,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			if self.event.eventConfig.actionProcessorProductIds:
 				productIds = self.event.eventConfig.actionProcessorProductIds
 
-			if not productIds:
+			if not productIds:		# why this if?
 				includeProductGroupIds = [x for x in forceList(self.event.eventConfig.includeProductGroupIds) if x != ""]
 				excludeProductGroupIds = [x for x in forceList(self.event.eventConfig.excludeProductGroupIds) if x != ""]
 				includeProductIds = []
@@ -734,8 +734,12 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								f"Event '{self.event.eventConfig.getId()}' uses cached products but product caching is not done"
 							)
 
+				additionalParams = ""
+				if includeProductIds or excludeProductIds:
+					additionalParams = "/processproducts " + ', '.join(productIds)
+
 				self.processActionWarningTime(productIds)
-				self.runActions(productIds)
+				self.runActions(productIds, additionalParams=additionalParams)
 				try:
 					if self.event.eventConfig.useCachedConfig and not self._configService.productOnClient_getIdents( # pylint: disable=no-member
 								productType   = 'LocalbootProduct',
@@ -886,6 +890,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			)
 			actionProcessorCommand += f" {additionalParams}"
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
+
+			logger.develop("calling action processor with additionalParams %s", additionalParams)
 
 			if RUNNING_ON_WINDOWS:
 				command = (
