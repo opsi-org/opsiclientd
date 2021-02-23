@@ -290,7 +290,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 		except Exception as ssl_ca_err: # pylint: disable=broad-except
 			logger.error("Failed to update CA cert: %s", ssl_ca_err)
 
-		if ca_cert_file:
+		if config.get('global', 'install_opsi_ca_into_os_store') and ca_cert_file:
 			try:
 				install_ca(ca_cert_file)
 				logger.info("CA cert file %s successfully installed into system cert store", ca_cert_file)

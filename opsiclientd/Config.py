@@ -156,6 +156,8 @@ class Config(metaclass=Singleton):
 				'block_login_notifier': '',
 				'verify_server_cert': False,
 				'verify_server_cert_by_ca': False,
+				'trust_uib_opsi_ca': True,
+				'install_opsi_ca_into_os_store': False,
 				'proxy_mode': 'static',
 				'proxy_url': '',
 				'suspend_bitlocker_on_reboot': False,
@@ -356,7 +358,7 @@ class Config(metaclass=Singleton):
 		elif option in (
 			'create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment',
 			'active', 'sync_time_from_service', 'suspend_bitlocker_on_reboot', 'w10BitlockerSuspendOnReboot',
-			'kiosk_api_active'
+			'kiosk_api_active', 'install_opsi_ca_into_os_store', 'trust_uib_opsi_ca'
 		):
 			if option == 'w10BitlockerSuspendOnReboot':
 				# legacy name
