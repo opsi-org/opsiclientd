@@ -85,7 +85,7 @@ class Config(metaclass=Singleton):
 			'log_dir': 'c:\\opsi.org\\log',
 			'state_file': 'c:\\opsi.org\\opsiclientd\\state.json',
 			'timeline_db': 'c:\\opsi.org\\opsiclientd\\timeline.sqlite',
-			'server_cert_dir': 'c:\\opsi.org\\opsiclientd\\server-certs'
+			'server_cert_dir': 'c:\\opsi.org\\opsiclientd\\tls'
 		},
 		'cache_service': {
 			'storage_dir': 'c:\\opsi.org\\cache',
@@ -98,7 +98,7 @@ class Config(metaclass=Singleton):
 			'config_file': "/etc/opsi-client-agent/opsiclientd.conf",
 			'state_file': "/var/lib/opsi-client-agent/opsiclientd/state.json",
 			'timeline_db': "/var/lib/opsi-client-agent/opsiclientd/timeline.sqlite",
-			'server_cert_dir': "/etc/opsi-client-agent/server-certs"
+			'server_cert_dir': "/etc/opsi-client-agent/tls"
 		},
 		'control_server': {
 			'ssl_server_key_file': "/etc/opsi-client-agent/opsiclientd.pem",
@@ -119,7 +119,7 @@ class Config(metaclass=Singleton):
 			'config_file': "/etc/opsi-client-agent/opsiclientd.conf",
 			'state_file': "/var/lib/opsi-client-agent/opsiclientd/state.json",
 			'timeline_db': "/var/lib/opsi-client-agent/opsiclientd/timeline.sqlite",
-			'server_cert_dir': "/etc/opsi-client-agent/server-certs"
+			'server_cert_dir': "/etc/opsi-client-agent/tls"
 		},
 		'control_server': {
 			'ssl_server_key_file': "/etc/opsi-client-agent/opsiclientd.pem",
@@ -260,7 +260,7 @@ class Config(metaclass=Singleton):
 			self._config['global']['config_file'] = os.path.join(baseDir, 'opsiclientd', 'opsiclientd.conf')
 			self._config['global']['log_dir'] = os.path.join(systemDrive, 'opsi.org', 'log')
 			self._config['global']['state_file'] = os.path.join(systemDrive, 'opsi.org', 'opsiclientd', 'state.json')
-			self._config['global']['server_cert_dir'] = os.path.join(systemDrive, 'opsi.org', 'opsiclientd', 'server-certs')
+			self._config['global']['server_cert_dir'] = os.path.join(systemDrive, 'opsi.org', 'opsiclientd', 'tls')
 			self._config['global']['timeline_db'] = os.path.join(systemDrive,  'opsi.org', 'opsiclientd', 'timeline.sqlite')
 			self._config['system']['program_files_dir'] = System.getProgramFilesDir()
 
