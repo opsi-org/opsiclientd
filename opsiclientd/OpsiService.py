@@ -45,7 +45,7 @@ from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
 
 from opsicommon.logging import logger, log_context
-from opsicommon.ssl import install_ca
+from opsicommon.ssl import install_ca, remove_ca
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config, UIB_OPSI_CA
@@ -299,6 +299,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 	def updateCACert(self):
 		logger.info("Updating CA cert")
 		ca_cert_file = None
+		ca_cert = None
 		try:
 			cert_dir = config.get('global', 'server_cert_dir')
 			ca_cert_file = os.path.join(cert_dir, 'opsi-ca-cert.pem')
@@ -317,12 +318,24 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 		except Exception as ssl_ca_err: # pylint: disable=broad-except
 			logger.error("Failed to update CA cert: %s", ssl_ca_err)
 
-		if config.get('global', 'install_opsi_ca_into_os_store') and ca_cert_file:
-			try:
-				install_ca(ca_cert_file)
-				logger.info("CA cert file %s successfully installed into system cert store", ca_cert_file)
-			except Exception as install_err: # pylint: disable=broad-except
-				logger.error("Failed to install CA into system cert store: %s", install_err)
+		if ca_cert and ca_cert_file:
+			if config.get('global', 'install_opsi_ca_into_os_store'):
+				try:
+					install_ca(ca_cert_file)
+					logger.info(
+						"CA cert file %s successfully installed into system cert store",
+						ca_cert_file
+					)
+				except Exception as err: # pylint: disable=broad-except
+					logger.error("Failed to install CA into system cert store: %s", err)
+				try:
+					if remove_ca(ca_cert.get_subject().CN):
+						logger.info(
+							"CA cert %s successfully removed system cert store",
+							ca_cert.get_subject().CN
+						)
+				except Exception as err: # pylint: disable=broad-except
+					logger.error("Failed to remove CA from system cert store: %s", err)
 
 	def run(self): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		with log_context({'instance' : 'service connection'}):
