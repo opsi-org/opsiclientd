@@ -687,7 +687,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					includeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects( # pylint: disable=no-member
 								groupType="ProductGroup",
 								groupId=includeProductGroupIds)]
-					logger.debug("Only products with productIds: '%s' will be cached", includeProductIds)
+					logger.devel("Only products with productIds: '%s' will be cached", includeProductIds)
 
 				elif excludeProductGroupIds:
 					excludeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects( # pylint: disable=no-member
@@ -702,7 +702,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 							attributes=['actionRequest'],
 							productId=includeProductIds) if poc.productId not in excludeProductIds]:
 
+					logger.devel("found poc %s", productOnClient.productId)
+
 					if productOnClient.productId not in productIds:
+						logger.devel("adding poc %s", productOnClient.productId)
 						productIds.append(productOnClient.productId)
 						logger.notice(
 							"   [%2s] product %-20s %s",
@@ -891,7 +894,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			actionProcessorCommand += f" {additionalParams}"
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 
-			logger.essential("calling action processor with additionalParams %s", additionalParams)
+			logger.devel("calling action processor with additionalParams %s", additionalParams)
 
 			if RUNNING_ON_WINDOWS:
 				command = (
