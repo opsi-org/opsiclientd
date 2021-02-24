@@ -319,6 +319,14 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 			logger.error("Failed to update CA cert: %s", ssl_ca_err)
 
 		if ca_cert and ca_cert_file:
+			try:
+				if remove_ca(ca_cert.get_subject().CN):
+					logger.info(
+						"CA cert %s successfully removed fromsystem cert store",
+						ca_cert.get_subject().CN
+					)
+			except Exception as err: # pylint: disable=broad-except
+				logger.error("Failed to remove CA from system cert store: %s", err)
 			if config.get('global', 'install_opsi_ca_into_os_store'):
 				try:
 					install_ca(ca_cert_file)
@@ -328,14 +336,6 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 					)
 				except Exception as err: # pylint: disable=broad-except
 					logger.error("Failed to install CA into system cert store: %s", err)
-				try:
-					if remove_ca(ca_cert.get_subject().CN):
-						logger.info(
-							"CA cert %s successfully removed system cert store",
-							ca_cert.get_subject().CN
-						)
-				except Exception as err: # pylint: disable=broad-except
-					logger.error("Failed to remove CA from system cert store: %s", err)
 
 	def run(self): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		with log_context({'instance' : 'service connection'}):
