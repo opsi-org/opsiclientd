@@ -307,22 +307,22 @@ class Opsiclientd(EventListener, threading.Thread): # pylint: disable=too-many-i
 		self._actionProcessorUserName = ''
 		self._actionProcessorUserPassword = ''
 
-	def setup(self):
+	def setup(self):  # pylint: disable=no-self-use
 		if not config.get('global', 'install_opsi_ca_into_os_store'):
 			try:
 				if remove_ca("opsi CA"):
 					logger.info("opsi CA successfully removed fromsystem cert store")
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				logger.error("Failed to remove opsi CA from system cert store: %s", err)
 
 	def run(self):
 		with log_context({'instance' : 'opsiclientd'}):
 			try:
 				self._run()
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err, exc_info=True)
 
-	def _run(self): # pylint: disable=too-many-statements
+	def _run(self):  # pylint: disable=too-many-statements
 		self._running = True
 		self._opsiclientdRunningEventId = None
 
