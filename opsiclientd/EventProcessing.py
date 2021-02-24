@@ -677,7 +677,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			if self.event.eventConfig.actionProcessorProductIds:
 				productIds = self.event.eventConfig.actionProcessorProductIds
 
-			if not productIds:		# why this if?
+			if not productIds:
 				includeProductGroupIds = [x for x in forceList(self.event.eventConfig.includeProductGroupIds) if x != ""]
 				excludeProductGroupIds = [x for x in forceList(self.event.eventConfig.excludeProductGroupIds) if x != ""]
 				includeProductIds = []
@@ -687,7 +687,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					includeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects( # pylint: disable=no-member
 								groupType="ProductGroup",
 								groupId=includeProductGroupIds)]
-					logger.devel("Only products with productIds: '%s' will be cached", includeProductIds)
+					logger.debug("Only products with productIds: '%s' will be cached", includeProductIds)
 
 				elif excludeProductGroupIds:
 					excludeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects( # pylint: disable=no-member
@@ -701,11 +701,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 							actionRequest=['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
 							attributes=['actionRequest'],
 							productId=includeProductIds) if poc.productId not in excludeProductIds]:
-
-					logger.devel("found poc %s", productOnClient.productId)
-
 					if productOnClient.productId not in productIds:
-						logger.devel("adding poc %s", productOnClient.productId)
 						productIds.append(productOnClient.productId)
 						logger.notice(
 							"   [%2s] product %-20s %s",
@@ -893,8 +889,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			)
 			actionProcessorCommand += f" {additionalParams}"
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
-
-			logger.devel("calling action processor with additionalParams %s", additionalParams)
 
 			if RUNNING_ON_WINDOWS:
 				command = (
