@@ -874,7 +874,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					clientId=config.get('global', 'host_id'),
 					actionRequest=['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
 					attributes=['actionRequest'],
-					productId=includeProductGroupIds)
+					productId=includeProductIds)
 				if poc.productId not in excludeProductIds]
 
 			for productOnClient in productOnClients:
