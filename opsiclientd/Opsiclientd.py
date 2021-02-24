@@ -44,6 +44,7 @@ from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 from OPSI import __version__ as python_opsi_version
 
 from opsicommon.logging import logger, log_context
+from opsicommon.ssl import remove_ca
 
 from opsiclientd import __version__, config, check_signature
 from opsiclientd.ControlPipe import ControlPipeFactory
@@ -306,6 +307,14 @@ class Opsiclientd(EventListener, threading.Thread): # pylint: disable=too-many-i
 		self._actionProcessorUserName = ''
 		self._actionProcessorUserPassword = ''
 
+	def setup(self):
+		if not config.get('global', 'install_opsi_ca_into_os_store'):
+			try:
+				if remove_ca("opsi CA"):
+					logger.info("opsi CA successfully removed fromsystem cert store")
+			except Exception as err: # pylint: disable=broad-except
+				logger.error("Failed to remove opsi CA from system cert store: %s", err)
+
 	def run(self):
 		with log_context({'instance' : 'opsiclientd'}):
 			try:
@@ -319,6 +328,8 @@ class Opsiclientd(EventListener, threading.Thread): # pylint: disable=too-many-i
 
 		config.readConfigFile()
 		config.check_restart_marker()
+
+		self.setup()
 
 		@contextmanager
 		def getControlPipe():
