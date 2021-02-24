@@ -311,7 +311,7 @@ class Opsiclientd(EventListener, threading.Thread): # pylint: disable=too-many-i
 		if not config.get('global', 'install_opsi_ca_into_os_store'):
 			try:
 				if remove_ca("opsi CA"):
-					logger.info("opsi CA successfully removed fromsystem cert store")
+					logger.info("opsi CA successfully removed from system cert store")
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error("Failed to remove opsi CA from system cert store: %s", err)
 
