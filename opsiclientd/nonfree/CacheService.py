@@ -566,7 +566,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 						# Exclude 'always'!
 						actionRequest=['setup', 'uninstall', 'update', 'once', 'custom'],
 						attributes=['actionRequest'],
-						productId=includeProductGroupIds
+						productId=includeProductIds
 					)
 					if poc.productId not in excludeProductIds
 				]
