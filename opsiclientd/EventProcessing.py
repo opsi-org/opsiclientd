@@ -689,7 +689,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								groupId=includeProductGroupIds)]
 					logger.debug("Only products with productIds: '%s' will be cached", includeProductIds)
 
-				elif excludeProductGroupIds:
+				if excludeProductGroupIds:
 					excludeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects( # pylint: disable=no-member
 								groupType="ProductGroup",
 								groupId=excludeProductGroupIds)]
