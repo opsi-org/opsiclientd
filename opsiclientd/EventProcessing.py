@@ -55,6 +55,7 @@ from opsicommon.logging import logger, log_context, logging_config, LOG_WARNING
 from opsiclientd import __version__
 from opsiclientd.Config import Config
 from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
+from opsiclientd.Events.Utilities import get_include_exclude_product_ids
 from opsiclientd.Events.SyncCompleted import SyncCompletedEvent
 from opsiclientd.Exceptions import CanceledByUserError, ConfigurationError
 from opsiclientd.Localization import _
@@ -680,20 +681,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			if not productIds:
 				includeProductGroupIds = [x for x in forceList(self.event.eventConfig.includeProductGroupIds) if x != ""]
 				excludeProductGroupIds = [x for x in forceList(self.event.eventConfig.excludeProductGroupIds) if x != ""]
-				includeProductIds = []
-				excludeProductIds = []
-
-				if includeProductGroupIds:
-					includeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects( # pylint: disable=no-member
-								groupType="ProductGroup",
-								groupId=includeProductGroupIds)]
-					logger.debug("Only products with productIds: '%s' will be cached", includeProductIds)
-
-				elif excludeProductGroupIds:
-					excludeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects( # pylint: disable=no-member
-								groupType="ProductGroup",
-								groupId=excludeProductGroupIds)]
-					logger.debug("Products with productIds: '%s' will be excluded", excludeProductIds)
+				includeProductIds, excludeProductIds = get_include_exclude_product_ids(self._configService, includeProductGroupIds, excludeProductGroupIds)
 
 				for productOnClient in [poc for poc in self._configService.productOnClient_getObjects( # pylint: disable=no-member
 							productType='LocalbootProduct',
@@ -701,7 +689,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 							actionRequest=['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
 							attributes=['actionRequest'],
 							productId=includeProductIds) if poc.productId not in excludeProductIds]:
-
 					if productOnClient.productId not in productIds:
 						productIds.append(productOnClient.productId)
 						logger.notice(
@@ -734,8 +721,12 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								f"Event '{self.event.eventConfig.getId()}' uses cached products but product caching is not done"
 							)
 
+				additionalParams = ""
+				if includeProductIds or excludeProductIds:
+					additionalParams = "/processproducts " + ', '.join(productIds)
+
 				self.processActionWarningTime(productIds)
-				self.runActions(productIds)
+				self.runActions(productIds, additionalParams=additionalParams)
 				try:
 					if self.event.eventConfig.useCachedConfig and not self._configService.productOnClient_getIdents( # pylint: disable=no-member
 								productType   = 'LocalbootProduct',
