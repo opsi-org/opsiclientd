@@ -681,7 +681,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			if not productIds:
 				includeProductGroupIds = [x for x in forceList(self.event.eventConfig.includeProductGroupIds) if x != ""]
 				excludeProductGroupIds = [x for x in forceList(self.event.eventConfig.excludeProductGroupIds) if x != ""]
-				includeProductIds, excludeProductIds = get_include_exclude_product_ids(self._configService, includeProductGroupIds, excludeProductGroupIds)
+				includeProductIds, excludeProductIds = get_include_exclude_product_ids(
+					self._configService, includeProductGroupIds, excludeProductGroupIds
+				)
 
 				for productOnClient in [poc for poc in self._configService.productOnClient_getObjects( # pylint: disable=no-member
 							productType='LocalbootProduct',

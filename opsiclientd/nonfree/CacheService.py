@@ -540,7 +540,9 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 			if not needSync:
 				excludeProductGroupIds = [x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != ""]
 				includeProductGroupIds = [x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != ""]
-				includeProductIds, excludeProductIds = get_include_exclude_product_ids(self._configService, includeProductGroupIds, excludeProductGroupIds)
+				includeProductIds, excludeProductIds = get_include_exclude_product_ids(
+					self._configService, includeProductGroupIds, excludeProductGroupIds
+				)
 
 				productOnClients = [
 					poc for poc in self._configService.productOnClient_getObjects( # pylint: disable=no-member
@@ -833,7 +835,9 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 
 			includeProductGroupIds = [x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != ""]
 			excludeProductGroupIds = [x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != ""]
-			includeProductIds, excludeProductIds = get_include_exclude_product_ids(self._configService, includeProductGroupIds, excludeProductGroupIds)
+			includeProductIds, excludeProductIds = get_include_exclude_product_ids(
+				self._configService, includeProductGroupIds, excludeProductGroupIds
+			)
 
 			productIds = []
 			productOnClients = [poc for poc in self._configService.productOnClient_getObjects( # pylint: disable=no-member
