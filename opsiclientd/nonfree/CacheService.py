@@ -43,6 +43,7 @@ from opsiclientd.Config import Config
 from opsiclientd.State import State
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
+from opsiclientd.Events.Utilities import get_include_exclude_product_ids
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.Timeline import Timeline
 
@@ -537,27 +538,9 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 			self._cacheBackend.depotId = masterDepotId
 
 			if not needSync:
-				includeProductIds = []
-				excludeProductIds = []
 				excludeProductGroupIds = [x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != ""]
 				includeProductGroupIds = [x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != ""]
-
-				logger.debug("Given includeProductGroupIds: '%s'", includeProductGroupIds)
-				logger.debug("Given excludeProductGroupIds: '%s'", excludeProductGroupIds)
-
-				if includeProductGroupIds:
-					includeProductIds = [
-						obj.objectId for obj in
-						self._configService.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds) # pylint: disable=no-member
-					]
-					logger.debug("Only products with productIds: '%s' will be cached.", includeProductIds)
-
-				if excludeProductGroupIds:
-					excludeProductIds = [
-						obj.objectId for obj in
-						self._configService.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds) # pylint: disable=no-member
-					]
-					logger.debug("Products with productIds: '%s' will be excluded.", excludeProductIds)
+				includeProductIds, excludeProductIds = get_include_exclude_product_ids(self._configService, includeProductGroupIds, excludeProductGroupIds)
 
 				productOnClients = [
 					poc for poc in self._configService.productOnClient_getObjects( # pylint: disable=no-member
@@ -848,25 +831,9 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			if not self._configService:
 				self.connectConfigService()
 
-			includeProductIds = []
-			excludeProductIds = []
-			excludeProductGroupIds = [x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != ""]
 			includeProductGroupIds = [x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != ""]
-
-			logger.debug("Given includeProductGroupIds: '%s'", includeProductGroupIds)
-			logger.debug("Given excludeProductGroupIds: '%s'", excludeProductGroupIds)
-
-			if includeProductGroupIds:
-				includeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects( # pylint: disable=no-member
-					groupType="ProductGroup",
-					groupId=includeProductGroupIds)]
-				logger.debug("Only products with productIds: '%s' will be cached.", includeProductIds)
-
-			if excludeProductGroupIds:
-				excludeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects( # pylint: disable=no-member
-					groupType="ProductGroup",
-					groupId=excludeProductGroupIds)]
-				logger.debug("Products with productIds: '%s' will be excluded.", excludeProductIds)
+			excludeProductGroupIds = [x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != ""]
+			includeProductIds, excludeProductIds = get_include_exclude_product_ids(self._configService, includeProductGroupIds, excludeProductGroupIds)
 
 			productIds = []
 			productOnClients = [poc for poc in self._configService.productOnClient_getObjects( # pylint: disable=no-member
