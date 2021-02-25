@@ -43,7 +43,7 @@ from opsiclientd.Config import Config
 from opsiclientd.State import State
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
-from opsiclientd.Events.Utilities import get_include_exclude_product_ids
+from opsiclientd.utils import get_include_exclude_product_ids
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.Timeline import Timeline
 

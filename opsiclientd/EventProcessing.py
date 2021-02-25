@@ -55,7 +55,7 @@ from opsicommon.logging import logger, log_context, logging_config, LOG_WARNING
 from opsiclientd import __version__
 from opsiclientd.Config import Config
 from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
-from opsiclientd.Events.Utilities import get_include_exclude_product_ids
+from opsiclientd.utils import get_include_exclude_product_ids
 from opsiclientd.Events.SyncCompleted import SyncCompletedEvent
 from opsiclientd.Exceptions import CanceledByUserError, ConfigurationError
 from opsiclientd.Localization import _
