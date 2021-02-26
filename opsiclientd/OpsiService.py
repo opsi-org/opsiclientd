@@ -299,7 +299,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 	def updateCACert(self):
 		logger.info("Updating CA cert")
 		ca_cert_file = None
-		ca_cert = None
+		ca_certs = []
 		try:
 			cert_dir = config.get('global', 'server_cert_dir')
 			ca_cert_file = os.path.join(cert_dir, 'opsi-ca-cert.pem')
@@ -309,16 +309,24 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 			response = self.configService.httpRequest("GET", "/ssl/opsi-ca-cert.pem")
 			if response.status != 200:
 				raise RuntimeError(f"Failed to fetch opsi-ca-cert.pem: {response.status} - {response.data}")
-			ca_cert = load_certificate(FILETYPE_PEM, response.data.decode("utf-8"))
+
+			for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", response.data.decode("utf-8"), re.DOTALL):
+				try:
+					ca_certs.append(load_certificate(FILETYPE_PEM, match.group(1).encode("utf-8")))
+				except Exception as err: # pylint: disable=broad-except
+					logger.error(err, exc_info=True)
+
 			with open(ca_cert_file, "w") as file:
-				file.write(dump_certificate(FILETYPE_PEM, ca_cert).decode("ascii"))
+				for cert in ca_certs:
+					file.write(dump_certificate(FILETYPE_PEM, cert).decode("utf-8"))
 				if config.get('global', 'trust_uib_opsi_ca'):
 					file.write(UIB_OPSI_CA)
-			logger.info("CA cert file %s successfully updated", ca_cert_file)
-		except Exception as ssl_ca_err: # pylint: disable=broad-except
-			logger.error("Failed to update CA cert: %s", ssl_ca_err)
 
-		if ca_cert and ca_cert_file:
+			logger.info("CA cert file %s successfully updated", ca_cert_file)
+		except Exception as err: # pylint: disable=broad-except
+			logger.error("Failed to update CA cert: %s", err)
+
+		for ca_cert in ca_certs:
 			try:
 				if remove_ca(ca_cert.get_subject().CN):
 					logger.info(
@@ -327,12 +335,13 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 					)
 			except Exception as err: # pylint: disable=broad-except
 				logger.error("Failed to remove CA from system cert store: %s", err)
+
 			if config.get('global', 'install_opsi_ca_into_os_store'):
 				try:
-					install_ca(ca_cert_file)
+					install_ca(ca_cert)
 					logger.info(
-						"CA cert file %s successfully installed into system cert store",
-						ca_cert_file
+						"CA cert %s successfully installed into system cert store",
+						ca_cert.get_subject().CN
 					)
 				except Exception as err: # pylint: disable=broad-except
 					logger.error("Failed to install CA into system cert store: %s", err)
