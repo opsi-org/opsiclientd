@@ -111,11 +111,13 @@ LOG_VIEWER_PAGE = '''<!DOCTYPE html>
 	<link rel="stylesheet" href="/opsiclientd.css" />
 	<script src="/javascript/log_viewer.js"></script>
 	<script src="/javascript/msgpack.js"></script>
-</head>
-<body>
 	<script>
-		startLog(20000);
+		function onLoad() {
+			startLog(20000);
+		}
 	</script>
+</head>
+<body onload="onLoad();">
 	<!--
 	<label for="log-channel">Log channel:</label>
 	<select id="log-channel">
