@@ -304,6 +304,11 @@ class Config(metaclass=Singleton):
 			value = forceUnicode(value)
 		return value
 
+	@property
+	def ca_cert_file(self):
+		cert_dir = self.get('global', 'server_cert_dir')
+		return os.path.join(cert_dir, 'opsi-ca-cert.pem')
+
 	def set(self, section, option, value): # pylint: disable=too-many-branches,too-many-statements
 		if not section:
 			section = 'global'

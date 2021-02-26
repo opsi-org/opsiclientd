@@ -272,39 +272,33 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 		return self._username
 
 	def prepare_ca_cert_file(self):  # pylint: disable=no-self-use
-		cert_dir = config.get('global', 'server_cert_dir')
-		ca_cert_file = os.path.join(cert_dir, 'opsi-ca-cert.pem')
-
 		certs = ""
-		if os.path.exists(ca_cert_file):
+		if os.path.exists(config.ca_cert_file):
 			# Read all certs from file except UIB_OPSI_CA
 			uib_opsi_ca_cert = load_certificate(FILETYPE_PEM, UIB_OPSI_CA.encode("ascii"))
-			with open(ca_cert_file, "r") as file:
+			with open(config.ca_cert_file, "r") as file:
 				for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", file.read(), re.DOTALL):
 					cert = load_certificate(FILETYPE_PEM, match.group(1).encode("ascii"))
 					if cert.get_subject().CN != uib_opsi_ca_cert.get_subject().CN:
 						certs += dump_certificate(FILETYPE_PEM, cert).decode("ascii")
 		if not certs:
-			if os.path.exists(ca_cert_file):
+			if os.path.exists(config.ca_cert_file):
 				# Accept all server certs on the next connection attempt
-				os.remove(ca_cert_file)
+				os.remove(config.ca_cert_file)
 			return
 
 		if config.get('global', 'trust_uib_opsi_ca'):
 			certs += UIB_OPSI_CA
 
-		with open(ca_cert_file, "w") as file:
+		with open(config.ca_cert_file, "w") as file:
 			file.write(certs)
 
-	def updateCACert(self):
+	def update_ca_cert(self):
 		logger.info("Updating CA cert")
-		ca_cert_file = None
 		ca_certs = []
 		try:
-			cert_dir = config.get('global', 'server_cert_dir')
-			ca_cert_file = os.path.join(cert_dir, 'opsi-ca-cert.pem')
-			if not os.path.isdir(cert_dir):
-				os.makedirs(cert_dir)
+			if not os.path.isdir(os.path.dirname(config.ca_cert_file)):
+				os.makedirs(os.path.dirname(config.ca_cert_file))
 
 			response = self.configService.httpRequest("GET", "/ssl/opsi-ca-cert.pem")
 			if response.status != 200:
@@ -316,13 +310,13 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 				except Exception as err: # pylint: disable=broad-except
 					logger.error(err, exc_info=True)
 
-			with open(ca_cert_file, "w") as file:
+			with open(config.ca_cert_file, "w") as file:
 				for cert in ca_certs:
 					file.write(dump_certificate(FILETYPE_PEM, cert).decode("utf-8"))
 				if config.get('global', 'trust_uib_opsi_ca'):
 					file.write(UIB_OPSI_CA)
 
-			logger.info("CA cert file %s successfully updated", ca_cert_file)
+			logger.info("CA cert file %s successfully updated", config.ca_cert_file)
 		except Exception as err: # pylint: disable=broad-except
 			logger.error("Failed to update CA cert: %s", err)
 
@@ -336,15 +330,15 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 			except Exception as err: # pylint: disable=broad-except
 				logger.error("Failed to remove CA from system cert store: %s", err)
 
-			if config.get('global', 'install_opsi_ca_into_os_store'):
-				try:
-					install_ca(ca_cert)
-					logger.info(
-						"CA cert %s successfully installed into system cert store",
-						ca_cert.get_subject().CN
-					)
-				except Exception as err: # pylint: disable=broad-except
-					logger.error("Failed to install CA into system cert store: %s", err)
+		if ca_certs and config.get('global', 'install_opsi_ca_into_os_store'):
+			try:
+				install_ca(ca_certs[0])
+				logger.info(
+					"CA cert %s successfully installed into system cert store",
+					ca_certs[0].get_subject().CN
+				)
+			except Exception as err: # pylint: disable=broad-except
+				logger.error("Failed to install CA into system cert store: %s", err)
 
 	def run(self): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		with log_context({'instance' : 'service connection'}):
@@ -362,10 +356,10 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 				elif proxyMode == 'static':
 					proxyURL = config.get('global', 'proxy_url')
 
-				verify_server_cert = config.get('global', 'verify_server_cert') or config.get('global', 'verify_server_cert_by_ca')
-				cert_dir = config.get('global', 'server_cert_dir')
-				ca_cert_file = os.path.join(cert_dir, 'opsi-ca-cert.pem')
-
+				verify_server_cert = (
+					config.get('global', 'verify_server_cert') or
+					config.get('global', 'verify_server_cert_by_ca')
+				)
 				self.prepare_ca_cert_file()
 
 				compression = True
@@ -375,10 +369,13 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 					proxyURL = None
 
 				if verify_server_cert:
-					if os.path.exists(ca_cert_file):
-						logger.info("Server verification enabled, using CA cert file '%s'", ca_cert_file)
+					if os.path.exists(config.ca_cert_file):
+						logger.info("Server verification enabled, using CA cert file '%s'", config.ca_cert_file)
 					else:
-						logger.error("Server verification enabled, but CA cert file '%s' not found, skipping verification", ca_cert_file)
+						logger.error(
+							"Server verification enabled, but CA cert file '%s' not found, skipping verification",
+							config.ca_cert_file
+						)
 
 				tryNum = 0
 				while not self.cancelled and not self.connected:
@@ -394,9 +391,9 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 							username=self._username,
 							password=self._password,
 							verifyServerCert=verify_server_cert,
-							caCertFile=ca_cert_file,
+							caCertFile=config.ca_cert_file,
 							proxyURL=proxyURL,
-							application='opsiclientd/%s' % __version__,
+							application=f"opsiclientd/{__version__}",
 							compression=compression
 						)
 
@@ -414,9 +411,9 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 						)
 
 						if serverVersion and (serverVersion[0] > 4 or (serverVersion[0] == 4 and serverVersion[1] > 1)):
-							if not os.path.exists(ca_cert_file) or verify_server_cert:
+							if not os.path.exists(config.ca_cert_file) or verify_server_cert:
 								# Renew CA if not exists or connection is verified
-								self.updateCACert()
+								self.update_ca_cert()
 					except OpsiServiceVerificationError as verificationError:
 						self.connectionError = forceUnicode(verificationError)
 						self.setStatusMessage(_("Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
