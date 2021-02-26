@@ -882,7 +882,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 			if RUNNING_ON_WINDOWS:
 				command = (
-					os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe") +
+					f'"{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}"' +
 					r' "%global.host_id%" "%global.opsi_host_key%" "%control_server.port%"'
 					r' "%global.log_file%" "%global.log_level%" "%depot_server.url%"'
 					f' "{config.getDepotDrive()}" "{depotServerUsername}" "{depotServerPassword}"'
