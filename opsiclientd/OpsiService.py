@@ -376,6 +376,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 							"Server verification enabled, but CA cert file '%s' not found, skipping verification",
 							config.ca_cert_file
 						)
+						verify_server_cert = False
 
 				tryNum = 0
 				while not self.cancelled and not self.connected:
