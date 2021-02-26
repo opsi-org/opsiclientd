@@ -139,7 +139,9 @@ LOG_VIEWER_PAGE = '''<!DOCTYPE html>
 		<button id="decrease-font-size" onclick="change_font_size(-1);">-</button>
 		<button id="increase-font-size" onclick="change_font_size(+1);">+</button>
 	</div>
-	<div id="log-container" style="font-size: 14px;" />
+	<div id="log-container" style="font-size: 14px;">
+		<div id="log-container-msg"></div>
+	</div>
 </body>
 </html>
 '''

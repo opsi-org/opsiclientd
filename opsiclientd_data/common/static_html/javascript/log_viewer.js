@@ -26,7 +26,7 @@ function addRecordToLog(record) {
 	let div = document.createElement('div');
 	div.setAttribute("class", "log-line");
 	div.setAttribute("id", "log-line-" + logLineId);
-	
+
 	let context = "";
 	if (record.context) {
 		for (key in record.context) {
@@ -34,7 +34,7 @@ function addRecordToLog(record) {
 			context = context + record.context[key];
 		}
 	}
-	
+
 	let msg = record.msg + "\n";
 	if (record.exc_text) {
 		msg += "\n" + record.exc_text;
@@ -54,7 +54,7 @@ function addRecordToLog(record) {
 
 	let elControl = document.createElement('div');
 	elControl.classList.add("log-record-control");
-	
+
 	let elCollapse = document.createElement('span');
 	elCollapse.classList.add("log-record-collapse");
 	elCollapse.onclick = toggleCollapse;
@@ -62,7 +62,7 @@ function addRecordToLog(record) {
 	let elLineId = document.createElement('span');
 	elLineId.classList.add("log-record-line-id");
 	elLineId.appendChild(document.createTextNode(logLineId));
-	
+
 	elControl.appendChild(elCollapse);
 	elControl.appendChild(elLineId);
 
@@ -82,11 +82,11 @@ function addRecordToLog(record) {
 	let elContext = document.createElement('span');
 	elContext.classList.add("log-record-context");
 	elContext.appendChild(document.createTextNode("[" + context.padEnd(16, ' ') + "] "));
-	
+
 	let elMessage = document.createElement('span');
 	elMessage.classList.add("log-record-message");
 	elMessage.appendChild(document.createTextNode(msg));
-	
+
 	elRecord.appendChild(elOpsiLevel);
 	elRecord.appendChild(elDate);
 	elRecord.appendChild(elContext);
@@ -94,7 +94,7 @@ function addRecordToLog(record) {
 
 	div.appendChild(elControl);
 	div.appendChild(elRecord);
-	
+
 	if (levelFilter && record.opsilevel > levelFilter) {
 		div.classList.add("log-line-hidden");
 	}
@@ -107,7 +107,7 @@ function addRecordToLog(record) {
 
 	let container = document.getElementById("log-container");
 	if (container.childElementCount >= MAX_LOG_LINES) {
-		container.removeChild(container.childNodes[0]); 
+		container.removeChild(container.childNodes[0]);
 	}
 	container.appendChild(div);
 	return div;
@@ -166,7 +166,7 @@ function applyLevelFilter(filter=null) {
 	if (filter) {
 		levelFilter = parseInt(filter);
 		if (levelFilter < 1) levelFilter = 1;
-		else if (levelFilter > 9) levelFilter = 9; 
+		else if (levelFilter > 9) levelFilter = 9;
 	}
 	else {
 		levelFilter = null;
@@ -195,10 +195,10 @@ function applyFilter() {
 		container.querySelectorAll(".log-record-message").forEach(function(el) {
 			if (!el.innerText.match(messageFilterRegex) && !filteredIds.includes(el.parentElement.parentElement.id)) {
 				filteredIds.push(el.parentElement.parentElement.id);
-			}		
+			}
 		});
 	}
-	
+
 	container.querySelectorAll(".log-line").forEach(function(el) {
 		if (filteredIds.includes(el.id)) {
 			el.classList.add("log-line-hidden");
@@ -209,7 +209,21 @@ function applyFilter() {
 	});
 }
 
+function setMessage(text = "", className = "") {
+	let con = document.getElementById("log-container-msg");
+	if (text) {
+		con.innerHTML = text;
+		con.style.visibility = "visible";
+	}
+	else {
+		con.innerHTML = "";
+		con.style.visibility = "hidden";
+	}
+	con.className = className;
+}
+
 function startLog(numRecords=0) {
+	setMessage("Connecting...");
 	logLineId = 0;
 	var start_time = Math.round(Date.now()-10000); // millseconds
 	var client = null;
@@ -236,10 +250,11 @@ function startLog(numRecords=0) {
 
 	ws.onopen = function() {
 		// websocket is connected
-		document.getElementById("log-container").innerHTML = '';
+		document.getElementById("log-container").innerHTML = "";
+		setMessage("");
 		//ws.send(msg);
 	};
-	
+
 	ws.onmessage = function (message) {
 		//console.log(message.data);
 		message.data.arrayBuffer().then(function(buffer) {
@@ -255,16 +270,17 @@ function startLog(numRecords=0) {
 				element.scrollIntoView({block: "end", behavior: "auto"});
 			}
 		});
-		
+
 	};
-	
+
 	ws.onclose = function(event) {
 		// websocket is closed.
 		console.log("Websocket conection closed");
-		if (event.code == 4401) {
-			document.getElementById("log-container").innerHTML =
-				`<div class="LEVEL_ERROR" style="margin: 10px; font-size: 20px">${event.reason}</div>`;
-		}
+		setMessage(`Connection lost: ${event.reason}`, "LEVEL_ERROR");
+		//if (event.code == 4401) {
+		//	document.getElementById("log-container").innerHTML =
+		//		`<div class="LEVEL_ERROR" style="margin: 10px; font-size: 20px">${event.reason}</div>`;
+		//}
 	};
 }
 
@@ -279,5 +295,5 @@ function change_font_size(val) {
 function stopLog(){
 	if(ws != undefined){
 		ws.close(1000, "LogViewer closed.")
-	}	
+	}
 }
