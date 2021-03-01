@@ -675,6 +675,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				raise Exception("Not connected to config service")
 
 			productIds = []
+			includeProductGroupIds = []
+			excludeProductGroupIds = []
 			if self.event.eventConfig.actionProcessorProductIds:
 				productIds = self.event.eventConfig.actionProcessorProductIds
 
