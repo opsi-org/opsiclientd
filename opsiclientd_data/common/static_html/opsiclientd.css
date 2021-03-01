@@ -23,14 +23,17 @@ body {
 	letter-spacing: 5px;
 	color: #6276a0;
 }
+
 a:link {
 	color: #555555;
 	text-decoration: none;
 }
+
 a:visited {
 	color: #555555;
 	text-decoration: none;
 }
+
 a:hover {
 	color: #46547f;
 	text-decoration: none;
@@ -38,6 +41,16 @@ a:hover {
 a:active {
 	color: #555555;
 	text-decoration: none;
+}
+
+input {
+	border: 1px solid #cccccc;
+}
+
+button {
+	appearance: none;
+	border: 1px solid #cccccc;
+	padding-bottom: 2px;
 }
 
 div.mainpage-link-box {
@@ -62,6 +75,7 @@ div.mainpage-link-box {
 	font-size: 8pt;
 	border: 1px solid #111111;
 }
+
 .timeline-event-bubble-title {
 	font-weight: bold;
 	border-bottom: 1px solid #111111;
@@ -69,10 +83,12 @@ div.mainpage-link-box {
 	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
 	font-size: 8pt;
 }
+
 .timeline-event-bubble-body {
 	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
 	font-size: 8pt;
 }
+
 .timeline-event-bubble-time {
 	font-family: Trebuchet MS, Helvetica, Arial, sans serif;
 	font-size: 8pt;
