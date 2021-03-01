@@ -1019,7 +1019,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		depotServerUsername = ''
 		depotServerPassword = ''
 
-		(scheme, host) = urlsplit(config.get('depot_server', 'url'))[0:2]
+		(scheme, _host) = urlsplit(config.get('depot_server', 'url'))[0:2]
 		if scheme.startswith('webdav'):
 			depotServerUsername = config.get('global', 'host_id')
 			depotServerPassword = config.get('global', 'opsi_host_key')
