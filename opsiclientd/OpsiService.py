@@ -324,7 +324,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 			try:
 				if remove_ca(ca_cert.get_subject().CN):
 					logger.info(
-						"CA cert %s successfully removed fromsystem cert store",
+						"CA cert %s successfully removed from system cert store",
 						ca_cert.get_subject().CN
 					)
 			except Exception as err: # pylint: disable=broad-except
