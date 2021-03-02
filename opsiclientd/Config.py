@@ -369,8 +369,6 @@ class Config(metaclass=Singleton):
 			value == '' and
 			option.find('command') == -1 and
 			option.find('productids') == -1 and
-			option.find('exclude_product_group_ids') == -1 and
-			option.find('include_product_group_ids') == -1 and
 			option.find('proxy_url') == -1 and
 			option.find('working_window') == -1
 		):
@@ -796,7 +794,10 @@ class Config(metaclass=Singleton):
 						logger.debug("Expected at least 3 parts in %s - skipping.", configState.configId)
 						continue
 
-					self.set(section=parts[1], option=parts[2], value=configState.values[0])
+					value = configState.values
+					if len(value) == 1:
+						value = value[0]
+					self.set(section=parts[1], option=parts[2], value=value)
 				except Exception as err: # pylint: disable=broad-except
 					logger.error("Failed to process configState '%s': %s", configState.configId, err)
 
