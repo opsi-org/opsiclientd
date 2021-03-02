@@ -105,9 +105,9 @@ build:pyinstaller-windows-x86:
   tags:
     - win10
   script:
-    - $env:path
-    - where.exe poetry
-    - (Invoke-WebRequest -Uri https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py -UseBasicParsing).Content | python -
+    #- $env:path
+    #- where.exe poetry
+    #- (Invoke-WebRequest -Uri https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py -UseBasicParsing).Content | python -
     #- Get-Content pyproject.toml | %{ $_ -Replace '"^python-opsi = .*"', 'python-opsi = "^4.2"' } | Out-File -Encoding ASCII "pyproject.tmp"
     #- Move-Item -Path "pyproject.tmp" -Destination "pyproject.toml" -Force
     #- Get-Content pyproject.toml
