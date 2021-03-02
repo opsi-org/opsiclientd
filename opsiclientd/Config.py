@@ -214,6 +214,8 @@ class Config(metaclass=Singleton):
 			'cache_service': {
 				'product_cache_max_size': 6000000000,
 				'extension_config_dir': '',
+				'include_product_group_ids': [],
+				'exclude_product_group_ids': []
 			},
 			'control_server': {
 				'interface': '0.0.0.0',  # TODO
