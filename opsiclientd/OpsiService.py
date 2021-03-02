@@ -387,6 +387,12 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 						if len(self._username.split('.')) < 3:
 							raise Exception(f"Domain missing in username '{self._username}'")
 
+						logger.info(
+							"address=%s, verifyServerCert=%s, caCertFile=%s, proxyURL=%s, application=%s",
+							self._configServiceUrl, verify_server_cert, config.ca_cert_file,
+							proxyURL, f"opsiclientd/{__version__}"
+						)
+
 						self.configService = JSONRPCBackend(
 							address=self._configServiceUrl,
 							username=self._username,
