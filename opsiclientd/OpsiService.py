@@ -414,7 +414,10 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 						if serverVersion and (serverVersion[0] > 4 or (serverVersion[0] == 4 and serverVersion[1] > 1)):
 							if not os.path.exists(config.ca_cert_file) or verify_server_cert:
 								# Renew CA if not exists or connection is verified
-								self.update_ca_cert()
+								try:
+									self.update_ca_cert()
+								except Exception as err: # pylint: disable=broad-except
+									logger.error(err, exc_info=True)
 					except OpsiServiceVerificationError as verificationError:
 						self.connectionError = forceUnicode(verificationError)
 						self.setStatusMessage(_("Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)

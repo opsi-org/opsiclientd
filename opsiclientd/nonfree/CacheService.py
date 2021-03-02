@@ -1027,7 +1027,10 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			kwargs = {}
 			if scheme.startswith('webdavs'):
 				kwargs['caCertFile'] = config.ca_cert_file
-				kwargs['verifyServerCert'] = config.get('global', 'verify_server_cert') or config.get('global', 'verify_server_cert_by_ca')
+				kwargs['verifyServerCert'] = (
+					(config.get('global', 'verify_server_cert') or config.get('global', 'verify_server_cert_by_ca')) and
+					os.path.exists(config.ca_cert_file)
+				)
 				kwargs['proxyURL'] = config.get('global', 'proxy_url')
 
 			return getRepository(config.get('depot_server', 'url'), username=depotServerUsername, password=depotServerPassword, **kwargs)
