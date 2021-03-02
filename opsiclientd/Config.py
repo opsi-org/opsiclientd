@@ -367,10 +367,12 @@ class Config(metaclass=Singleton):
 
 		if 	( # pylint: disable=too-many-boolean-expressions
 			value == '' and
-			option.find('command') == -1 and
-			option.find('productids') == -1 and
-			option.find('proxy_url') == -1 and
-			option.find('working_window') == -1
+			'command' not in option and
+			'productids' not in option and
+			'exclude_product_group_ids' not in option and
+			'include_product_group_ids' not in option and
+			'proxy_url' not in option and
+			'working_window' not in option
 		):
 			logger.warning("Refusing to set empty value for config value '%s' of section '%s'", option, section)
 			return
