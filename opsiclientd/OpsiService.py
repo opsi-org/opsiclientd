@@ -360,6 +360,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 					config.get('global', 'verify_server_cert') or
 					config.get('global', 'verify_server_cert_by_ca')
 				)
+				ca_cert_file = config.ca_cert_file
 				self.prepare_ca_cert_file()
 
 				compression = True
@@ -369,13 +370,14 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 					proxyURL = None
 
 				if verify_server_cert:
-					if os.path.exists(config.ca_cert_file):
-						logger.info("Server verification enabled, using CA cert file '%s'", config.ca_cert_file)
+					if os.path.exists(ca_cert_file):
+						logger.info("Server verification enabled, using CA cert file '%s'", ca_cert_file)
 					else:
 						logger.error(
 							"Server verification enabled, but CA cert file '%s' not found, skipping verification",
-							config.ca_cert_file
+							ca_cert_file
 						)
+						ca_cert_file = None
 						verify_server_cert = False
 
 				tryNum = 0
@@ -387,9 +389,9 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 						if len(self._username.split('.')) < 3:
 							raise Exception(f"Domain missing in username '{self._username}'")
 
-						logger.info(
-							"address=%s, verifyServerCert=%s, caCertFile=%s, proxyURL=%s, application=%s",
-							self._configServiceUrl, verify_server_cert, config.ca_cert_file,
+						logger.debug(
+							"JSONRPCBackend address=%s, verifyServerCert=%s, caCertFile=%s, proxyURL=%s, application=%s",
+							self._configServiceUrl, verify_server_cert, ca_cert_file,
 							proxyURL, f"opsiclientd/{__version__}"
 						)
 
@@ -398,7 +400,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 							username=self._username,
 							password=self._password,
 							verifyServerCert=verify_server_cert,
-							caCertFile=config.ca_cert_file,
+							caCertFile=ca_cert_file,
 							proxyURL=proxyURL,
 							application=f"opsiclientd/{__version__}",
 							compression=compression
