@@ -592,10 +592,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		logger.info("Copying from '%s' to '%s'", actionProcessorRemoteDir, actionProcessorLocalTmpDir)
 		shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
 		for common in os.listdir(actionProcessorCommonDir):
-			if os.path.isdir(common):
-				shutil.copytree(os.path.join(actionProcessorCommonDir, common), os.path.join(actionProcessorLocalTmpDir, common))
+			source = os.path.join(actionProcessorCommonDir, common)
+			if os.path.isdir(source):
+				shutil.copytree(source, os.path.join(actionProcessorLocalTmpDir, common))
 			else:
-				shutil.copy2(os.path.join(actionProcessorCommonDir, common), os.path.join(actionProcessorLocalTmpDir, common))
+				shutil.copy2(source, os.path.join(actionProcessorLocalTmpDir, common))
 
 		if not os.path.exists(os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)):
 			raise Exception(f"File '{os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)}' does not exist after copy")
