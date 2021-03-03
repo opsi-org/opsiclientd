@@ -459,20 +459,20 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				actionProcessorCommonDir = None
 				if url.hostname.lower() in ('127.0.0.1', 'localhost'):
 					dirname = config.get('action_processor', 'remote_dir')
-					dirname = dirname.lstrip(os.sep)
-					dirname = dirname.lstrip("install" + os.sep)
-					dirname = dirname.lstrip(os.sep)
+					dirname.lstrip(os.sep)
+					dirname.lstrip("install" + os.sep)
+					dirname.lstrip(os.sep)
 					actionProcessorRemoteDir = os.path.join(
 						self.opsiclientd.getCacheService().getProductCacheDir(),
 						dirname
 					)
 					if config.has_option('action_processor', 'remote_common_dir'):
 						commonname = config.get('action_processor', 'remote_common_dir')
-						commonname = commonname.lstrip(os.sep)
-						commonname = commonname.lstrip("install" + os.sep)
-						commonname = commonname.lstrip(os.sep)
+						commonname.lstrip(os.sep)
+						commonname.lstrip("install" + os.sep)
+						commonname.lstrip(os.sep)
 						actionProcessorCommonDir = os.path.join(self.opsiclientd.getCacheService().getProductCacheDir(), commonname)
-					logger.notice("Updating action processor from local cache '%s'", actionProcessorRemoteDir)
+					logger.notice("Updating action processor from local cache '%s' (common dir '%s')", actionProcessorRemoteDir, actionProcessorCommonDir)
 				else:
 					#match = re.search('^(smb|cifs)://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
 					## 1: protocol, 2: netloc, 3: share_name
@@ -488,9 +488,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					actionProcessorRemoteDir = os.path.join(dd, dirname)
 					if config.has_option('action_processor', 'remote_common_dir'):
 						commonname = config.get('action_processor', 'remote_common_dir')
-						commonname = commonname.lstrip(os.sep)
+						commonname.lstrip(os.sep)
 						actionProcessorCommonDir = os.path.join(dd, commonname)
-					logger.notice("Updating action processor from depot dir '%s'", actionProcessorRemoteDir)
+					logger.notice("Updating action processor from depot dir '%s' (common dir '%s')", actionProcessorRemoteDir, actionProcessorCommonDir)
 
 				actionProcessorFilename = config.get('action_processor', 'filename')
 				actionProcessorLocalDir = config.get('action_processor', 'local_dir')
