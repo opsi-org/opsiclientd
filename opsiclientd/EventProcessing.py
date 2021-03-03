@@ -456,6 +456,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					mounted = True
 
 				actionProcessorRemoteDir = None
+				actionProcessorCommonDir = None
 				if url.hostname.lower() in ('127.0.0.1', 'localhost'):
 					dirname = config.get('action_processor', 'remote_dir')
 					dirname = dirname.lstrip(os.sep)
@@ -465,6 +466,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						self.opsiclientd.getCacheService().getProductCacheDir(),
 						dirname
 					)
+					if config.has_option('action_processor', 'remote_common_dir'):
+						actionProcessorCommonDir = os.path.join(
+							self.opsiclientd.getCacheService().getProductCacheDir(),
+							config.get('action_processor', 'remote_common_dir')
+						)
 					logger.notice("Updating action processor from local cache '%s'", actionProcessorRemoteDir)
 				else:
 					#match = re.search('^(smb|cifs)://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
@@ -479,6 +485,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					dirname.lstrip(os.sep)
 					#actionProcessorRemoteDir = os.path.join(dd, pn, dirname)
 					actionProcessorRemoteDir = os.path.join(dd, dirname)
+					if config.has_option('action_processor', 'remote_common_dir'):
+						actionProcessorCommonDir = os.path.join(dd, config.get('action_processor', 'remote_common_dir'))
 					logger.notice("Updating action processor from depot dir '%s'", actionProcessorRemoteDir)
 
 				actionProcessorFilename = config.get('action_processor', 'filename')
@@ -526,8 +534,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 							pass
 
 				# Update files
-				if config.has_option('action_processor', 'remote_common_dir'):
-					self.updateActionProcessorUnified(actionProcessorRemoteDir)
+				if actionProcessorCommonDir:
+					self.updateActionProcessorUnified(actionProcessorRemoteDir, actionProcessorCommonDir)
 				else:
 					self.updateActionProcessorOld(actionProcessorRemoteDir)
 				logger.notice("Local action processor successfully updated")
@@ -568,12 +576,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				except Exception as err: # pylint: disable=broad-except
 					logger.warning(err)
 
-	def updateActionProcessorUnified(self, actionProcessorRemoteDir):
+	def updateActionProcessorUnified(self, actionProcessorRemoteDir, actionProcessorCommonDir):
 		actionProcessorFilename = config.get('action_processor', 'filename')
 		actionProcessorLocalDir = config.get('action_processor', 'local_dir')
 		actionProcessorLocalTmpDir = actionProcessorLocalDir + '.tmp'
 		actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
-		actionProcessorCommonDir = config.get('action_processor', 'remote_common_dir')
 
 		logger.notice("Start copying the action processor files")
 		if os.path.exists(actionProcessorLocalTmpDir):
