@@ -44,7 +44,41 @@ from OPSI.Util.File import IniFile
 from OPSI import System
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_LINUX, RUNNING_ON_DARWIN
 
-OPSI_CA = '''-----BEGIN CERTIFICATE-----
+# Current cert followed by old cert
+UIB_OPSI_CA = '''-----BEGIN CERTIFICATE-----
+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
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
 MIIEYTCCA0mgAwIBAgIJAO5oKZZR8dQkMA0GCSqGSIb3DQEBBQUAMH0xCzAJBgNV
 BAYTAkRFMRgwFgYDVQQIEw9SaGVpbmxhbmQtUGZhbHoxDjAMBgNVBAcTBU1haW56
 MREwDwYDVQQKEwh1aWIgR21iSDEVMBMGA1UEAxMMb3BzaSBSb290IENBMRowGAYJ
@@ -85,7 +119,7 @@ class Config(metaclass=Singleton):
 			'log_dir': 'c:\\opsi.org\\log',
 			'state_file': 'c:\\opsi.org\\opsiclientd\\state.json',
 			'timeline_db': 'c:\\opsi.org\\opsiclientd\\timeline.sqlite',
-			'server_cert_dir': 'c:\\opsi.org\\opsiclientd\\server-certs'
+			'server_cert_dir': 'c:\\opsi.org\\tls'
 		},
 		'cache_service': {
 			'storage_dir': 'c:\\opsi.org\\cache',
@@ -98,7 +132,7 @@ class Config(metaclass=Singleton):
 			'config_file': "/etc/opsi-client-agent/opsiclientd.conf",
 			'state_file': "/var/lib/opsi-client-agent/opsiclientd/state.json",
 			'timeline_db': "/var/lib/opsi-client-agent/opsiclientd/timeline.sqlite",
-			'server_cert_dir': "/etc/opsi-client-agent/server-certs"
+			'server_cert_dir': "/etc/opsi-client-agent/tls"
 		},
 		'control_server': {
 			'ssl_server_key_file': "/etc/opsi-client-agent/opsiclientd.pem",
@@ -119,7 +153,7 @@ class Config(metaclass=Singleton):
 			'config_file': "/etc/opsi-client-agent/opsiclientd.conf",
 			'state_file': "/var/lib/opsi-client-agent/opsiclientd/state.json",
 			'timeline_db': "/var/lib/opsi-client-agent/opsiclientd/timeline.sqlite",
-			'server_cert_dir': "/etc/opsi-client-agent/server-certs"
+			'server_cert_dir': "/etc/opsi-client-agent/tls"
 		},
 		'control_server': {
 			'ssl_server_key_file': "/etc/opsi-client-agent/opsiclientd.pem",
@@ -156,6 +190,8 @@ class Config(metaclass=Singleton):
 				'block_login_notifier': '',
 				'verify_server_cert': False,
 				'verify_server_cert_by_ca': False,
+				'trust_uib_opsi_ca': True,
+				'install_opsi_ca_into_os_store': False,
 				'proxy_mode': 'static',
 				'proxy_url': '',
 				'suspend_bitlocker_on_reboot': False,
@@ -178,6 +214,8 @@ class Config(metaclass=Singleton):
 			'cache_service': {
 				'product_cache_max_size': 6000000000,
 				'extension_config_dir': '',
+				'include_product_group_ids': [],
+				'exclude_product_group_ids': []
 			},
 			'control_server': {
 				'interface': '0.0.0.0',  # TODO
@@ -258,7 +296,7 @@ class Config(metaclass=Singleton):
 			self._config['global']['config_file'] = os.path.join(baseDir, 'opsiclientd', 'opsiclientd.conf')
 			self._config['global']['log_dir'] = os.path.join(systemDrive, 'opsi.org', 'log')
 			self._config['global']['state_file'] = os.path.join(systemDrive, 'opsi.org', 'opsiclientd', 'state.json')
-			self._config['global']['server_cert_dir'] = os.path.join(systemDrive, 'opsi.org', 'opsiclientd', 'server-certs')
+			self._config['global']['server_cert_dir'] = os.path.join(systemDrive, 'opsi.org', 'tls')
 			self._config['global']['timeline_db'] = os.path.join(systemDrive,  'opsi.org', 'opsiclientd', 'timeline.sqlite')
 			self._config['system']['program_files_dir'] = System.getProgramFilesDir()
 
@@ -302,6 +340,11 @@ class Config(metaclass=Singleton):
 			value = forceUnicode(value)
 		return value
 
+	@property
+	def ca_cert_file(self):
+		cert_dir = self.get('global', 'server_cert_dir')
+		return os.path.join(cert_dir, 'opsi-ca-cert.pem')
+
 	def set(self, section, option, value): # pylint: disable=too-many-branches,too-many-statements
 		if not section:
 			section = 'global'
@@ -326,12 +369,12 @@ class Config(metaclass=Singleton):
 
 		if 	( # pylint: disable=too-many-boolean-expressions
 			value == '' and
-			option.find('command') == -1 and
-			option.find('productids') == -1 and
-			option.find('exclude_product_group_ids') == -1 and
-			option.find('include_product_group_ids') == -1 and
-			option.find('proxy_url') == -1 and
-			option.find('working_window') == -1
+			'command' not in option and
+			'productids' not in option and
+			'exclude_product_group_ids' not in option and
+			'include_product_group_ids' not in option and
+			'proxy_url' not in option and
+			'working_window' not in option
 		):
 			logger.warning("Refusing to set empty value for config value '%s' of section '%s'", option, section)
 			return
@@ -356,7 +399,7 @@ class Config(metaclass=Singleton):
 		elif option in (
 			'create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment',
 			'active', 'sync_time_from_service', 'suspend_bitlocker_on_reboot', 'w10BitlockerSuspendOnReboot',
-			'kiosk_api_active'
+			'kiosk_api_active', 'install_opsi_ca_into_os_store', 'trust_uib_opsi_ca'
 		):
 			if option == 'w10BitlockerSuspendOnReboot':
 				# legacy name
@@ -755,7 +798,10 @@ class Config(metaclass=Singleton):
 						logger.debug("Expected at least 3 parts in %s - skipping.", configState.configId)
 						continue
 
-					self.set(section=parts[1], option=parts[2], value=configState.values[0])
+					value = configState.values
+					if len(value) == 1:
+						value = value[0]
+					self.set(section=parts[1], option=parts[2], value=value)
 				except Exception as err: # pylint: disable=broad-except
 					logger.error("Failed to process configState '%s': %s", configState.configId, err)
 

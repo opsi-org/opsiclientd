@@ -189,11 +189,13 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 				if not self._stopped:
 					logger.notice("Event generator '%s' now deactivated after %d event occurrences", self, self._eventsOccured)
 			except Exception as err: # pylint: disable=broad-except
-				logger.error("Failure in event generator '%s': %s", self, err, exc_info=True)
+				if not self._stopped:
+					logger.error("Failure in event generator '%s': %s", self, err, exc_info=True)
 			try:
 				self.cleanup()
 			except Exception as err: # pylint: disable=broad-except
-				logger.error("Failed to clean up: %s", err)
+				if not self._stopped:
+					logger.error("Failed to clean up: %s", err)
 
 			logger.info("Event generator '%s' exiting ", self)
 

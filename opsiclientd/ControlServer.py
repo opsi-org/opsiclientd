@@ -111,11 +111,13 @@ LOG_VIEWER_PAGE = '''<!DOCTYPE html>
 	<link rel="stylesheet" href="/opsiclientd.css" />
 	<script src="/javascript/log_viewer.js"></script>
 	<script src="/javascript/msgpack.js"></script>
-</head>
-<body>
 	<script>
-		startLog(20000);
+		function onLoad() {
+			startLog(20000);
+		}
 	</script>
+</head>
+<body onload="onLoad();">
 	<!--
 	<label for="log-channel">Log channel:</label>
 	<select id="log-channel">
@@ -136,10 +138,13 @@ LOG_VIEWER_PAGE = '''<!DOCTYPE html>
 		<input type="checkbox" id="collapse-all" onclick="collapseAll(this.checked);" checked>
 
 		<label>Font size:</label>
-		<button id="decrease-font-size" onclick="change_font_size(-1);">-</button>
-		<button id="increase-font-size" onclick="change_font_size(+1);">+</button>
+		<button id="decrease-font-size" onclick="changeFontSize(-1);">-</button>
+		<button id="increase-font-size" onclick="changeFontSize(+1);">+</button>
 	</div>
-	<div id="log-container" style="font-size: 14px;" />
+	<div id="log-container">
+		<div id="log-line-container" style="font-size: 14px"></div>
+		<div id="log-msg-container"></div>
+	</div>
 </body>
 </html>
 '''
@@ -792,7 +797,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				deleteDir = os.path.join(productCacheDir, product)
 				shutil.rmtree(deleteDir)
 
-		return "product cache deleted."
+		return "config and product cache deleted"
 
 	def timeline_getEvents(self): # pylint: disable=no-self-use
 		timeline = Timeline()
@@ -1017,21 +1022,29 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		self.opsiclientd.showPopup(message, mode, addTimestamp)
 
 	def deleteServerCerts(self): # pylint: disable=no-self-use
-		certDir = config.get('global', 'server_cert_dir')
-		if os.path.exists(certDir):
-			for filename in os.listdir(certDir):
-				if "opsi-ca-cert.pem" in filename.strip().lower():
-					continue
-				os.remove(os.path.join(certDir, filename))
-
-	def updateOpsiCaCert(self, ca_cert): # pylint: disable=no-self-use
 		cert_dir = config.get('global', 'server_cert_dir')
-		ca_cert_file = os.path.join(cert_dir, 'opsi-ca-cert.pem')
-		ca_cert = crypto.load_certificate(crypto.FILETYPE_PEM, ca_cert)
-		if not os.path.isdir(cert_dir):
-			os.makedirs(cert_dir)
-		with open(ca_cert_file, "wb") as file:
-			file.write(crypto.dump_certificate(crypto.FILETYPE_PEM, ca_cert))
+		if os.path.exists(cert_dir):
+			for filename in os.listdir(cert_dir):
+				if os.path.basename(config.ca_cert_file).lower() in filename.strip().lower():
+					continue
+				os.remove(os.path.join(cert_dir, filename))
+
+	def updateOpsiCaCert(self, ca_cert_pem): # pylint: disable=no-self-use
+		ca_certs = []
+		for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", ca_cert_pem, re.DOTALL):
+			try:
+				ca_certs.append(
+					crypto.load_certificate(crypto.FILETYPE_PEM, match.group(1).encode("utf-8"))
+				)
+			except Exception as err: # pylint: disable=broad-except
+				logger.error(err, exc_info=True)
+
+		if ca_certs:
+			if not os.path.isdir(os.path.dirname(config.ca_cert_file)):
+				os.makedirs(os.path.dirname(config.ca_cert_file))
+			with open(config.ca_cert_file, "wb") as file:
+				for cert in ca_certs:
+					file.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
 
 	def getActiveSessions(self): # pylint: disable=no-self-use
 		sessions = System.getActiveSessionInformation()

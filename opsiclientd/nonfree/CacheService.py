@@ -43,6 +43,7 @@ from opsiclientd.Config import Config
 from opsiclientd.State import State
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
+from opsiclientd.utils import get_include_exclude_product_ids
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.Timeline import Timeline
 
@@ -537,27 +538,11 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 			self._cacheBackend.depotId = masterDepotId
 
 			if not needSync:
-				includeProductIds = []
-				excludeProductIds = []
 				excludeProductGroupIds = [x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != ""]
 				includeProductGroupIds = [x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != ""]
-
-				logger.debug("Given includeProductGroupIds: '%s'", includeProductGroupIds)
-				logger.debug("Given excludeProductGroupIds: '%s'", excludeProductGroupIds)
-
-				if includeProductGroupIds:
-					includeProductIds = [
-						obj.objectId for obj in
-						self._configService.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds) # pylint: disable=no-member
-					]
-					logger.debug("Only products with productIds: '%s' will be cached.", includeProductIds)
-
-				if excludeProductGroupIds:
-					excludeProductIds = [
-						obj.objectId for obj in
-						self._configService.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds) # pylint: disable=no-member
-					]
-					logger.debug("Products with productIds: '%s' will be excluded.", excludeProductIds)
+				includeProductIds, excludeProductIds = get_include_exclude_product_ids(
+					self._configService, includeProductGroupIds, excludeProductGroupIds
+				)
 
 				productOnClients = [
 					poc for poc in self._configService.productOnClient_getObjects( # pylint: disable=no-member
@@ -566,7 +551,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 						# Exclude 'always'!
 						actionRequest=['setup', 'uninstall', 'update', 'once', 'custom'],
 						attributes=['actionRequest'],
-						productId=includeProductGroupIds
+						productId=includeProductIds
 					)
 					if poc.productId not in excludeProductIds
 				]
@@ -606,6 +591,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 						logger.notice("Product on client configuration not changed on config service, sync from server not required")
 
 			if needSync:
+				eventId = None
 				try:
 					self._forceSync = False
 					eventId = timeline.addEvent(
@@ -633,6 +619,9 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 						category="config_sync",
 						isError=True
 					)
+					if eventId:
+						timeline.setEventEnd(eventId)
+					self.setFaulty()
 					raise
 			else:
 				self._state['config_cached'] = True
@@ -844,25 +833,11 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			if not self._configService:
 				self.connectConfigService()
 
-			includeProductIds = []
-			excludeProductIds = []
-			excludeProductGroupIds = [x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != ""]
 			includeProductGroupIds = [x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != ""]
-
-			logger.debug("Given includeProductGroupIds: '%s'", includeProductGroupIds)
-			logger.debug("Given excludeProductGroupIds: '%s'", excludeProductGroupIds)
-
-			if includeProductGroupIds:
-				includeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects( # pylint: disable=no-member
-					groupType="ProductGroup",
-					groupId=includeProductGroupIds)]
-				logger.debug("Only products with productIds: '%s' will be cached.", includeProductIds)
-
-			if excludeProductGroupIds:
-				excludeProductIds = [obj.objectId for obj in self._configService.objectToGroup_getObjects( # pylint: disable=no-member
-					groupType="ProductGroup",
-					groupId=excludeProductGroupIds)]
-				logger.debug("Products with productIds: '%s' will be excluded.", excludeProductIds)
+			excludeProductGroupIds = [x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != ""]
+			includeProductIds, excludeProductIds = get_include_exclude_product_ids(
+				self._configService, includeProductGroupIds, excludeProductGroupIds
+			)
 
 			productIds = []
 			productOnClients = [poc for poc in self._configService.productOnClient_getObjects( # pylint: disable=no-member
@@ -870,7 +845,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					clientId=config.get('global', 'host_id'),
 					actionRequest=['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
 					attributes=['actionRequest'],
-					productId=includeProductGroupIds)
+					productId=includeProductIds)
 				if poc.productId not in excludeProductIds]
 
 			for productOnClient in productOnClients:
@@ -1049,18 +1024,18 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		depotServerUsername = ''
 		depotServerPassword = ''
 
-		(scheme, host) = urlsplit(config.get('depot_server', 'url'))[0:2]
+		(scheme, _host) = urlsplit(config.get('depot_server', 'url'))[0:2]
 		if scheme.startswith('webdav'):
 			depotServerUsername = config.get('global', 'host_id')
 			depotServerPassword = config.get('global', 'opsi_host_key')
 
 			kwargs = {}
 			if scheme.startswith('webdavs'):
-				certDir = config.get('global', 'server_cert_dir')
-				kwargs['caCertFile'] = os.path.join(certDir, 'opsi-ca-cert.pem')
-				kwargs['verifyServerCert'] = config.get('global', 'verify_server_cert')
-				kwargs['serverCertFile'] = os.path.join(certDir, host + '.pem')
-				kwargs['verifyServerCertByCa'] = config.get('global', 'verify_server_cert_by_ca')
+				kwargs['verifyServerCert'] = (
+					(config.get('global', 'verify_server_cert') or config.get('global', 'verify_server_cert_by_ca')) and
+					os.path.exists(config.ca_cert_file)
+				)
+				kwargs['caCertFile'] = config.ca_cert_file if kwargs['verifyServerCert'] else None
 				kwargs['proxyURL'] = config.get('global', 'proxy_url')
 
 			return getRepository(config.get('depot_server', 'url'), username=depotServerUsername, password=depotServerPassword, **kwargs)
