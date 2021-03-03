@@ -467,10 +467,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						dirname
 					)
 					if config.has_option('action_processor', 'remote_common_dir'):
-						actionProcessorCommonDir = os.path.join(
-							self.opsiclientd.getCacheService().getProductCacheDir(),
-							config.get('action_processor', 'remote_common_dir')
-						)
+						commonname = config.get('action_processor', 'remote_common_dir')
+						commonname = commonname.lstrip(os.sep)
+						commonname = commonname.lstrip("install" + os.sep)
+						commonname = commonname.lstrip(os.sep)
+						actionProcessorCommonDir = os.path.join(self.opsiclientd.getCacheService().getProductCacheDir(), commonname)
 					logger.notice("Updating action processor from local cache '%s'", actionProcessorRemoteDir)
 				else:
 					#match = re.search('^(smb|cifs)://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
@@ -486,7 +487,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					#actionProcessorRemoteDir = os.path.join(dd, pn, dirname)
 					actionProcessorRemoteDir = os.path.join(dd, dirname)
 					if config.has_option('action_processor', 'remote_common_dir'):
-						actionProcessorCommonDir = os.path.join(dd, config.get('action_processor', 'remote_common_dir'))
+						commonname = config.get('action_processor', 'remote_common_dir')
+						commonname.lstrip(os.sep)
+						actionProcessorCommonDir = os.path.join(dd, commonname)
 					logger.notice("Updating action processor from depot dir '%s'", actionProcessorRemoteDir)
 
 				actionProcessorFilename = config.get('action_processor', 'filename')
