@@ -530,7 +530,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					self.updateActionProcessorUnified(actionProcessorRemoteDir)
 				else:
 					self.updateActionProcessorOld(actionProcessorRemoteDir)
-
 				logger.notice("Local action processor successfully updated")
 
 				productVersion = None
@@ -611,8 +610,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		elif RUNNING_ON_LINUX:
 			symlink = os.path.join("/usr/bin", actionProcessorFilename)
 			logger.info("Making symlink '%s' to '%s'", symlink, actionProcessorLocalFile)
-			if os.path.exists(symlink) and not os.path.islink(symlink):
-				logger.warning("replacing binary '%s' with symlink to %s", symlink, actionProcessorLocalFile)
+			if os.path.exists(symlink):
+				if not os.path.islink(symlink):
+					logger.warning("replacing binary '%s' with symlink to %s", symlink, actionProcessorLocalFile)
 				os.remove(symlink)
 			os.symlink(actionProcessorLocalFile, symlink)
 

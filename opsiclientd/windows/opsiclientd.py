@@ -55,7 +55,6 @@ def opsiclientd_factory():
 	raise Exception(f"Windows version {windowsVersion} not supported")
 
 
-#TODO: winst registry keys for shutdown and reboot
 class OpsiclientdNT(Opsiclientd):
 	def __init__(self):
 		Opsiclientd.__init__(self)
