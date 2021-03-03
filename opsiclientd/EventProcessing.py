@@ -488,7 +488,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					actionProcessorRemoteDir = os.path.join(dd, dirname)
 					if config.has_option('action_processor', 'remote_common_dir'):
 						commonname = config.get('action_processor', 'remote_common_dir')
-						commonname.lstrip(os.sep)
+						commonname = commonname.lstrip(os.sep)
 						actionProcessorCommonDir = os.path.join(dd, commonname)
 					logger.notice("Updating action processor from depot dir '%s'", actionProcessorRemoteDir)
 
