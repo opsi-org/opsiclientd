@@ -727,7 +727,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 				additionalParams = ""
 				if includeProductIds or excludeProductIds:
-					additionalParams = "/processproducts " + ', '.join(productIds)
+					additionalParams = "/processproducts " + ','.join(productIds)
 
 				self.processActionWarningTime(productIds)
 				self.runActions(productIds, additionalParams=additionalParams)
