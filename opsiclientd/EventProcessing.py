@@ -466,12 +466,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						self.opsiclientd.getCacheService().getProductCacheDir(),
 						dirname
 					)
-					if config.has_option('action_processor', 'remote_common_dir'):
-						commonname = config.get('action_processor', 'remote_common_dir')
-						commonname.lstrip(os.sep)
-						commonname.lstrip("install" + os.sep)
-						commonname.lstrip(os.sep)
-						actionProcessorCommonDir = os.path.join(self.opsiclientd.getCacheService().getProductCacheDir(), commonname)
+					commonname = config.get('action_processor', 'remote_common_dir')
+					commonname.lstrip(os.sep)
+					commonname.lstrip("install" + os.sep)
+					commonname.lstrip(os.sep)
+					actionProcessorCommonDir = os.path.join(self.opsiclientd.getCacheService().getProductCacheDir(), commonname)
 					logger.notice("Updating action processor from local cache '%s' (common dir '%s')", actionProcessorRemoteDir, actionProcessorCommonDir)
 				else:
 					#match = re.search('^(smb|cifs)://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
@@ -486,10 +485,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					dirname.lstrip(os.sep)
 					#actionProcessorRemoteDir = os.path.join(dd, pn, dirname)
 					actionProcessorRemoteDir = os.path.join(dd, dirname)
-					if config.has_option('action_processor', 'remote_common_dir'):
-						commonname = config.get('action_processor', 'remote_common_dir')
-						commonname.lstrip(os.sep)
-						actionProcessorCommonDir = os.path.join(dd, commonname)
+					commonname = config.get('action_processor', 'remote_common_dir')
+					commonname.lstrip(os.sep)
+					actionProcessorCommonDir = os.path.join(dd, commonname)
 					logger.notice("Updating action processor from depot dir '%s' (common dir '%s')", actionProcessorRemoteDir, actionProcessorCommonDir)
 
 				actionProcessorFilename = config.get('action_processor', 'filename')
@@ -537,7 +535,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 							pass
 
 				# Update files
-				if actionProcessorCommonDir:
+				if "opsi-script" in actionProcessorLocalDir:
 					self.updateActionProcessorUnified(actionProcessorRemoteDir, actionProcessorCommonDir)
 				else:
 					self.updateActionProcessorOld(actionProcessorRemoteDir)

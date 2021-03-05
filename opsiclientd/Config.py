@@ -237,6 +237,7 @@ class Config(metaclass=Singleton):
 			'action_processor': {
 				'local_dir': '',
 				'remote_dir': '',
+				'remote_common_dir' : '',
 				'filename': '',
 				'command': '',
 				'run_as_user': 'SYSTEM',
