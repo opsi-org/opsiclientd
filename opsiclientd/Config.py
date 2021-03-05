@@ -346,6 +346,13 @@ class Config(metaclass=Singleton):
 		cert_dir = self.get('global', 'server_cert_dir')
 		return os.path.join(cert_dir, 'opsi-ca-cert.pem')
 
+	@property
+	def action_processor_name(self):
+		if 'opsi-winst' in self.get('action_processor', 'local_dir'):
+			return 'opsi-winst'
+		else:
+			return 'opsi-script'
+
 	def set(self, section, option, value): # pylint: disable=too-many-branches,too-many-statements
 		if not section:
 			section = 'global'

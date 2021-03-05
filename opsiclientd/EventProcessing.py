@@ -495,11 +495,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
 				actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
 
-				if "opsi-winst" in actionProcessorLocalDir:
-					action_processor_product = "opsi-winst"
-				else:
-					action_processor_product = "opsi-script"
-
 				if not os.path.exists(actionProcessorLocalFile):
 					logger.notice("Action processor needs update because file '%s' not found", actionProcessorLocalFile)
 				elif abs(os.stat(actionProcessorLocalFile).st_mtime - os.stat(actionProcessorRemoteFile).st_mtime) > 10:
@@ -511,7 +506,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					if self.event.eventConfig.useCachedProducts:
 						self._configService.productOnClient_updateObjects([ # pylint: disable=no-member
 							ProductOnClient(
-								productId          = action_processor_product,
+								productId          = config.action_processor_name,
 								productType        = 'LocalbootProduct',
 								clientId           = config.get('global', 'host_id'),
 								installationStatus = 'installed',
@@ -545,14 +540,14 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				packageVersion = None
 				for productOnDepot in self._configService.productOnDepot_getIdents( # pylint: disable=no-member
 							productType='LocalbootProduct',
-							productId=action_processor_product,
+							productId=config.action_processor_name,
 							depotId=config.get('depot_server', 'depot_id'),
 							returnType='dict'):
 					productVersion = productOnDepot['productVersion']
 					packageVersion = productOnDepot['packageVersion']
 				self._configService.productOnClient_updateObjects([ # pylint: disable=no-member
 					ProductOnClient(
-						productId=action_processor_product,
+						productId=config.action_processor_name,
 						productType='LocalbootProduct',
 						productVersion=productVersion,
 						packageVersion=packageVersion,
