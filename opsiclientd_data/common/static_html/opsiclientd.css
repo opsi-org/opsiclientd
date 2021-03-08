@@ -135,7 +135,12 @@ div.mainpage-link-box {
 .LEVEL_ESSENTIAL { color: #34e2e2; }
 
 #log-settings {
-	margin: 15px 0px 0px 10px;
+	display: flex;
+	margin: 15px 0px 0px 0px;
+}
+
+.log-setting {
+	margin: 0px 25px 0px 0px;
 }
 
 #log-container {

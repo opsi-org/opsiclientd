@@ -118,28 +118,32 @@ LOG_VIEWER_PAGE = '''<!DOCTYPE html>
 	</script>
 </head>
 <body onload="onLoad();">
-	<!--
-	<label for="log-channel">Log channel:</label>
-	<select id="log-channel">
-		<option value="">*all</option>
-	</select>
-	-->
 	<div id="log-settings">
-		<label for="log-level-filter">Filter by level:</label>
-		<input id="log-level-filter" type="number" min="1" max="9" value="9" onchange="applyLevelFilter(this.value);">
-
-		<label for="log-context-filter">Filter by context:</label>
-		<input id="log-context-filter" type="text" onchange="applyContextFilter(this.value);"/>
-
-		<label for="log-message-filter">Filter by message:</label>
-		<input id="log-message-filter" type="text" onchange="applyMessageFilter(this.value);"/>
-
-		<label for="collapse-all">Collapse multi-line:</label>
-		<input type="checkbox" id="collapse-all" onclick="collapseAll(this.checked);" checked>
-
-		<label>Font size:</label>
-		<button id="decrease-font-size" onclick="changeFontSize(-1);">-</button>
-		<button id="increase-font-size" onclick="changeFontSize(+1);">+</button>
+		<div class="log-setting">
+			<label for="log-level-filter">Filter by level:</label>
+			<input id="log-level-filter" type="number" min="1" max="9" value="9" onchange="applyLevelFilter(this.value);">
+		</div>
+		<div class="log-setting">
+			<label for="log-context-filter">Filter by context:</label>
+			<input id="log-context-filter" type="text" onchange="applyContextFilter(this.value);"/>
+		</div>
+		<div class="log-setting">
+			<label for="log-message-filter">Filter by message:</label>
+			<input id="log-message-filter" type="text" onchange="applyMessageFilter(this.value);"/>
+		</div>
+		<div class="log-setting">
+			<label for="collapse-all">Collapse multi-line:</label>
+			<input type="checkbox" id="collapse-all" onclick="collapseAll(this.checked);" checked>
+		</div>
+		<div class="log-setting">
+			<label for="collapse-all">Auto scroll:</label>
+			<input type="checkbox" id="auto-scroll" onclick="setAutoScroll(this.checked);" checked>
+		</div>
+		<div class="log-setting">
+			<label>Font size:</label>
+			<button id="decrease-font-size" onclick="changeFontSize(-1);">-</button>
+			<button id="increase-font-size" onclick="changeFontSize(+1);">+</button>
+		</div>
 	</div>
 	<div id="log-container">
 		<div id="log-line-container" style="font-size: 14px"></div>
