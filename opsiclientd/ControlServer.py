@@ -145,7 +145,7 @@ LOG_VIEWER_PAGE = '''<!DOCTYPE html>
 			<button id="increase-font-size" onclick="changeFontSize(+1);">+</button>
 		</div>
 	</div>
-	<div id="log-container">
+	<div id="log-container" onwheel="if (window.event.deltaY < 0) setAutoScroll(false);">
 		<div id="log-line-container" style="font-size: 14px"></div>
 		<div id="log-msg-container"></div>
 	</div>
