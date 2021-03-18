@@ -350,8 +350,7 @@ class Config(metaclass=Singleton):
 	def action_processor_name(self):
 		if 'opsi-winst' in self.get('action_processor', 'local_dir'):
 			return 'opsi-winst'
-		else:
-			return 'opsi-script'
+		return 'opsi-script'
 
 	def set(self, section, option, value): # pylint: disable=too-many-branches,too-many-statements
 		if not section:
