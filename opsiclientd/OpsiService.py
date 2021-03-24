@@ -29,8 +29,6 @@ import os
 import re
 import random
 import time
-import socket
-from http.client import HTTPConnection, HTTPSConnection
 from OpenSSL.crypto import (
 	FILETYPE_PEM, dump_certificate, load_certificate
 )
@@ -38,14 +36,11 @@ from OpenSSL.crypto import (
 from OPSI import System
 from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
 from OPSI.Util.Thread import KillableThread
-from OPSI.Util.HTTP import (
-	urlsplit, non_blocking_connect_http, non_blocking_connect_https
-)
-from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
 
 from opsicommon.logging import logger, log_context
 from opsicommon.ssl import install_ca, remove_ca
+from opsicommon.backend.jsonrpc import JSONRPCBackend
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config, UIB_OPSI_CA
@@ -56,38 +51,12 @@ from opsiclientd.nonfree import verify_modules
 config = Config()
 
 
-def isConfigServiceReachable(timeout=5):
-	for url in config.getConfigServiceUrls():
-		try:
-			logger.info("Trying connection to config service '%s'", url)
-			(scheme, host, port) = urlsplit(url)[:3]
-			conn = None
-			if scheme.endswith('s'):
-				conn = HTTPSConnection(host=host, port=port)
-				non_blocking_connect_https(conn, timeout)
-			else:
-				conn = HTTPConnection(host=host, port=port)
-				non_blocking_connect_http(conn, timeout)
-			if not conn:
-				continue
-			try:
-				conn.sock.close()
-				conn.close()
-			except socket.error:
-				pass
-			return True
-
-		except Exception as err: # pylint: disable=broad-except
-			logger.info(err)
-
-	return False
-
-
 class ServiceConnection:
 	def __init__(self, loadBalance=False):
 		self._loadBalance = forceBool(loadBalance)
 		self._configServiceUrl = None
 		self._configService = None
+		self._should_stop = False
 
 	def connectionThreadOptions(self): # pylint: disable=no-self-use
 		return {}
@@ -130,19 +99,9 @@ class ServiceConnection:
 	def isConfigServiceConnected(self):
 		return bool(self._configService)
 
-	def isConfigServiceReachable(self, timeout=15): # pylint: disable=no-self-use
-		return isConfigServiceReachable(timeout=timeout)
-
-	def stop(self): # pylint: disable=no-self-use
-		logger.warning("stop() not implemented")
-		#logger.debug("Stopping thread")
-		#self.cancelled = True
-		#self.running = False
-		#for i in range(10):
-		#	if not self.is_alive():
-		#		break
-		#	self.terminate()
-		#	time.sleep(0.5)
+	def stop(self):
+		self._should_stop = True
+		self.disconnectConfigService()
 
 	def connectConfigService(self, allowTemporaryConfigServiceUrls=True): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		try: # pylint: disable=too-many-nested-blocks
@@ -178,7 +137,9 @@ class ServiceConnection:
 					time.sleep(1)
 
 				logger.debug("ServiceConnectionThread started")
-				while serviceConnectionThread.running and (timeout > 0):
+				while serviceConnectionThread.running and timeout > 0:
+					if self._should_stop:
+						return
 					logger.debug("Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d)",
 						timeout, serviceConnectionThread.is_alive(), cancellableAfter
 					)
@@ -194,6 +155,9 @@ class ServiceConnection:
 					self.connectionCanceled()
 				elif serviceConnectionThread.running:
 					serviceConnectionThread.stop()
+					if urlIndex + 1 < len(configServiceUrls):
+						# Try next url
+						continue
 					self.connectionTimedOut()
 
 				if not serviceConnectionThread.connected:
@@ -227,7 +191,7 @@ class ServiceConnection:
 				if urlIndex > 0:
 					backend_info = serviceConnectionThread.configService.backend_info()
 					try:
-						verify_modules(backend_info, ['high_availability'])
+						verify_modules(backend_info, ['scalability1'])
 					except RuntimeError as err:
 						self.connectionFailed(err)
 
@@ -300,11 +264,12 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 			if not os.path.isdir(os.path.dirname(config.ca_cert_file)):
 				os.makedirs(os.path.dirname(config.ca_cert_file))
 
-			response = self.configService.httpRequest("GET", "/ssl/opsi-ca-cert.pem")
-			if response.status != 200:
-				raise RuntimeError(f"Failed to fetch opsi-ca-cert.pem: {response.status} - {response.data}")
+			try: # pylint: disable=broad-except
+				response = self.configService.get("/ssl/opsi-ca-cert.pem")
+			except Exception as err:
+				raise RuntimeError(f"Failed to fetch opsi-ca-cert.pem: {err}") from err
 
-			for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", response.data.decode("utf-8"), re.DOTALL):
+			for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", response.text, re.DOTALL):
 				try:
 					ca_certs.append(load_certificate(FILETYPE_PEM, match.group(1).encode("utf-8")))
 				except Exception as err: # pylint: disable=broad-except
@@ -405,7 +370,6 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 							application=f"opsiclientd/{__version__}",
 							compression=compression
 						)
-
 						self.configService.accessControl_authenticated() # pylint: disable=no-member
 						self.configService.setCompression(True)
 						self.connected = True

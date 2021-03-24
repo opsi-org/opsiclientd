@@ -36,7 +36,6 @@ from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
 
 from opsiclientd.Config import Config
-from opsiclientd.OpsiService import isConfigServiceReachable
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_DARWIN, RUNNING_ON_LINUX
 
 config = Config()
@@ -93,8 +92,6 @@ class State(metaclass=Singleton):
 				# TODO
 				return True
 			return False
-		if name == 'configserver_reachable':
-			return isConfigServiceReachable(timeout=15)
 		if name == 'products_cached':
 			return self._state.get('product_cache_service', {}).get('products_cached', default)
 		if name == 'config_cached':

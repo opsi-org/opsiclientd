@@ -495,6 +495,8 @@ class Opsiclientd(EventListener, threading.Thread): # pylint: disable=too-many-i
 								logger.notice("opsiclientd is going down")
 
 								for ept in self._eventProcessingThreads:
+									ept.stop()
+								for ept in self._eventProcessingThreads:
 									logger.info("Waiting for event processing thread %s", ept)
 									ept.join(5)
 

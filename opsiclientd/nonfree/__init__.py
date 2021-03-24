@@ -40,7 +40,7 @@ def verify_modules(backend_info, needed_modules=None): # pylint: disable=too-man
 
 	for needed_module in needed_modules:
 		if not modules.get(needed_module):
-			raise RuntimeError("Module {needed_module} currently disabled")
+			raise RuntimeError(f"Module {needed_module} currently disabled")
 
 	if (
 		modules.get('expires', '') != 'never' and

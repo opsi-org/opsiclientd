@@ -27,7 +27,6 @@ import sys
 import argparse
 import platform
 
-from OPSI.Backend.JSONRPC import JSONRPCBackend
 # Do not remove this import, it's needed by using this module from CLI
 from OPSI import System # pylint: disable=unused-import
 from OPSI import __version__ as python_opsi_version
@@ -35,6 +34,7 @@ from OPSI import __version__ as python_opsi_version
 from opsicommon.logging import (
 	logger, init_logging, log_context, secret_filter, LOG_DEBUG, LOG_NONE
 )
+from opsicommon.backend.jsonrpc import JSONRPCBackend
 
 from opsiclientd import __version__, DEFAULT_FILE_LOG_FORMAT
 

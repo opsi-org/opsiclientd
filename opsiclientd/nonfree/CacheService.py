@@ -362,7 +362,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 				raise RuntimeError("Cannot sync products: {err}") from err
 
 			try:
-				if self._configService._host not in ("localhost", "127.0.0.1"): # pylint: disable=protected-access
+				if self._configService.hostname not in ("localhost", "127.0.0.1"): # pylint: disable=protected-access
 					config.set(
 						'depot_server', 'master_depot_id',
 						self._configService.getDepotId(config.get('global', 'host_id')) # pylint: disable=no-member
@@ -746,7 +746,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				raise RuntimeError("Cannot cache config: {err}") from err
 
 			try:
-				if self._configService._host not in ("localhost", "127.0.0.1"):# pylint: disable=protected-access
+				if self._configService.hostname not in ("localhost", "127.0.0.1"): # pylint: disable=protected-access
 					config.set(
 						'depot_server', 'master_depot_id',
 						self._configService.getDepotId(config.get('global', 'host_id')) # pylint: disable=no-member
