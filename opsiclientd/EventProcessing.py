@@ -318,7 +318,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 		return processId
 
-	def startNotifierApplication(self, command, sessionId=None, desktop=None, notifierId=None):
+	def startNotifierApplication(self, command, sessionId=None, desktop=None, notifierId=None): # pylint: disable=inconsistent-return-statements
 		if sessionId is None:
 			sessionId = self.getSessionId()
 
@@ -330,7 +330,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				desktop = desktop,
 				waitForProcessEnding = False
 			)
-			#time.sleep(3)
 			return pid
 		except Exception as err: # pylint: disable=broad-except
 			logger.error("Failed to start notifier application '%s': %s" , command, err)
@@ -572,7 +571,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				except Exception as err: # pylint: disable=broad-except
 					logger.warning(err)
 
-	def updateActionProcessorUnified(self, actionProcessorRemoteDir, actionProcessorCommonDir):
+	def updateActionProcessorUnified(self, actionProcessorRemoteDir, actionProcessorCommonDir): # pylint: disable=no-self-use
 		actionProcessorFilename = config.get('action_processor', 'filename')
 		actionProcessorLocalDir = config.get('action_processor', 'local_dir')
 		actionProcessorLocalTmpDir = actionProcessorLocalDir + '.tmp'
@@ -620,7 +619,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				os.remove(symlink)
 			os.symlink(actionProcessorLocalFile, symlink)
 
-	def updateActionProcessorOld(self, actionProcessorRemoteDir):
+	def updateActionProcessorOld(self, actionProcessorRemoteDir): # pylint: disable=no-self-use
 		actionProcessorFilename = config.get('action_processor', 'filename')
 		actionProcessorLocalDir = config.get('action_processor', 'local_dir')
 		actionProcessorLocalTmpDir = actionProcessorLocalDir + '.tmp'
