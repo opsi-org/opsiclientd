@@ -1025,16 +1025,20 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			depotServerUsername = config.get('global', 'host_id')
 			depotServerPassword = config.get('global', 'opsi_host_key')
 
-			kwargs = {}
+			kwargs = {
+				"username": depotServerUsername,
+				"password": depotServerPassword
+			}
 			if scheme.startswith('webdavs'):
-				kwargs['verifyServerCert'] = (
+				kwargs['verify_server_cert'] = (
 					(config.get('global', 'verify_server_cert') or config.get('global', 'verify_server_cert_by_ca')) and
 					os.path.exists(config.ca_cert_file)
 				)
-				kwargs['caCertFile'] = config.ca_cert_file if kwargs['verifyServerCert'] else None
-				kwargs['proxyURL'] = config.get('global', 'proxy_url')
+				kwargs['ca_cert_file'] = config.ca_cert_file if kwargs['verifyServerCert'] else None
+				kwargs['proxy_url'] = config.get('global', 'proxy_url')
+				kwargs['ip_version'] = config.get('global', 'ip_version')
 
-			return getRepository(config.get('depot_server', 'url'), username=depotServerUsername, password=depotServerPassword, **kwargs)
+			return getRepository(config.get('depot_server', 'url'), **kwargs)
 
 		if self._impersonation:
 			try:

@@ -364,11 +364,12 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 							address=self._configServiceUrl,
 							username=self._username,
 							password=self._password,
-							verifyServerCert=verify_server_cert,
-							caCertFile=ca_cert_file,
-							proxyURL=proxyURL,
+							verify_server_cert=verify_server_cert,
+							ca_cert_file=ca_cert_file,
+							proxy_url=proxyURL,
 							application=f"opsiclientd/{__version__}",
-							compression=compression
+							compression=compression,
+							ip_version=config.get('global', 'ip_version')
 						)
 						self.configService.accessControl_authenticated() # pylint: disable=no-member
 						self.configService.setCompression(True)

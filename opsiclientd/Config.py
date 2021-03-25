@@ -195,12 +195,13 @@ class Config(metaclass=Singleton):
 				'proxy_mode': 'static',
 				'proxy_url': '',
 				'suspend_bitlocker_on_reboot': False,
+				'ip_version': 'auto'
 			},
 			'config_service': {
 				'url': [],
 				'connection_timeout': 10,
 				'user_cancelable_after': 0,
-				'sync_time_from_service': False,
+				'sync_time_from_service': False
 			},
 			'depot_server': {
 				# The id of the depot the client is assigned to
