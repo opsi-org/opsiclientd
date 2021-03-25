@@ -30,7 +30,7 @@ from urllib.parse import urlparse
 from OPSI import System
 
 from opsicommon.logging import logger, init_logging, log_context, LOG_NONE
-from opsicommon.backend.jsonrpc import JSONRPCBackend
+from opsicommon.client.jsonrpc import JSONRPCBackend
 
 from opsiclientd import __version__, DEFAULT_STDERR_LOG_FORMAT, DEFAULT_FILE_LOG_FORMAT
 

@@ -34,7 +34,7 @@ from OPSI import __version__ as python_opsi_version
 from opsicommon.logging import (
 	logger, init_logging, log_context, secret_filter, LOG_DEBUG, LOG_NONE
 )
-from opsicommon.backend.jsonrpc import JSONRPCBackend
+from opsicommon.client.jsonrpc import JSONRPCBackend
 
 from opsiclientd import __version__, DEFAULT_FILE_LOG_FORMAT
 
