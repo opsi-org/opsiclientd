@@ -515,10 +515,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						])
 					return actionProcessorLocalFile
 
-				if not RUNNING_ON_WINDOWS and not RUNNING_ON_LINUX:		# TODO: implement for macos
-					logger.error("Update of action processor not implemented on this os")
-					return
-
 				if RUNNING_ON_WINDOWS:
 					logger.info("Checking if action processor files are in use")
 					for proc in psutil.process_iter():
@@ -584,12 +580,13 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			shutil.rmtree(actionProcessorLocalTmpDir)
 		logger.info("Copying from '%s' to '%s'", actionProcessorRemoteDir, actionProcessorLocalTmpDir)
 		shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
-		for common in os.listdir(actionProcessorCommonDir):
-			source = os.path.join(actionProcessorCommonDir, common)
-			if os.path.isdir(source):
-				shutil.copytree(source, os.path.join(actionProcessorLocalTmpDir, common))
-			else:
-				shutil.copy2(source, os.path.join(actionProcessorLocalTmpDir, common))
+		if actionProcessorCommonDir:
+			for common in os.listdir(actionProcessorCommonDir):
+				source = os.path.join(actionProcessorCommonDir, common)
+				if os.path.isdir(source):
+					shutil.copytree(source, os.path.join(actionProcessorLocalTmpDir, common))
+				else:
+					shutil.copy2(source, os.path.join(actionProcessorLocalTmpDir, common))
 
 		if not os.path.exists(os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)):
 			raise Exception(f"File '{os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)}' does not exist after copy")
@@ -611,8 +608,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				' -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"'
 			)
 			System.execute(cmd, shell=False)
-		elif RUNNING_ON_LINUX:
-			symlink = os.path.join("/usr/bin", actionProcessorFilename)
+		else:
+			if RUNNING_ON_LINUX:
+				symlink = os.path.join("/usr/bin", actionProcessorFilename.split("/")[-1])
+			if RUNNING_ON_DARWIN:
+				symlink = os.path.join("/usr/local/bin", actionProcessorFilename.split("/")[-1])
 			logger.info("Making symlink '%s' to '%s'", symlink, actionProcessorLocalFile)
 			if os.path.exists(symlink):
 				if not os.path.islink(symlink):
@@ -621,6 +621,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			os.symlink(actionProcessorLocalFile, symlink)
 
 	def updateActionProcessorOld(self, actionProcessorRemoteDir):
+
+		if not RUNNING_ON_WINDOWS and not RUNNING_ON_LINUX:
+			logger.error("Update of action processor without installed opsi-script package not implemented on this os")
+			return
+
 		actionProcessorFilename = config.get('action_processor', 'filename')
 		actionProcessorLocalDir = config.get('action_processor', 'local_dir')
 		actionProcessorLocalTmpDir = actionProcessorLocalDir + '.tmp'
