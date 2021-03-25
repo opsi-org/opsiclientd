@@ -580,7 +580,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			shutil.rmtree(actionProcessorLocalTmpDir)
 		logger.info("Copying from '%s' to '%s'", actionProcessorRemoteDir, actionProcessorLocalTmpDir)
 		shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
-		if actionProcessorCommonDir:
+		if RUNNING_ON_LINUX or RUNNING_ON_WINDOWS:
 			for common in os.listdir(actionProcessorCommonDir):
 				source = os.path.join(actionProcessorCommonDir, common)
 				if os.path.isdir(source):
