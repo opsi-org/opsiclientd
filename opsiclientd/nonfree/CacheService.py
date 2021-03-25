@@ -1034,7 +1034,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 					(config.get('global', 'verify_server_cert') or config.get('global', 'verify_server_cert_by_ca')) and
 					os.path.exists(config.ca_cert_file)
 				)
-				kwargs['ca_cert_file'] = config.ca_cert_file if kwargs['verifyServerCert'] else None
+				kwargs['ca_cert_file'] = config.ca_cert_file if kwargs['verify_server_cert'] else None
 				kwargs['proxy_url'] = config.get('global', 'proxy_url')
 				kwargs['ip_version'] = config.get('global', 'ip_version')
 
