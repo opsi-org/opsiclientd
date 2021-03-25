@@ -573,6 +573,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		actionProcessorLocalDir = config.get('action_processor', 'local_dir')
 		actionProcessorLocalTmpDir = actionProcessorLocalDir + '.tmp'
 		actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
+		if actionProcessorLocalDir == "/usr/local/bin":
+			# in case of old opsiclientd.conf and new opsiclientd for macos
+			raise ValueError("refusing to replace /usr/local/bin. Update opsiclientd.conf")
 
 		logger.notice("Start copying the action processor files")
 		if os.path.exists(actionProcessorLocalTmpDir):
