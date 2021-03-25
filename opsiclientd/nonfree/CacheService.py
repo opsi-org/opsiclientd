@@ -184,7 +184,7 @@ class CacheService(threading.Thread):
 		if not productIds:
 			return True
 
-		workingWithCachedConfig = bool(configService._host in ("localhost", "127.0.0.1")) # pylint: disable=protected-access
+		workingWithCachedConfig = bool(configService.hostname.lower() in ("localhost", "127.0.0.1"))
 
 		self.initializeProductCacheService()
 
@@ -362,7 +362,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 				raise RuntimeError("Cannot sync products: {err}") from err
 
 			try:
-				if self._configService._host not in ("localhost", "127.0.0.1"): # pylint: disable=protected-access
+				if self._configService.hostname.lower() not in ("localhost", "127.0.0.1"):
 					config.set(
 						'depot_server', 'master_depot_id',
 						self._configService.getDepotId(config.get('global', 'host_id')) # pylint: disable=no-member
@@ -746,7 +746,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				raise RuntimeError("Cannot cache config: {err}") from err
 
 			try:
-				if self._configService._host not in ("localhost", "127.0.0.1"):# pylint: disable=protected-access
+				if self._configService.hostname.lower() not in ("localhost", "127.0.0.1"):
 					config.set(
 						'depot_server', 'master_depot_id',
 						self._configService.getDepotId(config.get('global', 'host_id')) # pylint: disable=no-member
@@ -1025,16 +1025,20 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			depotServerUsername = config.get('global', 'host_id')
 			depotServerPassword = config.get('global', 'opsi_host_key')
 
-			kwargs = {}
+			kwargs = {
+				"username": depotServerUsername,
+				"password": depotServerPassword
+			}
 			if scheme.startswith('webdavs'):
-				kwargs['verifyServerCert'] = (
+				kwargs['verify_server_cert'] = (
 					(config.get('global', 'verify_server_cert') or config.get('global', 'verify_server_cert_by_ca')) and
 					os.path.exists(config.ca_cert_file)
 				)
-				kwargs['caCertFile'] = config.ca_cert_file if kwargs['verifyServerCert'] else None
-				kwargs['proxyURL'] = config.get('global', 'proxy_url')
+				kwargs['ca_cert_file'] = config.ca_cert_file if kwargs['verifyServerCert'] else None
+				kwargs['proxy_url'] = config.get('global', 'proxy_url')
+				kwargs['ip_version'] = config.get('global', 'ip_version')
 
-			return getRepository(config.get('depot_server', 'url'), username=depotServerUsername, password=depotServerPassword, **kwargs)
+			return getRepository(config.get('depot_server', 'url'), **kwargs)
 
 		if self._impersonation:
 			try:
