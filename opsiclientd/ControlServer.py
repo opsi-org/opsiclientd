@@ -959,7 +959,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 
 	def isEventRunning(self, name):
 		running = False
-		for ept in self.opsiclientd._eventProcessingThreads: # pylint: disable=protected-access
+		for ept in self.opsiclientd.getEventProcessingThreads():
 			if ept.event.eventConfig.getId() == name:
 				running = True
 				break
@@ -969,7 +969,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		"""
 		Returns a list with running events.
 		"""
-		running = [ept.event.eventConfig.getId() for ept in self.opsiclientd._eventProcessingThreads] # pylint: disable=protected-access
+		running = [ept.event.eventConfig.getId() for ept in self.opsiclientd.getEventProcessingThreads()]
 		if not running:
 			logger.debug("Currently no event is running.")
 		return running

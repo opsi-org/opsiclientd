@@ -573,6 +573,9 @@ class Opsiclientd(EventListener, threading.Thread): # pylint: disable=too-many-i
 					except Exception as err: # pylint: disable=broad-except
 						logger.warning(err)
 
+	def getEventProcessingThreads(self):
+		return self._eventProcessingThreads
+
 	def getEventProcessingThread(self, sessionId):
 		for ept in self._eventProcessingThreads:
 			if int(ept.getSessionId()) == int(sessionId):
