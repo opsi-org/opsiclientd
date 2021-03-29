@@ -1,15 +1,10 @@
 # -*- coding: utf-8 -*-
 
-# ocdlibnonfree is part of the desktop management solution opsi
-# (open pc server integration) http://www.opsi.org
-
-# Copyright (C) 2015-2019 uib GmbH
-# http://www.uib.de/
-# All rights reserved.
+# opsiclientd is part of the desktop management solution opsi http://www.opsi.org
+# Copyright (c) 2010-2021 uib GmbH <info@uib.de>
+# License: opsi source available license 1.0
 """
 Non-free event generators.
-
-:copyright:	uib GmbH <info@uib.de>
 """
 
 import threading

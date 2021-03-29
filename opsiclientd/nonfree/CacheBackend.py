@@ -1,16 +1,10 @@
 # -*- coding: utf-8 -*-
 
-# opsiclientd is part of the desktop management solution opsi
-# (open pc server integration) http://www.opsi.org
-
-# Copyright (C) 2019 uib GmbH <info@uib.de>
-# http://www.uib.de/
-# All rights reserved.
+# opsiclientd is part of the desktop management solution opsi http://www.opsi.org
+# Copyright (c) 2010-2021 uib GmbH <info@uib.de>
+# License: opsi source available license 1.0
 """
 Cache-Backend for Clients.
-
-:copyright: uib GmbH <info@uib.de>
-:license: GNU Affero General Public License version 3
 """
 
 import codecs

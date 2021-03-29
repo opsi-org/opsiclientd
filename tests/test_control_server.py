@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 
+# opsiclientd is part of the desktop management solution opsi http://www.opsi.org
+# Copyright (c) 2010-2021 uib GmbH <info@uib.de>
+# All rights reserved.
+# License: AGPL-3.0
+
 import pytest
 import ssl
 import socket
 import codecs
 import requests
 import netifaces
-
 from opsiclientd import ControlServer
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import createEventGenerators
@@ -18,28 +22,23 @@ def prepared_config(config, configFile):
 
 def test_fire_event(prepared_config): # pylint: disable=redefined-outer-name
 	prepared_config.readConfigFile()
-
 	createEventGenerators(None)
 	getEventConfigs()
-
 	controlServer = ControlServer.OpsiclientdRpcInterface(None)
 	controlServer.fireEvent('on_demand')
 
 def test_firing_unknown_event_raises_error(prepared_config): # pylint: disable=redefined-outer-name
 	prepared_config.readConfigFile()
-
 	controlServer = ControlServer.OpsiclientdRpcInterface(None)
 	with pytest.raises(ValueError):
 		controlServer.fireEvent('foobar')
 
-
 def test_gui_startup_event_on_windows_only(prepared_config, onWindows): # pylint: disable=redefined-outer-name
 	prepared_config.readConfigFile()
-
 	createEventGenerators(None)
 	configs = getEventConfigs()
-
 	assert configs
+
 	if onWindows:
 		assert 'gui_startup' in configs
 
@@ -53,14 +52,13 @@ def test_log_reader_start_position(tmpdir):
 
 		lrt = ControlServer.LogReaderThread(log_file, None, num_tail_records)
 		start_position = lrt._get_start_position()
+
 		with codecs.open(log_file, "r", encoding="utf-8", errors="replace") as file:
 			file.seek(start_position)
 			data = file.read()
 			assert data.startswith("[5]")
 			assert data.count("\n") == num_tail_records if log_lines > num_tail_records else log_lines
 
-
-# Tests using running opsiclientd
 def test_index_page(opsiclient_url):
 	req = requests.get(f"{opsiclient_url}", verify=False)
 	assert req.status_code == 200
@@ -88,7 +86,6 @@ def test_kiosk_auth(opsiclient_url):
 	)
 	assert response.status_code == 500 # Not 401
 	assert "Not a gzipped file" in response.text
-
 	# "X-Forwarded-For" must not be accepted
 	address = None
 	interfaces = netifaces.interfaces()
@@ -98,6 +95,7 @@ def test_kiosk_auth(opsiclient_url):
 		if addr and addr != "127.0.0.1":
 			address = addr
 			break
+
 	assert address is not None, "Failed to find non loopback ip address"
 
 	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -117,4 +115,3 @@ def test_kiosk_auth(opsiclient_url):
 			)
 			http_code = int(ssock.recv(1024).split(b" ", 2)[1])
 			assert http_code == 401 # "X-Forwarded-For" not accepted
-
