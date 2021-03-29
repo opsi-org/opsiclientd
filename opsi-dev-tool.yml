@@ -1,3 +1,9 @@
+project:
+  licenses:
+    - license: AGPL-3.0
+    - license: opsi source available license 1.0
+      path: opsiclientd/nonfree
+
 locale:
   languages:
     - de
@@ -23,7 +29,7 @@ pyinstaller-poetry:
     windows:
       - --manifest
       - opsiclientd-windows.manifest
-      ## Without --noconsole opsiclientd_rpc and action_processor_starter are opening console windows 
+      ## Without --noconsole opsiclientd_rpc and action_processor_starter are opening console windows
       #- --noconsole
     darwin:
       - --exclude-module
