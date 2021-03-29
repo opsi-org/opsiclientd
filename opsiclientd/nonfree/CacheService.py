@@ -19,6 +19,7 @@ import os
 import shutil
 import threading
 import time
+from urllib.parse import urlparse
 
 from OPSI.Object import ProductOnClient
 from OPSI.Types import (
@@ -30,7 +31,6 @@ from OPSI.Util.Repository import (
 	DepotToLocalDirectorySychronizer, RepositoryObserver
 )
 from OPSI import System
-from OPSI.Util.HTTP import urlsplit
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.BackendManager import BackendExtender
 from OPSI.Backend.SQLite import (
@@ -1020,8 +1020,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		depotServerUsername = ''
 		depotServerPassword = ''
 
-		(scheme, _host) = urlsplit(config.get('depot_server', 'url'))[0:2]
-		if scheme.startswith('webdav'):
+		url = urlparse(config.get('depot_server', 'url'))
+		if url.scheme.startswith('webdav'):
 			depotServerUsername = config.get('global', 'host_id')
 			depotServerPassword = config.get('global', 'opsi_host_key')
 
@@ -1029,7 +1029,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				"username": depotServerUsername,
 				"password": depotServerPassword
 			}
-			if scheme.startswith('webdavs'):
+			if url.scheme.startswith('webdavs'):
 				kwargs['verify_server_cert'] = (
 					(config.get('global', 'verify_server_cert') or config.get('global', 'verify_server_cert_by_ca')) and
 					os.path.exists(config.ca_cert_file)
