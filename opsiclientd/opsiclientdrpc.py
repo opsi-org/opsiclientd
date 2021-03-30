@@ -126,7 +126,8 @@ def main():
 			with JSONRPCBackend(
 				username=username,
 				password=password,
-				address=address
+				address=address,
+				compression=False
 			) as jsonrpc: # pylint: disable=unused-variable
 				logger.notice(f"Executing: {rpc}")
 				result = eval(f"jsonrpc.{rpc}") # pylint: disable=eval-used
