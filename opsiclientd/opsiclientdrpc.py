@@ -65,7 +65,7 @@ def main():
 			help="Set log file"
 		)
 		parser.add_argument('--address',
-			default="https://localhost:4441/opsiclientd",
+			default="https://127.0.0.1:4441/opsiclientd",
 			help="Set service address"
 		)
 		parser.add_argument('--username',
