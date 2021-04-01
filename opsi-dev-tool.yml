@@ -32,8 +32,11 @@ pyinstaller-poetry:
       - pythoncom
       - win32api
       - win32timezone
-    linux: []
-    darwin: []
+      - OPSI.Backend.Manager.Authentication.NT
+    linux:
+      - OPSI.Backend.Manager.Authentication.PAM
+    darwin:
+      - OPSI.Backend.Manager.Authentication.PAM
   extra_args:
     windows:
       - --manifest
