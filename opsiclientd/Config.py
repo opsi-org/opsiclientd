@@ -215,6 +215,9 @@ class Config(metaclass=Singleton):
 				'start_port': 44000,
 				'popup_port': 45000,
 			},
+			'opsiclientd_rpc': {
+				'command': '',
+			},
 			'opsiclientd_notifier': {
 				'command': '',
 			},
@@ -340,11 +343,11 @@ class Config(metaclass=Singleton):
 		if not section:
 			section = 'global'
 
-		section = str(section).strip()
+		section = str(section).strip().lower()
 		if section == 'system':
 			return
 
-		option = str(option).strip()
+		option = str(option).strip().lower()
 		if isinstance(value, str):
 			value = value.strip()
 
@@ -353,7 +356,7 @@ class Config(metaclass=Singleton):
 			option = 'action_warning_time'
 		elif option == 'user_cancelable':
 			option = 'action_user_cancelable'
-		elif option == 'w10BitlockerSuspendOnReboot':
+		elif option == 'w10bitlockersuspendonreboot':
 			option = 'suspend_bitlocker_on_reboot'
 
 		# Check if empty value is allowed
