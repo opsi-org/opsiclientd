@@ -600,8 +600,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					logger.warning("replacing binary '%s' with symlink to %s", symlink, actionProcessorLocalFile)
 				os.remove(symlink)
 			os.symlink(actionProcessorLocalFile, symlink)
+
+			logger.info("Setting Permissions for actionProcessorLocalDir '%s'", actionProcessorLocalDir)
 			os.chmod(symlink, 0o755)
-			subprocess.check_call(f"chmod -R 755 {actionProcessorLocalDir}")
+			subprocess.check_call(f"chmod -R 755 {actionProcessorLocalDir}", shell=True)
 
 	def updateActionProcessorOld(self, actionProcessorRemoteDir): # pylint: disable=no-self-use
 		if not RUNNING_ON_WINDOWS and not RUNNING_ON_LINUX:
