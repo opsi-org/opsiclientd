@@ -18,7 +18,7 @@ import netifaces
 from opsicommon.logging import logger, LOG_NOTICE, logging_config, secret_filter
 from opsicommon.utils import Singleton
 from OPSI.Types import (
-	forceBool, forceBoolList, forceHostId, forceList,
+	forceBool, forceHostId, forceList,
 	forceProductIdList, forceUnicode, forceUrl,
 	forceUnicodeList
 )
