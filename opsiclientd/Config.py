@@ -367,6 +367,8 @@ class Config(metaclass=Singleton):
 			'proxy_url' not in option and
 			'working_window' not in option
 		):
+			if section == 'action_processor' and option == 'remote_common_dir':
+				return
 			logger.warning("Refusing to set empty value for config value '%s' of section '%s'", option, section)
 			return
 
