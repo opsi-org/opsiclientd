@@ -82,7 +82,7 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 		depot_url = urlparse(depotRemoteUrl)
 
 		try:
-			be = JSONRPCBackend(username=hostId, password=hostKey, address=f"https://localhost:{controlServerPort}/opsiclientd")
+			be = JSONRPCBackend(username=hostId, password=hostKey, address=f"https://127.0.0.1:{controlServerPort}/opsiclientd")
 
 			if runAsUser:
 				logger.info("Impersonating user '%s'", runAsUser)
@@ -93,7 +93,7 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 				imp = System.Impersonate(username=depotServerUsername, password=depotServerPassword, desktop=actionProcessorDesktop)
 				imp.start(logonType="NEW_CREDENTIALS")
 
-			if depot_url.hostname.lower() not in ("127.0.0.1", "localhost"):
+			if depot_url.hostname.lower() not in ("127.0.0.1", "localhost", "::1"):
 				logger.notice("Mounting depot share %s", depotRemoteUrl)
 				be.setStatusMessage(sessionId, _("Mounting depot share %s") % depotRemoteUrl) # pylint: disable=no-member
 

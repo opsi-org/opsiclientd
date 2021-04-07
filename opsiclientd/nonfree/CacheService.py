@@ -181,7 +181,7 @@ class CacheService(threading.Thread):
 		if not productIds:
 			return True
 
-		workingWithCachedConfig = bool(configService.hostname.lower() in ("localhost", "127.0.0.1"))
+		workingWithCachedConfig = bool(configService.hostname.lower() in ("localhost", "127.0.0.1", "::1"))
 
 		self.initializeProductCacheService()
 
@@ -359,7 +359,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 				raise RuntimeError("Cannot sync products: {err}") from err
 
 			try:
-				if self._configService.hostname.lower() not in ("localhost", "127.0.0.1"):
+				if self._configService.hostname.lower() not in ("localhost", "127.0.0.1", "::1"):
 					config.set(
 						'depot_server', 'master_depot_id',
 						self._configService.getDepotId(config.get('global', 'host_id')) # pylint: disable=no-member
@@ -743,7 +743,7 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				raise RuntimeError("Cannot cache config: {err}") from err
 
 			try:
-				if self._configService.hostname.lower() not in ("localhost", "127.0.0.1"):
+				if self._configService.hostname.lower() not in ("localhost", "127.0.0.1", "::1"):
 					config.set(
 						'depot_server', 'master_depot_id',
 						self._configService.getDepotId(config.get('global', 'host_id')) # pylint: disable=no-member

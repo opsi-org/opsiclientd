@@ -104,7 +104,7 @@ def main():
 			# <username> <password> <port> [debug-log-file] <rpc>
 			(username, password, port, rpc) = sys.argv[1:5] # pylint: disable=unbalanced-tuple-unpacking
 			secret_filter.add_secrets(password)
-			address = f"https://localhost:{port}/opsiclientd"
+			address = f"https://127.0.0.1:{port}/opsiclientd"
 			if len(sys.argv) > 5:
 				log_level = LOG_DEBUG
 				log_file = sys.argv[4]

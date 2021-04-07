@@ -350,7 +350,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			return
 		if not config.get('depot_server', 'url'):
 			raise Exception("Cannot mount depot share, depot_server.url undefined")
-		if config.get('depot_server', 'url').split('/')[2] in ('127.0.0.1', 'localhost'):
+		if config.get('depot_server', 'url').split('/')[2] in ('127.0.0.1', 'localhost', '::1'):
 			logger.notice("No need to mount depot share %s, working on local depot cache", config.get('depot_server', 'url'))
 			return
 
@@ -422,7 +422,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			mounted = False
 			try:
 				url = urlparse(config.get('depot_server', 'url'))
-				if mount and url.hostname.lower() not in ('127.0.0.1', 'localhost'):
+				if mount and url.hostname.lower() not in ('127.0.0.1', 'localhost', '::1'):
 					impersonation = None
 					if RUNNING_ON_WINDOWS:
 						# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
@@ -438,7 +438,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 				actionProcessorRemoteDir = None
 				actionProcessorCommonDir = None
-				if url.hostname.lower() in ('127.0.0.1', 'localhost'):
+				if url.hostname.lower() in ('127.0.0.1', 'localhost', '::1'):
 					dirname = config.get('action_processor', 'remote_dir')
 					dirname.lstrip(os.sep)
 					dirname.lstrip("install" + os.sep)
@@ -1507,7 +1507,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					if self.event.eventConfig.useCachedConfig:
 						if self.opsiclientd.getCacheService().configCacheCompleted():
 							logger.notice("Event '%s' uses cached config and config caching is done", self.event.eventConfig.getId())
-							config.setTemporaryConfigServiceUrls(['https://localhost:4441/rpc'])
+							config.setTemporaryConfigServiceUrls(['https://127.0.0.1:4441/rpc'])
 						else:
 							raise Exception(f"Event '{self.event.eventConfig.getId()}' uses cached config but config caching is not done")
 
