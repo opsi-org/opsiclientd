@@ -18,8 +18,8 @@ import netifaces
 from opsicommon.logging import logger, LOG_NOTICE, logging_config, secret_filter
 from opsicommon.utils import Singleton
 from OPSI.Types import (
-	forceBool, forceHostId, forceInt, forceFilename, forceList,
-	forceProductIdList, forceUnicode, forceUnicodeLower, forceUrl,
+	forceBool, forceBoolList, forceHostId, forceList,
+	forceProductIdList, forceUnicode, forceUrl,
 	forceUnicodeList
 )
 from OPSI.Util import objectToBeautifiedText, blowfishDecrypt
@@ -202,7 +202,7 @@ class Config(metaclass=Singleton):
 				'exclude_product_group_ids': []
 			},
 			'control_server': {
-				'interface': '0.0.0.0',  # TODO
+				'interface': '0.0.0.0',
 				'port': 4441,
 				'ssl_server_key_file': os.path.join(baseDir, "opsiclientd", "opsiclientd.pem"),
 				'ssl_server_cert_file': os.path.join(baseDir, "opsiclientd", "opsiclientd.pem"),
@@ -311,8 +311,8 @@ class Config(metaclass=Singleton):
 		if not section:
 			section = 'global'
 
-		section = forceUnicodeLower(section.strip()).lower()
-		option = forceUnicodeLower(option.strip()).lower()
+		section = str(section).lower().strip()
+		option = str(option).lower().strip()
 		if section not in self._config:
 			raise SectionNotFoundException("No such config section: %s" % section)
 		if option not in self._config[section]:
@@ -340,24 +340,83 @@ class Config(metaclass=Singleton):
 		if not section:
 			section = 'global'
 
-		section = forceUnicodeLower(section).strip()
+		section = str(section).strip()
 		if section == 'system':
 			return
 
-		option = forceUnicodeLower(option).strip()
+		option = str(option).strip()
 		if isinstance(value, str):
-			value = forceUnicode(value).strip()
+			value = value.strip()
 
+		# Rename legacy options
 		if option == 'warning_time':
 			option = 'action_warning_time'
 		elif option == 'user_cancelable':
 			option = 'action_user_cancelable'
+		elif option == 'w10BitlockerSuspendOnReboot':
+			option = 'suspend_bitlocker_on_reboot'
 
-		if option == 'opsi_host_key':
-			secret_filter.add_secrets(value)
+		if section in self._config and option in self._config[section]:
+			# Convert to correct type
+			if section == 'config_service' and option == 'url':
+				urls = value
+				if not isinstance(urls, list):
+					urls = str(urls).split(',')
 
-		logger.info("Setting config value %s.%s to '%s'", section, option, value)
+				value = []
+				for url in urls:
+					url = url.strip()
+					if not re.search('https?://[^/]+', url):
+						logger.error("Bad config service url '%s'", url)
+					if not url in value:
+						value.append(url)
+			else:
+				try:
+					if isinstance(self._config[section][option], bool):
+						value = forceBool(value)
+					else:
+						_type = type(self._config[section][option])
+						value = _type(value)
+				except ValueError as err:
+					logger.error(
+						"Failed to set value '%s' for config %s.%s: %s",
+						value, section, option, err
+					)
+					return
 
+				# Check / correct value
+				if option in ('connection_timeout', 'user_cancelable_after') and value < 0:
+					value = 0
+				elif option == 'opsi_host_key':
+					if len(value) != 32:
+						raise ValueError("Bad opsi host key, length != 32")
+					secret_filter.add_secrets(value)
+				elif option in ('depot_id', 'host_id'):
+					value = forceHostId(value.replace('_', '-'))
+
+		else:
+			if section.startswith("event_") or section.startswith("precondition_"):
+				if option.endswith('_warning_time') or option.endswith('_user_cancelable'):
+					try:
+						value = int(value)
+					except ValueError:
+						value = 0
+				elif option in ('active', ):
+					value = forceBool(value)
+			else:
+				logger.warning(
+					"Refusing to set value '%s' for invalid config %s.%s",
+					value, section, option
+				)
+				return
+
+		if option in ('exclude_product_group_ids', 'include_product_group_ids'):
+			if not isinstance(value, list):
+				value = [x.strip() for x in value.split(",")]
+			else:
+				value = forceList(value)
+
+		# Check if empty value is allowed
 		if 	( # pylint: disable=too-many-boolean-expressions
 			value == '' and
 			'command' not in option and
@@ -369,40 +428,13 @@ class Config(metaclass=Singleton):
 		):
 			if section == 'action_processor' and option == 'remote_common_dir':
 				return
-			logger.warning("Refusing to set empty value for config value '%s' of section '%s'", option, section)
+			logger.warning("Refusing to set empty value config %s.%s", section, option)
 			return
 
-		if (section == 'depot_server') and (option == 'drive'):
+		if section == 'depot_server' and option == 'drive':
 			if (RUNNING_ON_LINUX or RUNNING_ON_DARWIN) and not value.startswith("/"):
-				logger.warning("Refusing to set depot_server.drive to %s on posix", value)
+				logger.warning("Refusing to set %s.%s to '%s' on posix", section, option, value)
 				return
-
-		if option == 'opsi_host_key':
-			if len(value) != 32:
-				raise ValueError("Bad opsi host key, length != 32")
-		elif option in ('depot_id', 'host_id'):
-			value = forceHostId(value.replace('_', '-'))
-		elif option in ('log_level', 'wait_for_gui_timeout', 'popup_port', 'port', 'start_port', 'max_authentication_failures'):
-			value = forceInt(value)
-		elif option.endswith('_warning_time') or option.endswith('_user_cancelable'):
-			try:
-				value = forceInt(value)
-			except ValueError:
-				value = 0
-		elif option in (
-			'create_user', 'delete_user', 'verify_server_cert', 'verify_server_cert_by_ca', 'create_environment',
-			'active', 'sync_time_from_service', 'suspend_bitlocker_on_reboot', 'w10BitlockerSuspendOnReboot',
-			'kiosk_api_active', 'install_opsi_ca_into_os_store', 'trust_uib_opsi_ca'
-		):
-			if option == 'w10BitlockerSuspendOnReboot':
-				# legacy name
-				option = 'suspend_bitlocker_on_reboot'
-			value = forceBool(value)
-		elif option in ('exclude_product_group_ids', 'include_product_group_ids'):
-			if not isinstance(value, list):
-				value = [x.strip() for x in value.split(",")]
-			else:
-				value = forceList(value)
 
 		if RUNNING_ON_WINDOWS and (option.endswith("_dir") or option.endswith("_file")):
 			if ":" in value and ":\\" not in value:
@@ -413,31 +445,17 @@ class Config(metaclass=Singleton):
 			arch = '64' if '64' in platform.architecture()[0] else '32'
 			value = value.replace('%arch%', arch)
 
+		logger.info("Setting config %s.%s to %s", section, option, value)
+
 		if section not in self._config:
 			self._config[section] = {}
-
 		self._config[section][option] = value
 
-		if section == 'config_service' and option == 'url':
-			urls = self._config[section][option]
-			if not isinstance(urls, list):
-				urls = forceUnicode(self._config[section][option]).split(',')
-			self._config[section][option] = []
-			for url in forceUnicodeList(urls):
-				url = url.strip()
-				if not re.search('https?://[^/]+', url):
-					logger.error("Bad config service url '%s'", url)
-				self._config[section][option].append(url)
-		elif section == 'config_service' and option in ('connection_timeout', 'user_cancelable_after'):
-			self._config[section][option] = int(self._config[section][option])
-			if self._config[section][option] < 0:
-				self._config[section][option] = 0
-		elif section == 'global' and option == 'log_level':
+		if section == 'global' and option == 'log_level':
 			logging_config(file_level=self._config[section][option])
 		elif section == 'global' and option == 'server_cert_dir':
-			value = forceFilename(value)
-			if not os.path.exists(value):
-				os.makedirs(value)
+			if not os.path.exists(self._config[section][option]):
+				os.makedirs(self._config[section][option])
 
 	def replace(self, string, escaped=False):
 		for (section, values) in self._config.items():
