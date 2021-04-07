@@ -601,6 +601,15 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				os.remove(symlink)
 			os.symlink(actionProcessorLocalFile, symlink)
 
+			logger.info("Setting Permissions for actionProcessorLocalDir '%s'", actionProcessorLocalDir)
+			os.chmod(symlink, 0o755)
+			for root, dirs, files in os.walk(actionProcessorLocalDir):
+				for filename in files:
+					os.chmod(os.path.join(root, filename), 0o755)
+				for subdir in dirs:
+					os.chmod(os.path.join(root, subdir), 0o755)
+
+
 	def updateActionProcessorOld(self, actionProcessorRemoteDir): # pylint: disable=no-self-use
 		if not RUNNING_ON_WINDOWS and not RUNNING_ON_LINUX:
 			logger.error("Update of action processor without installed opsi-script package not implemented on this os")
