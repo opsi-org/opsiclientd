@@ -356,6 +356,21 @@ class Config(metaclass=Singleton):
 		elif option == 'w10BitlockerSuspendOnReboot':
 			option = 'suspend_bitlocker_on_reboot'
 
+		# Check if empty value is allowed
+		if 	( # pylint: disable=too-many-boolean-expressions
+			value == '' and
+			'command' not in option and
+			'productids' not in option and
+			'exclude_product_group_ids' not in option and
+			'include_product_group_ids' not in option and
+			'proxy_url' not in option and
+			'working_window' not in option
+		):
+			if section == 'action_processor' and option == 'remote_common_dir':
+				return
+			logger.warning("Refusing to set empty value config %s.%s", section, option)
+			return
+
 		if section in self._config and option in self._config[section]:
 			# Convert to correct type
 			if section == 'config_service' and option == 'url':
@@ -415,21 +430,6 @@ class Config(metaclass=Singleton):
 				value = [x.strip() for x in value.split(",")]
 			else:
 				value = forceList(value)
-
-		# Check if empty value is allowed
-		if 	( # pylint: disable=too-many-boolean-expressions
-			value == '' and
-			'command' not in option and
-			'productids' not in option and
-			'exclude_product_group_ids' not in option and
-			'include_product_group_ids' not in option and
-			'proxy_url' not in option and
-			'working_window' not in option
-		):
-			if section == 'action_processor' and option == 'remote_common_dir':
-				return
-			logger.warning("Refusing to set empty value config %s.%s", section, option)
-			return
 
 		if section == 'depot_server' and option == 'drive':
 			if (RUNNING_ON_LINUX or RUNNING_ON_DARWIN) and not value.startswith("/"):
