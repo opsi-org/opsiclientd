@@ -603,7 +603,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 			logger.info("Setting Permissions for actionProcessorLocalDir '%s'", actionProcessorLocalDir)
 			os.chmod(symlink, 0o755)
-			subprocess.check_call(f"chmod -R 755 {actionProcessorLocalDir}", shell=True)
+			for root, _, files in os.walk(actionProcessorLocalDir):
+				for filename in files:
+					os.chmod(os.path.join(root, filename), 0o755)
 
 	def updateActionProcessorOld(self, actionProcessorRemoteDir): # pylint: disable=no-self-use
 		if not RUNNING_ON_WINDOWS and not RUNNING_ON_LINUX:
