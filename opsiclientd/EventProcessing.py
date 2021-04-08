@@ -603,6 +603,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 			logger.info("Setting Permissions for actionProcessorLocalDir '%s'", actionProcessorLocalDir)
 			os.chmod(symlink, 0o755)
+			os.chmod(actionProcessorLocalDir, 0o755)
 			for root, dirs, files in os.walk(actionProcessorLocalDir):
 				for filename in files:
 					os.chmod(os.path.join(root, filename), 0o755)
