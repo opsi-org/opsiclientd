@@ -23,14 +23,30 @@ from opsiclientd.Events.SwOnDemand import SwOnDemandEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
 
 config = Config() # pylint: disable=invalid-name
+service_connection = ServiceConnection() # pylint: disable=invalid-name
 
-class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
+class WorkerKioskJsonRpc(WorkerOpsiJsonRpc): # pylint: disable=too-few-public-methods
+	_allowedMethods = [
+		"getClientId",
+		"fireEvent_software_on_demand",
+
+		"backend_setOptions",
+		"configState_getObjects",
+		"getDepotId",
+		"getGeneralConfigValue",
+		"getKioskProductInfosForClient",
+		"hostControlSafe_fireEvent",
+		"objectToGroup_getObjects",
+		"product_getObjects",
+		"productDependency_getObjects",
+		"productOnClient_getObjects",
+		"productOnDepot_getObjects",
+		"setProductActionRequestWithDependencies"
+	]
+
 	def __init__(self, service, request, resource):
 		with log_context({'instance' : 'software on demand'}):
-			self._allowedMethods = self._getAllowedMethods()
-			self._fireEvent = False
 			WorkerOpsiJsonRpc.__init__(self, service, request, resource)
-			ServiceConnection.__init__(self)
 			self._auth_module = None
 			if os.name == 'posix':
 				import OPSI.Backend.Manager.Authentication.PAM # pylint: disable=import-outside-toplevel
@@ -39,26 +55,9 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 				import OPSI.Backend.Manager.Authentication.NT # pylint: disable=import-outside-toplevel
 				self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
 
-	def _getAllowedMethods(self): # pylint: disable=no-self-use
-		return [
-			"backend_setOptions",
-			"configState_getObjects",
-			"fireEvent_software_on_demand",
-			"getDepotId",
-			"getGeneralConfigValue",
-			"getKioskProductInfosForClient",
-			"hostControlSafe_fireEvent",
-			"objectToGroup_getObjects",
-			"product_getObjects",
-			"productDependency_getObjects",
-			"productOnClient_getObjects",
-			"productOnDepot_getObjects",
-			"setProductActionRequestWithDependencies",
-		]
-
 	def _getCallInstance(self, result):
-		self._callInstance = self._configService
-		self._callInterface = self._configService.getInterface()
+		self._callInstance =  service_connection.getConfigService()
+		self._callInterface = self._callInstance.getInterface()
 
 	def _getCredentials(self):
 		user, password = self._getAuthorization()
@@ -104,18 +103,20 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		except Exception as err: # pylint: disable=broad-except
 			raise OpsiAuthenticationError(f"Forbidden: {err}") from err
 
-	def _checkRpcs(self, result):
-		if not self._rpcs:
-			raise Exception("No rpcs to check")
-
+	def _executeRpcs(self, result):  # pylint: disable=unused-argument
+		deferred = defer.Deferred()
 		for rpc in self._rpcs:
 			if rpc.method not in self._allowedMethods:
-				raise Exception("You are not allowed to execute the method: '%s'" % rpc.method)
-			if rpc.method == "fireEvent_software_on_demand":
-				self._fireEvent = True
-				self._rpcs.remove(rpc)
-
-		return result
+				raise Exception(f"Access to method '{rpc.method}' denied")
+			if rpc.method == "getClientId":
+				rpc.result = config.get('global', 'host_id')
+			elif rpc.method == "fireEvent_software_on_demand":
+				for eventGenerator in getEventGenerators(generatorClass=SwOnDemandEventGenerator):
+					eventGenerator.createAndFireEvent()
+			else:
+				deferred.addCallback(self._executeRpc, rpc)
+		deferred.callback(None)
+		return deferred
 
 	def _processQuery(self, result):
 		deferred = defer.Deferred()
@@ -123,30 +124,19 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc, ServiceConnection):
 		deferred.addCallback(self._openConnection)
 		deferred.addCallback(self._getCallInstance)
 		deferred.addCallback(self._getRpcs)
-		deferred.addCallback(self._checkRpcs)
 		deferred.addCallback(self._executeRpcs)
-		# TODO: Let the connection open and let it expire on server
-		# deferred.addCallback(self._closeConnection)
-		deferred.addCallback(self._checkFireEvent)
 		deferred.callback(None)
 		return deferred
 
-	def _openConnection(self, result):
-		ServiceConnection.connectConfigService(self)
+	def _openConnection(self, result): # pylint: disable=no-self-use
+		if not service_connection.isConfigServiceConnected():
+			service_connection.connectConfigService()
 		return result
 
-	def _closeConnection(self, result):
-		self.disconnectConfigService()
+	def _closeConnection(self, result): # pylint: disable=no-self-use
+		if service_connection.isConfigServiceConnected():
+			service_connection.disconnectConfigService()
 		return result
-
-	def _checkFireEvent(self, result):
-		if self._fireEvent:
-			for eventGenerator in getEventGenerators(generatorClass=SwOnDemandEventGenerator):
-				eventGenerator.createAndFireEvent()
-			self._fireEvent = False
-
-		return result
-
 
 class ResourceKioskJsonRpc(ResourceOpsi):
 	WorkerClass = WorkerKioskJsonRpc
