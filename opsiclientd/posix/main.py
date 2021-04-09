@@ -5,7 +5,6 @@
 # All rights reserved.
 # License: AGPL-3.0
 
-from sys import exc_info
 import os
 import signal
 import sys
