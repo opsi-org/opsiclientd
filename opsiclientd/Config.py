@@ -392,7 +392,7 @@ class Config(metaclass=Singleton):
 				try:
 					if isinstance(self._config[section][option], bool):
 						value = forceBool(value)
-					else:
+					elif self._config[section][option] is not None:
 						_type = type(self._config[section][option])
 						value = _type(value)
 				except ValueError as err:
