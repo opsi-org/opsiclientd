@@ -1076,6 +1076,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			raise ValueError(f"Invalid component {component}")
 		return self.opsiclientd.self_update_from_url(url)
 
+	def execPythonCode(self, code): # pylint: disable=no-self-use
+		""" Execute lines of python code, returns the result of the last line """
+		code = code.split("\n")
+		exec("\n".join(code[:-1])) # pylint: disable=exec-used
+		return eval(code[-1]) # pylint: disable=eval-used
+
 	def loginUser(self, username, password):
 		try:
 			secret_filter.add_secrets(password)
