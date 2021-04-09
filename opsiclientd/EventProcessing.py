@@ -988,6 +988,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					os.chmod(cmd[0], 0o0755)
 
 				with tempfile.TemporaryDirectory() as tmpdir:
+					logger.debug("Working in temp dir '%s'", tmpdir)
 					if username is not None and password is not None:
 						credentialfile = os.path.join(tmpdir, "credentials")
 						with open(credentialfile, mode="w", encoding="utf-8") as cfile:
