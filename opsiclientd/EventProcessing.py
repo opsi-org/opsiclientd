@@ -30,6 +30,7 @@ from OPSI.Util.Message import (
 	ProgressSubjectProxy
 )
 from OPSI.Util.Thread import KillableThread
+from OPSI.Util.Path import cd
 
 from opsicommon.logging import logger, log_context, logging_config, LOG_WARNING
 
@@ -536,7 +537,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				except Exception as err: # pylint: disable=broad-except
 					logger.warning(err)
 
-	def updateActionProcessorUnified(self, actionProcessorRemoteDir, actionProcessorCommonDir): # pylint: disable=no-self-use
+	def updateActionProcessorUnified(self, actionProcessorRemoteDir, actionProcessorCommonDir): # pylint: disable=no-self-use,too-many-locals,too-many-branches
 		actionProcessorFilename = config.get('action_processor', 'filename')
 		actionProcessorLocalDir = config.get('action_processor', 'local_dir')
 		actionProcessorLocalTmpDir = actionProcessorLocalDir + '.tmp'
@@ -812,6 +813,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			category="run_actions",
 			durationEvent=True
 		)
+
 		try:
 			config.selectDepotserver(
 				configService=self._configService,
@@ -981,6 +983,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						skip_next = True
 					else:
 						new_cmd.append(part)
+
+				if cmd and cmd[0] and os.path.isfile(cmd[0]) and not os.access(cmd[0], os.X_OK):
+					os.chmod(cmd[0], 0o0755)
+
 				with tempfile.TemporaryDirectory() as tmpdir:
 					if username is not None and password is not None:
 						credentialfile = os.path.join(tmpdir, "credentials")
@@ -989,16 +995,15 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						new_cmd.extend(["-credentialfile", credentialfile])
 						command = " ".join(new_cmd)
 
-					if cmd and cmd[0] and os.path.isfile(cmd[0]) and not os.access(cmd[0], os.X_OK):
-						os.chmod(cmd[0], 0o0755)
-
 					self.setStatusMessage(_("Action processor is running"))
-					System.runCommandInSession(
-						command=command,
-						sessionId=self.getSessionId(),
-						waitForProcessEnding=True,
-						timeoutSeconds=self.event.eventConfig.actionProcessorTimeout
-					)
+
+					with cd(tmpdir):
+						System.runCommandInSession(
+							command=command,
+							sessionId=self.getSessionId(),
+							waitForProcessEnding=True,
+							timeoutSeconds=self.event.eventConfig.actionProcessorTimeout
+						)
 
 			if self.event.eventConfig.postActionProcessorCommand:
 				logger.notice("Starting post action processor command '%s' in session '%s' on desktop '%s'",
