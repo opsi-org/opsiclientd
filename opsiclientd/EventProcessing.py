@@ -10,7 +10,6 @@ Processing of events.
 
 # pylint: disable=too-many-lines
 
-from contextlib import contextmanager
 import codecs
 import filecmp
 import os
