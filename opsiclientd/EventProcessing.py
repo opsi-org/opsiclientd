@@ -51,18 +51,6 @@ state = State()
 timeline = Timeline()
 
 
-@contextmanager
-def changeDirectory(path):
-	'Change the current directory to `path` as long as the context exists.'
-
-	old_dir = os.getcwd()
-	os.chdir(path)
-	try:
-		yield
-	finally:
-		os.chdir(old_dir)
-
-
 class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disable=too-many-instance-attributes,too-many-public-methods
 	def __init__(self, opsiclientd, event):
 		KillableThread.__init__(self)
@@ -978,46 +966,40 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					noWindow=True
 				)
 			else:
-				with changeDirectory('/tmp'):
-					credentialfile = None
-					try:
-						(username, password) = (None, None)
-						new_cmd = []
-						cmd = command.split()
+				(username, password) = (None, None)
+				new_cmd = []
+				cmd = command.split()
+				skip_next = False
+				for num, part in enumerate(cmd):
+					if skip_next:
 						skip_next = False
-						for num, part in enumerate(cmd):
-							if skip_next:
-								skip_next = False
-								continue
-							if part.strip().lower() == "-username" and len(cmd) > num:
-								username = cmd[num+1].strip()
-								skip_next = True
-							elif part.strip().lower() == "-password" and len(cmd) > num:
-								password = cmd[num+1].strip()
-								skip_next = True
-							else:
-								new_cmd.append(part)
-						if username is not None and password is not None:
-							tf = tempfile.NamedTemporaryFile(mode="w", delete=False, encoding="utf-8")
-							tf.write(f"username={username}\npassword={password}\n")
-							tf.close()
-							credentialfile = tf.name
-							new_cmd.extend(["-credentialfile", credentialfile])
-							command = " ".join(new_cmd)
+						continue
+					if part.strip().lower() == "-username" and len(cmd) > num:
+						username = cmd[num+1].strip()
+						skip_next = True
+					elif part.strip().lower() == "-password" and len(cmd) > num:
+						password = cmd[num+1].strip()
+						skip_next = True
+					else:
+						new_cmd.append(part)
+				with tempfile.TemporaryDirectory() as tmpdir:
+					if username is not None and password is not None:
+						credentialfile = os.path.join(tmpdir, "credentials")
+						with open(credentialfile, mode="w", encoding="utf-8") as cfile:
+							cfile.write(f"username={username}\npassword={password}\n")
+						new_cmd.extend(["-credentialfile", credentialfile])
+						command = " ".join(new_cmd)
 
-						if cmd and cmd[0] and os.path.isfile(cmd[0]) and not os.access(cmd[0], os.X_OK):
-							os.chmod(cmd[0], 0o0755)
+					if cmd and cmd[0] and os.path.isfile(cmd[0]) and not os.access(cmd[0], os.X_OK):
+						os.chmod(cmd[0], 0o0755)
 
-						self.setStatusMessage(_("Action processor is running"))
-						System.runCommandInSession(
-							command=command,
-							sessionId=self.getSessionId(),
-							waitForProcessEnding=True,
-							timeoutSeconds=self.event.eventConfig.actionProcessorTimeout
-						)
-					finally:
-						if credentialfile and os.path.exists(credentialfile):
-							os.unlink(credentialfile)
+					self.setStatusMessage(_("Action processor is running"))
+					System.runCommandInSession(
+						command=command,
+						sessionId=self.getSessionId(),
+						waitForProcessEnding=True,
+						timeoutSeconds=self.event.eventConfig.actionProcessorTimeout
+					)
 
 			if self.event.eventConfig.postActionProcessorCommand:
 				logger.notice("Starting post action processor command '%s' in session '%s' on desktop '%s'",
