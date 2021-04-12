@@ -282,6 +282,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 			self._state = {}
 
 			self._syncConfigFromServerRequested = False
+			self._syncConfigFromServerError = None
 			self._syncConfigToServerRequested = False
 			self._forceSync = False
 
@@ -495,10 +496,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 						isError=True
 					)
 					raise
+			self._syncConfigFromServerError = None
 		except Exception as err: # pylint: disable=broad-except
 			logger.error("Errors occurred while syncing config to server: %s", err)
-			# Do not sync from server in this case!
-			self._syncConfigFromServerRequested = False
+			self._syncConfigFromServerError = err
 		if eventId:
 			timeline.setEventEnd(eventId)
 		self.disconnectConfigService()
@@ -507,6 +508,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 	def _syncConfigFromServer(self): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		self._working = True
 		try:
+			if self._syncConfigFromServerError:
+				raise RuntimeError("Sync config to server failed")
 			self.setObsolete()
 			if not self._configService:
 				self.connectConfigService()
