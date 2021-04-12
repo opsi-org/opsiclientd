@@ -538,6 +538,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					logger.warning(err)
 
 	def updateActionProcessorUnified(self, actionProcessorRemoteDir, actionProcessorCommonDir): # pylint: disable=no-self-use,too-many-locals,too-many-branches
+		if not RUNNING_ON_WINDOWS and not RUNNING_ON_LINUX:
+			logger.error("Update of action processor not implemented on this os")
+			return
+
 		actionProcessorFilename = config.get('action_processor', 'filename')
 		actionProcessorLocalDir = config.get('action_processor', 'local_dir')
 		actionProcessorLocalTmpDir = actionProcessorLocalDir + '.tmp'
