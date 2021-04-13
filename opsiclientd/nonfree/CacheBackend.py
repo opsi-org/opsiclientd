@@ -19,7 +19,7 @@ from OPSI.Backend.Backend import (
 )
 from OPSI.Backend.Replicator import BackendReplicator
 from OPSI.Exceptions import (
-	BackendConfigurationError, BackendUnaccomplishableError
+	BackendConfigurationError, BackendMissingDataError, BackendUnaccomplishableError
 )
 from OPSI.Object import (
 	getIdentAttributes, objectsDiffer, LicenseOnClient, ProductOnClient
@@ -106,7 +106,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 	def _setMasterBackend(self, masterBackend):
 		self._masterBackend = masterBackend
 
-	def _syncModifiedObjectsWithMaster( # pylint: disable=too-many-arguments,too-many-locals
+	def _syncModifiedObjectsWithMaster( # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
 		self, objectClass, modifiedObjects, getFilter, objectsDifferFunction, createUpdateObjectFunction, mergeObjectsFunction
 	):
 		meth = getattr(self._masterBackend, f'{objectClass.backendMethodPrefix}_getObjects')
@@ -309,7 +309,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 					mergeObjectsFunction
 				)
 
-	def _replicateMasterToWorkBackend(self): # pylint: disable=too-many-branches
+	def _replicateMasterToWorkBackend(self): # pylint: disable=too-many-branches,too-many-locals,too-many-statements
 		if not self._masterBackend:
 			raise BackendConfigurationError("Master backend undefined")
 
@@ -387,7 +387,12 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 				"Client id '%s' does not match config global.host_id '%s'",
 				self._clientId, config.get('global', 'host_id')
 			)
-		opsiHostKey = self._workBackend.host_getObjects(id=self._clientId)[0].getOpsiHostKey()
+
+		clients = self._workBackend.host_getObjects(id=self._clientId)
+		if not clients:
+			raise BackendMissingDataError("Host '{self._clientId}' not found in replicated backend")
+
+		opsiHostKey = clients[0].getOpsiHostKey()
 		if opsiHostKey != config.get('global', 'opsi_host_key'):
 			logger.error(
 				"Host key '%s' from work backend does not match config global.opsi_host_key '%s'",
