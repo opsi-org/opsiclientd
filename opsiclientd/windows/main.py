@@ -4,6 +4,9 @@
 # Copyright (c) 2010-2021 uib GmbH <info@uib.de>
 # All rights reserved.
 # License: AGPL-3.0
+"""
+main for windows
+"""
 
 import os
 import sys
@@ -21,6 +24,7 @@ from opsicommon.logging import logger, LOG_NONE
 from OPSI import System
 
 from opsiclientd import init_logging, parser
+
 
 def run_as_system(command): # pylint: disable=too-many-locals
 	currentProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, os.getpid())

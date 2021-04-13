@@ -12,46 +12,16 @@ import os
 import signal
 import sys
 import time
-import subprocess
 from signal import SIGHUP, SIGTERM, SIGINT
 
 import opsicommon.logging
 from opsicommon.logging import logger, logging_config, LOG_NONE
 
-from opsiclientd import config, parser, init_logging
-from opsiclientd.SystemCheck import RUNNING_ON_LINUX, RUNNING_ON_MACOS
-
+from opsiclientd import parser, init_logging
 from opsiclientd.nonfree.Posix import OpsiclientdPosix
 
 
 opsiclientd = None # pylint: disable=invalid-name
-
-def configure_iptables():
-	logger.notice("Configure iptables")
-	port = config.get('control_server', 'port')
-	cmds = []
-	if os.path.exists("/usr/bin/firewall-cmd"):
-		# openSUSE Leap
-		cmds.append(["/usr/bin/firewall-cmd", f"--add-port={port}/tcp", "--zone", "public"])
-	else:
-		for iptables in ("iptables", "ip6tables"):
-			cmds.append([iptables, "-A", "INPUT", "-p", "tcp", "--dport", str(port), "-j", "ACCEPT"])
-
-	for cmd in cmds:
-		logger.info("Running command: %s", str(cmd))
-		subprocess.call(cmd)
-
-def configure_macos_firewall():
-	logger.notice("Configure MacOS firewall")
-	cmds = []
-
-	for path in ("/usr/local/bin/opsiclientd", "/usr/local/lib/opsiclientd/opsiclientd"):
-		cmds.append(["/usr/libexec/ApplicationFirewall/socketfilterfw", "--add" , path])
-		cmds.append(["/usr/libexec/ApplicationFirewall/socketfilterfw", "--unblockapp" , path])
-
-	for cmd in cmds:
-		logger.info("Running command: %s", str(cmd))
-		subprocess.call(cmd)
 
 def signal_handler(signo, stackFrame): # pylint: disable=unused-argument
 	logger.debug("Received signal %s, stopping opsiclientd", signo)
@@ -138,13 +108,6 @@ def main():
 			daemonize()
 
 		write_pid_file(options.pidFile)
-		try:
-			if RUNNING_ON_LINUX:
-				configure_iptables()
-			elif RUNNING_ON_MACOS:
-				configure_macos_firewall()
-		except Exception as err:  # pylint: disable=broad-except
-			logger.error("Failed to configure firewall: %s", err, exc_info=True)
 
 		logger.debug("Starting opsiclientd")
 		opsiclientd = OpsiclientdPosix()
