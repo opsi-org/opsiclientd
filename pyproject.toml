@@ -17,8 +17,8 @@ url = "http://pypi.uib.gmbh:8080/simple"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-#python-opsi = "^4.2.0.39"
-python-opsi = {path = "../python-opsi"}
+python-opsi = "^4.2.0.177"
+#python-opsi = {path = "../python-opsi"}
 pywin32 = {platform = "win32", version = "^227"}
 wmi = {platform = "win32", version = "^1.5.1"}
 distro = {platform = "linux", version = "^1.5.0"}
