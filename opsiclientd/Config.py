@@ -531,6 +531,8 @@ class Config(metaclass=Singleton):
 						continue
 					if isinstance(value, list):
 						value = ', '.join(forceUnicodeList(value))
+					elif isinstance(value, bool):
+						value = str(value).lower()
 					else:
 						value = forceUnicode(value)
 
