@@ -12,7 +12,7 @@ import os
 import ipaddress
 import subprocess
 
-from OpenSSL.crypto import FILETYPE_PEM, load_certificate
+from OpenSSL.crypto import FILETYPE_PEM, load_certificate, load_privatekey
 from OpenSSL.crypto import Error as CryptoError
 
 from opsicommon.logging import logger
@@ -63,11 +63,14 @@ def setup_ssl():
 						srv_crt.get_subject().CN, server_cn
 					)
 					create = True
+			with open(key_file, "r") as file:
+				srv_key = load_privatekey(FILETYPE_PEM, file.read())
 		except CryptoError as err:
 			logger.error(err)
 			create = True
 
 	if create:
+		logger.notice("Creating tls server certificate")
 		# TODO: fetch from config service
 		#pem = get_backend().host_getTLSCertificate(server_cn)  # pylint: disable=no-member
 		#srv_crt = load_certificate(FILETYPE_PEM, pem)
