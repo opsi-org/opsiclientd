@@ -286,6 +286,7 @@ class Timeline(metaclass=Singleton):
 				return self._sql.update(session, 'EVENT', '`id` = %d' % eventId, {'end': end, 'durationEvent': True})
 			except Exception as end_error: # pylint: disable=broad-except
 				logger.error("Failed to set end of event '%s': %s", eventId, end_error)
+		return -1
 
 	def getEvents(self):
 		if self._stopped:
