@@ -192,7 +192,6 @@ class ServiceConnection:
 				logger.error("Failed to disconnect config service: %s", exit_error)
 
 		self._configService = None
-		self._configServiceUrl = None
 
 
 class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instance-attributes
