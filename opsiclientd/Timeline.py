@@ -139,8 +139,8 @@ class Timeline(metaclass=Singleton):
 		self._stopped = True
 		end = forceOpsiTimestamp(timestamp())
 
-		with self._db_lock:
-			self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', {'end': end})
+		with self._db_lock, self._sql.session() as session:
+			self._sql.update(session, 'EVENT', '`durationEvent` = 1 AND `end` is NULL', {'end': end})
 
 	def getEventData(self):
 		events = []
@@ -194,10 +194,10 @@ class Timeline(metaclass=Singleton):
 		return HTML_HEAD % {'date': now}
 
 	def _cleanupDatabase(self):
-		with self._db_lock:
+		with self._db_lock, self._sql.session() as session:
 			try:
-				self._sql.execute('delete from EVENT where `start` < "%s"' % timestamp((time.time() - 7*24*3600)))
-				self._sql.update('EVENT', '`durationEvent` = 1 AND `end` is NULL', {'durationEvent': False})
+				self._sql.execute(session, 'delete from EVENT where `start` < "%s"' % timestamp((time.time() - 7*24*3600)))
+				self._sql.update(session, 'EVENT', '`durationEvent` = 1 AND `end` is NULL', {'durationEvent': False})
 			except Exception as cleanup_error: # pylint: disable=broad-except
 				logger.error(cleanup_error)
 
@@ -214,11 +214,10 @@ class Timeline(metaclass=Singleton):
 
 		self._sql = SQLite(
 			database=timelineDB,
-			synchronous=False,
 			databaseCharset='utf-8'
 		)
-		with self._db_lock:
-			tables = self._sql.getTables()
+		with self._db_lock, self._sql.session() as session:
+			tables = self._sql.getTables(session)
 			if 'EVENT' not in tables:
 				logger.debug('Creating table EVENT')
 				table = '''CREATE TABLE `EVENT` (
@@ -234,15 +233,15 @@ class Timeline(metaclass=Singleton):
 					) %s;
 					''' % self._sql.getTableCreationOptions('EVENT')
 				logger.debug(table)
-				self._sql.execute(table)
-				self._sql.execute('CREATE INDEX `category` on `EVENT` (`category`);')
-				self._sql.execute('CREATE INDEX `start` on `EVENT` (`start`);')
+				self._sql.execute(session, table)
+				self._sql.execute(session, 'CREATE INDEX `category` on `EVENT` (`category`);')
+				self._sql.execute(session, 'CREATE INDEX `start` on `EVENT` (`start`);')
 
 	def addEvent(self, title, description='', isError=False, category=None, durationEvent=False, start=None, end=None): # pylint: disable=too-many-arguments
 		if self._stopped:
 			return -1
 
-		with self._db_lock:
+		with self._db_lock, self._sql.session() as session:
 			try:
 				if category:
 					category = forceUnicode(category)
@@ -264,26 +263,27 @@ class Timeline(metaclass=Singleton):
 					'end': end,
 				}
 				try:
-					return self._sql.insert('EVENT', event)
+					return self._sql.insert(session, 'EVENT', event)
 				except sqlite3.DatabaseError as db_error:
 					logger.error("Failed to add event '%s': %s, recreating database", title, db_error)
 					self._sql.delete_db()
 					self._createDatabase(delete_existing=True)
-					return self._sql.insert('EVENT', event)
+					return self._sql.insert(session, 'EVENT', event)
 			except Exception as add_error: # pylint: disable=broad-except
 				logger.error("Failed to add event '%s': %s", title, add_error)
+		return -1
 
 	def setEventEnd(self, eventId, end=None):
 		if self._stopped:
 			return -1
 
-		with self._db_lock:
+		with self._db_lock, self._sql.session() as session:
 			try:
 				eventId = forceInt(eventId)
 				if not end:
 					end = timestamp()
 				end = forceOpsiTimestamp(end)
-				return self._sql.update('EVENT', '`id` = %d' % eventId, {'end': end, 'durationEvent': True})
+				return self._sql.update(session, 'EVENT', '`id` = %d' % eventId, {'end': end, 'durationEvent': True})
 			except Exception as end_error: # pylint: disable=broad-except
 				logger.error("Failed to set end of event '%s': %s", eventId, end_error)
 
@@ -291,5 +291,5 @@ class Timeline(metaclass=Singleton):
 		if self._stopped:
 			return {}
 
-		with self._db_lock:
-			return self._sql.getSet('select * from EVENT')
+		with self._db_lock, self._sql.session() as session:
+			return self._sql.getSet(session, 'select * from EVENT')
