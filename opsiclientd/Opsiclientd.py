@@ -57,13 +57,19 @@ if RUNNING_ON_WINDOWS:
 timeline = Timeline()
 state = State()
 
-class Opsiclientd(EventListener, threading.Thread): # pylint: disable=too-many-instance-attributes,too-many-public-methods
+class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
 	def __init__(self):
-		System.ensure_not_already_running("opsiclientd")
-		state.start()
-		timeline.start()
-
 		logger.debug("Opsiclient initiating")
+
+		System.ensure_not_already_running("opsiclientd")
+		try:
+			state.start()
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error("Failed to start state: %s", err, exc_info=True)
+		try:
+			timeline.start()
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error("Failed to start timeline: %s", err, exc_info=True)
 
 		EventListener.__init__(self)
 		threading.Thread.__init__(self)
