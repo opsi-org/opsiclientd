@@ -156,6 +156,7 @@ class Config(metaclass=Singleton):
 
 		self._temporaryConfigServiceUrls = []
 		self._temporaryDepotDrive = []
+		self._config_file_mtime = 0
 		self.disabledEventTypes = []
 
 		self._config = {
@@ -482,6 +483,7 @@ class Config(metaclass=Singleton):
 		logger.notice("Trying to read config from file: '%s'", self.get('global', 'config_file'))
 
 		try:
+			self._config_file_mtime = os.path.getmtime(self.get('global', 'config_file'))
 			# Read Config-File
 			config = IniFile(filename=self.get('global', 'config_file'), raw=True).parse()
 
@@ -509,6 +511,12 @@ class Config(metaclass=Singleton):
 
 	def updateConfigFile(self): # pylint: disable=too-many-branches
 		logger.info("Updating config file: '%s'", self.get('global', 'config_file'))
+
+		if self._config_file_mtime and os.path.getmtime(self.get('global', 'config_file')) > self._config_file_mtime:
+			logger.warning(
+				"The config file '%s' has been changed by another program, keeping file as is", self.get('global', 'config_file')
+			)
+			return
 
 		try:
 			configFile = IniFile(filename=self.get('global', 'config_file'), raw=True)
@@ -561,6 +569,7 @@ class Config(metaclass=Singleton):
 				# Write back config file if changed
 				configFile.generate(config, comments=comments)
 				logger.notice("Config file '%s' written", self.get('global', 'config_file'))
+				self._config_file_mtime = os.path.getmtime(self.get('global', 'config_file'))
 			else:
 				logger.info("No need to write config file '%s', config file is up to date", self.get('global', 'config_file'))
 		except Exception as err: # pylint: disable=broad-except
