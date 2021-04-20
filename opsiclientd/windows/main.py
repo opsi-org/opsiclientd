@@ -20,10 +20,13 @@ import win32security # pylint: disable=import-error
 import ntsecuritycon # pylint: disable=import-error
 
 import opsicommon.logging
-from opsicommon.logging import logger, LOG_NONE
+from opsicommon.logging import (
+	logger, LOG_NONE, init_logging as oc_init_logging
+)
 from OPSI import System
 
-from opsiclientd import init_logging, parser
+from opsiclientd import init_logging, parser, DEFAULT_STDERR_LOG_FORMAT
+from opsiclientd.setup import setup
 
 
 def run_as_system(command): # pylint: disable=too-many-locals
@@ -149,7 +152,14 @@ def main():
 			if "--elevated" in sys.argv:
 				sys.argv.remove("--elevated")
 			options = parser.parse_args()
+
+			if options.action == "setup":
+				oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
+				setup(full=True, options=options)
+				return
+
 			init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
+
 			with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
 				logger.notice("Running as user: %s", win32api.GetUserName())
 				if parent:

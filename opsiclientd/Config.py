@@ -509,14 +509,16 @@ class Config(metaclass=Singleton):
 		logger.notice("Config read")
 		logger.debug("Config is now:\n %s", objectToBeautifiedText(self._config))
 
-	def updateConfigFile(self): # pylint: disable=too-many-branches
+	def updateConfigFile(self, force=False): # pylint: disable=too-many-branches
 		logger.info("Updating config file: '%s'", self.get('global', 'config_file'))
 
 		if self._config_file_mtime and os.path.getmtime(self.get('global', 'config_file')) > self._config_file_mtime:
+			msg = "overwriting changes is forced" if force else "keeping file as is"
 			logger.warning(
-				"The config file '%s' has been changed by another program, keeping file as is", self.get('global', 'config_file')
+				"The config file '%s' has been changed by another program, %s", self.get('global', 'config_file'), msg
 			)
-			return
+			if not force:
+				return
 
 		try:
 			configFile = IniFile(filename=self.get('global', 'config_file'), raw=True)

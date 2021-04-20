@@ -15,9 +15,13 @@ import time
 from signal import SIGHUP, SIGTERM, SIGINT
 
 import opsicommon.logging
-from opsicommon.logging import logger, logging_config, LOG_NONE
+from opsicommon.logging import (
+	logger, logging_config, LOG_NONE,
+	init_logging as oc_init_logging
+)
 
-from opsiclientd import parser, init_logging
+from opsiclientd import parser, init_logging, DEFAULT_STDERR_LOG_FORMAT
+from opsiclientd.setup import setup
 from opsiclientd.nonfree.Posix import OpsiclientdPosix
 
 
@@ -91,6 +95,17 @@ def main():
 	)
 
 	options = parser.parse_args()
+
+	if options.action == "stop":
+		oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
+		setup(full=True, options=options)
+		return
+
+	if options.action == "setup":
+		oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
+		setup(full=True, options=options)
+		logger.error("setup")
+		return
 
 	init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
 

@@ -9,16 +9,20 @@ setup tasks
 """
 
 import os
+import time
+import signal
 import ipaddress
 import subprocess
 
 from OpenSSL.crypto import FILETYPE_PEM, load_certificate, load_privatekey
 from OpenSSL.crypto import Error as CryptoError
 
-from opsicommon.logging import logger
+from opsicommon.logging import logger, secret_filter
 from opsicommon.ssl import as_pem, create_ca, create_server_cert, remove_ca
 from opsicommon.system.network import get_ip_addresses, get_hostnames, get_fqdn
+from opsicommon.client.jsonrpc import JSONRPCClient
 
+from opsiclientd import get_opsiclientd_pid
 from opsiclientd.Config import Config
 from opsiclientd.SystemCheck import RUNNING_ON_LINUX, RUNNING_ON_MACOS
 
@@ -145,8 +149,38 @@ def setup_firewall():
 		setup_firewall_macos()
 
 
-def setup() -> None:
+def setup(full=False, options=None) -> None:
 	logger.notice("Running opsiclientd setup")
+
+	if full:
+		#opsiclientd_pid = get_opsiclientd_pid()
+		#if opsiclientd_pid:
+		#	logger.notice("Stopping opsiclientd")
+		#	os.kill(opsiclientd_pid, signal.SIGINT)
+		#	for _num in range(20):
+		#		if not get_opsiclientd_pid():
+		#			break
+		#		time.sleep(1)
+		try:
+			config.readConfigFile()
+		except Exception as err: # pylint: disable=broad-except
+			logger.info(err)
+
+		service_address = getattr(options, "service_address", None) or config.get('config_service', 'url')[0]
+		service_username = getattr(options, "service_username", None) or config.get('global', 'host_id')
+		service_password = getattr(options, "service_password", None) or config.get('global', 'opsi_host_key')
+		if getattr(options, "client_id", None):
+			config.set('global', 'host_id', options.client_id)
+		secret_filter.add_secrets(service_password)
+
+		logger.notice("Connecting to '%s' as '%s'", service_address, service_username)
+		jsonrpc_client = JSONRPCClient(
+			address=service_address,
+			username=service_username,
+			password=service_password
+		)
+		config.getFromService(jsonrpc_client)
+		config.updateConfigFile(force=True)
 
 	try:
 		setup_ssl()

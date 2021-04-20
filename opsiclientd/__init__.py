@@ -14,6 +14,7 @@ import os
 import sys
 import tempfile
 import argparse
+import psutil
 
 from opsicommon.logging import (
 	logger, logging_config, set_filter_from_string, init_logging as oc_init_logging,
@@ -50,6 +51,50 @@ parser.add_argument(
 	default=None,
 	help="Filter log records contexts (<ctx-name-1>=<val1>[,val2][;ctx-name-2=val3])."
 )
+parser.add_argument(
+	"--service-address",
+	default=None,
+	help="Service address to use for setup."
+)
+parser.add_argument(
+	"--service-username",
+	default=None,
+	help="Username to use for service connection (setup)."
+)
+parser.add_argument(
+	"--service-password",
+	default=None,
+	help="Password to use for service connection (setup)."
+)
+parser.add_argument(
+	"--client-id",
+	default=None,
+	help="Client id to use for setup (fqdn is used if omitted)."
+)
+parser.add_argument(
+	"action",
+	nargs="?",
+	choices=("start", "stop", "restart", "install", "update", "remove", "setup"),
+	default=None,
+	metavar="ACTION",
+	help="The ACTION to perform (start / stop / restart / install / update / remove / setup)."
+)
+
+def get_opsiclientd_pid() -> int:
+	our_pid = os.getpid()
+	for proc in psutil.process_iter():
+		if proc.pid == our_pid:
+			continue
+
+		if (
+			proc.name() in ("opsiclientd", "opsiclientd.exe") or
+			(proc.name() in ("python", "python3") and (
+				"opsiclientd" in proc.cmdline() or
+				"opsiclientd.__main__" in " ".join(proc.cmdline())
+			))
+		):
+			return proc.pid
+	return None
 
 def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = None):
 	if not os.path.isdir(log_dir):

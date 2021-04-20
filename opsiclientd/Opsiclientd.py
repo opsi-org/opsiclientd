@@ -52,7 +52,8 @@ except ImportError:
 
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.Events.Windows.GUIStartup import (
-		GUIStartupEventConfig, GUIStartupEventGenerator)
+		GUIStartupEventConfig, GUIStartupEventGenerator
+	)
 
 timeline = Timeline()
 state = State()
@@ -60,16 +61,6 @@ state = State()
 class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
 	def __init__(self):
 		logger.debug("Opsiclient initiating")
-
-		System.ensure_not_already_running("opsiclientd")
-		try:
-			state.start()
-		except Exception as err:  # pylint: disable=broad-except
-			logger.error("Failed to start state: %s", err, exc_info=True)
-		try:
-			timeline.start()
-		except Exception as err:  # pylint: disable=broad-except
-			logger.error("Failed to start timeline: %s", err, exc_info=True)
 
 		EventListener.__init__(self)
 		threading.Thread.__init__(self)
@@ -305,13 +296,23 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				logger.error(err, exc_info=True)
 
 	def _run(self):  # pylint: disable=too-many-statements
+		System.ensure_not_already_running("opsiclientd")
 		self._running = True
 		self._opsiclientdRunningEventId = None
+
+		try:
+			state.start()
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error("Failed to start state: %s", err, exc_info=True)
+		try:
+			timeline.start()
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error("Failed to start timeline: %s", err, exc_info=True)
 
 		config.readConfigFile()
 		config.check_restart_marker()
 
-		setup()
+		setup(full=False)
 
 		@contextmanager
 		def getControlPipe():
