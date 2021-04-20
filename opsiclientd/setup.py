@@ -9,8 +9,6 @@ setup tasks
 """
 
 import os
-import time
-import signal
 import ipaddress
 import subprocess
 
@@ -153,7 +151,11 @@ def setup(full=False, options=None) -> None:
 	logger.notice("Running opsiclientd setup")
 
 	if full:
-		#opsiclientd_pid = get_opsiclientd_pid()
+		opsiclientd_pid = get_opsiclientd_pid()
+		if opsiclientd_pid:
+			logger.info("opsiclientd is running with pid %d", opsiclientd_pid)
+		else:
+			logger.info("opsiclientd is not running")
 		#if opsiclientd_pid:
 		#	logger.notice("Stopping opsiclientd")
 		#	os.kill(opsiclientd_pid, signal.SIGINT)

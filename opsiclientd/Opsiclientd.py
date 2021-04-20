@@ -295,7 +295,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err, exc_info=True)
 
-	def _run(self):  # pylint: disable=too-many-statements
+	def _run(self):  # pylint: disable=too-many-statements,too-many-branches
 		System.ensure_not_already_running("opsiclientd")
 		self._running = True
 		self._opsiclientdRunningEventId = None
