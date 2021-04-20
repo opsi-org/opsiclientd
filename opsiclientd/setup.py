@@ -22,7 +22,7 @@ from opsicommon.client.jsonrpc import JSONRPCClient
 
 from opsiclientd import get_opsiclientd_pid
 from opsiclientd.Config import Config
-from opsiclientd.SystemCheck import RUNNING_ON_LINUX, RUNNING_ON_MACOS
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_LINUX, RUNNING_ON_MACOS
 
 config = Config()
 
@@ -142,10 +142,29 @@ def setup_firewall_macos():
 
 def setup_firewall():
 	if RUNNING_ON_LINUX:
-		setup_firewall_linux()
-	elif RUNNING_ON_MACOS:
-		setup_firewall_macos()
+		return setup_firewall_linux()
+	if RUNNING_ON_MACOS:
+		return setup_firewall_macos()
+	return None
 
+def install_service_windows():
+	logger.notice("Installing windows service")
+	from opsiclientd.windows.service import handle_commandline # pylint: disable=import-outside-toplevel
+	handle_commandline(argv=["opsiclientd.exe", "install"])
+
+def install_service_linux():
+	logger.notice("Install systemd service")
+	#subprocess.check_call(["systemctl", "daemon-reload"])
+	subprocess.check_call(["systemctl", "enable", "opsiclientd.service"])
+
+def install_service():
+	if RUNNING_ON_WINDOWS:
+		return install_service_windows()
+	if RUNNING_ON_LINUX:
+		return install_service_linux()
+	#if RUNNING_ON_MACOS:
+	#	install_service_macos()
+	return None
 
 def setup(full=False, options=None) -> None:
 	logger.notice("Running opsiclientd setup")
@@ -156,16 +175,10 @@ def setup(full=False, options=None) -> None:
 			logger.info("opsiclientd is running with pid %d", opsiclientd_pid)
 		else:
 			logger.info("opsiclientd is not running")
-		#if opsiclientd_pid:
-		#	logger.notice("Stopping opsiclientd")
-		#	os.kill(opsiclientd_pid, signal.SIGINT)
-		#	for _num in range(20):
-		#		if not get_opsiclientd_pid():
-		#			break
-		#		time.sleep(1)
+
 		try:
 			config.readConfigFile()
-		except Exception as err: # pylint: disable=broad-except
+		except Exception as err:  # pylint: disable=broad-except
 			logger.info(err)
 
 		service_address = getattr(options, "service_address", None) or config.get('config_service', 'url')[0]
@@ -173,6 +186,10 @@ def setup(full=False, options=None) -> None:
 		service_password = getattr(options, "service_password", None) or config.get('global', 'opsi_host_key')
 		if getattr(options, "client_id", None):
 			config.set('global', 'host_id', options.client_id)
+		if not config.get('global', 'host_id'):
+			fqdn = get_fqdn()
+			fqdn = config.set('global', 'host_id', fqdn)
+
 		secret_filter.add_secrets(service_password)
 
 		logger.notice("Connecting to '%s' as '%s'", service_address, service_username)
@@ -181,8 +198,29 @@ def setup(full=False, options=None) -> None:
 			username=service_username,
 			password=service_password
 		)
+		client = jsonrpc_client.host_getObjects(id=config.get('global', 'host_id'))  # pylint: disable=no-member
+		if client:
+			logger.notice("Client '%s' exists in service", config.get('global', 'host_id'))
+		else:
+			logger.notice("Creating client '%s' in service", config.get('global', 'host_id'))
+			jsonrpc_client.host_createOpsiClient(  # pylint: disable=no-member
+				id=config.get('global', 'host_id')
+			)
+			client = jsonrpc_client.host_getObjects(id=config.get('global', 'host_id'))  # pylint: disable=no-member
+			if not client:
+				raise RuntimeError(f"Client '{config.get('global', 'host_id')}' not found in service")
+
+		client = client[0]
+		if client.opsiHostKey:
+			config.set('global', 'opsi_host_key', client.opsiHostKey)
+
 		config.getFromService(jsonrpc_client)
 		config.updateConfigFile(force=True)
+
+		try:
+			install_service()
+		except Exception as err: # pylint: disable=broad-except
+			logger.error("Failed to install service: %s", err)
 
 	try:
 		setup_ssl()

@@ -96,15 +96,9 @@ def main():
 
 	options = parser.parse_args()
 
-	if options.action == "stop":
-		oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
-		setup(full=True, options=options)
-		return
-
 	if options.action == "setup":
 		oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
 		setup(full=True, options=options)
-		logger.error("setup")
 		return
 
 	init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)

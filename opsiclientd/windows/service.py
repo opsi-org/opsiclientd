@@ -129,5 +129,5 @@ def start_service():
 		servicemanager.PrepareToHostSingle(OpsiclientdService)
 		servicemanager.StartServiceCtrlDispatcher()
 
-def handle_commandline():
-	win32serviceutil.HandleCommandLine(OpsiclientdService)
+def handle_commandline(argv=None):
+	win32serviceutil.HandleCommandLine(OpsiclientdService, argv=argv)
