@@ -114,11 +114,10 @@ def get_integrity_level():
 	# S-1-16-12288  System Mandatory Level
 	return win32security.ConvertSidToStringSid(sid)
 
-def main():
+def main(): # pylint: disable=too-many-statements
 	log_dir = os.path.join(System.getSystemDrive() + "\\opsi.org\\log")
 	parent = psutil.Process(os.getpid()).parent()
 	parent_name = parent.name() if parent else None
-	integrity_level = get_integrity_level()
 	# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
 
 	if len(sys.argv) == 1 and parent_name == "services.exe":
@@ -149,6 +148,11 @@ def main():
 			print(f"Failed to run {command} as system: {err}", file=sys.stderr)
 			raise
 		return
+
+	integrity_level = get_integrity_level()
+	if integrity_level != "S-1-16-12288":
+		print(f"opsiclientd.exe must be run as service or from an elevated cmd.exe (integrity_level={integrity_level})", file=sys.stderr)
+		sys.exit(1)
 
 	if "--elevated" in sys.argv:
 		sys.argv.remove("--elevated")
