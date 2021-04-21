@@ -1590,9 +1590,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					else:
 						self.setStatusMessage(_("Unblocking login"))
 
-					if not self.opsiclientd.isRebootTriggered() and not self.opsiclientd.isShutdownTriggered():
-						# TODO: Not needed with new opsi-login-blocker (>= 4.2.0.0), remove when released
-						self.opsiclientd.setBlockLogin(False)
+					if self.opsiclientd.isRebootTriggered() or self.opsiclientd.isShutdownTriggered():
+						if os.path.exists(config.restart_marker):
+							os.remove(config.restart_marker)
 
 					self.setStatusMessage("")
 					self.stopNotificationServer()
