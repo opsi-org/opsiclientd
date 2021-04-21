@@ -252,12 +252,15 @@ class Config(metaclass=Singleton):
 
 		return baseDir
 
+	@property
+	def restart_marker(self): # pylint: disable=no-self-use
+		return os.path.join(os.path.dirname(sys.argv[0]), ".opsiclientd_restart")
+
 	def check_restart_marker(self):
-		restart_marker = os.path.join(os.path.dirname(sys.argv[0]), ".opsiclientd_restart")
-		if os.path.exists(restart_marker):
+		if os.path.exists(self.restart_marker):
 			logger.notice("Restart marker found")
 			try:
-				os.remove(restart_marker)
+				os.remove(self.restart_marker)
 			except Exception as err: # pylint: disable=broad-except
 				logger.error(err)
 			self.disabledEventTypes = ["gui startup"]

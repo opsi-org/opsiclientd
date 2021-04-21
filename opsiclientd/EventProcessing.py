@@ -1620,3 +1620,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			)
 			if timelineEventId:
 				timeline.setEventEnd(eventId = timelineEventId)
+
+			if os.path.exists(config.restart_marker):
+				logger.notice("Restart marker found, restarting in 3 seconds")
+				self.opsiclientd.restart(3)

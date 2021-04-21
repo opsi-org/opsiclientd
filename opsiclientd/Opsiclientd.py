@@ -163,7 +163,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				logger.info("Installing '%s' into '%s'", bin_dir, inst_dir)
 				shutil.copytree(bin_dir, inst_dir)
 
-				self.restart(5)
+				self.restart(3)
 		finally:
 			self._selfUpdating = False
 
@@ -172,9 +172,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			time.sleep(waitSeconds)
 			timeline.addEvent(title = "opsiclientd restart", category = "system")
 			try:
-				restart_marker = os.path.join(os.path.dirname(self._argv[0]), ".opsiclientd_restart")
-				logger.notice("Writing restart marker %s", restart_marker)
-				open(restart_marker, "w").close()
+				logger.notice("Writing restart marker %s", config.restart_marker)
+				open(config.restart_marker, "w").close()
 			except Exception as err: # pylint: disable=broad-except
 				logger.error(err)
 			logger.notice("Executing: %s", self._argv)
