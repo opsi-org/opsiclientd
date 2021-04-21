@@ -118,64 +118,60 @@ def main():
 	log_dir = os.path.join(System.getSystemDrive() + "\\opsi.org\\log")
 	parent = psutil.Process(os.getpid()).parent()
 	parent_name = parent.name() if parent else None
+	integrity_level = get_integrity_level()
 	# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
-	#if os.environ.get("USERNAME", "$").endswith("$") and len(sys.argv) == 1:
-	if parent_name == "services.exe":
+
+	if len(sys.argv) == 1 and parent_name == "services.exe":
 		from opsiclientd.windows.service import start_service # pylint: disable=import-outside-toplevel
 		init_logging(stderr_level=LOG_NONE, log_dir=log_dir)
 		start_service()
-	else:
-		if any(arg in sys.argv[1:] for arg in ("install", "update", "remove", "start", "stop", "restart")):
-			from opsiclientd.windows.service import handle_commandline # pylint: disable=import-outside-toplevel
-			handle_commandline()
-		else:
-			integrity_level = get_integrity_level()
-			if "--elevated" not in sys.argv and "--help" not in sys.argv and "--version" not in sys.argv and parent_name != "python.exe":
-				executable = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + ".exe"
-				args = " ".join(sys.argv[1:])
-				#subprocess.run("whoami /user /priv")
-				#print(integrity_level)
-				if integrity_level != "S-1-16-12288" or parent_name != "cmd.exe":
-					from opsiclientd.windows.service import handle_commandline # pylint: disable=import-outside-toplevel
-					handle_commandline()
-					#print("opsiclientd.exe must be run as service or from an elevated cmd.exe", file=sys.stderr)
-					return
+		return
 
-				command = executable + " " + args + " --elevated"
-				try:
-					run_as_system(command)
-				except Exception as err: # pylint: disable=broad-except
-					print(f"Failed to run {command} as system: {err}", file=sys.stderr)
-					raise
-				return
+	if any(arg in sys.argv[1:] for arg in ("install", "update", "remove", "start", "stop", "restart")):
+		from opsiclientd.windows.service import handle_commandline # pylint: disable=import-outside-toplevel
+		handle_commandline()
+		return
 
-			if "--elevated" in sys.argv:
-				sys.argv.remove("--elevated")
-			options = parser.parse_args()
+	if any(arg in sys.argv[1:] for arg in ("setup", "--version", "--help")):
+		options = parser.parse_args()
+		if options.action == "setup":
+			oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
+			setup(full=True, options=options)
+		return
 
-			if options.action == "setup":
-				oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
-				setup(full=True, options=options)
-				return
+	if "--elevated" not in sys.argv and parent_name != "python.exe":
+		executable = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + ".exe"
+		args = " ".join(sys.argv[1:])
+		command = executable + " " + args + " --elevated"
+		try:
+			run_as_system(command)
+		except Exception as err: # pylint: disable=broad-except
+			print(f"Failed to run {command} as system: {err}", file=sys.stderr)
+			raise
+		return
 
-			init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
+	if "--elevated" in sys.argv:
+		sys.argv.remove("--elevated")
+	options = parser.parse_args()
 
-			with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
-				logger.notice("Running as user: %s", win32api.GetUserName())
-				if parent:
-					logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)
-				logger.debug(os.environ)
-				from .opsiclientd import opsiclientd_factory # pylint: disable=import-outside-toplevel
-				opsiclientd = opsiclientd_factory()
-				try:
-					opsiclientd.start()
-					while True:
-						time.sleep(1)
-				except KeyboardInterrupt:
-					logger.essential("KeyboardInterrupt #1 -> stop")
-					opsiclientd.stop()
-					try:
-						opsiclientd.join(15)
-					except KeyboardInterrupt:
-						logger.essential("KeyboardInterrupt #2 -> kill process")
-						psutil.Process(os.getpid()).kill()
+	init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
+
+	with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
+		logger.notice("Running as user: %s", win32api.GetUserName())
+		if parent:
+			logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)
+		logger.debug(os.environ)
+		from .opsiclientd import opsiclientd_factory # pylint: disable=import-outside-toplevel
+		opsiclientd = opsiclientd_factory()
+		try:
+			opsiclientd.start()
+			while True:
+				time.sleep(1)
+		except KeyboardInterrupt:
+			logger.essential("KeyboardInterrupt #1 -> stop")
+			opsiclientd.stop()
+			try:
+				opsiclientd.join(15)
+			except KeyboardInterrupt:
+				logger.essential("KeyboardInterrupt #2 -> kill process")
+				psutil.Process(os.getpid()).kill()
