@@ -28,6 +28,7 @@ from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 from OPSI import __version__ as python_opsi_version
 
 from opsicommon.logging import logger, log_context
+from opsicommon.system import ensure_not_already_running
 
 from opsiclientd import __version__, config, check_signature
 from opsiclientd.ControlPipe import ControlPipeFactory
@@ -296,7 +297,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				logger.error(err, exc_info=True)
 
 	def _run(self):  # pylint: disable=too-many-statements,too-many-branches
-		System.ensure_not_already_running("opsiclientd")
+		ensure_not_already_running("opsiclientd")
 		self._running = True
 		self._opsiclientdRunningEventId = None
 
