@@ -12,6 +12,10 @@ import os
 import sys
 import platform
 
+def installation_helper():
+	from opsiclientd.installationhelper import main as _main # pylint: disable=import-outside-toplevel
+	_main()
+
 def opsiclientd_rpc():
 	from opsiclientd.opsiclientdrpc import main as _main # pylint: disable=import-outside-toplevel
 	_main()
@@ -40,4 +44,6 @@ def main():
 		return opsiclientd_rpc()
 	if name == "action_processor_starter":
 		return action_processor_starter()
+	if name == "installation_helper":
+		return installation_helper()
 	return opsiclientd()

@@ -26,6 +26,8 @@ autobahn = "^20.7.1"
 msgpack = "^1.0.0"
 lz4 = "^3.1.1"
 netifaces = "^0.10.9"
+zeroconf = "^0.29.0"
+pysimplegui = "^4.39.1"
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.5.0"
@@ -43,6 +45,7 @@ requests = "^2.25.1"
 opsiclientd = "opsiclientd.__main__:opsiclientd"
 opsiclientd_rpc = "opsiclientd.__main__:opsiclientd_rpc"
 action_processor_starter = "opsiclientd.__main__:action_processor_starter"
+installation_helper = "opsiclientd.__main__:installation_helper"
 
 [build-system]
 requires = ["poetry>=0.12"]
