@@ -117,7 +117,6 @@ build:pyinstaller-windows-x86:
     - poetry run opsi-dev-tool -l info --signserver-sign dist\opsiclientd\opsiclientd.exe
     - poetry run opsi-dev-tool -l info --signserver-sign dist\opsiclientd\opsiclientd_rpc.exe
     - poetry run opsi-dev-tool -l info --signserver-sign dist\opsiclientd\action_processor_starter.exe
-    - poetry run opsi-dev-tool -l info --signserver-sign dist\opsiclientd\installation_helper.exe
     - Move-Item -Path opsiclientd -Destination opsiclientd.src -Force
     - Move-Item -Path dist\opsiclientd -Destination opsiclientd_windows_x86
     # Check if binary is working

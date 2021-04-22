@@ -52,7 +52,6 @@ pyinstaller-poetry:
         - opsiclientd
         - opsiclientd_rpc
         - action_processor_starter
-        - installation_helper
   icon: opsiclientd_data/windows/opsi.ico
   before_script:
     linux:
