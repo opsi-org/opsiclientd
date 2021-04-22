@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+
+# opsiclientd is part of the desktop management solution opsi http://www.opsi.org
+# Copyright (c) 2010-2021 uib GmbH <info@uib.de>
+# All rights reserved.
+# License: AGPL-3.0
+"""
+opsi-client-agent installation_helper
+"""
+
 import os
 import sys
 import time
@@ -151,7 +161,7 @@ class InstallationHelper:  # pylint: disable=too-many-instance-attributes
 						)
 					)
 				#config.get("general", "dnsdomain", fallback=None)
-			except Exception as err:
+			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err)
 
 	def start_zeroconf(self):
@@ -163,7 +173,7 @@ class InstallationHelper:  # pylint: disable=too-many-instance-attributes
 				handlers=[self.zeroconf_handler]
 			)
 
-	def zeroconf_handler(self, zeroconf, service_type, name, state_change):
+	def zeroconf_handler(self, zeroconf, service_type, name, state_change):  # pylint: disable=unused-argument
 		info = zeroconf.get_service_info(service_type, name)
 		addresses = ["%s:%d" % (addr, info.port) for addr in info.parsed_addresses()]
 		logger.info(
