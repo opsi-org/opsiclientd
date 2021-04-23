@@ -202,16 +202,6 @@ def setup(full=False, options=None) -> None:
 		if client and client[0] and client[0].opsiHostKey:
 			config.set('global', 'opsi_host_key', client[0].opsiHostKey)
 
-		"""
-		else:
-			logger.notice("Creating client '%s' in service", config.get('global', 'host_id'))
-			jsonrpc_client.host_createOpsiClient(  # pylint: disable=no-member
-				id=config.get('global', 'host_id')
-			)
-			client = jsonrpc_client.host_getObjects(id=config.get('global', 'host_id'))  # pylint: disable=no-member
-			if not client:
-				raise RuntimeError(f"Client '{config.get('global', 'host_id')}' not found in service")
-		"""
 		config.getFromService(jsonrpc_client)
 		config.updateConfigFile(force=True)
 
