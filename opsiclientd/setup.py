@@ -20,7 +20,6 @@ from opsicommon.ssl import as_pem, create_ca, create_server_cert, remove_ca
 from opsicommon.system.network import get_ip_addresses, get_hostnames, get_fqdn
 from opsicommon.client.jsonrpc import JSONRPCClient
 
-from opsiclientd import get_opsiclientd_pid
 from opsiclientd.Config import Config
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_LINUX, RUNNING_ON_MACOS
 
@@ -258,11 +257,6 @@ def setup_on_shutdown():
 
 def setup(full=False, options=None) -> None:
 	logger.notice("Running opsiclientd setup")
-	#opsiclientd_pid = get_opsiclientd_pid()
-	#if opsiclientd_pid:
-	#	logger.info("opsiclientd is running with pid %d", opsiclientd_pid)
-	#else:
-	#	logger.info("opsiclientd is not running")
 
 	if full:
 		opsi_service_setup(options)
