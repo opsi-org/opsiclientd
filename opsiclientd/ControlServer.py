@@ -52,6 +52,7 @@ from opsicommon.logging import (
 from opsiclientd.ControlPipe import OpsiclientdRpcPipeInterface
 from opsiclientd.Config import Config
 from opsiclientd.Events.Utilities.Generators import getEventGenerator
+from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
 from opsiclientd.SoftwareOnDemand import ResourceKioskJsonRpc
@@ -1144,3 +1145,27 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		except Exception as err: # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 			raise
+
+	def runOnShutdown(self):
+		on_shutdown_active = False
+		for event_config in getEventConfigs().values():
+			if event_config["name"] == "on_shutdown" and event_config["active"]:
+				on_shutdown_active = True
+				break
+
+		if not on_shutdown_active:
+			logger.info("on_shutdown event is not active")
+			return False
+
+		if self.isInstallationPending():
+			logger.info("Installation are pending, not firing on_shutdown")
+			return False
+
+		logger.info("Firing on_shutdown and waiting for event to complete")
+		self.fireEvent("on_shutdown")
+		time.sleep(10)
+		while self.isEventRunning("on_shutdown"):
+			time.sleep(10)
+
+		logger.info("on_shutdown event completed")
+		return True
