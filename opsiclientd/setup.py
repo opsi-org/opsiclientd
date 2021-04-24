@@ -247,6 +247,8 @@ def setup_on_shutdown():
 		winreg.SetValueEx(key_handle, "Script", 0, winreg.REG_SZ, script_path)
 		winreg.SetValueEx(key_handle, "Parameters", 0, winreg.REG_SZ, script_params)
 		winreg.SetValueEx(key_handle, "ErrorCode", 0, winreg.REG_DWORD, 0)
+		winreg.SetValueEx(key_handle, "IsPowershell", 0, winreg.REG_DWORD, 0)
+		winreg.SetValueEx(key_handle, "ExecTime", 0, winreg.REG_BINARY, b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
 
 	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System")
 	if win32process.IsWow64Process():
