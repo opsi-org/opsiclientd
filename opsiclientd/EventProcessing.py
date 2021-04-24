@@ -1593,6 +1593,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					if self.opsiclientd.isRebootTriggered() or self.opsiclientd.isShutdownTriggered():
 						if os.path.exists(config.restart_marker):
 							os.remove(config.restart_marker)
+					else:
+						self.opsiclientd.setBlockLogin(False)
 
 					self.setStatusMessage("")
 					self.stopNotificationServer()
