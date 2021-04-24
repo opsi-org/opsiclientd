@@ -9,6 +9,7 @@ setup tasks
 """
 
 import os
+import codecs
 import ipaddress
 import subprocess
 
@@ -213,10 +214,15 @@ def setup_on_shutdown():
 		r"SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Shutdown",
 		r"SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Shutdown"
 	]
-	script_path = os.path.realpath(config.get('opsiclientd_rpc', 'command').split('"')[1].strip('"'))
-	#if not script_path:
-	#script_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "opsiclientd_rpc.exe")
-	script_params = "runOnShutdown()"
+
+	opsiclientd_rpc = os.path.realpath(config.get('opsiclientd_rpc', 'command').split('"')[1].strip('"'))
+	if not opsiclientd_rpc:
+		opsiclientd_rpc = os.path.join(os.path.dirname(os.path.realpath(__file__)), "opsiclientd_rpc.exe")
+
+	# Windows does not execute binaries directly, using cmd script
+	script_path = opsiclientd_rpc[:-3] + "cmd"
+	with codecs.open(script_path, "w", "windows-1252") as file:
+		file.write(f'"%~dp0\\{opsiclientd_rpc}" runOnShutdown()\r\n')
 
 	for base_key in BASE_KEYS:
 		base_key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, base_key)
@@ -245,7 +251,7 @@ def setup_on_shutdown():
 
 		key_handle = winreg.CreateKey(key_handle, "0")
 		winreg.SetValueEx(key_handle, "Script", 0, winreg.REG_SZ, script_path)
-		winreg.SetValueEx(key_handle, "Parameters", 0, winreg.REG_SZ, script_params)
+		winreg.SetValueEx(key_handle, "Parameters", 0, winreg.REG_SZ, "")
 		winreg.SetValueEx(key_handle, "ErrorCode", 0, winreg.REG_DWORD, 0)
 		winreg.SetValueEx(key_handle, "IsPowershell", 0, winreg.REG_DWORD, 0)
 		winreg.SetValueEx(key_handle, "ExecTime", 0, winreg.REG_BINARY, b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
