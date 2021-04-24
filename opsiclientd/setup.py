@@ -222,7 +222,7 @@ def setup_on_shutdown():
 	# Windows does not execute binaries directly, using cmd script
 	script_path = opsiclientd_rpc[:-3] + "cmd"
 	with codecs.open(script_path, "w", "windows-1252") as file:
-		file.write(f'"%~dp0\\{opsiclientd_rpc}" %*\r\n')
+		file.write(f'"%~dp0\\{os.path.basename(opsiclientd_rpc)}" %*\r\n')
 	script_params = "runOnShutdown()"
 
 	for base_key in BASE_KEYS:
