@@ -147,15 +147,18 @@ def setup_firewall():
 		return setup_firewall_macos()
 	return None
 
+
 def install_service_windows():
 	logger.notice("Installing windows service")
 	from opsiclientd.windows.service import handle_commandline # pylint: disable=import-outside-toplevel
 	handle_commandline(argv=["opsiclientd.exe", "install"])
 
+
 def install_service_linux():
 	logger.notice("Install systemd service")
 	#subprocess.check_call(["systemctl", "daemon-reload"])
 	subprocess.check_call(["systemctl", "enable", "opsiclientd.service"])
+
 
 def install_service():
 	if RUNNING_ON_WINDOWS:
@@ -166,45 +169,101 @@ def install_service():
 	#	install_service_macos()
 	return None
 
+
+def opsi_service_setup(options=None):
+	try:
+		config.readConfigFile()
+	except Exception as err:  # pylint: disable=broad-except
+		logger.info(err)
+
+	service_address = getattr(options, "service_address", None) or config.get('config_service', 'url')[0]
+	service_username = getattr(options, "service_username", None) or config.get('global', 'host_id')
+	service_password = getattr(options, "service_password", None) or config.get('global', 'opsi_host_key')
+	if getattr(options, "client_id", None):
+		config.set('global', 'host_id', options.client_id)
+	if not config.get('global', 'host_id'):
+		fqdn = get_fqdn()
+		fqdn = config.set('global', 'host_id', fqdn)
+
+	secret_filter.add_secrets(service_password)
+
+	logger.notice("Connecting to '%s' as '%s'", service_address, service_username)
+	jsonrpc_client = JSONRPCClient(
+		address=service_address,
+		username=service_username,
+		password=service_password
+	)
+	client = jsonrpc_client.host_getObjects(id=config.get('global', 'host_id'))  # pylint: disable=no-member
+	if client and client[0] and client[0].opsiHostKey:
+		config.set('global', 'opsi_host_key', client[0].opsiHostKey)
+
+	config.getFromService(jsonrpc_client)
+	config.updateConfigFile(force=True)
+
+
+def setup_on_shutdown():
+	if not RUNNING_ON_WINDOWS:
+		return None
+
+	# pyright: reportMissingImports=false
+	import winreg  # pylint: disable=import-outside-toplevel,import-error
+	import win32process  # pylint: disable=import-outside-toplevel,import-error
+
+	GPO_NAME = "opsi shutdown install policy"
+	BASE_KEYS = [
+		r"SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Shutdown",
+		r"SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Shutdown"
+	]
+	script_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "opsiclientd_rpc.exe")
+	script_params = "runOnShutdown()"
+
+	for base_key in BASE_KEYS:
+		base_key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, base_key)
+		if win32process.IsWow64Process():
+			winreg.DisableReflectionKey(base_key_handle)
+
+		num = -1
+		while True:
+			num += 1
+			try:
+				key_handle = winreg.OpenKey(base_key_handle, str(num))
+				(value, _type) = winreg.QueryValueEx(key_handle, "GPOName")
+				if value == GPO_NAME:
+					break
+			except OSError:
+				# Key does not exist
+				break
+
+		key_handle = winreg.CreateKey(base_key_handle, str(num))
+		winreg.SetValueEx(key_handle, "GPO-ID", 0, winreg.REG_SZ, "LocalGPO")
+		winreg.SetValueEx(key_handle, "SOM-ID", 0, winreg.REG_SZ, "Local")
+		winreg.SetValueEx(key_handle, "FileSysPath", 0, winreg.REG_SZ, rf"{os.environ['SystemRoot']}\System32\GroupPolicy\Machine")
+		winreg.SetValueEx(key_handle, "DisplayName", 0, winreg.REG_SZ, GPO_NAME)
+		winreg.SetValueEx(key_handle, "GPOName", 0, winreg.REG_SZ, GPO_NAME)
+		winreg.SetValueEx(key_handle, "PSScriptOrder", 0, winreg.REG_DWORD, 1)
+
+		key_handle = winreg.CreateKey(key_handle, "0")
+		winreg.SetValueEx(key_handle, "Script", 0, winreg.REG_SZ, script_path)
+		winreg.SetValueEx(key_handle, "Parameters", 0, winreg.REG_SZ, script_params)
+		winreg.SetValueEx(key_handle, "ErrorCode", 0, winreg.REG_DWORD, 0)
+
+	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System")
+	if win32process.IsWow64Process():
+		winreg.DisableReflectionKey(key_handle)
+	winreg.SetValueEx(key_handle, "MaxGPOScriptWait", 0, winreg.REG_DWORD, 0)
+	#winreg.SetValueEx(key_handle, "ShutdownWithoutLogon", 0, winreg.REG_DWORD, 1)
+
+
 def setup(full=False, options=None) -> None:
 	logger.notice("Running opsiclientd setup")
+	opsiclientd_pid = get_opsiclientd_pid()
+	if opsiclientd_pid:
+		logger.info("opsiclientd is running with pid %d", opsiclientd_pid)
+	else:
+		logger.info("opsiclientd is not running")
 
 	if full:
-		opsiclientd_pid = get_opsiclientd_pid()
-		if opsiclientd_pid:
-			logger.info("opsiclientd is running with pid %d", opsiclientd_pid)
-		else:
-			logger.info("opsiclientd is not running")
-
-		try:
-			config.readConfigFile()
-		except Exception as err:  # pylint: disable=broad-except
-			logger.info(err)
-
-		service_address = getattr(options, "service_address", None) or config.get('config_service', 'url')[0]
-		service_username = getattr(options, "service_username", None) or config.get('global', 'host_id')
-		service_password = getattr(options, "service_password", None) or config.get('global', 'opsi_host_key')
-		if getattr(options, "client_id", None):
-			config.set('global', 'host_id', options.client_id)
-		if not config.get('global', 'host_id'):
-			fqdn = get_fqdn()
-			fqdn = config.set('global', 'host_id', fqdn)
-
-		secret_filter.add_secrets(service_password)
-
-		logger.notice("Connecting to '%s' as '%s'", service_address, service_username)
-		jsonrpc_client = JSONRPCClient(
-			address=service_address,
-			username=service_username,
-			password=service_password
-		)
-		client = jsonrpc_client.host_getObjects(id=config.get('global', 'host_id'))  # pylint: disable=no-member
-		if client and client[0] and client[0].opsiHostKey:
-			config.set('global', 'opsi_host_key', client[0].opsiHostKey)
-
-		config.getFromService(jsonrpc_client)
-		config.updateConfigFile(force=True)
-
+		opsi_service_setup(options)
 		try:
 			install_service()
 		except Exception as err: # pylint: disable=broad-except
@@ -219,3 +278,8 @@ def setup(full=False, options=None) -> None:
 		setup_firewall()
 	except Exception as err:  # pylint: disable=broad-except
 		logger.error("Failed to setup firewall: %s", err, exc_info=True)
+
+	try:
+		setup_on_shutdown()
+	except Exception as err:  # pylint: disable=broad-except
+		logger.error("Failed to setup on_shutdown: %s", err, exc_info=True)
