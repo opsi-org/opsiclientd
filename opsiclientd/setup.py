@@ -214,7 +214,9 @@ def setup_on_shutdown():
 		r"SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\State\Machine\Scripts\Shutdown",
 		r"SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Shutdown"
 	]
-	script_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "opsiclientd_rpc.exe")
+	script_path = os.path.realpath(config.get('opsiclientd_rpc', 'command').split('"')[1].strip('"'))
+	#if not script_path:
+	#script_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "opsiclientd_rpc.exe")
 	script_params = "runOnShutdown()"
 
 	for base_key in BASE_KEYS:
@@ -247,7 +249,7 @@ def setup_on_shutdown():
 		winreg.SetValueEx(key_handle, "Parameters", 0, winreg.REG_SZ, script_params)
 		winreg.SetValueEx(key_handle, "ErrorCode", 0, winreg.REG_DWORD, 0)
 
-	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System")
+	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System")
 	if win32process.IsWow64Process():
 		winreg.DisableReflectionKey(key_handle)
 	winreg.SetValueEx(key_handle, "MaxGPOScriptWait", 0, winreg.REG_DWORD, 0)
@@ -256,11 +258,11 @@ def setup_on_shutdown():
 
 def setup(full=False, options=None) -> None:
 	logger.notice("Running opsiclientd setup")
-	opsiclientd_pid = get_opsiclientd_pid()
-	if opsiclientd_pid:
-		logger.info("opsiclientd is running with pid %d", opsiclientd_pid)
-	else:
-		logger.info("opsiclientd is not running")
+	#opsiclientd_pid = get_opsiclientd_pid()
+	#if opsiclientd_pid:
+	#	logger.info("opsiclientd is running with pid %d", opsiclientd_pid)
+	#else:
+	#	logger.info("opsiclientd is not running")
 
 	if full:
 		opsi_service_setup(options)
