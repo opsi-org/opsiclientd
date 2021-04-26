@@ -153,6 +153,15 @@ def install_service_windows():
 	from opsiclientd.windows.service import handle_commandline # pylint: disable=import-outside-toplevel
 	handle_commandline(argv=["opsiclientd.exe", "--startup", "auto", "install"])
 
+	# pyright: reportMissingImports=false
+	import winreg  # pylint: disable=import-outside-toplevel,import-error
+	import win32process  # pylint: disable=import-outside-toplevel,import-error
+	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Services\opsiclientd")
+	if win32process.IsWow64Process():
+		winreg.DisableReflectionKey(key_handle)
+	winreg.SetValueEx(key_handle, 'DependOnService', 0, winreg.REG_MULTI_SZ, ["Dhcp"])
+	#winreg.SetValueEx(key_handle, 'DependOnService', 0, winreg.REG_MULTI_SZ, ["Dhcp", "Dnscache"])
+
 
 def install_service_linux():
 	logger.notice("Install systemd service")
