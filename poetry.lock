@@ -558,7 +558,7 @@ reference = "uibpypi"
 
 [[package]]
 name = "opsi-dev-tools"
-version = "1.0.64"
+version = "1.0.65"
 description = "opsi development tools"
 category = "dev"
 optional = false
@@ -891,7 +891,7 @@ reference = "uibpypi"
 
 [[package]]
 name = "python-opsi"
-version = "4.2.0.183"
+version = "4.2.0.186"
 description = "The opsi python library"
 category = "main"
 optional = false
@@ -1686,8 +1686,8 @@ netifaces = [
     {file = "netifaces-0.10.9.tar.gz", hash = "sha256:2dee9ffdd16292878336a58d04a20f0ffe95555465fee7c9bd23b3490ef2abf3"},
 ]
 opsi-dev-tools = [
-    {file = "opsi-dev-tools-1.0.64.tar.gz", hash = "md5:196000f05d2b658437e70df052c6f9dc"},
-    {file = "opsi_dev_tools-1.0.64-py3-none-any.whl", hash = "md5:7b4e92b2e83f82c2031fa917366f4a95"},
+    {file = "opsi-dev-tools-1.0.65.tar.gz", hash = "md5:48f1d5432c92a6b6a329a0d84aeba33d"},
+    {file = "opsi_dev_tools-1.0.65-py3-none-any.whl", hash = "md5:5861e4709066c3265484ae8f126b84bf"},
 ]
 packaging = [
     {file = "packaging-20.9-py2.py3-none-any.whl", hash = "sha256:67714da7f7bc052e064859c05c595155bd1ee9f69f76557e21f051443c20947a"},
@@ -1813,8 +1813,8 @@ python-gettext = [
     {file = "python-gettext-4.0.tar.gz", hash = "sha256:626b501a51ac892fc3460cf550e60dca121f544eaa46eb69c90ce4682fc7ec02"},
 ]
 python-opsi = [
-    {file = "python-opsi-4.2.0.183.tar.gz", hash = "md5:7e4b7ec7fc2f25ee82cd69ec3d1075f5"},
-    {file = "python_opsi-4.2.0.183-py3-none-any.whl", hash = "md5:0e7f840fcf71ef033c052664c881dda7"},
+    {file = "python-opsi-4.2.0.186.tar.gz", hash = "md5:c1fac6a640e4c7490598a1192c0b9b78"},
+    {file = "python_opsi-4.2.0.186-py3-none-any.whl", hash = "md5:64af73846ff26d043a1a0a7d9638c7f2"},
 ]
 python-pam = [
     {file = "python-pam-1.8.4.tar.gz", hash = "sha256:c856d9c89fedb33951dd8a95727ae57c6887b02d065bbdffd2fd9dbc0183909b"},
