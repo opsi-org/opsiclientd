@@ -139,12 +139,27 @@ def setup_firewall_macos():
 		logger.info("Running command: %s", str(cmd))
 		subprocess.call(cmd)
 
+def setup_firewall_windows():
+	logger.notice("Configure Windows firewall")
+	port = config.get('control_server', 'port')
+	cmds = [
+		["netsh", "advfirewall", "firewall", "delete", "rule", 'name="opsiclientd-control-port"'],
+		[
+			"netsh", "advfirewall", "firewall", "add", "rule", 'name="opsiclientd-control-port"',
+			"dir=in", "action=allow", "protocol=TCP", f"localport={port}"
+		]
+	]
+	for cmd in cmds:
+		logger.info("Running command: %s", str(cmd))
+		subprocess.call(cmd)
 
 def setup_firewall():
 	if RUNNING_ON_LINUX:
 		return setup_firewall_linux()
 	if RUNNING_ON_MACOS:
 		return setup_firewall_macos()
+	if RUNNING_ON_WINDOWS:
+		return setup_firewall_windows()
 	return None
 
 
