@@ -178,7 +178,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				logger.error(err)
 
 			if RUNNING_ON_WINDOWS:
-				subprocess.run("sc stop opsiclientd & sc start opsiclientd", shell=True, check=False)
+				subprocess.run("cmd.exe /c sc stop opsiclientd & sc start opsiclientd", shell=True, check=False)
 			else:
 				logger.notice("Executing: %s", self._argv)
 				os.chdir(os.path.dirname(self._argv[0]))
