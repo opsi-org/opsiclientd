@@ -176,9 +176,13 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				open(config.restart_marker, "w").close()
 			except Exception as err: # pylint: disable=broad-except
 				logger.error(err)
-			logger.notice("Executing: %s", self._argv)
-			os.chdir(os.path.dirname(self._argv[0]))
-			os.execvp(self._argv[0], self._argv)
+
+			if RUNNING_ON_WINDOWS:
+				subprocess.run(["sc stop opsiclientd & sc start opsiclientd"], shell=True, check=False)
+			else:
+				logger.notice("Executing: %s", self._argv)
+				os.chdir(os.path.dirname(self._argv[0]))
+				os.execvp(self._argv[0], self._argv)
 		logger.notice("Will restart in %d seconds", waitSeconds)
 		threading.Thread(target=_restart, args=(waitSeconds, )).start()
 
