@@ -258,7 +258,7 @@ class Config(metaclass=Singleton):
 
 	def check_restart_marker(self):
 		if os.path.exists(self.restart_marker):
-			logger.notice("Restart marker found")
+			logger.notice("Restart marker found, gui startup events disabled")
 			try:
 				os.remove(self.restart_marker)
 			except Exception as err: # pylint: disable=broad-except
