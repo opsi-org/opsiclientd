@@ -108,10 +108,6 @@ def get_integrity_level():
 	currentProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, os.getpid())
 	currentProcessToken = win32security.OpenProcessToken(currentProcess, win32con.MAXIMUM_ALLOWED)
 	sid, _unused = win32security.GetTokenInformation(currentProcessToken, ntsecuritycon.TokenIntegrityLevel)
-	# S-1-16-0      Untrusted Mandatory Level
-	# S-1-16-4096   Low Mandatory Level
-	# S-1-16-8192   High Mandatory Level
-	# S-1-16-12288  System Mandatory Level
 	return win32security.ConvertSidToStringSid(sid)
 
 def main(): # pylint: disable=too-many-statements
@@ -150,8 +146,9 @@ def main(): # pylint: disable=too-many-statements
 		return
 
 	integrity_level = get_integrity_level()
-	if integrity_level != "S-1-16-12288":
+	if int(integrity_level.split("-")[-1]) < 12288:
 		print(f"opsiclientd.exe must be run as service or from an elevated cmd.exe (integrity_level={integrity_level})", file=sys.stderr)
+		time.sleep(3)
 		sys.exit(1)
 
 	if "--elevated" in sys.argv:
