@@ -110,7 +110,7 @@ def get_integrity_level():
 	sid, _unused = win32security.GetTokenInformation(currentProcessToken, ntsecuritycon.TokenIntegrityLevel)
 	return win32security.ConvertSidToStringSid(sid)
 
-def main(): # pylint: disable=too-many-statements
+def main(): # pylint: disable=too-many-statements,too-many-branches
 	log_dir = os.path.join(System.getSystemDrive() + "\\opsi.org\\log")
 	parent = psutil.Process(os.getpid()).parent()
 	parent_name = parent.name() if parent else None
@@ -151,7 +151,7 @@ def main(): # pylint: disable=too-many-statements
 			raise RuntimeError(
 				f"opsiclientd.exe must be run as service or from an elevated cmd.exe (integrity_level={integrity_level})"
 			)
-			
+
 		if "--elevated" in sys.argv:
 			sys.argv.remove("--elevated")
 		options = parser.parse_args()
@@ -177,7 +177,7 @@ def main(): # pylint: disable=too-many-statements
 				except KeyboardInterrupt:
 					logger.essential("KeyboardInterrupt #2 -> kill process")
 					psutil.Process(os.getpid()).kill()
-	except Exception as err:
+	except Exception as err:  # pylint: disable=broad-except
 		logger.error(err, exc_info=True)
 		time.sleep(3)
 		sys.exit(1)

@@ -703,8 +703,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		if addTimestamp:
 			message = "=== " + time.strftime("%Y-%m-%d %H:%M:%S") + " ===\n" + message
 
-		self._popupNotificationLock.acquire()
-		try: # pylint: disable=too-many-nested-blocks
+		with self._popupNotificationLock: # pylint: disable=too-many-nested-blocks
 			if (
 					mode in ('prepend', 'append') and
 					self._popupNotificationServer and
@@ -768,8 +767,6 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 							"Failed to start popup message notifier app in session %s on desktop %s: %s",
 							sessionId, desktop, err
 						)
-		finally:
-			self._popupNotificationLock.release()
 
 	def hidePopup(self):
 		if self._popupNotificationServer:
