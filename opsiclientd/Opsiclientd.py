@@ -180,7 +180,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			if RUNNING_ON_WINDOWS:
 				subprocess.Popen(
 					#"cmd.exe /c sc stop opsiclientd & sc start opsiclientd",
-					"sc stop opsiclientd & sc start opsiclientd",
+					"cmd.exe /c sc stop opsiclientd & sc start opsiclientd",
 					shell=True,
 					creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
 				)
