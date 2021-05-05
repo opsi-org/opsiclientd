@@ -1165,6 +1165,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 	def abortShutdownCallback(self, choiceSubject): # pylint: disable=unused-argument
 		logger.notice("Shutdown aborted by user")
+		selected = choiceSubject.getChoices()[choiceSubject.getSelectedIndexes()[0]]
+		logger.info("Selected choice: %s", selected)
 		self.shutdownCancelled = True
 
 	def startShutdownCallback(self, choiceSubject): # pylint: disable=unused-argument
@@ -1249,18 +1251,26 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						self._messageSubject.setMessage(shutdownWarningMessage)
 
 						choiceSubject = ChoiceSubject(id = 'choice')
+						action_text = "Reboot" if reboot else "Shutdown"
+						choices = [ _(f'{action_text} now') ]
+						callbacks = [ self.startShutdownCallback ]
 						if shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable:
-							if reboot:
-								choiceSubject.setChoices([ _('Reboot now'), _('Later') ])
-							else:
-								choiceSubject.setChoices([ _('Shutdown now'), _('Later') ])
-							choiceSubject.setCallbacks( [ self.startShutdownCallback, self.abortShutdownCallback ] )
-						else:
-							if reboot:
-								choiceSubject.setChoices([ _('Reboot now') ])
-							else:
-								choiceSubject.setChoices([ _('Shutdown now') ])
-							choiceSubject.setCallbacks( [ self.startShutdownCallback ] )
+							#times = []
+							hour = time.localtime().tm_hour
+							while True:
+								hour += 1
+								if hour > 23:
+									break
+								#times.append(f"{hour:02d}:00")
+								choices.append(_(f'{action_text} at') + f" {hour:02d}:00")
+								#functools.partial(self.abortShutdownCallback, move_to_hour)
+								callbacks.append(self.abortShutdownCallback)
+
+							#choices.append(_(f'{action_text} later'))
+							#callbacks.append(self.abortShutdownCallback)
+
+						choiceSubject.setChoices(choices)
+						choiceSubject.setCallbacks(callbacks)
 						self._notificationServer.addSubject(choiceSubject)
 
 						failed_to_start_notifier = False
