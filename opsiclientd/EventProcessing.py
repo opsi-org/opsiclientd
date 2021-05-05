@@ -1164,12 +1164,12 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		logger.notice("Shutdown aborted by user")
 		self._shutdownWarningRepetitionTime = self.event.eventConfig.shutdownWarningRepetitionTime
 		selected = choiceSubject.getChoices()[choiceSubject.getSelectedIndexes()[0]]
-		logger.info("Selected choice: %s", selected)
+		logger.debug("Selected choice: %s", selected)
 		match = re.search(r"(\d+):00", selected)
 		if match:
 			now = datetime.datetime.now()
 			shutdown_time = now.replace(hour=int(match.group(1)), minute=0, second=0)
-			self._shutdownWarningRepetitionTime = shutdown_time - now
+			self._shutdownWarningRepetitionTime = (shutdown_time - now).seconds
 		self.shutdownCancelled = True
 
 	def startShutdownCallback(self, choiceSubject): # pylint: disable=unused-argument
