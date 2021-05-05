@@ -10,9 +10,10 @@ Processing of events.
 
 # pylint: disable=too-many-lines
 
+import os
+import re
 import codecs
 import filecmp
-import os
 import shutil
 import sys
 import time
@@ -87,6 +88,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		self._clientIdSubject.setMessage(config.get('global', 'host_id'))
 		self._opsiclientdInfoSubject.setMessage(f"opsiclientd {__version__}")
 		self._actionProcessorInfoSubject.setMessage("")
+
+		self._shutdownWarningRepetitionTime = self.event.eventConfig.shutdownWarningRepetitionTime
 
 		self.isLoginEvent = bool(self.event.eventConfig.actionType == 'login')
 		if self.isLoginEvent:
@@ -442,17 +445,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					actionProcessorCommonDir = os.path.join(self.opsiclientd.getCacheService().getProductCacheDir(), commonname)
 					logger.notice("Updating action processor from local cache '%s' (common dir '%s')", actionProcessorRemoteDir, actionProcessorCommonDir)
 				else:
-					#match = re.search('^(smb|cifs)://([^/]+)/([^/]+)(.*)$', config.get('depot_server', 'url'), re.IGNORECASE)
-					## 1: protocol, 2: netloc, 3: share_name
-					#if not match:
-					#	raise Exception("Bad depot-URL '%s'" % config.get('depot_server', 'url'))
-					#pn = match.group(3).replace('/', os.sep)
 					dd = config.getDepotDrive()
 					if RUNNING_ON_WINDOWS:
 						dd += os.sep
 					dirname = config.get('action_processor', 'remote_dir')
 					dirname.lstrip(os.sep)
-					#actionProcessorRemoteDir = os.path.join(dd, pn, dirname)
 					actionProcessorRemoteDir = os.path.join(dd, dirname)
 					commonname = config.get('action_processor', 'remote_common_dir')
 					commonname.lstrip(os.sep)
@@ -1165,8 +1162,14 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 	def abortShutdownCallback(self, choiceSubject): # pylint: disable=unused-argument
 		logger.notice("Shutdown aborted by user")
+		self._shutdownWarningRepetitionTime = self.event.eventConfig.shutdownWarningRepetitionTime
 		selected = choiceSubject.getChoices()[choiceSubject.getSelectedIndexes()[0]]
 		logger.info("Selected choice: %s", selected)
+		match = re.search(r"(\d+):00", selected)
+		if match:
+			now = datetime.datetime.now()
+			shutdown_time = now.replace(hour=int(match.group(1)), minute=0, second=0)
+			self._shutdownWarningRepetitionTime = shutdown_time - now
 		self.shutdownCancelled = True
 
 	def startShutdownCallback(self, choiceSubject): # pylint: disable=unused-argument
@@ -1251,23 +1254,21 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						self._messageSubject.setMessage(shutdownWarningMessage)
 
 						choiceSubject = ChoiceSubject(id = 'choice')
-						action_text = "Reboot" if reboot else "Shutdown"
-						choices = [ _(f'{action_text} now') ]
+						choices = []
+						if reboot:
+							choices.append(_('Reboot now'))
+						else:
+							choices.append(_('Shutdown now'))
 						callbacks = [ self.startShutdownCallback ]
 						if shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable:
-							#times = []
 							hour = time.localtime().tm_hour
-							while True:
+							while hour < 23:
 								hour += 1
-								if hour > 23:
-									break
-								#times.append(f"{hour:02d}:00")
-								choices.append(_(f'{action_text} at') + f" {hour:02d}:00")
-								#functools.partial(self.abortShutdownCallback, move_to_hour)
+								if reboot:
+									choices.append(_('Reboot at %s') % f" {hour:02d}:00")
+								else:
+									choices.append(_('Shutdown at %s') % f" {hour:02d}:00")
 								callbacks.append(self.abortShutdownCallback)
-
-							#choices.append(_(f'{action_text} later'))
-							#callbacks.append(self.abortShutdownCallback)
 
 						choiceSubject.setChoices(choices)
 						choiceSubject.setCallbacks(callbacks)
@@ -1365,11 +1366,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 									category="user_interaction"
 								)
 
-							if self.event.eventConfig.shutdownWarningRepetitionTime >= 0:
+							if self._shutdownWarningRepetitionTime >= 0:
 								logger.info("Shutdown warning will be repeated in %d seconds",
-									self.event.eventConfig.shutdownWarningRepetitionTime
+									self._shutdownWarningRepetitionTime
 								)
-								for _second in range(self.event.eventConfig.shutdownWarningRepetitionTime):
+								for _second in range(self._shutdownWarningRepetitionTime):
 									time.sleep(1)
 								continue
 						break
