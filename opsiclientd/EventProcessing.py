@@ -1164,7 +1164,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		logger.notice("Shutdown aborted by user")
 		self._shutdownWarningRepetitionTime = self.event.eventConfig.shutdownWarningRepetitionTime
 		selected = choiceSubject.getChoices()[choiceSubject.getSelectedIndexes()[0]]
-		logger.debug("Selected choice: %s", selected)
+		logger.info("User choice: %s", selected)
 		match = re.search(r"(\d+):00", selected)
 		if match:
 			now = datetime.datetime.now()
