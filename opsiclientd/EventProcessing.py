@@ -1220,6 +1220,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								description=(
 									"Notifying user of reboot\n"
 									f"shutdownWarningTime: {self.event.eventConfig.shutdownWarningTime}, "
+									f"shutdownUserSelectableTime: {self.event.eventConfig.shutdownUserSelectableTime}, "
 									f"shutdownUserCancelable: {self.event.eventConfig.shutdownUserCancelable}, "
 									f"shutdownCancelCounter: {shutdownCancelCounter}"
 								),
@@ -1233,6 +1234,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								description=(
 									"Notifying user of shutdown\n"
 									f"shutdownWarningTime: {self.event.eventConfig.shutdownWarningTime}, "
+									f"shutdownUserSelectableTime: {self.event.eventConfig.shutdownUserSelectableTime}, "
 									f"shutdownUserCancelable: {self.event.eventConfig.shutdownUserCancelable}, "
 									f"shutdownCancelCounter: {shutdownCancelCounter}"
 								),
@@ -1261,14 +1263,20 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 							choices.append(_('Shutdown now'))
 						callbacks = [ self.startShutdownCallback ]
 						if shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable:
-							hour = time.localtime().tm_hour
-							while hour < 23:
-								hour += 1
+							if self.event.eventConfig.shutdownUserSelectableTime:
+								hour = time.localtime().tm_hour
+								while hour < 23:
+									hour += 1
+									if reboot:
+										choices.append(_('Reboot at %s') % f" {hour:02d}:00")
+									else:
+										choices.append(_('Shutdown at %s') % f" {hour:02d}:00")
+							else:
 								if reboot:
-									choices.append(_('Reboot at %s') % f" {hour:02d}:00")
+									choices.append(_('Reboot later'))
 								else:
-									choices.append(_('Shutdown at %s') % f" {hour:02d}:00")
-								callbacks.append(self.abortShutdownCallback)
+									choices.append(_('Shutdown later'))
+							callbacks.append(self.abortShutdownCallback)
 
 						choiceSubject.setChoices(choices)
 						choiceSubject.setCallbacks(callbacks)

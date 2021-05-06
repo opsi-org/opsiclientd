@@ -174,6 +174,8 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 						eventConfigs[eventConfigId]['shutdownWarningRepetitionTime'] = int(value)
 					elif key == 'shutdown_user_cancelable':
 						eventConfigs[eventConfigId]['shutdownUserCancelable'] = int(value)
+					elif key == 'shutdown_user_selectable_time':
+						eventConfigs[eventConfigId]['shutdownUserSelectableTime'] = forceBool(value)
 					elif key == 'block_login':
 						eventConfigs[eventConfigId]['blockLogin'] = forceBool(value)
 					elif key == 'lock_workstation':
