@@ -45,6 +45,9 @@ class EventConfig: # pylint: disable=too-many-instance-attributes
 		self.shutdownWarningTime = int(conf.get('shutdownWarningTime', 0))
 		self.shutdownWarningRepetitionTime = int(conf.get('shutdownWarningRepetitionTime', 3600))
 		self.shutdownUserSelectableTime = forceBool(conf.get('shutdownUserSelectableTime', False))
+		self.shutdownWarningTimeAfterTimeSelect = int(conf.get('shutdownWarningTimeAfterTimeSelect', -1))
+		if self.shutdownWarningTimeAfterTimeSelect == -1:
+			self.shutdownWarningTimeAfterTimeSelect = self.shutdownWarningTime
 		self.shutdownUserCancelable = int(conf.get('shutdownUserCancelable', 0))
 		self.shutdownCancelCounter = int(conf.get('shutdownCancelCounter', 0))
 		self.blockLogin = forceBool(conf.get('blockLogin', False))

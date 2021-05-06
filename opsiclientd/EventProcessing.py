@@ -90,6 +90,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		self._actionProcessorInfoSubject.setMessage("")
 
 		self._shutdownWarningRepetitionTime = self.event.eventConfig.shutdownWarningRepetitionTime
+		self._shutdownWarningTime = self.event.eventConfig.shutdownWarningTime
 
 		self.isLoginEvent = bool(self.event.eventConfig.actionType == 'login')
 		if self.isLoginEvent:
@@ -1163,13 +1164,18 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 	def abortShutdownCallback(self, choiceSubject): # pylint: disable=unused-argument
 		logger.notice("Shutdown aborted by user")
 		self._shutdownWarningRepetitionTime = self.event.eventConfig.shutdownWarningRepetitionTime
+		self._shutdownWarningTime = self.event.eventConfig.shutdownWarningTime
 		selected = choiceSubject.getChoices()[choiceSubject.getSelectedIndexes()[0]]
-		logger.info("User choice: %s", selected)
 		match = re.search(r"(\d+):00", selected)
 		if match:
+			self._shutdownWarningTime = self.event.eventConfig.shutdownWarningTimeAfterTimeSelect
 			now = datetime.datetime.now()
 			shutdown_time = now.replace(hour=int(match.group(1)), minute=0, second=0)
 			self._shutdownWarningRepetitionTime = (shutdown_time - now).seconds
+		logger.notice(
+			"User selected '%s', shutdownWarningRepetitionTime=%s, shutdownWarningTime=%s",
+			selected, self._shutdownWarningRepetitionTime, self._shutdownWarningTime
+		)
 		self.shutdownCancelled = True
 
 	def startShutdownCallback(self, choiceSubject): # pylint: disable=unused-argument
@@ -1202,7 +1208,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					timeline.addEvent(title = "Shutdown requested", category = "system")
 					self.setStatusMessage(_("Shutdown requested"))
 
-				if self.event.eventConfig.shutdownWarningTime:
+				if self._shutdownWarningTime:
 					if not self.event.eventConfig.shutdownNotifierCommand:
 						raise ConfigurationError(
 							f"Event {self.event.eventConfig.getName()} defines shutdownWarningTime"
@@ -1220,6 +1226,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								description=(
 									"Notifying user of reboot\n"
 									f"shutdownWarningTime: {self.event.eventConfig.shutdownWarningTime}, "
+									f"shutdownWarningTimeAfterTimeSelect: {self.event.eventConfig.shutdownWarningTimeAfterTimeSelect}, "
 									f"shutdownUserSelectableTime: {self.event.eventConfig.shutdownUserSelectableTime}, "
 									f"shutdownUserCancelable: {self.event.eventConfig.shutdownUserCancelable}, "
 									f"shutdownCancelCounter: {shutdownCancelCounter}"
@@ -1234,6 +1241,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								description=(
 									"Notifying user of shutdown\n"
 									f"shutdownWarningTime: {self.event.eventConfig.shutdownWarningTime}, "
+									f"shutdownWarningTimeAfterTimeSelect: {self.event.eventConfig.shutdownWarningTimeAfterTimeSelect}, "
 									f"shutdownUserSelectableTime: {self.event.eventConfig.shutdownUserSelectableTime}, "
 									f"shutdownUserCancelable: {self.event.eventConfig.shutdownUserCancelable}, "
 									f"shutdownCancelCounter: {shutdownCancelCounter}"
@@ -1299,7 +1307,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								logger.error("Failed to start shutdown notifier, shutdown will not be executed")
 								failed_to_start_notifier = True
 
-						timeout = int(self.event.eventConfig.shutdownWarningTime)
+						timeout = int(self._shutdownWarningTime)
 						endTime = time.time() + timeout
 						while (timeout > 0) and not self.shutdownCancelled and not self.shutdownWaitCancelled:
 							now = time.time()
