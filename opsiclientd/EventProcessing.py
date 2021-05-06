@@ -1366,19 +1366,27 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 							shutdown_type = "Reboot" if reboot else "Shutdown"
 
 							if failed_to_start_notifier:
-								logger.warning("%s cancelled because user could not be notified.", shutdown_type)
+								message = f"{shutdown_type} cancelled because user could not be notified."
+								logger.warning(message)
+								timeline.addEvent(
+									title=f"{shutdown_type} cancelled (notifer error)",
+									description=message,
+									category="error"
+								)
 							else:
 								shutdownCancelCounter += 1
 								state.set('shutdown_cancel_counter', shutdownCancelCounter)
-								logger.notice("Shutdown cancelled by user for the %d. time (max: %d)",
-									shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable
+								message = (
+									f"{shutdown_type} cancelled by user for the {shutdownCancelCounter}. time"
+									f" (max: {self.event.eventConfig.shutdownUserCancelable})."
 								)
+								if self._shutdownWarningRepetitionTime >= 0:
+									message += f" Shutdown warning will be repeated in {self._shutdownWarningRepetitionTime} seconds"
+								logger.notice(message)
+
 								timeline.addEvent(
 									title=f"{shutdown_type} cancelled by user",
-									description=(
-										f"{shutdown_type} cancelled by user for the {shutdownCancelCounter}. time"
-										f" (max: {self.event.eventConfig.shutdownUserCancelable})"
-									),
+									description=message,
 									category="user_interaction"
 								)
 
