@@ -12,7 +12,6 @@ import os
 import re
 import random
 import time
-from ssl import SSLError
 from OpenSSL.crypto import (
 	FILETYPE_PEM, dump_certificate, load_certificate
 )
@@ -374,7 +373,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 									self.update_ca_cert()
 								except Exception as err: # pylint: disable=broad-except
 									logger.error(err, exc_info=True)
-					except (OpsiServiceVerificationError, SSLError) as verificationError:
+					except OpsiServiceVerificationError as verificationError:
 						self.connectionError = forceUnicode(verificationError)
 						self.setStatusMessage(_("Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
 						logger.error("Failed to connect to config server '%s': %s", self._configServiceUrl, verificationError)
