@@ -2,7 +2,7 @@
 
 # opsiclientd is part of the desktop management solution opsi http://www.opsi.org
 # Copyright (c) 2010-2021 uib GmbH <info@uib.de>
-# License: opsi source available license 1.0
+# This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 """
 opsiclientd.nonfree.CacheService
 
