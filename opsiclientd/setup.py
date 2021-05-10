@@ -125,9 +125,11 @@ def setup_firewall_linux():
 		# UCS
 		cmds.append(["/usr/sbin/ucr", "set", f"security/packetfilter/package/opsiclientd/tcp/{port}/all=ACCEPT"])
 		cmds.append(["/usr/sbin/service", "univention-firewall", "restart"])
-	else:
+	elif os.path.exists("/sbin/iptables"):
 		for iptables in ("iptables", "ip6tables"):
 			cmds.append([iptables, "-A", "INPUT", "-p", "tcp", "--dport", str(port), "-j", "ACCEPT"])
+	else:
+		logger.warning("Could not configure firewall - no suitable executable found.")
 
 	for cmd in cmds:
 		logger.info("Running command: %s", str(cmd))
