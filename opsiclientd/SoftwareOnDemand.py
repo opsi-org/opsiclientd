@@ -29,6 +29,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc): # pylint: disable=too-few-public-me
 	_allowedMethods = [
 		"getClientId",
 		"fireEvent_software_on_demand",
+		"processActionRequests",
 
 		"backend_setOptions",
 		"configState_getObjects",
@@ -110,6 +111,8 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc): # pylint: disable=too-few-public-me
 				raise Exception(f"Access to method '{rpc.method}' denied")
 			if rpc.method == "getClientId":
 				rpc.result = config.get('global', 'host_id')
+			elif rpc.method == "processActionRequests":
+				self.service._opsiclientdRpcInterface.processActionRequests() # pylint: disable=protected-access
 			elif rpc.method == "fireEvent_software_on_demand":
 				for eventGenerator in getEventGenerators(generatorClass=SwOnDemandEventGenerator):
 					eventGenerator.createAndFireEvent()

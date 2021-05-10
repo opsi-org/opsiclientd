@@ -93,6 +93,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 
 		self._cacheService = None
 		self._controlPipe = None
+		self._controlServer = None
 
 		self._selfUpdating = False
 
@@ -346,17 +347,17 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		@contextmanager
 		def getControlServer():
 			logger.notice("Starting control server")
-			control_server = None
+			self._controlServer = None
 			try:
-				control_server = ControlServer(
+				self._controlServer = ControlServer(
 					opsiclientd=self,
 					httpsPort=config.get('control_server', 'port'),
 					sslServerKeyFile=config.get('control_server', 'ssl_server_key_file'),
 					sslServerCertFile=config.get('control_server', 'ssl_server_cert_file'),
 					staticDir=config.get('control_server', 'static_dir')
 				)
-				logger.debug("Current control server: %s", control_server)
-				control_server.start()
+				logger.debug("Current control server: %s", self._controlServer)
+				self._controlServer.start()
 				logger.notice("Control server started")
 
 				self._stopEvent.wait(1)
@@ -369,11 +370,11 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				logger.error("Failed to start control server: %s", err, exc_info=True)
 				raise err
 			finally:
-				if control_server:
+				if self._controlServer:
 					logger.info("Stopping control server")
 					try:
-						control_server.stop()
-						control_server.join(2)
+						self._controlServer.stop()
+						self._controlServer.join(2)
 						logger.info("Control server stopped")
 					except (NameError, RuntimeError) as stopError:
 						logger.debug("Stopping controlServer failed: %s", stopError)

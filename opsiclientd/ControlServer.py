@@ -1169,3 +1169,21 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 
 		logger.info("on_shutdown event completed")
 		return True
+
+	def processActionRequests(self):
+		timer_active = False
+		on_demand_active = False
+		for event_config in getEventConfigs().values():
+			if event_config["name"] == "timer" and event_config["active"]:
+				timer_active = True
+			elif event_config["name"] == "on_demand" and event_config["active"]:
+				on_demand_active = True
+
+		if timer_active:
+			self.fireEvent("timer")
+		elif on_demand_active:
+			self.fireEvent("on_demand")
+		else:
+			raise RuntimeError("Neither timer nor on_demand event active")
+
+
