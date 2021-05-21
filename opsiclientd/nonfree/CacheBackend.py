@@ -334,16 +334,16 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 			for productDependency in self._masterBackend.productDependency_getObjects(productId=product_ids_with_action):
 				if (
 					productDependency.productId in productOnClients and
-					productOnClients[productDependency.productId].actionRequest == productDependency.actionRequest and
+					productOnClients[productDependency.productId].actionRequest == productDependency.productAction and
 					productDependency.requiredProductId in productOnClients and
 					productOnClients[productDependency.requiredProductId].actionRequest != productDependency.requiredAction
 				):
 					logger.notice(
 						"Setting missing required action for dependency %s/%s %s/%s",
-						productDependency.productId, productDependency.actionRequest,
+						productDependency.productId, productDependency.productAction,
 						productDependency.requiredProductId, productDependency.requiredAction
 					)
-					productOnClients[productDependency.requiredProductId].actionRequest = productDependency.actionRequest
+					productOnClients[productDependency.requiredProductId].actionRequest = productDependency.productAction
 					updateProductOnClients.append(productOnClients[productDependency.requiredProductId])
 			if updateProductOnClients:
 				# Update is sufficient, creating a ProductOnClient is not required (see comment above)
