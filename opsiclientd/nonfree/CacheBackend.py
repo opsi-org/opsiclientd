@@ -313,6 +313,42 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 		if not self._masterBackend:
 			raise BackendConfigurationError("Master backend undefined")
 
+		# This is needed for the following situation:
+		#  - package1 is set to "setup" which defines a dependency to package2 "setup after"
+		#  - opsiclientd processes these actions with cached config
+		#  - before opsiclientd config sync returns the results back to config service, package3 is set to "setup"
+		#  - package3 also defines a dependency to package2 "setup after"
+		#  - so package3 will be set to setup on service side too
+		#  - now the sync starts again and the actions for package1 and package2 will be set to "none" on service side
+		#  - setup of packgage2 which is required by package3 will not be exceuted
+
+		productOnClients = {}
+		product_ids_with_action = []
+		for productOnClient in self._workBackend.productOnClient_getObjects(clientId=self._clientId):
+			productOnClients[productOnClient.productId] = productOnClient
+			if productOnClient.actionRequest not in (None, 'none'):
+				product_ids_with_action.append(productOnClient.productId)
+
+		if productOnClients:
+			updateProductOnClients = []
+			for productDependency in self._masterBackend.productDependency_getObjects(productId=product_ids_with_action):
+				if (
+					productDependency.productId in productOnClients and
+					productOnClients[productDependency.productId].actionRequest == productDependency.actionRequest and
+					productDependency.requiredProductId in productOnClients and
+					productOnClients[productDependency.requiredProductId].actionRequest != productDependency.requiredAction
+				):
+					logger.notice(
+						"Setting missing required action for dependency %s/%s %s/%s",
+						productDependency.productId, productDependency.actionRequest,
+						productDependency.requiredProductId, productDependency.requiredAction
+					)
+					productOnClients[productDependency.requiredProductId].actionRequest = productDependency.actionRequest
+					updateProductOnClients.append(productOnClients[productDependency.requiredProductId])
+			if updateProductOnClients:
+				# Update is sufficient, creating a ProductOnClient is not required (see comment above)
+				self._masterBackend.productOnClient_updateObjects(updateProductOnClients)
+
 		self._cacheBackendInfo(self._masterBackend.backend_info())
 
 		self._workBackend.backend_deleteBase()
