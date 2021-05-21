@@ -324,7 +324,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 
 		productOnClients = {}
 		product_ids_with_action = []
-		for productOnClient in self._workBackend.productOnClient_getObjects(clientId=self._clientId):
+		for productOnClient in self._masterBackend.productOnClient_getObjects(clientId=self._clientId):
 			productOnClients[productOnClient.productId] = productOnClient
 			if productOnClient.actionRequest not in (None, 'none'):
 				product_ids_with_action.append(productOnClient.productId)
