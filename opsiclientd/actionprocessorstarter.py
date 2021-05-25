@@ -4,6 +4,9 @@
 # Copyright (c) 2010-2021 uib GmbH <info@uib.de>
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0
+"""
+action processor starter helper for windows
+"""
 
 import os
 import sys
@@ -61,18 +64,27 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 			))
 		)
 
-		lang = None
-		localeDir = None
+		language = "en"
 		try:
-			lang = locale.getdefaultlocale()[0].split('_')[0]
-			localeDir = os.path.join(os.path.dirname(sys.argv[0]), 'locale')
-			translation = gettext.translation('opsiclientd', localeDir, [lang])
-			_ = translation.gettext
-		except Exception as error: # pylint: disable=broad-except
-			logger.debug("Failed to load locale for %s from %s: %s", lang, localeDir, error)
+			language = locale.getdefaultlocale()[0].split('_')[0]
+		except Exception as err: # pylint: disable=broad-except
+			logger.debug("Failed to find default language: %s", err)
 
-			def _(string):
-				return string
+		def _(string):
+			""" Fallback function """
+			return string
+
+		sp = None
+		try:
+			logger.debug("Loading translation for language '%s'", language)
+			sp = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+			if os.path.exists(os.path.join(sp, "site-packages")):
+				sp = os.path.join(sp, "site-packages")
+			sp = os.path.join(sp, 'opsiclientd_data', 'locale')
+			translation = gettext.translation('opsiclientd', sp, [language])
+			_ = translation.gettext
+		except Exception as err: # pylint: disable=broad-except
+			logger.debug("Failed to load locale for %s from %s: %s", language, sp, err)
 
 		createEnvironment = bool(runAsUser and createEnvironment.lower() in ('yes', 'true', '1'))
 		actionProcessorTimeout = int(actionProcessorTimeout)
