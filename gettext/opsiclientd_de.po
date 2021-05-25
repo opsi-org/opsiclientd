@@ -5,7 +5,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
-"POT-Creation-Date: 2021-05-25 14:17+CEST\n"
+"POT-Creation-Date: 2021-05-25 14:52+CEST\n"
 "PO-Revision-Date: 2010-09-08 16:59+CEST\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -114,22 +114,18 @@ msgid "Shutdown now"
 msgstr "Jetzt herunterfahren"
 
 #: opsiclientd/EventProcessing.py:1279
-#, fuzzy
 msgid "Reboot at %s"
 msgstr "Neustart um %s"
 
 #: opsiclientd/EventProcessing.py:1281
-#, fuzzy
 msgid "Shutdown at %s"
 msgstr "Herunterfahren um %s"
 
 #: opsiclientd/EventProcessing.py:1284
-#, fuzzy
 msgid "Reboot later"
 msgstr "Später herunterfahren"
 
 #: opsiclientd/EventProcessing.py:1286
-#, fuzzy
 msgid "Shutdown later"
 msgstr "Später herunterfahren"
 
@@ -198,69 +194,3 @@ msgstr "Schließen"
 #: opsiclientd/actionprocessorstarter.py:115
 msgid "Action processor ended"
 msgstr "Action processor beendet"
-
-msgid "Later"
-msgstr "Später"
-
-msgid "You selected to execute the following product actions:"
-msgstr "Die folgenden Produkt-Aktionen wurden ausgewählt:"
-
-msgid ""
-"The following product actions have been added to fulfill dependencies:"
-msgstr ""
-"Die folgenden Produkt-Aktionen wurden hinzugefügt um Abhängigkeiten zu "
-"erfüllen:"
-
-msgid "Other pending product actions:"
-msgstr "Andere anstehende Produkt-Aktionen:"
-
-msgid "back"
-msgstr "zurück"
-
-msgid "process on next boot"
-msgstr "beim nächsten Systemstart ausführen"
-
-msgid "process now"
-msgstr "sofort ausführen"
-
-msgid "Nothing selected"
-msgstr "Nichts ausgewählt"
-
-msgid "Starting to process actions now."
-msgstr "Beginne mit dem Ausführen der Aktionen."
-
-msgid "Actions will be processed on next boot."
-msgstr "Die Aktionen werden beim nächsten Systemstart ausgeführt."
-
-msgid "not installed"
-msgstr "nicht installiert"
-
-msgid "installed"
-msgstr "installiert"
-
-msgid "version"
-msgstr "Version"
-
-msgid "description"
-msgstr "Beschreibung"
-
-msgid "state"
-msgstr "Status"
-
-msgid "advice"
-msgstr "Hinweis"
-
-msgid "reinstall"
-msgstr "neu installieren"
-
-msgid "uninstall"
-msgstr "deinstallieren"
-
-msgid "install"
-msgstr "installieren"
-
-msgid "next"
-msgstr "weiter"
-
-msgid "Starting action processor"
-msgstr "Starte action processor"
