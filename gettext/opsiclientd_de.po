@@ -123,7 +123,7 @@ msgstr "Herunterfahren um %s"
 
 #: opsiclientd/EventProcessing.py:1284
 msgid "Reboot later"
-msgstr "Später herunterfahren"
+msgstr "Später neu starten"
 
 #: opsiclientd/EventProcessing.py:1286
 msgid "Shutdown later"
