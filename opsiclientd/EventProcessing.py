@@ -1279,12 +1279,13 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 										choices.append(_('Reboot at %s') % f" {hour:02d}:00")
 									else:
 										choices.append(_('Shutdown at %s') % f" {hour:02d}:00")
+									callbacks.append(self.abortShutdownCallback)
 							else:
 								if reboot:
 									choices.append(_('Reboot later'))
 								else:
 									choices.append(_('Shutdown later'))
-							callbacks.append(self.abortShutdownCallback)
+								callbacks.append(self.abortShutdownCallback)
 
 						choiceSubject.setChoices(choices)
 						choiceSubject.setCallbacks(callbacks)
