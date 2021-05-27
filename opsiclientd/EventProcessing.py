@@ -1296,9 +1296,14 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						desktops = [self.event.eventConfig.shutdownNotifierDesktop]
 						if RUNNING_ON_WINDOWS and self.event.eventConfig.shutdownNotifierDesktop == "all":
 							desktops = ["winlogon", "default"]
+
+						shutdownNotifierCommand = self.event.eventConfig.shutdownNotifierCommand
+						if self.event.eventConfig.shutdownUserSelectableTime:
+							shutdownNotifierCommand = shutdownNotifierCommand.replace("shutdown.ini", "shutdown_select.ini")
+
 						for desktop in desktops:
 							notifier_pid = self.startNotifierApplication(
-								command    = self.event.eventConfig.shutdownNotifierCommand,
+								command    = shutdownNotifierCommand,
 								desktop    = desktop,
 								notifierId = 'shutdown'
 							)
