@@ -570,15 +570,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		shutil.move(actionProcessorLocalTmpDir, actionProcessorLocalDir)
 
 		if RUNNING_ON_WINDOWS:
-			logger.notice("Trying to set the right permissions for opsi-script")
-			setaclcmd = os.path.join(config.get('global', 'base_dir'), 'utilities', 'setacl.exe')
+			logger.notice("Setting permissions for opsi-script")
 			opsi_script_dir = actionProcessorLocalDir.replace('\\\\', '\\')
-			cmd = (			#TODO: change to icacls
-				f'"{setaclcmd}" -on "{opsi_script_dir}" -ot file'
-				' -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y"'
-				' -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"'
-			)
-			System.execute(cmd, shell=False)
+			System.execute(f'icacls "{opsi_script_dir}" /q /c /t /reset', shell=False)
+			System.execute(f'icacls "{opsi_script_dir}" /grant *S-1-5-32-545:(OI)(CI)RX', shell=False)
 		else:
 			if RUNNING_ON_LINUX:
 				symlink = os.path.join("/usr/bin", actionProcessorFilename.split("/")[-1])
