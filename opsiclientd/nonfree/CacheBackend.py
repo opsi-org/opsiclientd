@@ -82,6 +82,10 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 
 	def licenseOnClient_getObjects(self, attributes=[], **filter): # pylint: disable=dangerous-default-value,redefined-builtin
 		licenseOnClients = self._workBackend.licenseOnClient_getObjects(attributes, **filter)
+		logger.info(
+			"licenseOnClient_getObjects called with filter %s, %s LicenseOnClients found",
+			filter, len(licenseOnClients)
+		)
 		for licenseOnClient in licenseOnClients:
 			# Recreate for later sync to server
 			self.licenseOnClient_insertObject(licenseOnClient)
@@ -403,16 +407,26 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 					self._fireEvent('objectsDeleted', [licenseOnClient])
 					self._fireEvent('backendModified')
 
+					statistics = {"licensePools": 0, "softwareLicenses": 0, "licenseContracts": 0}
 					for licensePool in self._masterBackend.licensePool_getObjects(id=licenseOnClient.licensePoolId):
+						logger.debug("Storing LicensePool: %s", licensePool)
 						self._workBackend.licensePool_insertObject(licensePool)
+						statistics["licensePools"] += 1
 
 					for softwareLicense in self._masterBackend.softwareLicense_getObjects(id=licenseOnClient.softwareLicenseId):
+						logger.debug("Storing SoftwareLicense: %s", softwareLicense)
 						for licenseContract in self._masterBackend.licenseContract_getObjects(id=softwareLicense.licenseContractId):
+							logger.debug("Storing LicenseContract: %s", licenseContract)
 							self._workBackend.licenseContract_insertObject(licenseContract)
+							statistics["licenseContracts"] += 1
 
 						self._workBackend.softwareLicense_insertObject(softwareLicense)
+						statistics["softwareLicenses"] += 1
 
+					logger.debug("Storing LicenseOnClient: %s", licenseOnClient)
 					self._workBackend.licenseOnClient_insertObject(licenseOnClient)
+
+					logger.notice("LicenseOnClient stored for product '%s', %s", productOnClient.productId, statistics)
 			except Exception as license_sync_error: # pylint: disable=broad-except
 				logger.error("Failed to acquire license for product '%s': %s", productOnClient.productId, license_sync_error)
 
