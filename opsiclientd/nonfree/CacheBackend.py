@@ -194,7 +194,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 				objects = meth(**objectFilter)
 				if objects:
 					modification['object'] = objects[0]
-					modifiedObjects[modification['objectClass']].append(modification)
+				modifiedObjects[modification['objectClass']].append(modification)
+				logger.debug("Modified object appended: %s", modification)
 			except Exception as modify_error: # pylint: disable=broad-except
 				logger.error("Failed to sync backend modification %s: %s", modification, modify_error, exc_info=True)
 				continue
