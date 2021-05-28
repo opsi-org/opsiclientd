@@ -190,12 +190,13 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 
 					objectFilter[attribute] = identValues[index]
 
-				meth = getattr(self._workBackend, ObjectClass.backendMethodPrefix + '_getObjects')
+				backend = self._snapshotBackend if modification["command"] == "delete" else self._workBackend
+				meth = getattr(backend, ObjectClass.backendMethodPrefix + '_getObjects')
 				objects = meth(**objectFilter)
 				if objects:
 					modification['object'] = objects[0]
-				modifiedObjects[modification['objectClass']].append(modification)
-				logger.debug("Modified object appended: %s", modification)
+					modifiedObjects[modification['objectClass']].append(modification)
+					logger.debug("Modified object appended: %s", modification)
 			except Exception as modify_error: # pylint: disable=broad-except
 				logger.error("Failed to sync backend modification %s: %s", modification, modify_error, exc_info=True)
 				continue
