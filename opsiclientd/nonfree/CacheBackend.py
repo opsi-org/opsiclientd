@@ -176,7 +176,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 
 	def _updateMasterFromWorkBackend(self, modifications=[]): # pylint: disable=dangerous-default-value,too-many-locals
 		modifiedObjects = collections.defaultdict(list)
-		logger.info("Updating master from work backend (%d modifications)", len(modifications))
+		logger.notice("Updating master from work backend (%d modifications)", len(modifications))
 
 		for modification in modifications:
 			try:
