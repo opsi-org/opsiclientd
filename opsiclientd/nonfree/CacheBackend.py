@@ -382,6 +382,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 
 			licensePool = licensePools[0]
 			try:
+				licenseOnClient = None
 				for loc in licenseOnClients:
 					if loc.licensePoolId == licensePool.id:
 						licenseOnClient = loc
@@ -394,20 +395,24 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 						productId=productOnClient.productId
 					)
 
-					# Fake deletion for later sync to server
+				if licenseOnClient:
+					# Fake deletion
+					# This will delete the licenseOnClient (free the license) while syncing config back to server
+					# In case licenseOnClient_getObjects will be called on the CacheBackend the licenseOnClients
+					# will be recreated, so the objects will be recreated after deletion
 					self._fireEvent('objectsDeleted', [licenseOnClient])
 					self._fireEvent('backendModified')
 
-				for licensePool in self._masterBackend.licensePool_getObjects(id=licenseOnClient.licensePoolId):
-					self._workBackend.licensePool_insertObject(licensePool)
+					for licensePool in self._masterBackend.licensePool_getObjects(id=licenseOnClient.licensePoolId):
+						self._workBackend.licensePool_insertObject(licensePool)
 
-				for softwareLicense in self._masterBackend.softwareLicense_getObjects(id=licenseOnClient.softwareLicenseId):
-					for licenseContract in self._masterBackend.licenseContract_getObjects(id=softwareLicense.licenseContractId):
-						self._workBackend.licenseContract_insertObject(licenseContract)
+					for softwareLicense in self._masterBackend.softwareLicense_getObjects(id=licenseOnClient.softwareLicenseId):
+						for licenseContract in self._masterBackend.licenseContract_getObjects(id=softwareLicense.licenseContractId):
+							self._workBackend.licenseContract_insertObject(licenseContract)
 
-					self._workBackend.softwareLicense_insertObject(softwareLicense)
+						self._workBackend.softwareLicense_insertObject(softwareLicense)
 
-				self._workBackend.licenseOnClient_insertObject(licenseOnClient)
+					self._workBackend.licenseOnClient_insertObject(licenseOnClient)
 			except Exception as license_sync_error: # pylint: disable=broad-except
 				logger.error("Failed to acquire license for product '%s': %s", productOnClient.productId, license_sync_error)
 
