@@ -907,7 +907,7 @@ reference = "uibpypi"
 
 [[package]]
 name = "python-opsi"
-version = "4.2.0.196"
+version = "4.2.0.198"
 description = "The opsi python library"
 category = "main"
 optional = false
@@ -1886,8 +1886,8 @@ python-gettext = [
     {file = "python-gettext-4.0.tar.gz", hash = "sha256:626b501a51ac892fc3460cf550e60dca121f544eaa46eb69c90ce4682fc7ec02"},
 ]
 python-opsi = [
-    {file = "python-opsi-4.2.0.196.tar.gz", hash = "md5:84d6befa5b4c2885bf19f1a556d2f053"},
-    {file = "python_opsi-4.2.0.196-py3-none-any.whl", hash = "md5:93f4d09f79155e86a7359836eb43ed01"},
+    {file = "python-opsi-4.2.0.198.tar.gz", hash = "md5:370cec4d338ef3a9ab36f110f4a68dc1"},
+    {file = "python_opsi-4.2.0.198-py3-none-any.whl", hash = "md5:8fca8fabc8c0b1e7794bf8bfcb38b985"},
 ]
 python-pam = [
     {file = "python-pam-1.8.4.tar.gz", hash = "sha256:c856d9c89fedb33951dd8a95727ae57c6887b02d065bbdffd2fd9dbc0183909b"},
