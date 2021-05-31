@@ -339,6 +339,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 			updateProductOnClients = []
 			for productDependency in self._masterBackend.productDependency_getObjects(productId=product_ids_with_action):
 				if (
+					productDependency.requiredAction not in (None, '') and
 					productDependency.productId in productOnClients and
 					productOnClients[productDependency.productId].actionRequest == productDependency.productAction and
 					productDependency.requiredProductId in productOnClients and
