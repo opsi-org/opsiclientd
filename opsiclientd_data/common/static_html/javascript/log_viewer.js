@@ -238,6 +238,8 @@ function setMessage(text = "", className = "LEVEL_INFO") {
 }
 
 function startLog(numRecords=0, startTime=0) {
+	stopLog();
+
 	setMessage("Connecting...");
 	if (reconnectTimer) {
 		clearTimeout(reconnectTimer);
@@ -293,6 +295,9 @@ function startLog(numRecords=0, startTime=0) {
 	ws.onclose = function(event) {
 		// websocket is closed.
 		console.log("Websocket conection closed");
+		if (event.code == 1000) {
+			return;
+		}
 		let msg = "Connection lost";
 		if (event.reason) {
 			msg = msg + ": " + event.reason;
@@ -313,7 +318,8 @@ function changeFontSize(val) {
 }
 
 function stopLog(){
-	if(ws != undefined){
+	if (ws != undefined){
+		console.log("Closing websocket");
 		ws.close(1000, "LogViewer closed.")
 	}
 }
