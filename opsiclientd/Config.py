@@ -158,6 +158,7 @@ class Config(metaclass=Singleton):
 			},
 			'config_service': {
 				'url': [],
+				'compression': True,
 				'connection_timeout': 10,
 				'user_cancelable_after': 0,
 				'sync_time_from_service': False

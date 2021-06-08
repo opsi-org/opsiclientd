@@ -310,7 +310,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 				ca_cert_file = config.ca_cert_file
 				self.prepare_ca_cert_file()
 
-				compression = True
+				compression = config.get('config_service', 'compression')
 				if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
 					compression = False
 					verify_server_cert = False
@@ -354,7 +354,6 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 							ip_version=config.get('global', 'ip_version')
 						)
 						self.configService.accessControl_authenticated() # pylint: disable=no-member
-						self.configService.setCompression(True)
 						self.connected = True
 						self.connectionError = None
 						serverVersion = self.configService.serverVersion
