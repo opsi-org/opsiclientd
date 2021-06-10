@@ -36,6 +36,7 @@ from OPSI.Backend.SQLite import (
 
 from opsicommon.logging import logger, log_context
 
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 from opsiclientd.Config import Config
 from opsiclientd.State import State
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
@@ -653,6 +654,8 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		self._overallProgressObserver = None
 		self._dynamicBandwidthLimitEvent = None
 
+		self._repository = None
+
 		if not os.path.exists(self._storageDir):
 			logger.notice("Creating cache service storage dir '%s'", self._storageDir)
 			os.makedirs(self._storageDir)
@@ -964,8 +967,11 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 		if eventId:
 			timeline.setEventEnd(eventId)
 
-		self.disconnectConfigService()
 		self._working = False
+		self.disconnectConfigService()
+		if self._repository:
+			self._repository.disconnect()
+			self._repository = None
 
 	def _setProductCacheState(self, productId, key, value, updateProductOnClient=True):
 		if 'products' not in self._state:
@@ -1044,9 +1050,13 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 				logger.warning(err)
 
 		(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
-		self._impersonation = System.Impersonate(username=depotServerUsername, password=depotServerPassword)
-		self._impersonation.start(logonType='NEW_CREDENTIALS')
-		return getRepository(config.get('depot_server', 'url'), username=depotServerUsername, password=depotServerPassword, mount=False)
+		mount = True
+		if RUNNING_ON_WINDOWS:
+			self._impersonation = System.Impersonate(username=depotServerUsername, password=depotServerPassword)
+			self._impersonation.start(logonType='NEW_CREDENTIALS')
+			mount = False
+		self._repository = getRepository(config.get('depot_server', 'url'), username=depotServerUsername, password=depotServerPassword, mount=mount)
+		return self._repository
 
 	def _cacheProduct(self, productId, neededProducts): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		logger.notice("Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)", productId, self._maxBandwidth, self._dynamicBandwidth)

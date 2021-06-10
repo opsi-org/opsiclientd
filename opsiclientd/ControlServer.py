@@ -1158,7 +1158,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			return False
 
 		if self.isInstallationPending():
-			logger.info("Installation are pending, not firing on_shutdown")
+			logger.info("Installations are pending, not firing on_shutdown")
 			return False
 
 		logger.info("Firing on_shutdown and waiting for event to complete")
