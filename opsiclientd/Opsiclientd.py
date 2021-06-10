@@ -252,8 +252,14 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		return self._stopEvent.is_set()
 
 	def waitForGUI(self, timeout=None):
-		waiter = WaitForGUI(self)
-		waiter.wait(timeout or None)
+		if RUNNING_ON_WINDOWS:
+			waiter = WaitForGUI(self)
+			waiter.wait(timeout or None)
+		else:
+			# TODO: Implement on linux and darwin
+			logger.info("Wait for gui not implemented on %s", platform.system())
+			for _ in range(10):
+				time.sleep(1)
 
 	def createActionProcessorUser(self, recreate=True):
 		if not config.get('action_processor', 'create_user'):
@@ -427,12 +433,11 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				for event_generator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
 					event_generator.createAndFireEvent()
 
-				if RUNNING_ON_WINDOWS and getEventGenerators(generatorClass=GUIStartupEventGenerator):
+				if getEventGenerators(generatorClass=GUIStartupEventGenerator):
 					# Wait until gui starts up
 					logger.notice("Waiting for gui startup (timeout: %d seconds)", config.get('global', 'wait_for_gui_timeout'))
 					self.waitForGUI(timeout=config.get('global', 'wait_for_gui_timeout'))
 					logger.notice("Done waiting for GUI")
-
 					# Wait some more seconds for events to fire
 					time.sleep(5)
 
