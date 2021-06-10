@@ -25,7 +25,7 @@ __all__ = [
 	'reconfigureEventGenerators',
 ]
 
-EVENT_CONFIG_TYPE_PANIC = u'panic'
+EVENT_CONFIG_TYPE_PANIC = 'panic'
 _EVENT_GENERATORS = {}
 
 logger = Logger()

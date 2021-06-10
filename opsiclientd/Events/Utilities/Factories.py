@@ -39,6 +39,10 @@ if RUNNING_ON_WINDOWS:
 	from opsiclientd.Events.Windows.UserLogin import (
 		UserLoginEventConfig, UserLoginEventGenerator
 	)
+else:
+	from opsiclientd.Events.Posix.GUIStartup import (
+		GUIStartupEventConfig, GUIStartupEventGenerator
+	)
 
 __all__ = ['EventConfigFactory', 'EventGeneratorFactory']
 
@@ -72,10 +76,10 @@ def EventConfigFactory(eventType, eventId, **kwargs): # pylint: disable=invalid-
 		return CustomEventConfig(eventId, **kwargs)
 	if eventType == 'sw on demand':
 		return SwOnDemandEventConfig(eventId, **kwargs)
+	if eventType == 'gui startup':
+		return GUIStartupEventConfig(eventId, **kwargs)
 
 	if RUNNING_ON_WINDOWS:
-		if eventType == 'gui startup':
-			return GUIStartupEventConfig(eventId, **kwargs)
 		if eventType == 'user login':
 			return UserLoginEventConfig(eventId, **kwargs)
 		if eventType == 'system shutdown':
@@ -107,13 +111,13 @@ def EventGeneratorFactory(opsiclientd, eventConfig): # pylint: disable=invalid-n
 		return CustomEventGenerator(opsiclientd, eventConfig)
 	if isinstance(eventConfig, SwOnDemandEventConfig):
 		return SwOnDemandEventGenerator(opsiclientd, eventConfig)
+	if isinstance(eventConfig, GUIStartupEventConfig):
+		return GUIStartupEventGenerator(opsiclientd, eventConfig)
 
 	if RUNNING_ON_WINDOWS:
 		if isinstance(eventConfig, UserLoginEventConfig):
 			return UserLoginEventGenerator(opsiclientd, eventConfig)
 		if isinstance(eventConfig, SystemShutdownEventConfig):
 			return SystemShutdownEventGenerator(opsiclientd, eventConfig)
-		if isinstance(eventConfig, GUIStartupEventConfig):
-			return GUIStartupEventGenerator(opsiclientd, eventConfig)
 
 	raise TypeError(f"Unhandled event config '{eventConfig}'")

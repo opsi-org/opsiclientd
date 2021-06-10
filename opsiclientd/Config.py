@@ -585,7 +585,10 @@ class Config(metaclass=Singleton):
 		if event and event.eventConfig.useCachedProducts:
 			cacheDepotDir = os.path.join(self.get('cache_service', 'storage_dir'), 'depot').replace('\\', '/').replace('//', '/')
 			logger.notice("Using depot cache: %s" % cacheDepotDir)
-			self.setTemporaryDepotDrive(cacheDepotDir.split(':')[0] + ':')
+			if RUNNING_ON_WINDOWS:
+				self.setTemporaryDepotDrive(cacheDepotDir.split(':')[0] + ':')
+			else:
+				self.setTemporaryDepotDrive(cacheDepotDir)
 			self.set('depot_server', 'url', 'smb://localhost/noshare/' + ('/'.join(cacheDepotDir.split('/')[1:])))
 			return
 

@@ -31,19 +31,27 @@ from opsicommon.logging import logger, log_context
 from opsicommon.system import ensure_not_already_running
 
 from opsiclientd import __version__, config, check_signature
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 from opsiclientd.ControlPipe import ControlPipeFactory
 from opsiclientd.ControlServer import ControlServer
 from opsiclientd.Events.Basic import EventListener
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventGenerator
 from opsiclientd.Events.DaemonStartup import DaemonStartupEventGenerator
 from opsiclientd.Events.Panic import PanicEvent
+if RUNNING_ON_WINDOWS:
+	from opsiclientd.Events.Windows.GUIStartup import (
+		GUIStartupEventConfig, GUIStartupEventGenerator
+	)
+else:
+	from opsiclientd.Events.Posix.GUIStartup import (
+		GUIStartupEventConfig, GUIStartupEventGenerator
+	)
 from opsiclientd.Events.Utilities.Factories import EventGeneratorFactory
 from opsiclientd.Events.Utilities.Generators import createEventGenerators, getEventGenerators
 from opsiclientd.EventProcessing import EventProcessingThread
 from opsiclientd.Localization import _
 from opsiclientd.State import State
 from opsiclientd.Timeline import Timeline
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 from opsiclientd.setup import setup
 
 try:
@@ -51,10 +59,6 @@ try:
 except ImportError:
 	__fullversion__ = False
 
-if RUNNING_ON_WINDOWS:
-	from opsiclientd.Events.Windows.GUIStartup import (
-		GUIStartupEventConfig, GUIStartupEventGenerator
-	)
 
 timeline = Timeline()
 state = State()
@@ -252,14 +256,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		return self._stopEvent.is_set()
 
 	def waitForGUI(self, timeout=None):
-		if RUNNING_ON_WINDOWS:
-			waiter = WaitForGUI(self)
-			waiter.wait(timeout or None)
-		else:
-			# TODO: Implement on linux and darwin
-			logger.info("Wait for gui not implemented on %s", platform.system())
-			for _ in range(10):
-				time.sleep(1)
+		waiter = WaitForGUI(self)
+		waiter.wait(timeout or None)
 
 	def createActionProcessorUser(self, recreate=True):
 		if not config.get('action_processor', 'create_user'):

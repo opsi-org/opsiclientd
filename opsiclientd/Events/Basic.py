@@ -15,7 +15,7 @@ import time
 
 import opsicommon.logging
 from opsicommon.logging import logger
-from OPSI.Types import forceList
+from OPSI.Types import forceList, forceBool
 
 from opsiclientd.State import State
 
@@ -51,7 +51,8 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 
 	def _preconditionsFulfilled(self, preconditions): # pylint: disable=no-self-use
 		for key, value in preconditions.items():
-			if bool(value) != state.get(key):
+			if forceBool(value) != state.get(key, False):
+				logger.debug("Precondition '%s' not fulfilled (%s != %s)", key, forceBool(value), state.get(key, False))
 				return False
 
 		return True

@@ -825,7 +825,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 			if (
 				RUNNING_ON_WINDOWS and
-				sys.getwindowsversion().major >= 6 and # pylint: disable=no-member
 				self.event.eventConfig.name == 'gui_startup' and
 				self.event.eventConfig.trustedInstallerDetection
 			):

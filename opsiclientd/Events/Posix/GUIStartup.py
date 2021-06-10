@@ -17,7 +17,7 @@ from OPSI import System
 from OPSI.Logger import Logger
 
 from opsiclientd.Events.Basic import Event, EventGenerator
-from opsiclientd.Events.Windows.WMI import WMIEventConfig
+from opsiclientd.EventConfiguration import EventConfig
 
 __all__ = [
 	'GUIStartupEvent', 'GUIStartupEventConfig', 'GUIStartupEventGenerator'
@@ -26,9 +26,9 @@ __all__ = [
 logger = Logger()
 
 
-class GUIStartupEventConfig(WMIEventConfig):
+class GUIStartupEventConfig(EventConfig):
 	def setConfig(self, conf):
-		WMIEventConfig.setConfig(self, conf)
+		EventConfig.setConfig(self, conf)
 		self.maxRepetitions = 0
 		self.processNames = []
 
@@ -36,7 +36,7 @@ class GUIStartupEventConfig(WMIEventConfig):
 class GUIStartupEventGenerator(EventGenerator):
 	def __init__(self, opsiclientd, eventConfig):
 		EventGenerator.__init__(self, opsiclientd, eventConfig)
-		self.guiProcessNames = ['LogonUI.exe', 'Explorer.exe']
+		self.guiProcessNames = []
 
 	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
 		eventConfig = self.getEventConfig()
@@ -46,17 +46,20 @@ class GUIStartupEventGenerator(EventGenerator):
 		return GUIStartupEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 	def getNextEvent(self):
-		while not self._stopped:
-			for guiProcessName in self.guiProcessNames:
-				logger.debug("Checking if process '%s' running", guiProcessName)
-				if System.getPid(guiProcessName):
-					logger.debug("Process '%s' is running", guiProcessName)
-					return self.createEvent()
-			for _i in range(3):
-				if self._stopped:
-					break
-				time.sleep(1)
-
+		# TODO: Implement on linux and darwin
+		for _ in range(10):
+			time.sleep(1)
+		return self.createEvent()
+		# while not self._stopped:
+		# 	for guiProcessName in self.guiProcessNames:
+		# 		logger.debug("Checking if process '%s' running", guiProcessName)
+		# 		if System.getPid(guiProcessName):
+		# 			logger.debug("Process '%s' is running", guiProcessName)
+		# 			return self.createEvent()
+		# 	for _i in range(3):
+		# 		if self._stopped:
+		# 			break
+		# 		time.sleep(1)
 
 class GUIStartupEvent(Event): # pylint: disable=too-few-public-methods
 	pass
