@@ -10,7 +10,6 @@ Events that get active once a system shuts down or restarts.
 
 from __future__ import absolute_import
 
-import sys
 import time
 
 from OPSI import System

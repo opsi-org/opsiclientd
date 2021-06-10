@@ -10,10 +10,8 @@ Events that get active once a system shuts down or restarts.
 
 from __future__ import absolute_import
 
-import sys
 import time
 
-from OPSI import System
 from OPSI.Logger import Logger
 
 from opsiclientd.Events.Basic import Event, EventGenerator
