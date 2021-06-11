@@ -38,14 +38,7 @@ from opsiclientd.Events.Basic import EventListener
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventGenerator
 from opsiclientd.Events.DaemonStartup import DaemonStartupEventGenerator
 from opsiclientd.Events.Panic import PanicEvent
-if RUNNING_ON_WINDOWS:
-	from opsiclientd.Events.Windows.GUIStartup import (
-		GUIStartupEventConfig, GUIStartupEventGenerator
-	)
-else:
-	from opsiclientd.Events.Posix.GUIStartup import (
-		GUIStartupEventConfig, GUIStartupEventGenerator
-	)
+from opsiclientd.Events.GUIStartup import GUIStartupEventConfig, GUIStartupEventGenerator
 from opsiclientd.Events.Utilities.Factories import EventGeneratorFactory
 from opsiclientd.Events.Utilities.Generators import createEventGenerators, getEventGenerators
 from opsiclientd.EventProcessing import EventProcessingThread

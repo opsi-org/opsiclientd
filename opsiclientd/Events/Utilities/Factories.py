@@ -28,20 +28,14 @@ from opsiclientd.Events.SyncCompleted import (
 	SyncCompletedEventConfig, SyncCompletedEventGenerator
 )
 from opsiclientd.Events.Timer import TimerEventConfig, TimerEventGenerator
+from opsiclientd.Events.GUIStartup import GUIStartupEventConfig, GUIStartupEventGenerator
 
 if RUNNING_ON_WINDOWS:
-	from opsiclientd.Events.Windows.GUIStartup import (
-		GUIStartupEventConfig, GUIStartupEventGenerator
-	)
 	from opsiclientd.Events.Windows.SystemShutdown import (
 		SystemShutdownEventConfig, SystemShutdownEventGenerator
 	)
 	from opsiclientd.Events.Windows.UserLogin import (
 		UserLoginEventConfig, UserLoginEventGenerator
-	)
-else:
-	from opsiclientd.Events.Posix.GUIStartup import (
-		GUIStartupEventConfig, GUIStartupEventGenerator
 	)
 
 __all__ = ['EventConfigFactory', 'EventGeneratorFactory']
