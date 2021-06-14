@@ -9,7 +9,7 @@ import time
 import threading
 import win32com.client # pylint: disable=import-error
 import win32com.server.policy # pylint: disable=import-error
-from winpty import PtyProcess
+from winpty import PtyProcess # pylint: disable=import-error
 
 from opsicommon.logging import logger
 
@@ -120,14 +120,14 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 def start_pty(shell="powershell.exe", lines=30, columns=120):
 	logger.notice("Starting %s (%d/%d)", shell, lines, columns)
 	process = PtyProcess.spawn(shell, dimensions=(lines, columns))
-	
+
 	def stop():
 		process.close()
-	
+
 	def read(length: int):
 		return process.read(length).encode("utf-8")
-	
+
 	def write(data: bytes):
 		return process.write(data.decode("utf-8"))
-	
+
 	return (read, write, stop)

@@ -18,7 +18,6 @@ import re
 import sys
 import codecs
 import shutil
-import signal
 import threading
 import time
 import json
@@ -838,7 +837,7 @@ class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd
 				kwargs["columns"] = int(self.request.params["columns"][0])
 			if self.request.params.get("shell"):
 				kwargs["shell"] = self.request.params["shell"][0]
-			
+
 			if RUNNING_ON_WINDOWS:
 				from opsiclientd.windows import start_pty
 			else:
