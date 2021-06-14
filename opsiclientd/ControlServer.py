@@ -13,12 +13,18 @@ procedure calls
 
 # pylint: disable=too-many-lines
 
-import codecs
 import os
 import re
-import shutil
 import sys
+import pty
+import codecs
+import shutil
+import struct
+import fcntl
+import termios
+import signal
 import threading
+import subprocess
 import time
 import json
 import urllib
@@ -210,7 +216,6 @@ class WorkerOpsiclientd(WorkerOpsi):
 						raise Exception(f"{client_ip} blocked")
 
 			(self.session.user, self.session.password) = self._getCredentials()
-
 			logger.notice("Authorization request from %s@%s (application: %s)" % (self.session.user, self.session.ip, self.session.userAgent))
 
 			if not self.session.password:
@@ -566,8 +571,14 @@ class ControlServer(OpsiService, threading.Thread): # pylint: disable=too-many-i
 		log_ws_factory = WebSocketServerFactory()
 		log_ws_factory.protocol = LogWebSocketServerProtocol
 		log_ws_factory.control_server = self
+
+		terminal_ws_factory = WebSocketServerFactory()
+		terminal_ws_factory.protocol = TerminalWebSocketServerProtocol
+		terminal_ws_factory.control_server = self
+
 		ws = Resource()
 		ws.putChild(b"log_viewer", WebSocketResource(log_ws_factory))
+		ws.putChild(b"terminal", WebSocketResource(terminal_ws_factory))
 		self._root.putChild(b"ws", ws)
 
 	def __repr__(self):
@@ -576,6 +587,7 @@ class ControlServer(OpsiService, threading.Thread): # pylint: disable=too-many-i
 			f'sslServerKeyFile={self._sslServerKeyFile}, sslServerCertFile={self._sslServerCertFile}, '
 			f'staticDir={self._staticDir})>'
 		)
+
 
 class RequestAdapter():
 	def __init__(self, connection_request):
@@ -591,7 +603,11 @@ class RequestAdapter():
 		return self.connection_request.headers
 
 	def getHeader(self, name):
-		return self.connection_request.headers.get(name)
+		for header in self.connection_request.headers:
+			if header.lower() == name.lower():
+				return self.connection_request.headers[header]
+		return None
+
 
 class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-attributes
 	record_start_regex = re.compile(r"^\[(\d)\]\s\[([\d\-\:\. ]+)\]\s\[([^\]]*)\]\s(.*)$")
@@ -616,7 +632,7 @@ class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-att
 		data = b""
 		for record in self.record_buffer:
 			data += msgpack.packb(record)
-		self.websocket_protocol.sendMessage(data, True)
+		reactor.callFromThread(self.websocket_protocol.sendMessage, data, True) # pylint: disable=no-member
 		self.send_time = time.time()
 		self.record_buffer = []
 
@@ -731,7 +747,8 @@ class LogReaderThread(threading.Thread): # pylint: disable=too-many-instance-att
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Error in log reader thread: %s", err, exc_info=True)
 
-class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi): # pylint: disable=too-many-ancestors
+
+class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd): # pylint: disable=too-many-ancestors
 	def onConnect(self, request):
 		self.service = self.factory.control_server # pylint: disable=no-member
 		self.request = RequestAdapter(request)
@@ -739,6 +756,11 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi): # pylint:
 
 		logger.info("Client connecting to log websocket: %s", self.request.peer)
 		self._getSession(None)
+		try:
+			self._authenticate(None)
+		except Exception as err:  # pylint: disable=broad-except
+			logger.warning("Authentication error: %s", err)
+			self.session.authenticated = False
 
 	def onOpen(self):
 		logger.info("Log websocket connection opened (params: %s)", self.request.params)
@@ -758,6 +780,98 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsi): # pylint:
 		logger.info("Log websocket connection closed: %s", reason)
 		if self.log_reader_thread:
 			self.log_reader_thread.stop()
+
+
+class TerminalReaderThread(threading.Thread):
+	def __init__(self, websocket_protocol):
+		super().__init__()
+		self.daemon = True
+		self.should_stop = False
+		self.websocket_protocol = websocket_protocol
+
+	def run(self):
+		try:
+			while not self.should_stop:
+				data = os.read(self.websocket_protocol.child_fd, 16*1024)
+				if not data:  # EOF.
+					break
+				if not self.should_stop:
+					reactor.callFromThread(self.websocket_protocol.send, data) # pylint: disable=no-member
+				time.sleep(0.001)
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error("Error in terminal reader thread: %s", err, exc_info=True)
+
+	def stop(self):
+		self.should_stop = True
+
+
+class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd): # pylint: disable=too-many-ancestors
+	def onConnect(self, request):
+		self.service = self.factory.control_server # pylint: disable=no-member
+		self.request = RequestAdapter(request)
+		self.terminal_reader_thread = None # pylint: disable=attribute-defined-outside-init
+		self.child_fd = None # pylint: disable=attribute-defined-outside-init
+		self.child_pid = None # pylint: disable=attribute-defined-outside-init
+
+		logger.info("Client connecting to terminal websocket: %s", self.request.peer)
+		self._getSession(None)
+		try:
+			self._authenticate(None)
+		except Exception as err:  # pylint: disable=broad-except
+			logger.warning("Authentication error: %s", err)
+			self.session.authenticated = False
+
+	def send(self, data):
+		try:
+			self.sendMessage(data, isBinary=True)
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error("Failed to ws send: %s", err)
+
+	def onOpen(self):
+		logger.info("Terminal websocket connection opened (params: %s)", self.request.params)
+		if not self.session or not self.session.authenticated:
+			logger.error("No valid session supplied")
+			self.sendClose(code=4401, reason="Unauthorized")
+		else:
+			logger.info("Starting terminal")
+			(child_pid, child_fd) = pty.fork()
+			if child_pid == 0:
+				shell = "bash"
+				if RUNNING_ON_WINDOWS:
+					shell = "powershell.exe"
+				shell = self.request.params.get("shell", [shell])[0]
+				subprocess.call(shell)
+			else:
+				self.child_fd = child_fd # pylint: disable=attribute-defined-outside-init
+				self.child_pid = child_pid # pylint: disable=attribute-defined-outside-init
+
+				def set_winsize(filed, lines, columns, xpix=0, ypix=0):
+					winsize = struct.pack("HHHH", lines, columns, xpix, ypix)
+					fcntl.ioctl(filed, termios.TIOCSWINSZ, winsize)
+
+				set_winsize(
+					self.child_fd,
+					int(self.request.params.get("lines", [30])[0]),
+					int(self.request.params.get("columns", [120])[0])
+				)
+			self.terminal_reader_thread = TerminalReaderThread(self) # pylint: disable=attribute-defined-outside-init
+			self.terminal_reader_thread.start()
+
+	def onMessage(self, payload, isBinary):
+		#logger.debug("onMessage: %s - %s", isBinary, payload)
+		os.write(self.child_fd, payload)
+
+	def onClose(self, wasClean, code, reason):
+		logger.info("Terminal websocket connection closed: %s", reason)
+		if self.terminal_reader_thread:
+			self.terminal_reader_thread.stop()
+		if self.child_fd:
+			os.close(self.child_fd)
+		if self.child_pid:
+			os.kill(self.child_pid, signal.SIGTERM)
+			time.sleep(3)
+			os.kill(self.child_pid, signal.SIGKILL)
+
 
 class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=too-many-public-methods
 	def __init__(self, opsiclientd):
@@ -1185,5 +1299,3 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			self.fireEvent("on_demand")
 		else:
 			raise RuntimeError("Neither timer nor on_demand event active")
-
-
