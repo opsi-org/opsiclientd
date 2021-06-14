@@ -139,6 +139,82 @@ LOG_VIEWER_PAGE = '''<!DOCTYPE html>
 </html>
 '''
 
+TERMINAL_PAGE = '''<!DOCTYPE html>
+<html>
+<head>
+	<title>opsiclientd - terminal</title>
+	<link rel="stylesheet" href="/opsiclientd.css" />
+	<link rel="stylesheet" href="/javascript/xterm.css" />
+	<script src="/xterm/xterm.js"></script>
+	<script src="/xterm/fit.js"></script>
+	<script src="/xterm/fullscreen.js"></script>
+	<script src="/xterm/search.js"></script>
+	<script src="/xterm/webLinks.js"></script>
+	<script>
+		var term;
+		var ws;
+
+		function runTerminal() {
+			Terminal.applyAddon(fullscreen)
+			Terminal.applyAddon(fit)
+			Terminal.applyAddon(search)
+			Terminal.applyAddon(webLinks)
+			term = new Terminal({
+				cursorBlink: true,
+				macOptionIsMeta: true,
+				scrollback: 1000,
+				fontSize: 14,
+				//lineHeight: 1.1
+			});
+			term.open(document.getElementById('terminal'));
+			term.fit()
+			//term.resize(columns, lines)
+			console.log(`size: ${term.cols} columns, ${term.rows} rows`)
+
+			term.on('key', (key, ev) => {
+				//console.debug("pressed key", key);
+				//console.debug("event", ev);
+				ws.send(key);
+			});
+
+			term.on('paste', function (data, ev) {
+				ws.send(data);
+			});
+
+			var params = [`lines=${term.rows}`, `columns=${term.cols}`]
+			var loc = window.location;
+			var ws_uri;
+			if (loc.protocol == "https:") {
+				ws_uri = "wss:";
+			} else {
+				ws_uri = "ws:";
+			}
+			ws_uri += "//" + loc.host;
+			ws = new WebSocket(ws_uri + "/ws/terminal?" + params.join('&'));
+
+			ws.onmessage = function (evt) {
+				evt.data.text().then(text => {
+					//console.debug(text);
+					term.write(text);
+				});
+			};
+
+			ws.onclose = function() {
+				console.log("Terminal ws connection closed...");
+			};
+		}
+	</script>
+</head>
+<body onload="runTerminal();">
+	<!--
+	<button onclick="term.setOption('fontSize', term.getOption('fontSize') + 1);">+</button>
+	<button onclick="term.setOption('fontSize', term.getOption('fontSize') - 1);">-</button>
+	-->
+	<div style="width: 100%; height: 100%; position: absolute; margin:auto;" id="terminal"></div>
+</body>
+</html>
+'''
+
 try:
 	fsencoding = sys.getfilesystemencoding()
 	if not fsencoding:
@@ -430,6 +506,20 @@ class WorkerOpsiclientdLogViewer(WorkerOpsiclientd):
 		self.request.write(LOG_VIEWER_PAGE.encode("utf-8").strip())
 
 
+class WorkerOpsiclientdTerminal(WorkerOpsiclientd):
+	def __init__(self, service, request, resource):
+		WorkerOpsiclientd.__init__(self, service, request, resource)
+
+	def _processQuery(self, result):
+		return result
+
+	def _generateResponse(self, result):
+		logger.info("Creating terminal page")
+		self.request.setResponseCode(200)
+		self.request.setHeader("content-type", "text/html; charset=utf-8")
+		self.request.write(TERMINAL_PAGE.encode("utf-8").strip())
+
+
 class ResourceRoot(Resource):
 	addSlash = True
 	#isLeaf = True
@@ -469,6 +559,14 @@ class ResourceOpsiclientdLogViewer(ResourceOpsiclientd):
 
 	def __init__(self, service):
 		ResourceOpsiclientd.__init__(self, service)
+
+
+class ResourceOpsiclientdTerminal(ResourceOpsiclientd):
+	WorkerClass = WorkerOpsiclientdTerminal
+
+	def __init__(self, service):
+		ResourceOpsiclientd.__init__(self, service)
+
 
 class ResourceOpsiclientdUpload(ResourceOpsiclientd):
 	WorkerClass = WorkerOpsiclientdUpload
@@ -562,6 +660,7 @@ class ControlServer(OpsiService, threading.Thread): # pylint: disable=too-many-i
 		self._root.putChild(b"rpcinterface", ResourceCacheServiceJsonInterface(self))
 		self._root.putChild(b"info.html", ResourceOpsiclientdInfo(self))
 		self._root.putChild(b"log_viewer.html", ResourceOpsiclientdLogViewer(self))
+		self._root.putChild(b"terminal.html", ResourceOpsiclientdTerminal(self))
 		self._root.putChild(b"upload", ResourceOpsiclientdUpload(self))
 		if config.get('control_server', 'kiosk_api_active'):
 			self._root.putChild(b"kiosk", ResourceKioskJsonRpc(self))
