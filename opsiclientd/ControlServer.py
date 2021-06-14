@@ -154,6 +154,10 @@ class WorkerOpsiclientd(WorkerOpsi):
 	def __init__(self, service, request, resource):
 		WorkerOpsi.__init__(self, service, request, resource)
 		self._auth_module = None
+		self._set_auth_module()
+
+	def _set_auth_module(self):
+		self._auth_module = None
 		if os.name == 'posix':
 			import OPSI.Backend.Manager.Authentication.PAM # pylint: disable=import-outside-toplevel
 			self._auth_module = OPSI.Backend.Manager.Authentication.PAM.PAMAuthentication()
@@ -749,6 +753,7 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd): # 
 		self.log_reader_thread = None # pylint: disable=attribute-defined-outside-init
 
 		logger.info("Client connecting to log websocket: %s", self.request.peer)
+		self._set_auth_module()
 		self._getSession(None)
 		try:
 			self._authenticate(None)
@@ -810,6 +815,7 @@ class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd
 		self.child_stop = None # pylint: disable=attribute-defined-outside-init
 
 		logger.info("Client connecting to terminal websocket: %s", self.request.peer)
+		self._set_auth_module()
 		self._getSession(None)
 		try:
 			self._authenticate(None)
