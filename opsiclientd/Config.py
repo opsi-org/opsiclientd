@@ -526,6 +526,9 @@ class Config(metaclass=Singleton):
 					else:
 						value = forceUnicode(value)
 
+					if value.lower() in ("true", "false"):
+						value = value.lower()
+
 					if not config.has_option(section, option):
 						logger.debug(
 							"Config changed - new option: %s.%s = %s",
