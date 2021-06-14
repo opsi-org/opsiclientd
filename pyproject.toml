@@ -27,6 +27,7 @@ msgpack = "^1.0.0"
 lz4 = "^3.1.1"
 netifaces = "^0.10.9"
 zeroconf = "^0.29.0"
+pywinpty = {platform = "win32", path = "pywinpty-1.1.2-cp37-none-win32.whl"}
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.5.0"

@@ -16,15 +16,10 @@ procedure calls
 import os
 import re
 import sys
-import pty
 import codecs
 import shutil
-import struct
-import fcntl
-import termios
 import signal
 import threading
-import subprocess
 import time
 import json
 import urllib
@@ -792,14 +787,15 @@ class TerminalReaderThread(threading.Thread):
 	def run(self):
 		try:
 			while not self.should_stop:
-				data = os.read(self.websocket_protocol.child_fd, 16*1024)
+				data = self.websocket_protocol.child_read(16*1024)
 				if not data:  # EOF.
 					break
 				if not self.should_stop:
 					reactor.callFromThread(self.websocket_protocol.send, data) # pylint: disable=no-member
 				time.sleep(0.001)
 		except Exception as err:  # pylint: disable=broad-except
-			logger.error("Error in terminal reader thread: %s", err, exc_info=True)
+			if not self.should_stop:
+				logger.error("Error in terminal reader thread: %s", err, exc_info=True)
 
 	def stop(self):
 		self.should_stop = True
@@ -810,8 +806,9 @@ class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd
 		self.service = self.factory.control_server # pylint: disable=no-member
 		self.request = RequestAdapter(request)
 		self.terminal_reader_thread = None # pylint: disable=attribute-defined-outside-init
-		self.child_fd = None # pylint: disable=attribute-defined-outside-init
-		self.child_pid = None # pylint: disable=attribute-defined-outside-init
+		self.child_read = None # pylint: disable=attribute-defined-outside-init
+		self.child_write = None # pylint: disable=attribute-defined-outside-init
+		self.child_stop = None # pylint: disable=attribute-defined-outside-init
 
 		logger.info("Client connecting to terminal websocket: %s", self.request.peer)
 		self._getSession(None)
@@ -834,43 +831,31 @@ class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd
 			self.sendClose(code=4401, reason="Unauthorized")
 		else:
 			logger.info("Starting terminal")
-			(child_pid, child_fd) = pty.fork()
-			if child_pid == 0:
-				shell = "bash"
-				if RUNNING_ON_WINDOWS:
-					shell = "powershell.exe"
-				shell = self.request.params.get("shell", [shell])[0]
-				subprocess.call(shell)
+			kwargs = {}
+			if self.request.params.get("lines"):
+				kwargs["lines"] = int(self.request.params["lines"][0])
+			if self.request.params.get("columns"):
+				kwargs["columns"] = int(self.request.params["columns"][0])
+			if self.request.params.get("shell"):
+				kwargs["shell"] = self.request.params["shell"][0]
+			
+			if RUNNING_ON_WINDOWS:
+				from opsiclientd.windows import start_pty
 			else:
-				self.child_fd = child_fd # pylint: disable=attribute-defined-outside-init
-				self.child_pid = child_pid # pylint: disable=attribute-defined-outside-init
-
-				def set_winsize(filed, lines, columns, xpix=0, ypix=0):
-					winsize = struct.pack("HHHH", lines, columns, xpix, ypix)
-					fcntl.ioctl(filed, termios.TIOCSWINSZ, winsize)
-
-				set_winsize(
-					self.child_fd,
-					int(self.request.params.get("lines", [30])[0]),
-					int(self.request.params.get("columns", [120])[0])
-				)
+				from opsiclientd.posix import start_pty
+			(self.child_read, self.child_write, self.child_stop) = start_pty(**kwargs)  # pylint: disable=attribute-defined-outside-init
 			self.terminal_reader_thread = TerminalReaderThread(self) # pylint: disable=attribute-defined-outside-init
 			self.terminal_reader_thread.start()
 
 	def onMessage(self, payload, isBinary):
 		#logger.debug("onMessage: %s - %s", isBinary, payload)
-		os.write(self.child_fd, payload)
+		self.child_write(payload)
 
 	def onClose(self, wasClean, code, reason):
 		logger.info("Terminal websocket connection closed: %s", reason)
 		if self.terminal_reader_thread:
 			self.terminal_reader_thread.stop()
-		if self.child_fd:
-			os.close(self.child_fd)
-		if self.child_pid:
-			os.kill(self.child_pid, signal.SIGTERM)
-			time.sleep(3)
-			os.kill(self.child_pid, signal.SIGKILL)
+		self.child_stop()
 
 
 class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=too-many-public-methods
