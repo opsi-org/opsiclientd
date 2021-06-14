@@ -917,6 +917,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
 			actionProcessorCommand = actionProcessorCommand.replace('%service_url%', self._configServiceUrl)
 			actionProcessorCommand = actionProcessorCommand.replace('%service_session%', serviceSession)
+			actionProcessorCommand = actionProcessorCommand.replace('%depot_path%', config.get_depot_path())
 			actionProcessorCommand = actionProcessorCommand.replace(
 				'%action_processor_productids%',
 				",".join(self.event.eventConfig.actionProcessorProductIds)
@@ -1465,6 +1466,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 				notifierPids = []
 				try:
+					config.set_temporary_depot_path(None)
 					config.setTemporaryDepotDrive(None)
 					config.setTemporaryConfigServiceUrls([])
 

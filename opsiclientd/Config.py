@@ -131,6 +131,7 @@ class Config(metaclass=Singleton):
 
 		self._temporaryConfigServiceUrls = []
 		self._temporaryDepotDrive = []
+		self._temporary_depot_path = None
 		self._config_file_mtime = 0
 		self.disabledEventTypes = []
 
@@ -566,6 +567,14 @@ class Config(metaclass=Singleton):
 			return self._temporaryDepotDrive
 		return self.get('depot_server', 'drive')
 
+	def set_temporary_depot_path(self, path):
+		self._temporary_depot_path = path
+
+	def get_depot_path(self):
+		if self._temporary_depot_path:
+			return self._temporary_depot_path
+		return self.get('depot_server', 'drive')
+
 	def setTemporaryConfigServiceUrls(self, temporaryConfigServiceUrls):
 		self._temporaryConfigServiceUrls = forceList(temporaryConfigServiceUrls)
 
@@ -585,6 +594,7 @@ class Config(metaclass=Singleton):
 		if event and event.eventConfig.useCachedProducts:
 			cacheDepotDir = os.path.join(self.get('cache_service', 'storage_dir'), 'depot').replace('\\', '/').replace('//', '/')
 			logger.notice("Using depot cache: %s" % cacheDepotDir)
+			self.set_temporary_depot_path(cacheDepotDir)
 			if RUNNING_ON_WINDOWS:
 				self.setTemporaryDepotDrive(cacheDepotDir.split(':')[0] + ':')
 			else:
