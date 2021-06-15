@@ -235,12 +235,12 @@ class Config(metaclass=Singleton):
 
 	def check_restart_marker(self):
 		if os.path.exists(self.restart_marker):
-			logger.notice("Restart marker found, gui startup events disabled")
+			logger.notice("Restart marker found, gui startup and daemon startup events disabled")
 			try:
 				os.remove(self.restart_marker)
 			except Exception as err: # pylint: disable=broad-except
 				logger.error(err)
-			self.disabledEventTypes = ["gui startup"]
+			self.disabledEventTypes = ["gui startup", "daemon startup"]
 
 	def _applySystemSpecificConfiguration(self):
 		defaultToApply = self.WINDOWS_DEFAULT_PATHS.copy()
