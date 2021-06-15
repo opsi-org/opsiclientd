@@ -35,8 +35,8 @@ config = Config()
 
 
 class ServiceConnection:
-	def __init__(self, loadBalance=False):
-		self._loadBalance = forceBool(loadBalance)
+	def __init__(self):
+		self._loadBalance = False
 		self._configServiceUrl = None
 		self._configService = None
 		self._should_stop = False

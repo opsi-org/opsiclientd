@@ -1246,7 +1246,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		return sessions
 
 	def getBackendInfo(self): # pylint: disable=no-self-use
-		serviceConnection = ServiceConnection(loadBalance=False)
+		serviceConnection = ServiceConnection()
 		serviceConnection.connectConfigService()
 		backendinfo = None
 		try:
