@@ -144,7 +144,7 @@ TERMINAL_PAGE = '''<!DOCTYPE html>
 <head>
 	<title>opsiclientd - terminal</title>
 	<link rel="stylesheet" href="/opsiclientd.css" />
-	<link rel="stylesheet" href="/javascript/xterm.css" />
+	<link rel="stylesheet" href="/xterm/xterm.css" />
 	<script src="/xterm/xterm.js"></script>
 	<script src="/xterm/fit.js"></script>
 	<script src="/xterm/fullscreen.js"></script>
