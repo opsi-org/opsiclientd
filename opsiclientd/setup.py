@@ -12,6 +12,7 @@ import os
 import codecs
 import ipaddress
 import subprocess
+import datetime
 
 from OpenSSL.crypto import FILETYPE_PEM, load_certificate, load_privatekey
 from OpenSSL.crypto import Error as CryptoError
@@ -26,6 +27,8 @@ from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_LINUX, RUNNIN
 
 config = Config()
 
+CERT_RENEW_DAYS = 60
+
 def get_ips():
 	ips = {"127.0.0.1", "::1"}
 	for addr in get_ip_addresses():
@@ -38,7 +41,7 @@ def get_ips():
 				logger.warning(err)
 	return ips
 
-def setup_ssl():
+def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many-statements,too-many-locals
 	logger.info("Checking server cert")
 
 	if not config.get('global', 'install_opsi_ca_into_os_store'):
@@ -52,38 +55,71 @@ def setup_ssl():
 	cert_file = config.get('control_server', 'ssl_server_cert_file')
 	server_cn = get_fqdn()
 	create = False
-
+	exists_self_signed = False
 	if not os.path.exists(key_file) or not os.path.exists(cert_file):
 		create = True
 	else:
 		try:
 			with open(cert_file, "r") as file:
 				srv_crt = load_certificate(FILETYPE_PEM, file.read())
-				if server_cn != srv_crt.get_subject().CN:
+				enddate = datetime.datetime.strptime(srv_crt.get_notAfter().decode("utf-8"), "%Y%m%d%H%M%SZ")
+				diff = (enddate - datetime.datetime.now()).days
+
+				logger.info("Server cert '%s' will expire in %d days", srv_crt.get_subject().CN, diff)
+				if diff <= CERT_RENEW_DAYS:
+					logger.notice("Server cert '%s' will expire in %d days, recreating", srv_crt.get_subject().CN, diff)
+					create = True
+				elif server_cn != srv_crt.get_subject().CN:
 					logger.notice(
 						"Server CN has changed from '%s' to '%s', creating new server cert",
 						srv_crt.get_subject().CN, server_cn
 					)
 					create = True
-			with open(key_file, "r") as file:
-				srv_key = load_privatekey(FILETYPE_PEM, file.read())
+				elif full and srv_crt.get_issuer().CN == srv_crt.get_subject().CN:
+					logger.notice("Self signed certificate found")
+					create = True
+					exists_self_signed = True
+
+			if not create:
+				with open(key_file, "r") as file:
+					srv_key = load_privatekey(FILETYPE_PEM, file.read())
 		except CryptoError as err:
 			logger.error(err)
 			create = True
 
-	if create:
-		logger.notice("Creating tls server certificate")
-		# TODO: fetch from config service
-		#pem = get_backend().host_getTLSCertificate(server_cn)  # pylint: disable=no-member
-		#srv_crt = load_certificate(FILETYPE_PEM, pem)
-		#srv_key = load_privatekey(FILETYPE_PEM, pem)
+	if not create:
+		logger.info("Server cert is up to date")
+		return
 
+	server_cn = get_fqdn()
+	(srv_crt, srv_key) = (None, None)
+	try:
+		logger.notice("Fetching tls server certificate from config service")
+		config.readConfigFile()
+		jsonrpc_client = JSONRPCClient(
+			address=config.get('config_service', 'url')[0],
+			username=config.get('global', 'host_id'),
+			password=config.get('global', 'opsi_host_key')
+		)
+		try:
+			pem = jsonrpc_client.host_getTLSCertificate(server_cn)  # pylint: disable=no-member
+			srv_crt = load_certificate(FILETYPE_PEM, pem)
+			srv_key = load_privatekey(FILETYPE_PEM, pem)
+		finally:
+			jsonrpc_client.disconnect()
+	except Exception as err:  # pylint: disable=broad-except
+		logger.warning("Failed to fetch tls certificate from server: %s", err)
+		if exists_self_signed:
+			return
+
+	if not srv_crt or not srv_key:
+		logger.notice("Creating self-signed tls server certificate")
 		(ca_cert, ca_key) = create_ca(
-			subject={"commonName": get_fqdn()},
+			subject={"commonName": server_cn},
 			valid_days=10000
 		)
-		(srv_cert, srv_key) = create_server_cert(
-			subject={"commonName": get_fqdn()},
+		(srv_crt, srv_key) = create_server_cert(
+			subject={"commonName": server_cn},
 			valid_days=10000,
 			ip_addresses=get_ips(),
 			hostnames=get_hostnames(),
@@ -91,24 +127,21 @@ def setup_ssl():
 			ca_cert=ca_cert
 		)
 
-		# key_file and cert_file can be the same file
-		if os.path.exists(key_file):
-			os.unlink(key_file)
-		if os.path.exists(cert_file):
-			os.unlink(cert_file)
+	# key_file and cert_file can be the same file
+	if os.path.exists(key_file):
+		os.unlink(key_file)
+	if os.path.exists(cert_file):
+		os.unlink(cert_file)
 
-		if not os.path.exists(os.path.dirname(key_file)):
-			os.makedirs(os.path.dirname(key_file))
-		with open(key_file, "a") as out:
-			out.write(as_pem(srv_key))
+	if not os.path.exists(os.path.dirname(key_file)):
+		os.makedirs(os.path.dirname(key_file))
+	with open(key_file, "a") as out:
+		out.write(as_pem(srv_key))
 
-		if not os.path.exists(os.path.dirname(cert_file)):
-			os.makedirs(os.path.dirname(cert_file))
-		with open(cert_file, "a") as out:
-			out.write(as_pem(srv_cert))
-
-	logger.info("Server cert is up to date")
-	return False
+	if not os.path.exists(os.path.dirname(cert_file)):
+		os.makedirs(os.path.dirname(cert_file))
+	with open(cert_file, "a") as out:
+		out.write(as_pem(srv_crt))
 
 
 def setup_firewall_linux():
@@ -226,12 +259,15 @@ def opsi_service_setup(options=None):
 		username=service_username,
 		password=service_password
 	)
-	client = jsonrpc_client.host_getObjects(id=config.get('global', 'host_id'))  # pylint: disable=no-member
-	if client and client[0] and client[0].opsiHostKey:
-		config.set('global', 'opsi_host_key', client[0].opsiHostKey)
+	try:
+		client = jsonrpc_client.host_getObjects(id=config.get('global', 'host_id'))  # pylint: disable=no-member
+		if client and client[0] and client[0].opsiHostKey:
+			config.set('global', 'opsi_host_key', client[0].opsiHostKey)
 
-	config.getFromService(jsonrpc_client)
-	config.updateConfigFile(force=True)
+		config.getFromService(jsonrpc_client)
+		config.updateConfigFile(force=True)
+	finally:
+		jsonrpc_client.disconnect()
 
 
 def setup_on_shutdown():
@@ -308,7 +344,7 @@ def setup(full=False, options=None) -> None:
 			logger.error("Failed to install service: %s", err)
 
 	try:
-		setup_ssl()
+		setup_ssl(full)
 	except Exception as err: # pylint: disable=broad-except
 		logger.error("Failed to setup ssl: %s", err, exc_info=True)
 
