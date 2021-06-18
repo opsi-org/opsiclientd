@@ -67,16 +67,16 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 
 				logger.info("Server cert '%s' will expire in %d days", srv_crt.get_subject().CN, diff)
 				if diff <= CERT_RENEW_DAYS:
-					logger.notice("Server cert '%s' will expire in %d days, recreating", srv_crt.get_subject().CN, diff)
+					logger.notice("Server cert '%s' will expire in %d days, needing new cert", srv_crt.get_subject().CN, diff)
 					create = True
 				elif server_cn != srv_crt.get_subject().CN:
 					logger.notice(
-						"Server CN has changed from '%s' to '%s', creating new server cert",
+						"Server CN has changed from '%s' to '%s', needing new cert",
 						srv_crt.get_subject().CN, server_cn
 					)
 					create = True
 				elif full and srv_crt.get_issuer().CN == srv_crt.get_subject().CN:
-					logger.notice("Self signed certificate found")
+					logger.notice("Self signed certificate found, needing new cert")
 					create = True
 					exists_self_signed = True
 
