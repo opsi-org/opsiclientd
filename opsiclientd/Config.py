@@ -231,7 +231,12 @@ class Config(metaclass=Singleton):
 
 	@property
 	def restart_marker(self): # pylint: disable=no-self-use
-		return os.path.join(os.path.dirname(sys.argv[0]), ".opsiclientd_restart")
+		if RUNNING_ON_WINDOWS:
+			# Old location of restart marker
+			old_location = os.path.join(os.path.dirname(sys.argv[0]), ".opsiclientd_restart")
+			if os.path.exists(old_location):
+				return old_location
+		return os.path.join(self._getBaseDirectory(), ".opsiclientd_restart")
 
 	def check_restart_marker(self):
 		if os.path.exists(self.restart_marker):
