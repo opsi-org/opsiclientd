@@ -123,7 +123,7 @@ def start_pty(shell="powershell.exe", lines=30, columns=120):
 		# Therefore we do not import at toplevel
 		from winpty import PtyProcess # pylint: disable=import-error,import-outside-toplevel
 	except ImportError as err:
-		logger.error(err, exc_info=True)
+		logger.error("Failed to start pty: %s", err, exc_info=True)
 		raise
 	process = PtyProcess.spawn(shell, dimensions=(lines, columns))
 
