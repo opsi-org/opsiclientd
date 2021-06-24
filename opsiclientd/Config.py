@@ -621,12 +621,9 @@ class Config(metaclass=Singleton):
 		configStates = []
 		dynamicDepot = False
 		depotProtocol = 'cifs'
-		protocol = None
-		sync_protocol = None
 		configStates = configService.configState_getObjects(
 			configId=[
 				'clientconfig.depot.dynamic', 'clientconfig.depot.protocol',
-				'clientconfig.depot.sync_protocol',
 				'opsiclientd.depot_server.depot_id', 'opsiclientd.depot_server.url'
 			],
 			objectId=self.get('global', 'host_id')
@@ -655,25 +652,14 @@ class Config(metaclass=Singleton):
 				dynamicDepot = forceBool(configState.values[0])
 
 			elif configState.configId == 'clientconfig.depot.protocol' and configState.values:
-				protocol = configState.values[0]
-			elif configState.configId == 'clientconfig.depot.sync_protocol' and configState.values:
-				sync_protocol = configState.values[0]
-
-		if not sync_protocol:
-			# old behaviour
-			if protocol:
-				if protocol == "webdav" and mode == "mount" and not RUNNING_ON_LINUX:
-					logger.info("Not using webdav protocol (not running on linux and not sync mode)")
-				else:
-					depotProtocol = protocol
-		else:
-			if mode == "mount" and protocol:
-				depotProtocol = protocol
-			if mode == "sync" and sync_protocol:
-				depotProtocol = sync_protocol
+				depotProtocol = configState.values[0]
 
 		if depotProtocol not in ("webdav", "cifs"):
 			logger.error("Invalid protocol %s specified, using cifs", depotProtocol)
+			depotProtocol = "cifs"
+
+		if depotProtocol == "webdav" and mode == "mount" and not RUNNING_ON_LINUX and not self.get('global', 'install_opsi_ca_into_os_store'):
+			logger.error("Using cifs instead of webdav to mount depot share because global.install_opsi_ca_into_os_store is disabled")
 			depotProtocol = "cifs"
 
 		if dynamicDepot:
