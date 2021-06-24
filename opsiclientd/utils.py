@@ -8,6 +8,8 @@
 utils
 """
 
+import struct
+
 from opsicommon.logging import logger
 
 
@@ -33,3 +35,72 @@ def get_include_exclude_product_ids(config_service, includeProductGroupIds, excl
 		logger.debug("Product ids %s will be excluded.", excludeProductIds)
 
 	return includeProductIds, excludeProductIds
+
+
+def lo_word(dword):
+	return str(dword & 0x0000ffff)
+
+
+def hi_word(dword):
+	return str(dword >> 16)
+
+
+def read_fixed_file_info(data):
+	# https://docs.microsoft.com/en-us/windows/win32/api/verrsrc/ns-verrsrc-vs_fixedfileinfo
+	pos = data.find(b"\xBD\x04\xEF\xFE")
+	if pos < 0:
+		raise ValueError("Failed to read VS_FIXEDFILEINFO")
+	vms = struct.unpack("<I", data[pos+8:pos+12])[0]
+	vls = struct.unpack("<I", data[pos+12:pos+16])[0]
+	return ".".join([hi_word(vms), lo_word(vms), hi_word(vls), lo_word(vls)])
+
+
+def get_version_from_mach_binary(filename):
+	from macholib import MachO  # pylint: disable=import-outside-toplevel
+
+	machofile = MachO.MachO(filename)
+	fpc_offset, fpc_size = 0, 0
+	for (_load_cmd, _cmd, _data) in machofile.headers[0].commands:
+		for data in _data:
+			if data and hasattr(data, "sectname") and data.sectname:
+				sectname = data.sectname.rstrip(b'\0')
+				if sectname == b"fpc.resources":
+					fpc_offset = data.offset
+					fpc_size = data.size
+
+	if fpc_offset > 0:
+		with open(filename, "rb") as file:
+			file.seek(fpc_offset)
+			return read_fixed_file_info(file.read(fpc_size))
+
+	raise ValueError(f"No version information embedded in '{filename}'")
+
+
+def get_version_from_elf_binary(filename):
+	from elftools.elf.elffile import ELFFile  # pylint: disable=import-outside-toplevel
+
+	with open(filename, 'rb') as file:
+		elffile = ELFFile(file)
+		for section in elffile.iter_sections():
+			if section.name == "fpc.resources":
+				return read_fixed_file_info(section.data())
+
+	raise ValueError(f"No version information embedded in '{filename}'")
+
+
+def get_version_from_dos_binary(filename):
+	import pefile  # pylint: disable=import-outside-toplevel
+
+	try:
+		pef = pefile.PE(filename)
+		pef.close()
+		fileinfo = pef.VS_FIXEDFILEINFO
+		if isinstance(fileinfo, list):
+			fileinfo = fileinfo[0]
+		fvms = fileinfo.FileVersionMS
+		fvls = fileinfo.FileVersionLS
+		return ".".join([hi_word(fvms), lo_word(fvms), hi_word(fvls), lo_word(fvls)])
+
+	except (AttributeError, pefile.PEFormatError):
+		pass
+	raise ValueError(f"No version information embedded in '{filename}'")

@@ -44,8 +44,9 @@ from opsiclientd.Exceptions import CanceledByUserError, ConfigurationError
 from opsiclientd.Localization import _
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_DARWIN, RUNNING_ON_LINUX
+from opsiclientd.SystemCheck import RUNNING_ON_MACOS, RUNNING_ON_WINDOWS, RUNNING_ON_DARWIN, RUNNING_ON_LINUX
 from opsiclientd.Timeline import Timeline
+from opsiclientd.utils import get_version_from_dos_binary, get_version_from_elf_binary, get_version_from_mach_binary
 
 config = Config()
 state = State()
@@ -318,23 +319,23 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		self.runCommandInSession(command=command, waitForProcessEnding=False, noWindow=True)
 
 	def setActionProcessorInfo(self):
+		action_processor_filename = config.get('action_processor', 'filename')
+		action_processor_local_dir = config.get('action_processor', 'local_dir')
+		action_processor_local_file = os.path.join(action_processor_local_dir, action_processor_filename)
+		name = os.path.basename(action_processor_local_file).replace(".exe", "")
+		version = "?"
 		try:
-			actionProcessorFilename = config.get('action_processor', 'filename')
-			actionProcessorLocalDir = config.get('action_processor', 'local_dir')
-			actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
-
 			if RUNNING_ON_WINDOWS:
-				info = System.getFileVersionInfo(actionProcessorLocalFile)
+				version = get_version_from_dos_binary(action_processor_local_file)
+			elif RUNNING_ON_LINUX:
+				version = get_version_from_elf_binary(action_processor_local_file)
+			elif RUNNING_ON_MACOS:
+				version = get_version_from_mach_binary(action_processor_local_file)
+		except ValueError as err:
+			logger.error(err)
 
-				version = info.get('FileVersion', '')
-				name = info.get('FileDescription', '')
-				logger.info("Action processor name '%s', version '%s'", name, version)
-				self._actionProcessorInfoSubject.setMessage(f"{name} {version}")
-			else:
-				logger.info("Action processor: %s", actionProcessorLocalFile)
-				self._actionProcessorInfoSubject.setMessage(os.path.basename(actionProcessorLocalFile))
-		except Exception as err: # pylint: disable=broad-except
-			logger.error("Failed to set action processor info: %s", err)
+		logger.notice("Action processor name '%s', version '%s'", name, version)
+		self._actionProcessorInfoSubject.setMessage(f"{name} {version}")
 
 	def mountDepotShare(self, impersonation):
 		if self._depotShareMounted:
@@ -520,8 +521,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						actionResult='successful'
 					)
 				])
-
-				self.setActionProcessorInfo()
+				try:
+					self.setActionProcessorInfo()
+				except Exception as err: # pylint: disable=broad-except
+					logger.error("Failed to set action processor info: %s", err)
 			finally:
 				if mounted:
 					self.umountDepotShare()
@@ -1471,7 +1474,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					config.setTemporaryConfigServiceUrls([])
 
 					self.startNotificationServer()
-					self.setActionProcessorInfo()
+					try:
+						self.setActionProcessorInfo()
+					except Exception as err: # pylint: disable=broad-except
+						logger.error("Failed to set action processor info: %s", err)
 					self._messageSubject.setMessage(self.event.eventConfig.getActionMessage())
 
 					self.setStatusMessage(_("Processing event %s") % self.event.eventConfig.getName())
