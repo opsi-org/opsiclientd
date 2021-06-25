@@ -888,17 +888,18 @@ class TerminalReaderThread(threading.Thread):
 		self.websocket_protocol = websocket_protocol
 
 	def run(self):
-		try:
-			while not self.should_stop:
+		while not self.should_stop:
+			try:
 				data = self.websocket_protocol.child_read(16*1024)
 				if not data:  # EOF.
 					break
 				if not self.should_stop:
 					reactor.callFromThread(self.websocket_protocol.send, data) # pylint: disable=no-member
 				time.sleep(0.001)
-		except Exception as err:  # pylint: disable=broad-except
-			if not self.should_stop:
-				logger.error("Error in terminal reader thread: %s", err, exc_info=True)
+			except Exception as err:  # pylint: disable=broad-except
+				if not self.should_stop:
+					logger.error("Error in terminal reader thread: %s - %s", err.__class__, err, exc_info=True)
+					time.sleep(1)
 
 	def stop(self):
 		self.should_stop = True
