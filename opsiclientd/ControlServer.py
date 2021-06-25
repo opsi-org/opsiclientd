@@ -206,7 +206,7 @@ TERMINAL_PAGE = '''<!DOCTYPE html>
 		}
 	</script>
 </head>
-<body onload="runTerminal();">
+<body style="background-color: #000000; margin: 5px;" onload="runTerminal();">
 	<!--
 	<button onclick="term.setOption('fontSize', term.getOption('fontSize') + 1);">+</button>
 	<button onclick="term.setOption('fontSize', term.getOption('fontSize') - 1);">-</button>
