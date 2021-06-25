@@ -406,137 +406,112 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		except Exception as err: # pylint: disable=broad-except
 			logger.warning(err)
 
-	def updateActionProcessor(self, mount=True): # pylint: disable=too-many-locals,inconsistent-return-statements,too-many-branches,too-many-statements
+	def updateActionProcessor(self): # pylint: disable=too-many-locals,inconsistent-return-statements,too-many-branches,too-many-statements
 		logger.notice("Updating action processor")
 		self.setStatusMessage(_("Updating action processor"))
 
-		impersonation = None
 		try: # pylint: disable=too-many-nested-blocks
-			mounted = False
-			try:
-				url = urlparse(config.get('depot_server', 'url'))
-				if mount and url.hostname.lower() not in ('127.0.0.1', 'localhost', '::1'):
-					impersonation = None
-					if RUNNING_ON_WINDOWS:
-						# This logon type allows the caller to clone its current token and specify new credentials for outbound connections.
-						# The new logon session has the same local identifier but uses different credentials for other network connections.
-						(mount_username, mount_password) = config.getDepotserverCredentials(configService=self._configService)
-						if url.scheme in ("smb", "cifs"):
-							impersonation = System.Impersonate(username=mount_username, password=mount_password)
-							impersonation.start(logonType='NEW_CREDENTIALS')
 
-					logger.debug("Not on windows: mounting %s impersonation", "with" if impersonation else "without")
-					self.mountDepotShare(impersonation)
-					mounted = True
-
-				actionProcessorRemoteDir = None
-				actionProcessorCommonDir = None
-				if url.hostname.lower() in ('127.0.0.1', 'localhost', '::1'):
-					dirname = config.get('action_processor', 'remote_dir')
-					dirname.lstrip(os.sep)
-					dirname.lstrip("install" + os.sep)
-					dirname.lstrip(os.sep)
-					actionProcessorRemoteDir = os.path.join(
-						self.opsiclientd.getCacheService().getProductCacheDir(),
-						dirname
-					)
-					commonname = config.get('action_processor', 'remote_common_dir')
-					commonname.lstrip(os.sep)
-					commonname.lstrip("install" + os.sep)
-					commonname.lstrip(os.sep)
-					actionProcessorCommonDir = os.path.join(self.opsiclientd.getCacheService().getProductCacheDir(), commonname)
-					logger.notice("Updating action processor from local cache '%s' (common dir '%s')", actionProcessorRemoteDir, actionProcessorCommonDir)
-				else:
-					dd = config.getDepotDrive()
-					if RUNNING_ON_WINDOWS:
-						dd += os.sep
-					dirname = config.get('action_processor', 'remote_dir')
-					dirname.lstrip(os.sep)
-					actionProcessorRemoteDir = os.path.join(dd, dirname)
-					commonname = config.get('action_processor', 'remote_common_dir')
-					commonname.lstrip(os.sep)
-					actionProcessorCommonDir = os.path.join(dd, commonname)
-					logger.notice("Updating action processor from depot dir '%s' (common dir '%s')", actionProcessorRemoteDir, actionProcessorCommonDir)
-
-				actionProcessorFilename = config.get('action_processor', 'filename')
-				actionProcessorLocalDir = config.get('action_processor', 'local_dir')
-				actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
-				actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
-
-				if not os.path.exists(actionProcessorLocalFile):
-					logger.notice("Action processor needs update because file '%s' not found", actionProcessorLocalFile)
-				elif abs(os.stat(actionProcessorLocalFile).st_mtime - os.stat(actionProcessorRemoteFile).st_mtime) > 10:
-					logger.notice("Action processor needs update because modification time difference is more than 10 seconds")
-				elif not filecmp.cmp(actionProcessorLocalFile, actionProcessorRemoteFile):
-					logger.notice("Action processor needs update because file changed")
-				else:
-					logger.notice("Local action processor exists and seems to be up to date")
-					if self.event.eventConfig.useCachedProducts:
-						self._configService.productOnClient_updateObjects([ # pylint: disable=no-member
-							ProductOnClient(
-								productId          = config.action_processor_name,
-								productType        = 'LocalbootProduct',
-								clientId           = config.get('global', 'host_id'),
-								installationStatus = 'installed',
-								actionProgress     = ''
-							)
-						])
-					return actionProcessorLocalFile
-
+			url = urlparse(config.get('depot_server', 'url'))
+			actionProcessorRemoteDir = None
+			actionProcessorCommonDir = None
+			if url.hostname.lower() in ('127.0.0.1', 'localhost', '::1'):
+				dirname = config.get('action_processor', 'remote_dir')
+				dirname.lstrip(os.sep)
+				dirname.lstrip("install" + os.sep)
+				dirname.lstrip(os.sep)
+				actionProcessorRemoteDir = os.path.join(
+					self.opsiclientd.getCacheService().getProductCacheDir(),
+					dirname
+				)
+				commonname = config.get('action_processor', 'remote_common_dir')
+				commonname.lstrip(os.sep)
+				commonname.lstrip("install" + os.sep)
+				commonname.lstrip(os.sep)
+				actionProcessorCommonDir = os.path.join(self.opsiclientd.getCacheService().getProductCacheDir(), commonname)
+				logger.notice("Updating action processor from local cache '%s' (common dir '%s')", actionProcessorRemoteDir, actionProcessorCommonDir)
+			else:
+				dd = config.getDepotDrive()
 				if RUNNING_ON_WINDOWS:
-					logger.info("Checking if action processor files are in use")
-					for proc in psutil.process_iter():
-						try:
-							full_path = proc.exe()
-							if full_path and not os.path.relpath(full_path, actionProcessorLocalDir).startswith(".."):
-								raise Exception(f"Action processor files are in use by process '{full_path}''")
-						except (PermissionError, psutil.AccessDenied, ValueError):
-							pass
+					dd += os.sep
+				dirname = config.get('action_processor', 'remote_dir')
+				dirname.lstrip(os.sep)
+				actionProcessorRemoteDir = os.path.join(dd, dirname)
+				commonname = config.get('action_processor', 'remote_common_dir')
+				commonname.lstrip(os.sep)
+				actionProcessorCommonDir = os.path.join(dd, commonname)
+				logger.notice("Updating action processor from depot dir '%s' (common dir '%s')", actionProcessorRemoteDir, actionProcessorCommonDir)
 
-				# Update files
-				if "opsi-script" in actionProcessorLocalDir:
-					self.updateActionProcessorUnified(actionProcessorRemoteDir, actionProcessorCommonDir)
-				else:
-					self.updateActionProcessorOld(actionProcessorRemoteDir)
-				logger.notice("Local action processor successfully updated")
+			actionProcessorFilename = config.get('action_processor', 'filename')
+			actionProcessorLocalDir = config.get('action_processor', 'local_dir')
+			actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
+			actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
 
-				productVersion = None
-				packageVersion = None
-				for productOnDepot in self._configService.productOnDepot_getIdents( # pylint: disable=no-member
-							productType='LocalbootProduct',
-							productId=config.action_processor_name,
-							depotId=config.get('depot_server', 'depot_id'),
-							returnType='dict'):
-					productVersion = productOnDepot['productVersion']
-					packageVersion = productOnDepot['packageVersion']
-				self._configService.productOnClient_updateObjects([ # pylint: disable=no-member
-					ProductOnClient(
-						productId=config.action_processor_name,
+			if not os.path.exists(actionProcessorLocalFile):
+				logger.notice("Action processor needs update because file '%s' not found", actionProcessorLocalFile)
+			elif abs(os.stat(actionProcessorLocalFile).st_mtime - os.stat(actionProcessorRemoteFile).st_mtime) > 10:
+				logger.notice("Action processor needs update because modification time difference is more than 10 seconds")
+			elif not filecmp.cmp(actionProcessorLocalFile, actionProcessorRemoteFile):
+				logger.notice("Action processor needs update because file changed")
+			else:
+				logger.notice("Local action processor exists and seems to be up to date")
+				if self.event.eventConfig.useCachedProducts:
+					self._configService.productOnClient_updateObjects([ # pylint: disable=no-member
+						ProductOnClient(
+							productId          = config.action_processor_name,
+							productType        = 'LocalbootProduct',
+							clientId           = config.get('global', 'host_id'),
+							installationStatus = 'installed',
+							actionProgress     = ''
+						)
+					])
+				return actionProcessorLocalFile
+
+			if RUNNING_ON_WINDOWS:
+				logger.info("Checking if action processor files are in use")
+				for proc in psutil.process_iter():
+					try:
+						full_path = proc.exe()
+						if full_path and not os.path.relpath(full_path, actionProcessorLocalDir).startswith(".."):
+							raise Exception(f"Action processor files are in use by process '{full_path}''")
+					except (PermissionError, psutil.AccessDenied, ValueError):
+						pass
+
+			# Update files
+			if "opsi-script" in actionProcessorLocalDir:
+				self.updateActionProcessorUnified(actionProcessorRemoteDir, actionProcessorCommonDir)
+			else:
+				self.updateActionProcessorOld(actionProcessorRemoteDir)
+			logger.notice("Local action processor successfully updated")
+
+			productVersion = None
+			packageVersion = None
+			for productOnDepot in self._configService.productOnDepot_getIdents( # pylint: disable=no-member
 						productType='LocalbootProduct',
-						productVersion=productVersion,
-						packageVersion=packageVersion,
-						clientId=config.get('global', 'host_id'),
-						installationStatus='installed',
-						actionProgress='',
-						actionResult='successful'
-					)
-				])
-				try:
-					self.setActionProcessorInfo()
-				except Exception as err: # pylint: disable=broad-except
-					logger.error("Failed to set action processor info: %s", err)
-			finally:
-				if mounted:
-					self.umountDepotShare()
+						productId=config.action_processor_name,
+						depotId=config.get('depot_server', 'depot_id'),
+						returnType='dict'):
+				productVersion = productOnDepot['productVersion']
+				packageVersion = productOnDepot['packageVersion']
+			self._configService.productOnClient_updateObjects([ # pylint: disable=no-member
+				ProductOnClient(
+					productId=config.action_processor_name,
+					productType='LocalbootProduct',
+					productVersion=productVersion,
+					packageVersion=packageVersion,
+					clientId=config.get('global', 'host_id'),
+					installationStatus='installed',
+					actionProgress='',
+					actionResult='successful'
+				)
+			])
+			try:
+				self.setActionProcessorInfo()
+			except Exception as err: # pylint: disable=broad-except
+				logger.error("Failed to set action processor info: %s", err)
 
 		except Exception as err: # pylint: disable=broad-except
 			logger.error("Failed to update action processor: %s", err, exc_info=True)
-		finally:
-			if impersonation:
-				try:
-					impersonation.end()
-				except Exception as err: # pylint: disable=broad-except
-					logger.warning(err)
 
 	def updateActionProcessorUnified(self, actionProcessorRemoteDir, actionProcessorCommonDir): # pylint: disable=no-self-use,too-many-locals,too-many-branches
 		if not RUNNING_ON_WINDOWS and not RUNNING_ON_LINUX:
@@ -893,12 +868,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				logger.error("Failed to get depotserver credentials, continuing because event uses cached products", exc_info=True)
 				depotServerUsername = 'pcpatch'
 
-			if not RUNNING_ON_WINDOWS:
-				self.mountDepotShare(None)
+			self.mountDepotShare(None)
 
 			# Update action processor
 			if self.event.eventConfig.updateActionProcessor:
-				self.updateActionProcessor(mount=not self._depotShareMounted)
+				self.updateActionProcessor()
 
 			# Run action processor
 			serviceSession = 'none'
