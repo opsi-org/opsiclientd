@@ -18,6 +18,7 @@ import re
 import sys
 import codecs
 import shutil
+import socket
 import threading
 import time
 import json
@@ -896,9 +897,11 @@ class TerminalReaderThread(threading.Thread):
 				if not self.should_stop:
 					reactor.callFromThread(self.websocket_protocol.send, data) # pylint: disable=no-member
 				time.sleep(0.001)
+			except socket.timeout:
+				continue
 			except Exception as err:  # pylint: disable=broad-except
 				if not self.should_stop:
-					logger.error("Error in terminal reader thread: %s - %s", err.__class__, err, exc_info=True)
+					logger.error("Error in terminal reader thread: %s %s", err.__class__, err, exc_info=True)
 					time.sleep(1)
 
 	def stop(self):
