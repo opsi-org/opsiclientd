@@ -901,7 +901,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			)
 			actionProcessorCommand += f" {additionalParams}"
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
-
+			"""
 			if RUNNING_ON_WINDOWS:
 				command = (
 					f'"{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}"' +
@@ -914,7 +914,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					f' "{str(createEnvironment).lower()}"'
 				)
 			else:
-				command = actionProcessorCommand
+			"""
+			command = actionProcessorCommand
 
 			command = config.replace(command)
 
