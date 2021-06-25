@@ -25,7 +25,7 @@ from OPSI.Types import (
 from OPSI.Util import objectToBeautifiedText, blowfishDecrypt
 from OPSI.Util.File import IniFile
 from OPSI import System
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_LINUX, RUNNING_ON_DARWIN
+from opsiclientd.SystemCheck import RUNNING_ON_MACOS, RUNNING_ON_WINDOWS, RUNNING_ON_LINUX, RUNNING_ON_DARWIN
 
 
 # It is possible to set multiple certificates as UIB_OPSI_CA
@@ -224,6 +224,8 @@ class Config(metaclass=Singleton):
 					baseDir = os.path.abspath(os.path.dirname(sys.argv[0]))
 				except Exception: # pylint: disable=broad-except
 					baseDir = "."
+		elif RUNNING_ON_MACOS:
+			baseDir = os.path.join('/usr', 'local', 'lib', 'opsi-client-agent')
 		else:
 			baseDir = os.path.join('/usr', 'lib', 'opsi-client-agent')
 
@@ -239,6 +241,7 @@ class Config(metaclass=Singleton):
 		return os.path.join(self._getBaseDirectory(), ".opsiclientd_restart")
 
 	def check_restart_marker(self):
+		logger.info("Checking if restart marker '%s' exists", self.restart_marker)
 		if os.path.exists(self.restart_marker):
 			logger.notice("Restart marker found, gui startup and daemon startup events disabled")
 			try:
