@@ -661,9 +661,9 @@ class Config(metaclass=Singleton):
 			logger.error("Invalid protocol %s specified, using cifs", depotProtocol)
 			depotProtocol = "cifs"
 
-		if depotProtocol == "webdav" and mode == "mount" and not RUNNING_ON_LINUX and not self.get('global', 'install_opsi_ca_into_os_store'):
-			logger.error("Using cifs instead of webdav to mount depot share because global.install_opsi_ca_into_os_store is disabled")
-			depotProtocol = "cifs"
+		#if depotProtocol == "webdav" and mode == "mount" and not RUNNING_ON_LINUX and not self.get('global', 'install_opsi_ca_into_os_store'):
+		#	logger.error("Using cifs instead of webdav to mount depot share because global.install_opsi_ca_into_os_store is disabled")
+		#	depotProtocol = "cifs"
 
 		if dynamicDepot:
 			if not depotIds:
