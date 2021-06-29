@@ -83,7 +83,6 @@ def createEventGenerators(opsiclientd):
 			try:
 				_EVENT_GENERATORS[mainEventConfigId] = EventGeneratorFactory(opsiclientd, ec)
 				logger.info("Event generator '%s' created", mainEventConfigId)
-				enabled_events[mainEventConfigId] = True
 			except Exception as err: # pylint: disable=broad-except
 				logger.error("Failed to create event generator '%s': %s", mainEventConfigId, err)
 
