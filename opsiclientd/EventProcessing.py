@@ -1090,10 +1090,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					minutes = int(seconds/60)
 					seconds -= minutes*60
 				seconds = int(seconds)
-				if seconds < 0:
-					seconds = 0
-				if minutes < 0:
-					minutes = 0
+				seconds = max(seconds, 0)
+				minutes = max(minutes, 0)
 				if minutes < 10:
 					minutes = f"0{minutes}"
 				if seconds < 10:
@@ -1304,10 +1302,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								minutes = int(seconds/60)
 								seconds -= minutes*60
 							seconds = int(seconds)
-							if seconds < 0:
-								seconds = 0
-							if minutes < 0:
-								minutes = 0
+							seconds = max(seconds, 0)
+							minutes = max(minutes, 0)
 							if minutes < 10:
 								minutes = f"0{minutes}"
 							if seconds < 10:
