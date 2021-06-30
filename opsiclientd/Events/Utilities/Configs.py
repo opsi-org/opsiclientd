@@ -90,9 +90,10 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 	for eventConfigId in rawEventConfigs:
 		if rawEventConfigs[eventConfigId]['super']:
 			rawEventConfigs[eventConfigId]['args'] = __inheritArgsFromSuperEvents(
-									rawEventConfigsCopy,
-									rawEventConfigs[eventConfigId]['args'],
-									rawEventConfigs[eventConfigId]['super'])
+				rawEventConfigsCopy,
+				rawEventConfigs[eventConfigId]['args'],
+				rawEventConfigs[eventConfigId]['super']
+			)
 
 	eventConfigs = {}
 	for (eventConfigId, rawEventConfig) in rawEventConfigs.items(): # pylint: disable=too-many-nested-blocks
@@ -108,7 +109,10 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 			if rawEventConfig.get('precondition'):
 				precondition = preconditions.get(rawEventConfig['precondition'])
 				if not precondition:
-					logger.error("Precondition '%s' referenced by event config '%s' not, deactivating event", precondition, eventConfigId)
+					logger.error(
+						"Precondition '%s' referenced by event config '%s' not found, deactivating event",
+						precondition, eventConfigId
+					)
 					eventConfigs[eventConfigId]['active'] = False
 				else:
 					eventConfigs[eventConfigId]['preconditions'] = precondition
