@@ -1422,6 +1422,48 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			)
 			return True
 
+	def cache_products(self, wait_for_ending: bool = False):
+		if self.opsiclientd.getCacheService().isProductCacheServiceWorking():
+			logger.info("Already caching products")
+			return
+
+		self.setStatusMessage( _("Caching products") )
+		try:
+			self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
+			self.opsiclientd.getCacheService().cacheProducts(
+				waitForEnding           = wait_for_ending,
+				productProgressObserver = self._currentProgressSubjectProxy,
+				overallProgressObserver = self._overallProgressSubjectProxy,
+				dynamicBandwidth        = self.event.eventConfig.cacheDynamicBandwidth,
+				maxBandwidth            = self.event.eventConfig.cacheMaxBandwidth
+			)
+			if wait_for_ending:
+				self.setStatusMessage(_("Products cached"))
+		finally:
+			self._detailSubjectProxy.setMessage("")
+			try:
+				self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
+				self._currentProgressSubjectProxy.reset()
+				self._overallProgressSubjectProxy.reset()
+			except Exception as err: # pylint: disable=broad-except
+				logger.error(err, exc_info=True)
+
+	def sync_config(self, wait_for_ending: bool = False):
+		if self.opsiclientd.getCacheService().isConfigCacheServiceWorking():
+			logger.info("Already syncing config")
+			return
+
+		if self.event.eventConfig.syncConfigToServer:
+			self.setStatusMessage( _("Syncing config to server") )
+			self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = True)
+			self.setStatusMessage( _("Sync completed") )
+
+		if self.event.eventConfig.syncConfigFromServer:
+			self.setStatusMessage( _("Syncing config from server") )
+			self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = wait_for_ending)
+			if wait_for_ending:
+				self.setStatusMessage( _("Sync completed") )
+
 	def run(self): # pylint: disable=too-many-branches,too-many-statements
 		with log_context({'instance' : f'event processing {self.event.eventConfig.getId()}'}):
 			timelineEventId = None
@@ -1485,48 +1527,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 							if notifier_pid:
 								notifierPids.append(notifier_pid)
 
-					if self.event.eventConfig.syncConfigToServer or self.event.eventConfig.syncConfigFromServer:
-						if self.opsiclientd.getCacheService().isConfigCacheServiceWorking():
-							logger.info("Already syncing config")
-						else:
-							if self.event.eventConfig.syncConfigToServer:
-								self.setStatusMessage( _("Syncing config to server") )
-								self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = True)
-								self.setStatusMessage( _("Sync completed") )
-
-							if self.event.eventConfig.syncConfigFromServer:
-								self.setStatusMessage( _("Syncing config from server") )
-								waitForEnding = self.event.eventConfig.useCachedConfig
-								self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = waitForEnding)
-								if waitForEnding:
-									self.setStatusMessage( _("Sync completed") )
-
-					if self.event.eventConfig.cacheProducts:
-						if self.opsiclientd.getCacheService().isProductCacheServiceWorking():
-							logger.info("Already caching products")
-						else:
-							self.setStatusMessage( _("Caching products") )
-							try:
-								self._currentProgressSubjectProxy.attachObserver(self._detailSubjectProxy)
-								waitForEnding = self.event.eventConfig.useCachedProducts
-								self.opsiclientd.getCacheService().cacheProducts(
-									waitForEnding           = waitForEnding,
-									productProgressObserver = self._currentProgressSubjectProxy,
-									overallProgressObserver = self._overallProgressSubjectProxy,
-									dynamicBandwidth        = self.event.eventConfig.cacheDynamicBandwidth,
-									maxBandwidth            = self.event.eventConfig.cacheMaxBandwidth
-								)
-								if waitForEnding:
-									self.setStatusMessage(_("Products cached"))
-							finally:
-								self._detailSubjectProxy.setMessage("")
-								try:
-									self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
-									self._currentProgressSubjectProxy.reset()
-									self._overallProgressSubjectProxy.reset()
-								except Exception as err: # pylint: disable=broad-except
-									logger.error(err, exc_info=True)
-
 					if self.event.eventConfig.useCachedConfig:
 						if self.opsiclientd.getCacheService().configCacheCompleted():
 							logger.notice("Event '%s' uses cached config and config caching is done", self.event.eventConfig.getId())
@@ -1551,11 +1551,18 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								self.processProductActionRequests()
 
 							# After the installation of opsi-client-agent the opsiclientd.conf needs to be updated again
+							# TODO: Remove with opsi-client-agent 4.2
 							if self.event.eventConfig.getConfigFromService:
 								config.readConfigFile()
 								self.getConfigFromService()
 								if self.event.eventConfig.updateConfigFile:
 									config.updateConfigFile()
+
+					if self.event.eventConfig.syncConfigToServer or self.event.eventConfig.syncConfigFromServer:
+						self.sync_config()
+
+					if self.event.eventConfig.cacheProducts:
+						self.cache_products()
 
 				finally:
 					self._messageSubject.setMessage("")
