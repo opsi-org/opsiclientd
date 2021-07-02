@@ -125,14 +125,14 @@ class OpsiclientdNT(Opsiclientd):
 				return True
 			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {response.get('error')}")
 
-	def createOpsiSetupAdmin(self, delete_existing=False): # pylint: disable=no-self-use
+	def createOpsiSetupUser(self, admin=True, delete_existing=False): # pylint: disable=no-self-use
 		# https://bugs.python.org/file46988/issue.py
 
 		user_info = {
-			"name": "opsisetupadmin",
-			"full_name": "opsi setup admin",
+			"name": "opsisetupuser",
+			"full_name": "opsi setup user",
 			"comment": "auto created by opsi",
-			"password": ''.join((random.choice(string.ascii_letters + string.digits) for i in range(12))),
+			"password": f"_{''.join((random.choice(string.ascii_letters + string.digits) for i in range(12)))}!",
 			"priv": win32netcon.USER_PRIV_USER,
 			"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD
 		}
@@ -181,9 +181,10 @@ class OpsiclientdNT(Opsiclientd):
 				for pdir in glob.glob(f"c:\\users\\{user_info['name']}*"):
 					try:
 						subprocess.call(['takeown', '/d', 'Y', '/r', '/f', pdir])
-						subprocess.call(['del', '/s', '/f', '/q',pdir], shell=True)
+						subprocess.call(['del', '/s', '/f', '/q', pdir], shell=True)
 					except subprocess.CalledProcessError as rm_err:
 						logger.warning("Failed to delete %s: %s", pdir, rm_err)
+
 				user_exists = False
 			else:
 				# Update user password
@@ -198,9 +199,16 @@ class OpsiclientdNT(Opsiclientd):
 		sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
 		local_admin_group_name = win32security.LookupAccountSid(None, sid)[0]
 		try:
-			win32net.NetLocalGroupAddMembers(None, local_admin_group_name, 3, [{"domainandname": user_info["name"]}])
+			if admin:
+				win32net.NetLocalGroupAddMembers(None, local_admin_group_name, 3, [{"domainandname": user_info["name"]}])
+			else:
+				win32net.NetLocalGroupDelMembers(None, local_admin_group_name, [{"domainandname": user_info["name"]}])
 		except pywintypes.error as err:
-			if err.winerror != 1378: # 1378 already a group member
+			# 1377 - ERROR_MEMBER_NOT_IN_ALIAS
+			#  The specified account name is not a member of the group.
+			# 1378 # ERROR_MEMBER_IN_ALIAS
+			#  The specified account name is already a member of the group.
+			if err.winerror not in (1377, 1378):
 				raise
 
 		user_info_4 = win32net.NetUserGetInfo(None, user_info["name"], 4)

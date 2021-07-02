@@ -1298,13 +1298,13 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			logger.error(err, exc_info=True)
 			raise
 
-	def loginOpsiSetupAdmin(self, recreate_user=False):
-		for session_id in System.getUserSessionIds("opsisetupadmin"):
+	def loginOpsiSetupUser(self, admin=True, recreate_user=False):
+		for session_id in System.getUserSessionIds("opsisetupuser"):
 			System.logoffSession(session_id)
-		user_info = self.opsiclientd.createOpsiSetupAdmin(delete_existing=recreate_user)
+		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 		return self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 
-	def runAsOpsiSetupAdmin(self, command="powershell.exe -ExecutionPolicy ByPass", recreate_user=False):
+	def runAsOpsiSetupUser(self, command="powershell.exe -ExecutionPolicy ByPass", admin=True, recreate_user=False):
 		try:
 			# https://bugs.python.org/file46988/issue.py
 			if not RUNNING_ON_WINDOWS:
@@ -1314,9 +1314,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			import win32security # pylint: disable=import-error,import-outside-toplevel
 			import winreg # pylint: disable=import-error,import-outside-toplevel
 
-			for session_id in System.getUserSessionIds("opsisetupadmin"):
+			for session_id in System.getUserSessionIds("opsisetupuser"):
 				System.logoffSession(session_id)
-			user_info = self.opsiclientd.createOpsiSetupAdmin(delete_existing=recreate_user)
+			user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 
 			logon = win32security.LogonUser(
 				user_info["name"], None, user_info["password"],

@@ -40,7 +40,7 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 		if self._opsiclientd.is_stopping():
 			return
 
-		if args[0].split("\\")[-1] == "opsisetupadmin":
+		if args[0].split("\\")[-1] == "opsisetupuser":
 			# TODO: username currently hardcoded
 			logger.info("Login of user %s detected, no UserLoginAction will be fired.", args[0])
 			return
