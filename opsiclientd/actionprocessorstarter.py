@@ -118,7 +118,7 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 			logger.notice("Starting action processor")
 			be.setStatusMessage(sessionId, _("Action processor is running")) # pylint: disable=no-member
 
-			if imp:
+			if runAsUser:
 				imp.runCommand(actionProcessorCommand, timeoutSeconds=actionProcessorTimeout)
 			else:
 				System.execute(actionProcessorCommand, waitForEnding=True, timeout=actionProcessorTimeout)
