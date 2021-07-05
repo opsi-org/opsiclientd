@@ -283,7 +283,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		processId = None
 		while True:
 			try:
-				logger.info("Running command %s in session '%s' on desktop '%s'", command, sessionId, desktop)
+				logger.info(
+					"Running command %s in session '%s' on desktop '%s' (elevated=%s)",
+					command, sessionId, desktop, elevated
+				)
 				processId = System.runCommandInSession(
 						command=command,
 						sessionId=sessionId,
@@ -897,11 +900,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 			actionProcessorUserName = ''
 			actionProcessorUserPassword = ''
-			elevated = True
 			if not self.isLoginEvent:
-				elevated = False
-				#actionProcessorUserName = self.opsiclientd._actionProcessorUserName # pylint: disable=protected-access
-				#actionProcessorUserPassword = self.opsiclientd._actionProcessorUserPassword # pylint: disable=protected-access
+				actionProcessorUserName = self.opsiclientd._actionProcessorUserName # pylint: disable=protected-access
+				actionProcessorUserPassword = self.opsiclientd._actionProcessorUserPassword # pylint: disable=protected-access
 
 			createEnvironment = config.get('action_processor', 'create_environment')
 
@@ -953,7 +954,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					desktop=desktop,
 					waitForProcessEnding=True,
 					noWindow=True,
-					elevated=elevated
+					elevated=not self.isLoginEvent
 				)
 			else:
 				(username, password) = (None, None)
