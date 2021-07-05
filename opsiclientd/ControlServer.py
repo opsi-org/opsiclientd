@@ -951,9 +951,11 @@ class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd
 				from opsiclientd.windows import start_pty  # pylint: disable=import-outside-toplevel
 			else:
 				from opsiclientd.posix import start_pty  # pylint: disable=import-outside-toplevel
-			(self.child_read, self.child_write, self.child_stop) = start_pty(**kwargs)  # pylint: disable=attribute-defined-outside-init
-			self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init
-			self.terminal_reader_thread.start()
+			ret = start_pty(**kwargs)
+			if ret:
+				(self.child_read, self.child_write, self.child_stop) = ret  # pylint: disable=attribute-defined-outside-init
+				self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init
+				self.terminal_reader_thread.start()
 
 	def onMessage(self, payload, isBinary):
 		#logger.debug("onMessage: %s - %s", isBinary, payload)
