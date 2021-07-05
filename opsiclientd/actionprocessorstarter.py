@@ -116,20 +116,17 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 					System.mount(depotRemoteUrl, depotDrive)
 				depotShareMounted = True
 
-			logger.info("Depot share (%s): %s", depotDrive, os.listdir(depotDrive + "\\"))
-			logger.info("Depot share (%s): %s", depotDrive, os.listdir(depotDrive + "\\firefox"))
-			logger.info(subprocess.check_output(["whoami"], shell=True))
+			#logger.info("Depot share (%s): %s", depotDrive, os.listdir(depotDrive + "\\"))
+			#logger.info("Depot share (%s): %s", depotDrive, os.listdir(depotDrive + "\\firefox"))
+			#logger.info(subprocess.check_output(["whoami"], shell=True))
 
 			logger.notice("Starting action processor")
 			be.setStatusMessage(sessionId, _("Action processor is running")) # pylint: disable=no-member
 
-			logger.info(subprocess.check_output(f"dir {depotDrive}\\firefox", shell=True))
-
-			logger.info(subprocess.check_output(actionProcessorCommand, shell=True))
-			#if imp:
-			#	imp.runCommand(actionProcessorCommand, timeoutSeconds=actionProcessorTimeout, asUser=False)
-			#else:
-			#	System.execute(actionProcessorCommand, waitForEnding=True, timeout=actionProcessorTimeout)
+			if imp:
+				imp.runCommand(actionProcessorCommand, timeoutSeconds=actionProcessorTimeout)
+			else:
+				System.execute(actionProcessorCommand, waitForEnding=True, timeout=actionProcessorTimeout)
 
 			logger.notice("Action processor ended")
 			be.setStatusMessage(sessionId, _("Action processor ended")) # pylint: disable=no-member
