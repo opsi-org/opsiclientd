@@ -945,16 +945,32 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				)
 
 			if RUNNING_ON_WINDOWS:
+				session_id = self.getSessionId()
+				elevated = True
+				if self.isLoginEvent:
+					elevated = False
+					timeout = 30
+					logger.info("Waiting for explorer.exe running in session %s (timeout=%d)", session_id, timeout)
+					start = time.time()
+					explorer_pid = None
+					while time.time() - start < timeout:
+						explorer_pid = System.getPid(process="explorer.exe", sessionId=session_id)
+						if explorer_pid:
+							logger.info("Found runnning explorer.exe (pid %d) in session %s", explorer_pid, session_id)
+							break
+					if not explorer_pid:
+						raise RuntimeError(f"Failed to find explorer.exe in session {session_id}")
+
 				logger.notice(
 					"Starting action processor in session '%s' on desktop '%s'",
-					self.getSessionId(), desktop
+					session_id, desktop
 				)
 				self.runCommandInSession(
 					command=command,
 					desktop=desktop,
 					waitForProcessEnding=True,
 					noWindow=True,
-					elevated=not self.isLoginEvent
+					elevated=elevated
 				)
 			else:
 				(username, password) = (None, None)
