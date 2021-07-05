@@ -260,7 +260,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			raise
 
 	def runCommandInSession( # pylint: disable=too-many-arguments
-		self, command, sessionId=None, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False, elevated=True
+		self, command, sessionId=None, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False
 	):
 		if sessionId is None:
 			sessionId = self.getSessionId()
@@ -276,21 +276,16 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		if not desktop:
 			desktop = 'winlogon'
 
-		get_token_from = "winlogon.exe"
-		if not elevated:
-			get_token_from = "explorer.exe"
-
 		processId = None
 		while True:
 			try:
 				logger.info(
-					"Running command %s in session '%s' on desktop '%s' (elevated=%s)",
-					command, sessionId, desktop, elevated
+					"Running command %s in session '%s' on desktop '%s'",
+					command, sessionId, desktop
 				)
 				processId = System.runCommandInSession(
 						command=command,
 						sessionId=sessionId,
-						duplicateFrom=get_token_from,
 						desktop=desktop,
 						waitForProcessEnding=waitForProcessEnding,
 						timeoutSeconds=timeoutSeconds,
@@ -945,33 +940,15 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				)
 
 			if RUNNING_ON_WINDOWS:
-				session_id = self.getSessionId()
-				elevated = True
-				if self.isLoginEvent:
-					elevated = False
-					timeout = 30
-					logger.info("Waiting for explorer.exe running in session %s (timeout=%d)", session_id, timeout)
-					start = time.time()
-					explorer_pid = None
-					while time.time() - start < timeout:
-						explorer_pid = System.getPid(process="explorer.exe", sessionId=session_id)
-						if explorer_pid:
-							logger.info("Found runnning explorer.exe (pid %d) in session %s", explorer_pid, session_id)
-							break
-						time.sleep(1)
-					if not explorer_pid:
-						raise RuntimeError(f"Failed to find explorer.exe in session {session_id}")
-
 				logger.notice(
 					"Starting action processor in session '%s' on desktop '%s'",
-					session_id, desktop
+					self.getSessionId(), desktop
 				)
 				self.runCommandInSession(
 					command=command,
 					desktop=desktop,
 					waitForProcessEnding=True,
-					noWindow=True,
-					elevated=elevated
+					noWindow=True
 				)
 			else:
 				(username, password) = (None, None)

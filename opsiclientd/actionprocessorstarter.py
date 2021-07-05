@@ -116,9 +116,7 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 					System.mount(depotRemoteUrl, depotDrive)
 				depotShareMounted = True
 
-			#logger.info("Depot share (%s): %s", depotDrive, os.listdir(depotDrive + "\\"))
-			#logger.info("Depot share (%s): %s", depotDrive, os.listdir(depotDrive + "\\firefox"))
-			#logger.info(subprocess.check_output(["whoami"], shell=True))
+			logger.info(subprocess.check_output(["whoami"], shell=True))
 
 			logger.notice("Starting action processor")
 			be.setStatusMessage(sessionId, _("Action processor is running")) # pylint: disable=no-member
