@@ -123,6 +123,8 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 			logger.notice("Starting action processor")
 			be.setStatusMessage(sessionId, _("Action processor is running")) # pylint: disable=no-member
 
+			logger.info(subprocess.check_output(f"dir {depotDrive}\\firefox", shell=True))
+
 			logger.info(subprocess.check_output(actionProcessorCommand, shell=True))
 			#if imp:
 			#	imp.runCommand(actionProcessorCommand, timeoutSeconds=actionProcessorTimeout, asUser=False)
