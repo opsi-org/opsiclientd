@@ -958,6 +958,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						if explorer_pid:
 							logger.info("Found runnning explorer.exe (pid %d) in session %s", explorer_pid, session_id)
 							break
+						time.sleep(1)
 					if not explorer_pid:
 						raise RuntimeError(f"Failed to find explorer.exe in session {session_id}")
 
