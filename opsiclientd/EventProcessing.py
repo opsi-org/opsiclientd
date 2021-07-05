@@ -259,7 +259,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			logger.error("Failed to write log to service: %s", err)
 			raise
 
-	def runCommandInSession(self, command, sessionId=None, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False): # pylint: disable=too-many-arguments
+	def runCommandInSession( # pylint: disable=too-many-arguments
+		self, command, sessionId=None, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False, elevated=True
+	):
 		if sessionId is None:
 			sessionId = self.getSessionId()
 
@@ -274,6 +276,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		if not desktop:
 			desktop = 'winlogon'
 
+		get_token_from = "winlogon.exe"
+		if not elevated:
+			get_token_from = "explorer.exe"
+
 		processId = None
 		while True:
 			try:
@@ -281,6 +287,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				processId = System.runCommandInSession(
 						command=command,
 						sessionId=sessionId,
+						duplicateFrom=get_token_from,
 						desktop=desktop,
 						waitForProcessEnding=waitForProcessEnding,
 						timeoutSeconds=timeoutSeconds,
@@ -890,9 +897,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 			actionProcessorUserName = ''
 			actionProcessorUserPassword = ''
+			elevated = True
 			if not self.isLoginEvent:
-				actionProcessorUserName = self.opsiclientd._actionProcessorUserName # pylint: disable=protected-access
-				actionProcessorUserPassword = self.opsiclientd._actionProcessorUserPassword # pylint: disable=protected-access
+				elevated = False
+				#actionProcessorUserName = self.opsiclientd._actionProcessorUserName # pylint: disable=protected-access
+				#actionProcessorUserPassword = self.opsiclientd._actionProcessorUserPassword # pylint: disable=protected-access
 
 			createEnvironment = config.get('action_processor', 'create_environment')
 
@@ -943,7 +952,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					command=command,
 					desktop=desktop,
 					waitForProcessEnding=True,
-					noWindow=True
+					noWindow=True,
+					elevated=elevated
 				)
 			else:
 				(username, password) = (None, None)

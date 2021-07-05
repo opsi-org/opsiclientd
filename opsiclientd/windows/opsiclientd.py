@@ -4,7 +4,6 @@
 # Copyright (c) 2010-2021 uib GmbH <info@uib.de>
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0
-
 import sys
 import time
 import threading
@@ -29,6 +28,10 @@ from opsicommon.logging import logger
 
 from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd import config
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
+
+if not RUNNING_ON_WINDOWS:
+	WindowsError = RuntimeError
 
 def opsiclientd_factory():
 	windowsVersion = sys.getwindowsversion() # pylint: disable=no-member
@@ -125,7 +128,7 @@ class OpsiclientdNT(Opsiclientd):
 				return True
 			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {response.get('error')}")
 
-	def createOpsiSetupUser(self, admin=True, delete_existing=False): # pylint: disable=no-self-use
+	def createOpsiSetupUser(self, admin=True, delete_existing=False): # pylint: disable=no-self-use,too-many-branches
 		# https://bugs.python.org/file46988/issue.py
 
 		user_info = {
