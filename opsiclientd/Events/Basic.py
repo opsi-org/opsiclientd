@@ -51,8 +51,12 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 
 	def _preconditionsFulfilled(self, preconditions): # pylint: disable=no-self-use
 		for key, value in preconditions.items():
-			if forceBool(value) != state.get(key, False):
-				logger.debug("Precondition '%s' not fulfilled (%s != %s)", key, forceBool(value), state.get(key, False))
+			if not forceBool(value):
+				# Only check if value in precondition is true
+				# false means: do not check state
+				continue
+			if not state.get(key, False):
+				logger.debug("Precondition '%s' not fulfilled", key)
 				return False
 
 		return True
