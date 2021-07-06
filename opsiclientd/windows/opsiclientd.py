@@ -135,7 +135,7 @@ class OpsiclientdNT(Opsiclientd):
 			"name": "opsisetupuser",
 			"full_name": "opsi setup user",
 			"comment": "auto created by opsi",
-			"password": f"_{''.join((random.choice(string.ascii_letters + string.digits) for i in range(12)))}!",
+			"password": f"/{''.join((random.choice(string.ascii_letters + string.digits) for i in range(8)))}?",
 			"priv": win32netcon.USER_PRIV_USER,
 			"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD
 		}
