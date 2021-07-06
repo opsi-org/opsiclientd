@@ -205,7 +205,7 @@ class OpsiclientdNT(Opsiclientd):
 			if admin:
 				win32net.NetLocalGroupAddMembers(None, local_admin_group_name, 3, [{"domainandname": user_info["name"]}])
 			else:
-				win32net.NetLocalGroupDelMembers(None, local_admin_group_name, [{"domainandname": user_info["name"]}])
+				win32net.NetLocalGroupDelMembers(None, local_admin_group_name, [user_info["name"]])
 		except pywintypes.error as err:
 			# 1377 - ERROR_MEMBER_NOT_IN_ALIAS
 			#  The specified account name is not a member of the group.
