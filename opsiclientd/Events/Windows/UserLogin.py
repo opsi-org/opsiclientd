@@ -12,6 +12,7 @@ from __future__ import absolute_import
 
 from OPSI.Logger import Logger
 
+from opsiclientd.Config import OPSI_SETUP_USER_NAME
 from opsiclientd.Events.Basic import Event
 from opsiclientd.Events.Windows.SensLogon import SensLogonEventGenerator
 from opsiclientd.Events.Windows.WMI import WMIEventConfig
@@ -40,8 +41,7 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 		if self._opsiclientd.is_stopping():
 			return
 
-		if args[0].split("\\")[-1] == "opsisetupuser":
-			# TODO: username currently hardcoded
+		if args[0].split("\\")[-1] == OPSI_SETUP_USER_NAME:
 			logger.info("Login of user %s detected, no UserLoginAction will be fired.", args[0])
 			return
 

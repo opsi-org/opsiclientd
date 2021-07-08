@@ -63,6 +63,8 @@ igDA0os9lNV7Pn4nlK0c+Fk/2+wZdF4rzl0Bia4C6CMso0M+3Kqe7aqY6+/I6jgy
 kGOsCMSImzajpmtonx3ccPgSOyEWyoEaGij6u80QtFkj9g==
 -----END CERTIFICATE-----'''
 
+OPSI_SETUP_USER_NAME = "opsisetupuser"
+
 class SectionNotFoundException(ValueError):
 	pass
 
@@ -71,7 +73,7 @@ class NoConfigOptionFoundException(ValueError):
 	pass
 
 
-class Config(metaclass=Singleton):
+class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 	WINDOWS_DEFAULT_PATHS = {
 		'global': {
 			'log_dir': 'c:\\opsi.org\\log',

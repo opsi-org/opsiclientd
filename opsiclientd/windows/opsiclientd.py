@@ -28,6 +28,7 @@ from opsicommon.logging import logger
 
 from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd import config
+from opsiclientd.Config import OPSI_SETUP_USER_NAME
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 if not RUNNING_ON_WINDOWS:
@@ -132,7 +133,7 @@ class OpsiclientdNT(Opsiclientd):
 		# https://bugs.python.org/file46988/issue.py
 
 		user_info = {
-			"name": "opsisetupuser",
+			"name": OPSI_SETUP_USER_NAME,
 			"full_name": "opsi setup user",
 			"comment": "auto created by opsi",
 			"password": f"/{''.join((random.choice(string.ascii_letters + string.digits) for i in range(8)))}?",

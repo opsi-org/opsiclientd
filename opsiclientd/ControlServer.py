@@ -51,7 +51,7 @@ from opsicommon.logging import (
 	OPSI_LEVEL_TO_LEVEL, LEVEL_TO_NAME
 )
 from opsiclientd.ControlPipe import OpsiclientdRpcPipeInterface
-from opsiclientd.Config import Config
+from opsiclientd.Config import Config, OPSI_SETUP_USER_NAME
 from opsiclientd.Events.Utilities.Generators import getEventGenerator
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.OpsiService import ServiceConnection
@@ -1301,7 +1301,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			raise
 
 	def loginOpsiSetupUser(self, admin=True, recreate_user=False):
-		for session_id in System.getUserSessionIds("opsisetupuser"):
+		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 			System.logoffSession(session_id)
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 		return self.opsiclientd.loginUser(user_info["name"], user_info["password"])
@@ -1316,7 +1316,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			import win32security # pylint: disable=import-error,import-outside-toplevel
 			import winreg # pylint: disable=import-error,import-outside-toplevel
 
-			for session_id in System.getUserSessionIds("opsisetupuser"):
+			for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 				System.logoffSession(session_id)
 			user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 

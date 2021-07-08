@@ -19,7 +19,7 @@ from opsicommon.logging import logger
 from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
 
-from opsiclientd.Config import Config
+from opsiclientd.Config import Config, OPSI_SETUP_USER_NAME
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_DARWIN, RUNNING_ON_LINUX
 
 config = Config()
@@ -62,7 +62,10 @@ class State(metaclass=Singleton):
 		name = forceUnicode(name)
 		if name == 'user_logged_in':
 			if RUNNING_ON_WINDOWS:
-				return bool(System.getActiveSessionIds())
+				for session in System.getActiveSessionInformation():
+					if session["UserName"] != OPSI_SETUP_USER_NAME:
+						return True
+				return False
 			if RUNNING_ON_LINUX:
 				for proc in psutil.process_iter():
 					try:
