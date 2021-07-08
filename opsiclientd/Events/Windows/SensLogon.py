@@ -12,14 +12,11 @@ from __future__ import absolute_import
 
 import time
 
-from OPSI.Logger import Logger
+from opsicommon.logging import logger
 
 from opsiclientd.Events.Basic import EventGenerator
 
 __all__ = ['SensLogonEventGenerator']
-
-logger = Logger()
-
 
 class SensLogonEventGenerator(EventGenerator):
 

@@ -11,7 +11,7 @@ Events that get active once a system shuts down or restarts.
 import time
 import psutil
 
-from OPSI.Logger import Logger
+from opsicommon.logging import logger
 
 from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_WINDOWS
 from opsiclientd.Events.Basic import Event, EventGenerator
@@ -20,8 +20,6 @@ from opsiclientd.EventConfiguration import EventConfig
 __all__ = [
 	'GUIStartupEvent', 'GUIStartupEventConfig', 'GUIStartupEventGenerator'
 ]
-
-logger = Logger()
 
 
 class GUIStartupEventConfig(EventConfig):

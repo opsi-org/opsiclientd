@@ -10,7 +10,7 @@ Events that get active once a system shuts down or restarts.
 
 from __future__ import absolute_import
 
-from OPSI.Logger import Logger
+from opsicommon.logging import logger
 
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
 from opsiclientd.Events.Basic import Event
@@ -20,8 +20,6 @@ from opsiclientd.Events.Windows.WMI import WMIEventConfig
 __all__ = [
 	'UserLoginEvent', 'UserLoginEventConfig', 'UserLoginEventGenerator'
 ]
-
-logger = Logger()
 
 
 class UserLoginEventConfig(WMIEventConfig):

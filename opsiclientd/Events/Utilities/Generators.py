@@ -11,7 +11,7 @@ Functions to create, reconfigure and get event generators.
 from __future__ import absolute_import
 import copy
 
-from OPSI.Logger import Logger
+from opsicommon.logging import logger
 from OPSI.Types import forceUnicode
 
 from opsiclientd.Config import Config
@@ -28,7 +28,6 @@ __all__ = [
 EVENT_CONFIG_TYPE_PANIC = 'panic'
 _EVENT_GENERATORS = {}
 
-logger = Logger()
 config = Config()
 
 

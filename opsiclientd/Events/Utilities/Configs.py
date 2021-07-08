@@ -13,7 +13,7 @@ from __future__ import absolute_import
 import copy as pycopy
 import pprint
 
-from OPSI.Logger import Logger
+from opsicommon.logging import logger
 from OPSI.Types import forceBool, forceList, forceUnicodeLower
 
 from opsiclientd.Config import Config
@@ -21,9 +21,7 @@ from opsiclientd.Localization import getLanguage
 
 __all__ = ['getEventConfigs']
 
-logger = Logger()
 config = Config()
-
 
 def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 	preconditions = {}

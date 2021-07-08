@@ -10,11 +10,9 @@ Posix-specific custom event.
 This does not use WMI.
 """
 
-from OPSI.Logger import Logger
+from opsicommon.logging import logger
 
 __all__ = ['CustomEvent', 'CustomEventConfig', 'CustomEventGenerator']
-
-logger = Logger()
 
 try:
 	from opsiclientd.nonfree.Events.Config import CustomEventConfig

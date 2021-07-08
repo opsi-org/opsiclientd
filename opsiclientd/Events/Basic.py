@@ -21,7 +21,6 @@ from opsiclientd.State import State
 
 __all__ = ['Event', 'EventGenerator', 'EventListener']
 
-#logger = Logger()
 state = State()
 
 

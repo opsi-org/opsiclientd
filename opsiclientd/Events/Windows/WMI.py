@@ -13,15 +13,12 @@ from __future__ import absolute_import
 import threading
 import time
 
-from OPSI.Logger import Logger
+from opsicommon.logging import logger
 
 from opsiclientd.Events.Basic import EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
 
 __all__ = ['WMIEventConfig', 'WMIEventGenerator']
-
-logger = Logger()
-
 
 class WMIEventConfig(EventConfig):
 	def setConfig(self, conf):
