@@ -32,7 +32,10 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 			preconditions[preconditionId] = {}
 			try:
 				for key in options.keys():
-					preconditions[preconditionId][key] = forceBool(options[key])
+					if forceBool(options[key]):
+						# Only check if value in precondition is true
+						# false means: do not check state
+						preconditions[preconditionId][key] = True
 				logger.info("Precondition '%s' created: %s", preconditionId, preconditions[preconditionId])
 			except Exception as err: # pylint: disable=broad-except
 				logger.error("Failed to parse precondition '%s': %s", preconditionId, err)

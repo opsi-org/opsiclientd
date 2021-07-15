@@ -49,15 +49,10 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 		self._eventConfigs.append(eventConfig)
 
 	def _preconditionsFulfilled(self, preconditions): # pylint: disable=no-self-use
-		for key, value in preconditions.items():
-			if not forceBool(value):
-				# Only check if value in precondition is true
-				# false means: do not check state
-				continue
-			if not state.get(key, False):
-				logger.debug("Precondition '%s' not fulfilled", key)
+		for precondition in preconditions.items():
+			if not state.get(precondition, False):
+				logger.debug("Precondition '%s' not fulfilled", precondition)
 				return False
-
 		return True
 
 	def addEventListener(self, eventListener):
@@ -74,11 +69,11 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 		actualConfig = {'preconditions': {}, 'config': None}
 		for pec in self._eventConfigs:
 			if self._preconditionsFulfilled(pec.preconditions):
-				logger.info("Preconditions %s for event config '%s' fulfilled", pec.preconditions, pec.getId())
+				logger.info("Preconditions %s for event config '%s' fulfilled", list(pec.preconditions), pec.getId())
 				if not actualConfig['config'] or (len(pec.preconditions.keys()) > len(actualConfig['preconditions'].keys())):
 					actualConfig = {'preconditions': pec.preconditions, 'config': pec}
 			else:
-				logger.info("Preconditions %s for event config '%s' not fulfilled", pec.preconditions, pec.getId())
+				logger.info("Preconditions %s for event config '%s' not fulfilled", list(pec.preconditions), pec.getId())
 
 		return actualConfig['config']
 
