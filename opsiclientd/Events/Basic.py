@@ -15,7 +15,7 @@ import time
 
 import opsicommon.logging
 from opsicommon.logging import logger
-from OPSI.Types import forceList, forceBool
+from OPSI.Types import forceList
 
 from opsiclientd.State import State
 
