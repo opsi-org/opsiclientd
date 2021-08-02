@@ -70,6 +70,7 @@ class EventConfig: # pylint: disable=too-many-instance-attributes
 		self.actionProcessorDesktop = str(conf.get('actionProcessorDesktop', 'current'))
 		self.actionProcessorTimeout = int(conf.get('actionProcessorTimeout', 3 * 3600))
 		self.actionProcessorProductIds = list(conf.get('actionProcessorProductIds', []))
+		self.depotProtocol = str(conf.get('depotProtocol', ''))
 		self.excludeProductGroupIds = list(conf.get('excludeProductGroupIds', []))
 		self.includeProductGroupIds = list(conf.get('includeProductGroupIds', []))
 		self.preActionProcessorCommand = str(conf.get('preActionProcessorCommand', ''))

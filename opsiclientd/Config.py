@@ -659,6 +659,9 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			elif configState.configId == 'clientconfig.depot.protocol' and configState.values:
 				depotProtocol = configState.values[0]
 
+		if event and event.depotProtocol:
+			depotProtocol = event.depotProtocol
+
 		if depotProtocol not in ("webdav", "cifs"):
 			logger.error("Invalid protocol %s specified, using cifs", depotProtocol)
 			depotProtocol = "cifs"
