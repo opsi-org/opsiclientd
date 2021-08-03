@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 
 from OPSI.Object import ProductOnClient
 from OPSI.Types import (
-	forceBool, forceInt, forceList, forceProductIdList, forceUnicode
+	forceBool, forceInt, forceProductIdList, forceUnicode
 )
 from OPSI.Util.File.Opsi import PackageContentFile
 from OPSI.Util.Repository import getRepository
