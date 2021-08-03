@@ -1055,7 +1055,10 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			self._impersonation = System.Impersonate(username=depotServerUsername, password=depotServerPassword)
 			self._impersonation.start(logonType='NEW_CREDENTIALS')
 			mount = False
-		self._repository = getRepository(config.get('depot_server', 'url'), username=depotServerUsername, password=depotServerPassword, mount=mount)
+		self._repository = getRepository(
+			config.get('depot_server', 'url'),
+			username=depotServerUsername, password=depotServerPassword, mount=mount
+		)
 		return self._repository
 
 	def _cacheProduct(self, productId, neededProducts): # pylint: disable=too-many-locals,too-many-branches,too-many-statements

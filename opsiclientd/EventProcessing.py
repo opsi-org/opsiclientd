@@ -25,7 +25,7 @@ import psutil
 
 from OPSI import System
 from OPSI.Object import ProductOnClient
-from OPSI.Types import forceInt, forceList, forceUnicode, forceUnicodeLower
+from OPSI.Types import forceInt, forceUnicode, forceUnicodeLower
 from OPSI.Util.Message import (
 	ChoiceSubject, MessageSubject, MessageSubjectProxy, NotificationServer,
 	ProgressSubjectProxy
