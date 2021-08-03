@@ -705,10 +705,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				productIds = self.event.eventConfig.actionProcessorProductIds
 
 			if not productIds:
-				includeProductGroupIds = [x for x in forceList(self.event.eventConfig.includeProductGroupIds) if x != ""]
-				excludeProductGroupIds = [x for x in forceList(self.event.eventConfig.excludeProductGroupIds) if x != ""]
 				includeProductIds, excludeProductIds = get_include_exclude_product_ids(
-					self._configService, includeProductGroupIds, excludeProductGroupIds
+					self._configService,
+					self.event.eventConfig.includeProductGroupIds,
+					self.event.eventConfig.excludeProductGroupIds
 				)
 
 				for productOnClient in [poc for poc in self._configService.productOnClient_getObjects( # pylint: disable=no-member

@@ -248,12 +248,18 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 					elif key == 'post_event_command':
 						eventConfigs[eventConfigId]['postEventCommand'] = config.replace(forceUnicodeLower(value), escaped=True)
 					elif key == 'action_processor_productids':
-						eventConfigs[eventConfigId]['actionProcessorProductIds'] = value.strip().split(",")
+						if not isinstance(value, list):
+							value = [x.strip() for x in value.split(",")]
+						eventConfigs[eventConfigId]['actionProcessorProductIds'] = forceList(value)
 					elif key == 'depot_protocol':
 						eventConfigs[eventConfigId]['depotProtocol'] = forceUnicodeLower(value)
 					elif key == 'exclude_product_group_ids':
+						if not isinstance(value, list):
+							value = [x.strip() for x in value.split(",")]
 						eventConfigs[eventConfigId]['excludeProductGroupIds'] = forceList(value)
 					elif key == 'include_product_group_ids':
+						if not isinstance(value, list):
+							value = [x.strip() for x in value.split(",")]
 						eventConfigs[eventConfigId]['includeProductGroupIds'] = forceList(value)
 					elif key == 'working_window':
 						eventConfigs[eventConfigId]['workingWindow'] = str(value)

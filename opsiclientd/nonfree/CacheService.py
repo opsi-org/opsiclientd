@@ -536,10 +536,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 			self._cacheBackend.depotId = masterDepotId
 
 			if not needSync:
-				excludeProductGroupIds = [x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != ""]
-				includeProductGroupIds = [x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != ""]
 				includeProductIds, excludeProductIds = get_include_exclude_product_ids(
-					self._configService, includeProductGroupIds, excludeProductGroupIds
+					self._configService,
+					config.get('cache_service', 'include_product_group_ids'),
+					config.get('cache_service', 'exclude_product_group_ids')
 				)
 
 				productOnClients = [
@@ -833,10 +833,10 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 			if not self._configService:
 				self.connectConfigService()
 
-			includeProductGroupIds = [x for x in forceList(config.get('cache_service', 'include_product_group_ids')) if x != ""]
-			excludeProductGroupIds = [x for x in forceList(config.get('cache_service', 'exclude_product_group_ids')) if x != ""]
 			includeProductIds, excludeProductIds = get_include_exclude_product_ids(
-				self._configService, includeProductGroupIds, excludeProductGroupIds
+				self._configService,
+				config.get('cache_service', 'include_product_group_ids'),
+				config.get('cache_service', 'exclude_product_group_ids')
 			)
 
 			productIds = []

@@ -422,8 +422,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		if option in ('exclude_product_group_ids', 'include_product_group_ids'):
 			if not isinstance(value, list):
 				value = [x.strip() for x in value.split(",")]
-			else:
-				value = forceList(value)
+			value = forceList(value)
 
 		if section == 'depot_server' and option == 'drive':
 			if (RUNNING_ON_LINUX or RUNNING_ON_DARWIN) and not value.startswith("/"):
