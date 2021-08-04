@@ -366,8 +366,38 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			logger.warning("Refusing to set empty value config %s.%s", section, option)
 			return
 
-		if section in self._config and option in self._config[section]:
-			# Convert to correct type
+		if section == 'depot_server' and option == 'drive':
+			if (RUNNING_ON_LINUX or RUNNING_ON_DARWIN) and not value.startswith("/"):
+				logger.warning("Refusing to set %s.%s to '%s' on posix", section, option, value)
+				return
+
+		# Preprocess values, convert to correct type
+		if option in ('exclude_product_group_ids', 'include_product_group_ids'):
+			logger.info("DEBUG 1: %s - %s", option, value)
+			if not isinstance(value, list):
+				value = [x.strip() for x in value.split(",") if x.strip()]
+			value = forceList(value)
+			logger.info("DEBUG 2: %s - %s", option, value)
+
+		if RUNNING_ON_WINDOWS and (option.endswith("_dir") or option.endswith("_file")):
+			if ":" in value and ":\\" not in value:
+				logger.warning("Correcting path '%s' to '%s'", value, value.replace(":", ":\\"))
+				value = value.replace(":", ":\\")
+
+		if option.endswith("_dir") or option.endswith("_file"):
+			arch = '64' if '64' in platform.architecture()[0] else '32'
+			value = value.replace('%arch%', arch)
+
+		if section.startswith("event_") or section.startswith("precondition_"):
+			if option.endswith('_warning_time') or option.endswith('_user_cancelable'):
+				try:
+					value = int(value)
+				except ValueError:
+					value = 0
+			elif option in ('active', ):
+				value = forceBool(value)
+
+		elif section in self._config and option in self._config[section]:
 			if section == 'config_service' and option == 'url':
 				urls = value
 				if not isinstance(urls, list):
@@ -405,41 +435,11 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 					value = forceHostId(value.replace('_', '-'))
 
 		else:
-			if section.startswith("event_") or section.startswith("precondition_"):
-				if option.endswith('_warning_time') or option.endswith('_user_cancelable'):
-					try:
-						value = int(value)
-					except ValueError:
-						value = 0
-				elif option in ('active', ):
-					value = forceBool(value)
-			else:
-				logger.warning(
-					"Refusing to set value '%s' for invalid config %s.%s",
-					value, section, option
-				)
-				return
-
-		if option in ('exclude_product_group_ids', 'include_product_group_ids'):
-			logger.info("DEBUG 1: %s - %s", option, value)
-			if not isinstance(value, list):
-				value = [x.strip() for x in value.split(",") if x.strip()]
-			value = forceList(value)
-			logger.info("DEBUG 2: %s - %s", option, value)
-
-		if section == 'depot_server' and option == 'drive':
-			if (RUNNING_ON_LINUX or RUNNING_ON_DARWIN) and not value.startswith("/"):
-				logger.warning("Refusing to set %s.%s to '%s' on posix", section, option, value)
-				return
-
-		if RUNNING_ON_WINDOWS and (option.endswith("_dir") or option.endswith("_file")):
-			if ":" in value and ":\\" not in value:
-				logger.warning("Correcting path '%s' to '%s'", value, value.replace(":", ":\\"))
-				value = value.replace(":", ":\\")
-
-		if option.endswith("_dir") or option.endswith("_file"):
-			arch = '64' if '64' in platform.architecture()[0] else '32'
-			value = value.replace('%arch%', arch)
+			logger.warning(
+				"Refusing to set value '%s' for invalid config %s.%s",
+				value, section, option
+			)
+			return
 
 		logger.info("Setting config %s.%s to %s", section, option, value)
 
