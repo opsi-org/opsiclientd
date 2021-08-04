@@ -95,8 +95,8 @@ class OpsiclientdNT(Opsiclientd):
 	def isShutdownRequested(self):
 		try:
 			shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
-		except Exception as error: # pylint: disable=broad-except
-			logger.warning("Failed to get shutdownRequested from registry: %s", error)
+		except Exception as err: # pylint: disable=broad-except
+			logger.info("Failed to get shutdownRequested from registry: %s", err)
 			shutdownRequested = 0
 
 		logger.notice("Shutdown request in Registry: %s", shutdownRequested)
