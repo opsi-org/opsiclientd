@@ -331,7 +331,6 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		return 'opsi-script'
 
 	def set(self, section, option, value): # pylint: disable=too-many-branches,too-many-statements
-		logger.info("DEBUG 0: %s - %s - %s", section, option, value)
 		if not section:
 			section = 'global'
 
@@ -373,11 +372,9 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 		# Preprocess values, convert to correct type
 		if option in ('exclude_product_group_ids', 'include_product_group_ids'):
-			logger.info("DEBUG 1: %s - %s", option, value)
 			if not isinstance(value, list):
 				value = [x.strip() for x in value.split(",") if x.strip()]
 			value = forceList(value)
-			logger.info("DEBUG 2: %s - %s", option, value)
 
 		if RUNNING_ON_WINDOWS and (option.endswith("_dir") or option.endswith("_file")):
 			if ":" in value and ":\\" not in value:
@@ -661,8 +658,8 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			elif configState.configId == 'clientconfig.depot.protocol' and configState.values:
 				depotProtocol = configState.values[0]
 
-		if event and event.depotProtocol:
-			depotProtocol = event.depotProtocol
+		if event and event.eventConfig.depotProtocol:
+			depotProtocol = event.eventConfig.depotProtocol
 
 		if depotProtocol not in ("webdav", "cifs"):
 			logger.error("Invalid protocol %s specified, using cifs", depotProtocol)
