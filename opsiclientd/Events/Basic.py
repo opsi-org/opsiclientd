@@ -49,7 +49,7 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 		self._eventConfigs.append(eventConfig)
 
 	def _preconditionsFulfilled(self, preconditions): # pylint: disable=no-self-use
-		for precondition in preconditions.items():
+		for precondition in preconditions:
 			if not state.get(precondition, False):
 				logger.debug("Precondition '%s' not fulfilled", precondition)
 				return False
@@ -57,7 +57,9 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 
 	def addEventListener(self, eventListener):
 		if not isinstance(eventListener, EventListener):
-			raise TypeError("Failed to add event listener, got class %s, need class EventListener" % eventListener.__class__)
+			raise TypeError(
+				f"Failed to add event listener, got class {eventListener.__class__}, need class EventListener"
+			)
 
 		if eventListener in self._eventListeners:
 			return
