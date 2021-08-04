@@ -331,6 +331,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		return 'opsi-script'
 
 	def set(self, section, option, value): # pylint: disable=too-many-branches,too-many-statements
+		logger.info("DEBUG 0: %s - %s - %s", section, option, value)
 		if not section:
 			section = 'global'
 
