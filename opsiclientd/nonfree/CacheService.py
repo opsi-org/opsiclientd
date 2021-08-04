@@ -24,9 +24,7 @@ from OPSI.Types import (
 )
 from OPSI.Util.File.Opsi import PackageContentFile
 from OPSI.Util.Repository import getRepository
-from OPSI.Util.Repository import (
-	DepotToLocalDirectorySychronizer, RepositoryObserver
-)
+from OPSI.Util.Repository import DepotToLocalDirectorySychronizer
 from OPSI import System
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.BackendManager import BackendExtender
@@ -632,7 +630,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 		self._working = False
 
 
-class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Thread): # pylint: disable=too-many-instance-attributes
+class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disable=too-many-instance-attributes
 	def __init__(self):
 		threading.Thread.__init__(self)
 		ServiceConnection.__init__(self)
@@ -678,20 +676,6 @@ class ProductCacheService(ServiceConnection, RepositoryObserver, threading.Threa
 
 	def getProductCacheDir(self):
 		return self._productCacheDir
-
-	def dynamicBandwidthLimitChanged(self, repository, bandwidth):
-		if bandwidth <= 0:
-			if self._dynamicBandwidthLimitEvent:
-				timeline.setEventEnd(self._dynamicBandwidthLimitEvent)
-				self._dynamicBandwidthLimitEvent = None
-		else:
-			if not self._dynamicBandwidthLimitEvent:
-				self._dynamicBandwidthLimitEvent = timeline.addEvent(
-					title="Dynamic bandwidth limit",
-					description="Other traffic detected, bandwidth dynamically limited to %0.2f kByte/s" % (bandwidth/1024),
-					category='wait',
-					durationEvent=True
-				)
 
 	def getState(self):
 		_state = self._state

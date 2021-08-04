@@ -220,8 +220,8 @@ try:
 	fsencoding = sys.getfilesystemencoding()
 	if not fsencoding:
 		raise ValueError(f"getfilesystemencoding returned {fsencoding}")
-except Exception as err: # pylint: disable=broad-except
-	logger.info("Problem getting filesystemencoding: %s", err)
+except Exception as fse_err: # pylint: disable=broad-except
+	logger.info("Problem getting filesystemencoding: %s", fse_err)
 	defaultEncoding = sys.getdefaultencoding()
 	logger.notice("Patching filesystemencoding to be '%s'", defaultEncoding)
 	sys.getfilesystemencoding = lambda: defaultEncoding
