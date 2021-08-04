@@ -650,7 +650,6 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 
 		self._productProgressObserver = None
 		self._overallProgressObserver = None
-		self._dynamicBandwidthLimitEvent = None
 
 		self._repository = None
 
@@ -1136,18 +1135,9 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 				maxBandwidth=self._maxBandwidth,
 				dynamicBandwidth=self._dynamicBandwidth
 			)
-			if self._dynamicBandwidth:
-				repository.attachObserver(self)
-			try:
-				productSynchronizer.synchronize(
-					productProgressObserver=self._productProgressObserver, overallProgressObserver=self._overallProgressObserver
-				)
-			finally:
-				if self._dynamicBandwidth:
-					repository.detachObserver(self)
-				if self._dynamicBandwidthLimitEvent:
-					timeline.setEventEnd(self._dynamicBandwidthLimitEvent)
-					self._dynamicBandwidthLimitEvent = None
+			productSynchronizer.synchronize(
+				productProgressObserver=self._productProgressObserver, overallProgressObserver=self._overallProgressObserver
+			)
 			logger.notice("Product '%s' cached", productId)
 			self._setProductCacheState(productId, 'completed', time.time())
 		except Exception as err: # pylint: disable=broad-except
