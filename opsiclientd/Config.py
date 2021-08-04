@@ -420,9 +420,11 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				return
 
 		if option in ('exclude_product_group_ids', 'include_product_group_ids'):
+			logger.info("DEBUG 1: %s - %s", option, value)
 			if not isinstance(value, list):
-				value = [x.strip() for x in value.split(",")]
+				value = [x.strip() for x in value.split(",") if x.strip()]
 			value = forceList(value)
+			logger.info("DEBUG 2: %s - %s", option, value)
 
 		if section == 'depot_server' and option == 'drive':
 			if (RUNNING_ON_LINUX or RUNNING_ON_DARWIN) and not value.startswith("/"):
