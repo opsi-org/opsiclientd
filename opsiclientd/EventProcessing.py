@@ -52,6 +52,8 @@ config = Config()
 state = State()
 timeline = Timeline()
 
+class EventProcessingCanceled(Exception):
+	pass
 
 class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disable=too-many-instance-attributes,too-many-public-methods
 	def __init__(self, opsiclientd, event):
@@ -64,6 +66,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		self.running = False
 		self.actionCancelled = False
 		self.waitCancelled = False
+		self._is_cancelable = False
+		self._should_cancel = False
+
+		if self._should_cancel:
+						raise EventProcessingCanceled()
 
 		self.shutdownCancelled = False
 		self.shutdownWaitCancelled = False
@@ -96,6 +103,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		self.isLoginEvent = bool(self.event.eventConfig.actionType == 'login')
 		if self.isLoginEvent:
 			logger.info("Event is user login event")
+
+	def cancel(self):
+		if not self._is_cancelable:
+			raise RuntimeError("Event processing currently not cancelable")
+		self._should_cancel = True
 
 	# ServiceConnection
 	def connectionThreadOptions(self):
@@ -727,7 +739,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			if (not productIds) and bootmode == 'BKSTD':
 				logger.notice("No product action requests set")
 				self.setStatusMessage( _("No product action requests set") )
-				#set installation_pending State to False
 				state.set('installation_pending','false')
 				try:
 					if self.event.eventConfig.useCachedConfig:
@@ -735,7 +746,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				except Exception as err: # pylint: disable=broad-except
 					logger.error(err)
 			else:
-				#set installation_pending State
 				if not self.event.eventConfig.actionProcessorProductIds:
 					state.set('installation_pending','true')
 
@@ -765,7 +775,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								productType   = 'LocalbootProduct',
 								clientId      = config.get('global', 'host_id'),
 								actionRequest = ['setup', 'uninstall', 'update', 'once', 'custom']):
-						#set installation_pending State to false nothing to do!!!!
+						# Nothing to do
 						logger.notice("Setting installation pending to false")
 						state.set('installation_pending','false')
 				except Exception as err: # pylint: disable=broad-except
@@ -1031,7 +1041,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		self.actionCancelled = True
 
 	def startActionCallback(self, choiceSubject): # pylint: disable=unused-argument
-		logger.notice("Event wait cancelled by user")
+		logger.notice("Event wait canceled by user")
 		self.waitCancelled = True
 
 	def processActionWarningTime(self, productIds=[]): # pylint: disable=dangerous-default-value,too-many-branches,too-many-statements,too-many-locals
@@ -1105,24 +1115,24 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			if self.waitCancelled:
 				timeline.addEvent(
 					title="Action processing started by user",
-					description="Action processing wait time cancelled by user",
+					description="Action processing wait time canceled by user",
 					category="user_interaction"
 				)
 
 			if self.actionCancelled:
 				cancelCounter += 1
 				state.set(f"action_processing_cancel_counter_{self.event.eventConfig.name}", cancelCounter)
-				logger.notice("Action processing cancelled by user for the %d. time (max: %d)",
+				logger.notice("Action processing canceled by user for the %d. time (max: %d)",
 					cancelCounter, self.event.eventConfig.actionUserCancelable
 				)
 				timeline.addEvent(
-					title="Action processing cancelled by user",
+					title="Action processing canceled by user",
 					description=(
-						f"Action processing cancelled by user for the {cancelCounter}. time"
+						f"Action processing canceled by user for the {cancelCounter}. time"
 						f" (max: {self.event.eventConfig.actionUserCancelable})"
 					),
 					category="user_interaction")
-				raise CanceledByUserError("Action processing cancelled by user")
+				raise CanceledByUserError("Action processing canceled by user")
 			state.set(f'action_processing_cancel_counter_{self.event.eventConfig.name}', 0)
 		finally:
 			timeline.setEventEnd(waitEventId)
@@ -1159,7 +1169,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		self.shutdownCancelled = True
 
 	def startShutdownCallback(self, choiceSubject): # pylint: disable=unused-argument
-		logger.notice("Shutdown wait cancelled by user")
+		logger.notice("Shutdown wait canceled by user")
 		self.shutdownWaitCancelled = True
 
 	def isRebootRequested(self):
@@ -1295,7 +1305,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 						timeout = int(self._shutdownWarningTime)
 						endTime = time.time() + timeout
-						while (timeout > 0) and not self.shutdownCancelled and not self.shutdownWaitCancelled:
+						while (timeout > 0) and not self.shutdownCancelled and not self.shutdownWaitCancelled and not self._should_cancel:
 							now = time.time()
 							minutes = 0
 							seconds = (endTime - now)
@@ -1339,25 +1349,29 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 							if reboot:
 								timeline.addEvent(
 									title="Reboot started by user",
-									description="Reboot wait time cancelled by user",
+									description="Reboot wait time canceled by user",
 									category="user_interaction"
 								)
 							else:
 								timeline.addEvent(
 									title="Shutdown started by user",
-									description="Shutdown wait time cancelled by user",
-									category="user_interaction"
+									description="Shutdown wait time canceled by user",
+									category="user_interactidef processShuton"
 								)
 
-						if self.shutdownCancelled or failed_to_start_notifier:
+
+						if self._should_cancel:
+							raise EventProcessingCanceled()
+
+						if self.shutdownCancelled or failed_to_start_notifier or self._should_cancel:
 							self.opsiclientd.setBlockLogin(False)
 							shutdown_type = "Reboot" if reboot else "Shutdown"
 
 							if failed_to_start_notifier:
-								message = f"{shutdown_type} cancelled because user could not be notified."
+								message = f"{shutdown_type} canceled because user could not be notified."
 								logger.warning(message)
 								timeline.addEvent(
-									title=f"{shutdown_type} cancelled (notifer error)",
+									title=f"{shutdown_type} canceled (notifier error)",
 									description=message,
 									category="error"
 								)
@@ -1365,7 +1379,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								shutdownCancelCounter += 1
 								state.set('shutdown_cancel_counter', shutdownCancelCounter)
 								message = (
-									f"{shutdown_type} cancelled by user for the {shutdownCancelCounter}. time"
+									f"{shutdown_type} canceled by user for the {shutdownCancelCounter}. time"
 									f" (max: {self.event.eventConfig.shutdownUserCancelable})."
 								)
 								if self._shutdownWarningRepetitionTime >= 0:
@@ -1373,7 +1387,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								logger.notice(message)
 
 								timeline.addEvent(
-									title=f"{shutdown_type} cancelled by user",
+									title=f"{shutdown_type} canceled by user",
 									description=message,
 									category="user_interaction"
 								)
@@ -1392,6 +1406,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				elif shutdown:
 					timeline.addEvent(title="Shutting down", category="system")
 					self.opsiclientd.shutdownMachine()
+		except EventProcessingCanceled:
+			raise
 		except Exception as err: # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 
@@ -1490,6 +1506,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				self.running = True
 				self.actionCancelled = False
 				self.waitCancelled = False
+				self._is_cancelable = True
 				if not self.event.eventConfig.blockLogin:
 					self.opsiclientd.setBlockLogin(False)
 
@@ -1518,6 +1535,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					elif self.event.eventConfig.lockWorkstation:
 						System.lockWorkstation()
 						time.sleep(15)
+
+					if self._should_cancel:
+						raise EventProcessingCanceled()
 
 					if self.event.eventConfig.eventNotifierCommand:
 						desktops = [self.event.eventConfig.eventNotifierDesktop]
@@ -1550,6 +1570,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								config.updateConfigFile()
 
 						if self.event.eventConfig.processActions:
+							if self._should_cancel:
+								raise EventProcessingCanceled()
+							self._is_cancelable = False
+
 							if self.event.eventConfig.actionType == 'login':
 								self.processUserLoginActions()
 							else:
@@ -1563,10 +1587,16 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								if self.event.eventConfig.updateConfigFile:
 									config.updateConfigFile()
 
+					if self._should_cancel:
+						raise EventProcessingCanceled()
+					self._is_cancelable = False
+
 					if self.event.eventConfig.syncConfigToServer or self.event.eventConfig.syncConfigFromServer:
+						self._is_cancelable = False
 						self.sync_config()
 
 					if self.event.eventConfig.cacheProducts:
+						self._is_cancelable = False
 						self.cache_products()
 
 				finally:
@@ -1615,7 +1645,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								err.output.decode(encoding, errors="replace")
 							)
 
+					self._is_cancelable = True
 					self.processShutdownRequests()
+					self._is_cancelable = False
 
 					if self.opsiclientd.isShutdownTriggered():
 						self.setStatusMessage(_("Shutting down machine"))
@@ -1639,6 +1671,14 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								System.terminateProcess(processId=notifierPid)
 						except Exception: # pylint: disable=broad-except
 							pass
+			except EventProcessingCanceled as err:
+				logger.notice("Processing of event %s canceled", self.event)
+				timeline.addEvent(
+					title=f"Processing of event {self.event.eventConfig.getName()} canceled",
+					description=f"Processing of event {self.event} canceled",
+					category="event_processing",
+					isError=True
+				)
 			except Exception as err: # pylint: disable=broad-except
 				logger.error("Failed to process event %s: %s", self.event, err, exc_info=True)
 				timeline.addEvent(
@@ -1647,8 +1687,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					category="event_processing",
 					isError=True
 				)
-				self.opsiclientd.setBlockLogin(False)
 
+			self.opsiclientd.setBlockLogin(False)
 			self.running = False
 			logger.notice(
 				"============= EventProcessingThread for event '%s' ended =============",

@@ -1169,6 +1169,13 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			logger.debug("Currently no event is running.")
 		return running
 
+	def cancelEvent(self, name):
+		for ept in self.opsiclientd.getEventProcessingThreads():
+			if ept.event.eventConfig.getId() == name:
+				ept.cancel()
+				return True
+		return False
+
 	def isInstallationPending(self):
 		return forceBool(self.opsiclientd.isInstallationPending())
 
