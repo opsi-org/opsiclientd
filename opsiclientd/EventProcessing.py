@@ -69,9 +69,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		self._is_cancelable = False
 		self._should_cancel = False
 
-		if self._should_cancel:
-						raise EventProcessingCanceled()
-
 		self.shutdownCancelled = False
 		self.shutdownWaitCancelled = False
 
