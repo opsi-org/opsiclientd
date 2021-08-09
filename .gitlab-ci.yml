@@ -83,6 +83,7 @@ build:pyinstaller-darwin-x64:
     - macostest
   script:
     - source $HOME/.poetry/env
+    - poetry env use python3.7
     #- sed -ie s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
     #- poetry update python-opsi
     - poetry install
