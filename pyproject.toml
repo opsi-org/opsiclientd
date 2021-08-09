@@ -16,7 +16,7 @@ name = "uibpypi"
 url = "https://pypi.uib.gmbh/simple"
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "3.7"
 python-opsi = "^4.2.0.177"
 #python-opsi = {path = "../python-opsi"}
 pywin32 = {platform = "win32", version = "^227"}
