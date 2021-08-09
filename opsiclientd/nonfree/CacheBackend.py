@@ -29,6 +29,7 @@ from OPSI.Types import forceHostId
 from OPSI.Util import blowfishDecrypt
 
 from opsicommon.logging import logger
+from opsicommon.license import OPSI_MODULE_IDS
 
 from opsiclientd.Config import Config
 
@@ -76,6 +77,16 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 		self._workBackend._setContext(self)
 		self._backend = self._workBackend
 		self._createInstanceMethods()
+
+	def backend_getLicensingInfo(  # pylint: disable=unused-argument
+		self,
+		licenses: bool = False,
+		legacy_modules: bool = False,
+		dates: bool = False
+	):
+		return {
+			"available_modules": OPSI_MODULE_IDS
+		}
 
 	def log_write(self, logType, data, objectId=None, append=False):
 		pass
@@ -480,7 +491,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 		for Class in (Backend, ConfigDataBackend):
 			for methodName, funcRef in inspect.getmembers(Class, inspect.isfunction):
 				if methodName.startswith('_') or methodName in (
-					'backend_info', 'user_getCredentials', 'user_setCredentials',
+					'backend_info', 'backend_getLicensingInfo',
+					'user_getCredentials', 'user_setCredentials',
 					'log_write', 'licenseOnClient_getObjects',
 					'configState_getObjects', 'config_getObjects'
 				):
