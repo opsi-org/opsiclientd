@@ -84,12 +84,9 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 		superArgs = pycopy.deepcopy(rawEventConfigsCopy[superEventConfigId]['args'])
 		if rawEventConfigsCopy[superEventConfigId]['super']:
 			superArgs = __inheritArgsFromSuperEvents(rawEventConfigsCopy, superArgs, rawEventConfigsCopy[superEventConfigId]['super'])
-		for key, value in args.items():
-			if value == "":
-				logger.devel("skipping setting of %s", key)
-				# Do not overwrite values with emptystring (emptystring behaves like no value given)
-				args.pop(key)
-		superArgs.update(args)
+		# Do not overwrite values with emptystring (emptystring behaves like no value given)
+		cleaned_args = {key : value for key, value in args.items() if not value == ""}
+		superArgs.update(cleaned_args)
 		return superArgs
 
 	rawEventConfigsCopy = pycopy.deepcopy(rawEventConfigs)
