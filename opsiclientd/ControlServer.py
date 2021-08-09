@@ -1169,9 +1169,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			logger.debug("Currently no event is running.")
 		return running
 
-	def cancelEvent(self, name):
+	def cancelEvents(self, ids=None):
 		for ept in self.opsiclientd.getEventProcessingThreads():
-			if ept.event.eventConfig.getId() == name:
+			if not ids or ept.event.eventConfig.getId() in ids:
 				ept.cancel()
 				return True
 		return False
