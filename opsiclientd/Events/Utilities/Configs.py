@@ -94,15 +94,15 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 
 	rawEventConfigsCopy = pycopy.deepcopy(rawEventConfigs)
 	for eventConfigId in rawEventConfigs:
-		logger.devel("working on event %s", rawEventConfigs[eventConfigId].get("name"))
-		logger.devel("before inherit: %s", rawEventConfigs[eventConfigId]['args'].get("excludeProductGroupIds"))
+		logger.devel("working on event %s", eventConfigId)
+		logger.devel("before inherit: %s", rawEventConfigs[eventConfigId]['args'].get("exclude_product_group_ids"))
 		if rawEventConfigs[eventConfigId]['super']:
 			rawEventConfigs[eventConfigId]['args'] = __inheritArgsFromSuperEvents(
 				rawEventConfigsCopy,
 				rawEventConfigs[eventConfigId]['args'],
 				rawEventConfigs[eventConfigId]['super']
 			)
-		logger.devel("after inherit: %s", rawEventConfigs[eventConfigId]['args'].get("excludeProductGroupIds"))
+		logger.devel("after inherit: %s", rawEventConfigs[eventConfigId]['args'].get("exclude_product_group_ids"))
 
 	eventConfigs = {}
 	for (eventConfigId, rawEventConfig) in rawEventConfigs.items(): # pylint: disable=too-many-nested-blocks
