@@ -12,7 +12,6 @@ from __future__ import absolute_import
 
 import copy as pycopy
 import pprint
-import inspect
 
 from opsicommon.logging import logger
 from OPSI.Types import forceBool, forceList, forceUnicodeLower
