@@ -393,7 +393,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 					value = 0
 			elif option in ('active', ):
 				value = forceBool(value)
-			if value == "" and self._config[section][option] != "":
+			if value == "" and self._config[section][option]:
 				logger.devel("refusing to overwrite inherited value with emptystring")
 				return
 
