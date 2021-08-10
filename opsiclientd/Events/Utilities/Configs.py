@@ -86,6 +86,9 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 			superArgs = __inheritArgsFromSuperEvents(rawEventConfigsCopy, superArgs, rawEventConfigsCopy[superEventConfigId]['super'])
 		# Do not overwrite values with emptystring (emptystring behaves like no value given)
 		cleaned_args = {key : value for key, value in args.items() if not value == ""}
+		for key in args:
+			if key not in cleaned_args:
+				logger.devel("removing emptystring value attribute from config %s", key)
 		superArgs.update(cleaned_args)
 		return superArgs
 
@@ -97,7 +100,7 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 				rawEventConfigs[eventConfigId]['args'],
 				rawEventConfigs[eventConfigId]['super']
 			)
-
+	logger.devel("config after inheritance %s", rawEventConfigs[eventConfigId]['args'])
 	eventConfigs = {}
 	for (eventConfigId, rawEventConfig) in rawEventConfigs.items(): # pylint: disable=too-many-nested-blocks
 		try:
