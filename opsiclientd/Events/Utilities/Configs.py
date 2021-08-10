@@ -12,6 +12,7 @@ from __future__ import absolute_import
 
 import copy as pycopy
 import pprint
+import inspect
 
 from opsicommon.logging import logger
 from OPSI.Types import forceBool, forceList, forceUnicodeLower
@@ -100,7 +101,8 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 				rawEventConfigs[eventConfigId]['args'],
 				rawEventConfigs[eventConfigId]['super']
 			)
-	logger.devel("config after inheritance %s", rawEventConfigs[eventConfigId]['args'])
+	logger.devel("config after inheritance %s", rawEventConfigs)
+	logger.devel(inspect.stack())
 	eventConfigs = {}
 	for (eventConfigId, rawEventConfig) in rawEventConfigs.items(): # pylint: disable=too-many-nested-blocks
 		try:
