@@ -84,25 +84,19 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 		superArgs = pycopy.deepcopy(rawEventConfigsCopy[superEventConfigId]['args'])
 		if rawEventConfigsCopy[superEventConfigId]['super']:
 			superArgs = __inheritArgsFromSuperEvents(rawEventConfigsCopy, superArgs, rawEventConfigsCopy[superEventConfigId]['super'])
-		# Do not overwrite values with emptystring (emptystring behaves like no value given)
+		# Do not overwrite values with emptystring or emptylist (behaves like no value given)
 		cleaned_args = {key : value for key, value in args.items() if not value in ("", [])}
-		for key in args:
-			if key not in cleaned_args:
-				logger.devel("removing emptystring value attribute from config %s", key)
 		superArgs.update(cleaned_args)
 		return superArgs
 
 	rawEventConfigsCopy = pycopy.deepcopy(rawEventConfigs)
 	for eventConfigId in rawEventConfigs:
-		logger.devel("working on event %s", eventConfigId)
-		logger.devel("before inherit: %s", rawEventConfigs[eventConfigId]['args'].get("exclude_product_group_ids"))
 		if rawEventConfigs[eventConfigId]['super']:
 			rawEventConfigs[eventConfigId]['args'] = __inheritArgsFromSuperEvents(
 				rawEventConfigsCopy,
 				rawEventConfigs[eventConfigId]['args'],
 				rawEventConfigs[eventConfigId]['super']
 			)
-		logger.devel("after inherit: %s", rawEventConfigs[eventConfigId]['args'].get("exclude_product_group_ids"))
 
 	eventConfigs = {}
 	for (eventConfigId, rawEventConfig) in rawEventConfigs.items(): # pylint: disable=too-many-nested-blocks
