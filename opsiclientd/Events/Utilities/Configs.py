@@ -85,7 +85,7 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 		if rawEventConfigsCopy[superEventConfigId]['super']:
 			superArgs = __inheritArgsFromSuperEvents(rawEventConfigsCopy, superArgs, rawEventConfigsCopy[superEventConfigId]['super'])
 		# Do not overwrite values with emptystring (emptystring behaves like no value given)
-		cleaned_args = {key : value for key, value in args.items() if not value == ""}
+		cleaned_args = {key : value for key, value in args.items() if not value in ("", [])}
 		for key in args:
 			if key not in cleaned_args:
 				logger.devel("removing emptystring value attribute from config %s", key)
