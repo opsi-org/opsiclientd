@@ -80,7 +80,7 @@ build:pyinstaller-linux-x64:
 build:pyinstaller-darwin-x64:
   stage: build
   tags:
-    - macostest
+    - macos
   script:
     - source $HOME/.poetry/env
     #- sed -ie s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
