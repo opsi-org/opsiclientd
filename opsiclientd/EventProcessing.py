@@ -758,8 +758,12 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 				additionalParams = ""
 				if includeProductIds or excludeProductIds:
-					additionalParams = "/processproducts " + ','.join(productIds)
-
+					if RUNNING_ON_LINUX or RUNNING_ON_DARWIN:
+						additionalParams = "-processproducts " + ','.join(productIds)
+					elif RUNNING_ON_WINDOWS:
+						additionalParams = "/processproducts " + ','.join(productIds)
+					else:
+						logger.error("Unknown operating system - skipping processproducts parameter for action processor call.")
 				self.processActionWarningTime(productIds)
 				self.runActions(productIds, additionalParams=additionalParams)
 				try:

@@ -85,7 +85,14 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 		if rawEventConfigsCopy[superEventConfigId]['super']:
 			superArgs = __inheritArgsFromSuperEvents(rawEventConfigsCopy, superArgs, rawEventConfigsCopy[superEventConfigId]['super'])
 		# Do not overwrite values with emptystring or emptylist (behaves like no value given)
-		cleaned_args = {key : value for key, value in args.items() if not value in ("", [])}
+		cleaned_args = {
+			key : value
+			for key, value in args.items()
+			if not (
+				key in ("include_product_group_ids", "exclude_product_group_ids")
+				and value in ("", [])
+			)
+		}
 		superArgs.update(cleaned_args)
 		return superArgs
 
