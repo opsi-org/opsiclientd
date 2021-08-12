@@ -36,7 +36,7 @@ viruscheck:virustotal:
   poetry run opsiclientd -l 1 &
 
 test:pylint-pytest:
-  when: never
+  when: manual
   stage: test
   script:
     - apt -y install curl openssl
