@@ -438,7 +438,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			)
 			return
 
-		logger.info("Setting config %s.%s to %s", section, option, value)
+		logger.info("Setting config %s.%s to %r", section, option, value)
 
 		if section not in self._config:
 			self._config[section] = {}
