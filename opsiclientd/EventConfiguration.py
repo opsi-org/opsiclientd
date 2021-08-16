@@ -83,8 +83,6 @@ class EventConfig: # pylint: disable=too-many-instance-attributes
 		self.useCachedProducts = forceBool(conf.get('useCachedProducts', False))
 		self.syncConfigToServer = forceBool(conf.get('syncConfigToServer', False))
 		self.syncConfigFromServer = forceBool(conf.get('syncConfigFromServer', False))
-		self.postSyncConfigToServer = forceBool(conf.get('postSyncConfigToServer', False))
-		self.postSyncConfigFromServer = forceBool(conf.get('postSyncConfigFromServer', False))
 		self.useCachedConfig = forceBool(conf.get('useCachedConfig', False))
 		self.workingWindow = str(conf.get('workingWindow', ''))
 

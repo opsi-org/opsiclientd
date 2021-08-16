@@ -171,12 +171,13 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			timeline.addEvent(title = "opsiclientd restart", category = "system")
 			try:
 				logger.notice("Writing restart marker %s", config.restart_marker)
-				open(config.restart_marker, "w").close()
+				with open(config.restart_marker, "w"):
+					pass
 			except Exception as err: # pylint: disable=broad-except
 				logger.error(err)
 
 			if RUNNING_ON_WINDOWS:
-				subprocess.Popen(
+				subprocess.Popen( # pylint: disable=consider-using-with
 					"net stop opsiclientd & net start opsiclientd",
 					shell=True,
 					creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS

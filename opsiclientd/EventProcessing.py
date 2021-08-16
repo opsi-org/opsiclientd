@@ -1616,15 +1616,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 					config.setTemporaryConfigServiceUrls([])
 
-					#if self.event.eventConfig.postSyncConfigToServer:
-					#	self.setStatusMessage( _("Syncing config to server") )
-					#	self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = True)
-					#	self.setStatusMessage( _("Sync completed") )
-					#if self.event.eventConfig.postSyncConfigFromServer:
-					#	self.setStatusMessage( _("Syncing config from server") )
-					#	self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.isShutdownRequested() or self.isRebootRequested())
-					#	self.setStatusMessage( _("Sync completed") )
-
 					if self.event.eventConfig.postEventCommand:
 						logger.notice("Running post event command '%s'",
 							self.event.eventConfig.postEventCommand

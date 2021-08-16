@@ -218,10 +218,6 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 						eventConfigs[eventConfigId]['syncConfigFromServer'] = forceBool(value)
 					elif key == 'sync_config_to_server':
 						eventConfigs[eventConfigId]['syncConfigToServer'] = forceBool(value)
-					elif key == 'post_sync_config_from_server':
-						eventConfigs[eventConfigId]['postSyncConfigFromServer'] = forceBool(value)
-					elif key == 'post_sync_config_to_server':
-						eventConfigs[eventConfigId]['postSyncConfigToServer'] = forceBool(value)
 					elif key == 'use_cached_config':
 						eventConfigs[eventConfigId]['useCachedConfig'] = forceBool(value)
 					elif key == 'update_action_processor':
