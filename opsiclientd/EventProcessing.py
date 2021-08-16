@@ -1592,13 +1592,14 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						raise EventProcessingCanceled()
 					self._is_cancelable = False
 
+					shutdown_or_reboot = self.isShutdownRequested() or self.isRebootRequested()
 					if self.event.eventConfig.syncConfigToServer or self.event.eventConfig.syncConfigFromServer:
 						self._is_cancelable = False
-						self.sync_config()
+						self.sync_config(wait_for_ending=shutdown_or_reboot)
 
 					if self.event.eventConfig.cacheProducts:
 						self._is_cancelable = False
-						self.cache_products()
+						self.cache_products(wait_for_ending=shutdown_or_reboot)
 
 				finally:
 					self._messageSubject.setMessage("")
@@ -1615,14 +1616,14 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 					config.setTemporaryConfigServiceUrls([])
 
-					if self.event.eventConfig.postSyncConfigToServer:
-						self.setStatusMessage( _("Syncing config to server") )
-						self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = True)
-						self.setStatusMessage( _("Sync completed") )
-					if self.event.eventConfig.postSyncConfigFromServer:
-						self.setStatusMessage( _("Syncing config from server") )
-						self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.isShutdownRequested() or self.isRebootRequested())
-						self.setStatusMessage( _("Sync completed") )
+					#if self.event.eventConfig.postSyncConfigToServer:
+					#	self.setStatusMessage( _("Syncing config to server") )
+					#	self.opsiclientd.getCacheService().syncConfigToServer(waitForEnding = True)
+					#	self.setStatusMessage( _("Sync completed") )
+					#if self.event.eventConfig.postSyncConfigFromServer:
+					#	self.setStatusMessage( _("Syncing config from server") )
+					#	self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding = self.isShutdownRequested() or self.isRebootRequested())
+					#	self.setStatusMessage( _("Sync completed") )
 
 					if self.event.eventConfig.postEventCommand:
 						logger.notice("Running post event command '%s'",
