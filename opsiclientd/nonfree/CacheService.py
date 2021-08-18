@@ -165,6 +165,9 @@ class CacheService(threading.Thread):
 			logger.info("Already caching products")
 			return
 
+		if self._configCacheService and self._configCacheService.syncConfigToServerError:
+			raise RuntimeError("Failed to cache products because config sync to server failed")
+
 		logger.info("Trigger product caching")
 		self._productCacheService.setDynamicBandwidth(dynamicBandwidth)
 		self._productCacheService.setMaxBandwidth(maxBandwidth)
@@ -281,7 +284,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 			self._state = {}
 
 			self._syncConfigFromServerRequested = False
-			self._syncConfigFromServerError = None
+			self._syncConfigToServerError = None
 			self._syncConfigToServerRequested = False
 			self._forceSync = False
 
@@ -301,6 +304,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 			except Exception: # pylint: disable=broad-except
 				pass
 			raise err
+
+	@property
+	def syncConfigToServerError(self):
+		return self._syncConfigToServerError
 
 	def initBackends(self):
 		clientId = config.get('global', 'host_id')
@@ -492,10 +499,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 						isError=True
 					)
 					raise
-			self._syncConfigFromServerError = None
+			self._syncConfigToServerError = None
 		except Exception as err: # pylint: disable=broad-except
 			logger.error("Errors occurred while syncing config to server: %s", err)
-			self._syncConfigFromServerError = err
+			self._syncConfigToServerError = err
 		if eventId:
 			timeline.setEventEnd(eventId)
 		self.disconnectConfigService()
@@ -504,7 +511,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 	def _syncConfigFromServer(self): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		self._working = True
 		try:
-			if self._syncConfigFromServerError:
+			if self._syncConfigToServerError:
 				raise RuntimeError("Sync config to server failed")
 			self.setObsolete()
 			if not self._configService:
