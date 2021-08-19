@@ -1508,8 +1508,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				self.actionCancelled = False
 				self.waitCancelled = False
 				self._is_cancelable = True
-				if not self.event.eventConfig.blockLogin:
-					self.opsiclientd.setBlockLogin(False)
+				self.opsiclientd.setBlockLogin(self.event.eventConfig.blockLogin)
 
 				notifierPids = []
 				try:
@@ -1526,10 +1525,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 					self.setStatusMessage(_("Processing event %s") % self.event.eventConfig.getName())
 
-					if self.event.eventConfig.blockLogin:
-						self.opsiclientd.setBlockLogin(True)
-					else:
-						self.opsiclientd.setBlockLogin(False)
 					if self.event.eventConfig.logoffCurrentUser:
 						System.logoffCurrentUser()
 						time.sleep(15)

@@ -1002,8 +1002,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		timeline = Timeline()
 		return timeline.getEvents()
 
-	def setBlockLogin(self, blockLogin):
-		self.opsiclientd.setBlockLogin(forceBool(blockLogin))
+	def setBlockLogin(self, blockLogin, handleNotifier=True):
+		self.opsiclientd.setBlockLogin(forceBool(blockLogin), forceBool(handleNotifier))
 		logger.notice("rpc setBlockLogin: blockLogin set to '%s'", self.opsiclientd._blockLogin) # pylint: disable=protected-access
 		if self.opsiclientd._blockLogin: # pylint: disable=protected-access
 			return "Login blocker is on"

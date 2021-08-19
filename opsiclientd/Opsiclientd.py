@@ -189,7 +189,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		logger.notice("Will restart in %d seconds", waitSeconds)
 		threading.Thread(target=_restart, args=(waitSeconds, )).start()
 
-	def setBlockLogin(self, blockLogin): # pylint: disable=too-many-branches
+	def setBlockLogin(self, blockLogin, handleNotifier=True): # pylint: disable=too-many-branches
 		blockLogin = forceBool(blockLogin)
 		changed = self._blockLogin != blockLogin
 		self._blockLogin = blockLogin
@@ -205,7 +205,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				)
 
 			if not self._blockLoginNotifierPid and config.get('global', 'block_login_notifier'):
-				if RUNNING_ON_WINDOWS:
+				if handleNotifier and RUNNING_ON_WINDOWS:
 					logger.info("Starting block login notifier app")
 					# Start block login notifier on physical console
 					sessionId = System.getActiveConsoleSessionId()
@@ -226,7 +226,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				timeline.setEventEnd(eventId=self._blockLoginEventId)
 				self._blockLoginEventId = None
 
-			if self._blockLoginNotifierPid:
+			if handleNotifier and self._blockLoginNotifierPid:
 				try:
 					logger.info("Terminating block login notifier app (pid %s)", self._blockLoginNotifierPid)
 					System.terminateProcess(processId=self._blockLoginNotifierPid)
@@ -458,7 +458,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 
 			logger.debug("Environment: %s", os.environ)
 
-			self.setBlockLogin(True)
+			# Do not show block login notifier yet!
+			self.setBlockLogin(True, handleNotifier=False)
 
 			self._opsiclientdRunningEventId = timeline.addEvent(
 				title=event_title,
