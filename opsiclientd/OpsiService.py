@@ -295,14 +295,6 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 			self.cancelled = False
 
 			try: # pylint: disable=too-many-nested-blocks
-				proxyMode = config.get('global', 'proxy_mode')
-				proxyURL = config.get('global', 'proxy_url')
-				if proxyMode == 'system':
-					logger.notice("not implemented yet")
-					proxyURL = System.getSystemProxySetting() # pylint: disable=assignment-from-no-return
-				elif proxyMode == 'static':
-					proxyURL = config.get('global', 'proxy_url')
-
 				verify_server_cert = (
 					config.get('global', 'verify_server_cert') or
 					config.get('global', 'verify_server_cert_by_ca')
@@ -314,7 +306,6 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 				if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
 					compression = False
 					verify_server_cert = False
-					proxyURL = None
 
 				if verify_server_cert:
 					if os.path.exists(ca_cert_file):
@@ -337,9 +328,9 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 							raise Exception(f"Domain missing in username '{self._username}'")
 
 						logger.debug(
-							"JSONRPCBackend address=%s, verifyServerCert=%s, caCertFile=%s, proxyURL=%s, application=%s",
+							"JSONRPCBackend address=%s, verify_server_cert=%s, ca_cert_file=%s, proxy_url=%s, application=%s",
 							self._configServiceUrl, verify_server_cert, ca_cert_file,
-							proxyURL, f"opsiclientd/{__version__}"
+							config.get('global', 'proxy_url'), f"opsiclientd/{__version__}"
 						)
 
 						self.configService = JSONRPCBackend(
@@ -348,7 +339,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 							password=self._password,
 							verify_server_cert=verify_server_cert,
 							ca_cert_file=ca_cert_file,
-							proxy_url=proxyURL,
+							proxy_url=config.get('global', 'proxy_url'),
 							application=f"opsiclientd/{__version__}",
 							compression=compression,
 							ip_version=config.get('global', 'ip_version')
