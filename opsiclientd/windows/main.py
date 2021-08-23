@@ -35,8 +35,8 @@ STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
 
 def startup_log(message):
 	if os.path.isdir(os.path.dirname(STARTUP_LOG)):
-		with codecs.open(STARTUP_LOG, "w", "utf-8") as file:
-			file.write(f"{datetime.now()} {message}")
+		with codecs.open(STARTUP_LOG, "a", "utf-8") as file:
+			file.write(f"{datetime.now()} {message}\n")
 
 def run_as_system(command): # pylint: disable=too-many-locals
 	currentProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, os.getpid())

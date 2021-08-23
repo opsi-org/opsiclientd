@@ -29,7 +29,7 @@ def opsiclientd():
 	if platform.system().lower() == 'windows':
 		if os.path.isdir(os.path.dirname(STARTUP_LOG)):
 			with codecs.open(STARTUP_LOG, "w", "utf-8") as file:
-				file.write(f"{datetime.now()} opsiclientd startup")
+				file.write(f"{datetime.now()} opsiclientd startup\n")
 		from opsiclientd.windows.main import main as _main # pylint: disable=import-outside-toplevel
 	elif platform.system().lower() in ('linux', 'darwin'):
 		from opsiclientd.posix.main import main as _main # pylint: disable=import-outside-toplevel
