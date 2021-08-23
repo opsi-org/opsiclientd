@@ -164,6 +164,8 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 								eventConfigs[eventConfigId]['name'] = value
 						else:
 							eventConfigs[eventConfigId]['name'] = value
+					elif key == 'start_interval':
+						eventConfigs[eventConfigId]['startInterval'] = int(value)
 					elif key == 'interval':
 						eventConfigs[eventConfigId]['interval'] = int(value)
 					elif key == 'max_repetitions':

@@ -94,6 +94,11 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 
 	def getNextEvent(self):
 		self._event = threading.Event()
+		if self._generatorConfig.startInterval > 0:
+			self._event.wait(self._generatorConfig.startInterval)
+			if self._stopped:
+				return None
+			return self.createEvent()
 		if self._generatorConfig.interval > 0:
 			self._event.wait(self._generatorConfig.interval)
 			if self._stopped:

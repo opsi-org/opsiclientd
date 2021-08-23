@@ -35,7 +35,8 @@ class EventConfig: # pylint: disable=too-many-instance-attributes
 		self.activationDelay = int(conf.get('activationDelay', 0))
 		# wait <notificationDelay> seconds before event is fired
 		self.notificationDelay = int(conf.get('notificationDelay', 0))
-		self.interval = int(conf.get('interval', -1))
+		self.startInterval = int(conf.get('start_interval', 0))
+		self.interval = int(conf.get('interval', 0))
 		self.actionWarningTime = int(conf.get('actionWarningTime', 0))
 		self.actionUserCancelable = int(conf.get('actionUserCancelable', 0))
 		self.shutdown = forceBool(conf.get('shutdown', False))
