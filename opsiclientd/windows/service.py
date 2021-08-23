@@ -83,16 +83,15 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			logger.notice("Handling start request")
 			startTime = time.time()
 
+			self.ReportServiceStatus(win32service.SERVICE_RUNNING)
+			logger.debug("Took %0.2f seconds to report service running status", (time.time() - startTime))
+
 			# Write to event log
 			servicemanager.LogMsg(
 				servicemanager.EVENTLOG_INFORMATION_TYPE,
 				servicemanager.PYS_SERVICE_STARTED,
 				(self._svc_name_, '')
 			)
-
-			self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
-			self.ReportServiceStatus(win32service.SERVICE_RUNNING)
-			logger.debug("Took %0.2f seconds to report service running status", (time.time() - startTime))
 
 			from .opsiclientd import opsiclientd_factory # pylint: disable=import-outside-toplevel
 			self.opsiclientd = opsiclientd_factory()
@@ -107,6 +106,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 
 			logger.notice("opsiclientd stopped")
 			try:
+				self.ReportServiceStatus(win32service.SERVICE_STOPPED)
 				servicemanager.LogMsg(
 					servicemanager.EVENTLOG_INFORMATION_TYPE,
 					servicemanager.PYS_SERVICE_STOPPED,
