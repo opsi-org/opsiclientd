@@ -8,7 +8,6 @@
 Functions to create, reconfigure and get event generators.
 """
 
-from __future__ import absolute_import
 import copy
 
 from opsicommon.logging import logger
@@ -93,7 +92,7 @@ def createEventGenerators(opsiclientd):
 			logger.error("Failed to add event config '%s' to event generator '%s': %s", eventConfigId, mainEventConfigId, err)
 
 	logger.notice("Configured events: %s", ", ".join(sorted(list(enabled_events))))
-	logger.notice("Enabled events: %s", ", ".join(sorted([evt_id for evt_id in enabled_events if enabled_events[evt_id]])))
+	logger.notice("Enabled events: %s", ", ".join(sorted([evt_id for evt_id in enabled_events if enabled_events[evt_id]])))  # pylint: disable=consider-using-dict-items
 
 def getEventGenerators(generatorClass=None):
 	return [

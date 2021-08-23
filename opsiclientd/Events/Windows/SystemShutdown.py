@@ -8,8 +8,6 @@
 Events that get active once a system shuts down or restarts.
 """
 
-from __future__ import absolute_import
-
 from opsiclientd.Events.Basic import Event, EventGenerator
 from opsiclientd.Events.Windows.WMI import WMIEventConfig
 

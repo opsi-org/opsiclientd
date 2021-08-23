@@ -10,8 +10,6 @@ Timer events get active after a specified time.
 
 from __future__ import absolute_import
 
-import threading
-
 from opsiclientd.Events.Basic import Event, EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
 
@@ -23,16 +21,6 @@ class TimerEventConfig(EventConfig):
 
 
 class TimerEventGenerator(EventGenerator):
-
-	def getNextEvent(self):
-		self._event = threading.Event()
-		if self._generatorConfig.interval > 0:
-			self._event.wait(self._generatorConfig.interval)
-			if self._stopped:
-				return None
-			return self.createEvent()
-		self._event.wait()
-		return None
 
 	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
 		eventConfig = self.getEventConfig()

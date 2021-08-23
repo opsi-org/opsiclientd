@@ -8,8 +8,6 @@
 Event configuration utilities.
 """
 
-from __future__ import absolute_import
-
 import copy as pycopy
 import pprint
 
@@ -97,12 +95,12 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 		return superArgs
 
 	rawEventConfigsCopy = pycopy.deepcopy(rawEventConfigs)
-	for eventConfigId in rawEventConfigs:
-		if rawEventConfigs[eventConfigId]['super']:
-			rawEventConfigs[eventConfigId]['args'] = __inheritArgsFromSuperEvents(
+	for eventConfigId, rawEventConfig in rawEventConfigs.items():
+		if rawEventConfig['super']:
+			rawEventConfig['args'] = __inheritArgsFromSuperEvents(
 				rawEventConfigsCopy,
-				rawEventConfigs[eventConfigId]['args'],
-				rawEventConfigs[eventConfigId]['super']
+				rawEventConfig['args'],
+				rawEventConfig['super']
 			)
 
 	eventConfigs = {}

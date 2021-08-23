@@ -10,8 +10,6 @@ Software On Demand events.
 Usually triggered by the kiosk client on the client.
 """
 
-from __future__ import absolute_import
-
 from opsiclientd.Events.Basic import Event, EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
 

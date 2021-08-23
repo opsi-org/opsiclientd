@@ -11,8 +11,6 @@ This module selects the appropriate custom implementation based on the
 OS it is running on.
 """
 
-from __future__ import absolute_import
-
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 if RUNNING_ON_WINDOWS:

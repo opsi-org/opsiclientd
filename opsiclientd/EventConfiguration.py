@@ -8,7 +8,6 @@
 opsiclientd - Event configuration.
 """
 
-from __future__ import absolute_import
 import re
 from OPSI.Types import forceUnicode, forceBool
 from opsicommon.logging import log_context
@@ -28,7 +27,7 @@ class EventConfig: # pylint: disable=too-many-instance-attributes
 			self.setConfig(kwargs)
 
 	def setConfig(self, conf): # pylint: disable=too-many-statements
-		self.name = str(conf.get('name', self._id.split('{')[0]))
+		self.name = str(conf.get('name', self._id.split('{', 1)[0]))
 		self.preconditions = dict(conf.get('preconditions', {}))
 		self.actionMessage = str(conf.get('actionMessage', ''))
 		self.maxRepetitions = int(conf.get('maxRepetitions', -1))

@@ -7,8 +7,6 @@
 Non-free event generators.
 """
 
-import threading
-
 from opsiclientd.Events.Basic import Event, EventGenerator
 
 __all__ = ['CustomEvent', 'CustomEventGenerator']
@@ -21,16 +19,6 @@ class CustomEventGenerator(EventGenerator):
 			return None
 
 		return CustomEvent(eventConfig=eventConfig, eventInfo=eventInfo)
-
-	def getNextEvent(self):
-		self._event = threading.Event()
-		if self._generatorConfig.interval > 0:
-			self._event.wait(self._generatorConfig.interval)
-			if self._stopped:
-				return None
-			return self.createEvent()
-		self._event.wait()
-		return None
 
 
 class CustomEvent(Event): # pylint: disable=too-few-public-methods
