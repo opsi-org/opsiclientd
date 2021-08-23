@@ -47,7 +47,9 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 
 	key_file = config.get('control_server', 'ssl_server_key_file')
 	cert_file = config.get('control_server', 'ssl_server_cert_file')
-	server_cn = get_fqdn()
+	server_cn = config.get('global', 'host_id')
+	if not server_cn:
+		server_cn = get_fqdn()
 	create = False
 	exists_self_signed = False
 	if not os.path.exists(key_file) or not os.path.exists(cert_file):
@@ -85,7 +87,6 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 		logger.info("Server cert is up to date")
 		return
 
-	server_cn = get_fqdn()
 	(srv_crt, srv_key) = (None, None)
 	try:
 		logger.notice("Fetching tls server certificate from config service")
