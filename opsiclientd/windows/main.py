@@ -12,6 +12,8 @@ import os
 import sys
 import time
 import psutil
+import codecs
+from datetime import datetime
 # pyright: reportMissingImports=false
 import win32con # pylint: disable=import-error
 import win32api # pylint: disable=import-error
@@ -28,6 +30,13 @@ from OPSI import System
 from opsiclientd import init_logging, parser, DEFAULT_STDERR_LOG_FORMAT
 from opsiclientd.setup import setup
 
+
+STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
+
+def startup_log(message):
+	if os.path.isdir(os.path.dirname(STARTUP_LOG)):
+		with codecs.open(STARTUP_LOG, "w", "utf-8") as file:
+			file.write(f"{datetime.now()} {message}")
 
 def run_as_system(command): # pylint: disable=too-many-locals
 	currentProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, os.getpid())
@@ -111,14 +120,20 @@ def get_integrity_level():
 	return win32security.ConvertSidToStringSid(sid)
 
 def main(): # pylint: disable=too-many-statements,too-many-branches
+	startup_log("windows.main")
 	log_dir = os.path.join(System.getSystemDrive() + "\\opsi.org\\log")
 	parent = psutil.Process(os.getpid()).parent()
 	parent_name = parent.name() if parent else None
 	# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
 
+	startup_log(f"argv={sys.argv} parent_name={parent_name}")
+
 	if len(sys.argv) == 1 and parent_name == "services.exe":
+		startup_log("import start service")
 		from opsiclientd.windows.service import start_service # pylint: disable=import-outside-toplevel
+		startup_log("init logging")
 		init_logging(stderr_level=LOG_NONE, log_dir=log_dir)
+		startup_log("start service")
 		start_service()
 		return
 
