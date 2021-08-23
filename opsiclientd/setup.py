@@ -18,12 +18,13 @@ from OpenSSL.crypto import FILETYPE_PEM, load_certificate, load_privatekey
 from OpenSSL.crypto import Error as CryptoError
 
 from opsicommon.logging import logger, secret_filter
-from opsicommon.ssl import as_pem, create_ca, create_server_cert, remove_ca
+from opsicommon.ssl import as_pem, create_ca, create_server_cert
 from opsicommon.system.network import get_ip_addresses, get_hostnames, get_fqdn
 from opsicommon.client.jsonrpc import JSONRPCClient
 
 from opsiclientd.Config import Config
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_LINUX, RUNNING_ON_MACOS
+from opsiclientd.OpsiService import update_ca_cert
 
 config = Config()
 
@@ -43,13 +44,6 @@ def get_ips():
 
 def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many-statements,too-many-locals
 	logger.info("Checking server cert")
-
-	if not config.get('global', 'install_opsi_ca_into_os_store'):
-		try:
-			if remove_ca("opsi CA"):
-				logger.info("opsi CA successfully removed from system cert store")
-		except Exception as err:  # pylint: disable=broad-except
-			logger.error("Failed to remove opsi CA from system cert store: %s", err)
 
 	key_file = config.get('control_server', 'ssl_server_key_file')
 	cert_file = config.get('control_server', 'ssl_server_cert_file')
@@ -242,10 +236,6 @@ def opsi_service_setup(options=None):
 	except Exception as err:  # pylint: disable=broad-except
 		logger.info(err)
 
-	if os.path.exists(config.ca_cert_file):
-		# Delete ca cert which could be invalid or expired
-		os.remove(config.ca_cert_file)
-
 	service_address = getattr(options, "service_address", None) or config.get('config_service', 'url')[0]
 	service_username = getattr(options, "service_username", None) or config.get('global', 'host_id')
 	service_password = getattr(options, "service_password", None) or config.get('global', 'opsi_host_key')
@@ -261,8 +251,15 @@ def opsi_service_setup(options=None):
 	jsonrpc_client = JSONRPCClient(
 		address=service_address,
 		username=service_username,
-		password=service_password
+		password=service_password,
+		verify_server_cert=False
 	)
+
+	try:
+		update_ca_cert(jsonrpc_client)
+	except Exception as err: # pylint: disable=broad-except
+		logger.error(err, exc_info=True)
+
 	try:
 		client = jsonrpc_client.host_getObjects(id=config.get('global', 'host_id'))  # pylint: disable=no-member
 		if client and client[0] and client[0].opsiHostKey:
