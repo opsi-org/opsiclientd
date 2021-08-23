@@ -242,6 +242,10 @@ def opsi_service_setup(options=None):
 	except Exception as err:  # pylint: disable=broad-except
 		logger.info(err)
 
+	if os.path.exists(config.ca_cert_file):
+		# Delete ca cert which could be invalid or expired
+		os.remove(config.ca_cert_file)
+
 	service_address = getattr(options, "service_address", None) or config.get('config_service', 'url')[0]
 	service_username = getattr(options, "service_username", None) or config.get('global', 'host_id')
 	service_password = getattr(options, "service_password", None) or config.get('global', 'opsi_host_key')
