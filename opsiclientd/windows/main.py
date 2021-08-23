@@ -11,9 +11,9 @@ main for windows
 import os
 import sys
 import time
-import psutil
 import codecs
 from datetime import datetime
+import psutil
 # pyright: reportMissingImports=false
 import win32con # pylint: disable=import-error
 import win32api # pylint: disable=import-error
