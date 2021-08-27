@@ -386,7 +386,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					System.setRegistryValue(
 						System.HKEY_LOCAL_MACHINE,
 						"SYSTEM\\CurrentControlSet\\Services\\WebClient\\Parameters",
-						"FileSizeLimitInBytes", 0xffffffff
+						"FileSizeLimitInBytes", 0xffffffffff
 					)
 				logger.info("Added depot '%s' to trusted domains", url.hostname)
 			except Exception as err: # pylint: disable=broad-except
