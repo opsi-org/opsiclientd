@@ -31,9 +31,12 @@ from opsiclientd import init_logging, parser, DEFAULT_STDERR_LOG_FORMAT
 from opsiclientd.setup import setup
 
 
-STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
+#STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
+STARTUP_LOG = None
 
 def startup_log(message):
+	if not STARTUP_LOG:
+		return
 	if os.path.isdir(os.path.dirname(STARTUP_LOG)):
 		with codecs.open(STARTUP_LOG, "a", "utf-8") as file:
 			file.write(f"{datetime.now()} {message}\n")
