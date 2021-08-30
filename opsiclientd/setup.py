@@ -214,6 +214,11 @@ def install_service_windows():
 	winreg.SetValueEx(key_handle, 'DependOnService', 0, winreg.REG_MULTI_SZ, ["Dhcp"])
 	#winreg.SetValueEx(key_handle, 'DependOnService', 0, winreg.REG_MULTI_SZ, ["Dhcp", "Dnscache"])
 
+	key_handle = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control")
+	if win32process.IsWow64Process():
+		winreg.DisableReflectionKey(key_handle)
+	winreg.SetValueEx(key_handle, 'ServicesPipeTimeout', 0, winreg.REG_DWORD, 120000)
+
 
 def install_service_linux():
 	logger.notice("Install systemd service")
