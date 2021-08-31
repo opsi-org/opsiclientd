@@ -354,7 +354,7 @@ def setup(full=False, options=None) -> None:
 		try:
 			install_service()
 		except Exception as err: # pylint: disable=broad-except
-			logger.error("Failed to install service: %s", err)
+			logger.error("Failed to install service: %s", err, exc_info=True)
 			errors.append(str(err))
 
 	try:
