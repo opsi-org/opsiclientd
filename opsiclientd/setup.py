@@ -213,12 +213,13 @@ def install_service_windows():
 		winreg.DisableReflectionKey(key_handle)
 	winreg.SetValueEx(key_handle, 'DependOnService', 0, winreg.REG_MULTI_SZ, ["Dhcp"])
 	#winreg.SetValueEx(key_handle, 'DependOnService', 0, winreg.REG_MULTI_SZ, ["Dhcp", "Dnscache"])
+	winreg.CloseKey(key_handle)
 
-	key_handle = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control")
+	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control")
 	if win32process.IsWow64Process():
 		winreg.DisableReflectionKey(key_handle)
 	winreg.SetValueEx(key_handle, 'ServicesPipeTimeout', 0, winreg.REG_DWORD, 120000)
-
+	winreg.CloseKey(key_handle)
 
 def install_service_linux():
 	logger.notice("Install systemd service")
@@ -317,6 +318,7 @@ def setup_on_shutdown():
 			try:
 				key_handle = winreg.OpenKey(base_key_handle, str(num))
 				(value, _type) = winreg.QueryValueEx(key_handle, "GPOName")
+				winreg.CloseKey(key_handle)
 				if value == GPO_NAME:
 					break
 			except OSError:
@@ -331,18 +333,23 @@ def setup_on_shutdown():
 		winreg.SetValueEx(key_handle, "GPOName", 0, winreg.REG_SZ, GPO_NAME)
 		winreg.SetValueEx(key_handle, "PSScriptOrder", 0, winreg.REG_DWORD, 1)
 
-		key_handle = winreg.CreateKey(key_handle, "0")
-		winreg.SetValueEx(key_handle, "Script", 0, winreg.REG_SZ, script_path)
-		winreg.SetValueEx(key_handle, "Parameters", 0, winreg.REG_SZ, script_params)
-		winreg.SetValueEx(key_handle, "ErrorCode", 0, winreg.REG_DWORD, 0)
-		winreg.SetValueEx(key_handle, "IsPowershell", 0, winreg.REG_DWORD, 0)
-		winreg.SetValueEx(key_handle, "ExecTime", 0, winreg.REG_BINARY, b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+		key_handle2 = winreg.CreateKey(key_handle, "0")
+		winreg.SetValueEx(key_handle2, "Script", 0, winreg.REG_SZ, script_path)
+		winreg.SetValueEx(key_handle2, "Parameters", 0, winreg.REG_SZ, script_params)
+		winreg.SetValueEx(key_handle2, "ErrorCode", 0, winreg.REG_DWORD, 0)
+		winreg.SetValueEx(key_handle2, "IsPowershell", 0, winreg.REG_DWORD, 0)
+		winreg.SetValueEx(key_handle2, "ExecTime", 0, winreg.REG_BINARY, b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+
+		winreg.CloseKey(key_handle2)
+		winreg.CloseKey(key_handle)
+		winreg.CloseKey(base_key_handle)
 
 	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System")
 	if win32process.IsWow64Process():
 		winreg.DisableReflectionKey(key_handle)
 	winreg.SetValueEx(key_handle, "MaxGPOScriptWait", 0, winreg.REG_DWORD, 0)
 	#winreg.SetValueEx(key_handle, "ShutdownWithoutLogon", 0, winreg.REG_DWORD, 1)
+	winreg.CloseKey(key_handle)
 
 
 def setup(full=False, options=None) -> None:
