@@ -347,6 +347,7 @@ def setup_on_shutdown():
 
 def setup(full=False, options=None) -> None:
 	logger.notice("Running opsiclientd setup")
+	errors = []
 
 	if full:
 		opsi_service_setup(options)
@@ -354,18 +355,25 @@ def setup(full=False, options=None) -> None:
 			install_service()
 		except Exception as err: # pylint: disable=broad-except
 			logger.error("Failed to install service: %s", err)
+			errors.append(str(err))
 
 	try:
 		setup_ssl(full)
 	except Exception as err: # pylint: disable=broad-except
 		logger.error("Failed to setup ssl: %s", err, exc_info=True)
+		errors.append(str(err))
 
 	try:
 		setup_firewall()
 	except Exception as err:  # pylint: disable=broad-except
 		logger.error("Failed to setup firewall: %s", err, exc_info=True)
+		errors.append(str(err))
 
 	try:
 		setup_on_shutdown()
 	except Exception as err:  # pylint: disable=broad-except
 		logger.error("Failed to setup on_shutdown: %s", err, exc_info=True)
+		errors.append(str(err))
+
+	if errors and full:
+		raise RuntimeError(", ".join(errors))
