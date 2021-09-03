@@ -400,6 +400,12 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			if RUNNING_ON_LINUX:
 				mount_options["dir_mode"] = "0700"
 				mount_options["file_mode"] = "0700"
+				# Currently for WebDAV and Linux only
+				mount_options["verify_server_cert"] = (
+					config.get('global', 'verify_server_cert') or
+					config.get('global', 'verify_server_cert_by_ca')
+				)
+				mount_options["ca_cert_file"] = config.ca_cert_file
 
 		System.mount(
 			config.get('depot_server', 'url'), config.getDepotDrive(),
