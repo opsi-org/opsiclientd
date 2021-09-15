@@ -20,10 +20,11 @@ from OPSI import System
 from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
 from OPSI.Util.Thread import KillableThread
 from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
+from OPSI.Backend.JSONRPC import JSONRPCBackend
 
 from opsicommon.logging import logger, log_context
 from opsicommon.ssl import install_ca, remove_ca
-from opsicommon.client.jsonrpc import JSONRPCBackend, JSONRPCClient
+from opsicommon.client.jsonrpc import JSONRPCClient
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config, UIB_OPSI_CA
