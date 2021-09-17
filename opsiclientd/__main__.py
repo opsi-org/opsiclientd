@@ -28,7 +28,7 @@ def action_processor_starter():
 def opsiclientd():
 	_main = None
 	if platform.system().lower() == 'windows':
-		if os.path.isdir(os.path.dirname(STARTUP_LOG)):
+		if STARTUP_LOG and os.path.isdir(os.path.dirname(STARTUP_LOG)):
 			with codecs.open(STARTUP_LOG, "w", "utf-8") as file:
 				file.write(f"{datetime.now()} opsiclientd startup\n")
 		from opsiclientd.windows.main import main as _main # pylint: disable=import-outside-toplevel
