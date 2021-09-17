@@ -14,7 +14,8 @@ import codecs
 import platform
 from datetime import datetime
 
-STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
+#STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
+STARTUP_LOG = None
 
 def opsiclientd_rpc():
 	from opsiclientd.opsiclientdrpc import main as _main # pylint: disable=import-outside-toplevel
