@@ -581,7 +581,7 @@ reference = "uibpypi"
 
 [[package]]
 name = "opsi-dev-tools"
-version = "1.0.72"
+version = "1.0.78"
 description = "opsi development tools"
 category = "dev"
 optional = false
@@ -1866,8 +1866,8 @@ netifaces = [
     {file = "netifaces-0.10.9.tar.gz", hash = "sha256:2dee9ffdd16292878336a58d04a20f0ffe95555465fee7c9bd23b3490ef2abf3"},
 ]
 opsi-dev-tools = [
-    {file = "opsi-dev-tools-1.0.72.tar.gz", hash = "md5:110388fc853120b66cd1062e89d08465"},
-    {file = "opsi_dev_tools-1.0.72-py3-none-any.whl", hash = "md5:0b84639ae1718228488967664506958f"},
+    {file = "opsi-dev-tools-1.0.78.tar.gz", hash = "md5:e3228a5a150dc045e5793b7777f57f17"},
+    {file = "opsi_dev_tools-1.0.78-py3-none-any.whl", hash = "md5:780ada2e3fc2e3968c4cdd14814f11d4"},
 ]
 packaging = [
     {file = "packaging-21.0-py3-none-any.whl", hash = "sha256:c86254f9220d55e31cc94d69bade760f0847da8000def4dfe1c6b872fd14ff14"},
