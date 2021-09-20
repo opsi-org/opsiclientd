@@ -548,6 +548,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		if RUNNING_ON_LINUX or RUNNING_ON_WINDOWS:
 			for common in os.listdir(actionProcessorCommonDir):
 				source = os.path.join(actionProcessorCommonDir, common)
+				if common == "skin" and os.path.exists(os.path.join(actionProcessorLocalTmpDir, common)):
+					continue	# do not overwrite skin dir
 				if os.path.isdir(source):
 					shutil.copytree(source, os.path.join(actionProcessorLocalTmpDir, common))
 				else:
