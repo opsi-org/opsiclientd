@@ -880,7 +880,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			depotServerPassword = ''
 			try:
 				(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
-			except Exception as err: # pylint: disable=broad-except
+			except Exception: # pylint: disable=broad-except
 				if not self.event.eventConfig.useCachedProducts:
 					raise
 				logger.error("Failed to get depotserver credentials, continuing because event uses cached products", exc_info=True)
@@ -1070,10 +1070,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			category="wait",
 			durationEvent=True
 		)
-		self._messageSubject.setMessage("%s\n%s: %s" % (
-			self.event.eventConfig.getActionMessage(),
-			_("Products"),
-			', '.join(productIds))
+		self._messageSubject.setMessage(
+			f'{self.event.eventConfig.getActionMessage()}\n{_("Products")}: {", ".join(productIds)}'
 		)
 		choiceSubject = ChoiceSubject(id='choice')
 		if cancelCounter < self.event.eventConfig.actionUserCancelable:

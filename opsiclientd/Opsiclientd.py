@@ -171,7 +171,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			timeline.addEvent(title = "opsiclientd restart", category = "system")
 			try:
 				logger.notice("Writing restart marker %s", config.restart_marker)
-				with open(config.restart_marker, "w"):
+				with open(config.restart_marker, "wb"):
 					pass
 			except Exception as err: # pylint: disable=broad-except
 				logger.error(err)
@@ -271,7 +271,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			return
 
 		self._actionProcessorUserName = run_as_user
-		logger.notice("Creating local user '%s'" % run_as_user)
+		logger.notice(f"Creating local user '{run_as_user}'")
 
 		self._actionProcessorUserPassword = '$!?' + str(randomString(16)) + '!/%'
 		logger.addConfidentialString(self._actionProcessorUserPassword)
@@ -588,7 +588,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				sessionId = System.getActiveConsoleSessionId()
 
 		rpc = f"setCurrentActiveDesktopName(\"{sessionId}\", System.getActiveDesktopName())"
-		cmd = '%s "%s"' % (config.get('opsiclientd_rpc', 'command'), rpc.replace('"', '\\"'))
+		cmd = config.get('opsiclientd_rpc', 'command') + ' "' + rpc.replace('"', '\\"') + '"'
 		try:
 			System.runCommandInSession(
 				command=cmd,
@@ -621,7 +621,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		sessionId = forceInt(sessionId)
 
 		rpc = f"noop(System.switchDesktop('{desktop}'))"
-		cmd = '%s "%s"' % (config.get('opsiclientd_rpc', 'command'), rpc)
+		cmd = f'{config.get("opsiclientd_rpc", "command")} "{rpc}"'
 
 		try:
 			System.runCommandInSession(
@@ -697,7 +697,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		notifierCommand = config.get('opsiclientd_notifier', 'command')
 		if not notifierCommand:
 			raise Exception('opsiclientd_notifier.command not defined')
-		notifierCommand += " -s %s" % os.path.join("notifier", "popup.ini")
+		notifierCommand = f'{notifierCommand} -s {os.path.join("notifier", "popup.ini")}'
 
 		if addTimestamp:
 			message = "=== " + time.strftime("%Y-%m-%d %H:%M:%S") + " ===\n" + message
