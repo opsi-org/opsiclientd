@@ -2010,7 +2010,7 @@ python-gettext = [
 ]
 python-opsi = [
     {file = "python-opsi-4.2.0.242.tar.gz", hash = "md5:d123c8d70774caa2d2660ec77df8b8b3"},
-    {file = "python_opsi-4.2.0.242-py3-none-any.whl", hash = "md5:925b73fcc4b5b0efe9e5a2ebda2b41b0"},
+    {file = "python_opsi-4.2.0.242-py3-none-any.whl", hash = "md5:6f20690c908931593741a75107ddf406"},
 ]
 python-pam = [
     {file = "python-pam-1.8.4.tar.gz", hash = "sha256:c856d9c89fedb33951dd8a95727ae57c6887b02d065bbdffd2fd9dbc0183909b"},
