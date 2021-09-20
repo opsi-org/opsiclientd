@@ -1867,8 +1867,8 @@ netifaces = [
     {file = "netifaces-0.10.9.tar.gz", hash = "sha256:2dee9ffdd16292878336a58d04a20f0ffe95555465fee7c9bd23b3490ef2abf3"},
 ]
 opsi-dev-tools = [
-    {file = "opsi-dev-tools-1.0.78.tar.gz", hash = "sha256:ad399cac1c51eaf1d28704e86afa74c050421a4c429b7c21d1694858fac5385f"},
-    {file = "opsi_dev_tools-1.0.78-py3-none-any.whl", hash = "sha256:e7e010c6fa8f24a274d274c87b9b224b4177cd0483e527f4ed3bebdb1d8a8879"},
+    {file = "opsi-dev-tools-1.0.78.tar.gz", hash = "sha256:28df87f0d05d4f106cd978dee9989fb565ee79fefc43465fe9d991a94efa3a2d"},
+    {file = "opsi_dev_tools-1.0.78-py3-none-any.whl", hash = "sha256:65e9dab121f6f56ea48ae0e05286dba7bcfc6e45b18a6af1401f1c5bdfdf0312"},
 ]
 packaging = [
     {file = "packaging-21.0-py3-none-any.whl", hash = "sha256:c86254f9220d55e31cc94d69bade760f0847da8000def4dfe1c6b872fd14ff14"},
