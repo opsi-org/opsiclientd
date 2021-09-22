@@ -187,7 +187,8 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				'ssl_server_cert_file': os.path.join(baseDir, "opsiclientd", "opsiclientd.pem"),
 				'static_dir': os.path.join(baseDir, "opsiclientd", "static_html"),
 				'max_authentication_failures': 5,
-				'kiosk_api_active': True
+				'kiosk_api_active': True,
+				'process_actions_event': 'auto'
 			},
 			'notification_server': {
 				'interface': '127.0.0.1',
@@ -260,7 +261,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 		baseDir = self._config["global"]["base_dir"]
 
-		for key in self._config:
+		for key in list(self._config):
 			if key in defaultToApply:
 				self._config[key].update(defaultToApply[key])
 
@@ -307,9 +308,9 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		section = str(section).lower().strip()
 		option = str(option).lower().strip()
 		if section not in self._config:
-			raise SectionNotFoundException("No such config section: %s" % section)
+			raise SectionNotFoundException(f"No such config section: {section}")
 		if option not in self._config[section]:
-			raise NoConfigOptionFoundException("No such config option in section '%s': %s" % (section, option))
+			raise NoConfigOptionFoundException(f"No such config option in section '{section}': {option}")
 
 		value = self._config[section][option]
 		if not raw and isinstance(value, str) and (value.count('%') >= 2):
@@ -604,7 +605,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 		if event and event.eventConfig.useCachedProducts:
 			cacheDepotDir = os.path.join(self.get('cache_service', 'storage_dir'), 'depot').replace('\\', '/').replace('//', '/')
-			logger.notice("Using depot cache: %s" % cacheDepotDir)
+			logger.notice("Using depot cache: %s", cacheDepotDir)
 			self.set_temporary_depot_path(cacheDepotDir)
 			if RUNNING_ON_WINDOWS:
 				self.setTemporaryDepotDrive(cacheDepotDir.split(':')[0] + ':')
