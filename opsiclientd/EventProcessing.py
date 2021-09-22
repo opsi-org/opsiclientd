@@ -548,12 +548,15 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		if RUNNING_ON_LINUX or RUNNING_ON_WINDOWS:
 			for common in os.listdir(actionProcessorCommonDir):
 				source = os.path.join(actionProcessorCommonDir, common)
-				if common == "skin" and os.path.exists(os.path.join(actionProcessorLocalTmpDir, common)):
-					continue	# do not overwrite skin dir
 				if os.path.isdir(source):
 					shutil.copytree(source, os.path.join(actionProcessorLocalTmpDir, common))
 				else:
 					shutil.copy2(source, os.path.join(actionProcessorLocalTmpDir, common))
+		if RUNNING_ON_WINDOWS:
+			# saving current opsi-script skin (set during opsi-client-agent setup with optional corporate identity)
+			if os.path.exists(os.path.join(actionProcessorLocalDir, "skin")):
+				shutil.rmtree(os.path.join(actionProcessorLocalTmpDir, "skin"))
+				shutil.move(os.path.join(actionProcessorLocalDir, "skin"), os.path.join(actionProcessorLocalTmpDir, "skin"))
 
 		if not os.path.exists(os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)):
 			raise Exception(f"File '{os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)}' does not exist after copy")
