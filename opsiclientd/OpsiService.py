@@ -53,7 +53,7 @@ def update_ca_cert(config_service: JSONRPCClient):
 			except Exception as err: # pylint: disable=broad-except
 				logger.error(err, exc_info=True)
 
-		with open(config.ca_cert_file, "w") as file:
+		with open(config.ca_cert_file, "w", encoding="utf-8") as file:
 			for cert in ca_certs:
 				file.write(dump_certificate(FILETYPE_PEM, cert).decode("utf-8"))
 			if config.get('global', 'trust_uib_opsi_ca'):
@@ -103,19 +103,20 @@ class ServiceConnection:
 		pass
 
 	def connectionCanceled(self):
-		error = "Failed to connect to config service '%s': cancelled by user" % self._configServiceUrl
+		error = f"Failed to connect to config service '{self._configServiceUrl}': cancelled by user"
 		logger.error(error)
 		raise CanceledByUserError(error)
 
 	def connectionTimedOut(self):
-		error = "Failed to connect to config service '%s': timed out after %d seconds" % (
-			self._configServiceUrl, config.get('config_service', 'connection_timeout')
+		error = (
+			f"Failed to connect to config service '{self._configServiceUrl}': "
+			f"timed out after {config.get('config_service', 'connection_timeout')} seconds"
 		)
 		logger.error(error)
 		raise Exception(error)
 
 	def connectionFailed(self, error):
-		error = "Failed to connect to config service '%s': %s" % (self._configServiceUrl, error)
+		error = f"Failed to connect to config service '{self._configServiceUrl}': {error}"
 		logger.error(error)
 		raise Exception(error)
 
@@ -271,7 +272,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 		if os.path.exists(config.ca_cert_file):
 			# Read all certs from file except UIB_OPSI_CA
 			uib_opsi_ca_cert = load_certificate(FILETYPE_PEM, UIB_OPSI_CA.encode("ascii"))
-			with open(config.ca_cert_file, "r") as file:
+			with open(config.ca_cert_file, "r", encoding="utf-8") as file:
 				for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", file.read(), re.DOTALL):
 					cert = load_certificate(FILETYPE_PEM, match.group(1).encode("ascii"))
 					if cert.get_subject().CN != uib_opsi_ca_cert.get_subject().CN:
@@ -285,7 +286,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 		if config.get('global', 'trust_uib_opsi_ca'):
 			certs += UIB_OPSI_CA
 
-		with open(config.ca_cert_file, "w") as file:
+		with open(config.ca_cert_file, "w", encoding="utf-8") as file:
 			file.write(certs)
 
 	def run(self): # pylint: disable=too-many-locals,too-many-branches,too-many-statements

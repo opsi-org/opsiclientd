@@ -32,7 +32,6 @@ config = Config()
 
 def createEventGenerators(opsiclientd):
 	enabled_events = {}
-	global _EVENT_GENERATORS # pylint: disable=global-statement
 	panicEventConfig = PanicEventConfig(
 		EVENT_CONFIG_TYPE_PANIC,
 		actionProcessorCommand=config.get('action_processor', 'command', raw=True)

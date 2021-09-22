@@ -291,10 +291,15 @@ class WorkerOpsiclientd(WorkerOpsi):
 						raise Exception(f"{client_ip} blocked")
 
 			(self.session.user, self.session.password) = self._getCredentials()
-			logger.notice("Authorization request from %s@%s (application: %s)" % (self.session.user, self.session.ip, self.session.userAgent))
+			logger.notice(
+				"Authorization request from %s@%s (application: %s)",
+				self.session.user, self.session.ip, self.session.userAgent
+			)
 
 			if not self.session.password:
-				raise Exception("No password from %s (application: %s)" % (self.session.ip, self.session.userAgent))
+				raise Exception(
+					f"No password from {self.session.ip} (application: {self.session.userAgent}"
+				)
 
 			if self.session.user.lower() == config.get('global', 'host_id').lower():
 				# Auth by opsi host key
@@ -372,10 +377,10 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 			pass
 
 		if not self.service._opsiclientd.getCacheService(): # pylint: disable=protected-access
-			raise Exception('Cache service not running')
+			raise Exception("Cache service not running")
 
 		self.session.callInstance = self.service._opsiclientd.getCacheService().getConfigBackend() # pylint: disable=protected-access
-		logger.notice('Backend created: %s' % self.session.callInstance)
+		logger.notice("Backend created: %s", self.session.callInstance)
 		self.session.callInterface = self.session.callInstance.backend_getInterface()
 		return result
 
@@ -1095,7 +1100,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			desktop=desktop,
 			waitForProcessEnding=False
 		)
-		return "command '%s' executed" % command
+		return f"command '{command}' executed"
 
 	def execute(self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300): # pylint: disable=no-self-use,too-many-arguments
 		return System.execute(
@@ -1142,7 +1147,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 
 	def fireEvent(self, name): # pylint: disable=no-self-use
 		event = getEventGenerator(name)
-		logger.notice("Firing event '%s'" % name)
+		logger.notice("Firing event '%s'", name)
 		event.createAndFireEvent()
 
 	def setStatusMessage(self, sessionId, message):
@@ -1387,17 +1392,21 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		return True
 
 	def processActionRequests(self):
-		timer_active = False
-		on_demand_active = False
-		for event_config in getEventConfigs().values():
-			if event_config["name"] == "timer" and event_config["active"]:
-				timer_active = True
-			elif event_config["name"] == "on_demand" and event_config["active"]:
-				on_demand_active = True
+		event = config.get("control_server", "process_actions_event")
+		if not event or event == "auto":
+			timer_active = False
+			on_demand_active = False
+			for event_config in getEventConfigs().values():
+				if event_config["name"] == "timer" and event_config["active"]:
+					timer_active = True
+				elif event_config["name"] == "on_demand" and event_config["active"]:
+					on_demand_active = True
 
-		if timer_active:
-			self.fireEvent("timer")
-		elif on_demand_active:
-			self.fireEvent("on_demand")
-		else:
-			raise RuntimeError("Neither timer nor on_demand event active")
+			if timer_active:
+				event = "timer"
+			elif on_demand_active:
+				event = "on_demand"
+			else:
+				raise RuntimeError("Neither timer nor on_demand event active")
+
+		self.fireEvent(event)

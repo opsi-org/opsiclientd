@@ -56,7 +56,7 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 		create = True
 	else:
 		try:
-			with open(cert_file, "r") as file:
+			with open(cert_file, "r", encoding="utf-8") as file:
 				srv_crt = load_certificate(FILETYPE_PEM, file.read())
 				enddate = datetime.datetime.strptime(srv_crt.get_notAfter().decode("utf-8"), "%Y%m%d%H%M%SZ")
 				diff = (enddate - datetime.datetime.now()).days
@@ -77,7 +77,7 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 					exists_self_signed = True
 
 			if not create:
-				with open(key_file, "r") as file:
+				with open(key_file, "r", encoding="utf-8") as file:
 					srv_key = load_privatekey(FILETYPE_PEM, file.read())
 		except CryptoError as err:
 			logger.error(err)
@@ -130,12 +130,12 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 
 	if not os.path.exists(os.path.dirname(key_file)):
 		os.makedirs(os.path.dirname(key_file))
-	with open(key_file, "a") as out:
+	with open(key_file, "a", encoding="utf-8") as out:
 		out.write(as_pem(srv_key))
 
 	if not os.path.exists(os.path.dirname(cert_file)):
 		os.makedirs(os.path.dirname(cert_file))
-	with open(cert_file, "a") as out:
+	with open(cert_file, "a", encoding="utf-8") as out:
 		out.write(as_pem(srv_crt))
 
 

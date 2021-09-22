@@ -66,7 +66,7 @@ def daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
 
 def write_pid_file(path):
 	if path:
-		with open(path, 'w') as pidFile:
+		with open(path, "w", encoding="utf-8") as pidFile:
 			pidFile.write(str(os.getpid()))
 
 def main():
