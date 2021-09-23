@@ -10,6 +10,7 @@ action processor starter helper for windows
 
 import os
 import sys
+import getpass
 import gettext
 import locale
 from urllib.parse import urlparse
@@ -104,9 +105,10 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 			be = JSONRPCBackend(username=hostId, password=hostKey, address=f"https://127.0.0.1:{controlServerPort}/opsiclientd")
 
 			if runAsUser:
-				logger.info("Impersonating user '%s'", runAsUser)
-				imp = System.Impersonate(username=runAsUser, password=runAsPassword, desktop=actionProcessorDesktop)
-				imp.start(logonType="INTERACTIVE", newDesktop=False, createEnvironment=createEnvironment)
+				if getpass.getuser().lower() != runAsUser.lower():
+					logger.info("Impersonating user '%s'", runAsUser)
+					imp = System.Impersonate(username=runAsUser, password=runAsPassword, desktop=actionProcessorDesktop)
+					imp.start(logonType="INTERACTIVE", newDesktop=False, createEnvironment=createEnvironment)
 			elif depot_url.scheme in ("smb", "cifs"):
 				logger.info("Impersonating network account '%s'", depotServerUsername)
 				imp = System.Impersonate(username=depotServerUsername, password=depotServerPassword, desktop=actionProcessorDesktop)
