@@ -207,7 +207,10 @@ class OpsiclientdNT(Opsiclientd):
 		# Hide user from login
 		try:
 			winreg.CreateKeyEx(
-				winreg.HKEY_LOCAists, sid i64KEY | winreg.KEY_ALL_ACCESS # sysnative
+				winreg.HKEY_LOCAL_MACHINE,
+				r'Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts',
+				0,
+				winreg.KEY_WOW64_64KEY | winreg.KEY_ALL_ACCESS # sysnative
 			)
 		except WindowsError: # pylint: disable=undefined-variable
 			pass
