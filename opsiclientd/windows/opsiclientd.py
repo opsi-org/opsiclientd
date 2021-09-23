@@ -131,35 +131,32 @@ class OpsiclientdNT(Opsiclientd):
 
 	def cleanup_opsi_setup_user(self, keep_sid: str = None):  # pylint: disable=no-self-use,too-many-locals
 		keep_profile = None
-		key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList")
-		for idx in range(1024):
-			try:
-				keyname = winreg.EnumKey(key, idx)
-				subkey = winreg.OpenKey(key, keyname)
-				profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]
-				if keep_sid and subkey == keep_sid:
-					keep_profile = profile_path
-					continue
-				winreg.CloseKey(subkey)
-				username = profile_path.split("\\")[-1].split(".")[0]
-				if not username.startswith(OPSI_SETUP_USER_NAME):
-					continue
-				sid = win32security.ConvertStringSidToSid(keyname)
+		with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList") as key:
+			for idx in range(1024):
 				try:
-					#win32profile.DeleteProfile(sid)
-					username, _domain, _type = win32security.LookupAccountSid(None, sid)
-					logger.info("Deleting user '%s'", username)
-					win32net.NetUserDel(None, username)
-				except Exception:  # pylint: disable=broad-except
-					pass
-				logger.info("Deleting '%s' from ProfileList", keyname)
-				winreg.DeleteKey(key, keyname)
-			except WindowsError as err:
-				if err.errno == 22:  # pylint: disable=no-member
-					# No more subkeys
-					break
-				logger.debug(err)
-		winreg.CloseKey(key)
+					keyname = winreg.EnumKey(key, idx)
+					with winreg.OpenKey(key, keyname) as subkey:
+						profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]
+						if keep_sid and subkey == keep_sid:
+							keep_profile = profile_path
+							continue
+					username = profile_path.split("\\")[-1].split(".")[0]
+					if not username.startswith(OPSI_SETUP_USER_NAME):
+						continue
+					sid = win32security.ConvertStringSidToSid(keyname)
+					try:
+						#win32profile.DeleteProfile(sid)
+						username, _domain, _type = win32security.LookupAccountSid(None, sid)
+						logger.info("Deleting user '%s'", username)
+						win32net.NetUserDel(None, username)
+					except Exception:  # pylint: disable=broad-except
+						pass
+					logger.info("Deleting '%s' from ProfileList", keyname)
+				except WindowsError as err:
+					if err.errno == 22:  # pylint: disable=no-member
+						# No more subkeys
+						break
+					logger.debug(err)
 
 		# takeown parameter /d is localized 😠
 		res = subprocess.run("choice <nul 2>nul", capture_output=True, check=False, shell=True)
