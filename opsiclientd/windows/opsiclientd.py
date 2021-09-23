@@ -161,12 +161,15 @@ class OpsiclientdNT(Opsiclientd):
 				logger.warning(err)
 		winreg.CloseKey(key)
 
+		# takeown parameter /d is localized 😠
+		res = subprocess.run("choice <nul 2>nul", capture_output=True, check=False, shell=True)
+		yes = res.stdout.decode().split(",")[0].lstrip("[").strip()
 		for pdir in glob.glob(f"c:\\users\\{OPSI_SETUP_USER_NAME}*"):
 			if keep_profile and keep_profile.lower() == pdir.lower():
 				continue
 			logger.info("Deleting user dir '%s'", pdir)
 			for cmd, shell in (
-				(['takeown', '/d', 'Y', '/r', '/f', pdir], False),
+				(['takeown', '/d', yes, '/r', '/f', pdir], False),
 				(['del', '/s', '/f', '/q', pdir], True)
 			):
 				logger.info("Executing: %s", cmd)
