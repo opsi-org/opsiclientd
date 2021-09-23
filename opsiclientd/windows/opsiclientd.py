@@ -129,7 +129,7 @@ class OpsiclientdNT(Opsiclientd):
 				return True
 			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {response.get('error')}")
 
-	def cleanup_opsi_setup_user(self, keep_sid: str = None):  # pylint: disable=no-self-use
+	def cleanup_opsi_setup_user(self, keep_sid: str = None):  # pylint: disable=no-self-use,too-many-locals
 		keep_profile = None
 		key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList")
 		for idx in range(1024):
@@ -168,14 +168,14 @@ class OpsiclientdNT(Opsiclientd):
 			if keep_profile and keep_profile.lower() == pdir.lower():
 				continue
 			logger.info("Deleting user dir '%s'", pdir)
-			for cmd, shell in (
-				(['takeown', '/d', yes, '/r', '/f', pdir], False),
-				(['del', '/s', '/f', '/q', pdir], True)
+			for cmd, shell, exit_codes_success in (
+				(['takeown', '/d', yes, '/r', '/f', pdir], False, [0, 1]),
+				(['del', '/s', '/f', '/q', pdir], True, [0])
 			):
 				logger.info("Executing: %s", cmd)
 				res = subprocess.run(cmd, capture_output=True, check=False, shell=shell)
 				out = res.stdout.decode(errors="replace") + res.stderr.decode(errors="replace")
-				if res.returncode != 0:
+				if res.returncode not in exit_codes_success:
 					logger.warning("Command %s failed with exit code %s: %s", cmd, res.returncode, out)
 				else:
 					logger.info("Command %s successful: %s", cmd, out)
@@ -191,6 +191,19 @@ class OpsiclientdNT(Opsiclientd):
 			"priv": win32netcon.USER_PRIV_USER,
 			"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD
 		}
+
+		# Test if user exists
+		user_sid = None
+		try:
+			user_sid = win32security.ConvertSidToStringSid(
+				win32security.LookupAccountName(None, user_info["name"])[0]
+			)
+		except Exception: # pylint: disable=broad-except
+			pass
+
+		self.cleanup_opsi_setup_user(keep_sid=None if delete_existing else user_sid)
+		if delete_existing:
+			user_sid = None
 
 		# Hide user from login
 		try:
@@ -219,17 +232,6 @@ class OpsiclientdNT(Opsiclientd):
 			winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY # sysnative
 		) as reg_key:
 			winreg.SetValueEx(reg_key, user_info["name"], 0, winreg.REG_DWORD, 0)
-
-		# Test if user exists
-		user_sid = None
-		try:
-			user_sid = win32security.ConvertSidToStringSid(
-				win32security.LookupAccountName(None, user_info["name"])[0]
-			)
-		except Exception: # pylint: disable=broad-except
-			pass
-
-		self.cleanup_opsi_setup_user(keep_sid=None if delete_existing else user_sid)
 
 		if user_sid:
 			# Update user password
