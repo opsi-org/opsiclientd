@@ -137,7 +137,7 @@ class OpsiclientdNT(Opsiclientd):
 					keyname = winreg.EnumKey(key, idx)
 					with winreg.OpenKey(key, keyname) as subkey:
 						profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]
-						if keep_sid and subkey == keep_sid:
+						if keep_sid and keyname == keep_sid:
 							keep_profile = profile_path
 							continue
 					username = profile_path.split("\\")[-1].split(".")[0]
