@@ -165,12 +165,17 @@ class OpsiclientdNT(Opsiclientd):
 			if keep_profile and keep_profile.lower() == pdir.lower():
 				continue
 			logger.info("Deleting user dir '%s'", pdir)
-			try:
-				subprocess.call(['takeown', '/d', 'Y', '/r', '/f', pdir])
-				subprocess.call(['del', '/s', '/f', '/q', pdir], shell=True)
-			except subprocess.CalledProcessError as rm_err:
-				logger.warning("Failed to delete user dir '%s': %s", pdir, rm_err)
-
+			for cmd, shell in (
+				(['takeown', '/d', 'Y', '/r', '/f', pdir], False),
+				(['del', '/s', '/f', '/q', pdir], True)
+			):
+				logger.info("Executing: %s", cmd)
+				res = subprocess.run(cmd, capture_output=True, check=False, shell=shell)
+				out = res.stdout.decode(errors="replace") + res.stderr.decode(errors="replace")
+				if res.returncode != 0:
+					logger.warning("Command %s failed with exit code %s: %s", cmd, res.returncode, out)
+				else:
+					logger.info("Command %s successful: %s", cmd, out)
 
 	def createOpsiSetupUser(self, admin=True, delete_existing=False): # pylint: disable=no-self-use,too-many-branches
 		# https://bugs.python.org/file46988/issue.py
