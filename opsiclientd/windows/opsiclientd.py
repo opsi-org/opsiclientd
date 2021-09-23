@@ -167,7 +167,7 @@ class OpsiclientdNT(Opsiclientd):
 			logger.info("Deleting user dir '%s'", pdir)
 			for cmd, exit_codes_success in (
 				(['takeown', '/d', yes, '/r', '/f', pdir], [0, 1]),
-				(['powershell.exe', '-ExecutionPolicy Bypass', '-Command', f'Remove-Item -Recurse -Force "{pdir}"'], [0])
+				(['powershell.exe', '-ExecutionPolicy', 'Bypass', '-Command', f'Remove-Item -Recurse -Force "{pdir}"'], [0])
 			):
 				logger.info("Executing: %s", cmd)
 				res = subprocess.run(cmd, capture_output=True, check=False)
@@ -207,10 +207,7 @@ class OpsiclientdNT(Opsiclientd):
 		# Hide user from login
 		try:
 			winreg.CreateKeyEx(
-				winreg.HKEY_LOCAL_MACHINE,
-				r'Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts',
-				0,
-				winreg.KEY_WOW64_64KEY | winreg.KEY_ALL_ACCESS # sysnative
+				winreg.HKEY_LOCAists, sid i64KEY | winreg.KEY_ALL_ACCESS # sysnative
 			)
 		except WindowsError: # pylint: disable=undefined-variable
 			pass
@@ -233,20 +230,22 @@ class OpsiclientdNT(Opsiclientd):
 			winreg.SetValueEx(reg_key, user_info["name"], 0, winreg.REG_DWORD, 0)
 
 		if user_sid:
-			# Update user password
+			logger.info("Updating password of user '%s'", user_info["name"])
 			user_info_update = win32net.NetUserGetInfo(None, user_info["name"], 1)
 			user_info_update["password"] = user_info["password"]
 			win32net.NetUserSetInfo(None, user_info["name"], 1, user_info_update)
 		else:
-			# Create user
+			logger.info("Creating user '%s'", user_info["name"])
 			win32net.NetUserAdd(None, 1, user_info)
 
 		local_admin_group_sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
 		local_admin_group_name = win32security.LookupAccountSid(None, local_admin_group_sid)[0]
 		try:
 			if admin:
+				logger.info("Adding user '%s' to admin group", user_info["name"])
 				win32net.NetLocalGroupAddMembers(None, local_admin_group_name, 3, [{"domainandname": user_info["name"]}])
 			else:
+				logger.info("Removing user '%s' from admin group", user_info["name"])
 				win32net.NetLocalGroupDelMembers(None, local_admin_group_name, [user_info["name"]])
 		except pywintypes.error as err:
 			# 1377 - ERROR_MEMBER_NOT_IN_ALIAS
