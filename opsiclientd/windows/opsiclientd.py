@@ -129,6 +129,49 @@ class OpsiclientdNT(Opsiclientd):
 				return True
 			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {response.get('error')}")
 
+	def cleanup_opsi_setup_user(self, keep_sid: str = None):  # pylint: disable=no-self-use
+		keep_profile = None
+		key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList")
+		for idx in range(1024):
+			try:
+				keyname = winreg.EnumKey(key, idx)
+				subkey = winreg.OpenKey(key, keyname)
+				profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]
+				if keep_sid and subkey == keep_sid:
+					keep_profile = profile_path
+					continue
+				winreg.CloseKey(subkey)
+				username = profile_path.split("\\")[-1].split(".")[0]
+				if not username.startswith(OPSI_SETUP_USER_NAME):
+					continue
+				sid = win32security.ConvertStringSidToSid(keyname)
+				try:
+					#win32profile.DeleteProfile(sid)
+					username, _domain, _type = win32security.LookupAccountSid(None, sid)
+					logger.info("Deleting user '%s'", username)
+					win32net.NetUserDel(None, username)
+				except Exception:  # pylint: disable=broad-except
+					pass
+				logger.info("Deleting '%s' from ProfileList", keyname)
+				winreg.DeleteKey(key, keyname)
+			except WindowsError as err:
+				if err.errno == 22:  # pylint: disable=no-member
+					# No more subkeys
+					break
+				logger.warning(err)
+		winreg.CloseKey(key)
+
+		for pdir in glob.glob(f"c:\\users\\{OPSI_SETUP_USER_NAME}*"):
+			if keep_profile and keep_profile.lower() == pdir.lower():
+				continue
+			logger.info("Deleting user dir '%s'", pdir)
+			try:
+				subprocess.call(['takeown', '/d', 'Y', '/r', '/f', pdir])
+				subprocess.call(['del', '/s', '/f', '/q', pdir], shell=True)
+			except subprocess.CalledProcessError as rm_err:
+				logger.warning("Failed to delete user dir '%s': %s", pdir, rm_err)
+
+
 	def createOpsiSetupUser(self, admin=True, delete_existing=False): # pylint: disable=no-self-use,too-many-branches
 		# https://bugs.python.org/file46988/issue.py
 
@@ -170,38 +213,27 @@ class OpsiclientdNT(Opsiclientd):
 			winreg.SetValueEx(reg_key, user_info["name"], 0, winreg.REG_DWORD, 0)
 
 		# Test if user exists
-		user_exists = False
+		user_sid = None
 		try:
-			win32net.NetUserGetInfo(None, user_info["name"], 1)
-			user_exists = True
+			user_sid = win32security.ConvertSidToStringSid(
+				win32security.LookupAccountName(None, user_info["name"])[0]
+			)
 		except Exception: # pylint: disable=broad-except
 			pass
 
-		if user_exists:
-			if delete_existing:
-				# Delete user
-				win32net.NetUserDel(None, user_info["name"])
+		self.cleanup_opsi_setup_user(keep_sid=None if delete_existing else user_sid)
 
-				for pdir in glob.glob(f"c:\\users\\{user_info['name']}*"):
-					try:
-						subprocess.call(['takeown', '/d', 'Y', '/r', '/f', pdir])
-						subprocess.call(['del', '/s', '/f', '/q', pdir], shell=True)
-					except subprocess.CalledProcessError as rm_err:
-						logger.warning("Failed to delete %s: %s", pdir, rm_err)
-
-				user_exists = False
-			else:
-				# Update user password
-				user_info_update = win32net.NetUserGetInfo(None, user_info["name"], 1)
-				user_info_update["password"] = user_info["password"]
-				win32net.NetUserSetInfo(None, user_info["name"], 1, user_info_update)
-
-		if not user_exists:
+		if user_sid:
+			# Update user password
+			user_info_update = win32net.NetUserGetInfo(None, user_info["name"], 1)
+			user_info_update["password"] = user_info["password"]
+			win32net.NetUserSetInfo(None, user_info["name"], 1, user_info_update)
+		else:
 			# Create user
 			win32net.NetUserAdd(None, 1, user_info)
 
-		sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
-		local_admin_group_name = win32security.LookupAccountSid(None, sid)[0]
+		local_admin_group_sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
+		local_admin_group_name = win32security.LookupAccountSid(None, local_admin_group_sid)[0]
 		try:
 			if admin:
 				win32net.NetLocalGroupAddMembers(None, local_admin_group_name, 3, [{"domainandname": user_info["name"]}])
