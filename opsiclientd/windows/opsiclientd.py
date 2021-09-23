@@ -158,7 +158,7 @@ class OpsiclientdNT(Opsiclientd):
 				if err.errno == 22:  # pylint: disable=no-member
 					# No more subkeys
 					break
-				logger.warning(err)
+				logger.debug(err)
 		winreg.CloseKey(key)
 
 		# takeown parameter /d is localized 😠
@@ -168,12 +168,12 @@ class OpsiclientdNT(Opsiclientd):
 			if keep_profile and keep_profile.lower() == pdir.lower():
 				continue
 			logger.info("Deleting user dir '%s'", pdir)
-			for cmd, shell, exit_codes_success in (
-				(['takeown', '/d', yes, '/r', '/f', pdir], False, [0, 1]),
-				(['del', '/s', '/f', '/q', pdir], True, [0])
+			for cmd, exit_codes_success in (
+				(['takeown', '/d', yes, '/r', '/f', pdir], [0, 1]),
+				(['powershell.exe', '-ExecutionPolicy Bypass', '-Command', f'Remove-Item -Recurse -Force "{pdir}"'], [0])
 			):
 				logger.info("Executing: %s", cmd)
-				res = subprocess.run(cmd, capture_output=True, check=False, shell=shell)
+				res = subprocess.run(cmd, capture_output=True, check=False)
 				out = res.stdout.decode(errors="replace") + res.stderr.decode(errors="replace")
 				if res.returncode not in exit_codes_success:
 					logger.warning("Command %s failed with exit code %s: %s", cmd, res.returncode, out)
@@ -195,9 +195,11 @@ class OpsiclientdNT(Opsiclientd):
 		# Test if user exists
 		user_sid = None
 		try:
+			win32net.NetUserGetInfo(None, user_info["name"], 1)
 			user_sid = win32security.ConvertSidToStringSid(
 				win32security.LookupAccountName(None, user_info["name"])[0]
 			)
+			logger.info("User '%s' exists, sid is '%s'", user_info["name"], user_sid)
 		except Exception: # pylint: disable=broad-except
 			pass
 
