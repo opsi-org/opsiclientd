@@ -4,6 +4,7 @@
 # Copyright (c) 2010-2021 uib GmbH <info@uib.de>
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0
+import os
 import sys
 import time
 import threading
@@ -241,6 +242,18 @@ class OpsiclientdNT(Opsiclientd):
 		else:
 			logger.info("Creating user '%s'", user_info["name"])
 			win32net.NetUserAdd(None, 1, user_info)
+
+		user_sid = win32security.ConvertSidToStringSid(
+			win32security.LookupAccountName(None, user_info["name"])[0]
+		)
+		subprocess.run(
+			["icacls", os.path.dirname(sys.argv[0]), "/grant:r", f"*{user_sid}:(OI)(CI)RX"],
+			capture_output=True, check=False, shell=True
+		)
+		subprocess.run(
+			["icacls", os.path.dirname(config.get("global", "log_file")), "/grant:r", f"*{user_sid}:(OI)(CI)F"],
+			capture_output=True, check=False, shell=True
+		)
 
 		local_admin_group_sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
 		local_admin_group_name = win32security.LookupAccountSid(None, local_admin_group_sid)[0]

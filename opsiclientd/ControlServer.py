@@ -1339,7 +1339,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 
 			command = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
 			if product_id:
-				product_id = f"/productid {product_id} ",
+				product_id = f"/productid {product_id} "
 			else:
 				product_id = ""
 
@@ -1353,8 +1353,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			command = command.replace('"', '\\"')
 			command = (
 				f'"{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}"'
-				r' "%global.host_id%" "%global.opsi_host_key%" "%control_server.port%"'
-				r' "%global.log_file%" "%global.log_level%" "%depot_server.url%"'
+				f' "{config.get("global", "host_id")}" "{config.get("global", "opsi_host_key")}"'
+				f' "{config.get("control_server", "port")}" "{config.get("global", "log_file")}"'
+				f' "{config.get("global", "log_level")}" "{config.get("depot_server", "url")}"'
 				f' "{config.getDepotDrive()}" "{depotServerUsername}" "{depotServerPassword}"'
 				f' "0" "default" '
 				f' "{command}" "3600"'
