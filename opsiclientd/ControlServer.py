@@ -1318,7 +1318,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 		return self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 
-	def runOpsiScriptAsOpsiSetupUser(self, script: str, product_id: str=None, admin=True):
+	def runOpsiScriptAsOpsiSetupUser(self, script: str, product_id: str=None, admin=True, wait_for_ending=True):
 		if not RUNNING_ON_WINDOWS:
 			raise NotImplementedError()
 
@@ -1377,6 +1377,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				)
 
 			self.runAsOpsiSetupUser(command=f"powershell.exe -ExecutionPolicy Bypass -WindowStyle hidden -File {ps_file}", admin=admin)
+
+			if wait_for_ending:
+				while os.path.exists(ps_file):
+					time.sleep(1)
+				for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
+					System.logoffSession(session_id)
 		finally:
 			serviceConnection.disconnectConfigService()
 
