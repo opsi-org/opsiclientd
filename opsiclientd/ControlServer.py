@@ -1322,6 +1322,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		if not RUNNING_ON_WINDOWS:
 			raise NotImplementedError()
 
+		logger.notice("Executing opsi script '%s' as opsisetupuser (product_id=%s)", script, product_id)
+
 		depot_path = config.get_depot_path()
 		if not os.path.isabs(script):
 			script = os.path.join(depot_path, os.sep, script)
@@ -1379,8 +1381,14 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			self.runAsOpsiSetupUser(command=f"powershell.exe -ExecutionPolicy Bypass -WindowStyle hidden -File {ps_file}", admin=admin)
 
 			if wait_for_ending:
+				logger.info("Wait for opsi-script to complete")
+				timeout = 4000
 				while os.path.exists(ps_file):
 					time.sleep(1)
+					timeout -= 1
+					if timeout == 0:
+						logger.warning("Timed out while waiting for opsi-script to complete")
+						break
 				for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 					System.logoffSession(session_id)
 		finally:
