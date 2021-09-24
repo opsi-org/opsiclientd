@@ -1333,7 +1333,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		try:
 
 			configServiceUrl = serviceConnection.getConfigServiceUrl()
-			depotServerUsername, depotServerPassword = config.getDepotserverCredentials(configService=serviceConnection)
+			depotServerUsername, depotServerPassword = config.getDepotserverCredentials(
+				configService=serviceConnection.getConfigService()
+			)
 
 			command = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
 			if product_id:
