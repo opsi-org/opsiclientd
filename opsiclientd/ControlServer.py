@@ -1324,7 +1324,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 
 		depot_path = config.get_depot_path()
 		if not os.path.isabs(script):
-			script = os.path.join(depot_path, script)
+			script = os.path.join(depot_path, os.sep, script)
 
 		log_file = os.path.join(config.get("global", "log_dir"), "opsisetupuser.log")
 
@@ -1362,7 +1362,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				f' "{OPSI_SETUP_USER_NAME}" ""'
 				f' "false"'
 			)
-			self.runAsOpsiSetupUser(command=command, admin=admin)
+
+			cmd_file = "c:\\opsi.org\\tmp\\opsisetupadmin_shell.cmd"
+			with codecs.open(cmd_file, "w", "windows-1252") as file:
+				file.write(command + "\r\n")
+			self.runAsOpsiSetupUser(command=cmd_file, admin=admin)
 		finally:
 			serviceConnection.disconnectConfigService()
 
