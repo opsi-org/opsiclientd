@@ -1350,23 +1350,31 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				f'/username "{config.get("global", "host_id")}" '
 				f'/password "{config.get("global", "opsi_host_key")}"'
 			)
-			command = command.replace('"', '\\"')
-			command = (
-				f'"{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}"'
-				f' "{config.get("global", "host_id")}" "{config.get("global", "opsi_host_key")}"'
-				f' "{config.get("control_server", "port")}" "{config.get("global", "log_file")}"'
-				f' "{config.get("global", "log_level")}" "{config.get("depot_server", "url")}"'
-				f' "{config.getDepotDrive()}" "{depotServerUsername}" "{depotServerPassword}"'
-				f' "0" "default" '
-				f' "{command}" "3600"'
-				f' "{OPSI_SETUP_USER_NAME}" ""'
-				f' "false"'
-			)
 
 			ps_file = os.path.join(config.get("global", "tmp_dir"), "opsisetupadmin_shell.ps1")
 			with codecs.open(ps_file, "w", "windows-1252") as file:
-				file.write(command + "\r\n")
-				file.write(f"Remove-Item -Path {ps_file} -Force\r\n")
+				file.write(
+					f"$args = @("
+					f"'{config.get('global', 'host_id')}',"
+					f"'{config.get('global', 'opsi_host_key')}',"
+					f"'{config.get('control_server', 'port')}',"
+					f"'{config.get('global', 'log_file')}',"
+					f"'{config.get('global', 'log_level')}',"
+					f"'{config.get('depot_server', 'url')}',"
+					f"'{config.getDepotDrive()}',"
+					f"'{depotServerUsername}',"
+					f"'{depotServerPassword}',"
+					f"'0',"
+					f"'default',"
+					f"'{command}',"
+					f"'3600',"
+					f"'{OPSI_SETUP_USER_NAME}',"
+					f"'',"
+					f"'false'"
+					f")\r\n"
+					f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args\r\n'
+					f'Remove-Item -Path "{ps_file}" -Force\r\n'
+				)
 
 			self.runAsOpsiSetupUser(command=f"powershell.exe -ExecutionPolicy Bypass -WindowStyle hidden -File {ps_file}", admin=admin)
 		finally:
