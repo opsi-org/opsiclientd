@@ -248,11 +248,15 @@ class OpsiclientdNT(Opsiclientd):
 		)
 		subprocess.run(
 			["icacls", os.path.dirname(sys.argv[0]), "/grant:r", f"*{user_sid}:(OI)(CI)RX"],
-			capture_output=True, check=False, shell=True
+			check=False
 		)
 		subprocess.run(
 			["icacls", os.path.dirname(config.get("global", "log_file")), "/grant:r", f"*{user_sid}:(OI)(CI)F"],
-			capture_output=True, check=False, shell=True
+			check=False
+		)
+		subprocess.run(
+			["icacls", os.path.dirname(config.get("global", "tmp_dir")), "/grant:r", f"*{user_sid}:(OI)(CI)F"],
+			check=False
 		)
 
 		local_admin_group_sid = win32security.ConvertStringSidToSid("S-1-5-32-544")

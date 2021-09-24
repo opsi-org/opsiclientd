@@ -1363,10 +1363,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				f' "false"'
 			)
 
-			cmd_file = "c:\\opsi.org\\tmp\\opsisetupadmin_shell.cmd"
+			cmd_file = os.path.join(config.get("global", "tmp_dir"), "opsisetupadmin_shell.cmd")
 			with codecs.open(cmd_file, "w", "windows-1252") as file:
 				file.write(command + "\r\n")
-			self.runAsOpsiSetupUser(command=cmd_file, admin=admin)
+				file.write(f"del /f /q {cmd_file}\r\n")
+
+			self.runAsOpsiSetupUser(command=f"start /b cmd.exe /c {cmd_file}", admin=admin)
 		finally:
 			serviceConnection.disconnectConfigService()
 
