@@ -1318,6 +1318,51 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 		return self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 
+	def runOpsiScriptAsOpsiSetupUser(self, script: str, product_id: str=None, admin=True):
+		if not RUNNING_ON_WINDOWS:
+			raise NotImplementedError()
+
+		depot_path = config.get_depot_path()
+		if not os.path.isabs(script):
+			script = os.path.join(depot_path, script)
+
+		log_file = os.path.join(config.get("global", "log_dir"), "opsisetupuser.log")
+
+		serviceConnection = ServiceConnection()
+		serviceConnection.connectConfigService()
+		try:
+
+			configServiceUrl = serviceConnection.getConfigServiceUrl()
+			depotServerUsername, depotServerPassword = config.getDepotserverCredentials(configService=serviceConnection)
+
+			command = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
+			if product_id:
+				product_id = f"/productid {product_id} ",
+			else:
+				product_id = ""
+
+			command = (
+				f'"{command}" "{script}" "{log_file}" /servicebatch '
+				f'/opsiservice "{configServiceUrl}" '
+				f'/clientid "{config.get("global", "host_id")}" '
+				f'/username "{config.get("global", "host_id")}" '
+				f'/password "{config.get("global", "opsi_host_key")}"'
+			)
+			command = command.replace('"', '\\"')
+			command = (
+				f'"{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}"'
+				r' "%global.host_id%" "%global.opsi_host_key%" "%control_server.port%"'
+				r' "%global.log_file%" "%global.log_level%" "%depot_server.url%"'
+				f' "{config.getDepotDrive()}" "{depotServerUsername}" "{depotServerPassword}"'
+				f' "0" "default" '
+				f' "{command}" "3600"'
+				f' "{OPSI_SETUP_USER_NAME}" ""'
+				f' "false"'
+			)
+			self.runAsOpsiSetupUser(command=command, admin=admin)
+		finally:
+			serviceConnection.disconnectConfigService()
+
 	def runAsOpsiSetupUser(self, command="powershell.exe -ExecutionPolicy ByPass", admin=True, recreate_user=False):
 		try:
 			# https://bugs.python.org/file46988/issue.py
