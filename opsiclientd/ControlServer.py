@@ -1344,11 +1344,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				product_id = ""
 
 			command = (
-				f'"{command}" "{script}" "{log_file}" /servicebatch '
-				f'/opsiservice "{configServiceUrl}" '
-				f'/clientid "{config.get("global", "host_id")}" '
-				f'/username "{config.get("global", "host_id")}" '
-				f'/password "{config.get("global", "opsi_host_key")}"'
+				f'""{command}"" ""{script}"" ""{log_file}"" /servicebatch '
+				f'/opsiservice ""{configServiceUrl}"" '
+				f'/clientid ""{config.get("global", "host_id")}"" '
+				f'/username ""{config.get("global", "host_id")}"" '
+				f'/password ""{config.get("global", "opsi_host_key")}""'
 			)
 
 			ps_file = os.path.join(config.get("global", "tmp_dir"), "opsisetupadmin_shell.ps1")
