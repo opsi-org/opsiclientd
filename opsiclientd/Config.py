@@ -75,56 +75,59 @@ class NoConfigOptionFoundException(ValueError):
 
 class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 	WINDOWS_DEFAULT_PATHS = {
-		'global': {
-			'log_dir': 'c:\\opsi.org\\log',
-			'state_file': 'c:\\opsi.org\\opsiclientd\\state.json',
-			'timeline_db': 'c:\\opsi.org\\opsiclientd\\timeline.sqlite',
-			'server_cert_dir': 'c:\\opsi.org\\tls'
+		"global": {
+			"tmp_dir": "c:\\opsi.org\\tmp",
+			"log_dir": "c:\\opsi.org\\log",
+			"state_file": "c:\\opsi.org\\opsiclientd\\state.json",
+			"timeline_db": "c:\\opsi.org\\opsiclientd\\timeline.sqlite",
+			"server_cert_dir": "c:\\opsi.org\\tls"
 		},
-		'cache_service': {
-			'storage_dir': 'c:\\opsi.org\\cache',
+		"cache_service": {
+			"storage_dir": "c:\\opsi.org\\cache",
 		},
 	}
 
 	LINUX_DEFAULT_PATHS = {
-		'global': {
-			'log_dir': "/var/log/opsi",
-			'config_file': "/etc/opsi-client-agent/opsiclientd.conf",
-			'state_file': "/var/lib/opsi-client-agent/opsiclientd/state.json",
-			'timeline_db': "/var/lib/opsi-client-agent/opsiclientd/timeline.sqlite",
-			'server_cert_dir': "/etc/opsi-client-agent/tls"
+		"global": {
+			"tmp_dir": "/tmp",
+			"log_dir": "/var/log/opsi",
+			"config_file": "/etc/opsi-client-agent/opsiclientd.conf",
+			"state_file": "/var/lib/opsi-client-agent/opsiclientd/state.json",
+			"timeline_db": "/var/lib/opsi-client-agent/opsiclientd/timeline.sqlite",
+			"server_cert_dir": "/etc/opsi-client-agent/tls"
 		},
-		'control_server': {
-			'ssl_server_key_file': "/etc/opsi-client-agent/opsiclientd.pem",
-			'ssl_server_cert_file': "/etc/opsi-client-agent/opsiclientd.pem",
-			'static_dir': "/usr/share/opsi-client-agent/opsiclientd/static_html"
+		"control_server": {
+			"ssl_server_key_file": "/etc/opsi-client-agent/opsiclientd.pem",
+			"ssl_server_cert_file": "/etc/opsi-client-agent/opsiclientd.pem",
+			"static_dir": "/usr/share/opsi-client-agent/opsiclientd/static_html"
 		},
-		'cache_service': {
-			'storage_dir': "/var/cache/opsi-client-agent"
+		"cache_service": {
+			"storage_dir": "/var/cache/opsi-client-agent"
 		},
-		'depot_server': {
-			'drive': "/media/opsi_depot"
+		"depot_server": {
+			"drive": "/media/opsi_depot"
 		}
 	}
 
 	MACOS_DEFAULT_PATHS = {
-		'global': {
-			'log_dir': "/var/log/opsi",
-			'config_file': "/etc/opsi-client-agent/opsiclientd.conf",
-			'state_file': "/var/lib/opsi-client-agent/opsiclientd/state.json",
-			'timeline_db': "/var/lib/opsi-client-agent/opsiclientd/timeline.sqlite",
-			'server_cert_dir': "/etc/opsi-client-agent/tls"
+		"global": {
+			"tmp_dir": "/tmp",
+			"log_dir": "/var/log/opsi",
+			"config_file": "/etc/opsi-client-agent/opsiclientd.conf",
+			"state_file": "/var/lib/opsi-client-agent/opsiclientd/state.json",
+			"timeline_db": "/var/lib/opsi-client-agent/opsiclientd/timeline.sqlite",
+			"server_cert_dir": "/etc/opsi-client-agent/tls"
 		},
-		'control_server': {
-			'ssl_server_key_file': "/etc/opsi-client-agent/opsiclientd.pem",
-			'ssl_server_cert_file': "/etc/opsi-client-agent/opsiclientd.pem",
-			'static_dir': "/usr/local/share/opsi-client-agent/opsiclientd/static_html"
+		"control_server": {
+			"ssl_server_key_file": "/etc/opsi-client-agent/opsiclientd.pem",
+			"ssl_server_cert_file": "/etc/opsi-client-agent/opsiclientd.pem",
+			"static_dir": "/usr/local/share/opsi-client-agent/opsiclientd/static_html"
 		},
-		'cache_service': {
-			'storage_dir': "/var/cache/opsi-client-agent"
+		"cache_service": {
+			"storage_dir": "/var/cache/opsi-client-agent"
 		},
-		'depot_server': {
-			'drive': "/private/var/opsisetupadmin/opsi_depot"
+		"depot_server": {
+			"drive": "/private/var/opsisetupadmin/opsi_depot"
 		}
 	}
 
@@ -138,79 +141,79 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		self.disabledEventTypes = []
 
 		self._config = {
-			'system': {
-				'program_files_dir': '',
+			"system": {
+				"program_files_dir": "",
 			},
-			'global': {
-				'base_dir': baseDir,
-				'config_file': os.path.join(baseDir, "opsiclientd", "opsiclientd.conf"),
-				'log_file': "opsiclientd.log",
-				'log_level': LOG_NOTICE,
-				'host_id': System.getFQDN().lower(),
-				'opsi_host_key': '',
-				'wait_for_gui_timeout': 120,
-				'block_login_notifier': '',
-				'verify_server_cert': False,
-				'verify_server_cert_by_ca': False,
-				'trust_uib_opsi_ca': True,
-				'install_opsi_ca_into_os_store': False,
-				'proxy_url': '',
-				'suspend_bitlocker_on_reboot': False,
-				'ip_version': 'auto'
+			"global": {
+				"base_dir": baseDir,
+				"config_file": os.path.join(baseDir, "opsiclientd", "opsiclientd.conf"),
+				"log_file": "opsiclientd.log",
+				"log_level": LOG_NOTICE,
+				"host_id": System.getFQDN().lower(),
+				"opsi_host_key": "",
+				"wait_for_gui_timeout": 120,
+				"block_login_notifier": "",
+				"verify_server_cert": False,
+				"verify_server_cert_by_ca": False,
+				"trust_uib_opsi_ca": True,
+				"install_opsi_ca_into_os_store": False,
+				"proxy_url": "",
+				"suspend_bitlocker_on_reboot": False,
+				"ip_version": "auto"
 			},
-			'config_service': {
-				'url': [],
-				'compression': True,
-				'connection_timeout': 10,
-				'user_cancelable_after': 0,
-				'sync_time_from_service': False
+			"config_service": {
+				"url": [],
+				"compression": True,
+				"connection_timeout": 10,
+				"user_cancelable_after": 0,
+				"sync_time_from_service": False
 			},
-			'depot_server': {
+			"depot_server": {
 				# The id of the depot the client is assigned to
-				'master_depot_id': '',
+				"master_depot_id": "",
 				# The id of the depot currently set as (dynamic) depot
-				'depot_id': '',
-				'url': '',
-				'drive': '',
-				'username': 'pcpatch',
+				"depot_id": "",
+				"url": "",
+				"drive": "",
+				"username": "pcpatch",
 			},
-			'cache_service': {
-				'product_cache_max_size': 6000000000,
-				'extension_config_dir': '',
-				'include_product_group_ids': [],
-				'exclude_product_group_ids': []
+			"cache_service": {
+				"product_cache_max_size": 6000000000,
+				"extension_config_dir": "",
+				"include_product_group_ids": [],
+				"exclude_product_group_ids": []
 			},
-			'control_server': {
-				'interface': '0.0.0.0',
-				'port': 4441,
-				'ssl_server_key_file': os.path.join(baseDir, "opsiclientd", "opsiclientd.pem"),
-				'ssl_server_cert_file': os.path.join(baseDir, "opsiclientd", "opsiclientd.pem"),
-				'static_dir': os.path.join(baseDir, "opsiclientd", "static_html"),
-				'max_authentication_failures': 5,
-				'kiosk_api_active': True,
-				'process_actions_event': 'auto'
+			"control_server": {
+				"interface": "0.0.0.0",
+				"port": 4441,
+				"ssl_server_key_file": os.path.join(baseDir, "opsiclientd", "opsiclientd.pem"),
+				"ssl_server_cert_file": os.path.join(baseDir, "opsiclientd", "opsiclientd.pem"),
+				"static_dir": os.path.join(baseDir, "opsiclientd", "static_html"),
+				"max_authentication_failures": 5,
+				"kiosk_api_active": True,
+				"process_actions_event": "auto"
 			},
-			'notification_server': {
-				'interface': '127.0.0.1',
-				'start_port': 44000,
-				'popup_port': 45000,
+			"notification_server": {
+				"interface": "127.0.0.1",
+				"start_port": 44000,
+				"popup_port": 45000,
 			},
-			'opsiclientd_rpc': {
-				'command': '',
+			"opsiclientd_rpc": {
+				"command": "",
 			},
-			'opsiclientd_notifier': {
-				'command': '',
+			"opsiclientd_notifier": {
+				"command": "",
 			},
-			'action_processor': {
-				'local_dir': '',
-				'remote_dir': '',
-				'remote_common_dir' : '',
-				'filename': '',
-				'command': '',
-				'run_as_user': 'SYSTEM',
-				'create_user': True,
-				'delete_user': True,
-				'create_environment': False,
+			"action_processor": {
+				"local_dir": "",
+				"remote_dir": "",
+				"remote_common_dir" : "",
+				"filename": "",
+				"command": "",
+				"run_as_user": "SYSTEM",
+				"create_user": True,
+				"delete_user": True,
+				"create_environment": False,
 			}
 		}
 
