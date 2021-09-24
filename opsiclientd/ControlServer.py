@@ -1368,7 +1368,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				file.write(command + "\r\n")
 				file.write(f"Remove-Item -Path {ps_file} -Force\r\n")
 
-			self.runAsOpsiSetupUser(command=f"PowerShell.exe -ExecutionPolicy Bypass -WindowStyle hidden {ps_file}", admin=admin)
+			self.runAsOpsiSetupUser(command=f"powershell.exe -ExecutionPolicy Bypass -WindowStyle hidden -File {ps_file}", admin=admin)
 		finally:
 			serviceConnection.disconnectConfigService()
 
