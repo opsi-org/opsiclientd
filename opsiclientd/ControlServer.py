@@ -1363,16 +1363,16 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				f' "false"'
 			)
 
-			cmd_file = os.path.join(config.get("global", "tmp_dir"), "opsisetupadmin_shell.cmd")
-			with codecs.open(cmd_file, "w", "windows-1252") as file:
+			ps_file = os.path.join(config.get("global", "tmp_dir"), "opsisetupadmin_shell.ps1")
+			with codecs.open(ps_file, "w", "windows-1252") as file:
 				file.write(command + "\r\n")
-				file.write(f"del /f /q {cmd_file}\r\n")
+				file.write(f"Remove-Item -Path {ps_file} -Force\r\n")
 
-			self.runAsOpsiSetupUser(command=f"start /b cmd.exe /c {cmd_file}", admin=admin)
+			self.runAsOpsiSetupUser(command=f"PowerShell.exe -ExecutionPolicy Bypass -WindowStyle hidden {ps_file}", admin=admin)
 		finally:
 			serviceConnection.disconnectConfigService()
 
-	def runAsOpsiSetupUser(self, command="powershell.exe -ExecutionPolicy ByPass", admin=True, recreate_user=False):
+	def runAsOpsiSetupUser(self, command="powershell.exe -ExecutionPolicy Bypass", admin=True, recreate_user=False):
 		try:
 			# https://bugs.python.org/file46988/issue.py
 			if not RUNNING_ON_WINDOWS:
