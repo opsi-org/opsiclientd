@@ -165,12 +165,13 @@ class OpsiclientdNT(Opsiclientd):
 			if keep_profile and keep_profile.lower() == pdir.lower():
 				continue
 			logger.info("Deleting user dir '%s'", pdir)
-			for cmd, exit_codes_success in (
-				(['takeown', '/d', yes, '/r', '/f', pdir], [0, 1]),
-				(['powershell.exe', '-ExecutionPolicy', 'Bypass', '-Command', f'Remove-Item -Recurse -Force "{pdir}"'], [0])
+			for cmd, shell, exit_codes_success in (
+				(['takeown', '/a', '/d', yes, '/r', '/f', pdir], False, [0, 1]),
+				(['del', pdir, "/f", "/s", "/q"], True, [0]),
+				(['rd', pdir, "/s", "/q"], True, [0])
 			):
 				logger.info("Executing: %s", cmd)
-				res = subprocess.run(cmd, capture_output=True, check=False)
+				res = subprocess.run(cmd, shell=shell, capture_output=True, check=False)
 				out = res.stdout.decode(errors="replace") + res.stderr.decode(errors="replace")
 				if res.returncode not in exit_codes_success:
 					logger.warning("Command %s failed with exit code %s: %s", cmd, res.returncode, out)
@@ -197,8 +198,8 @@ class OpsiclientdNT(Opsiclientd):
 				win32security.LookupAccountName(None, user_info["name"])[0]
 			)
 			logger.info("User '%s' exists, sid is '%s'", user_info["name"], user_sid)
-		except Exception: # pylint: disable=broad-except
-			pass
+		except Exception as err: # pylint: disable=broad-except
+			logger.info(err)
 
 		self.cleanup_opsi_setup_user(keep_sid=None if delete_existing else user_sid)
 		if delete_existing:
