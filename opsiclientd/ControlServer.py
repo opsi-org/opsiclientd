@@ -1369,7 +1369,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 					f"'{command}',"
 					f"'3600',"
 					f"'{OPSI_SETUP_USER_NAME}',"
-					f"'',"
+					f"'\"\"',"
 					f"'false'"
 					f")\r\n"
 					f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args\r\n'
