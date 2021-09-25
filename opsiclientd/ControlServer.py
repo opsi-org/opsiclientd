@@ -1318,7 +1318,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 		return self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 
-	def runOpsiScriptAsOpsiSetupUser(self, script: str, product_id: str=None, admin=True, wait_for_ending=True):
+	def runOpsiScriptAsOpsiSetupUser(self, script: str, product_id: str=None, admin=True, wait_for_ending=True):  # pylint: disable=too-many-locals
 		if not RUNNING_ON_WINDOWS:
 			raise NotImplementedError()
 
