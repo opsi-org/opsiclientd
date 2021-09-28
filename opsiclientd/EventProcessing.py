@@ -707,14 +707,13 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		self.setStatusMessage(_("Getting action requests from config service"))
 
 		try:
-			bootmode = ""
+			bootmode = None
 			if RUNNING_ON_WINDOWS:
 				try:
 					bootmode = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\general", "bootmode").upper()
 				except Exception as err: # pylint: disable=broad-except
 					logger.warning("Failed to get bootmode from registry: %s", err)
-			else:
-				bootmode = "BKSTD"
+			bootmode = bootmode or "BKSTD"
 
 			if not self._configService:
 				raise Exception("Not connected to config service")
@@ -1271,6 +1270,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						else:
 							choices.append(_('Shutdown now'))
 						callbacks = [ self.startShutdownCallback ]
+
+						logger.info("Shutdown cancel counter: %s/%s", shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable)
 						if shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable:
 							if self.event.eventConfig.shutdownUserSelectableTime:
 								hour = time.localtime().tm_hour
