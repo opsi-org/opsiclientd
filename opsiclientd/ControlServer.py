@@ -1341,7 +1341,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 
 			command = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
 			if product_id:
-				product_id = f"/productid {product_id} "
+				product_id = f'/productid ""{product_id}"" '
 			else:
 				product_id = ""
 
