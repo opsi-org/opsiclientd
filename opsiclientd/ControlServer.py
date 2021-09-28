@@ -1346,7 +1346,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				product_id = ""
 
 			command = (
-				f'""{command}"" ""{script}"" ""{log_file}"" /servicebatch '
+				f'""{command}"" ""{script}"" ""{log_file}"" /servicebatch {product_id}'
 				f'/opsiservice ""{configServiceUrl}"" '
 				f'/clientid ""{config.get("global", "host_id")}"" '
 				f'/username ""{config.get("global", "host_id")}"" '
