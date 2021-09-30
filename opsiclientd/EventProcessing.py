@@ -1300,7 +1300,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 							desktops = ["winlogon", "default"]
 
 						shutdownNotifierCommand = self.event.eventConfig.shutdownNotifierCommand
-						if self.event.eventConfig.shutdownUserSelectableTime:
+						if self.event.eventConfig.shutdownUserSelectableTime and len(choices) > 1:
 							shutdownNotifierCommand = shutdownNotifierCommand.replace("shutdown.ini", "shutdown_select.ini")
 
 						for desktop in desktops:
