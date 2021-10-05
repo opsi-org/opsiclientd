@@ -60,6 +60,9 @@ build:pyinstaller-linux-x64:
   stage: build
   script:
     - apt -y install curl
+    # Remove the expired letsencrypt root CA used for git
+    - rm /usr/share/ca-certificates/mozilla/DST_Root_CA_X3.crt
+    - update-ca-certificates
     - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3
     - source $HOME/.poetry/env
     #- sed -i s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
