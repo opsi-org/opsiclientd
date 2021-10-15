@@ -514,6 +514,25 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			raise RuntimeError("Cache service not started")
 		return self._cacheService
 
+	def createEventProcessingThread(self, event):
+		eventProcessingThread = EventProcessingThread(self, event)
+		# Always process panic events
+		if not isinstance(event, PanicEvent):
+			for ept in self._eventProcessingThreads:
+				if event.eventConfig.actionType != 'login' and ept.event.eventConfig.actionType != 'login':
+					logger.notice("Already processing an other (non login) event: %s", ept.event.eventConfig.getId())
+					raise ValueError(f"Already processing an other (non login) event: {ept.event.eventConfig.getId()}")
+
+				if event.eventConfig.actionType == 'login' and ept.event.eventConfig.actionType == 'login':
+					if ept.getSessionId() == eventProcessingThread.getSessionId():
+						logger.notice("Already processing login event '%s' in session %s",
+							ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()
+						)
+					raise ValueError(f"Already processing login event '{ept.event.eventConfig.getName()}' "
+						f"in session {eventProcessingThread.getSessionId()}"
+					)
+		return eventProcessingThread
+
 	def processEvent(self, event):
 		logger.notice("Processing event %s", event)
 		eventProcessingThread = None
@@ -530,22 +549,12 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				description=description,
 				category="event_occurrence"
 			)
+			try:
+				eventProcessingThread = self.createEventProcessingThread(event)
+			except ValueError:
+				# skipping execution if event cannot be created
+				return
 
-			eventProcessingThread = EventProcessingThread(self, event)
-
-			# Always process panic events
-			if not isinstance(event, PanicEvent):
-				for ept in self._eventProcessingThreads:
-					if event.eventConfig.actionType != 'login' and ept.event.eventConfig.actionType != 'login':
-						logger.notice("Already processing an other (non login) event: %s", ept.event.eventConfig.getId())
-						return
-
-					if event.eventConfig.actionType == 'login' and ept.event.eventConfig.actionType == 'login':
-						if ept.getSessionId() == eventProcessingThread.getSessionId():
-							logger.notice("Already processing login event '%s' in session %s",
-								ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()
-							)
-							return
 			self.createActionProcessorUser(recreate=False)
 			self._eventProcessingThreads.append(eventProcessingThread)
 
