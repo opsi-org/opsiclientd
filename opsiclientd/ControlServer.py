@@ -1386,6 +1386,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				logger.info("Wait for opsi-script to complete")
 				timeout = 4000
 				while os.path.exists(ps_file):
+					logger.devel("timeout at %s", timeout)
 					time.sleep(1)
 					timeout -= 1
 					if timeout == 0:
@@ -1395,6 +1396,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 					System.logoffSession(session_id)
 			logger.devel("finished runOpsiScriptAsOpsiSetupUser")
 		finally:
+			logger.devel("disconnecting ConfigService")
 			serviceConnection.disconnectConfigService()
 
 	def runAsOpsiSetupUser(self, command="powershell.exe -ExecutionPolicy Bypass", admin=True, recreate_user=False):
