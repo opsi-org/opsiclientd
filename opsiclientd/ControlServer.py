@@ -1322,7 +1322,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		if not RUNNING_ON_WINDOWS:
 			raise NotImplementedError()
 
-		logger.notice("Executing opsi script '%s' as opsisetupuser (product_id=%s)", script, product_id)
+		logger.notice("Executing opsi script '%s' as opsisetupuser (product_id=%s, admin=%s, wait_for_ending=%s)", script, product_id, admin, wait_for_ending)
 
 		depot_path = config.get_depot_path()
 		if not os.path.isabs(script):
@@ -1392,6 +1392,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 					System.logoffSession(session_id)
 		finally:
+			logger.info("Finished runOpsiScriptAsOpsiSetupUser - disconnecting ConfigService")
 			serviceConnection.disconnectConfigService()
 
 	def runAsOpsiSetupUser(self, command="powershell.exe -ExecutionPolicy Bypass", admin=True, recreate_user=False):
