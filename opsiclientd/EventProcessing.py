@@ -101,6 +101,14 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		if self.isLoginEvent:
 			logger.info("Event is user login event")
 
+	def cancelable_sleep(self):
+		if self._is_cancelable and self._should_cancel:
+			raise EventProcessingCanceled()
+		time.sleep(1)
+
+	def is_cancelable(self):
+		return self._is_cancelable
+
 	def cancel(self):
 		if not self._is_cancelable:
 			raise RuntimeError("Event processing currently not cancelable")
@@ -1120,7 +1128,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				self.setStatusMessage(_("Event %s: action processing will start in %s:%s") % (self.event.eventConfig.getName(), minutes, seconds))
 				if endTime - now <= 0:
 					break
-				time.sleep(1)
+				self.cancelable_sleep()
 
 			if self.waitCancelled:
 				timeline.addEvent(
@@ -1337,7 +1345,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								self.setStatusMessage(_("Shutdown in %s:%s") % (minutes, seconds))
 							if (endTime - now) <= 0:
 								break
-							time.sleep(1)
+							self.cancelable_sleep()
 
 						try:
 							if self._notificationServer:
@@ -1368,7 +1376,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								timeline.addEvent(
 									title="Shutdown started by user",
 									description="Shutdown wait time canceled by user",
-									category="user_interactidef processShuton"
+									category="user_interaction"
 								)
 
 
@@ -1409,7 +1417,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 									self._shutdownWarningRepetitionTime
 								)
 								for _second in range(self._shutdownWarningRepetitionTime):
-									time.sleep(1)
+									self.cancelable_sleep()
 								continue
 						break
 				if reboot:
