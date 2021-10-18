@@ -1378,15 +1378,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 					f'Remove-Item -Path "{ps_file}" -Force\r\n'
 				)
 
-			logger.devel("starting %s with wait_for_ending: %s", ps_file, wait_for_ending)
 			self.runAsOpsiSetupUser(command=f"powershell.exe -ExecutionPolicy Bypass -WindowStyle hidden -File {ps_file}", admin=admin)
 
 			if wait_for_ending:
-				logger.devel("starting wait_for_ending")
 				logger.info("Wait for opsi-script to complete")
 				timeout = 4000
 				while os.path.exists(ps_file):
-					logger.devel("timeout at %s", timeout)
 					time.sleep(1)
 					timeout -= 1
 					if timeout == 0:
@@ -1394,9 +1391,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 						break
 				for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 					System.logoffSession(session_id)
-			logger.devel("finished runOpsiScriptAsOpsiSetupUser")
 		finally:
-			logger.devel("disconnecting ConfigService")
+			logger.info("Finished runOpsiScriptAsOpsiSetupUser - disconnecting ConfigService")
 			serviceConnection.disconnectConfigService()
 
 	def runAsOpsiSetupUser(self, command="powershell.exe -ExecutionPolicy Bypass", admin=True, recreate_user=False):
