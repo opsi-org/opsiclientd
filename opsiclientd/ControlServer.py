@@ -1375,7 +1375,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 					f"'false'"
 					f")\r\n"
 					f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args\r\n'
-					#f'Remove-Item -Path "{ps_file}" -Force\r\n'
+					f'Remove-Item -Path "{ps_file}" -Force\r\n'
 				)
 
 			logger.devel("starting %s with wait_for_ending: %s", ps_file, wait_for_ending)
