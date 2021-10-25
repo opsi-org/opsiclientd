@@ -1366,7 +1366,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 					f"'{config.getDepotDrive()}',"
 					f"'{depotServerUsername}',"
 					f"'{depotServerPassword}',"
-					f"'0',"
+					f"'-1',"
 					f"'default',"
 					f"'{command}',"
 					f"'3600',"
