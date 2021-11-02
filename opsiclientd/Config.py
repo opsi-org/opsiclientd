@@ -157,7 +157,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				"verify_server_cert_by_ca": False,
 				"trust_uib_opsi_ca": True,
 				"install_opsi_ca_into_os_store": False,
-				"proxy_url": "",
+				"proxy_url": "system",
 				"suspend_bitlocker_on_reboot": False,
 				"ip_version": "auto"
 			},
