@@ -518,35 +518,35 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		# Always process panic events
 		if isinstance(event, PanicEvent):
 			return True
-		for ept in self._eventProcessingThreads:
-			if event.eventConfig.actionType != 'login' and ept.event.eventConfig.actionType != 'login':
-				if not ept.is_cancelable():
-					logger.notice("Already processing a non-cancelable (and non-login) event: %s", ept.event.eventConfig.getId())
-					raise ValueError(f"Already processing a non-cancelable (and non-login) event: {ept.event.eventConfig.getId()}")
-			if event.eventConfig.actionType == 'login' and ept.event.eventConfig.actionType == 'login':
-				eventProcessingThread = EventProcessingThread(self, event)
-				if ept.getSessionId() == eventProcessingThread.getSessionId():
-					logger.notice("Already processing login event '%s' in session %s",
-						ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()
-					)
-				raise ValueError(f"Already processing login event '{ept.event.eventConfig.getName()}' "
-					f"in session {eventProcessingThread.getSessionId()}"
-				)
-		return True
-
-	def cancelOthersAndWaitUntilReady(self):
 		with self._eventProcessingThreadsLock:
 			for ept in self._eventProcessingThreads:
-				if ept.event.eventConfig.actionType != 'login':
-					#trying to cancel all non-login events - RuntimeError if impossible
-					ept.cancel()
-			for ept in self._eventProcessingThreads:
-				if ept.event.eventConfig.actionType != 'login':
-					waiting_iterations = 0
-					while ept.running:
-						time.sleep(1)
-						if waiting_iterations == 60:
-							raise ValueError("Event didn't stop after 60 seconds - aborting")
+				if event.eventConfig.actionType != 'login' and ept.event.eventConfig.actionType != 'login':
+					if not ept.is_cancelable():
+						logger.notice("Already processing a non-cancelable (and non-login) event: %s", ept.event.eventConfig.getId())
+						raise ValueError(f"Already processing a non-cancelable (and non-login) event: {ept.event.eventConfig.getId()}")
+				if event.eventConfig.actionType == 'login' and ept.event.eventConfig.actionType == 'login':
+					eventProcessingThread = EventProcessingThread(self, event)
+					if ept.getSessionId() == eventProcessingThread.getSessionId():
+						logger.notice("Already processing login event '%s' in session %s",
+							ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()
+						)
+					raise ValueError(f"Already processing login event '{ept.event.eventConfig.getName()}' "
+						f"in session {eventProcessingThread.getSessionId()}"
+					)
+			return True
+
+	def cancelOthersAndWaitUntilReady(self):
+		for ept in self._eventProcessingThreads:
+			if ept.event.eventConfig.actionType != 'login':
+				#trying to cancel all non-login events - RuntimeError if impossible
+				ept.cancel()
+		for ept in self._eventProcessingThreads:
+			if ept.event.eventConfig.actionType != 'login':
+				waiting_iterations = 0
+				while ept.running:
+					time.sleep(1)
+					if waiting_iterations == 60:
+						raise ValueError("Event didn't stop after 60 seconds - aborting")
 
 	def processEvent(self, event):
 		logger.notice("Processing event %s", event)
