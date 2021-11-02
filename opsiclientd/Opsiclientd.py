@@ -535,17 +535,18 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		return True
 
 	def cancelOthersAndWaitUntilReady(self):
-		for ept in self._eventProcessingThreads:
-			if ept.event.eventConfig.actionType != 'login':
-				#trying to cancel all non-login events - RuntimeError if impossible
-				ept.cancel()
-		for ept in self._eventProcessingThreads:
-			if ept.event.eventConfig.actionType != 'login':
-				waiting_iterations = 0
-				while ept.running:
-					time.sleep(1)
-					if waiting_iterations == 60:
-						raise ValueError("Event didn't stop after 60 seconds - aborting")
+		with self._eventProcessingThreadsLock:
+			for ept in self._eventProcessingThreads:
+				if ept.event.eventConfig.actionType != 'login':
+					#trying to cancel all non-login events - RuntimeError if impossible
+					ept.cancel()
+			for ept in self._eventProcessingThreads:
+				if ept.event.eventConfig.actionType != 'login':
+					waiting_iterations = 0
+					while ept.running:
+						time.sleep(1)
+						if waiting_iterations == 60:
+							raise ValueError("Event didn't stop after 60 seconds - aborting")
 
 	def processEvent(self, event):
 		logger.notice("Processing event %s", event)
