@@ -518,22 +518,21 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		# Always process panic events
 		if isinstance(event, PanicEvent):
 			return True
-		with self._eventProcessingThreadsLock:
-			for ept in self._eventProcessingThreads:
-				if event.eventConfig.actionType != 'login' and ept.event.eventConfig.actionType != 'login':
-					if not ept.is_cancelable():
-						logger.notice("Already processing a non-cancelable (and non-login) event: %s", ept.event.eventConfig.getId())
-						raise ValueError(f"Already processing a non-cancelable (and non-login) event: {ept.event.eventConfig.getId()}")
-				if event.eventConfig.actionType == 'login' and ept.event.eventConfig.actionType == 'login':
-					eventProcessingThread = EventProcessingThread(self, event)
-					if ept.getSessionId() == eventProcessingThread.getSessionId():
-						logger.notice("Already processing login event '%s' in session %s",
-							ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()
-						)
-					raise ValueError(f"Already processing login event '{ept.event.eventConfig.getName()}' "
-						f"in session {eventProcessingThread.getSessionId()}"
+		for ept in self._eventProcessingThreads:
+			if event.eventConfig.actionType != 'login' and ept.event.eventConfig.actionType != 'login':
+				if not ept.is_cancelable():
+					logger.notice("Already processing a non-cancelable (and non-login) event: %s", ept.event.eventConfig.getId())
+					raise ValueError(f"Already processing a non-cancelable (and non-login) event: {ept.event.eventConfig.getId()}")
+			if event.eventConfig.actionType == 'login' and ept.event.eventConfig.actionType == 'login':
+				eventProcessingThread = EventProcessingThread(self, event)
+				if ept.getSessionId() == eventProcessingThread.getSessionId():
+					logger.notice("Already processing login event '%s' in session %s",
+						ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()
 					)
-			return True
+				raise ValueError(f"Already processing login event '{ept.event.eventConfig.getName()}' "
+					f"in session {eventProcessingThread.getSessionId()}"
+				)
+		return True
 
 	def cancelOthersAndWaitUntilReady(self):
 		for ept in self._eventProcessingThreads:

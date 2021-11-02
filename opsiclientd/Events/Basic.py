@@ -155,8 +155,13 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 		logger.info("Starting FireEventThread for listeners: %s", self._eventListeners)
 		for listener in self._eventListeners:
 			# Check if event listener can handle the event
-			# raises ValueError if another event is already running
-			listener.canProcessEvent(event)
+			if hasattr(listener, "_eventProcessingThreadsLock"):
+				with listener._eventProcessingThreadsLock:	#pylint: disable=protected-access
+					# prohibit simultanous starting, canceling and checking
+					listener.canProcessEvent(event)
+			else:
+				# raises ValueError if another event is already running
+				listener.canProcessEvent(event)
 			# Create a new thread for each event listener
 			FireEventThread(listener, event).start()
 
