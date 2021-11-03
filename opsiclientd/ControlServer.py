@@ -1491,7 +1491,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 	def getConfigDataFromOpsiclientd(self, get_depot_id=True, get_active_events=True):
 		result = {}
 		if get_depot_id:
-			result["depot_id"] = config.get('depot_server', 'url')
+			result["depot_url"] = config.get('depot_server', 'url')
 
 		if get_active_events:
 			active_events = []
