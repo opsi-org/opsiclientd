@@ -1487,3 +1487,17 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				raise RuntimeError("Neither timer nor on_demand event active")
 
 		self.fireEvent(event)
+
+	def getConfigDataFromOpsiclientd(self, get_depot_id=True, get_active_events=True):
+		result = {}
+		if get_depot_id:
+			result["depot_id"] = config.get('depot_server', 'url')
+
+		if get_active_events:
+			active_events = []
+			for event_config in getEventConfigs().values():
+				if event_config["active"]:
+					active_events.append(event_config["name"])
+
+			result["active_events"] = active_events
+		return result

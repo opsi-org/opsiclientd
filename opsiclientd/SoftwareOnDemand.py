@@ -43,6 +43,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc): # pylint: disable=too-few-public-me
 		"productOnClient_getObjects",
 		"productOnDepot_getObjects",
 		"setProductActionRequestWithDependencies"
+		"getConfigDataFromOpsiclientd"
 	]
 
 	def __init__(self, service, request, resource):
