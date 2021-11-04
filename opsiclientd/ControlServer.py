@@ -1499,5 +1499,5 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				if event_config["active"]:
 					active_events.append(event_config["name"])
 
-			result["active_events"] = active_events
+			result["active_events"] = list(set(active_events))
 		return result
