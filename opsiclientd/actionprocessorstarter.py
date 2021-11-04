@@ -23,6 +23,9 @@ from opsicommon.logging import logger, init_logging, log_context, LOG_NONE
 from opsiclientd import __version__, DEFAULT_STDERR_LOG_FORMAT, DEFAULT_FILE_LOG_FORMAT
 
 def set_status_message(backend, session_id, message):
+	if session_id == "-1":
+		logger.info("Not setting status message")
+		return
 	try:
 		backend.setStatusMessage(session_id, message) # pylint: disable=no-member
 	except Exception as err: # pylint: disable=broad-except

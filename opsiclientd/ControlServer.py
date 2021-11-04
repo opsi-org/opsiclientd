@@ -1322,7 +1322,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		if not RUNNING_ON_WINDOWS:
 			raise NotImplementedError()
 
-		logger.notice("Executing opsi script '%s' as opsisetupuser (product_id=%s)", script, product_id)
+		logger.notice("Executing opsi script '%s' as opsisetupuser (product_id=%s, admin=%s, wait_for_ending=%s)", script, product_id, admin, wait_for_ending)
 
 		depot_path = config.get_depot_path()
 		if not os.path.isabs(script):
@@ -1373,7 +1373,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 					f"'{config.getDepotDrive()}',"
 					f"'{depotServerUsername}',"
 					f"'{depotServerPassword}',"
-					f"'0',"
+					f"'-1',"
 					f"'default',"
 					f"'{command}',"
 					f"'3600',"
@@ -1399,6 +1399,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 					System.logoffSession(session_id)
 		finally:
+			logger.info("Finished runOpsiScriptAsOpsiSetupUser - disconnecting ConfigService")
 			serviceConnection.disconnectConfigService()
 
 	def runAsOpsiSetupUser(self, command="powershell.exe -ExecutionPolicy Bypass", admin=True, recreate_user=False):
@@ -1493,3 +1494,17 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				raise RuntimeError("Neither timer nor on_demand event active")
 
 		self.fireEvent(event)
+
+	def getConfigDataFromOpsiclientd(self, get_depot_id=True, get_active_events=True):
+		result = {}
+		if get_depot_id:
+			result["depot_id"] = config.get('depot_server', 'master_depot_id')
+
+		if get_active_events:
+			active_events = []
+			for event_config in getEventConfigs().values():
+				if event_config["active"]:
+					active_events.append(event_config["name"])
+
+			result["active_events"] = list(set(active_events))
+		return result

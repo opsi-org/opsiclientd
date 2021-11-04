@@ -154,6 +154,9 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 
 		logger.info("Starting FireEventThread for listeners: %s", self._eventListeners)
 		for listener in self._eventListeners:
+			# Check if event listener can handle the event
+			# raises ValueError if another event is already running
+			listener.canProcessEvent(event)
 			# Create a new thread for each event listener
 			FireEventThread(listener, event).start()
 
@@ -223,3 +226,7 @@ class EventListener: # pylint: disable=too-few-public-methods
 
 	def processEvent(self, event): # pylint: disable=unused-argument
 		logger.warning("%s: processEvent() not implemented", self)
+
+	def canProcessEvent(self, event): # pylint: disable=unused-argument
+		logger.warning("%s: canProcessEvent() not implemented", self)
+		raise NotImplementedError(f"{self}: canProcessEvent() not implemented")
