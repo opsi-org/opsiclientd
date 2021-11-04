@@ -1322,7 +1322,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		if not RUNNING_ON_WINDOWS:
 			raise NotImplementedError()
 
-		logger.notice("Executing opsi script '%s' as opsisetupuser (product_id=%s, admin=%s, wait_for_ending=%s)", script, product_id, admin, wait_for_ending)
+		logger.notice(
+			"Executing opsi script '%s' as opsisetupuser (product_id=%s, admin=%s, wait_for_ending=%s)",
+			script, product_id, admin, wait_for_ending
+		)
 
 		depot_path = config.get_depot_path()
 		if not os.path.isabs(script):
@@ -1488,7 +1491,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 
 		self.fireEvent(event)
 
-	def getConfigDataFromOpsiclientd(self, get_depot_id=True, get_active_events=True):
+	def getConfigDataFromOpsiclientd(self, get_depot_id=True, get_active_events=True):  # pylint: disable=no-self-use
 		result = {}
 		if get_depot_id:
 			result["depot_id"] = config.get('depot_server', 'master_depot_id')
