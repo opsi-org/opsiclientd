@@ -1344,12 +1344,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 
 			command = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
 			if product_id:
-				product_id = f'/productid ""{product_id}"" '
+				product_id = f'/productid \\"{product_id}\\" '
 			else:
 				product_id = ""
 
 			command = (
-				f'\\"{command}\\" \\"{script}\\" \\"{log_file}\\" /servicebatch \\"{product_id}\\"'
+				f'\\"{command}\\" \\"{script}\\" \\"{log_file}\\" /servicebatch {product_id}'
 				f'/opsiservice \\"{configServiceUrl}\\" '
 				f'/clientid \\"{config.get("global", "host_id")}\\" '
 				f'/username \\"{config.get("global", "host_id")}\\" '
