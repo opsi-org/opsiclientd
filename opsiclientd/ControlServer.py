@@ -1447,6 +1447,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			logger.error(err, exc_info=True)
 			raise
 
+	def removeOpsiSetupUser(self):
+		self.opsiclientd.cleanup_opsi_setup_user()
+
 	def runOnShutdown(self):
 		on_shutdown_active = False
 		for event_config in getEventConfigs().values():
