@@ -1318,13 +1318,16 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 		return self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 
-	def runOpsiScriptAsOpsiSetupUser(self, script: str, product_id: str=None, admin=True, wait_for_ending=True):  # pylint: disable=too-many-locals
+	def runOpsiScriptAsOpsiSetupUser(self, script: str, product_id: str=None, admin=True, wait_for_ending=True, remove_user=False):  # pylint: disable=too-many-locals
 		if not RUNNING_ON_WINDOWS:
 			raise NotImplementedError()
 
+		if remove_user:
+			wait_for_ending = True
+
 		logger.notice(
-			"Executing opsi script '%s' as opsisetupuser (product_id=%s, admin=%s, wait_for_ending=%s)",
-			script, product_id, admin, wait_for_ending
+			"Executing opsi script '%s' as opsisetupuser (product_id=%s, admin=%s, wait_for_ending=%s, remove_user=%s)",
+			script, product_id, admin, wait_for_ending, remove_user
 		)
 
 		depot_path = config.get_depot_path()
@@ -1394,6 +1397,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 						break
 				for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 					System.logoffSession(session_id)
+
+				if remove_user:
+					self.opsiclientd.cleanup_opsi_setup_user()
 		finally:
 			logger.info("Finished runOpsiScriptAsOpsiSetupUser - disconnecting ConfigService")
 			serviceConnection.disconnectConfigService()
