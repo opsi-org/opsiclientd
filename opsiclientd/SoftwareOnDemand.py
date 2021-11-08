@@ -30,6 +30,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc): # pylint: disable=too-few-public-me
 		"getClientId",
 		"fireEvent_software_on_demand",
 		"processActionRequests",
+		"getConfigDataFromOpsiclientd",
 
 		"backend_setOptions",
 		"configState_getObjects",
@@ -42,8 +43,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc): # pylint: disable=too-few-public-me
 		"productDependency_getObjects",
 		"productOnClient_getObjects",
 		"productOnDepot_getObjects",
-		"setProductActionRequestWithDependencies",
-		"getConfigDataFromOpsiclientd"
+		"setProductActionRequestWithDependencies"
 	]
 
 	def __init__(self, service, request, resource):
@@ -118,7 +118,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc): # pylint: disable=too-few-public-me
 				for eventGenerator in getEventGenerators(generatorClass=SwOnDemandEventGenerator):
 					eventGenerator.createAndFireEvent()
 			elif rpc.method == "getConfigDataFromOpsiclientd":
-				self.service._opsiclientdRpcInterface.getConfigDataFromOpsiclientd() # pylint: disable=protected-access
+				rpc.result = self.service._opsiclientdRpcInterface.getConfigDataFromOpsiclientd() # pylint: disable=protected-access
 			else:
 				deferred.addCallback(self._executeRpc, rpc)
 		deferred.callback(None)
