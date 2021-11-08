@@ -42,7 +42,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc): # pylint: disable=too-few-public-me
 		"productDependency_getObjects",
 		"productOnClient_getObjects",
 		"productOnDepot_getObjects",
-		"setProductActionRequestWithDependencies"
+		"setProductActionRequestWithDependencies",
 		"getConfigDataFromOpsiclientd"
 	]
 
