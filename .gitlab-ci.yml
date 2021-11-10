@@ -45,7 +45,6 @@ test:pylint-pytest:
     - "[ -e coverage.xml ] && rm coverage.xml"
     - poetry lock --no-update
     - poetry install
-    - cat .venv/lib/*/site-packages/opsicommon/ssl/linux.py
     - *run_opsiclientd
     - poetry run pylint --disable=R,C,fixme opsiclientd
     - poetry run pytest -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests

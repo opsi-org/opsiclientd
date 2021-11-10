@@ -773,7 +773,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			hostId=self.get('global', 'host_id')
 		)['password']
 		depotServerPassword = blowfishDecrypt(self.get('global', 'opsi_host_key'), encryptedDepotServerPassword)
-		logger.addConfidentialString(depotServerPassword)
+		secret_filter.add_secrets(depotServerPassword)
 		logger.debug("Using username '%s' for depot connection", depotServerUsername)
 		return (depotServerUsername, depotServerPassword)
 

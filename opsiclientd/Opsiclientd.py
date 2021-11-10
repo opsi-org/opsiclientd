@@ -27,7 +27,7 @@ from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 from OPSI import __version__ as python_opsi_version
 
-from opsicommon.logging import logger, log_context
+from opsicommon.logging import logger, log_context, secret_filter
 from opsicommon.system import ensure_not_already_running
 
 from opsiclientd import __version__, config, check_signature
@@ -274,7 +274,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		logger.notice(f"Creating local user '{run_as_user}'")
 
 		self._actionProcessorUserPassword = '$!?' + str(randomString(16)) + '!/%'
-		logger.addConfidentialString(self._actionProcessorUserPassword)
+		secret_filter.add_secrets(self._actionProcessorUserPassword)
 
 		if System.existsUser(username=run_as_user):
 			System.deleteUser(username=run_as_user)
