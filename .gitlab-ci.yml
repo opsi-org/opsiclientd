@@ -43,6 +43,7 @@ test:pylint-pytest:
     - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3
     - source $HOME/.poetry/env
     - "[ -e coverage.xml ] && rm coverage.xml"
+    - poetry cache clear . --all
     - poetry lock --no-update
     - poetry install
     - *run_opsiclientd
