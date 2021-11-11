@@ -7,8 +7,6 @@
 Non-free parts of opsiclientd.
 """
 
-__fullversion__ = True
-
 import time
 import base64
 from hashlib import md5
@@ -41,7 +39,7 @@ def verify_modules(backend_info, needed_modules=None): # pylint: disable=too-man
 	):
 		raise Exception("Modules file expired")
 
-	publicKey = getPublicKey(
+	public_key = getPublicKey(
 		data=base64.decodebytes(
 			b"AAAAB3NzaC1yc2EAAAADAQABAAABAQCAD/I79Jd0eKwwfuVwh5B2z+S8aV0C5suItJa18RrYip+d4P0ogzqoCfOoVWtDo"
 			b"jY96FDYv+2d73LsoOckHCnuh55GA0mtuVMWdXNZIE8Avt/RzbEoYGo/H0weuga7I8PuQNC/nyS8w3W8TH4pt+ZCjZZoX8"
@@ -63,20 +61,20 @@ def verify_modules(backend_info, needed_modules=None): # pylint: disable=too-man
 			val = modules[module]
 			if isinstance(val, bool):
 				val = "yes" if val else "no"
-		data += "%s = %s\r\n" % (module.lower().strip(), val)
+		data += f"{module.lower().strip()} = {val}\r\n"
 
 	verified = False
 	if modules["signature"].startswith("{"):
 		s_bytes = int(modules['signature'].split("}", 1)[-1]).to_bytes(256, "big")
 		try:
-			pkcs1_15.new(publicKey).verify(MD5.new(data.encode()), s_bytes)
+			pkcs1_15.new(public_key).verify(MD5.new(data.encode()), s_bytes)
 			verified = True
 		except ValueError:
 			# Invalid signature
 			pass
 	else:
 		h_int = int.from_bytes(md5(data.encode()).digest(), "big")
-		s_int = publicKey._encrypt(int(modules["signature"])) # pylint: disable=protected-access
+		s_int = public_key._encrypt(int(modules["signature"])) # pylint: disable=protected-access
 		verified = h_int == s_int
 
 	if not verified:
