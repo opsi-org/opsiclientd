@@ -38,6 +38,7 @@ from twisted.web import server
 from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
 from autobahn.twisted.resource import WebSocketResource
 
+from OPSI import __version__ as python_opsi_version
 from OPSI import System
 from OPSI.Util.Log import truncateLogData
 from OPSI.Exceptions import OpsiAuthenticationError
@@ -50,6 +51,7 @@ from opsicommon.logging import (
 	logger, log_context, secret_filter,
 	OPSI_LEVEL_TO_LEVEL, LEVEL_TO_NAME
 )
+from opsiclientd import __version__
 from opsiclientd.ControlPipe import OpsiclientdRpcPipeInterface
 from opsiclientd.Config import Config, OPSI_SETUP_USER_NAME
 from opsiclientd.Events.Utilities.Generators import getEventGenerator
@@ -1502,6 +1504,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 
 	def getConfigDataFromOpsiclientd(self, get_depot_id=True, get_active_events=True):  # pylint: disable=no-self-use
 		result = {}
+		result["opsiclientd_version"] = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}]"
+
 		if get_depot_id:
 			result["depot_id"] = config.get('depot_server', 'master_depot_id')
 
