@@ -23,7 +23,7 @@ from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 
 from opsicommon.logging import logger, log_context
-from opsicommon.ssl import install_ca, remove_ca, is_in_os_store
+from opsicommon.ssl import install_ca, remove_ca, load_ca
 from opsicommon.client.jsonrpc import JSONRPCClient
 
 from opsiclientd import __version__
@@ -66,7 +66,9 @@ def update_ca_cert(config_service: JSONRPCClient):
 	for ca_cert in ca_certs:
 		try:
 			# do not remove if correct certificate is already there
-			if not config.get('global', 'install_opsi_ca_into_os_store') or not is_in_os_store(ca_cert):
+			present_ca = load_ca(ca_cert.get_subject().CN)
+			if not config.get('global', 'install_opsi_ca_into_os_store') or \
+						(present_ca and present_ca.digest("sha1") == ca_cert.digest("sha1")):
 				if remove_ca(ca_cert.get_subject().CN):
 					logger.info(
 						"CA cert %s successfully removed from system cert store",
