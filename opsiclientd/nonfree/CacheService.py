@@ -744,7 +744,6 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 					verify_modules(self._configService.backend_info(), ['vpn'])
 			except Exception as err:  # pylint: disable=broad-except
 				raise RuntimeError("Cannot cache config: {err}") from err
-			backend_info = self._configService.backend_info()
 
 			try:
 				if self._configService.hostname.lower() not in ("localhost", "127.0.0.1", "::1"):
