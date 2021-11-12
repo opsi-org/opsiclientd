@@ -66,7 +66,7 @@ def update_ca_cert(config_service: JSONRPCClient):
 	for ca_cert in ca_certs:
 		try:
 			# do not remove if correct certificate is already there
-			present_ca = load_ca(ca_cert.get_subject().CN)
+			present_ca = load_ca(subject_name=ca_cert.get_subject().CN, serial_number=ca_cert.get_serial_number())
 			if not config.get('global', 'install_opsi_ca_into_os_store') or \
 						(present_ca and present_ca.digest("sha1") == ca_cert.digest("sha1")):
 				if remove_ca(ca_cert.get_subject().CN):
