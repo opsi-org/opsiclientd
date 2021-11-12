@@ -63,12 +63,16 @@ def update_ca_cert(config_service: JSONRPCClient):
 	except Exception as err: # pylint: disable=broad-except
 		logger.error("Failed to update CA cert: %s", err)
 
-	for ca_cert in ca_certs:
-		try:
+	for index, ca_cert in enumerate(ca_certs):
+		if index == 0:		# Assume opsi CA to be the first certificate
 			# do not remove if correct certificate is already there
 			present_ca = load_ca(ca_cert.get_subject().CN)
-			if not config.get('global', 'install_opsi_ca_into_os_store') or \
-						(present_ca and present_ca.digest("sha1") == ca_cert.digest("sha1")):
+			should_remove = not config.get('global', 'install_opsi_ca_into_os_store') or \
+						(present_ca and present_ca.digest("sha1") == ca_cert.digest("sha1"))
+		else:
+			should_remove = not config.get('global', 'install_opsi_ca_into_os_store')
+		try:
+			if should_remove:
 				if remove_ca(ca_cert.get_subject().CN):
 					logger.info(
 						"CA cert %s successfully removed from system cert store",
@@ -77,15 +81,15 @@ def update_ca_cert(config_service: JSONRPCClient):
 		except Exception as err: # pylint: disable=broad-except
 			logger.error("Failed to remove CA from system cert store: %s", err)
 
-	if ca_certs and config.get('global', 'install_opsi_ca_into_os_store'):
-		try:
-			install_ca(ca_certs[0])
-			logger.info(
-				"CA cert %s successfully installed into system cert store",
-				ca_certs[0].get_subject().CN
-			)
-		except Exception as err: # pylint: disable=broad-except
-			logger.error("Failed to install CA into system cert store: %s", err)
+		if index == 0:		# Assume opsi CA to be the first certificate
+			try:
+				install_ca(ca_cert)
+				logger.info(
+					"CA cert %s successfully installed into system cert store",
+					ca_certs[0].get_subject().CN
+				)
+			except Exception as err: # pylint: disable=broad-except
+				logger.error("Failed to install CA into system cert store: %s", err)
 
 class ServiceConnection:
 	def __init__(self):
