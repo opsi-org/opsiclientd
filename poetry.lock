@@ -1051,18 +1051,6 @@ url = "https://pypi.uib.gmbh/simple"
 reference = "uibpypi"
 
 [[package]]
-name = "pywinpty"
-version = "1.1.2"
-description = "Pseudo terminal support for Windows from Python."
-category = "main"
-optional = false
-python-versions = ">=3.6"
-
-[package.source]
-type = "file"
-url = "pywinpty-1.1.2-cp37-none-win32.whl"
-
-[[package]]
 name = "pyyaml"
 version = "5.4.1"
 description = "YAML parser and emitter for Python"
@@ -1466,7 +1454,7 @@ reference = "uibpypi"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "b89468e2bbc119388b006a7f11d8d718c3804bf4ccb5e2380015d5961ad5b4ab"
+content-hash = "18bff40900b56f9c989b9a37686c76b71e330ab2f5390f04e9c8d807fc8439f4"
 
 [metadata.files]
 altgraph = [
@@ -2035,9 +2023,6 @@ pywin32 = [
 pywin32-ctypes = [
     {file = "pywin32-ctypes-0.2.0.tar.gz", hash = "sha256:24ffc3b341d457d48e8922352130cf2644024a4ff09762a2261fd34c36ee5942"},
     {file = "pywin32_ctypes-0.2.0-py2.py3-none-any.whl", hash = "sha256:9dc2d991b3479cc2df15930958b674a48a227d5361d413827a4cfd0b5876fc98"},
-]
-pywinpty = [
-    {file = "pywinpty-1.1.2-cp37-none-win32.whl", hash = "sha256:cecec1b6be18e1d1b636d21cf249b833d17537f0f51f0caec85cd24466d24194"},
 ]
 pyyaml = [
     {file = "PyYAML-5.4.1-cp27-cp27m-macosx_10_9_x86_64.whl", hash = "sha256:3b2b1824fe7112845700f815ff6a489360226a5609b96ec2190a45e62a9fc922"},

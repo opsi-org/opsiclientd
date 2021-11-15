@@ -37,6 +37,7 @@ from twisted.web.resource import Resource
 from twisted.web import server
 from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
 from autobahn.twisted.resource import WebSocketResource
+from ptyprocess import PtyProcess
 
 from OPSI import __version__ as python_opsi_version
 from OPSI import System
@@ -59,7 +60,7 @@ from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
 from opsiclientd.SoftwareOnDemand import ResourceKioskJsonRpc
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd.SystemCheck import RUNNING_ON_LINUX, RUNNING_ON_MACOS, RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 
 config = Config()
@@ -906,6 +907,9 @@ class TerminalReaderThread(threading.Thread):
 				time.sleep(0.001)
 			except socket.timeout:
 				continue
+			except (IOError, EOFError) as err:
+				logger.debug(err)
+				break
 			except Exception as err:  # pylint: disable=broad-except
 				if not self.should_stop:
 					logger.error("Error in terminal reader thread: %s %s", err.__class__, err, exc_info=True)
@@ -945,24 +949,25 @@ class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd
 			logger.error("No valid session supplied")
 			self.sendClose(code=4401, reason="Unauthorized")
 		else:
-			logger.info("Starting terminal")
-			kwargs = {}
+			shell = "powershell.exe" if RUNNING_ON_WINDOWS else "bash"
+			lines = 30
+			columns = 120
 			if self.request.params.get("lines"):
-				kwargs["lines"] = int(self.request.params["lines"][0])
+				lines = int(self.request.params["lines"][0])
 			if self.request.params.get("columns"):
-				kwargs["columns"] = int(self.request.params["columns"][0])
+				columns = int(self.request.params["columns"][0])
 			if self.request.params.get("shell"):
-				kwargs["shell"] = self.request.params["shell"][0]
+				shell = self.request.params["shell"][0]
 
-			if RUNNING_ON_WINDOWS:
-				from opsiclientd.windows import start_pty  # pylint: disable=import-outside-toplevel
-			else:
-				from opsiclientd.posix import start_pty  # pylint: disable=import-outside-toplevel
-			ret = start_pty(**kwargs)
-			if ret:
-				(self.child_read, self.child_write, self.child_stop) = ret  # pylint: disable=attribute-defined-outside-init
-				self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init
-				self.terminal_reader_thread.start()
+			sp_env = System.get_subprocess_environment()
+			if RUNNING_ON_LINUX or RUNNING_ON_MACOS:
+				sp_env.update({"TERM": "xterm-256color"})
+
+			logger.notice("Starting terminal shell=%s, dimensions=(%d,%d)", shell, lines, columns)
+			proc = PtyProcess.spawn([shell], dimensions=(lines, columns), env=sp_env)
+			(self.child_read, self.child_write, self.child_stop) = (proc.read, proc.write, proc.terminate)  # pylint: disable=attribute-defined-outside-init
+			self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init
+			self.terminal_reader_thread.start()
 
 	def onMessage(self, payload, isBinary):
 		#logger.debug("onMessage: %s - %s", isBinary, payload)
@@ -1320,7 +1325,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 		return self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 
-	def runOpsiScriptAsOpsiSetupUser(self, script: str, product_id: str=None, admin=True, wait_for_ending=True, remove_user=False):  # pylint: disable=too-many-locals
+	def runOpsiScriptAsOpsiSetupUser(self, script: str, product_id: str=None, admin=True, wait_for_ending=True, remove_user=False):  # pylint: disable=too-many-locals,too-many-arguments
 		if not RUNNING_ON_WINDOWS:
 			raise NotImplementedError()
 
