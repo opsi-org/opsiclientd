@@ -47,12 +47,6 @@ from opsiclientd.State import State
 from opsiclientd.Timeline import Timeline
 from opsiclientd.setup import setup
 
-try:
-	from opsiclientd.nonfree import __fullversion__
-except ImportError:
-	__fullversion__ = False
-
-
 timeline = Timeline()
 state = State()
 
@@ -443,9 +437,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		try:
 			parent = psutil.Process(os.getpid()).parent()
 			parent_name = parent.name() if parent else None
-			event_title = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}]" \
-				f" ({'full' if __fullversion__ else 'open'})" \
-				f" running on {platform.system()}"
+			event_title = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}] running on {platform.system()}"
 			logger.essential(event_title)
 			event_description = f"Parent process: {parent_name}\n"
 			logger.essential(f"Parent process: {parent_name}")

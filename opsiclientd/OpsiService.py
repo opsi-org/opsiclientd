@@ -30,7 +30,7 @@ from opsiclientd import __version__
 from opsiclientd.Config import Config, UIB_OPSI_CA
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
-from opsiclientd.nonfree import verify_modules
+
 
 config = Config()
 
@@ -228,13 +228,6 @@ class ServiceConnection:
 						config.updateConfigFile()
 					except Exception as err: # pylint: disable=broad-except
 						logger.warning(err)
-
-				if urlIndex > 0:
-					backend_info = serviceConnectionThread.configService.backend_info()
-					try:
-						verify_modules(backend_info, ['scalability1'])
-					except RuntimeError as err:
-						self.connectionFailed(err)
 
 				self._configService = serviceConnectionThread.configService
 				self.connectionEstablished()

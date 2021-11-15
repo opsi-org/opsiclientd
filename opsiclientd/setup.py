@@ -94,7 +94,8 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 		jsonrpc_client = JSONRPCClient(
 			address=config.get('config_service', 'url')[0],
 			username=config.get('global', 'host_id'),
-			password=config.get('global', 'opsi_host_key')
+			password=config.get('global', 'opsi_host_key'),
+			proxy_url=config.get('global', 'proxy_url')
 		)
 		try:
 			pem = jsonrpc_client.host_getTLSCertificate(server_cn)  # pylint: disable=no-member

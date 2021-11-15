@@ -37,7 +37,9 @@ from twisted.web.resource import Resource
 from twisted.web import server
 from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
 from autobahn.twisted.resource import WebSocketResource
+from ptyprocess import PtyProcess
 
+from OPSI import __version__ as python_opsi_version
 from OPSI import System
 from OPSI.Util.Log import truncateLogData
 from OPSI.Exceptions import OpsiAuthenticationError
@@ -50,6 +52,7 @@ from opsicommon.logging import (
 	logger, log_context, secret_filter,
 	OPSI_LEVEL_TO_LEVEL, LEVEL_TO_NAME
 )
+from opsiclientd import __version__
 from opsiclientd.ControlPipe import OpsiclientdRpcPipeInterface
 from opsiclientd.Config import Config, OPSI_SETUP_USER_NAME
 from opsiclientd.Events.Utilities.Generators import getEventGenerator
@@ -57,7 +60,7 @@ from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
 from opsiclientd.SoftwareOnDemand import ResourceKioskJsonRpc
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd.SystemCheck import RUNNING_ON_LINUX, RUNNING_ON_MACOS, RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 
 config = Config()
@@ -904,6 +907,9 @@ class TerminalReaderThread(threading.Thread):
 				time.sleep(0.001)
 			except socket.timeout:
 				continue
+			except (IOError, EOFError) as err:
+				logger.debug(err)
+				break
 			except Exception as err:  # pylint: disable=broad-except
 				if not self.should_stop:
 					logger.error("Error in terminal reader thread: %s %s", err.__class__, err, exc_info=True)
@@ -943,24 +949,25 @@ class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd
 			logger.error("No valid session supplied")
 			self.sendClose(code=4401, reason="Unauthorized")
 		else:
-			logger.info("Starting terminal")
-			kwargs = {}
+			shell = "powershell.exe" if RUNNING_ON_WINDOWS else "bash"
+			lines = 30
+			columns = 120
 			if self.request.params.get("lines"):
-				kwargs["lines"] = int(self.request.params["lines"][0])
+				lines = int(self.request.params["lines"][0])
 			if self.request.params.get("columns"):
-				kwargs["columns"] = int(self.request.params["columns"][0])
+				columns = int(self.request.params["columns"][0])
 			if self.request.params.get("shell"):
-				kwargs["shell"] = self.request.params["shell"][0]
+				shell = self.request.params["shell"][0]
 
-			if RUNNING_ON_WINDOWS:
-				from opsiclientd.windows import start_pty  # pylint: disable=import-outside-toplevel
-			else:
-				from opsiclientd.posix import start_pty  # pylint: disable=import-outside-toplevel
-			ret = start_pty(**kwargs)
-			if ret:
-				(self.child_read, self.child_write, self.child_stop) = ret  # pylint: disable=attribute-defined-outside-init
-				self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init
-				self.terminal_reader_thread.start()
+			sp_env = System.get_subprocess_environment()
+			if RUNNING_ON_LINUX or RUNNING_ON_MACOS:
+				sp_env.update({"TERM": "xterm-256color"})
+
+			logger.notice("Starting terminal shell=%s, dimensions=(%d,%d)", shell, lines, columns)
+			proc = PtyProcess.spawn([shell], dimensions=(lines, columns), env=sp_env)
+			(self.child_read, self.child_write, self.child_stop) = (proc.read, proc.write, proc.terminate)  # pylint: disable=attribute-defined-outside-init
+			self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init
+			self.terminal_reader_thread.start()
 
 	def onMessage(self, payload, isBinary):
 		#logger.debug("onMessage: %s - %s", isBinary, payload)
@@ -1318,11 +1325,17 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 		return self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 
-	def runOpsiScriptAsOpsiSetupUser(self, script: str, product_id: str=None, admin=True, wait_for_ending=True):  # pylint: disable=too-many-locals
+	def runOpsiScriptAsOpsiSetupUser(self, script: str, product_id: str=None, admin=True, wait_for_ending=True, remove_user=False):  # pylint: disable=too-many-locals,too-many-arguments
 		if not RUNNING_ON_WINDOWS:
 			raise NotImplementedError()
 
-		logger.notice("Executing opsi script '%s' as opsisetupuser (product_id=%s, admin=%s, wait_for_ending=%s)", script, product_id, admin, wait_for_ending)
+		if remove_user:
+			wait_for_ending = True
+
+		logger.notice(
+			"Executing opsi script '%s' as opsisetupuser (product_id=%s, admin=%s, wait_for_ending=%s, remove_user=%s)",
+			script, product_id, admin, wait_for_ending, remove_user
+		)
 
 		depot_path = config.get_depot_path()
 		if not os.path.isabs(script):
@@ -1341,16 +1354,16 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 
 			command = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
 			if product_id:
-				product_id = f'/productid ""{product_id}"" '
+				product_id = f'/productid \\"{product_id}\\" '
 			else:
 				product_id = ""
 
 			command = (
-				f'""{command}"" ""{script}"" ""{log_file}"" /servicebatch {product_id}'
-				f'/opsiservice ""{configServiceUrl}"" '
-				f'/clientid ""{config.get("global", "host_id")}"" '
-				f'/username ""{config.get("global", "host_id")}"" '
-				f'/password ""{config.get("global", "opsi_host_key")}""'
+				f'\\"{command}\\" \\"{script}\\" \\"{log_file}\\" /servicebatch {product_id}'
+				f'/opsiservice \\"{configServiceUrl}\\" '
+				f'/clientid \\"{config.get("global", "host_id")}\\" '
+				f'/username \\"{config.get("global", "host_id")}\\" '
+				f'/password \\"{config.get("global", "opsi_host_key")}\\"'
 			)
 
 			ps_file = os.path.join(config.get("global", "tmp_dir"), "opsisetupadmin_shell.ps1")
@@ -1366,7 +1379,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 					f"'{config.getDepotDrive()}',"
 					f"'{depotServerUsername}',"
 					f"'{depotServerPassword}',"
-					f"'0',"
+					f"'-1',"
 					f"'default',"
 					f"'{command}',"
 					f"'3600',"
@@ -1391,6 +1404,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 						break
 				for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 					System.logoffSession(session_id)
+
+				if remove_user:
+					self.opsiclientd.cleanup_opsi_setup_user()
 		finally:
 			logger.info("Finished runOpsiScriptAsOpsiSetupUser - disconnecting ConfigService")
 			serviceConnection.disconnectConfigService()
@@ -1444,6 +1460,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			logger.error(err, exc_info=True)
 			raise
 
+	def removeOpsiSetupUser(self):
+		self.opsiclientd.cleanup_opsi_setup_user()
+
 	def runOnShutdown(self):
 		on_shutdown_active = False
 		for event_config in getEventConfigs().values():
@@ -1487,3 +1506,19 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				raise RuntimeError("Neither timer nor on_demand event active")
 
 		self.fireEvent(event)
+
+	def getConfigDataFromOpsiclientd(self, get_depot_id=True, get_active_events=True):  # pylint: disable=no-self-use
+		result = {}
+		result["opsiclientd_version"] = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}]"
+
+		if get_depot_id:
+			result["depot_id"] = config.get('depot_server', 'master_depot_id')
+
+		if get_active_events:
+			active_events = []
+			for event_config in getEventConfigs().values():
+				if event_config["active"]:
+					active_events.append(event_config["name"])
+
+			result["active_events"] = list(set(active_events))
+		return result
