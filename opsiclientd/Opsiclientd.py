@@ -542,7 +542,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 						break
 					time.sleep(1)
 				if ept.running:
-					raise ValueError("Event didn't stop after %s seconds - aborting", WAIT_SECONDS)
+					raise ValueError(f"Event didn't stop after {WAIT_SECONDS} seconds - aborting")
 
 	def processEvent(self, event):
 		logger.notice("Processing event %s", event)

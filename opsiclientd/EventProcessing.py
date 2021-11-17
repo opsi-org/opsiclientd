@@ -63,15 +63,14 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 		self.opsiclientd = opsiclientd
 
-		# No locking in constructor - it is intended to be run within lock section
-		self._is_cancelable = False
-		self._should_cancel = False
-
 		self.event = event
 
 		self.running = False
 		self.actionCancelled = False
 		self.waitCancelled = False
+		self._is_cancelable = False
+		self._should_cancel = False
+
 		self.shutdownCancelled = False
 		self.shutdownWaitCancelled = False
 
@@ -837,7 +836,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			self.setStatusMessage(_("Failed to process product action requests: %s") % str(err))
 			timeline.addEvent(
 				title="Failed to process product action requests",
-				description=f"Failed to process product action requests ({threading.get_ident()}): {err}",
+				description=f"Failed to process product action requests ({self.name}): {err}",
 				category="error",
 				isError=True
 			)
@@ -1549,7 +1548,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				)
 				timelineEventId = timeline.addEvent(
 					title=f"Processing event {self.event.eventConfig.getName()}",
-					description=f"EventProcessingThread for occurrcence of event '{self.event.eventConfig.getId()}' ({threading.get_ident()}) started",
+					description=f"EventProcessingThread for occurrcence of event '{self.event.eventConfig.getId()}' ({self.name}) started",
 					category="event_processing",
 					durationEvent=True
 				)
@@ -1712,7 +1711,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				logger.notice("Processing of event %s canceled", self.event)
 				timeline.addEvent(
 					title=f"Processing of event {self.event.eventConfig.getName()} canceled",
-					description=f"Processing of event {self.event} ({threading.get_ident()}) canceled",
+					description=f"Processing of event {self.event} ({self.name}) canceled",
 					category="event_processing",
 					isError=True
 				)
@@ -1720,7 +1719,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				logger.error("Failed to process event %s: %s", self.event, err, exc_info=True)
 				timeline.addEvent(
 					title=f"Failed to process event {self.event.eventConfig.getName()}",
-					description=f"Failed to process event {self.event} ({threading.get_ident()}): {err}",
+					description=f"Failed to process event {self.event} ({self.name}): {err}",
 					category="event_processing",
 					isError=True
 				)
