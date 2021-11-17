@@ -62,6 +62,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		ServiceConnection.__init__(self)
 
 		self.opsiclientd = opsiclientd
+
+		# No locking in constructor - it is intended to be run within lock section
+		self._is_cancelable = False
+		self._should_cancel = False
+
 		self.event = event
 
 		self.running = False
@@ -69,11 +74,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		self.waitCancelled = False
 		self.shutdownCancelled = False
 		self.shutdownWaitCancelled = False
-
-		self._cancelable_lock = threading.Lock()
-		with self._cancelable_lock:
-			self._is_cancelable = False
-			self._should_cancel = False
 
 		self._serviceConnection = None
 
@@ -106,32 +106,44 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 	def _cancelable_sleep(self, secs: int):
 		for _ in range(secs):
-			with self._cancelable_lock:
-				if self._is_cancelable and self._should_cancel:
-					raise EventProcessingCanceled()
+			#with self.opsiclientd.eventLock:		#TODO another thread calls cancel, this thread waits for lock in set_not_cancelable -> problem if lock here
+			if self._is_cancelable and self._should_cancel:
+				raise EventProcessingCanceled()
 			time.sleep(1)
 
 	def is_cancelable(self):
-		with self._cancelable_lock:
-			return self._is_cancelable
+		#with self.opsiclientd.eventLock:			#TODO another thread calls cancel, this thread waits for lock to check if it is cancelable -> problem if lock here
+		return self._is_cancelable
 
 	def _set_cancelable(self):
-		with self._cancelable_lock:
+		with self.opsiclientd.eventLock:
 			self._is_cancelable = True
+			if self._should_cancel:
+				raise EventProcessingCanceled()
 
 	def _set_not_cancelable(self):
-		with self._cancelable_lock:
+		while not self.opsiclientd.eventLock.acquire():
+			self._cancelable_sleep(1)
+		try:
 			self._is_cancelable = False
+		finally:
+			self.opsiclientd.eventLock.release()
 
 	def should_cancel(self):
-		with self._cancelable_lock:
-			return self._should_cancel
+		#with self.opsiclientd.eventLock:			#TODO another thread calls cancel, this thread waits for lock to check if it should -> problem if lock here
+		return self._should_cancel
 
-	def cancel(self):
-		with self._cancelable_lock:
+	# use no_lock only if you have already acquired the lock
+	def cancel(self, no_lock=False):
+		if no_lock:
 			if not self._is_cancelable:
 				raise RuntimeError("Event processing currently not cancelable")
 			self._should_cancel = True
+		else:
+			with self.opsiclientd.eventLock:
+				if not self._is_cancelable:
+					raise RuntimeError("Event processing currently not cancelable")
+				self._should_cancel = True
 
 	# ServiceConnection
 	def connectionThreadOptions(self):
@@ -825,7 +837,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			self.setStatusMessage(_("Failed to process product action requests: %s") % str(err))
 			timeline.addEvent(
 				title="Failed to process product action requests",
-				description=f"Failed to process product action requests: {err}",
+				description=f"Failed to process product action requests ({threading.get_ident()}): {err}",
 				category="error",
 				isError=True
 			)
@@ -1537,7 +1549,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				)
 				timelineEventId = timeline.addEvent(
 					title=f"Processing event {self.event.eventConfig.getName()}",
-					description=f"EventProcessingThread for occurrcence of event '{self.event.eventConfig.getId()}' started",
+					description=f"EventProcessingThread for occurrcence of event '{self.event.eventConfig.getId()}' ({threading.get_ident()}) started",
 					category="event_processing",
 					durationEvent=True
 				)
@@ -1644,61 +1656,63 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					except Exception as err: # pylint: disable=broad-except
 						logger.error(err, exc_info=True)
 
-					config.setTemporaryConfigServiceUrls([])
+					# if cancelled, skip further execution
+					if not self.should_cancel():
+						config.setTemporaryConfigServiceUrls([])
 
-					if self.event.eventConfig.postEventCommand:
-						logger.notice("Running post event command '%s'",
-							self.event.eventConfig.postEventCommand
-						)
-						encoding = "cp850" if RUNNING_ON_WINDOWS else "utf-8"
-						try:
-							output = subprocess.check_output(
-								self.event.eventConfig.postEventCommand,
-								shell=True,
-								stderr=subprocess.STDOUT
+						if self.event.eventConfig.postEventCommand:
+							logger.notice("Running post event command '%s'",
+								self.event.eventConfig.postEventCommand
 							)
-							logger.info("Post event command '%s' output: %s",
-								self.event.eventConfig.postEventCommand,
-								output.decode(encoding, errors="replace")
-							)
-						except subprocess.CalledProcessError as err:
-							logger.error("Post event command '%s' returned exit code %s: %s",
-								self.event.eventConfig.postEventCommand,
-								err.returncode,
-								err.output.decode(encoding, errors="replace")
-							)
+							encoding = "cp850" if RUNNING_ON_WINDOWS else "utf-8"
+							try:
+								output = subprocess.check_output(
+									self.event.eventConfig.postEventCommand,
+									shell=True,
+									stderr=subprocess.STDOUT
+								)
+								logger.info("Post event command '%s' output: %s",
+									self.event.eventConfig.postEventCommand,
+									output.decode(encoding, errors="replace")
+								)
+							except subprocess.CalledProcessError as err:
+								logger.error("Post event command '%s' returned exit code %s: %s",
+									self.event.eventConfig.postEventCommand,
+									err.returncode,
+									err.output.decode(encoding, errors="replace")
+								)
 
-					self._set_cancelable()
-					self.processShutdownRequests()
-					self._set_not_cancelable()
+						self._set_cancelable()
+						self.processShutdownRequests()
+						self._set_not_cancelable()
 
-					if self.opsiclientd.isShutdownTriggered():
-						self.setStatusMessage(_("Shutting down machine"))
-					elif self.opsiclientd.isRebootTriggered():
-						self.setStatusMessage(_("Rebooting machine"))
-					else:
-						self.setStatusMessage(_("Unblocking login"))
+						if self.opsiclientd.isShutdownTriggered():
+							self.setStatusMessage(_("Shutting down machine"))
+						elif self.opsiclientd.isRebootTriggered():
+							self.setStatusMessage(_("Rebooting machine"))
+						else:
+							self.setStatusMessage(_("Unblocking login"))
 
-					if self.opsiclientd.isRebootTriggered() or self.opsiclientd.isShutdownTriggered():
-						if os.path.exists(config.restart_marker):
-							os.remove(config.restart_marker)
-					else:
-						self.opsiclientd.setBlockLogin(False)
+						if self.opsiclientd.isRebootTriggered() or self.opsiclientd.isShutdownTriggered():
+							if os.path.exists(config.restart_marker):
+								os.remove(config.restart_marker)
+						else:
+							self.opsiclientd.setBlockLogin(False)
 
-					self.setStatusMessage("")
-					self.stopNotificationServer()
-					if notifierPids:
-						try:
-							time.sleep(3)
-							for notifierPid in notifierPids:
-								System.terminateProcess(processId=notifierPid)
-						except Exception: # pylint: disable=broad-except
-							pass
+						self.setStatusMessage("")
+						self.stopNotificationServer()
+						if notifierPids:
+							try:
+								time.sleep(3)
+								for notifierPid in notifierPids:
+									System.terminateProcess(processId=notifierPid)
+							except Exception: # pylint: disable=broad-except
+								pass
 			except EventProcessingCanceled as err:
 				logger.notice("Processing of event %s canceled", self.event)
 				timeline.addEvent(
 					title=f"Processing of event {self.event.eventConfig.getName()} canceled",
-					description=f"Processing of event {self.event} canceled",
+					description=f"Processing of event {self.event} ({threading.get_ident()}) canceled",
 					category="event_processing",
 					isError=True
 				)
@@ -1706,7 +1720,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				logger.error("Failed to process event %s: %s", self.event, err, exc_info=True)
 				timeline.addEvent(
 					title=f"Failed to process event {self.event.eventConfig.getName()}",
-					description=f"Failed to process event {self.event}: {err}",
+					description=f"Failed to process event {self.event} ({threading.get_ident()}): {err}",
 					category="event_processing",
 					isError=True
 				)

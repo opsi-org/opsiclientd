@@ -527,18 +527,22 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		return True
 
 	def cancelOthersAndWaitUntilReady(self):
+		WAIT_SECONDS = 30
 		for ept in self._eventProcessingThreads:
 			if ept.event.eventConfig.actionType != 'login':
 				#trying to cancel all non-login events - RuntimeError if impossible
-				logger.devel("Canceling event processing thread %s", ept)
-				ept.cancel()
-		for ept in self._eventProcessingThreads:
+				logger.devel("Canceling event processing thread %s (ocd)", ept)
+				ept.cancel(no_lock=True)
+		logger.devel("waiting for cancellation to conclude")
+		for ept in self._eventProcessingThreads.copy():
 			if ept.event.eventConfig.actionType != 'login':
-				waiting_iterations = 0
-				while ept.running:
+				logger.devel("waiting for ending of ept %s (ocd)", ept)
+				for _ in range(WAIT_SECONDS):
+					if not ept.running:
+						break
 					time.sleep(1)
-					if waiting_iterations == 60:
-						raise ValueError("Event didn't stop after 60 seconds - aborting")
+				if ept.running:
+					raise ValueError("Event didn't stop after %s seconds - aborting", WAIT_SECONDS)
 
 	def processEvent(self, event):
 		logger.notice("Processing event %s", event)
@@ -551,15 +555,17 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		for configKey in configKeys:
 			description += f"{configKey}: {_config[configKey]}\n"
 
-		logger.devel("acquire lock (ocd), currently %s", self.eventLock.locked())
-		self.eventLock.acquire()	# if already locked, this returns False but continues
+		logger.devel("check lock (ocd), currently %s -> locking if not True", self.eventLock.locked())
+		# if triggered by Basic.py fire_event, lock is already acquired
+		if not self.eventLock.locked():
+			self.eventLock.acquire()
 
-		timeline.addEvent(
-			title=f"Event {event.eventConfig.getName()}",
-			description=description,
-			category="event_occurrence"
-		)
 		try:
+			timeline.addEvent(
+				title=f"Event {event.eventConfig.getName()}",
+				description=description,
+				category="event_occurrence"
+			)
 			self.canProcessEvent(event)
 			self.cancelOthersAndWaitUntilReady()
 		except (ValueError, RuntimeError) as exception:
@@ -568,30 +574,31 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			logger.devel("release lock (ocd cannot process event)")
 			self.eventLock.release()
 			return
+		try:
+			logger.devel("Creating new ept (ocd)")
+			eventProcessingThread = EventProcessingThread(self, event)
 
-		eventProcessingThread = EventProcessingThread(self, event)
-
-		self.createActionProcessorUser(recreate=False)
-		self._eventProcessingThreads.append(eventProcessingThread)
-
-		logger.devel("release lock (ocd)")
-		self.eventLock.release()
+			self.createActionProcessorUser(recreate=False)
+			self._eventProcessingThreads.append(eventProcessingThread)
+		finally:
+			logger.devel("release lock (ocd)")
+			self.eventLock.release()
 
 		try:
 			eventProcessingThread.start()
 			eventProcessingThread.join()
 			logger.notice("Done processing event %s", event)
 		finally:
-			logger.devel("acquire lock (ocd cleanup), currently %s", self.eventLock.locked())
-			with self.eventLock:
-				self._eventProcessingThreads.remove(eventProcessingThread)
+			#logger.devel("acquire lock (ocd cleanup)")
+			#with self.eventLock:		#TODO another thread calls cancel, this thread waits for lock in set_not_cancelable -> problem if lock here
+			self._eventProcessingThreads.remove(eventProcessingThread)
 
-				if not self._eventProcessingThreads:
-					try:
-						self.deleteActionProcessorUser()
-					except Exception as err: # pylint: disable=broad-except
-						logger.warning(err)
-			logger.devel("release lock (ocd cleanup)")
+			if not self._eventProcessingThreads:
+				try:
+					self.deleteActionProcessorUser()
+				except Exception as err: # pylint: disable=broad-except
+					logger.warning(err)
+			#logger.devel("release lock (ocd cleanup)")
 
 
 	def getEventProcessingThreads(self):
