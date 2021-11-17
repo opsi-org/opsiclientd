@@ -12,6 +12,7 @@ import codecs
 import requests
 import netifaces
 from opsiclientd import ControlServer
+from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import createEventGenerators
 
@@ -22,9 +23,10 @@ def prepared_config(config, configFile):
 
 def test_fire_event(prepared_config): # pylint: disable=redefined-outer-name
 	prepared_config.readConfigFile()
-	createEventGenerators(None)
+	ocd = Opsiclientd()
+	createEventGenerators(ocd)
 	getEventConfigs()
-	controlServer = ControlServer.OpsiclientdRpcInterface(None)
+	controlServer = ControlServer.OpsiclientdRpcInterface(ocd)
 	controlServer.fireEvent('on_demand')
 
 def test_firing_unknown_event_raises_error(prepared_config): # pylint: disable=redefined-outer-name
