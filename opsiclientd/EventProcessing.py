@@ -22,7 +22,6 @@ import tempfile
 import subprocess
 from urllib.parse import urlparse
 import psutil
-import threading
 
 from OPSI import System
 from OPSI.Object import ProductOnClient
