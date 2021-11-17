@@ -37,7 +37,6 @@ from twisted.web.resource import Resource
 from twisted.web import server
 from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
 from autobahn.twisted.resource import WebSocketResource
-from ptyprocess import PtyProcess
 
 from OPSI import __version__ as python_opsi_version
 from OPSI import System
@@ -60,7 +59,7 @@ from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
 from opsiclientd.SoftwareOnDemand import ResourceKioskJsonRpc
-from opsiclientd.SystemCheck import RUNNING_ON_LINUX, RUNNING_ON_MACOS, RUNNING_ON_WINDOWS
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 
 config = Config()
@@ -959,13 +958,15 @@ class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd
 			if self.request.params.get("shell"):
 				shell = self.request.params["shell"][0]
 
-			sp_env = System.get_subprocess_environment()
-			if RUNNING_ON_LINUX or RUNNING_ON_MACOS:
-				sp_env.update({"TERM": "xterm-256color"})
+			if RUNNING_ON_WINDOWS:
+				from opsiclientd.windows import start_pty  # pylint: disable=import-outside-toplevel
+			else:
+				from opsiclientd.posix import start_pty  # pylint: disable=import-outside-toplevel
 
 			logger.notice("Starting terminal shell=%s, dimensions=(%d,%d)", shell, lines, columns)
-			proc = PtyProcess.spawn([shell], dimensions=(lines, columns), env=sp_env)
-			(self.child_read, self.child_write, self.child_stop) = (proc.read, proc.write, proc.terminate)  # pylint: disable=attribute-defined-outside-init
+			(self.child_read, self.child_write, self.child_stop) = start_pty(  # pylint: disable=attribute-defined-outside-init
+				shell=shell, lines=lines, columns=columns
+			)
 			self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init
 			self.terminal_reader_thread.start()
 
