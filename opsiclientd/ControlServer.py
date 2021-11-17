@@ -963,7 +963,7 @@ class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd
 			else:
 				from opsiclientd.posix import start_pty  # pylint: disable=import-outside-toplevel
 
-			logger.notice("Starting terminal shell=%s, dimensions=(%d,%d)", shell, lines, columns)
+			logger.notice("Starting terminal shell=%s, lines=%d, columns=%d", shell, lines, columns)
 			(self.child_read, self.child_write, self.child_stop) = start_pty(  # pylint: disable=attribute-defined-outside-init
 				shell=shell, lines=lines, columns=columns
 			)
