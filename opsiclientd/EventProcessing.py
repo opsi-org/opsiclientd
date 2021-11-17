@@ -1654,9 +1654,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					except Exception as err: # pylint: disable=broad-except
 						logger.error(err, exc_info=True)
 
+					config.setTemporaryConfigServiceUrls([])
+
 					# if cancelled, skip further execution
 					if not self.should_cancel():
-						config.setTemporaryConfigServiceUrls([])
 
 						if self.event.eventConfig.postEventCommand:
 							logger.notice("Running post event command '%s'",
@@ -1697,15 +1698,15 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						else:
 							self.opsiclientd.setBlockLogin(False)
 
-						self.setStatusMessage("")
-						self.stopNotificationServer()
-						if notifierPids:
-							try:
-								time.sleep(3)
-								for notifierPid in notifierPids:
-									System.terminateProcess(processId=notifierPid)
-							except Exception: # pylint: disable=broad-except
-								pass
+					self.setStatusMessage("")
+					self.stopNotificationServer()
+					if notifierPids:
+						try:
+							time.sleep(3)
+							for notifierPid in notifierPids:
+								System.terminateProcess(processId=notifierPid)
+						except Exception: # pylint: disable=broad-except
+							pass
 			except EventProcessingCanceled as err:
 				logger.notice("Processing of event %s canceled", self.event)
 				timeline.addEvent(
