@@ -114,3 +114,26 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 	def StopScreenSaver(self, *args): # pylint: disable=invalid-name
 		logger.notice('StopScreenSaver: %s', args)
 		self._callback('StopScreenSaver', *args)
+
+
+def start_pty(shell="powershell.exe", lines=30, columns=120):
+	logger.notice("Starting %s (%d/%d)", shell, lines, columns)
+	try:
+		# Import of winpty may sometimes fail because of problems with the needed dll.
+		# Therefore we do not import at toplevel
+		from winpty import PtyProcess # pylint: disable=import-error,import-outside-toplevel
+	except ImportError as err:
+		logger.error("Failed to start pty: %s", err, exc_info=True)
+		raise
+	process = PtyProcess.spawn(shell, dimensions=(lines, columns))
+
+	def read(length: int):
+		return process.read(length).encode("utf-8")
+
+	def write(data: bytes):
+		return process.write(data.decode("utf-8"))
+
+	def stop():
+		process.close()
+
+	return (read, write, stop)
