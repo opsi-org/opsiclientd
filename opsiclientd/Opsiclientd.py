@@ -820,16 +820,26 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 
 class WaitForGUI(EventListener):
 	def __init__(self, opsiclientd): # pylint: disable=super-init-not-called
+		self._opsiclientd = opsiclientd
 		self._guiStarted = threading.Event()
 		ec = GUIStartupEventConfig("wait_for_gui")
-		eventGenerator = EventGeneratorFactory(opsiclientd, ec)
+		eventGenerator = EventGeneratorFactory(self._opsiclientd, ec)
 		eventGenerator.addEventConfig(ec)
 		eventGenerator.addEventListener(self)
 		eventGenerator.start()
 
 	def processEvent(self, event):
-		logger.info("GUI started")
-		self._guiStarted.set()
+		logger.devel("check lock (ocd), currently %s -> locking if not True", self._opsiclientd.eventLock.locked())
+		# if triggered by Basic.py fire_event, lock is already acquired
+		if not self._opsiclientd.eventLock.locked():
+			self._opsiclientd.eventLock.acquire()
+		try:
+			logger.info("GUI started")
+			self._guiStarted.set()
+		finally:
+			logger.devel("release lock (WaitForGUI)")
+			self._opsiclientd.eventLock.release()
+
 
 	def wait(self, timeout=None):
 		self._guiStarted.wait(timeout)
