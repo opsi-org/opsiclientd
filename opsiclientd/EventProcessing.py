@@ -104,13 +104,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 	def _cancelable_sleep(self, secs: int):
 		for _ in range(secs):
-			#with self.opsiclientd.eventLock:		#TODO another thread calls cancel, this thread waits for lock in set_not_cancelable -> problem if lock here
 			if self._is_cancelable and self._should_cancel:
 				raise EventProcessingCanceled()
 			time.sleep(1)
 
 	def is_cancelable(self):
-		#with self.opsiclientd.eventLock:			#TODO another thread calls cancel, this thread waits for lock to check if it is cancelable -> problem if lock here
 		return self._is_cancelable
 
 	def _set_cancelable(self):
@@ -128,7 +126,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			self.opsiclientd.eventLock.release()
 
 	def should_cancel(self):
-		#with self.opsiclientd.eventLock:			#TODO another thread calls cancel, this thread waits for lock to check if it should -> problem if lock here
 		return self._should_cancel
 
 	# use no_lock only if you have already acquired the lock

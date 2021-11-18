@@ -535,14 +535,14 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			for ept in self._eventProcessingThreads:
 				if ept.event.eventConfig.actionType != 'login':
 					#trying to cancel all non-login events - RuntimeError if impossible
-					logger.devel("Canceling event processing thread %s (ocd)", ept)
+					logger.info("Canceling event processing thread %s (ocd)", ept)
 					ept.cancel(no_lock=True)
-			logger.devel("waiting for cancellation to conclude")
+			logger.trace("waiting for cancellation to conclude")
 			eptListCopy = self._eventProcessingThreads.copy()
 		# Use copy to allow for epts to be removed from eptList
 		for ept in eptListCopy:
 			if ept.event.eventConfig.actionType != 'login':
-				logger.devel("waiting for ending of ept %s (ocd)", ept)
+				logger.trace("waiting for ending of ept %s (ocd)", ept)
 				for _ in range(WAIT_SECONDS):
 					if not ept or not ept.running:
 						break
@@ -561,7 +561,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		for configKey in configKeys:
 			description += f"{configKey}: {_config[configKey]}\n"
 
-		logger.devel("check lock (ocd), currently %s -> locking if not True", self.eventLock.locked())
+		logger.trace("check lock (ocd), currently %s -> locking if not True", self.eventLock.locked())
 		# if triggered by Basic.py fire_event, lock is already acquired
 		if not self.eventLock.locked():
 			self.eventLock.acquire()
@@ -577,18 +577,18 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		except (ValueError, RuntimeError) as exception:
 			# skipping execution if event cannot be created
 			logger.warning("Could not start event", exc_info=exception)
-			logger.devel("release lock (ocd cannot process event)")
+			logger.trace("release lock (ocd cannot process event)")
 			self.eventLock.release()
 			return
 		try:
-			logger.devel("Creating new ept (ocd)")
+			logger.debug("Creating new ept (ocd)")
 			eventProcessingThread = EventProcessingThread(self, event)
 
 			self.createActionProcessorUser(recreate=False)
 			with self._eptListLock:
 				self._eventProcessingThreads.append(eventProcessingThread)
 		finally:
-			logger.devel("release lock (ocd)")
+			logger.trace("release lock (ocd)")
 			self.eventLock.release()
 
 		try:
@@ -836,7 +836,7 @@ class WaitForGUI(EventListener):
 		eventGenerator.start()
 
 	def processEvent(self, event):
-		logger.devel("check lock (ocd), currently %s -> locking if not True", self._opsiclientd.eventLock.locked())
+		logger.trace("check lock (ocd), currently %s -> locking if not True", self._opsiclientd.eventLock.locked())
 		# if triggered by Basic.py fire_event, lock is already acquired
 		if not self._opsiclientd.eventLock.locked():
 			self._opsiclientd.eventLock.acquire()
@@ -844,7 +844,7 @@ class WaitForGUI(EventListener):
 			logger.info("GUI started")
 			self._guiStarted.set()
 		finally:
-			logger.devel("release lock (WaitForGUI)")
+			logger.trace("release lock (WaitForGUI)")
 			self._opsiclientd.eventLock.release()
 
 
