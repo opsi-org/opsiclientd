@@ -467,7 +467,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 						self._cacheService = cacheService
 
 						with getDaemonLoopingContext():
-							with self._eptListLock():
+							with self._eptListLock:
 								if not self._eventProcessingThreads:
 									logger.notice("No events processing, unblocking login")
 									self.setBlockLogin(False)
@@ -477,7 +477,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 									self._stopEvent.wait(1)
 							finally:
 								logger.notice("opsiclientd is going down")
-								with self._eptListLock():
+								with self._eptListLock:
 									for ept in self._eventProcessingThreads:
 										ept.stop()
 									for ept in self._eventProcessingThreads:
@@ -512,7 +512,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		# Always process panic events
 		if isinstance(event, PanicEvent):
 			return True
-		with self._eptListLock():
+		with self._eptListLock:
 			for ept in self._eventProcessingThreads:
 				if event.eventConfig.actionType != 'login' and ept.event.eventConfig.actionType != 'login':
 					if not ept.is_cancelable():
@@ -531,7 +531,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 
 	def cancelOthersAndWaitUntilReady(self):
 		WAIT_SECONDS = 30
-		with self._eptListLock():
+		with self._eptListLock:
 			for ept in self._eventProcessingThreads:
 				if ept.event.eventConfig.actionType != 'login':
 					#trying to cancel all non-login events - RuntimeError if impossible
