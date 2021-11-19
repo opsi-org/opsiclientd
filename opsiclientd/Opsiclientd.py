@@ -537,7 +537,6 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					#trying to cancel all non-login events - RuntimeError if impossible
 					logger.info("Canceling event processing thread %s (ocd)", ept)
 					ept.cancel(no_lock=True)
-					has_canceled = True
 			logger.trace("waiting for cancellation to conclude")
 			eptListCopy = self._eventProcessingThreads.copy()
 		# Use copy to allow for epts to be removed from eptList
