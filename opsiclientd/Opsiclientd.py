@@ -549,18 +549,15 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					time.sleep(1)
 				if ept and ept.running:
 					raise ValueError(f"Event didn't stop after {WAIT_SECONDS} seconds - aborting")
-				logger.devel("successfully canceled %s of type %s", ept.event.eventConfig.name, ept.event.eventConfig.actionType)
-				#if ept.event.eventConfig.actionType == "sync completed":
+				logger.debug("successfully canceled %s of type %s", ept.event.eventConfig.name, ept.event.eventConfig.actionType)
 				if ept.event.eventConfig.name == "sync_completed":
-					logger.devel("getting cache service")
 					try:
 						cache_service = self.getCacheService()
-						logger.devel("got config_service with state: %s - marking dirty", cache_service.getConfigCacheState())
+						logger.debug("got config_service with state: %s - marking dirty", cache_service.getConfigCacheState())
 						# mark cache as dirty when bypassing cache mechanism for installation
 						cache_service.setConfigCacheFaulty()
-						logger.devel("finished setting config cache dirty")
 					except RuntimeError as exception:
-						logger.error("could not mark confiv service cache dirty", exc_info=exception)
+						logger.error("could not mark config service cache dirty", exc_info=exception)
 
 	def processEvent(self, event):
 		logger.notice("Processing event %s", event)
