@@ -537,6 +537,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					#trying to cancel all non-login events - RuntimeError if impossible
 					logger.info("Canceling event processing thread %s (ocd)", ept)
 					ept.cancel(no_lock=True)
+					has_canceled = True
 			logger.trace("waiting for cancellation to conclude")
 			eptListCopy = self._eventProcessingThreads.copy()
 		# Use copy to allow for epts to be removed from eptList
@@ -549,6 +550,16 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					time.sleep(1)
 				if ept and ept.running:
 					raise ValueError(f"Event didn't stop after {WAIT_SECONDS} seconds - aborting")
+				if ept.event.eventConfig.actionType == "timer":
+					logger.devel("getting cache service")
+					try:
+						cache_service = self.getCacheService()
+						logger.devel("got config_service with state: %s - marking dirty", cache_service.getConfigCacheState())
+						# mark cache as dirty when bypassing cache mechanism for installation
+						cache_service.setConfigCacheFaulty()
+						logger.devel("finished setting config cache dirty")
+					except RuntimeError as exception:
+						logger.error("could not mark confiv service cache dirty", exc_info=exception)
 
 	def processEvent(self, event):
 		logger.notice("Processing event %s", event)
