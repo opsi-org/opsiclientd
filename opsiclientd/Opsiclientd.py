@@ -532,13 +532,13 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 	def cancelOthersAndWaitUntilReady(self):
 		WAIT_SECONDS = 30
 		with self._eptListLock:
+			eptListCopy = self._eventProcessingThreads.copy()
 			for ept in self._eventProcessingThreads:
 				if ept.event.eventConfig.actionType != 'login':
 					#trying to cancel all non-login events - RuntimeError if impossible
-					logger.info("Canceling event processing thread %s (ocd)", ept)
+					logger.notice("Canceling event processing thread %s (ocd)", ept)
 					ept.cancel(no_lock=True)
 			logger.trace("waiting for cancellation to conclude")
-			eptListCopy = self._eventProcessingThreads.copy()
 		# Use copy to allow for epts to be removed from eptList
 		for ept in eptListCopy:
 			if ept.event.eventConfig.actionType != 'login':
@@ -549,6 +549,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					time.sleep(1)
 				if ept and ept.running:
 					raise ValueError(f"Event didn't stop after {WAIT_SECONDS} seconds - aborting")
+				logger.devel("successfully canceled %s of type %s", ept.event, ept.event.eventConfig.actionType)
 				if ept.event.eventConfig.actionType == "sync completed":
 					logger.devel("getting cache service")
 					try:
