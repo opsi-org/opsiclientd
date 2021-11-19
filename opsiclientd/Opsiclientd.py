@@ -549,8 +549,9 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					time.sleep(1)
 				if ept and ept.running:
 					raise ValueError(f"Event didn't stop after {WAIT_SECONDS} seconds - aborting")
-				logger.devel("successfully canceled %s of type %s", ept.event, ept.event.eventConfig.actionType)
-				if ept.event.eventConfig.actionType == "sync completed":
+				logger.devel("successfully canceled %s of type %s", ept.event.eventConfig.name, ept.event.eventConfig.actionType)
+				#if ept.event.eventConfig.actionType == "sync completed":
+				if ept.event.eventConfig.name == "sync_completed":
 					logger.devel("getting cache service")
 					try:
 						cache_service = self.getCacheService()
