@@ -79,7 +79,7 @@ def update_ca_cert(config_service: JSONRPCClient):
 						ca_cert.get_subject().CN
 					)
 		except Exception as err: # pylint: disable=broad-except
-			logger.error("Failed to remove CA from system cert store: %s", err)
+			logger.error("Failed to remove CA from system cert store", exc_info=err)
 
 		if index == 0:		# Assume opsi CA to be the first certificate
 			try:
@@ -89,7 +89,7 @@ def update_ca_cert(config_service: JSONRPCClient):
 					ca_certs[0].get_subject().CN
 				)
 			except Exception as err: # pylint: disable=broad-except
-				logger.error("Failed to install CA into system cert store: %s", err)
+				logger.error("Failed to install CA into system cert store", exc_info=err)
 
 class ServiceConnection:
 	def __init__(self):

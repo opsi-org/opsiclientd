@@ -258,11 +258,6 @@ class WorkerOpsiclientd(WorkerOpsi):
 
 	def _errback(self, failure):
 		WorkerOpsi._errback(self, failure)
-		logger.debug("DEBUG: detected host: '%s'", self.request.getClientIP())
-		logger.debug("DEBUG: responsecode: '%s'", self.request.code)
-		logger.debug("DEBUG: maxAuthenticationFailures config: '%s'", config.get('control_server', 'max_authentication_failures'))
-		logger.debug("DEBUG: maxAuthenticationFailures config type: '%s'", type(config.get('control_server', 'max_authentication_failures')))
-
 		if self.request.code == 401 and self.request.getClientIP() != "127.0.0.1":
 			maxAuthenticationFailures = config.get('control_server', 'max_authentication_failures')
 			if maxAuthenticationFailures > 0:
