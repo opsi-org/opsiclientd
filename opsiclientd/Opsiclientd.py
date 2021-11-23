@@ -418,7 +418,10 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		def getDaemonLoopingContext():
 			with getEventGeneratorContext():
 				for event_generator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
-					event_generator.createAndFireEvent()
+					try:
+						event_generator.createAndFireEvent()
+					except ValueError as exception:
+						logger.error("Unable to fire DaemonStartupEvent from %s", event_generator, exc_info=exception)
 
 				if getEventGenerators(generatorClass=GUIStartupEventGenerator):
 					# Wait until gui starts up
@@ -433,7 +436,10 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				finally:
 					for event_generator in getEventGenerators(generatorClass=DaemonShutdownEventGenerator):
 						logger.info("Create and fire shutdown event generator %s", event_generator)
-						event_generator.createAndFireEvent()
+						try:
+							event_generator.createAndFireEvent()
+						except ValueError as exception:
+							logger.error("Unable to fire DaemonStartupEvent from %s", event_generator, exc_info=exception)
 
 		try:
 			parent = psutil.Process(os.getpid()).parent()

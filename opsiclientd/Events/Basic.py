@@ -162,8 +162,6 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 			for listener in self._eventListeners:
 				# Check if all event listeners can handle the event
 				# raises ValueError if another event is already running
-				logger.trace("checking event against listener %s (Basic)", listener)
-
 				listener.canProcessEvent(event)
 			for listener in self._eventListeners:
 				# Create a new thread for each event listener

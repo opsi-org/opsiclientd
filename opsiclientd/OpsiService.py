@@ -68,7 +68,7 @@ def update_ca_cert(config_service: JSONRPCClient):
 			# do not remove if correct certificate is already there
 			present_ca = load_ca(ca_cert.get_subject().CN)
 			should_remove = not config.get('global', 'install_opsi_ca_into_os_store') or \
-						(present_ca and present_ca.digest("sha1") == ca_cert.digest("sha1"))
+						(present_ca and present_ca.digest("sha1") != ca_cert.digest("sha1"))
 		else:
 			should_remove = not config.get('global', 'install_opsi_ca_into_os_store')
 		try:
@@ -81,7 +81,7 @@ def update_ca_cert(config_service: JSONRPCClient):
 		except Exception as err: # pylint: disable=broad-except
 			logger.error("Failed to remove CA from system cert store", exc_info=err)
 
-		if index == 0:		# Assume opsi CA to be the first certificate
+		if index == 0 and config.get('global', 'install_opsi_ca_into_os_store'):	# Assume opsi CA to be the first certificate
 			try:
 				install_ca(ca_cert)
 				logger.info(
