@@ -365,7 +365,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 				else:
 					verify_modules(self._configService.backend_info(), ['vpn'])
 			except Exception as err:  # pylint: disable=broad-except
-				raise RuntimeError("Cannot sync products: {err}") from err
+				raise RuntimeError(f"Cannot sync products: {err}") from err
 
 			try:
 				if self._configService.hostname.lower() not in ("localhost", "127.0.0.1", "::1"):
