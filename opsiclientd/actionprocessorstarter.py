@@ -18,7 +18,7 @@ from urllib.parse import urlparse
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 
-from opsicommon.logging import logger, init_logging, log_context, LOG_NONE
+from opsicommon.logging import logger, init_logging, log_context, LOG_NONE, secret_filter
 
 from opsiclientd import __version__, DEFAULT_STDERR_LOG_FORMAT, DEFAULT_FILE_LOG_FORMAT
 
@@ -50,11 +50,11 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 	) = sys.argv[1:]
 
 	if hostKey:
-		logger.addConfidentialString(hostKey)
+		secret_filter.add_secrets(hostKey)
 	if depotServerPassword:
-		logger.addConfidentialString(depotServerPassword)
+		secret_filter.add_secrets(depotServerPassword)
 	if runAsPassword:
-		logger.addConfidentialString(runAsPassword)
+		secret_filter.add_secrets(runAsPassword)
 
 	init_logging(
 		stderr_level=LOG_NONE,

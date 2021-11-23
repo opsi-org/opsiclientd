@@ -27,7 +27,7 @@ from OPSI.Util import randomString
 from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
 from OPSI import __version__ as python_opsi_version
 
-from opsicommon.logging import logger, log_context
+from opsicommon.logging import logger, log_context, secret_filter
 from opsicommon.system import ensure_not_already_running
 
 from opsiclientd import __version__, config, check_signature
@@ -60,7 +60,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		self._startupTime = time.time()
 		self._running = False
 		self._eventProcessingThreads = []
-		self._eventProcessingThreadsLock = threading.Lock()
+		self.eventLock = threading.Lock()
+		self._eptListLock = threading.Lock()
 		self._blockLogin = True
 		self._currentActiveDesktopName = {}
 
@@ -268,7 +269,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		logger.notice(f"Creating local user '{run_as_user}'")
 
 		self._actionProcessorUserPassword = '$!?' + str(randomString(16)) + '!/%'
-		logger.addConfidentialString(self._actionProcessorUserPassword)
+		secret_filter.add_secrets(self._actionProcessorUserPassword)
 
 		if System.existsUser(username=run_as_user):
 			System.deleteUser(username=run_as_user)
@@ -417,7 +418,10 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		def getDaemonLoopingContext():
 			with getEventGeneratorContext():
 				for event_generator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
-					event_generator.createAndFireEvent()
+					try:
+						event_generator.createAndFireEvent()
+					except ValueError as exception:
+						logger.error("Unable to fire DaemonStartupEvent from %s", event_generator, exc_info=exception)
 
 				if getEventGenerators(generatorClass=GUIStartupEventGenerator):
 					# Wait until gui starts up
@@ -432,7 +436,10 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				finally:
 					for event_generator in getEventGenerators(generatorClass=DaemonShutdownEventGenerator):
 						logger.info("Create and fire shutdown event generator %s", event_generator)
-						event_generator.createAndFireEvent()
+						try:
+							event_generator.createAndFireEvent()
+						except ValueError as exception:
+							logger.error("Unable to fire DaemonStartupEvent from %s", event_generator, exc_info=exception)
 
 		try:
 			parent = psutil.Process(os.getpid()).parent()
@@ -466,21 +473,22 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 						self._cacheService = cacheService
 
 						with getDaemonLoopingContext():
-							if not self._eventProcessingThreads:
-								logger.notice("No events processing, unblocking login")
-								self.setBlockLogin(False)
+							with self._eptListLock:
+								if not self._eventProcessingThreads:
+									logger.notice("No events processing, unblocking login")
+									self.setBlockLogin(False)
 
 							try:
 								while not self._stopEvent.is_set():
 									self._stopEvent.wait(1)
 							finally:
 								logger.notice("opsiclientd is going down")
-
-								for ept in self._eventProcessingThreads:
-									ept.stop()
-								for ept in self._eventProcessingThreads:
-									logger.info("Waiting for event processing thread %s", ept)
-									ept.join(5)
+								with self._eptListLock:
+									for ept in self._eventProcessingThreads:
+										ept.stop()
+									for ept in self._eventProcessingThreads:
+										logger.info("Waiting for event processing thread %s", ept)
+										ept.join(5)
 
 								if self._opsiclientdRunningEventId:
 									timeline.setEventEnd(self._opsiclientdRunningEventId)
@@ -510,53 +518,100 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		# Always process panic events
 		if isinstance(event, PanicEvent):
 			return True
-		for ept in self._eventProcessingThreads:
-			if event.eventConfig.actionType != 'login' and ept.event.eventConfig.actionType != 'login':
-				logger.notice("Already processing an other (non login) event: %s", ept.event.eventConfig.getId())
-				raise ValueError(f"Already processing an other (non login) event: {ept.event.eventConfig.getId()}")
-			eventProcessingThread = EventProcessingThread(self, event)
-			if event.eventConfig.actionType == 'login' and ept.event.eventConfig.actionType == 'login':
-				if ept.getSessionId() == eventProcessingThread.getSessionId():
-					logger.notice("Already processing login event '%s' in session %s",
-						ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()
+		with self._eptListLock:
+			for ept in self._eventProcessingThreads:
+				if event.eventConfig.actionType != 'login' and ept.event.eventConfig.actionType != 'login':
+					if not ept.is_cancelable():
+						logger.notice("Already processing a non-cancelable (and non-login) event: %s", ept.event.eventConfig.getId())
+						raise ValueError(f"Already processing a non-cancelable (and non-login) event: {ept.event.eventConfig.getId()}")
+				if event.eventConfig.actionType == 'login' and ept.event.eventConfig.actionType == 'login':
+					eventProcessingThread = EventProcessingThread(self, event)
+					if ept.getSessionId() == eventProcessingThread.getSessionId():
+						logger.notice("Already processing login event '%s' in session %s",
+							ept.event.eventConfig.getName(), eventProcessingThread.getSessionId()
+						)
+					raise ValueError(f"Already processing login event '{ept.event.eventConfig.getName()}' "
+						f"in session {eventProcessingThread.getSessionId()}"
 					)
-				raise ValueError(f"Already processing login event '{ept.event.eventConfig.getName()}' "
-					f"in session {eventProcessingThread.getSessionId()}"
-				)
 		return True
+
+	def cancelOthersAndWaitUntilReady(self):
+		WAIT_SECONDS = 30
+		with self._eptListLock:
+			eptListCopy = self._eventProcessingThreads.copy()
+			for ept in self._eventProcessingThreads:
+				if ept.event.eventConfig.actionType != 'login':
+					#trying to cancel all non-login events - RuntimeError if impossible
+					logger.notice("Canceling event processing thread %s (ocd)", ept)
+					ept.cancel(no_lock=True)
+			logger.trace("waiting for cancellation to conclude")
+		# Use copy to allow for epts to be removed from eptList
+		for ept in eptListCopy:
+			if ept.event.eventConfig.actionType != 'login':
+				logger.trace("waiting for ending of ept %s (ocd)", ept)
+				for _ in range(WAIT_SECONDS):
+					if not ept or not ept.running:
+						break
+					time.sleep(1)
+				if ept and ept.running:
+					raise ValueError(f"Event didn't stop after {WAIT_SECONDS} seconds - aborting")
+				logger.debug("successfully canceled %s of type %s", ept.event.eventConfig.name, ept.event.eventConfig.actionType)
+				if ept.event.eventConfig.name == "sync_completed":
+					try:
+						cache_service = self.getCacheService()
+						logger.debug("got config_service with state: %s - marking dirty", cache_service.getConfigCacheState())
+						# mark cache as dirty when bypassing cache mechanism for installation
+						cache_service.setConfigCacheFaulty()
+					except RuntimeError as exception:
+						logger.error("could not mark config service cache dirty", exc_info=exception)
 
 	def processEvent(self, event):
 		logger.notice("Processing event %s", event)
-		eventProcessingThread = None
-		with self._eventProcessingThreadsLock:
-			description = f"Event {event.eventConfig.getId()} occurred\n"
-			description += "Config:\n"
-			_config = event.eventConfig.getConfig()
-			configKeys = list(_config.keys())
-			configKeys.sort()
-			for configKey in configKeys:
-				description += f"{configKey}: {_config[configKey]}\n"
+
+		description = f"Event {event.eventConfig.getId()} occurred\n"
+		description += "Config:\n"
+		_config = event.eventConfig.getConfig()
+		configKeys = list(_config.keys())
+		configKeys.sort()
+		for configKey in configKeys:
+			description += f"{configKey}: {_config[configKey]}\n"
+
+		logger.trace("check lock (ocd), currently %s -> locking if not True", self.eventLock.locked())
+		# if triggered by Basic.py fire_event, lock is already acquired
+		if not self.eventLock.locked():
+			self.eventLock.acquire()
+
+		try:
 			timeline.addEvent(
 				title=f"Event {event.eventConfig.getName()}",
 				description=description,
 				category="event_occurrence"
 			)
-			try:
-				self.canProcessEvent(event)
-			except ValueError:
-				# skipping execution if event cannot be created
-				return
+			self.canProcessEvent(event)
+			self.cancelOthersAndWaitUntilReady()
+		except (ValueError, RuntimeError) as exception:
+			# skipping execution if event cannot be created
+			logger.warning("Could not start event", exc_info=exception)
+			logger.trace("release lock (ocd cannot process event)")
+			self.eventLock.release()
+			return
+		try:
+			logger.debug("Creating new ept (ocd)")
 			eventProcessingThread = EventProcessingThread(self, event)
 
 			self.createActionProcessorUser(recreate=False)
-			self._eventProcessingThreads.append(eventProcessingThread)
+			with self._eptListLock:
+				self._eventProcessingThreads.append(eventProcessingThread)
+		finally:
+			logger.trace("release lock (ocd)")
+			self.eventLock.release()
 
 		try:
 			eventProcessingThread.start()
 			eventProcessingThread.join()
 			logger.notice("Done processing event %s", event)
 		finally:
-			with self._eventProcessingThreadsLock:
+			with self._eptListLock:
 				self._eventProcessingThreads.remove(eventProcessingThread)
 
 				if not self._eventProcessingThreads:
@@ -565,13 +620,16 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					except Exception as err: # pylint: disable=broad-except
 						logger.warning(err)
 
+
 	def getEventProcessingThreads(self):
-		return self._eventProcessingThreads
+		with self._eptListLock:
+			return self._eventProcessingThreads
 
 	def getEventProcessingThread(self, sessionId):
-		for ept in self._eventProcessingThreads:
-			if int(ept.getSessionId()) == int(sessionId):
-				return ept
+		with self._eptListLock:
+			for ept in self._eventProcessingThreads:
+				if int(ept.getSessionId()) == int(sessionId):
+					return ept
 		raise Exception(f"Event processing thread for session {sessionId} not found")
 
 	def processProductActionRequests(self, event): # pylint: disable=unused-argument,no-self-use
@@ -784,16 +842,26 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 
 class WaitForGUI(EventListener):
 	def __init__(self, opsiclientd): # pylint: disable=super-init-not-called
+		self._opsiclientd = opsiclientd
 		self._guiStarted = threading.Event()
 		ec = GUIStartupEventConfig("wait_for_gui")
-		eventGenerator = EventGeneratorFactory(opsiclientd, ec)
+		eventGenerator = EventGeneratorFactory(self._opsiclientd, ec)
 		eventGenerator.addEventConfig(ec)
 		eventGenerator.addEventListener(self)
 		eventGenerator.start()
 
 	def processEvent(self, event):
-		logger.info("GUI started")
-		self._guiStarted.set()
+		logger.trace("check lock (ocd), currently %s -> locking if not True", self._opsiclientd.eventLock.locked())
+		# if triggered by Basic.py fire_event, lock is already acquired
+		if not self._opsiclientd.eventLock.locked():
+			self._opsiclientd.eventLock.acquire()
+		try:
+			logger.info("GUI started")
+			self._guiStarted.set()
+		finally:
+			logger.trace("release lock (WaitForGUI)")
+			self._opsiclientd.eventLock.release()
+
 
 	def wait(self, timeout=None):
 		self._guiStarted.wait(timeout)

@@ -153,12 +153,25 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 						logger.error(err, exc_info=True)
 
 		logger.info("Starting FireEventThread for listeners: %s", self._eventListeners)
-		for listener in self._eventListeners:
-			# Check if event listener can handle the event
-			# raises ValueError if another event is already running
-			listener.canProcessEvent(event)
-			# Create a new thread for each event listener
-			FireEventThread(listener, event).start()
+		keep_lock = False
+		logger.trace("acquire lock (Basic), currently %s", self._opsiclientd.eventLock.locked())
+		# timeout should be less than 15s as this is default opsi-admin call timeout
+		if not self._opsiclientd.eventLock.acquire(timeout=5):
+			raise ValueError("Could not get event handling lock due to another event currently running")
+		try:
+			for listener in self._eventListeners:
+				# Check if all event listeners can handle the event
+				# raises ValueError if another event is already running
+				listener.canProcessEvent(event)
+			for listener in self._eventListeners:
+				# Create a new thread for each event listener
+				FireEventThread(listener, event).start()
+			keep_lock = True
+			logger.debug("keeping event processing lock (Basic)")
+		finally:
+			if not keep_lock:
+				logger.trace("release lock (Basic)")
+				self._opsiclientd.eventLock.release()
 
 	def run(self):
 		with opsicommon.logging.log_context({'instance' : f'event generator {self._generatorConfig.getId()}'}):

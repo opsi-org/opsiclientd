@@ -23,7 +23,7 @@ from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 
 from opsicommon.logging import logger, log_context
-from opsicommon.ssl import install_ca, remove_ca
+from opsicommon.ssl import install_ca, remove_ca, load_ca
 from opsicommon.client.jsonrpc import JSONRPCClient
 
 from opsiclientd import __version__
@@ -63,25 +63,32 @@ def update_ca_cert(config_service: JSONRPCClient):
 	except Exception as err: # pylint: disable=broad-except
 		logger.error("Failed to update CA cert: %s", err)
 
-	for ca_cert in ca_certs:
+	for index, ca_cert in enumerate(ca_certs):
+		outdated = False
+		if index == 0:		# Assume opsi CA to be the first certificate
+			# do not remove if correct certificate is already there
+			present_ca = load_ca(ca_cert.get_subject().CN)
+			outdated = present_ca and present_ca.digest("sha1") != ca_cert.digest("sha1")
 		try:
-			if remove_ca(ca_cert.get_subject().CN):
-				logger.info(
-					"CA cert %s successfully removed from system cert store",
-					ca_cert.get_subject().CN
-				)
+			if outdated or not config.get('global', 'install_opsi_ca_into_os_store'):
+				if remove_ca(ca_cert.get_subject().CN):
+					logger.info(
+						"CA cert %s successfully removed from system cert store",
+						ca_cert.get_subject().CN
+					)
 		except Exception as err: # pylint: disable=broad-except
-			logger.error("Failed to remove CA from system cert store: %s", err)
+			logger.error("Failed to remove CA from system cert store", exc_info=err)
 
-	if ca_certs and config.get('global', 'install_opsi_ca_into_os_store'):
-		try:
-			install_ca(ca_certs[0])
-			logger.info(
-				"CA cert %s successfully installed into system cert store",
-				ca_certs[0].get_subject().CN
-			)
-		except Exception as err: # pylint: disable=broad-except
-			logger.error("Failed to install CA into system cert store: %s", err)
+		# remark: outdated implies index == 0
+		if config.get('global', 'install_opsi_ca_into_os_store') and outdated:	# Assume opsi CA to be the first certificate
+			try:
+				install_ca(ca_cert)
+				logger.info(
+					"CA cert %s successfully installed into system cert store",
+					ca_certs[0].get_subject().CN
+				)
+			except Exception as err: # pylint: disable=broad-except
+				logger.error("Failed to install CA into system cert store", exc_info=err)
 
 class ServiceConnection:
 	def __init__(self):
