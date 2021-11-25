@@ -295,7 +295,12 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			data += "-------------------- submitted part of log file ends here, see the rest of log file on client --------------------\n"
 			# Do not log jsonrpc request
 			logging_config(file_level=LOG_WARNING)
-			self._configService.log_write('clientconnect', data.replace('\ufffd', '?'), config.get('global', 'host_id')) # pylint: disable=no-member
+			self._configService.log_write(
+				'clientconnect',
+				data=data.replace('\ufffd', '?'),
+				objectId=config.get('global', 'host_id'),
+				append=True
+			) # pylint: disable=no-member
 			logging_config(file_level=config.get('global', 'log_level'))
 		except Exception as err: # pylint: disable=broad-except
 			logging_config(file_level=config.get('global', 'log_level'))
