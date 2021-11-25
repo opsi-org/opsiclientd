@@ -1231,9 +1231,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 	def updateConfigFile(self, force=False): # pylint: disable=no-self-use
 		config.updateConfigFile(force)
 
-	def showPopup(self, message, mode='prepend', addTimestamp=True):
+	def showPopup(self, message, mode='prepend', addTimestamp=True, displaySeconds=-1):
 		message = forceUnicode(message)
-		self.opsiclientd.showPopup(message, mode, addTimestamp)
+		self.opsiclientd.showPopup(message, mode, addTimestamp, displaySeconds)
 
 	def deleteServerCerts(self): # pylint: disable=no-self-use
 		cert_dir = config.get('global', 'server_cert_dir')

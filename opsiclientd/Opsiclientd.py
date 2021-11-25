@@ -76,6 +76,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 
 		self._popupNotificationServer = None
 		self._popupNotificationLock = threading.Lock()
+		self.popup_end_time = 0
+		self._popupClosingThread = None
 
 		self._blockLoginEventId = None
 		self._opsiclientdRunningEventId = None
@@ -579,7 +581,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		logger.trace("check lock (ocd), currently %s -> locking if not True", self.eventLock.locked())
 		# if triggered by Basic.py fire_event, lock is already acquired
 		if not self.eventLock.locked():
-			self.eventLock.acquire()
+			self.eventLock.acquire()		# pylint: disable=consider-using-with
 
 		try:
 			timeline.addEvent(
@@ -747,7 +749,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 	def isInstallationPending(self): # pylint: disable=no-self-use
 		return state.get('installation_pending', False)
 
-	def showPopup(self, message, mode='prepend', addTimestamp=True): # pylint: disable=too-many-branches,too-many-statements
+	def showPopup(self, message, mode='prepend', addTimestamp=True, display_seconds=-1): # pylint: disable=too-many-branches,too-many-statements, too-many-locals
 		if mode not in ('prepend', 'append', 'replace'):
 			mode = 'prepend'
 		port = config.get('notification_server', 'popup_port')
@@ -826,6 +828,29 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 							"Failed to start popup message notifier app in session %s on desktop %s: %s",
 							sessionId, desktop, err
 						)
+
+			class PopupClosingThread(threading.Thread):
+				def __init__(self, opsiclientd):
+					super().__init__()
+					self.opsiclientd = opsiclientd
+
+				def run(self):
+					logger.devel("waiting for popup end (at %s)", self.opsiclientd.popup_end_time)
+					while True:
+						time.sleep(1)
+						if time.time() > self.opsiclientd.popup_end_time:
+							break
+					logger.devel("hiding popup window")
+					self.opsiclientd.hidePopup()
+
+			logger.devel("got display_seconds %s", display_seconds)
+			if display_seconds > 0:
+				self.popup_end_time = max(self.popup_end_time, time.time() + display_seconds)
+				logger.devel("setting new popup_end_time: %s", self.popup_end_time)
+				logger.devel("self._popupClosingThread is: %s", self._popupClosingThread)
+				if not self._popupClosingThread or not self._popupClosingThread.is_alive():
+					self._popupClosingThread = PopupClosingThread(self)
+					self._popupClosingThread.start()
 
 	def hidePopup(self):
 		if self._popupNotificationServer:
