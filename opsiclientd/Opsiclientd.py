@@ -749,7 +749,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 	def isInstallationPending(self): # pylint: disable=no-self-use
 		return state.get('installation_pending', False)
 
-	def showPopup(self, message, mode='prepend', addTimestamp=True, display_seconds=-1): # pylint: disable=too-many-branches,too-many-statements, too-many-locals
+	def showPopup(self, message, mode='prepend', addTimestamp=True, displaySeconds=-1): # pylint: disable=too-many-branches,too-many-statements, too-many-locals
 		if mode not in ('prepend', 'append', 'replace'):
 			mode = 'prepend'
 		port = config.get('notification_server', 'popup_port')
@@ -835,19 +835,16 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					self.opsiclientd = opsiclientd
 
 				def run(self):
-					logger.devel("waiting for popup end (at %s)", self.opsiclientd.popup_end_time)
 					while True:
 						time.sleep(1)
 						if time.time() > self.opsiclientd.popup_end_time:
 							break
-					logger.devel("hiding popup window")
+					logger.debug("hiding popup window")
 					self.opsiclientd.hidePopup()
 
-			logger.devel("got display_seconds %s", display_seconds)
-			if display_seconds > 0:
-				self.popup_end_time = max(self.popup_end_time, time.time() + display_seconds)
-				logger.devel("setting new popup_end_time: %s", self.popup_end_time)
-				logger.devel("self._popupClosingThread is: %s", self._popupClosingThread)
+			if displaySeconds > 0:
+				logger.debug("displaying popup for %s seconds", displaySeconds)
+				self.popup_end_time = max(self.popup_end_time, time.time() + displaySeconds)
 				if not self._popupClosingThread or not self._popupClosingThread.is_alive():
 					self._popupClosingThread = PopupClosingThread(self)
 					self._popupClosingThread.start()
