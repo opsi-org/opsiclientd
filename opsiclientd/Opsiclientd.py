@@ -749,7 +749,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 	def isInstallationPending(self): # pylint: disable=no-self-use
 		return state.get('installation_pending', False)
 
-	def showPopup(self, message, mode='prepend', addTimestamp=True, displaySeconds=-1): # pylint: disable=too-many-branches,too-many-statements, too-many-locals
+	def showPopup(self, message, mode='prepend', addTimestamp=True, displaySeconds=0): # pylint: disable=too-many-branches,too-many-statements, too-many-locals
 		if mode not in ('prepend', 'append', 'replace'):
 			mode = 'prepend'
 		port = config.get('notification_server', 'popup_port')

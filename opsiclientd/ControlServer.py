@@ -1231,7 +1231,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 	def updateConfigFile(self, force=False): # pylint: disable=no-self-use
 		config.updateConfigFile(force)
 
-	def showPopup(self, message, mode='prepend', addTimestamp=True, displaySeconds=-1):
+	def showPopup(self, message, mode='prepend', addTimestamp=True, displaySeconds=0):
 		message = forceUnicode(message)
 		self.opsiclientd.showPopup(message, mode, addTimestamp, displaySeconds)
 
