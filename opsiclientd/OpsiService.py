@@ -65,6 +65,7 @@ def update_ca_cert(config_service: JSONRPCClient):
 
 	for index, ca_cert in enumerate(ca_certs):
 		name = ca_cert.get_subject().CN
+		logger.devel("checking certificate %s : %s", index, name)
 		outdated = False
 		present_ca = None
 		try:
@@ -84,6 +85,7 @@ def update_ca_cert(config_service: JSONRPCClient):
 			logger.error("Failed to remove CA from system cert store", exc_info=err)
 
 		# Assume opsi CA to be the first certificate
+		logger.devel("checking index %s, config %s, outdated %s, present_ca %s", index, config.get('global', 'install_opsi_ca_into_os_store'), outdated, present_ca)
 		if index == 0 and config.get('global', 'install_opsi_ca_into_os_store') and (outdated or not present_ca):
 			try:
 				install_ca(ca_cert)
