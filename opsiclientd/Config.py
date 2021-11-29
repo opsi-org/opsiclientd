@@ -660,8 +660,10 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 			elif configState.configId == 'clientconfig.depot.protocol' and configState.values:
 				depotProtocol = configState.values[0]
+				logger.info("Using depot protocol '%s' from config state '%s'", depotProtocol, configState.configId)
 
 		if event and event.eventConfig.depotProtocol:
+			logger.info("Using depot protocol '%s' from event '%s'", event.eventConfig.depotProtocol, event.eventConfig.getName())
 			depotProtocol = event.eventConfig.depotProtocol
 
 		if depotProtocol not in ("webdav", "cifs"):
