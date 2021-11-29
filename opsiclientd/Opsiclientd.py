@@ -76,7 +76,6 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 
 		self._popupNotificationServer = None
 		self._popupNotificationLock = threading.Lock()
-		self.popup_end_time = 0
 		self._popupClosingThread = None
 
 		self._blockLoginEventId = None
@@ -830,24 +829,31 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 						)
 
 			class PopupClosingThread(threading.Thread):
-				def __init__(self, opsiclientd):
+				def __init__(self, opsiclientd, seconds):
 					super().__init__()
 					self.opsiclientd = opsiclientd
+					self.seconds = seconds
+					self.stopped = False
+
+				def stop(self):
+					self.stopped = True
 
 				def run(self):
-					while True:
+					while not self.stopped:
 						time.sleep(1)
-						if time.time() > self.opsiclientd.popup_end_time:
+						if time.time() > self.seconds:
 							break
-					logger.debug("hiding popup window")
-					self.opsiclientd.hidePopup()
+					if not self.stopped:
+						logger.debug("hiding popup window")
+						self.opsiclientd.hidePopup()
 
+			# last popup decides end time (even if unlimited)
+			if self._popupClosingThread and self._popupClosingThread.is_alive():
+				self._popupClosingThread.stop()
 			if displaySeconds > 0:
 				logger.debug("displaying popup for %s seconds", displaySeconds)
-				self.popup_end_time = max(self.popup_end_time, time.time() + displaySeconds)
-				if not self._popupClosingThread or not self._popupClosingThread.is_alive():
-					self._popupClosingThread = PopupClosingThread(self)
-					self._popupClosingThread.start()
+				self._popupClosingThread = PopupClosingThread(self, time.time() + displaySeconds)
+				self._popupClosingThread.start()
 
 	def hidePopup(self):
 		if self._popupNotificationServer:
