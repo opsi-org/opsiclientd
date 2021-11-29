@@ -1303,33 +1303,37 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						self._messageSubject.setMessage(shutdownWarningMessage)
 
 						choiceSubject = ChoiceSubject(id = 'choice')
-						choices = []
-						if reboot:
-							choices.append(_('Reboot now'))
-						else:
-							choices.append(_('Shutdown now'))
-						callbacks = [ self.startShutdownCallback ]
+						def set_choices_and_callbacks(choice_subject):
 
-						logger.info("Shutdown cancel counter: %s/%s", shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable)
-						if shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable:
-							if self.event.eventConfig.shutdownUserSelectableTime:
-								hour = time.localtime().tm_hour
-								while hour < 23:
-									hour += 1
-									if reboot:
-										choices.append(_('Reboot at %s') % f" {hour:02d}:00")
-									else:
-										choices.append(_('Shutdown at %s') % f" {hour:02d}:00")
-									callbacks.append(self.abortShutdownCallback)
+							choices = []
+							if reboot:
+								choices.append(_('Reboot now'))
 							else:
-								if reboot:
-									choices.append(_('Reboot later'))
-								else:
-									choices.append(_('Shutdown later'))
-								callbacks.append(self.abortShutdownCallback)
+								choices.append(_('Shutdown now'))
+							callbacks = [ self.startShutdownCallback ]
 
-						choiceSubject.setChoices(choices)
-						choiceSubject.setCallbacks(callbacks)
+							logger.info("Shutdown cancel counter: %s/%s", shutdownCancelCounter, self.event.eventConfig.shutdownUserCancelable)
+							if shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable:
+								if self.event.eventConfig.shutdownUserSelectableTime:
+									hour = time.localtime().tm_hour
+									while hour < 23:
+										hour += 1
+										if reboot:
+											choices.append(_('Reboot at %s') % f" {hour:02d}:00")
+										else:
+											choices.append(_('Shutdown at %s') % f" {hour:02d}:00")
+										callbacks.append(self.abortShutdownCallback)
+								else:
+									if reboot:
+										choices.append(_('Reboot later'))
+									else:
+										choices.append(_('Shutdown later'))
+									callbacks.append(self.abortShutdownCallback)
+
+							choice_subject.setChoices(choices)
+							choice_subject.setCallbacks(callbacks)
+
+						set_choices_and_callbacks(choiceSubject)
 						self._notificationServer.addSubject(choiceSubject)
 
 						failed_to_start_notifier = False
@@ -1339,7 +1343,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 							desktops = ["winlogon", "default"]
 
 						shutdownNotifierCommand = self.event.eventConfig.shutdownNotifierCommand
-						if self.event.eventConfig.shutdownUserSelectableTime and len(choices) > 1:
+						if self.event.eventConfig.shutdownUserSelectableTime and len(choiceSubject.getChoices()) > 1:
 							shutdownNotifierCommand = shutdownNotifierCommand.replace("shutdown.ini", "shutdown_select.ini")
 
 						for desktop in desktops:
@@ -1354,12 +1358,17 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								logger.error("Failed to start shutdown notifier, shutdown will not be executed")
 								failed_to_start_notifier = True
 
+						current_hour = time.localtime().tm_hour
 						timeout = int(self._shutdownWarningTime)
 						endTime = time.time() + timeout
 						while (timeout > 0) and not self.shutdownCancelled and not self.shutdownWaitCancelled and not self._should_cancel:
+							if current_hour != time.localtime().tm_hour:
+								# Remove choices which are in the past
+								set_choices_and_callbacks(choiceSubject)
+								current_hour = time.localtime().tm_hour
 							now = time.time()
 							minutes = 0
-							seconds = (endTime - now)
+							seconds = endTime - now
 							if seconds >= 60:
 								minutes = int(seconds/60)
 								seconds -= minutes*60
@@ -1374,7 +1383,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 								self.setStatusMessage(_("Reboot in %s:%s") % (minutes, seconds))
 							else:
 								self.setStatusMessage(_("Shutdown in %s:%s") % (minutes, seconds))
-							if (endTime - now) <= 0:
+							if endTime - now <= 0:
 								break
 							self._cancelable_sleep(1)
 
