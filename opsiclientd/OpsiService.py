@@ -64,29 +64,30 @@ def update_ca_cert(config_service: JSONRPCClient):
 		logger.error("Failed to update CA cert: %s", err)
 
 	for index, ca_cert in enumerate(ca_certs):
+		name = ca_cert.get_subject().CN
 		outdated = False
-		if index == 0:		# Assume opsi CA to be the first certificate
-			# do not remove if correct certificate is already there
-			present_ca = load_ca(ca_cert.get_subject().CN)
-			outdated = present_ca and present_ca.digest("sha1") != ca_cert.digest("sha1")
+		present_ca = None
 		try:
+			present_ca = load_ca(name)
+			outdated = present_ca and present_ca.digest("sha1") != ca_cert.digest("sha1")
+		except Exception as err: # pylint: disable=broad-except
+			logger.error("Failed to load CA from system cert store", exc_info=err)
+
+		if present_ca and not outdated:
+			logger.info("Found valid CA in os store")
+		try:
+			# do not remove if correct certificate is already there
 			if outdated or not config.get('global', 'install_opsi_ca_into_os_store'):
-				if remove_ca(ca_cert.get_subject().CN):
-					logger.info(
-						"CA cert %s successfully removed from system cert store",
-						ca_cert.get_subject().CN
-					)
+				if remove_ca(name):
+					logger.info("CA cert %s successfully removed from system cert store", name)
 		except Exception as err: # pylint: disable=broad-except
 			logger.error("Failed to remove CA from system cert store", exc_info=err)
 
-		# remark: outdated implies index == 0
-		if config.get('global', 'install_opsi_ca_into_os_store') and outdated:	# Assume opsi CA to be the first certificate
+		# Assume opsi CA to be the first certificate
+		if index == 0 and config.get('global', 'install_opsi_ca_into_os_store') and (outdated or not present_ca):
 			try:
 				install_ca(ca_cert)
-				logger.info(
-					"CA cert %s successfully installed into system cert store",
-					ca_certs[0].get_subject().CN
-				)
+				logger.info("CA cert %s successfully installed into system cert store", name)
 			except Exception as err: # pylint: disable=broad-except
 				logger.error("Failed to install CA into system cert store", exc_info=err)
 
