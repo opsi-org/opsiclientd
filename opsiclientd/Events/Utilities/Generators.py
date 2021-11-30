@@ -47,8 +47,12 @@ def createEventGenerators(opsiclientd):
 			continue
 
 		enabled_events[eventConfigId] = False
-		if not eventConfig['active'] or eventConfig['type'] in config.disabledEventTypes:
-			logger.info("Event %s of type %s is disabled", eventConfigId, eventConfig['type'])
+		if eventConfig['type'] in config.disabledEventTypes:
+			logger.info("Event '%s' of type '%s' is temporary disabled (main)", eventConfigId, eventConfig['type'])
+			continue
+
+		if not eventConfig['active']:
+			logger.info("Event '%s' of type '%s' is disabled (main)", eventConfigId, eventConfig['type'])
 			continue
 
 		try:
@@ -69,8 +73,12 @@ def createEventGenerators(opsiclientd):
 		if not eventConfigId in enabled_events:
 			enabled_events[eventConfigId] = False
 
-		if not eventConfig['active'] or eventConfig['type'] in config.disabledEventTypes:
-			logger.info("Event %s of type %s is disabled", eventConfigId, eventConfig['type'])
+		if eventConfig['type'] in config.disabledEventTypes:
+			logger.info("Event '%s' of type '%s' is temporary disabled (precondition)", eventConfigId, eventConfig['type'])
+			continue
+
+		if not eventConfig['active']:
+			logger.info("Event '%s' of type '%s' is disabled (precondition)", eventConfigId, eventConfig['type'])
 			continue
 
 		eventType = eventConfig['type']
