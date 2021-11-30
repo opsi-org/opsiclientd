@@ -17,6 +17,7 @@ import filecmp
 import shutil
 import sys
 import time
+import threading
 import datetime
 import tempfile
 import subprocess
@@ -148,7 +149,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		self._serviceUrlSubject.setMessage(configServiceUrl)
 		try:
 			cancellableAfter = forceInt(config.get('config_service', 'user_cancelable_after'))
-			if self._notificationServer and (cancellableAfter >= 0):
+			if self._notificationServer and cancellableAfter >= 0:
 				logger.info("User is allowed to cancel connection after %d seconds", cancellableAfter)
 				self._choiceSubject = ChoiceSubject(id = 'choice')
 		except Exception as err: # pylint: disable=broad-except
@@ -255,15 +256,17 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 			logger.error("Failed to start notification server: %s", err)
 			raise Exception(f"Failed to start notification server: {err}") from err
 
-	def stopNotificationServer(self):
-		if not self._notificationServer:
-			return
-
+	def _stopNotificationServer(self):
 		try:
 			logger.info("Stopping notification server")
 			self._notificationServer.stop(stopReactor=False)
 		except Exception as err: # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
+
+	def stopNotificationServer(self):
+		if not self._notificationServer:
+			return
+		threading.Thread(target=self._stopNotificationServer).start()
 
 	def getConfigFromService(self):
 		''' Get settings from service '''
@@ -1548,6 +1551,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 	def run(self): # pylint: disable=too-many-branches,too-many-statements
 		with log_context({'instance' : f'event processing {self.event.eventConfig.getId()}'}):
 			timelineEventId = None
+			notifierPids = []
+
 			try: # pylint: disable=too-many-nested-blocks
 				if self.event.eventConfig.workingWindow:
 					if not self.inWorkingWindow():
@@ -1569,7 +1574,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				self._set_cancelable()
 				self.opsiclientd.setBlockLogin(self.event.eventConfig.blockLogin)
 
-				notifierPids = []
 				try:
 					config.set_temporary_depot_path(None)
 					config.setTemporaryDepotDrive(None)
@@ -1710,15 +1714,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						else:
 							self.opsiclientd.setBlockLogin(False)
 
-					self.setStatusMessage("")
-					self.stopNotificationServer()
-					if notifierPids:
-						try:
-							time.sleep(3)
-							for notifierPid in notifierPids:
-								System.terminateProcess(processId=notifierPid)
-						except Exception: # pylint: disable=broad-except
-							pass
 			except EventProcessingCanceled as err:
 				logger.notice("Processing of event %s canceled", self.event)
 				timeline.addEvent(
@@ -1735,6 +1730,16 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					category="event_processing",
 					isError=True
 				)
+
+			self.setStatusMessage("")
+			self.stopNotificationServer()
+			if notifierPids:
+				try:
+					time.sleep(3)
+					for notifierPid in notifierPids:
+						System.terminateProcess(processId=notifierPid)
+				except Exception: # pylint: disable=broad-except
+					pass
 
 			self.opsiclientd.setBlockLogin(False)
 			self.running = False
