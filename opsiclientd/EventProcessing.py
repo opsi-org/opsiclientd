@@ -112,19 +112,19 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 	def is_cancelable(self):
 		return self._is_cancelable
 
-	def _set_cancelable(self):
-		with self.opsiclientd.eventLock:
-			self._is_cancelable = True
-			if self._should_cancel:
-				raise EventProcessingCanceled()
-
-	def _set_not_cancelable(self):
-		while not self.opsiclientd.eventLock.acquire():
-			self._cancelable_sleep(1)
-		try:
-			self._is_cancelable = False
-		finally:
-			self.opsiclientd.eventLock.release()
+	def _set_cancelable(self, cancelable: bool):
+		if cancelable:
+			with self.opsiclientd.eventLock:
+				self._is_cancelable = True
+				if self._should_cancel:
+					raise EventProcessingCanceled()
+		else:
+			while not self.opsiclientd.eventLock.acquire():
+				self._cancelable_sleep(1)
+			try:
+				self._is_cancelable = False
+			finally:
+				self.opsiclientd.eventLock.release()
 
 	def should_cancel(self):
 		return self._should_cancel
@@ -1571,7 +1571,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				self.running = True
 				self.actionCancelled = False
 				self.waitCancelled = False
-				self._set_cancelable()
+				self._set_cancelable(True)
 				self.opsiclientd.setBlockLogin(self.event.eventConfig.blockLogin)
 
 				try:
@@ -1631,7 +1631,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						if self.event.eventConfig.processActions:
 							if self.should_cancel():
 								raise EventProcessingCanceled()
-							self._set_not_cancelable()
+							self._set_cancelable(False)
 
 							if self.event.eventConfig.actionType == 'login':
 								self.processUserLoginActions()
@@ -1648,7 +1648,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 					if self.should_cancel():
 						raise EventProcessingCanceled()
-					self._set_not_cancelable()
+					self._set_cancelable(False)
 
 					shutdown_or_reboot = self.isShutdownRequested() or self.isRebootRequested()
 					if self.event.eventConfig.syncConfigToServer or self.event.eventConfig.syncConfigFromServer:
@@ -1697,9 +1697,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 									err.output.decode(encoding, errors="replace")
 								)
 
-						self._set_cancelable()
+						# Shutdown / reboot not cancelable if triggered by opsi script
+						self._set_cancelable(False)
 						self.processShutdownRequests()
-						self._set_not_cancelable()
 
 						if self.opsiclientd.isShutdownTriggered():
 							self.setStatusMessage(_("Shutting down machine"))
