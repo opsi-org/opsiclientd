@@ -132,7 +132,10 @@ def reconfigureEventGenerators():
 		try:
 			eventGenerator = _EVENT_GENERATORS[mainEventConfigId]
 		except KeyError:
-			logger.info("Cannot reconfigure event generator '%s': not found", mainEventConfigId)
+			logger.info(
+				"Cannot reconfigure event generator for event '%s': not found",
+				eventConfigId
+			)
 			continue
 
 		try:
