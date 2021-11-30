@@ -75,33 +75,39 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 			except Exception as err: # pylint: disable=broad-except
 				logger.error("Failed to parse event config '%s': %s", eventConfigId, err)
 
-	def __inheritArgsFromSuperEvents(rawEventConfigsCopy, args, superEventConfigId):
-		if not superEventConfigId in rawEventConfigsCopy.keys():
-			logger.error("Super event '%s' not found", superEventConfigId)
-			return args
-		superArgs = pycopy.deepcopy(rawEventConfigsCopy[superEventConfigId]['args'])
-		if rawEventConfigsCopy[superEventConfigId]['super']:
-			superArgs = __inheritArgsFromSuperEvents(rawEventConfigsCopy, superArgs, rawEventConfigsCopy[superEventConfigId]['super'])
-		# Do not overwrite values with emptystring or emptylist (behaves like no value given)
-		cleaned_args = {
-			key : value
-			for key, value in args.items()
-			if not (
-				key in ("include_product_group_ids", "exclude_product_group_ids")
-				and value in ("", [])
-			)
-		}
-		superArgs.update(cleaned_args)
-		return superArgs
+	# Process inheritance
+	newRawEventConfigs = {}
+	while rawEventConfigs:
+		num_configs = len(rawEventConfigs)
+		for eventConfigId in sorted(list(rawEventConfigs)):
+			rawEventConfig = rawEventConfigs[eventConfigId]
+			if rawEventConfig['super']:
+				if rawEventConfig['super'] in newRawEventConfigs:
+					super_args = pycopy.deepcopy(newRawEventConfigs[rawEventConfig['super']]['args'])
+					# Do not overwrite values with emptystring or emptylist (behaves like no value given)
+					cleaned_args = {
+						key : value
+						for key, value in rawEventConfig['args'].items()
+						if not (
+							key in ("include_product_group_ids", "exclude_product_group_ids")
+							and value in ("", [])
+						)
+					}
+					super_args.update(cleaned_args)
+					rawEventConfig['args'] = super_args
+					newRawEventConfigs[eventConfigId] = rawEventConfigs.pop(eventConfigId)
+					logger.debug("Inheritance for event '%s' processed", eventConfigId)
+				elif rawEventConfig['super'] not in rawEventConfigs:
+					logger.error("Super event '%s' not found", rawEventConfig['super'])
+					rawEventConfigs.pop(eventConfigId)
+			else:
+				logger.debug("Inheritance for event '%s' processed", eventConfigId)
+				newRawEventConfigs[eventConfigId] = rawEventConfig
+		if num_configs == len(rawEventConfigs):
+			logger.error("Failed to process event inheritance")
+			break
 
-	rawEventConfigsCopy = pycopy.deepcopy(rawEventConfigs)
-	for eventConfigId, rawEventConfig in rawEventConfigs.items():
-		if rawEventConfig['super']:
-			rawEventConfig['args'] = __inheritArgsFromSuperEvents(
-				rawEventConfigsCopy,
-				rawEventConfig['args'],
-				rawEventConfig['super']
-			)
+	rawEventConfigs = newRawEventConfigs
 
 	eventConfigs = {}
 	for (eventConfigId, rawEventConfig) in rawEventConfigs.items(): # pylint: disable=too-many-nested-blocks
