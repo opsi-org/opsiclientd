@@ -594,7 +594,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 					shutil.copy2(source, os.path.join(actionProcessorLocalTmpDir, common))
 		if RUNNING_ON_WINDOWS:
 			# saving current opsi-script skin (set during opsi-client-agent setup with optional corporate identity)
-			if os.path.exists(os.path.join(actionProcessorLocalDir, "skin")):
+			if os.path.exists(os.path.join(actionProcessorLocalDir, "skin")) and os.listdir(os.path.join(actionProcessorLocalDir, "skin")):
 				if os.path.exists(os.path.join(actionProcessorLocalTmpDir, "skin")):
 					shutil.rmtree(os.path.join(actionProcessorLocalTmpDir, "skin"))
 				shutil.move(os.path.join(actionProcessorLocalDir, "skin"), os.path.join(actionProcessorLocalTmpDir, "skin"))
