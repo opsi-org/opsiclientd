@@ -80,7 +80,7 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 	while rawEventConfigs:
 		num_configs = len(rawEventConfigs)
 		for eventConfigId in sorted(list(rawEventConfigs)):
-			rawEventConfig = pycopy.deepcopy(rawEventConfigs[eventConfigId])
+			rawEventConfig = rawEventConfigs[eventConfigId]
 			if rawEventConfig['super']:
 				if rawEventConfig['super'] in newRawEventConfigs:
 					super_args = pycopy.deepcopy(newRawEventConfigs[rawEventConfig['super']]['args'])
@@ -96,7 +96,8 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 					super_args.update(cleaned_args)
 					rawEventConfig['args'] = super_args
 					logger.debug("Inheritance for event '%s' processed", eventConfigId)
-					newRawEventConfigs[eventConfigId] = rawEventConfigs.pop(eventConfigId)
+					newRawEventConfigs[eventConfigId] = rawEventConfig
+					rawEventConfigs.pop(eventConfigId)
 				elif rawEventConfig['super'] not in rawEventConfigs:
 					logger.error("Super event '%s' not found", rawEventConfig['super'])
 					rawEventConfigs.pop(eventConfigId)
