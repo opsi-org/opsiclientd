@@ -35,14 +35,14 @@ from opsiclientd.Localization import _
 config = Config()
 
 
-def update_ca_cert(config_service: JSONRPCClient):
+def update_ca_cert(config_service: JSONRPCClient):  # pylint: disable=too-many-branches
 	logger.info("Updating CA cert")
 	ca_certs = []
 	try:
 		if not os.path.isdir(os.path.dirname(config.ca_cert_file)):
 			os.makedirs(os.path.dirname(config.ca_cert_file))
 
-		try: # pylint: disable=broad-except
+		try:  # pylint: disable=broad-except
 			response = config_service.get("/ssl/opsi-ca-cert.pem")
 		except Exception as err:
 			raise RuntimeError(f"Failed to fetch opsi-ca-cert.pem: {err}") from err
@@ -63,35 +63,40 @@ def update_ca_cert(config_service: JSONRPCClient):
 	except Exception as err: # pylint: disable=broad-except
 		logger.error("Failed to update CA cert: %s", err)
 
-	for index, ca_cert in enumerate(ca_certs):
+	for _idx, ca_cert in enumerate(ca_certs):
 		name = ca_cert.get_subject().CN
-		logger.debug("handling certificate: %s", name)
-		outdated = False
+		if name == "uib opsi CA":
+			continue
+
+		logger.debug("Handling CA '%s'", name)
 		present_ca = None
+		outdated = True
 		try:
 			present_ca = load_ca(name)
 			if present_ca:
 				outdated = present_ca.digest("sha1") != ca_cert.digest("sha1")
+				logger.info("CA '%s' exists in system store and is %s", name, "outdated" if outdated else "up to date")
+			else:
+				logger.info("CA '%s' not found in system store", name)
 		except Exception as err: # pylint: disable=broad-except
-			logger.error("Failed to load CA from system cert store", exc_info=err)
+			logger.error("Failed to load CA '%s' from system cert store: %s", name, err, exc_info=err)
 
-		if present_ca and not outdated:
-			logger.info("Found valid CA in os store")
-		try:
-			# do not remove if correct certificate is already there
-			if outdated or not config.get('global', 'install_opsi_ca_into_os_store'):
-				if remove_ca(name):
-					logger.info("CA cert %s successfully removed from system cert store", name)
-		except Exception as err: # pylint: disable=broad-except
-			logger.error("Failed to remove CA from system cert store", exc_info=err)
-
-		# Assume opsi CA to be the first certificate
-		if index == 0 and config.get('global', 'install_opsi_ca_into_os_store') and (outdated or not present_ca):
+		if config.get('global', 'install_opsi_ca_into_os_store'):
+			if outdated or not present_ca:
+				# Add or replace CA
+				try:
+					install_ca(ca_cert)
+					logger.info("CA '%s' successfully installed into system cert store", name)
+				except Exception as err: # pylint: disable=broad-except
+					logger.error("Failed to install CA '%s' into system cert store: %s", name, err, exc_info=err)
+		elif present_ca:
+			logger.info("Removing present CA %s from store because global.install_opsi_ca_into_os_store is false", name)
 			try:
-				install_ca(ca_cert)
-				logger.info("CA cert %s successfully installed into system cert store", name)
+				if remove_ca(name):
+					logger.info("CA '%s' successfully removed from system cert store", name)
 			except Exception as err: # pylint: disable=broad-except
-				logger.error("Failed to install CA into system cert store", exc_info=err)
+				logger.error("Failed to remove CA '%s' from system cert store: %s", name, err, exc_info=err)
+
 
 class ServiceConnection:
 	def __init__(self):
