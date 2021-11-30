@@ -30,7 +30,7 @@ _EVENT_GENERATORS = {}
 config = Config()
 
 
-def createEventGenerators(opsiclientd):
+def createEventGenerators(opsiclientd): # pylint: disable=too-many-branches,too-many-statements
 	enabled_events = {}
 	panicEventConfig = PanicEventConfig(
 		EVENT_CONFIG_TYPE_PANIC,
