@@ -421,8 +421,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				for event_generator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
 					try:
 						event_generator.createAndFireEvent()
-					except ValueError as exception:
-						logger.error("Unable to fire DaemonStartupEvent from %s", event_generator, exc_info=exception)
+					except ValueError as err:
+						logger.error("Unable to fire DaemonStartupEvent from %s: %s", event_generator, err, exc_info=True)
 
 				if getEventGenerators(generatorClass=GUIStartupEventGenerator):
 					# Wait until gui starts up
@@ -439,8 +439,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 						logger.info("Create and fire shutdown event generator %s", event_generator)
 						try:
 							event_generator.createAndFireEvent()
-						except ValueError as exception:
-							logger.error("Unable to fire DaemonStartupEvent from %s", event_generator, exc_info=exception)
+						except ValueError as err:
+							logger.error("Unable to fire DaemonStartupEvent from %s: %s", event_generator, err, exc_info=True)
 
 		try:
 			parent = psutil.Process(os.getpid()).parent()
@@ -545,26 +545,31 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					#trying to cancel all non-login events - RuntimeError if impossible
 					logger.notice("Canceling event processing thread %s (ocd)", ept)
 					ept.cancel(no_lock=True)
-			logger.trace("waiting for cancellation to conclude")
+			logger.trace("Waiting for cancellation to conclude")
+
 		# Use copy to allow for epts to be removed from eptList
 		for ept in eptListCopy:
 			if ept.event.eventConfig.actionType != 'login':
-				logger.trace("waiting for ending of ept %s (ocd)", ept)
+				logger.trace("Waiting for ending of ept %s (ocd)", ept)
 				for _ in range(WAIT_SECONDS):
 					if not ept or not ept.running:
 						break
 					time.sleep(1)
 				if ept and ept.running:
-					raise ValueError(f"Event didn't stop after {WAIT_SECONDS} seconds - aborting")
-				logger.debug("successfully canceled %s of type %s", ept.event.eventConfig.name, ept.event.eventConfig.actionType)
-				if ept.event.eventConfig.name == "sync_completed":
-					try:
-						cache_service = self.getCacheService()
-						logger.debug("got config_service with state: %s - marking dirty", cache_service.getConfigCacheState())
-						# mark cache as dirty when bypassing cache mechanism for installation
-						cache_service.setConfigCacheFaulty()
-					except RuntimeError as exception:
-						logger.error("could not mark config service cache dirty", exc_info=exception)
+					raise ValueError(
+						f"Event {ept.event.eventConfig.name} didn't stop after {WAIT_SECONDS} seconds - aborting"
+					)
+				logger.debug("Successfully canceled event '%s' of type %s", ept.event.eventConfig.name, ept.event.eventConfig.actionType)
+
+				try:
+					cache_service = self.getCacheService()
+					logger.debug("Got config_service with state: %s - marking dirty", cache_service.getConfigCacheState())
+					# mark cache as dirty when bypassing cache mechanism for installation
+					cache_service.setConfigCacheFaulty()
+				except RuntimeError as err:
+					logger.info("Could not mark config service cache dirty: %s", err, exc_info=True)
+
+
 
 	def processEvent(self, event):
 		logger.notice("Processing event %s", event)
@@ -590,9 +595,9 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			)
 			self.canProcessEvent(event)
 			self.cancelOthersAndWaitUntilReady()
-		except (ValueError, RuntimeError) as exception:
+		except (ValueError, RuntimeError) as err:
 			# skipping execution if event cannot be created
-			logger.warning("Could not start event", exc_info=exception)
+			logger.warning("Could not start event: %s", err, exc_info=True)
 			logger.trace("release lock (ocd cannot process event)")
 			self.eventLock.release()
 			return

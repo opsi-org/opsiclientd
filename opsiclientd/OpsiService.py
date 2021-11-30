@@ -79,7 +79,7 @@ def update_ca_cert(config_service: JSONRPCClient):  # pylint: disable=too-many-b
 			else:
 				logger.info("CA '%s' not found in system store", name)
 		except Exception as err: # pylint: disable=broad-except
-			logger.error("Failed to load CA '%s' from system cert store: %s", name, err, exc_info=err)
+			logger.error("Failed to load CA '%s' from system cert store: %s", name, err, exc_info=True)
 
 		if config.get('global', 'install_opsi_ca_into_os_store'):
 			if outdated or not present_ca:
@@ -88,14 +88,14 @@ def update_ca_cert(config_service: JSONRPCClient):  # pylint: disable=too-many-b
 					install_ca(ca_cert)
 					logger.info("CA '%s' successfully installed into system cert store", name)
 				except Exception as err: # pylint: disable=broad-except
-					logger.error("Failed to install CA '%s' into system cert store: %s", name, err, exc_info=err)
+					logger.error("Failed to install CA '%s' into system cert store: %s", name, err, exc_info=True)
 		elif present_ca:
 			logger.info("Removing present CA %s from store because global.install_opsi_ca_into_os_store is false", name)
 			try:
 				if remove_ca(name):
 					logger.info("CA '%s' successfully removed from system cert store", name)
 			except Exception as err: # pylint: disable=broad-except
-				logger.error("Failed to remove CA '%s' from system cert store: %s", name, err, exc_info=err)
+				logger.error("Failed to remove CA '%s' from system cert store: %s", name, err, exc_info=True)
 
 
 class ServiceConnection:
