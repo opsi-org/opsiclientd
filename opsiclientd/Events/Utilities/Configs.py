@@ -80,7 +80,7 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 	while rawEventConfigs:
 		num_configs = len(rawEventConfigs)
 		for eventConfigId in sorted(list(rawEventConfigs)):
-			rawEventConfig = rawEventConfigs[eventConfigId]
+			rawEventConfig = pycopy.deepcopy(rawEventConfigs[eventConfigId])
 			if rawEventConfig['super']:
 				if rawEventConfig['super'] in newRawEventConfigs:
 					super_args = pycopy.deepcopy(newRawEventConfigs[rawEventConfig['super']]['args'])
