@@ -17,6 +17,7 @@ from opsiclientd.Events.SwOnDemand import SwOnDemandEventConfig
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventConfig
 from opsiclientd.Events.Timer import TimerEventConfig
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
+from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
 
 @pytest.fixture(params=[
 	DaemonShutdownEventConfig, DaemonStartupEventConfig, EventConfig,
@@ -57,3 +58,13 @@ def test_inheritance():
 	assert configs["on_demand"]["shutdownWarningTime"] == 3600
 	assert configs["on_demand{user_logged_in}"]["shutdownWarningTime"] == 36000
 
+	config.set(section="event_default", option="shutdown_warning_time", value=12345)
+	reconfigureEventGenerators()
+
+	configs = getEventConfigs()
+	assert configs["on_demand"]["shutdownWarningTime"] == 12345
+	assert configs["on_demand{user_logged_in}"]["shutdownWarningTime"] == 36000
+
+	assert configs["gui_startup"]["shutdownWarningTime"] == 12345
+	assert configs["gui_startup{cache_ready}"]["shutdownWarningTime"] == 12345
+	assert configs["gui_startup{installation_pending}"]["shutdownWarningTime"] == 12345

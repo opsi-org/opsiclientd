@@ -274,6 +274,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				return
 			self.setStatusMessage(_("Getting config from service"))
 			config.getFromService(self._configService)
+			config.updateConfigFile(force=True)
 			self.setStatusMessage(_("Got config from service"))
 			logger.notice("Reconfiguring event generators")
 			reconfigureEventGenerators()
