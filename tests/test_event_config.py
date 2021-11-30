@@ -6,6 +6,8 @@
 # License: AGPL-3.0
 
 import pytest
+
+from opsiclientd.Config import Config
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventConfig
 from opsiclientd.Events.DaemonStartup import DaemonStartupEventConfig
@@ -14,6 +16,7 @@ from opsiclientd.Events.ProcessActionRequests import ProcessActionRequestsEventC
 from opsiclientd.Events.SwOnDemand import SwOnDemandEventConfig
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventConfig
 from opsiclientd.Events.Timer import TimerEventConfig
+from opsiclientd.Events.Utilities.Configs import getEventConfigs
 
 @pytest.fixture(params=[
 	DaemonShutdownEventConfig, DaemonStartupEventConfig, EventConfig,
@@ -31,3 +34,26 @@ def testAttributesForWhiteAndBlackListExist(configClass):
 	config = configClass("testevent")
 	assert hasattr(config, 'excludeProductGroupIds')
 	assert hasattr(config, 'includeProductGroupIds')
+
+def test_inheritance():
+	config = Config()
+	config.set("global", "config_file", "tests/data/event_config/1.conf")
+	config.readConfigFile()
+
+	configs = getEventConfigs()
+	assert sorted(list(configs)) == sorted([
+		'gui_startup', 'gui_startup{cache_ready}', 'gui_startup{installation_pending}', 'gui_startup{user_logged_in}',
+		'maintenance',
+		'net_connection',
+		'on_demand', 'on_demand{user_logged_in}',
+		'on_shutdown', 'on_shutdown{installation_pending}',
+		'opsiclientd_start', 'opsiclientd_start{cache_ready}',
+		'silent_install',
+		'software_on_demand',
+		'sync_completed', 'sync_completed{cache_ready_user_logged_in}', 'sync_completed{cache_ready}',
+		'timer', 'timer_silentinstall',
+		'user_login'
+	])
+	assert configs["on_demand"]["shutdownWarningTime"] == 3600
+	assert configs["on_demand{user_logged_in}"]["shutdownWarningTime"] == 36000
+

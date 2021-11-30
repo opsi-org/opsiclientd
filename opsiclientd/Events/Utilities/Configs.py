@@ -95,16 +95,17 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 					}
 					super_args.update(cleaned_args)
 					rawEventConfig['args'] = super_args
-					newRawEventConfigs[eventConfigId] = rawEventConfigs.pop(eventConfigId)
 					logger.debug("Inheritance for event '%s' processed", eventConfigId)
+					newRawEventConfigs[eventConfigId] = rawEventConfigs.pop(eventConfigId)
 				elif rawEventConfig['super'] not in rawEventConfigs:
 					logger.error("Super event '%s' not found", rawEventConfig['super'])
 					rawEventConfigs.pop(eventConfigId)
 			else:
 				logger.debug("Inheritance for event '%s' processed", eventConfigId)
 				newRawEventConfigs[eventConfigId] = rawEventConfig
+				rawEventConfigs.pop(eventConfigId)
 		if num_configs == len(rawEventConfigs):
-			logger.error("Failed to process event inheritance")
+			logger.error("Failed to process event inheritance: %s", rawEventConfigs)
 			break
 
 	rawEventConfigs = newRawEventConfigs
@@ -281,16 +282,16 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 								logger.info("Removing config option %s.%s", section, key)
 								config.del_option(section, key)
 
-				except Exception as err1: # pylint: disable=broad-except
-					logger.debug(err1, exc_info=True)
-					logger.error("Failed to set event config argument '%s' to '%s': %s", key, value, err1)
+				except Exception as err: # pylint: disable=broad-except
+					logger.debug(err, exc_info=True)
+					logger.error("Failed to set event config argument '%s' to '%s': %s", key, value, err)
 
 			logger.info(
 				"Event config '%s' args:\n%s",
 				eventConfigId,
 				pprint.pformat(eventConfigs[eventConfigId], indent=4, width=300, compact=False)
 			)
-		except Exception as err2: # pylint: disable=broad-except
-			logger.error(err2, exc_info=True)
+		except Exception as err: # pylint: disable=broad-except
+			logger.error(err, exc_info=True)
 
 	return eventConfigs
