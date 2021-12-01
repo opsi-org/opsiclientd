@@ -35,7 +35,7 @@ from opsiclientd.Localization import _
 config = Config()
 
 
-def update_ca_cert(config_service: JSONRPCClient):  # pylint: disable=too-many-branches
+def update_ca_cert(config_service: JSONRPCClient, allow_remove: bool=False):  # pylint: disable=too-many-branches
 	logger.info("Updating CA cert")
 	ca_certs = []
 	try:
@@ -89,7 +89,7 @@ def update_ca_cert(config_service: JSONRPCClient):  # pylint: disable=too-many-b
 					logger.info("CA '%s' successfully installed into system cert store", name)
 				except Exception as err: # pylint: disable=broad-except
 					logger.error("Failed to install CA '%s' into system cert store: %s", name, err, exc_info=True)
-		elif present_ca:
+		elif present_ca and allow_remove:
 			logger.info("Removing present CA %s from store because global.install_opsi_ca_into_os_store is false", name)
 			try:
 				if remove_ca(name):
@@ -370,7 +370,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 							if not os.path.exists(config.ca_cert_file) or verify_server_cert:
 								# Renew CA if not exists or connection is verified
 								try:
-									update_ca_cert(self.configService)
+									update_ca_cert(self.configService, allow_remove=True)
 								except Exception as err: # pylint: disable=broad-except
 									logger.error(err, exc_info=True)
 					except OpsiServiceVerificationError as verificationError:

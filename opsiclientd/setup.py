@@ -268,7 +268,7 @@ def opsi_service_setup(options=None):
 	)
 
 	try:
-		update_ca_cert(jsonrpc_client)
+		update_ca_cert(jsonrpc_client, allow_remove=False)
 	except Exception as err: # pylint: disable=broad-except
 		logger.error(err, exc_info=True)
 
