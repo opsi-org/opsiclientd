@@ -383,6 +383,6 @@ def setup(full=False, options=None) -> None:
 		logger.error("Failed to setup on_shutdown: %s", err, exc_info=True)
 		errors.append(str(err))
 
+	logger.notice("Setup completed with %d errors", len(errors))
 	if errors and full:
-		logger.error("Setup errors occured: %s", errors)
 		raise RuntimeError(", ".join(errors))
