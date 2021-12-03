@@ -287,7 +287,7 @@ def setup_on_shutdown():
 	if not RUNNING_ON_WINDOWS:
 		return None
 
-	logger.info("Creating opsi shutdown install policy")
+	logger.notice("Creating opsi shutdown install policy")
 	# pyright: reportMissingImports=false
 	import winreg  # pylint: disable=import-outside-toplevel,import-error
 	import win32process  # pylint: disable=import-outside-toplevel,import-error
@@ -384,4 +384,5 @@ def setup(full=False, options=None) -> None:
 		errors.append(str(err))
 
 	if errors and full:
+		logger.error("Setup errors occured: %s", errors)
 		raise RuntimeError(", ".join(errors))
