@@ -367,7 +367,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 						)
 
 						if serverVersion and (serverVersion[0] > 4 or (serverVersion[0] == 4 and serverVersion[1] > 1)):
-							if not os.path.exists(config.ca_cert_file) or verify_server_cert:
+							if not os.path.exists(config.ca_cert_file) or verify_server_cert or config.get('global', 'install_opsi_ca_into_os_store'):
 								# Renew CA if not exists or connection is verified
 								try:
 									update_ca_cert(self.configService, allow_remove=True)
