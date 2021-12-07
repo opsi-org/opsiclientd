@@ -1697,9 +1697,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 									err.output.decode(encoding, errors="replace")
 								)
 
+						self._set_cancelable(True)
+						self.processShutdownRequests()
 						# Shutdown / reboot not cancelable if triggered by opsi script
 						self._set_cancelable(False)
-						self.processShutdownRequests()
 
 						if self.opsiclientd.isShutdownTriggered():
 							self.setStatusMessage(_("Shutting down machine"))
