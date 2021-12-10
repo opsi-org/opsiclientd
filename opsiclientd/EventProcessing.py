@@ -1135,14 +1135,14 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				desktops = [self.event.eventConfig.actionNotifierDesktop]
 				if RUNNING_ON_WINDOWS and self.event.eventConfig.actionNotifierDesktop == "all":
 					desktops = ["winlogon", "default"]
-				for desktop in desktops:
-					notifier_pid = self.startNotifierApplication(
-						command    = self.event.eventConfig.actionNotifierCommand,
-						desktop    = desktop,
-						notifierId = 'action'
-					)
-					if notifier_pid:
-						notifierPids.append(notifier_pid)
+					for desktop in desktops:
+						notifier_pid = self.startNotifierApplication(
+							command    = self.event.eventConfig.actionNotifierCommand,
+							desktop    = desktop,
+							notifierId = 'action'
+						)
+						if notifier_pid:
+							notifierPids.append(notifier_pid)
 
 			timeout = int(self.event.eventConfig.actionWarningTime)
 			endTime = time.time() + timeout
