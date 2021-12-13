@@ -303,7 +303,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				'clientconnect',
 				data=data.replace('\ufffd', '?'),
 				objectId=config.get('global', 'host_id'),
-				append=True
+				append=False
 			)
 			logging_config(file_level=config.get('global', 'log_level'))
 		except Exception as err: # pylint: disable=broad-except
