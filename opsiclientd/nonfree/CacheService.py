@@ -489,7 +489,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 								'instlog',
 								data=data,
 								objectId=config.get('global', 'host_id'),
-								append=True
+								append=False
 							)
 					except Exception as err: # pylint: disable=broad-except
 						logger.error("Failed to sync instlog: %s", err)
