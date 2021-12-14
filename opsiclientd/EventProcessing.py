@@ -1703,7 +1703,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 									err.output.decode(encoding, errors="replace")
 								)
 
-						self._set_cancelable(True)
+						# processActions is False for passive events like sync/sync_completed
+						if self.event.eventConfig.processActions:
+							self._set_cancelable(False)
+						else:
+							self._set_cancelable(True)
 						self.processShutdownRequests()
 						# Shutdown / reboot not cancelable if triggered by opsi script
 						self._set_cancelable(False)
