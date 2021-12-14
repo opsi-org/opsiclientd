@@ -331,10 +331,6 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		processId = None
 		while True:
 			try:
-				logger.info(
-					"Running command %s in session '%s' on desktop '%s'",
-					command, sessionId, desktop
-				)
 				processId = System.runCommandInSession(
 						command=command,
 						sessionId=sessionId,
@@ -359,7 +355,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 		try:
 			pid = self.runCommandInSession(
 				sessionId = sessionId,
-				command = command.replace('%port%', forceUnicode(self.notificationServerPort)).replace('%id%', forceUnicode(notifierId)),
+				command = command.replace('%port%', forceUnicode(self.notificationServerPort)).replace('%id%', forceUnicode(notifierId)).split(),
 				desktop = desktop,
 				waitForProcessEnding = False
 			)
