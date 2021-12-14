@@ -361,9 +361,13 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 		logger.notice("Starting notifier application in session '%s' on desktop '%s'", sessionId, desktop)
 		try:
+			command = command.replace('%port%', forceUnicode(self.notificationServerPort)).replace('%id%', forceUnicode(notifierId))
+			# call process directly without shell for posix, keep string structure for windows
+			if not RUNNING_ON_WINDOWS:
+				command = command.split()
 			pid = self.runCommandInSession(
 				sessionId = sessionId,
-				command = command.replace('%port%', forceUnicode(self.notificationServerPort)).replace('%id%', forceUnicode(notifierId)).split(),
+				command = command,
 				desktop = desktop,
 				waitForProcessEnding = False
 			)
