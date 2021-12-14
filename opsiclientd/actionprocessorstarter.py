@@ -24,7 +24,7 @@ from opsiclientd import __version__, DEFAULT_STDERR_LOG_FORMAT, DEFAULT_FILE_LOG
 
 def set_status_message(backend, session_id, message):
 	if session_id == "-1":
-		logger.info("Not setting status message")
+		logger.debug("Not setting status message")
 		return
 	try:
 		backend.setStatusMessage(session_id, message) # pylint: disable=no-member
@@ -64,7 +64,8 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 		file_format=DEFAULT_FILE_LOG_FORMAT
 	)
 
-	with log_context({'instance' : os.path.basename(sys.argv[0])}):
+	log_instance = f'{os.path.basename(sys.argv[0]).rsplit(".", 1)[0]}_s{sessionId}'
+	with log_context({'instance': log_instance}):
 		logger.debug(
 			"Called with arguments: %s",
 			', '.join((
