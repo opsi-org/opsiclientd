@@ -341,7 +341,8 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						desktop=desktop,
 						waitForProcessEnding=waitForProcessEnding,
 						timeoutSeconds=timeoutSeconds,
-						noWindow=noWindow
+						noWindow=noWindow,
+						shell=False
 				)[2]
 				break
 			except Exception as err: # pylint: disable=broad-except
@@ -362,6 +363,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				desktop = desktop,
 				waitForProcessEnding = False
 			)
+			logger.debug("starting notifier with pid %s", pid)
 			return pid
 		except Exception as err: # pylint: disable=broad-except
 			logger.error("Failed to start notifier application '%s': %s" , command, err)
@@ -1738,9 +1740,10 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				try:
 					time.sleep(3)
 					for notifierPid in notifierPids:
+						logger.trace("killing notifier with pid %s", notifierPid)
 						System.terminateProcess(processId=notifierPid)
-				except Exception: # pylint: disable=broad-except
-					pass
+				except Exception as error: # pylint: disable=broad-except
+					logger.error("Could not kill notifier", exc_info=error)
 
 			self.opsiclientd.setBlockLogin(False)
 			self.running = False
