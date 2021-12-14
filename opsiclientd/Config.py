@@ -149,6 +149,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				"config_file": os.path.join(baseDir, "opsiclientd", "opsiclientd.conf"),
 				"log_file": "opsiclientd.log",
 				"log_level": LOG_NOTICE,
+				"max_log_transfer_size": 5,
 				"host_id": System.getFQDN().lower(),
 				"opsi_host_key": "",
 				"wait_for_gui_timeout": 120,

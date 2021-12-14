@@ -12,7 +12,6 @@ Processing of events.
 
 import os
 import re
-import codecs
 import filecmp
 import shutil
 import sys
@@ -34,7 +33,7 @@ from OPSI.Util.Message import (
 from OPSI.Util.Thread import KillableThread
 from OPSI.Util.Path import cd
 
-from opsicommon.logging import logger, log_context, logging_config, LOG_WARNING
+from opsicommon.logging import logger, log_context, logging_config, LOG_INFO
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
@@ -293,22 +292,31 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				return
 			self.setStatusMessage(_("Writing log to service"))
 
-			with codecs.open(config.get('global', 'log_file'), 'r', 'utf-8', 'replace') as file:
-				data = file.read()
+			data = ""
+			size = os.path.getsize(config.get('global', 'log_file'))
+			with open(config.get('global', 'log_file'), 'rb') as file:
+				max_size = config.get('global', 'max_log_transfer_size') * 1000000
+				if max_size and size > max_size:
+					file.seek(size - max_size)
+					# Read to next newline character
+					file.readline()
+				data = file.read().decode("utf-8", errors='replace').replace('\ufffd', '?')
 
 			data += "-------------------- submitted part of log file ends here, see the rest of log file on client --------------------\n"
 			# Do not log jsonrpc request
-			logging_config(file_level=LOG_WARNING)
-			self._configService.log_write(  # pylint: disable=no-member
-				'clientconnect',
-				data=data.replace('\ufffd', '?'),
-				objectId=config.get('global', 'host_id'),
-				append=False
-			)
-			logging_config(file_level=config.get('global', 'log_level'))
+			if config.get('global', 'log_level') > LOG_INFO:
+				logging_config(file_level=LOG_INFO)
+			try:
+				self._configService.log_write(  # pylint: disable=no-member
+					'clientconnect',
+					data=data,
+					objectId=config.get('global', 'host_id'),
+					append=False
+				)
+			finally:
+				logging_config(file_level=config.get('global', 'log_level'))
 		except Exception as err: # pylint: disable=broad-except
-			logging_config(file_level=config.get('global', 'log_level'))
-			logger.error("Failed to write log to service: %s", err)
+			logger.error("Failed to write log to service: %s", err, exc_info=True)
 			raise
 
 	def runCommandInSession( # pylint: disable=too-many-arguments
