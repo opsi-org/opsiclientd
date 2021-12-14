@@ -1739,7 +1739,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 						logger.trace("killing notifier with pid %s", notifierPid)
 						System.terminateProcess(processId=notifierPid)
 				except Exception as error: # pylint: disable=broad-except
-					logger.error("Could not kill notifier", exc_info=error)
+					logger.error("Could not kill notifier: %s", error, exc_info=True)
 
 			self.opsiclientd.setBlockLogin(False)
 			self.running = False
