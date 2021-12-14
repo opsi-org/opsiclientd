@@ -1752,8 +1752,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				try:
 					time.sleep(3)
 					for notifierPid in notifierPids:
-						logger.trace("killing notifier with pid %s", notifierPid)
-						System.terminateProcess(processId=notifierPid)
+						if shutil.pid_exists(notifierPid):
+							logger.trace("killing notifier with pid %s", notifierPid)
+							System.terminateProcess(processId=notifierPid)
 				except Exception as error: # pylint: disable=broad-except
 					logger.error("Could not kill notifier: %s", error, exc_info=True)
 
