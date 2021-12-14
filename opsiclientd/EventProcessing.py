@@ -1752,7 +1752,7 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				try:
 					time.sleep(3)
 					for notifierPid in notifierPids:
-						if shutil.pid_exists(notifierPid):
+						if psutil.pid_exists(notifierPid):
 							logger.trace("killing notifier with pid %s", notifierPid)
 							System.terminateProcess(processId=notifierPid)
 				except Exception as error: # pylint: disable=broad-except
