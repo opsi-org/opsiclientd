@@ -361,9 +361,13 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 
 		logger.notice("Starting notifier application in session '%s' on desktop '%s'", sessionId, desktop)
 		try:
+			command = command.replace('%port%', forceUnicode(self.notificationServerPort)).replace('%id%', forceUnicode(notifierId))
+			# call process directly without shell for posix, keep string structure for windows
+			if not RUNNING_ON_WINDOWS:
+				command = command.split()
 			pid = self.runCommandInSession(
 				sessionId = sessionId,
-				command = command.replace('%port%', forceUnicode(self.notificationServerPort)).replace('%id%', forceUnicode(notifierId)).split(),
+				command = command,
 				desktop = desktop,
 				waitForProcessEnding = False
 			)
@@ -1703,7 +1707,11 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 									err.output.decode(encoding, errors="replace")
 								)
 
-						self._set_cancelable(True)
+						# processActions is False for passive events like sync/sync_completed
+						if self.event.eventConfig.processActions:
+							self._set_cancelable(False)
+						else:
+							self._set_cancelable(True)
 						self.processShutdownRequests()
 						# Shutdown / reboot not cancelable if triggered by opsi script
 						self._set_cancelable(False)
@@ -1744,8 +1752,9 @@ class EventProcessingThread(KillableThread, ServiceConnection): # pylint: disabl
 				try:
 					time.sleep(3)
 					for notifierPid in notifierPids:
-						logger.trace("killing notifier with pid %s", notifierPid)
-						System.terminateProcess(processId=notifierPid)
+						if psutil.pid_exists(notifierPid):
+							logger.trace("killing notifier with pid %s", notifierPid)
+							System.terminateProcess(processId=notifierPid)
 				except Exception as error: # pylint: disable=broad-except
 					logger.error("Could not kill notifier: %s", error, exc_info=True)
 
