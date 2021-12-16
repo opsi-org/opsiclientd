@@ -1,0 +1,29 @@
+{
+	"name": "opsiclientd",
+	"dockerComposeFile": "opsiclientd-dev-compose.yml",
+	"service": "opsiclientd-dev",
+	"workspaceFolder": "/workspace",
+	"postCreateCommand": ".devcontainer/post_create.sh",
+	"postStartCommand": ".devcontainer/post_start.sh",
+	"settings": {
+		"python.pythonPath": ".venv/bin/python",
+		"python.terminal.activateEnvironment": false,
+		"python.linting.enabled": true,
+		"python.testing.pytestArgs": [
+			"-vv",
+			"tests"
+		],
+		"python.testing.unittestEnabled": false,
+		"python.testing.nosetestsEnabled": false,
+		"python.testing.pytestEnabled": true,
+		"python.testing.pytestPath": ".venv/bin/pytest",
+		"python.linting.pylintEnabled": true,
+		"python.linting.pylintCategorySeverity.refactor": "Information",
+		"files.trimTrailingWhitespace": true,
+		"python.languageServer": "Pylance"
+	},
+	"extensions": [
+		"ms-python.python",
+		"ms-python.vscode-pylance"
+	]
+}

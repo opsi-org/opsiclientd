@@ -1,0 +1,11 @@
+version: '3.3'
+
+services:
+  opsiclientd-dev:
+    hostname: opsiclientd-dev
+    build: opsiclientd-dev-docker
+    volumes:
+      - ..:/workspace:cached
+    ports:
+      - "44410:4441"
+    entrypoint: ["/docker-entrypoint.sh"]

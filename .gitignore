@@ -1,6 +1,7 @@
 /.venv
 /build
 /dist
+/opsiclientd-dev-data
 
 *~
 *.pyc

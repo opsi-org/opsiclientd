@@ -1999,7 +1999,7 @@ python-gettext = [
 ]
 python-opsi = [
     {file = "python-opsi-4.2.0.260.tar.gz", hash = "sha256:742d3dea51de5ad79be19e81187d2a72369a734fd9910ec39bb525f231417b51"},
-    {file = "python_opsi-4.2.0.260-py3-none-any.whl", hash = "sha256:fbbe3f18f1128583ef8147b27edceea0addcdb2c943cda8c94eb044d87b901f0"},
+    {file = "python_opsi-4.2.0.260-py3-none-any.whl", hash = "sha256:f32ceb979df798a3085a8554287dd3aef3ccc6ef814421dcd16b30acd7707393"},
 ]
 python-pam = [
     {file = "python-pam-1.8.4.tar.gz", hash = "sha256:c856d9c89fedb33951dd8a95727ae57c6887b02d065bbdffd2fd9dbc0183909b"},
