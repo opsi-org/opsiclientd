@@ -64,6 +64,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		self._eptListLock = threading.Lock()
 		self._blockLogin = True
 		self._currentActiveDesktopName = {}
+		self._gui_waiter = None
 
 		self._isRebootTriggered = False
 		self._isShutdownTriggered = False
@@ -246,8 +247,9 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		return self._stopEvent.is_set()
 
 	def waitForGUI(self, timeout=None):
-		waiter = WaitForGUI(self)
-		waiter.wait(timeout or None)
+		self._gui_waiter = WaitForGUI(self)
+		self._gui_waiter.wait(timeout)
+		self._gui_waiter = None
 
 	def createActionProcessorUser(self, recreate=True):
 		if not config.get('action_processor', 'create_user'):
@@ -428,9 +430,10 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					# Wait until gui starts up
 					logger.notice("Waiting for gui startup (timeout: %d seconds)", config.get('global', 'wait_for_gui_timeout'))
 					self.waitForGUI(timeout=config.get('global', 'wait_for_gui_timeout'))
-					logger.notice("Done waiting for GUI")
-					# Wait some more seconds for events to fire
-					time.sleep(5)
+					if not self.is_stopping():
+						logger.notice("Done waiting for GUI")
+						# Wait some more seconds for events to fire
+						time.sleep(5)
 
 				try:
 					yield
@@ -508,6 +511,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 
 	def stop(self):
 		logger.notice("Stopping %s", self)
+		if self._gui_waiter:
+			self._gui_waiter.stop()
 		self._stopEvent.set()
 
 	def getCacheService(self):
@@ -877,11 +882,16 @@ class WaitForGUI(EventListener):
 	def __init__(self, opsiclientd): # pylint: disable=super-init-not-called
 		self._opsiclientd = opsiclientd
 		self._guiStarted = threading.Event()
+		self._should_stop = False
 		ec = GUIStartupEventConfig("wait_for_gui")
 		eventGenerator = EventGeneratorFactory(self._opsiclientd, ec)
 		eventGenerator.addEventConfig(ec)
 		eventGenerator.addEventListener(self)
 		eventGenerator.start()
+
+	def stop(self):
+		self._should_stop = True
+		self._guiStarted.set()
 
 	def processEvent(self, event):
 		logger.trace("check lock (ocd), currently %s -> locking if not True", self._opsiclientd.eventLock.locked())
@@ -898,6 +908,8 @@ class WaitForGUI(EventListener):
 
 	def wait(self, timeout=None):
 		self._guiStarted.wait(timeout)
+		if self._should_stop:
+			return
 		if not self._guiStarted.isSet():
 			logger.warning("Timed out after %d seconds while waiting for GUI", timeout)
 
