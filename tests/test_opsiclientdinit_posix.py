@@ -4,32 +4,33 @@
 # Copyright (c) 2010-2021 uib GmbH <info@uib.de>
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0
+"""
+test_opsiclientdinit_posix
+"""
 
-from __future__ import absolute_import
 import os
-from .helper import workInTemporaryDirectory
+
 import pytest
 
 try:
 	from opsiclientd.posix.main import main, write_pid_file
-except ImportError as error:
-	print("Failed to import: {0}".format(error))
+	error_message = ""  # pylint: disable=invalid-name
+except ImportError as err:
 	main = None
+	error_message = str(err)  # pylint: disable=invalid-name
 
 @pytest.mark.skipif(main is None, reason="Unable to find non-free modules.")
-def testWritingPID():
+def testWritingPID(tmpdir):
 	currentPID = os.getpid()
-	with workInTemporaryDirectory() as tempDir:
-		targetFile = os.path.join(tempDir, 'pidfile')
-		write_pid_file(targetFile)
-		with open(targetFile) as f:
-			pid = int(f.read().strip())
-		assert currentPID == pid
+	targetFile = tmpdir / 'pidfile'
+	write_pid_file(targetFile)
+	with open(targetFile, encoding="ascii") as file:
+		pid = int(file.read().strip())
+	assert currentPID == pid
 
 @pytest.mark.skipif(main is None, reason="Unable to find non-free modules.")
-def testNotWritingPIDtoEmptyPath():
-	with workInTemporaryDirectory() as tempDir:
-		write_pid_file(None)
-		assert not [e for e in os.listdir(tempDir)]
-		write_pid_file("")
-		assert not [e for e in os.listdir(tempDir)]
+def testNotWritingPIDtoEmptyPath(tmpdir):
+	write_pid_file(None)
+	assert not list(os.listdir(tmpdir))
+	write_pid_file("")
+	assert not list(os.listdir(tmpdir))

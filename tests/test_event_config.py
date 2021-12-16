@@ -4,10 +4,11 @@
 # Copyright (c) 2010-2021 uib GmbH <info@uib.de>
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0
+"""
+test_event_config
+"""
 
 import pytest
-
-from .helper import load_config_file
 
 from opsiclientd.Config import Config
 from opsiclientd.EventConfiguration import EventConfig
@@ -21,6 +22,9 @@ from opsiclientd.Events.Timer import TimerEventConfig
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
 
+from .utils import load_config_file
+
+
 @pytest.fixture(params=[
 	DaemonShutdownEventConfig, DaemonStartupEventConfig, EventConfig,
 	PanicEventConfig, TimerEventConfig, ProcessActionRequestsEventConfig,
@@ -30,10 +34,10 @@ from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
 def configClass(request):
 	yield request.param
 
-def testCreatingNewEventConfig(configClass):
+def testCreatingNewEventConfig(configClass):  # pylint: disable=redefined-outer-name
 	configClass("testevent")
 
-def testAttributesForWhiteAndBlackListExist(configClass):
+def testAttributesForWhiteAndBlackListExist(configClass):  # pylint: disable=redefined-outer-name
 	config = configClass("testevent")
 	assert hasattr(config, 'excludeProductGroupIds')
 	assert hasattr(config, 'includeProductGroupIds')
@@ -58,7 +62,7 @@ def test_inheritance():
 	assert configs["on_demand"]["shutdownWarningTime"] == 3600
 	assert configs["on_demand{user_logged_in}"]["shutdownWarningTime"] == 36000
 
-	config.set(section="event_default", option="shutdown_warning_time", value=12345)
+	Config().set(section="event_default", option="shutdown_warning_time", value=12345)
 	reconfigureEventGenerators()
 
 	configs = getEventConfigs()

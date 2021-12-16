@@ -4,24 +4,24 @@
 # Copyright (c) 2010-2021 uib GmbH <info@uib.de>
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0
+"""
+test_control_server
+"""
 
-from .helper import load_config_file
-
-import pytest
 import ssl
 import socket
 import codecs
+
 import requests
 import netifaces
-
-from .utils import default_config, opsiclient_url, opsiclientd_auth
-
-from opsicommon.logging import logging_config, LOG_WARNING
+import pytest
 
 from opsiclientd import ControlServer
 from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import createEventGenerators
+
+from .utils import default_config, opsiclient_url, opsiclientd_auth  # pylint: disable=unused-import
 
 
 def test_fire_event():
@@ -54,7 +54,7 @@ def test_log_reader_start_position(tmpdir):
 				file.write(f"[5] [2021-01-02 11:12:13.456] [opsiclientd] log line {i+1}   (opsiclientd.py:123)\n")
 
 		lrt = ControlServer.LogReaderThread(log_file, None, num_tail_records)
-		start_position = lrt._get_start_position()
+		start_position = lrt._get_start_position()  # pylint: disable=protected-access
 
 		with codecs.open(log_file, "r", encoding="utf-8", errors="replace") as file:
 			file.seek(start_position)
@@ -63,12 +63,12 @@ def test_log_reader_start_position(tmpdir):
 			assert data.count("\n") == num_tail_records if log_lines > num_tail_records else log_lines
 
 
-def test_index_page(opsiclient_url):
+def test_index_page(opsiclient_url):  # pylint: disable=redefined-outer-name
 	req = requests.get(f"{opsiclient_url}", verify=False)
 	assert req.status_code == 200
 
 
-def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):
+def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):  # pylint: disable=redefined-outer-name
 	rpc = {"id":1, "method": "invalid", "params":[]}
 	for endpoint in ("opsiclientd", "rpc"):
 		response = requests.post(f"{opsiclient_url}/{endpoint}", verify=False, json=rpc)
@@ -82,7 +82,7 @@ def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):
 	assert rpc_response.get("error") is not None
 
 
-def test_kiosk_auth(opsiclient_url):
+def test_kiosk_auth(opsiclient_url):  # pylint: disable=redefined-outer-name
 	# Kiosk allows connection from 127.0.0.1 without auth
 	response = requests.post(
 		f"{opsiclient_url}/kiosk",
@@ -94,10 +94,10 @@ def test_kiosk_auth(opsiclient_url):
 	assert "Not a gzipped file" in response.text
 	# "X-Forwarded-For" must not be accepted
 	address = None
-	interfaces = netifaces.interfaces()
+	interfaces = netifaces.interfaces()  # pylint: disable=c-extension-no-member
 	for interface in interfaces:
-		addresses = netifaces.ifaddresses(interface)
-		addr = addresses.get(netifaces.AF_INET, [{}])[0].get("addr")
+		addresses = netifaces.ifaddresses(interface)  # pylint: disable=c-extension-no-member
+		addr = addresses.get(netifaces.AF_INET, [{}])[0].get("addr")  # pylint: disable=c-extension-no-member
 		if addr and addr != "127.0.0.1":
 			address = addr
 			break

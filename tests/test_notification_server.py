@@ -4,26 +4,32 @@
 # Copyright (c) 2010-2021 uib GmbH <info@uib.de>
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0
+"""
+test_notification_server
+"""
+
+import json
+import time
+import socket
+
+from OPSI.Util.Message import ChoiceSubject
 
 from opsiclientd.EventProcessing import EventProcessingThread
 from opsiclientd.Events.Basic import Event
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.EventConfiguration import EventConfig
-from OPSI.Util.Message import ChoiceSubject
-import socket
-import json
-import time
 
-def testNotificationServer(config, configFile):
-	config.set('global', 'config_file', configFile)
-	config.readConfigFile()
+from .utils import default_config  # pylint: disable=unused-import
+
+
+def testNotificationServer():
 	configs = getEventConfigs()
 	eventConfig = EventConfig(configs["on_demand"])
 
 	evt = Event(eventConfig=eventConfig, eventInfo={})
 	ept = EventProcessingThread(opsiclientd=None, event=evt)
 	ept.startNotificationServer()
-	ept._messageSubject.setMessage("pytest")
+	ept._messageSubject.setMessage("pytest")  # pylint: disable=protected-access
 
 	choiceSubject = ChoiceSubject(id = 'choice')
 	choiceSubject.setChoices(["abort", "start"])
@@ -36,7 +42,7 @@ def testNotificationServer(config, configFile):
 		_choiceSubject.pyTestDone = True
 
 	choiceSubject.setCallbacks([abortActionCallback, startActionCallback])
-	ept._notificationServer.addSubject(choiceSubject)
+	ept._notificationServer.addSubject(choiceSubject)  # pylint: disable=protected-access
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	sock.connect(("127.0.0.1", ept.notificationServerPort))
 	try:
@@ -57,7 +63,7 @@ def testNotificationServer(config, configFile):
 		}
 		sock.send( (json.dumps(rpc1) + "\r\n" + json.dumps(rpc2) + "\r\n").encode("utf-8") )
 		time.sleep(1)
-		assert choiceSubject.pyTestDone == True, "selectChoice did not set pyTestDone on choiceSubject"
+		assert choiceSubject.pyTestDone is True, "selectChoice did not set pyTestDone on choiceSubject"
 	finally:
 		sock.close()
 		ept.stopNotificationServer()

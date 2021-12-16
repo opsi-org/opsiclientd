@@ -26,14 +26,13 @@ viruscheck:virustotal:
 .run_opsiclientd: &run_opsiclientd |
   mkdir -p /var/log/opsi-client-agent
   mkdir -p /etc/opsi-client-agent
-  cp opsiclientd_data/linux/opsiclientd.conf /etc/opsi-client-agent/opsiclientd.conf
-  sed -i s'/url =.*/url = /' /etc/opsi-client-agent/opsiclientd.conf
-  sed -i s'/host_id =.*/host_id = testclient.opsi.org/' /etc/opsi-client-agent/opsiclientd.conf
-  sed -i s'/opsi_host_key =.*/opsi_host_key = opsiopsiopsiopsiopsiopsiopsiopsi/' /etc/opsi-client-agent/opsiclientd.conf
-  sed -i s'#static_dir =.*#static_dir = opsiclientd_data/common/static_html#' /etc/opsi-client-agent/opsiclientd.conf
-  #cat /etc/opsi-client-agent/opsiclientd.conf
-  openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes -keyout /etc/opsi-client-agent/opsiclientd.pem -out /etc/opsi-client-agent/opsiclientd.pem -subj "/CN=testclient.opsi.org"
-  poetry run opsiclientd -l 1 &
+  # cp opsiclientd_data/linux/opsiclientd.conf /etc/opsi-client-agent/opsiclientd.conf
+  # sed -i s'/url =.*/url = /' /etc/opsi-client-agent/opsiclientd.conf
+  # sed -i s'/host_id =.*/host_id = testclient.opsi.org/' /etc/opsi-client-agent/opsiclientd.conf
+  # sed -i s'/opsi_host_key =.*/opsi_host_key = opsiopsiopsiopsiopsiopsiopsiopsi/' /etc/opsi-client-agent/opsiclientd.conf
+  # sed -i s'#static_dir =.*#static_dir = opsiclientd_data/common/static_html#' /etc/opsi-client-agent/opsiclientd.conf
+  # openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes -keyout /etc/opsi-client-agent/opsiclientd.pem -out /etc/opsi-client-agent/opsiclientd.pem -subj "/CN=testclient.opsi.org"
+  poetry run opsiclientd --config-file=tests/data/opsiclientd.conf -l 1 &
 
 test:pylint-pytest:
   #when: manual
