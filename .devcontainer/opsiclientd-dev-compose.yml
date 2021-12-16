@@ -8,8 +8,9 @@ services:
       - ..:/workspace:cached
     ports:
       - "44410:4441"
+    # Needed for cifs mount
+    privileged: true
     cap_add:
-      # Needed for cifs mount
       - SYS_ADMIN
       - DAC_READ_SEARCH
     entrypoint: ["/docker-entrypoint.sh"]
