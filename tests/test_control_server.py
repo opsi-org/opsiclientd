@@ -11,6 +11,7 @@ test_control_server
 import ssl
 import socket
 import codecs
+import threading
 
 import requests
 import netifaces
@@ -121,3 +122,34 @@ def test_kiosk_auth(opsiclient_url):  # pylint: disable=redefined-outer-name
 			)
 			http_code = int(ssock.recv(1024).split(b" ", 2)[1])
 			assert http_code == 401 # "X-Forwarded-For" not accepted
+
+
+def test_concurrency(opsiclient_url, opsiclientd_auth):  # pylint: disable=redefined-outer-name
+	rpcs = [
+		{"id":1, "method": "execute", "params":["sleep 3; echo ok", True]},
+		{"id":2, "method": "execute", "params":["sleep 4; echo ok", True]},
+		{"id":3, "method": "invalid", "params":[]},
+		{"id":4, "method": "log_read", "params":[]},
+		{"id":5, "method": "getConfig", "params":[]}
+	]
+
+	def run_rpc(rpc):
+		res = requests.post(f"{opsiclient_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
+		threading.current_thread().status_code = res.status_code
+		threading.current_thread().response = res.json()
+
+	threads = []
+	for rpc in rpcs:
+		thread = threading.Thread(target=run_rpc, args=[rpc])
+		threads.append(thread)
+		thread.start()
+
+	for thread in threads:
+		thread.join()
+		assert thread.status_code == 200
+		if thread.response["id"] == 3:
+			assert thread.response["error"] is not None
+		else:
+			assert thread.response["error"] is None
+		if thread.response["id"] in (1, 2):
+			assert "ok" in thread.response["result"]
