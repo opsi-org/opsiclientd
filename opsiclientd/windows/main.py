@@ -28,6 +28,7 @@ from opsicommon.logging import (
 from OPSI import System
 
 from opsiclientd import init_logging, parser, DEFAULT_STDERR_LOG_FORMAT
+from opsiclientd.Config import Config
 from opsiclientd.setup import setup
 
 
@@ -147,6 +148,8 @@ def main(): # pylint: disable=too-many-statements,too-many-branches
 
 	if any(arg in sys.argv[1:] for arg in ("setup", "--version", "--help")):
 		options = parser.parse_args()
+		if options.config_file:
+			Config().set("global", "config_file", options.config_file)
 		if options.action == "setup":
 			oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
 			setup(full=True, options=options)
@@ -173,6 +176,8 @@ def main(): # pylint: disable=too-many-statements,too-many-branches
 		if "--elevated" in sys.argv:
 			sys.argv.remove("--elevated")
 		options = parser.parse_args()
+		if options.config_file:
+			Config().set("global", "config_file", options.config_file)
 
 		init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
 

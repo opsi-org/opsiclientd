@@ -5,44 +5,45 @@
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0
 
+from .helper import load_config_file
+
 import pytest
 import ssl
 import socket
 import codecs
 import requests
 import netifaces
+
+from .utils import default_config, opsiclient_url, opsiclientd_auth
+
+from opsicommon.logging import logging_config, LOG_WARNING
+
 from opsiclientd import ControlServer
 from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import createEventGenerators
 
-@pytest.fixture
-def prepared_config(config, configFile):
-	config.set('global', 'config_file', configFile)
-	yield config
 
-def test_fire_event(prepared_config): # pylint: disable=redefined-outer-name
-	prepared_config.readConfigFile()
+def test_fire_event():
 	ocd = Opsiclientd()
 	createEventGenerators(ocd)
 	getEventConfigs()
 	controlServer = ControlServer.OpsiclientdRpcInterface(ocd)
 	controlServer.fireEvent('on_demand')
 
-def test_firing_unknown_event_raises_error(prepared_config): # pylint: disable=redefined-outer-name
-	prepared_config.readConfigFile()
+
+def test_firing_unknown_event_raises_error():
 	controlServer = ControlServer.OpsiclientdRpcInterface(None)
 	with pytest.raises(ValueError):
 		controlServer.fireEvent('foobar')
 
-def test_gui_startup_event_on_windows_only(prepared_config, onWindows): # pylint: disable=redefined-outer-name
-	prepared_config.readConfigFile()
+
+def test_gui_startup_event_on_windows_only():
 	createEventGenerators(None)
 	configs = getEventConfigs()
 	assert configs
+	assert 'gui_startup' in configs
 
-	if onWindows:
-		assert 'gui_startup' in configs
 
 def test_log_reader_start_position(tmpdir):
 	log_lines = 20
@@ -61,22 +62,25 @@ def test_log_reader_start_position(tmpdir):
 			assert data.startswith("[5]")
 			assert data.count("\n") == num_tail_records if log_lines > num_tail_records else log_lines
 
+
 def test_index_page(opsiclient_url):
 	req = requests.get(f"{opsiclient_url}", verify=False)
 	assert req.status_code == 200
 
-def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth, configFile):
+
+def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):
 	rpc = {"id":1, "method": "invalid", "params":[]}
 	for endpoint in ("opsiclientd", "rpc"):
 		response = requests.post(f"{opsiclient_url}/{endpoint}", verify=False, json=rpc)
 		assert response.status_code == 401
 
 	response = requests.post(f"{opsiclient_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
-	assert response.status_code == 200, f"auth failed: {opsiclientd_auth} / {configFile}"
+	assert response.status_code == 200, f"auth failed: {opsiclientd_auth}"
 	rpc_response = response.json()
 	assert rpc_response.get("id") == rpc["id"]
 	assert rpc_response.get("result") is None
 	assert rpc_response.get("error") is not None
+
 
 def test_kiosk_auth(opsiclient_url):
 	# Kiosk allows connection from 127.0.0.1 without auth

@@ -52,6 +52,11 @@ parser.add_argument(
 	help="Filter log records contexts (<ctx-name-1>=<val1>[,val2][;ctx-name-2=val3])."
 )
 parser.add_argument(
+	"--config-file",
+	default=None, #config.get("global", "config_file"),
+	help="Path to config file"
+)
+parser.add_argument(
 	"--service-address",
 	default=None,
 	help="Service address to use for setup."
@@ -79,6 +84,7 @@ parser.add_argument(
 	metavar="ACTION",
 	help="The ACTION to perform (start / stop / restart / install / update / remove / setup)."
 )
+
 
 def get_opsiclientd_pid() -> int:
 	our_pid = os.getpid()

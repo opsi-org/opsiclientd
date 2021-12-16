@@ -7,6 +7,8 @@
 
 import pytest
 
+from .helper import load_config_file
+
 from opsiclientd.Config import Config
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventConfig
@@ -37,9 +39,7 @@ def testAttributesForWhiteAndBlackListExist(configClass):
 	assert hasattr(config, 'includeProductGroupIds')
 
 def test_inheritance():
-	config = Config()
-	config.set("global", "config_file", "tests/data/event_config/1.conf")
-	config.readConfigFile()
+	load_config_file("tests/data/event_config/1.conf")
 
 	configs = getEventConfigs()
 	assert sorted(list(configs)) == sorted([

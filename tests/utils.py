@@ -6,9 +6,34 @@
 # License: AGPL-3.0
 
 import os
-import shutil
+import pytest
 import tempfile
+import configparser
 from contextlib import contextmanager
+import shutil
+
+from opsiclientd.Config import Config
+
+
+@pytest.fixture
+def opsiclient_url():
+	return "https://localhost:4441"
+
+
+@pytest.fixture
+def opsiclientd_auth():
+	config = Config()
+	return (config.get("global", "host_id"), config.get("global", "opsi_host_key"))
+
+	#conf = configparser.ConfigParser()
+	#conf.read(configFile)
+	#return (conf.get("global", "host_id"), conf.get("global", "opsi_host_key"))
+
+
+@pytest.fixture
+def onWindows():
+	return os.name == 'nt'
+
 
 @contextmanager
 def workInTemporaryDirectory(tempDir=None):
@@ -30,3 +55,12 @@ def cd(path):
 	os.chdir(path)
 	yield
 	os.chdir(old_dir)
+
+def load_config_file(config_file):
+	config = Config()
+	config.set("global", "config_file", config_file)
+	config.readConfigFile()
+
+@pytest.fixture(autouse=True)
+def default_config():
+	load_config_file("tests/data/opsiclientd.conf")
