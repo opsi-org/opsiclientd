@@ -2,6 +2,7 @@
 FROM docker.uib.gmbh/opsi/dev/pybuilder:uib-python-3.9
 
 ARG DOCKER_ENV
+ARG DEBIAN_FRONTEND=noninteractive
 
 ENV DOCKER_ENV=${DOCKER_ENV} \
 	# python:
