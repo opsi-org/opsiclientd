@@ -29,6 +29,8 @@ RUN apt-get update \
 		git \
 		bash-completion \
 		psmisc \
+		cifs-utils \
+		davfs2 \
 	&& pip install "poetry==$POETRY_VERSION"
 
 COPY files/ /
