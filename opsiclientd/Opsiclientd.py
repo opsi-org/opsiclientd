@@ -520,14 +520,14 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			raise RuntimeError("Cache service not started")
 		return self._cacheService
 
-	def canProcessEvent(self, event):
+	def canProcessEvent(self, event, can_cancel=False):
 		# Always process panic events
 		if isinstance(event, PanicEvent):
 			return True
 		with self._eptListLock:
 			for ept in self._eventProcessingThreads:
 				if event.eventConfig.actionType != 'login' and ept.event.eventConfig.actionType != 'login':
-					if not ept.is_cancelable():
+					if not ept.is_cancelable() or not can_cancel:
 						logger.notice("Already processing a non-cancelable (and non-login) event: %s", ept.event.eventConfig.getId())
 						raise ValueError(f"Already processing a non-cancelable (and non-login) event: {ept.event.eventConfig.getId()}")
 				if event.eventConfig.actionType == 'login' and ept.event.eventConfig.actionType == 'login':

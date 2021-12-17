@@ -1151,7 +1151,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 	def fireEvent(self, name): # pylint: disable=no-self-use
 		event = getEventGenerator(name)
 		logger.notice("Firing event '%s'", name)
-		event.createAndFireEvent()
+		# Allow event cancellation for new events called via the ControlServer
+		event.createAndFireEvent(can_cancel=True)
 
 	def setStatusMessage(self, sessionId, message):
 		sessionId = forceInt(sessionId)

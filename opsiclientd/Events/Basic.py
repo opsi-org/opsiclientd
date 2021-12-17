@@ -77,8 +77,8 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 
 		return actualConfig['config']
 
-	def createAndFireEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
-		self.fireEvent(self.createEvent(eventInfo))
+	def createAndFireEvent(self, eventInfo={}, can_cancel=False): # pylint: disable=dangerous-default-value
+		self.fireEvent(self.createEvent(eventInfo), can_cancel=can_cancel)
 
 	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
 		logger.debug("Creating event config from info: %s", eventInfo)
@@ -116,7 +116,7 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 	def cleanup(self):
 		pass
 
-	def fireEvent(self, event=None):
+	def fireEvent(self, event=None, can_cancel=False):
 		logger.debug("Trying to fire event %s", event)
 		if self._stopped:
 			logger.debug('%s is stopped, not firing event.', self)
@@ -162,7 +162,7 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 			for listener in self._eventListeners:
 				# Check if all event listeners can handle the event
 				# raises ValueError if another event is already running
-				listener.canProcessEvent(event)
+				listener.canProcessEvent(event, can_cancel=can_cancel)
 			for listener in self._eventListeners:
 				# Create a new thread for each event listener
 				FireEventThread(listener, event).start()
