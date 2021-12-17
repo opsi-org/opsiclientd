@@ -240,6 +240,6 @@ class EventListener: # pylint: disable=too-few-public-methods
 	def processEvent(self, event): # pylint: disable=unused-argument
 		logger.warning("%s: processEvent() not implemented", self)
 
-	def canProcessEvent(self, event): # pylint: disable=unused-argument
+	def canProcessEvent(self, event, can_cancel=False): # pylint: disable=unused-argument
 		logger.warning("%s: canProcessEvent() not implemented", self)
 		raise NotImplementedError(f"{self}: canProcessEvent() not implemented")

@@ -913,6 +913,6 @@ class WaitForGUI(EventListener):
 		if not self._guiStarted.isSet():
 			logger.warning("Timed out after %d seconds while waiting for GUI", timeout)
 
-	def canProcessEvent(self, event): # pylint: disable=unused-argument
+	def canProcessEvent(self, event, can_cancel=False): # pylint: disable=unused-argument
 		# WaitForGUI should handle all Events
 		return True
