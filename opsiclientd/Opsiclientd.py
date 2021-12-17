@@ -598,7 +598,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				description=description,
 				category="event_occurrence"
 			)
-			self.canProcessEvent(event)
+			# if processEvent is called through Event.fireEvent(), this check is already done
+			#self.canProcessEvent(event)
 			self.cancelOthersAndWaitUntilReady()
 		except (ValueError, RuntimeError) as err:
 			# skipping execution if event cannot be created
