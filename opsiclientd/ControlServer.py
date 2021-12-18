@@ -981,7 +981,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
 
 	def wait(self, seconds: int = 0):  # pylint: disable=no-self-use
-		for _ in range(seconds):
+		for _ in range(int(seconds)):
 			time.sleep(1)
 
 	def noop(self, arg):
