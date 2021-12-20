@@ -527,9 +527,12 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		with self._eptListLock:
 			for ept in self._eventProcessingThreads:
 				if event.eventConfig.actionType != 'login' and ept.event.eventConfig.actionType != 'login':
-					if not ept.is_cancelable() or not can_cancel:
+					if not ept.is_cancelable():
 						logger.notice("Already processing a non-cancelable (and non-login) event: %s", ept.event.eventConfig.getId())
 						raise ValueError(f"Already processing a non-cancelable (and non-login) event: {ept.event.eventConfig.getId()}")
+					if not can_cancel:
+						logger.notice("Currently running event can only be canceled by manual action (ControlServer/Kiosk): %s", ept.event.eventConfig.getId())
+						raise ValueError(f"Currently running event can only be canceled by manual action (ControlServer/Kiosk): {ept.event.eventConfig.getId()}")
 				if event.eventConfig.actionType == 'login' and ept.event.eventConfig.actionType == 'login':
 					eventProcessingThread = EventProcessingThread(self, event)
 					if ept.getSessionId() == eventProcessingThread.getSessionId():
