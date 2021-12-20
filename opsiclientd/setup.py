@@ -306,7 +306,7 @@ def setup_on_shutdown():
 	script_path = opsiclientd_rpc[:-3] + "cmd"
 	with codecs.open(script_path, "w", "windows-1252") as file:
 		file.write(f'"%~dp0\\{os.path.basename(opsiclientd_rpc)}" %*\r\n')
-	script_params = "runOnShutdown()"
+	script_params = "--timeout=18000 runOnShutdown()"
 
 	for base_key in BASE_KEYS:
 		base_key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, base_key)
