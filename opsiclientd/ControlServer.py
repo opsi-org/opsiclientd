@@ -1339,6 +1339,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		)
 
 		depot_path = config.get_depot_path()
+		depot_drive = config.getDepotDrive()
+		if depot_path == depot_drive:
+			# Do not use depot drive which could already be in use
+			depot_path = depot_drive = System.get_available_drive_letter()
+
 		if not os.path.isabs(script):
 			script = os.path.join(depot_path, os.sep, script)
 
@@ -1377,7 +1382,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 					f"'{config.get('global', 'log_file')}',"
 					f"'{config.get('global', 'log_level')}',"
 					f"'{config.get('depot_server', 'url')}',"
-					f"'{config.getDepotDrive()}',"
+					f"'{depot_drive}',"
 					f"'{depotServerUsername}',"
 					f"'{depotServerPassword}',"
 					f"'-1',"
