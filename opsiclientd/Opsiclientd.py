@@ -520,7 +520,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			raise RuntimeError("Cache service not started")
 		return self._cacheService
 
-	def canProcessEvent(self, event):
+	def canProcessEvent(self, event, can_cancel=False):
 		# Always process panic events
 		if isinstance(event, PanicEvent):
 			return True
@@ -530,6 +530,9 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					if not ept.is_cancelable():
 						logger.notice("Already processing a non-cancelable (and non-login) event: %s", ept.event.eventConfig.getId())
 						raise ValueError(f"Already processing a non-cancelable (and non-login) event: {ept.event.eventConfig.getId()}")
+					if not can_cancel:
+						logger.notice("Currently running event can only be canceled by manual action (ControlServer/Kiosk): %s", ept.event.eventConfig.getId())
+						raise ValueError(f"Currently running event can only be canceled by manual action (ControlServer/Kiosk): {ept.event.eventConfig.getId()}")
 				if event.eventConfig.actionType == 'login' and ept.event.eventConfig.actionType == 'login':
 					eventProcessingThread = EventProcessingThread(self, event)
 					if ept.getSessionId() == eventProcessingThread.getSessionId():
@@ -598,7 +601,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				description=description,
 				category="event_occurrence"
 			)
-			self.canProcessEvent(event)
+			# if processEvent is called through Event.fireEvent(), this check is already done
+			#self.canProcessEvent(event)
 			self.cancelOthersAndWaitUntilReady()
 		except (ValueError, RuntimeError) as err:
 			# skipping execution if event cannot be created
@@ -913,6 +917,6 @@ class WaitForGUI(EventListener):
 		if not self._guiStarted.isSet():
 			logger.warning("Timed out after %d seconds while waiting for GUI", timeout)
 
-	def canProcessEvent(self, event): # pylint: disable=unused-argument
+	def canProcessEvent(self, event, can_cancel=False): # pylint: disable=unused-argument
 		# WaitForGUI should handle all Events
 		return True
