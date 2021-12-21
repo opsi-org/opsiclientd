@@ -1397,7 +1397,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 					f'Remove-Item -Path "{ps_file}" -Force\r\n'
 				)
 
-			self.runAsOpsiSetupUser(command=f"type {ps_file} | powershell.exe -ExecutionPolicy Bypass -WindowStyle hidden -Command -", admin=admin)
+			self.runAsOpsiSetupUser(command=f"powershell.exe -ExecutionPolicy Bypass -WindowStyle hidden -File {ps_file}", admin=admin)
 
 			if wait_for_ending:
 				logger.info("Wait for opsi-script to complete")
