@@ -150,7 +150,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				"log_file": "opsiclientd.log",
 				"log_level": LOG_NOTICE,
 				"keep_rotated_logs": 10,
-				"max_log_size": 10, # In MB
+				"max_log_size": 5, # In MB
 				"max_log_transfer_size": 5, # In MB
 				"host_id": System.getFQDN().lower(),
 				"opsi_host_key": "",
