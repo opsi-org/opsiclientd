@@ -20,7 +20,6 @@ python = "^3.7"
 python-opsi = "^4.2.0.177"
 #python-opsi = {path = "../python-opsi"}
 pywin32 = {platform = "win32", version = "^227"}
-pywinpty = {platform = "win32", version = "^1.1.6"}
 wmi = {platform = "win32", version = "^1.5.1"}
 distro = {platform = "linux", version = "^1.5.0"}
 autobahn = "^20.7.1"
@@ -30,6 +29,7 @@ netifaces = "^0.10.9"
 zeroconf = "^0.29.0"
 pyelftools = "^0.27"
 macholib = "^1.14"
+pywinpty = {platform = "win32", path = "pywinpty-1.1.2-cp37-none-win32.whl"}
 
 [tool.poetry.dev-dependencies]
 pylint = "^2.5.0"
