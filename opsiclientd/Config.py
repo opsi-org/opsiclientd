@@ -16,6 +16,7 @@ from urllib.parse import urlparse
 import netifaces
 
 from opsicommon.logging import logger, LOG_NOTICE, logging_config, secret_filter
+from opsicommon.logging.constants import LOG_DEBUG2
 from opsicommon.utils import Singleton
 from OPSI.Types import (
 	forceBool, forceHostId, forceList,
@@ -149,7 +150,9 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				"config_file": os.path.join(baseDir, "opsiclientd", "opsiclientd.conf"),
 				"log_file": "opsiclientd.log",
 				"log_level": LOG_NOTICE,
-				"max_log_transfer_size": 5,
+				"keep_rotated_logs": 10,
+				"max_log_size": 10, # In MB
+				"max_log_transfer_size": 5, # In MB
 				"host_id": System.getFQDN().lower(),
 				"opsi_host_key": "",
 				"wait_for_gui_timeout": 120,
