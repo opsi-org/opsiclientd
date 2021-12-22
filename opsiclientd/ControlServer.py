@@ -959,11 +959,14 @@ class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd
 				from opsiclientd.posix import start_pty  # pylint: disable=import-outside-toplevel
 
 			logger.notice("Starting terminal shell=%s, lines=%d, columns=%d", shell, lines, columns)
-			(self.child_read, self.child_write, self.child_stop) = start_pty(  # pylint: disable=attribute-defined-outside-init
-				shell=shell, lines=lines, columns=columns
-			)
-			self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init
-			self.terminal_reader_thread.start()
+			try:
+				(self.child_read, self.child_write, self.child_stop) = start_pty(  # pylint: disable=attribute-defined-outside-init
+					shell=shell, lines=lines, columns=columns
+				)
+				self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init
+				self.terminal_reader_thread.start()
+			except Exception as err: # pylint: disable=broad-except
+				self.sendClose(code=500, reason=str(err))
 
 	def onMessage(self, payload, isBinary):
 		#logger.debug("onMessage: %s - %s", isBinary, payload)
