@@ -16,7 +16,6 @@ from urllib.parse import urlparse
 import netifaces
 
 from opsicommon.logging import logger, LOG_NOTICE, logging_config, secret_filter
-from opsicommon.logging.constants import LOG_DEBUG2
 from opsicommon.utils import Singleton
 from OPSI.Types import (
 	forceBool, forceHostId, forceList,
