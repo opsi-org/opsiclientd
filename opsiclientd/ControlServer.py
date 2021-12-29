@@ -30,7 +30,7 @@ import datetime
 from OpenSSL import crypto
 import msgpack
 
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 from twisted.internet.error import CannotListenError
 from twisted.web.static import File
 from twisted.web.resource import Resource
@@ -238,7 +238,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 	def _set_auth_module(self):
 		self._auth_module = None
 		if os.name == 'posix':
-			import OPSI.Backend.Manager.Authentication.PAM # pylint: disable=import-outside-toplevel
+			import OPSI.Backend.Manager.Authentication.PAM  # pylint: disable=import-outside-toplevel
 			self._auth_module = OPSI.Backend.Manager.Authentication.PAM.PAMAuthentication()
 		elif os.name == 'nt':
 			import OPSI.Backend.Manager.Authentication.NT # pylint: disable=import-outside-toplevel
@@ -257,7 +257,6 @@ class WorkerOpsiclientd(WorkerOpsi):
 		return (user, password)
 
 	def _errback(self, failure):
-		WorkerOpsi._errback(self, failure)
 		if self.request.code == 401 and self.request.getClientIP() != "127.0.0.1":
 			maxAuthenticationFailures = config.get('control_server', 'max_authentication_failures')
 			if maxAuthenticationFailures > 0:
@@ -270,6 +269,9 @@ class WorkerOpsiclientd(WorkerOpsi):
 				self.service.authFailures[client_ip]["count"] += 1
 				if self.service.authFailures[client_ip]["count"] > maxAuthenticationFailures:
 					self.service.authFailures[client_ip]["blocked_time"] = time.time()
+			reactor.callLater(5, WorkerOpsi._errback, self, failure)  # pylint: disable=no-member
+		else:
+			WorkerOpsi._errback(self, failure)
 
 	def _authenticate(self, result): #pylint: disable=too-many-branches
 		if self.session.authenticated:
@@ -314,6 +316,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 			else:
 				raise Exception("Invalid credentials")
 		except Exception as err: # pylint: disable=broad-except
+			self.request.code = 401
 			raise OpsiAuthenticationError(f"Forbidden: {err}") from err
 
 		# Auth ok
@@ -1329,7 +1332,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 		return self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 
-	def runOpsiScriptAsOpsiSetupUser(self, script: str, product_id: str=None, admin=True, wait_for_ending=True, remove_user=False):  # pylint: disable=too-many-locals,too-many-arguments
+	def runOpsiScriptAsOpsiSetupUser(self, script: str, product_id: str=None, admin=True, wait_for_ending=True, remove_user=False):  # pylint: disable=too-many-locals,too-many-arguments,too-many-branches
 		if not RUNNING_ON_WINDOWS:
 			raise NotImplementedError()
 
