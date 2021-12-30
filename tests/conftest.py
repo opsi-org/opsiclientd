@@ -10,6 +10,7 @@ conftest
 
 import sys
 import urllib3
+import platform
 from _pytest.logging import LogCaptureHandler
 
 import pytest
@@ -25,6 +26,6 @@ def pytest_runtest_setup(item):
 	supported_platforms = {"windows", "linux", "darwin"}.intersection(
 		mark.name for mark in item.iter_markers()
 	)
-	platform = sys.platform
-	if supported_platforms and platform not in supported_platforms:
-		pytest.skip(f"Cannot run on {platform}")
+	plat = platform.system().lower()
+	if supported_platforms and plat not in supported_platforms:
+		pytest.skip(f"Cannot run on {plat}")
