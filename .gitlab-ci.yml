@@ -55,9 +55,10 @@ test:pylint-pytest-windows:
 test:pylint-pytest-linux:
   #when: manual
   stage: test
-  dependencies:
+  needs:
     # We want to combine test coverage from all test jobs
-    - test:pylint-pytest-windows
+    - job: test:pylint-pytest-windows
+      artifacts: true
   script:
     - ls -la
     - mv opsiclientd_test_windows/coverage.xml .
