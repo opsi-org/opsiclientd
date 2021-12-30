@@ -64,11 +64,13 @@ def test_log_reader_start_position(tmpdir):
 			assert data.count("\n") == num_tail_records if log_lines > num_tail_records else log_lines
 
 
+@pytest.mark.opsiclientd_running
 def test_index_page(opsiclient_url):  # pylint: disable=redefined-outer-name
 	req = requests.get(f"{opsiclient_url}", verify=False)
 	assert req.status_code == 200
 
 
+@pytest.mark.opsiclientd_running
 def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):  # pylint: disable=redefined-outer-name
 	rpc = {"id":1, "method": "invalid", "params":[]}
 	for endpoint in ("opsiclientd", "rpc"):
@@ -83,6 +85,7 @@ def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):  # pylint: disable
 	assert rpc_response.get("error") is not None
 
 
+@pytest.mark.opsiclientd_running
 def test_kiosk_auth(opsiclient_url):  # pylint: disable=redefined-outer-name
 	# Kiosk allows connection from 127.0.0.1 without auth
 	response = requests.post(
@@ -124,6 +127,7 @@ def test_kiosk_auth(opsiclient_url):  # pylint: disable=redefined-outer-name
 			assert http_code == 401 # "X-Forwarded-For" not accepted
 
 
+@pytest.mark.opsiclientd_running
 def test_concurrency(opsiclient_url, opsiclientd_auth):  # pylint: disable=redefined-outer-name
 	rpcs = [
 		{"id":1, "method": "execute", "params":["sleep 3; echo ok", True]},

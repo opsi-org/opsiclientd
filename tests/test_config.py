@@ -12,7 +12,6 @@ import shutil
 import pytest
 
 from opsiclientd.Config import Config, SectionNotFoundException, NoConfigOptionFoundException
-from opsiclientd import RUNNING_ON_WINDOWS
 
 from .utils import default_config  # pylint: disable=unused-import
 
@@ -51,7 +50,7 @@ def test_getting_unknown_option_fails():
 		config.get('global', 'non_existing_option')
 
 
-def test_update_config_file(tmpdir, default_config):
+def test_update_config_file(tmpdir, default_config):  # pylint: disable=redefined-outer-name,unused-argument
 	conf_file = config.get('global', 'config_file')
 	tmp_conf_file =  tmpdir / "opsiclientd.conf"
 	shutil.copy(conf_file, tmp_conf_file)
