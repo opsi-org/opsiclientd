@@ -60,8 +60,6 @@ test:pylint-pytest-linux:
     - job: test:pylint-pytest-windows
       artifacts: true
   script:
-    - ls -la
-    - mv opsiclientd_test_windows/coverage.xml .
     - apt -y install curl openssl
     - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3
     - source $HOME/.poetry/env
