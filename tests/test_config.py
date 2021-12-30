@@ -27,41 +27,29 @@ def test_getting_unknown_section_fails():
 def test_default_paths_exist_per_os():
 	assert config.WINDOWS_DEFAULT_PATHS
 	assert config.LINUX_DEFAULT_PATHS
+	assert config.MACOS_DEFAULT_PATHS
 
 
-def test_config_gets_filled_with_system_defaults():
-	assert config.get('global', 'log_dir')
-	assert config.get('global', 'state_file')
-	assert config.get('global', 'timeline_db')
-	assert config.get('global', 'server_cert_dir')
-	assert config.get('cache_service', 'storage_dir')
+@pytest.mark.windows
+def test_config_system_defaults_windows():
 	for section in ('log_dir', 'state_file', 'timeline_db', 'server_cert_dir'):
-		if RUNNING_ON_WINDOWS:
-			assert config.get('global', section).startswith('c:')
-		else:
-			assert config.get('global', section).startswith('/')
-
-	if RUNNING_ON_WINDOWS:
-		assert config.get('cache_service', 'storage_dir').startswith('c:')
-	else:
-		assert config.get('cache_service', 'storage_dir').startswith('/')
+		assert config.get('global', section).startswith('c:')
+	assert config.get('cache_service', 'storage_dir').startswith('c:')
+	assert config.get('system', 'program_files_dir')
 
 
-def test_config_gets_filled_with_system_specific_values():
-	assert config.get('global', 'config_file')
-	assert config.get('global', 'server_cert_dir')
-	assert config.get('cache_service', 'storage_dir')
-	assert config.get('cache_service', 'extension_config_dir')
-	assert config.get('global', 'config_file')
-	assert config.get('global', 'state_file')
-	assert config.get('global', 'timeline_db')
-	assert config.get('global', 'log_dir')
-	if RUNNING_ON_WINDOWS:
-		assert config.get('system', 'program_files_dir')
+@pytest.mark.linux
+@pytest.mark.darwin
+def test_config_system_defaults_posix():
+	for section in ('log_dir', 'state_file', 'timeline_db', 'server_cert_dir'):
+		assert config.get('global', section).startswith('/')
+	assert config.get('cache_service', 'storage_dir').startswith('/')
+
 
 def test_getting_unknown_option_fails():
 	with pytest.raises(NoConfigOptionFoundException):
 		config.get('global', 'non_existing_option')
+
 
 def test_update_config_file(tmpdir):
 	conf_file = config.get('global', 'config_file')
