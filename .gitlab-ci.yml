@@ -75,7 +75,7 @@ test:pylint-pytest-windows:
     paths:
       - coverage.xml
       - testreport.xml
-      expire_in: 3 days
+    expire_in: 3 days
 
 build:pyinstaller-linux-x64:
   stage: build
