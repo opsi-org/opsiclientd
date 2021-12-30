@@ -39,11 +39,15 @@ viruscheck:virustotal:
 test:pylint-pytest-linux:
   #when: manual
   stage: test
+  dependencies:
+    # We want to combine test coverage from all test jobs
+    - test:pylint-pytest-windows
   script:
+    - ls -la
+    - mv opsiclientd_test_windows/coverage.xml .
     - apt -y install curl openssl
     - curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python3
     - source $HOME/.poetry/env
-    #- "[ -e coverage.xml ] && rm coverage.xml"
     - poetry lock --no-update
     - poetry install
     - *run_opsiclientd
@@ -51,7 +55,7 @@ test:pylint-pytest-linux:
     - poetry run pytest -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+)%/'
   artifacts:
-    name: 'opsiclientd_test'
+    name: 'opsiclientd_test_linux'
     paths:
       - coverage.xml
       - testreport.xml
@@ -66,13 +70,12 @@ test:pylint-pytest-windows:
     - poetry lock --no-update
     - poetry install
     - poetry run pytest -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
-  #coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+)%/'
-  #artifacts:
-  #  name: 'opsiclientd_test'
-  #  paths:
-  #    - coverage.xml
-  #    - testreport.xml
-  #  expire_in: 14 days
+  artifacts:
+    name: 'opsiclientd_test_windows'
+    paths:
+      - coverage.xml
+      - testreport.xml
+      expire_in: 3 days
 
 build:pyinstaller-linux-x64:
   stage: build
