@@ -36,9 +36,30 @@ viruscheck:virustotal:
   cp -a opsiclientd_data/common/static_html /usr/share/opsi-client-agent/opsiclientd/static_html
   poetry run opsiclientd --config-file=tests/data/opsiclientd.conf -l 1 &
 
+test:pylint-pytest-darwin:
+  #when: manual
+  stage: test
+  tags:
+    - macos
+  script:
+    - source $HOME/.poetry/env
+    - poetry lock --no-update
+    - poetry install
+    - poetry run pytest -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
+  artifacts:
+    name: 'opsiclientd_test_darwin'
+    paths:
+      - coverage.xml
+      - testreport.xml
+    expire_in: 3 days
+
 test:pylint-pytest-windows:
   #when: manual
   stage: test
+  needs:
+    # We want to combine test coverage from all test jobs
+    - job: test:pylint-pytest-darwin
+      artifacts: true
   tags:
     - win10
   script:
