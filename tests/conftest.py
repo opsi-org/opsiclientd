@@ -8,6 +8,7 @@
 conftest
 """
 
+import os
 import platform
 import urllib3
 import psutil
@@ -22,6 +23,8 @@ def emit(*args, **kwargs) -> None:  # pylint: disable=unused-argument
 LogCaptureHandler.emit = emit
 
 def running_in_docker():
+	if not os.path.exists("/proc/self/cgroup"):
+		return False
 	with open("/proc/self/cgroup", "r", encoding="utf-8") as file:
 		for line in file.readlines():
 			if line.split(':')[2].startswith("/docker/"):
