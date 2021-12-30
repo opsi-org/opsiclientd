@@ -14,6 +14,14 @@ import json
 import time
 from types import MethodType
 
+from opsicommon.logging import logger
+from opsicommon.license import OPSI_MODULE_IDS
+from opsicommon.objects import (
+	objects_differ, get_ident_attributes, LicenseOnClient, ProductOnClient
+)
+from opsicommon.objects import * # required for dynamic class loading # pylint: disable=wildcard-import,unused-wildcard-import
+from opsicommon.types import forceHostId
+
 from OPSI.Backend.Backend import (
 	getArgAndCallString, Backend, ConfigDataBackend, ModificationTrackingBackend
 )
@@ -21,15 +29,7 @@ from OPSI.Backend.Replicator import BackendReplicator
 from OPSI.Exceptions import (
 	BackendConfigurationError, BackendMissingDataError, BackendUnaccomplishableError
 )
-from OPSI.Object import (
-	getIdentAttributes, objectsDiffer, LicenseOnClient, ProductOnClient
-)
-from OPSI.Object import * # required for dynamic class loading # pylint: disable=wildcard-import,unused-wildcard-import
-from OPSI.Types import forceHostId
 from OPSI.Util import blowfishDecrypt
-
-from opsicommon.logging import logger
-from opsicommon.license import OPSI_MODULE_IDS
 
 from opsiclientd.Config import Config
 
@@ -193,7 +193,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 			try:
 				ObjectClass = eval(modification['objectClass']) # pylint: disable=eval-used
 				identValues = modification['ident'].split(ObjectClass.identSeparator)
-				identAttributes = getIdentAttributes(ObjectClass)
+				identAttributes = get_ident_attributes(ObjectClass)
 				objectFilter = {}
 				for index, attribute in enumerate(identAttributes):
 					if index >= len(identValues):
@@ -229,7 +229,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 
 		if 'ProductOnClient' in modifiedObjects:
 			def objectsDifferFunction(snapshotObj, masterObj):
-				return objectsDiffer(snapshotObj, masterObj, excludeAttributes=['modificationTime', 'actionProgress', 'actionResult', 'lastAction'])
+				return objects_differ(snapshotObj, masterObj, exclude_attributes=['modificationTime', 'actionProgress', 'actionResult', 'lastAction'])
 
 			def createUpdateObjectFunction(modifiedObj):
 				return modifiedObj.clone(identOnly=False)
@@ -275,7 +275,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 
 		if 'LicenseOnClient' in modifiedObjects:
 			def objectsDifferFunction(snapshotObj, masterObj): # pylint: disable=function-redefined
-				return objectsDiffer(snapshotObj, masterObj)
+				return objects_differ(snapshotObj, masterObj)
 
 			def createUpdateObjectFunction(modifiedObj): # pylint: disable=function-redefined
 				return modifiedObj.clone(identOnly=False)
@@ -294,7 +294,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 
 		for objectClassName in ('ProductPropertyState', 'ConfigState'):
 			def objectsDifferFunction(snapshotObj, masterObj): # pylint: disable=function-redefined
-				return objectsDiffer(snapshotObj, masterObj)
+				return objects_differ(snapshotObj, masterObj)
 
 			def createUpdateObjectFunction(modifiedObj): # pylint: disable=function-redefined
 				return modifiedObj.clone()

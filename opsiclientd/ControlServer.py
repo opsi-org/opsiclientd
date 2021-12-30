@@ -30,7 +30,7 @@ import datetime
 from OpenSSL import crypto
 import msgpack
 
-from twisted.internet import reactor, defer
+from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
 from twisted.web.static import File
 from twisted.web.resource import Resource

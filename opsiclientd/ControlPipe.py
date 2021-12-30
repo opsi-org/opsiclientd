@@ -144,7 +144,7 @@ class ClientConnection(threading.Thread): # pylint: disable=too-many-instance-at
 			}
 			try:
 				if with_lock:
-					self.comLock.acquire()
+					self.comLock.acquire()  # pylint: disable=consider-using-with
 				try:
 					request_json = toJson(request)
 					logger.info("Sending request '%s' to client %s", request_json, self)
@@ -281,6 +281,7 @@ class PosixClientConnection(ClientConnection):
 			return data.decode(self._encoding)
 		except Exception as err: # pylint: disable=broad-except
 			logger.trace("Failed to read from socket: %s", err)
+		return None
 
 	def write(self, data):
 		if not data or not self._connection:
