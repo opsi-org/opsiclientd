@@ -32,17 +32,17 @@ def test_default_paths_exist_per_os():
 
 @pytest.mark.windows
 def test_config_system_defaults_windows():
-	for section in ('log_dir', 'state_file', 'timeline_db', 'server_cert_dir'):
-		assert config.get('global', section).startswith('c:')
-	assert config.get('cache_service', 'storage_dir').startswith('c:')
+	for option in ('log_dir', 'state_file', 'timeline_db', 'server_cert_dir'):
+		assert config.get('global', option).lower().startswith('c:')
+	assert config.get('cache_service', 'storage_dir').lower().startswith('c:')
 	assert config.get('system', 'program_files_dir')
 
 
 @pytest.mark.linux
 @pytest.mark.darwin
 def test_config_system_defaults_posix():
-	for section in ('log_dir', 'state_file', 'timeline_db', 'server_cert_dir'):
-		assert config.get('global', section).startswith('/')
+	for option in ('log_dir', 'state_file', 'timeline_db', 'server_cert_dir'):
+		assert config.get('global', option).startswith('/')
 	assert config.get('cache_service', 'storage_dir').startswith('/')
 
 
@@ -51,7 +51,7 @@ def test_getting_unknown_option_fails():
 		config.get('global', 'non_existing_option')
 
 
-def test_update_config_file(tmpdir):
+def test_update_config_file(tmpdir, default_config):
 	conf_file = config.get('global', 'config_file')
 	tmp_conf_file =  tmpdir / "opsiclientd.conf"
 	shutil.copy(conf_file, tmp_conf_file)

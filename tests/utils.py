@@ -43,6 +43,6 @@ def load_config_file(config_file):
 	config.readConfigFile()
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def default_config():
 	load_config_file("tests/data/opsiclientd.conf")
