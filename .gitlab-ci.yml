@@ -45,7 +45,7 @@ test:pylint-pytest-darwin:
     - source $HOME/.poetry/env
     - poetry lock --no-update
     - poetry install
-    - poetry run pytest -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
+    - poetry run pytest --tb=short -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
   artifacts:
     name: 'opsiclientd_test_darwin'
     paths:
@@ -65,7 +65,7 @@ test:pylint-pytest-windows:
   script:
     - poetry lock --no-update
     - poetry install
-    - poetry run pytest -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
+    - poetry run pytest --tb=short -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
   artifacts:
     name: 'opsiclientd_test_windows'
     paths:
@@ -88,7 +88,7 @@ test:pylint-pytest-linux:
     - poetry install
     - *run_opsiclientd
     - poetry run pylint --disable=R,fixme opsiclientd
-    - poetry run pytest -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
+    - poetry run pytest --tb=short -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+)%/'
   artifacts:
     name: 'opsiclientd_test_linux'
