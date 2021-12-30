@@ -8,6 +8,7 @@
 test_config
 """
 
+import shutil
 import pytest
 
 from opsiclientd.Config import Config, SectionNotFoundException, NoConfigOptionFoundException
@@ -18,17 +19,17 @@ from .utils import default_config  # pylint: disable=unused-import
 config = Config()
 
 
-def testGettingUnknownSectionFails():
+def test_getting_unknown_section_fails():
 	with pytest.raises(SectionNotFoundException):
 		config.get('nothing', 'bla')
 
 
-def testDefaultPathsExistPerOS():
+def test_default_paths_exist_per_os():
 	assert config.WINDOWS_DEFAULT_PATHS
 	assert config.LINUX_DEFAULT_PATHS
 
 
-def testConfigGetsFilledWithSystemDefaults():
+def test_config_gets_filled_with_system_defaults():
 	assert config.get('global', 'log_dir')
 	assert config.get('global', 'state_file')
 	assert config.get('global', 'timeline_db')
@@ -46,7 +47,7 @@ def testConfigGetsFilledWithSystemDefaults():
 		assert config.get('cache_service', 'storage_dir').startswith('/')
 
 
-def testConfigGetsFilledWithSystemSpecificValues():
+def test_config_gets_filled_with_system_specific_values():
 	assert config.get('global', 'config_file')
 	assert config.get('global', 'server_cert_dir')
 	assert config.get('cache_service', 'storage_dir')
@@ -58,6 +59,32 @@ def testConfigGetsFilledWithSystemSpecificValues():
 	if RUNNING_ON_WINDOWS:
 		assert config.get('system', 'program_files_dir')
 
-def testGettingUnknownOptionFails():
+def test_getting_unknown_option_fails():
 	with pytest.raises(NoConfigOptionFoundException):
 		config.get('global', 'non_existing_option')
+
+def test_update_config_file(tmpdir):
+	conf_file = config.get('global', 'config_file')
+	tmp_conf_file =  tmpdir / "opsiclientd.conf"
+	shutil.copy(conf_file, tmp_conf_file)
+	content = tmp_conf_file.read_text(encoding="utf-8")
+	content = content.replace("[global]\n", "[global]\nold_option_to_remove = value")
+	tmp_conf_file.write_text(content, encoding="utf-8")
+
+	mtime = tmp_conf_file.stat().mtime
+	config.set('global', 'config_file', str(tmp_conf_file))
+	try:
+		config.set("global", "max_log_size", 6)
+		config.set("event_test", "test_find_me", True)
+		config.updateConfigFile()
+		# changed by another program
+		assert tmp_conf_file.stat().mtime == mtime
+
+		config.updateConfigFile(force=True)
+		assert tmp_conf_file.stat().mtime != mtime
+		content = tmp_conf_file.read_text(encoding="utf-8")
+		assert "max_log_size = 6" in content
+		assert "test_find_me = true" in content
+		assert "old_option_to_remove" not in content
+	finally:
+		config.set('global', 'config_file', conf_file)
