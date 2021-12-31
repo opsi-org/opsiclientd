@@ -105,6 +105,7 @@ test:pylint-pytest:
   script:
     - apt-get update
     - apt-get --yes install sqlite3
+    - poetry lock --no-update
     - poetry install
     - poetry run pylint --disable=R,fixme opsicommon
     - for db in coverage_*; do sqlite3 $db 'update file set path=replace(substr(path,instr(path,"opsicommon")),"\","/");'; done
