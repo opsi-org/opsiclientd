@@ -108,7 +108,7 @@ test:pylint-pytest:
     - poetry lock --no-update
     - poetry install
     - poetry run pylint --disable=R,fixme opsicommon
-    - for db in coverage_*; do sqlite3 $db 'update file set path=replace(substr(path,instr(path,"opsicommon")),"\","/");'; done
+    - for db in coverage_*; do sqlite3 $db 'update file set path=replace(substr(path,instr(path,"opsiclientd")),"\","/");'; done
     - echo -e '[run]\nrelative_files = True\n' > .coveragerc
     - poetry run coverage combine coverage_*
     - poetry run coverage xml
