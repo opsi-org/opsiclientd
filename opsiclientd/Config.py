@@ -249,7 +249,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		return os.path.join(self._getBaseDirectory(), ".opsiclientd_restart")
 
 	def check_restart_marker(self):
-		logger.critical("Checking if restart marker '%s' exists", self.restart_marker)
+		logger.info("Checking if restart marker '%s' exists", self.restart_marker)
 		if os.path.exists(self.restart_marker):
 			if os.path.getsize(self.restart_marker) == 0:
 				logger.notice("Old restart marker found, gui startup and daemon startup events disabled")
