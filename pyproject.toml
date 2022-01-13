@@ -17,32 +17,33 @@ url = "https://pypi.uib.gmbh/simple"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-python-opsi = "^4.2.0.263"
-python-opsi-common = "^4.2.0.263"
-#python-opsi = {path = "../python-opsi"}
-pywin32 = {platform = "win32", version = "^227"}
-wmi = {platform = "win32", version = "^1.5.1"}
-distro = {platform = "linux", version = "^1.5.0"}
-autobahn = "^21.11.1"
-msgpack = "^1.0.0"
-lz4 = "^3.1.1"
-netifaces = "^0.11.0"
-zeroconf = "^0.38.1"
-pyelftools = "^0.27"
+autobahn = "^21.11"
+distro = {platform = "linux", version = "^1.5"}
+lz4 = "^3.1"
 macholib = "^1.14"
+msgpack = "^1.0"
+netifaces = "^0.11"
+pyelftools = "^0.27"
+python-opsi = "^4.2.0.263"
+#python-opsi = {path = "../python-opsi"}
+python-opsi-common = "^4.2.0.263"
+pywin32 = {platform = "win32", version = "^227"}
 pywinpty = {platform = "win32", path = "pywinpty-1.1.2-cp37-none-win32.whl"}
+wmi = {platform = "win32", version = "^1.5"}
+zeroconf = "^0.38"
 
 [tool.poetry.dev-dependencies]
-pylint = "^2.5.0"
-pywin32-ctypes = {version = "^0.2.0", platform = "win32"}
-pefile = {version = "^2021.9.3", platform = "win32"}
+flake8 = "^4.0"
 macholib = {version = "^1.14", platform = "darwin"}
+mock = "^4.0"
 opsi-dev-tools = "^1.0.78"
-pytest = "^6.2.5"
-mock = "^4.0.2"
-pytest-cov = "^3.0.0"
+pefile = {version = "^2021.9", platform = "win32"}
 pyinstaller = "4.3"	# Pinned to work with adhoc signature on macos high sierra
-requests = "^2.25.1"
+pylint = "^2.5"
+pytest = "^6.2"
+pytest-cov = "^3.0"
+pywin32-ctypes = {version = "^0.2", platform = "win32"}
+requests = "^2.25"
 
 [tool.poetry.scripts]
 opsiclientd = "opsiclientd.__main__:opsiclientd"

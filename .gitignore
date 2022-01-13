@@ -11,6 +11,8 @@
 .pydevproject
 *.egg-info
 *.mo
+.coverage
+coverage.xml
 
 # Created during build
 opsiclientd.tar.gz
@@ -22,4 +24,3 @@ src/build/*
 src/build/
 src/dist/
 src/OPSI/
-.vscode
