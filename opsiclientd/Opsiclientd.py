@@ -610,7 +610,9 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			)
 			# if processEvent is called through Event.fireEvent(), this check is already done
 			#self.canProcessEvent(event)
-			self.cancelOthersAndWaitUntilReady()
+			# A user login event should not cancel running non-login Event
+			if event.eventConfig.actionType != 'login':
+				self.cancelOthersAndWaitUntilReady()
 		except (ValueError, RuntimeError) as err:
 			# skipping execution if event cannot be created
 			logger.warning("Could not start event: %s", err, exc_info=True)
