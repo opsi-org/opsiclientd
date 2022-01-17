@@ -222,10 +222,16 @@ def install_service_windows():
 	winreg.SetValueEx(key_handle, 'ServicesPipeTimeout', 0, winreg.REG_DWORD, 120000)
 	winreg.CloseKey(key_handle)
 
+
 def install_service_linux():
 	logger.notice("Install systemd service")
 	#subprocess.check_call(["systemctl", "daemon-reload"])
 	subprocess.check_call(["systemctl", "enable", "opsiclientd.service"])
+
+
+def install_service_macos():
+	logger.notice("Bootstrap launchd service")
+	subprocess.check_call(["launchctl", "bootstrap", "system" "/Library/LaunchDaemons/org.opsi.opsiclientd.plist"])
 
 
 def install_service():
@@ -233,9 +239,8 @@ def install_service():
 		return install_service_windows()
 	if RUNNING_ON_LINUX:
 		return install_service_linux()
-	#if RUNNING_ON_MACOS:
-	#	install_service_macos()
-	return None
+	if RUNNING_ON_MACOS:
+		install_service_macos()
 
 
 def opsi_service_setup(options=None):
