@@ -240,7 +240,8 @@ def install_service():
 	if RUNNING_ON_LINUX:
 		return install_service_linux()
 	if RUNNING_ON_MACOS:
-		install_service_macos()
+		return install_service_macos()
+	return None
 
 
 def opsi_service_setup(options=None):
