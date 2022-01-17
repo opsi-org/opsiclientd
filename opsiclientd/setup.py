@@ -231,7 +231,7 @@ def install_service_linux():
 
 def install_service_macos():
 	logger.notice("Bootstrap launchd service")
-	subprocess.check_call(["launchctl", "bootstrap", "system" "/Library/LaunchDaemons/org.opsi.opsiclientd.plist"])
+	subprocess.check_call(["launchctl", "bootstrap", "system", "/Library/LaunchDaemons/org.opsi.opsiclientd.plist"])
 
 
 def install_service():
