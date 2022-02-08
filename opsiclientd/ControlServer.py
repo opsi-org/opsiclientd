@@ -1432,6 +1432,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 			import win32profile # pylint: disable=import-error,import-outside-toplevel
 			import win32security # pylint: disable=import-error,import-outside-toplevel
 			import winreg # pylint: disable=import-error,import-outside-toplevel
+			import pywintypes # pylint: disable=import-error,import-outside-toplevel
 
 			for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 				System.logoffSession(session_id)
@@ -1442,9 +1443,21 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 				win32security.LOGON32_LOGON_INTERACTIVE,
 				win32security.LOGON32_PROVIDER_DEFAULT
 			)
+
 			try:
-				# This will create the user home dir and ntuser.dat gets loaded
-				hkey = win32profile.LoadUserProfile(logon, {"UserName": user_info["name"]})
+				for attempt in (1, 2, 3, 4, 5):
+					try:
+
+						# This will create the user home dir and ntuser.dat gets loaded
+						# Can fail if C:\users\default\ntuser.dat is ocked by an other process
+						hkey = win32profile.LoadUserProfile(logon, {"UserName": user_info["name"]})
+						break
+					except pywintypes.error as err:
+						logger.warning("Failed to load user profile (attempt #%d): %s", attempt, err)
+						time.sleep(5)
+						if attempt == 5:
+							raise
+
 				try:
 					#env = win32profile.CreateEnvironmentBlock(logon, False)
 					str_sid = win32security.ConvertSidToStringSid(user_info["user_sid"])
@@ -1458,6 +1471,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface): # pylint: disable=to
 						winreg.SetValueEx(reg_key, "Shell", 0, winreg.REG_SZ, command)
 				finally:
 					win32profile.UnloadUserProfile(logon, hkey)
+
 			finally:
 				logon.close()
 
