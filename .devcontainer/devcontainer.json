@@ -7,16 +7,27 @@
 	"postStartCommand": ".devcontainer/post_start.sh",
 	"settings": {
 		"python.pythonPath": ".venv/bin/python",
+		"editor.formatOnSave": true,
+		"editor.formatOnType": true,
+		"python.formatting.provider": "black",
+		"python.formatting.blackPath": ".venv/bin/tan",
 		"python.terminal.activateEnvironment": false,
-		"python.testing.pytestArgs": ["-vv", "tests"],
+		"python.testing.pytestArgs": [
+			"-vv",
+			"tests"
+		],
 		"python.testing.unittestEnabled": false,
 		"python.testing.nosetestsEnabled": false,
-		"python.linting.enabled": true,
-		"python.testing.flake8Enabled": true,
 		"python.testing.pytestEnabled": true,
 		"python.testing.pytestPath": ".venv/bin/pytest",
+		"python.linting.enabled": true,
+		"python.linting.flake8Enabled": true,
 		"python.linting.pylintEnabled": true,
 		"python.linting.pylintCategorySeverity.refactor": "Information",
+		"python.linting.mypyEnabled": true,
+		"python.linting.mypyArgs": [
+			"--show-error-codes"
+		],
 		"files.trimTrailingWhitespace": true,
 		"python.languageServer": "Pylance"
 	},

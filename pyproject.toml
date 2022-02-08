@@ -44,11 +44,18 @@ pytest = "^6.2"
 pytest-cov = "^3.0"
 pywin32-ctypes = {version = "^0.2", platform = "win32"}
 requests = "^2.25"
+tan = "^21.14"
+mypy = "^0.931"
 
 [tool.poetry.scripts]
 opsiclientd = "opsiclientd.__main__:opsiclientd"
 opsiclientd_rpc = "opsiclientd.__main__:opsiclientd_rpc"
 action_processor_starter = "opsiclientd.__main__:action_processor_starter"
+
+[tool.black]
+line-length = 140
+target-version = ['py39', 'py310']
+use-tabs = true
 
 [build-system]
 requires = ["poetry>=0.12"]
