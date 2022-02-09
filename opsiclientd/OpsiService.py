@@ -30,12 +30,13 @@ from opsiclientd import __version__
 from opsiclientd.Config import Config, UIB_OPSI_CA
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
+from opsiclientd.utils import log_network_status
 
 
 config = Config()
 
 
-def update_ca_cert(config_service: JSONRPCClient, allow_remove: bool=False):  # pylint: disable=too-many-branches
+def update_ca_cert(config_service: JSONRPCClient, allow_remove: bool = False):  # pylint: disable=too-many-branches
 	logger.info("Updating CA cert")
 	ca_certs = []
 	try:
@@ -50,7 +51,7 @@ def update_ca_cert(config_service: JSONRPCClient, allow_remove: bool=False):  # 
 		for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", response.text, re.DOTALL):
 			try:
 				ca_certs.append(load_certificate(FILETYPE_PEM, match.group(1).encode("utf-8")))
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err, exc_info=True)
 
 		with open(config.ca_cert_file, "w", encoding="utf-8") as file:
@@ -60,7 +61,7 @@ def update_ca_cert(config_service: JSONRPCClient, allow_remove: bool=False):  # 
 				file.write(UIB_OPSI_CA)
 
 		logger.info("CA cert file %s successfully updated", config.ca_cert_file)
-	except Exception as err: # pylint: disable=broad-except
+	except Exception as err:  # pylint: disable=broad-except
 		logger.error("Failed to update CA cert: %s", err)
 
 	for _idx, ca_cert in enumerate(ca_certs):
@@ -78,7 +79,7 @@ def update_ca_cert(config_service: JSONRPCClient, allow_remove: bool=False):  # 
 				logger.info("CA '%s' exists in system store and is %s", name, "outdated" if outdated else "up to date")
 			else:
 				logger.info("CA '%s' not found in system store", name)
-		except Exception as err: # pylint: disable=broad-except
+		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Failed to load CA '%s' from system cert store: %s", name, err, exc_info=True)
 
 		if config.get('global', 'install_opsi_ca_into_os_store'):
@@ -87,14 +88,14 @@ def update_ca_cert(config_service: JSONRPCClient, allow_remove: bool=False):  # 
 				try:
 					install_ca(ca_cert)
 					logger.info("CA '%s' successfully installed into system cert store", name)
-				except Exception as err: # pylint: disable=broad-except
+				except Exception as err:  # pylint: disable=broad-except
 					logger.error("Failed to install CA '%s' into system cert store: %s", name, err, exc_info=True)
 		elif present_ca and allow_remove:
 			logger.info("Removing present CA %s from store because global.install_opsi_ca_into_os_store is false", name)
 			try:
 				if remove_ca(name):
 					logger.info("CA '%s' successfully removed from system cert store", name)
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				logger.error("Failed to remove CA '%s' from system cert store: %s", name, err, exc_info=True)
 
 
@@ -105,16 +106,16 @@ class ServiceConnection:
 		self._configService = None
 		self._should_stop = False
 
-	def connectionThreadOptions(self): # pylint: disable=no-self-use
+	def connectionThreadOptions(self):  # pylint: disable=no-self-use
 		return {}
 
-	def connectionStart(self, configServiceUrl): # pylint: disable=no-self-use
+	def connectionStart(self, configServiceUrl):  # pylint: disable=no-self-use
 		pass
 
-	def connectionCancelable(self, stopConnectionCallback): # pylint: disable=no-self-use
+	def connectionCancelable(self, stopConnectionCallback):  # pylint: disable=no-self-use
 		pass
 
-	def connectionTimeoutChanged(self, timeout): # pylint: disable=no-self-use
+	def connectionTimeoutChanged(self, timeout):  # pylint: disable=no-self-use
 		pass
 
 	def connectionCanceled(self):
@@ -151,8 +152,8 @@ class ServiceConnection:
 		self._should_stop = True
 		self.disconnectConfigService()
 
-	def connectConfigService(self, allowTemporaryConfigServiceUrls=True): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-		try: # pylint: disable=too-many-nested-blocks
+	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+		try:  # pylint: disable=too-many-nested-blocks
 			configServiceUrls = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=allowTemporaryConfigServiceUrls)
 			if not configServiceUrls:
 				raise Exception("No service url defined")
@@ -188,7 +189,8 @@ class ServiceConnection:
 				while serviceConnectionThread.running and timeout > 0:
 					if self._should_stop:
 						return
-					logger.debug("Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d)",
+					logger.debug(
+						"Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d)",
 						timeout, serviceConnectionThread.is_alive(), cancellableAfter
 					)
 					self.connectionTimeoutChanged(timeout)
@@ -219,8 +221,8 @@ class ServiceConnection:
 				if serviceConnectionThread.connected and forceBool(config.get('config_service', 'sync_time_from_service')):
 					logger.info("Syncing local system time from service")
 					try:
-						System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True)) # pylint: disable=no-member
-					except Exception as err: # pylint: disable=broad-except
+						System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True))  # pylint: disable=no-member
+					except Exception as err:  # pylint: disable=broad-except
 						logger.error("Failed to sync time: '%s'", err)
 
 				if (
@@ -230,10 +232,10 @@ class ServiceConnection:
 					try:
 						config.set(
 							'depot_server', 'master_depot_id',
-							serviceConnectionThread.configService.getDepotId(config.get('global', 'host_id')) # pylint: disable=no-member
+							serviceConnectionThread.configService.getDepotId(config.get('global', 'host_id'))  # pylint: disable=no-member
 						)
 						config.updateConfigFile()
-					except Exception as err: # pylint: disable=broad-except
+					except Exception as err:  # pylint: disable=broad-except
 						logger.warning(err)
 
 				self._configService = serviceConnectionThread.configService
@@ -246,13 +248,13 @@ class ServiceConnection:
 		if self._configService:
 			try:
 				self._configService.backend_exit()
-			except Exception as exit_error: # pylint: disable=broad-except
+			except Exception as exit_error:  # pylint: disable=broad-except
 				logger.error("Failed to disconnect config service: %s", exit_error)
 
 		self._configService = None
 
 
-class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instance-attributes
+class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-instance-attributes
 	def __init__(self, configServiceUrl, username, password, statusSubject=None):
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
@@ -297,14 +299,14 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 		with open(config.ca_cert_file, "w", encoding="utf-8") as file:
 			file.write(certs)
 
-	def run(self): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-		with log_context({'instance' : 'service connection'}):
+	def run(self):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+		with log_context({'instance': 'service connection'}):
 			logger.debug("ServiceConnectionThread started...")
 			self.running = True
 			self.connected = False
 			self.cancelled = False
 
-			try: # pylint: disable=too-many-nested-blocks
+			try:  # pylint: disable=too-many-nested-blocks
 				verify_server_cert = (
 					config.get('global', 'verify_server_cert') or
 					config.get('global', 'verify_server_cert_by_ca')
@@ -328,6 +330,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 						ca_cert_file = None
 						verify_server_cert = False
 
+				log_network_status()
 				tryNum = 0
 				while not self.cancelled and not self.connected:
 					tryNum += 1
@@ -354,7 +357,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 							compression=compression,
 							ip_version=config.get('global', 'ip_version')
 						)
-						self.configService.accessControl_authenticated() # pylint: disable=no-member
+						self.configService.accessControl_authenticated()  # pylint: disable=no-member
 						self.connected = True
 						self.connectionError = None
 						serverVersion = self.configService.serverVersion
@@ -371,14 +374,14 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 								# Renew CA if not exists or connection is verified
 								try:
 									update_ca_cert(self.configService, allow_remove=True)
-								except Exception as err: # pylint: disable=broad-except
+								except Exception as err:  # pylint: disable=broad-except
 									logger.error(err, exc_info=True)
 					except OpsiServiceVerificationError as verificationError:
 						self.connectionError = forceUnicode(verificationError)
 						self.setStatusMessage(_("Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
 						logger.error("Failed to connect to config server '%s': %s", self._configServiceUrl, verificationError)
 						break
-					except Exception as error: # pylint: disable=broad-except
+					except Exception as error:  # pylint: disable=broad-except
 						self.connectionError = forceUnicode(error)
 						self.setStatusMessage(_("Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(error)))
 						logger.info("Failed to connect to config server '%s': %s", self._configServiceUrl, error)
@@ -388,7 +391,7 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 							fqdn = System.getFQDN()
 							try:
 								fqdn = forceFqdn(fqdn)
-							except Exception as fqdnError: # pylint: disable=broad-except
+							except Exception as fqdnError:  # pylint: disable=broad-except
 								logger.warning("Failed to get fqdn from os, got '%s': %s", fqdn, fqdnError)
 								break
 
@@ -401,18 +404,18 @@ class ServiceConnectionThread(KillableThread): # pylint: disable=too-many-instan
 						if 'is not supported by the backend' in self.connectionError.lower():
 							try:
 								from cryptography.hazmat.backends import default_backend  # pylint: disable=import-outside-toplevel
-								logger.debug("Got the following crypto backends: %s", default_backend()._backends) # pylint: disable=no-member,protected-access
-							except Exception as cryptoCheckError: # pylint: disable=broad-except
+								logger.debug("Got the following crypto backends: %s", default_backend()._backends)  # pylint: disable=no-member,protected-access
+							except Exception as cryptoCheckError:  # pylint: disable=broad-except
 								logger.debug("Failed to get info about installed crypto modules: %s", cryptoCheckError)
 
 						for _unused in range(3):  # Sleeping before the next retry
 							time.sleep(1)
-			except Exception as err:# pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err, exc_info=True)
 			finally:
 				self.running = False
 
-	def stopConnectionCallback(self, choiceSubject): # pylint: disable=unused-argument
+	def stopConnectionCallback(self, choiceSubject):  # pylint: disable=unused-argument
 		logger.notice("Connection cancelled by user")
 		self.stop()
 

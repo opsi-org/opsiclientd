@@ -9,6 +9,7 @@ utils
 """
 
 import struct
+import netifaces
 
 from opsicommon.logging import logger
 
@@ -23,14 +24,14 @@ def get_include_exclude_product_ids(config_service, includeProductGroupIds, excl
 	if includeProductGroupIds:
 		includeProductIds = [
 			obj.objectId for obj in
-			config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds) # pylint: disable=no-member
+			config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds)  # pylint: disable=no-member
 		]
 		logger.debug("Only products ids %s will be regarded.", includeProductIds)
 
 	if excludeProductGroupIds:
 		excludeProductIds = [
 			obj.objectId for obj in
-			config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds) # pylint: disable=no-member
+			config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds)  # pylint: disable=no-member
 		]
 		logger.debug("Product ids %s will be excluded.", excludeProductIds)
 
@@ -50,8 +51,8 @@ def read_fixed_file_info(data):
 	pos = data.find(b"\xBD\x04\xEF\xFE")
 	if pos < 0:
 		raise ValueError("Failed to read VS_FIXEDFILEINFO")
-	vms = struct.unpack("<I", data[pos+8:pos+12])[0]
-	vls = struct.unpack("<I", data[pos+12:pos+16])[0]
+	vms = struct.unpack("<I", data[pos + 8:pos + 12])[0]
+	vls = struct.unpack("<I", data[pos + 12:pos + 16])[0]
 	return ".".join([hi_word(vms), lo_word(vms), hi_word(vls), lo_word(vls)])
 
 
@@ -104,3 +105,14 @@ def get_version_from_dos_binary(filename):
 	except (AttributeError, pefile.PEFormatError):
 		pass
 	raise ValueError(f"No version information embedded in '{filename}'")
+
+
+def log_network_status():
+	status_string = ""
+	for interface in netifaces.interfaces():
+		for protocol in (netifaces.AF_INET, netifaces.AF_INET6):
+			af_inet_list = netifaces.ifaddresses(interface).get(protocol, {})
+			if af_inet_list:
+				for entry in af_inet_list:
+					status_string += f"Interface {interface}, Address {entry.get('addr')}, Netmask {entry.get('netmask')}\n"
+	logger.info("Current network Status:\n%s", status_string)

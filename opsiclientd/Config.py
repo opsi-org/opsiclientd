@@ -193,6 +193,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				"max_authentication_failures": 5,
 				"kiosk_api_active": True,
 				"process_actions_event": "auto",
+				"skip_setup_firewall": False
 			},
 			"notification_server": {
 				"interface": "127.0.0.1",
