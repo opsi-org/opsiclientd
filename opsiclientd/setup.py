@@ -387,8 +387,7 @@ def setup(full: bool = False, options: Namespace = None) -> None:
 		errors.append(str(err))
 
 	try:
-		if not config.get('control_server', 'skip_setup_firewall'):
-			setup_firewall()
+		setup_firewall()
 	except Exception as err:  # pylint: disable=broad-except
 		logger.error("Failed to setup firewall: %s", err, exc_info=True)
 		errors.append(str(err))
