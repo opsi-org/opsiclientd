@@ -736,6 +736,13 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 						addr = netifaces.ifaddresses(iface_name)[netifaces.AF_INET][0]  # pylint: disable=c-extension-no-member
 						clientConfig["netmask"] = addr["netmask"]
 						clientConfig["ipAddress"] = addr["addr"]
+						logger.info(
+							"Using the following network config for depot selection algorithm: iface=%s addr=%s/%s gw=%s",
+							iface_name,
+							addr["addr"],
+							addr["netmask"],
+							gateways["default"],
+						)
 					except Exception as gwe:
 						raise RuntimeError(f"Failed to get network interface with default gateway: {gwe}") from gwe
 
