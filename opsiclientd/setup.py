@@ -144,8 +144,6 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 
 
 def setup_firewall_linux():
-	if config.get('control_server', 'skip_setup_firewall'):
-		return
 	logger.notice("Configure firewall")
 	port = config.get('control_server', 'port')
 	cmds = []
@@ -171,8 +169,6 @@ def setup_firewall_linux():
 
 
 def setup_firewall_macos():
-	if config.get('control_server', 'skip_setup_firewall'):
-		return
 	logger.notice("Configure MacOS firewall")
 	cmds = []
 
@@ -189,11 +185,10 @@ def setup_firewall_windows():
 	logger.notice("Configure Windows firewall")
 	port = config.get('control_server', 'port')
 	cmds = [["netsh", "advfirewall", "firewall", "delete", "rule", 'name="opsiclientd-control-port"']]
-	if not config.get('control_server', 'skip_setup_firewall'):
-		cmds.append([
-			"netsh", "advfirewall", "firewall", "add", "rule", 'name="opsiclientd-control-port"',
-			"dir=in", "action=allow", "protocol=TCP", f"localport={port}"
-		])
+	cmds.append([
+		"netsh", "advfirewall", "firewall", "add", "rule", 'name="opsiclientd-control-port"',
+		"dir=in", "action=allow", "protocol=TCP", f"localport={port}"
+	])
 
 	for cmd in cmds:
 		logger.info("Running command: %s", str(cmd))
@@ -386,11 +381,12 @@ def setup(full: bool = False, options: Namespace = None) -> None:
 		logger.error("Failed to setup ssl: %s", err, exc_info=True)
 		errors.append(str(err))
 
-	try:
-		setup_firewall()
-	except Exception as err:  # pylint: disable=broad-except
-		logger.error("Failed to setup firewall: %s", err, exc_info=True)
-		errors.append(str(err))
+	if not config.get('control_server', 'skip_setup_firewall'):
+		try:
+			setup_firewall()
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error("Failed to setup firewall: %s", err, exc_info=True)
+			errors.append(str(err))
 
 	try:
 		setup_on_shutdown()
