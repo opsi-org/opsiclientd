@@ -8,6 +8,7 @@
 setup tasks
 """
 
+from argparse import Namespace
 import os
 import codecs
 import ipaddress
@@ -30,6 +31,7 @@ config = Config()
 
 CERT_RENEW_DAYS = 60
 
+
 def get_ips():
 	ips = {"127.0.0.1", "::1"}
 	for addr in get_ip_addresses():
@@ -41,6 +43,7 @@ def get_ips():
 			except ValueError as err:
 				logger.warning(err)
 	return ips
+
 
 def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many-statements,too-many-locals
 	logger.info("Checking server cert")
@@ -141,7 +144,9 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 
 
 def setup_firewall_linux():
-	logger.notice("Configure iptables")
+	if config.get('control_server', 'skip_setup_firewall'):
+		return
+	logger.notice("Configure firewall")
 	port = config.get('control_server', 'port')
 	cmds = []
 	if os.path.exists("/usr/bin/firewall-cmd"):
@@ -166,30 +171,34 @@ def setup_firewall_linux():
 
 
 def setup_firewall_macos():
+	if config.get('control_server', 'skip_setup_firewall'):
+		return
 	logger.notice("Configure MacOS firewall")
 	cmds = []
 
 	for path in ("/usr/local/bin/opsiclientd", "/usr/local/lib/opsiclientd/opsiclientd"):
-		cmds.append(["/usr/libexec/ApplicationFirewall/socketfilterfw", "--add" , path])
-		cmds.append(["/usr/libexec/ApplicationFirewall/socketfilterfw", "--unblockapp" , path])
+		cmds.append(["/usr/libexec/ApplicationFirewall/socketfilterfw", "--add", path])
+		cmds.append(["/usr/libexec/ApplicationFirewall/socketfilterfw", "--unblockapp", path])
 
 	for cmd in cmds:
 		logger.info("Running command: %s", str(cmd))
 		subprocess.call(cmd)
+
 
 def setup_firewall_windows():
 	logger.notice("Configure Windows firewall")
 	port = config.get('control_server', 'port')
-	cmds = [
-		["netsh", "advfirewall", "firewall", "delete", "rule", 'name="opsiclientd-control-port"'],
-		[
+	cmds = [["netsh", "advfirewall", "firewall", "delete", "rule", 'name="opsiclientd-control-port"']]
+	if not config.get('control_server', 'skip_setup_firewall'):
+		cmds.append([
 			"netsh", "advfirewall", "firewall", "add", "rule", 'name="opsiclientd-control-port"',
 			"dir=in", "action=allow", "protocol=TCP", f"localport={port}"
-		]
-	]
+		])
+
 	for cmd in cmds:
 		logger.info("Running command: %s", str(cmd))
 		subprocess.call(cmd)
+
 
 def setup_firewall():
 	if RUNNING_ON_LINUX:
@@ -203,7 +212,7 @@ def setup_firewall():
 
 def install_service_windows():
 	logger.notice("Installing windows service")
-	from opsiclientd.windows.service import handle_commandline # pylint: disable=import-outside-toplevel
+	from opsiclientd.windows.service import handle_commandline  # pylint: disable=import-outside-toplevel
 	handle_commandline(argv=["opsiclientd.exe", "--startup", "auto", "install"])
 
 	# pyright: reportMissingImports=false
@@ -213,7 +222,7 @@ def install_service_windows():
 	if win32process.IsWow64Process():
 		winreg.DisableReflectionKey(key_handle)
 	winreg.SetValueEx(key_handle, 'DependOnService', 0, winreg.REG_MULTI_SZ, ["Dhcp"])
-	#winreg.SetValueEx(key_handle, 'DependOnService', 0, winreg.REG_MULTI_SZ, ["Dhcp", "Dnscache"])
+	# winreg.SetValueEx(key_handle, 'DependOnService', 0, winreg.REG_MULTI_SZ, ["Dhcp", "Dnscache"])
 	winreg.CloseKey(key_handle)
 
 	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control")
@@ -225,7 +234,7 @@ def install_service_windows():
 
 def install_service_linux():
 	logger.notice("Install systemd service")
-	#subprocess.check_call(["systemctl", "daemon-reload"])
+	# subprocess.check_call(["systemctl", "daemon-reload"])
 	subprocess.check_call(["systemctl", "enable", "opsiclientd.service"])
 
 
@@ -275,7 +284,7 @@ def opsi_service_setup(options=None):
 
 	try:
 		update_ca_cert(jsonrpc_client, allow_remove=False)
-	except Exception as err: # pylint: disable=broad-except
+	except Exception as err:  # pylint: disable=broad-except
 		logger.error(err, exc_info=True)
 
 	try:
@@ -355,11 +364,11 @@ def setup_on_shutdown():
 	if win32process.IsWow64Process():
 		winreg.DisableReflectionKey(key_handle)
 	winreg.SetValueEx(key_handle, "MaxGPOScriptWait", 0, winreg.REG_DWORD, 0)
-	#winreg.SetValueEx(key_handle, "ShutdownWithoutLogon", 0, winreg.REG_DWORD, 1)
+	# winreg.SetValueEx(key_handle, "ShutdownWithoutLogon", 0, winreg.REG_DWORD, 1)
 	winreg.CloseKey(key_handle)
 
 
-def setup(full=False, options=None) -> None:
+def setup(full: bool = False, options: Namespace = None) -> None:
 	logger.notice("Running opsiclientd setup")
 	errors = []
 
@@ -367,18 +376,19 @@ def setup(full=False, options=None) -> None:
 		opsi_service_setup(options)
 		try:
 			install_service()
-		except Exception as err: # pylint: disable=broad-except
+		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Failed to install service: %s", err, exc_info=True)
 			errors.append(str(err))
 
 	try:
 		setup_ssl(full)
-	except Exception as err: # pylint: disable=broad-except
+	except Exception as err:  # pylint: disable=broad-except
 		logger.error("Failed to setup ssl: %s", err, exc_info=True)
 		errors.append(str(err))
 
 	try:
-		setup_firewall()
+		if not config.get('control_server', 'skip_setup_firewall'):
+			setup_firewall()
 	except Exception as err:  # pylint: disable=broad-except
 		logger.error("Failed to setup firewall: %s", err, exc_info=True)
 		errors.append(str(err))
