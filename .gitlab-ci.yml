@@ -42,7 +42,6 @@ test:pytest-darwin:
   tags:
     - macos
   script:
-    - source $HOME/.poetry/env
     - poetry lock --no-update
     - poetry install
     - poetry run pytest --tb=short -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
@@ -150,10 +149,8 @@ build:pyinstaller-linux-x64:
 build:pyinstaller-darwin-x64:
   stage: build
   tags:
-    - macostest
+    - macos_catalina
   script:
-    - source $HOME/.poetry/env
-    - poetry env use python3.7
     #- sed -ie s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
     #- poetry update python-opsi
     - poetry lock --no-update
