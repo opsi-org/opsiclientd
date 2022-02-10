@@ -10,7 +10,12 @@ opsi client daemon (opsiclientd)
 
 import os
 import sys
+import codecs
 import platform
+from datetime import datetime
+
+#STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
+STARTUP_LOG = None
 
 def opsiclientd_rpc():
 	from opsiclientd.opsiclientdrpc import main as _main # pylint: disable=import-outside-toplevel
@@ -21,9 +26,11 @@ def action_processor_starter():
 	_main()
 
 def opsiclientd():
-	from opsicommon.logging import logger # pylint: disable=import-outside-toplevel
 	_main = None
 	if platform.system().lower() == 'windows':
+		if STARTUP_LOG and os.path.isdir(os.path.dirname(STARTUP_LOG)):
+			with codecs.open(STARTUP_LOG, "w", "utf-8") as file:
+				file.write(f"{datetime.now()} opsiclientd startup\n")
 		from opsiclientd.windows.main import main as _main # pylint: disable=import-outside-toplevel
 	elif platform.system().lower() in ('linux', 'darwin'):
 		from opsiclientd.posix.main import main as _main # pylint: disable=import-outside-toplevel
@@ -32,6 +39,7 @@ def opsiclientd():
 	try:
 		_main()
 	except Exception as err: # pylint: disable=broad-except
+		from opsicommon.logging import logger # pylint: disable=import-outside-toplevel
 		logger.critical(err, exc_info=True)
 
 def main():

@@ -21,6 +21,7 @@ from opsicommon.logging import (
 )
 
 from opsiclientd import parser, init_logging, DEFAULT_STDERR_LOG_FORMAT
+from opsiclientd.Config import Config
 from opsiclientd.setup import setup
 from opsiclientd.nonfree.Posix import OpsiclientdPosix
 
@@ -66,7 +67,7 @@ def daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
 
 def write_pid_file(path):
 	if path:
-		with open(path, 'w') as pidFile:
+		with open(path, "w", encoding="utf-8") as pidFile:
 			pidFile.write(str(os.getpid()))
 
 def main():
@@ -95,6 +96,8 @@ def main():
 	)
 
 	options = parser.parse_args()
+	if options.config_file:
+		Config().set("global", "config_file", options.config_file)
 
 	if options.action == "setup":
 		oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)

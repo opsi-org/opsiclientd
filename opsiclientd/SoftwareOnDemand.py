@@ -30,6 +30,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc): # pylint: disable=too-few-public-me
 		"getClientId",
 		"fireEvent_software_on_demand",
 		"processActionRequests",
+		"getConfigDataFromOpsiclientd",
 
 		"backend_setOptions",
 		"configState_getObjects",
@@ -115,7 +116,10 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc): # pylint: disable=too-few-public-me
 				self.service._opsiclientdRpcInterface.processActionRequests() # pylint: disable=protected-access
 			elif rpc.method == "fireEvent_software_on_demand":
 				for eventGenerator in getEventGenerators(generatorClass=SwOnDemandEventGenerator):
-					eventGenerator.createAndFireEvent()
+					# Allow event cancellation for new events called via the Kiosk
+					eventGenerator.createAndFireEvent(can_cancel=True)
+			elif rpc.method == "getConfigDataFromOpsiclientd":
+				rpc.result = self.service._opsiclientdRpcInterface.getConfigDataFromOpsiclientd() # pylint: disable=protected-access
 			else:
 				deferred.addCallback(self._executeRpc, rpc)
 		deferred.callback(None)

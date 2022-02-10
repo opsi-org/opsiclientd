@@ -8,17 +8,18 @@
 opsiclientd Library.
 """
 
-__version__ = '4.2.0.76'
+__version__ = '4.2.0.103'
 
 import os
 import sys
 import tempfile
 import argparse
+from logging.handlers import RotatingFileHandler
 import psutil
 
 from opsicommon.logging import (
-	logger, logging_config, set_filter_from_string, init_logging as oc_init_logging,
-	LOG_NONE, LOG_DEBUG, LOG_ERROR, LOG_NOTICE
+	logger, set_filter_from_string, logging_config, get_all_handlers,
+	LOG_NONE, LOG_DEBUG, LOG_NOTICE
 )
 from OPSI import __version__ as python_opsi_version
 from OPSI.System import execute
@@ -52,6 +53,11 @@ parser.add_argument(
 	help="Filter log records contexts (<ctx-name-1>=<val1>[,val2][;ctx-name-2=val3])."
 )
 parser.add_argument(
+	"--config-file",
+	default=None, #config.get("global", "config_file"),
+	help="Path to config file"
+)
+parser.add_argument(
 	"--service-address",
 	default=None,
 	help="Service address to use for setup."
@@ -80,6 +86,7 @@ parser.add_argument(
 	help="The ACTION to perform (start / stop / restart / install / update / remove / setup)."
 )
 
+
 def get_opsiclientd_pid() -> int:
 	our_pid = os.getpid()
 	for proc in psutil.process_iter():
@@ -106,29 +113,31 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 	log_file_without_ext, ext = os.path.splitext(log_file) # ext contains '.'
 
 	for i in (9, 8, 7, 6, 5, 4, 3, 2, 1, 0):
-		slf = f"{log_file_without_ext}_{i-1}{ext}"
-		olf = f"{log_file_without_ext}{ext}.{i-1}" # old format
-		dlf = f"{log_file_without_ext}_{i}{ext}"
-		if i == 0:
-			slf = log_file
-		try:
-			if i > 0 and os.path.exists(olf):
+		old_lf = f"{log_file_without_ext}{ext}.{i-1}" # old format
+		new_lf = f"{log_file_without_ext}_{i}{ext}"
+		if i > 0 and os.path.exists(old_lf):
+			try:
 				# Rename existing log file from old to new format
-				os.rename(olf, slf)
-			if os.path.exists(slf):
-				if os.path.exists(dlf):
-					os.unlink(dlf)
-				os.rename(slf, dlf)
-		except Exception as err: # pylint: disable=broad-except
-			logger.error("Failed to rename %s to %s: %s", slf, dlf, err)
+				os.rename(old_lf, new_lf)
+			except Exception as err: # pylint: disable=broad-except
+				logger.error("Failed to rename %s to %s: %s", old_lf, new_lf, err)
 
-	oc_init_logging(
+	logging_config(
 		stderr_level=stderr_level,
 		stderr_format=DEFAULT_STDERR_LOG_FORMAT,
 		log_file=log_file,
 		file_level=LOG_DEBUG,
-		file_format=DEFAULT_FILE_LOG_FORMAT
+		file_format=DEFAULT_FILE_LOG_FORMAT,
+		file_rotate_max_bytes=config.get("global", "max_log_size")*1000*1000,
+		file_rotate_backup_count=config.get("global", "keep_rotated_logs")
 	)
+	def namer(default_name):
+		tmp = default_name.rsplit(".", 2)
+		return f"{tmp[0]}_{int(tmp[2]) - 1}.{tmp[1]}"
+
+	handler = get_all_handlers(handler_type=RotatingFileHandler)[0]
+	handler.namer = namer
+	handler.doRollover()
 	if log_filter:
 		set_filter_from_string(log_filter)
 

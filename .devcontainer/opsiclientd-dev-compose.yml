@@ -1,0 +1,16 @@
+version: '3.3'
+
+services:
+  opsiclientd-dev:
+    hostname: opsiclientd-dev
+    build: opsiclientd-dev-docker
+    volumes:
+      - ..:/workspace:cached
+    ports:
+      - "44410:4441"
+    # Needed for cifs mount
+    privileged: true
+    cap_add:
+      - SYS_ADMIN
+      - DAC_READ_SEARCH
+    entrypoint: ["/docker-entrypoint.sh"]

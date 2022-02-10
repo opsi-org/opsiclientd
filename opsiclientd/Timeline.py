@@ -196,7 +196,7 @@ class Timeline(metaclass=Singleton):
 	def _cleanupDatabase(self):
 		with self._db_lock, self._sql.session() as session:
 			try:
-				self._sql.execute(session, 'delete from EVENT where `start` < "%s"' % timestamp((time.time() - 7*24*3600)))
+				self._sql.execute(session, f'delete from EVENT where `start` < "{timestamp(time.time() - 7*24*3600)}"')
 				self._sql.update(session, 'EVENT', '`durationEvent` = 1 AND `end` is NULL', {'durationEvent': False})
 			except Exception as cleanup_error: # pylint: disable=broad-except
 				logger.error(cleanup_error)
@@ -220,8 +220,8 @@ class Timeline(metaclass=Singleton):
 			tables = self._sql.getTables(session)
 			if 'EVENT' not in tables:
 				logger.debug('Creating table EVENT')
-				table = '''CREATE TABLE `EVENT` (
-						`id` integer NOT NULL ''' + self._sql.AUTOINCREMENT + ''',
+				table = f'''CREATE TABLE `EVENT` (
+						`id` integer NOT NULL {self._sql.AUTOINCREMENT},
 						`title` varchar(255) NOT NULL,
 						`category` varchar(64),
 						`isError` bool,
@@ -230,8 +230,8 @@ class Timeline(metaclass=Singleton):
 						`start` TIMESTAMP,
 						`end` TIMESTAMP,
 						PRIMARY KEY (`id`)
-					) %s;
-					''' % self._sql.getTableCreationOptions('EVENT')
+					) {self._sql.getTableCreationOptions('EVENT')};
+					'''
 				logger.debug(table)
 				self._sql.execute(session, table)
 				self._sql.execute(session, 'CREATE INDEX `category` on `EVENT` (`category`);')
@@ -283,7 +283,7 @@ class Timeline(metaclass=Singleton):
 				if not end:
 					end = timestamp()
 				end = forceOpsiTimestamp(end)
-				return self._sql.update(session, 'EVENT', '`id` = %d' % eventId, {'end': end, 'durationEvent': True})
+				return self._sql.update(session, 'EVENT', f'`id` = {eventId}', {'end': end, 'durationEvent': True})
 			except Exception as end_error: # pylint: disable=broad-except
 				logger.error("Failed to set end of event '%s': %s", eventId, end_error)
 		return -1

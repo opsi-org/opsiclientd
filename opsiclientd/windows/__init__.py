@@ -4,6 +4,9 @@
 # Copyright (c) 2010-2021 uib GmbH <info@uib.de>
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0
+"""
+opsiclientd.windows
+"""
 
 import time
 import threading
@@ -127,13 +130,13 @@ def start_pty(shell="powershell.exe", lines=30, columns=120):
 		raise
 	process = PtyProcess.spawn(shell, dimensions=(lines, columns))
 
-	def stop():
-		process.close()
-
 	def read(length: int):
 		return process.read(length).encode("utf-8")
 
 	def write(data: bytes):
 		return process.write(data.decode("utf-8"))
+
+	def stop():
+		process.close()
 
 	return (read, write, stop)

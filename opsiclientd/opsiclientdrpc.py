@@ -4,6 +4,9 @@
 # Copyright (c) 2010-2021 uib GmbH <info@uib.de>
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0
+"""
+opsiclientd rpc client
+"""
 
 import codecs
 import os
@@ -18,9 +21,10 @@ from OPSI import __version__ as python_opsi_version
 from opsicommon.logging import (
 	logger, init_logging, log_context, secret_filter, LOG_DEBUG, LOG_NONE
 )
-from opsicommon.client.jsonrpc import JSONRPCBackend
+from opsicommon.client.jsonrpc import JSONRPCClient
 
 from opsiclientd import __version__, DEFAULT_FILE_LOG_FORMAT
+
 
 def get_opsi_host_key():
 	config_file = "/etc/opsi-client-agent/opsiclientd.conf"
@@ -38,13 +42,15 @@ def get_opsi_host_key():
 
 	raise RuntimeError(f"Failed to find opsi_host_key in config file {config_file}")
 
+
 class ArgumentParser(argparse.ArgumentParser):
 	def error(self, message):
 		if len(sys.argv) in (5, 6):
 			raise DeprecationWarning("Legacy comandline arguments")
 		return argparse.ArgumentParser.error(self, message)
 
-def main():
+
+def main():  # pylint: disable=too-many-statements
 	with log_context({'instance' : os.path.basename(sys.argv[0])}):
 		parser = ArgumentParser()
 		parser.add_argument('--version',
@@ -74,6 +80,11 @@ def main():
 		parser.add_argument('--password',
 			help="Password to use for service connection (default: opsi host key)."
 		)
+		parser.add_argument('--timeout',
+			type=int,
+			default=30,
+			help="Read timeout for the rpc in seconds (default: 30)."
+		)
 		parser.add_argument('rpc',
 			help="The remote procedure call to execute."
 		)
@@ -84,6 +95,7 @@ def main():
 		username = None
 		password = None
 		rpc = None
+		timeout = None
 		try:
 			args = parser.parse_args()
 			log_file = args.log_file
@@ -92,6 +104,7 @@ def main():
 			username = args.username
 			password = args.password
 			rpc = args.rpc
+			timeout = max(0, args.timeout)
 			if not username and not password:
 				try:
 					password = get_opsi_host_key()
@@ -123,16 +136,17 @@ def main():
 		)
 
 		try:
-			with JSONRPCBackend(
+			jsonrpc = JSONRPCClient(  # pylint: disable=unused-variable
+				address=address,
 				username=username,
 				password=password,
-				address=address,
+				readtimeout=timeout,
 				compression=False
-			) as jsonrpc: # pylint: disable=unused-variable
-				logger.notice(f"Executing: {rpc}")
-				result = eval(f"jsonrpc.{rpc}") # pylint: disable=eval-used
-				print(result)
-		except Exception as err: # pylint: disable=broad-except
+			)
+			logger.notice(f"Executing: {rpc}")
+			result = eval(f"jsonrpc.{rpc}")  # pylint: disable=eval-used
+			print(result)
+		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 			print(f"Error: {err}", file=sys.stderr)
 			sys.exit(1)

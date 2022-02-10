@@ -4,43 +4,47 @@
 # Copyright (c) 2010-2021 uib GmbH <info@uib.de>
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0
+"""
+test_control_server
+"""
 
-import pytest
 import ssl
 import socket
 import codecs
+import threading
+
 import requests
 import netifaces
+import pytest
+
 from opsiclientd import ControlServer
+from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import createEventGenerators
 
-@pytest.fixture
-def prepared_config(config, configFile):
-	config.set('global', 'config_file', configFile)
-	yield config
+from .utils import default_config, opsiclient_url, opsiclientd_auth  # pylint: disable=unused-import
 
-def test_fire_event(prepared_config): # pylint: disable=redefined-outer-name
-	prepared_config.readConfigFile()
-	createEventGenerators(None)
+
+def test_fire_event():
+	ocd = Opsiclientd()
+	createEventGenerators(ocd)
 	getEventConfigs()
-	controlServer = ControlServer.OpsiclientdRpcInterface(None)
+	controlServer = ControlServer.OpsiclientdRpcInterface(ocd)
 	controlServer.fireEvent('on_demand')
 
-def test_firing_unknown_event_raises_error(prepared_config): # pylint: disable=redefined-outer-name
-	prepared_config.readConfigFile()
+
+def test_firing_unknown_event_raises_error():
 	controlServer = ControlServer.OpsiclientdRpcInterface(None)
 	with pytest.raises(ValueError):
 		controlServer.fireEvent('foobar')
 
-def test_gui_startup_event_on_windows_only(prepared_config, onWindows): # pylint: disable=redefined-outer-name
-	prepared_config.readConfigFile()
+
+def test_gui_startup_event_on_windows_only():
 	createEventGenerators(None)
 	configs = getEventConfigs()
 	assert configs
+	assert 'gui_startup' in configs
 
-	if onWindows:
-		assert 'gui_startup' in configs
 
 def test_log_reader_start_position(tmpdir):
 	log_lines = 20
@@ -51,7 +55,7 @@ def test_log_reader_start_position(tmpdir):
 				file.write(f"[5] [2021-01-02 11:12:13.456] [opsiclientd] log line {i+1}   (opsiclientd.py:123)\n")
 
 		lrt = ControlServer.LogReaderThread(log_file, None, num_tail_records)
-		start_position = lrt._get_start_position()
+		start_position = lrt._get_start_position()  # pylint: disable=protected-access
 
 		with codecs.open(log_file, "r", encoding="utf-8", errors="replace") as file:
 			file.seek(start_position)
@@ -59,24 +63,30 @@ def test_log_reader_start_position(tmpdir):
 			assert data.startswith("[5]")
 			assert data.count("\n") == num_tail_records if log_lines > num_tail_records else log_lines
 
-def test_index_page(opsiclient_url):
+
+@pytest.mark.opsiclientd_running
+def test_index_page(opsiclient_url):  # pylint: disable=redefined-outer-name
 	req = requests.get(f"{opsiclient_url}", verify=False)
 	assert req.status_code == 200
 
-def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth, configFile):
+
+@pytest.mark.opsiclientd_running
+def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):  # pylint: disable=redefined-outer-name
 	rpc = {"id":1, "method": "invalid", "params":[]}
 	for endpoint in ("opsiclientd", "rpc"):
 		response = requests.post(f"{opsiclient_url}/{endpoint}", verify=False, json=rpc)
 		assert response.status_code == 401
 
 	response = requests.post(f"{opsiclient_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
-	assert response.status_code == 200, f"auth failed: {opsiclientd_auth} / {configFile}"
+	assert response.status_code == 200, f"auth failed: {opsiclientd_auth}"
 	rpc_response = response.json()
 	assert rpc_response.get("id") == rpc["id"]
 	assert rpc_response.get("result") is None
 	assert rpc_response.get("error") is not None
 
-def test_kiosk_auth(opsiclient_url):
+
+@pytest.mark.opsiclientd_running
+def test_kiosk_auth(opsiclient_url):  # pylint: disable=redefined-outer-name
 	# Kiosk allows connection from 127.0.0.1 without auth
 	response = requests.post(
 		f"{opsiclient_url}/kiosk",
@@ -88,10 +98,10 @@ def test_kiosk_auth(opsiclient_url):
 	assert "Not a gzipped file" in response.text
 	# "X-Forwarded-For" must not be accepted
 	address = None
-	interfaces = netifaces.interfaces()
+	interfaces = netifaces.interfaces()  # pylint: disable=c-extension-no-member
 	for interface in interfaces:
-		addresses = netifaces.ifaddresses(interface)
-		addr = addresses.get(netifaces.AF_INET, [{}])[0].get("addr")
+		addresses = netifaces.ifaddresses(interface)  # pylint: disable=c-extension-no-member
+		addr = addresses.get(netifaces.AF_INET, [{}])[0].get("addr")  # pylint: disable=c-extension-no-member
 		if addr and addr != "127.0.0.1":
 			address = addr
 			break
@@ -115,3 +125,35 @@ def test_kiosk_auth(opsiclient_url):
 			)
 			http_code = int(ssock.recv(1024).split(b" ", 2)[1])
 			assert http_code == 401 # "X-Forwarded-For" not accepted
+
+
+@pytest.mark.opsiclientd_running
+def test_concurrency(opsiclient_url, opsiclientd_auth):  # pylint: disable=redefined-outer-name
+	rpcs = [
+		{"id":1, "method": "execute", "params":["sleep 3; echo ok", True]},
+		{"id":2, "method": "execute", "params":["sleep 4; echo ok", True]},
+		{"id":3, "method": "invalid", "params":[]},
+		{"id":4, "method": "log_read", "params":[]},
+		{"id":5, "method": "getConfig", "params":[]}
+	]
+
+	def run_rpc(rpc):
+		res = requests.post(f"{opsiclient_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
+		threading.current_thread().status_code = res.status_code
+		threading.current_thread().response = res.json()
+
+	threads = []
+	for rpc in rpcs:
+		thread = threading.Thread(target=run_rpc, args=[rpc])
+		threads.append(thread)
+		thread.start()
+
+	for thread in threads:
+		thread.join()
+		assert thread.status_code == 200
+		if thread.response["id"] == 3:
+			assert thread.response["error"] is not None
+		else:
+			assert thread.response["error"] is None
+		if thread.response["id"] in (1, 2):
+			assert "ok" in thread.response["result"]

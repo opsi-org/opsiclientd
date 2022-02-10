@@ -4,6 +4,11 @@
 # Copyright (c) 2010-2021 uib GmbH <info@uib.de>
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0
+"""
+opsiclientd.windows.opsiclientd
+"""
+
+import os
 import sys
 import time
 import threading
@@ -129,6 +134,55 @@ class OpsiclientdNT(Opsiclientd):
 				return True
 			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {response.get('error')}")
 
+	def cleanup_opsi_setup_user(self, keep_sid: str = None):  # pylint: disable=no-self-use,too-many-locals
+		keep_profile = None
+		with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList") as key:
+			for idx in range(1024):
+				try:
+					keyname = winreg.EnumKey(key, idx)
+					with winreg.OpenKey(key, keyname) as subkey:
+						profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]
+						if keep_sid and keyname == keep_sid:
+							keep_profile = profile_path
+							continue
+					username = profile_path.split("\\")[-1].split(".")[0]
+					if not username.startswith(OPSI_SETUP_USER_NAME):
+						continue
+					sid = win32security.ConvertStringSidToSid(keyname)
+					try:
+						#win32profile.DeleteProfile(sid)
+						username, _domain, _type = win32security.LookupAccountSid(None, sid)
+						logger.info("Deleting user '%s'", username)
+						win32net.NetUserDel(None, username)
+					except Exception:  # pylint: disable=broad-except
+						pass
+					logger.info("Deleting '%s' from ProfileList", keyname)
+				except WindowsError as err:
+					if err.errno == 22:  # pylint: disable=no-member
+						# No more subkeys
+						break
+					logger.debug(err)
+
+		# takeown parameter /d is localized 😠
+		res = subprocess.run("choice <nul 2>nul", capture_output=True, check=False, shell=True)
+		yes = res.stdout.decode().split(",")[0].lstrip("[").strip()
+		for pdir in glob.glob(f"c:\\users\\{OPSI_SETUP_USER_NAME}*"):
+			if keep_profile and keep_profile.lower() == pdir.lower():
+				continue
+			logger.info("Deleting user dir '%s'", pdir)
+			for cmd, shell, exit_codes_success in (
+				(['takeown', '/a', '/d', yes, '/r', '/f', pdir], False, [0, 1]),
+				(['del', pdir, "/f", "/s", "/q"], True, [0]),
+				(['rd', pdir, "/s", "/q"], True, [0])
+			):
+				logger.info("Executing: %s", cmd)
+				res = subprocess.run(cmd, shell=shell, capture_output=True, check=False)
+				out = res.stdout.decode(errors="replace") + res.stderr.decode(errors="replace")
+				if res.returncode not in exit_codes_success:
+					logger.warning("Command %s failed with exit code %s: %s", cmd, res.returncode, out)
+				else:
+					logger.info("Command %s successful: %s", cmd, out)
+
 	def createOpsiSetupUser(self, admin=True, delete_existing=False): # pylint: disable=no-self-use,too-many-branches
 		# https://bugs.python.org/file46988/issue.py
 
@@ -140,6 +194,21 @@ class OpsiclientdNT(Opsiclientd):
 			"priv": win32netcon.USER_PRIV_USER,
 			"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD
 		}
+
+		# Test if user exists
+		user_sid = None
+		try:
+			win32net.NetUserGetInfo(None, user_info["name"], 1)
+			user_sid = win32security.ConvertSidToStringSid(
+				win32security.LookupAccountName(None, user_info["name"])[0]
+			)
+			logger.info("User '%s' exists, sid is '%s'", user_info["name"], user_sid)
+		except Exception as err: # pylint: disable=broad-except
+			logger.info(err)
+
+		self.cleanup_opsi_setup_user(keep_sid=None if delete_existing else user_sid)
+		if delete_existing:
+			user_sid = None
 
 		# Hide user from login
 		try:
@@ -169,43 +238,39 @@ class OpsiclientdNT(Opsiclientd):
 		) as reg_key:
 			winreg.SetValueEx(reg_key, user_info["name"], 0, winreg.REG_DWORD, 0)
 
-		# Test if user exists
-		user_exists = False
-		try:
-			win32net.NetUserGetInfo(None, user_info["name"], 1)
-			user_exists = True
-		except Exception: # pylint: disable=broad-except
-			pass
-
-		if user_exists:
-			if delete_existing:
-				# Delete user
-				win32net.NetUserDel(None, user_info["name"])
-
-				for pdir in glob.glob(f"c:\\users\\{user_info['name']}*"):
-					try:
-						subprocess.call(['takeown', '/d', 'Y', '/r', '/f', pdir])
-						subprocess.call(['del', '/s', '/f', '/q', pdir], shell=True)
-					except subprocess.CalledProcessError as rm_err:
-						logger.warning("Failed to delete %s: %s", pdir, rm_err)
-
-				user_exists = False
-			else:
-				# Update user password
-				user_info_update = win32net.NetUserGetInfo(None, user_info["name"], 1)
-				user_info_update["password"] = user_info["password"]
-				win32net.NetUserSetInfo(None, user_info["name"], 1, user_info_update)
-
-		if not user_exists:
-			# Create user
+		if user_sid:
+			logger.info("Updating password of user '%s'", user_info["name"])
+			user_info_update = win32net.NetUserGetInfo(None, user_info["name"], 1)
+			user_info_update["password"] = user_info["password"]
+			win32net.NetUserSetInfo(None, user_info["name"], 1, user_info_update)
+		else:
+			logger.info("Creating user '%s'", user_info["name"])
 			win32net.NetUserAdd(None, 1, user_info)
 
-		sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
-		local_admin_group_name = win32security.LookupAccountSid(None, sid)[0]
+		user_sid = win32security.ConvertSidToStringSid(
+			win32security.LookupAccountName(None, user_info["name"])[0]
+		)
+		subprocess.run(
+			["icacls", os.path.dirname(sys.argv[0]), "/grant:r", f"*{user_sid}:(OI)(CI)RX"],
+			check=False
+		)
+		subprocess.run(
+			["icacls", os.path.dirname(config.get("global", "log_file")), "/grant:r", f"*{user_sid}:(OI)(CI)F"],
+			check=False
+		)
+		subprocess.run(
+			["icacls", os.path.dirname(config.get("global", "tmp_dir")), "/grant:r", f"*{user_sid}:(OI)(CI)F"],
+			check=False
+		)
+
+		local_admin_group_sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
+		local_admin_group_name = win32security.LookupAccountSid(None, local_admin_group_sid)[0]
 		try:
 			if admin:
+				logger.info("Adding user '%s' to admin group", user_info["name"])
 				win32net.NetLocalGroupAddMembers(None, local_admin_group_name, 3, [{"domainandname": user_info["name"]}])
 			else:
+				logger.info("Removing user '%s' from admin group", user_info["name"])
 				win32net.NetLocalGroupDelMembers(None, local_admin_group_name, [user_info["name"]])
 		except pywintypes.error as err:
 			# 1377 - ERROR_MEMBER_NOT_IN_ALIAS

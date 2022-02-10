@@ -14,6 +14,14 @@ import json
 import time
 from types import MethodType
 
+from opsicommon.logging import logger
+from opsicommon.license import OPSI_MODULE_IDS
+from opsicommon.objects import (
+	objects_differ, get_ident_attributes, LicenseOnClient, ProductOnClient
+)
+from opsicommon.objects import * # required for dynamic class loading # pylint: disable=wildcard-import,unused-wildcard-import
+from opsicommon.types import forceHostId
+
 from OPSI.Backend.Backend import (
 	getArgAndCallString, Backend, ConfigDataBackend, ModificationTrackingBackend
 )
@@ -21,14 +29,7 @@ from OPSI.Backend.Replicator import BackendReplicator
 from OPSI.Exceptions import (
 	BackendConfigurationError, BackendMissingDataError, BackendUnaccomplishableError
 )
-from OPSI.Object import (
-	getIdentAttributes, objectsDiffer, LicenseOnClient, ProductOnClient
-)
-from OPSI.Object import * # required for dynamic class loading # pylint: disable=wildcard-import,unused-wildcard-import
-from OPSI.Types import forceHostId
 from OPSI.Util import blowfishDecrypt
-
-from opsicommon.logging import logger
 
 from opsiclientd.Config import Config
 
@@ -76,6 +77,16 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 		self._workBackend._setContext(self)
 		self._backend = self._workBackend
 		self._createInstanceMethods()
+
+	def backend_getLicensingInfo(  # pylint: disable=unused-argument,no-self-use
+		self,
+		licenses: bool = False,
+		legacy_modules: bool = False,
+		dates: bool = False
+	):
+		return {
+			"available_modules": OPSI_MODULE_IDS
+		}
 
 	def log_write(self, logType, data, objectId=None, append=False):
 		pass
@@ -128,7 +139,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 					logger.info("No need to delete object %s because object has been deleted on server since last sync", mo['object'])
 					continue
 
-				meth = getattr(self._snapshotBackend, '%s_getObjects' % objectClass.backendMethodPrefix)
+				meth = getattr(self._snapshotBackend, f'{objectClass.backendMethodPrefix}_getObjects')
 				snapshotObj = meth(**(mo['object'].getIdent(returnType='dict')))
 				if not snapshotObj:
 					logger.info("Deletion of object %s prevented because object has been created on server since last sync", mo['object'])
@@ -174,7 +185,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 				logger.error("Failed to update objects %s: %s", updateObjects, update_err)
 				raise
 
-	def _updateMasterFromWorkBackend(self, modifications=[]): # pylint: disable=dangerous-default-value,too-many-locals
+	def _updateMasterFromWorkBackend(self, modifications=[]): # pylint: disable=dangerous-default-value,too-many-locals,too-many-statements
 		modifiedObjects = collections.defaultdict(list)
 		logger.notice("Updating master from work backend (%d modifications)", len(modifications))
 
@@ -182,11 +193,13 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 			try:
 				ObjectClass = eval(modification['objectClass']) # pylint: disable=eval-used
 				identValues = modification['ident'].split(ObjectClass.identSeparator)
-				identAttributes = getIdentAttributes(ObjectClass)
+				identAttributes = get_ident_attributes(ObjectClass)
 				objectFilter = {}
 				for index, attribute in enumerate(identAttributes):
 					if index >= len(identValues):
-						raise BackendUnaccomplishableError("Bad ident '%s' for objectClass '%s'" % (identValues, modification['objectClass']))
+						raise BackendUnaccomplishableError(
+							f"Bad ident '{identValues}' for objectClass '{modification['objectClass']}'"
+						)
 
 					objectFilter[attribute] = identValues[index]
 
@@ -216,7 +229,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 
 		if 'ProductOnClient' in modifiedObjects:
 			def objectsDifferFunction(snapshotObj, masterObj):
-				return objectsDiffer(snapshotObj, masterObj, excludeAttributes=['modificationTime', 'actionProgress', 'actionResult', 'lastAction'])
+				return objects_differ(snapshotObj, masterObj, exclude_attributes=['modificationTime', 'actionProgress', 'actionResult', 'lastAction'])
 
 			def createUpdateObjectFunction(modifiedObj):
 				return modifiedObj.clone(identOnly=False)
@@ -262,7 +275,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 
 		if 'LicenseOnClient' in modifiedObjects:
 			def objectsDifferFunction(snapshotObj, masterObj): # pylint: disable=function-redefined
-				return objectsDiffer(snapshotObj, masterObj)
+				return objects_differ(snapshotObj, masterObj)
 
 			def createUpdateObjectFunction(modifiedObj): # pylint: disable=function-redefined
 				return modifiedObj.clone(identOnly=False)
@@ -281,7 +294,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 
 		for objectClassName in ('ProductPropertyState', 'ConfigState'):
 			def objectsDifferFunction(snapshotObj, masterObj): # pylint: disable=function-redefined
-				return objectsDiffer(snapshotObj, masterObj)
+				return objects_differ(snapshotObj, masterObj)
 
 			def createUpdateObjectFunction(modifiedObj): # pylint: disable=function-redefined
 				return modifiedObj.clone()
@@ -480,7 +493,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 		for Class in (Backend, ConfigDataBackend):
 			for methodName, funcRef in inspect.getmembers(Class, inspect.isfunction):
 				if methodName.startswith('_') or methodName in (
-					'backend_info', 'user_getCredentials', 'user_setCredentials',
+					'backend_info', 'backend_getLicensingInfo',
+					'user_getCredentials', 'user_setCredentials',
 					'log_write', 'licenseOnClient_getObjects',
 					'configState_getObjects', 'config_getObjects'
 				):
@@ -488,8 +502,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 
 				(argString, callString) = getArgAndCallString(funcRef)
 
-				logger.debug2("Adding method '%s' to execute on work backend" % methodName)
-				exec('def %s(self, %s): return self._executeMethod("%s", %s)' % (methodName, argString, methodName, callString)) # pylint: disable=exec-used
+				logger.trace("Adding method '%s' to execute on work backend", methodName)
+				exec(f'def {methodName}(self, {argString}): return self._executeMethod("{methodName}", {callString})')  # pylint: disable=exec-used
 				setattr(self, methodName, MethodType(eval(methodName), self)) # pylint: disable=eval-used
 
 	def _cacheBackendInfo(self, backendInfo):
@@ -506,7 +520,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 						state = 'yes'
 					else:
 						state = 'no'
-				file.write('%s = %s\n' % (module.lower(), state))
-			file.write('customer = %s\n' % modules.get('customer', ''))
-			file.write('expires = %s\n' % modules.get('expires', time.strftime("%Y-%m-%d", time.localtime(time.time()))))
-			file.write('signature = %s\n' % modules.get('signature', ''))
+				file.write(f"{module.lower()} = {state}\n")
+			file.write(f"customer = {modules.get('customer', '')}\n")
+			file.write(f"expires = {modules.get('expires', time.strftime('%Y-%m-%d', time.localtime(time.time())))}\n")
+			file.write(f"signature = {modules.get('signature', '')}\n")

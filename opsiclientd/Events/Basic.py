@@ -8,8 +8,6 @@
 Basic event building blocks.
 """
 
-from __future__ import absolute_import
-
 import threading
 import time
 
@@ -79,8 +77,8 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 
 		return actualConfig['config']
 
-	def createAndFireEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
-		self.fireEvent(self.createEvent(eventInfo))
+	def createAndFireEvent(self, eventInfo={}, can_cancel=False): # pylint: disable=dangerous-default-value
+		self.fireEvent(self.createEvent(eventInfo), can_cancel=can_cancel)
 
 	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
 		logger.debug("Creating event config from info: %s", eventInfo)
@@ -96,12 +94,29 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 
 	def getNextEvent(self):
 		self._event = threading.Event()
+		logger.debug(
+			"getNextEvent: eventsOccured=%d, startInterval=%d, interval=%d",
+			self._eventsOccured, self._generatorConfig.startInterval, self._generatorConfig.interval
+		)
+		if self._eventsOccured == 0 and self._generatorConfig.startInterval > 0:
+			logger.debug("Waiting for start interval %d", self._generatorConfig.startInterval)
+			self._event.wait(self._generatorConfig.startInterval)
+			if self._stopped:
+				return None
+			return self.createEvent()
+		if self._generatorConfig.interval > 0:
+			logger.debug("Waiting for interval %d", self._generatorConfig.interval)
+			self._event.wait(self._generatorConfig.interval)
+			if self._stopped:
+				return None
+			return self.createEvent()
 		self._event.wait()
+		return None
 
 	def cleanup(self):
 		pass
 
-	def fireEvent(self, event=None):
+	def fireEvent(self, event=None, can_cancel=False):
 		logger.debug("Trying to fire event %s", event)
 		if self._stopped:
 			logger.debug('%s is stopped, not firing event.', self)
@@ -138,9 +153,25 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 						logger.error(err, exc_info=True)
 
 		logger.info("Starting FireEventThread for listeners: %s", self._eventListeners)
-		for listener in self._eventListeners:
-			# Create a new thread for each event listener
-			FireEventThread(listener, event).start()
+		keep_lock = False
+		logger.trace("acquire lock (Basic), currently %s", self._opsiclientd.eventLock.locked())
+		# timeout should be less than 15s as this is default opsi-admin call timeout
+		if not self._opsiclientd.eventLock.acquire(timeout=5):
+			raise ValueError("Could not get event handling lock due to another event currently running")
+		try:
+			for listener in self._eventListeners:
+				# Check if all event listeners can handle the event
+				# raises ValueError if another event is already running
+				listener.canProcessEvent(event, can_cancel=can_cancel)
+			for listener in self._eventListeners:
+				# Create a new thread for each event listener
+				FireEventThread(listener, event).start()
+			keep_lock = True
+			logger.debug("keeping event processing lock (Basic)")
+		finally:
+			if not keep_lock:
+				logger.trace("release lock (Basic)")
+				self._opsiclientd.eventLock.release()
 
 	def run(self):
 		with opsicommon.logging.log_context({'instance' : f'event generator {self._generatorConfig.getId()}'}):
@@ -208,3 +239,7 @@ class EventListener: # pylint: disable=too-few-public-methods
 
 	def processEvent(self, event): # pylint: disable=unused-argument
 		logger.warning("%s: processEvent() not implemented", self)
+
+	def canProcessEvent(self, event, can_cancel=False): # pylint: disable=unused-argument
+		logger.warning("%s: canProcessEvent() not implemented", self)
+		raise NotImplementedError(f"{self}: canProcessEvent() not implemented")

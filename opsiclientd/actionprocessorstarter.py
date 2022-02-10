@@ -10,16 +10,27 @@ action processor starter helper for windows
 
 import os
 import sys
+import getpass
 import gettext
 import locale
 from urllib.parse import urlparse
 
 from OPSI import System
+from OPSI.Backend.JSONRPC import JSONRPCBackend
 
-from opsicommon.logging import logger, init_logging, log_context, LOG_NONE
-from opsicommon.client.jsonrpc import JSONRPCBackend
+from opsicommon.logging import logger, init_logging, log_context, LOG_NONE, secret_filter
 
 from opsiclientd import __version__, DEFAULT_STDERR_LOG_FORMAT, DEFAULT_FILE_LOG_FORMAT
+
+def set_status_message(backend, session_id, message):
+	if session_id == "-1":
+		logger.debug("Not setting status message")
+		return
+	try:
+		backend.setStatusMessage(session_id, message) # pylint: disable=no-member
+	except Exception as err: # pylint: disable=broad-except
+		logger.warning("Failed to set status message: %s", err)
+
 
 def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 	if len(sys.argv) != 17:
@@ -39,11 +50,11 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 	) = sys.argv[1:]
 
 	if hostKey:
-		logger.addConfidentialString(hostKey)
+		secret_filter.add_secrets(hostKey)
 	if depotServerPassword:
-		logger.addConfidentialString(depotServerPassword)
+		secret_filter.add_secrets(depotServerPassword)
 	if runAsPassword:
-		logger.addConfidentialString(runAsPassword)
+		secret_filter.add_secrets(runAsPassword)
 
 	init_logging(
 		stderr_level=LOG_NONE,
@@ -53,7 +64,8 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 		file_format=DEFAULT_FILE_LOG_FORMAT
 	)
 
-	with log_context({'instance' : os.path.basename(sys.argv[0])}):
+	log_instance = f'{os.path.basename(sys.argv[0]).rsplit(".", 1)[0]}_s{sessionId}'
+	with log_context({'instance': log_instance}):
 		logger.debug(
 			"Called with arguments: %s",
 			', '.join((
@@ -97,9 +109,10 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 			be = JSONRPCBackend(username=hostId, password=hostKey, address=f"https://127.0.0.1:{controlServerPort}/opsiclientd")
 
 			if runAsUser:
-				logger.info("Impersonating user '%s'", runAsUser)
-				imp = System.Impersonate(username=runAsUser, password=runAsPassword, desktop=actionProcessorDesktop)
-				imp.start(logonType="INTERACTIVE", newDesktop=False, createEnvironment=createEnvironment)
+				if getpass.getuser().lower() != runAsUser.lower():
+					logger.info("Impersonating user '%s'", runAsUser)
+					imp = System.Impersonate(username=runAsUser, password=runAsPassword, desktop=actionProcessorDesktop)
+					imp.start(logonType="INTERACTIVE", newDesktop=False, createEnvironment=createEnvironment)
 			elif depot_url.scheme in ("smb", "cifs"):
 				logger.info("Impersonating network account '%s'", depotServerUsername)
 				imp = System.Impersonate(username=depotServerUsername, password=depotServerPassword, desktop=actionProcessorDesktop)
@@ -107,7 +120,7 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 
 			if depot_url.hostname.lower() not in ("127.0.0.1", "localhost", "::1"):
 				logger.notice("Mounting depot share %s", depotRemoteUrl)
-				be.setStatusMessage(sessionId, _("Mounting depot share %s") % depotRemoteUrl) # pylint: disable=no-member
+				set_status_message(be, sessionId, _("Mounting depot share %s") % depotRemoteUrl) # pylint: disable=no-member
 
 				if runAsUser or depot_url.scheme not in ("smb", "cifs"):
 					System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
@@ -116,7 +129,7 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 				depotShareMounted = True
 
 			logger.notice("Starting action processor")
-			be.setStatusMessage(sessionId, _("Action processor is running")) # pylint: disable=no-member
+			set_status_message(be, sessionId, _("Action processor is running")) # pylint: disable=no-member
 
 			if imp:
 				imp.runCommand(actionProcessorCommand, timeoutSeconds=actionProcessorTimeout)
@@ -124,16 +137,14 @@ def main(): # pylint: disable=too-many-locals,too-many-branches,too-many-stateme
 				System.execute(actionProcessorCommand, waitForEnding=True, timeout=actionProcessorTimeout)
 
 			logger.notice("Action processor ended")
-			be.setStatusMessage(sessionId, _("Action processor ended")) # pylint: disable=no-member
+			set_status_message(be, sessionId, _("Action processor ended")) # pylint: disable=no-member
 		except Exception as err: # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 			error = f"Failed to process action requests: {err}"
-			if be:
-				try:
-					be.setStatusMessage(sessionId, error)
-				except Exception: # pylint: disable=broad-except
-					pass
 			logger.error(error)
+			if be:
+				set_status_message(be, sessionId, error)
+
 
 		if depotShareMounted:
 			try:

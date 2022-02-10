@@ -8,7 +8,6 @@
 Functions to create, reconfigure and get event generators.
 """
 
-from __future__ import absolute_import
 import copy
 
 from opsicommon.logging import logger
@@ -31,9 +30,8 @@ _EVENT_GENERATORS = {}
 config = Config()
 
 
-def createEventGenerators(opsiclientd):
+def createEventGenerators(opsiclientd): # pylint: disable=too-many-branches,too-many-statements
 	enabled_events = {}
-	global _EVENT_GENERATORS # pylint: disable=global-statement
 	panicEventConfig = PanicEventConfig(
 		EVENT_CONFIG_TYPE_PANIC,
 		actionProcessorCommand=config.get('action_processor', 'command', raw=True)
@@ -49,8 +47,12 @@ def createEventGenerators(opsiclientd):
 			continue
 
 		enabled_events[eventConfigId] = False
-		if not eventConfig['active'] or eventConfig['type'] in config.disabledEventTypes:
-			logger.info("Event %s of type %s is disabled", eventConfigId, eventConfig['type'])
+		if eventConfig['type'] in config.disabledEventTypes:
+			logger.info("Event '%s' of type '%s' is temporary disabled (main)", eventConfigId, eventConfig['type'])
+			continue
+
+		if not eventConfig['active']:
+			logger.info("Event '%s' of type '%s' is disabled (main)", eventConfigId, eventConfig['type'])
 			continue
 
 		try:
@@ -71,8 +73,12 @@ def createEventGenerators(opsiclientd):
 		if not eventConfigId in enabled_events:
 			enabled_events[eventConfigId] = False
 
-		if not eventConfig['active'] or eventConfig['type'] in config.disabledEventTypes:
-			logger.info("Event %s of type %s is disabled", eventConfigId, eventConfig['type'])
+		if eventConfig['type'] in config.disabledEventTypes:
+			logger.info("Event '%s' of type '%s' is temporary disabled (precondition)", eventConfigId, eventConfig['type'])
+			continue
+
+		if not eventConfig['active']:
+			logger.info("Event '%s' of type '%s' is disabled (precondition)", eventConfigId, eventConfig['type'])
 			continue
 
 		eventType = eventConfig['type']
@@ -93,7 +99,7 @@ def createEventGenerators(opsiclientd):
 			logger.error("Failed to add event config '%s' to event generator '%s': %s", eventConfigId, mainEventConfigId, err)
 
 	logger.notice("Configured events: %s", ", ".join(sorted(list(enabled_events))))
-	logger.notice("Enabled events: %s", ", ".join(sorted([evt_id for evt_id in enabled_events if enabled_events[evt_id]])))
+	logger.notice("Enabled events: %s", ", ".join(sorted([evt_id for evt_id in enabled_events if enabled_events[evt_id]])))  # pylint: disable=consider-using-dict-items
 
 def getEventGenerators(generatorClass=None):
 	return [
@@ -126,7 +132,10 @@ def reconfigureEventGenerators():
 		try:
 			eventGenerator = _EVENT_GENERATORS[mainEventConfigId]
 		except KeyError:
-			logger.info("Cannot reconfigure event generator '%s': not found", mainEventConfigId)
+			logger.info(
+				"Cannot reconfigure event generator for event '%s': not found",
+				eventConfigId
+			)
 			continue
 
 		try:

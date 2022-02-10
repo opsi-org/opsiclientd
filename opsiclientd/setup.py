@@ -8,6 +8,7 @@
 setup tasks
 """
 
+from argparse import Namespace
 import os
 import codecs
 import ipaddress
@@ -18,16 +19,18 @@ from OpenSSL.crypto import FILETYPE_PEM, load_certificate, load_privatekey
 from OpenSSL.crypto import Error as CryptoError
 
 from opsicommon.logging import logger, secret_filter
-from opsicommon.ssl import as_pem, create_ca, create_server_cert, remove_ca
+from opsicommon.ssl import as_pem, create_ca, create_server_cert
 from opsicommon.system.network import get_ip_addresses, get_hostnames, get_fqdn
 from opsicommon.client.jsonrpc import JSONRPCClient
 
 from opsiclientd.Config import Config
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_LINUX, RUNNING_ON_MACOS
+from opsiclientd.OpsiService import update_ca_cert
 
 config = Config()
 
 CERT_RENEW_DAYS = 60
+
 
 def get_ips():
 	ips = {"127.0.0.1", "::1"}
@@ -41,26 +44,22 @@ def get_ips():
 				logger.warning(err)
 	return ips
 
+
 def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many-statements,too-many-locals
 	logger.info("Checking server cert")
 
-	if not config.get('global', 'install_opsi_ca_into_os_store'):
-		try:
-			if remove_ca("opsi CA"):
-				logger.info("opsi CA successfully removed from system cert store")
-		except Exception as err:  # pylint: disable=broad-except
-			logger.error("Failed to remove opsi CA from system cert store: %s", err)
-
 	key_file = config.get('control_server', 'ssl_server_key_file')
 	cert_file = config.get('control_server', 'ssl_server_cert_file')
-	server_cn = get_fqdn()
+	server_cn = config.get('global', 'host_id')
+	if not server_cn:
+		server_cn = get_fqdn()
 	create = False
 	exists_self_signed = False
 	if not os.path.exists(key_file) or not os.path.exists(cert_file):
 		create = True
 	else:
 		try:
-			with open(cert_file, "r") as file:
+			with open(cert_file, "r", encoding="utf-8") as file:
 				srv_crt = load_certificate(FILETYPE_PEM, file.read())
 				enddate = datetime.datetime.strptime(srv_crt.get_notAfter().decode("utf-8"), "%Y%m%d%H%M%SZ")
 				diff = (enddate - datetime.datetime.now()).days
@@ -81,7 +80,7 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 					exists_self_signed = True
 
 			if not create:
-				with open(key_file, "r") as file:
+				with open(key_file, "r", encoding="utf-8") as file:
 					srv_key = load_privatekey(FILETYPE_PEM, file.read())
 		except CryptoError as err:
 			logger.error(err)
@@ -91,7 +90,6 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 		logger.info("Server cert is up to date")
 		return
 
-	server_cn = get_fqdn()
 	(srv_crt, srv_key) = (None, None)
 	try:
 		logger.notice("Fetching tls server certificate from config service")
@@ -99,7 +97,8 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 		jsonrpc_client = JSONRPCClient(
 			address=config.get('config_service', 'url')[0],
 			username=config.get('global', 'host_id'),
-			password=config.get('global', 'opsi_host_key')
+			password=config.get('global', 'opsi_host_key'),
+			proxy_url=config.get('global', 'proxy_url')
 		)
 		try:
 			pem = jsonrpc_client.host_getTLSCertificate(server_cn)  # pylint: disable=no-member
@@ -135,17 +134,17 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 
 	if not os.path.exists(os.path.dirname(key_file)):
 		os.makedirs(os.path.dirname(key_file))
-	with open(key_file, "a") as out:
+	with open(key_file, "a", encoding="utf-8") as out:
 		out.write(as_pem(srv_key))
 
 	if not os.path.exists(os.path.dirname(cert_file)):
 		os.makedirs(os.path.dirname(cert_file))
-	with open(cert_file, "a") as out:
+	with open(cert_file, "a", encoding="utf-8") as out:
 		out.write(as_pem(srv_crt))
 
 
 def setup_firewall_linux():
-	logger.notice("Configure iptables")
+	logger.notice("Configure firewall")
 	port = config.get('control_server', 'port')
 	cmds = []
 	if os.path.exists("/usr/bin/firewall-cmd"):
@@ -174,26 +173,27 @@ def setup_firewall_macos():
 	cmds = []
 
 	for path in ("/usr/local/bin/opsiclientd", "/usr/local/lib/opsiclientd/opsiclientd"):
-		cmds.append(["/usr/libexec/ApplicationFirewall/socketfilterfw", "--add" , path])
-		cmds.append(["/usr/libexec/ApplicationFirewall/socketfilterfw", "--unblockapp" , path])
+		cmds.append(["/usr/libexec/ApplicationFirewall/socketfilterfw", "--add", path])
+		cmds.append(["/usr/libexec/ApplicationFirewall/socketfilterfw", "--unblockapp", path])
 
 	for cmd in cmds:
 		logger.info("Running command: %s", str(cmd))
 		subprocess.call(cmd)
+
 
 def setup_firewall_windows():
 	logger.notice("Configure Windows firewall")
 	port = config.get('control_server', 'port')
-	cmds = [
-		["netsh", "advfirewall", "firewall", "delete", "rule", 'name="opsiclientd-control-port"'],
-		[
-			"netsh", "advfirewall", "firewall", "add", "rule", 'name="opsiclientd-control-port"',
-			"dir=in", "action=allow", "protocol=TCP", f"localport={port}"
-		]
-	]
+	cmds = [["netsh", "advfirewall", "firewall", "delete", "rule", 'name="opsiclientd-control-port"']]
+	cmds.append([
+		"netsh", "advfirewall", "firewall", "add", "rule", 'name="opsiclientd-control-port"',
+		"dir=in", "action=allow", "protocol=TCP", f"localport={port}"
+	])
+
 	for cmd in cmds:
 		logger.info("Running command: %s", str(cmd))
 		subprocess.call(cmd)
+
 
 def setup_firewall():
 	if RUNNING_ON_LINUX:
@@ -207,7 +207,7 @@ def setup_firewall():
 
 def install_service_windows():
 	logger.notice("Installing windows service")
-	from opsiclientd.windows.service import handle_commandline # pylint: disable=import-outside-toplevel
+	from opsiclientd.windows.service import handle_commandline  # pylint: disable=import-outside-toplevel
 	handle_commandline(argv=["opsiclientd.exe", "--startup", "auto", "install"])
 
 	# pyright: reportMissingImports=false
@@ -217,13 +217,25 @@ def install_service_windows():
 	if win32process.IsWow64Process():
 		winreg.DisableReflectionKey(key_handle)
 	winreg.SetValueEx(key_handle, 'DependOnService', 0, winreg.REG_MULTI_SZ, ["Dhcp"])
-	#winreg.SetValueEx(key_handle, 'DependOnService', 0, winreg.REG_MULTI_SZ, ["Dhcp", "Dnscache"])
+	# winreg.SetValueEx(key_handle, 'DependOnService', 0, winreg.REG_MULTI_SZ, ["Dhcp", "Dnscache"])
+	winreg.CloseKey(key_handle)
+
+	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control")
+	if win32process.IsWow64Process():
+		winreg.DisableReflectionKey(key_handle)
+	winreg.SetValueEx(key_handle, 'ServicesPipeTimeout', 0, winreg.REG_DWORD, 120000)
+	winreg.CloseKey(key_handle)
 
 
 def install_service_linux():
 	logger.notice("Install systemd service")
-	#subprocess.check_call(["systemctl", "daemon-reload"])
+	# subprocess.check_call(["systemctl", "daemon-reload"])
 	subprocess.check_call(["systemctl", "enable", "opsiclientd.service"])
+
+
+def install_service_macos():
+	logger.notice("Bootstrap launchd service")
+	subprocess.check_call(["launchctl", "bootstrap", "system", "/Library/LaunchDaemons/org.opsi.opsiclientd.plist"])
 
 
 def install_service():
@@ -231,8 +243,8 @@ def install_service():
 		return install_service_windows()
 	if RUNNING_ON_LINUX:
 		return install_service_linux()
-	#if RUNNING_ON_MACOS:
-	#	install_service_macos()
+	if RUNNING_ON_MACOS:
+		return install_service_macos()
 	return None
 
 
@@ -241,6 +253,10 @@ def opsi_service_setup(options=None):
 		config.readConfigFile()
 	except Exception as err:  # pylint: disable=broad-except
 		logger.info(err)
+
+	if os.path.exists(config.ca_cert_file):
+		# Delete ca cert which could be invalid or expired
+		os.remove(config.ca_cert_file)
 
 	service_address = getattr(options, "service_address", None) or config.get('config_service', 'url')[0]
 	service_username = getattr(options, "service_username", None) or config.get('global', 'host_id')
@@ -257,8 +273,15 @@ def opsi_service_setup(options=None):
 	jsonrpc_client = JSONRPCClient(
 		address=service_address,
 		username=service_username,
-		password=service_password
+		password=service_password,
+		verify_server_cert=False
 	)
+
+	try:
+		update_ca_cert(jsonrpc_client, allow_remove=False)
+	except Exception as err:  # pylint: disable=broad-except
+		logger.error(err, exc_info=True)
+
 	try:
 		client = jsonrpc_client.host_getObjects(id=config.get('global', 'host_id'))  # pylint: disable=no-member
 		if client and client[0] and client[0].opsiHostKey:
@@ -274,7 +297,7 @@ def setup_on_shutdown():
 	if not RUNNING_ON_WINDOWS:
 		return None
 
-	logger.info("Creating opsi shutdown install policy")
+	logger.notice("Creating opsi shutdown install policy")
 	# pyright: reportMissingImports=false
 	import winreg  # pylint: disable=import-outside-toplevel,import-error
 	import win32process  # pylint: disable=import-outside-toplevel,import-error
@@ -293,7 +316,7 @@ def setup_on_shutdown():
 	script_path = opsiclientd_rpc[:-3] + "cmd"
 	with codecs.open(script_path, "w", "windows-1252") as file:
 		file.write(f'"%~dp0\\{os.path.basename(opsiclientd_rpc)}" %*\r\n')
-	script_params = "runOnShutdown()"
+	script_params = "--timeout=18000 runOnShutdown()"
 
 	for base_key in BASE_KEYS:
 		base_key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, base_key)
@@ -306,6 +329,7 @@ def setup_on_shutdown():
 			try:
 				key_handle = winreg.OpenKey(base_key_handle, str(num))
 				(value, _type) = winreg.QueryValueEx(key_handle, "GPOName")
+				winreg.CloseKey(key_handle)
 				if value == GPO_NAME:
 					break
 			except OSError:
@@ -320,41 +344,56 @@ def setup_on_shutdown():
 		winreg.SetValueEx(key_handle, "GPOName", 0, winreg.REG_SZ, GPO_NAME)
 		winreg.SetValueEx(key_handle, "PSScriptOrder", 0, winreg.REG_DWORD, 1)
 
-		key_handle = winreg.CreateKey(key_handle, "0")
-		winreg.SetValueEx(key_handle, "Script", 0, winreg.REG_SZ, script_path)
-		winreg.SetValueEx(key_handle, "Parameters", 0, winreg.REG_SZ, script_params)
-		winreg.SetValueEx(key_handle, "ErrorCode", 0, winreg.REG_DWORD, 0)
-		winreg.SetValueEx(key_handle, "IsPowershell", 0, winreg.REG_DWORD, 0)
-		winreg.SetValueEx(key_handle, "ExecTime", 0, winreg.REG_BINARY, b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+		key_handle2 = winreg.CreateKey(key_handle, "0")
+		winreg.SetValueEx(key_handle2, "Script", 0, winreg.REG_SZ, script_path)
+		winreg.SetValueEx(key_handle2, "Parameters", 0, winreg.REG_SZ, script_params)
+		winreg.SetValueEx(key_handle2, "ErrorCode", 0, winreg.REG_DWORD, 0)
+		winreg.SetValueEx(key_handle2, "IsPowershell", 0, winreg.REG_DWORD, 0)
+		winreg.SetValueEx(key_handle2, "ExecTime", 0, winreg.REG_BINARY, b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00")
+
+		winreg.CloseKey(key_handle2)
+		winreg.CloseKey(key_handle)
+		winreg.CloseKey(base_key_handle)
 
 	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System")
 	if win32process.IsWow64Process():
 		winreg.DisableReflectionKey(key_handle)
 	winreg.SetValueEx(key_handle, "MaxGPOScriptWait", 0, winreg.REG_DWORD, 0)
-	#winreg.SetValueEx(key_handle, "ShutdownWithoutLogon", 0, winreg.REG_DWORD, 1)
+	# winreg.SetValueEx(key_handle, "ShutdownWithoutLogon", 0, winreg.REG_DWORD, 1)
+	winreg.CloseKey(key_handle)
 
 
-def setup(full=False, options=None) -> None:
+def setup(full: bool = False, options: Namespace = None) -> None:
 	logger.notice("Running opsiclientd setup")
+	errors = []
 
 	if full:
 		opsi_service_setup(options)
 		try:
 			install_service()
-		except Exception as err: # pylint: disable=broad-except
-			logger.error("Failed to install service: %s", err)
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error("Failed to install service: %s", err, exc_info=True)
+			errors.append(str(err))
 
 	try:
 		setup_ssl(full)
-	except Exception as err: # pylint: disable=broad-except
-		logger.error("Failed to setup ssl: %s", err, exc_info=True)
-
-	try:
-		setup_firewall()
 	except Exception as err:  # pylint: disable=broad-except
-		logger.error("Failed to setup firewall: %s", err, exc_info=True)
+		logger.error("Failed to setup ssl: %s", err, exc_info=True)
+		errors.append(str(err))
+
+	if not config.get('control_server', 'skip_setup_firewall'):
+		try:
+			setup_firewall()
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error("Failed to setup firewall: %s", err, exc_info=True)
+			errors.append(str(err))
 
 	try:
 		setup_on_shutdown()
 	except Exception as err:  # pylint: disable=broad-except
 		logger.error("Failed to setup on_shutdown: %s", err, exc_info=True)
+		errors.append(str(err))
+
+	logger.notice("Setup completed with %d errors", len(errors))
+	if errors and full:
+		raise RuntimeError(", ".join(errors))

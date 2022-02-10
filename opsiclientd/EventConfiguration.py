@@ -8,7 +8,6 @@
 opsiclientd - Event configuration.
 """
 
-from __future__ import absolute_import
 import re
 from OPSI.Types import forceUnicode, forceBool
 from opsicommon.logging import log_context
@@ -28,7 +27,7 @@ class EventConfig: # pylint: disable=too-many-instance-attributes
 			self.setConfig(kwargs)
 
 	def setConfig(self, conf): # pylint: disable=too-many-statements
-		self.name = str(conf.get('name', self._id.split('{')[0]))
+		self.name = str(conf.get('name', self._id.split('{', 1)[0]))
 		self.preconditions = dict(conf.get('preconditions', {}))
 		self.actionMessage = str(conf.get('actionMessage', ''))
 		self.maxRepetitions = int(conf.get('maxRepetitions', -1))
@@ -36,7 +35,8 @@ class EventConfig: # pylint: disable=too-many-instance-attributes
 		self.activationDelay = int(conf.get('activationDelay', 0))
 		# wait <notificationDelay> seconds before event is fired
 		self.notificationDelay = int(conf.get('notificationDelay', 0))
-		self.interval = int(conf.get('interval', -1))
+		self.startInterval = int(conf.get('startInterval', 0))
+		self.interval = int(conf.get('interval', 0))
 		self.actionWarningTime = int(conf.get('actionWarningTime', 0))
 		self.actionUserCancelable = int(conf.get('actionUserCancelable', 0))
 		self.shutdown = forceBool(conf.get('shutdown', False))
@@ -83,8 +83,6 @@ class EventConfig: # pylint: disable=too-many-instance-attributes
 		self.useCachedProducts = forceBool(conf.get('useCachedProducts', False))
 		self.syncConfigToServer = forceBool(conf.get('syncConfigToServer', False))
 		self.syncConfigFromServer = forceBool(conf.get('syncConfigFromServer', False))
-		self.postSyncConfigToServer = forceBool(conf.get('postSyncConfigToServer', False))
-		self.postSyncConfigFromServer = forceBool(conf.get('postSyncConfigFromServer', False))
 		self.useCachedConfig = forceBool(conf.get('useCachedConfig', False))
 		self.workingWindow = str(conf.get('workingWindow', ''))
 

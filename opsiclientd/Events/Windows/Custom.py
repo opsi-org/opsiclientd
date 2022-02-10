@@ -8,8 +8,6 @@
 Windows-specific Custom event.
 """
 
-from __future__ import absolute_import
-
 from opsiclientd.Events.Basic import Event
 from opsiclientd.Events.Windows.WMI import WMIEventConfig, WMIEventGenerator
 

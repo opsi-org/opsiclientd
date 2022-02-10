@@ -1,0 +1,40 @@
+{
+	"name": "opsiclientd",
+	"dockerComposeFile": "opsiclientd-dev-compose.yml",
+	"service": "opsiclientd-dev",
+	"workspaceFolder": "/workspace",
+	"postCreateCommand": ".devcontainer/post_create.sh",
+	"postStartCommand": ".devcontainer/post_start.sh",
+	"settings": {
+		"python.pythonPath": ".venv/bin/python",
+		"editor.formatOnSave": true,
+		"editor.formatOnType": true,
+		"python.formatting.provider": "black",
+		"python.formatting.blackPath": ".venv/bin/tan",
+		"python.terminal.activateEnvironment": false,
+		"python.testing.pytestArgs": [
+			"-vv",
+			"tests"
+		],
+		"python.testing.unittestEnabled": false,
+		"python.testing.nosetestsEnabled": false,
+		"python.testing.pytestEnabled": true,
+		"python.testing.pytestPath": ".venv/bin/pytest",
+		"python.linting.enabled": true,
+		"python.linting.flake8Enabled": true,
+		"python.linting.pylintEnabled": true,
+		"python.linting.pylintCategorySeverity.refactor": "Information",
+		"python.linting.mypyEnabled": true,
+		"python.linting.mypyArgs": [
+			"--show-error-codes"
+		],
+		"files.trimTrailingWhitespace": true,
+		"python.languageServer": "Pylance"
+	},
+	"extensions": [
+		"ms-python.python",
+		"ms-python.vscode-pylance",
+		"ryanluker.vscode-coverage-gutters",
+		"wmaurer.change-case"
+	]
+}

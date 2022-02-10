@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "opsiclientd"
-version = "4.2.0.83"
+version = "4.2.0.107"
 description = "opsi client daemon. The service running on opsi clients."
 maintainers = ["uib GmbH <info@uib.de>"]
 authors = ["uib GmbH <info@uib.de>"]
@@ -16,37 +16,46 @@ name = "uibpypi"
 url = "https://pypi.uib.gmbh/simple"
 
 [tool.poetry.dependencies]
-python = "^3.7"
-python-opsi = "^4.2.0.177"
-#python-opsi = {path = "../python-opsi"}
-pywin32 = {platform = "win32", version = "^227"}
-wmi = {platform = "win32", version = "^1.5.1"}
-distro = {platform = "linux", version = "^1.5.0"}
-autobahn = "^20.7.1"
-msgpack = "^1.0.0"
-lz4 = "^3.1.1"
-netifaces = "^0.10.9"
-zeroconf = "^0.29.0"
-pywinpty = {platform = "win32", path = "pywinpty-1.1.2-cp37-none-win32.whl"}
-pyelftools = "^0.27"
+python = "^3.7,<3.11"
+autobahn = "^21.11"
+distro = {platform = "linux", version = "^1.5"}
+lz4 = "^3.1"
 macholib = "^1.14"
+msgpack = "^1.0"
+netifaces = "^0.11"
+pyelftools = "^0.27"
+python-opsi = "^4.2.0.263"
+#python-opsi = {path = "../python-opsi"}
+python-opsi-common = "^4.2.0.263"
+pywin32 = {platform = "win32", version = "^227"}
+pywinpty = {platform = "win32", path = "pywinpty-1.1.2-cp37-none-win32.whl"}
+wmi = {platform = "win32", version = "^1.5"}
+zeroconf = "^0.38"
 
 [tool.poetry.dev-dependencies]
-pylint = "^2.5.0"
-pywin32-ctypes = {version = "^0.2.0", platform = "win32"}
-pefile = {version = "^2019.4.18", platform = "win32"}
+flake8 = "^4.0"
 macholib = {version = "^1.14", platform = "darwin"}
-opsi-dev-tools = "^1.0.44"
-pytest = "^5.4.3"
-mock = "^4.0.2"
-pytest-cov = "^2.10.0"
-pyinstaller = "^4.0"
-requests = "^2.25.1"
+mock = "^4.0"
+opsi-dev-tools = "^1.0.78"
+pefile = {version = "^2021.9", platform = "win32"}
+pyinstaller = "4.3"	# Pinned to work with adhoc signature on macos high sierra
+pylint = "^2.5"
+pytest = "^6.2"
+pytest-cov = "^3.0"
+pywin32-ctypes = {version = "^0.2", platform = "win32"}
+requests = "^2.25"
+tan = "^21.14"
+mypy = "^0.931"
 
 [tool.poetry.scripts]
 opsiclientd = "opsiclientd.__main__:opsiclientd"
 opsiclientd_rpc = "opsiclientd.__main__:opsiclientd_rpc"
 action_processor_starter = "opsiclientd.__main__:action_processor_starter"
+
+[tool.black]
+line-length = 140
+target-version = ['py39', 'py310']
+use-tabs = true
 
 [build-system]
 requires = ["poetry>=0.12"]

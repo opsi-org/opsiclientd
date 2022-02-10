@@ -165,6 +165,9 @@ class CacheService(threading.Thread):
 			logger.info("Already caching products")
 			return
 
+		if self._configCacheService and self._configCacheService.syncConfigToServerError:
+			raise RuntimeError("Failed to cache products because config sync to server failed")
+
 		logger.info("Trigger product caching")
 		self._productCacheService.setDynamicBandwidth(dynamicBandwidth)
 		self._productCacheService.setMaxBandwidth(maxBandwidth)
@@ -281,7 +284,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 			self._state = {}
 
 			self._syncConfigFromServerRequested = False
-			self._syncConfigFromServerError = None
+			self._syncConfigToServerError = None
 			self._syncConfigToServerRequested = False
 			self._forceSync = False
 
@@ -301,6 +304,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 			except Exception: # pylint: disable=broad-except
 				pass
 			raise err
+
+	@property
+	def syncConfigToServerError(self):
+		return self._syncConfigToServerError
 
 	def initBackends(self):
 		clientId = config.get('global', 'host_id')
@@ -349,11 +356,16 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 		ServiceConnection.connectConfigService(self, allowTemporaryConfigServiceUrls=False)
 
 		try:
-			backend_info = self._configService.backend_info()
 			try:
-				verify_modules(backend_info, ['vpn'])
-			except RuntimeError as err:
-				raise RuntimeError("Cannot sync products: {err}") from err
+				if hasattr(self._configService, "backend_getLicensingInfo"):
+					info = self._configService.backend_getLicensingInfo(licenses=False, legacy_modules=False, dates=False)  # pylint: disable=no-member
+					logger.debug("Got licensing info from service: %s", info)
+					if not "vpn" in info["available_modules"]:
+						raise RuntimeError("Module 'vpn' not licensed")
+				else:
+					verify_modules(self._configService.backend_info(), ['vpn'])
+			except Exception as err:  # pylint: disable=broad-except
+				raise RuntimeError(f"Cannot sync products: {err}") from err
 
 			try:
 				if self._configService.hostname.lower() not in ("localhost", "127.0.0.1", "::1"):
@@ -492,10 +504,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 						isError=True
 					)
 					raise
-			self._syncConfigFromServerError = None
+			self._syncConfigToServerError = None
 		except Exception as err: # pylint: disable=broad-except
 			logger.error("Errors occurred while syncing config to server: %s", err)
-			self._syncConfigFromServerError = err
+			self._syncConfigToServerError = err
 		if eventId:
 			timeline.setEventEnd(eventId)
 		self.disconnectConfigService()
@@ -504,7 +516,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 	def _syncConfigFromServer(self): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		self._working = True
 		try:
-			if self._syncConfigFromServerError:
+			if self._syncConfigToServerError:
 				raise RuntimeError("Sync config to server failed")
 			self.setObsolete()
 			if not self._configService:
@@ -722,10 +734,15 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 	def connectConfigService(self, allowTemporaryConfigServiceUrls=True): # pylint: disable=too-many-branches,too-many-statements
 		ServiceConnection.connectConfigService(self, allowTemporaryConfigServiceUrls=False)
 		try:
-			backend_info = self._configService.backend_info()
 			try:
-				verify_modules(backend_info, ['vpn'])
-			except RuntimeError as err:
+				if hasattr(self._configService, "backend_getLicensingInfo"):
+					info = self._configService.backend_getLicensingInfo(licenses=False, legacy_modules=False, dates=False)  # pylint: disable=no-member
+					logger.debug("Got licensing info from service: %s", info)
+					if not "vpn" in info["available_modules"]:
+						raise RuntimeError("Module 'vpn' not licensed")
+				else:
+					verify_modules(self._configService.backend_info(), ['vpn'])
+			except Exception as err:  # pylint: disable=broad-except
 				raise RuntimeError("Cannot cache config: {err}") from err
 
 			try:
@@ -756,11 +773,9 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 
 			if maxFreeableSize < neededSpace:
 				raise Exception(
-					"Needed space: %0.3f MB, maximum freeable space: %0.3f MB (max product cache size: %0.0f MB)" % (
-						float(neededSpace) / (1000 * 1000),
-						float(maxFreeableSize) / (1000 * 1000),
-						float(self._productCacheMaxSize) / (1000 * 1000)
-					)
+					f"Needed space: {(float(neededSpace) / (1000 * 1000)):0.3f} MB, "
+					f"maximum freeable space: {(float(maxFreeableSize) / (1000 * 1000)):0.3f} MB "
+					f"(max product cache size: {(float(self._productCacheMaxSize) / (1000 * 1000)):0.0f} MB)"
 				)
 
 			freedSpace = 0
@@ -874,7 +889,7 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 							releaseId = "1507"
 						#Splitting Name of original Packagename and reverse result to get arch
 						parts = additionalProductId.split("-")[::-1]
-						releasePackageName = "mshotfix-win10-%s-%s-glb" % (releaseId, parts[1])
+						releasePackageName = f"mshotfix-win10-{releaseId}-{parts[1]}-glb"
 
 						logger.info("Searching for release-packageid: '%s'", releasePackageName)
 						if releasePackageName in productOnDepotIds:
@@ -1064,7 +1079,7 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 				productId=productId
 			)
 			if not productOnDepots:
-				raise Exception("Product '%s' not found on depot '%s'" % (productId, masterDepotId))
+				raise Exception(f"Product '{productId}' not found on depot '{masterDepotId}'")
 
 			self._setProductCacheState(productId, 'productVersion', productOnDepots[0].productVersion, updateProductOnClient=False)
 			self._setProductCacheState(productId, 'packageVersion', productOnDepots[0].packageVersion, updateProductOnClient=False)
@@ -1111,18 +1126,14 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 			diskFreeSpace = System.getDiskSpaceUsage(self._productCacheDir)['available']
 			if diskFreeSpace < productSize + 500 * 1000 * 1000:
 				raise Exception(
-					"Only %0.3f MB free space available on disk, refusing to cache product files" % (
-						float(diskFreeSpace) / (1000 * 1000)
-					)
+					f"Only {(float(diskFreeSpace) / (1000 * 1000)):0.3f} MB free space available on disk, failed to cache product files"
 				)
 
 			eventId = timeline.addEvent(
 				title=f"Cache product {productId}",
-				description="Caching product '%s' of size %0.2f MB\nmax bandwidth: %s, dynamic bandwidth: %s" % (
-					productId,
-					float(productSize) / (1000 * 1000),
-					self._maxBandwidth,
-					self._dynamicBandwidth
+				description=(
+					f"Caching product '{productId}' of size {(float(productSize) / (1000 * 1000)):0.2f} MB\n"
+					f"max bandwidth: {self._maxBandwidth}, dynamic bandwidth: {self._dynamicBandwidth}"
 				),
 				category='product_caching',
 				durationEvent=True

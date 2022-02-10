@@ -8,8 +8,6 @@
 Factories for creation of event configs or generators.
 """
 
-from __future__ import absolute_import
-
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 from opsiclientd.Events.Custom import CustomEventConfig, CustomEventGenerator

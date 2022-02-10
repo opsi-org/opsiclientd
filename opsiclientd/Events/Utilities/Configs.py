@@ -8,8 +8,6 @@
 Event configuration utilities.
 """
 
-from __future__ import absolute_import
-
 import copy as pycopy
 import pprint
 
@@ -77,24 +75,41 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 			except Exception as err: # pylint: disable=broad-except
 				logger.error("Failed to parse event config '%s': %s", eventConfigId, err)
 
-	def __inheritArgsFromSuperEvents(rawEventConfigsCopy, args, superEventConfigId):
-		if not superEventConfigId in rawEventConfigsCopy.keys():
-			logger.error("Super event '%s' not found", superEventConfigId)
-			return args
-		superArgs = pycopy.deepcopy(rawEventConfigsCopy[superEventConfigId]['args'])
-		if rawEventConfigsCopy[superEventConfigId]['super']:
-			superArgs = __inheritArgsFromSuperEvents(rawEventConfigsCopy, superArgs, rawEventConfigsCopy[superEventConfigId]['super'])
-		superArgs.update(args)
-		return superArgs
+	# Process inheritance
+	newRawEventConfigs = {}
+	while rawEventConfigs:
+		num_configs = len(rawEventConfigs)
+		for eventConfigId in sorted(list(rawEventConfigs)):
+			rawEventConfig = rawEventConfigs[eventConfigId]
+			if rawEventConfig['super']:
+				if rawEventConfig['super'] in newRawEventConfigs:
+					super_args = pycopy.deepcopy(newRawEventConfigs[rawEventConfig['super']]['args'])
+					# Do not overwrite values with emptystring or emptylist (behaves like no value given)
+					cleaned_args = {
+						key : value
+						for key, value in rawEventConfig['args'].items()
+						if not (
+							key in ("include_product_group_ids", "exclude_product_group_ids")
+							and value in ("", [])
+						)
+					}
+					super_args.update(cleaned_args)
+					rawEventConfig['args'] = super_args
+					logger.debug("Inheritance for event '%s' processed", eventConfigId)
+					newRawEventConfigs[eventConfigId] = rawEventConfig
+					rawEventConfigs.pop(eventConfigId)
+				elif rawEventConfig['super'] not in rawEventConfigs:
+					logger.error("Super event '%s' not found", rawEventConfig['super'])
+					rawEventConfigs.pop(eventConfigId)
+			else:
+				logger.debug("Inheritance for event '%s' processed", eventConfigId)
+				newRawEventConfigs[eventConfigId] = rawEventConfig
+				rawEventConfigs.pop(eventConfigId)
+		if num_configs == len(rawEventConfigs):
+			logger.error("Failed to process event inheritance: %s", rawEventConfigs)
+			break
 
-	rawEventConfigsCopy = pycopy.deepcopy(rawEventConfigs)
-	for eventConfigId in rawEventConfigs:
-		if rawEventConfigs[eventConfigId]['super']:
-			rawEventConfigs[eventConfigId]['args'] = __inheritArgsFromSuperEvents(
-				rawEventConfigsCopy,
-				rawEventConfigs[eventConfigId]['args'],
-				rawEventConfigs[eventConfigId]['super']
-			)
+	rawEventConfigs = newRawEventConfigs
 
 	eventConfigs = {}
 	for (eventConfigId, rawEventConfig) in rawEventConfigs.items(): # pylint: disable=too-many-nested-blocks
@@ -157,6 +172,8 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 								eventConfigs[eventConfigId]['name'] = value
 						else:
 							eventConfigs[eventConfigId]['name'] = value
+					elif key == 'start_interval':
+						eventConfigs[eventConfigId]['startInterval'] = int(value)
 					elif key == 'interval':
 						eventConfigs[eventConfigId]['interval'] = int(value)
 					elif key == 'max_repetitions':
@@ -209,10 +226,6 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 						eventConfigs[eventConfigId]['syncConfigFromServer'] = forceBool(value)
 					elif key == 'sync_config_to_server':
 						eventConfigs[eventConfigId]['syncConfigToServer'] = forceBool(value)
-					elif key == 'post_sync_config_from_server':
-						eventConfigs[eventConfigId]['postSyncConfigFromServer'] = forceBool(value)
-					elif key == 'post_sync_config_to_server':
-						eventConfigs[eventConfigId]['postSyncConfigToServer'] = forceBool(value)
 					elif key == 'use_cached_config':
 						eventConfigs[eventConfigId]['useCachedConfig'] = forceBool(value)
 					elif key == 'update_action_processor':
@@ -270,16 +283,16 @@ def getEventConfigs(): # pylint: disable=too-many-locals,too-many-branches,too-m
 								logger.info("Removing config option %s.%s", section, key)
 								config.del_option(section, key)
 
-				except Exception as err1: # pylint: disable=broad-except
-					logger.debug(err1, exc_info=True)
-					logger.error("Failed to set event config argument '%s' to '%s': %s", key, value, err1)
+				except Exception as err: # pylint: disable=broad-except
+					logger.debug(err, exc_info=True)
+					logger.error("Failed to set event config argument '%s' to '%s': %s", key, value, err)
 
 			logger.info(
 				"Event config '%s' args:\n%s",
 				eventConfigId,
 				pprint.pformat(eventConfigs[eventConfigId], indent=4, width=300, compact=False)
 			)
-		except Exception as err2: # pylint: disable=broad-except
-			logger.error(err2, exc_info=True)
+		except Exception as err: # pylint: disable=broad-except
+			logger.error(err, exc_info=True)
 
 	return eventConfigs

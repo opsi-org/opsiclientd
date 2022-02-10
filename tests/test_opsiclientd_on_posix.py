@@ -4,40 +4,40 @@
 # Copyright (c) 2010-2021 uib GmbH <info@uib.de>
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0
+"""
+test_opsiclientd_on_posix
+"""
 
-from .helper import workInTemporaryDirectory
-import os
 import mock
 import pytest
+
 try:
 	from opsiclientd.nonfree.Posix import OpsiclientdPosix
-	errorMessage = ""
-except ImportError as error:
-	print("Failed to import: {0}".format(error))
-	errorMessage = str(error)
+	error_message = ""  # pylint: disable=invalid-name
+except ImportError as err:
 	OpsiclientdPosix = None
+	error_message = str(err)  # pylint: disable=invalid-name
 
-@pytest.mark.skipif(OpsiclientdPosix is None, reason="Unable to find non-free modules: %s" % errorMessage)
-def test_requesting_reboot():
-	with workInTemporaryDirectory() as tempDir:
-		with mock.patch('opsiclientd.nonfree.Posix.OpsiclientdPosix._PID_DIR', tempDir):
-			ocd = OpsiclientdPosix()
-			assert not ocd.isRebootRequested()
-			rebootFile = os.path.join(tempDir, 'reboot')
-			with open(rebootFile, 'w'):
-				pass
-			ocd.clearRebootRequest()
-			assert not ocd.isRebootRequested()
 
-@pytest.mark.skipif(OpsiclientdPosix is None, reason="Unable to find non-free modules: %s" % errorMessage)
-def test_requesting_shutdown():
-	with workInTemporaryDirectory() as tempDir:
-		with mock.patch('opsiclientd.nonfree.Posix.OpsiclientdPosix._PID_DIR', tempDir):
-			ocd = OpsiclientdPosix()
-			assert not ocd.isShutdownRequested()
-			rebootFile = os.path.join(tempDir, 'shutdown')
-			with open(rebootFile, 'w'):
-				pass
+@pytest.mark.skipif(OpsiclientdPosix is None, reason=error_message)
+def test_requesting_reboot(tmpdir):
+	with mock.patch('opsiclientd.nonfree.Posix.OpsiclientdPosix._PID_DIR', str(tmpdir)):
+		ocd = OpsiclientdPosix()
+		assert not ocd.isRebootRequested()
+		rebootFile = tmpdir / 'reboot'
+		with open(rebootFile, 'w', encoding="ascii"):
+			pass
+		ocd.clearRebootRequest()
+		assert not ocd.isRebootRequested()
 
-			ocd.clearShutdownRequest()
-			assert not ocd.isShutdownRequested()
+@pytest.mark.skipif(OpsiclientdPosix is None, reason=error_message)
+def test_requesting_shutdown(tmpdir):
+	with mock.patch('opsiclientd.nonfree.Posix.OpsiclientdPosix._PID_DIR', str(tmpdir)):
+		ocd = OpsiclientdPosix()
+		assert not ocd.isShutdownRequested()
+		rebootFile = tmpdir / 'shutdown'
+		with open(rebootFile, 'w', encoding="ascii"):
+			pass
+
+		ocd.clearShutdownRequest()
+		assert not ocd.isShutdownRequested()

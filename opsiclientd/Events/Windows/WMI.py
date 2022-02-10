@@ -8,8 +8,6 @@
 Handling of WMI queries with events
 """
 
-from __future__ import absolute_import
-
 import threading
 import time
 
