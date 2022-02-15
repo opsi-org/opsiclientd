@@ -66,10 +66,23 @@ class State(metaclass=Singleton):
 				for session in System.getActiveSessionInformation():
 					if session["UserName"] != OPSI_SETUP_USER_NAME:
 						return True
-			elif RUNNING_ON_LINUX or RUNNING_ON_DARWIN:
-				# psutil.users is a list of suser objects (entries for every logged in user)
-				if psutil.users():
-					return True
+			elif RUNNING_ON_LINUX:
+				for proc in psutil.process_iter():
+					try:
+						env = proc.environ()
+						if env.get("DISPLAY") and proc.uids()[0] >= 1000:
+							return True
+					except psutil.AccessDenied:
+						pass
+			elif RUNNING_ON_DARWIN:
+				for proc in psutil.process_iter():
+					try:
+						envuser = proc.environ().get("USER", "_")
+						if envuser != "root" and not envuser.startswith("_"):
+							logger.devel(envuser)
+							return True
+					except psutil.AccessDenied:
+						pass
 			return False
 		if name == 'products_cached':
 			return self._state.get('product_cache_service', {}).get('products_cached', default)
