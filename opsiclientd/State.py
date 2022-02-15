@@ -12,6 +12,7 @@ import os
 import json
 import codecs
 import threading
+from pathlib import Path
 import psutil
 
 from opsicommon.utils import Singleton
@@ -23,6 +24,7 @@ from opsiclientd.Config import Config, OPSI_SETUP_USER_NAME
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_DARWIN, RUNNING_ON_LINUX
 
 config = Config()
+
 
 class State(metaclass=Singleton):
 	def __init__(self):
@@ -43,7 +45,7 @@ class State(metaclass=Singleton):
 						jsonstr = stateFile.read()
 
 					self._state = json.loads(jsonstr)
-			except Exception as error: # pylint: disable=broad-except
+			except Exception as error:  # pylint: disable=broad-except
 				logger.error("Failed to read state file '%s': %s", self._stateFile, error)
 
 	def _writeStateFile(self):
@@ -55,18 +57,17 @@ class State(metaclass=Singleton):
 
 				with codecs.open(self._stateFile, 'w', 'utf8') as stateFile:
 					stateFile.write(jsonstr)
-			except Exception as error: # pylint: disable=broad-except
+			except Exception as error:  # pylint: disable=broad-except
 				logger.error("Failed to write state file '%s': %s", self._stateFile, error)
 
-	def get(self, name, default=None): # pylint: disable=too-many-return-statements,too-many-branches
+	def get(self, name, default=None):  # pylint: disable=too-many-return-statements,too-many-branches
 		name = forceUnicode(name)
 		if name == 'user_logged_in':
 			if RUNNING_ON_WINDOWS:
 				for session in System.getActiveSessionInformation():
 					if session["UserName"] != OPSI_SETUP_USER_NAME:
 						return True
-				return False
-			if RUNNING_ON_LINUX:
+			elif RUNNING_ON_LINUX:
 				for proc in psutil.process_iter():
 					try:
 						env = proc.environ()
@@ -74,10 +75,9 @@ class State(metaclass=Singleton):
 							return True
 					except psutil.AccessDenied:
 						pass
-				return False
-			if RUNNING_ON_DARWIN:
-				# TODO
-				return True
+			elif RUNNING_ON_DARWIN:
+				if Path("/dev/console").owner() != "root":
+					return True
 			return False
 		if name == 'products_cached':
 			return self._state.get('product_cache_service', {}).get('products_cached', default)
