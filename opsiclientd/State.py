@@ -12,6 +12,7 @@ import os
 import json
 import codecs
 import threading
+from pathlib import Path
 import psutil
 
 from opsicommon.utils import Singleton
@@ -75,14 +76,8 @@ class State(metaclass=Singleton):
 					except psutil.AccessDenied:
 						pass
 			elif RUNNING_ON_DARWIN:
-				for proc in psutil.process_iter():
-					try:
-						envuser = proc.environ().get("USER", "_")
-						if envuser != "root" and not envuser.startswith("_"):
-							logger.devel(envuser)
-							return True
-					except psutil.AccessDenied:
-						pass
+				if Path("/dev/console").owner() != "root":
+					return True
 			return False
 		if name == 'products_cached':
 			return self._state.get('product_cache_service', {}).get('products_cached', default)
