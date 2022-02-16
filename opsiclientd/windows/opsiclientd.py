@@ -156,14 +156,20 @@ class OpsiclientdNT(Opsiclientd):
 					continue
 
 				logger.info("Deleting user %r, sid %r", username, sid)
-				cmd = ["powershell.exe", "-ExecutionPolicy", "Bypass", "-Command", f"Remove-LocalUser -SID {sid} -Verbose"]
+				cmd = [
+					"powershell.exe",
+					"-ExecutionPolicy",
+					"Bypass",
+					"-Command",
+					f"Remove-LocalUser -SID (New-Object 'Security.Principal.SecurityIdentifier' \"{sid}\") -Verbose",
+				]
 				logger.info("Executing: %s", cmd)
 				res = subprocess.run(cmd, shell=False, capture_output=True, check=False, timeout=60)
 				out = res.stdout.decode(errors="replace") + res.stderr.decode(errors="replace")
 				if res.returncode == 0:
 					logger.info("Command %s successful: %s", cmd, out)
 				else:
-					logger.warning("Failed to delete user %r, sid %r: %s", cmd, res.returncode, out)
+					logger.warning("Failed to delete user %r (exitcode %d): %s", cmd, res.returncode, out)
 
 		# takeown parameter /d is localized 😠
 		res = subprocess.run("choice <nul 2>nul", capture_output=True, check=False, shell=True)
