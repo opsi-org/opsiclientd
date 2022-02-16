@@ -18,18 +18,18 @@ import random
 import string
 
 # pyright: reportMissingImports=false
-import winreg # pylint: disable=import-error
-import win32com.server.policy # pylint: disable=import-error
-import win32com.client # pylint: disable=import-error
-import win32netcon # pylint: disable=import-error
-import win32net # pylint: disable=import-error
-import win32security # pylint: disable=import-error
-import pywintypes # pylint: disable=import-error
+import winreg  # type: ignore[import] # pylint: disable=import-error
+import win32com.server.policy  # type: ignore[import] # pylint: disable=import-error
+import win32com.client  # type: ignore[import] # pylint: disable=import-error
+import win32netcon  # type: ignore[import] # pylint: disable=import-error
+import win32net  # type: ignore[import] # pylint: disable=import-error
+import win32security  # type: ignore[import] # pylint: disable=import-error
+import pywintypes  # type: ignore[import] # pylint: disable=import-error
 
-from OPSI.Types import forceBool
-from OPSI import System
+from OPSI.Types import forceBool  # type: ignore[import]
+from OPSI import System  # type: ignore[import]
 
-from opsicommon.logging import logger
+from opsicommon.logging import logger  # type: ignore[import]
 
 from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd import config
@@ -39,8 +39,9 @@ from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 if not RUNNING_ON_WINDOWS:
 	WindowsError = RuntimeError
 
+
 def opsiclientd_factory():
-	windowsVersion = sys.getwindowsversion() # pylint: disable=no-member
+	windowsVersion = sys.getwindowsversion()  # pylint: disable=no-member
 	if windowsVersion.major == 5:  # NT5: XP
 		return OpsiclientdNT5()
 	if windowsVersion.major >= 6:  # NT6: Vista / Windows7 and later
@@ -53,25 +54,25 @@ class OpsiclientdNT(Opsiclientd):
 		Opsiclientd.__init__(self)
 		self._ms_update_installer = None
 
-	def suspendBitlocker(self): # pylint: disable=no-self-use
+	def suspendBitlocker(self):  # pylint: disable=no-self-use
 		logger.notice("Suspending bitlocker for one reboot if active")
 		try:
 			System.execute(
-				"powershell.exe -ExecutionPolicy Bypass -Command \""
+				'powershell.exe -ExecutionPolicy Bypass -Command "'
 				"foreach($v in Get-BitLockerVolume)"
 				"{if ($v.EncryptionPercentage -gt 0)"
-				"{$v | Suspend-BitLocker -RebootCount 1}}\"",
+				'{$v | Suspend-BitLocker -RebootCount 1}}"',
 				captureStderr=True,
 				waitForEnding=True,
-				timeout=20
+				timeout=20,
 			)
-		except Exception as err: # pylint: disable=broad-except
+		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Failed to suspend bitlocker: %s", err, exc_info=True)
 
 	def rebootMachine(self, waitSeconds=3):
-		if config.get('global', 'suspend_bitlocker_on_reboot'):
-			windowsVersion = sys.getwindowsversion() # pylint: disable=no-member
-			if (windowsVersion.major == 6 and windowsVersion.minor >= 4) or windowsVersion.major > 6: # Win10 and later
+		if config.get("global", "suspend_bitlocker_on_reboot"):
+			windowsVersion = sys.getwindowsversion()  # pylint: disable=no-member
+			if (windowsVersion.major == 6 and windowsVersion.minor >= 4) or windowsVersion.major > 6:  # Win10 and later
 				self.suspendBitlocker()
 		super().rebootMachine(waitSeconds)
 
@@ -84,7 +85,7 @@ class OpsiclientdNT(Opsiclientd):
 	def isRebootRequested(self):
 		try:
 			rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
-		except Exception as error: # pylint: disable=broad-except
+		except Exception as error:  # pylint: disable=broad-except
 			logger.warning("Failed to get RebootRequested from registry: %s", error)
 			rebootRequested = 0
 
@@ -100,7 +101,7 @@ class OpsiclientdNT(Opsiclientd):
 	def isShutdownRequested(self):
 		try:
 			shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
-		except Exception as err: # pylint: disable=broad-except
+		except Exception as err:  # pylint: disable=broad-except
 			logger.info("Failed to get shutdownRequested from registry: %s", err)
 			shutdownRequested = 0
 
@@ -109,11 +110,9 @@ class OpsiclientdNT(Opsiclientd):
 
 	def isWindowsInstallerBusy(self):
 		if not self._ms_update_installer:
-			from opsiclientd.windows import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
-			(_wmi, _pythoncom) = importWmiAndPythoncom(
-				importWmi=False,
-				importPythoncom=True
-			)
+			from opsiclientd.windows import importWmiAndPythoncom  # pylint: disable=import-outside-toplevel
+
+			(_wmi, _pythoncom) = importWmiAndPythoncom(importWmi=False, importPythoncom=True)
 			_pythoncom.CoInitialize()
 			session = win32com.client.Dispatch("Microsoft.Update.Session")
 			self._ms_update_installer = session.CreateUpdateInstaller()
@@ -134,34 +133,37 @@ class OpsiclientdNT(Opsiclientd):
 				return True
 			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {response.get('error')}")
 
-	def cleanup_opsi_setup_user(self, keep_sid: str = None):  # pylint: disable=no-self-use,too-many-locals
+	def cleanup_opsi_setup_user(self, keep_sid: str = None):  # pylint: disable=no-self-use,too-many-locals,too-many-branches
 		keep_profile = None
 		with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList") as key:
 			for idx in range(1024):
 				try:
-					keyname = winreg.EnumKey(key, idx)
-					with winreg.OpenKey(key, keyname) as subkey:
-						profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]
-						if keep_sid and keyname == keep_sid:
-							keep_profile = profile_path
-							continue
-					username = profile_path.split("\\")[-1].split(".")[0]
-					if not username.startswith(OPSI_SETUP_USER_NAME):
-						continue
-					sid = win32security.ConvertStringSidToSid(keyname)
-					try:
-						#win32profile.DeleteProfile(sid)
-						username, _domain, _type = win32security.LookupAccountSid(None, sid)
-						logger.info("Deleting user '%s'", username)
-						win32net.NetUserDel(None, username)
-					except Exception:  # pylint: disable=broad-except
-						pass
-					logger.info("Deleting '%s' from ProfileList", keyname)
+					sid = winreg.EnumKey(key, idx)
 				except WindowsError as err:
-					if err.errno == 22:  # pylint: disable=no-member
+					if err.errno == 22:  # type: ignore[attr-defined] # pylint: disable=no-member
 						# No more subkeys
 						break
 					logger.debug(err)
+
+				with winreg.OpenKey(key, sid) as subkey:
+					profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]
+					if keep_sid and sid == keep_sid:
+						keep_profile = profile_path
+						continue
+
+				username = profile_path.split("\\")[-1].split(".")[0]
+				if not username.startswith(OPSI_SETUP_USER_NAME):
+					continue
+
+				logger.info("Deleting user %r, sid %r", username, sid)
+				cmd = ["powershell.exe", "-ExecutionPolicy", "Bypass", "-Command", f"Remove-LocalUser -SID {sid} -Verbose"]
+				logger.info("Executing: %s", cmd)
+				res = subprocess.run(cmd, shell=False, capture_output=True, check=False, timeout=60)
+				out = res.stdout.decode(errors="replace") + res.stderr.decode(errors="replace")
+				if res.returncode == 0:
+					logger.info("Command %s successful: %s", cmd, out)
+				else:
+					logger.warning("Failed to delete user %r, sid %r: %s", cmd, res.returncode, out)
 
 		# takeown parameter /d is localized 😠
 		res = subprocess.run("choice <nul 2>nul", capture_output=True, check=False, shell=True)
@@ -171,9 +173,9 @@ class OpsiclientdNT(Opsiclientd):
 				continue
 			logger.info("Deleting user dir '%s'", pdir)
 			for cmd, shell, exit_codes_success in (
-				(['takeown', '/a', '/d', yes, '/r', '/f', pdir], False, [0, 1]),
-				(['del', pdir, "/f", "/s", "/q"], True, [0]),
-				(['rd', pdir, "/s", "/q"], True, [0])
+				(["takeown", "/a", "/d", yes, "/r", "/f", pdir], False, [0, 1]),
+				(["del", pdir, "/f", "/s", "/q"], True, [0]),
+				(["rd", pdir, "/s", "/q"], True, [0]),
 			):
 				logger.info("Executing: %s", cmd)
 				res = subprocess.run(cmd, shell=shell, capture_output=True, check=False)
@@ -183,7 +185,7 @@ class OpsiclientdNT(Opsiclientd):
 				else:
 					logger.info("Command %s successful: %s", cmd, out)
 
-	def createOpsiSetupUser(self, admin=True, delete_existing=False): # pylint: disable=no-self-use,too-many-branches
+	def createOpsiSetupUser(self, admin=True, delete_existing=False):  # pylint: disable=no-self-use,too-many-branches
 		# https://bugs.python.org/file46988/issue.py
 
 		user_info = {
@@ -192,18 +194,16 @@ class OpsiclientdNT(Opsiclientd):
 			"comment": "auto created by opsi",
 			"password": f"/{''.join((random.choice(string.ascii_letters + string.digits) for i in range(8)))}?",
 			"priv": win32netcon.USER_PRIV_USER,
-			"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD
+			"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD,
 		}
 
 		# Test if user exists
 		user_sid = None
 		try:
 			win32net.NetUserGetInfo(None, user_info["name"], 1)
-			user_sid = win32security.ConvertSidToStringSid(
-				win32security.LookupAccountName(None, user_info["name"])[0]
-			)
+			user_sid = win32security.ConvertSidToStringSid(win32security.LookupAccountName(None, user_info["name"])[0])
 			logger.info("User '%s' exists, sid is '%s'", user_info["name"], user_sid)
-		except Exception as err: # pylint: disable=broad-except
+		except Exception as err:  # pylint: disable=broad-except
 			logger.info(err)
 
 		self.cleanup_opsi_setup_user(keep_sid=None if delete_existing else user_sid)
@@ -214,27 +214,27 @@ class OpsiclientdNT(Opsiclientd):
 		try:
 			winreg.CreateKeyEx(
 				winreg.HKEY_LOCAL_MACHINE,
-				r'Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts',
+				r"Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts",
 				0,
-				winreg.KEY_WOW64_64KEY | winreg.KEY_ALL_ACCESS # sysnative
+				winreg.KEY_WOW64_64KEY | winreg.KEY_ALL_ACCESS,  # sysnative
 			)
-		except WindowsError: # pylint: disable=undefined-variable
+		except WindowsError:  # pylint: disable=undefined-variable
 			pass
 		try:
 			winreg.CreateKeyEx(
 				winreg.HKEY_LOCAL_MACHINE,
-				r'Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList',
+				r"Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList",
 				0,
-				winreg.KEY_WOW64_64KEY | winreg.KEY_ALL_ACCESS # sysnative
+				winreg.KEY_WOW64_64KEY | winreg.KEY_ALL_ACCESS,  # sysnative
 			)
-		except WindowsError: # pylint: disable=undefined-variable
+		except WindowsError:  # pylint: disable=undefined-variable
 			pass
 
 		with winreg.OpenKey(
 			winreg.HKEY_LOCAL_MACHINE,
-			r'Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList',
+			r"Software\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList",
 			0,
-			winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY # sysnative
+			winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,  # sysnative
 		) as reg_key:
 			winreg.SetValueEx(reg_key, user_info["name"], 0, winreg.REG_DWORD, 0)
 
@@ -247,21 +247,10 @@ class OpsiclientdNT(Opsiclientd):
 			logger.info("Creating user '%s'", user_info["name"])
 			win32net.NetUserAdd(None, 1, user_info)
 
-		user_sid = win32security.ConvertSidToStringSid(
-			win32security.LookupAccountName(None, user_info["name"])[0]
-		)
-		subprocess.run(
-			["icacls", os.path.dirname(sys.argv[0]), "/grant:r", f"*{user_sid}:(OI)(CI)RX"],
-			check=False
-		)
-		subprocess.run(
-			["icacls", os.path.dirname(config.get("global", "log_file")), "/grant:r", f"*{user_sid}:(OI)(CI)F"],
-			check=False
-		)
-		subprocess.run(
-			["icacls", os.path.dirname(config.get("global", "tmp_dir")), "/grant:r", f"*{user_sid}:(OI)(CI)F"],
-			check=False
-		)
+		user_sid = win32security.ConvertSidToStringSid(win32security.LookupAccountName(None, user_info["name"])[0])
+		subprocess.run(["icacls", os.path.dirname(sys.argv[0]), "/grant:r", f"*{user_sid}:(OI)(CI)RX"], check=False)
+		subprocess.run(["icacls", os.path.dirname(config.get("global", "log_file")), "/grant:r", f"*{user_sid}:(OI)(CI)F"], check=False)
+		subprocess.run(["icacls", os.path.dirname(config.get("global", "tmp_dir")), "/grant:r", f"*{user_sid}:(OI)(CI)F"], check=False)
 
 		local_admin_group_sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
 		local_admin_group_name = win32security.LookupAccountSid(None, local_admin_group_sid)[0]
@@ -314,7 +303,7 @@ class ShutdownThread(threading.Thread):
 				System.shutdown(0)
 				logger.notice("Shutdown initiated")
 				break
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				# Device not ready?
 				logger.info("Failed to initiate shutdown: %s", err)
 				time.sleep(1)
@@ -330,7 +319,7 @@ class RebootThread(threading.Thread):
 				System.reboot(0)
 				logger.notice("Reboot initiated")
 				break
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				# Device not ready?
 				logger.info("Failed to initiate reboot: %s", err)
 				time.sleep(1)
