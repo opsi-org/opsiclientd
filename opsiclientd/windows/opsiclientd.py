@@ -155,6 +155,12 @@ class OpsiclientdNT(Opsiclientd):
 				if not username.startswith(OPSI_SETUP_USER_NAME):
 					continue
 
+				try:
+					win32security.ConvertStringSidToSid(sid)
+				except pywintypes.error:
+					logger.info("Not a valid SID %r", sid)
+					continue
+
 				logger.info("Deleting user %r, sid %r", username, sid)
 				cmd = [
 					"powershell.exe",
