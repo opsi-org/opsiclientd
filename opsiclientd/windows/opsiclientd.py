@@ -19,6 +19,8 @@ import string
 
 # pyright: reportMissingImports=false
 import winreg  # type: ignore[import] # pylint: disable=import-error
+import win32con  # type: ignore[import] # pylint: disable=import-error
+import win32api  # type: ignore[import] # pylint: disable=import-error
 import win32com.server.policy  # type: ignore[import] # pylint: disable=import-error
 import win32com.client  # type: ignore[import] # pylint: disable=import-error
 import win32netcon  # type: ignore[import] # pylint: disable=import-error
@@ -158,8 +160,13 @@ class OpsiclientdNT(Opsiclientd):
 				try:
 					win32security.ConvertStringSidToSid(sid)
 				except pywintypes.error:
-					logger.info("Not a valid SID %r", sid)
+					logger.debug("Not a valid SID %r", sid)
 					continue
+
+				try:
+					win32api.RegUnLoadKey(win32con.HKEY_USERS, sid)
+				except pywintypes.error as err:
+					logger.debug(err)
 
 				logger.info("Deleting user %r, sid %r", username, sid)
 				cmd = [
