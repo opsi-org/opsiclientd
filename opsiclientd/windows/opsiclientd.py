@@ -142,14 +142,16 @@ class OpsiclientdNT(Opsiclientd):
 		with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList") as key:
 			for idx in range(1024):
 				try:
-					sid = winreg.EnumKey(key, idx)
+					profile_key = winreg.EnumKey(key, idx)
 				except WindowsError as err:
 					if err.errno == 22:  # type: ignore[attr-defined] # pylint: disable=no-member
 						# No more subkeys
 						break
 					logger.debug(err)
 
-				with winreg.OpenKey(key, sid) as subkey:
+				sid = profile_key.replace(".bak", "")
+
+				with winreg.OpenKey(key, profile_key) as subkey:
 					profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]
 					if keep_sid and sid == keep_sid:
 						keep_profile = profile_path
@@ -166,7 +168,7 @@ class OpsiclientdNT(Opsiclientd):
 					continue
 
 				try:
-					win32api.RegUnLoadKey(win32con.HKEY_USERS, sid)
+					win32api.RegUnLoadKey(win32con.HKEY_USERS, profile_key)
 				except pywintypes.error as err:
 					logger.debug(err)
 
@@ -196,7 +198,7 @@ class OpsiclientdNT(Opsiclientd):
 				else:
 					logger.info("User %r, sid %r does not exist, deleting key", username, sid)
 					try:
-						winreg.DeleteKey(key, sid)
+						winreg.DeleteKey(key, profile_key)
 					except OSError as err:
 						logger.debug(err)
 
