@@ -143,9 +143,10 @@ class OpsiclientdNT(Opsiclientd):
 			for idx in range(1024):
 				try:
 					profile_key = winreg.EnumKey(key, idx)
+					logger.debug("Processing profile key %r", profile_key)
 				except WindowsError as err:
 					if err.errno == 22:  # type: ignore[attr-defined] # pylint: disable=no-member
-						# No more subkeys
+						logger.debug("No more subkeys")
 						break
 					logger.debug(err)
 
