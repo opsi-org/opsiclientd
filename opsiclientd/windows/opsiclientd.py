@@ -139,74 +139,80 @@ class OpsiclientdNT(Opsiclientd):
 		self, keep_sid: str = None
 	):  # pylint: disable=no-self-use,too-many-locals,too-many-branches,too-many-statements
 		keep_profile = None
-		with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList") as key:
-			for idx in range(1024):
-				try:
-					profile_key = winreg.EnumKey(key, idx)
-					logger.debug("Processing profile key %r", profile_key)
-				except WindowsError as err:
-					if err.errno == 22:  # type: ignore[attr-defined] # pylint: disable=no-member
-						logger.debug("No more subkeys")
-						break
-					logger.debug(err)
-
-				sid = profile_key.replace(".bak", "")
-
-				with winreg.OpenKey(key, profile_key) as subkey:
-					profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]
-					if keep_sid and sid == keep_sid:
-						keep_profile = profile_path
-						continue
-
-				username = profile_path.split("\\")[-1].split(".")[0]
-				if not username.startswith(OPSI_SETUP_USER_NAME):
-					continue
-
-				try:
-					win32security.ConvertStringSidToSid(sid)
-				except pywintypes.error:
-					logger.debug("Not a valid SID %r", sid)
-					continue
-
-				try:
-					win32api.RegUnLoadKey(win32con.HKEY_USERS, profile_key)
-				except pywintypes.error as err:
-					logger.debug(err)
-
-				exists = False
-				try:
-					win32security.LookupAccountSid(None, win32security.ConvertStringSidToSid(sid))
-					exists = True
-				except pywintypes.error as err:
-					logger.debug(err)
-
-				if exists:
-					logger.info("Deleting user %r, sid %r", username, sid)
-					cmd = [
-						"powershell.exe",
-						"-ExecutionPolicy",
-						"Bypass",
-						"-Command",
-						f"Remove-LocalUser -SID (New-Object 'Security.Principal.SecurityIdentifier' \"{sid}\") -Verbose",
-					]
-					logger.info("Executing: %s", cmd)
-					res = subprocess.run(cmd, shell=False, capture_output=True, check=False, timeout=60)
-					out = res.stdout.decode(errors="replace") + res.stderr.decode(errors="replace")
-					if res.returncode == 0:
-						logger.info("Command %s successful: %s", cmd, out)
-					else:
-						logger.warning("Failed to delete user %r (exitcode %d): %s", cmd, res.returncode, out)
-				else:
-					logger.info("User %r, sid %r does not exist, deleting key", username, sid)
+		modified = True
+		while modified:
+			modified = False
+			# We need to start over iterating after key change
+			with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList") as key:
+				for idx in range(1024):
 					try:
-						winreg.DeleteKey(key, profile_key)
-					except OSError as err:
+						profile_key = winreg.EnumKey(key, idx)
+						logger.debug("Processing profile key %r", profile_key)
+					except WindowsError as err:
+						if err.errno == 22:  # type: ignore[attr-defined] # pylint: disable=no-member
+							logger.debug("No more subkeys")
+							break
 						logger.debug(err)
 
-				try:
-					winreg.DeleteKey(winreg.HKEY_USERS, sid)
-				except OSError as err:
-					logger.debug(err)
+					sid = profile_key.replace(".bak", "")
+
+					with winreg.OpenKey(key, profile_key) as subkey:
+						profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]
+						if keep_sid and sid == keep_sid:
+							keep_profile = profile_path
+							continue
+
+					username = profile_path.split("\\")[-1].split(".")[0]
+					if not username.startswith(OPSI_SETUP_USER_NAME):
+						continue
+
+					try:
+						win32security.ConvertStringSidToSid(sid)
+					except pywintypes.error:
+						logger.debug("Not a valid SID %r", sid)
+						continue
+
+					try:
+						win32api.RegUnLoadKey(win32con.HKEY_USERS, profile_key)
+					except pywintypes.error as err:
+						logger.debug(err)
+
+					exists = False
+					try:
+						win32security.LookupAccountSid(None, win32security.ConvertStringSidToSid(sid))
+						exists = True
+					except pywintypes.error as err:
+						logger.debug(err)
+
+					if exists:
+						logger.info("Deleting user %r, sid %r", username, sid)
+						cmd = [
+							"powershell.exe",
+							"-ExecutionPolicy",
+							"Bypass",
+							"-Command",
+							f"Remove-LocalUser -SID (New-Object 'Security.Principal.SecurityIdentifier' \"{sid}\") -Verbose",
+						]
+						logger.info("Executing: %s", cmd)
+						res = subprocess.run(cmd, shell=False, capture_output=True, check=False, timeout=60)
+						out = res.stdout.decode(errors="replace") + res.stderr.decode(errors="replace")
+						if res.returncode == 0:
+							logger.info("Command %s successful: %s", cmd, out)
+							modified = True
+						else:
+							logger.warning("Failed to delete user %r (exitcode %d): %s", cmd, res.returncode, out)
+					else:
+						logger.info("User %r, sid %r does not exist, deleting key", username, sid)
+						try:
+							winreg.DeleteKey(key, profile_key)
+							modified = True
+						except OSError as err:
+							logger.debug(err)
+
+					try:
+						winreg.DeleteKey(winreg.HKEY_USERS, sid)
+					except OSError as err:
+						logger.debug(err)
 
 		# takeown parameter /d is localized 😠
 		res = subprocess.run("choice <nul 2>nul", capture_output=True, check=False, shell=True)
