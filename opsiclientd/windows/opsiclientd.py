@@ -170,21 +170,35 @@ class OpsiclientdNT(Opsiclientd):
 				except pywintypes.error as err:
 					logger.debug(err)
 
-				logger.info("Deleting user %r, sid %r", username, sid)
-				cmd = [
-					"powershell.exe",
-					"-ExecutionPolicy",
-					"Bypass",
-					"-Command",
-					f"Remove-LocalUser -SID (New-Object 'Security.Principal.SecurityIdentifier' \"{sid}\") -Verbose",
-				]
-				logger.info("Executing: %s", cmd)
-				res = subprocess.run(cmd, shell=False, capture_output=True, check=False, timeout=60)
-				out = res.stdout.decode(errors="replace") + res.stderr.decode(errors="replace")
-				if res.returncode == 0:
-					logger.info("Command %s successful: %s", cmd, out)
+				exists = False
+				try:
+					win32security.LookupAccountSid(None, win32security.ConvertStringSidToSid(sid))
+					exists = True
+				except pywintypes.error as err:
+					logger.debug(err)
+
+				if exists:
+					logger.info("Deleting user %r, sid %r", username, sid)
+					cmd = [
+						"powershell.exe",
+						"-ExecutionPolicy",
+						"Bypass",
+						"-Command",
+						f"Remove-LocalUser -SID (New-Object 'Security.Principal.SecurityIdentifier' \"{sid}\") -Verbose",
+					]
+					logger.info("Executing: %s", cmd)
+					res = subprocess.run(cmd, shell=False, capture_output=True, check=False, timeout=60)
+					out = res.stdout.decode(errors="replace") + res.stderr.decode(errors="replace")
+					if res.returncode == 0:
+						logger.info("Command %s successful: %s", cmd, out)
+					else:
+						logger.warning("Failed to delete user %r (exitcode %d): %s", cmd, res.returncode, out)
 				else:
-					logger.warning("Failed to delete user %r (exitcode %d): %s", cmd, res.returncode, out)
+					logger.info("User %r, sid %r does not exist, deleting key", username, sid)
+					try:
+						winreg.DeleteKey(key, sid)
+					except OSError as err:
+						logger.debug(err)
 
 				try:
 					winreg.DeleteKey(winreg.HKEY_USERS, sid)
