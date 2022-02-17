@@ -135,7 +135,9 @@ class OpsiclientdNT(Opsiclientd):
 				return True
 			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {response.get('error')}")
 
-	def cleanup_opsi_setup_user(self, keep_sid: str = None):  # pylint: disable=no-self-use,too-many-locals,too-many-branches
+	def cleanup_opsi_setup_user(
+		self, keep_sid: str = None
+	):  # pylint: disable=no-self-use,too-many-locals,too-many-branches,too-many-statements
 		keep_profile = None
 		with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList") as key:
 			for idx in range(1024):
@@ -183,6 +185,11 @@ class OpsiclientdNT(Opsiclientd):
 					logger.info("Command %s successful: %s", cmd, out)
 				else:
 					logger.warning("Failed to delete user %r (exitcode %d): %s", cmd, res.returncode, out)
+
+				try:
+					winreg.DeleteKey(winreg.HKEY_USERS, sid)
+				except OSError as err:
+					logger.debug(err)
 
 		# takeown parameter /d is localized 😠
 		res = subprocess.run("choice <nul 2>nul", capture_output=True, check=False, shell=True)
