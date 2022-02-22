@@ -386,7 +386,9 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 					except Exception as error:  # pylint: disable=broad-except
 						self.connectionError = forceUnicode(error)
 						# Use string cast of error to avoid lengthy tracebackes in Notifier window
-						self.setStatusMessage(_("Failed to connect to config server '%s': %s") % (self._configServiceUrl, str(error)))
+						logger.devel("showing error %s", self.connectionError)
+						logger.devel("settings: timeout=%s, retries=%s", self.configService._connect_timeout, self.configService._http_max_retries)  # pylint: disable=protected-access
+						self.setStatusMessage(_("Failed to connect to config server '%s': %s") % (self._configServiceUrl, self.connectionError))
 						logger.info("Failed to connect to config server '%s': %s", self._configServiceUrl, error)
 						logger.debug(error, exc_info=True)
 
