@@ -356,7 +356,8 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 							application=f"opsiclientd/{__version__}",
 							compression=compression,
 							ip_version=config.get('global', 'ip_version'),
-							retry=0,
+							http_max_retries=0,
+							connect_timeout=5,
 						)
 						self.configService.accessControl_authenticated()  # pylint: disable=no-member
 						self.connected = True
