@@ -1135,22 +1135,22 @@ description = "The opsi python common library"
 category = "main"
 optional = false
 python-versions = ">=3.7,<3.11"
-develop = false
 
 [package.dependencies]
-colorlog = "^6.6"
-distro = "^1.6"
-lz4 = "^3.1"
-msgpack = "^1.0"
-psutil = "^5.8"
-pycryptodome = "^3.10"
-pyopenssl = "^22.0"
-pywin32 = {version = "^303", markers = "sys_platform == \"win32\""}
-requests = "^2.26"
+colorlog = ">=6.6,<7.0"
+distro = ">=1.6,<2.0"
+lz4 = ">=3.1,<4.0"
+msgpack = ">=1.0,<2.0"
+psutil = ">=5.8,<6.0"
+pycryptodome = ">=3.10,<4.0"
+pyopenssl = ">=22.0,<23.0"
+pywin32 = {version = ">=303,<304", markers = "sys_platform == \"win32\""}
+requests = ">=2.26,<3.0"
 
 [package.source]
-type = "directory"
-url = "../python-opsi-common"
+type = "legacy"
+url = "https://pypi.uib.gmbh/simple"
+reference = "uibpypi"
 
 [[package]]
 name = "python-pam"
@@ -2263,7 +2263,10 @@ python-opsi = [
     {file = "python-opsi-4.2.0.273.tar.gz", hash = "sha256:1f99602aed46fdbd54746aba3100277f8f5d0df7bb969a969fb34a508a902162"},
     {file = "python_opsi-4.2.0.273-py3-none-any.whl", hash = "sha256:407ad26add78194ce250878f42f9cd17190ad0f657eb22a78488d328103abe8f"},
 ]
-python-opsi-common = []
+python-opsi-common = [
+    {file = "python-opsi-common-4.2.0.273.tar.gz", hash = "sha256:dab8fbaad32f04e7e5f095532772f1e5766228e99926745afb16bb674551a8ff"},
+    {file = "python_opsi_common-4.2.0.273-py3-none-any.whl", hash = "sha256:d9d311fbe178bd24cf4ae110572c5c187df3c890cef0cf8d2119aff3558b5597"},
+]
 python-pam = [
     {file = "python-pam-1.8.4.tar.gz", hash = "sha256:c856d9c89fedb33951dd8a95727ae57c6887b02d065bbdffd2fd9dbc0183909b"},
     {file = "python_pam-1.8.4-py2.py3-none-any.whl", hash = "sha256:8439b470b564ac558585b5a3ffce0fce48d1eeebdff19add48279c33de7da0e0"},
