@@ -356,11 +356,8 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 							application=f"opsiclientd/{__version__}",
 							compression=compression,
 							ip_version=config.get('global', 'ip_version'),
-							http_max_retries=0,
 							connect_timeout=5,
 						)
-						if self.configService:
-							logger.devel("settings: timeout=%s, retries=%s", self.configService._connect_timeout, self.configService._http_max_retries)  # pylint: disable=protected-access
 						self.configService.accessControl_authenticated()  # pylint: disable=no-member
 						self.connected = True
 						self.connectionError = None
@@ -387,10 +384,7 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 						break
 					except Exception as error:  # pylint: disable=broad-except
 						self.connectionError = forceUnicode(error)
-						displayed_error = self.connectionError.split(" (Caused by")[0]
-						# Use string cast of error to avoid lengthy tracebackes in Notifier window
-						logger.devel("showing error %s", displayed_error)
-						self.setStatusMessage(_("Failed to connect to config server '%s': %s") % (self._configServiceUrl, displayed_error))
+						self.setStatusMessage(_("Failed to connect to config server '%s'") % (self._configServiceUrl))
 						logger.info("Failed to connect to config server '%s': %s", self._configServiceUrl, error)
 						logger.debug(error, exc_info=True)
 
