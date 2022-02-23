@@ -34,7 +34,8 @@ from opsiclientd.utils import log_network_status
 
 
 config = Config()
-SERVICE_CONNECT_TIMEOUT = 5
+SERVICE_CONNECT_TIMEOUT = 5  # Seconds
+
 
 def update_ca_cert(config_service: JSONRPCClient, allow_remove: bool = False):  # pylint: disable=too-many-branches
 	logger.info("Updating CA cert")
