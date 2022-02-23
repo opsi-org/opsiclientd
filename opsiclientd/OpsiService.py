@@ -34,6 +34,7 @@ from opsiclientd.utils import log_network_status
 
 
 config = Config()
+SERVICE_CONNECT_TIMEOUT = 5  # Seconds
 
 
 def update_ca_cert(config_service: JSONRPCClient, allow_remove: bool = False):  # pylint: disable=too-many-branches
@@ -355,7 +356,8 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 							proxy_url=config.get('global', 'proxy_url'),
 							application=f"opsiclientd/{__version__}",
 							compression=compression,
-							ip_version=config.get('global', 'ip_version')
+							ip_version=config.get('global', 'ip_version'),
+							connect_timeout=SERVICE_CONNECT_TIMEOUT,
 						)
 						self.configService.accessControl_authenticated()  # pylint: disable=no-member
 						self.connected = True
@@ -383,7 +385,7 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 						break
 					except Exception as error:  # pylint: disable=broad-except
 						self.connectionError = forceUnicode(error)
-						self.setStatusMessage(_("Failed to connect to config server '%s': %s") % (self._configServiceUrl, forceUnicode(error)))
+						self.setStatusMessage(_("Failed to connect to config server '%s'") % (self._configServiceUrl))
 						logger.info("Failed to connect to config server '%s': %s", self._configServiceUrl, error)
 						logger.debug(error, exc_info=True)
 
