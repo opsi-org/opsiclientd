@@ -109,9 +109,9 @@ def get_version_from_dos_binary(filename):
 
 def log_network_status():
 	status_string = ""
-	for interface in netifaces.interfaces():
-		for protocol in (netifaces.AF_INET, netifaces.AF_INET6):
-			af_inet_list = netifaces.ifaddresses(interface).get(protocol, {})
+	for interface in netifaces.interfaces():  # pylint: disable=c-extension-no-member
+		for protocol in (netifaces.AF_INET, netifaces.AF_INET6):  # pylint: disable=c-extension-no-member
+			af_inet_list = netifaces.ifaddresses(interface).get(protocol, {})  # pylint: disable=c-extension-no-member
 			if af_inet_list:
 				for entry in af_inet_list:
 					status_string += f"Interface {interface}, Address {entry.get('addr')}, Netmask {entry.get('netmask')}\n"
