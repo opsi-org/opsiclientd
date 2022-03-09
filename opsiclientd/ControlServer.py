@@ -1562,7 +1562,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 	def collectLogfiles(self, prefix: str = "opsi", max_age_days: int = None) -> str:  # pylint: disable=no-self-use
 		# log_dir = Path(config.get("global", "log_dir"))
 		if platform.system().lower() == "windows":
-			log_dir = Path(System.getSystemDrive()) / "opsi.org" / "log"
+			log_dir = Path(System.getSystemDrive()+"\\opsi.org\\log")
 		else:
 			log_dir = Path("/") / "var" / "log" / "opsi-client-agent"
 		now = datetime.datetime.now().timestamp()
