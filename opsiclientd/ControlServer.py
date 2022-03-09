@@ -14,6 +14,7 @@ procedure calls
 # pylint: disable=too-many-lines
 
 import os
+from pathlib import Path
 import re
 import sys
 import codecs
@@ -437,6 +438,32 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 			self.request.write(html.encode("utf-8").strip())
 
 
+class WorkerOpsiclientdFiles(WorkerOpsiclientd):
+	def __init__(self, service, request, resource):
+		WorkerOpsiclientd.__init__(self, service, request, resource)
+
+	def _processQuery(self, result):
+		path = urllib.parse.unquote(self.request.path.decode("utf-8"))
+		if path.startswith("/files/"):
+			logger.notice("Requested file %s", path)
+		else:
+			raise ValueError(f"Invalid path {path}")
+
+	def _generateResponse(self, result):
+		path = urllib.parse.unquote(self.request.path.decode("utf-8"))
+		file_path = Path(config.get("control_server", "files_dir")) / path.replace("/files/", "")
+		logger.notice("Delivering file %s", file_path)
+		if not file_path.exists():
+			self.request.setResponseCode(404)
+			self.request.setHeader("content-type", "text/plain; charset=utf-8")
+			self.request.write(f"Could not find file {file_path}".encode("utf-8"))
+			return
+		self.request.setResponseCode(200)
+		self.request.setHeader("content-type", "application/zip")
+		with open(str(file_path), "rb") as body_file:
+			self.request.write(body_file.read())  # TODO: memory efficient
+
+
 class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientd.__init__(self, service, request, resource)
@@ -556,6 +583,10 @@ class ResourceOpsiclientdInfo(ResourceOpsiclientd):
 		ResourceOpsiclientd.__init__(self, service)
 
 
+class ResourceOpsiclientdFiles(ResourceOpsiclientd):
+	WorkerClass = WorkerOpsiclientdFiles
+
+
 class ResourceOpsiclientdLogViewer(ResourceOpsiclientd):
 	WorkerClass = WorkerOpsiclientdLogViewer
 
@@ -658,6 +689,7 @@ class ControlServer(OpsiService, threading.Thread):  # pylint: disable=too-many-
 		self._root.putChild(b"log_viewer.html", ResourceOpsiclientdLogViewer(self))
 		self._root.putChild(b"terminal.html", ResourceOpsiclientdTerminal(self))
 		self._root.putChild(b"upload", ResourceOpsiclientdUpload(self))
+		self._root.putChild(b"files", ResourceOpsiclientdFiles(self))
 		if config.get("control_server", "kiosk_api_active"):
 			self._root.putChild(b"kiosk", ResourceKioskJsonRpc(self))
 
@@ -1526,3 +1558,40 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 			result["active_events"] = list(set(active_events))
 		return result
+
+	def collectLogfiles(self, prefix: str = "opsi", max_age_days: int = None) -> str:  # pylint: disable=no-self-use
+		# log_dir = Path(config.get("global", "log_dir"))
+		if platform.system().lower() == "windows":
+			log_dir = Path(System.getSystemDrive()) / "opsi.org" / "log"
+		else:
+			log_dir = Path("/") / "var" / "log" / "opsi-client-agent"
+		now = datetime.datetime.now().timestamp()
+
+		def collect_matching_files(path: Path, result_path: Path, prefix: str, max_age_days: int) -> None:
+			for content in path.iterdir():
+				# regex instead of prefix?
+				if content.is_file() and content.name.startswith(prefix):
+					if not max_age_days or now - content.lstat().st_mtime < max_age_days * 3600 * 24:
+						shutil.copy(str(content), str(result_path))
+				if content.is_dir():
+					new_dir = result_path / content.name
+					new_dir.mkdir()
+					collect_matching_files(content, new_dir, prefix, max_age_days)
+					if not list(new_dir.iterdir()):
+						new_dir.rmdir()
+
+		filename = (
+			Path(config.get("control_server", "files_dir")) /
+			f"logs-{config.get('global', 'host_id')}-{datetime.datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S')}"
+		)
+		compression = "zip"
+		with tempfile.TemporaryDirectory() as tempdir:
+			tempdir_path = Path(tempdir) / "logs"
+			tempdir_path.mkdir()
+			logger.info("Collecting log files to %s", tempdir_path)
+			collect_matching_files(log_dir, tempdir_path, prefix, max_age_days)
+			logger.info("Writing zip archive %s", filename)
+			shutil.make_archive(str(filename), compression, root_dir=str(tempdir_path.parent), base_dir=tempdir_path.name)
+		url = f"https://{config.get('global', 'host_id')}:{config.get('control_server', 'port')}/files/{filename.name}.{compression}"
+		logger.notice("Collected logfile archive can be found at %s", url)
+		return url

@@ -12,6 +12,7 @@ from argparse import Namespace
 import os
 import codecs
 import ipaddress
+from pathlib import Path
 import subprocess
 import datetime
 
@@ -363,6 +364,17 @@ def setup_on_shutdown():
 	winreg.CloseKey(key_handle)
 
 
+def cleanup_control_server_files():
+	share_dir = Path(config.get("control_server", "files_dir"))
+	if not share_dir.exists():
+		logger.info("Creating files directory %s", share_dir)
+		share_dir.mkdir(parents=True)
+	for content in share_dir.iterdir():
+		if content.is_file():
+			logger.debug("Deleting file %s", content)
+			content.unlink()
+
+
 def setup(full: bool = False, options: Namespace = None) -> None:
 	logger.notice("Running opsiclientd setup")
 	errors = []
@@ -393,6 +405,11 @@ def setup(full: bool = False, options: Namespace = None) -> None:
 	except Exception as err:  # pylint: disable=broad-except
 		logger.error("Failed to setup on_shutdown: %s", err, exc_info=True)
 		errors.append(str(err))
+
+	try:
+		cleanup_control_server_files()
+	except Exception as err:  # pylint: disable=broad-except
+		logger.error("Failed to clean control_server_files: %s", err, exc_info=True)
 
 	logger.notice("Setup completed with %d errors", len(errors))
 	if errors and full:
