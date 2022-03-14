@@ -25,8 +25,6 @@ import opsicommon.logging
 from opsicommon.logging import (
 	logger, LOG_NONE, init_logging as oc_init_logging
 )
-from OPSI import System
-
 from opsiclientd import init_logging, parser, DEFAULT_STDERR_LOG_FORMAT
 from opsiclientd.Config import Config
 from opsiclientd.setup import setup
