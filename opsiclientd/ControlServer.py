@@ -447,7 +447,9 @@ class WorkerOpsiclientdFiles(WorkerOpsiclientd):
 		file_path = (Path(config.get("control_server", "files_dir")) / path.replace("/files/", "")).resolve()
 		logger.debug("Requested file %s", path)
 		logger.notice("Delivering file %s", file_path)
-		if not file_path.is_relative_to(Path(config.get("control_server", "files_dir"))):
+		try:
+			file_path.relative_to(config.get("control_server", "files_dir"))
+		except ValueError:  # file_path is not in the subpath of files_dir
 			self.request.setResponseCode(403)
 			self.request.setHeader("content-type", "text/plain; charset=utf-8")
 			self.request.write(f"Forbidden: not allowed to access {file_path}".encode("utf-8"))
