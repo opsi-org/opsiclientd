@@ -134,7 +134,7 @@ class CacheService(threading.Thread):
 	def configCacheCompleted(self):
 		try:
 			self.initializeConfigCacheService()
-		except Exception as cacheInitError: # pylint: disable=broad-except
+		except Exception as cacheInitError:  # pylint: disable=broad-except
 			logger.info(cacheInitError, exc_info=True)
 			logger.error(cacheInitError)
 			return False
@@ -150,13 +150,13 @@ class CacheService(threading.Thread):
 
 	def getConfigModifications(self):
 		self.initializeConfigCacheService()
-		return self._configCacheService._backendTracker.getModifications() # pylint: disable=protected-access
+		return self._configCacheService._backendTracker.getModifications()  # pylint: disable=protected-access
 
 	def isProductCacheServiceWorking(self):
 		self.initializeProductCacheService()
 		return self._productCacheService.isWorking()
 
-	def cacheProducts( # pylint: disable=too-many-arguments
+	def cacheProducts(  # pylint: disable=too-many-arguments
 		self, waitForEnding=False, productProgressObserver=None, overallProgressObserver=None,
 		dynamicBandwidth=True, maxBandwidth=0
 	):
@@ -192,7 +192,7 @@ class CacheService(threading.Thread):
 			depotIds = []
 			for depot in configService.host_getObjects(type="OpsiDepotserver"):
 				depotIds.append(depot.id)
-			if not masterDepotId in depotIds:
+			if masterDepotId not in depotIds:
 				self.setConfigCacheFaulty()
 				raise Exception(
 					f"Config cache problem: depot '{masterDepotId}' not available in cached depots: {depotIds}."
@@ -262,12 +262,12 @@ class CacheService(threading.Thread):
 		return self._productCacheService.getProductCacheDir()
 
 
-class ConfigCacheServiceBackendExtension: # pylint: disable=too-few-public-methods
-	def accessControl_authenticated(self): # pylint: disable=no-self-use
+class ConfigCacheServiceBackendExtension:  # pylint: disable=too-few-public-methods
+	def accessControl_authenticated(self):  # pylint: disable=no-self-use
 		return True
 
 
-class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable=too-many-instance-attributes
+class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disable=too-many-instance-attributes
 	def __init__(self):
 		try:
 			threading.Thread.__init__(self)
@@ -297,11 +297,11 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 			ccss = state.get('config_cache_service')
 			if ccss:
 				self._state = ccss
-		except Exception as err: # pylint: disable=broad-except
+		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 			try:
 				self.setObsolete()
-			except Exception: # pylint: disable=broad-except
+			except Exception:  # pylint: disable=broad-except
 				pass
 			raise err
 
@@ -352,7 +352,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 		)
 		self._cacheBackend.addBackendChangeListener(self._backendTracker)
 
-	def connectConfigService(self, allowTemporaryConfigServiceUrls=True): # pylint: disable=too-many-branches,too-many-statements
+	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):  # pylint: disable=too-many-branches,too-many-statements
 		ServiceConnection.connectConfigService(self, allowTemporaryConfigServiceUrls=False)
 
 		try:
@@ -360,7 +360,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 				if hasattr(self._configService, "backend_getLicensingInfo"):
 					info = self._configService.backend_getLicensingInfo(licenses=False, legacy_modules=False, dates=False)  # pylint: disable=no-member
 					logger.debug("Got licensing info from service: %s", info)
-					if not "vpn" in info["available_modules"]:
+					if "vpn" not in info["available_modules"]:
 						raise RuntimeError("Module 'vpn' not licensed")
 				else:
 					verify_modules(self._configService.backend_info(), ['vpn'])
@@ -371,10 +371,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 				if self._configService.hostname.lower() not in ("localhost", "127.0.0.1", "::1"):
 					config.set(
 						'depot_server', 'master_depot_id',
-						self._configService.getDepotId(config.get('global', 'host_id')) # pylint: disable=no-member
+						self._configService.getDepotId(config.get('global', 'host_id'))  # pylint: disable=no-member
 					)
 					config.updateConfigFile()
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				logger.warning(err)
 		except Exception:
 			self.disconnectConfigService()
@@ -418,7 +418,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 		self._stopped = True
 
 	def run(self):
-		with log_context({'instance' : 'config cache service'}):
+		with log_context({'instance': 'config cache service'}):
 			self._running = True
 			logger.notice("Config cache service started")
 			try:
@@ -431,7 +431,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 							self._syncConfigFromServerRequested = False
 							self._syncConfigFromServer()
 					time.sleep(1)
-			except Exception as error: # pylint: disable=broad-except
+			except Exception as error:  # pylint: disable=broad-except
 				logger.error(error, exc_info=True)
 			logger.notice("Config cache service ended")
 			self._running = False
@@ -450,7 +450,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 	def _syncConfigToServer(self):
 		self._working = True
 		eventId = None
-		try: # pylint: disable=too-many-nested-blocks
+		try:  # pylint: disable=too-many-nested-blocks
 			modifications = self._backendTracker.getModifications()
 			if not modifications:
 				logger.notice("Cache backend was not modified, no sync to server required")
@@ -466,8 +466,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 					)
 					if not self._configService:
 						self.connectConfigService()
-					self._cacheBackend._setMasterBackend(self._configService) # pylint: disable=protected-access
-					self._cacheBackend._updateMasterFromWorkBackend(modifications) # pylint: disable=protected-access
+					self._cacheBackend._setMasterBackend(self._configService)  # pylint: disable=protected-access
+					self._cacheBackend._updateMasterFromWorkBackend(modifications)  # pylint: disable=protected-access
 					logger.info("Clearing modifications in tracker")
 					self._backendTracker.clearModifications()
 					try:
@@ -477,7 +477,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 							commandParts = config.get('action_processor', 'command').split()
 							if '/logfile' in commandParts:
 								instlog = commandParts[commandParts.index('/logfile') + 1]
-						except Exception: # pylint: disable=broad-except
+						except Exception:  # pylint: disable=broad-except
 							pass
 
 						if os.path.isfile(instlog):
@@ -485,17 +485,17 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 							with codecs.open(instlog, 'r', 'utf-8', 'replace') as file:
 								data = file.read()
 
-							self._configService.log_write( # pylint: disable=no-member
+							self._configService.log_write(  # pylint: disable=no-member
 								'instlog',
 								data=data,
 								objectId=config.get('global', 'host_id'),
 								append=False
 							)
-					except Exception as err: # pylint: disable=broad-except
+					except Exception as err:  # pylint: disable=broad-except
 						logger.error("Failed to sync instlog: %s", err)
 
 					logger.notice("Config synced to server")
-				except Exception as err: # pylint: disable=broad-except
+				except Exception as err:  # pylint: disable=broad-except
 					logger.error(err, exc_info=True)
 					timeline.addEvent(
 						title="Failed to sync config to server",
@@ -505,7 +505,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 					)
 					raise
 			self._syncConfigToServerError = None
-		except Exception as err: # pylint: disable=broad-except
+		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Errors occurred while syncing config to server: %s", err)
 			self._syncConfigToServerError = err
 		if eventId:
@@ -513,7 +513,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 		self.disconnectConfigService()
 		self._working = False
 
-	def _syncConfigFromServer(self): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+	def _syncConfigFromServer(self):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		self._working = True
 		try:
 			if self._syncConfigToServerError:
@@ -534,7 +534,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 				try:
 					for depot in self._cacheBackend.host_getObjects(type="OpsiDepotserver"):
 						cachedDepotIds.append(depot.id)
-				except Exception as depError: # pylint: disable=broad-except
+				except Exception as depError:  # pylint: disable=broad-except
 					logger.warning(depError)
 				if cachedDepotIds and masterDepotId not in cachedDepotIds:
 					logger.notice(
@@ -553,7 +553,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 				)
 
 				productOnClients = [
-					poc for poc in self._configService.productOnClient_getObjects( # pylint: disable=no-member
+					poc for poc in self._configService.productOnClient_getObjects(  # pylint: disable=no-member
 						productType='LocalbootProduct',
 						clientId=config.get('global', 'host_id'),
 						# Exclude 'always'!
@@ -568,12 +568,13 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 				if not productOnClients:
 					logger.notice("No product action requests set on config service, no sync from server required")
 				else:
-					localProductOnClientsByProductId = {} # pylint: disable=invalid-name
+					localProductOnClientsByProductId = {}  # pylint: disable=invalid-name
 					for productOnClient in self._cacheBackend.productOnClient_getObjects(
-									productType='LocalbootProduct',
-									clientId=config.get('global', 'host_id'),
-									actionRequest=['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
-									attributes=['actionRequest']):
+						productType='LocalbootProduct',
+						clientId=config.get('global', 'host_id'),
+						actionRequest=['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
+						attributes=['actionRequest']
+					):
 						localProductOnClientsByProductId[productOnClient.productId] = productOnClient
 
 					for productOnClient in list(productOnClients):
@@ -608,10 +609,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 						category='config_sync',
 						durationEvent=True
 					)
-					self._cacheBackend._setMasterBackend(self._configService) # pylint: disable=protected-access
+					self._cacheBackend._setMasterBackend(self._configService)  # pylint: disable=protected-access
 					logger.info("Clearing modifications in tracker")
 					self._backendTracker.clearModifications()
-					self._cacheBackend._replicateMasterToWorkBackend() # pylint: disable=protected-access
+					self._cacheBackend._replicateMasterToWorkBackend()  # pylint: disable=protected-access
 					logger.notice("Config synced from server")
 					self._state['config_cached'] = True
 					state.set('config_cache_service', self._state)
@@ -635,14 +636,14 @@ class ConfigCacheService(ServiceConnection, threading.Thread): # pylint: disable
 				self._state['config_cached'] = True
 				state.set('config_cache_service', self._state)
 
-		except Exception as err: # pylint: disable=broad-except
+		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Errors occurred while syncing config from server: %s", err, exc_info=True)
 
 		self.disconnectConfigService()
 		self._working = False
 
 
-class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disable=too-many-instance-attributes
+class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disable=too-many-instance-attributes
 	def __init__(self):
 		threading.Thread.__init__(self)
 		ServiceConnection.__init__(self)
@@ -712,7 +713,7 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 		self._dynamicBandwidth = forceBool(dynamicBandwidth)
 
 	def run(self):
-		with log_context({'instance' : 'product cache service'}):
+		with log_context({'instance': 'product cache service'}):
 			self._running = True
 			logger.notice("Product cache service started")
 			try:
@@ -721,7 +722,7 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 						self._cacheProductsRequested = False
 						self._cacheProducts()
 					time.sleep(1)
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err, exc_info=True)
 			logger.notice("Product cache service ended")
 			self._running = False
@@ -731,14 +732,14 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 		self._productProgressObserver = productProgressObserver
 		self._overallProgressObserver = overallProgressObserver
 
-	def connectConfigService(self, allowTemporaryConfigServiceUrls=True): # pylint: disable=too-many-branches,too-many-statements
+	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):  # pylint: disable=too-many-branches,too-many-statements
 		ServiceConnection.connectConfigService(self, allowTemporaryConfigServiceUrls=False)
 		try:
 			try:
 				if hasattr(self._configService, "backend_getLicensingInfo"):
 					info = self._configService.backend_getLicensingInfo(licenses=False, legacy_modules=False, dates=False)  # pylint: disable=no-member
 					logger.debug("Got licensing info from service: %s", info)
-					if not "vpn" in info["available_modules"]:
+					if "vpn" not in info["available_modules"]:
 						raise RuntimeError("Module 'vpn' not licensed")
 				else:
 					verify_modules(self._configService.backend_info(), ['vpn'])
@@ -749,16 +750,16 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 				if self._configService.hostname.lower() not in ("localhost", "127.0.0.1", "::1"):
 					config.set(
 						'depot_server', 'master_depot_id',
-						self._configService.getDepotId(config.get('global', 'host_id')) # pylint: disable=no-member
+						self._configService.getDepotId(config.get('global', 'host_id'))  # pylint: disable=no-member
 					)
 					config.updateConfigFile()
-			except Exception as err:# pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				logger.warning(err)
 		except Exception:
 			self.disconnectConfigService()
 			raise
 
-	def _freeProductCacheSpace(self, neededSpace=0, neededProducts=[]): # pylint: disable=dangerous-default-value
+	def _freeProductCacheSpace(self, neededSpace=0, neededProducts=[]):  # pylint: disable=dangerous-default-value
 		try:
 			# neededSpace in byte
 			neededSpace = forceInt(neededSpace)
@@ -815,11 +816,11 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 
 				del productDirSizes[deleteProduct]
 
-			logger.notice("%0.3f MB of product cache freed", float(freedSpace)/(1000*1000))
+			logger.notice("%0.3f MB of product cache freed", float(freedSpace) / (1000 * 1000))
 		except Exception as err:
 			raise Exception(f"Failed to free enough disk space for product cache: {err}") from err
 
-	def _cacheProducts(self): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+	def _cacheProducts(self):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		self._updateConfig()
 		self._working = True
 		self._state['products_cached'] = False
@@ -827,7 +828,7 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 		state.set('product_cache_service', self._state)
 		eventId = None
 
-		try: # pylint: disable=too-many-nested-blocks
+		try:  # pylint: disable=too-many-nested-blocks
 			if not self._configService:
 				self.connectConfigService()
 
@@ -838,13 +839,17 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 			)
 
 			productIds = []
-			productOnClients = [poc for poc in self._configService.productOnClient_getObjects( # pylint: disable=no-member
+			productOnClients = [
+				poc for poc in
+				self._configService.productOnClient_getObjects(  # pylint: disable=no-member
 					productType='LocalbootProduct',
 					clientId=config.get('global', 'host_id'),
 					actionRequest=['setup', 'uninstall', 'update', 'always', 'once', 'custom'],
 					attributes=['actionRequest'],
-					productId=includeProductIds)
-				if poc.productId not in excludeProductIds]
+					productId=includeProductIds
+				)
+				if poc.productId not in excludeProductIds
+			]
 
 			for productOnClient in productOnClients:
 				if productOnClient.productId not in productIds:
@@ -855,12 +860,12 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 				masterDepotId = config.get('depot_server', 'master_depot_id')
 
 				# Get all productOnDepots!
-				productOnDepots = self._configService.productOnDepot_getObjects(depotId=masterDepotId) # pylint: disable=no-member
+				productOnDepots = self._configService.productOnDepot_getObjects(depotId=masterDepotId)  # pylint: disable=no-member
 				productOnDepotIds = [productOnDepot.productId for productOnDepot in productOnDepots]
 				logger.debug("Product ids on depot %s: %s", masterDepotId, productOnDepotIds)
 				errorProductIds = []
 				for productOnClient in productOnClients:
-					if not productOnClient.productId in productOnDepotIds:
+					if productOnClient.productId not in productOnDepotIds:
 						logger.error(
 							"Requested product: '%s' not found on configured depot: '%s', please check your configuration, setting product to failed.",
 							productOnClient.productId, masterDepotId
@@ -872,7 +877,7 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 				if 'mshotfix' in productIds:
 					# Windows 8.1 Bugfix, with a helper exe.
 					# Helper seems not to be needed with Python 3
-					helper = None #os.path.join(config.get('global', 'base_dir'), 'utilities', 'getmsversioninfo.exe')
+					helper = None  # os.path.join(config.get('global', 'base_dir'), 'utilities', 'getmsversioninfo.exe')
 					additionalProductId = System.getOpsiHotfixName(helper)
 					if "win10" in additionalProductId:
 						releaseId = None
@@ -882,12 +887,12 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 							subKey = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"
 							valueName = "ReleaseID"
 							releaseId = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, subKey, valueName)
-						except Exception as reg_err: # pylint: disable=broad-except
+						except Exception as reg_err:  # pylint: disable=broad-except
 							logger.error("Failed to read registry value %s %s: %s", subKey, valueName, reg_err)
-						#Setting default to 1507-Build
+						# Setting default to 1507-Build
 						if not releaseId:
 							releaseId = "1507"
-						#Splitting Name of original Packagename and reverse result to get arch
+						# Splitting Name of original Packagename and reverse result to get arch
 						parts = additionalProductId.split("-")[::-1]
 						releasePackageName = f"mshotfix-win10-{releaseId}-{parts[1]}-glb"
 
@@ -930,10 +935,10 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 						for productId in productIds:
 							try:
 								self._cacheProduct(productId, productIds)
-							except Exception as err: # pylint: disable=broad-except
+							except Exception as err:  # pylint: disable=broad-except
 								errorsOccured.append(str(err))
 								self._setProductCacheState(productId, 'failure', forceUnicode(err))
-					except Exception as err: # pylint: disable=broad-except
+					except Exception as err:  # pylint: disable=broad-except
 						logger.error("%s", err, exc_info=True)
 						errorsOccured.append(forceUnicode(err))
 
@@ -953,7 +958,7 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 
 						for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
 							eventGenerator.createAndFireEvent()
-		except Exception as err: # pylint: disable=broad-except
+		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Failed to cache products: %s", err, exc_info=True)
 			timeline.addEvent(
 				title="Failed to cache products",
@@ -996,7 +1001,7 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 				actionRequest = 'none'
 
 		if actionProgress and updateProductOnClient:
-			self._configService.productOnClient_updateObjects([ # pylint: disable=no-member
+			self._configService.productOnClient_updateObjects([  # pylint: disable=no-member
 				ProductOnClient(
 					productId=productId,
 					productType='LocalbootProduct',
@@ -1044,7 +1049,7 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 		if self._impersonation:
 			try:
 				self._impersonation.end()
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				logger.warning(err)
 
 		(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
@@ -1059,7 +1064,7 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 		)
 		return self._repository
 
-	def _cacheProduct(self, productId, neededProducts): # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+	def _cacheProduct(self, productId, neededProducts):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		logger.notice("Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)", productId, self._maxBandwidth, self._dynamicBandwidth)
 		self._setProductCacheState(productId, 'started', time.time())
 		self._setProductCacheState(productId, 'completed', None, updateProductOnClient=False)
@@ -1074,7 +1079,7 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 			if not masterDepotId:
 				raise ValueError("Cannot cache product files: depot_server.master_depot_id undefined")
 
-			productOnDepots = self._configService.productOnDepot_getObjects( # pylint: disable=no-member
+			productOnDepots = self._configService.productOnDepot_getObjects(  # pylint: disable=no-member
 				depotId=masterDepotId,
 				productId=productId
 			)
@@ -1151,7 +1156,7 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 			)
 			logger.notice("Product '%s' cached", productId)
 			self._setProductCacheState(productId, 'completed', time.time())
-		except Exception as err: # pylint: disable=broad-except
+		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Failed to cache product %s: %s", productId, err, exc_info=True)
 			exception = err
 			timeline.addEvent(
@@ -1167,13 +1172,13 @@ class ProductCacheService(ServiceConnection, threading.Thread): # pylint: disabl
 		if repository:
 			try:
 				repository.disconnect()
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				logger.warning("Failed to disconnect from repository: %s", err)
 
 		if self._impersonation:
 			try:
 				self._impersonation.end()
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				logger.warning(err)
 
 		if exception is not None:

@@ -88,9 +88,8 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			"timeline_db": "c:\\opsi.org\\opsiclientd\\timeline.sqlite",
 			"server_cert_dir": "c:\\opsi.org\\tls",
 		},
-		"cache_service": {
-			"storage_dir": "c:\\opsi.org\\cache",
-		},
+		"cache_service": {"storage_dir": "c:\\opsi.org\\cache"},
+		"control_server": {"files_dir": "c:\\opsi.org\\files"}
 	}
 
 	LINUX_DEFAULT_PATHS = {
@@ -106,7 +105,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			"ssl_server_key_file": "/etc/opsi-client-agent/opsiclientd.pem",
 			"ssl_server_cert_file": "/etc/opsi-client-agent/opsiclientd.pem",
 			"static_dir": "/usr/share/opsi-client-agent/opsiclientd/static_html",
-			"files_dir": "/usr/share/opsi-client-agent/files",
+			"files_dir": "/var/local/share/opsi-client-agent/files",
 		},
 		"cache_service": {"storage_dir": "/var/cache/opsi-client-agent"},
 		"depot_server": {"drive": "/media/opsi_depot"},
@@ -125,7 +124,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			"ssl_server_key_file": "/etc/opsi-client-agent/opsiclientd.pem",
 			"ssl_server_cert_file": "/etc/opsi-client-agent/opsiclientd.pem",
 			"static_dir": "/usr/local/share/opsi-client-agent/opsiclientd/static_html",
-			"files_dir": "/usr/local/share/opsi-client-agent/files",
+			"files_dir": "/var/local/share/opsi-client-agent/files",
 		},
 		"cache_service": {"storage_dir": "/var/cache/opsi-client-agent"},
 		"depot_server": {"drive": "/private/var/opsisetupadmin/opsi_depot"},
@@ -192,7 +191,6 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				"ssl_server_key_file": os.path.join(baseDir, "opsiclientd", "opsiclientd.pem"),
 				"ssl_server_cert_file": os.path.join(baseDir, "opsiclientd", "opsiclientd.pem"),
 				"static_dir": os.path.join(baseDir, "opsiclientd", "static_html"),
-				"files_dir": os.path.join(baseDir, "opsiclientd", "files"),
 				"max_authentication_failures": 5,
 				"kiosk_api_active": True,
 				"process_actions_event": "auto",

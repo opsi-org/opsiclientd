@@ -15,11 +15,11 @@ import codecs
 from datetime import datetime
 import psutil
 # pyright: reportMissingImports=false
-import win32con # pylint: disable=import-error
-import win32api # pylint: disable=import-error
-import win32process # pylint: disable=import-error
-import win32security # pylint: disable=import-error
-import ntsecuritycon # pylint: disable=import-error
+import win32con  # pylint: disable=import-error
+import win32api  # pylint: disable=import-error
+import win32process  # pylint: disable=import-error
+import win32security  # pylint: disable=import-error
+import ntsecuritycon  # pylint: disable=import-error
 
 import opsicommon.logging
 from opsicommon.logging import (
@@ -31,9 +31,9 @@ from opsiclientd import init_logging, parser, DEFAULT_STDERR_LOG_FORMAT
 from opsiclientd.Config import Config
 from opsiclientd.setup import setup
 
-
-#STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
+# STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
 STARTUP_LOG = None
+
 
 def startup_log(message):
 	if not STARTUP_LOG:
@@ -42,7 +42,8 @@ def startup_log(message):
 		with codecs.open(STARTUP_LOG, "a", "utf-8") as file:
 			file.write(f"{datetime.now()} {message}\n")
 
-def run_as_system(command): # pylint: disable=too-many-locals
+
+def run_as_system(command):  # pylint: disable=too-many-locals
 	currentProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, os.getpid())
 	currentProcessToken = win32security.OpenProcessToken(currentProcess, win32con.MAXIMUM_ALLOWED)
 	duplicatedCurrentProcessToken = win32security.DuplicateTokenEx(
@@ -117,15 +118,17 @@ def run_as_system(command): # pylint: disable=too-many-locals
 	dwCreationFlags = win32con.CREATE_NEW_CONSOLE
 	win32process.CreateProcessAsUser(hToken, None, command, None, None, 1, dwCreationFlags, None, None, si)
 
+
 def get_integrity_level():
 	currentProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, os.getpid())
 	currentProcessToken = win32security.OpenProcessToken(currentProcess, win32con.MAXIMUM_ALLOWED)
 	sid, _unused = win32security.GetTokenInformation(currentProcessToken, ntsecuritycon.TokenIntegrityLevel)
 	return win32security.ConvertSidToStringSid(sid)
 
-def main(): # pylint: disable=too-many-statements,too-many-branches
+
+def main():  # pylint: disable=too-many-statements,too-many-branches
 	startup_log("windows.main")
-	log_dir = os.path.join(System.getSystemDrive() + "\\opsi.org\\log")
+	log_dir = Config().get("global", "log_dir")
 	parent = psutil.Process(os.getpid()).parent()
 	parent_name = parent.name() if parent else None
 	# https://stackoverflow.com/questions/25770873/python-windows-service-pyinstaller-executables-error-1053
@@ -134,7 +137,7 @@ def main(): # pylint: disable=too-many-statements,too-many-branches
 
 	if len(sys.argv) == 1 and parent_name == "services.exe":
 		startup_log("import start service")
-		from opsiclientd.windows.service import start_service # pylint: disable=import-outside-toplevel
+		from opsiclientd.windows.service import start_service  # pylint: disable=import-outside-toplevel
 		startup_log("init logging")
 		init_logging(stderr_level=LOG_NONE, log_dir=log_dir)
 		startup_log("start service")
@@ -142,7 +145,7 @@ def main(): # pylint: disable=too-many-statements,too-many-branches
 		return
 
 	if any(arg in sys.argv[1:] for arg in ("install", "update", "remove", "start", "stop", "restart")):
-		from opsiclientd.windows.service import handle_commandline # pylint: disable=import-outside-toplevel
+		from opsiclientd.windows.service import handle_commandline  # pylint: disable=import-outside-toplevel
 		handle_commandline()
 		return
 
@@ -162,7 +165,7 @@ def main(): # pylint: disable=too-many-statements,too-many-branches
 			command = executable + " " + args + " --elevated"
 			try:
 				run_as_system(command)
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				print(f"Failed to run {command} as system: {err}", file=sys.stderr)
 				raise
 			return
@@ -186,7 +189,7 @@ def main(): # pylint: disable=too-many-statements,too-many-branches
 			if parent:
 				logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)
 			logger.debug(os.environ)
-			from .opsiclientd import opsiclientd_factory # pylint: disable=import-outside-toplevel
+			from .opsiclientd import opsiclientd_factory  # pylint: disable=import-outside-toplevel
 			opsiclientd = opsiclientd_factory()
 			try:
 				opsiclientd.start()

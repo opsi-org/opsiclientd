@@ -442,26 +442,31 @@ class WorkerOpsiclientdFiles(WorkerOpsiclientd):
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientd.__init__(self, service, request, resource)
 
-	def _processQuery(self, result):
-		path = urllib.parse.unquote(self.request.path.decode("utf-8"))
-		if path.startswith("/files/"):
-			logger.notice("Requested file %s", path)
-		else:
-			raise ValueError(f"Invalid path {path}")
-
 	def _generateResponse(self, result):
 		path = urllib.parse.unquote(self.request.path.decode("utf-8"))
-		file_path = Path(config.get("control_server", "files_dir")) / path.replace("/files/", "")
+		file_path = (Path(config.get("control_server", "files_dir")) / path.replace("/files/", "")).resolve()
+		logger.debug("Requested file %s", path)
 		logger.notice("Delivering file %s", file_path)
+		if not file_path.is_relative_to(Path(config.get("control_server", "files_dir"))):
+			self.request.setResponseCode(403)
+			self.request.setHeader("content-type", "text/plain; charset=utf-8")
+			self.request.write(f"Forbidden: not allowed to access {file_path}".encode("utf-8"))
+			return
 		if not file_path.exists():
 			self.request.setResponseCode(404)
 			self.request.setHeader("content-type", "text/plain; charset=utf-8")
 			self.request.write(f"Could not find file {file_path}".encode("utf-8"))
 			return
 		self.request.setResponseCode(200)
-		self.request.setHeader("content-type", "application/zip")
+		self.request.setHeader(f"content-type=application/octet-stream; Content-Disposition=attachment; filename={file_path.name}")
 		with open(str(file_path), "rb") as body_file:
-			self.request.write(body_file.read())  # TODO: memory efficient
+			chunk_size = 65536
+			while True:
+				data = body_file.read(chunk_size)
+				if not data:
+					break
+				self.request.write(data)
+		file_path.unlink()  # Delete file after successfull download
 
 
 class WorkerOpsiclientdUpload(WorkerOpsiclientd):
@@ -1560,11 +1565,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		return result
 
 	def collectLogfiles(self, prefix: str = "opsi", max_age_days: int = None) -> str:  # pylint: disable=no-self-use
-		# log_dir = Path(config.get("global", "log_dir"))
-		if platform.system().lower() == "windows":
-			log_dir = Path(System.getSystemDrive()+"\\opsi.org\\log")
-		else:
-			log_dir = Path("/") / "var" / "log" / "opsi-client-agent"
 		now = datetime.datetime.now().timestamp()
 
 		def collect_matching_files(path: Path, result_path: Path, prefix: str, max_age_days: int) -> None:
@@ -1572,13 +1572,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				# regex instead of prefix?
 				if content.is_file() and content.name.startswith(prefix):
 					if not max_age_days or now - content.lstat().st_mtime < max_age_days * 3600 * 24:
-						shutil.copy(str(content), str(result_path))
+						if not result_path.is_dir():
+							result_path.mkdir()
+						shutil.copy2(content, result_path)  # preserve metadata
+
 				if content.is_dir():
-					new_dir = result_path / content.name
-					new_dir.mkdir()
-					collect_matching_files(content, new_dir, prefix, max_age_days)
-					if not list(new_dir.iterdir()):
-						new_dir.rmdir()
+					collect_matching_files(content, result_path / content.name, prefix, max_age_days)
 
 		filename = (
 			Path(config.get("control_server", "files_dir")) /
@@ -1589,7 +1588,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			tempdir_path = Path(tempdir) / "logs"
 			tempdir_path.mkdir()
 			logger.info("Collecting log files to %s", tempdir_path)
-			collect_matching_files(log_dir, tempdir_path, prefix, max_age_days)
+			collect_matching_files(Path(config.get("global", "log_dir")), tempdir_path, prefix, max_age_days)
 			logger.info("Writing zip archive %s", filename)
 			shutil.make_archive(str(filename), compression, root_dir=str(tempdir_path.parent), base_dir=tempdir_path.name)
 		url = f"https://{config.get('global', 'host_id')}:{config.get('control_server', 'port')}/files/{filename.name}.{compression}"

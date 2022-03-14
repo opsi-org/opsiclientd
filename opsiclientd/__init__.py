@@ -27,7 +27,7 @@ from OPSI.System import execute
 from opsiclientd.Config import Config
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
-DEFAULT_STDERR_LOG_FORMAT = "%(log_color)s[%(opsilevel)d] [%(asctime)s.%(msecs)03d]%(reset)s [%(contextstring)-40s] %(message)s   (%(filename)s:%(lineno)d)" # pylint: disable=line-too-long
+DEFAULT_STDERR_LOG_FORMAT = "%(log_color)s[%(opsilevel)d] [%(asctime)s.%(msecs)03d]%(reset)s [%(contextstring)-40s] %(message)s   (%(filename)s:%(lineno)d)"  # pylint: disable=line-too-long
 DEFAULT_FILE_LOG_FORMAT = DEFAULT_STDERR_LOG_FORMAT.replace("%(log_color)s", "").replace("%(reset)s", "")
 
 config = Config()
@@ -54,7 +54,7 @@ parser.add_argument(
 )
 parser.add_argument(
 	"--config-file",
-	default=None, #config.get("global", "config_file"),
+	default=None,  # config.get("global", "config_file"),
 	help="Path to config file"
 )
 parser.add_argument(
@@ -103,6 +103,7 @@ def get_opsiclientd_pid() -> int:
 			return proc.pid
 	return None
 
+
 def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = None):
 	if not os.path.isdir(log_dir):
 		log_dir = tempfile.gettempdir()
@@ -110,16 +111,16 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 
 	config.set("global", "log_file", log_file)
 
-	log_file_without_ext, ext = os.path.splitext(log_file) # ext contains '.'
+	log_file_without_ext, ext = os.path.splitext(log_file)  # ext contains '.'
 
 	for i in (9, 8, 7, 6, 5, 4, 3, 2, 1, 0):
-		old_lf = f"{log_file_without_ext}{ext}.{i-1}" # old format
+		old_lf = f"{log_file_without_ext}{ext}.{i-1}"  # old format
 		new_lf = f"{log_file_without_ext}_{i}{ext}"
 		if i > 0 and os.path.exists(old_lf):
 			try:
 				# Rename existing log file from old to new format
 				os.rename(old_lf, new_lf)
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				logger.error("Failed to rename %s to %s: %s", old_lf, new_lf, err)
 
 	logging_config(
@@ -128,9 +129,10 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 		log_file=log_file,
 		file_level=LOG_DEBUG,
 		file_format=DEFAULT_FILE_LOG_FORMAT,
-		file_rotate_max_bytes=config.get("global", "max_log_size")*1000*1000,
+		file_rotate_max_bytes=config.get("global", "max_log_size") * 1000 * 1000,
 		file_rotate_backup_count=config.get("global", "keep_rotated_logs")
 	)
+
 	def namer(default_name):
 		tmp = default_name.rsplit(".", 2)
 		return f"{tmp[0]}_{int(tmp[2]) - 1}.{tmp[1]}"
@@ -143,14 +145,15 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 
 	logger.essential("Log file %s started", log_file)
 
+
 def check_signature(bin_dir):
 	logger.info("check_signature is called")
 	if not RUNNING_ON_WINDOWS:
-		return # Not yet implemented
+		return  # Not yet implemented
 
-	windowsVersion = sys.getwindowsversion() # pylint: disable=no-member
+	windowsVersion = sys.getwindowsversion()  # pylint: disable=no-member
 	if windowsVersion.major < 6 or (windowsVersion.major == 6 and windowsVersion.minor < 4):
-		return # Get-AuthenticodeSignature is only defined for versions since 2016
+		return  # Get-AuthenticodeSignature is only defined for versions since 2016
 
 	binary_list = [
 		os.path.join(bin_dir, "opsiclientd.exe"),
@@ -162,6 +165,6 @@ def check_signature(bin_dir):
 
 		result = execute(cmd, captureStderr=True, waitForEnding=True, timeout=20)
 		logger.debug(result)
-		if not "True" in result:
+		if "True" not in result:
 			raise ValueError(f"Invalid Signature of file {binary}")
 	logger.notice("Successfully verified %s", binary_list)
