@@ -460,7 +460,7 @@ class WorkerOpsiclientdFiles(WorkerOpsiclientd):
 			self.request.write(f"Could not find file {file_path}".encode("utf-8"))
 			return
 		self.request.setResponseCode(200)
-		self.request.setHeader(f"content-type=application/octet-stream; Content-Disposition=attachment; filename={file_path.name}")
+		self.request.setHeader("content-type", f"application/octet-stream; Content-Disposition=attachment; filename={file_path.name}")
 		with open(str(file_path), "rb") as body_file:
 			chunk_size = 65536
 			while True:
