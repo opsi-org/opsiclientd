@@ -454,7 +454,8 @@ class WorkerOpsiclientdFiles(WorkerOpsiclientd):
 			)
 			logger.notice("Delivering file %s", file_path)
 			self.request.setResponseCode(200)
-			self.request.setHeader("content-type", f"application/octet-stream; content-disposition=attachment; filename='{file_path.name}'")
+			self.request.setHeader("Content-Type", "application/octet-stream")
+			self.request.setHeader("Content-Disposition", f"attachment; filename='{file_path.name}'")
 			with open(str(file_path), "rb") as body_file:
 				chunk_size = 65536
 				while True:
