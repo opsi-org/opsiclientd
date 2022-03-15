@@ -11,12 +11,16 @@ should be overridden in the concrete implementation for an OS.
 
 from contextlib import contextmanager
 import os
+import re
 import sys
 import threading
 import time
 import tempfile
 import platform
 import subprocess
+import datetime
+from typing import List
+from pathlib import Path
 import urllib.request
 import shutil
 import psutil
@@ -860,6 +864,37 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 
 	def popupCloseCallback(self, choiceSubject):  # pylint: disable=unused-argument
 		self.hidePopup()
+
+	def collectLogfiles(self, types: List[str] = None, max_age_days: int = None) -> str:  # pylint: disable=no-self-use
+		now = datetime.datetime.now().timestamp()
+		type_patterns = []
+		if not types:
+			type_patterns.append(re.compile(r".*\.log"))
+		for stem_type in types:
+			type_patterns.append(re.compile(rf"{stem_type}[_0-9]*\.log"))
+
+		def collect_matching_files(path: Path, result_path: Path, patterns: List[re.Pattern], max_age_days: int) -> None:
+			for content in path.iterdir():
+				if content.is_file() and any((re.match(pattern, content.name) for pattern in patterns)):
+					if not max_age_days or now - content.lstat().st_mtime < int(max_age_days) * 3600 * 24:
+						if not result_path.is_dir():
+							result_path.mkdir()
+						shutil.copy2(content, result_path)  # preserve metadata
+
+				if content.is_dir():
+					collect_matching_files(content, result_path / content.name, patterns, max_age_days)
+
+		filename = f"logs-{config.get('global', 'host_id')}-{datetime.datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S')}"
+		outfile = Path(config.get("control_server", "files_dir")) / filename
+		compression = "zip"
+		with tempfile.TemporaryDirectory() as tempdir:
+			tempdir_path = Path(tempdir) / filename
+			tempdir_path.mkdir()
+			logger.info("Collecting log files to %s", tempdir_path)
+			collect_matching_files(Path(config.get("global", "log_dir")), tempdir_path, type_patterns, max_age_days)
+			logger.info("Writing zip archive %s", outfile)
+			shutil.make_archive(str(outfile), compression, root_dir=str(tempdir_path.parent), base_dir=tempdir_path.name)
+		return outfile.parent / (outfile.name + f".{compression}")
 
 
 class WaitForGUI(EventListener):

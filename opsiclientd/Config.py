@@ -88,15 +88,14 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			"timeline_db": "c:\\opsi.org\\opsiclientd\\timeline.sqlite",
 			"server_cert_dir": "c:\\opsi.org\\tls",
 		},
-		"cache_service": {
-			"storage_dir": "c:\\opsi.org\\cache",
-		},
+		"cache_service": {"storage_dir": "c:\\opsi.org\\cache"},
+		"control_server": {"files_dir": "c:\\opsi.org\\opsi-client-agent\\files"},
 	}
 
 	LINUX_DEFAULT_PATHS = {
 		"global": {
 			"tmp_dir": "/tmp",
-			"log_dir": "/var/log/opsi",
+			"log_dir": "/var/log/opsi-client-agent",
 			"config_file": "/etc/opsi-client-agent/opsiclientd.conf",
 			"state_file": "/var/lib/opsi-client-agent/opsiclientd/state.json",
 			"timeline_db": "/var/lib/opsi-client-agent/opsiclientd/timeline.sqlite",
@@ -106,6 +105,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			"ssl_server_key_file": "/etc/opsi-client-agent/opsiclientd.pem",
 			"ssl_server_cert_file": "/etc/opsi-client-agent/opsiclientd.pem",
 			"static_dir": "/usr/share/opsi-client-agent/opsiclientd/static_html",
+			"files_dir": "/var/local/share/opsi-client-agent/files",
 		},
 		"cache_service": {"storage_dir": "/var/cache/opsi-client-agent"},
 		"depot_server": {"drive": "/media/opsi_depot"},
@@ -114,7 +114,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 	MACOS_DEFAULT_PATHS = {
 		"global": {
 			"tmp_dir": "/tmp",
-			"log_dir": "/var/log/opsi",
+			"log_dir": "/var/log/opsi-client-agent",
 			"config_file": "/etc/opsi-client-agent/opsiclientd.conf",
 			"state_file": "/var/lib/opsi-client-agent/opsiclientd/state.json",
 			"timeline_db": "/var/lib/opsi-client-agent/opsiclientd/timeline.sqlite",
@@ -124,6 +124,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			"ssl_server_key_file": "/etc/opsi-client-agent/opsiclientd.pem",
 			"ssl_server_cert_file": "/etc/opsi-client-agent/opsiclientd.pem",
 			"static_dir": "/usr/local/share/opsi-client-agent/opsiclientd/static_html",
+			"files_dir": "/var/local/share/opsi-client-agent/files",
 		},
 		"cache_service": {"storage_dir": "/var/cache/opsi-client-agent"},
 		"depot_server": {"drive": "/private/var/opsisetupadmin/opsi_depot"},
@@ -496,6 +497,9 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				logger.debug("Processing section '%s' in config file: '%s'", section, self.get("global", "config_file"))
 
 				for (option, value) in config.items(section):
+					if section == "global" and option == "log_dir":
+						continue  # Ingoring configured log_dir
+
 					option = option.lower()
 					self.set(section.lower(), option, value)
 		except Exception as err:  # pylint: disable=broad-except

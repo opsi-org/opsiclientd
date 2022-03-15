@@ -26,12 +26,14 @@ from opsiclientd.setup import setup
 from opsiclientd.nonfree.Posix import OpsiclientdPosix
 
 
-opsiclientd = None # pylint: disable=invalid-name
+opsiclientd = None  # pylint: disable=invalid-name
 
-def signal_handler(signo, stackFrame): # pylint: disable=unused-argument
+
+def signal_handler(signo, stackFrame):  # pylint: disable=unused-argument
 	logger.debug("Received signal %s, stopping opsiclientd", signo)
 	if opsiclientd:
 		opsiclientd.stop()
+
 
 def daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
 	"""
@@ -65,14 +67,16 @@ def daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
 	with open(stderr, 'rb', 0) as file:
 		os.dup2(file.fileno(), sys.stderr.fileno())
 
+
 def write_pid_file(path):
 	if path:
 		with open(path, "w", encoding="utf-8") as pidFile:
 			pidFile.write(str(os.getpid()))
 
+
 def main():
-	global opsiclientd # pylint: disable=global-statement,invalid-name
-	log_dir = "/var/log/opsi-client-agent"
+	global opsiclientd  # pylint: disable=global-statement,invalid-name
+	log_dir = Config().get("global", "log_dir")
 
 	parser.add_argument(
 		"--no-signal-handlers", "-t",

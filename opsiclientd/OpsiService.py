@@ -12,6 +12,7 @@ import os
 import re
 import random
 import time
+import threading
 from OpenSSL.crypto import (
 	FILETYPE_PEM, dump_certificate, load_certificate
 )
@@ -34,6 +35,7 @@ from opsiclientd.utils import log_network_status
 
 
 config = Config()
+cert_file_lock = threading.Lock()
 SERVICE_CONNECT_TIMEOUT = 5  # Seconds
 
 
@@ -280,25 +282,26 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 
 	def prepare_ca_cert_file(self):  # pylint: disable=no-self-use
 		certs = ""
-		if os.path.exists(config.ca_cert_file):
-			# Read all certs from file except UIB_OPSI_CA
-			uib_opsi_ca_cert = load_certificate(FILETYPE_PEM, UIB_OPSI_CA.encode("ascii"))
-			with open(config.ca_cert_file, "r", encoding="utf-8") as file:
-				for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", file.read(), re.DOTALL):
-					cert = load_certificate(FILETYPE_PEM, match.group(1).encode("ascii"))
-					if cert.get_subject().CN != uib_opsi_ca_cert.get_subject().CN:
-						certs += dump_certificate(FILETYPE_PEM, cert).decode("ascii")
-		if not certs:
+		with cert_file_lock:
 			if os.path.exists(config.ca_cert_file):
-				# Accept all server certs on the next connection attempt
-				os.remove(config.ca_cert_file)
-			return
+				# Read all certs from file except UIB_OPSI_CA
+				uib_opsi_ca_cert = load_certificate(FILETYPE_PEM, UIB_OPSI_CA.encode("ascii"))
+				with open(config.ca_cert_file, "r", encoding="utf-8") as file:
+					for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", file.read(), re.DOTALL):
+						cert = load_certificate(FILETYPE_PEM, match.group(1).encode("ascii"))
+						if cert.get_subject().CN != uib_opsi_ca_cert.get_subject().CN:
+							certs += dump_certificate(FILETYPE_PEM, cert).decode("ascii")
+			if not certs:
+				if os.path.exists(config.ca_cert_file):
+					# Accept all server certs on the next connection attempt
+					os.remove(config.ca_cert_file)
+				return
 
-		if config.get('global', 'trust_uib_opsi_ca'):
-			certs += UIB_OPSI_CA
+			if config.get('global', 'trust_uib_opsi_ca'):
+				certs += UIB_OPSI_CA
 
-		with open(config.ca_cert_file, "w", encoding="utf-8") as file:
-			file.write(certs)
+			with open(config.ca_cert_file, "w", encoding="utf-8") as file:
+				file.write(certs)
 
 	def run(self):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		with log_context({'instance': 'service connection'}):
@@ -313,7 +316,10 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 					config.get('global', 'verify_server_cert_by_ca')
 				)
 				ca_cert_file = config.ca_cert_file
-				self.prepare_ca_cert_file()
+				try:
+					self.prepare_ca_cert_file()
+				except PermissionError as perm_error:
+					logger.error("Not allowed to prepare ca_cert_file: %s", perm_error, exc_info=True)
 
 				compression = config.get('config_service', 'compression')
 				if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:

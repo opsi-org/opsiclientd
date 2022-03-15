@@ -437,6 +437,39 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 			self.request.write(html.encode("utf-8").strip())
 
 
+class WorkerOpsiclientdFiles(WorkerOpsiclientd):
+	def __init__(self, service, request, resource):
+		WorkerOpsiclientd.__init__(self, service, request, resource)
+
+	def _generateResponse(self, result):
+		path = urllib.parse.unquote(self.request.path.decode("utf-8"))
+		query = {}
+		if b"?" in self.request.uri:
+			query = urllib.parse.parse_qs(self.request.uri.decode("utf-8").split("?", 1)[1])
+		logger.info("Requested endpoint %s with query %s", path, query)
+		if path == "/files/logs":
+			file_path = self.service._opsiclientd.collectLogfiles(  # pylint: disable=protected-access
+				types=query.get("type", []),
+				max_age_days=query.get("max_age_days", [None])[0]
+			)
+			logger.notice("Delivering file %s", file_path)
+			self.request.setResponseCode(200)
+			self.request.setHeader("Content-Type", "application/octet-stream")
+			self.request.setHeader("Content-Disposition", f"attachment; filename='{file_path.name}'")
+			with open(str(file_path), "rb") as body_file:
+				chunk_size = 65536
+				while True:
+					data = body_file.read(chunk_size)
+					if not data:
+						break
+					self.request.write(data)
+			file_path.unlink()  # Delete file after successfull download
+		else:
+			self.request.setResponseCode(404)
+			self.request.setHeader("content-type", "text/plain; charset=utf-8")
+			self.request.write(f"Endpoint {path} unknown".encode("utf-8"))
+
+
 class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 	def __init__(self, service, request, resource):
 		WorkerOpsiclientd.__init__(self, service, request, resource)
@@ -556,6 +589,10 @@ class ResourceOpsiclientdInfo(ResourceOpsiclientd):
 		ResourceOpsiclientd.__init__(self, service)
 
 
+class ResourceOpsiclientdFiles(ResourceOpsiclientd):
+	WorkerClass = WorkerOpsiclientdFiles
+
+
 class ResourceOpsiclientdLogViewer(ResourceOpsiclientd):
 	WorkerClass = WorkerOpsiclientdLogViewer
 
@@ -658,6 +695,7 @@ class ControlServer(OpsiService, threading.Thread):  # pylint: disable=too-many-
 		self._root.putChild(b"log_viewer.html", ResourceOpsiclientdLogViewer(self))
 		self._root.putChild(b"terminal.html", ResourceOpsiclientdTerminal(self))
 		self._root.putChild(b"upload", ResourceOpsiclientdUpload(self))
+		self._root.putChild(b"files", ResourceOpsiclientdFiles(self))
 		if config.get("control_server", "kiosk_api_active"):
 			self._root.putChild(b"kiosk", ResourceKioskJsonRpc(self))
 
