@@ -14,7 +14,6 @@ procedure calls
 # pylint: disable=too-many-lines
 
 import os
-from pathlib import Path
 import re
 import sys
 import codecs

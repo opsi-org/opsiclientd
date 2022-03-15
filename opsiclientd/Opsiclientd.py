@@ -19,7 +19,7 @@ import tempfile
 import platform
 import subprocess
 import datetime
-from typing import List, Optional
+from typing import List
 from pathlib import Path
 import urllib.request
 import shutil
