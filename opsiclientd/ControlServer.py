@@ -444,31 +444,30 @@ class WorkerOpsiclientdFiles(WorkerOpsiclientd):
 
 	def _generateResponse(self, result):
 		path = urllib.parse.unquote(self.request.path.decode("utf-8"))
-		file_path = (Path(config.get("control_server", "files_dir")) / path.replace("/files/", "")).resolve()
-		logger.debug("Requested file %s", path)
-		logger.notice("Delivering file %s", file_path)
-		try:
-			file_path.relative_to(config.get("control_server", "files_dir"))
-		except ValueError:  # file_path is not in the subpath of files_dir
-			self.request.setResponseCode(403)
-			self.request.setHeader("content-type", "text/plain; charset=utf-8")
-			self.request.write(f"Forbidden: not allowed to access {file_path}".encode("utf-8"))
-			return
-		if not file_path.exists():
+		query = {}
+		if b"?" in self.request.uri:
+			query = urllib.parse.parse_qs(self.request.uri.decode("utf-8").split("?", 1)[1])
+		logger.info("Requested endpoint %s with query %s", path, query)
+		if path == "/files/logs":
+			file_path = self.service._opsiclientd.collectLogfiles(  # pylint: disable=protected-access
+				types=query.get("type", []),
+				max_age_days=query.get("max_age_days", [None])[0]
+			)
+			logger.notice("Delivering file %s", file_path)
+			self.request.setResponseCode(200)
+			self.request.setHeader("content-type", f"application/octet-stream; content-disposition=attachment; filename='{file_path.name}'")
+			with open(str(file_path), "rb") as body_file:
+				chunk_size = 65536
+				while True:
+					data = body_file.read(chunk_size)
+					if not data:
+						break
+					self.request.write(data)
+			file_path.unlink()  # Delete file after successfull download
+		else:
 			self.request.setResponseCode(404)
 			self.request.setHeader("content-type", "text/plain; charset=utf-8")
-			self.request.write(f"Could not find file {file_path}".encode("utf-8"))
-			return
-		self.request.setResponseCode(200)
-		self.request.setHeader("content-type", f"application/octet-stream; Content-Disposition=attachment; filename={file_path.name}")
-		with open(str(file_path), "rb") as body_file:
-			chunk_size = 65536
-			while True:
-				data = body_file.read(chunk_size)
-				if not data:
-					break
-				self.request.write(data)
-		file_path.unlink()  # Delete file after successfull download
+			self.request.write(f"Endpoint {path} unknown".encode("utf-8"))
 
 
 class WorkerOpsiclientdUpload(WorkerOpsiclientd):
@@ -1565,34 +1564,3 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 			result["active_events"] = list(set(active_events))
 		return result
-
-	def collectLogfiles(self, prefix: str = "opsi", max_age_days: int = None) -> str:  # pylint: disable=no-self-use
-		now = datetime.datetime.now().timestamp()
-
-		def collect_matching_files(path: Path, result_path: Path, prefix: str, max_age_days: int) -> None:
-			for content in path.iterdir():
-				# regex instead of prefix?
-				if content.is_file() and content.name.startswith(prefix):
-					if not max_age_days or now - content.lstat().st_mtime < max_age_days * 3600 * 24:
-						if not result_path.is_dir():
-							result_path.mkdir()
-						shutil.copy2(content, result_path)  # preserve metadata
-
-				if content.is_dir():
-					collect_matching_files(content, result_path / content.name, prefix, max_age_days)
-
-		filename = (
-			Path(config.get("control_server", "files_dir")) /
-			f"logs-{config.get('global', 'host_id')}-{datetime.datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S')}"
-		)
-		compression = "zip"
-		with tempfile.TemporaryDirectory() as tempdir:
-			tempdir_path = Path(tempdir) / "logs"
-			tempdir_path.mkdir()
-			logger.info("Collecting log files to %s", tempdir_path)
-			collect_matching_files(Path(config.get("global", "log_dir")), tempdir_path, prefix, max_age_days)
-			logger.info("Writing zip archive %s", filename)
-			shutil.make_archive(str(filename), compression, root_dir=str(tempdir_path.parent), base_dir=tempdir_path.name)
-		url = f"https://{config.get('global', 'host_id')}:{config.get('control_server', 'port')}/files/{filename.name}.{compression}"
-		logger.notice("Collected logfile archive can be found at %s", url)
-		return url
