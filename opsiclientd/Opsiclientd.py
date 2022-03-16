@@ -865,7 +865,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 	def popupCloseCallback(self, choiceSubject):  # pylint: disable=unused-argument
 		self.hidePopup()
 
-	def collectLogfiles(self, types: List[str] = None, max_age_days: int = None) -> str:  # pylint: disable=no-self-use
+	def collectLogfiles(self, types: List[str] = None, max_age_days: int = None, timeline_db: bool = True) -> str:  # pylint: disable=no-self-use
 		now = datetime.datetime.now().timestamp()
 		type_patterns = []
 		if not types:
@@ -892,6 +892,10 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			tempdir_path.mkdir()
 			logger.info("Collecting log files to %s", tempdir_path)
 			collect_matching_files(Path(config.get("global", "log_dir")), tempdir_path, type_patterns, max_age_days)
+			if timeline_db:
+				db_path = Path(config.get('global', 'timeline_db'))
+				if db_path.exists():
+					shutil.copy2(db_path, tempdir_path)
 			logger.info("Writing zip archive %s", outfile)
 			shutil.make_archive(str(outfile), compression, root_dir=str(tempdir_path.parent), base_dir=tempdir_path.name)
 		return outfile.parent / (outfile.name + f".{compression}")
