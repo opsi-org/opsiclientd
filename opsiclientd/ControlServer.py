@@ -17,7 +17,6 @@ import os
 import re
 import sys
 import codecs
-import shutil
 import socket
 import threading
 import time
