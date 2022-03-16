@@ -735,7 +735,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 	def clear_cache(self):
 		timeline.addEvent(
 			title="Clear product cache",
-			description=f"Product cache deleted",
+			description="Product cache deleted",
 			category="product_caching"
 		)
 		productCacheDir = self.getProductCacheDir()
