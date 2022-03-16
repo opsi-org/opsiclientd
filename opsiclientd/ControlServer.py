@@ -1170,11 +1170,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		logger.notice("rpc uptime: opsiclientd is running for %d seconds", uptime)
 		return uptime
 
-	def fireEvent(self, name):  # pylint: disable=no-self-use
+	def fireEvent(self, name, can_cancel=True):  # pylint: disable=no-self-use
+		can_cancel = bool(can_cancel)
 		event = getEventGenerator(name)
-		logger.notice("Firing event '%s'", name)
+		logger.notice("rpc firing event %r, can_cancel=%r", name, can_cancel)
 		# Allow event cancellation for new events called via the ControlServer
-		event.createAndFireEvent(can_cancel=True)
+		event.createAndFireEvent(can_cancel=can_cancel)
 
 	def setStatusMessage(self, sessionId, message):
 		sessionId = forceInt(sessionId)
