@@ -261,6 +261,11 @@ class CacheService(threading.Thread):
 		self.initializeProductCacheService()
 		return self._productCacheService.getProductCacheDir()
 
+	def clear_product_cache(self):
+		self.initializeProductCacheService()
+		return self._productCacheService.clear_cache()
+
+
 
 class ConfigCacheServiceBackendExtension:  # pylint: disable=too-few-public-methods
 	def accessControl_authenticated(self):  # pylint: disable=no-self-use
@@ -726,6 +731,18 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 				logger.error(err, exc_info=True)
 			logger.notice("Product cache service ended")
 			self._running = False
+
+	def clear_cache(self):
+		timeline.addEvent(
+			title="Clear product cache",
+			description=f"Product cache deleted",
+			category="product_caching"
+		)
+		productCacheDir = self.getProductCacheDir()
+		if os.path.exists(productCacheDir):
+			for product in os.listdir(productCacheDir):
+				deleteDir = os.path.join(productCacheDir, product)
+				shutil.rmtree(deleteDir)
 
 	def cacheProducts(self, productProgressObserver=None, overallProgressObserver=None):
 		self._cacheProductsRequested = True

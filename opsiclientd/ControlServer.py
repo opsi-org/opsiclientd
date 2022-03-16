@@ -1029,12 +1029,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 	def cacheService_deleteCache(self):
 		cacheService = self.opsiclientd.getCacheService()
 		cacheService.setConfigCacheObsolete()
-		productCacheDir = cacheService.getProductCacheDir()
-		if os.path.exists(productCacheDir):
-			for product in os.listdir(productCacheDir):
-				deleteDir = os.path.join(productCacheDir, product)
-				shutil.rmtree(deleteDir)
-
+		cacheService.clear_product_cache()
 		return "config and product cache deleted"
 
 	def timeline_getEvents(self):  # pylint: disable=no-self-use
