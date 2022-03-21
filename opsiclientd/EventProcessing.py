@@ -1641,14 +1641,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 							else:
 								self.processProductActionRequests()
 
-							# After the installation of opsi-client-agent the opsiclientd.conf needs to be updated again
-							# TODO: Remove with opsi-client-agent 4.2
-							if self.event.eventConfig.getConfigFromService:
-								config.readConfigFile()
-								self.getConfigFromService()
-								if self.event.eventConfig.updateConfigFile:
-									config.updateConfigFile()
-
 					if self.should_cancel():
 						raise EventProcessingCanceled()
 					self._set_cancelable(False)
