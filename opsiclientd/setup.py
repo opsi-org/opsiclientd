@@ -325,8 +325,12 @@ def cleanup_registry_uninstall():
 					# Keep this entry
 					continue
 
+				display_name = None
 				with winreg.OpenKey(key, uninstall_key) as subkey:
-					display_name = winreg.QueryValueEx(subkey, "DisplayName")[0]
+					try:
+						display_name = winreg.QueryValueEx(subkey, "DisplayName")[0]
+					except FileNotFoundError:
+						pass
 
 				if display_name == "opsi-client-agent":
 					logger.info("Removing uninstall key %r", uninstall_key)
