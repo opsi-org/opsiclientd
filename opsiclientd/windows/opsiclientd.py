@@ -213,6 +213,9 @@ class OpsiclientdNT(Opsiclientd):
 						winreg.DeleteKey(winreg.HKEY_USERS, sid)
 					except OSError as err:
 						logger.debug(err)
+					if modified:
+						# Restart iteration
+						break
 
 		# takeown parameter /d is localized 😠
 		res = subprocess.run("choice <nul 2>nul", capture_output=True, check=False, shell=True)
