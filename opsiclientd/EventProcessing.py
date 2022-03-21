@@ -1470,7 +1470,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 								)
 
 							if self._shutdownWarningRepetitionTime >= 0:
-								logger.info("Shutdown warning will be repeated in %d seconds", self._shutdownWarningRepetitionTime)
+								rep_at = datetime.datetime.now() + datetime.timedelta(seconds=self._shutdownWarningRepetitionTime)
+								logger.info(
+									"Shutdown warning will be repeated in %d seconds at %s",
+									self._shutdownWarningRepetitionTime,
+									rep_at.strftime("%H:%M:%S"),
+								)
 								self._cancelable_sleep(self._shutdownWarningRepetitionTime)
 								continue
 						break
