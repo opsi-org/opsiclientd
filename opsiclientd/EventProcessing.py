@@ -1490,6 +1490,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 								if not exact_time_passed:
 									# Time jump possibly caused by standby
 									# Use shutdownWarningTime, not shutdownWarningTimeAfterTimeSelect
+									logger.notice("Time jump possibly caused by standby, using shutdownWarningTime, not shutdownWarningTimeAfterTimeSelect")
 									self._shutdownWarningTime = self.event.eventConfig.shutdownWarningTime
 								continue
 						break
