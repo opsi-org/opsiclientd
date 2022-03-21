@@ -332,7 +332,7 @@ def cleanup_registry_uninstall():
 					except FileNotFoundError:
 						pass
 
-				if display_name.startswith("opsi-client-agent"):
+				if display_name and display_name.startswith("opsi-client-agent"):
 					logger.info("Removing uninstall key %r (DisplayName=%r)", uninstall_key, display_name)
 					winreg.DeleteKey(key, uninstall_key)
 					modified = True
