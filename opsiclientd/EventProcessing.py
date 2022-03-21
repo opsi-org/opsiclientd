@@ -107,9 +107,19 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		if self.isLoginEvent:
 			logger.info("Event is user login event")
 
-	def _cancelable_sleep(self, secs: int):
+	def _cancelable_sleep(self, secs: int) -> bool:
+		"""Wait for the given number of seconds.
+		The running event can be canceled in the meantime.
+		Returns whether the number of seconds to wait corresponds
+		to the actual time elapsed (no standby / wakeup occured)."""
 		start = time.time()
-		while time.time() - start < secs:
+		while True:
+			seconds_remaining = secs - (time.time() - start)
+			if seconds_remaining <= -60:
+				# Time jump possibly caused by standby
+				return False
+			if seconds_remaining <= 0:
+				return True
 			if self._is_cancelable and self._should_cancel:
 				raise EventProcessingCanceled()
 			time.sleep(1)
@@ -1476,7 +1486,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 									self._shutdownWarningRepetitionTime,
 									rep_at.strftime("%H:%M:%S"),
 								)
-								self._cancelable_sleep(self._shutdownWarningRepetitionTime)
+								exact_time_passed = self._cancelable_sleep(self._shutdownWarningRepetitionTime)
+								if not exact_time_passed:
+									# Time jump possibly caused by standby
+									# Use shutdownWarningTime, not shutdownWarningTimeAfterTimeSelect
+									self._shutdownWarningTime = self.event.eventConfig.shutdownWarningTime
 								continue
 						break
 				if reboot:
