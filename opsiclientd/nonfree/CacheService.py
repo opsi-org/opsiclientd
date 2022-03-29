@@ -994,8 +994,8 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 				actionRequest = "none"
 
 		if actionProgress and updateProductOnClient:
-			self._configService.productOnClient_updateObjects(
-				[  # pylint: disable=no-member
+			self._configService.productOnClient_updateObjects(  # pylint: disable=no-member
+				[
 					ProductOnClient(
 						productId=productId,
 						productType="LocalbootProduct",
