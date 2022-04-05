@@ -200,7 +200,13 @@ class OpsiclientdNT(Opsiclientd):
 							logger.info("Command %s successful: %s", cmd, out)
 							modified = True
 						else:
-							logger.warning("Failed to delete user %r (exitcode %d): %s", cmd, res.returncode, out)
+							logger.warning("Failed to delete user %r %r (exitcode %d): %s", cmd, username, res.returncode, out)
+							try:
+								logger.info("Deleting user %r via windows api", username)
+								win32net.NetUserDel(None, username)
+							except Exception as err:  # pylint: disable=broad-except
+								logger.warning("Failed to delete user %r via windows api: %s", username, err)
+
 					else:
 						logger.info("User %r, sid %r does not exist, deleting key", username, sid)
 						try:
