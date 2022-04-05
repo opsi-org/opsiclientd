@@ -453,7 +453,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		try:
 			parent = psutil.Process(os.getpid()).parent()
 			parent_name = parent.name() if parent else None
-			event_title = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}] running on {platform.system()}"
+			event_title = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}] running on {platform.platform()!r}"
 			logger.essential(event_title)
 			event_description = f"Parent process: {parent_name}\n"
 			logger.essential(f"Parent process: {parent_name}")
