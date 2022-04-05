@@ -8,7 +8,7 @@
 opsiclientd Library.
 """
 
-__version__ = '4.2.0.110'
+__version__ = '4.2.0.113'
 
 import os
 import sys
