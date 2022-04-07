@@ -28,7 +28,8 @@ python-opsi = "^4.2.0.263"
 #python-opsi = {path = "../python-opsi"}
 python-opsi-common = "^4.2.0.263"
 pywin32 = {platform = "win32", version = "^303"}
-pywinpty = {platform = "win32", path = "pywinpty-1.1.2-cp37-none-win32.whl"}
+#pywinpty = {platform = "win32", path = "pywinpty-1.1.2-cp37-none-win32.whl"}
+pywinpty = {platform = "win32", version = "^2.0"}
 wmi = {platform = "win32", version = "^1.5"}
 zeroconf = "^0.38"
 
