@@ -9,7 +9,7 @@ stages:
 viruscheck:virustotal:
   stage: viruscheck
   tags:
-    - win10
+    - win10-py310
   script:
     - Invoke-WebRequest -UseBasicParsing -Uri "$OPSIDEVTOOLS_URL_WINDOWS_X86" -OutFile opsi-dev-tools.zip
     - Expand-Archive opsi-dev-tools.zip -DestinationPath opsi-dev-tools
@@ -58,7 +58,7 @@ test:pytest-windows:
   #when: manual
   stage: test
   tags:
-    - win10
+    - win10-py310
   script:
     - poetry lock --no-update
     - poetry install
@@ -172,7 +172,7 @@ build:pyinstaller-darwin-x64:
 build:pyinstaller-windows-x86:
   stage: build
   tags:
-    - win10
+    - win10-py310
   script:
     #- $env:path
     #- where.exe poetry
