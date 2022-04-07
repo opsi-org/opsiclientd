@@ -9,34 +9,30 @@ Connecting to a opsi service.
 """
 
 import os
-import re
 import random
-import time
+import re
 import threading
-from OpenSSL.crypto import (
-	FILETYPE_PEM, dump_certificate, load_certificate
-)
+import time
 
+from OpenSSL.crypto import FILETYPE_PEM, dump_certificate, load_certificate
 from OPSI import System
-from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
-from OPSI.Util.Thread import KillableThread
-from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
 from OPSI.Backend.JSONRPC import JSONRPCBackend
-
-from opsicommon.logging import logger, log_context
-from opsicommon.ssl import install_ca, remove_ca, load_ca
+from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
+from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
+from OPSI.Util.Thread import KillableThread
 from opsicommon.client.jsonrpc import JSONRPCClient
+from opsicommon.logging import log_context, logger
+from opsicommon.ssl import install_ca, load_ca, remove_ca
 
 from opsiclientd import __version__
-from opsiclientd.Config import Config, UIB_OPSI_CA
+from opsiclientd.Config import UIB_OPSI_CA, Config
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
 from opsiclientd.utils import log_network_status
 
-
 config = Config()
 cert_file_lock = threading.Lock()
-SERVICE_CONNECT_TIMEOUT = 5  # Seconds
+SERVICE_CONNECT_TIMEOUT = 10  # Seconds
 
 
 def update_ca_cert(config_service: JSONRPCClient, allow_remove: bool = False):  # pylint: disable=too-many-branches
@@ -411,7 +407,9 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 
 						if 'is not supported by the backend' in self.connectionError.lower():
 							try:
-								from cryptography.hazmat.backends import default_backend  # pylint: disable=import-outside-toplevel
+								from cryptography.hazmat.backends import (
+									default_backend,  # pylint: disable=import-outside-toplevel
+								)
 								logger.debug("Got the following crypto backends: %s", default_backend()._backends)  # pylint: disable=no-member,protected-access
 							except Exception as cryptoCheckError:  # pylint: disable=broad-except
 								logger.debug("Failed to get info about installed crypto modules: %s", cryptoCheckError)
