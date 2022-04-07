@@ -10,19 +10,28 @@ opsiclientd Library.
 
 __version__ = '4.2.0.113'
 
+import argparse
+import http
 import os
 import sys
 import tempfile
-import argparse
 from logging.handlers import RotatingFileHandler
-import psutil
+from syslog import LOG_CRIT
 
-from opsicommon.logging import (
-	logger, set_filter_from_string, logging_config, get_all_handlers,
-	LOG_NONE, LOG_DEBUG, LOG_NOTICE
-)
+import psutil
 from OPSI import __version__ as python_opsi_version
 from OPSI.System import execute
+from opsicommon.logging import (
+	LOG_DEBUG,
+	LOG_NONE,
+	LOG_NOTICE,
+	LOG_TRACE,
+	get_all_handlers,
+	log_context,
+	logger,
+	logging_config,
+	set_filter_from_string,
+)
 
 from opsiclientd.Config import Config
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
@@ -144,6 +153,25 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 		set_filter_from_string(log_filter)
 
 	logger.essential("Log file %s started", log_file)
+
+	def log_http(*args):
+		if logger.level < LOG_TRACE or len(args) < 2:
+			return
+		with log_context({'module': 'http client'}):
+			if args[0] == "header:":
+				logger.trace("<<< %s %s", args[1], args[2])
+			elif args[0] == "reply:":
+				logger.trace("<<< %s", args[1][1:-4])
+			elif args[0] == "send:":
+				header_end = args[1].find(r"\r\n\r\n")
+				if header_end != -1:
+					for header in args[1][:header_end].split(r"\r\n"):
+						logger.trace(">>> %s", header.lstrip("b'"))
+			else:
+				logger.trace(args)
+
+	http.client.HTTPConnection.debuglevel = 1
+	http.client.print = log_http
 
 
 def check_signature(bin_dir):
