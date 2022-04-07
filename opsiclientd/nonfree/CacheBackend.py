@@ -14,22 +14,29 @@ import json
 import time
 from types import MethodType
 
-from opsicommon.logging import logger
-from opsicommon.license import OPSI_MODULE_IDS
-from opsicommon.objects import (
-	objects_differ, get_ident_attributes, LicenseOnClient, ProductOnClient
-)
-from opsicommon.objects import * # required for dynamic class loading # pylint: disable=wildcard-import,unused-wildcard-import
-from opsicommon.types import forceHostId
-
 from OPSI.Backend.Backend import (
-	getArgAndCallString, Backend, ConfigDataBackend, ModificationTrackingBackend
+	Backend,
+	ConfigDataBackend,
+	ModificationTrackingBackend,
+	getArgAndCallString,
 )
 from OPSI.Backend.Replicator import BackendReplicator
 from OPSI.Exceptions import (
-	BackendConfigurationError, BackendMissingDataError, BackendUnaccomplishableError
+	BackendConfigurationError,
+	BackendMissingDataError,
+	BackendUnaccomplishableError,
 )
 from OPSI.Util import blowfishDecrypt
+from opsicommon.license import OPSI_MODULE_IDS
+from opsicommon.logging import logger
+from opsicommon.objects import *  # required for dynamic class loading # pylint: disable=wildcard-import,unused-wildcard-import
+from opsicommon.objects import (
+	LicenseOnClient,
+	ProductOnClient,
+	get_ident_attributes,
+	objects_differ,
+)
+from opsicommon.types import forceHostId
 
 from opsiclientd.Config import Config
 
@@ -82,7 +89,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 		self,
 		licenses: bool = False,
 		legacy_modules: bool = False,
-		dates: bool = False
+		dates: bool = False,
+		allow_cache: bool = True
 	):
 		return {
 			"available_modules": OPSI_MODULE_IDS

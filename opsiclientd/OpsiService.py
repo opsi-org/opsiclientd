@@ -407,8 +407,8 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 
 						if 'is not supported by the backend' in self.connectionError.lower():
 							try:
-								from cryptography.hazmat.backends import (
-									default_backend,  # pylint: disable=import-outside-toplevel
+								from cryptography.hazmat.backends import (  # pylint: disable=import-outside-toplevel
+									default_backend,
 								)
 								logger.debug("Got the following crypto backends: %s", default_backend()._backends)  # pylint: disable=no-member,protected-access
 							except Exception as cryptoCheckError:  # pylint: disable=broad-except
