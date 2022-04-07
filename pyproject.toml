@@ -16,7 +16,7 @@ name = "uibpypi"
 url = "https://pypi.uib.gmbh/simple"
 
 [tool.poetry.dependencies]
-python = "^3.7,<3.11"
+python = "^3.8,<3.11"
 autobahn = "^21.11"
 distro = {platform = "linux", version = "^1.5"}
 lz4 = "^3.1"
