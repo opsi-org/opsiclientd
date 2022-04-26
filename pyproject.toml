@@ -39,12 +39,12 @@ opsi-dev-tools = "^1.0.78"
 pefile = {version = "^2021.9", platform = "win32"}
 pyinstaller = "^4.0"
 pylint = "^2.5"
-pytest = "^6.2"
+pytest = "^7.1"
 pytest-cov = "^3.0"
 pywin32-ctypes = {version = "^0.2", platform = "win32"}
 requests = "^2.25"
-tan = "^21.14"
-mypy = "^0.931"
+tan = "^22.2"
+mypy = "^0.942"
 isort = "^5.10.1"
 
 [tool.poetry.scripts]
