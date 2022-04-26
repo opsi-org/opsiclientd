@@ -58,7 +58,7 @@ test:pytest-windows:
   #when: manual
   stage: test
   tags:
-    - win10-py38
+    - win10-py310
   script:
     - poetry lock --no-update
     - poetry install
@@ -172,7 +172,7 @@ build:pyinstaller-darwin-x64:
 build:pyinstaller-windows-x86:
   stage: build
   tags:
-    - win10-py38
+    - win10-py310
   script:
     #- $env:path
     #- where.exe poetry
