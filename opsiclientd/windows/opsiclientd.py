@@ -156,11 +156,15 @@ class OpsiclientdNT(Opsiclientd):
 
 					sid = profile_key.replace(".bak", "")
 
-					with winreg.OpenKey(key, profile_key) as subkey:
-						profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]
-						if keep_sid and sid == keep_sid:
-							keep_profile = profile_path
-							continue
+					try:
+						with winreg.OpenKey(key, profile_key) as subkey:
+							profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]
+							if keep_sid and sid == keep_sid:
+								keep_profile = profile_path
+								continue
+					except FileNotFoundError as err:
+						logger.debug("Failed to read ProfileImagePath for SID %r: %s", sid, err)
+						continue
 
 					username = profile_path.split("\\")[-1].split(".")[0]
 					if not username.startswith(OPSI_SETUP_USER_NAME):
