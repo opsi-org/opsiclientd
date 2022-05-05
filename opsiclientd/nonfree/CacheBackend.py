@@ -18,8 +18,8 @@ from OPSI.Backend.Backend import (
 	Backend,
 	ConfigDataBackend,
 	ModificationTrackingBackend,
-	getArgAndCallString,
 )
+from OPSI.Backend.Base.Extended import get_function_signature_and_args
 from OPSI.Backend.Replicator import BackendReplicator
 from OPSI.Exceptions import (
 	BackendConfigurationError,
@@ -508,10 +508,12 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 				):
 					continue
 
-				(argString, callString) = getArgAndCallString(funcRef)
-
+				sig, arg = get_function_signature_and_args(funcRef)
+				sig = "(self)" if sig == "()" else f"(self, {sig[1:]}"
 				logger.trace("Adding method '%s' to execute on work backend", methodName)
-				exec(f'def {methodName}(self, {argString}): return self._executeMethod("{methodName}", {callString})')  # pylint: disable=exec-used
+				exec(  # pylint: disable=exec-used
+					f'def {methodName}{sig}: return self._executeMethod("{methodName}", {arg})'
+				)
 				setattr(self, methodName, MethodType(eval(methodName), self)) # pylint: disable=eval-used
 
 	def _cacheBackendInfo(self, backendInfo):
