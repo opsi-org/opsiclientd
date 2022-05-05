@@ -1,5 +1,4 @@
-#FROM python:3.7-buster
-FROM docker.uib.gmbh/opsi/dev/pybuilder:uib-python-3.9
+FROM docker.uib.gmbh/opsi/dev/pybuilder:uib-python-3.10
 
 ARG DOCKER_ENV
 ARG DEBIAN_FRONTEND=noninteractive
