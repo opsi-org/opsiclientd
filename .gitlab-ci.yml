@@ -40,7 +40,7 @@ test:pytest-darwin:
   #when: manual
   stage: test
   tags:
-    - macos
+    - macos_catalina
   script:
     - poetry lock --no-update
     - poetry install
