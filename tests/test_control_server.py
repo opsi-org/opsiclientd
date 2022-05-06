@@ -43,13 +43,6 @@ def test_firing_unknown_event_raises_error():
 		controlServer.fireEvent('foobar')
 
 
-def test_gui_startup_event_on_windows_only():
-	createEventGenerators(None)
-	configs = getEventConfigs()
-	assert configs
-	assert 'gui_startup' in configs
-
-
 def test_log_reader_start_position(tmpdir):
 	log_lines = 20
 	for num_tail_records in (5, 10, 19, 20, 21):

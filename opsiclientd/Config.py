@@ -468,9 +468,6 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 		if section == "global" and option == "log_level":
 			logging_config(file_level=self._config[section][option])
-		elif section == "global" and option == "server_cert_dir":
-			if not os.path.exists(self._config[section][option]):
-				os.makedirs(self._config[section][option])
 
 	def replace(self, string, escaped=False):
 		for (section, values) in self._config.items():
