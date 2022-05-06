@@ -8,29 +8,33 @@
 main for windows
 """
 
+import codecs
 import os
 import sys
 import time
-import codecs
 from datetime import datetime
-import psutil
-# pyright: reportMissingImports=false
-import win32con  # pylint: disable=import-error
-import win32api  # pylint: disable=import-error
-import win32process  # pylint: disable=import-error
-import win32security  # pylint: disable=import-error
-import ntsecuritycon  # pylint: disable=import-error
 
-import opsicommon.logging
-from opsicommon.logging import (
-	logger, LOG_NONE, init_logging as oc_init_logging
-)
-from opsiclientd import init_logging, parser, DEFAULT_STDERR_LOG_FORMAT
+import ntsecuritycon  # type: ignore[import] # pylint: disable=import-error
+import opsicommon.logging  # type: ignore[import]
+import psutil  # type: ignore[import]
+import win32api  # type: ignore[import] # pylint: disable=import-error
+
+# pyright: reportMissingImports=false
+import win32con  # type: ignore[import] # pylint: disable=import-error
+import win32process  # type: ignore[import] # pylint: disable=import-error
+import win32security  # type: ignore[import] # pylint: disable=import-error
+from opsicommon.logging import LOG_NONE
+from opsicommon.logging import init_logging as oc_init_logging
+from opsicommon.logging import logger
+
+from opsiclientd import DEFAULT_STDERR_LOG_FORMAT, init_logging, parser
 from opsiclientd.Config import Config
 from opsiclientd.setup import setup
 
 # STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
 STARTUP_LOG = None
+
+# pylint: disable=import-outside-toplevel
 
 
 def startup_log(message):
@@ -135,7 +139,7 @@ def main():  # pylint: disable=too-many-statements,too-many-branches
 
 	if len(sys.argv) == 1 and parent_name == "services.exe":
 		startup_log("import start service")
-		from opsiclientd.windows.service import start_service  # pylint: disable=import-outside-toplevel
+		from opsiclientd.windows.service import start_service
 		startup_log("init logging")
 		init_logging(stderr_level=LOG_NONE, log_dir=log_dir)
 		startup_log("start service")
@@ -143,7 +147,7 @@ def main():  # pylint: disable=too-many-statements,too-many-branches
 		return
 
 	if any(arg in sys.argv[1:] for arg in ("install", "update", "remove", "start", "stop", "restart")):
-		from opsiclientd.windows.service import handle_commandline  # pylint: disable=import-outside-toplevel
+		from opsiclientd.windows.service import handle_commandline
 		handle_commandline()
 		return
 
@@ -156,52 +160,47 @@ def main():  # pylint: disable=too-many-statements,too-many-branches
 			setup(full=True, options=options)
 		return
 
-	try:
-		if "--elevated" not in sys.argv and parent_name != "python.exe":
-			executable = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + ".exe"
-			args = " ".join(sys.argv[1:])
-			command = executable + " " + args + " --elevated"
+	if "--elevated" not in sys.argv and parent_name != "python.exe":
+		executable = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + ".exe"
+		args = " ".join(sys.argv[1:])
+		command = executable + " " + args + " --elevated"
+		try:
+			run_as_system(command)
+		except Exception as err:  # pylint: disable=broad-except
+			print(f"Failed to run {command} as system: {err}", file=sys.stderr)
+			raise
+		return
+
+	integrity_level = get_integrity_level()
+	if int(integrity_level.split("-")[-1]) < 12288:
+		raise RuntimeError(
+			f"opsiclientd.exe must be run as service or from an elevated cmd.exe (integrity_level={integrity_level})"
+		)
+
+	if "--elevated" in sys.argv:
+		sys.argv.remove("--elevated")
+	options = parser.parse_args()
+	if options.config_file:
+		Config().set("global", "config_file", options.config_file)
+
+	init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
+
+	with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
+		logger.notice("Running as user: %s", win32api.GetUserName())
+		if parent:
+			logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)
+		logger.debug(os.environ)
+		from .opsiclientd import opsiclientd_factory
+		opsiclientd = opsiclientd_factory()
+		try:
+			opsiclientd.start()
+			while True:
+				time.sleep(1)
+		except KeyboardInterrupt:
+			logger.essential("KeyboardInterrupt #1 -> stop")
+			opsiclientd.stop()
 			try:
-				run_as_system(command)
-			except Exception as err:  # pylint: disable=broad-except
-				print(f"Failed to run {command} as system: {err}", file=sys.stderr)
-				raise
-			return
-
-		integrity_level = get_integrity_level()
-		if int(integrity_level.split("-")[-1]) < 12288:
-			raise RuntimeError(
-				f"opsiclientd.exe must be run as service or from an elevated cmd.exe (integrity_level={integrity_level})"
-			)
-
-		if "--elevated" in sys.argv:
-			sys.argv.remove("--elevated")
-		options = parser.parse_args()
-		if options.config_file:
-			Config().set("global", "config_file", options.config_file)
-
-		init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
-
-		with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
-			logger.notice("Running as user: %s", win32api.GetUserName())
-			if parent:
-				logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)
-			logger.debug(os.environ)
-			from .opsiclientd import opsiclientd_factory  # pylint: disable=import-outside-toplevel
-			opsiclientd = opsiclientd_factory()
-			try:
-				opsiclientd.start()
-				while True:
-					time.sleep(1)
+				opsiclientd.join(15)
 			except KeyboardInterrupt:
-				logger.essential("KeyboardInterrupt #1 -> stop")
-				opsiclientd.stop()
-				try:
-					opsiclientd.join(15)
-				except KeyboardInterrupt:
-					logger.essential("KeyboardInterrupt #2 -> kill process")
-					psutil.Process(os.getpid()).kill()
-	except Exception as err:  # pylint: disable=broad-except
-		logger.error(err, exc_info=True)
-		time.sleep(3)
-		sys.exit(1)
+				logger.essential("KeyboardInterrupt #2 -> kill process")
+				psutil.Process(os.getpid()).kill()
