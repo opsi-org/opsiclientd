@@ -14,29 +14,31 @@ import json
 import time
 from types import MethodType
 
-from OPSI.Backend.Backend import (
+from OPSI.Backend.Backend import (  # type: ignore[import]
 	Backend,
 	ConfigDataBackend,
 	ModificationTrackingBackend,
 )
-from OPSI.Backend.Base.Extended import get_function_signature_and_args
-from OPSI.Backend.Replicator import BackendReplicator
-from OPSI.Exceptions import (
+from OPSI.Backend.Base.Extended import (  # type: ignore[import]
+	get_function_signature_and_args,
+)
+from OPSI.Backend.Replicator import BackendReplicator  # type: ignore[import]
+from OPSI.Exceptions import (  # type: ignore[import]
 	BackendConfigurationError,
 	BackendMissingDataError,
 	BackendUnaccomplishableError,
 )
-from OPSI.Util import blowfishDecrypt
-from opsicommon.license import OPSI_MODULE_IDS
-from opsicommon.logging import logger
-from opsicommon.objects import *  # required for dynamic class loading # pylint: disable=wildcard-import,unused-wildcard-import
+from OPSI.Util import blowfishDecrypt  # type: ignore[import]
+from opsicommon.license import OPSI_MODULE_IDS  # type: ignore[import]
+from opsicommon.logging import logger  # type: ignore[import]
+from opsicommon.objects import *  # type: ignore[import] # required for dynamic class loading # pylint: disable=wildcard-import,unused-wildcard-import
 from opsicommon.objects import (
 	LicenseOnClient,
 	ProductOnClient,
 	get_ident_attributes,
 	objects_differ,
 )
-from opsicommon.types import forceHostId
+from opsicommon.types import forceHostId  # type: ignore[import]
 
 from opsiclientd.Config import Config
 
@@ -45,9 +47,9 @@ __all__ = ['ClientCacheBackend']
 config = Config()
 
 
-class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pylint: disable=too-many-instance-attributes
+class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pylint: disable=too-many-instance-attributes
 
-	def __init__(self, **kwargs): # pylint: disable=super-init-not-called
+	def __init__(self, **kwargs):  # pylint: disable=super-init-not-called
 		ConfigDataBackend.__init__(self, **kwargs)
 
 		self._workBackend = None
@@ -99,7 +101,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 	def log_write(self, logType, data, objectId=None, append=False):
 		pass
 
-	def licenseOnClient_getObjects(self, attributes=[], **filter): # pylint: disable=dangerous-default-value,redefined-builtin
+	def licenseOnClient_getObjects(self, attributes=[], **filter):  # pylint: disable=dangerous-default-value,redefined-builtin
 		licenseOnClients = self._workBackend.licenseOnClient_getObjects(attributes, **filter)
 		logger.info(
 			"licenseOnClient_getObjects called with filter %s, %s LicenseOnClients found",
@@ -110,7 +112,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 			self.licenseOnClient_insertObject(licenseOnClient)
 		return licenseOnClients
 
-	def config_getObjects(self, attributes=[], **filter): # pylint: disable=dangerous-default-value,redefined-builtin
+	def config_getObjects(self, attributes=[], **filter):  # pylint: disable=dangerous-default-value,redefined-builtin
 		configs = self._backend.config_getObjects(attributes, **filter)
 		for idx, _config in enumerate(configs):
 			if _config.id == 'clientconfig.depot.id':
@@ -118,7 +120,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 		logger.trace("config_getObjects returning %s", configs)
 		return configs
 
-	def configState_getObjects(self, attributes=[], **filter): # pylint: disable=dangerous-default-value,redefined-builtin
+	def configState_getObjects(self, attributes=[], **filter):  # pylint: disable=dangerous-default-value,redefined-builtin
 		config_states = self._backend.configState_getObjects(attributes, **filter)
 		for idx, config_state in enumerate(config_states):
 			if config_state.configId == 'clientconfig.depot.id':
@@ -129,7 +131,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 	def _setMasterBackend(self, masterBackend):
 		self._masterBackend = masterBackend
 
-	def _syncModifiedObjectsWithMaster( # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
+	def _syncModifiedObjectsWithMaster(  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
 		self, objectClass, modifiedObjects, getFilter, objectsDifferFunction, createUpdateObjectFunction, mergeObjectsFunction
 	):
 		meth = getattr(self._masterBackend, f'{objectClass.backendMethodPrefix}_getObjects')
@@ -193,13 +195,13 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 				logger.error("Failed to update objects %s: %s", updateObjects, update_err)
 				raise
 
-	def _updateMasterFromWorkBackend(self, modifications=[]): # pylint: disable=dangerous-default-value,too-many-locals,too-many-statements
+	def _updateMasterFromWorkBackend(self, modifications=[]):  # pylint: disable=dangerous-default-value,too-many-locals,too-many-statements
 		modifiedObjects = collections.defaultdict(list)
 		logger.notice("Updating master from work backend (%d modifications)", len(modifications))
 
 		for modification in modifications:
 			try:
-				ObjectClass = eval(modification['objectClass']) # pylint: disable=eval-used
+				ObjectClass = eval(modification['objectClass'])  # pylint: disable=eval-used
 				identValues = modification['ident'].split(ObjectClass.identSeparator)
 				identAttributes = get_ident_attributes(ObjectClass)
 				objectFilter = {}
@@ -218,7 +220,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 					modification['object'] = objects[0]
 					modifiedObjects[modification['objectClass']].append(modification)
 					logger.debug("Modified object appended: %s", modification)
-			except Exception as modify_error: # pylint: disable=broad-except
+			except Exception as modify_error:  # pylint: disable=broad-except
 				logger.error("Failed to sync backend modification %s: %s", modification, modify_error, exc_info=True)
 				continue
 
@@ -242,7 +244,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 			def createUpdateObjectFunction(modifiedObj):
 				return modifiedObj.clone(identOnly=False)
 
-			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend): # pylint: disable=unused-argument,too-many-arguments
+			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):  # pylint: disable=unused-argument,too-many-arguments
 				masterVersions = sorted([
 					f"{p.productVersion}-{p.packageVersion}" for p in
 					masterBackend.productOnDepot_getObjects(
@@ -260,11 +262,13 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 					)
 				])
 
-				logger.info("Syncing ProductOnClient %s (product versions local=%s, server=%s)",
+				logger.info(
+					"Syncing ProductOnClient %s (product versions local=%s, server=%s)",
 					updateObj, snapshotVersions, masterVersions
 				)
 				if snapshotVersions != masterVersions:
-					logger.notice("Product %s changed on server since last sync, not updating actionRequest (local=%s, server=%s)",
+					logger.notice(
+						"Product %s changed on server since last sync, not updating actionRequest (local=%s, server=%s)",
 						snapshotObj.productId, snapshotVersions, masterVersions
 					)
 					updateObj.actionRequest = None
@@ -282,13 +286,13 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 			)
 
 		if 'LicenseOnClient' in modifiedObjects:
-			def objectsDifferFunction(snapshotObj, masterObj): # pylint: disable=function-redefined
+			def objectsDifferFunction(snapshotObj, masterObj):  # pylint: disable=function-redefined
 				return objects_differ(snapshotObj, masterObj)
 
-			def createUpdateObjectFunction(modifiedObj): # pylint: disable=function-redefined
+			def createUpdateObjectFunction(modifiedObj):  # pylint: disable=function-redefined
 				return modifiedObj.clone(identOnly=False)
 
-			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend): # pylint: disable=function-redefined,unused-argument,too-many-arguments
+			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):  # pylint: disable=function-redefined,unused-argument,too-many-arguments
 				return updateObj
 
 			self._syncModifiedObjectsWithMaster(
@@ -301,13 +305,13 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 			)
 
 		for objectClassName in ('ProductPropertyState', 'ConfigState'):
-			def objectsDifferFunction(snapshotObj, masterObj): # pylint: disable=function-redefined
+			def objectsDifferFunction(snapshotObj, masterObj):  # pylint: disable=function-redefined
 				return objects_differ(snapshotObj, masterObj)
 
-			def createUpdateObjectFunction(modifiedObj): # pylint: disable=function-redefined
+			def createUpdateObjectFunction(modifiedObj):  # pylint: disable=function-redefined
 				return modifiedObj.clone()
 
-			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend): # pylint: disable=function-redefined,unused-argument,too-many-arguments
+			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):  # pylint: disable=function-redefined,unused-argument,too-many-arguments
 				if len(snapshotObj.values) != len(masterObj.values):
 					logger.info("Values of %s changed on server since last sync, not updating values", snapshotObj)
 					return None
@@ -328,7 +332,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 
 			if objectClassName in modifiedObjects:
 				self._syncModifiedObjectsWithMaster(
-					eval(objectClassName), # pylint: disable=eval-used
+					eval(objectClassName),  # pylint: disable=eval-used
 					modifiedObjects[objectClassName],
 					{"objectId": self._clientId},
 					objectsDifferFunction,
@@ -336,7 +340,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 					mergeObjectsFunction
 				)
 
-	def _replicateMasterToWorkBackend(self): # pylint: disable=too-many-branches,too-many-locals,too-many-statements
+	def _replicateMasterToWorkBackend(self):  # pylint: disable=too-many-branches,too-many-locals,too-many-statements
 		if not self._masterBackend:
 			raise BackendConfigurationError("Master backend undefined")
 
@@ -451,7 +455,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 					self._workBackend.licenseOnClient_insertObject(licenseOnClient)
 
 					logger.notice("LicenseOnClient stored for product '%s', %s", productOnClient.productId, statistics)
-			except Exception as license_sync_error: # pylint: disable=broad-except
+			except Exception as license_sync_error:  # pylint: disable=broad-except
 				logger.error("Failed to acquire license for product '%s': %s", productOnClient.productId, license_sync_error)
 
 		self._snapshotBackend.backend_createBase()
@@ -483,7 +487,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 			hostId=self._clientId
 		)
 		password = password['password']
-		logger.notice("Creating opsi passwd file '%s' using opsi host key '%s...'",
+		logger.notice(
+			"Creating opsi passwd file '%s' using opsi host key '%s...'",
 			self._opsiPasswdFile, opsiHostKey[:10]
 		)
 		self.user_setCredentials(
@@ -494,7 +499,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 		with codecs.open(self._auditHardwareConfigFile, 'w', 'utf8') as file:
 			file.write(json.dumps(auditHardwareConfig))
 
-		self._workBackend._setAuditHardwareConfig(auditHardwareConfig) # pylint: disable=protected-access
+		self._workBackend._setAuditHardwareConfig(auditHardwareConfig)  # pylint: disable=protected-access
 		self._workBackend.backend_createBase()
 
 	def _createInstanceMethods(self):
@@ -514,7 +519,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend): # pyli
 				exec(  # pylint: disable=exec-used
 					f'def {methodName}{sig}: return self._executeMethod("{methodName}", {arg})'
 				)
-				setattr(self, methodName, MethodType(eval(methodName), self)) # pylint: disable=eval-used
+				setattr(self, methodName, MethodType(eval(methodName), self))  # pylint: disable=eval-used
 
 	def _cacheBackendInfo(self, backendInfo):
 		with codecs.open(self._opsiModulesFile, 'w', 'utf-8') as file:
