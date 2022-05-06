@@ -10,14 +10,16 @@ Functions to create, reconfigure and get event generators.
 
 import copy
 
-from opsicommon.logging import logger
 from OPSI.Types import forceUnicode
+from opsicommon.logging import logger
 
 from opsiclientd.Config import Config
-
-from opsiclientd.Events.Utilities.Configs import getEventConfigs
-from opsiclientd.Events.Utilities.Factories import EventConfigFactory, EventGeneratorFactory
 from opsiclientd.Events.Panic import PanicEventConfig
+from opsiclientd.Events.Utilities.Configs import getEventConfigs
+from opsiclientd.Events.Utilities.Factories import (
+	EventConfigFactory,
+	EventGeneratorFactory,
+)
 
 __all__ = [
 	'createEventGenerators', 'getEventGenerator', 'getEventGenerators',

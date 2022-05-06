@@ -10,10 +10,11 @@ conftest
 
 import os
 import platform
-import urllib3
+
 import psutil
-from _pytest.logging import LogCaptureHandler
 import pytest
+import urllib3
+from _pytest.logging import LogCaptureHandler
 
 urllib3.disable_warnings()
 
@@ -21,6 +22,17 @@ urllib3.disable_warnings()
 def emit(*args, **kwargs) -> None:  # pylint: disable=unused-argument
 	pass
 LogCaptureHandler.emit = emit
+
+
+@pytest.hookimpl()
+def pytest_configure(config):
+	config.addinivalue_line("markers", "docker_linux: mark test to run only on linux in docker")
+	config.addinivalue_line("markers", "opsiclientd_running: mark test to run only if an opsiclientd instance is running")
+	config.addinivalue_line("markers", "windows: mark test to run only on windows")
+	config.addinivalue_line("markers", "linux: mark test to run only on linux")
+	config.addinivalue_line("markers", "darwin: mark test to run only on darwin")
+	config.addinivalue_line("markers", "posix: mark test to run only on posix")
+
 
 def running_in_docker():
 	if not os.path.exists("/proc/self/cgroup"):
@@ -30,6 +42,7 @@ def running_in_docker():
 			if line.split(':')[2].startswith("/docker/"):
 				return True
 	return False
+
 
 def opsiclient_running():
 	for proc in psutil.process_iter():

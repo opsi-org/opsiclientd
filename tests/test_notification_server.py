@@ -9,20 +9,20 @@ test_notification_server
 """
 
 import json
-import time
 import socket
+import time
 
 from OPSI.Util.Message import ChoiceSubject
 
+from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.EventProcessing import EventProcessingThread
 from opsiclientd.Events.Basic import Event
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
-from opsiclientd.EventConfiguration import EventConfig
 
 from .utils import default_config  # pylint: disable=unused-import
 
 
-def testNotificationServer():
+def test_notification_server(default_config):  # pylint: disable=redefined-outer-name,unused-argument
 	configs = getEventConfigs()
 	eventConfig = EventConfig(configs["on_demand"])
 
@@ -31,7 +31,7 @@ def testNotificationServer():
 	ept.startNotificationServer()
 	ept._messageSubject.setMessage("pytest")  # pylint: disable=protected-access
 
-	choiceSubject = ChoiceSubject(id = 'choice')
+	choiceSubject = ChoiceSubject(id="choice")
 	choiceSubject.setChoices(["abort", "start"])
 	choiceSubject.pyTestDone = False
 
@@ -51,17 +51,9 @@ def testNotificationServer():
 		for subject in data.get("params")[0]:
 			ids.append(subject["id"])
 		assert "choice" in ids, "subject id choice not received"
-		rpc1 = {
-			"id": 1,
-			"method": "setSelectedIndexes",
-			"params": ["choice", 1]
-		}
-		rpc2 = {
-			"id": 2,
-			"method": "selectChoice",
-			"params": ["choice"]
-		}
-		sock.send( (json.dumps(rpc1) + "\r\n" + json.dumps(rpc2) + "\r\n").encode("utf-8") )
+		rpc1 = {"id": 1, "method": "setSelectedIndexes", "params": ["choice", 1]}
+		rpc2 = {"id": 2, "method": "selectChoice", "params": ["choice"]}
+		sock.send((json.dumps(rpc1) + "\r\n" + json.dumps(rpc2) + "\r\n").encode("utf-8"))
 		time.sleep(1)
 		assert choiceSubject.pyTestDone is True, "selectChoice did not set pyTestDone on choiceSubject"
 	finally:

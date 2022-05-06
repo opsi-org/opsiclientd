@@ -8,24 +8,28 @@
 test_control_server
 """
 
-import ssl
-import socket
 import codecs
+import socket
+import ssl
 import threading
 
-import requests
 import netifaces
 import pytest
+import requests
 
 from opsiclientd import ControlServer
-from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import createEventGenerators
+from opsiclientd.Opsiclientd import Opsiclientd
 
-from .utils import default_config, opsiclient_url, opsiclientd_auth  # pylint: disable=unused-import
+from .utils import (  # pylint: disable=unused-import
+	default_config,
+	opsiclient_url,
+	opsiclientd_auth,
+)
 
 
-def test_fire_event():
+def test_fire_event(default_config):  # pylint: disable=redefined-outer-name,unused-argument
 	ocd = Opsiclientd()
 	createEventGenerators(ocd)
 	getEventConfigs()

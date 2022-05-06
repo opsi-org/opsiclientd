@@ -13,25 +13,34 @@ import platform
 import re
 import sys
 from urllib.parse import urlparse
-import netifaces  # type: ignore[import]
 
-from opsicommon.logging import logger, LOG_NOTICE, logging_config, secret_filter  # type: ignore[import]
-from opsicommon.utils import Singleton  # type: ignore[import]
+import netifaces  # type: ignore[import]
+from OPSI import System  # type: ignore[import]
 from OPSI.Types import (  # type: ignore[import]
 	forceBool,
 	forceHostId,
 	forceList,
 	forceProductIdList,
 	forceUnicode,
-	forceUrl,
 	forceUnicodeList,
+	forceUrl,
 )
-from OPSI.Util import objectToBeautifiedText, blowfishDecrypt  # type: ignore[import]
+from OPSI.Util import blowfishDecrypt, objectToBeautifiedText  # type: ignore[import]
 from OPSI.Util.File import IniFile  # type: ignore[import]
-from OPSI import System  # type: ignore[import]
+from opsicommon.logging import (  # type: ignore[import]
+	LOG_NOTICE,
+	logger,
+	logging_config,
+	secret_filter,
+)
+from opsicommon.utils import Singleton  # type: ignore[import]
 
-from opsiclientd.SystemCheck import RUNNING_ON_MACOS, RUNNING_ON_WINDOWS, RUNNING_ON_LINUX, RUNNING_ON_DARWIN
-
+from opsiclientd.SystemCheck import (
+	RUNNING_ON_DARWIN,
+	RUNNING_ON_LINUX,
+	RUNNING_ON_MACOS,
+	RUNNING_ON_WINDOWS,
+)
 
 # It is possible to set multiple certificates as UIB_OPSI_CA
 UIB_OPSI_CA = """-----BEGIN CERTIFICATE-----
@@ -482,6 +491,8 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 	def readConfigFile(self):
 		"""Get settings from config file"""
+		print("============================================")
+		print("READ CONFIG")
 		logger.notice("Trying to read config from file: '%s'", self.get("global", "config_file"))
 
 		try:
