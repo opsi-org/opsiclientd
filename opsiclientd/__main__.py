@@ -49,13 +49,13 @@ def opsiclientd():
 		_main()
 		sys.exit(0)
 	except Exception as err:  # pylint: disable=broad-except
-		print(f"ERROR: {err}", sys.stderr)
+		print(f"ERROR: {err}", file=sys.stderr)
 		try:
 			from opsicommon.logging import logger  # type: ignore[import]
 
 			logger.critical(err, exc_info=True)
 		except Exception as log_err:  # pylint: disable=broad-except
-			print(f"ERROR: {log_err}", sys.stderr)
+			print(f"ERROR: {log_err}", file=sys.stderr)
 		sys.exit(1)
 
 
