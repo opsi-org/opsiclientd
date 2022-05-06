@@ -15,7 +15,7 @@ ENV DOCKER_ENV=${DOCKER_ENV} \
 	# dockerize:
 	DOCKERIZE_VERSION=v0.6.1 \
 	# poetry:
-	POETRY_VERSION=1.1.9
+	POETRY_VERSION=1.1.13
 
 # System deps:
 RUN apt-get update \
