@@ -488,8 +488,6 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 	def readConfigFile(self):
 		"""Get settings from config file"""
-		print("============================================")
-		print("READ CONFIG")
 		logger.notice("Trying to read config from file: '%s'", self.get("global", "config_file"))
 
 		try:

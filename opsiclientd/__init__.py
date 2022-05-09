@@ -51,7 +51,7 @@ parser.add_argument(
 	dest="logLevel",
 	type=int,
 	choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-	default=LOG_NOTICE,
+	default=LOG_NONE,
 	help="Set the log-level."
 )
 parser.add_argument(
