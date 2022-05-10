@@ -2703,8 +2703,8 @@ python-gettext = [
     {file = "python-gettext-4.0.tar.gz", hash = "sha256:626b501a51ac892fc3460cf550e60dca121f544eaa46eb69c90ce4682fc7ec02"},
 ]
 python-opsi = [
-    {file = "python-opsi-4.2.0.291.tar.gz", hash = "sha256:db71e1e0bc42bc8d8030f6ad616f4ba68ab5fd0e783f145c69906ce62434ea2f"},
-    {file = "python_opsi-4.2.0.291-py3-none-any.whl", hash = "sha256:d3d3fdf2c18653d7fd1b205562c8874d7bf2af987a863d8d2d5598519417247b"},
+    {file = "python-opsi-4.2.0.291.tar.gz", hash = "sha256:c8cac71ffcaa2a3f4058ea1665b37a9f13fa329d80131b0be4560e833d9c7d32"},
+    {file = "python_opsi-4.2.0.291-py3-none-any.whl", hash = "sha256:1ffc1e9460114402d4e830299fb1ef41d5f921b6ad5b2bbfb5b6f3de1b2b7865"},
 ]
 python-opsi-common = [
     {file = "python-opsi-common-4.2.0.285.tar.gz", hash = "sha256:f9a8703fa8bd9844b050aa14ccf6cb7c8e950d0a3c6e572ecaebe37f3ca2c398"},
