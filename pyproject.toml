@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "opsiclientd"
-version = "4.2.0.119"
+version = "4.2.0.120"
 description = "opsi client daemon. The service running on opsi clients."
 maintainers = ["uib GmbH <info@uib.de>"]
 authors = ["uib GmbH <info@uib.de>"]
@@ -37,15 +37,14 @@ isort = "^5.10.1"
 macholib = {version = "^1.14", platform = "darwin"}
 mock = "^4.0"
 mypy = "^0.950"
-opsi-dev-tools = "^1.1"
 pefile = {version = "^2021.9", platform = "win32"}
-pyinstaller = "^5.0"
 pylint = "^2.5"
 pytest = "^7.1"
 pytest-cov = "^3.0"
 pywin32-ctypes = {version = "^0.2", platform = "win32"}
 requests = "^2.25"
 tan = "^22.2"
+pyinstaller = "^5.1"
 
 [tool.poetry.scripts]
 opsiclientd = "opsiclientd.__main__:opsiclientd"

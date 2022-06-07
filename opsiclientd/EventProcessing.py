@@ -352,7 +352,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		processId = None
 		while True:
 			try:
-				processId = System.runCommandInSession(
+				process, _, processId = System.runCommandInSession(
 					command=command,
 					sessionId=sessionId,
 					desktop=desktop,
@@ -360,13 +360,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					timeoutSeconds=timeoutSeconds,
 					noWindow=noWindow,
 					shell=False,
-				)[2]
+				)[:3]
 				break
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err)
 				raise
 
-		return processId
+		return process, processId
 
 	def startNotifierApplication(
 		self, command, sessionId=None, desktop=None, notifierId=None
@@ -380,12 +380,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			# call process directly without shell for posix, keep string structure for windows
 			if not RUNNING_ON_WINDOWS:
 				command = command.split()
-			pid = self.runCommandInSession(sessionId=sessionId, command=command, desktop=desktop, waitForProcessEnding=False)
+			process, pid = self.runCommandInSession(sessionId=sessionId, command=command, desktop=desktop, waitForProcessEnding=False)
 			logger.debug("starting notifier with pid %s", pid)
-			return pid
+			return process, pid
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Failed to start notifier application '%s': %s", command, err)
-		return None
+		return None, None
 
 	def closeProcessWindows(self, processId):
 		try:
@@ -394,6 +394,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		except Exception as err:  # pylint: disable=broad-except
 			raise Exception(f"opsiclientd_rpc command not defined: {err}") from err
 
+		# TODO: collect exit codes to avoid Zombie Process
 		self.runCommandInSession(command=command, waitForProcessEnding=False, noWindow=True)
 
 	def setActionProcessorInfo(self):
@@ -1151,17 +1152,19 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			choiceSubject.setCallbacks([self.startActionCallback])
 		self._notificationServer.addSubject(choiceSubject)
 		notifierPids = []
+		notifierHandles = []
 		try:
 			if self.event.eventConfig.actionNotifierCommand:
 				desktops = [self.event.eventConfig.actionNotifierDesktop]
 				if RUNNING_ON_WINDOWS and self.event.eventConfig.actionNotifierDesktop == "all":
 					desktops = ["winlogon", "default"]
 				for desktop in desktops:
-					notifier_pid = self.startNotifierApplication(
+					notifier_process, notifier_pid = self.startNotifierApplication(
 						command=self.event.eventConfig.actionNotifierCommand, desktop=desktop, notifierId="action"
 					)
 					if notifier_pid:
 						notifierPids.append(notifier_pid)
+						notifierHandles.append(notifier_process)
 
 			timeout = int(self.event.eventConfig.actionWarningTime)
 			endTime = time.time() + timeout
@@ -1220,7 +1223,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				if notifierPids:
 					try:
 						time.sleep(3)
-						for notifierPid in notifierPids:
+						for notifierHandle, notifierPid in zip(notifierHandles, notifierPids):
+							notifierHandle.poll()
 							System.terminateProcess(processId=notifierPid)
 					except Exception:  # pylint: disable=broad-except
 						pass
@@ -1371,6 +1375,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 
 						failed_to_start_notifier = False
 						notifierPids = []
+						notifierHandles = []
 						desktops = [self.event.eventConfig.shutdownNotifierDesktop]
 						if RUNNING_ON_WINDOWS and self.event.eventConfig.shutdownNotifierDesktop == "all":
 							desktops = ["winlogon", "default"]
@@ -1380,11 +1385,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 							shutdownNotifierCommand = shutdownNotifierCommand.replace("shutdown.ini", "shutdown_select.ini")
 
 						for desktop in desktops:
-							notifier_pid = self.startNotifierApplication(
+							notifier_handle, notifier_pid = self.startNotifierApplication(
 								command=shutdownNotifierCommand, desktop=desktop, notifierId="shutdown"
 							)
 							if notifier_pid:
 								notifierPids.append(notifier_pid)
+								notifierHandles.append(notifier_handle)
 							else:
 								logger.error("Failed to start shutdown notifier, shutdown will not be executed")
 								failed_to_start_notifier = True
@@ -1425,7 +1431,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 							if notifierPids:
 								try:
 									time.sleep(3)
-									for notifierPid in notifierPids:
+									for notifierHandle, notifierPid in zip(notifierHandles, notifierPids):
+										notifierHandle.poll()
 										System.terminateProcess(processId=notifierPid)
 								except Exception:  # pylint: disable=broad-except
 									pass
@@ -1580,6 +1587,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		with log_context({"instance": f"event processing {self.event.eventConfig.getId()}"}):
 			timelineEventId = None
 			notifierPids = []
+			notifierHandles = []
 
 			try:  # pylint: disable=too-many-nested-blocks
 				if self.event.eventConfig.workingWindow:
@@ -1631,11 +1639,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						if RUNNING_ON_WINDOWS and self.event.eventConfig.eventNotifierDesktop == "all":
 							desktops = ["winlogon", "default"]
 						for desktop in desktops:
-							notifier_pid = self.startNotifierApplication(
+							notifier_handle, notifier_pid = self.startNotifierApplication(
 								command=self.event.eventConfig.eventNotifierCommand, desktop=desktop, notifierId="event"
 							)
 							if notifier_pid:
 								notifierPids.append(notifier_pid)
+								notifierHandles.append(notifier_handle)
 
 					if self.event.eventConfig.useCachedConfig:
 						if self.opsiclientd.getCacheService().configCacheCompleted():
@@ -1757,9 +1766,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			if notifierPids:
 				try:
 					time.sleep(3)
-					for notifierPid in notifierPids:
+					for notifierHandle, notifierPid in zip(notifierHandles, notifierPids):
 						if psutil.pid_exists(notifierPid):
 							logger.trace("killing notifier with pid %s", notifierPid)
+							notifierHandle.poll()
 							System.terminateProcess(processId=notifierPid)
 				except Exception as error:  # pylint: disable=broad-except
 					logger.error("Could not kill notifier: %s", error, exc_info=True)
