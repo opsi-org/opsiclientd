@@ -111,8 +111,8 @@ class OpsiclientdNT(Opsiclientd):
 
 	def isWindowsInstallerBusy(self):
 		if not self._ms_update_installer:
-			from opsiclientd.windows import (
-				importWmiAndPythoncom,  # pylint: disable=import-outside-toplevel
+			from opsiclientd.windows import (  # pylint: disable=import-outside-toplevel
+				importWmiAndPythoncom,
 			)
 
 			(_wmi, _pythoncom) = importWmiAndPythoncom(importWmi=False, importPythoncom=True)
@@ -138,7 +138,7 @@ class OpsiclientdNT(Opsiclientd):
 
 	def cleanup_opsi_setup_user(
 		self, keep_sid: str = None
-	):,too-many-locals,too-many-branches,too-many-statements
+	):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		keep_profile = None
 		modified = True
 		while modified:
@@ -248,7 +248,7 @@ class OpsiclientdNT(Opsiclientd):
 				else:
 					logger.info("Command %s successful: %s", cmd, out)
 
-	def createOpsiSetupUser(self, admin=True, delete_existing=False):,too-many-branches
+	def createOpsiSetupUser(self, admin=True, delete_existing=False):  # pylint: disable=too-many-branches
 		# https://bugs.python.org/file46988/issue.py
 
 		user_info = {

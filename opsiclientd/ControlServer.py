@@ -1022,7 +1022,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 	def __init__(self, opsiclientd):
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
 
-	def wait(self, seconds: int = 0):  # pylint: disable=no-self-use
+	def wait(self, seconds: int = 0):
 		for _ in range(int(seconds)):
 			time.sleep(1)
 
@@ -1047,7 +1047,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		cacheService.clear_product_cache()
 		return "config and product cache deleted"
 
-	def timeline_getEvents(self):  # pylint: disable=no-self-use
+	def timeline_getEvents(self):
 		timeline = Timeline()
 		return timeline.getEvents()
 
@@ -1058,7 +1058,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			return "Login blocker is on"
 		return "Login blocker is off"
 
-	def readLog(self, logType="opsiclientd"):  # pylint: disable=no-self-use
+	def readLog(self, logType="opsiclientd"):
 		logType = forceUnicode(logType)
 		if logType != "opsiclientd":
 			raise ValueError(f"Unknown log type '{logType}'")
@@ -1071,7 +1071,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 		return ""
 
-	def log_read(self, logType="opsiclientd", extension="", maxSize=5000000):  # pylint: disable=no-self-use
+	def log_read(self, logType="opsiclientd", extension="", maxSize=5000000):
 		"""
 		Return the content of a log.
 
@@ -1143,20 +1143,20 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 	def execute(
 		self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300
-	):  # pylint: disable=no-self-use,too-many-arguments
+	):  # pylint: disable=too-many-arguments
 		return System.execute(cmd=command, waitForEnding=waitForEnding, captureStderr=captureStderr, encoding=encoding, timeout=timeout)
 
-	def logoffSession(self, session_id=None, username=None):  # pylint: disable=no-self-use
+	def logoffSession(self, session_id=None, username=None):
 		return System.logoffSession(session_id=session_id, username=username)
 
-	def logoffCurrentUser(self):  # pylint: disable=no-self-use
+	def logoffCurrentUser(self):
 		logger.notice("rpc logoffCurrentUser: logging of current user now")
 		System.logoffCurrentUser()
 
-	def lockSession(self, session_id=None, username=None):  # pylint: disable=no-self-use
+	def lockSession(self, session_id=None, username=None):
 		return System.lockSession(session_id=session_id, username=username)
 
-	def lockWorkstation(self):  # pylint: disable=no-self-use
+	def lockWorkstation(self):
 		logger.notice("rpc lockWorkstation: locking workstation now")
 		System.lockWorkstation()
 
@@ -1180,7 +1180,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		logger.notice("rpc uptime: opsiclientd is running for %d seconds", uptime)
 		return uptime
 
-	def fireEvent(self, name, can_cancel=True):  # pylint: disable=no-self-use
+	def fireEvent(self, name, can_cancel=True):
 		# can_cancel: Allow event cancellation for new events called via the ControlServer
 		can_cancel = bool(can_cancel)
 		event = getEventGenerator(name)
@@ -1235,15 +1235,15 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 	def switchDesktop(self, desktop, sessionId=None):
 		self.opsiclientd.switchDesktop(desktop, sessionId)
 
-	def getConfig(self):  # pylint: disable=no-self-use
+	def getConfig(self):
 		return config.getDict()
 
-	def getConfigValue(self, section, option):  # pylint: disable=no-self-use
+	def getConfigValue(self, section, option):
 		section = forceUnicode(section)
 		option = forceUnicode(option)
 		return config.get(section, option)
 
-	def setConfigValue(self, section, option, value):  # pylint: disable=no-self-use
+	def setConfigValue(self, section, option, value):
 		section = forceUnicode(section)
 		option = forceUnicode(option)
 		value = forceUnicode(value)
@@ -1253,17 +1253,17 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		# Legacy method
 		return self.setConfigValue(section, option, value)
 
-	def readConfigFile(self):  # pylint: disable=no-self-use
+	def readConfigFile(self):
 		config.readConfigFile()
 
-	def updateConfigFile(self, force=False):  # pylint: disable=no-self-use
+	def updateConfigFile(self, force=False):
 		config.updateConfigFile(force)
 
 	def showPopup(self, message, mode="prepend", addTimestamp=True, displaySeconds=0):
 		message = forceUnicode(message)
 		self.opsiclientd.showPopup(message, mode, addTimestamp, displaySeconds)
 
-	def deleteServerCerts(self):  # pylint: disable=no-self-use
+	def deleteServerCerts(self):
 		cert_dir = config.get("global", "server_cert_dir")
 		if os.path.exists(cert_dir):
 			for filename in os.listdir(cert_dir):
@@ -1271,7 +1271,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					continue
 				os.remove(os.path.join(cert_dir, filename))
 
-	def updateOpsiCaCert(self, ca_cert_pem):  # pylint: disable=no-self-use
+	def updateOpsiCaCert(self, ca_cert_pem):
 		ca_certs = []
 		for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", ca_cert_pem, re.DOTALL):
 			try:
@@ -1286,13 +1286,13 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				for cert in ca_certs:
 					file.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
 
-	def getActiveSessions(self):  # pylint: disable=no-self-use
+	def getActiveSessions(self):
 		sessions = System.getActiveSessionInformation()
 		for session in sessions:
 			session["LogonDomain"] = session.get("DomainName")
 		return sessions
 
-	def getBackendInfo(self):  # pylint: disable=no-self-use
+	def getBackendInfo(self):
 		serviceConnection = ServiceConnection()
 		serviceConnection.connectConfigService()
 		backendinfo = None
@@ -1304,7 +1304,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 		return backendinfo
 
-	def getState(self, name, default=None):  # pylint: disable=no-self-use
+	def getState(self, name, default=None):
 		"""
 		Return a specified state.
 
@@ -1313,7 +1313,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		"""
 		return state.get(name, default)
 
-	def setState(self, name, value):  # pylint: disable=no-self-use
+	def setState(self, name, value):
 		"""
 		Set a specified state.
 
@@ -1327,7 +1327,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			raise ValueError(f"Invalid component {component}")
 		return self.opsiclientd.self_update_from_url(url)
 
-	def execPythonCode(self, code):  # pylint: disable=no-self-use
+	def execPythonCode(self, code):
 		"""Execute lines of python code, returns the result of the last line"""
 		code = code.split("\n")
 		exec("\n".join(code[:-1]))  # pylint: disable=exec-used
@@ -1561,7 +1561,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 		self.fireEvent(event)
 
-	def getConfigDataFromOpsiclientd(self, get_depot_id=True, get_active_events=True):  # pylint: disable=no-self-use
+	def getConfigDataFromOpsiclientd(self, get_depot_id=True, get_active_events=True):
 		result = {}
 		result["opsiclientd_version"] = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}]"
 
