@@ -107,16 +107,16 @@ class ServiceConnection:
 		self._configService = None
 		self._should_stop = False
 
-	def connectionThreadOptions(self):  # pylint: disable=no-self-use
+	def connectionThreadOptions(self):
 		return {}
 
-	def connectionStart(self, configServiceUrl):  # pylint: disable=no-self-use
+	def connectionStart(self, configServiceUrl):
 		pass
 
-	def connectionCancelable(self, stopConnectionCallback):  # pylint: disable=no-self-use
+	def connectionCancelable(self, stopConnectionCallback):
 		pass
 
-	def connectionTimeoutChanged(self, timeout):  # pylint: disable=no-self-use
+	def connectionTimeoutChanged(self, timeout):
 		pass
 
 	def connectionCanceled(self):
@@ -278,7 +278,7 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 	def getUsername(self):
 		return self._username
 
-	def prepare_ca_cert_file(self):  # pylint: disable=no-self-use
+	def prepare_ca_cert_file(self):
 		certs = ""
 		with cert_file_lock:
 			if os.path.exists(config.ca_cert_file):

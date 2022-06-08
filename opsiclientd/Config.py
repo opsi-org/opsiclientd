@@ -249,7 +249,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		return baseDir
 
 	@property
-	def restart_marker(self):  # pylint: disable=no-self-use
+	def restart_marker(self):
 		if RUNNING_ON_WINDOWS:
 			# Old location of restart marker
 			old_location = os.path.join(os.path.dirname(sys.argv[0]), ".opsiclientd_restart")

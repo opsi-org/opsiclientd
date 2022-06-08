@@ -9,47 +9,52 @@ Basic opsiclientd implementation. This is abstract in some parts that
 should be overridden in the concrete implementation for an OS.
 """
 
-from contextlib import contextmanager
+import datetime
 import os
+import platform
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import threading
 import time
-import tempfile
-import platform
-import subprocess
-import datetime
-from typing import List
-from pathlib import Path
 import urllib.request
-import shutil
-import psutil
+from contextlib import contextmanager
+from pathlib import Path
+from typing import List
 
+import psutil
 from OPSI import System
+from OPSI import __version__ as python_opsi_version
 from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Util import randomString
-from OPSI.Util.Message import MessageSubject, ChoiceSubject, NotificationServer
-from OPSI import __version__ as python_opsi_version
-
-from opsicommon.logging import logger, log_context, secret_filter
+from OPSI.Util.Message import ChoiceSubject, MessageSubject, NotificationServer
+from opsicommon.logging import log_context, logger, secret_filter
 from opsicommon.system import ensure_not_already_running
 
-from opsiclientd import __version__, config, check_signature
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd import __version__, check_signature, config
 from opsiclientd.ControlPipe import ControlPipeFactory
 from opsiclientd.ControlServer import ControlServer
+from opsiclientd.EventProcessing import EventProcessingThread
 from opsiclientd.Events.Basic import EventListener
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventGenerator
 from opsiclientd.Events.DaemonStartup import DaemonStartupEventGenerator
+from opsiclientd.Events.GUIStartup import (
+	GUIStartupEventConfig,
+	GUIStartupEventGenerator,
+)
 from opsiclientd.Events.Panic import PanicEvent
-from opsiclientd.Events.GUIStartup import GUIStartupEventConfig, GUIStartupEventGenerator
 from opsiclientd.Events.Utilities.Factories import EventGeneratorFactory
-from opsiclientd.Events.Utilities.Generators import createEventGenerators, getEventGenerators
-from opsiclientd.EventProcessing import EventProcessingThread
+from opsiclientd.Events.Utilities.Generators import (
+	createEventGenerators,
+	getEventGenerators,
+)
 from opsiclientd.Localization import _
-from opsiclientd.State import State
-from opsiclientd.Timeline import Timeline
 from opsiclientd.setup import setup
+from opsiclientd.State import State
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd.Timeline import Timeline
 
 timeline = Timeline()
 state = State()
@@ -384,7 +389,9 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			cache_service = None
 			try:
 				logger.notice("Starting cache service")
-				from opsiclientd.nonfree.CacheService import CacheService  # pylint: disable=import-outside-toplevel
+				from opsiclientd.nonfree.CacheService import (  # pylint: disable=import-outside-toplevel
+					CacheService,
+				)
 
 				cache_service = CacheService(opsiclientd=self)
 				cache_service.start()
@@ -651,7 +658,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					return ept
 		raise Exception(f"Event processing thread for session {sessionId} not found")
 
-	def processProductActionRequests(self, event):  # pylint: disable=unused-argument,no-self-use
+	def processProductActionRequests(self, event):  # pylint: disable=unused-argument
 		logger.error("processProductActionRequests not implemented")
 
 	def getCurrentActiveDesktopName(self, sessionId=None):
@@ -683,7 +690,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		logger.debug("Returning current active dektop name '%s' for session %s", desktop, sessionId)
 		return desktop
 
-	def switchDesktop(self, desktop, sessionId=None):  # pylint: disable=no-self-use
+	def switchDesktop(self, desktop, sessionId=None):
 		if not ("opsiclientd_rpc" in config.getDict() and "command" in config.getDict()["opsiclientd_rpc"]):
 			raise Exception("opsiclientd_rpc command not defined")
 
@@ -741,19 +748,19 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			return True
 		return False
 
-	def clearRebootRequest(self):  # pylint: disable=no-self-use
+	def clearRebootRequest(self):
 		pass
 
-	def clearShutdownRequest(self):  # pylint: disable=no-self-use
+	def clearShutdownRequest(self):
 		pass
 
-	def isRebootRequested(self):  # pylint: disable=no-self-use
+	def isRebootRequested(self):
 		return False
 
-	def isShutdownRequested(self):  # pylint: disable=no-self-use
+	def isShutdownRequested(self):
 		return False
 
-	def isInstallationPending(self):  # pylint: disable=no-self-use
+	def isInstallationPending(self):
 		return state.get("installation_pending", False)
 
 	def showPopup(
@@ -865,7 +872,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 	def popupCloseCallback(self, choiceSubject):  # pylint: disable=unused-argument
 		self.hidePopup()
 
-	def collectLogfiles(self, types: List[str] = None, max_age_days: int = None, timeline_db: bool = True) -> str:  # pylint: disable=no-self-use
+	def collectLogfiles(self, types: List[str] = None, max_age_days: int = None, timeline_db: bool = True) -> str:
 		now = datetime.datetime.now().timestamp()
 		type_patterns = []
 		if not types:

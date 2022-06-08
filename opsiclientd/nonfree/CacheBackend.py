@@ -87,7 +87,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 		self._backend = self._workBackend
 		self._createInstanceMethods()
 
-	def backend_getLicensingInfo(  # pylint: disable=unused-argument,no-self-use
+	def backend_getLicensingInfo(
 		self,
 		licenses: bool = False,
 		legacy_modules: bool = False,

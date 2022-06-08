@@ -9,18 +9,17 @@ Self-service functionality.
 """
 
 import os
-from twisted.internet import defer
 
 from OPSI.Exceptions import OpsiAuthenticationError
-from OPSI.Service.Worker import WorkerOpsiJsonRpc
 from OPSI.Service.Resource import ResourceOpsi
+from OPSI.Service.Worker import WorkerOpsiJsonRpc
+from opsicommon.logging import log_context, logger
+from twisted.internet import defer
 
-from opsicommon.logging import logger, log_context
-
-from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.Config import Config
 from opsiclientd.Events.SwOnDemand import SwOnDemandEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
+from opsiclientd.OpsiService import ServiceConnection
 
 config = Config() # pylint: disable=invalid-name
 service_connection = ServiceConnection() # pylint: disable=invalid-name
@@ -51,10 +50,10 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc): # pylint: disable=too-few-public-me
 			WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 			self._auth_module = None
 			if os.name == 'posix':
-				import OPSI.Backend.Manager.Authentication.PAM # pylint: disable=import-outside-toplevel
+				import OPSI.Backend.Manager.Authentication.PAM  # pylint: disable=import-outside-toplevel
 				self._auth_module = OPSI.Backend.Manager.Authentication.PAM.PAMAuthentication()
 			elif os.name == 'nt':
-				import OPSI.Backend.Manager.Authentication.NT # pylint: disable=import-outside-toplevel
+				import OPSI.Backend.Manager.Authentication.NT  # pylint: disable=import-outside-toplevel
 				self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
 
 	def _getCallInstance(self, result):
@@ -135,12 +134,12 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc): # pylint: disable=too-few-public-me
 		deferred.callback(None)
 		return deferred
 
-	def _openConnection(self, result): # pylint: disable=no-self-use
+	def _openConnection(self, result):
 		if not service_connection.isConfigServiceConnected():
 			service_connection.connectConfigService()
 		return result
 
-	def _closeConnection(self, result): # pylint: disable=no-self-use
+	def _closeConnection(self, result):
 		if service_connection.isConfigServiceConnected():
 			service_connection.disconnectConfigService()
 		return result

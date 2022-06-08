@@ -18,29 +18,26 @@ import threading
 import time
 from urllib.parse import urlparse
 
-from OPSI.Object import ProductOnClient
-from OPSI.Types import forceBool, forceInt, forceProductIdList, forceUnicode
-from OPSI.Util.File.Opsi import PackageContentFile
-from OPSI.Util.Repository import getRepository
-from OPSI.Util.Repository import DepotToLocalDirectorySychronizer
 from OPSI import System
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.BackendManager import BackendExtender
 from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker
+from OPSI.Object import ProductOnClient
+from OPSI.Types import forceBool, forceInt, forceProductIdList, forceUnicode
+from OPSI.Util.File.Opsi import PackageContentFile
+from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, getRepository
+from opsicommon.logging import log_context, logger
 
-from opsicommon.logging import logger, log_context
-
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 from opsiclientd.Config import Config
-from opsiclientd.State import State
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
-from opsiclientd.utils import get_include_exclude_product_ids
-from opsiclientd.OpsiService import ServiceConnection
-from opsiclientd.Timeline import Timeline
-
 from opsiclientd.nonfree import verify_modules
 from opsiclientd.nonfree.CacheBackend import ClientCacheBackend
+from opsiclientd.OpsiService import ServiceConnection
+from opsiclientd.State import State
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd.Timeline import Timeline
+from opsiclientd.utils import get_include_exclude_product_ids
 
 __all__ = ["CacheService", "ConfigCacheService", "ConfigCacheServiceBackendExtension", "ProductCacheService"]
 
@@ -264,7 +261,7 @@ class CacheService(threading.Thread):
 
 
 class ConfigCacheServiceBackendExtension:  # pylint: disable=too-few-public-methods
-	def accessControl_authenticated(self):  # pylint: disable=no-self-use
+	def accessControl_authenticated(self):
 		return True
 
 

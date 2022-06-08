@@ -53,7 +53,7 @@ action_processor_starter = "opsiclientd.__main__:action_processor_starter"
 
 [tool.black]
 line-length = 140
-target-version = ['py39', 'py310']
+target-version = ['py310']
 use-tabs = true
 
 [tool.isort]

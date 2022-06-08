@@ -10,19 +10,19 @@ Processing of events.
 
 # pylint: disable=too-many-lines
 
+import datetime
+import filecmp
 import os
 import re
-import filecmp
 import shutil
-import sys
-import time
-import threading
-import datetime
-import tempfile
 import subprocess
+import sys
+import tempfile
+import threading
+import time
 from urllib.parse import urlparse
-import psutil  # type: ignore[import]
 
+import psutil  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
 from OPSI.Object import ProductOnClient  # type: ignore[import]
 from OPSI.Types import forceInt, forceUnicode, forceUnicodeLower  # type: ignore[import]
@@ -33,23 +33,36 @@ from OPSI.Util.Message import (  # type: ignore[import]
 	NotificationServer,
 	ProgressSubjectProxy,
 )
-from OPSI.Util.Thread import KillableThread  # type: ignore[import]
 from OPSI.Util.Path import cd  # type: ignore[import]
-
-from opsicommon.logging import logger, log_context, logging_config, LOG_INFO  # type: ignore[import]
+from OPSI.Util.Thread import KillableThread  # type: ignore[import]
+from opsicommon.logging import (  # type: ignore[import]
+	LOG_INFO,
+	log_context,
+	logger,
+	logging_config,
+)
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
-from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
-from opsiclientd.utils import get_include_exclude_product_ids
 from opsiclientd.Events.SyncCompleted import SyncCompletedEvent
+from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
 from opsiclientd.Exceptions import CanceledByUserError, ConfigurationError
 from opsiclientd.Localization import _
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
-from opsiclientd.SystemCheck import RUNNING_ON_MACOS, RUNNING_ON_WINDOWS, RUNNING_ON_DARWIN, RUNNING_ON_LINUX
+from opsiclientd.SystemCheck import (
+	RUNNING_ON_DARWIN,
+	RUNNING_ON_LINUX,
+	RUNNING_ON_MACOS,
+	RUNNING_ON_WINDOWS,
+)
 from opsiclientd.Timeline import Timeline
-from opsiclientd.utils import get_version_from_dos_binary, get_version_from_elf_binary, get_version_from_mach_binary
+from opsiclientd.utils import (
+	get_include_exclude_product_ids,
+	get_version_from_dos_binary,
+	get_version_from_elf_binary,
+	get_version_from_mach_binary,
+)
 
 config = Config()
 state = State()
@@ -606,7 +619,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 
 	def updateActionProcessorUnified(
 		self, actionProcessorRemoteDir, actionProcessorCommonDir
-	):  # pylint: disable=no-self-use,too-many-locals,too-many-branches
+	):  # pylint: disable=too-many-locals,too-many-branches
 		actionProcessorFilename = config.get("action_processor", "filename")
 		actionProcessorLocalDir = config.get("action_processor", "local_dir")
 		actionProcessorLocalTmpDir = actionProcessorLocalDir + ".tmp"
@@ -668,7 +681,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				for subdir in dirs:
 					os.chmod(os.path.join(root, subdir), 0o755)
 
-	def updateActionProcessorOld(self, actionProcessorRemoteDir):  # pylint: disable=no-self-use
+	def updateActionProcessorOld(self, actionProcessorRemoteDir):
 		if not RUNNING_ON_WINDOWS and not RUNNING_ON_LINUX:
 			logger.error("Update of action processor without installed opsi-script package not implemented on this os")
 			return
@@ -1088,7 +1101,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			timeline.setEventEnd(eventId=runActionsEventId)
 			self.umountDepotShare()
 
-	def setEnvironment(self):  # pylint: disable=no-self-use
+	def setEnvironment(self):
 		try:
 			logger.debug("Current environment:")
 			for (key, value) in os.environ.items():

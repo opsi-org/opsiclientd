@@ -28,15 +28,15 @@ Timeline event attributes:
 """
 
 import os
-import time
-import threading
 import sqlite3
+import threading
+import time
 
-from opsicommon.logging import logger
-from opsicommon.utils import Singleton
+from OPSI.Backend.SQLite import SQLite
 from OPSI.Types import forceBool, forceInt, forceOpsiTimestamp, forceUnicode
 from OPSI.Util import timestamp
-from OPSI.Backend.SQLite import SQLite
+from opsicommon.logging import logger
+from opsicommon.utils import Singleton
 
 from opsiclientd.Config import Config
 
@@ -189,7 +189,7 @@ class Timeline(metaclass=Singleton):
 			events.append(event)
 		return {'dateTimeFormat': 'iso8601', 'events': events}
 
-	def getHtmlHead(self): # pylint: disable=no-self-use
+	def getHtmlHead(self):
 		now = time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime())
 		return HTML_HEAD % {'date': now}
 

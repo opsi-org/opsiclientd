@@ -12,8 +12,8 @@ import threading
 import time
 
 import opsicommon.logging
-from opsicommon.logging import logger
 from OPSI.Types import forceList
+from opsicommon.logging import logger
 
 from opsiclientd.State import State
 
@@ -46,7 +46,7 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 	def addEventConfig(self, eventConfig):
 		self._eventConfigs.append(eventConfig)
 
-	def _preconditionsFulfilled(self, preconditions): # pylint: disable=no-self-use
+	def _preconditionsFulfilled(self, preconditions):
 		for precondition in preconditions:
 			if not state.get(precondition, False):
 				logger.debug("Precondition '%s' not fulfilled", precondition)
@@ -80,7 +80,7 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 	def createAndFireEvent(self, eventInfo={}, can_cancel=False): # pylint: disable=dangerous-default-value
 		self.fireEvent(self.createEvent(eventInfo), can_cancel=can_cancel)
 
-	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
+	def createEvent(self, eventInfo={}):  # pylint: disable=dangerous-default-value
 		logger.debug("Creating event config from info: %s", eventInfo)
 		eventConfig = self.getEventConfig()
 		logger.debug("Event config: %s", eventConfig)
@@ -140,9 +140,10 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 				self._event = event
 
 			def run(self):
-				with opsicommon.logging.log_context({'instance' : 'event generator ' + self._event.eventConfig.getId()}):
+				with opsicommon.logging.log_context({'instance': 'event generator ' + self._event.eventConfig.getId()}):
 					if self._event.eventConfig.notificationDelay > 0:
-						logger.debug("Waiting %d seconds before notifying listener '%s' of event '%s'",
+						logger.debug(
+							"Waiting %d seconds before notifying listener '%s' of event '%s'",
 							self._event.eventConfig.notificationDelay, self._eventListener, self._event
 						)
 						time.sleep(self._event.eventConfig.notificationDelay)
@@ -180,7 +181,8 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 				self.initialize()
 
 				if self._generatorConfig.activationDelay > 0:
-					logger.debug("Waiting %d seconds before activation of event generator '%s'",
+					logger.debug(
+						"Waiting %d seconds before activation of event generator '%s'",
 						self._generatorConfig.activationDelay, self
 					)
 					time.sleep(self._generatorConfig.activationDelay)

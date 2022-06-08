@@ -11,32 +11,31 @@ The classes are used to create named pipes for remote procedure calls.
 """
 
 import os
+import socket
 import threading
 import time
-import socket
 from ctypes import byref, c_char_p, c_ulong, create_string_buffer
 
 from OPSI.Backend.Backend import describeInterface
-from OPSI.Util import fromJson, toJson
 from OPSI.Service.JsonRpc import JsonRpc
+from OPSI.Util import fromJson, toJson
+from opsicommon.logging import log_context, logger
 
-from opsicommon.logging import logger, log_context
-
-if os.name == 'nt':
+if os.name == "nt":
 	from ctypes import windll
 else:
-	windll = None # pylint: disable=invalid-name
+	windll = None  # pylint: disable=invalid-name
 
 
-def ControlPipeFactory(opsiclientd): # pylint: disable=invalid-name
-	if os.name == 'posix':
+def ControlPipeFactory(opsiclientd):  # pylint: disable=invalid-name
+	if os.name == "posix":
 		return PosixControlDomainSocket(opsiclientd)
-	if os.name == 'nt':
+	if os.name == "nt":
 		return NTControlPipe(opsiclientd)
 	raise NotImplementedError(f"Unsupported operating system: {os.name}")
 
 
-class ClientConnection(threading.Thread): # pylint: disable=too-many-instance-attributes
+class ClientConnection(threading.Thread):  # pylint: disable=too-many-instance-attributes
 	def __init__(self, controller, connection, client_id):
 		threading.Thread.__init__(self)
 		self._controller = controller
@@ -50,16 +49,13 @@ class ClientConnection(threading.Thread): # pylint: disable=too-many-instance-at
 		self._stopEvent = threading.Event()
 		self._stopEvent.clear()
 		self.login_capable = False
-		logger.trace(
-			"%s created controller=%s connection=%s",
-			self.__class__.__name__, self._controller, self._connection
-		)
+		logger.trace("%s created controller=%s connection=%s", self.__class__.__name__, self._controller, self._connection)
 
 	def __str__(self):
 		return f"<{self.__class__.__name__} {self.client_id}>"
 
 	def run(self):
-		with log_context({'instance' : 'control pipe'}):
+		with log_context({"instance": "control pipe"}):
 			try:
 				while not self._stopEvent.is_set():
 					if self.clientInfo:
@@ -76,9 +72,11 @@ class ClientConnection(threading.Thread): # pylint: disable=too-many-instance-at
 
 								if self.clientInfo:
 									# Switch to new protocol
-									self.executeRpc('blockLogin', [self._controller._opsiclientd._blockLogin], with_lock=False) # pylint: disable=protected-access
+									self.executeRpc(
+										"blockLogin", [self._controller._opsiclientd._blockLogin], with_lock=False  # pylint: disable=protected-access
+									)
 					time.sleep(0.5)
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err, exc_info=True)
 			finally:
 				self.clientDisconnected()
@@ -86,10 +84,10 @@ class ClientConnection(threading.Thread): # pylint: disable=too-many-instance-at
 	def stop(self):
 		self._stopEvent.set()
 
-	def read(self): # pylint: disable=no-self-use
+	def read(self):
 		return ""
 
-	def write(self, data): # pylint: disable=unused-argument,no-self-use
+	def write(self, data):  # pylint: disable=unused-argument
 		return False
 
 	def checkConnection(self):
@@ -107,41 +105,28 @@ class ClientConnection(threading.Thread): # pylint: disable=too-many-instance-at
 				self.clientInfo = rpc.get("params", [])
 				self.login_capable = True
 				logger.info("Client %s info set to: %s", self, self.clientInfo)
-				return toJson({
-					"id": rpc.get("id"),
-					"result": f"client {'/'.join(self.clientInfo)}/{self.client_id} registered",
-					"error": None
-				})
+				return toJson(
+					{"id": rpc.get("id"), "result": f"client {'/'.join(self.clientInfo)}/{self.client_id} registered", "error": None}
+				)
 			jsonrpc = JsonRpc(
-				instance=self._controller._opsiclientdRpcInterface, # pylint: disable=protected-access
-				interface=self._controller._opsiclientdRpcInterface.getInterface(), # pylint: disable=protected-access
-				rpc=rpc
+				instance=self._controller._opsiclientdRpcInterface,  # pylint: disable=protected-access
+				interface=self._controller._opsiclientdRpcInterface.getInterface(),  # pylint: disable=protected-access
+				rpc=rpc,
 			)
 			jsonrpc.execute()
 			return toJson(jsonrpc.getResponse())
-		except Exception as rpc_error: # pylint: disable=broad-except
+		except Exception as rpc_error:  # pylint: disable=broad-except
 			logger.error(rpc_error, exc_info=True)
-			return toJson({
-				"id": None,
-				"error": str(rpc_error)
-			})
+			return toJson({"id": None, "error": str(rpc_error)})
 
 	def executeRpc(self, method, params=None, with_lock=True):
 		params = params or []
-		with log_context({'instance' : 'control pipe'}):
+		with log_context({"instance": "control pipe"}):
 			rpc_id = 1
 			if not self.clientInfo:
-				return {
-					"id": rpc_id,
-					"error": f"Cannot execute rpc, not supported by client {self}",
-					"result": None
-				}
+				return {"id": rpc_id, "error": f"Cannot execute rpc, not supported by client {self}", "result": None}
 
-			request = {
-				"id": rpc_id,
-				"method": method,
-				"params": params
-			}
+			request = {"id": rpc_id, "method": method, "params": params}
 			try:
 				if with_lock:
 					self.comLock.acquire()  # pylint: disable=consider-using-with
@@ -164,14 +149,16 @@ class ClientConnection(threading.Thread): # pylint: disable=too-many-instance-at
 				finally:
 					if with_lock:
 						self.comLock.release()
-			except Exception as client_err: # pylint: disable=broad-except
+			except Exception as client_err:  # pylint: disable=broad-except
 				logger.error(client_err, exc_info=True)
 				return {"id": rpc_id, "error": str(client_err), "result": None}
+
 
 class ControlPipe(threading.Thread):
 	"""
 	Base class for a named pipe which handles remote procedure calls.
 	"""
+
 	connection_class = ClientConnection
 
 	def __init__(self, opsiclientd):
@@ -186,7 +173,7 @@ class ControlPipe(threading.Thread):
 		self._clientLock = threading.Lock()
 
 	def run(self):
-		with log_context({'instance' : 'control pipe'}):
+		with log_context({"instance": "control pipe"}):
 			self._running = True
 			self.setup()
 			try:
@@ -200,10 +187,10 @@ class ControlPipe(threading.Thread):
 							self._clients.append(connection)
 							connection.daemon = True
 							connection.start()
-					except Exception as err1: # pylint: disable=broad-except
+					except Exception as err1:  # pylint: disable=broad-except
 						logger.error(err1, exc_info=True)
 						self.setup()
-			except Exception as err2: # pylint: disable=broad-except
+			except Exception as err2:  # pylint: disable=broad-except
 				logger.error(err2, exc_info=True)
 			self._running = False
 			self.teardown()
@@ -221,7 +208,7 @@ class ControlPipe(threading.Thread):
 	def teardown(self):
 		pass
 
-	def waitForClient(self): # pylint: disable=no-self-use
+	def waitForClient(self):
 		return (None, None)
 
 	def clientDisconnected(self, client):
@@ -243,7 +230,7 @@ class ControlPipe(threading.Thread):
 		return False
 
 	def executeRpc(self, method, *params):
-		with log_context({'instance' : 'control pipe'}):
+		with log_context({"instance": "control pipe"}):
 			if not self._clients:
 				raise RuntimeError("Cannot execute rpc, no client connected")
 
@@ -279,7 +266,7 @@ class PosixClientConnection(ClientConnection):
 			if not data:
 				self.clientDisconnected()
 			return data.decode(self._encoding)
-		except Exception as err: # pylint: disable=broad-except
+		except Exception as err:  # pylint: disable=broad-except
 			logger.trace("Failed to read from socket: %s", err)
 		return None
 
@@ -292,13 +279,15 @@ class PosixClientConnection(ClientConnection):
 		self._connection.settimeout(self._writeTimeout)
 		try:
 			self._connection.sendall(data)
-		except Exception as err: # pylint: disable=broad-except
+		except Exception as err:  # pylint: disable=broad-except
 			raise RuntimeError(f"Failed to write to socket: {err}") from err
+
 
 class PosixControlDomainSocket(ControlPipe):
 	"""
 	PosixControlDomainSocket implements a control socket for posix operating systems
 	"""
+
 	connection_class = PosixClientConnection
 
 	def __init__(self, opsiclientd):
@@ -336,22 +325,18 @@ class PosixControlDomainSocket(ControlPipe):
 				if self._stopEvent.is_set():
 					return (None, None)
 
+
 class NTPipeClientConnection(ClientConnection):
 	def checkConnection(self):
 		chBuf = create_string_buffer(self._controller.bufferSize)
 		cbRead = c_ulong(0)
 		cbAvailable = c_ulong(0)
 		fSuccess = windll.kernel32.PeekNamedPipe(
-			self._connection,
-			chBuf,
-			self._controller.bufferSize,
-			byref(cbRead),
-			byref(cbAvailable),
-			None
+			self._connection, chBuf, self._controller.bufferSize, byref(cbRead), byref(cbAvailable), None
 		)
 		if fSuccess != 1:
 			error = windll.kernel32.GetLastError()
-			if error == 109: # ERROR_BROKEN_PIPE
+			if error == 109:  # ERROR_BROKEN_PIPE
 				self.clientDisconnected()
 
 	def read(self):
@@ -360,23 +345,17 @@ class NTPipeClientConnection(ClientConnection):
 			logger.trace("Reading from pipe")
 			chBuf = create_string_buffer(self._controller.bufferSize)
 			cbRead = c_ulong(0)
-			fSuccess = windll.kernel32.ReadFile(
-				self._connection,
-				chBuf,
-				self._controller.bufferSize,
-				byref(cbRead),
-				None
-			)
+			fSuccess = windll.kernel32.ReadFile(self._connection, chBuf, self._controller.bufferSize, byref(cbRead), None)
 			logger.trace("Read %d bytes from pipe", cbRead.value)
 			if cbRead.value > 0:
 				data += chBuf.value
 
 			if fSuccess != 1:
-				if windll.kernel32.GetLastError() == 234: # ERROR_MORE_DATA
+				if windll.kernel32.GetLastError() == 234:  # ERROR_MORE_DATA
 					continue
 				if data:
 					return data.decode()
-				if windll.kernel32.GetLastError() == 109: # ERROR_BROKEN_PIPE
+				if windll.kernel32.GetLastError() == 109:  # ERROR_BROKEN_PIPE
 					self.clientDisconnected()
 
 			return data.decode()
@@ -390,18 +369,12 @@ class NTPipeClientConnection(ClientConnection):
 		data += b"\0"
 
 		cbWritten = c_ulong(0)
-		fSuccess = windll.kernel32.WriteFile(
-			self._connection,
-			c_char_p(data),
-			len(data),
-			byref(cbWritten),
-			None
-		)
+		fSuccess = windll.kernel32.WriteFile(self._connection, c_char_p(data), len(data), byref(cbWritten), None)
 		windll.kernel32.FlushFileBuffers(self._connection)
 		logger.trace("Wrote %d bytes to pipe", cbWritten.value)
 		if not fSuccess:
 			error = windll.kernel32.GetLastError()
-			if error in (232, 109): # ERROR_NO_DATA, ERROR_BROKEN_PIPE
+			if error in (232, 109):  # ERROR_NO_DATA, ERROR_BROKEN_PIPE
 				self.clientDisconnected()
 				return
 			raise RuntimeError(f"Failed to write to pipe (error: {error})")
@@ -410,10 +383,12 @@ class NTPipeClientConnection(ClientConnection):
 				f"Failed to write all bytes to pipe ({cbWritten.value}/{len(data)})",
 			)
 
+
 class NTControlPipe(ControlPipe):
 	"""
 	Control pipe for windows operating systems.
 	"""
+
 	connection_class = NTPipeClientConnection
 
 	def __init__(self, opsiclientd):
@@ -431,7 +406,7 @@ class NTControlPipe(ControlPipe):
 				windll.kernel32.FlushFileBuffers(self._pipe)
 				windll.kernel32.DisconnectNamedPipe(self._pipe)
 				windll.kernel32.CloseHandle(self._pipe)
-			except Exception: # pylint: disable=broad-except
+			except Exception:  # pylint: disable=broad-except
 				pass
 
 	def waitForClient(self):
@@ -451,7 +426,7 @@ class NTControlPipe(ControlPipe):
 			self.bufferSize,
 			self.bufferSize,
 			NMPWAIT_USE_DEFAULT_WAIT,
-			None
+			None,
 		)
 		if self._pipe == INVALID_HANDLE_VALUE:
 			raise Exception(f"Failed to create named pipe: {windll.kernel32.GetLastError()}")
@@ -494,17 +469,17 @@ class OpsiclientdRpcPipeInterface:
 	def backend_getInterface(self):
 		return self.getInterface()
 
-	def backend_info(self): # pylint: disable=no-self-use
+	def backend_info(self):
 		return {}
 
-	def exit(self): # pylint: disable=no-self-use
+	def exit(self):
 		return
 
-	def backend_exit(self): # pylint: disable=no-self-use
+	def backend_exit(self):
 		return
 
 	def getBlockLogin(self):
-		return self.opsiclientd._blockLogin # pylint: disable=protected-access
+		return self.opsiclientd._blockLogin  # pylint: disable=protected-access
 
 	def isRebootRequested(self):
 		return self.isRebootTriggered()

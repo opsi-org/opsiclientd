@@ -8,34 +8,33 @@
 opsiclientd.windows.opsiclientd
 """
 
-import os
-import sys
-import time
-import threading
-import subprocess
 import glob
+import os
 import random
 import string
+import subprocess
+import sys
+import threading
+import time
 
 # pyright: reportMissingImports=false
 import winreg  # type: ignore[import] # pylint: disable=import-error
-import win32con  # type: ignore[import] # pylint: disable=import-error
-import win32api  # type: ignore[import] # pylint: disable=import-error
-import win32com.server.policy  # type: ignore[import] # pylint: disable=import-error
-import win32com.client  # type: ignore[import] # pylint: disable=import-error
-import win32netcon  # type: ignore[import] # pylint: disable=import-error
-import win32net  # type: ignore[import] # pylint: disable=import-error
-import win32security  # type: ignore[import] # pylint: disable=import-error
+
 import pywintypes  # type: ignore[import] # pylint: disable=import-error
-
-from OPSI.Types import forceBool  # type: ignore[import]
+import win32api  # type: ignore[import] # pylint: disable=import-error
+import win32com.client  # type: ignore[import] # pylint: disable=import-error
+import win32com.server.policy  # type: ignore[import] # pylint: disable=import-error
+import win32con  # type: ignore[import] # pylint: disable=import-error
+import win32net  # type: ignore[import] # pylint: disable=import-error
+import win32netcon  # type: ignore[import] # pylint: disable=import-error
+import win32security  # type: ignore[import] # pylint: disable=import-error
 from OPSI import System  # type: ignore[import]
-
+from OPSI.Types import forceBool  # type: ignore[import]
 from opsicommon.logging import logger  # type: ignore[import]
 
-from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd import config
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
+from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 if not RUNNING_ON_WINDOWS:
@@ -56,7 +55,7 @@ class OpsiclientdNT(Opsiclientd):
 		Opsiclientd.__init__(self)
 		self._ms_update_installer = None
 
-	def suspendBitlocker(self):  # pylint: disable=no-self-use
+	def suspendBitlocker(self):
 		logger.notice("Suspending bitlocker for one reboot if active")
 		try:
 			System.execute(
@@ -112,7 +111,9 @@ class OpsiclientdNT(Opsiclientd):
 
 	def isWindowsInstallerBusy(self):
 		if not self._ms_update_installer:
-			from opsiclientd.windows import importWmiAndPythoncom  # pylint: disable=import-outside-toplevel
+			from opsiclientd.windows import (
+				importWmiAndPythoncom,  # pylint: disable=import-outside-toplevel
+			)
 
 			(_wmi, _pythoncom) = importWmiAndPythoncom(importWmi=False, importPythoncom=True)
 			_pythoncom.CoInitialize()
@@ -137,7 +138,7 @@ class OpsiclientdNT(Opsiclientd):
 
 	def cleanup_opsi_setup_user(
 		self, keep_sid: str = None
-	):  # pylint: disable=no-self-use,too-many-locals,too-many-branches,too-many-statements
+	):,too-many-locals,too-many-branches,too-many-statements
 		keep_profile = None
 		modified = True
 		while modified:
@@ -247,7 +248,7 @@ class OpsiclientdNT(Opsiclientd):
 				else:
 					logger.info("Command %s successful: %s", cmd, out)
 
-	def createOpsiSetupUser(self, admin=True, delete_existing=False):  # pylint: disable=no-self-use,too-many-branches
+	def createOpsiSetupUser(self, admin=True, delete_existing=False):,too-many-branches
 		# https://bugs.python.org/file46988/issue.py
 
 		user_info = {
