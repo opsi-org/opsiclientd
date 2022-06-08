@@ -13,49 +13,65 @@ procedure calls
 
 # pylint: disable=too-many-lines
 
-import os
-import re
-import sys
 import codecs
+import datetime
+import email
+import json
+import os
+import platform
+import re
 import socket
+import sys
+import tempfile
 import threading
 import time
-import json
 import urllib
-import email
-import tempfile
-import platform
-import datetime
-from OpenSSL import crypto  # type: ignore[import]
-import msgpack  # type: ignore[import]
+from pathlib import Path
 
+import msgpack  # type: ignore[import]
+from autobahn.twisted.resource import WebSocketResource  # type: ignore[import]
+from autobahn.twisted.websocket import (  # type: ignore[import]
+	WebSocketServerFactory,
+	WebSocketServerProtocol,
+)
+from OpenSSL import crypto  # type: ignore[import]
+from OPSI import System  # type: ignore[import]
+from OPSI import __version__ as python_opsi_version  # type: ignore[import]
+from OPSI.Exceptions import OpsiAuthenticationError  # type: ignore[import]
+from OPSI.Service import OpsiService, SSLContext  # type: ignore[import]
+from OPSI.Service.Resource import (  # type: ignore[import]
+	ResourceOpsi,
+	ResourceOpsiJsonInterface,
+	ResourceOpsiJsonRpc,
+)
+from OPSI.Service.Worker import (  # type: ignore[import]
+	WorkerOpsi,
+	WorkerOpsiJsonInterface,
+	WorkerOpsiJsonRpc,
+)
+from OPSI.Types import forceBool, forceInt, forceUnicode  # type: ignore[import]
+from OPSI.Util.Log import truncateLogData  # type: ignore[import]
+from opsicommon.logging import (  # type: ignore[import]
+	LEVEL_TO_NAME,
+	OPSI_LEVEL_TO_LEVEL,
+	log_context,
+	logger,
+	secret_filter,
+)
 from twisted.internet import reactor
 from twisted.internet.error import CannotListenError
-from twisted.web.static import File
-from twisted.web.resource import Resource
 from twisted.web import server
-from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol  # type: ignore[import]
-from autobahn.twisted.resource import WebSocketResource  # type: ignore[import]
-
-from OPSI import __version__ as python_opsi_version  # type: ignore[import]
-from OPSI import System  # type: ignore[import]
-from OPSI.Util.Log import truncateLogData  # type: ignore[import]
-from OPSI.Exceptions import OpsiAuthenticationError  # type: ignore[import]
-from OPSI.Service import SSLContext, OpsiService  # type: ignore[import]
-from OPSI.Service.Worker import WorkerOpsi, WorkerOpsiJsonRpc, WorkerOpsiJsonInterface  # type: ignore[import]
-from OPSI.Service.Resource import ResourceOpsi, ResourceOpsiJsonRpc, ResourceOpsiJsonInterface  # type: ignore[import]
-from OPSI.Types import forceBool, forceInt, forceUnicode  # type: ignore[import]
-
-from opsicommon.logging import logger, log_context, secret_filter, OPSI_LEVEL_TO_LEVEL, LEVEL_TO_NAME  # type: ignore[import]
+from twisted.web.resource import Resource
+from twisted.web.static import File
 
 from opsiclientd import __version__
+from opsiclientd.Config import OPSI_SETUP_USER_NAME, Config
 from opsiclientd.ControlPipe import OpsiclientdRpcPipeInterface
-from opsiclientd.Config import Config, OPSI_SETUP_USER_NAME
-from opsiclientd.Events.Utilities.Generators import getEventGenerator
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
-from opsiclientd.OpsiService import ServiceConnection
-from opsiclientd.State import State
+from opsiclientd.Events.Utilities.Generators import getEventGenerator
+from opsiclientd.OpsiService import ServiceConnection, download_from_depot
 from opsiclientd.SoftwareOnDemand import ResourceKioskJsonRpc
+from opsiclientd.State import State
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 
@@ -1434,10 +1450,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			if not RUNNING_ON_WINDOWS:
 				raise NotImplementedError(f"Not implemented on {platform.system()}")
 			# pyright: reportMissingImports=false
+			import winreg  # type: ignore[import]  # pylint: disable=import-error,import-outside-toplevel
+
+			import pywintypes  # type: ignore[import]  # pylint: disable=import-error,import-outside-toplevel
 			import win32profile  # type: ignore[import] # pylint: disable=import-error,import-outside-toplevel
 			import win32security  # type: ignore[import]  # pylint: disable=import-error,import-outside-toplevel
-			import winreg  # type: ignore[import]  # pylint: disable=import-error,import-outside-toplevel
-			import pywintypes  # type: ignore[import]  # pylint: disable=import-error,import-outside-toplevel
 
 			for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 				System.logoffSession(session_id)
@@ -1559,3 +1576,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 			result["active_events"] = list(set(active_events))
 		return result
+
+	def downloadFromDepot(self, path: str, destination: str):
+		return download_from_depot(path, Path(destination).resolve())

@@ -9,8 +9,8 @@ utils
 """
 
 import struct
-import netifaces
 
+import netifaces
 from opsicommon.logging import logger
 
 
@@ -116,3 +116,4 @@ def log_network_status():
 				for entry in af_inet_list:
 					status_string += f"Interface {interface}, Address {entry.get('addr')}, Netmask {entry.get('netmask')}\n"
 	logger.info("Current network Status:\n%s", status_string)
+

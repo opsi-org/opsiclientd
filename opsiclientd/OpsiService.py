@@ -13,12 +13,14 @@ import random
 import re
 import threading
 import time
+from pathlib import Path
 
 from OpenSSL.crypto import FILETYPE_PEM, dump_certificate, load_certificate
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
 from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
+from OPSI.Util.Repository import WebDAVRepository
 from OPSI.Util.Thread import KillableThread
 from opsicommon.client.jsonrpc import JSONRPCClient
 from opsicommon.logging import log_context, logger
@@ -434,3 +436,38 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 				break
 			self.terminate()
 			time.sleep(0.5)
+
+
+def download_from_depot(path: str, destination: Path):
+	if not destination.is_dir():
+		destination.mkdir(parents=True)
+
+	depot_id = config.get("depot_server", "depot_id")
+	if not depot_id:
+		depot_id = config.get("depot_server", "master_depot_id")
+	if not depot_id:
+		raise ValueError("Failed to get depot server id from config")
+
+	service_connection = ServiceConnection()
+	service_connection.connectConfigService()
+	depots = service_connection.getConfigService().execute_rpc("host_getObjects", [None, {"id": depot_id}])
+	if not depots or not depots:
+		raise ValueError("Failed to get depot server info from service")
+	url = depots[0].depotWebdavUrl
+	if not url:
+		raise ValueError(f"Failed to get webdav url for depot {depots[0]!r} from service")
+	logger.info("Using depot %r, webdav url %r", depots[0], url)
+	service_connection.disconnectConfigService()
+
+	logger.notice("Downloading '%s' to '%s' from depot %r", path, destination, url)
+	repository = WebDAVRepository(
+		url,
+		username=config.get("global", "host_id"),
+		password=config.get("global", "opsi_host_key"),
+		verify_server_cert=config.get("global", "verify_server_cert") or config.get("global", "verify_server_cert_by_ca"),
+		ca_cert_file=config.ca_cert_file,
+		proxy_url=config.get("global", "proxy_url"),
+		ip_version=config.get("global", "ip_version")
+	)
+	repository.copy(path, str(destination))
+	logger.info("Download completed")
