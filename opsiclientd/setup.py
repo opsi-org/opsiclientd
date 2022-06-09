@@ -223,8 +223,8 @@ def setup_firewall():
 
 def install_service_windows():
 	logger.notice("Installing windows service")
-	from opsiclientd.windows.service import (
-		handle_commandline,  # pylint: disable=import-outside-toplevel
+	from opsiclientd.windows.service import (  # pylint: disable=import-outside-toplevel
+		handle_commandline,
 	)
 
 	handle_commandline(argv=["opsiclientd.exe", "--startup", "auto", "install"])
