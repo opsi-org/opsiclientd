@@ -975,7 +975,7 @@ reference = "uibpypi"
 
 [[package]]
 name = "python-opsi"
-version = "4.2.0.294"
+version = "4.2.0.295"
 description = "The opsi python library"
 category = "main"
 optional = false
@@ -2057,8 +2057,8 @@ pytest-cov = [
     {file = "pytest_cov-3.0.0-py3-none-any.whl", hash = "sha256:578d5d15ac4a25e5f961c938b85a05b09fdaae9deef3bb6de9a6e766622ca7a6"},
 ]
 python-opsi = [
-    {file = "python-opsi-4.2.0.294.tar.gz", hash = "sha256:da4bbe632a6171104cc2d40fabb7599318d968638f850ed3f94d5ba4454dbf68"},
-    {file = "python_opsi-4.2.0.294-py3-none-any.whl", hash = "sha256:9f3103a4149a54ed06ad0d9244d30bf5c38f8f4d531880f1a4c403c717f34671"},
+    {file = "python-opsi-4.2.0.295.tar.gz", hash = "sha256:1afc4dde93445800c22fdec6367c1d26c85c297ca12317d6a69ec47a26e6d647"},
+    {file = "python_opsi-4.2.0.295-py3-none-any.whl", hash = "sha256:4926d918fde22ca2eafa2ed48d79b98f69c3a40b8b9e92d5a9e15e0c1238732b"},
 ]
 python-opsi-common = [
     {file = "python-opsi-common-4.2.0.287.tar.gz", hash = "sha256:a11c60b66b8efa1bc4c05b6365b8c4db0d49bdec64d6da4c0dec9fbc8b42c3aa"},
@@ -2113,6 +2113,7 @@ sqlalchemy = [
     {file = "SQLAlchemy-1.4.37-cp27-cp27m-macosx_10_14_x86_64.whl", hash = "sha256:d9050b0c4a7f5538650c74aaba5c80cd64450e41c206f43ea6d194ae6d060ff9"},
     {file = "SQLAlchemy-1.4.37-cp27-cp27m-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:b4c92823889cf9846b972ee6db30c0e3a92c0ddfc76c6060a6cda467aa5fb694"},
     {file = "SQLAlchemy-1.4.37-cp27-cp27m-win32.whl", hash = "sha256:b55932fd0e81b43f4aff397c8ad0b3c038f540af37930423ab8f47a20b117e4c"},
+    {file = "SQLAlchemy-1.4.37-cp27-cp27m-win_amd64.whl", hash = "sha256:4a17c1a1152ca4c29d992714aa9df3054da3af1598e02134f2e7314a32ef69d8"},
     {file = "SQLAlchemy-1.4.37-cp27-cp27mu-manylinux_2_5_x86_64.manylinux1_x86_64.whl", hash = "sha256:ffe487570f47536b96eff5ef2b84034a8ba4e19aab5ab7647e677d94a119ea55"},
     {file = "SQLAlchemy-1.4.37-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:78363f400fbda80f866e8e91d37d36fe6313ff847ded08674e272873c1377ea5"},
     {file = "SQLAlchemy-1.4.37-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7ee34c85cbda7779d66abac392c306ec78c13f5c73a1f01b8b767916d4895d23"},
