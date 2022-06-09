@@ -8,25 +8,33 @@
 setup tasks
 """
 
-from argparse import Namespace
-import os
 import codecs
-import ipaddress
-from pathlib import Path
-import subprocess
 import datetime
+import ipaddress
+import os
+import subprocess
+from argparse import Namespace
+from pathlib import Path
 
-from OpenSSL.crypto import FILETYPE_PEM, load_certificate, load_privatekey  # type: ignore[import]
+from OpenSSL.crypto import FILETYPE_PEM  # type: ignore[import]
 from OpenSSL.crypto import Error as CryptoError
-
+from OpenSSL.crypto import load_certificate, load_privatekey  # type: ignore[import]
+from opsicommon.client.jsonrpc import JSONRPCClient  # type: ignore[import]
 from opsicommon.logging import logger, secret_filter  # type: ignore[import]
 from opsicommon.ssl import as_pem, create_ca, create_server_cert  # type: ignore[import]
-from opsicommon.system.network import get_ip_addresses, get_hostnames, get_fqdn  # type: ignore[import]
-from opsicommon.client.jsonrpc import JSONRPCClient  # type: ignore[import]
+from opsicommon.system.network import (  # type: ignore[import]
+	get_fqdn,
+	get_hostnames,
+	get_ip_addresses,
+)
 
 from opsiclientd.Config import Config
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_LINUX, RUNNING_ON_MACOS
 from opsiclientd.OpsiService import update_ca_cert
+from opsiclientd.SystemCheck import (
+	RUNNING_ON_LINUX,
+	RUNNING_ON_MACOS,
+	RUNNING_ON_WINDOWS,
+)
 
 if not RUNNING_ON_WINDOWS:
 	WindowsError = RuntimeError
@@ -215,12 +223,15 @@ def setup_firewall():
 
 def install_service_windows():
 	logger.notice("Installing windows service")
-	from opsiclientd.windows.service import handle_commandline  # pylint: disable=import-outside-toplevel
+	from opsiclientd.windows.service import (
+		handle_commandline,  # pylint: disable=import-outside-toplevel
+	)
 
 	handle_commandline(argv=["opsiclientd.exe", "--startup", "auto", "install"])
 
 	# pyright: reportMissingImports=false
 	import winreg  # pylint: disable=import-outside-toplevel,import-error
+
 	import win32process  # type: ignore[import] # pylint: disable=import-outside-toplevel,import-error
 
 	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Services\opsiclientd")
@@ -347,6 +358,7 @@ def setup_on_shutdown():
 	logger.notice("Creating opsi shutdown install policy")
 	# pyright: reportMissingImports=false
 	import winreg  # pylint: disable=import-outside-toplevel,import-error
+
 	import win32process  # pylint: disable=import-outside-toplevel,import-error
 
 	GPO_NAME = "opsi shutdown install policy"

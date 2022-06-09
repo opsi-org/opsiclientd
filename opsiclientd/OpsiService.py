@@ -14,12 +14,13 @@ import re
 import threading
 import time
 from pathlib import Path
+from typing import Union
 
 from OpenSSL.crypto import FILETYPE_PEM, dump_certificate, load_certificate
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
-from OPSI.Types import forceBool, forceFqdn, forceInt, forceUnicode
+from OPSI.Types import forceBool, forceFqdn, forceInt, forceProductId, forceUnicode
 from OPSI.Util.Repository import WebDAVRepository
 from OPSI.Util.Thread import KillableThread
 from opsicommon.client.jsonrpc import JSONRPCClient
@@ -438,27 +439,36 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 			time.sleep(0.5)
 
 
-def download_from_depot(path: str, destination: Path):
-	if not destination.is_dir():
-		destination.mkdir(parents=True)
-
-	depot_id = config.get("depot_server", "depot_id")
-	if not depot_id:
-		depot_id = config.get("depot_server", "master_depot_id")
-	if not depot_id:
-		raise ValueError("Failed to get depot server id from config")
+def download_from_depot(product_id: str, destination: Union[str, Path], sub_path: str = None):
+	product_id = forceProductId(product_id)
+	if isinstance(destination, str):
+		destination = Path(destination).resolve()
 
 	service_connection = ServiceConnection()
 	service_connection.connectConfigService()
-	depots = service_connection.getConfigService().execute_rpc("host_getObjects", [None, {"id": depot_id}])
-	if not depots or not depots:
-		raise ValueError("Failed to get depot server info from service")
-	url = depots[0].depotWebdavUrl
+
+	product_idents = service_connection.getConfigService().execute_rpc("product_getIdents", ["hash", {"id": product_id}])
+	if not product_idents:
+		raise ValueError(f"Product {product_id!r} not available")
+
+	selected_depot, _depot_protocol = config.getDepot(
+		configService=service_connection.getConfigService(), productIds=[product_id], forceDepotProtocol="webdav"
+	)
+
+	if not selected_depot:
+		raise ValueError(f"Failed to get depot server for product {product_id!r}")
+
+	url = selected_depot.depotWebdavUrl
 	if not url:
-		raise ValueError(f"Failed to get webdav url for depot {depots[0]!r} from service")
-	logger.info("Using depot %r, webdav url %r", depots[0], url)
+		raise ValueError(f"Failed to get webdav url for depot {selected_depot!r} from service")
+	logger.info("Using depot %r, webdav url %r", selected_depot, url)
+
 	service_connection.disconnectConfigService()
 
+	if not destination.is_dir():
+		destination.mkdir(parents=True)
+
+	path = f"/{product_id}{('/' + sub_path.lstrip('/') if sub_path else '')}"
 	logger.notice("Downloading '%s' to '%s' from depot %r", path, destination, url)
 	repository = WebDAVRepository(
 		url,
@@ -470,4 +480,6 @@ def download_from_depot(path: str, destination: Path):
 		ip_version=config.get("global", "ip_version")
 	)
 	repository.copy(path, str(destination))
+	repository.disconnect()
+
 	logger.info("Download completed")

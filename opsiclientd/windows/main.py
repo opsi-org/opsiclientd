@@ -151,13 +151,20 @@ def main():  # pylint: disable=too-many-statements,too-many-branches
 		handle_commandline()
 		return
 
-	if any(arg in sys.argv[1:] for arg in ("setup", "--version", "--help")):
+	if any(arg in sys.argv[1:] for arg in ("setup", "download-from-depot", "--version", "--help")):
 		options = parser.parse_args()
 		if options.config_file:
 			Config().set("global", "config_file", options.config_file)
 		if options.action == "setup":
 			oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
 			setup(full=True, options=options)
+		elif options.action == "download-from-depot":
+			oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
+			from opsiclientd.OpsiService import (  # pylint: disable=import-outside-toplevel
+				download_from_depot,
+			)
+			Config().readConfigFile()
+			download_from_depot(*options.arguments)
 		return
 
 	if "--elevated" not in sys.argv and parent_name != "python.exe":

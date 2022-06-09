@@ -612,26 +612,8 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 		return self.get("config_service", "url")
 
-	def selectDepotserver(
-		self, configService, mode="mount", event=None, productIds=[], masterOnly=False
-	):  # pylint: disable=dangerous-default-value,too-many-arguments,too-many-locals,too-many-branches,too-many-statements,redefined-builtin
-		assert mode in ("mount", "sync")
-		productIds = forceProductIdList(productIds)
-
-		logger.notice("Selecting depot for products %s", productIds)
-		logger.notice("MasterOnly --> '%s'", masterOnly)
-
-		if event and event.eventConfig.useCachedProducts:
-			cacheDepotDir = os.path.join(self.get("cache_service", "storage_dir"), "depot").replace("\\", "/").replace("//", "/")
-			logger.notice("Using depot cache: %s", cacheDepotDir)
-			self.set_temporary_depot_path(cacheDepotDir)
-			if RUNNING_ON_WINDOWS:
-				self.setTemporaryDepotDrive(cacheDepotDir.split(":")[0] + ":")
-			else:
-				self.setTemporaryDepotDrive(cacheDepotDir)
-			self.set("depot_server", "url", "smb://localhost/noshare/" + ("/".join(cacheDepotDir.split("/")[1:])))
-			return
-
+	def getDepot(self, configService, event=None, productIds=None, masterOnly=False, forceDepotProtocol=None):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
+		productIds = forceProductIdList(productIds or [])
 		if not configService:
 			raise Exception("Not connected to config service")
 
@@ -643,6 +625,9 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		configStates = []
 		dynamicDepot = False
 		depotProtocol = "cifs"
+		if forceDepotProtocol:
+			depotProtocol = forceDepotProtocol
+
 		configStates = configService.configState_getObjects(
 			configId=[
 				"clientconfig.depot.dynamic",
@@ -661,8 +646,8 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 					depotUrl = forceUrl(configState.values[0])
 					self.set("depot_server", "depot_id", "")
 					self.set("depot_server", "url", depotUrl)
-					logger.notice("Depot url was set to '%s' from configState %s", depotUrl, configState)
-					return
+					logger.warning("Depot url was set to '%s' from configState %s", depotUrl, configState)
+					return None
 				except Exception as err:  # pylint: disable=broad-except
 					logger.error("Failed to set depot url from values %s in configState %s: %s", configState.values, configState, err)
 			elif configState.configId == "opsiclientd.depot_server.depot_id" and configState.values:
@@ -675,21 +660,17 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			elif not masterOnly and (configState.configId == "clientconfig.depot.dynamic") and configState.values:
 				dynamicDepot = forceBool(configState.values[0])
 
-			elif configState.configId == "clientconfig.depot.protocol" and configState.values:
+			elif configState.configId == "clientconfig.depot.protocol" and configState.values and not forceDepotProtocol:
 				depotProtocol = configState.values[0]
 				logger.info("Using depot protocol '%s' from config state '%s'", depotProtocol, configState.configId)
 
-		if event and event.eventConfig.depotProtocol:
+		if event and event.eventConfig.depotProtocol and not forceDepotProtocol:
 			logger.info("Using depot protocol '%s' from event '%s'", event.eventConfig.depotProtocol, event.eventConfig.getName())
 			depotProtocol = event.eventConfig.depotProtocol
 
 		if depotProtocol not in ("webdav", "cifs"):
 			logger.error("Invalid protocol %s specified, using cifs", depotProtocol)
 			depotProtocol = "cifs"
-
-		# if depotProtocol == "webdav" and mode == "mount" and not RUNNING_ON_LINUX and not self.get('global', 'install_opsi_ca_into_os_store'):
-		# 	logger.error("Using cifs instead of webdav to mount depot share because global.install_opsi_ca_into_os_store is disabled")
-		# 	depotProtocol = "cifs"
 
 		if dynamicDepot:
 			if not depotIds:
@@ -773,6 +754,32 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 					logger.error("Failed to select depot: %s", err, exc_info=True)
 			else:
 				logger.info("No alternative depot for products: %s", productIds)
+
+		return selectedDepot, depotProtocol
+
+	def selectDepotserver(
+		self, configService, mode="mount", event=None, productIds=None, masterOnly=False
+	):  # pylint: disable=too-many-arguments
+		assert mode in ("mount", "sync")
+		productIds = forceProductIdList(productIds or [])
+
+		logger.notice("Selecting depot for products %s", productIds)
+		logger.notice("MasterOnly --> '%s'", masterOnly)
+
+		if event and event.eventConfig.useCachedProducts:
+			cacheDepotDir = os.path.join(self.get("cache_service", "storage_dir"), "depot").replace("\\", "/").replace("//", "/")
+			logger.notice("Using depot cache: %s", cacheDepotDir)
+			self.set_temporary_depot_path(cacheDepotDir)
+			if RUNNING_ON_WINDOWS:
+				self.setTemporaryDepotDrive(cacheDepotDir.split(":")[0] + ":")
+			else:
+				self.setTemporaryDepotDrive(cacheDepotDir)
+			self.set("depot_server", "url", "smb://localhost/noshare/" + ("/".join(cacheDepotDir.split("/")[1:])))
+			return
+
+		selectedDepot, depotProtocol = self.getDepot(
+			configService=configService, event=event, productIds=productIds, masterOnly=masterOnly
+		)
 
 		logger.notice("Selected depot for mode '%s' is '%s', protocol '%s'", mode, selectedDepot, depotProtocol)
 		self.set("depot_server", "depot_id", selectedDepot.id)

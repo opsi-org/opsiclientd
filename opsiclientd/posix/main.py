@@ -12,19 +12,17 @@ import os
 import signal
 import sys
 import time
-from signal import SIGHUP, SIGTERM, SIGINT
+from signal import SIGHUP, SIGINT, SIGTERM
 
 import opsicommon.logging
-from opsicommon.logging import (
-	logger, logging_config, LOG_NONE,
-	init_logging as oc_init_logging
-)
+from opsicommon.logging import LOG_NONE
+from opsicommon.logging import init_logging as oc_init_logging
+from opsicommon.logging import logger, logging_config
 
-from opsiclientd import parser, init_logging, DEFAULT_STDERR_LOG_FORMAT
+from opsiclientd import DEFAULT_STDERR_LOG_FORMAT, init_logging, parser
 from opsiclientd.Config import Config
-from opsiclientd.setup import setup
 from opsiclientd.nonfree.Posix import OpsiclientdPosix
-
+from opsiclientd.setup import setup
 
 opsiclientd = None  # pylint: disable=invalid-name
 
@@ -106,6 +104,15 @@ def main():
 	if options.action == "setup":
 		oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
 		setup(full=True, options=options)
+		return
+
+	if options.action == "download-from-depot":
+		oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
+		from opsiclientd.OpsiService import (  # pylint: disable=import-outside-toplevel
+			download_from_depot,
+		)
+		Config().readConfigFile()
+		download_from_depot(*options.arguments)
 		return
 
 	init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)

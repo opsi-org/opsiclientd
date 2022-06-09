@@ -1577,5 +1577,5 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			result["active_events"] = list(set(active_events))
 		return result
 
-	def downloadFromDepot(self, path: str, destination: str):
-		return download_from_depot(path, Path(destination).resolve())
+	def downloadFromDepot(self, product_id: str, destination: str, sub_path: str = None):
+		return download_from_depot(product_id, Path(destination).resolve(), sub_path)

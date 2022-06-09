@@ -88,10 +88,15 @@ parser.add_argument(
 parser.add_argument(
 	"action",
 	nargs="?",
-	choices=("start", "stop", "restart", "install", "update", "remove", "setup"),
+	choices=("start", "stop", "restart", "install", "update", "remove", "setup", "download-from-depot"),
 	default=None,
 	metavar="ACTION",
-	help="The ACTION to perform (start / stop / restart / install / update / remove / setup)."
+	help="The ACTION to perform (start / stop / restart / install / update / remove / setup / download-from-depot)."
+)
+parser.add_argument(
+	"arguments",
+	nargs='*',
+	default=None
 )
 
 
