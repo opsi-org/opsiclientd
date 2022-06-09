@@ -1369,7 +1369,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		depot_drive = config.getDepotDrive()
 		if depot_path == depot_drive:
 			# Prefer depot drive if not in use
-			depot_path = depot_drive = System.get_available_drive_letter(start=depot_drive).rstrip(":") + ":"
+			depot_path = depot_drive = System.get_available_drive_letter(start=depot_drive.rstrip(":")).rstrip(":") + ":"
 
 		if not os.path.isabs(script):
 			script = os.path.join(depot_path, os.sep, script)
