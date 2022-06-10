@@ -367,7 +367,11 @@ def setup_on_shutdown():
 		r"SOFTWARE\Microsoft\Windows\CurrentVersion\Group Policy\Scripts\Shutdown",
 	]
 
-	opsiclientd_rpc = os.path.realpath(config.get("opsiclientd_rpc", "command").split('"')[1].strip('"'))
+	opsiclientd_rpc = None
+	try:
+		opsiclientd_rpc = os.path.realpath(config.get("opsiclientd_rpc", "command").split('"')[1].strip('"'))
+	except IndexError:
+		pass
 	if not opsiclientd_rpc:
 		opsiclientd_rpc = os.path.join(os.path.dirname(os.path.realpath(__file__)), "opsiclientd_rpc.exe")
 
