@@ -251,11 +251,14 @@ class OpsiclientdNT(Opsiclientd):
 	def createOpsiSetupUser(self, admin=True, delete_existing=False):  # pylint: disable=too-many-branches
 		# https://bugs.python.org/file46988/issue.py
 
+		password_chars = [random.choice(string.ascii_letters + string.digits) for i in range(9)] + ["/", "?", "9", "a", "Z"]
+		random.shuffle(password_chars)
+
 		user_info = {
 			"name": OPSI_SETUP_USER_NAME,
 			"full_name": "opsi setup user",
 			"comment": "auto created by opsi",
-			"password": f"/{''.join((random.choice(string.ascii_letters + string.digits) for i in range(8)))}?",
+			"password": ''.join(password_chars),
 			"priv": win32netcon.USER_PRIV_USER,
 			"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD,
 		}
