@@ -1237,7 +1237,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					try:
 						time.sleep(3)
 						for notifierHandle, notifierPid in zip(notifierHandles, notifierPids):
-							notifierHandle.poll()
+							if hasattr(notifierHandle, "poll"):
+								notifierHandle.poll()
 							System.terminateProcess(processId=notifierPid)
 					except Exception:  # pylint: disable=broad-except
 						pass
@@ -1445,7 +1446,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 								try:
 									time.sleep(3)
 									for notifierHandle, notifierPid in zip(notifierHandles, notifierPids):
-										notifierHandle.poll()
+										if hasattr(notifierHandle, "poll"):
+											notifierHandle.poll()
 										System.terminateProcess(processId=notifierPid)
 								except Exception:  # pylint: disable=broad-except
 									pass
@@ -1780,7 +1782,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				try:
 					time.sleep(3)
 					for notifierHandle, notifierPid in zip(notifierHandles, notifierPids):
-						if psutil.pid_exists(notifierPid):
+						if psutil.pid_exists(notifierPid) and hasattr(notifierHandle, "poll"):
 							notifierHandle.poll()
 						time.sleep(0.1)
 						if psutil.pid_exists(notifierPid):
