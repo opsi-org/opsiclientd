@@ -22,7 +22,7 @@ __all__ = ['Event', 'EventGenerator', 'EventListener']
 state = State()
 
 
-class CannotCancelEventError(ValueError):
+class CannotCancelEventError(RuntimeError):
 	pass
 
 
