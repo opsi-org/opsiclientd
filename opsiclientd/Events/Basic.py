@@ -50,7 +50,7 @@ class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-att
 	def addEventConfig(self, eventConfig):
 		self._eventConfigs.append(eventConfig)
 
-	def _preconditionsFulfilled(self, preconditions):  # pylint: disable=no-self-use
+	def _preconditionsFulfilled(self, preconditions):
 		for precondition in preconditions:
 			if not state.get(precondition, False):
 				logger.debug("Precondition '%s' not fulfilled", precondition)
