@@ -37,7 +37,7 @@ from opsiclientd import __version__, check_signature, config
 from opsiclientd.ControlPipe import ControlPipeFactory
 from opsiclientd.ControlServer import ControlServer
 from opsiclientd.EventProcessing import EventProcessingThread
-from opsiclientd.Events.Basic import EventListener
+from opsiclientd.Events.Basic import EventListener, CannotCancelEventError
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventGenerator
 from opsiclientd.Events.DaemonStartup import DaemonStartupEventGenerator
 from opsiclientd.Events.GUIStartup import (
@@ -538,13 +538,13 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				if event.eventConfig.actionType != "login" and ept.event.eventConfig.actionType != "login":
 					if not ept.is_cancelable():
 						logger.notice("Already processing a non-cancelable (and non-login) event: %s", ept.event.eventConfig.getId())
-						raise ValueError(f"Already processing a non-cancelable (and non-login) event: {ept.event.eventConfig.getId()}")
+						raise CannotCancelEventError(f"Already processing a non-cancelable (and non-login) event: {ept.event.eventConfig.getId()}")
 					if not can_cancel:
 						logger.notice(
 							"Currently running event can only be canceled by manual action (ControlServer/Kiosk): %s",
 							ept.event.eventConfig.getId(),
 						)
-						raise ValueError(
+						raise CannotCancelEventError(
 							"Currently running event can only be canceled by manual action (ControlServer/Kiosk): "
 							f"{ept.event.eventConfig.getId()}"
 						)

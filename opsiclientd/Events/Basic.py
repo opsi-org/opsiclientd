@@ -22,7 +22,11 @@ __all__ = ['Event', 'EventGenerator', 'EventListener']
 state = State()
 
 
-class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attributes
+class CannotCancelEventError(ValueError):
+	pass
+
+
+class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-attributes
 	def __init__(self, opsiclientd, generatorConfig):
 		threading.Thread.__init__(self, daemon=True)
 		self._opsiclientd = opsiclientd
@@ -46,7 +50,7 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 	def addEventConfig(self, eventConfig):
 		self._eventConfigs.append(eventConfig)
 
-	def _preconditionsFulfilled(self, preconditions):
+	def _preconditionsFulfilled(self, preconditions):  # pylint: disable=no-self-use
 		for precondition in preconditions:
 			if not state.get(precondition, False):
 				logger.debug("Precondition '%s' not fulfilled", precondition)
@@ -77,7 +81,7 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 
 		return actualConfig['config']
 
-	def createAndFireEvent(self, eventInfo={}, can_cancel=False): # pylint: disable=dangerous-default-value
+	def createAndFireEvent(self, eventInfo={}, can_cancel=False):  # pylint: disable=dangerous-default-value
 		self.fireEvent(self.createEvent(eventInfo), can_cancel=can_cancel)
 
 	def createEvent(self, eventInfo={}):  # pylint: disable=dangerous-default-value
@@ -150,7 +154,7 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 					try:
 						logger.info("Calling processEvent on listener %s", self._eventListener)
 						self._eventListener.processEvent(self._event)
-					except Exception as err: # pylint: disable=broad-except
+					except Exception as err:  # pylint: disable=broad-except
 						logger.error(err, exc_info=True)
 
 		logger.info("Starting FireEventThread for listeners: %s", self._eventListeners)
@@ -162,7 +166,7 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 		try:
 			for listener in self._eventListeners:
 				# Check if all event listeners can handle the event
-				# raises ValueError if another event is already running
+				# raises CannotCancelEventError if another event is already running
 				listener.canProcessEvent(event, can_cancel=can_cancel)
 			for listener in self._eventListeners:
 				# Create a new thread for each event listener
@@ -175,7 +179,7 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 				self._opsiclientd.eventLock.release()
 
 	def run(self):
-		with opsicommon.logging.log_context({'instance' : f'event generator {self._generatorConfig.getId()}'}):
+		with opsicommon.logging.log_context({'instance': f'event generator {self._generatorConfig.getId()}'}):
 			try:
 				logger.info("Initializing event generator '%s'", self)
 				self.initialize()
@@ -193,23 +197,26 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 					(self._eventsOccured <= self._generatorConfig.maxRepetitions)
 				):
 					logger.info("Getting next event...")
-					event = self.getNextEvent() # pylint: disable=assignment-from-none,assignment-from-no-return
-					self._eventsOccured += 1 # Count as occured, even if event is None!
+					event = self.getNextEvent()  # pylint: disable=assignment-from-none,assignment-from-no-return
+					self._eventsOccured += 1  # Count as occured, even if event is None!
 					if event:
 						logger.info("Got new event: %s (%d/%d)", event, self._eventsOccured, self._generatorConfig.maxRepetitions + 1)
-						self.fireEvent(event)
+						try:
+							self.fireEvent(event)
+						except CannotCancelEventError as cce_error:
+							logger.warning("Event generator '%s' could not fire: %s", self, cce_error, exc_info=True)
 					for _unused in range(10):
 						if self._stopped:
 							break
 						time.sleep(1)
 				if not self._stopped:
 					logger.notice("Event generator '%s' now deactivated after %d event occurrences", self, self._eventsOccured)
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				if not self._stopped:
 					logger.error("Failure in event generator '%s': %s", self, err, exc_info=True)
 			try:
 				self.cleanup()
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				if not self._stopped:
 					logger.error("Failed to clean up: %s", err)
 
@@ -221,9 +228,9 @@ class EventGenerator(threading.Thread): # pylint: disable=too-many-instance-attr
 			self._event.set()
 
 
-class Event: # pylint: disable=too-few-public-methods
+class Event:  # pylint: disable=too-few-public-methods
 	""" Basic event class """
-	def __init__(self, eventConfig, eventInfo={}): # pylint: disable=dangerous-default-value
+	def __init__(self, eventConfig, eventInfo={}):  # pylint: disable=dangerous-default-value
 		self.eventConfig = eventConfig
 		self.eventInfo = eventInfo
 
@@ -235,13 +242,13 @@ class Event: # pylint: disable=too-few-public-methods
 		return actionProcessorCommand
 
 
-class EventListener: # pylint: disable=too-few-public-methods
+class EventListener:  # pylint: disable=too-few-public-methods
 	def __init__(self):
 		logger.debug("EventListener initiated")
 
-	def processEvent(self, event): # pylint: disable=unused-argument
+	def processEvent(self, event):  # pylint: disable=unused-argument
 		logger.warning("%s: processEvent() not implemented", self)
 
-	def canProcessEvent(self, event, can_cancel=False): # pylint: disable=unused-argument
+	def canProcessEvent(self, event, can_cancel=False):  # pylint: disable=unused-argument
 		logger.warning("%s: canProcessEvent() not implemented", self)
 		raise NotImplementedError(f"{self}: canProcessEvent() not implemented")
