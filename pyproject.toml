@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "opsiclientd"
-version = "4.2.0.121"
+version = "4.2.0.122"
 description = "opsi client daemon. The service running on opsi clients."
 maintainers = ["uib GmbH <info@uib.de>"]
 authors = ["uib GmbH <info@uib.de>"]
