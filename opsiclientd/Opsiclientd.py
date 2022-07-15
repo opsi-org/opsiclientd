@@ -21,6 +21,7 @@ import threading
 import time
 import urllib.request
 from contextlib import contextmanager
+from ctypes import WinError
 from pathlib import Path
 from typing import List
 
@@ -37,7 +38,7 @@ from opsiclientd import __version__, check_signature, config
 from opsiclientd.ControlPipe import ControlPipeFactory
 from opsiclientd.ControlServer import ControlServer
 from opsiclientd.EventProcessing import EventProcessingThread
-from opsiclientd.Events.Basic import EventListener, CannotCancelEventError
+from opsiclientd.Events.Basic import CannotCancelEventError, EventListener
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventGenerator
 from opsiclientd.Events.DaemonStartup import DaemonStartupEventGenerator
 from opsiclientd.Events.GUIStartup import (
@@ -237,7 +238,11 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					logger.info("Terminating block login notifier app (pid %s)", self._blockLoginNotifierPid)
 					System.terminateProcess(processId=self._blockLoginNotifierPid)
 				except Exception as err:  # pylint: disable=broad-except
-					logger.warning("Failed to terminate block login notifier app: %s", err)
+					log = logger.warning
+					if isinstance(err, OSError) and getattr(err, "errno", None) == 87:
+						# Process already terminated
+						log = logger.debug
+					log("Failed to terminate block login notifier app: %s", err)
 				self._blockLoginNotifierPid = None
 
 		if changed and self._controlPipe:
