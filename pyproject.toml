@@ -37,14 +37,14 @@ isort = "^5.10.1"
 macholib = {version = "^1.14", platform = "darwin"}
 mock = "^4.0"
 mypy = "^0.950"
-pefile = {version = "^2021.9", platform = "win32"}
+pefile = {version = "^2022.5", platform = "win32"}
 pylint = "^2.5"
 pytest = "^7.1"
 pytest-cov = "^3.0"
 pywin32-ctypes = {version = "^0.2", platform = "win32"}
 requests = "^2.25"
 tan = "^22.2"
-pyinstaller = "^5.1"
+pyinstaller = "^5.2"
 
 [tool.poetry.scripts]
 opsiclientd = "opsiclientd.__main__:opsiclientd"
