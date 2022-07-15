@@ -26,6 +26,7 @@ import tempfile
 import threading
 import time
 import urllib
+from collections import namedtuple
 from pathlib import Path
 
 import msgpack  # type: ignore[import]
@@ -272,10 +273,10 @@ class WorkerOpsiclientd(WorkerOpsi):
 		return (user.lower(), password)
 
 	def _errback(self, failure):
-		if self.request.code == 401 and self.request.getClientIP() != "127.0.0.1":
+		client_ip = self.request.getClientAddress().host
+		if self.request.code == 401 and client_ip != "127.0.0.1":
 			maxAuthenticationFailures = config.get("control_server", "max_authentication_failures")
 			if maxAuthenticationFailures > 0:
-				client_ip = self.request.getClientIP()
 				if client_ip not in self.service.authFailures:
 					self.service.authFailures[client_ip] = {"count": 0, "blocked_time": 0}
 				self.service.authFailures[client_ip]["count"] += 1
@@ -292,7 +293,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 		try:
 			maxAuthenticationFailures = config.get("control_server", "max_authentication_failures")
 			if maxAuthenticationFailures > 0:
-				client_ip = self.request.getClientIP()
+				client_ip = self.request.getClientAddress().host
 				if client_ip in self.service.authFailures and self.service.authFailures[client_ip]["blocked_time"]:
 					if time.time() - self.service.authFailures[client_ip]["blocked_time"] > 60:
 						# Unblock after 60 seconds
@@ -330,7 +331,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 		# Auth ok
 		self.session.authenticated = True
 
-		client_ip = self.request.getClientIP()
+		client_ip = self.request.getClientAddress().host
 		if client_ip in self.service.authFailures:
 			del self.service.authFailures[client_ip]
 
@@ -735,6 +736,9 @@ class ControlServer(OpsiService, threading.Thread):  # pylint: disable=too-many-
 		)
 
 
+ClientAddress = namedtuple("ClientAddress", ["type", "host", "port"])
+
+
 class RequestAdapter:
 	def __init__(self, connection_request):
 		self.connection_request = connection_request
@@ -742,8 +746,8 @@ class RequestAdapter:
 	def __getattr__(self, name):
 		return getattr(self.connection_request, name)
 
-	def getClientIP(self):
-		return self.connection_request.peer.split(":")[1]
+	def getClientAddress(self):
+		return ClientAddress(*self.connection_request.peer.split(":"))
 
 	def getAllHeaders(self):
 		return self.connection_request.headers
