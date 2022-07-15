@@ -16,6 +16,7 @@ import os
 import sys
 import tempfile
 from logging.handlers import RotatingFileHandler
+from typing import Union
 
 import psutil
 from OPSI import __version__ as python_opsi_version
@@ -100,7 +101,7 @@ parser.add_argument(
 )
 
 
-def get_opsiclientd_pid() -> int:
+def get_opsiclientd_pid() -> Union[int, None]:
 	our_pid = os.getpid()
 	for proc in psutil.process_iter():
 		if proc.pid == our_pid:
