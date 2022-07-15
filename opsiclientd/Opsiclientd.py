@@ -21,7 +21,6 @@ import threading
 import time
 import urllib.request
 from contextlib import contextmanager
-from ctypes import WinError
 from pathlib import Path
 from typing import List
 
