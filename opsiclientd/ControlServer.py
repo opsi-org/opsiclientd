@@ -649,15 +649,15 @@ class ControlServer(OpsiService, threading.Thread):  # pylint: disable=too-many-
 		with log_context({"instance": "control server"}):
 			self._running = True
 			try:
-				logger.info("creating root resource")
+				logger.info("Creating root resource")
 				self.createRoot()
 				self._site = server.Site(self._root)
 
 				logger.debug("Creating SSLContext with the following values:")
-				logger.debug("\t-SSL Server Key File: %r", self._sslServerKeyFile)
+				logger.debug("\t-SSL Server Key %r", self._sslServerKeyFile)
 				if not os.path.exists(self._sslServerKeyFile):
 					logger.warning("The SSL server key file '%s' is missing, please check your configuration", self._sslServerKeyFile)
-				logger.debug("\t-SSL Server Cert File %r", self._sslServerCertFile)
+				logger.debug("\t-SSL Server Cert %r", self._sslServerCertFile)
 				if not os.path.exists(self._sslServerCertFile):
 					logger.warning(
 						"The SSL server certificate file '%s' is missing, please check your configuration", self._sslServerCertFile
