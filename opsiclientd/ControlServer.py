@@ -664,12 +664,12 @@ class ControlServer(OpsiService, threading.Thread):  # pylint: disable=too-many-
 					)
 
 				ssl_context = SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
-				try:
-					self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context, interface="::")   # pylint: disable=no-member
-					logger.info("IPv6 support enabled")
-				except Exception as err:  # pylint: disable=broad-except
-					logger.info("No IPv6 support: %s", err)
-					self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context)  # pylint: disable=no-member
+				#try:
+				#	self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context, interface="::")   # pylint: disable=no-member
+				#	logger.info("IPv6 support enabled")
+				#except Exception as err:  # pylint: disable=broad-except
+				#	logger.info("No IPv6 support: %s", err)
+				self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context)  # pylint: disable=no-member
 				logger.notice("Control server is accepting HTTPS requests on port %d", self._httpsPort)
 
 				if not reactor.running:  # pylint: disable=no-member
