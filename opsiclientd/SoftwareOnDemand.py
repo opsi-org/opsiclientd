@@ -68,7 +68,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc): # pylint: disable=too-few-public-me
 		return (user, password)
 
 	def _authenticate(self, result):
-		if self.request.getClientIP() == '127.0.0.1':
+		if self.request.getClientIP() in ("127.0.0.1", "::ffff:127.0.0.1", "::1"):
 			self.session.authenticated = False
 			return result
 

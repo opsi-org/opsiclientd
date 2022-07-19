@@ -274,7 +274,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 
 	def _errback(self, failure):
 		client_ip = self.request.getClientAddress().host
-		if self.request.code == 401 and client_ip != "127.0.0.1":
+		if self.request.code == 401 and client_ip not in ("127.0.0.1", "::ffff:127.0.0.1", "::1"):
 			maxAuthenticationFailures = config.get("control_server", "max_authentication_failures")
 			if maxAuthenticationFailures > 0:
 				if client_ip not in self.service.authFailures:
