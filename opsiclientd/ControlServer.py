@@ -663,9 +663,12 @@ class ControlServer(OpsiService, threading.Thread):  # pylint: disable=too-many-
 						"The SSL server certificate file '%s' is missing, please check your configuration", self._sslServerCertFile
 					)
 
-				self._server = reactor.listenSSL(  # pylint: disable=no-member
-					self._httpsPort, self._site, SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
-				)
+				ssl_context = SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
+				try:
+					self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context, interface="::")   # pylint: disable=no-member
+				except Exception as err:  # pylint: disable=broad-except
+					logger.info("No IPv6 support: %s", err)
+					self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context)  # pylint: disable=no-member
 				logger.notice("Control server is accepting HTTPS requests on port %d", self._httpsPort)
 
 				if not reactor.running:  # pylint: disable=no-member
