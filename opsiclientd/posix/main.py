@@ -28,7 +28,7 @@ opsiclientd = None  # pylint: disable=invalid-name
 
 
 def signal_handler(signo, stackFrame):  # pylint: disable=unused-argument
-	logger.debug("Received signal %s, stopping opsiclientd", signo)
+	logger.notice("Received signal %s, stopping opsiclientd", signo)
 	if opsiclientd:
 		opsiclientd.stop()
 
