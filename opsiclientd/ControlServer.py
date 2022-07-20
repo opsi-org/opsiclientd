@@ -1351,7 +1351,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 	def get_open_files(self):
 		proc = psutil.Process()
-		return proc.open_files()
+		files = proc.open_files()
+		logger.debug("Open files: %s", files)
+		return [popenfile.path for popenfile in files]
 
 	def runOpsiScriptAsOpsiSetupUser(
 		self, script: str, product_id: str = None, admin=True, wait_for_ending=True, remove_user=False
