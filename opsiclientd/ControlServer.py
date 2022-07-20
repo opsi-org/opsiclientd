@@ -30,6 +30,7 @@ from collections import namedtuple
 from pathlib import Path
 
 import msgpack  # type: ignore[import]
+import psutil
 from autobahn.twisted.resource import WebSocketResource  # type: ignore[import]
 from autobahn.twisted.websocket import (  # type: ignore[import]
 	WebSocketServerFactory,
@@ -465,8 +466,7 @@ class WorkerOpsiclientdFiles(WorkerOpsiclientd):
 		logger.info("Requested endpoint %s with query %s", path, query)
 		if path == "/files/logs":
 			file_path = self.service._opsiclientd.collectLogfiles(  # pylint: disable=protected-access
-				types=query.get("type", []),
-				max_age_days=query.get("max_age_days", [None])[0]
+				types=query.get("type", []), max_age_days=query.get("max_age_days", [None])[0]
 			)
 			logger.notice("Delivering file %s", file_path)
 			self.request.setResponseCode(200)
@@ -1149,9 +1149,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		System.runCommandInSession(command=command, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False)
 		return f"command '{command}' executed"
 
-	def execute(
-		self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300
-	):  # pylint: disable=too-many-arguments
+	def execute(self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300):  # pylint: disable=too-many-arguments
 		return System.execute(cmd=command, waitForEnding=waitForEnding, captureStderr=captureStderr, encoding=encoding, timeout=timeout)
 
 	def logoffSession(self, session_id=None, username=None):
@@ -1354,6 +1352,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			System.logoffSession(session_id)
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 		return self.opsiclientd.loginUser(user_info["name"], user_info["password"])
+
+	def get_open_files(self):
+		proc = psutil.Process()
+		files = proc.open_files()
+		logger.debug("Open files: %s", files)
+		return [popenfile.path for popenfile in files]
 
 	def runOpsiScriptAsOpsiSetupUser(
 		self, script: str, product_id: str = None, admin=True, wait_for_ending=True, remove_user=False
