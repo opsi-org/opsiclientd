@@ -62,6 +62,7 @@ from opsicommon.logging import (  # type: ignore[import]
 )
 from twisted.internet import reactor, fdesc
 from twisted.internet.error import CannotListenError
+from twisted.internet.base import BasePort
 from twisted.web import server
 from twisted.web.resource import Resource
 from twisted.web.static import File
@@ -244,24 +245,16 @@ except Exception as fse_err:  # pylint: disable=broad-except
 	sys.getfilesystemencoding = lambda: defaultEncoding
 
 if platform.system().lower() == "windows":
-	def create_dual_stack_socket(self, af, stype):  # pylint: disable=invalid-name
+	def create_dualstack_internet_socket(self):
 		logger.info("Creating DualStack socket.")
-		skt = socket.socket(af, stype)
-		skt.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
-		self.registerHandle(skt.fileno())
-		return skt
-
-	def create_dual_stack_socket_universal(self):
-		logger.info("Creating universal DualStack socket.")
 		skt = socket.socket(self.addressFamily, self.socketType)
 		skt.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
-		skt.setblocking(0)
+		skt.setblocking(False)
 		fdesc._setCloseOnExec(skt.fileno())  # pylint: disable=protected-access
 		return skt
 
-	# Monkeypatch createSocket to enable dual stack connections
-	reactor.createSocket = create_dual_stack_socket
-	reactor.createInternetSocket = create_dual_stack_socket_universal
+	# Monkeypatch createInternetSocket to enable dual stack connections
+	BasePort.createInternetSocket = create_dualstack_internet_socket
 
 
 class WorkerOpsiclientd(WorkerOpsi):
