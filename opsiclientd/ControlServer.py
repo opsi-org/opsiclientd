@@ -244,7 +244,7 @@ except Exception as fse_err:  # pylint: disable=broad-except
 	sys.getfilesystemencoding = lambda: defaultEncoding
 
 if platform.system().lower() == "windows":
-	def create_dual_stack_socket(self, af, stype):
+	def create_dual_stack_socket(self, af, stype):  # pylint: disable=invalid-name
 		logger.info("Creating DualStack socket.")
 		skt = socket.socket(af, stype)
 		skt.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
@@ -256,7 +256,7 @@ if platform.system().lower() == "windows":
 		skt = socket.socket(self.addressFamily, self.socketType)
 		skt.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
 		skt.setblocking(0)
-		fdesc._setCloseOnExec(skt.fileno())  # pyint: disable=protected-access
+		fdesc._setCloseOnExec(skt.fileno())  # pylint: disable=protected-access
 		return skt
 
 	# Monkeypatch createSocket to enable dual stack connections
