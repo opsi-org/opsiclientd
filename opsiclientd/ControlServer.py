@@ -263,6 +263,7 @@ if platform.system().lower() == "windows":
 	reactor.createSocket = create_dual_stack_socket
 	reactor.createInternetSocket = create_dual_stack_socket_universal
 
+
 class WorkerOpsiclientd(WorkerOpsi):
 	def __init__(self, service, request, resource):
 		WorkerOpsi.__init__(self, service, request, resource)
