@@ -243,6 +243,17 @@ except Exception as fse_err:  # pylint: disable=broad-except
 	logger.notice("Patching filesystemencoding to be '%s'", defaultEncoding)
 	sys.getfilesystemencoding = lambda: defaultEncoding
 
+if platform.system().lower() == "windows":
+	def create_dual_stack_socket(self, af, stype):  # pylint: disable=invalid-name
+		skt = socket.socket(af, stype)
+		skt.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+		self.registerHandle(skt.fileno())
+		return skt
+
+	# Monkeypatch createSocket to enable dual stack connections
+	logger.devel("Monkeypatching createSocket to be dual-stack-capable")  # TODO: lower
+	reactor.createSocket = create_dual_stack_socket
+
 
 class WorkerOpsiclientd(WorkerOpsi):
 	def __init__(self, service, request, resource):
@@ -664,12 +675,12 @@ class ControlServer(OpsiService, threading.Thread):  # pylint: disable=too-many-
 					)
 
 				ssl_context = SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
-				#try:
-				#	self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context, interface="::")   # pylint: disable=no-member
-				#	logger.info("IPv6 support enabled")
-				#except Exception as err:  # pylint: disable=broad-except
-				#	logger.info("No IPv6 support: %s", err)
-				self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context)  # pylint: disable=no-member
+				try:
+					self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context, interface="::")  # pylint: disable=no-member
+					logger.info("IPv6 support enabled")
+				except Exception as err:  # pylint: disable=broad-except
+					logger.info("No IPv6 support: %s", err)
+					self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context)  # pylint: disable=no-member
 				logger.notice("Control server is accepting HTTPS requests on port %d", self._httpsPort)
 
 				if not reactor.running:  # pylint: disable=no-member
