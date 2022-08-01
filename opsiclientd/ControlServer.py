@@ -60,8 +60,9 @@ from opsicommon.logging import (  # type: ignore[import]
 	logger,
 	secret_filter,
 )
-from twisted.internet import reactor
+from twisted.internet import reactor, fdesc
 from twisted.internet.error import CannotListenError
+from twisted.internet.base import BasePort
 from twisted.web import server
 from twisted.web.resource import Resource
 from twisted.web.static import File
@@ -242,6 +243,18 @@ except Exception as fse_err:  # pylint: disable=broad-except
 	defaultEncoding = sys.getdefaultencoding()
 	logger.notice("Patching filesystemencoding to be '%s'", defaultEncoding)
 	sys.getfilesystemencoding = lambda: defaultEncoding
+
+if platform.system().lower() == "windows":
+	def create_dualstack_internet_socket(self):
+		logger.info("Creating DualStack socket.")
+		skt = socket.socket(self.addressFamily, self.socketType)
+		skt.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+		skt.setblocking(False)
+		fdesc._setCloseOnExec(skt.fileno())  # pylint: disable=protected-access
+		return skt
+
+	# Monkeypatch createInternetSocket to enable dual stack connections
+	BasePort.createInternetSocket = create_dualstack_internet_socket
 
 
 class WorkerOpsiclientd(WorkerOpsi):
@@ -664,12 +677,12 @@ class ControlServer(OpsiService, threading.Thread):  # pylint: disable=too-many-
 					)
 
 				ssl_context = SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
-				#try:
-				#	self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context, interface="::")   # pylint: disable=no-member
-				#	logger.info("IPv6 support enabled")
-				#except Exception as err:  # pylint: disable=broad-except
-				#	logger.info("No IPv6 support: %s", err)
-				self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context)  # pylint: disable=no-member
+				try:
+					self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context, interface="::")  # pylint: disable=no-member
+					logger.info("IPv6 support enabled")
+				except Exception as err:  # pylint: disable=broad-except
+					logger.info("No IPv6 support: %s", err)
+					self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context)  # pylint: disable=no-member
 				logger.notice("Control server is accepting HTTPS requests on port %d", self._httpsPort)
 
 				if not reactor.running:  # pylint: disable=no-member
@@ -751,7 +764,11 @@ class RequestAdapter:
 		return getattr(self.connection_request, name)
 
 	def getClientAddress(self):
-		return ClientAddress(*self.connection_request.peer.split(":"))
+		parts = self.connection_request.peer.split(":")
+		host = ":".join(parts[1:-1]).replace("[", "").replace("]", "")
+		logger.debug("Creating ClientAddress with parameters '%s', '%s' and '%s'", parts[0], host, parts[-1])
+		# In case of ipv6 connection, host may contain ":"
+		return ClientAddress(parts[0], host, parts[-1])
 
 	def getAllHeaders(self):
 		return self.connection_request.headers
