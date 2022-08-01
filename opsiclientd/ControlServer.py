@@ -764,7 +764,11 @@ class RequestAdapter:
 		return getattr(self.connection_request, name)
 
 	def getClientAddress(self):
-		return ClientAddress(*self.connection_request.peer.split(":"))
+		parts = self.connection_request.peer.split(":")
+		host = ":".join(parts[1:-1]).replace("[", "").replace("]", "")
+		logger.devel("Creating ClientAddress with parameters '%s', '%s' and '%s'", parts[0], host, parts[-1])  # TODO: debug
+		# In case of ipv6 connection, host may contain ":"
+		return ClientAddress(parts[0], host, parts[-1])
 
 	def getAllHeaders(self):
 		return self.connection_request.headers
