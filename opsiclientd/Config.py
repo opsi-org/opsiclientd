@@ -647,7 +647,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 					self.set("depot_server", "depot_id", "")
 					self.set("depot_server", "url", depotUrl)
 					logger.warning("Depot url was set to '%s' from configState %s", depotUrl, configState)
-					return None
+					return None, None
 				except Exception as err:  # pylint: disable=broad-except
 					logger.error("Failed to set depot url from values %s in configState %s: %s", configState.values, configState, err)
 			elif configState.configId == "opsiclientd.depot_server.depot_id" and configState.values:
@@ -780,6 +780,8 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		selectedDepot, depotProtocol = self.getDepot(
 			configService=configService, event=event, productIds=productIds, masterOnly=masterOnly
 		)
+		if not selectedDepot:
+			return  # depot_server.url is already set by getDepot if opsiclientd.depot_server.url is set.
 
 		logger.notice("Selected depot for mode '%s' is '%s', protocol '%s'", mode, selectedDepot, depotProtocol)
 		self.set("depot_server", "depot_id", selectedDepot.id)
