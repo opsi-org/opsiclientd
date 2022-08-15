@@ -439,7 +439,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				for event_generator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
 					try:
 						event_generator.createAndFireEvent()
-					except ValueError as err:
+					except (ValueError, CannotCancelEventError) as err:
 						logger.error("Unable to fire DaemonStartupEvent from %s: %s", event_generator, err, exc_info=True)
 
 				if getEventGenerators(generatorClass=GUIStartupEventGenerator):
@@ -458,7 +458,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 						logger.info("Create and fire shutdown event generator %s", event_generator)
 						try:
 							event_generator.createAndFireEvent()
-						except ValueError as err:
+						except (ValueError, CannotCancelEventError) as err:
 							logger.error("Unable to fire DaemonStartupEvent from %s: %s", event_generator, err, exc_info=True)
 
 		try:
