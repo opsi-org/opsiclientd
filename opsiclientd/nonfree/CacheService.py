@@ -718,6 +718,9 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			for product in os.listdir(productCacheDir):
 				deleteDir = os.path.join(productCacheDir, product)
 				shutil.rmtree(deleteDir)
+			self._state["products"] = {}
+			self._state["products_cached"] = False
+			state.set("product_cache_service", self._state)
 
 	def cacheProducts(self, productProgressObserver=None, overallProgressObserver=None):
 		self._cacheProductsRequested = True
