@@ -39,7 +39,6 @@ from opsicommon.messagebus import (
 	JSONRPCRequestMessage,
 	JSONRPCResponseMessage,
 	Message,
-	MessageType,
 )
 from opsicommon.ssl import install_ca, load_ca, remove_ca
 from opsicommon.utils import Singleton  # type: ignore[import]
@@ -160,7 +159,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		self.start()
 		return self
 
-	def __exit__(self, exc_type: Exception, exc_value: TracebackException, traceback: TracebackType) -> None:
+	def __exit__(self, exc_type: Exception, exc_value: TracebackException, exc_traceback: TracebackType) -> None:
 		self.stop()
 
 	def connection_open(self, service_client: ServiceClient) -> None:
@@ -195,7 +194,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 					raise ValueError("Invalid method")
 				method = getattr(self._rpc_interface, message.method)
 				response.result = method(*(message.params or tuple()))
-			except Exception as err:  # pylint: diable=broad-except
+			except Exception as err:  # pylint: disable=broad-except
 				response.error = {
 					"code": 0,
 					"message": str(err),
