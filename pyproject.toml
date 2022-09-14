@@ -24,7 +24,8 @@ msgpack = "^1.0"
 netifaces = "^0.11"
 pyelftools = "^0.28"
 python-opsi = "^4.2.0.291"
-python-opsi-common = "^4.2.0.263"
+#python-opsi-common = "^4.2.0.263"
+python-opsi-common = {path = "python-opsi-common", develop = true}
 pywin32 = {platform = "win32", version = "^303"}
 pywinpty = {platform = "win32", version = "^2.0"}
 wmi = {platform = "win32", version = "^1.5"}

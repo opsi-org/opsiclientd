@@ -13,7 +13,10 @@ import random
 import re
 import threading
 import time
+import traceback
 from pathlib import Path
+from traceback import TracebackException
+from types import TracebackType
 from typing import Union
 
 from OpenSSL.crypto import FILETYPE_PEM, dump_certificate, load_certificate
@@ -24,13 +27,28 @@ from OPSI.Types import forceBool, forceFqdn, forceInt, forceProductId, forceUnic
 from OPSI.Util.Repository import WebDAVRepository
 from OPSI.Util.Thread import KillableThread
 from opsicommon.client.jsonrpc import JSONRPCClient
+from opsicommon.client.opsiservice import (
+	MessagebusListener,
+	ServiceClient,
+	ServiceConnectionListener,
+	ServiceVerificationModes,
+)
 from opsicommon.logging import log_context, logger
+from opsicommon.messagebus import (
+	ChannelSubscriptionRequestMessage,
+	JSONRPCRequestMessage,
+	JSONRPCResponseMessage,
+	Message,
+	MessageType,
+)
 from opsicommon.ssl import install_ca, load_ca, remove_ca
+from opsicommon.utils import Singleton  # type: ignore[import]
 
 from opsiclientd import __version__
 from opsiclientd.Config import UIB_OPSI_CA, Config
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
+from opsiclientd.terminal import process_messagebus_message
 from opsiclientd.utils import log_network_status
 
 config = Config()
@@ -99,6 +117,93 @@ def update_ca_cert(config_service: JSONRPCClient, allow_remove: bool = False):  
 					logger.info("CA '%s' successfully removed from system cert store", name)
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error("Failed to remove CA '%s' from system cert store: %s", name, err, exc_info=True)
+
+
+class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, MessagebusListener, metaclass=Singleton):
+	def __init__(self, rpc_interface) -> None:
+		threading.Thread.__init__(self)
+		ServiceConnectionListener.__init__(self)
+		MessagebusListener.__init__(self)
+		self.daemon = True
+		self._should_stop = False
+		self._rpc_interface = rpc_interface
+		self.service_client = ServiceClient(
+			address=config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False),
+			username=config.get("global", "host_id"),
+			password=config.get("global", "opsi_host_key"),
+			ca_cert_file=config.ca_cert_file,
+			verify=ServiceVerificationModes.FETCH_CA_TRUST_UIB if config.get("global", "trust_uib_opsi_ca") else ServiceVerificationModes.FETCH_CA,
+			proxy_url=config.get("global", "proxy_url"),
+			user_agent=f"opsiclientd/{__version__}",
+			connect_timeout=config.get("config_service", "connection_timeout")
+		)
+		self.service_client.register_connection_listener(self)
+
+	def run(self):
+		logger.notice("Permanent service connection starting")
+		while not self._should_stop:
+			if not self.service_client.connected:
+				try:
+					self.service_client.connect()
+				except Exception as err:  # pylint: disable=broad-except
+					logger.info(err)
+					for _sec in range(30):
+						if self._should_stop:
+							break
+						time.sleep(1)
+
+	def stop(self):
+		self._should_stop = True
+		self.service_client.disconnect()
+
+	def __enter__(self) -> "PermanentServiceConnection":
+		self.start()
+		return self
+
+	def __exit__(self, exc_type: Exception, exc_value: TracebackException, traceback: TracebackType) -> None:
+		self.stop()
+
+	def connection_open(self, service_client: ServiceClient) -> None:
+		logger.notice("Opening connection to opsi service: %s", service_client.base_url)
+
+	def connection_established(self, service_client: ServiceClient) -> None:
+		logger.notice("Connection to opsi service established: %s", service_client.base_url)
+		if service_client.messagebus_available:
+			logger.notice("OPSI message bus available")
+			service_client.connect_messagebus()
+			service_client.messagebus.register_message_listener(self)
+			service_client.messagebus.send_message(
+				ChannelSubscriptionRequestMessage(sender="@", channel="service:messagebus", operation="add", channels=["@"])
+			)
+
+	def connection_closed(self, service_client: ServiceClient) -> None:
+		logger.notice("Connection to opsi service closed: %s", service_client.base_url)
+
+	def connection_failed(self, service_client: ServiceClient, exception: Exception) -> None:
+		logger.notice("Connection to opsi service failed: %s", service_client.base_url)
+
+	def message_received(self, message: Message) -> None:
+		# logger.devel("Message received: %s", message.to_dict())
+		if isinstance(message, JSONRPCRequestMessage):
+			response = JSONRPCResponseMessage(
+				sender="@",
+				channel=message.back_channel,
+				rpc_id=message.rpc_id
+			)
+			try:
+				if message.method.startswith("_"):
+					raise ValueError("Invalid method")
+				method = getattr(self._rpc_interface, message.method)
+				response.result = method(*(message.params or tuple()))
+			except Exception as err:  # pylint: diable=broad-except
+				response.error = {
+					"code": 0,
+					"message": str(err),
+					"data": {"class": err.__class__.__name__, "details": traceback.format_exc()}
+				}
+			self.service_client.messagebus.send_message(response)
+		elif message.type.startswith("terminal_"):
+			process_messagebus_message(message, self.service_client.messagebus.send_message)
 
 
 class ServiceConnection:

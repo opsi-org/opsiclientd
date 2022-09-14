@@ -60,9 +60,9 @@ from opsicommon.logging import (  # type: ignore[import]
 	logger,
 	secret_filter,
 )
-from twisted.internet import reactor, fdesc
-from twisted.internet.error import CannotListenError
+from twisted.internet import fdesc, reactor
 from twisted.internet.base import BasePort
+from twisted.internet.error import CannotListenError
 from twisted.web import server
 from twisted.web.resource import Resource
 from twisted.web.static import File
@@ -1024,7 +1024,7 @@ class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd
 
 			logger.notice("Starting terminal shell=%s, lines=%d, columns=%d", shell, lines, columns)
 			try:
-				(self.child_read, self.child_write, self.child_stop) = start_pty(  # pylint: disable=attribute-defined-outside-init
+				(self.child_read, self.child_write, self.child_set_size, self.child_stop) = start_pty(  # pylint: disable=attribute-defined-outside-init
 					shell=shell, lines=lines, columns=columns
 				)
 				self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init

@@ -51,6 +51,7 @@ from opsiclientd.Events.Utilities.Generators import (
 	getEventGenerators,
 )
 from opsiclientd.Localization import _
+from opsiclientd.OpsiService import PermanentServiceConnection
 from opsiclientd.setup import setup
 from opsiclientd.State import State
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
@@ -98,7 +99,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		self._cacheService = None
 		self._controlPipe = None
 		self._controlServer = None
-
+		self._permanent_service_connection = None
 		self._selfUpdating = False
 
 		self._argv = list(sys.argv)
@@ -486,6 +487,9 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 
 			with getControlPipe():
 				with getControlServer():
+					if config.get("config_service", "permanent_connection"):
+						self._permanent_service_connection = PermanentServiceConnection(self._controlServer._opsiclientdRpcInterface)  # pylint: disable=protected-access
+						self._permanent_service_connection.start()
 					with getCacheService() as cacheService:
 						self._cacheService = cacheService
 
@@ -516,6 +520,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				logger.error(err, exc_info=True)
 			self.setBlockLogin(False)
 		finally:
+			if self._permanent_service_connection:
+				self._permanent_service_connection.stop()
 			self._running = False
 			for thread in threading.enumerate():
 				logger.info("Runnning thread on main thread exit: %s", thread)
