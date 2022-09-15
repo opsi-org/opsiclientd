@@ -39,6 +39,9 @@ from opsicommon.messagebus import (
 	JSONRPCRequestMessage,
 	JSONRPCResponseMessage,
 	Message,
+	TraceRequestMessage,
+	TraceResponseMessage,
+	timestamp,
 )
 from opsicommon.ssl import install_ca, load_ca, remove_ca
 from opsicommon.utils import Singleton  # type: ignore[import]
@@ -182,6 +185,12 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		logger.notice("Connection to opsi service failed: %s", service_client.base_url)
 
 	def message_received(self, message: Message) -> None:
+		try:
+			self._process_message(message)
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error(err, exc_info=True)
+
+	def _process_message(self, message: Message) -> None:
 		# logger.devel("Message received: %s", message.to_dict())
 		if isinstance(message, JSONRPCRequestMessage):
 			response = JSONRPCResponseMessage(
@@ -200,6 +209,16 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 					"message": str(err),
 					"data": {"class": err.__class__.__name__, "details": traceback.format_exc()}
 				}
+			self.service_client.messagebus.send_message(response)
+		elif isinstance(message, TraceRequestMessage):
+			response = TraceResponseMessage(
+				sender="@",
+				channel=message.back_channel,
+				req_id=message.id,
+				req_trace=message.trace,
+				payload=message.payload,
+				trace={"sender_ws_send": timestamp()}
+			)
 			self.service_client.messagebus.send_message(response)
 		elif message.type.startswith("terminal_"):
 			process_messagebus_message(message, self.service_client.messagebus.send_message)
