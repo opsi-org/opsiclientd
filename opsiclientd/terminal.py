@@ -82,6 +82,7 @@ class Terminal:  # pylint: disable=too-many-instance-attributes
 		channel: str,
 		rows: int = None,
 		cols: int = None,
+		shell: str = None
 	) -> None:
 		self.send_message = send_message
 		self.id = id  # pylint: disable=invalid-name
@@ -93,8 +94,10 @@ class Terminal:  # pylint: disable=too-many-instance-attributes
 
 		self.set_size(rows, cols)
 
+		if not shell:
+			shell = "cmd.exe" if RUNNING_ON_WINDOWS else "bash"
 		(self.pty_read, self.pty_write, self.pty_set_size, self.pty_stop) = start_pty(  # pylint: disable=attribute-defined-outside-init
-			shell="powershell.exe" if RUNNING_ON_WINDOWS else "bash", lines=self.rows, columns=self.cols
+			shell=shell, lines=self.rows, columns=self.cols
 		)
 		self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init
 		self._closing = False
@@ -159,6 +162,7 @@ def process_messagebus_message(message: Message, send_message: Callable) -> None
 				channel=message.back_channel,
 				rows=message.rows,
 				cols=message.cols,
+				shell=message.shell,
 			)
 			terminals[terminal.id] = terminal
 		msg = TerminalOpenEvent(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
