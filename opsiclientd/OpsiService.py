@@ -36,6 +36,7 @@ from opsicommon.client.opsiservice import (
 from opsicommon.logging import log_context, logger
 from opsicommon.messagebus import (
 	ChannelSubscriptionRequestMessage,
+	GeneralErrorMessage,
 	JSONRPCRequestMessage,
 	JSONRPCResponseMessage,
 	Message,
@@ -189,6 +190,17 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			self._process_message(message)
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
+			response = GeneralErrorMessage(
+				sender="@",
+				channel=message.back_channel,
+				ref_message_id=message.id,
+				error={
+					"code": 0,
+					"message": str(err),
+					"details": str(traceback.format_exc())
+				},
+			)
+			self.service_client.messagebus.send_message(response)
 
 	def _process_message(self, message: Message) -> None:
 		# logger.devel("Message received: %s", message.to_dict())
