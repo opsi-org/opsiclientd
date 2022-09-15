@@ -88,7 +88,9 @@ pyinstaller-poetry:
     # need to adapt opsi-client-agent opsi-script first
     linux:
       - cp -a dist/opsiclientd/opsiclientd_data dist/opsiclientd/site-packages/
+      - chmod g-w,o-w -R dist/opsiclientd
     darwin:
       - cp -a dist/opsiclientd/opsiclientd_data dist/opsiclientd/site-packages/
+      - chmod g-w,o-w -R dist/opsiclientd
     windows:
       - Copy-Item -Path dist\opsiclientd\opsiclientd_data -Destination dist\opsiclientd\site-packages\opsiclientd_data -Recurse
