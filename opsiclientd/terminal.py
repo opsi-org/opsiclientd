@@ -143,7 +143,8 @@ class Terminal:  # pylint: disable=too-many-instance-attributes
 			)
 			self.send_message(message)
 			self.pty_stop()
-
+			if self.id in terminals:
+				del terminals[self.id]
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 
