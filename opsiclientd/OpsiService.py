@@ -130,12 +130,20 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		self.daemon = True
 		self._should_stop = False
 		self._rpc_interface = rpc_interface
+
+		verify = ServiceVerificationModes.ACCEPT_ALL
+		if config.get("global", "verify_server_cert"):
+			if config.get("global", "trust_uib_opsi_ca"):
+				verify = ServiceVerificationModes.FETCH_CA_TRUST_UIB
+			else:
+				verify = ServiceVerificationModes.FETCH_CA
+
 		self.service_client = ServiceClient(
 			address=config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False),
 			username=config.get("global", "host_id"),
 			password=config.get("global", "opsi_host_key"),
 			ca_cert_file=config.ca_cert_file,
-			verify=ServiceVerificationModes.FETCH_CA_TRUST_UIB if config.get("global", "trust_uib_opsi_ca") else ServiceVerificationModes.FETCH_CA,
+			verify=verify,
 			proxy_url=config.get("global", "proxy_url"),
 			user_agent=f"opsiclientd/{__version__}",
 			connect_timeout=config.get("config_service", "connection_timeout")
