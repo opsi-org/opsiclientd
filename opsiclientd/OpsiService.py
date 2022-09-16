@@ -167,10 +167,10 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		self.stop()
 
 	def connection_open(self, service_client: ServiceClient) -> None:
-		logger.notice("Opening connection to opsi service: %s", service_client.base_url)
+		logger.notice("Opening connection to opsi service %s", service_client.base_url)
 
 	def connection_established(self, service_client: ServiceClient) -> None:
-		logger.notice("Connection to opsi service established: %s", service_client.base_url)
+		logger.notice("Connection to opsi service %s established", service_client.base_url)
 		if service_client.messagebus_available:
 			logger.notice("OPSI message bus available")
 			service_client.connect_messagebus()
@@ -180,10 +180,10 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			)
 
 	def connection_closed(self, service_client: ServiceClient) -> None:
-		logger.notice("Connection to opsi service closed: %s", service_client.base_url)
+		logger.notice("Connection to opsi service %s closed", service_client.base_url)
 
 	def connection_failed(self, service_client: ServiceClient, exception: Exception) -> None:
-		logger.notice("Connection to opsi service failed: %s", service_client.base_url)
+		logger.notice("Connection to opsi service %s failed: %s", service_client.base_url, exception)
 
 	def message_received(self, message: Message) -> None:
 		try:
