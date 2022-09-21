@@ -488,6 +488,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			with getControlPipe():
 				with getControlServer():
 					if config.get("config_service", "permanent_connection"):
+						logger.info("Starting permanent service connection")
 						self._permanent_service_connection = PermanentServiceConnection(self._controlServer._opsiclientdRpcInterface)  # pylint: disable=protected-access
 						self._permanent_service_connection.start()
 					with getCacheService() as cacheService:
@@ -521,6 +522,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			self.setBlockLogin(False)
 		finally:
 			if self._permanent_service_connection:
+				logger.info("Stopping permanent service connection")
 				self._permanent_service_connection.stop()
 			self._running = False
 			for thread in threading.enumerate():

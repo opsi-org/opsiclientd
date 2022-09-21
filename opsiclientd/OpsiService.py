@@ -151,6 +151,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		self.service_client.register_connection_listener(self)
 
 	def run(self):
+		interval = 5
 		logger.notice("Permanent service connection starting")
 		while not self._should_stop:
 			if not self.service_client.connected:
@@ -158,14 +159,14 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 					self.service_client.connect()
 				except Exception as err:  # pylint: disable=broad-except
 					logger.info(err)
-					for _sec in range(30):
-						if self._should_stop:
-							break
-						time.sleep(1)
+			for _sec in range(interval):
+				if self._should_stop:
+					break
+				time.sleep(1)
 
 	def stop(self):
 		self._should_stop = True
-		self.service_client.disconnect()
+		self.service_client.stop()
 
 	def __enter__(self) -> "PermanentServiceConnection":
 		self.start()

@@ -26,6 +26,7 @@ pyelftools = "^0.28"
 python-opsi = "^4.2.0.291"
 python-opsi-common = "^4.2.0.296"
 #python-opsi-common = {path = "python-opsi-common", develop = true}
+websocket-client = { git = "https://github.com/j-a-n/websocket-client.git", branch = "fix-reconnect" }
 pywin32 = {platform = "win32", version = "^303"}
 pywinpty = {platform = "win32", version = "^2.0"}
 wmi = {platform = "win32", version = "^1.5"}
