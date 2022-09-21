@@ -131,24 +131,25 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		self._should_stop = False
 		self._rpc_interface = rpc_interface
 
-		verify = ServiceVerificationModes.ACCEPT_ALL
-		if config.get("global", "verify_server_cert"):
-			if config.get("global", "trust_uib_opsi_ca"):
-				verify = ServiceVerificationModes.OPSI_CA
-			else:
-				verify = ServiceVerificationModes.UIB_OPSI_CA
+		with log_context({"instance": "permanent service connection"}):
+			verify = ServiceVerificationModes.ACCEPT_ALL
+			if config.get("global", "verify_server_cert"):
+				if config.get("global", "trust_uib_opsi_ca"):
+					verify = ServiceVerificationModes.OPSI_CA
+				else:
+					verify = ServiceVerificationModes.UIB_OPSI_CA
 
-		self.service_client = ServiceClient(
-			address=config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False),
-			username=config.get("global", "host_id"),
-			password=config.get("global", "opsi_host_key"),
-			ca_cert_file=config.ca_cert_file,
-			verify=verify,
-			proxy_url=config.get("global", "proxy_url"),
-			user_agent=f"opsiclientd/{__version__}",
-			connect_timeout=config.get("config_service", "connection_timeout")
-		)
-		self.service_client.register_connection_listener(self)
+			self.service_client = ServiceClient(
+				address=config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False),
+				username=config.get("global", "host_id"),
+				password=config.get("global", "opsi_host_key"),
+				ca_cert_file=config.ca_cert_file,
+				verify=verify,
+				proxy_url=config.get("global", "proxy_url"),
+				user_agent=f"opsiclientd/{__version__}",
+				connect_timeout=config.get("config_service", "connection_timeout")
+			)
+			self.service_client.register_connection_listener(self)
 
 	def run(self):
 		with log_context({"instance": "permanent service connection"}):
@@ -184,8 +185,8 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		try:
 			if service_client.messagebus_available:
 				logger.notice("OPSI message bus available")
-				service_client.connect_messagebus()
 				service_client.messagebus.register_message_listener(self)
+				service_client.connect_messagebus()
 				service_client.messagebus.send_message(
 					ChannelSubscriptionRequestMessage(sender="@", channel="service:messagebus", operation="add", channels=["@"])
 				)
