@@ -93,7 +93,7 @@ class Terminal:  # pylint: disable=too-many-instance-attributes
 		self.rows = self.default_rows
 		self.cols = self.default_cols
 
-		self.set_size(rows, cols)
+		self.set_size(rows, cols, False)
 
 		if not shell:
 			shell = "cmd.exe" if RUNNING_ON_WINDOWS else "bash"
@@ -107,17 +107,17 @@ class Terminal:  # pylint: disable=too-many-instance-attributes
 		if not self.terminal_reader_thread.is_alive():
 			self.terminal_reader_thread.start()
 
-	def set_size(self, rows: int = None, cols: int = None) -> None:
+	def set_size(self, rows: int = None, cols: int = None, pty_set_size: bool = True) -> None:
 		self.rows = min(max(1, int(rows or self.default_rows)), self.max_rows)
 		self.cols = min(max(1, int(cols or self.default_cols)), self.max_cols)
+		if pty_set_size:
+			self.pty_set_size(self.rows, self.cols)
 
 	def process_message(self, message: Message) -> None:
 		if message.type == MessageType.TERMINAL_DATA_WRITE:
 			self.pty_write(message.data)
 		elif message.type == MessageType.TERMINAL_RESIZE_REQUEST:
-			self.rows = message.rows
-			self.cols = message.cols
-			self.pty_set_size(self.rows, self.cols)
+			self.set_size(message.rows, message.cols)
 			message = TerminalResizeEvent(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
 				sender=self.sender,
 				channel=self.channel,
@@ -167,6 +167,10 @@ def process_messagebus_message(message: Message, send_message: Callable) -> None
 					shell=message.shell,
 				)
 				terminals[terminal.id] = terminal
+			else:
+				# Resize to redraw screen
+				terminals[terminal.id].set_size(message.rows - 1, message.cols)
+				terminals[terminal.id].set_size(message.rows, message.cols)
 			msg = TerminalOpenEvent(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
 				sender="@",
 				channel=message.back_channel,

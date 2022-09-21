@@ -33,7 +33,7 @@ from opsicommon.client.opsiservice import (
 	ServiceConnectionListener,
 	ServiceVerificationModes,
 )
-from opsicommon.logging import log_context, logger
+from opsicommon.logging import log_context, logger, set_context
 from opsicommon.messagebus import (
 	ChannelSubscriptionRequestMessage,
 	GeneralErrorMessage,
@@ -134,9 +134,9 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		verify = ServiceVerificationModes.ACCEPT_ALL
 		if config.get("global", "verify_server_cert"):
 			if config.get("global", "trust_uib_opsi_ca"):
-				verify = ServiceVerificationModes.FETCH_CA_TRUST_UIB
+				verify = ServiceVerificationModes.OPSI_CA
 			else:
-				verify = ServiceVerificationModes.FETCH_CA
+				verify = ServiceVerificationModes.UIB_OPSI_CA
 
 		self.service_client = ServiceClient(
 			address=config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False),
@@ -151,18 +151,19 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		self.service_client.register_connection_listener(self)
 
 	def run(self):
-		interval = 5
-		logger.notice("Permanent service connection starting")
-		while not self._should_stop:
-			if not self.service_client.connected:
-				try:
-					self.service_client.connect()
-				except Exception as err:  # pylint: disable=broad-except
-					logger.info(err)
-			for _sec in range(interval):
-				if self._should_stop:
-					break
-				time.sleep(1)
+		with log_context({"instance": "permanent service connection"}):
+			interval = 5
+			logger.notice("Permanent service connection starting")
+			while not self._should_stop:
+				if not self.service_client.connected:
+					try:
+						self.service_client.connect()
+					except Exception as err:  # pylint: disable=broad-except
+						logger.info(err)
+				for _sec in range(interval):
+					if self._should_stop:
+						break
+					time.sleep(1)
 
 	def stop(self):
 		self._should_stop = True
