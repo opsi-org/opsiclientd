@@ -33,7 +33,7 @@ from opsicommon.client.opsiservice import (
 	ServiceConnectionListener,
 	ServiceVerificationModes,
 )
-from opsicommon.logging import log_context, logger, set_context
+from opsicommon.logging import log_context, logger
 from opsicommon.messagebus import (
 	ChannelSubscriptionRequestMessage,
 	GeneralErrorMessage,
