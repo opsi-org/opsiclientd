@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 
 # opsiclientd is part of the desktop management solution opsi http://www.opsi.org
@@ -151,34 +152,40 @@ class Terminal:  # pylint: disable=too-many-instance-attributes
 
 def process_messagebus_message(message: Message, send_message: Callable) -> None:
 	terminal = terminals.get(message.terminal_id)
-	if terminal and terminal.owner != message.sender:
-		return
-	if message.type == MessageType.TERMINAL_OPEN_REQUEST:
-		if not terminal:
-			terminal = Terminal(
-				send_message=send_message,
-				id=message.terminal_id,
-				owner=message.sender,
+
+	try:
+		if message.type == MessageType.TERMINAL_OPEN_REQUEST:
+			if not terminal:
+				terminal = Terminal(
+					send_message=send_message,
+					id=message.terminal_id,
+					owner=message.sender,
+					sender="@",
+					channel=message.back_channel,
+					rows=message.rows,
+					cols=message.cols,
+					shell=message.shell,
+				)
+				terminals[terminal.id] = terminal
+			msg = TerminalOpenEvent(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
 				sender="@",
 				channel=message.back_channel,
-				rows=message.rows,
-				cols=message.cols,
-				shell=message.shell,
+				terminal_id=terminal.id,
+				back_channel="$",
+				rows=terminal.rows,
+				cols=terminal.cols,
 			)
-			terminals[terminal.id] = terminal
-		msg = TerminalOpenEvent(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-			sender="@",
-			channel=message.back_channel,
-			terminal_id=terminal.id,
-			back_channel="$",
-			rows=terminal.rows,
-			cols=terminal.cols,
-		)
-		send_message(msg)
-		terminal.start_reading()
-	else:
+			send_message(msg)
+			terminal.start_reading()
+			return
 		if terminal:
 			terminal.process_message(message)
+			return
+		raise RuntimeError("Invalid terminal id")
+	except Exception as err:  # pylint: disable=broad-except
+		logger.warning(err, exc_info=True)
+		if terminal:
+			terminal.close()
 		else:
 			msg = TerminalCloseEvent(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
 				sender="@", channel=message.back_channel, terminal_id=message.terminal_id
