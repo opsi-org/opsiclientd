@@ -181,13 +181,16 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 
 	def connection_established(self, service_client: ServiceClient) -> None:
 		logger.notice("Connection to opsi service %s established", service_client.base_url)
-		if service_client.messagebus_available:
-			logger.notice("OPSI message bus available")
-			service_client.connect_messagebus()
-			service_client.messagebus.register_message_listener(self)
-			service_client.messagebus.send_message(
-				ChannelSubscriptionRequestMessage(sender="@", channel="service:messagebus", operation="add", channels=["@"])
-			)
+		try:
+			if service_client.messagebus_available:
+				logger.notice("OPSI message bus available")
+				service_client.connect_messagebus()
+				service_client.messagebus.register_message_listener(self)
+				service_client.messagebus.send_message(
+					ChannelSubscriptionRequestMessage(sender="@", channel="service:messagebus", operation="add", channels=["@"])
+				)
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error(err, exc_info=True)
 
 	def connection_closed(self, service_client: ServiceClient) -> None:
 		logger.notice("Connection to opsi service %s closed", service_client.base_url)
