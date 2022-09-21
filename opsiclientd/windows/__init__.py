@@ -131,7 +131,7 @@ def start_pty(shell="powershell.exe", lines=30, columns=120):
 		return process.write(data.decode("utf-8"))
 
 	def set_size(lines: int, columns: int):
-		return process.set_size(columns, lines)
+		return process.setwinsize(columns, lines)
 
 	def stop():
 		process.close()
