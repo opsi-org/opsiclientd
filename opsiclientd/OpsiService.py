@@ -51,7 +51,7 @@ from opsiclientd import __version__
 from opsiclientd.Config import UIB_OPSI_CA, Config
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
-from opsiclientd.terminal import process_messagebus_message
+from opsiclientd.messagebus.terminal import process_messagebus_message
 from opsiclientd.utils import log_network_status
 
 config = Config()
@@ -123,6 +123,9 @@ def update_ca_cert(config_service: JSONRPCClient, allow_remove: bool = False):  
 
 
 class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, MessagebusListener, metaclass=Singleton):
+	_reconnect_wait_min = 3
+	_reconnect_wait_max = 30
+
 	def __init__(self, rpc_interface) -> None:
 		threading.Thread.__init__(self)
 		ServiceConnectionListener.__init__(self)
@@ -130,6 +133,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		self.daemon = True
 		self._should_stop = False
 		self._rpc_interface = rpc_interface
+		self._reconnect_wait = self._reconnect_wait_min
 
 		with log_context({"instance": "permanent service connection"}):
 			verify = ServiceVerificationModes.ACCEPT_ALL
@@ -153,15 +157,16 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 
 	def run(self):
 		with log_context({"instance": "permanent service connection"}):
-			interval = 5
 			logger.notice("Permanent service connection starting")
 			while not self._should_stop:
 				if not self.service_client.connected:
 					try:
 						self.service_client.connect()
+						self._reconnect_wait = self._reconnect_wait_min
 					except Exception as err:  # pylint: disable=broad-except
 						logger.info(err)
-				for _sec in range(interval):
+						self._reconnect_wait = min(round(self._reconnect_wait * 1.25), self._reconnect_wait_max)
+				for _sec in range(self._reconnect_wait):
 					if self._should_stop:
 						break
 					time.sleep(1)
