@@ -136,4 +136,4 @@ def start_pty(shell="powershell.exe", lines=30, columns=120):
 	def stop():
 		process.close()
 
-	return (read, write, set_size, stop)
+	return (process.pid, read, write, set_size, stop)

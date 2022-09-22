@@ -16,4 +16,4 @@ def start_pty(shell="bash", lines=30, columns=120):
 	sp_env.update({"TERM": "xterm-256color"})
 
 	proc = PtyProcess.spawn([shell], dimensions=(lines, columns), env=sp_env)
-	return (proc.read, proc.write, proc.setwinsize, proc.terminate)
+	return (proc.pid, proc.read, proc.write, proc.setwinsize, proc.terminate)

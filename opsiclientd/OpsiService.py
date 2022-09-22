@@ -51,7 +51,12 @@ from opsiclientd import __version__
 from opsiclientd.Config import UIB_OPSI_CA, Config
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
-from opsiclientd.messagebus.terminal import process_messagebus_message
+from opsiclientd.messagebus.filetransfer import (
+	process_messagebus_message as process_filetransfer_message,
+)
+from opsiclientd.messagebus.terminal import (
+	process_messagebus_message as process_terminal_message,
+)
 from opsiclientd.utils import log_network_status
 
 config = Config()
@@ -252,7 +257,9 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			)
 			self.service_client.messagebus.send_message(response)
 		elif message.type.startswith("terminal_"):
-			process_messagebus_message(message, self.service_client.messagebus.send_message)
+			process_terminal_message(message, self.service_client.messagebus.send_message)
+		elif message.type.startswith("file_"):
+			process_filetransfer_message(message, self.service_client.messagebus.send_message)
 
 
 class ServiceConnection:

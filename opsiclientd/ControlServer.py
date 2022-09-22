@@ -982,6 +982,7 @@ class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd
 		self.service = self.factory.control_server  # pylint: disable=no-member
 		self.request = RequestAdapter(request)
 		self.terminal_reader_thread = None  # pylint: disable=attribute-defined-outside-init
+		self.child_pid = None  # pylint: disable=attribute-defined-outside-init
 		self.child_read = None  # pylint: disable=attribute-defined-outside-init
 		self.child_write = None  # pylint: disable=attribute-defined-outside-init
 		self.child_stop = None  # pylint: disable=attribute-defined-outside-init
@@ -1024,7 +1025,7 @@ class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd
 
 			logger.notice("Starting terminal shell=%s, lines=%d, columns=%d", shell, lines, columns)
 			try:
-				(self.child_read, self.child_write, self.child_set_size, self.child_stop) = start_pty(  # pylint: disable=attribute-defined-outside-init
+				(self.child_pid, self.child_read, self.child_write, self.child_set_size, self.child_stop) = start_pty(  # pylint: disable=attribute-defined-outside-init
 					shell=shell, lines=lines, columns=columns
 				)
 				self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init

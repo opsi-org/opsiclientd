@@ -9,9 +9,12 @@
 opsiclientd.messagebus.terminal
 """
 
+from __future__ import annotations
+
+from pathlib import Path
 from threading import Thread
 from time import sleep
-from typing import Callable, Dict
+from typing import Callable, Dict, Optional
 
 from opsicommon.logging import logger  # type: ignore[import]
 from opsicommon.messagebus import (  # type: ignore[import]
@@ -22,6 +25,7 @@ from opsicommon.messagebus import (  # type: ignore[import]
 	TerminalOpenEvent,
 	TerminalResizeEvent,
 )
+from psutil import AccessDenied, NoSuchProcess, Process
 
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
@@ -30,13 +34,13 @@ if RUNNING_ON_WINDOWS:
 else:
 	from opsiclientd.posix import start_pty
 
-terminals: Dict[str, "Terminal"] = {}
+terminals: Dict[str, Terminal] = {}
 
 
 class TerminalReaderThread(Thread):
 	block_size = 16 * 1024
 
-	def __init__(self, terminal: "Terminal"):
+	def __init__(self, terminal: Terminal):
 		super().__init__()
 		self.daemon = True
 		self.should_stop = False
@@ -97,7 +101,7 @@ class Terminal:  # pylint: disable=too-many-instance-attributes
 
 		if not shell:
 			shell = "cmd.exe" if RUNNING_ON_WINDOWS else "bash"
-		(self.pty_read, self.pty_write, self.pty_set_size, self.pty_stop) = start_pty(  # pylint: disable=attribute-defined-outside-init
+		(self.pty_pid, self.pty_read, self.pty_write, self.pty_set_size, self.pty_stop) = start_pty(  # pylint: disable=attribute-defined-outside-init
 			shell=shell, lines=self.rows, columns=self.cols
 		)
 		self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init
@@ -139,7 +143,7 @@ class Terminal:  # pylint: disable=too-many-instance-attributes
 		try:
 			if self.terminal_reader_thread:
 				self.terminal_reader_thread.stop()
-			message = TerminalCloseEvent(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+			message = TerminalCloseEvent(
 				sender=self.sender, channel=self.channel, terminal_id=self.id
 			)
 			self.send_message(message)
@@ -148,6 +152,21 @@ class Terminal:  # pylint: disable=too-many-instance-attributes
 				del terminals[self.id]
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
+
+	def get_cwd(self) -> Optional[Path]:
+		try:
+			proc = Process(self.pty_pid)
+		except (NoSuchProcess, ValueError):
+			return None
+
+		cwd = proc.cwd()
+		for child in proc.children(recursive=True):
+			try:  # pylint: disable=loop-try-except-usage
+				cwd = child.cwd()
+			except AccessDenied:
+				# Child owned by an other user (su)
+				pass
+		return Path(cwd)
 
 
 def process_messagebus_message(message: Message, send_message: Callable) -> None:
@@ -191,7 +210,11 @@ def process_messagebus_message(message: Message, send_message: Callable) -> None
 		if terminal:
 			terminal.close()
 		else:
-			msg = TerminalCloseEvent(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-				sender="@", channel=message.back_channel, terminal_id=message.terminal_id
+			msg = TerminalCloseEvent(
+				sender="@", channel=message.back_channel, terminal_id=message.terminal_id, error={
+					"code": 0,
+					"message": str(err),
+					"details": None,
+				}
 			)
 			send_message(msg)
