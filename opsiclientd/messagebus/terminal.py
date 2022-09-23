@@ -25,7 +25,7 @@ from opsicommon.messagebus import (  # type: ignore[import]
 	TerminalOpenEvent,
 	TerminalResizeEvent,
 )
-from psutil import AccessDenied, NoSuchProcess, Process
+from psutil import AccessDenied, NoSuchProcess, Process  # type: ignore[import]
 
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
