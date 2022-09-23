@@ -30,7 +30,7 @@ from opsiclientd.messagebus.terminal import terminals
 file_uploads: Dict[str, FileUpload] = {}
 
 
-class FileUpload(Thread):  # pylint: disable=too-few-public-methods
+class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-instance-attributes
 	def __init__(
 		self,
 		send_message_function: Callable,
