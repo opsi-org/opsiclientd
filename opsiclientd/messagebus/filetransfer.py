@@ -11,7 +11,6 @@ opsiclientd.messagebus.filetransfer
 
 from __future__ import annotations
 
-from multiprocessing.util import is_abstract_socket_namespace
 from pathlib import Path
 from typing import Callable, Dict
 
