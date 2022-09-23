@@ -14,7 +14,8 @@ from __future__ import annotations
 from contextvars import copy_context
 from pathlib import Path
 from queue import Empty, Queue
-from threading import Thread
+from threading import Lock, Thread
+from time import time
 from typing import Callable, Dict
 
 from opsicommon.logging import logger  # type: ignore[import]
@@ -27,10 +28,13 @@ from opsicommon.messagebus import (  # type: ignore[import]
 
 from opsiclientd.messagebus.terminal import terminals
 
+file_uploads_lock = Lock()
 file_uploads: Dict[str, FileUpload] = {}
 
 
 class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-instance-attributes
+	chunk_timeout = 300
+
 	def __init__(
 		self,
 		send_message_function: Callable,
@@ -44,6 +48,7 @@ class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-ins
 		self._file_upload_request = file_upload_request
 		self._send_message_function = send_message_function
 		self._chunk_number = 0
+		self._last_chunk_time = time()
 
 		if not self._file_upload_request.name:
 			raise ValueError("Invalid name")
@@ -99,9 +104,24 @@ class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-ins
 			try:
 				message = self._message_queue.get(timeout=1.0)
 			except Empty:
+				if time() > self._last_chunk_time + self.chunk_timeout:
+					logger.notice("File transfer timed out")
+					msg = FileUploadResultMessage(
+						sender="@",
+						channel=self._file_upload_request.back_channel,
+						file_id=self._file_upload_request.file_id,
+						error={
+							"code": 0,
+							"message": "File transfer timed out while waiting for next chunk",
+							"details": None,
+						}
+					)
+					self._send_message_function(msg)
+					self._should_stop = True
 				continue
 
 			logger.debug("Received file chunk %r", message.number)
+			self._last_chunk_time = time()
 			if message.number != self._chunk_number + 1:
 				self._error(f"Expected chunk number {self._chunk_number + 1}")
 
@@ -129,17 +149,19 @@ class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-ins
 
 
 def process_messagebus_message(message: Message, send_message: Callable) -> None:
-	file_upload = file_uploads.get(message.file_id)
+	with file_uploads_lock:
+		file_upload = file_uploads.get(message.file_id)
 	try:
 		if message.type == MessageType.FILE_UPLOAD_REQUEST:
-			if file_upload:
-				raise RuntimeError("File id already taken")
-			file_uploads[message.file_id] = FileUpload(
-				send_message_function=send_message,
-				file_upload_request=message
-			)
-			file_uploads[message.file_id].start()
-			return
+			with file_uploads_lock:
+				if file_upload:
+					raise RuntimeError("File id already taken")
+				file_uploads[message.file_id] = FileUpload(
+					send_message_function=send_message,
+					file_upload_request=message
+				)
+				file_uploads[message.file_id].start()
+				return
 
 		if not file_upload:
 			raise RuntimeError("Invalid file id")

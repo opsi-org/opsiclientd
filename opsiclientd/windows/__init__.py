@@ -130,10 +130,4 @@ def start_pty(shell="powershell.exe", lines=30, columns=120):
 	def write(data: bytes):
 		return process.write(data.decode("utf-8"))
 
-	def set_size(lines: int, columns: int):
-		return process.setwinsize(columns, lines)
-
-	def stop():
-		process.close()
-
-	return (process.pid, read, write, set_size, stop)
+	return (process.pid, read, write, process.setwinsize, process.close)

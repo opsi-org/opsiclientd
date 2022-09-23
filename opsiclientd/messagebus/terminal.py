@@ -14,7 +14,7 @@ from __future__ import annotations
 from contextvars import copy_context
 from pathlib import Path
 from queue import Empty, Queue
-from threading import Thread
+from threading import Lock, Thread
 from time import sleep, time
 from typing import Callable, Dict, Optional
 
@@ -28,7 +28,7 @@ from opsicommon.messagebus import (  # type: ignore[import]
 	TerminalOpenRequest,
 	TerminalResizeEvent,
 )
-from psutil import AccessDenied, NoSuchProcess, Process
+from psutil import AccessDenied, NoSuchProcess, Process  # type: ignore[import]
 
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
@@ -37,7 +37,9 @@ if RUNNING_ON_WINDOWS:
 else:
 	from opsiclientd.posix import start_pty
 
+
 terminals: Dict[str, Terminal] = {}
+terminals_lock = Lock()
 
 
 class TerminalReaderThread(Thread):
@@ -209,17 +211,19 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 
 
 def process_messagebus_message(message: Message, send_message: Callable) -> None:
-	terminal = terminals.get(message.terminal_id)
+	with terminals_lock:
+		terminal = terminals.get(message.terminal_id)
 
 	try:
 		if message.type == MessageType.TERMINAL_OPEN_REQUEST:
 			if not terminal:
-				terminal = Terminal(
-					send_message_function=send_message,
-					terminal_open_request=message
-				)
-				terminals[message.terminal_id] = terminal
-				terminals[message.terminal_id].start()
+				with terminals_lock:
+					terminal = Terminal(
+						send_message_function=send_message,
+						terminal_open_request=message
+					)
+					terminals[message.terminal_id] = terminal
+					terminals[message.terminal_id].start()
 			else:
 				# Resize to redraw screen
 				terminals[message.terminal_id].set_size(message.rows - 1, message.cols)

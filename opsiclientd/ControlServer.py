@@ -30,7 +30,7 @@ from collections import namedtuple
 from pathlib import Path
 
 import msgpack  # type: ignore[import]
-import psutil
+import psutil  # type: ignore[import]
 from autobahn.twisted.resource import WebSocketResource  # type: ignore[import]
 from autobahn.twisted.websocket import (  # type: ignore[import]
 	WebSocketServerFactory,
