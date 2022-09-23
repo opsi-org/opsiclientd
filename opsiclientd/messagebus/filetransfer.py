@@ -11,7 +11,10 @@ opsiclientd.messagebus.filetransfer
 
 from __future__ import annotations
 
+from contextvars import copy_context
 from pathlib import Path
+from queue import Empty, Queue
+from threading import Thread
 from typing import Callable, Dict
 
 from opsicommon.logging import logger  # type: ignore[import]
@@ -27,12 +30,17 @@ from opsiclientd.messagebus.terminal import terminals
 file_uploads: Dict[str, FileUpload] = {}
 
 
-class FileUpload:  # pylint: disable=too-few-public-methods
+class FileUpload(Thread):  # pylint: disable=too-few-public-methods
 	def __init__(
 		self,
 		send_message_function: Callable,
 		file_upload_request: FileUploadRequestMessage
 	) -> None:
+		super().__init__()
+		self.daemon = True
+		self._context = copy_context()
+		self._should_stop = False
+		self._message_queue: Queue[Message] = Queue()
 		self._file_upload_request = file_upload_request
 		self._send_message_function = send_message_function
 		self._chunk_number = 0
@@ -80,7 +88,19 @@ class FileUpload:  # pylint: disable=too-few-public-methods
 		self._send_message_function(msg)
 
 	def process_message(self, message: Message) -> None:
-		if message.type == MessageType.FILE_CHUNK:
+		if message.type != MessageType.FILE_CHUNK:
+			raise ValueError(f"Received invalid message type {message.type}")
+		self._message_queue.put(message)
+
+	def _run(self) -> None:
+		for var in self._context:
+			var.set(self._context[var])
+		while not self._should_stop:
+			try:
+				message = self._message_queue.get(timeout=1.0)
+			except Empty:
+				continue
+
 			logger.debug("Received file chunk %r", message.number)
 			if message.number != self._chunk_number + 1:
 				self._error(f"Expected chunk number {self._chunk_number + 1}")
@@ -99,8 +119,13 @@ class FileUpload:  # pylint: disable=too-few-public-methods
 					path=str(self._file_path)
 				)
 				self._send_message_function(msg)
-		else:
-			raise ValueError(f"Received invalid message type {message.type}")
+				self._should_stop = True
+
+	def run(self) -> None:
+		try:
+			self._run()
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error(err, exc_info=True)
 
 
 def process_messagebus_message(message: Message, send_message: Callable) -> None:
@@ -113,6 +138,7 @@ def process_messagebus_message(message: Message, send_message: Callable) -> None
 				send_message_function=send_message,
 				file_upload_request=message
 			)
+			file_uploads[message.file_id].start()
 			return
 
 		if not file_upload:
