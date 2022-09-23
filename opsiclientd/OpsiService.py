@@ -217,7 +217,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			response = GeneralErrorMessage(
 				sender="@",
 				channel=message.back_channel,
-				ref_message_id=message.id,
+				ref_id=message.id,
 				error={
 					"code": 0,
 					"message": str(err),
