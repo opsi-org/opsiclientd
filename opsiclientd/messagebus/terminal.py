@@ -161,7 +161,7 @@ class Terminal:  # pylint: disable=too-many-instance-attributes
 
 		cwd = proc.cwd()
 		for child in proc.children(recursive=True):
-			try:  # pylint: disable=loop-try-except-usage
+			try:
 				cwd = child.cwd()
 			except AccessDenied:
 				# Child owned by an other user (su)
