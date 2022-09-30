@@ -20,6 +20,7 @@ import sys
 import tempfile
 import threading
 import time
+from pathlib import Path
 from urllib.parse import urlparse
 
 import psutil  # type: ignore[import]
@@ -845,6 +846,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						self.opsiclientd.getCacheService().setConfigCacheObsolete()
 				except Exception as err:  # pylint: disable=broad-except
 					logger.error(err)
+				try:
+					self.cleanup_temp_dir()
+				except Exception as err:  # pylint: disable=broad-except
+					logger.error(err)
 			else:
 				if not self.event.eventConfig.actionProcessorProductIds:
 					state.set("installation_pending", "true")
@@ -1597,6 +1602,19 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			self.opsiclientd.getCacheService().syncConfigFromServer(waitForEnding=wait_for_ending)
 			if wait_for_ending:
 				self.setStatusMessage(_("Sync completed"))
+
+	def cleanup_temp_dir(self):
+		tmp_dir = config.get("global", "tmp_dir")
+		if not RUNNING_ON_WINDOWS or not config.get("global", "tmp_dir_cleanup") or not tmp_dir:
+			return
+		logger.notice("Cleaning up temp dir %r", tmp_dir)
+
+		for path in Path(tmp_dir).iterdir():
+			if path.is_dir():
+				shutil.rmtree(path)
+			else:
+				path.unlink()
+
 
 	def run(self):  # pylint: disable=too-many-branches,too-many-statements
 		with log_context({"instance": f"event processing {self.event.eventConfig.getId()}"}):

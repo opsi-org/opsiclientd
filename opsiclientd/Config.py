@@ -171,6 +171,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				"proxy_url": "system",
 				"suspend_bitlocker_on_reboot": False,
 				"ip_version": "auto",
+				"tmp_dir_cleanup": False
 			},
 			"config_service": {
 				"url": [],
