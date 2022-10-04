@@ -250,7 +250,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			response = TraceResponseMessage(
 				sender="@",
 				channel=message.back_channel,
-				req_id=message.id,
+				ref_id=message.id,
 				req_trace=message.trace,
 				payload=message.payload,
 				trace={"sender_ws_send": timestamp()}
