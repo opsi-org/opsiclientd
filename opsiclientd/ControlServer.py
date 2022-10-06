@@ -1056,6 +1056,7 @@ class TerminalWebSocketServerProtocol(
 class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=too-many-public-methods
 	def __init__(self, opsiclientd):
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
+		self._run_as_opsi_setup_user_lock = threading.Lock()
 
 	def wait(self, seconds: int = 0):
 		for _ in range(int(seconds)):
@@ -1482,7 +1483,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		recreate_user: bool = False,
 		wait_for_ending: Union[bool, int] = False,
 	):
+		if not self._run_as_opsi_setup_user_lock.acquire(blocking=False):
+			raise RuntimeError("Another process is already running")
 		try:
+
 			# https://bugs.python.org/file46988/issue.py
 			if not RUNNING_ON_WINDOWS:
 				raise NotImplementedError(f"Not implemented on {platform.system()}")
@@ -1532,7 +1536,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					)
 					with reg_key:
 						with codecs.open(ps_file, "w", "windows-1252") as file:
-							file.write(f'& {command}\r\nRemove-Item -Path "{ps_file}" -Force\r\n')
+							file.write(f'{command} | Out-Null\r\nRemove-Item -Path "{ps_file}" -Force\r\n')
 						winreg.SetValueEx(
 							reg_key,
 							"Shell",
@@ -1572,6 +1576,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 			raise
+		finally:
+			self._run_as_opsi_setup_user_lock.release()
 
 	def removeOpsiSetupUser(self):
 		self.opsiclientd.cleanup_opsi_setup_user()
