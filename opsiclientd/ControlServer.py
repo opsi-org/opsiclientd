@@ -28,6 +28,7 @@ import time
 import urllib
 from collections import namedtuple
 from pathlib import Path
+from typing import Union
 
 import msgpack  # type: ignore[import]
 import psutil  # type: ignore[import]
@@ -245,6 +246,7 @@ except Exception as fse_err:  # pylint: disable=broad-except
 	sys.getfilesystemencoding = lambda: defaultEncoding
 
 if platform.system().lower() == "windows":
+
 	def create_dualstack_internet_socket(self):
 		logger.info("Creating DualStack socket.")
 		skt = socket.socket(self.addressFamily, self.socketType)
@@ -1025,7 +1027,13 @@ class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd
 
 			logger.notice("Starting terminal shell=%s, lines=%d, columns=%d", shell, lines, columns)
 			try:
-				(self.child_pid, self.child_read, self.child_write, self.child_set_size, self.child_stop) = start_pty(  # pylint: disable=attribute-defined-outside-init
+				(
+					self.child_pid,
+					self.child_read,
+					self.child_write,
+					self.child_set_size,
+					self.child_stop,
+				) = start_pty(  # pylint: disable=attribute-defined-outside-init
 					shell=shell, lines=lines, columns=columns
 				)
 				self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init
@@ -1378,13 +1386,15 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		return [popenfile.path for popenfile in files]
 
 	def runOpsiScriptAsOpsiSetupUser(
-		self, script: str, product_id: str = None, admin=True, wait_for_ending=True, remove_user=False
+		self, script: str, product_id: str = None, admin: bool = True, wait_for_ending: Union[bool, int] = 7200, remove_user: bool = False
 	):  # pylint: disable=too-many-locals,too-many-arguments,too-many-branches
 		if not RUNNING_ON_WINDOWS:
 			raise NotImplementedError()
 
-		if remove_user:
+		if remove_user and not wait_for_ending:
 			wait_for_ending = True
+		if isinstance(wait_for_ending, bool) and wait_for_ending:
+			wait_for_ending = 7200
 
 		logger.notice(
 			"Executing opsi script '%s' as opsisetupuser (product_id=%s, admin=%s, wait_for_ending=%s, remove_user=%s)",
@@ -1452,29 +1462,25 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					f'Remove-Item -Path "{ps_file}" -Force\r\n'
 				)
 
-			self.runAsOpsiSetupUser(command=f"powershell.exe -ExecutionPolicy Bypass -WindowStyle hidden -File {ps_file}", admin=admin)
+			self.runAsOpsiSetupUser(
+				command=f'powershell.exe -ExecutionPolicy Bypass -WindowStyle hidden -File "{ps_file}"',
+				admin=admin,
+				wait_for_ending=wait_for_ending,
+			)
 
-			if wait_for_ending:
-				logger.info("Wait for opsi-script to complete")
-				timeout = 4000
-				while os.path.exists(ps_file):
-					time.sleep(1)
-					timeout -= 1
-					if timeout == 0:
-						logger.warning("Timed out while waiting for opsi-script to complete")
-						break
-				for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
-					System.logoffSession(session_id)
-
-				if remove_user:
-					self.opsiclientd.cleanup_opsi_setup_user()
+			if wait_for_ending and remove_user:
+				self.opsiclientd.cleanup_opsi_setup_user()
 		finally:
 			logger.info("Finished runOpsiScriptAsOpsiSetupUser - disconnecting ConfigService")
 			serviceConnection.disconnectConfigService()
 
-	def runAsOpsiSetupUser(
-		self, command="powershell.exe -ExecutionPolicy Bypass", admin=True, recreate_user=False
-	):  # pylint: disable=too-many-locals,too-many-branches
+	def runAsOpsiSetupUser(  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+		self,
+		command: str = "powershell.exe -ExecutionPolicy Bypass",
+		admin: bool = True,
+		recreate_user: bool = False,
+		wait_for_ending: Union[bool, int] = False,
+	):
 		try:
 			# https://bugs.python.org/file46988/issue.py
 			if not RUNNING_ON_WINDOWS:
@@ -1497,6 +1503,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				win32security.LOGON32_LOGON_INTERACTIVE,
 				win32security.LOGON32_PROVIDER_DEFAULT,
 			)
+
+			ps_file = os.path.join(config.get("global", "tmp_dir"), "run_as_opsi_setup_user.ps1")
 
 			try:
 				for attempt in (1, 2, 3, 4, 5):
@@ -1522,6 +1530,15 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 						winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,
 					)
 					with reg_key:
+						with codecs.open(ps_file, "w", "windows-1252") as file:
+							file.write(f'& {command}\r\nRemove-Item -Path "{ps_file}" -Force\r\n')
+						winreg.SetValueEx(
+							reg_key,
+							"Shell",
+							0,
+							winreg.REG_SZ,
+							f'powershell.exe -ExecutionPolicy Bypass -WindowStyle hidden -File "{ps_file}"',
+						)
 						winreg.SetValueEx(reg_key, "Shell", 0, winreg.REG_SZ, command)
 				finally:
 					win32profile.UnloadUserProfile(logon, hkey)
@@ -1536,6 +1553,21 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					time.sleep(0.5)
 
 			self.opsiclientd.loginUser(user_info["name"], user_info["password"])
+			if wait_for_ending:
+				timeout = 3600
+				if isinstance(wait_for_ending, int) and wait_for_ending > 0:
+					timeout = wait_for_ending
+				logger.info("Wait for process to complete (timeout=%r)", timeout)
+				start = time.time()
+				while os.path.exists(ps_file):
+					time.sleep(1)
+					if time.time() >= start + timeout:
+						logger.warning("Timed out after %r seconds while waiting for process to complete", timeout)
+						break
+				for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
+					System.logoffSession(session_id)
+				if os.path.exists(ps_file):
+					os.unlink(ps_file)
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 			raise
