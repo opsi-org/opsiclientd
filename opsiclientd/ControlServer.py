@@ -29,6 +29,7 @@ import urllib
 from collections import namedtuple
 from pathlib import Path
 from typing import Union
+from uuid import uuid4
 
 import msgpack  # type: ignore[import]
 import psutil  # type: ignore[import]
@@ -1439,9 +1440,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				f'/password \\"{config.get("global", "opsi_host_key")}\\"'
 			)
 
-			ps_file = os.path.join(config.get("global", "tmp_dir"), "opsisetupadmin_shell.ps1")
-			with codecs.open(ps_file, "w", "windows-1252") as file:
-				file.write(
+			ps_script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
+			ps_script.write_text(
+				(
 					f"$args = @("
 					f"'{config.get('global', 'host_id')}',"
 					f"'{config.get('global', 'opsi_host_key')}',"
@@ -1461,15 +1462,14 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					f"'false'"
 					f")\r\n"
 					f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args\r\n'
-					f'Remove-Item -Path "{ps_file}" -Force\r\n'
-				)
-
-			self.runAsOpsiSetupUser(
-				command=f'powershell.exe -ExecutionPolicy Bypass -WindowStyle hidden -File "{ps_file}"',
-				admin=admin,
-				wait_for_ending=wait_for_ending,
+					f'Remove-Item -Path "{str(script)}" -Force\r\n'
+				),
+				encoding="windows-1252",
 			)
 
+			self._run_powershell_script_as_opsi_setup_user(
+				script=ps_script, admin=admin, recreate_user=False, wait_for_ending=wait_for_ending, shell_window_style="Hidden"
+			)
 			if wait_for_ending and remove_user:
 				self.opsiclientd.cleanup_opsi_setup_user()
 		finally:
@@ -1483,6 +1483,23 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		recreate_user: bool = False,
 		wait_for_ending: Union[bool, int] = False,
 	):
+
+		script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
+		script.write_text(f'& {command}\r\nRemove-Item -Path "{str(script)}" -Force\r\n', encoding="windows-1252")
+		self._run_powershell_script_as_opsi_setup_user(
+			script=script, admin=admin, recreate_user=recreate_user, wait_for_ending=wait_for_ending, shell_window_style="Normal"
+		)
+
+	def _run_powershell_script_as_opsi_setup_user(  # pylint: disable=too-many-locals,too-many-branches,too-many-statements,too-many-arguments
+		self,
+		script: Path,
+		admin: bool = True,
+		recreate_user: bool = False,
+		wait_for_ending: Union[bool, int] = False,
+		shell_window_style: str = "Normal",  # Normal / Minimized / Maximized / Hidden
+	):
+		if shell_window_style.lower() not in ("normal", "minimized", "maximized", "hidden"):
+			raise ValueError(f"Invalid value for shell_window_style: {shell_window_style!r}")
 		if not self._run_as_opsi_setup_user_lock.acquire(blocking=False):  # pylint: disable=consider-using-with
 			raise RuntimeError("Another process is already running")
 		try:
@@ -1509,8 +1526,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				win32security.LOGON32_PROVIDER_DEFAULT,
 			)
 
-			ps_file = os.path.join(config.get("global", "tmp_dir"), "run_as_opsi_setup_user.ps1")
-
 			try:
 				for attempt in (1, 2, 3, 4, 5):
 					try:
@@ -1535,15 +1550,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 						winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,
 					)
 					with reg_key:
-						shell_window_style = "Normal"  # Normal / Minimized / Maximized / Hidden
-						with codecs.open(ps_file, "w", "windows-1252") as file:
-							file.write(f'& {command}\r\nRemove-Item -Path "{ps_file}" -Force\r\n')
 						winreg.SetValueEx(
 							reg_key,
 							"Shell",
 							0,
 							winreg.REG_SZ,
-							f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{ps_file}"',
+							f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{str(script)}"',
 						)
 				finally:
 					win32profile.UnloadUserProfile(logon, hkey)
@@ -1564,15 +1576,15 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					timeout = wait_for_ending
 				logger.info("Wait for process to complete (timeout=%r)", timeout)
 				start = time.time()
-				while os.path.exists(ps_file):
+				while script.exists():
 					time.sleep(1)
 					if time.time() >= start + timeout:
 						logger.warning("Timed out after %r seconds while waiting for process to complete", timeout)
 						break
 				for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 					System.logoffSession(session_id)
-				if os.path.exists(ps_file):
-					os.unlink(ps_file)
+				if script.exists():
+					script.unlink()
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 			raise
