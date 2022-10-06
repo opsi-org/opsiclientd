@@ -979,7 +979,7 @@ class TerminalReaderThread(threading.Thread):
 		self.should_stop = True
 
 
-class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd):  # pylint: disable=too-many-ancestors
+class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd):  # pylint: disable=too-many-ancestors,too-many-instance-attributes
 	def onConnect(self, request):
 		self.service = self.factory.control_server  # pylint: disable=no-member
 		self.request = RequestAdapter(request)
@@ -987,6 +987,7 @@ class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd
 		self.child_pid = None  # pylint: disable=attribute-defined-outside-init
 		self.child_read = None  # pylint: disable=attribute-defined-outside-init
 		self.child_write = None  # pylint: disable=attribute-defined-outside-init
+		self.child_set_size = None  # pylint: disable=attribute-defined-outside-init
 		self.child_stop = None  # pylint: disable=attribute-defined-outside-init
 
 		logger.info("Client connecting to terminal websocket: %s", self.request.peer)
@@ -1028,14 +1029,12 @@ class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd
 			logger.notice("Starting terminal shell=%s, lines=%d, columns=%d", shell, lines, columns)
 			try:
 				(
-					self.child_pid,
-					self.child_read,
-					self.child_write,
-					self.child_set_size,
-					self.child_stop,
-				) = start_pty(  # pylint: disable=attribute-defined-outside-init
-					shell=shell, lines=lines, columns=columns
-				)
+					self.child_pid,  # pylint: disable=attribute-defined-outside-init
+					self.child_read,  # pylint: disable=attribute-defined-outside-init
+					self.child_write,  # pylint: disable=attribute-defined-outside-init
+					self.child_set_size,  # pylint: disable=attribute-defined-outside-init
+					self.child_stop,  # pylint: disable=attribute-defined-outside-init
+				) = start_pty(shell=shell, lines=lines, columns=columns)
 				self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init
 				self.terminal_reader_thread.start()
 			except Exception as err:  # pylint: disable=broad-except
