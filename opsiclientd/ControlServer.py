@@ -1536,7 +1536,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					)
 					with reg_key:
 						with codecs.open(ps_file, "w", "windows-1252") as file:
-							file.write(f'{command} | Out-Null\r\nRemove-Item -Path "{ps_file}" -Force\r\n')
+							file.write(f'& {command}\r\nRemove-Item -Path "{ps_file}" -Force\r\n')
 						winreg.SetValueEx(
 							reg_key,
 							"Shell",
@@ -1544,7 +1544,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 							winreg.REG_SZ,
 							f'powershell.exe -ExecutionPolicy Bypass -WindowStyle hidden -File "{ps_file}"',
 						)
-						winreg.SetValueEx(reg_key, "Shell", 0, winreg.REG_SZ, command)
 				finally:
 					win32profile.UnloadUserProfile(logon, hkey)
 
