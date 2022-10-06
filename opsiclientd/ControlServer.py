@@ -979,7 +979,9 @@ class TerminalReaderThread(threading.Thread):
 		self.should_stop = True
 
 
-class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd):  # pylint: disable=too-many-ancestors,too-many-instance-attributes
+class TerminalWebSocketServerProtocol(
+	WebSocketServerProtocol, WorkerOpsiclientd
+):  # pylint: disable=too-many-ancestors,too-many-instance-attributes
 	def onConnect(self, request):
 		self.service = self.factory.control_server  # pylint: disable=no-member
 		self.request = RequestAdapter(request)
@@ -1554,7 +1556,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 			if wait_for_ending:
 				timeout = 3600
-				if isinstance(wait_for_ending, int) and wait_for_ending > 0:
+				if isinstance(wait_for_ending, int):
 					timeout = wait_for_ending
 				logger.info("Wait for process to complete (timeout=%r)", timeout)
 				start = time.time()
