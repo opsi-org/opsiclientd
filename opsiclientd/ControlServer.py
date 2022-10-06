@@ -1394,7 +1394,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 		if remove_user and not wait_for_ending:
 			wait_for_ending = True
-		if isinstance(wait_for_ending, bool) and wait_for_ending:
+		if type(wait_for_ending) is bool and wait_for_ending:  # pylint: disable=unidiomatic-typecheck
 			wait_for_ending = 7200
 
 		logger.notice(
@@ -1556,7 +1556,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 			if wait_for_ending:
 				timeout = 3600
-				if isinstance(wait_for_ending, int):
+				if type(wait_for_ending) is int:  # pylint: disable=unidiomatic-typecheck
 					timeout = wait_for_ending
 				logger.info("Wait for process to complete (timeout=%r)", timeout)
 				start = time.time()
