@@ -1483,7 +1483,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		recreate_user: bool = False,
 		wait_for_ending: Union[bool, int] = False,
 	):
-		if not self._run_as_opsi_setup_user_lock.acquire(blocking=False):
+		if not self._run_as_opsi_setup_user_lock.acquire(blocking=False):  # pylint: disable=consider-using-with
 			raise RuntimeError("Another process is already running")
 		try:
 
@@ -1535,6 +1535,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 						winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,
 					)
 					with reg_key:
+						shell_window_style = "Normal"  # Normal / Minimized / Maximized / Hidden
 						with codecs.open(ps_file, "w", "windows-1252") as file:
 							file.write(f'& {command}\r\nRemove-Item -Path "{ps_file}" -Force\r\n')
 						winreg.SetValueEx(
@@ -1542,7 +1543,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 							"Shell",
 							0,
 							winreg.REG_SZ,
-							f'powershell.exe -ExecutionPolicy Bypass -WindowStyle hidden -File "{ps_file}"',
+							f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{ps_file}"',
 						)
 				finally:
 					win32profile.UnloadUserProfile(logon, hkey)
