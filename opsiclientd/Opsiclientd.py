@@ -668,7 +668,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			for ept in self._eventProcessingThreads:
 				if int(ept.getSessionId()) == int(sessionId):
 					return ept
-		raise Exception(f"Event processing thread for session {sessionId} not found")
+		raise LookupError(f"Event processing thread for session {sessionId} not found")
 
 	def processProductActionRequests(self, event):  # pylint: disable=unused-argument
 		logger.error("processProductActionRequests not implemented")

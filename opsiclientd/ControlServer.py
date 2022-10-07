@@ -1226,9 +1226,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 	def setStatusMessage(self, sessionId, message):
 		sessionId = forceInt(sessionId)
 		message = forceUnicode(message)
-		ept = self.opsiclientd.getEventProcessingThread(sessionId)
-		logger.notice("rpc setStatusMessage: Setting status message to '%s'", message)
-		ept.setStatusMessage(message)
+		try:
+			ept = self.opsiclientd.getEventProcessingThread(sessionId)
+			logger.notice("rpc setStatusMessage: Setting status message to '%s'", message)
+			ept.setStatusMessage(message)
+		except LookupError as error:
+			logger.warning("Session does not match EventProcessingThread: %s", error, exc_info=True)
 
 	def isEventRunning(self, name):
 		running = False
