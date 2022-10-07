@@ -1468,10 +1468,13 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			)
 
 			self._run_powershell_script_as_opsi_setup_user(
-				script=ps_script, admin=admin, recreate_user=False, wait_for_ending=wait_for_ending, shell_window_style="Hidden"
+				script=ps_script,
+				admin=admin,
+				recreate_user=False,
+				remove_user=remove_user,
+				wait_for_ending=wait_for_ending,
+				shell_window_style="normal",
 			)
-			if wait_for_ending and remove_user:
-				self.opsiclientd.cleanup_opsi_setup_user()
 		finally:
 			logger.info("Finished runOpsiScriptAsOpsiSetupUser - disconnecting ConfigService")
 			serviceConnection.disconnectConfigService()
@@ -1481,13 +1484,19 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		command: str = "powershell.exe -ExecutionPolicy Bypass",
 		admin: bool = True,
 		recreate_user: bool = False,
+		remove_user: bool = False,
 		wait_for_ending: Union[bool, int] = False,
 	):
 
 		script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
 		script.write_text(f'& {command}\r\nRemove-Item -Path "{str(script)}" -Force\r\n', encoding="windows-1252")
 		self._run_powershell_script_as_opsi_setup_user(
-			script=script, admin=admin, recreate_user=recreate_user, wait_for_ending=wait_for_ending, shell_window_style="Normal"
+			script=script,
+			admin=admin,
+			recreate_user=recreate_user,
+			remove_user=remove_user,
+			wait_for_ending=wait_for_ending,
+			shell_window_style="normal",
 		)
 
 	def _run_powershell_script_as_opsi_setup_user(  # pylint: disable=too-many-locals,too-many-branches,too-many-statements,too-many-arguments
@@ -1495,13 +1504,16 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		script: Path,
 		admin: bool = True,
 		recreate_user: bool = False,
+		remove_user: bool = False,
 		wait_for_ending: Union[bool, int] = False,
-		shell_window_style: str = "Normal",  # Normal / Minimized / Maximized / Hidden
+		shell_window_style: str = "normal",  # Normal / Minimized / Maximized / Hidden
 	):
 		if shell_window_style.lower() not in ("normal", "minimized", "maximized", "hidden"):
 			raise ValueError(f"Invalid value for shell_window_style: {shell_window_style!r}")
 		if not self._run_as_opsi_setup_user_lock.acquire(blocking=False):  # pylint: disable=consider-using-with
 			raise RuntimeError("Another process is already running")
+		if remove_user and not wait_for_ending:
+			wait_for_ending = True
 		try:
 
 			# https://bugs.python.org/file46988/issue.py
@@ -1585,6 +1597,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					System.logoffSession(session_id)
 				if script.exists():
 					script.unlink()
+				if remove_user:
+					self.opsiclientd.cleanup_opsi_setup_user()
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 			raise
