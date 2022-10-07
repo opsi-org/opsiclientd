@@ -1454,7 +1454,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			ps_script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
 
 			# Remove inherited permissions, allow SYSTEM only
-			subprocess.run(["icacls", str(ps_script), " /inheritance:r", "/grant:r", f"SYSTEM:(OI)(CI)F"], check=False)
+			subprocess.run(["icacls", str(ps_script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
 
 			ps_script.write_text(
 				(
@@ -1488,7 +1488,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				recreate_user=False,
 				remove_user=remove_user,
 				wait_for_ending=wait_for_ending,
-				shell_window_style="normal",
+				shell_window_style="hidden",
 			)
 		finally:
 			logger.info("Finished runOpsiScriptAsOpsiSetupUser - disconnecting ConfigService")
@@ -1507,7 +1507,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		script.write_text(f'& {command}\r\nRemove-Item -Path "{str(script)}" -Force\r\n', encoding="windows-1252")
 
 		# Remove inherited permissions, allow SYSTEM only
-		subprocess.run(["icacls", str(script), " /inheritance:r", "/grant:r", f"SYSTEM:(OI)(CI)F"], check=False)
+		subprocess.run(["icacls", str(script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
 
 		self._run_powershell_script_as_opsi_setup_user(
 			script=script,
