@@ -230,7 +230,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 
 			# Prefer active console/rdp sessions
 			for session in System.getActiveSessionInformation():
-				logger.devel("Checking session %s", session)
 				if session.get("StateName") == "active" and session.get("UserName") != OPSI_SETUP_USER_NAME:
 					session_id = session["SessionId"]
 					logger.info("Using session id of user '%s': %s", session.get("UserName"), session_id)
