@@ -21,7 +21,6 @@ from OPSI.Backend.JSONRPC import JSONRPCBackend
 from opsicommon.logging import logger, init_logging, log_context, LOG_NONE, secret_filter
 
 from opsiclientd import __version__, DEFAULT_STDERR_LOG_FORMAT, DEFAULT_FILE_LOG_FORMAT
-from opsiclientd.Config import OPSI_SETUP_USER_NAME
 
 
 def set_status_message(backend, session_id, message):
@@ -122,8 +121,7 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 
 			if depot_url.hostname.lower() not in ("127.0.0.1", "localhost", "::1"):
 				logger.notice("Mounting depot share %s", depotRemoteUrl)
-				if runAsUser != OPSI_SETUP_USER_NAME:
-					set_status_message(be, sessionId, _("Mounting depot share %s") % depotRemoteUrl)  # pylint: disable=no-member
+				set_status_message(be, sessionId, _("Mounting depot share %s") % depotRemoteUrl)  # pylint: disable=no-member
 
 				if runAsUser or depot_url.scheme not in ("smb", "cifs"):
 					System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
@@ -132,8 +130,7 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 				depotShareMounted = True
 
 			logger.notice("Starting action processor")
-			if runAsUser != OPSI_SETUP_USER_NAME:
-				set_status_message(be, sessionId, _("Action processor is running"))  # pylint: disable=no-member
+			set_status_message(be, sessionId, _("Action processor is running"))  # pylint: disable=no-member
 
 			if imp:
 				imp.runCommand(actionProcessorCommand, timeoutSeconds=actionProcessorTimeout)
@@ -141,13 +138,12 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 				System.execute(actionProcessorCommand, waitForEnding=True, timeout=actionProcessorTimeout)
 
 			logger.notice("Action processor ended")
-			if runAsUser != OPSI_SETUP_USER_NAME:
-				set_status_message(be, sessionId, _("Action processor ended"))  # pylint: disable=no-member
+			set_status_message(be, sessionId, _("Action processor ended"))  # pylint: disable=no-member
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 			error = f"Failed to process action requests: {err}"
 			logger.error(error)
-			if be and runAsUser != OPSI_SETUP_USER_NAME:
+			if be:
 				set_status_message(be, sessionId, error)
 
 		if depotShareMounted:

@@ -44,7 +44,7 @@ from opsicommon.logging import (  # type: ignore[import]
 )
 
 from opsiclientd import __version__
-from opsiclientd.Config import Config
+from opsiclientd.Config import OPSI_SETUP_USER_NAME, Config
 from opsiclientd.Events.SyncCompleted import SyncCompletedEvent
 from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
 from opsiclientd.Exceptions import CanceledByUserError, ConfigurationError
@@ -230,7 +230,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 
 			# Prefer active console/rdp sessions
 			for session in System.getActiveSessionInformation():
-				if session.get("StateName") == "active":
+				if session.get("StateName") == "active" and session.get("UserName") != OPSI_SETUP_USER_NAME:
 					session_id = session["SessionId"]
 					logger.info("Using session id of user '%s': %s", session.get("UserName"), session_id)
 					return session_id
