@@ -21,6 +21,7 @@ import os
 import platform
 import re
 import socket
+import subprocess
 import sys
 import tempfile
 import threading
@@ -1451,6 +1452,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			)
 
 			ps_script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
+
+			# Remove inherited permissions, allow SYSTEM only
+			subprocess.run(["icacls", str(ps_script), " /inheritance:r", "/grant:r", f"SYSTEM:(OI)(CI)F"], check=False)
+
 			ps_script.write_text(
 				(
 					f"$args = @("
@@ -1500,6 +1505,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 		script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
 		script.write_text(f'& {command}\r\nRemove-Item -Path "{str(script)}" -Force\r\n', encoding="windows-1252")
+
+		# Remove inherited permissions, allow SYSTEM only
+		subprocess.run(["icacls", str(script), " /inheritance:r", "/grant:r", f"SYSTEM:(OI)(CI)F"], check=False)
+
 		self._run_powershell_script_as_opsi_setup_user(
 			script=script,
 			admin=admin,
@@ -1565,6 +1574,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				try:
 					# env = win32profile.CreateEnvironmentBlock(logon, False)
 					str_sid = win32security.ConvertSidToStringSid(user_info["user_sid"])
+					subprocess.run(["icacls", str(script), "/grant", f"*{str_sid}:(OI)(CI)RX"], check=False)
 					reg_key = winreg.OpenKey(
 						winreg.HKEY_USERS,
 						str_sid + r"\Software\Microsoft\Windows NT\CurrentVersion\Winlogon",
@@ -1577,7 +1587,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 							"Shell",
 							0,
 							winreg.REG_SZ,
-							f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{str(script)}" 2>&1 > "{str(script)}_log.txt"',
+							f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{str(script)}"',
 						)
 				finally:
 					win32profile.UnloadUserProfile(logon, hkey)
