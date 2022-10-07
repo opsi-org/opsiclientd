@@ -1408,6 +1408,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			remove_user,
 		)
 
+		depot_server_url = config.get("depot_server", "url")
+		if not depot_server_url:
+			raise RuntimeError("depot_server.url not defined")
 		depot_path = config.get_depot_path()
 		depot_drive = config.getDepotDrive()
 		if depot_path == depot_drive:
@@ -1424,7 +1427,14 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		try:
 
 			configServiceUrl = serviceConnection.getConfigServiceUrl()
-			depotServerUsername, depotServerPassword = config.getDepotserverCredentials(configService=serviceConnection.getConfigService())
+			config.selectDepotserver(
+				configService=serviceConnection.getConfigService(),
+				mode="mount",
+				productIds=[product_id] if product_id else None,
+			)
+			depot_server_username, depot_server_password = config.getDepotserverCredentials(
+				configService=serviceConnection.getConfigService()
+			)
 
 			command = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
 			if product_id:
@@ -1449,10 +1459,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					f"'{config.get('control_server', 'port')}',"
 					f"'{config.get('global', 'log_file')}',"
 					f"'{config.get('global', 'log_level')}',"
-					f"'{config.get('depot_server', 'url')}',"
+					f"'{depot_server_url}',"
 					f"'{depot_drive}',"
-					f"'{depotServerUsername}',"
-					f"'{depotServerPassword}',"
+					f"'{depot_server_username}',"
+					f"'{depot_server_password}',"
 					f"'-1',"
 					f"'default',"
 					f"'{command}',"
@@ -1462,7 +1472,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					f"'false'"
 					f")\r\n"
 					f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args\r\n'
-					f'Remove-Item -Path "{str(script)}" -Force\r\n'
+					f'Remove-Item -Path "{str(ps_script)}" -Force\r\n'
 				),
 				encoding="windows-1252",
 			)
@@ -1479,7 +1489,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			logger.info("Finished runOpsiScriptAsOpsiSetupUser - disconnecting ConfigService")
 			serviceConnection.disconnectConfigService()
 
-	def runAsOpsiSetupUser(  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+	def runAsOpsiSetupUser(  # pylint: disable=too-many-locals,too-many-branches,too-many-statements,too-many-arguments
 		self,
 		command: str = "powershell.exe -ExecutionPolicy Bypass",
 		admin: bool = True,
@@ -1567,7 +1577,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 							"Shell",
 							0,
 							winreg.REG_SZ,
-							f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{str(script)}"',
+							f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{str(script)}" 2>&1 > "{str(script)}_log.txt"',
 						)
 				finally:
 					win32profile.UnloadUserProfile(logon, hkey)

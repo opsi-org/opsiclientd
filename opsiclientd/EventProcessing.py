@@ -1171,7 +1171,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		self._notificationServer.addSubject(choiceSubject)
 		notifierPids = []
 		notifierHandles = []
-		try:
+		try:  # pylint: disable=too-many-nested-blocks
 			if self.event.eventConfig.actionNotifierCommand:
 				desktops = [self.event.eventConfig.actionNotifierDesktop]
 				if RUNNING_ON_WINDOWS and self.event.eventConfig.actionNotifierDesktop == "all":
@@ -1614,7 +1614,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				shutil.rmtree(path)
 			else:
 				path.unlink()
-
 
 	def run(self):  # pylint: disable=too-many-branches,too-many-statements
 		with log_context({"instance": f"event processing {self.event.eventConfig.getId()}"}):

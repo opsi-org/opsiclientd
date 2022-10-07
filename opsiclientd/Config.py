@@ -23,7 +23,6 @@ from OPSI.Types import (  # type: ignore[import]
 	forceProductIdList,
 	forceUnicode,
 	forceUnicodeList,
-	forceUrl,
 )
 from OPSI.Util import blowfishDecrypt, objectToBeautifiedText  # type: ignore[import]
 from OPSI.Util.File import IniFile  # type: ignore[import]
@@ -634,8 +633,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			configId=[
 				"clientconfig.depot.dynamic",
 				"clientconfig.depot.protocol",
-				"opsiclientd.depot_server.depot_id",
-				"opsiclientd.depot_server.url",
+				"opsiclientd.depot_server.depot_id"
 			],
 			objectId=self.get("global", "host_id"),
 		)
@@ -643,16 +641,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			if not configState.values or not configState.values[0]:
 				continue
 
-			if configState.configId == "opsiclientd.depot_server.url" and configState.values:
-				try:
-					depotUrl = forceUrl(configState.values[0])
-					self.set("depot_server", "depot_id", "")
-					self.set("depot_server", "url", depotUrl)
-					logger.warning("Depot url was set to '%s' from configState %s", depotUrl, configState)
-					return None, None
-				except Exception as err:  # pylint: disable=broad-except
-					logger.error("Failed to set depot url from values %s in configState %s: %s", configState.values, configState, err)
-			elif configState.configId == "opsiclientd.depot_server.depot_id" and configState.values:
+			if configState.configId == "opsiclientd.depot_server.depot_id" and configState.values:
 				try:
 					depotId = forceHostId(configState.values[0])
 					depotIds.append(depotId)
@@ -783,7 +772,8 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			configService=configService, event=event, productIds=productIds, masterOnly=masterOnly
 		)
 		if not selectedDepot:
-			return  # depot_server.url is already set by getDepot if opsiclientd.depot_server.url is set.
+			logger.error("Failed to get depot server")
+			return
 
 		logger.notice("Selected depot for mode '%s' is '%s', protocol '%s'", mode, selectedDepot, depotProtocol)
 		self.set("depot_server", "depot_id", selectedDepot.id)
