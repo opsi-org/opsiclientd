@@ -666,6 +666,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 	def getEventProcessingThread(self, sessionId):
 		with self._eptListLock:
 			for ept in self._eventProcessingThreads:
+				logger.devel("Found ept with sessionId %s", ept.getSessionId())
 				if int(ept.getSessionId()) == int(sessionId):
 					return ept
 		raise Exception(f"Event processing thread for session {sessionId} not found")
