@@ -1408,20 +1408,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			remove_user,
 		)
 
-		depot_server_url = config.get("depot_server", "url")
-		if not depot_server_url:
-			raise RuntimeError("depot_server.url not defined")
-		depot_path = config.get_depot_path()
-		depot_drive = config.getDepotDrive()
-		if depot_path == depot_drive:
-			# Prefer depot drive if not in use
-			depot_path = depot_drive = System.get_available_drive_letter(start=depot_drive.rstrip(":")).rstrip(":") + ":"
-
-		if not os.path.isabs(script):
-			script = os.path.join(depot_path, os.sep, script)
-
-		log_file = os.path.join(config.get("global", "log_dir"), "opsisetupuser.log")
-
 		serviceConnection = ServiceConnection()
 		serviceConnection.connectConfigService()
 		try:
@@ -1435,6 +1421,20 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			depot_server_username, depot_server_password = config.getDepotserverCredentials(
 				configService=serviceConnection.getConfigService()
 			)
+
+			depot_server_url = config.get("depot_server", "url")
+			if not depot_server_url:
+				raise RuntimeError("depot_server.url not defined")
+			depot_path = config.get_depot_path()
+			depot_drive = config.getDepotDrive()
+			if depot_path == depot_drive:
+				# Prefer depot drive if not in use
+				depot_path = depot_drive = System.get_available_drive_letter(start=depot_drive.rstrip(":")).rstrip(":") + ":"
+
+			if not os.path.isabs(script):
+				script = os.path.join(depot_path, os.sep, script)
+
+			log_file = os.path.join(config.get("global", "log_dir"), "opsisetupuser.log")
 
 			command = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
 			if product_id:
