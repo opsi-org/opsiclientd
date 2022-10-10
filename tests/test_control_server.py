@@ -154,10 +154,3 @@ def test_concurrency(opsiclient_url, opsiclientd_auth):  # pylint: disable=redef
 			assert thread.response["error"] is None
 		if thread.response["id"] in (1, 2):
 			assert "ok" in thread.response["result"]
-
-
-@pytest.mark.xfail
-def test_runAsOpsiSetupUser():  # pylint: disable=redefined-outer-name,unused-argument
-	ocd = Opsiclientd()
-	controlServer = ControlServer.OpsiclientdRpcInterface(ocd)
-	controlServer.runAsOpsiSetupUser("echo hi", admin=True, recreate_user=True, remove_user=True, wait_for_ending=True)
