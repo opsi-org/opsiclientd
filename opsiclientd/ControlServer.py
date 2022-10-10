@@ -1540,7 +1540,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		# If wait_for_ending is active, stdout and stderr are collected and added to log
 		logfile = Path(config.get("global", "tmp_dir")) / f"{uuid4()}.log"
 		if wait_for_ending:
-			powershell_call += f" 2>&1 | Out-File -Encoding utf8 {logfile}"
+			powershell_call += f" 2>&1 >:u8 {logfile}"
 		try:
 
 			# https://bugs.python.org/file46988/issue.py
