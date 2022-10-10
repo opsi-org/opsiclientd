@@ -1536,6 +1536,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			raise RuntimeError("Another process is already running")
 		if remove_user and not wait_for_ending:
 			wait_for_ending = True
+		powershell_call = f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{str(script)}"'
+		# If wait_for_ending is active, stdout and stderr are collected and added to log
+		logfile = Path(config.get("global", "tmp_dir")) / f"{uuid4()}.log"
+		if wait_for_ending:
+			powershell_call += f" 2>&1 {logfile}"
 		try:
 
 			# https://bugs.python.org/file46988/issue.py
@@ -1590,7 +1595,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 							"Shell",
 							0,
 							winreg.REG_SZ,
-							f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{str(script)}"',
+							powershell_call,
 						)
 				finally:
 					win32profile.UnloadUserProfile(logon, hkey)
@@ -1616,6 +1621,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					if time.time() >= start + timeout:
 						logger.warning("Timed out after %r seconds while waiting for process to complete", timeout)
 						break
+				with open(logfile, "r") as logfile_handle:
+					logger.devel(logfile_handle.read())
+				logfile.unlink()
 				for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 					System.logoffSession(session_id)
 				if script.exists():
