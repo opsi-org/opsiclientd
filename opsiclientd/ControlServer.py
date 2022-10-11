@@ -1459,7 +1459,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			# Remove inherited permissions, allow SYSTEM only
 			subprocess.run(["icacls", str(ps_script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
 
-			logfile = ps_script.with_suffix("log")
+			logfile = ps_script.with_suffix(".log")
 			ps_script.write_text(
 				(
 					f"$args = @("
@@ -1507,7 +1507,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		wait_for_ending: Union[bool, int] = False,
 	):
 		script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
-		logfile = script.with_suffix("log")
+		logfile = script.with_suffix(".log")
 		script.write_text(f'& {command} 2>&1 > "{logfile}"\r\nRemove-Item -Path "{str(script)}" -Force\r\n', encoding="windows-1252")
 
 		# Remove inherited permissions, allow SYSTEM only
