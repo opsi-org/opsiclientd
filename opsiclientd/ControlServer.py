@@ -1480,7 +1480,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					f"'\"\"',"
 					f"'false'"
 					f")\r\n"
-					f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args 2>&1 > "{logfile}\r\n'
+					f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args 2>&1 > "{logfile}"\r\n'
 					f'Remove-Item -Path "{str(ps_script)}" -Force\r\n'
 				),
 				encoding="windows-1252",
