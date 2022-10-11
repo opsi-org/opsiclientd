@@ -1540,7 +1540,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		# If wait_for_ending is active, stdout and stderr are collected and added to log
 		logfile = Path(config.get("global", "tmp_dir")) / f"{uuid4()}.log"
 		if wait_for_ending:
-			powershell_call += f" 2>&1 > {logfile}"
+			powershell_call += f' 2>&1 > "{logfile}"'
+		logger.devel("Setting powershell call: %s", powershell_call)
 		try:
 
 			# https://bugs.python.org/file46988/issue.py
@@ -1621,6 +1622,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					if time.time() >= start + timeout:
 						logger.warning("Timed out after %r seconds while waiting for process to complete", timeout)
 						break
+				logger.devel("logfile %s exists: %s", logfile, logfile.exists())
 				if logfile.exists():
 					with open(logfile, "r", encoding="utf-8") as logfile_handle:
 						logger.devel(logfile_handle.read())
