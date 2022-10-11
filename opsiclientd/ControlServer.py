@@ -1459,6 +1459,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			# Remove inherited permissions, allow SYSTEM only
 			subprocess.run(["icacls", str(ps_script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
 
+			logfile = ps_script.with_suffix("log")
 			ps_script.write_text(
 				(
 					f"$args = @("
@@ -1479,7 +1480,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					f"'\"\"',"
 					f"'false'"
 					f")\r\n"
-					f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args\r\n'
+					f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args 2>&1 > "{logfile}\r\n'
 					f'Remove-Item -Path "{str(ps_script)}" -Force\r\n'
 				),
 				encoding="windows-1252",
@@ -1505,9 +1506,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		remove_user: bool = False,
 		wait_for_ending: Union[bool, int] = False,
 	):
-
 		script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
-		script.write_text(f'& {command}\r\nRemove-Item -Path "{str(script)}" -Force\r\n', encoding="windows-1252")
+		logfile = script.with_suffix("log")
+		script.write_text(f'& {command} 2>&1 > "{logfile}"\r\nRemove-Item -Path "{str(script)}" -Force\r\n', encoding="windows-1252")
 
 		# Remove inherited permissions, allow SYSTEM only
 		subprocess.run(["icacls", str(script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
@@ -1536,12 +1537,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			raise RuntimeError("Another process is already running")
 		if remove_user and not wait_for_ending:
 			wait_for_ending = True
-		powershell_call = f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{str(script)}"'
-		# If wait_for_ending is active, stdout and stderr are collected and added to log
-		logfile = Path(config.get("global", "tmp_dir")) / f"{uuid4()}.log"
-		if wait_for_ending:
-			powershell_call += f' 2>&1 > "{logfile}"'
-		logger.devel("Setting powershell call: %s", powershell_call)
 		try:
 
 			# https://bugs.python.org/file46988/issue.py
@@ -1596,7 +1591,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 							"Shell",
 							0,
 							winreg.REG_SZ,
-							powershell_call,
+							f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{str(script)}"',
 						)
 				finally:
 					win32profile.UnloadUserProfile(logon, hkey)
@@ -1622,6 +1617,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					if time.time() >= start + timeout:
 						logger.warning("Timed out after %r seconds while waiting for process to complete", timeout)
 						break
+				logfile = script.with_suffix(".log")
 				logger.devel("logfile %s exists: %s", logfile, logfile.exists())
 				if logfile.exists():
 					with open(logfile, "r", encoding="utf-8") as logfile_handle:
