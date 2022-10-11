@@ -1611,24 +1611,25 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				if type(wait_for_ending) is int:  # pylint: disable=unidiomatic-typecheck
 					timeout = wait_for_ending
 				logger.info("Wait for process to complete (timeout=%r)", timeout)
-				start = time.time()
-				while script.exists():
-					time.sleep(1)
-					if time.time() >= start + timeout:
-						logger.warning("Timed out after %r seconds while waiting for process to complete", timeout)
-						break
-				logfile = script.with_suffix(".log")
-				logger.devel("logfile %s exists: %s", logfile, logfile.exists())
-				if logfile.exists():
-					with open(logfile, "r", encoding="utf-8") as logfile_handle:
-						logger.devel(logfile_handle.read())
-					logfile.unlink()
-				for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
-					System.logoffSession(session_id)
-				if script.exists():
-					script.unlink()
-				if remove_user:
-					self.opsiclientd.cleanup_opsi_setup_user()
+				try:
+					start = time.time()
+					while script.exists():
+						time.sleep(1)
+						if time.time() >= start + timeout:
+							logger.warning("Timed out after %r seconds while waiting for process to complete", timeout)
+							break
+					logfile = script.with_suffix(".log")
+					if logfile.exists():
+						with open(logfile, "r", encoding="utf-8-sig") as logfile_handle:  # utf-8-sig can handle BOM
+							logger.info("Script output: %s", logfile_handle.read())
+						logfile.unlink()
+				finally:
+					for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
+						System.logoffSession(session_id)
+					if script.exists():
+						script.unlink()
+					if remove_user:
+						self.opsiclientd.cleanup_opsi_setup_user()
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 			raise
