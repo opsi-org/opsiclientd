@@ -150,16 +150,16 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 			try:
 				logger.notice("Unmounting depot share")
 				System.umount(depotDrive)
-			except Exception:  # pylint: disable=broad-except
-				pass
+			except Exception as error:  # pylint: disable=broad-except
+				logger.debug("Caught exception in umount: %s", error)
 		if imp:
 			try:
 				imp.end()
-			except Exception:  # pylint: disable=broad-except
-				pass
+			except Exception as error:  # pylint: disable=broad-except
+				logger.debug("Caught exception in end of impersonation: %s", error)
 
 		if be:
 			try:
 				be.backend_exit()
-			except Exception:  # pylint: disable=broad-except
-				pass
+			except Exception as error:  # pylint: disable=broad-except
+				logger.debug("Caught exception in backend_exit: %s", error)

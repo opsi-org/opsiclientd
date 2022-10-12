@@ -1226,9 +1226,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 	def setStatusMessage(self, sessionId, message):
 		sessionId = forceInt(sessionId)
 		message = forceUnicode(message)
-		ept = self.opsiclientd.getEventProcessingThread(sessionId)
-		logger.notice("rpc setStatusMessage: Setting status message to '%s'", message)
-		ept.setStatusMessage(message)
+		try:
+			ept = self.opsiclientd.getEventProcessingThread(sessionId)
+			logger.notice("rpc setStatusMessage: Setting status message to '%s'", message)
+			ept.setStatusMessage(message)
+		except LookupError as error:
+			logger.warning("Session does not match EventProcessingThread: %s", error, exc_info=True)
 
 	def isEventRunning(self, name):
 		running = False
@@ -1456,6 +1459,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			# Remove inherited permissions, allow SYSTEM only
 			subprocess.run(["icacls", str(ps_script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
 
+			logfile = ps_script.with_suffix(".log")
 			ps_script.write_text(
 				(
 					f"$args = @("
@@ -1476,7 +1480,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					f"'\"\"',"
 					f"'false'"
 					f")\r\n"
-					f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args\r\n'
+					f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args 2>&1 > "{logfile}"\r\n'
 					f'Remove-Item -Path "{str(ps_script)}" -Force\r\n'
 				),
 				encoding="windows-1252",
@@ -1502,9 +1506,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		remove_user: bool = False,
 		wait_for_ending: Union[bool, int] = False,
 	):
-
 		script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
-		script.write_text(f'& {command}\r\nRemove-Item -Path "{str(script)}" -Force\r\n', encoding="windows-1252")
+		logfile = script.with_suffix(".log")
+		script.write_text(f'& {command} 2>&1 > "{logfile}"\r\nRemove-Item -Path "{str(script)}" -Force\r\n', encoding="windows-1252")
 
 		# Remove inherited permissions, allow SYSTEM only
 		subprocess.run(["icacls", str(script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
@@ -1607,18 +1611,25 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				if type(wait_for_ending) is int:  # pylint: disable=unidiomatic-typecheck
 					timeout = wait_for_ending
 				logger.info("Wait for process to complete (timeout=%r)", timeout)
-				start = time.time()
-				while script.exists():
-					time.sleep(1)
-					if time.time() >= start + timeout:
-						logger.warning("Timed out after %r seconds while waiting for process to complete", timeout)
-						break
-				for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
-					System.logoffSession(session_id)
-				if script.exists():
-					script.unlink()
-				if remove_user:
-					self.opsiclientd.cleanup_opsi_setup_user()
+				try:
+					start = time.time()
+					while script.exists():
+						time.sleep(1)
+						if time.time() >= start + timeout:
+							logger.warning("Timed out after %r seconds while waiting for process to complete", timeout)
+							break
+					logfile = script.with_suffix(".log")
+					if logfile.exists():
+						with open(logfile, "r", encoding="utf-8-sig") as logfile_handle:  # utf-8-sig can handle BOM
+							logger.info("Script output: %s", logfile_handle.read())
+						logfile.unlink()
+				finally:
+					for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
+						System.logoffSession(session_id)
+					if script.exists():
+						script.unlink()
+					if remove_user:
+						self.opsiclientd.cleanup_opsi_setup_user()
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 			raise
