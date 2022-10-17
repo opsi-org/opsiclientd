@@ -1508,8 +1508,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 	):
 		script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
 		logfile = script.with_suffix(".log")
-		# script.write_text(f'& {command} 2>&1 > "{logfile}"\r\nRemove-Item -Path "{str(script)}" -Force\r\n', encoding="windows-1252")
-		script.write_text(f'& {command} 2>&1 > "{logfile}"\r\n', encoding="windows-1252")  # Remove-Item -Path "{str(script)}" -Force\r\n
+		# Pipe output to Out-Null to prevent powershell from continuing
+		# https://stackoverflow.com/a/1742758
+		script.write_text(f'& {command} 2>&1 > "{logfile}" | Out-Null\r\nRemove-Item -Path "{str(script)}" -Force\r\n', encoding="windows-1252")
 
 		# Remove inherited permissions, allow SYSTEM only
 		subprocess.run(["icacls", str(script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
@@ -1627,8 +1628,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				finally:
 					for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 						System.logoffSession(session_id)
-					# if script.exists():
-					# 	script.unlink()
+					if script.exists():
+						script.unlink()
 					if remove_user:
 						self.opsiclientd.cleanup_opsi_setup_user()
 		except Exception as err:  # pylint: disable=broad-except
