@@ -1456,9 +1456,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 			ps_script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
 
-			# Remove inherited permissions, allow SYSTEM only
-			subprocess.run(["icacls", str(ps_script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
-
 			logfile = ps_script.with_suffix(".log")
 			ps_script.write_text(
 				(
@@ -1486,6 +1483,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				encoding="windows-1252",
 			)
 
+			# Remove inherited permissions, allow SYSTEM only
+			subprocess.run(["icacls", str(ps_script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
+
 			self._run_powershell_script_as_opsi_setup_user(
 				script=ps_script,
 				admin=admin,
@@ -1503,26 +1503,100 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		command: str = "powershell.exe -ExecutionPolicy Bypass",
 		admin: bool = True,
 		recreate_user: bool = False,
-		remove_user: bool = False,
-		wait_for_ending: Union[bool, int] = False,
+		# remove_user: bool = False,
+		# wait_for_ending: Union[bool, int] = False,
 	):
-		script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
-		logfile = script.with_suffix(".log")
-		script.write_text(f'& {command} 2>&1 > "{logfile}"\r\nRemove-Item -Path "{str(script)}" -Force\r\n', encoding="windows-1252")
+		# script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
+		# logfile = script.with_suffix(".log")
+		# # Pipe output to Out-Null to prevent powershell from continuing
+		# # https://stackoverflow.com/a/1742758
+		# script.write_text(f'& {command} 2>&1 > "{logfile}" | Out-Null\r\nRemove-Item -Path "{str(script)}" -Force\r\n', encoding="windows-1252")
 
-		# Remove inherited permissions, allow SYSTEM only
-		subprocess.run(["icacls", str(script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
+		# # Remove inherited permissions, allow SYSTEM only
+		# subprocess.run(["icacls", str(script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
 
-		self._run_powershell_script_as_opsi_setup_user(
-			script=script,
-			admin=admin,
-			recreate_user=recreate_user,
-			remove_user=remove_user,
-			wait_for_ending=wait_for_ending,
-			shell_window_style="normal",
+		# self._run_powershell_script_as_opsi_setup_user(
+		# 	script=script,
+		# 	admin=admin,
+		# 	recreate_user=recreate_user,
+		# 	remove_user=remove_user,
+		# 	wait_for_ending=wait_for_ending,
+		# 	shell_window_style="normal",
+		# )
+		try:
+			self._run_process_as_opsi_setup_user(command, admin, recreate_user)
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error(err, exc_info=True)
+			raise
+
+	def _run_process_as_opsi_setup_user(  # pylint: disable=too-many-locals
+		self,
+		command: str,
+		admin: bool,
+		recreate_user: bool
+	) -> None:
+		# https://bugs.python.org/file46988/issue.py
+		if not RUNNING_ON_WINDOWS:
+			raise NotImplementedError(f"Not implemented on {platform.system()}")
+		# pyright: reportMissingImports=false
+		import winreg  # type: ignore[import]  # pylint: disable=import-error,import-outside-toplevel
+
+		import pywintypes  # type: ignore[import]  # pylint: disable=import-error,import-outside-toplevel
+		import win32profile  # type: ignore[import] # pylint: disable=import-error,import-outside-toplevel
+		import win32security  # type: ignore[import]  # pylint: disable=import-error,import-outside-toplevel
+
+		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
+			System.logoffSession(session_id)
+		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
+
+		logon = win32security.LogonUser(
+			user_info["name"],
+			None,
+			user_info["password"],
+			win32security.LOGON32_LOGON_INTERACTIVE,
+			win32security.LOGON32_PROVIDER_DEFAULT,
 		)
 
-	def _run_powershell_script_as_opsi_setup_user(  # pylint: disable=too-many-locals,too-many-branches,too-many-statements,too-many-arguments
+		try:
+			for attempt in (1, 2, 3, 4, 5):
+				try:
+
+					# This will create the user home dir and ntuser.dat gets loaded
+					# Can fail if C:\users\default\ntuser.dat is ocked by an other process
+					hkey = win32profile.LoadUserProfile(logon, {"UserName": user_info["name"]})
+					break
+				except pywintypes.error as err:
+					logger.warning("Failed to load user profile (attempt #%d): %s", attempt, err)
+					time.sleep(5)
+					if attempt == 5:
+						raise
+
+			try:
+				# env = win32profile.CreateEnvironmentBlock(logon, False)
+				str_sid = win32security.ConvertSidToStringSid(user_info["user_sid"])
+				reg_key = winreg.OpenKey(
+					winreg.HKEY_USERS,
+					str_sid + r"\Software\Microsoft\Windows NT\CurrentVersion\Winlogon",
+					0,
+					winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,
+				)
+				with reg_key:
+					winreg.SetValueEx(reg_key, "Shell", 0, winreg.REG_SZ, command)
+			finally:
+				win32profile.UnloadUserProfile(logon, hkey)
+
+		finally:
+			logon.close()
+
+		if not self.opsiclientd._controlPipe.credentialProviderConnected():  # pylint: disable=protected-access
+			for _unused in range(20):
+				if self.opsiclientd._controlPipe.credentialProviderConnected():  # pylint: disable=protected-access
+					break
+				time.sleep(0.5)
+
+		self.opsiclientd.loginUser(user_info["name"], user_info["password"])
+
+	def _run_powershell_script_as_opsi_setup_user(  # pylint: disable=too-many-nested-blocks,too-many-arguments,too-many-branches
 		self,
 		script: Path,
 		admin: bool = True,
@@ -1538,74 +1612,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		if remove_user and not wait_for_ending:
 			wait_for_ending = True
 		try:
-
-			# https://bugs.python.org/file46988/issue.py
-			if not RUNNING_ON_WINDOWS:
-				raise NotImplementedError(f"Not implemented on {platform.system()}")
-			# pyright: reportMissingImports=false
-			import winreg  # type: ignore[import]  # pylint: disable=import-error,import-outside-toplevel
-
-			import pywintypes  # type: ignore[import]  # pylint: disable=import-error,import-outside-toplevel
-			import win32profile  # type: ignore[import] # pylint: disable=import-error,import-outside-toplevel
-			import win32security  # type: ignore[import]  # pylint: disable=import-error,import-outside-toplevel
-
-			for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
-				System.logoffSession(session_id)
-			user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
-
-			logon = win32security.LogonUser(
-				user_info["name"],
-				None,
-				user_info["password"],
-				win32security.LOGON32_LOGON_INTERACTIVE,
-				win32security.LOGON32_PROVIDER_DEFAULT,
+			self._run_process_as_opsi_setup_user(
+				f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{str(script)}"',
+				admin,
+				recreate_user,
 			)
-
-			try:
-				for attempt in (1, 2, 3, 4, 5):
-					try:
-
-						# This will create the user home dir and ntuser.dat gets loaded
-						# Can fail if C:\users\default\ntuser.dat is ocked by an other process
-						hkey = win32profile.LoadUserProfile(logon, {"UserName": user_info["name"]})
-						break
-					except pywintypes.error as err:
-						logger.warning("Failed to load user profile (attempt #%d): %s", attempt, err)
-						time.sleep(5)
-						if attempt == 5:
-							raise
-
-				try:
-					# env = win32profile.CreateEnvironmentBlock(logon, False)
-					str_sid = win32security.ConvertSidToStringSid(user_info["user_sid"])
-					subprocess.run(["icacls", str(script), "/grant", f"*{str_sid}:(OI)(CI)RX"], check=False)
-					reg_key = winreg.OpenKey(
-						winreg.HKEY_USERS,
-						str_sid + r"\Software\Microsoft\Windows NT\CurrentVersion\Winlogon",
-						0,
-						winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,
-					)
-					with reg_key:
-						winreg.SetValueEx(
-							reg_key,
-							"Shell",
-							0,
-							winreg.REG_SZ,
-							f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{str(script)}"',
-						)
-				finally:
-					win32profile.UnloadUserProfile(logon, hkey)
-
-			finally:
-				logon.close()
-
-			if not self.opsiclientd._controlPipe.credentialProviderConnected():  # pylint: disable=protected-access
-				for _unused in range(20):
-					if self.opsiclientd._controlPipe.credentialProviderConnected():  # pylint: disable=protected-access
-						break
-					time.sleep(0.5)
-
-			self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 			if wait_for_ending:
 				timeout = 3600
 				if type(wait_for_ending) is int:  # pylint: disable=unidiomatic-typecheck
