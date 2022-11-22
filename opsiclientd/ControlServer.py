@@ -20,6 +20,7 @@ import json
 import os
 import platform
 import re
+import shlex
 import socket
 import subprocess
 import sys
@@ -31,14 +32,17 @@ from collections import namedtuple
 from pathlib import Path
 from typing import Union
 from uuid import uuid4
+import warnings
 
 import msgpack  # type: ignore[import]
 import psutil  # type: ignore[import]
-from autobahn.twisted.resource import WebSocketResource  # type: ignore[import]
-from autobahn.twisted.websocket import (  # type: ignore[import]
-	WebSocketServerFactory,
-	WebSocketServerProtocol,
-)
+with warnings.catch_warnings():
+	warnings.filterwarnings("ignore", category=DeprecationWarning)
+	from autobahn.twisted.resource import WebSocketResource  # type: ignore[import]
+	from autobahn.twisted.websocket import (  # type: ignore[import]
+		WebSocketServerFactory,
+		WebSocketServerProtocol,
+	)
 from OpenSSL import crypto  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
 from OPSI import __version__ as python_opsi_version  # type: ignore[import]
@@ -1456,7 +1460,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 			ps_script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
 
-			logfile = ps_script.with_suffix(".log")
 			ps_script.write_text(
 				(
 					f"$args = @("
@@ -1477,14 +1480,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					f"'\"\"',"
 					f"'false'"
 					f")\r\n"
-					f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args 2>&1 > "{logfile}"\r\n'
+					f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args\r\n'
 					f'Remove-Item -Path "{str(ps_script)}" -Force\r\n'
 				),
 				encoding="windows-1252",
 			)
-
-			# Remove inherited permissions, allow SYSTEM only
-			subprocess.run(["icacls", str(ps_script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
 
 			self._run_powershell_script_as_opsi_setup_user(
 				script=ps_script,
@@ -1503,38 +1503,40 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		command: str = "powershell.exe -ExecutionPolicy Bypass",
 		admin: bool = True,
 		recreate_user: bool = False,
-		# remove_user: bool = False,
-		# wait_for_ending: Union[bool, int] = False,
+		remove_user: bool = False,
+		wait_for_ending: Union[bool, int] = False,
 	):
-		# script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
-		# logfile = script.with_suffix(".log")
-		# # Pipe output to Out-Null to prevent powershell from continuing
-		# # https://stackoverflow.com/a/1742758
-		# script.write_text(f'& {command} 2>&1 > "{logfile}" | Out-Null\r\nRemove-Item -Path "{str(script)}" -Force\r\n', encoding="windows-1252")
-
-		# # Remove inherited permissions, allow SYSTEM only
-		# subprocess.run(["icacls", str(script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
-
-		# self._run_powershell_script_as_opsi_setup_user(
-		# 	script=script,
-		# 	admin=admin,
-		# 	recreate_user=recreate_user,
-		# 	remove_user=remove_user,
-		# 	wait_for_ending=wait_for_ending,
-		# 	shell_window_style="normal",
-		# )
+		script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
+		# catch <Drive>:.....exe and put in quotes if not already quoted
+		if re.search("[A-Z]:.*\\.exe", command) and not command.startswith(('"', "'")):
+			command = re.sub("([A-Z]:.*\\.exe)", '"\\1"', command, count=1)
+		parts = shlex.split(command, posix=False)
+		if not parts:
+			raise ValueError(f"Invalid command {command}")
+		if len(parts) == 1:
+			script_content = f'Start-Process -FilePath {parts[0]} -Wait\r\n'
+		else:
+			script_content = (
+				f"""Start-Process -FilePath {parts[0]} -ArgumentList {','.join((f'"{entry}"' for entry in parts[1:]))} -Wait\r\n"""
+			)
+		# WARNING: This part is not executed if the command call above initiates reboot
+		script_content += f'Remove-Item -Path "{str(script)}" -Force\r\n'
+		script.write_text(script_content, encoding="windows-1252")
+		logger.debug("Preparing script:\n%s", script_content)
 		try:
-			self._run_process_as_opsi_setup_user(command, admin, recreate_user)
+			self._run_powershell_script_as_opsi_setup_user(
+				script=script,
+				admin=admin,
+				recreate_user=recreate_user,
+				remove_user=remove_user,
+				wait_for_ending=wait_for_ending,
+				shell_window_style="normal",
+			)
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 			raise
 
-	def _run_process_as_opsi_setup_user(  # pylint: disable=too-many-locals
-		self,
-		command: str,
-		admin: bool,
-		recreate_user: bool
-	) -> None:
+	def _run_process_as_opsi_setup_user(self, command: str, admin: bool, recreate_user: bool) -> None:  # pylint: disable=too-many-locals
 		# https://bugs.python.org/file46988/issue.py
 		if not RUNNING_ON_WINDOWS:
 			raise NotImplementedError(f"Not implemented on {platform.system()}")
@@ -1611,6 +1613,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			raise RuntimeError("Another process is already running")
 		if remove_user and not wait_for_ending:
 			wait_for_ending = True
+
+		# Remove inherited permissions, allow SYSTEM only
+		logger.info("Setting permissions: %s", ["icacls", str(script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"])
+		subprocess.run(["icacls", str(script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
+
 		try:
 			self._run_process_as_opsi_setup_user(
 				f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{str(script)}"',
@@ -1629,11 +1636,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 						if time.time() >= start + timeout:
 							logger.warning("Timed out after %r seconds while waiting for process to complete", timeout)
 							break
-					logfile = script.with_suffix(".log")
-					if logfile.exists():
-						with open(logfile, "r", encoding="utf-8-sig") as logfile_handle:  # utf-8-sig can handle BOM
-							logger.info("Script output: %s", logfile_handle.read())
-						logfile.unlink()
 				finally:
 					for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 						System.logoffSession(session_id)
