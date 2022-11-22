@@ -874,11 +874,34 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 
 				productIds.append(config.action_processor_name)
 				if "mshotfix" in productIds:
-					# Windows 8.1 Bugfix, with a helper exe.
-					# Helper seems not to be needed with Python 3
-					helper = None  # os.path.join(config.get('global', 'base_dir'), 'utilities', 'getmsversioninfo.exe')
-					additionalProductId = System.getOpsiHotfixName(helper)
-					if "win10" in additionalProductId:
+					additionalProductId = System.getOpsiHotfixName()
+					if "win11" in additionalProductId:
+						releaseId = None
+						subKey = None
+						valueName = None
+						try:
+							subKey = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"
+							valueName = "CurrentBuild"
+							currentBuild = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, subKey, valueName)
+						except Exception as reg_err:  # pylint: disable=broad-except
+							logger.error("Failed to read registry value %s %s: %s", subKey, valueName, reg_err)
+						releasePackageName = None
+						if currentBuild == "20348":
+							releasePackageName = "mshotfix-win2022"
+						elif currentBuild == "22000":
+							releasePackageName = "mshotfix-win11-21h2"
+						elif currentBuild == "22621":
+							releasePackageName = "mshotfix-win11-22h2"
+						else:
+							logger.warning("Unknown win11 current build %s. Maybe update opsi-client-agent.", currentBuild)
+						if releasePackageName:
+							logger.info("Searching for release-packageid: '%s'", releasePackageName)
+							if releasePackageName in productOnDepotIds:
+								logger.info("Releasepackage '%s' found on depot '%s'", releasePackageName, masterDepotId)
+								additionalProductId = releasePackageName
+							else:
+								logger.info("Releasepackage '%s' not found on depot '%s'", releasePackageName, masterDepotId)
+					elif "win10" in additionalProductId:
 						releaseId = None
 						subKey = None
 						valueName = None
