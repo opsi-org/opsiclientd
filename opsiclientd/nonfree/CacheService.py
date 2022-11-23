@@ -893,7 +893,8 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 						elif currentBuild == "22621":
 							releasePackageName = "mshotfix-win11-22h2"
 						else:
-							logger.warning("Unknown win11 current build %s. Maybe update opsi-client-agent.", currentBuild)
+							logger.warning("Unknown win11 current build %s. Maybe update opsi-client-agent. Using fallback mshotfix-win11-22h2", currentBuild)
+							releasePackageName = "mshotfix-win11-22h2"
 						if releasePackageName:
 							logger.info("Searching for release-packageid: '%s'", releasePackageName)
 							if releasePackageName in productOnDepotIds:
