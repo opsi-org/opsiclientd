@@ -58,17 +58,17 @@ pyinstaller-poetry:
       - "[ -e opsi-server ] && rm -rf opsi-server"
       - url=$(git remote -v | grep fetch | cut -f2 | sed s'#/opsiclientd.git.*#/opsi-server.git#')
       #- branch=$(git rev-parse --abbrev-ref HEAD)
-      - branch=master
+      - branch=v4.2
       - GIT_TERMINAL_PROMPT=0 git clone --branch $branch $url
     darwin:
       - "[ -e opsi-server ] && rm -rf opsi-server"
       - url=$(git remote -v | grep fetch | cut -f2 | sed s'#/opsiclientd.git.*#/opsi-server.git#')
       #- branch=$(git rev-parse --abbrev-ref HEAD)
-      - branch=master
+      - branch=v4.2
       - GIT_TERMINAL_PROMPT=0 git clone --branch $branch $url
     windows:
       - $url = git remote -v | where { $_ -match "fetch"} | % { $_ -replace "origin\s+", "" } | % { $_ -replace "/opsiclientd.git.*", "/opsi-server.git" }
-      - $branch = "master"
+      - $branch = "v4.2"
       - $env:GIT_TERMINAL_PROMPT = 0
       - git clone --branch $branch $url
   data_files:
