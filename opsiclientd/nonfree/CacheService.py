@@ -874,33 +874,45 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 
 				productIds.append(config.action_processor_name)
 				if "mshotfix" in productIds:
-					# Windows 8.1 Bugfix, with a helper exe.
-					# Helper seems not to be needed with Python 3
-					helper = None  # os.path.join(config.get('global', 'base_dir'), 'utilities', 'getmsversioninfo.exe')
-					additionalProductId = System.getOpsiHotfixName(helper)
-					if "win10" in additionalProductId:
+					additionalProductId = System.getOpsiHotfixName()
+					if "win10" in additionalProductId or "win11" in additionalProductId:
 						releaseId = None
-						subKey = None
-						valueName = None
+						currentBuild = None
+						subKey = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"
 						try:
-							subKey = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"
-							valueName = "ReleaseID"
-							releaseId = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, subKey, valueName)
+							currentBuild = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, subKey, "CurrentBuild")
 						except Exception as reg_err:  # pylint: disable=broad-except
-							logger.error("Failed to read registry value %s %s: %s", subKey, valueName, reg_err)
-						# Setting default to 1507-Build
-						if not releaseId:
-							releaseId = "1507"
-						# Splitting Name of original Packagename and reverse result to get arch
-						parts = additionalProductId.split("-")[::-1]
-						releasePackageName = f"mshotfix-win10-{releaseId}-{parts[1]}-glb"
+							logger.error("Failed to read registry value %s %s: %s", subKey, "CurrentBuild", reg_err)
+						try:
+							releaseId = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, subKey, "ReleaseID")
+						except Exception as reg_err:  # pylint: disable=broad-except
+							logger.error("Failed to read registry value %s %s: %s", subKey, "ReleaseID", reg_err)
 
-						logger.info("Searching for release-packageid: '%s'", releasePackageName)
-						if releasePackageName in productOnDepotIds:
-							logger.info("Releasepackage '%s' found on depot '%s'", releasePackageName, masterDepotId)
-							additionalProductId = releasePackageName
+						releasePackageName = None
+						if currentBuild == "20348":
+							releasePackageName = "mshotfix-win2022"
+						elif currentBuild == "22000":
+							releasePackageName = "mshotfix-win11-21h2"
+						elif currentBuild == "22621":
+							releasePackageName = "mshotfix-win11-22h2"
+						elif int(currentBuild) > 22621:
+							logger.warning("Unknown windows build %s. Maybe update opsi-client-agent. Using fallback mshotfix-win11-22h2", currentBuild)
+							releasePackageName = "mshotfix-win11-22h2"
+						else:  # win10
+							# Setting default to 1507-Build
+							if not releaseId:
+								releaseId = "1507"
+							arch = additionalProductId.split("-")[-2]  # id is like f"mshotfix-{_os}-{arch}-{lang}"
+							releasePackageName = f"mshotfix-win10-{releaseId}-{arch}-glb"
+						if releasePackageName:
+							logger.info("Searching for release-packageid: '%s'", releasePackageName)
+							if releasePackageName in productOnDepotIds:
+								logger.info("Releasepackage '%s' found on depot '%s'", releasePackageName, masterDepotId)
+								additionalProductId = releasePackageName
+							else:
+								logger.info("Releasepackage '%s' not found on depot '%s'", releasePackageName, masterDepotId)
 						else:
-							logger.info("Releasepackage '%s' not found on depot '%s'", releasePackageName, masterDepotId)
+							logger.warning("Did not find release-specific package.")
 					logger.info(
 						"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s",
 						additionalProductId,
