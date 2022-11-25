@@ -911,21 +911,19 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 								releaseId = "1507"
 							arch = additionalProductId.split("-")[-2]  # id is like f"mshotfix-{_os}-{arch}-{lang}"
 							releasePackageName = f"mshotfix-win10-{releaseId}-{arch}-glb"
-						if releasePackageName:
-							logger.info("Searching for release-packageid: '%s'", releasePackageName)
-							if releasePackageName in productOnDepotIds:
-								logger.info("Releasepackage '%s' found on depot '%s'", releasePackageName, masterDepotId)
-								additionalProductId = releasePackageName
-							else:
-								logger.info("Releasepackage '%s' not found on depot '%s'", releasePackageName, masterDepotId)
+						if releasePackageName and releasePackageName in productOnDepotIds:
+							logger.info("Releasepackage '%s' found on depot '%s'", releasePackageName, masterDepotId)
+							additionalProductId = releasePackageName
 						else:
-							logger.warning("Did not find release-specific package.")
-					logger.info(
-						"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s",
-						additionalProductId,
-					)
-					if additionalProductId not in productIds:
-						productIds.append(additionalProductId)
+							logger.error("Did not find release-specific mshotfix package.")
+							additionalProductId = None
+					if additionalProductId:
+						logger.info(
+							"Requested to cache product mshotfix => additionaly caching system specific mshotfix product: %s",
+							additionalProductId,
+						)
+						if additionalProductId not in productIds:
+							productIds.append(additionalProductId)
 
 				if errorProductIds:
 					for index in range(len(productIds) - 1):
