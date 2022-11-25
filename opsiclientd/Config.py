@@ -88,6 +88,7 @@ class NoConfigOptionFoundException(ValueError):
 
 
 class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
+	_initialized = False
 	WINDOWS_DEFAULT_PATHS = {
 		"global": {
 			"tmp_dir": "c:\\opsi.org\\tmp",
@@ -139,6 +140,10 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 	}
 
 	def __init__(self):
+		if self._initialized:
+			return
+		self._initialized = True
+
 		baseDir = self._getBaseDirectory()
 
 		self._temporaryConfigServiceUrls = []

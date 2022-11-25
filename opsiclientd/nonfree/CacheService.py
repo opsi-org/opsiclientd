@@ -18,6 +18,7 @@ import threading
 import time
 from urllib.parse import urlparse
 
+from pathlib import Path
 from OPSI import System
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.BackendManager import BackendExtender
@@ -61,12 +62,12 @@ class CacheService(threading.Thread):
 
 	def initializeProductCacheService(self):
 		if not self._productCacheService:
-			self._productCacheService = ProductCacheService()
+			self._productCacheService = ProductCacheService(self._opsiclientd)
 			self._productCacheService.start()
 
 	def initializeConfigCacheService(self):
 		if not self._configCacheService:
-			self._configCacheService = ConfigCacheService()
+			self._configCacheService = ConfigCacheService(self._opsiclientd)
 			self._configCacheService.start()
 
 	def setConfigCacheObsolete(self):
@@ -266,10 +267,10 @@ class ConfigCacheServiceBackendExtension:  # pylint: disable=too-few-public-meth
 
 
 class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disable=too-many-instance-attributes
-	def __init__(self):
+	def __init__(self, opsiclientd):
 		try:
 			threading.Thread.__init__(self)
-			ServiceConnection.__init__(self)
+			ServiceConnection.__init__(self, opsiclientd)
 
 			self._configCacheDir = os.path.join(config.get("cache_service", "storage_dir"), "config")
 			self._opsiModulesFile = os.path.join(self._configCacheDir, "cached_modules")
@@ -626,11 +627,17 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 		self.disconnectConfigService()
 		self._working = False
 
+	@classmethod
+	def delete_cache_dir(cls) -> None:
+		config_cache = Path(config.get("cache_service", "storage_dir")) / "config"
+		if config_cache.exists():
+			shutil.rmtree(config_cache)
+
 
 class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disable=too-many-instance-attributes
-	def __init__(self):
+	def __init__(self, opsiclientd):
 		threading.Thread.__init__(self)
-		ServiceConnection.__init__(self)
+		ServiceConnection.__init__(self, opsiclientd)
 
 		self._updateConfig()
 
