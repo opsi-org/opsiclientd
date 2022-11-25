@@ -11,6 +11,7 @@ Connecting to a opsi service.
 import os
 import random
 import re
+import shutil
 import threading
 import time
 import traceback
@@ -33,7 +34,7 @@ from opsicommon.client.opsiservice import (
 	ServiceConnectionListener,
 	ServiceVerificationModes,
 )
-from opsicommon.logging import log_context, logger
+from opsicommon.logging import log_context, logger, secret_filter
 from opsicommon.messagebus import (
 	ChannelSubscriptionRequestMessage,
 	GeneralErrorMessage,
@@ -130,8 +131,13 @@ def update_ca_cert(config_service: JSONRPCClient, allow_remove: bool = False):  
 class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, MessagebusListener, metaclass=Singleton):
 	_reconnect_wait_min = 3
 	_reconnect_wait_max = 30
+	_initialized = False
 
 	def __init__(self, rpc_interface) -> None:
+		if self._initialized:
+			return
+		self._initialized = True
+
 		threading.Thread.__init__(self)
 		ServiceConnectionListener.__init__(self)
 		MessagebusListener.__init__(self)
@@ -263,7 +269,8 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 
 
 class ServiceConnection:
-	def __init__(self):
+	def __init__(self, opsiclientd=None):
+		self.opsiclientd = opsiclientd
 		self._loadBalance = False
 		self._configServiceUrl = None
 		self._configService = None
@@ -314,6 +321,32 @@ class ServiceConnection:
 	def stop(self):
 		self._should_stop = True
 		self.disconnectConfigService()
+
+	def update_information_from_header(self) -> None:
+		change = False
+		if self._configService.new_host_id and self._configService.new_host_id != config.get("global", "host_id"):
+			logger.notice("Received new opsi host id %r.", self._configService.new_host_id)
+			config.set("global", "host_id", forceUnicode(self._configService.new_host_id))
+			change = True
+		if self._configService.new_host_key and self._configService.new_host_key != config.get("global", "host_host_key"):
+			secret_filter.add_secrets(self._configService.new_host_key)
+			logger.notice("Received new opsi host key: %r", self._configService.new_host_key)
+			config.set("global", "host_host_key", forceUnicode(self._configService.new_host_key))
+			change = True
+		if change:
+			config.updateConfigFile(force=False)
+			if self.opsiclientd:
+				logger.info("Cleaning config cache after host information change.")
+				try:
+					cache_service = self.opsiclientd.getCacheService()
+					cache_service.setConfigCacheFaulty()
+				except RuntimeError:  # No cache_service currently running
+					from opsiclientd.nonfree.CacheService import ConfigCacheService  # pylint: disable=import-outside-toplevel
+					ConfigCacheService.delete_cache_dir()
+			else:  # Called from SoftwareOnDemand or download_from_depot without opsiclientd context
+				config_cache = Path(config.get("cache_service", "storage_dir")) / "config"
+				if config_cache.exists():
+					shutil.rmtree(config_cache)
 
 	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		try:  # pylint: disable=too-many-nested-blocks
@@ -376,17 +409,15 @@ class ServiceConnection:
 				if not serviceConnectionThread.connected:
 					self.connectionFailed(serviceConnectionThread.connectionError)
 
-				if serviceConnectionThread.connected and (serviceConnectionThread.getUsername() != config.get('global', 'host_id')):
-					config.set('global', 'host_id', serviceConnectionThread.getUsername().lower())
-					logger.info("Updated host_id to '%s'", config.get('global', 'host_id'))
-					config.updateConfigFile()
-
 				if serviceConnectionThread.connected and forceBool(config.get('config_service', 'sync_time_from_service')):
 					logger.info("Syncing local system time from service")
 					try:
 						System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True))  # pylint: disable=no-member
 					except Exception as err:  # pylint: disable=broad-except
 						logger.error("Failed to sync time: '%s'", err)
+
+				self._configService = serviceConnectionThread.configService
+				self.update_information_from_header()
 
 				if (
 					"localhost" not in configServiceURL and
@@ -401,7 +432,6 @@ class ServiceConnection:
 					except Exception as err:  # pylint: disable=broad-except
 						logger.warning(err)
 
-				self._configService = serviceConnectionThread.configService
 				self.connectionEstablished()
 		except Exception:
 			self.disconnectConfigService()
@@ -525,7 +555,6 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 							ip_version=config.get('global', 'ip_version'),
 							connect_timeout=SERVICE_CONNECT_TIMEOUT,
 						)
-						self.configService.accessControl_authenticated()  # pylint: disable=no-member
 						self.connected = True
 						self.connectionError = None
 						serverVersion = self.configService.serverVersion

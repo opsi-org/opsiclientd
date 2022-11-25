@@ -8,23 +8,23 @@
 Event-Timeline.
 
 Timeline event attributes:
-  * icon - url. This image will appear next to the title text in the timeline if (no end date) or (durationEvent = false).
-    If a start and end date are supplied, and durationEvent is true, the icon is not shown.
+* icon - url. This image will appear next to the title text in the timeline if (no end date) or (durationEvent = false).
+	If a start and end date are supplied, and durationEvent is true, the icon is not shown.
 	If icon attribute is not set, a default icon from the theme is used.
-  * image - url to an image that will be displayed in the bubble
-  * link - url. The bubble's title text be a hyper-link to this address.
-  * color - color of the text and tape (duration events) to display in the timeline.
-    If the event has durationEvent = false, then the bar's opacity will be applied (default 20%). See durationEvent, above.
-  * textColor - color of the label text on the timeline. If not set, then the color attribute will be used.
-  * tapeImage and tapeRepeat Sets the background image and repeat style for the event's tape (or 'bar') on the Timeline.
-    Overrides the color setting for the tape. Repeat style should be one of {repeat | repeat-x | repeat-y}, repeat is the default.
+* image - url to an image that will be displayed in the bubble
+* link - url. The bubble's title text be a hyper-link to this address.
+* color - color of the text and tape (duration events) to display in the timeline.
+	If the event has durationEvent = false, then the bar's opacity will be applied (default 20%). See durationEvent, above.
+* textColor - color of the label text on the timeline. If not set, then the color attribute will be used.
+* tapeImage and tapeRepeat Sets the background image and repeat style for the event's tape (or 'bar') on the Timeline.
+	Overrides the color setting for the tape. Repeat style should be one of {repeat | repeat-x | repeat-y}, repeat is the default.
 	See the Cubism example for a demonstration. Only applies to duration events.
-  * caption - additional event information shown when mouse is hovered over the Timeline tape or label. Uses the html title property.
-    Looks like a tooltip. Plain text only. See the cubism example.
-  * classname - added to the HTML classnames for the event's label and tape divs.
-    Eg classname attribute 'hot_event' will result in div classes of 'timeline-event-label hot_event' and 'timeline-event-tape hot_event'
+* caption - additional event information shown when mouse is hovered over the Timeline tape or label. Uses the html title property.
+	Looks like a tooltip. Plain text only. See the cubism example.
+* classname - added to the HTML classnames for the event's label and tape divs.
+	Eg classname attribute 'hot_event' will result in div classes of 'timeline-event-label hot_event' and 'timeline-event-tape hot_event'
 	for the event's Timeline label and tape, respectively.
-  * description - will be displayed inside the bubble with the event's title and image.
+* description - will be displayed inside the bubble with the event's title and image.
 """
 
 import os
@@ -120,7 +120,13 @@ function onResize() {
 
 class Timeline(metaclass=Singleton):
 	""" Timeline """
+	_initialized = False
+
 	def __init__(self):
+		if self._initialized:
+			return
+		self._initialized = True
+
 		self._sql = None
 		self._db_lock = threading.Lock()
 		self._stopped = False
@@ -198,7 +204,7 @@ class Timeline(metaclass=Singleton):
 			try:
 				self._sql.execute(session, f'delete from EVENT where `start` < "{timestamp(time.time() - 7*24*3600)}"')
 				self._sql.update(session, 'EVENT', '`durationEvent` = 1 AND `end` is NULL', {'durationEvent': False})
-			except Exception as cleanup_error: # pylint: disable=broad-except
+			except Exception as cleanup_error:  # pylint: disable=broad-except
 				logger.error(cleanup_error)
 
 	def _createDatabase(self, delete_existing=False):
@@ -237,7 +243,7 @@ class Timeline(metaclass=Singleton):
 				self._sql.execute(session, 'CREATE INDEX `category` on `EVENT` (`category`);')
 				self._sql.execute(session, 'CREATE INDEX `start` on `EVENT` (`start`);')
 
-	def addEvent(self, title, description='', isError=False, category=None, durationEvent=False, start=None, end=None): # pylint: disable=too-many-arguments
+	def addEvent(self, title, description='', isError=False, category=None, durationEvent=False, start=None, end=None):  # pylint: disable=too-many-arguments
 		if self._stopped:
 			return -1
 
@@ -269,7 +275,7 @@ class Timeline(metaclass=Singleton):
 					self._sql.delete_db()
 					self._createDatabase(delete_existing=True)
 					return self._sql.insert(session, 'EVENT', event)
-			except Exception as add_error: # pylint: disable=broad-except
+			except Exception as add_error:  # pylint: disable=broad-except
 				logger.error("Failed to add event '%s': %s", title, add_error)
 		return -1
 
@@ -284,7 +290,7 @@ class Timeline(metaclass=Singleton):
 					end = timestamp()
 				end = forceOpsiTimestamp(end)
 				return self._sql.update(session, 'EVENT', f'`id` = {eventId}', {'end': end, 'durationEvent': True})
-			except Exception as end_error: # pylint: disable=broad-except
+			except Exception as end_error:  # pylint: disable=broad-except
 				logger.error("Failed to set end of event '%s': %s", eventId, end_error)
 		return -1
 

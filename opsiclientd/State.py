@@ -27,7 +27,12 @@ config = Config()
 
 
 class State(metaclass=Singleton):
+	_initialized = False
+
 	def __init__(self):
+		if self._initialized:
+			return
+		self._initialized = True
 		self._state = {}
 		self._stateFile = None
 		self._stateLock = threading.Lock()
