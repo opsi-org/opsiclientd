@@ -265,6 +265,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 	def check_restart_marker(self):
 		logger.info("Checking if restart marker '%s' exists", self.restart_marker)
+		product_id, opsi_script = None, None
 		if os.path.exists(self.restart_marker):
 			if os.path.getsize(self.restart_marker) == 0:
 				logger.notice("Old restart marker found, gui startup and daemon startup events disabled")
@@ -281,10 +282,16 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 						if option == "disabled_event_types":
 							self.disabledEventTypes = [v.strip().lower() for v in value.split(",") if v.strip().lower()]
 							logger.notice("Event types %s disabled by restart marker", self.disabledEventTypes)
+						elif option == "run_opsi_script":
+							product_id, opsi_script = value.split(",", 1)
+							product_id = product_id.strip().lower()
+							opsi_script = opsi_script.strip()
+							logger.notice("Read product_id=%s, opsi_script=%s from restart marker", product_id, opsi_script)
 			try:
 				os.remove(self.restart_marker)
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err)
+		return product_id, opsi_script
 
 	def _applySystemSpecificConfiguration(self):
 		defaultToApply = self.WINDOWS_DEFAULT_PATHS.copy()

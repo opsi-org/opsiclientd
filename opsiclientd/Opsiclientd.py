@@ -329,7 +329,10 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			logger.error("Failed to start timeline: %s", err, exc_info=True)
 
 		config.readConfigFile()
-		config.check_restart_marker()
+		try:
+			product_id, opsi_script = config.check_restart_marker()
+		except Exception as err:
+			logger.error(err, exc_info=True)
 
 		setup(full=False)
 
@@ -491,6 +494,30 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 						logger.info("Starting permanent service connection")
 						self._permanent_service_connection = PermanentServiceConnection(self._controlServer._opsiclientdRpcInterface)  # pylint: disable=protected-access
 						self._permanent_service_connection.start()
+
+					if product_id and opsi_script:
+						log_dir = config.get("global", "log_dir")
+						action_processor = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
+						param_char = "/" if RUNNING_ON_WINDOWS else "-"
+						cmd = [
+							action_processor,
+							opsi_script,
+							os.path.join(log_dir, "start_opsi_script.log"),
+							f"{param_char}servicebatch",
+							f"{param_char}productid",
+							product_id,
+							f"{param_char}opsiservice",
+							config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False),
+							f"{param_char}clientid",
+							config.get("global", "host_id"),
+							f"{param_char}username",
+							config.get("global", "host_id"),
+							f"{param_char}password",
+							config.get("global", "opsi_host_key")
+						]
+						logger.notice("Running startup script: %s", cmd)
+						System.execute(cmd, shell=False, waitForEnding=True, timeout=3600)
+
 					with getCacheService() as cacheService:
 						self._cacheService = cacheService
 
