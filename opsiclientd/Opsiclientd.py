@@ -507,7 +507,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 							f"{param_char}productid",
 							product_id,
 							f"{param_char}opsiservice",
-							config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False),
+							config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False)[0],
 							f"{param_char}clientid",
 							config.get("global", "host_id"),
 							f"{param_char}username",
