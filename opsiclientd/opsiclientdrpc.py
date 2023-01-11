@@ -15,7 +15,7 @@ import argparse
 import platform
 
 # Do not remove this import, it's needed by using this module from CLI
-from OPSI import System # pylint: disable=unused-import
+from OPSI import System  # pylint: disable=unused-import
 from OPSI import __version__ as python_opsi_version
 
 from opsicommon.logging import (
@@ -92,7 +92,8 @@ def main():  # pylint: disable=too-many-statements
 			default=30,
 			help="Read timeout for the rpc in seconds (default: 30)."
 		)
-		parser.add_argument('rpc',
+		parser.add_argument(
+			'rpc',
 			help="The remote procedure call to execute."
 		)
 
@@ -146,7 +147,8 @@ def main():  # pylint: disable=too-many-statements
 			service_client = ServiceClient(
 				address=address,
 				username=username,
-				password=password
+				password=password,
+				verify="accept_all"
 			)
 			method = rpc
 			params = []
