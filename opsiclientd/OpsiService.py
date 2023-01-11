@@ -32,7 +32,7 @@ from opsicommon.client.opsiservice import (
 	MessagebusListener,
 	ServiceClient,
 	ServiceConnectionListener,
-	ServiceVerificationModes,
+	ServiceVerificationFlags,
 )
 from opsicommon.logging import log_context, logger, secret_filter
 from opsicommon.messagebus import (
@@ -147,12 +147,13 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		self._reconnect_wait = self._reconnect_wait_min
 
 		with log_context({"instance": "permanent service connection"}):
-			verify = ServiceVerificationModes.ACCEPT_ALL
+			verify = [ServiceVerificationFlags.ACCEPT_ALL]
 			if config.get("global", "verify_server_cert"):
+				verify = [ServiceVerificationFlags.OPSI_CA]
 				if config.get("global", "trust_uib_opsi_ca"):
-					verify = ServiceVerificationModes.OPSI_CA
-				else:
-					verify = ServiceVerificationModes.UIB_OPSI_CA
+					verify.append(ServiceVerificationFlags.UIB_OPSI_CA)
+				if config.get("global", "replace_expired_ca"):
+					verify.append(ServiceVerificationFlags.REPLACE_EXPIRED_CA)
 
 			self.service_client = ServiceClient(
 				address=config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False),
