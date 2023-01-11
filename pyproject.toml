@@ -18,6 +18,8 @@ url = "https://pypi.uib.gmbh/simple"
 [tool.poetry.dependencies]
 python = "^3.10,<3.11"
 autobahn = "^22.4"
+# cryptography pinned (AttributeError: module 'lib' has no attribute 'OpenSSL_add_all_algorithms')
+cryptography = "38.0.4"
 distro = {platform = "linux", version = "^1.5"}
 macholib = "^1.14"
 msgpack = "^1.0"
