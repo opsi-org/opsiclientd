@@ -22,11 +22,11 @@ from opsicommon.logging import logger  # type: ignore[import]
 from opsicommon.messagebus import (  # type: ignore[import]
 	Message,
 	MessageType,
-	TerminalCloseEvent,
-	TerminalDataRead,
-	TerminalOpenEvent,
-	TerminalOpenRequest,
-	TerminalResizeEvent,
+	TerminalCloseEventMessage,
+	TerminalDataReadMessage,
+	TerminalOpenEventMessage,
+	TerminalOpenRequestMessage,
+	TerminalResizeEventMessage,
 )
 from psutil import AccessDenied, NoSuchProcess, Process  # type: ignore[import]
 
@@ -61,7 +61,7 @@ class TerminalReaderThread(Thread):
 				if not data:  # EOF.
 					break
 				if not self._should_stop:
-					message = TerminalDataRead(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+					message = TerminalDataReadMessage(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
 						sender="@", channel=self.terminal.back_channel, terminal_id=self.terminal.terminal_id, data=data
 					)
 					self.terminal.send_message(message)  # pylint: disable=no-member
@@ -90,7 +90,7 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 	def __init__(  # pylint: disable=too-many-arguments
 		self,
 		send_message_function: Callable,
-		terminal_open_request: TerminalOpenRequest
+		terminal_open_request: TerminalOpenRequestMessage
 	) -> None:
 		super().__init__()
 		self.daemon = True
@@ -147,7 +147,7 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 		try:
 			if self.terminal_reader_thread:
 				self.terminal_reader_thread.stop()
-			message = TerminalCloseEvent(
+			message = TerminalCloseEventMessage(
 				sender="@", channel=self.back_channel, terminal_id=self.terminal_id
 			)
 			self._send_message_function(message)
@@ -175,7 +175,7 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 	def _run(self) -> None:
 		for var in self._context:
 			var.set(self._context[var])
-		message = TerminalOpenEvent(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+		message = TerminalOpenEventMessage(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
 			sender="@",
 			channel=self.back_channel,
 			terminal_id=self.terminal_id,
@@ -198,7 +198,7 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 				self.pty_write(message.data)
 			elif message.type == MessageType.TERMINAL_RESIZE_REQUEST:
 				self.set_size(message.rows, message.cols)
-				message = TerminalResizeEvent(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+				message = TerminalResizeEventMessage(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
 					sender="@",
 					channel=self.back_channel,
 					terminal_id=self.terminal_id,
@@ -238,7 +238,7 @@ def process_messagebus_message(message: Message, send_message: Callable) -> None
 		if terminal:
 			terminal.close()
 		else:
-			msg = TerminalCloseEvent(
+			msg = TerminalCloseEventMessage(
 				sender="@", channel=message.back_channel, terminal_id=message.terminal_id, error={
 					"code": 0,
 					"message": str(err),
