@@ -19,7 +19,7 @@ from pathlib import Path
 from OpenSSL.crypto import FILETYPE_PEM  # type: ignore[import]
 from OpenSSL.crypto import Error as CryptoError
 from OpenSSL.crypto import load_certificate, load_privatekey  # type: ignore[import]
-from opsicommon.client.jsonrpc import JSONRPCClient  # type: ignore[import]
+from opsicommon.client.opsiservice import ServiceClient  # type: ignore[import]
 from opsicommon.logging import logger, secret_filter  # type: ignore[import]
 from opsicommon.ssl import as_pem, create_ca, create_server_cert  # type: ignore[import]
 from opsicommon.system.network import (  # type: ignore[import]
@@ -28,6 +28,7 @@ from opsicommon.system.network import (  # type: ignore[import]
 	get_ip_addresses,
 )
 
+from opsiclientd import __version__
 from opsiclientd.Config import Config
 from opsiclientd.OpsiService import update_ca_cert
 from opsiclientd.SystemCheck import (
@@ -55,6 +56,19 @@ def get_ips():
 			except ValueError as err:
 				logger.warning(err)
 	return ips
+
+
+def get_service_client(address: str | None = None, username: str | None = None, password: str | None = None) -> ServiceClient:
+	return ServiceClient(
+		address=address or config.get("config_service", "url")[0],
+		username=username or config.get("global", "host_id"),
+		password=password or config.get("global", "opsi_host_key"),
+		ca_cert_file=config.ca_cert_file,
+		verify=config.service_verification_flags,
+		proxy_url=config.get("global", "proxy_url"),
+		user_agent=f"opsiclientd/{__version__}",
+		connect_timeout=config.get("config_service", "connection_timeout")
+	)
 
 
 def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many-statements,too-many-locals
@@ -103,18 +117,14 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 	try:
 		logger.notice("Fetching tls server certificate from config service")
 		config.readConfigFile()
-		jsonrpc_client = JSONRPCClient(
-			address=config.get("config_service", "url")[0],
-			username=config.get("global", "host_id"),
-			password=config.get("global", "opsi_host_key"),
-			proxy_url=config.get("global", "proxy_url"),
-		)
+
+		service_client = get_service_client()
 		try:
-			pem = jsonrpc_client.host_getTLSCertificate(server_cn)  # pylint: disable=no-member
+			pem = service_client.jsonrpc(method="host_getTLSCertificate", params=[server_cn])  # pylint: disable=no-member
 			srv_crt = load_certificate(FILETYPE_PEM, pem)
 			srv_key = load_privatekey(FILETYPE_PEM, pem)
 		finally:
-			jsonrpc_client.disconnect()
+			service_client.disconnect()
 	except Exception as err:  # pylint: disable=broad-except
 		logger.warning("Failed to fetch tls certificate from server: %s", err)
 		if exists_self_signed:
@@ -291,22 +301,22 @@ def opsi_service_setup(options=None):
 	secret_filter.add_secrets(service_password)
 
 	logger.notice("Connecting to '%s' as '%s'", service_address, service_username)
-	jsonrpc_client = JSONRPCClient(address=service_address, username=service_username, password=service_password, verify_server_cert=False)
+	service_client = get_service_client(address=service_address, username=service_username, password=service_password)
 
 	try:
-		update_ca_cert(jsonrpc_client, allow_remove=False)
+		update_ca_cert(service_client, allow_remove=False)
 	except Exception as err:  # pylint: disable=broad-except
 		logger.error(err, exc_info=True)
 
 	try:
-		client = jsonrpc_client.host_getObjects(id=config.get("global", "host_id"))  # pylint: disable=no-member
+		client = service_client.jsonrpc(method="host_getObjects", params=[[], config.get("global", "host_id")])  # pylint: disable=no-member
 		if client and client[0] and client[0].opsiHostKey:
 			config.set("global", "opsi_host_key", client[0].opsiHostKey)
 
-		config.getFromService(jsonrpc_client)
+		config.getFromService(service_client)
 		config.updateConfigFile(force=True)
 	finally:
-		jsonrpc_client.disconnect()
+		service_client.disconnect()
 
 
 def cleanup_registry_uninstall():
@@ -351,7 +361,7 @@ def cleanup_registry_uninstall():
 					break
 
 
-def setup_on_shutdown():
+def setup_on_shutdown():  # pylint: disable=too-many-statements
 	if not RUNNING_ON_WINDOWS:
 		return None
 

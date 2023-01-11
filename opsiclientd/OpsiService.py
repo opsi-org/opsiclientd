@@ -19,6 +19,7 @@ from pathlib import Path
 from traceback import TracebackException
 from types import TracebackType
 from typing import Union
+from packaging import version
 
 from OpenSSL.crypto import FILETYPE_PEM, dump_certificate, load_certificate
 from OPSI import System
@@ -27,12 +28,10 @@ from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationErro
 from OPSI.Types import forceBool, forceFqdn, forceInt, forceProductId, forceUnicode
 from OPSI.Util.Repository import WebDAVRepository
 from OPSI.Util.Thread import KillableThread
-from opsicommon.client.jsonrpc import JSONRPCClient
 from opsicommon.client.opsiservice import (
 	MessagebusListener,
 	ServiceClient,
-	ServiceConnectionListener,
-	ServiceVerificationFlags,
+	ServiceConnectionListener
 )
 from opsicommon.logging import log_context, logger, secret_filter
 from opsicommon.messagebus import (
@@ -65,7 +64,7 @@ cert_file_lock = threading.Lock()
 SERVICE_CONNECT_TIMEOUT = 10  # Seconds
 
 
-def update_ca_cert(config_service: JSONRPCClient, allow_remove: bool = False):  # pylint: disable=too-many-branches
+def update_ca_cert(config_service: ServiceClient, allow_remove: bool = False):  # pylint: disable=too-many-branches
 	logger.info("Updating CA cert")
 	ca_certs = []
 	try:
@@ -147,20 +146,12 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		self._reconnect_wait = self._reconnect_wait_min
 
 		with log_context({"instance": "permanent service connection"}):
-			verify = [ServiceVerificationFlags.ACCEPT_ALL]
-			if config.get("global", "verify_server_cert"):
-				verify = [ServiceVerificationFlags.OPSI_CA]
-				if config.get("global", "trust_uib_opsi_ca"):
-					verify.append(ServiceVerificationFlags.UIB_OPSI_CA)
-				if config.get("global", "replace_expired_ca"):
-					verify.append(ServiceVerificationFlags.REPLACE_EXPIRED_CA)
-
 			self.service_client = ServiceClient(
 				address=config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False),
 				username=config.get("global", "host_id"),
 				password=config.get("global", "opsi_host_key"),
 				ca_cert_file=config.ca_cert_file,
-				verify=verify,
+				verify=config.service_verification_flags,
 				proxy_url=config.get("global", "proxy_url"),
 				user_agent=f"opsiclientd/{__version__}",
 				connect_timeout=config.get("config_service", "connection_timeout")
@@ -325,14 +316,14 @@ class ServiceConnection:
 
 	def update_information_from_header(self) -> None:
 		change = False
-		if self._configService.new_host_id and self._configService.new_host_id != config.get("global", "host_id"):
-			logger.notice("Received new opsi host id %r.", self._configService.new_host_id)
-			config.set("global", "host_id", forceUnicode(self._configService.new_host_id))
+		if self._configService.service.new_host_id and self._configService.service.new_host_id != config.get("global", "host_id"):
+			logger.notice("Received new opsi host id %r.", self._configService.service.new_host_id)
+			config.set("global", "host_id", forceUnicode(self._configService.service.new_host_id))
 			change = True
-		if self._configService.new_host_key and self._configService.new_host_key != config.get("global", "host_host_key"):
-			secret_filter.add_secrets(self._configService.new_host_key)
-			logger.notice("Received new opsi host key: %r", self._configService.new_host_key)
-			config.set("global", "host_host_key", forceUnicode(self._configService.new_host_key))
+		if self._configService.service.new_host_key and self._configService.service.new_host_key != config.get("global", "host_host_key"):
+			secret_filter.add_secrets(self._configService.service.new_host_key)
+			logger.notice("Received new opsi host key: %r", self._configService.service.new_host_key)
+			config.set("global", "host_host_key", forceUnicode(self._configService.service.new_host_key))
 			change = True
 		if change:
 			config.updateConfigFile(force=False)
@@ -413,11 +404,11 @@ class ServiceConnection:
 				if serviceConnectionThread.connected and forceBool(config.get('config_service', 'sync_time_from_service')):
 					logger.info("Syncing local system time from service")
 					try:
-						System.setLocalSystemTime(serviceConnectionThread.configService.getServiceTime(utctime=True))  # pylint: disable=no-member
+						System.setLocalSystemTime(serviceConnectionThread._configService.getServiceTime(utctime=True))  # pylint: disable=no-member,protected-access
 					except Exception as err:  # pylint: disable=broad-except
 						logger.error("Failed to sync time: '%s'", err)
 
-				self._configService = serviceConnectionThread.configService
+				self._configService = serviceConnectionThread._configService  # pylint: disable=protected-access
 				self.update_information_from_header()
 
 				if (
@@ -427,7 +418,7 @@ class ServiceConnection:
 					try:
 						config.set(
 							'depot_server', 'master_depot_id',
-							serviceConnectionThread.configService.getDepotId(config.get('global', 'host_id'))  # pylint: disable=no-member
+							serviceConnectionThread._configService.getDepotId(config.get('global', 'host_id'))  # pylint: disable=no-member, protected-access
 						)
 						config.updateConfigFile()
 					except Exception as err:  # pylint: disable=broad-except
@@ -455,7 +446,7 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 		self._username = username
 		self._password = password
 		self._statusSubject = statusSubject
-		self.configService = None
+		self._configService = None
 		self.running = False
 		self.connected = False
 		self.cancelled = False
@@ -544,7 +535,7 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 							config.get('global', 'proxy_url'), f"opsiclientd/{__version__}"
 						)
 
-						self.configService = JSONRPCBackend(
+						self._configService = JSONRPCBackend(
 							address=self._configServiceUrl,
 							username=self._username,
 							password=self._password,
@@ -558,20 +549,20 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 						)
 						self.connected = True
 						self.connectionError = None
-						serverVersion = self.configService.serverVersion
+						server_version = self._configService.service.server_version
 						self.setStatusMessage(_("Connected to config server '%s'") % self._configServiceUrl)
 						logger.notice(
 							"Connected to config server '%s' (name=%s, version=%s)",
 							self._configServiceUrl,
-							self.configService.serverName,
-							serverVersion
+							self._configService.service.server_name,
+							server_version
 						)
 
-						if serverVersion and (serverVersion[0] > 4 or (serverVersion[0] == 4 and serverVersion[1] > 1)):
+						if self._configService.service.server_version and self._configService.service.server_version > version.parse("4.1.0.0"):
 							if not os.path.exists(config.ca_cert_file) or verify_server_cert or config.get('global', 'install_opsi_ca_into_os_store'):
 								# Renew CA if not exists or connection is verified
 								try:
-									update_ca_cert(self.configService, allow_remove=True)
+									update_ca_cert(self._configService.service, allow_remove=True)
 								except Exception as err:  # pylint: disable=broad-except
 									logger.error(err, exc_info=True)
 					except OpsiServiceVerificationError as verificationError:
@@ -638,7 +629,7 @@ def download_from_depot(product_id: str, destination: Union[str, Path], sub_path
 	service_connection = ServiceConnection()
 	service_connection.connectConfigService()
 
-	product_idents = service_connection.getConfigService().execute_rpc("product_getIdents", ["hash", {"id": product_id}])
+	product_idents = service_connection.getConfigService().service.jsonrpc(method="product_getIdents", params=["hash", {"id": product_id}])
 	if not product_idents:
 		raise ValueError(f"Product {product_id!r} not available")
 

@@ -33,6 +33,7 @@ from opsicommon.logging import (  # type: ignore[import]
 	secret_filter,
 )
 from opsicommon.utils import Singleton  # type: ignore[import]
+from opsicommon.client.opsiservice import ServiceVerificationFlags, ServiceClient
 
 from opsiclientd.SystemCheck import (
 	RUNNING_ON_DARWIN,
@@ -365,6 +366,17 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 	def ca_cert_file(self):
 		cert_dir = self.get("global", "server_cert_dir")
 		return os.path.join(cert_dir, "opsi-ca-cert.pem")
+
+	@property
+	def service_verification_flags(self):
+		verify = [ServiceVerificationFlags.ACCEPT_ALL]
+		if self.get("global", "verify_server_cert"):
+			verify = [ServiceVerificationFlags.OPSI_CA]
+			if self.get("global", "trust_uib_opsi_ca"):
+				verify.append(ServiceVerificationFlags.UIB_OPSI_CA)
+			if self.get("global", "replace_expired_ca"):
+				verify.append(ServiceVerificationFlags.REPLACE_EXPIRED_CA)
+		return verify
 
 	@property
 	def action_processor_name(self):
@@ -812,56 +824,66 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		logger.debug("Using username '%s' for depot connection", depotServerUsername)
 		return (depotServerUsername, depotServerPassword)
 
-	def getFromService(self, configService):
+	def getFromService(self, service_client: ServiceClient) -> None:  # pylint: disable=too-many-branches
 		"""Get settings from service"""
 		logger.notice("Getting config from service")
-		if not configService:
+		if not service_client:
 			raise Exception("Config service is undefined")
 
-		query = {
-			"objectId": self.get("global", "host_id"),
-			"configId": [
-				"clientconfig.configserver.url",
-				"clientconfig.depot.drive",
-				"clientconfig.depot.id",
-				"clientconfig.depot.user",
-				"clientconfig.suspend_bitlocker_on_reboot",
-				"opsiclientd.*",  # everything starting with opsiclientd.
-			],
-		}
+		config_ids = [
+			"clientconfig.configserver.url",
+			"clientconfig.depot.drive",
+			"clientconfig.depot.id",
+			"clientconfig.depot.user",
+			"clientconfig.suspend_bitlocker_on_reboot",
+			"opsiclientd.*",  # everything starting with opsiclientd.
+		]
 
-		configService.backend_setOptions({"addConfigStateDefaults": True})
-		for configState in configService.configState_getObjects(**query):
-			logger.info("Got config state from service: %r", configState)
+		config_states = {}
+		for config in service_client.jsonrpc(
+			method="config_getObjects", params=[[], {"id": config_ids}]
+		):
+			config_states[config["id"]] = config["defaultValues"]
 
-			if not configState.values:
-				logger.debug("No values - skipping %s", configState.configId)
+		for config_state in service_client.jsonrpc(
+			method="configState_getObjects", params=[
+				[],
+				{"objectId": self.get("global", "host_id"), "configId": config_ids}
+			]
+		):
+			config_states[config_state["configId"]] = config_state["values"]
+
+		for config_id, values in config_states.items():
+			logger.info("Got config state from service: %r=%r", config_id, values)
+
+			if not values:
+				logger.debug("No values - skipping %s", config_id)
 				continue
 
-			if configState.configId == "clientconfig.configserver.url":
-				self.set("config_service", "url", configState.values)
-			elif configState.configId == "clientconfig.depot.drive":
-				self.set("depot_server", "drive", configState.values[0])
-			elif configState.configId == "clientconfig.depot.id":
-				self.set("depot_server", "depot_id", configState.values[0])
-			elif configState.configId == "clientconfig.depot.user":
-				self.set("depot_server", "username", configState.values[0])
-			elif configState.configId == "clientconfig.suspend_bitlocker_on_reboot":
-				self.set("global", "suspend_bitlocker_on_reboot", configState.values[0])
+			if config_id == "clientconfig.configserver.url":
+				self.set("config_service", "url", values)
+			elif config_id == "clientconfig.depot.drive":
+				self.set("depot_server", "drive", values[0])
+			elif config_id == "clientconfig.depot.id":
+				self.set("depot_server", "depot_id", values[0])
+			elif config_id == "clientconfig.depot.user":
+				self.set("depot_server", "username", values[0])
+			elif config_id == "clientconfig.suspend_bitlocker_on_reboot":
+				self.set("global", "suspend_bitlocker_on_reboot", values[0])
 
-			elif configState.configId.startswith("opsiclientd."):
+			elif config_id.startswith("opsiclientd."):
 				try:
-					parts = configState.configId.lower().split(".")
+					parts = config_id.lower().split(".")
 					if len(parts) < 3:
-						logger.debug("Expected at least 3 parts in %s - skipping.", configState.configId)
+						logger.debug("Expected at least 3 parts in %s - skipping.", config_id)
 						continue
 
-					value = configState.values
+					value = values
 					if len(value) == 1:
 						value = value[0]
 					self.set(section=parts[1], option=parts[2], value=value)
 				except Exception as err:  # pylint: disable=broad-except
-					logger.error("Failed to process configState '%s': %s", configState.configId, err)
+					logger.error("Failed to process configState '%s': %s", config_id, err)
 
 		logger.notice("Got config from service")
 		logger.debug("Config is now:\n %s", objectToBeautifiedText(self.getDict()))
