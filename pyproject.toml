@@ -30,14 +30,14 @@ websocket-client = { git = "https://github.com/j-a-n/websocket-client.git", bran
 pywin32 = {platform = "win32", version = "^303"}
 pywinpty = {platform = "win32", version = "^2.0"}
 wmi = {platform = "win32", version = "^1.5"}
-zeroconf = "^0.39"
+zeroconf = "^0.47"
 
 [tool.poetry.dev-dependencies]
-flake8 = "^5.0"
+flake8 = "^6.0"
 isort = "^5.10.1"
 macholib = {version = "^1.14", platform = "darwin"}
-mock = "^4.0"
-mypy = "^0.990"
+mock = "^5.0"
+mypy = "^0.991"
 pefile = {version = "^2022.5", platform = "win32"}
 pylint = "^2.5"
 pytest = "^7.1"
