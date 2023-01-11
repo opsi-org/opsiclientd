@@ -21,7 +21,7 @@ from OPSI import __version__ as python_opsi_version
 from opsicommon.logging import (
 	logger, init_logging, log_context, secret_filter, LOG_DEBUG, LOG_NONE
 )
-from opsicommon.client.jsonrpc import JSONRPCClient
+from opsicommon.client.opsiservice import ServiceClient
 
 from opsiclientd import __version__, DEFAULT_FILE_LOG_FORMAT
 
@@ -51,13 +51,15 @@ class ArgumentParser(argparse.ArgumentParser):
 
 
 def main():  # pylint: disable=too-many-statements
-	with log_context({'instance' : os.path.basename(sys.argv[0])}):
+	with log_context({'instance': os.path.basename(sys.argv[0])}):
 		parser = ArgumentParser()
-		parser.add_argument('--version',
+		parser.add_argument(
+			'--version',
 			action='version',
 			version=f"{__version__} [python-opsi={python_opsi_version}]"
 		)
-		parser.add_argument('--log-level',
+		parser.add_argument(
+			'--log-level',
 			default=LOG_NONE,
 			type=int,
 			choices=range(0, 10),
@@ -67,20 +69,25 @@ def main():  # pylint: disable=too-many-statements
 				"6: infos, 7: debug messages, 8: trace messages, 9: secrets"
 			)
 		)
-		parser.add_argument('--log-file',
+		parser.add_argument(
+			'--log-file',
 			help="Set log file"
 		)
-		parser.add_argument('--address',
+		parser.add_argument(
+			'--address',
 			default="https://127.0.0.1:4441/opsiclientd",
 			help="Set service address"
 		)
-		parser.add_argument('--username',
+		parser.add_argument(
+			'--username',
 			help="Username to use for service connection."
 		)
-		parser.add_argument('--password',
+		parser.add_argument(
+			'--password',
 			help="Password to use for service connection (default: opsi host key)."
 		)
-		parser.add_argument('--timeout',
+		parser.add_argument(
+			'--timeout',
 			type=int,
 			default=30,
 			help="Read timeout for the rpc in seconds (default: 30)."
@@ -109,13 +116,13 @@ def main():  # pylint: disable=too-many-statements
 				try:
 					password = get_opsi_host_key()
 					secret_filter.add_secrets(password)
-				except Exception as err: # pylint: disable=broad-except
+				except Exception as err:  # pylint: disable=broad-except
 					raise RuntimeError(f"Failed to read opsi host key from config file: {err}") from err
 
 		except DeprecationWarning:
 			# Fallback to legacy comandline arguments
 			# <username> <password> <port> [debug-log-file] <rpc>
-			(username, password, port, rpc) = sys.argv[1:5] # pylint: disable=unbalanced-tuple-unpacking
+			(username, password, port, rpc) = sys.argv[1:5]  # pylint: disable=unbalanced-tuple-unpacking
 			secret_filter.add_secrets(password)
 			address = f"https://127.0.0.1:{port}/opsiclientd"
 			if len(sys.argv) > 5:
@@ -136,15 +143,20 @@ def main():  # pylint: disable=too-many-statements
 		)
 
 		try:
-			jsonrpc = JSONRPCClient(  # pylint: disable=unused-variable
+			service_client = ServiceClient(
 				address=address,
 				username=username,
-				password=password,
-				readtimeout=timeout,
-				compression=False
+				password=password
 			)
-			logger.notice(f"Executing: {rpc}")
-			result = eval(f"jsonrpc.{rpc}")  # pylint: disable=eval-used
+			method = rpc
+			params = []
+			if "(" in rpc:
+				method, params = rpc.split("(", 1)
+				method = method.strip()
+				params = params.rstrip(")")
+				params = eval(f"[{params}]")  # pylint: disable=eval-used
+			logger.notice("Executing: method=%r, params=%r", method, params)
+			result = service_client.jsonrpc(method=method, params=params, read_timeout=timeout)
 			print(result)
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)

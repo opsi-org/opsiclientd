@@ -331,7 +331,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		config.readConfigFile()
 		try:
 			product_id, opsi_script = config.check_restart_marker()
-		except Exception as err:
+		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 
 		setup(full=False)
