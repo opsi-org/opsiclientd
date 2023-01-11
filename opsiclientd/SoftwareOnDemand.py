@@ -57,8 +57,8 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc): # pylint: disable=too-few-public-me
 				self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
 
 	def _getCallInstance(self, result):
-		self._callInstance =  service_connection.getConfigService()
-		self._callInterface = self._callInstance.getInterface()
+		self._callInstance = service_connection.getConfigService()
+		self._callInterface = self._callInstance.backend_getInterface()
 
 	def _getCredentials(self):
 		user, password = self._getAuthorization()
