@@ -19,7 +19,6 @@ from pathlib import Path
 from traceback import TracebackException
 from types import TracebackType
 from typing import Union
-from packaging import version
 
 from OpenSSL.crypto import FILETYPE_PEM, dump_certificate, load_certificate
 from OPSI import System
@@ -31,7 +30,7 @@ from OPSI.Util.Thread import KillableThread
 from opsicommon.client.opsiservice import (
 	MessagebusListener,
 	ServiceClient,
-	ServiceConnectionListener
+	ServiceConnectionListener,
 )
 from opsicommon.logging import log_context, logger, secret_filter
 from opsicommon.messagebus import (
@@ -46,6 +45,7 @@ from opsicommon.messagebus import (
 )
 from opsicommon.ssl import install_ca, load_ca, remove_ca
 from opsicommon.utils import Singleton  # type: ignore[import]
+from packaging import version
 
 from opsiclientd import __version__
 from opsiclientd.Config import UIB_OPSI_CA, Config
@@ -167,7 +167,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 						self.service_client.connect()
 						self._reconnect_wait = self._reconnect_wait_min
 					except Exception as err:  # pylint: disable=broad-except
-						logger.info(err)
+						logger.info(err, exc_info=True)
 						self._reconnect_wait = min(round(self._reconnect_wait * 1.25), self._reconnect_wait_max)
 				for _sec in range(self._reconnect_wait):
 					if self._should_stop:
@@ -333,7 +333,9 @@ class ServiceConnection:
 					cache_service = self.opsiclientd.getCacheService()
 					cache_service.setConfigCacheFaulty()
 				except RuntimeError:  # No cache_service currently running
-					from opsiclientd.nonfree.CacheService import ConfigCacheService  # pylint: disable=import-outside-toplevel
+					from opsiclientd.nonfree.CacheService import (
+						ConfigCacheService,  # pylint: disable=import-outside-toplevel
+					)
 					ConfigCacheService.delete_cache_dir()
 			else:  # Called from SoftwareOnDemand or download_from_depot without opsiclientd context
 				config_cache = Path(config.get("cache_service", "storage_dir")) / "config"

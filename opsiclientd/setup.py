@@ -67,7 +67,8 @@ def get_service_client(address: str | None = None, username: str | None = None, 
 		verify=config.service_verification_flags,
 		proxy_url=config.get("global", "proxy_url"),
 		user_agent=f"opsiclientd/{__version__}",
-		connect_timeout=config.get("config_service", "connection_timeout")
+		connect_timeout=config.get("config_service", "connection_timeout"),
+		jsonrpc_create_objects=True,
 	)
 
 

@@ -26,6 +26,7 @@ from OPSI.Types import (  # type: ignore[import]
 )
 from OPSI.Util import blowfishDecrypt, objectToBeautifiedText  # type: ignore[import]
 from OPSI.Util.File import IniFile  # type: ignore[import]
+from opsicommon.client.opsiservice import ServiceClient, ServiceVerificationFlags
 from opsicommon.logging import (  # type: ignore[import]
 	LOG_NOTICE,
 	logger,
@@ -33,7 +34,6 @@ from opsicommon.logging import (  # type: ignore[import]
 	secret_filter,
 )
 from opsicommon.utils import Singleton  # type: ignore[import]
-from opsicommon.client.opsiservice import ServiceVerificationFlags, ServiceClient
 
 from opsiclientd.SystemCheck import (
 	RUNNING_ON_DARWIN,
@@ -177,7 +177,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				"proxy_url": "system",
 				"suspend_bitlocker_on_reboot": False,
 				"ip_version": "auto",
-				"tmp_dir_cleanup": False
+				"tmp_dir_cleanup": False,
 			},
 			"config_service": {
 				"url": [],
@@ -185,7 +185,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				"connection_timeout": 10,
 				"user_cancelable_after": 0,
 				"sync_time_from_service": False,
-				"permanent_connection": False
+				"permanent_connection": False,
 			},
 			"depot_server": {
 				# The id of the depot the client is assigned to
@@ -211,7 +211,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				"max_authentication_failures": 5,
 				"kiosk_api_active": True,
 				"process_actions_event": "auto",
-				"skip_setup_firewall": False
+				"skip_setup_firewall": False,
 			},
 			"notification_server": {
 				"interface": "127.0.0.1",
@@ -638,7 +638,9 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 		return self.get("config_service", "url")
 
-	def getDepot(self, configService, event=None, productIds=None, masterOnly=False, forceDepotProtocol=None):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
+	def getDepot(
+		self, configService, event=None, productIds=None, masterOnly=False, forceDepotProtocol=None
+	):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
 		productIds = forceProductIdList(productIds or [])
 		if not configService:
 			raise Exception("Not connected to config service")
@@ -655,11 +657,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			depotProtocol = forceDepotProtocol
 
 		configStates = configService.configState_getObjects(
-			configId=[
-				"clientconfig.depot.dynamic",
-				"clientconfig.depot.protocol",
-				"opsiclientd.depot_server.depot_id"
-			],
+			configId=["clientconfig.depot.dynamic", "clientconfig.depot.protocol", "opsiclientd.depot_server.depot_id"],
 			objectId=self.get("global", "host_id"),
 		)
 		for configState in configStates:
@@ -793,9 +791,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			self.set("depot_server", "url", "smb://localhost/noshare/" + ("/".join(cacheDepotDir.split("/")[1:])))
 			return
 
-		selectedDepot, depotProtocol = self.getDepot(
-			configService=configService, event=event, productIds=productIds, masterOnly=masterOnly
-		)
+		selectedDepot, depotProtocol = self.getDepot(configService=configService, event=event, productIds=productIds, masterOnly=masterOnly)
 		if not selectedDepot:
 			logger.error("Failed to get depot server")
 			return
@@ -840,18 +836,13 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		]
 
 		config_states = {}
-		for config in service_client.jsonrpc(
-			method="config_getObjects", params=[[], {"id": config_ids}]
-		):
-			config_states[config["id"]] = config["defaultValues"]
+		for config in service_client.jsonrpc(method="config_getObjects", params=[[], {"id": config_ids}]):
+			config_states[config.id] = config.defaultValues
 
 		for config_state in service_client.jsonrpc(
-			method="configState_getObjects", params=[
-				[],
-				{"objectId": self.get("global", "host_id"), "configId": config_ids}
-			]
+			method="configState_getObjects", params=[[], {"objectId": self.get("global", "host_id"), "configId": config_ids}]
 		):
-			config_states[config_state["configId"]] = config_state["values"]
+			config_states[config_state.configId] = config_state.values
 
 		for config_id, values in config_states.items():
 			logger.info("Got config state from service: %r=%r", config_id, values)
