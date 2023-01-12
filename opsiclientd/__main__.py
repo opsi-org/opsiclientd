@@ -14,7 +14,7 @@ import platform
 import sys
 from datetime import datetime
 
-import sqlalchemy
+import sqlalchemy  # type: ignore[import]
 
 # STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
 STARTUP_LOG = None
