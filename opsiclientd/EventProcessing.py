@@ -996,7 +996,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			# Run action processor
 			serviceSession = "none"
 			try:
-				serviceSession = self.getConfigService().jsonrpc_getSessionId()
+				serviceSession = self.getConfigService().jsonrpc_getSessionId()  # pylint: disable=no-member
 				if not serviceSession:
 					serviceSession = "none"
 			except Exception:  # pylint: disable=broad-except
