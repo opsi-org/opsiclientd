@@ -14,6 +14,8 @@ import platform
 import sys
 from datetime import datetime
 
+import sqlalchemy
+
 # STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
 STARTUP_LOG = None
 
@@ -35,6 +37,9 @@ def action_processor_starter():
 
 
 def opsiclientd():
+	# Disable sqlalchemy 2.0 deprecation warnings
+	sqlalchemy.util.deprecations.SILENCE_UBER_WARNING = True
+
 	_main = None
 	if platform.system().lower() == "windows":
 		if STARTUP_LOG and os.path.isdir(os.path.dirname(STARTUP_LOG)):
