@@ -333,8 +333,8 @@ class ServiceConnection:
 					cache_service = self.opsiclientd.getCacheService()
 					cache_service.setConfigCacheFaulty()
 				except RuntimeError:  # No cache_service currently running
-					from opsiclientd.nonfree.CacheService import (
-						ConfigCacheService,  # pylint: disable=import-outside-toplevel
+					from opsiclientd.nonfree.CacheService import (  # pylint: disable=import-outside-toplevel
+						ConfigCacheService,
 					)
 					ConfigCacheService.delete_cache_dir()
 			else:  # Called from SoftwareOnDemand or download_from_depot without opsiclientd context
