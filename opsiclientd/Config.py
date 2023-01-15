@@ -290,6 +290,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 							product_id = product_id.strip().lower()
 							opsi_script = opsi_script.strip()
 							logger.notice("Read product_id=%s, opsi_script=%s from restart marker", product_id, opsi_script)
+							self.disabledEventTypes = ["gui startup", "daemon startup"]
 							remove_marker = False
 			if remove_marker:
 				try:
