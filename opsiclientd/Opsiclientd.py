@@ -495,7 +495,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 						self._permanent_service_connection = PermanentServiceConnection(self._controlServer._opsiclientdRpcInterface)  # pylint: disable=protected-access
 						self._permanent_service_connection.start()
 
-					if product_id and opsi_script:
+					if opsi_script:
 						log_dir = config.get("global", "log_dir")
 						action_processor = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
 						param_char = "/" if RUNNING_ON_WINDOWS else "-"
@@ -504,8 +504,13 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 							opsi_script,
 							os.path.join(log_dir, "start_opsi_script.log"),
 							f"{param_char}servicebatch",
-							f"{param_char}productid",
-							product_id,
+						]
+						if product_id:
+							cmd += [
+								f"{param_char}productid",
+								product_id,
+							]
+						cmd += [
 							f"{param_char}opsiservice",
 							config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False)[0],
 							f"{param_char}clientid",

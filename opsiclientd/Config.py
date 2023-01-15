@@ -286,7 +286,10 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 							self.disabledEventTypes = [v.strip().lower() for v in value.split(",") if v.strip().lower()]
 							logger.notice("Event types %s disabled by restart marker", self.disabledEventTypes)
 						elif option == "run_opsi_script":
-							product_id, opsi_script = value.split(",", 1)
+							product_id = None
+							opsi_script = value
+							if "," in value:
+								product_id, opsi_script = value.split(",", 1)
 							product_id = product_id.strip().lower()
 							opsi_script = opsi_script.strip()
 							logger.notice("Read product_id=%s, opsi_script=%s from restart marker", product_id, opsi_script)
