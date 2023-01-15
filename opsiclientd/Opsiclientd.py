@@ -181,7 +181,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				if not os.path.exists(config.restart_marker):
 					logger.notice("Writing restart marker %s", config.restart_marker)
 					with open(config.restart_marker, "w", encoding="utf-8") as file:
-						file.write("#")
+						file.write("disabled_event_types=gui startup,daemon startup\n")
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err)
 
