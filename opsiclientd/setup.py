@@ -310,7 +310,7 @@ def opsi_service_setup(options=None):
 		logger.error(err, exc_info=True)
 
 	try:
-		client = service_client.jsonrpc(method="host_getObjects", params=[[], config.get("global", "host_id")])  # pylint: disable=no-member
+		client = service_client.jsonrpc(method="host_getObjects", params=[[], {"id": config.get("global", "host_id")}])
 		if client and client[0] and client[0].opsiHostKey:
 			config.set("global", "opsi_host_key", client[0].opsiHostKey)
 
