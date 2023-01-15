@@ -329,6 +329,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			logger.error("Failed to start timeline: %s", err, exc_info=True)
 
 		config.readConfigFile()
+		product_id, opsi_script = None, None
 		try:
 			product_id, opsi_script = config.check_restart_marker()
 		except Exception as err:  # pylint: disable=broad-except
