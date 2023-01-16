@@ -519,7 +519,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 							config.get("global", "host_id"),
 							f"{param_char}password",
 							config.get("global", "opsi_host_key"),
-							f"/opsiclientd_restart_marker={config.restart_marker}"
+							f"{param_char}parameter",
+							f"opsiclientd_restart_marker={config.restart_marker}"
 						]
 						logger.notice("Running startup script: %s", cmd)
 						System.execute(cmd, shell=False, waitForEnding=True, timeout=3600)
