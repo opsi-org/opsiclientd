@@ -329,7 +329,6 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			logger.error("Failed to start timeline: %s", err, exc_info=True)
 
 		config.readConfigFile()
-		product_id, opsi_script = None, None
 		try:
 			product_id, opsi_script = config.check_restart_marker()
 		except Exception as err:  # pylint: disable=broad-except
@@ -519,7 +518,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 							f"{param_char}username",
 							config.get("global", "host_id"),
 							f"{param_char}password",
-							config.get("global", "opsi_host_key")
+							config.get("global", "opsi_host_key"),
+							f"/opsiclientd_restart_marker={config.restart_marker}"
 						]
 						logger.notice("Running startup script: %s", cmd)
 						System.execute(cmd, shell=False, waitForEnding=True, timeout=3600)
