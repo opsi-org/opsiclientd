@@ -13,6 +13,7 @@ import sys
 import getpass
 import gettext
 import locale
+from ipaddress import ip_address, IPv6Address
 from urllib.parse import urlparse
 
 from OPSI import System
@@ -119,13 +120,22 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 				imp = System.Impersonate(username=depotServerUsername, password=depotServerPassword, desktop=actionProcessorDesktop)
 				imp.start(logonType="NEW_CREDENTIALS")
 
-			if depot_url.hostname.lower() not in ("127.0.0.1", "localhost", "::1"):
+			# using netloc instead of hostname as hostname is stripped after the first : (not ipv6-safe)
+			if depot_url.netloc.lower() not in ("127.0.0.1", "localhost", "::1"):
 				logger.notice("Mounting depot share %s", depotRemoteUrl)
 				set_status_message(be, sessionId, _("Mounting depot share %s") % depotRemoteUrl)  # pylint: disable=no-member
 
 				if runAsUser or depot_url.scheme not in ("smb", "cifs"):
 					System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
 				else:
+					if isinstance(ip_address(depot_url.netloc), IPv6Address):
+						new_depot_url = depot_url.netloc.replace(":", "-")
+						if new_depot_url.endswith("]"):
+							new_depot_url = f"{new_depot_url[:-1]}.ipv6-literal.net]"
+						else:
+							new_depot_url = f"{new_depot_url}.ipv6-literal.net"
+						logger.notice("Using windows workaround to mount depot %s", new_depot_url)
+						depotRemoteUrl.replace(depot_url.netloc, new_depot_url)
 					System.mount(depotRemoteUrl, depotDrive)
 				depotShareMounted = True
 
