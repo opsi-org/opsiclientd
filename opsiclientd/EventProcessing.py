@@ -431,7 +431,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		logger.notice("Action processor name '%s', version '%s'", name, version)
 		self._actionProcessorInfoSubject.setMessage(f"{name} {version}")
 
-	def mountDepotShare(self, impersonation):
+	def mountDepotShare(self, impersonation):  # pylint: disable=too-many-branches
 		if self._depotShareMounted:
 			logger.debug("Depot share already mounted")
 			return
@@ -454,14 +454,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				if url.scheme in ("smb", "cifs"):
 					System.setRegistryValue(
 						System.HKEY_LOCAL_MACHINE,
-						f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\{url.netloc}",
+						f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\{url.hostname}",
 						"file",
 						1,
 					)
 				elif url.scheme in ("webdavs", "https"):
 					System.setRegistryValue(
 						System.HKEY_LOCAL_MACHINE,
-						f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\{url.netloc}@SSL@{url.port}",
+						f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\{url.hostname}@SSL@{url.port}",
 						"file",
 						1,
 					)
@@ -471,7 +471,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						"FileSizeLimitInBytes",
 						0xFFFFFFFF,
 					)
-				logger.info("Added depot '%s' to trusted domains", url.netloc)
+				logger.info("Added depot '%s' to trusted domains", url.hostname)
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error("Failed to add depot to trusted domains: %s", err)
 
@@ -492,12 +492,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		depot_server_url = config.get("depot_server", "url")
 		if RUNNING_ON_WINDOWS:
 			depot_url_parsed = urlparse(depot_server_url)
-			if isinstance(ip_address(depot_url_parsed.netloc), IPv6Address):
-				depot_server_url = depot_url_parsed.netloc.replace(":", "-")
-				if depot_server_url.endswith("]"):
-					depot_server_url = f"{depot_server_url[:-1]}.ipv6-literal.net]"
-				else:
-					depot_server_url = f"{depot_server_url}.ipv6-literal.net"
+			if isinstance(ip_address(depot_url_parsed.hostname), IPv6Address):
+				depot_server_url = depot_server_url.replace(
+					depot_url_parsed.hostname,
+					f"{depot_url_parsed.hostname.replace(':', '-')}.ipv6-literal.net",
+				).replace("[", "").replace("]", "")
 				logger.notice("Using windows workaround to mount depot %s", depot_server_url)
 		System.mount(
 			depot_server_url, config.getDepotDrive(), username=mount_username, password=mount_password, **mount_options
@@ -525,8 +524,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			url = urlparse(config.get("depot_server", "url"))
 			actionProcessorRemoteDir = None
 			actionProcessorCommonDir = None
-			# using netloc instead of hostname as hostname is stripped after the first : (not ipv6-safe)
-			if url.netloc.lower() in ("127.0.0.1", "localhost", "::1"):
+			if url.hostname.lower() in ("127.0.0.1", "localhost", "::1"):
 				dirname = config.get("action_processor", "remote_dir")
 				dirname.lstrip(os.sep)
 				dirname.lstrip("install" + os.sep)
