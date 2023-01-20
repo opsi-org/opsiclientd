@@ -500,7 +500,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					).replace("[", "").replace("]", "")
 					logger.notice("Using windows workaround to mount depot %s", depot_server_url)
 			except ValueError as error:
-				logger.error("Failed to check ip format, using %s for depot mount: %s", depot_server_url, error)
+				logger.info("Not an IP address '%s', using %s for depot mount: %s", depot_url_parsed.hostname, depot_server_url, error)
 		System.mount(
 			depot_server_url, config.getDepotDrive(), username=mount_username, password=mount_password, **mount_options
 		)
