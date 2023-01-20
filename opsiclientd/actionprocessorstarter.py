@@ -127,12 +127,16 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 				if runAsUser or depot_url.scheme not in ("smb", "cifs"):
 					System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
 				else:
-					if isinstance(ip_address(depot_url.hostname), IPv6Address):
-						depotRemoteUrl = depotRemoteUrl.replace(
-							depot_url.hostname,
-							f"{depot_url.hostname.replace(':', '-')}.ipv6-literal.net",
-						).replace("[", "").replace("]", "")
-						logger.notice("Using windows workaround to mount depot %s", depotRemoteUrl)
+					try:
+						if isinstance(ip_address(depot_url.hostname), IPv6Address):
+							depotRemoteUrl = depotRemoteUrl.replace(
+								depot_url.hostname,
+								f"{depot_url.hostname.replace(':', '-')}.ipv6-literal.net",
+							).replace("[", "").replace("]", "")
+							logger.notice("Using windows workaround to mount depot %s", depotRemoteUrl)
+					except ValueError as error:
+						logger.error("Failed to check ip format, using %s for depot mount: %s", depotRemoteUrl, error)
+
 					System.mount(depotRemoteUrl, depotDrive)
 				depotShareMounted = True
 

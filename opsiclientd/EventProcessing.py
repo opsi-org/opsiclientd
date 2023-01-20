@@ -492,12 +492,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		depot_server_url = config.get("depot_server", "url")
 		if RUNNING_ON_WINDOWS:
 			depot_url_parsed = urlparse(depot_server_url)
-			if isinstance(ip_address(depot_url_parsed.hostname), IPv6Address):
-				depot_server_url = depot_server_url.replace(
-					depot_url_parsed.hostname,
-					f"{depot_url_parsed.hostname.replace(':', '-')}.ipv6-literal.net",
-				).replace("[", "").replace("]", "")
-				logger.notice("Using windows workaround to mount depot %s", depot_server_url)
+			try:
+				if isinstance(ip_address(depot_url_parsed.hostname), IPv6Address):
+					depot_server_url = depot_server_url.replace(
+						depot_url_parsed.hostname,
+						f"{depot_url_parsed.hostname.replace(':', '-')}.ipv6-literal.net",
+					).replace("[", "").replace("]", "")
+					logger.notice("Using windows workaround to mount depot %s", depot_server_url)
+			except ValueError as error:
+				logger.error("Failed to check ip format, using %s for depot mount: %s", depot_server_url, error)
 		System.mount(
 			depot_server_url, config.getDepotDrive(), username=mount_username, password=mount_password, **mount_options
 		)
