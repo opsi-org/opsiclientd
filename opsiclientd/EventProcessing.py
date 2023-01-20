@@ -12,6 +12,7 @@ Processing of events.
 
 import datetime
 import filecmp
+from ipaddress import ip_address, IPv6Address
 import os
 import re
 import shutil
@@ -430,7 +431,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		logger.notice("Action processor name '%s', version '%s'", name, version)
 		self._actionProcessorInfoSubject.setMessage(f"{name} {version}")
 
-	def mountDepotShare(self, impersonation):
+	def mountDepotShare(self, impersonation):  # pylint: disable=too-many-branches
 		if self._depotShareMounted:
 			logger.debug("Depot share already mounted")
 			return
@@ -488,8 +489,20 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				)
 				mount_options["ca_cert_file"] = config.ca_cert_file
 
+		depot_server_url = config.get("depot_server", "url")
+		if RUNNING_ON_WINDOWS:
+			depot_url_parsed = urlparse(depot_server_url)
+			try:
+				if isinstance(ip_address(depot_url_parsed.hostname), IPv6Address):
+					depot_server_url = depot_server_url.replace(
+						depot_url_parsed.hostname,
+						f"{depot_url_parsed.hostname.replace(':', '-')}.ipv6-literal.net",
+					).replace("[", "").replace("]", "")
+					logger.notice("Using windows workaround to mount depot %s", depot_server_url)
+			except ValueError as error:
+				logger.info("Not an IP address '%s', using %s for depot mount: %s", depot_url_parsed.hostname, depot_server_url, error)
 		System.mount(
-			config.get("depot_server", "url"), config.getDepotDrive(), username=mount_username, password=mount_password, **mount_options
+			depot_server_url, config.getDepotDrive(), username=mount_username, password=mount_password, **mount_options
 		)
 
 		self._depotShareMounted = True
