@@ -493,8 +493,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					if config.get("config_service", "permanent_connection"):
 						logger.info("Starting permanent service connection")
 						self._permanent_service_connection = PermanentServiceConnection(
-							self._controlServer._opsiclientdRpcInterface
-						)  # pylint: disable=protected-access
+							self._controlServer._opsiclientdRpcInterface  # pylint: disable=protected-access
+						)
 						self._permanent_service_connection.start()
 
 					if opsi_script:
