@@ -8,12 +8,13 @@
 Non-standard exceptions.
 """
 
-from OPSI.Types import forceUnicode
+from opsicommon.types import forceUnicode
+
 
 class OpsiclientdError(Exception):
 	ExceptionShortDescription = "Opsiclientd error"
 
-	def __init__(self, message=''):
+	def __init__(self, message=""):
 		Exception.__init__(self)
 		self._message = forceUnicode(message)
 
@@ -27,9 +28,12 @@ class OpsiclientdError(Exception):
 
 
 class CanceledByUserError(OpsiclientdError):
-	""" Exception raised if user cancels operation. """
+	"""Exception raised if user cancels operation."""
+
 	ExceptionShortDescription = "Canceled by user error"
 
+
 class ConfigurationError(OpsiclientdError):
-	""" Exception raised if a configuration is invalid or missing. """
+	"""Exception raised if a configuration is invalid or missing."""
+
 	ExceptionShortDescription = "Configuration error"

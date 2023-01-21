@@ -9,8 +9,10 @@ opsiclientd - Event configuration.
 """
 
 import re
-from OPSI.Types import forceUnicode, forceBool
+
 from opsicommon.logging import log_context
+from opsicommon.types import forceBool, forceUnicode
+
 from .State import State
 
 state = State()

@@ -16,18 +16,18 @@ import os
 import shutil
 import threading
 import time
+from pathlib import Path
 from urllib.parse import urlparse
 
-from pathlib import Path
 from OPSI import System
 from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.BackendManager import BackendExtender
 from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker
 from OPSI.Object import ProductOnClient
-from OPSI.Types import forceBool, forceInt, forceProductIdList, forceUnicode
 from OPSI.Util.File.Opsi import PackageContentFile
 from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, getRepository
 from opsicommon.logging import log_context, logger
+from opsicommon.types import forceBool, forceInt, forceProductIdList, forceUnicode
 
 from opsiclientd.Config import Config
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator

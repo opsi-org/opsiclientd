@@ -12,12 +12,12 @@ import threading
 import time
 
 import opsicommon.logging
-from OPSI.Types import forceList
 from opsicommon.logging import logger
+from opsicommon.types import forceList
 
 from opsiclientd.State import State
 
-__all__ = ['Event', 'EventGenerator', 'EventListener']
+__all__ = ["Event", "EventGenerator", "EventListener"]
 
 state = State()
 
@@ -40,7 +40,7 @@ class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-att
 		self._lastEventOccurence = None
 
 	def __str__(self):
-		return f'<{self.__class__.__name__} {self._generatorConfig.getId()}>'
+		return f"<{self.__class__.__name__} {self._generatorConfig.getId()}>"
 
 	__repr__ = __str__
 
@@ -59,9 +59,7 @@ class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-att
 
 	def addEventListener(self, eventListener):
 		if not isinstance(eventListener, EventListener):
-			raise TypeError(
-				f"Failed to add event listener, got class {eventListener.__class__}, need class EventListener"
-			)
+			raise TypeError(f"Failed to add event listener, got class {eventListener.__class__}, need class EventListener")
 
 		if eventListener in self._eventListeners:
 			return
@@ -70,16 +68,16 @@ class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-att
 
 	def getEventConfig(self):
 		logger.info("Testing preconditions of configs: %s", self._eventConfigs)
-		actualConfig = {'preconditions': {}, 'config': None}
+		actualConfig = {"preconditions": {}, "config": None}
 		for pec in self._eventConfigs:
 			if self._preconditionsFulfilled(pec.preconditions):
 				logger.info("Preconditions %s for event config '%s' fulfilled", list(pec.preconditions), pec.getId())
-				if not actualConfig['config'] or (len(pec.preconditions.keys()) > len(actualConfig['preconditions'].keys())):
-					actualConfig = {'preconditions': pec.preconditions, 'config': pec}
+				if not actualConfig["config"] or (len(pec.preconditions.keys()) > len(actualConfig["preconditions"].keys())):
+					actualConfig = {"preconditions": pec.preconditions, "config": pec}
 			else:
 				logger.info("Preconditions %s for event config '%s' not fulfilled", list(pec.preconditions), pec.getId())
 
-		return actualConfig['config']
+		return actualConfig["config"]
 
 	def createAndFireEvent(self, eventInfo={}, can_cancel=False):  # pylint: disable=dangerous-default-value
 		self.fireEvent(self.createEvent(eventInfo), can_cancel=can_cancel)
@@ -100,7 +98,9 @@ class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-att
 		self._event = threading.Event()
 		logger.debug(
 			"getNextEvent: eventsOccured=%d, startInterval=%d, interval=%d",
-			self._eventsOccured, self._generatorConfig.startInterval, self._generatorConfig.interval
+			self._eventsOccured,
+			self._generatorConfig.startInterval,
+			self._generatorConfig.interval,
 		)
 		if self._eventsOccured == 0 and self._generatorConfig.startInterval > 0:
 			logger.debug("Waiting for start interval %d", self._generatorConfig.startInterval)
@@ -123,7 +123,7 @@ class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-att
 	def fireEvent(self, event=None, can_cancel=False):
 		logger.debug("Trying to fire event %s", event)
 		if self._stopped:
-			logger.debug('%s is stopped, not firing event.', self)
+			logger.debug("%s is stopped, not firing event.", self)
 			return
 
 		if not event:
@@ -144,11 +144,13 @@ class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-att
 				self._event = event
 
 			def run(self):
-				with opsicommon.logging.log_context({'instance': 'event generator ' + self._event.eventConfig.getId()}):
+				with opsicommon.logging.log_context({"instance": "event generator " + self._event.eventConfig.getId()}):
 					if self._event.eventConfig.notificationDelay > 0:
 						logger.debug(
 							"Waiting %d seconds before notifying listener '%s' of event '%s'",
-							self._event.eventConfig.notificationDelay, self._eventListener, self._event
+							self._event.eventConfig.notificationDelay,
+							self._eventListener,
+							self._event,
 						)
 						time.sleep(self._event.eventConfig.notificationDelay)
 					try:
@@ -179,22 +181,20 @@ class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-att
 				self._opsiclientd.eventLock.release()
 
 	def run(self):
-		with opsicommon.logging.log_context({'instance': f'event generator {self._generatorConfig.getId()}'}):
+		with opsicommon.logging.log_context({"instance": f"event generator {self._generatorConfig.getId()}"}):
 			try:
 				logger.info("Initializing event generator '%s'", self)
 				self.initialize()
 
 				if self._generatorConfig.activationDelay > 0:
 					logger.debug(
-						"Waiting %d seconds before activation of event generator '%s'",
-						self._generatorConfig.activationDelay, self
+						"Waiting %d seconds before activation of event generator '%s'", self._generatorConfig.activationDelay, self
 					)
 					time.sleep(self._generatorConfig.activationDelay)
 
 				logger.info("Activating event generator '%s'", self)
 				while not self._stopped and (
-					(self._generatorConfig.maxRepetitions < 0) or
-					(self._eventsOccured <= self._generatorConfig.maxRepetitions)
+					(self._generatorConfig.maxRepetitions < 0) or (self._eventsOccured <= self._generatorConfig.maxRepetitions)
 				):
 					logger.info("Getting next event...")
 					event = self.getNextEvent()  # pylint: disable=assignment-from-none,assignment-from-no-return
@@ -229,7 +229,8 @@ class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-att
 
 
 class Event:  # pylint: disable=too-few-public-methods
-	""" Basic event class """
+	"""Basic event class"""
+
 	def __init__(self, eventConfig, eventInfo={}):  # pylint: disable=dangerous-default-value
 		self.eventConfig = eventConfig
 		self.eventInfo = eventInfo
@@ -237,7 +238,7 @@ class Event:  # pylint: disable=too-few-public-methods
 	def getActionProcessorCommand(self):
 		actionProcessorCommand = self.eventConfig.actionProcessorCommand
 		for (key, value) in self.eventInfo.items():
-			actionProcessorCommand = actionProcessorCommand.replace('%' + 'event.' + str(key.lower()) + '%', str(value))
+			actionProcessorCommand = actionProcessorCommand.replace("%" + "event." + str(key.lower()) + "%", str(value))
 
 		return actionProcessorCommand
 

@@ -23,12 +23,12 @@ from OPSI.Backend.Base.Extended import (  # type: ignore[import]
 	get_function_signature_and_args,
 )
 from OPSI.Backend.Replicator import BackendReplicator  # type: ignore[import]
-from OPSI.Exceptions import (  # type: ignore[import]
+from OPSI.Util import blowfishDecrypt  # type: ignore[import]
+from opsicommon.exceptions import (  # type: ignore[import]
 	BackendConfigurationError,
 	BackendMissingDataError,
 	BackendUnaccomplishableError,
 )
-from OPSI.Util import blowfishDecrypt  # type: ignore[import]
 from opsicommon.license import OPSI_MODULE_IDS  # type: ignore[import]
 from opsicommon.logging import logger  # type: ignore[import]
 from opsicommon.objects import *  # type: ignore[import] # required for dynamic class loading # pylint: disable=wildcard-import,unused-wildcard-import

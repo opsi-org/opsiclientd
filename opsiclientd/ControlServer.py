@@ -28,14 +28,15 @@ import tempfile
 import threading
 import time
 import urllib
+import warnings
 from collections import namedtuple
 from pathlib import Path
 from typing import Union
 from uuid import uuid4
-import warnings
 
 import msgpack  # type: ignore[import]
 import psutil  # type: ignore[import]
+
 with warnings.catch_warnings():
 	warnings.filterwarnings("ignore", category=DeprecationWarning)
 	from autobahn.twisted.resource import WebSocketResource  # type: ignore[import]
@@ -43,10 +44,10 @@ with warnings.catch_warnings():
 		WebSocketServerFactory,
 		WebSocketServerProtocol,
 	)
+
 from OpenSSL import crypto  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
 from OPSI import __version__ as python_opsi_version  # type: ignore[import]
-from OPSI.Exceptions import OpsiAuthenticationError  # type: ignore[import]
 from OPSI.Service import OpsiService, SSLContext  # type: ignore[import]
 from OPSI.Service.Resource import (  # type: ignore[import]
 	ResourceOpsi,
@@ -58,8 +59,8 @@ from OPSI.Service.Worker import (  # type: ignore[import]
 	WorkerOpsiJsonInterface,
 	WorkerOpsiJsonRpc,
 )
-from OPSI.Types import forceBool, forceInt, forceUnicode  # type: ignore[import]
 from OPSI.Util.Log import truncateLogData  # type: ignore[import]
+from opsicommon.exceptions import OpsiServiceAuthenticationError
 from opsicommon.logging import (  # type: ignore[import]
 	LEVEL_TO_NAME,
 	OPSI_LEVEL_TO_LEVEL,
@@ -67,6 +68,7 @@ from opsicommon.logging import (  # type: ignore[import]
 	logger,
 	secret_filter,
 )
+from opsicommon.types import forceBool, forceInt, forceUnicode  # type: ignore[import]
 from twisted.internet import fdesc, reactor
 from twisted.internet.base import BasePort
 from twisted.internet.error import CannotListenError
@@ -348,7 +350,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 				raise Exception("Invalid credentials")
 		except Exception as err:  # pylint: disable=broad-except
 			self.request.code = 401
-			raise OpsiAuthenticationError(f"Forbidden: {err}") from err
+			raise OpsiServiceAuthenticationError(f"Forbidden: {err}") from err
 
 		# Auth ok
 		self.session.authenticated = True
@@ -1514,7 +1516,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		if not parts:
 			raise ValueError(f"Invalid command {command}")
 		if len(parts) == 1:
-			script_content = f'Start-Process -FilePath {parts[0]} -Wait\r\n'
+			script_content = f"Start-Process -FilePath {parts[0]} -Wait\r\n"
 		else:
 			script_content = (
 				f"""Start-Process -FilePath {parts[0]} -ArgumentList {','.join((f'"{entry}"' for entry in parts[1:]))} -Wait\r\n"""

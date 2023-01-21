@@ -16,14 +16,6 @@ from urllib.parse import urlparse
 
 import netifaces  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
-from OPSI.Types import (  # type: ignore[import]
-	forceBool,
-	forceHostId,
-	forceList,
-	forceProductIdList,
-	forceUnicode,
-	forceUnicodeList,
-)
 from OPSI.Util import blowfishDecrypt, objectToBeautifiedText  # type: ignore[import]
 from OPSI.Util.File import IniFile  # type: ignore[import]
 from opsicommon.client.opsiservice import ServiceClient, ServiceVerificationFlags
@@ -32,6 +24,14 @@ from opsicommon.logging import (  # type: ignore[import]
 	logger,
 	logging_config,
 	secret_filter,
+)
+from opsicommon.types import (  # type: ignore[import]
+	forceBool,
+	forceHostId,
+	forceList,
+	forceProductIdList,
+	forceUnicode,
+	forceUnicodeList,
 )
 from opsicommon.utils import Singleton  # type: ignore[import]
 

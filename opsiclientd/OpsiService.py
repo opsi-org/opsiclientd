@@ -23,14 +23,16 @@ from typing import Union
 from OpenSSL.crypto import FILETYPE_PEM, dump_certificate, load_certificate
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
-from OPSI.Exceptions import OpsiAuthenticationError, OpsiServiceVerificationError
-from OPSI.Types import forceBool, forceFqdn, forceInt, forceProductId, forceUnicode
 from OPSI.Util.Repository import WebDAVRepository
 from OPSI.Util.Thread import KillableThread
 from opsicommon.client.opsiservice import (
 	MessagebusListener,
 	ServiceClient,
 	ServiceConnectionListener,
+)
+from opsicommon.exceptions import (
+	OpsiServiceAuthenticationError,
+	OpsiServiceVerificationError,
 )
 from opsicommon.logging import log_context, logger, secret_filter
 from opsicommon.messagebus import (
@@ -44,6 +46,13 @@ from opsicommon.messagebus import (
 	timestamp,
 )
 from opsicommon.ssl import install_ca, load_ca, remove_ca
+from opsicommon.types import (
+	forceBool,
+	forceFqdn,
+	forceInt,
+	forceProductId,
+	forceUnicode,
+)
 from opsicommon.utils import Singleton  # type: ignore[import]
 from packaging import version
 
@@ -578,7 +587,7 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 						logger.info("Failed to connect to config server '%s': %s", self._configServiceUrl, error)
 						logger.debug(error, exc_info=True)
 
-						if isinstance(error, OpsiAuthenticationError):
+						if isinstance(error, OpsiServiceAuthenticationError):
 							fqdn = System.getFQDN()
 							try:
 								fqdn = forceFqdn(fqdn)

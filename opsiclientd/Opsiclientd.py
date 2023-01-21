@@ -27,11 +27,11 @@ from typing import List
 import psutil
 from OPSI import System
 from OPSI import __version__ as python_opsi_version
-from OPSI.Types import forceBool, forceInt, forceUnicode
 from OPSI.Util import randomString
 from OPSI.Util.Message import ChoiceSubject, MessageSubject, NotificationServer
 from opsicommon.logging import log_context, logger, secret_filter
 from opsicommon.system import ensure_not_already_running
+from opsicommon.types import forceBool, forceInt, forceUnicode
 
 from opsiclientd import __version__, check_signature, config
 from opsiclientd.ControlPipe import ControlPipeFactory
@@ -492,12 +492,16 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				with getControlServer():
 					if config.get("config_service", "permanent_connection"):
 						logger.info("Starting permanent service connection")
-						self._permanent_service_connection = PermanentServiceConnection(self._controlServer._opsiclientdRpcInterface)  # pylint: disable=protected-access
+						self._permanent_service_connection = PermanentServiceConnection(
+							self._controlServer._opsiclientdRpcInterface
+						)  # pylint: disable=protected-access
 						self._permanent_service_connection.start()
 
 					if opsi_script:
 						log_dir = config.get("global", "log_dir")
-						action_processor = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
+						action_processor = os.path.join(
+							config.get("action_processor", "local_dir"), config.get("action_processor", "filename")
+						)
 						param_char = "/" if RUNNING_ON_WINDOWS else "-"
 						cmd = [
 							action_processor,
@@ -520,7 +524,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 							f"{param_char}password",
 							config.get("global", "opsi_host_key"),
 							f"{param_char}parameter",
-							f"opsiclientd_restart_marker={config.restart_marker}"
+							f"opsiclientd_restart_marker={config.restart_marker}",
 						]
 						logger.notice("Running startup script: %s", cmd)
 						System.execute(cmd, shell=False, waitForEnding=True, timeout=3600)
@@ -584,7 +588,9 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				if event.eventConfig.actionType != "login" and ept.event.eventConfig.actionType != "login":
 					if not ept.is_cancelable():
 						logger.notice("Already processing a non-cancelable (and non-login) event: %s", ept.event.eventConfig.getId())
-						raise CannotCancelEventError(f"Already processing a non-cancelable (and non-login) event: {ept.event.eventConfig.getId()}")
+						raise CannotCancelEventError(
+							f"Already processing a non-cancelable (and non-login) event: {ept.event.eventConfig.getId()}"
+						)
 					if not can_cancel:
 						logger.notice(
 							"Currently running event can only be canceled by manual action (ControlServer/Kiosk): %s",
@@ -946,7 +952,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			logger.info("Collecting log files to %s", tempdir_path)
 			collect_matching_files(Path(config.get("global", "log_dir")), tempdir_path, type_patterns, max_age_days)
 			if timeline_db:
-				db_path = Path(config.get('global', 'timeline_db'))
+				db_path = Path(config.get("global", "timeline_db"))
 				if db_path.exists():
 					shutil.copy2(db_path, tempdir_path)
 			logger.info("Writing zip archive %s", outfile)

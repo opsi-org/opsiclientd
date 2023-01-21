@@ -26,7 +26,6 @@ from urllib.parse import urlparse
 import psutil  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
 from OPSI.Object import ProductOnClient  # type: ignore[import]
-from OPSI.Types import forceInt, forceUnicode, forceUnicodeLower  # type: ignore[import]
 from OPSI.Util.Message import (  # type: ignore[import]
 	ChoiceSubject,
 	MessageSubject,
@@ -41,6 +40,11 @@ from opsicommon.logging import (  # type: ignore[import]
 	log_context,
 	logger,
 	logging_config,
+)
+from opsicommon.types import (  # type: ignore[import]
+	forceInt,
+	forceUnicode,
+	forceUnicodeLower,
 )
 
 from opsiclientd import __version__

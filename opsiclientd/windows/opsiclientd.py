@@ -29,8 +29,8 @@ import win32net  # type: ignore[import] # pylint: disable=import-error
 import win32netcon  # type: ignore[import] # pylint: disable=import-error
 import win32security  # type: ignore[import] # pylint: disable=import-error
 from OPSI import System  # type: ignore[import]
-from OPSI.Types import forceBool  # type: ignore[import]
 from opsicommon.logging import logger  # type: ignore[import]
+from opsicommon.types import forceBool  # type: ignore[import]
 
 from opsiclientd import config
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
@@ -136,9 +136,7 @@ class OpsiclientdNT(Opsiclientd):
 				return True
 			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {response.get('error')}")
 
-	def cleanup_opsi_setup_user(
-		self, keep_sid: str = None
-	):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+	def cleanup_opsi_setup_user(self, keep_sid: str = None):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		keep_profile = None
 		modified = True
 		while modified:
@@ -258,7 +256,7 @@ class OpsiclientdNT(Opsiclientd):
 			"name": OPSI_SETUP_USER_NAME,
 			"full_name": "opsi setup user",
 			"comment": "auto created by opsi",
-			"password": ''.join(password_chars),
+			"password": "".join(password_chars),
 			"priv": win32netcon.USER_PRIV_USER,
 			"flags": win32netcon.UF_NORMAL_ACCOUNT | win32netcon.UF_SCRIPT | win32netcon.UF_DONT_EXPIRE_PASSWD,
 		}

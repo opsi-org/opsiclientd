@@ -8,20 +8,24 @@
 Application state.
 """
 
-import os
-import json
 import codecs
+import json
+import os
 import threading
 from pathlib import Path
+
 import psutil
-
-from opsicommon.utils import Singleton
-from opsicommon.logging import logger
-from OPSI.Types import forceBool, forceUnicode
 from OPSI import System
+from opsicommon.logging import logger
+from opsicommon.types import forceBool, forceUnicode
+from opsicommon.utils import Singleton
 
-from opsiclientd.Config import Config, OPSI_SETUP_USER_NAME
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_DARWIN, RUNNING_ON_LINUX
+from opsiclientd.Config import OPSI_SETUP_USER_NAME, Config
+from opsiclientd.SystemCheck import (
+	RUNNING_ON_DARWIN,
+	RUNNING_ON_LINUX,
+	RUNNING_ON_WINDOWS,
+)
 
 config = Config()
 
@@ -38,15 +42,15 @@ class State(metaclass=Singleton):
 		self._stateLock = threading.Lock()
 
 	def start(self):
-		self._stateFile = config.get('global', 'state_file')
+		self._stateFile = config.get("global", "state_file")
 		self._readStateFile()
-		self.set('shutdown_cancel_counter', 0)
+		self.set("shutdown_cancel_counter", 0)
 
 	def _readStateFile(self):
 		with self._stateLock:
 			try:
 				if os.path.exists(self._stateFile):
-					with codecs.open(self._stateFile, 'r', 'utf8') as stateFile:
+					with codecs.open(self._stateFile, "r", "utf8") as stateFile:
 						jsonstr = stateFile.read()
 
 					self._state = json.loads(jsonstr)
@@ -60,14 +64,14 @@ class State(metaclass=Singleton):
 				if not os.path.exists(os.path.dirname(self._stateFile)):
 					os.makedirs(os.path.dirname(self._stateFile))
 
-				with codecs.open(self._stateFile, 'w', 'utf8') as stateFile:
+				with codecs.open(self._stateFile, "w", "utf8") as stateFile:
 					stateFile.write(jsonstr)
 			except Exception as error:  # pylint: disable=broad-except
 				logger.error("Failed to write state file '%s': %s", self._stateFile, error)
 
 	def get(self, name, default=None):  # pylint: disable=too-many-return-statements,too-many-branches
 		name = forceUnicode(name)
-		if name == 'user_logged_in':
+		if name == "user_logged_in":
 			if RUNNING_ON_WINDOWS:
 				for session in System.getActiveSessionInformation():
 					if session["UserName"] != OPSI_SETUP_USER_NAME:
@@ -84,14 +88,14 @@ class State(metaclass=Singleton):
 				if Path("/dev/console").owner() != "root":
 					return True
 			return False
-		if name == 'products_cached':
-			return self._state.get('product_cache_service', {}).get('products_cached', default)
-		if name == 'config_cached':
-			return self._state.get('config_cache_service', {}).get('config_cached', default)
+		if name == "products_cached":
+			return self._state.get("product_cache_service", {}).get("products_cached", default)
+		if name == "config_cached":
+			return self._state.get("config_cache_service", {}).get("config_cached", default)
 		if "cancel_counter" in name:
 			return self._state.get(name, 0)
-		if name == 'installation_pending':
-			return forceBool(self._state.get('installation_pending', False))
+		if name == "installation_pending":
+			return forceBool(self._state.get("installation_pending", False))
 
 		try:
 			return self._state[name]

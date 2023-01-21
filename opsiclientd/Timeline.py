@@ -33,17 +33,17 @@ import threading
 import time
 
 from OPSI.Backend.SQLite import SQLite
-from OPSI.Types import forceBool, forceInt, forceOpsiTimestamp, forceUnicode
 from OPSI.Util import timestamp
 from opsicommon.logging import logger
+from opsicommon.types import forceBool, forceInt, forceOpsiTimestamp, forceUnicode
 from opsicommon.utils import Singleton
 
 from opsiclientd.Config import Config
 
 config = Config()
 
-TIMELINE_IMAGE_URL = '/timeline/timeline_js/images/'
-HTML_HEAD = '''
+TIMELINE_IMAGE_URL = "/timeline/timeline_js/images/"
+HTML_HEAD = """
 <script type="text/javascript">
 Timeline_ajax_url   = "/timeline/timeline_ajax/simile-ajax-api.js";
 Timeline_urlPrefix  = "/timeline/timeline_js/";
@@ -115,11 +115,12 @@ function onResize() {
 	}
 }
 </script>
-'''
+"""
 
 
 class Timeline(metaclass=Singleton):
-	""" Timeline """
+	"""Timeline"""
+
 	_initialized = False
 
 	def __init__(self):
@@ -132,7 +133,7 @@ class Timeline(metaclass=Singleton):
 		self._stopped = False
 
 	def start(self):
-		db_file = config.get('global', 'timeline_db')
+		db_file = config.get("global", "timeline_db")
 		logger.notice("Starting timeline (database location: %s)", db_file)
 		try:
 			self._createDatabase()
@@ -146,69 +147,69 @@ class Timeline(metaclass=Singleton):
 		end = forceOpsiTimestamp(timestamp())
 
 		with self._db_lock, self._sql.session() as session:
-			self._sql.update(session, 'EVENT', '`durationEvent` = 1 AND `end` is NULL', {'end': end})
+			self._sql.update(session, "EVENT", "`durationEvent` = 1 AND `end` is NULL", {"end": end})
 
 	def getEventData(self):
 		events = []
-		now = time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime())
+		now = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.localtime())
 		for event in self.getEvents():
-			event['icon'] = TIMELINE_IMAGE_URL + "gray-circle.png"
-			event['start'] = event['start'].replace(' ', 'T') + '+00:00'
-			if event['end']:
-				event['end'] = event['end'].replace(' ', 'T') + '+00:00'
+			event["icon"] = TIMELINE_IMAGE_URL + "gray-circle.png"
+			event["start"] = event["start"].replace(" ", "T") + "+00:00"
+			if event["end"]:
+				event["end"] = event["end"].replace(" ", "T") + "+00:00"
 			else:
-				if event['durationEvent']:
-					event['end'] = now
-			if event['description']:
-				event['description'] = event['description'].replace('\n', '<br />')
-			if event['isError']:
-				event['color'] = "#A74141"
-				event['textColor'] = "#A74141"
-				event['icon'] = TIMELINE_IMAGE_URL + "dark-red-circle.png"
-			elif event['category'] in ('event_processing', 'event_occurrence'):
-				event['color'] = "#D7CB1E"
-				event['textColor'] = "#D7CB1E"
-			elif event['category'] in ('opsiclientd_running',):
-				event['color'] = "#80A63D"
-				event['textColor'] = "#80A63D"
-				event['icon'] = TIMELINE_IMAGE_URL + "dull-green-circle.png"
-			elif event['category'] in ('block_login', 'system'):
-				event['color'] = "#A74141"
-				event['textColor'] = "#A74141"
-				event['icon'] = TIMELINE_IMAGE_URL + "dark-red-circle.png"
-			elif event['category'] in ('product_caching',):
-				event['color'] = "#6BABDF"
-				event['textColor'] = "#6BABDF"
-			elif event['category'] in ('config_sync',):
-				event['color'] = "#69DFD0"
-				event['textColor'] = "#69DFD0"
-			elif event['category'] in ('user_interaction',):
-				event['color'] = "#B46ADF"
-				event['textColor'] = "#B46ADF"
-				event['icon'] = TIMELINE_IMAGE_URL + "dull-blue-circle.png"
-			elif event['category'] in ('wait',):
-				event['color'] = "#DFA86C"
-				event['textColor'] = "#DFA86C"
-			del event['isError']
-			del event['category']
-			del event['id']
+				if event["durationEvent"]:
+					event["end"] = now
+			if event["description"]:
+				event["description"] = event["description"].replace("\n", "<br />")
+			if event["isError"]:
+				event["color"] = "#A74141"
+				event["textColor"] = "#A74141"
+				event["icon"] = TIMELINE_IMAGE_URL + "dark-red-circle.png"
+			elif event["category"] in ("event_processing", "event_occurrence"):
+				event["color"] = "#D7CB1E"
+				event["textColor"] = "#D7CB1E"
+			elif event["category"] in ("opsiclientd_running",):
+				event["color"] = "#80A63D"
+				event["textColor"] = "#80A63D"
+				event["icon"] = TIMELINE_IMAGE_URL + "dull-green-circle.png"
+			elif event["category"] in ("block_login", "system"):
+				event["color"] = "#A74141"
+				event["textColor"] = "#A74141"
+				event["icon"] = TIMELINE_IMAGE_URL + "dark-red-circle.png"
+			elif event["category"] in ("product_caching",):
+				event["color"] = "#6BABDF"
+				event["textColor"] = "#6BABDF"
+			elif event["category"] in ("config_sync",):
+				event["color"] = "#69DFD0"
+				event["textColor"] = "#69DFD0"
+			elif event["category"] in ("user_interaction",):
+				event["color"] = "#B46ADF"
+				event["textColor"] = "#B46ADF"
+				event["icon"] = TIMELINE_IMAGE_URL + "dull-blue-circle.png"
+			elif event["category"] in ("wait",):
+				event["color"] = "#DFA86C"
+				event["textColor"] = "#DFA86C"
+			del event["isError"]
+			del event["category"]
+			del event["id"]
 			events.append(event)
-		return {'dateTimeFormat': 'iso8601', 'events': events}
+		return {"dateTimeFormat": "iso8601", "events": events}
 
 	def getHtmlHead(self):
-		now = time.strftime('%Y-%m-%dT%H:%M:%S+00:00', time.localtime())
-		return HTML_HEAD % {'date': now}
+		now = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.localtime())
+		return HTML_HEAD % {"date": now}
 
 	def _cleanupDatabase(self):
 		with self._db_lock, self._sql.session() as session:
 			try:
 				self._sql.execute(session, f'delete from EVENT where `start` < "{timestamp(time.time() - 7*24*3600)}"')
-				self._sql.update(session, 'EVENT', '`durationEvent` = 1 AND `end` is NULL', {'durationEvent': False})
+				self._sql.update(session, "EVENT", "`durationEvent` = 1 AND `end` is NULL", {"durationEvent": False})
 			except Exception as cleanup_error:  # pylint: disable=broad-except
 				logger.error(cleanup_error)
 
 	def _createDatabase(self, delete_existing=False):
-		timelineDB = config.get('global', 'timeline_db')
+		timelineDB = config.get("global", "timeline_db")
 		timelineFolder = os.path.dirname(timelineDB)
 		if not os.path.exists(timelineFolder):
 			logger.debug("Creating missing directory '%s'", timelineFolder)
@@ -218,15 +219,12 @@ class Timeline(metaclass=Singleton):
 			logger.notice("Deleting an recreating timeline database: %s", timelineDB)
 			os.remove(timelineDB)
 
-		self._sql = SQLite(
-			database=timelineDB,
-			databaseCharset='utf-8'
-		)
+		self._sql = SQLite(database=timelineDB, databaseCharset="utf-8")
 		with self._db_lock, self._sql.session() as session:
 			tables = self._sql.getTables(session)
-			if 'EVENT' not in tables:
-				logger.debug('Creating table EVENT')
-				table = f'''CREATE TABLE `EVENT` (
+			if "EVENT" not in tables:
+				logger.debug("Creating table EVENT")
+				table = f"""CREATE TABLE `EVENT` (
 						`id` integer NOT NULL {self._sql.AUTOINCREMENT},
 						`title` varchar(255) NOT NULL,
 						`category` varchar(64),
@@ -237,13 +235,15 @@ class Timeline(metaclass=Singleton):
 						`end` TIMESTAMP,
 						PRIMARY KEY (`id`)
 					) {self._sql.getTableCreationOptions('EVENT')};
-					'''
+					"""
 				logger.debug(table)
 				self._sql.execute(session, table)
-				self._sql.execute(session, 'CREATE INDEX `category` on `EVENT` (`category`);')
-				self._sql.execute(session, 'CREATE INDEX `start` on `EVENT` (`start`);')
+				self._sql.execute(session, "CREATE INDEX `category` on `EVENT` (`category`);")
+				self._sql.execute(session, "CREATE INDEX `start` on `EVENT` (`start`);")
 
-	def addEvent(self, title, description='', isError=False, category=None, durationEvent=False, start=None, end=None):  # pylint: disable=too-many-arguments
+	def addEvent(
+		self, title, description="", isError=False, category=None, durationEvent=False, start=None, end=None
+	):  # pylint: disable=too-many-arguments
 		if self._stopped:
 			return -1
 
@@ -260,21 +260,21 @@ class Timeline(metaclass=Singleton):
 					durationEvent = True
 
 				event = {
-					'title': forceUnicode(title),
-					'category': category,
-					'description': forceUnicode(description),
-					'isError': forceBool(isError),
-					'durationEvent': forceBool(durationEvent),
-					'start': start,
-					'end': end,
+					"title": forceUnicode(title),
+					"category": category,
+					"description": forceUnicode(description),
+					"isError": forceBool(isError),
+					"durationEvent": forceBool(durationEvent),
+					"start": start,
+					"end": end,
 				}
 				try:
-					return self._sql.insert(session, 'EVENT', event)
+					return self._sql.insert(session, "EVENT", event)
 				except sqlite3.DatabaseError as db_error:
 					logger.error("Failed to add event '%s': %s, recreating database", title, db_error)
 					self._sql.delete_db()
 					self._createDatabase(delete_existing=True)
-					return self._sql.insert(session, 'EVENT', event)
+					return self._sql.insert(session, "EVENT", event)
 			except Exception as add_error:  # pylint: disable=broad-except
 				logger.error("Failed to add event '%s': %s", title, add_error)
 		return -1
@@ -289,7 +289,7 @@ class Timeline(metaclass=Singleton):
 				if not end:
 					end = timestamp()
 				end = forceOpsiTimestamp(end)
-				return self._sql.update(session, 'EVENT', f'`id` = {eventId}', {'end': end, 'durationEvent': True})
+				return self._sql.update(session, "EVENT", f"`id` = {eventId}", {"end": end, "durationEvent": True})
 			except Exception as end_error:  # pylint: disable=broad-except
 				logger.error("Failed to set end of event '%s': %s", eventId, end_error)
 		return -1
@@ -299,4 +299,4 @@ class Timeline(metaclass=Singleton):
 			return {}
 
 		with self._db_lock, self._sql.session() as session:
-			return self._sql.getSet(session, 'select * from EVENT')
+			return self._sql.getSet(session, "select * from EVENT")

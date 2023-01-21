@@ -10,8 +10,8 @@ Functions to create, reconfigure and get event generators.
 
 import copy
 
-from OPSI.Types import forceUnicode
 from opsicommon.logging import logger
+from opsicommon.types import forceUnicode
 
 from opsiclientd.Config import Config
 from opsiclientd.Events.Panic import PanicEventConfig
