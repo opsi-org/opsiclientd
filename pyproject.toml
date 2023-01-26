@@ -28,7 +28,7 @@ pyelftools = "^0.29"
 python-opsi = "^4.3.0"
 python-opsi-common = "^4.3.0"
 #python-opsi-common = {path = "python-opsi-common", develop = true}
-websocket-client = { git = "https://github.com/j-a-n/websocket-client.git", branch = "fix-reconnect" }
+websocket-client = "^1.5"
 pywin32 = {platform = "win32", version = "^303"}
 pywinpty = {platform = "win32", version = "^2.0"}
 wmi = {platform = "win32", version = "^1.5"}
@@ -46,7 +46,7 @@ pytest = "^7.1"
 pytest-cov = "^4.0"
 pywin32-ctypes = {version = "^0.2", platform = "win32"}
 requests = "^2.25"
-tan = "^22.2"
+tan = "^22.8"
 pyinstaller = "^5.2"
 
 [tool.poetry.scripts]
