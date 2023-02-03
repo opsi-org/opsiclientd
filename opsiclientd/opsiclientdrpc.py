@@ -16,12 +16,12 @@ import platform
 
 # Do not remove this import, it's needed by using this module from CLI
 from OPSI import System  # pylint: disable=unused-import
-from OPSI import __version__ as python_opsi_version
 
 from opsicommon.logging import (
 	logger, init_logging, log_context, secret_filter, LOG_DEBUG, LOG_NONE
 )
 from opsicommon.client.opsiservice import ServiceClient
+from opsicommon import __version__ as opsicommon_version
 
 from opsiclientd import __version__, DEFAULT_FILE_LOG_FORMAT
 
@@ -56,7 +56,7 @@ def main():  # pylint: disable=too-many-statements
 		parser.add_argument(
 			'--version',
 			action='version',
-			version=f"{__version__} [python-opsi={python_opsi_version}]"
+			version=f"{__version__} [python-opsi-common={opsicommon_version}]"
 		)
 		parser.add_argument(
 			'--log-level',
@@ -138,6 +138,7 @@ def main():  # pylint: disable=too-many-statements
 			file_format=DEFAULT_FILE_LOG_FORMAT
 		)
 
+		logger.info("opsiclientdrpc version=%s [python-opsi-common=%s]", __version__, opsicommon_version)
 		logger.debug(
 			"log_file=%s, log_level=%s, address=%s, username=%s, password=%s, rpc=%s",
 			log_file, log_level, address, username, password, rpc
