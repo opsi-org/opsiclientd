@@ -718,7 +718,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			return None
 
 		if not ("opsiclientd_rpc" in config.getDict() and "command" in config.getDict()["opsiclientd_rpc"]):
-			raise Exception("opsiclientd_rpc command not defined")
+			raise RuntimeError("opsiclientd_rpc command not defined")
 
 		if sessionId is None:
 			sessionId = System.getActiveSessionId()
@@ -744,7 +744,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 
 	def switchDesktop(self, desktop, sessionId=None):
 		if not ("opsiclientd_rpc" in config.getDict() and "command" in config.getDict()["opsiclientd_rpc"]):
-			raise Exception("opsiclientd_rpc command not defined")
+			raise RuntimeError("opsiclientd_rpc command not defined")
 
 		desktop = forceUnicode(desktop)
 		if sessionId is None:
@@ -822,11 +822,11 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			mode = "prepend"
 		port = config.get("notification_server", "popup_port")
 		if not port:
-			raise Exception("notification_server.popup_port not defined")
+			raise RuntimeError("notification_server.popup_port not defined")
 
 		notifierCommand = config.get("opsiclientd_notifier", "command")
 		if not notifierCommand:
-			raise Exception("opsiclientd_notifier.command not defined")
+			raise RuntimeError("opsiclientd_notifier.command not defined")
 		notifierCommand = f'{notifierCommand} -s {os.path.join("notifier", "popup.ini")}'
 
 		if addTimestamp:
@@ -860,7 +860,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				self._popupNotificationServer.daemon = True
 				with log_context({"instance": "popup notification server"}):
 					if not self._popupNotificationServer.start_and_wait(timeout=30):
-						raise Exception("Timed out while waiting for notification server")
+						raise RuntimeError("Timed out while waiting for notification server")
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error("Failed to start notification server: %s", err)
 				raise

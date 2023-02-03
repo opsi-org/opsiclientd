@@ -281,14 +281,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				self._notificationServer.daemon = True
 				if not self._notificationServer.start_and_wait(timeout=30):
 					if self._notificationServer.errorOccurred():
-						raise Exception(self._notificationServer.errorOccurred())
-					raise Exception("Timed out while waiting for notification server")
+						raise RuntimeError(self._notificationServer.errorOccurred())
+					raise RuntimeError("Timed out while waiting for notification server")
 				if self._notificationServer.errorOccurred():
-					raise Exception(self._notificationServer.errorOccurred())
+					raise RuntimeError(self._notificationServer.errorOccurred())
 				logger.notice("Notification server started (listening on port %d)", self.notificationServerPort)
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Failed to start notification server: %s", err)
-			raise Exception(f"Failed to start notification server: {err}") from err
+			raise RuntimeError(f"Failed to start notification server: {err}") from err
 
 	def _stopNotificationServer(self):
 		try:
@@ -411,7 +411,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			opsiclientd_rpc = config.get("opsiclientd_rpc", "command")
 			command = f'{opsiclientd_rpc} "exit(); System.closeProcessWindows(processId={processId})"'
 		except Exception as err:  # pylint: disable=broad-except
-			raise Exception(f"opsiclientd_rpc command not defined: {err}") from err
+			raise RuntimeError(f"opsiclientd_rpc command not defined: {err}") from err
 
 		# TODO: collect exit codes to avoid Zombie Process
 		self.runCommandInSession(command=command, waitForProcessEnding=False, noWindow=True)
@@ -440,7 +440,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			logger.debug("Depot share already mounted")
 			return
 		if not config.get("depot_server", "url"):
-			raise Exception("Cannot mount depot share, depot_server.url undefined")
+			raise RuntimeError("Cannot mount depot share, depot_server.url undefined")
 		if config.get("depot_server", "url").split("/")[2] in ("127.0.0.1", "localhost", "::1"):
 			logger.notice("No need to mount depot share %s, working on local depot cache", config.get("depot_server", "url"))
 			return
@@ -592,7 +592,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					try:
 						full_path = proc.exe()
 						if full_path and not os.path.relpath(full_path, actionProcessorLocalDir).startswith(".."):
-							raise Exception(f"Action processor files are in use by process '{full_path}''")
+							raise RuntimeError(f"Action processor files are in use by process '{full_path}''")
 					except (PermissionError, psutil.AccessDenied, ValueError):
 						pass
 
@@ -664,7 +664,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				shutil.move(os.path.join(actionProcessorLocalDir, "skin"), os.path.join(actionProcessorLocalTmpDir, "skin"))
 
 		if not os.path.exists(os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)):
-			raise Exception(f"File '{os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)}' does not exist after copy")
+			raise RuntimeError(f"File '{os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)}' does not exist after copy")
 
 		if os.path.exists(actionProcessorLocalDir):
 			logger.info("Deleting dir '%s'", actionProcessorLocalDir)
@@ -717,7 +717,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
 
 			if not os.path.exists(os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)):
-				raise Exception(f"File '{os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)}' does not exist after copy")
+				raise RuntimeError(f"File '{os.path.join(actionProcessorLocalTmpDir, actionProcessorFilename)}' does not exist after copy")
 
 			if os.path.exists(actionProcessorLocalDir):
 				logger.info("Deleting dir '%s'", actionProcessorLocalDir)
@@ -749,7 +749,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		self.setStatusMessage(_("Processing login actions"))
 		try:
 			if not self._configService:
-				raise Exception("Not connected to config service")
+				raise RuntimeError("Not connected to config service")
 
 			productsByIdAndVersion = {}
 			for product in self._configService.product_getObjects(  # pylint: disable=no-member
@@ -769,7 +769,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				clientIds=config.get("global", "host_id")
 			)
 			if not clientToDepotservers:
-				raise Exception(f"Failed to get depotserver for client '{config.get('global', 'host_id')}'")
+				raise RuntimeError(f"Failed to get depotserver for client '{config.get('global', 'host_id')}'")
 			depotId = clientToDepotservers[0]["depotId"]
 
 			dd = config.getDepotDrive()
@@ -824,7 +824,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			bootmode = bootmode or "BKSTD"
 
 			if not self._configService:
-				raise Exception("Not connected to config service")
+				raise RuntimeError("Not connected to config service")
 
 			productIds = []
 			includeProductIds = []
@@ -877,7 +877,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						if self.opsiclientd.getCacheService().productCacheCompleted(self._configService, productIds):
 							logger.notice("Event '%s' uses cached products and product caching is done", self.event.eventConfig.getId())
 						else:
-							raise Exception(
+							raise RuntimeError(
 								f"Event '{self.event.eventConfig.getId()}' uses cached products but product caching is not done"
 							)
 
@@ -932,7 +932,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			if not additionalParams:
 				additionalParams = ""
 			if not self.event.getActionProcessorCommand():
-				raise Exception("No action processor command defined")
+				raise RuntimeError("No action processor command defined")
 
 			if RUNNING_ON_WINDOWS and self.event.eventConfig.name == "gui_startup" and self.event.eventConfig.trustedInstallerDetection:
 				# Wait for windows installer before Running Action Processor
@@ -1700,7 +1700,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 							logger.notice("Event '%s' uses cached config and config caching is done", self.event.eventConfig.getId())
 							config.setTemporaryConfigServiceUrls(["https://127.0.0.1:4441/rpc"])
 						else:
-							raise Exception(f"Event '{self.event.eventConfig.getId()}' uses cached config but config caching is not done")
+							raise RuntimeError(f"Event '{self.event.eventConfig.getId()}' uses cached config but config caching is not done")
 
 					if self.event.eventConfig.getConfigFromService or self.event.eventConfig.processActions:
 						if not self.isConfigServiceConnected():

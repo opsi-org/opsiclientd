@@ -300,12 +300,12 @@ class ServiceConnection:
 			f"timed out after {config.get('config_service', 'connection_timeout')} seconds"
 		)
 		logger.error(error)
-		raise Exception(error)
+		raise RuntimeError(error)
 
 	def connectionFailed(self, error):
 		error = f"Failed to connect to config service '{self._configServiceUrl}': {error}"
 		logger.error(error)
-		raise Exception(error)
+		raise RuntimeError(error)
 
 	def connectionEstablished(self):
 		pass
@@ -355,7 +355,7 @@ class ServiceConnection:
 		try:  # pylint: disable=too-many-nested-blocks
 			configServiceUrls = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=allowTemporaryConfigServiceUrls)
 			if not configServiceUrls:
-				raise Exception("No service url defined")
+				raise RuntimeError("No service url defined")
 
 			if self._loadBalance and (len(configServiceUrls) > 1):
 				random.shuffle(configServiceUrls)
@@ -463,7 +463,7 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 		self.cancelled = False
 		self.connectionError = None
 		if not self._configServiceUrl:
-			raise Exception("No config service url given")
+			raise RuntimeError("No config service url given")
 
 	def setStatusMessage(self, message):
 		if not self._statusSubject:
@@ -538,7 +538,7 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 						logger.notice("Connecting to config server '%s' #%d", self._configServiceUrl, tryNum)
 						self.setStatusMessage(_("Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
 						if len(self._username.split('.')) < 3:
-							raise Exception(f"Domain missing in username '{self._username}'")
+							raise RuntimeError(f"Domain missing in username '{self._username}'")
 
 						logger.debug(
 							"JSONRPCBackend address=%s, verify_server_cert=%s, ca_cert_file=%s, proxy_url=%s, application=%s",

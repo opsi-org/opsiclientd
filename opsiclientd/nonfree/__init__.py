@@ -37,7 +37,7 @@ def verify_modules(backend_info, needed_modules=None): # pylint: disable=too-man
 		modules.get('expires', '') != 'never' and
 		time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0
 	):
-		raise Exception("Modules file expired")
+		raise RuntimeError("Modules file expired")
 
 	public_key = getPublicKey(
 		data=base64.decodebytes(
@@ -78,6 +78,6 @@ def verify_modules(backend_info, needed_modules=None): # pylint: disable=too-man
 		verified = h_int == s_int
 
 	if not verified:
-		raise Exception("Modules file invalid")
+		raise RuntimeError("Modules file invalid")
 
 	logger.info("Modules file signature verified (customer: %s)", modules.get('customer'))

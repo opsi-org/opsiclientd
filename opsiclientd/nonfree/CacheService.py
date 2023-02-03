@@ -186,7 +186,7 @@ class CacheService(threading.Thread):
 				depotIds.append(depot.id)
 			if masterDepotId not in depotIds:
 				self.setConfigCacheFaulty()
-				raise Exception(
+				raise RuntimeError(
 					f"Config cache problem: depot '{masterDepotId}' not available in cached depots: {depotIds}."
 					" Probably the depot was switched after the last config sync from server."
 				)
@@ -208,8 +208,8 @@ class CacheService(threading.Thread):
 				# Problem with cached config
 				if workingWithCachedConfig:
 					self.setConfigCacheFaulty()
-					raise Exception(f"Config cache problem: product '{productId}' not available on depot '{masterDepotId}'") from err
-				raise Exception(f"Product '{productId}' not available on depot '{masterDepotId}'") from err
+					raise RuntimeError(f"Config cache problem: product '{productId}' not available on depot '{masterDepotId}'") from err
+				raise RuntimeError(f"Product '{productId}' not available on depot '{masterDepotId}'") from err
 
 			productState = productCacheState.get(productId)
 			if not productState:
@@ -778,7 +778,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 					maxFreeableSize += productDirSizes[product]
 
 			if maxFreeableSize < neededSpace:
-				raise Exception(
+				raise RuntimeError(
 					f"Needed space: {(float(neededSpace) / (1000 * 1000)):0.3f} MB, "
 					f"maximum freeable space: {(float(maxFreeableSize) / (1000 * 1000)):0.3f} MB "
 					f"(max product cache size: {(float(self._productCacheMaxSize) / (1000 * 1000)):0.0f} MB)"
@@ -806,12 +806,12 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 						deleteProduct = product
 
 				if not deleteProduct:
-					raise Exception("Internal error")
+					raise RuntimeError("Internal error")
 
 				deleteDir = os.path.join(self._productCacheDir, deleteProduct)
 				logger.notice("Deleting product cache directory '%s'", deleteDir)
 				if not os.path.exists(deleteDir):
-					raise Exception(f"Directory '{deleteDir}' not found")
+					raise RuntimeError(f"Directory '{deleteDir}' not found")
 
 				shutil.rmtree(deleteDir)
 				freedSpace += productDirSizes[deleteProduct]
@@ -823,7 +823,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 
 			logger.notice("%0.3f MB of product cache freed", float(freedSpace) / (1000 * 1000))
 		except Exception as err:
-			raise Exception(f"Failed to free enough disk space for product cache: {err}") from err
+			raise RuntimeError(f"Failed to free enough disk space for product cache: {err}") from err
 
 	def _cacheProducts(self):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		self._updateConfig()
@@ -1028,7 +1028,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 	def _getRepository(self, productId):
 		config.selectDepotserver(configService=self._configService, mode="sync", event=None, productIds=[productId])
 		if not config.get("depot_server", "url"):
-			raise Exception("Cannot cache product files: depot_server.url undefined")
+			raise RuntimeError("Cannot cache product files: depot_server.url undefined")
 
 		depotServerUsername = ""
 		depotServerPassword = ""
@@ -1087,7 +1087,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 				depotId=masterDepotId, productId=productId
 			)
 			if not productOnDepots:
-				raise Exception(f"Product '{productId}' not found on depot '{masterDepotId}'")
+				raise RuntimeError(f"Product '{productId}' not found on depot '{masterDepotId}'")
 
 			self._setProductCacheState(productId, "productVersion", productOnDepots[0].productVersion, updateProductOnClient=False)
 			self._setProductCacheState(productId, "packageVersion", productOnDepots[0].packageVersion, updateProductOnClient=False)
@@ -1132,7 +1132,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 
 			diskFreeSpace = System.getDiskSpaceUsage(self._productCacheDir)["available"]
 			if diskFreeSpace < productSize + 500 * 1000 * 1000:
-				raise Exception(
+				raise RuntimeError(
 					f"Only {(float(diskFreeSpace) / (1000 * 1000)):0.3f} MB free space available on disk, failed to cache product files"
 				)
 

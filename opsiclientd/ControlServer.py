@@ -324,18 +324,18 @@ class WorkerOpsiclientd(WorkerOpsi):
 						del self.service.authFailures[client_ip]
 					else:
 						self.service.authFailures[client_ip]["blocked_time"] = time.time()
-						raise Exception(f"{client_ip} blocked")
+						raise RuntimeError(f"{client_ip} blocked")
 
 			(self.session.user, self.session.password) = self._getCredentials()
 			logger.notice("Authorization request from %s@%s (application: %s)", self.session.user, self.session.ip, self.session.userAgent)
 
 			if not self.session.password:
-				raise Exception(f"No password from {self.session.ip} (application: {self.session.userAgent}")
+				raise RuntimeError(f"No password from {self.session.ip} (application: {self.session.userAgent}")
 
 			if self.session.user.lower() == config.get("global", "host_id").lower():
 				# Auth by opsi host key
 				if self.session.password != config.get("global", "opsi_host_key"):
-					raise Exception("Wrong opsi host key")
+					raise RuntimeError("Wrong opsi host key")
 			elif self._auth_module:
 				self._auth_module.authenticate(self.session.user, self.session.password)
 				logger.info(
@@ -345,9 +345,9 @@ class WorkerOpsiclientd(WorkerOpsi):
 					self._auth_module.get_admin_groupname(),
 				)
 				if not self._auth_module.user_is_admin(self.session.user):
-					raise Exception("Not an admin user")
+					raise RuntimeError("Not an admin user")
 			else:
-				raise Exception("Invalid credentials")
+				raise RuntimeError("Invalid credentials")
 		except Exception as err:  # pylint: disable=broad-except
 			self.request.code = 401
 			raise OpsiServiceAuthenticationError(f"Forbidden: {err}") from err
@@ -410,7 +410,7 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 			pass
 
 		if not self.service._opsiclientd.getCacheService():  # pylint: disable=protected-access
-			raise Exception("Cache service not running")
+			raise RuntimeError("Cache service not running")
 
 		self.session.callInstance = self.service._opsiclientd.getCacheService().getConfigBackend()  # pylint: disable=protected-access
 		logger.notice("Backend created: %s", self.session.callInstance)

@@ -647,7 +647,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 	):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
 		productIds = forceProductIdList(productIds or [])
 		if not configService:
-			raise Exception("Not connected to config service")
+			raise RuntimeError("Not connected to config service")
 
 		selectedDepot = None
 
@@ -703,7 +703,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				clientIds=[self.get("global", "host_id")], masterOnly=bool(not dynamicDepot), productIds=productIds
 			)
 			if not clientToDepotservers:
-				raise Exception("Failed to get depot config from service")
+				raise RuntimeError("Failed to get depot config from service")
 
 			depotIds = [clientToDepotservers[0]["depotId"]]
 			if dynamicDepot:
@@ -720,7 +720,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				alternativeDepots.append(depot)
 
 		if not masterDepot:
-			raise Exception(f"Failed to get info for master depot '{depotIds[0]}'")
+			raise RuntimeError(f"Failed to get info for master depot '{depotIds[0]}'")
 
 		logger.info("Master depot for products %s is %s", productIds, masterDepot.id)
 		selectedDepot = masterDepot
@@ -813,7 +813,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			return (self.get("global", "host_id"), self.get("global", "opsi_host_key"))
 
 		if not configService:
-			raise Exception("Not connected to config service")
+			raise RuntimeError("Not connected to config service")
 
 		depotServerUsername = self.get("depot_server", "username")
 		encryptedDepotServerPassword = configService.user_getCredentials(username="pcpatch", hostId=self.get("global", "host_id"))[
@@ -828,7 +828,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		"""Get settings from service"""
 		logger.notice("Getting config from service")
 		if not service_client:
-			raise Exception("Config service is undefined")
+			raise RuntimeError("Config service is undefined")
 
 		config_ids = [
 			"clientconfig.configserver.url",

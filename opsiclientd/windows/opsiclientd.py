@@ -47,7 +47,7 @@ def opsiclientd_factory():
 		return OpsiclientdNT5()
 	if windowsVersion.major >= 6:  # NT6: Vista / Windows7 and later
 		return OpsiclientdNT6()
-	raise Exception(f"Windows version {windowsVersion} not supported")
+	raise RuntimeError(f"Windows version {windowsVersion} not supported")
 
 
 class OpsiclientdNT(Opsiclientd):

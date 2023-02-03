@@ -80,7 +80,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc):  # pylint: disable=too-few-public-m
 			logger.notice("Authorization request from %s@%s (application: %s)", self.session.user, self.session.ip, self.session.userAgent)
 
 			if not self.session.password:
-				raise Exception(f"No password from {self.session.ip} (application: {self.session.userAgent})")
+				raise RuntimeError(f"No password from {self.session.ip} (application: {self.session.userAgent})")
 
 			if self.session.user.lower() == config.get("global", "host_id").lower() and self.session.password == config.get(
 				"global", "opsi_host_key"
@@ -96,10 +96,10 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc):  # pylint: disable=too-few-public-m
 					self._auth_module.get_admin_groupname(),
 				)
 				if not self._auth_module.user_is_admin(self.session.user):
-					raise Exception("Not an admin user")
+					raise RuntimeError("Not an admin user")
 				return result
 
-			raise Exception("Invalid credentials")
+			raise RuntimeError("Invalid credentials")
 		except Exception as err:  # pylint: disable=broad-except
 			raise OpsiServiceAuthenticationError(f"Forbidden: {err}") from err
 
@@ -107,7 +107,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc):  # pylint: disable=too-few-public-m
 		deferred = defer.Deferred()
 		for rpc in self._rpcs:
 			if rpc.method not in self._allowedMethods:
-				raise Exception(f"Access to method '{rpc.method}' denied")
+				raise RuntimeError(f"Access to method '{rpc.method}' denied")
 			if rpc.method == "getClientId":
 				rpc.result = config.get("global", "host_id")
 			elif rpc.method == "processActionRequests":

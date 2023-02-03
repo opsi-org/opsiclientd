@@ -429,7 +429,7 @@ class NTControlPipe(ControlPipe):
 			None,
 		)
 		if self._pipe == INVALID_HANDLE_VALUE:
-			raise Exception(f"Failed to create named pipe: {windll.kernel32.GetLastError()}")
+			raise RuntimeError(f"Failed to create named pipe: {windll.kernel32.GetLastError()}")
 
 		logger.debug("Pipe %s created, waiting for client to connect", self._pipeName)
 		# This call is blocking until a client connects
