@@ -1042,7 +1042,7 @@ reference = "uibpypi"
 
 [[package]]
 name = "python-opsi"
-version = "4.3.0.3"
+version = "4.3.0.5"
 description = "The opsi python library"
 category = "main"
 optional = false
@@ -2403,8 +2403,8 @@ pytest-cov = [
     {file = "pytest_cov-4.0.0-py3-none-any.whl", hash = "sha256:2feb1b751d66a8bd934e5edfa2e961d11309dc37b73b0eabe73b5945fee20f6b"},
 ]
 python-opsi = [
-    {file = "python_opsi-4.3.0.3-py3-none-any.whl", hash = "sha256:61a1d02e30d62ed73e139f18dd1d5fd2a831c19e94d29abdff467190c79c6d23"},
-    {file = "python_opsi-4.3.0.3.tar.gz", hash = "sha256:5d08473401fb04414fb472fa7851bf0ab9a295ed0e5cc9a6890890306e6fbd7a"},
+    {file = "python_opsi-4.3.0.5-py3-none-any.whl", hash = "sha256:ca58fd0275f80d0220a2295970adf9e77549c2c1f6691dfbce5f559b1477852b"},
+    {file = "python_opsi-4.3.0.5.tar.gz", hash = "sha256:a4c1321e1a859265ee32fd946bec8184ac86c1b3170041a65669deac8308f552"},
 ]
 python-opsi-common = [
     {file = "python_opsi_common-4.3.0.6-py3-none-any.whl", hash = "sha256:dac26fe488db2c5f9093443fc7a6baa42154357f7ba54c0454f4f1570c39cb22"},
