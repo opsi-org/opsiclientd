@@ -151,15 +151,8 @@ def main():  # pylint: disable=too-many-statements
 				password=password,
 				verify="accept_all"
 			)
-			method = rpc
-			params = []
-			if "(" in rpc:
-				method, params = rpc.split("(", 1)
-				method = method.strip()
-				params = params.rstrip(")")
-				params = eval(f"[{params}]")  # pylint: disable=eval-used
-			logger.notice("Executing: method=%r, params=%r", method, params)
-			result = service_client.jsonrpc(method=method, params=params, read_timeout=timeout)
+			logger.notice(f"Executing: {rpc}")
+			result = eval(f"service_client.{rpc}") # pylint: disable=eval-used
 			print(result)
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
