@@ -20,7 +20,7 @@ from OPSI import System  # pylint: disable=unused-import
 from opsicommon.logging import (
 	logger, init_logging, log_context, secret_filter, LOG_DEBUG, LOG_NONE
 )
-from opsicommon.client.opsiservice import ServiceClient
+from opsicommon.client.opsiservice import ServiceClient, RPC_TIMEOUTS
 from opsicommon import __version__ as opsicommon_version
 
 from opsiclientd import __version__, DEFAULT_FILE_LOG_FORMAT
@@ -151,6 +151,8 @@ def main():  # pylint: disable=too-many-statements
 				password=password,
 				verify="accept_all"
 			)
+			method = rpc.split("(", 1)[0]
+			RPC_TIMEOUTS[method] = timeout
 			logger.notice(f"Executing: {rpc}")
 			result = eval(f"service_client.{rpc}")  # pylint: disable=eval-used
 			print(result)
