@@ -152,6 +152,7 @@ def main():  # pylint: disable=too-many-statements
 				verify="accept_all",
 				jsonrpc_create_methods=True
 			)
+			service_client.connect()
 			method = rpc.split("(", 1)[0]
 			RPC_TIMEOUTS[method] = timeout
 			logger.notice(f"Executing: {rpc}")
