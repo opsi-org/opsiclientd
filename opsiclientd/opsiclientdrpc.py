@@ -145,14 +145,14 @@ def main():  # pylint: disable=too-many-statements
 		)
 
 		try:
-			service_client = ServiceClient(
+			service_client = ServiceClient(  # pylint: disable=unused-variable
 				address=address,
 				username=username,
 				password=password,
 				verify="accept_all"
 			)
 			logger.notice(f"Executing: {rpc}")
-			result = eval(f"service_client.{rpc}") # pylint: disable=eval-used
+			result = eval(f"service_client.{rpc}")  # pylint: disable=eval-used
 			print(result)
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
