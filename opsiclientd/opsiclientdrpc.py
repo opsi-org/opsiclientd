@@ -149,7 +149,8 @@ def main():  # pylint: disable=too-many-statements
 				address=address,
 				username=username,
 				password=password,
-				verify="accept_all"
+				verify="accept_all",
+				jsonrpc_create_methods=True
 			)
 			method = rpc.split("(", 1)[0]
 			RPC_TIMEOUTS[method] = timeout
