@@ -8,30 +8,37 @@
 opsiclientd rpc client
 """
 
+import argparse
 import codecs
 import os
-import sys
-import argparse
 import platform
+import sys
 
 # Do not remove this import, it's needed by using this module from CLI
 from OPSI import System  # pylint: disable=unused-import
-
-from opsicommon.logging import (
-	logger, init_logging, log_context, secret_filter, LOG_DEBUG, LOG_NONE
-)
-from opsicommon.client.opsiservice import ServiceClient, RPC_TIMEOUTS
 from opsicommon import __version__ as opsicommon_version
+from opsicommon.client.opsiservice import RPC_TIMEOUTS, ServiceClient
+from opsicommon.logging import (
+	LOG_DEBUG,
+	LOG_NONE,
+	init_logging,
+	log_context,
+	logger,
+	secret_filter,
+)
 
-from opsiclientd import __version__, DEFAULT_FILE_LOG_FORMAT
+from opsiclientd import DEFAULT_FILE_LOG_FORMAT, __version__
 
 
 def get_opsi_host_key():
 	config_file = "/etc/opsi-client-agent/opsiclientd.conf"
-	if platform.system().lower() == 'windows':
+	if platform.system().lower() == "windows":
 		config_file = os.path.join(
 			os.environ.get("PROGRAMFILES(X86)", os.environ.get("PROGRAMFILES")),
-			"opsi.org", "opsi-client-agent", "opsiclientd", "opsiclientd.conf"
+			"opsi.org",
+			"opsi-client-agent",
+			"opsiclientd",
+			"opsiclientd.conf",
 		)
 
 	with codecs.open(config_file, "r", "utf-8") as file:
@@ -51,15 +58,11 @@ class ArgumentParser(argparse.ArgumentParser):
 
 
 def main():  # pylint: disable=too-many-statements
-	with log_context({'instance': os.path.basename(sys.argv[0])}):
+	with log_context({"instance": os.path.basename(sys.argv[0])}):
 		parser = ArgumentParser()
+		parser.add_argument("--version", action="version", version=f"{__version__} [python-opsi-common={opsicommon_version}]")
 		parser.add_argument(
-			'--version',
-			action='version',
-			version=f"{__version__} [python-opsi-common={opsicommon_version}]"
-		)
-		parser.add_argument(
-			'--log-level',
+			"--log-level",
 			default=LOG_NONE,
 			type=int,
 			choices=range(0, 10),
@@ -67,35 +70,14 @@ def main():  # pylint: disable=too-many-statements
 				"Set the log level. "
 				"0: nothing, 1: essential, 2: critical, 3: errors, 4: warnings, 5: notices "
 				"6: infos, 7: debug messages, 8: trace messages, 9: secrets"
-			)
+			),
 		)
-		parser.add_argument(
-			'--log-file',
-			help="Set log file"
-		)
-		parser.add_argument(
-			'--address',
-			default="https://127.0.0.1:4441/opsiclientd",
-			help="Set service address"
-		)
-		parser.add_argument(
-			'--username',
-			help="Username to use for service connection."
-		)
-		parser.add_argument(
-			'--password',
-			help="Password to use for service connection (default: opsi host key)."
-		)
-		parser.add_argument(
-			'--timeout',
-			type=int,
-			default=30,
-			help="Read timeout for the rpc in seconds (default: 30)."
-		)
-		parser.add_argument(
-			'rpc',
-			help="The remote procedure call to execute."
-		)
+		parser.add_argument("--log-file", help="Set log file")
+		parser.add_argument("--address", default="https://127.0.0.1:4441/opsiclientd", help="Set service address")
+		parser.add_argument("--username", help="Username to use for service connection.")
+		parser.add_argument("--password", help="Password to use for service connection (default: opsi host key).")
+		parser.add_argument("--timeout", type=int, default=30, help="Read timeout for the rpc in seconds (default: 30).")
+		parser.add_argument("rpc", help="The remote procedure call to execute.")
 
 		log_file = None
 		log_level = None
@@ -103,7 +85,7 @@ def main():  # pylint: disable=too-many-statements
 		username = None
 		password = None
 		rpc = None
-		timeout = None
+		timeout = 30
 		try:
 			args = parser.parse_args()
 			log_file = args.log_file
@@ -131,26 +113,16 @@ def main():  # pylint: disable=too-many-statements
 				log_file = sys.argv[4]
 				rpc = sys.argv[5]
 
-		init_logging(
-			log_file=log_file,
-			file_level=log_level,
-			stderr_level=LOG_NONE,
-			file_format=DEFAULT_FILE_LOG_FORMAT
-		)
+		init_logging(log_file=log_file, file_level=log_level, stderr_level=LOG_NONE, file_format=DEFAULT_FILE_LOG_FORMAT)
 
 		logger.info("opsiclientdrpc version=%s [python-opsi-common=%s]", __version__, opsicommon_version)
 		logger.debug(
-			"log_file=%s, log_level=%s, address=%s, username=%s, password=%s, rpc=%s",
-			log_file, log_level, address, username, password, rpc
+			"log_file=%s, log_level=%s, address=%s, username=%s, password=%s, rpc=%s", log_file, log_level, address, username, password, rpc
 		)
 
 		try:
 			service_client = ServiceClient(  # pylint: disable=unused-variable
-				address=address,
-				username=username,
-				password=password,
-				verify="accept_all",
-				jsonrpc_create_methods=True
+				address=address, username=username, password=password, verify="accept_all", jsonrpc_create_methods=True
 			)
 			service_client.connect()
 			method = rpc.split("(", 1)[0]
