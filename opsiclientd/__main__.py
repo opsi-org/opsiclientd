@@ -13,6 +13,7 @@ import os
 import platform
 import sys
 from datetime import datetime
+import warnings
 
 import sqlalchemy  # type: ignore[import]
 
@@ -39,6 +40,9 @@ def action_processor_starter():
 def opsiclientd():
 	# Disable sqlalchemy 2.0 deprecation warnings
 	sqlalchemy.util.deprecations.SILENCE_UBER_WARNING = True
+	if getattr(sys, "frozen", False):
+		# Disable resource warnings if frozen
+		warnings.simplefilter("ignore", ResourceWarning)
 
 	_main = None
 	if platform.system().lower() == "windows":
