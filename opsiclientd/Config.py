@@ -373,8 +373,10 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 	@property
 	def service_verification_flags(self):
-		verify = [ServiceVerificationFlags.ACCEPT_ALL]
+		# Do not verify certificate but fetch opsi CA
+		verify = [ServiceVerificationFlags.ACCEPT_ALL, ServiceVerificationFlags.OPSI_CA]
 		if self.get("global", "verify_server_cert"):
+			# Verify certificate if local CA exists and fetch opsi CA
 			verify = [ServiceVerificationFlags.OPSI_CA]
 			if self.get("global", "trust_uib_opsi_ca"):
 				verify.append(ServiceVerificationFlags.UIB_OPSI_CA)
