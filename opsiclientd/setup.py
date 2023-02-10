@@ -30,7 +30,7 @@ from opsicommon.system.network import (  # type: ignore[import]
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
-from opsiclientd.OpsiService import update_ca_cert
+from opsiclientd.OpsiService import update_os_ca_store
 from opsiclientd.SystemCheck import (
 	RUNNING_ON_LINUX,
 	RUNNING_ON_MACOS,
@@ -303,9 +303,10 @@ def opsi_service_setup(options=None):
 
 	logger.notice("Connecting to '%s' as '%s'", service_address, service_username)
 	service_client = get_service_client(address=service_address, username=service_username, password=service_password)
+	service_client.connect()
 
 	try:
-		update_ca_cert(service_client, allow_remove=False)
+		update_os_ca_store(allow_remove=False)
 	except Exception as err:  # pylint: disable=broad-except
 		logger.error(err, exc_info=True)
 
@@ -450,7 +451,7 @@ def cleanup_control_server_files():
 			content.unlink()
 
 
-def setup(full: bool = False, options: Namespace = None) -> None:
+def setup(full: bool = False, options: Namespace | None = None) -> None:
 	logger.notice("Running opsiclientd setup")
 	errors = []
 
