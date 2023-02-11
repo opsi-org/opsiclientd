@@ -528,6 +528,11 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 						]
 						logger.notice("Running startup script: %s", cmd)
 						System.execute(cmd, shell=False, waitForEnding=True, timeout=3600)
+						if os.path.exists(config.restart_marker):
+							logger.notice("Restart marker found, restarting")
+							os.unlink(config.restart_marker)
+							self.restart()
+							return
 
 					with getCacheService() as cacheService:
 						self._cacheService = cacheService
