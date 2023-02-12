@@ -174,15 +174,18 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		finally:
 			self._selfUpdating = False
 
-	def restart(self, waitSeconds=0):
+	def restart(self, waitSeconds: int = 0, disabled_event_types: list[str] | None = None):
+		if disabled_event_types is None:
+			disabled_event_types = ["gui startup", "daemon startup"]
+
 		def _restart(waitSeconds=0):
 			time.sleep(waitSeconds)
 			timeline.addEvent(title="opsiclientd restart", category="system")
 			try:
 				if not os.path.exists(config.restart_marker):
-					logger.notice("Writing restart marker %s", config.restart_marker)
+					logger.notice("Writing restart marker %r (disabled_event_types=%r)", config.restart_marker, disabled_event_types)
 					with open(config.restart_marker, "w", encoding="utf-8") as file:
-						file.write("disabled_event_types=gui startup,daemon startup\n")
+						file.write(f"disabled_event_types={','.join(disabled_event_types)}\n")
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err)
 
@@ -532,7 +535,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 						if os.path.exists(config.restart_marker):
 							logger.notice("Restart marker found, restarting")
 							os.unlink(config.restart_marker)
-							self.restart()
+							self.restart(disabled_event_types=[])
 							return
 
 					with getCacheService() as cacheService:
