@@ -8,6 +8,7 @@
 Basic opsiclientd implementation. This is abstract in some parts that
 should be overridden in the concrete implementation for an OS.
 """
+# pylint: disable=too-many-lines
 
 import datetime
 import os
