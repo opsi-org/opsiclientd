@@ -150,6 +150,7 @@ class PermanentServiceConnection(  # type: ignore[misc]
 				proxy_url=config.get("global", "proxy_url"),
 				user_agent=f"opsiclientd/{__version__}",
 				connect_timeout=config.get("config_service", "connection_timeout"),
+				max_time_diff=5.0
 			)
 			self.service_client.register_connection_listener(self)
 

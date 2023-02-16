@@ -122,7 +122,12 @@ def main():  # pylint: disable=too-many-statements
 
 		try:
 			service_client = ServiceClient(  # pylint: disable=unused-variable
-				address=address, username=username, password=password, verify="accept_all", jsonrpc_create_methods=True
+				address=address,
+				username=username,
+				password=password,
+				verify="accept_all",
+				jsonrpc_create_methods=True,
+				max_time_diff=30.0
 			)
 			service_client.connect()
 			method = rpc.split("(", 1)[0]
