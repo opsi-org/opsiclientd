@@ -656,33 +656,37 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		configService.backend_setOptions({"addConfigStateDefaults": True})
 
 		depotIds = []
-		configStates = []
 		dynamicDepot = False
 		depotProtocol = "cifs"
 		if forceDepotProtocol:
 			depotProtocol = forceDepotProtocol
 
-		configStates = configService.configState_getObjects(
-			configId=["clientconfig.depot.dynamic", "clientconfig.depot.protocol", "opsiclientd.depot_server.depot_id"],
-			objectId=self.get("global", "host_id"),
-		)
-		for configState in configStates:
-			if not configState.values or not configState.values[0]:
+		config_ids = [
+			"clientconfig.depot.dynamic", "clientconfig.depot.protocol", "opsiclientd.depot_server.depot_id"
+		]
+		config_states = {}
+		for config in configService.config_getObjects(id=config_ids):
+			config_states[config.id] = config.defaultValues
+		for config_state in configService.configState_getObjects(objectId=self.get("global", "host_id"), configId=config_ids):
+			config_states[config_state.configId] = config_state.values
+
+		for config_id, values in config_states.items():
+			if not values or not values[0]:
 				continue
 
-			if configState.configId == "opsiclientd.depot_server.depot_id" and configState.values:
+			if config_id == "opsiclientd.depot_server.depot_id" and config_state.values:
 				try:
-					depotId = forceHostId(configState.values[0])
+					depotId = forceHostId(values[0])
 					depotIds.append(depotId)
-					logger.notice("Depot was set to '%s' from configState %s", depotId, configState)
+					logger.notice("Depot was set to '%s' from configState %s", depotId, config_state)
 				except Exception as err:  # pylint: disable=broad-except
-					logger.error("Failed to set depot id from values %s in configState %s: %s", configState.values, configState, err)
-			elif not masterOnly and (configState.configId == "clientconfig.depot.dynamic") and configState.values:
-				dynamicDepot = forceBool(configState.values[0])
+					logger.error("Failed to set depot id from values %s in configState %s: %s", values, config_state, err)
+			elif not masterOnly and (config_id == "clientconfig.depot.dynamic") and values:
+				dynamicDepot = forceBool(values[0])
 
-			elif configState.configId == "clientconfig.depot.protocol" and configState.values and not forceDepotProtocol:
-				depotProtocol = configState.values[0]
-				logger.info("Using depot protocol '%s' from config state '%s'", depotProtocol, configState.configId)
+			elif config_id == "clientconfig.depot.protocol" and values and not forceDepotProtocol:
+				depotProtocol = values[0]
+				logger.info("Using depot protocol '%s' from config state '%s'", depotProtocol, config_id)
 
 		if event and event.eventConfig.depotProtocol and not forceDepotProtocol:
 			logger.info("Using depot protocol '%s' from event '%s'", event.eventConfig.depotProtocol, event.eventConfig.getName())
@@ -840,14 +844,10 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			"clientconfig.suspend_bitlocker_on_reboot",
 			"opsiclientd.*",  # everything starting with opsiclientd.
 		]
-
 		config_states = {}
-		for config in service_client.jsonrpc(method="config_getObjects", params=[[], {"id": config_ids}]):
+		for config in service_client.config_getObjects(id=config_ids):
 			config_states[config.id] = config.defaultValues
-
-		for config_state in service_client.jsonrpc(
-			method="configState_getObjects", params=[[], {"objectId": self.get("global", "host_id"), "configId": config_ids}]
-		):
+		for config_state in service_client.configState_getObjects(objectId=self.get("global", "host_id"), configId=config_ids):
 			config_states[config_state.configId] = config_state.values
 
 		for config_id, values in config_states.items():

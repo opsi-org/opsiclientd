@@ -34,6 +34,7 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc):  # pylint: disable=too-few-public-m
 		"backend_setOptions",
 		"configState_getObjects",
 		"getDepotId",
+		"configState_getClientToDepotserver",
 		"getGeneralConfigValue",
 		"getKioskProductInfosForClient",
 		"hostControlSafe_fireEvent",

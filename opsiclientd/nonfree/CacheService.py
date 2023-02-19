@@ -358,11 +358,13 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 
 			try:
 				if self._configService.hostname.lower() not in ("localhost", "127.0.0.1", "::1"):
-					config.set(
-						"depot_server",
-						"master_depot_id",
-						self._configService.getDepotId(config.get("global", "host_id")),  # pylint: disable=no-member
+					client_to_depotservers = self._configService.configState_getClientToDepotserver(  # pylint: disable=no-member
+						clientIds=config.get("global", "host_id")
 					)
+					if not client_to_depotservers:
+						raise RuntimeError(f"Failed to get depotserver for client '{config.get('global', 'host_id')}'")
+					depot_id = client_to_depotservers[0]["depotId"]
+					config.set("depot_server", "master_depot_id", depot_id)
 					config.updateConfigFile()
 			except Exception as err:  # pylint: disable=broad-except
 				logger.warning(err)
@@ -752,11 +754,13 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 
 			try:
 				if self._configService.hostname.lower() not in ("localhost", "127.0.0.1", "::1"):
-					config.set(
-						"depot_server",
-						"master_depot_id",
-						self._configService.getDepotId(config.get("global", "host_id")),  # pylint: disable=no-member
+					client_to_depotservers = self._configService.configState_getClientToDepotserver(  # pylint: disable=no-member
+						clientIds=config.get("global", "host_id")
 					)
+					if not client_to_depotservers:
+						raise RuntimeError(f"Failed to get depotserver for client '{config.get('global', 'host_id')}'")
+					depot_id = client_to_depotservers[0]["depotId"]
+					config.set("depot_server", "master_depot_id", depot_id)
 					config.updateConfigFile()
 			except Exception as err:  # pylint: disable=broad-except
 				logger.warning(err)

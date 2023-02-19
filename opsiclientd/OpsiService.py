@@ -412,13 +412,13 @@ class ServiceConnection:
 
 				if "localhost" not in configServiceURL and "127.0.0.1" not in configServiceURL:
 					try:
-						config.set(
-							"depot_server",
-							"master_depot_id",
-							serviceConnectionThread._configService.getDepotId(  # pylint: disable=no-member, protected-access
-								config.get("global", "host_id")
-							),
+						client_to_depotservers = self._configService.configState_getClientToDepotserver(  # pylint: disable=no-member
+							clientIds=config.get("global", "host_id")
 						)
+						if not client_to_depotservers:
+							raise RuntimeError(f"Failed to get depotserver for client '{config.get('global', 'host_id')}'")
+						depot_id = client_to_depotservers[0]["depotId"]
+						config.set("depot_server", "master_depot_id", depot_id)
 						config.updateConfigFile()
 					except Exception as err:  # pylint: disable=broad-except
 						logger.warning(err)
