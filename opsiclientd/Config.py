@@ -674,13 +674,13 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			if not values or not values[0]:
 				continue
 
-			if config_id == "opsiclientd.depot_server.depot_id" and config_state.values:
+			if config_id == "opsiclientd.depot_server.depot_id" and values:
 				try:
 					depotId = forceHostId(values[0])
 					depotIds.append(depotId)
-					logger.notice("Depot was set to '%s' from configState %s", depotId, config_state)
+					logger.notice("Depot was set to '%s' from configState %s", depotId, config_id)
 				except Exception as err:  # pylint: disable=broad-except
-					logger.error("Failed to set depot id from values %s in configState %s: %s", values, config_state, err)
+					logger.error("Failed to set depot id from values %s in configState %s: %s", values, config_id, err)
 			elif not masterOnly and (config_id == "clientconfig.depot.dynamic") and values:
 				dynamicDepot = forceBool(values[0])
 
