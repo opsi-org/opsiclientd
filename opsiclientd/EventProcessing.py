@@ -12,7 +12,6 @@ Processing of events.
 
 import datetime
 import filecmp
-from ipaddress import ip_address, IPv6Address
 import os
 import re
 import shutil
@@ -21,6 +20,7 @@ import sys
 import tempfile
 import threading
 import time
+from ipaddress import IPv6Address, ip_address
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -310,7 +310,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				logger.warning("Cannot get config from service: not connected")
 				return
 			self.setStatusMessage(_("Getting config from service"))
-			config.getFromService(self._configService.service)
+			config.getFromService(self._configService)
 			config.updateConfigFile(force=True)
 			self.setStatusMessage(_("Got config from service"))
 			logger.notice("Reconfiguring event generators")

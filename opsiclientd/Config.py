@@ -16,6 +16,7 @@ from urllib.parse import urlparse
 
 import netifaces  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
+from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Util import blowfishDecrypt, objectToBeautifiedText  # type: ignore[import]
 from OPSI.Util.File import IniFile  # type: ignore[import]
 from opsicommon.client.opsiservice import ServiceClient, ServiceVerificationFlags
@@ -661,9 +662,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		if forceDepotProtocol:
 			depotProtocol = forceDepotProtocol
 
-		config_ids = [
-			"clientconfig.depot.dynamic", "clientconfig.depot.protocol", "opsiclientd.depot_server.depot_id"
-		]
+		config_ids = ["clientconfig.depot.dynamic", "clientconfig.depot.protocol", "opsiclientd.depot_server.depot_id"]
 		config_states = {}
 		for config in configService.config_getObjects(id=config_ids):
 			config_states[config.id] = config.defaultValues
@@ -830,7 +829,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		logger.debug("Using username '%s' for depot connection", depotServerUsername)
 		return (depotServerUsername, depotServerPassword)
 
-	def getFromService(self, service_client: ServiceClient) -> None:  # pylint: disable=too-many-branches
+	def getFromService(self, service_client: ServiceClient | JSONRPCBackend) -> None:  # pylint: disable=too-many-branches
 		"""Get settings from service"""
 		logger.notice("Getting config from service")
 		if not service_client:
