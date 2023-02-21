@@ -150,7 +150,7 @@ class PermanentServiceConnection(  # type: ignore[misc]
 				proxy_url=config.get("global", "proxy_url"),
 				user_agent=f"opsiclientd/{__version__}",
 				connect_timeout=config.get("config_service", "connection_timeout"),
-				max_time_diff=5.0
+				max_time_diff=5.0,
 			)
 			self.service_client.register_connection_listener(self)
 
@@ -189,7 +189,7 @@ class PermanentServiceConnection(  # type: ignore[misc]
 		try:
 			if service_client.messagebus_available:
 				logger.notice("OPSI message bus available")
-				service_client.messagebus.register_message_listener(self)
+				service_client.messagebus.register_messagebus_listener(self)
 				service_client.connect_messagebus()
 				service_client.messagebus.send_message(
 					ChannelSubscriptionRequestMessage(sender="@", channel="service:messagebus", operation="add", channels=["@"])
