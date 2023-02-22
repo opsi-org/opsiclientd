@@ -69,6 +69,7 @@ def get_service_client(address: str | None = None, username: str | None = None, 
 		user_agent=f"opsiclientd/{__version__}",
 		connect_timeout=config.get("config_service", "connection_timeout"),
 		jsonrpc_create_objects=True,
+		jsonrpc_create_methods=True,
 	)
 
 
@@ -121,7 +122,7 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 
 		service_client = get_service_client()
 		try:
-			pem = service_client.jsonrpc(method="host_getTLSCertificate", params=[server_cn])  # pylint: disable=no-member
+			pem = service_client.host_getTLSCertificate(server_cn)  # pylint: disable=no-member
 			srv_crt = load_certificate(FILETYPE_PEM, pem)
 			srv_key = load_privatekey(FILETYPE_PEM, pem)
 		finally:
@@ -311,7 +312,7 @@ def opsi_service_setup(options=None):
 		logger.error(err, exc_info=True)
 
 	try:
-		client = service_client.jsonrpc(method="host_getObjects", params=[[], {"id": config.get("global", "host_id")}])
+		client = service_client.host_getObjects(id=config.get("global", "host_id"))
 		if client and client[0] and client[0].opsiHostKey:
 			config.set("global", "opsi_host_key", client[0].opsiHostKey)
 
