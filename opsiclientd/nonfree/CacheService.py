@@ -1068,7 +1068,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			mount = False
 		mount_point = None
 		if RUNNING_ON_DARWIN:
-			mount_point = str(Path(config.get("depot_server", "drive")).parent / f"/tmp/.cifs-mount.{randomString(5)}")
+			mount_point = str(Path(config.get("depot_server", "drive")).parent / f".cifs-mount.{randomString(5)}")
 		self._repository = getRepository(
 			config.get("depot_server", "url"),
 			username=depotServerUsername,
