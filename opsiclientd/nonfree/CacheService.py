@@ -36,7 +36,7 @@ from opsiclientd.nonfree import verify_modules
 from opsiclientd.nonfree.CacheBackend import ClientCacheBackend
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_DARWIN
 from opsiclientd.Timeline import Timeline
 from opsiclientd.utils import get_include_exclude_product_ids
 
@@ -1065,8 +1065,15 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			self._impersonation = System.Impersonate(username=depotServerUsername, password=depotServerPassword)
 			self._impersonation.start(logonType="NEW_CREDENTIALS")
 			mount = False
+		mount_point = None
+		if RUNNING_ON_DARWIN:
+			mount_point = config.get("depot_server", "drive")
 		self._repository = getRepository(
-			config.get("depot_server", "url"), username=depotServerUsername, password=depotServerPassword, mount=mount
+			config.get("depot_server", "url"),
+			username=depotServerUsername,
+			password=depotServerPassword,
+			mount=mount,
+			mountPoint=mount_point,
 		)
 		return self._repository
 
