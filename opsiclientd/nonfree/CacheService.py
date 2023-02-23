@@ -24,6 +24,7 @@ from OPSI.Backend.Backend import ExtendedConfigDataBackend
 from OPSI.Backend.BackendManager import BackendExtender
 from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker
 from OPSI.Object import ProductOnClient
+from OPSI.Util import randomString
 from OPSI.Util.File.Opsi import PackageContentFile
 from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, getRepository
 from opsicommon.logging import log_context, logger
@@ -1067,7 +1068,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			mount = False
 		mount_point = None
 		if RUNNING_ON_DARWIN:
-			mount_point = config.get("depot_server", "drive")
+			mount_point = str(Path(config.get("depot_server", "drive")).parent / f"/tmp/.cifs-mount.{randomString(5)}")
 		self._repository = getRepository(
 			config.get("depot_server", "url"),
 			username=depotServerUsername,
