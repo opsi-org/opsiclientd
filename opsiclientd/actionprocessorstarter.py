@@ -8,20 +8,25 @@
 action processor starter helper for windows
 """
 
-import os
-import sys
 import getpass
 import gettext
 import locale
-from ipaddress import ip_address, IPv6Address
+import os
+import sys
+from ipaddress import IPv6Address, ip_address
 from urllib.parse import urlparse
 
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
+from opsicommon.logging import (
+	LOG_NONE,
+	init_logging,
+	log_context,
+	logger,
+	secret_filter,
+)
 
-from opsicommon.logging import logger, init_logging, log_context, LOG_NONE, secret_filter
-
-from opsiclientd import __version__, DEFAULT_STDERR_LOG_FORMAT, DEFAULT_FILE_LOG_FORMAT
+from opsiclientd import DEFAULT_FILE_LOG_FORMAT, DEFAULT_STDERR_LOG_FORMAT, __version__
 
 
 def set_status_message(backend, session_id, message):
@@ -45,10 +50,22 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 		sys.exit(1)
 
 	(  # pylint: disable=unbalanced-tuple-unpacking
-		hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl,
-		depotDrive, depotServerUsername, depotServerPassword, sessionId,
-		actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout,
-		runAsUser, runAsPassword, createEnvironment
+		hostId,
+		hostKey,
+		controlServerPort,
+		logFile,
+		logLevel,
+		depotRemoteUrl,
+		depotDrive,
+		depotServerUsername,
+		depotServerPassword,
+		sessionId,
+		actionProcessorDesktop,
+		actionProcessorCommand,
+		actionProcessorTimeout,
+		runAsUser,
+		runAsPassword,
+		createEnvironment,
 	) = sys.argv[1:]
 
 	if hostKey:
@@ -63,29 +80,43 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 		stderr_format=DEFAULT_STDERR_LOG_FORMAT,
 		log_file=logFile,
 		file_level=int(logLevel),
-		file_format=DEFAULT_FILE_LOG_FORMAT
+		file_format=DEFAULT_FILE_LOG_FORMAT,
 	)
 
 	log_instance = f'{os.path.basename(sys.argv[0]).rsplit(".", 1)[0]}_s{sessionId}'
-	with log_context({'instance': log_instance}):
+	with log_context({"instance": log_instance}):
 		logger.debug(
 			"Called with arguments: %s",
-			', '.join((
-				hostId, hostKey, controlServerPort, logFile, logLevel, depotRemoteUrl,
-				depotDrive, depotServerUsername, depotServerPassword, sessionId,
-				actionProcessorDesktop, actionProcessorCommand, actionProcessorTimeout,
-				runAsUser, runAsPassword, createEnvironment
-			))
+			", ".join(
+				(
+					hostId,
+					hostKey,
+					controlServerPort,
+					logFile,
+					logLevel,
+					depotRemoteUrl,
+					depotDrive,
+					depotServerUsername,
+					depotServerPassword,
+					sessionId,
+					actionProcessorDesktop,
+					actionProcessorCommand,
+					actionProcessorTimeout,
+					runAsUser,
+					runAsPassword,
+					createEnvironment,
+				)
+			),
 		)
 
 		language = "en"
 		try:
-			language = locale.getdefaultlocale()[0].split('_')[0]
+			language = locale.getdefaultlocale()[0].split("_")[0]
 		except Exception as err:  # pylint: disable=broad-except
 			logger.debug("Failed to find default language: %s", err)
 
 		def _(string):
-			""" Fallback function """
+			"""Fallback function"""
 			return string
 
 		sp = None
@@ -94,13 +125,13 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 			sp = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 			if os.path.exists(os.path.join(sp, "site-packages")):
 				sp = os.path.join(sp, "site-packages")
-			sp = os.path.join(sp, 'opsiclientd_data', 'locale')
-			translation = gettext.translation('opsiclientd', sp, [language])
+			sp = os.path.join(sp, "opsiclientd_data", "locale")
+			translation = gettext.translation("opsiclientd", sp, [language])
 			_ = translation.gettext
 		except Exception as err:  # pylint: disable=broad-except
 			logger.debug("Failed to load locale for %s from %s: %s", language, sp, err)
 
-		createEnvironment = bool(runAsUser and createEnvironment.lower() in ('yes', 'true', '1'))
+		createEnvironment = bool(runAsUser and createEnvironment.lower() in ("yes", "true", "1"))
 		actionProcessorTimeout = int(actionProcessorTimeout)
 		imp = None
 		depotShareMounted = False
@@ -129,13 +160,18 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 				else:
 					try:
 						if isinstance(ip_address(depot_url.hostname), IPv6Address):
-							depotRemoteUrl = depotRemoteUrl.replace(
-								depot_url.hostname,
-								f"{depot_url.hostname.replace(':', '-')}.ipv6-literal.net",
-							).replace("[", "").replace("]", "")
+							depotRemoteUrl = (
+								depotRemoteUrl.replace(
+									depot_url.hostname,
+									f"{depot_url.hostname.replace(':', '-')}.ipv6-literal.net",
+								)
+								.replace("[", "")
+								.replace("]", "")
+							)
 							logger.notice("Using windows workaround to mount depot %s", depotRemoteUrl)
 					except ValueError as error:
-						logger.error("Failed to check ip format, using %s for depot mount: %s", depotRemoteUrl, error)
+						# Can be a hostname
+						logger.debug("Failed to check ip format, using %s for depot mount: %s", depotRemoteUrl, error)
 
 					System.mount(depotRemoteUrl, depotDrive)
 				depotShareMounted = True
