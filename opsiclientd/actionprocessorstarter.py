@@ -16,8 +16,8 @@ import sys
 from ipaddress import IPv6Address, ip_address
 from urllib.parse import urlparse
 
-from OPSI import System
-from OPSI.Backend.JSONRPC import JSONRPCBackend
+from OPSI import System  # type: ignore[import]
+from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
 from opsicommon.logging import (
 	LOG_NONE,
 	init_logging,
@@ -169,9 +169,9 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 								.replace("]", "")
 							)
 							logger.notice("Using windows workaround to mount depot %s", depotRemoteUrl)
-					except ValueError as error:
+					except ValueError as err:
 						# Can be a hostname
-						logger.debug("Failed to check ip format, using %s for depot mount: %s", depotRemoteUrl, error)
+						logger.debug("Failed to check ip format, using %s for depot mount: %s", depotRemoteUrl, err)
 
 					System.mount(depotRemoteUrl, depotDrive)
 				depotShareMounted = True
@@ -197,16 +197,16 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 			try:
 				logger.notice("Unmounting depot share")
 				System.umount(depotDrive)
-			except Exception as error:  # pylint: disable=broad-except
-				logger.debug("Caught exception in umount: %s", error)
+			except Exception as err:  # pylint: disable=broad-except
+				logger.debug("Caught exception in umount: %s", err)
 		if imp:
 			try:
 				imp.end()
-			except Exception as error:  # pylint: disable=broad-except
-				logger.debug("Caught exception in end of impersonation: %s", error)
+			except Exception as err:  # pylint: disable=broad-except
+				logger.debug("Caught exception in end of impersonation: %s", err)
 
 		if be:
 			try:
 				be.backend_exit()
-			except Exception as error:  # pylint: disable=broad-except
-				logger.debug("Caught exception in backend_exit: %s", error)
+			except Exception as err:  # pylint: disable=broad-except
+				logger.debug("Caught exception in backend_exit: %s", err)
