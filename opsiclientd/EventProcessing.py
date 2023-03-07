@@ -1122,9 +1122,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		finally:
 			timeline.setEventEnd(eventId=runActionsEventId)
 			self.umountDepotShare()
-			cache_service = self.opsiclientd.getCacheService()
-			cache_service.stop()  # checks and stops product and config cache
-			cache_service.setConfigCacheObsolete()
+			try:
+				cache_service = self.opsiclientd.getCacheService()
+				logger.info("Got config_service with state: %s - marking dirty", cache_service.getConfigCacheState())
+				# stopping cache_service disables caching until opsiclientd restart - marking it faulty forces resync at next event
+				cache_service.setConfigCacheFaulty()
+			except RuntimeError as err:
+				logger.info("Could not mark config service cache dirty: %s", err, exc_info=True)
 
 	def setEnvironment(self):
 		try:
