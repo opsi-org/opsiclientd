@@ -1122,6 +1122,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		finally:
 			timeline.setEventEnd(eventId=runActionsEventId)
 			self.umountDepotShare()
+			cache_service = self.opsiclientd.getCacheService()
+			cache_service.stop()  # checks and stops product and config cache
+			cache_service.setConfigCacheObsolete()
 
 	def setEnvironment(self):
 		try:
