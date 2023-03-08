@@ -30,6 +30,7 @@ pyinstaller-poetry:
       - OPSI.Util.Ping
     windows:
       - pythoncom
+      - pywintypes
       - win32api
       - win32timezone
       - OPSI.Backend.Manager.Authentication.NT

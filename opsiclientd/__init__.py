@@ -8,7 +8,7 @@
 opsiclientd Library.
 """
 
-__version__ = '4.2.0.131'
+__version__ = '4.2.0.137'
 
 import argparse
 import http
