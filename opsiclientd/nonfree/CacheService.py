@@ -79,6 +79,11 @@ class CacheService(threading.Thread):
 		self.initializeConfigCacheService()
 		self._configCacheService.setFaulty()
 
+	def setIgnoreCacheResult(self):
+		if self._configCacheService:
+			with self._configCacheService.ignore_cache_result_lock:
+				self._configCacheService.ignore_cache_result = True
+
 	def syncConfig(self, waitForEnding=False, force=False):
 		self.initializeConfigCacheService()
 		if self._configCacheService.isWorking():
