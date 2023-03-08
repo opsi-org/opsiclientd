@@ -16,12 +16,14 @@ import subprocess
 from argparse import Namespace
 from pathlib import Path
 
+import packaging
 from OpenSSL.crypto import FILETYPE_PEM  # type: ignore[import]
 from OpenSSL.crypto import Error as CryptoError
 from OpenSSL.crypto import load_certificate, load_privatekey  # type: ignore[import]
 from opsicommon.client.opsiservice import ServiceClient  # type: ignore[import]
 from opsicommon.logging import logger, secret_filter  # type: ignore[import]
 from opsicommon.ssl import as_pem, create_ca, create_server_cert  # type: ignore[import]
+from opsicommon.system import get_system_uuid
 from opsicommon.system.network import (  # type: ignore[import]
 	get_fqdn,
 	get_hostnames,
@@ -315,6 +317,15 @@ def opsi_service_setup(options=None):
 		client = service_client.host_getObjects(id=config.get("global", "host_id"))  # type: ignore[attr-defined]   # pylint: disable=no-member
 		if client and client[0] and client[0].opsiHostKey:
 			config.set("global", "opsi_host_key", client[0].opsiHostKey)
+			try:
+				if service_client.server_version >= packaging.version.parse("4.3"):
+					system_uuid = get_system_uuid()
+					if system_uuid:
+						logger.info("Updating systemUUID to %r", system_uuid)
+						client.systemUUID = system_uuid
+						service_client.host_updateObjects([client])  # pylint: disable=no-member
+			except Exception as err:  # pylint: disable=broad-except
+				logger.error("Failed to update systemUUID: %s", err, exc_info=True)
 
 		config.getFromService(service_client)
 		config.updateConfigFile(force=True)
@@ -324,7 +335,7 @@ def opsi_service_setup(options=None):
 
 def cleanup_registry_uninstall():
 	if not RUNNING_ON_WINDOWS:
-		return None
+		return
 
 	logger.notice("Cleanup registry uninstall information")
 	# pyright: reportMissingImports=false
