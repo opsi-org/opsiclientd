@@ -314,16 +314,16 @@ def opsi_service_setup(options=None):
 		logger.error(err, exc_info=True)
 
 	try:
-		client = service_client.host_getObjects(id=config.get("global", "host_id"))  # type: ignore[attr-defined]   # pylint: disable=no-member
-		if client and client[0] and client[0].opsiHostKey:
-			config.set("global", "opsi_host_key", client[0].opsiHostKey)
+		clients = service_client.host_getObjects(id=config.get("global", "host_id"))  # type: ignore[attr-defined]   # pylint: disable=no-member
+		if clients and clients[0] and clients[0].opsiHostKey:
+			config.set("global", "opsi_host_key", clients[0].opsiHostKey)
 			try:
 				if service_client.server_version >= packaging.version.parse("4.3"):
 					system_uuid = get_system_uuid()
 					if system_uuid:
 						logger.info("Updating systemUUID to %r", system_uuid)
-						client.systemUUID = system_uuid
-						service_client.host_updateObjects([client])  # pylint: disable=no-member
+						clients[0].systemUUID = system_uuid
+						service_client.host_updateObjects(clients)  # pylint: disable=no-member
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error("Failed to update systemUUID: %s", err, exc_info=True)
 
