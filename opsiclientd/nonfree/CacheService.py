@@ -282,6 +282,8 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 			self._running = False
 			self._working = False
 			self._state = {}
+			self.ignore_cache_result = False
+			self.ignore_cache_result_lock = threading.Lock()
 
 			self._syncConfigFromServerRequested = False
 			self._syncConfigToServerError = None
@@ -502,6 +504,9 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 
 	def _syncConfigFromServer(self):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		self._working = True
+		with self.ignore_cache_result_lock:
+			self.ignore_cache_result = False
+
 		try:
 			if self._syncConfigToServerError:
 				raise RuntimeError("Sync config to server failed")
@@ -602,12 +607,17 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 					self._backendTracker.clearModifications()
 					self._cacheBackend._replicateMasterToWorkBackend()  # pylint: disable=protected-access
 					logger.notice("Config synced from server")
-					self._state["config_cached"] = True
-					state.set("config_cache_service", self._state)
+					with self.ignore_cache_result_lock:
+						if self.ignore_cache_result:
+							logger.notice("Ignoring config cache result - not firing sync_completed")
+							self.ignore_cache_result = False
+							self._forceSync = True
+						else:
+							self._state["config_cached"] = True
+							state.set("config_cache_service", self._state)
+							for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
+								eventGenerator.createAndFireEvent()
 					timeline.setEventEnd(eventId)
-
-					for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
-						eventGenerator.createAndFireEvent()
 				except Exception as err:
 					logger.error(err, exc_info=True)
 					timeline.addEvent(

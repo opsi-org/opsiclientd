@@ -1125,6 +1125,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			try:
 				cache_service = self.opsiclientd.getCacheService()
 				logger.info("Got config_service with state: %s - marking dirty", cache_service.getConfigCacheState())
+				# Setting ignore_cache_result prevents that a running config sync from server sets config_cached to True
+				with cache_service.ignore_cache_result_lock:
+					cache_service.ignore_cache_result = True
 				# stopping cache_service disables caching until opsiclientd restart - marking it faulty forces resync at next event
 				cache_service.setConfigCacheFaulty()
 			except RuntimeError as err:
