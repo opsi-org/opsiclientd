@@ -29,7 +29,7 @@ python-opsi = "^4.3.0"
 python-opsi-common = "^4.3.0"
 #python-opsi-common = {path = "python-opsi-common", develop = true}
 websocket-client = "^1.5"
-pywin32 = {platform = "win32", version = "^303"}
+pywin32 = {platform = "win32", version = ">=304,<305"}
 pywinpty = {platform = "win32", version = "^2.0"}
 wmi = {platform = "win32", version = "^1.5"}
 zeroconf = "^0.47"
