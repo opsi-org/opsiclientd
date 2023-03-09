@@ -123,6 +123,7 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 		config.readConfigFile()
 
 		service_client = get_service_client()
+		service_client.connect()
 		try:
 			pem = service_client.host_getTLSCertificate(server_cn)  # type: ignore[attr-defined] # pylint: disable=no-member
 			srv_crt = load_certificate(FILETYPE_PEM, pem)
@@ -318,12 +319,16 @@ def opsi_service_setup(options=None):
 		if clients and clients[0] and clients[0].opsiHostKey:
 			config.set("global", "opsi_host_key", clients[0].opsiHostKey)
 			try:
+				logger.debug("Connected to opsi server version %r", service_client.server_version)
 				if service_client.server_version >= packaging.version.parse("4.3"):
+					logger.debug("Connected to opsi server >= 4.3")
 					system_uuid = get_system_uuid()
 					if system_uuid:
 						logger.info("Updating systemUUID to %r", system_uuid)
 						clients[0].systemUUID = system_uuid
 						service_client.host_updateObjects(clients)  # pylint: disable=no-member
+					else:
+						logger.warning("Failed to get systemUUID")
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error("Failed to update systemUUID: %s", err, exc_info=True)
 
