@@ -1407,7 +1407,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 						continue
 					file_list.add((file.path, proc_name))
 			except Exception as err:  # pylint: disable=broad-except
-				logger.warning(err)
+				logger.warning("Failed to get open files for: %s", err, exc_info=True)
 
 		return [{"file_path": x[0], "process_name": x[1]} for x in sorted(list(file_list))]
 
