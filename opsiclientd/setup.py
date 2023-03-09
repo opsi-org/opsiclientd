@@ -323,12 +323,11 @@ def opsi_service_setup(options=None):
 				if service_client.server_version >= packaging.version.parse("4.3"):
 					logger.debug("Connected to opsi server >= 4.3")
 					system_uuid = get_system_uuid()
+					logger.debug("system_uuid: %s", system_uuid)
 					if system_uuid:
 						logger.info("Updating systemUUID to %r", system_uuid)
 						clients[0].systemUUID = system_uuid
 						service_client.host_updateObjects(clients)  # pylint: disable=no-member
-					else:
-						logger.warning("Failed to get systemUUID")
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error("Failed to update systemUUID: %s", err, exc_info=True)
 
