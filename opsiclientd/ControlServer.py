@@ -1392,14 +1392,27 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 		return self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 
-	def get_open_files(self):
-		proc = psutil.Process()
-		files = proc.open_files()
-		logger.debug("Open files: %s", files)
-		return [popenfile.path for popenfile in files]
+	def getOpenFiles(self, process_filter: str = ".*", path_filter: str = ".*"):
+		re_process_filter = re.compile(process_filter, flags=re.IGNORECASE)
+		re_path_filter = re.compile(path_filter, flags=re.IGNORECASE)
+
+		file_list = set()
+		for proc in psutil.process_iter():
+			proc_name = proc.name()
+			if not re_process_filter.match(proc_name):
+				continue
+			try:
+				for file in proc.open_files():
+					if not re_path_filter.match(file.path):
+						continue
+					file_list.add([file.path, proc_name])
+			except Exception as err:  # pylint: disable=broad-except
+				logger.warning(err)
+
+		return sorted(list(file_list))
 
 	def runOpsiScriptAsOpsiSetupUser(
-		self, script: str, product_id: str = None, admin: bool = True, wait_for_ending: Union[bool, int] = 7200, remove_user: bool = False
+		self, script: str, product_id: str | None = None, admin: bool = True, wait_for_ending: Union[bool, int] = 7200, remove_user: bool = False
 	):  # pylint: disable=too-many-locals,too-many-arguments,too-many-branches
 		if not RUNNING_ON_WINDOWS:
 			raise NotImplementedError()
