@@ -4,12 +4,12 @@ stages:
   - test
   - build
   - viruscheck
-  - package
+
 
 viruscheck:virustotal:
   stage: viruscheck
   tags:
-    - win10-py38
+    - win10-py310
   script:
     - Invoke-WebRequest -UseBasicParsing -Uri "$OPSIDEVTOOLS_URL_WINDOWS_X86" -OutFile opsi-dev-tools.zip
     - Expand-Archive opsi-dev-tools.zip -DestinationPath opsi-dev-tools
