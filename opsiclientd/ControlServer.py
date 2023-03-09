@@ -1405,14 +1405,19 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				for file in proc.open_files():
 					if not re_path_filter.match(file.path):
 						continue
-					file_list.add([file.path, proc_name])
+					file_list.add((file.path, proc_name))
 			except Exception as err:  # pylint: disable=broad-except
 				logger.warning(err)
 
-		return sorted(list(file_list))
+		return [{"file_path": x[0], "process_name": x[1]} for x in sorted(list(file_list))]
 
 	def runOpsiScriptAsOpsiSetupUser(
-		self, script: str, product_id: str | None = None, admin: bool = True, wait_for_ending: Union[bool, int] = 7200, remove_user: bool = False
+		self,
+		script: str,
+		product_id: str | None = None,
+		admin: bool = True,
+		wait_for_ending: Union[bool, int] = 7200,
+		remove_user: bool = False,
 	):  # pylint: disable=too-many-locals,too-many-arguments,too-many-branches
 		if not RUNNING_ON_WINDOWS:
 			raise NotImplementedError()
