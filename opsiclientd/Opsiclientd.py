@@ -109,7 +109,10 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 	def self_update_from_url(self, url):
 		logger.notice("Self-update from url: %s", url)
 
-		for ept in self.getEventProcessingThreads():
+		epts = self.getEventProcessingThreads()
+		if not epts:
+			logger.notice("No event processing threads running")
+		for ept in epts:
 			logger.notice("Canceling event processing thread %s", ept)
 			ept.cancel()
 
