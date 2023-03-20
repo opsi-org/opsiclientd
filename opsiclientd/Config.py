@@ -654,8 +654,6 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 		selectedDepot = None
 
-		configService.backend_setOptions({"addConfigStateDefaults": True})
-
 		depotIds = []
 		dynamicDepot = False
 		depotProtocol = "cifs"
