@@ -187,6 +187,8 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				"user_cancelable_after": 0,
 				"sync_time_from_service": False,
 				"permanent_connection": False,
+				"reconnect_wait_min": 5,
+				"reconnect_wait_max": 120,
 			},
 			"depot_server": {
 				# The id of the depot the client is assigned to

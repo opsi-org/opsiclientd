@@ -123,8 +123,6 @@ def update_os_ca_store(allow_remove: bool = False):  # pylint: disable=too-many-
 class PermanentServiceConnection(  # type: ignore[misc]
 	threading.Thread, ServiceConnectionListener, MessagebusListener, metaclass=Singleton
 ):
-	_reconnect_wait_min = 3
-	_reconnect_wait_max = 30
 	_initialized = False
 
 	def __init__(self, rpc_interface) -> None:
@@ -138,7 +136,6 @@ class PermanentServiceConnection(  # type: ignore[misc]
 		self.daemon = True
 		self._should_stop = False
 		self._rpc_interface = rpc_interface
-		self._reconnect_wait = self._reconnect_wait_min
 
 		with log_context({"instance": "permanent service connection"}):
 			self.service_client = ServiceClient(
@@ -157,18 +154,24 @@ class PermanentServiceConnection(  # type: ignore[misc]
 	def run(self):
 		with log_context({"instance": "permanent service connection"}):
 			logger.notice("Permanent service connection starting")
+			# Initial connect, reconnect will be handled by ServiceClient
+			connect_wait = 3
 			while not self._should_stop:
-				if not self.service_client.connected:
-					try:
-						self.service_client.connect()
-						self._reconnect_wait = self._reconnect_wait_min
-					except Exception as err:  # pylint: disable=broad-except
-						logger.info(err, exc_info=True)
-						self._reconnect_wait = min(round(self._reconnect_wait * 1.25), self._reconnect_wait_max)
-				for _sec in range(self._reconnect_wait):
+				try:
+					logger.info("Trying to connect")
+					self.service_client.connect()
+					break
+				except Exception as err:  # pylint: disable=broad-except
+					logger.info("Failed to connect: %s", err)
+					logger.debug(err, exc_info=True)
+				for _sec in range(connect_wait):
 					if self._should_stop:
-						break
+						return
 					time.sleep(1)
+				connect_wait = min(round(connect_wait * 1.5), 300)
+
+			while not self._should_stop:
+				time.sleep(1)
 
 	def stop(self):
 		self._should_stop = True
@@ -189,11 +192,13 @@ class PermanentServiceConnection(  # type: ignore[misc]
 		try:
 			if service_client.messagebus_available:
 				logger.notice("OPSI message bus available")
+				try:
+					service_client.messagebus.reconnect_wait_min = int(config.get("config_service", "reconnect_wait_min"))
+					service_client.messagebus.reconnect_wait_max = int(config.get("config_service", "reconnect_wait_max"))
+				except Exception as err:
+					logger.error(err)
 				service_client.messagebus.register_messagebus_listener(self)
 				service_client.connect_messagebus()
-				service_client.messagebus.send_message(
-					ChannelSubscriptionRequestMessage(sender="@", channel="service:messagebus", operation="add", channels=["@"])
-				)
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 
