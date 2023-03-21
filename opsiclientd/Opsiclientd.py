@@ -179,6 +179,10 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 						new_dir = inst2 if link.readlink().name == inst1.name else inst1
 						link.unlink()
 					else:
+						if inst1.exists():
+							logger.info("Deleting dir '%s'", inst1)
+							shutil.rmtree(inst1)
+
 						logger.info("Moving current installation dir '%s' to '%s'", link, inst1)
 						link.rename(inst1)
 						new_dir = inst2
