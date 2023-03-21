@@ -195,7 +195,7 @@ class PermanentServiceConnection(  # type: ignore[misc]
 				try:
 					service_client.messagebus.reconnect_wait_min = int(config.get("config_service", "reconnect_wait_min"))
 					service_client.messagebus.reconnect_wait_max = int(config.get("config_service", "reconnect_wait_max"))
-				except Exception as err:
+				except Exception as err:  # pylint: disable=broad-except
 					logger.error(err)
 				service_client.messagebus.register_messagebus_listener(self)
 				service_client.connect_messagebus()
