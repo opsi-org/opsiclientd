@@ -221,7 +221,6 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err)
 
-			bin_dir = os.path.dirname(self._argv[0])
 			if RUNNING_ON_WINDOWS:
 				subprocess.Popen(  # pylint: disable=consider-using-with
 					"net stop opsiclientd & net start opsiclientd",
