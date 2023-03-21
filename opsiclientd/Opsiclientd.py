@@ -169,14 +169,22 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				out = subprocess.check_output([binary, "--version"])
 				logger.info(out)
 
-				move_dir = inst_dir + "_old"
-				logger.info("Moving current installation dir '%s' to '%s'", inst_dir, move_dir)
-				if os.path.exists(move_dir):
-					shutil.rmtree(move_dir)
-				os.rename(inst_dir, move_dir)
+				if RUNNING_ON_WINDOWS:
+					# new_dir will be moved during restart
+					new_dir = f"{inst_dir}_new"
+					logger.info("Moving new binary dir '%s' to '%s'", bin_dir, new_dir)
+					if os.path.exists(new_dir):
+						shutil.rmtree(new_dir)
+					os.rename(bin_dir, new_dir)
+				else:
+					old_dir = f"{inst_dir}_old"
+					logger.info("Moving current installation dir '%s' to '%s'", inst_dir, old_dir)
+					if os.path.exists(old_dir):
+						shutil.rmtree(old_dir)
+					os.rename(inst_dir, old_dir)
 
-				logger.info("Installing '%s' into '%s'", bin_dir, inst_dir)
-				shutil.copytree(bin_dir, inst_dir)
+					logger.info("Installing '%s' into '%s'", bin_dir, inst_dir)
+					os.rename(bin_dir, inst_dir)
 
 				self.restart(3)
 		finally:
@@ -197,9 +205,19 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err)
 
+			bin_dir = os.path.dirname(self._argv[0])
 			if RUNNING_ON_WINDOWS:
+				cmds = ["net stop opsiclientd"]
+				new_bin_dir = f"{bin_dir}_new"
+				if os.path.isdir(new_bin_dir):
+					old_bin_dir = f"{bin_dir}_old"
+					if os.path.isdir(old_bin_dir):
+						cmds.append(f'rmdir /s /q "{old_bin_dir}"')
+					cmds.append(f'ren "{bin_dir}" "{old_bin_dir}"')
+					cmds.append(f'ren "{new_bin_dir}" "{bin_dir}"')
+				cmds.append("net start opsiclientd")
 				subprocess.Popen(  # pylint: disable=consider-using-with
-					"net stop opsiclientd & net start opsiclientd",
+					" & ".join(cmds),
 					shell=True,
 					creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
 				)
