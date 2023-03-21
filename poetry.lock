@@ -2338,8 +2338,8 @@ pytest-cov = [
     {file = "pytest_cov-4.0.0-py3-none-any.whl", hash = "sha256:2feb1b751d66a8bd934e5edfa2e961d11309dc37b73b0eabe73b5945fee20f6b"},
 ]
 python-opsi = [
-    {file = "python_opsi-4.3.0.11-py3-none-any.whl", hash = "sha256:9f2660e6f3fe2ad7df89a7da67503653e5d319aafbb2173b0381d47d9c8dcd89"},
-    {file = "python_opsi-4.3.0.11.tar.gz", hash = "sha256:0ccfcd17a7d5d96fb5474e7362140a1c086bbc07e73fded45e595e9d37899476"},
+    {file = "python_opsi-4.3.0.11-py3-none-any.whl", hash = "sha256:1b22b800dd9aa0dfe2c6a5e6a39bdd78dfefc088cdab22c4559f9092b987157d"},
+    {file = "python_opsi-4.3.0.11.tar.gz", hash = "sha256:c991c49f478d84aaba55a214c47d46703f0df9deecf44d8b3fcb1f1a4077bcbc"},
 ]
 python-opsi-common = [
     {file = "python_opsi_common-4.3.0.22-py3-none-any.whl", hash = "sha256:e6b1e916b271176036910c50bf97b57cbf6b9c6552555591cec11b4cb76fa289"},
