@@ -213,11 +213,13 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					old_bin_dir = f"{bin_dir}_old"
 					if os.path.isdir(old_bin_dir):
 						cmds.append(f'rmdir /s /q "{old_bin_dir}"')
-					cmds.append(f'ren "{bin_dir}" "{old_bin_dir}"')
-					cmds.append(f'ren "{new_bin_dir}" "{bin_dir}"')
+					cmds.append(f'move "{bin_dir}" "{old_bin_dir}"')
+					cmds.append(f'move "{new_bin_dir}" "{bin_dir}"')
 				cmds.append("net start opsiclientd")
+				cmd = " & ".join(cmds)
+				logger.notice("Executing: %s", cmd)
 				subprocess.Popen(  # pylint: disable=consider-using-with
-					" & ".join(cmds),
+					cmd,
 					shell=True,
 					creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
 				)
