@@ -36,7 +36,6 @@ from opsicommon.exceptions import (
 )
 from opsicommon.logging import log_context, logger, secret_filter
 from opsicommon.messagebus import (
-	ChannelSubscriptionRequestMessage,
 	GeneralErrorMessage,
 	JSONRPCRequestMessage,
 	JSONRPCResponseMessage,
