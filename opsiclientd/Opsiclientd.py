@@ -134,57 +134,73 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		logger.notice("Self-update from file %s", filename)
 
 		test_file = "base_library.zip"
-		inst_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-		if not os.path.exists(os.path.join(inst_dir, test_file)):
-			raise RuntimeError(f"File not found: {os.path.join(inst_dir, test_file)}")
+		inst_dir = Path(__file__).resolve().parent.parent
+		if not (inst_dir / test_file).exists():
+			raise RuntimeError(f"File not found: {inst_dir / test_file}")
 
 		if self._selfUpdating:
 			raise RuntimeError("Self-update already running")
+
 		self._selfUpdating = True
 		try:
 			with tempfile.TemporaryDirectory() as tmpdir:
-				destination = os.path.join(tmpdir, "content")
+				tmpdir = Path(tmpdir)
+				destination = tmpdir / "content"
 				shutil.unpack_archive(filename=filename, extract_dir=destination)
 
 				bin_dir = destination
-				if not os.path.exists(os.path.join(bin_dir, test_file)):
+				if not (bin_dir / test_file).exists():
 					bin_dir = None
-					for fn in os.listdir(destination):
-						if os.path.exists(os.path.join(destination, fn, test_file)):
-							bin_dir = os.path.join(destination, fn)
+					for entry in destination.iterdir():
+						if (entry / test_file).exists():
+							bin_dir = entry
 							break
 				if not bin_dir:
 					raise RuntimeError("Invalid archive")
 
 				try:
-					check_signature(bin_dir)
+					check_signature(str(bin_dir))
 				except Exception as err:  # pylint: disable=broad-except
 					logger.error("Could not verify signature!\n%s", err, exc_info=True)
 					logger.error("Not performing self_update.")
 					raise RuntimeError("Invalid signature") from err
 
-				binary = os.path.join(bin_dir, os.path.basename(self._argv[0]))
+				binary = bin_dir / os.path.basename(self._argv[0])
 
 				logger.info("Testing new binary: %s", binary)
-				out = subprocess.check_output([binary, "--version"])
+				out = subprocess.check_output([str(binary), "--version"])
 				logger.info(out)
 
 				if RUNNING_ON_WINDOWS:
-					# new_dir will be moved during restart
-					new_dir = f"{inst_dir}_new"
-					logger.info("Moving new binary dir '%s' to '%s'", bin_dir, new_dir)
-					if os.path.exists(new_dir):
+					inst1 = inst_dir.with_name("opsiclientd_bin1")
+					inst2 = inst_dir.with_name("opsiclientd_bin2")
+					link = inst_dir.with_name("opsiclientd_bin")
+					if link.is_symlink():
+						new_dir = inst2 if link.readlink().name == inst1.name else inst1
+						link.unlink()
+					else:
+						logger.info("Moving current installation dir '%s' to '%s'", link, inst1)
+						link.rename(inst1)
+						new_dir = inst2
+
+					if new_dir.exists():
+						logger.info("Deleting dir '%s'", new_dir)
 						shutil.rmtree(new_dir)
-					os.rename(bin_dir, new_dir)
+
+					logger.info("Moving '%s' to '%s'", bin_dir, new_dir)
+					bin_dir.rename(new_dir)
+
+					logger.info("Creating link '%s' pointing to '%s'", link, new_dir)
+					link.symlink_to(new_dir, target_is_directory=True)
 				else:
-					old_dir = f"{inst_dir}_old"
+					old_dir = inst_dir.with_name(f"{inst_dir.name}_old")
 					logger.info("Moving current installation dir '%s' to '%s'", inst_dir, old_dir)
-					if os.path.exists(old_dir):
+					if old_dir.exists():
 						shutil.rmtree(old_dir)
-					os.rename(inst_dir, old_dir)
+					inst_dir.rename(old_dir)
 
 					logger.info("Installing '%s' into '%s'", bin_dir, inst_dir)
-					os.rename(bin_dir, inst_dir)
+					bin_dir.rename(inst_dir)
 
 				self.restart(3)
 		finally:
@@ -207,19 +223,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 
 			bin_dir = os.path.dirname(self._argv[0])
 			if RUNNING_ON_WINDOWS:
-				cmds = ["net stop opsiclientd"]
-				new_bin_dir = f"{bin_dir}_new"
-				if os.path.isdir(new_bin_dir):
-					old_bin_dir = f"{bin_dir}_old"
-					if os.path.isdir(old_bin_dir):
-						cmds.append(f'rmdir /s /q "{old_bin_dir}"')
-					cmds.append(f'move "{bin_dir}" "{old_bin_dir}"')
-					cmds.append(f'move "{new_bin_dir}" "{bin_dir}"')
-				cmds.append("net start opsiclientd")
-				cmd = " & ".join(cmds)
-				logger.notice("Executing: %s", cmd)
 				subprocess.Popen(  # pylint: disable=consider-using-with
-					cmd,
+					"net stop opsiclientd & net start opsiclientd",
 					shell=True,
 					creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
 				)
