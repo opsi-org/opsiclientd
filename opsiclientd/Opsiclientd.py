@@ -175,17 +175,20 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					inst1 = inst_dir.with_name("opsiclientd_bin1")
 					inst2 = inst_dir.with_name("opsiclientd_bin2")
 					link = inst_dir.with_name("opsiclientd_bin")
-					if link.is_symlink():
-						new_dir = inst2 if link.readlink().name == inst1.name else inst1
-						link.unlink()
-					else:
-						if inst1.exists():
-							logger.info("Deleting dir '%s'", inst1)
-							shutil.rmtree(inst1)
+					target = subprocess.run(
+						f"powershell.exe -ExecutionPolicy Bypass -Command \"Get-Item '{link}' | Select-Object -ExpandProperty Target\"",
+						text=True,
+						capture_output=True,
+						shell=False,
+						check=False,
+					).stdout
+					if link.exists() and not target:
+						raise RuntimeError(f"{link} is not a link")
 
-						logger.info("Moving current installation dir '%s' to '%s'", link, inst1)
-						link.rename(inst1)
-						new_dir = inst2
+					logger.info("Link '%s' is pointing to '%s'", link, target)
+
+					target = Path(target)
+					new_dir = inst2 if target.name == inst1.name else inst1
 
 					if new_dir.exists():
 						logger.info("Deleting dir '%s'", new_dir)
@@ -195,7 +198,10 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					bin_dir.rename(new_dir)
 
 					logger.info("Creating link '%s' pointing to '%s'", link, new_dir)
-					link.symlink_to(new_dir, target_is_directory=True)
+					out = subprocess.run(
+						f'rmdir "{link}" & mklink /j "{link}" "{new_dir}"', text=True, capture_output=True, check=False, shell=True
+					).stdout
+					logger.debug(out)
 				else:
 					old_dir = inst_dir.with_name(f"{inst_dir.name}_old")
 					logger.info("Moving current installation dir '%s' to '%s'", inst_dir, old_dir)
