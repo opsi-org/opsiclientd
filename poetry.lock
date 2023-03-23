@@ -935,7 +935,7 @@ reference = "uibpypi"
 
 [[package]]
 name = "pylint"
-version = "2.17.0"
+version = "2.17.1"
 description = "python code static checker"
 category = "dev"
 optional = false
@@ -1065,7 +1065,7 @@ reference = "uibpypi"
 
 [[package]]
 name = "python-opsi-common"
-version = "4.3.0.25"
+version = "4.3.0.27"
 description = "The opsi python common library"
 category = "main"
 optional = false
@@ -2322,8 +2322,8 @@ pyinstaller-hooks-contrib = [
     {file = "pyinstaller_hooks_contrib-2023.1-py2.py3-none-any.whl", hash = "sha256:d2ea40a7105651aa525bfe5fe309aa264d4d9bb49f839b862243dcf0a56c34cd"},
 ]
 pylint = [
-    {file = "pylint-2.17.0-py3-none-any.whl", hash = "sha256:e097d8325f8c88e14ad12844e3fe2d963d3de871ea9a8f8ad25ab1c109889ddc"},
-    {file = "pylint-2.17.0.tar.gz", hash = "sha256:1460829b6397cb5eb0cdb0b4fc4b556348e515cdca32115f74a1eb7c20b896b4"},
+    {file = "pylint-2.17.1-py3-none-any.whl", hash = "sha256:8660a54e3f696243d644fca98f79013a959c03f979992c1ab59c24d3f4ec2700"},
+    {file = "pylint-2.17.1.tar.gz", hash = "sha256:d4d009b0116e16845533bc2163493d6681846ac725eab8ca8014afb520178ddd"},
 ]
 pyopenssl = [
     {file = "pyOpenSSL-23.0.0-py3-none-any.whl", hash = "sha256:df5fc28af899e74e19fccb5510df423581047e10ab6f1f4ba1763ff5fde844c0"},
@@ -2342,8 +2342,8 @@ python-opsi = [
     {file = "python_opsi-4.3.0.11.tar.gz", hash = "sha256:c991c49f478d84aaba55a214c47d46703f0df9deecf44d8b3fcb1f1a4077bcbc"},
 ]
 python-opsi-common = [
-    {file = "python_opsi_common-4.3.0.25-py3-none-any.whl", hash = "sha256:7795b1bb8489b95eccc142b1357776668ef451b352ae8a7c92801e33a90f01ae"},
-    {file = "python_opsi_common-4.3.0.25.tar.gz", hash = "sha256:24e3d65047f9336b7e947bbafe5fba4bf4d1369288eb0c09e86d7f0c546f2125"},
+    {file = "python_opsi_common-4.3.0.27-py3-none-any.whl", hash = "sha256:8f041d24cdefa2b3aa9b36e639471b30ce3a857e64be0aaad986056f57b5578a"},
+    {file = "python_opsi_common-4.3.0.27.tar.gz", hash = "sha256:594843d1710eebedb5dc386b069cbf725fa0e7df19c2879f0a7b92147db44338"},
 ]
 python-pam = [
     {file = "python-pam-2.0.2.tar.gz", hash = "sha256:97235235ba9b82dbae8068d1099508455949b275f77273ca22fdbd8b1fb5d950"},
