@@ -42,13 +42,12 @@ from opsicommon.types import forceHostId  # type: ignore[import]
 
 from opsiclientd.Config import Config
 
-__all__ = ['ClientCacheBackend']
+__all__ = ["ClientCacheBackend"]
 
 config = Config()
 
 
 class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pylint: disable=too-many-instance-attributes
-
 	def __init__(self, **kwargs):  # pylint: disable=super-init-not-called
 		ConfigDataBackend.__init__(self, **kwargs)
 
@@ -61,17 +60,17 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 
 		for (option, value) in kwargs.items():
 			option = option.lower()
-			if option == 'workbackend':
+			if option == "workbackend":
 				self._workBackend = value
-			elif option == 'snapshotbackend':
+			elif option == "snapshotbackend":
 				self._snapshotBackend = value
-			elif option == 'masterbackend':
+			elif option == "masterbackend":
 				self._masterBackend = value
-			elif option == 'clientid':
+			elif option == "clientid":
 				self._clientId = forceHostId(value)
-			elif option == 'depotid':
+			elif option == "depotid":
 				self._depotId = forceHostId(value)
-			elif option == 'backendinfo':
+			elif option == "backendinfo":
 				self._backendInfo = value
 
 		if not self._workBackend:
@@ -87,26 +86,15 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 		self._backend = self._workBackend
 		self._createInstanceMethods()
 
-	def backend_getLicensingInfo(
-		self,
-		licenses: bool = False,
-		legacy_modules: bool = False,
-		dates: bool = False,
-		allow_cache: bool = True
-	):
-		return {
-			"available_modules": OPSI_MODULE_IDS
-		}
+	def backend_getLicensingInfo(self, licenses: bool = False, legacy_modules: bool = False, dates: bool = False, allow_cache: bool = True):
+		return {"available_modules": OPSI_MODULE_IDS}
 
 	def log_write(self, logType, data, objectId=None, append=False):
 		pass
 
 	def licenseOnClient_getObjects(self, attributes=[], **filter):  # pylint: disable=dangerous-default-value,redefined-builtin
 		licenseOnClients = self._workBackend.licenseOnClient_getObjects(attributes, **filter)
-		logger.info(
-			"licenseOnClient_getObjects called with filter %s, %s LicenseOnClients found",
-			filter, len(licenseOnClients)
-		)
+		logger.info("licenseOnClient_getObjects called with filter %s, %s LicenseOnClients found", filter, len(licenseOnClients))
 		for licenseOnClient in licenseOnClients:
 			# Recreate for later sync to server
 			self.licenseOnClient_insertObject(licenseOnClient)
@@ -115,7 +103,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 	def config_getObjects(self, attributes=[], **filter):  # pylint: disable=dangerous-default-value,redefined-builtin
 		configs = self._backend.config_getObjects(attributes, **filter)
 		for idx, _config in enumerate(configs):
-			if _config.id == 'clientconfig.depot.id':
+			if _config.id == "clientconfig.depot.id":
 				configs[idx].defaultValues = [self._depotId]
 		logger.trace("config_getObjects returning %s", configs)
 		return configs
@@ -123,7 +111,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 	def configState_getObjects(self, attributes=[], **filter):  # pylint: disable=dangerous-default-value,redefined-builtin
 		config_states = self._backend.configState_getObjects(attributes, **filter)
 		for idx, config_state in enumerate(config_states):
-			if config_state.configId == 'clientconfig.depot.id':
+			if config_state.configId == "clientconfig.depot.id":
 				config_states[idx].values = [self._depotId]
 		logger.trace("configState_getObjects returning %s", config_states)
 		return config_states
@@ -134,53 +122,55 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 	def _syncModifiedObjectsWithMaster(  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
 		self, objectClass, modifiedObjects, getFilter, objectsDifferFunction, createUpdateObjectFunction, mergeObjectsFunction
 	):
-		meth = getattr(self._masterBackend, f'{objectClass.backendMethodPrefix}_getObjects')
+		meth = getattr(self._masterBackend, f"{objectClass.backendMethodPrefix}_getObjects")
 		masterObjects = {obj.getIdent(): obj for obj in meth(**getFilter)}
 
 		deleteObjects = []
 		updateObjects = []
 		for mo in modifiedObjects:
 			logger.debug("Processing modified object: %s", mo)
-			masterObj = masterObjects.get(mo['object'].getIdent())
+			masterObj = masterObjects.get(mo["object"].getIdent())
 
-			command = mo['command'].lower()
-			if command == 'delete':
+			command = mo["command"].lower()
+			if command == "delete":
 				if not masterObj:
-					logger.info("No need to delete object %s because object has been deleted on server since last sync", mo['object'])
+					logger.info("No need to delete object %s because object has been deleted on server since last sync", mo["object"])
 					continue
 
-				meth = getattr(self._snapshotBackend, f'{objectClass.backendMethodPrefix}_getObjects')
-				snapshotObj = meth(**(mo['object'].getIdent(returnType='dict')))
+				meth = getattr(self._snapshotBackend, f"{objectClass.backendMethodPrefix}_getObjects")
+				snapshotObj = meth(**(mo["object"].getIdent(returnType="dict")))
 				if not snapshotObj:
-					logger.info("Deletion of object %s prevented because object has been created on server since last sync", mo['object'])
+					logger.info("Deletion of object %s prevented because object has been created on server since last sync", mo["object"])
 					continue
 
 				snapshotObj = snapshotObj[0]
 				if objectsDifferFunction(snapshotObj, masterObj):
-					logger.info("Deletion of object %s prevented because object has been modified on server since last sync", mo['object'])
+					logger.info("Deletion of object %s prevented because object has been modified on server since last sync", mo["object"])
 					continue
 
-				logger.info("Object %s marked for deletion", mo['object'])
-				deleteObjects.append(mo['object'])
-			elif command in ('update', 'insert'):
-				logger.debug("Modified object: %s", mo['object'].toHash())
-				updateObj = createUpdateObjectFunction(mo['object'])
+				logger.info("Object %s marked for deletion", mo["object"])
+				deleteObjects.append(mo["object"])
+			elif command in ("update", "insert"):
+				logger.debug("Modified object: %s", mo["object"].toHash())
+				updateObj = createUpdateObjectFunction(mo["object"])
 
 				if masterObj:
 					logger.debug("Master object: %s", masterObj.toHash())
-					meth = getattr(self._snapshotBackend, f'{objectClass.backendMethodPrefix}_getObjects')
-					snapshotObj = meth(**(updateObj.getIdent(returnType='dict')))
+					meth = getattr(self._snapshotBackend, f"{objectClass.backendMethodPrefix}_getObjects")
+					snapshotObj = meth(**(updateObj.getIdent(returnType="dict")))
 					if snapshotObj:
 						snapshotObj = snapshotObj[0]
 						logger.debug("Snapshot object: %s", snapshotObj.toHash())
-						updateObj = mergeObjectsFunction(snapshotObj, updateObj, masterObj, self._snapshotBackend, self._workBackend, self._masterBackend)
+						updateObj = mergeObjectsFunction(
+							snapshotObj, updateObj, masterObj, self._snapshotBackend, self._workBackend, self._masterBackend
+						)
 
 				if updateObj:
-					logger.info("Object %s marked for update", mo['object'])
+					logger.info("Object %s marked for update", mo["object"])
 					updateObjects.append(updateObj)
 
 		if deleteObjects:
-			meth = getattr(self._masterBackend, f'{objectClass.backendMethodPrefix}_deleteObjects')
+			meth = getattr(self._masterBackend, f"{objectClass.backendMethodPrefix}_deleteObjects")
 			try:
 				meth(deleteObjects)
 			except Exception as delete_err:
@@ -188,7 +178,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 				raise
 
 		if updateObjects:
-			meth = getattr(self._masterBackend, f'{objectClass.backendMethodPrefix}_updateObjects')
+			meth = getattr(self._masterBackend, f"{objectClass.backendMethodPrefix}_updateObjects")
 			try:
 				meth(updateObjects)
 			except Exception as update_err:
@@ -201,117 +191,125 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 
 		for modification in modifications:
 			try:
-				ObjectClass = eval(modification['objectClass'])  # pylint: disable=eval-used
-				identValues = modification['ident'].split(ObjectClass.identSeparator)
+				ObjectClass = eval(modification["objectClass"])  # pylint: disable=eval-used
+				identValues = modification["ident"].split(ObjectClass.identSeparator)
 				identAttributes = get_ident_attributes(ObjectClass)
 				objectFilter = {}
 				for index, attribute in enumerate(identAttributes):
 					if index >= len(identValues):
-						raise BackendUnaccomplishableError(
-							f"Bad ident '{identValues}' for objectClass '{modification['objectClass']}'"
-						)
+						raise BackendUnaccomplishableError(f"Bad ident '{identValues}' for objectClass '{modification['objectClass']}'")
 
 					objectFilter[attribute] = identValues[index]
 
 				backend = self._snapshotBackend if modification["command"] == "delete" else self._workBackend
-				meth = getattr(backend, ObjectClass.backendMethodPrefix + '_getObjects')
+				meth = getattr(backend, ObjectClass.backendMethodPrefix + "_getObjects")
 				objects = meth(**objectFilter)
 				if objects:
-					modification['object'] = objects[0]
-					modifiedObjects[modification['objectClass']].append(modification)
+					modification["object"] = objects[0]
+					modifiedObjects[modification["objectClass"]].append(modification)
 					logger.debug("Modified object appended: %s", modification)
 			except Exception as modify_error:  # pylint: disable=broad-except
 				logger.error("Failed to sync backend modification %s: %s", modification, modify_error, exc_info=True)
 				continue
 
-		if 'AuditHardwareOnHost' in modifiedObjects:
+		if "AuditHardwareOnHost" in modifiedObjects:
 			self._masterBackend.auditHardwareOnHost_setObsolete(self._clientId)
-			self._masterBackend.auditHardwareOnHost_updateObjects([mo['object'] for mo in modifiedObjects['AuditHardwareOnHost']])
+			self._masterBackend.auditHardwareOnHost_updateObjects([mo["object"] for mo in modifiedObjects["AuditHardwareOnHost"]])
 
-		if 'AuditSoftware' in modifiedObjects:
-			self._masterBackend.auditSoftware_updateObjects([mo['object'] for mo in modifiedObjects['AuditSoftware']])
+		if "AuditSoftware" in modifiedObjects:
+			self._masterBackend.auditSoftware_updateObjects([mo["object"] for mo in modifiedObjects["AuditSoftware"]])
 
-		if 'AuditSoftwareOnClient' in modifiedObjects:
+		if "AuditSoftwareOnClient" in modifiedObjects:
 			self._masterBackend.auditSoftwareOnClient_setObsolete(self._clientId)
-			self._masterBackend.auditSoftwareOnClient_updateObjects(
-				[mo['object'] for mo in modifiedObjects['AuditSoftwareOnClient']]
-			)
+			self._masterBackend.auditSoftwareOnClient_updateObjects([mo["object"] for mo in modifiedObjects["AuditSoftwareOnClient"]])
 
-		if 'ProductOnClient' in modifiedObjects:
+		if "ProductOnClient" in modifiedObjects:
+
 			def objectsDifferFunction(snapshotObj, masterObj):
-				return objects_differ(snapshotObj, masterObj, exclude_attributes=['modificationTime', 'actionProgress', 'actionResult', 'lastAction'])
+				return objects_differ(
+					snapshotObj, masterObj, exclude_attributes=["modificationTime", "actionProgress", "actionResult", "lastAction"]
+				)
 
 			def createUpdateObjectFunction(modifiedObj):
 				return modifiedObj.clone(identOnly=False)
 
-			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):  # pylint: disable=unused-argument,too-many-arguments
-				masterVersions = sorted([
-					f"{p.productVersion}-{p.packageVersion}" for p in
-					masterBackend.productOnDepot_getObjects(
-						["productVersion", "packageVersion"],
-						productId=snapshotObj.productId,
-						depotId=self._depotId
-					)
-				])
-				snapshotVersions = sorted([
-					f"{p.productVersion}-{p.packageVersion}" for p in
-					snapshotBackend.productOnDepot_getObjects(
-						["productVersion", "packageVersion"],
-						productId=snapshotObj.productId,
-						depotId=self._depotId
-					)
-				])
+			def mergeObjectsFunction(
+				snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend
+			):  # pylint: disable=unused-argument,too-many-arguments
+				masterVersions = sorted(
+					[
+						f"{p.productVersion}-{p.packageVersion}"
+						for p in masterBackend.productOnDepot_getObjects(
+							["productVersion", "packageVersion"], productId=snapshotObj.productId, depotId=self._depotId
+						)
+					]
+				)
+				snapshotVersions = sorted(
+					[
+						f"{p.productVersion}-{p.packageVersion}"
+						for p in snapshotBackend.productOnDepot_getObjects(
+							["productVersion", "packageVersion"], productId=snapshotObj.productId, depotId=self._depotId
+						)
+					]
+				)
 
 				logger.info(
-					"Syncing ProductOnClient %s (product versions local=%s, server=%s)",
-					updateObj, snapshotVersions, masterVersions
+					"Syncing ProductOnClient %s (product versions local=%s, server=%s)", updateObj, snapshotVersions, masterVersions
 				)
 				if snapshotVersions != masterVersions:
 					logger.notice(
 						"Product %s changed on server since last sync, not updating actionRequest (local=%s, server=%s)",
-						snapshotObj.productId, snapshotVersions, masterVersions
+						snapshotObj.productId,
+						snapshotVersions,
+						masterVersions,
 					)
 					updateObj.actionRequest = None
 					updateObj.targetConfiguration = None
 				return updateObj
 
-			logger.debug("Syncing modified ProductOnClients with master: %s", modifiedObjects['ProductOnClient'])
+			logger.debug("Syncing modified ProductOnClients with master: %s", modifiedObjects["ProductOnClient"])
 			self._syncModifiedObjectsWithMaster(
 				ProductOnClient,
-				modifiedObjects['ProductOnClient'],
+				modifiedObjects["ProductOnClient"],
 				{"clientId": self._clientId},
 				objectsDifferFunction,
 				createUpdateObjectFunction,
-				mergeObjectsFunction
+				mergeObjectsFunction,
 			)
 
-		if 'LicenseOnClient' in modifiedObjects:
+		if "LicenseOnClient" in modifiedObjects:
+
 			def objectsDifferFunction(snapshotObj, masterObj):  # pylint: disable=function-redefined
 				return objects_differ(snapshotObj, masterObj)
 
 			def createUpdateObjectFunction(modifiedObj):  # pylint: disable=function-redefined
 				return modifiedObj.clone(identOnly=False)
 
-			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):  # pylint: disable=function-redefined,unused-argument,too-many-arguments
+			def mergeObjectsFunction(
+				snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend
+			):  # pylint: disable=function-redefined,unused-argument,too-many-arguments
 				return updateObj
 
 			self._syncModifiedObjectsWithMaster(
 				LicenseOnClient,
-				modifiedObjects['LicenseOnClient'],
+				modifiedObjects["LicenseOnClient"],
 				{"clientId": self._clientId},
 				objectsDifferFunction,
 				createUpdateObjectFunction,
-				mergeObjectsFunction
+				mergeObjectsFunction,
 			)
 
-		for objectClassName in ('ProductPropertyState', 'ConfigState'):
+		for objectClassName in ("ProductPropertyState", "ConfigState"):
+
 			def objectsDifferFunction(snapshotObj, masterObj):  # pylint: disable=function-redefined
 				return objects_differ(snapshotObj, masterObj)
 
 			def createUpdateObjectFunction(modifiedObj):  # pylint: disable=function-redefined
 				return modifiedObj.clone()
 
-			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):  # pylint: disable=function-redefined,unused-argument,too-many-arguments
+			def mergeObjectsFunction(
+				snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend
+			):  # pylint: disable=function-redefined,unused-argument,too-many-arguments
 				if len(snapshotObj.values) != len(masterObj.values):
 					logger.info("Values of %s changed on server since last sync, not updating values", snapshotObj)
 					return None
@@ -337,7 +335,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 					{"objectId": self._clientId},
 					objectsDifferFunction,
 					createUpdateObjectFunction,
-					mergeObjectsFunction
+					mergeObjectsFunction,
 				)
 
 	def _replicateMasterToWorkBackend(self):  # pylint: disable=too-many-branches,too-many-locals,too-many-statements
@@ -357,54 +355,61 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 		product_ids_with_action = []
 		for productOnClient in self._masterBackend.productOnClient_getObjects(clientId=self._clientId):
 			productOnClients[productOnClient.productId] = productOnClient
-			if productOnClient.actionRequest not in (None, 'none'):
+			if productOnClient.actionRequest not in (None, "none"):
 				product_ids_with_action.append(productOnClient.productId)
 
 		if productOnClients and product_ids_with_action:
 			updateProductOnClients = []
 			for productDependency in self._masterBackend.productDependency_getObjects(productId=product_ids_with_action):
 				if (
-					productDependency.requiredAction not in (None, '') and
-					productDependency.productId in productOnClients and
-					productOnClients[productDependency.productId].actionRequest == productDependency.productAction and
-					productDependency.requiredProductId in productOnClients and
-					productOnClients[productDependency.requiredProductId].actionRequest != productDependency.requiredAction
+					productDependency.requiredAction not in (None, "")
+					and productDependency.productId in productOnClients
+					and productOnClients[productDependency.productId].actionRequest == productDependency.productAction
+					and productDependency.requiredProductId in productOnClients
+					and productOnClients[productDependency.requiredProductId].actionRequest != productDependency.requiredAction
 				):
 					logger.notice(
 						"Setting missing required action for dependency %s/%s %s/%s",
-						productDependency.productId, productDependency.productAction,
-						productDependency.requiredProductId, productDependency.requiredAction
+						productDependency.productId,
+						productDependency.productAction,
+						productDependency.requiredProductId,
+						productDependency.requiredAction,
 					)
 					productOnClients[productDependency.requiredProductId].actionRequest = productDependency.productAction
 					updateProductOnClients.append(productOnClients[productDependency.requiredProductId])
+					if productDependency.requiredProductId not in product_ids_with_action:
+						product_ids_with_action.append(productDependency.requiredProductId)
 			if updateProductOnClients:
 				# Update is sufficient, creating a ProductOnClient is not required (see comment above)
 				self._masterBackend.productOnClient_updateObjects(updateProductOnClients)
 
+		if not product_ids_with_action:
+			raise RuntimeError("No actionRequests set")
+
 		self._cacheBackendInfo(self._masterBackend.backend_info())
 
+		filterProductIds = []
+		if config.get("cache_service", "sync_products_with_actions_only"):
+			filterProductIds = product_ids_with_action
 		self._workBackend.backend_deleteBase()
 		self._workBackend.backend_createBase()
-		br = BackendReplicator(
-			readBackend=self._masterBackend,
-			writeBackend=self._workBackend
-		)
+		br = BackendReplicator(readBackend=self._masterBackend, writeBackend=self._workBackend)
 		br.replicate(
 			serverIds=[],
 			depotIds=[self._depotId],
 			clientIds=[self._clientId],
 			groupIds=[],
-			productIds=[],
-			productTypes=['LocalbootProduct'],
+			productIds=filterProductIds,
+			productTypes=["LocalbootProduct"],
 			audit=False,
-			licenses=False
+			licenses=False,
 		)
 
 		self._snapshotBackend.backend_deleteBase()
 
 		licenseOnClients = self._masterBackend.licenseOnClient_getObjects(clientId=self._clientId)
 		for productOnClient in self._workBackend.productOnClient_getObjects(clientId=self._clientId):
-			if productOnClient.actionRequest in (None, 'none'):
+			if productOnClient.actionRequest in (None, "none"):
 				continue
 
 			licensePools = self._masterBackend.licensePool_getObjects(productIds=[productOnClient.productId])
@@ -423,8 +428,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 				else:
 					logger.notice("Acquiring license for product '%s'", productOnClient.productId)
 					licenseOnClient = self._masterBackend.licenseOnClient_getOrCreateObject(
-						clientId=self._clientId,
-						productId=productOnClient.productId
+						clientId=self._clientId, productId=productOnClient.productId
 					)
 
 				if licenseOnClient:
@@ -432,8 +436,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 					# This will delete the licenseOnClient (free the license) while syncing config back to server
 					# In case licenseOnClient_getObjects will be called on the CacheBackend the licenseOnClients
 					# will be recreated, so the objects will be recreated after deletion
-					self._fireEvent('objectsDeleted', [licenseOnClient])
-					self._fireEvent('backendModified')
+					self._fireEvent("objectsDeleted", [licenseOnClient])
+					self._fireEvent("backendModified")
 
 					statistics = {"licensePools": 0, "softwareLicenses": 0, "licenseContracts": 0}
 					for licensePool in self._masterBackend.licensePool_getObjects(id=licenseOnClient.licensePoolId):
@@ -459,44 +463,30 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 				logger.error("Failed to acquire license for product '%s': %s", productOnClient.productId, license_sync_error)
 
 		self._snapshotBackend.backend_createBase()
-		br = BackendReplicator(
-			readBackend=self._workBackend,
-			writeBackend=self._snapshotBackend
-		)
+		br = BackendReplicator(readBackend=self._workBackend, writeBackend=self._snapshotBackend)
 		br.replicate()
 
-		if self._clientId != config.get('global', 'host_id'):
-			logger.error(
-				"Client id '%s' does not match config global.host_id '%s'",
-				self._clientId, config.get('global', 'host_id')
-			)
+		if self._clientId != config.get("global", "host_id"):
+			logger.error("Client id '%s' does not match config global.host_id '%s'", self._clientId, config.get("global", "host_id"))
 
 		clients = self._workBackend.host_getObjects(id=self._clientId)
 		if not clients:
 			raise BackendMissingDataError("Host '{self._clientId}' not found in replicated backend")
 
 		opsiHostKey = clients[0].getOpsiHostKey()
-		if opsiHostKey != config.get('global', 'opsi_host_key'):
+		if opsiHostKey != config.get("global", "opsi_host_key"):
 			logger.error(
 				"Host key '%s' from work backend does not match config global.opsi_host_key '%s'",
-				opsiHostKey, config.get('global', 'opsi_host_key')
+				opsiHostKey,
+				config.get("global", "opsi_host_key"),
 			)
 
-		password = self._masterBackend.user_getCredentials(
-			username='pcpatch',
-			hostId=self._clientId
-		)
-		password = password['password']
-		logger.notice(
-			"Creating opsi passwd file '%s' using opsi host key '%s...'",
-			self._opsiPasswdFile, opsiHostKey[:10]
-		)
-		self.user_setCredentials(
-			username='pcpatch',
-			password=blowfishDecrypt(opsiHostKey, password)
-		)
+		password = self._masterBackend.user_getCredentials(username="pcpatch", hostId=self._clientId)
+		password = password["password"]
+		logger.notice("Creating opsi passwd file '%s' using opsi host key '%s...'", self._opsiPasswdFile, opsiHostKey[:10])
+		self.user_setCredentials(username="pcpatch", password=blowfishDecrypt(opsiHostKey, password))
 		auditHardwareConfig = self._masterBackend.auditHardware_getConfig()
-		with codecs.open(self._auditHardwareConfigFile, 'w', 'utf8') as file:
+		with codecs.open(self._auditHardwareConfigFile, "w", "utf8") as file:
 			file.write(json.dumps(auditHardwareConfig))
 
 		self._workBackend._setAuditHardwareConfig(auditHardwareConfig)  # pylint: disable=protected-access
@@ -505,36 +495,38 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 	def _createInstanceMethods(self):
 		for Class in (Backend, ConfigDataBackend):
 			for methodName, funcRef in inspect.getmembers(Class, inspect.isfunction):
-				if methodName.startswith('_') or methodName in (
-					'backend_info', 'backend_getLicensingInfo',
-					'user_getCredentials', 'user_setCredentials',
-					'log_write', 'licenseOnClient_getObjects',
-					'configState_getObjects', 'config_getObjects'
+				if methodName.startswith("_") or methodName in (
+					"backend_info",
+					"backend_getLicensingInfo",
+					"user_getCredentials",
+					"user_setCredentials",
+					"log_write",
+					"licenseOnClient_getObjects",
+					"configState_getObjects",
+					"config_getObjects",
 				):
 					continue
 
 				sig, arg = get_function_signature_and_args(funcRef)
 				sig = "(self)" if sig == "()" else f"(self, {sig[1:]}"
 				logger.trace("Adding method '%s' to execute on work backend", methodName)
-				exec(  # pylint: disable=exec-used
-					f'def {methodName}{sig}: return self._executeMethod("{methodName}", {arg})'
-				)
+				exec(f'def {methodName}{sig}: return self._executeMethod("{methodName}", {arg})')  # pylint: disable=exec-used
 				setattr(self, methodName, MethodType(eval(methodName), self))  # pylint: disable=eval-used
 
 	def _cacheBackendInfo(self, backendInfo):
-		with codecs.open(self._opsiModulesFile, 'w', 'utf-8') as file:
-			modules = backendInfo['modules']
-			helpermodules = backendInfo['realmodules']
+		with codecs.open(self._opsiModulesFile, "w", "utf-8") as file:
+			modules = backendInfo["modules"]
+			helpermodules = backendInfo["realmodules"]
 			for (module, state) in modules.items():
-				if helpermodules in ('customer', 'expires'):
+				if helpermodules in ("customer", "expires"):
 					continue
 				if module in helpermodules:
 					state = helpermodules[module]
 				else:
 					if state:
-						state = 'yes'
+						state = "yes"
 					else:
-						state = 'no'
+						state = "no"
 				file.write(f"{module.lower()} = {state}\n")
 			file.write(f"customer = {modules.get('customer', '')}\n")
 			file.write(f"expires = {modules.get('expires', time.strftime('%Y-%m-%d', time.localtime(time.time())))}\n")

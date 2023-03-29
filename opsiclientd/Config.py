@@ -204,6 +204,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				"extension_config_dir": "",
 				"include_product_group_ids": [],
 				"exclude_product_group_ids": [],
+				"sync_products_with_actions_only": True,
 			},
 			"control_server": {
 				"interface": "0.0.0.0",
