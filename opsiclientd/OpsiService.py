@@ -498,7 +498,6 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 							f"opsiclientd/{__version__}",
 						)
 
-						# TODO: config.get("global", "trust_uib_opsi_ca")
 						self._configService = JSONRPCBackend(
 							address=self._configServiceUrl,
 							username=self._username,
