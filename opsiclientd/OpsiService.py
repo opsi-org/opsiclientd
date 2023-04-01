@@ -8,7 +8,6 @@
 Connecting to a opsi service.
 """
 
-import os
 import random
 import re
 import shutil
@@ -20,7 +19,7 @@ from traceback import TracebackException
 from types import TracebackType
 from typing import Union
 
-from OpenSSL.crypto import FILETYPE_PEM, dump_certificate, load_certificate
+from OpenSSL.crypto import FILETYPE_PEM, load_certificate
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Util.Repository import WebDAVRepository
