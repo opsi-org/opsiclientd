@@ -55,7 +55,7 @@ from opsicommon.types import (
 from opsicommon.utils import Singleton  # type: ignore[import]
 
 from opsiclientd import __version__
-from opsiclientd.Config import UIB_OPSI_CA, Config
+from opsiclientd.Config import Config
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
 from opsiclientd.messagebus.filetransfer import (
@@ -465,29 +465,6 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 	def getUsername(self):
 		return self._username
 
-	def prepare_ca_cert_file(self):
-		certs = ""
-		with cert_file_lock:
-			if os.path.exists(config.ca_cert_file):
-				# Read all certs from file except UIB_OPSI_CA
-				uib_opsi_ca_cert = load_certificate(FILETYPE_PEM, UIB_OPSI_CA.encode("ascii"))
-				with open(config.ca_cert_file, "r", encoding="utf-8") as file:
-					for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", file.read(), re.DOTALL):
-						cert = load_certificate(FILETYPE_PEM, match.group(1).encode("ascii"))
-						if cert.get_subject().CN != uib_opsi_ca_cert.get_subject().CN:
-							certs += dump_certificate(FILETYPE_PEM, cert).decode("ascii")
-			if not certs:
-				if os.path.exists(config.ca_cert_file):
-					# Accept all server certs on the next connection attempt
-					os.remove(config.ca_cert_file)
-				return
-
-			if config.get("global", "trust_uib_opsi_ca"):
-				certs += UIB_OPSI_CA
-
-			with open(config.ca_cert_file, "w", encoding="utf-8") as file:
-				file.write(certs)
-
 	def run(self):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		with log_context({"instance": "service connection"}):
 			logger.debug("ServiceConnectionThread started...")
@@ -496,25 +473,11 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 			self.cancelled = False
 
 			try:  # pylint: disable=too-many-nested-blocks
-				verify_server_cert = config.get("global", "verify_server_cert") or config.get("global", "verify_server_cert_by_ca")
-				ca_cert_file = config.ca_cert_file
-				try:
-					self.prepare_ca_cert_file()
-				except PermissionError as perm_error:
-					logger.error("Not allowed to prepare ca_cert_file: %s", perm_error, exc_info=True)
-
 				compression = config.get("config_service", "compression")
+				verify = config.service_verification_flags
 				if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
 					compression = False
-					verify_server_cert = False
-
-				if verify_server_cert:
-					if os.path.exists(ca_cert_file):
-						logger.info("Server verification enabled, using CA cert file '%s'", ca_cert_file)
-					else:
-						logger.error("Server verification enabled, but CA cert file '%s' not found, skipping verification", ca_cert_file)
-						ca_cert_file = None
-						verify_server_cert = False
+					verify = "accept_all"
 
 				log_network_status()
 				tryNum = 0
@@ -527,20 +490,21 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 							raise RuntimeError(f"Domain missing in username '{self._username}'")
 
 						logger.debug(
-							"JSONRPCBackend address=%s, verify_server_cert=%s, ca_cert_file=%s, proxy_url=%s, application=%s",
+							"JSONRPCBackend address=%s, verify=%s, ca_cert_file=%s, proxy_url=%s, application=%s",
 							self._configServiceUrl,
-							verify_server_cert,
-							ca_cert_file,
+							verify,
+							config.ca_cert_file,
 							config.get("global", "proxy_url"),
 							f"opsiclientd/{__version__}",
 						)
 
+						# TODO: config.get("global", "trust_uib_opsi_ca")
 						self._configService = JSONRPCBackend(
 							address=self._configServiceUrl,
 							username=self._username,
 							password=self._password,
-							verify_server_cert=verify_server_cert,
-							ca_cert_file=ca_cert_file,
+							verify=verify,
+							ca_cert_file=config.ca_cert_file,
 							proxy_url=config.get("global", "proxy_url"),
 							application=f"opsiclientd/{__version__}",
 							compression=compression,
