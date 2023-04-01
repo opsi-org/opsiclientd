@@ -2343,7 +2343,7 @@ python-opsi = [
 ]
 python-opsi-common = [
     {file = "python_opsi_common-4.3.0.34-py3-none-any.whl", hash = "sha256:9e1413f044fc0b2c92f7352e93c68a29ff2717fabc17ce9c2f2299563d001cc5"},
-    {file = "python_opsi_common-4.3.0.34.tar.gz", hash = "sha256:b612624bcfdeb49b6cb60f43ea12d9cbdf0ac0195f29939675032e9aaa5704bf"},
+    {file = "python_opsi_common-4.3.0.34.tar.gz", hash = "sha256:faa23270cff4669839a852a1233f923072b5e831425c0d4ba221b9a7e43c6765"},
 ]
 python-pam = [
     {file = "python-pam-2.0.2.tar.gz", hash = "sha256:97235235ba9b82dbae8068d1099508455949b275f77273ca22fdbd8b1fb5d950"},
