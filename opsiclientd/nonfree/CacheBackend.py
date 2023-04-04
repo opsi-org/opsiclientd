@@ -47,6 +47,10 @@ __all__ = ["ClientCacheBackend"]
 config = Config()
 
 
+class NoNeedToCacheException(RuntimeError):
+	pass
+
+
 class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pylint: disable=too-many-instance-attributes
 	def __init__(self, **kwargs):  # pylint: disable=super-init-not-called
 		ConfigDataBackend.__init__(self, **kwargs)
@@ -384,7 +388,9 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 				self._masterBackend.productOnClient_updateObjects(updateProductOnClients)
 
 		if not product_ids_with_action:
-			raise RuntimeError("No actionRequests set")
+			logger.info("No actionRequests set")
+			if config.get("cache_service", "sync_products_with_actions_only"):
+				raise NoNeedToCacheException("No actionRequests set and snyc_products_with_actions_only active. Not syncing")
 
 		self._cacheBackendInfo(self._masterBackend.backend_info())
 
