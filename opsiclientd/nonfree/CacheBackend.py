@@ -47,10 +47,6 @@ __all__ = ["ClientCacheBackend"]
 config = Config()
 
 
-class NoNeedToCacheException(RuntimeError):
-	pass
-
-
 class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pylint: disable=too-many-instance-attributes
 	def __init__(self, **kwargs):  # pylint: disable=super-init-not-called
 		ConfigDataBackend.__init__(self, **kwargs)
@@ -387,16 +383,14 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 				# Update is sufficient, creating a ProductOnClient is not required (see comment above)
 				self._masterBackend.productOnClient_updateObjects(updateProductOnClients)
 
-		if not product_ids_with_action:
-			logger.info("No actionRequests set")
-			if config.get("cache_service", "sync_products_with_actions_only"):
-				raise NoNeedToCacheException("No actionRequests set and snyc_products_with_actions_only active. Not syncing")
-
 		self._cacheBackendInfo(self._masterBackend.backend_info())
 
 		filterProductIds = []
 		if config.get("cache_service", "sync_products_with_actions_only"):
 			filterProductIds = product_ids_with_action
+		# Need opsi-script PoC in cached backend for update_action_processor!
+		if not "opsi-script" in filterProductIds:
+			filterProductIds.append("opsi-script")
 		self._workBackend.backend_deleteBase()
 		self._workBackend.backend_createBase()
 		br = BackendReplicator(readBackend=self._masterBackend, writeBackend=self._workBackend)

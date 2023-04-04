@@ -34,7 +34,7 @@ from opsiclientd.Config import Config
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
 from opsiclientd.nonfree import verify_modules
-from opsiclientd.nonfree.CacheBackend import ClientCacheBackend, NoNeedToCacheException
+from opsiclientd.nonfree.CacheBackend import ClientCacheBackend
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_DARWIN
@@ -622,8 +622,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 							state.set("config_cache_service", self._state)
 							for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
 								eventGenerator.createAndFireEvent()
-				except NoNeedToCacheException:
-					logger.notice("No need to cache Backend")
+					timeline.setEventEnd(eventId)
 				except Exception as err:
 					logger.error(err, exc_info=True)
 					timeline.addEvent(
@@ -632,12 +631,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 						category="config_sync",
 						isError=True,
 					)
-					self.setFaulty()
-					raise
-				finally:
 					if eventId:
 						timeline.setEventEnd(eventId)
-
+					self.setFaulty()
+					raise
 			else:
 				self._state["config_cached"] = True
 				state.set("config_cache_service", self._state)
