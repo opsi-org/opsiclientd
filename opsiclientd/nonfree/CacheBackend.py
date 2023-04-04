@@ -389,7 +389,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 		if config.get("cache_service", "sync_products_with_actions_only"):
 			filterProductIds = product_ids_with_action
 		# Need opsi-script PoC in cached backend for update_action_processor!
-		if not "opsi-script" in filterProductIds:
+		if "opsi-script" not in filterProductIds:
 			filterProductIds.append("opsi-script")
 		self._workBackend.backend_deleteBase()
 		self._workBackend.backend_createBase()
