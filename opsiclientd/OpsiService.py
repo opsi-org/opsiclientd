@@ -52,6 +52,7 @@ from opsicommon.types import (
 	forceUnicode,
 )
 from opsicommon.utils import Singleton  # type: ignore[import]
+from opsicommon.system import lock_file
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
@@ -76,7 +77,9 @@ def update_os_ca_store(allow_remove: bool = False):  # pylint: disable=too-many-
 	ca_certs = []
 	ca_cert_file = Path(config.ca_cert_file)
 	if ca_cert_file.exists():
-		data = ca_cert_file.read_text(encoding="utf-8")
+		with open(ca_cert_file, "r", encoding="utf-8") as file:
+			with lock_file(file=file, exclusive=False, timeout=5.0):
+				data = file.read()
 		for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", data, re.DOTALL):
 			try:
 				ca_certs.append(load_certificate(FILETYPE_PEM, match.group(1).encode("utf-8")))
