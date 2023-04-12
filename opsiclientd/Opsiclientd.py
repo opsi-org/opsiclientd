@@ -181,13 +181,14 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 						capture_output=True,
 						shell=False,
 						check=False,
-					).stdout
+					).stdout.strip()
 					if link.exists() and not target:
 						raise RuntimeError(f"{link} is not a link")
 
 					logger.info("Link '%s' is pointing to '%s'", link, target)
 
 					target = Path(target)
+					logger.info("Names: inst1=%r, inst2=%r, target=%r", inst1.name, inst2.name, target.name)
 					new_dir = inst2 if target.name == inst1.name else inst1
 
 					if new_dir.exists():
