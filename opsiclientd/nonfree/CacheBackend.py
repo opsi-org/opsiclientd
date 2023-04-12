@@ -383,14 +383,14 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 				# Update is sufficient, creating a ProductOnClient is not required (see comment above)
 				self._masterBackend.productOnClient_updateObjects(updateProductOnClients)
 
-		if not product_ids_with_action:
-			raise RuntimeError("No actionRequests set")
-
 		self._cacheBackendInfo(self._masterBackend.backend_info())
 
 		filterProductIds = []
 		if config.get("cache_service", "sync_products_with_actions_only"):
 			filterProductIds = product_ids_with_action
+		# Need opsi-script PoC in cached backend for update_action_processor!
+		if "opsi-script" not in filterProductIds:
+			filterProductIds.append("opsi-script")
 		self._workBackend.backend_deleteBase()
 		self._workBackend.backend_createBase()
 		br = BackendReplicator(readBackend=self._masterBackend, writeBackend=self._workBackend)
