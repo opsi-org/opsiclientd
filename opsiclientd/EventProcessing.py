@@ -315,6 +315,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			self.setStatusMessage(_("Got config from service"))
 			logger.notice("Reconfiguring event generators")
 			reconfigureEventGenerators()
+			if config.get("config_service", "permanent_connection") and not self.opsiclientd.permanent_service_connection.running:
+				logger.info("Starting permanent service connection")
+				self.opsiclientd.permanent_service_connection.start()
+			elif self.opsiclientd.permanent_service_connection and self.opsiclientd.permanent_service_connection.running:
+				logger.info("Stopping permanent service connection")
+				self.opsiclientd.permanent_service_connection.stop()
+
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Failed to get config from service: %s", err)
 			raise
@@ -498,16 +505,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			depot_url_parsed = urlparse(depot_server_url)
 			try:
 				if isinstance(ip_address(depot_url_parsed.hostname), IPv6Address):
-					depot_server_url = depot_server_url.replace(
-						depot_url_parsed.hostname,
-						f"{depot_url_parsed.hostname.replace(':', '-')}.ipv6-literal.net",
-					).replace("[", "").replace("]", "")
+					depot_server_url = (
+						depot_server_url.replace(
+							depot_url_parsed.hostname,
+							f"{depot_url_parsed.hostname.replace(':', '-')}.ipv6-literal.net",
+						)
+						.replace("[", "")
+						.replace("]", "")
+					)
 					logger.notice("Using windows workaround to mount depot %s", depot_server_url)
 			except ValueError as error:
 				logger.info("Not an IP address '%s', using %s for depot mount: %s", depot_url_parsed.hostname, depot_server_url, error)
-		System.mount(
-			depot_server_url, config.getDepotDrive(), username=mount_username, password=mount_password, **mount_options
-		)
+		System.mount(depot_server_url, config.getDepotDrive(), username=mount_username, password=mount_password, **mount_options)
 
 		self._depotShareMounted = True
 
@@ -892,10 +901,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				self.processActionWarningTime(productIds)
 				self.runActions(productIds, additionalParams=additionalParams)
 				try:
-					if self.event.eventConfig.useCachedConfig and not self._configService.productOnClient_getIdents(  # pylint: disable=no-member
-						productType="LocalbootProduct",
-						clientId=config.get("global", "host_id"),
-						actionRequest=["setup", "uninstall", "update", "always", "once", "custom"],
+					if (
+						self.event.eventConfig.useCachedConfig
+						and not self._configService.productOnClient_getIdents(  # pylint: disable=no-member
+							productType="LocalbootProduct",
+							clientId=config.get("global", "host_id"),
+							actionRequest=["setup", "uninstall", "update", "always", "once", "custom"],
+						)
 					):
 						self.opsiclientd.getCacheService().setConfigCacheObsolete()
 					if not self._configService.productOnClient_getIdents(  # pylint: disable=no-member
@@ -1523,9 +1535,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 								)
 								if self._shutdownWarningRepetitionTime >= 0:
 									rep_at = datetime.datetime.now() + datetime.timedelta(seconds=self._shutdownWarningRepetitionTime)
-									message += (
-										f" Shutdown warning will be repeated in {self._shutdownWarningRepetitionTime:.0f} seconds at {rep_at.strftime('%H:%M:%S')}"
-									)
+									message += f" Shutdown warning will be repeated in {self._shutdownWarningRepetitionTime:.0f} seconds at {rep_at.strftime('%H:%M:%S')}"
 								logger.notice(message)
 
 								timeline.addEvent(
@@ -1543,7 +1553,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 								if not exact_time_passed:
 									# Time jump possibly caused by standby
 									# Use shutdownWarningTime, not shutdownWarningTimeAfterTimeSelect
-									logger.notice("Time jump possibly caused by standby, using shutdownWarningTime, not shutdownWarningTimeAfterTimeSelect")
+									logger.notice(
+										"Time jump possibly caused by standby, using shutdownWarningTime, not shutdownWarningTimeAfterTimeSelect"
+									)
 									self._shutdownWarningTime = self.event.eventConfig.shutdownWarningTime
 								continue
 						break
@@ -1709,7 +1721,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 							logger.notice("Event '%s' uses cached config and config caching is done", self.event.eventConfig.getId())
 							config.setTemporaryConfigServiceUrls(["https://127.0.0.1:4441/rpc"])
 						else:
-							raise RuntimeError(f"Event '{self.event.eventConfig.getId()}' uses cached config but config caching is not done")
+							raise RuntimeError(
+								f"Event '{self.event.eventConfig.getId()}' uses cached config but config caching is not done"
+							)
 
 					if self.event.eventConfig.getConfigFromService or self.event.eventConfig.processActions:
 						if not self.isConfigServiceConnected():

@@ -130,6 +130,7 @@ class PermanentServiceConnection(  # type: ignore[misc]
 		if self._initialized:
 			return
 		self._initialized = True
+		self.running = False
 
 		threading.Thread.__init__(self)
 		ServiceConnectionListener.__init__(self)
@@ -153,6 +154,7 @@ class PermanentServiceConnection(  # type: ignore[misc]
 			self.service_client.register_connection_listener(self)
 
 	def run(self):
+		self.running = True
 		with log_context({"instance": "permanent service connection"}):
 			logger.notice("Permanent service connection starting")
 			# Initial connect, reconnect will be handled by ServiceClient
@@ -173,6 +175,7 @@ class PermanentServiceConnection(  # type: ignore[misc]
 
 			while not self._should_stop:
 				time.sleep(1)
+		self.running = False
 
 	def stop(self):
 		self._should_stop = True
