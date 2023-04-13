@@ -1535,7 +1535,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 								)
 								if self._shutdownWarningRepetitionTime >= 0:
 									rep_at = datetime.datetime.now() + datetime.timedelta(seconds=self._shutdownWarningRepetitionTime)
-									message += f" Shutdown warning will be repeated in {self._shutdownWarningRepetitionTime:.0f} seconds at {rep_at.strftime('%H:%M:%S')}"
+									message += (
+										f" Shutdown warning will be repeated in {self._shutdownWarningRepetitionTime:.0f}"
+										f" seconds at {rep_at.strftime('%H:%M:%S')}"
+									)
 								logger.notice(message)
 
 								timeline.addEvent(
