@@ -667,7 +667,7 @@ reference = "uibpypi"
 
 [[package]]
 name = "packaging"
-version = "23.0"
+version = "23.1"
 description = "Core utilities for Python packages"
 category = "main"
 optional = false
@@ -1064,7 +1064,7 @@ reference = "uibpypi"
 
 [[package]]
 name = "python-opsi-common"
-version = "4.3.0.35"
+version = "4.3.0.36"
 description = "The opsi python common library"
 category = "main"
 optional = false
@@ -1168,7 +1168,7 @@ reference = "uibpypi"
 
 [[package]]
 name = "rich"
-version = "13.3.3"
+version = "13.3.4"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
 category = "main"
 optional = false
@@ -2197,8 +2197,8 @@ netifaces = [
     {file = "netifaces-0.11.0.tar.gz", hash = "sha256:043a79146eb2907edf439899f262b3dfe41717d34124298ed281139a8b93ca32"},
 ]
 packaging = [
-    {file = "packaging-23.0-py3-none-any.whl", hash = "sha256:714ac14496c3e68c99c29b00845f7a2b85f3bb6f1078fd9f72fd20f0570002b2"},
-    {file = "packaging-23.0.tar.gz", hash = "sha256:b6ad297f8907de0fa2fe1ccbd26fdaf387f5f47c7275fedf8cce89f99446cf97"},
+    {file = "packaging-23.1-py3-none-any.whl", hash = "sha256:994793af429502c4ea2ebf6bf664629d07c1a9fe974af92966e4b8d2df7edc61"},
+    {file = "packaging-23.1.tar.gz", hash = "sha256:a392980d2b6cffa644431898be54b0045151319d1e7ec34f0cfed48767dd334f"},
 ]
 pathspec = [
     {file = "pathspec-0.11.1-py3-none-any.whl", hash = "sha256:d8af70af76652554bd134c22b3e8a1cc46ed7d91edcdd721ef1a0c51a84a5293"},
@@ -2341,8 +2341,8 @@ python-opsi = [
     {file = "python_opsi-4.3.0.12.tar.gz", hash = "sha256:34e9720118f77542adc196d081d3b108bb0c8ef16f80349fcd8c74c47246538a"},
 ]
 python-opsi-common = [
-    {file = "python_opsi_common-4.3.0.35-py3-none-any.whl", hash = "sha256:860a700d53ed36c5d3c91ce1855f36d954d59f13530d55183d89fcb70f844e55"},
-    {file = "python_opsi_common-4.3.0.35.tar.gz", hash = "sha256:db7e2edf40153ace080d2f19fd54b67c8689fb3d505c3c01950227fdc2445028"},
+    {file = "python_opsi_common-4.3.0.36-py3-none-any.whl", hash = "sha256:f3db1357ef4dc2a0207b9ae447cd0e8600c6c2916467322fa8cdd9341d8dbc68"},
+    {file = "python_opsi_common-4.3.0.36.tar.gz", hash = "sha256:df4f96023613c4f6850b6557fd1ea6c00feef0e43cc22c876b39fdda40a7049c"},
 ]
 python-pam = [
     {file = "python-pam-2.0.2.tar.gz", hash = "sha256:97235235ba9b82dbae8068d1099508455949b275f77273ca22fdbd8b1fb5d950"},
@@ -2379,8 +2379,8 @@ requests = [
     {file = "requests-2.28.2.tar.gz", hash = "sha256:98b1b2782e3c6c4904938b84c0eb932721069dfdb9134313beff7c83c2df24bf"},
 ]
 rich = [
-    {file = "rich-13.3.3-py3-none-any.whl", hash = "sha256:540c7d6d26a1178e8e8b37e9ba44573a3cd1464ff6348b99ee7061b95d1c6333"},
-    {file = "rich-13.3.3.tar.gz", hash = "sha256:dc84400a9d842b3a9c5ff74addd8eb798d155f36c1c91303888e0a66850d2a15"},
+    {file = "rich-13.3.4-py3-none-any.whl", hash = "sha256:22b74cae0278fd5086ff44144d3813be1cedc9115bdfabbfefd86400cb88b20a"},
+    {file = "rich-13.3.4.tar.gz", hash = "sha256:b5d573e13605423ec80bdd0cd5f8541f7844a0e71a13f74cf454ccb2f490708b"},
 ]
 ruyaml = [
     {file = "ruyaml-0.91.0-py3-none-any.whl", hash = "sha256:50e0ee3389c77ad340e209472e0effd41ae0275246df00cdad0a067532171755"},
