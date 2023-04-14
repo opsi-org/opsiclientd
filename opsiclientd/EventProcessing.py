@@ -317,7 +317,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			reconfigureEventGenerators()
 			if config.get("config_service", "permanent_connection"):
 				self.opsiclientd.start_permanent_service_connection()
-			elif not config.get("config_service", "permanent_connection") and self.opsiclientd.permanent_service_connection.running:
+			else:
 				self.opsiclientd.stop_permanent_service_connection()
 
 		except Exception as err:  # pylint: disable=broad-except
