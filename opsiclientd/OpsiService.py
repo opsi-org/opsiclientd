@@ -122,20 +122,14 @@ def update_os_ca_store(allow_remove: bool = False):  # pylint: disable=too-many-
 
 
 class PermanentServiceConnection(  # type: ignore[misc]
-	threading.Thread, ServiceConnectionListener, MessagebusListener, metaclass=Singleton
+	threading.Thread, ServiceConnectionListener, MessagebusListener
 ):
-	_initialized = False
-
 	def __init__(self, rpc_interface) -> None:
-		if self._initialized:
-			return
-		self._initialized = True
-		self.running = False
-
 		threading.Thread.__init__(self)
 		ServiceConnectionListener.__init__(self)
 		MessagebusListener.__init__(self)
 		self.daemon = True
+		self.running = False
 		self._should_stop = False
 		self._rpc_interface = rpc_interface
 
