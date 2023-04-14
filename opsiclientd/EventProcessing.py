@@ -318,7 +318,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			if config.get("config_service", "permanent_connection") and not self.opsiclientd.permanent_service_connection.running:
 				logger.info("Starting permanent service connection")
 				self.opsiclientd.permanent_service_connection.start()
-			elif self.opsiclientd.permanent_service_connection and self.opsiclientd.permanent_service_connection.running:
+			elif not config.get("config_service", "permanent_connection") and self.opsiclientd.permanent_service_connection.running:
 				logger.info("Stopping permanent service connection")
 				self.opsiclientd.permanent_service_connection.stop()
 
