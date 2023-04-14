@@ -51,7 +51,6 @@ from opsicommon.types import (
 	forceProductId,
 	forceUnicode,
 )
-from opsicommon.utils import Singleton  # type: ignore[import]
 from opsicommon.system import lock_file
 
 from opsiclientd import __version__
