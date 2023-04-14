@@ -100,11 +100,28 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		self._cacheService = None
 		self._controlPipe = None
 		self._controlServer = None
-		self.permanent_service_connection = None
+		self._permanent_service_connection = None
 		self._selfUpdating = False
 
 		self._argv = list(sys.argv)
 		self._argv[0] = os.path.abspath(self._argv[0])
+
+	def start_permanent_service_connection(self):
+		if self._permanent_service_connection and self._permanent_service_connection.running:
+			return
+
+		logger.info("Starting permanent service connection")
+		self._permanent_service_connection = PermanentServiceConnection(
+			self._controlServer._opsiclientdRpcInterface  # pylint: disable=protected-access
+		)
+		self._permanent_service_connection.start()
+
+	def stop_permanent_service_connection(self):
+		if self._permanent_service_connection and self._permanent_service_connection.running:
+			logger.info("Stopping permanent service connection")
+			self._permanent_service_connection.stop()
+			time.sleep(1)
+			self._permanent_service_connection = None
 
 	def self_update_from_url(self, url):
 		logger.notice("Self-update from url: %s", url)
@@ -537,12 +554,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 
 			with getControlPipe():
 				with getControlServer():
-					self.permanent_service_connection = PermanentServiceConnection(
-						self._controlServer._opsiclientdRpcInterface  # pylint: disable=protected-access
-					)
 					if config.get("config_service", "permanent_connection"):
-						logger.info("Starting permanent service connection")
-						self.permanent_service_connection.start()
+						self.start_permanent_service_connection()
 
 					if opsi_script:
 						log_dir = config.get("global", "log_dir")
@@ -611,9 +624,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				logger.error(err, exc_info=True)
 			self.setBlockLogin(False)
 		finally:
-			if self.permanent_service_connection:
-				logger.info("Stopping permanent service connection")
-				self.permanent_service_connection.stop()
+			self.stop_permanent_service_connection()
 			self._running = False
 			for thread in threading.enumerate():
 				logger.info("Runnning thread on main thread exit: %s", thread)
