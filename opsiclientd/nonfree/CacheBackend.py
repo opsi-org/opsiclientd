@@ -203,8 +203,10 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 				for index, attribute in enumerate(identAttributes):
 					if index >= len(identValues):
 						raise BackendUnaccomplishableError(f"Bad ident '{identValues}' for objectClass '{modification['objectClass']}'")
-
-					objectFilter[attribute] = identValues[index]
+					val = identValues[index]
+					if val in ("", None):
+						val = ["", None]
+					objectFilter[attribute] = val
 
 				backend = self._snapshotBackend if modification["command"] == "delete" else self._workBackend
 				meth = getattr(backend, ObjectClass.backendMethodPrefix + "_getObjects")
