@@ -190,6 +190,9 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 		modifiedObjects = collections.defaultdict(list)
 		logger.notice("Updating master from work backend (%d modifications)", len(modifications))
 
+		logger.trace("workBackend: auditHardware_getObjects: %s", self._workBackend.auditHardware_getObjects())
+		logger.trace("workBackend: auditHardwareOnHost_getObjects: %s", self._workBackend.auditHardwareOnHost_getObjects())
+
 		for modification in modifications:
 			try:
 				ObjectClass = eval(modification["objectClass"])  # pylint: disable=eval-used
