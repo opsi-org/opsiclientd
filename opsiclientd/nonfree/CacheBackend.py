@@ -29,11 +29,12 @@ from opsicommon.exceptions import (  # type: ignore[import]
 	BackendMissingDataError,
 	BackendUnaccomplishableError,
 )
-from opsicommon.license import OPSI_MODULE_IDS  # type: ignore[import]
-from opsicommon.logging import logger  # type: ignore[import]
-from opsicommon.objects import *  # type: ignore[import] # required for dynamic class loading # pylint: disable=wildcard-import,unused-wildcard-import
+from opsicommon.license import OPSI_MODULE_IDS
+from opsicommon.logging import logger
+from opsicommon.logging.constants import TRACE
+from opsicommon.objects import *  # required for dynamic class loading # pylint: disable=wildcard-import,unused-wildcard-import
 from opsicommon.objects import LicenseOnClient, ProductOnClient, get_ident_attributes, objects_differ, serialize
-from opsicommon.types import forceHostId  # type: ignore[import]
+from opsicommon.types import forceHostId
 
 from opsiclientd.Config import Config
 
@@ -185,8 +186,9 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 		modifiedObjects = collections.defaultdict(list)
 		logger.notice("Updating master from work backend (%d modifications)", len(modifications))
 
-		logger.trace("workBackend: auditHardware_getObjects: %s", serialize(self._workBackend.auditHardware_getObjects()))
-		logger.trace("workBackend: auditHardwareOnHost_getObjects: %s", serialize(self._workBackend.auditHardwareOnHost_getObjects()))
+		if logger.isEnabledFor(TRACE):
+			logger.trace("workBackend: auditHardware_getObjects: %s", serialize(self._workBackend.auditHardware_getObjects()))
+			logger.trace("workBackend: auditHardwareOnHost_getObjects: %s", serialize(self._workBackend.auditHardwareOnHost_getObjects()))
 
 		for modification in modifications:
 			try:
