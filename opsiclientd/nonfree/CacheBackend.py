@@ -185,7 +185,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 				logger.error("Failed to update objects %s: %s", updateObjects, update_err)
 				raise
 
-	def _updateMasterFromWorkBackend(self, modifications=[]):  # pylint: disable=dangerous-default-value,too-many-locals,too-many-statements
+	# pylint: disable=dangerous-default-value,too-many-locals,too-many-statements,too-many-branches
+	def _updateMasterFromWorkBackend(self, modifications=[]):
 		modifiedObjects = collections.defaultdict(list)
 		logger.notice("Updating master from work backend (%d modifications)", len(modifications))
 
@@ -193,7 +194,13 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 			try:
 				ObjectClass = eval(modification["objectClass"])  # pylint: disable=eval-used
 				identValues = modification["ident"].split(ObjectClass.identSeparator)
-				identAttributes = get_ident_attributes(ObjectClass)
+				identAttributes = tuple()
+				if modification["objectClass"] == "AuditHardware":
+					identAttributes = ("hardwareClass",) + tuple(sorted(ObjectClass.hardware_attributes[identValues[0]]))
+				elif modification["objectClass"] == "AuditHardwareOnHost":
+					identAttributes = ("hostId", "hardwareClass") + tuple(sorted(ObjectClass.hardware_attributes[identValues[1]]))
+				else:
+					identAttributes = get_ident_attributes(ObjectClass)
 				objectFilter = {}
 				for index, attribute in enumerate(identAttributes):
 					if index >= len(identValues):
