@@ -19,14 +19,15 @@ import time
 from pathlib import Path
 from urllib.parse import urlparse
 
-from OPSI import System
-from OPSI.Backend.Backend import ExtendedConfigDataBackend
-from OPSI.Backend.BackendManager import BackendExtender
-from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker
-from OPSI.Object import ProductOnClient
-from OPSI.Util import randomString
-from OPSI.Util.File.Opsi import PackageContentFile
-from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, getRepository
+from OPSI import System  # type: ignore[import]
+from OPSI.Backend.Backend import ExtendedConfigDataBackend  # type: ignore[import]
+from OPSI.Backend.BackendManager import BackendExtender  # type: ignore[import]
+from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker  # type: ignore[import]
+from OPSI.Object import ProductOnClient  # type: ignore[import]
+from OPSI.Util import randomString  # type: ignore[import]
+from OPSI.Util.File.Opsi import PackageContentFile  # type: ignore[import]
+from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, getRepository  # type: ignore[import]
+
 from opsicommon.logging import log_context, logger
 from opsicommon.types import forceBool, forceInt, forceProductIdList, forceUnicode
 
@@ -923,7 +924,9 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 						elif currentBuild == "22621":
 							releasePackageName = "mshotfix-win11-22h2"
 						elif int(currentBuild) > 22621:
-							logger.warning("Unknown windows build %s. Maybe update opsi-client-agent. Using fallback mshotfix-win11-22h2", currentBuild)
+							logger.warning(
+								"Unknown windows build %s. Maybe update opsi-client-agent. Using fallback mshotfix-win11-22h2", currentBuild
+							)
 							releasePackageName = "mshotfix-win11-22h2"
 						else:  # win10
 							# Setting default to 1507-Build

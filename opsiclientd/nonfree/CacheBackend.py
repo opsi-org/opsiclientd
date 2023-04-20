@@ -36,11 +36,11 @@ from opsicommon.objects import *  # required for dynamic class loading # pylint:
 from opsicommon.objects import LicenseOnClient, ProductOnClient, get_ident_attributes, objects_differ, serialize
 from opsicommon.types import forceHostId
 
-from opsiclientd.Config import Config
+from opsiclientd.Config import Config as OCDConfig
 
 __all__ = ["ClientCacheBackend"]
 
-config = Config()
+config = OCDConfig()
 
 
 class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pylint: disable=too-many-instance-attributes
