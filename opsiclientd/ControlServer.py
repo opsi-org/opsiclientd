@@ -1738,3 +1738,13 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 	def downloadFromDepot(self, product_id: str, destination: str, sub_path: str = None):
 		return download_from_depot(product_id, Path(destination).resolve(), sub_path)
+
+	def getLogs(self, log_types: list[str] | None = None, max_age_days: int = 0) -> str:
+		file_path = self.opsiclientd.collectLogfiles(types=log_types, max_age_days=max_age_days)
+		logger.notice("Delivering file %s", file_path)
+		with open(file_path, "rb") as file_handle:
+			response = self.opsiclientd._permanent_service_connection.service_client.post(  # pylint: disable=protected-access
+				"/file-transfer", data=file_handle
+			)
+			logger.debug("Got response with status %s: %s", response.status_code, response.content.decode("utf-8"))
+			return response.content.decode("utf-8")

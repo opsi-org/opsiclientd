@@ -987,9 +987,10 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 	def popupCloseCallback(self, choiceSubject):  # pylint: disable=unused-argument
 		self.hidePopup()
 
-	def collectLogfiles(self, types: List[str] = None, max_age_days: int = None, timeline_db: bool = True) -> str:
+	def collectLogfiles(self, types: List[str] = None, max_age_days: int = None, timeline_db: bool = True) -> Path:
 		now = datetime.datetime.now().timestamp()
 		type_patterns = []
+		types = types or []
 		if not types:
 			type_patterns.append(re.compile(r".*\.log"))
 		for stem_type in types:

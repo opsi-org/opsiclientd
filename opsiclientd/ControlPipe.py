@@ -450,7 +450,8 @@ class NTControlPipe(ControlPipe):
 
 class OpsiclientdRpcPipeInterface:
 	def __init__(self, opsiclientd):
-		self.opsiclientd = opsiclientd
+		from .Opsiclientd import Opsiclientd  # pylint: disable=import-outside-toplevel
+		self.opsiclientd: Opsiclientd = opsiclientd
 
 	def getInterface(self):
 		"""
