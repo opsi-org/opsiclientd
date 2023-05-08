@@ -1747,4 +1747,4 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				"/file-transfer", data=file_handle
 			)
 			logger.debug("Got response with status %s: %s", response.status_code, response.content.decode("utf-8"))
-			return response.content.decode("utf-8")
+			return json.loads(response.content.decode("utf-8"))
