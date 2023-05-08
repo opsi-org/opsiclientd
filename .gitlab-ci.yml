@@ -9,7 +9,7 @@ stages:
 viruscheck:virustotal:
   stage: viruscheck
   tags:
-    - win10-py310
+    - win10-py310-x86
   script:
     - Invoke-WebRequest -UseBasicParsing -Uri "$OPSIDEVTOOLS_URL_WINDOWS_X86" -OutFile opsi-dev-tools.zip
     - Expand-Archive opsi-dev-tools.zip -DestinationPath opsi-dev-tools
@@ -40,7 +40,7 @@ test:pytest-darwin:
   #when: manual
   stage: test
   tags:
-    - macos_catalina
+    - catalina-py311-x64
   script:
     - poetry lock --no-update --no-cache
     - poetry install
@@ -58,7 +58,7 @@ test:pytest-windows:
   #when: manual
   stage: test
   tags:
-    - win10-py310
+    - win10-py310-x86
   script:
     - poetry lock --no-update --no-cache
     - poetry install
@@ -145,7 +145,7 @@ build:pyinstaller-linux-x64:
 build:pyinstaller-darwin-x64:
   stage: build
   tags:
-    - macos_catalina
+    - catalina-py311-x64
   script:
     #- sed -ie s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
     #- poetry update python-opsi
@@ -164,7 +164,7 @@ build:pyinstaller-darwin-x64:
 build:pyinstaller-windows-x86:
   stage: build
   tags:
-    - win10-py310
+    - win10-py310-x86
   script:
     #- $env:path
     #- where.exe poetry
