@@ -45,7 +45,7 @@ if not RUNNING_ON_WINDOWS:
 config = Config()
 
 CERT_RENEW_DAYS = 60
-
+SERVICES_PIPE_TIMEOUT_WINDOWS = 120000
 
 def get_ips():
 	ips = {"127.0.0.1", "::1"}
@@ -259,7 +259,14 @@ def install_service_windows():
 	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control")
 	if win32process.IsWow64Process():
 		winreg.DisableReflectionKey(key_handle)
-	winreg.SetValueEx(key_handle, "ServicesPipeTimeout", 0, winreg.REG_DWORD, 120000)
+	current_timeout = 0
+	try:
+		current_timeout = winreg.QueryValueEx(key_handle, "ServicesPipeTimeout", 0)[0]
+	except Exception:  # pylint: disable=broad-except
+		logger.debug("Did not get ServicesPipeTimeout from registry")
+	# Insure to have timeout of at least SERVICES_PIPE_TIMEOUT_WINDOWS
+	if current_timeout < SERVICES_PIPE_TIMEOUT_WINDOWS:
+		winreg.SetValueEx(key_handle, "ServicesPipeTimeout", 0, winreg.REG_DWORD, SERVICES_PIPE_TIMEOUT_WINDOWS)
 	winreg.CloseKey(key_handle)
 
 

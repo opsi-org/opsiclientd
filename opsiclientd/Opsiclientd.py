@@ -71,7 +71,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 
 		self._startupTime = time.time()
 		self._running = False
-		self._eventProcessingThreads = []
+		self._eventProcessingThreads: list[EventProcessingThread] = []
 		self.eventLock = threading.Lock()
 		self._eptListLock = threading.Lock()
 		self._blockLogin = True
@@ -147,7 +147,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 						file.write(response.read())
 			self.self_update_from_file(filename)
 
-	def self_update_from_file(self, filename):
+	def self_update_from_file(self, filename):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		logger.notice("Self-update from file %s", filename)
 
 		test_file = "base_library.zip"
@@ -648,32 +648,19 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			return True
 		with self._eptListLock:
 			for ept in self._eventProcessingThreads:
-				if event.eventConfig.actionType != "login" and ept.event.eventConfig.actionType != "login":
-					if not ept.is_cancelable():
-						logger.notice("Already processing a non-cancelable (and non-login) event: %s", ept.event.eventConfig.getId())
-						raise CannotCancelEventError(
-							f"Already processing a non-cancelable (and non-login) event: {ept.event.eventConfig.getId()}"
-						)
-					if not can_cancel:
-						logger.notice(
-							"Currently running event can only be canceled by manual action (ControlServer/Kiosk): %s",
-							ept.event.eventConfig.getId(),
-						)
-						raise CannotCancelEventError(
-							"Currently running event can only be canceled by manual action (ControlServer/Kiosk): "
-							f"{ept.event.eventConfig.getId()}"
-						)
-				if event.eventConfig.actionType == "login" and ept.event.eventConfig.actionType == "login":
-					eventProcessingThread = EventProcessingThread(self, event)
-					if ept.getSessionId() == eventProcessingThread.getSessionId():
-						logger.notice(
-							"Already processing login event '%s' in session %s",
-							ept.event.eventConfig.getName(),
-							eventProcessingThread.getSessionId(),
-						)
-					raise ValueError(
-						f"Already processing login event '{ept.event.eventConfig.getName()}' "
-						f"in session {eventProcessingThread.getSessionId()}"
+				if not ept.is_cancelable():
+					logger.notice("Already processing a non-cancelable event: %s", ept.event.eventConfig.getId())
+					raise CannotCancelEventError(
+						f"Already processing a non-cancelable event: {ept.event.eventConfig.getId()}"
+					)
+				if not can_cancel:
+					logger.notice(
+						"Currently running event can only be canceled by manual action (ControlServer/Kiosk): %s",
+						ept.event.eventConfig.getId(),
+					)
+					raise CannotCancelEventError(
+						"Currently running event can only be canceled by manual action (ControlServer/Kiosk): "
+						f"{ept.event.eventConfig.getId()}"
 					)
 		return True
 
