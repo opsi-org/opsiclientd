@@ -806,7 +806,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				)
 				userLoginScripts.append(os.path.join(productDir, product.userLoginScript))
 				productIds.append(product.id)
-				versions.append(f"{product.productVersion}-{product.packageVersion}")
+				versions.append(f"{productOnDepot['productVersion']}-{productOnDepot['packageVersion']}")
 
 			if not userLoginScripts:
 				logger.notice("No user login script found, nothing to do")
