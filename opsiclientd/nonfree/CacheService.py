@@ -1107,6 +1107,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 		eventId = None
 		repository = None
 		exception = None
+		version = None
 		try:
 			repository = self._getRepository(productId)
 			masterDepotId = config.get("depot_server", "master_depot_id")
@@ -1119,6 +1120,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			if not productOnDepots:
 				raise RuntimeError(f"Product '{productId}' not found on depot '{masterDepotId}'")
 
+			version = f"{productOnDepots[0].productVersion}.{productOnDepots[0].packageVersion}"
 			self._setProductCacheState(productId, "productVersion", productOnDepots[0].productVersion, updateProductOnClient=False)
 			self._setProductCacheState(productId, "packageVersion", productOnDepots[0].packageVersion, updateProductOnClient=False)
 
@@ -1167,9 +1169,9 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 				)
 
 			eventId = timeline.addEvent(
-				title=f"Cache product {productId}",
+				title=f"Cache product {productId} {version}",
 				description=(
-					f"Caching product '{productId}' of size {(float(productSize) / (1000 * 1000)):0.2f} MB\n"
+					f"Caching product '{productId}' ({version}) of size {(float(productSize) / (1000 * 1000)):0.2f} MB\n"
 					f"max bandwidth: {self._maxBandwidth}, dynamic bandwidth: {self._dynamicBandwidth}"
 				),
 				category="product_caching",
@@ -1186,7 +1188,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			productSynchronizer.synchronize(
 				productProgressObserver=self._productProgressObserver, overallProgressObserver=self._overallProgressObserver
 			)
-			logger.notice("Product '%s' cached", productId)
+			logger.notice("Product '%s' (%s) cached", productId, version)
 			self._setProductCacheState(productId, "completed", time.time())
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Failed to cache product %s: %s", productId, err, exc_info=True)
