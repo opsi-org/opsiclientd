@@ -861,6 +861,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					if productOnClient.productId not in productIds:
 						productIds.append(productOnClient.productId)
 						versions.append(f"{productOnClient.productVersion}-{productOnClient.packageVersion}")
+						logger.devel("Adding %s %s-%s", productOnClient.productId, productOnClient.productVersion, productOnClient.packageVersion)  # TODO: remove
 						logger.notice(
 							"   [%2s] product %-20s %s", len(productIds), productOnClient.productId + ":", productOnClient.actionRequest
 						)
@@ -940,6 +941,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		description = f"Running actions {', '.join(productIds)}"
 		if versions and len(versions) == len(productIds):
 			description = f"Running actions {', '.join(f'{p_id} {p_version}' for p_id, p_version in zip(productIds, versions))}"
+		logger.devel("Running actions: %s", description)  # TODO: remove
 		runActionsEventId = timeline.addEvent(
 			title="Running actions", description=description, category="run_actions", durationEvent=True
 		)
