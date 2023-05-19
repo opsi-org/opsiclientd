@@ -861,7 +861,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					if productOnClient.productId not in productIds:
 						productIds.append(productOnClient.productId)
 						versions.append(f"{productOnClient.productVersion}-{productOnClient.packageVersion}")
-						logger.devel("Adding %s %s-%s", productOnClient.productId, productOnClient.productVersion, productOnClient.packageVersion)  # TODO: remove
+						logger.devel(
+							"Adding %s %s-%s",
+							productOnClient.productId,
+							productOnClient.productVersion,
+							productOnClient.packageVersion
+						)  # TODO: remove
 						logger.notice(
 							"   [%2s] product %-20s %s", len(productIds), productOnClient.productId + ":", productOnClient.actionRequest
 						)
