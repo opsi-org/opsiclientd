@@ -786,6 +786,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 
 			userLoginScripts = []
 			productIds = []
+			versions = []
 			for productOnDepot in self._configService.productOnDepot_getIdents(  # pylint: disable=no-member
 				productType="LocalbootProduct", depotId=depotId, returnType="dict"
 			):
@@ -805,6 +806,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				)
 				userLoginScripts.append(os.path.join(productDir, product.userLoginScript))
 				productIds.append(product.id)
+				versions.append(f"{productOnDepot['productVersion']}-{productOnDepot['packageVersion']}")
 
 			if not userLoginScripts:
 				logger.notice("No user login script found, nothing to do")
@@ -812,7 +814,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 
 			logger.notice("User login scripts found, executing")
 			additionalParams = f"/usercontext {self.event.eventInfo.get('User')}"
-			self.runActions(productIds, additionalParams)
+			self.runActions(productIds, additionalParams, versions)
 
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Failed to process login actions: %s", err, exc_info=True)
@@ -834,6 +836,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				raise RuntimeError("Not connected to config service")
 
 			productIds = []
+			versions = []
 			includeProductIds = []
 			excludeProductIds = []
 			if self.event.eventConfig.actionProcessorProductIds:
@@ -850,13 +853,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						productType="LocalbootProduct",
 						clientId=config.get("global", "host_id"),
 						actionRequest=["setup", "uninstall", "update", "always", "once", "custom"],
-						attributes=["actionRequest"],
+						attributes=["actionRequest", "productVersion", "packageVersion"],
 						productId=includeProductIds,
 					)
 					if poc.productId not in excludeProductIds
 				]:
 					if productOnClient.productId not in productIds:
 						productIds.append(productOnClient.productId)
+						versions.append(f"{productOnClient.productVersion}-{productOnClient.packageVersion}")
 						logger.notice(
 							"   [%2s] product %-20s %s", len(productIds), productOnClient.productId + ":", productOnClient.actionRequest
 						)
@@ -897,7 +901,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					else:
 						logger.error("Unknown operating system - skipping processproducts parameter for action processor call.")
 				self.processActionWarningTime(productIds)
-				self.runActions(productIds, additionalParams=additionalParams)
+				self.runActions(productIds, additionalParams=additionalParams, versions=versions)
 				try:
 					if (
 						self.event.eventConfig.useCachedConfig
@@ -931,10 +935,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		time.sleep(3)
 
 	def runActions(
-		self, productIds, additionalParams=""
+		self, productIds, additionalParams="", versions=None
 	):  # pylint: disable=too-many-nested-blocks,too-many-locals,too-many-branches,too-many-statements
+		description = f"Running actions {', '.join(productIds)}"
+		if versions and len(versions) == len(productIds):
+			description = f"Running actions {', '.join(f'{p_id} {p_version}' for p_id, p_version in zip(productIds, versions))}"
 		runActionsEventId = timeline.addEvent(
-			title="Running actions", description=f"Running actions {', '.join(productIds)}", category="run_actions", durationEvent=True
+			title="Running actions", description=description, category="run_actions", durationEvent=True
 		)
 
 		try:
