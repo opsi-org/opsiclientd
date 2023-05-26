@@ -915,8 +915,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						products = cache_service.getProductCacheState().get("products", [])
 					except RuntimeError:
 						logger.info("Could not get cache service")
-					logger.debug("Pending action requests: %s")
-					logger.debug("Cached products: %s", products)
+					logger.debug("Pending action requests: %s", pocs)
+					logger.debug("Cached products: %s", list(products.keys()))
 					if not pocs or (cache_service and any(
 						(f"{product};LocalbootProduct;{config.get('global', 'host_id')}" not in pocs for product in products)
 					)):
@@ -932,7 +932,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 							cache_service.setConfigCacheFaulty()
 						except RuntimeError as err:
 							logger.info("Could not mark config service cache dirty: %s", err, exc_info=True)
-					if not pocs:
 						# Nothing to do
 						logger.notice("Setting installation pending to false")
 						state.set("installation_pending", "false")
