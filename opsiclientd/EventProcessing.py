@@ -903,20 +903,35 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				self.processActionWarningTime(productIds)
 				self.runActions(productIds, additionalParams=additionalParams, versions=versions)
 				try:
-					if (
-						self.event.eventConfig.useCachedConfig
-						and not self._configService.productOnClient_getIdents(  # pylint: disable=no-member
-							productType="LocalbootProduct",
-							clientId=config.get("global", "host_id"),
-							actionRequest=["setup", "uninstall", "update", "always", "once", "custom"],
-						)
-					):
-						self.opsiclientd.getCacheService().setConfigCacheObsolete()
-					if not self._configService.productOnClient_getIdents(  # pylint: disable=no-member
+					pocs = self._configService.productOnClient_getIdents(  # pylint: disable=no-member
 						productType="LocalbootProduct",
 						clientId=config.get("global", "host_id"),
 						actionRequest=["setup", "uninstall", "update", "once", "custom"],
-					):
+					)
+					cache_service = None
+					products = []
+					try:
+						cache_service = self.opsiclientd.getCacheService()
+						products = cache_service.getProductCacheState().get("products", [])
+					except RuntimeError:
+						logger.info("Could not get cache service")
+					logger.debug("Pending action requests: %s", pocs)
+					logger.debug("Cached products: %s", list(products.keys()))
+					if not pocs or (cache_service and any(
+						(f"{product};LocalbootProduct;{config.get('global', 'host_id')}" not in pocs for product in products)
+					)):
+						# If there are no pending action requests (except "always"), mark cache as faulty to force resync.
+						# If pending action request uses product that is not cached, mark cache as faulty to force resync.
+						# (If current event is not using cached config, there might be an action request in cache
+						# which should be reevaluated after the event.)
+						try:
+							logger.info("Marking config cache dirty")
+							# Setting ignore_cache_result prevents that a running config sync from server sets config_cached to True
+							cache_service.setIgnoreCacheResult()
+							# stopping cache_service would disable caching until opsiclientd restart - marking it faulty forces resync at next event
+							cache_service.setConfigCacheFaulty()
+						except RuntimeError as err:
+							logger.info("Could not mark config service cache dirty: %s", err, exc_info=True)
 						# Nothing to do
 						logger.notice("Setting installation pending to false")
 						state.set("installation_pending", "false")
@@ -1139,15 +1154,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		finally:
 			timeline.setEventEnd(eventId=runActionsEventId)
 			self.umountDepotShare()
-			try:
-				cache_service = self.opsiclientd.getCacheService()
-				logger.info("Marking config cache dirty")
-				# Setting ignore_cache_result prevents that a running config sync from server sets config_cached to True
-				cache_service.setIgnoreCacheResult()
-				# stopping cache_service would disable caching until opsiclientd restart - marking it faulty forces resync at next event
-				cache_service.setConfigCacheFaulty()
-			except RuntimeError as err:
-				logger.info("Could not mark config service cache dirty: %s", err, exc_info=True)
 
 	def setEnvironment(self):
 		try:
