@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "opsiclientd"
-version = "4.2.0.146"
+version = "4.2.0.147"
 description = "opsi client daemon. The service running on opsi clients."
 maintainers = ["uib GmbH <info@uib.de>"]
 authors = ["uib GmbH <info@uib.de>"]
@@ -25,7 +25,7 @@ macholib = "^1.14"
 msgpack = "^1.0"
 netifaces = "^0.11"
 pyelftools = "^0.29"
-python-opsi = "^4.3.0"
+python-opsi = "^4.3.0.13"
 python-opsi-common = "^4.3.0"
 #python-opsi-common = {path = "python-opsi-common", develop = true}
 websocket-client = "^1.5"
@@ -42,7 +42,7 @@ isort = "^5.10.1"
 macholib = {version = "^1.14", platform = "darwin"}
 mock = "^5.0"
 mypy = "^0.991"
-pefile = {version = "^2022.5", platform = "win32"}
+pefile = {version = "^2023.2", platform = "win32"}
 pylint = "^2.5"
 pytest = "^7.1"
 pytest-cov = "^4.0"

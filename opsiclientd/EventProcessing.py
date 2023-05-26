@@ -903,15 +903,23 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				self.processActionWarningTime(productIds)
 				self.runActions(productIds, additionalParams=additionalParams, versions=versions)
 				try:
-					if not self._configService.productOnClient_getIdents(  # pylint: disable=no-member
+					pocs = self._configService.productOnClient_getIdents(  # pylint: disable=no-member
 						productType="LocalbootProduct",
 						clientId=config.get("global", "host_id"),
 						actionRequest=["setup", "uninstall", "update", "once", "custom"],
-					):
+					)
+					cache_service = None
+					try:
+						cache_service = self.opsiclientd.getCacheService()
+						products = cache_service.getProductCacheState().get("products", {})
+					except RuntimeError:
+						logger.info("Could not get cache service")
+					if not pocs or (cache_service and any((poc not in products for poc in pocs))):
 						# If there are no pending action requests (except "always"), mark cache as faulty to force resync.
-						# If current event is not using cached config, there might be an action request in cache which should be reevaluated after the event.
+						# If pending action request uses product that is not cached, mark cache as faulty to force resync.
+						# (If current event is not using cached config, there might be an action request in cache
+						# which should be reevaluated after the event.)
 						try:
-							cache_service = self.opsiclientd.getCacheService()
 							logger.info("Marking config cache dirty")
 							# Setting ignore_cache_result prevents that a running config sync from server sets config_cached to True
 							cache_service.setIgnoreCacheResult()
@@ -919,7 +927,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 							cache_service.setConfigCacheFaulty()
 						except RuntimeError as err:
 							logger.info("Could not mark config service cache dirty: %s", err, exc_info=True)
-
+					if not pocs:
 						# Nothing to do
 						logger.notice("Setting installation pending to false")
 						state.set("installation_pending", "false")
