@@ -909,12 +909,17 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						actionRequest=["setup", "uninstall", "update", "once", "custom"],
 					)
 					cache_service = None
+					products = []
 					try:
 						cache_service = self.opsiclientd.getCacheService()
-						products = cache_service.getProductCacheState().get("products", {})
+						products = cache_service.getProductCacheState().get("products", [])
 					except RuntimeError:
 						logger.info("Could not get cache service")
-					if not pocs or (cache_service and any((poc not in products for poc in pocs))):
+					logger.debug("Pending action requests: %s")
+					logger.debug("Cached products: %s", products)
+					if not pocs or (cache_service and any(
+						(f"{product};LocalbootProduct;{config.get('global', 'host_id')}" not in pocs for product in products)
+					)):
 						# If there are no pending action requests (except "always"), mark cache as faulty to force resync.
 						# If pending action request uses product that is not cached, mark cache as faulty to force resync.
 						# (If current event is not using cached config, there might be an action request in cache
