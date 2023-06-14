@@ -916,7 +916,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					except RuntimeError:
 						logger.info("Could not get cache service")
 					logger.debug("Pending action requests: %s", pocs)
-					logger.debug("Cached products: %s", list(products.keys()))
+					logger.debug("Cached products: %s", products)
 					if not pocs or (cache_service and any(
 						(f"{product};LocalbootProduct;{config.get('global', 'host_id')}" not in pocs for product in products)
 					)):
