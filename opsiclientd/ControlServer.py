@@ -90,6 +90,30 @@ from opsiclientd.Timeline import Timeline
 config = Config()
 state = State()
 
+INDEX_PAGE = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/xhtml; charset=utf-8" />
+	<title>opsi client daemon</title>
+	<link rel="stylesheet" type="text/css" href="/opsiclientd.css" />
+</head>
+<body>
+	<p id="title">opsiclientd on host %(hostname)s</p>
+	<div class="mainpage-link-box">
+		<ul>
+			<li><a target="_blank" href="info.html">opsiclientd info page</a></li>
+			<li><a target="_blank" href="log_viewer.html">opsiclientd log viewer</a></li>
+			<li><a target="_blank" href="interface">opsiclientd control interface</a></li>
+		</ul>
+	</div>
+
+</body>
+</html>
+"""
+
 INFO_PAGE = """<!DOCTYPE html>
 <html>
 <head>
@@ -601,6 +625,14 @@ class ResourceRoot(Resource):
 		return b"<html><head><title>opsiclientd</title></head><body></body></html>"
 
 
+class ResourceOpsiclientdIndex(Resource):
+	def __init__(self, service):  # pylint: disable=unused-argument
+		super().__init__()
+
+	def render(self, request):
+		return (INDEX_PAGE % {"hostname": config.get("global", "host_id")}).encode("utf-8")
+
+
 class ResourceOpsiclientd(ResourceOpsi):
 	WorkerClass = WorkerOpsiclientd
 
@@ -722,10 +754,9 @@ class ControlServer(OpsiService, threading.Thread):  # pylint: disable=too-many-
 
 	def createRoot(self):
 		if self._staticDir:
-			if os.path.isdir(self._staticDir):
-				self._root = File(self._staticDir.encode())
-			else:
-				logger.error("Cannot add static content '/': directory '%s' does not exist.", self._staticDir)
+			self._root = File(self._staticDir.encode())
+		else:
+			logger.error("Cannot add static content '/': directory '%s' does not exist.", self._staticDir)
 
 		if not self._root:
 			self._root = ResourceRoot()
@@ -739,6 +770,8 @@ class ControlServer(OpsiService, threading.Thread):  # pylint: disable=too-many-
 		self._root.putChild(b"terminal.html", ResourceOpsiclientdTerminal(self))
 		self._root.putChild(b"upload", ResourceOpsiclientdUpload(self))
 		self._root.putChild(b"files", ResourceOpsiclientdFiles(self))
+		self._root.putChild(b"index.html", ResourceOpsiclientdIndex(self))
+		self._root.putChild(b"", ResourceOpsiclientdIndex(self))
 		if config.get("control_server", "kiosk_api_active"):
 			self._root.putChild(b"kiosk", ResourceKioskJsonRpc(self))
 
