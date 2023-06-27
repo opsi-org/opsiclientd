@@ -1120,7 +1120,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			if not productOnDepots:
 				raise RuntimeError(f"Product '{productId}' not found on depot '{masterDepotId}'")
 
-			version = f"{productOnDepots[0].productVersion}.{productOnDepots[0].packageVersion}"
+			version = f"{productOnDepots[0].productVersion}-{productOnDepots[0].packageVersion}"
 			self._setProductCacheState(productId, "productVersion", productOnDepots[0].productVersion, updateProductOnClient=False)
 			self._setProductCacheState(productId, "packageVersion", productOnDepots[0].packageVersion, updateProductOnClient=False)
 
