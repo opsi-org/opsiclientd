@@ -18,9 +18,10 @@ import tempfile
 from logging.handlers import RotatingFileHandler
 from typing import Union
 
+import shutil
 import psutil
 from OPSI import __version__ as python_opsi_version
-from OPSI.System import execute
+from OPSI.System import execute, which
 from opsicommon.logging import (
 	LOG_DEBUG,
 	LOG_NONE,
@@ -201,3 +202,14 @@ def check_signature(bin_dir):
 		if "True" not in result:
 			raise ValueError(f"Invalid Signature of file {binary}")
 	logger.notice("Successfully verified %s", binary_list)
+
+
+def notify_posix_terminals(message: str) -> None:
+	if not RUNNING_ON_WINDOWS and which("wall"):
+		# On non-Windows systems, use 'wall' to display a message before reboot/shutdown
+		command = [which("wall"), "-n", message]
+		logger.debug("Executing %s", command)
+		try:
+			execute(command, shell=False)
+		except Exception as err:  # pylint: disable=broad-except
+			logger.warning("Failed to notify users via 'wall': %s", err)
