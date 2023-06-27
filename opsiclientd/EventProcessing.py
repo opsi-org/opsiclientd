@@ -903,23 +903,23 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				self.processActionWarningTime(productIds)
 				self.runActions(productIds, additionalParams=additionalParams, versions=versions)
 				try:
-					pocs = self._configService.productOnClient_getIdents(  # pylint: disable=no-member
+					pending_actions = self._configService.productOnClient_getIdents(  # pylint: disable=no-member
 						productType="LocalbootProduct",
 						clientId=config.get("global", "host_id"),
 						actionRequest=["setup", "uninstall", "update", "once", "custom"],
 					)
 					cache_service = None
-					products = []
+					cached_products = []
 					try:
 						cache_service = self.opsiclientd.getCacheService()
-						products = cache_service.getProductCacheState().get("products", [])
+						cached_products = cache_service.getProductCacheState().get("products", [])
 					except RuntimeError:
 						logger.info("Could not get cache service")
-					logger.debug("Pending action requests: %s", pocs)
-					logger.debug("Cached products: %s", products)
-					if not pocs or (cache_service and any(
-						(f"{product};LocalbootProduct;{config.get('global', 'host_id')}" not in pocs for product in products)
-					)):
+					logger.debug("Pending action requests: %s", pending_actions)
+					logger.debug("Cached products: %s", cached_products)
+					if not pending_actions or (
+						cache_service and any((pending_action.split(";")[0] not in cached_products for pending_action in pending_actions))
+					):
 						# If there are no pending action requests (except "always"), mark cache as faulty to force resync.
 						# If pending action request uses product that is not cached, mark cache as faulty to force resync.
 						# (If current event is not using cached config, there might be an action request in cache
@@ -928,7 +928,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 							logger.info("Marking config cache dirty")
 							# Setting ignore_cache_result prevents that a running config sync from server sets config_cached to True
 							cache_service.setIgnoreCacheResult()
-							# stopping cache_service would disable caching until opsiclientd restart - marking it faulty forces resync at next event
+							# stopping cache_service would disable caching until opsiclientd restart
+							# marking it faulty forces resync at next event
 							cache_service.setConfigCacheFaulty()
 						except RuntimeError as err:
 							logger.info("Could not mark config service cache dirty: %s", err, exc_info=True)
