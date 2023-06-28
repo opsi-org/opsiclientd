@@ -23,7 +23,6 @@ import time
 import urllib.request
 from contextlib import contextmanager
 from pathlib import Path
-from typing import List
 
 import psutil
 from OPSI import System
@@ -34,7 +33,7 @@ from opsicommon.logging import log_context, logger, secret_filter
 from opsicommon.system import ensure_not_already_running
 from opsicommon.types import forceBool, forceInt, forceUnicode
 
-from opsiclientd import __version__, check_signature, config
+from opsiclientd import __version__, check_signature, config, notify_posix_terminals
 from opsiclientd.ControlPipe import ControlPipeFactory
 from opsiclientd.ControlServer import ControlServer
 from opsiclientd.EventProcessing import EventProcessingThread
@@ -234,7 +233,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		finally:
 			self._selfUpdating = False
 
-	def restart(self, waitSeconds: int = 0, disabled_event_types: list[str] | None = None):
+	def restart(self, waitSeconds: int = 0, disabled_event_types: list[str] | None = None) -> None:
 		if disabled_event_types is None:
 			disabled_event_types = ["gui startup", "daemon startup"]
 
@@ -828,6 +827,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			except Exception as err:  # pylint: disable=broad-except
 				logger.debug(err)
 		self.clearRebootRequest()
+		notify_posix_terminals(f"Rebooting in {waitSeconds} seconds")
 		System.reboot(wait=waitSeconds)
 
 	def shutdownMachine(self, waitSeconds=3):
@@ -838,6 +838,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			except Exception as err:  # pylint: disable=broad-except
 				logger.debug(err)
 		self.clearShutdownRequest()
+		notify_posix_terminals(f"Shutdown in {waitSeconds} seconds")
 		System.shutdown(wait=waitSeconds)
 
 	def isRebootTriggered(self):
@@ -974,7 +975,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 	def popupCloseCallback(self, choiceSubject):  # pylint: disable=unused-argument
 		self.hidePopup()
 
-	def collectLogfiles(self, types: List[str] = None, max_age_days: int = None, timeline_db: bool = True) -> Path:
+	def collectLogfiles(self, types: list[str] = None, max_age_days: int = None, timeline_db: bool = True) -> Path:
 		now = datetime.datetime.now().timestamp()
 		type_patterns = []
 		types = types or []
@@ -983,7 +984,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		for stem_type in types:
 			type_patterns.append(re.compile(rf"{stem_type}[_0-9]*\.log"))
 
-		def collect_matching_files(path: Path, result_path: Path, patterns: List[re.Pattern], max_age_days: int) -> None:
+		def collect_matching_files(path: Path, result_path: Path, patterns: list[re.Pattern], max_age_days: int) -> None:
 			for content in path.iterdir():
 				if content.is_file() and any((re.match(pattern, content.name) for pattern in patterns)):
 					if not max_age_days or now - content.lstat().st_mtime < int(max_age_days) * 3600 * 24:
