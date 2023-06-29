@@ -1,4 +1,4 @@
-image: docker.uib.gmbh/opsi/dev/pybuilder:uib-python-3.10
+image: docker.uib.gmbh/opsi/dev/pybuilder-ssl3:uib-python-3.11
 
 stages:
   - test
@@ -9,7 +9,7 @@ stages:
 viruscheck:virustotal:
   stage: viruscheck
   tags:
-    - win10-py310-x86
+    - win10-py311-x86
   script:
     - Invoke-WebRequest -UseBasicParsing -Uri "$OPSIDEVTOOLS_URL_WINDOWS_X86" -OutFile opsi-dev-tools.zip
     - Expand-Archive opsi-dev-tools.zip -DestinationPath opsi-dev-tools
@@ -58,7 +58,7 @@ test:pytest-windows:
   #when: manual
   stage: test
   tags:
-    - win10-py310-x86
+    - win10-py311-x86
   script:
     - poetry lock --no-update --no-cache
     - poetry install
@@ -164,7 +164,7 @@ build:pyinstaller-darwin-x64:
 build:pyinstaller-windows-x86:
   stage: build
   tags:
-    - win10-py310-x86
+    - win10-py311-x86
   script:
     #- $env:path
     #- where.exe poetry
