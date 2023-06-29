@@ -16,7 +16,7 @@ name = "uibpypi"
 url = "https://pypi.uib.gmbh/simple"
 
 [tool.poetry.dependencies]
-python = "^3.10,<3.11"
+python = "^3.11,<3.12"
 autobahn = "^22.4"
 # cryptography pinned (AttributeError: module 'lib' has no attribute 'OpenSSL_add_all_algorithms')
 cryptography = "38.0.4"
@@ -41,7 +41,7 @@ flake8 = "^6.0"
 isort = "^5.10.1"
 macholib = {version = "^1.14", platform = "darwin"}
 mock = "^5.0"
-mypy = "^0.991"
+mypy = "^1.4"
 pefile = {version = "^2023.2", platform = "win32"}
 pylint = "^2.5"
 pytest = "^7.1"
@@ -58,7 +58,7 @@ action_processor_starter = "opsiclientd.__main__:action_processor_starter"
 
 [tool.black]
 line-length = 140
-target-version = ['py310']
+target-version = ['py311']
 use-tabs = true
 
 [tool.isort]
