@@ -31,7 +31,9 @@ try:
 	path = Path(__file__).parent.resolve()
 	if (path / "site-packages").exists():
 		path = path / "site-packages"
-	path = path / "opsiclientd_data" / "locale"
+	if (path / "opsiclientd_data").exists():  # only windows
+		path = path / "opsiclientd_data"
+	path = path / "locale"
 	translation = gettext.translation('opsiclientd', path, [language])
 	_ = translation.gettext
 except Exception as err:  # pylint: disable=broad-except
