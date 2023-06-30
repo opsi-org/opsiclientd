@@ -8,9 +8,9 @@
 Localisation ofopsiclientd.
 """
 
-import os
 import gettext
 import locale
+from pathlib import Path
 
 from opsicommon.logging import logger
 
@@ -25,22 +25,22 @@ except Exception as err:  # pylint: disable=broad-except
 	logger.debug("Failed to find default language: %s", err)
 	language = "en"  # pylint: disable=invalid-name
 
-sp = None  # pylint: disable=invalid-name
+path: Path | None = None  # pylint: disable=invalid-name
 try:
 	logger.debug("Loading translation for language '%s'", language)
-	sp = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-	if os.path.exists(os.path.join(sp, "site-packages")):
-		sp = os.path.join(sp, "site-packages")
-	sp = os.path.join(sp, 'opsiclientd_data', 'locale')
-	translation = gettext.translation('opsiclientd', sp, [language])
+	path = Path(__file__).parent.resolve()
+	if (path / "site-packages").exists():
+		path = path / "site-packages"
+	path = path / "opsiclientd_data" / "locale"
+	translation = gettext.translation('opsiclientd', path, [language])
 	_ = translation.gettext
 except Exception as err:  # pylint: disable=broad-except
-	logger.debug("Failed to load locale for %s from %s: %s", language, sp, err)
+	logger.debug("Failed to load locale for %s from %s: %s", language, path, err)
 
 	def _(string):
 		""" Fallback function """
 		return string
 
 
-def getLanguage():
+def getLanguage() -> str:
 	return language
