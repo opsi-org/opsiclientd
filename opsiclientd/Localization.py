@@ -15,12 +15,7 @@ from pathlib import Path
 from opsicommon.logging import logger
 
 try:
-	language = (
-		locale.getlocale("LC_ALL")[0]
-		or locale.getlocale("LC_CTYPE")[0]
-		or locale.getlocale("LANG")[0]
-		or locale.getlocale("LANGUAGE")[0]
-	).split("_")[0]
+	language = locale.getlocale()[0].split("_")[0]
 except Exception as err:  # pylint: disable=broad-except
 	logger.debug("Failed to find default language: %s", err)
 	language = "en"  # pylint: disable=invalid-name

@@ -825,6 +825,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		from .Localization import getLanguage  # pylint: disable=import-outside-toplevel
 		logger.devel("getting language")  # TODO: remove
 		getLanguage()
+		logger.devel(os.environ)
 
 		try:
 			bootmode = None

@@ -111,12 +111,7 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 
 		language = "en"
 		try:
-			language = (
-				locale.getlocale("LC_ALL")[0]
-				or locale.getlocale("LC_CTYPE")[0]
-				or locale.getlocale("LANG")[0]
-				or locale.getlocale("LANGUAGE")[0]
-			).split("_")[0]
+			language = locale.getlocale()[0].split("_")[0]
 		except Exception as err:  # pylint: disable=broad-except
 			logger.debug("Failed to find default language: %s", err)
 
