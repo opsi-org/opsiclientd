@@ -23,7 +23,7 @@ except Exception as err:  # pylint: disable=broad-except
 path: Path | None = None  # pylint: disable=invalid-name
 try:
 	logger.debug("Loading translation for language '%s'", language)
-	path = Path(__file__).parent.resolve()
+	path = Path(__file__).parent.parent.resolve()
 	if (path / "site-packages").exists():
 		path = path / "site-packages"
 	if (path / "opsiclientd_data").exists():  # only windows
