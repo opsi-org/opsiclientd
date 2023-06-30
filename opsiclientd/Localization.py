@@ -45,4 +45,5 @@ except Exception as err:  # pylint: disable=broad-except
 
 
 def getLanguage() -> str:
+	logger.debug("Using translation %s with files located at %s", language, path)
 	return language

@@ -822,6 +822,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 
 	def processProductActionRequests(self):  # pylint: disable=too-many-branches,too-many-statements
 		self.setStatusMessage(_("Getting action requests from config service"))
+		from .Localization import getLanguage  # pylint: disable=import-outside-toplevel
+		logger.devel("getting language")  # TODO: remove
+		getLanguage()
 
 		try:
 			bootmode = None
