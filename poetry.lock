@@ -2247,23 +2247,22 @@ reference = "uibpypi"
 [[package]]
 name = "websocket-client"
 version = "1.6.1"
-description = "WebSocket client for Python with low level API options"
+description = ""
 optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "websocket-client-1.6.1.tar.gz", hash = "sha256:c951af98631d24f8df89ab1019fc365f2227c0892f12fd150e935607c79dd0dd"},
-    {file = "websocket_client-1.6.1-py3-none-any.whl", hash = "sha256:f1f9f2ad5291f0225a49efad77abf9e700b6fef553900623060dad6e26503b9d"},
-]
+python-versions = ">=3.8"
+files = []
+develop = false
 
 [package.extras]
-docs = ["Sphinx (>=3.4)", "sphinx-rtd-theme (>=0.5)"]
+docs = ["Sphinx (>=3.4)", "sphinx_rtd_theme (>=0.5)"]
 optional = ["python-socks", "wsaccel"]
 test = ["websockets"]
 
 [package.source]
-type = "legacy"
-url = "https://pypi.uib.gmbh/simple"
-reference = "uibpypi"
+type = "git"
+url = "https://github.com/j-a-n/websocket-client.git"
+reference = "fix-get_proxy_info-for-https"
+resolved_reference = "7022449697ac165a36269754930882188cb3ba93"
 
 [[package]]
 name = "wmi"
@@ -2564,4 +2563,4 @@ reference = "uibpypi"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11,<3.12"
-content-hash = "c362892f6e9c7cca16eda1d0ca399d38543bd228147e598d3edc2435140748e2"
+content-hash = "afccf3404cadfd879025f6205d445497ff1fdbc2bd5096aa7de72279a59d3850"

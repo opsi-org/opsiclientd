@@ -28,7 +28,8 @@ pyelftools = "^0.29"
 python-opsi = "^4.3.0.13"
 python-opsi-common = "^4.3.0"
 #python-opsi-common = {path = "python-opsi-common", develop = true}
-websocket-client = "^1.5"
+#websocket-client = "^1.5"
+websocket-client = { git = "https://github.com/j-a-n/websocket-client.git", branch = "fix-get_proxy_info-for-https" }
 # Pin pywin32 to 303. 304 and 305 will result in the following error on startup:
 # ImportError: DLL load failed while importing pythoncom
 pywin32 = {platform = "win32", version = ">=303,<304"}
