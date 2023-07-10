@@ -149,6 +149,8 @@ build:pyinstaller-darwin-x64:
   script:
     #- sed -ie s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
     #- poetry update python-opsi
+    - env
+    - poetry --version
     - curl -o opsi-dev-tools.tar.gz "$OPSIDEVTOOLS_URL_DARWIN_X64"
     - tar -xvf opsi-dev-tools.tar.gz
     - poetry lock --no-update --no-cache
