@@ -42,7 +42,6 @@ test:pytest-darwin:
   tags:
     - catalina-py311-x64
   script:
-    - env
     - poetry --version
     - poetry lock --no-update --no-cache
     - poetry install
