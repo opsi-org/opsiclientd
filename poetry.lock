@@ -1721,13 +1721,13 @@ reference = "uibpypi"
 
 [[package]]
 name = "python-opsi-common"
-version = "4.3.0.57"
+version = "4.3.0.58"
 description = "The opsi python common library"
 optional = false
 python-versions = ">=3.11,<3.12"
 files = [
-    {file = "python_opsi_common-4.3.0.57-py3-none-any.whl", hash = "sha256:0d69c864826cf3564585475c9c0aa7b2db35266aa658d00accc9ea89d730605c"},
-    {file = "python_opsi_common-4.3.0.57.tar.gz", hash = "sha256:873e97e1010ecfff72955a91a681798e78a0458ba709c21da05810651dae6e69"},
+    {file = "python_opsi_common-4.3.0.58-py3-none-any.whl", hash = "sha256:674c23ae620ac9ba3530634b7ff0014f787774a86f47a84a01832743e9ba5991"},
+    {file = "python_opsi_common-4.3.0.58.tar.gz", hash = "sha256:0ba1c67900446a13acb50ff3f615982c8cf3ed069965fd2e5d0ec6772d0bc08d"},
 ]
 
 [package.dependencies]
@@ -2247,7 +2247,7 @@ reference = "uibpypi"
 [[package]]
 name = "websocket-client"
 version = "1.6.1"
-description = ""
+description = "WebSocket client for Python with low level API options"
 optional = false
 python-versions = ">=3.8"
 files = []
