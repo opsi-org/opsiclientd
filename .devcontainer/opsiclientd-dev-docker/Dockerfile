@@ -1,4 +1,4 @@
-FROM docker.uib.gmbh/opsi/dev/pybuilder:uib-python-3.10
+FROM docker.uib.gmbh/opsi/dev/pybuilder-ssl3:uib-python-3.11
 
 ARG DOCKER_ENV
 ARG DEBIAN_FRONTEND=noninteractive
@@ -11,11 +11,7 @@ ENV DOCKER_ENV=${DOCKER_ENV} \
 	# pip:
 	PIP_NO_CACHE_DIR=off \
 	PIP_DISABLE_PIP_VERSION_CHECK=on \
-	PIP_DEFAULT_TIMEOUT=100 \
-	# dockerize:
-	DOCKERIZE_VERSION=v0.6.1 \
-	# poetry:
-	POETRY_VERSION=1.1.13
+	PIP_DEFAULT_TIMEOUT=100
 
 # System deps:
 RUN apt-get update \
@@ -31,7 +27,7 @@ RUN apt-get update \
 		psmisc \
 		cifs-utils \
 		davfs2 \
-	&& pip install "poetry==$POETRY_VERSION"
+	&& pip install poetry
 
 COPY files/ /
 
