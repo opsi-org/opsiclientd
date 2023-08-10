@@ -13,6 +13,7 @@ import inspect
 import json
 import time
 from types import MethodType
+from dataclasses import dataclass, field
 
 from OPSI.Backend.Backend import (  # type: ignore[import]
 	Backend,
@@ -33,19 +34,35 @@ from opsicommon.license import OPSI_MODULE_IDS
 from opsicommon.logging import logger
 from opsicommon.logging.constants import TRACE
 from opsicommon.objects import *  # required for dynamic class loading # pylint: disable=wildcard-import,unused-wildcard-import
-from opsicommon.objects import LicenseOnClient, ProductOnClient, get_ident_attributes, objects_differ, serialize
+from opsicommon.objects import (  # pylint: disable=reimported
+	LicenseOnClient,
+	ProductOnClient,
+	get_ident_attributes,
+	objects_differ,
+	serialize,
+	ProductDependency,
+)
 from opsicommon.types import forceHostId
-
 from opsiclientd.Config import Config as OCDConfig
+from opsiclientd.nonfree.RPCProductDependencyMixin import RPCProductDependencyMixin
 
 __all__ = ["ClientCacheBackend"]
 
 config = OCDConfig()
 
 
-class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pylint: disable=too-many-instance-attributes
+@dataclass
+class ProductActionGroup:
+	priority: int = 0
+	product_on_clients: list[ProductOnClient] = field(default_factory=list)
+	priorities: dict[str, int] = field(default_factory=dict)
+	dependencies: dict[str, list[ProductDependency]] = field(default_factory=lambda: collections.defaultdict(list))
+
+
+class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend, RPCProductDependencyMixin):  # pylint: disable=too-many-instance-attributes
 	def __init__(self, **kwargs):  # pylint: disable=super-init-not-called
 		ConfigDataBackend.__init__(self, **kwargs)
+		RPCProductDependencyMixin.__init__(self, **kwargs)
 
 		self._workBackend = None
 		self._masterBackend = None
@@ -111,6 +128,22 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 				config_states[idx].values = [self._depotId]
 		logger.trace("configState_getObjects returning %s", config_states)
 		return config_states
+
+	def productOnClient_getActionGroups(self, clientId: str) -> list[dict]:  # pylint: disable=invalid-name
+		product_on_clients = self.productOnClient_getObjects(clientId=clientId)
+
+		action_groups: list[dict] = []
+		for group in self.get_product_action_groups(product_on_clients).get(clientId, []):
+			group.product_on_clients = [
+				poc.to_hash() for poc in group.product_on_clients if poc.actionRequest and poc.actionRequest != "none"  # type: ignore[misc]
+			]
+			if group.product_on_clients:
+				group.dependencies = {
+					product_id: [d.to_hash() for d in dep] for product_id, dep in group.dependencies.items()  # type: ignore[misc]
+				}
+				action_groups.append(group)  # type: ignore[arg-type]
+
+		return action_groups
 
 	def _setMasterBackend(self, masterBackend):
 		self._masterBackend = masterBackend
