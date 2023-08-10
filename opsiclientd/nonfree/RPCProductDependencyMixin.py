@@ -4,7 +4,11 @@
 # Copyright (c) 2020-2021 uib GmbH <info@uib.de>
 # All rights reserved.
 # License: AGPL-3.0
+"""
+RPCProductDependencyMixin
 
+copied from opsiconfd.backend.rpc.obj_product_dependency
+"""
 from __future__ import annotations
 
 from collections import defaultdict
@@ -113,7 +117,7 @@ class Action:
 		return product_on_client
 
 
-class RPCProductDependencyMixin(Protocol):
+class RPCProductDependencyMixin(Protocol):  # pylint: disable=too-few-public-methods
 	def get_product_action_groups(  # pylint: disable=too-many-locals,too-many-statements,too-many-branches
 		self, product_on_clients: list[ProductOnClient], *, ignore_unavailable_products: bool = True
 	) -> dict[str, list[ProductActionGroup]]:
@@ -121,7 +125,7 @@ class RPCProductDependencyMixin(Protocol):
 		product_on_depot_cache: dict[tuple[str, str], ProductOnDepot] = {}
 		product_on_client_cache: dict[tuple[str, str], ProductOnClient] = {}
 		product_dependency_cache: dict[tuple[str, str, str], list[ProductDependency]] = {}
-		product_on_clients_by_client_id: dict[str, list[ProductOnClient]] = defaultdict(list)
+		product_on_clients_by_client_id: dict[str, list[ProductOnClient]] = defaultdict(list)  # pylint: disable=invalid-name
 		product_ids = set()
 		for poc in product_on_clients:
 			product_on_clients_by_client_id[poc.clientId].append(poc)
