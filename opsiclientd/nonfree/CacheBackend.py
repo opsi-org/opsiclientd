@@ -14,6 +14,7 @@ import json
 import time
 from types import MethodType
 from dataclasses import dataclass, field
+from typing import Any
 
 from OPSI.Backend.Backend import (  # type: ignore[import]
 	Backend,
@@ -130,6 +131,9 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend, RPCProd
 		return config_states
 
 	def productOnClient_getActionGroups(self, clientId: str) -> list[dict]:  # pylint: disable=invalid-name
+		"""
+		Get product action groups of action requests set for a client.
+		"""
 		product_on_clients = self.productOnClient_getObjects(clientId=clientId)
 
 		action_groups: list[dict] = []
@@ -144,6 +148,48 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend, RPCProd
 				action_groups.append(group)  # type: ignore[arg-type]
 
 		return action_groups
+
+	def productOnClient_generateSequence(  # pylint: disable=invalid-name
+		self, productOnClients: list[ProductOnClient]
+	) -> list[ProductOnClient]:
+		"""
+		Takes a list of ProductOnClient objects.
+		Returns the same list of in the order in which the actions must be processed.
+		Please also check if `productOnClient_addDependencies` is more suitable.
+		"""
+		product_ids_by_client_id: dict[str, list[str]] = collections.defaultdict(list)
+		for poc in productOnClients:
+			product_ids_by_client_id[poc.clientId].append(poc.productId)
+
+		return [
+			poc
+			for group in self.get_product_action_groups(productOnClients).values()
+			for g in group
+			for poc in g.product_on_clients
+			if poc.productId in product_ids_by_client_id.get(poc.clientId, [])
+		]
+
+	def productOnClient_getObjectsWithSequence(  # pylint: disable=invalid-name
+		self, attributes: list[str] | None = None, **filter: Any  # pylint: disable=redefined-builtin
+	) -> list[ProductOnClient]:
+		"""
+		Like productOnClient_getObjects, but return objects in order and with attribute actionSequence set.
+		Will not add dependent ProductOnClients!
+		If attributes are passed and `actionSequence` is not included in the list of attributes,
+		the method behaves like `productOnClient_getObjects` (which is faster).
+		"""
+		if attributes and "actionSequence" not in attributes:
+			return self.productOnClient_getObjects(attributes, **filter)
+
+		product_on_clients = self.productOnClient_getObjects(attributes, **filter)
+		action_requests = {(poc.clientId, poc.productId): poc.actionRequest for poc in product_on_clients}
+		product_on_clients = self.productOnClient_generateSequence(product_on_clients)
+		for poc in product_on_clients:
+			if action_request := action_requests.get((poc.clientId, poc.productId)):
+				poc.actionRequest = action_request
+				if not poc.actionRequest or poc.actionRequest == "none":
+					poc.actionSequence = -1
+		return product_on_clients
 
 	def _setMasterBackend(self, masterBackend):
 		self._masterBackend = masterBackend
