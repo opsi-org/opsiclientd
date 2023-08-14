@@ -42,6 +42,7 @@ from opsicommon.objects import (  # pylint: disable=reimported
 	objects_differ,
 	serialize,
 	ProductDependency,
+	LocalbootProduct,
 )
 from opsicommon.types import forceHostId
 from opsiclientd.Config import Config as OCDConfig
@@ -60,7 +61,9 @@ class ProductActionGroup:
 	dependencies: dict[str, list[ProductDependency]] = field(default_factory=lambda: collections.defaultdict(list))
 
 
-class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend, RPCProductDependencyMixin):  # pylint: disable=too-many-instance-attributes
+class ClientCacheBackend(
+	ConfigDataBackend, ModificationTrackingBackend, RPCProductDependencyMixin
+):  # pylint: disable=too-many-instance-attributes
 	def __init__(self, **kwargs):  # pylint: disable=super-init-not-called
 		ConfigDataBackend.__init__(self, **kwargs)
 		RPCProductDependencyMixin.__init__(self, **kwargs)
@@ -190,6 +193,49 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend, RPCProd
 				if not poc.actionRequest or poc.actionRequest == "none":
 					poc.actionSequence = -1
 		return product_on_clients
+
+	def getProductOrdering(  # pylint: disable=invalid-name,too-many-branches
+		self, depotId: str, sortAlgorithm: str | None = None
+	) -> dict[str, list]:
+		if sortAlgorithm and sortAlgorithm != "algorithm1":
+			raise ValueError(f"Invalid sort algorithm {sortAlgorithm!r}")
+
+		products_by_id_and_version: dict[tuple[str, str, str], LocalbootProduct] = {}
+		for product in self.product_getObjects(type="LocalbootProduct"):
+			products_by_id_and_version[(product.id, product.productVersion, product.packageVersion)] = product
+
+		product_ids = []
+		product_on_clients = []
+		for product_on_depot in self.productOnDepot_getObjects(depotId=depotId, productType="LocalbootProduct"):
+			product = products_by_id_and_version.get(
+				(product_on_depot.productId, product_on_depot.productVersion, product_on_depot.packageVersion)
+			)
+			if not product:
+				continue
+
+			product_ids.append(product.id)
+
+			for action in ("setup", "always", "once", "custom", "uninstall"):
+				if getattr(product, f"{action}Script"):
+					product_on_clients.append(
+						ProductOnClient(
+							productId=product_on_depot.productId,
+							productType=product_on_depot.productType,
+							clientId=depotId,
+							installationStatus="not_installed",
+							actionRequest=action,
+						)
+					)
+					break
+
+		product_ids.sort()
+		sorted_ids = [
+			poc.productId
+			for actions in self.get_product_action_groups(product_on_clients).values()
+			for a in actions
+			for poc in a.product_on_clients
+		]
+		return {"not_sorted": product_ids, "sorted": sorted_ids}
 
 	def _setMasterBackend(self, masterBackend):
 		self._masterBackend = masterBackend
