@@ -291,27 +291,27 @@ class ConfigCacheServiceBackendExtension(RPCProductDependencyMixin):  # pylint: 
 		object_ids = forceObjectIdList(object_ids or [])
 		res: dict[str, dict[str, list[Any]]] = {}
 		if with_defaults:
-			configserver_id = self.host_getIdents(type="OpsiConfigserver")[0]
-			defaults = {c.id: c.defaultValues for c in self.config_getObjects(id=config_ids)}
-			res = {h.id: defaults.copy() for h in self.host_getObjects(attributes=["id"], id=object_ids)}
+			configserver_id = self.host_getIdents(type="OpsiConfigserver")[0]  # pylint: disable=no-member
+			defaults = {c.id: c.defaultValues for c in self.config_getObjects(id=config_ids)}  # pylint: disable=no-member
+			res = {h.id: defaults.copy() for h in self.host_getObjects(attributes=["id"], id=object_ids)}  # pylint: disable=no-member
 			client_id_to_depot_id = {
 				ctd.getObjectId(): ctd.getValues()[0]
-				for ctd in self.configState_getObjects(objectId=object_ids, configId="clientconfig.depot.id")
+				for ctd in self.configState_getObjects(objectId=object_ids, configId="clientconfig.depot.id")  # pylint: disable=no-member
 			}
 			depot_values: dict[str, dict[str, list[Any]]] = defaultdict(lambda: defaultdict(list))
 			depot_ids = list(set(client_id_to_depot_id.values()))
 			depot_ids.append(configserver_id)
 			if depot_ids:
-				for config_state in self.configState_getObjects(configId=config_ids, objectId=depot_ids):
+				for config_state in self.configState_getObjects(configId=config_ids, objectId=depot_ids):  # pylint: disable=no-member
 					depot_values[config_state.getObjectId()][config_state.getConfigId()] = config_state.values
-			for host in self.host_getObjects(attributes=["id"], id=object_ids):
+			for host in self.host_getObjects(attributes=["id"], id=object_ids):  # pylint: disable=no-member
 				host_id = host.id
 				depot_id = client_id_to_depot_id.get(host_id)
 				if depot_id and depot_id in depot_values:
 					res[host_id] = depot_values[depot_id].copy()
 				elif not depot_id and configserver_id in depot_values:
 					res[host_id] = depot_values[configserver_id].copy()
-		for config_state in self.configState_getObjects(configId=config_ids, objectId=object_ids):
+		for config_state in self.configState_getObjects(configId=config_ids, objectId=object_ids):  # pylint: disable=no-member
 			if config_state.objectId not in res:
 				res[config_state.objectId] = {}
 			res[config_state.objectId][config_state.configId] = config_state.values
@@ -321,7 +321,7 @@ class ConfigCacheServiceBackendExtension(RPCProductDependencyMixin):  # pylint: 
 		"""
 		Get product action groups of action requests set for a client.
 		"""
-		product_on_clients = self.productOnClient_getObjects(clientId=clientId)
+		product_on_clients = self.productOnClient_getObjects(clientId=clientId)  # pylint: disable=no-member
 
 		action_groups: list[dict] = []
 		for group in self.get_product_action_groups(product_on_clients).get(clientId, []):
@@ -366,9 +366,9 @@ class ConfigCacheServiceBackendExtension(RPCProductDependencyMixin):  # pylint: 
 		the method behaves like `productOnClient_getObjects` (which is faster).
 		"""
 		if attributes and "actionSequence" not in attributes:
-			return self.productOnClient_getObjects(attributes, **filter)
+			return self.productOnClient_getObjects(attributes, **filter)  # pylint: disable=no-member
 
-		product_on_clients = self.productOnClient_getObjects(attributes, **filter)
+		product_on_clients = self.productOnClient_getObjects(attributes, **filter)  # pylint: disable=no-member
 		action_requests = {(poc.clientId, poc.productId): poc.actionRequest for poc in product_on_clients}
 		product_on_clients = self.productOnClient_generateSequence(product_on_clients)
 		for poc in product_on_clients:
@@ -385,12 +385,14 @@ class ConfigCacheServiceBackendExtension(RPCProductDependencyMixin):  # pylint: 
 			raise ValueError(f"Invalid sort algorithm {sortAlgorithm!r}")
 
 		products_by_id_and_version: dict[tuple[str, str, str], LocalbootProduct] = {}
-		for product in self.product_getObjects(type="LocalbootProduct"):
+		for product in self.product_getObjects(type="LocalbootProduct"):  # pylint: disable=no-member
 			products_by_id_and_version[(product.id, product.productVersion, product.packageVersion)] = product
 
 		product_ids = []
 		product_on_clients = []
-		for product_on_depot in self.productOnDepot_getObjects(depotId=depotId, productType="LocalbootProduct"):
+		for product_on_depot in self.productOnDepot_getObjects(  # pylint: disable=no-member
+			depotId=depotId, productType="LocalbootProduct"
+		):
 			product = products_by_id_and_version.get(
 				(product_on_depot.productId, product_on_depot.productVersion, product_on_depot.packageVersion)
 			)
