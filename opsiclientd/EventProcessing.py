@@ -842,6 +842,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			if self.event.eventConfig.actionProcessorProductIds:
 				productIds = self.event.eventConfig.actionProcessorProductIds
 
+			if self.event.eventInfo.get("product_ids"):
+				productIds = self.event.eventInfo["product_ids"]
+				logger.notice("Got product IDs from eventConfig: %r", productIds)
+
 			if not productIds:
 				includeProductIds, excludeProductIds = get_include_exclude_product_ids(
 					self._configService, self.event.eventConfig.includeProductGroupIds, self.event.eventConfig.excludeProductGroupIds
@@ -956,9 +960,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		description = f"Running actions {', '.join(productIds)}"
 		if versions and len(versions) == len(productIds):
 			description = f"Running actions {', '.join(f'{p_id} {p_version}' for p_id, p_version in zip(productIds, versions))}"
-		runActionsEventId = timeline.addEvent(
-			title="Running actions", description=description, category="run_actions", durationEvent=True
-		)
+		runActionsEventId = timeline.addEvent(title="Running actions", description=description, category="run_actions", durationEvent=True)
 
 		try:
 			config.selectDepotserver(configService=self._configService, mode="mount", event=self.event, productIds=productIds)

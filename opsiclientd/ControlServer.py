@@ -68,7 +68,7 @@ from opsicommon.logging import (  # type: ignore[import]
 	logger,
 	secret_filter,
 )
-from opsicommon.types import forceBool, forceInt, forceUnicode  # type: ignore[import]
+from opsicommon.types import forceBool, forceInt, forceUnicode, forceProductIdList  # type: ignore[import]
 from twisted.internet import fdesc, reactor
 from twisted.internet.base import BasePort
 from twisted.internet.error import CannotListenError
@@ -1255,12 +1255,13 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		logger.notice("rpc uptime: opsiclientd is running for %d seconds", uptime)
 		return uptime
 
-	def fireEvent(self, name, can_cancel=True):
+	def fireEvent(self, name, can_cancel=True, event_info=None):
 		# can_cancel: Allow event cancellation for new events called via the ControlServer
-		can_cancel = bool(can_cancel)
-		event = getEventGenerator(name)
-		logger.notice("rpc firing event %r, can_cancel=%r", name, can_cancel)
-		event.createAndFireEvent(can_cancel=can_cancel)
+		can_cancel = forceBool(can_cancel)
+		event_info = event_info or {}
+		event_generator = getEventGenerator(name)
+		logger.notice("rpc firing event %r, event_info=%r, can_cancel=%r", name, event_info, can_cancel)
+		event_generator.createAndFireEvent(eventInfo=event_info, can_cancel=can_cancel)
 
 	def setStatusMessage(self, sessionId, message):
 		sessionId = forceInt(sessionId)
@@ -1733,7 +1734,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		logger.info("on_shutdown event completed")
 		return True
 
-	def processActionRequests(self):
+	def processActionRequests(self, product_ids=None):
 		event = config.get("control_server", "process_actions_event")
 		if not event or event == "auto":
 			timer_active = False
@@ -1751,7 +1752,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			else:
 				raise RuntimeError("Neither timer nor on_demand event active")
 
-		self.fireEvent(event)
+		event_info = {}
+		if product_ids:
+			event_info = {"product_ids": forceProductIdList(product_ids)}
+		self.fireEvent(name=event, event_info=event_info)
 
 	def getConfigDataFromOpsiclientd(self, get_depot_id=True, get_active_events=True):
 		result = {}

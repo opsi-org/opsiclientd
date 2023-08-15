@@ -11,10 +11,7 @@ Processing action requests.
 from opsiclientd.Events.Basic import Event, EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
 
-__all__ = [
-	'ProcessActionRequestsEvent', 'ProcessActionRequestsEventConfig',
-	'ProcessActionRequestsEventGenerator'
-]
+__all__ = ["ProcessActionRequestsEvent", "ProcessActionRequestsEventConfig", "ProcessActionRequestsEventGenerator"]
 
 
 class ProcessActionRequestsEventConfig(EventConfig):
@@ -22,17 +19,13 @@ class ProcessActionRequestsEventConfig(EventConfig):
 
 
 class ProcessActionRequestsEventGenerator(EventGenerator):
-
-	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
+	def createEvent(self, eventInfo={}):  # pylint: disable=dangerous-default-value
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None
 
-		return ProcessActionRequestsEvent(
-			eventConfig=eventConfig,
-			eventInfo=eventInfo
-		)
+		return ProcessActionRequestsEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class ProcessActionRequestsEvent(Event): # pylint: disable=too-few-public-methods
+class ProcessActionRequestsEvent(Event):  # pylint: disable=too-few-public-methods
 	pass
