@@ -12,6 +12,9 @@ opsiclientd.nonfree.CacheService
 # pylint: disable=too-many-lines
 
 import codecs
+import collections
+from collections import defaultdict
+from typing import Any
 import os
 import shutil
 import threading
@@ -23,24 +26,30 @@ from OPSI import System  # type: ignore[import]
 from OPSI.Backend.Backend import ExtendedConfigDataBackend  # type: ignore[import]
 from OPSI.Backend.BackendManager import BackendExtender  # type: ignore[import]
 from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker  # type: ignore[import]
-from OPSI.Object import ProductOnClient  # type: ignore[import]
 from OPSI.Util import randomString  # type: ignore[import]
 from OPSI.Util.File.Opsi import PackageContentFile  # type: ignore[import]
 from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, getRepository  # type: ignore[import]
 
 from opsicommon.logging import log_context, logger
 from opsicommon.types import forceBool, forceInt, forceProductIdList, forceUnicode
+from opsicommon.objects import (  # pylint: disable=reimported
+	ProductOnClient,
+	LocalbootProduct,
+)
+from opsicommon.types import forceUnicodeList, forceObjectIdList
 
 from opsiclientd.Config import Config
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
 from opsiclientd.nonfree import verify_modules
 from opsiclientd.nonfree.CacheBackend import ClientCacheBackend
+from opsiclientd.nonfree.RPCProductDependencyMixin import RPCProductDependencyMixin
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_DARWIN
 from opsiclientd.Timeline import Timeline
 from opsiclientd.utils import get_include_exclude_product_ids
+
 
 __all__ = ["CacheService", "ConfigCacheService", "ConfigCacheServiceBackendExtension", "ProductCacheService"]
 
@@ -268,9 +277,149 @@ class CacheService(threading.Thread):
 		return self._productCacheService.clear_cache()
 
 
-class ConfigCacheServiceBackendExtension:  # pylint: disable=too-few-public-methods
+class ConfigCacheServiceBackendExtension(RPCProductDependencyMixin):  # pylint: disable=too-few-public-methods
 	def accessControl_authenticated(self):
 		return True
+
+	def configState_getValues(  # pylint: disable=invalid-name
+		self,
+		config_ids: list[str] | str | None = None,
+		object_ids: list[str] | str | None = None,
+		with_defaults: bool = True,
+	) -> dict[str, dict[str, list[Any]]]:
+		config_ids = forceUnicodeList(config_ids or [])
+		object_ids = forceObjectIdList(object_ids or [])
+		res: dict[str, dict[str, list[Any]]] = {}
+		if with_defaults:
+			configserver_id = self.host_getIdents(type="OpsiConfigserver")[0]
+			defaults = {c.id: c.defaultValues for c in self.config_getObjects(id=config_ids)}
+			res = {h.id: defaults.copy() for h in self.host_getObjects(attributes=["id"], id=object_ids)}
+			client_id_to_depot_id = {
+				ctd.getObjectId(): ctd.getValues()[0]
+				for ctd in self.configState_getObjects(objectId=object_ids, configId="clientconfig.depot.id")
+			}
+			depot_values: dict[str, dict[str, list[Any]]] = defaultdict(lambda: defaultdict(list))
+			depot_ids = list(set(client_id_to_depot_id.values()))
+			depot_ids.append(configserver_id)
+			if depot_ids:
+				for config_state in self.configState_getObjects(configId=config_ids, objectId=depot_ids):
+					depot_values[config_state.getObjectId()][config_state.getConfigId()] = config_state.values
+			for host in self.host_getObjects(attributes=["id"], id=object_ids):
+				host_id = host.id
+				depot_id = client_id_to_depot_id.get(host_id)
+				if depot_id and depot_id in depot_values:
+					res[host_id] = depot_values[depot_id].copy()
+				elif not depot_id and configserver_id in depot_values:
+					res[host_id] = depot_values[configserver_id].copy()
+		for config_state in self.configState_getObjects(configId=config_ids, objectId=object_ids):
+			if config_state.objectId not in res:
+				res[config_state.objectId] = {}
+			res[config_state.objectId][config_state.configId] = config_state.values
+		return res
+
+	def productOnClient_getActionGroups(self, clientId: str) -> list[dict]:  # pylint: disable=invalid-name
+		"""
+		Get product action groups of action requests set for a client.
+		"""
+		product_on_clients = self.productOnClient_getObjects(clientId=clientId)
+
+		action_groups: list[dict] = []
+		for group in self.get_product_action_groups(product_on_clients).get(clientId, []):
+			group.product_on_clients = [
+				poc.to_hash() for poc in group.product_on_clients if poc.actionRequest and poc.actionRequest != "none"  # type: ignore[misc]
+			]
+			if group.product_on_clients:
+				group.dependencies = {
+					product_id: [d.to_hash() for d in dep] for product_id, dep in group.dependencies.items()  # type: ignore[misc]
+				}
+				action_groups.append(group)  # type: ignore[arg-type]
+
+		return action_groups
+
+	def productOnClient_generateSequence(  # pylint: disable=invalid-name
+		self, productOnClients: list[ProductOnClient]
+	) -> list[ProductOnClient]:
+		"""
+		Takes a list of ProductOnClient objects.
+		Returns the same list of in the order in which the actions must be processed.
+		Please also check if `productOnClient_addDependencies` is more suitable.
+		"""
+		product_ids_by_client_id: dict[str, list[str]] = collections.defaultdict(list)
+		for poc in productOnClients:
+			product_ids_by_client_id[poc.clientId].append(poc.productId)
+
+		return [
+			poc
+			for group in self.get_product_action_groups(productOnClients).values()
+			for g in group
+			for poc in g.product_on_clients
+			if poc.productId in product_ids_by_client_id.get(poc.clientId, [])
+		]
+
+	def productOnClient_getObjectsWithSequence(  # pylint: disable=invalid-name
+		self, attributes: list[str] | None = None, **filter: Any  # pylint: disable=redefined-builtin
+	) -> list[ProductOnClient]:
+		"""
+		Like productOnClient_getObjects, but return objects in order and with attribute actionSequence set.
+		Will not add dependent ProductOnClients!
+		If attributes are passed and `actionSequence` is not included in the list of attributes,
+		the method behaves like `productOnClient_getObjects` (which is faster).
+		"""
+		if attributes and "actionSequence" not in attributes:
+			return self.productOnClient_getObjects(attributes, **filter)
+
+		product_on_clients = self.productOnClient_getObjects(attributes, **filter)
+		action_requests = {(poc.clientId, poc.productId): poc.actionRequest for poc in product_on_clients}
+		product_on_clients = self.productOnClient_generateSequence(product_on_clients)
+		for poc in product_on_clients:
+			if action_request := action_requests.get((poc.clientId, poc.productId)):
+				poc.actionRequest = action_request
+				if not poc.actionRequest or poc.actionRequest == "none":
+					poc.actionSequence = -1
+		return product_on_clients
+
+	def getProductOrdering(  # pylint: disable=invalid-name,too-many-branches
+		self, depotId: str, sortAlgorithm: str | None = None
+	) -> dict[str, list]:
+		if sortAlgorithm and sortAlgorithm != "algorithm1":
+			raise ValueError(f"Invalid sort algorithm {sortAlgorithm!r}")
+
+		products_by_id_and_version: dict[tuple[str, str, str], LocalbootProduct] = {}
+		for product in self.product_getObjects(type="LocalbootProduct"):
+			products_by_id_and_version[(product.id, product.productVersion, product.packageVersion)] = product
+
+		product_ids = []
+		product_on_clients = []
+		for product_on_depot in self.productOnDepot_getObjects(depotId=depotId, productType="LocalbootProduct"):
+			product = products_by_id_and_version.get(
+				(product_on_depot.productId, product_on_depot.productVersion, product_on_depot.packageVersion)
+			)
+			if not product:
+				continue
+
+			product_ids.append(product.id)
+
+			for action in ("setup", "always", "once", "custom", "uninstall"):
+				if getattr(product, f"{action}Script"):
+					product_on_clients.append(
+						ProductOnClient(
+							productId=product_on_depot.productId,
+							productType=product_on_depot.productType,
+							clientId=depotId,
+							installationStatus="not_installed",
+							actionRequest=action,
+						)
+					)
+					break
+
+		product_ids.sort()
+		sorted_ids = [
+			poc.productId
+			for actions in self.get_product_action_groups(product_on_clients).values()
+			for a in actions
+			for poc in a.product_on_clients
+		]
+		return {"not_sorted": product_ids, "sorted": sorted_ids}
 
 
 class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disable=too-many-instance-attributes
@@ -341,6 +490,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 			backend=ExtendedConfigDataBackend(configDataBackend=self._cacheBackend),
 			extensionClass=ConfigCacheServiceBackendExtension,
 			extensionConfigDir=config.get("cache_service", "extension_config_dir"),
+			extensionReplaceMethods=False,
 		)
 
 		self._backendTracker = SQLiteObjectBackendModificationTracker(

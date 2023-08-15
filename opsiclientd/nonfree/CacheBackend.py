@@ -13,6 +13,7 @@ import inspect
 import json
 import time
 from types import MethodType
+from dataclasses import dataclass, field
 
 from OPSI.Backend.Backend import (  # type: ignore[import]
 	Backend,
@@ -33,14 +34,28 @@ from opsicommon.license import OPSI_MODULE_IDS
 from opsicommon.logging import logger
 from opsicommon.logging.constants import TRACE
 from opsicommon.objects import *  # required for dynamic class loading # pylint: disable=wildcard-import,unused-wildcard-import
-from opsicommon.objects import LicenseOnClient, ProductOnClient, get_ident_attributes, objects_differ, serialize
+from opsicommon.objects import (  # pylint: disable=reimported
+	LicenseOnClient,
+	ProductOnClient,
+	get_ident_attributes,
+	objects_differ,
+	serialize,
+	ProductDependency,
+)
 from opsicommon.types import forceHostId
-
 from opsiclientd.Config import Config as OCDConfig
 
 __all__ = ["ClientCacheBackend"]
 
 config = OCDConfig()
+
+
+@dataclass
+class ProductActionGroup:
+	priority: int = 0
+	product_on_clients: list[ProductOnClient] = field(default_factory=list)
+	priorities: dict[str, int] = field(default_factory=dict)
+	dependencies: dict[str, list[ProductDependency]] = field(default_factory=lambda: collections.defaultdict(list))
 
 
 class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pylint: disable=too-many-instance-attributes
@@ -401,6 +416,13 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 		# Need opsi-script PoC in cached backend for update_action_processor!
 		if filterProductIds and "opsi-script" not in filterProductIds:
 			filterProductIds.append("opsi-script")
+
+		logger.notice(
+			"sync_products_with_actions_only=%r, filterProductIds=%r",
+			config.get("cache_service", "sync_products_with_actions_only"),
+			filterProductIds,
+		)
+
 		self._workBackend.backend_deleteBase()
 		self._workBackend.backend_createBase()
 		br = BackendReplicator(readBackend=self._masterBackend, writeBackend=self._workBackend)
@@ -514,6 +536,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 					"licenseOnClient_getObjects",
 					"configState_getObjects",
 					"config_getObjects",
+					"getProductOrdering",
 				):
 					continue
 
