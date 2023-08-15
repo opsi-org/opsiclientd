@@ -14,7 +14,6 @@ import json
 import time
 from types import MethodType
 from dataclasses import dataclass, field
-from typing import Any
 
 from OPSI.Backend.Backend import (  # type: ignore[import]
 	Backend,
@@ -42,11 +41,9 @@ from opsicommon.objects import (  # pylint: disable=reimported
 	objects_differ,
 	serialize,
 	ProductDependency,
-	LocalbootProduct,
 )
 from opsicommon.types import forceHostId
 from opsiclientd.Config import Config as OCDConfig
-from opsiclientd.nonfree.RPCProductDependencyMixin import RPCProductDependencyMixin
 
 __all__ = ["ClientCacheBackend"]
 
@@ -61,12 +58,9 @@ class ProductActionGroup:
 	dependencies: dict[str, list[ProductDependency]] = field(default_factory=lambda: collections.defaultdict(list))
 
 
-class ClientCacheBackend(
-	ConfigDataBackend, ModificationTrackingBackend, RPCProductDependencyMixin
-):  # pylint: disable=too-many-instance-attributes
+class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pylint: disable=too-many-instance-attributes
 	def __init__(self, **kwargs):  # pylint: disable=super-init-not-called
 		ConfigDataBackend.__init__(self, **kwargs)
-		RPCProductDependencyMixin.__init__(self, **kwargs)
 
 		self._workBackend = None
 		self._masterBackend = None
@@ -132,110 +126,6 @@ class ClientCacheBackend(
 				config_states[idx].values = [self._depotId]
 		logger.trace("configState_getObjects returning %s", config_states)
 		return config_states
-
-	def productOnClient_getActionGroups(self, clientId: str) -> list[dict]:  # pylint: disable=invalid-name
-		"""
-		Get product action groups of action requests set for a client.
-		"""
-		product_on_clients = self.productOnClient_getObjects(clientId=clientId)
-
-		action_groups: list[dict] = []
-		for group in self.get_product_action_groups(product_on_clients).get(clientId, []):
-			group.product_on_clients = [
-				poc.to_hash() for poc in group.product_on_clients if poc.actionRequest and poc.actionRequest != "none"  # type: ignore[misc]
-			]
-			if group.product_on_clients:
-				group.dependencies = {
-					product_id: [d.to_hash() for d in dep] for product_id, dep in group.dependencies.items()  # type: ignore[misc]
-				}
-				action_groups.append(group)  # type: ignore[arg-type]
-
-		return action_groups
-
-	def productOnClient_generateSequence(  # pylint: disable=invalid-name
-		self, productOnClients: list[ProductOnClient]
-	) -> list[ProductOnClient]:
-		"""
-		Takes a list of ProductOnClient objects.
-		Returns the same list of in the order in which the actions must be processed.
-		Please also check if `productOnClient_addDependencies` is more suitable.
-		"""
-		product_ids_by_client_id: dict[str, list[str]] = collections.defaultdict(list)
-		for poc in productOnClients:
-			product_ids_by_client_id[poc.clientId].append(poc.productId)
-
-		return [
-			poc
-			for group in self.get_product_action_groups(productOnClients).values()
-			for g in group
-			for poc in g.product_on_clients
-			if poc.productId in product_ids_by_client_id.get(poc.clientId, [])
-		]
-
-	def productOnClient_getObjectsWithSequence(  # pylint: disable=invalid-name
-		self, attributes: list[str] | None = None, **filter: Any  # pylint: disable=redefined-builtin
-	) -> list[ProductOnClient]:
-		"""
-		Like productOnClient_getObjects, but return objects in order and with attribute actionSequence set.
-		Will not add dependent ProductOnClients!
-		If attributes are passed and `actionSequence` is not included in the list of attributes,
-		the method behaves like `productOnClient_getObjects` (which is faster).
-		"""
-		if attributes and "actionSequence" not in attributes:
-			return self.productOnClient_getObjects(attributes, **filter)
-
-		product_on_clients = self.productOnClient_getObjects(attributes, **filter)
-		action_requests = {(poc.clientId, poc.productId): poc.actionRequest for poc in product_on_clients}
-		product_on_clients = self.productOnClient_generateSequence(product_on_clients)
-		for poc in product_on_clients:
-			if action_request := action_requests.get((poc.clientId, poc.productId)):
-				poc.actionRequest = action_request
-				if not poc.actionRequest or poc.actionRequest == "none":
-					poc.actionSequence = -1
-		return product_on_clients
-
-	def getProductOrdering(  # pylint: disable=invalid-name,too-many-branches
-		self, depotId: str, sortAlgorithm: str | None = None
-	) -> dict[str, list]:
-		if sortAlgorithm and sortAlgorithm != "algorithm1":
-			raise ValueError(f"Invalid sort algorithm {sortAlgorithm!r}")
-
-		products_by_id_and_version: dict[tuple[str, str, str], LocalbootProduct] = {}
-		for product in self.product_getObjects(type="LocalbootProduct"):
-			products_by_id_and_version[(product.id, product.productVersion, product.packageVersion)] = product
-
-		product_ids = []
-		product_on_clients = []
-		for product_on_depot in self.productOnDepot_getObjects(depotId=depotId, productType="LocalbootProduct"):
-			product = products_by_id_and_version.get(
-				(product_on_depot.productId, product_on_depot.productVersion, product_on_depot.packageVersion)
-			)
-			if not product:
-				continue
-
-			product_ids.append(product.id)
-
-			for action in ("setup", "always", "once", "custom", "uninstall"):
-				if getattr(product, f"{action}Script"):
-					product_on_clients.append(
-						ProductOnClient(
-							productId=product_on_depot.productId,
-							productType=product_on_depot.productType,
-							clientId=depotId,
-							installationStatus="not_installed",
-							actionRequest=action,
-						)
-					)
-					break
-
-		product_ids.sort()
-		sorted_ids = [
-			poc.productId
-			for actions in self.get_product_action_groups(product_on_clients).values()
-			for a in actions
-			for poc in a.product_on_clients
-		]
-		return {"not_sorted": product_ids, "sorted": sorted_ids}
 
 	def _setMasterBackend(self, masterBackend):
 		self._masterBackend = masterBackend
@@ -639,6 +529,7 @@ class ClientCacheBackend(
 					"licenseOnClient_getObjects",
 					"configState_getObjects",
 					"config_getObjects",
+					"getProductOrdering",
 				):
 					continue
 
