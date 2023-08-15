@@ -415,7 +415,7 @@ class ConfigCacheServiceBackendExtension(RPCProductDependencyMixin):  # pylint: 
 		product_ids.sort()
 		sorted_ids = [
 			poc.productId
-			for actions in self.get_product_action_groups(product_on_clients, ignore_unavailable_products=True).values()
+			for actions in self.get_product_action_groups(product_on_clients).values()
 			for a in actions
 			for poc in a.product_on_clients
 		]
