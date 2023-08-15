@@ -842,14 +842,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			if self.event.eventConfig.actionProcessorProductIds:
 				productIds = self.event.eventConfig.actionProcessorProductIds
 
-			if self.event.eventInfo.get("product_ids"):
-				productIds = self.event.eventInfo["product_ids"]
-				logger.notice("Got product IDs from eventConfig: %r", productIds)
-
 			if not productIds:
-				includeProductIds, excludeProductIds = get_include_exclude_product_ids(
-					self._configService, self.event.eventConfig.includeProductGroupIds, self.event.eventConfig.excludeProductGroupIds
-				)
+				if self.event.eventInfo.get("product_ids"):
+					includeProductIds = self.event.eventInfo["product_ids"]
+					logger.notice("Got product IDs from eventConfig: %r", includeProductIds)
+				else:
+					includeProductIds, excludeProductIds = get_include_exclude_product_ids(
+						self._configService, self.event.eventConfig.includeProductGroupIds, self.event.eventConfig.excludeProductGroupIds
+					)
 
 				for productOnClient in [
 					poc
