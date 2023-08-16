@@ -845,10 +845,17 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			"opsiclientd.*",  # everything starting with opsiclientd.
 		]
 		config_states = {}
-		for config in service_client.config_getObjects(id=config_ids):
-			config_states[config.id] = config.defaultValues
-		for config_state in service_client.configState_getObjects(objectId=self.get("global", "host_id"), configId=config_ids):
-			config_states[config_state.configId] = config_state.values
+		if hasattr(service_client, "configState_getValues"):
+			logger.info("Using configState_getValues")
+			config_states = service_client.configState_getValues(
+				config_ids=config_ids, object_ids=[self.get("global", "host_id")], with_defaults=True
+			).get(self.get("global", "host_id"), {})
+		else:
+			logger.info("Using configState_getObjects")
+			for config in service_client.config_getObjects(id=config_ids):
+				config_states[config.id] = config.defaultValues
+			for config_state in service_client.configState_getObjects(objectId=self.get("global", "host_id"), configId=config_ids):
+				config_states[config_state.configId] = config_state.values
 
 		for config_id, values in config_states.items():
 			logger.info("Got config state from service: %r=%r", config_id, values)
