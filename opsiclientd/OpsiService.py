@@ -120,9 +120,7 @@ def update_os_ca_store(allow_remove: bool = False):  # pylint: disable=too-many-
 				logger.error("Failed to remove CA '%s' from system cert store: %s", name, err, exc_info=True)
 
 
-class PermanentServiceConnection(  # type: ignore[misc]
-	threading.Thread, ServiceConnectionListener, MessagebusListener
-):
+class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, MessagebusListener):  # type: ignore[misc]
 	def __init__(self, rpc_interface) -> None:
 		threading.Thread.__init__(self)
 		ServiceConnectionListener.__init__(self)
@@ -426,6 +424,7 @@ class ServiceConnection:
 						logger.warning(err)
 
 				self.connectionEstablished()
+				break
 		except Exception:
 			self.disconnectConfigService()
 			raise
