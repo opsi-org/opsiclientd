@@ -665,10 +665,17 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 		config_ids = ["clientconfig.depot.dynamic", "clientconfig.depot.protocol", "opsiclientd.depot_server.depot_id"]
 		config_states = {}
-		for config in configService.config_getObjects(id=config_ids):
-			config_states[config.id] = config.defaultValues
-		for config_state in configService.configState_getObjects(objectId=self.get("global", "host_id"), configId=config_ids):
-			config_states[config_state.configId] = config_state.values
+		if hasattr(configService, "configState_getValues"):
+			logger.info("Using configState_getValues")
+			config_states = configService.configState_getValues(
+				config_ids=config_ids, object_ids=[self.get("global", "host_id")], with_defaults=True
+			).get(self.get("global", "host_id"), {})
+		else:
+			logger.info("Using configState_getObjects")
+			for config in configService.config_getObjects(id=config_ids):
+				config_states[config.id] = config.defaultValues
+			for config_state in configService.configState_getObjects(objectId=self.get("global", "host_id"), configId=config_ids):
+				config_states[config_state.configId] = config_state.values
 
 		for config_id, values in config_states.items():
 			if not values or not values[0]:

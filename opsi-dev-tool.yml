@@ -13,32 +13,17 @@ project:
         This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
       path: opsiclientd/nonfree
 
-#locale:
-#  languages:
-#    - de
-#    - fr
-#  source_files:
-#    - opsiclientd
-#  install: opsiclientd_data/locale
-
 transifex:
   upload_resources:
     - organization: opsi-org
       project: opsiorg
       resource_name: opsiclientd.pot
-      # resource_file: gettext/opsiclientd.pot
       scan_sources:
         - opsiclientd
   download_translations:
     - organization: opsi-org
       project: opsiorg
       resource_name: opsiclientd.pot
-      languages:
-        - da
-        - de
-        - es
-        - fr
-        - it
       install_dir: opsiclientd_data/locale
 
 pyinstaller-poetry:
