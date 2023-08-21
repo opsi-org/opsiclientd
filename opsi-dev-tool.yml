@@ -97,6 +97,8 @@ pyinstaller-poetry:
     # from opsiclientd
     - src: opsiclientd_data/common/static_html/**
       dst: opsiclientd_data/static_html/
+    - src: opsiclientd_data/locale/**
+      dst: opsiclientd_data/locale/
     - src: opsiclientd_data/${PLATFORM_SYSTEM}/**
       dst: opsiclientd_data/
     # from opsi-server
