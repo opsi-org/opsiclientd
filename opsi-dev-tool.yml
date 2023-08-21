@@ -29,8 +29,8 @@ transifex:
       # resource_file: gettext/opsiclientd.pot
       scan_sources:
         - opsiclientd
-    - download_translations:
-      organization: opsi-org
+  download_translations:
+    - organization: opsi-org
       project: opsiorg
       resource_name: opsiclientd.pot
       languages:
