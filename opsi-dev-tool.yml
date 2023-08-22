@@ -25,6 +25,10 @@ transifex:
       project: opsiorg
       resource_name: opsiclientd.pot
       install_dir: opsiclientd_data/locale
+      min_review_rate: 1.0
+      languages:
+        - de
+        - fr
 
 pyinstaller-poetry:
   one_file: no
