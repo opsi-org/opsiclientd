@@ -905,6 +905,17 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					else:
 						logger.error("Unknown operating system - skipping processproducts parameter for action processor call.")
 				self.processActionWarningTime(productIds)
+				try:
+					try:
+						cache_service = self.opsiclientd.getCacheService()
+					except RuntimeError:
+						cache_service = None
+					if cache_service and not self.event.eventConfig.useCachedConfig:
+						# Event like on_demand that does not use cached config - changes are not reflected in cache
+						logger.info("Performing event that did not use cached config, setting config cache obsolete to suggest update")
+						cache_service.setConfigCacheObsolete()
+				except Exception as err:  # pylint: disable=broad-except
+					logger.error(err)
 				self.runActions(productIds, additionalParams=additionalParams, versions=versions)
 				try:
 					try:
@@ -922,11 +933,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					):  # TODO: what about always scripts?
 						# After having performed all cached actions, request new sync
 						logger.info("No more actions to perform, setting config cache obsolete")
-						cache_service.setConfigCacheObsolete()
-
-					if cache_service and not self.event.eventConfig.useCachedConfig:
-						# Event like on_demand that does not use cached config - changes are not reflected in cache
-						logger.info("Performing event that did not use cached config, setting config cache obsolete to suggest update")
 						cache_service.setConfigCacheObsolete()
 
 					if not self._configService.productOnClient_getIdents(  # pylint: disable=no-member
