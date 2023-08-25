@@ -58,6 +58,28 @@ state = State()
 timeline = Timeline()
 
 
+def add_products_from_setup_after_install(products: list[str], service: ServiceConnection) -> list[str]:
+	# setup_after_install is not treated as a formal dependency
+	# Adding those products here, ignoring dependencies and hoping for the best
+	# A construct big as death and twice as ugly
+	add_products = []
+	try:
+		for product in ("opsi-client-agent", "opsi-linux-client-agent", "opsi-mac-client-agent"):
+			if product in products:  # one at most
+				setup_after_install_products = service.productPropertyState_getObjects(
+					objectId=config.get("global", "host_id"),
+					productId=product,
+					propertyId="setup_after_install",
+				)[0]
+				add_products += [
+					sai_product for sai_product in setup_after_install_products.values
+					if sai_product not in products and sai_product not in add_products
+				]
+	except Exception as err:  # pylint: disable=broad-except
+		logger.warning("Failed to add setup_after_install products to filteredProductIds: %s", err)
+	return add_products
+
+
 class CacheService(threading.Thread):
 	def __init__(self, opsiclientd):
 		threading.Thread.__init__(self)
@@ -1018,6 +1040,9 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			for productOnClient in productOnClients:
 				if productOnClient.productId not in productIds:
 					productIds.append(productOnClient.productId)
+
+			productIds += add_products_from_setup_after_install(productIds, self._configService)
+
 			if not productIds:
 				logger.notice("No product action request set => no products to cache")
 			else:
