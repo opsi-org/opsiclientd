@@ -432,6 +432,7 @@ class ConfigCacheServiceBackendExtension(RPCProductDependencyMixin):  # pylint: 
 					break
 
 		product_ids.sort()
+		logger.devel(self.get_product_action_groups)
 		sorted_ids = [
 			poc.productId
 			for actions in self.get_product_action_groups(product_on_clients).values()
