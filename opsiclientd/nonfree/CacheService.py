@@ -42,7 +42,7 @@ from opsiclientd.Config import Config
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
 from opsiclientd.nonfree import verify_modules
-from opsiclientd.nonfree.CacheBackend import ClientCacheBackend
+from opsiclientd.nonfree.CacheBackend import ClientCacheBackend, add_products_from_setup_after_install
 from opsiclientd.nonfree.RPCProductDependencyMixin import RPCProductDependencyMixin
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
@@ -88,11 +88,6 @@ class CacheService(threading.Thread):
 	def setConfigCacheFaulty(self):
 		self.initializeConfigCacheService()
 		self._configCacheService.setFaulty()
-
-	def setIgnoreCacheResult(self):
-		if self._configCacheService:
-			with self._configCacheService.ignore_cache_result_lock:
-				self._configCacheService.ignore_cache_result = True
 
 	def syncConfig(self, waitForEnding=False, force=False):
 		self.initializeConfigCacheService()
@@ -439,8 +434,6 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 			self._running = False
 			self._working = False
 			self._state = {}
-			self.ignore_cache_result = False
-			self.ignore_cache_result_lock = threading.Lock()
 
 			self._syncConfigFromServerRequested = False
 			self._syncConfigToServerError = None
@@ -662,9 +655,6 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 
 	def _syncConfigFromServer(self):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		self._working = True
-		with self.ignore_cache_result_lock:
-			self.ignore_cache_result = False
-
 		try:
 			if self._syncConfigToServerError:
 				raise RuntimeError("Sync config to server failed")
@@ -765,17 +755,13 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 					self._backendTracker.clearModifications()
 					self._cacheBackend._replicateMasterToWorkBackend()  # pylint: disable=protected-access
 					logger.notice("Config synced from server")
-					with self.ignore_cache_result_lock:
-						if self.ignore_cache_result:
-							logger.notice("Ignoring config cache result - not firing sync_completed")
-							self.ignore_cache_result = False
-							self._forceSync = True
-						else:
-							self._state["config_cached"] = True
-							state.set("config_cache_service", self._state)
-							for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
-								eventGenerator.createAndFireEvent()
+					self._state["config_cached"] = True
+					state.set("config_cache_service", self._state)
 					timeline.setEventEnd(eventId)
+
+					# IDEA: only fire sync_completed if pending action requests?
+					for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
+						eventGenerator.createAndFireEvent()
 				except Exception as err:
 					logger.error(err, exc_info=True)
 					timeline.addEvent(
@@ -1032,6 +1018,9 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			for productOnClient in productOnClients:
 				if productOnClient.productId not in productIds:
 					productIds.append(productOnClient.productId)
+
+			productIds += add_products_from_setup_after_install(productIds, self._configService)
+
 			if not productIds:
 				logger.notice("No product action request set => no products to cache")
 			else:

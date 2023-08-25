@@ -44,10 +44,33 @@ from opsicommon.objects import (  # pylint: disable=reimported
 )
 from opsicommon.types import forceHostId
 from opsiclientd.Config import Config as OCDConfig
+from opsiclientd.OpsiService import ServiceConnection
 
 __all__ = ["ClientCacheBackend"]
 
 config = OCDConfig()
+
+
+def add_products_from_setup_after_install(products: list[str], service: ServiceConnection) -> list[str]:
+	# setup_after_install is not treated as a formal dependency
+	# Adding those products here, ignoring dependencies and hoping for the best
+	# A construct big as death and twice as ugly
+	add_products = []
+	try:
+		for product in ("opsi-client-agent", "opsi-linux-client-agent", "opsi-mac-client-agent"):
+			if product in products:  # one at most
+				setup_after_install_products = service.productPropertyState_getObjects(
+					objectId=config.get("global", "host_id"),
+					productId=product,
+					propertyId="setup_after_install",
+				)[0]
+				add_products += [
+					sai_product for sai_product in setup_after_install_products.values
+					if sai_product not in products and sai_product not in add_products
+				]
+	except Exception as err:  # pylint: disable=broad-except
+		logger.warning("Failed to add setup_after_install products to filteredProductIds: %s", err)
+	return add_products
 
 
 @dataclass
@@ -413,6 +436,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 		filterProductIds = []
 		if config.get("cache_service", "sync_products_with_actions_only"):
 			filterProductIds = product_ids_with_action
+			filterProductIds += add_products_from_setup_after_install(filterProductIds, self._masterBackend)
+
 		# Need opsi-script PoC in cached backend for update_action_processor!
 		if filterProductIds and "opsi-script" not in filterProductIds:
 			filterProductIds.append("opsi-script")

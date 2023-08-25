@@ -905,44 +905,46 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					else:
 						logger.error("Unknown operating system - skipping processproducts parameter for action processor call.")
 				self.processActionWarningTime(productIds)
+				try:
+					try:
+						cache_service = self.opsiclientd.getCacheService()
+					except RuntimeError:
+						cache_service = None
+					if cache_service and not self.event.eventConfig.useCachedConfig:
+						# Event like on_demand that does not use cached config - changes are not reflected in cache
+						logger.info("Performing event that did not use cached config, setting config cache obsolete to suggest update")
+						cache_service.setConfigCacheObsolete()
+				except Exception as err:  # pylint: disable=broad-except
+					logger.error(err)
 				self.runActions(productIds, additionalParams=additionalParams, versions=versions)
 				try:
-					pending_actions = self._configService.productOnClient_getIdents(  # pylint: disable=no-member
+					try:
+						cache_service = self.opsiclientd.getCacheService()
+					except RuntimeError:
+						cache_service = None
+					if (
+						cache_service
+						and self.event.eventConfig.useCachedConfig
+						and not self._configService.productOnClient_getIdents(  # pylint: disable=no-member
+							productType="LocalbootProduct",
+							clientId=config.get("global", "host_id"),
+							actionRequest=["setup", "uninstall", "update", "always", "once", "custom"],
+						)
+					):  # TODO: what about always scripts?
+						# After having performed all cached actions, request new sync
+						logger.info("No more actions to perform, setting config cache obsolete")
+						cache_service.setConfigCacheObsolete()
+
+					if not self._configService.productOnClient_getIdents(  # pylint: disable=no-member
 						productType="LocalbootProduct",
 						clientId=config.get("global", "host_id"),
 						actionRequest=["setup", "uninstall", "update", "once", "custom"],
-					)
-					cache_service = None
-					cached_products = []
-					try:
-						cache_service = self.opsiclientd.getCacheService()
-						cached_products = cache_service.getProductCacheState().get("products", [])
-					except RuntimeError:
-						logger.info("Could not get cache service")
-					logger.debug("Pending action requests: %s", pending_actions)
-					logger.debug("Cached products: %s", cached_products)
-					if not pending_actions or (
-						cache_service and any((pending_action.split(";")[0] not in cached_products for pending_action in pending_actions))
 					):
-						# If there are no pending action requests (except "always"), mark cache as faulty to force resync.
-						# If pending action request uses product that is not cached, mark cache as faulty to force resync.
-						# (If current event is not using cached config, there might be an action request in cache
-						# which should be reevaluated after the event.)
-						try:
-							logger.info("Marking config cache dirty")
-							# Setting ignore_cache_result prevents that a running config sync from server sets config_cached to True
-							cache_service.setIgnoreCacheResult()
-							# stopping cache_service would disable caching until opsiclientd restart
-							# marking it faulty forces resync at next event
-							cache_service.setConfigCacheFaulty()
-						except RuntimeError as err:
-							logger.info("Could not mark config service cache dirty: %s", err, exc_info=True)
 						# Nothing to do
 						logger.notice("Setting installation pending to false")
 						state.set("installation_pending", "false")
 				except Exception as err:  # pylint: disable=broad-except
 					logger.error(err)
-
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Failed to process product action requests: %s", err, exc_info=True)
 			self.setStatusMessage(_("Failed to process product action requests: %s") % str(err))
