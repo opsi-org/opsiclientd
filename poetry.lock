@@ -1677,8 +1677,8 @@ description = "The opsi python library"
 optional = false
 python-versions = ">=3.11,<3.12"
 files = [
-    {file = "python_opsi-4.3.0.24-py3-none-any.whl", hash = "sha256:7b4633a9348f958b15da34aaea0d8546d580b35ef1c6d21225b1ded2948fa114"},
-    {file = "python_opsi-4.3.0.24.tar.gz", hash = "sha256:121c575e89733245943f2bcf234021093902d09478aa3da3173dd38089889a2d"},
+    {file = "python_opsi-4.3.0.24-py3-none-any.whl", hash = "sha256:8c4a7846baedf12d4721fe2d923f3e79e0a26bf4c3c249474c6876b97e301086"},
+    {file = "python_opsi-4.3.0.24.tar.gz", hash = "sha256:1caf748a5fe9bef45c427e1a87f332b73f9162ec36478a665e8e7edc99d26b75"},
 ]
 
 [package.dependencies]
