@@ -42,7 +42,7 @@ from opsiclientd.Config import Config
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
 from opsiclientd.nonfree import verify_modules
-from opsiclientd.nonfree.CacheBackend import ClientCacheBackend
+from opsiclientd.nonfree.CacheBackend import ClientCacheBackend, add_products_from_setup_after_install
 from opsiclientd.nonfree.RPCProductDependencyMixin import RPCProductDependencyMixin
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
@@ -56,28 +56,6 @@ __all__ = ["CacheService", "ConfigCacheService", "ConfigCacheServiceBackendExten
 config = Config()
 state = State()
 timeline = Timeline()
-
-
-def add_products_from_setup_after_install(products: list[str], service: ServiceConnection) -> list[str]:
-	# setup_after_install is not treated as a formal dependency
-	# Adding those products here, ignoring dependencies and hoping for the best
-	# A construct big as death and twice as ugly
-	add_products = []
-	try:
-		for product in ("opsi-client-agent", "opsi-linux-client-agent", "opsi-mac-client-agent"):
-			if product in products:  # one at most
-				setup_after_install_products = service.productPropertyState_getObjects(
-					objectId=config.get("global", "host_id"),
-					productId=product,
-					propertyId="setup_after_install",
-				)[0]
-				add_products += [
-					sai_product for sai_product in setup_after_install_products.values
-					if sai_product not in products and sai_product not in add_products
-				]
-	except Exception as err:  # pylint: disable=broad-except
-		logger.warning("Failed to add setup_after_install products to filteredProductIds: %s", err)
-	return add_products
 
 
 class CacheService(threading.Thread):
