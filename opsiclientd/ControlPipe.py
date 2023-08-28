@@ -13,6 +13,7 @@ The classes are used to create named pipes for remote procedure calls.
 import os
 import socket
 import threading
+from datetime import datetime
 import time
 from ctypes import byref, c_char_p, c_ulong, create_string_buffer
 
@@ -49,6 +50,7 @@ class ClientConnection(threading.Thread):  # pylint: disable=too-many-instance-a
 		self._stopEvent = threading.Event()
 		self._stopEvent.clear()
 		self.login_capable = False
+		self.login_user_executed: datetime | None = None
 		logger.trace("%s created controller=%s connection=%s", self.__class__.__name__, self._controller, self._connection)
 
 	def __str__(self):
@@ -73,7 +75,9 @@ class ClientConnection(threading.Thread):  # pylint: disable=too-many-instance-a
 								if self.clientInfo:
 									# Switch to new protocol
 									self.executeRpc(
-										"blockLogin", [self._controller._opsiclientd._blockLogin], with_lock=False  # pylint: disable=protected-access
+										"blockLogin",
+										[self._controller._opsiclientd._blockLogin],
+										with_lock=False,  # pylint: disable=protected-access
 									)
 					time.sleep(0.5)
 			except Exception as err:  # pylint: disable=broad-except
@@ -141,6 +145,7 @@ class ClientConnection(threading.Thread):  # pylint: disable=too-many-instance-a
 					logger.info("Received response '%s' from client %s", response_json, self)
 					response = fromJson(response_json)
 					if method == "loginUser" and response.get("result"):
+						self.login_user_executed = datetime.now()
 						# Credential provider can only handle one successful login.
 						# Ensure, that the credential provider is not used for a
 						# second login if it keeps the pipe connection open.
@@ -169,7 +174,7 @@ class ControlPipe(threading.Thread):
 		self._running = False
 		self._stopEvent = threading.Event()
 		self._stopEvent.clear()
-		self._clients = []
+		self._clients: list[ClientConnection] = []
 		self._clientLock = threading.Lock()
 
 	def run(self):
@@ -225,6 +230,7 @@ class ControlPipe(threading.Thread):
 
 	def credentialProviderConnected(self, login_capable=None):
 		for client in self._clients:
+			logger.debug("Checking client: %r (login_user_executed=%r)", client.clientInfo, client.login_user_executed)
 			if client.clientInfo and (login_capable is None or login_capable == client.login_capable):
 				return True
 		return False
@@ -451,6 +457,7 @@ class NTControlPipe(ControlPipe):
 class OpsiclientdRpcPipeInterface:
 	def __init__(self, opsiclientd):
 		from .Opsiclientd import Opsiclientd  # pylint: disable=import-outside-toplevel
+
 		self.opsiclientd: Opsiclientd = opsiclientd
 
 	def getInterface(self):
