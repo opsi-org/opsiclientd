@@ -76,8 +76,8 @@ class ClientConnection(threading.Thread):  # pylint: disable=too-many-instance-a
 									# Switch to new protocol
 									self.executeRpc(
 										"blockLogin",
-										[self._controller._opsiclientd._blockLogin],
-										with_lock=False,  # pylint: disable=protected-access
+										[self._controller._opsiclientd._blockLogin],  # pylint: disable=protected-access
+										with_lock=False,
 									)
 					time.sleep(0.5)
 			except Exception as err:  # pylint: disable=broad-except
