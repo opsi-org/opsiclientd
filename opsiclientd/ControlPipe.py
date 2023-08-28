@@ -228,6 +228,17 @@ class ControlPipe(threading.Thread):
 	def getClientInfo(self):
 		return [c.clientInfo for c in self._clients]
 
+	def getLoginCapableCredentialProvider(self) -> ClientConnection:
+		return_client = None
+		for client in self._clients:
+			logger.debug("Checking client: %r (login_user_executed=%r)", client.clientInfo, client.login_user_executed)
+			if client.clientInfo and client.login_capable:
+				# Use latest ClientConnection (do not return / break)
+				return_client = client
+		if not return_client:
+			raise RuntimeError("Cannot execute rpc, no login capable opsi credential provider connected")
+		return return_client
+
 	def credentialProviderConnected(self, login_capable=None):
 		for client in self._clients:
 			logger.debug("Checking client: %r (login_user_executed=%r)", client.clientInfo, client.login_user_executed)
@@ -240,12 +251,14 @@ class ControlPipe(threading.Thread):
 			if not self._clients:
 				raise RuntimeError("Cannot execute rpc, no client connected")
 
-			if method == "loginUser" and not self.credentialProviderConnected(login_capable=True):
-				raise RuntimeError("Cannot execute rpc, no login capable opsi credential provider connected")
+			clients = self._clients
+			if method == "loginUser":
+				# Send loginUser to latest connected credential provider only
+				self._clients = [self.getLoginCapableCredentialProvider()]
 
 			responses = []
 			errors = []
-			for client in self._clients:
+			for client in clients:
 				if method == "loginUser" and not client.login_capable:
 					continue
 				response = client.executeRpc(method, params)
