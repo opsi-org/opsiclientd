@@ -452,11 +452,11 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 				logger.notice("Creating config cache dir '%s'", self._configCacheDir)
 				os.makedirs(self._configCacheDir)
 
-			self.initBackends()
-
 			ccss = state.get("config_cache_service")
 			if ccss:
 				self._state = ccss
+
+			self.initBackends()
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 			try:
@@ -534,6 +534,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 		server_version = version.parse(self._state.get("server_version", "4.2.0.0"))
 		if server_version < version.parse("4.3"):
 			extension_class = ConfigCacheServiceBackendExtension42
+		logger.notice("Using extension class %r for server version %s", extension_class, server_version)
 
 		self._configBackend = BackendExtender(
 			backend=ExtendedConfigDataBackend(configDataBackend=self._cacheBackend),
