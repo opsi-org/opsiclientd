@@ -450,6 +450,12 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		return WorkerOpsiJsonRpc._processQuery(self, result)
 
 	def _generateResponse(self, result):
+		cache_service = self.service._opsiclientd.getCacheService()  # pylint: disable=protected-access
+		if not cache_service:
+			raise RuntimeError("Cache service not running")
+		self.request.setHeader(
+			b"server", f"opsiclientd config cache service {cache_service.getConfigCacheState().get('server_version', '4.2.0.0')}"
+		)
 		return WorkerOpsiJsonRpc._generateResponse(self, result)
 
 	def _renderError(self, failure):
@@ -489,7 +495,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 		timeline = Timeline()
 		self.request.setResponseCode(200)
 		if get_event_data:
-			self.request.setHeader("content-type", "application/json")
+			self.request.setHeader("Content-Type", "application/json")
 			self.request.write(json.dumps(timeline.getEventData()).encode("utf-8"))
 		else:
 			logger.info("Creating opsiclientd info page")
@@ -497,7 +503,7 @@ class WorkerOpsiclientdInfo(WorkerOpsiclientd):
 				"head": timeline.getHtmlHead(),
 				"hostname": config.get("global", "host_id"),
 			}
-			self.request.setHeader("content-type", "text/html; charset=utf-8")
+			self.request.setHeader("Content-Type", "text/html; charset=utf-8")
 			self.request.write(html.encode("utf-8").strip())
 
 
@@ -529,7 +535,7 @@ class WorkerOpsiclientdFiles(WorkerOpsiclientd):
 			file_path.unlink()  # Delete file after successfull download
 		else:
 			self.request.setResponseCode(404)
-			self.request.setHeader("content-type", "text/plain; charset=utf-8")
+			self.request.setHeader("Content-Type", "text/plain; charset=utf-8")
 			self.request.write(f"Endpoint {path} unknown".encode("utf-8"))
 
 
@@ -584,7 +590,7 @@ class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 
 	def _generateResponse(self, result):
 		self.request.setResponseCode(200)
-		self.request.setHeader("content-type", "text/plain; charset=utf-8")
+		self.request.setHeader("Content-Type", "text/plain; charset=utf-8")
 		self.request.write("ok".encode("utf-8"))
 
 
@@ -598,7 +604,7 @@ class WorkerOpsiclientdLogViewer(WorkerOpsiclientd):
 	def _generateResponse(self, result):
 		logger.info("Creating log viewer page")
 		self.request.setResponseCode(200)
-		self.request.setHeader("content-type", "text/html; charset=utf-8")
+		self.request.setHeader("Content-Type", "text/html; charset=utf-8")
 		self.request.write(LOG_VIEWER_PAGE.encode("utf-8").strip())
 
 
@@ -612,16 +618,16 @@ class WorkerOpsiclientdTerminal(WorkerOpsiclientd):
 	def _generateResponse(self, result):
 		logger.info("Creating terminal page")
 		self.request.setResponseCode(200)
-		self.request.setHeader("content-type", "text/html; charset=utf-8")
+		self.request.setHeader("Content-Type", "text/html; charset=utf-8")
 		self.request.write(TERMINAL_PAGE.encode("utf-8").strip())
 
 
 class ResourceRoot(Resource):
 	addSlash = True
-	# isLeaf = True
 
 	def render(self, request):
 		"""Process request."""
+		request.setHeader(b"server", f"opsiclientd {__version__}")
 		return b"<html><head><title>opsiclientd</title></head><body></body></html>"
 
 
@@ -630,6 +636,7 @@ class ResourceOpsiclientdIndex(Resource):
 		super().__init__()
 
 	def render(self, request):
+		request.setHeader(b"server", f"opsiclientd {__version__}")
 		return (INDEX_PAGE % {"hostname": config.get("global", "host_id")}).encode("utf-8")
 
 
