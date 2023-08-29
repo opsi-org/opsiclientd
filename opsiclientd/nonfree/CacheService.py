@@ -19,6 +19,7 @@ import os
 import shutil
 import threading
 import time
+from packaging import version
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -272,7 +273,12 @@ class CacheService(threading.Thread):
 		return self._productCacheService.clear_cache()
 
 
-class ConfigCacheServiceBackendExtension(RPCProductDependencyMixin):  # pylint: disable=too-few-public-methods
+class ConfigCacheServiceBackendExtension42(RPCProductDependencyMixin):  # pylint: disable=too-few-public-methods
+	def accessControl_authenticated(self):
+		return True
+
+
+class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):  # pylint: disable=too-few-public-methods
 	def accessControl_authenticated(self):
 		return True
 
@@ -481,12 +487,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 			workBackend=self._workBackend, snapshotBackend=self._snapshotBackend, clientId=clientId, **backendArgs
 		)
 
-		self._configBackend = BackendExtender(
-			backend=ExtendedConfigDataBackend(configDataBackend=self._cacheBackend),
-			extensionClass=ConfigCacheServiceBackendExtension,
-			extensionConfigDir=config.get("cache_service", "extension_config_dir"),
-			extensionReplaceMethods=False,
-		)
+		self._createConfigBackend()
 
 		self._backendTracker = SQLiteObjectBackendModificationTracker(
 			database=os.path.join(self._configCacheDir, "tracker.sqlite"), lastModificationOnly=True
@@ -525,6 +526,19 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 		except Exception:
 			self.disconnectConfigService()
 			raise
+
+	def _createConfigBackend(self):
+		extension_class = ConfigCacheServiceBackendExtension43
+		server_version = version.parse(self._state.get("server_version", "4.2.0.0"))
+		if server_version < version.parse("4.3"):
+			extension_class = ConfigCacheServiceBackendExtension42
+
+		self._configBackend = BackendExtender(
+			backend=ExtendedConfigDataBackend(configDataBackend=self._cacheBackend),
+			extensionClass=extension_class,
+			extensionConfigDir=config.get("cache_service", "extension_config_dir"),
+			extensionReplaceMethods=False,
+		)
 
 	def getConfigBackend(self):
 		return self._configBackend
@@ -755,8 +769,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 					self._backendTracker.clearModifications()
 					self._cacheBackend._replicateMasterToWorkBackend()  # pylint: disable=protected-access
 					logger.notice("Config synced from server")
+					self._state["server_version"] = str(self._configService.service.server_version)
 					self._state["config_cached"] = True
 					state.set("config_cache_service", self._state)
+					self._createConfigBackend()
 					timeline.setEventEnd(eventId)
 
 					# IDEA: only fire sync_completed if pending action requests?
