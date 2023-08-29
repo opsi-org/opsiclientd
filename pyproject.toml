@@ -56,7 +56,7 @@ pytest-cov = "^4.0"
 pywin32-ctypes = {version = "^0.2", platform = "win32"}
 requests = "^2.25"
 tan = "^22.8"
-pyinstaller = "^5.2"
+pyinstaller = "5.13.0"
 
 [tool.poetry.scripts]
 opsiclientd = "opsiclientd.__main__:opsiclientd"
