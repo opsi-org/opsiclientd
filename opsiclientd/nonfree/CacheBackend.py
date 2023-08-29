@@ -65,7 +65,8 @@ def add_products_from_setup_after_install(products: list[str], service: ServiceC
 					propertyId="setup_after_install",
 				)[0]
 				add_products += [
-					sai_product for sai_product in setup_after_install_products.values
+					sai_product
+					for sai_product in setup_after_install_products.values
 					if sai_product not in products and sai_product not in add_products
 				]
 	except Exception as err:  # pylint: disable=broad-except
@@ -528,7 +529,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 
 		clients = self._workBackend.host_getObjects(id=self._clientId)
 		if not clients:
-			raise BackendMissingDataError("Host '{self._clientId}' not found in replicated backend")
+			raise BackendMissingDataError(f"Host '{self._clientId}' not found in replicated backend")
 
 		opsiHostKey = clients[0].getOpsiHostKey()
 		if opsiHostKey != config.get("global", "opsi_host_key"):
