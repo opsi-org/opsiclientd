@@ -13,7 +13,6 @@ import inspect
 import json
 import time
 from types import MethodType
-from dataclasses import dataclass, field
 
 from OPSI.Backend.Backend import (  # type: ignore[import]
 	Backend,
@@ -72,14 +71,6 @@ def add_products_from_setup_after_install(products: list[str], service: ServiceC
 	except Exception as err:  # pylint: disable=broad-except
 		logger.warning("Failed to add setup_after_install products to filteredProductIds: %s", err)
 	return add_products
-
-
-@dataclass
-class ProductActionGroup:
-	priority: int = 0
-	product_on_clients: list[ProductOnClient] = field(default_factory=list)
-	priorities: dict[str, int] = field(default_factory=dict)
-	dependencies: dict[str, list[ProductDependency]] = field(default_factory=lambda: collections.defaultdict(list))
 
 
 class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pylint: disable=too-many-instance-attributes
