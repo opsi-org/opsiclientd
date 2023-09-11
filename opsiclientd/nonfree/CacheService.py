@@ -56,6 +56,7 @@ __all__ = ["CacheService", "ConfigCacheService", "ConfigCacheServiceBackendExten
 config = Config()
 state = State()
 timeline = Timeline()
+SLOT_SYNC_HEARTBEAT_INTERVAL = 5.0
 
 
 class SyncSlotHeartbeat(threading.Thread):
@@ -69,6 +70,7 @@ class SyncSlotHeartbeat(threading.Thread):
 		while not self.should_stop:
 			response = self.service_connection.acquire_sync_slot(self.slot_id)
 			logger.devel("Acquired sync slot %s, response: %s", self.slot_id, response)
+			time.sleep(SLOT_SYNC_HEARTBEAT_INTERVAL)
 
 
 class CacheService(threading.Thread):
