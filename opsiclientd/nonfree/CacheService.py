@@ -70,7 +70,7 @@ class SyncSlotHeartbeat(threading.Thread):
 	def run(self) -> None:
 		while not self.should_stop:
 			response = self.service_connection.service_acquireTransferSlot(self.depot_id, self.slot_id)
-			logger.devel("Acquired sync slot %s, response: %s", self.slot_id, response)
+			logger.devel("Sync slot Heartbeat %s, response: %s", self.slot_id, response)
 			time.sleep(SLOT_SYNC_HEARTBEAT_INTERVAL)
 
 
@@ -890,7 +890,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			if hasattr(self._configService, "service_acquireTransferSlot"):
 				logger.devel("Acquiring sync slot")
 				response = self._configService.service_acquireTransferSlot(depot_id)
-				try_after_seconds = response.get("try_after_seconds")
+				try_after_seconds = response.get("retry_after")
 				self._sync_slot_id = response.get("slot_id")
 				logger.devel("service_acquireTransferSlot produced response %s", response)
 			if not try_after_seconds:
@@ -900,18 +900,18 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 					heartbeat_thread.start()
 				logger.devel("Starting to cache products")
 				self._cacheProducts()
-				if heartbeat_thread:
-					logger.devel("Joining sync slot heartbeat thread")
-					heartbeat_thread.should_stop = True
-					heartbeat_thread.join()
 				logger.devel("Finished caching products, returning waiting time 1.0")
 				return 1.0
 			logger.devel("Did not cache Products, server suggested waiting time of %s", try_after_seconds)
 			return try_after_seconds
 		finally:
-			if hasattr(self._configService, "service_releaseTransferSlot") and not try_after_seconds:
+			logger.devel("Finally clause")
+			if heartbeat_thread:
+				heartbeat_thread.should_stop = True
 				logger.devel("Releasing sync slot %s", self._sync_slot_id)
 				self._configService.service_releaseTransferSlot(self._sync_slot_id)  # pylint: disable=no-member
+				logger.devel("Joining sync slot heartbeat thread")
+				heartbeat_thread.join()
 
 	def run(self):
 		with log_context({"instance": "product cache service"}):
