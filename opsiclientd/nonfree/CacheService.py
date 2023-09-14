@@ -912,6 +912,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 				self._configService.service_releaseTransferSlot(self._sync_slot_id)  # pylint: disable=no-member
 				logger.devel("Joining sync slot heartbeat thread")
 				heartbeat_thread.join()
+			self.disconnectConfigService()
 
 	def run(self):
 		with log_context({"instance": "product cache service"}):
@@ -1199,7 +1200,6 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			timeline.setEventEnd(eventId)
 
 		self._working = False
-		self.disconnectConfigService()
 		if self._repository:
 			self._repository.disconnect()
 			self._repository = None
