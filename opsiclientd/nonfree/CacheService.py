@@ -60,15 +60,16 @@ SLOT_SYNC_HEARTBEAT_INTERVAL = 5.0
 
 
 class SyncSlotHeartbeat(threading.Thread):
-	def __init__(self, service_connection: ServiceConnection, slot_id: str) -> None:
+	def __init__(self, service_connection: ServiceConnection, depot_id: str, slot_id: str) -> None:
 		super().__init__()
 		self.should_stop = False
 		self.service_connection = service_connection
+		self.depot_id = depot_id
 		self.slot_id = slot_id
 
 	def run(self) -> None:
 		while not self.should_stop:
-			response = self.service_connection.acquire_sync_slot(self.slot_id)
+			response = self.service_connection.service_acquireTransferSlot(self.depot_id, self.slot_id)
 			logger.devel("Acquired sync slot %s, response: %s", self.slot_id, response)
 			time.sleep(SLOT_SYNC_HEARTBEAT_INTERVAL)
 
@@ -880,17 +881,20 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 		config_service = self.getConfigService()
 		try_after_seconds = 0.0
 		heartbeat_thread = None
+		depot_id = config_service.configState_getClientToDepotserver(  # pylint: disable=no-member
+			clientIds=config.get("global", "host_id")
+		)[0]["depotId"]
 		try:
-			if hasattr(config_service, "acquire_sync_slot"):
+			if hasattr(config_service, "service_acquireTransferSlot"):
 				logger.devel("Acquiring sync slot")
-				response = config_service.acquire_sync_slot()
+				response = config_service.service_acquireTransferSlot(depot_id)
 				try_after_seconds = response.get("try_after_seconds")
 				self._sync_slot_id = response.get("slot_id")
-				logger.devel("acquire_sync_slot produced response %s", response)
+				logger.devel("service_acquireTransferSlot produced response %s", response)
 			if not try_after_seconds:
-				if hasattr(config_service, "acquire_sync_slot"):
+				if hasattr(config_service, "service_acquireTransferSlot"):
 					logger.devel("Starting sync slot heartbeat thread")
-					heartbeat_thread = SyncSlotHeartbeat(config_service, self._sync_slot_id)
+					heartbeat_thread = SyncSlotHeartbeat(config_service, depot_id, self._sync_slot_id)
 					heartbeat_thread.start()
 				logger.devel("Starting to cache products")
 				self._cacheProducts()
@@ -903,9 +907,9 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			logger.devel("Did not cache Products, server suggested waiting time of %s", try_after_seconds)
 			return try_after_seconds
 		finally:
-			if hasattr(config_service, "release_sync_slot") and not try_after_seconds:
+			if hasattr(config_service, "service_releaseTransferSlot") and not try_after_seconds:
 				logger.devel("Releasing sync slot %s", self._sync_slot_id)
-				config_service.release_sync_slot(self._sync_slot_id)  # pylint: disable=no-member
+				config_service.service_releaseTransferSlot(self._sync_slot_id)  # pylint: disable=no-member
 
 	def run(self):
 		with log_context({"instance": "product cache service"}):
@@ -913,6 +917,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			logger.notice("Product cache service started")
 			try:
 				while not self._stopped:
+					sleep_time = 1.0
 					if self._cacheProductsRequested and not self._working:
 						self._cacheProductsRequested = False
 						sleep_time = self.start_caching_or_get_waiting_time()
