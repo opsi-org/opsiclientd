@@ -880,6 +880,9 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 	def start_caching_or_get_waiting_time(self) -> float:
 		try_after_seconds = 0.0
 		heartbeat_thread = None
+		if not self._configService:
+			self.connectConfigService()
+
 		depot_id = self._configService.configState_getClientToDepotserver(  # pylint: disable=no-member
 			clientIds=config.get("global", "host_id")
 		)[0]["depotId"]
