@@ -878,23 +878,22 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 		self._dynamicBandwidth = forceBool(dynamicBandwidth)
 
 	def start_caching_or_get_waiting_time(self) -> float:
-		config_service = self.getConfigService()
 		try_after_seconds = 0.0
 		heartbeat_thread = None
-		depot_id = config_service.configState_getClientToDepotserver(  # pylint: disable=no-member
+		depot_id = self._configService.configState_getClientToDepotserver(  # pylint: disable=no-member
 			clientIds=config.get("global", "host_id")
 		)[0]["depotId"]
 		try:
-			if hasattr(config_service, "service_acquireTransferSlot"):
+			if hasattr(self._configService, "service_acquireTransferSlot"):
 				logger.devel("Acquiring sync slot")
-				response = config_service.service_acquireTransferSlot(depot_id)
+				response = self._configService.service_acquireTransferSlot(depot_id)
 				try_after_seconds = response.get("try_after_seconds")
 				self._sync_slot_id = response.get("slot_id")
 				logger.devel("service_acquireTransferSlot produced response %s", response)
 			if not try_after_seconds:
-				if hasattr(config_service, "service_acquireTransferSlot"):
+				if hasattr(self._configService, "service_acquireTransferSlot"):
 					logger.devel("Starting sync slot heartbeat thread")
-					heartbeat_thread = SyncSlotHeartbeat(config_service, depot_id, self._sync_slot_id)
+					heartbeat_thread = SyncSlotHeartbeat(self._configService, depot_id, self._sync_slot_id)
 					heartbeat_thread.start()
 				logger.devel("Starting to cache products")
 				self._cacheProducts()
@@ -907,9 +906,9 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			logger.devel("Did not cache Products, server suggested waiting time of %s", try_after_seconds)
 			return try_after_seconds
 		finally:
-			if hasattr(config_service, "service_releaseTransferSlot") and not try_after_seconds:
+			if hasattr(self._configService, "service_releaseTransferSlot") and not try_after_seconds:
 				logger.devel("Releasing sync slot %s", self._sync_slot_id)
-				config_service.service_releaseTransferSlot(self._sync_slot_id)  # pylint: disable=no-member
+				self._configService.service_releaseTransferSlot(self._sync_slot_id)  # pylint: disable=no-member
 
 	def run(self):
 		with log_context({"instance": "product cache service"}):
