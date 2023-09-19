@@ -56,22 +56,40 @@ __all__ = ["CacheService", "ConfigCacheService", "ConfigCacheServiceBackendExten
 config = Config()
 state = State()
 timeline = Timeline()
-TRANSFER_SLOT_HEARTBEAT_INTERVAL = 5.0  # TODO: configurable?
+
+RETENTION_HEARTBEAT_INTERVAL_DIFF = 10.0
+MIN_HEARTBEAT_INTERVAL = 1.0
 
 
 class TransferSlotHeartbeat(threading.Thread):
-	def __init__(self, service_connection: ServiceConnection, depot_id: str, slot_id: str) -> None:
+	def __init__(self, service_connection: ServiceConnection, depot_id: str, client_id: str) -> None:
 		super().__init__()
 		self.should_stop = False
 		self.service_connection = service_connection
 		self.depot_id = depot_id
-		self.slot_id = slot_id
+		self.client_id = client_id
+		self.slot_id = None
+
+	def acquire(self) -> dict[str, str | float]:
+		response = self.service_connection.service_acquireTransferSlot(self.depot_id, self.client_id, self.slot_id)
+		self.slot_id = response.get("slot_id")
+		logger.debug("Transfer slot Heartbeat %s, response: %s", self.slot_id, response)
+		return response
+
+	def release(self) -> None:
+		response = self.service_connection.service_releaseTransferSlot(self.depot_id, self.client_id, self.slot_id)
+		logger.debug("releaseTransferSlot response: %s", response)
 
 	def run(self) -> None:
-		while not self.should_stop:
-			response = self.service_connection.service_acquireTransferSlot(self.depot_id, self.slot_id)
-			logger.debug("Transfer slot Heartbeat %s, response: %s", self.slot_id, response)
-			time.sleep(TRANSFER_SLOT_HEARTBEAT_INTERVAL)
+		try:
+			while not self.should_stop:
+				response = self.acquire()
+				if not response.get("retention"):  # assuming retention to be set if slot_id is given
+					raise ConnectionError("TransferSlotHeartbeat lost transfer slot (and did not get new one)")
+				time.sleep(max(response["retention"] - RETENTION_HEARTBEAT_INTERVAL_DIFF, MIN_HEARTBEAT_INTERVAL))
+		finally:
+			if self.slot_id:
+				self.release()
 
 
 class CacheService(threading.Thread):
@@ -829,7 +847,6 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 		self._overallProgressObserver = None
 
 		self._repository = None
-		self._transfer_slot_id = None
 
 		if not os.path.exists(self._storageDir):
 			logger.notice("Creating cache service storage dir '%s'", self._storageDir)
@@ -886,15 +903,14 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 		)[0]["depotId"]
 		try:
 			if hasattr(self._configService, "service_acquireTransferSlot"):
+				heartbeat_thread = TransferSlotHeartbeat(self._configService, depot_id, config.get("global", "host_id"))
 				logger.notice("Acquiring transfer slot")
-				response = self._configService.service_acquireTransferSlot(depot_id)
+				response = heartbeat_thread.acquire()
 				try_after_seconds = response.get("retry_after")
-				self._transfer_slot_id = response.get("slot_id")
 				logger.debug("service_acquireTransferSlot produced response %s", response)
 			if not try_after_seconds:
-				if hasattr(self._configService, "service_acquireTransferSlot"):
+				if heartbeat_thread:
 					logger.info("Starting transfer slot heartbeat thread")
-					heartbeat_thread = TransferSlotHeartbeat(self._configService, depot_id, self._transfer_slot_id)
 					heartbeat_thread.start()
 				logger.notice("Starting to cache products")
 				self._cacheProducts()
@@ -904,9 +920,8 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			return try_after_seconds
 		finally:
 			if heartbeat_thread:
+				logger.debug("Releasing transfer slot %s", heartbeat_thread.slot_id)
 				heartbeat_thread.should_stop = True
-				logger.notice("Releasing transfer slot %s", self._transfer_slot_id)
-				self._configService.service_releaseTransferSlot(self._transfer_slot_id)  # pylint: disable=no-member
 				logger.debug("Joining transfer slot heartbeat thread")
 				heartbeat_thread.join()
 
