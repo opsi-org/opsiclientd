@@ -71,13 +71,13 @@ class TransferSlotHeartbeat(threading.Thread):
 		self.slot_id = None
 
 	def acquire(self) -> dict[str, str | float]:
-		response = self.service_connection.service_acquireTransferSlot(self.depot_id, self.client_id, self.slot_id)
+		response = self.service_connection.depot_acquireTransferSlot(self.depot_id, self.client_id, self.slot_id)
 		self.slot_id = response.get("slot_id")
 		logger.debug("Transfer slot Heartbeat %s, response: %s", self.slot_id, response)
 		return response
 
 	def release(self) -> None:
-		response = self.service_connection.service_releaseTransferSlot(self.depot_id, self.client_id, self.slot_id)
+		response = self.service_connection.depot_releaseTransferSlot(self.depot_id, self.client_id, self.slot_id)
 		logger.debug("releaseTransferSlot response: %s", response)
 
 	def run(self) -> None:
@@ -902,12 +902,12 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			clientIds=config.get("global", "host_id")
 		)[0]["depotId"]
 		try:
-			if hasattr(self._configService, "service_acquireTransferSlot"):
+			if hasattr(self._configService, "depot_acquireTransferSlot"):
 				heartbeat_thread = TransferSlotHeartbeat(self._configService, depot_id, config.get("global", "host_id"))
 				logger.notice("Acquiring transfer slot")
 				response = heartbeat_thread.acquire()
 				try_after_seconds = response.get("retry_after")
-				logger.debug("service_acquireTransferSlot produced response %s", response)
+				logger.debug("depot_acquireTransferSlot produced response %s", response)
 			if not try_after_seconds:
 				if heartbeat_thread:
 					logger.info("Starting transfer slot heartbeat thread")
