@@ -84,9 +84,12 @@ class TransferSlotHeartbeat(threading.Thread):
 		try:
 			while not self.should_stop:
 				response = self.acquire()
-				if not response.get("retention"):  # assuming retention to be set if slot_id is given
+				if not response.get("retention"):
+					logger.error("TransferSlotHeartbeat lost transfer slot (and did not get new one)")
 					raise ConnectionError("TransferSlotHeartbeat lost transfer slot (and did not get new one)")
-				time.sleep(max(response["retention"] - RETENTION_HEARTBEAT_INTERVAL_DIFF, MIN_HEARTBEAT_INTERVAL))
+				wait_time = max(response["retention"] - RETENTION_HEARTBEAT_INTERVAL_DIFF, MIN_HEARTBEAT_INTERVAL)
+				logger.debug("Waiting %s seconds before reaquiring slot", wait_time)
+				time.sleep(wait_time)
 		finally:
 			if self.slot_id:
 				self.release()
