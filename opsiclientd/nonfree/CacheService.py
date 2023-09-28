@@ -63,7 +63,7 @@ MIN_HEARTBEAT_INTERVAL = 1.0
 
 class TransferSlotHeartbeat(threading.Thread):
 	def __init__(self, service_connection: ServiceConnection, depot_id: str, client_id: str) -> None:
-		super().__init__()
+		super().__init__(daemon=True)
 		self.should_stop = False
 		self.service_connection = service_connection
 		self.depot_id = depot_id
