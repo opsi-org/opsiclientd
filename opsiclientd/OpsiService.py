@@ -308,6 +308,11 @@ class ServiceConnection:
 			logger.notice("Received new opsi host id %r.", self._configService.service.new_host_id)
 			config.set("global", "host_id", forceUnicode(self._configService.service.new_host_id))
 			change = True
+			if config.get("config_service", "permanent_connection"):
+				logger.info("Reestablishing permanent service connection")
+				self.opsiclientd.stop_permanent_service_connection()
+				self.opsiclientd.start_permanent_service_connection()
+
 		if self._configService.service.new_host_key and self._configService.service.new_host_key != config.get("global", "host_host_key"):
 			secret_filter.add_secrets(self._configService.service.new_host_key)
 			logger.notice("Received new opsi host key: %r", self._configService.service.new_host_key)
