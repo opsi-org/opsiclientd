@@ -59,6 +59,43 @@ config = Config()
 state = State()
 timeline = Timeline()
 
+RETENTION_HEARTBEAT_INTERVAL_DIFF = 10.0
+MIN_HEARTBEAT_INTERVAL = 1.0
+
+
+class TransferSlotHeartbeat(threading.Thread):
+	def __init__(self, service_connection: ServiceConnection, depot_id: str, client_id: str) -> None:
+		super().__init__(daemon=True)
+		self.should_stop = False
+		self.service_connection = service_connection
+		self.depot_id = depot_id
+		self.client_id = client_id
+		self.slot_id = None
+
+	def acquire(self) -> dict[str, str | float]:
+		response = self.service_connection.depot_acquireTransferSlot(self.depot_id, self.client_id, self.slot_id)
+		self.slot_id = response.get("slot_id")
+		logger.debug("Transfer slot Heartbeat %s, response: %s", self.slot_id, response)
+		return response
+
+	def release(self) -> None:
+		response = self.service_connection.depot_releaseTransferSlot(self.depot_id, self.client_id, self.slot_id)
+		logger.debug("releaseTransferSlot response: %s", response)
+
+	def run(self) -> None:
+		try:
+			while not self.should_stop:
+				response = self.acquire()
+				if not response.get("retention"):
+					logger.error("TransferSlotHeartbeat lost transfer slot (and did not get new one)")
+					raise ConnectionError("TransferSlotHeartbeat lost transfer slot (and did not get new one)")
+				wait_time = max(response["retention"] - RETENTION_HEARTBEAT_INTERVAL_DIFF, MIN_HEARTBEAT_INTERVAL)
+				logger.debug("Waiting %s seconds before reaquiring slot", wait_time)
+				time.sleep(wait_time)
+		finally:
+			if self.slot_id:
+				self.release()
+
 
 class CacheService(threading.Thread):
 	def __init__(self, opsiclientd):
@@ -879,18 +916,54 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 	def setDynamicBandwidth(self, dynamicBandwidth):
 		self._dynamicBandwidth = forceBool(dynamicBandwidth)
 
+	def start_caching_or_get_waiting_time(self) -> float:
+		try_after_seconds = 0.0
+		heartbeat_thread = None
+
+		depot_id = self._configService.configState_getClientToDepotserver(  # pylint: disable=no-member
+			clientIds=config.get("global", "host_id")
+		)[0]["depotId"]
+		try:
+			if hasattr(self._configService, "depot_acquireTransferSlot"):
+				heartbeat_thread = TransferSlotHeartbeat(self._configService, depot_id, config.get("global", "host_id"))
+				logger.notice("Acquiring transfer slot")
+				response = heartbeat_thread.acquire()
+				try_after_seconds = response.get("retry_after")
+				logger.debug("depot_acquireTransferSlot produced response %s", response)
+			if not try_after_seconds:
+				if heartbeat_thread:
+					logger.info("Starting transfer slot heartbeat thread")
+					heartbeat_thread.start()
+				logger.notice("Starting to cache products")
+				self._cacheProducts()
+				logger.info("Finished caching products")
+				return 1.0  # check again in 1 second if we have to cache
+			logger.notice("Did not cache Products, server suggested waiting time of %s", try_after_seconds)
+			return try_after_seconds
+		finally:
+			if heartbeat_thread:
+				logger.debug("Releasing transfer slot %s", heartbeat_thread.slot_id)
+				heartbeat_thread.should_stop = True
+				logger.debug("Joining transfer slot heartbeat thread")
+				heartbeat_thread.join()
+
 	def run(self):
 		with log_context({"instance": "product cache service"}):
 			self._running = True
 			logger.notice("Product cache service started")
 			try:
+				if not self._configService:
+					self.connectConfigService()
 				while not self._stopped:
+					sleep_time = 1.0
 					if self._cacheProductsRequested and not self._working:
 						self._cacheProductsRequested = False
-						self._cacheProducts()
-					time.sleep(1)
+						sleep_time = self.start_caching_or_get_waiting_time()
+					time.sleep(sleep_time)
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err, exc_info=True)
+			finally:
+				self.disconnectConfigService()
 			logger.notice("Product cache service ended")
 			self._running = False
 
@@ -1164,7 +1237,6 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			timeline.setEventEnd(eventId)
 
 		self._working = False
-		self.disconnectConfigService()
 		if self._repository:
 			self._repository.disconnect()
 			self._repository = None
