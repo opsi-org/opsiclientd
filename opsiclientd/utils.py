@@ -9,6 +9,7 @@ utils
 """
 
 import struct
+import subprocess
 
 import netifaces
 from opsicommon.logging import logger

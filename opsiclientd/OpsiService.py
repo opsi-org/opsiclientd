@@ -63,6 +63,7 @@ from opsiclientd.messagebus.filetransfer import (
 from opsiclientd.messagebus.terminal import (
 	process_messagebus_message as process_terminal_message,
 )
+from opsiclientd.messagebus.process import process_messagebus_message as process_process_message
 from opsiclientd.utils import log_network_status
 
 config = Config()
@@ -246,6 +247,8 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			process_terminal_message(message, self.service_client.messagebus.send_message)
 		elif message.type.startswith("file_"):
 			process_filetransfer_message(message, self.service_client.messagebus.send_message)
+		elif message.type.startswith("process_"):
+			process_process_message(message, self.service_client.messagebus.send_message)
 
 
 class ServiceConnection:
