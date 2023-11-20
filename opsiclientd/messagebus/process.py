@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 
 # opsiclientd is part of the desktop management solution opsi http://www.opsi.org
@@ -24,12 +23,9 @@ from opsicommon.messagebus import (  # type: ignore[import]
 	MessageType,
 	ProcessDataReadMessage,
 	ProcessStartEventMessage,
-	ProcessStopEventMessage,
 	ProcessStartRequestMessage,
+	ProcessStopEventMessage,
 )
-
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
-
 
 processes: dict[str, ProcessThread] = {}
 processes_lock = Lock()
@@ -52,10 +48,16 @@ class ProcessReaderThread(Thread):
 			try:
 				if self.process.process_handle.returncode is not None:
 					break
-				stdout, stderr = self.process.read_stdouterr(self.block_size)  # TODO: how to read write from/to process?
+				stdout = self.process.process_handle.stdout.read(self.block_size)
+				stderr = self.process.process_handle.stderr.read(self.block_size)
 				if not self._should_stop:
 					message = ProcessDataReadMessage(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-						sender="@", channel=self.process.back_channel, process_id=self.process.process_id, stdout=stdout, stderr=stderr)
+						sender="@",
+						channel=self.process.back_channel,
+						process_id=self.process.process_id,
+						stdout=stdout,
+						stderr=stderr,
+					)
 					self.process.send_message(message)  # pylint: disable=no-member
 				sleep(1.0)
 			except (IOError, EOFError) as err:
@@ -64,7 +66,12 @@ class ProcessReaderThread(Thread):
 				break
 			except Exception as err:  # pylint: disable=broad-except
 				if not self._should_stop:
-					logger.error("Error in terminal reader thread: %s %s", err.__class__, err, exc_info=True)
+					logger.error(
+						"Error in terminal reader thread: %s %s",
+						err.__class__,
+						err,
+						exc_info=True,
+					)
 					self.process.close()
 					break
 
@@ -78,7 +85,7 @@ class ProcessThread(Thread):  # pylint: disable=too-many-instance-attributes
 	def __init__(  # pylint: disable=too-many-arguments
 		self,
 		send_message_function: Callable,
-		process_start_request: ProcessStartRequestMessage
+		process_start_request: ProcessStartRequestMessage,
 	) -> None:
 		super().__init__()
 		self.daemon = True
@@ -91,7 +98,12 @@ class ProcessThread(Thread):  # pylint: disable=too-many-instance-attributes
 		self.local_process_id
 
 		command = self._process_start_request.command
-		self.process_handle = subprocess.Popen(command)
+		self.process_handle = subprocess.Popen(
+			command,
+			stdin=subprocess.PIPE,
+			stdout=subprocess.PIPE,
+			stderr=subprocess.PIPE,
+		)
 		self.local_process_id = self.process_handle.pid
 		self.process_reader_thread = ProcessReaderThread(self)
 
@@ -100,11 +112,14 @@ class ProcessThread(Thread):  # pylint: disable=too-many-instance-attributes
 		return self._process_start_request.process_id
 
 	@property
-	def back_channel(self) -> str:
+	def back_channel(self) -> str | None:
 		return self._process_start_request.back_channel
 
 	def process_message(self, message: Message) -> None:
-		if message.type not in (MessageType.PROCESS_DATA_WRITE, MessageType.PROCESS_STOP_REQUEST):
+		if message.type not in (
+			MessageType.PROCESS_DATA_WRITE,
+			MessageType.PROCESS_STOP_REQUEST,
+		):
 			logger.warning("Received invalid message type %r", message.type)
 			return
 		self._message_queue.put(message)
@@ -124,7 +139,10 @@ class ProcessThread(Thread):  # pylint: disable=too-many-instance-attributes
 			if self.process_reader_thread:
 				self.process_reader_thread.stop()
 			message = ProcessStopEventMessage(
-				sender="@", channel=self.back_channel, process_id=self.process_id, exit_code=self.process_handle.returncode
+				sender="@",
+				channel=self.back_channel,
+				process_id=self.process_id,
+				exit_code=self.process_handle.returncode,
 			)
 			self._send_message_function(message)
 			self.pty_stop()
@@ -155,7 +173,7 @@ class ProcessThread(Thread):  # pylint: disable=too-many-instance-attributes
 				continue
 			self._last_usage = time()
 			if message.type == MessageType.PROCESS_DATA_WRITE:
-				self.process_handle.communicate(message.stdin)
+				self.process_handle.stdin.write(message.stdin)  # flush?
 			elif message.type == MessageType.PROCESS_STOP_REQUEST:
 				self.close()
 
@@ -170,7 +188,7 @@ def process_messagebus_message(message: Message, send_message: Callable) -> None
 				with processes_lock:
 					process = ProcessThread(
 						send_message_function=send_message,
-						process_start_request=message
+						process_start_request=message,
 					)
 					processes[message.process_id] = process
 					processes[message.process_id].start()
@@ -187,10 +205,14 @@ def process_messagebus_message(message: Message, send_message: Callable) -> None
 			process.close()
 		else:
 			msg = ProcessStopEventMessage(
-				sender="@", channel=message.back_channel, process_id=message.process_id, exit_code=-1, error={
+				sender="@",
+				channel=message.back_channel,
+				process_id=message.process_id,
+				exit_code=-1,
+				error={
 					"code": 0,
 					"message": str(err),
 					"details": None,
-				}
+				},
 			)
 			send_message(msg)
