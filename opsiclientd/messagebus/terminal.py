@@ -27,6 +27,7 @@ from opsicommon.messagebus import (  # type: ignore[import]
 	TerminalOpenEventMessage,
 	TerminalOpenRequestMessage,
 	TerminalResizeEventMessage,
+	CONNECTION_USER_CHANNEL,
 )
 from psutil import AccessDenied, NoSuchProcess, Process  # type: ignore[import]
 
@@ -62,7 +63,7 @@ class TerminalReaderThread(Thread):
 					break
 				if not self._should_stop:
 					message = TerminalDataReadMessage(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-						sender="@",
+						sender=CONNECTION_USER_CHANNEL,
 						channel=self.terminal.back_channel,
 						terminal_id=self.terminal.terminal_id,
 						data=data,
@@ -165,7 +166,7 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 		try:
 			if self.terminal_reader_thread:
 				self.terminal_reader_thread.stop()
-			message = TerminalCloseEventMessage(sender="@", channel=self.back_channel, terminal_id=self.terminal_id)
+			message = TerminalCloseEventMessage(sender=CONNECTION_USER_CHANNEL, channel=self.back_channel, terminal_id=self.terminal_id)
 			self._send_message_function(message)
 			self.pty_stop()
 			if self.terminal_id in terminals:
@@ -192,7 +193,7 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 		for var in self._context:
 			var.set(self._context[var])
 		message = TerminalOpenEventMessage(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-			sender="@",
+			sender=CONNECTION_USER_CHANNEL,
 			channel=self.back_channel,
 			terminal_id=self.terminal_id,
 			back_channel="$",
@@ -215,7 +216,7 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 			elif message.type == MessageType.TERMINAL_RESIZE_REQUEST:
 				self.set_size(message.rows, message.cols)
 				message = TerminalResizeEventMessage(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-					sender="@",
+					sender=CONNECTION_USER_CHANNEL,
 					channel=self.back_channel,
 					terminal_id=self.terminal_id,
 					rows=self.rows,
@@ -255,7 +256,7 @@ def process_messagebus_message(message: TerminalMessage, send_message: Callable)
 			terminal.close()
 		else:
 			msg = TerminalErrorMessage(
-				sender="@",
+				sender=CONNECTION_USER_CHANNEL,
 				channel=message.back_channel,
 				terminal_id=message.terminal_id,
 				error={

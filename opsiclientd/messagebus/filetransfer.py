@@ -25,6 +25,7 @@ from opsicommon.messagebus import (  # type: ignore[import]
 	FileErrorMessage,
 	MessageErrorEnum,
 	FileMessage,
+	CONNECTION_USER_CHANNEL,
 )
 
 from opsiclientd.messagebus.terminal import terminals
@@ -78,7 +79,7 @@ class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-ins
 	def _error(self, error: str):
 		self._file_path.unlink(missing_ok=True)
 		msg = FileErrorMessage(
-			sender="@",
+			sender=CONNECTION_USER_CHANNEL,
 			channel=self._file_upload_request.back_channel,
 			file_id=self._file_upload_request.file_id,
 			error={
@@ -103,7 +104,7 @@ class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-ins
 				if time() > self._last_chunk_time + self.chunk_timeout:
 					logger.notice("File transfer timed out")
 					msg = FileErrorMessage(
-						sender="@",
+						sender=CONNECTION_USER_CHANNEL,
 						channel=self._file_upload_request.back_channel,
 						file_id=self._file_upload_request.file_id,
 						error={
@@ -129,7 +130,7 @@ class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-ins
 			if message.last:
 				logger.debug("Last chunk received")
 				msg = FileUploadResultMessage(
-					sender="@",
+					sender=CONNECTION_USER_CHANNEL,
 					channel=self._file_upload_request.back_channel,
 					file_id=self._file_upload_request.file_id,
 					path=str(self._file_path),
@@ -165,7 +166,7 @@ def process_messagebus_message(message: FileMessage, send_message: Callable) -> 
 		logger.warning(err, exc_info=True)
 
 		msg = FileErrorMessage(
-			sender="@",
+			sender=CONNECTION_USER_CHANNEL,
 			channel=message.back_channel,
 			file_id=message.file_id,
 			error={
