@@ -41,6 +41,8 @@ from opsicommon.messagebus import (
 	Message,
 	TraceRequestMessage,
 	TraceResponseMessage,
+	TerminalMessage,
+	FileMessage,
 	timestamp,
 )
 from opsicommon.ssl import install_ca, load_ca, remove_ca
@@ -242,9 +244,9 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 				trace={"sender_ws_send": timestamp()},
 			)
 			self.service_client.messagebus.send_message(response)
-		elif message.type.startswith("terminal_"):
+		elif isinstance(message, TerminalMessage):
 			process_terminal_message(message, self.service_client.messagebus.send_message)
-		elif message.type.startswith("file_"):
+		elif isinstance(message, FileMessage):
 			process_filetransfer_message(message, self.service_client.messagebus.send_message)
 
 
@@ -336,9 +338,7 @@ class ServiceConnection:
 				if config_cache.exists():
 					shutil.rmtree(config_cache)
 
-	def connectConfigService(
-		self, allowTemporaryConfigServiceUrls=True
-	):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		try:  # pylint: disable=too-many-nested-blocks
 			configServiceUrls = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=allowTemporaryConfigServiceUrls)
 			if not configServiceUrls:
