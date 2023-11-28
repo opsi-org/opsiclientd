@@ -41,20 +41,27 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			logger.error(err, exc_info=True)
 			raise
 
+	def GetAcceptedControls(self):
+		rc = win32serviceutil.ServiceFramework.GetAcceptedControls(self)
+		rc |= win32service.SERVICE_ACCEPT_POWEREVENT
+		return rc  # additionally accept SERVICE_ACCEPT_POWEREVENT
+
 	def ReportServiceStatus(self, serviceStatus, waitHint=5000, win32ExitCode=0, svcExitCode=0):  # pylint: disable=invalid-name
 		# Wrapping because ReportServiceStatus sometimes lets windows
 		# report a crash of opsiclientd (python 2.6.5) invalid handle
 		try:
 			logger.debug("Reporting service status: %s", serviceStatus)
 			win32serviceutil.ServiceFramework.ReportServiceStatus(
-				self,
-				serviceStatus,
-				waitHint=waitHint,
-				win32ExitCode=win32ExitCode,
-				svcExitCode=svcExitCode
+				self, serviceStatus, waitHint=waitHint, win32ExitCode=win32ExitCode, svcExitCode=svcExitCode
 			)
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Failed to report service status %s: %s", serviceStatus, err)
+
+	# All extra events are sent via SvcOtherEx (SvcOther remains as a function taking only the first args for backwards compat)
+	def SvcOtherEx(self, control, event_type, data):
+		logger.devel("Got Ex event: %s (%s - %s)", control, event_type, data)
+		if control == win32service.SERVICE_ACCEPT_POWEREVENT:
+			logger.devel("Caught SERVICE_ACCEPT_POWEREVENT")
 
 	def SvcInterrogate(self):  # pylint: disable=invalid-name
 		logger.notice("Handling interrogate request")
@@ -91,15 +98,12 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			logger.debug("Took %0.2f seconds to report service running status", (time.time() - startTime))
 
 			# Write to event log
-			servicemanager.LogMsg(
-				servicemanager.EVENTLOG_INFORMATION_TYPE,
-				servicemanager.PYS_SERVICE_STARTED,
-				(self._svc_name_, '')
-			)
+			servicemanager.LogMsg(servicemanager.EVENTLOG_INFORMATION_TYPE, servicemanager.PYS_SERVICE_STARTED, (self._svc_name_, ""))
 
 			from .opsiclientd import (  # pylint: disable=import-outside-toplevel
 				opsiclientd_factory,
 			)
+
 			self.opsiclientd = opsiclientd_factory()
 			self.opsiclientd.start()
 
@@ -113,11 +117,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			logger.notice("opsiclientd stopped")
 			try:
 				self.ReportServiceStatus(win32service.SERVICE_STOPPED)
-				servicemanager.LogMsg(
-					servicemanager.EVENTLOG_INFORMATION_TYPE,
-					servicemanager.PYS_SERVICE_STOPPED,
-					(self._svc_name_, '')
-				)
+				servicemanager.LogMsg(servicemanager.EVENTLOG_INFORMATION_TYPE, servicemanager.PYS_SERVICE_STOPPED, (self._svc_name_, ""))
 			except Exception as err:  # pylint: disable=broad-except
 				# Errors can occur if windows is shutting down
 				logger.info(err, exc_info=True)
@@ -128,7 +128,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 
 
 def start_service():
-	with log_context({'instance', 'opsiclientd'}):
+	with log_context({"instance", "opsiclientd"}):
 		logger.essential("opsiclientd service start")
 		servicemanager.Initialize()
 		servicemanager.PrepareToHostSingle(OpsiclientdService)
