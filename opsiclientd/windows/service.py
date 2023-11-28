@@ -41,7 +41,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			logger.error(err, exc_info=True)
 			raise
 
-	def GetAcceptedControls(self):
+	def GetAcceptedControls(self):  # pylint: disable=invalid-name
 		rc = win32serviceutil.ServiceFramework.GetAcceptedControls(self)
 		rc |= win32service.SERVICE_ACCEPT_POWEREVENT
 		return rc  # additionally accept SERVICE_ACCEPT_POWEREVENT
@@ -58,7 +58,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			logger.error("Failed to report service status %s: %s", serviceStatus, err)
 
 	# All extra events are sent via SvcOtherEx (SvcOther remains as a function taking only the first args for backwards compat)
-	def SvcOtherEx(self, control, event_type, data):
+	def SvcOtherEx(self, control, event_type, data):  # pylint: disable=invalid-name
 		logger.devel("Got Ex event: %s (%s - %s)", control, event_type, data)
 		if control == win32service.SERVICE_ACCEPT_POWEREVENT:
 			logger.devel("Caught SERVICE_ACCEPT_POWEREVENT")
