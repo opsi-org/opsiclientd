@@ -21,6 +21,11 @@ import win32serviceutil  # pylint: disable=import-error
 from opsicommon.logging import log_context, logger
 
 
+PBT_APMSUSPEND = 0x4  # https://learn.microsoft.com/en-us/windows/win32/power/pbt-apmsuspend
+PBT_APMRESUMEAUTOMATIC = 0x12  # https://learn.microsoft.com/en-us/windows/win32/power/pbt-apmresumeautomatic
+PBT_APMRESUMESUSPEND = 0x7  # https://learn.microsoft.com/en-us/windows/win32/power/pbt-apmresumesuspend
+
+
 class OpsiclientdService(win32serviceutil.ServiceFramework):
 	_svc_name_ = "opsiclientd"
 	_svc_display_name_ = "opsiclientd"
@@ -59,9 +64,14 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 
 	# All extra events are sent via SvcOtherEx (SvcOther remains as a function taking only the first args for backwards compat)
 	def SvcOtherEx(self, control, event_type, data):  # pylint: disable=invalid-name
-		logger.devel("Got Ex event: %s (%s - %s)", control, event_type, data)
-		if control == win32service.SERVICE_ACCEPT_POWEREVENT:
-			logger.devel("Caught SERVICE_ACCEPT_POWEREVENT")
+		logger.debug("Got Ex event: %s (%s - %s)", control, event_type, data)
+		# https://stackoverflow.com/questions/47942716/how-to-detect-wake-up-from-sleep-mode-in-windows-service
+		# https://github.com/mhammond/pywin32/blob/main/win32/Demos/service/serviceEvents.py
+		if control == win32service.SERVICE_CONTROL_POWEREVENT:
+			if event_type == PBT_APMSUSPEND:
+				logger.info("Caught Event for sleep")
+			elif event_type == PBT_APMRESUMEAUTOMATIC:
+				logger.info("Caught Event for wakeup")
 
 	def SvcInterrogate(self):  # pylint: disable=invalid-name
 		logger.notice("Handling interrogate request")
