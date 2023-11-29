@@ -8,7 +8,9 @@
 utils
 """
 
+import time
 import struct
+import platform
 
 import netifaces
 from opsicommon.logging import logger
@@ -23,15 +25,15 @@ def get_include_exclude_product_ids(config_service, includeProductGroupIds, excl
 
 	if includeProductGroupIds:
 		includeProductIds = [
-			obj.objectId for obj in
-			config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds)  # pylint: disable=no-member
+			obj.objectId
+			for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds)  # pylint: disable=no-member
 		]
 		logger.debug("Only products ids %s will be regarded.", includeProductIds)
 
 	if excludeProductGroupIds:
 		excludeProductIds = [
-			obj.objectId for obj in
-			config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds)  # pylint: disable=no-member
+			obj.objectId
+			for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds)  # pylint: disable=no-member
 		]
 		logger.debug("Product ids %s will be excluded.", excludeProductIds)
 
@@ -39,7 +41,7 @@ def get_include_exclude_product_ids(config_service, includeProductGroupIds, excl
 
 
 def lo_word(dword):
-	return str(dword & 0x0000ffff)
+	return str(dword & 0x0000FFFF)
 
 
 def hi_word(dword):
@@ -51,8 +53,8 @@ def read_fixed_file_info(data):
 	pos = data.find(b"\xBD\x04\xEF\xFE")
 	if pos < 0:
 		raise ValueError("Failed to read VS_FIXEDFILEINFO")
-	vms = struct.unpack("<I", data[pos + 8:pos + 12])[0]
-	vls = struct.unpack("<I", data[pos + 12:pos + 16])[0]
+	vms = struct.unpack("<I", data[pos + 8 : pos + 12])[0]
+	vls = struct.unpack("<I", data[pos + 12 : pos + 16])[0]
 	return ".".join([hi_word(vms), lo_word(vms), hi_word(vls), lo_word(vls)])
 
 
@@ -61,10 +63,10 @@ def get_version_from_mach_binary(filename):
 
 	machofile = MachO.MachO(filename)
 	fpc_offset, fpc_size = 0, 0
-	for (_load_cmd, _cmd, _data) in machofile.headers[0].commands:
+	for _load_cmd, _cmd, _data in machofile.headers[0].commands:
 		for data in _data:
 			if data and hasattr(data, "sectname") and data.sectname:
-				sectname = data.sectname.rstrip(b'\0')
+				sectname = data.sectname.rstrip(b"\0")
 				if sectname == b"fpc.resources":
 					fpc_offset = data.offset
 					fpc_size = data.size
@@ -80,7 +82,7 @@ def get_version_from_mach_binary(filename):
 def get_version_from_elf_binary(filename):
 	from elftools.elf.elffile import ELFFile  # pylint: disable=import-outside-toplevel
 
-	with open(filename, 'rb') as file:
+	with open(filename, "rb") as file:
 		elffile = ELFFile(file)
 		for section in elffile.iter_sections():
 			if section.name == "fpc.resources":
@@ -116,3 +118,18 @@ def log_network_status():
 				for entry in af_inet_list:
 					status_string += f"Interface {interface}, Address {entry.get('addr')}, Netmask {entry.get('netmask')}\n"
 	logger.info("Current network Status:\n%s", status_string)
+
+
+def import_system():
+	if platform.system().lower() == "windows":
+		for _ in range(15):  # try for 30 seconds max
+			try:
+				from OPSI import System  # pylint: disable=import-outside-toplevel
+
+				break
+			except Exception as import_error:  # pylint: disable=broad-except
+				logger.warning("Failed to import: %s, retrying in 2 seconds", import_error)
+				time.sleep(2)
+	else:
+		from OPSI import System  # pylint: disable=import-outside-toplevel
+	return System

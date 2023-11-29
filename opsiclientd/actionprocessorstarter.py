@@ -16,7 +16,7 @@ import sys
 from ipaddress import IPv6Address, ip_address
 from urllib.parse import urlparse
 
-from OPSI import System  # type: ignore[import]
+
 from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
 from opsicommon.logging import (
 	LOG_NONE,
@@ -27,6 +27,10 @@ from opsicommon.logging import (
 )
 
 from opsiclientd import DEFAULT_FILE_LOG_FORMAT, DEFAULT_STDERR_LOG_FORMAT, __version__
+from opsiclientd.utils import import_system
+
+
+System = import_system()
 
 
 def set_status_message(backend, session_id, message):
