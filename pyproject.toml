@@ -16,7 +16,6 @@ name = "uibpypi"
 url = "https://pypi.uib.gmbh/simple"
 priority = "primary"
 
-
 [[tool.poetry.source]]
 name = "PyPI"
 priority = "primary"
@@ -62,6 +61,12 @@ pyinstaller = "5.13.0"
 opsiclientd = "opsiclientd.__main__:opsiclientd"
 opsiclientd_rpc = "opsiclientd.__main__:opsiclientd_rpc"
 action_processor_starter = "opsiclientd.__main__:action_processor_starter"
+
+[tool.ruff]
+line-length = 140
+
+[tool.ruff.format]
+indent-style = "tab"
 
 [tool.black]
 line-length = 140
