@@ -121,6 +121,7 @@ def log_network_status():
 
 
 def import_system():
+	exception = None
 	if platform.system().lower() == "windows":
 		for _ in range(15):  # try for 30 seconds max
 			try:
@@ -128,8 +129,11 @@ def import_system():
 
 				break
 			except Exception as import_error:  # pylint: disable=broad-except
+				exception = import_error
 				logger.warning("Failed to import: %s, retrying in 2 seconds", import_error)
 				time.sleep(2)
+		if exception:
+			raise exception
 	else:
 		from OPSI import System  # pylint: disable=import-outside-toplevel
 	return System
