@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 
 # opsiclientd is part of the desktop management solution opsi http://www.opsi.org
@@ -20,13 +19,15 @@ from typing import Callable, Dict, Optional
 
 from opsicommon.logging import logger  # type: ignore[import]
 from opsicommon.messagebus import (  # type: ignore[import]
-	Message,
 	MessageType,
+	TerminalErrorMessage,
+	TerminalMessage,
 	TerminalCloseEventMessage,
 	TerminalDataReadMessage,
 	TerminalOpenEventMessage,
 	TerminalOpenRequestMessage,
 	TerminalResizeEventMessage,
+	CONNECTION_USER_CHANNEL,
 )
 from psutil import AccessDenied, NoSuchProcess, Process  # type: ignore[import]
 
@@ -62,7 +63,10 @@ class TerminalReaderThread(Thread):
 					break
 				if not self._should_stop:
 					message = TerminalDataReadMessage(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-						sender="@", channel=self.terminal.back_channel, terminal_id=self.terminal.terminal_id, data=data
+						sender=CONNECTION_USER_CHANNEL,
+						channel=self.terminal.back_channel,
+						terminal_id=self.terminal.terminal_id,
+						data=data,
 					)
 					self.terminal.send_message(message)  # pylint: disable=no-member
 				sleep(0.001)
@@ -72,7 +76,12 @@ class TerminalReaderThread(Thread):
 				break
 			except Exception as err:  # pylint: disable=broad-except
 				if not self._should_stop:
-					logger.error("Error in terminal reader thread: %s %s", err.__class__, err, exc_info=True)
+					logger.error(
+						"Error in terminal reader thread: %s %s",
+						err.__class__,
+						err,
+						exc_info=True,
+					)
 					self.terminal.close()
 					break
 
@@ -90,13 +99,13 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 	def __init__(  # pylint: disable=too-many-arguments
 		self,
 		send_message_function: Callable,
-		terminal_open_request: TerminalOpenRequestMessage
+		terminal_open_request: TerminalOpenRequestMessage,
 	) -> None:
 		super().__init__()
 		self.daemon = True
 		self._context = copy_context()
 		self._should_stop = False
-		self._message_queue: Queue[Message] = Queue()
+		self._message_queue: Queue[TerminalMessage] = Queue()
 		self._terminal_open_request = terminal_open_request
 		self.send_message = self._send_message_function = send_message_function
 		self.rows = self.default_rows
@@ -108,7 +117,13 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 		shell = self._terminal_open_request.shell
 		if not shell:
 			shell = "cmd.exe" if RUNNING_ON_WINDOWS else "bash"
-		(self.pty_pid, self.pty_read, self.pty_write, self.pty_set_size, self.pty_stop) = start_pty(  # pylint: disable=attribute-defined-outside-init
+		(
+			self.pty_pid,
+			self.pty_read,
+			self.pty_write,
+			self.pty_set_size,
+			self.pty_stop,
+		) = start_pty(  # pylint: disable=attribute-defined-outside-init
 			shell=shell, lines=self.rows, columns=self.cols
 		)
 		self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init
@@ -127,8 +142,12 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 		if pty_set_size:
 			self.pty_set_size(self.rows, self.cols)
 
-	def process_message(self, message: Message) -> None:
-		if message.type not in (MessageType.TERMINAL_DATA_WRITE, MessageType.TERMINAL_RESIZE_REQUEST, MessageType.TERMINAL_CLOSE_REQUEST):
+	def process_message(self, message: TerminalMessage) -> None:
+		if message.type not in (
+			MessageType.TERMINAL_DATA_WRITE,
+			MessageType.TERMINAL_RESIZE_REQUEST,
+			MessageType.TERMINAL_CLOSE_REQUEST,
+		):
 			logger.warning("Received invalid message type %r", message.type)
 			return
 		self._message_queue.put(message)
@@ -147,9 +166,7 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 		try:
 			if self.terminal_reader_thread:
 				self.terminal_reader_thread.stop()
-			message = TerminalCloseEventMessage(
-				sender="@", channel=self.back_channel, terminal_id=self.terminal_id
-			)
+			message = TerminalCloseEventMessage(sender=CONNECTION_USER_CHANNEL, channel=self.back_channel, terminal_id=self.terminal_id)
 			self._send_message_function(message)
 			self.pty_stop()
 			if self.terminal_id in terminals:
@@ -176,7 +193,7 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 		for var in self._context:
 			var.set(self._context[var])
 		message = TerminalOpenEventMessage(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-			sender="@",
+			sender=CONNECTION_USER_CHANNEL,
 			channel=self.back_channel,
 			terminal_id=self.terminal_id,
 			back_channel="$",
@@ -199,7 +216,7 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 			elif message.type == MessageType.TERMINAL_RESIZE_REQUEST:
 				self.set_size(message.rows, message.cols)
 				message = TerminalResizeEventMessage(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
-					sender="@",
+					sender=CONNECTION_USER_CHANNEL,
 					channel=self.back_channel,
 					terminal_id=self.terminal_id,
 					rows=self.rows,
@@ -210,17 +227,17 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 				self.close()
 
 
-def process_messagebus_message(message: Message, send_message: Callable) -> None:
+def process_messagebus_message(message: TerminalMessage, send_message: Callable) -> None:
 	with terminals_lock:
 		terminal = terminals.get(message.terminal_id)
 
 	try:
-		if message.type == MessageType.TERMINAL_OPEN_REQUEST:
+		if isinstance(message, TerminalOpenRequestMessage):
 			if not terminal:
 				with terminals_lock:
 					terminal = Terminal(
 						send_message_function=send_message,
-						terminal_open_request=message
+						terminal_open_request=message,
 					)
 					terminals[message.terminal_id] = terminal
 					terminals[message.terminal_id].start()
@@ -238,11 +255,13 @@ def process_messagebus_message(message: Message, send_message: Callable) -> None
 		if terminal:
 			terminal.close()
 		else:
-			msg = TerminalCloseEventMessage(
-				sender="@", channel=message.back_channel, terminal_id=message.terminal_id, error={
-					"code": 0,
+			msg = TerminalErrorMessage(
+				sender=CONNECTION_USER_CHANNEL,
+				channel=message.back_channel,
+				terminal_id=message.terminal_id,
+				error={
 					"message": str(err),
 					"details": None,
-				}
+				},
 			)
 			send_message(msg)
