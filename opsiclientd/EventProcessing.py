@@ -883,8 +883,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				except Exception as err:  # pylint: disable=broad-except
 					logger.error(err)
 			else:
-				if not self.event.eventConfig.actionProcessorProductIds:
-					state.set("installation_pending", "true")
+				state.set("installation_pending", "true")
 
 				logger.notice("Start processing action requests")
 				if productIds:
@@ -935,14 +934,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						logger.info("No more actions to perform, setting config cache obsolete")
 						cache_service.setConfigCacheObsolete()
 
-					if not self._configService.productOnClient_getIdents(  # pylint: disable=no-member
+					pocs_with_action = self._configService.productOnClient_getIdents(  # pylint: disable=no-member
+						returnType="dict",
 						productType="LocalbootProduct",
 						clientId=config.get("global", "host_id"),
 						actionRequest=["setup", "uninstall", "update", "once", "custom"],
-					):
-						# Nothing to do
-						logger.notice("Setting installation pending to false")
+					)
+					logger.info("pocs_with_action: %r, productIds: %r", pocs_with_action, productIds)
+					if pocs_with_action	and (not productIds or any(poc["productId"] for poc in pocs_with_action if poc["productId"] in productIds)):
+						# No more product actions pending of the actions requested
+						logger.info("Setting installation pending to false")
 						state.set("installation_pending", "false")
+					logger.notice("Installation pending is: %s", state.get("installation_pending"))
 				except Exception as err:  # pylint: disable=broad-except
 					logger.error(err)
 		except Exception as err:  # pylint: disable=broad-except
