@@ -339,7 +339,8 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):  # pylint
 			}
 			depot_values: dict[str, dict[str, list[Any]]] = defaultdict(lambda: defaultdict(list))
 			depot_ids = list(set(client_id_to_depot_id.values()))
-			depot_ids.append(configserver_id)
+			if configserver_id not in depot_ids:
+				depot_ids.append(configserver_id)
 			if depot_ids:
 				for config_state in self.configState_getObjects(configId=config_ids, objectId=depot_ids):  # pylint: disable=no-member
 					depot_values[config_state.getObjectId()][config_state.getConfigId()] = config_state.values
@@ -347,9 +348,9 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):  # pylint
 				host_id = host.id
 				depot_id = client_id_to_depot_id.get(host_id)
 				if depot_id and depot_id in depot_values:
-					res[host_id] = depot_values[depot_id].copy()
+					res[host_id].update(depot_values[depot_id])
 				elif not depot_id and configserver_id in depot_values:
-					res[host_id] = depot_values[configserver_id].copy()
+					res[host_id].update(depot_values[configserver_id])
 		for config_state in self.configState_getObjects(configId=config_ids, objectId=object_ids):  # pylint: disable=no-member
 			if config_state.objectId not in res:
 				res[config_state.objectId] = {}
