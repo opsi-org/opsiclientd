@@ -1316,8 +1316,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		match = re.search(r"(\d+):00", selected)
 		if match:
 			self._shutdownWarningTime = self.event.eventConfig.shutdownWarningTimeAfterTimeSelect
+			hour = int(match.group(1))
 			now = datetime.datetime.now()
-			shutdown_time = now.replace(hour=int(match.group(1)), minute=0, second=0)
+			shutdown_time = datetime.datetime.now()
+			if now.hour > hour:
+				shutdown_time += datetime.timedelta(days=1)
+			shutdown_time = shutdown_time.replace(hour=hour, minute=0, second=0)
 			self._shutdownWarningRepetitionTime = (shutdown_time - now).total_seconds()
 		logger.notice(
 			"User selected '%s', shutdownWarningRepetitionTime=%s, shutdownWarningTime=%s",
@@ -1429,8 +1433,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 							if shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable:
 								if self.event.eventConfig.shutdownUserSelectableTime:
 									hour = time.localtime().tm_hour
-									while hour < 23:
+									while len(choices) < 24:
 										hour += 1
+										if hour == 24:
+											hour = 0
 										if reboot:
 											choices.append(_("Reboot at %s") % f" {hour:02d}:00")
 										else:
