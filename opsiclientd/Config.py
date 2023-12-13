@@ -861,7 +861,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			).get(self.get("global", "host_id"), {})
 			if (
 				"clientconfig.configserver.url" not in config_states
-				and isinstance(service_client, service_client)
+				and isinstance(service_client, ServiceClient)
 				and service_client.service_is_opsiclientd()
 			):
 				# Workaround getValues bug of older opsiclientd
