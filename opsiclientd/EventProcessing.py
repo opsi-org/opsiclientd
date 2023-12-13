@@ -941,9 +941,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						actionRequest=["setup", "uninstall", "update", "once", "custom"],
 					)
 					logger.info("pocs_with_action: %r, productIds: %r", pocs_with_action, productIds)
-					if pocs_with_action	and (
-						not productIds or not any(poc["productId"] for poc in pocs_with_action if poc["productId"] in productIds)
-					):
+					if not any(poc for poc in pocs_with_action if not productIds or poc["productId"] in productIds):
 						# No more product actions pending of the actions requested
 						logger.info("Setting installation pending to false")
 						state.set("installation_pending", "false")
