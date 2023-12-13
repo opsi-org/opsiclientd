@@ -852,12 +852,22 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			"opsiclientd.*",  # everything starting with opsiclientd.
 		]
 		config_states = {}
+		use_get_objects = True
 		if hasattr(service_client, "configState_getValues"):
+			use_get_objects = False
 			logger.info("Using configState_getValues")
 			config_states = service_client.configState_getValues(
 				config_ids=config_ids, object_ids=[self.get("global", "host_id")], with_defaults=True
 			).get(self.get("global", "host_id"), {})
-		else:
+			if (
+				"clientconfig.configserver.url" not in config_states
+				and isinstance(service_client, service_client)
+				and service_client.service_is_opsiclientd()
+			):
+				# Workaround getValues bug of older opsiclientd
+				logger.warning("Service is opsiclientd with getValues bug")
+				use_get_objects = True
+		if use_get_objects:
 			logger.info("Using configState_getObjects")
 			for config in service_client.config_getObjects(id=config_ids):
 				config_states[config.id] = config.defaultValues
