@@ -70,6 +70,11 @@ from opsiclientd.utils import (
 	get_version_from_mach_binary,
 )
 
+if RUNNING_ON_WINDOWS:
+	from opsiclientd.windows import runCommandInSession
+else:
+	from OPSI.System import runCommandInSession  # type: ignore
+
 config = Config()
 state = State()
 timeline = Timeline()
@@ -374,24 +379,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			desktop = "winlogon"
 
 		processId = None
-		for attempt in range(1, max_attempts + 1):
-			try:
-				process, _, processId = System.runCommandInSession(
-					command=command,
-					sessionId=sessionId,
-					desktop=desktop,
-					waitForProcessEnding=waitForProcessEnding,
-					timeoutSeconds=timeoutSeconds,
-					noWindow=noWindow,
-					shell=False,
-				)[:3]
-				break
-			except Exception as err:  # pylint: disable=broad-except
-				if attempt >= max_attempts:
-					logger.error(err, exc_info=True)
-					raise
-				logger.warning("%s, retrying in 5 seconds", err)
-				time.sleep(5)
+		try:
+			process, _, processId = runCommandInSession(
+				command=command,
+				sessionId=sessionId,
+				desktop=desktop,
+				waitForProcessEnding=waitForProcessEnding,
+				timeoutSeconds=timeoutSeconds,
+				noWindow=noWindow,
+				shell=False,
+			)[:3]
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error(err, exc_info=True)
 
 		return process, processId
 
@@ -1143,7 +1142,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					self.setStatusMessage(_("Action processor is running"))
 
 					with cd(tmpdir):
-						System.runCommandInSession(
+						runCommandInSession(
 							command=command,
 							sessionId=self.getSessionId(),
 							waitForProcessEnding=True,

@@ -87,6 +87,11 @@ from opsiclientd.State import State
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 
+if RUNNING_ON_WINDOWS:
+	from opsiclientd.windows import runCommandInSession
+else:
+	from OPSI.System import runCommandInSession  # type: ignore
+
 config = Config()
 state = State()
 
@@ -1222,7 +1227,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			desktop = self.opsiclientd.getCurrentActiveDesktopName()
 
 		logger.notice("rpc runCommand: executing command '%s' in session %d on desktop '%s'", command, sessionId, desktop)
-		System.runCommandInSession(command=command, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False)
+		runCommandInSession(command=command, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False)
 		return f"command '{command}' executed"
 
 	def execute(self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300):  # pylint: disable=too-many-arguments

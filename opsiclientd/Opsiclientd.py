@@ -57,6 +57,11 @@ from opsiclientd.State import State
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 
+if RUNNING_ON_WINDOWS:
+	from opsiclientd.windows import runCommandInSession
+else:
+	from OPSI.System import runCommandInSession  # type: ignore
+
 timeline = Timeline()
 state = State()
 
@@ -777,7 +782,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		rpc = f'setCurrentActiveDesktopName("{sessionId}", System.getActiveDesktopName())'
 		cmd = config.get("opsiclientd_rpc", "command") + ' "' + rpc.replace('"', '\\"') + '"'
 		try:
-			System.runCommandInSession(
+			runCommandInSession(
 				command=cmd, sessionId=sessionId, desktop="winlogon", waitForProcessEnding=True, timeoutSeconds=60, noWindow=True
 			)
 		except Exception as err:  # pylint: disable=broad-except
@@ -806,7 +811,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		cmd = f'{config.get("opsiclientd_rpc", "command")} "{rpc}"'
 
 		try:
-			System.runCommandInSession(
+			runCommandInSession(
 				command=cmd, sessionId=sessionId, desktop=desktop, waitForProcessEnding=True, timeoutSeconds=60, noWindow=True
 			)
 		except Exception as err:  # pylint: disable=broad-except
@@ -930,7 +935,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					desktops = ["default", "winlogon"]
 				for desktop in desktops:
 					try:
-						System.runCommandInSession(
+						runCommandInSession(
 							command=notifierCommand, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False
 						)
 					except Exception as err:  # pylint: disable=broad-except
