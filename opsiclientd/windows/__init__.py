@@ -209,6 +209,8 @@ def runCommandInSession(  # pylint: disable=too-many-arguments,too-many-locals,u
 		if exitCode != 0:
 			log = logger.warning
 		log("Process %d ended with exit code %d", dwProcessId, exitCode)
+		# Can occur with the DeviceLock software on system startup
+		# -1073741502 / 0xc0000142 / STATUS_DLL_INIT_FAILED
 		if exitCode == -1073741502 and attempt < max_attempts:
 			logger.warning("Retrying in 5 seconds")
 			time.sleep(5)
