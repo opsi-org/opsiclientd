@@ -15,7 +15,9 @@ import win32com.client  # pylint: disable=import-error
 import win32com.server.policy  # pylint: disable=import-error
 from opsicommon.logging import logger
 from opsicommon.types import forceUnicode, forceInt, forceUnicodeLower, forceBool
-from OPSI.System.Windows import getActiveSessionId, createDesktop, getUserToken, win32con, win32process, win32event, terminateProcess  # type: ignore[import]
+from OPSI.System.Windows import (  # type: ignore[import]
+	getActiveSessionId, createDesktop, getUserToken, win32con, win32process, win32event, terminateProcess
+)
 
 # pyright: reportMissingImports=false
 
@@ -135,7 +137,7 @@ def start_pty(shell="powershell.exe", lines=30, columns=120):
 	return (process.pid, read, write, process.setwinsize, process.close)
 
 
-def runCommandInSession(  # pylint: disable=too-many-arguments,too-many-locals,unused-argument
+def runCommandInSession(  # pylint: disable=too-many-arguments,too-many-locals,unused-argument,too-many-branches
 	command,
 	sessionId=None,
 	desktop="default",

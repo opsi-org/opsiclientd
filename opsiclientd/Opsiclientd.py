@@ -60,7 +60,7 @@ from opsiclientd.Timeline import Timeline
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.windows import runCommandInSession
 else:
-	from OPSI.System import runCommandInSession  # type: ignore
+	from OPSI.System import runCommandInSession  # type: ignore  # pylint: disable=ungrouped-imports
 
 timeline = Timeline()
 state = State()

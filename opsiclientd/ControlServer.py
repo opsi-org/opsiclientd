@@ -68,7 +68,12 @@ from opsicommon.logging import (  # type: ignore[import]
 	logger,
 	secret_filter,
 )
-from opsicommon.types import forceBool, forceInt, forceUnicode, forceProductIdList  # type: ignore[import]
+from opsicommon.types import (  # type: ignore[import]
+	forceBool,
+	forceInt,
+	forceProductIdList,
+	forceUnicode,
+)
 from twisted.internet import fdesc, reactor
 from twisted.internet.base import BasePort
 from twisted.internet.error import CannotListenError
@@ -90,7 +95,7 @@ from opsiclientd.Timeline import Timeline
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.windows import runCommandInSession
 else:
-	from OPSI.System import runCommandInSession  # type: ignore
+	from OPSI.System import runCommandInSession  # type: ignore  # pylint: disable=ungrouped-imports
 
 config = Config()
 state = State()

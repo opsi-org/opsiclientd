@@ -73,7 +73,7 @@ from opsiclientd.utils import (
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.windows import runCommandInSession
 else:
-	from OPSI.System import runCommandInSession  # type: ignore
+	from OPSI.System import runCommandInSession  # type: ignore  # pylint: disable=ungrouped-imports
 
 config = Config()
 state = State()
@@ -362,7 +362,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			raise
 
 	def runCommandInSession(  # pylint: disable=too-many-arguments
-		self, command, sessionId=None, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False, max_attempts = 5
+		self, command, sessionId=None, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False
 	):
 		if sessionId is None:
 			sessionId = self.getSessionId()
