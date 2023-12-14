@@ -357,7 +357,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			raise
 
 	def runCommandInSession(  # pylint: disable=too-many-arguments
-		self, command, sessionId=None, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False
+		self, command, sessionId=None, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False, max_attempts = 5
 	):
 		if sessionId is None:
 			sessionId = self.getSessionId()
@@ -374,7 +374,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			desktop = "winlogon"
 
 		processId = None
-		while True:
+		for attempt in range(1, max_attempts + 1):
 			try:
 				process, _, processId = System.runCommandInSession(
 					command=command,
@@ -387,8 +387,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				)[:3]
 				break
 			except Exception as err:  # pylint: disable=broad-except
-				logger.error(err)
-				raise
+				if attempt >= max_attempts:
+					logger.error(err, exc_info=True)
+					raise
+				logger.warning("%s, retrying in 5 seconds", err)
+				time.sleep(5)
 
 		return process, processId
 
