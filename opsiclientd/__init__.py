@@ -8,20 +8,21 @@
 opsiclientd Library.
 """
 
-__version__ = '4.3.0.1'
+__version__ = "4.3.0.1"
 
 import argparse
 import http
 import os
+import shutil
 import sys
 import tempfile
 from logging.handlers import RotatingFileHandler
 from typing import Union
 
-import shutil
 import psutil
 from OPSI import __version__ as python_opsi_version
 from OPSI.System import execute, which
+from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import (
 	LOG_DEBUG,
 	LOG_NONE,
@@ -37,69 +38,44 @@ from opsicommon.logging import (
 from opsiclientd.Config import Config
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
-DEFAULT_STDERR_LOG_FORMAT = "%(log_color)s[%(opsilevel)d] [%(asctime)s.%(msecs)03d]%(reset)s [%(contextstring)-40s] %(message)s   (%(filename)s:%(lineno)d)"  # pylint: disable=line-too-long
+DEFAULT_STDERR_LOG_FORMAT = (
+	"%(log_color)s[%(opsilevel)d] [%(asctime)s.%(msecs)03d]%(reset)s [%(contextstring)-40s] %(message)s   (%(filename)s:%(lineno)d)"  # pylint: disable=line-too-long
+)
 DEFAULT_FILE_LOG_FORMAT = DEFAULT_STDERR_LOG_FORMAT.replace("%(log_color)s", "").replace("%(reset)s", "")
 
 config = Config()
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-	"--version", "-V",
-	action='version',
-	version=f"{__version__} [python-opsi={python_opsi_version}]"
+	"--version",
+	"-V",
+	action="version",
+	version=f"{__version__} [python-opsi={python_opsi_version},python-opsi-common={opsicommon_version}]",
 )
 parser.add_argument(
-	"--log-level", "-l",
-	dest="logLevel",
-	type=int,
-	choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-	default=LOG_NONE,
-	help="Set the log-level."
+	"--log-level", "-l", dest="logLevel", type=int, choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], default=LOG_NONE, help="Set the log-level."
 )
 parser.add_argument(
-	"--log-filter",
-	dest="logFilter",
-	default=None,
-	help="Filter log records contexts (<ctx-name-1>=<val1>[,val2][;ctx-name-2=val3])."
+	"--log-filter", dest="logFilter", default=None, help="Filter log records contexts (<ctx-name-1>=<val1>[,val2][;ctx-name-2=val3])."
 )
 parser.add_argument(
 	"--config-file",
 	default=None,  # config.get("global", "config_file"),
-	help="Path to config file"
+	help="Path to config file",
 )
-parser.add_argument(
-	"--service-address",
-	default=None,
-	help="Service address to use for setup."
-)
-parser.add_argument(
-	"--service-username",
-	default=None,
-	help="Username to use for service connection (setup)."
-)
-parser.add_argument(
-	"--service-password",
-	default=None,
-	help="Password to use for service connection (setup)."
-)
-parser.add_argument(
-	"--client-id",
-	default=None,
-	help="Client id to use for setup (fqdn is used if omitted)."
-)
+parser.add_argument("--service-address", default=None, help="Service address to use for setup.")
+parser.add_argument("--service-username", default=None, help="Username to use for service connection (setup).")
+parser.add_argument("--service-password", default=None, help="Password to use for service connection (setup).")
+parser.add_argument("--client-id", default=None, help="Client id to use for setup (fqdn is used if omitted).")
 parser.add_argument(
 	"action",
 	nargs="?",
 	choices=("start", "stop", "restart", "install", "update", "remove", "setup", "download-from-depot"),
 	default=None,
 	metavar="ACTION",
-	help="The ACTION to perform (start / stop / restart / install / update / remove / setup / download-from-depot)."
+	help="The ACTION to perform (start / stop / restart / install / update / remove / setup / download-from-depot).",
 )
-parser.add_argument(
-	"arguments",
-	nargs='*',
-	default=None
-)
+parser.add_argument("arguments", nargs="*", default=None)
 
 
 def get_opsiclientd_pid() -> Union[int, None]:
@@ -108,12 +84,8 @@ def get_opsiclientd_pid() -> Union[int, None]:
 		if proc.pid == our_pid:
 			continue
 
-		if (
-			proc.name() in ("opsiclientd", "opsiclientd.exe") or
-			(proc.name() in ("python", "python3") and (
-				"opsiclientd" in proc.cmdline() or
-				"opsiclientd.__main__" in " ".join(proc.cmdline())
-			))
+		if proc.name() in ("opsiclientd", "opsiclientd.exe") or (
+			proc.name() in ("python", "python3") and ("opsiclientd" in proc.cmdline() or "opsiclientd.__main__" in " ".join(proc.cmdline()))
 		):
 			return proc.pid
 	return None
@@ -145,7 +117,7 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 		file_level=LOG_DEBUG,
 		file_format=DEFAULT_FILE_LOG_FORMAT,
 		file_rotate_max_bytes=config.get("global", "max_log_size") * 1000 * 1000,
-		file_rotate_backup_count=config.get("global", "keep_rotated_logs")
+		file_rotate_backup_count=config.get("global", "keep_rotated_logs"),
 	)
 
 	def namer(default_name):
@@ -163,7 +135,7 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 	def log_http(*args):
 		if logger.level < LOG_TRACE or len(args) < 2:
 			return
-		with log_context({'module': 'http client'}):
+		with log_context({"module": "http client"}):
 			if args[0] == "header:":
 				logger.trace("<<< %s %s", args[1], args[2])
 			elif args[0] == "reply:":
@@ -192,10 +164,10 @@ def check_signature(bin_dir):
 	binary_list = [
 		os.path.join(bin_dir, "opsiclientd.exe"),
 		os.path.join(bin_dir, "opsiclientd_rpc.exe"),
-		os.path.join(bin_dir, "action_processor_starter.exe")
+		os.path.join(bin_dir, "action_processor_starter.exe"),
 	]
 	for binary in binary_list:
-		cmd = f'powershell.exe -ExecutionPolicy Bypass -Command \"(Get-AuthenticodeSignature \'{binary}\').Status -eq \'Valid\'\"'
+		cmd = f"powershell.exe -ExecutionPolicy Bypass -Command \"(Get-AuthenticodeSignature '{binary}').Status -eq 'Valid'\""
 
 		result = execute(cmd, captureStderr=True, waitForEnding=True, timeout=20)
 		logger.debug(result)

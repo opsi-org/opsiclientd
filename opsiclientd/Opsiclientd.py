@@ -29,6 +29,7 @@ from OPSI import System
 from OPSI import __version__ as python_opsi_version
 from OPSI.Util import randomString
 from OPSI.Util.Message import ChoiceSubject, MessageSubject, NotificationServer
+from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import log_context, logger, secret_filter
 from opsicommon.system import ensure_not_already_running
 from opsicommon.types import forceBool, forceInt, forceUnicode
@@ -60,7 +61,9 @@ from opsiclientd.Timeline import Timeline
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.windows import runCommandInSession
 else:
-	from OPSI.System import runCommandInSession  # type: ignore  # pylint: disable=ungrouped-imports
+	from OPSI.System import (  # type: ignore  # pylint: disable=ungrouped-imports
+		runCommandInSession,
+	)
 
 timeline = Timeline()
 state = State()
@@ -536,7 +539,10 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		try:
 			parent = psutil.Process(os.getpid()).parent()
 			parent_name = parent.name() if parent else None
-			event_title = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}] running on {platform.platform()!r}"
+			event_title = (
+				f"Opsiclientd {__version__} [python-opsi={python_opsi_version},python-opsi-common={opsicommon_version}]"
+				f"running on {platform.platform()!r}"
+			)
 			logger.essential(event_title)
 			event_description = f"Parent process: {parent_name}\n"
 			logger.essential(f"Parent process: {parent_name}")
@@ -654,9 +660,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			for ept in self._eventProcessingThreads:
 				if not ept.is_cancelable():
 					logger.notice("Already processing a non-cancelable event: %s", ept.event.eventConfig.getId())
-					raise CannotCancelEventError(
-						f"Already processing a non-cancelable event: {ept.event.eventConfig.getId()}"
-					)
+					raise CannotCancelEventError(f"Already processing a non-cancelable event: {ept.event.eventConfig.getId()}")
 				if not can_cancel:
 					logger.notice(
 						"Currently running event can only be canceled by manual action (ControlServer/Kiosk): %s",
@@ -871,9 +875,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 	def isInstallationPending(self):
 		return state.get("installation_pending", False)
 
-	def showPopup(
-		self, message, mode="prepend", addTimestamp=True, displaySeconds=0
-	):  # pylint: disable=too-many-branches,too-many-statements, too-many-locals
+	def showPopup(self, message, mode="prepend", addTimestamp=True, displaySeconds=0):  # pylint: disable=too-many-branches,too-many-statements, too-many-locals
 		if mode not in ("prepend", "append", "replace"):
 			mode = "prepend"
 		port = config.get("notification_server", "popup_port")
@@ -935,9 +937,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					desktops = ["default", "winlogon"]
 				for desktop in desktops:
 					try:
-						runCommandInSession(
-							command=notifierCommand, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False
-						)
+						runCommandInSession(command=notifierCommand, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False)
 					except Exception as err:  # pylint: disable=broad-except
 						logger.error("Failed to start popup message notifier app in session %s on desktop %s: %s", sessionId, desktop, err)
 

@@ -36,6 +36,7 @@ from uuid import uuid4
 
 import msgpack  # type: ignore[import]
 import psutil  # type: ignore[import]
+from opsicommon import __version__ as opsicommon_version
 
 with warnings.catch_warnings():
 	warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -60,6 +61,8 @@ from OPSI.Service.Worker import (  # type: ignore[import]
 	WorkerOpsiJsonRpc,
 )
 from OPSI.Util.Log import truncateLogData  # type: ignore[import]
+
+# pylint: disable=ungrouped-imports
 from opsicommon.exceptions import OpsiServiceAuthenticationError
 from opsicommon.logging import (  # type: ignore[import]
 	LEVEL_TO_NAME,
@@ -1774,7 +1777,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 	def getConfigDataFromOpsiclientd(self, get_depot_id=True, get_active_events=True):
 		result = {}
-		result["opsiclientd_version"] = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}]"
+		result[
+			"opsiclientd_version"
+		] = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}python-opsi-common={opsicommon_version}]"
 
 		if get_depot_id:
 			result["depot_id"] = config.get("depot_server", "master_depot_id")
