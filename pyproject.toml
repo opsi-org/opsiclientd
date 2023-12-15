@@ -29,6 +29,10 @@ use-tabs = true
 profile = "black"
 indent = "\t"
 
+[tool.ruff]
+line-length = 140
+ignore = [ "F401", "E402", "F811",]
+
 [tool.poetry.dependencies]
 python = "^3.11,<3.12"
 autobahn = "^22.4"
@@ -55,10 +59,6 @@ pyinstaller = "5.13.0"
 opsiclientd = "opsiclientd.__main__:opsiclientd"
 opsiclientd_rpc = "opsiclientd.__main__:opsiclientd_rpc"
 action_processor_starter = "opsiclientd.__main__:action_processor_starter"
-
-[tool.ruff]
-line-length = 140
-ignore = [ "F401", "E402", "F811" ]
 
 [tool.ruff.format]
 indent-style = "tab"
