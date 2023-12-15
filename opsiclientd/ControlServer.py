@@ -95,8 +95,9 @@ from opsiclientd.Timeline import Timeline
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.windows import runCommandInSession
 else:
-	# pylint: disable=ungrouped-imports
-	from OPSI.System import runCommandInSession  # type: ignore
+	from OPSI.System import (  # type: ignore  # pylint: disable=ungrouped-imports
+		runCommandInSession,
+	)
 
 config = Config()
 state = State()
