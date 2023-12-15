@@ -13,11 +13,17 @@ import time
 
 import win32com.client  # pylint: disable=import-error
 import win32com.server.policy  # pylint: disable=import-error
-from opsicommon.logging import logger
-from opsicommon.types import forceUnicode, forceInt, forceUnicodeLower, forceBool
 from OPSI.System.Windows import (  # type: ignore[import]
-	getActiveSessionId, createDesktop, getUserToken, win32con, win32process, win32event, terminateProcess
+	createDesktop,
+	getActiveSessionId,
+	getUserToken,
+	terminateProcess,
+	win32con,
+	win32event,
+	win32process,
 )
+from opsicommon.logging import logger
+from opsicommon.types import forceBool, forceInt, forceUnicode, forceUnicodeLower
 
 # pyright: reportMissingImports=false
 
@@ -146,7 +152,7 @@ def runCommandInSession(  # pylint: disable=too-many-arguments,too-many-locals,u
 	timeoutSeconds=0,
 	noWindow=False,
 	shell=True,
-	max_attempts=5
+	max_attempts=5,
 ):
 	"""
 	put command arguments in double, not single, quotes.

@@ -95,7 +95,8 @@ from opsiclientd.Timeline import Timeline
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.windows import runCommandInSession
 else:
-	from OPSI.System import runCommandInSession  # type: ignore  # pylint: disable=ungrouped-imports
+	# pylint: disable=ungrouped-imports
+	from OPSI.System import runCommandInSession  # type: ignore
 
 config = Config()
 state = State()
@@ -1037,9 +1038,7 @@ class TerminalReaderThread(threading.Thread):
 		self.should_stop = True
 
 
-class TerminalWebSocketServerProtocol(
-	WebSocketServerProtocol, WorkerOpsiclientd
-):  # pylint: disable=too-many-ancestors,too-many-instance-attributes
+class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd):  # pylint: disable=too-many-ancestors,too-many-instance-attributes
 	def onConnect(self, request):
 		self.service = self.factory.control_server  # pylint: disable=no-member
 		self.request = RequestAdapter(request)
@@ -1475,7 +1474,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 		if remove_user and not wait_for_ending:
 			wait_for_ending = True
-		if type(wait_for_ending) is bool and wait_for_ending:  # pylint: disable=unidiomatic-typecheck
+		if type(wait_for_ending) is bool and wait_for_ending:  # pylint: disable=unidiomatic-typecheck # noqa: E721
 			wait_for_ending = 7200
 
 		logger.notice(
@@ -1490,7 +1489,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		serviceConnection = ServiceConnection(self.opsiclientd)
 		serviceConnection.connectConfigService()
 		try:
-
 			configServiceUrl = serviceConnection.getConfigServiceUrl()
 			config.selectDepotserver(
 				configService=serviceConnection.getConfigService(),
@@ -1633,7 +1631,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		try:
 			for attempt in (1, 2, 3, 4, 5):
 				try:
-
 					# This will create the user home dir and ntuser.dat gets loaded
 					# Can fail if C:\users\default\ntuser.dat is ocked by an other process
 					hkey = win32profile.LoadUserProfile(logon, {"UserName": user_info["name"]})
@@ -1697,7 +1694,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			)
 			if wait_for_ending:
 				timeout = 3600
-				if type(wait_for_ending) is int:  # pylint: disable=unidiomatic-typecheck
+				if type(wait_for_ending) is int:  # pylint: disable=unidiomatic-typecheck # noqa: E721
 					timeout = wait_for_ending
 				logger.info("Wait for process to complete (timeout=%r)", timeout)
 				try:

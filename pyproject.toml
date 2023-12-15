@@ -29,9 +29,6 @@ use-tabs = true
 profile = "black"
 indent = "\t"
 
-[tool.ruff]
-line-length = 140
-
 [tool.poetry.dependencies]
 python = "^3.11,<3.12"
 autobahn = "^22.4"
@@ -45,21 +42,23 @@ python-opsi-common = "^4.3.0"
 zeroconf = "^0.129"
 
 [tool.poetry.dev-dependencies]
-flake8 = "^6.0"
-isort = "^5.10.1"
 mock = "^5.0"
 mypy = "^1.4"
 pylint = "^2.5"
 pytest = "^7.1"
 pytest-cov = "^4.0"
 requests = "^2.25"
-tan = "^22.8"
+ruff = "^0.1"
 pyinstaller = "5.13.0"
 
 [tool.poetry.scripts]
 opsiclientd = "opsiclientd.__main__:opsiclientd"
 opsiclientd_rpc = "opsiclientd.__main__:opsiclientd_rpc"
 action_processor_starter = "opsiclientd.__main__:action_processor_starter"
+
+[tool.ruff]
+line-length = 140
+ignore = [ "F401", "E402", "F811" ]
 
 [tool.ruff.format]
 indent-style = "tab"
