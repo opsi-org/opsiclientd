@@ -540,7 +540,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			parent = psutil.Process(os.getpid()).parent()
 			parent_name = parent.name() if parent else None
 			event_title = (
-				f"Opsiclientd {__version__} [python-opsi={python_opsi_version},python-opsi-common={opsicommon_version}]"
+				f"Opsiclientd {__version__} [python-opsi={python_opsi_version},python-opsi-common={opsicommon_version}] "
 				f"running on {platform.platform()!r}"
 			)
 			logger.essential(event_title)

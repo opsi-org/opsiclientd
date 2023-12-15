@@ -63,12 +63,13 @@ def add_products_from_setup_after_install(products: list[str], service: ServiceC
 					objectId=config.get("global", "host_id"),
 					productId=product,
 					propertyId="setup_after_install",
-				)[0]
-				add_products += [
-					sai_product
-					for sai_product in setup_after_install_products.values
-					if sai_product not in products and sai_product not in add_products
-				]
+				)
+				if setup_after_install_products:
+					add_products += [
+						sai_product
+						for sai_product in setup_after_install_products[0].values
+						if sai_product not in products and sai_product not in add_products
+					]
 	except Exception as err:  # pylint: disable=broad-except
 		logger.warning("Failed to add setup_after_install products to filteredProductIds: %s", err)
 	return add_products
