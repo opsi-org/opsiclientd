@@ -73,9 +73,7 @@ from opsiclientd.utils import (
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.windows import runCommandInSession
 else:
-	from OPSI.System import (
-		runCommandInSession,  # type: ignore  # pylint: disable=ungrouped-imports
-	)
+	from OPSI.System import runCommandInSession  # pylint: disable=ungrouped-imports
 
 config = Config()
 state = State()
