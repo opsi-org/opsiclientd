@@ -13,16 +13,14 @@ opsiclientd.nonfree.CacheService
 
 import codecs
 import collections
-from collections import defaultdict
-from typing import Any
 import os
 import shutil
 import threading
 import time
+from collections import defaultdict
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
-
-from packaging import version
 
 from OPSI import System  # type: ignore[import]
 from OPSI.Backend.Backend import ExtendedConfigDataBackend  # type: ignore[import]
@@ -31,14 +29,13 @@ from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTr
 from OPSI.Util import randomString  # type: ignore[import]
 from OPSI.Util.File.Opsi import PackageContentFile  # type: ignore[import]
 from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, getRepository  # type: ignore[import]
-
 from opsicommon.logging import log_context, logger
-from opsicommon.types import forceBool, forceInt, forceProductIdList, forceUnicode
 from opsicommon.objects import (  # pylint: disable=reimported
-	ProductOnClient,
 	LocalbootProduct,
+	ProductOnClient,
 )
-from opsicommon.types import forceUnicodeList, forceObjectIdList
+from opsicommon.types import forceBool, forceInt, forceObjectIdList, forceProductIdList, forceUnicode, forceUnicodeList
+from packaging import version
 
 from opsiclientd.Config import Config
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
@@ -48,10 +45,9 @@ from opsiclientd.nonfree.CacheBackend import ClientCacheBackend, add_products_fr
 from opsiclientd.nonfree.RPCProductDependencyMixin import RPCProductDependencyMixin
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_DARWIN
+from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 from opsiclientd.utils import get_include_exclude_product_ids
-
 
 __all__ = ["CacheService", "ConfigCacheService", "ProductCacheService"]
 
@@ -399,10 +395,10 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):  # pylint
 			if poc.productId in product_ids_by_client_id.get(poc.clientId, [])
 		]
 
-	def productOnClient_getObjectsWithSequence(  # pylint: disable=invalid-name
+	def productOnClient_getObjectsWithSequence(  # pylint: disable=invalid-name, redefined-builtin
 		self,
 		attributes: list[str] | None = None,
-		**filter: Any,  # pylint: disable=redefined-builtin
+		**filter: Any,
 	) -> list[ProductOnClient]:
 		"""
 		Like productOnClient_getObjects, but return objects in order and with attribute actionSequence set.
