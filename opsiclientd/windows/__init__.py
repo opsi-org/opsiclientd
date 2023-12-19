@@ -152,7 +152,7 @@ def runCommandInSession(  # pylint: disable=too-many-arguments,too-many-locals,u
 	timeoutSeconds=0,
 	noWindow=False,
 	shell=True,
-	max_attempts=5,
+	max_attempts=6,
 ):
 	"""
 	put command arguments in double, not single, quotes.
@@ -218,7 +218,7 @@ def runCommandInSession(  # pylint: disable=too-many-arguments,too-many-locals,u
 		# Can occur with the DeviceLock software on system startup
 		# -1073741502 / 0xc0000142 / STATUS_DLL_INIT_FAILED
 		if exitCode == -1073741502 and attempt < max_attempts:
-			logger.warning("Retrying in 5 seconds")
-			time.sleep(5)
+			logger.warning("Retrying in 10 seconds")
+			time.sleep(10)
 			continue
 		return (None, None, None, None)
