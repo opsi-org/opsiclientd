@@ -366,11 +366,14 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):  # pylint
 		action_groups: list[dict] = []
 		for group in self.get_product_action_groups(product_on_clients).get(clientId, []):
 			group.product_on_clients = [
-				poc.to_hash() for poc in group.product_on_clients if poc.actionRequest and poc.actionRequest != "none"  # type: ignore[misc]
+				poc.to_hash()
+				for poc in group.product_on_clients
+				if poc.actionRequest and poc.actionRequest != "none"  # type: ignore[misc]
 			]
 			if group.product_on_clients:
 				group.dependencies = {
-					product_id: [d.to_hash() for d in dep] for product_id, dep in group.dependencies.items()  # type: ignore[misc]
+					product_id: [d.to_hash() for d in dep]
+					for product_id, dep in group.dependencies.items()  # type: ignore[misc]
 				}
 				action_groups.append(group)  # type: ignore[arg-type]
 
@@ -397,7 +400,9 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):  # pylint
 		]
 
 	def productOnClient_getObjectsWithSequence(  # pylint: disable=invalid-name
-		self, attributes: list[str] | None = None, **filter: Any  # pylint: disable=redefined-builtin
+		self,
+		attributes: list[str] | None = None,
+		**filter: Any,  # pylint: disable=redefined-builtin
 	) -> list[ProductOnClient]:
 		"""
 		Like productOnClient_getObjects, but return objects in order and with attribute actionSequence set.
@@ -540,9 +545,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 		try:
 			try:
 				if hasattr(self._configService, "backend_getLicensingInfo"):
-					info = self._configService.backend_getLicensingInfo(
-						licenses=False, legacy_modules=False, dates=False
-					)  # pylint: disable=no-member
+					info = self._configService.backend_getLicensingInfo(licenses=False, legacy_modules=False, dates=False)  # pylint: disable=no-member
 					logger.debug("Got licensing info from service: %s", info)
 					if "vpn" not in info["available_modules"]:
 						raise RuntimeError("Module 'vpn' not licensed")
@@ -953,11 +956,11 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			self._running = True
 			logger.notice("Product cache service started")
 			try:
-				if not self._configService:
-					self.connectConfigService()
 				while not self._stopped:
 					sleep_time = 1.0
 					if self._cacheProductsRequested and not self._working:
+						if not self._configService:
+							self.connectConfigService()
 						self._cacheProductsRequested = False
 						sleep_time = self.start_caching_or_get_waiting_time()
 					time.sleep(sleep_time)
@@ -989,9 +992,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 		try:
 			try:
 				if hasattr(self._configService, "backend_getLicensingInfo"):
-					info = self._configService.backend_getLicensingInfo(
-						licenses=False, legacy_modules=False, dates=False
-					)  # pylint: disable=no-member
+					info = self._configService.backend_getLicensingInfo(licenses=False, legacy_modules=False, dates=False)  # pylint: disable=no-member
 					logger.debug("Got licensing info from service: %s", info)
 					if "vpn" not in info["available_modules"]:
 						raise RuntimeError("Module 'vpn' not licensed")
