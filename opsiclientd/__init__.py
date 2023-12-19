@@ -116,7 +116,7 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 		log_file=log_file,
 		file_level=LOG_DEBUG,
 		file_format=DEFAULT_FILE_LOG_FORMAT,
-		file_rotate_max_bytes=config.get("global", "max_log_size") * 1000 * 1000,
+		file_rotate_max_bytes=int(float(config.get("global", "max_log_size")) * 1_000_000),
 		file_rotate_backup_count=config.get("global", "keep_rotated_logs"),
 	)
 
