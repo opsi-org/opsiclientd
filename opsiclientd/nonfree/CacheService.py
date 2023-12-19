@@ -25,23 +25,39 @@ from urllib.parse import urlparse
 from OPSI import System  # type: ignore[import]
 from OPSI.Backend.Backend import ExtendedConfigDataBackend  # type: ignore[import]
 from OPSI.Backend.BackendManager import BackendExtender  # type: ignore[import]
-from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker  # type: ignore[import]
+from OPSI.Backend.SQLite import (  # type: ignore[import]
+	SQLiteBackend,
+	SQLiteObjectBackendModificationTracker,
+)
 from OPSI.Util import randomString  # type: ignore[import]
 from OPSI.Util.File.Opsi import PackageContentFile  # type: ignore[import]
-from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, getRepository  # type: ignore[import]
+from OPSI.Util.Repository import (  # type: ignore[import]
+	DepotToLocalDirectorySychronizer,
+	getRepository,
+)
 from opsicommon.logging import log_context, logger
 from opsicommon.objects import (  # pylint: disable=reimported
 	LocalbootProduct,
 	ProductOnClient,
 )
-from opsicommon.types import forceBool, forceInt, forceObjectIdList, forceProductIdList, forceUnicode, forceUnicodeList
+from opsicommon.types import (
+	forceBool,
+	forceInt,
+	forceObjectIdList,
+	forceProductIdList,
+	forceUnicode,
+	forceUnicodeList,
+)
 from packaging import version
 
 from opsiclientd.Config import Config
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
 from opsiclientd.nonfree import verify_modules
-from opsiclientd.nonfree.CacheBackend import ClientCacheBackend, add_products_from_setup_after_install
+from opsiclientd.nonfree.CacheBackend import (
+	ClientCacheBackend,
+	add_products_from_setup_after_install,
+)
 from opsiclientd.nonfree.RPCProductDependencyMixin import RPCProductDependencyMixin
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
@@ -54,7 +70,7 @@ __all__ = ["CacheService", "ConfigCacheService", "ProductCacheService"]
 config = Config()
 state = State()
 timeline = Timeline()
-
+sync_completed_lock = threading.Lock()
 RETENTION_HEARTBEAT_INTERVAL_DIFF = 10.0
 MIN_HEARTBEAT_INTERVAL = 1.0
 
@@ -810,14 +826,14 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 					self._cacheBackend._replicateMasterToWorkBackend()  # pylint: disable=protected-access
 					logger.notice("Config synced from server")
 					self._state["server_version"] = str(self._configService.service.server_version)
-					self._state["config_cached"] = True
-					state.set("config_cache_service", self._state)
-					self._createConfigBackend()
-					timeline.setEventEnd(eventId)
-
-					# IDEA: only fire sync_completed if pending action requests?
-					for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
-						eventGenerator.createAndFireEvent()
+					with sync_completed_lock:
+						self._state["config_cached"] = True
+						state.set("config_cache_service", self._state)
+						self._createConfigBackend()
+						timeline.setEventEnd(eventId)
+						# IDEA: only fire sync_completed if pending action requests?
+						for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
+							eventGenerator.createAndFireEvent()
 				except Exception as err:
 					logger.error(err, exc_info=True)
 					timeline.addEvent(
@@ -1220,11 +1236,12 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 						)
 					else:
 						logger.notice("All products cached: %s", p_list)
-						self._state["products_cached"] = True
-						state.set("product_cache_service", self._state)
+						with sync_completed_lock:
+							self._state["products_cached"] = True
+							state.set("product_cache_service", self._state)
 
-						for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
-							eventGenerator.createAndFireEvent()
+							for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
+								eventGenerator.createAndFireEvent()
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Failed to cache products: %s", err, exc_info=True)
 			timeline.addEvent(
