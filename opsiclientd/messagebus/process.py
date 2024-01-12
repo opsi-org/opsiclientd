@@ -1,5 +1,13 @@
 # -*- coding: utf-8 -*-
 
+# opsiclientd is part of the desktop management solution opsi http://www.opsi.org
+# Copyright (c) 2010-2021 uib GmbH <info@uib.de>
+# This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
+# License: AGPL-3.0
+"""
+opsiclientd.messagebus.process
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -100,7 +108,7 @@ class Process(Thread):
 			self._proc = await asyncio.create_subprocess_exec(
 				*self._command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
 			)
-		except Exception as error:
+		except Exception as error:  # pylint: disable=broad-except
 			logger.error(error, exc_info=True)
 			message = ProcessErrorMessage(
 				sender=CONNECTION_USER_CHANNEL,
@@ -127,7 +135,7 @@ class Process(Thread):
 				sender=CONNECTION_USER_CHANNEL, channel=self.response_channel, process_id=self.process_id, exit_code=self._proc.returncode
 			)
 			await self.send_message(message)
-		except Exception as err:
+		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err, exc_info=True)
 		finally:
 			with processes_lock:
@@ -169,7 +177,7 @@ def process_messagebus_message(message: ProcessMessage, send_message: Callable, 
 			process.stop()
 			return
 		raise RuntimeError("Invalid process id")
-	except Exception as err:
+	except Exception as err:  # pylint: disable=broad-except
 		logger.warning(err, exc_info=True)
 		if process:
 			process.stop()
