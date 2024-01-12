@@ -15,7 +15,7 @@ from asyncio import AbstractEventLoop
 from asyncio.subprocess import Process as AsyncioProcess
 from threading import Lock, Thread
 from time import sleep, time
-from typing import Callable, Coroutine
+from typing import Awaitable, Callable
 
 from opsicommon.logging import logger  # type: ignore[import]
 from opsicommon.messagebus import (
@@ -38,12 +38,12 @@ processes_lock = Lock()
 class Process(Thread):
 	block_size = 8192
 
-	def __init__(self, command: list[str], send_message_function: Coroutine, process_start_request: ProcessStartRequestMessage) -> None:
+	def __init__(self, command: list[str], send_message_function: Awaitable, process_start_request: ProcessStartRequestMessage) -> None:
 		Thread.__init__(self, daemon=True)
 		self._command = command
 		self._proc: AsyncioProcess | None = None
 		self._loop: AbstractEventLoop = asyncio.new_event_loop()
-		self.send_message: Coroutine = send_message_function
+		self.send_message: Awaitable = send_message_function
 		self._process_start_request = process_start_request
 
 	@property
@@ -104,8 +104,9 @@ class Process(Thread):
 
 	async def _arun(self) -> None:
 		logger.notice("Received ProcessStartRequestMessage %r", self)
+		message: ProcessMessage
 		try:
-			self._proc = await asyncio.create_subprocess_exec(
+			self._proc = await asyncio.create_subprocess_exec(  # TODO: timeout handling? or fully on server side?
 				*self._command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
 			)
 		except Exception as error:  # pylint: disable=broad-except
@@ -129,10 +130,10 @@ class Process(Thread):
 		await self.send_message(message)
 		logger.info("Started %r", self)
 		await asyncio.gather(self._stderr_reader(), self._stdout_reader())
-
+		exit_code = await self._proc.wait()  # necessary because stderr and stdout might be closed prematurely
 		try:
 			message = ProcessStopEventMessage(
-				sender=CONNECTION_USER_CHANNEL, channel=self.response_channel, process_id=self.process_id, exit_code=self._proc.returncode
+				sender=CONNECTION_USER_CHANNEL, channel=self.response_channel, process_id=self.process_id, exit_code=exit_code
 			)
 			await self.send_message(message)
 		except Exception as err:  # pylint: disable=broad-except
@@ -156,7 +157,7 @@ class Process(Thread):
 		return f"{self._command[0]} ({info})"
 
 
-def process_messagebus_message(message: ProcessMessage, send_message: Callable, async_send_message: Coroutine) -> None:
+def process_messagebus_message(message: ProcessMessage, send_message: Callable, async_send_message: Awaitable) -> None:
 	with processes_lock:
 		process = processes.get(message.process_id)
 
