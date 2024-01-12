@@ -17,9 +17,12 @@ from argparse import Namespace
 from pathlib import Path
 
 import packaging
-from OpenSSL.crypto import FILETYPE_PEM  # type: ignore[import]
+from OpenSSL.crypto import (  # type: ignore[import]
+	FILETYPE_PEM,  # type: ignore[import]
+	load_certificate,
+	load_privatekey,
+)
 from OpenSSL.crypto import Error as CryptoError
-from OpenSSL.crypto import load_certificate, load_privatekey  # type: ignore[import]
 from opsicommon.client.opsiservice import ServiceClient  # type: ignore[import]
 from opsicommon.logging import logger, secret_filter  # type: ignore[import]
 from opsicommon.ssl import as_pem, create_ca, create_server_cert  # type: ignore[import]
@@ -46,6 +49,7 @@ config = Config()
 
 CERT_RENEW_DAYS = 60
 SERVICES_PIPE_TIMEOUT_WINDOWS = 120000
+
 
 def get_ips():
 	ips = {"127.0.0.1", "::1"}
@@ -386,6 +390,40 @@ def cleanup_registry_uninstall():
 					break
 
 
+def cleanup_registry_environment_path():
+	if not RUNNING_ON_WINDOWS:
+		return
+
+	logger.notice("Cleanup registry environment PATH variable")
+	# pyright: reportMissingImports=false
+	import winreg  # pylint: disable=import-outside-toplevel,import-error
+
+	import win32process  # type: ignore[import] # pylint: disable=import-outside-toplevel,import-error
+
+	key_handle = winreg.CreateKey(  # type: ignore[attr-defined]
+		winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
+	)
+	try:
+		if win32process.IsWow64Process():
+			winreg.DisableReflectionKey(key_handle)  # type: ignore[attr-defined]
+
+		try:
+			reg_value, value_type = winreg.QueryValueEx(key_handle, "PATH")  # type: ignore[attr-defined]
+			cur_reg_values = reg_value.split(";")
+			# Remove empty values and values containing "pywin32_system32" and "opsi"
+			reg_values = list(dict.fromkeys(v for v in cur_reg_values if v and not ("pywin32_system32" in v and "opsi" in v)))
+			if reg_values == cur_reg_values:
+				# Unchanged
+				return
+
+			reg_value = ";".join(reg_values)
+			winreg.SetValueEx(key_handle, "PATH", 0, value_type, reg_value)  # type: ignore[attr-defined]
+		except FileNotFoundError:
+			logger.warning("Key 'PATH' not found in registry")
+	finally:
+		winreg.CloseKey(key_handle)  # type: ignore[attr-defined]
+
+
 def setup_on_shutdown():  # pylint: disable=too-many-statements
 	if not RUNNING_ON_WINDOWS:
 		return None
@@ -514,7 +552,12 @@ def setup(full: bool = False, options: Namespace | None = None) -> None:
 	try:
 		cleanup_control_server_files()
 	except Exception as err:  # pylint: disable=broad-except
-		logger.error("Failed to clean control_server_files: %s", err, exc_info=True)
+		logger.error("Failed to clean control server files: %s", err, exc_info=True)
+
+	try:
+		cleanup_registry_environment_path()
+	except Exception as err:  # pylint: disable=broad-except
+		logger.error("Failed to clean registry environment PATH: %s", err, exc_info=True)
 
 	logger.notice("Setup completed with %d errors", len(errors))
 	if errors and full:

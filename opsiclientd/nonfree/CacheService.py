@@ -13,52 +13,64 @@ opsiclientd.nonfree.CacheService
 
 import codecs
 import collections
-from collections import defaultdict
-from typing import Any
 import os
 import shutil
 import threading
 import time
+from collections import defaultdict
 from pathlib import Path
+from typing import Any
 from urllib.parse import urlparse
-
-from packaging import version
 
 from OPSI import System  # type: ignore[import]
 from OPSI.Backend.Backend import ExtendedConfigDataBackend  # type: ignore[import]
 from OPSI.Backend.BackendManager import BackendExtender  # type: ignore[import]
-from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker  # type: ignore[import]
+from OPSI.Backend.SQLite import (  # type: ignore[import]
+	SQLiteBackend,
+	SQLiteObjectBackendModificationTracker,
+)
 from OPSI.Util import randomString  # type: ignore[import]
 from OPSI.Util.File.Opsi import PackageContentFile  # type: ignore[import]
-from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, getRepository  # type: ignore[import]
-
-from opsicommon.logging import log_context, logger
-from opsicommon.types import forceBool, forceInt, forceProductIdList, forceUnicode
-from opsicommon.objects import (  # pylint: disable=reimported
-	ProductOnClient,
-	LocalbootProduct,
+from OPSI.Util.Repository import (  # type: ignore[import]
+	DepotToLocalDirectorySychronizer,
+	getRepository,
 )
-from opsicommon.types import forceUnicodeList, forceObjectIdList
+from opsicommon.logging import log_context, logger
+from opsicommon.objects import (  # pylint: disable=reimported
+	LocalbootProduct,
+	ProductOnClient,
+)
+from opsicommon.types import (
+	forceBool,
+	forceInt,
+	forceObjectIdList,
+	forceProductIdList,
+	forceUnicode,
+	forceUnicodeList,
+)
+from packaging import version
 
 from opsiclientd.Config import Config
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
 from opsiclientd.nonfree import verify_modules
-from opsiclientd.nonfree.CacheBackend import ClientCacheBackend, add_products_from_setup_after_install
+from opsiclientd.nonfree.CacheBackend import (
+	ClientCacheBackend,
+	add_products_from_setup_after_install,
+)
 from opsiclientd.nonfree.RPCProductDependencyMixin import RPCProductDependencyMixin
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS, RUNNING_ON_DARWIN
+from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 from opsiclientd.utils import get_include_exclude_product_ids
-
 
 __all__ = ["CacheService", "ConfigCacheService", "ProductCacheService"]
 
 config = Config()
 state = State()
 timeline = Timeline()
-
+sync_completed_lock = threading.Lock()
 RETENTION_HEARTBEAT_INTERVAL_DIFF = 10.0
 MIN_HEARTBEAT_INTERVAL = 1.0
 
@@ -339,7 +351,8 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):  # pylint
 			}
 			depot_values: dict[str, dict[str, list[Any]]] = defaultdict(lambda: defaultdict(list))
 			depot_ids = list(set(client_id_to_depot_id.values()))
-			depot_ids.append(configserver_id)
+			if configserver_id not in depot_ids:
+				depot_ids.append(configserver_id)
 			if depot_ids:
 				for config_state in self.configState_getObjects(configId=config_ids, objectId=depot_ids):  # pylint: disable=no-member
 					depot_values[config_state.getObjectId()][config_state.getConfigId()] = config_state.values
@@ -347,9 +360,9 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):  # pylint
 				host_id = host.id
 				depot_id = client_id_to_depot_id.get(host_id)
 				if depot_id and depot_id in depot_values:
-					res[host_id] = depot_values[depot_id].copy()
+					res[host_id].update(depot_values[depot_id])
 				elif not depot_id and configserver_id in depot_values:
-					res[host_id] = depot_values[configserver_id].copy()
+					res[host_id].update(depot_values[configserver_id])
 		for config_state in self.configState_getObjects(configId=config_ids, objectId=object_ids):  # pylint: disable=no-member
 			if config_state.objectId not in res:
 				res[config_state.objectId] = {}
@@ -365,11 +378,14 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):  # pylint
 		action_groups: list[dict] = []
 		for group in self.get_product_action_groups(product_on_clients).get(clientId, []):
 			group.product_on_clients = [
-				poc.to_hash() for poc in group.product_on_clients if poc.actionRequest and poc.actionRequest != "none"  # type: ignore[misc]
+				poc.to_hash()
+				for poc in group.product_on_clients
+				if poc.actionRequest and poc.actionRequest != "none"  # type: ignore[misc]
 			]
 			if group.product_on_clients:
 				group.dependencies = {
-					product_id: [d.to_hash() for d in dep] for product_id, dep in group.dependencies.items()  # type: ignore[misc]
+					product_id: [d.to_hash() for d in dep]
+					for product_id, dep in group.dependencies.items()  # type: ignore[misc]
 				}
 				action_groups.append(group)  # type: ignore[arg-type]
 
@@ -395,8 +411,10 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):  # pylint
 			if poc.productId in product_ids_by_client_id.get(poc.clientId, [])
 		]
 
-	def productOnClient_getObjectsWithSequence(  # pylint: disable=invalid-name
-		self, attributes: list[str] | None = None, **filter: Any  # pylint: disable=redefined-builtin
+	def productOnClient_getObjectsWithSequence(  # pylint: disable=invalid-name, redefined-builtin
+		self,
+		attributes: list[str] | None = None,
+		**filter: Any,
 	) -> list[ProductOnClient]:
 		"""
 		Like productOnClient_getObjects, but return objects in order and with attribute actionSequence set.
@@ -539,9 +557,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 		try:
 			try:
 				if hasattr(self._configService, "backend_getLicensingInfo"):
-					info = self._configService.backend_getLicensingInfo(
-						licenses=False, legacy_modules=False, dates=False
-					)  # pylint: disable=no-member
+					info = self._configService.backend_getLicensingInfo(licenses=False, legacy_modules=False, dates=False)  # pylint: disable=no-member
 					logger.debug("Got licensing info from service: %s", info)
 					if "vpn" not in info["available_modules"]:
 						raise RuntimeError("Module 'vpn' not licensed")
@@ -810,14 +826,14 @@ class ConfigCacheService(ServiceConnection, threading.Thread):  # pylint: disabl
 					self._cacheBackend._replicateMasterToWorkBackend()  # pylint: disable=protected-access
 					logger.notice("Config synced from server")
 					self._state["server_version"] = str(self._configService.service.server_version)
-					self._state["config_cached"] = True
-					state.set("config_cache_service", self._state)
-					self._createConfigBackend()
-					timeline.setEventEnd(eventId)
-
-					# IDEA: only fire sync_completed if pending action requests?
-					for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
-						eventGenerator.createAndFireEvent()
+					with sync_completed_lock:
+						self._state["config_cached"] = True
+						state.set("config_cache_service", self._state)
+						self._createConfigBackend()
+						timeline.setEventEnd(eventId)
+						# IDEA: only fire sync_completed if pending action requests?
+						for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
+							eventGenerator.createAndFireEvent()
 				except Exception as err:
 					logger.error(err, exc_info=True)
 					timeline.addEvent(
@@ -952,11 +968,11 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			self._running = True
 			logger.notice("Product cache service started")
 			try:
-				if not self._configService:
-					self.connectConfigService()
 				while not self._stopped:
 					sleep_time = 1.0
 					if self._cacheProductsRequested and not self._working:
+						if not self._configService:
+							self.connectConfigService()
 						self._cacheProductsRequested = False
 						sleep_time = self.start_caching_or_get_waiting_time()
 					time.sleep(sleep_time)
@@ -988,9 +1004,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 		try:
 			try:
 				if hasattr(self._configService, "backend_getLicensingInfo"):
-					info = self._configService.backend_getLicensingInfo(
-						licenses=False, legacy_modules=False, dates=False
-					)  # pylint: disable=no-member
+					info = self._configService.backend_getLicensingInfo(licenses=False, legacy_modules=False, dates=False)  # pylint: disable=no-member
 					logger.debug("Got licensing info from service: %s", info)
 					if "vpn" not in info["available_modules"]:
 						raise RuntimeError("Module 'vpn' not licensed")
@@ -1222,11 +1236,12 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 						)
 					else:
 						logger.notice("All products cached: %s", p_list)
-						self._state["products_cached"] = True
-						state.set("product_cache_service", self._state)
+						with sync_completed_lock:
+							self._state["products_cached"] = True
+							state.set("product_cache_service", self._state)
 
-						for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
-							eventGenerator.createAndFireEvent()
+							for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
+								eventGenerator.createAndFireEvent()
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Failed to cache products: %s", err, exc_info=True)
 			timeline.addEvent(

@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 
 # opsiclientd is part of the desktop management solution opsi http://www.opsi.org
@@ -22,8 +21,11 @@ from opsicommon.logging import logger  # type: ignore[import]
 from opsicommon.messagebus import (  # type: ignore[import]
 	FileUploadRequestMessage,
 	FileUploadResultMessage,
-	Message,
 	MessageType,
+	FileErrorMessage,
+	MessageErrorEnum,
+	FileMessage,
+	CONNECTION_USER_CHANNEL,
 )
 
 from opsiclientd.messagebus.terminal import terminals
@@ -35,16 +37,12 @@ file_uploads: Dict[str, FileUpload] = {}
 class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-instance-attributes
 	chunk_timeout = 300
 
-	def __init__(
-		self,
-		send_message_function: Callable,
-		file_upload_request: FileUploadRequestMessage
-	) -> None:
+	def __init__(self, send_message_function: Callable, file_upload_request: FileUploadRequestMessage) -> None:
 		super().__init__()
 		self.daemon = True
 		self._context = copy_context()
 		self._should_stop = False
-		self._message_queue: Queue[Message] = Queue()
+		self._message_queue: Queue[FileMessage] = Queue()
 		self._file_upload_request = file_upload_request
 		self._send_message_function = send_message_function
 		self._chunk_number = 0
@@ -80,19 +78,18 @@ class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-ins
 
 	def _error(self, error: str):
 		self._file_path.unlink(missing_ok=True)
-		msg = FileUploadResultMessage(
-			sender="@",
+		msg = FileErrorMessage(
+			sender=CONNECTION_USER_CHANNEL,
 			channel=self._file_upload_request.back_channel,
 			file_id=self._file_upload_request.file_id,
 			error={
-				"code": 0,
 				"message": error,
 				"details": None,
-			}
+			},
 		)
 		self._send_message_function(msg)
 
-	def process_message(self, message: Message) -> None:
+	def process_message(self, message: FileMessage) -> None:
 		if message.type != MessageType.FILE_CHUNK:
 			raise ValueError(f"Received invalid message type {message.type}")
 		self._message_queue.put(message)
@@ -106,15 +103,15 @@ class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-ins
 			except Empty:
 				if time() > self._last_chunk_time + self.chunk_timeout:
 					logger.notice("File transfer timed out")
-					msg = FileUploadResultMessage(
-						sender="@",
+					msg = FileErrorMessage(
+						sender=CONNECTION_USER_CHANNEL,
 						channel=self._file_upload_request.back_channel,
 						file_id=self._file_upload_request.file_id,
 						error={
-							"code": 0,
+							"code": MessageErrorEnum.TIMEOUT_REACHED,
 							"message": "File transfer timed out while waiting for next chunk",
 							"details": None,
-						}
+						},
 					)
 					self._send_message_function(msg)
 					self._should_stop = True
@@ -133,10 +130,10 @@ class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-ins
 			if message.last:
 				logger.debug("Last chunk received")
 				msg = FileUploadResultMessage(
-					sender="@",
+					sender=CONNECTION_USER_CHANNEL,
 					channel=self._file_upload_request.back_channel,
 					file_id=self._file_upload_request.file_id,
-					path=str(self._file_path)
+					path=str(self._file_path),
 				)
 				self._send_message_function(msg)
 				self._should_stop = True
@@ -148,18 +145,15 @@ class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-ins
 			logger.error(err, exc_info=True)
 
 
-def process_messagebus_message(message: Message, send_message: Callable) -> None:
+def process_messagebus_message(message: FileMessage, send_message: Callable) -> None:
 	with file_uploads_lock:
 		file_upload = file_uploads.get(message.file_id)
 	try:
-		if message.type == MessageType.FILE_UPLOAD_REQUEST:
+		if isinstance(message, FileUploadRequestMessage):
 			with file_uploads_lock:
 				if file_upload:
 					raise RuntimeError("File id already taken")
-				file_uploads[message.file_id] = FileUpload(
-					send_message_function=send_message,
-					file_upload_request=message
-				)
+				file_uploads[message.file_id] = FileUpload(send_message_function=send_message, file_upload_request=message)
 				file_uploads[message.file_id].start()
 				return
 
@@ -171,11 +165,13 @@ def process_messagebus_message(message: Message, send_message: Callable) -> None
 	except Exception as err:  # pylint: disable=broad-except
 		logger.warning(err, exc_info=True)
 
-		msg = FileUploadResultMessage(
-			sender="@", channel=message.back_channel, file_id=message.file_id, error={
-				"code": 0,
+		msg = FileErrorMessage(
+			sender=CONNECTION_USER_CHANNEL,
+			channel=message.back_channel,
+			file_id=message.file_id,
+			error={
 				"message": str(err),
 				"details": None,
-			}
+			},
 		)
 		send_message(msg)

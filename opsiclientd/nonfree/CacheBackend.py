@@ -32,16 +32,17 @@ from opsicommon.exceptions import (  # type: ignore[import]
 from opsicommon.license import OPSI_MODULE_IDS
 from opsicommon.logging import logger
 from opsicommon.logging.constants import TRACE
-from opsicommon.objects import *  # required for dynamic class loading # pylint: disable=wildcard-import,unused-wildcard-import
+from opsicommon.objects import *  # required for dynamic class loading # pylint: disable=wildcard-import,unused-wildcard-import # noqa: F403
 from opsicommon.objects import (  # pylint: disable=reimported
 	LicenseOnClient,
+	ProductDependency,
 	ProductOnClient,
 	get_ident_attributes,
 	objects_differ,
 	serialize,
-	ProductDependency,
 )
 from opsicommon.types import forceHostId
+
 from opsiclientd.Config import Config as OCDConfig
 from opsiclientd.OpsiService import ServiceConnection
 
@@ -62,12 +63,13 @@ def add_products_from_setup_after_install(products: list[str], service: ServiceC
 					objectId=config.get("global", "host_id"),
 					productId=product,
 					propertyId="setup_after_install",
-				)[0]
-				add_products += [
-					sai_product
-					for sai_product in setup_after_install_products.values
-					if sai_product not in products and sai_product not in add_products
-				]
+				)
+				if setup_after_install_products:
+					add_products += [
+						sai_product
+						for sai_product in setup_after_install_products[0].values
+						if sai_product not in products and sai_product not in add_products
+					]
 	except Exception as err:  # pylint: disable=broad-except
 		logger.warning("Failed to add setup_after_install products to filteredProductIds: %s", err)
 	return add_products
@@ -84,7 +86,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 		self._depotId = None
 		self._backendChangeListeners = []
 
-		for (option, value) in kwargs.items():
+		for option, value in kwargs.items():
 			option = option.lower()
 			if option == "workbackend":
 				self._workBackend = value
@@ -273,9 +275,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 			def createUpdateObjectFunction(modifiedObj):
 				return modifiedObj.clone(identOnly=False)
 
-			def mergeObjectsFunction(
-				snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend
-			):  # pylint: disable=unused-argument,too-many-arguments
+			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):  # pylint: disable=unused-argument,too-many-arguments
 				masterVersions = sorted(
 					[
 						f"{p.productVersion}-{p.packageVersion}"
@@ -325,9 +325,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 			def createUpdateObjectFunction(modifiedObj):  # pylint: disable=function-redefined
 				return modifiedObj.clone(identOnly=False)
 
-			def mergeObjectsFunction(
-				snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend
-			):  # pylint: disable=function-redefined,unused-argument,too-many-arguments
+			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):  # pylint: disable=function-redefined,unused-argument,too-many-arguments
 				return updateObj
 
 			self._syncModifiedObjectsWithMaster(
@@ -347,9 +345,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 			def createUpdateObjectFunction(modifiedObj):  # pylint: disable=function-redefined
 				return modifiedObj.clone()
 
-			def mergeObjectsFunction(
-				snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend
-			):  # pylint: disable=function-redefined,unused-argument,too-many-arguments
+			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):  # pylint: disable=function-redefined,unused-argument,too-many-arguments
 				if len(snapshotObj.values) != len(masterObj.values):
 					logger.info("Values of %s changed on server since last sync, not updating values", snapshotObj)
 					return None
@@ -567,7 +563,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):  # pyl
 		with codecs.open(self._opsiModulesFile, "w", "utf-8") as file:
 			modules = backendInfo["modules"]
 			helpermodules = backendInfo["realmodules"]
-			for (module, state) in modules.items():
+			for module, state in modules.items():
 				if helpermodules in ("customer", "expires"):
 					continue
 				if module in helpermodules:

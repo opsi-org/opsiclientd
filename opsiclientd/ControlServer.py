@@ -36,6 +36,7 @@ from uuid import uuid4
 
 import msgpack  # type: ignore[import]
 import psutil  # type: ignore[import]
+from opsicommon import __version__ as opsicommon_version
 
 with warnings.catch_warnings():
 	warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -60,6 +61,8 @@ from OPSI.Service.Worker import (  # type: ignore[import]
 	WorkerOpsiJsonRpc,
 )
 from OPSI.Util.Log import truncateLogData  # type: ignore[import]
+
+# pylint: disable=ungrouped-imports
 from opsicommon.exceptions import OpsiServiceAuthenticationError
 from opsicommon.logging import (  # type: ignore[import]
 	LEVEL_TO_NAME,
@@ -68,7 +71,12 @@ from opsicommon.logging import (  # type: ignore[import]
 	logger,
 	secret_filter,
 )
-from opsicommon.types import forceBool, forceInt, forceUnicode, forceProductIdList  # type: ignore[import]
+from opsicommon.types import (  # type: ignore[import]
+	forceBool,
+	forceInt,
+	forceProductIdList,
+	forceUnicode,
+)
 from twisted.internet import fdesc, reactor
 from twisted.internet.base import BasePort
 from twisted.internet.error import CannotListenError
@@ -86,6 +94,13 @@ from opsiclientd.SoftwareOnDemand import ResourceKioskJsonRpc
 from opsiclientd.State import State
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
+
+if RUNNING_ON_WINDOWS:
+	from opsiclientd.windows import runCommandInSession
+else:
+	from OPSI.System import (  # type: ignore  # pylint: disable=ungrouped-imports
+		runCommandInSession,
+	)
 
 config = Config()
 state = State()
@@ -1027,9 +1042,7 @@ class TerminalReaderThread(threading.Thread):
 		self.should_stop = True
 
 
-class TerminalWebSocketServerProtocol(
-	WebSocketServerProtocol, WorkerOpsiclientd
-):  # pylint: disable=too-many-ancestors,too-many-instance-attributes
+class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd):  # pylint: disable=too-many-ancestors,too-many-instance-attributes
 	def onConnect(self, request):
 		self.service = self.factory.control_server  # pylint: disable=no-member
 		self.request = RequestAdapter(request)
@@ -1222,7 +1235,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			desktop = self.opsiclientd.getCurrentActiveDesktopName()
 
 		logger.notice("rpc runCommand: executing command '%s' in session %d on desktop '%s'", command, sessionId, desktop)
-		System.runCommandInSession(command=command, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False)
+		runCommandInSession(command=command, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False)
 		return f"command '{command}' executed"
 
 	def execute(self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300):  # pylint: disable=too-many-arguments
@@ -1465,7 +1478,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 		if remove_user and not wait_for_ending:
 			wait_for_ending = True
-		if type(wait_for_ending) is bool and wait_for_ending:  # pylint: disable=unidiomatic-typecheck
+		if type(wait_for_ending) is bool and wait_for_ending:  # pylint: disable=unidiomatic-typecheck # noqa: E721
 			wait_for_ending = 7200
 
 		logger.notice(
@@ -1480,7 +1493,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		serviceConnection = ServiceConnection(self.opsiclientd)
 		serviceConnection.connectConfigService()
 		try:
-
 			configServiceUrl = serviceConnection.getConfigServiceUrl()
 			config.selectDepotserver(
 				configService=serviceConnection.getConfigService(),
@@ -1623,7 +1635,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		try:
 			for attempt in (1, 2, 3, 4, 5):
 				try:
-
 					# This will create the user home dir and ntuser.dat gets loaded
 					# Can fail if C:\users\default\ntuser.dat is ocked by an other process
 					hkey = win32profile.LoadUserProfile(logon, {"UserName": user_info["name"]})
@@ -1687,7 +1698,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			)
 			if wait_for_ending:
 				timeout = 3600
-				if type(wait_for_ending) is int:  # pylint: disable=unidiomatic-typecheck
+				if type(wait_for_ending) is int:  # pylint: disable=unidiomatic-typecheck # noqa: E721
 					timeout = wait_for_ending
 				logger.info("Wait for process to complete (timeout=%r)", timeout)
 				try:
@@ -1766,7 +1777,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 	def getConfigDataFromOpsiclientd(self, get_depot_id=True, get_active_events=True):
 		result = {}
-		result["opsiclientd_version"] = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}]"
+		result[
+			"opsiclientd_version"
+		] = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}python-opsi-common={opsicommon_version}]"
 
 		if get_depot_id:
 			result["depot_id"] = config.get("depot_server", "master_depot_id")

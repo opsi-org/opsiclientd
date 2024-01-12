@@ -164,8 +164,8 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				"log_file": "opsiclientd.log",
 				"log_level": LOG_NOTICE,
 				"keep_rotated_logs": 10,
-				"max_log_size": 5,  # In MB
-				"max_log_transfer_size": 5,  # In MB
+				"max_log_size": 5.0,  # In MB
+				"max_log_transfer_size": 5.0,  # In MB
 				"host_id": System.getFQDN().lower(),
 				"opsi_host_key": "",
 				"wait_for_gui_timeout": 120,
@@ -506,10 +506,10 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			logging_config(file_level=self._config[section][option])
 
 	def replace(self, string, escaped=False):
-		for (section, values) in self._config.items():
+		for section, values in self._config.items():
 			if not isinstance(values, dict):
 				continue
-			for (key, value) in values.items():
+			for key, value in values.items():
 				value = forceUnicode(value)
 				if string.find('"%' + forceUnicode(section) + "." + forceUnicode(key) + '%"') != -1 and escaped:
 					if os.name == "posix":
@@ -538,7 +538,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			for section in config.sections():
 				logger.debug("Processing section '%s' in config file: '%s'", section, self.get("global", "config_file"))
 
-				for (option, value) in config.items(section):
+				for option, value in config.items(section):
 					if section == "global" and option == "log_dir":
 						continue  # Ingoring configured log_dir
 
@@ -570,7 +570,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			configFile.setKeepOrdering(True)
 			(config, comments) = configFile.parse(returnComments=True)
 			changed = False
-			for (section, values) in self._config.items():
+			for section, values in self._config.items():
 				if not isinstance(values, dict):
 					continue
 				if section == "system":
@@ -580,7 +580,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 					config.add_section(section)
 					changed = True
 
-				for (option, value) in values.items():
+				for option, value in values.items():
 					if (section == "global") and (option == "config_file"):
 						# Do not store these option
 						continue
@@ -648,9 +648,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 		return self.get("config_service", "url")
 
-	def getDepot(
-		self, configService, event=None, productIds=None, masterOnly=False, forceDepotProtocol=None
-	):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
+	def getDepot(self, configService, event=None, productIds=None, masterOnly=False, forceDepotProtocol=None):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
 		productIds = forceProductIdList(productIds or [])
 		if not configService:
 			raise RuntimeError("Not connected to config service")
@@ -788,9 +786,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 		return selectedDepot, depotProtocol
 
-	def selectDepotserver(
-		self, configService, mode="mount", event=None, productIds=None, masterOnly=False
-	):  # pylint: disable=too-many-arguments
+	def selectDepotserver(self, configService, mode="mount", event=None, productIds=None, masterOnly=False):  # pylint: disable=too-many-arguments
 		assert mode in ("mount", "sync")
 		productIds = forceProductIdList(productIds or [])
 
@@ -852,12 +848,22 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			"opsiclientd.*",  # everything starting with opsiclientd.
 		]
 		config_states = {}
+		use_get_objects = True
 		if hasattr(service_client, "configState_getValues"):
+			use_get_objects = False
 			logger.info("Using configState_getValues")
 			config_states = service_client.configState_getValues(
 				config_ids=config_ids, object_ids=[self.get("global", "host_id")], with_defaults=True
 			).get(self.get("global", "host_id"), {})
-		else:
+			if (
+				"clientconfig.configserver.url" not in config_states
+				and isinstance(service_client, ServiceClient)
+				and service_client.service_is_opsiclientd()
+			):
+				# Workaround getValues bug of older opsiclientd
+				logger.warning("Service is opsiclientd with getValues bug")
+				use_get_objects = True
+		if use_get_objects:
 			logger.info("Using configState_getObjects")
 			for config in service_client.config_getObjects(id=config_ids):
 				config_states[config.id] = config.defaultValues

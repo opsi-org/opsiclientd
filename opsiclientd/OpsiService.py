@@ -41,6 +41,8 @@ from opsicommon.messagebus import (
 	Message,
 	TraceRequestMessage,
 	TraceResponseMessage,
+	TerminalMessage,
+	FileMessage,
 	timestamp,
 )
 from opsicommon.ssl import install_ca, load_ca, remove_ca
@@ -243,9 +245,9 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 				trace={"sender_ws_send": timestamp()},
 			)
 			self.service_client.messagebus.send_message(response)
-		elif message.type.startswith("terminal_"):
+		elif isinstance(message, TerminalMessage):
 			process_terminal_message(message, self.service_client.messagebus.send_message)
-		elif message.type.startswith("file_"):
+		elif isinstance(message, FileMessage):
 			process_filetransfer_message(message, self.service_client.messagebus.send_message)
 		elif message.type.startswith("process_"):
 			process_process_message(message, self.service_client.messagebus.send_message, self.messagebus.async_send_message)

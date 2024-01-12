@@ -13,7 +13,17 @@ import time
 
 import win32com.client  # pylint: disable=import-error
 import win32com.server.policy  # pylint: disable=import-error
+from OPSI.System.Windows import (  # type: ignore[import]
+	createDesktop,
+	getActiveSessionId,
+	getUserToken,
+	terminateProcess,
+	win32con,
+	win32event,
+	win32process,
+)
 from opsicommon.logging import logger
+from opsicommon.types import forceBool, forceInt, forceUnicode, forceUnicodeLower
 
 # pyright: reportMissingImports=false
 
@@ -131,3 +141,84 @@ def start_pty(shell="powershell.exe", lines=30, columns=120):
 		return process.write(data.decode("utf-8"))
 
 	return (process.pid, read, write, process.setwinsize, process.close)
+
+
+def runCommandInSession(  # pylint: disable=too-many-arguments,too-many-locals,unused-argument,too-many-branches
+	command,
+	sessionId=None,
+	desktop="default",
+	duplicateFrom="winlogon.exe",
+	waitForProcessEnding=True,
+	timeoutSeconds=0,
+	noWindow=False,
+	shell=True,
+	max_attempts=6,
+):
+	"""
+	put command arguments in double, not single, quotes.
+	"""
+	command = forceUnicode(command)
+	if sessionId is not None:
+		sessionId = forceInt(sessionId)
+
+	desktop = forceUnicodeLower(desktop)
+	if desktop.find("\\") == -1:
+		desktop = "winsta0\\" + desktop
+
+	duplicateFrom = forceUnicode(duplicateFrom)
+	waitForProcessEnding = forceBool(waitForProcessEnding)
+	timeoutSeconds = forceInt(timeoutSeconds)
+
+	logger.debug("Session id given: %s", sessionId)
+	if sessionId is None or (sessionId < 0):
+		logger.debug("No session id given, running in active session")
+		sessionId = getActiveSessionId()
+
+	if desktop.split("\\")[-1] not in ("default", "winlogon"):
+		logger.info("Creating new desktop '%s'", desktop.split("\\")[-1])
+		try:
+			createDesktop(desktop.split("\\")[-1])
+		except Exception as err:  # pylint: disable=broad-except
+			logger.warning(err)
+
+	userToken = getUserToken(sessionId, duplicateFrom)
+
+	dwCreationFlags = win32con.NORMAL_PRIORITY_CLASS
+	if noWindow:
+		dwCreationFlags |= win32con.CREATE_NO_WINDOW
+
+	sti = win32process.STARTUPINFO()
+	sti.lpDesktop = desktop
+
+	for attempt in range(1, max_attempts + 1):
+		logger.notice("Executing: '%s' in session '%s' on desktop '%s'", command, sessionId, desktop)
+		(hProcess, hThread, dwProcessId, dwThreadId) = win32process.CreateProcessAsUser(
+			userToken, None, command, None, None, 1, dwCreationFlags, None, None, sti
+		)
+
+		logger.info("Process startet, pid: %d", dwProcessId)
+		if not waitForProcessEnding:
+			return (hProcess, hThread, dwProcessId, dwThreadId)
+
+		logger.info("Waiting for process ending: %d (timeout: %d seconds)", dwProcessId, timeoutSeconds)
+		sec = 0.0
+		while win32event.WaitForSingleObject(hProcess, timeoutSeconds):
+			if timeoutSeconds > 0:
+				if sec >= timeoutSeconds:
+					terminateProcess(processId=dwProcessId)
+					raise RuntimeError(f"Timed out after {sec} seconds while waiting for process {dwProcessId}")
+				sec += 0.1
+			time.sleep(0.1)
+
+		exitCode = win32process.GetExitCodeProcess(hProcess)
+		log = logger.notice
+		if exitCode != 0:
+			log = logger.warning
+		log("Process %d ended with exit code %d", dwProcessId, exitCode)
+		# Can occur with the DeviceLock software on system startup
+		# -1073741502 / 0xc0000142 / STATUS_DLL_INIT_FAILED
+		if exitCode == -1073741502 and attempt < max_attempts:
+			logger.warning("Retrying in 10 seconds")
+			time.sleep(10)
+			continue
+		return (None, None, None, None)

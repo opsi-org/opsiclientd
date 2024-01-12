@@ -70,6 +70,11 @@ from opsiclientd.utils import (
 	get_version_from_mach_binary,
 )
 
+if RUNNING_ON_WINDOWS:
+	from opsiclientd.windows import runCommandInSession
+else:
+	from OPSI.System import runCommandInSession  # pylint: disable=ungrouped-imports
+
 config = Config()
 state = State()
 timeline = Timeline()
@@ -335,7 +340,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			data = ""
 			size = os.path.getsize(config.get("global", "log_file"))
 			with open(config.get("global", "log_file"), "rb") as file:
-				max_size = config.get("global", "max_log_transfer_size") * 1000000
+				max_size = 5_000_000
+				try:
+					max_size = int(float(config.get("global", "max_log_transfer_size")) * 1_000_000)
+				except ValueError as err:
+					logger.error(err, exc_info=True)
 				if max_size and size > max_size:
 					file.seek(size - max_size)
 					# Read to next newline character
@@ -374,27 +383,22 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			desktop = "winlogon"
 
 		processId = None
-		while True:
-			try:
-				process, _, processId = System.runCommandInSession(
-					command=command,
-					sessionId=sessionId,
-					desktop=desktop,
-					waitForProcessEnding=waitForProcessEnding,
-					timeoutSeconds=timeoutSeconds,
-					noWindow=noWindow,
-					shell=False,
-				)[:3]
-				break
-			except Exception as err:  # pylint: disable=broad-except
-				logger.error(err)
-				raise
+		try:
+			process, _, processId = runCommandInSession(
+				command=command,
+				sessionId=sessionId,
+				desktop=desktop,
+				waitForProcessEnding=waitForProcessEnding,
+				timeoutSeconds=timeoutSeconds,
+				noWindow=noWindow,
+				shell=False,
+			)[:3]
+		except Exception as err:  # pylint: disable=broad-except
+			logger.error(err, exc_info=True)
 
 		return process, processId
 
-	def startNotifierApplication(
-		self, command, sessionId=None, desktop=None, notifierId=None
-	):  # pylint: disable=inconsistent-return-statements
+	def startNotifierApplication(self, command, sessionId=None, desktop=None, notifierId=None):  # pylint: disable=inconsistent-return-statements
 		if sessionId is None:
 			sessionId = self.getSessionId()
 
@@ -459,7 +463,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		if RUNNING_ON_WINDOWS:
 			url = urlparse(config.get("depot_server", "url"))
 			try:
-
 				if url.scheme in ("smb", "cifs"):
 					System.setRegistryValue(
 						System.HKEY_LOCAL_MACHINE,
@@ -534,7 +537,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		self.setStatusMessage(_("Updating action processor"))
 
 		try:  # pylint: disable=too-many-nested-blocks
-
 			url = urlparse(config.get("depot_server", "url"))
 			actionProcessorRemoteDir = None
 			actionProcessorCommonDir = None
@@ -642,9 +644,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Failed to update action processor: %s", err, exc_info=True)
 
-	def updateActionProcessorUnified(
-		self, actionProcessorRemoteDir, actionProcessorCommonDir
-	):  # pylint: disable=too-many-locals,too-many-branches
+	def updateActionProcessorUnified(self, actionProcessorRemoteDir, actionProcessorCommonDir):  # pylint: disable=too-many-locals,too-many-branches
 		actionProcessorFilename = config.get("action_processor", "filename")
 		actionProcessorLocalDir = config.get("action_processor", "local_dir")
 		actionProcessorLocalTmpDir = actionProcessorLocalDir + ".tmp"
@@ -883,8 +883,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				except Exception as err:  # pylint: disable=broad-except
 					logger.error(err)
 			else:
-				if not self.event.eventConfig.actionProcessorProductIds:
-					state.set("installation_pending", "true")
+				state.set("installation_pending", "true")
 
 				logger.notice("Start processing action requests")
 				if productIds:
@@ -935,14 +934,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						logger.info("No more actions to perform, setting config cache obsolete")
 						cache_service.setConfigCacheObsolete()
 
-					if not self._configService.productOnClient_getIdents(  # pylint: disable=no-member
+					pocs_with_action = self._configService.productOnClient_getIdents(  # pylint: disable=no-member
+						returnType="dict",
 						productType="LocalbootProduct",
 						clientId=config.get("global", "host_id"),
 						actionRequest=["setup", "uninstall", "update", "once", "custom"],
-					):
-						# Nothing to do
-						logger.notice("Setting installation pending to false")
+					)
+					logger.info("pocs_with_action: %r, productIds: %r", pocs_with_action, productIds)
+					if not any(poc for poc in pocs_with_action if not productIds or poc["productId"] in productIds):
+						# No more product actions pending of the actions requested
+						logger.info("Setting installation pending to false")
 						state.set("installation_pending", "false")
+					logger.notice("Installation pending is: %s", state.get("installation_pending"))
 				except Exception as err:  # pylint: disable=broad-except
 					logger.error(err)
 		except Exception as err:  # pylint: disable=broad-except
@@ -956,9 +959,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			)
 		time.sleep(3)
 
-	def runActions(
-		self, productIds, additionalParams="", versions=None
-	):  # pylint: disable=too-many-nested-blocks,too-many-locals,too-many-branches,too-many-statements
+	def runActions(self, productIds, additionalParams="", versions=None):  # pylint: disable=too-many-nested-blocks,too-many-locals,too-many-branches,too-many-statements
 		description = f"Running actions {', '.join(productIds)}"
 		if versions and len(versions) == len(productIds):
 			description = f"Running actions {', '.join(f'{p_id} {p_version}' for p_id, p_version in zip(productIds, versions))}"
@@ -1137,7 +1138,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					self.setStatusMessage(_("Action processor is running"))
 
 					with cd(tmpdir):
-						System.runCommandInSession(
+						runCommandInSession(
 							command=command,
 							sessionId=self.getSessionId(),
 							waitForProcessEnding=True,
@@ -1163,7 +1164,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 	def setEnvironment(self):
 		try:
 			logger.debug("Current environment:")
-			for (key, value) in os.environ.items():
+			for key, value in os.environ.items():
 				logger.debug("   %s=%s", key, value)
 			logger.debug("Updating environment")
 			hostname = os.environ["COMPUTERNAME"]
@@ -1180,7 +1181,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			os.environ["USERNAME"] = username
 			os.environ["USERPROFILE"] = f"{homeDrive}\\{homeDir}\\{username}"
 			logger.debug("Updated environment:")
-			for (key, value) in os.environ.items():
+			for key, value in os.environ.items():
 				logger.debug("   %s=%s", key, value)
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error("Failed to set environment: %s", err)
@@ -1193,9 +1194,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		logger.notice("Event wait canceled by user")
 		self.waitCancelled = True
 
-	def processActionWarningTime(
-		self, productIds=[]
-	):  # pylint: disable=dangerous-default-value,too-many-branches,too-many-statements,too-many-locals
+	def processActionWarningTime(self, productIds=[]):  # pylint: disable=dangerous-default-value,too-many-branches,too-many-statements,too-many-locals
 		if not self.event.eventConfig.actionWarningTime:
 			return
 		logger.info("Notifying user of actions to process %s (%s)", self.event, productIds)
@@ -1313,8 +1312,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		match = re.search(r"(\d+):00", selected)
 		if match:
 			self._shutdownWarningTime = self.event.eventConfig.shutdownWarningTimeAfterTimeSelect
+			hour = int(match.group(1))
 			now = datetime.datetime.now()
-			shutdown_time = now.replace(hour=int(match.group(1)), minute=0, second=0)
+			shutdown_time = datetime.datetime.now()
+			if now.hour > hour:
+				shutdown_time += datetime.timedelta(days=1)
+			shutdown_time = shutdown_time.replace(hour=hour, minute=0, second=0)
 			self._shutdownWarningRepetitionTime = (shutdown_time - now).total_seconds()
 		logger.notice(
 			"User selected '%s', shutdownWarningRepetitionTime=%s, shutdownWarningTime=%s",
@@ -1412,7 +1415,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						choiceSubject = ChoiceSubject(id="choice")
 
 						def set_choices_and_callbacks(choice_subject):
-
 							choices = []
 							if reboot:
 								choices.append(_("Reboot now"))
@@ -1426,8 +1428,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 							if shutdownCancelCounter < self.event.eventConfig.shutdownUserCancelable:
 								if self.event.eventConfig.shutdownUserSelectableTime:
 									hour = time.localtime().tm_hour
-									while hour < 23:
+									while len(choices) < 24:
 										hour += 1
+										if hour == 24:
+											hour = 0
 										if reboot:
 											choices.append(_("Reboot at %s") % f" {hour:02d}:00")
 										else:
@@ -1792,7 +1796,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 
 					# if cancelled, skip further execution
 					if not self.should_cancel():
-
 						if self.event.eventConfig.postEventCommand:
 							logger.notice("Running post event command '%s'", self.event.eventConfig.postEventCommand)
 							encoding = "cp850" if RUNNING_ON_WINDOWS else "utf-8"
