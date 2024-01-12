@@ -65,6 +65,7 @@ from opsiclientd.messagebus.filetransfer import (
 from opsiclientd.messagebus.terminal import (
 	process_messagebus_message as process_terminal_message,
 )
+from opsiclientd.messagebus.process import process_messagebus_message as process_process_message
 from opsiclientd.utils import log_network_status
 
 config = Config()
@@ -221,7 +222,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 	def _process_message(self, message: Message) -> None:
 		# logger.devel("Message received: %s", message.to_dict())
 		if isinstance(message, JSONRPCRequestMessage):
-			response = JSONRPCResponseMessage(sender="@", channel=message.back_channel or message.sender, rpc_id=message.rpc_id)
+			response: Message = JSONRPCResponseMessage(sender="@", channel=message.back_channel or message.sender, rpc_id=message.rpc_id)
 			try:
 				if message.method.startswith("_"):
 					raise ValueError("Invalid method")
@@ -248,6 +249,8 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			process_terminal_message(message, self.service_client.messagebus.send_message)
 		elif isinstance(message, FileMessage):
 			process_filetransfer_message(message, self.service_client.messagebus.send_message)
+		elif message.type.startswith("process_"):
+			process_process_message(message, self.service_client.messagebus.send_message, self.messagebus.async_send_message)
 
 
 class ServiceConnection:
@@ -437,6 +440,7 @@ class ServiceConnection:
 	def disconnectConfigService(self):
 		if self._configService:
 			try:
+				# stop_running_processes()?  #TODO cleanup
 				self._configService.backend_exit()
 			except Exception as exit_error:  # pylint: disable=broad-except
 				logger.error("Failed to disconnect config service: %s", exit_error)
