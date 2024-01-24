@@ -955,6 +955,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 					heartbeat_thread.start()
 				logger.notice("Starting to cache products")
 				self._cacheProducts()
+				self._cacheProductsRequested = False
 				logger.info("Finished caching products")
 				return 1.0  # check again in 1 second if we have to cache
 			logger.notice("Did not cache Products, server suggested waiting time of %s", try_after_seconds)
@@ -977,7 +978,6 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 					if self._cacheProductsRequested and not self._working:
 						if not self._configService:
 							self.connectConfigService()
-						self._cacheProductsRequested = False
 						sleep_time = self.start_caching_or_get_waiting_time()
 					time.sleep(sleep_time)
 			except Exception as err:  # pylint: disable=broad-except
