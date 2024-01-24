@@ -33,6 +33,7 @@ indent = "\t"
 line-length = 140
 ignore = [ "F401", "E402", "F811",]
 
+
 [tool.poetry.dependencies]
 python = "^3.11,<3.12"
 autobahn = "^22.4"

@@ -960,8 +960,9 @@ class ProductCacheService(ServiceConnection, threading.Thread):  # pylint: disab
 			if heartbeat_thread:
 				logger.debug("Releasing transfer slot %s", heartbeat_thread.slot_id)
 				heartbeat_thread.should_stop = True
-				logger.debug("Joining transfer slot heartbeat thread")
-				heartbeat_thread.join()
+				if heartbeat_thread.is_alive():
+					logger.debug("Joining transfer slot heartbeat thread")
+					heartbeat_thread.join()
 
 	def run(self):
 		with log_context({"instance": "product cache service"}):
