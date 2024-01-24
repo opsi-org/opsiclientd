@@ -18,6 +18,7 @@ import shutil
 import threading
 import time
 from collections import defaultdict
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -103,7 +104,9 @@ class TransferSlotHeartbeat(threading.Thread):
 					raise ConnectionError("TransferSlotHeartbeat lost transfer slot (and did not get new one)")
 				wait_time = max(response["retention"] - RETENTION_HEARTBEAT_INTERVAL_DIFF, MIN_HEARTBEAT_INTERVAL)
 				logger.debug("Waiting %s seconds before reaquiring slot", wait_time)
-				time.sleep(wait_time)
+				end = datetime.now() + timedelta(seconds=wait_time)
+				while not self.should_stop and datetime.now() < end:
+					time.sleep(1.0)
 		finally:
 			if self.slot_id:
 				self.release()
