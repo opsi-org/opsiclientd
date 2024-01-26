@@ -1812,6 +1812,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			new_key = generate_opsi_host_key()
 		secret_filter.add_secrets(new_key)
 
+		logger.info("Replacing opsi host key on service")
 		serviceConnection = ServiceConnection(self.opsiclientd)
 		serviceConnection.connectConfigService()
 		try:
@@ -1822,10 +1823,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		finally:
 			serviceConnection.disconnectConfigService()
 
+		logger.info("Replacing opsi host key in config")
 		config.set("global", "opsi_host_key", new_key)
 		config.updateConfigFile(force=True)
 
-		logger.info("Cleaning config cache after host information change.")
+		logger.info("Removing config cache")
 		try:
 			cache_service = self.opsiclientd.getCacheService()
 			cache_service.setConfigCacheFaulty()
