@@ -33,7 +33,7 @@ from opsicommon.exceptions import (
 	OpsiServiceAuthenticationError,
 	OpsiServiceVerificationError,
 )
-from opsicommon.logging import log_context, logger, secret_filter
+from opsicommon.logging import log_context, logger
 from opsicommon.messagebus import (
 	FileMessage,
 	GeneralErrorMessage,

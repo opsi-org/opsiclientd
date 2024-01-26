@@ -1810,14 +1810,15 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 	def replaceOpsiHostKey(self, new_key: str | None = None):
 		if not new_key:
 			new_key = generate_opsi_host_key()
+		secret_filter.add_secrets(new_key)
 
 		serviceConnection = ServiceConnection(self.opsiclientd)
 		serviceConnection.connectConfigService()
 		try:
 			configService = serviceConnection.getConfigService()
-			host = configService.host_getObjects(id=config.get("global", "host_id"))[0]
+			host = configService.host_getObjects(id=config.get("global", "host_id"))[0]  # pylint: disable=no-member
 			host.setOpsiHostKey(new_key)
-			configService.host_updateObject(host)
+			configService.host_updateObject(host)  # pylint: disable=no-member
 		finally:
 			serviceConnection.disconnectConfigService()
 
@@ -1829,7 +1830,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			cache_service = self.opsiclientd.getCacheService()
 			cache_service.setConfigCacheFaulty()
 			cache_service._configCacheService.delete_cache_dir()  # pylint: disable=protected-access
-		except Exception as err:
+		except Exception as err:  # pylint: disable=broad-exception-caught
 			logger.warning(err, exc_info=True)
 
 		self.opsiclientd.restart(2)
