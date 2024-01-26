@@ -310,7 +310,6 @@ class ServiceConnection:
 		self.disconnectConfigService()
 
 	def update_information_from_header(self) -> None:
-		host_id_changed = False
 		if self._configService.service.new_host_id and self._configService.service.new_host_id != config.get("global", "host_id"):
 			logger.notice("Received new opsi host id %r.", self._configService.service.new_host_id)
 			config.set("global", "host_id", forceUnicode(self._configService.service.new_host_id))
