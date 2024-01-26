@@ -1811,6 +1811,16 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		if not new_key:
 			new_key = generate_opsi_host_key()
 
+		serviceConnection = ServiceConnection(self.opsiclientd)
+		serviceConnection.connectConfigService()
+		try:
+			configService = serviceConnection.getConfigService()
+			host = configService.host_getObjects(id=config.get("global", "host_id"))[0]
+			host.setOpsiHostKey(new_key)
+			configService.host_updateObject(host)
+		finally:
+			serviceConnection.disconnectConfigService()
+
 		config.set("global", "opsi_host_key", new_key)
 		config.updateConfigFile(force=True)
 
