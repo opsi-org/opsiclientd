@@ -311,41 +311,30 @@ class ServiceConnection:
 
 	def update_information_from_header(self) -> None:
 		host_id_changed = False
-		host_key_changed = False
 		if self._configService.service.new_host_id and self._configService.service.new_host_id != config.get("global", "host_id"):
 			logger.notice("Received new opsi host id %r.", self._configService.service.new_host_id)
 			config.set("global", "host_id", forceUnicode(self._configService.service.new_host_id))
-			host_id_changed = True
+			config.updateConfigFile(force=True)
 			if config.get("config_service", "permanent_connection"):
 				logger.info("Reestablishing permanent service connection")
 				self.opsiclientd.stop_permanent_service_connection()
 				self.opsiclientd.start_permanent_service_connection()
 
-		if self._configService.service.new_host_key and self._configService.service.new_host_key != config.get("global", "host_key"):
-			secret_filter.add_secrets(self._configService.service.new_host_key)
-			logger.notice("Received new opsi host key: %r", self._configService.service.new_host_key)
-			config.set("global", "host_key", forceUnicode(self._configService.service.new_host_key))
-			self.opsiclientd._permanent_service_connection.service_client.password = config.get("global", "opsi_host_key")  # pylint: disable=protected-access
-			host_key_changed = True
+			if self.opsiclientd:
+				logger.info("Cleaning config cache after host information change.")
+				try:
+					cache_service = self.opsiclientd.getCacheService()
+					cache_service.setConfigCacheFaulty()
+				except RuntimeError:  # No cache_service currently running
+					from opsiclientd.nonfree.CacheService import (  # pylint: disable=import-outside-toplevel
+						ConfigCacheService,
+					)
 
-		if host_id_changed or host_key_changed:
-			config.updateConfigFile(force=False)
-			if host_id_changed:
-				if self.opsiclientd:
-					logger.info("Cleaning config cache after host information change.")
-					try:
-						cache_service = self.opsiclientd.getCacheService()
-						cache_service.setConfigCacheFaulty()
-					except RuntimeError:  # No cache_service currently running
-						from opsiclientd.nonfree.CacheService import (  # pylint: disable=import-outside-toplevel
-							ConfigCacheService,
-						)
-
-						ConfigCacheService.delete_cache_dir()
-				else:  # Called from SoftwareOnDemand or download_from_depot without opsiclientd context
-					config_cache = Path(config.get("cache_service", "storage_dir")) / "config"
-					if config_cache.exists():
-						shutil.rmtree(config_cache)
+					ConfigCacheService.delete_cache_dir()
+			else:  # Called from SoftwareOnDemand or download_from_depot without opsiclientd context
+				config_cache = Path(config.get("cache_service", "storage_dir")) / "config"
+				if config_cache.exists():
+					shutil.rmtree(config_cache)
 
 	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
 		try:  # pylint: disable=too-many-nested-blocks

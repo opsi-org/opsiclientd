@@ -77,6 +77,7 @@ from opsicommon.types import (  # type: ignore[import]
 	forceProductIdList,
 	forceUnicode,
 )
+from opsicommon.utils import generate_opsi_host_key
 from twisted.internet import fdesc, reactor
 from twisted.internet.base import BasePort
 from twisted.internet.error import CannotListenError
@@ -1805,3 +1806,20 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			)
 			logger.debug("Got response with status %s: %s", response.status_code, response.content.decode("utf-8"))
 			return json.loads(response.content.decode("utf-8"))
+
+	def replaceOpsiHostKey(self, new_key: str | None = None):
+		if not new_key:
+			new_key = generate_opsi_host_key()
+
+		config.set("global", "opsi_host_key", new_key)
+		config.updateConfigFile(force=True)
+
+		logger.info("Cleaning config cache after host information change.")
+		try:
+			cache_service = self.opsiclientd.getCacheService()
+			cache_service.setConfigCacheFaulty()
+			cache_service._configCacheService.delete_cache_dir()  # pylint: disable=protected-access
+		except Exception as err:
+			logger.warning(err, exc_info=True)
+
+		self.opsiclientd.restart(2)
