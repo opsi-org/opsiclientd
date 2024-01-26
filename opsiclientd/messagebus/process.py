@@ -105,9 +105,10 @@ class Process(Thread):
 	async def _arun(self) -> None:
 		logger.notice("Received ProcessStartRequestMessage %r", self)
 		message: ProcessMessage
+		shell = self._process_start_request.shell
 		try:
 			self._proc = await asyncio.create_subprocess_exec(  # TODO: timeout handling? or fully on server side?
-				*self._command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+				*self._command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, shell=shell
 			)
 		except Exception as error:  # pylint: disable=broad-except
 			logger.error(error, exc_info=True)

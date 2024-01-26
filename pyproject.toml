@@ -36,13 +36,12 @@ ignore = [ "F401", "E402", "F811",]
 [tool.poetry.dependencies]
 python = "^3.11,<3.12"
 autobahn = "^22.4"
-cryptography = "38.0.4"
 macholib = "^1.14"
 msgpack = "^1.0"
 netifaces = "^0.11"
 pyelftools = "^0.29"
 python-opsi = "^4.3.0.13"
-python-opsi-common = "^4.3.0"
+python-opsi-common = "^4.3.4"
 zeroconf = "^0.129"
 
 [tool.poetry.dev-dependencies]
