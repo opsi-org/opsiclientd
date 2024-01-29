@@ -19,7 +19,7 @@ from traceback import TracebackException
 from types import TracebackType
 from typing import Union
 
-from OpenSSL.crypto import FILETYPE_PEM, load_certificate
+from cryptography import x509
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Util.Repository import WebDAVRepository
@@ -86,7 +86,7 @@ def update_os_ca_store(allow_remove: bool = False):  # pylint: disable=too-many-
 				data = file.read()
 		for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", data, re.DOTALL):
 			try:
-				ca_certs.append(load_certificate(FILETYPE_PEM, match.group(1).encode("utf-8")))
+				ca_certs.append(x509.load_pem_x509_certificate(match.group(1).encode("utf-8")))
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err, exc_info=True)
 

@@ -17,12 +17,8 @@ from argparse import Namespace
 from pathlib import Path
 
 import packaging
-from OpenSSL.crypto import (  # type: ignore[import]
-	FILETYPE_PEM,  # type: ignore[import]
-	load_certificate,
-	load_privatekey,
-)
-from OpenSSL.crypto import Error as CryptoError
+from cryptography import x509
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from opsicommon.client.opsiservice import ServiceClient  # type: ignore[import]
 from opsicommon.logging import logger, secret_filter  # type: ignore[import]
 from opsicommon.ssl import as_pem, create_ca, create_server_cert  # type: ignore[import]
@@ -93,8 +89,8 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 		create = True
 	else:
 		try:
-			with open(cert_file, "r", encoding="utf-8") as file:
-				srv_crt = load_certificate(FILETYPE_PEM, file.read())
+			with open(cert_file, "rb", encoding="utf-8") as file:
+				srv_crt = x509.load_pem_x509_certificate(file.read())
 				enddate = datetime.datetime.strptime(srv_crt.get_notAfter().decode("utf-8"), "%Y%m%d%H%M%SZ")
 				diff = (enddate - datetime.datetime.now()).days
 
@@ -111,9 +107,9 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 					exists_self_signed = True
 
 			if not create:
-				with open(key_file, "r", encoding="utf-8") as file:
-					srv_key = load_privatekey(FILETYPE_PEM, file.read())
-		except CryptoError as err:
+				with open(key_file, "rb", encoding="utf-8") as file:
+					srv_key = load_pem_private_key(file.read())
+		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err)
 			create = True
 
@@ -130,8 +126,8 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 		service_client.connect()
 		try:
 			pem = service_client.host_getTLSCertificate(server_cn)  # type: ignore[attr-defined] # pylint: disable=no-member
-			srv_crt = load_certificate(FILETYPE_PEM, pem)
-			srv_key = load_privatekey(FILETYPE_PEM, pem)
+			srv_crt = x509.load_pem_x509_certificate(pem.encode("utf-8"))
+			srv_key = load_pem_private_key(pem.encode("utf-8"))
 		finally:
 			service_client.disconnect()
 	except Exception as err:  # pylint: disable=broad-except
