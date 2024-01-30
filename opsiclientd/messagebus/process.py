@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 from asyncio import AbstractEventLoop
+from asyncio.subprocess import PIPE
 from asyncio.subprocess import Process as AsyncioProcess
 from threading import Lock, Thread
 from time import sleep, time
@@ -105,11 +106,11 @@ class Process(Thread):
 	async def _arun(self) -> None:
 		logger.notice("Received ProcessStartRequestMessage %r", self)
 		message: ProcessMessage
-		shell = self._process_start_request.shell
 		try:
-			self._proc = await asyncio.create_subprocess_exec(
-				*self._command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, shell=shell
-			)
+			if self._process_start_request.shell:
+				self._proc = await asyncio.create_subprocess_shell(" ".join(self._command), stdin=PIPE, stdout=PIPE, stderr=PIPE)
+			else:
+				self._proc = await asyncio.create_subprocess_exec(*self._command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
 		except Exception as error:  # pylint: disable=broad-except
 			logger.error(error, exc_info=True)
 			message = ProcessErrorMessage(
