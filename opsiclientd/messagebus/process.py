@@ -107,7 +107,7 @@ class Process(Thread):
 		message: ProcessMessage
 		shell = self._process_start_request.shell
 		try:
-			self._proc = await asyncio.create_subprocess_exec(  # TODO: timeout handling? or fully on server side?
+			self._proc = await asyncio.create_subprocess_exec(
 				*self._command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, shell=shell
 			)
 		except Exception as error:  # pylint: disable=broad-except
@@ -149,7 +149,7 @@ class Process(Thread):
 		self._loop.close()
 
 	def __repr__(self) -> str:
-		return f"Process(command={self._command}, id={self.process_id})"
+		return f"Process(command={self._command}, id={self.process_id}, shell={self._process_start_request.shell})"
 
 	def __str__(self) -> str:
 		info = "running"
