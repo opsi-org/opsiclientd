@@ -11,6 +11,7 @@ opsiclientd.messagebus.process
 from __future__ import annotations
 
 import asyncio
+import locale
 from asyncio import AbstractEventLoop
 from asyncio.subprocess import PIPE
 from asyncio.subprocess import Process as AsyncioProcess
@@ -39,12 +40,12 @@ processes_lock = Lock()
 class Process(Thread):
 	block_size = 8192
 
-	def __init__(self, command: list[str], send_message_function: Awaitable, process_start_request: ProcessStartRequestMessage) -> None:
+	def __init__(self, command: list[str], send_message_function: Callable, process_start_request: ProcessStartRequestMessage) -> None:
 		Thread.__init__(self, daemon=True)
 		self._command = command
 		self._proc: AsyncioProcess | None = None
 		self._loop: AbstractEventLoop = asyncio.new_event_loop()
-		self.send_message: Awaitable = send_message_function
+		self.send_message: Callable = send_message_function
 		self._process_start_request = process_start_request
 
 	@property
@@ -128,6 +129,7 @@ class Process(Thread):
 			process_id=self.process_id,
 			back_channel="$",
 			local_process_id=self._proc.pid,
+			locale_encoding=locale.getencoding(),
 		)
 		await self.send_message(message)
 		logger.info("Started %r", self)
