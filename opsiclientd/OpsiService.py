@@ -20,6 +20,7 @@ from types import TracebackType
 from typing import Union
 
 from cryptography import x509
+from cryptography.x509.oid import NameOID
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Util.Repository import WebDAVRepository
@@ -75,10 +76,10 @@ cert_file_lock = threading.Lock()
 SERVICE_CONNECT_TIMEOUT = 10  # Seconds
 
 
-def update_os_ca_store(allow_remove: bool = False):  # pylint: disable=too-many-branches
+def update_os_ca_store(allow_remove: bool = False) -> None:  # pylint: disable=too-many-branches
 	logger.info("Updating os CA cert store")
 
-	ca_certs = []
+	ca_certs: list[x509.Certificate] = []
 	ca_cert_file = Path(config.ca_cert_file)
 	if ca_cert_file.exists():
 		with open(ca_cert_file, "r", encoding="utf-8") as file:
@@ -91,7 +92,7 @@ def update_os_ca_store(allow_remove: bool = False):  # pylint: disable=too-many-
 				logger.error(err, exc_info=True)
 
 	for _idx, ca_cert in enumerate(ca_certs):
-		name = ca_cert.get_subject().CN
+		name = ca_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
 		if name == "uib opsi CA":
 			continue
 

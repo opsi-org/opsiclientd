@@ -19,6 +19,7 @@ from pathlib import Path
 import packaging
 from cryptography import x509
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
+from cryptography.x509.oid import NameOID
 from opsicommon.client.opsiservice import ServiceClient  # type: ignore[import]
 from opsicommon.logging import logger, secret_filter  # type: ignore[import]
 from opsicommon.ssl import as_pem, create_ca, create_server_cert  # type: ignore[import]
@@ -93,15 +94,15 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 				srv_crt = x509.load_pem_x509_certificate(file.read())
 				enddate = datetime.datetime.strptime(srv_crt.get_notAfter().decode("utf-8"), "%Y%m%d%H%M%SZ")
 				diff = (enddate - datetime.datetime.now()).days
-
-				logger.info("Server cert '%s' will expire in %d days", srv_crt.get_subject().CN, diff)
+				server_cn = srv_crt.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[-1].value
+				logger.info("Server cert '%s' will expire in %d days", server_cn, diff)
 				if diff <= CERT_RENEW_DAYS:
-					logger.notice("Server cert '%s' will expire in %d days, needing new cert", srv_crt.get_subject().CN, diff)
+					logger.notice("Server cert '%s' will expire in %d days, needing new cert", server_cn, diff)
 					create = True
-				elif server_cn != srv_crt.get_subject().CN:
-					logger.notice("Server CN has changed from '%s' to '%s', needing new cert", srv_crt.get_subject().CN, server_cn)
+				elif server_cn != server_cn:
+					logger.notice("Server CN has changed from '%s' to '%s', needing new cert", server_cn, server_cn)
 					create = True
-				elif full and srv_crt.get_issuer().CN == srv_crt.get_subject().CN:
+				elif full and srv_crt.issuer.get_attributes_for_oid(NameOID.COMMON_NAME)[-1].value == server_cn:
 					logger.notice("Self signed certificate found, needing new cert")
 					create = True
 					exists_self_signed = True
