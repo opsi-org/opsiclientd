@@ -12,6 +12,9 @@ from __future__ import annotations
 
 import asyncio
 import locale
+import platform
+import re
+import subprocess
 from asyncio import AbstractEventLoop
 from asyncio.subprocess import PIPE
 from asyncio.subprocess import Process as AsyncioProcess
@@ -123,13 +126,24 @@ class Process(Thread):
 			await self.send_message(message)
 			return
 
+		encoding = locale.getencoding()
+		if platform.system().lower() == "windows":  # windows suggests cp1252 even if using something else like cp850
+			try:
+				output = subprocess.check_output("chcp", shell=True).decode("ascii", errors="replace")
+				match = re.search(r": (\d+)", output)
+				if match:
+					codepage = int(match.group(1))
+					encoding = f"cp{codepage}"
+			except Exception as error:  # pylint: disable=broad-except
+				logger.info("Failed to determine codepage, using default. %s", error)
+
 		message = ProcessStartEventMessage(
 			sender=CONNECTION_USER_CHANNEL,
 			channel=self.response_channel,
 			process_id=self.process_id,
 			back_channel="$",
 			local_process_id=self._proc.pid,
-			locale_encoding=locale.getencoding(),
+			locale_encoding=encoding,
 		)
 		await self.send_message(message)
 		logger.info("Started %r", self)
