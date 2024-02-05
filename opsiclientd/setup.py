@@ -92,7 +92,7 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 		try:
 			with open(cert_file, "rb") as file:
 				srv_crt = x509.load_pem_x509_certificate(file.read())
-				enddate = srv_crt.not_valid_after
+				enddate = srv_crt.not_valid_after_utc
 				diff = (enddate - datetime.datetime.now()).days
 				server_cn = srv_crt.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[-1].value
 				logger.info("Server cert '%s' will expire in %d days", server_cn, diff)
