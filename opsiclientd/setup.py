@@ -17,12 +17,9 @@ from argparse import Namespace
 from pathlib import Path
 
 import packaging
-from OpenSSL.crypto import (  # type: ignore[import]
-	FILETYPE_PEM,  # type: ignore[import]
-	load_certificate,
-	load_privatekey,
-)
-from OpenSSL.crypto import Error as CryptoError
+from cryptography import x509
+from cryptography.hazmat.primitives.serialization import load_pem_private_key
+from cryptography.x509.oid import NameOID
 from opsicommon.client.opsiservice import ServiceClient  # type: ignore[import]
 from opsicommon.logging import logger, secret_filter  # type: ignore[import]
 from opsicommon.ssl import as_pem, create_ca, create_server_cert  # type: ignore[import]
@@ -93,27 +90,27 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 		create = True
 	else:
 		try:
-			with open(cert_file, "r", encoding="utf-8") as file:
-				srv_crt = load_certificate(FILETYPE_PEM, file.read())
-				enddate = datetime.datetime.strptime(srv_crt.get_notAfter().decode("utf-8"), "%Y%m%d%H%M%SZ")
+			with open(cert_file, "rb") as file:
+				srv_crt = x509.load_pem_x509_certificate(file.read())
+				enddate = srv_crt.not_valid_after_utc.replace(tzinfo=None)
 				diff = (enddate - datetime.datetime.now()).days
-
-				logger.info("Server cert '%s' will expire in %d days", srv_crt.get_subject().CN, diff)
+				server_cn = srv_crt.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[-1].value
+				logger.info("Server cert '%s' will expire in %d days", server_cn, diff)
 				if diff <= CERT_RENEW_DAYS:
-					logger.notice("Server cert '%s' will expire in %d days, needing new cert", srv_crt.get_subject().CN, diff)
+					logger.notice("Server cert '%s' will expire in %d days, needing new cert", server_cn, diff)
 					create = True
-				elif server_cn != srv_crt.get_subject().CN:
-					logger.notice("Server CN has changed from '%s' to '%s', needing new cert", srv_crt.get_subject().CN, server_cn)
+				elif server_cn != server_cn:
+					logger.notice("Server CN has changed from '%s' to '%s', needing new cert", server_cn, server_cn)
 					create = True
-				elif full and srv_crt.get_issuer().CN == srv_crt.get_subject().CN:
+				elif full and srv_crt.issuer.get_attributes_for_oid(NameOID.COMMON_NAME)[-1].value == server_cn:
 					logger.notice("Self signed certificate found, needing new cert")
 					create = True
 					exists_self_signed = True
 
 			if not create:
-				with open(key_file, "r", encoding="utf-8") as file:
-					srv_key = load_privatekey(FILETYPE_PEM, file.read())
-		except CryptoError as err:
+				with open(key_file, "rb") as file:
+					srv_key = load_pem_private_key(file.read(), password=None)
+		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err)
 			create = True
 
@@ -130,8 +127,8 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 		service_client.connect()
 		try:
 			pem = service_client.host_getTLSCertificate(server_cn)  # type: ignore[attr-defined] # pylint: disable=no-member
-			srv_crt = load_certificate(FILETYPE_PEM, pem)
-			srv_key = load_privatekey(FILETYPE_PEM, pem)
+			srv_crt = x509.load_pem_x509_certificate(pem.encode("utf-8"))
+			srv_key = load_pem_private_key(pem.encode("utf-8"), password=None)
 		finally:
 			service_client.disconnect()
 	except Exception as err:  # pylint: disable=broad-except

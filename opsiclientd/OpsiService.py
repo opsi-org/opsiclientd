@@ -19,7 +19,9 @@ from traceback import TracebackException
 from types import TracebackType
 from typing import Union
 
-from OpenSSL.crypto import FILETYPE_PEM, load_certificate
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes
+from cryptography.x509.oid import NameOID
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
 from OPSI.Util.Repository import WebDAVRepository
@@ -75,10 +77,10 @@ cert_file_lock = threading.Lock()
 SERVICE_CONNECT_TIMEOUT = 10  # Seconds
 
 
-def update_os_ca_store(allow_remove: bool = False):  # pylint: disable=too-many-branches
+def update_os_ca_store(allow_remove: bool = False) -> None:  # pylint: disable=too-many-branches
 	logger.info("Updating os CA cert store")
 
-	ca_certs = []
+	ca_certs: list[x509.Certificate] = []
 	ca_cert_file = Path(config.ca_cert_file)
 	if ca_cert_file.exists():
 		with open(ca_cert_file, "r", encoding="utf-8") as file:
@@ -86,12 +88,12 @@ def update_os_ca_store(allow_remove: bool = False):  # pylint: disable=too-many-
 				data = file.read()
 		for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", data, re.DOTALL):
 			try:
-				ca_certs.append(load_certificate(FILETYPE_PEM, match.group(1).encode("utf-8")))
+				ca_certs.append(x509.load_pem_x509_certificate(match.group(1).encode("utf-8")))
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err, exc_info=True)
 
 	for _idx, ca_cert in enumerate(ca_certs):
-		name = ca_cert.get_subject().CN
+		name = ca_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
 		if name == "uib opsi CA":
 			continue
 
@@ -101,7 +103,7 @@ def update_os_ca_store(allow_remove: bool = False):  # pylint: disable=too-many-
 		try:
 			present_ca = load_ca(name)
 			if present_ca:
-				outdated = present_ca.digest("sha1") != ca_cert.digest("sha1")
+				outdated = present_ca.fingerprint(hashes.SHA1()) != ca_cert.fingerprint(hashes.SHA1())
 				logger.info("CA '%s' exists in system store and is %s", name, "outdated" if outdated else "up to date")
 			else:
 				logger.info("CA '%s' not found in system store", name)

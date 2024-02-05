@@ -36,6 +36,9 @@ from uuid import uuid4
 
 import msgpack  # type: ignore[import]
 import psutil  # type: ignore[import]
+from cryptography import x509
+from cryptography.hazmat.primitives import serialization
+from OpenSSL import SSL
 from opsicommon import __version__ as opsicommon_version
 
 with warnings.catch_warnings():
@@ -46,10 +49,9 @@ with warnings.catch_warnings():
 		WebSocketServerProtocol,
 	)
 
-from OpenSSL import crypto  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
 from OPSI import __version__ as python_opsi_version  # type: ignore[import]
-from OPSI.Service import OpsiService, SSLContext  # type: ignore[import]
+from OPSI.Service import OpsiService  # type: ignore[import]
 from OPSI.Service.Resource import (  # type: ignore[import]
 	ResourceOpsi,
 	ResourceOpsiJsonInterface,
@@ -105,6 +107,50 @@ else:
 
 config = Config()
 state = State()
+
+
+class SSLContext(object):
+	def __init__(self, sslServerKeyFile, sslServerCertFile, acceptedCiphers=""):
+		"""
+		Create a context for the usage of SSL in twisted.
+
+		:param sslServerCertFile: Path to the certificate file.
+		:type sslServerCertFile: str
+		:param sslServerKeyFile: Path to the key file.
+		:type sslServerKeyFile: str
+		:param acceptedCiphers: A string defining what ciphers should \
+be accepted. Please refer to the OpenSSL documentation on how such a \
+string should be composed. No limitation will be done if an empty value \
+is set.
+		:type acceptedCiphers: str
+		"""
+		self._sslServerKeyFile = sslServerKeyFile
+		self._sslServerCertFile = sslServerCertFile
+		self._acceptedCiphers = acceptedCiphers
+
+	def getContext(self):
+		"""
+		Get an SSL context.
+
+		:rtype: OpenSSL.SSL.Context
+		"""
+
+		# Test if server certificate and key file exist.
+		if not os.path.isfile(self._sslServerKeyFile):
+			raise OSError(f"Server key file '{self._sslServerKeyFile}' does not exist!")
+
+		if not os.path.isfile(self._sslServerCertFile):
+			raise OSError(f"Server certificate file '{self._sslServerCertFile}' does not exist!")
+
+		context = SSL.Context(SSL.SSLv23_METHOD)
+		context.use_privatekey_file(self._sslServerKeyFile)
+		context.use_certificate_file(self._sslServerCertFile)
+
+		if self._acceptedCiphers:
+			context.set_cipher_list(self._acceptedCiphers)
+
+		return context
+
 
 INDEX_PAGE = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
@@ -1372,10 +1418,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				os.remove(os.path.join(cert_dir, filename))
 
 	def updateOpsiCaCert(self, ca_cert_pem):
-		ca_certs = []
+		ca_certs: list[x509.Certificate] = []
 		for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", ca_cert_pem, re.DOTALL):
 			try:
-				ca_certs.append(crypto.load_certificate(crypto.FILETYPE_PEM, match.group(1).encode("utf-8")))
+				ca_certs.append(x509.load_pem_x509_certificate(match.group(1).encode("utf-8")))
 			except Exception as err:  # pylint: disable=broad-except
 				logger.error(err, exc_info=True)
 
@@ -1384,7 +1430,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				os.makedirs(os.path.dirname(config.ca_cert_file))
 			with open(config.ca_cert_file, "wb") as file:
 				for cert in ca_certs:
-					file.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
+					file.write(cert.public_bytes(encoding=serialization.Encoding.PEM).decode("ascii"))
 
 	def getActiveSessions(self):
 		sessions = System.getActiveSessionInformation()

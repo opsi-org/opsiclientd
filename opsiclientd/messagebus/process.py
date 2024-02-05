@@ -11,7 +11,12 @@ opsiclientd.messagebus.process
 from __future__ import annotations
 
 import asyncio
+import locale
+import platform
+import re
+import subprocess
 from asyncio import AbstractEventLoop
+from asyncio.subprocess import PIPE
 from asyncio.subprocess import Process as AsyncioProcess
 from threading import Lock, Thread
 from time import sleep, time
@@ -38,12 +43,12 @@ processes_lock = Lock()
 class Process(Thread):
 	block_size = 8192
 
-	def __init__(self, command: list[str], send_message_function: Awaitable, process_start_request: ProcessStartRequestMessage) -> None:
+	def __init__(self, command: list[str], send_message_function: Callable, process_start_request: ProcessStartRequestMessage) -> None:
 		Thread.__init__(self, daemon=True)
 		self._command = command
 		self._proc: AsyncioProcess | None = None
 		self._loop: AbstractEventLoop = asyncio.new_event_loop()
-		self.send_message: Awaitable = send_message_function
+		self.send_message: Callable = send_message_function
 		self._process_start_request = process_start_request
 
 	@property
@@ -106,9 +111,10 @@ class Process(Thread):
 		logger.notice("Received ProcessStartRequestMessage %r", self)
 		message: ProcessMessage
 		try:
-			self._proc = await asyncio.create_subprocess_exec(  # TODO: timeout handling? or fully on server side?
-				*self._command, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-			)
+			if self._process_start_request.shell:
+				self._proc = await asyncio.create_subprocess_shell(" ".join(self._command), stdin=PIPE, stdout=PIPE, stderr=PIPE)
+			else:
+				self._proc = await asyncio.create_subprocess_exec(*self._command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
 		except Exception as error:  # pylint: disable=broad-except
 			logger.error(error, exc_info=True)
 			message = ProcessErrorMessage(
@@ -120,12 +126,24 @@ class Process(Thread):
 			await self.send_message(message)
 			return
 
+		encoding = locale.getencoding()
+		if platform.system().lower() == "windows":  # windows suggests cp1252 even if using something else like cp850
+			try:
+				output = subprocess.check_output("chcp", shell=True).decode("ascii", errors="replace")
+				match = re.search(r": (\d+)", output)
+				if match:
+					codepage = int(match.group(1))
+					encoding = f"cp{codepage}"
+			except Exception as error:  # pylint: disable=broad-except
+				logger.info("Failed to determine codepage, using default. %s", error)
+
 		message = ProcessStartEventMessage(
 			sender=CONNECTION_USER_CHANNEL,
 			channel=self.response_channel,
 			process_id=self.process_id,
 			back_channel="$",
 			local_process_id=self._proc.pid,
+			locale_encoding=encoding,
 		)
 		await self.send_message(message)
 		logger.info("Started %r", self)
@@ -148,7 +166,7 @@ class Process(Thread):
 		self._loop.close()
 
 	def __repr__(self) -> str:
-		return f"Process(command={self._command}, id={self.process_id})"
+		return f"Process(command={self._command}, id={self.process_id}, shell={self._process_start_request.shell})"
 
 	def __str__(self) -> str:
 		info = "running"
