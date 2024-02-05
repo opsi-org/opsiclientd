@@ -90,7 +90,7 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 		create = True
 	else:
 		try:
-			with open(cert_file, "rb", encoding="utf-8") as file:
+			with open(cert_file, "rb") as file:
 				srv_crt = x509.load_pem_x509_certificate(file.read())
 				enddate = datetime.datetime.strptime(srv_crt.get_notAfter().decode("utf-8"), "%Y%m%d%H%M%SZ")
 				diff = (enddate - datetime.datetime.now()).days

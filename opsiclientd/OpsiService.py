@@ -102,7 +102,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:  # pylint: disable=t
 		try:
 			present_ca = load_ca(name)
 			if present_ca:
-				outdated = present_ca.digest("sha1") != ca_cert.digest("sha1")
+				outdated = present_ca.fingerprint("sha1") != ca_cert.fingerprint("sha1")
 				logger.info("CA '%s' exists in system store and is %s", name, "outdated" if outdated else "up to date")
 			else:
 				logger.info("CA '%s' not found in system store", name)
