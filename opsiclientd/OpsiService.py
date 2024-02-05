@@ -20,6 +20,7 @@ from types import TracebackType
 from typing import Union
 
 from cryptography import x509
+from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
 from OPSI import System
 from OPSI.Backend.JSONRPC import JSONRPCBackend
@@ -102,7 +103,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:  # pylint: disable=t
 		try:
 			present_ca = load_ca(name)
 			if present_ca:
-				outdated = present_ca.fingerprint("sha1") != ca_cert.fingerprint("sha1")
+				outdated = present_ca.fingerprint(hashes.SHA1()) != ca_cert.fingerprint(hashes.SHA1())
 				logger.info("CA '%s' exists in system store and is %s", name, "outdated" if outdated else "up to date")
 			else:
 				logger.info("CA '%s' not found in system store", name)
