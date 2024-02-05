@@ -108,8 +108,8 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 					exists_self_signed = True
 
 			if not create:
-				with open(key_file, "rb", encoding="utf-8") as file:
-					srv_key = load_pem_private_key(file.read())
+				with open(key_file, "rb") as file:
+					srv_key = load_pem_private_key(file.read(), password=None)
 		except Exception as err:  # pylint: disable=broad-except
 			logger.error(err)
 			create = True
@@ -128,7 +128,7 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 		try:
 			pem = service_client.host_getTLSCertificate(server_cn)  # type: ignore[attr-defined] # pylint: disable=no-member
 			srv_crt = x509.load_pem_x509_certificate(pem.encode("utf-8"))
-			srv_key = load_pem_private_key(pem.encode("utf-8"))
+			srv_key = load_pem_private_key(pem.encode("utf-8"), password=None)
 		finally:
 			service_client.disconnect()
 	except Exception as err:  # pylint: disable=broad-except
