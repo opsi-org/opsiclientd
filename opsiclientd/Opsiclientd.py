@@ -192,7 +192,13 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				binary = bin_dir / os.path.basename(self._argv[0])
 
 				logger.info("Testing new binary: %s", binary)
-				out = subprocess.check_output([str(binary), "--version"])
+				try:
+					out = subprocess.check_output([str(binary), "--version"], stderr=subprocess.STDOUT)
+				except subprocess.CalledProcessError as err:
+					if err.returncode == 120:
+						logger.warning("Caught error in cleanup (tolerating new binary): %s", err)
+					else:
+						raise err
 				logger.info(out)
 
 				if RUNNING_ON_WINDOWS:
