@@ -179,6 +179,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				"suspend_bitlocker_on_reboot": False,
 				"ip_version": "auto",
 				"tmp_dir_cleanup": False,
+				"post_trusted_installer_delay": 15,
 			},
 			"config_service": {
 				"url": [],

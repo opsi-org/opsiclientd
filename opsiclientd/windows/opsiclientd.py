@@ -119,7 +119,12 @@ class OpsiclientdNT(Opsiclientd):
 			_pythoncom.CoInitialize()
 			session = win32com.client.Dispatch("Microsoft.Update.Session")
 			self._ms_update_installer = session.CreateUpdateInstaller()
-		return self._ms_update_installer.isBusy
+		installer_is_busy = self._ms_update_installer.isBusy
+		if not installer_is_busy:
+			logger.info(
+				"IUpdateInstaller::get_RebootRequiredBeforeInstallation: %r", self._ms_update_installer.get_RebootRequiredBeforeInstallation
+			)
+		return installer_is_busy
 
 	def loginUser(self, username, password):
 		for session_id in System.getActiveSessionIds(protocol="console"):
