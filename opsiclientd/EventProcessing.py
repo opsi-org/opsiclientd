@@ -989,7 +989,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						while self.opsiclientd.isWindowsInstallerBusy():
 							time.sleep(10)
 							logger.debug("Windows installer is running, waiting until upgrade process is finished")
-
+						wait_time = float(config.get("global", "post_trusted_installer_delay"))
+						logger.info("Windows installer finished, waiting %r s for potential reboot", wait_time)
+						time.sleep(wait_time)
 						logger.notice("Windows installer finished")
 						timeline.setEventEnd(eventId=waitEventId)
 					else:
