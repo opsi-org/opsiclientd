@@ -9,18 +9,23 @@ test_config
 """
 
 import shutil
+
 import pytest
 
-from opsiclientd.Config import Config, SectionNotFoundException, NoConfigOptionFoundException
+from opsiclientd.Config import (
+	Config,
+	NoConfigOptionFoundException,
+	SectionNotFoundException,
+)
 
-from .utils import default_config  # pylint: disable=unused-import
+from .utils import default_config
 
 config = Config()
 
 
 def test_getting_unknown_section_fails():
 	with pytest.raises(SectionNotFoundException):
-		config.get('nothing', 'bla')
+		config.get("nothing", "bla")
 
 
 def test_default_paths_exist_per_os():
@@ -31,35 +36,35 @@ def test_default_paths_exist_per_os():
 
 @pytest.mark.windows
 def test_config_system_defaults_windows():
-	for option in ('log_dir', 'state_file', 'timeline_db', 'server_cert_dir'):
-		assert config.get('global', option).lower().startswith('c:')
-	assert config.get('cache_service', 'storage_dir').lower().startswith('c:')
-	assert config.get('system', 'program_files_dir')
+	for option in ("log_dir", "state_file", "timeline_db", "server_cert_dir"):
+		assert config.get("global", option).lower().startswith("c:")
+	assert config.get("cache_service", "storage_dir").lower().startswith("c:")
+	assert config.get("system", "program_files_dir")
 
 
 @pytest.mark.linux
 @pytest.mark.darwin
 def test_config_system_defaults_posix():
-	for option in ('log_dir', 'state_file', 'timeline_db', 'server_cert_dir'):
-		assert config.get('global', option).startswith('/')
-	assert config.get('cache_service', 'storage_dir').startswith('/')
+	for option in ("log_dir", "state_file", "timeline_db", "server_cert_dir"):
+		assert config.get("global", option).startswith("/")
+	assert config.get("cache_service", "storage_dir").startswith("/")
 
 
 def test_getting_unknown_option_fails():
 	with pytest.raises(NoConfigOptionFoundException):
-		config.get('global', 'non_existing_option')
+		config.get("global", "non_existing_option")
 
 
-def test_update_config_file(tmpdir, default_config):  # pylint: disable=redefined-outer-name,unused-argument
-	conf_file = config.get('global', 'config_file')
-	tmp_conf_file =  tmpdir / "opsiclientd.conf"
+def test_update_config_file(tmpdir, default_config):
+	conf_file = config.get("global", "config_file")
+	tmp_conf_file = tmpdir / "opsiclientd.conf"
 	shutil.copy(conf_file, tmp_conf_file)
 	content = tmp_conf_file.read_text(encoding="utf-8")
 	content = content.replace("[global]\n", "[global]\nold_option_to_remove = value")
 	tmp_conf_file.write_text(content, encoding="utf-8")
 
 	mtime = tmp_conf_file.stat().mtime
-	config.set('global', 'config_file', str(tmp_conf_file))
+	config.set("global", "config_file", str(tmp_conf_file))
 	try:
 		config.set("global", "max_log_size", 6)
 		config.set("event_test", "test_find_me", True)
@@ -74,4 +79,5 @@ def test_update_config_file(tmpdir, default_config):  # pylint: disable=redefine
 		assert "test_find_me = true" in content
 		assert "old_option_to_remove" not in content
 	finally:
-		config.set('global', 'config_file', conf_file)
+		config.set("global", "config_file", conf_file)
+		config.set("global", "config_file", conf_file)

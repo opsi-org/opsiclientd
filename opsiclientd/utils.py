@@ -10,8 +10,10 @@ utils
 
 import struct
 
-import netifaces
-from opsicommon.logging import logger
+import netifaces  # type: ignore[import]
+from opsicommon.logging import get_logger
+
+logger = get_logger("opsiclientd")
 
 
 def get_include_exclude_product_ids(config_service, includeProductGroupIds, excludeProductGroupIds):
@@ -23,15 +25,13 @@ def get_include_exclude_product_ids(config_service, includeProductGroupIds, excl
 
 	if includeProductGroupIds:
 		includeProductIds = [
-			obj.objectId
-			for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds)  # pylint: disable=no-member
+			obj.objectId for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds)
 		]
 		logger.debug("Only products ids %s will be regarded.", includeProductIds)
 
 	if excludeProductGroupIds:
 		excludeProductIds = [
-			obj.objectId
-			for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds)  # pylint: disable=no-member
+			obj.objectId for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds)
 		]
 		logger.debug("Product ids %s will be excluded.", excludeProductIds)
 
@@ -57,7 +57,7 @@ def read_fixed_file_info(data):
 
 
 def get_version_from_mach_binary(filename):
-	from macholib import MachO  # pylint: disable=import-outside-toplevel
+	from macholib import MachO  # type: ignore[import]
 
 	machofile = MachO.MachO(filename)
 	fpc_offset, fpc_size = 0, 0
@@ -78,7 +78,7 @@ def get_version_from_mach_binary(filename):
 
 
 def get_version_from_elf_binary(filename):
-	from elftools.elf.elffile import ELFFile  # pylint: disable=import-outside-toplevel
+	from elftools.elf.elffile import ELFFile  # type: ignore[import]
 
 	with open(filename, "rb") as file:
 		elffile = ELFFile(file)
@@ -90,7 +90,7 @@ def get_version_from_elf_binary(filename):
 
 
 def get_version_from_dos_binary(filename):
-	import pefile  # pylint: disable=import-outside-toplevel
+	import pefile  # type: ignore[import]
 
 	try:
 		pef = pefile.PE(filename)
@@ -109,9 +109,9 @@ def get_version_from_dos_binary(filename):
 
 def log_network_status():
 	status_string = ""
-	for interface in netifaces.interfaces():  # pylint: disable=c-extension-no-member
-		for protocol in (netifaces.AF_INET, netifaces.AF_INET6):  # pylint: disable=c-extension-no-member
-			af_inet_list = netifaces.ifaddresses(interface).get(protocol, {})  # pylint: disable=c-extension-no-member
+	for interface in netifaces.interfaces():
+		for protocol in (netifaces.AF_INET, netifaces.AF_INET6):
+			af_inet_list = netifaces.ifaddresses(interface).get(protocol, {})
 			if af_inet_list:
 				for entry in af_inet_list:
 					status_string += f"Interface {interface}, Address {entry.get('addr')}, Netmask {entry.get('netmask')}\n"

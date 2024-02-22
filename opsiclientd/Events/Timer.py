@@ -9,11 +9,10 @@ Timer events get active after a specified time.
 """
 
 
-
-from opsiclientd.Events.Basic import Event, EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
+from opsiclientd.Events.Basic import Event, EventGenerator
 
-__all__ = ['TimerEvent', 'TimerEventConfig', 'TimerEventGenerator']
+__all__ = ["TimerEvent", "TimerEventConfig", "TimerEventGenerator"]
 
 
 class TimerEventConfig(EventConfig):
@@ -21,8 +20,7 @@ class TimerEventConfig(EventConfig):
 
 
 class TimerEventGenerator(EventGenerator):
-
-	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
+	def createEvent(self, eventInfo={}):
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None
@@ -30,5 +28,5 @@ class TimerEventGenerator(EventGenerator):
 		return TimerEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class TimerEvent(Event): # pylint: disable=too-few-public-methods
+class TimerEvent(Event):
 	pass

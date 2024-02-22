@@ -22,10 +22,10 @@ from typing import Union
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
-from OPSI import System
-from OPSI.Backend.JSONRPC import JSONRPCBackend
-from OPSI.Util.Repository import WebDAVRepository
-from OPSI.Util.Thread import KillableThread
+from OPSI import System  # type: ignore[import]
+from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
+from OPSI.Util.Repository import WebDAVRepository  # type: ignore[import]
+from OPSI.Util.Thread import KillableThread  # type: ignore[import]
 from opsicommon.client.opsiservice import (
 	MessagebusListener,
 	ServiceClient,
@@ -35,7 +35,7 @@ from opsicommon.exceptions import (
 	OpsiServiceAuthenticationError,
 	OpsiServiceVerificationError,
 )
-from opsicommon.logging import log_context, logger
+from opsicommon.logging import get_logger, log_context
 from opsicommon.messagebus import (
 	FileMessage,
 	GeneralErrorMessage,
@@ -54,6 +54,7 @@ from opsicommon.types import (
 	forceFqdn,
 	forceInt,
 	forceProductId,
+	forceString,
 	forceUnicode,
 )
 
@@ -76,8 +77,10 @@ config = Config()
 cert_file_lock = threading.Lock()
 SERVICE_CONNECT_TIMEOUT = 10  # Seconds
 
+logger = get_logger("opsiclientd")
 
-def update_os_ca_store(allow_remove: bool = False) -> None:  # pylint: disable=too-many-branches
+
+def update_os_ca_store(allow_remove: bool = False) -> None:
 	logger.info("Updating os CA cert store")
 
 	ca_certs: list[x509.Certificate] = []
@@ -89,11 +92,11 @@ def update_os_ca_store(allow_remove: bool = False) -> None:  # pylint: disable=t
 		for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", data, re.DOTALL):
 			try:
 				ca_certs.append(x509.load_pem_x509_certificate(match.group(1).encode("utf-8")))
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error(err, exc_info=True)
 
 	for _idx, ca_cert in enumerate(ca_certs):
-		name = ca_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
+		name = forceString(ca_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value)
 		if name == "uib opsi CA":
 			continue
 
@@ -107,7 +110,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:  # pylint: disable=t
 				logger.info("CA '%s' exists in system store and is %s", name, "outdated" if outdated else "up to date")
 			else:
 				logger.info("CA '%s' not found in system store", name)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error("Failed to load CA '%s' from system cert store: %s", name, err, exc_info=True)
 
 		if config.get("global", "install_opsi_ca_into_os_store"):
@@ -116,14 +119,14 @@ def update_os_ca_store(allow_remove: bool = False) -> None:  # pylint: disable=t
 				try:
 					install_ca(ca_cert)
 					logger.info("CA '%s' successfully installed into system cert store", name)
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.error("Failed to install CA '%s' into system cert store: %s", name, err, exc_info=True)
 		elif present_ca and allow_remove:
 			logger.info("Removing present CA %s from store because global.install_opsi_ca_into_os_store is false", name)
 			try:
 				if remove_ca(name):
 					logger.info("CA '%s' successfully removed from system cert store", name)
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error("Failed to remove CA '%s' from system cert store: %s", name, err, exc_info=True)
 
 
@@ -162,7 +165,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 					logger.info("Trying to connect")
 					self.service_client.connect()
 					break
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.info("Failed to connect: %s", err)
 					logger.debug(err, exc_info=True)
 				for _sec in range(connect_wait):
@@ -197,11 +200,11 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 				try:
 					service_client.messagebus.reconnect_wait_min = int(config.get("config_service", "reconnect_wait_min"))
 					service_client.messagebus.reconnect_wait_max = int(config.get("config_service", "reconnect_wait_max"))
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.error(err)
 				service_client.messagebus.register_messagebus_listener(self)
 				service_client.connect_messagebus()
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err, exc_info=True)
 
 	def connection_closed(self, service_client: ServiceClient) -> None:
@@ -213,7 +216,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 	def message_received(self, message: Message) -> None:
 		try:
 			self._process_message(message)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err, exc_info=True)
 			response = GeneralErrorMessage(
 				sender="@",
@@ -232,7 +235,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 					raise ValueError("Invalid method")
 				method = getattr(self._rpc_interface, message.method)
 				response.result = method(*(message.params or tuple()))
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				response.error = {
 					"code": 0,
 					"message": str(err),
@@ -327,9 +330,7 @@ class ServiceConnection:
 					cache_service = self.opsiclientd.getCacheService()
 					cache_service.setConfigCacheFaulty()
 				except RuntimeError:  # No cache_service currently running
-					from opsiclientd.nonfree.CacheService import (  # pylint: disable=import-outside-toplevel
-						ConfigCacheService,
-					)
+					from opsiclientd.nonfree.CacheService import ConfigCacheService
 
 					ConfigCacheService.delete_cache_dir()
 			else:  # Called from SoftwareOnDemand or download_from_depot without opsiclientd context
@@ -337,8 +338,8 @@ class ServiceConnection:
 				if config_cache.exists():
 					shutil.rmtree(config_cache)
 
-	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-		try:  # pylint: disable=too-many-nested-blocks
+	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):
+		try:
 			configServiceUrls = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=allowTemporaryConfigServiceUrls)
 			if not configServiceUrls:
 				raise RuntimeError("No service url defined")
@@ -403,20 +404,16 @@ class ServiceConnection:
 				if serviceConnectionThread.connected and forceBool(config.get("config_service", "sync_time_from_service")):
 					logger.info("Syncing local system time from service")
 					try:
-						System.setLocalSystemTime(
-							serviceConnectionThread._configService.getServiceTime(  # pylint: disable=no-member,protected-access
-								utctime=True
-							)
-						)
-					except Exception as err:  # pylint: disable=broad-except
+						System.setLocalSystemTime(serviceConnectionThread._configService.getServiceTime(utctime=True))
+					except Exception as err:
 						logger.error("Failed to sync time: '%s'", err)
 
-				self._configService = serviceConnectionThread._configService  # pylint: disable=protected-access
+				self._configService = serviceConnectionThread._configService
 				self.update_information_from_header()
 
 				if "localhost" not in configServiceURL and "127.0.0.1" not in configServiceURL:
 					try:
-						client_to_depotservers = self._configService.configState_getClientToDepotserver(  # pylint: disable=no-member
+						client_to_depotservers = self._configService.configState_getClientToDepotserver(
 							clientIds=config.get("global", "host_id")
 						)
 						if not client_to_depotservers:
@@ -424,7 +421,7 @@ class ServiceConnection:
 						depot_id = client_to_depotservers[0]["depotId"]
 						config.set("depot_server", "master_depot_id", depot_id)
 						config.updateConfigFile()
-					except Exception as err:  # pylint: disable=broad-except
+					except Exception as err:
 						logger.warning(err)
 
 				self.connectionEstablished()
@@ -438,13 +435,13 @@ class ServiceConnection:
 			try:
 				# stop_running_processes()?  #TODO cleanup
 				self._configService.backend_exit()
-			except Exception as exit_error:  # pylint: disable=broad-except
+			except Exception as exit_error:
 				logger.error("Failed to disconnect config service: %s", exit_error)
 
 		self._configService = None
 
 
-class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-instance-attributes
+class ServiceConnectionThread(KillableThread):
 	def __init__(self, configServiceUrl, username, password, statusSubject=None):
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
@@ -467,14 +464,14 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 	def getUsername(self):
 		return self._username
 
-	def run(self):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+	def run(self):
 		with log_context({"instance": "service connection"}):
 			logger.debug("ServiceConnectionThread started...")
 			self.running = True
 			self.connected = False
 			self.cancelled = False
 
-			try:  # pylint: disable=too-many-nested-blocks
+			try:
 				compression = config.get("config_service", "compression")
 				verify = config.service_verification_flags
 				if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
@@ -524,7 +521,7 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 						)
 						try:
 							update_os_ca_store(allow_remove=True)
-						except Exception as err:  # pylint: disable=broad-except
+						except Exception as err:
 							logger.error(err, exc_info=True)
 					except OpsiServiceVerificationError as verificationError:
 						self.connectionError = forceUnicode(verificationError)
@@ -533,7 +530,7 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 						)
 						logger.error("Failed to connect to config server '%s': %s", self._configServiceUrl, verificationError)
 						break
-					except Exception as error:  # pylint: disable=broad-except
+					except Exception as error:
 						self.connectionError = forceUnicode(error)
 						self.setStatusMessage(_("Failed to connect to config server '%s'") % (self._configServiceUrl))
 						logger.info("Failed to connect to config server '%s': %s", self._configServiceUrl, error)
@@ -543,7 +540,7 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 							fqdn = System.getFQDN()
 							try:
 								fqdn = forceFqdn(fqdn)
-							except Exception as fqdnError:  # pylint: disable=broad-except
+							except Exception as fqdnError:
 								logger.warning("Failed to get fqdn from os, got '%s': %s", fqdn, fqdnError)
 								break
 
@@ -555,25 +552,23 @@ class ServiceConnectionThread(KillableThread):  # pylint: disable=too-many-insta
 
 						if "is not supported by the backend" in self.connectionError.lower():
 							try:
-								from cryptography.hazmat.backends import (  # pylint: disable=import-outside-toplevel
-									default_backend,
-								)
+								from cryptography.hazmat.backends import default_backend
 
 								logger.debug(
 									"Got the following crypto backends: %s",
-									default_backend()._backends,  # pylint: disable=no-member,protected-access
+									default_backend()._backends,
 								)
-							except Exception as cryptoCheckError:  # pylint: disable=broad-except
+							except Exception as cryptoCheckError:
 								logger.debug("Failed to get info about installed crypto modules: %s", cryptoCheckError)
 
 						for _unused in range(3):  # Sleeping before the next retry
 							time.sleep(1)
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error(err, exc_info=True)
 			finally:
 				self.running = False
 
-	def stopConnectionCallback(self, choiceSubject):  # pylint: disable=unused-argument
+	def stopConnectionCallback(self, choiceSubject):
 		logger.notice("Connection cancelled by user")
 		self.stop()
 

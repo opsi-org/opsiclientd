@@ -22,25 +22,21 @@ from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import createEventGenerators
 from opsiclientd.Opsiclientd import Opsiclientd
 
-from .utils import (  # pylint: disable=unused-import
-	default_config,
-	opsiclient_url,
-	opsiclientd_auth,
-)
+from .utils import default_config, opsiclient_url, opsiclientd_auth
 
 
-def test_fire_event(default_config):  # pylint: disable=redefined-outer-name,unused-argument
+def test_fire_event(default_config):
 	ocd = Opsiclientd()
 	createEventGenerators(ocd)
 	getEventConfigs()
 	controlServer = ControlServer.OpsiclientdRpcInterface(ocd)
-	controlServer.fireEvent('on_demand')
+	controlServer.fireEvent("on_demand")
 
 
 def test_firing_unknown_event_raises_error():
 	controlServer = ControlServer.OpsiclientdRpcInterface(None)
 	with pytest.raises(ValueError):
-		controlServer.fireEvent('foobar')
+		controlServer.fireEvent("foobar")
 
 
 def test_log_reader_start_position(tmpdir):
@@ -52,7 +48,7 @@ def test_log_reader_start_position(tmpdir):
 				file.write(f"[5] [2021-01-02 11:12:13.456] [opsiclientd] log line {i+1}   (opsiclientd.py:123)\n")
 
 		lrt = ControlServer.LogReaderThread(log_file, None, num_tail_records)
-		start_position = lrt._get_start_position()  # pylint: disable=protected-access
+		start_position = lrt._get_start_position()
 
 		with codecs.open(log_file, "r", encoding="utf-8", errors="replace") as file:
 			file.seek(start_position)
@@ -62,14 +58,14 @@ def test_log_reader_start_position(tmpdir):
 
 
 @pytest.mark.opsiclientd_running
-def test_index_page(opsiclient_url):  # pylint: disable=redefined-outer-name
+def test_index_page(opsiclient_url):
 	req = requests.get(f"{opsiclient_url}", verify=False)
 	assert req.status_code == 200
 
 
 @pytest.mark.opsiclientd_running
-def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):  # pylint: disable=redefined-outer-name
-	rpc = {"id":1, "method": "invalid", "params":[]}
+def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):
+	rpc = {"id": 1, "method": "invalid", "params": []}
 	for endpoint in ("opsiclientd", "rpc"):
 		response = requests.post(f"{opsiclient_url}/{endpoint}", verify=False, json=rpc)
 		assert response.status_code == 401
@@ -83,22 +79,17 @@ def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):  # pylint: disable
 
 
 @pytest.mark.opsiclientd_running
-def test_kiosk_auth(opsiclient_url):  # pylint: disable=redefined-outer-name
+def test_kiosk_auth(opsiclient_url):
 	# Kiosk allows connection from 127.0.0.1 without auth
-	response = requests.post(
-		f"{opsiclient_url}/kiosk",
-		verify=False,
-		headers={"Content-Encoding": "gzip"},
-		data="fail"
-	)
-	assert response.status_code == 500 # Not 401
+	response = requests.post(f"{opsiclient_url}/kiosk", verify=False, headers={"Content-Encoding": "gzip"}, data="fail")
+	assert response.status_code == 500  # Not 401
 	assert "Not a gzipped file" in response.text
 	# "X-Forwarded-For" must not be accepted
 	address = None
-	interfaces = netifaces.interfaces()  # pylint: disable=c-extension-no-member
+	interfaces = netifaces.interfaces()
 	for interface in interfaces:
-		addresses = netifaces.ifaddresses(interface)  # pylint: disable=c-extension-no-member
-		addr = addresses.get(netifaces.AF_INET, [{}])[0].get("addr")  # pylint: disable=c-extension-no-member
+		addresses = netifaces.ifaddresses(interface)
+		addr = addresses.get(netifaces.AF_INET, [{}])[0].get("addr")
 		if addr and addr != "127.0.0.1":
 			address = addr
 			break
@@ -121,17 +112,17 @@ def test_kiosk_auth(opsiclient_url):  # pylint: disable=redefined-outer-name
 				b"xxxxxxxx"
 			)
 			http_code = int(ssock.recv(1024).split(b" ", 2)[1])
-			assert http_code == 401 # "X-Forwarded-For" not accepted
+			assert http_code == 401  # "X-Forwarded-For" not accepted
 
 
 @pytest.mark.opsiclientd_running
-def test_concurrency(opsiclient_url, opsiclientd_auth):  # pylint: disable=redefined-outer-name
+def test_concurrency(opsiclient_url, opsiclientd_auth):
 	rpcs = [
-		{"id":1, "method": "execute", "params":["sleep 3; echo ok", True]},
-		{"id":2, "method": "execute", "params":["sleep 4; echo ok", True]},
-		{"id":3, "method": "invalid", "params":[]},
-		{"id":4, "method": "log_read", "params":[]},
-		{"id":5, "method": "getConfig", "params":[]}
+		{"id": 1, "method": "execute", "params": ["sleep 3; echo ok", True]},
+		{"id": 2, "method": "execute", "params": ["sleep 4; echo ok", True]},
+		{"id": 3, "method": "invalid", "params": []},
+		{"id": 4, "method": "log_read", "params": []},
+		{"id": 5, "method": "getConfig", "params": []},
 	]
 
 	def run_rpc(rpc):

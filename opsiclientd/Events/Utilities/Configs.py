@@ -22,9 +22,9 @@ __all__ = ["getEventConfigs"]
 config = Config()
 
 
-def getEventConfigs():  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+def getEventConfigs():
 	preconditions = {}
-	for (section, options) in config.getDict().items():
+	for section, options in config.getDict().items():
 		section = section.lower()
 		if section.startswith("precondition_"):
 			preconditionId = section.split("_", 1)[1]
@@ -36,11 +36,11 @@ def getEventConfigs():  # pylint: disable=too-many-locals,too-many-branches,too-
 						# false means: do not check state
 						preconditions[preconditionId][key] = True
 				logger.info("Precondition '%s' created: %s", preconditionId, preconditions[preconditionId])
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error("Failed to parse precondition '%s': %s", preconditionId, err)
 
 	rawEventConfigs = {}
-	for (section, options) in config.getDict().items():  # pylint: disable=too-many-nested-blocks
+	for section, options in config.getDict().items():
 		section = section.lower()
 		if section.startswith("event_"):
 			eventConfigId = section.split("_", 1)[1]
@@ -71,7 +71,7 @@ def getEventConfigs():  # pylint: disable=too-many-locals,too-many-branches,too-
 					if not rawEventConfigs[eventConfigId]["super"]:
 						rawEventConfigs[eventConfigId]["super"] = superEventName.strip()
 					rawEventConfigs[eventConfigId]["precondition"] = precondition.replace("}", "").strip()
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error("Failed to parse event config '%s': %s", eventConfigId, err)
 
 	# Process inheritance
@@ -108,7 +108,7 @@ def getEventConfigs():  # pylint: disable=too-many-locals,too-many-branches,too-
 	rawEventConfigs = newRawEventConfigs
 
 	eventConfigs = {}
-	for (eventConfigId, rawEventConfig) in rawEventConfigs.items():  # pylint: disable=too-many-nested-blocks
+	for eventConfigId, rawEventConfig in rawEventConfigs.items():
 		try:
 			if rawEventConfig["args"].get("type", "template").lower() == "template":
 				continue
@@ -125,7 +125,7 @@ def getEventConfigs():  # pylint: disable=too-many-locals,too-many-branches,too-
 				else:
 					eventConfigs[eventConfigId]["preconditions"] = precondition
 
-			for (key, value) in rawEventConfig["args"].items():
+			for key, value in rawEventConfig["args"].items():
 				try:
 					if key == "type":
 						eventConfigs[eventConfigId]["type"] = value
@@ -134,7 +134,7 @@ def getEventConfigs():  # pylint: disable=too-many-locals,too-many-branches,too-
 					elif key.startswith(("action_message", "message")):
 						try:
 							mLanguage = key.split("[")[1].split("]")[0].strip().lower()
-						except Exception:  # pylint: disable=broad-except
+						except Exception:
 							mLanguage = None
 
 						if mLanguage:
@@ -145,7 +145,7 @@ def getEventConfigs():  # pylint: disable=too-many-locals,too-many-branches,too-
 					elif key.startswith("shutdown_warning_message"):
 						try:
 							mLanguage = key.split("[")[1].split("]")[0].strip().lower()
-						except Exception:  # pylint: disable=broad-except
+						except Exception:
 							mLanguage = None
 
 						if mLanguage:
@@ -156,7 +156,7 @@ def getEventConfigs():  # pylint: disable=too-many-locals,too-many-branches,too-
 					elif key.startswith("name"):
 						try:
 							mLanguage = key.split("[")[1].split("]")[0].strip().lower()
-						except Exception:  # pylint: disable=broad-except
+						except Exception:
 							mLanguage = None
 
 						if mLanguage:
@@ -275,7 +275,7 @@ def getEventConfigs():  # pylint: disable=too-many-locals,too-many-branches,too-
 								logger.info("Removing config option %s.%s", section, key)
 								config.del_option(section, key)
 
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.debug(err, exc_info=True)
 					logger.error("Failed to set event config argument '%s' to '%s': %s", key, value, err)
 
@@ -284,7 +284,7 @@ def getEventConfigs():  # pylint: disable=too-many-locals,too-many-branches,too-
 				eventConfigId,
 				pprint.pformat(eventConfigs[eventConfigId], indent=4, width=300, compact=False),
 			)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err, exc_info=True)
 
 	return eventConfigs

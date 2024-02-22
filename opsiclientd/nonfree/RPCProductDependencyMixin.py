@@ -16,15 +16,16 @@ from dataclasses import dataclass, field
 from typing import Protocol
 
 from opsicommon.exceptions import OpsiError
+from opsicommon.logging import get_logger
 from opsicommon.logging.constants import TRACE  # type: ignore[import]
-from opsicommon.logging import logger
-
 from opsicommon.objects import (  # type: ignore[import]
 	Product,
 	ProductDependency,
 	ProductOnClient,
 	ProductOnDepot,
 )
+
+logger = get_logger("opsiclientd")
 
 
 class OpsiProductNotAvailableError(OpsiError):
@@ -139,46 +140,46 @@ class Action:
 		return product_on_client
 
 
-class RPCProductDependencyMixin(Protocol):  # pylint: disable=too-few-public-methods
-	def get_product_action_groups(  # pylint: disable=too-many-locals,too-many-statements,too-many-branches
+class RPCProductDependencyMixin(Protocol):
+	def get_product_action_groups(
 		self, product_on_clients: list[ProductOnClient], *, ignore_unavailable_products: bool = True
 	) -> dict[str, list[ProductActionGroup]]:
 		product_cache: dict[tuple[str, str, str], Product] = {}
 		product_on_depot_cache: dict[tuple[str, str], ProductOnDepot] = {}
 		product_on_client_cache: dict[tuple[str, str], ProductOnClient] = {}
 		product_dependency_cache: dict[tuple[str, str, str], list[ProductDependency]] = {}
-		product_on_clients_by_client_id: dict[str, list[ProductOnClient]] = defaultdict(list)  # pylint: disable=invalid-name
+		product_on_clients_by_client_id: dict[str, list[ProductOnClient]] = defaultdict(list)
 		product_ids = set()
 		for poc in product_on_clients:
 			product_on_clients_by_client_id[poc.clientId].append(poc)
 			product_ids.add(poc.productId)
 		client_ids = list(product_on_clients_by_client_id)
-		client_to_depot = {c2d["clientId"]: c2d["depotId"] for c2d in self.configState_getClientToDepotserver(clientIds=client_ids)}
+		client_to_depot = {c2d["clientId"]: c2d["depotId"] for c2d in self.configState_getClientToDepotserver(clientIds=client_ids)}  # type: ignore[attr-defined]
 		depot_ids = list(set(client_to_depot.values()))
 		product_action_groups: dict[str, list[ProductActionGroup]] = {c: [] for c in client_ids}
 
 		if product_ids:
 			# Prefill caches
-			for dependency in self.productDependency_getObjects(productId=list(product_ids)):
+			for dependency in self.productDependency_getObjects(productId=list(product_ids)):  # type: ignore[attr-defined]
 				pdkey = (dependency.productId, dependency.productVersion, dependency.packageVersion)
 				if pdkey not in product_dependency_cache:
 					product_dependency_cache[pdkey] = []
 				product_dependency_cache[pdkey].append(dependency)
 				product_ids.add(dependency.requiredProductId)
 
-			for product in self.product_getObjects(id=list(product_ids)):
+			for product in self.product_getObjects(id=list(product_ids)):  # type: ignore[attr-defined]
 				pkey = (product.id, product.productVersion, product.packageVersion)
 				product_cache[pkey] = product
 
 			if depot_ids:
-				for product_on_depot in self.productOnDepot_getObjects(productId=list(product_ids), depotId=depot_ids):
+				for product_on_depot in self.productOnDepot_getObjects(productId=list(product_ids), depotId=depot_ids):  # type: ignore[attr-defined]
 					podkey = (product_on_depot.depotId, product_on_depot.productId)
 					product_on_depot_cache[podkey] = product_on_depot
 
 		def get_product(product_id: str, product_version: str, package_version: str) -> Product:
 			pkey = (product_id, product_version, package_version)
 			if pkey not in product_cache:
-				objs = self.product_getObjects(
+				objs = self.product_getObjects(  # type: ignore[attr-defined]
 					id=product_id,
 					productVersion=product_version,
 					packageVersion=package_version,
@@ -194,7 +195,7 @@ class RPCProductDependencyMixin(Protocol):  # pylint: disable=too-few-public-met
 		) -> ProductOnDepot:
 			pkey = (depot_id, product_id)
 			if pkey not in product_on_depot_cache:
-				objs = self.productOnDepot_getObjects(productId=product_id, depotId=depot_id)
+				objs = self.productOnDepot_getObjects(productId=product_id, depotId=depot_id)  # type: ignore[attr-defined]
 				product_on_depot_cache[pkey] = objs[0] if objs else None
 
 			if (
@@ -211,7 +212,7 @@ class RPCProductDependencyMixin(Protocol):  # pylint: disable=too-few-public-met
 		def get_product_dependencies(product_id: str, product_version: str, package_version: str) -> list[ProductDependency]:
 			pkey = (product_id, product_version, package_version)
 			if pkey not in product_dependency_cache:
-				objs = self.productDependency_getObjects(
+				objs = self.productDependency_getObjects(  # type: ignore[attr-defined]
 					productId=product_id, productVersion=product_version, packageVersion=package_version
 				)
 				product_dependency_cache[pkey] = objs
@@ -225,7 +226,7 @@ class RPCProductDependencyMixin(Protocol):  # pylint: disable=too-few-public-met
 						product_on_client_cache[pkey] = poc
 						break
 			if pkey not in product_on_client_cache:
-				objs = self.productOnClient_getObjects(productId=product_id, clientId=client_id)
+				objs = self.productOnClient_getObjects(productId=product_id, clientId=client_id)  # type: ignore[attr-defined]
 				if not objs:
 					poc = ProductOnClient(productId=product_id, productType=product_type, clientId=client_id)
 					poc.setDefaults()
@@ -242,7 +243,7 @@ class RPCProductDependencyMixin(Protocol):  # pylint: disable=too-few-public-met
 			product_id_groups: list[set[str]] = field(default_factory=list)
 			dependencies: dict[str, list[ProductDependency]] = field(default_factory=lambda: defaultdict(list))
 
-			def process_dependencies(  # pylint: disable=too-many-arguments,too-many-branches
+			def process_dependencies(
 				self,
 				action: Action,
 				dependency_path: list[str] | None = None,
@@ -313,7 +314,7 @@ class RPCProductDependencyMixin(Protocol):  # pylint: disable=too-few-public-met
 
 					required_action = dependency.requiredAction
 					if not required_action:
-						if (  # pylint: disable=too-many-boolean-expressions
+						if (
 							dependency.requiredInstallationStatus == dep_poc.installationStatus
 							and (
 								not dependency.requiredProductVersion

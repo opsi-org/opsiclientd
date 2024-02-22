@@ -26,7 +26,7 @@ class CannotCancelEventError(RuntimeError):
 	pass
 
 
-class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-attributes
+class EventGenerator(threading.Thread):
 	def __init__(self, opsiclientd, generatorConfig):
 		threading.Thread.__init__(self, daemon=True)
 		self._opsiclientd = opsiclientd
@@ -79,10 +79,10 @@ class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-att
 
 		return actualConfig["config"]
 
-	def createAndFireEvent(self, eventInfo={}, can_cancel=False):  # pylint: disable=dangerous-default-value
+	def createAndFireEvent(self, eventInfo={}, can_cancel=False):
 		self.fireEvent(self.createEvent(eventInfo), can_cancel=can_cancel)
 
-	def createEvent(self, eventInfo={}):  # pylint: disable=dangerous-default-value
+	def createEvent(self, eventInfo={}):
 		logger.debug("Creating event config from info: %s", eventInfo)
 		eventConfig = self.getEventConfig()
 		logger.debug("Event config: %s", eventConfig)
@@ -134,7 +134,7 @@ class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-att
 
 		logger.info("Firing event '%s'", event)
 		logger.info("Event info:")
-		for (key, value) in event.eventInfo.items():
+		for key, value in event.eventInfo.items():
 			logger.info("     %s: %s", key, value)
 
 		class FireEventThread(threading.Thread):
@@ -156,7 +156,7 @@ class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-att
 					try:
 						logger.info("Calling processEvent on listener %s", self._eventListener)
 						self._eventListener.processEvent(self._event)
-					except Exception as err:  # pylint: disable=broad-except
+					except Exception as err:
 						logger.error(err, exc_info=True)
 
 		logger.info("Starting FireEventThread for listeners: %s", self._eventListeners)
@@ -197,7 +197,7 @@ class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-att
 					(self._generatorConfig.maxRepetitions < 0) or (self._eventsOccured <= self._generatorConfig.maxRepetitions)
 				):
 					logger.info("Getting next event...")
-					event = self.getNextEvent()  # pylint: disable=assignment-from-none,assignment-from-no-return
+					event = self.getNextEvent()
 					self._eventsOccured += 1  # Count as occured, even if event is None!
 					if event:
 						logger.info("Got new event: %s (%d/%d)", event, self._eventsOccured, self._generatorConfig.maxRepetitions + 1)
@@ -211,12 +211,12 @@ class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-att
 						time.sleep(1)
 				if not self._stopped:
 					logger.notice("Event generator '%s' now deactivated after %d event occurrences", self, self._eventsOccured)
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				if not self._stopped:
 					logger.error("Failure in event generator '%s': %s", self, err, exc_info=True)
 			try:
 				self.cleanup()
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				if not self._stopped:
 					logger.error("Failed to clean up: %s", err)
 
@@ -228,28 +228,28 @@ class EventGenerator(threading.Thread):  # pylint: disable=too-many-instance-att
 			self._event.set()
 
 
-class Event:  # pylint: disable=too-few-public-methods
+class Event:
 	"""Basic event class"""
 
-	def __init__(self, eventConfig, eventInfo={}):  # pylint: disable=dangerous-default-value
+	def __init__(self, eventConfig, eventInfo={}):
 		self.eventConfig = eventConfig
 		self.eventInfo = eventInfo
 
 	def getActionProcessorCommand(self):
 		actionProcessorCommand = self.eventConfig.actionProcessorCommand
-		for (key, value) in self.eventInfo.items():
+		for key, value in self.eventInfo.items():
 			actionProcessorCommand = actionProcessorCommand.replace("%" + "event." + str(key.lower()) + "%", str(value))
 
 		return actionProcessorCommand
 
 
-class EventListener:  # pylint: disable=too-few-public-methods
+class EventListener:
 	def __init__(self):
 		logger.debug("EventListener initiated")
 
-	def processEvent(self, event):  # pylint: disable=unused-argument
+	def processEvent(self, event):
 		logger.warning("%s: processEvent() not implemented", self)
 
-	def canProcessEvent(self, event, can_cancel=False):  # pylint: disable=unused-argument
+	def canProcessEvent(self, event, can_cancel=False):
 		logger.warning("%s: canProcessEvent() not implemented", self)
 		raise NotImplementedError(f"{self}: canProcessEvent() not implemented")

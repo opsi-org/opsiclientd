@@ -15,12 +15,12 @@ from pathlib import Path
 from opsicommon.logging import logger
 
 try:
-	language = locale.getlocale()[0].split("_")[0]
-except Exception as err:  # pylint: disable=broad-except
+	language = (locale.getlocale()[0] or "en").split("_")[0]
+except Exception as err:
 	logger.debug("Failed to find default language: %s", err)
-	language = "en"  # pylint: disable=invalid-name
+	language = "en"
 
-path: Path | None = None  # pylint: disable=invalid-name
+path: Path | None = None
 try:
 	logger.debug("Loading translation for language '%s'", language)
 	path = Path(__file__).parent.parent.resolve()
@@ -29,13 +29,13 @@ try:
 	if (path / "opsiclientd_data").exists():  # only windows
 		path = path / "opsiclientd_data"
 	path = path / "locale"
-	translation = gettext.translation('opsiclientd', path, [language])
+	translation = gettext.translation("opsiclientd", path, [language])
 	_ = translation.gettext
-except Exception as err:  # pylint: disable=broad-except
+except Exception as err:
 	logger.debug("Failed to load locale for %s from %s: %s", language, path, err)
 
 	def _(string):
-		""" Fallback function """
+		"""Fallback function"""
 		return string
 
 

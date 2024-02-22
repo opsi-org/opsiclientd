@@ -39,7 +39,7 @@ from opsiclientd.Config import Config
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 DEFAULT_STDERR_LOG_FORMAT = (
-	"%(log_color)s[%(opsilevel)d] [%(asctime)s.%(msecs)03d]%(reset)s [%(contextstring)-40s] %(message)s   (%(filename)s:%(lineno)d)"  # pylint: disable=line-too-long
+	"%(log_color)s[%(opsilevel)d] [%(asctime)s.%(msecs)03d]%(reset)s [%(contextstring)-40s] %(message)s   (%(filename)s:%(lineno)d)"
 )
 DEFAULT_FILE_LOG_FORMAT = DEFAULT_STDERR_LOG_FORMAT.replace("%(log_color)s", "").replace("%(reset)s", "")
 
@@ -107,7 +107,7 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 			try:
 				# Rename existing log file from old to new format
 				os.rename(old_lf, new_lf)
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error("Failed to rename %s to %s: %s", old_lf, new_lf, err)
 
 	logging_config(
@@ -157,7 +157,7 @@ def check_signature(bin_dir):
 	if not RUNNING_ON_WINDOWS:
 		return  # Not yet implemented
 
-	windowsVersion = sys.getwindowsversion()  # pylint: disable=no-member
+	windowsVersion = sys.getwindowsversion()
 	if windowsVersion.major < 6 or (windowsVersion.major == 6 and windowsVersion.minor < 4):
 		return  # Get-AuthenticodeSignature is only defined for versions since 2016
 
@@ -183,5 +183,5 @@ def notify_posix_terminals(message: str) -> None:
 		logger.debug("Executing %s", command)
 		try:
 			execute(command, shell=False)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.warning("Failed to notify users via 'wall': %s", err)

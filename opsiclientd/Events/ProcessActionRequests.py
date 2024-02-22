@@ -8,8 +8,8 @@
 Processing action requests.
 """
 
-from opsiclientd.Events.Basic import Event, EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
+from opsiclientd.Events.Basic import Event, EventGenerator
 
 __all__ = ["ProcessActionRequestsEvent", "ProcessActionRequestsEventConfig", "ProcessActionRequestsEventGenerator"]
 
@@ -19,7 +19,7 @@ class ProcessActionRequestsEventConfig(EventConfig):
 
 
 class ProcessActionRequestsEventGenerator(EventGenerator):
-	def createEvent(self, eventInfo={}):  # pylint: disable=dangerous-default-value
+	def createEvent(self, eventInfo={}):
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None
@@ -27,5 +27,5 @@ class ProcessActionRequestsEventGenerator(EventGenerator):
 		return ProcessActionRequestsEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class ProcessActionRequestsEvent(Event):  # pylint: disable=too-few-public-methods
+class ProcessActionRequestsEvent(Event):
 	pass

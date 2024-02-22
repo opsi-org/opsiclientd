@@ -9,23 +9,26 @@ Events that get active once a system shuts down or restarts.
 """
 
 import time
-import psutil
 
+import psutil
 from opsicommon.logging import logger
 
-from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_WINDOWS
-from opsiclientd.Events.Basic import Event, EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
+from opsiclientd.Events.Basic import Event, EventGenerator
+from opsiclientd.SystemCheck import (
+	RUNNING_ON_DARWIN,
+	RUNNING_ON_LINUX,
+	RUNNING_ON_WINDOWS,
+)
 
-__all__ = [
-	'GUIStartupEvent', 'GUIStartupEventConfig', 'GUIStartupEventGenerator'
-]
+__all__ = ["GUIStartupEvent", "GUIStartupEventConfig", "GUIStartupEventGenerator"]
 
 
 class GUIStartupEventConfig(EventConfig):
 	def setConfig(self, conf):
 		EventConfig.setConfig(self, conf)
 		self.maxRepetitions = 0
+
 
 class GUIStartupEventGenerator(EventGenerator):
 	def __init__(self, opsiclientd, eventConfig):
@@ -38,8 +41,7 @@ class GUIStartupEventGenerator(EventGenerator):
 		elif RUNNING_ON_DARWIN:
 			self.gui_process_names = ["WindowServer"]
 
-
-	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
+	def createEvent(self, eventInfo={}):
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None
@@ -61,5 +63,6 @@ class GUIStartupEventGenerator(EventGenerator):
 					break
 				time.sleep(1)
 
-class GUIStartupEvent(Event): # pylint: disable=too-few-public-methods
+
+class GUIStartupEvent(Event):
 	pass

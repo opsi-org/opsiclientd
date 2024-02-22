@@ -12,15 +12,13 @@ import codecs
 import os
 import platform
 import sys
-from datetime import datetime
 import warnings
+from datetime import datetime
 
 import sqlalchemy  # type: ignore[import]
 
 # STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
 STARTUP_LOG = None
-
-# pylint: disable=import-outside-toplevel
 
 
 def opsiclientd_rpc():
@@ -57,13 +55,13 @@ def opsiclientd():
 	try:
 		_main()
 		sys.exit(0)
-	except Exception as err:  # pylint: disable=broad-except
+	except Exception as err:
 		print(f"ERROR: {err}", file=sys.stderr)
 		try:
 			from opsicommon.logging import logger  # type: ignore[import]
 
 			logger.critical(err, exc_info=True)
-		except Exception as log_err:  # pylint: disable=broad-except
+		except Exception as log_err:
 			print(f"ERROR: {log_err}", file=sys.stderr)
 		sys.exit(1)
 

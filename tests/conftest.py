@@ -18,9 +18,12 @@ from _pytest.logging import LogCaptureHandler
 
 urllib3.disable_warnings()
 
+
 # Disable pytest log capture
-def emit(*args, **kwargs) -> None:  # pylint: disable=unused-argument
+def emit(*args, **kwargs) -> None:
 	pass
+
+
 LogCaptureHandler.emit = emit
 
 
@@ -39,19 +42,15 @@ def running_in_docker():
 		return False
 	with open("/proc/self/cgroup", "r", encoding="utf-8") as file:
 		for line in file.readlines():
-			if line.split(':')[2].startswith("/docker/"):
+			if line.split(":")[2].startswith("/docker/"):
 				return True
 	return False
 
 
 def opsiclient_running():
 	for proc in psutil.process_iter():
-		if (
-			proc.name() == "opsiclientd" or
-			(proc.name() in ("python", "python3") and (
-				"opsiclientd" in proc.cmdline() or
-				"opsiclientd.__main__" in " ".join(proc.cmdline())
-			))
+		if proc.name() == "opsiclientd" or (
+			proc.name() in ("python", "python3") and ("opsiclientd" in proc.cmdline() or "opsiclientd.__main__" in " ".join(proc.cmdline()))
 		):
 			return True
 	return False

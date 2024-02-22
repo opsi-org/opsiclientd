@@ -8,7 +8,6 @@
 Processing of events.
 """
 
-# pylint: disable=too-many-lines
 
 import datetime
 import filecmp
@@ -73,7 +72,7 @@ from opsiclientd.utils import (
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.windows import runCommandInSession
 else:
-	from OPSI.System import runCommandInSession  # pylint: disable=ungrouped-imports
+	from OPSI.System import runCommandInSession
 
 config = Config()
 state = State()
@@ -84,7 +83,7 @@ class EventProcessingCanceled(Exception):
 	pass
 
 
-class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
+class EventProcessingThread(KillableThread, ServiceConnection):
 	def __init__(self, opsiclientd, event):
 		KillableThread.__init__(self)
 		ServiceConnection.__init__(self)
@@ -191,7 +190,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			if self._notificationServer and cancellableAfter >= 0:
 				logger.info("User is allowed to cancel connection after %d seconds", cancellableAfter)
 				self._choiceSubject = ChoiceSubject(id="choice")
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err)
 
 	def connectionCancelable(self, stopConnectionCallback):
@@ -291,7 +290,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				if self._notificationServer.errorOccurred():
 					raise RuntimeError(self._notificationServer.errorOccurred())
 				logger.notice("Notification server started (listening on port %d)", self.notificationServerPort)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error("Failed to start notification server: %s", err)
 			raise RuntimeError(f"Failed to start notification server: {err}") from err
 
@@ -299,7 +298,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		try:
 			logger.info("Stopping notification server")
 			self._notificationServer.stop(stopReactor=False)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err, exc_info=True)
 
 	def stopNotificationServer(self):
@@ -325,7 +324,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			else:
 				self.opsiclientd.stop_permanent_service_connection()
 
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error("Failed to get config from service: %s", err)
 			raise
 
@@ -356,18 +355,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			if config.get("global", "log_level") > LOG_INFO:
 				logging_config(file_level=LOG_INFO)
 			try:
-				self._configService.log_write(  # pylint: disable=no-member
-					"clientconnect", data=data, objectId=config.get("global", "host_id"), append=False
-				)
+				self._configService.log_write("clientconnect", data=data, objectId=config.get("global", "host_id"), append=False)
 			finally:
 				logging_config(file_level=config.get("global", "log_level"))
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error("Failed to write log to service: %s", err, exc_info=True)
 			raise
 
-	def runCommandInSession(  # pylint: disable=too-many-arguments
-		self, command, sessionId=None, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False
-	):
+	def runCommandInSession(self, command, sessionId=None, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False):
 		if sessionId is None:
 			sessionId = self.getSessionId()
 
@@ -393,12 +388,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				noWindow=noWindow,
 				shell=False,
 			)[:3]
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err, exc_info=True)
 
 		return process, processId
 
-	def startNotifierApplication(self, command, sessionId=None, desktop=None, notifierId=None):  # pylint: disable=inconsistent-return-statements
+	def startNotifierApplication(self, command, sessionId=None, desktop=None, notifierId=None):
 		if sessionId is None:
 			sessionId = self.getSessionId()
 
@@ -411,7 +406,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			process, pid = self.runCommandInSession(sessionId=sessionId, command=command, desktop=desktop, waitForProcessEnding=False)
 			logger.debug("starting notifier with pid %s", pid)
 			return process, pid
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error("Failed to start notifier application '%s': %s", command, err)
 		return None, None
 
@@ -419,7 +414,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		try:
 			opsiclientd_rpc = config.get("opsiclientd_rpc", "command")
 			command = f'{opsiclientd_rpc} "exit(); System.closeProcessWindows(processId={processId})"'
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			raise RuntimeError(f"opsiclientd_rpc command not defined: {err}") from err
 
 		# TODO: collect exit codes to avoid Zombie Process
@@ -444,7 +439,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		logger.notice("Action processor name '%s', version '%s'", name, version)
 		self._actionProcessorInfoSubject.setMessage(f"{name} {version}")
 
-	def mountDepotShare(self, impersonation):  # pylint: disable=too-many-branches
+	def mountDepotShare(self, impersonation):
 		if self._depotShareMounted:
 			logger.debug("Depot share already mounted")
 			return
@@ -484,7 +479,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						0xFFFFFFFF,
 					)
 				logger.info("Added depot '%s' to trusted domains", url.hostname)
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error("Failed to add depot to trusted domains: %s", err)
 
 			if url.scheme in ("smb", "cifs") and impersonation:
@@ -529,14 +524,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			logger.notice("Unmounting depot share")
 			System.umount(config.getDepotDrive())
 			self._depotShareMounted = False
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.warning(err)
 
-	def updateActionProcessor(self):  # pylint: disable=too-many-locals,inconsistent-return-statements,too-many-branches,too-many-statements
+	def updateActionProcessor(self):
 		logger.notice("Updating action processor")
 		self.setStatusMessage(_("Updating action processor"))
 
-		try:  # pylint: disable=too-many-nested-blocks
+		try:
 			url = urlparse(config.get("depot_server", "url"))
 			actionProcessorRemoteDir = None
 			actionProcessorCommonDir = None
@@ -582,7 +577,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			else:
 				logger.notice("Local action processor exists and seems to be up to date")
 				if self.event.eventConfig.useCachedProducts:
-					self._configService.productOnClient_updateObjects(  # pylint: disable=no-member
+					self._configService.productOnClient_updateObjects(
 						[
 							ProductOnClient(
 								productId=config.action_processor_name,
@@ -614,7 +609,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 
 			productVersion = None
 			packageVersion = None
-			for productOnDepot in self._configService.productOnDepot_getIdents(  # pylint: disable=no-member
+			for productOnDepot in self._configService.productOnDepot_getIdents(
 				productType="LocalbootProduct",
 				productId=config.action_processor_name,
 				depotId=config.get("depot_server", "depot_id"),
@@ -622,7 +617,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			):
 				productVersion = productOnDepot["productVersion"]
 				packageVersion = productOnDepot["packageVersion"]
-			self._configService.productOnClient_updateObjects(  # pylint: disable=no-member
+			self._configService.productOnClient_updateObjects(
 				[
 					ProductOnClient(
 						productId=config.action_processor_name,
@@ -638,13 +633,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			)
 			try:
 				self.setActionProcessorInfo()
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error("Failed to set action processor info: %s", err)
 
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error("Failed to update action processor: %s", err, exc_info=True)
 
-	def updateActionProcessorUnified(self, actionProcessorRemoteDir, actionProcessorCommonDir):  # pylint: disable=too-many-locals,too-many-branches
+	def updateActionProcessorUnified(self, actionProcessorRemoteDir, actionProcessorCommonDir):
 		actionProcessorFilename = config.get("action_processor", "filename")
 		actionProcessorLocalDir = config.get("action_processor", "local_dir")
 		actionProcessorLocalTmpDir = actionProcessorLocalDir + ".tmp"
@@ -759,9 +754,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				raise RuntimeError("Not connected to config service")
 
 			productsByIdAndVersion = {}
-			for product in self._configService.product_getObjects(  # pylint: disable=no-member
-				type="LocalbootProduct", userLoginScript="*.*"
-			):
+			for product in self._configService.product_getObjects(type="LocalbootProduct", userLoginScript="*.*"):
 				if product.id not in productsByIdAndVersion:
 					productsByIdAndVersion[product.id] = {}
 				if product.productVersion not in productsByIdAndVersion[product.id]:
@@ -772,9 +765,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				logger.notice("No user login script found, nothing to do")
 				return
 
-			clientToDepotservers = self._configService.configState_getClientToDepotserver(  # pylint: disable=no-member
-				clientIds=config.get("global", "host_id")
-			)
+			clientToDepotservers = self._configService.configState_getClientToDepotserver(clientIds=config.get("global", "host_id"))
 			if not clientToDepotservers:
 				raise RuntimeError(f"Failed to get depotserver for client '{config.get('global', 'host_id')}'")
 			depotId = clientToDepotservers[0]["depotId"]
@@ -787,7 +778,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			userLoginScripts = []
 			productIds = []
 			versions = []
-			for productOnDepot in self._configService.productOnDepot_getIdents(  # pylint: disable=no-member
+			for productOnDepot in self._configService.productOnDepot_getIdents(
 				productType="LocalbootProduct", depotId=depotId, returnType="dict"
 			):
 				product = (
@@ -816,11 +807,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			additionalParams = f"/usercontext {self.event.eventInfo.get('User')}"
 			self.runActions(productIds, additionalParams, versions)
 
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error("Failed to process login actions: %s", err, exc_info=True)
 			self.setStatusMessage(_("Failed to process login actions: %s") % forceUnicode(err))
 
-	def processProductActionRequests(self):  # pylint: disable=too-many-branches,too-many-statements
+	def processProductActionRequests(self):
 		self.setStatusMessage(_("Getting action requests from config service"))
 
 		try:
@@ -828,7 +819,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			if RUNNING_ON_WINDOWS:
 				try:
 					bootmode = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\general", "bootmode").upper()
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.warning("Failed to get bootmode from registry: %s", err)
 			bootmode = bootmode or "BKSTD"
 
@@ -853,7 +844,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 
 				for productOnClient in [
 					poc
-					for poc in self._configService.productOnClient_getObjects(  # pylint: disable=no-member
+					for poc in self._configService.productOnClient_getObjects(
 						productType="LocalbootProduct",
 						clientId=config.get("global", "host_id"),
 						actionRequest=["setup", "uninstall", "update", "always", "once", "custom"],
@@ -876,11 +867,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				try:
 					if self.event.eventConfig.useCachedConfig:
 						self.opsiclientd.getCacheService().setConfigCacheObsolete()
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.error(err)
 				try:
 					self.cleanup_temp_dir()
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.error(err)
 			else:
 				state.set("installation_pending", "true")
@@ -913,7 +904,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						# Event like on_demand that does not use cached config - changes are not reflected in cache
 						logger.info("Performing event that did not use cached config, setting config cache obsolete to suggest update")
 						cache_service.setConfigCacheObsolete()
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.error(err)
 				self.runActions(productIds, additionalParams=additionalParams, versions=versions)
 				try:
@@ -924,7 +915,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					if (
 						cache_service
 						and self.event.eventConfig.useCachedConfig
-						and not self._configService.productOnClient_getIdents(  # pylint: disable=no-member
+						and not self._configService.productOnClient_getIdents(
 							productType="LocalbootProduct",
 							clientId=config.get("global", "host_id"),
 							actionRequest=["setup", "uninstall", "update", "always", "once", "custom"],
@@ -934,7 +925,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						logger.info("No more actions to perform, setting config cache obsolete")
 						cache_service.setConfigCacheObsolete()
 
-					pocs_with_action = self._configService.productOnClient_getIdents(  # pylint: disable=no-member
+					pocs_with_action = self._configService.productOnClient_getIdents(
 						returnType="dict",
 						productType="LocalbootProduct",
 						clientId=config.get("global", "host_id"),
@@ -946,9 +937,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						logger.info("Setting installation pending to false")
 						state.set("installation_pending", "false")
 					logger.notice("Installation pending is: %s", state.get("installation_pending"))
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.error(err)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error("Failed to process product action requests: %s", err, exc_info=True)
 			self.setStatusMessage(_("Failed to process product action requests: %s") % str(err))
 			timeline.addEvent(
@@ -959,7 +950,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			)
 		time.sleep(3)
 
-	def runActions(self, productIds, additionalParams="", versions=None):  # pylint: disable=too-many-nested-blocks,too-many-locals,too-many-branches,too-many-statements
+	def runActions(self, productIds, additionalParams="", versions=None):
 		description = f"Running actions {', '.join(productIds)}"
 		if versions and len(versions) == len(productIds):
 			description = f"Running actions {', '.join(f'{p_id} {p_version}' for p_id, p_version in zip(productIds, versions))}"
@@ -996,7 +987,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						timeline.setEventEnd(eventId=waitEventId)
 					else:
 						logger.notice("Windows installer not running")
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.error("Failed to get windows installer status: %s", err)
 
 			self.setStatusMessage(_("Starting actions"))
@@ -1033,7 +1024,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			depotServerPassword = ""
 			try:
 				(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
-			except Exception:  # pylint: disable=broad-except
+			except Exception:
 				if not self.event.eventConfig.useCachedProducts:
 					raise
 				logger.error("Failed to get depotserver credentials, continuing because event uses cached products", exc_info=True)
@@ -1053,17 +1044,17 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			# Run action processor
 			serviceSession = "none"
 			try:
-				serviceSession = self.getConfigService().jsonrpc_getSessionId()  # pylint: disable=no-member
+				serviceSession = self.getConfigService().jsonrpc_getSessionId()
 				if not serviceSession:
 					serviceSession = "none"
-			except Exception:  # pylint: disable=broad-except
+			except Exception:
 				pass
 
 			actionProcessorUserName = ""
 			actionProcessorUserPassword = ""
 			if not self.isLoginEvent:
-				actionProcessorUserName = self.opsiclientd._actionProcessorUserName  # pylint: disable=protected-access
-				actionProcessorUserPassword = self.opsiclientd._actionProcessorUserPassword  # pylint: disable=protected-access
+				actionProcessorUserName = self.opsiclientd._actionProcessorUserName
+				actionProcessorUserPassword = self.opsiclientd._actionProcessorUserPassword
 
 			createEnvironment = config.get("action_processor", "create_environment")
 
@@ -1185,18 +1176,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			logger.debug("Updated environment:")
 			for key, value in os.environ.items():
 				logger.debug("   %s=%s", key, value)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error("Failed to set environment: %s", err)
 
-	def abortActionCallback(self, choiceSubject):  # pylint: disable=unused-argument
+	def abortActionCallback(self, choiceSubject):
 		logger.notice("Event aborted by user")
 		self.actionCancelled = True
 
-	def startActionCallback(self, choiceSubject):  # pylint: disable=unused-argument
+	def startActionCallback(self, choiceSubject):
 		logger.notice("Event wait canceled by user")
 		self.waitCancelled = True
 
-	def processActionWarningTime(self, productIds=[]):  # pylint: disable=dangerous-default-value,too-many-branches,too-many-statements,too-many-locals
+	def processActionWarningTime(self, productIds=[]):
 		if not self.event.eventConfig.actionWarningTime:
 			return
 		logger.info("Notifying user of actions to process %s (%s)", self.event, productIds)
@@ -1226,7 +1217,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		self._notificationServer.addSubject(choiceSubject)
 		notifierPids = []
 		notifierHandles = []
-		try:  # pylint: disable=too-many-nested-blocks
+		try:
 			if self.event.eventConfig.actionNotifierCommand:
 				desktops = [self.event.eventConfig.actionNotifierDesktop]
 				if RUNNING_ON_WINDOWS and self.event.eventConfig.actionNotifierDesktop == "all":
@@ -1300,13 +1291,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 							if hasattr(notifierHandle, "poll"):
 								notifierHandle.poll()
 							System.terminateProcess(processId=notifierPid)
-					except Exception:  # pylint: disable=broad-except
+					except Exception:
 						pass
 
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error(err, exc_info=True)
 
-	def abortShutdownCallback(self, choiceSubject):  # pylint: disable=unused-argument
+	def abortShutdownCallback(self, choiceSubject):
 		logger.notice("Shutdown aborted by user")
 		self._shutdownWarningRepetitionTime = self.event.eventConfig.shutdownWarningRepetitionTime
 		self._shutdownWarningTime = self.event.eventConfig.shutdownWarningTime
@@ -1329,7 +1320,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 		)
 		self.shutdownCancelled = True
 
-	def startShutdownCallback(self, choiceSubject):  # pylint: disable=unused-argument
+	def startShutdownCallback(self, choiceSubject):
 		logger.notice("Shutdown wait canceled by user")
 		self.shutdownWaitCancelled = True
 
@@ -1347,8 +1338,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			return True
 		return False
 
-	def processShutdownRequests(self):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-		try:  # pylint: disable=too-many-nested-blocks
+	def processShutdownRequests(self):
+		try:
 			shutdown = self.isShutdownRequested()
 			reboot = self.isRebootRequested()
 			if reboot or shutdown:
@@ -1410,7 +1401,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 								productIds = list(self.opsiclientd.getCacheService().getProductCacheState()["products"])
 								if productIds:
 									shutdownWarningMessage += f"\n{_('Products')}: {', '.join(productIds)}"
-							except Exception as stateErr:  # pylint: disable=broad-except
+							except Exception as stateErr:
 								logger.error(stateErr, exc_info=True)
 						self._messageSubject.setMessage(shutdownWarningMessage)
 
@@ -1514,9 +1505,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 										if hasattr(notifierHandle, "poll"):
 											notifierHandle.poll()
 										System.terminateProcess(processId=notifierPid)
-								except Exception:  # pylint: disable=broad-except
+								except Exception:
 									pass
-						except Exception as err:  # pylint: disable=broad-except
+						except Exception as err:
 							logger.error(err, exc_info=True)
 
 						self._messageSubject.setMessage("")
@@ -1592,7 +1583,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					self.opsiclientd.shutdownMachine()
 		except EventProcessingCanceled:
 			raise
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err, exc_info=True)
 
 	def inWorkingWindow(self):
@@ -1620,7 +1611,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			logger.info("Current time %s is outside the configured working window (%s-%s)", now, start, end)
 			return False
 
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error("Working window processing failed (start=%s, end=%s, now=%s): %s", start_str, end_str, now, err, exc_info=True)
 			return True
 
@@ -1647,7 +1638,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 				self._currentProgressSubjectProxy.detachObserver(self._detailSubjectProxy)
 				self._currentProgressSubjectProxy.reset()
 				self._overallProgressSubjectProxy.reset()
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error(err, exc_info=True)
 
 	def sync_config(self, wait_for_ending: bool = False):
@@ -1678,13 +1669,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 			else:
 				path.unlink()
 
-	def run(self):  # pylint: disable=too-many-branches,too-many-statements
+	def run(self):
 		with log_context({"instance": f"event processing {self.event.eventConfig.getId()}"}):
 			timelineEventId = None
 			notifierPids = []
 			notifierHandles = []
 
-			try:  # pylint: disable=too-many-nested-blocks
+			try:
 				if self.event.eventConfig.workingWindow:
 					if not self.inWorkingWindow():
 						logger.notice("We are not in the configured working window, stopping Event")
@@ -1713,7 +1704,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					self.startNotificationServer()
 					try:
 						self.setActionProcessorInfo()
-					except Exception as err:  # pylint: disable=broad-except
+					except Exception as err:
 						logger.error("Failed to set action processor info: %s", err)
 					self._messageSubject.setMessage(self.event.eventConfig.getActionMessage())
 
@@ -1786,12 +1777,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					if self.event.eventConfig.writeLogToService:
 						try:
 							self.writeLogToService()
-						except Exception as err:  # pylint: disable=broad-except
+						except Exception as err:
 							logger.error(err, exc_info=True)
 
 					try:
 						self.disconnectConfigService()
-					except Exception as err:  # pylint: disable=broad-except
+					except Exception as err:
 						logger.error(err, exc_info=True)
 
 					config.setTemporaryConfigServiceUrls([])
@@ -1848,7 +1839,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 					category="event_processing",
 					isError=True,
 				)
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error("Failed to process event %s: %s", self.event, err, exc_info=True)
 				timeline.addEvent(
 					title=f"Failed to process event {self.event.eventConfig.getName()}",
@@ -1869,7 +1860,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):  # pylint: disab
 						if psutil.pid_exists(notifierPid):
 							logger.trace("killing notifier with pid %s", notifierPid)
 							System.terminateProcess(processId=notifierPid)
-				except Exception as error:  # pylint: disable=broad-except
+				except Exception as error:
 					logger.error("Could not kill notifier: %s", error, exc_info=True)
 
 			self.opsiclientd.setBlockLogin(False)

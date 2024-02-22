@@ -89,7 +89,7 @@ class NoConfigOptionFoundException(ValueError):
 	pass
 
 
-class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
+class Config(metaclass=Singleton):
 	_initialized = False
 	WINDOWS_DEFAULT_PATHS = {
 		"global": {
@@ -252,7 +252,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			if not os.path.exists(baseDir):
 				try:
 					baseDir = os.path.abspath(os.path.dirname(sys.argv[0]))
-				except Exception:  # pylint: disable=broad-except
+				except Exception:
 					baseDir = "."
 		elif RUNNING_ON_MACOS:
 			baseDir = os.path.join("/usr", "local", "lib", "opsi-client-agent")
@@ -300,7 +300,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 							self.disabledEventTypes = ["gui startup", "daemon startup"]
 			try:
 				os.remove(self.restart_marker)
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error(err)
 		return product_id, opsi_script
 
@@ -331,7 +331,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			self._config["global"]["timeline_db"] = os.path.join(systemDrive, "opsi.org", "opsiclientd", "timeline.sqlite")
 			self._config["system"]["program_files_dir"] = System.getProgramFilesDir()
 
-			if sys.getwindowsversion()[0] == 5:  # pylint: disable=no-member
+			if sys.getwindowsversion()[0] == 5:
 				self._config["action_processor"]["run_as_user"] = "pcpatch"
 		else:
 			sslCertDir = os.path.join("/etc", "opsi-client-agent")
@@ -395,7 +395,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			return "opsi-winst"
 		return "opsi-script"
 
-	def set(self, section, option, value):  # pylint: disable=too-many-branches,too-many-statements
+	def set(self, section, option, value):
 		if not section:
 			section = "global"
 
@@ -416,7 +416,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			option = "suspend_bitlocker_on_reboot"
 
 		# Check if empty value is allowed
-		if (  # pylint: disable=too-many-boolean-expressions
+		if (
 			value == ""
 			and "command" not in option
 			and "productids" not in option
@@ -545,7 +545,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 					option = option.lower()
 					self.set(section.lower(), option, value)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			# An error occured while trying to read the config file
 			logger.error("Failed to read config file '%s': %s", self.get("global", "config_file"), err)
 			logger.error(err, exc_info=True)
@@ -557,7 +557,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		logger.notice("Config read")
 		logger.debug("Config is now:\n %s", objectToBeautifiedText(self._config))
 
-	def updateConfigFile(self, force=False):  # pylint: disable=too-many-branches
+	def updateConfigFile(self, force=False):
 		logger.info("Updating config file: '%s'", self.get("global", "config_file"))
 
 		if self._config_file_mtime and os.path.getmtime(self.get("global", "config_file")) > self._config_file_mtime:
@@ -619,7 +619,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				self._config_file_mtime = os.path.getmtime(self.get("global", "config_file"))
 			else:
 				logger.info("No need to write config file '%s', config file is up to date", self.get("global", "config_file"))
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			# An error occured while trying to write the config file
 			logger.error(err, exc_info=True)
 			logger.error("Failed to write config file '%s': %s", self.get("global", "config_file"), err)
@@ -649,7 +649,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 		return self.get("config_service", "url")
 
-	def getDepot(self, configService, event=None, productIds=None, masterOnly=False, forceDepotProtocol=None):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
+	def getDepot(self, configService, event=None, productIds=None, masterOnly=False, forceDepotProtocol=None):
 		productIds = forceProductIdList(productIds or [])
 		if not configService:
 			raise RuntimeError("Not connected to config service")
@@ -685,7 +685,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 					depotId = forceHostId(values[0])
 					depotIds.append(depotId)
 					logger.notice("Depot was set to '%s' from configState %s", depotId, config_id)
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.error("Failed to set depot id from values %s in configState %s: %s", values, config_id, err)
 			elif not masterOnly and (config_id == "clientconfig.depot.dynamic") and values:
 				dynamicDepot = forceBool(values[0])
@@ -751,11 +751,9 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 						"defaultGateway": None,
 					}
 					try:
-						gateways = netifaces.gateways()  # pylint: disable=c-extension-no-member
-						clientConfig["defaultGateway"], iface_name = gateways["default"][
-							netifaces.AF_INET  # pylint: disable=c-extension-no-member
-						]
-						addr = netifaces.ifaddresses(iface_name)[netifaces.AF_INET][0]  # pylint: disable=c-extension-no-member
+						gateways = netifaces.gateways()
+						clientConfig["defaultGateway"], iface_name = gateways["default"][netifaces.AF_INET]
+						addr = netifaces.ifaddresses(iface_name)[netifaces.AF_INET][0]
 						clientConfig["netmask"] = addr["netmask"]
 						clientConfig["ipAddress"] = addr["addr"]
 						logger.info(
@@ -774,20 +772,20 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 					logger.trace("depotSelectionAlgorithm:\n%s", depotSelectionAlgorithm)
 
 					currentLocals = locals()
-					exec(depotSelectionAlgorithm, None, currentLocals)  # pylint: disable=exec-used
+					exec(depotSelectionAlgorithm, None, currentLocals)
 					selectDepot = currentLocals["selectDepot"]
 
 					selectedDepot = selectDepot(clientConfig=clientConfig, masterDepot=masterDepot, alternativeDepots=alternativeDepots)
 					if not selectedDepot:
 						selectedDepot = masterDepot
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.error("Failed to select depot: %s", err, exc_info=True)
 			else:
 				logger.info("No alternative depot for products: %s", productIds)
 
 		return selectedDepot, depotProtocol
 
-	def selectDepotserver(self, configService, mode="mount", event=None, productIds=None, masterOnly=False):  # pylint: disable=too-many-arguments
+	def selectDepotserver(self, configService, mode="mount", event=None, productIds=None, masterOnly=False):
 		assert mode in ("mount", "sync")
 		productIds = forceProductIdList(productIds or [])
 
@@ -834,7 +832,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		logger.debug("Using username '%s' for depot connection", depotServerUsername)
 		return (depotServerUsername, depotServerPassword)
 
-	def getFromService(self, service_client: ServiceClient | JSONRPCBackend) -> None:  # pylint: disable=too-many-branches
+	def getFromService(self, service_client: ServiceClient | JSONRPCBackend) -> None:
 		"""Get settings from service"""
 		logger.notice("Getting config from service")
 		if not service_client:
@@ -900,7 +898,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 					if len(value) == 1:
 						value = value[0]
 					self.set(section=parts[1], option=parts[2], value=value)
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.error("Failed to process configState '%s': %s", config_id, err)
 
 		logger.notice("Got config from service")

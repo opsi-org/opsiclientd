@@ -8,26 +8,49 @@
 Factories for creation of event configs or generators.
 """
 
+from opsiclientd.Events.Custom import CustomEventConfig, CustomEventGenerator
+from opsiclientd.Events.DaemonShutdown import (
+	DaemonShutdownEventConfig,
+	DaemonShutdownEventGenerator,
+)
+from opsiclientd.Events.DaemonStartup import (
+	DaemonStartupEventConfig,
+	DaemonStartupEventGenerator,
+)
+from opsiclientd.Events.GUIStartup import (
+	GUIStartupEventConfig,
+	GUIStartupEventGenerator,
+)
+from opsiclientd.Events.Panic import PanicEventConfig, PanicEventGenerator
+from opsiclientd.Events.ProcessActionRequests import (
+	ProcessActionRequestsEventConfig,
+	ProcessActionRequestsEventGenerator,
+)
+from opsiclientd.Events.SwOnDemand import (
+	SwOnDemandEventConfig,
+	SwOnDemandEventGenerator,
+)
+from opsiclientd.Events.SyncCompleted import (
+	SyncCompletedEventConfig,
+	SyncCompletedEventGenerator,
+)
+from opsiclientd.Events.Timer import TimerEventConfig, TimerEventGenerator
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
-from opsiclientd.Events.Custom import CustomEventConfig, CustomEventGenerator
-from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventConfig, DaemonShutdownEventGenerator
-from opsiclientd.Events.DaemonStartup import DaemonStartupEventConfig, DaemonStartupEventGenerator
-from opsiclientd.Events.Panic import PanicEventConfig, PanicEventGenerator
-from opsiclientd.Events.ProcessActionRequests import ProcessActionRequestsEventConfig, ProcessActionRequestsEventGenerator
-from opsiclientd.Events.SwOnDemand import SwOnDemandEventConfig, SwOnDemandEventGenerator
-from opsiclientd.Events.SyncCompleted import SyncCompletedEventConfig, SyncCompletedEventGenerator
-from opsiclientd.Events.Timer import TimerEventConfig, TimerEventGenerator
-from opsiclientd.Events.GUIStartup import GUIStartupEventConfig, GUIStartupEventGenerator
-
 if RUNNING_ON_WINDOWS:
-	from opsiclientd.Events.Windows.SystemShutdown import SystemShutdownEventConfig, SystemShutdownEventGenerator
-	from opsiclientd.Events.Windows.UserLogin import UserLoginEventConfig, UserLoginEventGenerator
+	from opsiclientd.Events.Windows.SystemShutdown import (
+		SystemShutdownEventConfig,
+		SystemShutdownEventGenerator,
+	)
+	from opsiclientd.Events.Windows.UserLogin import (
+		UserLoginEventConfig,
+		UserLoginEventGenerator,
+	)
 
 __all__ = ["EventConfigFactory", "EventGeneratorFactory"]
 
 
-def EventConfigFactory(eventType, eventId, **kwargs):  # pylint: disable=invalid-name,too-many-return-statements
+def EventConfigFactory(eventType, eventId, **kwargs):
 	"""
 	Get an event config for the given type.
 
@@ -68,7 +91,7 @@ def EventConfigFactory(eventType, eventId, **kwargs):  # pylint: disable=invalid
 	raise TypeError(f"Unknown event config type '{eventType}'")
 
 
-def EventGeneratorFactory(opsiclientd, eventConfig):  # pylint: disable=invalid-name,too-many-return-statements
+def EventGeneratorFactory(opsiclientd, eventConfig):
 	"""
 	Get an event generator matching the given config type.
 

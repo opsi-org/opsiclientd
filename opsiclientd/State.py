@@ -54,7 +54,7 @@ class State(metaclass=Singleton):
 						jsonstr = stateFile.read()
 
 					self._state = json.loads(jsonstr)
-			except Exception as error:  # pylint: disable=broad-except
+			except Exception as error:
 				logger.error("Failed to read state file '%s': %s", self._stateFile, error)
 
 	def _writeStateFile(self):
@@ -66,10 +66,10 @@ class State(metaclass=Singleton):
 
 				with codecs.open(self._stateFile, "w", "utf8") as stateFile:
 					stateFile.write(jsonstr)
-			except Exception as error:  # pylint: disable=broad-except
+			except Exception as error:
 				logger.error("Failed to write state file '%s': %s", self._stateFile, error)
 
-	def get(self, name, default=None):  # pylint: disable=too-many-return-statements,too-many-branches
+	def get(self, name, default=None):
 		name = forceUnicode(name)
 		if name == "user_logged_in":
 			if RUNNING_ON_WINDOWS:
