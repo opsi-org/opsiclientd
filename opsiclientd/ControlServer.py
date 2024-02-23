@@ -1697,6 +1697,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		finally:
 			logon.close()
 
+		assert self.opsiclientd._controlPipe, "Control pipe not initialized"
 		if not self.opsiclientd._controlPipe.credentialProviderConnected():  # type: ignore[attr-defined]
 			for _unused in range(20):
 				if self.opsiclientd._controlPipe.credentialProviderConnected():  # type: ignore[attr-defined]
@@ -1787,6 +1788,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		logger.info("on_shutdown event completed")
 		return True
 
+	def showMessageOfTheDay(self, variant: str) -> None:
+		self.opsiclientd.showMOTD(variant)
+
 	def processActionRequests(self, product_ids=None):
 		event = config.get("control_server", "process_actions_event")
 		if not event or event == "auto":
@@ -1836,7 +1840,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		assert self.opsiclientd._permanent_service_connection, "Need permanent service connection for getLogs"
 		logger.notice("Delivering file %s", file_path)
 		with open(file_path, "rb") as file_handle:
-			response = self.opsiclientd._permanent_service_connection.service_client.post("/file-transfer", data=file_handle)
+			# requests accepts "Dictionary, list of tuples, bytes, or file-like object to send in the body of the Request" as data
+			response = self.opsiclientd._permanent_service_connection.service_client.post("/file-transfer", data=file_handle)  # type: ignore[call-overload]
 			logger.debug("Got response with status %s: %s", response.status_code, response.content.decode("utf-8"))
 			return json.loads(response.content.decode("utf-8"))
 

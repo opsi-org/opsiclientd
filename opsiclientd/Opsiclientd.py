@@ -23,6 +23,7 @@ import time
 import urllib.request
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any, Generator, Literal
 
 import psutil  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
@@ -39,10 +40,10 @@ from opsicommon.system import ensure_not_already_running
 from opsicommon.types import forceBool, forceInt, forceUnicode
 
 from opsiclientd import __version__, check_signature, config, notify_posix_terminals
-from opsiclientd.ControlPipe import ControlPipeFactory
+from opsiclientd.ControlPipe import ControlPipe, ControlPipeFactory
 from opsiclientd.ControlServer import ControlServer
 from opsiclientd.EventProcessing import EventProcessingThread
-from opsiclientd.Events.Basic import CannotCancelEventError, EventListener
+from opsiclientd.Events.Basic import CannotCancelEventError, Event, EventListener
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventGenerator
 from opsiclientd.Events.DaemonStartup import DaemonStartupEventGenerator
 from opsiclientd.Events.GUIStartup import (
@@ -87,7 +88,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._eptListLock = threading.Lock()
 		self._blockLogin = True
 		self._currentActiveDesktopName: dict[str, str] = {}
-		self._gui_waiter = None
+		self._gui_waiter: WaitForGUI | None = None
 
 		self._isRebootTriggered = False
 		self._isShutdownTriggered = False
@@ -109,30 +110,32 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._stopEvent.clear()
 
 		self._cacheService = None
-		self._controlPipe = None
-		self._controlServer = None
-		self._permanent_service_connection = None
+		self._controlPipe: ControlPipe | None = None
+		self._controlServer: ControlServer | None = None
+		self._permanent_service_connection: PermanentServiceConnection | None = None
 		self._selfUpdating = False
 
 		self._argv = list(sys.argv)
 		self._argv[0] = os.path.abspath(self._argv[0])
 
-	def start_permanent_service_connection(self):
+	def start_permanent_service_connection(self) -> None:
 		if self._permanent_service_connection and self._permanent_service_connection.running:
 			return
 
+		if not self._controlServer:
+			raise RuntimeError("Control server not started - cannot start permanent service connection")
 		logger.info("Starting permanent service connection")
 		self._permanent_service_connection = PermanentServiceConnection(self._controlServer._opsiclientdRpcInterface)
 		self._permanent_service_connection.start()
 
-	def stop_permanent_service_connection(self):
+	def stop_permanent_service_connection(self) -> None:
 		if self._permanent_service_connection and self._permanent_service_connection.running:
 			logger.info("Stopping permanent service connection")
 			self._permanent_service_connection.stop()
 			time.sleep(1)
 			self._permanent_service_connection = None
 
-	def self_update_from_url(self, url):
+	def self_update_from_url(self, url: str) -> None:
 		logger.notice("Self-update from url: %s", url)
 
 		epts = self.getEventProcessingThreads()
@@ -156,7 +159,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						file.write(response.read())
 			self.self_update_from_file(filename)
 
-	def self_update_from_file(self, filename):
+	def self_update_from_file(self, filename: str) -> None:
 		logger.notice("Self-update from file %s", filename)
 
 		test_file = "base_library.zip"
@@ -169,13 +172,13 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		self._selfUpdating = True
 		try:
-			with tempfile.TemporaryDirectory() as tmpdir:
-				tmpdir = Path(tmpdir)
+			with tempfile.TemporaryDirectory() as tmpdir_name:
+				tmpdir = Path(tmpdir_name)
 				destination = tmpdir / "content"
 				shutil.unpack_archive(filename=filename, extract_dir=destination)
 
-				bin_dir = destination
-				if not (bin_dir / test_file).exists():
+				bin_dir: Path | None = destination
+				if not (destination / test_file).exists():
 					bin_dir = None
 					for entry in destination.iterdir():
 						if (entry / test_file).exists():
@@ -202,19 +205,19 @@ class Opsiclientd(EventListener, threading.Thread):
 					inst1 = inst_dir.with_name("opsiclientd_bin1")
 					inst2 = inst_dir.with_name("opsiclientd_bin2")
 					link = inst_dir.with_name("opsiclientd_bin")
-					target = subprocess.run(
+					process_stdout = subprocess.run(
 						f"powershell.exe -ExecutionPolicy Bypass -Command \"Get-Item '{link}' | Select-Object -ExpandProperty Target\"",
 						text=True,
 						capture_output=True,
 						shell=False,
 						check=False,
 					).stdout.strip()
-					if link.exists() and not target:
+					if link.exists() and not process_stdout:
 						raise RuntimeError(f"{link} is not a link")
 
-					logger.info("Link '%s' is pointing to '%s'", link, target)
+					logger.info("Link '%s' is pointing to '%s'", link, process_stdout)
 
-					target = Path(target)
+					target = Path(process_stdout)
 					logger.info("Names: inst1=%r, inst2=%r, target=%r", inst1.name, inst2.name, target.name)
 					new_dir = inst2 if target.name == inst1.name else inst1
 
@@ -226,10 +229,10 @@ class Opsiclientd(EventListener, threading.Thread):
 					bin_dir.rename(new_dir)
 
 					logger.info("Creating link '%s' pointing to '%s'", link, new_dir)
-					out = subprocess.run(
+					process_stdout = subprocess.run(
 						f'rmdir "{link}" & mklink /j "{link}" "{new_dir}"', text=True, capture_output=True, check=False, shell=True
 					).stdout
-					logger.debug(out)
+					logger.debug(process_stdout)
 				else:
 					old_dir = inst_dir.with_name(f"{inst_dir.name}_old")
 					logger.info("Moving current installation dir '%s' to '%s'", inst_dir, old_dir)
@@ -248,7 +251,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		if disabled_event_types is None:
 			disabled_event_types = ["gui startup", "daemon startup"]
 
-		def _restart(waitSeconds=0):
+		def _restart(waitSeconds: int = 0) -> None:
 			time.sleep(waitSeconds)
 			timeline.addEvent(title="opsiclientd restart", category="system")
 			try:
@@ -263,7 +266,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				subprocess.Popen(
 					"net stop opsiclientd & net start opsiclientd",
 					shell=True,
-					creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
+					creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,  # type: ignore[attr-defined]  # only windows
 				)
 			else:
 				logger.notice("Executing: %s", self._argv)
@@ -273,7 +276,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.notice("Will restart in %d seconds", waitSeconds)
 		threading.Thread(target=_restart, args=(waitSeconds,)).start()
 
-	def setBlockLogin(self, blockLogin, handleNotifier=True):
+	def setBlockLogin(self, blockLogin: bool, handleNotifier: bool = True) -> None:
 		blockLogin = forceBool(blockLogin)
 		changed = self._blockLogin != blockLogin
 		self._blockLogin = blockLogin
@@ -325,21 +328,21 @@ class Opsiclientd(EventListener, threading.Thread):
 			except Exception as rpc_error:
 				logger.debug(rpc_error)
 
-	def loginUser(self, username, password):
+	def loginUser(self, username: str, password: str) -> None:
 		raise NotImplementedError(f"Not implemented on {platform.system()}")
 
-	def isRunning(self):
+	def isRunning(self) -> bool:
 		return self._running
 
-	def is_stopping(self):
+	def is_stopping(self) -> bool:
 		return self._stopEvent.is_set()
 
-	def waitForGUI(self, timeout=None):
+	def waitForGUI(self, timeout: float | None = None) -> None:
 		self._gui_waiter = WaitForGUI(self)
 		self._gui_waiter.wait(timeout)
 		self._gui_waiter = None
 
-	def createActionProcessorUser(self, recreate=True):
+	def createActionProcessorUser(self, recreate: bool = True) -> None:
 		if not config.get("action_processor", "create_user"):
 			return
 
@@ -366,7 +369,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			System.deleteUser(username=run_as_user)
 		System.createUser(username=run_as_user, password=self._actionProcessorUserPassword, groups=[System.getAdminGroupName()])
 
-	def deleteActionProcessorUser(self):
+	def deleteActionProcessorUser(self) -> None:
 		if not config.get("action_processor", "delete_user"):
 			return
 
@@ -381,14 +384,14 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._actionProcessorUserName = ""
 		self._actionProcessorUserPassword = ""
 
-	def run(self):
+	def run(self) -> None:
 		with log_context({"instance": "opsiclientd"}):
 			try:
 				self._run()
 			except Exception as err:
 				logger.error(err, exc_info=True)
 
-	def _run(self):
+	def _run(self) -> None:
 		ensure_not_already_running("opsiclientd")
 		self._running = True
 		self._opsiclientdRunningEventId = None
@@ -411,10 +414,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		setup(full=False)
 
 		@contextmanager
-		def getControlPipe():
+		def getControlPipe() -> Generator[None, None, None]:
 			logger.notice("Starting control pipe")
 			try:
 				self._controlPipe = ControlPipeFactory(self)
+				assert self._controlPipe
 				self._controlPipe.daemon = True
 				self._controlPipe.start()
 				logger.notice("Control pipe started")
@@ -425,14 +429,15 @@ class Opsiclientd(EventListener, threading.Thread):
 			finally:
 				logger.info("Stopping control pipe")
 				try:
-					self._controlPipe.stop()
-					self._controlPipe.join(2)
-					logger.info("Control pipe stopped")
+					if self._controlPipe:
+						self._controlPipe.stop()
+						self._controlPipe.join(2)
+						logger.info("Control pipe stopped")
 				except (NameError, RuntimeError) as stopError:
 					logger.debug("Stopping controlPipe failed: %s", stopError)
 
 		@contextmanager
-		def getControlServer():
+		def getControlServer() -> Generator[None, None, None]:
 			logger.notice("Starting control server")
 			self._controlServer = None
 			try:
@@ -467,7 +472,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						logger.debug("Stopping controlServer failed: %s", stopError)
 
 		@contextmanager
-		def getCacheService():
+		def getCacheService() -> Generator[Any | None, None, None]:  # not typing here for speedup (costly import)
 			cache_service = None
 			try:
 				logger.notice("Starting cache service")
@@ -491,7 +496,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						logger.debug("Failed to stop cache service: %s", stop_err)
 
 		@contextmanager
-		def getEventGeneratorContext():
+		def getEventGeneratorContext() -> Generator[None, None, None]:
 			logger.debug("Creating event generators")
 			createEventGenerators(self)
 
@@ -510,7 +515,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.info("Event generator %s stopped", eventGenerator)
 
 		@contextmanager
-		def getDaemonLoopingContext():
+		def getDaemonLoopingContext() -> Generator[None, None, None]:
 			with getEventGeneratorContext():
 				for event_generator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
 					try:
@@ -642,18 +647,18 @@ class Opsiclientd(EventListener, threading.Thread):
 
 			logger.info("Exiting opsiclientd thread")
 
-	def stop(self):
+	def stop(self) -> None:
 		logger.notice("Stopping %s", self)
 		if self._gui_waiter:
 			self._gui_waiter.stop()
 		self._stopEvent.set()
 
-	def getCacheService(self):
+	def getCacheService(self) -> Any:  # Not typing here for speedup (costly import)
 		if not self._cacheService:
 			raise RuntimeError("Cache service not started")
 		return self._cacheService
 
-	def canProcessEvent(self, event, can_cancel=False):
+	def canProcessEvent(self, event: Event, can_cancel: bool = False) -> bool:
 		# Always process panic events
 		if isinstance(event, PanicEvent):
 			return True
@@ -673,7 +678,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					)
 		return True
 
-	def cancelOthersAndWaitUntilReady(self):
+	def cancelOthersAndWaitUntilReady(self) -> None:
 		WAIT_SECONDS = 30
 		with self._eptListLock:
 			eptListCopy = self._eventProcessingThreads.copy()
@@ -704,7 +709,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				except RuntimeError as err:
 					logger.info("Could not mark config service cache dirty: %s", err, exc_info=True)
 
-	def processEvent(self, event):
+	def processEvent(self, event: Event) -> None:
 		logger.notice("Processing event %s", event)
 
 		description = f"Event {event.eventConfig.getId()} occurred\n"
@@ -758,21 +763,21 @@ class Opsiclientd(EventListener, threading.Thread):
 					except Exception as err:
 						logger.warning(err)
 
-	def getEventProcessingThreads(self):
+	def getEventProcessingThreads(self) -> list[EventProcessingThread]:
 		with self._eptListLock:
 			return self._eventProcessingThreads
 
-	def getEventProcessingThread(self, sessionId):
+	def getEventProcessingThread(self, sessionId: str) -> EventProcessingThread:
 		with self._eptListLock:
 			for ept in self._eventProcessingThreads:
 				if int(ept.getSessionId()) == int(sessionId):
 					return ept
 		raise LookupError(f"Event processing thread for session {sessionId} not found")
 
-	def processProductActionRequests(self, event):
+	def processProductActionRequests(self, event: Event) -> None:
 		logger.error("processProductActionRequests not implemented")
 
-	def getCurrentActiveDesktopName(self, sessionId=None):
+	def getCurrentActiveDesktopName(self, sessionId: str | None = None) -> str | None:
 		if not RUNNING_ON_WINDOWS:
 			return None
 
@@ -801,7 +806,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.debug("Returning current active dektop name '%s' for session %s", desktop, sessionId)
 		return desktop
 
-	def switchDesktop(self, desktop, sessionId=None):
+	def switchDesktop(self, desktop: str, sessionId: int | None = None) -> None:
 		if not ("opsiclientd_rpc" in config.getDict() and "command" in config.getDict()["opsiclientd_rpc"]):
 			raise RuntimeError("opsiclientd_rpc command not defined")
 
@@ -822,14 +827,14 @@ class Opsiclientd(EventListener, threading.Thread):
 		except Exception as err:
 			logger.error(err)
 
-	def systemShutdownInitiated(self):
+	def systemShutdownInitiated(self) -> None:
 		if not self.isRebootTriggered() and not self.isShutdownTriggered():
 			# This shutdown was triggered by someone else
 			# Reset shutdown/reboot requests to avoid reboot/shutdown on next boot
 			logger.notice("Someone triggered a reboot or a shutdown => clearing reboot request")
 			self.clearRebootRequest()
 
-	def rebootMachine(self, waitSeconds=3):
+	def rebootMachine(self, waitSeconds: int = 3) -> None:
 		self._isRebootTriggered = True
 		if self._controlPipe:
 			try:
@@ -840,7 +845,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		notify_posix_terminals(f"Rebooting in {waitSeconds} seconds")
 		System.reboot(wait=waitSeconds)
 
-	def shutdownMachine(self, waitSeconds=3):
+	def shutdownMachine(self, waitSeconds: int = 3) -> None:
 		self._isShutdownTriggered = True
 		if self._controlPipe:
 			try:
@@ -851,42 +856,75 @@ class Opsiclientd(EventListener, threading.Thread):
 		notify_posix_terminals(f"Shutdown in {waitSeconds} seconds")
 		System.shutdown(wait=waitSeconds)
 
-	def isRebootTriggered(self):
+	def isRebootTriggered(self) -> bool:
 		if self._isRebootTriggered:
 			return True
 		return False
 
-	def isShutdownTriggered(self):
+	def isShutdownTriggered(self) -> bool:
 		if self._isShutdownTriggered:
 			return True
 		return False
 
-	def clearRebootRequest(self):
+	def clearRebootRequest(self) -> None:
 		pass
 
-	def clearShutdownRequest(self):
+	def clearShutdownRequest(self) -> None:
 		pass
 
-	def isRebootRequested(self):
+	def isRebootRequested(self) -> bool:
 		return False
 
-	def isShutdownRequested(self):
+	def isShutdownRequested(self) -> bool:
 		return False
 
-	def isInstallationPending(self):
+	def isInstallationPending(self) -> bool:
 		return state.get("installation_pending", False)
 
-	def showPopup(self, message, mode="prepend", addTimestamp=True, displaySeconds=0):
-		if mode not in ("prepend", "append", "replace"):
-			mode = "prepend"
+	def getNotifierCommand(self) -> str:
+		notifierCommand = config.get("opsiclientd_notifier", "command")
+		if Path(config.get("opsiclientd_notifier", "motd_notifier")).exists():
+			notifierCommand = config.get("opsiclientd_notifier", "motd_notifier") + " -l 6 -p %port% -i %id%"
+		if not notifierCommand:
+			raise RuntimeError("opsiclientd_notifier.command not defined")
+		return notifierCommand
+
+	def getPopupPort(self) -> int:
 		port = config.get("notification_server", "popup_port")
 		if not port:
 			raise RuntimeError("notification_server.popup_port not defined")
+		return port
 
-		notifierCommand = config.get("opsiclientd_notifier", "command")
-		if not notifierCommand:
-			raise RuntimeError("opsiclientd_notifier.command not defined")
+	def showMOTD(self, variant: str = "startup") -> None:
+		if not self._permanent_service_connection:  # TODO: test without service connection
+			logger.info("No connection to service - not showing MOTD")
+			return
+		if variant == "startup":
+			motd_config = "opsiclientd.global.message_of_the_day_startup"
+		elif variant == "user":
+			motd_config = "opsiclientd.global.message_of_the_day_user"
+		else:
+			logger.error("Invalid variant of message of the day requested %r", variant)
+			return
+		host_id = config.get("global", "host_id")
+		data = self._permanent_service_connection.service_client.configState_getValues(motd_config, host_id)  # type: ignore[attr-defined]
+		message = data[host_id].get(motd_config, [""])[0]
+		if not message:
+			logger.debug("No MOTD message for type %r found", variant)
+			return
+		# TODO: test link clicking stuff
+		self.showPopup(message, mode="replace", addTimestamp=False, disable_links=(variant == "startup"))
+
+	def showPopup(
+		self, message: str, mode: str = "prepend", addTimestamp: bool = True, displaySeconds: int = 0, disable_links: bool = False
+	) -> None:
+		if mode not in ("prepend", "append", "replace"):
+			mode = "prepend"
+		port = self.getPopupPort()
+		notifierCommand = self.getNotifierCommand()
 		notifierCommand = f'{notifierCommand} -s {os.path.join("notifier", "popup.ini")}'
+		if disable_links:  # TODO: also disable at normal popup if not in login session?
+			notifierCommand = f"{notifierCommand} --disable-links"
 
 		if addTimestamp:
 			message = "=== " + time.strftime("%Y-%m-%d %H:%M:%S") + " ===\n" + message
@@ -899,7 +937,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						if subject.getId() == "message":
 							if mode == "prepend":
 								message = message + "\n\n" + subject.getMessage()
-							else:
+							elif mode == "append":
 								message = subject.getMessage() + "\n\n" + message
 							break
 				except Exception as err:
@@ -916,6 +954,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._popupNotificationServer = NotificationServer(
 					address="127.0.0.1", start_port=port, subjects=[popupSubject, choiceSubject]
 				)
+				assert self._popupNotificationServer, "Failed to create popup notification server"
 				self._popupNotificationServer.daemon = True
 				with log_context({"instance": "popup notification server"}):
 					if not self._popupNotificationServer.start_and_wait(timeout=30):
@@ -942,25 +981,6 @@ class Opsiclientd(EventListener, threading.Thread):
 					except Exception as err:
 						logger.error("Failed to start popup message notifier app in session %s on desktop %s: %s", sessionId, desktop, err)
 
-			class PopupClosingThread(threading.Thread):
-				def __init__(self, opsiclientd, seconds):
-					super().__init__()
-					self.opsiclientd = opsiclientd
-					self.seconds = seconds
-					self.stopped = False
-
-				def stop(self):
-					self.stopped = True
-
-				def run(self):
-					while not self.stopped:
-						time.sleep(1)
-						if time.time() > self.seconds:
-							break
-					if not self.stopped:
-						logger.debug("hiding popup window")
-						self.opsiclientd.hidePopup()
-
 			# last popup decides end time (even if unlimited)
 			if self._popupClosingThread and self._popupClosingThread.is_alive():
 				self._popupClosingThread.stop()
@@ -969,7 +989,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._popupClosingThread = PopupClosingThread(self, time.time() + displaySeconds)
 				self._popupClosingThread.start()
 
-	def hidePopup(self):
+	def hidePopup(self) -> None:
 		if self._popupNotificationServer:
 			try:
 				logger.info("Stopping popup message notification server")
@@ -978,7 +998,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			except Exception as err:
 				logger.error("Failed to stop popup notification server: %s", err)
 
-	def popupCloseCallback(self, choiceSubject):
+	def popupCloseCallback(self, choiceSubject: ChoiceSubject) -> None:
 		self.hidePopup()
 
 	def collectLogfiles(self, types: list[str] | None = None, max_age_days: int | None = None, timeline_db: bool = True) -> Path:
@@ -1018,8 +1038,28 @@ class Opsiclientd(EventListener, threading.Thread):
 		return outfile.parent / (outfile.name + f".{compression}")
 
 
+class PopupClosingThread(threading.Thread):
+	def __init__(self, opsiclientd: Opsiclientd, seconds: float) -> None:
+		super().__init__()
+		self.opsiclientd = opsiclientd
+		self.seconds = seconds
+		self.stopped = False
+
+	def stop(self) -> None:
+		self.stopped = True
+
+	def run(self) -> None:
+		while not self.stopped:
+			time.sleep(1)
+			if time.time() > self.seconds:
+				break
+		if not self.stopped:
+			logger.debug("hiding popup window")
+			self.opsiclientd.hidePopup()
+
+
 class WaitForGUI(EventListener):
-	def __init__(self, opsiclientd):
+	def __init__(self, opsiclientd: Opsiclientd) -> None:
 		self._opsiclientd = opsiclientd
 		self._guiStarted = threading.Event()
 		self._should_stop = False
@@ -1029,11 +1069,11 @@ class WaitForGUI(EventListener):
 		eventGenerator.addEventListener(self)
 		eventGenerator.start()
 
-	def stop(self):
+	def stop(self) -> None:
 		self._should_stop = True
 		self._guiStarted.set()
 
-	def processEvent(self, event):
+	def processEvent(self, event: Event) -> None:
 		logger.trace("check lock (ocd), currently %s -> locking if not True", self._opsiclientd.eventLock.locked())
 		# if triggered by Basic.py fire_event, lock is already acquired
 		if not self._opsiclientd.eventLock.locked():
@@ -1045,13 +1085,13 @@ class WaitForGUI(EventListener):
 			logger.trace("release lock (WaitForGUI)")
 			self._opsiclientd.eventLock.release()
 
-	def wait(self, timeout=None):
+	def wait(self, timeout: float | None = None) -> None:
 		self._guiStarted.wait(timeout)
 		if self._should_stop:
 			return
 		if not self._guiStarted.is_set():
 			logger.warning("Timed out after %d seconds while waiting for GUI", timeout)
 
-	def canProcessEvent(self, event, can_cancel=False):
+	def canProcessEvent(self, event: Event, can_cancel: bool = False) -> bool:
 		# WaitForGUI should handle all Events
 		return True
