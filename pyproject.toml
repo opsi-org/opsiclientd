@@ -31,7 +31,7 @@ indent = "\t"
 
 [tool.ruff]
 line-length = 140
-ignore = [ "F401", "E402", "F811",]
+lint.ignore = [ "F401", "E402", "F811",]
 
 [tool.poetry.dependencies]
 python = "^3.11,<3.12"
@@ -44,15 +44,18 @@ python-opsi = "^4.3.0.13"
 python-opsi-common = "^4.3.4"
 zeroconf = "^0.129"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 mock = "^5.0"
 mypy = "^1.4"
-pylint = "^2.5"
-pytest = "^7.1"
+pytest = "^8.0"
 pytest-cov = "^4.0"
-requests = "^2.25"
-ruff = "^0.1"
+ruff = "^0.2"
 pyinstaller = "5.13.0"
+types-pywin32 = "^306.0.0.20240130"
+types-psutil = "^5.9.5.20240205"
+types-pyopenssl = "^24.0.0.20240130"
+types-mock = "^5.1.0.20240106"
+types-requests = "^2.31.0.20240218"
 
 [tool.poetry.scripts]
 opsiclientd = "opsiclientd.__main__:opsiclientd"

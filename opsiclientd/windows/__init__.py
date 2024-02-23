@@ -11,8 +11,8 @@ opsiclientd.windows
 import threading
 import time
 
-import win32com.client  # pylint: disable=import-error
-import win32com.server.policy  # pylint: disable=import-error
+import win32com.client  # type: ignore[import]
+import win32com.server.policy  # type: ignore[import]
 from OPSI.System.Windows import (  # type: ignore[import]
 	createDesktop,
 	getActiveSessionId,
@@ -22,7 +22,7 @@ from OPSI.System.Windows import (  # type: ignore[import]
 	win32event,
 	win32process,
 )
-from opsicommon.logging import logger
+from opsicommon.logging import get_logger
 from opsicommon.types import forceBool, forceInt, forceUnicode, forceUnicodeLower
 
 # pyright: reportMissingImports=false
@@ -32,19 +32,21 @@ SENSGUID_PUBLISHER = "{5fee1bd6-5b9b-11d1-8dd2-00aa004abd5e}"
 SENSGUID_EVENTCLASS_LOGON = "{d5978630-5b9f-11d1-8dd2-00aa004abd5e}"
 
 # from EventSys.h
-PROGID_EventSystem = "EventSystem.EventSystem"  # pylint: disable=invalid-name
-PROGID_EventSubscription = "EventSystem.EventSubscription"  # pylint: disable=invalid-name
+PROGID_EventSystem = "EventSystem.EventSystem"
+PROGID_EventSubscription = "EventSystem.EventSubscription"
 
-IID_ISensLogon = "{d597bab3-5b9f-11d1-8dd2-00aa004abd5e}"  # pylint: disable=invalid-name
+IID_ISensLogon = "{d597bab3-5b9f-11d1-8dd2-00aa004abd5e}"
 
-wmi = None  # pylint: disable=invalid-name
-pythoncom = None  # pylint: disable=invalid-name
+wmi = None  # type: ignore[var-annotated]
+pythoncom = None  # type: ignore[var-annotated]
 importWmiAndPythoncomLock = threading.Lock()
+
+logger = get_logger("opsiclientd")
 
 
 def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
-	global wmi  # pylint: disable=global-statement,invalid-name
-	global pythoncom  # pylint: disable=global-statement,invalid-name
+	global wmi
+	global pythoncom
 	if importWmi and not pythoncom:
 		importPythoncom = True
 
@@ -55,16 +57,16 @@ def importWmiAndPythoncom(importWmi=True, importPythoncom=True):
 				try:
 					if not pythoncom and importPythoncom:
 						logger.debug("Importing pythoncom")
-						import pythoncom  # pylint: disable=import-error,import-outside-toplevel,redefined-outer-name
+						import pythoncom  # type: ignore[import]
 
 					if not wmi and importWmi:
 						logger.debug("Importing wmi")
 						pythoncom.CoInitialize()
 						try:
-							import wmi  # pylint: disable=import-error,import-outside-toplevel,redefined-outer-name
+							import wmi  # type: ignore[import]
 						finally:
 							pythoncom.CoUninitialize()
-				except Exception as import_error:  # pylint: disable=broad-except
+				except Exception as import_error:
 					logger.warning("Failed to import: %s, retrying in 2 seconds", import_error)
 					time.sleep(2)
 
@@ -94,31 +96,31 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 
 		event_system.Store(PROGID_EventSubscription, event_subscription)
 
-	def Logon(self, *args):  # pylint: disable=invalid-name
+	def Logon(self, *args):
 		logger.notice("Logon: %s", args)
 		self._callback("Logon", *args)
 
-	def Logoff(self, *args):  # pylint: disable=invalid-name
+	def Logoff(self, *args):
 		logger.notice("Logoff: %s", args)
 		self._callback("Logoff", *args)
 
-	def StartShell(self, *args):  # pylint: disable=invalid-name
+	def StartShell(self, *args):
 		logger.notice("StartShell: %s", args)
 		self._callback("StartShell", *args)
 
-	def DisplayLock(self, *args):  # pylint: disable=invalid-name
+	def DisplayLock(self, *args):
 		logger.notice("DisplayLock: %s", args)
 		self._callback("DisplayLock", *args)
 
-	def DisplayUnlock(self, *args):  # pylint: disable=invalid-name
+	def DisplayUnlock(self, *args):
 		logger.notice("DisplayUnlock: %s", args)
 		self._callback("DisplayUnlock", *args)
 
-	def StartScreenSaver(self, *args):  # pylint: disable=invalid-name
+	def StartScreenSaver(self, *args):
 		logger.notice("StartScreenSaver: %s", args)
 		self._callback("StartScreenSaver", *args)
 
-	def StopScreenSaver(self, *args):  # pylint: disable=invalid-name
+	def StopScreenSaver(self, *args):
 		logger.notice("StopScreenSaver: %s", args)
 		self._callback("StopScreenSaver", *args)
 
@@ -128,7 +130,7 @@ def start_pty(shell="powershell.exe", lines=30, columns=120):
 	try:
 		# Import of winpty may sometimes fail because of problems with the needed dll.
 		# Therefore we do not import at toplevel
-		from winpty import PtyProcess  # pylint: disable=import-error,import-outside-toplevel
+		from winpty import PtyProcess  # type: ignore[import]
 	except ImportError as err:
 		logger.error("Failed to start pty: %s", err, exc_info=True)
 		raise
@@ -143,7 +145,7 @@ def start_pty(shell="powershell.exe", lines=30, columns=120):
 	return (process.pid, read, write, process.setwinsize, process.close)
 
 
-def runCommandInSession(  # pylint: disable=too-many-arguments,too-many-locals,unused-argument,too-many-branches
+def runCommandInSession(
 	command,
 	sessionId=None,
 	desktop="default",
@@ -178,7 +180,7 @@ def runCommandInSession(  # pylint: disable=too-many-arguments,too-many-locals,u
 		logger.info("Creating new desktop '%s'", desktop.split("\\")[-1])
 		try:
 			createDesktop(desktop.split("\\")[-1])
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.warning(err)
 
 	userToken = getUserToken(sessionId, duplicateFrom)

@@ -34,12 +34,12 @@ def set_status_message(backend, session_id, message):
 		logger.debug("Not setting status message")
 		return
 	try:
-		backend.setStatusMessage(session_id, message)  # pylint: disable=no-member
-	except Exception as err:  # pylint: disable=broad-except
+		backend.setStatusMessage(session_id, message)
+	except Exception as err:
 		logger.warning("Failed to set status message: %s", err)
 
 
-def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+def main():
 	if len(sys.argv) != 17:
 		print(
 			f"Usage: {os.path.basename(sys.argv[0])} <hostId> <hostKey> <controlServerPort>"
@@ -49,7 +49,7 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 		)
 		sys.exit(1)
 
-	(  # pylint: disable=unbalanced-tuple-unpacking
+	(
 		hostId,
 		hostKey,
 		controlServerPort,
@@ -112,7 +112,7 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 		language = "en"
 		try:
 			language = locale.getlocale()[0].split("_")[0]
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.debug("Failed to find default language: %s", err)
 
 		def _(string):
@@ -128,7 +128,7 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 			sp = os.path.join(sp, "opsiclientd_data", "locale")
 			translation = gettext.translation("opsiclientd", sp, [language])
 			_ = translation.gettext
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.debug("Failed to load locale for %s from %s: %s", language, sp, err)
 
 		createEnvironment = bool(runAsUser and createEnvironment.lower() in ("yes", "true", "1"))
@@ -153,7 +153,7 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 
 			if depot_url.hostname.lower() not in ("127.0.0.1", "localhost", "::1"):
 				logger.notice("Mounting depot share %s", depotRemoteUrl)
-				set_status_message(be, sessionId, _("Mounting depot share %s") % depotRemoteUrl)  # pylint: disable=no-member
+				set_status_message(be, sessionId, _("Mounting depot share %s") % depotRemoteUrl)
 
 				if runAsUser or depot_url.scheme not in ("smb", "cifs"):
 					System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
@@ -177,7 +177,7 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 				depotShareMounted = True
 
 			logger.notice("Starting action processor")
-			set_status_message(be, sessionId, _("Action processor is running"))  # pylint: disable=no-member
+			set_status_message(be, sessionId, _("Action processor is running"))
 
 			if imp:
 				imp.runCommand(actionProcessorCommand, timeoutSeconds=actionProcessorTimeout)
@@ -185,8 +185,8 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 				System.execute(actionProcessorCommand, waitForEnding=True, timeout=actionProcessorTimeout)
 
 			logger.notice("Action processor ended")
-			set_status_message(be, sessionId, _("Action processor ended"))  # pylint: disable=no-member
-		except Exception as err:  # pylint: disable=broad-except
+			set_status_message(be, sessionId, _("Action processor ended"))
+		except Exception as err:
 			logger.error(err, exc_info=True)
 			error = f"Failed to process action requests: {err}"
 			logger.error(error)
@@ -197,16 +197,16 @@ def main():  # pylint: disable=too-many-locals,too-many-branches,too-many-statem
 			try:
 				logger.notice("Unmounting depot share")
 				System.umount(depotDrive)
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.debug("Caught exception in umount: %s", err)
 		if imp:
 			try:
 				imp.end()
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.debug("Caught exception in end of impersonation: %s", err)
 
 		if be:
 			try:
 				be.backend_exit()
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.debug("Caught exception in backend_exit: %s", err)

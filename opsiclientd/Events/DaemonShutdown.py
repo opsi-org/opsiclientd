@@ -8,13 +8,10 @@
 Daemon Shutdown Events
 """
 
-from opsiclientd.Events.Basic import Event, EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
+from opsiclientd.Events.Basic import Event, EventGenerator
 
-__all__ = [
-	'DaemonShutdownEvent', 'DaemonShutdownEventConfig',
-	'DaemonShutdownEventGenerator'
-]
+__all__ = ["DaemonShutdownEvent", "DaemonShutdownEventConfig", "DaemonShutdownEventGenerator"]
 
 
 class DaemonShutdownEventConfig(EventConfig):
@@ -24,17 +21,13 @@ class DaemonShutdownEventConfig(EventConfig):
 
 
 class DaemonShutdownEventGenerator(EventGenerator):
-
-	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
+	def createEvent(self, eventInfo={}):
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None
 
-		return DaemonShutdownEvent(
-			eventConfig=eventConfig,
-			eventInfo=eventInfo
-		)
+		return DaemonShutdownEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class DaemonShutdownEvent(Event): # pylint: disable=too-few-public-methods
+class DaemonShutdownEvent(Event):
 	pass

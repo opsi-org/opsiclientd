@@ -11,10 +11,7 @@ Events that get active once a system shuts down or restarts.
 from opsiclientd.Events.Basic import Event, EventGenerator
 from opsiclientd.Events.Windows.WMI import WMIEventConfig
 
-__all__ = [
-	'SystemShutdownEvent', 'SystemShutdownEventConfig',
-	'SystemShutdownEventGenerator'
-]
+__all__ = ["SystemShutdownEvent", "SystemShutdownEventConfig", "SystemShutdownEventGenerator"]
 
 
 class SystemShutdownEventConfig(WMIEventConfig):
@@ -27,5 +24,5 @@ class SystemShutdownEventGenerator(EventGenerator):
 	pass
 
 
-class SystemShutdownEvent(Event): # pylint: disable=too-few-public-methods
+class SystemShutdownEvent(Event):
 	pass

@@ -18,13 +18,14 @@ from pathlib import Path
 
 import packaging
 from cryptography import x509
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.x509.oid import NameOID
-from opsicommon.client.opsiservice import ServiceClient  # type: ignore[import]
-from opsicommon.logging import logger, secret_filter  # type: ignore[import]
-from opsicommon.ssl import as_pem, create_ca, create_server_cert  # type: ignore[import]
+from opsicommon.client.opsiservice import ServiceClient
+from opsicommon.logging import get_logger, secret_filter
+from opsicommon.ssl import as_pem, create_ca, create_server_cert
 from opsicommon.system import get_system_uuid
-from opsicommon.system.network import (  # type: ignore[import]
+from opsicommon.system.network import (
 	get_fqdn,
 	get_hostnames,
 	get_ip_addresses,
@@ -43,6 +44,7 @@ if not RUNNING_ON_WINDOWS:
 	WindowsError = RuntimeError
 
 config = Config()
+logger = get_logger("opsiclientd")
 
 CERT_RENEW_DAYS = 60
 SERVICES_PIPE_TIMEOUT_WINDOWS = 120000
@@ -76,7 +78,7 @@ def get_service_client(address: str | None = None, username: str | None = None, 
 	)
 
 
-def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many-statements,too-many-locals
+def setup_ssl(full: bool = False):
 	logger.info("Checking server cert")
 
 	key_file = config.get("control_server", "ssl_server_key_file")
@@ -86,6 +88,8 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 		server_cn = get_fqdn()
 	create = False
 	exists_self_signed = False
+	srv_crt: x509.Certificate | None = None
+	srv_key: RSAPrivateKey | None = None
 	if not os.path.exists(key_file) or not os.path.exists(cert_file):
 		create = True
 	else:
@@ -109,8 +113,11 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 
 			if not create:
 				with open(key_file, "rb") as file:
-					srv_key = load_pem_private_key(file.read(), password=None)
-		except Exception as err:  # pylint: disable=broad-except
+					loaded_key = load_pem_private_key(file.read(), password=None)
+					if not isinstance(loaded_key, RSAPrivateKey):
+						raise ValueError(f"Invalid key type: {type(loaded_key)} Recreating key")
+					srv_key = loaded_key
+		except Exception as err:
 			logger.error(err)
 			create = True
 
@@ -126,12 +133,16 @@ def setup_ssl(full: bool = False):  # pylint: disable=too-many-branches,too-many
 		service_client = get_service_client()
 		service_client.connect()
 		try:
-			pem = service_client.host_getTLSCertificate(server_cn)  # type: ignore[attr-defined] # pylint: disable=no-member
+			pem = service_client.host_getTLSCertificate(server_cn)  # type: ignore[attr-defined]
 			srv_crt = x509.load_pem_x509_certificate(pem.encode("utf-8"))
-			srv_key = load_pem_private_key(pem.encode("utf-8"), password=None)
+			loaded_key = load_pem_private_key(pem.encode("utf-8"), password=None)
+			if isinstance(loaded_key, RSAPrivateKey):
+				srv_key = loaded_key
+			else:
+				logger.error("Invalid key type: %r Recreating key", type(loaded_key))
 		finally:
 			service_client.disconnect()
-	except Exception as err:  # pylint: disable=broad-except
+	except Exception as err:
 		logger.warning("Failed to fetch tls certificate from server: %s", err)
 		if exists_self_signed:
 			return
@@ -239,16 +250,13 @@ def setup_firewall():
 
 def install_service_windows():
 	logger.notice("Installing windows service")
-	from opsiclientd.windows.service import (  # pylint: disable=import-outside-toplevel
-		handle_commandline,
-	)
+	from opsiclientd.windows.service import handle_commandline
 
 	handle_commandline(argv=["opsiclientd.exe", "--startup", "auto", "install"])
 
-	# pyright: reportMissingImports=false
-	import winreg  # pylint: disable=import-outside-toplevel,import-error
+	import winreg
 
-	import win32process  # type: ignore[import] # pylint: disable=import-outside-toplevel,import-error
+	import win32process  # type: ignore[import]
 
 	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Services\opsiclientd")
 	if win32process.IsWow64Process():
@@ -263,7 +271,7 @@ def install_service_windows():
 	current_timeout = 0
 	try:
 		current_timeout = winreg.QueryValueEx(key_handle, "ServicesPipeTimeout", 0)[0]
-	except Exception:  # pylint: disable=broad-except
+	except Exception:
 		logger.debug("Did not get ServicesPipeTimeout from registry")
 	# Insure to have timeout of at least SERVICES_PIPE_TIMEOUT_WINDOWS
 	if current_timeout < SERVICES_PIPE_TIMEOUT_WINDOWS:
@@ -295,7 +303,7 @@ def install_service():
 def opsi_service_setup(options=None):
 	try:
 		config.readConfigFile()
-	except Exception as err:  # pylint: disable=broad-except
+	except Exception as err:
 		logger.info(err)
 
 	if os.path.exists(config.ca_cert_file):
@@ -319,11 +327,11 @@ def opsi_service_setup(options=None):
 
 	try:
 		update_os_ca_store(allow_remove=False)
-	except Exception as err:  # pylint: disable=broad-except
+	except Exception as err:
 		logger.error(err, exc_info=True)
 
 	try:
-		clients = service_client.host_getObjects(id=config.get("global", "host_id"))  # type: ignore[attr-defined]   # pylint: disable=no-member
+		clients = service_client.host_getObjects(id=config.get("global", "host_id"))  # type: ignore[attr-defined]
 		if clients and clients[0] and clients[0].opsiHostKey:
 			config.set("global", "opsi_host_key", clients[0].opsiHostKey)
 			try:
@@ -335,8 +343,8 @@ def opsi_service_setup(options=None):
 					if system_uuid:
 						logger.info("Updating systemUUID to %r", system_uuid)
 						clients[0].systemUUID = system_uuid
-						service_client.host_updateObjects(clients)  # pylint: disable=no-member
-			except Exception as err:  # pylint: disable=broad-except
+						service_client.host_updateObjects(clients)
+			except Exception as err:
 				logger.error("Failed to update systemUUID: %s", err, exc_info=True)
 
 		config.getFromService(service_client)
@@ -350,8 +358,7 @@ def cleanup_registry_uninstall():
 		return
 
 	logger.notice("Cleanup registry uninstall information")
-	# pyright: reportMissingImports=false
-	import winreg  # pylint: disable=import-outside-toplevel,import-error
+	import winreg
 
 	modified = True
 	while modified:
@@ -363,7 +370,7 @@ def cleanup_registry_uninstall():
 					uninstall_key = winreg.EnumKey(key, idx)
 					logger.debug("Processing key %r", uninstall_key)
 				except WindowsError as err:
-					if err.errno == 22:  # type: ignore[attr-defined] # pylint: disable=no-member
+					if err.errno == 22:  # type: ignore[attr-defined]
 						logger.debug("No more subkeys")
 						break
 					logger.debug(err)
@@ -392,10 +399,9 @@ def cleanup_registry_environment_path():
 		return
 
 	logger.notice("Cleanup registry environment PATH variable")
-	# pyright: reportMissingImports=false
-	import winreg  # pylint: disable=import-outside-toplevel,import-error
+	import winreg
 
-	import win32process  # type: ignore[import] # pylint: disable=import-outside-toplevel,import-error
+	import win32process  # type: ignore[import]
 
 	key_handle = winreg.CreateKey(  # type: ignore[attr-defined]
 		winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
@@ -421,15 +427,14 @@ def cleanup_registry_environment_path():
 		winreg.CloseKey(key_handle)  # type: ignore[attr-defined]
 
 
-def setup_on_shutdown():  # pylint: disable=too-many-statements
+def setup_on_shutdown():
 	if not RUNNING_ON_WINDOWS:
 		return None
 
 	logger.notice("Creating opsi shutdown install policy")
-	# pyright: reportMissingImports=false
-	import winreg  # pylint: disable=import-outside-toplevel,import-error
+	import winreg
 
-	import win32process  # pylint: disable=import-outside-toplevel,import-error
+	import win32process
 
 	GPO_NAME = "opsi shutdown install policy"
 	BASE_KEYS = [
@@ -517,43 +522,43 @@ def setup(full: bool = False, options: Namespace | None = None) -> None:
 		opsi_service_setup(options)
 		try:
 			install_service()
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error("Failed to install service: %s", err, exc_info=True)
 			errors.append(str(err))
 
 	try:
 		setup_ssl(full)
-	except Exception as err:  # pylint: disable=broad-except
+	except Exception as err:
 		logger.error("Failed to setup ssl: %s", err, exc_info=True)
 		errors.append(str(err))
 
 	try:
 		cleanup_registry_uninstall()
-	except Exception as err:  # pylint: disable=broad-except
+	except Exception as err:
 		logger.error("Failed to clean cleanup_registry_uninstall: %s", err, exc_info=True)
 		errors.append(str(err))
 
 	if not config.get("control_server", "skip_setup_firewall"):
 		try:
 			setup_firewall()
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error("Failed to setup firewall: %s", err, exc_info=True)
 			errors.append(str(err))
 
 	try:
 		setup_on_shutdown()
-	except Exception as err:  # pylint: disable=broad-except
+	except Exception as err:
 		logger.error("Failed to setup on_shutdown: %s", err, exc_info=True)
 		errors.append(str(err))
 
 	try:
 		cleanup_control_server_files()
-	except Exception as err:  # pylint: disable=broad-except
+	except Exception as err:
 		logger.error("Failed to clean control server files: %s", err, exc_info=True)
 
 	try:
 		cleanup_registry_environment_path()
-	except Exception as err:  # pylint: disable=broad-except
+	except Exception as err:
 		logger.error("Failed to clean registry environment PATH: %s", err, exc_info=True)
 
 	logger.notice("Setup completed with %d errors", len(errors))

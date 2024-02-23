@@ -22,7 +22,7 @@ from threading import Lock, Thread
 from time import sleep, time
 from typing import Awaitable, Callable
 
-from opsicommon.logging import logger  # type: ignore[import]
+from opsicommon.logging import get_logger  # type: ignore[import]
 from opsicommon.messagebus import (
 	CONNECTION_USER_CHANNEL,
 	Error,
@@ -38,12 +38,15 @@ from opsicommon.messagebus import (
 
 processes: dict[str, Process] = {}
 processes_lock = Lock()
+logger = get_logger("opsiclientd")
 
 
 class Process(Thread):
 	block_size = 8192
 
-	def __init__(self, command: list[str], send_message_function: Callable, process_start_request: ProcessStartRequestMessage) -> None:
+	def __init__(
+		self, command: tuple[str, ...], send_message_function: Callable, process_start_request: ProcessStartRequestMessage
+	) -> None:
 		Thread.__init__(self, daemon=True)
 		self._command = command
 		self._proc: AsyncioProcess | None = None
@@ -68,7 +71,7 @@ class Process(Thread):
 		except TimeoutError as error:
 			logger.error("Failed to wait for stop of %r: %s", self, error, exc_info=False)
 
-	def wait_for_stop(self, timeout: int = 10.0) -> None:
+	def wait_for_stop(self, timeout: float = 10.0) -> None:
 		current_time = time()
 		while time() < current_time + timeout:
 			if not self.is_alive():
@@ -115,7 +118,7 @@ class Process(Thread):
 				self._proc = await asyncio.create_subprocess_shell(" ".join(self._command), stdin=PIPE, stdout=PIPE, stderr=PIPE)
 			else:
 				self._proc = await asyncio.create_subprocess_exec(*self._command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-		except Exception as error:  # pylint: disable=broad-except
+		except Exception as error:
 			logger.error(error, exc_info=True)
 			message = ProcessErrorMessage(
 				sender=CONNECTION_USER_CHANNEL,
@@ -134,7 +137,7 @@ class Process(Thread):
 				if match:
 					codepage = int(match.group(1))
 					encoding = f"cp{codepage}"
-			except Exception as error:  # pylint: disable=broad-except
+			except Exception as error:
 				logger.info("Failed to determine codepage, using default. %s", error)
 
 		message = ProcessStartEventMessage(
@@ -154,7 +157,7 @@ class Process(Thread):
 				sender=CONNECTION_USER_CHANNEL, channel=self.response_channel, process_id=self.process_id, exit_code=exit_code
 			)
 			await self.send_message(message)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err, exc_info=True)
 		finally:
 			with processes_lock:
@@ -175,7 +178,7 @@ class Process(Thread):
 		return f"{self._command[0]} ({info})"
 
 
-def process_messagebus_message(message: ProcessMessage, send_message: Callable, async_send_message: Awaitable) -> None:
+def process_messagebus_message(message: ProcessMessage, send_message: Callable, async_send_message: Callable) -> None:
 	with processes_lock:
 		process = processes.get(message.process_id)
 
@@ -189,6 +192,8 @@ def process_messagebus_message(message: ProcessMessage, send_message: Callable, 
 			else:
 				raise RuntimeError(f"Process already open: {process!r}")
 			return
+		if not process:
+			raise RuntimeError(f"Process {message.process_id} not found")
 		if isinstance(message, ProcessDataWriteMessage):
 			process.write_stdin(message.stdin)
 			return
@@ -196,7 +201,7 @@ def process_messagebus_message(message: ProcessMessage, send_message: Callable, 
 			process.stop()
 			return
 		raise RuntimeError("Invalid process id")
-	except Exception as err:  # pylint: disable=broad-except
+	except Exception as err:
 		logger.warning(err, exc_info=True)
 		if process:
 			process.stop()

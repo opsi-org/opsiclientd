@@ -14,10 +14,16 @@ OS it is running on.
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 if RUNNING_ON_WINDOWS:
-	from opsiclientd.Events.Windows.Custom import (
-		CustomEvent, CustomEventConfig, CustomEventGenerator)
+	from opsiclientd.Events.Windows.Custom import (  # type: ignore[assignment]
+		CustomEvent,
+		CustomEventConfig,
+		CustomEventGenerator,
+	)
 else:
-	from opsiclientd.Events.Posix.Custom import (
-		CustomEvent, CustomEventConfig, CustomEventGenerator)
+	from opsiclientd.Events.Posix.Custom import (  # type: ignore[assignment]
+		CustomEvent,
+		CustomEventConfig,
+		CustomEventGenerator,
+	)
 
-__all__ = ['CustomEvent', 'CustomEventConfig', 'CustomEventGenerator']
+__all__ = ["CustomEvent", "CustomEventConfig", "CustomEventGenerator"]

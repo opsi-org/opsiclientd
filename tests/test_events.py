@@ -10,7 +10,7 @@ test_events
 
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 
-from .utils import default_config  # pylint: disable=unused-import
+from .utils import default_config
 
 
 def testGettingEventConfiguration():
@@ -19,4 +19,4 @@ def testGettingEventConfiguration():
 	No check if the data is correct.
 	"""
 	configs = getEventConfigs()
-	assert configs, 'no event configurations read'
+	assert configs, "no event configurations read"

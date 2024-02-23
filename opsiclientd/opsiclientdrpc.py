@@ -15,7 +15,7 @@ import platform
 import sys
 
 # Do not remove this import, it's needed by using this module from CLI
-from OPSI import System  # pylint: disable=unused-import
+from OPSI import System  # type: ignore[import]
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.client.opsiservice import RPC_TIMEOUTS, ServiceClient
 from opsicommon.logging import (
@@ -57,7 +57,7 @@ class ArgumentParser(argparse.ArgumentParser):
 		return argparse.ArgumentParser.error(self, message)
 
 
-def main():  # pylint: disable=too-many-statements
+def main():
 	with log_context({"instance": os.path.basename(sys.argv[0])}):
 		parser = ArgumentParser()
 		parser.add_argument("--version", action="version", version=f"{__version__} [python-opsi-common={opsicommon_version}]")
@@ -99,13 +99,13 @@ def main():  # pylint: disable=too-many-statements
 				try:
 					password = get_opsi_host_key()
 					secret_filter.add_secrets(password)
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					raise RuntimeError(f"Failed to read opsi host key from config file: {err}") from err
 
 		except DeprecationWarning:
 			# Fallback to legacy comandline arguments
 			# <username> <password> <port> [debug-log-file] <rpc>
-			(username, password, port, rpc) = sys.argv[1:5]  # pylint: disable=unbalanced-tuple-unpacking
+			(username, password, port, rpc) = sys.argv[1:5]
 			secret_filter.add_secrets(password)
 			address = f"https://127.0.0.1:{port}/opsiclientd"
 			if len(sys.argv) > 5:
@@ -121,21 +121,16 @@ def main():  # pylint: disable=too-many-statements
 		)
 
 		try:
-			service_client = ServiceClient(  # pylint: disable=unused-variable
-				address=address,
-				username=username,
-				password=password,
-				verify="accept_all",
-				jsonrpc_create_methods=True,
-				max_time_diff=30.0
+			service_client = ServiceClient(
+				address=address, username=username, password=password, verify="accept_all", jsonrpc_create_methods=True, max_time_diff=30.0
 			)
 			service_client.connect()
 			method = rpc.split("(", 1)[0]
 			RPC_TIMEOUTS[method] = timeout
 			logger.notice(f"Executing: {rpc}")
-			result = eval(f"service_client.{rpc}")  # pylint: disable=eval-used
+			result = eval(f"service_client.{rpc}")
 			print(result)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err, exc_info=True)
 			print(f"Error: {err}", file=sys.stderr)
 			sys.exit(1)

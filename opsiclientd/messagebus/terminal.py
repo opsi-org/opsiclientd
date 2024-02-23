@@ -15,19 +15,23 @@ from pathlib import Path
 from queue import Empty, Queue
 from threading import Lock, Thread
 from time import sleep, time
-from typing import Callable, Dict, Optional
+from typing import Callable
 
-from opsicommon.logging import logger  # type: ignore[import]
+from opsicommon.logging import get_logger  # type: ignore[import]
 from opsicommon.messagebus import (  # type: ignore[import]
+	CONNECTION_USER_CHANNEL,
+	Error,
 	MessageType,
+	TerminalCloseEventMessage,
+	TerminalCloseRequestMessage,
+	TerminalDataReadMessage,
+	TerminalDataWriteMessage,
 	TerminalErrorMessage,
 	TerminalMessage,
-	TerminalCloseEventMessage,
-	TerminalDataReadMessage,
 	TerminalOpenEventMessage,
 	TerminalOpenRequestMessage,
 	TerminalResizeEventMessage,
-	CONNECTION_USER_CHANNEL,
+	TerminalResizeRequestMessage,
 )
 from psutil import AccessDenied, NoSuchProcess, Process  # type: ignore[import]
 
@@ -39,8 +43,10 @@ else:
 	from opsiclientd.posix import start_pty
 
 
-terminals: Dict[str, Terminal] = {}
+terminals: dict[str, Terminal] = {}
 terminals_lock = Lock()
+
+logger = get_logger("opsiclientd")
 
 
 class TerminalReaderThread(Thread):
@@ -62,19 +68,19 @@ class TerminalReaderThread(Thread):
 				if not data:  # EOF.
 					break
 				if not self._should_stop:
-					message = TerminalDataReadMessage(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+					message = TerminalDataReadMessage(
 						sender=CONNECTION_USER_CHANNEL,
 						channel=self.terminal.back_channel,
 						terminal_id=self.terminal.terminal_id,
 						data=data,
 					)
-					self.terminal.send_message(message)  # pylint: disable=no-member
+					self.terminal.send_message(message)
 				sleep(0.001)
 			except (IOError, EOFError) as err:
 				logger.debug(err)
 				self.terminal.close()
 				break
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				if not self._should_stop:
 					logger.error(
 						"Error in terminal reader thread: %s %s",
@@ -89,14 +95,14 @@ class TerminalReaderThread(Thread):
 		self._should_stop = True
 
 
-class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
+class Terminal(Thread):
 	default_rows = 30
 	max_rows = 100
 	default_cols = 120
 	max_cols = 300
 	idle_timeout = 600
 
-	def __init__(  # pylint: disable=too-many-arguments
+	def __init__(
 		self,
 		send_message_function: Callable,
 		terminal_open_request: TerminalOpenRequestMessage,
@@ -123,10 +129,8 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 			self.pty_write,
 			self.pty_set_size,
 			self.pty_stop,
-		) = start_pty(  # pylint: disable=attribute-defined-outside-init
-			shell=shell, lines=self.rows, columns=self.cols
-		)
-		self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init
+		) = start_pty(shell=shell, lines=self.rows, columns=self.cols)
+		self.terminal_reader_thread = TerminalReaderThread(self)
 
 	@property
 	def terminal_id(self) -> str:
@@ -134,9 +138,9 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 
 	@property
 	def back_channel(self) -> str:
-		return self._terminal_open_request.back_channel
+		return self._terminal_open_request.response_channel
 
-	def set_size(self, rows: int = None, cols: int = None, pty_set_size: bool = True) -> None:
+	def set_size(self, rows: int | None = None, cols: int | None = None, pty_set_size: bool = True) -> None:
 		self.rows = min(max(1, int(rows or self.default_rows)), self.max_rows)
 		self.cols = min(max(1, int(cols or self.default_cols)), self.max_cols)
 		if pty_set_size:
@@ -155,7 +159,7 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 	def run(self) -> None:
 		try:
 			self._run()
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err, exc_info=True)
 
 	def close(self) -> None:
@@ -171,10 +175,10 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 			self.pty_stop()
 			if self.terminal_id in terminals:
 				del terminals[self.terminal_id]
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err, exc_info=True)
 
-	def get_cwd(self) -> Optional[Path]:
+	def get_cwd(self) -> Path | None:
 		try:
 			proc = Process(self.pty_pid)
 		except (NoSuchProcess, ValueError):
@@ -192,7 +196,7 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 	def _run(self) -> None:
 		for var in self._context:
 			var.set(self._context[var])
-		message = TerminalOpenEventMessage(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+		toe_message = TerminalOpenEventMessage(
 			sender=CONNECTION_USER_CHANNEL,
 			channel=self.back_channel,
 			terminal_id=self.terminal_id,
@@ -200,7 +204,7 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 			rows=self.rows,
 			cols=self.cols,
 		)
-		self._send_message_function(message)
+		self._send_message_function(toe_message)
 		self.terminal_reader_thread.start()
 		while not self._should_stop:
 			try:
@@ -211,11 +215,11 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 					self.close()
 				continue
 			self._last_usage = time()
-			if message.type == MessageType.TERMINAL_DATA_WRITE:
+			if isinstance(message, TerminalDataWriteMessage):
 				self.pty_write(message.data)
-			elif message.type == MessageType.TERMINAL_RESIZE_REQUEST:
+			elif isinstance(message, TerminalResizeRequestMessage):
 				self.set_size(message.rows, message.cols)
-				message = TerminalResizeEventMessage(  # pylint: disable=unexpected-keyword-arg,no-value-for-parameter
+				message = TerminalResizeEventMessage(
 					sender=CONNECTION_USER_CHANNEL,
 					channel=self.back_channel,
 					terminal_id=self.terminal_id,
@@ -223,7 +227,7 @@ class Terminal(Thread):  # pylint: disable=too-many-instance-attributes
 					cols=self.cols,
 				)
 				self._send_message_function(message)
-			elif message.type == MessageType.TERMINAL_CLOSE_REQUEST:
+			elif isinstance(message, TerminalCloseRequestMessage):
 				self.close()
 
 
@@ -243,25 +247,23 @@ def process_messagebus_message(message: TerminalMessage, send_message: Callable)
 					terminals[message.terminal_id].start()
 			else:
 				# Resize to redraw screen
-				terminals[message.terminal_id].set_size(message.rows - 1, message.cols)
-				terminals[message.terminal_id].set_size(message.rows, message.cols)
+				if message.rows and message.cols:
+					terminals[message.terminal_id].set_size(message.rows - 1, message.cols)  # TODO: why?
+					terminals[message.terminal_id].set_size(message.rows, message.cols)
 			return
 		if terminal:
 			terminal.process_message(message)
 			return
 		raise RuntimeError("Invalid terminal id")
-	except Exception as err:  # pylint: disable=broad-except
+	except Exception as err:
 		logger.warning(err, exc_info=True)
 		if terminal:
 			terminal.close()
 		else:
 			msg = TerminalErrorMessage(
 				sender=CONNECTION_USER_CHANNEL,
-				channel=message.back_channel,
+				channel=message.response_channel,
 				terminal_id=message.terminal_id,
-				error={
-					"message": str(err),
-					"details": None,
-				},
+				error=Error(message=str(err), details=None),
 			)
 			send_message(msg)

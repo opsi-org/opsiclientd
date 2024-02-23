@@ -13,22 +13,24 @@ The classes are used to create named pipes for remote procedure calls.
 import os
 import socket
 import threading
-from datetime import datetime
 import time
 from ctypes import byref, c_char_p, c_ulong, create_string_buffer
+from datetime import datetime
 
-from OPSI.Backend.Backend import describeInterface
-from OPSI.Service.JsonRpc import JsonRpc
-from OPSI.Util import fromJson, toJson
-from opsicommon.logging import log_context, logger
+from OPSI.Backend.Backend import describeInterface  # type: ignore[import]
+from OPSI.Service.JsonRpc import JsonRpc  # type: ignore[import]
+from OPSI.Util import fromJson, toJson  # type: ignore[import]
+from opsicommon.logging import get_logger, log_context
 
 if os.name == "nt":
-	from ctypes import windll
+	from ctypes import windll  # type: ignore[attr-defined]
 else:
-	windll = None  # pylint: disable=invalid-name
+	windll = None
+
+logger = get_logger("opsiclientd")
 
 
-def ControlPipeFactory(opsiclientd):  # pylint: disable=invalid-name
+def ControlPipeFactory(opsiclientd):
 	if os.name == "posix":
 		return PosixControlDomainSocket(opsiclientd)
 	if os.name == "nt":
@@ -36,8 +38,8 @@ def ControlPipeFactory(opsiclientd):  # pylint: disable=invalid-name
 	raise NotImplementedError(f"Unsupported operating system: {os.name}")
 
 
-class ClientConnection(threading.Thread):  # pylint: disable=too-many-instance-attributes
-	def __init__(self, controller, connection, client_id):
+class ClientConnection(threading.Thread):
+	def __init__(self, controller, connection, client_id: str) -> None:
 		threading.Thread.__init__(self)
 		self._controller = controller
 		self._connection = connection
@@ -45,7 +47,7 @@ class ClientConnection(threading.Thread):  # pylint: disable=too-many-instance-a
 		self._readTimeout = 1
 		self._writeTimeout = 1
 		self._encoding = "utf-8"
-		self.clientInfo = []
+		self.clientInfo: list[str] = []
 		self.comLock = threading.Lock()
 		self._stopEvent = threading.Event()
 		self._stopEvent.clear()
@@ -76,11 +78,11 @@ class ClientConnection(threading.Thread):  # pylint: disable=too-many-instance-a
 									# Switch to new protocol
 									self.executeRpc(
 										"blockLogin",
-										[self._controller._opsiclientd._blockLogin],  # pylint: disable=protected-access
+										[self._controller._opsiclientd._blockLogin],
 										with_lock=False,
 									)
 					time.sleep(0.5)
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error(err, exc_info=True)
 			finally:
 				self.clientDisconnected()
@@ -91,7 +93,7 @@ class ClientConnection(threading.Thread):  # pylint: disable=too-many-instance-a
 	def read(self):
 		return ""
 
-	def write(self, data):  # pylint: disable=unused-argument
+	def write(self, data):
 		return False
 
 	def checkConnection(self):
@@ -113,13 +115,13 @@ class ClientConnection(threading.Thread):  # pylint: disable=too-many-instance-a
 					{"id": rpc.get("id"), "result": f"client {'/'.join(self.clientInfo)}/{self.client_id} registered", "error": None}
 				)
 			jsonrpc = JsonRpc(
-				instance=self._controller._opsiclientdRpcInterface,  # pylint: disable=protected-access
-				interface=self._controller._opsiclientdRpcInterface.getInterface(),  # pylint: disable=protected-access
+				instance=self._controller._opsiclientdRpcInterface,
+				interface=self._controller._opsiclientdRpcInterface.getInterface(),
 				rpc=rpc,
 			)
 			jsonrpc.execute()
 			return toJson(jsonrpc.getResponse())
-		except Exception as rpc_error:  # pylint: disable=broad-except
+		except Exception as rpc_error:
 			logger.error(rpc_error, exc_info=True)
 			return toJson({"id": None, "error": str(rpc_error)})
 
@@ -133,7 +135,7 @@ class ClientConnection(threading.Thread):  # pylint: disable=too-many-instance-a
 			request = {"id": rpc_id, "method": method, "params": params}
 			try:
 				if with_lock:
-					self.comLock.acquire()  # pylint: disable=consider-using-with
+					self.comLock.acquire()
 				try:
 					request_json = toJson(request)
 					logger.info("Sending request '%s' to client %s", request_json, self)
@@ -154,7 +156,7 @@ class ClientConnection(threading.Thread):  # pylint: disable=too-many-instance-a
 				finally:
 					if with_lock:
 						self.comLock.release()
-			except Exception as client_err:  # pylint: disable=broad-except
+			except Exception as client_err:
 				logger.error(client_err, exc_info=True)
 				return {"id": rpc_id, "error": str(client_err), "result": None}
 
@@ -166,7 +168,7 @@ class ControlPipe(threading.Thread):
 
 	connection_class = ClientConnection
 
-	def __init__(self, opsiclientd):
+	def __init__(self, opsiclientd) -> None:
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._opsiclientdRpcInterface = OpsiclientdRpcPipeInterface(self._opsiclientd)
@@ -192,10 +194,10 @@ class ControlPipe(threading.Thread):
 							self._clients.append(connection)
 							connection.daemon = True
 							connection.start()
-					except Exception as err1:  # pylint: disable=broad-except
+					except Exception as err1:
 						logger.error(err1, exc_info=True)
 						self.setup()
-			except Exception as err2:  # pylint: disable=broad-except
+			except Exception as err2:
 				logger.error(err2, exc_info=True)
 			self._running = False
 			self.teardown()
@@ -285,7 +287,7 @@ class PosixClientConnection(ClientConnection):
 			if not data:
 				self.clientDisconnected()
 			return data.decode(self._encoding)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.trace("Failed to read from socket: %s", err)
 		return None
 
@@ -298,7 +300,7 @@ class PosixClientConnection(ClientConnection):
 		self._connection.settimeout(self._writeTimeout)
 		try:
 			self._connection.sendall(data)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			raise RuntimeError(f"Failed to write to socket: {err}") from err
 
 
@@ -425,7 +427,7 @@ class NTControlPipe(ControlPipe):
 				windll.kernel32.FlushFileBuffers(self._pipe)
 				windll.kernel32.DisconnectNamedPipe(self._pipe)
 				windll.kernel32.CloseHandle(self._pipe)
-			except Exception:  # pylint: disable=broad-except
+			except Exception:
 				pass
 
 	def waitForClient(self):
@@ -468,8 +470,8 @@ class NTControlPipe(ControlPipe):
 
 
 class OpsiclientdRpcPipeInterface:
-	def __init__(self, opsiclientd):
-		from .Opsiclientd import Opsiclientd  # pylint: disable=import-outside-toplevel
+	def __init__(self, opsiclientd) -> None:
+		from .Opsiclientd import Opsiclientd
 
 		self.opsiclientd: Opsiclientd = opsiclientd
 
@@ -500,7 +502,7 @@ class OpsiclientdRpcPipeInterface:
 		return
 
 	def getBlockLogin(self):
-		return self.opsiclientd._blockLogin  # pylint: disable=protected-access
+		return self.opsiclientd._blockLogin
 
 	def isRebootRequested(self):
 		return self.isRebootTriggered()

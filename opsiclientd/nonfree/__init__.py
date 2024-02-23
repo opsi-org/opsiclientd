@@ -7,26 +7,28 @@
 Non-free parts of opsiclientd.
 """
 
-import time
 import base64
+import time
 from hashlib import md5
+
 from Crypto.Hash import MD5
 from Crypto.Signature import pkcs1_15
+from OPSI.Util import getPublicKey  # type: ignore[import]
+from opsicommon.logging import get_logger
 
-from OPSI.Util import getPublicKey
+logger = get_logger("opsiclientd")
 
-from opsicommon.logging import logger
 
-def verify_modules(backend_info, needed_modules=None): # pylint: disable=too-many-branches
+def verify_modules(backend_info, needed_modules=None):
 	logger.debug("Verifying modules file signature")
-	modules = backend_info['modules']
-	helpermodules = backend_info['realmodules']
+	modules = backend_info["modules"]
+	helpermodules = backend_info["realmodules"]
 	needed_modules = needed_modules or []
 
-	if not modules.get('customer'):
+	if not modules.get("customer"):
 		raise RuntimeError("No customer in modules file")
 
-	if not modules.get('valid'):
+	if not modules.get("valid"):
 		raise RuntimeError("Modules file invalid")
 
 	for needed_module in needed_modules:
@@ -34,8 +36,8 @@ def verify_modules(backend_info, needed_modules=None): # pylint: disable=too-man
 			raise RuntimeError(f"Module {needed_module} currently disabled")
 
 	if (
-		modules.get('expires', '') != 'never' and
-		time.mktime(time.strptime(modules.get('expires', '2000-01-01'), "%Y-%m-%d")) - time.time() <= 0
+		modules.get("expires", "") != "never"
+		and time.mktime(time.strptime(modules.get("expires", "2000-01-01"), "%Y-%m-%d")) - time.time() <= 0
 	):
 		raise RuntimeError("Modules file expired")
 
@@ -65,7 +67,7 @@ def verify_modules(backend_info, needed_modules=None): # pylint: disable=too-man
 
 	verified = False
 	if modules["signature"].startswith("{"):
-		s_bytes = int(modules['signature'].split("}", 1)[-1]).to_bytes(256, "big")
+		s_bytes = int(modules["signature"].split("}", 1)[-1]).to_bytes(256, "big")
 		try:
 			pkcs1_15.new(public_key).verify(MD5.new(data.encode()), s_bytes)
 			verified = True
@@ -74,10 +76,10 @@ def verify_modules(backend_info, needed_modules=None): # pylint: disable=too-man
 			pass
 	else:
 		h_int = int.from_bytes(md5(data.encode()).digest(), "big")
-		s_int = public_key._encrypt(int(modules["signature"])) # pylint: disable=protected-access
+		s_int = public_key._encrypt(int(modules["signature"]))
 		verified = h_int == s_int
 
 	if not verified:
 		raise RuntimeError("Modules file invalid")
 
-	logger.info("Modules file signature verified (customer: %s)", modules.get('customer'))
+	logger.info("Modules file signature verified (customer: %s)", modules.get("customer"))

@@ -13,30 +13,32 @@ import pytest
 
 try:
 	from opsiclientd.nonfree.Posix import OpsiclientdPosix
-	error_message = ""  # pylint: disable=invalid-name
+
+	error_message = ""
 except ImportError as err:
-	OpsiclientdPosix = None
-	error_message = str(err)  # pylint: disable=invalid-name
+	OpsiclientdPosix = None  # type: ignore
+	error_message = str(err)
 
 
 @pytest.mark.skipif(OpsiclientdPosix is None, reason=error_message)
 def test_requesting_reboot(tmpdir):
-	with mock.patch('opsiclientd.nonfree.Posix.OpsiclientdPosix._PID_DIR', str(tmpdir)):
+	with mock.patch("opsiclientd.nonfree.Posix.OpsiclientdPosix._PID_DIR", str(tmpdir)):
 		ocd = OpsiclientdPosix()
 		assert not ocd.isRebootRequested()
-		rebootFile = tmpdir / 'reboot'
-		with open(rebootFile, 'w', encoding="ascii"):
+		rebootFile = tmpdir / "reboot"
+		with open(rebootFile, "w", encoding="ascii"):
 			pass
 		ocd.clearRebootRequest()
 		assert not ocd.isRebootRequested()
 
+
 @pytest.mark.skipif(OpsiclientdPosix is None, reason=error_message)
 def test_requesting_shutdown(tmpdir):
-	with mock.patch('opsiclientd.nonfree.Posix.OpsiclientdPosix._PID_DIR', str(tmpdir)):
+	with mock.patch("opsiclientd.nonfree.Posix.OpsiclientdPosix._PID_DIR", str(tmpdir)):
 		ocd = OpsiclientdPosix()
 		assert not ocd.isShutdownRequested()
-		rebootFile = tmpdir / 'shutdown'
-		with open(rebootFile, 'w', encoding="ascii"):
+		rebootFile = tmpdir / "shutdown"
+		with open(rebootFile, "w", encoding="ascii"):
 			pass
 
 		ocd.clearShutdownRequest()

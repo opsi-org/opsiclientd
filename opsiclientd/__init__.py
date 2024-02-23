@@ -13,24 +13,22 @@ __version__ = "4.3.0.10"
 import argparse
 import http
 import os
-import shutil
 import sys
 import tempfile
 from logging.handlers import RotatingFileHandler
 from typing import Union
 
 import psutil
-from OPSI import __version__ as python_opsi_version
-from OPSI.System import execute, which
+from OPSI import __version__ as python_opsi_version  # type: ignore[import]
+from OPSI.System import execute, which  # type: ignore[import]
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import (
 	LOG_DEBUG,
 	LOG_NONE,
-	LOG_NOTICE,
 	LOG_TRACE,
 	get_all_handlers,
+	get_logger,
 	log_context,
-	logger,
 	logging_config,
 	set_filter_from_string,
 )
@@ -39,11 +37,12 @@ from opsiclientd.Config import Config
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 DEFAULT_STDERR_LOG_FORMAT = (
-	"%(log_color)s[%(opsilevel)d] [%(asctime)s.%(msecs)03d]%(reset)s [%(contextstring)-40s] %(message)s   (%(filename)s:%(lineno)d)"  # pylint: disable=line-too-long
+	"%(log_color)s[%(opsilevel)d] [%(asctime)s.%(msecs)03d]%(reset)s [%(contextstring)-40s] %(message)s   (%(filename)s:%(lineno)d)"
 )
 DEFAULT_FILE_LOG_FORMAT = DEFAULT_STDERR_LOG_FORMAT.replace("%(log_color)s", "").replace("%(reset)s", "")
 
 config = Config()
+logger = get_logger("opsiclientd")
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -91,7 +90,7 @@ def get_opsiclientd_pid() -> Union[int, None]:
 	return None
 
 
-def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = None):
+def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str | None = None):
 	if not os.path.isdir(log_dir):
 		log_dir = tempfile.gettempdir()
 	log_file = os.path.join(log_dir, "opsiclientd.log")
@@ -107,7 +106,7 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 			try:
 				# Rename existing log file from old to new format
 				os.rename(old_lf, new_lf)
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error("Failed to rename %s to %s: %s", old_lf, new_lf, err)
 
 	logging_config(
@@ -125,8 +124,8 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 		return f"{tmp[0]}_{int(tmp[2]) - 1}.{tmp[1]}"
 
 	handler = get_all_handlers(handler_type=RotatingFileHandler)[0]
-	handler.namer = namer
-	handler.doRollover()
+	handler.namer = namer  # type: ignore[attr-defined]
+	handler.doRollover()  # type: ignore[attr-defined]
 	if log_filter:
 		set_filter_from_string(log_filter)
 
@@ -149,7 +148,7 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 				logger.trace(args)
 
 	http.client.HTTPConnection.debuglevel = 1
-	http.client.print = log_http
+	http.client.print = log_http  # type: ignore[attr-defined]
 
 
 def check_signature(bin_dir):
@@ -157,7 +156,7 @@ def check_signature(bin_dir):
 	if not RUNNING_ON_WINDOWS:
 		return  # Not yet implemented
 
-	windowsVersion = sys.getwindowsversion()  # pylint: disable=no-member
+	windowsVersion = sys.getwindowsversion()
 	if windowsVersion.major < 6 or (windowsVersion.major == 6 and windowsVersion.minor < 4):
 		return  # Get-AuthenticodeSignature is only defined for versions since 2016
 
@@ -183,5 +182,5 @@ def notify_posix_terminals(message: str) -> None:
 		logger.debug("Executing %s", command)
 		try:
 			execute(command, shell=False)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.warning("Failed to notify users via 'wall': %s", err)

@@ -8,13 +8,10 @@
 Events for when a sync is completed.
 """
 
-from opsiclientd.Events.Basic import Event, EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
+from opsiclientd.Events.Basic import Event, EventGenerator
 
-__all__ = [
-	'SyncCompletedEvent', 'SyncCompletedEventConfig',
-	'SyncCompletedEventGenerator'
-]
+__all__ = ["SyncCompletedEvent", "SyncCompletedEventConfig", "SyncCompletedEventGenerator"]
 
 
 class SyncCompletedEventConfig(EventConfig):
@@ -22,8 +19,7 @@ class SyncCompletedEventConfig(EventConfig):
 
 
 class SyncCompletedEventGenerator(EventGenerator):
-
-	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
+	def createEvent(self, eventInfo={}):
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None
@@ -31,5 +27,5 @@ class SyncCompletedEventGenerator(EventGenerator):
 		return SyncCompletedEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class SyncCompletedEvent(Event): # pylint: disable=too-few-public-methods
+class SyncCompletedEvent(Event):
 	pass

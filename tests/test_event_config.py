@@ -25,40 +25,60 @@ from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
 from .utils import load_config_file
 
 
-@pytest.fixture(params=[
-	DaemonShutdownEventConfig, DaemonStartupEventConfig, EventConfig,
-	PanicEventConfig, TimerEventConfig, ProcessActionRequestsEventConfig,
-	SwOnDemandEventConfig, SyncCompletedEventConfig
-])
-
+@pytest.fixture(
+	params=[
+		DaemonShutdownEventConfig,
+		DaemonStartupEventConfig,
+		EventConfig,
+		PanicEventConfig,
+		TimerEventConfig,
+		ProcessActionRequestsEventConfig,
+		SwOnDemandEventConfig,
+		SyncCompletedEventConfig,
+	]
+)
 def configClass(request):
 	yield request.param
 
-def testCreatingNewEventConfig(configClass):  # pylint: disable=redefined-outer-name
+
+def testCreatingNewEventConfig(configClass):
 	configClass("testevent")
 
-def testAttributesForWhiteAndBlackListExist(configClass):  # pylint: disable=redefined-outer-name
+
+def testAttributesForWhiteAndBlackListExist(configClass):
 	config = configClass("testevent")
-	assert hasattr(config, 'excludeProductGroupIds')
-	assert hasattr(config, 'includeProductGroupIds')
+	assert hasattr(config, "excludeProductGroupIds")
+	assert hasattr(config, "includeProductGroupIds")
+
 
 def test_inheritance():
 	load_config_file("tests/data/event_config/1.conf")
 
 	configs = getEventConfigs()
-	assert sorted(list(configs)) == sorted([
-		'gui_startup', 'gui_startup{cache_ready}', 'gui_startup{installation_pending}', 'gui_startup{user_logged_in}',
-		'maintenance',
-		'net_connection',
-		'on_demand', 'on_demand{user_logged_in}',
-		'on_shutdown', 'on_shutdown{installation_pending}',
-		'opsiclientd_start', 'opsiclientd_start{cache_ready}',
-		'silent_install',
-		'software_on_demand',
-		'sync_completed', 'sync_completed{cache_ready_user_logged_in}', 'sync_completed{cache_ready}',
-		'timer', 'timer_silentinstall',
-		'user_login'
-	])
+	assert sorted(list(configs)) == sorted(
+		[
+			"gui_startup",
+			"gui_startup{cache_ready}",
+			"gui_startup{installation_pending}",
+			"gui_startup{user_logged_in}",
+			"maintenance",
+			"net_connection",
+			"on_demand",
+			"on_demand{user_logged_in}",
+			"on_shutdown",
+			"on_shutdown{installation_pending}",
+			"opsiclientd_start",
+			"opsiclientd_start{cache_ready}",
+			"silent_install",
+			"software_on_demand",
+			"sync_completed",
+			"sync_completed{cache_ready_user_logged_in}",
+			"sync_completed{cache_ready}",
+			"timer",
+			"timer_silentinstall",
+			"user_login",
+		]
+	)
 	assert configs["on_demand"]["shutdownWarningTime"] == 3600
 	assert configs["on_demand{user_logged_in}"]["shutdownWarningTime"] == 36000
 
