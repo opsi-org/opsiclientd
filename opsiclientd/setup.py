@@ -18,13 +18,14 @@ from pathlib import Path
 
 import packaging
 from cryptography import x509
+from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.x509.oid import NameOID
-from opsicommon.client.opsiservice import ServiceClient  # type: ignore[import]
-from opsicommon.logging import logger, secret_filter  # type: ignore[import]
-from opsicommon.ssl import as_pem, create_ca, create_server_cert  # type: ignore[import]
+from opsicommon.client.opsiservice import ServiceClient
+from opsicommon.logging import get_logger, secret_filter
+from opsicommon.ssl import as_pem, create_ca, create_server_cert
 from opsicommon.system import get_system_uuid
-from opsicommon.system.network import (  # type: ignore[import]
+from opsicommon.system.network import (
 	get_fqdn,
 	get_hostnames,
 	get_ip_addresses,
@@ -43,6 +44,7 @@ if not RUNNING_ON_WINDOWS:
 	WindowsError = RuntimeError
 
 config = Config()
+logger = get_logger("opsiclientd")
 
 CERT_RENEW_DAYS = 60
 SERVICES_PIPE_TIMEOUT_WINDOWS = 120000
@@ -86,6 +88,8 @@ def setup_ssl(full: bool = False):
 		server_cn = get_fqdn()
 	create = False
 	exists_self_signed = False
+	srv_crt: x509.Certificate | None = None
+	srv_key: RSAPrivateKey | None = None
 	if not os.path.exists(key_file) or not os.path.exists(cert_file):
 		create = True
 	else:
@@ -109,7 +113,10 @@ def setup_ssl(full: bool = False):
 
 			if not create:
 				with open(key_file, "rb") as file:
-					srv_key = load_pem_private_key(file.read(), password=None)
+					loaded_key = load_pem_private_key(file.read(), password=None)
+					if not isinstance(loaded_key, RSAPrivateKey):
+						raise ValueError(f"Invalid key type: {type(loaded_key)} Recreating key")
+					srv_key = loaded_key
 		except Exception as err:
 			logger.error(err)
 			create = True
@@ -128,7 +135,11 @@ def setup_ssl(full: bool = False):
 		try:
 			pem = service_client.host_getTLSCertificate(server_cn)  # type: ignore[attr-defined]
 			srv_crt = x509.load_pem_x509_certificate(pem.encode("utf-8"))
-			srv_key = load_pem_private_key(pem.encode("utf-8"), password=None)
+			loaded_key = load_pem_private_key(pem.encode("utf-8"), password=None)
+			if isinstance(loaded_key, RSAPrivateKey):
+				srv_key = loaded_key
+			else:
+				logger.error("Invalid key type: %r Recreating key", type(loaded_key))
 		finally:
 			service_client.disconnect()
 	except Exception as err:
@@ -243,7 +254,6 @@ def install_service_windows():
 
 	handle_commandline(argv=["opsiclientd.exe", "--startup", "auto", "install"])
 
-	# pyright: reportMissingImports=false
 	import winreg
 
 	import win32process  # type: ignore[import]
@@ -348,7 +358,6 @@ def cleanup_registry_uninstall():
 		return
 
 	logger.notice("Cleanup registry uninstall information")
-	# pyright: reportMissingImports=false
 	import winreg
 
 	modified = True
@@ -390,7 +399,6 @@ def cleanup_registry_environment_path():
 		return
 
 	logger.notice("Cleanup registry environment PATH variable")
-	# pyright: reportMissingImports=false
 	import winreg
 
 	import win32process  # type: ignore[import]
@@ -424,7 +432,6 @@ def setup_on_shutdown():
 		return None
 
 	logger.notice("Creating opsi shutdown install policy")
-	# pyright: reportMissingImports=false
 	import winreg
 
 	import win32process

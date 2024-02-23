@@ -16,7 +16,7 @@ try:
 
 	error_message = ""
 except ImportError as err:
-	OpsiclientdPosix = None
+	OpsiclientdPosix = None  # type: ignore
 	error_message = str(err)
 
 

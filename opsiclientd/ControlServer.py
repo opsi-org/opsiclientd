@@ -63,19 +63,14 @@ from OPSI.Service.Worker import (  # type: ignore[import]
 )
 from OPSI.Util.Log import truncateLogData  # type: ignore[import]
 from opsicommon.exceptions import OpsiServiceAuthenticationError
-from opsicommon.logging import (  # type: ignore[import]
+from opsicommon.logging import (
 	LEVEL_TO_NAME,
 	OPSI_LEVEL_TO_LEVEL,
+	get_logger,
 	log_context,
-	logger,
 	secret_filter,
 )
-from opsicommon.types import (  # type: ignore[import]
-	forceBool,
-	forceInt,
-	forceProductIdList,
-	forceUnicode,
-)
+from opsicommon.types import forceBool, forceInt, forceProductIdList, forceUnicode
 from opsicommon.utils import generate_opsi_host_key
 from twisted.internet import fdesc, reactor
 from twisted.internet.base import BasePort
@@ -102,6 +97,7 @@ else:
 
 config = Config()
 state = State()
+logger = get_logger("opsiclientd")
 
 
 class SSLContext(object):
@@ -345,7 +341,7 @@ if platform.system().lower() == "windows":
 		return skt
 
 	# Monkeypatch createInternetSocket to enable dual stack connections
-	BasePort.createInternetSocket = create_dualstack_internet_socket
+	BasePort.createInternetSocket = create_dualstack_internet_socket  # type: ignore[method-assign]
 
 
 class WorkerOpsiclientd(WorkerOpsi):
@@ -1410,7 +1406,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 					continue
 				os.remove(os.path.join(cert_dir, filename))
 
-	def updateOpsiCaCert(self, ca_cert_pem):
+	def updateOpsiCaCert(self, ca_cert_pem: str) -> None:
 		ca_certs: list[x509.Certificate] = []
 		for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", ca_cert_pem, re.DOTALL):
 			try:
@@ -1423,7 +1419,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				os.makedirs(os.path.dirname(config.ca_cert_file))
 			with open(config.ca_cert_file, "wb") as file:
 				for cert in ca_certs:
-					file.write(cert.public_bytes(encoding=serialization.Encoding.PEM).decode("ascii"))
+					file.write(cert.public_bytes(encoding=serialization.Encoding.PEM))
 
 	def getActiveSessions(self):
 		sessions = System.getActiveSessionInformation()
@@ -1661,7 +1657,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 			System.logoffSession(session_id)
-		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
+		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)  # type: ignore[attr-defined]
 
 		logon = win32security.LogonUser(
 			user_info["name"],
@@ -1675,8 +1671,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			for attempt in (1, 2, 3, 4, 5):
 				try:
 					# This will create the user home dir and ntuser.dat gets loaded
-					# Can fail if C:\users\default\ntuser.dat is ocked by an other process
-					hkey = win32profile.LoadUserProfile(logon, {"UserName": user_info["name"]})
+					# Can fail if C:\users\default\ntuser.dat is locked by an other process
+					hkey = win32profile.LoadUserProfile(logon, {"UserName": user_info["name"]})  # type: ignore[arg-type]
 					break
 				except pywintypes.error as err:
 					logger.warning("Failed to load user profile (attempt #%d): %s", attempt, err)
@@ -1687,23 +1683,23 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			try:
 				# env = win32profile.CreateEnvironmentBlock(logon, False)
 				str_sid = win32security.ConvertSidToStringSid(user_info["user_sid"])
-				reg_key = winreg.OpenKey(
-					winreg.HKEY_USERS,
+				reg_key = winreg.OpenKey(  # type: ignore[attr-defined]
+					winreg.HKEY_USERS,  # type: ignore[attr-defined]
 					str_sid + r"\Software\Microsoft\Windows NT\CurrentVersion\Winlogon",
 					0,
-					winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,
+					winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,  # type: ignore[attr-defined]
 				)
 				with reg_key:
-					winreg.SetValueEx(reg_key, "Shell", 0, winreg.REG_SZ, command)
+					winreg.SetValueEx(reg_key, "Shell", 0, winreg.REG_SZ, command)  # type: ignore[attr-defined]
 			finally:
-				win32profile.UnloadUserProfile(logon, hkey)
+				win32profile.UnloadUserProfile(logon, hkey)  # type: ignore[arg-type]
 
 		finally:
 			logon.close()
 
-		if not self.opsiclientd._controlPipe.credentialProviderConnected():
+		if not self.opsiclientd._controlPipe.credentialProviderConnected():  # type: ignore[attr-defined]
 			for _unused in range(20):
-				if self.opsiclientd._controlPipe.credentialProviderConnected():
+				if self.opsiclientd._controlPipe.credentialProviderConnected():  # type: ignore[attr-defined]
 					break
 				time.sleep(0.5)
 
@@ -1753,7 +1749,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 					if script.exists():
 						script.unlink()
 					if remove_user:
-						self.opsiclientd.cleanup_opsi_setup_user()
+						self.opsiclientd.cleanup_opsi_setup_user()  # type: ignore[attr-defined]
 		except Exception as err:
 			logger.error(err, exc_info=True)
 			raise
@@ -1832,11 +1828,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			result["active_events"] = list(set(active_events))
 		return result
 
-	def downloadFromDepot(self, product_id: str, destination: str, sub_path: str = None):
+	def downloadFromDepot(self, product_id: str, destination: str, sub_path: str | None = None):
 		return download_from_depot(product_id, Path(destination).resolve(), sub_path)
 
 	def getLogs(self, log_types: list[str] | None = None, max_age_days: int = 0) -> str:
 		file_path = self.opsiclientd.collectLogfiles(types=log_types, max_age_days=max_age_days)
+		assert self.opsiclientd._permanent_service_connection, "Need permanent service connection for getLogs"
 		logger.notice("Delivering file %s", file_path)
 		with open(file_path, "rb") as file_handle:
 			response = self.opsiclientd._permanent_service_connection.service_client.post("/file-transfer", data=file_handle)

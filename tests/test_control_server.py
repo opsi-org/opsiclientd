@@ -13,7 +13,7 @@ import socket
 import ssl
 import threading
 
-import netifaces
+import netifaces  # type: ignore[import]
 import pytest
 import requests
 

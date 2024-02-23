@@ -37,8 +37,8 @@ PROGID_EventSubscription = "EventSystem.EventSubscription"
 
 IID_ISensLogon = "{d597bab3-5b9f-11d1-8dd2-00aa004abd5e}"
 
-wmi = None
-pythoncom = None
+wmi = None  # type: ignore[var-annotated]
+pythoncom = None  # type: ignore[var-annotated]
 importWmiAndPythoncomLock = threading.Lock()
 
 logger = get_logger("opsiclientd")

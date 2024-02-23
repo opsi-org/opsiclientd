@@ -86,7 +86,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self.eventLock = threading.Lock()
 		self._eptListLock = threading.Lock()
 		self._blockLogin = True
-		self._currentActiveDesktopName = {}
+		self._currentActiveDesktopName: dict[str, str] = {}
 		self._gui_waiter = None
 
 		self._isRebootTriggered = False
@@ -990,7 +990,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		for stem_type in types:
 			type_patterns.append(re.compile(rf"{stem_type}[_0-9]*\.log"))
 
-		def collect_matching_files(path: Path, result_path: Path, patterns: list[re.Pattern], max_age_days: int) -> None:
+		def collect_matching_files(path: Path, result_path: Path, patterns: list[re.Pattern], max_age_days: int | None) -> None:
 			for content in path.iterdir():
 				if content.is_file() and any((re.match(pattern, content.name) for pattern in patterns)):
 					if not max_age_days or now - content.lstat().st_mtime < int(max_age_days) * 3600 * 24:

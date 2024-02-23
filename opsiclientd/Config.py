@@ -16,17 +16,12 @@ from urllib.parse import urlparse
 
 import netifaces  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
-from OPSI.Backend.JSONRPC import JSONRPCBackend
+from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
 from OPSI.Util import blowfishDecrypt, objectToBeautifiedText  # type: ignore[import]
 from OPSI.Util.File import IniFile  # type: ignore[import]
 from opsicommon.client.opsiservice import ServiceClient, ServiceVerificationFlags
-from opsicommon.logging import (  # type: ignore[import]
-	LOG_NOTICE,
-	logger,
-	logging_config,
-	secret_filter,
-)
-from opsicommon.types import (  # type: ignore[import]
+from opsicommon.logging import LOG_NOTICE, get_logger, logging_config, secret_filter
+from opsicommon.types import (
 	forceBool,
 	forceHostId,
 	forceList,
@@ -34,7 +29,7 @@ from opsicommon.types import (  # type: ignore[import]
 	forceUnicode,
 	forceUnicodeList,
 )
-from opsicommon.utils import Singleton  # type: ignore[import]
+from opsicommon.utils import Singleton
 
 from opsiclientd.SystemCheck import (
 	RUNNING_ON_DARWIN,
@@ -79,6 +74,8 @@ kGOsCMSImzajpmtonx3ccPgSOyEWyoEaGij6u80QtFkj9g==
 -----END CERTIFICATE-----"""
 
 OPSI_SETUP_USER_NAME = "opsisetupuser"
+
+logger = get_logger("opsiclientd")
 
 
 class SectionNotFoundException(ValueError):
@@ -864,9 +861,12 @@ class Config(metaclass=Singleton):
 				use_get_objects = True
 		if use_get_objects:
 			logger.info("Using configState_getObjects")
-			for config in service_client.config_getObjects(id=config_ids):
+			for config in service_client.config_getObjects(id=config_ids):  # type: ignore[union-attr]
 				config_states[config.id] = config.defaultValues
-			for config_state in service_client.configState_getObjects(objectId=self.get("global", "host_id"), configId=config_ids):
+			for config_state in service_client.configState_getObjects(  # type: ignore[union-attr]
+				objectId=self.get("global", "host_id"),
+				configId=config_ids,
+			):
 				config_states[config_state.configId] = config_state.values
 
 		for config_id, values in config_states.items():

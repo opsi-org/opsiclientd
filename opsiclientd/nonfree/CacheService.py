@@ -35,7 +35,7 @@ from OPSI.Util.Repository import (  # type: ignore[import]
 	DepotToLocalDirectorySychronizer,
 	getRepository,
 )
-from opsicommon.logging import log_context, logger
+from opsicommon.logging import get_logger, log_context
 from opsicommon.objects import LocalbootProduct, ProductOnClient
 from opsicommon.types import (
 	forceBool,
@@ -70,6 +70,7 @@ timeline = Timeline()
 sync_completed_lock = threading.Lock()
 RETENTION_HEARTBEAT_INTERVAL_DIFF = 10.0
 MIN_HEARTBEAT_INTERVAL = 1.0
+logger = get_logger("opsiclientd")
 
 
 class TransferSlotHeartbeat(threading.Thread):
@@ -82,13 +83,13 @@ class TransferSlotHeartbeat(threading.Thread):
 		self.slot_id = None
 
 	def acquire(self) -> dict[str, str | float]:
-		response = self.service_connection.depot_acquireTransferSlot(self.depot_id, self.client_id, self.slot_id)
+		response = self.service_connection.depot_acquireTransferSlot(self.depot_id, self.client_id, self.slot_id)  # type: ignore[attr-defined]
 		self.slot_id = response.get("slot_id")
 		logger.debug("Transfer slot Heartbeat %s, response: %s", self.slot_id, response)
 		return response
 
 	def release(self) -> None:
-		response = self.service_connection.depot_releaseTransferSlot(self.depot_id, self.client_id, self.slot_id)
+		response = self.service_connection.depot_releaseTransferSlot(self.depot_id, self.client_id, self.slot_id)  # type: ignore[attr-defined]
 		logger.debug("releaseTransferSlot response: %s", response)
 
 	def run(self) -> None:
@@ -98,7 +99,7 @@ class TransferSlotHeartbeat(threading.Thread):
 				if not response.get("retention"):
 					logger.error("TransferSlotHeartbeat lost transfer slot (and did not get new one)")
 					raise ConnectionError("TransferSlotHeartbeat lost transfer slot (and did not get new one)")
-				wait_time = max(response["retention"] - RETENTION_HEARTBEAT_INTERVAL_DIFF, MIN_HEARTBEAT_INTERVAL)
+				wait_time = max(float(response["retention"]) - RETENTION_HEARTBEAT_INTERVAL_DIFF, MIN_HEARTBEAT_INTERVAL)
 				logger.debug("Waiting %s seconds before reaquiring slot", wait_time)
 				end = datetime.now() + timedelta(seconds=wait_time)
 				while not self.should_stop and datetime.now() < end:
@@ -341,50 +342,50 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):
 		object_ids = forceObjectIdList(object_ids or [])
 		res: dict[str, dict[str, list[Any]]] = {}
 		if with_defaults:
-			configserver_id = self.host_getIdents(type="OpsiConfigserver")[0]
-			defaults = {c.id: c.defaultValues for c in self.config_getObjects(id=config_ids)}
-			res = {h.id: defaults.copy() for h in self.host_getObjects(attributes=["id"], id=object_ids)}
+			configserver_id = self.host_getIdents(type="OpsiConfigserver")[0]  # type: ignore[attr-defined]
+			defaults = {c.id: c.defaultValues for c in self.config_getObjects(id=config_ids)}  # type: ignore[attr-defined]
+			res = {h.id: defaults.copy() for h in self.host_getObjects(attributes=["id"], id=object_ids)}  # type: ignore[attr-defined]
 			client_id_to_depot_id = {
 				ctd.getObjectId(): ctd.getValues()[0]
-				for ctd in self.configState_getObjects(objectId=object_ids, configId="clientconfig.depot.id")
+				for ctd in self.configState_getObjects(objectId=object_ids, configId="clientconfig.depot.id")  # type: ignore[attr-defined]
 			}
 			depot_values: dict[str, dict[str, list[Any]]] = defaultdict(lambda: defaultdict(list))
 			depot_ids = list(set(client_id_to_depot_id.values()))
 			if configserver_id not in depot_ids:
 				depot_ids.append(configserver_id)
 			if depot_ids:
-				for config_state in self.configState_getObjects(configId=config_ids, objectId=depot_ids):
+				for config_state in self.configState_getObjects(configId=config_ids, objectId=depot_ids):  # type: ignore[attr-defined]
 					depot_values[config_state.getObjectId()][config_state.getConfigId()] = config_state.values
-			for host in self.host_getObjects(attributes=["id"], id=object_ids):
+			for host in self.host_getObjects(attributes=["id"], id=object_ids):  # type: ignore[attr-defined]
 				host_id = host.id
 				depot_id = client_id_to_depot_id.get(host_id)
 				if depot_id and depot_id in depot_values:
 					res[host_id].update(depot_values[depot_id])
 				elif not depot_id and configserver_id in depot_values:
 					res[host_id].update(depot_values[configserver_id])
-		for config_state in self.configState_getObjects(configId=config_ids, objectId=object_ids):
+		for config_state in self.configState_getObjects(configId=config_ids, objectId=object_ids):  # type: ignore[attr-defined]
 			if config_state.objectId not in res:
 				res[config_state.objectId] = {}
 			res[config_state.objectId][config_state.configId] = config_state.values
 		return res
 
-	def productOnClient_getActionGroups(self, clientId: str) -> list[dict]:
+	def productOnClient_getActionGroups(self, clientId: str) -> list[dict[str, Any]]:
 		"""
 		Get product action groups of action requests set for a client.
 		"""
-		product_on_clients = self.productOnClient_getObjects(clientId=clientId)
+		product_on_clients = self.productOnClient_getObjects(clientId=clientId)  # type: ignore[attr-defined]
 
 		action_groups: list[dict] = []
 		for group in self.get_product_action_groups(product_on_clients).get(clientId, []):
 			group.product_on_clients = [
-				poc.to_hash()
+				poc.to_hash()  # type: ignore[misc]
 				for poc in group.product_on_clients
-				if poc.actionRequest and poc.actionRequest != "none"  # type: ignore[misc]
+				if poc.actionRequest and poc.actionRequest != "none"
 			]
 			if group.product_on_clients:
 				group.dependencies = {
-					product_id: [d.to_hash() for d in dep]
-					for product_id, dep in group.dependencies.items()  # type: ignore[misc]
+					product_id: [d.to_hash() for d in dep]  # type: ignore[misc]
+					for product_id, dep in group.dependencies.items()
 				}
 				action_groups.append(group)  # type: ignore[arg-type]
 
@@ -420,9 +421,9 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):
 		the method behaves like `productOnClient_getObjects` (which is faster).
 		"""
 		if attributes and "actionSequence" not in attributes:
-			return self.productOnClient_getObjects(attributes, **filter)
+			return self.productOnClient_getObjects(attributes, **filter)  # type: ignore[attr-defined]
 
-		product_on_clients = self.productOnClient_getObjects(attributes, **filter)
+		product_on_clients = self.productOnClient_getObjects(attributes, **filter)  # type: ignore[attr-defined]
 		action_requests = {(poc.clientId, poc.productId): poc.actionRequest for poc in product_on_clients}
 		product_on_clients = self.productOnClient_generateSequence(product_on_clients)
 		for poc in product_on_clients:
@@ -437,12 +438,12 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):
 			raise ValueError(f"Invalid sort algorithm {sortAlgorithm!r}")
 
 		products_by_id_and_version: dict[tuple[str, str, str], LocalbootProduct] = {}
-		for product in self.product_getObjects(type="LocalbootProduct"):
+		for product in self.product_getObjects(type="LocalbootProduct"):  # type: ignore[attr-defined]
 			products_by_id_and_version[(product.id, product.productVersion, product.packageVersion)] = product
 
 		product_ids = []
 		product_on_clients = []
-		for product_on_depot in self.productOnDepot_getObjects(depotId=depotId, productType="LocalbootProduct"):
+		for product_on_depot in self.productOnDepot_getObjects(depotId=depotId, productType="LocalbootProduct"):  # type: ignore[attr-defined]
 			product = products_by_id_and_version.get(
 				(product_on_depot.productId, product_on_depot.productVersion, product_on_depot.packageVersion)
 			)
@@ -924,7 +925,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		self._dynamicBandwidth = forceBool(dynamicBandwidth)
 
 	def start_caching_or_get_waiting_time(self) -> float:
-		try_after_seconds = 0.0
+		try_after_seconds: float = 0.0
 		heartbeat_thread = None
 
 		depot_id = self._configService.configState_getClientToDepotserver(clientIds=config.get("global", "host_id"))[0]["depotId"]
@@ -933,7 +934,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 				heartbeat_thread = TransferSlotHeartbeat(self._configService, depot_id, config.get("global", "host_id"))
 				logger.notice("Acquiring transfer slot")
 				response = heartbeat_thread.acquire()
-				try_after_seconds = response.get("retry_after")
+				try_after_seconds = float(response.get("retry_after") or 0.0)
 				logger.debug("depot_acquireTransferSlot produced response %s", response)
 			if not try_after_seconds:
 				if heartbeat_thread:

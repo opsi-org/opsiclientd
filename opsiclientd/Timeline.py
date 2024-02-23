@@ -32,15 +32,17 @@ import sqlite3
 import threading
 import time
 
-from OPSI.Backend.SQLite import SQLite
-from OPSI.Util import timestamp
-from opsicommon.logging import logger
+from OPSI.Backend.SQLite import SQLite  # type: ignore[import]
+from OPSI.Util import timestamp  # type: ignore[import]
+from opsicommon.logging import get_logger
 from opsicommon.types import forceBool, forceInt, forceOpsiTimestamp, forceUnicode
 from opsicommon.utils import Singleton
 
 from opsiclientd.Config import Config
 
 config = Config()
+
+logger = get_logger("opsiclientd")
 
 TIMELINE_IMAGE_URL = "/timeline/timeline_js/images/"
 HTML_HEAD = """

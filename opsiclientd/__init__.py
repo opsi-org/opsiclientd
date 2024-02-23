@@ -13,24 +13,22 @@ __version__ = "4.3.0.10"
 import argparse
 import http
 import os
-import shutil
 import sys
 import tempfile
 from logging.handlers import RotatingFileHandler
 from typing import Union
 
 import psutil
-from OPSI import __version__ as python_opsi_version
-from OPSI.System import execute, which
+from OPSI import __version__ as python_opsi_version  # type: ignore[import]
+from OPSI.System import execute, which  # type: ignore[import]
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import (
 	LOG_DEBUG,
 	LOG_NONE,
-	LOG_NOTICE,
 	LOG_TRACE,
 	get_all_handlers,
+	get_logger,
 	log_context,
-	logger,
 	logging_config,
 	set_filter_from_string,
 )
@@ -44,6 +42,7 @@ DEFAULT_STDERR_LOG_FORMAT = (
 DEFAULT_FILE_LOG_FORMAT = DEFAULT_STDERR_LOG_FORMAT.replace("%(log_color)s", "").replace("%(reset)s", "")
 
 config = Config()
+logger = get_logger("opsiclientd")
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -91,7 +90,7 @@ def get_opsiclientd_pid() -> Union[int, None]:
 	return None
 
 
-def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = None):
+def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str | None = None):
 	if not os.path.isdir(log_dir):
 		log_dir = tempfile.gettempdir()
 	log_file = os.path.join(log_dir, "opsiclientd.log")
@@ -125,8 +124,8 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 		return f"{tmp[0]}_{int(tmp[2]) - 1}.{tmp[1]}"
 
 	handler = get_all_handlers(handler_type=RotatingFileHandler)[0]
-	handler.namer = namer
-	handler.doRollover()
+	handler.namer = namer  # type: ignore[attr-defined]
+	handler.doRollover()  # type: ignore[attr-defined]
 	if log_filter:
 		set_filter_from_string(log_filter)
 
@@ -149,7 +148,7 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str = N
 				logger.trace(args)
 
 	http.client.HTTPConnection.debuglevel = 1
-	http.client.print = log_http
+	http.client.print = log_http  # type: ignore[attr-defined]
 
 
 def check_signature(bin_dir):

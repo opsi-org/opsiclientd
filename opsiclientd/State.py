@@ -15,8 +15,8 @@ import threading
 from pathlib import Path
 
 import psutil
-from OPSI import System
-from opsicommon.logging import logger
+from OPSI import System  # type: ignore[import]
+from opsicommon.logging import get_logger
 from opsicommon.types import forceBool, forceUnicode
 from opsicommon.utils import Singleton
 
@@ -28,6 +28,7 @@ from opsiclientd.SystemCheck import (
 )
 
 config = Config()
+logger = get_logger("opsiclientd")
 
 
 class State(metaclass=Singleton):

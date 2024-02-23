@@ -14,17 +14,17 @@ import sys
 import time
 from signal import SIGHUP, SIGINT, SIGTERM
 
-import opsicommon.logging
-from opsicommon.logging import LOG_NONE
+from opsicommon.logging import LOG_NONE, get_logger, log_context, logging_config
 from opsicommon.logging import init_logging as oc_init_logging
-from opsicommon.logging import logger, logging_config
 
 from opsiclientd import DEFAULT_STDERR_LOG_FORMAT, init_logging, parser
 from opsiclientd.Config import Config
 from opsiclientd.nonfree.Posix import OpsiclientdPosix
+from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.setup import setup
 
-opsiclientd = None
+opsiclientd: Opsiclientd | None = None
+logger = get_logger("opsiclientd")
 
 
 def signal_handler(signo, stackFrame):
@@ -101,7 +101,7 @@ def main():
 
 	init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
 
-	with opsicommon.logging.log_context({"instance", "opsiclientd"}):
+	with log_context({"instance", "opsiclientd"}):
 		if options.signalHandlers:
 			logger.debug("Registering signal handlers")
 			signal.signal(SIGHUP, signal.SIG_IGN)  # ignore SIGHUP

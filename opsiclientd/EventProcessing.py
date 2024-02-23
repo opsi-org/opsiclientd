@@ -72,7 +72,7 @@ from opsiclientd.utils import (
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.windows import runCommandInSession
 else:
-	from OPSI.System import runCommandInSession
+	from OPSI.System import runCommandInSession  # type: ignore
 
 config = Config()
 state = State()

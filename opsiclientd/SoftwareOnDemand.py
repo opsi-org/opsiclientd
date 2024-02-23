@@ -10,10 +10,10 @@ Self-service functionality.
 
 import os
 
-from OPSI.Service.Resource import ResourceOpsi
-from OPSI.Service.Worker import WorkerOpsiJsonRpc
+from OPSI.Service.Resource import ResourceOpsi  # type: ignore[import]
+from OPSI.Service.Worker import WorkerOpsiJsonRpc  # type: ignore[import]
 from opsicommon.exceptions import OpsiServiceAuthenticationError
-from opsicommon.logging import log_context, logger
+from opsicommon.logging import get_logger, log_context
 from twisted.internet import defer
 
 from opsiclientd.Config import Config
@@ -23,6 +23,7 @@ from opsiclientd.OpsiService import ServiceConnection
 
 config = Config()
 service_connection = ServiceConnection()
+logger = get_logger("opsiclientd")
 
 
 class WorkerKioskJsonRpc(WorkerOpsiJsonRpc):
@@ -51,11 +52,11 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc):
 			WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 			self._auth_module = None
 			if os.name == "posix":
-				import OPSI.Backend.Manager.Authentication.PAM
+				import OPSI.Backend.Manager.Authentication.PAM  # type: ignore[import]
 
 				self._auth_module = OPSI.Backend.Manager.Authentication.PAM.PAMAuthentication()
 			elif os.name == "nt":
-				import OPSI.Backend.Manager.Authentication.NT
+				import OPSI.Backend.Manager.Authentication.NT  # type: ignore[import]
 
 				self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
 

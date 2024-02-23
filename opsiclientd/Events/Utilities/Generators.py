@@ -14,6 +14,7 @@ from opsicommon.logging import logger
 from opsicommon.types import forceUnicode
 
 from opsiclientd.Config import Config
+from opsiclientd.Events.Basic import EventGenerator
 from opsiclientd.Events.Panic import PanicEventConfig
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Factories import (
@@ -29,7 +30,7 @@ __all__ = [
 ]
 
 EVENT_CONFIG_TYPE_PANIC = "panic"
-_EVENT_GENERATORS = {}
+_EVENT_GENERATORS: dict[str, EventGenerator] = {}
 
 config = Config()
 

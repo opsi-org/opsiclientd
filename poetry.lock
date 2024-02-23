@@ -2104,6 +2104,57 @@ url = "https://pypi.uib.gmbh/simple"
 reference = "uibpypi"
 
 [[package]]
+name = "types-mock"
+version = "5.1.0.20240106"
+description = "Typing stubs for mock"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "types-mock-5.1.0.20240106.tar.gz", hash = "sha256:13ca379d5710ccb3f18f69ade5b08881874cb83383d8fb49b1d4dac9d5c5d090"},
+    {file = "types_mock-5.1.0.20240106-py3-none-any.whl", hash = "sha256:3d116955495935b0bcba14954b38d97e507cd43eca3e3700fc1b8e4f5c6bf2c7"},
+]
+
+[package.source]
+type = "legacy"
+url = "https://pypi.uib.gmbh/simple"
+reference = "uibpypi"
+
+[[package]]
+name = "types-psutil"
+version = "5.9.5.20240205"
+description = "Typing stubs for psutil"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "types-psutil-5.9.5.20240205.tar.gz", hash = "sha256:51df36a361aa597bf483dcc5b58f2ab7aa87452a36d2da97c90994d6a81ef743"},
+    {file = "types_psutil-5.9.5.20240205-py3-none-any.whl", hash = "sha256:3ec9bd8b95a64fe1269241d3ffb74b94a45df2d0391da1402423cd33f29745ca"},
+]
+
+[package.source]
+type = "legacy"
+url = "https://pypi.uib.gmbh/simple"
+reference = "uibpypi"
+
+[[package]]
+name = "types-pyopenssl"
+version = "24.0.0.20240130"
+description = "Typing stubs for pyOpenSSL"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "types-pyOpenSSL-24.0.0.20240130.tar.gz", hash = "sha256:c812e5c1c35249f75ef5935708b2a997d62abf9745be222e5f94b9595472ab25"},
+    {file = "types_pyOpenSSL-24.0.0.20240130-py3-none-any.whl", hash = "sha256:24a255458b5b8a7fca8139cf56f2a8ad5a4f1a5f711b73a5bb9cb50dc688fab5"},
+]
+
+[package.dependencies]
+cryptography = ">=35.0.0"
+
+[package.source]
+type = "legacy"
+url = "https://pypi.uib.gmbh/simple"
+reference = "uibpypi"
+
+[[package]]
 name = "types-pywin32"
 version = "306.0.0.20240130"
 description = "Typing stubs for pywin32"
@@ -2113,6 +2164,25 @@ files = [
     {file = "types-pywin32-306.0.0.20240130.tar.gz", hash = "sha256:16ec2059a2b5e40c13e533f2bf8e5a46788efe058e332c46ddce1f56d1ccc527"},
     {file = "types_pywin32-306.0.0.20240130-py3-none-any.whl", hash = "sha256:85dbc541b1161279aea8c471ac1b157ef1ab221ead53ce7f4fdc4d7644d1e44e"},
 ]
+
+[package.source]
+type = "legacy"
+url = "https://pypi.uib.gmbh/simple"
+reference = "uibpypi"
+
+[[package]]
+name = "types-requests"
+version = "2.31.0.20240218"
+description = "Typing stubs for requests"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "types-requests-2.31.0.20240218.tar.gz", hash = "sha256:f1721dba8385958f504a5386240b92de4734e047a08a40751c1654d1ac3349c5"},
+    {file = "types_requests-2.31.0.20240218-py3-none-any.whl", hash = "sha256:a82807ec6ddce8f00fe0e949da6d6bc1fbf1715420218a9640d695f70a9e5a9b"},
+]
+
+[package.dependencies]
+urllib3 = ">=2"
 
 [package.source]
 type = "legacy"
@@ -2398,4 +2468,4 @@ reference = "uibpypi"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11,<3.12"
-content-hash = "fd313dd3d97a82e3ed61d2aaa839c95e518febf0f01698cc42d3ef31b1a7df51"
+content-hash = "ec76cf34d4f32864f73e7c3470fb04a04245f1f7be63b1afed790da1731b1e94"

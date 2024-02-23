@@ -17,15 +17,17 @@ import time
 from ctypes import byref, c_char_p, c_ulong, create_string_buffer
 from datetime import datetime
 
-from OPSI.Backend.Backend import describeInterface
-from OPSI.Service.JsonRpc import JsonRpc
-from OPSI.Util import fromJson, toJson
-from opsicommon.logging import log_context, logger
+from OPSI.Backend.Backend import describeInterface  # type: ignore[import]
+from OPSI.Service.JsonRpc import JsonRpc  # type: ignore[import]
+from OPSI.Util import fromJson, toJson  # type: ignore[import]
+from opsicommon.logging import get_logger, log_context
 
 if os.name == "nt":
-	from ctypes import windll
+	from ctypes import windll  # type: ignore[attr-defined]
 else:
 	windll = None
+
+logger = get_logger("opsiclientd")
 
 
 def ControlPipeFactory(opsiclientd):
@@ -37,7 +39,7 @@ def ControlPipeFactory(opsiclientd):
 
 
 class ClientConnection(threading.Thread):
-	def __init__(self, controller, connection, client_id):
+	def __init__(self, controller, connection, client_id: str) -> None:
 		threading.Thread.__init__(self)
 		self._controller = controller
 		self._connection = connection
@@ -45,7 +47,7 @@ class ClientConnection(threading.Thread):
 		self._readTimeout = 1
 		self._writeTimeout = 1
 		self._encoding = "utf-8"
-		self.clientInfo = []
+		self.clientInfo: list[str] = []
 		self.comLock = threading.Lock()
 		self._stopEvent = threading.Event()
 		self._stopEvent.clear()
@@ -166,7 +168,7 @@ class ControlPipe(threading.Thread):
 
 	connection_class = ClientConnection
 
-	def __init__(self, opsiclientd):
+	def __init__(self, opsiclientd) -> None:
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
 		self._opsiclientdRpcInterface = OpsiclientdRpcPipeInterface(self._opsiclientd)
@@ -468,7 +470,7 @@ class NTControlPipe(ControlPipe):
 
 
 class OpsiclientdRpcPipeInterface:
-	def __init__(self, opsiclientd):
+	def __init__(self, opsiclientd) -> None:
 		from .Opsiclientd import Opsiclientd
 
 		self.opsiclientd: Opsiclientd = opsiclientd

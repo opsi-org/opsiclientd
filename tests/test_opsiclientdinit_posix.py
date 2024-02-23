@@ -17,7 +17,7 @@ try:
 
 	error_message = ""
 except ImportError as err:
-	main = None
+	main = None  # type: ignore[assignment]
 	error_message = str(err)
 
 

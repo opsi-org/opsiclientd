@@ -12,7 +12,7 @@ import json
 import socket
 import time
 
-from OPSI.Util.Message import ChoiceSubject
+from OPSI.Util.Message import ChoiceSubject  # type: ignore[import]
 
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.EventProcessing import EventProcessingThread

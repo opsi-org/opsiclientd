@@ -143,7 +143,7 @@ class OpsiclientdNT(Opsiclientd):
 				return True
 			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {response.get('error')}")
 
-	def cleanup_opsi_setup_user(self, keep_sid: str = None):
+	def cleanup_opsi_setup_user(self, keep_sid: str | None = None):
 		keep_profile = None
 		modified = True
 		while modified:
@@ -183,13 +183,13 @@ class OpsiclientdNT(Opsiclientd):
 						continue
 
 					try:
-						win32api.RegUnLoadKey(win32con.HKEY_USERS, profile_key)
+						win32api.RegUnLoadKey(win32con.HKEY_USERS, profile_key)  # type: ignore[arg-type]
 					except pywintypes.error as err:
 						logger.debug(err)
 
 					exists = False
 					try:
-						win32security.LookupAccountSid(None, win32security.ConvertStringSidToSid(sid))
+						win32security.LookupAccountSid(None, win32security.ConvertStringSidToSid(sid))  # type: ignore[arg-type]
 						exists = True
 					except pywintypes.error as err:
 						logger.debug(err)
@@ -213,7 +213,7 @@ class OpsiclientdNT(Opsiclientd):
 							logger.warning("Failed to delete user %r %r (exitcode %d): %s", cmd, username, res.returncode, out)
 							try:
 								logger.info("Deleting user %r via windows api", username)
-								win32net.NetUserDel(None, username)
+								win32net.NetUserDel(None, username)  # type: ignore[arg-type]
 							except Exception as err:
 								logger.warning("Failed to delete user %r via windows api: %s", username, err)
 

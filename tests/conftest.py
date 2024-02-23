@@ -24,7 +24,7 @@ def emit(*args, **kwargs) -> None:
 	pass
 
 
-LogCaptureHandler.emit = emit
+LogCaptureHandler.emit = emit  # type: ignore[method-assign]
 
 
 @pytest.hookimpl()

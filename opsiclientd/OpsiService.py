@@ -37,11 +37,13 @@ from opsicommon.exceptions import (
 )
 from opsicommon.logging import get_logger, log_context
 from opsicommon.messagebus import (
+	Error,
 	FileMessage,
 	GeneralErrorMessage,
 	JSONRPCRequestMessage,
 	JSONRPCResponseMessage,
 	Message,
+	ProcessMessage,
 	TerminalMessage,
 	TraceRequestMessage,
 	TraceResponseMessage,
@@ -220,9 +222,9 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			logger.error(err, exc_info=True)
 			response = GeneralErrorMessage(
 				sender="@",
-				channel=message.back_channel or message.sender,
+				channel=message.response_channel,
 				ref_id=message.id,
-				error={"code": 0, "message": str(err), "details": str(traceback.format_exc())},
+				error=Error(code=0, message=str(err), details=str(traceback.format_exc())),
 			)
 			self.service_client.messagebus.send_message(response)
 
@@ -256,8 +258,8 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			process_terminal_message(message, self.service_client.messagebus.send_message)
 		elif isinstance(message, FileMessage):
 			process_filetransfer_message(message, self.service_client.messagebus.send_message)
-		elif message.type.startswith("process_"):
-			process_process_message(message, self.service_client.messagebus.send_message, self.messagebus.async_send_message)
+		elif isinstance(message, ProcessMessage):
+			process_process_message(message, self.service_client.messagebus.send_message, self.service_client.messagebus.async_send_message)
 
 
 class ServiceConnection:

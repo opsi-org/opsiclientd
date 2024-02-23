@@ -30,12 +30,11 @@ from opsicommon.exceptions import (  # type: ignore[import]
 	BackendUnaccomplishableError,
 )
 from opsicommon.license import OPSI_MODULE_IDS
-from opsicommon.logging import logger
+from opsicommon.logging import get_logger
 from opsicommon.logging.constants import TRACE
 from opsicommon.objects import *  # noqa  # required for dynamic class loading
 from opsicommon.objects import (
 	LicenseOnClient,
-	ProductDependency,
 	ProductOnClient,
 	get_ident_attributes,
 	objects_differ,
@@ -49,6 +48,7 @@ from opsiclientd.OpsiService import ServiceConnection
 __all__ = ["ClientCacheBackend"]
 
 config = OCDConfig()
+logger = get_logger("opsiclientd")
 
 
 def add_products_from_setup_after_install(products: list[str], service: ServiceConnection) -> list[str]:
@@ -59,7 +59,7 @@ def add_products_from_setup_after_install(products: list[str], service: ServiceC
 	try:
 		for product in ("opsi-client-agent", "opsi-linux-client-agent", "opsi-mac-client-agent"):
 			if product in products:  # one at most
-				setup_after_install_products = service.productPropertyState_getObjects(
+				setup_after_install_products = service.productPropertyState_getObjects(  # type: ignore[attr-defined]
 					objectId=config.get("global", "host_id"),
 					productId=product,
 					propertyId="setup_after_install",

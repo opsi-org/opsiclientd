@@ -23,16 +23,17 @@ import win32api  # type: ignore[import]
 import win32con  # type: ignore[import]
 import win32process  # type: ignore[import]
 import win32security  # type: ignore[import]
-from opsicommon.logging import LOG_NONE
+from opsicommon.logging import LOG_NONE, get_logger
 from opsicommon.logging import init_logging as oc_init_logging
-from opsicommon.logging import logger
 
 from opsiclientd import DEFAULT_STDERR_LOG_FORMAT, init_logging, parser
 from opsiclientd.Config import Config
 from opsiclientd.setup import setup
 
 # STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
-STARTUP_LOG = None
+STARTUP_LOG: str | None = None
+
+logger = get_logger("opsiclientd")
 
 
 def startup_log(message):
