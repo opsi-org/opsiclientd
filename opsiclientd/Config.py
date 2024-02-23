@@ -98,7 +98,7 @@ class Config(metaclass=Singleton):
 		},
 		"cache_service": {"storage_dir": "c:\\opsi.org\\cache"},
 		"control_server": {"files_dir": "c:\\opsi.org\\opsi-client-agent\\files"},
-		"opsiclientd_notifier": {"motd_notifier": "c:\\program files (x86)\\opsi.org\\opsi-client-agent\\motd_notifier.exe"},
+		"opsiclientd_notifier": {"motd_notifier": "c:\\program files (x86)\\opsi.org\\opsi-client-agent\\motd-notifier.exe"},
 	}
 
 	LINUX_DEFAULT_PATHS = {
