@@ -895,7 +895,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			raise RuntimeError("notification_server.popup_port not defined")
 		return port
 
-	def showMOTD(self, variant: str = "startup") -> None:
+	def showMOTD(self, variant: str = "startup") -> None:  # TODO: when to show? boot, login, detect config change?
 		if not self._permanent_service_connection:  # TODO: test without service connection
 			logger.info("No connection to service - not showing MOTD")
 			return
@@ -907,12 +907,11 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.error("Invalid variant of message of the day requested %r", variant)
 			return
 		host_id = config.get("global", "host_id")
-		data = self._permanent_service_connection.service_client.configState_getValues(motd_config, host_id)  # type: ignore[attr-defined]
+		data = self._permanent_service_connection.service_client.jsonrpc("configState_getValues", [motd_config, host_id])
 		message = data[host_id].get(motd_config, [""])[0]
 		if not message:
 			logger.debug("No MOTD message for type %r found", variant)
 			return
-		# TODO: test link clicking stuff
 		self.showPopup(message, mode="replace", addTimestamp=False, disable_links=(variant == "startup"))
 
 	def showPopup(
