@@ -1788,8 +1788,15 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		logger.info("on_shutdown event completed")
 		return True
 
-	def showMessageOfTheDay(self, variant: str) -> None:
-		self.opsiclientd.showMOTD(variant)
+	def messageOfTheDayUpdated(
+		self, device_message: str, device_message_valid_until: str, user_message: str, user_message_valid_until: str
+	) -> None:
+		self.opsiclientd.updateMOTD(
+			device_message=device_message,
+			device_message_valid_until=device_message_valid_until,
+			user_message=user_message,
+			user_message_valid_until=user_message_valid_until,
+		)
 
 	def processActionRequests(self, product_ids=None):
 		event = config.get("control_server", "process_actions_event")

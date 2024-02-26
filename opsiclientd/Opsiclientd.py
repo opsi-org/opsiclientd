@@ -10,7 +10,6 @@ should be overridden in the concrete implementation for an OS.
 """
 
 
-import datetime
 import os
 import platform
 import re
@@ -22,8 +21,10 @@ import threading
 import time
 import urllib.request
 from contextlib import contextmanager
+from datetime import datetime, timedelta
+from hashlib import sha256
 from pathlib import Path
-from typing import Any, Generator, Literal
+from typing import Any, Generator
 
 import psutil  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
@@ -895,35 +896,75 @@ class Opsiclientd(EventListener, threading.Thread):
 			raise RuntimeError("notification_server.popup_port not defined")
 		return port
 
-	def showMOTD(self, variant: str = "startup") -> None:  # TODO: when to show? boot, login, detect config change?
+	def get_logged_in_users(self) -> list[str]:
+		if not RUNNING_ON_WINDOWS:
+			return []
+		try:
+			sessions = System.getActiveSessionInformation()
+			logger.devel("Active sessions: %s", sessions)  # TODO: remove
+			return [session["username"] for session in sessions]  # if session["state"] == "Active"]
+		except Exception as err:
+			logger.error("Failed to determine logged in users: %s", err, exc_info=False)
+			return []
+
+	def updateMOTD(
+		self,
+		device_message: str | None = None,
+		device_message_valid_until: str | None = None,
+		user_message: str | None = None,
+		user_message_valid_until: str | None = None,
+	) -> None:
 		if not self._permanent_service_connection:  # TODO: test without service connection
 			logger.info("No connection to service - not showing MOTD")
 			return
-		if variant == "startup":
-			motd_config = "opsiclientd.global.message_of_the_day_startup"
-		elif variant == "user":
-			motd_config = "opsiclientd.global.message_of_the_day_user"
-		else:
-			logger.error("Invalid variant of message of the day requested %r", variant)
-			return
+		logged_in_users = self.get_logged_in_users()
 		host_id = config.get("global", "host_id")
-		data = self._permanent_service_connection.service_client.jsonrpc("configState_getValues", [motd_config, host_id])
-		message = data[host_id].get(motd_config, [""])[0]
-		if not message:
-			logger.debug("No MOTD message for type %r found", variant)
-			return
-		self.showPopup(message, mode="replace", addTimestamp=False, disable_links=(variant == "startup"))
+
+		message_of_the_day_state = state.get("message_of_the_day")
+		if logged_in_users:  # show user message
+			if not user_message:
+				motd_configs = ["message_of_the_day.user.message", "message_of_the_day.user.message_valid_until"]
+				data = self._permanent_service_connection.service_client.jsonrpc("configState_getValues", [motd_configs, host_id])
+				user_message = data[host_id].get(motd_configs[0], [""])[0]
+				user_message_valid_until = data[host_id].get(motd_configs[0], [""])[0]
+			if not user_message_valid_until:
+				user_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
+			if (
+				user_message
+				and sha256(user_message.encode("utf-8")).digest() != message_of_the_day_state.get("last_user_message_hash")
+				and datetime.now() < datetime.fromisoformat(user_message_valid_until)
+			):  # Note: Assuming iso format!
+				self.showPopup(user_message, mode="replace", addTimestamp=False, link_handling="browser")  # transmit users?
+				if "last_user_message_hash" not in message_of_the_day_state:
+					message_of_the_day_state["last_user_message_hash"] = {}
+				for logged_in_user in logged_in_users:
+					message_of_the_day_state["last_user_message_hash"][logged_in_user] = sha256(user_message.encode("utf-8")).digest()
+		else:  # show device message
+			if not device_message:
+				motd_configs = ["message_of_the_day.device.message", "message_of_the_day.device.message_valid_until"]
+				data = self._permanent_service_connection.service_client.jsonrpc("configState_getValues", [motd_configs, host_id])
+				device_message = data[host_id].get(motd_configs[0], [""])[0]
+			if not device_message_valid_until:
+				device_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
+			if (
+				device_message
+				and sha256(device_message.encode("utf-8")).digest() != message_of_the_day_state.get("last_device_message_hash")
+				and datetime.now() < datetime.fromisoformat(device_message_valid_until)
+			):  # Note: Assuming iso format!
+				self.showPopup(device_message, mode="replace", addTimestamp=False, link_handling="no")
+				message_of_the_day_state["last_device_message_hash"] = sha256(device_message.encode("utf-8")).digest()
+		state.set("message_of_the_day", message_of_the_day_state)
 
 	def showPopup(
-		self, message: str, mode: str = "prepend", addTimestamp: bool = True, displaySeconds: int = 0, disable_links: bool = False
+		self, message: str, mode: str = "prepend", addTimestamp: bool = True, displaySeconds: int = 0, link_handling: str = "no"
 	) -> None:
 		if mode not in ("prepend", "append", "replace"):
 			mode = "prepend"
 		port = self.getPopupPort()
 		notifierCommand = self.getNotifierCommand()
 		notifierCommand = f'{notifierCommand} -s {os.path.join("notifier", "popup.ini")}'
-		if disable_links:  # TODO: also disable at normal popup if not in login session?
-			notifierCommand = f"{notifierCommand} --disable-links"
+		if link_handling != "no":  # cannot set --link-handling with lazarus notifier
+			notifierCommand = f"{notifierCommand} --link-handling {link_handling}"
 
 		if addTimestamp:
 			message = "=== " + time.strftime("%Y-%m-%d %H:%M:%S") + " ===\n" + message
@@ -1001,7 +1042,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self.hidePopup()
 
 	def collectLogfiles(self, types: list[str] | None = None, max_age_days: int | None = None, timeline_db: bool = True) -> Path:
-		now = datetime.datetime.now().timestamp()
+		now = datetime.now().timestamp()
 		type_patterns = []
 		types = types or []
 		if not types:
@@ -1020,7 +1061,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				if content.is_dir():
 					collect_matching_files(content, result_path / content.name, patterns, max_age_days)
 
-		filename = f"logs-{config.get('global', 'host_id')}-{datetime.datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S')}"
+		filename = f"logs-{config.get('global', 'host_id')}-{datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S')}"
 		outfile = Path(config.get("control_server", "files_dir")) / filename
 		compression = "zip"
 		with tempfile.TemporaryDirectory() as tempdir:
