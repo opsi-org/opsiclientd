@@ -19,6 +19,7 @@ import time
 
 # pyright: reportMissingImports=false
 import winreg  # type: ignore[import] # pylint: disable=import-error
+from enum import StrEnum
 
 import pywintypes  # type: ignore[import]
 import win32api  # type: ignore[import]
@@ -111,6 +112,134 @@ class OpsiclientdNT(Opsiclientd):
 
 		logger.notice("Shutdown request in Registry: %s", shutdownRequested)
 		return forceBool(shutdownRequested)
+
+	def isWindowsRebootPending(self):
+		import winreg
+
+		import win32process  # type: ignore[import]
+
+		class CheckType(StrEnum):
+			KEY_EXISTS = "key_exists"
+			ANY_SUB_KEY_EXISTS = "any_sub_key_exists"
+			VALUE_EXISTS = "value_exists"
+			VALUE_NOT_ZERO = "value_not_zero"
+
+		checks = (
+			(
+				r"\SOFTWARE\Microsoft\Updates",
+				"UpdateExeVolatile",
+				CheckType.VALUE_NOT_ZERO,
+			),
+			(
+				r"\SYSTEM\CurrentControlSet\Control\Session Manager",
+				"PendingFileRenameOperations",
+				CheckType.VALUE_EXISTS,
+			),
+			(
+				r"\SYSTEM\CurrentControlSet\Control\Session Manager",
+				"PendingFileRenameOperations2",
+				CheckType.VALUE_EXISTS,
+			),
+			(
+				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired",
+				None,
+				CheckType.KEY_EXISTS,
+			),
+			(
+				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Services\Pending",
+				None,
+				CheckType.ANY_SUB_KEY_EXISTS,
+			),
+			(
+				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\PostRebootReporting",
+				None,
+				CheckType.KEY_EXISTS,
+			),
+			(
+				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+				"DVDRebootSignal",
+				CheckType.VALUE_EXISTS,
+			),
+			(
+				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending",
+				None,
+				CheckType.KEY_EXISTS,
+			),
+			(
+				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootInProgress",
+				None,
+				CheckType.KEY_EXISTS,
+			),
+			(
+				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\PackagesPending",
+				None,
+				CheckType.KEY_EXISTS,
+			),
+			(
+				r"\SOFTWARE\Microsoft\ServerManager\CurrentRebootAttempts",
+				None,
+				CheckType.KEY_EXISTS,
+			),
+			(
+				r"\SYSTEM\CurrentControlSet\Services\Netlogon",
+				"JoinDomain",
+				CheckType.VALUE_EXISTS,
+			),
+			(
+				r"\SYSTEM\CurrentControlSet\Services\Netlogon",
+				"AvoidSpnSet",
+				CheckType.VALUE_EXISTS,
+			),
+		)
+
+		is_windows_reboot_pending = False
+
+		access = winreg.KEY_READ
+		if win32process.IsWow64Process():
+			access |= winreg.KEY_WOW64_64KEY
+
+		for key, sub_key, value_name, check in checks:
+			reboot_check_result = False
+			key_exists = False
+			value_exists = False
+			any_sub_key_exists = False
+			reg_value = None
+			try:
+				with winreg.OpenKey(key=winreg.HKEY_LOCAL_MACHINE, sub_key=sub_key, access=access) as key:
+					key_exists = True
+					if check == CheckType.ANY_SUB_KEY_EXISTS:
+						number_of_sub_keys = winreg.QueryInfoKey(key)[0]
+						any_sub_key_exists = number_of_sub_keys > 0
+					if value_name:
+						reg_value, _value_type = winreg.QueryValueEx(key, value_name)
+						value_exists = True
+			except Exception:
+				pass
+
+			if CheckType.KEY_EXISTS:
+				reboot_check_result = key_exists
+			elif CheckType.VALUE_EXISTS:
+				reboot_check_result = value_exists
+			elif CheckType.VALUE_NOT_ZERO:
+				reboot_check_result = reg_value != 0
+			elif CheckType.ANY_SUB_KEY_EXISTS:
+				reboot_check_result = any_sub_key_exists
+
+			if reboot_check_result:
+				is_windows_reboot_pending = True
+
+			logger.info(
+				"Reboot check %r - %r - %r - %r: key_exists=%r, value_exists=%r, value=%r, result=%r",
+				key,
+				sub_key,
+				value_name,
+				check,
+				key_exists,
+				value_exists,
+				reg_value,
+				reboot_check_result,
+			)
+		return is_windows_reboot_pending
 
 	def isWindowsInstallerBusy(self):
 		if not self._ms_update_installer:

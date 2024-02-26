@@ -980,6 +980,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						while self.opsiclientd.isWindowsInstallerBusy():
 							time.sleep(10)
 							logger.debug("Windows installer is running, waiting until upgrade process is finished")
+
+						# We will use this information as soon as we know whether it is reliable
+						is_windows_reboot_pending = self.opsiclientd.isWindowsRebootPending()
+						logger.info("Windows reboot pending: %s", is_windows_reboot_pending)
+
 						wait_time = float(config.get("global", "post_trusted_installer_delay"))
 						logger.info("Windows installer finished, waiting %r s for potential reboot", wait_time)
 						time.sleep(wait_time)

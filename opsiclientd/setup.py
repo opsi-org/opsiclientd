@@ -25,11 +25,7 @@ from opsicommon.client.opsiservice import ServiceClient
 from opsicommon.logging import get_logger, secret_filter
 from opsicommon.ssl import as_pem, create_ca, create_server_cert
 from opsicommon.system import get_system_uuid
-from opsicommon.system.network import (
-	get_fqdn,
-	get_hostnames,
-	get_ip_addresses,
-)
+from opsicommon.system.network import get_fqdn, get_hostnames, get_ip_addresses
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
@@ -434,7 +430,7 @@ def setup_on_shutdown():
 	logger.notice("Creating opsi shutdown install policy")
 	import winreg
 
-	import win32process
+	import win32process  # type: ignore[import]
 
 	GPO_NAME = "opsi shutdown install policy"
 	BASE_KEYS = [
