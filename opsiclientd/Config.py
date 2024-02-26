@@ -12,6 +12,7 @@ import os
 import platform
 import re
 import sys
+from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
 import netifaces  # type: ignore[import]
@@ -76,6 +77,21 @@ kGOsCMSImzajpmtonx3ccPgSOyEWyoEaGij6u80QtFkj9g==
 OPSI_SETUP_USER_NAME = "opsisetupuser"
 
 logger = get_logger("opsiclientd")
+
+
+@dataclass
+class RestartMarkerConfig:
+	disabled_event_types: list[str] = field(default_factory=list)
+	run_opsi_script: str | None = None
+	product_id: str | None = None
+	restart_service: bool = True
+	remove_marker: bool = True
+
+	def __post_init__(self):
+		if self.disabled_event_types:
+			self.disabled_event_types = [v.strip().lower() for v in self.disabled_event_types if v.strip()]
+		if self.product_id:
+			self.product_id = self.product_id.strip().lower()
 
 
 class SectionNotFoundException(ValueError):
@@ -267,39 +283,48 @@ class Config(metaclass=Singleton):
 				return old_location
 		return os.path.join(self._getBaseDirectory(), ".opsiclientd_restart")
 
-	def check_restart_marker(self):
+	def check_restart_marker(self) -> RestartMarkerConfig | None:
 		logger.info("Checking if restart marker '%s' exists", self.restart_marker)
-		product_id, opsi_script = None, None
-		if os.path.exists(self.restart_marker):
-			if os.path.getsize(self.restart_marker) == 0:
-				logger.notice("Old restart marker found, gui startup and daemon startup events disabled")
-				self.disabledEventTypes = ["gui startup", "daemon startup"]
-			else:
-				logger.notice("Reading restart marker")
-				with open(self.restart_marker, "r", encoding="utf-8") as file:
-					for line in file.readlines():
-						line = line.strip()
-						if line.startswith("#") or "=" not in line:
-							continue
-						option, value = line.split("=", 1)
-						option = option.strip().lower()
-						if option == "disabled_event_types":
-							self.disabledEventTypes = [v.strip().lower() for v in value.split(",") if v.strip().lower()]
-							logger.notice("Event types %s disabled by restart marker", self.disabledEventTypes)
-						elif option == "run_opsi_script":
-							product_id = None
-							opsi_script = value
-							if "," in value:
-								product_id, opsi_script = value.split(",", 1)
-							product_id = product_id.strip().lower() if product_id else None
-							opsi_script = opsi_script.strip()
-							logger.notice("Read product_id=%s, opsi_script=%s from restart marker", product_id, opsi_script)
-							self.disabledEventTypes = ["gui startup", "daemon startup"]
+		if not os.path.exists(self.restart_marker):
+			return None
+
+		resm_config = RestartMarkerConfig()
+		if os.path.getsize(self.restart_marker) == 0:
+			logger.notice("Old restart marker found, gui startup and daemon startup events disabled")
+			resm_config.disabled_event_types = ["gui startup", "daemon startup"]
+			resm_config.remove_marker = True
+		else:
+			logger.notice("Reading restart marker")
+			with open(self.restart_marker, "r", encoding="utf-8") as file:
+				for line in file.readlines():
+					line = line.strip()
+					if line.startswith("#") or "=" not in line:
+						continue
+					option, value = line.split("=", 1)
+					option = option.strip().lower()
+					if option == "disabled_event_types":
+						resm_config.disabled_event_types = [v.strip().lower() for v in value.split(",") if v.strip()]
+					elif option == "run_opsi_script":
+						resm_config.run_opsi_script = value
+						if "," in value:
+							resm_config.product_id, resm_config.run_opsi_script = value.split(",", 1)
+						resm_config.product_id = resm_config.product_id.strip().lower() if resm_config.product_id else None
+						resm_config.run_opsi_script = resm_config.run_opsi_script.strip()
+						resm_config.disabled_event_types = ["gui startup", "daemon startup"]
+					elif option == "remove_marker":
+						resm_config.remove_marker = forceBool(value)
+					elif option == "restart_service":
+						resm_config.restart_service = forceBool(value)
+
+		logger.notice("Restart marker config: %r", resm_config)
+		if resm_config.disabled_event_types:
+			self.disabledEventTypes = resm_config.disabled_event_types
+		if resm_config.remove_marker or resm_config.restart_service:
 			try:
 				os.remove(self.restart_marker)
 			except Exception as err:
 				logger.error(err)
-		return product_id, opsi_script
+		return resm_config
 
 	def _applySystemSpecificConfiguration(self):
 		defaultToApply = self.WINDOWS_DEFAULT_PATHS.copy()
