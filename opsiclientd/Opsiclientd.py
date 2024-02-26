@@ -75,6 +75,10 @@ state = State()
 logger = get_logger("opsiclientd")
 
 
+def sha256string(input_string: str) -> str:
+	return sha256(input_string.encode("utf-8")).digest().hex()
+
+
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self) -> None:
 		logger.debug("Opsiclient initiating")
@@ -574,7 +578,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					if config.get("config_service", "permanent_connection"):
 						self.start_permanent_service_connection()
 
-					if restart_marker_config.run_opsi_script:
+					if restart_marker_config and restart_marker_config.run_opsi_script:
 						log_dir = config.get("global", "log_dir")
 						action_processor = os.path.join(
 							config.get("action_processor", "local_dir"), config.get("action_processor", "filename")
@@ -607,7 +611,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						System.execute(cmd, shell=False, waitForEnding=True, timeout=3600)
 
 						restart_marker_config = config.check_restart_marker()
-						if restart_marker_config.restart_service:
+						if restart_marker_config and restart_marker_config.restart_service:
 							logger.notice("Restart marker found, restarting")
 							self.restart(disabled_event_types=restart_marker_config.disabled_event_types)
 							return
@@ -897,51 +901,48 @@ class Opsiclientd(EventListener, threading.Thread):
 			raise RuntimeError("notification_server.popup_port not defined")
 		return port
 
-	def get_logged_in_users(self) -> list[str]:
-		if not RUNNING_ON_WINDOWS:
-			return []
-		try:
-			sessions = System.getActiveSessionInformation()
-			logger.devel("Active sessions: %s", sessions)  # TODO: remove
-			return [session["username"] for session in sessions]  # if session["state"] == "Active"]
-		except Exception as err:
-			logger.error("Failed to determine logged in users: %s", err, exc_info=False)
-			return []
-
 	def updateMOTD(
 		self,
 		device_message: str | None = None,
 		device_message_valid_until: str | None = None,
 		user_message: str | None = None,
 		user_message_valid_until: str | None = None,
-	) -> None:
-		if not self._permanent_service_connection:  # TODO: test without service connection
-			logger.info("No connection to service - not showing MOTD")
-			return
-		logged_in_users = self.get_logged_in_users()
+	) -> str | None:
+		sessions = System.getActiveSessionInformation()
 		host_id = config.get("global", "host_id")
+		message_shown = None
 
-		message_of_the_day_state = state.get("message_of_the_day")
-		if logged_in_users:  # show user message
+		message_of_the_day_state: dict[str, Any] = state.get("message_of_the_day", {})
+		if sessions:  # show user message
 			if not user_message:
 				motd_configs = ["message_of_the_day.user.message", "message_of_the_day.user.message_valid_until"]
+				if not self._permanent_service_connection:
+					logger.info("No permanent service connection available, cannot get user message")
+					return None
 				data = self._permanent_service_connection.service_client.jsonrpc("configState_getValues", [motd_configs, host_id])
 				user_message = data[host_id].get(motd_configs[0], [""])[0]
 				user_message_valid_until = data[host_id].get(motd_configs[0], [""])[0]
 			if not user_message_valid_until:
 				user_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
-			if (
-				user_message
-				and sha256(user_message.encode("utf-8")).digest() != message_of_the_day_state.get("last_user_message_hash")
-				and datetime.now() < datetime.fromisoformat(user_message_valid_until)
-			):  # Note: Assuming iso format!
-				self.showPopup(user_message, mode="replace", addTimestamp=False, link_handling="browser")  # transmit users?
-				if "last_user_message_hash" not in message_of_the_day_state:
-					message_of_the_day_state["last_user_message_hash"] = {}
-				for logged_in_user in logged_in_users:
-					message_of_the_day_state["last_user_message_hash"][logged_in_user] = sha256(user_message.encode("utf-8")).digest()
+			for entry in sessions:
+				if (
+					user_message
+					and sha256string(user_message) != message_of_the_day_state.get("last_user_message_hash", {}).get(entry.get("UserName"))
+					and datetime.now() < datetime.fromisoformat(user_message_valid_until)
+				):  # Note: Assuming iso format!
+					logger.notice("Showing user-specific message of the day")
+					self.showPopup(
+						user_message, mode="replace", addTimestamp=False, link_handling="browser", session=entry.get("SessionId")
+					)
+					if "last_user_message_hash" not in message_of_the_day_state:
+						message_of_the_day_state["last_user_message_hash"] = {}
+					message_of_the_day_state["last_user_message_hash"][entry.get("UserName")] = sha256string(user_message)
+					message_shown = "user"
 		else:  # show device message
 			if not device_message:
+				if not self._permanent_service_connection:
+					logger.info("No permanent service connection available, cannot get user message")
+					return None
 				motd_configs = ["message_of_the_day.device.message", "message_of_the_day.device.message_valid_until"]
 				data = self._permanent_service_connection.service_client.jsonrpc("configState_getValues", [motd_configs, host_id])
 				device_message = data[host_id].get(motd_configs[0], [""])[0]
@@ -949,15 +950,24 @@ class Opsiclientd(EventListener, threading.Thread):
 				device_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
 			if (
 				device_message
-				and sha256(device_message.encode("utf-8")).digest() != message_of_the_day_state.get("last_device_message_hash")
+				and sha256string(device_message) != message_of_the_day_state.get("last_device_message_hash")
 				and datetime.now() < datetime.fromisoformat(device_message_valid_until)
 			):  # Note: Assuming iso format!
+				logger.notice("Showing device-specific message of the day")
 				self.showPopup(device_message, mode="replace", addTimestamp=False, link_handling="no")
-				message_of_the_day_state["last_device_message_hash"] = sha256(device_message.encode("utf-8")).digest()
+				message_of_the_day_state["last_device_message_hash"] = sha256string(device_message)
+				message_shown = "device"
 		state.set("message_of_the_day", message_of_the_day_state)
+		return message_shown
 
 	def showPopup(
-		self, message: str, mode: str = "prepend", addTimestamp: bool = True, displaySeconds: int = 0, link_handling: str = "no"
+		self,
+		message: str,
+		mode: str = "prepend",
+		addTimestamp: bool = True,
+		displaySeconds: int = 0,
+		link_handling: str = "no",
+		session: str | None = None,
 	) -> None:
 		if mode not in ("prepend", "append", "replace"):
 			mode = "prepend"
@@ -1009,9 +1019,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setChoices([_("Close")])
 			choiceSubject.setCallbacks([self.popupCloseCallback])
 
-			sessionIds = System.getActiveSessionIds()
-			if not sessionIds:
-				sessionIds = [System.getActiveConsoleSessionId()]
+			sessionIds = [session] if session else System.getActiveSessionIds() or [System.getActiveConsoleSessionId()]
 			for sessionId in sessionIds:
 				desktops = [None]
 				if RUNNING_ON_WINDOWS:
