@@ -259,7 +259,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				if not os.path.exists(config.restart_marker):
 					logger.notice("Writing restart marker %r (disabled_event_types=%r)", config.restart_marker, disabled_event_types)
 					with open(config.restart_marker, "w", encoding="utf-8") as file:
-						file.write(f"disabled_event_types={','.join(disabled_event_types)}\n")
+						file.write(f"disabled_event_types={','.join(disabled_event_types)}\nrestart_service=false\nremove_marker=true\n")
 			except Exception as err:
 				logger.error(err)
 
@@ -408,7 +408,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		config.readConfigFile()
 		try:
-			product_id, opsi_script = config.check_restart_marker()
+			restart_marker_config = config.check_restart_marker()
 		except Exception as err:
 			logger.error(err, exc_info=True)
 
@@ -574,7 +574,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					if config.get("config_service", "permanent_connection"):
 						self.start_permanent_service_connection()
 
-					if opsi_script:
+					if restart_marker_config.run_opsi_script:
 						log_dir = config.get("global", "log_dir")
 						action_processor = os.path.join(
 							config.get("action_processor", "local_dir"), config.get("action_processor", "filename")
@@ -582,14 +582,14 @@ class Opsiclientd(EventListener, threading.Thread):
 						param_char = "/" if RUNNING_ON_WINDOWS else "-"
 						cmd = [
 							action_processor,
-							opsi_script,
+							restart_marker_config.run_opsi_script,
 							os.path.join(log_dir, "start_opsi_script.log"),
 							f"{param_char}servicebatch",
 						]
-						if product_id:
+						if restart_marker_config.product_id:
 							cmd += [
 								f"{param_char}productid",
-								product_id,
+								restart_marker_config.product_id,
 							]
 						cmd += [
 							f"{param_char}opsiservice",
@@ -605,10 +605,11 @@ class Opsiclientd(EventListener, threading.Thread):
 						]
 						logger.notice("Running startup script: %s", cmd)
 						System.execute(cmd, shell=False, waitForEnding=True, timeout=3600)
-						if os.path.exists(config.restart_marker):
+
+						restart_marker_config = config.check_restart_marker()
+						if restart_marker_config.restart_service:
 							logger.notice("Restart marker found, restarting")
-							os.unlink(config.restart_marker)
-							self.restart(disabled_event_types=[])
+							self.restart(disabled_event_types=restart_marker_config.disabled_event_types)
 							return
 
 					with getCacheService() as cacheService:
