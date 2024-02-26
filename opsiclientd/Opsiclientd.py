@@ -619,6 +619,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					with getCacheService() as cacheService:
 						self._cacheService = cacheService
 
+						self.updateMOTD()  # or after daemon startup?
 						with getDaemonLoopingContext():
 							with self._eptListLock:
 								if not self._eventProcessingThreads:
