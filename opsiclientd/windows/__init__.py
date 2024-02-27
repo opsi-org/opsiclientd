@@ -232,6 +232,7 @@ def runCommandInSession(
 
 class LoginDetector(threading.Thread):
 	def __init__(self, opsiclientd: Any) -> None:
+		super().__init__()
 		self._opsiclientd = opsiclientd
 		self._sensLogon = SensLogon(self.callback)
 		self._sensLogon.subscribe()

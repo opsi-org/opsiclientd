@@ -547,10 +547,6 @@ class Opsiclientd(EventListener, threading.Thread):
 						# Wait some more seconds for events to fire
 						time.sleep(5)
 				try:
-					self.updateMOTD()  # daemon startup is done, gui is up
-				except Exception as error:
-					logger.error("Failed to update message of the day: %s", error, exc_info=True)
-				try:
 					yield
 				finally:
 					for event_generator in getEventGenerators(generatorClass=DaemonShutdownEventGenerator):
@@ -637,6 +633,11 @@ class Opsiclientd(EventListener, threading.Thread):
 								if not self._eventProcessingThreads:
 									logger.notice("No events processing, unblocking login")
 									self.setBlockLogin(False)
+
+							try:
+								self.updateMOTD()  # daemon startup is done, gui is up
+							except Exception as error:
+								logger.error("Failed to update message of the day: %s", error, exc_info=True)
 
 							try:
 								while not self._stopEvent.is_set():
@@ -926,7 +927,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		message_shown = None
 
 		message_of_the_day_state: dict[str, Any] = state.get("message_of_the_day", {})
-		logger.debug("Found sessions: %s", sessions)
+		logger.devel("Found sessions: %s", sessions)  # TODO: debug
 		if sessions:  # show user message
 			if not user_message:
 				motd_configs = ["message_of_the_day.user.message", "message_of_the_day.user.message_valid_until"]
