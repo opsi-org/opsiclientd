@@ -235,11 +235,10 @@ class LoginDetector(threading.Thread):
 		super().__init__()
 		self._opsiclientd = opsiclientd
 		self._sensLogon = SensLogon(self.callback)
-		self._sensLogon.subscribe()
 		self._stopped = False
 
 	def callback(self, eventType, *args):
-		logger.devel("LoginDetector triggered. eventType: '%s', args: %s", eventType, args)
+		logger.info("LoginDetector triggered. eventType: '%s', args: %s", eventType, args)
 		if self._opsiclientd.is_stopping():
 			return
 
@@ -252,6 +251,8 @@ class LoginDetector(threading.Thread):
 			self._opsiclientd.updateMOTD()
 
 	def run(self) -> None:
+		self._sensLogon.subscribe()
+		logger.info("LoginDetector started")
 		while not self._stopped:
 			time.sleep(0.5)
 

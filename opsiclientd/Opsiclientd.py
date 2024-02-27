@@ -513,6 +513,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 			if RUNNING_ON_WINDOWS:
 				try:
+					logger.info("Starting LoginDetector for message of the day.")
 					self.login_detector = LoginDetector(self)
 					self.login_detector.start()
 				except Exception as error:
@@ -927,7 +928,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		message_shown = None
 
 		message_of_the_day_state: dict[str, Any] = state.get("message_of_the_day", {})
-		logger.devel("Found sessions: %s", sessions)  # TODO: debug
+		logger.debug("Found sessions: %s", sessions)
 		if sessions:  # show user message
 			if not user_message:
 				motd_configs = ["message_of_the_day.user.message", "message_of_the_day.user.message_valid_until"]
