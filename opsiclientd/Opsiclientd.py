@@ -245,6 +245,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			self._selfUpdating = False
 
 	def restart(self, waitSeconds: int = 0, disabled_event_types: list[str] | None = None) -> None:
+		self.setBlockLogin(False)
+
 		if disabled_event_types is None:
 			disabled_event_types = ["gui startup", "daemon startup"]
 
