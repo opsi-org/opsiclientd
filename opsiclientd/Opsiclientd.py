@@ -512,8 +512,11 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.info("Event generator '%s' started", eventGenerator)
 
 			if RUNNING_ON_WINDOWS:
-				self.login_detector = LoginDetector(self)
-				self.login_detector.start()
+				try:
+					self.login_detector = LoginDetector(self)
+					self.login_detector.start()
+				except Exception as error:
+					logger.error("Failed to start login_detector: %s", error, exc_info=True)
 			try:
 				yield
 			finally:

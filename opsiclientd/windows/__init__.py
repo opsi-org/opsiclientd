@@ -85,7 +85,7 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 		self._callback = callback
 
 	def subscribe(self):
-		(_wmi, _pythoncom) = importWmiAndPythoncom(importWmi=False)
+		(_wmi, _pythoncom) = importWmiAndPythoncom()  # need both to run co-initialize
 
 		subscription_interface = _pythoncom.WrapObject(self)
 
