@@ -512,7 +512,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.info("Event generator '%s' started", eventGenerator)
 
 			if RUNNING_ON_WINDOWS:
-				self.login_detector = LoginDetector(self.updateMOTD)
+				self.login_detector = LoginDetector(self)
 				self.login_detector.start()
 			try:
 				yield
@@ -921,6 +921,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		message_shown = None
 
 		message_of_the_day_state: dict[str, Any] = state.get("message_of_the_day", {})
+		logger.devel("Found sessions: %s", sessions)
 		if sessions:  # show user message
 			if not user_message:
 				motd_configs = ["message_of_the_day.user.message", "message_of_the_day.user.message_valid_until"]
@@ -933,6 +934,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			if not user_message_valid_until:
 				user_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
 			for entry in sessions:
+				logger.devel("Handling entry %s", entry)
 				if (
 					user_message
 					and sha256string(user_message) != message_of_the_day_state.get("last_user_message_hash", {}).get(entry.get("UserName"))
