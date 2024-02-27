@@ -10,6 +10,7 @@ opsiclientd.windows
 
 import threading
 import time
+from typing import Any
 
 import win32com.client  # type: ignore[import]
 import win32com.server.policy  # type: ignore[import]
@@ -24,6 +25,8 @@ from OPSI.System.Windows import (  # type: ignore[import]
 )
 from opsicommon.logging import get_logger
 from opsicommon.types import forceBool, forceInt, forceUnicode, forceUnicodeLower
+
+from opsiclientd.Config import OPSI_SETUP_USER_NAME
 
 # pyright: reportMissingImports=false
 
@@ -224,3 +227,31 @@ def runCommandInSession(
 			time.sleep(10)
 			continue
 		return (None, None, None, None)
+
+
+class LoginDetector(threading.Thread):
+	def __init__(self, opsiclientd: Any) -> None:
+		self._opsiclientd = opsiclientd
+		self._sensLogon = SensLogon(self.callback)
+		self._sensLogon.subscribe()
+		self._stopped = False
+
+	def callback(self, eventType, *args):
+		logger.devel("LoginDetector triggered. eventType: '%s', args: %s", eventType, args)
+		if self._opsiclientd.is_stopping():
+			return
+
+		if args[0].split("\\")[-1] == OPSI_SETUP_USER_NAME:
+			logger.info("Login of user %s detected, no UserLoginAction will be fired.", args[0])
+			return
+
+		if eventType == "Logon":
+			logger.notice("User login detected: %s", args[0])
+			self._opsiclientd.updateMOTD()
+
+	def run(self) -> None:
+		while not self._stopped:
+			time.sleep(0.5)
+
+	def stop(self) -> None:
+		self._stopped = True

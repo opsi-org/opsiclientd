@@ -65,7 +65,7 @@ from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 
 if RUNNING_ON_WINDOWS:
-	from opsiclientd.windows import runCommandInSession
+	from opsiclientd.windows import LoginDetector, runCommandInSession
 else:
 	from OPSI.System import runCommandInSession  # type: ignore
 
@@ -119,6 +119,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._controlServer: ControlServer | None = None
 		self._permanent_service_connection: PermanentServiceConnection | None = None
 		self._selfUpdating = False
+		self.login_detector: Any = None  # No proper typing to avoid windows imports
 
 		self._argv = list(sys.argv)
 		self._argv[0] = os.path.abspath(self._argv[0])
@@ -510,9 +511,15 @@ class Opsiclientd(EventListener, threading.Thread):
 				eventGenerator.start()
 				logger.info("Event generator '%s' started", eventGenerator)
 
+			if RUNNING_ON_WINDOWS:
+				self.login_detector = LoginDetector(self.updateMOTD)
+				self.login_detector.start()
 			try:
 				yield
 			finally:
+				if RUNNING_ON_WINDOWS and isinstance(self.login_detector, LoginDetector):
+					self.login_detector.stop()
+					self.login_detector.join(2)
 				for eventGenerator in getEventGenerators():
 					logger.info("Stopping event generator %s", eventGenerator)
 					eventGenerator.stop()
@@ -537,6 +544,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						# Wait some more seconds for events to fire
 						time.sleep(5)
 
+				self.updateMOTD()  # daemon startup is done, gui is up
 				try:
 					yield
 				finally:
@@ -619,7 +627,6 @@ class Opsiclientd(EventListener, threading.Thread):
 					with getCacheService() as cacheService:
 						self._cacheService = cacheService
 
-						self.updateMOTD()  # or after daemon startup?
 						with getDaemonLoopingContext():
 							with self._eptListLock:
 								if not self._eventProcessingThreads:
