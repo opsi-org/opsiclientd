@@ -254,8 +254,9 @@ class LoginDetector(threading.Thread):
 
 	def run(self) -> None:
 		logger.info("LoginDetector started")
-		while not self._stopped:
-			time.sleep(0.5)
+		(_wmi, pythoncom) = importWmiAndPythoncom(importWmi=False, importPythoncom=True)
+		pythoncom.PumpMessages()
+		pythoncom.CoUninitialize()  # Neccessary?
 		logger.info("LoginDetector stopped")
 
 	def stop(self) -> None:
