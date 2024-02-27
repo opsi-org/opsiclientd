@@ -86,7 +86,6 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 
 	def subscribe(self):
 		(_wmi, _pythoncom) = importWmiAndPythoncom(importWmi=False)
-		pythoncom.CoInitialize()
 
 		subscription_interface = _pythoncom.WrapObject(self)
 
@@ -234,7 +233,10 @@ class LoginDetector(threading.Thread):
 	def __init__(self, opsiclientd: Any) -> None:
 		super().__init__()
 		self._opsiclientd = opsiclientd
+		(_wmi, pythoncom) = importWmiAndPythoncom(importWmi=False, importPythoncom=True)
+		pythoncom.CoInitialize()
 		self._sensLogon = SensLogon(self.callback)
+		self._sensLogon.subscribe()
 		self._stopped = False
 
 	def callback(self, eventType, *args):
@@ -251,10 +253,10 @@ class LoginDetector(threading.Thread):
 			self._opsiclientd.updateMOTD()
 
 	def run(self) -> None:
-		self._sensLogon.subscribe()
 		logger.info("LoginDetector started")
 		while not self._stopped:
 			time.sleep(0.5)
+		logger.info("LoginDetector stopped")
 
 	def stop(self) -> None:
 		self._stopped = True

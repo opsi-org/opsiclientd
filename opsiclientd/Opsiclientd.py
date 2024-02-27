@@ -119,7 +119,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._controlServer: ControlServer | None = None
 		self._permanent_service_connection: PermanentServiceConnection | None = None
 		self._selfUpdating = False
-		self.login_detector: Any = None  # No proper typing to avoid windows imports
+		self.login_detector: LoginDetector | None = None
 
 		self._argv = list(sys.argv)
 		self._argv[0] = os.path.abspath(self._argv[0])
@@ -517,11 +517,12 @@ class Opsiclientd(EventListener, threading.Thread):
 					self.login_detector = LoginDetector(self)
 					self.login_detector.start()
 				except Exception as error:
-					logger.error("Failed to start login_detector: %s", error, exc_info=True)
+					logger.error("Failed to start LoginDetector: %s", error, exc_info=True)
 			try:
 				yield
 			finally:
 				if RUNNING_ON_WINDOWS and isinstance(self.login_detector, LoginDetector):
+					logger.info("Stopping LoginDetector for message of the day.")
 					self.login_detector.stop()
 					self.login_detector.join(2)
 				for eventGenerator in getEventGenerators():
@@ -941,19 +942,21 @@ class Opsiclientd(EventListener, threading.Thread):
 			if not user_message_valid_until:
 				user_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
 			for entry in sessions:
-				if (
-					user_message
-					and sha256string(user_message) != message_of_the_day_state.get("last_user_message_hash", {}).get(entry.get("UserName"))
-					and datetime.now() < datetime.fromisoformat(user_message_valid_until)
-				):  # Note: Assuming iso format!
-					logger.notice("Showing user-specific message of the day")
-					self.showPopup(
-						user_message, mode="replace", addTimestamp=False, link_handling="browser", session=entry.get("SessionId")
-					)
-					if "last_user_message_hash" not in message_of_the_day_state:
-						message_of_the_day_state["last_user_message_hash"] = {}
-					message_of_the_day_state["last_user_message_hash"][entry.get("UserName")] = sha256string(user_message)
-					message_shown = "user"
+				if not user_message:
+					logger.info("Not showing user-specific message of the day, because it is empty")
+					continue
+				if sha256string(user_message) == message_of_the_day_state.get("last_user_message_hash", {}).get(entry.get("UserName")):
+					logger.info("Not showing user-specific message of the day, because it was already shown")
+					continue
+				if datetime.now() > datetime.fromisoformat(user_message_valid_until):  # Note: Assuming iso format!
+					logger.info("Not showing user-specific message of the day, because it is not valid anymore")
+					continue
+				logger.notice("Showing user-specific message of the day")
+				self.showPopup(user_message, mode="replace", addTimestamp=False, link_handling="browser", session=entry.get("SessionId"))
+				if "last_user_message_hash" not in message_of_the_day_state:
+					message_of_the_day_state["last_user_message_hash"] = {}
+				message_of_the_day_state["last_user_message_hash"][entry.get("UserName")] = sha256string(user_message)
+				message_shown = "user"
 		else:  # show device message
 			if not device_message:
 				if not self._permanent_service_connection:
@@ -965,11 +968,13 @@ class Opsiclientd(EventListener, threading.Thread):
 				device_message_valid_until = data[host_id].get(motd_configs[1], [""])[0]
 			if not device_message_valid_until:
 				device_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
-			if (
-				device_message
-				and sha256string(device_message) != message_of_the_day_state.get("last_device_message_hash")
-				and datetime.now() < datetime.fromisoformat(device_message_valid_until)
-			):  # Note: Assuming iso format!
+			if not device_message:
+				logger.info("Not showing device-specific message of the day, because it is empty")
+			elif sha256string(device_message) == message_of_the_day_state.get("last_device_message_hash"):
+				logger.info("Not showing device-specific message of the day, because it was already shown")
+			elif datetime.now() > datetime.fromisoformat(device_message_valid_until):  # Note: Assuming iso format!
+				logger.info("Not showing device-specific message of the day, because it is not valid anymore")
+			else:
 				logger.notice("Showing device-specific message of the day")
 				self.showPopup(device_message, mode="replace", addTimestamp=False, link_handling="no")
 				message_of_the_day_state["last_device_message_hash"] = sha256string(device_message)
