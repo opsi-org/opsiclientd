@@ -13,15 +13,16 @@ import time
 
 from opsicommon.logging import logger
 
-from opsiclientd.Events.Basic import EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
+from opsiclientd.Events.Basic import EventGenerator
 
-__all__ = ['WMIEventConfig', 'WMIEventGenerator']
+__all__ = ["WMIEventConfig", "WMIEventGenerator"]
+
 
 class WMIEventConfig(EventConfig):
 	def setConfig(self, conf):
 		EventConfig.setConfig(self, conf)
-		self.wql = str(conf.get('wql', ''))
+		self.wql = str(conf.get("wql", ""))
 
 
 class WMIEventGenerator(EventGenerator):
@@ -37,7 +38,8 @@ class WMIEventGenerator(EventGenerator):
 		if not self._wql:
 			return
 
-		from opsiclientd.windows import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
+		from opsiclientd.windows import importWmiAndPythoncom
+
 		(wmi, pythoncom) = importWmiAndPythoncom()
 		pythoncom.CoInitialize()
 		max_attempts = 10
@@ -46,15 +48,15 @@ class WMIEventGenerator(EventGenerator):
 				logger.debug("Creating wmi object")
 				con = wmi.WMI(privileges=["Security"])
 				logger.info("Watching for wql: %s", self._wql)
-				self._watcher = con.watch_for(raw_wql=self._wql, wmi_class='')
+				self._watcher = con.watch_for(raw_wql=self._wql, wmi_class="")
 				break
-			except Exception as err: # pylint: disable=broad-except
+			except Exception as err:
 				if self._stopped:
 					return
 				logger.warning("Failed to create wmi watcher (wql=%s): %s", self._wql, err, exc_info=True)
 				if attempt >= max_attempts:
 					raise
-				for i in range(3):  # pylint: disable=unused-variable
+				for i in range(3):
 					if self._stopped:
 						return
 					time.sleep(1)
@@ -71,7 +73,8 @@ class WMIEventGenerator(EventGenerator):
 			return None
 
 		wqlResult = None
-		from opsiclientd.windows import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
+		from opsiclientd.windows import importWmiAndPythoncom
+
 		(wmi, _pythoncom) = importWmiAndPythoncom()
 		while not self._stopped:
 			try:
@@ -104,7 +107,8 @@ class WMIEventGenerator(EventGenerator):
 			time.sleep(waitTime)
 
 		try:
-			from opsiclientd.windows import importWmiAndPythoncom # pylint: disable=import-outside-toplevel
+			from opsiclientd.windows import importWmiAndPythoncom
+
 			(_wmi, pythoncom) = importWmiAndPythoncom()
 			pythoncom.CoUninitialize()
 		except ImportError:

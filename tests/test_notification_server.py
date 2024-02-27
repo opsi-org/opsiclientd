@@ -12,24 +12,24 @@ import json
 import socket
 import time
 
-from OPSI.Util.Message import ChoiceSubject
+from OPSI.Util.Message import ChoiceSubject  # type: ignore[import]
 
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.EventProcessing import EventProcessingThread
 from opsiclientd.Events.Basic import Event
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 
-from .utils import default_config  # pylint: disable=unused-import
+from .utils import default_config
 
 
-def test_notification_server(default_config):  # pylint: disable=redefined-outer-name,unused-argument
+def test_notification_server(default_config):
 	configs = getEventConfigs()
 	eventConfig = EventConfig(configs["on_demand"])
 
 	evt = Event(eventConfig=eventConfig, eventInfo={})
 	ept = EventProcessingThread(opsiclientd=None, event=evt)
 	ept.startNotificationServer()
-	ept._messageSubject.setMessage("pytest")  # pylint: disable=protected-access
+	ept._messageSubject.setMessage("pytest")
 
 	choiceSubject = ChoiceSubject(id="choice")
 	choiceSubject.setChoices(["abort", "start"])
@@ -42,7 +42,7 @@ def test_notification_server(default_config):  # pylint: disable=redefined-outer
 		_choiceSubject.pyTestDone = True
 
 	choiceSubject.setCallbacks([abortActionCallback, startActionCallback])
-	ept._notificationServer.addSubject(choiceSubject)  # pylint: disable=protected-access
+	ept._notificationServer.addSubject(choiceSubject)
 	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	sock.connect(("127.0.0.1", ept.notificationServerPort))
 	try:

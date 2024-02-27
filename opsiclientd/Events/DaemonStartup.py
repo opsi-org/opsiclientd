@@ -8,13 +8,10 @@
 Daemon Startup Events
 """
 
-from opsiclientd.Events.Basic import Event, EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
+from opsiclientd.Events.Basic import Event, EventGenerator
 
-__all__ = [
-	'DaemonStartupEvent', 'DaemonStartupEventConfig',
-	'DaemonStartupEventGenerator'
-]
+__all__ = ["DaemonStartupEvent", "DaemonStartupEventConfig", "DaemonStartupEventGenerator"]
 
 
 class DaemonStartupEventConfig(EventConfig):
@@ -24,8 +21,7 @@ class DaemonStartupEventConfig(EventConfig):
 
 
 class DaemonStartupEventGenerator(EventGenerator):
-
-	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
+	def createEvent(self, eventInfo={}):
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None
@@ -33,5 +29,5 @@ class DaemonStartupEventGenerator(EventGenerator):
 		return DaemonStartupEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class DaemonStartupEvent(Event): # pylint: disable=too-few-public-methods
+class DaemonStartupEvent(Event):
 	pass

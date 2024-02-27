@@ -15,8 +15,8 @@ import threading
 from pathlib import Path
 
 import psutil
-from OPSI import System
-from opsicommon.logging import logger
+from OPSI import System  # type: ignore[import]
+from opsicommon.logging import get_logger
 from opsicommon.types import forceBool, forceUnicode
 from opsicommon.utils import Singleton
 
@@ -28,6 +28,7 @@ from opsiclientd.SystemCheck import (
 )
 
 config = Config()
+logger = get_logger("opsiclientd")
 
 
 class State(metaclass=Singleton):
@@ -54,7 +55,7 @@ class State(metaclass=Singleton):
 						jsonstr = stateFile.read()
 
 					self._state = json.loads(jsonstr)
-			except Exception as error:  # pylint: disable=broad-except
+			except Exception as error:
 				logger.error("Failed to read state file '%s': %s", self._stateFile, error)
 
 	def _writeStateFile(self):
@@ -66,10 +67,10 @@ class State(metaclass=Singleton):
 
 				with codecs.open(self._stateFile, "w", "utf8") as stateFile:
 					stateFile.write(jsonstr)
-			except Exception as error:  # pylint: disable=broad-except
+			except Exception as error:
 				logger.error("Failed to write state file '%s': %s", self._stateFile, error)
 
-	def get(self, name, default=None):  # pylint: disable=too-many-return-statements,too-many-branches
+	def get(self, name, default=None):
 		name = forceUnicode(name)
 		if name == "user_logged_in":
 			if RUNNING_ON_WINDOWS:

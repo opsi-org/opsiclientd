@@ -10,10 +10,10 @@ Self-service functionality.
 
 import os
 
-from OPSI.Service.Resource import ResourceOpsi
-from OPSI.Service.Worker import WorkerOpsiJsonRpc
+from OPSI.Service.Resource import ResourceOpsi  # type: ignore[import]
+from OPSI.Service.Worker import WorkerOpsiJsonRpc  # type: ignore[import]
 from opsicommon.exceptions import OpsiServiceAuthenticationError
-from opsicommon.logging import log_context, logger
+from opsicommon.logging import get_logger, log_context
 from twisted.internet import defer
 
 from opsiclientd.Config import Config
@@ -21,11 +21,12 @@ from opsiclientd.Events.SwOnDemand import SwOnDemandEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
 from opsiclientd.OpsiService import ServiceConnection
 
-config = Config()  # pylint: disable=invalid-name
-service_connection = ServiceConnection()  # pylint: disable=invalid-name
+config = Config()
+service_connection = ServiceConnection()
+logger = get_logger("opsiclientd")
 
 
-class WorkerKioskJsonRpc(WorkerOpsiJsonRpc):  # pylint: disable=too-few-public-methods
+class WorkerKioskJsonRpc(WorkerOpsiJsonRpc):
 	_allowedMethods = [
 		"getClientId",
 		"fireEvent_software_on_demand",
@@ -51,11 +52,11 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc):  # pylint: disable=too-few-public-m
 			WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 			self._auth_module = None
 			if os.name == "posix":
-				import OPSI.Backend.Manager.Authentication.PAM  # pylint: disable=import-outside-toplevel
+				import OPSI.Backend.Manager.Authentication.PAM  # type: ignore[import]
 
 				self._auth_module = OPSI.Backend.Manager.Authentication.PAM.PAMAuthentication()
 			elif os.name == "nt":
-				import OPSI.Backend.Manager.Authentication.NT  # pylint: disable=import-outside-toplevel
+				import OPSI.Backend.Manager.Authentication.NT  # type: ignore[import]
 
 				self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
 
@@ -101,10 +102,10 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc):  # pylint: disable=too-few-public-m
 				return result
 
 			raise RuntimeError("Invalid credentials")
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			raise OpsiServiceAuthenticationError(f"Forbidden: {err}") from err
 
-	def _executeRpcs(self, result):  # pylint: disable=unused-argument
+	def _executeRpcs(self, result):
 		deferred = defer.Deferred()
 		for rpc in self._rpcs:
 			if rpc.method not in self._allowedMethods:
@@ -112,13 +113,13 @@ class WorkerKioskJsonRpc(WorkerOpsiJsonRpc):  # pylint: disable=too-few-public-m
 			if rpc.method == "getClientId":
 				rpc.result = config.get("global", "host_id")
 			elif rpc.method == "processActionRequests":
-				self.service._opsiclientdRpcInterface.processActionRequests()  # pylint: disable=protected-access
+				self.service._opsiclientdRpcInterface.processActionRequests()
 			elif rpc.method == "fireEvent_software_on_demand":
 				for eventGenerator in getEventGenerators(generatorClass=SwOnDemandEventGenerator):
 					# Allow event cancellation for new events called via the Kiosk
 					eventGenerator.createAndFireEvent(can_cancel=True)
 			elif rpc.method == "getConfigDataFromOpsiclientd":
-				rpc.result = self.service._opsiclientdRpcInterface.getConfigDataFromOpsiclientd()  # pylint: disable=protected-access
+				rpc.result = self.service._opsiclientdRpcInterface.getConfigDataFromOpsiclientd()
 			else:
 				deferred.addCallback(self._executeRpc, rpc)
 		deferred.callback(None)

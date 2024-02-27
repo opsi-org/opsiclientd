@@ -10,12 +10,10 @@ Software On Demand events.
 Usually triggered by the kiosk client on the client.
 """
 
-from opsiclientd.Events.Basic import Event, EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
+from opsiclientd.Events.Basic import Event, EventGenerator
 
-__all__ = [
-	'SwOnDemandEvent', 'SwOnDemandEventConfig', 'SwOnDemandEventGenerator'
-]
+__all__ = ["SwOnDemandEvent", "SwOnDemandEventConfig", "SwOnDemandEventGenerator"]
 
 
 class SwOnDemandEventConfig(EventConfig):
@@ -26,7 +24,7 @@ class SwOnDemandEventGenerator(EventGenerator):
 	def __init__(self, opsiclientd, eventConfig):
 		EventGenerator.__init__(self, opsiclientd, eventConfig)
 
-	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
+	def createEvent(self, eventInfo={}):
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None
@@ -34,5 +32,5 @@ class SwOnDemandEventGenerator(EventGenerator):
 		return SwOnDemandEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class SwOnDemandEvent(Event): # pylint: disable=too-few-public-methods
+class SwOnDemandEvent(Event):
 	pass

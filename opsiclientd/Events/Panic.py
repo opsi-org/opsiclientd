@@ -8,17 +8,17 @@
 Panic events are used to react to problems.
 """
 
-from opsiclientd.Events.Basic import Event, EventGenerator
 from opsiclientd.EventConfiguration import EventConfig
+from opsiclientd.Events.Basic import Event, EventGenerator
 
-__all__ = ['PanicEvent', 'PanicEventConfig', 'PanicEventGenerator']
+__all__ = ["PanicEvent", "PanicEventConfig", "PanicEventGenerator"]
 
 
-class PanicEventConfig(EventConfig): # pylint: disable=too-many-instance-attributes
+class PanicEventConfig(EventConfig):
 	def setConfig(self, conf):
 		EventConfig.setConfig(self, conf)
 		self.maxRepetitions = -1
-		self.actionMessage = 'Panic event'
+		self.actionMessage = "Panic event"
 		self.activationDelay = 0
 		self.notificationDelay = 0
 		self.actionWarningTime = 0
@@ -33,12 +33,11 @@ class PanicEventConfig(EventConfig): # pylint: disable=too-many-instance-attribu
 		self.eventNotifierCommand = None
 		self.actionNotifierCommand = None
 		self.shutdownNotifierCommand = None
-		self.actionProcessorDesktop = 'winlogon'
+		self.actionProcessorDesktop = "winlogon"
 
 
 class PanicEventGenerator(EventGenerator):
-
-	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
+	def createEvent(self, eventInfo={}):
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None
@@ -46,5 +45,5 @@ class PanicEventGenerator(EventGenerator):
 		return PanicEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class PanicEvent(Event): # pylint: disable=too-few-public-methods
+class PanicEvent(Event):
 	pass

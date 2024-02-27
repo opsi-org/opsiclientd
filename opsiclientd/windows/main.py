@@ -14,27 +14,26 @@ import sys
 import time
 from datetime import datetime
 
-import ntsecuritycon  # type: ignore[import] # pylint: disable=import-error
+import ntsecuritycon  # type: ignore[import]
 import opsicommon.logging  # type: ignore[import]
 import psutil  # type: ignore[import]
-import win32api  # type: ignore[import] # pylint: disable=import-error
+import win32api  # type: ignore[import]
 
 # pyright: reportMissingImports=false
-import win32con  # type: ignore[import] # pylint: disable=import-error
-import win32process  # type: ignore[import] # pylint: disable=import-error
-import win32security  # type: ignore[import] # pylint: disable=import-error
-from opsicommon.logging import LOG_NONE
+import win32con  # type: ignore[import]
+import win32process  # type: ignore[import]
+import win32security  # type: ignore[import]
+from opsicommon.logging import LOG_NONE, get_logger
 from opsicommon.logging import init_logging as oc_init_logging
-from opsicommon.logging import logger
 
 from opsiclientd import DEFAULT_STDERR_LOG_FORMAT, init_logging, parser
 from opsiclientd.Config import Config
 from opsiclientd.setup import setup
 
 # STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
-STARTUP_LOG = None
+STARTUP_LOG: str | None = None
 
-# pylint: disable=import-outside-toplevel
+logger = get_logger("opsiclientd")
 
 
 def startup_log(message):
@@ -45,7 +44,7 @@ def startup_log(message):
 			file.write(f"{datetime.now()} {message}\n")
 
 
-def run_as_system(command):  # pylint: disable=too-many-locals
+def run_as_system(command):
 	currentProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, os.getpid())
 	currentProcessToken = win32security.OpenProcessToken(currentProcess, win32con.MAXIMUM_ALLOWED)
 	duplicatedCurrentProcessToken = win32security.DuplicateTokenEx(
@@ -53,7 +52,7 @@ def run_as_system(command):  # pylint: disable=too-many-locals
 		DesiredAccess=win32con.MAXIMUM_ALLOWED,
 		ImpersonationLevel=win32security.SecurityImpersonation,
 		TokenType=ntsecuritycon.TokenImpersonation,
-		TokenAttributes=None
+		TokenAttributes=None,
 	)
 	_id = win32security.LookupPrivilegeValue(None, win32security.SE_DEBUG_NAME)
 	newprivs = [(_id, win32security.SE_PRIVILEGE_ENABLED)]
@@ -76,17 +75,14 @@ def run_as_system(command):  # pylint: disable=too-many-locals
 		raise RuntimeError("Failed to get pid of lsass.exe")
 
 	lsassProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, pid)
-	lsassProcessToken = win32security.OpenProcessToken(
-		lsassProcess,
-		win32con.MAXIMUM_ALLOWED
-	)
+	lsassProcessToken = win32security.OpenProcessToken(lsassProcess, win32con.MAXIMUM_ALLOWED)
 
 	systemToken = win32security.DuplicateTokenEx(
 		ExistingToken=lsassProcessToken,
 		DesiredAccess=win32con.MAXIMUM_ALLOWED,
 		ImpersonationLevel=win32security.SecurityImpersonation,
 		TokenType=ntsecuritycon.TokenImpersonation,
-		TokenAttributes=None
+		TokenAttributes=None,
 	)
 
 	privs = win32security.GetTokenInformation(systemToken, ntsecuritycon.TokenPrivileges)
@@ -104,7 +100,7 @@ def run_as_system(command):  # pylint: disable=too-many-locals
 		DesiredAccess=win32con.MAXIMUM_ALLOWED,
 		ImpersonationLevel=win32security.SecurityImpersonation,
 		TokenType=ntsecuritycon.TokenPrimary,
-		TokenAttributes=None
+		TokenAttributes=None,
 	)
 	win32security.SetTokenInformation(hToken, ntsecuritycon.TokenSessionId, sessionId)
 
@@ -128,7 +124,7 @@ def get_integrity_level():
 	return win32security.ConvertSidToStringSid(sid)
 
 
-def main():  # pylint: disable=too-many-statements,too-many-branches
+def main():
 	startup_log("windows.main")
 	log_dir = Config().get("global", "log_dir")
 	parent = psutil.Process(os.getpid()).parent()
@@ -140,6 +136,7 @@ def main():  # pylint: disable=too-many-statements,too-many-branches
 	if len(sys.argv) == 1 and parent_name == "services.exe":
 		startup_log("import start service")
 		from opsiclientd.windows.service import start_service
+
 		startup_log("init logging")
 		init_logging(stderr_level=LOG_NONE, log_dir=log_dir)
 		startup_log("start service")
@@ -148,6 +145,7 @@ def main():  # pylint: disable=too-many-statements,too-many-branches
 
 	if any(arg in sys.argv[1:] for arg in ("install", "update", "remove", "start", "stop", "restart")):
 		from opsiclientd.windows.service import handle_commandline
+
 		handle_commandline()
 		return
 
@@ -160,9 +158,8 @@ def main():  # pylint: disable=too-many-statements,too-many-branches
 			setup(full=True, options=options)
 		elif options.action == "download-from-depot":
 			oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
-			from opsiclientd.OpsiService import (  # pylint: disable=import-outside-toplevel
-				download_from_depot,
-			)
+			from opsiclientd.OpsiService import download_from_depot
+
 			Config().readConfigFile()
 			download_from_depot(*options.arguments)
 		return
@@ -173,16 +170,14 @@ def main():  # pylint: disable=too-many-statements,too-many-branches
 		command = executable + " " + args + " --elevated"
 		try:
 			run_as_system(command)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			print(f"Failed to run {command} as system: {err}", file=sys.stderr)
 			raise
 		return
 
 	integrity_level = get_integrity_level()
 	if int(integrity_level.split("-")[-1]) < 12288:
-		raise RuntimeError(
-			f"opsiclientd.exe must be run as service or from an elevated cmd.exe (integrity_level={integrity_level})"
-		)
+		raise RuntimeError(f"opsiclientd.exe must be run as service or from an elevated cmd.exe (integrity_level={integrity_level})")
 
 	if "--elevated" in sys.argv:
 		sys.argv.remove("--elevated")
@@ -192,12 +187,13 @@ def main():  # pylint: disable=too-many-statements,too-many-branches
 
 	init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
 
-	with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
+	with opsicommon.logging.log_context({"instance", "opsiclientd"}):
 		logger.notice("Running as user: %s", win32api.GetUserName())
 		if parent:
 			logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)
 		logger.debug(os.environ)
 		from .opsiclientd import opsiclientd_factory
+
 		opsiclientd = opsiclientd_factory()
 		try:
 			opsiclientd.start()

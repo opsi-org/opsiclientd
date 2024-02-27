@@ -19,17 +19,18 @@ import time
 
 # pyright: reportMissingImports=false
 import winreg  # type: ignore[import] # pylint: disable=import-error
+from enum import StrEnum
 
-import pywintypes  # type: ignore[import] # pylint: disable=import-error
-import win32api  # type: ignore[import] # pylint: disable=import-error
-import win32com.client  # type: ignore[import] # pylint: disable=import-error
-import win32com.server.policy  # type: ignore[import] # pylint: disable=import-error
-import win32con  # type: ignore[import] # pylint: disable=import-error
-import win32net  # type: ignore[import] # pylint: disable=import-error
-import win32netcon  # type: ignore[import] # pylint: disable=import-error
-import win32security  # type: ignore[import] # pylint: disable=import-error
+import pywintypes  # type: ignore[import]
+import win32api  # type: ignore[import]
+import win32com.client  # type: ignore[import]
+import win32com.server.policy  # type: ignore[import]
+import win32con  # type: ignore[import]
+import win32net  # type: ignore[import]
+import win32netcon  # type: ignore[import]
+import win32security  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
-from opsicommon.logging import logger  # type: ignore[import]
+from opsicommon.logging import get_logger  # type: ignore[import]
 from opsicommon.types import forceBool  # type: ignore[import]
 
 from opsiclientd import config
@@ -40,9 +41,11 @@ from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 if not RUNNING_ON_WINDOWS:
 	WindowsError = RuntimeError
 
+logger = get_logger("opsiclientd")
+
 
 def opsiclientd_factory():
-	windowsVersion = sys.getwindowsversion()  # pylint: disable=no-member
+	windowsVersion = sys.getwindowsversion()  # type: ignore[attr-defined]
 	if windowsVersion.major == 5:  # NT5: XP
 		return OpsiclientdNT5()
 	if windowsVersion.major >= 6:  # NT6: Vista / Windows7 and later
@@ -67,12 +70,13 @@ class OpsiclientdNT(Opsiclientd):
 				waitForEnding=True,
 				timeout=20,
 			)
-		except Exception as err:  # pylint: disable=broad-except
+
+		except Exception as err:
 			logger.error("Failed to suspend bitlocker: %s", err, exc_info=True)
 
 	def rebootMachine(self, waitSeconds=3):
 		if config.get("global", "suspend_bitlocker_on_reboot"):
-			windowsVersion = sys.getwindowsversion()  # pylint: disable=no-member
+			windowsVersion = sys.getwindowsversion()
 			if (windowsVersion.major == 6 and windowsVersion.minor >= 4) or windowsVersion.major > 6:  # Win10 and later
 				self.suspendBitlocker()
 		super().rebootMachine(waitSeconds)
@@ -86,7 +90,7 @@ class OpsiclientdNT(Opsiclientd):
 	def isRebootRequested(self):
 		try:
 			rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
-		except Exception as error:  # pylint: disable=broad-except
+		except Exception as error:
 			logger.warning("Failed to get RebootRequested from registry: %s", error)
 			rebootRequested = 0
 
@@ -102,24 +106,155 @@ class OpsiclientdNT(Opsiclientd):
 	def isShutdownRequested(self):
 		try:
 			shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.info("Failed to get shutdownRequested from registry: %s", err)
 			shutdownRequested = 0
 
 		logger.notice("Shutdown request in Registry: %s", shutdownRequested)
 		return forceBool(shutdownRequested)
 
+	def isWindowsRebootPending(self):
+		import winreg
+
+		import win32process  # type: ignore[import]
+
+		class CheckType(StrEnum):
+			KEY_EXISTS = "key_exists"
+			ANY_SUB_KEY_EXISTS = "any_sub_key_exists"
+			VALUE_EXISTS = "value_exists"
+			VALUE_NOT_ZERO = "value_not_zero"
+
+		checks = (
+			(
+				r"\SOFTWARE\Microsoft\Updates",
+				"UpdateExeVolatile",
+				CheckType.VALUE_NOT_ZERO,
+			),
+			(
+				r"\SYSTEM\CurrentControlSet\Control\Session Manager",
+				"PendingFileRenameOperations",
+				CheckType.VALUE_EXISTS,
+			),
+			(
+				r"\SYSTEM\CurrentControlSet\Control\Session Manager",
+				"PendingFileRenameOperations2",
+				CheckType.VALUE_EXISTS,
+			),
+			(
+				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired",
+				None,
+				CheckType.KEY_EXISTS,
+			),
+			(
+				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Services\Pending",
+				None,
+				CheckType.ANY_SUB_KEY_EXISTS,
+			),
+			(
+				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\PostRebootReporting",
+				None,
+				CheckType.KEY_EXISTS,
+			),
+			(
+				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce",
+				"DVDRebootSignal",
+				CheckType.VALUE_EXISTS,
+			),
+			(
+				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending",
+				None,
+				CheckType.KEY_EXISTS,
+			),
+			(
+				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootInProgress",
+				None,
+				CheckType.KEY_EXISTS,
+			),
+			(
+				r"\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\PackagesPending",
+				None,
+				CheckType.KEY_EXISTS,
+			),
+			(
+				r"\SOFTWARE\Microsoft\ServerManager\CurrentRebootAttempts",
+				None,
+				CheckType.KEY_EXISTS,
+			),
+			(
+				r"\SYSTEM\CurrentControlSet\Services\Netlogon",
+				"JoinDomain",
+				CheckType.VALUE_EXISTS,
+			),
+			(
+				r"\SYSTEM\CurrentControlSet\Services\Netlogon",
+				"AvoidSpnSet",
+				CheckType.VALUE_EXISTS,
+			),
+		)
+
+		is_windows_reboot_pending = False
+
+		access = winreg.KEY_READ
+		if win32process.IsWow64Process():
+			access |= winreg.KEY_WOW64_64KEY
+
+		for key, sub_key, value_name, check in checks:
+			reboot_check_result = False
+			key_exists = False
+			value_exists = False
+			any_sub_key_exists = False
+			reg_value = None
+			try:
+				with winreg.OpenKey(key=winreg.HKEY_LOCAL_MACHINE, sub_key=sub_key, access=access) as key:
+					key_exists = True
+					if check == CheckType.ANY_SUB_KEY_EXISTS:
+						number_of_sub_keys = winreg.QueryInfoKey(key)[0]
+						any_sub_key_exists = number_of_sub_keys > 0
+					if value_name:
+						reg_value, _value_type = winreg.QueryValueEx(key, value_name)
+						value_exists = True
+			except Exception:
+				pass
+
+			if CheckType.KEY_EXISTS:
+				reboot_check_result = key_exists
+			elif CheckType.VALUE_EXISTS:
+				reboot_check_result = value_exists
+			elif CheckType.VALUE_NOT_ZERO:
+				reboot_check_result = reg_value != 0
+			elif CheckType.ANY_SUB_KEY_EXISTS:
+				reboot_check_result = any_sub_key_exists
+
+			if reboot_check_result:
+				is_windows_reboot_pending = True
+
+			logger.info(
+				"Reboot check %r - %r - %r - %r: key_exists=%r, value_exists=%r, value=%r, result=%r",
+				key,
+				sub_key,
+				value_name,
+				check,
+				key_exists,
+				value_exists,
+				reg_value,
+				reboot_check_result,
+			)
+		return is_windows_reboot_pending
+
 	def isWindowsInstallerBusy(self):
 		if not self._ms_update_installer:
-			from opsiclientd.windows import (  # pylint: disable=import-outside-toplevel
-				importWmiAndPythoncom,
-			)
+			from opsiclientd.windows import importWmiAndPythoncom
 
 			(_wmi, _pythoncom) = importWmiAndPythoncom(importWmi=False, importPythoncom=True)
 			_pythoncom.CoInitialize()
 			session = win32com.client.Dispatch("Microsoft.Update.Session")
 			self._ms_update_installer = session.CreateUpdateInstaller()
-		return self._ms_update_installer.isBusy
+		installer_is_busy = self._ms_update_installer.isBusy
+		if not installer_is_busy:
+			logger.info(
+				"IUpdateInstaller::get_RebootRequiredBeforeInstallation: %r", self._ms_update_installer.get_RebootRequiredBeforeInstallation
+			)
+		return installer_is_busy
 
 	def loginUser(self, username, password):
 		for session_id in System.getActiveSessionIds(protocol="console"):
@@ -137,19 +272,19 @@ class OpsiclientdNT(Opsiclientd):
 				return True
 			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {response.get('error')}")
 
-	def cleanup_opsi_setup_user(self, keep_sid: str = None):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+	def cleanup_opsi_setup_user(self, keep_sid: str | None = None):
 		keep_profile = None
 		modified = True
 		while modified:
 			modified = False
 			# We need to start over iterating after key change
-			with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList") as key:
+			with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList") as key:  # type: ignore[attr-defined]
 				for idx in range(1024):
 					try:
-						profile_key = winreg.EnumKey(key, idx)
+						profile_key = winreg.EnumKey(key, idx)  # type: ignore[attr-defined]
 						logger.debug("Processing profile key %r", profile_key)
 					except WindowsError as err:
-						if err.errno == 22:  # type: ignore[attr-defined] # pylint: disable=no-member
+						if err.errno == 22:  # type: ignore[attr-defined]
 							logger.debug("No more subkeys")
 							break
 						logger.debug(err)
@@ -157,8 +292,8 @@ class OpsiclientdNT(Opsiclientd):
 					sid = profile_key.replace(".bak", "")
 
 					try:
-						with winreg.OpenKey(key, profile_key) as subkey:
-							profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]
+						with winreg.OpenKey(key, profile_key) as subkey:  # type: ignore[attr-defined]
+							profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]  # type: ignore[attr-defined]
 							if keep_sid and sid == keep_sid:
 								keep_profile = profile_path
 								continue
@@ -177,13 +312,13 @@ class OpsiclientdNT(Opsiclientd):
 						continue
 
 					try:
-						win32api.RegUnLoadKey(win32con.HKEY_USERS, profile_key)
+						win32api.RegUnLoadKey(win32con.HKEY_USERS, profile_key)  # type: ignore[arg-type]
 					except pywintypes.error as err:
 						logger.debug(err)
 
 					exists = False
 					try:
-						win32security.LookupAccountSid(None, win32security.ConvertStringSidToSid(sid))
+						win32security.LookupAccountSid(None, win32security.ConvertStringSidToSid(sid))  # type: ignore[arg-type]
 						exists = True
 					except pywintypes.error as err:
 						logger.debug(err)
@@ -207,20 +342,20 @@ class OpsiclientdNT(Opsiclientd):
 							logger.warning("Failed to delete user %r %r (exitcode %d): %s", cmd, username, res.returncode, out)
 							try:
 								logger.info("Deleting user %r via windows api", username)
-								win32net.NetUserDel(None, username)
-							except Exception as err:  # pylint: disable=broad-except
+								win32net.NetUserDel(None, username)  # type: ignore[arg-type]
+							except Exception as err:
 								logger.warning("Failed to delete user %r via windows api: %s", username, err)
 
 					else:
 						logger.info("User %r, sid %r does not exist, deleting key", username, sid)
 						try:
-							winreg.DeleteKey(key, profile_key)
+							winreg.DeleteKey(key, profile_key)  # type: ignore[attr-defined]
 							modified = True
 						except OSError as err:
 							logger.debug(err)
 
 					try:
-						winreg.DeleteKey(winreg.HKEY_USERS, sid)
+						winreg.DeleteKey(winreg.HKEY_USERS, sid)  # type: ignore[attr-defined]
 					except OSError as err:
 						logger.debug(err)
 					if modified:
@@ -247,7 +382,7 @@ class OpsiclientdNT(Opsiclientd):
 				else:
 					logger.info("Command %s successful: %s", cmd, out)
 
-	def createOpsiSetupUser(self, admin=True, delete_existing=False):  # pylint: disable=too-many-branches
+	def createOpsiSetupUser(self, admin=True, delete_existing=False):
 		# https://bugs.python.org/file46988/issue.py
 
 		password_chars = [random.choice(string.ascii_letters + string.digits) for i in range(9)] + ["/", "?", "9", "a", "Z"]
@@ -268,7 +403,7 @@ class OpsiclientdNT(Opsiclientd):
 			win32net.NetUserGetInfo(None, user_info["name"], 1)
 			user_sid = win32security.ConvertSidToStringSid(win32security.LookupAccountName(None, user_info["name"])[0])
 			logger.info("User '%s' exists, sid is '%s'", user_info["name"], user_sid)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.info(err)
 
 		self.cleanup_opsi_setup_user(keep_sid=None if delete_existing else user_sid)
@@ -283,7 +418,7 @@ class OpsiclientdNT(Opsiclientd):
 				0,
 				winreg.KEY_WOW64_64KEY | winreg.KEY_ALL_ACCESS,  # sysnative
 			)
-		except WindowsError:  # pylint: disable=undefined-variable
+		except WindowsError:
 			pass
 		try:
 			winreg.CreateKeyEx(
@@ -292,7 +427,7 @@ class OpsiclientdNT(Opsiclientd):
 				0,
 				winreg.KEY_WOW64_64KEY | winreg.KEY_ALL_ACCESS,  # sysnative
 			)
-		except WindowsError:  # pylint: disable=undefined-variable
+		except WindowsError:
 			pass
 
 		with winreg.OpenKey(
@@ -368,7 +503,7 @@ class ShutdownThread(threading.Thread):
 				System.shutdown(0)
 				logger.notice("Shutdown initiated")
 				break
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				# Device not ready?
 				logger.info("Failed to initiate shutdown: %s", err)
 				time.sleep(1)
@@ -384,7 +519,7 @@ class RebootThread(threading.Thread):
 				System.reboot(0)
 				logger.notice("Reboot initiated")
 				break
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				# Device not ready?
 				logger.info("Failed to initiate reboot: %s", err)
 				time.sleep(1)

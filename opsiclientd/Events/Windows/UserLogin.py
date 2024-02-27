@@ -15,9 +15,7 @@ from opsiclientd.Events.Basic import Event
 from opsiclientd.Events.Windows.SensLogon import SensLogonEventGenerator
 from opsiclientd.Events.Windows.WMI import WMIEventConfig
 
-__all__ = [
-	'UserLoginEvent', 'UserLoginEventConfig', 'UserLoginEventGenerator'
-]
+__all__ = ["UserLoginEvent", "UserLoginEventConfig", "UserLoginEventGenerator"]
 
 
 class UserLoginEventConfig(WMIEventConfig):
@@ -41,14 +39,14 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 			logger.info("Login of user %s detected, no UserLoginAction will be fired.", args[0])
 			return
 
-		if eventType == 'Logon':
+		if eventType == "Logon":
 			logger.notice("User login detected: %s", args[0])
 			self._eventsOccured += 1
-			self.fireEvent(self.createEvent(eventInfo={'User': args[0]}))
+			self.fireEvent(self.createEvent(eventInfo={"User": args[0]}))
 			if (self._generatorConfig.maxRepetitions > 0) and (self._eventsOccured > self._generatorConfig.maxRepetitions):
 				self.stop()
 
-	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
+	def createEvent(self, eventInfo={}):
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None
@@ -56,5 +54,5 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 		return UserLoginEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class UserLoginEvent(Event): # pylint: disable=too-few-public-methods
+class UserLoginEvent(Event):
 	pass

@@ -14,26 +14,26 @@ import sys
 import time
 from signal import SIGHUP, SIGINT, SIGTERM
 
-import opsicommon.logging
-from opsicommon.logging import LOG_NONE
+from opsicommon.logging import LOG_NONE, get_logger, log_context, logging_config
 from opsicommon.logging import init_logging as oc_init_logging
-from opsicommon.logging import logger, logging_config
 
 from opsiclientd import DEFAULT_STDERR_LOG_FORMAT, init_logging, parser
 from opsiclientd.Config import Config
 from opsiclientd.nonfree.Posix import OpsiclientdPosix
+from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.setup import setup
 
-opsiclientd = None  # pylint: disable=invalid-name
+opsiclientd: Opsiclientd | None = None
+logger = get_logger("opsiclientd")
 
 
-def signal_handler(signo, stackFrame):  # pylint: disable=unused-argument
+def signal_handler(signo, stackFrame):
 	logger.notice("Received signal %s, stopping opsiclientd", signo)
 	if opsiclientd:
 		opsiclientd.stop()
 
 
-def daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
+def daemonize(stdin="/dev/null", stdout="/dev/null", stderr="/dev/null"):
 	"""
 	Running as a daemon.
 	"""
@@ -58,11 +58,11 @@ def daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
 	logging_config(stderr_level=LOG_NONE)
 
 	# Replacing file descriptors
-	with open(stdin, 'rb', 0) as file:
+	with open(stdin, "rb", 0) as file:
 		os.dup2(file.fileno(), sys.stdin.fileno())
-	with open(stdout, 'rb', 0) as file:
+	with open(stdout, "rb", 0) as file:
 		os.dup2(file.fileno(), sys.stdout.fileno())
-	with open(stderr, 'rb', 0) as file:
+	with open(stderr, "rb", 0) as file:
 		os.dup2(file.fileno(), sys.stderr.fileno())
 
 
@@ -73,29 +73,14 @@ def write_pid_file(path):
 
 
 def main():
-	global opsiclientd  # pylint: disable=global-statement,invalid-name
+	global opsiclientd
 	log_dir = Config().get("global", "log_dir")
 
 	parser.add_argument(
-		"--no-signal-handlers", "-t",
-		dest="signalHandlers",
-		action="store_false",
-		default=True,
-		help="Do not register signal handlers."
+		"--no-signal-handlers", "-t", dest="signalHandlers", action="store_false", default=True, help="Do not register signal handlers."
 	)
-	parser.add_argument(
-		"--daemon", "-D",
-		dest="daemon",
-		action="store_true",
-		default=False,
-		help="Daemonize process."
-	)
-	parser.add_argument(
-		"--pid-file",
-		dest="pidFile",
-		default=None,
-		help="Write the PID into this file."
-	)
+	parser.add_argument("--daemon", "-D", dest="daemon", action="store_true", default=False, help="Daemonize process.")
+	parser.add_argument("--pid-file", dest="pidFile", default=None, help="Write the PID into this file.")
 
 	options = parser.parse_args()
 	if options.config_file:
@@ -108,16 +93,15 @@ def main():
 
 	if options.action == "download-from-depot":
 		oc_init_logging(stderr_level=options.logLevel, stderr_format=DEFAULT_STDERR_LOG_FORMAT)
-		from opsiclientd.OpsiService import (  # pylint: disable=import-outside-toplevel
-			download_from_depot,
-		)
+		from opsiclientd.OpsiService import download_from_depot
+
 		Config().readConfigFile()
 		download_from_depot(*options.arguments)
 		return
 
 	init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
 
-	with opsicommon.logging.log_context({'instance', 'opsiclientd'}):
+	with log_context({"instance", "opsiclientd"}):
 		if options.signalHandlers:
 			logger.debug("Registering signal handlers")
 			signal.signal(SIGHUP, signal.SIG_IGN)  # ignore SIGHUP
@@ -143,7 +127,7 @@ def main():
 			logger.debug("Stopping opsiclientd")
 			opsiclientd.join(60)
 			logger.debug("Stopped")
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err, exc_info=True)
 		finally:
 			if options.pidFile:

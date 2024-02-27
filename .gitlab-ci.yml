@@ -5,7 +5,6 @@ stages:
   - build
   - viruscheck
 
-
 viruscheck:virustotal:
   stage: viruscheck
   tags:
@@ -16,12 +15,15 @@ viruscheck:virustotal:
     - '$proc = (Start-Process -FilePath "opsi-dev-tools\opsi-dev-tool.exe" -ArgumentList "-l debug --virustotal-analysis opsiclientd_windows_x86\opsiclientd.exe --output-type simple --output-file viruscheck.txt" -PassThru -Wait)'
     - 'Write-Host "VirusTotal analysis finished with exit code: $($proc.ExitCode)"'
   artifacts:
-    name: 'opsiclientd_viruscheck'
+    name: "opsiclientd_viruscheck"
     paths:
       - viruscheck.txt
     expire_in: 14 days
   only:
     - tags
+  except:
+    variables:
+      - $SKIP_TESTS
 
 .run_opsiclientd: &run_opsiclientd |
   mkdir -p /var/log/opsi-client-agent
@@ -48,12 +50,15 @@ test:pytest-darwin:
     - poetry run pytest --tb=short -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
     - mv .coverage coverage_darwin
   artifacts:
-    name: 'opsiclientd_test_darwin'
+    name: "opsiclientd_test_darwin"
     paths:
       - coverage.xml
       - testreport.xml
       - coverage_darwin
     expire_in: 3 days
+  except:
+    variables:
+      - $SKIP_TESTS
 
 test:pytest-windows:
   #when: manual
@@ -66,12 +71,15 @@ test:pytest-windows:
     - poetry run pytest --tb=short -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
     - Rename-Item -Path .coverage -NewName coverage_windows
   artifacts:
-    name: 'opsiclientd_test_windows'
+    name: "opsiclientd_test_windows"
     paths:
       - coverage.xml
       - testreport.xml
       - coverage_windows
     expire_in: 3 days
+  except:
+    variables:
+      - $SKIP_TESTS
 
 test:pytest-linux:
   #when: manual
@@ -84,14 +92,17 @@ test:pytest-linux:
     - poetry run pytest --tb=short -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
     - mv .coverage coverage_linux
   artifacts:
-    name: 'opsiclientd_test_linux'
+    name: "opsiclientd_test_linux"
     paths:
       - coverage.xml
       - testreport.xml
       - coverage_linux
     expire_in: 3 days
+  except:
+    variables:
+      - $SKIP_TESTS
 
-test:pylint-pytest:
+lint-pytest:
   #when: manual
   stage: test
   needs:
@@ -108,7 +119,8 @@ test:pylint-pytest:
     - apt-get --yes install sqlite3
     - poetry lock --no-update --no-cache
     - poetry install
-    - poetry run pylint --disable=R,fixme opsiclientd
+    - poetry run ruff opsiclientd tests
+    - poetry run mypy opsiclientd tests
     - for db in coverage_*; do sqlite3 $db 'update file set path=replace(substr(path,instr(path,"opsiclientd")+12),"\","/");'; done
     - echo -e '[run]\nrelative_files = True\n' > .coveragerc
     - poetry run coverage combine coverage_*
@@ -116,21 +128,17 @@ test:pylint-pytest:
     - poetry run coverage report
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+)%/'
   artifacts:
-    name: 'opsiclientd_test'
+    name: "opsiclientd_test"
     paths:
       - coverage.xml
     expire_in: 3 days
-
+  except:
+    variables:
+      - $SKIP_TESTS
 
 build:pyinstaller-linux-x64:
   stage: build
   script:
-    #- apt -y install curl
-    ## Remove the expired letsencrypt root CA used for git
-    #- rm /usr/share/ca-certificates/mozilla/DST_Root_CA_X3.crt
-    #- update-ca-certificates
-    #- sed -i s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
-    #- poetry update python-opsi
     - TRANSIFEX_MIN_REVIEW_RATE=0.0
     - '[ "$CI_COMMIT_TAG" = "" ] || TRANSIFEX_MIN_REVIEW_RATE=1.0'
     - curl -o opsi-dev-tools.tar.gz "$OPSIDEVTOOLS_URL_LINUX_X64"
@@ -145,7 +153,6 @@ build:pyinstaller-linux-x64:
     # Push to binaryindex
     - '[ "$CI_COMMIT_TAG" = "" ] && ./opsi-dev-cli -l info binary push opsiclientd_linux_x64 --prerelease="$CI_JOB_ID"'
     - '[ "$CI_COMMIT_TAG" = "" ] || ./opsi-dev-cli -l info binary push opsiclientd_linux_x64'
-
 
 build:pyinstaller-darwin-x64:
   stage: build

@@ -11,7 +11,7 @@ Windows-specific Custom event.
 from opsiclientd.Events.Basic import Event
 from opsiclientd.Events.Windows.WMI import WMIEventConfig, WMIEventGenerator
 
-__all__ = ['CustomEvent', 'CustomEventConfig', 'CustomEventGenerator']
+__all__ = ["CustomEvent", "CustomEventConfig", "CustomEventGenerator"]
 
 
 class CustomEventConfig(WMIEventConfig):
@@ -19,8 +19,7 @@ class CustomEventConfig(WMIEventConfig):
 
 
 class CustomEventGenerator(WMIEventGenerator):
-
-	def createEvent(self, eventInfo={}): # pylint: disable=dangerous-default-value
+	def createEvent(self, eventInfo={}):
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None
@@ -28,5 +27,5 @@ class CustomEventGenerator(WMIEventGenerator):
 		return CustomEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
 
-class CustomEvent(Event): # pylint: disable=too-few-public-methods
+class CustomEvent(Event):
 	pass

@@ -11,7 +11,6 @@ These classes are used to create a https service which executes remote
 procedure calls
 """
 
-# pylint: disable=too-many-lines
 
 import codecs
 import datetime
@@ -36,6 +35,10 @@ from uuid import uuid4
 
 import msgpack  # type: ignore[import]
 import psutil  # type: ignore[import]
+from cryptography import x509
+from cryptography.hazmat.primitives import serialization
+from OpenSSL import SSL
+from opsicommon import __version__ as opsicommon_version
 
 with warnings.catch_warnings():
 	warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -45,10 +48,9 @@ with warnings.catch_warnings():
 		WebSocketServerProtocol,
 	)
 
-from OpenSSL import crypto  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
 from OPSI import __version__ as python_opsi_version  # type: ignore[import]
-from OPSI.Service import OpsiService, SSLContext  # type: ignore[import]
+from OPSI.Service import OpsiService  # type: ignore[import]
 from OPSI.Service.Resource import (  # type: ignore[import]
 	ResourceOpsi,
 	ResourceOpsiJsonInterface,
@@ -61,14 +63,15 @@ from OPSI.Service.Worker import (  # type: ignore[import]
 )
 from OPSI.Util.Log import truncateLogData  # type: ignore[import]
 from opsicommon.exceptions import OpsiServiceAuthenticationError
-from opsicommon.logging import (  # type: ignore[import]
+from opsicommon.logging import (
 	LEVEL_TO_NAME,
 	OPSI_LEVEL_TO_LEVEL,
+	get_logger,
 	log_context,
-	logger,
 	secret_filter,
 )
-from opsicommon.types import forceBool, forceInt, forceUnicode, forceProductIdList  # type: ignore[import]
+from opsicommon.types import forceBool, forceInt, forceProductIdList, forceUnicode
+from opsicommon.utils import generate_opsi_host_key
 from twisted.internet import fdesc, reactor
 from twisted.internet.base import BasePort
 from twisted.internet.error import CannotListenError
@@ -87,8 +90,58 @@ from opsiclientd.State import State
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 
+if RUNNING_ON_WINDOWS:
+	from opsiclientd.windows import runCommandInSession
+else:
+	from OPSI.System import runCommandInSession  # type: ignore
+
 config = Config()
 state = State()
+logger = get_logger("opsiclientd")
+
+
+class SSLContext(object):
+	def __init__(self, sslServerKeyFile, sslServerCertFile, acceptedCiphers=""):
+		"""
+		Create a context for the usage of SSL in twisted.
+
+		:param sslServerCertFile: Path to the certificate file.
+		:type sslServerCertFile: str
+		:param sslServerKeyFile: Path to the key file.
+		:type sslServerKeyFile: str
+		:param acceptedCiphers: A string defining what ciphers should \
+be accepted. Please refer to the OpenSSL documentation on how such a \
+string should be composed. No limitation will be done if an empty value \
+is set.
+		:type acceptedCiphers: str
+		"""
+		self._sslServerKeyFile = sslServerKeyFile
+		self._sslServerCertFile = sslServerCertFile
+		self._acceptedCiphers = acceptedCiphers
+
+	def getContext(self):
+		"""
+		Get an SSL context.
+
+		:rtype: OpenSSL.SSL.Context
+		"""
+
+		# Test if server certificate and key file exist.
+		if not os.path.isfile(self._sslServerKeyFile):
+			raise OSError(f"Server key file '{self._sslServerKeyFile}' does not exist!")
+
+		if not os.path.isfile(self._sslServerCertFile):
+			raise OSError(f"Server certificate file '{self._sslServerCertFile}' does not exist!")
+
+		context = SSL.Context(SSL.SSLv23_METHOD)
+		context.use_privatekey_file(self._sslServerKeyFile)
+		context.use_certificate_file(self._sslServerCertFile)
+
+		if self._acceptedCiphers:
+			context.set_cipher_list(self._acceptedCiphers)
+
+		return context
+
 
 INDEX_PAGE = """<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
@@ -271,7 +324,7 @@ try:
 	fsencoding = sys.getfilesystemencoding()
 	if not fsencoding:
 		raise ValueError(f"getfilesystemencoding returned {fsencoding}")
-except Exception as fse_err:  # pylint: disable=broad-except
+except Exception as fse_err:
 	logger.info("Problem getting filesystemencoding: %s", fse_err)
 	defaultEncoding = sys.getdefaultencoding()
 	logger.notice("Patching filesystemencoding to be '%s'", defaultEncoding)
@@ -284,11 +337,11 @@ if platform.system().lower() == "windows":
 		skt = socket.socket(self.addressFamily, self.socketType)
 		skt.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
 		skt.setblocking(False)
-		fdesc._setCloseOnExec(skt.fileno())  # pylint: disable=protected-access
+		fdesc._setCloseOnExec(skt.fileno())
 		return skt
 
 	# Monkeypatch createInternetSocket to enable dual stack connections
-	BasePort.createInternetSocket = create_dualstack_internet_socket
+	BasePort.createInternetSocket = create_dualstack_internet_socket  # type: ignore[method-assign]
 
 
 class WorkerOpsiclientd(WorkerOpsi):
@@ -300,17 +353,17 @@ class WorkerOpsiclientd(WorkerOpsi):
 	def _set_auth_module(self):
 		self._auth_module = None
 		if os.name == "posix":
-			import OPSI.Backend.Manager.Authentication.PAM  # type: ignore[import] # pylint: disable=import-outside-toplevel
+			import OPSI.Backend.Manager.Authentication.PAM  # type: ignore[import]
 
 			self._auth_module = OPSI.Backend.Manager.Authentication.PAM.PAMAuthentication()
 		elif os.name == "nt":
-			import OPSI.Backend.Manager.Authentication.NT  # type: ignore[import] # pylint: disable=import-outside-toplevel
+			import OPSI.Backend.Manager.Authentication.NT  # type: ignore[import]
 
 			self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
 
 	def run(self):
 		with log_context({"instance": "control server"}):
-			super().run()  # pylint: disable=no-member
+			super().run()
 
 	def _getCredentials(self):
 		(user, password) = self._getAuthorization()
@@ -330,11 +383,11 @@ class WorkerOpsiclientd(WorkerOpsi):
 				self.service.authFailures[client_ip]["count"] += 1
 				if self.service.authFailures[client_ip]["count"] > maxAuthenticationFailures:
 					self.service.authFailures[client_ip]["blocked_time"] = time.time()
-			reactor.callLater(5, WorkerOpsi._errback, self, failure)  # pylint: disable=no-member
+			reactor.callLater(5, WorkerOpsi._errback, self, failure)
 		else:
 			WorkerOpsi._errback(self, failure)
 
-	def _authenticate(self, result):  # pylint: disable=too-many-branches
+	def _authenticate(self, result):
 		if self.session.authenticated:
 			return result
 
@@ -372,7 +425,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 					raise RuntimeError("Not an admin user")
 			else:
 				raise RuntimeError("Invalid credentials")
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			self.request.code = 401
 			raise OpsiServiceAuthenticationError(f"Forbidden: {err}") from err
 
@@ -392,8 +445,8 @@ class WorkerOpsiclientdJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		WorkerOpsiJsonRpc.__init__(self, service, request, resource)
 
 	def _getCallInstance(self, result):
-		self._callInstance = self.service._opsiclientdRpcInterface  # pylint: disable=protected-access
-		self._callInterface = self.service._opsiclientdRpcInterface.getInterface()  # pylint: disable=protected-access
+		self._callInstance = self.service._opsiclientdRpcInterface
+		self._callInterface = self.service._opsiclientdRpcInterface.getInterface()
 
 	def _processQuery(self, result):
 		return WorkerOpsiJsonRpc._processQuery(self, result)
@@ -433,10 +486,10 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		except AttributeError:
 			pass
 
-		if not self.service._opsiclientd.getCacheService():  # pylint: disable=protected-access
+		if not self.service._opsiclientd.getCacheService():
 			raise RuntimeError("Cache service not running")
 
-		self.session.callInstance = self.service._opsiclientd.getCacheService().getConfigBackend()  # pylint: disable=protected-access
+		self.session.callInstance = self.service._opsiclientd.getCacheService().getConfigBackend()
 		logger.notice("Backend created: %s", self.session.callInstance)
 		self.session.callInterface = self.session.callInstance.backend_getInterface()
 		return result
@@ -450,7 +503,7 @@ class WorkerCacheServiceJsonRpc(WorkerOpsiclientd, WorkerOpsiJsonRpc):
 		return WorkerOpsiJsonRpc._processQuery(self, result)
 
 	def _generateResponse(self, result):
-		cache_service = self.service._opsiclientd.getCacheService()  # pylint: disable=protected-access
+		cache_service = self.service._opsiclientd.getCacheService()
 		if not cache_service:
 			raise RuntimeError("Cache service not running")
 		self.request.setHeader(
@@ -518,7 +571,7 @@ class WorkerOpsiclientdFiles(WorkerOpsiclientd):
 			query = urllib.parse.parse_qs(self.request.uri.decode("utf-8").split("?", 1)[1])
 		logger.info("Requested endpoint %s with query %s", path, query)
 		if path == "/files/logs":
-			file_path = self.service._opsiclientd.collectLogfiles(  # pylint: disable=protected-access
+			file_path = self.service._opsiclientd.collectLogfiles(
 				types=query.get("type", []), max_age_days=query.get("max_age_days", [None])[0]
 			)
 			logger.notice("Delivering file %s", file_path)
@@ -572,7 +625,7 @@ class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 			tmpfile = os.path.join(tmpdir, filename)
 			with open(tmpfile, "wb") as file:
 				file.write(file_data)
-			self.service._opsiclientd.self_update_from_file(tmpfile)  # pylint: disable=protected-access
+			self.service._opsiclientd.self_update_from_file(tmpfile)
 
 	def _getQuery(self, result):
 		pass
@@ -582,7 +635,7 @@ class WorkerOpsiclientdUpload(WorkerOpsiclientd):
 		if path.startswith("/upload/update/opsiclientd"):
 			try:
 				self.self_update_from_upload()
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error(err, exc_info=True)
 				raise
 		else:
@@ -632,7 +685,7 @@ class ResourceRoot(Resource):
 
 
 class ResourceOpsiclientdIndex(Resource):
-	def __init__(self, service):  # pylint: disable=unused-argument
+	def __init__(self, service):
 		super().__init__()
 
 	def render(self, request):
@@ -689,8 +742,8 @@ class ResourceOpsiclientdUpload(ResourceOpsiclientd):
 	WorkerClass = WorkerOpsiclientdUpload
 
 
-class ControlServer(OpsiService, threading.Thread):  # pylint: disable=too-many-instance-attributes
-	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):  # pylint: disable=too-many-arguments
+class ControlServer(OpsiService, threading.Thread):
+	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
 		OpsiService.__init__(self)
 		threading.Thread.__init__(self)
 		self._opsiclientd = opsiclientd
@@ -727,16 +780,16 @@ class ControlServer(OpsiService, threading.Thread):  # pylint: disable=too-many-
 
 				ssl_context = SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
 				try:
-					self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context, interface="::")  # pylint: disable=no-member
+					self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context, interface="::")
 					logger.info("IPv6 support enabled")
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.info("No IPv6 support: %s", err)
-					self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context)  # pylint: disable=no-member
+					self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context)
 				logger.notice("Control server is accepting HTTPS requests on port %d", self._httpsPort)
 
-				if not reactor.running:  # pylint: disable=no-member
+				if not reactor.running:
 					logger.debug("Reactor is not running. Starting.")
-					reactor.run(installSignalHandlers=0)  # pylint: disable=no-member
+					reactor.run(installSignalHandlers=0)
 					logger.debug("Reactor run ended.")
 				else:
 					logger.debug("Reactor already running.")
@@ -744,7 +797,7 @@ class ControlServer(OpsiService, threading.Thread):  # pylint: disable=too-many-
 			except CannotListenError as err:
 				logger.critical("Failed to listen on port %s: %s", self._httpsPort, err, exc_info=True)
 				self._opsiclientd.stop()
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error("ControlServer error: %s", err, exc_info=True)
 			finally:
 				logger.notice("Control server exiting")
@@ -755,8 +808,8 @@ class ControlServer(OpsiService, threading.Thread):  # pylint: disable=too-many-
 			self._server.stopListening()
 		if self._sessionHandler:
 			self._sessionHandler.deleteAllSessions()
-		reactor.fireSystemEvent("shutdown")  # pylint: disable=no-member
-		reactor.disconnectAll()  # pylint: disable=no-member
+		reactor.fireSystemEvent("shutdown")
+		reactor.disconnectAll()
 		self._running = False
 
 	def createRoot(self):
@@ -830,7 +883,7 @@ class RequestAdapter:
 		return None
 
 
-class LogReaderThread(threading.Thread):  # pylint: disable=too-many-instance-attributes
+class LogReaderThread(threading.Thread):
 	record_start_regex = re.compile(r"^\[(\d)\]\s\[([\d\-\:\. ]+)\]\s\[([^\]]*)\]\s(.*)$")
 	is_record_start_regex = re.compile(r"^\[\d\]\s\[")  # should speed up matching
 	max_delay = 0.2
@@ -853,7 +906,7 @@ class LogReaderThread(threading.Thread):  # pylint: disable=too-many-instance-at
 		data = b""
 		for record in self.record_buffer:
 			data += msgpack.packb(record)
-		reactor.callFromThread(self.websocket_protocol.sendMessage, data, True)  # pylint: disable=no-member
+		reactor.callFromThread(self.websocket_protocol.sendMessage, data, True)
 		self.send_time = time.time()
 		self.record_buffer = []
 
@@ -956,22 +1009,22 @@ class LogReaderThread(threading.Thread):  # pylint: disable=too-many-instance-at
 							line_buffer = []
 							self.send_buffer_if_needed(max_delay)
 						time.sleep(self.max_delay / 3)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error("Error in log reader thread: %s", err, exc_info=True)
 
 
-class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd):  # pylint: disable=too-many-ancestors
+class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd):
 	def onConnect(self, request):
-		self.service = self.factory.control_server  # pylint: disable=no-member
+		self.service = self.factory.control_server
 		self.request = RequestAdapter(request)
-		self.log_reader_thread = None  # pylint: disable=attribute-defined-outside-init
+		self.log_reader_thread = None
 
 		logger.info("Client connecting to log websocket: %s", self.request.peer)
 		self._set_auth_module()
 		self._getSession(None)
 		try:
 			self._authenticate(None)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.warning("Authentication error: %s", err)
 			self.session.authenticated = False
 
@@ -982,9 +1035,7 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd):  #
 			self.sendClose(code=4401, reason="Unauthorized")
 		else:
 			num_tail_records = int(self.request.params.get("num_records", [-1])[0])
-			self.log_reader_thread = LogReaderThread(  # pylint: disable=attribute-defined-outside-init
-				config.get("global", "log_file"), self, num_tail_records
-			)
+			self.log_reader_thread = LogReaderThread(config.get("global", "log_file"), self, num_tail_records)
 			logger.info("Starting log reader thread")
 			self.log_reader_thread.start()
 
@@ -1011,14 +1062,14 @@ class TerminalReaderThread(threading.Thread):
 				if not data:  # EOF.
 					break
 				if not self.should_stop:
-					reactor.callFromThread(self.websocket_protocol.send, data)  # pylint: disable=no-member
+					reactor.callFromThread(self.websocket_protocol.send, data)
 				time.sleep(0.001)
 			except socket.timeout:
 				continue
 			except (IOError, EOFError) as err:
 				logger.debug(err)
 				break
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				if not self.should_stop:
 					logger.error("Error in terminal reader thread: %s %s", err.__class__, err, exc_info=True)
 					time.sleep(1)
@@ -1027,32 +1078,30 @@ class TerminalReaderThread(threading.Thread):
 		self.should_stop = True
 
 
-class TerminalWebSocketServerProtocol(
-	WebSocketServerProtocol, WorkerOpsiclientd
-):  # pylint: disable=too-many-ancestors,too-many-instance-attributes
+class TerminalWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd):
 	def onConnect(self, request):
-		self.service = self.factory.control_server  # pylint: disable=no-member
+		self.service = self.factory.control_server
 		self.request = RequestAdapter(request)
-		self.terminal_reader_thread = None  # pylint: disable=attribute-defined-outside-init
-		self.child_pid = None  # pylint: disable=attribute-defined-outside-init
-		self.child_read = None  # pylint: disable=attribute-defined-outside-init
-		self.child_write = None  # pylint: disable=attribute-defined-outside-init
-		self.child_set_size = None  # pylint: disable=attribute-defined-outside-init
-		self.child_stop = None  # pylint: disable=attribute-defined-outside-init
+		self.terminal_reader_thread = None
+		self.child_pid = None
+		self.child_read = None
+		self.child_write = None
+		self.child_set_size = None
+		self.child_stop = None
 
 		logger.info("Client connecting to terminal websocket: %s", self.request.peer)
 		self._set_auth_module()
 		self._getSession(None)
 		try:
 			self._authenticate(None)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.warning("Authentication error: %s", err)
 			self.session.authenticated = False
 
 	def send(self, data):
 		try:
 			self.sendMessage(data, isBinary=True)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error("Failed to ws send: %s", err)
 
 	def onOpen(self):
@@ -1072,22 +1121,22 @@ class TerminalWebSocketServerProtocol(
 				shell = self.request.params["shell"][0]
 
 			if RUNNING_ON_WINDOWS:
-				from opsiclientd.windows import start_pty  # pylint: disable=import-outside-toplevel
+				from opsiclientd.windows import start_pty
 			else:
-				from opsiclientd.posix import start_pty  # pylint: disable=import-outside-toplevel
+				from opsiclientd.posix import start_pty
 
 			logger.notice("Starting terminal shell=%s, lines=%d, columns=%d", shell, lines, columns)
 			try:
 				(
-					self.child_pid,  # pylint: disable=attribute-defined-outside-init
-					self.child_read,  # pylint: disable=attribute-defined-outside-init
-					self.child_write,  # pylint: disable=attribute-defined-outside-init
-					self.child_set_size,  # pylint: disable=attribute-defined-outside-init
-					self.child_stop,  # pylint: disable=attribute-defined-outside-init
+					self.child_pid,
+					self.child_read,
+					self.child_write,
+					self.child_set_size,
+					self.child_stop,
 				) = start_pty(shell=shell, lines=lines, columns=columns)
-				self.terminal_reader_thread = TerminalReaderThread(self)  # pylint: disable=attribute-defined-outside-init
+				self.terminal_reader_thread = TerminalReaderThread(self)
 				self.terminal_reader_thread.start()
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				self.sendClose(code=500, reason=str(err))
 
 	def onMessage(self, payload, isBinary):
@@ -1101,7 +1150,7 @@ class TerminalWebSocketServerProtocol(
 		self.child_stop()
 
 
-class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=too-many-public-methods
+class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def __init__(self, opsiclientd):
 		OpsiclientdRpcPipeInterface.__init__(self, opsiclientd)
 		self._run_as_opsi_setup_user_lock = threading.Lock()
@@ -1137,8 +1186,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 	def setBlockLogin(self, blockLogin, handleNotifier=True):
 		self.opsiclientd.setBlockLogin(forceBool(blockLogin), forceBool(handleNotifier))
-		logger.notice("rpc setBlockLogin: blockLogin set to '%s'", self.opsiclientd._blockLogin)  # pylint: disable=protected-access
-		if self.opsiclientd._blockLogin:  # pylint: disable=protected-access
+		logger.notice("rpc setBlockLogin: blockLogin set to '%s'", self.opsiclientd._blockLogin)
+		if self.opsiclientd._blockLogin:
 			return "Login blocker is on"
 		return "Login blocker is off"
 
@@ -1222,10 +1271,10 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			desktop = self.opsiclientd.getCurrentActiveDesktopName()
 
 		logger.notice("rpc runCommand: executing command '%s' in session %d on desktop '%s'", command, sessionId, desktop)
-		System.runCommandInSession(command=command, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False)
+		runCommandInSession(command=command, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False)
 		return f"command '{command}' executed"
 
-	def execute(self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300):  # pylint: disable=too-many-arguments
+	def execute(self, command, waitForEnding=True, captureStderr=True, encoding=None, timeout=300):
 		return System.execute(cmd=command, waitForEnding=waitForEnding, captureStderr=captureStderr, encoding=encoding, timeout=timeout)
 
 	def logoffSession(self, session_id=None, username=None):
@@ -1258,7 +1307,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		self.opsiclientd.restart(waitSeconds)
 
 	def uptime(self):
-		uptime = int(time.time() - self.opsiclientd._startupTime)  # pylint: disable=protected-access
+		uptime = int(time.time() - self.opsiclientd._startupTime)
 		logger.notice("rpc uptime: opsiclientd is running for %d seconds", uptime)
 		return uptime
 
@@ -1315,7 +1364,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 	def setCurrentActiveDesktopName(self, sessionId, desktop):
 		sessionId = forceInt(sessionId)
 		desktop = forceUnicode(desktop)
-		self.opsiclientd._currentActiveDesktopName[sessionId] = desktop  # pylint: disable=protected-access
+		self.opsiclientd._currentActiveDesktopName[sessionId] = desktop
 		logger.notice("rpc setCurrentActiveDesktopName: current active desktop name for session %s set to '%s'", sessionId, desktop)
 
 	def switchDesktop(self, desktop, sessionId=None):
@@ -1357,12 +1406,12 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					continue
 				os.remove(os.path.join(cert_dir, filename))
 
-	def updateOpsiCaCert(self, ca_cert_pem):
-		ca_certs = []
+	def updateOpsiCaCert(self, ca_cert_pem: str) -> None:
+		ca_certs: list[x509.Certificate] = []
 		for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", ca_cert_pem, re.DOTALL):
 			try:
-				ca_certs.append(crypto.load_certificate(crypto.FILETYPE_PEM, match.group(1).encode("utf-8")))
-			except Exception as err:  # pylint: disable=broad-except
+				ca_certs.append(x509.load_pem_x509_certificate(match.group(1).encode("utf-8")))
+			except Exception as err:
 				logger.error(err, exc_info=True)
 
 		if ca_certs:
@@ -1370,7 +1419,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				os.makedirs(os.path.dirname(config.ca_cert_file))
 			with open(config.ca_cert_file, "wb") as file:
 				for cert in ca_certs:
-					file.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
+					file.write(cert.public_bytes(encoding=serialization.Encoding.PEM))
 
 	def getActiveSessions(self):
 		sessions = System.getActiveSessionInformation()
@@ -1416,14 +1465,14 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 	def execPythonCode(self, code):
 		"""Execute lines of python code, returns the result of the last line"""
 		code = code.split("\n")
-		exec("\n".join(code[:-1]))  # pylint: disable=exec-used
-		return eval(code[-1])  # pylint: disable=eval-used
+		exec("\n".join(code[:-1]))
+		return eval(code[-1])
 
 	def loginUser(self, username, password):
 		try:
 			secret_filter.add_secrets(password)
 			return self.opsiclientd.loginUser(username, password)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err, exc_info=True)
 			raise
 
@@ -1447,7 +1496,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					if not re_path_filter.match(file.path):
 						continue
 					file_list.add((file.path, proc_name))
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.warning("Failed to get open files for: %s", err, exc_info=True)
 
 		return [{"file_path": x[0], "process_name": x[1]} for x in sorted(list(file_list))]
@@ -1459,13 +1508,13 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		admin: bool = True,
 		wait_for_ending: Union[bool, int] = 7200,
 		remove_user: bool = False,
-	):  # pylint: disable=too-many-locals,too-many-arguments,too-many-branches
+	):
 		if not RUNNING_ON_WINDOWS:
 			raise NotImplementedError()
 
 		if remove_user and not wait_for_ending:
 			wait_for_ending = True
-		if type(wait_for_ending) is bool and wait_for_ending:  # pylint: disable=unidiomatic-typecheck
+		if isinstance(wait_for_ending, bool) and wait_for_ending:
 			wait_for_ending = 7200
 
 		logger.notice(
@@ -1480,7 +1529,6 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		serviceConnection = ServiceConnection(self.opsiclientd)
 		serviceConnection.connectConfigService()
 		try:
-
 			configServiceUrl = serviceConnection.getConfigServiceUrl()
 			config.selectDepotserver(
 				configService=serviceConnection.getConfigService(),
@@ -1559,7 +1607,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			logger.info("Finished runOpsiScriptAsOpsiSetupUser - disconnecting ConfigService")
 			serviceConnection.disconnectConfigService()
 
-	def runAsOpsiSetupUser(  # pylint: disable=too-many-locals,too-many-branches,too-many-statements,too-many-arguments
+	def runAsOpsiSetupUser(
 		self,
 		command: str = "powershell.exe -ExecutionPolicy Bypass",
 		admin: bool = True,
@@ -1593,24 +1641,23 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 				wait_for_ending=wait_for_ending,
 				shell_window_style="normal",
 			)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err, exc_info=True)
 			raise
 
-	def _run_process_as_opsi_setup_user(self, command: str, admin: bool, recreate_user: bool) -> None:  # pylint: disable=too-many-locals
+	def _run_process_as_opsi_setup_user(self, command: str, admin: bool, recreate_user: bool) -> None:
 		# https://bugs.python.org/file46988/issue.py
 		if not RUNNING_ON_WINDOWS:
 			raise NotImplementedError(f"Not implemented on {platform.system()}")
-		# pyright: reportMissingImports=false
-		import winreg  # type: ignore[import]  # pylint: disable=import-error,import-outside-toplevel
+		import winreg  # type: ignore[import]
 
-		import pywintypes  # type: ignore[import]  # pylint: disable=import-error,import-outside-toplevel
-		import win32profile  # type: ignore[import] # pylint: disable=import-error,import-outside-toplevel
-		import win32security  # type: ignore[import]  # pylint: disable=import-error,import-outside-toplevel
+		import pywintypes  # type: ignore[import]
+		import win32profile  # type: ignore[import]
+		import win32security  # type: ignore[import]
 
 		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 			System.logoffSession(session_id)
-		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
+		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)  # type: ignore[attr-defined]
 
 		logon = win32security.LogonUser(
 			user_info["name"],
@@ -1623,10 +1670,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 		try:
 			for attempt in (1, 2, 3, 4, 5):
 				try:
-
 					# This will create the user home dir and ntuser.dat gets loaded
-					# Can fail if C:\users\default\ntuser.dat is ocked by an other process
-					hkey = win32profile.LoadUserProfile(logon, {"UserName": user_info["name"]})
+					# Can fail if C:\users\default\ntuser.dat is locked by an other process
+					hkey = win32profile.LoadUserProfile(logon, {"UserName": user_info["name"]})  # type: ignore[arg-type]
 					break
 				except pywintypes.error as err:
 					logger.warning("Failed to load user profile (attempt #%d): %s", attempt, err)
@@ -1637,29 +1683,29 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			try:
 				# env = win32profile.CreateEnvironmentBlock(logon, False)
 				str_sid = win32security.ConvertSidToStringSid(user_info["user_sid"])
-				reg_key = winreg.OpenKey(
-					winreg.HKEY_USERS,
+				reg_key = winreg.OpenKey(  # type: ignore[attr-defined]
+					winreg.HKEY_USERS,  # type: ignore[attr-defined]
 					str_sid + r"\Software\Microsoft\Windows NT\CurrentVersion\Winlogon",
 					0,
-					winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,
+					winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,  # type: ignore[attr-defined]
 				)
 				with reg_key:
-					winreg.SetValueEx(reg_key, "Shell", 0, winreg.REG_SZ, command)
+					winreg.SetValueEx(reg_key, "Shell", 0, winreg.REG_SZ, command)  # type: ignore[attr-defined]
 			finally:
-				win32profile.UnloadUserProfile(logon, hkey)
+				win32profile.UnloadUserProfile(logon, hkey)  # type: ignore[arg-type]
 
 		finally:
 			logon.close()
 
-		if not self.opsiclientd._controlPipe.credentialProviderConnected():  # pylint: disable=protected-access
+		if not self.opsiclientd._controlPipe.credentialProviderConnected():  # type: ignore[attr-defined]
 			for _unused in range(20):
-				if self.opsiclientd._controlPipe.credentialProviderConnected():  # pylint: disable=protected-access
+				if self.opsiclientd._controlPipe.credentialProviderConnected():  # type: ignore[attr-defined]
 					break
 				time.sleep(0.5)
 
 		self.opsiclientd.loginUser(user_info["name"], user_info["password"])
 
-	def _run_powershell_script_as_opsi_setup_user(  # pylint: disable=too-many-nested-blocks,too-many-arguments,too-many-branches
+	def _run_powershell_script_as_opsi_setup_user(
 		self,
 		script: Path,
 		admin: bool = True,
@@ -1670,7 +1716,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 	):
 		if shell_window_style.lower() not in ("normal", "minimized", "maximized", "hidden"):
 			raise ValueError(f"Invalid value for shell_window_style: {shell_window_style!r}")
-		if not self._run_as_opsi_setup_user_lock.acquire(blocking=False):  # pylint: disable=consider-using-with
+		if not self._run_as_opsi_setup_user_lock.acquire(blocking=False):
 			raise RuntimeError("Another process is already running")
 		if remove_user and not wait_for_ending:
 			wait_for_ending = True
@@ -1687,7 +1733,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			)
 			if wait_for_ending:
 				timeout = 3600
-				if type(wait_for_ending) is int:  # pylint: disable=unidiomatic-typecheck
+				if isinstance(wait_for_ending, int):
 					timeout = wait_for_ending
 				logger.info("Wait for process to complete (timeout=%r)", timeout)
 				try:
@@ -1703,8 +1749,8 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 					if script.exists():
 						script.unlink()
 					if remove_user:
-						self.opsiclientd.cleanup_opsi_setup_user()
-		except Exception as err:  # pylint: disable=broad-except
+						self.opsiclientd.cleanup_opsi_setup_user()  # type: ignore[attr-defined]
+		except Exception as err:
 			logger.error(err, exc_info=True)
 			raise
 		finally:
@@ -1766,7 +1812,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 
 	def getConfigDataFromOpsiclientd(self, get_depot_id=True, get_active_events=True):
 		result = {}
-		result["opsiclientd_version"] = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}]"
+		result[
+			"opsiclientd_version"
+		] = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}python-opsi-common={opsicommon_version}]"
 
 		if get_depot_id:
 			result["depot_id"] = config.get("depot_server", "master_depot_id")
@@ -1780,15 +1828,44 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):  # pylint: disable=t
 			result["active_events"] = list(set(active_events))
 		return result
 
-	def downloadFromDepot(self, product_id: str, destination: str, sub_path: str = None):
+	def downloadFromDepot(self, product_id: str, destination: str, sub_path: str | None = None):
 		return download_from_depot(product_id, Path(destination).resolve(), sub_path)
 
 	def getLogs(self, log_types: list[str] | None = None, max_age_days: int = 0) -> str:
 		file_path = self.opsiclientd.collectLogfiles(types=log_types, max_age_days=max_age_days)
+		assert self.opsiclientd._permanent_service_connection, "Need permanent service connection for getLogs"
 		logger.notice("Delivering file %s", file_path)
 		with open(file_path, "rb") as file_handle:
-			response = self.opsiclientd._permanent_service_connection.service_client.post(  # pylint: disable=protected-access
-				"/file-transfer", data=file_handle
-			)
+			response = self.opsiclientd._permanent_service_connection.service_client.post("/file-transfer", data=file_handle)
 			logger.debug("Got response with status %s: %s", response.status_code, response.content.decode("utf-8"))
 			return json.loads(response.content.decode("utf-8"))
+
+	def replaceOpsiHostKey(self, new_key: str | None = None):
+		if not new_key:
+			new_key = generate_opsi_host_key()
+		secret_filter.add_secrets(new_key)
+
+		logger.info("Replacing opsi host key on service")
+		serviceConnection = ServiceConnection(self.opsiclientd)
+		serviceConnection.connectConfigService()
+		try:
+			configService = serviceConnection.getConfigService()
+			host = configService.host_getObjects(id=config.get("global", "host_id"))[0]
+			host.setOpsiHostKey(new_key)
+			configService.host_updateObject(host)
+		finally:
+			serviceConnection.disconnectConfigService()
+
+		logger.info("Replacing opsi host key in config")
+		config.set("global", "opsi_host_key", new_key)
+		config.updateConfigFile(force=True)
+
+		logger.info("Removing config cache")
+		try:
+			cache_service = self.opsiclientd.getCacheService()
+			cache_service.setConfigCacheFaulty()
+			cache_service._configCacheService.delete_cache_dir()
+		except Exception as err:
+			logger.warning(err, exc_info=True)
+
+		self.opsiclientd.restart(2)

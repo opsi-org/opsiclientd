@@ -8,7 +8,7 @@
 Basic opsiclientd implementation. This is abstract in some parts that
 should be overridden in the concrete implementation for an OS.
 """
-# pylint: disable=too-many-lines
+
 
 import datetime
 import os
@@ -24,12 +24,17 @@ import urllib.request
 from contextlib import contextmanager
 from pathlib import Path
 
-import psutil
-from OPSI import System
-from OPSI import __version__ as python_opsi_version
-from OPSI.Util import randomString
-from OPSI.Util.Message import ChoiceSubject, MessageSubject, NotificationServer
-from opsicommon.logging import log_context, logger, secret_filter
+import psutil  # type: ignore[import]
+from OPSI import System  # type: ignore[import]
+from OPSI import __version__ as python_opsi_version  # type: ignore[import]
+from OPSI.Util import randomString  # type: ignore[import]
+from OPSI.Util.Message import (  # type: ignore[import]
+	ChoiceSubject,
+	MessageSubject,
+	NotificationServer,
+)
+from opsicommon import __version__ as opsicommon_version
+from opsicommon.logging import get_logger, log_context, secret_filter
 from opsicommon.system import ensure_not_already_running
 from opsicommon.types import forceBool, forceInt, forceUnicode
 
@@ -57,12 +62,19 @@ from opsiclientd.State import State
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 
+if RUNNING_ON_WINDOWS:
+	from opsiclientd.windows import runCommandInSession
+else:
+	from OPSI.System import runCommandInSession  # type: ignore
+
 timeline = Timeline()
 state = State()
 
+logger = get_logger("opsiclientd")
 
-class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-instance-attributes,too-many-public-methods
-	def __init__(self):
+
+class Opsiclientd(EventListener, threading.Thread):
+	def __init__(self) -> None:
 		logger.debug("Opsiclient initiating")
 
 		EventListener.__init__(self)
@@ -74,7 +86,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		self.eventLock = threading.Lock()
 		self._eptListLock = threading.Lock()
 		self._blockLogin = True
-		self._currentActiveDesktopName = {}
+		self._currentActiveDesktopName: dict[str, str] = {}
 		self._gui_waiter = None
 
 		self._isRebootTriggered = False
@@ -110,9 +122,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			return
 
 		logger.info("Starting permanent service connection")
-		self._permanent_service_connection = PermanentServiceConnection(
-			self._controlServer._opsiclientdRpcInterface  # pylint: disable=protected-access
-		)
+		self._permanent_service_connection = PermanentServiceConnection(self._controlServer._opsiclientdRpcInterface)
 		self._permanent_service_connection.start()
 
 	def stop_permanent_service_connection(self):
@@ -146,7 +156,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 						file.write(response.read())
 			self.self_update_from_file(filename)
 
-	def self_update_from_file(self, filename):  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+	def self_update_from_file(self, filename):
 		logger.notice("Self-update from file %s", filename)
 
 		test_file = "base_library.zip"
@@ -176,7 +186,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 
 				try:
 					check_signature(str(bin_dir))
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.error("Could not verify signature!\n%s", err, exc_info=True)
 					logger.error("Not performing self_update.")
 					raise RuntimeError("Invalid signature") from err
@@ -184,7 +194,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				binary = bin_dir / os.path.basename(self._argv[0])
 
 				logger.info("Testing new binary: %s", binary)
-				out = subprocess.check_output([str(binary), "--version"])
+				# need to direct stderr to stdout to avoid error in cleanup due to 32 bit python performance warning (code 120)
+				out = subprocess.check_output([str(binary), "--version"], stderr=subprocess.STDOUT)
 				logger.info(out)
 
 				if RUNNING_ON_WINDOWS:
@@ -244,12 +255,12 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				if not os.path.exists(config.restart_marker):
 					logger.notice("Writing restart marker %r (disabled_event_types=%r)", config.restart_marker, disabled_event_types)
 					with open(config.restart_marker, "w", encoding="utf-8") as file:
-						file.write(f"disabled_event_types={','.join(disabled_event_types)}\n")
-			except Exception as err:  # pylint: disable=broad-except
+						file.write(f"disabled_event_types={','.join(disabled_event_types)}\nrestart_service=false\nremove_marker=true\n")
+			except Exception as err:
 				logger.error(err)
 
 			if RUNNING_ON_WINDOWS:
-				subprocess.Popen(  # pylint: disable=consider-using-with
+				subprocess.Popen(
 					"net stop opsiclientd & net start opsiclientd",
 					shell=True,
 					creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,
@@ -262,7 +273,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		logger.notice("Will restart in %d seconds", waitSeconds)
 		threading.Thread(target=_restart, args=(waitSeconds,)).start()
 
-	def setBlockLogin(self, blockLogin, handleNotifier=True):  # pylint: disable=too-many-branches
+	def setBlockLogin(self, blockLogin, handleNotifier=True):
 		blockLogin = forceBool(blockLogin)
 		changed = self._blockLogin != blockLogin
 		self._blockLogin = blockLogin
@@ -288,7 +299,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 								waitForProcessEnding=False,
 							)[2]
 							break
-						except Exception as err:  # pylint: disable=broad-except
+						except Exception as err:
 							logger.error("Failed to start block login notifier app: %s", err)
 							break
 		else:
@@ -300,7 +311,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				try:
 					logger.info("Terminating block login notifier app (pid %s)", self._blockLoginNotifierPid)
 					System.terminateProcess(processId=self._blockLoginNotifierPid)
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					log = logger.warning
 					if isinstance(err, OSError) and getattr(err, "errno", None) == 87:
 						# Process already terminated
@@ -311,7 +322,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		if changed and self._controlPipe:
 			try:
 				self._controlPipe.executeRpc("blockLogin", self._blockLogin)
-			except Exception as rpc_error:  # pylint: disable=broad-except
+			except Exception as rpc_error:
 				logger.debug(rpc_error)
 
 	def loginUser(self, username, password):
@@ -374,27 +385,27 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		with log_context({"instance": "opsiclientd"}):
 			try:
 				self._run()
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error(err, exc_info=True)
 
-	def _run(self):  # pylint: disable=too-many-statements,too-many-branches,too-many-locals
+	def _run(self):
 		ensure_not_already_running("opsiclientd")
 		self._running = True
 		self._opsiclientdRunningEventId = None
 
 		try:
 			state.start()
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error("Failed to start state: %s", err, exc_info=True)
 		try:
 			timeline.start()
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error("Failed to start timeline: %s", err, exc_info=True)
 
 		config.readConfigFile()
 		try:
-			product_id, opsi_script = config.check_restart_marker()
-		except Exception as err:  # pylint: disable=broad-except
+			restart_marker_config = config.check_restart_marker()
+		except Exception as err:
 			logger.error(err, exc_info=True)
 
 		setup(full=False)
@@ -408,7 +419,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				self._controlPipe.start()
 				logger.notice("Control pipe started")
 				yield
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error("Failed to start control pipe: %s", err, exc_info=True)
 				raise
 			finally:
@@ -442,7 +453,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					raise RuntimeError("Received stop signal.")
 
 				yield
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error("Failed to start control server: %s", err, exc_info=True)
 				raise err
 			finally:
@@ -460,15 +471,13 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			cache_service = None
 			try:
 				logger.notice("Starting cache service")
-				from opsiclientd.nonfree.CacheService import (  # pylint: disable=import-outside-toplevel
-					CacheService,
-				)
+				from opsiclientd.nonfree.CacheService import CacheService
 
 				cache_service = CacheService(opsiclientd=self)
 				cache_service.start()
 				logger.notice("Cache service started")
 				yield cache_service
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error("Failed to start cache service: %s", err, exc_info=True)
 				yield None
 			finally:
@@ -531,7 +540,10 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		try:
 			parent = psutil.Process(os.getpid()).parent()
 			parent_name = parent.name() if parent else None
-			event_title = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}] running on {platform.platform()!r}"
+			event_title = (
+				f"Opsiclientd {__version__} [python-opsi={python_opsi_version},python-opsi-common={opsicommon_version}] "
+				f"running on {platform.platform()!r}"
+			)
 			logger.essential(event_title)
 			event_description = f"Parent process: {parent_name}\n"
 			logger.essential(f"Parent process: {parent_name}")
@@ -556,7 +568,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					if config.get("config_service", "permanent_connection"):
 						self.start_permanent_service_connection()
 
-					if opsi_script:
+					if restart_marker_config.run_opsi_script:
 						log_dir = config.get("global", "log_dir")
 						action_processor = os.path.join(
 							config.get("action_processor", "local_dir"), config.get("action_processor", "filename")
@@ -564,14 +576,14 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 						param_char = "/" if RUNNING_ON_WINDOWS else "-"
 						cmd = [
 							action_processor,
-							opsi_script,
+							restart_marker_config.run_opsi_script,
 							os.path.join(log_dir, "start_opsi_script.log"),
 							f"{param_char}servicebatch",
 						]
-						if product_id:
+						if restart_marker_config.product_id:
 							cmd += [
 								f"{param_char}productid",
-								product_id,
+								restart_marker_config.product_id,
 							]
 						cmd += [
 							f"{param_char}opsiservice",
@@ -587,10 +599,11 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 						]
 						logger.notice("Running startup script: %s", cmd)
 						System.execute(cmd, shell=False, waitForEnding=True, timeout=3600)
-						if os.path.exists(config.restart_marker):
+
+						restart_marker_config = config.check_restart_marker()
+						if restart_marker_config.restart_service:
 							logger.notice("Restart marker found, restarting")
-							os.unlink(config.restart_marker)
-							self.restart(disabled_event_types=[])
+							self.restart(disabled_event_types=restart_marker_config.disabled_event_types)
 							return
 
 					with getCacheService() as cacheService:
@@ -618,7 +631,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 									timeline.setEventEnd(self._opsiclientdRunningEventId)
 								logger.info("Stopping timeline")
 								timeline.stop()
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			if not self._stopEvent.is_set():
 				logger.error(err, exc_info=True)
 			self.setBlockLogin(False)
@@ -649,9 +662,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 			for ept in self._eventProcessingThreads:
 				if not ept.is_cancelable():
 					logger.notice("Already processing a non-cancelable event: %s", ept.event.eventConfig.getId())
-					raise CannotCancelEventError(
-						f"Already processing a non-cancelable event: {ept.event.eventConfig.getId()}"
-					)
+					raise CannotCancelEventError(f"Already processing a non-cancelable event: {ept.event.eventConfig.getId()}")
 				if not can_cancel:
 					logger.notice(
 						"Currently running event can only be canceled by manual action (ControlServer/Kiosk): %s",
@@ -708,7 +719,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		logger.trace("check lock (ocd), currently %s -> locking if not True", self.eventLock.locked())
 		# if triggered by Basic.py fire_event, lock is already acquired
 		if not self.eventLock.locked():
-			self.eventLock.acquire()  # pylint: disable=consider-using-with
+			self.eventLock.acquire()
 
 		try:
 			timeline.addEvent(title=f"Event {event.eventConfig.getName()}", description=description, category="event_occurrence")
@@ -745,7 +756,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				if not self._eventProcessingThreads:
 					try:
 						self.deleteActionProcessorUser()
-					except Exception as err:  # pylint: disable=broad-except
+					except Exception as err:
 						logger.warning(err)
 
 	def getEventProcessingThreads(self):
@@ -759,7 +770,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					return ept
 		raise LookupError(f"Event processing thread for session {sessionId} not found")
 
-	def processProductActionRequests(self, event):  # pylint: disable=unused-argument
+	def processProductActionRequests(self, event):
 		logger.error("processProductActionRequests not implemented")
 
 	def getCurrentActiveDesktopName(self, sessionId=None):
@@ -777,10 +788,10 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		rpc = f'setCurrentActiveDesktopName("{sessionId}", System.getActiveDesktopName())'
 		cmd = config.get("opsiclientd_rpc", "command") + ' "' + rpc.replace('"', '\\"') + '"'
 		try:
-			System.runCommandInSession(
+			runCommandInSession(
 				command=cmd, sessionId=sessionId, desktop="winlogon", waitForProcessEnding=True, timeoutSeconds=60, noWindow=True
 			)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err)
 
 		desktop = self._currentActiveDesktopName.get(sessionId)
@@ -806,10 +817,10 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		cmd = f'{config.get("opsiclientd_rpc", "command")} "{rpc}"'
 
 		try:
-			System.runCommandInSession(
+			runCommandInSession(
 				command=cmd, sessionId=sessionId, desktop=desktop, waitForProcessEnding=True, timeoutSeconds=60, noWindow=True
 			)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err)
 
 	def systemShutdownInitiated(self):
@@ -824,7 +835,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		if self._controlPipe:
 			try:
 				self._controlPipe.executeRpc("rebootTriggered", True)
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.debug(err)
 		self.clearRebootRequest()
 		notify_posix_terminals(f"Rebooting in {waitSeconds} seconds")
@@ -835,7 +846,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		if self._controlPipe:
 			try:
 				self._controlPipe.executeRpc("shutdownTriggered", True)
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.debug(err)
 		self.clearShutdownRequest()
 		notify_posix_terminals(f"Shutdown in {waitSeconds} seconds")
@@ -866,9 +877,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 	def isInstallationPending(self):
 		return state.get("installation_pending", False)
 
-	def showPopup(
-		self, message, mode="prepend", addTimestamp=True, displaySeconds=0
-	):  # pylint: disable=too-many-branches,too-many-statements, too-many-locals
+	def showPopup(self, message, mode="prepend", addTimestamp=True, displaySeconds=0):
 		if mode not in ("prepend", "append", "replace"):
 			mode = "prepend"
 		port = config.get("notification_server", "popup_port")
@@ -883,7 +892,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		if addTimestamp:
 			message = "=== " + time.strftime("%Y-%m-%d %H:%M:%S") + " ===\n" + message
 
-		with self._popupNotificationLock:  # pylint: disable=too-many-nested-blocks
+		with self._popupNotificationLock:
 			if mode in ("prepend", "append") and self._popupNotificationServer and self._popupNotificationServer.isListening():
 				# Already runnning
 				try:
@@ -894,7 +903,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 							else:
 								message = subject.getMessage() + "\n\n" + message
 							break
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.warning(err, exc_info=True)
 
 			self.hidePopup()
@@ -912,7 +921,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				with log_context({"instance": "popup notification server"}):
 					if not self._popupNotificationServer.start_and_wait(timeout=30):
 						raise RuntimeError("Timed out while waiting for notification server")
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error("Failed to start notification server: %s", err)
 				raise
 
@@ -930,10 +939,8 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 					desktops = ["default", "winlogon"]
 				for desktop in desktops:
 					try:
-						System.runCommandInSession(
-							command=notifierCommand, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False
-						)
-					except Exception as err:  # pylint: disable=broad-except
+						runCommandInSession(command=notifierCommand, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False)
+					except Exception as err:
 						logger.error("Failed to start popup message notifier app in session %s on desktop %s: %s", sessionId, desktop, err)
 
 			class PopupClosingThread(threading.Thread):
@@ -969,13 +976,13 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 				logger.info("Stopping popup message notification server")
 
 				self._popupNotificationServer.stop(stopReactor=False)
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error("Failed to stop popup notification server: %s", err)
 
-	def popupCloseCallback(self, choiceSubject):  # pylint: disable=unused-argument
+	def popupCloseCallback(self, choiceSubject):
 		self.hidePopup()
 
-	def collectLogfiles(self, types: list[str] = None, max_age_days: int = None, timeline_db: bool = True) -> Path:
+	def collectLogfiles(self, types: list[str] | None = None, max_age_days: int | None = None, timeline_db: bool = True) -> Path:
 		now = datetime.datetime.now().timestamp()
 		type_patterns = []
 		types = types or []
@@ -984,7 +991,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 		for stem_type in types:
 			type_patterns.append(re.compile(rf"{stem_type}[_0-9]*\.log"))
 
-		def collect_matching_files(path: Path, result_path: Path, patterns: list[re.Pattern], max_age_days: int) -> None:
+		def collect_matching_files(path: Path, result_path: Path, patterns: list[re.Pattern], max_age_days: int | None) -> None:
 			for content in path.iterdir():
 				if content.is_file() and any((re.match(pattern, content.name) for pattern in patterns)):
 					if not max_age_days or now - content.lstat().st_mtime < int(max_age_days) * 3600 * 24:
@@ -1013,7 +1020,7 @@ class Opsiclientd(EventListener, threading.Thread):  # pylint: disable=too-many-
 
 
 class WaitForGUI(EventListener):
-	def __init__(self, opsiclientd):  # pylint: disable=super-init-not-called
+	def __init__(self, opsiclientd):
 		self._opsiclientd = opsiclientd
 		self._guiStarted = threading.Event()
 		self._should_stop = False
@@ -1046,6 +1053,6 @@ class WaitForGUI(EventListener):
 		if not self._guiStarted.is_set():
 			logger.warning("Timed out after %d seconds while waiting for GUI", timeout)
 
-	def canProcessEvent(self, event, can_cancel=False):  # pylint: disable=unused-argument
+	def canProcessEvent(self, event, can_cancel=False):
 		# WaitForGUI should handle all Events
 		return True

@@ -12,21 +12,17 @@ import os
 import platform
 import re
 import sys
+from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
 import netifaces  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
-from OPSI.Backend.JSONRPC import JSONRPCBackend
+from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
 from OPSI.Util import blowfishDecrypt, objectToBeautifiedText  # type: ignore[import]
 from OPSI.Util.File import IniFile  # type: ignore[import]
 from opsicommon.client.opsiservice import ServiceClient, ServiceVerificationFlags
-from opsicommon.logging import (  # type: ignore[import]
-	LOG_NOTICE,
-	logger,
-	logging_config,
-	secret_filter,
-)
-from opsicommon.types import (  # type: ignore[import]
+from opsicommon.logging import LOG_NOTICE, get_logger, logging_config, secret_filter
+from opsicommon.types import (
 	forceBool,
 	forceHostId,
 	forceList,
@@ -34,7 +30,7 @@ from opsicommon.types import (  # type: ignore[import]
 	forceUnicode,
 	forceUnicodeList,
 )
-from opsicommon.utils import Singleton  # type: ignore[import]
+from opsicommon.utils import Singleton
 
 from opsiclientd.SystemCheck import (
 	RUNNING_ON_DARWIN,
@@ -80,6 +76,23 @@ kGOsCMSImzajpmtonx3ccPgSOyEWyoEaGij6u80QtFkj9g==
 
 OPSI_SETUP_USER_NAME = "opsisetupuser"
 
+logger = get_logger("opsiclientd")
+
+
+@dataclass
+class RestartMarkerConfig:
+	disabled_event_types: list[str] = field(default_factory=list)
+	run_opsi_script: str | None = None
+	product_id: str | None = None
+	restart_service: bool = True
+	remove_marker: bool = True
+
+	def __post_init__(self):
+		if self.disabled_event_types:
+			self.disabled_event_types = [v.strip().lower() for v in self.disabled_event_types if v.strip()]
+		if self.product_id:
+			self.product_id = self.product_id.strip().lower()
+
 
 class SectionNotFoundException(ValueError):
 	pass
@@ -89,7 +102,7 @@ class NoConfigOptionFoundException(ValueError):
 	pass
 
 
-class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
+class Config(metaclass=Singleton):
 	_initialized = False
 	WINDOWS_DEFAULT_PATHS = {
 		"global": {
@@ -164,8 +177,8 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				"log_file": "opsiclientd.log",
 				"log_level": LOG_NOTICE,
 				"keep_rotated_logs": 10,
-				"max_log_size": 5,  # In MB
-				"max_log_transfer_size": 5,  # In MB
+				"max_log_size": 5.0,  # In MB
+				"max_log_transfer_size": 5.0,  # In MB
 				"host_id": System.getFQDN().lower(),
 				"opsi_host_key": "",
 				"wait_for_gui_timeout": 120,
@@ -179,6 +192,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				"suspend_bitlocker_on_reboot": False,
 				"ip_version": "auto",
 				"tmp_dir_cleanup": False,
+				"post_trusted_installer_delay": 15,
 			},
 			"config_service": {
 				"url": [],
@@ -251,7 +265,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			if not os.path.exists(baseDir):
 				try:
 					baseDir = os.path.abspath(os.path.dirname(sys.argv[0]))
-				except Exception:  # pylint: disable=broad-except
+				except Exception:
 					baseDir = "."
 		elif RUNNING_ON_MACOS:
 			baseDir = os.path.join("/usr", "local", "lib", "opsi-client-agent")
@@ -269,39 +283,48 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				return old_location
 		return os.path.join(self._getBaseDirectory(), ".opsiclientd_restart")
 
-	def check_restart_marker(self):
+	def check_restart_marker(self) -> RestartMarkerConfig | None:
 		logger.info("Checking if restart marker '%s' exists", self.restart_marker)
-		product_id, opsi_script = None, None
-		if os.path.exists(self.restart_marker):
-			if os.path.getsize(self.restart_marker) == 0:
-				logger.notice("Old restart marker found, gui startup and daemon startup events disabled")
-				self.disabledEventTypes = ["gui startup", "daemon startup"]
-			else:
-				logger.notice("Reading restart marker")
-				with open(self.restart_marker, "r", encoding="utf-8") as file:
-					for line in file.readlines():
-						line = line.strip()
-						if line.startswith("#") or "=" not in line:
-							continue
-						option, value = line.split("=", 1)
-						option = option.strip().lower()
-						if option == "disabled_event_types":
-							self.disabledEventTypes = [v.strip().lower() for v in value.split(",") if v.strip().lower()]
-							logger.notice("Event types %s disabled by restart marker", self.disabledEventTypes)
-						elif option == "run_opsi_script":
-							product_id = None
-							opsi_script = value
-							if "," in value:
-								product_id, opsi_script = value.split(",", 1)
-							product_id = product_id.strip().lower() if product_id else None
-							opsi_script = opsi_script.strip()
-							logger.notice("Read product_id=%s, opsi_script=%s from restart marker", product_id, opsi_script)
-							self.disabledEventTypes = ["gui startup", "daemon startup"]
+		if not os.path.exists(self.restart_marker):
+			return None
+
+		resm_config = RestartMarkerConfig()
+		if os.path.getsize(self.restart_marker) == 0:
+			logger.notice("Old restart marker found, gui startup and daemon startup events disabled")
+			resm_config.disabled_event_types = ["gui startup", "daemon startup"]
+			resm_config.remove_marker = True
+		else:
+			logger.notice("Reading restart marker")
+			with open(self.restart_marker, "r", encoding="utf-8") as file:
+				for line in file.readlines():
+					line = line.strip()
+					if line.startswith("#") or "=" not in line:
+						continue
+					option, value = line.split("=", 1)
+					option = option.strip().lower()
+					if option == "disabled_event_types":
+						resm_config.disabled_event_types = [v.strip().lower() for v in value.split(",") if v.strip()]
+					elif option == "run_opsi_script":
+						resm_config.run_opsi_script = value
+						if "," in value:
+							resm_config.product_id, resm_config.run_opsi_script = value.split(",", 1)
+						resm_config.product_id = resm_config.product_id.strip().lower() if resm_config.product_id else None
+						resm_config.run_opsi_script = resm_config.run_opsi_script.strip()
+						resm_config.disabled_event_types = ["gui startup", "daemon startup"]
+					elif option == "remove_marker":
+						resm_config.remove_marker = forceBool(value)
+					elif option == "restart_service":
+						resm_config.restart_service = forceBool(value)
+
+		logger.notice("Restart marker config: %r", resm_config)
+		if resm_config.disabled_event_types:
+			self.disabledEventTypes = resm_config.disabled_event_types
+		if resm_config.remove_marker or resm_config.restart_service:
 			try:
 				os.remove(self.restart_marker)
-			except Exception as err:  # pylint: disable=broad-except
+			except Exception as err:
 				logger.error(err)
-		return product_id, opsi_script
+		return resm_config
 
 	def _applySystemSpecificConfiguration(self):
 		defaultToApply = self.WINDOWS_DEFAULT_PATHS.copy()
@@ -330,7 +353,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			self._config["global"]["timeline_db"] = os.path.join(systemDrive, "opsi.org", "opsiclientd", "timeline.sqlite")
 			self._config["system"]["program_files_dir"] = System.getProgramFilesDir()
 
-			if sys.getwindowsversion()[0] == 5:  # pylint: disable=no-member
+			if sys.getwindowsversion()[0] == 5:
 				self._config["action_processor"]["run_as_user"] = "pcpatch"
 		else:
 			sslCertDir = os.path.join("/etc", "opsi-client-agent")
@@ -394,7 +417,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			return "opsi-winst"
 		return "opsi-script"
 
-	def set(self, section, option, value):  # pylint: disable=too-many-branches,too-many-statements
+	def set(self, section, option, value):
 		if not section:
 			section = "global"
 
@@ -415,7 +438,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			option = "suspend_bitlocker_on_reboot"
 
 		# Check if empty value is allowed
-		if (  # pylint: disable=too-many-boolean-expressions
+		if (
 			value == ""
 			and "command" not in option
 			and "productids" not in option
@@ -506,10 +529,10 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			logging_config(file_level=self._config[section][option])
 
 	def replace(self, string, escaped=False):
-		for (section, values) in self._config.items():
+		for section, values in self._config.items():
 			if not isinstance(values, dict):
 				continue
-			for (key, value) in values.items():
+			for key, value in values.items():
 				value = forceUnicode(value)
 				if string.find('"%' + forceUnicode(section) + "." + forceUnicode(key) + '%"') != -1 and escaped:
 					if os.name == "posix":
@@ -538,13 +561,13 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			for section in config.sections():
 				logger.debug("Processing section '%s' in config file: '%s'", section, self.get("global", "config_file"))
 
-				for (option, value) in config.items(section):
+				for option, value in config.items(section):
 					if section == "global" and option == "log_dir":
 						continue  # Ingoring configured log_dir
 
 					option = option.lower()
 					self.set(section.lower(), option, value)
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			# An error occured while trying to read the config file
 			logger.error("Failed to read config file '%s': %s", self.get("global", "config_file"), err)
 			logger.error(err, exc_info=True)
@@ -556,7 +579,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		logger.notice("Config read")
 		logger.debug("Config is now:\n %s", objectToBeautifiedText(self._config))
 
-	def updateConfigFile(self, force=False):  # pylint: disable=too-many-branches
+	def updateConfigFile(self, force=False):
 		logger.info("Updating config file: '%s'", self.get("global", "config_file"))
 
 		if self._config_file_mtime and os.path.getmtime(self.get("global", "config_file")) > self._config_file_mtime:
@@ -570,7 +593,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			configFile.setKeepOrdering(True)
 			(config, comments) = configFile.parse(returnComments=True)
 			changed = False
-			for (section, values) in self._config.items():
+			for section, values in self._config.items():
 				if not isinstance(values, dict):
 					continue
 				if section == "system":
@@ -580,7 +603,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 					config.add_section(section)
 					changed = True
 
-				for (option, value) in values.items():
+				for option, value in values.items():
 					if (section == "global") and (option == "config_file"):
 						# Do not store these option
 						continue
@@ -618,7 +641,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 				self._config_file_mtime = os.path.getmtime(self.get("global", "config_file"))
 			else:
 				logger.info("No need to write config file '%s', config file is up to date", self.get("global", "config_file"))
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			# An error occured while trying to write the config file
 			logger.error(err, exc_info=True)
 			logger.error("Failed to write config file '%s': %s", self.get("global", "config_file"), err)
@@ -648,9 +671,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 
 		return self.get("config_service", "url")
 
-	def getDepot(
-		self, configService, event=None, productIds=None, masterOnly=False, forceDepotProtocol=None
-	):  # pylint: disable=too-many-arguments,too-many-locals,too-many-branches,too-many-statements
+	def getDepot(self, configService, event=None, productIds=None, masterOnly=False, forceDepotProtocol=None):
 		productIds = forceProductIdList(productIds or [])
 		if not configService:
 			raise RuntimeError("Not connected to config service")
@@ -686,7 +707,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 					depotId = forceHostId(values[0])
 					depotIds.append(depotId)
 					logger.notice("Depot was set to '%s' from configState %s", depotId, config_id)
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.error("Failed to set depot id from values %s in configState %s: %s", values, config_id, err)
 			elif not masterOnly and (config_id == "clientconfig.depot.dynamic") and values:
 				dynamicDepot = forceBool(values[0])
@@ -752,11 +773,9 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 						"defaultGateway": None,
 					}
 					try:
-						gateways = netifaces.gateways()  # pylint: disable=c-extension-no-member
-						clientConfig["defaultGateway"], iface_name = gateways["default"][
-							netifaces.AF_INET  # pylint: disable=c-extension-no-member
-						]
-						addr = netifaces.ifaddresses(iface_name)[netifaces.AF_INET][0]  # pylint: disable=c-extension-no-member
+						gateways = netifaces.gateways()
+						clientConfig["defaultGateway"], iface_name = gateways["default"][netifaces.AF_INET]
+						addr = netifaces.ifaddresses(iface_name)[netifaces.AF_INET][0]
 						clientConfig["netmask"] = addr["netmask"]
 						clientConfig["ipAddress"] = addr["addr"]
 						logger.info(
@@ -775,22 +794,20 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 					logger.trace("depotSelectionAlgorithm:\n%s", depotSelectionAlgorithm)
 
 					currentLocals = locals()
-					exec(depotSelectionAlgorithm, None, currentLocals)  # pylint: disable=exec-used
+					exec(depotSelectionAlgorithm, None, currentLocals)
 					selectDepot = currentLocals["selectDepot"]
 
 					selectedDepot = selectDepot(clientConfig=clientConfig, masterDepot=masterDepot, alternativeDepots=alternativeDepots)
 					if not selectedDepot:
 						selectedDepot = masterDepot
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.error("Failed to select depot: %s", err, exc_info=True)
 			else:
 				logger.info("No alternative depot for products: %s", productIds)
 
 		return selectedDepot, depotProtocol
 
-	def selectDepotserver(
-		self, configService, mode="mount", event=None, productIds=None, masterOnly=False
-	):  # pylint: disable=too-many-arguments
+	def selectDepotserver(self, configService, mode="mount", event=None, productIds=None, masterOnly=False):
 		assert mode in ("mount", "sync")
 		productIds = forceProductIdList(productIds or [])
 
@@ -837,7 +854,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 		logger.debug("Using username '%s' for depot connection", depotServerUsername)
 		return (depotServerUsername, depotServerPassword)
 
-	def getFromService(self, service_client: ServiceClient | JSONRPCBackend) -> None:  # pylint: disable=too-many-branches
+	def getFromService(self, service_client: ServiceClient | JSONRPCBackend) -> None:
 		"""Get settings from service"""
 		logger.notice("Getting config from service")
 		if not service_client:
@@ -852,16 +869,29 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 			"opsiclientd.*",  # everything starting with opsiclientd.
 		]
 		config_states = {}
+		use_get_objects = True
 		if hasattr(service_client, "configState_getValues"):
+			use_get_objects = False
 			logger.info("Using configState_getValues")
 			config_states = service_client.configState_getValues(
 				config_ids=config_ids, object_ids=[self.get("global", "host_id")], with_defaults=True
 			).get(self.get("global", "host_id"), {})
-		else:
+			if (
+				"clientconfig.configserver.url" not in config_states
+				and isinstance(service_client, ServiceClient)
+				and service_client.service_is_opsiclientd()
+			):
+				# Workaround getValues bug of older opsiclientd
+				logger.warning("Service is opsiclientd with getValues bug")
+				use_get_objects = True
+		if use_get_objects:
 			logger.info("Using configState_getObjects")
-			for config in service_client.config_getObjects(id=config_ids):
+			for config in service_client.config_getObjects(id=config_ids):  # type: ignore[union-attr]
 				config_states[config.id] = config.defaultValues
-			for config_state in service_client.configState_getObjects(objectId=self.get("global", "host_id"), configId=config_ids):
+			for config_state in service_client.configState_getObjects(  # type: ignore[union-attr]
+				objectId=self.get("global", "host_id"),
+				configId=config_ids,
+			):
 				config_states[config_state.configId] = config_state.values
 
 		for config_id, values in config_states.items():
@@ -893,7 +923,7 @@ class Config(metaclass=Singleton):  # pylint: disable=too-many-public-methods
 					if len(value) == 1:
 						value = value[0]
 					self.set(section=parts[1], option=parts[2], value=value)
-				except Exception as err:  # pylint: disable=broad-except
+				except Exception as err:
 					logger.error("Failed to process configState '%s': %s", config_id, err)
 
 		logger.notice("Got config from service")

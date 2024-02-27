@@ -32,15 +32,17 @@ import sqlite3
 import threading
 import time
 
-from OPSI.Backend.SQLite import SQLite
-from OPSI.Util import timestamp
-from opsicommon.logging import logger
+from OPSI.Backend.SQLite import SQLite  # type: ignore[import]
+from OPSI.Util import timestamp  # type: ignore[import]
+from opsicommon.logging import get_logger
 from opsicommon.types import forceBool, forceInt, forceOpsiTimestamp, forceUnicode
 from opsicommon.utils import Singleton
 
 from opsiclientd.Config import Config
 
 config = Config()
+
+logger = get_logger("opsiclientd")
 
 TIMELINE_IMAGE_URL = "/timeline/timeline_js/images/"
 HTML_HEAD = """
@@ -205,7 +207,7 @@ class Timeline(metaclass=Singleton):
 			try:
 				self._sql.execute(session, f'delete from EVENT where `start` < "{timestamp(time.time() - 7*24*3600)}"')
 				self._sql.update(session, "EVENT", "`durationEvent` = 1 AND `end` is NULL", {"durationEvent": False})
-			except Exception as cleanup_error:  # pylint: disable=broad-except
+			except Exception as cleanup_error:
 				logger.error(cleanup_error)
 
 	def _createDatabase(self, delete_existing=False):
@@ -241,9 +243,7 @@ class Timeline(metaclass=Singleton):
 				self._sql.execute(session, "CREATE INDEX `category` on `EVENT` (`category`);")
 				self._sql.execute(session, "CREATE INDEX `start` on `EVENT` (`start`);")
 
-	def addEvent(
-		self, title, description="", isError=False, category=None, durationEvent=False, start=None, end=None
-	):  # pylint: disable=too-many-arguments
+	def addEvent(self, title, description="", isError=False, category=None, durationEvent=False, start=None, end=None):
 		if self._stopped:
 			return -1
 
@@ -275,7 +275,7 @@ class Timeline(metaclass=Singleton):
 					self._sql.delete_db()
 					self._createDatabase(delete_existing=True)
 					return self._sql.insert(session, "EVENT", event)
-			except Exception as add_error:  # pylint: disable=broad-except
+			except Exception as add_error:
 				logger.error("Failed to add event '%s': %s", title, add_error)
 		return -1
 
@@ -290,7 +290,7 @@ class Timeline(metaclass=Singleton):
 					end = timestamp()
 				end = forceOpsiTimestamp(end)
 				return self._sql.update(session, "EVENT", f"`id` = {eventId}", {"end": end, "durationEvent": True})
-			except Exception as end_error:  # pylint: disable=broad-except
+			except Exception as end_error:
 				logger.error("Failed to set end of event '%s': %s", eventId, end_error)
 		return -1
 

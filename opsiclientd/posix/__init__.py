@@ -7,11 +7,13 @@
 """
 opsiclientd.posix
 """
-from OPSI.System import get_subprocess_environment
-from ptyprocess import PtyProcess
+from typing import Callable
+
+from OPSI.System import get_subprocess_environment  # type: ignore[import]
+from ptyprocess import PtyProcess  # type: ignore[import]
 
 
-def start_pty(shell="bash", lines=30, columns=120):
+def start_pty(shell: str = "bash", lines: int = 30, columns: int = 120) -> tuple[int, Callable, Callable, Callable, Callable]:
 	sp_env = get_subprocess_environment()
 	sp_env.update({"TERM": "xterm-256color"})
 

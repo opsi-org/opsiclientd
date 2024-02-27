@@ -15,26 +15,30 @@ from pathlib import Path
 from queue import Empty, Queue
 from threading import Lock, Thread
 from time import time
-from typing import Callable, Dict
+from typing import Callable
 
-from opsicommon.logging import logger  # type: ignore[import]
-from opsicommon.messagebus import (  # type: ignore[import]
+from opsicommon.logging import get_logger
+from opsicommon.messagebus import (
+	CONNECTION_USER_CHANNEL,
+	Error,
+	FileChunkMessage,
+	FileErrorMessage,
+	FileMessage,
 	FileUploadRequestMessage,
 	FileUploadResultMessage,
-	MessageType,
-	FileErrorMessage,
 	MessageErrorEnum,
-	FileMessage,
-	CONNECTION_USER_CHANNEL,
+	MessageType,
 )
 
 from opsiclientd.messagebus.terminal import terminals
 
 file_uploads_lock = Lock()
-file_uploads: Dict[str, FileUpload] = {}
+file_uploads: dict[str, FileUpload] = {}
+
+logger = get_logger("opsiclientd")
 
 
-class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-instance-attributes
+class FileUpload(Thread):
 	chunk_timeout = 300
 
 	def __init__(self, send_message_function: Callable, file_upload_request: FileUploadRequestMessage) -> None:
@@ -53,17 +57,16 @@ class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-ins
 		if not self._file_upload_request.content_type:
 			raise ValueError("Invalid content_type")
 
-		destination_dir = None
+		destination_path: Path | None = None
 		if self._file_upload_request.destination_dir:
-			destination_dir = self._file_upload_request.destination_dir
+			destination_path = Path(self._file_upload_request.destination_dir)
 		elif self._file_upload_request.terminal_id:
 			terminal = terminals.get(self._file_upload_request.terminal_id)
 			if terminal:
-				destination_dir = terminal.get_cwd()
-		if not destination_dir:
+				destination_path = terminal.get_cwd()
+		if not destination_path:
 			raise ValueError("Invalid destination_dir")
 
-		destination_path = Path(destination_dir)
 		self._file_path: Path = (destination_path / self._file_upload_request.name).absolute()
 		if not self._file_path.is_relative_to(destination_path):
 			raise ValueError("Invalid name")
@@ -80,12 +83,9 @@ class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-ins
 		self._file_path.unlink(missing_ok=True)
 		msg = FileErrorMessage(
 			sender=CONNECTION_USER_CHANNEL,
-			channel=self._file_upload_request.back_channel,
+			channel=self._file_upload_request.response_channel,
 			file_id=self._file_upload_request.file_id,
-			error={
-				"message": error,
-				"details": None,
-			},
+			error=Error(message=error, details=None),
 		)
 		self._send_message_function(msg)
 
@@ -105,16 +105,19 @@ class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-ins
 					logger.notice("File transfer timed out")
 					msg = FileErrorMessage(
 						sender=CONNECTION_USER_CHANNEL,
-						channel=self._file_upload_request.back_channel,
+						channel=self._file_upload_request.response_channel,
 						file_id=self._file_upload_request.file_id,
-						error={
-							"code": MessageErrorEnum.TIMEOUT_REACHED,
-							"message": "File transfer timed out while waiting for next chunk",
-							"details": None,
-						},
+						error=Error(
+							message="File transfer timed out while waiting for next chunk",
+							details=None,
+							code=MessageErrorEnum.TIMEOUT_REACHED,
+						),
 					)
 					self._send_message_function(msg)
 					self._should_stop = True
+				continue
+			if not isinstance(message, FileChunkMessage):
+				logger.warning("Expected FileChungMessage, but received message type %r", message.type)
 				continue
 
 			logger.debug("Received file chunk %r", message.number)
@@ -129,19 +132,19 @@ class FileUpload(Thread):  # pylint: disable=too-few-public-methods,too-many-ins
 
 			if message.last:
 				logger.debug("Last chunk received")
-				msg = FileUploadResultMessage(
+				fur_message = FileUploadResultMessage(
 					sender=CONNECTION_USER_CHANNEL,
-					channel=self._file_upload_request.back_channel,
+					channel=self._file_upload_request.response_channel,
 					file_id=self._file_upload_request.file_id,
 					path=str(self._file_path),
 				)
-				self._send_message_function(msg)
+				self._send_message_function(fur_message)
 				self._should_stop = True
 
 	def run(self) -> None:
 		try:
 			self._run()
-		except Exception as err:  # pylint: disable=broad-except
+		except Exception as err:
 			logger.error(err, exc_info=True)
 
 
@@ -162,16 +165,13 @@ def process_messagebus_message(message: FileMessage, send_message: Callable) -> 
 
 		file_upload.process_message(message)
 
-	except Exception as err:  # pylint: disable=broad-except
+	except Exception as err:
 		logger.warning(err, exc_info=True)
 
 		msg = FileErrorMessage(
 			sender=CONNECTION_USER_CHANNEL,
-			channel=message.back_channel,
+			channel=message.response_channel,
 			file_id=message.file_id,
-			error={
-				"message": str(err),
-				"details": None,
-			},
+			error=Error(message=str(err), details=None),
 		)
 		send_message(msg)
