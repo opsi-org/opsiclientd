@@ -125,7 +125,10 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str | N
 
 	handler = get_all_handlers(handler_type=RotatingFileHandler)[0]
 	handler.namer = namer  # type: ignore[attr-defined]
-	handler.doRollover()  # type: ignore[attr-defined]
+	try:
+		handler.doRollover()  # type: ignore[attr-defined]
+	except Exception as err:
+		logger.error("Failed to rotate log file: %s", err)
 	if log_filter:
 		set_filter_from_string(log_filter)
 
