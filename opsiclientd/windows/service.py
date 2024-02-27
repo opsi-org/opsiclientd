@@ -20,6 +20,10 @@ import win32service
 import win32serviceutil
 from opsicommon.logging import log_context, logger
 
+PBT_APMSUSPEND = 0x4  # https://learn.microsoft.com/en-us/windows/win32/power/pbt-apmsuspend
+PBT_APMRESUMEAUTOMATIC = 0x12  # https://learn.microsoft.com/en-us/windows/win32/power/pbt-apmresumeautomatic
+PBT_APMRESUMESUSPEND = 0x7  # https://learn.microsoft.com/en-us/windows/win32/power/pbt-apmresumesuspend
+
 
 class OpsiclientdService(win32serviceutil.ServiceFramework):
 	_svc_name_ = "opsiclientd"
@@ -41,6 +45,11 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			logger.error(err, exc_info=True)
 			raise
 
+	def GetAcceptedControls(self):
+		rc = win32serviceutil.ServiceFramework.GetAcceptedControls(self)
+		rc |= win32service.SERVICE_ACCEPT_POWEREVENT
+		return rc  # additionally accept SERVICE_ACCEPT_POWEREVENT
+
 	def ReportServiceStatus(self, serviceStatus, waitHint=5000, win32ExitCode=0, svcExitCode=0):
 		# Wrapping because ReportServiceStatus sometimes lets windows
 		# report a crash of opsiclientd (python 2.6.5) invalid handle
@@ -51,6 +60,17 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			)
 		except Exception as err:
 			logger.error("Failed to report service status %s: %s", serviceStatus, err)
+
+	# All extra events are sent via SvcOtherEx (SvcOther remains as a function taking only the first args for backwards compat)
+	def SvcOtherEx(self, control, event_type, data):
+		logger.debug("Got Ex event: %s (%s - %s)", control, event_type, data)
+		# https://stackoverflow.com/questions/47942716/how-to-detect-wake-up-from-sleep-mode-in-windows-service
+		# https://github.com/mhammond/pywin32/blob/main/win32/Demos/service/serviceEvents.py
+		if control == win32service.SERVICE_CONTROL_POWEREVENT:
+			if event_type == PBT_APMSUSPEND:
+				logger.info("Caught Event for sleep")
+			elif event_type == PBT_APMRESUMEAUTOMATIC:
+				logger.info("Caught Event for wakeup")
 
 	def SvcInterrogate(self):
 		logger.notice("Handling interrogate request")
