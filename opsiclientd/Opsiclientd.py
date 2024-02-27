@@ -546,8 +546,10 @@ class Opsiclientd(EventListener, threading.Thread):
 						logger.notice("Done waiting for GUI")
 						# Wait some more seconds for events to fire
 						time.sleep(5)
-
-				self.updateMOTD()  # daemon startup is done, gui is up
+				try:
+					self.updateMOTD()  # daemon startup is done, gui is up
+				except Exception as error:
+					logger.error("Failed to update message of the day: %s", error, exc_info=True)
 				try:
 					yield
 				finally:
@@ -933,7 +935,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					return None
 				data = self._permanent_service_connection.service_client.jsonrpc("configState_getValues", [motd_configs, host_id])
 				user_message = data[host_id].get(motd_configs[0], [""])[0]
-				user_message_valid_until = data[host_id].get(motd_configs[0], [""])[0]
+				user_message_valid_until = data[host_id].get(motd_configs[1], [""])[0]
 			if not user_message_valid_until:
 				user_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
 			for entry in sessions:
@@ -958,6 +960,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				motd_configs = ["message_of_the_day.device.message", "message_of_the_day.device.message_valid_until"]
 				data = self._permanent_service_connection.service_client.jsonrpc("configState_getValues", [motd_configs, host_id])
 				device_message = data[host_id].get(motd_configs[0], [""])[0]
+				device_message_valid_until = data[host_id].get(motd_configs[1], [""])[0]
 			if not device_message_valid_until:
 				device_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
 			if (
