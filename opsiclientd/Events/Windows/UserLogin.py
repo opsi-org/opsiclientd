@@ -8,6 +8,9 @@
 Events that get active once a system shuts down or restarts.
 """
 
+import time
+
+import psutil
 from opsicommon.logging import logger
 
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
@@ -68,8 +71,18 @@ class LoginDetector(SensLogonEventGenerator):
 			return
 		if eventType == "Logon":
 			logger.notice("User login detected: %s", args[0])
+			self._wait_for_explorer()
 			self._opsiclientd.updateMOTD()
 
+	def _wait_for_explorer(self):
+		for _ in range(12):
+			if "explorer.exe" in (p.name() for p in psutil.process_iter()):
+				logger.info("Finished waiting for explorer.exe to start")
+				return
+			logger.debug("Waiting for explorer.exe to start")
+			time.sleep(5)
+		raise RuntimeError("Timeout while waiting for explorer.exe to start")
+
 	def createEvent(self, eventInfo={}):
-		logger.devel("createEvent triggered for LoginDetector")
+		logger.debug("createEvent triggered for LoginDetector - should never occur")
 		return None
