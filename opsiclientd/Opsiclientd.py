@@ -1061,13 +1061,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			sessions = sessions or System.getActiveSessionIds() or [System.getActiveConsoleSessionId()]
 			if sessions:
 				for sessionId in sessions:
-					logger.devel("Running notifierCommand in sessison %s", sessionId)
+					logger.info("Running notifierCommand in sessison %s", sessionId)
 					try:  # program files (x86) might be a problem
 						if RUNNING_ON_WINDOWS:
-							import win32process  # type: ignore[import]
-
-							startupinfo = win32process.STARTUPINFO()
-							startupinfo.lpDesktop = "default"
+							startupinfo = subprocess.STARTUPINFO(lpAttributeList={"lpDesktop": "default"})
 							subprocess.Popen(
 								notifierCommand, session_id=sessionId, session_env=True, session_elevated=False, startupinfo=startupinfo
 							)
@@ -1077,7 +1074,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					except Exception as err:
 						logger.error("Failed to start popup message notifier app in session %s: %s", sessionId, err)
 			else:
-				logger.devel("Running notifierCommand without user session")
+				logger.info("Running notifierCommand without user session")
 				try:  # program files (x86) might be a problem
 					runCommandInSession(command=notifierCommand, waitForProcessEnding=False)
 				except Exception as err:

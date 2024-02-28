@@ -168,7 +168,7 @@ def check_signature(bin_dir):
 	for binary in binary_list:
 		cmd = f"powershell.exe -ExecutionPolicy Bypass -Command \"(Get-AuthenticodeSignature '{binary}').Status -eq 'Valid'\""
 
-		result = execute(cmd, captureStderr=True, waitForEnding=True, timeout=20)
+		result = execute(cmd, captureStderr=True, waitForEnding=True, timeout=30)
 		logger.debug(result)
 		if "True" not in result:
 			raise ValueError(f"Invalid Signature of file {binary}")
