@@ -38,6 +38,7 @@ from OPSI.Util.Message import (  # type: ignore[import]
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, log_context, secret_filter
 from opsicommon.system import ensure_not_already_running
+from opsicommon.system.subprocess import patch_popen
 from opsicommon.types import forceBool, forceInt, forceUnicode
 
 from opsiclientd import __version__, check_signature, config, notify_posix_terminals
@@ -68,6 +69,8 @@ if RUNNING_ON_WINDOWS:
 	from opsiclientd.windows import LoginDetector, runCommandInSession
 else:
 	from OPSI.System import runCommandInSession  # type: ignore
+
+patch_popen()
 
 timeline = Timeline()
 state = State()
@@ -903,12 +906,16 @@ class Opsiclientd(EventListener, threading.Thread):
 	def isInstallationPending(self) -> bool:
 		return state.get("installation_pending", False)
 
-	def getNotifierCommand(self) -> str:
+	def getNotifierCommand(self, skin_file: str | None = None, link_handling: str = "no") -> str:
 		notifierCommand = config.get("opsiclientd_notifier", "command")
 		if Path(config.get("opsiclientd_notifier", "motd_notifier")).exists():
 			notifierCommand = config.get("opsiclientd_notifier", "motd_notifier") + " -l 6 -p %port% -i %id%"
 		if not notifierCommand:
 			raise RuntimeError("opsiclientd_notifier.command not defined")
+		if skin_file:
+			notifierCommand = f"{notifierCommand} -s {skin_file}"
+		if link_handling != "no":  # cannot set --link-handling with lazarus notifier
+			notifierCommand = f"{notifierCommand} --link-handling {link_handling}"
 		return notifierCommand
 
 	def getPopupPort(self) -> int:
@@ -941,22 +948,33 @@ class Opsiclientd(EventListener, threading.Thread):
 				user_message_valid_until = data[host_id].get(motd_configs[1], [""])[0]
 			if not user_message_valid_until:
 				user_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
+			if not user_message:
+				logger.info("Not showing user-specific message of the day, because it is empty")
+				return None
+			if datetime.now() > datetime.fromisoformat(user_message_valid_until):  # Note: Assuming iso format!
+				logger.info("Not showing user-specific message of the day, because it is not valid anymore")
+				return None
+			relevant_sessions = []
 			for entry in sessions:
-				if not user_message:
-					logger.info("Not showing user-specific message of the day, because it is empty")
-					continue
 				if sha256string(user_message) == message_of_the_day_state.get("last_user_message_hash", {}).get(entry.get("UserName")):
 					logger.info("Not showing user-specific message of the day, because it was already shown")
 					continue
-				if datetime.now() > datetime.fromisoformat(user_message_valid_until):  # Note: Assuming iso format!
-					logger.info("Not showing user-specific message of the day, because it is not valid anymore")
-					continue
+				relevant_sessions.append(entry)
+			if relevant_sessions:
 				logger.notice("Showing user-specific message of the day")
-				self.showPopup(user_message, mode="replace", addTimestamp=False, link_handling="browser", session=entry.get("SessionId"))
+				self.showPopup(
+					user_message,
+					mode="replace",
+					addTimestamp=False,
+					link_handling="browser",
+					sessions=[entry.get("SessionId") for entry in relevant_sessions],
+				)
+				message_shown = "user"
 				if "last_user_message_hash" not in message_of_the_day_state:
 					message_of_the_day_state["last_user_message_hash"] = {}
-				message_of_the_day_state["last_user_message_hash"][entry.get("UserName")] = sha256string(user_message)
-				message_shown = "user"
+				for entry in relevant_sessions:
+					message_of_the_day_state["last_user_message_hash"][entry.get("UserName")] = sha256string(user_message)
+
 		else:  # show device message
 			if not device_message:
 				if not self._permanent_service_connection:
@@ -970,15 +988,17 @@ class Opsiclientd(EventListener, threading.Thread):
 				device_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
 			if not device_message:
 				logger.info("Not showing device-specific message of the day, because it is empty")
-			elif sha256string(device_message) == message_of_the_day_state.get("last_device_message_hash"):
+				return None
+			if sha256string(device_message) == message_of_the_day_state.get("last_device_message_hash"):
 				logger.info("Not showing device-specific message of the day, because it was already shown")
-			elif datetime.now() > datetime.fromisoformat(device_message_valid_until):  # Note: Assuming iso format!
+				return None
+			if datetime.now() > datetime.fromisoformat(device_message_valid_until):  # Note: Assuming iso format!
 				logger.info("Not showing device-specific message of the day, because it is not valid anymore")
-			else:
-				logger.notice("Showing device-specific message of the day")
-				self.showPopup(device_message, mode="replace", addTimestamp=False, link_handling="no")
-				message_of_the_day_state["last_device_message_hash"] = sha256string(device_message)
-				message_shown = "device"
+				return None
+			logger.notice("Showing device-specific message of the day")
+			self.showPopup(device_message, mode="replace", addTimestamp=False, link_handling="no")
+			message_of_the_day_state["last_device_message_hash"] = sha256string(device_message)
+			message_shown = "device"
 		state.set("message_of_the_day", message_of_the_day_state)
 		return message_shown
 
@@ -989,15 +1009,12 @@ class Opsiclientd(EventListener, threading.Thread):
 		addTimestamp: bool = True,
 		displaySeconds: int = 0,
 		link_handling: str = "no",
-		session: str | None = None,
+		sessions: list[str] | None = None,
 	) -> None:
 		if mode not in ("prepend", "append", "replace"):
 			mode = "prepend"
 		port = self.getPopupPort()
-		notifierCommand = self.getNotifierCommand()
-		notifierCommand = f'{notifierCommand} -s {os.path.join("notifier", "popup.ini")}'
-		if link_handling != "no":  # cannot set --link-handling with lazarus notifier
-			notifierCommand = f"{notifierCommand} --link-handling {link_handling}"
+		notifierCommand = self.getNotifierCommand(skin_file=os.path.join("notifier", "popup.ini"), link_handling=link_handling)
 
 		if addTimestamp:
 			message = "=== " + time.strftime("%Y-%m-%d %H:%M:%S") + " ===\n" + message
@@ -1041,16 +1058,30 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setChoices([_("Close")])
 			choiceSubject.setCallbacks([self.popupCloseCallback])
 
-			sessionIds = [session] if session else System.getActiveSessionIds() or [System.getActiveConsoleSessionId()]
-			for sessionId in sessionIds:
-				desktops = [None]
-				if RUNNING_ON_WINDOWS:
-					desktops = ["default", "winlogon"]
-				for desktop in desktops:
-					try:
-						runCommandInSession(command=notifierCommand, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False)
+			sessions = sessions or System.getActiveSessionIds() or [System.getActiveConsoleSessionId()]
+			if sessions:
+				for sessionId in sessions:
+					logger.devel("Running notifierCommand in sessison %s", sessionId)
+					try:  # program files (x86) might be a problem
+						if RUNNING_ON_WINDOWS:
+							import win32process  # type: ignore[import]
+
+							startupinfo = win32process.STARTUPINFO()
+							startupinfo.lpDesktop = "default"
+							subprocess.Popen(
+								notifierCommand, session_id=sessionId, session_env=True, session_elevated=False, startupinfo=startupinfo
+							)
+						else:
+							# subprocess.Popen(notifierCommand)  # cannot run as user on linux (yet)
+							runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
 					except Exception as err:
-						logger.error("Failed to start popup message notifier app in session %s on desktop %s: %s", sessionId, desktop, err)
+						logger.error("Failed to start popup message notifier app in session %s: %s", sessionId, err)
+			else:
+				logger.devel("Running notifierCommand without user session")
+				try:  # program files (x86) might be a problem
+					runCommandInSession(command=notifierCommand, waitForProcessEnding=False)
+				except Exception as err:
+					logger.error("Failed to start popup message notifier app in session %s: %s", sessionId, err)
 
 			# last popup decides end time (even if unlimited)
 			if self._popupClosingThread and self._popupClosingThread.is_alive():

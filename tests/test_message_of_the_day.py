@@ -20,7 +20,7 @@ class FakeOpsiclientd(Opsiclientd):
 		addTimestamp: bool = True,
 		displaySeconds: int = 0,
 		link_handling: str = "no",
-		session: str | None = None,
+		sessions: list[str] | None = None,
 	) -> None:
 		pass
 

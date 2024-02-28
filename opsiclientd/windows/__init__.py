@@ -241,13 +241,8 @@ class LoginDetector(threading.Thread):
 
 	def callback(self, eventType, *args):
 		logger.info("LoginDetector triggered. eventType: '%s', args: %s", eventType, args)
-		if self._opsiclientd.is_stopping():
+		if self._opsiclientd.is_stopping() or args[0].split("\\")[-1] == OPSI_SETUP_USER_NAME:
 			return
-
-		if args[0].split("\\")[-1] == OPSI_SETUP_USER_NAME:
-			logger.info("Login of user %s detected, no UserLoginAction will be fired.", args[0])
-			return
-
 		if eventType == "Logon":
 			logger.notice("User login detected: %s", args[0])
 			self._opsiclientd.updateMOTD()
