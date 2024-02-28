@@ -56,3 +56,20 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 
 class UserLoginEvent(Event):
 	pass
+
+
+class LoginDetector(SensLogonEventGenerator):
+	def __init__(self, opsiclientd, eventConfig):
+		SensLogonEventGenerator.__init__(self, opsiclientd, eventConfig)
+
+	def callback(self, eventType, *args):
+		logger.info("LoginDetector triggered. eventType: '%s', args: %s", eventType, args)
+		if self._opsiclientd.is_stopping() or args[0].split("\\")[-1] == OPSI_SETUP_USER_NAME:
+			return
+		if eventType == "Logon":
+			logger.notice("User login detected: %s", args[0])
+			self._opsiclientd.updateMOTD()
+
+	def createEvent(self, eventInfo={}):
+		logger.devel("createEvent triggered for LoginDetector")
+		return None

@@ -66,7 +66,8 @@ from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 
 if RUNNING_ON_WINDOWS:
-	from opsiclientd.windows import LoginDetector, runCommandInSession
+	from opsiclientd.Events.Windows.UserLogin import LoginDetector
+	from opsiclientd.windows import runCommandInSession
 else:
 	from OPSI.System import runCommandInSession  # type: ignore
 
@@ -517,7 +518,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			if RUNNING_ON_WINDOWS:
 				try:
 					logger.info("Starting LoginDetector for message of the day.")
-					self.login_detector = LoginDetector(self)
+					self.login_detector = LoginDetector(self, {})
 					self.login_detector.start()
 				except Exception as error:
 					logger.error("Failed to start LoginDetector: %s", error, exc_info=True)
@@ -1058,10 +1059,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setChoices([_("Close")])
 			choiceSubject.setCallbacks([self.popupCloseCallback])
 
-			sessions = sessions or System.getActiveSessionIds() or [System.getActiveConsoleSessionId()]
+			sessions = sessions or System.getActiveSessionIds()
 			if sessions:
 				for sessionId in sessions:
-					logger.info("Running notifierCommand in sessison %s", sessionId)
+					logger.info("Running notifierCommand in session %s", sessionId)
 					try:
 						if RUNNING_ON_WINDOWS:
 							subprocess.Popen(notifierCommand, session_id=sessionId, session_env=True, session_elevated=False)
