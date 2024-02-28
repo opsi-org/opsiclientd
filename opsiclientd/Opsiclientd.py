@@ -44,6 +44,7 @@ from opsicommon.types import forceBool, forceInt, forceUnicode
 from opsiclientd import __version__, check_signature, config, notify_posix_terminals
 from opsiclientd.ControlPipe import ControlPipe, ControlPipeFactory
 from opsiclientd.ControlServer import ControlServer
+from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.EventProcessing import EventProcessingThread
 from opsiclientd.Events.Basic import CannotCancelEventError, Event, EventListener
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventGenerator
@@ -518,7 +519,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			if RUNNING_ON_WINDOWS:
 				try:
 					logger.info("Starting LoginDetector for message of the day.")
-					self.login_detector = LoginDetector(self, {})
+					self.login_detector = LoginDetector(self, EventConfig("login_detector"))
 					self.login_detector.start()
 				except Exception as error:
 					logger.error("Failed to start LoginDetector: %s", error, exc_info=True)
