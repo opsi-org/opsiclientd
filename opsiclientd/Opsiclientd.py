@@ -1002,7 +1002,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				mode="replace",
 				addTimestamp=False,
 				link_handling="no",
-				sessions=[entry.get("SessionId") for entry in relevant_sessions],
+				sessions=[entry.get("SessionId") for entry in sessions],
 			)
 			message_of_the_day_state["last_device_message_hash"] = sha256string(device_message)
 			messages_shown.append("device")
