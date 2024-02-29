@@ -997,7 +997,13 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.info("Not showing device-specific message of the day, because it was already shown")
 		else:
 			logger.notice("Showing device-specific message of the day")
-			self.showPopup(device_message, mode="replace", addTimestamp=False, link_handling="no", sessions=sessions)
+			self.showPopup(
+				device_message,
+				mode="replace",
+				addTimestamp=False,
+				link_handling="no",
+				sessions=[entry.get("SessionId") for entry in relevant_sessions],
+			)
 			message_of_the_day_state["last_device_message_hash"] = sha256string(device_message)
 			messages_shown.append("device")
 		state.set("message_of_the_day", message_of_the_day_state)
@@ -1065,6 +1071,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				sessions = [System.getActiveConsoleSessionId()]
 				desktops = ("winlogon",)
 			for sessionId in sessions:
+				logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
 				try:
 					if RUNNING_ON_WINDOWS:
 						for desktop in desktops:
@@ -1078,7 +1085,9 @@ class Opsiclientd(EventListener, threading.Thread):
 					else:
 						runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
 				except Exception as err:
-					logger.error("Failed to start popup message notifier app in session %s on desktop %s: %s", sessionId, desktop, err)
+					logger.error(
+						"Failed to start popup message notifier app in session %r on desktop %r: %s", sessionId, desktop, err, exc_info=True
+					)
 
 			# last popup decides end time (even if unlimited)
 			if self._popupClosingThread and self._popupClosingThread.is_alive():
