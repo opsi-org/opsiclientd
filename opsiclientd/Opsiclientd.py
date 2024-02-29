@@ -1066,7 +1066,14 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.info("Running notifierCommand in session %s", sessionId)
 					try:
 						if RUNNING_ON_WINDOWS:
-							subprocess.Popen(notifierCommand, session_id=sessionId, session_env=True, session_elevated=False)
+							for desktop in ["winlogon", "default"]:
+								subprocess.Popen(
+									notifierCommand,
+									session_id=sessionId,
+									session_env=True,
+									session_elevated=False,
+									session_desktop=desktop,
+								)
 						else:
 							# subprocess.Popen(notifierCommand)  # cannot run as user on linux (yet)
 							runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
@@ -1075,7 +1082,15 @@ class Opsiclientd(EventListener, threading.Thread):
 			else:
 				logger.info("Running notifierCommand without user session")
 				try:
-					runCommandInSession(command=notifierCommand, waitForProcessEnding=False)
+					if RUNNING_ON_WINDOWS:
+						runCommandInSession(
+							command=notifierCommand,
+							sessionId=System.getActiveConsoleSessionId(),
+							waitForProcessEnding=False,
+							desktop="winlogon",  # only show message on winlogon if no user is logged in
+						)
+					else:
+						runCommandInSession(command=notifierCommand, waitForProcessEnding=False)
 				except Exception as err:
 					logger.error("Failed to start popup message notifier app in session %s: %s", sessionId, err)
 
