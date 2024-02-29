@@ -1794,7 +1794,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		device_message_valid_until: str | None = None,
 		user_message: str | None = None,
 		user_message_valid_until: str | None = None,
-	) -> str | None:
+	) -> list[str]:
 		return self.opsiclientd.updateMOTD(
 			device_message=device_message,
 			device_message_valid_until=device_message_valid_until,

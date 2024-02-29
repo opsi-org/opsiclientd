@@ -932,77 +932,76 @@ class Opsiclientd(EventListener, threading.Thread):
 		device_message_valid_until: str | None = None,
 		user_message: str | None = None,
 		user_message_valid_until: str | None = None,
-	) -> str | None:
+	) -> list[str]:
 		sessions = System.getActiveSessionInformation()
+		logger.debug("Found sessions: %s", sessions)
 		host_id = config.get("global", "host_id")
-		message_shown = None
+		messages_shown: list[str] = []
 
 		message_of_the_day_state: dict[str, Any] = state.get("message_of_the_day", {})
-		logger.debug("Found sessions: %s", sessions)
+		if "last_user_message_hash" not in message_of_the_day_state:
+			message_of_the_day_state["last_user_message_hash"] = {}
+
+		if not device_message and not user_message:
+			if not self._permanent_service_connection:
+				logger.info("No permanent service connection available, cannot get message of the day")
+				return []
+			logger.info("Updating message of the day from service information")
+			motd_configs = [
+				"message_of_the_day.user.message",
+				"message_of_the_day.user.message_valid_until",
+				"message_of_the_day.device.message",
+				"message_of_the_day.device.message_valid_until",
+			]
+			data = self._permanent_service_connection.service_client.jsonrpc("configState_getValues", [motd_configs, host_id])
+			user_message = data[host_id].get(motd_configs[0], [""])[0]
+			user_message_valid_until = data[host_id].get(motd_configs[1], [""])[0]
+			user_message = data[host_id].get(motd_configs[2], [""])[0]
+			user_message_valid_until = data[host_id].get(motd_configs[3], [""])[0]
+		if not user_message_valid_until:
+			user_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
+		if not device_message_valid_until:
+			device_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
+
 		if sessions:  # show user message
 			if not user_message:
-				motd_configs = ["message_of_the_day.user.message", "message_of_the_day.user.message_valid_until"]
-				if not self._permanent_service_connection:
-					logger.info("No permanent service connection available, cannot get user message")
-					return None
-				data = self._permanent_service_connection.service_client.jsonrpc("configState_getValues", [motd_configs, host_id])
-				user_message = data[host_id].get(motd_configs[0], [""])[0]
-				user_message_valid_until = data[host_id].get(motd_configs[1], [""])[0]
-			if not user_message_valid_until:
-				user_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
-			if not user_message:
 				logger.info("Not showing user-specific message of the day, because it is empty")
-				return None
-			if datetime.now() > datetime.fromisoformat(user_message_valid_until):  # Note: Assuming iso format!
+			elif datetime.now() > datetime.fromisoformat(user_message_valid_until):  # Note: Assuming iso format!
 				logger.info("Not showing user-specific message of the day, because it is not valid anymore")
-				return None
-			relevant_sessions = []
-			for entry in sessions:
-				if sha256string(user_message) == message_of_the_day_state.get("last_user_message_hash", {}).get(entry.get("UserName")):
-					logger.info("Not showing user-specific message of the day, because it was already shown")
-					continue
-				relevant_sessions.append(entry)
-			if relevant_sessions:
-				logger.notice("Showing user-specific message of the day")
-				self.showPopup(
-					user_message,
-					mode="replace",
-					addTimestamp=False,
-					link_handling="browser",
-					sessions=[entry.get("SessionId") for entry in relevant_sessions],
-				)
-				message_shown = "user"
-				if "last_user_message_hash" not in message_of_the_day_state:
-					message_of_the_day_state["last_user_message_hash"] = {}
-				for entry in relevant_sessions:
-					message_of_the_day_state["last_user_message_hash"][entry.get("UserName")] = sha256string(user_message)
+			else:
+				relevant_sessions = []
+				for entry in sessions:
+					if sha256string(user_message) == message_of_the_day_state.get("last_user_message_hash", {}).get(entry.get("UserName")):
+						logger.info("Not showing user-specific message of the day, because it was already shown")
+						continue
+					relevant_sessions.append(entry)
+				if relevant_sessions:
+					logger.notice("Showing user-specific message of the day")
+					self.showPopup(
+						user_message,
+						mode="replace",
+						addTimestamp=False,
+						link_handling="browser",
+						sessions=[entry.get("SessionId") for entry in relevant_sessions],
+					)
+					messages_shown.append("user")
+					for entry in relevant_sessions:
+						message_of_the_day_state["last_user_message_hash"][entry.get("UserName")] = sha256string(user_message)
 
-		else:  # show device message
-			if not device_message:
-				if not self._permanent_service_connection:
-					logger.info("No permanent service connection available, cannot get user message")
-					return None
-				motd_configs = ["message_of_the_day.device.message", "message_of_the_day.device.message_valid_until"]
-				data = self._permanent_service_connection.service_client.jsonrpc("configState_getValues", [motd_configs, host_id])
-				device_message = data[host_id].get(motd_configs[0], [""])[0]
-				device_message_valid_until = data[host_id].get(motd_configs[1], [""])[0]
-			if not device_message_valid_until:
-				device_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
-			if not device_message:
-				logger.info("Not showing device-specific message of the day, because it is empty")
-				return None
-			if sha256string(device_message) == message_of_the_day_state.get("last_device_message_hash"):
-				logger.info("Not showing device-specific message of the day, because it was already shown")
-				return None
-			if datetime.now() > datetime.fromisoformat(device_message_valid_until):  # Note: Assuming iso format!
-				logger.info("Not showing device-specific message of the day, because it is not valid anymore")
-				return None
+		# show device message
+		if not device_message:
+			logger.info("Not showing device-specific message of the day, because it is empty")
+		elif datetime.now() > datetime.fromisoformat(device_message_valid_until):  # Note: Assuming iso format!
+			logger.info("Not showing device-specific message of the day, because it is not valid anymore")
+		elif sha256string(device_message) == message_of_the_day_state.get("last_device_message_hash"):
+			logger.info("Not showing device-specific message of the day, because it was already shown")
+		else:
 			logger.notice("Showing device-specific message of the day")
-			self.showPopup(device_message, mode="replace", addTimestamp=False, link_handling="no")
+			self.showPopup(device_message, mode="replace", addTimestamp=False, link_handling="no", sessions=sessions)
 			message_of_the_day_state["last_device_message_hash"] = sha256string(device_message)
-			message_shown = "device"
+			messages_shown.append("device")
 		state.set("message_of_the_day", message_of_the_day_state)
-		return message_shown
+		return messages_shown
 
 	def showPopup(
 		self,
@@ -1061,38 +1060,25 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setCallbacks([self.popupCloseCallback])
 
 			sessions = sessions or System.getActiveSessionIds()
-			if sessions:
-				for sessionId in sessions:
-					logger.info("Running notifierCommand in session %s", sessionId)
-					try:
-						if RUNNING_ON_WINDOWS:
-							for desktop in ["winlogon", "default"]:
-								subprocess.Popen(
-									notifierCommand,
-									session_id=sessionId,
-									session_env=True,
-									session_elevated=False,
-									session_desktop=desktop,
-								)
-						else:
-							# subprocess.Popen(notifierCommand)  # cannot run as user on linux (yet)
-							runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
-					except Exception as err:
-						logger.error("Failed to start popup message notifier app in session %s: %s", sessionId, err)
-			else:
-				logger.info("Running notifierCommand without user session")
+			desktops = ("default", "winlogon")
+			if not sessions:
+				sessions = [System.getActiveConsoleSessionId()]
+				desktops = ("winlogon",)
+			for sessionId in sessions:
 				try:
 					if RUNNING_ON_WINDOWS:
-						runCommandInSession(
-							command=notifierCommand,
-							sessionId=System.getActiveConsoleSessionId(),
-							waitForProcessEnding=False,
-							desktop="winlogon",  # only show message on winlogon if no user is logged in
-						)
+						for desktop in desktops:
+							subprocess.Popen(
+								notifierCommand,
+								session_id=sessionId,
+								session_env=(desktop == "default"),
+								session_elevated=(desktop == "winlogon"),
+								session_desktop=desktop,
+							)
 					else:
-						runCommandInSession(command=notifierCommand, waitForProcessEnding=False)
+						runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
 				except Exception as err:
-					logger.error("Failed to start popup message notifier app in session %s: %s", sessionId, err)
+					logger.error("Failed to start popup message notifier app in session %s on desktop %s: %s", sessionId, desktop, err)
 
 			# last popup decides end time (even if unlimited)
 			if self._popupClosingThread and self._popupClosingThread.is_alive():
