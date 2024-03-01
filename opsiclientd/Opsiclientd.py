@@ -983,6 +983,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						addTimestamp=False,
 						link_handling="browser",
 						sessions=[entry.get("SessionId") for entry in relevant_sessions],
+						desktops=["default"],
 					)
 					messages_shown.append("user")
 					for entry in relevant_sessions:
@@ -1016,6 +1017,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		displaySeconds: int = 0,
 		link_handling: str = "no",
 		sessions: list[str] | None = None,
+		desktops: list[str] | None = None,
 	) -> None:
 		if mode not in ("prepend", "append", "replace"):
 			mode = "prepend"
@@ -1065,10 +1067,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setCallbacks([self.popupCloseCallback])
 
 			sessions = sessions or System.getActiveSessionIds()
-			desktops = ("default", "winlogon")
+			desktops = desktops or ["default", "winlogon"]
 			if not sessions:
 				sessions = [System.getActiveConsoleSessionId()]
-				desktops = ("winlogon",)
+				desktops = ["winlogon"]
 			for sessionId in sessions:
 				logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
 				try:
