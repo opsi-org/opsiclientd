@@ -21,6 +21,7 @@ class FakeOpsiclientd(Opsiclientd):
 		displaySeconds: int = 0,
 		link_handling: str = "no",
 		sessions: list[str] | None = None,
+		desktops: list[str] | None = None,
 	) -> None:
 		pass
 
