@@ -33,7 +33,7 @@ def test_motd_update(default_config: None, tmp_path: Path) -> None:
 	first = controlServer.messageOfTheDayUpdated(user_message="Test message user", device_message="Test message device")
 	second = controlServer.messageOfTheDayUpdated(user_message="Test message user", device_message="Test message device")
 	if user_logged_in:
-		assert first == ["user", "device"]  # should be shown
+		assert first == ["user"]  # should be shown
 	else:
 		assert first == ["device"]
 	assert second == []  # should not be shown (same hash)
@@ -54,6 +54,6 @@ def test_motd_update_valid_until(default_config: None, tmp_path: Path) -> None:
 	)
 	assert first == []  # should not be shown (expired)
 	if user_logged_in:
-		assert second == ["user", "device"]  # should be shown
+		assert second == ["user"]  # should be shown
 	else:
 		assert second == ["device"]
