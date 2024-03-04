@@ -25,8 +25,6 @@ from OPSI.System.Windows import (  # type: ignore[import]
 from opsicommon.logging import get_logger
 from opsicommon.types import forceBool, forceInt, forceUnicode, forceUnicodeLower
 
-# pyright: reportMissingImports=false
-
 # from Sens.h
 SENSGUID_PUBLISHER = "{5fee1bd6-5b9b-11d1-8dd2-00aa004abd5e}"
 SENSGUID_EVENTCLASS_LOGON = "{d5978630-5b9f-11d1-8dd2-00aa004abd5e}"

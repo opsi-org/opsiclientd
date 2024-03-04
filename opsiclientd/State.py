@@ -97,7 +97,8 @@ class State(metaclass=Singleton):
 			return self._state.get(name, 0)
 		if name == "installation_pending":
 			return forceBool(self._state.get("installation_pending", False))
-
+		if name == "message_of_the_day":
+			return self._state.get("message_of_the_day", default)
 		try:
 			return self._state[name]
 		except KeyError:
