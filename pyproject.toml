@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "opsiclientd"
-version = "4.3.1.2"
+version = "4.3.1.3"
 description = "opsi client daemon. The service running on opsi clients."
 maintainers = [ "uib GmbH <info@uib.de>",]
 authors = [ "uib GmbH <info@uib.de>",]
@@ -31,7 +31,6 @@ indent = "\t"
 
 [tool.ruff]
 line-length = 140
-lint.ignore = [ "F401", "E402", "F811",]
 
 [tool.poetry.dependencies]
 python = "^3.11,<3.12"
@@ -44,23 +43,13 @@ python-opsi = "^4.3.0.13"
 python-opsi-common = "^4.3.4"
 zeroconf = "^0.129"
 
-[tool.poetry.group.dev.dependencies]
-mock = "^5.0"
-mypy = "^1.4"
-pytest = "^8.0"
-pytest-cov = "^4.0"
-ruff = "^0.2"
-pyinstaller = "5.13.0"
-types-pywin32 = "^306.0.0.20240130"
-types-psutil = "^5.9.5.20240205"
-types-pyopenssl = "^24.0.0.20240130"
-types-mock = "^5.1.0.20240106"
-types-requests = "^2.31.0.20240218"
-
 [tool.poetry.scripts]
 opsiclientd = "opsiclientd.__main__:opsiclientd"
 opsiclientd_rpc = "opsiclientd.__main__:opsiclientd_rpc"
 action_processor_starter = "opsiclientd.__main__:action_processor_starter"
+
+[tool.ruff.lint]
+ignore = [ "F401", "E402", "F811",]
 
 [tool.ruff.format]
 indent-style = "tab"
@@ -96,3 +85,16 @@ platform = "win32"
 [tool.poetry.dev-dependencies.pywin32-ctypes]
 version = "^0.2"
 platform = "win32"
+
+[tool.poetry.group.dev.dependencies]
+mock = "^5.0"
+mypy = "^1.4"
+pytest = "^8.0"
+pytest-cov = "^4.0"
+ruff = "^0.2"
+pyinstaller = "5.13.0"
+types-pywin32 = "^306.0.0.20240130"
+types-psutil = "^5.9.5.20240205"
+types-pyopenssl = "^24.0.0.20240130"
+types-mock = "^5.1.0.20240106"
+types-requests = "^2.31.0.20240218"
