@@ -1,4 +1,4 @@
-FROM docker.uib.gmbh/opsi/dev/pybuilder-ssl3:uib-python-3.11
+FROM docker.uib.gmbh/opsi/dev/pybuilder:deb9-py3.11
 
 ARG DOCKER_ENV
 ARG DEBIAN_FRONTEND=noninteractive
@@ -17,16 +17,16 @@ ENV DOCKER_ENV=${DOCKER_ENV} \
 RUN apt-get update \
 	&& apt-get --yes dist-upgrade \
 	&& apt-get --yes install \
-		cpio \
-		vim \
-		wget \
-		gettext \
-		sudo \
-		git \
-		bash-completion \
-		psmisc \
-		cifs-utils \
-		davfs2 \
+	cpio \
+	vim \
+	wget \
+	gettext \
+	sudo \
+	git \
+	bash-completion \
+	psmisc \
+	cifs-utils \
+	davfs2 \
 	&& pip install poetry
 
 COPY files/ /
