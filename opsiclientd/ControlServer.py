@@ -1791,9 +1791,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 	def messageOfTheDayUpdated(
 		self,
 		device_message: str | None = None,
-		device_message_valid_until: int | None = None,
+		device_message_valid_until: int = 0,
 		user_message: str | None = None,
-		user_message_valid_until: int | None = None,
+		user_message_valid_until: int = 0,
 	) -> list[str]:
 		return self.opsiclientd.updateMOTD(
 			device_message=device_message,

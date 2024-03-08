@@ -931,9 +931,9 @@ class Opsiclientd(EventListener, threading.Thread):
 	def updateMOTD(
 		self,
 		device_message: str | None = None,
-		device_message_valid_until: int | None = None,
+		device_message_valid_until: int = 0,
 		user_message: str | None = None,
-		user_message_valid_until: int | None = None,
+		user_message_valid_until: int = 0,
 	) -> list[str]:
 		sessions = System.getActiveSessionInformation()
 		logger.debug("Found sessions: %s", sessions)
@@ -944,7 +944,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		if "last_user_message_hash" not in message_of_the_day_state:
 			message_of_the_day_state["last_user_message_hash"] = {}
 
-		if device_message is None and device_message_valid_until is None and user_message is None and user_message_valid_until is None:
+		if device_message is None or user_message is None:
 			if not self._permanent_service_connection:
 				logger.info("No permanent service connection available, cannot get message of the day")
 				return []
@@ -960,6 +960,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			user_message_valid_until = int(data[host_id].get(motd_configs[1], ["0"])[0])
 			device_message = data[host_id].get(motd_configs[2], [""])[0]
 			device_message_valid_until = int(data[host_id].get(motd_configs[3], ["0"])[0])
+
+		device_message_valid_until = int(device_message_valid_until) if device_message_valid_until else 0
+		user_message_valid_until = int(user_message_valid_until) if user_message_valid_until else 0
 
 		utc_timestamp = int(datetime.now(tz=timezone.utc).timestamp())
 		if sessions:
