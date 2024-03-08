@@ -21,7 +21,7 @@ import threading
 import time
 import urllib.request
 from contextlib import contextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Generator
@@ -931,9 +931,9 @@ class Opsiclientd(EventListener, threading.Thread):
 	def updateMOTD(
 		self,
 		device_message: str | None = None,
-		device_message_valid_until: str | None = None,
+		device_message_valid_until: int | None = None,
 		user_message: str | None = None,
-		user_message_valid_until: str | None = None,
+		user_message_valid_until: int | None = None,
 	) -> list[str]:
 		sessions = System.getActiveSessionInformation()
 		logger.debug("Found sessions: %s", sessions)
@@ -944,7 +944,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		if "last_user_message_hash" not in message_of_the_day_state:
 			message_of_the_day_state["last_user_message_hash"] = {}
 
-		if not device_message and not user_message:
+		if device_message is None and device_message_valid_until is None and user_message is None and user_message_valid_until is None:
 			if not self._permanent_service_connection:
 				logger.info("No permanent service connection available, cannot get message of the day")
 				return []
@@ -957,19 +957,21 @@ class Opsiclientd(EventListener, threading.Thread):
 			]
 			data = self._permanent_service_connection.service_client.jsonrpc("configState_getValues", [motd_configs, host_id])
 			user_message = data[host_id].get(motd_configs[0], [""])[0]
-			user_message_valid_until = data[host_id].get(motd_configs[1], [""])[0]
+			user_message_valid_until = int(data[host_id].get(motd_configs[1], ["0"])[0])
 			device_message = data[host_id].get(motd_configs[2], [""])[0]
-			device_message_valid_until = data[host_id].get(motd_configs[3], [""])[0]
-		if not user_message_valid_until:
-			user_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
-		if not device_message_valid_until:
-			device_message_valid_until = (datetime.now() + timedelta(days=1)).isoformat()
+			device_message_valid_until = int(data[host_id].get(motd_configs[3], ["0"])[0])
 
-		if sessions:  # show user message
+		utc_timestamp = int(datetime.now(tz=timezone.utc).timestamp())
+		if sessions:
+			# Show user message
 			if not user_message:
 				logger.info("Not showing user-specific message of the day, because it is empty")
-			elif datetime.now() > datetime.fromisoformat(user_message_valid_until):  # Note: Assuming iso format!
-				logger.info("Not showing user-specific message of the day, because it is not valid anymore")
+			elif user_message_valid_until > 0 and utc_timestamp > user_message_valid_until:
+				logger.info(
+					"Not showing user-specific message of the day, because it is not valid anymore (%d > %d)",
+					utc_timestamp,
+					user_message_valid_until,
+				)
 			else:
 				relevant_sessions = []
 				for entry in sessions:
@@ -990,11 +992,16 @@ class Opsiclientd(EventListener, threading.Thread):
 					messages_shown.append("user")
 					for entry in relevant_sessions:
 						message_of_the_day_state["last_user_message_hash"][entry.get("UserName")] = sha256string(user_message)
-		else:  # show device message
+		else:
+			# Show device message
 			if not device_message:
 				logger.info("Not showing device-specific message of the day, because it is empty")
-			elif datetime.now() > datetime.fromisoformat(device_message_valid_until):  # Note: Assuming iso format!
-				logger.info("Not showing device-specific message of the day, because it is not valid anymore")
+			elif device_message_valid_until > 0 and utc_timestamp > device_message_valid_until:
+				logger.info(
+					"Not showing device-specific message of the day, because it is not valid anymore (%d > %d)",
+					utc_timestamp,
+					device_message_valid_until,
+				)
 			elif sha256string(device_message) == message_of_the_day_state.get("last_device_message_hash"):
 				logger.info("Not showing device-specific message of the day, because it was already shown")
 			else:
