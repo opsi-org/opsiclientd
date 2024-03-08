@@ -11,6 +11,7 @@ authors = [ "uib GmbH <info@uib.de>",]
 homepage = "https://www.opsi.org"
 license = "AGPL-3.0"
 include = [ "run-opsiclientd", "opsiclientd_data/**/*",]
+
 [[tool.poetry.source]]
 name = "uibpypi"
 url = "https://pypi.uib.gmbh/simple"
@@ -18,16 +19,7 @@ priority = "primary"
 
 [[tool.poetry.source]]
 name = "PyPI"
-priority = "primary"
-
-[tool.black]
-line-length = 140
-target-version = [ "py311",]
-use-tabs = true
-
-[tool.isort]
-profile = "black"
-indent = "\t"
+priority = "supplemental"
 
 [tool.ruff]
 line-length = 140
