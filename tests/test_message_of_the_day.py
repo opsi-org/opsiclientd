@@ -48,7 +48,7 @@ def test_motd_update_without_valid_until(default_config: None, tmp_path: Path, u
 				user_message="Test message user",
 				user_message_valid_until=0,
 				device_message="Test message device",
-				device_message_valid_until=None,
+				device_message_valid_until=None,  # type: ignore[arg-type]
 			)
 			second = controlServer.messageOfTheDayUpdated(user_message="Test message user", device_message="Test message device")
 			# First should be shown
@@ -75,13 +75,19 @@ def test_motd_update_valid_until(default_config: None, tmp_path: Path, user_logg
 	state._stateFile = tmp_path / "state_file.json"
 
 	with patch("opsiclientd.Opsiclientd.System.getActiveSessionInformation", getActiveSessionInformation):
-		valid_until = (datetime.now(tz=timezone.utc) - timedelta(days=1)).timestamp()
+		valid_until = int((datetime.now(tz=timezone.utc) - timedelta(days=1)).timestamp())
 		first = controlServer.messageOfTheDayUpdated(
-			user_message="1", device_message="1", user_message_valid_until=valid_until, device_message_valid_until=valid_until
+			user_message="usermsg1",
+			device_message="devicemsg1",
+			user_message_valid_until=valid_until,
+			device_message_valid_until=valid_until,
 		)
-		valid_until = (datetime.now(tz=timezone.utc) + timedelta(days=1)).timestamp()
+		valid_until = int((datetime.now(tz=timezone.utc) + timedelta(days=1)).timestamp())
 		second = controlServer.messageOfTheDayUpdated(
-			user_message="2", device_message="2", user_message_valid_until=valid_until, device_message_valid_until=valid_until
+			user_message="usermsg2",
+			device_message="devicemsg2",
+			user_message_valid_until=valid_until,
+			device_message_valid_until=valid_until,
 		)
 
 		# Should not be shown (expired)
