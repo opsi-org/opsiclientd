@@ -113,8 +113,7 @@ class Config(metaclass=Singleton):
 			"server_cert_dir": "c:\\opsi.org\\tls",
 		},
 		"cache_service": {"storage_dir": "c:\\opsi.org\\cache"},
-		"control_server": {"files_dir": "c:\\opsi.org\\opsi-client-agent\\files"},
-		"opsiclientd_notifier": {"motd_notifier": "c:\\program files (x86)\\opsi.org\\opsi-client-agent\\motd-notifier.exe"},
+		"control_server": {"files_dir": "c:\\opsi.org\\opsi-client-agent\\files"}
 	}
 
 	LINUX_DEFAULT_PATHS = {
@@ -133,8 +132,7 @@ class Config(metaclass=Singleton):
 			"files_dir": "/var/local/share/opsi-client-agent/files",
 		},
 		"cache_service": {"storage_dir": "/var/cache/opsi-client-agent"},
-		"depot_server": {"drive": "/media/opsi_depot"},
-		"opsiclientd_notifier": {"motd_notifier": "/usr/bin/motd-notifier"},
+		"depot_server": {"drive": "/media/opsi_depot"}
 	}
 
 	MACOS_DEFAULT_PATHS = {
@@ -153,8 +151,7 @@ class Config(metaclass=Singleton):
 			"files_dir": "/var/local/share/opsi-client-agent/files",
 		},
 		"cache_service": {"storage_dir": "/var/cache/opsi-client-agent"},
-		"depot_server": {"drive": "/private/var/opsisetupadmin/opsi_depot"},
-		"opsiclientd_notifier": {"motd_notifier": "/usr/bin/motd-notifier -l 6 -p %port% -i %id%"},
+		"depot_server": {"drive": "/private/var/opsisetupadmin/opsi_depot"}
 	}
 
 	def __init__(self):
@@ -244,6 +241,7 @@ class Config(metaclass=Singleton):
 			},
 			"opsiclientd_notifier": {
 				"command": "",
+				"motd_notifier": "",
 			},
 			"action_processor": {
 				"local_dir": "",
