@@ -8,6 +8,7 @@
 Connecting to a opsi service.
 """
 
+import asyncio
 import random
 import re
 import shutil
@@ -49,6 +50,7 @@ from opsicommon.messagebus.message import (
 	TraceResponseMessage,
 	timestamp,
 )
+from opsicommon.messagebus.process import process_messagebus_message as process_process_message
 from opsicommon.ssl import install_ca, load_ca, remove_ca
 from opsicommon.system import lock_file
 from opsicommon.types import (
@@ -64,15 +66,8 @@ from opsiclientd import __version__
 from opsiclientd.Config import Config
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
-from opsiclientd.messagebus.filetransfer import (
-	process_messagebus_message as process_filetransfer_message,
-)
-from opsiclientd.messagebus.process import (
-	process_messagebus_message as process_process_message,
-)
-from opsiclientd.messagebus.terminal import (
-	process_messagebus_message as process_terminal_message,
-)
+from opsiclientd.messagebus.filetransfer import process_messagebus_message as process_filetransfer_message
+from opsiclientd.messagebus.terminal import process_messagebus_message as process_terminal_message
 from opsiclientd.utils import log_network_status
 
 config = Config()
@@ -141,6 +136,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		self.running = False
 		self._should_stop = False
 		self._rpc_interface = rpc_interface
+		self._loop = asyncio.new_event_loop()
 
 		with log_context({"instance": "permanent service connection"}):
 			self.service_client = ServiceClient(
@@ -156,29 +152,36 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			)
 			self.service_client.register_connection_listener(self)
 
-	def run(self):
-		self.running = True
-		with log_context({"instance": "permanent service connection"}):
-			logger.notice("Permanent service connection starting")
-			# Initial connect, reconnect will be handled by ServiceClient
-			connect_wait = 3
-			while not self._should_stop:
-				try:
-					logger.info("Trying to connect")
-					self.service_client.connect()
-					break
-				except Exception as err:
-					logger.info("Failed to connect: %s", err)
-					logger.debug(err, exc_info=True)
-				for _sec in range(connect_wait):
-					if self._should_stop:
-						return
-					time.sleep(1)
-				connect_wait = min(round(connect_wait * 1.5), 300)
+	async def _arun(self):
+		logger.notice("Permanent service connection starting")
+		# Initial connect, reconnect will be handled by ServiceClient
+		connect_wait = 3
+		while not self._should_stop:
+			try:
+				logger.info("Trying to connect")
+				await self._loop.run_in_executor(None, self.service_client.connect)
+				break
+			except Exception as err:
+				logger.info("Failed to connect: %s", err)
+				logger.debug(err, exc_info=True)
+			for _sec in range(connect_wait):
+				if self._should_stop:
+					return
+				await asyncio.sleep(1)
+			connect_wait = min(round(connect_wait * 1.5), 300)
 
-			while not self._should_stop:
-				time.sleep(1)
-		self.running = False
+		while not self._should_stop:
+			await asyncio.sleep(1)
+
+	def run(self):
+		with log_context({"instance": "permanent service connection"}):
+			self.running = True
+			try:
+				self._loop.run_until_complete(self._arun())
+				self._loop.close()
+			except Exception as err:
+				logger.error(err, exc_info=True)
+			self.running = False
 
 	def stop(self):
 		self._should_stop = True
@@ -217,7 +220,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 
 	def message_received(self, message: Message) -> None:
 		try:
-			self._process_message(message)
+			asyncio.run_coroutine_threadsafe(self._process_message(message), self._loop)
 		except Exception as err:
 			logger.error(err, exc_info=True)
 			response = GeneralErrorMessage(
@@ -228,7 +231,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			)
 			self.service_client.messagebus.send_message(response)
 
-	def _process_message(self, message: Message) -> None:
+	async def _process_message(self, message: Message) -> None:
 		# logger.devel("Message received: %s", message.to_dict())
 		if isinstance(message, JSONRPCRequestMessage):
 			response: Message = JSONRPCResponseMessage(sender="@", channel=message.back_channel or message.sender, rpc_id=message.rpc_id)
@@ -243,7 +246,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 					"message": str(err),
 					"data": {"class": err.__class__.__name__, "details": traceback.format_exc()},
 				}
-			self.service_client.messagebus.send_message(response)
+			await self.service_client.messagebus.async_send_message(response)
 		elif isinstance(message, TraceRequestMessage):
 			response = TraceResponseMessage(
 				sender="@",
@@ -253,13 +256,14 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 				payload=message.payload,
 				trace={"sender_ws_send": timestamp()},
 			)
-			self.service_client.messagebus.send_message(response)
+			await self.service_client.messagebus.async_send_message(response)
 		elif isinstance(message, TerminalMessage):
-			process_terminal_message(message, self.service_client.messagebus.send_message)
+			logger.devel("Processing terminal message %s", message)
+			await self._loop.run_in_executor(None, process_terminal_message, message, self.service_client.messagebus.send_message)
 		elif isinstance(message, FileMessage):
-			process_filetransfer_message(message, self.service_client.messagebus.send_message)
+			await self._loop.run_in_executor(None, process_filetransfer_message, message, self.service_client.messagebus.send_message)
 		elif isinstance(message, ProcessMessage):
-			process_process_message(message, self.service_client.messagebus.send_message, self.service_client.messagebus.async_send_message)
+			await process_process_message(message=message, send_message=self.service_client.messagebus.async_send_message)
 
 
 class ServiceConnection:
