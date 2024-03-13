@@ -1071,7 +1071,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				and mode in ("prepend", "append")
 				and self._popupNotificationServer
 				and self._popupNotificationServer.isListening()
-				and self._popupNotificationServer.notifier_id == "popup"
+				and getattr(self._popupNotificationServer, "notifier_id", "") == "popup"
 			):
 				# Already runnning
 				try:
@@ -1094,9 +1094,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.notice("Starting popup message notification server on port %d", port)
 			try:
 				self._popupNotificationServer = NotificationServer(
-					address="127.0.0.1", start_port=port, subjects=[popupSubject, choiceSubject], notifier_id=notifier_id
+					address="127.0.0.1", start_port=port, subjects=[popupSubject, choiceSubject]
 				)
 				assert self._popupNotificationServer, "Failed to create popup notification server"
+				setattr(self._popupNotificationServer, "notifier_id", notifier_id)
 				self._popupNotificationServer.daemon = True
 				with log_context({"instance": "popup notification server"}):
 					if not self._popupNotificationServer.start_and_wait(timeout=30):
