@@ -8,11 +8,13 @@
 Processing of events.
 """
 
+from __future__ import annotations
 
 import datetime
 import filecmp
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -21,6 +23,7 @@ import threading
 import time
 from ipaddress import IPv6Address, ip_address
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import urlparse
 
 import psutil  # type: ignore[import]
@@ -74,6 +77,9 @@ if RUNNING_ON_WINDOWS:
 else:
 	from OPSI.System import runCommandInSession  # type: ignore
 
+if TYPE_CHECKING:
+	from opsiclientd.Opsiclientd import Opsiclientd
+
 config = Config()
 state = State()
 timeline = Timeline()
@@ -84,11 +90,11 @@ class EventProcessingCanceled(Exception):
 
 
 class EventProcessingThread(KillableThread, ServiceConnection):
-	def __init__(self, opsiclientd, event):
+	def __init__(self, opsiclientd: Opsiclientd, event):
 		KillableThread.__init__(self)
 		ServiceConnection.__init__(self)
 
-		self.opsiclientd = opsiclientd
+		self.opsiclientd: Opsiclientd = opsiclientd
 
 		self.event = event
 
@@ -399,12 +405,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 		logger.notice("Starting notifier application in session '%s' on desktop '%s'", sessionId, desktop)
 		try:
-			command = command.replace("%port%", forceUnicode(self.notificationServerPort)).replace("%id%", forceUnicode(notifierId))
-			# call process directly without shell for posix, keep string structure for windows
+			command = self.opsiclientd.getNotifierCommand(command=command, notifier_id=notifierId, port=self.notificationServerPort)
+			# Call process directly without shell for posix, keep string structure for windows
 			if not RUNNING_ON_WINDOWS:
-				command = command.split()
+				command = shlex.split()
 			process, pid = self.runCommandInSession(sessionId=sessionId, command=command, desktop=desktop, waitForProcessEnding=False)
-			logger.debug("starting notifier with pid %s", pid)
+			logger.debug("Starting notifier with pid %s", pid)
 			return process, pid
 		except Exception as err:
 			logger.error("Failed to start notifier application '%s': %s", command, err)

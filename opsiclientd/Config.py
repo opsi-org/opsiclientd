@@ -113,7 +113,7 @@ class Config(metaclass=Singleton):
 			"server_cert_dir": "c:\\opsi.org\\tls",
 		},
 		"cache_service": {"storage_dir": "c:\\opsi.org\\cache"},
-		"control_server": {"files_dir": "c:\\opsi.org\\opsi-client-agent\\files"}
+		"control_server": {"files_dir": "c:\\opsi.org\\opsi-client-agent\\files"},
 	}
 
 	LINUX_DEFAULT_PATHS = {
@@ -132,7 +132,7 @@ class Config(metaclass=Singleton):
 			"files_dir": "/var/local/share/opsi-client-agent/files",
 		},
 		"cache_service": {"storage_dir": "/var/cache/opsi-client-agent"},
-		"depot_server": {"drive": "/media/opsi_depot"}
+		"depot_server": {"drive": "/media/opsi_depot"},
 	}
 
 	MACOS_DEFAULT_PATHS = {
@@ -151,7 +151,7 @@ class Config(metaclass=Singleton):
 			"files_dir": "/var/local/share/opsi-client-agent/files",
 		},
 		"cache_service": {"storage_dir": "/var/cache/opsi-client-agent"},
-		"depot_server": {"drive": "/private/var/opsisetupadmin/opsi_depot"}
+		"depot_server": {"drive": "/private/var/opsisetupadmin/opsi_depot"},
 	}
 
 	def __init__(self):
@@ -241,7 +241,8 @@ class Config(metaclass=Singleton):
 			},
 			"opsiclientd_notifier": {
 				"command": "",
-				"motd_notifier": "",
+				"alt_command": "",
+				"alt_ids": "",
 			},
 			"action_processor": {
 				"local_dir": "",

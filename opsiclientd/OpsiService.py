@@ -258,7 +258,6 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			)
 			await self.service_client.messagebus.async_send_message(response)
 		elif isinstance(message, TerminalMessage):
-			logger.devel("Processing terminal message %s", message)
 			await self._loop.run_in_executor(None, process_terminal_message, message, self.service_client.messagebus.send_message)
 		elif isinstance(message, FileMessage):
 			await self._loop.run_in_executor(None, process_filetransfer_message, message, self.service_client.messagebus.send_message)

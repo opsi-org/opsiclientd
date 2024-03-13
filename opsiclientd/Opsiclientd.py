@@ -13,6 +13,7 @@ should be overridden in the concrete implementation for an OS.
 import os
 import platform
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -24,7 +25,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, Generator
+from typing import Any, Generator, Literal
 
 import psutil  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
@@ -910,17 +911,19 @@ class Opsiclientd(EventListener, threading.Thread):
 	def isInstallationPending(self) -> bool:
 		return state.get("installation_pending", False)
 
-	def getNotifierCommand(self, skin_file: str | None = None, link_handling: str = "no") -> str:
-		notifierCommand = config.get("opsiclientd_notifier", "command")
-		if Path(config.get("opsiclientd_notifier", "motd_notifier")).exists():
-			notifierCommand = config.get("opsiclientd_notifier", "motd_notifier") + " -l 6 -p %port% -i %id%"
-		if not notifierCommand:
-			raise RuntimeError("opsiclientd_notifier.command not defined")
-		if skin_file:
-			notifierCommand = f"{notifierCommand} -s {skin_file}"
-		if link_handling != "no":  # cannot set --link-handling with lazarus notifier
-			notifierCommand = f"{notifierCommand} --link-handling {link_handling}"
-		return notifierCommand
+	def getNotifierCommand(self, command: str, notifier_id: Literal["popup", "motd"], port: int, link_handling: str = "no") -> str:
+		alt_command = config.get("opsiclientd_notifier", "alt_command")
+		alt_ids = [i.lower().strip() for i in config.get("opsiclientd_notifier", "alt_ids").split(",")]
+		if notifier_id in alt_ids and alt_command and Path(shlex.split(alt_command)[0]).exists():
+			command = f"{alt_command} --link-handling {link_handling}"
+		else:
+			if notifier_id == "motd":
+				# Lazarus notifier does not support MOTD
+				notifier_id = "popup"
+			skin_file = os.path.join("notifier", f"{notifier_id}.ini")
+			command = f"{command} -s {skin_file}"
+
+		return command.replace("%port%", str(port)).replace("%id%", notifier_id)
 
 	def getPopupPort(self) -> int:
 		port = config.get("notification_server", "popup_port")
@@ -1030,11 +1033,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		link_handling: str = "no",
 		sessions: list[str] | None = None,
 		desktops: list[str] | None = None,
+		notifier_type: str = "popup",
 	) -> None:
 		if mode not in ("prepend", "append", "replace"):
 			mode = "prepend"
 		port = self.getPopupPort()
-		notifierCommand = self.getNotifierCommand(skin_file=os.path.join("notifier", "popup.ini"), link_handling=link_handling)
 
 		if addTimestamp:
 			message = "=== " + time.strftime("%Y-%m-%d %H:%M:%S") + " ===\n" + message
@@ -1073,7 +1076,12 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to start notification server: %s", err)
 				raise
 
-			notifierCommand = notifierCommand.replace("%port%", str(self._popupNotificationServer.port)).replace("%id%", "popup")
+			notifierCommand = self.getNotifierCommand(
+				command=config.get("opsiclientd_notifier", "command"),
+				notifier_id=notifier_type,
+				port=self._popupNotificationServer.port,
+				link_handling=link_handling,
+			)
 
 			choiceSubject.setChoices([_("Close")])
 			choiceSubject.setCallbacks([self.popupCloseCallback])
