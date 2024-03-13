@@ -19,13 +19,13 @@ class FakeOpsiclientd(Opsiclientd):
 	def showPopup(
 		self,
 		message: str,
+		notifier_id: Literal["popup", "motd"] = "popup",
 		mode: str = "prepend",
 		addTimestamp: bool = True,
 		displaySeconds: int = 0,
 		link_handling: str = "no",
 		sessions: list[str] | None = None,
 		desktops: list[str] | None = None,
-		notifier_id: Literal["popup", "motd"] = "popup",
 	) -> None:
 		pass
 

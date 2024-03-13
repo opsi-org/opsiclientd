@@ -1010,12 +1010,12 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.notice("Showing user-specific message of the day")
 					self.showPopup(
 						user_message,
+						notifier_id="motd",
 						mode="replace",
 						addTimestamp=False,
 						link_handling="browser",
 						sessions=[entry.get("SessionId") for entry in relevant_sessions],
 						desktops=["default"],
-						notifier_id="motd",
 					)
 					messages_shown.append("user")
 					for entry in relevant_sessions:
@@ -1036,11 +1036,11 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.notice("Showing device-specific message of the day")
 				self.showPopup(
 					device_message,
+					notifier_id="motd",
 					mode="replace",
 					addTimestamp=False,
 					link_handling="no",
 					sessions=[entry.get("SessionId") for entry in sessions],
-					notifier_id="motd",
 				)
 				message_of_the_day_state["last_device_message_hash"] = sha256string(device_message)
 				messages_shown.append("device")
@@ -1050,13 +1050,13 @@ class Opsiclientd(EventListener, threading.Thread):
 	def showPopup(
 		self,
 		message: str,
+		notifier_id: Literal["popup", "motd"] = "popup",
 		mode: str = "prepend",
 		addTimestamp: bool = True,
 		displaySeconds: int = 0,
 		link_handling: str = "no",
 		sessions: list[str] | None = None,
 		desktops: list[str] | None = None,
-		notifier_id: Literal["popup", "motd"] = "popup",
 	) -> None:
 		if mode not in ("prepend", "append", "replace"):
 			mode = "prepend"
@@ -1066,7 +1066,13 @@ class Opsiclientd(EventListener, threading.Thread):
 			message = "=== " + time.strftime("%Y-%m-%d %H:%M:%S") + " ===\n" + message
 
 		with self._popupNotificationLock:
-			if mode in ("prepend", "append") and self._popupNotificationServer and self._popupNotificationServer.isListening():
+			if (
+				notifier_id == "popup"
+				and mode in ("prepend", "append")
+				and self._popupNotificationServer
+				and self._popupNotificationServer.isListening()
+				and self._popupNotificationServer.notifier_id == "popup"
+			):
 				# Already runnning
 				try:
 					for subject in self._popupNotificationServer.getSubjects():
@@ -1088,7 +1094,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.notice("Starting popup message notification server on port %d", port)
 			try:
 				self._popupNotificationServer = NotificationServer(
-					address="127.0.0.1", start_port=port, subjects=[popupSubject, choiceSubject]
+					address="127.0.0.1", start_port=port, subjects=[popupSubject, choiceSubject], notifier_id=notifier_id
 				)
 				assert self._popupNotificationServer, "Failed to create popup notification server"
 				self._popupNotificationServer.daemon = True
