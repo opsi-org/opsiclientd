@@ -36,7 +36,7 @@ from opsicommon.exceptions import (
 	OpsiServiceVerificationError,
 )
 from opsicommon.logging import get_logger, log_context
-from opsicommon.messagebus import (
+from opsicommon.messagebus.message import (
 	Error,
 	FileMessage,
 	GeneralErrorMessage,

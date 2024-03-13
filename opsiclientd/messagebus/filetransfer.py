@@ -18,8 +18,8 @@ from time import time
 from typing import Callable
 
 from opsicommon.logging import get_logger
-from opsicommon.messagebus import (
-	CONNECTION_USER_CHANNEL,
+from opsicommon.messagebus import CONNECTION_USER_CHANNEL
+from opsicommon.messagebus.message import (
 	Error,
 	FileChunkMessage,
 	FileErrorMessage,

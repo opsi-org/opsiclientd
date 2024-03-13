@@ -22,9 +22,9 @@ from threading import Lock, Thread
 from time import sleep, time
 from typing import Awaitable, Callable
 
-from opsicommon.logging import get_logger  # type: ignore[import]
-from opsicommon.messagebus import (
-	CONNECTION_USER_CHANNEL,
+from opsicommon.logging import get_logger
+from opsicommon.messagebus import CONNECTION_USER_CHANNEL
+from opsicommon.messagebus.message import (
 	Error,
 	ProcessDataReadMessage,
 	ProcessDataWriteMessage,
