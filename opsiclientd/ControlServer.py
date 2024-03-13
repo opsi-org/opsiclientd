@@ -1396,7 +1396,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def showPopup(self, message, mode="prepend", addTimestamp=True, displaySeconds=0):
 		message = forceUnicode(message)
-		self.opsiclientd.showPopup(message, mode, addTimestamp, displaySeconds)
+		self.opsiclientd.showPopup(message=message, mode=mode, addTimestamp=addTimestamp, displaySeconds=displaySeconds)
 
 	def deleteServerCerts(self):
 		cert_dir = config.get("global", "server_cert_dir")
