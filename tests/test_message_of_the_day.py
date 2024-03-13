@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Literal
 from unittest.mock import patch
 
 import pytest
@@ -24,6 +25,7 @@ class FakeOpsiclientd(Opsiclientd):
 		link_handling: str = "no",
 		sessions: list[str] | None = None,
 		desktops: list[str] | None = None,
+		notifier_id: Literal["popup", "motd"] = "popup",
 	) -> None:
 		pass
 

@@ -309,8 +309,11 @@ class Opsiclientd(EventListener, threading.Thread):
 					sessionId = System.getActiveConsoleSessionId()
 					while True:
 						try:
+							notifierCommand = self.getNotifierCommand(
+								command=config.get("global", "block_login_notifier"), notifier_id="block_login"
+							)
 							self._blockLoginNotifierPid = System.runCommandInSession(
-								command=config.get("global", "block_login_notifier"),
+								command=notifierCommand,
 								sessionId=sessionId,
 								desktop="winlogon",
 								waitForProcessEnding=False,
@@ -911,19 +914,37 @@ class Opsiclientd(EventListener, threading.Thread):
 	def isInstallationPending(self) -> bool:
 		return state.get("installation_pending", False)
 
-	def getNotifierCommand(self, command: str, notifier_id: Literal["popup", "motd"], port: int, link_handling: str = "no") -> str:
+	def getNotifierCommand(
+		self,
+		command: str,
+		notifier_id: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin"],
+		port: int | None = None,
+		link_handling: str = "no",
+	) -> str:
 		alt_command = config.get("opsiclientd_notifier", "alt_command")
 		alt_ids = [i.lower().strip() for i in config.get("opsiclientd_notifier", "alt_ids").split(",")]
 		if notifier_id in alt_ids and alt_command and Path(shlex.split(alt_command)[0]).exists():
 			command = f"{alt_command} --link-handling {link_handling}"
 		else:
-			if notifier_id == "motd":
-				# Lazarus notifier does not support MOTD
-				notifier_id = "popup"
-			skin_file = os.path.join("notifier", f"{notifier_id}.ini")
-			command = f"{command} -s {skin_file}"
+			skin_file = ""
+			cmd = shlex.split(command)
+			for idx, arg in enumerate(cmd):
+				if arg == "-s" and len(cmd) > idx + 1:
+					skin_file = cmd[idx + 1]
+					break
+			if not skin_file:
+				skin_file = os.path.join("notifier", f"{notifier_id}.ini")
+				command = f"{command} -s {skin_file}"
 
-		return command.replace("%port%", str(port)).replace("%id%", notifier_id)
+			# Lazarus notifier does not support all IDs
+			if notifier_id == "motd":
+				notifier_id = "popup"
+			elif notifier_id == "shutdown_select":
+				notifier_id = "shutdown"
+			elif notifier_id == "userlogin":
+				notifier_id = "event"
+
+		return command.replace("%port%", str(port or 0)).replace("%id%", notifier_id)
 
 	def getPopupPort(self) -> int:
 		port = config.get("notification_server", "popup_port")
@@ -994,6 +1015,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						link_handling="browser",
 						sessions=[entry.get("SessionId") for entry in relevant_sessions],
 						desktops=["default"],
+						notifier_id="motd",
 					)
 					messages_shown.append("user")
 					for entry in relevant_sessions:
@@ -1018,6 +1040,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					addTimestamp=False,
 					link_handling="no",
 					sessions=[entry.get("SessionId") for entry in sessions],
+					notifier_id="motd",
 				)
 				message_of_the_day_state["last_device_message_hash"] = sha256string(device_message)
 				messages_shown.append("device")
@@ -1033,7 +1056,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		link_handling: str = "no",
 		sessions: list[str] | None = None,
 		desktops: list[str] | None = None,
-		notifier_type: str = "popup",
+		notifier_id: Literal["popup", "motd"] = "popup",
 	) -> None:
 		if mode not in ("prepend", "append", "replace"):
 			mode = "prepend"
@@ -1078,7 +1101,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 			notifierCommand = self.getNotifierCommand(
 				command=config.get("opsiclientd_notifier", "command"),
-				notifier_id=notifier_type,
+				notifier_id=notifier_id,
 				port=self._popupNotificationServer.port,
 				link_handling=link_handling,
 			)

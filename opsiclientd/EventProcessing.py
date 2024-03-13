@@ -23,7 +23,7 @@ import threading
 import time
 from ipaddress import IPv6Address, ip_address
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlparse
 
 import psutil  # type: ignore[import]
@@ -40,8 +40,8 @@ from OPSI.Util.Path import cd  # type: ignore[import]
 from OPSI.Util.Thread import KillableThread  # type: ignore[import]
 from opsicommon.logging import (  # type: ignore[import]
 	LOG_INFO,
+	get_logger,
 	log_context,
-	logger,
 	logging_config,
 )
 from opsicommon.types import (  # type: ignore[import]
@@ -80,6 +80,7 @@ else:
 if TYPE_CHECKING:
 	from opsiclientd.Opsiclientd import Opsiclientd
 
+logger = get_logger()
 config = Config()
 state = State()
 timeline = Timeline()
@@ -399,17 +400,26 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 		return process, processId
 
-	def startNotifierApplication(self, command, sessionId=None, desktop=None, notifierId=None):
+	def startNotifierApplication(
+		self,
+		command: str,
+		notifierId: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin"],
+		sessionId: str | None = None,
+		desktop: str | None = None,
+	):
 		if sessionId is None:
 			sessionId = self.getSessionId()
 
 		logger.notice("Starting notifier application in session '%s' on desktop '%s'", sessionId, desktop)
 		try:
 			command = self.opsiclientd.getNotifierCommand(command=command, notifier_id=notifierId, port=self.notificationServerPort)
-			# Call process directly without shell for posix, keep string structure for windows
-			if not RUNNING_ON_WINDOWS:
-				command = shlex.split()
-			process, pid = self.runCommandInSession(sessionId=sessionId, command=command, desktop=desktop, waitForProcessEnding=False)
+			process, pid = self.runCommandInSession(
+				sessionId=sessionId,
+				# Call process directly without shell for posix, keep string structure for windows
+				command=command if RUNNING_ON_WINDOWS else shlex.split(command),
+				desktop=desktop,
+				waitForProcessEnding=False,
+			)
 			logger.debug("Starting notifier with pid %s", pid)
 			return process, pid
 		except Exception as err:
@@ -1238,7 +1248,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					desktops = ["winlogon", "default"]
 				for desktop in desktops:
 					notifier_process, notifier_pid = self.startNotifierApplication(
-						command=self.event.eventConfig.actionNotifierCommand, desktop=desktop, notifierId="action"
+						command=self.event.eventConfig.actionNotifierCommand, notifierId="action", desktop=desktop
 					)
 					if notifier_pid:
 						notifierPids.append(notifier_pid)
@@ -1367,8 +1377,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if self._shutdownWarningTime:
 					if not self.event.eventConfig.shutdownNotifierCommand:
 						raise ConfigurationError(
-							f"Event {self.event.eventConfig.getName()} defines shutdownWarningTime"
-							" but shutdownNotifierCommand is not set"
+							f"Event {self.event.eventConfig.getName()} defines shutdownWarningTime but shutdownNotifierCommand is not set"
 						)
 					if self._notificationServer:
 						self._notificationServer.requestEndConnections()
@@ -1461,16 +1470,19 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						notifierPids = []
 						notifierHandles = []
 						desktops = [self.event.eventConfig.shutdownNotifierDesktop]
+
 						if RUNNING_ON_WINDOWS and self.event.eventConfig.shutdownNotifierDesktop == "all":
 							desktops = ["winlogon", "default"]
 
+						notifierId = "shutdown"
 						shutdownNotifierCommand = self.event.eventConfig.shutdownNotifierCommand
 						if self.event.eventConfig.shutdownUserSelectableTime and len(choiceSubject.getChoices()) > 1:
+							notifierId = "shutdown_select"
 							shutdownNotifierCommand = shutdownNotifierCommand.replace("shutdown.ini", "shutdown_select.ini")
 
 						for desktop in desktops:
 							notifier_handle, notifier_pid = self.startNotifierApplication(
-								command=shutdownNotifierCommand, desktop=desktop, notifierId="shutdown"
+								command=shutdownNotifierCommand, notifierId=notifierId, desktop=desktop
 							)
 							if notifier_pid:
 								notifierPids.append(notifier_pid)
@@ -1735,12 +1747,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						raise EventProcessingCanceled()
 
 					if self.event.eventConfig.eventNotifierCommand:
+						notifierId = "userlogin" if self.event.eventConfig.actionType == "login" else "event"
 						desktops = [self.event.eventConfig.eventNotifierDesktop]
 						if RUNNING_ON_WINDOWS and self.event.eventConfig.eventNotifierDesktop == "all":
 							desktops = ["winlogon", "default"]
 						for desktop in desktops:
 							notifier_handle, notifier_pid = self.startNotifierApplication(
-								command=self.event.eventConfig.eventNotifierCommand, desktop=desktop, notifierId="event"
+								command=self.event.eventConfig.eventNotifierCommand, notifierId=notifierId, desktop=desktop
 							)
 							if notifier_pid:
 								notifierPids.append(notifier_pid)
