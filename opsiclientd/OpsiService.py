@@ -125,6 +125,13 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 							stored_ca.not_valid_after_utc,
 						)
 						del_cas.append(stored_ca)
+					else:
+						logger.info(
+							"Keeping CA '%s' (%s) which is valid until %s",
+							subject_name,
+							stored_ca_fingerprint,
+							stored_ca.not_valid_after_utc,
+						)
 				elif allow_remove:
 					logger.info(
 						"Removing CA '%s' (%s) from store because install_opsi_ca_into_os_store is false",
