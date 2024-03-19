@@ -1897,7 +1897,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		cpu_times_proc = cpu_times["system"] + cpu_times["user"]
 		thread_by_id = {t.native_id: t for t in threading.enumerate()}
 		for p_thread in proc.threads():
-			thread = thread_by_id[p_thread.id]
+			thread = thread_by_id.get(p_thread.id)
+			if not thread:
+				continue
 			info["threads"].append(
 				{
 					"id": p_thread.id,
