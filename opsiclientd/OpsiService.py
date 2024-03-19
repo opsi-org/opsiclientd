@@ -11,6 +11,7 @@ Connecting to a opsi service.
 import asyncio
 import random
 import re
+from datetime import datetime
 import shutil
 import threading
 import time
@@ -51,7 +52,7 @@ from opsicommon.messagebus.message import (
 	timestamp,
 )
 from opsicommon.messagebus.process import process_messagebus_message as process_process_message
-from opsicommon.ssl import install_ca, load_ca, remove_ca
+from opsicommon.ssl import install_ca, load_ca, load_cas, remove_ca
 from opsicommon.system import lock_file
 from opsicommon.types import (
 	forceBool,
@@ -80,51 +81,77 @@ logger = get_logger("opsiclientd")
 def update_os_ca_store(allow_remove: bool = False) -> None:
 	logger.info("Updating os CA cert store")
 
-	ca_certs: list[x509.Certificate] = []
 	ca_cert_file = Path(config.ca_cert_file)
-	if ca_cert_file.exists():
-		with open(ca_cert_file, "r", encoding="utf-8") as file:
-			with lock_file(file=file, exclusive=False, timeout=5.0):
-				data = file.read()
-		for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", data, re.DOTALL):
-			try:
-				ca_certs.append(x509.load_pem_x509_certificate(match.group(1).encode("utf-8")))
-			except Exception as err:
-				logger.error(err, exc_info=True)
+	if not ca_cert_file.exists():
+		return
 
-	for _idx, ca_cert in enumerate(ca_certs):
-		name = forceString(ca_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value)
-		if name == "uib opsi CA":
+	ca_certs: list[x509.Certificate] = []
+	with open(ca_cert_file, "r", encoding="utf-8") as file:
+		with lock_file(file=file, exclusive=False, timeout=5.0):
+			data = file.read()
+	for match in re.finditer(r"(-+BEGIN CERTIFICATE-+.*?-+END CERTIFICATE-+)", data, re.DOTALL):
+		try:
+			ca_certs.append(x509.load_pem_x509_certificate(match.group(1).encode("utf-8")))
+		except Exception as err:
+			logger.error(err, exc_info=True)
+	if not ca_certs:
+		return
+
+	now = datetime.now()
+	install_ca_into_os_store = config.get("global", "install_opsi_ca_into_os_store")
+	for ca_cert in ca_certs:
+		subject_name = forceString(ca_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value)
+		if subject_name == "uib opsi CA":
+			# uib opsi CA will not be installed into system cert store
 			continue
 
-		logger.debug("Handling CA '%s'", name)
-		present_ca = None
-		outdated = True
-		try:
-			present_ca = load_ca(name)
-			if present_ca:
-				outdated = present_ca.fingerprint(hashes.SHA1()) != ca_cert.fingerprint(hashes.SHA1())
-				logger.info("CA '%s' exists in system store and is %s", name, "outdated" if outdated else "up to date")
-			else:
-				logger.info("CA '%s' not found in system store", name)
-		except Exception as err:
-			logger.error("Failed to load CA '%s' from system cert store: %s", name, err, exc_info=True)
+		ca_cert_fingerprint = ca_cert.fingerprint(hashes.SHA1())
+		logger.debug("Handling CA '%s' (%s)", subject_name, ca_cert_fingerprint)
 
-		if config.get("global", "install_opsi_ca_into_os_store"):
-			if outdated or not present_ca:
-				# Add or replace CA
-				try:
-					install_ca(ca_cert)
-					logger.info("CA '%s' successfully installed into system cert store", name)
-				except Exception as err:
-					logger.error("Failed to install CA '%s' into system cert store: %s", name, err, exc_info=True)
-		elif present_ca and allow_remove:
-			logger.info("Removing present CA %s from store because global.install_opsi_ca_into_os_store is false", name)
+		add_ca = install_ca_into_os_store
+		del_cas = []
+		try:
+			for stored_ca in load_cas(subject_name):
+				stored_ca_fingerprint = stored_ca.fingerprint(hashes.SHA1())
+				if install_ca_into_os_store:
+					if stored_ca_fingerprint == ca_cert_fingerprint:
+						logger.info("CA '%s' (%s) already installed into system cert store", subject_name, ca_cert_fingerprint)
+						add_ca = False
+					elif stored_ca.not_valid_after < now and allow_remove:
+						logger.info(
+							"CA '%s' (%s) expired at %s, marking for removal from store",
+							subject_name,
+							stored_ca_fingerprint,
+							stored_ca.not_valid_after,
+						)
+						del_cas.append(stored_ca)
+				elif allow_remove:
+					logger.info(
+						"Removing CA '%s' (%s) from store because install_opsi_ca_into_os_store is false",
+						subject_name,
+						stored_ca_fingerprint,
+					)
+					del_cas.append(stored_ca)
+		except Exception as err:
+			logger.error("Failed to load CAs '%s' from system cert store: %s", subject_name, err, exc_info=True)
+
+		for del_ca in del_cas:
+			del_ca_fingerprint = del_ca.fingerprint(hashes.SHA1())
+			logger.info("Removing CA '%s' (%s) from store", subject_name, del_ca_fingerprint)
 			try:
-				if remove_ca(name):
-					logger.info("CA '%s' successfully removed from system cert store", name)
+				if remove_ca(subject_name, del_ca_fingerprint):
+					logger.info("CA '%s' (%s) successfully removed from system cert store", subject_name, del_ca_fingerprint)
 			except Exception as err:
-				logger.error("Failed to remove CA '%s' from system cert store: %s", name, err, exc_info=True)
+				logger.error("Failed to remove CA '%s' from system cert store: %s", subject_name, err, exc_info=True)
+
+		if add_ca:
+			try:
+				install_ca(ca_cert)
+				logger.info("CA '%s' (%s) successfully installed into system cert store", subject_name, ca_cert_fingerprint)
+			except Exception as err:
+				logger.error(
+					"Failed to install CA '%s' (%s) into system cert store: %s", subject_name, ca_cert_fingerprint, err, exc_info=True
+				)
 
 
 class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, MessagebusListener):  # type: ignore[misc]
