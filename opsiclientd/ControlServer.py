@@ -1884,7 +1884,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 		self.opsiclientd.restart(2)
 
-	def getProcessInfo(self, interval = 5.0):
+	def getProcessInfo(self, interval=5.0):
 		info = {"threads": []}
 		proc = psutil.Process()
 		cpu_times_start = proc.cpu_times()._asdict()
@@ -1894,14 +1894,19 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		cpu_times = {k: v - cpu_times_start[k] for k, v in cpu_times_end.items()}
 		info["cpu_times"] = cpu_times
 		info["cpu_percent"] = cpu_percent
+		cpu_times_proc = cpu_times["system"] + cpu_times["user"]
 		thread_by_id = {t.native_id: t for t in threading.enumerate()}
 		for p_thread in proc.threads():
 			thread = thread_by_id[p_thread.id]
-			info["threads"].append({
-				"id": p_thread.id,
-				"name": thread.name,
-				"run_func": thread.run,
-				"cpu_times": {"user": p_thread.user_time, "system": p_thread.system_time},
-				"cpu_percent": cpu_percent * ((p_thread.system_time + p_thread.user_time) / (cpu_times["system"] + cpu_times["user"])),
-			})
+			info["threads"].append(
+				{
+					"id": p_thread.id,
+					"name": thread.name,
+					"run_func": thread.run,
+					"cpu_times": {"user": p_thread.user_time, "system": p_thread.system_time},
+					"cpu_percent": (cpu_percent * ((p_thread.system_time + p_thread.user_time) / cpu_times_proc))
+					if cpu_times_proc
+					else 0.0,
+				}
+			)
 		return info
