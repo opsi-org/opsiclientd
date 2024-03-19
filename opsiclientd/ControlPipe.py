@@ -40,7 +40,7 @@ def ControlPipeFactory(opsiclientd):
 
 class ClientConnection(threading.Thread):
 	def __init__(self, controller, connection, client_id: str) -> None:
-		threading.Thread.__init__(self)
+		threading.Thread.__init__(self, name="ControlPipe-ClientConnection")
 		self._controller = controller
 		self._connection = connection
 		self.client_id = client_id
@@ -169,7 +169,7 @@ class ControlPipe(threading.Thread):
 	connection_class = ClientConnection
 
 	def __init__(self, opsiclientd) -> None:
-		threading.Thread.__init__(self)
+		threading.Thread.__init__(self, name="ControlPipe")
 		self._opsiclientd = opsiclientd
 		self._opsiclientdRpcInterface = OpsiclientdRpcPipeInterface(self._opsiclientd)
 		self.bufferSize = 4096

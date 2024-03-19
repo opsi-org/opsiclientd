@@ -495,7 +495,7 @@ class OpsiclientdNT5(OpsiclientdNT):
 
 class ShutdownThread(threading.Thread):
 	def __init__(self):
-		threading.Thread.__init__(self)
+		threading.Thread.__init__(self, name="ShutdownThread")
 
 	def run(self):
 		while True:
@@ -511,7 +511,7 @@ class ShutdownThread(threading.Thread):
 
 class RebootThread(threading.Thread):
 	def __init__(self):
-		threading.Thread.__init__(self)
+		threading.Thread.__init__(self, name="RebootThread")
 
 	def run(self):
 		while True:

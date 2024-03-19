@@ -129,7 +129,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 
 class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, MessagebusListener):  # type: ignore[misc]
 	def __init__(self, rpc_interface) -> None:
-		threading.Thread.__init__(self)
+		threading.Thread.__init__(self, name="PermanentServiceConnection")
 		ServiceConnectionListener.__init__(self)
 		MessagebusListener.__init__(self)
 		self.daemon = True

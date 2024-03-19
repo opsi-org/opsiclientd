@@ -745,7 +745,7 @@ class ResourceOpsiclientdUpload(ResourceOpsiclientd):
 class ControlServer(OpsiService, threading.Thread):
 	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
 		OpsiService.__init__(self)
-		threading.Thread.__init__(self)
+		threading.Thread.__init__(self, name="ControlServer")
 		self._opsiclientd = opsiclientd
 		self._httpsPort = httpsPort
 		self._sslServerKeyFile = sslServerKeyFile
@@ -890,8 +890,7 @@ class LogReaderThread(threading.Thread):
 	max_record_buffer_size = 2500
 
 	def __init__(self, filename, websocket_protocol, num_tail_records=-1):
-		super().__init__()
-		self.daemon = True
+		super().__init__(daemon=True, name="LogReaderThread")
 		self.should_stop = False
 		self.filename = filename
 		self.websocket_protocol = websocket_protocol
@@ -1050,8 +1049,7 @@ class LogWebSocketServerProtocol(WebSocketServerProtocol, WorkerOpsiclientd):
 
 class TerminalReaderThread(threading.Thread):
 	def __init__(self, websocket_protocol):
-		super().__init__()
-		self.daemon = True
+		super().__init__(daemon=True, name="TerminalReaderThread")
 		self.should_stop = False
 		self.websocket_protocol = websocket_protocol
 
@@ -1885,3 +1883,25 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			logger.warning(err, exc_info=True)
 
 		self.opsiclientd.restart(2)
+
+	def getProcessInfo(self, interval = 5.0):
+		info = {"threads": []}
+		proc = psutil.Process()
+		cpu_times_start = proc.cpu_times()._asdict()
+		time.sleep(interval)
+		cpu_times_end = proc.cpu_times()._asdict()
+		cpu_percent = proc.cpu_percent()
+		cpu_times = {k: v - cpu_times_start[k] for k, v in cpu_times_end.items()}
+		info["cpu_times"] = cpu_times
+		info["cpu_percent"] = cpu_percent
+		thread_by_id = {t.native_id: t for t in threading.enumerate()}
+		for p_thread in proc.threads():
+			thread = thread_by_id[p_thread.id]
+			info["threads"].append({
+				"id": p_thread.id,
+				"name": thread.name,
+				"run_func": thread.run,
+				"cpu_times": {"user": p_thread.user_time, "system": p_thread.system_time},
+				"cpu_percent": cpu_percent * ((p_thread.system_time + p_thread.user_time) / (cpu_times["system"] + cpu_times["user"])),
+			})
+		return info

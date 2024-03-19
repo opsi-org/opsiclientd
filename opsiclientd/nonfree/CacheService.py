@@ -111,7 +111,7 @@ class TransferSlotHeartbeat(threading.Thread):
 
 class CacheService(threading.Thread):
 	def __init__(self, opsiclientd):
-		threading.Thread.__init__(self)
+		threading.Thread.__init__(self, name="CacheService")
 		self._opsiclientd = opsiclientd
 		self._productCacheService = None
 		self._configCacheService = None
@@ -478,7 +478,7 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):
 class ConfigCacheService(ServiceConnection, threading.Thread):
 	def __init__(self, opsiclientd):
 		try:
-			threading.Thread.__init__(self)
+			threading.Thread.__init__(self, name="ConfigCacheService")
 			ServiceConnection.__init__(self, opsiclientd)
 
 			self._configBackend = None
@@ -857,7 +857,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 
 class ProductCacheService(ServiceConnection, threading.Thread):
 	def __init__(self, opsiclientd):
-		threading.Thread.__init__(self)
+		threading.Thread.__init__(self, name="ProductCacheService")
 		ServiceConnection.__init__(self, opsiclientd)
 
 		self._updateConfig()

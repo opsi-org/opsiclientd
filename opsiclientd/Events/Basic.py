@@ -28,7 +28,7 @@ class CannotCancelEventError(RuntimeError):
 
 class EventGenerator(threading.Thread):
 	def __init__(self, opsiclientd, generatorConfig):
-		threading.Thread.__init__(self, daemon=True)
+		threading.Thread.__init__(self, daemon=True, name=f"EventGenerator-{generatorConfig.getId()}")
 		self._opsiclientd = opsiclientd
 		self._generatorConfig = generatorConfig
 		self._eventConfigs = []
@@ -139,7 +139,7 @@ class EventGenerator(threading.Thread):
 
 		class FireEventThread(threading.Thread):
 			def __init__(self, eventListener, event):
-				threading.Thread.__init__(self)
+				threading.Thread.__init__(self, name=f"FireEventThread-{event.eventConfig.getId()}")
 				self._eventListener = eventListener
 				self._event = event
 

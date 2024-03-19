@@ -92,7 +92,7 @@ class EventProcessingCanceled(Exception):
 
 class EventProcessingThread(KillableThread, ServiceConnection):
 	def __init__(self, opsiclientd: Opsiclientd, event):
-		KillableThread.__init__(self)
+		KillableThread.__init__(self, name="EventProcessingThread")
 		ServiceConnection.__init__(self)
 
 		self.opsiclientd: Opsiclientd = opsiclientd
@@ -311,7 +311,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	def stopNotificationServer(self):
 		if not self._notificationServer:
 			return
-		threading.Thread(target=self._stopNotificationServer).start()
+		threading.Thread(target=self._stopNotificationServer, name="stopNotificationServer").start()
 
 	def getConfigFromService(self):
 		"""Get settings from service"""

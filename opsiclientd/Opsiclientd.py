@@ -90,7 +90,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.debug("Opsiclient initiating")
 
 		EventListener.__init__(self)
-		threading.Thread.__init__(self)
+		threading.Thread.__init__(self, name="Opsiclientd")
 
 		self._startupTime = time.time()
 		self._running = False
@@ -288,7 +288,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				os.execvp(self._argv[0], self._argv)
 
 		logger.notice("Will restart in %d seconds", waitSeconds)
-		threading.Thread(target=_restart, args=(waitSeconds,)).start()
+		threading.Thread(target=_restart, args=(waitSeconds,), name="restart").start()
 
 	def setBlockLogin(self, blockLogin: bool, handleNotifier: bool = True) -> None:
 		blockLogin = forceBool(blockLogin)
