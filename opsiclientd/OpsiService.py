@@ -105,14 +105,14 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 			# uib opsi CA will not be installed into system cert store
 			continue
 
-		ca_cert_fingerprint = ca_cert.fingerprint(hashes.SHA1())
+		ca_cert_fingerprint = ca_cert.fingerprint(hashes.SHA1()).hex().upper()
 		logger.debug("Handling CA '%s' (%s)", subject_name, ca_cert_fingerprint)
 
 		add_ca = install_ca_into_os_store
 		del_cas = []
 		try:
 			for stored_ca in load_cas(subject_name):
-				stored_ca_fingerprint = stored_ca.fingerprint(hashes.SHA1())
+				stored_ca_fingerprint = stored_ca.fingerprint(hashes.SHA1()).hex().upper()
 				if install_ca_into_os_store:
 					if stored_ca_fingerprint == ca_cert_fingerprint:
 						logger.info("CA '%s' (%s) already installed into system cert store", subject_name, ca_cert_fingerprint)
@@ -136,7 +136,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 			logger.error("Failed to load CAs '%s' from system cert store: %s", subject_name, err, exc_info=True)
 
 		for del_ca in del_cas:
-			del_ca_fingerprint = del_ca.fingerprint(hashes.SHA1())
+			del_ca_fingerprint = del_ca.fingerprint(hashes.SHA1()).hex().upper()
 			logger.info("Removing CA '%s' (%s) from store", subject_name, del_ca_fingerprint)
 			try:
 				if remove_ca(subject_name, del_ca_fingerprint):
