@@ -11,7 +11,7 @@ Connecting to a opsi service.
 import asyncio
 import random
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 import shutil
 import threading
 import time
@@ -97,7 +97,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 	if not ca_certs:
 		return
 
-	now = datetime.now()
+	utc_now = datetime.now(tz=timezone.utc)
 	install_ca_into_os_store = config.get("global", "install_opsi_ca_into_os_store")
 	for ca_cert in ca_certs:
 		subject_name = forceString(ca_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value)
@@ -117,12 +117,12 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 					if stored_ca_fingerprint == ca_cert_fingerprint:
 						logger.info("CA '%s' (%s) already installed into system cert store", subject_name, ca_cert_fingerprint)
 						add_ca = False
-					elif stored_ca.not_valid_after < now and allow_remove:
+					elif stored_ca.not_valid_after_utc < utc_now and allow_remove:
 						logger.info(
 							"CA '%s' (%s) expired at %s, marking for removal from store",
 							subject_name,
 							stored_ca_fingerprint,
-							stored_ca.not_valid_after,
+							stored_ca.not_valid_after_utc,
 						)
 						del_cas.append(stored_ca)
 				elif allow_remove:
