@@ -38,6 +38,7 @@ from OPSI.Util.Message import (  # type: ignore[import]
 )
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, log_context, secret_filter
+from opsicommon.package import OpsiPackage
 from opsicommon.system import ensure_not_already_running
 from opsicommon.system.subprocess import patch_popen
 from opsicommon.types import forceBool, forceInt, forceUnicode
@@ -64,7 +65,7 @@ from opsiclientd.Localization import _
 from opsiclientd.OpsiService import PermanentServiceConnection
 from opsiclientd.setup import setup
 from opsiclientd.State import State
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
+from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 
 if RUNNING_ON_WINDOWS:
@@ -171,7 +172,8 @@ class Opsiclientd(EventListener, threading.Thread):
 						file.write(response.read())
 			self.self_update_from_file(filename)
 
-	def self_update_from_file(self, filename: str) -> None:
+	def self_update_from_file(self, filename: str | Path) -> None:
+		filename = Path(filename)
 		logger.notice("Self-update from file %s", filename)
 
 		test_file = "base_library.zip"
@@ -187,6 +189,26 @@ class Opsiclientd(EventListener, threading.Thread):
 			with tempfile.TemporaryDirectory() as tmpdir_name:
 				tmpdir = Path(tmpdir_name)
 				destination = tmpdir / "content"
+
+				if filename.suffix == ".opsi":
+					logger.info("Extracting opsi package %s", filename)
+					package_destination = tmpdir / "opsi_package"
+
+					opsi_package = OpsiPackage()
+					opsi_package.extract_package_archive(filename, package_destination)
+
+					search = "**/opsiclientd_windows_*.zip"
+					if RUNNING_ON_LINUX:
+						search = "**/opsiclientd_linux_*.tar.gz"
+					elif RUNNING_ON_DARWIN:
+						search = "**/opsiclientd_darwin_*.tar.gz"
+					opsiclientd_archives = list((package_destination / "CLIENT_DATA").glob(search))
+					logger.info("Found the following opsiclient archives in opsi package: %s", opsiclientd_archives)
+					if not opsiclientd_archives:
+						raise RuntimeError(f"Could not find any opsiclientd archives ({search}) in extracted opsi package")
+					filename = opsiclientd_archives[0]
+
+				logger.info("Extracting archive %s to %s", filename, destination)
 				shutil.unpack_archive(filename=filename, extract_dir=destination)
 
 				bin_dir: Path | None = destination
