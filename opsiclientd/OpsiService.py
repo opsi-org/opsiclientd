@@ -11,11 +11,11 @@ Connecting to a opsi service.
 import asyncio
 import random
 import re
-from datetime import datetime, timezone
 import shutil
 import threading
 import time
 import traceback
+from datetime import datetime, timezone
 from pathlib import Path
 from traceback import TracebackException
 from types import TracebackType
@@ -110,8 +110,10 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 
 		add_ca = install_ca_into_os_store
 		del_cas = []
+		num_cas = 1
 		try:
-			for stored_ca in load_cas(subject_name):
+			# Iterate over all stored CAs, newest first
+			for stored_ca in sorted(load_cas(subject_name), key=lambda x: x.not_valid_after_utc, reverse=True):
 				stored_ca_fingerprint = stored_ca.fingerprint(hashes.SHA1()).hex().upper()
 				if install_ca_into_os_store:
 					if stored_ca_fingerprint == ca_cert_fingerprint:
@@ -125,6 +127,15 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 							stored_ca.not_valid_after_utc,
 						)
 						del_cas.append(stored_ca)
+					elif num_cas >= 2:
+						logger.info(
+							"CA '%s' (%s) is valid until %s but %d newer certificates are in the store, marking for removal",
+							subject_name,
+							stored_ca_fingerprint,
+							stored_ca.not_valid_after_utc,
+							num_cas,
+						)
+						del_cas.append(stored_ca)
 					else:
 						logger.info(
 							"Keeping CA '%s' (%s) which is valid until %s",
@@ -132,6 +143,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 							stored_ca_fingerprint,
 							stored_ca.not_valid_after_utc,
 						)
+						num_cas += 1
 				elif allow_remove:
 					logger.info(
 						"Removing CA '%s' (%s) from store because install_opsi_ca_into_os_store is false",
@@ -144,17 +156,18 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 
 		for del_ca in del_cas:
 			del_ca_fingerprint = del_ca.fingerprint(hashes.SHA1()).hex().upper()
-			logger.info("Removing CA '%s' (%s) from store", subject_name, del_ca_fingerprint)
+			logger.debug("Removing CA '%s' (%s) from store", subject_name, del_ca_fingerprint)
 			try:
 				if remove_ca(subject_name, del_ca_fingerprint):
-					logger.info("CA '%s' (%s) successfully removed from system cert store", subject_name, del_ca_fingerprint)
+					logger.debug("CA '%s' (%s) successfully removed from system cert store", subject_name, del_ca_fingerprint)
 			except Exception as err:
 				logger.error("Failed to remove CA '%s' from system cert store: %s", subject_name, err, exc_info=True)
 
 		if add_ca:
+			logger.debug("Installing CA '%s' (%s) into system cert store", subject_name, ca_cert_fingerprint)
 			try:
 				install_ca(ca_cert)
-				logger.info("CA '%s' (%s) successfully installed into system cert store", subject_name, ca_cert_fingerprint)
+				logger.debug("CA '%s' (%s) successfully installed into system cert store", subject_name, ca_cert_fingerprint)
 			except Exception as err:
 				logger.error(
 					"Failed to install CA '%s' (%s) into system cert store: %s", subject_name, ca_cert_fingerprint, err, exc_info=True
