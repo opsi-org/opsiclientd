@@ -762,7 +762,7 @@ class ControlServer(OpsiService, threading.Thread):
 		self._opsiclientdRpcInterface = OpsiclientdRpcInterface(self._opsiclientd)
 
 		logger.info("ControlServer initiated")
-		self.authFailures = {}
+		self.authFailures: dict[str, dict[str, int]] = {}
 
 	def run(self):
 		with log_context({"instance": "control server"}):
