@@ -73,6 +73,7 @@ from opsicommon.logging import (
 from opsicommon.types import forceBool, forceInt, forceProductIdList, forceUnicode
 from opsicommon.utils import generate_opsi_host_key
 from twisted.internet import fdesc, reactor
+from twisted.internet.abstract import isIPv6Address
 from twisted.internet.base import BasePort
 from twisted.internet.error import CannotListenError
 from twisted.web import server
@@ -743,16 +744,19 @@ class ResourceOpsiclientdUpload(ResourceOpsiclientd):
 
 
 class ControlServer(OpsiService, threading.Thread):
-	def __init__(self, opsiclientd, httpsPort, sslServerKeyFile, sslServerCertFile, staticDir=None):
+	def __init__(self, opsiclientd) -> None:
 		OpsiService.__init__(self)
 		threading.Thread.__init__(self, name="ControlServer")
 		self._opsiclientd = opsiclientd
-		self._httpsPort = httpsPort
-		self._sslServerKeyFile = sslServerKeyFile
-		self._sslServerCertFile = sslServerCertFile
-		self._staticDir = staticDir
+		self._interface = config.get("control_server", "interface") or "::"
+		self._httpsPort = config.get("control_server", "port")
+		self._sslServerKeyFile = config.get("control_server", "ssl_server_key_file")
+		self._sslServerCertFile = config.get("control_server", "ssl_server_cert_file")
+		self._staticDir = config.get("control_server", "static_dir")
+		self._startDelay = config.get("control_server", "start_delay") or 0
 		self._root = None
 		self._running = False
+		self._should_stop = False
 		self._server = None
 		self._site = None
 		self._opsiclientdRpcInterface = OpsiclientdRpcInterface(self._opsiclientd)
@@ -778,14 +782,25 @@ class ControlServer(OpsiService, threading.Thread):
 						"The SSL server certificate file '%s' is missing, please check your configuration", self._sslServerCertFile
 					)
 
+				if self._startDelay and self._startDelay > 0:
+					logger.notice("Starting control server with delay of %d seconds", self._startDelay)
+					for _ in range(self._startDelay):
+						if self._should_stop:
+							return
+						time.sleep(1)
+
 				ssl_context = SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
+				is_ipv6 = isIPv6Address(self._interface)
 				try:
-					self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context, interface="::")
-					logger.info("IPv6 support enabled")
+					self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context, interface=self._interface)
+					if is_ipv6:
+						logger.info("IPv6 support enabled")
 				except Exception as err:
+					if not is_ipv6 or self._interface != "::":
+						raise
 					logger.info("No IPv6 support: %s", err)
-					self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context)
-				logger.notice("Control server is accepting HTTPS requests on port %d", self._httpsPort)
+					self._server = reactor.listenSSL(self._httpsPort, self._site, ssl_context, interface=self._interface)
+				logger.notice("Control server is accepting HTTPS requests on address [%s]:%d", self._interface, self._httpsPort)
 
 				if not reactor.running:
 					logger.debug("Reactor is not running. Starting.")
@@ -793,6 +808,8 @@ class ControlServer(OpsiService, threading.Thread):
 					logger.debug("Reactor run ended.")
 				else:
 					logger.debug("Reactor already running.")
+					while not self._should_stop and reactor.running:
+						time.sleep(1)
 
 			except CannotListenError as err:
 				logger.critical("Failed to listen on port %s: %s", self._httpsPort, err, exc_info=True)
@@ -804,6 +821,7 @@ class ControlServer(OpsiService, threading.Thread):
 				self._running = False
 
 	def stop(self):
+		self._should_stop = True
 		if self._server:
 			self._server.stopListening()
 		if self._sessionHandler:
@@ -1904,7 +1922,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 				{
 					"id": p_thread.id,
 					"name": thread.name,
-					"run_func": thread.run,
+					"run_func": str(thread.run),
 					"cpu_times": {"user": p_thread.user_time, "system": p_thread.system_time},
 					"cpu_percent": (cpu_percent * ((p_thread.system_time + p_thread.user_time) / cpu_times_proc))
 					if cpu_times_proc

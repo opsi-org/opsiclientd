@@ -221,7 +221,7 @@ class Config(metaclass=Singleton):
 				"sync_products_with_actions_only": True,
 			},
 			"control_server": {
-				"interface": "0.0.0.0",
+				"interface": "::",
 				"port": 4441,
 				"ssl_server_key_file": os.path.join(baseDir, "opsiclientd", "opsiclientd.pem"),
 				"ssl_server_cert_file": os.path.join(baseDir, "opsiclientd", "opsiclientd.pem"),
@@ -230,6 +230,7 @@ class Config(metaclass=Singleton):
 				"kiosk_api_active": True,
 				"process_actions_event": "auto",
 				"skip_setup_firewall": False,
+				"start_delay": 0,
 			},
 			"notification_server": {
 				"interface": "127.0.0.1",

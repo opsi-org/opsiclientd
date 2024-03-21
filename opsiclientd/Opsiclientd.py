@@ -480,13 +480,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.notice("Starting control server")
 			self._controlServer = None
 			try:
-				self._controlServer = ControlServer(
-					opsiclientd=self,
-					httpsPort=config.get("control_server", "port"),
-					sslServerKeyFile=config.get("control_server", "ssl_server_key_file"),
-					sslServerCertFile=config.get("control_server", "ssl_server_cert_file"),
-					staticDir=config.get("control_server", "static_dir"),
-				)
+				self._controlServer = ControlServer(opsiclientd=self)
 				logger.debug("Current control server: %s", self._controlServer)
 				self._controlServer.start()
 				logger.notice("Control server started")
