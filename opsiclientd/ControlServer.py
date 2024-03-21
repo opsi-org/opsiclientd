@@ -1903,6 +1903,7 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		self.opsiclientd.restart(2)
 
 	def getProcessInfo(self, interval=5.0):
+		# TODO: cpu usage not correct, run in main thread?
 		info = {"threads": []}
 		proc = psutil.Process()
 		cpu_times_start = proc.cpu_times()._asdict()
