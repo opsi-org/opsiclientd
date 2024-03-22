@@ -42,6 +42,7 @@ from opsicommon.messagebus.file_transfer import process_messagebus_message as pr
 from opsicommon.messagebus.message import (
 	Error,
 	FileTransferMessage,
+	FileUploadRequestMessage,
 	GeneralErrorMessage,
 	JSONRPCRequestMessage,
 	JSONRPCResponseMessage,
@@ -69,6 +70,7 @@ from opsiclientd.Config import Config
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
 from opsiclientd.messagebus.terminal import process_messagebus_message as process_terminal_message
+from opsiclientd.messagebus.terminal import terminals
 from opsiclientd.utils import log_network_status
 
 config = Config()
@@ -307,6 +309,12 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		elif isinstance(message, TerminalMessage):
 			await self._loop.run_in_executor(None, process_terminal_message, message, self.service_client.messagebus.send_message)
 		elif isinstance(message, FileTransferMessage):
+			if isinstance(message, FileUploadRequestMessage):
+				if message.terminal_id and not message.destination_dir:
+					terminal = terminals.get(message.terminal_id)
+					if terminal:
+						destination_dir = terminal.get_cwd()
+						message.destination_dir = str(destination_dir)
 			await process_filetransfer_message(message=message, send_message=self.service_client.messagebus.async_send_message)
 		elif isinstance(message, ProcessMessage):
 			await process_process_message(message=message, send_message=self.service_client.messagebus.async_send_message)
