@@ -124,6 +124,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self._currentProgressSubjectProxy = ProgressSubjectProxy("currentProgress", fireAlways=False)
 		self._overallProgressSubjectProxy = ProgressSubjectProxy("overallProgress", fireAlways=False)
 		self._choiceSubject = None
+		self._notificationServerShouldStop = False
 
 		self._statusSubject.setMessage(_("Processing event %s") % self.event.eventConfig.getName())
 		self._clientIdSubject.setMessage(config.get("global", "host_id"))
@@ -273,6 +274,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		logger.notice("Starting notification server")
 
 		try:
+			self._notificationServerShouldStop = False
+			start_delay = config.get("notification_server", "start_delay") or 0
+			if start_delay and start_delay > 0:
+				logger.notice("Starting control server with delay of %d seconds", start_delay)
+				for _ in range(start_delay):
+					if self._notificationServerShouldStop:
+						return
+					time.sleep(1)
+
 			self._notificationServer = NotificationServer(
 				address=config.get("notification_server", "interface"),
 				start_port=forceInt(config.get("notification_server", "start_port")),
@@ -304,6 +314,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	def _stopNotificationServer(self):
 		try:
 			logger.info("Stopping notification server")
+			self._notificationServerShouldStop = True
 			self._notificationServer.stop(stopReactor=False)
 		except Exception as err:
 			logger.error(err, exc_info=True)

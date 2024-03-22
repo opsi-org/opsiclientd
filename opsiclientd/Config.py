@@ -236,6 +236,7 @@ class Config(metaclass=Singleton):
 				"interface": "127.0.0.1",
 				"start_port": 44000,
 				"popup_port": 45000,
+				"start_delay": 0,
 			},
 			"opsiclientd_rpc": {
 				"command": "",
