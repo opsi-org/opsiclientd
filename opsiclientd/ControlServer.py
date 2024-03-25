@@ -30,6 +30,7 @@ import urllib
 import warnings
 from collections import namedtuple
 from pathlib import Path
+from types import ModuleType
 from typing import Union
 from uuid import uuid4
 
@@ -72,7 +73,7 @@ from opsicommon.logging import (
 )
 from opsicommon.types import forceBool, forceInt, forceProductIdList, forceUnicode
 from opsicommon.utils import generate_opsi_host_key
-from twisted.internet import fdesc, reactor
+from twisted.internet import fdesc
 from twisted.internet.abstract import isIPv6Address
 from twisted.internet.base import BasePort
 from twisted.internet.error import CannotListenError
@@ -96,9 +97,22 @@ if RUNNING_ON_WINDOWS:
 else:
 	from OPSI.System import runCommandInSession  # type: ignore
 
+
 config = Config()
 state = State()
 logger = get_logger("opsiclientd")
+twisted_reactor: ModuleType | None = None
+
+
+def get_twisted_reactor() -> ModuleType:
+	global twisted_reactor  # pylint: disable=global-statement
+	if twisted_reactor is None:
+		logger.info("Installing twisted reactor")
+		from twisted.internet import reactor
+
+		twisted_reactor = reactor
+	assert twisted_reactor
+	return twisted_reactor
 
 
 class SSLContext(object):
@@ -384,7 +398,7 @@ class WorkerOpsiclientd(WorkerOpsi):
 				self.service.authFailures[client_ip]["count"] += 1
 				if self.service.authFailures[client_ip]["count"] > maxAuthenticationFailures:
 					self.service.authFailures[client_ip]["blocked_time"] = time.time()
-			reactor.callLater(5, WorkerOpsi._errback, self, failure)
+			get_twisted_reactor().callLater(5, WorkerOpsi._errback, self, failure)
 		else:
 			WorkerOpsi._errback(self, failure)
 
@@ -789,6 +803,7 @@ class ControlServer(OpsiService, threading.Thread):
 							return
 						time.sleep(1)
 
+				reactor = get_twisted_reactor()
 				ssl_context = SSLContext(self._sslServerKeyFile, self._sslServerCertFile)
 				is_ipv6 = isIPv6Address(self._interface)
 				try:
@@ -826,6 +841,7 @@ class ControlServer(OpsiService, threading.Thread):
 			self._server.stopListening()
 		if self._sessionHandler:
 			self._sessionHandler.deleteAllSessions()
+		reactor = get_twisted_reactor()
 		reactor.fireSystemEvent("shutdown")
 		reactor.disconnectAll()
 		self._running = False
@@ -923,7 +939,7 @@ class LogReaderThread(threading.Thread):
 		data = b""
 		for record in self.record_buffer:
 			data += msgpack.packb(record)
-		reactor.callFromThread(self.websocket_protocol.sendMessage, data, True)
+		get_twisted_reactor().callFromThread(self.websocket_protocol.sendMessage, data, True)
 		self.send_time = time.time()
 		self.record_buffer = []
 
@@ -1072,6 +1088,7 @@ class TerminalReaderThread(threading.Thread):
 		self.websocket_protocol = websocket_protocol
 
 	def run(self):
+		reactor = get_twisted_reactor()
 		while not self.should_stop:
 			try:
 				data = self.websocket_protocol.child_read(16 * 1024)
