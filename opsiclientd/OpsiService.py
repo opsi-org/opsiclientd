@@ -636,11 +636,6 @@ class ServiceConnectionThread(KillableThread):
 		logger.debug("Stopping thread")
 		self.cancelled = True
 		self.running = False
-		for _unused in range(10):
-			if not self.is_alive():
-				break
-			self.terminate()
-			time.sleep(0.5)
 
 
 def download_from_depot(product_id: str, destination: Union[str, Path], sub_path: str | None = None):
