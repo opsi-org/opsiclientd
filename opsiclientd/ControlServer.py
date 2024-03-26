@@ -1920,11 +1920,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		self.opsiclientd.restart(2)
 
 	def getProcessInfo(self, interval=5.0):
-		# TODO: cpu usage not correct, run in main thread?
 		info = {"threads": []}
 		proc = psutil.Process()
 		proc.cpu_percent()
 		cpu_times_start = proc.cpu_times()._asdict()
+		p_thread_cpu_times_start = {t.id: {"user": t.user_time, "system": t.system_time} for t in proc.threads()}
 		time.sleep(interval)
 		cpu_percent = proc.cpu_percent()
 		cpu_times_end = proc.cpu_times()._asdict()
@@ -1937,15 +1937,16 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 			thread = thread_by_id.get(p_thread.id)
 			if not thread:
 				continue
+			cts = p_thread_cpu_times_start.get(p_thread.id)
+			user_time = p_thread.user_time - cts["user"]
+			system_time = p_thread.system_time - cts["system"]
 			info["threads"].append(
 				{
 					"id": p_thread.id,
 					"name": thread.name,
 					"run_func": str(thread.run),
-					"cpu_times": {"user": p_thread.user_time, "system": p_thread.system_time},
-					"cpu_percent": (cpu_percent * ((p_thread.system_time + p_thread.user_time) / cpu_times_proc))
-					if cpu_times_proc
-					else 0.0,
+					"cpu_times": {"user": user_time, "system": system_time},
+					"cpu_percent": (cpu_percent * ((system_time + user_time) / cpu_times_proc)) if cpu_times_proc else 0.0,
 				}
 			)
 		return info
