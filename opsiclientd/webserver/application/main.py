@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING
 from fastapi import FastAPI
 
 from opsiclientd.webserver.application import set_opsiclientd
-from opsiclientd.webserver.application.index import setup_index
+from opsiclientd.webserver.application.control import setup as setup_control_interface
+from opsiclientd.webserver.application.index import setup as setup_index
 
 if TYPE_CHECKING:
 	from opsiclientd.Opsiclientd import Opsiclientd
@@ -22,4 +23,5 @@ def setup_application(opsiclientd: Opsiclientd) -> FastAPI:
 	set_opsiclientd(opsiclientd)
 	app = FastAPI()
 	setup_index(app)
+	setup_control_interface(app)
 	return app

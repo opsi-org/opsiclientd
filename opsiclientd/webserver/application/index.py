@@ -43,6 +43,6 @@ def index_page() -> str:
 	return INDEX_PAGE % {"hostname": get_opsiclientd().config.get("global", "host_id")}
 
 
-def setup_index(app: FastAPI) -> None:
+def setup(app: FastAPI) -> None:
 	app.mount("/static", StaticFiles(directory=get_opsiclientd().config.get("control_server", "static_dir")))
 	app.include_router(router)

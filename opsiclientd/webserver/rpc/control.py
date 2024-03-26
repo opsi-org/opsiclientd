@@ -19,6 +19,7 @@ import subprocess
 import sys
 import threading
 import time
+from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Union
 from uuid import uuid4
@@ -28,7 +29,6 @@ from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from OPSI import System  # type: ignore[import]
 from OPSI import __version__ as python_opsi_version  # type: ignore[import]
-from OPSI.Backend.Backend import describeInterface  # type: ignore[import]
 from OPSI.Util.Log import truncateLogData  # type: ignore[import]
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, secret_filter
@@ -42,6 +42,7 @@ from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import getEventGenerator
 from opsiclientd.OpsiService import ServiceConnection, download_from_depot
 from opsiclientd.Timeline import Timeline
+from opsiclientd.webserver.rpc.interface import Interface
 
 if is_windows():
 	from opsiclientd.windows import runCommandInSession
@@ -55,12 +56,10 @@ if TYPE_CHECKING:
 logger = get_logger("opsiclientd")
 
 
-class PipeControlInterface:
+class PipeControlInterface(Interface):
 	def __init__(self, opsiclientd: Opsiclientd) -> None:
+		super().__init__()
 		self.opsiclientd: Opsiclientd = opsiclientd
-
-	def getInterface(self):
-		return describeInterface(self)
 
 	def getPossibleMethods_listOfHashes(self):
 		return self.getInterface()
@@ -866,3 +865,8 @@ class ControlInterface(PipeControlInterface):
 				}
 			)
 		return info
+
+
+@lru_cache
+def get_control_interface(opsiclientd: Opsiclientd) -> ControlInterface:
+	return ControlInterface(opsiclientd)
