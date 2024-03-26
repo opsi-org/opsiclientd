@@ -1923,10 +1923,11 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 		# TODO: cpu usage not correct, run in main thread?
 		info = {"threads": []}
 		proc = psutil.Process()
+		proc.cpu_percent()
 		cpu_times_start = proc.cpu_times()._asdict()
 		time.sleep(interval)
-		cpu_times_end = proc.cpu_times()._asdict()
 		cpu_percent = proc.cpu_percent()
+		cpu_times_end = proc.cpu_times()._asdict()
 		cpu_times = {k: v - cpu_times_start[k] for k, v in cpu_times_end.items()}
 		info["cpu_times"] = cpu_times
 		info["cpu_percent"] = cpu_percent
