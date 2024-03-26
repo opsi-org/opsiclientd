@@ -7,6 +7,7 @@
 """
 Connecting to a opsi service.
 """
+from __future__ import annotations
 
 import asyncio
 import random
@@ -19,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from traceback import TracebackException
 from types import TracebackType
-from typing import Union
+from typing import TYPE_CHECKING
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
@@ -72,6 +73,9 @@ from opsiclientd.Localization import _
 from opsiclientd.messagebus.terminal import process_messagebus_message as process_terminal_message
 from opsiclientd.messagebus.terminal import terminals
 from opsiclientd.utils import log_network_status
+
+if TYPE_CHECKING:
+	from opsiclientd.Opsiclientd import Opsiclientd
 
 config = Config()
 cert_file_lock = threading.Lock()
@@ -177,14 +181,16 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 
 
 class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, MessagebusListener):  # type: ignore[misc]
-	def __init__(self, rpc_interface) -> None:
+	def __init__(self, opsiclientd: Opsiclientd) -> None:
+		from opsiclientd.webserver.rpc.control import ControlInterface
+
 		threading.Thread.__init__(self, name="PermanentServiceConnection")
 		ServiceConnectionListener.__init__(self)
 		MessagebusListener.__init__(self)
 		self.daemon = True
 		self.running = False
 		self._should_stop = False
-		self._rpc_interface = rpc_interface
+		self._control_interface = ControlInterface(opsiclientd)
 		self._loop = asyncio.new_event_loop()
 
 		with log_context({"instance": "permanent service connection"}):
@@ -287,7 +293,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			try:
 				if message.method.startswith("_"):
 					raise ValueError("Invalid method")
-				method = getattr(self._rpc_interface, message.method)
+				method = getattr(self._control_interface, message.method)
 				response.result = method(*(message.params or tuple()))
 			except Exception as err:
 				response.error = {
@@ -638,7 +644,7 @@ class ServiceConnectionThread(KillableThread):
 		self.running = False
 
 
-def download_from_depot(product_id: str, destination: Union[str, Path], sub_path: str | None = None):
+def download_from_depot(product_id: str, destination: str | Path, sub_path: str | None = None) -> None:
 	product_id = forceProductId(product_id)
 	if isinstance(destination, str):
 		destination = Path(destination).resolve()

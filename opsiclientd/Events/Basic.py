@@ -8,6 +8,8 @@
 Basic event building blocks.
 """
 
+from __future__ import annotations
+
 import threading
 import time
 
@@ -15,6 +17,7 @@ import opsicommon.logging
 from opsicommon.logging import logger
 from opsicommon.types import forceList
 
+from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.State import State
 
 __all__ = ["Event", "EventGenerator", "EventListener"]
@@ -79,10 +82,10 @@ class EventGenerator(threading.Thread):
 
 		return actualConfig["config"]
 
-	def createAndFireEvent(self, eventInfo={}, can_cancel=False):
+	def createAndFireEvent(self, eventInfo: dict[str, str | list[str]] | None = None, can_cancel: bool = False) -> None:
 		self.fireEvent(self.createEvent(eventInfo), can_cancel=can_cancel)
 
-	def createEvent(self, eventInfo={}):
+	def createEvent(self, eventInfo: dict[str, str | list[str]] | None) -> Event | None:
 		logger.debug("Creating event config from info: %s", eventInfo)
 		eventConfig = self.getEventConfig()
 		logger.debug("Event config: %s", eventConfig)
@@ -231,9 +234,9 @@ class EventGenerator(threading.Thread):
 class Event:
 	"""Basic event class"""
 
-	def __init__(self, eventConfig, eventInfo={}):
-		self.eventConfig = eventConfig
-		self.eventInfo = eventInfo
+	def __init__(self, eventConfig: EventConfig, eventInfo: dict[str, str | list[str]] | None = None):
+		self.eventConfig: EventConfig = eventConfig
+		self.eventInfo: dict[str, str | list[str]] = eventInfo or {}
 
 	def getActionProcessorCommand(self):
 		actionProcessorCommand = self.eventConfig.actionProcessorCommand

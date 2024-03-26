@@ -9,6 +9,7 @@ Basic opsiclientd implementation. This is abstract in some parts that
 should be overridden in the concrete implementation for an OS.
 """
 
+from __future__ import annotations
 
 import os
 import platform
@@ -25,7 +26,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, Generator, Literal
+from typing import TYPE_CHECKING, Any, Generator, Literal
 
 import psutil  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
@@ -43,9 +44,8 @@ from opsicommon.system import ensure_not_already_running
 from opsicommon.system.subprocess import patch_popen
 from opsicommon.types import forceBool, forceInt, forceUnicode
 
-from opsiclientd import __version__, check_signature, config, notify_posix_terminals
+from opsiclientd import Config, __version__, check_signature, config, notify_posix_terminals
 from opsiclientd.ControlPipe import ControlPipe, ControlPipeFactory
-from opsiclientd.ControlServer import ControlServer
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.EventProcessing import EventProcessingThread
 from opsiclientd.Events.Basic import CannotCancelEventError, Event, EventListener
@@ -67,12 +67,17 @@ from opsiclientd.setup import setup
 from opsiclientd.State import State
 from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
+from opsiclientd.webserver import Webserver
+from opsiclientd.webserver.rpc.control import ControlInterface
 
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.Events.Windows.UserLogin import LoginDetector
 	from opsiclientd.windows import runCommandInSession
 else:
 	from OPSI.System import runCommandInSession  # type: ignore
+
+if TYPE_CHECKING:
+	from opsiclientd.nonfree.CacheService import CacheService
 
 patch_popen()
 
@@ -93,13 +98,16 @@ class Opsiclientd(EventListener, threading.Thread):
 		EventListener.__init__(self)
 		threading.Thread.__init__(self, name="Opsiclientd")
 
+		self.config: Config = config
+		self.state: State = state
+
 		self._startupTime = time.time()
 		self._running = False
 		self._eventProcessingThreads: list[EventProcessingThread] = []
 		self.eventLock = threading.Lock()
 		self._eptListLock = threading.Lock()
 		self._blockLogin = True
-		self._currentActiveDesktopName: dict[str, str] = {}
+		self._currentActiveDesktopName: dict[int, str] = {}
 		self._gui_waiter: WaitForGUI | None = None
 
 		self._isRebootTriggered = False
@@ -121,9 +129,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._stopEvent = threading.Event()
 		self._stopEvent.clear()
 
-		self._cacheService = None
+		self._cacheService: CacheService | None = None
 		self._controlPipe: ControlPipe | None = None
-		self._controlServer: ControlServer | None = None
+		self._webserver: Webserver | None = None
 		self._permanent_service_connection: PermanentServiceConnection | None = None
 		self._selfUpdating = False
 		self.login_detector: LoginDetector | None = None
@@ -131,14 +139,18 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._argv = list(sys.argv)
 		self._argv[0] = os.path.abspath(self._argv[0])
 
+	def cleanup_opsi_setup_user(self, keep_sid: str | None = None):
+		raise NotImplementedError(f"Not implemented on {platform.system()}")
+
+	def createOpsiSetupUser(self, admin=True, delete_existing=False):
+		raise NotImplementedError(f"Not implemented on {platform.system()}")
+
 	def start_permanent_service_connection(self) -> None:
 		if self._permanent_service_connection and self._permanent_service_connection.running:
 			return
 
-		if not self._controlServer:
-			raise RuntimeError("Control server not started - cannot start permanent service connection")
 		logger.info("Starting permanent service connection")
-		self._permanent_service_connection = PermanentServiceConnection(self._controlServer._opsiclientdRpcInterface)
+		self._permanent_service_connection = PermanentServiceConnection(self)
 		self._permanent_service_connection.start()
 
 	def stop_permanent_service_connection(self) -> None:
@@ -476,36 +488,29 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.debug("Stopping controlPipe failed: %s", stopError)
 
 		@contextmanager
-		def getControlServer() -> Generator[None, None, None]:
-			logger.notice("Starting control server")
-			self._controlServer = None
+		def getWebserver() -> Generator[None, None, None]:
+			logger.notice("Starting webserver")
+			self._webserver = None
 			try:
-				self._controlServer = ControlServer(opsiclientd=self)
-				logger.debug("Current control server: %s", self._controlServer)
-				self._controlServer.start()
-				logger.notice("Control server started")
-
-				self._stopEvent.wait(1)
-				if self._stopEvent.is_set():
-					# Probably a failure during binding to port.
-					raise RuntimeError("Received stop signal.")
+				self._webserver = Webserver(opsiclientd=self)
+				self._webserver.start()
+				logger.notice("Webserver started")
 
 				yield
 			except Exception as err:
-				logger.error("Failed to start control server: %s", err, exc_info=True)
+				logger.error("Failed to start webserver: %s", err, exc_info=True)
 				raise err
 			finally:
-				if self._controlServer:
-					logger.info("Stopping control server")
+				if self._webserver:
+					logger.info("Stopping webserver")
 					try:
-						self._controlServer.stop()
-						self._controlServer.join(2)
-						logger.info("Control server stopped")
+						self._webserver.stop()
+						logger.info("Webserver stopped")
 					except (NameError, RuntimeError) as stopError:
-						logger.debug("Stopping controlServer failed: %s", stopError)
+						logger.debug("Stopping webserver failed: %s", stopError)
 
 		@contextmanager
-		def getCacheService() -> Generator[Any | None, None, None]:  # not typing here for speedup (costly import)
+		def getCacheService() -> Generator[CacheService | None, None, None]:  # not typing here for speedup (costly import)
 			cache_service = None
 			try:
 				logger.notice("Starting cache service")
@@ -612,7 +617,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			)
 
 			with getControlPipe():
-				with getControlServer():
+				with getWebserver():
 					if config.get("config_service", "permanent_connection"):
 						self.start_permanent_service_connection()
 
@@ -702,7 +707,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			self._gui_waiter.stop()
 		self._stopEvent.set()
 
-	def getCacheService(self) -> Any:  # Not typing here for speedup (costly import)
+	def getCacheService(self) -> CacheService:
 		if not self._cacheService:
 			raise RuntimeError("Cache service not started")
 		return self._cacheService
@@ -816,7 +821,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		with self._eptListLock:
 			return self._eventProcessingThreads
 
-	def getEventProcessingThread(self, sessionId: str) -> EventProcessingThread:
+	def getEventProcessingThread(self, sessionId: int) -> EventProcessingThread:
 		with self._eptListLock:
 			for ept in self._eventProcessingThreads:
 				if int(ept.getSessionId()) == int(sessionId):
@@ -826,11 +831,12 @@ class Opsiclientd(EventListener, threading.Thread):
 	def processProductActionRequests(self, event: Event) -> None:
 		logger.error("processProductActionRequests not implemented")
 
-	def getCurrentActiveDesktopName(self, sessionId: str | None = None) -> str | None:
+	def getCurrentActiveDesktopName(self, sessionId: int | None = None) -> str | None:
 		if not RUNNING_ON_WINDOWS:
 			return None
 
-		if not ("opsiclientd_rpc" in config.getDict() and "command" in config.getDict()["opsiclientd_rpc"]):
+		opsiclientd_rpc = config.get("opsiclientd_rpc", "command")
+		if not opsiclientd_rpc:
 			raise RuntimeError("opsiclientd_rpc command not defined")
 
 		if sessionId is None:
@@ -838,8 +844,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			if sessionId is None:
 				sessionId = System.getActiveConsoleSessionId()
 
+		assert sessionId
+
 		rpc = f'setCurrentActiveDesktopName("{sessionId}", System.getActiveDesktopName())'
-		cmd = config.get("opsiclientd_rpc", "command") + ' "' + rpc.replace('"', '\\"') + '"'
+		cmd = opsiclientd_rpc + ' "' + rpc.replace('"', '\\"') + '"'
 		try:
 			runCommandInSession(
 				command=cmd, sessionId=sessionId, desktop="winlogon", waitForProcessEnding=True, timeoutSeconds=60, noWindow=True
@@ -856,7 +864,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		return desktop
 
 	def switchDesktop(self, desktop: str, sessionId: int | None = None) -> None:
-		if not ("opsiclientd_rpc" in config.getDict() and "command" in config.getDict()["opsiclientd_rpc"]):
+		opsiclientd_rpc = config.get("opsiclientd_rpc", "command")
+		if not opsiclientd_rpc:
 			raise RuntimeError("opsiclientd_rpc command not defined")
 
 		desktop = forceUnicode(desktop)
@@ -867,7 +876,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		sessionId = forceInt(sessionId)
 
 		rpc = f"noop(System.switchDesktop('{desktop}'))"
-		cmd = f'{config.get("opsiclientd_rpc", "command")} "{rpc}"'
+		cmd = f'{opsiclientd_rpc} "{rpc}"'
 
 		try:
 			runCommandInSession(

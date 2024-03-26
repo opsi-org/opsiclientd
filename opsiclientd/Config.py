@@ -366,7 +366,7 @@ class Config(metaclass=Singleton):
 				if sslCertDir not in self._config["control_server"][certPath]:
 					self._config["control_server"][certPath] = os.path.join(sslCertDir, self._config["control_server"][certPath])
 
-	def getDict(self):
+	def getDict(self) -> dict[str, str | int | float | bool | list[str] | dict[str, str]]:
 		return self._config
 
 	def has_option(self, section, option):
@@ -421,7 +421,7 @@ class Config(metaclass=Singleton):
 			return "opsi-winst"
 		return "opsi-script"
 
-	def set(self, section, option, value):
+	def set(self, section, option, value) -> None:
 		if not section:
 			section = "global"
 

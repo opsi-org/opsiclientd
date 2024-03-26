@@ -8,7 +8,7 @@ opsiclientd.nonfree.CacheService
 
 @copyright:	uib GmbH <info@uib.de>
 """
-
+from __future__ import annotations
 
 import codecs
 import collections
@@ -19,7 +19,7 @@ import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from OPSI import System  # type: ignore[import]
@@ -61,6 +61,9 @@ from opsiclientd.State import State
 from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 from opsiclientd.utils import get_include_exclude_product_ids
+
+if TYPE_CHECKING:
+	from opsiclientd.Opsiclientd import Opsiclientd
 
 __all__ = ["CacheService", "ConfigCacheService", "ProductCacheService"]
 
@@ -306,7 +309,7 @@ class CacheService(threading.Thread):
 
 		return True
 
-	def getProductCacheState(self):
+	def getProductCacheState(self) -> dict[str, Any]:
 		self.initializeProductCacheService()
 		return self._productCacheService.getState()
 
@@ -476,7 +479,7 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):
 
 
 class ConfigCacheService(ServiceConnection, threading.Thread):
-	def __init__(self, opsiclientd):
+	def __init__(self, opsiclientd: Opsiclientd) -> None:
 		try:
 			threading.Thread.__init__(self, name="ConfigCacheService")
 			ServiceConnection.__init__(self, opsiclientd)
@@ -490,7 +493,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			self._stopped = False
 			self._running = False
 			self._working = False
-			self._state = {}
+			self._state: dict[str, Any] = {}
 
 			self._syncConfigFromServerRequested = False
 			self._syncConfigToServerError = None
@@ -593,7 +596,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 	def getConfigBackend(self):
 		return self._configBackend
 
-	def getState(self):
+	def getState(self) -> dict[str, Any]:
 		_state = self._state
 		_state["running"] = self.isRunning()
 		_state["working"] = self.isWorking()
@@ -856,7 +859,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 
 
 class ProductCacheService(ServiceConnection, threading.Thread):
-	def __init__(self, opsiclientd):
+	def __init__(self, opsiclientd: Opsiclientd) -> None:
 		threading.Thread.__init__(self, name="ProductCacheService")
 		ServiceConnection.__init__(self, opsiclientd)
 
@@ -865,7 +868,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		self._stopped = False
 		self._running = False
 		self._working = False
-		self._state = {}
+		self._state: dict[str, Any] = {}
 
 		self._impersonation = None
 		self._cacheProductsRequested = False
@@ -901,7 +904,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 	def getProductCacheDir(self):
 		return self._productCacheDir
 
-	def getState(self):
+	def getState(self) -> dict[str, Any]:
 		_state = self._state
 		_state["running"] = self.isRunning()
 		_state["working"] = self.isWorking()

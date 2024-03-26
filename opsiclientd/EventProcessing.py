@@ -78,6 +78,7 @@ else:
 	from OPSI.System import runCommandInSession  # type: ignore
 
 if TYPE_CHECKING:
+	from opsiclientd.Events.Basic import Event
 	from opsiclientd.Opsiclientd import Opsiclientd
 
 logger = get_logger()
@@ -97,7 +98,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 		self.opsiclientd: Opsiclientd = opsiclientd
 
-		self.event = event
+		self.event: Event = event
 
 		self.running = False
 		self.actionCancelled = False

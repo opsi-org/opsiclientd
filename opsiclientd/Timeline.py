@@ -31,6 +31,7 @@ import os
 import sqlite3
 import threading
 import time
+from typing import Any
 
 from OPSI.Backend.SQLite import SQLite  # type: ignore[import]
 from OPSI.Util import timestamp  # type: ignore[import]
@@ -294,9 +295,9 @@ class Timeline(metaclass=Singleton):
 				logger.error("Failed to set end of event '%s': %s", eventId, end_error)
 		return -1
 
-	def getEvents(self):
+	def getEvents(self) -> list[dict[str, Any]]:
 		if self._stopped:
-			return {}
+			return []
 
 		with self._db_lock, self._sql.session() as session:
 			return self._sql.getSet(session, "select * from EVENT")
