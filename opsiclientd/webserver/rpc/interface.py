@@ -16,6 +16,11 @@ from textwrap import dedent
 from typing import Any, Callable
 
 
+def no_export(func: Callable) -> Callable:
+	func.no_export = True
+	return func
+
+
 @dataclass(slots=True)
 class MethodInterface:
 	name: str
@@ -89,6 +94,7 @@ def get_method_interface(
 class Interface:
 	def __init__(self) -> None:
 		self._interface: dict[str, MethodInterface] = {}
+
 		for _, function in inspect.getmembers(self, inspect.ismethod):
 			method_name = function.__name__
 			if getattr(function, "no_export", False):
@@ -99,5 +105,12 @@ class Interface:
 
 			self._interface[method_name] = get_method_interface(function)
 
+		self._interface_list: list[dict[str, Any]] = [self._interface[name].as_dict() for name in sorted(list(self._interface.keys()))]
+
+	@no_export
+	def get_interface(self) -> dict[str, MethodInterface]:
+		return self._interface
+
+	@no_export
 	def get_method_interface(self, method: str) -> MethodInterface | None:
 		return self._interface.get(method)

@@ -5,8 +5,12 @@
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0
 
+import json
+from typing import Any
+
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import HTMLResponse, Response
+from opsicommon.logging import get_logger
 
 from opsiclientd.webserver.application import get_opsiclientd
 from opsiclientd.webserver.rpc.control import get_control_interface
@@ -18,199 +22,170 @@ INTERFACE_PAGE = """<?xml version="1.0" encoding="UTF-8"?>
 <head>
 	<meta http-equiv="Content-Type" content="text/xhtml; charset=utf-8" />
 	<title>%(title)s</title>
-	<style>
-	a:link 	      { color: #555555; text-decoration: none; }
-	a:visited     { color: #555555; text-decoration: none; }
-	a:hover	      { color: #46547f; text-decoration: none; }
-	a:active      { color: #555555; text-decoration: none; }
-	body          { font-family: verdana, arial; font-size: 12px; }
-	#title        { padding: 10px; color: #6276a0; font-size: 20px; letter-spacing: 5px; }
-	input, select { background-color: #fafafa; border: 1px #abb1ef solid; width: 430px; font-family: verdana, arial; }
-	.json         { color: #555555; width: 95%%; float: left; clear: both; margin: 30px; padding: 20px; background-color: #fafafa; border: 1px #abb1ef dashed; font-size: 11px; }
-	.json_key     { color: #9e445a; }
-	.json_label   { color: #abb1ef; margin-top: 20px; margin-bottom: 5px; font-size: 11px; }
-	.title        { color: #555555; font-size: 20px; font-weight: bolder; letter-spacing: 5px; }
-	.button       { color: #9e445a; background-color: #fafafa; border: none; margin-top: 20px; font-weight: bolder; }
-	.box          { background-color: #fafafa; border: 1px #555555 solid; padding: 20px; margin-left: 30px; margin-top: 50px;}
-	</style>
+	<link rel="stylesheet" type="text/css" href="/static/opsiclientd.css">
+
 	<script type="text/javascript">
-	var path = '%(path)s';
-	var parameters = new Array();
-	var method = '';
-	var params = '';
-	var id = '"id": 1';
-	%(javascript)s
+	let jsonrpcRequest;
+	let methods = JSON.parse('%(methods)s');
 
-	function createElement(element) {
-		if (typeof document.createElementNS != 'undefined') {
-			return document.createElementNS('http://www.w3.org/1999/xhtml', element);
+	function syntaxHighlight(json) {
+		if (typeof json != 'string') {
+			json = JSON.stringify(json, undefined, 2);
 		}
-		if (typeof document.createElement != 'undefined') {
-			return document.createElement(element);
-		}
-		return false;
-	}
-
-	function selectPath(select) {
-		path = select.value;
-		document.getElementById('json_method').firstChild.data = '"backend_getInterface"';
-		document.getElementById('json_params').firstChild.data = '[]';
-		onSubmit();
-	}
-	function selectMethod(select) {
-		method = select.value;
-		tbody = document.getElementById('tbody');
-		var button;
-		var json;
-		for (i=tbody.childNodes.length-1; i>=0; i--) {
-			if (tbody.childNodes[i].id == 'tr_path') {
-			}
-			else if (tbody.childNodes[i].id == 'tr_method') {
-			}
-			else if (tbody.childNodes[i].id == 'tr_submit') {
-				button = tbody.childNodes[i];
-				tbody.removeChild(button);
-			}
-			else if (tbody.childNodes[i].id == 'tr_json') {
-				json = tbody.childNodes[i];
-				tbody.removeChild(json);
-			}
-			else {
-				tbody.removeChild(tbody.childNodes[i]);
-			}
-		}
-
-		for (i=0; i < parameters[select.value].length; i++) {
-			tr = createElement("tr");
-			td1 = createElement("td");
-			text = document.createTextNode(parameters[select.value][i] + ":");
-			td1.appendChild(text);
-			td2 = createElement("td");
-			input = createElement("input");
-			input.setAttribute('onchange', 'jsonString()');
-			input.setAttribute('type', 'text');
-			if ((method == currentMethod) && (currentParams[i] != null)) {
-				input.value = currentParams[i];
-			}
-			td2.appendChild(input);
-			tr.appendChild(td1);
-			tr.appendChild(td2);
-			tbody.appendChild(tr)
-		}
-		tbody.appendChild(json)
-		tbody.appendChild(button)
-
-		jsonString();
-	}
-
-	function onSubmit() {
-		var json = '{ "id": 1, "method": ';
-		json += document.getElementById('json_method').firstChild.data;
-		json += ', "params": ';
-		json += document.getElementById('json_params').firstChild.data;
-		json += ' }';
-		window.location.href = '/' + path + '?' + json;
-		return false;
-	}
-
-	function jsonString() {
-		span = document.getElementById('json_method');
-		for (i=span.childNodes.length-1; i>=0; i--) {
-			span.removeChild(span.childNodes[i])
-		}
-		span.appendChild(document.createTextNode('"' + method + '"'));
-
-		span = document.getElementById('json_params');
-		for (i=span.childNodes.length-1; i>=0; i--) {
-			span.removeChild(span.childNodes[i])
-		}
-		params = '['
-		inputs = document.getElementsByTagName('input');
-		for (i=0; i<inputs.length; i++) {
-			if (inputs[i].id != 'submit') {
-				if (inputs[i].value == '') {
-					i = inputs.length;
-				}
-				else {
-					if (i>0) {
-						params += ', ';
+		json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		return json.replace(
+			/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+			function (match) {
+				var cls = 'json_number';
+				if (/^"/.test(match)) {
+					if (/:$/.test(match)) {
+						cls = 'json_key';
+					} else {
+						cls = 'json_string';
 					}
-					params += inputs[i].value;
+				} else if (/true|false/.test(match)) {
+					cls = 'json_boolean';
+				} else if (/null/.test(match)) {
+					cls = 'json_null';
 				}
+				return '<span class="' + cls + '">' + match + '</span>';
+			}
+		);
+	}
+
+	function onSelectMethod() {
+		const selectedMethod = document.getElementById('method_select').value;
+		const tbody = document.getElementById('tbody');
+		const trJson = document.getElementById('tr_json');
+		const elements = document.getElementsByClassName("param");
+		while (elements.length > 0){
+			tbody.removeChild(elements[0]);
+		}
+		methods[selectedMethod].forEach(param => {
+			const tr = document.createElement("tr");
+			tr.classList.add("param");
+			tr.innerHTML = `<td>${param}:</td><td><input type="text" name="${param}" onchange="createRequest()" style="width: 400px"></input></td>`;
+			tbody.appendChild(tr);
+			tbody.insertBefore(tr, trJson);
+		})
+		createRequest();
+	}
+
+	function createRequest() {
+		jsonrpcRequest = {
+			id: 1,
+			method: document.getElementById('method_select').value,
+			params: [],
+			jsonrpc: '2.0'
+		};
+
+		document.getElementById("jsonrpc-request-error").innerHTML = "";
+		let inputs = document.getElementsByTagName('input');
+		for (i = 0; i < inputs.length; i++) {
+			let name = null;
+			let value = null;
+			try {
+				name = inputs[i].name.trim();
+				value = inputs[i].value.trim();
+				if (value) {
+					jsonrpcRequest.params.push(JSON.parse(value));
+				} else if (!name.startsWith("*")) {
+					jsonrpcRequest.params.push(null);
+				}
+			} catch (e) {
+				console.warn(`${name}: ${e}`);
+				document.getElementById("jsonrpc-request-error").innerHTML = `${name}: ${e}`;
 			}
 		}
-		span.appendChild(document.createTextNode(params + ']'));
+		let jsonStr = JSON.stringify(jsonrpcRequest, undefined, 2);
+		document.getElementById('jsonrpc-request').innerHTML = syntaxHighlight(jsonStr);
 	}
 
 	function onLoad() {
-		selectMethod(document.getElementById('method_select'));
-		window.history.replaceState(null, null, window.location.href.split('?')[0]);
+		let methodSelect = document.getElementById('method_select');
+		for (const [method, params] of Object.entries(methods)) {
+			const option = document.createElement("option");
+			option.value = method;
+			option.innerText = method;
+			methodSelect.appendChild(option);
+		};
+		onSelectMethod();
+	}
+
+	function executeJsonrpc() {
+		let xhr = new XMLHttpRequest();
+		xhr.open('POST', '%(jsonrpc_path)s', true);
+		xhr.setRequestHeader('Content-Type', 'application/json');
+		xhr.onreadystatechange = function() {
+			if (xhr.readyState == 4 && xhr.status == 200) {
+				let jsonStr = JSON.stringify(JSON.parse(xhr.responseText), undefined, 2);
+				document.getElementById('jsonrpc-response').innerHTML = syntaxHighlight(jsonStr);
+			}
+		}
+		xhr.send(JSON.stringify(jsonrpcRequest));
+		return false;
 	}
 	</script>
 </head>
 <body onload="onLoad();">
 	<p id="title">
-		<img src="/static/opsi_logo.png" /><br /><br />
-		<span style="padding: 1px">%(title)s</span>
+		%(title)s
 	</p>
-	<form method="post" onsubmit="return onSubmit()">
+	<form onsubmit="return executeJsonrpc();">
 		<table class="box">
 			<tbody id="tbody">
-				<tr id="tr_path">
-					<td style="width: 150px;">Path:</td>
-					<td style="width: 440px;">
-						<select id="path_select" onchange="selectPath(this)" name="path">
-							%(select_path)s
-						</select>
-					</td>
-				</tr>
 				<tr id="tr_method">
 					<td style="width: 150px;">Method:</td>
 					<td style="width: 440px;">
-						<select id="method_select" onchange="selectMethod(this)" name="method">
-							%(select_method)s
+						<select id="method_select" onchange="onSelectMethod()" name="method" style="width: 400px">
 						</select>
 					</td>
 				</tr>
 				<tr id="tr_json">
 					<td colspan="2">
+						<div id="jsonrpc-request-error" style="width: 480px;">
+						</div>
 						<div class="json_label">
-							resulting json remote procedure call:
+							jsonrpc request:
 						</div>
-						<div class="json" style="width: 480px;">
-							{&nbsp;"<font class="json_key">method</font>": <span id="json_method"></span>,<br />
-							&nbsp;&nbsp;&nbsp;"<font class="json_key">params</font>": <span id="json_params">[]</span>,<br />
-							&nbsp;&nbsp;&nbsp;"<font class="json_key">id</font>": 1 }
-						</div>
+						<pre id="jsonrpc-request" class="json" style="width: 480px;">
+						</pre>
 					</td>
 				</tr>
 				<tr id="tr_submit">
 					<td align="center" colspan="2">
-						<input value="Execute" id="submit" class="button" type="submit" />
+						<button id="submit" class="button" type="submit">Execute</button>
 					</td>
 				</tr>
 			</tbody>
 		</table>
 	</form>
-	<div class="json_label" style="padding-left: 30px">json-rpc result</div>
-	%(result)s
+	<div class="json_label" style="padding-left: 30px">json-rpc response</div>
+	<pre class="json" id="jsonrpc-response"></pre>
 </body>
 </html>
 """
 
+logger = get_logger("opsiclientd")
 interface_router = APIRouter()
 
 
-@interface_router.get("/", response_class=HTMLResponse)
-def index_page() -> str:
-	return INTERFACE_PAGE % {
-		"path": "/interface",
-		"title": "opsiclientd interface page",
-		"javascript": "",
-		"select_path": '<option selected="selected">/</option>',
-		"select_method": "",
-		"result": "",
-	}
+@interface_router.get("/")
+def index_page() -> HTMLResponse:
+	interface = get_control_interface(get_opsiclientd())
+
+	methods = {}
+	for method_name, meth_if in interface.get_interface().items():
+		methods[method_name] = meth_if.params
+
+	return HTMLResponse(
+		INTERFACE_PAGE
+		% {
+			"title": "opsiclientd interface page",
+			"jsonrpc_path": "/opsiclientd",
+			"methods": json.dumps(methods),
+		}
+	)
 
 
 jsonrpc_router = APIRouter()

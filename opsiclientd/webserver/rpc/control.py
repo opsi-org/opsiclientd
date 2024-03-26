@@ -62,10 +62,10 @@ class PipeControlInterface(Interface):
 		self.opsiclientd: Opsiclientd = opsiclientd
 
 	def getPossibleMethods_listOfHashes(self):
-		return self.getInterface()
+		return self._interface_list
 
 	def backend_getInterface(self):
-		return self.getInterface()
+		return self._interface_list
 
 	def backend_info(self):
 		return {}

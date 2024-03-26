@@ -16,7 +16,7 @@ import urllib.parse
 import warnings
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, AsyncGenerator
+from typing import Any, AsyncGenerator
 
 import msgspec
 from fastapi import HTTPException
