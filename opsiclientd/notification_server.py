@@ -8,13 +8,13 @@
 from __future__ import annotations
 
 import json
-from asyncio import BaseTransport, Protocol, Server, get_event_loop, run, run_coroutine_threadsafe
+from asyncio import BaseTransport, Protocol, Server, Transport, get_event_loop, run, run_coroutine_threadsafe
 from asyncio.exceptions import CancelledError
 from dataclasses import asdict, dataclass, field
 from threading import Event, Thread
 from typing import Any
 
-from OPSI.Util.Message import ChoiceSubject, Subject, SubjectsObserver
+from OPSI.Util.Message import ChoiceSubject, Subject, SubjectsObserver  # type: ignore[import]
 from opsicommon.logging import get_logger
 
 logger = get_logger()
@@ -24,8 +24,9 @@ logger = get_logger()
 class NotificationRPC:
 	method: str
 	params: list[Any] = field(default_factory=list)
-	id: str | None = None
+	id: str | int | None = None
 
+	@staticmethod
 	def from_json(json_str: str) -> NotificationRPC:
 		return NotificationRPC(**json.loads(json_str))
 
@@ -39,6 +40,7 @@ class NotificationServerClientConnection(Protocol):
 		self._notification_server = notification_server
 		self._buffer = bytearray()
 		self._peer: tuple[str, int] = ("", 0)
+		self._transport: Transport
 
 	def __str__(self) -> str:
 		return f"{self.__class__.__name__}({self._peer[0]}:{self._peer[1]})"
@@ -51,8 +53,9 @@ class NotificationServerClientConnection(Protocol):
 
 	def connection_made(self, transport: BaseTransport) -> None:
 		self._peer = transport.get_extra_info("peername")
-		self._transport = transport
 		logger.debug("%s - connection made", self)
+		assert isinstance(transport, Transport)
+		self._transport = transport
 		self._notification_server.client_connected(self)
 
 	def connection_lost(self, exc: Exception | None = None) -> None:
@@ -104,6 +107,8 @@ class NotificationServerClientConnection(Protocol):
 				break
 		else:
 			raise ValueError(f"Invalid method '{rpc.method}'")
+
+		return None
 
 	def send_rpc(self, rpc: NotificationRPC) -> None:
 		self._transport.write(rpc.to_json().encode("utf-8") + b"\r\n")
@@ -182,7 +187,7 @@ class NotificationServer(SubjectsObserver, Thread):
 		)
 		self.notify(name="progressChanged", params=[subject.serializable(), state, percent, timeSpend, timeLeft, speed])
 
-	def endChanged(self, subject: str, end: int) -> None:
+	def endChanged(self, subject: Subject, end: int) -> None:
 		if subject not in self.getSubjects():
 			logger.info("Unknown subject %s passed to endChanged, automatically adding subject", subject)
 			self.addSubject(subject)
@@ -242,6 +247,7 @@ class NotificationServer(SubjectsObserver, Thread):
 			logger.error(self._error, exc_info=True)
 			return
 
+		assert self._server
 		addrs = ", ".join(str(sock.getsockname()) for sock in self._server.sockets)
 		logger.info(f"Notification server serving on {addrs}")
 		try:

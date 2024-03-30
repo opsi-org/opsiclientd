@@ -57,6 +57,7 @@ class Webserver(Thread):
 	def run(self) -> None:
 		try:
 			logger.debug("Starting uvicorn server")
+			assert self._server
 			self._server.run()
 			logger.debug("Uvicorn server stopped")
 		except Exception as err:

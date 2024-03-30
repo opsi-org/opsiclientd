@@ -16,7 +16,7 @@ import urllib.parse
 import warnings
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, AsyncGenerator
+from typing import Any, AsyncGenerator, Literal
 
 import msgspec
 from fastapi import HTTPException
@@ -98,7 +98,7 @@ class JSONRPC20ErrorResponse:
 	jsonrpc: str = "2.0"
 
 
-def get_compression(content_encoding: str) -> str | None:
+def get_compression(content_encoding: str) -> Literal["lz4", "deflate", "gzip"] | None:
 	if not content_encoding:
 		return None
 	content_encoding = content_encoding.lower()
@@ -113,19 +113,19 @@ def get_compression(content_encoding: str) -> str | None:
 	raise ValueError(f"Unhandled Content-Encoding {content_encoding!r}")
 
 
-def get_request_compression(request: Request) -> str | None:
+def get_request_compression(request: Request) -> Literal["lz4", "deflate", "gz", "gzip"] | None:
 	content_encoding = request.headers.get("content-encoding", "")
 	logger.debug("Content-Encoding: %r", content_encoding)
 	return get_compression(content_encoding)
 
 
-def get_response_compression(request: Request) -> str | None:
+def get_response_compression(request: Request) -> Literal["lz4", "deflate", "gz", "gzip"] | None:
 	content_encoding = request.headers.get("accept-encoding", "")
 	logger.debug("Accept-Encoding: %r", content_encoding)
 	return get_compression(content_encoding)
 
 
-def get_request_serialization(request: Request) -> str | None:
+def get_request_serialization(request: Request) -> Literal["msgpack", "json"] | None:
 	content_type = request.headers.get("content-type")
 	logger.debug("Content-Type: %r", content_type)
 	if content_type:
@@ -137,7 +137,7 @@ def get_request_serialization(request: Request) -> str | None:
 	return None
 
 
-def get_response_serialization(request: Request) -> str | None:
+def get_response_serialization(request: Request) -> Literal["msgpack", "json"] | None:
 	accept = request.headers.get("accept")
 	logger.debug("Accept: %r", accept)
 	if accept:

@@ -17,7 +17,7 @@ from typing import Any, Callable
 
 
 def no_export(func: Callable) -> Callable:
-	func.no_export = True
+	setattr(func, "no_export", True)
 	return func
 
 
