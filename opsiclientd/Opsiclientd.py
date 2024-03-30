@@ -68,7 +68,6 @@ from opsiclientd.State import State
 from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 from opsiclientd.webserver import Webserver
-from opsiclientd.webserver.rpc.control import ControlInterface
 
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.Events.Windows.UserLogin import LoginDetector

@@ -48,6 +48,10 @@ pyinstaller-poetry:
       - OPSI.Backend.Manager.Authentication.PAM
     darwin:
       - OPSI.Backend.Manager.Authentication.PAM
+  collect_submodules:
+    - uvicorn
+    - websockets
+    - h11
   extra_args:
     windows:
       - --manifest
