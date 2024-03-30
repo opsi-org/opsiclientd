@@ -8,6 +8,7 @@
 from fastapi import APIRouter, FastAPI
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from opsicommon.logging import get_logger
 
 from opsiclientd.webserver.application import get_opsiclientd
 
@@ -35,6 +36,7 @@ INDEX_PAGE = """<?xml version="1.0" encoding="UTF-8"?>
 </html>
 """
 
+logger = get_logger()
 router = APIRouter()
 
 
@@ -44,5 +46,7 @@ def index_page() -> str:
 
 
 def setup(app: FastAPI) -> None:
-	app.mount("/static", StaticFiles(directory=get_opsiclientd().config.get("control_server", "static_dir")))
+	static_dir = get_opsiclientd().config.get("control_server", "static_dir")
+	logger.info("Mounting static dir %r as /static", static_dir)
+	app.mount("/static", StaticFiles(directory=static_dir))
 	app.include_router(router)

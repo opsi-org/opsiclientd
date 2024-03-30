@@ -49,9 +49,6 @@ class Webserver(Thread):
 			ssl_keyfile=self.opsiclientd.config.get("control_server", "ssl_server_key_file"),
 			ssl_certfile=self.opsiclientd.config.get("control_server", "ssl_server_cert_file"),
 		)
-
-		# config.get("control_server", "static_dir")
-
 		self._server = UvicornServer(config=uvicorn_config)
 
 	def run(self) -> None:

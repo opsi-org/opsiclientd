@@ -35,7 +35,6 @@ from OPSI.Util import randomString  # type: ignore[import]
 from OPSI.Util.Message import (  # type: ignore[import]
 	ChoiceSubject,
 	MessageSubject,
-	NotificationServer,
 )
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, log_context, secret_filter
@@ -62,6 +61,7 @@ from opsiclientd.Events.Utilities.Generators import (
 	getEventGenerators,
 )
 from opsiclientd.Localization import _
+from opsiclientd.notification_server import NotificationServer
 from opsiclientd.OpsiService import PermanentServiceConnection
 from opsiclientd.setup import setup
 from opsiclientd.State import State
@@ -118,9 +118,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._statusApplicationProcess = None
 		self._blockLoginNotifierPid = None
 
-		self._popupNotificationServer = None
+		self._popupNotificationServer: NotificationServer | None = None
 		self._popupNotificationLock = threading.Lock()
-		self._popupClosingThread = None
+		self._popupClosingThread: PopupClosingThread | None = None
 
 		self._blockLoginEventId = None
 		self._opsiclientdRunningEventId = None
@@ -1094,8 +1094,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				notifier_id == "popup"
 				and mode in ("prepend", "append")
 				and self._popupNotificationServer
-				and self._popupNotificationServer.isListening()
-				and getattr(self._popupNotificationServer, "notifier_id", "") == "popup"
+				and self._popupNotificationServer.is_alive()
+				and self._popupNotificationServer.notifier_id == "popup"
 			):
 				# Already runnning
 				try:
@@ -1118,14 +1118,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.notice("Starting popup message notification server on port %d", port)
 			try:
 				self._popupNotificationServer = NotificationServer(
-					address="127.0.0.1", start_port=port, subjects=[popupSubject, choiceSubject]
+					address="127.0.0.1", start_port=port, subjects=[popupSubject, choiceSubject], notifier_id=notifier_id
 				)
-				assert self._popupNotificationServer, "Failed to create popup notification server"
-				setattr(self._popupNotificationServer, "notifier_id", notifier_id)
-				self._popupNotificationServer.daemon = True
 				with log_context({"instance": "popup notification server"}):
-					if not self._popupNotificationServer.start_and_wait(timeout=30):
-						raise RuntimeError("Timed out while waiting for notification server")
+					self._popupNotificationServer.start_and_wait(timeout=30)
 			except Exception as err:
 				logger.error("Failed to start notification server: %s", err)
 				raise
@@ -1150,7 +1146,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				try:
 					if RUNNING_ON_WINDOWS:
 						for desktop in desktops:
-							subprocess.Popen(
+							subprocess.Popen(  # type: ignore[call-overload]
 								notifierCommand,
 								session_id=sessionId,
 								session_env=(desktop == "default"),
@@ -1176,8 +1172,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		if self._popupNotificationServer:
 			try:
 				logger.info("Stopping popup message notification server")
-
-				self._popupNotificationServer.stop(stopReactor=False)
+				self._popupNotificationServer.stop()
 			except Exception as err:
 				logger.error("Failed to stop popup notification server: %s", err)
 
