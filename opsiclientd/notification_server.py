@@ -73,6 +73,7 @@ class NotificationServerClientConnection(Protocol):
 			logger.debug("Received RPC data: %r", rpc_data)
 			try:
 				rpc = NotificationRPC.from_json(rpc_data.decode("utf-8"))
+				logger.info("Received RPC: %r", rpc)
 			except Exception as err:
 				logger.error("Invalid RPC data %r: %s", rpc_data, err, exc_info=True)
 				continue
@@ -210,7 +211,7 @@ class NotificationServer(SubjectsObserver, Thread):
 		if not isinstance(params, list):
 			params = [params]
 
-		logger.debug("Sending notification '%s' to %d client(s)", name, len(self._clients))
+		logger.info("Sending notification '%s' to %d client(s)", name, len(self._clients))
 
 		if not self._clients:
 			return
@@ -219,7 +220,7 @@ class NotificationServer(SubjectsObserver, Thread):
 		rpc = NotificationRPC(method=name, params=params)
 		for client in self._clients:
 			try:
-				logger.debug("Sending rpc %r to client %r", rpc, client)
+				logger.info("Sending rpc %r to client %r", rpc, client)
 				client.send_rpc(rpc)
 			except Exception as err:
 				logger.warning("Failed to send rpc client %r: %s", client, err)
@@ -275,7 +276,8 @@ class NotificationServer(SubjectsObserver, Thread):
 			except Exception as err:
 				logger.debug(err)
 			try:
-				run_coroutine_threadsafe(self._server.wait_closed(), self._server.get_loop())
+				future = run_coroutine_threadsafe(self._server.wait_closed(), self._server.get_loop())
+				future.result()
 			except Exception as err:
 				logger.debug(err)
 		self._stopped.wait(5)
