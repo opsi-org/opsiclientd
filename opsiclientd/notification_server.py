@@ -149,7 +149,7 @@ class NotificationServer(SubjectsObserver, Thread):
 	def client_connected(self, client: NotificationServerClientConnection) -> None:
 		if client not in self._clients:
 			self._clients.append(client)
-			self.subjectsChanged(self.getSubjects())
+			self.subjectsChanged(self.getSubjects(), clients=[client])
 
 	def client_disconnected(self, client: NotificationServerClientConnection) -> None:
 		if client in self._clients:
@@ -198,28 +198,28 @@ class NotificationServer(SubjectsObserver, Thread):
 		logger.debug("endChanged: subject id '%s', end %s", subject.getId(), end)
 		self.notify(name="endChanged", params=[subject.serializable(), end])
 
-	def subjectsChanged(self, subjects: list[Subject]) -> None:
+	def subjectsChanged(self, subjects: list[Subject], clients: list[NotificationServerClientConnection] | None = None) -> None:
 		logger.debug("subjectsChanged: subjects %s", subjects)
 		param = [subject.serializable() for subject in subjects]
-		self.notify(name="subjectsChanged", params=[param])
+		self.notify(name="subjectsChanged", params=[param], clients=clients)
 
 	def requestEndConnections(self, clientIds: list[str] | None = None):
 		if not self._clients:
 			return
 		self.notify(name="endConnection", params=[clientIds])
 
-	def notify(self, name: str, params: list[Any]):
+	def notify(self, name: str, params: list[Any], clients: list[NotificationServerClientConnection] | None = None):
 		if not isinstance(params, list):
 			params = [params]
 
-		logger.info("Sending notification '%s' to %d client(s)", name, len(self._clients))
-
-		if not self._clients:
+		clients = clients or self._clients
+		logger.info("Sending notification '%s' to %d client(s)", name, len(clients))
+		if not clients:
 			return
 
 		# json-rpc: notifications have id null
 		rpc = NotificationRPC(method=name, params=params)
-		for client in self._clients:
+		for client in clients:
 			try:
 				logger.info("Sending rpc %r to client %r", rpc, client)
 				client.send_rpc(rpc)

@@ -105,11 +105,12 @@ def test_notification_server_multi_client() -> None:
 
 	for client in [client1, client2]:
 		print(client.rpcs_received)
-		assert len(client.rpcs_received) == 1
-		assert client.rpcs_received[0].method == "selectedIndexesChanged"
-		assert len(client.rpcs_received[0].params) == 2
-		assert client.rpcs_received[0].params[0] == choice_subject.serializable()
-		assert client.rpcs_received[0].params[1] == [0]
+		assert len(client.rpcs_received) == 2
+		assert client.rpcs_received[0].method == "subjectsChanged"
+		assert client.rpcs_received[1].method == "selectedIndexesChanged"
+		assert len(client.rpcs_received[1].params) == 2
+		assert client.rpcs_received[1].params[0] == choice_subject.serializable()
+		assert client.rpcs_received[1].params[1] == [0]
 		client.rpcs_received = []
 
 	assert not abort_called
