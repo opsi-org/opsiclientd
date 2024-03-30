@@ -7,8 +7,8 @@ import pytest
 from opsicommon.logging import LOG_INFO, use_logging_config
 
 from opsiclientd.Config import Config
-from opsiclientd.ControlServer import OpsiclientdRpcInterface
 from opsiclientd.Opsiclientd import Opsiclientd, state
+from opsiclientd.webserver.rpc.control import get_control_interface
 
 from .utils import default_config
 
@@ -41,7 +41,7 @@ def test_motd_update_without_valid_until(default_config: None, tmp_path: Path, u
 		return [{"SessionId": 1, "UserName": "testuser"}, {"SessionId": 2, "UserName": "testuser2"}]
 
 	ocd = FakeOpsiclientd()
-	controlServer = OpsiclientdRpcInterface(ocd)
+	controlServer = get_control_interface(ocd)
 	state._stateFile = tmp_path / "state_file.json"
 
 	with use_logging_config(stderr_level=LOG_INFO):
@@ -73,7 +73,7 @@ def test_motd_update_valid_until(default_config: None, tmp_path: Path, user_logg
 		return [{"SessionId": 1, "UserName": "testuser"}, {"SessionId": 2, "UserName": "testuser2"}]
 
 	ocd = FakeOpsiclientd()
-	controlServer = OpsiclientdRpcInterface(ocd)
+	controlServer = get_control_interface(ocd)
 	state._stateFile = tmp_path / "state_file.json"
 
 	with patch("opsiclientd.Opsiclientd.System.getActiveSessionInformation", getActiveSessionInformation):
