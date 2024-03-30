@@ -149,6 +149,7 @@ class NotificationServer(SubjectsObserver, Thread):
 	def client_connected(self, client: NotificationServerClientConnection) -> None:
 		if client not in self._clients:
 			self._clients.append(client)
+			self.subjectsChanged(self.getSubjects())
 
 	def client_disconnected(self, client: NotificationServerClientConnection) -> None:
 		if client in self._clients:
