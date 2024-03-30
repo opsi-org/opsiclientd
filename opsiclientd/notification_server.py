@@ -228,8 +228,10 @@ class NotificationServer(SubjectsObserver, Thread):
 				break
 			except Exception as err:
 				self._error = err
-				if isinstance(err, OSError) and err.errno == 98:
-					# Address already in use
+				if isinstance(err, OSError) and err.errno in (48, 98, 10048):
+					# MacOS [Errno 48] Address already in use
+					# Linux [Errno 98] Address already in use
+					# Windows [Errno 10048] only one usage of each socket address
 					logger.debug(err)
 					port += 1
 					continue
