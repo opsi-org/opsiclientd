@@ -6,9 +6,10 @@
 # License: AGPL-3.0
 
 from fastapi import APIRouter, FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from opsicommon.logging import get_logger
+from starlette.status import HTTP_308_PERMANENT_REDIRECT
 
 from opsiclientd.webserver.application import get_opsiclientd
 
@@ -40,9 +41,14 @@ logger = get_logger()
 router = APIRouter()
 
 
-@router.get("/", response_class=HTMLResponse)
-def index_page() -> str:
-	return INDEX_PAGE % {"hostname": get_opsiclientd().config.get("global", "host_id")}
+@router.get("/")
+def index_page() -> HTMLResponse:
+	return HTMLResponse(INDEX_PAGE % {"hostname": get_opsiclientd().config.get("global", "host_id")})
+
+
+@router.get("/favicon.ico")
+def favicon() -> RedirectResponse:
+	return RedirectResponse("/static/favicon.ico", status_code=HTTP_308_PERMANENT_REDIRECT)
 
 
 def setup(app: FastAPI) -> None:
