@@ -124,6 +124,7 @@ class NotificationServer(SubjectsObserver, Thread):
 		self._server: Server | None = None
 		self._port = 0
 		self._ready = Event()
+		self._stopped = Event()
 		self._error: Exception | None = None
 		self._clients: list[NotificationServerClientConnection] = []
 		self.setSubjects(subjects)
@@ -259,9 +260,11 @@ class NotificationServer(SubjectsObserver, Thread):
 	def run(self) -> None:
 		try:
 			logger.debug("Starting notification server")
+			self._stopped.clear()
 			run(self._async_main())
 			self._ready.clear()
 			logger.debug("Notification server stopped")
+			self._stopped.set()
 		except Exception as err:
 			logger.error("Notification server error: %s", err, exc_info=True)
 
@@ -275,4 +278,4 @@ class NotificationServer(SubjectsObserver, Thread):
 				run_coroutine_threadsafe(self._server.wait_closed(), self._server.get_loop())
 			except Exception as err:
 				logger.debug(err)
-		self.join(5)
+		self._stopped.wait(5)
