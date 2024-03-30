@@ -12,6 +12,7 @@ jsonrpc
 from __future__ import annotations
 
 import asyncio
+import time
 import urllib.parse
 import warnings
 from dataclasses import dataclass, field
@@ -258,18 +259,36 @@ async def process_rpcs(
 ) -> AsyncGenerator[JSONRPC20Response | JSONRPC20ErrorResponse | JSONRPCResponse | JSONRPCErrorResponse, None]:
 	for request in requests:
 		response: JSONRPC20Response | JSONRPC20ErrorResponse | JSONRPCResponse | JSONRPCErrorResponse
+		start = time.time()
+		is_error = False
+		num_results = 0
 		try:
 			logger.debug("Processing request from %s for %s", request.info.client, request.method)
 			response = await process_rpc(request, interface)
+			num_results = 1
+			if isinstance(response.result, list):
+				num_results = len(response.result)
 		except Exception as err:
+			is_error = True
 			logger.error(err, exc_info=True)
 			response = await process_rpc_error(err, request)
+		end = time.time()
 
 		logger.trace(response)
+		logger.notice(
+			"JSONRPC request: method=%s, num_params=%d, duration=%0.0fms, error=%s, num_results=%d",
+			request.method,
+			len(request.params),
+			(end - start) * 1000,
+			is_error,
+			response.result,
+			num_results,
+		)
 		yield response
 
 
 async def process_request(interface: Interface, request: Request, response: Response) -> Response:
+	logger.info("Processing JSONRPC request (%s, %s)", interface, request)
 	request_compression = None
 	request_serialization = None
 	response_compression = None

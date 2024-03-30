@@ -53,13 +53,13 @@ class NotificationServerClientConnection(Protocol):
 
 	def connection_made(self, transport: BaseTransport) -> None:
 		self._peer = transport.get_extra_info("peername")
-		logger.debug("%s - connection made", self)
+		logger.info("%s - connection made", self)
 		assert isinstance(transport, Transport)
 		self._transport = transport
 		self._notification_server.client_connected(self)
 
 	def connection_lost(self, exc: Exception | None = None) -> None:
-		logger.debug("%s - connection lost", self)
+		logger.info("%s - connection lost", self)
 		self._notification_server.client_disconnected(self)
 
 	def data_received(self, data: bytes) -> None:
