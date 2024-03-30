@@ -33,7 +33,6 @@ from OPSI.Util.Message import (  # type: ignore[import]
 	ChoiceSubject,
 	MessageSubject,
 	MessageSubjectProxy,
-	NotificationServer,
 	ProgressSubjectProxy,
 )
 from OPSI.Util.Path import cd  # type: ignore[import]
@@ -56,6 +55,7 @@ from opsiclientd.Events.SyncCompleted import SyncCompletedEvent
 from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
 from opsiclientd.Exceptions import CanceledByUserError, ConfigurationError
 from opsiclientd.Localization import _
+from opsiclientd.notification_server import NotificationServer
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
 from opsiclientd.SystemCheck import (
@@ -111,7 +111,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 		self._serviceConnection = None
 
-		self._notificationServer = None
+		self._notificationServer: NotificationServer | None = None
 
 		self._depotShareMounted = False
 
@@ -300,13 +300,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				],
 			)
 			with log_context({"instance": "notification server"}):
-				self._notificationServer.daemon = True
-				if not self._notificationServer.start_and_wait(timeout=30):
-					if self._notificationServer.errorOccurred():
-						raise RuntimeError(self._notificationServer.errorOccurred())
-					raise RuntimeError("Timed out while waiting for notification server")
-				if self._notificationServer.errorOccurred():
-					raise RuntimeError(self._notificationServer.errorOccurred())
+				self._notificationServer.start_and_wait(timeout=30)
 				logger.notice("Notification server started (listening on port %d)", self.notificationServerPort)
 		except Exception as err:
 			logger.error("Failed to start notification server: %s", err)
@@ -316,7 +310,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		try:
 			logger.info("Stopping notification server")
 			self._notificationServerShouldStop = True
-			self._notificationServer.stop(stopReactor=False)
+			self._notificationServer.stop()
 		except Exception as err:
 			logger.error(err, exc_info=True)
 

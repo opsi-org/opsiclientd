@@ -8,54 +8,134 @@
 test_notification_server
 """
 
-import json
 import socket
 import time
+from threading import Thread
 
 from OPSI.Util.Message import ChoiceSubject  # type: ignore[import]
 
-from opsiclientd.EventConfiguration import EventConfig
-from opsiclientd.EventProcessing import EventProcessingThread
-from opsiclientd.Events.Basic import Event
-from opsiclientd.Events.Utilities.Configs import getEventConfigs
-
-from .utils import default_config
+from opsiclientd.notification_server import NotificationRPC, NotificationServer
 
 
-def test_notification_server(default_config):
-	configs = getEventConfigs()
-	eventConfig = EventConfig(configs["on_demand"])
+def test_start_stop_notification_server() -> None:
+	address = "127.0.0.1"
+	start_port = 44044
+	choice_subject = ChoiceSubject(id="choice")
+	choice_subject.setChoices(["abort", "start"])
+	subjects = [choice_subject]
+	notification_server1 = NotificationServer(address=address, start_port=start_port, subjects=subjects)
+	notification_server1.start()
+	notification_server1.wait_ready(5)
+	assert notification_server1.port == start_port
 
-	evt = Event(eventConfig=eventConfig, eventInfo={})
-	ept = EventProcessingThread(opsiclientd=None, event=evt)
-	ept.startNotificationServer()
-	ept._messageSubject.setMessage("pytest")
+	notification_server2 = NotificationServer(address=address, start_port=start_port, subjects=subjects)
+	notification_server2.start()
+	notification_server2.wait_ready(5)
+	assert notification_server2.port == start_port + 1
 
-	choiceSubject = ChoiceSubject(id="choice")
-	choiceSubject.setChoices(["abort", "start"])
-	choiceSubject.pyTestDone = False
+	notification_server1.stop()
+	notification_server2.stop()
 
-	def abortActionCallback(_choiceSubject):
-		pass
 
-	def startActionCallback(_choiceSubject):
-		_choiceSubject.pyTestDone = True
+class NotificationClient(Thread):
+	def __init__(self, address: str, port: int) -> None:
+		super().__init__(daemon=True)
+		self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		self.sock.connect((address, port))
+		self.rpcs_received: list[NotificationRPC] = []
+		self._buffer = bytearray()
+		self.start()
 
-	choiceSubject.setCallbacks([abortActionCallback, startActionCallback])
-	ept._notificationServer.addSubject(choiceSubject)
-	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	sock.connect(("127.0.0.1", ept.notificationServerPort))
-	try:
-		data = json.loads(sock.recv(10 * 1024))
-		ids = []
-		for subject in data.get("params")[0]:
-			ids.append(subject["id"])
-		assert "choice" in ids, "subject id choice not received"
-		rpc1 = {"id": 1, "method": "setSelectedIndexes", "params": ["choice", 1]}
-		rpc2 = {"id": 2, "method": "selectChoice", "params": ["choice"]}
-		sock.send((json.dumps(rpc1) + "\r\n" + json.dumps(rpc2) + "\r\n").encode("utf-8"))
-		time.sleep(1)
-		assert choiceSubject.pyTestDone is True, "selectChoice did not set pyTestDone on choiceSubject"
-	finally:
-		sock.close()
-		ept.stopNotificationServer()
+	def run(self) -> None:
+		while data := self.sock.recv(4096):
+			self._buffer += data
+			while b"\r\n" in self._buffer or b"\1e" in self._buffer:  # multiple rpc calls separated by \r\n or \1e
+				if b"\r\n" in self._buffer:
+					rpc_data, self._buffer = self._buffer.split(b"\r\n", maxsplit=1)
+				else:  # b"\1e" in byte_buffer
+					rpc_data, self._buffer = self._buffer.split(b"\1e", maxsplit=1)
+
+				# print(f"Received rpc_data: {rpc_data!r}")
+				try:
+					rpc = NotificationRPC.from_json(rpc_data.decode("utf-8"))
+				except Exception as err:
+					print(f"Error decoding rpc_data {rpc_data!r}: {err}")
+					continue
+				# print(f"Received rpc: {rpc!r}")
+				self.rpcs_received.append(rpc)
+				if rpc.method == "endConnection":
+					return
+
+	def send_rpc(self, rpc: NotificationRPC) -> None:
+		self.sock.sendall(rpc.to_json().encode("utf-8") + b"\r\n")
+
+	def stop(self) -> None:
+		self.sock.close()
+
+
+def test_notification_server_multi_client() -> None:
+	address = "127.0.0.1"
+	start_port = 44044
+
+	abort_called = False
+	start_called = False
+
+	def abort_callback(choice_subject: ChoiceSubject) -> None:
+		nonlocal abort_called
+		abort_called = True
+
+	def start_callback(choice_subject: ChoiceSubject) -> None:
+		nonlocal start_called
+		start_called = True
+
+	choice_subject = ChoiceSubject(id="choice", callbacks=[abort_callback, start_callback])
+	choice_subject.setChoices(["abort", "start"])
+	subjects = [choice_subject]
+	notification_server = NotificationServer(address=address, start_port=start_port, subjects=subjects)
+	notification_server.start()
+	notification_server.wait_ready(5)
+	assert notification_server.port == start_port
+
+	client1 = NotificationClient(address, start_port)
+	client2 = NotificationClient(address, start_port)
+	time.sleep(1)
+
+	client1.send_rpc(NotificationRPC(id=1, method="setSelectedIndexes", params=["choice", 0]))
+	time.sleep(1)
+
+	for client in [client1, client2]:
+		print(client.rpcs_received)
+		assert len(client.rpcs_received) == 1
+		assert client.rpcs_received[0].method == "selectedIndexesChanged"
+		assert len(client.rpcs_received[0].params) == 2
+		assert client.rpcs_received[0].params[0] == choice_subject.serializable()
+		assert client.rpcs_received[0].params[1] == [0]
+		client.rpcs_received = []
+
+	assert not abort_called
+	assert not start_called
+
+	client2.send_rpc(NotificationRPC(id=1, method="setSelectedIndexes", params=["choice", 1]))
+	client2.send_rpc(NotificationRPC(id=1, method="selectChoice", params=["choice"]))
+	time.sleep(1)
+
+	for client in [client1, client2]:
+		print(client.rpcs_received)
+		assert len(client.rpcs_received) == 1
+		assert client.rpcs_received[0].method == "selectedIndexesChanged"
+		assert len(client.rpcs_received[0].params) == 2
+		assert client.rpcs_received[0].params[0] == choice_subject.serializable()
+		assert client.rpcs_received[0].params[1] == [1]
+
+	assert not abort_called
+	assert start_called
+
+	notification_server.requestEndConnections(["1", "2"])
+	time.sleep(1)
+
+	for client in [client1, client2]:
+		assert client.rpcs_received[-1].method == "endConnection"
+		assert client.rpcs_received[-1].params == [["1", "2"]]
+		assert not client.is_alive()
+
+	notification_server.stop()

@@ -868,5 +868,10 @@ class ControlInterface(PipeControlInterface):
 
 
 @lru_cache
+def get_pipe_control_interface(opsiclientd: Opsiclientd) -> PipeControlInterface:
+	return PipeControlInterface(opsiclientd)
+
+
+@lru_cache
 def get_control_interface(opsiclientd: Opsiclientd) -> ControlInterface:
 	return ControlInterface(opsiclientd)

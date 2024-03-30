@@ -9,6 +9,7 @@ Pipes for remote procedure calls.
 
 The classes are used to create named pipes for remote procedure calls.
 """
+from __future__ import annotations
 
 import os
 import socket
@@ -17,10 +18,11 @@ import time
 from ctypes import byref, c_char_p, c_ulong, create_string_buffer
 from datetime import datetime
 
-from OPSI.Backend.Backend import describeInterface  # type: ignore[import]
 from OPSI.Service.JsonRpc import JsonRpc  # type: ignore[import]
 from OPSI.Util import fromJson, toJson  # type: ignore[import]
 from opsicommon.logging import get_logger, log_context
+
+from opsiclientd.webserver.rpc.control import get_pipe_control_interface
 
 if os.name == "nt":
 	from ctypes import windll  # type: ignore[attr-defined]
@@ -39,7 +41,7 @@ def ControlPipeFactory(opsiclientd):
 
 
 class ClientConnection(threading.Thread):
-	def __init__(self, controller, connection, client_id: str) -> None:
+	def __init__(self, controller: ControlPipe, connection, client_id: str) -> None:
 		threading.Thread.__init__(self, name="ControlPipe-ClientConnection")
 		self._controller = controller
 		self._connection = connection
@@ -116,7 +118,7 @@ class ClientConnection(threading.Thread):
 				)
 			jsonrpc = JsonRpc(
 				instance=self._controller._opsiclientdRpcInterface,
-				interface=self._controller._opsiclientdRpcInterface.getInterface(),
+				interface=self._controller._opsiclientdRpcInterface.backend_getInterface(),
 				rpc=rpc,
 			)
 			jsonrpc.execute()
@@ -171,7 +173,7 @@ class ControlPipe(threading.Thread):
 	def __init__(self, opsiclientd) -> None:
 		threading.Thread.__init__(self, name="ControlPipe")
 		self._opsiclientd = opsiclientd
-		self._opsiclientdRpcInterface = OpsiclientdRpcPipeInterface(self._opsiclientd)
+		self._opsiclientdRpcInterface = get_pipe_control_interface(self._opsiclientd)
 		self.bufferSize = 4096
 		self._running = False
 		self._stopEvent = threading.Event()
@@ -467,51 +469,3 @@ class NTControlPipe(ControlPipe):
 		error = windll.kernel32.GetLastError()
 		windll.kernel32.CloseHandle(self._pipe)
 		raise RuntimeError(f"Failed to connect to pipe (error: {error})")
-
-
-class OpsiclientdRpcPipeInterface:
-	def __init__(self, opsiclientd) -> None:
-		from .Opsiclientd import Opsiclientd
-
-		self.opsiclientd: Opsiclientd = opsiclientd
-
-	def getInterface(self):
-		"""
-		Returns what public methods are available and the signatures they use.
-
-		These methods are represented as a dict with the following keys: \
-		*name*, *params*, *args*, *varargs*, *keywords*, *defaults*.
-
-		:returntype: [{},]
-		"""
-		return describeInterface(self)
-
-	def getPossibleMethods_listOfHashes(self):
-		return self.getInterface()
-
-	def backend_getInterface(self):
-		return self.getInterface()
-
-	def backend_info(self):
-		return {}
-
-	def exit(self):
-		return
-
-	def backend_exit(self):
-		return
-
-	def getBlockLogin(self):
-		return self.opsiclientd._blockLogin
-
-	def isRebootRequested(self):
-		return self.isRebootTriggered()
-
-	def isShutdownRequested(self):
-		return self.isShutdownTriggered()
-
-	def isRebootTriggered(self):
-		return self.opsiclientd.isRebootTriggered()
-
-	def isShutdownTriggered(self):
-		return self.opsiclientd.isShutdownTriggered()
