@@ -271,6 +271,8 @@ class NotificationServer(SubjectsObserver, Thread):
 				self._server.close()
 			except Exception as err:
 				logger.debug(err)
-			run_coroutine_threadsafe(self._server.wait_closed(), self._server.get_loop())
-
+			try:
+				run_coroutine_threadsafe(self._server.wait_closed(), self._server.get_loop())
+			except Exception as err:
+				logger.debug(err)
 		self.join(5)
