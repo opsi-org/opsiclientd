@@ -281,7 +281,6 @@ async def process_rpcs(
 			len(request.params),
 			(end - start) * 1000,
 			is_error,
-			response.result,
 			num_results,
 		)
 		yield response
