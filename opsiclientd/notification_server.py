@@ -8,11 +8,10 @@
 from __future__ import annotations
 
 import json
-import time
 from asyncio import BaseTransport, Protocol, Server, Transport, get_event_loop, run, run_coroutine_threadsafe
 from asyncio.exceptions import CancelledError
 from dataclasses import asdict, dataclass, field
-from threading import Event, Thread
+from threading import Event, Lock, Thread
 from typing import Any
 
 from OPSI.Util.Message import ChoiceSubject, Subject, SubjectsObserver  # type: ignore[import]
@@ -42,6 +41,7 @@ class NotificationServerClientConnection(Protocol):
 		self._buffer = bytearray()
 		self._peer: tuple[str, int] = ("", 0)
 		self._transport: Transport
+		self._closed = Event()
 
 	def __str__(self) -> str:
 		return f"{self.__class__.__name__}({self._peer[0]}:{self._peer[1]})"
@@ -62,6 +62,7 @@ class NotificationServerClientConnection(Protocol):
 	def connection_lost(self, exc: Exception | None = None) -> None:
 		logger.info("%s - connection lost", self)
 		self._notification_server.client_disconnected(self)
+		self._closed.set()
 
 	def data_received(self, data: bytes) -> None:
 		logger.trace("%s - data received:", self, data)
@@ -115,9 +116,11 @@ class NotificationServerClientConnection(Protocol):
 	def send_rpc(self, rpc: NotificationRPC) -> None:
 		self._transport.write(rpc.to_json().encode("utf-8") + b"\r\n")
 
-	def close_connection(self):
-		self._transport.write_eof()
+	def close_connection(self) -> None:
 		self._transport.close()
+
+	def wait_closed(self, timeout: float = 5.0) -> bool:
+		return self._closed.wait(timeout=timeout)
 
 
 class NotificationServer(SubjectsObserver, Thread):
@@ -128,6 +131,7 @@ class NotificationServer(SubjectsObserver, Thread):
 		self._start_port = start_port
 		self.notifier_id = notifier_id
 		self._server: Server | None = None
+		self._server_lock = Lock()
 		self._port = 0
 		self._ready = Event()
 		self._stopped = Event()
@@ -148,8 +152,9 @@ class NotificationServer(SubjectsObserver, Thread):
 			raise self._error
 
 	def start_and_wait(self, timeout: float | None = None) -> None:
-		self.start()
-		self.wait_ready(timeout=timeout)
+		with self._server_lock:
+			self.start()
+			self.wait_ready(timeout=timeout)
 
 	def client_connected(self, client: NotificationServerClientConnection) -> None:
 		if client not in self._clients:
@@ -212,6 +217,8 @@ class NotificationServer(SubjectsObserver, Thread):
 		self.notify(name="endConnection", params=[])
 		for client in self._clients:
 			client.close_connection()
+		for client in self._clients:
+			client.wait_closed(timeout=5.0)
 
 	def notify(self, name: str, params: list[Any], clients: list[NotificationServerClientConnection] | None = None):
 		if not isinstance(params, list):
@@ -276,17 +283,17 @@ class NotificationServer(SubjectsObserver, Thread):
 			logger.error("Notification server error: %s", err, exc_info=True)
 
 	def stop(self) -> None:
-		if self._server:
-			if self._clients:
-				self.requestEndConnections()
-				time.sleep(1)
-			try:
-				self._server.close()
-			except Exception as err:
-				logger.debug(err)
-			try:
-				future = run_coroutine_threadsafe(self._server.wait_closed(), self._server.get_loop())
-				future.result()
-			except Exception as err:
-				logger.debug(err)
-		self._stopped.wait(5)
+		with self._server_lock:
+			if self._server:
+				if self._clients:
+					self.requestEndConnections()
+				try:
+					self._server.close()
+				except Exception as err:
+					logger.debug(err)
+				try:
+					future = run_coroutine_threadsafe(self._server.wait_closed(), self._server.get_loop())
+					future.result()
+				except Exception as err:
+					logger.debug(err)
+			self._stopped.wait(5)

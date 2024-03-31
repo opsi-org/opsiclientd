@@ -1172,12 +1172,13 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._popupClosingThread.start()
 
 	def hidePopup(self) -> None:
-		if self._popupNotificationServer:
-			try:
-				logger.info("Stopping popup message notification server")
-				self._popupNotificationServer.stop()
-			except Exception as err:
-				logger.error("Failed to stop popup notification server: %s", err)
+		if not self._popupNotificationServer:
+			return
+		try:
+			logger.info("Stopping popup message notification server")
+			self._popupNotificationServer.stop()
+		except Exception as err:
+			logger.error("Failed to stop popup notification server: %s", err)
 
 	def popupCloseCallback(self, choiceSubject: ChoiceSubject) -> None:
 		self.hidePopup()
