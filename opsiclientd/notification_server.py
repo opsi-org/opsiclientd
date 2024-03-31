@@ -115,6 +115,10 @@ class NotificationServerClientConnection(Protocol):
 	def send_rpc(self, rpc: NotificationRPC) -> None:
 		self._transport.write(rpc.to_json().encode("utf-8") + b"\r\n")
 
+	def close_connection(self):
+		self._transport.write_eof()
+		self._transport.close()
+
 
 class NotificationServer(SubjectsObserver, Thread):
 	def __init__(self, address: str, start_port: int, subjects: list[Subject], notifier_id: str | None = None) -> None:
@@ -206,6 +210,8 @@ class NotificationServer(SubjectsObserver, Thread):
 
 	def requestEndConnections(self):
 		self.notify(name="endConnection", params=[])
+		for client in self._clients:
+			client.close_connection()
 
 	def notify(self, name: str, params: list[Any], clients: list[NotificationServerClientConnection] | None = None):
 		if not isinstance(params, list):
@@ -273,7 +279,7 @@ class NotificationServer(SubjectsObserver, Thread):
 		if self._server:
 			if self._clients:
 				self.requestEndConnections()
-				time.sleep(2)
+				time.sleep(1)
 			try:
 				self._server.close()
 			except Exception as err:
