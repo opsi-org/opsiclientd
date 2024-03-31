@@ -82,18 +82,13 @@ class NotificationServerClientConnection(Protocol):
 				logger.error("Invalid RPC data %r: %s", rpc_data, err, exc_info=True)
 				continue
 		for rpc in rpcs:
-			try:
-				response = self.process_rpc(rpc)
-				if response:
-					self._transport.write(response.to_json().encode("utf-8") + b"\r\n")
-			except Exception as err:
-				logger.error("Error processing RPC %r: %s", rpc, err, exc_info=True)
+			self.process_rpc(rpc)
 
 	def eof_received(self) -> bool:
 		logger.debug("%s - EOF received", self)
 		return False
 
-	def process_rpc(self, rpc: NotificationRPC) -> NotificationRPC | None:
+	def __process_rpc(self, rpc: NotificationRPC) -> None:
 		if rpc.method == "setSelectedIndexes":
 			subject_id = rpc.params[0]
 			selectedIndexes = rpc.params[1]
@@ -114,7 +109,14 @@ class NotificationServerClientConnection(Protocol):
 		else:
 			raise ValueError(f"Invalid method '{rpc.method}'")
 
-		return None
+	def _process_rpc(self, rpc: NotificationRPC) -> None:
+		try:
+			self.__process_rpc(rpc)
+		except Exception as err:
+			logger.error("Error processing RPC %r: %s", rpc, err, exc_info=True)
+
+	def process_rpc(self, rpc: NotificationRPC) -> None:
+		Thread(target=self._process_rpc, args=[rpc], daemon=True).start()
 
 	def send_rpc(self, rpc: NotificationRPC) -> None:
 		self._transport.write(rpc.to_json().encode("utf-8") + b"\r\n")
