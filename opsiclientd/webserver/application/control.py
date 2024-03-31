@@ -115,6 +115,7 @@ INTERFACE_PAGE = """<?xml version="1.0" encoding="UTF-8"?>
 	function executeJsonrpc() {
 		const submitButton = document.getElementById('submit');
 		submitButton.disabled = true;
+		document.getElementById('jsonrpc-response').innerHTML = "";
 		let xhr = new XMLHttpRequest();
 		xhr.open('POST', '%(jsonrpc_path)s', true);
 		xhr.setRequestHeader('Content-Type', 'application/json');
