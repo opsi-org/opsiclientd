@@ -1089,7 +1089,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		if addTimestamp:
 			message = "=== " + time.strftime("%Y-%m-%d %H:%M:%S") + " ===\n" + message
 
+		logger.info("Acquire popupNotificationLock")
 		with self._popupNotificationLock:
+			logger.info("popupNotificationLock acquired")
 			if (
 				notifier_id == "popup"
 				and mode in ("prepend", "append")
@@ -1109,6 +1111,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				except Exception as err:
 					logger.warning(err, exc_info=True)
 
+			logger.info("Hide popup")
 			self.hidePopup()
 
 			popupSubject = MessageSubject(id="message")
@@ -1121,7 +1124,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					address="127.0.0.1", start_port=port, subjects=[popupSubject, choiceSubject], notifier_id=notifier_id
 				)
 				with log_context({"instance": "popup notification server"}):
-					self._popupNotificationServer.start_and_wait(timeout=30)
+					self._popupNotificationServer.start_and_wait(timeout=10)
 			except Exception as err:
 				logger.error("Failed to start notification server: %s", err)
 				raise
@@ -1165,7 +1168,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._popupClosingThread.stop()
 			if displaySeconds > 0:
 				logger.debug("displaying popup for %s seconds", displaySeconds)
-				self._popupClosingThread = PopupClosingThread(self, time.time() + displaySeconds)
+				self._popupClosingThread = PopupClosingThread(self, displaySeconds)
 				self._popupClosingThread.start()
 
 	def hidePopup(self) -> None:
@@ -1220,20 +1223,18 @@ class PopupClosingThread(threading.Thread):
 	def __init__(self, opsiclientd: Opsiclientd, seconds: float) -> None:
 		super().__init__()
 		self.opsiclientd = opsiclientd
-		self.seconds = seconds
-		self.stopped = False
+		self.end_time = time.time() + seconds
+		self._should_stop = threading.Event()
 
 	def stop(self) -> None:
-		self.stopped = True
+		self._should_stop.set()
 
 	def run(self) -> None:
-		while not self.stopped:
-			time.sleep(1)
-			if time.time() > self.seconds:
+		while not self._should_stop.wait(1):
+			if time.time() > self.end_time:
+				logger.debug("Hiding popup window")
+				self.opsiclientd.hidePopup()
 				break
-		if not self.stopped:
-			logger.debug("hiding popup window")
-			self.opsiclientd.hidePopup()
 
 
 class WaitForGUI(EventListener):
