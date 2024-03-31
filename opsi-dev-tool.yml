@@ -35,7 +35,6 @@ pyinstaller-poetry:
   hidden_imports:
     all:
       - csv
-      - h11
       # OPSI.Util.Ping needed for dynamic depot selection
       - OPSI.Util.Ping
     windows:
