@@ -1145,10 +1145,10 @@ class Opsiclientd(EventListener, threading.Thread):
 				sessions = [System.getActiveConsoleSessionId()]
 				desktops = ["winlogon"]
 			for sessionId in sessions:
-				logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
 				try:
 					if RUNNING_ON_WINDOWS:
 						for desktop in desktops:
+							logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, sessionId, desktop)
 							subprocess.Popen(  # type: ignore[call-overload]
 								notifierCommand,
 								session_id=sessionId,
@@ -1157,6 +1157,7 @@ class Opsiclientd(EventListener, threading.Thread):
 								session_desktop=desktop,
 							)
 					else:
+						logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
 						runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
 				except Exception as err:
 					logger.error(
@@ -1165,9 +1166,10 @@ class Opsiclientd(EventListener, threading.Thread):
 
 			# last popup decides end time (even if unlimited)
 			if self._popupClosingThread and self._popupClosingThread.is_alive():
+				logger.info("Stopping PopupClosingThread")
 				self._popupClosingThread.stop()
 			if displaySeconds > 0:
-				logger.debug("displaying popup for %s seconds", displaySeconds)
+				logger.info("Displaying popup for %s seconds", displaySeconds)
 				self._popupClosingThread = PopupClosingThread(self, displaySeconds)
 				self._popupClosingThread.start()
 

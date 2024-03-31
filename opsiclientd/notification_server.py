@@ -288,12 +288,16 @@ class NotificationServer(SubjectsObserver, Thread):
 				if self._clients:
 					self.requestEndConnections()
 				try:
+					logger.info("Closing notification server")
 					self._server.close()
 				except Exception as err:
 					logger.debug(err)
 				try:
+					logger.info("Waiting for notification server to close")
 					future = run_coroutine_threadsafe(self._server.wait_closed(), self._server.get_loop())
 					future.result()
+					logger.info("Notification server closed")
 				except Exception as err:
 					logger.debug(err)
+			logger.info("Waiting for NotificationServer thread to stop")
 			self._stopped.wait(5)
