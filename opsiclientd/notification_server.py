@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import json
+import time
 from asyncio import BaseTransport, Protocol, Server, Transport, get_event_loop, run, run_coroutine_threadsafe
 from asyncio.exceptions import CancelledError
 from dataclasses import asdict, dataclass, field
@@ -269,8 +270,10 @@ class NotificationServer(SubjectsObserver, Thread):
 			logger.error("Notification server error: %s", err, exc_info=True)
 
 	def stop(self) -> None:
-		self.requestEndConnections()
 		if self._server:
+			if self._clients:
+				self.requestEndConnections()
+				time.sleep(2)
 			try:
 				self._server.close()
 			except Exception as err:
