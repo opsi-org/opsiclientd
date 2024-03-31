@@ -287,7 +287,7 @@ async def process_rpcs(
 
 
 async def process_request(interface: Interface, request: Request, response: Response) -> Response:
-	logger.info("Processing JSONRPC request (%s, %s)", interface, request)
+	logger.info("Processing JSONRPC request (interface=%s)", interface.__class__.__name__)
 	request_compression = None
 	request_serialization = None
 	response_compression = None

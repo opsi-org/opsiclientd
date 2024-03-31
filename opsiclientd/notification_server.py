@@ -203,10 +203,8 @@ class NotificationServer(SubjectsObserver, Thread):
 		param = [subject.serializable() for subject in subjects]
 		self.notify(name="subjectsChanged", params=[param], clients=clients)
 
-	def requestEndConnections(self, clientIds: list[str] | None = None):
-		if not self._clients:
-			return
-		self.notify(name="endConnection", params=[clientIds])
+	def requestEndConnections(self):
+		self.notify(name="endConnection", params=[])
 
 	def notify(self, name: str, params: list[Any], clients: list[NotificationServerClientConnection] | None = None):
 		if not isinstance(params, list):
@@ -271,6 +269,7 @@ class NotificationServer(SubjectsObserver, Thread):
 			logger.error("Notification server error: %s", err, exc_info=True)
 
 	def stop(self) -> None:
+		self.requestEndConnections()
 		if self._server:
 			try:
 				self._server.close()
