@@ -38,7 +38,6 @@ pyinstaller-poetry:
       - h11
       # OPSI.Util.Ping needed for dynamic depot selection
       - OPSI.Util.Ping
-      -
     windows:
       - pythoncom
       - win32com
