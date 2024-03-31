@@ -102,7 +102,7 @@ INTERFACE_PAGE = """<?xml version="1.0" encoding="UTF-8"?>
 	}
 
 	function onLoad() {
-		let methodSelect = document.getElementById('method_select');
+		const methodSelect = document.getElementById('method_select');
 		for (const [method, params] of Object.entries(methods)) {
 			const option = document.createElement("option");
 			option.value = method;
@@ -113,11 +113,14 @@ INTERFACE_PAGE = """<?xml version="1.0" encoding="UTF-8"?>
 	}
 
 	function executeJsonrpc() {
+		const submitButton = document.getElementById('submit');
+		submitButton.disabled = true;
 		let xhr = new XMLHttpRequest();
 		xhr.open('POST', '%(jsonrpc_path)s', true);
 		xhr.setRequestHeader('Content-Type', 'application/json');
 		xhr.onreadystatechange = function() {
 			if (xhr.readyState == 4 && xhr.status == 200) {
+				submitButton.disabled = false;
 				let jsonStr = JSON.stringify(JSON.parse(xhr.responseText), undefined, 2);
 				document.getElementById('jsonrpc-response').innerHTML = syntaxHighlight(jsonStr);
 			}
