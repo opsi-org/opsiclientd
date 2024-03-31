@@ -131,12 +131,12 @@ def test_notification_server_multi_client() -> None:
 	assert not abort_called
 	assert start_called
 
-	notification_server.requestEndConnections(["1", "2"])
+	notification_server.requestEndConnections()
 	time.sleep(1)
 
 	for client in [client1, client2]:
 		assert client.rpcs_received[-1].method == "endConnection"
-		assert client.rpcs_received[-1].params == [["1", "2"]]
+		assert client.rpcs_received[-1].params == []
 		assert not client.is_alive()
 
 	notification_server.stop()
