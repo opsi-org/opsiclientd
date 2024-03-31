@@ -67,6 +67,7 @@ class NotificationServerClientConnection(Protocol):
 	def data_received(self, data: bytes) -> None:
 		logger.trace("%s - data received:", self, data)
 		self._buffer += data
+		rpcs = []
 		while b"\r\n" in self._buffer or b"\1e" in self._buffer:  # multiple rpc calls separated by \r\n or \1e
 			if b"\r\n" in self._buffer:
 				rpc_data, self._buffer = self._buffer.split(b"\r\n", maxsplit=1)
@@ -76,9 +77,11 @@ class NotificationServerClientConnection(Protocol):
 			try:
 				rpc = NotificationRPC.from_json(rpc_data.decode("utf-8"))
 				logger.info("Received RPC: %r", rpc)
+				rpcs.append(rpc)
 			except Exception as err:
 				logger.error("Invalid RPC data %r: %s", rpc_data, err, exc_info=True)
 				continue
+		for rpc in rpcs:
 			try:
 				response = self.process_rpc(rpc)
 				if response:
