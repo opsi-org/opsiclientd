@@ -115,7 +115,7 @@ def get_basic_auth(headers: Headers) -> BasicAuth:
 
 class BaseMiddleware:
 	_max_authentication_failures = config.get("control_server", "max_authentication_failures")
-	_server_port = config.get("control_server", "port")
+	_server_port: int = int(config.get("control_server", "port"))
 
 	def __init__(self, app: FastAPI) -> None:
 		self._app = app
@@ -215,7 +215,8 @@ class BaseMiddleware:
 		async def send_wrapper(message: Message) -> None:
 			if message["type"] == "http.response.start":
 				headers = MutableHeaders(scope=message)
-				session.add_cookie_to_headers(headers)
+				if session:
+					session.add_cookie_to_headers(headers)
 
 				host = request_headers.get("host", "localhost:4447").split(":")[0]
 				origin_scheme = "https"
@@ -223,7 +224,8 @@ class BaseMiddleware:
 				try:
 					origin = urlparse(request_headers["origin"])
 					origin_scheme = origin.scheme
-					origin_port = int(origin.port)
+					if origin.port:
+						origin_port = int(origin.port)
 				except Exception:
 					pass
 
@@ -369,6 +371,6 @@ class Session:
 		attrs = "; ".join(SESSION_COOKIE_ATTRIBUTES)
 		return f"{SESSION_COOKIE_NAME}={self.session_id}; {attrs}; path=/; Max-Age={self.max_age}"
 
-	def add_cookie_to_headers(self, headers: dict[str, str]) -> None:
+	def add_cookie_to_headers(self, headers: MutableHeaders) -> None:
 		if cookie := self.get_cookie():
 			headers["set-cookie"] = cookie

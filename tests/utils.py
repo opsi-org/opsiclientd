@@ -18,12 +18,12 @@ from opsiclientd.Config import Config
 
 
 @pytest.fixture
-def opsiclientd_url() -> Generator[str, None, None]:
+def opsiclientd_url() -> str:
 	return "https://localhost:4441"
 
 
 @pytest.fixture
-def opsiclientd_auth() -> Generator[tuple[str, str], None, None]:
+def opsiclientd_auth() -> tuple[str, str]:
 	config = Config()
 	config.readConfigFile()
 	return (config.get("global", "host_id"), config.get("global", "opsi_host_key"))
@@ -46,5 +46,5 @@ def load_config_file(config_file: str) -> None:
 
 
 @pytest.fixture
-def default_config() -> Generator[None, None, None]:
+def default_config() -> None:
 	load_config_file("tests/data/opsiclientd.conf")

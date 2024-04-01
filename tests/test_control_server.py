@@ -39,7 +39,7 @@ def test_fire_event(default_config: None) -> None:
 
 
 def test_firing_unknown_event_raises_error() -> None:
-	controlServer = ControlInterface(None)
+	controlServer = ControlInterface(Opsiclientd())
 	with pytest.raises(ValueError):
 		controlServer.fireEvent("foobar")
 
