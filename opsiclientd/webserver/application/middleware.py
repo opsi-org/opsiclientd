@@ -139,6 +139,12 @@ class BaseMiddleware:
 			host = normalize_ip_address(host)
 		return host, port
 
+	def remove_expired_sessions(self) -> None:
+		for session_id in list(self._sessions):
+			if self._sessions[session_id].expired:
+				logger.info("Sesson %r expired", session_id)
+				del self._sessions[session_id]
+
 	async def authenticate(self, scope: Scope) -> None:
 		session: Session = scope["session"]
 		session.authenticated = False
@@ -203,6 +209,7 @@ class BaseMiddleware:
 		scope["session"] = session
 
 		if not session.authenticated:
+			self.remove_expired_sessions()
 			await self.authenticate(scope)
 
 		async def send_wrapper(message: Message) -> None:
