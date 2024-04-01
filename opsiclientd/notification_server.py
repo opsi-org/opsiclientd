@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import json
-from asyncio import BaseTransport, Protocol, Server, Transport, get_event_loop, run, run_coroutine_threadsafe
+from asyncio import BaseTransport, Protocol, Server, Transport, get_event_loop, run
 from asyncio.exceptions import CancelledError
 from dataclasses import asdict, dataclass, field
 from threading import Event, Lock, Thread

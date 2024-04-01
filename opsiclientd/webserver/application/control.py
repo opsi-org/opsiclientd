@@ -6,7 +6,6 @@
 # License: AGPL-3.0
 
 import json
-from typing import Any
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import HTMLResponse, Response

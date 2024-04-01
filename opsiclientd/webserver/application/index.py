@@ -27,9 +27,9 @@ INDEX_PAGE = """<?xml version="1.0" encoding="UTF-8"?>
 	<p id="title">opsiclientd on host %(hostname)s</p>
 	<div class="mainpage-link-box">
 		<ul>
-			<li><a target="_blank" href="info.html">opsiclientd info page</a></li>
-			<li><a target="_blank" href="log_viewer.html">opsiclientd log viewer</a></li>
-			<li><a target="_blank" href="interface">opsiclientd control interface</a></li>
+			<li><a target="_blank" href="/info">opsiclientd info page</a></li>
+			<li><a target="_blank" href="/log_viewer">opsiclientd log viewer</a></li>
+			<li><a target="_blank" href="/interface">opsiclientd control interface</a></li>
 		</ul>
 	</div>
 

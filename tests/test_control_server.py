@@ -13,6 +13,7 @@ import socket
 import ssl
 import threading
 import time
+from pathlib import Path
 from unittest.mock import patch
 
 import netifaces  # type: ignore[import]
@@ -20,10 +21,12 @@ import pytest
 import requests
 from fastapi.testclient import TestClient
 from httpx._models import Cookies
+from starlette.websockets import WebSocketDisconnect
 
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import createEventGenerators
 from opsiclientd.Opsiclientd import Opsiclientd
+from opsiclientd.webserver.application.log_viewer import LogReaderThread
 from opsiclientd.webserver.application.main import setup_application
 from opsiclientd.webserver.rpc.control import ControlInterface
 
@@ -127,24 +130,43 @@ def test_auth_proxy(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) -> 
 			assert response.status_code == 200
 
 
-"""
-TODO
-def test_log_reader_start_position(tmpdir):
+def test_log_viewer_auth(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) -> None:
+	app = setup_application(Opsiclientd())
+	with TestClient(app=app, base_url=opsiclientd_url, headers={"x-forwarded-for": "127.0.0.1"}) as test_client:
+		response = test_client.get("/log_viewer")
+		assert response.status_code == 401
+
+		with pytest.raises(WebSocketDisconnect, match="Authorization header missing"):
+			with test_client.websocket_connect("/log_viewer/ws"):
+				pass
+
+		response = test_client.get("/log_viewer", auth=opsiclientd_auth)
+		assert response.status_code == 200
+		cookie = list(test_client.cookies.jar)[0]
+		with test_client.websocket_connect("/log_viewer/ws", headers={"Cookie": f"{cookie.name}={cookie.value}"}):
+			pass
+
+
+def test_log_reader_start_position(tmp_path: Path) -> None:
 	log_lines = 20
 	for num_tail_records in (5, 10, 19, 20, 21):
-		log_file = tmpdir.join("opsiclientd.log")
-		with codecs.open(log_file, "w", encoding="utf-8", errors="replace") as file:
+		log_file = tmp_path / "opsiclientd.log"
+		with open(log_file, "w", encoding="utf-8", errors="replace") as file:
 			for i in range(log_lines):
 				file.write(f"[5] [2021-01-02 11:12:13.456] [opsiclientd] log line {i+1}   (opsiclientd.py:123)\n")
 
-		lrt = ControlServer.LogReaderThread(log_file, None, num_tail_records)
+		lrt = LogReaderThread(log_file, None, num_tail_records)
 		start_position = lrt._get_start_position()
 
-		with codecs.open(log_file, "r", encoding="utf-8", errors="replace") as file:
+		with open(log_file, "r", encoding="utf-8", errors="replace") as file:
 			file.seek(start_position)
 			data = file.read()
 			assert data.startswith("[5]")
 			assert data.count("\n") == num_tail_records if log_lines > num_tail_records else log_lines
+
+
+"""
+TODO
 
 @pytest.mark.opsiclientd_running
 def test_jsonrpc_endpoints(opsiclientd_url, opsiclientd_auth):
