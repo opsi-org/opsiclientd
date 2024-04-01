@@ -178,6 +178,9 @@ class BaseMiddleware:
 				raise BackendAuthenticationError("Authentication module not available on this platform")
 
 			await run_in_threadpool(self._auth_module.authenticate, auth.username, auth.password)
+			if not self._auth_module.user_is_admin(auth.username):
+				raise BackendPermissionDeniedError(f"User '{auth.username}' is not an admin")
+
 			session.username = auth.username
 			session.authenticated = True
 			logger.info("User %r authenticated from %r", session.username, session.client_addr)
