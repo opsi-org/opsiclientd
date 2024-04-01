@@ -84,6 +84,38 @@ def test_auth_direct(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) ->
 			assert response.status_code == 401
 
 
+def test_max_authentication_failures(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) -> None:
+	app = setup_application(Opsiclientd())
+	max_authentication_failures = 3
+	client_block_time = 3
+	with (
+		patch("opsiclientd.webserver.application.middleware.CLIENT_BLOCK_TIME", client_block_time),
+		patch("opsiclientd.webserver.application.middleware.BaseMiddleware._max_authentication_failures", max_authentication_failures),
+		patch("opsiclientd.webserver.application.middleware.BaseMiddleware.get_client_address", lambda _self, _scope: ("1.2.3.4", 12345)),
+	):
+		with TestClient(app=app, base_url=opsiclientd_url, headers={"x-forwarded-for": "2.2.2.2"}) as test_client:
+			max_authentication_failures = 3
+
+			for _ in range(max_authentication_failures):
+				response = test_client.get("/", auth=("", "12345678901234567890123456789012"))
+				assert response.status_code == 401
+				assert "Authentication error" in response.text
+
+			response = test_client.get("/", auth=("", "12345678901234567890123456789012"))
+			assert response.status_code == 403
+			assert response.text == "Client '1.2.3.4' is blocked"
+
+			response = test_client.get("/", auth=("", "12345678901234567890123456789012"))
+			assert response.status_code == 403
+			assert response.text == "Client '1.2.3.4' is blocked"
+
+			time.sleep(client_block_time + 1)
+
+			response = test_client.get("/", auth=("", "12345678901234567890123456789012"))
+			assert response.status_code == 401
+			assert "Authentication error" in response.text
+
+
 def test_auth_proxy(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) -> None:
 	app = setup_application(Opsiclientd())
 	with patch("opsiclientd.webserver.application.middleware.BaseMiddleware.get_client_address", lambda _self, _scope: ("1.2.3.4", 12345)):

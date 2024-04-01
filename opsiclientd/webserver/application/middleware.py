@@ -17,7 +17,7 @@ from time import time
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, HTTPException, status
-from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, Response
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from OPSI.Backend.Manager.Authentication import AuthenticationModule  # type: ignore[import]
 from opsicommon.exceptions import BackendAuthenticationError, BackendPermissionDeniedError
 from opsicommon.logging import get_logger, secret_filter
@@ -114,12 +114,13 @@ def get_basic_auth(headers: Headers) -> BasicAuth:
 
 
 class BaseMiddleware:
+	_max_authentication_failures = config.get("control_server", "max_authentication_failures")
+	_server_port = config.get("control_server", "port")
+
 	def __init__(self, app: FastAPI) -> None:
 		self._app = app
 		self._sessions: dict[str, Session] = {}
 		self._auth_failures: dict[str, list[int]] = {}
-		self._server_port = config.get("control_server", "port")
-		self._max_authentication_failures = config.get("control_server", "max_authentication_failures")
 		self._auth_module: AuthenticationModule | None = None
 		if is_linux():
 			import OPSI.Backend.Manager.Authentication.PAM  # type: ignore[import]
@@ -131,9 +132,9 @@ class BaseMiddleware:
 			self._auth_module = OPSI.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
 
 	@staticmethod
-	def get_client_address(scope: Scope) -> tuple[str | None, int]:
+	def get_client_address(scope: Scope) -> tuple[str, int]:
 		"""Get sanitized client address"""
-		host, port = scope.get("client") or (None, 0)
+		host, port = scope.get("client") or ("", 0)
 		if host:
 			host = normalize_ip_address(host)
 		return host, port
@@ -146,9 +147,10 @@ class BaseMiddleware:
 
 		current_timestamp = int(unix_timestamp())
 		if session.client_addr in self._auth_failures:
+			assert isinstance(session.client_addr, str)
 			min_ts = current_timestamp - CLIENT_BLOCK_TIME
 			self._auth_failures[session.client_addr] = [ts for ts in self._auth_failures[session.client_addr] if ts >= min_ts]
-			if len(self._auth_failures) >= self._max_authentication_failures:
+			if len(self._auth_failures[session.client_addr]) >= self._max_authentication_failures:
 				logger.info("Client '%s' is blocked", session.client_addr)
 				raise ConnectionRefusedError(f"Client '{session.client_addr}' is blocked")
 
@@ -158,9 +160,10 @@ class BaseMiddleware:
 				raise BackendAuthenticationError("No password specified")
 
 			if not auth.username or auth.username.count(".") >= 2:
+				host_id = config.get("global", "host_id")
 				if auth.password != config.get("global", "opsi_host_key"):
-					raise BackendAuthenticationError(f"Host not found '{auth.username}'")
-				session.username = config.get("global", "host_id")
+					raise BackendAuthenticationError(f"Authentication of host '{host_id}' failed")
+				session.username = host_id
 				session.authenticated = True
 				logger.info("Host %r authenticated from %r", session.username, session.client_addr)
 				return
@@ -194,7 +197,7 @@ class BaseMiddleware:
 				else:
 					session.touch()
 		if not session:
-			session = Session(client_addr=scope["client"], headers=request_headers)
+			session = Session(client_addr=scope["client"][0], headers=request_headers)
 			session_id = session.session_id
 			self._sessions[session_id] = session
 		scope["session"] = session
