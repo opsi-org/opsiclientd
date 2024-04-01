@@ -12,20 +12,25 @@ import codecs
 import socket
 import ssl
 import threading
+import time
+from unittest.mock import patch
 
 import netifaces  # type: ignore[import]
 import pytest
 import requests
+from fastapi.testclient import TestClient
+from httpx._models import Cookies
 
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import createEventGenerators
 from opsiclientd.Opsiclientd import Opsiclientd
+from opsiclientd.webserver.application.main import setup_application
 from opsiclientd.webserver.rpc.control import ControlInterface
 
-from .utils import default_config, opsiclient_url, opsiclientd_auth
+from .utils import default_config, opsiclientd_auth, opsiclientd_url
 
 
-def test_fire_event(default_config):
+def test_fire_event(default_config: None) -> None:
 	ocd = Opsiclientd()
 	createEventGenerators(ocd)
 	getEventConfigs()
@@ -33,16 +38,61 @@ def test_fire_event(default_config):
 	controlServer.fireEvent("on_demand")
 
 
-def test_firing_unknown_event_raises_error():
+def test_firing_unknown_event_raises_error() -> None:
 	controlServer = ControlInterface(None)
 	with pytest.raises(ValueError):
 		controlServer.fireEvent("foobar")
 
 
-@pytest.mark.opsiclientd_running
-def test_index_page(opsiclient_url):
-	req = requests.get(f"{opsiclient_url}", verify=False)
-	assert req.status_code == 200
+def test_auth_direct(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) -> None:
+	app = setup_application(Opsiclientd())
+	session_lifetime = 2
+	with patch("opsiclientd.webserver.application.middleware.SESSION_LIFETIME", session_lifetime):
+		with TestClient(app=app, base_url=opsiclientd_url) as test_client:
+			response = test_client.get("/")
+			assert response.status_code == 401
+
+			response = test_client.get("/", auth=opsiclientd_auth)
+			assert response.status_code == 200
+			session_id = response.headers["set-cookie"].split(";")[0].split("=")[1].strip()
+			assert len(session_id) == 32
+
+			response = test_client.get("/")
+			assert response.status_code == 200
+			assert session_id == response.headers["set-cookie"].split(";")[0].split("=")[1].strip()
+
+			test_client.cookies = Cookies()
+
+			response = test_client.get("/")
+			assert response.status_code == 401
+			# New session
+			assert session_id != response.headers["set-cookie"].split(";")[0].split("=")[1].strip()
+
+			response = test_client.get("/", auth=("not", "valid"))
+			assert response.status_code == 401
+
+			response = test_client.get("/", auth=opsiclientd_auth)
+			assert response.status_code == 200
+
+			response = test_client.get("/")
+			assert response.status_code == 200
+
+			time.sleep(session_lifetime + 1)
+
+			response = test_client.get("/")
+			# Session expired
+			assert response.status_code == 401
+
+
+def test_auth_proxy(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) -> None:
+	app = setup_application(Opsiclientd())
+	with patch("opsiclientd.webserver.application.middleware.BaseMiddleware.get_client_address", lambda _self, _scope: ("1.2.3.4", 12345)):
+		with TestClient(app=app, base_url=opsiclientd_url, headers={"x-forwarded-for": "127.0.0.1"}) as test_client:
+			response = test_client.get("/")
+			assert response.status_code == 401
+
+			response = test_client.get("/", auth=opsiclientd_auth)
+			assert response.status_code == 200
 
 
 """
@@ -65,13 +115,13 @@ def test_log_reader_start_position(tmpdir):
 			assert data.count("\n") == num_tail_records if log_lines > num_tail_records else log_lines
 
 @pytest.mark.opsiclientd_running
-def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):
+def test_jsonrpc_endpoints(opsiclientd_url, opsiclientd_auth):
 	rpc = {"id": 1, "method": "invalid", "params": []}
 	for endpoint in ("opsiclientd", "rpc"):
-		response = requests.post(f"{opsiclient_url}/{endpoint}", verify=False, json=rpc)
+		response = requests.post(f"{opsiclientd_url}/{endpoint}", verify=False, json=rpc)
 		assert response.status_code == 401
 
-	response = requests.post(f"{opsiclient_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
+	response = requests.post(f"{opsiclientd_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
 	assert response.status_code == 200, f"auth failed: {opsiclientd_auth}"
 	rpc_response = response.json()
 	assert rpc_response.get("id") == rpc["id"]
@@ -80,9 +130,9 @@ def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):
 
 
 @pytest.mark.opsiclientd_running
-def test_kiosk_auth(opsiclient_url):
+def test_kiosk_auth(opsiclientd_url):
 	# Kiosk allows connection from 127.0.0.1 without auth
-	response = requests.post(f"{opsiclient_url}/kiosk", verify=False, headers={"Content-Encoding": "gzip"}, data="fail")
+	response = requests.post(f"{opsiclientd_url}/kiosk", verify=False, headers={"Content-Encoding": "gzip"}, data="fail")
 	assert response.status_code == 500  # Not 401
 	assert "Not a gzipped file" in response.text
 	# "X-Forwarded-For" must not be accepted
@@ -117,7 +167,7 @@ def test_kiosk_auth(opsiclient_url):
 
 
 @pytest.mark.opsiclientd_running
-def test_concurrency(opsiclient_url, opsiclientd_auth):
+def test_concurrency(opsiclientd_url, opsiclientd_auth):
 	rpcs = [
 		{"id": 1, "method": "execute", "params": ["sleep 3; echo ok", True]},
 		{"id": 2, "method": "execute", "params": ["sleep 4; echo ok", True]},
@@ -127,7 +177,7 @@ def test_concurrency(opsiclient_url, opsiclientd_auth):
 	]
 
 	def run_rpc(rpc):
-		res = requests.post(f"{opsiclient_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
+		res = requests.post(f"{opsiclientd_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
 		threading.current_thread().status_code = res.status_code
 		threading.current_thread().response = res.json()
 

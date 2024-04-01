@@ -8,7 +8,6 @@
 conftest
 """
 
-import os
 import platform
 
 import psutil
@@ -37,17 +36,18 @@ def pytest_configure(config):
 	config.addinivalue_line("markers", "posix: mark test to run only on posix")
 
 
-def running_in_docker():
-	if not os.path.exists("/proc/self/cgroup"):
-		return False
-	with open("/proc/self/cgroup", "r", encoding="utf-8") as file:
-		for line in file.readlines():
-			if line.split(":")[2].startswith("/docker/"):
-				return True
+def running_in_docker() -> bool:
+	try:
+		with open("/proc/2/stat", encoding="utf-8", errors="replace") as file:
+			return "kthreadd" not in file.read()
+	except FileNotFoundError:
+		return True
+	except Exception:
+		pass
 	return False
 
 
-def opsiclient_running():
+def opsiclient_running() -> bool:
 	for proc in psutil.process_iter():
 		if proc.name() == "opsiclientd" or (
 			proc.name() in ("python", "python3") and ("opsiclientd" in proc.cmdline() or "opsiclientd.__main__" in " ".join(proc.cmdline()))
@@ -58,7 +58,7 @@ def opsiclient_running():
 
 PLATFORM = platform.system().lower()
 RUNNING_IN_DOCKER = running_in_docker()
-OPSICLIENTD_RUNNING = running_in_docker() and opsiclient_running()
+OPSICLIENTD_RUNNING = RUNNING_IN_DOCKER and opsiclient_running()
 
 
 def pytest_runtest_setup(item):

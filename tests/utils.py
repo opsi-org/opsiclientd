@@ -10,6 +10,7 @@ utils
 
 import os
 from contextlib import contextmanager
+from typing import Generator
 
 import pytest
 
@@ -17,19 +18,19 @@ from opsiclientd.Config import Config
 
 
 @pytest.fixture
-def opsiclient_url():
+def opsiclientd_url() -> Generator[str, None, None]:
 	return "https://localhost:4441"
 
 
 @pytest.fixture
-def opsiclientd_auth():
+def opsiclientd_auth() -> Generator[tuple[str, str], None, None]:
 	config = Config()
 	config.readConfigFile()
 	return (config.get("global", "host_id"), config.get("global", "opsi_host_key"))
 
 
 @contextmanager
-def change_dir(path):
+def change_dir(path) -> Generator[None, None, None]:
 	old_dir = os.getcwd()
 	os.chdir(path)
 	try:
@@ -38,12 +39,12 @@ def change_dir(path):
 		os.chdir(old_dir)
 
 
-def load_config_file(config_file):
+def load_config_file(config_file: str) -> None:
 	config = Config()
 	config.set("global", "config_file", config_file)
 	config.readConfigFile()
 
 
 @pytest.fixture
-def default_config():
+def default_config() -> Generator[None, None, None]:
 	load_config_file("tests/data/opsiclientd.conf")
