@@ -152,17 +152,19 @@ def test_log_reader_start_position(tmp_path: Path) -> None:
 	for num_tail_records in (5, 10, 19, 20, 21):
 		log_file = tmp_path / "opsiclientd.log"
 		with open(log_file, "w", encoding="utf-8", errors="replace") as file:
-			for i in range(log_lines):
-				file.write(f"[5] [2021-01-02 11:12:13.456] [opsiclientd] log line {i+1}   (opsiclientd.py:123)\n")
+			for idx in range(log_lines):
+				file.write(f"[5] [2021-01-02 11:12:13.456] [opsiclientd] log line {idx+1}   (opsiclientd.py:123)\n")
 
-		lrt = LogReaderThread(log_file, None, num_tail_records)  # type: ignore
+		lrt = LogReaderThread(filename=log_file, loop=None, websocket=None, num_tail_records=num_tail_records)  # type: ignore
 		start_position = lrt._get_start_position()
 
 		with open(log_file, "r", encoding="utf-8", errors="replace") as file:
 			file.seek(start_position)
 			data = file.read()
 			assert data.startswith("[5]")
-			assert data.count("\n") == num_tail_records if log_lines > num_tail_records else log_lines
+			lines = data.count("\n")
+			print(f"{lines=}, {num_tail_records=}, {log_lines=}")
+			assert lines == num_tail_records if log_lines > num_tail_records else log_lines
 
 
 """
