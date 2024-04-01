@@ -580,6 +580,8 @@ class Config(metaclass=Singleton):
 		if not self.get("depot_server", "master_depot_id"):
 			self.set("depot_server", "master_depot_id", self.get("depot_server", "depot_id"))
 
+		self.set("control_server", "static_dir", self.get("control_server", "static_dir").replace("/", os.sep))
+
 		logger.notice("Config read")
 		logger.debug("Config is now:\n %s", objectToBeautifiedText(self._config))
 
