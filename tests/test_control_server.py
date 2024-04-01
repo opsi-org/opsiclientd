@@ -155,7 +155,7 @@ def test_log_reader_start_position(tmp_path: Path) -> None:
 			for i in range(log_lines):
 				file.write(f"[5] [2021-01-02 11:12:13.456] [opsiclientd] log line {i+1}   (opsiclientd.py:123)\n")
 
-		lrt = LogReaderThread(log_file, None, num_tail_records)
+		lrt = LogReaderThread(log_file, None, num_tail_records)  # type: ignore
 		start_position = lrt._get_start_position()
 
 		with open(log_file, "r", encoding="utf-8", errors="replace") as file:

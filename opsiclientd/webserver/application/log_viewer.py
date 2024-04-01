@@ -91,11 +91,11 @@ class LogReaderThread(threading.Thread):
 		self.loop = loop
 		self.websocket = websocket
 		self.num_tail_records = int(num_tail_records)
-		self.record_buffer = []
-		self.send_time = 0
+		self.record_buffer: list[dict[str, str | int | float | dict[int, str] | None]] = []
+		self.send_time = 0.0
 		self._initial_read = False
 
-	def send_buffer(self):
+	def send_buffer(self) -> None:
 		if not self.record_buffer:
 			return
 		data = b""
@@ -106,19 +106,19 @@ class LogReaderThread(threading.Thread):
 		self.send_time = time.time()
 		self.record_buffer = []
 
-	def send_buffer_if_needed(self, max_delay=None):
+	def send_buffer_if_needed(self, max_delay: float | None = None) -> None:
 		if max_delay is None:
 			max_delay = self.max_delay
 		if self.record_buffer and (len(self.record_buffer) > self.max_record_buffer_size or time.time() - self.send_time > max_delay):
 			self.send_buffer()
 
-	def parse_log_line(self, line):
+	def parse_log_line(self, line: str) -> dict[str, str | int | float | dict[int, str] | None] | None:
 		match = self.record_start_regex.match(line)
 		if not match:
 			if self.record_buffer:
-				self.record_buffer[-1]["msg"] += f"\n{line.rstrip()}"
+				self.record_buffer[-1]["msg"] += f"\n{line.rstrip()}"  # type: ignore
 			return None
-		context = {}
+		context: dict[int, str] = {}
 		cnum = 0
 		for val in match.group(3).split(","):
 			context[cnum] = val.strip()
@@ -135,17 +135,17 @@ class LogReaderThread(threading.Thread):
 			"exc_text": None,
 		}
 
-	def add_log_line(self, line):
+	def add_log_line(self, line: str) -> None:
 		if not line:
 			return
 		record = self.parse_log_line(line)
 		if record:
 			self.record_buffer.append(record)
 
-	def stop(self):
+	def stop(self) -> None:
 		self.should_stop = True
 
-	def _get_start_position(self):
+	def _get_start_position(self) -> int:
 		if self.num_tail_records <= 0:
 			return 0
 
@@ -169,7 +169,7 @@ class LogReaderThread(threading.Thread):
 		logger.info("Setting log file start position to %d, record %d/%d", start_position, start_record, record_number)
 		return start_position
 
-	def run(self):
+	def run(self) -> None:
 		try:
 			start_position = self._get_start_position()
 			with open(self.filename, "r", encoding="utf-8", errors="replace") as file:
@@ -177,7 +177,7 @@ class LogReaderThread(threading.Thread):
 				file.seek(start_position)
 				self._initial_read = True
 				# Start sending big bunches (high delay)
-				max_delay = 3
+				max_delay = 3.0
 				line_buffer = []
 				no_line_count = 0
 
@@ -242,7 +242,7 @@ class LoggerWebsocket(WebSocketEndpoint):
 		await self._check_authorization()
 
 		try:
-			num_records = int(num_records)
+			num_records = int(num_records)  # type: ignore[arg-type]
 		except (ValueError, TypeError):
 			num_records = -1
 		logger.info("Websocket client is starting to read log stream: num_records=%s, client=%s", num_records, client)
