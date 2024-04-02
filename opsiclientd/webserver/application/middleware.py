@@ -28,6 +28,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import Headers, MutableHeaders
 from starlette.types import Message, Receive, Scope, Send
 
+from opsiclientd import __version__
 from opsiclientd.Config import Config
 
 SESSION_COOKIE_NAME = "opsiclientd-session"
@@ -141,6 +142,9 @@ class BaseMiddleware:
 		if host:
 			host = normalize_ip_address(host)
 		return host, port
+
+	def server_header(self, scope: Scope) -> str:
+		return "opsiclientd config cache service 4.2.0.0" if scope.get("path", "").startswith("/rpc") else f"opsiclientd {__version__}"
 
 	def remove_expired_sessions(self) -> None:
 		for session_id in list(self._sessions):
@@ -262,9 +266,13 @@ class BaseMiddleware:
 						logger.trace(">>> %s: %s", header, value)
 
 			if "headers" in message:
+				message["headers"].append((b"server", self.server_header(scope).encode("utf-8")))
 				dat = get_server_date()
 				message["headers"].append((b"date", dat[1]))
 				message["headers"].append((b"x-date-unix-timestamp", dat[0]))
+				if scope["path"].startswith("/rpc"):
+					message["headers"].append((b"content-type", b"application/json"))
+
 			await send(message)
 
 		return await self._app(scope, receive, send_wrapper)
@@ -297,6 +305,7 @@ class BaseMiddleware:
 			error = str(err)
 
 		headers = headers or {}
+		headers["server"] = self.server_header(scope)
 		headers["x-opsi-error"] = str(error)[:64]
 
 		if scope["type"] == "websocket":

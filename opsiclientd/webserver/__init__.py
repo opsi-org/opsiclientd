@@ -14,7 +14,6 @@ from opsicommon.logging import get_logger
 from uvicorn.config import Config as UvicornConfig
 from uvicorn.server import Server as UvicornServer
 
-from opsiclientd import __version__
 from opsiclientd.webserver.application.main import setup_application
 
 if TYPE_CHECKING:
@@ -44,7 +43,6 @@ class Webserver(Thread):
 			log_config=None,
 			date_header=False,
 			server_header=False,
-			headers=[("Server", f"opsiclientd {__version__}")],
 			ws_ping_interval=15,
 			ws_ping_timeout=10,
 			ssl_keyfile=self.opsiclientd.config.get("control_server", "ssl_server_key_file"),

@@ -19,6 +19,7 @@ from httpx import HTTPStatusError
 from opsicommon.system.info import is_macos
 from starlette.websockets import WebSocketDisconnect
 
+from opsiclientd import __version__
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import createEventGenerators
 from opsiclientd.Opsiclientd import Opsiclientd
@@ -153,6 +154,16 @@ def test_kiosk_auth(default_config: Config, test_client: OpsiclientdTestClient) 
 		test_client.set_client_address("1.2.3.4", 12345)
 		with pytest.raises(HTTPStatusError, match="401 Unauthorized"):
 			client.jsonrpc20(path="/kiosk", method="getClientId", params=[], id="1", headers={"x-forwarded-for": "127.0.0.1"})
+
+
+def test_headers(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
+	with test_client as client:
+		test_client.auth = opsiclientd_auth
+		response = client.get("/")
+		assert response.headers["server"] == f"opsiclientd {__version__}"
+
+		response = client.get("/rpc")
+		assert response.headers["server"] == "opsiclientd config cache service 4.2.0.0"
 
 
 def test_control_jsonrpc(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
