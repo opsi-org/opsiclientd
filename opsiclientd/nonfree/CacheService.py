@@ -8,6 +8,7 @@ opsiclientd.nonfree.CacheService
 
 @copyright:	uib GmbH <info@uib.de>
 """
+
 from __future__ import annotations
 
 import codecs

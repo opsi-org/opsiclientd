@@ -10,8 +10,6 @@ from opsiclientd.Config import Config
 from opsiclientd.Opsiclientd import Opsiclientd, state
 from opsiclientd.webserver.rpc.control import get_control_interface
 
-from .utils import default_config
-
 config = Config()
 
 
@@ -34,7 +32,7 @@ class FakeOpsiclientd(Opsiclientd):
 	"user_logged_in",
 	(False, True),
 )
-def test_motd_update_without_valid_until(default_config: None, tmp_path: Path, user_logged_in: bool) -> None:
+def test_motd_update_without_valid_until(default_config: None, tmp_path: Path, user_logged_in: bool) -> None:  # noqa
 	def getActiveSessionInformation():
 		if not user_logged_in:
 			return []
@@ -66,7 +64,7 @@ def test_motd_update_without_valid_until(default_config: None, tmp_path: Path, u
 	"user_logged_in",
 	(False, True),
 )
-def test_motd_update_valid_until(default_config: None, tmp_path: Path, user_logged_in: bool) -> None:
+def test_motd_update_valid_until(default_config: None, tmp_path: Path, user_logged_in: bool) -> None:  # noqa
 	def getActiveSessionInformation():
 		if not user_logged_in:
 			return []

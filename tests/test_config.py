@@ -18,7 +18,7 @@ from opsiclientd.Config import (
 	SectionNotFoundException,
 )
 
-from .utils import default_config
+from .utils import default_config  # noqa
 
 config = Config()
 
@@ -55,7 +55,7 @@ def test_getting_unknown_option_fails():
 		config.get("global", "non_existing_option")
 
 
-def test_update_config_file(tmpdir, default_config):
+def test_update_config_file(tmpdir, default_config):  # noqa
 	conf_file = config.get("global", "config_file")
 	tmp_conf_file = tmpdir / "opsiclientd.conf"
 	shutil.copy(conf_file, tmp_conf_file)

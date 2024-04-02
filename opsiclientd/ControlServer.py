@@ -11,7 +11,6 @@ These classes are used to create a https service which executes remote
 procedure calls
 """
 
-
 import codecs
 import datetime
 import email
@@ -27,10 +26,7 @@ import time
 import urllib
 import warnings
 from collections import namedtuple
-from pathlib import Path
 from types import ModuleType
-from typing import Union
-from uuid import uuid4
 
 import msgpack  # type: ignore[import]
 from OpenSSL import SSL

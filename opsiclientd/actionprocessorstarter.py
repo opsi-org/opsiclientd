@@ -26,7 +26,7 @@ from opsicommon.logging import (
 	secret_filter,
 )
 
-from opsiclientd import DEFAULT_FILE_LOG_FORMAT, DEFAULT_STDERR_LOG_FORMAT, __version__
+from opsiclientd import DEFAULT_FILE_LOG_FORMAT, DEFAULT_STDERR_LOG_FORMAT
 
 
 def set_status_message(backend, session_id, message):

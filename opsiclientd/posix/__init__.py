@@ -7,6 +7,7 @@
 """
 opsiclientd.posix
 """
+
 from typing import Callable
 
 from OPSI.System import get_subprocess_environment  # type: ignore[import]

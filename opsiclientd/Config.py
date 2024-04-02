@@ -244,7 +244,7 @@ class Config(metaclass=Singleton):
 			"opsiclientd_notifier": {
 				"command": "",
 				"alt_command": "",
-				"alt_ids": "",
+				"alt_ids": [],
 			},
 			"action_processor": {
 				"local_dir": "",
@@ -450,6 +450,7 @@ class Config(metaclass=Singleton):
 			and "include_product_group_ids" not in option
 			and "proxy_url" not in option
 			and "working_window" not in option
+			and "alt_ids" not in option
 		):
 			if section == "action_processor" and option == "remote_common_dir":
 				return
@@ -462,7 +463,7 @@ class Config(metaclass=Singleton):
 				return
 
 		# Preprocess values, convert to correct type
-		if option in ("exclude_product_group_ids", "include_product_group_ids"):
+		if option in ("exclude_product_group_ids", "include_product_group_ids", "alt_ids"):
 			if not isinstance(value, list):
 				value = [x.strip() for x in value.split(",") if x.strip()]
 			value = forceList(value)

@@ -45,7 +45,7 @@ opsiclientd_rpc = "opsiclientd.__main__:opsiclientd_rpc"
 action_processor_starter = "opsiclientd.__main__:action_processor_starter"
 
 [tool.ruff.lint]
-ignore = [ "F401", "E402", "F811",]
+ignore = ["E402",]
 
 [tool.ruff.format]
 indent-style = "tab"
