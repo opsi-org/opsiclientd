@@ -10,6 +10,8 @@ from opsiclientd.Config import Config
 from opsiclientd.Opsiclientd import Opsiclientd, state
 from opsiclientd.webserver.rpc.control import get_control_interface
 
+from .utils import default_config  # noqa
+
 config = Config()
 
 
