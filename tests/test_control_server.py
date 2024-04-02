@@ -49,6 +49,7 @@ def test_auth_direct(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple
 			assert response.status_code == 200
 			session_id = response.headers["set-cookie"].split(";")[0].split("=")[1].strip()
 			assert len(session_id) == 32
+			print(client.cookies)
 			print(client.cookies.jar)
 
 			response = client.get("/")
