@@ -83,16 +83,16 @@ class LogReaderThread(threading.Thread):
 	max_delay = 0.2
 	max_record_buffer_size = 2500
 
-	def __init__(self, filename: str, loop: asyncio.AbstractEventLoop, websocket: WebSocket, num_tail_records=-1):
+	def __init__(self, loop: asyncio.AbstractEventLoop, websocket: WebSocket, filename: str, num_tail_records=-1):
 		super().__init__(daemon=True, name="LogReaderThread")
-		self.should_stop = False
-		self.filename = filename
 		self.loop = loop
 		self.websocket = websocket
+		self.filename = filename
 		self.num_tail_records = int(num_tail_records)
 		self.record_buffer: list[dict[str, str | int | float | dict[int, str] | None]] = []
 		self.send_time = 0.0
 		self._initial_read = False
+		self.should_stop = False
 
 	def send_buffer(self) -> None:
 		if not self.record_buffer:
@@ -244,10 +244,12 @@ class LoggerWebsocket(WebSocketEndpoint):
 			num_records = int(num_records)  # type: ignore[arg-type]
 		except (ValueError, TypeError):
 			num_records = -1
+
 		logger.info("Websocket client is starting to read log stream: num_records=%s, client=%s", num_records, client)
 		await websocket.accept()
+
 		self._log_reader_thread = LogReaderThread(
-			filename=self.filename, loop=asyncio.get_event_loop(), websocket=websocket, num_tail_records=num_records
+			loop=asyncio.get_event_loop(), websocket=websocket, filename=self.filename, num_tail_records=num_records
 		)
 		self._log_reader_thread.start()
 
