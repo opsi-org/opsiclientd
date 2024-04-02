@@ -5,24 +5,27 @@
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
 # License: AGPL-3.0
 
+
 import json
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import HTMLResponse, Response
 from opsicommon.logging import get_logger
 
+from opsiclientd.Config import Config
 from opsiclientd.webserver.application import INTERFACE_PAGE, get_opsiclientd
-from opsiclientd.webserver.rpc.control import get_control_interface
+from opsiclientd.webserver.rpc.control import get_kiosk_control_interface
 from opsiclientd.webserver.rpc.jsonrpc import process_request
 
-logger = get_logger("opsiclientd")
-interface_router = APIRouter()
+logger = get_logger()
+config = Config()
 jsonrpc_router = APIRouter()
+interface_router = APIRouter()
 
 
 @interface_router.get("/")
 def index_page() -> HTMLResponse:
-	interface = get_control_interface(get_opsiclientd())
+	interface = get_kiosk_control_interface(get_opsiclientd())
 
 	methods = {}
 	for method_name, meth_if in interface.get_interface().items():
@@ -31,8 +34,8 @@ def index_page() -> HTMLResponse:
 	return HTMLResponse(
 		INTERFACE_PAGE
 		% {
-			"title": "opsiclientd interface page",
-			"jsonrpc_path": "/opsiclientd",
+			"title": "opsiclientd kiosk interface page",
+			"jsonrpc_path": "/kiosk",
 			"methods": json.dumps(methods),
 		}
 	)
@@ -48,9 +51,9 @@ async def jsonrpc_head() -> Response:
 @jsonrpc_router.get("{any:path}")
 @jsonrpc_router.post("{any:path}")
 async def jsonrpc(request: Request, response: Response) -> Response:
-	return await process_request(interface=get_control_interface(get_opsiclientd()), request=request, response=response)
+	return await process_request(interface=get_kiosk_control_interface(get_opsiclientd()), request=request, response=response)
 
 
 def setup(app: FastAPI) -> None:
-	app.include_router(interface_router, prefix="/interface/opsiclientd")
-	app.include_router(jsonrpc_router, prefix="/opsiclientd")
+	app.include_router(interface_router, prefix="/interface/kiosk")
+	app.include_router(jsonrpc_router, prefix="/kiosk")

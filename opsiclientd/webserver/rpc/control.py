@@ -19,9 +19,10 @@ import subprocess
 import sys
 import threading
 import time
+from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Generator, Union
 from uuid import uuid4
 
 import psutil  # type: ignore[import]
@@ -32,14 +33,16 @@ from OPSI import __version__ as python_opsi_version  # type: ignore[import]
 from OPSI.Util.Log import truncateLogData  # type: ignore[import]
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, secret_filter
+from opsicommon.objects import ConfigState, ObjectToGroup, Product, ProductDependency, ProductOnClient, ProductOnDepot
 from opsicommon.system.info import is_windows
 from opsicommon.types import forceBool, forceInt, forceProductIdList, forceUnicode
 from opsicommon.utils import generate_opsi_host_key
 
 from opsiclientd import __version__
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
+from opsiclientd.Events.SwOnDemand import SwOnDemandEventGenerator
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
-from opsiclientd.Events.Utilities.Generators import getEventGenerator
+from opsiclientd.Events.Utilities.Generators import getEventGenerator, getEventGenerators
 from opsiclientd.OpsiService import ServiceConnection, download_from_depot
 from opsiclientd.Timeline import Timeline
 from opsiclientd.webserver.rpc.interface import Interface
@@ -59,7 +62,50 @@ logger = get_logger("opsiclientd")
 class PipeControlInterface(Interface):
 	def __init__(self, opsiclientd: Opsiclientd) -> None:
 		super().__init__()
-		self.opsiclientd: Opsiclientd = opsiclientd
+		self.opsiclientd = opsiclientd
+
+	@contextmanager
+	def _config_service_connection(self, disconnect: bool = True) -> Generator[ServiceConnection, None, None]:
+		service_connection = ServiceConnection(self.opsiclientd)
+		connected = service_connection.isConfigServiceConnected()
+		if not connected:
+			service_connection.connectConfigService()
+		try:
+			yield service_connection
+		finally:
+			if not connected and disconnect:
+				service_connection.disconnectConfigService()
+
+	def _fireEvent(self, name: str, can_cancel: bool = True, event_info: dict[str, str | list[str]] | None = None) -> None:
+		# can_cancel: Allow event cancellation for new events called via the ControlServer
+		can_cancel = forceBool(can_cancel)
+		event_info = event_info or {}
+		event_generator = getEventGenerator(name)
+		logger.notice("rpc firing event %r, event_info=%r, can_cancel=%r", name, event_info, can_cancel)
+		event_generator.createAndFireEvent(eventInfo=event_info, can_cancel=can_cancel)
+
+	def _processActionRequests(self, product_ids: list[str] | None = None) -> None:
+		event = self.opsiclientd.config.get("control_server", "process_actions_event")
+		if not event or event == "auto":
+			timer_active = False
+			on_demand_active = False
+			for event_config in getEventConfigs().values():
+				if event_config["name"] == "timer" and event_config["active"]:
+					timer_active = True
+				elif event_config["name"] == "on_demand" and event_config["active"]:
+					on_demand_active = True
+
+			if timer_active:
+				event = "timer"
+			elif on_demand_active:
+				event = "on_demand"
+			else:
+				raise RuntimeError("Neither timer nor on_demand event active")
+
+		event_info: dict[str, str | list[str]] = {}
+		if product_ids:
+			event_info = {"product_ids": forceProductIdList(product_ids)}
+		self._fireEvent(name=event, event_info=event_info)
 
 	def getPossibleMethods_listOfHashes(self):
 		return self._interface_list
@@ -90,6 +136,100 @@ class PipeControlInterface(Interface):
 
 	def isShutdownTriggered(self):
 		return self.opsiclientd.isShutdownTriggered()
+
+
+class KioskControlInterface(PipeControlInterface):
+	def _get_service(self) -> str:
+		serviceConnection = ServiceConnection(self.opsiclientd)
+		if not serviceConnection.isConfigServiceConnected():
+			serviceConnection.connectConfigService()
+
+	def getClientId(self) -> str:
+		return self.opsiclientd.config.get("global", "host_id")
+
+	def processActionRequests(self, product_ids: list[str] | None = None) -> None:
+		return self._processActionRequests(product_ids=product_ids)
+
+	def fireEvent_software_on_demand(self) -> None:
+		for eventGenerator in getEventGenerators(generatorClass=SwOnDemandEventGenerator):
+			# Allow event cancellation for new events called via the Kiosk
+			eventGenerator.createAndFireEvent(can_cancel=True)
+
+	def getConfigDataFromOpsiclientd(self, get_depot_id: bool = True, get_active_events: bool = True) -> dict[str, Any]:
+		result: dict[str, Any] = {}
+		result["opsiclientd_version"] = (
+			f"Opsiclientd {__version__} [python-opsi={python_opsi_version}python-opsi-common={opsicommon_version}]"
+		)
+
+		if get_depot_id:
+			result["depot_id"] = self.opsiclientd.config.get("depot_server", "master_depot_id")
+
+		if get_active_events:
+			active_events = []
+			for event_config in getEventConfigs().values():
+				if event_config["active"]:
+					active_events.append(event_config["name"])
+
+			result["active_events"] = list(set(active_events))
+		return result
+
+	def backend_setOptions(self, options: dict[str, Any]) -> None:
+		with self._config_service_connection(disconnect=False) as service_connection:
+			service_connection.getConfigService().backend_setOptions(options)
+
+	def configState_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ConfigState]:
+		with self._config_service_connection(disconnect=False) as service_connection:
+			return service_connection.getConfigService().configState_getObjects(attributes, **filter)
+
+	def getDepotId(self, clientId: str | None = None) -> str:
+		with self._config_service_connection(disconnect=False) as service_connection:
+			return service_connection.getConfigService().getDepotId(self.opsiclientd.config.get("global", "host_id"))
+
+	def configState_getClientToDepotserver(
+		self,
+		depotIds: list[str] | None = None,
+		clientIds: list[str] | None = None,
+		masterOnly: bool = True,
+		productIds: list[str] | None = None,
+	) -> list[dict[str, Any]]:
+		with self._config_service_connection(disconnect=False) as service_connection:
+			return service_connection.getConfigService().configState_getClientToDepotserver(depotIds, clientIds, masterOnly, productIds)
+
+	def getGeneralConfigValue(self, key: str, objectId: str | None = None) -> str:
+		with self._config_service_connection(disconnect=False) as service_connection:
+			return service_connection.getConfigService().getGeneralConfigValue(key, objectId)
+
+	def getKioskProductInfosForClient(self, clientId: str, addConfigs: bool = False) -> dict | list:
+		with self._config_service_connection(disconnect=False) as service_connection:
+			return service_connection.getConfigService().getKioskProductInfosForClient(clientId, addConfigs)
+
+	def hostControlSafe_fireEvent(self, event: str, hostIds: list[str] | None = None) -> dict[str, Any]:
+		with self._config_service_connection(disconnect=False) as service_connection:
+			return service_connection.getConfigService().hostControlSafe_fireEvent(event, hostIds)
+
+	def objectToGroup_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ObjectToGroup]:
+		with self._config_service_connection(disconnect=False) as service_connection:
+			return service_connection.getConfigService().objectToGroup_getObjects(attributes, **filter)
+
+	def product_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[Product]:
+		with self._config_service_connection(disconnect=False) as service_connection:
+			return service_connection.getConfigService().product_getObjects(attributes, **filter)
+
+	def productDependency_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ProductDependency]:
+		with self._config_service_connection(disconnect=False) as service_connection:
+			return service_connection.getConfigService().productDependency_getObjects(attributes, **filter)
+
+	def productOnClient_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ProductOnClient]:
+		with self._config_service_connection(disconnect=False) as service_connection:
+			return service_connection.getConfigService().productOnClient_getObjects(attributes, **filter)
+
+	def productOnDepot_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ProductOnDepot]:
+		with self._config_service_connection(disconnect=False) as service_connection:
+			return service_connection.getConfigService().productOnDepot_getObjects(attributes, **filter)
+
+	def setProductActionRequestWithDependencies(self, productId: str, clientId: str, actionRequest: str) -> None:
+		with self._config_service_connection(disconnect=False) as service_connection:
+			return service_connection.getConfigService().setProductActionRequestWithDependencies(productId, clientId, actionRequest)
 
 
 class ControlInterface(PipeControlInterface):
@@ -254,12 +394,10 @@ class ControlInterface(PipeControlInterface):
 		return uptime
 
 	def fireEvent(self, name: str, can_cancel: bool = True, event_info: dict[str, str | list[str]] | None = None) -> None:
-		# can_cancel: Allow event cancellation for new events called via the ControlServer
-		can_cancel = forceBool(can_cancel)
-		event_info = event_info or {}
-		event_generator = getEventGenerator(name)
-		logger.notice("rpc firing event %r, event_info=%r, can_cancel=%r", name, event_info, can_cancel)
-		event_generator.createAndFireEvent(eventInfo=event_info, can_cancel=can_cancel)
+		return self._fireEvent(name=name, can_cancel=can_cancel, event_info=event_info)
+
+	def processActionRequests(self, product_ids: list[str] | None = None) -> None:
+		return self._processActionRequests(product_ids=product_ids)
 
 	def setStatusMessage(self, sessionId: int, message: str) -> None:
 		sessionId = forceInt(sessionId)
@@ -372,16 +510,8 @@ class ControlInterface(PipeControlInterface):
 		return sessions
 
 	def getBackendInfo(self) -> dict[str, Any]:
-		serviceConnection = ServiceConnection(self.opsiclientd)
-		serviceConnection.connectConfigService()
-		backendinfo = None
-		try:
-			configService = serviceConnection.getConfigService()
-			backendinfo = configService.backend_info()
-		finally:
-			serviceConnection.disconnectConfigService()
-
-		return backendinfo
+		with self._config_service_connection() as service_connection:
+			return service_connection.getConfigService().backend_info()
 
 	def getState(self, name: str, default: Any = None) -> Any:
 		"""
@@ -470,18 +600,16 @@ class ControlInterface(PipeControlInterface):
 			remove_user,
 		)
 
-		serviceConnection = ServiceConnection(self.opsiclientd)
-		serviceConnection.connectConfigService()
 		config = self.opsiclientd.config
-		try:
-			configServiceUrl = serviceConnection.getConfigServiceUrl()
+		with self._config_service_connection() as service_connection:
+			configServiceUrl = service_connection.getConfigServiceUrl()
 			config.selectDepotserver(
-				configService=serviceConnection.getConfigService(),
+				configService=service_connection.getConfigService(),
 				mode="mount",
 				productIds=[product_id] if product_id else None,
 			)
 			depot_server_username, depot_server_password = config.getDepotserverCredentials(
-				configService=serviceConnection.getConfigService()
+				configService=service_connection.getConfigService()
 			)
 
 			depot_server_url = config.get("depot_server", "url")
@@ -548,9 +676,6 @@ class ControlInterface(PipeControlInterface):
 				wait_for_ending=wait_for_ending,
 				shell_window_style="hidden",
 			)
-		finally:
-			logger.info("Finished runOpsiScriptAsOpsiSetupUser - disconnecting ConfigService")
-			serviceConnection.disconnectConfigService()
 
 	def runAsOpsiSetupUser(
 		self,
@@ -747,47 +872,6 @@ class ControlInterface(PipeControlInterface):
 			user_message_valid_until=user_message_valid_until,
 		)
 
-	def processActionRequests(self, product_ids: list[str] | None = None) -> None:
-		event = self.opsiclientd.config.get("control_server", "process_actions_event")
-		if not event or event == "auto":
-			timer_active = False
-			on_demand_active = False
-			for event_config in getEventConfigs().values():
-				if event_config["name"] == "timer" and event_config["active"]:
-					timer_active = True
-				elif event_config["name"] == "on_demand" and event_config["active"]:
-					on_demand_active = True
-
-			if timer_active:
-				event = "timer"
-			elif on_demand_active:
-				event = "on_demand"
-			else:
-				raise RuntimeError("Neither timer nor on_demand event active")
-
-		event_info: dict[str, str | list[str]] = {}
-		if product_ids:
-			event_info = {"product_ids": forceProductIdList(product_ids)}
-		self.fireEvent(name=event, event_info=event_info)
-
-	def getConfigDataFromOpsiclientd(self, get_depot_id: bool = True, get_active_events: bool = True) -> dict[str, Any]:
-		result: dict[str, Any] = {}
-		result[
-			"opsiclientd_version"
-		] = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}python-opsi-common={opsicommon_version}]"
-
-		if get_depot_id:
-			result["depot_id"] = self.opsiclientd.config.get("depot_server", "master_depot_id")
-
-		if get_active_events:
-			active_events = []
-			for event_config in getEventConfigs().values():
-				if event_config["active"]:
-					active_events.append(event_config["name"])
-
-			result["active_events"] = list(set(active_events))
-		return result
-
 	def downloadFromDepot(self, product_id: str, destination: str, sub_path: str | None = None) -> None:
 		download_from_depot(product_id, Path(destination).resolve(), sub_path)
 
@@ -808,15 +892,11 @@ class ControlInterface(PipeControlInterface):
 		config = self.opsiclientd.config
 
 		logger.info("Replacing opsi host key on service")
-		serviceConnection = ServiceConnection(self.opsiclientd)
-		serviceConnection.connectConfigService()
-		try:
-			configService = serviceConnection.getConfigService()
+		with self._config_service_connection() as service_connection:
+			configService = service_connection.getConfigService()
 			host = configService.host_getObjects(id=config.get("global", "host_id"))[0]
 			host.setOpsiHostKey(new_key)
 			configService.host_updateObject(host)
-		finally:
-			serviceConnection.disconnectConfigService()
 
 		logger.info("Replacing opsi host key in config")
 		config.set("global", "opsi_host_key", new_key)
@@ -870,6 +950,11 @@ class ControlInterface(PipeControlInterface):
 @lru_cache
 def get_pipe_control_interface(opsiclientd: Opsiclientd) -> PipeControlInterface:
 	return PipeControlInterface(opsiclientd)
+
+
+@lru_cache
+def get_kiosk_control_interface(opsiclientd: Opsiclientd) -> KioskControlInterface:
+	return KioskControlInterface(opsiclientd)
 
 
 @lru_cache

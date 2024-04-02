@@ -35,6 +35,9 @@ SESSION_COOKIE_ATTRIBUTES = ("SameSite=Strict", "Secure")
 SESSION_LIFETIME = 300
 CLIENT_BLOCK_TIME = 120
 AUTH_HEADERS = {"WWW-Authenticate": 'Basic realm="opsi", charset="UTF-8"'}
+PATH_MAPPINGS = {
+	"/interface": "/interface/opsiclientd/",
+}
 
 logger = get_logger()
 config = Config()
@@ -193,6 +196,10 @@ class BaseMiddleware:
 	async def handle_request(self, scope: Scope, receive: Receive, send: Send) -> None:
 		scope["request_headers"] = request_headers = Headers(scope=scope)
 		scope["client"] = self.get_client_address(scope)
+		if redir_path := PATH_MAPPINGS.get(scope["path"].rstrip("/")):
+			logger.debug("Mapping %r to %r", scope["path"], redir_path)
+			scope["path"] = redir_path
+			scope["raw_path"] = redir_path.encode("utf-8")
 
 		session: Session | None = None
 		session_id = get_session_id_from_headers(request_headers)
