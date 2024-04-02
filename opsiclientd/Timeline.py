@@ -45,14 +45,14 @@ config = Config()
 
 logger = get_logger("opsiclientd")
 
-TIMELINE_IMAGE_URL = "/timeline/timeline_js/images/"
+TIMELINE_IMAGE_URL = "/static/timeline/timeline_js/images/"
 HTML_HEAD = """
 <script type="text/javascript">
-Timeline_ajax_url   = "/timeline/timeline_ajax/simile-ajax-api.js";
-Timeline_urlPrefix  = "/timeline/timeline_js/";
+Timeline_ajax_url   = "/static/timeline/timeline_ajax/simile-ajax-api.js";
+Timeline_urlPrefix  = "/static/timeline/timeline_js/";
 Timeline_parameters = "bundle=true";
 </script>
-<script src="/timeline/timeline_js/timeline-api.js" type="text/javascript">
+<script src="/static/timeline/timeline_js/timeline-api.js" type="text/javascript">
 </script>
 <script type="text/javascript">
 var timeline_data;
@@ -68,7 +68,7 @@ function updateEventData() {
 		//timeline.layout();
 		setTimeout(updateEventData, 5000);
 	});
-	req.open("GET", "?get_event_data");
+	req.open("GET", "/info/timeline_event_data");
 	req.send();
 }
 
