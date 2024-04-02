@@ -15,7 +15,7 @@ import platform
 import sys
 
 # Do not remove this import, it's needed by using this module from CLI
-from OPSI import System  # noqa
+from OPSI import System  # type: ignore  # noqa
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.client.opsiservice import RPC_TIMEOUTS, ServiceClient
 from opsicommon.logging import (

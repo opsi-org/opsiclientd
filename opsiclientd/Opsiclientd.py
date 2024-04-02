@@ -937,8 +937,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		link_handling: str = "no",
 	) -> str:
 		alt_command = config.get("opsiclientd_notifier", "alt_command")
-		alt_ids = [i.lower().strip() for i in config.get("opsiclientd_notifier", "alt_ids").split(",")]
-		if notifier_id in alt_ids and alt_command and Path(shlex.split(alt_command)[0]).exists():
+		if notifier_id in config.get("opsiclientd_notifier", "alt_ids") and alt_command and Path(shlex.split(alt_command)[0]).exists():
 			command = f"{alt_command} --link-handling {link_handling}"
 		else:
 			skin_file = ""
