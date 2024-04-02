@@ -24,7 +24,7 @@ from opsiclientd.webserver.application.log_viewer import LogReaderThread
 from opsiclientd.webserver.application.main import setup_application
 from opsiclientd.webserver.rpc.control import ControlInterface
 
-from .utils import default_config, opsiclient_url, opsiclientd_auth  # noqa
+from .utils import default_config, opsiclientd_auth  # noqa
 
 
 def test_fire_event(default_config):  # noqa
