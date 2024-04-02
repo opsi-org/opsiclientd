@@ -1197,17 +1197,17 @@ reference = "uibpypi"
 
 [[package]]
 name = "pyasn1-modules"
-version = "0.3.0"
+version = "0.4.0"
 description = "A collection of ASN.1-based protocols modules"
 optional = false
-python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,>=2.7"
+python-versions = ">=3.8"
 files = [
-    {file = "pyasn1_modules-0.3.0-py2.py3-none-any.whl", hash = "sha256:d3ccd6ed470d9ffbc716be08bd90efbd44d0734bc9303818f7336070984a162d"},
-    {file = "pyasn1_modules-0.3.0.tar.gz", hash = "sha256:5bd01446b736eb9d31512a30d46c1ac3395d676c6f3cafa4c03eb54b9925631c"},
+    {file = "pyasn1_modules-0.4.0-py3-none-any.whl", hash = "sha256:be04f15b66c206eed667e0bb5ab27e2b1855ea54a842e5037738099e8ca4ae0b"},
+    {file = "pyasn1_modules-0.4.0.tar.gz", hash = "sha256:831dbcea1b177b28c9baddf4c6d1013c24c3accd14a1873fffaa6a2e905f17b6"},
 ]
 
 [package.dependencies]
-pyasn1 = ">=0.4.6,<0.6.0"
+pyasn1 = ">=0.4.6,<0.7.0"
 
 [package.source]
 type = "legacy"
@@ -1216,13 +1216,13 @@ reference = "uibpypi"
 
 [[package]]
 name = "pycparser"
-version = "2.21"
+version = "2.22"
 description = "C parser in Python"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+python-versions = ">=3.8"
 files = [
-    {file = "pycparser-2.21-py2.py3-none-any.whl", hash = "sha256:8ee45429555515e1f6b185e78100aea234072576aa43ab53aefcae078162fca9"},
-    {file = "pycparser-2.21.tar.gz", hash = "sha256:e644fdec12f7872f86c58ff790da456218b10f863970249516d60a5eaca77206"},
+    {file = "pycparser-2.22-py3-none-any.whl", hash = "sha256:c3702b6d3dd8c7abc1afa565d7e63d53a1d0bd86cdc24edd75470f4de499cfcc"},
+    {file = "pycparser-2.22.tar.gz", hash = "sha256:491c8be9c040f5390f5bf44a5b07752bd07f56edf992381b05c701439eec10f6"},
 ]
 
 [package.source]
@@ -1603,13 +1603,13 @@ reference = "uibpypi"
 
 [[package]]
 name = "python-opsi-common"
-version = "4.3.9.1"
+version = "4.3.10.2"
 description = "The opsi python common library"
 optional = false
 python-versions = ">=3.11,<3.13"
 files = [
-    {file = "python_opsi_common-4.3.9.1-py3-none-any.whl", hash = "sha256:5be3aaeb510401dbe3ac16883d18bfd37ce41d2e4e7a350ed1a524fabcbd6489"},
-    {file = "python_opsi_common-4.3.9.1.tar.gz", hash = "sha256:19cd8739831014cb5abe858c37820e4d5ae3f5817d31d2dc9b831afd74658d5f"},
+    {file = "python_opsi_common-4.3.10.2-py3-none-any.whl", hash = "sha256:33dd50b4f783367117dba7949ffeef8e3b43191ce491b93a8c4e43532c24337e"},
+    {file = "python_opsi_common-4.3.10.2.tar.gz", hash = "sha256:5f60c421cad942f59494a2f2f9b4cc1f220b8111bb79c29d3c4d60bcb253814d"},
 ]
 
 [package.dependencies]
@@ -2156,13 +2156,13 @@ reference = "uibpypi"
 
 [[package]]
 name = "types-pywin32"
-version = "306.0.0.20240319"
+version = "306.0.0.20240331"
 description = "Typing stubs for pywin32"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "types-pywin32-306.0.0.20240319.tar.gz", hash = "sha256:a578ba15167a7a3a2bca0b307a401650d2f6b7bb58b2215d3ad9a6584b7baea5"},
-    {file = "types_pywin32-306.0.0.20240319-py3-none-any.whl", hash = "sha256:acaa5da80f1b875115da8af2836c75c3cee4b45a2dd19e0fcac23dd011e2387b"},
+    {file = "types-pywin32-306.0.0.20240331.tar.gz", hash = "sha256:3427e60ffbbc47b31e6bc416c3e4c37d579e6774e5152dab953589c9b64c4d58"},
+    {file = "types_pywin32-306.0.0.20240331-py3-none-any.whl", hash = "sha256:844b90253f3da38e254c9ce199ba41f63da52c511003daedcda414e88f1cf319"},
 ]
 
 [package.source]
@@ -2172,13 +2172,13 @@ reference = "uibpypi"
 
 [[package]]
 name = "types-requests"
-version = "2.31.0.20240311"
+version = "2.31.0.20240402"
 description = "Typing stubs for requests"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "types-requests-2.31.0.20240311.tar.gz", hash = "sha256:b1c1b66abfb7fa79aae09097a811c4aa97130eb8831c60e47aee4ca344731ca5"},
-    {file = "types_requests-2.31.0.20240311-py3-none-any.whl", hash = "sha256:47872893d65a38e282ee9f277a4ee50d1b28bd592040df7d1fdaffdf3779937d"},
+    {file = "types-requests-2.31.0.20240402.tar.gz", hash = "sha256:e5c09a202f8ae79cd6ffbbba2203b6c3775a83126283bb2a6abbc129abc02a12"},
+    {file = "types_requests-2.31.0.20240402-py3-none-any.whl", hash = "sha256:bd7eb7102168d4b5b489f15cdd9842b63ab7fe56aa82a0589fa595b94195acf4"},
 ]
 
 [package.dependencies]
