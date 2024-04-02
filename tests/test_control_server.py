@@ -10,6 +10,7 @@ test_control_server
 
 import threading
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -161,6 +162,22 @@ def test_headers(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str
 		test_client.auth = opsiclientd_auth
 		response = client.get("/")
 		assert response.headers["server"] == f"opsiclientd {__version__}"
+
+		server_date = response.headers["date"]
+		assert server_date.endswith(" UTC")
+		server_dt = datetime.strptime(server_date, "%a, %d %b %Y %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+		now = datetime.now(tz=timezone.utc)
+		assert abs((now - server_dt).total_seconds()) < 2
+
+		server_timestamp = int(response.headers["x-date-unix-timestamp"])
+		assert abs(now.timestamp() - server_timestamp) < 2
+
+		time.sleep(1)
+
+		res = test_client.get("/")
+		server_date = res.headers["date"]
+		server_dt = datetime.strptime(server_date, "%a, %d %b %Y %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+		assert now < server_dt
 
 		response = client.get("/rpc")
 		assert response.headers["server"] == "opsiclientd config cache service 4.2.0.0"

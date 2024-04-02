@@ -42,8 +42,9 @@ PATH_MAPPINGS = {
 
 logger = get_logger()
 config = Config()
-server_date = (0, b"", b"")
+server_date = (0, "", "")
 BasicAuth = namedtuple("BasicAuth", ["username", "password"])
+default_server_header = f"opsiclientd {__version__}"
 
 
 def get_server_date() -> tuple[bytes, bytes]:
@@ -52,8 +53,8 @@ def get_server_date() -> tuple[bytes, bytes]:
 	if server_date[0] != now:
 		server_date = (
 			now,
-			str(now).encode("ascii"),
-			datetime.fromtimestamp(now, timezone.utc).strftime("%a, %d %b %Y %H:%M:%S %Z").encode("utf-8"),
+			str(now),
+			datetime.fromtimestamp(now, timezone.utc).strftime("%a, %d %b %Y %H:%M:%S %Z"),
 		)
 	return server_date[1], server_date[2]
 
@@ -142,9 +143,6 @@ class BaseMiddleware:
 		if host:
 			host = normalize_ip_address(host)
 		return host, port
-
-	def server_header(self, scope: Scope) -> str:
-		return "opsiclientd config cache service 4.2.0.0" if scope.get("path", "").startswith("/rpc") else f"opsiclientd {__version__}"
 
 	def remove_expired_sessions(self) -> None:
 		for session_id in list(self._sessions):
@@ -235,6 +233,11 @@ class BaseMiddleware:
 		async def send_wrapper(message: Message) -> None:
 			if message["type"] == "http.response.start":
 				headers = MutableHeaders(scope=message)
+				if not headers.get("server"):
+					headers.append("server", default_server_header)
+				dat = get_server_date()
+				headers.append("x-date-unix-timestamp", dat[0])
+				headers.append("date", dat[1])
 				if session:
 					session.add_cookie_to_headers(headers)
 
@@ -264,14 +267,6 @@ class BaseMiddleware:
 					logger.trace(">>> HTTP/%s %s", scope.get("http_version"), message.get("status"))
 					for header, value in dict(headers).items():
 						logger.trace(">>> %s: %s", header, value)
-
-			if "headers" in message:
-				message["headers"].append((b"server", self.server_header(scope).encode("utf-8")))
-				dat = get_server_date()
-				message["headers"].append((b"date", dat[1]))
-				message["headers"].append((b"x-date-unix-timestamp", dat[0]))
-				if scope["path"].startswith("/rpc"):
-					message["headers"].append((b"content-type", b"application/json"))
 
 			await send(message)
 
@@ -305,7 +300,8 @@ class BaseMiddleware:
 			error = str(err)
 
 		headers = headers or {}
-		headers["server"] = self.server_header(scope)
+		if not headers.get("server"):
+			headers["server"] = default_server_header
 		headers["x-opsi-error"] = str(error)[:64]
 
 		if scope["type"] == "websocket":

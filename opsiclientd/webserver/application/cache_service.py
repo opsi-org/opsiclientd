@@ -11,11 +11,12 @@ import json
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import HTMLResponse, Response
 from opsicommon.logging import get_logger
+from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 
 from opsiclientd.Config import Config
 from opsiclientd.webserver.application import INTERFACE_PAGE, get_opsiclientd
 from opsiclientd.webserver.rpc.control import get_cache_service_interface
-from opsiclientd.webserver.rpc.jsonrpc import process_request
+from opsiclientd.webserver.rpc.jsonrpc import JSONRPC20Error, JSONRPC20ErrorResponse, process_request, serialize_data
 
 logger = get_logger()
 config = Config()
@@ -51,7 +52,21 @@ async def jsonrpc_head() -> Response:
 @jsonrpc_router.get("{any:path}")
 @jsonrpc_router.post("{any:path}")
 async def jsonrpc(request: Request, response: Response) -> Response:
-	return await process_request(interface=get_cache_service_interface(get_opsiclientd()), request=request, response=response)
+	server_version = "4.2.0.0"
+	try:
+		opsiclientd = get_opsiclientd()
+		cache_service = opsiclientd.getCacheService()
+		server_version = cache_service.getConfigCacheState().get("server_version", server_version)
+		response = await process_request(interface=get_cache_service_interface(opsiclientd), request=request, response=response)
+	except Exception as err:
+		response.status_code = HTTP_500_INTERNAL_SERVER_ERROR
+		jsonrpc_response = JSONRPC20ErrorResponse(id=0, error=JSONRPC20Error(message=str(err)))
+		data = serialize_data(jsonrpc_response, "json")
+		response.headers["Content-Type"] = "application/json"
+		response.headers["content-length"] = str(len(data))
+		response.body = data
+	response.headers.append("server", f"opsiclientd config cache service {server_version}")
+	return response
 
 
 def setup(app: FastAPI) -> None:
