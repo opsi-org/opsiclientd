@@ -126,16 +126,16 @@ class Timeline(metaclass=Singleton):
 
 	_initialized = False
 
-	def __init__(self):
+	def __init__(self) -> None:
 		if self._initialized:
 			return
 		self._initialized = True
 
-		self._sql = None
+		self._sql: SQLite | None = None
 		self._db_lock = threading.Lock()
 		self._stopped = False
 
-	def start(self):
+	def start(self) -> None:
 		db_file = config.get("global", "timeline_db")
 		logger.notice("Starting timeline (database location: %s)", db_file)
 		try:
@@ -145,14 +145,15 @@ class Timeline(metaclass=Singleton):
 			self._createDatabase(delete_existing=True)
 		self._cleanupDatabase()
 
-	def stop(self):
+	def stop(self) -> None:
 		self._stopped = True
 		end = forceOpsiTimestamp(timestamp())
 
-		with self._db_lock, self._sql.session() as session:
-			self._sql.update(session, "EVENT", "`durationEvent` = 1 AND `end` is NULL", {"end": end})
+		if self._sql:
+			with self._db_lock, self._sql.session() as session:
+				self._sql.update(session, "EVENT", "`durationEvent` = 1 AND `end` is NULL", {"end": end})
 
-	def getEventData(self):
+	def getEventData(self) -> dict[str, Any]:
 		events = []
 		now = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.localtime())
 		for event in self.getEvents():
@@ -199,11 +200,12 @@ class Timeline(metaclass=Singleton):
 			events.append(event)
 		return {"dateTimeFormat": "iso8601", "events": events}
 
-	def getHtmlHead(self):
+	def getHtmlHead(self) -> str:
 		now = time.strftime("%Y-%m-%dT%H:%M:%S+00:00", time.localtime())
 		return HTML_HEAD % {"date": now}
 
-	def _cleanupDatabase(self):
+	def _cleanupDatabase(self) -> None:
+		assert self._sql
 		with self._db_lock, self._sql.session() as session:
 			try:
 				self._sql.execute(session, f'delete from EVENT where `start` < "{timestamp(time.time() - 7*24*3600)}"')
@@ -211,7 +213,7 @@ class Timeline(metaclass=Singleton):
 			except Exception as cleanup_error:
 				logger.error(cleanup_error)
 
-	def _createDatabase(self, delete_existing=False):
+	def _createDatabase(self, delete_existing: bool = False) -> None:
 		timelineDB = config.get("global", "timeline_db")
 		timelineFolder = os.path.dirname(timelineDB)
 		if not os.path.exists(timelineFolder):
@@ -244,8 +246,17 @@ class Timeline(metaclass=Singleton):
 				self._sql.execute(session, "CREATE INDEX `category` on `EVENT` (`category`);")
 				self._sql.execute(session, "CREATE INDEX `start` on `EVENT` (`start`);")
 
-	def addEvent(self, title, description="", isError=False, category=None, durationEvent=False, start=None, end=None):
-		if self._stopped:
+	def addEvent(
+		self,
+		title: str,
+		description: str = "",
+		isError: bool = False,
+		category: str | None = None,
+		durationEvent: bool = False,
+		start: str | None = None,
+		end: str | None = None,
+	) -> int:
+		if self._stopped or not self._sql:
 			return -1
 
 		with self._db_lock, self._sql.session() as session:
@@ -280,8 +291,8 @@ class Timeline(metaclass=Singleton):
 				logger.error("Failed to add event '%s': %s", title, add_error)
 		return -1
 
-	def setEventEnd(self, eventId, end=None):
-		if self._stopped:
+	def setEventEnd(self, eventId: int, end: str | None = None) -> int:
+		if self._stopped or not self._sql:
 			return -1
 
 		with self._db_lock, self._sql.session() as session:
@@ -296,7 +307,7 @@ class Timeline(metaclass=Singleton):
 		return -1
 
 	def getEvents(self) -> list[dict[str, Any]]:
-		if self._stopped:
+		if self._stopped or not self._sql:
 			return []
 
 		with self._db_lock, self._sql.session() as session:

@@ -9,14 +9,21 @@ utils
 """
 
 import struct
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import netifaces  # type: ignore[import]
 from opsicommon.logging import get_logger
 
+if TYPE_CHECKING:
+	from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
+
 logger = get_logger("opsiclientd")
 
 
-def get_include_exclude_product_ids(config_service, includeProductGroupIds, excludeProductGroupIds):
+def get_include_exclude_product_ids(
+	config_service: JSONRPCBackend, includeProductGroupIds: list[str], excludeProductGroupIds: list[str]
+) -> tuple[list[str], list[str]]:
 	includeProductIds = []
 	excludeProductIds = []
 
@@ -38,15 +45,15 @@ def get_include_exclude_product_ids(config_service, includeProductGroupIds, excl
 	return includeProductIds, excludeProductIds
 
 
-def lo_word(dword):
+def lo_word(dword: int) -> str:
 	return str(dword & 0x0000FFFF)
 
 
-def hi_word(dword):
+def hi_word(dword: int) -> str:
 	return str(dword >> 16)
 
 
-def read_fixed_file_info(data):
+def read_fixed_file_info(data: bytes) -> str:
 	# https://docs.microsoft.com/en-us/windows/win32/api/verrsrc/ns-verrsrc-vs_fixedfileinfo
 	pos = data.find(b"\xbd\x04\xef\xfe")
 	if pos < 0:
@@ -56,10 +63,10 @@ def read_fixed_file_info(data):
 	return ".".join([hi_word(vms), lo_word(vms), hi_word(vls), lo_word(vls)])
 
 
-def get_version_from_mach_binary(filename):
+def get_version_from_mach_binary(filename: str | Path) -> str:
 	from macholib import MachO  # type: ignore[import]
 
-	machofile = MachO.MachO(filename)
+	machofile = MachO.MachO(str(filename))
 	fpc_offset, fpc_size = 0, 0
 	for _load_cmd, _cmd, _data in machofile.headers[0].commands:
 		for data in _data:
@@ -77,7 +84,7 @@ def get_version_from_mach_binary(filename):
 	raise ValueError(f"No version information embedded in '{filename}'")
 
 
-def get_version_from_elf_binary(filename):
+def get_version_from_elf_binary(filename: str | Path) -> str:
 	from elftools.elf.elffile import ELFFile  # type: ignore[import]
 
 	with open(filename, "rb") as file:
@@ -89,11 +96,11 @@ def get_version_from_elf_binary(filename):
 	raise ValueError(f"No version information embedded in '{filename}'")
 
 
-def get_version_from_dos_binary(filename):
+def get_version_from_dos_binary(filename: str | Path) -> str:
 	import pefile  # type: ignore[import]
 
 	try:
-		pef = pefile.PE(filename)
+		pef = pefile.PE(str(filename))
 		pef.close()
 		fileinfo = pef.VS_FIXEDFILEINFO
 		if isinstance(fileinfo, list):
@@ -107,7 +114,7 @@ def get_version_from_dos_binary(filename):
 	raise ValueError(f"No version information embedded in '{filename}'")
 
 
-def log_network_status():
+def log_network_status() -> None:
 	status_string = ""
 	for interface in netifaces.interfaces():
 		for protocol in (netifaces.AF_INET, netifaces.AF_INET6):
