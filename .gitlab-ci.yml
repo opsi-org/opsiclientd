@@ -119,7 +119,7 @@ lint-pytest:
     - apt-get --yes install sqlite3
     - poetry lock --no-update --no-cache
     - poetry install
-    - poetry run ruff opsiclientd tests
+    - poetry run ruff check opsiclientd tests
     - poetry run mypy opsiclientd tests
     - for db in coverage_*; do sqlite3 $db 'update file set path=replace(substr(path,instr(path,"opsiclientd")+12),"\","/");'; done
     - echo -e '[run]\nrelative_files = True\n' > .coveragerc

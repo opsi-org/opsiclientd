@@ -168,11 +168,11 @@ class TerminalWebsocket(WebSocketEndpoint):
 		if not shell:
 			shell = "powershell.exe" if is_windows() else "bash"
 		try:
-			lines = int(lines)
+			lines = int(lines)  # type: ignore[arg-type]
 		except (ValueError, TypeError):
 			lines = 30
 		try:
-			columns = int(columns)
+			columns = int(columns)  # type: ignore[arg-type]
 		except (ValueError, TypeError):
 			columns = 120
 
@@ -192,12 +192,13 @@ class TerminalWebsocket(WebSocketEndpoint):
 				self.child_set_size,
 				self.child_stop,
 			) = start_pty(shell=shell, lines=lines, columns=columns)
+			assert self.child_read
 			self.terminal_reader_thread = TerminalReaderThread(
 				loop=asyncio.get_event_loop(), websocket=websocket, child_read=self.child_read
 			)
 			self.terminal_reader_thread.start()
 		except Exception as err:
-			websocket.close(code=500, reason=str(err))
+			await websocket.close(code=500, reason=str(err))
 
 	async def on_disconnect(self, websocket: WebSocket, close_code: int) -> None:
 		if self.terminal_reader_thread:

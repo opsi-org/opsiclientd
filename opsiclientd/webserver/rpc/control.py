@@ -139,11 +139,6 @@ class PipeControlInterface(Interface):
 
 
 class KioskControlInterface(PipeControlInterface):
-	def _get_service(self) -> str:
-		serviceConnection = ServiceConnection(self.opsiclientd)
-		if not serviceConnection.isConfigServiceConnected():
-			serviceConnection.connectConfigService()
-
 	def getClientId(self) -> str:
 		return self.opsiclientd.config.get("global", "host_id")
 
