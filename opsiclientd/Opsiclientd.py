@@ -9,7 +9,6 @@ Basic opsiclientd implementation. This is abstract in some parts that
 should be overridden in the concrete implementation for an OS.
 """
 
-
 import os
 import platform
 import re

@@ -14,10 +14,10 @@ from opsicommon.logging import logger
 
 from opsiclientd.Opsiclientd import Opsiclientd
 
-__all__ = ['OpsiclientdPosix']
+__all__ = ["OpsiclientdPosix"]
+
 
 class OpsiclientdPosix(Opsiclientd):
-
 	_PID_DIR = os.path.join("/var", "run", "opsiclientd")
 
 	def __init__(self):

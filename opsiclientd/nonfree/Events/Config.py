@@ -9,7 +9,7 @@ Non-free event configuration.
 
 from opsiclientd.EventConfiguration import EventConfig
 
-__all__ = ['CustomEventConfig']
+__all__ = ["CustomEventConfig"]
 
 
 class CustomEventConfig(EventConfig):

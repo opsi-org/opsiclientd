@@ -48,7 +48,7 @@ def hi_word(dword):
 
 def read_fixed_file_info(data):
 	# https://docs.microsoft.com/en-us/windows/win32/api/verrsrc/ns-verrsrc-vs_fixedfileinfo
-	pos = data.find(b"\xBD\x04\xEF\xFE")
+	pos = data.find(b"\xbd\x04\xef\xfe")
 	if pos < 0:
 		raise ValueError("Failed to read VS_FIXEDFILEINFO")
 	vms = struct.unpack("<I", data[pos + 8 : pos + 12])[0]

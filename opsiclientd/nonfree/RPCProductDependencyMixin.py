@@ -9,6 +9,7 @@ RPCProductDependencyMixin
 
 copied from opsiconfd.backend.rpc.obj_product_dependency
 """
+
 from __future__ import annotations
 
 from collections import defaultdict

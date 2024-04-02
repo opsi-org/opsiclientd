@@ -54,7 +54,7 @@ from opsicommon.messagebus.message import (
 	timestamp,
 )
 from opsicommon.messagebus.process import process_messagebus_message as process_process_message
-from opsicommon.ssl import install_ca, load_ca, load_cas, remove_ca
+from opsicommon.ssl import install_ca, load_cas, remove_ca
 from opsicommon.system import lock_file
 from opsicommon.types import (
 	forceBool,

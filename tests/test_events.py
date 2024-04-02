@@ -10,7 +10,7 @@ test_events
 
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 
-from .utils import default_config
+from .utils import default_config  # noqa
 
 
 def testGettingEventConfiguration():

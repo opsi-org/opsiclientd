@@ -8,7 +8,6 @@
 Timer events get active after a specified time.
 """
 
-
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.Events.Basic import Event, EventGenerator
 

@@ -19,10 +19,10 @@ from opsiclientd.EventProcessing import EventProcessingThread
 from opsiclientd.Events.Basic import Event
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 
-from .utils import default_config
+from .utils import default_config  # noqa
 
 
-def test_notification_server(default_config):
+def test_notification_server(default_config):  # noqa
 	configs = getEventConfigs()
 	eventConfig = EventConfig(configs["on_demand"])
 

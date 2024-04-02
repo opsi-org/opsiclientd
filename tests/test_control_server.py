@@ -22,10 +22,10 @@ from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import createEventGenerators
 from opsiclientd.Opsiclientd import Opsiclientd
 
-from .utils import default_config, opsiclient_url, opsiclientd_auth
+from .utils import default_config, opsiclient_url, opsiclientd_auth  # noqa
 
 
-def test_fire_event(default_config):
+def test_fire_event(default_config):  # noqa
 	ocd = Opsiclientd()
 	createEventGenerators(ocd)
 	getEventConfigs()
@@ -58,13 +58,13 @@ def test_log_reader_start_position(tmpdir):
 
 
 @pytest.mark.opsiclientd_running
-def test_index_page(opsiclient_url):
+def test_index_page(opsiclient_url):  # noqa
 	req = requests.get(f"{opsiclient_url}", verify=False)
 	assert req.status_code == 200
 
 
 @pytest.mark.opsiclientd_running
-def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):
+def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):  # noqa
 	rpc = {"id": 1, "method": "invalid", "params": []}
 	for endpoint in ("opsiclientd", "rpc"):
 		response = requests.post(f"{opsiclient_url}/{endpoint}", verify=False, json=rpc)
@@ -79,7 +79,7 @@ def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):
 
 
 @pytest.mark.opsiclientd_running
-def test_kiosk_auth(opsiclient_url):
+def test_kiosk_auth(opsiclient_url):  # noqa
 	# Kiosk allows connection from 127.0.0.1 without auth
 	response = requests.post(f"{opsiclient_url}/kiosk", verify=False, headers={"Content-Encoding": "gzip"}, data="fail")
 	assert response.status_code == 500  # Not 401
@@ -116,7 +116,7 @@ def test_kiosk_auth(opsiclient_url):
 
 
 @pytest.mark.opsiclientd_running
-def test_concurrency(opsiclient_url, opsiclientd_auth):
+def test_concurrency(opsiclient_url, opsiclientd_auth):  # noqa
 	rpcs = [
 		{"id": 1, "method": "execute", "params": ["sleep 3; echo ok", True]},
 		{"id": 2, "method": "execute", "params": ["sleep 4; echo ok", True]},

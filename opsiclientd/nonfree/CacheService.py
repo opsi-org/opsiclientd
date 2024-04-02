@@ -9,7 +9,6 @@ opsiclientd.nonfree.CacheService
 @copyright:	uib GmbH <info@uib.de>
 """
 
-
 import codecs
 import collections
 import os

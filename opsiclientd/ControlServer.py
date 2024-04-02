@@ -11,7 +11,6 @@ These classes are used to create a https service which executes remote
 procedure calls
 """
 
-
 import codecs
 import datetime
 import email
@@ -1860,9 +1859,9 @@ class OpsiclientdRpcInterface(OpsiclientdRpcPipeInterface):
 
 	def getConfigDataFromOpsiclientd(self, get_depot_id=True, get_active_events=True):
 		result = {}
-		result[
-			"opsiclientd_version"
-		] = f"Opsiclientd {__version__} [python-opsi={python_opsi_version}python-opsi-common={opsicommon_version}]"
+		result["opsiclientd_version"] = (
+			f"Opsiclientd {__version__} [python-opsi={python_opsi_version}python-opsi-common={opsicommon_version}]"
+		)
 
 		if get_depot_id:
 			result["depot_id"] = config.get("depot_server", "master_depot_id")
