@@ -47,7 +47,7 @@ BasicAuth = namedtuple("BasicAuth", ["username", "password"])
 default_server_header = f"opsiclientd {__version__}"
 
 
-def get_server_date() -> tuple[bytes, bytes]:
+def get_server_date() -> tuple[str, str]:
 	global server_date
 	now = int(time())
 	if server_date[0] != now:
