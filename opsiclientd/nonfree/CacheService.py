@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from OPSI import System  # type: ignore[import]
-from OPSI.Backend.Backend import ExtendedConfigDataBackend  # type: ignore[import]
+from OPSI.Backend.Backend import Backend, ExtendedConfigDataBackend  # type: ignore[import]
 from OPSI.Backend.BackendManager import BackendExtender  # type: ignore[import]
 from OPSI.Backend.SQLite import (  # type: ignore[import]
 	SQLiteBackend,
@@ -201,7 +201,7 @@ class CacheService(threading.Thread):
 
 		return False
 
-	def getConfigBackend(self):
+	def getConfigBackend(self) -> Backend:
 		self.initializeConfigCacheService()
 		return self._configCacheService.getConfigBackend()
 
@@ -485,7 +485,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			threading.Thread.__init__(self, name="ConfigCacheService")
 			ServiceConnection.__init__(self, opsiclientd)
 
-			self._configBackend = None
+			self._configBackend: Backend | None = None
 			self._configCacheDir = os.path.join(config.get("cache_service", "storage_dir"), "config")
 			self._opsiModulesFile = os.path.join(self._configCacheDir, "cached_modules")
 			self._opsiPasswdFile = os.path.join(self._configCacheDir, "cached_passwd")
@@ -594,7 +594,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			extensionReplaceMethods=False,
 		)
 
-	def getConfigBackend(self):
+	def getConfigBackend(self) -> Backend:
 		return self._configBackend
 
 	def getState(self) -> dict[str, Any]:

@@ -184,8 +184,8 @@ def test_concurrency(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) ->
 	def run_rpc(rpc):
 		thread = threading.current_thread()
 		res = requests.post(f"{opsiclientd_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
-		thread.status_code = res.status_code
-		thread.response = res.json()
+		setattr(thread, "status_code", res.status_code)
+		setattr(thread, "response", res.json())
 
 	threads = []
 	for rpc in rpcs:
@@ -195,13 +195,14 @@ def test_concurrency(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) ->
 
 	for thread in threads:
 		thread.join()
-		assert thread.status_code == 200
-		if thread.response["id"] == 3:
-			assert thread.response["error"] is not None
+		assert getattr(thread, "status_code") == 200
+		response = getattr(thread, "response")
+		if response["id"] == 3:
+			assert response["error"] is not None
 		else:
-			assert thread.response["error"] is None
-		if thread.response["id"] in (1, 2):
-			assert "ok" in thread.response["result"]
+			assert response["error"] is None
+		if response["id"] in (1, 2):
+			assert "ok" in response["result"]
 
 
 def test_log_reader_start_position(tmp_path: Path) -> None:

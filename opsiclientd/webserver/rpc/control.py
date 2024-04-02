@@ -22,6 +22,7 @@ import time
 from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
+from types import MethodType
 from typing import TYPE_CHECKING, Any, Generator, Union
 from uuid import uuid4
 
@@ -952,3 +953,19 @@ def get_kiosk_control_interface(opsiclientd: Opsiclientd) -> KioskControlInterfa
 @lru_cache
 def get_control_interface(opsiclientd: Opsiclientd) -> ControlInterface:
 	return ControlInterface(opsiclientd)
+
+
+@lru_cache
+def get_cache_service_interface(opsiclientd: Opsiclientd) -> ControlInterface:
+	cache_service = opsiclientd.getCacheService()
+	if not cache_service:
+		raise RuntimeError("Cache service not running")
+
+	backend = cache_service.getConfigBackend()
+	setattr(backend, "_interface", {})
+	setattr(backend, "_interface_list", [])
+	setattr(backend, "_create_interface", MethodType(Interface._create_interface, backend))
+	setattr(backend, "get_interface", MethodType(Interface.get_interface, backend))
+	setattr(backend, "get_method_interface", MethodType(Interface.get_method_interface, backend))
+	backend._create_interface()
+	return backend

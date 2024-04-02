@@ -94,7 +94,10 @@ def get_method_interface(
 class Interface:
 	def __init__(self) -> None:
 		self._interface: dict[str, MethodInterface] = {}
+		self._interface_list: list[dict[str, Any]]
+		self._create_interface()
 
+	def _create_interface(self) -> None:
 		for _, function in inspect.getmembers(self, inspect.ismethod):
 			method_name = function.__name__
 			if getattr(function, "no_export", False):
@@ -105,7 +108,7 @@ class Interface:
 
 			self._interface[method_name] = get_method_interface(function)
 
-		self._interface_list: list[dict[str, Any]] = [self._interface[name].as_dict() for name in sorted(list(self._interface.keys()))]
+		self._interface_list = [self._interface[name].as_dict() for name in sorted(list(self._interface.keys()))]
 
 	@no_export
 	def get_interface(self) -> dict[str, MethodInterface]:

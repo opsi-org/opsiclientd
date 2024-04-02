@@ -13,6 +13,7 @@ from fastapi import FastAPI
 
 from opsiclientd.Config import Config
 from opsiclientd.webserver.application import set_opsiclientd
+from opsiclientd.webserver.application.cache_service import setup as setup_cache_service
 from opsiclientd.webserver.application.control import setup as setup_control_interface
 from opsiclientd.webserver.application.index import setup as setup_index
 from opsiclientd.webserver.application.info import setup as setup_info
@@ -36,6 +37,7 @@ def setup_application(opsiclientd: Opsiclientd) -> FastAPI:
 	setup_control_interface(app)
 	setup_log_viewer(app)
 	setup_terminal(app)
+	setup_cache_service(app)
 	if config.get("control_server", "kiosk_api_active"):
 		setup_kiosk(app)
 	return app

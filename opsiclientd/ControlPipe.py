@@ -9,6 +9,7 @@ Pipes for remote procedure calls.
 
 The classes are used to create named pipes for remote procedure calls.
 """
+
 from __future__ import annotations
 
 import os
