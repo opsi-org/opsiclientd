@@ -220,7 +220,13 @@ class BaseMiddleware:
 
 		if not session.authenticated:
 			self.remove_expired_sessions()
-			await self.authenticate(scope)
+			try:
+				await self.authenticate(scope)
+			except Exception:
+				if scope["path"].startswith("/kiosk") and scope["client"][0] in ("127.0.0.1", "::1"):
+					logger.info("Allow unauthenticated access to kiosk endpoint from localhost")
+				else:
+					raise
 
 		async def send_wrapper(message: Message) -> None:
 			if message["type"] == "http.response.start":

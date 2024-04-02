@@ -8,11 +8,14 @@
 test_control_server
 """
 
+import threading
 import time
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import requests
+from httpx import HTTPStatusError
 from starlette.websockets import WebSocketDisconnect
 
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
@@ -21,10 +24,10 @@ from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.webserver.application.log_viewer import LogReaderThread
 from opsiclientd.webserver.rpc.control import ControlInterface
 
-from .utils import OpsiclientdTestClient, default_config, opsiclientd_auth, opsiclientd_url, test_client  # noqa
+from .utils import Config, OpsiclientdTestClient, default_config, opsiclientd_auth, opsiclientd_url, test_client  # noqa
 
 
-def test_fire_event(default_config: None) -> None:  # noqa
+def test_fire_event(default_config: Config) -> None:  # noqa
 	ocd = Opsiclientd()
 	createEventGenerators(ocd)
 	getEventConfigs()
@@ -139,6 +142,68 @@ def test_log_viewer_auth(test_client: OpsiclientdTestClient, opsiclientd_auth: t
 			pass
 
 
+def test_kiosk_auth(default_config: Config, test_client: OpsiclientdTestClient) -> None:  # noqa
+	# Kiosk allows connection from 127.0.0.1 without auth
+	with test_client as client:
+		response = client.jsonrpc20(path="/kiosk", method="getClientId", params=[], id="1")
+		assert "error" not in response
+		assert response["result"] == default_config.get("global", "host_id")
+
+		test_client.set_client_address("1.2.3.4", 12345)
+		with pytest.raises(HTTPStatusError, match="401 Unauthorized"):
+			client.jsonrpc20(path="/kiosk", method="getClientId", params=[], id="1", headers={"x-forwarded-for": "127.0.0.1"})
+
+
+def test_control_jsonrpc(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
+	with test_client as client:
+		with pytest.raises(HTTPStatusError, match="401 Unauthorized"):
+			client.jsonrpc20(path="/opsiclientd", method="noop", params=["x"], id="1")
+
+		test_client.auth = opsiclientd_auth
+		response = client.jsonrpc20(path="/opsiclientd", method="noop", params=["x"], id="2")
+		assert "error" not in response
+		assert response["result"] is None
+		assert response["id"] == "2"
+
+		response = client.jsonrpc20(path="/opsiclientd", method="uptime", params=[], id="3")
+		assert "error" not in response
+		assert int(response["result"]) >= 0
+		assert response["id"] == "3"
+
+
+@pytest.mark.opsiclientd_running
+def test_concurrency(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
+	rpcs = [
+		{"id": 1, "method": "execute", "params": ["sleep 3; echo ok", True]},
+		{"id": 2, "method": "execute", "params": ["sleep 4; echo ok", True]},
+		{"id": 3, "method": "invalid", "params": []},
+		{"id": 4, "method": "log_read", "params": []},
+		{"id": 5, "method": "getConfig", "params": []},
+	]
+
+	def run_rpc(rpc):
+		thread = threading.current_thread()
+		res = requests.post(f"{opsiclientd_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
+		thread.status_code = res.status_code
+		thread.response = res.json()
+
+	threads = []
+	for rpc in rpcs:
+		thread = threading.Thread(target=run_rpc, args=[rpc])
+		threads.append(thread)
+		thread.start()
+
+	for thread in threads:
+		thread.join()
+		assert thread.status_code == 200
+		if thread.response["id"] == 3:
+			assert thread.response["error"] is not None
+		else:
+			assert thread.response["error"] is None
+		if thread.response["id"] in (1, 2):
+			assert "ok" in thread.response["result"]
+
+
 def test_log_reader_start_position(tmp_path: Path) -> None:
 	log_lines = 20
 	for num_tail_records in (5, 10, 19, 20, 21):
@@ -157,91 +222,3 @@ def test_log_reader_start_position(tmp_path: Path) -> None:
 			lines = data.count("\n")
 			print(f"{lines=}, {num_tail_records=}, {log_lines=}")
 			assert lines == num_tail_records if log_lines > num_tail_records else log_lines
-
-
-"""
-TODO
-
-@pytest.mark.opsiclientd_running
-def test_jsonrpc_endpoints(opsiclientd_url, opsiclientd_auth):
-	rpc = {"id": 1, "method": "invalid", "params": []}
-	for endpoint in ("opsiclientd", "rpc"):
-		response = requests.post(f"{opsiclientd_url}/{endpoint}", verify=False, json=rpc)
-		assert response.status_code == 401
-
-	response = requests.post(f"{opsiclientd_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
-	assert response.status_code == 200, f"auth failed: {opsiclientd_auth}"
-	rpc_response = response.json()
-	assert rpc_response.get("id") == rpc["id"]
-	assert rpc_response.get("result") is None
-	assert rpc_response.get("error") is not None
-
-
-@pytest.mark.opsiclientd_running
-def test_kiosk_auth(opsiclientd_url):
-	# Kiosk allows connection from 127.0.0.1 without auth
-	response = requests.post(f"{opsiclientd_url}/kiosk", verify=False, headers={"Content-Encoding": "gzip"}, data="fail")
-	assert response.status_code == 500  # Not 401
-	assert "Not a gzipped file" in response.text
-	# "X-Forwarded-For" must not be accepted
-	address = None
-	interfaces = netifaces.interfaces()
-	for interface in interfaces:
-		addresses = netifaces.ifaddresses(interface)
-		addr = addresses.get(netifaces.AF_INET, [{}])[0].get("addr")
-		if addr and addr != "127.0.0.1":
-			address = addr
-			break
-
-	assert address is not None, "Failed to find non loopback ip address"
-
-	with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-		context = ssl.create_default_context()
-		context.check_hostname = False
-		context.verify_mode = ssl.CERT_NONE
-		with context.wrap_socket(sock) as ssock:
-			ssock.connect((address, 4441))
-			ssock.send(
-				b"POST /kiosk HTTP/1.1\r\n"
-				b"Accept-Encoding: data/json\r\n"
-				b"Content-Encoding: gzip\r\n"
-				b"X-Forwarded-For: 127.0.0.1\r\n"
-				b"Content-length: 8\r\n"
-				b"\r\n"
-				b"xxxxxxxx"
-			)
-			http_code = int(ssock.recv(1024).split(b" ", 2)[1])
-			assert http_code == 401  # "X-Forwarded-For" not accepted
-
-
-@pytest.mark.opsiclientd_running
-def test_concurrency(opsiclientd_url, opsiclientd_auth):
-	rpcs = [
-		{"id": 1, "method": "execute", "params": ["sleep 3; echo ok", True]},
-		{"id": 2, "method": "execute", "params": ["sleep 4; echo ok", True]},
-		{"id": 3, "method": "invalid", "params": []},
-		{"id": 4, "method": "log_read", "params": []},
-		{"id": 5, "method": "getConfig", "params": []},
-	]
-
-	def run_rpc(rpc):
-		res = requests.post(f"{opsiclientd_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
-		threading.current_thread().status_code = res.status_code
-		threading.current_thread().response = res.json()
-
-	threads = []
-	for rpc in rpcs:
-		thread = threading.Thread(target=run_rpc, args=[rpc])
-		threads.append(thread)
-		thread.start()
-
-	for thread in threads:
-		thread.join()
-		assert thread.status_code == 200
-		if thread.response["id"] == 3:
-			assert thread.response["error"] is not None
-		else:
-			assert thread.response["error"] is None
-		if thread.response["id"] in (1, 2):
-			assert "ok" in thread.response["result"]
-"""

@@ -50,15 +50,16 @@ def change_dir(path) -> Generator[None, None, None]:
 		os.chdir(old_dir)
 
 
-def load_config_file(config_file: str) -> None:
+def load_config_file(config_file: str) -> Config:
 	config = Config()
 	config.set("global", "config_file", config_file)
 	config.readConfigFile()
+	return config
 
 
 @pytest.fixture
-def default_config() -> None:
-	load_config_file("tests/data/opsiclientd.conf")
+def default_config() -> Config:
+	return load_config_file("tests/data/opsiclientd.conf")
 
 
 class OpsiclientdTestClient(TestClient):
@@ -96,10 +97,18 @@ class OpsiclientdTestClient(TestClient):
 	def get_client_address(self) -> tuple[str, int]:
 		return self._address
 
-	def jsonrpc20(self, method: str, params: dict[str, Any] | list[Any] | None = None, id: int | str | None = None) -> Any:
+	def jsonrpc20(
+		self,
+		*,
+		method: str,
+		params: dict[str, Any] | list[Any] | None = None,
+		id: int | str | None = None,
+		path: str = "/rpc",
+		headers: dict[str, str] | None = None,
+	) -> Any:
 		params = serialize(params or {})
 		rpc = {"jsonrpc": "2.0", "id": id or str(uuid4()), "method": method, "params": params}
-		res = self.post("/rpc", json=rpc)
+		res = self.post(path, json=rpc, headers=headers)
 		res.raise_for_status()
 		return deserialize(res.json(), deep=True)
 

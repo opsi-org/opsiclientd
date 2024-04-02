@@ -9,13 +9,12 @@ conftest
 """
 
 import platform
+import warnings
 
 import psutil
 import pytest
 import urllib3
 from _pytest.logging import LogCaptureHandler
-
-urllib3.disable_warnings()
 
 
 # Disable pytest log capture
@@ -77,3 +76,8 @@ def pytest_runtest_setup(item):
 
 	if supported_platforms and PLATFORM not in supported_platforms:
 		pytest.skip(f"Cannot run on {PLATFORM}")
+
+
+@pytest.fixture(autouse=True)
+def disable_insecure_request_warning() -> None:
+	warnings.simplefilter("ignore", urllib3.exceptions.InsecureRequestWarning)

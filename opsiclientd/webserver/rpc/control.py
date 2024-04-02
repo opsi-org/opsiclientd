@@ -273,11 +273,8 @@ class ControlInterface(PipeControlInterface):
 
 		logger.notice("rpc readLog: reading log of type '%s'", logType)
 
-		if logType == "opsiclientd":
-			with open(self.opsiclientd.config.get("global", "log_file"), "r", encoding="utf-8", errors="replace") as log:
-				return log.read()
-
-		return ""
+		with open(self.opsiclientd.config.get("global", "log_file"), "r", encoding="utf-8", errors="replace") as log:
+			return log.read()
 
 	def log_read(self, logType: str = "opsiclientd", extension: str = "", maxSize: int = 5000000) -> str:
 		"""
