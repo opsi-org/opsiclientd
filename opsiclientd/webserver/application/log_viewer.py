@@ -101,6 +101,8 @@ class LogReaderThread(threading.Thread):
 		for record in self.record_buffer:
 			data += msgspec.msgpack.encode(record)
 
+		if self.loop.is_closed():
+			return
 		asyncio.run_coroutine_threadsafe(self.websocket.send_bytes(data), self.loop)
 		self.send_time = time.time()
 		self.record_buffer = []
