@@ -8,17 +8,11 @@
 test_control_server
 """
 
-import codecs
-import socket
-import ssl
-import threading
 import time
 from pathlib import Path
 from unittest.mock import patch
 
-import netifaces  # type: ignore[import]
 import pytest
-import requests
 from fastapi.testclient import TestClient
 from httpx._models import Cookies
 from starlette.websockets import WebSocketDisconnect
@@ -47,7 +41,7 @@ def test_firing_unknown_event_raises_error() -> None:
 		controlServer.fireEvent("foobar")
 
 
-def test_auth_direct(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) -> None:
+def test_auth_direct(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
 	app = setup_application(Opsiclientd())
 	session_lifetime = 2
 	with patch("opsiclientd.webserver.application.middleware.SESSION_LIFETIME", session_lifetime):
@@ -87,7 +81,7 @@ def test_auth_direct(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) ->
 			assert response.status_code == 401
 
 
-def test_max_authentication_failures(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) -> None:
+def test_max_authentication_failures(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
 	app = setup_application(Opsiclientd())
 	max_authentication_failures = 3
 	client_block_time = 3
@@ -119,7 +113,7 @@ def test_max_authentication_failures(opsiclientd_url: str, opsiclientd_auth: tup
 			assert "Authentication error" in response.text
 
 
-def test_auth_proxy(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) -> None:
+def test_auth_proxy(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
 	app = setup_application(Opsiclientd())
 	with patch("opsiclientd.webserver.application.middleware.BaseMiddleware.get_client_address", lambda _self, _scope: ("1.2.3.4", 12345)):
 		with TestClient(app=app, base_url=opsiclientd_url, headers={"x-forwarded-for": "127.0.0.1"}) as test_client:
@@ -130,7 +124,7 @@ def test_auth_proxy(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) -> 
 			assert response.status_code == 200
 
 
-def test_log_viewer_auth(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) -> None:
+def test_log_viewer_auth(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
 	app = setup_application(Opsiclientd())
 	with TestClient(app=app, base_url=opsiclientd_url, headers={"x-forwarded-for": "127.0.0.1"}) as test_client:
 		response = test_client.get("/log_viewer")
@@ -167,22 +161,11 @@ def test_log_reader_start_position(tmp_path: Path) -> None:
 			assert lines == num_tail_records if log_lines > num_tail_records else log_lines
 
 
-<<<<<<< HEAD
 """
 TODO
 
 @pytest.mark.opsiclientd_running
 def test_jsonrpc_endpoints(opsiclientd_url, opsiclientd_auth):
-=======
-@pytest.mark.opsiclientd_running
-def test_index_page(opsiclient_url):  # noqa
-	req = requests.get(f"{opsiclient_url}", verify=False)
-	assert req.status_code == 200
-
-
-@pytest.mark.opsiclientd_running
-def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):  # noqa
->>>>>>> main
 	rpc = {"id": 1, "method": "invalid", "params": []}
 	for endpoint in ("opsiclientd", "rpc"):
 		response = requests.post(f"{opsiclientd_url}/{endpoint}", verify=False, json=rpc)
@@ -197,11 +180,7 @@ def test_jsonrpc_endpoints(opsiclient_url, opsiclientd_auth):  # noqa
 
 
 @pytest.mark.opsiclientd_running
-<<<<<<< HEAD
 def test_kiosk_auth(opsiclientd_url):
-=======
-def test_kiosk_auth(opsiclient_url):  # noqa
->>>>>>> main
 	# Kiosk allows connection from 127.0.0.1 without auth
 	response = requests.post(f"{opsiclientd_url}/kiosk", verify=False, headers={"Content-Encoding": "gzip"}, data="fail")
 	assert response.status_code == 500  # Not 401
@@ -238,11 +217,7 @@ def test_kiosk_auth(opsiclient_url):  # noqa
 
 
 @pytest.mark.opsiclientd_running
-<<<<<<< HEAD
 def test_concurrency(opsiclientd_url, opsiclientd_auth):
-=======
-def test_concurrency(opsiclient_url, opsiclientd_auth):  # noqa
->>>>>>> main
 	rpcs = [
 		{"id": 1, "method": "execute", "params": ["sleep 3; echo ok", True]},
 		{"id": 2, "method": "execute", "params": ["sleep 4; echo ok", True]},
