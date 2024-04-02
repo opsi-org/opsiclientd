@@ -14,10 +14,9 @@ import time
 import msgspec
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
-from opsicommon.exceptions import BackendAuthenticationError, BackendPermissionDeniedError
 from opsicommon.logging import LEVEL_TO_NAME, OPSI_LEVEL_TO_LEVEL, get_logger
 from starlette.endpoints import WebSocketEndpoint
-from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
+from starlette.status import HTTP_401_UNAUTHORIZED
 from starlette.types import Receive, Scope, Send
 from starlette.websockets import WebSocket
 
