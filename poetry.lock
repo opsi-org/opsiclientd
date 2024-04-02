@@ -2754,4 +2754,4 @@ reference = "uibpypi"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11,<3.12"
-content-hash = "e110e4627253f4a5ecaab7b491a04399dce614980534035a2940809868894280"
+content-hash = "7cff3819fafcf2ec633b779dbb7ad386bdc20a33dac5b2c945bc5456516bf84d"
