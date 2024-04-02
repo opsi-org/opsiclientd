@@ -720,7 +720,7 @@ class ControlInterface(PipeControlInterface):
 
 		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 			System.logoffSession(session_id)
-		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)  # type: ignore[attr-defined]
+		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 
 		logon = win32security.LogonUser(
 			user_info["name"],

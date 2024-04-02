@@ -929,6 +929,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		self._dynamicBandwidth = forceBool(dynamicBandwidth)
 
 	def start_caching_or_get_waiting_time(self) -> float:
+		assert self._configService
 		try_after_seconds: float = 0.0
 		heartbeat_thread = None
 

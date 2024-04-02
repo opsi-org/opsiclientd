@@ -79,7 +79,7 @@ parser.add_argument(
 parser.add_argument("arguments", nargs="*", default=None)
 
 
-def get_opsiclientd_pid() -> Union[int, None]:
+def get_opsiclientd_pid() -> int | None:
 	our_pid = os.getpid()
 	for proc in psutil.process_iter():
 		if proc.pid == our_pid:
@@ -92,7 +92,7 @@ def get_opsiclientd_pid() -> Union[int, None]:
 	return None
 
 
-def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str | None = None):
+def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str | None = None) -> None:
 	if not os.path.isdir(log_dir):
 		log_dir = tempfile.gettempdir()
 	log_file = os.path.join(log_dir, "opsiclientd.log")
@@ -156,9 +156,9 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str | N
 	http.client.print = log_http  # type: ignore[attr-defined]
 
 
-def check_signature(bin_dir):
+def check_signature(bin_dir: str) -> None:
 	logger.info("check_signature is called")
-	if not RUNNING_ON_WINDOWS:
+	if not sys.platform == "win32":
 		return  # Not yet implemented
 
 	windowsVersion = sys.getwindowsversion()

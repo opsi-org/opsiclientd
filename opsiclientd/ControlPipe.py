@@ -18,11 +18,13 @@ import threading
 import time
 from ctypes import byref, c_char_p, c_ulong, create_string_buffer
 from datetime import datetime
+from typing import Any
 
 from OPSI.Service.JsonRpc import JsonRpc  # type: ignore[import]
 from OPSI.Util import fromJson, toJson  # type: ignore[import]
 from opsicommon.logging import get_logger, log_context
 
+from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.webserver.rpc.control import get_pipe_control_interface
 
 if os.name == "nt":
@@ -33,7 +35,7 @@ else:
 logger = get_logger("opsiclientd")
 
 
-def ControlPipeFactory(opsiclientd):
+def ControlPipeFactory(opsiclientd: Opsiclientd) -> ControlPipe:
 	if os.name == "posix":
 		return PosixControlDomainSocket(opsiclientd)
 	if os.name == "nt":
@@ -90,23 +92,23 @@ class ClientConnection(threading.Thread):
 			finally:
 				self.clientDisconnected()
 
-	def stop(self):
+	def stop(self) -> None:
 		self._stopEvent.set()
 
-	def read(self):
+	def read(self) -> str:
 		return ""
 
-	def write(self, data):
+	def write(self, data: str | bytes) -> bool:
 		return False
 
-	def checkConnection(self):
+	def checkConnection(self) -> None:
 		pass
 
-	def clientDisconnected(self):
+	def clientDisconnected(self) -> None:
 		self.stop()
 		self._controller.clientDisconnected(self)
 
-	def processIncomingRpc(self, rpc):
+	def processIncomingRpc(self, rpc: dict[str, Any]) -> str:
 		try:
 			rpc = fromJson(rpc)
 			if rpc.get("method") == "registerClient":
@@ -128,7 +130,7 @@ class ClientConnection(threading.Thread):
 			logger.error(rpc_error, exc_info=True)
 			return toJson({"id": None, "error": str(rpc_error)})
 
-	def executeRpc(self, method, params=None, with_lock=True):
+	def executeRpc(self, method: str, params: list[Any] | None = None, with_lock: bool = True) -> dict[str, Any]:
 		params = params or []
 		with log_context({"instance": "control pipe"}):
 			rpc_id = 1
@@ -171,7 +173,7 @@ class ControlPipe(threading.Thread):
 
 	connection_class = ClientConnection
 
-	def __init__(self, opsiclientd) -> None:
+	def __init__(self, opsiclientd: Opsiclientd) -> None:
 		threading.Thread.__init__(self, name="ControlPipe")
 		self._opsiclientd = opsiclientd
 		self._opsiclientdRpcInterface = get_pipe_control_interface(self._opsiclientd)
@@ -182,7 +184,7 @@ class ControlPipe(threading.Thread):
 		self._clients: list[ClientConnection] = []
 		self._clientLock = threading.Lock()
 
-	def run(self):
+	def run(self) -> None:
 		with log_context({"instance": "control pipe"}):
 			self._running = True
 			self.setup()
@@ -205,21 +207,21 @@ class ControlPipe(threading.Thread):
 			self._running = False
 			self.teardown()
 
-	def stop(self):
+	def stop(self) -> None:
 		logger.debug("Stopping %s", self)
 		with self._clientLock:
 			for client in self._clients:
 				client.stop()
 		self._stopEvent.set()
 
-	def setup(self):
+	def setup(self) -> None:
 		pass
 
-	def teardown(self):
+	def teardown(self) -> None:
 		pass
 
-	def waitForClient(self):
-		return (None, None)
+	def waitForClient(self) -> tuple[Any, str]:
+		return (None, "")
 
 	def clientDisconnected(self, client):
 		with self._clientLock:
@@ -294,9 +296,9 @@ class PosixClientConnection(ClientConnection):
 			logger.trace("Failed to read from socket: %s", err)
 		return None
 
-	def write(self, data):
+	def write(self, data: str | bytes) -> bool:
 		if not data or not self._connection:
-			return
+			return False
 		logger.trace("Writing to connection %s", self._connection)
 		if not isinstance(data, bytes):
 			data = data.encode(self._encoding)
@@ -305,6 +307,7 @@ class PosixClientConnection(ClientConnection):
 			self._connection.sendall(data)
 		except Exception as err:
 			raise RuntimeError(f"Failed to write to socket: {err}") from err
+		return True
 
 
 class PosixControlDomainSocket(ControlPipe):
@@ -314,12 +317,12 @@ class PosixControlDomainSocket(ControlPipe):
 
 	connection_class = PosixClientConnection
 
-	def __init__(self, opsiclientd):
+	def __init__(self, opsiclientd: Opsiclientd) -> None:
 		ControlPipe.__init__(self, opsiclientd)
 		self._socketName = "/var/run/opsiclientd/socket"
-		self._socket = None
+		self._socket: socket.socket | None = None
 
-	def setup(self):
+	def setup(self) -> None:
 		logger.trace("Creating socket %s", self._socketName)
 		self.teardown()
 		self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -328,7 +331,7 @@ class PosixControlDomainSocket(ControlPipe):
 		self._socket.listen(1)
 		logger.trace("Socket %s created", self._socketName)
 
-	def teardown(self):
+	def teardown(self) -> None:
 		if self._socket:
 			try:
 				self._socket.close()
@@ -337,8 +340,9 @@ class PosixControlDomainSocket(ControlPipe):
 		if os.path.exists(self._socketName):
 			os.remove(self._socketName)
 
-	def waitForClient(self):
+	def waitForClient(self) -> tuple[Any, str]:
 		logger.debug("Waiting for client to connect to %s", self._socketName)
+		assert self._socket
 		self._socket.settimeout(2.0)
 		while True:
 			try:
@@ -347,11 +351,11 @@ class PosixControlDomainSocket(ControlPipe):
 				return (connection, client_address)
 			except socket.timeout:
 				if self._stopEvent.is_set():
-					return (None, None)
+					return (None, "")
 
 
 class NTPipeClientConnection(ClientConnection):
-	def checkConnection(self):
+	def checkConnection(self) -> None:
 		chBuf = create_string_buffer(self._controller.bufferSize)
 		cbRead = c_ulong(0)
 		cbAvailable = c_ulong(0)
@@ -363,7 +367,7 @@ class NTPipeClientConnection(ClientConnection):
 			if error == 109:  # ERROR_BROKEN_PIPE
 				self.clientDisconnected()
 
-	def read(self):
+	def read(self) -> str:
 		data = b""
 		while True:
 			logger.trace("Reading from pipe")
@@ -384,9 +388,9 @@ class NTPipeClientConnection(ClientConnection):
 
 			return data.decode()
 
-	def write(self, data):
+	def write(self, data: str | bytes) -> bool:
 		if not data:
-			return
+			return False
 		logger.trace("Writing to pipe")
 		if not isinstance(data, bytes):
 			data = data.encode(self._encoding)
@@ -400,12 +404,13 @@ class NTPipeClientConnection(ClientConnection):
 			error = windll.kernel32.GetLastError()
 			if error in (232, 109):  # ERROR_NO_DATA, ERROR_BROKEN_PIPE
 				self.clientDisconnected()
-				return
+				return False
 			raise RuntimeError(f"Failed to write to pipe (error: {error})")
 		if len(data) != cbWritten.value:
 			raise RuntimeError(
 				f"Failed to write all bytes to pipe ({cbWritten.value}/{len(data)})",
 			)
+		return True
 
 
 class NTControlPipe(ControlPipe):
@@ -415,16 +420,16 @@ class NTControlPipe(ControlPipe):
 
 	connection_class = NTPipeClientConnection
 
-	def __init__(self, opsiclientd):
+	def __init__(self, opsiclientd: Opsiclientd) -> None:
 		ControlPipe.__init__(self, opsiclientd)
 		self._pipeName = "\\\\.\\pipe\\opsiclientd"
 		self._pipe = None
 		self._client_id = 0
 
-	def setup(self):
+	def setup(self) -> None:
 		pass
 
-	def teardown(self):
+	def teardown(self) -> None:
 		if self._pipe:
 			try:
 				windll.kernel32.FlushFileBuffers(self._pipe)
@@ -433,7 +438,7 @@ class NTControlPipe(ControlPipe):
 			except Exception:
 				pass
 
-	def waitForClient(self):
+	def waitForClient(self) -> tuple[Any, str]:
 		logger.trace("Creating pipe %s", self._pipeName)
 		PIPE_ACCESS_DUPLEX = 0x3
 		PIPE_TYPE_MESSAGE = 0x4

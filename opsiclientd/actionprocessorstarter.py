@@ -20,16 +20,18 @@ from OPSI import System  # type: ignore[import]
 from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
 from opsicommon.logging import (
 	LOG_NONE,
+	get_logger,
 	init_logging,
 	log_context,
-	logger,
 	secret_filter,
 )
 
 from opsiclientd import DEFAULT_FILE_LOG_FORMAT, DEFAULT_STDERR_LOG_FORMAT
 
+logger = get_logger()
 
-def set_status_message(backend, session_id, message):
+
+def set_status_message(backend: JSONRPCBackend, session_id: str, message: str) -> None:
 	if session_id == "-1":
 		logger.debug("Not setting status message")
 		return
@@ -39,7 +41,7 @@ def set_status_message(backend, session_id, message):
 		logger.warning("Failed to set status message: %s", err)
 
 
-def main():
+def main() -> None:
 	if len(sys.argv) != 17:
 		print(
 			f"Usage: {os.path.basename(sys.argv[0])} <hostId> <hostKey> <controlServerPort>"
@@ -111,7 +113,7 @@ def main():
 
 		language = "en"
 		try:
-			language = locale.getlocale()[0].split("_")[0]
+			language = locale.getlocale()[0].split("_")[0]  # type: ignore[union-attr]
 		except Exception as err:
 			logger.debug("Failed to find default language: %s", err)
 
@@ -131,8 +133,6 @@ def main():
 		except Exception as err:
 			logger.debug("Failed to load locale for %s from %s: %s", language, sp, err)
 
-		createEnvironment = bool(runAsUser and createEnvironment.lower() in ("yes", "true", "1"))
-		actionProcessorTimeout = int(actionProcessorTimeout)
 		imp = None
 		depotShareMounted = False
 		be = None
@@ -145,13 +145,17 @@ def main():
 				if getpass.getuser().lower() != runAsUser.lower():
 					logger.info("Impersonating user '%s'", runAsUser)
 					imp = System.Impersonate(username=runAsUser, password=runAsPassword, desktop=actionProcessorDesktop)
-					imp.start(logonType="INTERACTIVE", newDesktop=False, createEnvironment=createEnvironment)
+					imp.start(
+						logonType="INTERACTIVE",
+						newDesktop=False,
+						createEnvironment=bool(runAsUser and createEnvironment.lower() in ("yes", "true", "1")),
+					)
 			elif depot_url.scheme in ("smb", "cifs"):
 				logger.info("Impersonating network account '%s'", depotServerUsername)
 				imp = System.Impersonate(username=depotServerUsername, password=depotServerPassword, desktop=actionProcessorDesktop)
 				imp.start(logonType="NEW_CREDENTIALS")
 
-			if depot_url.hostname.lower() not in ("127.0.0.1", "localhost", "::1"):
+			if (depot_url.hostname or "").lower() not in ("127.0.0.1", "localhost", "::1"):
 				logger.notice("Mounting depot share %s", depotRemoteUrl)
 				set_status_message(be, sessionId, _("Mounting depot share %s") % depotRemoteUrl)
 
@@ -159,11 +163,11 @@ def main():
 					System.mount(depotRemoteUrl, depotDrive, username=depotServerUsername, password=depotServerPassword)
 				else:
 					try:
-						if isinstance(ip_address(depot_url.hostname), IPv6Address):
+						if isinstance(ip_address(depot_url.hostname or ""), IPv6Address):
 							depotRemoteUrl = (
 								depotRemoteUrl.replace(
-									depot_url.hostname,
-									f"{depot_url.hostname.replace(':', '-')}.ipv6-literal.net",
+									depot_url.hostname or "",
+									f"{(depot_url.hostname or '').replace(':', '-')}.ipv6-literal.net",
 								)
 								.replace("[", "")
 								.replace("]", "")
@@ -180,9 +184,9 @@ def main():
 			set_status_message(be, sessionId, _("Action processor is running"))
 
 			if imp:
-				imp.runCommand(actionProcessorCommand, timeoutSeconds=actionProcessorTimeout)
+				imp.runCommand(actionProcessorCommand, timeoutSeconds=int(actionProcessorTimeout))
 			else:
-				System.execute(actionProcessorCommand, waitForEnding=True, timeout=actionProcessorTimeout)
+				System.execute(actionProcessorCommand, waitForEnding=True, timeout=int(actionProcessorTimeout))
 
 			logger.notice("Action processor ended")
 			set_status_message(be, sessionId, _("Action processor ended"))

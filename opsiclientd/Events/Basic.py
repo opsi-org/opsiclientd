@@ -12,16 +12,21 @@ from __future__ import annotations
 
 import threading
 import time
+from typing import TYPE_CHECKING
 
 import opsicommon.logging
-from opsicommon.logging import logger
+from opsicommon.logging import get_logger
 from opsicommon.types import forceList
 
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.State import State
 
+if TYPE_CHECKING:
+	from opsiclientd.Opsiclientd import Opsiclientd
+
 __all__ = ["Event", "EventGenerator", "EventListener"]
 
+logger = get_logger()
 state = State()
 
 
@@ -30,37 +35,37 @@ class CannotCancelEventError(RuntimeError):
 
 
 class EventGenerator(threading.Thread):
-	def __init__(self, opsiclientd, generatorConfig):
+	def __init__(self, opsiclientd: Opsiclientd, generatorConfig: EventConfig) -> None:
 		threading.Thread.__init__(self, daemon=True, name=f"EventGenerator-{generatorConfig.getId()}")
 		self._opsiclientd = opsiclientd
 		self._generatorConfig = generatorConfig
-		self._eventConfigs = []
-		self._eventListeners = []
+		self._eventConfigs: list[EventConfig] = []
+		self._eventListeners: list[EventListener] = []
 		self._eventsOccured = 0
 		self._threadId = None
 		self._stopped = False
-		self._event = None
-		self._lastEventOccurence = None
+		self._event: threading.Event | None = None
+		self._lastEventOccurence: float | None = None
 
 	def __str__(self):
 		return f"<{self.__class__.__name__} {self._generatorConfig.getId()}>"
 
 	__repr__ = __str__
 
-	def setEventConfigs(self, eventConfigs):
+	def setEventConfigs(self, eventConfigs: list[EventConfig]) -> None:
 		self._eventConfigs = forceList(eventConfigs)
 
-	def addEventConfig(self, eventConfig):
+	def addEventConfig(self, eventConfig: EventConfig) -> None:
 		self._eventConfigs.append(eventConfig)
 
-	def _preconditionsFulfilled(self, preconditions):
+	def _preconditionsFulfilled(self, preconditions: dict[str, str]) -> bool:
 		for precondition in preconditions:
 			if not state.get(precondition, False):
 				logger.debug("Precondition '%s' not fulfilled", precondition)
 				return False
 		return True
 
-	def addEventListener(self, eventListener):
+	def addEventListener(self, eventListener: EventListener) -> None:
 		if not isinstance(eventListener, EventListener):
 			raise TypeError(f"Failed to add event listener, got class {eventListener.__class__}, need class EventListener")
 
@@ -69,23 +74,26 @@ class EventGenerator(threading.Thread):
 
 		self._eventListeners.append(eventListener)
 
-	def getEventConfig(self):
+	def getEventConfig(self) -> EventConfig | None:
 		logger.info("Testing preconditions of configs: %s", self._eventConfigs)
-		actualConfig = {"preconditions": {}, "config": None}
+		actualPreconditions: dict[str, str] = {}
+		actualConfig: EventConfig | None = None
+
 		for pec in self._eventConfigs:
 			if self._preconditionsFulfilled(pec.preconditions):
 				logger.info("Preconditions %s for event config '%s' fulfilled", list(pec.preconditions), pec.getId())
-				if not actualConfig["config"] or (len(pec.preconditions.keys()) > len(actualConfig["preconditions"].keys())):
-					actualConfig = {"preconditions": pec.preconditions, "config": pec}
+				if not actualConfig or (len(pec.preconditions.keys()) > len(actualPreconditions.keys())):
+					actualPreconditions = pec.preconditions
+					actualConfig = pec
 			else:
 				logger.info("Preconditions %s for event config '%s' not fulfilled", list(pec.preconditions), pec.getId())
 
-		return actualConfig["config"]
+		return actualConfig
 
 	def createAndFireEvent(self, eventInfo: dict[str, str | list[str]] | None = None, can_cancel: bool = False) -> None:
 		self.fireEvent(self.createEvent(eventInfo), can_cancel=can_cancel)
 
-	def createEvent(self, eventInfo: dict[str, str | list[str]] | None) -> Event | None:
+	def createEvent(self, eventInfo: dict[str, str | list[str]] | None = None) -> Event | None:
 		logger.debug("Creating event config from info: %s", eventInfo)
 		eventConfig = self.getEventConfig()
 		logger.debug("Event config: %s", eventConfig)
@@ -94,10 +102,10 @@ class EventGenerator(threading.Thread):
 
 		return Event(eventConfig=eventConfig, eventInfo=eventInfo)
 
-	def initialize(self):
+	def initialize(self) -> None:
 		pass
 
-	def getNextEvent(self):
+	def getNextEvent(self) -> Event | None:
 		self._event = threading.Event()
 		logger.debug(
 			"getNextEvent: eventsOccured=%d, startInterval=%d, interval=%d",
@@ -120,10 +128,10 @@ class EventGenerator(threading.Thread):
 		self._event.wait()
 		return None
 
-	def cleanup(self):
+	def cleanup(self) -> None:
 		pass
 
-	def fireEvent(self, event=None, can_cancel=False):
+	def fireEvent(self, event: Event | None = None, can_cancel: bool = False) -> None:
 		logger.debug("Trying to fire event %s", event)
 		if self._stopped:
 			logger.debug("%s is stopped, not firing event.", self)
@@ -183,7 +191,7 @@ class EventGenerator(threading.Thread):
 				logger.trace("release lock (Basic)")
 				self._opsiclientd.eventLock.release()
 
-	def run(self):
+	def run(self) -> None:
 		with opsicommon.logging.log_context({"instance": f"event generator {self._generatorConfig.getId()}"}):
 			try:
 				logger.info("Initializing event generator '%s'", self)
@@ -225,7 +233,7 @@ class EventGenerator(threading.Thread):
 
 			logger.info("Event generator '%s' exiting ", self)
 
-	def stop(self):
+	def stop(self) -> None:
 		self._stopped = True
 		if self._event:
 			self._event.set()
@@ -234,11 +242,11 @@ class EventGenerator(threading.Thread):
 class Event:
 	"""Basic event class"""
 
-	def __init__(self, eventConfig: EventConfig, eventInfo: dict[str, str | list[str]] | None = None):
+	def __init__(self, eventConfig: EventConfig, eventInfo: dict[str, str | list[str]] | None = None) -> None:
 		self.eventConfig: EventConfig = eventConfig
 		self.eventInfo: dict[str, str | list[str]] = eventInfo or {}
 
-	def getActionProcessorCommand(self):
+	def getActionProcessorCommand(self) -> str:
 		actionProcessorCommand = self.eventConfig.actionProcessorCommand
 		for key, value in self.eventInfo.items():
 			actionProcessorCommand = actionProcessorCommand.replace("%" + "event." + str(key.lower()) + "%", str(value))
@@ -247,12 +255,12 @@ class Event:
 
 
 class EventListener:
-	def __init__(self):
+	def __init__(self) -> None:
 		logger.debug("EventListener initiated")
 
-	def processEvent(self, event):
+	def processEvent(self, event: Event) -> None:
 		logger.warning("%s: processEvent() not implemented", self)
 
-	def canProcessEvent(self, event, can_cancel=False):
+	def canProcessEvent(self, event: Event, can_cancel: bool = False) -> bool:
 		logger.warning("%s: canProcessEvent() not implemented", self)
 		raise NotImplementedError(f"{self}: canProcessEvent() not implemented")

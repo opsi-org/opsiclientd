@@ -8,6 +8,8 @@
 Events that get active once a system shuts down or restarts.
 """
 
+from __future__ import annotations
+
 import time
 
 import psutil
@@ -49,7 +51,7 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 			if (self._generatorConfig.maxRepetitions > 0) and (self._eventsOccured > self._generatorConfig.maxRepetitions):
 				self.stop()
 
-	def createEvent(self, eventInfo={}):
+	def createEvent(self, eventInfo: dict[str, str | list[str]] | None = None) -> UserLoginEvent | None:
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None
@@ -83,6 +85,6 @@ class LoginDetector(SensLogonEventGenerator):
 			time.sleep(5)
 		raise RuntimeError("Timeout while waiting for explorer.exe to start")
 
-	def createEvent(self, eventInfo={}):
+	def createEvent(self, eventInfo: dict[str, str | list[str]] | None = None) -> None:
 		logger.debug("createEvent triggered for LoginDetector - should never occur")
 		return None

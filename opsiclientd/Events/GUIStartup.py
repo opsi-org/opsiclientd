@@ -8,7 +8,10 @@
 Events that get active once a system shuts down or restarts.
 """
 
+from __future__ import annotations
+
 import time
+from typing import TYPE_CHECKING
 
 import psutil
 from opsicommon.logging import logger
@@ -21,6 +24,9 @@ from opsiclientd.SystemCheck import (
 	RUNNING_ON_WINDOWS,
 )
 
+if TYPE_CHECKING:
+	from opsiclientd.Opsiclientd import Opsiclientd
+
 __all__ = ["GUIStartupEvent", "GUIStartupEventConfig", "GUIStartupEventGenerator"]
 
 
@@ -31,7 +37,7 @@ class GUIStartupEventConfig(EventConfig):
 
 
 class GUIStartupEventGenerator(EventGenerator):
-	def __init__(self, opsiclientd, eventConfig):
+	def __init__(self, opsiclientd: Opsiclientd, eventConfig: GUIStartupEventConfig) -> None:
 		EventGenerator.__init__(self, opsiclientd, eventConfig)
 		self.gui_process_names = []
 		if RUNNING_ON_WINDOWS:
@@ -41,14 +47,14 @@ class GUIStartupEventGenerator(EventGenerator):
 		elif RUNNING_ON_DARWIN:
 			self.gui_process_names = ["WindowServer"]
 
-	def createEvent(self, eventInfo={}):
+	def createEvent(self, eventInfo: dict[str, str | list[str]] | None = None) -> GUIStartupEvent | None:
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None
 
 		return GUIStartupEvent(eventConfig=eventConfig, eventInfo=eventInfo)
 
-	def getNextEvent(self):
+	def getNextEvent(self) -> GUIStartupEvent | None:
 		gui_process_names_lower = [n.lower() for n in self.gui_process_names]
 		while not self._stopped:
 			for proc in psutil.process_iter():
@@ -62,6 +68,7 @@ class GUIStartupEventGenerator(EventGenerator):
 				if self._stopped:
 					break
 				time.sleep(1)
+		return None
 
 
 class GUIStartupEvent(Event):

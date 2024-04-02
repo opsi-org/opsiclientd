@@ -21,28 +21,27 @@ import sqlalchemy  # type: ignore[import]
 STARTUP_LOG: str | None = None
 
 
-def opsiclientd_rpc():
+def opsiclientd_rpc() -> None:
 	from opsiclientd.opsiclientdrpc import main as _main
 
 	_main()
 	sys.exit(0)
 
 
-def action_processor_starter():
+def action_processor_starter() -> None:
 	from opsiclientd.actionprocessorstarter import main as _main
 
 	_main()
 	sys.exit(0)
 
 
-def opsiclientd():
+def opsiclientd() -> None:
 	# Disable sqlalchemy 2.0 deprecation warnings
 	sqlalchemy.util.deprecations.SILENCE_UBER_WARNING = True
 	if getattr(sys, "frozen", False):
 		# Disable resource warnings if frozen
 		warnings.simplefilter("ignore", ResourceWarning)
 
-	_main = None
 	if platform.system().lower() == "windows":
 		if STARTUP_LOG and os.path.isdir(os.path.dirname(STARTUP_LOG)):
 			with codecs.open(STARTUP_LOG, "w", "utf-8") as file:
@@ -52,6 +51,7 @@ def opsiclientd():
 		from opsiclientd.posix.main import main as _main
 	else:
 		raise NotImplementedError(f"OS {os.name} not supported.")
+
 	try:
 		_main()
 		sys.exit(0)
@@ -66,7 +66,7 @@ def opsiclientd():
 		sys.exit(1)
 
 
-def main():
+def main() -> None:
 	name = os.path.splitext(os.path.basename(sys.argv[0]))[0].lower()
 	if name == "opsiclientd_rpc":
 		return opsiclientd_rpc()

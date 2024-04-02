@@ -13,6 +13,7 @@ import signal
 import sys
 import time
 from signal import SIGHUP, SIGINT, SIGTERM
+from types import FrameType
 
 from opsicommon.logging import LOG_NONE, get_logger, log_context, logging_config
 from opsicommon.logging import init_logging as oc_init_logging
@@ -27,13 +28,13 @@ opsiclientd: Opsiclientd | None = None
 logger = get_logger("opsiclientd")
 
 
-def signal_handler(signo, stackFrame):
+def signal_handler(signo: int, stackFrame: FrameType | None) -> None:
 	logger.notice("Received signal %s, stopping opsiclientd", signo)
 	if opsiclientd:
 		opsiclientd.stop()
 
 
-def daemonize(stdin="/dev/null", stdout="/dev/null", stderr="/dev/null"):
+def daemonize(stdin: str = "/dev/null", stdout: str = "/dev/null", stderr: str = "/dev/null") -> None:
 	"""
 	Running as a daemon.
 	"""
@@ -66,13 +67,13 @@ def daemonize(stdin="/dev/null", stdout="/dev/null", stderr="/dev/null"):
 		os.dup2(file.fileno(), sys.stderr.fileno())
 
 
-def write_pid_file(path):
+def write_pid_file(path: str) -> None:
 	if path:
 		with open(path, "w", encoding="utf-8") as pidFile:
 			pidFile.write(str(os.getpid()))
 
 
-def main():
+def main() -> None:
 	global opsiclientd
 	log_dir = Config().get("global", "log_dir")
 
@@ -101,7 +102,7 @@ def main():
 
 	init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
 
-	with log_context({"instance", "opsiclientd"}):
+	with log_context({"instance": "opsiclientd"}):
 		if options.signalHandlers:
 			logger.debug("Registering signal handlers")
 			signal.signal(SIGHUP, signal.SIG_IGN)  # ignore SIGHUP

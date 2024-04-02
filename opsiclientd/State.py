@@ -8,11 +8,11 @@
 Application state.
 """
 
-import codecs
 import json
 import os
 import threading
 from pathlib import Path
+from typing import Any
 
 import psutil
 from OPSI import System  # type: ignore[import]
@@ -34,43 +34,45 @@ logger = get_logger("opsiclientd")
 class State(metaclass=Singleton):
 	_initialized = False
 
-	def __init__(self):
+	def __init__(self) -> None:
 		if self._initialized:
 			return
 		self._initialized = True
-		self._state = {}
-		self._stateFile = None
+		self._state: dict[str, Any] = {}
+		self._stateFile: str | None = None
 		self._stateLock = threading.Lock()
 
-	def start(self):
+	def start(self) -> None:
 		self._stateFile = config.get("global", "state_file")
 		self._readStateFile()
 		self.set("shutdown_cancel_counter", 0)
 
-	def _readStateFile(self):
+	def _readStateFile(self) -> None:
 		with self._stateLock:
 			try:
+				assert self._stateFile
 				if os.path.exists(self._stateFile):
-					with codecs.open(self._stateFile, "r", "utf8") as stateFile:
+					with open(self._stateFile, "r", encoding="utf8") as stateFile:
 						jsonstr = stateFile.read()
 
 					self._state = json.loads(jsonstr)
 			except Exception as error:
 				logger.error("Failed to read state file '%s': %s", self._stateFile, error)
 
-	def _writeStateFile(self):
+	def _writeStateFile(self) -> None:
 		with self._stateLock:
 			try:
+				assert self._stateFile
 				jsonstr = json.dumps(self._state)
 				if not os.path.exists(os.path.dirname(self._stateFile)):
 					os.makedirs(os.path.dirname(self._stateFile))
 
-				with codecs.open(self._stateFile, "w", "utf8") as stateFile:
+				with open(self._stateFile, "w", encoding="utf8") as stateFile:
 					stateFile.write(jsonstr)
 			except Exception as error:
 				logger.error("Failed to write state file '%s': %s", self._stateFile, error)
 
-	def get(self, name, default=None):
+	def get(self, name: str, default: Any = None) -> Any:
 		name = forceUnicode(name)
 		if name == "user_logged_in":
 			if RUNNING_ON_WINDOWS:
@@ -105,7 +107,7 @@ class State(metaclass=Singleton):
 			logger.warning("Unknown state name '%s', returning default '%s'", name, default)
 			return default
 
-	def set(self, name, value):
+	def set(self, name: str, value: Any) -> None:
 		name = forceUnicode(name)
 		logger.debug("Setting state '%s' to %s", name, value)
 		self._state[name] = value

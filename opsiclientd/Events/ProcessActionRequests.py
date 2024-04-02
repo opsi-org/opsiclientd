@@ -8,6 +8,8 @@
 Processing action requests.
 """
 
+from __future__ import annotations
+
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.Events.Basic import Event, EventGenerator
 
@@ -19,7 +21,7 @@ class ProcessActionRequestsEventConfig(EventConfig):
 
 
 class ProcessActionRequestsEventGenerator(EventGenerator):
-	def createEvent(self, eventInfo={}):
+	def createEvent(self, eventInfo: dict[str, str | list[str]] | None = None) -> ProcessActionRequestsEvent | None:
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None

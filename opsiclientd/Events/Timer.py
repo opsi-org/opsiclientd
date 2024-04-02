@@ -8,6 +8,8 @@
 Timer events get active after a specified time.
 """
 
+from __future__ import annotations
+
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.Events.Basic import Event, EventGenerator
 
@@ -19,7 +21,7 @@ class TimerEventConfig(EventConfig):
 
 
 class TimerEventGenerator(EventGenerator):
-	def createEvent(self, eventInfo={}):
+	def createEvent(self, eventInfo: dict[str, str | list[str]] | None = None) -> TimerEvent | None:
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None

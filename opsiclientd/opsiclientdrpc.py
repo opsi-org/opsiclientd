@@ -9,10 +9,10 @@ opsiclientd rpc client
 """
 
 import argparse
-import codecs
 import os
 import platform
 import sys
+from typing import NoReturn
 
 # Do not remove this import, it's needed by using this module from CLI
 from OPSI import System  # type: ignore  # noqa
@@ -21,27 +21,29 @@ from opsicommon.client.opsiservice import RPC_TIMEOUTS, ServiceClient
 from opsicommon.logging import (
 	LOG_DEBUG,
 	LOG_NONE,
+	get_logger,
 	init_logging,
 	log_context,
-	logger,
 	secret_filter,
 )
 
 from opsiclientd import DEFAULT_FILE_LOG_FORMAT, __version__
 
+logger = get_logger()
 
-def get_opsi_host_key():
+
+def get_opsi_host_key() -> str:
 	config_file = "/etc/opsi-client-agent/opsiclientd.conf"
 	if platform.system().lower() == "windows":
 		config_file = os.path.join(
-			os.environ.get("PROGRAMFILES(X86)", os.environ.get("PROGRAMFILES")),
+			os.environ.get("PROGRAMFILES(X86)", os.environ.get("PROGRAMFILES", "c:\\Program Files")),
 			"opsi.org",
 			"opsi-client-agent",
 			"opsiclientd",
 			"opsiclientd.conf",
 		)
 
-	with codecs.open(config_file, "r", "utf-8") as file:
+	with open(config_file, "r", encoding="utf-8") as file:
 		for line in file.readlines():
 			line = line.strip()
 			if line.startswith("opsi_host_key"):
@@ -51,13 +53,13 @@ def get_opsi_host_key():
 
 
 class ArgumentParser(argparse.ArgumentParser):
-	def error(self, message):
+	def error(self, message: str) -> NoReturn:
 		if len(sys.argv) in (5, 6):
 			raise DeprecationWarning("Legacy comandline arguments")
-		return argparse.ArgumentParser.error(self, message)
+		argparse.ArgumentParser.error(self, message)
 
 
-def main():
+def main() -> None:
 	with log_context({"instance": os.path.basename(sys.argv[0])}):
 		parser = ArgumentParser()
 		parser.add_argument("--version", action="version", version=f"{__version__} [python-opsi-common={opsicommon_version}]")

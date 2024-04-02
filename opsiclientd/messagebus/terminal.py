@@ -52,14 +52,14 @@ logger = get_logger("opsiclientd")
 class TerminalReaderThread(Thread):
 	block_size = 16 * 1024
 
-	def __init__(self, terminal: Terminal):
+	def __init__(self, terminal: Terminal) -> None:
 		super().__init__()
 		self.daemon = True
 		self._context = copy_context()
 		self._should_stop = False
 		self.terminal = terminal
 
-	def run(self):
+	def run(self) -> None:
 		for var in self._context:
 			var.set(self._context[var])
 		while not self._should_stop:

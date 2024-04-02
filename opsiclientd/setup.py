@@ -13,6 +13,7 @@ import datetime
 import ipaddress
 import os
 import subprocess
+import sys
 from argparse import Namespace
 from pathlib import Path
 
@@ -46,7 +47,7 @@ CERT_RENEW_DAYS = 60
 SERVICES_PIPE_TIMEOUT_WINDOWS = 120000
 
 
-def get_ips():
+def get_ips() -> set[str]:
 	ips = {"127.0.0.1", "::1"}
 	for addr in get_ip_addresses():
 		if addr["family"] in ("ipv4", "ipv6") and addr["address"] not in ips:
@@ -74,7 +75,7 @@ def get_service_client(address: str | None = None, username: str | None = None, 
 	)
 
 
-def setup_ssl(full: bool = False):
+def setup_ssl(full: bool = False) -> None:
 	logger.info("Checking server cert")
 
 	key_file = config.get("control_server", "ssl_server_key_file")
@@ -172,7 +173,7 @@ def setup_ssl(full: bool = False):
 		out.write(as_pem(srv_crt))
 
 
-def setup_firewall_linux():
+def setup_firewall_linux() -> None:
 	logger.notice("Configure firewall")
 	port = config.get("control_server", "port")
 	cmds = []
@@ -197,7 +198,7 @@ def setup_firewall_linux():
 		subprocess.call(cmd)
 
 
-def setup_firewall_macos():
+def setup_firewall_macos() -> None:
 	logger.notice("Configure MacOS firewall")
 	cmds = []
 
@@ -210,7 +211,7 @@ def setup_firewall_macos():
 		subprocess.call(cmd)
 
 
-def setup_firewall_windows():
+def setup_firewall_windows() -> None:
 	logger.notice("Configure Windows firewall")
 	port = config.get("control_server", "port")
 	cmds = [["netsh", "advfirewall", "firewall", "delete", "rule", 'name="opsiclientd-control-port"']]
@@ -234,7 +235,7 @@ def setup_firewall_windows():
 		subprocess.call(cmd)
 
 
-def setup_firewall():
+def setup_firewall() -> None:
 	if RUNNING_ON_LINUX:
 		return setup_firewall_linux()
 	if RUNNING_ON_MACOS:
@@ -244,7 +245,10 @@ def setup_firewall():
 	return None
 
 
-def install_service_windows():
+def install_service_windows() -> None:
+	if sys.platform != "win32":
+		return
+
 	logger.notice("Installing windows service")
 	from opsiclientd.windows.service import handle_commandline
 
@@ -275,18 +279,18 @@ def install_service_windows():
 	winreg.CloseKey(key_handle)
 
 
-def install_service_linux():
+def install_service_linux() -> None:
 	logger.notice("Install systemd service")
 	# subprocess.check_call(["systemctl", "daemon-reload"])
 	subprocess.check_call(["systemctl", "enable", "opsiclientd.service"])
 
 
-def install_service_macos():
+def install_service_macos() -> None:
 	logger.notice("Bootstrap launchd service")
 	subprocess.check_call(["launchctl", "bootstrap", "system", "/Library/LaunchDaemons/org.opsi.opsiclientd.plist"])
 
 
-def install_service():
+def install_service() -> None:
 	if RUNNING_ON_WINDOWS:
 		return install_service_windows()
 	if RUNNING_ON_LINUX:
@@ -296,7 +300,7 @@ def install_service():
 	return None
 
 
-def opsi_service_setup(options=None):
+def opsi_service_setup(options: Namespace) -> None:
 	try:
 		config.readConfigFile()
 	except Exception as err:
@@ -313,7 +317,7 @@ def opsi_service_setup(options=None):
 		config.set("global", "host_id", options.client_id)
 	if not config.get("global", "host_id"):
 		fqdn = get_fqdn()
-		fqdn = config.set("global", "host_id", fqdn)
+		config.set("global", "host_id", fqdn)
 
 	secret_filter.add_secrets(service_password)
 
@@ -339,7 +343,7 @@ def opsi_service_setup(options=None):
 					if system_uuid:
 						logger.info("Updating systemUUID to %r", system_uuid)
 						clients[0].systemUUID = system_uuid
-						service_client.host_updateObjects(clients)
+						service_client.host_updateObjects(clients)  # type: ignore[attr-defined]
 			except Exception as err:
 				logger.error("Failed to update systemUUID: %s", err, exc_info=True)
 
@@ -511,6 +515,8 @@ def cleanup_control_server_files():
 
 
 def setup(full: bool = False, options: Namespace | None = None) -> None:
+	if not options:
+		options = Namespace()
 	logger.notice("Running opsiclientd setup")
 	errors = []
 

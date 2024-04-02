@@ -8,6 +8,8 @@
 Events for when a sync is completed.
 """
 
+from __future__ import annotations
+
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.Events.Basic import Event, EventGenerator
 
@@ -19,7 +21,7 @@ class SyncCompletedEventConfig(EventConfig):
 
 
 class SyncCompletedEventGenerator(EventGenerator):
-	def createEvent(self, eventInfo={}):
+	def createEvent(self, eventInfo: dict[str, str | list[str]] | None = None) -> SyncCompletedEvent | None:
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None

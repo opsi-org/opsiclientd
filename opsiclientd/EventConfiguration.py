@@ -9,6 +9,7 @@ opsiclientd - Event configuration.
 """
 
 import re
+from typing import Any
 
 from opsicommon.logging import log_context
 from opsicommon.types import forceBool, forceUnicode
@@ -19,16 +20,16 @@ state = State()
 
 
 class EventConfig:
-	def __init__(self, eventId, **kwargs):
+	def __init__(self, eventId: str, **kwargs: Any) -> None:
 		if not eventId:
 			raise TypeError("Event id not given")
 		self._id = str(eventId)
 
 		# Setting context here only succeeds if id is set
-		with log_context({"instance", f"event config {self._id}"}):
+		with log_context({"instance": f"event config {self._id}"}):
 			self.setConfig(kwargs)
 
-	def setConfig(self, conf):
+	def setConfig(self, conf: dict[str, Any]) -> None:
 		self.name = str(conf.get("name", self._id.split("{", 1)[0]))
 		self.preconditions = dict(conf.get("preconditions", {}))
 		self.actionMessage = str(conf.get("actionMessage", ""))
@@ -88,7 +89,7 @@ class EventConfig:
 		self.useCachedConfig = forceBool(conf.get("useCachedConfig", False))
 		self.workingWindow = str(conf.get("workingWindow", ""))
 
-	def getConfig(self):
+	def getConfig(self) -> dict[str, Any]:
 		config = {}
 		for key, value in self.__dict__.items():
 			if not key.startswith("_"):
@@ -96,24 +97,24 @@ class EventConfig:
 
 		return config
 
-	def __str__(self):
+	def __str__(self) -> str:
 		return f"<{self.__class__.__name__} {self._id}>"
 
 	__repr__ = __str__
 
-	def getId(self):
+	def getId(self) -> str:
 		return self._id
 
-	def getName(self):
+	def getName(self) -> str:
 		return self.name
 
-	def getActionMessage(self):
+	def getActionMessage(self) -> str:
 		return self._replacePlaceholdersInMessage(self.actionMessage)
 
-	def getShutdownWarningMessage(self):
+	def getShutdownWarningMessage(self) -> str:
 		return self._replacePlaceholdersInMessage(self.shutdownWarningMessage)
 
-	def _replacePlaceholdersInMessage(self, message):
+	def _replacePlaceholdersInMessage(self, message: str) -> str:
 		def toUnderscore(value):
 			s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", value)
 			return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()

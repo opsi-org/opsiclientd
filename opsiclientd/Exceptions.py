@@ -14,11 +14,11 @@ from opsicommon.types import forceUnicode
 class OpsiclientdError(Exception):
 	ExceptionShortDescription = "Opsiclientd error"
 
-	def __init__(self, message=""):
+	def __init__(self, message: str = "") -> None:
 		Exception.__init__(self)
 		self._message = forceUnicode(message)
 
-	def __str__(self):
+	def __str__(self) -> str:
 		_str = self.ExceptionShortDescription
 		if self._message:
 			_str += f": {self._message}"

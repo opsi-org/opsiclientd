@@ -8,6 +8,8 @@
 Panic events are used to react to problems.
 """
 
+from __future__ import annotations
+
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.Events.Basic import Event, EventGenerator
 
@@ -37,7 +39,7 @@ class PanicEventConfig(EventConfig):
 
 
 class PanicEventGenerator(EventGenerator):
-	def createEvent(self, eventInfo={}):
+	def createEvent(self, eventInfo: dict[str, str | list[str]] | None = None) -> PanicEvent | None:
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None

@@ -7,13 +7,15 @@
 Non-free event generators.
 """
 
+from __future__ import annotations
+
 from opsiclientd.Events.Basic import Event, EventGenerator
 
 __all__ = ["CustomEvent", "CustomEventGenerator"]
 
 
 class CustomEventGenerator(EventGenerator):
-	def createEvent(self, eventInfo={}):
+	def createEvent(self, eventInfo: dict[str, str | list[str]] | None = None) -> CustomEvent | None:
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None

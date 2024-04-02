@@ -8,6 +8,8 @@
 Daemon Shutdown Events
 """
 
+from __future__ import annotations
+
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.Events.Basic import Event, EventGenerator
 
@@ -15,13 +17,13 @@ __all__ = ["DaemonShutdownEvent", "DaemonShutdownEventConfig", "DaemonShutdownEv
 
 
 class DaemonShutdownEventConfig(EventConfig):
-	def setConfig(self, conf):
+	def setConfig(self, conf: dict[str, str]) -> None:
 		EventConfig.setConfig(self, conf)
 		self.maxRepetitions = 0
 
 
 class DaemonShutdownEventGenerator(EventGenerator):
-	def createEvent(self, eventInfo={}):
+	def createEvent(self, eventInfo: dict[str, str | list[str]] | None = None) -> DaemonShutdownEvent | None:
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None

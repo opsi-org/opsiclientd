@@ -13,6 +13,7 @@ import platform
 import re
 import sys
 from dataclasses import dataclass, field
+from typing import Any
 from urllib.parse import urlparse
 
 import netifaces  # type: ignore[import]
@@ -87,7 +88,7 @@ class RestartMarkerConfig:
 	restart_service: bool = True
 	remove_marker: bool = True
 
-	def __post_init__(self):
+	def __post_init__(self) -> None:
 		if self.disabled_event_types:
 			self.disabled_event_types = [v.strip().lower() for v in self.disabled_event_types if v.strip()]
 		if self.product_id:
@@ -154,18 +155,18 @@ class Config(metaclass=Singleton):
 		"depot_server": {"drive": "/private/var/opsisetupadmin/opsi_depot"},
 	}
 
-	def __init__(self):
+	def __init__(self) -> None:
 		if self._initialized:
 			return
 		self._initialized = True
 
 		baseDir = self._getBaseDirectory()
 
-		self._temporaryConfigServiceUrls = []
-		self._temporaryDepotDrive = []
-		self._temporary_depot_path = None
-		self._config_file_mtime = 0
-		self.disabledEventTypes = []
+		self._temporaryConfigServiceUrls: list[str] = []
+		self._temporaryDepotDrive: str | None = None
+		self._temporary_depot_path: str | None = None
+		self._config_file_mtime: float = 0.0
+		self.disabledEventTypes: list[str] = []
 
 		self._config = {
 			"system": {
@@ -262,9 +263,9 @@ class Config(metaclass=Singleton):
 		self._applySystemSpecificConfiguration()
 
 	@staticmethod
-	def _getBaseDirectory():
+	def _getBaseDirectory() -> str:
 		if RUNNING_ON_WINDOWS:
-			pfp = os.environ.get("PROGRAMFILES(X86)", os.environ.get("PROGRAMFILES"))
+			pfp = os.environ.get("PROGRAMFILES(X86)", os.environ.get("PROGRAMFILES", "c:\\Program Files"))
 			baseDir = os.path.join(pfp, "opsi.org", "opsi-client-agent")
 			if not os.path.exists(baseDir):
 				try:
@@ -279,7 +280,7 @@ class Config(metaclass=Singleton):
 		return baseDir
 
 	@property
-	def restart_marker(self):
+	def restart_marker(self) -> str:
 		if RUNNING_ON_WINDOWS:
 			# Old location of restart marker
 			old_location = os.path.join(os.path.dirname(sys.argv[0]), ".opsiclientd_restart")
@@ -330,7 +331,7 @@ class Config(metaclass=Singleton):
 				logger.error(err)
 		return resm_config
 
-	def _applySystemSpecificConfiguration(self):
+	def _applySystemSpecificConfiguration(self) -> None:
 		defaultToApply = self.WINDOWS_DEFAULT_PATHS.copy()
 		if RUNNING_ON_LINUX:
 			defaultToApply = self.LINUX_DEFAULT_PATHS.copy()
@@ -345,7 +346,7 @@ class Config(metaclass=Singleton):
 
 		self._config["cache_service"]["extension_config_dir"] = os.path.join(baseDir, "opsiclientd", "extend.d")
 
-		if RUNNING_ON_WINDOWS:
+		if sys.platform == "win32":
 			systemDrive = System.getSystemDrive()
 			logger.debug("Running on windows: adapting paths to use system drive (%s)", systemDrive)
 			systemDrive += "\\"
@@ -366,20 +367,20 @@ class Config(metaclass=Singleton):
 				if sslCertDir not in self._config["control_server"][certPath]:
 					self._config["control_server"][certPath] = os.path.join(sslCertDir, self._config["control_server"][certPath])
 
-	def getDict(self) -> dict[str, str | int | float | bool | list[str] | dict[str, str]]:
+	def getDict(self) -> dict[str, Any]:
 		return self._config
 
-	def has_option(self, section, option):
+	def has_option(self, section: str, option: str) -> bool:
 		if section not in self._config:
 			return False
 		if option not in self._config[section]:
 			return False
 		return True
 
-	def del_option(self, section, option):
+	def del_option(self, section: str, option: str) -> None:
 		del self._config[section][option]
 
-	def get(self, section, option, raw=False):
+	def get(self, section: str, option: str, raw: bool = False) -> Any:
 		if not section:
 			section = "global"
 
@@ -398,12 +399,12 @@ class Config(metaclass=Singleton):
 		return value
 
 	@property
-	def ca_cert_file(self):
+	def ca_cert_file(self) -> str:
 		cert_dir = self.get("global", "server_cert_dir")
 		return os.path.join(cert_dir, "opsi-ca-cert.pem")
 
 	@property
-	def service_verification_flags(self):
+	def service_verification_flags(self) -> list[ServiceVerificationFlags]:
 		# Do not verify certificate but fetch opsi CA
 		verify = [ServiceVerificationFlags.ACCEPT_ALL, ServiceVerificationFlags.OPSI_CA]
 		if self.get("global", "verify_server_cert"):
@@ -416,12 +417,12 @@ class Config(metaclass=Singleton):
 		return verify
 
 	@property
-	def action_processor_name(self):
+	def action_processor_name(self) -> str:
 		if "opsi-winst" in self.get("action_processor", "local_dir"):
 			return "opsi-winst"
 		return "opsi-script"
 
-	def set(self, section, option, value) -> None:
+	def set(self, section: str, option: str, value: Any) -> None:
 		if not section:
 			section = "global"
 
@@ -533,7 +534,7 @@ class Config(metaclass=Singleton):
 		if section == "global" and option == "log_level":
 			logging_config(file_level=self._config[section][option])
 
-	def replace(self, string, escaped=False):
+	def replace(self, string: str, escaped: bool = False) -> str:
 		for section, values in self._config.items():
 			if not isinstance(values, dict):
 				continue
@@ -586,7 +587,7 @@ class Config(metaclass=Singleton):
 		logger.notice("Config read")
 		logger.debug("Config is now:\n %s", objectToBeautifiedText(self._config))
 
-	def updateConfigFile(self, force=False):
+	def updateConfigFile(self, force: bool = False) -> None:
 		logger.info("Updating config file: '%s'", self.get("global", "config_file"))
 
 		if self._config_file_mtime and os.path.getmtime(self.get("global", "config_file")) > self._config_file_mtime:
@@ -653,18 +654,18 @@ class Config(metaclass=Singleton):
 			logger.error(err, exc_info=True)
 			logger.error("Failed to write config file '%s': %s", self.get("global", "config_file"), err)
 
-	def setTemporaryDepotDrive(self, temporaryDepotDrive):
+	def setTemporaryDepotDrive(self, temporaryDepotDrive: str | None) -> None:
 		self._temporaryDepotDrive = temporaryDepotDrive
 
-	def getDepotDrive(self):
+	def getDepotDrive(self) -> str:
 		if self._temporaryDepotDrive:
 			return self._temporaryDepotDrive
 		return self.get("depot_server", "drive")
 
-	def set_temporary_depot_path(self, path):
+	def set_temporary_depot_path(self, path: str | None) -> None:
 		self._temporary_depot_path = path
 
-	def get_depot_path(self):
+	def get_depot_path(self) -> str:
 		if self._temporary_depot_path:
 			return self._temporary_depot_path
 		return self.get("depot_server", "drive")

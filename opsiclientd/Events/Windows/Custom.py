@@ -8,6 +8,8 @@
 Windows-specific Custom event.
 """
 
+from __future__ import annotations
+
 from opsiclientd.Events.Basic import Event
 from opsiclientd.Events.Windows.WMI import WMIEventConfig, WMIEventGenerator
 
@@ -19,7 +21,7 @@ class CustomEventConfig(WMIEventConfig):
 
 
 class CustomEventGenerator(WMIEventGenerator):
-	def createEvent(self, eventInfo={}):
+	def createEvent(self, eventInfo: dict[str, str | list[str]] | None = None) -> CustomEvent | None:
 		eventConfig = self.getEventConfig()
 		if not eventConfig:
 			return None

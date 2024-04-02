@@ -16,10 +16,11 @@ import subprocess
 import sys
 import threading
 import time
-
-# pyright: reportMissingImports=false
 import winreg  # type: ignore[import] # pylint: disable=import-error
 from enum import StrEnum
+
+# pyright: reportMissingImports=false
+from typing import Any
 
 import pywintypes  # type: ignore[import]
 import win32api  # type: ignore[import]
@@ -382,8 +383,10 @@ class OpsiclientdNT(Opsiclientd):
 				else:
 					logger.info("Command %s successful: %s", cmd, out)
 
-	def createOpsiSetupUser(self, admin=True, delete_existing=False):
+	def createOpsiSetupUser(self, admin=True, delete_existing=False) -> dict[str, Any]:
 		# https://bugs.python.org/file46988/issue.py
+		if sys.platform != "win32":
+			return {}
 
 		password_chars = [random.choice(string.ascii_letters + string.digits) for i in range(9)] + ["/", "?", "9", "a", "Z"]
 		random.shuffle(password_chars)
@@ -400,9 +403,9 @@ class OpsiclientdNT(Opsiclientd):
 		# Test if user exists
 		user_sid = None
 		try:
-			win32net.NetUserGetInfo(None, user_info["name"], 1)
-			user_sid = win32security.ConvertSidToStringSid(win32security.LookupAccountName(None, user_info["name"])[0])
-			logger.info("User '%s' exists, sid is '%s'", user_info["name"], user_sid)
+			win32net.NetUserGetInfo(None, str(user_info["name"]), 1)  # type: ignore[arg-type]
+			user_sid = win32security.ConvertSidToStringSid(win32security.LookupAccountName(None, str(user_info["name"]))[0])
+			logger.info("User '%s' exists, sid is '%s'", str(user_info["name"]), user_sid)
 		except Exception as err:
 			logger.info(err)
 
@@ -436,31 +439,31 @@ class OpsiclientdNT(Opsiclientd):
 			0,
 			winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,  # sysnative
 		) as reg_key:
-			winreg.SetValueEx(reg_key, user_info["name"], 0, winreg.REG_DWORD, 0)
+			winreg.SetValueEx(reg_key, str(user_info["name"]), 0, winreg.REG_DWORD, 0)
 
 		if user_sid:
-			logger.info("Updating password of user '%s'", user_info["name"])
-			user_info_update = win32net.NetUserGetInfo(None, user_info["name"], 1)
+			logger.info("Updating password of user '%s'", str(user_info["name"]))
+			user_info_update = win32net.NetUserGetInfo(None, str(user_info["name"]), 1)  # type: ignore[arg-type]
 			user_info_update["password"] = user_info["password"]
-			win32net.NetUserSetInfo(None, user_info["name"], 1, user_info_update)
+			win32net.NetUserSetInfo(None, str(user_info["name"]), 1, user_info_update)  # type: ignore[arg-type]
 		else:
-			logger.info("Creating user '%s'", user_info["name"])
-			win32net.NetUserAdd(None, 1, user_info)
+			logger.info("Creating user '%s'", str(user_info["name"]))
+			win32net.NetUserAdd(None, 1, user_info)  # type: ignore[arg-type]
 
-		user_sid = win32security.ConvertSidToStringSid(win32security.LookupAccountName(None, user_info["name"])[0])
+		user_sid = win32security.ConvertSidToStringSid(win32security.LookupAccountName(None, str(user_info["name"]))[0])
 		subprocess.run(["icacls", os.path.dirname(sys.argv[0]), "/grant:r", f"*{user_sid}:(OI)(CI)RX"], check=False)
 		subprocess.run(["icacls", os.path.dirname(config.get("global", "log_file")), "/grant:r", f"*{user_sid}:(OI)(CI)F"], check=False)
 		subprocess.run(["icacls", os.path.dirname(config.get("global", "tmp_dir")), "/grant:r", f"*{user_sid}:(OI)(CI)F"], check=False)
 
 		local_admin_group_sid = win32security.ConvertStringSidToSid("S-1-5-32-544")
-		local_admin_group_name = win32security.LookupAccountSid(None, local_admin_group_sid)[0]
+		local_admin_group_name = win32security.LookupAccountSid(None, local_admin_group_sid)[0]  # type: ignore[arg-type]
 		try:
 			if admin:
-				logger.info("Adding user '%s' to admin group", user_info["name"])
-				win32net.NetLocalGroupAddMembers(None, local_admin_group_name, 3, [{"domainandname": user_info["name"]}])
+				logger.info("Adding user '%s' to admin group", str(user_info["name"]))
+				win32net.NetLocalGroupAddMembers(None, local_admin_group_name, 3, [{"domainandname": str(user_info["name"])}])  # type: ignore[arg-type]
 			else:
-				logger.info("Removing user '%s' from admin group", user_info["name"])
-				win32net.NetLocalGroupDelMembers(None, local_admin_group_name, [user_info["name"]])
+				logger.info("Removing user '%s' from admin group", str(user_info["name"]))
+				win32net.NetLocalGroupDelMembers(None, local_admin_group_name, [str(user_info["name"])])  # type: ignore[arg-type]
 		except pywintypes.error as err:
 			# 1377 - ERROR_MEMBER_NOT_IN_ALIAS
 			#  The specified account name is not a member of the group.
@@ -469,7 +472,7 @@ class OpsiclientdNT(Opsiclientd):
 			if err.winerror not in (1377, 1378):
 				raise
 
-		user_info_4 = win32net.NetUserGetInfo(None, user_info["name"], 4)
+		user_info_4 = win32net.NetUserGetInfo(None, str(user_info["name"]), 4)  # type: ignore[arg-type]
 		user_info_4["password"] = user_info["password"]
 		return user_info_4
 

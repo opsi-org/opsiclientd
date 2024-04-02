@@ -122,8 +122,8 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._popupNotificationLock = threading.Lock()
 		self._popupClosingThread: PopupClosingThread | None = None
 
-		self._blockLoginEventId = None
-		self._opsiclientdRunningEventId = None
+		self._blockLoginEventId: int | None = None
+		self._opsiclientdRunningEventId: int | None = None
 
 		self._stopEvent = threading.Event()
 		self._stopEvent.clear()
@@ -138,10 +138,10 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._argv = list(sys.argv)
 		self._argv[0] = os.path.abspath(self._argv[0])
 
-	def cleanup_opsi_setup_user(self, keep_sid: str | None = None):
+	def cleanup_opsi_setup_user(self, keep_sid: str | None = None) -> None:
 		raise NotImplementedError(f"Not implemented on {platform.system()}")
 
-	def createOpsiSetupUser(self, admin=True, delete_existing=False):
+	def createOpsiSetupUser(self, admin: bool = True, delete_existing: bool = False) -> dict[str, Any]:
 		raise NotImplementedError(f"Not implemented on {platform.system()}")
 
 	def start_permanent_service_connection(self) -> None:

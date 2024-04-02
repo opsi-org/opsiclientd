@@ -23,7 +23,7 @@ import threading
 import time
 from ipaddress import IPv6Address, ip_address
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Callable, Literal
 from urllib.parse import urlparse
 
 import psutil  # type: ignore[import]
@@ -43,8 +43,10 @@ from opsicommon.logging import (  # type: ignore[import]
 	log_context,
 	logging_config,
 )
+from opsicommon.objects import Product
 from opsicommon.types import (  # type: ignore[import]
 	forceInt,
+	forceStringList,
 	forceUnicode,
 	forceUnicodeLower,
 )
@@ -92,13 +94,12 @@ class EventProcessingCanceled(Exception):
 
 
 class EventProcessingThread(KillableThread, ServiceConnection):
-	def __init__(self, opsiclientd: Opsiclientd, event):
+	def __init__(self, opsiclientd: Opsiclientd, event: Event) -> None:
 		KillableThread.__init__(self, name="EventProcessingThread")
-		ServiceConnection.__init__(self)
+		ServiceConnection.__init__(self, opsiclientd)
 
-		self.opsiclientd: Opsiclientd = opsiclientd
-
-		self.event: Event = event
+		self.opsiclientd = opsiclientd
+		self.event = event
 
 		self.running = False
 		self.actionCancelled = False
@@ -156,10 +157,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				raise EventProcessingCanceled()
 			time.sleep(1)
 
-	def is_cancelable(self):
+	def is_cancelable(self) -> bool:
 		return self._is_cancelable
 
-	def _set_cancelable(self, cancelable: bool):
+	def _set_cancelable(self, cancelable: bool) -> None:
+		assert self.opsiclientd
 		if cancelable:
 			with self.opsiclientd.eventLock:
 				self._is_cancelable = True
@@ -173,26 +175,27 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			finally:
 				self.opsiclientd.eventLock.release()
 
-	def should_cancel(self):
+	def should_cancel(self) -> bool:
 		return self._should_cancel
 
 	# use no_lock only if you have already acquired the lock
-	def cancel(self, no_lock=False):
+	def cancel(self, no_lock: bool = False) -> None:
 		if no_lock:
 			if not self._is_cancelable:
 				raise RuntimeError("Event processing currently not cancelable")
 			self._should_cancel = True
 		else:
+			assert self.opsiclientd
 			with self.opsiclientd.eventLock:
 				if not self._is_cancelable:
 					raise RuntimeError("Event processing currently not cancelable")
 				self._should_cancel = True
 
 	# ServiceConnection
-	def connectionThreadOptions(self):
+	def connectionThreadOptions(self) -> dict[str, MessageSubject]:
 		return {"statusSubject": self._statusSubject}
 
-	def connectionStart(self, configServiceUrl):
+	def connectionStart(self, configServiceUrl: str) -> None:
 		self._serviceUrlSubject.setMessage(configServiceUrl)
 		try:
 			cancellableAfter = forceInt(config.get("config_service", "user_cancelable_after"))
@@ -202,34 +205,34 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		except Exception as err:
 			logger.error(err)
 
-	def connectionCancelable(self, stopConnectionCallback):
+	def connectionCancelable(self, stopConnectionCallback: Callable) -> None:
 		if self._notificationServer and self._choiceSubject:
 			self._choiceSubject.setChoices(["Stop connection"])
 			self._choiceSubject.setCallbacks([stopConnectionCallback])
 			self._notificationServer.addSubject(self._choiceSubject)
 
-	def connectionTimeoutChanged(self, timeout):
+	def connectionTimeoutChanged(self, timeout: float) -> None:
 		if self._detailSubjectProxy:
 			self._detailSubjectProxy.setMessage(_("Timeout: %ds") % timeout)
 
-	def connectionCanceled(self):
+	def connectionCanceled(self) -> None:
 		if self._notificationServer and self._choiceSubject:
 			self._notificationServer.removeSubject(self._choiceSubject)
 		self._detailSubjectProxy.setMessage("")
 		ServiceConnection.connectionCanceled(self)
 
-	def connectionTimedOut(self):
+	def connectionTimedOut(self) -> None:
 		if self._notificationServer and self._choiceSubject:
 			self._notificationServer.removeSubject(self._choiceSubject)
 		self._detailSubjectProxy.setMessage("")
 		ServiceConnection.connectionTimedOut(self)
 
-	def connectionEstablished(self):
+	def connectionEstablished(self) -> None:
 		if self._notificationServer and self._choiceSubject:
 			self._notificationServer.removeSubject(self._choiceSubject)
 		self._detailSubjectProxy.setMessage("")
 
-	def connectionFailed(self, error):
+	def connectionFailed(self, error: str) -> None:
 		if self._notificationServer and self._choiceSubject:
 			self._notificationServer.removeSubject(self._choiceSubject)
 		self._detailSubjectProxy.setMessage("")
@@ -237,7 +240,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 	# End of ServiceConnection
 
-	def getSessionId(self):
+	def getSessionId(self) -> int:
 		if RUNNING_ON_WINDOWS:
 			if self.isLoginEvent:
 				user_session_ids = System.getUserSessionIds(self.event.eventInfo["User"])
@@ -261,17 +264,17 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		logger.info("Using active session id: %s", session_id)
 		return session_id
 
-	def setStatusMessage(self, message):
+	def setStatusMessage(self, message: str) -> None:
 		logger.debug("Setting status message to: %s", message)
 		self._statusSubject.setMessage(message)
 
 	@property
-	def notificationServerPort(self):
+	def notificationServerPort(self) -> int | None:
 		if not self._notificationServer:
 			return None
 		return self._notificationServer.port
 
-	def startNotificationServer(self):
+	def startNotificationServer(self) -> None:
 		logger.notice("Starting notification server")
 
 		try:
@@ -306,23 +309,25 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.error("Failed to start notification server: %s", err)
 			raise RuntimeError(f"Failed to start notification server: {err}") from err
 
-	def _stopNotificationServer(self):
+	def _stopNotificationServer(self) -> None:
 		try:
 			logger.info("Stopping notification server")
 			self._notificationServerShouldStop = True
-			self._notificationServer.stop()
+			if self._notificationServer:
+				self._notificationServer.stop()
 		except Exception as err:
 			logger.error(err, exc_info=True)
 
-	def stopNotificationServer(self):
+	def stopNotificationServer(self) -> None:
 		if not self._notificationServer:
 			return
 		threading.Thread(target=self._stopNotificationServer, name="stopNotificationServer").start()
 
-	def getConfigFromService(self):
+	def getConfigFromService(self) -> None:
 		"""Get settings from service"""
 		logger.notice("Getting config from service")
 		try:
+			assert self.opsiclientd
 			if not self.isConfigServiceConnected():
 				logger.warning("Cannot get config from service: not connected")
 				return
@@ -341,12 +346,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.error("Failed to get config from service: %s", err)
 			raise
 
-	def writeLogToService(self):
+	def writeLogToService(self) -> None:
 		logger.notice("Writing log to service")
 		try:
-			if not self.isConfigServiceConnected():
+			if not self._configService or not self.isConfigServiceConnected():
 				logger.warning("Cannot write log to service: not connected")
 				return
+
 			self.setStatusMessage(_("Writing log to service"))
 
 			data = ""
@@ -375,7 +381,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.error("Failed to write log to service: %s", err, exc_info=True)
 			raise
 
-	def runCommandInSession(self, command, sessionId=None, desktop=None, waitForProcessEnding=False, timeoutSeconds=0, noWindow=False):
+	def runCommandInSession(
+		self,
+		command: str | list[str],
+		sessionId: int | None = None,
+		desktop: str | None = None,
+		waitForProcessEnding: bool = False,
+		timeoutSeconds: int = 0,
+		noWindow: bool = False,
+	) -> tuple[psutil.Process | None, int | None]:
 		if sessionId is None:
 			sessionId = self.getSessionId()
 
@@ -384,6 +398,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				desktop = "default"
 			else:
 				logger.debug("Getting current active desktop name")
+				assert self.opsiclientd
 				desktop = forceUnicodeLower(self.opsiclientd.getCurrentActiveDesktopName(sessionId))
 				logger.debug("Got current active desktop name: %s", desktop)
 
@@ -410,7 +425,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self,
 		command: str,
 		notifierId: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin"],
-		sessionId: str | None = None,
+		sessionId: int | None = None,
 		desktop: str | None = None,
 	):
 		if sessionId is None:
@@ -418,6 +433,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 		logger.notice("Starting notifier application in session '%s' on desktop '%s'", sessionId, desktop)
 		try:
+			assert self.opsiclientd
 			command = self.opsiclientd.getNotifierCommand(command=command, notifier_id=notifierId, port=self.notificationServerPort)
 			process, pid = self.runCommandInSession(
 				sessionId=sessionId,
@@ -432,7 +448,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.error("Failed to start notifier application '%s': %s", command, err)
 		return None, None
 
-	def closeProcessWindows(self, processId):
+	def closeProcessWindows(self, processId: int) -> None:
 		try:
 			opsiclientd_rpc = config.get("opsiclientd_rpc", "command")
 			command = f'{opsiclientd_rpc} "exit(); System.closeProcessWindows(processId={processId})"'
@@ -442,7 +458,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		# TODO: collect exit codes to avoid Zombie Process
 		self.runCommandInSession(command=command, waitForProcessEnding=False, noWindow=True)
 
-	def setActionProcessorInfo(self):
+	def setActionProcessorInfo(self) -> None:
 		action_processor_filename = config.get("action_processor", "filename")
 		action_processor_local_dir = config.get("action_processor", "local_dir")
 		action_processor_local_file = os.path.join(action_processor_local_dir, action_processor_filename)
@@ -461,7 +477,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		logger.notice("Action processor name '%s', version '%s'", name, version)
 		self._actionProcessorInfoSubject.setMessage(f"{name} {version}")
 
-	def mountDepotShare(self, impersonation):
+	def mountDepotShare(self) -> None:
 		if self._depotShareMounted:
 			logger.debug("Depot share already mounted")
 			return
@@ -504,9 +520,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			except Exception as err:
 				logger.error("Failed to add depot to trusted domains: %s", err)
 
-			if url.scheme in ("smb", "cifs") and impersonation:
-				mount_username = None
-				mount_password = None
 		elif RUNNING_ON_LINUX or RUNNING_ON_DARWIN:
 			mount_options["ro"] = ""
 			if RUNNING_ON_LINUX:
@@ -538,7 +551,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 		self._depotShareMounted = True
 
-	def umountDepotShare(self):
+	def umountDepotShare(self) -> None:
 		if not self._depotShareMounted:
 			logger.debug("Depot share not mounted")
 			return
@@ -549,11 +562,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		except Exception as err:
 			logger.warning(err)
 
-	def updateActionProcessor(self):
+	def updateActionProcessor(self) -> None:
 		logger.notice("Updating action processor")
 		self.setStatusMessage(_("Updating action processor"))
 
 		try:
+			assert self.opsiclientd
+			assert self._configService
 			url = urlparse(config.get("depot_server", "url"))
 			actionProcessorRemoteDir = None
 			actionProcessorCommonDir = None
@@ -587,6 +602,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 			actionProcessorFilename = config.get("action_processor", "filename")
 			actionProcessorLocalDir = config.get("action_processor", "local_dir")
+			assert actionProcessorFilename
+			assert actionProcessorLocalDir
 			actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
 			actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
 
@@ -661,7 +678,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		except Exception as err:
 			logger.error("Failed to update action processor: %s", err, exc_info=True)
 
-	def updateActionProcessorUnified(self, actionProcessorRemoteDir, actionProcessorCommonDir):
+	def updateActionProcessorUnified(self, actionProcessorRemoteDir: str, actionProcessorCommonDir: str) -> None:
 		actionProcessorFilename = config.get("action_processor", "filename")
 		actionProcessorLocalDir = config.get("action_processor", "local_dir")
 		actionProcessorLocalTmpDir = actionProcessorLocalDir + ".tmp"
@@ -723,7 +740,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				for subdir in dirs:
 					os.chmod(os.path.join(root, subdir), 0o755)
 
-	def updateActionProcessorOld(self, actionProcessorRemoteDir):
+	def updateActionProcessorOld(self, actionProcessorRemoteDir: str) -> None:
 		if not RUNNING_ON_WINDOWS and not RUNNING_ON_LINUX:
 			logger.error("Update of action processor without installed opsi-script package not implemented on this os")
 			return
@@ -769,13 +786,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						"Skipping '%s' while updating action processor because it is not a file", os.path.join(actionProcessorRemoteDir, fn)
 					)
 
-	def processUserLoginActions(self):
+	def processUserLoginActions(self) -> None:
 		self.setStatusMessage(_("Processing login actions"))
 		try:
 			if not self._configService:
 				raise RuntimeError("Not connected to config service")
 
-			productsByIdAndVersion = {}
+			productsByIdAndVersion: dict[str, dict[str, dict[str, Product]]] = {}
 			for product in self._configService.product_getObjects(type="LocalbootProduct", userLoginScript="*.*"):
 				if product.id not in productsByIdAndVersion:
 					productsByIdAndVersion[product.id] = {}
@@ -833,10 +850,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.error("Failed to process login actions: %s", err, exc_info=True)
 			self.setStatusMessage(_("Failed to process login actions: %s") % forceUnicode(err))
 
-	def processProductActionRequests(self):
+	def processProductActionRequests(self) -> None:
 		self.setStatusMessage(_("Getting action requests from config service"))
 
 		try:
+			assert self.opsiclientd
 			bootmode = None
 			if RUNNING_ON_WINDOWS:
 				try:
@@ -848,16 +866,16 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if not self._configService:
 				raise RuntimeError("Not connected to config service")
 
-			productIds = []
-			versions = []
-			includeProductIds = []
-			excludeProductIds = []
+			productIds: list[str] = []
+			versions: list[str] = []
+			includeProductIds: list[str] = []
+			excludeProductIds: list[str] = []
 			if self.event.eventConfig.actionProcessorProductIds:
 				productIds = self.event.eventConfig.actionProcessorProductIds
 
 			if not productIds:
 				if self.event.eventInfo.get("product_ids"):
-					includeProductIds = self.event.eventInfo["product_ids"]
+					includeProductIds = forceStringList(self.event.eventInfo["product_ids"])
 					logger.notice("Got product IDs from eventConfig: %r", includeProductIds)
 				else:
 					includeProductIds, excludeProductIds = get_include_exclude_product_ids(
@@ -972,20 +990,25 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			)
 		time.sleep(3)
 
-	def runActions(self, productIds, additionalParams="", versions=None):
+	def runActions(self, productIds: list[str], additionalParams: str = "", versions: list[str] | None = None) -> None:
 		description = f"Running actions {', '.join(productIds)}"
 		if versions and len(versions) == len(productIds):
 			description = f"Running actions {', '.join(f'{p_id} {p_version}' for p_id, p_version in zip(productIds, versions))}"
 		runActionsEventId = timeline.addEvent(title="Running actions", description=description, category="run_actions", durationEvent=True)
 
 		try:
+			assert self.opsiclientd
 			config.selectDepotserver(configService=self._configService, mode="mount", event=self.event, productIds=productIds)
 			if not additionalParams:
 				additionalParams = ""
 			if not self.event.getActionProcessorCommand():
 				raise RuntimeError("No action processor command defined")
 
-			if RUNNING_ON_WINDOWS and self.event.eventConfig.name == "gui_startup" and self.event.eventConfig.trustedInstallerDetection:
+			if (
+				sys.platform == "win32"
+				and self.event.eventConfig.name == "gui_startup"
+				and self.event.eventConfig.trustedInstallerDetection
+			):
 				# Wait for windows installer before Running Action Processor
 				try:
 					logger.notice("Getting windows installer status")
@@ -1061,12 +1084,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				depotServerUsername = "pcpatch"
 
 			if not RUNNING_ON_WINDOWS:
-				self.mountDepotShare(None)
+				self.mountDepotShare()
 
 			# Update action processor
 			if self.event.eventConfig.updateActionProcessor:
 				if RUNNING_ON_WINDOWS:
-					self.mountDepotShare(None)
+					self.mountDepotShare()
 				self.updateActionProcessor()
 				if RUNNING_ON_WINDOWS:
 					self.umountDepotShare()
@@ -1089,7 +1112,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			createEnvironment = config.get("action_processor", "create_environment")
 
 			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
-			actionProcessorCommand = actionProcessorCommand.replace("%service_url%", self._configServiceUrl)
+			actionProcessorCommand = actionProcessorCommand.replace("%service_url%", self._configServiceUrl or "?")
 			actionProcessorCommand = actionProcessorCommand.replace("%service_session%", serviceSession)
 			actionProcessorCommand = actionProcessorCommand.replace("%depot_path%", config.get_depot_path())
 			actionProcessorCommand = actionProcessorCommand.replace(
@@ -1184,7 +1207,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			timeline.setEventEnd(eventId=runActionsEventId)
 			self.umountDepotShare()
 
-	def setEnvironment(self):
+	def setEnvironment(self) -> None:
 		try:
 			logger.debug("Current environment:")
 			for key, value in os.environ.items():
@@ -1209,17 +1232,19 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		except Exception as err:
 			logger.error("Failed to set environment: %s", err)
 
-	def abortActionCallback(self, choiceSubject):
+	def abortActionCallback(self, choiceSubject: ChoiceSubject) -> None:
 		logger.notice("Event aborted by user")
 		self.actionCancelled = True
 
-	def startActionCallback(self, choiceSubject):
+	def startActionCallback(self, choiceSubject: ChoiceSubject) -> None:
 		logger.notice("Event wait canceled by user")
 		self.waitCancelled = True
 
-	def processActionWarningTime(self, productIds=[]):
+	def processActionWarningTime(self, productIds: list[str] | None = None):
 		if not self.event.eventConfig.actionWarningTime:
 			return
+		assert self._notificationServer
+		productIds = productIds or []
 		logger.info("Notifying user of actions to process %s (%s)", self.event, productIds)
 		cancelCounter = state.get(f"action_processing_cancel_counter_{self.event.eventConfig.name}", 0)
 		# State action_processing_cancel_counter without appended event name is needed for notification server
@@ -1272,12 +1297,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				seconds = int(seconds)
 				seconds = max(seconds, 0)
 				minutes = max(minutes, 0)
-				if minutes < 10:
-					minutes = f"0{minutes}"
-				if seconds < 10:
-					seconds = f"0{seconds}"
 				self.setStatusMessage(
-					_("Event %s: action processing will start in %s:%s") % (self.event.eventConfig.getName(), minutes, seconds)
+					_("Event %s: action processing will start in %s:%s")
+					% (self.event.eventConfig.getName(), f"{minutes:02d}", f"{seconds:02d}")
 				)
 				if endTime - now <= 0:
 					break
@@ -1312,7 +1334,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			timeline.setEventEnd(waitEventId)
 			try:
 				if self._notificationServer:
-					self._notificationServer.requestEndConnections(["action"])
+					self._notificationServer.requestEndConnections()
 					self._notificationServer.removeSubject(choiceSubject)
 				if notifierPids:
 					try:
@@ -1327,7 +1349,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			except Exception as err:
 				logger.error(err, exc_info=True)
 
-	def abortShutdownCallback(self, choiceSubject):
+	def abortShutdownCallback(self, choiceSubject: ChoiceSubject) -> None:
 		logger.notice("Shutdown aborted by user")
 		self._shutdownWarningRepetitionTime = self.event.eventConfig.shutdownWarningRepetitionTime
 		self._shutdownWarningTime = self.event.eventConfig.shutdownWarningTime
@@ -1341,7 +1363,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if now.hour > hour:
 				shutdown_time += datetime.timedelta(days=1)
 			shutdown_time = shutdown_time.replace(hour=hour, minute=0, second=0)
-			self._shutdownWarningRepetitionTime = (shutdown_time - now).total_seconds()
+			self._shutdownWarningRepetitionTime = int((shutdown_time - now).total_seconds())
 		logger.notice(
 			"User selected '%s', shutdownWarningRepetitionTime=%s, shutdownWarningTime=%s",
 			selected,
@@ -1350,26 +1372,27 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		)
 		self.shutdownCancelled = True
 
-	def startShutdownCallback(self, choiceSubject):
+	def startShutdownCallback(self, choiceSubject: ChoiceSubject) -> None:
 		logger.notice("Shutdown wait canceled by user")
 		self.shutdownWaitCancelled = True
 
-	def isRebootRequested(self):
+	def isRebootRequested(self) -> bool:
 		if self.event.eventConfig.reboot:
 			return True
-		if self.event.eventConfig.processShutdownRequests and self.opsiclientd.isRebootRequested():
+		if self.event.eventConfig.processShutdownRequests and self.opsiclientd and self.opsiclientd.isRebootRequested():
 			return True
 		return False
 
-	def isShutdownRequested(self):
+	def isShutdownRequested(self) -> bool:
 		if self.event.eventConfig.shutdown:
 			return True
-		if self.event.eventConfig.processShutdownRequests and self.opsiclientd.isShutdownRequested():
+		if self.event.eventConfig.processShutdownRequests and self.opsiclientd and self.opsiclientd.isShutdownRequested():
 			return True
 		return False
 
-	def processShutdownRequests(self):
+	def processShutdownRequests(self) -> None:
 		try:
+			assert self.opsiclientd
 			shutdown = self.isShutdownRequested()
 			reboot = self.isRebootRequested()
 			if reboot or shutdown:
@@ -1385,8 +1408,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						raise ConfigurationError(
 							f"Event {self.event.eventConfig.getName()} defines shutdownWarningTime but shutdownNotifierCommand is not set"
 						)
-					if self._notificationServer:
-						self._notificationServer.requestEndConnections()
+					assert self._notificationServer
+					self._notificationServer.requestEndConnections()
 					while True:
 						shutdownCancelCounter = state.get("shutdown_cancel_counter", 0)
 						waitEventId = None
@@ -1480,7 +1503,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						if RUNNING_ON_WINDOWS and self.event.eventConfig.shutdownNotifierDesktop == "all":
 							desktops = ["winlogon", "default"]
 
-						notifierId = "shutdown"
+						notifierId: Literal["shutdown", "shutdown_select"] = "shutdown"
 						shutdownNotifierCommand = self.event.eventConfig.shutdownNotifierCommand
 						if self.event.eventConfig.shutdownUserSelectableTime and len(choiceSubject.getChoices()) > 1:
 							notifierId = "shutdown_select"
@@ -1514,14 +1537,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							seconds = int(seconds)
 							seconds = max(seconds, 0)
 							minutes = max(minutes, 0)
-							if minutes < 10:
-								minutes = f"0{minutes}"
-							if seconds < 10:
-								seconds = f"0{seconds}"
 							if reboot:
-								self.setStatusMessage(_("Reboot in %s:%s") % (minutes, seconds))
+								self.setStatusMessage(_("Reboot in %s:%s") % (f"{minutes:02d}", f"{seconds:02d}"))
 							else:
-								self.setStatusMessage(_("Shutdown in %s:%s") % (minutes, seconds))
+								self.setStatusMessage(_("Shutdown in %s:%s") % (f"{minutes:02d}", f"{seconds:02d}"))
 							if endTime - now <= 0:
 								break
 							self._cancelable_sleep(1)
@@ -1618,7 +1637,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		except Exception as err:
 			logger.error(err, exc_info=True)
 
-	def inWorkingWindow(self):
+	def inWorkingWindow(self) -> bool:
 		start_str, end_str, now = (None, None, None)
 		try:
 			# Working window is specified like: 07:00-22:00
@@ -1647,7 +1666,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.error("Working window processing failed (start=%s, end=%s, now=%s): %s", start_str, end_str, now, err, exc_info=True)
 			return True
 
-	def cache_products(self, wait_for_ending: bool = False):
+	def cache_products(self, wait_for_ending: bool = False) -> None:
+		assert self.opsiclientd
 		if self.opsiclientd.getCacheService().isProductCacheServiceWorking():
 			logger.info("Already caching products")
 			return
@@ -1673,7 +1693,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			except Exception as err:
 				logger.error(err, exc_info=True)
 
-	def sync_config(self, wait_for_ending: bool = False):
+	def sync_config(self, wait_for_ending: bool = False) -> None:
+		assert self.opsiclientd
 		if self.opsiclientd.getCacheService().isConfigCacheServiceWorking():
 			logger.info("Already syncing config")
 			return
@@ -1689,7 +1710,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if wait_for_ending:
 				self.setStatusMessage(_("Sync completed"))
 
-	def cleanup_temp_dir(self):
+	def cleanup_temp_dir(self) -> None:
 		tmp_dir = config.get("global", "tmp_dir")
 		if not RUNNING_ON_WINDOWS or not config.get("global", "tmp_dir_cleanup") or not tmp_dir:
 			return
@@ -1701,8 +1722,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			else:
 				path.unlink()
 
-	def run(self):
+	def run(self) -> None:
 		with log_context({"instance": f"event processing {self.event.eventConfig.getId()}"}):
+			assert self.opsiclientd
 			timelineEventId = None
 			notifierPids = []
 			notifierHandles = []
@@ -1753,7 +1775,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						raise EventProcessingCanceled()
 
 					if self.event.eventConfig.eventNotifierCommand:
-						notifierId = "userlogin" if self.event.eventConfig.actionType == "login" else "event"
+						notifierId: Literal["userlogin", "event"] = "userlogin" if self.event.eventConfig.actionType == "login" else "event"
 						desktops = [self.event.eventConfig.eventNotifierDesktop]
 						if RUNNING_ON_WINDOWS and self.event.eventConfig.eventNotifierDesktop == "all":
 							desktops = ["winlogon", "default"]

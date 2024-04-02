@@ -21,19 +21,21 @@ from datetime import datetime, timezone
 from pathlib import Path
 from traceback import TracebackException
 from types import TracebackType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
 from OPSI import System  # type: ignore[import]
 from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
+from OPSI.Util.Message import ChoiceSubject, MessageSubject  # type: ignore[import]
 from OPSI.Util.Repository import WebDAVRepository  # type: ignore[import]
 from OPSI.Util.Thread import KillableThread  # type: ignore[import]
 from opsicommon.client.opsiservice import (
 	MessagebusListener,
 	ServiceClient,
 	ServiceConnectionListener,
+	ServiceVerificationFlags,
 )
 from opsicommon.exceptions import (
 	OpsiServiceAuthenticationError,
@@ -208,7 +210,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			)
 			self.service_client.register_connection_listener(self)
 
-	async def _arun(self):
+	async def _arun(self) -> None:
 		logger.notice("Permanent service connection starting")
 		# Initial connect, reconnect will be handled by ServiceClient
 		connect_wait = 3
@@ -229,7 +231,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		while not self._should_stop:
 			await asyncio.sleep(1)
 
-	def run(self):
+	def run(self) -> None:
 		with log_context({"instance": "permanent service connection"}):
 			self.running = True
 			try:
@@ -239,11 +241,11 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 				logger.error(err, exc_info=True)
 			self.running = False
 
-	def stop(self):
+	def stop(self) -> None:
 		self._should_stop = True
 		self.service_client.stop()
 
-	def __enter__(self) -> "PermanentServiceConnection":
+	def __enter__(self) -> PermanentServiceConnection:
 		self.start()
 		return self
 
@@ -328,31 +330,31 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 
 
 class ServiceConnection:
-	def __init__(self, opsiclientd=None):
+	def __init__(self, opsiclientd: Opsiclientd | None = None):
 		self.opsiclientd = opsiclientd
 		self._loadBalance = False
-		self._configServiceUrl = None
-		self._configService = None
+		self._configServiceUrl: str | None = None
+		self._configService: JSONRPCBackend | None = None
 		self._should_stop = False
 
-	def connectionThreadOptions(self):
+	def connectionThreadOptions(self) -> dict[str, str]:
 		return {}
 
-	def connectionStart(self, configServiceUrl):
+	def connectionStart(self, configServiceUrl: str) -> None:
 		pass
 
-	def connectionCancelable(self, stopConnectionCallback):
+	def connectionCancelable(self, stopConnectionCallback: Callable) -> None:
 		pass
 
-	def connectionTimeoutChanged(self, timeout):
+	def connectionTimeoutChanged(self, timeout: float) -> None:
 		pass
 
-	def connectionCanceled(self):
+	def connectionCanceled(self) -> None:
 		error = f"Failed to connect to config service '{self._configServiceUrl}': cancelled by user"
 		logger.error(error)
 		raise CanceledByUserError(error)
 
-	def connectionTimedOut(self):
+	def connectionTimedOut(self) -> None:
 		error = (
 			f"Failed to connect to config service '{self._configServiceUrl}': "
 			f"timed out after {config.get('config_service', 'connection_timeout')} seconds"
@@ -360,52 +362,58 @@ class ServiceConnection:
 		logger.error(error)
 		raise RuntimeError(error)
 
-	def connectionFailed(self, error):
+	def connectionFailed(self, error: str) -> None:
 		error = f"Failed to connect to config service '{self._configServiceUrl}': {error}"
 		logger.error(error)
 		raise RuntimeError(error)
 
-	def connectionEstablished(self):
+	def connectionEstablished(self) -> None:
 		pass
 
-	def getConfigService(self):
+	def getConfigService(self) -> JSONRPCBackend:
+		if not self._configService:
+			raise RuntimeError("No config service connected")
 		return self._configService
 
-	def getConfigServiceUrl(self):
+	def getConfigServiceUrl(self) -> str | None:
 		return self._configServiceUrl
 
-	def isConfigServiceConnected(self):
+	def isConfigServiceConnected(self) -> bool:
 		return bool(self._configService)
 
-	def stop(self):
+	def stop(self) -> None:
 		self._should_stop = True
 		self.disconnectConfigService()
 
 	def update_information_from_header(self) -> None:
-		if self._configService.service.new_host_id and self._configService.service.new_host_id != config.get("global", "host_id"):
-			logger.notice("Received new opsi host id %r.", self._configService.service.new_host_id)
-			config.set("global", "host_id", forceUnicode(self._configService.service.new_host_id))
-			config.updateConfigFile(force=True)
-			if config.get("config_service", "permanent_connection"):
-				logger.info("Reestablishing permanent service connection")
-				self.opsiclientd.stop_permanent_service_connection()
-				self.opsiclientd.start_permanent_service_connection()
+		assert self._configService
+		if not self._configService.service.new_host_id or self._configService.service.new_host_id == config.get("global", "host_id"):
+			return
 
-			if self.opsiclientd:
-				logger.info("Cleaning config cache after host information change.")
-				try:
-					cache_service = self.opsiclientd.getCacheService()
-					cache_service.setConfigCacheFaulty()
-				except RuntimeError:  # No cache_service currently running
-					from opsiclientd.nonfree.CacheService import ConfigCacheService
+		assert self.opsiclientd
+		logger.notice("Received new opsi host id %r.", self._configService.service.new_host_id)
+		config.set("global", "host_id", forceUnicode(self._configService.service.new_host_id))
+		config.updateConfigFile(force=True)
+		if config.get("config_service", "permanent_connection"):
+			logger.info("Reestablishing permanent service connection")
+			self.opsiclientd.stop_permanent_service_connection()
+			self.opsiclientd.start_permanent_service_connection()
 
-					ConfigCacheService.delete_cache_dir()
-			else:  # Called from SoftwareOnDemand or download_from_depot without opsiclientd context
-				config_cache = Path(config.get("cache_service", "storage_dir")) / "config"
-				if config_cache.exists():
-					shutil.rmtree(config_cache)
+		if self.opsiclientd:
+			logger.info("Cleaning config cache after host information change.")
+			try:
+				cache_service = self.opsiclientd.getCacheService()
+				cache_service.setConfigCacheFaulty()
+			except RuntimeError:  # No cache_service currently running
+				from opsiclientd.nonfree.CacheService import ConfigCacheService
 
-	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):
+				ConfigCacheService.delete_cache_dir()
+		else:  # Called from SoftwareOnDemand or download_from_depot without opsiclientd context
+			config_cache = Path(config.get("cache_service", "storage_dir")) / "config"
+			if config_cache.exists():
+				shutil.rmtree(config_cache)
+
+	def connectConfigService(self, allowTemporaryConfigServiceUrls: bool = True) -> None:
 		try:
 			configServiceUrls = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=allowTemporaryConfigServiceUrls)
 			if not configServiceUrls:
@@ -416,6 +424,7 @@ class ServiceConnection:
 
 			for urlIndex, configServiceURL in enumerate(configServiceUrls):
 				self._configServiceUrl = configServiceURL
+				assert self._configServiceUrl
 
 				kwargs = self.connectionThreadOptions()
 				logger.debug("Creating ServiceConnectionThread (url: %s)", self._configServiceUrl)
@@ -466,11 +475,12 @@ class ServiceConnection:
 					self.connectionTimedOut()
 
 				if not serviceConnectionThread.connected:
-					self.connectionFailed(serviceConnectionThread.connectionError)
+					self.connectionFailed(serviceConnectionThread.connectionError or "Unknown error")
 
 				if serviceConnectionThread.connected and forceBool(config.get("config_service", "sync_time_from_service")):
 					logger.info("Syncing local system time from service")
 					try:
+						assert serviceConnectionThread._configService
 						System.setLocalSystemTime(serviceConnectionThread._configService.getServiceTime(utctime=True))
 					except Exception as err:
 						logger.error("Failed to sync time: '%s'", err)
@@ -478,7 +488,7 @@ class ServiceConnection:
 				self._configService = serviceConnectionThread._configService
 				self.update_information_from_header()
 
-				if "localhost" not in configServiceURL and "127.0.0.1" not in configServiceURL:
+				if self._configService and "localhost" not in configServiceURL and "127.0.0.1" not in configServiceURL:
 					try:
 						client_to_depotservers = self._configService.configState_getClientToDepotserver(
 							clientIds=config.get("global", "host_id")
@@ -497,7 +507,7 @@ class ServiceConnection:
 			self.disconnectConfigService()
 			raise
 
-	def disconnectConfigService(self):
+	def disconnectConfigService(self) -> None:
 		if self._configService:
 			try:
 				# stop_running_processes()?  #TODO cleanup
@@ -509,7 +519,7 @@ class ServiceConnection:
 
 
 class ServiceConnectionThread(KillableThread):
-	def __init__(self, configServiceUrl, username, password, statusSubject=None):
+	def __init__(self, configServiceUrl: str, username: str, password: str, statusSubject: MessageSubject | None = None) -> None:
 		KillableThread.__init__(self)
 		self._configServiceUrl = configServiceUrl
 		self._username = username
@@ -519,19 +529,19 @@ class ServiceConnectionThread(KillableThread):
 		self.running = False
 		self.connected = False
 		self.cancelled = False
-		self.connectionError = None
+		self.connectionError: str | None = None
 		if not self._configServiceUrl:
 			raise RuntimeError("No config service url given")
 
-	def setStatusMessage(self, message):
+	def setStatusMessage(self, message: str) -> None:
 		if not self._statusSubject:
 			return
 		self._statusSubject.setMessage(message)
 
-	def getUsername(self):
+	def getUsername(self) -> str:
 		return self._username
 
-	def run(self):
+	def run(self) -> None:
 		with log_context({"instance": "service connection"}):
 			logger.debug("ServiceConnectionThread started...")
 			self.running = True
@@ -543,7 +553,7 @@ class ServiceConnectionThread(KillableThread):
 				verify = config.service_verification_flags
 				if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
 					compression = False
-					verify = "accept_all"
+					verify = [ServiceVerificationFlags.ACCEPT_ALL]
 
 				log_network_status()
 				tryNum = 0
@@ -576,6 +586,7 @@ class ServiceConnectionThread(KillableThread):
 							ip_version=config.get("global", "ip_version"),
 							connect_timeout=SERVICE_CONNECT_TIMEOUT,
 						)
+						assert self._configService
 						self.connected = True
 						self.connectionError = None
 						server_version = self._configService.service.server_version
@@ -635,11 +646,11 @@ class ServiceConnectionThread(KillableThread):
 			finally:
 				self.running = False
 
-	def stopConnectionCallback(self, choiceSubject):
+	def stopConnectionCallback(self, choiceSubject: ChoiceSubject) -> None:
 		logger.notice("Connection cancelled by user")
 		self.stop()
 
-	def stop(self):
+	def stop(self) -> None:
 		logger.debug("Stopping thread")
 		self.cancelled = True
 		self.running = False
