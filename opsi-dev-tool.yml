@@ -101,13 +101,11 @@ pyinstaller-poetry:
       dst: opsiclientd_data/extend.d/
   dirname: opsiclientd
   after_script:
-    # opsiclientd_data should be moved not copied
-    # need to adapt opsi-client-agent opsi-script first
     linux:
-      - cp -a dist/opsiclientd/opsiclientd_data dist/opsiclientd/site-packages/
+      - mv dist/opsiclientd/_internal/opsiclientd_data dist/opsiclientd/
       - chmod -R g-w,o-w dist/opsiclientd
     darwin:
-      - cp -a dist/opsiclientd/opsiclientd_data dist/opsiclientd/site-packages/
+      - mv dist/opsiclientd/_internal/opsiclientd_data dist/opsiclientd/
       - chmod -R g-w,o-w dist/opsiclientd
     windows:
-      - Copy-Item -Path dist\opsiclientd\opsiclientd_data -Destination dist\opsiclientd\site-packages\opsiclientd_data -Recurse
+      - Move-Item -Path dist\opsiclientd\_internal\opsiclientd_data -Destination dist\opsiclientd\opsiclientd_data -Recurse
