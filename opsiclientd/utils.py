@@ -90,8 +90,8 @@ def get_version_from_elf_binary(filename: str | Path) -> str:
 	from elftools.elf.elffile import ELFFile  # type: ignore[import]
 
 	with open(filename, "rb") as file:
-		elffile = ELFFile(file)
-		for section in elffile.iter_sections():
+		elffile = ELFFile(file)  # type: ignore[no-untyped-call]
+		for section in elffile.iter_sections():  # type: ignore[no-untyped-call]
 			if section.name == "fpc.resources":
 				return read_fixed_file_info(section.data())
 

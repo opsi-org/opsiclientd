@@ -157,7 +157,7 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str | N
 
 def check_signature(bin_dir: str) -> None:
 	logger.info("check_signature is called")
-	if not sys.platform == "win32":
+	if sys.platform != "win32":
 		return  # Not yet implemented
 
 	windowsVersion = sys.getwindowsversion()

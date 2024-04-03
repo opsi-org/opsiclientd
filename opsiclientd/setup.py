@@ -394,7 +394,7 @@ def cleanup_registry_uninstall() -> None:
 
 
 def cleanup_registry_environment_path() -> None:
-	if not sys.platform != "win32":
+	if sys.platform != "win32":
 		return
 
 	logger.notice("Cleanup registry environment PATH variable")
@@ -402,16 +402,16 @@ def cleanup_registry_environment_path() -> None:
 
 	import win32process  # type: ignore[import]
 
-	key_handle = winreg.CreateKey(  # type: ignore[attr-defined]
-		winreg.HKEY_LOCAL_MACHINE,  # type: ignore[attr-defined]
+	key_handle = winreg.CreateKey(
+		winreg.HKEY_LOCAL_MACHINE,
 		r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
 	)
 	try:
 		if win32process.IsWow64Process():
-			winreg.DisableReflectionKey(key_handle)  # type: ignore[attr-defined]
+			winreg.DisableReflectionKey(key_handle)
 
 		try:
-			reg_value, value_type = winreg.QueryValueEx(key_handle, "PATH")  # type: ignore[attr-defined]
+			reg_value, value_type = winreg.QueryValueEx(key_handle, "PATH")
 			cur_reg_values = reg_value.split(";")
 			# Remove empty values and values containing "pywin32_system32" and "opsi"
 			reg_values = list(dict.fromkeys(v for v in cur_reg_values if v and not ("pywin32_system32" in v and "opsi" in v)))
@@ -420,11 +420,11 @@ def cleanup_registry_environment_path() -> None:
 				return
 
 			reg_value = ";".join(reg_values)
-			winreg.SetValueEx(key_handle, "PATH", 0, value_type, reg_value)  # type: ignore[attr-defined]
+			winreg.SetValueEx(key_handle, "PATH", 0, value_type, reg_value)
 		except FileNotFoundError:
 			logger.warning("Key 'PATH' not found in registry")
 	finally:
-		winreg.CloseKey(key_handle)  # type: ignore[attr-defined]
+		winreg.CloseKey(key_handle)
 
 
 def setup_on_shutdown() -> None:

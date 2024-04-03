@@ -248,7 +248,7 @@ def process_messagebus_message(message: TerminalMessage, send_message: Callable)
 			else:
 				# Resize to redraw screen
 				if message.rows and message.cols:
-					terminals[message.terminal_id].set_size(message.rows - 1, message.cols)  # TODO: why?
+					terminals[message.terminal_id].set_size(message.rows - 1, message.cols)
 					terminals[message.terminal_id].set_size(message.rows, message.cols)
 			return
 		if terminal:
