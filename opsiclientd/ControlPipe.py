@@ -24,6 +24,7 @@ from opsicommon.logging import get_logger, log_context
 
 from opsiclientd.webserver.rpc.control import get_pipe_control_interface
 from opsiclientd.webserver.rpc.jsonrpc import (
+	JSONRPC20ErrorResponse,
 	JSONRPC20Request,
 	JSONRPC20Response,
 	JSONRPCErrorResponse,
@@ -136,7 +137,7 @@ class ClientConnection(threading.Thread):
 
 	def executeRpc(
 		self, method: str, params: list[Any] | tuple[Any, ...] | None = None, with_lock: bool = True
-	) -> JSONRPCErrorResponse | JSONRPCResponse:
+	) -> JSONRPCErrorResponse | JSONRPCResponse | JSONRPC20ErrorResponse | JSONRPC20Response:
 		params = params or []
 		with log_context({"instance": "control pipe"}):
 			rpc_id = 1
@@ -157,7 +158,7 @@ class ClientConnection(threading.Thread):
 						return JSONRPCResponse(id=rpc_id)
 					logger.info("Received response '%s' from client %s", response_json, self)
 					response = jsonrpc_response_from_data(response_json, "json")[0]
-					if method == "loginUser" and response.result:
+					if method == "loginUser" and isinstance(response, (JSONRPCResponse, JSONRPC20Response)) and response.result:
 						self.login_user_executed = datetime.now()
 						# Credential provider can only handle one successful login.
 						# Ensure, that the credential provider is not used for a
@@ -259,7 +260,9 @@ class ControlPipe(threading.Thread):
 				return True
 		return False
 
-	def executeRpc(self, method: str, *params: Any) -> list[JSONRPCResponse | JSONRPCErrorResponse]:
+	def executeRpc(
+		self, method: str, *params: Any
+	) -> list[JSONRPCResponse | JSONRPCErrorResponse | JSONRPC20Response | JSONRPC20ErrorResponse]:
 		with log_context({"instance": "control pipe"}):
 			if not self._clients:
 				raise RuntimeError("Cannot execute rpc, no client connected")
@@ -276,8 +279,8 @@ class ControlPipe(threading.Thread):
 					continue
 				response = client.executeRpc(method, params)
 				responses.append(response)
-				if isinstance(response, JSONRPCErrorResponse):
-					errors.append(response.error)
+				if isinstance(response, (JSONRPCErrorResponse, JSONRPC20ErrorResponse)):
+					errors.append(str(response.error))
 
 			if len(errors) == len(responses):
 				raise RuntimeError(", ".join(errors))

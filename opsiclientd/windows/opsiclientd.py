@@ -38,6 +38,7 @@ from opsicommon.types import forceBool  # type: ignore[import]
 
 from opsiclientd import config
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
+from opsiclientd.ControlPipe import JSONRPC20Response, JSONRPCResponse
 from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
@@ -280,9 +281,9 @@ class OpsiclientdNT(Opsiclientd):
 		logger.info("Login capable opsi credential provider connected, calling loginUser")
 		for response in self._controlPipe.executeRpc("loginUser", username, password):
 			logger.debug("loginUser response: %r", response)
-			if not response.error and response.result:
+			if isinstance(response, (JSONRPCResponse, JSONRPC20Response)) and response.result:
 				return True
-			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {response.error}")
+			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {getattr(response, 'error', '')}")
 		return False
 
 	def cleanup_opsi_setup_user(self, keep_sid: str | None = None) -> None:
