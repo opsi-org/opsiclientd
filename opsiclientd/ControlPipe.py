@@ -328,6 +328,7 @@ class PosixControlDomainSocket(ControlPipe):
 		ControlPipe.__init__(self, opsiclientd)
 		self._socketName = "/var/run/opsiclientd/socket"
 		self._socket: socket.socket | None = None
+		self._client_id = 0
 
 	def setup(self) -> None:
 		logger.trace("Creating socket %s", self._socketName)
@@ -355,7 +356,8 @@ class PosixControlDomainSocket(ControlPipe):
 			try:
 				connection, client_address = self._socket.accept()
 				logger.notice("Client %s connected to %s", client_address, self._socketName)
-				return (connection, f"unix_socket{client_address}")
+				self._client_id += 1
+				return (connection, f"#{self._client_id}")
 			except socket.timeout:
 				if self._stopEvent.is_set():
 					return (None, "")
