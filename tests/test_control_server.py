@@ -262,7 +262,8 @@ def test_log_reader_start_position(tmp_path: Path) -> None:
 			assert lines == num_tail_records if log_lines > num_tail_records else log_lines
 
 
-def test_cache_service_interface(default_config: Config) -> None:  # noqa
+def test_cache_service_interface(default_config: Config, tmp_path: Path) -> None:  # noqa
+	default_config.set("cache_service", "extension_config_dir", str(tmp_path))
 	ocd = Opsiclientd()
 	with ocd.runCacheService(allow_fail=False):
 		backend = get_cache_service_interface(ocd)
@@ -274,9 +275,10 @@ def test_cache_service_interface(default_config: Config) -> None:  # noqa
 		backend.productOnClient_getObjectsWithSequence()  # type: ignore[attr-defined]
 
 
-def test_cache_service_jsonrpc(opsiclientd_auth: tuple[str, str]) -> None:  # noqa
+def test_cache_service_jsonrpc(default_config: Config, tmp_path: Path, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
+	default_config.set("cache_service", "extension_config_dir", str(tmp_path))
 	ocd = Opsiclientd()
-	with ocd.runCacheService():
+	with ocd.runCacheService(allow_fail=False):
 		with get_test_client(ocd) as client:
 			with pytest.raises(HTTPStatusError, match="401 Unauthorized"):
 				client.jsonrpc20(path="/rpc", method="backend_info", params=[], id="1")
