@@ -184,7 +184,7 @@ def test_headers(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str
 		assert now < server_dt
 
 		response = client.get("/rpc")
-		assert response.headers["server"] == "opsiclientd config cache service 4.2.0.0"
+		assert response.headers["server"] == "opsiclientd config cache service 4.3.0.0"
 
 
 def test_control_jsonrpc(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
