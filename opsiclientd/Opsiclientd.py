@@ -465,6 +465,102 @@ class Opsiclientd(EventListener, threading.Thread):
 				except (NameError, RuntimeError) as stop_err:
 					logger.debug("Failed to stop cache service: %s", stop_err)
 
+	@contextmanager
+	def runEventGenerators(self) -> Generator[None, None, None]:
+		logger.debug("Creating event generators")
+		createEventGenerators(self)
+
+		for eventGenerator in getEventGenerators():
+			eventGenerator.addEventListener(self)
+			eventGenerator.start()
+			logger.info("Event generator '%s' started", eventGenerator)
+
+		if RUNNING_ON_WINDOWS:
+			try:
+				logger.info("Starting LoginDetector for message of the day.")
+				self.login_detector = LoginDetector(self, EventConfig("login_detector"))
+				self.login_detector.start()
+			except Exception as error:
+				logger.error("Failed to start LoginDetector: %s", error, exc_info=True)
+
+		for event_generator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
+			try:
+				event_generator.createAndFireEvent()
+			except (ValueError, CannotCancelEventError) as err:
+				logger.error("Unable to fire DaemonStartupEvent from %s: %s", event_generator, err, exc_info=True)
+
+		if getEventGenerators(generatorClass=GUIStartupEventGenerator):
+			# Wait until gui starts up
+			logger.notice("Waiting for gui startup (timeout: %d seconds)", config.get("global", "wait_for_gui_timeout"))
+			self.waitForGUI(timeout=config.get("global", "wait_for_gui_timeout"))
+			if not self.is_stopping():
+				logger.notice("Done waiting for GUI")
+				# Wait some more seconds for events to fire
+				time.sleep(5)
+		try:
+			yield
+		finally:
+			for event_generator in getEventGenerators(generatorClass=DaemonShutdownEventGenerator):
+				logger.info("Create and fire shutdown event generator %s", event_generator)
+				try:
+					event_generator.createAndFireEvent()
+				except (ValueError, CannotCancelEventError) as err:
+					logger.error("Unable to fire DaemonShutdownEvent from %s: %s", event_generator, err, exc_info=True)
+			if RUNNING_ON_WINDOWS and isinstance(self.login_detector, LoginDetector):
+				logger.info("Stopping LoginDetector for message of the day.")
+				self.login_detector.stop()
+				self.login_detector.join(2)
+			for eventGenerator in getEventGenerators():
+				logger.info("Stopping event generator %s", eventGenerator)
+				eventGenerator.stop()
+				eventGenerator.join(2)
+				logger.info("Event generator %s stopped", eventGenerator)
+
+	@contextmanager
+	def runControlPipe(self) -> Generator[None, None, None]:
+		logger.notice("Starting control pipe")
+		try:
+			self._controlPipe = ControlPipeFactory(self)
+			assert self._controlPipe
+			self._controlPipe.daemon = True
+			self._controlPipe.start()
+			logger.notice("Control pipe started")
+			yield
+		except Exception as err:
+			logger.error("Failed to start control pipe: %s", err, exc_info=True)
+			raise
+		finally:
+			logger.info("Stopping control pipe")
+			try:
+				if self._controlPipe:
+					self._controlPipe.stop()
+					self._controlPipe.join(2)
+					logger.info("Control pipe stopped")
+			except (NameError, RuntimeError) as stopError:
+				logger.debug("Stopping controlPipe failed: %s", stopError)
+
+	@contextmanager
+	def runWebserver(self) -> Generator[None, None, None]:
+		logger.notice("Starting webserver")
+		self._webserver = None
+		try:
+			self._webserver = Webserver(opsiclientd=self)
+			self._webserver.start()
+			logger.notice("Webserver started")
+
+			yield
+		except Exception as err:
+			logger.error("Failed to start webserver: %s", err, exc_info=True)
+			raise err
+		finally:
+			if self._webserver:
+				logger.info("Stopping webserver")
+				try:
+					self._webserver.stop()
+					logger.info("Webserver stopped")
+				except (NameError, RuntimeError) as stopError:
+					logger.debug("Stopping webserver failed: %s", stopError)
+
 	def run(self) -> None:
 		with log_context({"instance": "opsiclientd"}):
 			try:
@@ -494,108 +590,6 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		setup(full=False)
 
-		@contextmanager
-		def getControlPipe() -> Generator[None, None, None]:
-			logger.notice("Starting control pipe")
-			try:
-				self._controlPipe = ControlPipeFactory(self)
-				assert self._controlPipe
-				self._controlPipe.daemon = True
-				self._controlPipe.start()
-				logger.notice("Control pipe started")
-				yield
-			except Exception as err:
-				logger.error("Failed to start control pipe: %s", err, exc_info=True)
-				raise
-			finally:
-				logger.info("Stopping control pipe")
-				try:
-					if self._controlPipe:
-						self._controlPipe.stop()
-						self._controlPipe.join(2)
-						logger.info("Control pipe stopped")
-				except (NameError, RuntimeError) as stopError:
-					logger.debug("Stopping controlPipe failed: %s", stopError)
-
-		@contextmanager
-		def getWebserver() -> Generator[None, None, None]:
-			logger.notice("Starting webserver")
-			self._webserver = None
-			try:
-				self._webserver = Webserver(opsiclientd=self)
-				self._webserver.start()
-				logger.notice("Webserver started")
-
-				yield
-			except Exception as err:
-				logger.error("Failed to start webserver: %s", err, exc_info=True)
-				raise err
-			finally:
-				if self._webserver:
-					logger.info("Stopping webserver")
-					try:
-						self._webserver.stop()
-						logger.info("Webserver stopped")
-					except (NameError, RuntimeError) as stopError:
-						logger.debug("Stopping webserver failed: %s", stopError)
-
-		@contextmanager
-		def getEventGeneratorContext() -> Generator[None, None, None]:
-			logger.debug("Creating event generators")
-			createEventGenerators(self)
-
-			for eventGenerator in getEventGenerators():
-				eventGenerator.addEventListener(self)
-				eventGenerator.start()
-				logger.info("Event generator '%s' started", eventGenerator)
-
-			if RUNNING_ON_WINDOWS:
-				try:
-					logger.info("Starting LoginDetector for message of the day.")
-					self.login_detector = LoginDetector(self, EventConfig("login_detector"))
-					self.login_detector.start()
-				except Exception as error:
-					logger.error("Failed to start LoginDetector: %s", error, exc_info=True)
-			try:
-				yield
-			finally:
-				if RUNNING_ON_WINDOWS and isinstance(self.login_detector, LoginDetector):
-					logger.info("Stopping LoginDetector for message of the day.")
-					self.login_detector.stop()
-					self.login_detector.join(2)
-				for eventGenerator in getEventGenerators():
-					logger.info("Stopping event generator %s", eventGenerator)
-					eventGenerator.stop()
-					eventGenerator.join(2)
-					logger.info("Event generator %s stopped", eventGenerator)
-
-		@contextmanager
-		def getDaemonLoopingContext() -> Generator[None, None, None]:
-			with getEventGeneratorContext():
-				for event_generator in getEventGenerators(generatorClass=DaemonStartupEventGenerator):
-					try:
-						event_generator.createAndFireEvent()
-					except (ValueError, CannotCancelEventError) as err:
-						logger.error("Unable to fire DaemonStartupEvent from %s: %s", event_generator, err, exc_info=True)
-
-				if getEventGenerators(generatorClass=GUIStartupEventGenerator):
-					# Wait until gui starts up
-					logger.notice("Waiting for gui startup (timeout: %d seconds)", config.get("global", "wait_for_gui_timeout"))
-					self.waitForGUI(timeout=config.get("global", "wait_for_gui_timeout"))
-					if not self.is_stopping():
-						logger.notice("Done waiting for GUI")
-						# Wait some more seconds for events to fire
-						time.sleep(5)
-				try:
-					yield
-				finally:
-					for event_generator in getEventGenerators(generatorClass=DaemonShutdownEventGenerator):
-						logger.info("Create and fire shutdown event generator %s", event_generator)
-						try:
-							event_generator.createAndFireEvent()
-						except (ValueError, CannotCancelEventError) as err:
-							logger.error("Unable to fire DaemonStartupEvent from %s: %s", event_generator, err, exc_info=True)
-
 		try:
 			parent = psutil.Process(os.getpid()).parent()
 			parent_name = parent.name() if parent else None
@@ -622,77 +616,73 @@ class Opsiclientd(EventListener, threading.Thread):
 				title=event_title, description=event_description, category="opsiclientd_running", durationEvent=True
 			)
 
-			with getControlPipe():
-				with getWebserver():
-					if config.get("config_service", "permanent_connection"):
-						self.start_permanent_service_connection()
+			with self.runControlPipe(), self.runWebserver():
+				if config.get("config_service", "permanent_connection"):
+					self.start_permanent_service_connection()
 
-					if restart_marker_config and restart_marker_config.run_opsi_script:
-						log_dir = config.get("global", "log_dir")
-						action_processor = os.path.join(
-							config.get("action_processor", "local_dir"), config.get("action_processor", "filename")
-						)
-						param_char = "/" if RUNNING_ON_WINDOWS else "-"
-						cmd = [
-							action_processor,
-							restart_marker_config.run_opsi_script,
-							os.path.join(log_dir, "start_opsi_script.log"),
-							f"{param_char}servicebatch",
-						]
-						if restart_marker_config.product_id:
-							cmd += [
-								f"{param_char}productid",
-								restart_marker_config.product_id,
-							]
+				if restart_marker_config and restart_marker_config.run_opsi_script:
+					log_dir = config.get("global", "log_dir")
+					action_processor = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
+					param_char = "/" if RUNNING_ON_WINDOWS else "-"
+					cmd = [
+						action_processor,
+						restart_marker_config.run_opsi_script,
+						os.path.join(log_dir, "start_opsi_script.log"),
+						f"{param_char}servicebatch",
+					]
+					if restart_marker_config.product_id:
 						cmd += [
-							f"{param_char}opsiservice",
-							config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False)[0],
-							f"{param_char}clientid",
-							config.get("global", "host_id"),
-							f"{param_char}username",
-							config.get("global", "host_id"),
-							f"{param_char}password",
-							config.get("global", "opsi_host_key"),
-							f"{param_char}parameter",
-							f"opsiclientd_restart_marker={config.restart_marker}",
+							f"{param_char}productid",
+							restart_marker_config.product_id,
 						]
-						logger.notice("Running startup script: %s", cmd)
-						System.execute(cmd, shell=False, waitForEnding=True, timeout=3600)
+					cmd += [
+						f"{param_char}opsiservice",
+						config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False)[0],
+						f"{param_char}clientid",
+						config.get("global", "host_id"),
+						f"{param_char}username",
+						config.get("global", "host_id"),
+						f"{param_char}password",
+						config.get("global", "opsi_host_key"),
+						f"{param_char}parameter",
+						f"opsiclientd_restart_marker={config.restart_marker}",
+					]
+					logger.notice("Running startup script: %s", cmd)
+					System.execute(cmd, shell=False, waitForEnding=True, timeout=3600)
 
-						restart_marker_config = config.check_restart_marker()
-						if restart_marker_config and restart_marker_config.restart_service:
-							logger.notice("Restart marker found, restarting")
-							self.restart(disabled_event_types=restart_marker_config.disabled_event_types)
-							return
+					restart_marker_config = config.check_restart_marker()
+					if restart_marker_config and restart_marker_config.restart_service:
+						logger.notice("Restart marker found, restarting")
+						self.restart(disabled_event_types=restart_marker_config.disabled_event_types)
+						return
 
-					with self.runCacheService():
-						with getDaemonLoopingContext():
-							with self._eptListLock:
-								if not self._eventProcessingThreads:
-									logger.notice("No events processing, unblocking login")
-									self.setBlockLogin(False)
+				with self.runCacheService(), self.runEventGenerators():
+					with self._eptListLock:
+						if not self._eventProcessingThreads:
+							logger.notice("No events processing, unblocking login")
+							self.setBlockLogin(False)
 
-							try:
-								self.updateMOTD()  # daemon startup is done, gui is up
-							except Exception as error:
-								logger.error("Failed to update message of the day: %s", error, exc_info=True)
+					try:
+						self.updateMOTD()  # Daemon startup is done, gui is up
+					except Exception as error:
+						logger.error("Failed to update message of the day: %s", error, exc_info=True)
 
-							try:
-								while not self._stopEvent.is_set():
-									self._stopEvent.wait(1)
-							finally:
-								logger.notice("opsiclientd is going down")
-								with self._eptListLock:
-									for ept in self._eventProcessingThreads:
-										ept.stop()
-									for ept in self._eventProcessingThreads:
-										logger.info("Waiting for event processing thread %s", ept)
-										ept.join(5)
+					try:
+						while not self._stopEvent.is_set():
+							self._stopEvent.wait(1)
+					finally:
+						logger.notice("opsiclientd is going down")
+						with self._eptListLock:
+							for ept in self._eventProcessingThreads:
+								ept.stop()
+							for ept in self._eventProcessingThreads:
+								logger.info("Waiting for event processing thread %s", ept)
+								ept.join(5)
 
-								if self._opsiclientdRunningEventId:
-									timeline.setEventEnd(self._opsiclientdRunningEventId)
-								logger.info("Stopping timeline")
-								timeline.stop()
+						if self._opsiclientdRunningEventId:
+							timeline.setEventEnd(self._opsiclientdRunningEventId)
+						logger.info("Stopping timeline")
+						timeline.stop()
 		except Exception as err:
 			if not self._stopEvent.is_set():
 				logger.error(err, exc_info=True)

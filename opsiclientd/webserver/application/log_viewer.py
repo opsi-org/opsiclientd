@@ -111,7 +111,10 @@ class LogReaderThread(threading.Thread):
 		if max_delay is None:
 			max_delay = self.max_delay
 		if self.record_buffer and (len(self.record_buffer) > self.max_record_buffer_size or time.time() - self.send_time > max_delay):
-			self.send_buffer()
+			try:
+				self.send_buffer()
+			except Exception as err:
+				logger.error("Error sending log data: %s", err, exc_info=True)
 
 	def parse_log_line(self, line: str) -> dict[str, str | int | float | dict[int, str] | None] | None:
 		match = self.record_start_regex.match(line)
