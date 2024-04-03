@@ -229,7 +229,7 @@ class Config(metaclass=Singleton):
 				"sync_products_with_actions_only": True,
 			},
 			"control_server": {
-				"interface": "::",
+				"interface": ["0.0.0.0", "::"],
 				"port": 4441,
 				"ssl_server_key_file": os.path.join(baseDir, "opsiclientd", "opsiclientd.pem"),
 				"ssl_server_cert_file": os.path.join(baseDir, "opsiclientd", "opsiclientd.pem"),
@@ -241,7 +241,7 @@ class Config(metaclass=Singleton):
 				"start_delay": 0,
 			},
 			"notification_server": {
-				"interface": "127.0.0.1",
+				"interface": ["127.0.0.1", "::1"],
 				"start_port": 44000,
 				"popup_port": 45000,
 				"start_delay": 0,
@@ -471,7 +471,7 @@ class Config(metaclass=Singleton):
 				return
 
 		# Preprocess values, convert to correct type
-		if option in ("exclude_product_group_ids", "include_product_group_ids", "alt_ids"):
+		if option in ("exclude_product_group_ids", "include_product_group_ids", "alt_ids", "interface"):
 			if not isinstance(value, list):
 				value = [x.strip() for x in value.split(",") if x.strip()]
 			value = forceList(value)

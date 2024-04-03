@@ -31,7 +31,6 @@ class Webserver(Thread):
 		self._server_thread: Thread | None
 
 		app = setup_application(self.opsiclientd)
-
 		uvicorn_config = UvicornConfig(
 			app=app,
 			interface="asgi3",

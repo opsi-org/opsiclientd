@@ -129,7 +129,7 @@ class NotificationServerClientConnection(Protocol):
 
 
 class NotificationServer(SubjectsObserver, Thread):
-	def __init__(self, address: str, start_port: int, subjects: list[Subject], notifier_id: str | None = None) -> None:
+	def __init__(self, address: list[str] | str, start_port: int, subjects: list[Subject], notifier_id: str | None = None) -> None:
 		Thread.__init__(self, daemon=True)
 		SubjectsObserver.__init__(self)
 		self._address = address
