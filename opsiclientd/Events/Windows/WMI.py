@@ -92,6 +92,10 @@ class WMIEventGenerator(EventGenerator):
 				break
 			except wmi.x_wmi_timed_out:
 				continue
+			except Exception:
+				if self._opsiclientd.is_stopping():
+					return None
+				raise
 
 		if wqlResult:
 			eventInfo = {}

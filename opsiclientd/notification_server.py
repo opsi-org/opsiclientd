@@ -15,7 +15,7 @@ from threading import Event, Lock, Thread
 from typing import Any
 
 from OPSI.Util.Message import ChoiceSubject, Subject, SubjectsObserver  # type: ignore[import]
-from opsicommon.logging import get_logger
+from opsicommon.logging import get_logger, log_context
 
 logger = get_logger()
 
@@ -277,15 +277,16 @@ class NotificationServer(SubjectsObserver, Thread):
 			pass
 
 	def run(self) -> None:
-		try:
-			logger.debug("Starting notification server")
-			self._stopped.clear()
-			run(self._async_main())
-			self._ready.clear()
-			logger.debug("Notification server stopped")
-			self._stopped.set()
-		except Exception as err:
-			logger.error("Notification server error: %s", err, exc_info=True)
+		with log_context({"instance": "notification server"}):
+			try:
+				logger.debug("Starting notification server")
+				self._stopped.clear()
+				run(self._async_main())
+				self._ready.clear()
+				logger.debug("Notification server stopped")
+				self._stopped.set()
+			except Exception as err:
+				logger.error("Notification server error: %s", err, exc_info=True)
 
 	def stop(self) -> None:
 		with self._server_lock:
