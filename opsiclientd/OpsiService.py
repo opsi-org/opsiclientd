@@ -84,7 +84,7 @@ config = Config()
 cert_file_lock = threading.Lock()
 SERVICE_CONNECT_TIMEOUT = 10  # Seconds
 
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 
 def update_os_ca_store(allow_remove: bool = False) -> None:

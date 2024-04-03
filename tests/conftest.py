@@ -10,15 +10,18 @@ conftest
 
 import platform
 import warnings
+from typing import Any
 
 import psutil
 import pytest
 import urllib3
+from _pytest.config import Config
 from _pytest.logging import LogCaptureHandler
+from _pytest.nodes import Item
 
 
 # Disable pytest log capture
-def emit(*args, **kwargs) -> None:
+def emit(*args: Any, **kwargs: Any) -> None:
 	pass
 
 
@@ -26,7 +29,7 @@ LogCaptureHandler.emit = emit  # type: ignore[method-assign]
 
 
 @pytest.hookimpl()
-def pytest_configure(config):
+def pytest_configure(config: Config) -> None:
 	config.addinivalue_line("markers", "docker_linux: mark test to run only on linux in docker")
 	config.addinivalue_line("markers", "opsiclientd_running: mark test to run only if an opsiclientd instance is running")
 	config.addinivalue_line("markers", "windows: mark test to run only on windows")
@@ -60,7 +63,7 @@ RUNNING_IN_DOCKER = running_in_docker()
 OPSICLIENTD_RUNNING = RUNNING_IN_DOCKER and opsiclient_running()
 
 
-def pytest_runtest_setup(item):
+def pytest_runtest_setup(item: Item) -> None:
 	supported_platforms = []
 	for marker in item.iter_markers():
 		if marker == "docker_linux" and not RUNNING_IN_DOCKER:

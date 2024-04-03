@@ -43,7 +43,7 @@ from opsiclientd.Config import Config
 
 config = Config()
 
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 TIMELINE_IMAGE_URL = "/static/timeline/timeline_js/images/"
 HTML_HEAD = """

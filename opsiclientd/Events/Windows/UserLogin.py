@@ -11,20 +11,27 @@ Events that get active once a system shuts down or restarts.
 from __future__ import annotations
 
 import time
+from typing import TYPE_CHECKING, Any
 
 import psutil
-from opsicommon.logging import logger
+from opsicommon.logging import get_logger
 
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
-from opsiclientd.Events.Basic import Event
+from opsiclientd.Events.Basic import Event, EventConfig
 from opsiclientd.Events.Windows.SensLogon import SensLogonEventGenerator
 from opsiclientd.Events.Windows.WMI import WMIEventConfig
 
+if TYPE_CHECKING:
+	from opsiclientd.Opsiclientd import Opsiclientd
+
+
 __all__ = ["UserLoginEvent", "UserLoginEventConfig", "UserLoginEventGenerator"]
+
+logger = get_logger()
 
 
 class UserLoginEventConfig(WMIEventConfig):
-	def setConfig(self, conf):
+	def setConfig(self, conf: dict[str, Any]) -> None:
 		WMIEventConfig.setConfig(self, conf)
 		self.blockLogin = False
 		self.logoffCurrentUser = False
@@ -32,10 +39,10 @@ class UserLoginEventConfig(WMIEventConfig):
 
 
 class UserLoginEventGenerator(SensLogonEventGenerator):
-	def __init__(self, opsiclientd, eventConfig):
+	def __init__(self, opsiclientd: Opsiclientd, eventConfig: EventConfig) -> None:
 		SensLogonEventGenerator.__init__(self, opsiclientd, eventConfig)
 
-	def callback(self, eventType, *args):
+	def callback(self, eventType: str, *args: Any) -> None:
 		logger.debug("UserLoginEventGenerator event callback: eventType '%s', args: %s", eventType, args)
 		if self._opsiclientd.is_stopping():
 			return
@@ -64,10 +71,10 @@ class UserLoginEvent(Event):
 
 
 class LoginDetector(SensLogonEventGenerator):
-	def __init__(self, opsiclientd, eventConfig):
+	def __init__(self, opsiclientd: Opsiclientd, eventConfig: EventConfig) -> None:
 		SensLogonEventGenerator.__init__(self, opsiclientd, eventConfig)
 
-	def callback(self, eventType, *args):
+	def callback(self, eventType: str, *args: Any) -> None:
 		logger.info("LoginDetector triggered. eventType: '%s', args: %s", eventType, args)
 		if self._opsiclientd.is_stopping() or args[0].split("\\")[-1] == OPSI_SETUP_USER_NAME:
 			return
@@ -76,7 +83,7 @@ class LoginDetector(SensLogonEventGenerator):
 			self._wait_for_explorer()
 			self._opsiclientd.updateMOTD()
 
-	def _wait_for_explorer(self):
+	def _wait_for_explorer(self) -> None:
 		for _ in range(12):
 			if "explorer.exe" in (p.name() for p in psutil.process_iter()):
 				logger.info("Finished waiting for explorer.exe to start")

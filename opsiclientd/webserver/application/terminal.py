@@ -112,7 +112,7 @@ class TerminalReaderThread(threading.Thread):
 		self.child_read = child_read
 		self.should_stop = False
 
-	def run(self):
+	def run(self) -> None:
 		while not self.should_stop:
 			try:
 				data = self.child_read(16 * 1024)
@@ -131,7 +131,7 @@ class TerminalReaderThread(threading.Thread):
 					logger.error("Error in terminal reader thread: %s %s", err.__class__, err, exc_info=True)
 					time.sleep(1)
 
-	def stop(self):
+	def stop(self) -> None:
 		self.should_stop = True
 
 
@@ -192,7 +192,6 @@ class TerminalWebsocket(WebSocketEndpoint):
 				self.child_set_size,
 				self.child_stop,
 			) = start_pty(shell=shell, lines=lines, columns=columns)
-			assert self.child_read
 			self.terminal_reader_thread = TerminalReaderThread(
 				loop=asyncio.get_event_loop(), websocket=websocket, child_read=self.child_read
 			)

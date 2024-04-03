@@ -7,15 +7,16 @@
 Cache-Backend for Clients.
 """
 
-import codecs
 import collections
 import inspect
 import json
 import time
 from types import MethodType
+from typing import Any, Callable, Type
 
 from OPSI.Backend.Backend import (  # type: ignore[import]
 	Backend,
+	BackendModificationListener,
 	ConfigDataBackend,
 	ModificationTrackingBackend,
 )
@@ -34,8 +35,12 @@ from opsicommon.logging import get_logger
 from opsicommon.logging.constants import TRACE
 from opsicommon.objects import *  # noqa  # required for dynamic class loading
 from opsicommon.objects import (
+	BaseObject,
+	Config,
+	ConfigState,
 	LicenseOnClient,
 	ProductOnClient,
+	ProductPropertyState,
 	get_ident_attributes,
 	objects_differ,
 	serialize,
@@ -48,7 +53,7 @@ from opsiclientd.OpsiService import ServiceConnection
 __all__ = ["ClientCacheBackend"]
 
 config = OCDConfig()
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 
 def add_products_from_setup_after_install(products: list[str], service: ServiceConnection) -> list[str]:
@@ -76,15 +81,15 @@ def add_products_from_setup_after_install(products: list[str], service: ServiceC
 
 
 class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
-	def __init__(self, **kwargs):
+	def __init__(self, **kwargs: Any) -> None:
 		ConfigDataBackend.__init__(self, **kwargs)
 
-		self._workBackend = None
-		self._masterBackend = None
-		self._snapshotBackend = None
-		self._clientId = None
-		self._depotId = None
-		self._backendChangeListeners = []
+		self._workBackend: ConfigDataBackend | None = None
+		self._masterBackend: ConfigDataBackend | None = None
+		self._snapshotBackend: ConfigDataBackend | None = None
+		self._clientId: str | None = None
+		self._depotId: str | None = None
+		self._backendChangeListeners: list[BackendModificationListener] = []
 
 		for option, value in kwargs.items():
 			option = option.lower()
@@ -114,13 +119,16 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		self._backend = self._workBackend
 		self._createInstanceMethods()
 
-	def backend_getLicensingInfo(self, licenses: bool = False, legacy_modules: bool = False, dates: bool = False, allow_cache: bool = True):
+	def backend_getLicensingInfo(
+		self, licenses: bool = False, legacy_modules: bool = False, dates: bool = False, allow_cache: bool = True
+	) -> dict[str, tuple[str, ...]]:
 		return {"available_modules": OPSI_MODULE_IDS}
 
-	def log_write(self, logType, data, objectId=None, append=False):
+	def log_write(self, logType: str, data: str, objectId: str | None = None, append: bool = False) -> None:
 		pass
 
-	def licenseOnClient_getObjects(self, attributes=[], **filter):
+	def licenseOnClient_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[LicenseOnClient]:
+		assert self._workBackend
 		licenseOnClients = self._workBackend.licenseOnClient_getObjects(attributes, **filter)
 		logger.info("licenseOnClient_getObjects called with filter %s, %s LicenseOnClients found", filter, len(licenseOnClients))
 		for licenseOnClient in licenseOnClients:
@@ -128,7 +136,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			self.licenseOnClient_insertObject(licenseOnClient)
 		return licenseOnClients
 
-	def config_getObjects(self, attributes=[], **filter):
+	def config_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[Config]:
 		configs = self._backend.config_getObjects(attributes, **filter)
 		for idx, _config in enumerate(configs):
 			if _config.id == "clientconfig.depot.id":
@@ -136,7 +144,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		logger.trace("config_getObjects returning %s", configs)
 		return configs
 
-	def configState_getObjects(self, attributes=[], **filter):
+	def configState_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ConfigState]:
 		config_states = self._backend.configState_getObjects(attributes, **filter)
 		for idx, config_state in enumerate(config_states):
 			if config_state.configId == "clientconfig.depot.id":
@@ -144,17 +152,23 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		logger.trace("configState_getObjects returning %s", config_states)
 		return config_states
 
-	def _setMasterBackend(self, masterBackend):
+	def _setMasterBackend(self, masterBackend: ConfigDataBackend) -> None:
 		self._masterBackend = masterBackend
 
 	def _syncModifiedObjectsWithMaster(
-		self, objectClass, modifiedObjects, getFilter, objectsDifferFunction, createUpdateObjectFunction, mergeObjectsFunction
-	):
+		self,
+		objectClass: Type[BaseObject],
+		modifiedObjects: list[dict[str, Any]],
+		getFilter: dict[str, Any],
+		objectsDifferFunction: Callable,
+		createUpdateObjectFunction: Callable,
+		mergeObjectsFunction: Callable,
+	) -> None:
 		meth = getattr(self._masterBackend, f"{objectClass.backendMethodPrefix}_getObjects")
-		masterObjects = {obj.getIdent(): obj for obj in meth(**getFilter)}
+		masterObjects: dict[str, BaseObject] = {obj.getIdent(): obj for obj in meth(**getFilter)}
 
-		deleteObjects = []
-		updateObjects = []
+		deleteObjects: list[BaseObject] = []
+		updateObjects: list[BaseObject] = []
 		for mo in modifiedObjects:
 			logger.debug("Processing modified object: %s", mo)
 			masterObj = masterObjects.get(mo["object"].getIdent())
@@ -213,7 +227,13 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				logger.error("Failed to update objects %s: %s", updateObjects, update_err)
 				raise
 
-	def _updateMasterFromWorkBackend(self, modifications=[]):
+	def _updateMasterFromWorkBackend(self, modifications: list[dict[str, Any]] | None = None) -> None:
+		if not self._masterBackend:
+			raise BackendConfigurationError("Master backend undefined")
+		if not self._workBackend:
+			raise BackendConfigurationError("Work backend undefined")
+
+		modifications = modifications or []
 		modifiedObjects = collections.defaultdict(list)
 		logger.notice("Updating master from work backend (%d modifications)", len(modifications))
 
@@ -225,7 +245,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			try:
 				ObjectClass = eval(modification["objectClass"])
 				identValues = modification["ident"].split(ObjectClass.identSeparator)
-				identAttributes = tuple()
+				identAttributes: tuple[str, ...] = tuple()
 				if modification["objectClass"] == "AuditHardware":
 					identAttributes = ("hardwareClass",) + tuple(sorted(ObjectClass.hardware_attributes[identValues[0]]))
 				elif modification["objectClass"] == "AuditHardwareOnHost":
@@ -266,15 +286,22 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 		if "ProductOnClient" in modifiedObjects:
 
-			def objectsDifferFunction(snapshotObj, masterObj):
+			def objectsDifferFunction_poc(snapshotObj: BaseObject, masterObj: BaseObject) -> bool:
 				return objects_differ(
 					snapshotObj, masterObj, exclude_attributes=["modificationTime", "actionProgress", "actionResult", "lastAction"]
 				)
 
-			def createUpdateObjectFunction(modifiedObj):
+			def createUpdateObjectFunction_poc(modifiedObj: BaseObject) -> BaseObject:
 				return modifiedObj.clone(identOnly=False)
 
-			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):
+			def mergeObjectsFunction_poc(
+				snapshotObj: ProductOnClient,
+				updateObj: ProductOnClient,
+				masterObj: ProductOnClient,
+				snapshotBackend: ConfigDataBackend,
+				workBackend: ConfigDataBackend,
+				masterBackend: ConfigDataBackend,
+			) -> ProductOnClient:
 				masterVersions = sorted(
 					[
 						f"{p.productVersion}-{p.packageVersion}"
@@ -311,53 +338,67 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				ProductOnClient,
 				modifiedObjects["ProductOnClient"],
 				{"clientId": self._clientId},
-				objectsDifferFunction,
-				createUpdateObjectFunction,
-				mergeObjectsFunction,
+				objectsDifferFunction_poc,
+				createUpdateObjectFunction_poc,
+				mergeObjectsFunction_poc,
 			)
 
 		if "LicenseOnClient" in modifiedObjects:
 
-			def objectsDifferFunction(snapshotObj, masterObj):
+			def objectsDifferFunction_loc(snapshotObj: BaseObject, masterObj: BaseObject) -> bool:
 				return objects_differ(snapshotObj, masterObj)
 
-			def createUpdateObjectFunction(modifiedObj):
+			def createUpdateObjectFunction_loc(modifiedObj: BaseObject) -> BaseObject:
 				return modifiedObj.clone(identOnly=False)
 
-			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):
+			def mergeObjectsFunction_loc(
+				snapshotObj: BaseObject,
+				updateObj: BaseObject,
+				masterObj: BaseObject,
+				snapshotBackend: ConfigDataBackend,
+				workBackend: ConfigDataBackend,
+				masterBackend: ConfigDataBackend,
+			) -> BaseObject:
 				return updateObj
 
 			self._syncModifiedObjectsWithMaster(
 				LicenseOnClient,
 				modifiedObjects["LicenseOnClient"],
 				{"clientId": self._clientId},
-				objectsDifferFunction,
-				createUpdateObjectFunction,
-				mergeObjectsFunction,
+				objectsDifferFunction_loc,
+				createUpdateObjectFunction_loc,
+				mergeObjectsFunction_loc,
 			)
 
 		for objectClassName in ("ProductPropertyState", "ConfigState"):
 
-			def objectsDifferFunction(snapshotObj, masterObj):
+			def objectsDifferFunction_pcs(snapshotObj: BaseObject, masterObj: BaseObject) -> bool:
 				return objects_differ(snapshotObj, masterObj)
 
-			def createUpdateObjectFunction(modifiedObj):
+			def createUpdateObjectFunction_pcs(modifiedObj: BaseObject) -> BaseObject:
 				return modifiedObj.clone()
 
-			def mergeObjectsFunction(snapshotObj, updateObj, masterObj, snapshotBackend, workBackend, masterBackend):
-				if len(snapshotObj.values) != len(masterObj.values):
+			def mergeObjectsFunction_pcs(
+				snapshotObj: ProductPropertyState | ConfigState,
+				updateObj: ProductPropertyState | ConfigState,
+				masterObj: ProductPropertyState | ConfigState,
+				snapshotBackend: ConfigDataBackend,
+				workBackend: ConfigDataBackend,
+				masterBackend: ConfigDataBackend,
+			) -> ProductPropertyState | ConfigState | None:
+				if len(snapshotObj.values or []) != len(masterObj.values or []):
 					logger.info("Values of %s changed on server since last sync, not updating values", snapshotObj)
 					return None
 
 				if snapshotObj.values:
 					for val in snapshotObj.values:
-						if val not in masterObj.values:
+						if val not in (masterObj.values or []):
 							logger.info("Values of %s changed on server since last sync, not updating values", snapshotObj)
 							return None
 
 				if masterObj.values:
 					for val in masterObj.values:
-						if val not in snapshotObj.values:
+						if val not in (snapshotObj.values or []):
 							logger.info("Values of %s changed on server since last sync, not updating values", snapshotObj)
 							return None
 
@@ -368,14 +409,18 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					eval(objectClassName),
 					modifiedObjects[objectClassName],
 					{"objectId": self._clientId},
-					objectsDifferFunction,
-					createUpdateObjectFunction,
-					mergeObjectsFunction,
+					objectsDifferFunction_pcs,
+					createUpdateObjectFunction_pcs,
+					mergeObjectsFunction_pcs,
 				)
 
-	def _replicateMasterToWorkBackend(self):
+	def _replicateMasterToWorkBackend(self) -> None:
 		if not self._masterBackend:
 			raise BackendConfigurationError("Master backend undefined")
+		if not self._workBackend:
+			raise BackendConfigurationError("Work backend undefined")
+		if not self._snapshotBackend:
+			raise BackendConfigurationError("Snapshot backend undefined")
 
 		# This is needed for the following situation:
 		#  - package1 is set to "setup" which defines a dependency to package2 "setup after"
@@ -530,13 +575,13 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		logger.notice("Creating opsi passwd file '%s' using opsi host key '%s...'", self._opsiPasswdFile, opsiHostKey[:10])
 		self.user_setCredentials(username="pcpatch", password=blowfishDecrypt(opsiHostKey, password))
 		auditHardwareConfig = self._masterBackend.auditHardware_getConfig()
-		with codecs.open(self._auditHardwareConfigFile, "w", "utf8") as file:
+		with open(self._auditHardwareConfigFile, "w", encoding="utf8") as file:
 			file.write(json.dumps(auditHardwareConfig))
 
 		self._workBackend._setAuditHardwareConfig(auditHardwareConfig)
 		self._workBackend.backend_createBase()
 
-	def _createInstanceMethods(self):
+	def _createInstanceMethods(self) -> None:
 		for Class in (Backend, ConfigDataBackend):
 			for methodName, funcRef in inspect.getmembers(Class, inspect.isfunction):
 				if methodName.startswith("_") or methodName in (
@@ -558,8 +603,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				exec(f'def {methodName}{sig}: return self._executeMethod("{methodName}", {arg})')
 				setattr(self, methodName, MethodType(eval(methodName), self))
 
-	def _cacheBackendInfo(self, backendInfo):
-		with codecs.open(self._opsiModulesFile, "w", "utf-8") as file:
+	def _cacheBackendInfo(self, backendInfo: dict[str, Any]) -> None:
+		with open(self._opsiModulesFile, "w", encoding="utf-8") as file:
 			modules = backendInfo["modules"]
 			helpermodules = backendInfo["realmodules"]
 			for module, state in modules.items():

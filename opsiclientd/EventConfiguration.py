@@ -21,6 +21,9 @@ state = State()
 
 class EventConfig:
 	def __init__(self, eventId: str, **kwargs: Any) -> None:
+		self.eventNotifierCommand: str | None = None
+		self.actionNotifierCommand: str | None = None
+		self.shutdownNotifierCommand: str | None = None
 		if not eventId:
 			raise TypeError("Event id not given")
 		self._id = str(eventId)
@@ -115,7 +118,7 @@ class EventConfig:
 		return self._replacePlaceholdersInMessage(self.shutdownWarningMessage)
 
 	def _replacePlaceholdersInMessage(self, message: str) -> str:
-		def toUnderscore(value):
+		def toUnderscore(value: str) -> str:
 			s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", value)
 			return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 

@@ -32,7 +32,7 @@ if os.name == "nt":
 else:
 	windll = None
 
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 
 def ControlPipeFactory(opsiclientd: Opsiclientd) -> ControlPipe:
@@ -44,7 +44,7 @@ def ControlPipeFactory(opsiclientd: Opsiclientd) -> ControlPipe:
 
 
 class ClientConnection(threading.Thread):
-	def __init__(self, controller: ControlPipe, connection, client_id: str) -> None:
+	def __init__(self, controller: ControlPipe, connection: socket.socket, client_id: str) -> None:
 		threading.Thread.__init__(self, name="ControlPipe-ClientConnection")
 		self._controller = controller
 		self._connection = connection
@@ -60,10 +60,10 @@ class ClientConnection(threading.Thread):
 		self.login_user_executed: datetime | None = None
 		logger.trace("%s created controller=%s connection=%s", self.__class__.__name__, self._controller, self._connection)
 
-	def __str__(self):
+	def __str__(self) -> str:
 		return f"<{self.__class__.__name__} {self.client_id}>"
 
-	def run(self):
+	def run(self) -> None:
 		with log_context({"instance": "control pipe"}):
 			try:
 				while not self._stopEvent.is_set():
@@ -108,9 +108,9 @@ class ClientConnection(threading.Thread):
 		self.stop()
 		self._controller.clientDisconnected(self)
 
-	def processIncomingRpc(self, rpc: dict[str, Any]) -> str:
+	def processIncomingRpc(self, rpc_str: str) -> str:
 		try:
-			rpc = fromJson(rpc)
+			rpc = fromJson(rpc_str)
 			if rpc.get("method") == "registerClient":
 				# New client protocol
 				self.clientInfo = rpc.get("params", [])
@@ -130,7 +130,7 @@ class ClientConnection(threading.Thread):
 			logger.error(rpc_error, exc_info=True)
 			return toJson({"id": None, "error": str(rpc_error)})
 
-	def executeRpc(self, method: str, params: list[Any] | None = None, with_lock: bool = True) -> dict[str, Any]:
+	def executeRpc(self, method: str, params: list[Any] | tuple[Any, ...] | None = None, with_lock: bool = True) -> dict[str, Any]:
 		params = params or []
 		with log_context({"instance": "control pipe"}):
 			rpc_id = 1
@@ -223,16 +223,16 @@ class ControlPipe(threading.Thread):
 	def waitForClient(self) -> tuple[Any, str]:
 		return (None, "")
 
-	def clientDisconnected(self, client):
+	def clientDisconnected(self, client: ClientConnection) -> None:
 		with self._clientLock:
 			if client in self._clients:
 				logger.info("Client %s disconnected", client)
 				self._clients.remove(client)
 
-	def isRunning(self):
+	def isRunning(self) -> bool:
 		return self._running
 
-	def getClientInfo(self):
+	def getClientInfo(self) -> list[list[str]]:
 		return [c.clientInfo for c in self._clients]
 
 	def getLoginCapableCredentialProvider(self) -> ClientConnection:
@@ -246,14 +246,14 @@ class ControlPipe(threading.Thread):
 			raise RuntimeError("Cannot execute rpc, no login capable opsi credential provider connected")
 		return return_client
 
-	def credentialProviderConnected(self, login_capable=None):
+	def credentialProviderConnected(self, login_capable: bool | None = None) -> bool:
 		for client in self._clients:
 			logger.debug("Checking client: %r (login_user_executed=%r)", client.clientInfo, client.login_user_executed)
 			if client.clientInfo and (login_capable is None or login_capable == client.login_capable):
 				return True
 		return False
 
-	def executeRpc(self, method, *params):
+	def executeRpc(self, method: str, *params: Any) -> list[dict[str, Any]]:
 		with log_context({"instance": "control pipe"}):
 			if not self._clients:
 				raise RuntimeError("Cannot execute rpc, no client connected")
@@ -280,11 +280,11 @@ class ControlPipe(threading.Thread):
 
 
 class PosixClientConnection(ClientConnection):
-	def checkConnection(self):
+	def checkConnection(self) -> None:
 		# TODO
 		pass
 
-	def read(self):
+	def read(self) -> str:
 		logger.trace("Reading from connection %s", self._connection)
 		self._connection.settimeout(self._readTimeout)
 		try:
@@ -294,7 +294,7 @@ class PosixClientConnection(ClientConnection):
 			return data.decode(self._encoding)
 		except Exception as err:
 			logger.trace("Failed to read from socket: %s", err)
-		return None
+		return ""
 
 	def write(self, data: str | bytes) -> bool:
 		if not data or not self._connection:

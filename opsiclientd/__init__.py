@@ -44,7 +44,7 @@ DEFAULT_STDERR_LOG_FORMAT = (
 DEFAULT_FILE_LOG_FORMAT = DEFAULT_STDERR_LOG_FORMAT.replace("%(log_color)s", "").replace("%(reset)s", "")
 
 config = Config()
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -121,7 +121,7 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str | N
 		file_rotate_backup_count=config.get("global", "keep_rotated_logs"),
 	)
 
-	def namer(default_name):
+	def namer(default_name: str) -> str:
 		tmp = default_name.rsplit(".", 2)
 		return f"{tmp[0]}_{int(tmp[2]) - 1}.{tmp[1]}"
 
@@ -136,7 +136,7 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str | N
 
 	logger.essential("Log file %s started", log_file)
 
-	def log_http(*args):
+	def log_http(*args: str) -> None:
 		if logger.level < LOG_TRACE or len(args) < 2:
 			return
 		with log_context({"module": "http client"}):

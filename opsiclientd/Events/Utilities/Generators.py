@@ -9,8 +9,9 @@ Functions to create, reconfigure and get event generators.
 """
 
 import copy
+from typing import TYPE_CHECKING, Type
 
-from opsicommon.logging import logger
+from opsicommon.logging import get_logger
 from opsicommon.types import forceUnicode
 
 from opsiclientd.Config import Config
@@ -22,6 +23,9 @@ from opsiclientd.Events.Utilities.Factories import (
 	EventGeneratorFactory,
 )
 
+if TYPE_CHECKING:
+	from opsiclientd.Opsiclientd import Opsiclientd
+
 __all__ = [
 	"createEventGenerators",
 	"getEventGenerator",
@@ -32,10 +36,11 @@ __all__ = [
 EVENT_CONFIG_TYPE_PANIC = "panic"
 _EVENT_GENERATORS: dict[str, EventGenerator] = {}
 
+logger = get_logger()
 config = Config()
 
 
-def createEventGenerators(opsiclientd):
+def createEventGenerators(opsiclientd: Opsiclientd) -> None:
 	enabled_events = {}
 	panicEventConfig = PanicEventConfig(EVENT_CONFIG_TYPE_PANIC, actionProcessorCommand=config.get("action_processor", "command", raw=True))
 	_EVENT_GENERATORS[EVENT_CONFIG_TYPE_PANIC] = EventGeneratorFactory(opsiclientd, panicEventConfig)
@@ -104,7 +109,7 @@ def createEventGenerators(opsiclientd):
 	logger.notice("Enabled events: %s", ", ".join(sorted([evt_id for evt_id in enabled_events if enabled_events[evt_id]])))
 
 
-def getEventGenerators(generatorClass=None):
+def getEventGenerators(generatorClass: Type[EventGenerator] | None = None) -> list[EventGenerator]:
 	return [
 		eventGenerator
 		for eventGenerator in _EVENT_GENERATORS.values()
@@ -112,7 +117,7 @@ def getEventGenerators(generatorClass=None):
 	]
 
 
-def getEventGenerator(name):
+def getEventGenerator(name: str) -> EventGenerator:
 	"""
 	Get the event generator for the event with the given name.
 
@@ -127,7 +132,7 @@ def getEventGenerator(name):
 		raise ValueError(f"Event '{name}' not in list of known events: {', '.join(_EVENT_GENERATORS.keys())}") from err
 
 
-def reconfigureEventGenerators():
+def reconfigureEventGenerators() -> None:
 	eventConfigs = getEventConfigs()
 	for eventGenerator in _EVENT_GENERATORS.values():
 		eventGenerator.setEventConfigs([])

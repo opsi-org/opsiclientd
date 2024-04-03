@@ -10,28 +10,34 @@ Handling of WMI queries with events
 
 import threading
 import time
+from typing import TYPE_CHECKING, Any
 
 from opsicommon.logging import logger
 
 from opsiclientd.EventConfiguration import EventConfig
-from opsiclientd.Events.Basic import EventGenerator
+from opsiclientd.Events.Basic import Event, EventGenerator
+
+if TYPE_CHECKING:
+	from opsiclientd.Opsiclientd import Opsiclientd
 
 __all__ = ["WMIEventConfig", "WMIEventGenerator"]
 
 
 class WMIEventConfig(EventConfig):
-	def setConfig(self, conf):
+	def setConfig(self, conf: dict[str, Any]) -> None:
 		EventConfig.setConfig(self, conf)
 		self.wql = str(conf.get("wql", ""))
 
 
 class WMIEventGenerator(EventGenerator):
-	def __init__(self, opsiclientd, eventConfig):
-		EventGenerator.__init__(self, opsiclientd, eventConfig)
+	_generatorConfig: WMIEventConfig
+
+	def __init__(self, opsiclientd: Opsiclientd, generatorConfig: WMIEventConfig) -> None:
+		EventGenerator.__init__(self, opsiclientd, generatorConfig)
 		self._wql = self._generatorConfig.wql
 		self._watcher = None
 
-	def initialize(self):
+	def initialize(self) -> None:
 		if self._opsiclientd.is_stopping():
 			return
 
@@ -41,6 +47,8 @@ class WMIEventGenerator(EventGenerator):
 		from opsiclientd.windows import importWmiAndPythoncom
 
 		(wmi, pythoncom) = importWmiAndPythoncom()
+		assert wmi
+		assert pythoncom
 		pythoncom.CoInitialize()
 		max_attempts = 10
 		for attempt in range(1, 100):
@@ -62,7 +70,7 @@ class WMIEventGenerator(EventGenerator):
 					time.sleep(1)
 		logger.debug("Initialized")
 
-	def getNextEvent(self):
+	def getNextEvent(self) -> Event | None:
 		if self._opsiclientd.is_stopping():
 			return None
 
@@ -96,7 +104,7 @@ class WMIEventGenerator(EventGenerator):
 
 			return self.createEvent(eventInfo)
 
-	def cleanup(self):
+	def cleanup(self) -> None:
 		if self._opsiclientd.is_stopping():
 			return
 
@@ -110,6 +118,7 @@ class WMIEventGenerator(EventGenerator):
 			from opsiclientd.windows import importWmiAndPythoncom
 
 			(_wmi, pythoncom) = importWmiAndPythoncom()
+			assert pythoncom
 			pythoncom.CoUninitialize()
 		except ImportError:
 			# Probably not running on Windows.

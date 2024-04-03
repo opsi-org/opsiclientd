@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import os
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any, Generator
 from unittest.mock import patch
 from uuid import uuid4
@@ -41,7 +42,7 @@ def opsiclientd_auth() -> tuple[str, str]:
 
 
 @contextmanager
-def change_dir(path) -> Generator[None, None, None]:
+def change_dir(path: str | Path) -> Generator[None, None, None]:
 	old_dir = os.getcwd()
 	os.chdir(path)
 	try:

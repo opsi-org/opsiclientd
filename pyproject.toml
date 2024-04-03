@@ -46,9 +46,9 @@ opsiclientd_rpc = "opsiclientd.__main__:opsiclientd_rpc"
 action_processor_starter = "opsiclientd.__main__:action_processor_starter"
 
 [tool.mypy]
-#disallow_untyped_calls = true
-#disallow_untyped_defs = true
-#disallow_incomplete_defs = true
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
 follow_imports = "silent"
 
 [tool.ruff.lint]

@@ -15,7 +15,7 @@ from opsiclientd.webserver.application import INTERFACE_PAGE, get_opsiclientd
 from opsiclientd.webserver.rpc.control import get_control_interface
 from opsiclientd.webserver.rpc.jsonrpc import process_request
 
-logger = get_logger("opsiclientd")
+logger = get_logger()
 interface_router = APIRouter()
 jsonrpc_router = APIRouter()
 

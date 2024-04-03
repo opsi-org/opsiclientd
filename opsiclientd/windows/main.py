@@ -8,7 +8,6 @@
 main for windows
 """
 
-import codecs
 import os
 import sys
 import time
@@ -33,18 +32,18 @@ from opsiclientd.setup import setup
 # STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
 STARTUP_LOG: str | None = None
 
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 
-def startup_log(message):
+def startup_log(message: str) -> None:
 	if not STARTUP_LOG:
 		return
 	if os.path.isdir(os.path.dirname(STARTUP_LOG)):
-		with codecs.open(STARTUP_LOG, "a", "utf-8") as file:
+		with open(STARTUP_LOG, "a", encoding="utf-8") as file:
 			file.write(f"{datetime.now()} {message}\n")
 
 
-def run_as_system(command):
+def run_as_system(command: str) -> None:
 	currentProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, os.getpid())
 	currentProcessToken = win32security.OpenProcessToken(currentProcess, win32con.MAXIMUM_ALLOWED)
 	duplicatedCurrentProcessToken = win32security.DuplicateTokenEx(
@@ -54,13 +53,13 @@ def run_as_system(command):
 		TokenType=ntsecuritycon.TokenImpersonation,
 		TokenAttributes=None,
 	)
-	_id = win32security.LookupPrivilegeValue(None, win32security.SE_DEBUG_NAME)
+	_id = win32security.LookupPrivilegeValue(None, win32security.SE_DEBUG_NAME)  # type: ignore[arg-type]
 	newprivs = [(_id, win32security.SE_PRIVILEGE_ENABLED)]
-	win32security.AdjustTokenPrivileges(duplicatedCurrentProcessToken, False, newprivs)
+	win32security.AdjustTokenPrivileges(duplicatedCurrentProcessToken, False, newprivs)  # type: ignore[arg-type]
 
-	win32security.SetThreadToken(win32api.GetCurrentThread(), duplicatedCurrentProcessToken)
+	win32security.SetThreadToken(win32api.GetCurrentThread(), duplicatedCurrentProcessToken)  # type: ignore[no-untyped-call]
 
-	currentProcessToken = win32security.OpenThreadToken(win32api.GetCurrentThread(), win32con.MAXIMUM_ALLOWED, False)
+	currentProcessToken = win32security.OpenThreadToken(win32api.GetCurrentThread(), win32con.MAXIMUM_ALLOWED, False)  # type: ignore[no-untyped-call]
 	sessionId = win32security.GetTokenInformation(currentProcessToken, ntsecuritycon.TokenSessionId)
 
 	pid = None
@@ -91,9 +90,9 @@ def run_as_system(command):
 	for privtuple in privs:
 		newprivs.append((privtuple[0], win32security.SE_PRIVILEGE_ENABLED))
 	privs = tuple(newprivs)
-	win32security.AdjustTokenPrivileges(systemToken, False, newprivs)
+	win32security.AdjustTokenPrivileges(systemToken, False, newprivs)  # type: ignore[arg-type]
 
-	win32security.SetThreadToken(win32api.GetCurrentThread(), systemToken)
+	win32security.SetThreadToken(win32api.GetCurrentThread(), systemToken)  # type: ignore[no-untyped-call]
 
 	hToken = win32security.DuplicateTokenEx(
 		ExistingToken=lsassProcessToken,
@@ -110,21 +109,21 @@ def run_as_system(command):
 	for privtuple in privs:
 		newprivs.append((privtuple[0], win32security.SE_PRIVILEGE_ENABLED))
 	privs = tuple(newprivs)
-	win32security.AdjustTokenPrivileges(hToken, False, newprivs)
+	win32security.AdjustTokenPrivileges(hToken, False, newprivs)  # type: ignore[arg-type]
 
 	si = win32process.STARTUPINFO()
 	dwCreationFlags = win32con.CREATE_NEW_CONSOLE
-	win32process.CreateProcessAsUser(hToken, None, command, None, None, 1, dwCreationFlags, None, None, si)
+	win32process.CreateProcessAsUser(hToken, None, command, None, None, 1, dwCreationFlags, None, None, si)  # type: ignore[arg-type]
 
 
-def get_integrity_level():
+def get_integrity_level() -> str:
 	currentProcess = win32api.OpenProcess(win32con.MAXIMUM_ALLOWED, False, os.getpid())
 	currentProcessToken = win32security.OpenProcessToken(currentProcess, win32con.MAXIMUM_ALLOWED)
 	sid, _unused = win32security.GetTokenInformation(currentProcessToken, ntsecuritycon.TokenIntegrityLevel)
 	return win32security.ConvertSidToStringSid(sid)
 
 
-def main():
+def main() -> None:
 	startup_log("windows.main")
 	log_dir = Config().get("global", "log_dir")
 	parent = psutil.Process(os.getpid()).parent()
@@ -187,7 +186,7 @@ def main():
 
 	init_logging(log_dir=log_dir, stderr_level=options.logLevel, log_filter=options.logFilter)
 
-	with opsicommon.logging.log_context({"instance", "opsiclientd"}):
+	with opsicommon.logging.log_context({"instance": "opsiclientd"}):
 		logger.notice("Running as user: %s", win32api.GetUserName())
 		if parent:
 			logger.notice("Parent process: %s (%s)", parent.name(), parent.pid)

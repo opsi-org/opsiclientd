@@ -83,7 +83,7 @@ patch_popen()
 timeline = Timeline()
 state = State()
 
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 
 def sha256string(input_string: str) -> str:
@@ -378,7 +378,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			except Exception as rpc_error:
 				logger.debug(rpc_error)
 
-	def loginUser(self, username: str, password: str) -> None:
+	def loginUser(self, username: str, password: str) -> bool:
 		raise NotImplementedError(f"Not implemented on {platform.system()}")
 
 	def isRunning(self) -> bool:
@@ -1078,7 +1078,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		addTimestamp: bool = True,
 		displaySeconds: int = 0,
 		link_handling: str = "no",
-		sessions: list[str] | None = None,
+		sessions: list[int] | None = None,
 		desktops: list[str] | None = None,
 	) -> None:
 		if mode not in ("prepend", "append", "replace"):
@@ -1141,7 +1141,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			sessions = sessions or System.getActiveSessionIds()
 			desktops = desktops or ["default", "winlogon"]
 			if not sessions:
-				sessions = [System.getActiveConsoleSessionId()]
+				sessions = [int(System.getActiveConsoleSessionId())]
 				desktops = ["winlogon"]
 			for sessionId in sessions:
 				try:

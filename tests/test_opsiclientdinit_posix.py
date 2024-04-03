@@ -9,6 +9,7 @@ test_opsiclientdinit_posix
 """
 
 import os
+from pathlib import Path
 
 import pytest
 
@@ -22,9 +23,9 @@ except ImportError as err:
 
 
 @pytest.mark.skipif(main is None, reason="Unable to find non-free modules.")
-def testWritingPID(tmpdir):
+def testWritingPID(tmp_path: Path) -> None:
 	currentPID = os.getpid()
-	targetFile = tmpdir / "pidfile"
+	targetFile = str(tmp_path / "pidfile")
 	write_pid_file(targetFile)
 	with open(targetFile, encoding="ascii") as file:
 		pid = int(file.read().strip())
@@ -32,8 +33,8 @@ def testWritingPID(tmpdir):
 
 
 @pytest.mark.skipif(main is None, reason="Unable to find non-free modules.")
-def testNotWritingPIDtoEmptyPath(tmpdir):
+def testNotWritingPIDtoEmptyPath(tmp_path: Path) -> None:
 	write_pid_file(None)
-	assert not list(os.listdir(tmpdir))
+	assert not list(os.listdir(tmp_path))
 	write_pid_file("")
-	assert not list(os.listdir(tmpdir))
+	assert not list(os.listdir(tmp_path))

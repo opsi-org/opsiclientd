@@ -11,7 +11,6 @@ opsiclientd.nonfree.CacheService
 
 from __future__ import annotations
 
-import codecs
 import collections
 import os
 import shutil
@@ -20,20 +19,23 @@ import time
 from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Type
 from urllib.parse import urlparse
 
 from OPSI import System  # type: ignore[import]
 from OPSI.Backend.Backend import Backend, ExtendedConfigDataBackend  # type: ignore[import]
 from OPSI.Backend.BackendManager import BackendExtender  # type: ignore[import]
+from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
 from OPSI.Backend.SQLite import (  # type: ignore[import]
 	SQLiteBackend,
 	SQLiteObjectBackendModificationTracker,
 )
 from OPSI.Util import randomString  # type: ignore[import]
 from OPSI.Util.File.Opsi import PackageContentFile  # type: ignore[import]
+from OPSI.Util.Message import ProgressSubjectProxy  # type: ignore[import]
 from OPSI.Util.Repository import (  # type: ignore[import]
 	DepotToLocalDirectorySychronizer,
+	Repository,
 	getRepository,
 )
 from opsicommon.logging import get_logger, log_context
@@ -74,7 +76,7 @@ timeline = Timeline()
 sync_completed_lock = threading.Lock()
 RETENTION_HEARTBEAT_INTERVAL_DIFF = 10.0
 MIN_HEARTBEAT_INTERVAL = 1.0
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 
 class TransferSlotHeartbeat(threading.Thread):
@@ -114,38 +116,41 @@ class TransferSlotHeartbeat(threading.Thread):
 
 
 class CacheService(threading.Thread):
-	def __init__(self, opsiclientd):
+	def __init__(self, opsiclientd: Opsiclientd) -> None:
 		threading.Thread.__init__(self, name="CacheService")
 		self._opsiclientd = opsiclientd
-		self._productCacheService = None
-		self._configCacheService = None
+		self._productCacheService: ProductCacheService | None = None
+		self._configCacheService: ConfigCacheService | None = None
 
-	def stop(self):
+	def stop(self) -> None:
 		if self._productCacheService:
 			self._productCacheService.stop()
 		if self._configCacheService:
 			self._configCacheService.stop()
 
-	def initializeProductCacheService(self):
+	def initializeProductCacheService(self) -> None:
 		if not self._productCacheService:
 			self._productCacheService = ProductCacheService(self._opsiclientd)
 			self._productCacheService.start()
 
-	def initializeConfigCacheService(self):
+	def initializeConfigCacheService(self) -> None:
 		if not self._configCacheService:
 			self._configCacheService = ConfigCacheService(self._opsiclientd)
 			self._configCacheService.start()
 
-	def setConfigCacheObsolete(self):
+	def setConfigCacheObsolete(self) -> None:
 		self.initializeConfigCacheService()
+		assert self._configCacheService
 		self._configCacheService.setObsolete()
 
-	def setConfigCacheFaulty(self):
+	def setConfigCacheFaulty(self) -> None:
 		self.initializeConfigCacheService()
+		assert self._configCacheService
 		self._configCacheService.setFaulty()
 
-	def syncConfig(self, waitForEnding=False, force=False):
+	def syncConfig(self, waitForEnding: bool = False, force: bool = False) -> None:
 		self.initializeConfigCacheService()
+		assert self._configCacheService
 		if self._configCacheService.isWorking():
 			logger.info("Already syncing config")
 		else:
@@ -157,8 +162,9 @@ class CacheService(threading.Thread):
 			while self._configCacheService.isRunning() and self._configCacheService.isWorking():
 				time.sleep(1)
 
-	def syncConfigToServer(self, waitForEnding=False):
+	def syncConfigToServer(self, waitForEnding: bool = False) -> None:
 		self.initializeConfigCacheService()
+		assert self._configCacheService
 		if self._configCacheService.isWorking():
 			logger.info("Already syncing config")
 			return
@@ -170,12 +176,14 @@ class CacheService(threading.Thread):
 			while self._configCacheService.isRunning() and self._configCacheService.isWorking():
 				time.sleep(1)
 
-	def isConfigCacheServiceWorking(self):
+	def isConfigCacheServiceWorking(self) -> bool:
 		self.initializeConfigCacheService()
+		assert self._configCacheService
 		return self._configCacheService.isWorking()
 
-	def syncConfigFromServer(self, waitForEnding=False):
+	def syncConfigFromServer(self, waitForEnding: bool = False) -> None:
 		self.initializeConfigCacheService()
+		assert self._configCacheService
 		if self._configCacheService.isWorking():
 			logger.info("Already syncing config")
 			return
@@ -188,7 +196,7 @@ class CacheService(threading.Thread):
 			while self._configCacheService.isRunning() and self._configCacheService.isWorking():
 				time.sleep(1)
 
-	def configCacheCompleted(self):
+	def configCacheCompleted(self) -> bool:
 		try:
 			self.initializeConfigCacheService()
 		except Exception as cacheInitError:
@@ -196,6 +204,7 @@ class CacheService(threading.Thread):
 			logger.error(cacheInitError)
 			return False
 
+		assert self._configCacheService
 		if not self._configCacheService.isWorking() and self._configCacheService.getState().get("config_cached", False):
 			return True
 
@@ -203,20 +212,29 @@ class CacheService(threading.Thread):
 
 	def getConfigBackend(self) -> Backend:
 		self.initializeConfigCacheService()
+		assert self._configCacheService
 		return self._configCacheService.getConfigBackend()
 
-	def getConfigModifications(self):
+	def getConfigModifications(self) -> dict[str, Any]:
 		self.initializeConfigCacheService()
+		assert self._configCacheService
 		return self._configCacheService._backendTracker.getModifications()
 
-	def isProductCacheServiceWorking(self):
+	def isProductCacheServiceWorking(self) -> bool:
 		self.initializeProductCacheService()
+		assert self._productCacheService
 		return self._productCacheService.isWorking()
 
 	def cacheProducts(
-		self, waitForEnding=False, productProgressObserver=None, overallProgressObserver=None, dynamicBandwidth=True, maxBandwidth=0
-	):
+		self,
+		waitForEnding: bool = False,
+		productProgressObserver: ProgressSubjectProxy | None = None,
+		overallProgressObserver: ProgressSubjectProxy | None = None,
+		dynamicBandwidth: bool = True,
+		maxBandwidth: int = 0,
+	) -> None:
 		self.initializeProductCacheService()
+		assert self._productCacheService
 		if self._productCacheService.isWorking():
 			logger.info("Already caching products")
 			return
@@ -236,7 +254,7 @@ class CacheService(threading.Thread):
 			while self._productCacheService.isRunning() and self._productCacheService.isWorking():
 				time.sleep(1)
 
-	def productCacheCompleted(self, configService, productIds, checkCachedProductVersion=False):
+	def productCacheCompleted(self, configService: JSONRPCBackend, productIds: list[str], checkCachedProductVersion: bool = False) -> bool:
 		logger.debug("productCacheCompleted: configService=%s productIds=%s", configService, productIds)
 		if not productIds:
 			return True
@@ -244,6 +262,7 @@ class CacheService(threading.Thread):
 		workingWithCachedConfig = bool(configService.hostname.lower() in ("localhost", "127.0.0.1", "::1"))
 
 		self.initializeProductCacheService()
+		assert self._productCacheService
 
 		masterDepotId = config.get("depot_server", "master_depot_id")
 		if workingWithCachedConfig:
@@ -312,28 +331,32 @@ class CacheService(threading.Thread):
 
 	def getProductCacheState(self) -> dict[str, Any]:
 		self.initializeProductCacheService()
+		assert self._productCacheService
 		return self._productCacheService.getState()
 
-	def getConfigCacheState(self):
+	def getConfigCacheState(self) -> dict[str, Any]:
 		self.initializeConfigCacheService()
+		assert self._configCacheService
 		return self._configCacheService.getState()
 
-	def getProductCacheDir(self):
+	def getProductCacheDir(self) -> str:
 		self.initializeProductCacheService()
+		assert self._productCacheService
 		return self._productCacheService.getProductCacheDir()
 
-	def clear_product_cache(self):
+	def clear_product_cache(self) -> None:
 		self.initializeProductCacheService()
+		assert self._productCacheService
 		return self._productCacheService.clear_cache()
 
 
 class ConfigCacheServiceBackendExtension42(RPCProductDependencyMixin):
-	def accessControl_authenticated(self):
+	def accessControl_authenticated(self) -> bool:
 		return True
 
 
 class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):
-	def accessControl_authenticated(self):
+	def accessControl_authenticated(self) -> bool:
 		return True
 
 	def configState_getValues(
@@ -497,7 +520,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			self._state: dict[str, Any] = {}
 
 			self._syncConfigFromServerRequested = False
-			self._syncConfigToServerError = None
+			self._syncConfigToServerError: Exception | None = None
 			self._syncConfigToServerRequested = False
 			self._forceSync = False
 
@@ -519,10 +542,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			raise err
 
 	@property
-	def syncConfigToServerError(self):
+	def syncConfigToServerError(self) -> Exception | None:
 		return self._syncConfigToServerError
 
-	def initBackends(self):
+	def initBackends(self) -> None:
 		clientId = config.get("global", "host_id")
 		masterDepotId = config.get("depot_server", "master_depot_id")
 
@@ -549,9 +572,9 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		)
 		self._cacheBackend.addBackendChangeListener(self._backendTracker)
 
-	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):
+	def connectConfigService(self, allowTemporaryConfigServiceUrls: bool = True) -> None:
 		ServiceConnection.connectConfigService(self, allowTemporaryConfigServiceUrls=False)
-
+		assert self._configService
 		try:
 			try:
 				if hasattr(self._configService, "backend_getLicensingInfo"):
@@ -580,8 +603,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			self.disconnectConfigService()
 			raise
 
-	def _createConfigBackend(self):
-		extension_class = ConfigCacheServiceBackendExtension43
+	def _createConfigBackend(self) -> None:
+		extension_class: Type[ConfigCacheServiceBackendExtension43] | Type[ConfigCacheServiceBackendExtension42] = (
+			ConfigCacheServiceBackendExtension43
+		)
 		server_version = version.parse(self._state.get("server_version", "4.2.0.0"))
 		if server_version < version.parse("4.3"):
 			extension_class = ConfigCacheServiceBackendExtension42
@@ -603,18 +628,18 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		_state["working"] = self.isWorking()
 		return _state
 
-	def setObsolete(self):
+	def setObsolete(self) -> None:
 		self._state["config_cached"] = False
 		state.set("config_cache_service", self._state)
 
-	def setFaulty(self):
+	def setFaulty(self) -> None:
 		self._forceSync = True
 		self.setObsolete()
 
-	def isRunning(self):
+	def isRunning(self) -> bool:
 		return self._running
 
-	def isWorking(self):
+	def isWorking(self) -> bool:
 		if self._working:
 			return True
 
@@ -628,10 +653,10 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 
 		return False
 
-	def stop(self):
+	def stop(self) -> None:
 		self._stopped = True
 
-	def run(self):
+	def run(self) -> None:
 		with log_context({"instance": "config cache service"}):
 			self._running = True
 			logger.notice("Config cache service started")
@@ -650,18 +675,18 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			logger.notice("Config cache service ended")
 			self._running = False
 
-	def syncConfig(self, force=False):
+	def syncConfig(self, force: bool = False) -> None:
 		self._forceSync = bool(force)
 		self._syncConfigToServerRequested = True
 		self._syncConfigFromServerRequested = True
 
-	def syncConfigToServer(self):
+	def syncConfigToServer(self) -> None:
 		self._syncConfigToServerRequested = True
 
-	def syncConfigFromServer(self):
+	def syncConfigFromServer(self) -> None:
 		self._syncConfigFromServerRequested = True
 
-	def _syncConfigToServer(self):
+	def _syncConfigToServer(self) -> None:
 		self._working = True
 		eventId = None
 		try:
@@ -677,6 +702,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					)
 					if not self._configService:
 						self.connectConfigService()
+					assert self._configService
 					self._cacheBackend._setMasterBackend(self._configService)
 					self._cacheBackend._updateMasterFromWorkBackend(modifications)
 					logger.info("Clearing modifications in tracker")
@@ -693,7 +719,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 
 						if os.path.isfile(instlog):
 							logger.info("Syncing instlog %s", instlog)
-							with codecs.open(instlog, "r", "utf-8", "replace") as file:
+							with open(instlog, "r", encoding="utf-8", errors="replace") as file:
 								data = file.read()
 
 							self._configService.log_write("instlog", data=data, objectId=config.get("global", "host_id"), append=False)
@@ -719,7 +745,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		self.disconnectConfigService()
 		self._working = False
 
-	def _syncConfigFromServer(self):
+	def _syncConfigFromServer(self) -> None:
 		self._working = True
 		try:
 			if self._syncConfigToServerError:
@@ -727,6 +753,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			self.setObsolete()
 			if not self._configService:
 				self.connectConfigService()
+			assert self._configService
 
 			masterDepotId = config.get("depot_server", "master_depot_id")
 
@@ -877,10 +904,10 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		self._maxBandwidth = 0
 		self._dynamicBandwidth = True
 
-		self._productProgressObserver = None
-		self._overallProgressObserver = None
+		self._productProgressObserver: ProgressSubjectProxy | None = None
+		self._overallProgressObserver: ProgressSubjectProxy | None = None
 
-		self._repository = None
+		self._repository: Repository | None = None
 
 		if not os.path.exists(self._storageDir):
 			logger.notice("Creating cache service storage dir '%s'", self._storageDir)
@@ -896,13 +923,13 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		if pcss:
 			self._state = pcss
 
-	def _updateConfig(self):
+	def _updateConfig(self) -> None:
 		self._storageDir = config.get("cache_service", "storage_dir")
 		self._tempDir = os.path.join(self._storageDir, "tmp")
 		self._productCacheDir = os.path.join(self._storageDir, "depot")
 		self._productCacheMaxSize = forceInt(config.get("cache_service", "product_cache_max_size"))
 
-	def getProductCacheDir(self):
+	def getProductCacheDir(self) -> str:
 		return self._productCacheDir
 
 	def getState(self) -> dict[str, Any]:
@@ -913,19 +940,19 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		_state["dynamicBandwidth"] = self._dynamicBandwidth
 		return _state
 
-	def isRunning(self):
+	def isRunning(self) -> bool:
 		return self._running
 
-	def isWorking(self):
+	def isWorking(self) -> bool:
 		return self._working
 
-	def stop(self):
+	def stop(self) -> None:
 		self._stopped = True
 
-	def setMaxBandwidth(self, maxBandwidth):
+	def setMaxBandwidth(self, maxBandwidth: int) -> None:
 		self._maxBandwidth = forceInt(maxBandwidth)
 
-	def setDynamicBandwidth(self, dynamicBandwidth):
+	def setDynamicBandwidth(self, dynamicBandwidth: bool) -> None:
 		self._dynamicBandwidth = forceBool(dynamicBandwidth)
 
 	def start_caching_or_get_waiting_time(self) -> float:
@@ -960,7 +987,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 					logger.debug("Joining transfer slot heartbeat thread")
 					heartbeat_thread.join()
 
-	def run(self):
+	def run(self) -> None:
 		with log_context({"instance": "product cache service"}):
 			self._running = True
 			logger.notice("Product cache service started")
@@ -979,7 +1006,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 			logger.notice("Product cache service ended")
 			self._running = False
 
-	def clear_cache(self):
+	def clear_cache(self) -> None:
 		timeline.addEvent(title="Clear product cache", description="Product cache deleted", category="product_caching")
 		productCacheDir = self.getProductCacheDir()
 		if os.path.exists(productCacheDir):
@@ -990,13 +1017,16 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 			self._state["products_cached"] = False
 			state.set("product_cache_service", self._state)
 
-	def cacheProducts(self, productProgressObserver=None, overallProgressObserver=None):
+	def cacheProducts(
+		self, productProgressObserver: ProgressSubjectProxy | None = None, overallProgressObserver: ProgressSubjectProxy | None = None
+	) -> None:
 		self._cacheProductsRequested = True
 		self._productProgressObserver = productProgressObserver
 		self._overallProgressObserver = overallProgressObserver
 
-	def connectConfigService(self, allowTemporaryConfigServiceUrls=True):
+	def connectConfigService(self, allowTemporaryConfigServiceUrls: bool = True) -> None:
 		ServiceConnection.connectConfigService(self, allowTemporaryConfigServiceUrls=False)
+		assert self._configService
 		try:
 			try:
 				if hasattr(self._configService, "backend_getLicensingInfo"):
@@ -1025,11 +1055,11 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 			self.disconnectConfigService()
 			raise
 
-	def _freeProductCacheSpace(self, neededSpace=0, neededProducts=[]):
+	def _freeProductCacheSpace(self, neededSpace: int = 0, neededProducts: list[str] | None = None) -> None:
 		try:
 			# neededSpace in byte
 			neededSpace = forceInt(neededSpace)
-			neededProducts = forceProductIdList(neededProducts)
+			neededProducts = forceProductIdList(neededProducts or [])
 
 			maxFreeableSize = 0
 			productDirSizes = {}
@@ -1086,7 +1116,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		except Exception as err:
 			raise RuntimeError(f"Failed to free enough disk space for product cache: {err}") from err
 
-	def _cacheProducts(self):
+	def _cacheProducts(self) -> None:
 		self._updateConfig()
 		self._working = True
 		self._state["products_cached"] = False
@@ -1097,6 +1127,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		try:
 			if not self._configService:
 				self.connectConfigService()
+			assert self._configService
 
 			includeProductIds, excludeProductIds = get_include_exclude_product_ids(
 				self._configService,
@@ -1147,11 +1178,11 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 				if "mshotfix" in productIds:
 					additionalProductId = System.getOpsiHotfixName()
 					if "win10" in additionalProductId or "win11" in additionalProductId:
-						releaseId = None
-						currentBuild = None
+						releaseId = ""
+						currentBuild = 0
 						subKey = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"
 						try:
-							currentBuild = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, subKey, "CurrentBuild")
+							currentBuild = int(System.getRegistryValue(System.HKEY_LOCAL_MACHINE, subKey, "CurrentBuild"))
 						except Exception as reg_err:
 							logger.error("Failed to read registry value %s %s: %s", subKey, "CurrentBuild", reg_err)
 						try:
@@ -1160,13 +1191,13 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 							logger.error("Failed to read registry value %s %s: %s", subKey, "ReleaseID", reg_err)
 
 						releasePackageName = None
-						if currentBuild == "20348":
+						if currentBuild == 20348:
 							releasePackageName = "mshotfix-win2022"
-						elif currentBuild == "22000":
+						elif currentBuild == 22000:
 							releasePackageName = "mshotfix-win11-21h2"
-						elif currentBuild == "22621":
+						elif currentBuild == 22621:
 							releasePackageName = "mshotfix-win11-22h2"
-						elif int(currentBuild) > 22621:
+						elif currentBuild > 22621:
 							logger.warning(
 								"Unknown windows build %s. Maybe update opsi-client-agent. Using fallback mshotfix-win11-22h2", currentBuild
 							)
@@ -1252,7 +1283,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 			self._repository.disconnect()
 			self._repository = None
 
-	def _setProductCacheState(self, productId, key, value, updateProductOnClient=True):
+	def _setProductCacheState(self, productId: str, key: str, value: Any, updateProductOnClient: bool = True) -> None:
 		if "products" not in self._state:
 			self._state["products"] = {}
 		if productId not in self._state["products"]:
@@ -1277,6 +1308,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 				actionRequest = "none"
 
 		if actionProgress and updateProductOnClient:
+			assert self._configService
 			self._configService.productOnClient_updateObjects(
 				[
 					ProductOnClient(
@@ -1291,7 +1323,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 				]
 			)
 
-	def _getRepository(self, productId):
+	def _getRepository(self, productId: str) -> Repository:
 		config.selectDepotserver(configService=self._configService, mode="sync", event=None, productIds=[productId])
 		if not config.get("depot_server", "url"):
 			raise RuntimeError("Cannot cache product files: depot_server.url undefined")
@@ -1300,12 +1332,12 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		depotServerPassword = ""
 
 		url = urlparse(config.get("depot_server", "url"))
-		if url.scheme.startswith("webdav"):
+		if str(url.scheme).startswith("webdav"):
 			depotServerUsername = config.get("global", "host_id")
 			depotServerPassword = config.get("global", "opsi_host_key")
 
-			kwargs = {"username": depotServerUsername, "password": depotServerPassword}
-			if url.scheme.startswith("webdavs"):
+			kwargs: dict[str, Any] = {"username": depotServerUsername, "password": depotServerPassword}
+			if str(url.scheme).startswith("webdavs"):
 				kwargs["verify_server_cert"] = (
 					config.get("global", "verify_server_cert") or config.get("global", "verify_server_cert_by_ca")
 				) and os.path.exists(config.ca_cert_file)
@@ -1339,7 +1371,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 		)
 		return self._repository
 
-	def _cacheProduct(self, productId, neededProducts):
+	def _cacheProduct(self, productId: str, neededProducts: list[str]) -> None:
 		logger.notice(
 			"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)", productId, self._maxBandwidth, self._dynamicBandwidth
 		)
@@ -1357,6 +1389,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 			if not masterDepotId:
 				raise ValueError("Cannot cache product files: depot_server.master_depot_id undefined")
 
+			assert self._configService
 			productOnDepots = self._configService.productOnDepot_getObjects(depotId=masterDepotId, productId=productId)
 			if not productOnDepots:
 				raise RuntimeError(f"Product '{productId}' not found on depot '{masterDepotId}'")

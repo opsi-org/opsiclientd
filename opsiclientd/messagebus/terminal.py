@@ -46,7 +46,7 @@ else:
 terminals: dict[str, Terminal] = {}
 terminals_lock = Lock()
 
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 
 class TerminalReaderThread(Thread):
@@ -91,7 +91,7 @@ class TerminalReaderThread(Thread):
 					self.terminal.close()
 					break
 
-	def stop(self):
+	def stop(self) -> None:
 		self._should_stop = True
 
 

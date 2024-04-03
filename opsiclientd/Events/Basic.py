@@ -47,7 +47,7 @@ class EventGenerator(threading.Thread):
 		self._event: threading.Event | None = None
 		self._lastEventOccurence: float | None = None
 
-	def __str__(self):
+	def __str__(self) -> str:
 		return f"<{self.__class__.__name__} {self._generatorConfig.getId()}>"
 
 	__repr__ = __str__
@@ -149,12 +149,12 @@ class EventGenerator(threading.Thread):
 			logger.info("     %s: %s", key, value)
 
 		class FireEventThread(threading.Thread):
-			def __init__(self, eventListener, event):
+			def __init__(self, eventListener: EventListener, event: Event) -> None:
 				threading.Thread.__init__(self, name=f"FireEventThread-{event.eventConfig.getId()}")
 				self._eventListener = eventListener
 				self._event = event
 
-			def run(self):
+			def run(self) -> None:
 				with opsicommon.logging.log_context({"instance": "event generator " + self._event.eventConfig.getId()}):
 					if self._event.eventConfig.notificationDelay > 0:
 						logger.debug(

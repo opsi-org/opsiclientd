@@ -80,8 +80,11 @@ else:
 	from OPSI.System import runCommandInSession  # type: ignore
 
 if TYPE_CHECKING:
+	from subprocess import Popen
+
 	from opsiclientd.Events.Basic import Event
 	from opsiclientd.Opsiclientd import Opsiclientd
+
 
 logger = get_logger()
 config = Config()
@@ -389,7 +392,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		waitForProcessEnding: bool = False,
 		timeoutSeconds: int = 0,
 		noWindow: bool = False,
-	) -> tuple[psutil.Process | None, int | None]:
+	) -> tuple[Popen | int | None, int | None]:
 		if sessionId is None:
 			sessionId = self.getSessionId()
 
@@ -407,7 +410,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 		processId = None
 		try:
-			process, _, processId = runCommandInSession(
+			process, _hThread, processId, _dwThreadId = runCommandInSession(
 				command=command,
 				sessionId=sessionId,
 				desktop=desktop,
@@ -415,7 +418,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				timeoutSeconds=timeoutSeconds,
 				noWindow=noWindow,
 				shell=False,
-			)[:3]
+			)
 		except Exception as err:
 			logger.error(err, exc_info=True)
 
@@ -427,7 +430,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		notifierId: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin"],
 		sessionId: int | None = None,
 		desktop: str | None = None,
-	):
+	) -> tuple[Popen | int | None, int | None]:
 		if sessionId is None:
 			sessionId = self.getSessionId()
 
@@ -1240,7 +1243,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		logger.notice("Event wait canceled by user")
 		self.waitCancelled = True
 
-	def processActionWarningTime(self, productIds: list[str] | None = None):
+	def processActionWarningTime(self, productIds: list[str] | None = None) -> None:
 		if not self.event.eventConfig.actionWarningTime:
 			return
 		assert self._notificationServer
@@ -1270,8 +1273,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			choiceSubject.setChoices([_("Start now")])
 			choiceSubject.setCallbacks([self.startActionCallback])
 		self._notificationServer.addSubject(choiceSubject)
-		notifierPids = []
-		notifierHandles = []
+		notifierPids: list[int] = []
+		notifierHandles: list[Popen | int] = []
 		try:
 			if self.event.eventConfig.actionNotifierCommand:
 				desktops = [self.event.eventConfig.actionNotifierDesktop]
@@ -1281,7 +1284,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					notifier_process, notifier_pid = self.startNotifierApplication(
 						command=self.event.eventConfig.actionNotifierCommand, notifierId="action", desktop=desktop
 					)
-					if notifier_pid:
+					if notifier_process and notifier_pid:
 						notifierPids.append(notifier_pid)
 						notifierHandles.append(notifier_process)
 
@@ -1459,7 +1462,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 						choiceSubject = ChoiceSubject(id="choice")
 
-						def set_choices_and_callbacks(choice_subject):
+						def set_choices_and_callbacks(choice_subject: ChoiceSubject) -> None:
 							choices = []
 							if reboot:
 								choices.append(_("Reboot now"))
@@ -1496,8 +1499,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						self._notificationServer.addSubject(choiceSubject)
 
 						failed_to_start_notifier = False
-						notifierPids = []
-						notifierHandles = []
+						notifierPids: list[int] = []
+						notifierHandles: list[Popen | int] = []
 						desktops = [self.event.eventConfig.shutdownNotifierDesktop]
 
 						if RUNNING_ON_WINDOWS and self.event.eventConfig.shutdownNotifierDesktop == "all":
@@ -1513,7 +1516,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							notifier_handle, notifier_pid = self.startNotifierApplication(
 								command=shutdownNotifierCommand, notifierId=notifierId, desktop=desktop
 							)
-							if notifier_pid:
+							if notifier_handle and notifier_pid:
 								notifierPids.append(notifier_pid)
 								notifierHandles.append(notifier_handle)
 							else:
@@ -1726,8 +1729,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		with log_context({"instance": f"event processing {self.event.eventConfig.getId()}"}):
 			assert self.opsiclientd
 			timelineEventId = None
-			notifierPids = []
-			notifierHandles = []
+			notifierPids: list[int] = []
+			notifierHandles: list[Popen | int] = []
 
 			try:
 				if self.event.eventConfig.workingWindow:
@@ -1783,7 +1786,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							notifier_handle, notifier_pid = self.startNotifierApplication(
 								command=self.event.eventConfig.eventNotifierCommand, notifierId=notifierId, desktop=desktop
 							)
-							if notifier_pid:
+							if notifier_handle and notifier_pid:
 								notifierPids.append(notifier_pid)
 								notifierHandles.append(notifier_handle)
 

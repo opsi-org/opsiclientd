@@ -218,14 +218,14 @@ class NotificationServer(SubjectsObserver, Thread):
 		param = [subject.serializable() for subject in subjects]
 		self.notify(name="subjectsChanged", params=[param], clients=clients)
 
-	def requestEndConnections(self):
+	def requestEndConnections(self) -> None:
 		self.notify(name="endConnection", params=[])
 		for client in self._clients:
 			client.close_connection()
 		for client in self._clients:
 			client.wait_closed(timeout=5.0)
 
-	def notify(self, name: str, params: list[Any], clients: list[NotificationServerClientConnection] | None = None):
+	def notify(self, name: str, params: list[Any], clients: list[NotificationServerClientConnection] | None = None) -> None:
 		if not isinstance(params, list):
 			params = [params]
 

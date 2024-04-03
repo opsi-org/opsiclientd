@@ -20,13 +20,13 @@ __all__ = ["OpsiclientdPosix"]
 class OpsiclientdPosix(Opsiclientd):
 	_PID_DIR = os.path.join("/var", "run", "opsiclientd")
 
-	def __init__(self):
+	def __init__(self) -> None:
 		super().__init__()
 
 		if not os.path.exists(self._PID_DIR):
 			os.makedirs(self._PID_DIR)
 
-	def clearRebootRequest(self):
+	def clearRebootRequest(self) -> None:
 		rebootFile = os.path.join(self._PID_DIR, "reboot")
 		if os.path.exists(rebootFile):
 			try:
@@ -34,7 +34,7 @@ class OpsiclientdPosix(Opsiclientd):
 			except OSError as err:
 				logger.error("Failed to remove reboot file %s: %s", err, rebootFile)
 
-	def clearShutdownRequest(self):
+	def clearShutdownRequest(self) -> None:
 		shutdownFile = os.path.join(self._PID_DIR, "shutdown")
 		if os.path.exists(shutdownFile):
 			try:
@@ -42,13 +42,13 @@ class OpsiclientdPosix(Opsiclientd):
 			except OSError as err:
 				logger.error("Failed to remove shutdown file %s: %s", err, shutdownFile)
 
-	def isRebootRequested(self):
+	def isRebootRequested(self) -> bool:
 		rebootFile = os.path.join(self._PID_DIR, "reboot")
 		return os.path.exists(rebootFile)
 
-	def isShutdownRequested(self):
+	def isShutdownRequested(self) -> bool:
 		shutdownFile = os.path.join(self._PID_DIR, "shutdown")
 		return os.path.exists(shutdownFile)
 
-	def loginUser(self, username, password):
+	def loginUser(self, username: str, password: str) -> bool:
 		raise NotImplementedError("Not implemented on posix")

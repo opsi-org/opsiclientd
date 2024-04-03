@@ -12,8 +12,13 @@ Usually triggered by the kiosk client on the client.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.Events.Basic import Event, EventGenerator
+
+if TYPE_CHECKING:
+	from opsiclientd.Opsiclientd import Opsiclientd
 
 __all__ = ["SwOnDemandEvent", "SwOnDemandEventConfig", "SwOnDemandEventGenerator"]
 
@@ -23,7 +28,7 @@ class SwOnDemandEventConfig(EventConfig):
 
 
 class SwOnDemandEventGenerator(EventGenerator):
-	def __init__(self, opsiclientd, eventConfig):
+	def __init__(self, opsiclientd: Opsiclientd, eventConfig: EventConfig) -> None:
 		EventGenerator.__init__(self, opsiclientd, eventConfig)
 
 	def createEvent(self, eventInfo: dict[str, str | list[str]] | None = None) -> SwOnDemandEvent | None:

@@ -13,5 +13,5 @@ import os
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 
-def test_system_determining():
+def test_system_determining() -> None:
 	assert RUNNING_ON_WINDOWS == bool(os.name == "nt")

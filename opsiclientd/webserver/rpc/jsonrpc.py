@@ -30,7 +30,7 @@ from starlette.concurrency import run_in_threadpool
 
 from opsiclientd.webserver.rpc.interface import Interface
 
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 COMPRESS_MIN_SIZE = 10000
 

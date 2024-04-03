@@ -57,7 +57,7 @@ if TYPE_CHECKING:
 	from opsiclientd.Opsiclientd import Opsiclientd
 
 
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 
 class PipeControlInterface(Interface):
@@ -108,34 +108,34 @@ class PipeControlInterface(Interface):
 			event_info = {"product_ids": forceProductIdList(product_ids)}
 		self._fireEvent(name=event, event_info=event_info)
 
-	def getPossibleMethods_listOfHashes(self):
+	def getPossibleMethods_listOfHashes(self) -> list[dict[str, Any]]:
 		return self._interface_list
 
-	def backend_getInterface(self):
+	def backend_getInterface(self) -> list[dict[str, Any]]:
 		return self._interface_list
 
-	def backend_info(self):
+	def backend_info(self) -> dict[str, Any]:
 		return {}
 
-	def exit(self):
+	def exit(self) -> None:
 		return
 
-	def backend_exit(self):
+	def backend_exit(self) -> None:
 		return
 
-	def getBlockLogin(self):
+	def getBlockLogin(self) -> bool:
 		return self.opsiclientd._blockLogin
 
-	def isRebootRequested(self):
+	def isRebootRequested(self) -> bool:
 		return self.isRebootTriggered()
 
-	def isShutdownRequested(self):
+	def isShutdownRequested(self) -> bool:
 		return self.isShutdownTriggered()
 
-	def isRebootTriggered(self):
+	def isRebootTriggered(self) -> bool:
 		return self.opsiclientd.isRebootTriggered()
 
-	def isShutdownTriggered(self):
+	def isShutdownTriggered(self) -> bool:
 		return self.opsiclientd.isShutdownTriggered()
 
 
@@ -247,7 +247,7 @@ class ControlInterface(PipeControlInterface):
 	def cacheService_getProductCacheState(self) -> dict[str, Any]:
 		return self.opsiclientd.getCacheService().getProductCacheState()
 
-	def cacheService_getConfigModifications(self):
+	def cacheService_getConfigModifications(self) -> dict[str, Any]:
 		return self.opsiclientd.getCacheService().getConfigModifications()
 
 	def cacheService_deleteCache(self) -> str:
@@ -451,13 +451,13 @@ class ControlInterface(PipeControlInterface):
 		option = forceUnicode(option)
 		return self.opsiclientd.config.get(section, option)
 
-	def setConfigValue(self, section: str, option: str, value: str | int | float | bool | list[str] | dict[str, str]):
+	def setConfigValue(self, section: str, option: str, value: str | int | float | bool | list[str] | dict[str, str]) -> None:
 		section = forceUnicode(section)
 		option = forceUnicode(option)
 		value = forceUnicode(value)
 		self.opsiclientd.config.set(section, option, value)
 
-	def set(self, section: str, option: str, value: str | int | float | bool | list[str] | dict[str, str]):
+	def set(self, section: str, option: str, value: str | int | float | bool | list[str] | dict[str, str]) -> None:
 		# Legacy method
 		self.setConfigValue(section, option, value)
 
@@ -467,7 +467,7 @@ class ControlInterface(PipeControlInterface):
 	def updateConfigFile(self, force: bool = False) -> None:
 		self.opsiclientd.config.updateConfigFile(force)
 
-	def showPopup(self, message, mode="prepend", addTimestamp=True, displaySeconds=0):
+	def showPopup(self, message: str, mode: str = "prepend", addTimestamp: bool = True, displaySeconds: int = 0) -> None:
 		message = forceUnicode(message)
 		self.opsiclientd.showPopup(message=message, mode=mode, addTimestamp=addTimestamp, displaySeconds=displaySeconds)
 
@@ -899,6 +899,7 @@ class ControlInterface(PipeControlInterface):
 		try:
 			cache_service = self.opsiclientd.getCacheService()
 			cache_service.setConfigCacheFaulty()
+			assert cache_service._configCacheService
 			cache_service._configCacheService.delete_cache_dir()
 		except Exception as err:
 			logger.warning(err, exc_info=True)

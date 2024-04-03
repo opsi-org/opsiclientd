@@ -83,7 +83,7 @@ class LogReaderThread(threading.Thread):
 	max_delay = 0.2
 	max_record_buffer_size = 2500
 
-	def __init__(self, loop: asyncio.AbstractEventLoop, websocket: WebSocket, filename: str, num_tail_records=-1):
+	def __init__(self, loop: asyncio.AbstractEventLoop, websocket: WebSocket, filename: str, num_tail_records: int = -1) -> None:
 		super().__init__(daemon=True, name="LogReaderThread")
 		self.loop = loop
 		self.websocket = websocket

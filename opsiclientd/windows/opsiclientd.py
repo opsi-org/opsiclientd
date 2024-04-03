@@ -8,6 +8,8 @@
 opsiclientd.windows.opsiclientd
 """
 
+from __future__ import annotations
+
 import glob
 import os
 import random
@@ -42,10 +44,10 @@ from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 if not RUNNING_ON_WINDOWS:
 	WindowsError = RuntimeError
 
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 
-def opsiclientd_factory():
+def opsiclientd_factory() -> OpsiclientdNT:
 	windowsVersion = sys.getwindowsversion()  # type: ignore[attr-defined]
 	if windowsVersion.major == 5:  # NT5: XP
 		return OpsiclientdNT5()
@@ -55,11 +57,11 @@ def opsiclientd_factory():
 
 
 class OpsiclientdNT(Opsiclientd):
-	def __init__(self):
+	def __init__(self) -> None:
 		Opsiclientd.__init__(self)
 		self._ms_update_installer = None
 
-	def suspendBitlocker(self):
+	def suspendBitlocker(self) -> None:
 		logger.notice("Suspending bitlocker for one reboot if active")
 		try:
 			System.execute(
@@ -75,20 +77,22 @@ class OpsiclientdNT(Opsiclientd):
 		except Exception as err:
 			logger.error("Failed to suspend bitlocker: %s", err, exc_info=True)
 
-	def rebootMachine(self, waitSeconds=3):
+	def rebootMachine(self, waitSeconds: int = 3) -> None:
+		if sys.platform != "win32":
+			return
 		if config.get("global", "suspend_bitlocker_on_reboot"):
 			windowsVersion = sys.getwindowsversion()
 			if (windowsVersion.major == 6 and windowsVersion.minor >= 4) or windowsVersion.major > 6:  # Win10 and later
 				self.suspendBitlocker()
 		super().rebootMachine(waitSeconds)
 
-	def clearRebootRequest(self):
+	def clearRebootRequest(self) -> None:
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
 
-	def clearShutdownRequest(self):
+	def clearShutdownRequest(self) -> None:
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
 
-	def isRebootRequested(self):
+	def isRebootRequested(self) -> bool:
 		try:
 			rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
 		except Exception as error:
@@ -104,7 +108,7 @@ class OpsiclientdNT(Opsiclientd):
 
 		return forceBool(rebootRequested)
 
-	def isShutdownRequested(self):
+	def isShutdownRequested(self) -> bool:
 		try:
 			shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
 		except Exception as err:
@@ -114,7 +118,10 @@ class OpsiclientdNT(Opsiclientd):
 		logger.notice("Shutdown request in Registry: %s", shutdownRequested)
 		return forceBool(shutdownRequested)
 
-	def isWindowsRebootPending(self):
+	def isWindowsRebootPending(self) -> bool:
+		if sys.platform != "win32":
+			return False
+
 		import winreg
 
 		import win32process  # type: ignore[import]
@@ -242,22 +249,26 @@ class OpsiclientdNT(Opsiclientd):
 			)
 		return is_windows_reboot_pending
 
-	def isWindowsInstallerBusy(self):
+	def isWindowsInstallerBusy(self) -> bool:
 		if not self._ms_update_installer:
 			from opsiclientd.windows import importWmiAndPythoncom
 
 			(_wmi, _pythoncom) = importWmiAndPythoncom(importWmi=False, importPythoncom=True)
+			assert _pythoncom
 			_pythoncom.CoInitialize()
 			session = win32com.client.Dispatch("Microsoft.Update.Session")
 			self._ms_update_installer = session.CreateUpdateInstaller()
+		assert self._ms_update_installer
 		installer_is_busy = self._ms_update_installer.isBusy
 		if not installer_is_busy:
 			logger.info(
-				"IUpdateInstaller::get_RebootRequiredBeforeInstallation: %r", self._ms_update_installer.get_RebootRequiredBeforeInstallation
+				"IUpdateInstaller::get_RebootRequiredBeforeInstallation: %r",
+				self._ms_update_installer.get_RebootRequiredBeforeInstallation,  # type: ignore[attr-defined]
 			)
 		return installer_is_busy
 
-	def loginUser(self, username, password):
+	def loginUser(self, username: str, password: str) -> bool:
+		assert self._controlPipe
 		for session_id in System.getActiveSessionIds(protocol="console"):
 			System.lockSession(session_id)
 		for _unused in range(20):
@@ -272,8 +283,9 @@ class OpsiclientdNT(Opsiclientd):
 			if not response.get("error") and response.get("result"):
 				return True
 			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {response.get('error')}")
+		return False
 
-	def cleanup_opsi_setup_user(self, keep_sid: str | None = None):
+	def cleanup_opsi_setup_user(self, keep_sid: str | None = None) -> None:
 		keep_profile = None
 		modified = True
 		while modified:
@@ -383,7 +395,7 @@ class OpsiclientdNT(Opsiclientd):
 				else:
 					logger.info("Command %s successful: %s", cmd, out)
 
-	def createOpsiSetupUser(self, admin=True, delete_existing=False) -> dict[str, Any]:
+	def createOpsiSetupUser(self, admin: bool = True, delete_existing: bool = False) -> dict[str, Any]:
 		# https://bugs.python.org/file46988/issue.py
 		if sys.platform != "win32":
 			return {}
@@ -478,17 +490,17 @@ class OpsiclientdNT(Opsiclientd):
 
 
 class OpsiclientdNT5(OpsiclientdNT):
-	def __init__(self):
+	def __init__(self) -> None:
 		OpsiclientdNT.__init__(self)
 
-	def shutdownMachine(self, waitSeconds=3):
+	def shutdownMachine(self, waitSeconds: int = 3) -> None:
 		self._isShutdownTriggered = True
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
 
 		# Running in thread to avoid failure of shutdown (device not ready)
 		ShutdownThread().start()
 
-	def rebootMachine(self, waitSeconds=3):
+	def rebootMachine(self, waitSeconds: int = 3) -> None:
 		self._isRebootTriggered = True
 		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
 
@@ -497,10 +509,10 @@ class OpsiclientdNT5(OpsiclientdNT):
 
 
 class ShutdownThread(threading.Thread):
-	def __init__(self):
+	def __init__(self) -> None:
 		threading.Thread.__init__(self, name="ShutdownThread")
 
-	def run(self):
+	def run(self) -> None:
 		while True:
 			try:
 				System.shutdown(0)
@@ -513,10 +525,10 @@ class ShutdownThread(threading.Thread):
 
 
 class RebootThread(threading.Thread):
-	def __init__(self):
+	def __init__(self) -> None:
 		threading.Thread.__init__(self, name="RebootThread")
 
-	def run(self):
+	def run(self) -> None:
 		while True:
 			try:
 				System.reboot(0)
@@ -529,5 +541,5 @@ class RebootThread(threading.Thread):
 
 
 class OpsiclientdNT6(OpsiclientdNT):
-	def __init__(self):
+	def __init__(self) -> None:
 		OpsiclientdNT.__init__(self)

@@ -8,6 +8,8 @@
 test_event_config
 """
 
+from typing import Generator, Type
+
 import pytest
 
 from opsiclientd.Config import Config
@@ -37,21 +39,21 @@ from .utils import load_config_file
 		SyncCompletedEventConfig,
 	]
 )
-def configClass(request):
+def configClass(request: pytest.FixtureRequest) -> Generator[Type[EventConfig], None, None]:
 	yield request.param
 
 
-def testCreatingNewEventConfig(configClass):
+def testCreatingNewEventConfig(configClass: Type[EventConfig]) -> None:
 	configClass("testevent")
 
 
-def testAttributesForWhiteAndBlackListExist(configClass):
+def testAttributesForWhiteAndBlackListExist(configClass: Type[EventConfig]) -> None:
 	config = configClass("testevent")
 	assert hasattr(config, "excludeProductGroupIds")
 	assert hasattr(config, "includeProductGroupIds")
 
 
-def test_inheritance():
+def test_inheritance() -> None:
 	load_config_file("tests/data/event_config/1.conf")
 
 	configs = getEventConfigs()

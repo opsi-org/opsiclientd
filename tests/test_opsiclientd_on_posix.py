@@ -8,6 +8,8 @@
 test_opsiclientd_on_posix
 """
 
+from pathlib import Path
+
 import mock
 import pytest
 
@@ -21,11 +23,11 @@ except ImportError as err:
 
 
 @pytest.mark.skipif(OpsiclientdPosix is None, reason=error_message)
-def test_requesting_reboot(tmpdir):
-	with mock.patch("opsiclientd.nonfree.Posix.OpsiclientdPosix._PID_DIR", str(tmpdir)):
+def test_requesting_reboot(tmp_path: Path) -> None:
+	with mock.patch("opsiclientd.nonfree.Posix.OpsiclientdPosix._PID_DIR", str(tmp_path)):
 		ocd = OpsiclientdPosix()
 		assert not ocd.isRebootRequested()
-		rebootFile = tmpdir / "reboot"
+		rebootFile = tmp_path / "reboot"
 		with open(rebootFile, "w", encoding="ascii"):
 			pass
 		ocd.clearRebootRequest()
@@ -33,11 +35,11 @@ def test_requesting_reboot(tmpdir):
 
 
 @pytest.mark.skipif(OpsiclientdPosix is None, reason=error_message)
-def test_requesting_shutdown(tmpdir):
-	with mock.patch("opsiclientd.nonfree.Posix.OpsiclientdPosix._PID_DIR", str(tmpdir)):
+def test_requesting_shutdown(tmp_path: Path) -> None:
+	with mock.patch("opsiclientd.nonfree.Posix.OpsiclientdPosix._PID_DIR", str(tmp_path)):
 		ocd = OpsiclientdPosix()
 		assert not ocd.isShutdownRequested()
-		rebootFile = tmpdir / "shutdown"
+		rebootFile = tmp_path / "shutdown"
 		with open(rebootFile, "w", encoding="ascii"):
 			pass
 

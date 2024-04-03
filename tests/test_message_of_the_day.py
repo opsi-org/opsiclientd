@@ -24,7 +24,7 @@ class FakeOpsiclientd(Opsiclientd):
 		addTimestamp: bool = True,
 		displaySeconds: int = 0,
 		link_handling: str = "no",
-		sessions: list[str] | None = None,
+		sessions: list[int] | None = None,
 		desktops: list[str] | None = None,
 	) -> None:
 		pass
@@ -35,14 +35,14 @@ class FakeOpsiclientd(Opsiclientd):
 	(False, True),
 )
 def test_motd_update_without_valid_until(default_config: None, tmp_path: Path, user_logged_in: bool) -> None:  # noqa
-	def getActiveSessionInformation():
+	def getActiveSessionInformation() -> list[dict[str, str | int]]:
 		if not user_logged_in:
 			return []
 		return [{"SessionId": 1, "UserName": "testuser"}, {"SessionId": 2, "UserName": "testuser2"}]
 
 	ocd = FakeOpsiclientd()
 	controlServer = get_control_interface(ocd)
-	state._stateFile = tmp_path / "state_file.json"
+	state._stateFile = str(tmp_path / "state_file.json")
 
 	with use_logging_config(stderr_level=LOG_INFO):
 		with patch("opsiclientd.Opsiclientd.System.getActiveSessionInformation", getActiveSessionInformation):
@@ -67,14 +67,14 @@ def test_motd_update_without_valid_until(default_config: None, tmp_path: Path, u
 	(False, True),
 )
 def test_motd_update_valid_until(default_config: None, tmp_path: Path, user_logged_in: bool) -> None:  # noqa
-	def getActiveSessionInformation():
+	def getActiveSessionInformation() -> list[dict[str, str | int]]:
 		if not user_logged_in:
 			return []
 		return [{"SessionId": 1, "UserName": "testuser"}, {"SessionId": 2, "UserName": "testuser2"}]
 
 	ocd = FakeOpsiclientd()
 	controlServer = get_control_interface(ocd)
-	state._stateFile = tmp_path / "state_file.json"
+	state._stateFile = str(tmp_path / "state_file.json")
 
 	with patch("opsiclientd.Opsiclientd.System.getActiveSessionInformation", getActiveSessionInformation):
 		valid_until = int((datetime.now(tz=timezone.utc) - timedelta(days=1)).timestamp())

@@ -8,6 +8,8 @@
 Events that get active once a system shuts down or restarts.
 """
 
+from typing import Any
+
 from opsiclientd.Events.Basic import Event, EventGenerator
 from opsiclientd.Events.Windows.WMI import WMIEventConfig
 
@@ -15,7 +17,7 @@ __all__ = ["SystemShutdownEvent", "SystemShutdownEventConfig", "SystemShutdownEv
 
 
 class SystemShutdownEventConfig(WMIEventConfig):
-	def setConfig(self, conf):
+	def setConfig(self, conf: dict[str, Any]) -> None:
 		WMIEventConfig.setConfig(self, conf)
 		self.maxRepetitions = 0
 

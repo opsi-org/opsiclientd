@@ -11,6 +11,7 @@ opsiclientd.windows.service
 import socket
 import threading
 import time
+from typing import TYPE_CHECKING, Any, Iterable, Sequence
 
 import servicemanager
 
@@ -18,11 +19,16 @@ import servicemanager
 import win32event
 import win32service
 import win32serviceutil
-from opsicommon.logging import log_context, logger
+from opsicommon.logging import get_logger, log_context
+
+if TYPE_CHECKING:
+	from opsiclientd.Opsiclientd import Opsiclientd
 
 PBT_APMSUSPEND = 0x4  # https://learn.microsoft.com/en-us/windows/win32/power/pbt-apmsuspend
 PBT_APMRESUMEAUTOMATIC = 0x12  # https://learn.microsoft.com/en-us/windows/win32/power/pbt-apmresumeautomatic
 PBT_APMRESUMESUSPEND = 0x7  # https://learn.microsoft.com/en-us/windows/win32/power/pbt-apmresumesuspend
+
+logger = get_logger()
 
 
 class OpsiclientdService(win32serviceutil.ServiceFramework):
@@ -30,11 +36,11 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 	_svc_display_name_ = "opsiclientd"
 	_svc_description_ = "opsi client daemon"
 
-	def __init__(self, args):
+	def __init__(self, args: Iterable[str]) -> None:
 		"""
 		Initialize service and create stop event
 		"""
-		self.opsiclientd = None
+		self.opsiclientd: Opsiclientd | None = None
 		try:
 			logger.debug("OpsiclientdService initiating")
 			win32serviceutil.ServiceFramework.__init__(self, args)
@@ -45,12 +51,12 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			logger.error(err, exc_info=True)
 			raise
 
-	def GetAcceptedControls(self):
-		rc = win32serviceutil.ServiceFramework.GetAcceptedControls(self)
+	def GetAcceptedControls(self) -> int:
+		rc = win32serviceutil.ServiceFramework.GetAcceptedControls(self)  # type: ignore[no-untyped-call]
 		rc |= win32service.SERVICE_ACCEPT_POWEREVENT
 		return rc  # additionally accept SERVICE_ACCEPT_POWEREVENT
 
-	def ReportServiceStatus(self, serviceStatus, waitHint=5000, win32ExitCode=0, svcExitCode=0):
+	def ReportServiceStatus(self, serviceStatus: int, waitHint: int = 5000, win32ExitCode: int = 0, svcExitCode: int = 0) -> None:
 		# Wrapping because ReportServiceStatus sometimes lets windows
 		# report a crash of opsiclientd (python 2.6.5) invalid handle
 		try:
@@ -62,7 +68,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			logger.error("Failed to report service status %s: %s", serviceStatus, err)
 
 	# All extra events are sent via SvcOtherEx (SvcOther remains as a function taking only the first args for backwards compat)
-	def SvcOtherEx(self, control, event_type, data):
+	def SvcOtherEx(self, control: int, event_type: str, data: list[Any]) -> None:
 		logger.debug("Got Ex event: %s (%s - %s)", control, event_type, data)
 		# https://stackoverflow.com/questions/47942716/how-to-detect-wake-up-from-sleep-mode-in-windows-service
 		# https://github.com/mhammond/pywin32/blob/main/win32/Demos/service/serviceEvents.py
@@ -72,12 +78,12 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			elif event_type == PBT_APMRESUMEAUTOMATIC:
 				logger.info("Caught Event for wakeup")
 
-	def SvcInterrogate(self):
+	def SvcInterrogate(self) -> None:
 		logger.notice("Handling interrogate request")
 		# Assume we are running, and everyone is happy.
 		self.ReportServiceStatus(win32service.SERVICE_RUNNING)
 
-	def SvcStop(self):
+	def SvcStop(self) -> None:
 		"""
 		Gets called from windows to stop service
 		"""
@@ -85,7 +91,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
 		win32event.SetEvent(self._stopEvent)
 
-	def SvcShutdown(self):
+	def SvcShutdown(self) -> None:
 		"""
 		Gets called from windows on system shutdown
 		"""
@@ -95,12 +101,13 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			self.opsiclientd.systemShutdownInitiated()
 		win32event.SetEvent(self._stopEvent)
 
-	def SvcRun(self):
+	def SvcRun(self) -> None:
 		"""
 		Gets called from windows to start service
 		"""
 		try:
 			logger.notice("Handling start request")
+			assert self.opsiclientd
 			startTime = time.time()
 
 			self.ReportServiceStatus(win32service.SERVICE_RUNNING)
@@ -134,13 +141,13 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			logger.critical("opsiclientd crash %s", err, exc_info=True)
 
 
-def start_service():
-	with log_context({"instance", "opsiclientd"}):
+def start_service() -> None:
+	with log_context({"instance": "opsiclientd"}):
 		logger.essential("opsiclientd service start")
 		servicemanager.Initialize()
 		servicemanager.PrepareToHostSingle(OpsiclientdService)
-		servicemanager.StartServiceCtrlDispatcher()
+		servicemanager.StartServiceCtrlDispatcher()  # type: ignore[no-untyped-call]
 
 
-def handle_commandline(argv=None):
+def handle_commandline(argv: Sequence[str] | None = None) -> None:
 	win32serviceutil.HandleCommandLine(OpsiclientdService, argv=argv)

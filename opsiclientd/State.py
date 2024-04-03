@@ -28,7 +28,7 @@ from opsiclientd.SystemCheck import (
 )
 
 config = Config()
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 
 class State(metaclass=Singleton):

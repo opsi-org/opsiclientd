@@ -13,7 +13,7 @@ import platform
 import re
 import sys
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 import netifaces  # type: ignore[import]
@@ -39,6 +39,11 @@ from opsiclientd.SystemCheck import (
 	RUNNING_ON_MACOS,
 	RUNNING_ON_WINDOWS,
 )
+
+if TYPE_CHECKING:
+	from opsicommon.objects import OpsiDepotserver
+
+	from opsiclientd.Events.Basic import Event
 
 # It is possible to set multiple certificates as UIB_OPSI_CA
 UIB_OPSI_CA = """-----BEGIN CERTIFICATE-----
@@ -77,7 +82,7 @@ kGOsCMSImzajpmtonx3ccPgSOyEWyoEaGij6u80QtFkj9g==
 
 OPSI_SETUP_USER_NAME = "opsisetupuser"
 
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 
 @dataclass
@@ -551,7 +556,7 @@ class Config(metaclass=Singleton):
 					string = self.replace(newString, escaped)
 		return forceUnicode(string)
 
-	def readConfigFile(self):
+	def readConfigFile(self) -> None:
 		"""Get settings from config file"""
 		logger.notice("Trying to read config from file: '%s'", self.get("global", "config_file"))
 
@@ -670,16 +675,23 @@ class Config(metaclass=Singleton):
 			return self._temporary_depot_path
 		return self.get("depot_server", "drive")
 
-	def setTemporaryConfigServiceUrls(self, temporaryConfigServiceUrls):
+	def setTemporaryConfigServiceUrls(self, temporaryConfigServiceUrls: list[str]) -> None:
 		self._temporaryConfigServiceUrls = forceList(temporaryConfigServiceUrls)
 
-	def getConfigServiceUrls(self, allowTemporaryConfigServiceUrls=True):
+	def getConfigServiceUrls(self, allowTemporaryConfigServiceUrls: bool = True) -> list[str]:
 		if allowTemporaryConfigServiceUrls and self._temporaryConfigServiceUrls:
 			return self._temporaryConfigServiceUrls
 
 		return self.get("config_service", "url")
 
-	def getDepot(self, configService, event=None, productIds=None, masterOnly=False, forceDepotProtocol=None):
+	def getDepot(
+		self,
+		configService: JSONRPCBackend,
+		event: Event | None = None,
+		productIds: list[str] | None = None,
+		masterOnly: bool = False,
+		forceDepotProtocol: str | None = None,
+	) -> tuple[OpsiDepotserver, str]:
 		productIds = forceProductIdList(productIds or [])
 		if not configService:
 			raise RuntimeError("Not connected to config service")
@@ -815,7 +827,14 @@ class Config(metaclass=Singleton):
 
 		return selectedDepot, depotProtocol
 
-	def selectDepotserver(self, configService, mode="mount", event=None, productIds=None, masterOnly=False):
+	def selectDepotserver(
+		self,
+		configService: JSONRPCBackend,
+		mode: str = "mount",
+		event: Event | None = None,
+		productIds: list[str] | None = None,
+		masterOnly: bool = False,
+	) -> None:
 		assert mode in ("mount", "sync")
 		productIds = forceProductIdList(productIds or [])
 
@@ -845,7 +864,7 @@ class Config(metaclass=Singleton):
 		else:
 			self.set("depot_server", "url", selectedDepot.depotRemoteUrl)
 
-	def getDepotserverCredentials(self, configService):
+	def getDepotserverCredentials(self, configService: JSONRPCBackend) -> tuple[str, str]:
 		url = urlparse(self.get("depot_server", "url"))
 		if url.scheme in ("webdav", "webdavs", "http", "https"):
 			return (self.get("global", "host_id"), self.get("global", "opsi_host_key"))

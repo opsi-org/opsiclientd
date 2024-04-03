@@ -11,7 +11,7 @@ Events that get active once a system shuts down or restarts.
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import psutil
 from opsicommon.logging import logger
@@ -31,7 +31,7 @@ __all__ = ["GUIStartupEvent", "GUIStartupEventConfig", "GUIStartupEventGenerator
 
 
 class GUIStartupEventConfig(EventConfig):
-	def setConfig(self, conf):
+	def setConfig(self, conf: dict[str, Any]) -> None:
 		EventConfig.setConfig(self, conf)
 		self.maxRepetitions = 0
 

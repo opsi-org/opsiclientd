@@ -34,9 +34,9 @@ try:
 except Exception as err:
 	logger.debug("Failed to load locale for %s from %s: %s", language, path, err)
 
-	def _(string):
+	def _(message: str) -> str:
 		"""Fallback function"""
-		return string
+		return message
 
 
 def getLanguage() -> str:

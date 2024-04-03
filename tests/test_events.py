@@ -13,7 +13,7 @@ from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from .utils import default_config  # noqa
 
 
-def testGettingEventConfiguration():
+def testGettingEventConfiguration() -> None:
 	"""
 	Testing if event configuration can be read from an config file.
 	No check if the data is correct.

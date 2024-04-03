@@ -9,16 +9,19 @@ ISensLogon generator.
 """
 
 import time
+from typing import Any
 
-from opsicommon.logging import logger
+from opsicommon.logging import get_logger
 
 from opsiclientd.Events.Basic import EventGenerator
 
 __all__ = ["SensLogonEventGenerator"]
 
+logger = get_logger()
+
 
 class SensLogonEventGenerator(EventGenerator):
-	def initialize(self):
+	def initialize(self) -> None:
 		EventGenerator.initialize(self)
 
 		logger.notice("Registring ISensLogon")
@@ -26,26 +29,28 @@ class SensLogonEventGenerator(EventGenerator):
 		from opsiclientd.windows import SensLogon, importWmiAndPythoncom
 
 		(_wmi, pythoncom) = importWmiAndPythoncom(importWmi=False, importPythoncom=True)
+		assert pythoncom
 		pythoncom.CoInitialize()
 
 		sl = SensLogon(self.callback)
 		sl.subscribe()
 
-	def getNextEvent(self):
+	def getNextEvent(self) -> None:
 		from opsiclientd.windows import importWmiAndPythoncom
 
 		(_wmi, pythoncom) = importWmiAndPythoncom(importWmi=False, importPythoncom=True)
+		assert pythoncom
 		pythoncom.PumpMessages()
 		logger.info("Event generator '%s' now deactivated after %d event occurrences", self, self._eventsOccured)
 		self.cleanup()
 
-	def callback(self, eventType, *args):
+	def callback(self, eventType: str, *args: Any) -> None:
 		logger.debug("SensLogonEventGenerator event callback: eventType '%s', args: %s", eventType, args)
 
-	def stop(self):
+	def stop(self) -> None:
 		EventGenerator.stop(self)
 
-	def cleanup(self):
+	def cleanup(self) -> None:
 		if self._lastEventOccurence and (time.time() - self._lastEventOccurence < 10):
 			# Waiting some seconds before exit to avoid Win32 releasing
 			# exceptions
@@ -56,4 +61,5 @@ class SensLogonEventGenerator(EventGenerator):
 		from opsiclientd.windows import importWmiAndPythoncom
 
 		(_wmi, pythoncom) = importWmiAndPythoncom(importWmi=False, importPythoncom=True)
+		assert pythoncom
 		pythoncom.CoUninitialize()

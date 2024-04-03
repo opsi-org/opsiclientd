@@ -10,6 +10,8 @@ Daemon Startup Events
 
 from __future__ import annotations
 
+from typing import Any
+
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.Events.Basic import Event, EventGenerator
 
@@ -17,7 +19,7 @@ __all__ = ["DaemonStartupEvent", "DaemonStartupEventConfig", "DaemonStartupEvent
 
 
 class DaemonStartupEventConfig(EventConfig):
-	def setConfig(self, conf):
+	def setConfig(self, conf: dict[str, Any]) -> None:
 		EventConfig.setConfig(self, conf)
 		self.maxRepetitions = 0
 

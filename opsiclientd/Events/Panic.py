@@ -10,6 +10,8 @@ Panic events are used to react to problems.
 
 from __future__ import annotations
 
+from typing import Any
+
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.Events.Basic import Event, EventGenerator
 
@@ -17,7 +19,7 @@ __all__ = ["PanicEvent", "PanicEventConfig", "PanicEventGenerator"]
 
 
 class PanicEventConfig(EventConfig):
-	def setConfig(self, conf):
+	def setConfig(self, conf: dict[str, Any]) -> None:
 		EventConfig.setConfig(self, conf)
 		self.maxRepetitions = -1
 		self.actionMessage = "Panic event"
@@ -32,9 +34,9 @@ class PanicEventConfig(EventConfig):
 		self.updateConfigFile = False
 		self.writeLogToService = False
 		self.updateActionProcessor = False
-		self.eventNotifierCommand = None
-		self.actionNotifierCommand = None
-		self.shutdownNotifierCommand = None
+		self.eventNotifierCommand: str | None = None
+		self.actionNotifierCommand: str | None = None
+		self.shutdownNotifierCommand: str | None = None
 		self.actionProcessorDesktop = "winlogon"
 
 

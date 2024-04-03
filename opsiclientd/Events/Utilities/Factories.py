@@ -8,6 +8,9 @@
 Factories for creation of event configs or generators.
 """
 
+from typing import TYPE_CHECKING, Any
+
+from opsiclientd.Events.Basic import EventConfig, EventGenerator
 from opsiclientd.Events.Custom import CustomEventConfig, CustomEventGenerator
 from opsiclientd.Events.DaemonShutdown import (
 	DaemonShutdownEventConfig,
@@ -47,10 +50,14 @@ if RUNNING_ON_WINDOWS:
 		UserLoginEventGenerator,
 	)
 
+if TYPE_CHECKING:
+	from opsiclientd.Opsiclientd import Opsiclientd
+
+
 __all__ = ["EventConfigFactory", "EventGeneratorFactory"]
 
 
-def EventConfigFactory(eventType, eventId, **kwargs):
+def EventConfigFactory(eventType: str, eventId: str, **kwargs: Any) -> EventConfig:
 	"""
 	Get an event config for the given type.
 
@@ -91,7 +98,7 @@ def EventConfigFactory(eventType, eventId, **kwargs):
 	raise TypeError(f"Unknown event config type '{eventType}'")
 
 
-def EventGeneratorFactory(opsiclientd, eventConfig):
+def EventGeneratorFactory(opsiclientd: Opsiclientd, eventConfig: EventConfig) -> EventGenerator:
 	"""
 	Get an event generator matching the given config type.
 

@@ -117,9 +117,9 @@ def main() -> None:
 		except Exception as err:
 			logger.debug("Failed to find default language: %s", err)
 
-		def _(string):
+		def _(message: str) -> str:
 			"""Fallback function"""
-			return string
+			return message
 
 		sp = None
 		try:

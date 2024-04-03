@@ -10,16 +10,17 @@ Non-free parts of opsiclientd.
 import base64
 import time
 from hashlib import md5
+from typing import Any
 
 from Crypto.Hash import MD5
 from Crypto.Signature import pkcs1_15
 from OPSI.Util import getPublicKey  # type: ignore[import]
 from opsicommon.logging import get_logger
 
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 
-def verify_modules(backend_info, needed_modules=None):
+def verify_modules(backend_info: dict[str, Any], needed_modules: list[str] | None = None) -> None:
 	logger.debug("Verifying modules file signature")
 	modules = backend_info["modules"]
 	helpermodules = backend_info["realmodules"]

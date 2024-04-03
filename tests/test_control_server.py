@@ -12,6 +12,7 @@ import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -214,7 +215,7 @@ def test_concurrency(opsiclientd_url: str, opsiclientd_auth: tuple[str, str]) ->
 		{"id": 5, "method": "getConfig", "params": []},
 	]
 
-	def run_rpc(rpc):
+	def run_rpc(rpc: dict[str, Any]) -> None:
 		thread = threading.current_thread()
 		res = requests.post(f"{opsiclientd_url}/opsiclientd", auth=opsiclientd_auth, verify=False, json=rpc)
 		setattr(thread, "status_code", res.status_code)

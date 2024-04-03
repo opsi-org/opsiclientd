@@ -10,6 +10,7 @@ Event configuration utilities.
 
 import copy as pycopy
 import pprint
+from typing import Any
 
 from opsicommon.logging import logger
 from opsicommon.types import forceBool, forceList, forceUnicodeLower
@@ -22,8 +23,8 @@ __all__ = ["getEventConfigs"]
 config = Config()
 
 
-def getEventConfigs():
-	preconditions = {}
+def getEventConfigs() -> dict[str, dict[str, Any]]:
+	preconditions: dict[str, dict[str, bool]] = {}
 	for section, options in config.getDict().items():
 		section = section.lower()
 		if section.startswith("precondition_"):
@@ -39,7 +40,7 @@ def getEventConfigs():
 			except Exception as err:
 				logger.error("Failed to parse precondition '%s': %s", preconditionId, err)
 
-	rawEventConfigs = {}
+	rawEventConfigs: dict[str, dict[str, Any]] = {}
 	for section, options in config.getDict().items():
 		section = section.lower()
 		if section.startswith("event_"):
@@ -67,15 +68,15 @@ def getEventConfigs():
 						rawEventConfigs[eventConfigId]["args"][key.lower()] = options[key]
 
 				if "{" in eventConfigId:
-					superEventName, precondition = eventConfigId.split("{", 1)
+					superEventName, precondition_id = eventConfigId.split("{", 1)
 					if not rawEventConfigs[eventConfigId]["super"]:
 						rawEventConfigs[eventConfigId]["super"] = superEventName.strip()
-					rawEventConfigs[eventConfigId]["precondition"] = precondition.replace("}", "").strip()
+					rawEventConfigs[eventConfigId]["precondition"] = precondition_id.replace("}", "").strip()
 			except Exception as err:
 				logger.error("Failed to parse event config '%s': %s", eventConfigId, err)
 
 	# Process inheritance
-	newRawEventConfigs = {}
+	newRawEventConfigs: dict[str, dict[str, Any]] = {}
 	while rawEventConfigs:
 		num_configs = len(rawEventConfigs)
 		for eventConfigId in sorted(list(rawEventConfigs)):

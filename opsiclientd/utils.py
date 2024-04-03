@@ -18,7 +18,7 @@ from opsicommon.logging import get_logger
 if TYPE_CHECKING:
 	from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
 
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 
 def get_include_exclude_product_ids(

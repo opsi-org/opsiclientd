@@ -28,7 +28,7 @@ from opsicommon.objects import (  # type: ignore[import]
 
 from opsiclientd.webserver.rpc.interface import no_export
 
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 
 class OpsiProductNotAvailableError(OpsiError):

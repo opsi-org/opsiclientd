@@ -25,7 +25,7 @@ from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.setup import setup
 
 opsiclientd: Opsiclientd | None = None
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 
 def signal_handler(signo: int, stackFrame: FrameType | None) -> None:
@@ -67,7 +67,7 @@ def daemonize(stdin: str = "/dev/null", stdout: str = "/dev/null", stderr: str =
 		os.dup2(file.fileno(), sys.stderr.fileno())
 
 
-def write_pid_file(path: str) -> None:
+def write_pid_file(path: str | None) -> None:
 	if path:
 		with open(path, "w", encoding="utf-8") as pidFile:
 			pidFile.write(str(os.getpid()))

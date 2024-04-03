@@ -8,7 +8,6 @@
 setup tasks
 """
 
-import codecs
 import datetime
 import ipaddress
 import os
@@ -41,7 +40,7 @@ if not RUNNING_ON_WINDOWS:
 	WindowsError = RuntimeError
 
 config = Config()
-logger = get_logger("opsiclientd")
+logger = get_logger()
 
 CERT_RENEW_DAYS = 60
 SERVICES_PIPE_TIMEOUT_WINDOWS = 120000
@@ -353,8 +352,8 @@ def opsi_service_setup(options: Namespace) -> None:
 		service_client.disconnect()
 
 
-def cleanup_registry_uninstall():
-	if not RUNNING_ON_WINDOWS:
+def cleanup_registry_uninstall() -> None:
+	if sys.platform != "win32":
 		return
 
 	logger.notice("Cleanup registry uninstall information")
@@ -394,8 +393,8 @@ def cleanup_registry_uninstall():
 					break
 
 
-def cleanup_registry_environment_path():
-	if not RUNNING_ON_WINDOWS:
+def cleanup_registry_environment_path() -> None:
+	if not sys.platform != "win32":
 		return
 
 	logger.notice("Cleanup registry environment PATH variable")
@@ -404,7 +403,8 @@ def cleanup_registry_environment_path():
 	import win32process  # type: ignore[import]
 
 	key_handle = winreg.CreateKey(  # type: ignore[attr-defined]
-		winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"
+		winreg.HKEY_LOCAL_MACHINE,  # type: ignore[attr-defined]
+		r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
 	)
 	try:
 		if win32process.IsWow64Process():
@@ -427,8 +427,8 @@ def cleanup_registry_environment_path():
 		winreg.CloseKey(key_handle)  # type: ignore[attr-defined]
 
 
-def setup_on_shutdown():
-	if not RUNNING_ON_WINDOWS:
+def setup_on_shutdown() -> None:
+	if sys.platform != "win32":
 		return None
 
 	logger.notice("Creating opsi shutdown install policy")
@@ -452,7 +452,7 @@ def setup_on_shutdown():
 
 	# Windows does not execute binaries directly, using cmd script
 	script_path = opsiclientd_rpc[:-3] + "cmd"
-	with codecs.open(script_path, "w", "windows-1252") as file:
+	with open(script_path, "w", encoding="windows-1252") as file:
 		file.write(f'"%~dp0\\{os.path.basename(opsiclientd_rpc)}" %*\r\n')
 	script_params = "--timeout=18000 runOnShutdown()"
 
@@ -503,7 +503,7 @@ def setup_on_shutdown():
 	winreg.CloseKey(key_handle)
 
 
-def cleanup_control_server_files():
+def cleanup_control_server_files() -> None:
 	share_dir = Path(config.get("control_server", "files_dir"))
 	if not share_dir.exists():
 		logger.info("Creating files directory %s", share_dir)
