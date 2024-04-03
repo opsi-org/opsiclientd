@@ -154,21 +154,6 @@ msgpack_decoder = msgspec.msgpack.Decoder()
 json_decoder = msgspec.json.Decoder()
 
 
-def jsonrpc_request_from_dict(data: dict[str, Any], client: str) -> JSONRPCRequest | JSONRPC20Request:
-	if data.get("jsonrpc") == "2.0":
-		return JSONRPC20Request(
-			info=RequestInfo(client=client), id=data.get("id") or 0, method=data["method"], params=data.get("params") or []
-		)
-	return JSONRPCRequest(info=RequestInfo(client=client), id=data.get("id") or 0, method=data["method"], params=data.get("params") or [])
-
-
-def jsonrpc_request_from_data(data: bytes, serialization: str, client: str = "") -> list[JSONRPCRequest | JSONRPC20Request]:
-	dat = deserialize_data(data, serialization)
-	if isinstance(dat, list):
-		return [jsonrpc_request_from_dict(d, client) for d in dat]
-	return [jsonrpc_request_from_dict(dat, client)]
-
-
 def deserialize_data(data: bytes, serialization: str) -> Any:
 	if serialization == "msgpack":
 		return msgpack_decoder.decode(data)
@@ -187,6 +172,41 @@ def serialize_data(data: Any, serialization: str) -> bytes:
 	if serialization == "json":
 		return json_encoder.encode(data)
 	raise ValueError(f"Unhandled serialization {serialization!r}")
+
+
+def jsonrpc_request_from_dict(data: dict[str, Any], client: str) -> JSONRPCRequest | JSONRPC20Request:
+	if data.get("jsonrpc") == "2.0":
+		return JSONRPC20Request(
+			info=RequestInfo(client=client), id=data.get("id") or 0, method=data["method"], params=data.get("params") or []
+		)
+	return JSONRPCRequest(info=RequestInfo(client=client), id=data.get("id") or 0, method=data["method"], params=data.get("params") or [])
+
+
+def jsonrpc_request_from_data(data: bytes, serialization: str, client: str = "") -> list[JSONRPCRequest | JSONRPC20Request]:
+	dat = deserialize_data(data, serialization)
+	if isinstance(dat, list):
+		return [jsonrpc_request_from_dict(d, client) for d in dat]
+	return [jsonrpc_request_from_dict(dat, client)]
+
+
+def jsonrpc_response_from_dict(data: dict[str, Any]) -> JSONRPCResponse | JSONRPCErrorResponse | JSONRPC20Response | JSONRPC20ErrorResponse:
+	rpc_id = data.get("id") or 0
+	if data.get("jsonrpc") == "2.0":
+		if data.get("error"):
+			return JSONRPC20ErrorResponse(id=rpc_id, error=data["error"])
+		return JSONRPC20Response(id=rpc_id, result=data.get("result"))
+	if data.get("error"):
+		return JSONRPCErrorResponse(id=rpc_id, error=data["error"])
+	return JSONRPCResponse(id=rpc_id, result=data.get("result"))
+
+
+def jsonrpc_response_from_data(
+	data: bytes, serialization: str
+) -> list[JSONRPCResponse | JSONRPCErrorResponse | JSONRPC20Response | JSONRPC20ErrorResponse]:
+	dat = deserialize_data(data, serialization)
+	if isinstance(dat, list):
+		return [jsonrpc_response_from_dict(d) for d in dat]
+	return [jsonrpc_response_from_dict(dat)]
 
 
 async def execute_rpc(request: JSONRPC20Request | JSONRPCRequest, interface: Interface) -> Any:

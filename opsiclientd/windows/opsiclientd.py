@@ -280,9 +280,9 @@ class OpsiclientdNT(Opsiclientd):
 		logger.info("Login capable opsi credential provider connected, calling loginUser")
 		for response in self._controlPipe.executeRpc("loginUser", username, password):
 			logger.debug("loginUser response: %r", response)
-			if not response.get("error") and response.get("result"):
+			if not response.error and response.result:
 				return True
-			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {response.get('error')}")
+			raise RuntimeError(f"opsi credential provider failed to login user '{username}': {response.error}")
 		return False
 
 	def cleanup_opsi_setup_user(self, keep_sid: str | None = None) -> None:

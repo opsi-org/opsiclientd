@@ -20,11 +20,19 @@ from ctypes import byref, c_char_p, c_ulong, create_string_buffer
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from OPSI.Service.JsonRpc import JsonRpc  # type: ignore[import]
-from OPSI.Util import fromJson, toJson  # type: ignore[import]
 from opsicommon.logging import get_logger, log_context
 
 from opsiclientd.webserver.rpc.control import get_pipe_control_interface
+from opsiclientd.webserver.rpc.jsonrpc import (
+	JSONRPC20Request,
+	JSONRPC20Response,
+	JSONRPCErrorResponse,
+	JSONRPCResponse,
+	jsonrpc_request_from_data,
+	jsonrpc_response_from_data,
+	process_rpcs,
+	serialize_data,
+)
 
 if os.name == "nt":
 	from ctypes import windll  # type: ignore[attr-defined]
@@ -51,9 +59,6 @@ class ClientConnection(threading.Thread):
 		self._controller = controller
 		self._connection = connection
 		self.client_id = client_id
-		self._readTimeout = 1
-		self._writeTimeout = 1
-		self._encoding = "utf-8"
 		self.clientInfo: list[str] = []
 		self.comLock = threading.Lock()
 		self._stopEvent = threading.Event()
@@ -82,6 +87,7 @@ class ClientConnection(threading.Thread):
 								self.write(response)
 
 								if self.clientInfo:
+									time.sleep(1)
 									# Switch to new protocol
 									self.executeRpc(
 										"blockLogin",
@@ -97,10 +103,10 @@ class ClientConnection(threading.Thread):
 	def stop(self) -> None:
 		self._stopEvent.set()
 
-	def read(self) -> str:
-		return ""
+	def read(self, timeout: float = 1.0) -> bytes:
+		return b""
 
-	def write(self, data: str | bytes) -> bool:
+	def write(self, data: bytes, timeout: float = 1.0) -> bool:
 		return False
 
 	def checkConnection(self) -> None:
@@ -110,50 +116,48 @@ class ClientConnection(threading.Thread):
 		self.stop()
 		self._controller.clientDisconnected(self)
 
-	def processIncomingRpc(self, rpc_str: str) -> str:
+	def processIncomingRpc(self, rpc_data: bytes) -> bytes:
 		try:
-			rpc = fromJson(rpc_str)
-			if rpc.get("method") == "registerClient":
+			rpc = jsonrpc_request_from_data(rpc_data, "json")[0]
+			if rpc.method == "registerClient":
 				# New client protocol
-				self.clientInfo = rpc.get("params", [])
+				self.clientInfo = list(rpc.params)
 				self.login_capable = True
 				logger.info("Client %s info set to: %s", self, self.clientInfo)
-				return toJson(
-					{"id": rpc.get("id"), "result": f"client {'/'.join(self.clientInfo)}/{self.client_id} registered", "error": None}
+				res_class = JSONRPC20Response if isinstance(rpc, JSONRPC20Request) else JSONRPCResponse
+				return serialize_data(
+					res_class(id=rpc.id, result=f"client {'/'.join(self.clientInfo)}/{self.client_id} registered", error=None), "json"
 				)
-			jsonrpc = JsonRpc(
-				instance=self._controller._opsiclientdRpcInterface,
-				interface=self._controller._opsiclientdRpcInterface.backend_getInterface(),
-				rpc=rpc,
-			)
-			jsonrpc.execute()
-			return toJson(jsonrpc.getResponse())
+
+			return serialize_data(process_rpcs(self._controller._opsiclientdRpcInterface, rpc), "json")
 		except Exception as rpc_error:
 			logger.error(rpc_error, exc_info=True)
-			return toJson({"id": None, "error": str(rpc_error)})
+			return serialize_data(JSONRPCErrorResponse(id=0, error=str(rpc_error)), "json")
 
-	def executeRpc(self, method: str, params: list[Any] | tuple[Any, ...] | None = None, with_lock: bool = True) -> dict[str, Any]:
+	def executeRpc(
+		self, method: str, params: list[Any] | tuple[Any, ...] | None = None, with_lock: bool = True
+	) -> JSONRPCErrorResponse | JSONRPCResponse:
 		params = params or []
 		with log_context({"instance": "control pipe"}):
 			rpc_id = 1
 			if not self.clientInfo:
-				return {"id": rpc_id, "error": f"Cannot execute rpc, not supported by client {self}", "result": None}
+				return JSONRPCErrorResponse(id=rpc_id, error=f"Cannot execute rpc, not supported by client {self}")
 
 			request = {"id": rpc_id, "method": method, "params": params}
 			try:
 				if with_lock:
 					self.comLock.acquire()
 				try:
-					request_json = toJson(request)
+					request_json = serialize_data(request, "json")
 					logger.info("Sending request '%s' to client %s", request_json, self)
 					self.write(request_json)
-					response_json = self.read()
+					response_json = self.read(3.0)
 					if not response_json:
 						logger.warning("No response for method '%s' received from client %s", request["method"], self)
-						return {"id": rpc_id, "error": None, "result": None}
+						return JSONRPCResponse(id=rpc_id)
 					logger.info("Received response '%s' from client %s", response_json, self)
-					response = fromJson(response_json)
-					if method == "loginUser" and response.get("result"):
+					response = jsonrpc_response_from_data(response_json, "json")[0]
+					if method == "loginUser" and response.result:
 						self.login_user_executed = datetime.now()
 						# Credential provider can only handle one successful login.
 						# Ensure, that the credential provider is not used for a
@@ -165,7 +169,7 @@ class ClientConnection(threading.Thread):
 						self.comLock.release()
 			except Exception as client_err:
 				logger.error(client_err, exc_info=True)
-				return {"id": rpc_id, "error": str(client_err), "result": None}
+				return JSONRPCErrorResponse(id=rpc_id, error=str(client_err))
 
 
 class ControlPipe(threading.Thread):
@@ -255,7 +259,7 @@ class ControlPipe(threading.Thread):
 				return True
 		return False
 
-	def executeRpc(self, method: str, *params: Any) -> list[dict[str, Any]]:
+	def executeRpc(self, method: str, *params: Any) -> list[JSONRPCResponse | JSONRPCErrorResponse]:
 		with log_context({"instance": "control pipe"}):
 			if not self._clients:
 				raise RuntimeError("Cannot execute rpc, no client connected")
@@ -272,8 +276,8 @@ class ControlPipe(threading.Thread):
 					continue
 				response = client.executeRpc(method, params)
 				responses.append(response)
-				if response.get("error"):
-					errors.append(response["error"])
+				if isinstance(response, JSONRPCErrorResponse):
+					errors.append(response.error)
 
 			if len(errors) == len(responses):
 				raise RuntimeError(", ".join(errors))
@@ -286,25 +290,23 @@ class PosixClientConnection(ClientConnection):
 		# TODO
 		pass
 
-	def read(self) -> str:
+	def read(self, timeout: float = 1.0) -> bytes:
 		logger.trace("Reading from connection %s", self._connection)
-		self._connection.settimeout(self._readTimeout)
+		self._connection.settimeout(timeout)
 		try:
 			data = self._connection.recv(4096)
 			if not data:
 				self.clientDisconnected()
-			return data.decode(self._encoding)
+			return data
 		except Exception as err:
 			logger.trace("Failed to read from socket: %s", err)
-		return ""
+		return b""
 
-	def write(self, data: str | bytes) -> bool:
+	def write(self, data: bytes, timeout: float = 1.0) -> bool:
 		if not data or not self._connection:
 			return False
 		logger.trace("Writing to connection %s", self._connection)
-		if not isinstance(data, bytes):
-			data = data.encode(self._encoding)
-		self._connection.settimeout(self._writeTimeout)
+		self._connection.settimeout(timeout)
 		try:
 			self._connection.sendall(data)
 		except Exception as err:
@@ -350,7 +352,7 @@ class PosixControlDomainSocket(ControlPipe):
 			try:
 				connection, client_address = self._socket.accept()
 				logger.notice("Client %s connected to %s", client_address, self._socketName)
-				return (connection, client_address)
+				return (connection, f"unix_socket{client_address}")
 			except socket.timeout:
 				if self._stopEvent.is_set():
 					return (None, "")
@@ -369,7 +371,7 @@ class NTPipeClientConnection(ClientConnection):
 			if error == 109:  # ERROR_BROKEN_PIPE
 				self.clientDisconnected()
 
-	def read(self) -> str:
+	def read(self, timeout: float = 1.0) -> bytes:
 		data = b""
 		while True:
 			logger.trace("Reading from pipe")
@@ -384,18 +386,17 @@ class NTPipeClientConnection(ClientConnection):
 				if windll.kernel32.GetLastError() == 234:  # ERROR_MORE_DATA
 					continue
 				if data:
-					return data.decode()
+					return data
 				if windll.kernel32.GetLastError() == 109:  # ERROR_BROKEN_PIPE
 					self.clientDisconnected()
 
-			return data.decode()
+			return data
 
-	def write(self, data: str | bytes) -> bool:
+	def write(self, data: bytes, timeout: float = 1.0) -> bool:
 		if not data:
 			return False
+
 		logger.trace("Writing to pipe")
-		if not isinstance(data, bytes):
-			data = data.encode(self._encoding)
 		data += b"\0"
 
 		cbWritten = c_ulong(0)
