@@ -16,7 +16,6 @@ import os
 import sys
 import tempfile
 from logging.handlers import RotatingFileHandler
-from typing import Union
 
 import psutil
 from OPSI import __version__ as python_opsi_version  # type: ignore[import]
