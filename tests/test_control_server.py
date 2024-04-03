@@ -281,16 +281,23 @@ def test_cache_service_jsonrpc(default_config: Config, tmp_path: Path, opsiclien
 	with ocd.runCacheService(allow_fail=False):
 		with get_test_client(ocd) as client:
 			with pytest.raises(HTTPStatusError, match="401 Unauthorized"):
-				client.jsonrpc20(path="/rpc", method="backend_info", params=[], id="1")
+				client.jsonrpc20(path="/rpc", method="backend_info", params=[], id=1)
 
 			client.auth = opsiclientd_auth
 			pocs = [
 				ProductOnClient(productId="product1", productType="LocalbootProduct", clientId="client1.opsi.test"),
 				ProductOnClient(productId="product2", productType="LocalbootProduct", clientId="client1.opsi.test"),
 			]
-			response = client.jsonrpc20(path="/rpc", method="productOnClient_generateSequence", params=[serialize(pocs)], id="2")
+			start = time.time()
+			for rpc_id in range(9, 21):
+				client.jsonrpc20(path="/rpc", method="productOnClient_createObjects", params=[serialize(pocs)], id=rpc_id)
+			duration = time.time() - start
+			print(f"Duration: {duration:.2f} seconds")
+			assert duration < 3
+
+			response = client.jsonrpc20(path="/rpc", method="productOnClient_generateSequence", params=[serialize(pocs)], id=101)
 			print(response)
 			assert "error" not in response
-			assert response["id"] == "2"
+			assert response["id"] == 101
 
-			response = client.jsonrpc20(path="/rpc", method="productOnClient_getObjectsWithSequence", params=[], id="3")
+			response = client.jsonrpc20(path="/rpc", method="productOnClient_getObjectsWithSequence", params=[], id=102)

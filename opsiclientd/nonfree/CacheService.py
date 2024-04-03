@@ -639,18 +639,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		return self._running
 
 	def isWorking(self) -> bool:
-		if self._working:
-			return True
-
-		time.sleep(1)
-		if self._working:
-			return True
-
-		time.sleep(1)
-		if self._working:
-			return True
-
-		return False
+		return self._working
 
 	def stop(self) -> None:
 		self._stopped = True
