@@ -52,7 +52,7 @@ async def jsonrpc_head() -> Response:
 @jsonrpc_router.get("{any:path}")
 @jsonrpc_router.post("{any:path}")
 async def jsonrpc(request: Request, response: Response) -> Response:
-	server_version = "4.2.0.0"
+	server_version = "4.3.0.0"
 	try:
 		opsiclientd = get_opsiclientd()
 		cache_service = opsiclientd.getCacheService()

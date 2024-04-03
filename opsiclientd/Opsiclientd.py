@@ -434,6 +434,37 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._actionProcessorUserName = ""
 		self._actionProcessorUserPassword = ""
 
+	@contextmanager
+	def runCacheService(
+		self, allow_fail: bool = True
+	) -> Generator[CacheService | None, None, None]:  # not typing here for speedup (costly import)
+		self._cacheService = None
+		yielded = False
+		try:
+			logger.notice("Starting cache service")
+			from opsiclientd.nonfree.CacheService import CacheService
+
+			self._cacheService = CacheService(opsiclientd=self)
+			self._cacheService.start()
+			logger.notice("Cache service started")
+			yielded = True
+			yield self._cacheService
+		except Exception as err:
+			logger.error("Failed to start cache service: %s", err, exc_info=True)
+			if not allow_fail:
+				raise
+			if not yielded:
+				yield None
+		finally:
+			if self._cacheService:
+				logger.info("Stopping cache service")
+				try:
+					self._cacheService.stop()
+					self._cacheService.join(2)
+					logger.info("Cache service stopped")
+				except (NameError, RuntimeError) as stop_err:
+					logger.debug("Failed to stop cache service: %s", stop_err)
+
 	def run(self) -> None:
 		with log_context({"instance": "opsiclientd"}):
 			try:
@@ -507,30 +538,6 @@ class Opsiclientd(EventListener, threading.Thread):
 						logger.info("Webserver stopped")
 					except (NameError, RuntimeError) as stopError:
 						logger.debug("Stopping webserver failed: %s", stopError)
-
-		@contextmanager
-		def getCacheService() -> Generator[CacheService | None, None, None]:  # not typing here for speedup (costly import)
-			cache_service = None
-			try:
-				logger.notice("Starting cache service")
-				from opsiclientd.nonfree.CacheService import CacheService
-
-				cache_service = CacheService(opsiclientd=self)
-				cache_service.start()
-				logger.notice("Cache service started")
-				yield cache_service
-			except Exception as err:
-				logger.error("Failed to start cache service: %s", err, exc_info=True)
-				yield None
-			finally:
-				if cache_service:
-					logger.info("Stopping cache service")
-					try:
-						cache_service.stop()
-						cache_service.join(2)
-						logger.info("Cache service stopped")
-					except (NameError, RuntimeError) as stop_err:
-						logger.debug("Failed to stop cache service: %s", stop_err)
 
 		@contextmanager
 		def getEventGeneratorContext() -> Generator[None, None, None]:
@@ -658,9 +665,7 @@ class Opsiclientd(EventListener, threading.Thread):
 							self.restart(disabled_event_types=restart_marker_config.disabled_event_types)
 							return
 
-					with getCacheService() as cacheService:
-						self._cacheService = cacheService
-
+					with self.runCacheService():
 						with getDaemonLoopingContext():
 							with self._eptListLock:
 								if not self._eventProcessingThreads:

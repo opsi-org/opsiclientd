@@ -26,8 +26,6 @@ from opsicommon.objects import (  # type: ignore[import]
 	ProductOnDepot,
 )
 
-from opsiclientd.webserver.rpc.interface import no_export
-
 logger = get_logger()
 
 
@@ -144,7 +142,6 @@ class Action:
 
 
 class RPCProductDependencyMixin(Protocol):
-	@no_export
 	def get_product_action_groups(
 		self, product_on_clients: list[ProductOnClient], *, ignore_unavailable_products: bool = True
 	) -> dict[str, list[ProductActionGroup]]:

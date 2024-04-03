@@ -547,13 +547,12 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 
 	def initBackends(self) -> None:
 		clientId = config.get("global", "host_id")
-		masterDepotId = config.get("depot_server", "master_depot_id")
-
+		depot_id = config.get("depot_server", "master_depot_id") or config.get("depot_server", "depot_id")
 		backendArgs = {
 			"opsiModulesFile": self._opsiModulesFile,
 			"opsiPasswdFile": self._opsiPasswdFile,
 			"auditHardwareConfigFile": self._auditHardwareConfigFile,
-			"depotId": masterDepotId,
+			"depotId": depot_id,
 		}
 		self._workBackend = SQLiteBackend(database=os.path.join(self._configCacheDir, "work.sqlite"), **backendArgs)
 		self._workBackend.backend_createBase()
@@ -607,7 +606,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 		extension_class: Type[ConfigCacheServiceBackendExtension43] | Type[ConfigCacheServiceBackendExtension42] = (
 			ConfigCacheServiceBackendExtension43
 		)
-		server_version = version.parse(self._state.get("server_version", "4.2.0.0"))
+		server_version = version.parse(self._state.get("server_version", "4.3.0.0"))
 		if server_version < version.parse("4.3"):
 			extension_class = ConfigCacheServiceBackendExtension42
 		logger.notice("Using extension class %r for server version %s", extension_class, server_version)

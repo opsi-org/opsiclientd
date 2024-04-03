@@ -105,6 +105,9 @@ class Interface:
 			if method_name.startswith("_"):
 				# protected / private
 				continue
+			if method_name == "get_product_action_groups":
+				# Not using no_export because BackendExtender would not add this method
+				continue
 
 			self._interface[method_name] = get_method_interface(function)
 

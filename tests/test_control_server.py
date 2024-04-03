@@ -20,6 +20,7 @@ from unittest.mock import patch
 import pytest
 import requests
 from httpx import HTTPStatusError
+from opsicommon.objects import ProductOnClient, serialize
 from opsicommon.system.info import is_macos
 from starlette.websockets import WebSocketDisconnect
 
@@ -28,9 +29,9 @@ from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import createEventGenerators
 from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.webserver.application.log_viewer import LogReaderThread
-from opsiclientd.webserver.rpc.control import ControlInterface
+from opsiclientd.webserver.rpc.control import ControlInterface, get_cache_service_interface
 
-from .utils import Config, OpsiclientdTestClient, default_config, opsiclientd_auth, opsiclientd_url, test_client  # noqa
+from .utils import Config, OpsiclientdTestClient, default_config, get_test_client, opsiclientd_auth, opsiclientd_url, test_client  # noqa
 
 
 def test_fire_event(default_config: Config) -> None:  # noqa
@@ -259,3 +260,35 @@ def test_log_reader_start_position(tmp_path: Path) -> None:
 			lines = data.count("\n")
 			print(f"{lines=}, {num_tail_records=}, {log_lines=}")
 			assert lines == num_tail_records if log_lines > num_tail_records else log_lines
+
+
+def test_cache_service_interface(default_config: Config) -> None:  # noqa
+	ocd = Opsiclientd()
+	with ocd.runCacheService(allow_fail=False):
+		backend = get_cache_service_interface(ocd)
+		interface = backend.get_interface()
+		assert "backend_info" in interface
+		assert "accessControl_authenticated" in interface
+		assert "productOnClient_generateSequence" in interface
+		assert "productOnClient_getObjectsWithSequence" in interface
+		backend.productOnClient_getObjectsWithSequence()  # type: ignore[attr-defined]
+
+
+def test_cache_service_jsonrpc(opsiclientd_auth: tuple[str, str]) -> None:  # noqa
+	ocd = Opsiclientd()
+	with ocd.runCacheService():
+		with get_test_client(ocd) as client:
+			with pytest.raises(HTTPStatusError, match="401 Unauthorized"):
+				client.jsonrpc20(path="/rpc", method="backend_info", params=[], id="1")
+
+			client.auth = opsiclientd_auth
+			pocs = [
+				ProductOnClient(productId="product1", productType="LocalbootProduct", clientId="client1.opsi.test"),
+				ProductOnClient(productId="product2", productType="LocalbootProduct", clientId="client1.opsi.test"),
+			]
+			response = client.jsonrpc20(path="/rpc", method="productOnClient_generateSequence", params=[serialize(pocs)], id="2")
+			print(response)
+			assert "error" not in response
+			assert response["id"] == "2"
+
+			response = client.jsonrpc20(path="/rpc", method="productOnClient_getObjectsWithSequence", params=[], id="3")

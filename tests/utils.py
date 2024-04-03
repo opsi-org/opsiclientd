@@ -64,8 +64,10 @@ def default_config() -> Config:
 
 
 class OpsiclientdTestClient(TestClient):
-	def __init__(self) -> None:
-		super().__init__(setup_application(Opsiclientd()), "https://localhost:4441")
+	def __init__(self, opsiclientd: Opsiclientd | None = None) -> None:
+		if not opsiclientd:
+			opsiclientd = Opsiclientd()
+		super().__init__(setup_application(opsiclientd), "https://localhost:4441")
 		self._address = ("127.0.0.1", 12345)
 		self._username: str | None = None
 		self._password: str | None = None
@@ -110,13 +112,21 @@ class OpsiclientdTestClient(TestClient):
 		params = serialize(params or {})
 		rpc = {"jsonrpc": "2.0", "id": id or str(uuid4()), "method": method, "params": params}
 		res = self.post(path, json=rpc, headers=headers)
-		res.raise_for_status()
+		if res.status_code != 200:
+			print(res.text)
+			res.raise_for_status()
 		return deserialize(res.json(), deep=True)
 
 
 @pytest.fixture()
 def test_client() -> Generator[OpsiclientdTestClient, None, None]:
-	client = OpsiclientdTestClient()
+	with get_test_client() as client:
+		yield client
+
+
+@contextmanager
+def get_test_client(opsiclientd: Opsiclientd | None = None) -> Generator[OpsiclientdTestClient, None, None]:
+	client = OpsiclientdTestClient(opsiclientd)
 
 	def get_client_address(asgi_adapter: Any, scope: Scope) -> tuple[str, int]:
 		return client.get_client_address()

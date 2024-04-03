@@ -14,10 +14,14 @@ from typing import Any
 
 import psutil
 import pytest
+import sqlalchemy.util.deprecations  # type: ignore[import]
 import urllib3
 from _pytest.config import Config
 from _pytest.logging import LogCaptureHandler
 from _pytest.nodes import Item
+
+# Disable sqlalchemy 2.0 deprecation warnings
+sqlalchemy.util.deprecations.SILENCE_UBER_WARNING = True
 
 
 # Disable pytest log capture
