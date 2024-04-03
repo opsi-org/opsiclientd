@@ -205,8 +205,8 @@ class BaseMiddleware:
 
 		session: Session | None = None
 		session_id = get_session_id_from_headers(request_headers)
-		secret_filter.add_secrets(session_id)
 		if session_id:
+			secret_filter.add_secrets(session_id)
 			session = self._sessions.get(session_id)
 			if session:
 				if session.expired:
