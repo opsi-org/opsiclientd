@@ -108,4 +108,4 @@ pyinstaller-poetry:
       - mv dist/opsiclientd/_internal/opsiclientd_data dist/opsiclientd/
       - chmod -R g-w,o-w dist/opsiclientd
     windows:
-      - Move-Item -Path dist\opsiclientd\_internal\opsiclientd_data -Destination dist\opsiclientd\opsiclientd_data -Recurse
+      - Move-Item -Path dist\opsiclientd\_internal\opsiclientd_data -Destination dist\opsiclientd\
