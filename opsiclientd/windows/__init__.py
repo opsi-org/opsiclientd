@@ -228,4 +228,5 @@ def runCommandInSession(
 			logger.warning("Retrying in 10 seconds")
 			time.sleep(10)
 			continue
+		return (None, None, None, None)
 	return (None, None, None, None)
