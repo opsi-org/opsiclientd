@@ -73,10 +73,10 @@ class NotificationServerClientConnection(Protocol):
 				rpc_data, self._buffer = self._buffer.split(b"\r\n", maxsplit=1)
 			else:  # b"\1e" in byte_buffer
 				rpc_data, self._buffer = self._buffer.split(b"\1e", maxsplit=1)
-			logger.debug("Received RPC data: %r", rpc_data)
+			logger.trace("Received RPC data: %r", rpc_data)
 			try:
 				rpc = NotificationRPC.from_json(rpc_data.decode("utf-8"))
-				logger.info("Received RPC: %r", rpc)
+				logger.debug("Received RPC: %r", rpc)
 				rpcs.append(rpc)
 			except Exception as err:
 				logger.error("Invalid RPC data %r: %s", rpc_data, err, exc_info=True)
@@ -238,7 +238,7 @@ class NotificationServer(SubjectsObserver, Thread):
 		rpc = NotificationRPC(method=name, params=params)
 		for client in clients:
 			try:
-				logger.info("Sending rpc %r to client %r", rpc, client)
+				logger.debug("Sending rpc %r to client %r", rpc, client)
 				client.send_rpc(rpc)
 			except Exception as err:
 				logger.warning("Failed to send rpc client %r: %s", client, err)
@@ -293,9 +293,9 @@ class NotificationServer(SubjectsObserver, Thread):
 				if self._clients:
 					self.requestEndConnections()
 				try:
-					logger.info("Closing notification server")
+					logger.debug("Closing notification server")
 					self._server.close()
 				except Exception as err:
 					logger.debug(err)
-			logger.info("Waiting for NotificationServer thread to stop")
+			logger.debug("Waiting for NotificationServer thread to stop")
 			self._stopped.wait(5)
