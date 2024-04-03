@@ -230,7 +230,7 @@ class NotificationServer(SubjectsObserver, Thread):
 			params = [params]
 
 		clients = clients or self._clients
-		logger.info("Sending notification '%s' to %d client(s)", name, len(clients))
+		logger.debug("Sending notification %r %r to %d client(s)", name, params, len(clients))
 		if not clients:
 			return
 
