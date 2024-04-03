@@ -10,7 +10,7 @@ from __future__ import annotations
 from threading import Thread
 from typing import TYPE_CHECKING
 
-from opsicommon.logging import get_logger
+from opsicommon.logging import get_logger, log_context
 from uvicorn.config import Config as UvicornConfig
 from uvicorn.server import Server as UvicornServer
 
@@ -51,13 +51,14 @@ class Webserver(Thread):
 		self._server = UvicornServer(config=uvicorn_config)
 
 	def run(self) -> None:
-		try:
-			logger.debug("Starting uvicorn server")
-			assert self._server
-			self._server.run()
-			logger.debug("Uvicorn server stopped")
-		except Exception as err:
-			logger.error("Webserver error: %s", err, exc_info=True)
+		with log_context({"instance": "webserver"}):
+			try:
+				logger.debug("Starting uvicorn server")
+				assert self._server
+				self._server.run()
+				logger.debug("Uvicorn server stopped")
+			except Exception as err:
+				logger.error("Webserver error: %s", err, exc_info=True)
 
 	def stop(self) -> None:
 		if self._server:
