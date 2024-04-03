@@ -205,6 +205,7 @@ class BaseMiddleware:
 
 		session: Session | None = None
 		session_id = get_session_id_from_headers(request_headers)
+		secret_filter.add_secrets(session_id)
 		if session_id:
 			session = self._sessions.get(session_id)
 			if session:
@@ -376,6 +377,7 @@ class Session:
 		self.last_used = self.created = int(unix_timestamp())
 		self.username = ""
 		self.authenticated = False
+		secret_filter.add_secrets(self.session_id)
 
 	def touch(self) -> None:
 		self.last_used = int(unix_timestamp())

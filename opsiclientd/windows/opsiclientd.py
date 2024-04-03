@@ -260,13 +260,7 @@ class OpsiclientdNT(Opsiclientd):
 			session = win32com.client.Dispatch("Microsoft.Update.Session")
 			self._ms_update_installer = session.CreateUpdateInstaller()
 		assert self._ms_update_installer
-		installer_is_busy = self._ms_update_installer.isBusy
-		if not installer_is_busy:
-			logger.info(
-				"IUpdateInstaller::get_RebootRequiredBeforeInstallation: %r",
-				self._ms_update_installer.get_RebootRequiredBeforeInstallation,  # type: ignore[attr-defined]
-			)
-		return installer_is_busy
+		return self._ms_update_installer.isBusy
 
 	def loginUser(self, username: str, password: str) -> bool:
 		assert self._controlPipe

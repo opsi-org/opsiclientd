@@ -1044,7 +1044,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					else:
 						logger.notice("Windows installer not running")
 				except Exception as err:
-					logger.error("Failed to get windows installer status: %s", err)
+					logger.error("Failed to get windows installer status: %s", err, exc_info=True)
 
 			self.setStatusMessage(_("Starting actions"))
 
