@@ -8,6 +8,8 @@
 Factories for creation of event configs or generators.
 """
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any
 
 from opsiclientd.Events.Basic import EventConfig, EventGenerator

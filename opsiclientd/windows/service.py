@@ -8,6 +8,8 @@
 opsiclientd.windows.service
 """
 
+from __future__ import annotations
+
 import socket
 import threading
 import time

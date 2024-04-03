@@ -18,19 +18,21 @@ import threading
 import time
 from ctypes import byref, c_char_p, c_ulong, create_string_buffer
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from OPSI.Service.JsonRpc import JsonRpc  # type: ignore[import]
 from OPSI.Util import fromJson, toJson  # type: ignore[import]
 from opsicommon.logging import get_logger, log_context
 
-from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.webserver.rpc.control import get_pipe_control_interface
 
 if os.name == "nt":
 	from ctypes import windll  # type: ignore[attr-defined]
 else:
 	windll = None
+
+if TYPE_CHECKING:
+	from opsiclientd.Opsiclientd import Opsiclientd
 
 logger = get_logger()
 
