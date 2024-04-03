@@ -109,7 +109,6 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 		"""
 		try:
 			logger.notice("Handling start request")
-			assert self.opsiclientd
 			startTime = time.time()
 
 			self.ReportServiceStatus(win32service.SERVICE_RUNNING)
@@ -121,6 +120,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			from .opsiclientd import opsiclientd_factory
 
 			self.opsiclientd = opsiclientd_factory()
+			assert self.opsiclientd
 			self.opsiclientd.start()
 
 			# Wait for stop event
