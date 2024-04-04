@@ -76,12 +76,12 @@ class EventGenerator(threading.Thread):
 		for pec in self._eventConfigs:
 			p_state = {p: state.get(p, False) for p in pec.preconditions}
 			if all(p_state.values()):
-				logger.info("Preconditions %s for event config '%s' fulfilled (%r)", list(pec.preconditions), pec.getId(), p_state)
+				logger.info("Preconditions for event config '%s' fulfilled (%r)", pec.getId(), p_state)
 				if not actualConfig or (len(pec.preconditions.keys()) > len(actualPreconditions.keys())):
 					actualPreconditions = pec.preconditions
 					actualConfig = pec
 			else:
-				logger.info("Preconditions %s for event config '%s' not fulfilled (%r)", list(pec.preconditions), pec.getId(), p_state)
+				logger.info("Preconditions for event config '%s' not fulfilled (%r)", pec.getId(), p_state)
 
 		return actualConfig
 
