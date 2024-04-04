@@ -188,7 +188,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		filename = Path(filename)
 		logger.notice("Self-update from file %s", filename)
 
-		test_file = "opsiclient.exe" if RUNNING_ON_WINDOWS else "opsiclientd"
+		test_file = "opsiclientd.exe" if RUNNING_ON_WINDOWS else "opsiclientd"
 		inst_dir = Path(__file__).resolve().parent.parent.parent
 		if not (inst_dir / test_file).exists():
 			raise RuntimeError(f"File not found: {inst_dir / test_file}")

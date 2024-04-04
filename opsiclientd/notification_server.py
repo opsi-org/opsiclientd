@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import json
-from asyncio import BaseTransport, Protocol, Server, Transport, get_event_loop, run
+from asyncio import AbstractEventLoop, BaseTransport, Protocol, Server, Transport, get_event_loop, run
 from asyncio.exceptions import CancelledError
 from dataclasses import asdict, dataclass, field
 from threading import Event, Lock, Thread
@@ -139,6 +139,7 @@ class NotificationServer(SubjectsObserver, Thread):
 		self._server_lock = Lock()
 		self._port = 0
 		self._ready = Event()
+		self._should_stop = False
 		self._stopped = Event()
 		self._error: Exception | None = None
 		self._clients: list[NotificationServerClientConnection] = []
@@ -243,8 +244,18 @@ class NotificationServer(SubjectsObserver, Thread):
 			except Exception as err:
 				logger.warning("Failed to send rpc client %r: %s", client, err)
 
+	def _handle_asyncio_exception(self, loop: AbstractEventLoop, context: dict) -> None:
+		logger.error(
+			"Unhandled asyncio exception in %s (should_stop=%s) '%s': %s",
+			self,
+			self._should_stop,
+			context.get("message"),
+			exc_info=context.get("exception"),
+		)
+
 	async def _async_main(self) -> None:
 		loop = get_event_loop()
+		loop.set_exception_handler(self._handle_asyncio_exception)
 		port = self._start_port
 		for _ in range(10):
 			try:
@@ -280,6 +291,7 @@ class NotificationServer(SubjectsObserver, Thread):
 		with log_context({"instance": "notification server"}):
 			try:
 				logger.debug("Starting notification server")
+				self._should_stop = False
 				self._stopped.clear()
 				run(self._async_main())
 				self._ready.clear()
@@ -289,6 +301,7 @@ class NotificationServer(SubjectsObserver, Thread):
 				logger.error("Notification server error: %s", err, exc_info=True)
 
 	def stop(self) -> None:
+		self._should_stop = True
 		with self._server_lock:
 			if self._server:
 				if self._clients:
