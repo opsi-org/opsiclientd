@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "opsiclientd"
-version = "4.3.3.0"
+version = "4.3.3.1"
 description = "opsi client daemon. The service running on opsi clients."
 maintainers = [ "uib GmbH <info@uib.de>",]
 authors = [ "uib GmbH <info@uib.de>",]
@@ -22,6 +22,12 @@ priority = "supplemental"
 
 [tool.ruff]
 line-length = 140
+
+[tool.mypy]
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+follow_imports = "silent"
 
 [tool.poetry.dependencies]
 python = "^3.11,<3.12"
@@ -44,14 +50,8 @@ opsiclientd = "opsiclientd.__main__:opsiclientd"
 opsiclientd_rpc = "opsiclientd.__main__:opsiclientd_rpc"
 action_processor_starter = "opsiclientd.__main__:action_processor_starter"
 
-[tool.mypy]
-disallow_untyped_calls = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-follow_imports = "silent"
-
 [tool.ruff.lint]
-ignore = ["E402",]
+ignore = [ "E402",]
 
 [tool.ruff.format]
 indent-style = "tab"
