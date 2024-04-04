@@ -216,6 +216,13 @@ class BaseMiddleware:
 					session = None
 				else:
 					session.touch()
+
+		if scope["path"] == "/session/logout":
+			if session:
+				logger.info("Logout session %r", session.session_id)
+				del self._sessions[session.session_id]
+			return await JSONResponse(status_code=status.HTTP_200_OK, content="session deleted")(scope, receive, send)
+
 		if not session:
 			session = Session(client_addr=scope["client"][0], headers=request_headers)
 			session_id = session.session_id
