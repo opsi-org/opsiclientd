@@ -24,7 +24,7 @@ from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 from types import MethodType
-from typing import TYPE_CHECKING, Any, Generator, Union
+from typing import TYPE_CHECKING, Any, Generator
 from uuid import uuid4
 
 import psutil  # type: ignore[import]
@@ -574,7 +574,7 @@ class ControlInterface(PipeControlInterface):
 		script: str,
 		product_id: str | None = None,
 		admin: bool = True,
-		wait_for_ending: Union[bool, int] = 7200,
+		wait_for_ending: bool | int = 7200,
 		remove_user: bool = False,
 	) -> None:
 		if not is_windows():
@@ -677,7 +677,7 @@ class ControlInterface(PipeControlInterface):
 		admin: bool = True,
 		recreate_user: bool = False,
 		remove_user: bool = False,
-		wait_for_ending: Union[bool, int] = False,
+		wait_for_ending: bool | int = False,
 	) -> None:
 		script = Path(self.opsiclientd.config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
 		# catch <Drive>:.....exe and put in quotes if not already quoted
@@ -776,7 +776,7 @@ class ControlInterface(PipeControlInterface):
 		admin: bool = True,
 		recreate_user: bool = False,
 		remove_user: bool = False,
-		wait_for_ending: Union[bool, int] = False,
+		wait_for_ending: bool | int = False,
 		shell_window_style: str = "normal",  # Normal / Minimized / Maximized / Hidden
 	) -> None:
 		if shell_window_style.lower() not in ("normal", "minimized", "maximized", "hidden"):
@@ -797,8 +797,8 @@ class ControlInterface(PipeControlInterface):
 				recreate_user,
 			)
 			if wait_for_ending:
-				timeout = 3600
-				if isinstance(wait_for_ending, int):
+				timeout = 7200
+				if not isinstance(wait_for_ending, bool):
 					timeout = wait_for_ending
 				logger.info("Wait for process to complete (timeout=%r)", timeout)
 				try:
