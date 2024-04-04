@@ -59,13 +59,6 @@ class EventGenerator(threading.Thread):
 	def addEventConfig(self, eventConfig: EventConfig) -> None:
 		self._eventConfigs.append(eventConfig)
 
-	def _preconditionsFulfilled(self, preconditions: dict[str, str]) -> bool:
-		for precondition in preconditions:
-			if not state.get(precondition, False):
-				logger.debug("Precondition '%s' not fulfilled", precondition)
-				return False
-		return True
-
 	def addEventListener(self, eventListener: EventListener) -> None:
 		if not isinstance(eventListener, EventListener):
 			raise TypeError(f"Failed to add event listener, got class {eventListener.__class__}, need class EventListener")
@@ -81,13 +74,14 @@ class EventGenerator(threading.Thread):
 		actualConfig: EventConfig | None = None
 
 		for pec in self._eventConfigs:
-			if self._preconditionsFulfilled(pec.preconditions):
-				logger.info("Preconditions %s for event config '%s' fulfilled", list(pec.preconditions), pec.getId())
+			p_state = {p: state.get(p, False) for p in pec.preconditions}
+			if all(p_state.values()):
+				logger.info("Preconditions %s for event config '%s' fulfilled (%r)", list(pec.preconditions), pec.getId(), p_state)
 				if not actualConfig or (len(pec.preconditions.keys()) > len(actualPreconditions.keys())):
 					actualPreconditions = pec.preconditions
 					actualConfig = pec
 			else:
-				logger.info("Preconditions %s for event config '%s' not fulfilled", list(pec.preconditions), pec.getId())
+				logger.info("Preconditions %s for event config '%s' not fulfilled (%r)", list(pec.preconditions), pec.getId(), p_state)
 
 		return actualConfig
 
