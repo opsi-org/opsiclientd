@@ -586,6 +586,15 @@ class Opsiclientd(EventListener, threading.Thread):
 		config.readConfigFile()
 		try:
 			restart_marker_config = config.check_restart_marker()
+			if restart_marker_config and RUNNING_ON_WINDOWS:
+				# opsiclientd was restarted, restart LogonUI.exe to reconnect Credential Provider
+				for proc in psutil.process_iter():
+					try:
+						if proc.name().lower() == "logonui.exe":
+							logger.notice("Restart marker found, restarting LogonUI.exe")
+							proc.kill()
+					except psutil.AccessDenied as ps_err:
+						logger.info(ps_err)
 		except Exception as err:
 			logger.error(err, exc_info=True)
 
