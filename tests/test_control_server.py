@@ -30,6 +30,7 @@ from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import createEventGenerators
 from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.webserver.application.log_viewer import LogReaderThread
+from opsiclientd.webserver.application.middleware import REDIRECTS
 from opsiclientd.webserver.rpc.control import ControlInterface, get_cache_service_interface
 
 from .utils import Config, OpsiclientdTestClient, default_config, get_test_client, opsiclientd_auth, opsiclientd_url, test_client  # noqa
@@ -47,6 +48,14 @@ def test_firing_unknown_event_raises_error() -> None:
 	controlServer = ControlInterface(Opsiclientd())
 	with pytest.raises(ValueError):
 		controlServer.fireEvent("foobar")
+
+
+def test_redirect(test_client: OpsiclientdTestClient) -> None:  # noqa
+	with test_client as client:
+		for path, redirect in REDIRECTS.items():
+			response = client.get(path, follow_redirects=False)
+			assert response.status_code == 301
+			assert response.headers["location"] == redirect
 
 
 def test_auth_direct(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
