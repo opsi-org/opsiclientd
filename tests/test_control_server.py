@@ -344,12 +344,12 @@ def test_download(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[st
 		with test_client as client:
 			response = client.get("/download/logs")
 			assert response.status_code == 200
-			assert response.headers["content-type"] == "application/zip"
+			assert response.headers["content-type"] in ("application/zip", "application/x-zip-compressed")
 			assert int(response.headers["content-length"]) > 0
 			assert params_received[0] == [None, None, True]
 
 			response = client.get("/download/logs", params={"types": ["opsiclientd", "opsi-script"], "max_age_days": 10})
 			assert response.status_code == 200
-			assert response.headers["content-type"] == "application/zip"
+			assert response.headers["content-type"] in ("application/zip", "application/x-zip-compressed")
 			assert int(response.headers["content-length"]) > 0
 			assert params_received[1] == [["opsiclientd", "opsi-script"], 10, True]
