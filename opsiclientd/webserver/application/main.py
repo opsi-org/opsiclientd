@@ -15,12 +15,14 @@ from opsiclientd.Config import Config
 from opsiclientd.webserver.application import set_opsiclientd
 from opsiclientd.webserver.application.cache_service import setup as setup_cache_service
 from opsiclientd.webserver.application.control import setup as setup_control_interface
+from opsiclientd.webserver.application.download import setup as setup_download
 from opsiclientd.webserver.application.index import setup as setup_index
 from opsiclientd.webserver.application.info import setup as setup_info
 from opsiclientd.webserver.application.kiosk import setup as setup_kiosk
 from opsiclientd.webserver.application.log_viewer import setup as setup_log_viewer
 from opsiclientd.webserver.application.middleware import BaseMiddleware
 from opsiclientd.webserver.application.terminal import setup as setup_terminal
+from opsiclientd.webserver.application.upload import setup as setup_upload
 
 if TYPE_CHECKING:
 	from opsiclientd.Opsiclientd import Opsiclientd
@@ -34,6 +36,8 @@ def setup_application(opsiclientd: Opsiclientd) -> FastAPI:
 	app.add_middleware(BaseMiddleware)
 	setup_index(app)
 	setup_info(app)
+	setup_upload(app)
+	setup_download(app)
 	setup_control_interface(app)
 	setup_log_viewer(app)
 	setup_terminal(app)

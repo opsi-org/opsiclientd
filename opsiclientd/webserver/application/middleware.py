@@ -43,6 +43,7 @@ REDIRECTS = {
 	"/terminal.html": "/terminal/",
 	"/interface": "/interface/opsiclientd/",
 	"/rpcinterface": "/interface/rpc/",
+	"/files/logs": "/download/logs",
 }
 
 logger = get_logger()

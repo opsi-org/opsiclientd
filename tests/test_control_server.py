@@ -311,3 +311,45 @@ def test_cache_service_jsonrpc(default_config: Config, tmp_path: Path, opsiclien
 			assert response["id"] == 101
 
 			response = client.jsonrpc20(path="/rpc", method="productOnClient_getObjectsWithSequence", params=[], id=102)
+
+
+def test_upload(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
+	data_received = b""
+	data = b"test data" * 50_000
+
+	def self_update_from_file(self, filename: str | Path) -> None:
+		nonlocal data_received
+		data_received = Path(filename).read_bytes()
+
+	with patch("opsiclientd.Opsiclientd.Opsiclientd.self_update_from_file", self_update_from_file):
+		with test_client as client:
+			test_client.auth = opsiclientd_auth
+			response = client.post("/upload/update/opsiclientd", files={"file": ("opsiclientd.tar.gz", data)})
+			assert response.status_code == 200
+			assert response.text == '"ok"'
+			assert data == data_received
+
+
+def test_download(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
+	orig_collectLogfiles = Opsiclientd.collectLogfiles
+	params_received = []
+
+	def collectLogfiles(self, types: list[str] | None = None, max_age_days: int | None = None, timeline_db: bool = True) -> Path:
+		nonlocal params_received
+		params_received.append([types, max_age_days, timeline_db])
+		return orig_collectLogfiles(self, types=types, max_age_days=max_age_days, timeline_db=timeline_db)
+
+	with patch("opsiclientd.Opsiclientd.Opsiclientd.collectLogfiles", collectLogfiles):
+		test_client.auth = opsiclientd_auth
+		with test_client as client:
+			response = client.get("/download/logs")
+			assert response.status_code == 200
+			assert response.headers["content-type"] == "application/zip"
+			assert int(response.headers["content-length"]) > 0
+			assert params_received[0] == [None, None, True]
+
+			response = client.get("/download/logs", params={"types": ["opsiclientd", "opsi-script"], "max_age_days": 10})
+			assert response.status_code == 200
+			assert response.headers["content-type"] == "application/zip"
+			assert int(response.headers["content-length"]) > 0
+			assert params_received[1] == [["opsiclientd", "opsi-script"], 10, True]
