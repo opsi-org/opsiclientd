@@ -39,6 +39,7 @@ CLIENT_BLOCK_TIME = 120
 AUTH_HEADERS = {"WWW-Authenticate": 'Basic realm="opsi", charset="UTF-8"'}
 REDIRECTS = {
 	"/index.html": "/",
+	"/info.html": "/info/",
 	"/log_viewer.html": "/log_viewer/",
 	"/terminal.html": "/terminal/",
 	"/interface": "/interface/opsiclientd/",
