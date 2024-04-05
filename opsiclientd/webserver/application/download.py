@@ -10,11 +10,9 @@ from fastapi import APIRouter, BackgroundTasks, FastAPI, Query
 from fastapi.responses import FileResponse
 from opsicommon.logging import get_logger
 
-from opsiclientd.Config import Config
 from opsiclientd.webserver.application import get_opsiclientd
 
 logger = get_logger()
-config = Config()
 download_router = APIRouter()
 
 
