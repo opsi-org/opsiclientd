@@ -317,7 +317,7 @@ def test_upload(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str,
 	data_received = b""
 	data = b"test data" * 50_000
 
-	def self_update_from_file(self, filename: str | Path) -> None:
+	def self_update_from_file(self: Opsiclientd, filename: str | Path) -> None:
 		nonlocal data_received
 		data_received = Path(filename).read_bytes()
 
@@ -338,7 +338,9 @@ def test_download(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[st
 	orig_collectLogfiles = Opsiclientd.collectLogfiles
 	params_received = []
 
-	def collectLogfiles(self, types: list[str] | None = None, max_age_days: int | None = None, timeline_db: bool = True) -> Path:
+	def collectLogfiles(
+		self: Opsiclientd, types: list[str] | None = None, max_age_days: int | None = None, timeline_db: bool = True
+	) -> Path:
 		nonlocal params_received
 		params_received.append([types, max_age_days, timeline_db])
 		return orig_collectLogfiles(self, types=types, max_age_days=max_age_days, timeline_db=timeline_db)

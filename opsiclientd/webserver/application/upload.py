@@ -21,10 +21,10 @@ upload_router = APIRouter()
 @upload_router.post("/update/opsiclientd")
 async def update_opsiclientd(file: UploadFile) -> JSONResponse:
 	logger.notice("Self-update from upload")
-	filename = file.filename.split("/")[-1].split("\\")[-1]
-
-	if not filename:
+	if not file.filename:
 		raise RuntimeError("Filename missing")
+
+	filename = file.filename.split("/")[-1].split("\\")[-1]
 
 	try:
 		with tempfile.TemporaryDirectory() as tmp_dir:
