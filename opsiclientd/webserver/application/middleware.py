@@ -18,7 +18,7 @@ from time import time
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, HTTPException, status
-from fastapi.responses import JSONResponse, PlainTextResponse, Response
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, Response
 from OPSI.Backend.Manager.Authentication import AuthenticationModule  # type: ignore[import]
 from opsicommon.exceptions import BackendAuthenticationError, BackendPermissionDeniedError
 from opsicommon.logging import get_logger, secret_filter
@@ -37,8 +37,12 @@ SESSION_COOKIE_ATTRIBUTES = ("SameSite=Strict", "Secure")
 SESSION_LIFETIME = 300
 CLIENT_BLOCK_TIME = 120
 AUTH_HEADERS = {"WWW-Authenticate": 'Basic realm="opsi", charset="UTF-8"'}
-PATH_MAPPINGS = {
+REDIRECTS = {
+	"/index.html": "/",
+	"/log_viewer.html": "/log_viewer/",
+	"/terminal.html": "/terminal/",
 	"/interface": "/interface/opsiclientd/",
+	"/rpcinterface": "/interface/rpc/",
 }
 
 logger = get_logger()
@@ -199,10 +203,9 @@ class BaseMiddleware:
 	async def handle_request(self, scope: Scope, receive: Receive, send: Send) -> None:
 		scope["request_headers"] = request_headers = Headers(scope=scope)
 		scope["client"] = self.get_client_address(scope)
-		if redir_path := PATH_MAPPINGS.get(scope["path"].rstrip("/")):
-			logger.debug("Mapping %r to %r", scope["path"], redir_path)
-			scope["path"] = redir_path
-			scope["raw_path"] = redir_path.encode("utf-8")
+		if redir_path := REDIRECTS.get(scope["path"].rstrip("/")):
+			logger.debug("Redirecting %r to %r", scope["path"], redir_path)
+			return await RedirectResponse(url=redir_path, status_code=status.HTTP_301_MOVED_PERMANENTLY)(scope, receive, send)
 
 		session: Session | None = None
 		session_id = get_session_id_from_headers(request_headers)
