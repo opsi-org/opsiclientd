@@ -274,6 +274,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				logger.error("Failed to sync backend modification %s: %s", modification, modify_error, exc_info=True)
 				continue
 
+		logger.info("modifiedObjects: %r", {m: len(modifiedObjects[m]) for m in modifiedObjects})
 		if "AuditHardwareOnHost" in modifiedObjects:
 			self._masterBackend.auditHardwareOnHost_setObsolete(self._clientId)
 			self._masterBackend.auditHardwareOnHost_updateObjects([mo["object"] for mo in modifiedObjects["AuditHardwareOnHost"]])
@@ -284,6 +285,24 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		if "AuditSoftwareOnClient" in modifiedObjects:
 			self._masterBackend.auditSoftwareOnClient_setObsolete(self._clientId)
 			self._masterBackend.auditSoftwareOnClient_updateObjects([mo["object"] for mo in modifiedObjects["AuditSoftwareOnClient"]])
+
+		if "OpsiClient" in modifiedObjects:
+			for mo in modifiedObjects["OpsiClient"]:
+				logger.debug("Modified OpsiClient object: %s", mo["object"])
+				if mo["object"].id != self._clientId:
+					continue
+				client_objs = self._masterBackend.host_getObjects(type="OpsiClient", id=self._clientId)
+				if not client_objs:
+					logger.error("Failed to get OpsiClient %r from master backend", self._clientId)
+					break
+				if mo["object"].systemUUID and mo["object"].systemUUID != client_objs[0].systemUUID:
+					logger.info(
+						"Client systemUUID changed from %r to %r, updating in master backend",
+						client_objs[0].systemUUID,
+						mo["object"].systemUUID,
+					)
+					client_objs[0].setSystemUUID(mo["object"].systemUUID)
+					self._masterBackend.host_updateObject(client_objs[0])
 
 		if "ProductOnClient" in modifiedObjects:
 
