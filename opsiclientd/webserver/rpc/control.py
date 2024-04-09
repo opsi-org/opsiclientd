@@ -417,7 +417,7 @@ class ControlInterface(PipeControlInterface):
 		"""
 		running = [ept.event.eventConfig.getId() for ept in self.opsiclientd.getEventProcessingThreads()]
 		if not running:
-			logger.debug("Currently no event is running.")
+			logger.debug("Currently no event is running")
 		return running
 
 	def cancelEvents(self, ids: list[str] | None = None) -> bool:

@@ -37,13 +37,13 @@ def get_include_exclude_product_ids(
 		includeProductIds = [
 			obj.objectId for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds)
 		]
-		logger.debug("Only products ids %s will be regarded.", includeProductIds)
+		logger.debug("Only products ids %s will be regarded", includeProductIds)
 
 	if excludeProductGroupIds:
 		excludeProductIds = [
 			obj.objectId for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds)
 		]
-		logger.debug("Product ids %s will be excluded.", excludeProductIds)
+		logger.debug("Product ids %s will be excluded", excludeProductIds)
 
 	return includeProductIds, excludeProductIds
 

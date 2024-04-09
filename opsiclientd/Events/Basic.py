@@ -129,7 +129,7 @@ class EventGenerator(threading.Thread):
 	def fireEvent(self, event: Event | None = None, can_cancel: bool = False) -> None:
 		logger.debug("Trying to fire event %s", event)
 		if self._stopped:
-			logger.debug("%s is stopped, not firing event.", self)
+			logger.debug("%s is stopped, not firing event", self)
 			return
 
 		if not event:

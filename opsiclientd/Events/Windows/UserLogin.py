@@ -49,7 +49,7 @@ class UserLoginEventGenerator(SensLogonEventGenerator):
 			return
 
 		if args[0].split("\\")[-1] == OPSI_SETUP_USER_NAME:
-			logger.info("Login of user %s detected, no UserLoginAction will be fired.", args[0])
+			logger.info("Login of user %s detected, no UserLoginAction will be fired", args[0])
 			return
 
 		if eventType == "Logon":

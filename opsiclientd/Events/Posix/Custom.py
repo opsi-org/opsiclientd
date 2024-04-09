@@ -19,5 +19,5 @@ try:
 	from opsiclientd.nonfree.Events.Config import CustomEventConfig
 	from opsiclientd.nonfree.Events.Generator import CustomEvent, CustomEventGenerator
 except ImportError as error:
-	logger.critical("Unable to import from opsiclientd.nonfree." "Is this the full version?")
+	logger.critical("Unable to import from opsiclientd.nonfree, is this the full version?")
 	raise error

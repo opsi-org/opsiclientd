@@ -1201,7 +1201,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 							logger.info("Releasepackage '%s' found on depot '%s'", releasePackageName, masterDepotId)
 							additionalProductId = releasePackageName
 						else:
-							logger.error("Did not find release-specific mshotfix package.")
+							logger.error("Did not find release-specific mshotfix package")
 							additionalProductId = None
 					if additionalProductId:
 						logger.info(
@@ -1214,7 +1214,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 				if errorProductIds:
 					for index in range(len(productIds) - 1):
 						if productIds[index] in errorProductIds:
-							logger.error("ProductId: '%s' will not be cached.", productIds[index])
+							logger.error("ProductId: '%s' will not be cached", productIds[index])
 							del productIds[index]
 
 				if len(productIds) == 1 and productIds[0] == config.action_processor_name:

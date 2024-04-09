@@ -392,7 +392,7 @@ class ServiceConnection:
 			return
 
 		assert self.opsiclientd
-		logger.notice("Received new opsi host id %r.", self._configService.service.new_host_id)
+		logger.notice("Received new opsi host id %r", self._configService.service.new_host_id)
 		config.set("global", "host_id", forceUnicode(self._configService.service.new_host_id))
 		config.updateConfigFile(force=True)
 		if config.get("config_service", "permanent_connection"):
@@ -401,7 +401,7 @@ class ServiceConnection:
 			self.opsiclientd.start_permanent_service_connection()
 
 		if self.opsiclientd:
-			logger.info("Cleaning config cache after host information change.")
+			logger.info("Cleaning config cache after host information change")
 			try:
 				cache_service = self.opsiclientd.getCacheService()
 				cache_service.setConfigCacheFaulty()

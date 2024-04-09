@@ -946,7 +946,7 @@ class Config(metaclass=Singleton):
 				try:
 					parts = config_id.lower().split(".")
 					if len(parts) < 3:
-						logger.debug("Expected at least 3 parts in %s - skipping.", config_id)
+						logger.debug("Expected at least 3 parts in %s - skipping", config_id)
 						continue
 
 					value = values

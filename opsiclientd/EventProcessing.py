@@ -937,7 +937,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					elif RUNNING_ON_WINDOWS:
 						additionalParams = "/processproducts " + ",".join(productIds)
 					else:
-						logger.error("Unknown operating system - skipping processproducts parameter for action processor call.")
+						logger.error("Unknown operating system - skipping processproducts parameter for action processor call")
 				self.processActionWarningTime(productIds)
 				try:
 					try:

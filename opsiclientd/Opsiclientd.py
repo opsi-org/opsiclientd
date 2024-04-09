@@ -237,7 +237,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					check_signature(str(bin_dir))
 				except Exception as err:
 					logger.error("Could not verify signature!\n%s", err, exc_info=True)
-					logger.error("Not performing self_update.")
+					logger.error("Not performing self_update")
 					raise RuntimeError("Invalid signature") from err
 
 				binary = bin_dir / os.path.basename(self._argv[0])
@@ -478,7 +478,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		if RUNNING_ON_WINDOWS:
 			try:
-				logger.info("Starting LoginDetector for message of the day.")
+				logger.info("Starting LoginDetector for message of the day")
 				self.login_detector = LoginDetector(self, EventConfig("login_detector"))
 				self.login_detector.start()
 			except Exception as error:
@@ -508,7 +508,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				except (ValueError, CannotCancelEventError) as err:
 					logger.error("Unable to fire DaemonShutdownEvent from %s: %s", event_generator, err, exc_info=True)
 			if RUNNING_ON_WINDOWS and isinstance(self.login_detector, LoginDetector):
-				logger.info("Stopping LoginDetector for message of the day.")
+				logger.info("Stopping LoginDetector for message of the day")
 				self.login_detector.stop()
 				self.login_detector.join(2)
 			for eventGenerator in getEventGenerators():

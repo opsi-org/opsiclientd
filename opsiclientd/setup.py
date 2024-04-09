@@ -191,7 +191,7 @@ def setup_firewall_linux() -> None:
 		for iptables in ("iptables", "ip6tables"):
 			cmds.append([iptables, "-A", "INPUT", "-p", "tcp", "--dport", str(port), "-j", "ACCEPT"])
 	else:
-		logger.warning("Could not configure firewall - no suitable executable found.")
+		logger.warning("Could not configure firewall - no suitable executable found")
 
 	for cmd in cmds:
 		logger.info("Running command: %s", str(cmd))
