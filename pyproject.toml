@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "opsiclientd"
-version = "4.3.3.3"
+version = "4.3.3.4"
 description = "opsi client daemon. The service running on opsi clients."
 maintainers = [ "uib GmbH <info@uib.de>",]
 authors = [ "uib GmbH <info@uib.de>",]
