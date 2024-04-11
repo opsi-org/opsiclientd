@@ -20,7 +20,6 @@ import pytest
 from opsiclientd.ControlPipe import ControlPipeFactory, PosixControlDomainSocket
 from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.webserver.rpc.jsonrpc import JSONRPCRequest, JSONRPCResponse, deserialize_data, jsonrpc_response_from_data, serialize_data
-from opsicommon.system.info import is_windows
 from .utils import default_config  # noqa
 
 
