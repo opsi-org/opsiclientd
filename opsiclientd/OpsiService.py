@@ -59,6 +59,7 @@ from opsicommon.messagebus.message import (
 	timestamp,
 )
 from opsicommon.messagebus.process import process_messagebus_message as process_process_message
+from opsicommon.messagebus.terminal import process_messagebus_message as process_terminal_message, terminals
 from opsicommon.ssl import install_ca, load_cas, remove_ca
 from opsicommon.system import lock_file
 from opsicommon.types import (
@@ -74,8 +75,7 @@ from opsiclientd import __version__
 from opsiclientd.Config import Config
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
-from opsiclientd.messagebus.terminal import process_messagebus_message as process_terminal_message
-from opsiclientd.messagebus.terminal import terminals
+
 from opsiclientd.utils import log_network_status
 
 if TYPE_CHECKING:
@@ -317,7 +317,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			)
 			await self.service_client.messagebus.async_send_message(response)
 		elif isinstance(message, TerminalMessage):
-			await self._loop.run_in_executor(None, process_terminal_message, message, self.service_client.messagebus.send_message)
+			await process_terminal_message(message=message, send_message=self.service_client.messagebus.async_send_message)
 		elif isinstance(message, FileTransferMessage):
 			if isinstance(message, FileUploadRequestMessage):
 				if message.terminal_id and not message.destination_dir:
