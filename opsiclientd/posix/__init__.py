@@ -8,16 +8,3 @@
 """
 opsiclientd.posix
 """
-
-from typing import Callable
-
-from OPSI.System import get_subprocess_environment  # type: ignore[import]
-from ptyprocess import PtyProcess  # type: ignore[import]
-
-
-def start_pty(shell: str = "bash", lines: int = 30, columns: int = 120) -> tuple[int, Callable, Callable, Callable, Callable]:
-	sp_env = get_subprocess_environment()
-	sp_env.update({"TERM": "xterm-256color"})
-
-	proc = PtyProcess.spawn([shell], dimensions=(lines, columns), env=sp_env)
-	return (proc.pid, proc.read, proc.write, proc.setwinsize, proc.terminate)

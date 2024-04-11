@@ -14,6 +14,7 @@ from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from opsicommon.logging import get_logger
 from opsicommon.system.info import is_windows
+from opsicommon.messagebus.terminal import start_pty
 from starlette.endpoints import WebSocketEndpoint
 from starlette.status import HTTP_401_UNAUTHORIZED
 from starlette.types import Receive, Scope, Send
@@ -176,11 +177,6 @@ class TerminalWebsocket(WebSocketEndpoint):
 		except (ValueError, TypeError):
 			columns = 120
 
-		if is_windows():
-			from opsiclientd.windows import start_pty
-		else:
-			from opsiclientd.posix import start_pty
-
 		logger.notice("Starting terminal shell=%s, lines=%d, columns=%d", shell, lines, columns)
 		await websocket.accept()
 
@@ -191,7 +187,7 @@ class TerminalWebsocket(WebSocketEndpoint):
 				self.child_write,
 				self.child_set_size,
 				self.child_stop,
-			) = start_pty(shell=shell, lines=lines, columns=columns)
+			) = start_pty(shell=shell, rows=lines, cols=columns)
 			self.terminal_reader_thread = TerminalReaderThread(
 				loop=asyncio.get_event_loop(), websocket=websocket, child_read=self.child_read
 			)

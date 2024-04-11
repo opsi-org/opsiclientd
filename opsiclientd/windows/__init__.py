@@ -128,26 +128,6 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 		self._callback("StopScreenSaver", *args)
 
 
-def start_pty(shell: str = "powershell.exe", lines: int = 30, columns: int = 120) -> tuple[int, Callable, Callable, Callable, Callable]:
-	logger.notice("Starting %s (%d/%d)", shell, lines, columns)
-	try:
-		# Import of winpty may sometimes fail because of problems with the needed dll.
-		# Therefore we do not import at toplevel
-		from winpty import PtyProcess  # type: ignore[import]
-	except ImportError as err:
-		logger.error("Failed to start pty: %s", err, exc_info=True)
-		raise
-	process = PtyProcess.spawn(shell, dimensions=(lines, columns))
-
-	def read(length: int) -> bytes:
-		return process.read(length).encode("utf-8")
-
-	def write(data: bytes) -> int:
-		return process.write(data.decode("utf-8"))
-
-	return (process.pid, read, write, process.setwinsize, process.close)
-
-
 def runCommandInSession(
 	command: str | list[str],
 	sessionId: int | None = None,
@@ -219,10 +199,8 @@ def runCommandInSession(
 			time.sleep(0.1)
 
 		exitCode = win32process.GetExitCodeProcess(hProcess)
-		log = logger.notice
-		if exitCode != 0:
-			log = logger.warning
-		log("Process %d ended with exit code %d", dwProcessId, exitCode)
+		log = logger.notice if exitCode == 0 else logger.warning
+		log("Process %d ended with exit code %d", dwProcessId, exitCode)  # type: ignore
 		# Can occur with the DeviceLock software on system startup
 		# -1073741502 / 0xc0000142 / STATUS_DLL_INIT_FAILED
 		if exitCode == -1073741502 and attempt < max_attempts:
