@@ -20,7 +20,7 @@ import pytest
 from opsiclientd.ControlPipe import ControlPipeFactory, PosixControlDomainSocket
 from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.webserver.rpc.jsonrpc import JSONRPCRequest, JSONRPCResponse, deserialize_data, jsonrpc_response_from_data, serialize_data
-
+from opsicommon.system.info import is_windows
 from .utils import default_config  # noqa
 
 
@@ -76,7 +76,8 @@ def test_control_pipe() -> None:  # noqa
 		response = jsonrpc_response_from_data(pipe_client.data_received[0], "json")[0]
 		assert isinstance(response, JSONRPCResponse)
 		assert response.id == request.id
-		assert response.result == "client opsi-login-blocker/4.3.0.0/unix_socket registered"
+		con_id = "#1" if is_windows() else "unix_socket"
+		assert response.result == f"client opsi-login-blocker/4.3.0.0/{con_id} registered"
 		assert len(control_pipe._clients) == 1
 		assert control_pipe._clients[0].clientInfo == ["opsi-login-blocker", "4.3.0.0"]
 
