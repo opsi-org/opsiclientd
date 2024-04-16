@@ -59,7 +59,9 @@ from opsicommon.messagebus.message import (
 	timestamp,
 )
 from opsicommon.messagebus.process import process_messagebus_message as process_process_message
-from opsicommon.messagebus.terminal import process_messagebus_message as process_terminal_message, terminals
+from opsicommon.messagebus.process import stop_running_processes
+from opsicommon.messagebus.terminal import process_messagebus_message as process_terminal_message
+from opsicommon.messagebus.terminal import stop_running_terminals, terminals
 from opsicommon.ssl import install_ca, load_cas, remove_ca
 from opsicommon.system import lock_file
 from opsicommon.types import (
@@ -75,7 +77,6 @@ from opsiclientd import __version__
 from opsiclientd.Config import Config
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
-
 from opsiclientd.utils import log_network_status
 
 if TYPE_CHECKING:
@@ -231,6 +232,8 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 
 		while not self._should_stop:
 			await asyncio.sleep(1)
+		await stop_running_terminals()
+		await stop_running_processes()
 
 	def run(self) -> None:
 		with log_context({"instance": "permanent service connection"}):
