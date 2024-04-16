@@ -1632,8 +1632,8 @@ description = "The opsi python common library"
 optional = false
 python-versions = ">=3.11,<3.13"
 files = [
-    {file = "python_opsi_common-4.3.11.0-py3-none-any.whl", hash = "sha256:e36a54e1facbe908c0f3b536a3b6c7cce1d33c9abb331da097cb533a62a422de"},
-    {file = "python_opsi_common-4.3.11.0.tar.gz", hash = "sha256:3e36641f1eee7583a81d348f8604c9e2326be898b283ac1f1bb29fb8586ae81b"},
+    {file = "python_opsi_common-4.3.11.0-py3-none-any.whl", hash = "sha256:6d439b19c74cfa7ee0041df0afdb8b5e4b175488a0398ee853cd21869e07b212"},
+    {file = "python_opsi_common-4.3.11.0.tar.gz", hash = "sha256:2c9de797f7973930f58fcd968102184062d545d4e979fed3875539afe342904f"},
 ]
 
 [package.dependencies]
