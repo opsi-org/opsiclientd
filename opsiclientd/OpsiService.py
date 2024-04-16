@@ -296,7 +296,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 	async def _process_message(self, message: Message) -> None:
 		# logger.devel("Message received: %s", message.to_dict())
 		if isinstance(message, JSONRPCRequestMessage):
-			response: Message = JSONRPCResponseMessage(sender="@", channel=message.back_channel or message.sender, rpc_id=message.rpc_id)
+			response = JSONRPCResponseMessage(sender="@", channel=message.back_channel or message.sender, rpc_id=message.rpc_id)
 			try:
 				if message.method.startswith("_"):
 					raise ValueError("Invalid method")
@@ -310,15 +310,16 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 				}
 			await self.service_client.messagebus.async_send_message(response)
 		elif isinstance(message, TraceRequestMessage):
-			response = TraceResponseMessage(
-				sender="@",
-				channel=message.back_channel or message.sender,
-				ref_id=message.id,
-				req_trace=message.trace,
-				payload=message.payload,
-				trace={"sender_ws_send": timestamp()},
+			await self.service_client.messagebus.async_send_message(
+				TraceResponseMessage(
+					sender="@",
+					channel=message.back_channel or message.sender,
+					ref_id=message.id,
+					req_trace=message.trace,
+					payload=message.payload,
+					trace={"sender_ws_send": timestamp()},
+				)
 			)
-			await self.service_client.messagebus.async_send_message(response)
 		elif isinstance(message, TerminalMessage):
 			await process_terminal_message(message=message, send_message=self.service_client.messagebus.async_send_message)
 		elif isinstance(message, FileTransferMessage):
