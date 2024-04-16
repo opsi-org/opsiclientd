@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 from asyncio import AbstractEventLoop, BaseTransport, Protocol, Server, Transport, get_event_loop, run, sleep
-from asyncio.exceptions import CancelledError
 from dataclasses import asdict, dataclass, field
 from threading import Event, Lock, Thread
 from typing import Any
