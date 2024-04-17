@@ -166,7 +166,7 @@ def main() -> None:
 		return
 
 	if "--elevated" not in sys.argv and parent_name != "python.exe":
-		executable = Path(__file__).resolve().parent.parent.parent / "opsiclientd.exe"
+		executable = Path(__file__).resolve().parent.parent.parent.parent / "opsiclientd.exe"
 		args = " ".join(sys.argv[1:])
 		command = f"{executable} {args} --elevated"
 		try:
