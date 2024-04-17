@@ -36,7 +36,7 @@ try:
 	translation = gettext.translation("opsiclientd", path, [language])
 	_ = translation.gettext
 except Exception as err:
-	logger.debug("Failed to load locale for %s from %s: %s", language, path, err)
+	logger.debug("Failed to load locale for '%s' from '%s': %s", language, path, err)
 
 	def _(message: str) -> str:
 		"""Fallback function"""
@@ -44,5 +44,5 @@ except Exception as err:
 
 
 def getLanguage() -> str:
-	logger.debug("Using translation %s with files located at %s", language, path)
+	logger.debug("Using translation '%s' with files located at '%s'", language, path)
 	return language
