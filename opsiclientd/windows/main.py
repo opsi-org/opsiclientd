@@ -13,6 +13,7 @@ import os
 import sys
 import time
 from datetime import datetime
+from pathlib import Path
 
 import ntsecuritycon  # type: ignore[import]
 import opsicommon.logging  # type: ignore[import]
@@ -165,9 +166,9 @@ def main() -> None:
 		return
 
 	if "--elevated" not in sys.argv and parent_name != "python.exe":
-		executable = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + ".exe"
+		executable = Path(__file__).resolve().parent.parent.parent / "opsiclientd.exe"
 		args = " ".join(sys.argv[1:])
-		command = executable + " " + args + " --elevated"
+		command = f"{executable} {args} --elevated"
 		try:
 			run_as_system(command)
 		except Exception as err:
