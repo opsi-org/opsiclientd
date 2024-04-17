@@ -168,7 +168,7 @@ class Config(metaclass=Singleton):
 			return
 		self._initialized = True
 
-		baseDir = self._getBaseDirectory()
+		baseDir = self.getBaseDirectory()
 
 		self._temporaryConfigServiceUrls: list[str] = []
 		self._temporaryDepotDrive: str | None = None
@@ -271,7 +271,7 @@ class Config(metaclass=Singleton):
 		self._applySystemSpecificConfiguration()
 
 	@staticmethod
-	def _getBaseDirectory() -> str:
+	def getBaseDirectory() -> str:
 		if RUNNING_ON_WINDOWS:
 			pfp = os.environ.get("PROGRAMFILES(X86)", os.environ.get("PROGRAMFILES", "c:\\Program Files"))
 			baseDir = os.path.join(pfp, "opsi.org", "opsi-client-agent")
@@ -294,7 +294,7 @@ class Config(metaclass=Singleton):
 			old_location = os.path.join(os.path.dirname(sys.argv[0]), ".opsiclientd_restart")
 			if os.path.exists(old_location):
 				return old_location
-		return os.path.join(self._getBaseDirectory(), ".opsiclientd_restart")
+		return os.path.join(self.getBaseDirectory(), ".opsiclientd_restart")
 
 	def check_restart_marker(self) -> RestartMarkerConfig | None:
 		logger.info("Checking if restart marker '%s' exists", self.restart_marker)

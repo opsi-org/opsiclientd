@@ -165,7 +165,7 @@ def main() -> None:
 		return
 
 	if "--elevated" not in sys.argv and parent_name != "python.exe":
-		executable = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + ".exe"
+		executable = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))) + ".exe"
 		args = " ".join(sys.argv[1:])
 		command = executable + " " + args + " --elevated"
 		try:

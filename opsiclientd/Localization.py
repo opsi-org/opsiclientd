@@ -24,12 +24,15 @@ except Exception as err:
 path: Path | None = None
 try:
 	logger.debug("Loading translation for language '%s'", language)
-	path = Path(__file__).parent.parent.resolve()
-	if (path / "site-packages").exists():
-		path = path / "site-packages"
-	if (path / "opsiclientd_data").exists():  # only windows
-		path = path / "opsiclientd_data"
-	path = path / "locale"
+
+	from opsiclientd.Config import Config
+
+	check_paths = [Path(__file__).parent.parent.resolve() / "opsiclientd_data" / "locale", Path(Config.getBaseDirectory()) / "locale"]
+	existing_paths = [p for p in check_paths if p.exists()]
+	if not existing_paths:
+		raise RuntimeError("Failed to find locale path, checked: %s", check_paths)
+
+	path = existing_paths[0]
 	translation = gettext.translation("opsiclientd", path, [language])
 	_ = translation.gettext
 except Exception as err:
