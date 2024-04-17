@@ -52,6 +52,7 @@ class EventConfig:
 		self.shutdownWarningTime = int(conf.get("shutdownWarningTime", 0))
 		self.shutdownWarningRepetitionTime = int(conf.get("shutdownWarningRepetitionTime", 3600))
 		self.shutdownUserSelectableTime = forceBool(conf.get("shutdownUserSelectableTime", False))
+		self.shutdownLatestSelectableHour = int(conf.get("shutdownLatestSelectableHour", -1))
 		self.shutdownWarningTimeAfterTimeSelect = int(conf.get("shutdownWarningTimeAfterTimeSelect", -1))
 		if self.shutdownWarningTimeAfterTimeSelect == -1:
 			self.shutdownWarningTimeAfterTimeSelect = self.shutdownWarningTime

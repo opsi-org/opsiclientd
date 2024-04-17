@@ -192,6 +192,8 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 						eventConfigs[eventConfigId]["shutdownUserCancelable"] = int(value)
 					elif key == "shutdown_user_selectable_time":
 						eventConfigs[eventConfigId]["shutdownUserSelectableTime"] = forceBool(value)
+					elif key == "shutdown_latest_selectable_hour":
+						eventConfigs[eventConfigId]["shutdownLatestSelectableHour"] = int(value)
 					elif key == "shutdown_warning_time_after_time_select":
 						eventConfigs[eventConfigId]["shutdownWarningTimeAfterTimeSelect"] = int(value)
 					elif key == "block_login":

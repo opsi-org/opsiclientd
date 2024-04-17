@@ -1426,6 +1426,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 									f"shutdownWarningTime: {self.event.eventConfig.shutdownWarningTime}, "
 									f"shutdownWarningTimeAfterTimeSelect: {self.event.eventConfig.shutdownWarningTimeAfterTimeSelect}, "
 									f"shutdownUserSelectableTime: {self.event.eventConfig.shutdownUserSelectableTime}, "
+									f"shutdownLatestSelectableHour: {self.event.eventConfig.shutdownLatestSelectableHour}, "
 									f"shutdownUserCancelable: {self.event.eventConfig.shutdownUserCancelable}, "
 									f"shutdownCancelCounter: {shutdownCancelCounter}"
 								),
@@ -1441,6 +1442,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 									f"shutdownWarningTime: {self.event.eventConfig.shutdownWarningTime}, "
 									f"shutdownWarningTimeAfterTimeSelect: {self.event.eventConfig.shutdownWarningTimeAfterTimeSelect}, "
 									f"shutdownUserSelectableTime: {self.event.eventConfig.shutdownUserSelectableTime}, "
+									f"shutdownLatestSelectableHour: {self.event.eventConfig.shutdownLatestSelectableHour}, "
 									f"shutdownUserCancelable: {self.event.eventConfig.shutdownUserCancelable}, "
 									f"shutdownCancelCounter: {shutdownCancelCounter}"
 								),
@@ -1481,6 +1483,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 										hour += 1
 										if hour == 24:
 											hour = 0
+										if (
+											self.event.eventConfig.shutdownLatestSelectableHour >= 0
+											and hour > self.event.eventConfig.shutdownLatestSelectableHour
+										):
+											break
 										if reboot:
 											choices.append(_("Reboot at %s") % f" {hour:02d}:00")
 										else:
