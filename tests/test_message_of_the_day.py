@@ -38,10 +38,16 @@ class FakeOpsiclientd(Opsiclientd):
 
 
 @pytest.mark.parametrize(
-	"user_logged_in",
-	(False, True),
+	"user_logged_in, motd_enabled",
+	(
+		(False, True),
+		(True, True),
+		(True, False),
+		(False, False)
+	),
 )
-def test_motd_update_without_valid_until(default_config: None, tmp_path: Path, user_logged_in: bool) -> None:  # noqa
+def test_motd_update_without_valid_until(default_config: Config, tmp_path: Path, user_logged_in: bool, motd_enabled: bool) -> None:  # noqa
+	default_config.set("global", "message_of_the_day_enabled", motd_enabled)
 	def getActiveSessionInformation() -> list[dict[str, str | int]]:
 		if not user_logged_in:
 			return []
@@ -60,20 +66,26 @@ def test_motd_update_without_valid_until(default_config: None, tmp_path: Path, u
 				device_message_valid_until=None,  # type: ignore[arg-type]
 			)
 			second = controlServer.messageOfTheDayUpdated(user_message="Test message user", device_message="Test message device")
-			# First should be shown
-			if user_logged_in:
-				assert first == ["user"]
+
+			if motd_enabled:
+				# First should be shown
+				if user_logged_in:
+					assert first == ["user"]
+				else:
+					assert first == ["device"]
+				# Second should not be shown (same hash)
+				assert second == []
 			else:
-				assert first == ["device"]
-			# Second should not be shown (same hash)
-			assert second == []
+				assert first == []
+				assert second == []
 
 
 @pytest.mark.parametrize(
 	"user_logged_in",
 	(False, True),
 )
-def test_motd_update_valid_until(default_config: None, tmp_path: Path, user_logged_in: bool) -> None:  # noqa
+def test_motd_update_valid_until(default_config: Config, tmp_path: Path, user_logged_in: bool) -> None:  # noqa
+	default_config.set("global", "message_of_the_day_enabled", True)
 	def getActiveSessionInformation() -> list[dict[str, str | int]]:
 		if not user_logged_in:
 			return []
