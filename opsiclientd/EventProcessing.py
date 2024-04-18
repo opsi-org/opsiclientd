@@ -1488,10 +1488,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 										else:
 											choices.append(_("Shutdown at %s") % f" {hour:02d}:00")
 										callbacks.append(self.abortShutdownCallback)
-										if (
-											self.event.eventConfig.shutdownLatestSelectableHour >= 0
-											and hour == self.event.eventConfig.shutdownLatestSelectableHour
-										):
+										if hour == self.event.eventConfig.shutdownLatestSelectableHour:
 											break
 								else:
 									if reboot:
