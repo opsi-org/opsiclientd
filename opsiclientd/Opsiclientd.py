@@ -61,7 +61,7 @@ from opsiclientd.Events.Utilities.Generators import (
 	createEventGenerators,
 	getEventGenerators,
 )
-from opsiclientd.Localization import _
+from opsiclientd.Localization import _, load_translation
 from opsiclientd.notification_server import NotificationServer
 from opsiclientd.OpsiService import PermanentServiceConnection
 from opsiclientd.setup import setup
@@ -80,6 +80,7 @@ if TYPE_CHECKING:
 	from opsiclientd.nonfree.CacheService import CacheService
 
 patch_popen()
+load_translation()
 
 timeline = Timeline()
 state = State()
@@ -1150,8 +1151,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			sessions = sessions or System.getActiveSessionIds()
 			desktops = desktops or ["default", "winlogon"]
 			if not sessions:
-				sessions = [int(System.getActiveConsoleSessionId())]
-				desktops = ["winlogon"]
+				if console_sessin_id := System.getActiveConsoleSessionId():
+					sessions = [int(console_sessin_id)]
+					desktops = ["winlogon"]
 			for sessionId in sessions:
 				try:
 					if RUNNING_ON_WINDOWS:

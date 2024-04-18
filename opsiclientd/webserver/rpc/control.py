@@ -45,6 +45,7 @@ from opsiclientd.Config import OPSI_SETUP_USER_NAME
 from opsiclientd.Events.SwOnDemand import SwOnDemandEventGenerator
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import getEventGenerator, getEventGenerators
+from opsiclientd.Localization import _, get_translation_info
 from opsiclientd.OpsiService import ServiceConnection, download_from_depot
 from opsiclientd.Timeline import Timeline
 from opsiclientd.webserver.rpc.interface import Interface
@@ -940,6 +941,12 @@ class ControlInterface(PipeControlInterface):
 				}
 			)
 		return info
+
+	def getLocalizationInfo(self) -> dict[str, Any]:
+		return get_translation_info()
+
+	def translateMessage(self, message: str) -> str:
+		return _(message)
 
 
 @lru_cache

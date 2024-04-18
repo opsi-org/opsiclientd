@@ -17,7 +17,7 @@ from opsicommon.logging import logger
 from opsicommon.types import forceBool, forceList, forceUnicodeLower
 
 from opsiclientd.Config import Config
-from opsiclientd.Localization import getLanguage
+from opsiclientd.Localization import get_language
 
 __all__ = ["getEventConfigs"]
 
@@ -140,7 +140,7 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 							mLanguage = None
 
 						if mLanguage:
-							if mLanguage == getLanguage():
+							if mLanguage == get_language():
 								eventConfigs[eventConfigId]["actionMessage"] = value
 						elif not eventConfigs[eventConfigId].get("actionMessage"):
 							eventConfigs[eventConfigId]["actionMessage"] = value
@@ -151,7 +151,7 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 							mLanguage = None
 
 						if mLanguage:
-							if mLanguage == getLanguage():
+							if mLanguage == get_language():
 								eventConfigs[eventConfigId]["shutdownWarningMessage"] = value
 						elif not eventConfigs[eventConfigId].get("shutdownWarningMessage"):
 							eventConfigs[eventConfigId]["shutdownWarningMessage"] = value
@@ -162,7 +162,7 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 							mLanguage = None
 
 						if mLanguage:
-							if mLanguage == getLanguage():
+							if mLanguage == get_language():
 								eventConfigs[eventConfigId]["name"] = value
 						else:
 							eventConfigs[eventConfigId]["name"] = value
