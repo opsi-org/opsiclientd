@@ -234,7 +234,7 @@ class ControlInterface(PipeControlInterface):
 	_run_as_opsi_setup_user_lock = threading.Lock()
 
 	def wait(self, seconds: int = 0) -> None:
-		for _ in range(int(seconds)):
+		for _sec in range(int(seconds)):
 			time.sleep(1)
 
 	def noop(self, arg: str) -> None:
