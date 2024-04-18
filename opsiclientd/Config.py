@@ -202,6 +202,7 @@ class Config(metaclass=Singleton):
 				"ip_version": "auto",
 				"tmp_dir_cleanup": False,
 				"post_trusted_installer_delay": 15,
+				"message_of_the_day_enabled": False,
 			},
 			"config_service": {
 				"url": [],

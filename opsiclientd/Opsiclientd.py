@@ -987,6 +987,10 @@ class Opsiclientd(EventListener, threading.Thread):
 		user_message: str | None = None,
 		user_message_valid_until: int = 0,
 	) -> list[str]:
+		if not config.get("global", "message_of_the_day_enabled"):
+			logger.info("Message of the day is disabled")
+			return []
+
 		sessions = System.getActiveSessionInformation()
 		logger.debug("Found sessions: %s", sessions)
 		host_id = config.get("global", "host_id")
