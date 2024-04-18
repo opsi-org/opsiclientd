@@ -41,7 +41,10 @@ def load_translation(languages: Iterable[str] | None = None) -> None:
 	try:
 		from opsiclientd.Config import Config
 
-		check_paths = [Path(__file__).parent.parent.resolve() / "opsiclientd_data" / "locale", Path(Config.getBaseDirectory()) / "locale"]
+		check_paths = [
+			Path(__file__).parent.parent.resolve() / "opsiclientd_data" / "locale",
+			Path(Config.getBaseDirectory()) / "opsiclientd" / "locale",
+		]
 		existing_paths = [p for p in check_paths if p.exists()]
 		if not existing_paths:
 			raise RuntimeError("Failed to find locale path, checked: %s", check_paths)
