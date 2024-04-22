@@ -246,6 +246,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 	def stop(self) -> None:
 		asyncio.run_coroutine_threadsafe(stop_running_terminals(), self._loop)
 		asyncio.run_coroutine_threadsafe(stop_running_processes(), self._loop)
+		time.sleep(2)
 		self._should_stop = True
 		self.service_client.stop()
 
