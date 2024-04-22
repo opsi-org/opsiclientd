@@ -75,6 +75,7 @@ if RUNNING_ON_WINDOWS:
 	from opsiclientd.windows import runCommandInSession
 else:
 	from OPSI.System import runCommandInSession  # type: ignore
+	from opsicommon.system.posix.subprocess import get_subprocess_environment
 
 if TYPE_CHECKING:
 	from opsiclientd.nonfree.CacheService import CacheService
@@ -320,7 +321,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			else:
 				logger.notice("Executing: %s", self._argv)
 				os.chdir(os.path.dirname(self._argv[0]))
-				os.execvp(self._argv[0], self._argv)
+				os.execve(self._argv[0], self._argv, get_subprocess_environment())
 
 		logger.notice("Will restart in %d seconds", waitSeconds)
 		threading.Thread(target=_restart, args=(waitSeconds,), name="restart").start()
