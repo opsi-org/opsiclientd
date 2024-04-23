@@ -800,7 +800,7 @@ class ControlInterface(PipeControlInterface):
 			if wait_for_ending:
 				timeout = 7200
 				if not isinstance(wait_for_ending, bool):
-					timeout = wait_for_ending
+					timeout = int(wait_for_ending)
 				logger.info("Wait for process to complete (timeout=%r)", timeout)
 				try:
 					start = time.time()
