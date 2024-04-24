@@ -146,10 +146,10 @@ def setup_ssl(full: bool = False) -> None:
 
 	if not srv_crt or not srv_key:
 		logger.notice("Creating self-signed tls server certificate")
-		(ca_cert, ca_key) = create_ca(subject={"commonName": server_cn}, valid_days=10000)
+		(ca_cert, ca_key) = create_ca(subject={"commonName": server_cn}, valid_days=365)
 		(srv_crt, srv_key) = create_server_cert(
 			subject={"commonName": server_cn},
-			valid_days=10000,
+			valid_days=365,
 			ip_addresses=get_ips(),
 			hostnames=get_hostnames(),
 			ca_key=ca_key,
