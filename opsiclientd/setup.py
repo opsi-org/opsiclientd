@@ -111,8 +111,9 @@ def setup_ssl(full: bool = False) -> None:
 			if not create:
 				with open(key_file, "rb") as file:
 					loaded_key = load_pem_private_key(file.read(), password=None)
+					logger.info("Server key type: %s, %d bits", loaded_key.__class__.__name__, getattr(loaded_key, "key_size", 0))
 					if not isinstance(loaded_key, RSAPrivateKey):
-						raise ValueError(f"Invalid key type: {type(loaded_key)}, needing new cert")
+						raise ValueError(f"Invalid key type: {loaded_key.__class__.__name__}, needing new cert")
 					if loaded_key.key_size < 2048:
 						raise ValueError(f"Server key is only {loaded_key.key_size} bits long, needing new cert")
 					srv_key = loaded_key
