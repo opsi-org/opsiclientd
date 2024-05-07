@@ -185,7 +185,7 @@ def setup_firewall_linux() -> None:
 		cmds.append(["/usr/bin/firewall-cmd", f"--add-port={port}/tcp", "--zone", "public"])
 	elif os.path.exists("/sbin/SuSEfirewall2"):
 		# other SUSE
-		cmds.append(["/sbin/SuSEfirewall2", "open", "EXT", "TCP" f"{port}"])
+		cmds.append(["/sbin/SuSEfirewall2", "open", "EXT", "TCP", f"{port}"])
 	elif os.path.exists("/usr/sbin/ucr"):
 		# UCS
 		cmds.append(["/usr/sbin/ucr", "set", f"security/packetfilter/package/opsiclientd/tcp/{port}/all=ACCEPT"])
