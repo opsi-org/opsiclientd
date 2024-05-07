@@ -680,6 +680,14 @@ class ControlInterface(PipeControlInterface):
 		remove_user: bool = False,
 		wait_for_ending: bool | int = False,
 	) -> None:
+		if not is_windows():
+			raise NotImplementedError()
+
+		if re.fullmatch(r"^\d+$", str(wait_for_ending)):
+			wait_for_ending = int(wait_for_ending)
+		else:
+			wait_for_ending = forceBool(wait_for_ending)
+
 		script = Path(self.opsiclientd.config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
 		# catch <Drive>:.....exe and put in quotes if not already quoted
 		if re.search("[A-Z]:.*\\.exe", command) and not command.startswith(('"', "'")):
