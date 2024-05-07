@@ -581,10 +581,10 @@ class ControlInterface(PipeControlInterface):
 		if not is_windows():
 			raise NotImplementedError()
 
-		if remove_user and not wait_for_ending:
-			wait_for_ending = True
-		if isinstance(wait_for_ending, bool) and wait_for_ending:
-			wait_for_ending = 7200
+		if re.fullmatch(r"^\d+$", str(wait_for_ending)):
+			wait_for_ending = int(wait_for_ending)
+		else:
+			wait_for_ending = forceBool(wait_for_ending)
 
 		logger.notice(
 			"Executing opsi script '%s' as opsisetupuser (product_id=%s, admin=%s, wait_for_ending=%s, remove_user=%s)",
