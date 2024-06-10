@@ -951,13 +951,10 @@ class Opsiclientd(EventListener, threading.Thread):
 		notifier_id: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin"],
 		port: int | None = None,
 		link_handling: str = "no",
-	) -> tuple[str, bool]:
-		# Old notifier needs to be run with elevated rights for access to the config and log file
-		require_elevated = True
+	) -> str
 		alt_command = config.get("opsiclientd_notifier", "alt_command")
 		if notifier_id in config.get("opsiclientd_notifier", "alt_ids") and alt_command and Path(shlex.split(alt_command)[0]).exists():
 			command = f"{alt_command} --link-handling {link_handling}"
-			require_elevated = False
 		else:
 			skin_file = ""
 			cmd = shlex.split(command)
@@ -977,7 +974,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			elif notifier_id == "userlogin":
 				notifier_id = "event"
 
-		return command.replace("%port%", str(port or 0)).replace("%id%", notifier_id), require_elevated
+		return command.replace("%port%", str(port or 0)).replace("%id%", notifier_id)
 
 	def getPopupPort(self) -> int:
 		port = config.get("notification_server", "popup_port")
@@ -1142,7 +1139,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to start notification server: %s", err)
 				raise
 
-			notifierCommand, require_elevated = self.getNotifierCommand(
+			notifierCommand = self.getNotifierCommand(
 				command=config.get("opsiclientd_notifier", "command"),
 				notifier_id=notifier_id,
 				port=self._popupNotificationServer.port,
@@ -1167,7 +1164,8 @@ class Opsiclientd(EventListener, threading.Thread):
 								notifierCommand,
 								session_id=sessionId,
 								session_env=(desktop == "default"),
-								session_elevated=(desktop == "winlogon") or require_elevated,
+								# Notifier needs to be run with elevated rights for access to the config, log file and winlogon desktop
+								session_elevated=True,
 								session_desktop=desktop,
 							)
 							logger.info("Process started with pid %s", proc.pid)
