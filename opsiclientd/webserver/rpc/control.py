@@ -328,7 +328,7 @@ class ControlInterface(PipeControlInterface):
 
 		return data
 
-	def runCommand(self, command: str, sessionId: int | None = None, desktop: str | None = None) -> str:
+	def runCommand(self, command: str, sessionId: int | None = None, desktop: str | None = None, use_subprocess: bool = False) -> str:
 		command = forceUnicode(command)
 		if not command:
 			raise ValueError("No command given")
@@ -346,7 +346,19 @@ class ControlInterface(PipeControlInterface):
 			desktop = self.opsiclientd.getCurrentActiveDesktopName()
 
 		logger.notice("rpc runCommand: executing command '%s' in session %d on desktop '%s'", command, sessionId, desktop)
-		runCommandInSession(command=command, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False)
+
+		if use_subprocess:
+			proc = subprocess.Popen(  # type: ignore[call-overload]
+				command,
+				session_id=sessionId,
+				session_env=(desktop == "default"),
+				session_elevated=(desktop == "winlogon"),
+				session_desktop=desktop,
+			)
+			logger.info("Process started with pid %s", proc.pid)
+		else:
+			runCommandInSession(command=command, sessionId=sessionId, desktop=desktop, waitForProcessEnding=False)
+
 		return f"command '{command}' executed"
 
 	def execute(

@@ -1160,13 +1160,14 @@ class Opsiclientd(EventListener, threading.Thread):
 					if RUNNING_ON_WINDOWS:
 						for desktop in desktops:
 							logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, sessionId, desktop)
-							subprocess.Popen(  # type: ignore[call-overload]
+							proc = subprocess.Popen(  # type: ignore[call-overload]
 								notifierCommand,
 								session_id=sessionId,
 								session_env=(desktop == "default"),
 								session_elevated=(desktop == "winlogon"),
 								session_desktop=desktop,
 							)
+							logger.info("Process started with pid %s", proc.pid)
 					else:
 						logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
 						runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
