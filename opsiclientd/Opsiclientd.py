@@ -1164,7 +1164,8 @@ class Opsiclientd(EventListener, threading.Thread):
 								notifierCommand,
 								session_id=sessionId,
 								session_env=(desktop == "default"),
-								# Notifier needs to be run with elevated rights for access to the config, log file and winlogon desktop
+								# Notifier needs to be run with elevated rights for access
+								# to the binary, config, log file and winlogon desktop
 								session_elevated=True,
 								session_desktop=desktop,
 							)
