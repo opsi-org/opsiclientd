@@ -951,7 +951,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		notifier_id: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin"],
 		port: int | None = None,
 		link_handling: str = "no",
-	) -> str
+	) -> str:
 		alt_command = config.get("opsiclientd_notifier", "alt_command")
 		if notifier_id in config.get("opsiclientd_notifier", "alt_ids") and alt_command and Path(shlex.split(alt_command)[0]).exists():
 			command = f"{alt_command} --link-handling {link_handling}"
