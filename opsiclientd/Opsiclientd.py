@@ -345,7 +345,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					sessionId = System.getActiveConsoleSessionId()
 					while True:
 						try:
-							notifierCommand, _elevated = self.getNotifierCommand(
+							notifierCommand = self.getNotifierCommand(
 								command=config.get("global", "block_login_notifier"), notifier_id="block_login"
 							)
 							self._blockLoginNotifierPid = System.runCommandInSession(
