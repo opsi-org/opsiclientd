@@ -345,7 +345,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					sessionId = System.getActiveConsoleSessionId()
 					while True:
 						try:
-							notifierCommand = self.getNotifierCommand(
+							notifierCommand, _elevated = self.getNotifierCommand(
 								command=config.get("global", "block_login_notifier"), notifier_id="block_login"
 							)
 							self._blockLoginNotifierPid = System.runCommandInSession(
@@ -951,10 +951,13 @@ class Opsiclientd(EventListener, threading.Thread):
 		notifier_id: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin"],
 		port: int | None = None,
 		link_handling: str = "no",
-	) -> str:
+	) -> tuple[str, bool]:
+		# Old notifier needs to be run with elevated rights for access to the config and log file
+		require_elevated = True
 		alt_command = config.get("opsiclientd_notifier", "alt_command")
 		if notifier_id in config.get("opsiclientd_notifier", "alt_ids") and alt_command and Path(shlex.split(alt_command)[0]).exists():
 			command = f"{alt_command} --link-handling {link_handling}"
+			require_elevated = False
 		else:
 			skin_file = ""
 			cmd = shlex.split(command)
@@ -974,7 +977,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			elif notifier_id == "userlogin":
 				notifier_id = "event"
 
-		return command.replace("%port%", str(port or 0)).replace("%id%", notifier_id)
+		return command.replace("%port%", str(port or 0)).replace("%id%", notifier_id), require_elevated
 
 	def getPopupPort(self) -> int:
 		port = config.get("notification_server", "popup_port")
@@ -1139,7 +1142,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to start notification server: %s", err)
 				raise
 
-			notifierCommand = self.getNotifierCommand(
+			notifierCommand, require_elevated = self.getNotifierCommand(
 				command=config.get("opsiclientd_notifier", "command"),
 				notifier_id=notifier_id,
 				port=self._popupNotificationServer.port,
@@ -1164,7 +1167,7 @@ class Opsiclientd(EventListener, threading.Thread):
 								notifierCommand,
 								session_id=sessionId,
 								session_env=(desktop == "default"),
-								session_elevated=(desktop == "winlogon"),
+								session_elevated=(desktop == "winlogon") or require_elevated,
 								session_desktop=desktop,
 							)
 							logger.info("Process started with pid %s", proc.pid)
