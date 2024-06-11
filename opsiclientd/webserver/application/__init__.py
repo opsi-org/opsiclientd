@@ -141,9 +141,7 @@ INTERFACE_PAGE = """<?xml version="1.0" encoding="UTF-8"?>
 	</script>
 </head>
 <body onload="onLoad();">
-	<p id="title">
-		%(title)s
-	</p>
+	<a href="/"><p id="title">%(title)s</p></a>
 	<form onsubmit="return executeJsonrpc();">
 		<table class="box">
 			<tbody id="tbody">

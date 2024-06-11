@@ -26,7 +26,7 @@ INFO_PAGE = """<!DOCTYPE html>
 	</script>
 </head>
 <body onload="onPageLoad();" onresize="onResize();">
-	<p id="title">opsi client daemon info</p>
+	<a href="/"><p id="title">opsi client daemon info</p></a>
 	<div id="infopage-timeline-box">
 		<p id="infopage-timeline-title">Timeline</p>
 		<div class="timeline-default" id="opsiclientd-timeline" style="height: 400px; border: 1px solid #aaaaaa"></div>

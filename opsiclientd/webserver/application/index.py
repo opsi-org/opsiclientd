@@ -24,7 +24,7 @@ INDEX_PAGE = """<?xml version="1.0" encoding="UTF-8"?>
 	<link rel="stylesheet" type="text/css" href="/static/opsiclientd.css" />
 </head>
 <body>
-	<p id="title">opsiclientd on host %(hostname)s</p>
+	<a href="/"><p id="title">opsiclientd on host %(hostname)s</p></a>
 	<div class="mainpage-link-box">
 		<ul>
 			<li><a target="_blank" href="/info">info page</a></li>
