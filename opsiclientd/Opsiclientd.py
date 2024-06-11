@@ -345,13 +345,14 @@ class Opsiclientd(EventListener, threading.Thread):
 					sessionId = System.getActiveConsoleSessionId()
 					while True:
 						try:
-							notifierCommand = self.getNotifierCommand(
-								command=config.get("global", "block_login_notifier"), notifier_id="block_login"
+							desktop = "winlogon"
+							notifierCommand, _elevation_required = self.getNotifierCommand(
+								command=config.get("global", "block_login_notifier"), notifier_id="block_login", desktop=desktop
 							)
 							self._blockLoginNotifierPid = System.runCommandInSession(
 								command=notifierCommand,
 								sessionId=sessionId,
-								desktop="winlogon",
+								desktop=desktop,
 								waitForProcessEnding=False,
 							)[2]
 							break
@@ -951,9 +952,17 @@ class Opsiclientd(EventListener, threading.Thread):
 		notifier_id: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin"],
 		port: int | None = None,
 		link_handling: str = "no",
-	) -> str:
+		desktop: str | None = None,
+	) -> tuple[str, bool]:
+		# Notifier needs to be run with elevated rights for access
+		# to the binary, config, log file and winlogon desktop
+		elevation_required = True
 		alt_command = config.get("opsiclientd_notifier", "alt_command")
 		if notifier_id in config.get("opsiclientd_notifier", "alt_ids") and alt_command and Path(shlex.split(alt_command)[0]).exists():
+			elevation_required = desktop != "default"
+			if elevation_required and link_handling == "browser":
+				# Would start start elevated browser
+				link_handling = "no"
 			command = f"{alt_command} --link-handling {link_handling}"
 		else:
 			skin_file = ""
@@ -974,7 +983,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			elif notifier_id == "userlogin":
 				notifier_id = "event"
 
-		return command.replace("%port%", str(port or 0)).replace("%id%", notifier_id)
+		return command.replace("%port%", str(port or 0)).replace("%id%", notifier_id), elevation_required
 
 	def getPopupPort(self) -> int:
 		port = config.get("notification_server", "popup_port")
@@ -1139,13 +1148,6 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to start notification server: %s", err)
 				raise
 
-			notifierCommand = self.getNotifierCommand(
-				command=config.get("opsiclientd_notifier", "command"),
-				notifier_id=notifier_id,
-				port=self._popupNotificationServer.port,
-				link_handling=link_handling,
-			)
-
 			choiceSubject.setChoices([_("Close")])
 			choiceSubject.setCallbacks([self.popupCloseCallback])
 
@@ -1159,18 +1161,29 @@ class Opsiclientd(EventListener, threading.Thread):
 				try:
 					if RUNNING_ON_WINDOWS:
 						for desktop in desktops:
+							notifierCommand, elevation_required = self.getNotifierCommand(
+								command=config.get("opsiclientd_notifier", "command"),
+								notifier_id=notifier_id,
+								port=self._popupNotificationServer.port,
+								link_handling=link_handling,
+								desktop=desktop,
+							)
 							logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, sessionId, desktop)
 							proc = subprocess.Popen(  # type: ignore[call-overload]
 								notifierCommand,
 								session_id=sessionId,
 								session_env=(desktop == "default"),
-								# Notifier needs to be run with elevated rights for access
-								# to the binary, config, log file and winlogon desktop
-								session_elevated=True,
+								session_elevated=elevation_required,
 								session_desktop=desktop,
 							)
 							logger.info("Process started with pid %s", proc.pid)
 					else:
+						notifierCommand, elevation_required = self.getNotifierCommand(
+							command=config.get("opsiclientd_notifier", "command"),
+							notifier_id=notifier_id,
+							port=self._popupNotificationServer.port,
+							link_handling=link_handling,
+						)
 						logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
 						runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
 				except Exception as err:

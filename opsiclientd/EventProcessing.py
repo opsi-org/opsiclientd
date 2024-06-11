@@ -438,7 +438,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		logger.notice("Starting notifier application in session '%s' on desktop '%s'", sessionId, desktop)
 		try:
 			assert self.opsiclientd
-			command = self.opsiclientd.getNotifierCommand(command=command, notifier_id=notifierId, port=self.notificationServerPort)
+			command, _elevation_required = self.opsiclientd.getNotifierCommand(
+				command=command, notifier_id=notifierId, port=self.notificationServerPort, desktop=desktop
+			)
 			process, pid = self.runCommandInSession(
 				sessionId=sessionId,
 				# Call process directly without shell for posix, keep string structure for windows
