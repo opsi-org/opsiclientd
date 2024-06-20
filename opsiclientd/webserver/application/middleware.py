@@ -240,7 +240,7 @@ class BaseMiddleware:
 				await self.authenticate(scope)
 			except Exception:
 				if scope["client"][0] in ("127.0.0.1", "::1") and (
-					scope["path"].startswith("/kiosk", "/static") or scope["path"] in ("/", "/favicon.ico")
+					scope["path"].startswith(("/kiosk", "/static")) or scope["path"] in ("/", "/favicon.ico")
 				):
 					logger.info("Allow unauthenticated access to %r from localhost", scope["path"])
 				else:
