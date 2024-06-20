@@ -17,6 +17,7 @@ import os
 import socket
 import threading
 import time
+from pathlib import Path
 from ctypes import byref, c_char_p, c_ulong, create_string_buffer
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
@@ -334,6 +335,7 @@ class PosixControlDomainSocket(ControlPipe):
 	def setup(self) -> None:
 		logger.trace("Creating socket %s", self._socketName)
 		self.teardown()
+		Path(self._socketName).parent.mkdir(parents=True, exist_ok=True)
 		self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 		self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		self._socket.bind(self._socketName)
