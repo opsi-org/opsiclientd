@@ -61,6 +61,7 @@ def test_redirect(test_client: OpsiclientdTestClient) -> None:  # noqa
 def test_auth_direct(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
 	session_lifetime = 2
 	with patch("opsiclientd.webserver.application.middleware.SESSION_LIFETIME", session_lifetime):
+		test_client.set_client_address("1.2.3.4", 12321)
 		with test_client as client:
 			response = client.get("/")
 			assert response.status_code == 401
