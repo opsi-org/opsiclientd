@@ -39,15 +39,11 @@ class FakeOpsiclientd(Opsiclientd):
 
 @pytest.mark.parametrize(
 	"user_logged_in, motd_enabled",
-	(
-		(False, True),
-		(True, True),
-		(True, False),
-		(False, False)
-	),
+	((False, True), (True, True), (True, False), (False, False)),
 )
 def test_motd_update_without_valid_until(default_config: Config, tmp_path: Path, user_logged_in: bool, motd_enabled: bool) -> None:  # noqa
 	default_config.set("global", "message_of_the_day_enabled", motd_enabled)
+
 	def getActiveSessionInformation() -> list[dict[str, str | int]]:
 		if not user_logged_in:
 			return []
@@ -86,6 +82,7 @@ def test_motd_update_without_valid_until(default_config: Config, tmp_path: Path,
 )
 def test_motd_update_valid_until(default_config: Config, tmp_path: Path, user_logged_in: bool) -> None:  # noqa
 	default_config.set("global", "message_of_the_day_enabled", True)
+
 	def getActiveSessionInformation() -> list[dict[str, str | int]]:
 		if not user_logged_in:
 			return []

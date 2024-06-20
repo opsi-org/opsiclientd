@@ -37,7 +37,7 @@ from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, secret_filter
 from opsicommon.objects import ConfigState, ObjectToGroup, Product, ProductDependency, ProductOnClient, ProductOnDepot
 from opsicommon.system.info import is_windows
-from opsicommon.types import forceBool, forceInt, forceProductIdList, forceUnicode
+from opsicommon.types import forceBool, forceInt, forceProductIdList, forceUnicode, forceHostId
 from opsicommon.utils import generate_opsi_host_key
 
 from opsiclientd import __version__
@@ -199,7 +199,7 @@ class KioskControlInterface(PipeControlInterface):
 
 	def getKioskProductInfosForClient(self, clientId: str, addConfigs: bool = False) -> dict | list:
 		with self._config_service_connection(disconnect=False) as service_connection:
-			return service_connection.getConfigService().getKioskProductInfosForClient(clientId, addConfigs)
+			return service_connection.getConfigService().getKioskProductInfosForClient(forceHostId(clientId), addConfigs)
 
 	def hostControlSafe_fireEvent(self, event: str, hostIds: list[str] | None = None) -> dict[str, Any]:
 		with self._config_service_connection(disconnect=False) as service_connection:
@@ -227,7 +227,9 @@ class KioskControlInterface(PipeControlInterface):
 
 	def setProductActionRequestWithDependencies(self, productId: str, clientId: str, actionRequest: str) -> None:
 		with self._config_service_connection(disconnect=False) as service_connection:
-			return service_connection.getConfigService().setProductActionRequestWithDependencies(productId, clientId, actionRequest)
+			return service_connection.getConfigService().setProductActionRequestWithDependencies(
+				productId, forceHostId(clientId), actionRequest
+			)
 
 
 class ControlInterface(PipeControlInterface):
