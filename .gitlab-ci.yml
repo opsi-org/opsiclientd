@@ -12,8 +12,8 @@ viruscheck:virustotal:
   script:
     - Invoke-WebRequest -UseBasicParsing -Uri "$OPSIDEVTOOLS_URL_WINDOWS_X86" -OutFile opsi-dev-tools.zip
     - Expand-Archive opsi-dev-tools.zip -DestinationPath opsi-dev-tools
-    - '$proc = (Start-Process -FilePath "opsi-dev-tools\opsi-dev-tool.exe" -ArgumentList "-l debug --virustotal-analysis opsiclientd_windows_x86\opsiclientd.exe --output-type simple --output-file viruscheck.txt" -PassThru -Wait)'
-    - 'Write-Host "VirusTotal analysis finished with exit code: $($proc.ExitCode)"'
+    - Copy-Item opsi-dev-tool.exe opsi-dev-cli.exe
+    - .\opsi-dev-cli.exe -l info --output-format summary virustotal check opsiclientd_windows_x86\opsiclientd.exe --allow-detections=10 > viruscheck.txt
   artifacts:
     name: "opsiclientd_viruscheck"
     paths:
