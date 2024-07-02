@@ -196,9 +196,9 @@ build:pyinstaller-windows-x86:
     - poetry lock --no-update --no-cache
     - poetry install
     - poetry run .\opsi-dev-cli.exe -l debug pyinstaller build
-    - .\opsi-dev-tool.exe -l info --signserver-sign dist\opsiclientd\opsiclientd.exe
-    - .\opsi-dev-tool.exe -l info --signserver-sign dist\opsiclientd\opsiclientd_rpc.exe
-    - .\opsi-dev-tool.exe -l info --signserver-sign dist\opsiclientd\action_processor_starter.exe
+    - .\opsi-dev-cli.exe -l info -l info signserver sign dist\opsiclientd\opsiclientd.exe
+    - .\opsi-dev-cli.exe -l info -l info signserver sign dist\opsiclientd\opsiclientd_rpc.exe
+    - .\opsi-dev-cli.exe -l info -l info signserver sign dist\opsiclientd\action_processor_starter.exe
     - Move-Item -Path dist\opsiclientd -Destination opsiclientd_windows_x86
     # Check if binary is working
     - opsiclientd_windows_x86\opsiclientd.exe --version
