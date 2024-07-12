@@ -1382,10 +1382,18 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 			productOnDepots = self._configService.productOnDepot_getObjects(depotId=masterDepotId, productId=productId)
 			if not productOnDepots:
 				raise RuntimeError(f"Product '{productId}' not found on depot '{masterDepotId}'")
-
 			product_version = f"{productOnDepots[0].productVersion}-{productOnDepots[0].packageVersion}"
-			self._setProductCacheState(productId, "productVersion", productOnDepots[0].productVersion, updateProductOnClient=False)
-			self._setProductCacheState(productId, "packageVersion", productOnDepots[0].packageVersion, updateProductOnClient=False)
+			products = self._configService.product_getObjects(
+				attributes=["id", "productVersion", "packageVersion", "name"],
+				id=productId,
+				productVersion=productOnDepots[0].productVersion,
+				packageVersion=productOnDepots[0].packageVersion,
+			)
+			if not products:
+				raise RuntimeError(f"Product '{productId}' ({product_version}) not found")
+			self._setProductCacheState(productId, "productVersion", products[0].productVersion, updateProductOnClient=False)
+			self._setProductCacheState(productId, "packageVersion", products[0].packageVersion, updateProductOnClient=False)
+			self._setProductCacheState(productId, "name", products[0].name, updateProductOnClient=False)
 
 			if not os.path.exists(os.path.join(self._productCacheDir, productId)):
 				os.mkdir(os.path.join(self._productCacheDir, productId))

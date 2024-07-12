@@ -1493,9 +1493,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						shutdownWarningMessage = self.event.eventConfig.getShutdownWarningMessage()
 						if isinstance(self.event, SyncCompletedEvent):
 							try:
-								productIds = list(self.opsiclientd.getCacheService().getProductCacheState()["products"])
-								if productIds:
-									shutdownWarningMessage += f"\n{_('Products')}: {', '.join(productIds)}"
+								products = self.opsiclientd.getCacheService().getProductCacheState()["products"]
+								product_info = ", ".join(products)
+								if config.get("opsiclientd_notifier", "product_info") == "name":
+									product_info = ",".join([p["name"] for p in products.values()])
+								if product_info:
+									shutdownWarningMessage += f"\n{_('Products')}: {product_info}"
 							except Exception as stateErr:
 								logger.error(stateErr, exc_info=True)
 						self._messageSubject.setMessage(shutdownWarningMessage)
