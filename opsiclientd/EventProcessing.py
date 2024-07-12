@@ -1302,7 +1302,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			category="wait",
 			durationEvent=True,
 		)
-		self._messageSubject.setMessage(f'{self.event.eventConfig.getActionMessage()}\n{_("Products")}: {product_list}')
+		loc_products = _("Products")
+		self._messageSubject.setMessage(f"{self.event.eventConfig.getActionMessage()}\n{loc_products}: {product_list}")
 		choiceSubject = ChoiceSubject(id="choice")
 		if cancelCounter < self.event.eventConfig.actionUserCancelable:
 			choiceSubject.setChoices([_("Abort"), _("Start now")])
@@ -1500,7 +1501,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 										[p_info["name"] if "name" in p_info else p_id for p_id, p_info in products.items()]
 									)
 								if product_info:
-									shutdownWarningMessage += f"\n{_('Products')}: {product_info}"
+									loc_products = _("Products")
+									shutdownWarningMessage += f"\n{loc_products}: {product_info}"
 							except Exception as stateErr:
 								logger.error(stateErr, exc_info=True)
 						self._messageSubject.setMessage(shutdownWarningMessage)
