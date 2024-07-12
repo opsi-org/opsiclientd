@@ -22,6 +22,7 @@ import sys
 import tempfile
 import threading
 import time
+from dataclasses import dataclass
 from ipaddress import IPv6Address, ip_address
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Literal
@@ -91,6 +92,14 @@ logger = get_logger()
 config = Config()
 state = State()
 timeline = Timeline()
+
+
+@dataclass
+class ProductInfo:
+	id: str
+	productVersion: str
+	packageVersion: str
+	name: str
 
 
 class EventProcessingCanceled(Exception):
@@ -821,8 +830,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			productDir = os.path.join(dd, "install")
 
 			userLoginScripts = []
-			productIds = []
-			versions = []
+			productInfo: list[ProductInfo] = []
 			for productOnDepot in self._configService.productOnDepot_getIdents(
 				productType="LocalbootProduct", depotId=depotId, returnType="dict"
 			):
@@ -841,8 +849,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					product.packageVersion,
 				)
 				userLoginScripts.append(os.path.join(productDir, product.userLoginScript))
-				productIds.append(product.id)
-				versions.append(f"{productOnDepot['productVersion']}-{productOnDepot['packageVersion']}")
+				productInfo.append(ProductInfo(product.id, product.productVersion, product.packageVersion, product.name))
 
 			if not userLoginScripts:
 				logger.notice("No user login script found, nothing to do")
@@ -850,7 +857,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 			logger.notice("User login scripts found, executing")
 			additionalParams = f"/usercontext {self.event.eventInfo.get('User')}"
-			self.runActions(productIds, additionalParams, versions)
+			self.runActions(productInfo, additionalParams)
 
 		except Exception as err:
 			logger.error("Failed to process login actions: %s", err, exc_info=True)
@@ -873,13 +880,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				raise RuntimeError("Not connected to config service")
 
 			productIds: list[str] = []
-			versions: list[str] = []
+			productInfo: list[ProductInfo] = []
 			includeProductIds: list[str] = []
 			excludeProductIds: list[str] = []
-			if self.event.eventConfig.actionProcessorProductIds:
-				productIds = self.event.eventConfig.actionProcessorProductIds
+			actionRequests = ["setup", "uninstall", "update", "always", "once", "custom"]
 
-			if not productIds:
+			if self.event.eventConfig.actionProcessorProductIds:
+				includeProductIds = self.event.eventConfig.actionProcessorProductIds
+				actionRequests = []
+			else:
 				if self.event.eventInfo.get("product_ids"):
 					includeProductIds = forceStringList(self.event.eventInfo["product_ids"])
 					logger.notice("Got product IDs from eventConfig: %r", includeProductIds)
@@ -888,23 +897,30 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						self._configService, self.event.eventConfig.includeProductGroupIds, self.event.eventConfig.excludeProductGroupIds
 					)
 
-				for productOnClient in [
-					poc
-					for poc in self._configService.productOnClient_getObjects(
-						productType="LocalbootProduct",
-						clientId=config.get("global", "host_id"),
-						actionRequest=["setup", "uninstall", "update", "always", "once", "custom"],
-						attributes=["actionRequest", "productVersion", "packageVersion"],
-						productId=includeProductIds,
-					)
-					if poc.productId not in excludeProductIds
-				]:
-					if productOnClient.productId not in productIds:
-						productIds.append(productOnClient.productId)
-						versions.append(f"{productOnClient.productVersion}-{productOnClient.packageVersion}")
-						logger.notice(
-							"   [%2s] product %-20s %s", len(productIds), productOnClient.productId + ":", productOnClient.actionRequest
+			for productOnClient in [
+				poc
+				for poc in self._configService.productOnClient_getObjects(
+					productType="LocalbootProduct",
+					clientId=config.get("global", "host_id"),
+					actionRequest=actionRequests,
+					attributes=["actionRequest", "productVersion", "packageVersion"],
+					productId=includeProductIds,
+				)
+				if poc.productId not in excludeProductIds
+			]:
+				if productOnClient.productId not in productIds:
+					productIds.append(productOnClient.productId)
+					productInfo.append(
+						ProductInfo(
+							productOnClient.productId,
+							productOnClient.productVersion,
+							productOnClient.packageVersion,
+							"",
 						)
+					)
+					logger.notice(
+						"   [%2s] product %-20s %s", len(productIds), productOnClient.productId + ":", productOnClient.actionRequest
+					)
 
 			if (not productIds) and bootmode == "BKSTD":
 				logger.notice("No product action requests set")
@@ -940,7 +956,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						additionalParams = "/processproducts " + ",".join(productIds)
 					else:
 						logger.error("Unknown operating system - skipping processproducts parameter for action processor call")
-				self.processActionWarningTime(productIds)
+
+				if productInfo:
+					for product in self._configService.product_getObjects(
+						attributes=["id", "name", "productVersion", "packageVersion"], id=productIds
+					):
+						for p_info in productInfo:
+							if p_info.id == product.id:
+								if p_info.productVersion == product.productVersion and p_info.packageVersion == product.packageVersion:
+									p_info.name = product.name
+								break
+
+				self.processActionWarningTime(productInfo)
 				try:
 					try:
 						cache_service = self.opsiclientd.getCacheService()
@@ -952,7 +979,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						cache_service.setConfigCacheObsolete()
 				except Exception as err:
 					logger.error(err)
-				self.runActions(productIds, additionalParams=additionalParams, versions=versions)
+
+				self.runActions(productInfo, additionalParams=additionalParams)
 				try:
 					try:
 						cache_service = self.opsiclientd.getCacheService()
@@ -996,10 +1024,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			)
 		time.sleep(3)
 
-	def runActions(self, productIds: list[str], additionalParams: str = "", versions: list[str] | None = None) -> None:
+	def runActions(self, productInfo: list[ProductInfo], additionalParams: str = "") -> None:
+		productIds = [p.id for p in productInfo]
 		description = f"Running actions {', '.join(productIds)}"
-		if versions and len(versions) == len(productIds):
-			description = f"Running actions {', '.join(f'{p_id} {p_version}' for p_id, p_version in zip(productIds, versions))}"
+		if productInfo:
+			prod_desc = [f"{p.id} {p.productVersion}-{p.packageVersion}" for p in productInfo]
+			description = f"Running actions {', '.join(prod_desc)}"
 		runActionsEventId = timeline.addEvent(title="Running actions", description=description, category="run_actions", durationEvent=True)
 
 		try:
@@ -1246,12 +1276,17 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		logger.notice("Event wait canceled by user")
 		self.waitCancelled = True
 
-	def processActionWarningTime(self, productIds: list[str] | None = None) -> None:
+	def processActionWarningTime(self, productInfo: list[ProductInfo]) -> None:
 		if not self.event.eventConfig.actionWarningTime:
 			return
 		assert self._notificationServer
-		productIds = productIds or []
-		logger.info("Notifying user of actions to process %s (%s)", self.event, productIds)
+
+		product_ids = [p.id for p in productInfo]
+		product_list = ", ".join(product_ids)
+		if config.get("opsiclientd_notifier", "product_info") == "name":
+			product_list = ", ".join(p.name for p in productInfo)
+
+		logger.info("Notifying user of actions to process %s (%s)", self.event, product_ids)
 		cancelCounter = state.get(f"action_processing_cancel_counter_{self.event.eventConfig.name}", 0)
 		# State action_processing_cancel_counter without appended event name is needed for notification server
 		state.set("action_processing_cancel_counter", cancelCounter)
@@ -1259,7 +1294,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		waitEventId = timeline.addEvent(
 			title="Action warning",
 			description=(
-				f"Notifying user of actions to process {self.event.eventConfig.getId()} ({', '.join(productIds)})\n"
+				f"Notifying user of actions to process {self.event.eventConfig.getId()} ({', '.join(product_ids)})\n"
 				f"actionWarningTime: {self.event.eventConfig.actionWarningTime}, "
 				f"actionUserCancelable: {self.event.eventConfig.actionUserCancelable}, "
 				f"cancelCounter: {cancelCounter}"
@@ -1267,7 +1302,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			category="wait",
 			durationEvent=True,
 		)
-		self._messageSubject.setMessage(f'{self.event.eventConfig.getActionMessage()}\n{_("Products")}: {", ".join(productIds)}')
+		self._messageSubject.setMessage(f'{self.event.eventConfig.getActionMessage()}\n{_("Products")}: {product_list}')
 		choiceSubject = ChoiceSubject(id="choice")
 		if cancelCounter < self.event.eventConfig.actionUserCancelable:
 			choiceSubject.setChoices([_("Abort"), _("Start now")])

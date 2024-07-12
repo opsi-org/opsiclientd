@@ -75,7 +75,7 @@ if RUNNING_ON_WINDOWS:
 	from opsiclientd.windows import runCommandInSession
 else:
 	from OPSI.System import runCommandInSession  # type: ignore
-	from opsicommon.system.posix.subprocess import get_subprocess_environment
+	from opsicommon.system.subprocess import get_subprocess_environment
 
 if TYPE_CHECKING:
 	from opsiclientd.nonfree.CacheService import CacheService

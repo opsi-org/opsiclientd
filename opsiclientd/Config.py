@@ -255,6 +255,7 @@ class Config(metaclass=Singleton):
 				"command": "",
 				"alt_command": "",
 				"alt_ids": [],
+				"product_info": "id",
 			},
 			"action_processor": {
 				"local_dir": "",
