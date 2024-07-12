@@ -1282,10 +1282,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		assert self._notificationServer
 
 		product_ids = [p.id for p in productInfo]
-		product_list = ", ".join(p for p in product_ids if p != "opsi-script")
-		if config.get("opsiclientd_notifier", "product_info") == "name":
-			product_list = ", ".join(p.name for p in productInfo if p.id != "opsi-script")
-
+		template = config.get("opsiclientd_notifier", "product_info")
+		product_list = ", ".join(
+			template.replace("{id}", p.id)
+			.replace("{name}", p.name)
+			.replace("{productVersion}", p.productVersion)
+			.replace("{packageVersion}", p.packageVersion)
+			for p in productInfo
+			if p.id != "opsi-script"
+		)
 		logger.info("Notifying user of actions to process %s (%s)", self.event, product_ids)
 		cancelCounter = state.get(f"action_processing_cancel_counter_{self.event.eventConfig.name}", 0)
 		# State action_processing_cancel_counter without appended event name is needed for notification server
@@ -1494,16 +1499,16 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						shutdownWarningMessage = self.event.eventConfig.getShutdownWarningMessage()
 						if isinstance(self.event, SyncCompletedEvent):
 							try:
-								products = self.opsiclientd.getCacheService().getProductCacheState()["products"]
-								product_list = ", ".join(p for p in products if p != "opsi-script")
-								if config.get("opsiclientd_notifier", "product_info") == "name":
-									product_list = ", ".join(
-										[
-											p_info["name"] if "name" in p_info else p_id
-											for p_id, p_info in products.items()
-											if p_id != "opsi-script"
-										]
-									)
+								products: dict[str, dict[str, str]] = self.opsiclientd.getCacheService().getProductCacheState()["products"]
+								template = config.get("opsiclientd_notifier", "product_info")
+								product_list = ", ".join(
+									template.replace("{id}", p_id)
+									.replace("{name}", p.get("name", ""))
+									.replace("{productVersion}", p.get("productVersion", ""))
+									.replace("{packageVersion}", p.get("packageVersion", ""))
+									for p_id, p in products.items()
+									if p_id != "opsi-script"
+								)
 								if product_list:
 									loc_products = _("Products")
 									shutdownWarningMessage += f"\n{loc_products}: {product_list}"
