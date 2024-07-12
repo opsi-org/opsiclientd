@@ -1496,7 +1496,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 								products = self.opsiclientd.getCacheService().getProductCacheState()["products"]
 								product_info = ", ".join(products)
 								if config.get("opsiclientd_notifier", "product_info") == "name":
-									product_info = ",".join([p["name"] for p in products.values()])
+									product_info = ",".join(
+										[p_info["name"] if "name" in p_info else p_id for p_id, p_info in products.items()]
+									)
 								if product_info:
 									shutdownWarningMessage += f"\n{_('Products')}: {product_info}"
 							except Exception as stateErr:
