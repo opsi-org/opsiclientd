@@ -1282,9 +1282,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		assert self._notificationServer
 
 		product_ids = [p.id for p in productInfo]
-		product_list = ", ".join(product_ids)
+		product_list = ", ".join(p for p in product_ids if p != "opsi-script")
 		if config.get("opsiclientd_notifier", "product_info") == "name":
-			product_list = ", ".join(p.name for p in productInfo)
+			product_list = ", ".join(p.name for p in productInfo if p.id != "opsi-script")
 
 		logger.info("Notifying user of actions to process %s (%s)", self.event, product_ids)
 		cancelCounter = state.get(f"action_processing_cancel_counter_{self.event.eventConfig.name}", 0)
@@ -1495,14 +1495,18 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						if isinstance(self.event, SyncCompletedEvent):
 							try:
 								products = self.opsiclientd.getCacheService().getProductCacheState()["products"]
-								product_info = ", ".join(products)
+								product_list = ", ".join(p for p in products if p != "opsi-script")
 								if config.get("opsiclientd_notifier", "product_info") == "name":
-									product_info = ",".join(
-										[p_info["name"] if "name" in p_info else p_id for p_id, p_info in products.items()]
+									product_list = ", ".join(
+										[
+											p_info["name"] if "name" in p_info else p_id
+											for p_id, p_info in products.items()
+											if p_id != "opsi-script"
+										]
 									)
-								if product_info:
+								if product_list:
 									loc_products = _("Products")
-									shutdownWarningMessage += f"\n{loc_products}: {product_info}"
+									shutdownWarningMessage += f"\n{loc_products}: {product_list}"
 							except Exception as stateErr:
 								logger.error(stateErr, exc_info=True)
 						self._messageSubject.setMessage(shutdownWarningMessage)
