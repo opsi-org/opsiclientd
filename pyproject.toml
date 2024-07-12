@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "opsiclientd"
-version = "4.3.3.15"
+version = "4.3.3.16"
 description = "opsi client daemon. The service running on opsi clients."
 maintainers = [ "uib GmbH <info@uib.de>",]
 authors = [ "uib GmbH <info@uib.de>",]
@@ -38,7 +38,6 @@ h11 = "^0.14"
 macholib = "^1.14"
 netifaces = "^0.11"
 pydantic = "^2.7"
-# Using a Windows 7 compatible pydantic version
 pydantic-core = ">=2.18,<2.18.3"
 pyelftools = "^0.31"
 python-multipart = "^0.0"
