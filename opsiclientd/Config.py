@@ -898,6 +898,7 @@ class Config(metaclass=Singleton):
 			"clientconfig.depot.id",
 			"clientconfig.depot.user",
 			"clientconfig.suspend_bitlocker_on_reboot",
+			"clientconfig.wan_vpn",
 			"opsiclientd.*",  # everything starting with opsiclientd.
 		]
 		config_states = {}
