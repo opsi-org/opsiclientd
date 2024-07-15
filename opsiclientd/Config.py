@@ -926,6 +926,8 @@ class Config(metaclass=Singleton):
 			):
 				config_states[config_state.configId] = config_state.values
 
+		self.setProductCachingMode(False)
+		wan_vpn = False
 		for config_id, values in config_states.items():
 			logger.info("Got config state from service: %r=%r", config_id, values)
 
@@ -943,6 +945,8 @@ class Config(metaclass=Singleton):
 				self.set("depot_server", "username", values[0])
 			elif config_id == "clientconfig.suspend_bitlocker_on_reboot":
 				self.set("global", "suspend_bitlocker_on_reboot", values[0])
+			elif config_id == "clientconfig.wan_vpn":
+				wan_vpn = values and values[0]
 
 			elif config_id.startswith("opsiclientd."):
 				try:
@@ -958,5 +962,55 @@ class Config(metaclass=Singleton):
 				except Exception as err:
 					logger.error("Failed to process configState '%s': %s", config_id, err)
 
+		if wan_vpn:
+			logger.info("WAN/VPN mode enabled")
+			self.setProductCachingMode(True)
+
 		logger.notice("Got config from service")
 		logger.debug("Config is now:\n %s", objectToBeautifiedText(self.getDict()))
+
+	def setProductCachingMode(self, activated: bool) -> None:
+		if activated:
+			self.set("event_net_connection", "active", False)
+			self.set("event_timer", "active", True)
+			if RUNNING_ON_WINDOWS:
+				self.set("event_gui_startup", "active", False)
+				self.set("event_opsiclientd_start", "active", False)
+				self.set("event_gui_startup{cache_ready}", "active", True)
+				self.set("event_gui_startup{cache_ready}", "use_cached_config", False)
+				self.set("event_gui_startup{cache_ready}", "use_cached_products", True)
+			else:
+				self.set("event_gui_startup", "active", False)
+				self.set("event_opsiclientd_start", "active", False)
+				self.set("event_opsiclientd_start{cache_ready}", "active", True)
+				self.set("event_opsiclientd_start{cache_ready}", "use_cached_config", False)
+				self.set("event_opsiclientd_start{cache_ready}", "use_cached_products", True)
+			self.set("event_sync", "sync_config_from_server", False)
+			self.set("event_sync", "sync_config_to_server", False)
+			self.set("event_sync", "cache_products", True)
+			self.set("precondition_cache_ready_user_logged_in", "config_cached", False)
+			self.set("precondition_cache_ready_user_logged_in", "products_cached", True)
+			self.set("precondition_cache_ready", "config_cached", False)
+			self.set("precondition_cache_ready", "products_cached", True)
+		else:
+			self.set("event_net_connection", "active", False)
+			self.set("event_timer", "active", True)
+			if RUNNING_ON_WINDOWS:
+				self.set("event_gui_startup", "active", True)
+				self.set("event_opsiclientd_start", "active", False)
+			else:
+				self.set("event_gui_startup", "active", False)
+				self.set("event_opsiclientd_start", "active", True)
+			self.set("event_gui_startup{cache_ready}", "active", False)
+			self.set("event_opsiclientd_start{cache_ready}", "active", False)
+			self.set("event_gui_startup{cache_ready}", "use_cached_config", True)
+			self.set("event_gui_startup{cache_ready}", "use_cached_products", True)
+			self.set("event_opsiclientd_start{cache_ready}", "use_cached_config", True)
+			self.set("event_opsiclientd_start{cache_ready}", "use_cached_products", True)
+			self.set("event_sync", "sync_config_from_server", True)
+			self.set("event_sync", "sync_config_to_server", True)
+			self.set("event_sync", "cache_products", True)
+			self.set("precondition_cache_ready_user_logged_in", "config_cached", True)
+			self.set("precondition_cache_ready_user_logged_in", "products_cached", True)
+			self.set("precondition_cache_ready", "config_cached", True)
+			self.set("precondition_cache_ready", "products_cached", True)
