@@ -265,7 +265,9 @@ def install_service_windows() -> None:
 	if win32process.IsWow64Process():
 		winreg.DisableReflectionKey(key_handle)
 	winreg.SetValueEx(key_handle, "DependOnService", 0, winreg.REG_MULTI_SZ, ["Dhcp"])
-	# winreg.SetValueEx(key_handle, 'DependOnService', 0, winreg.REG_MULTI_SZ, ["Dhcp", "Dnscache"])
+	# SC failure opsiclientd actions= restart/60000/restart/60000/restart/60000 reset= 86400
+	failure_actions = "80510100000000000000000003000000140000000100000060ea00000100000060ea00000100000060ea0000"
+	winreg.SetValueEx(key_handle, "FailureActions", 0, winreg.REG_BINARY, bytes.fromhex(failure_actions))
 	winreg.CloseKey(key_handle)
 
 	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control")
@@ -276,7 +278,7 @@ def install_service_windows() -> None:
 		current_timeout = winreg.QueryValueEx(key_handle, "ServicesPipeTimeout", 0)[0]
 	except Exception:
 		logger.debug("Did not get ServicesPipeTimeout from registry")
-	# Insure to have timeout of at least SERVICES_PIPE_TIMEOUT_WINDOWS
+	# Make sure to have a timeout of at least SERVICES_PIPE_TIMEOUT_WINDOWS
 	if current_timeout < SERVICES_PIPE_TIMEOUT_WINDOWS:
 		winreg.SetValueEx(key_handle, "ServicesPipeTimeout", 0, winreg.REG_DWORD, SERVICES_PIPE_TIMEOUT_WINDOWS)
 	winreg.CloseKey(key_handle)
