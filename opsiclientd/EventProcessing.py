@@ -958,13 +958,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						logger.error("Unknown operating system - skipping processproducts parameter for action processor call")
 
 				if productInfo:
-					for product in self._configService.product_getObjects(
-						attributes=["id", "name", "productVersion", "packageVersion"], id=productIds
+					depot_id = config.get("depot_server", "depot_id")
+					for product in self._configService.productOnDepot_getObjects(
+						attributes=["id", "name", "productVersion", "packageVersion"], id=productIds, depotId=depot_id
 					):
 						for p_info in productInfo:
 							if p_info.id == product.id:
-								if p_info.productVersion == product.productVersion and p_info.packageVersion == product.packageVersion:
-									p_info.name = product.name
+								p_info.productVersion = product.productVersion
+								p_info.packageVersion = product.packageVersion
+								p_info.name = product.name
 								break
 
 				self.processActionWarningTime(productInfo)
