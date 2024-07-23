@@ -960,7 +960,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if productInfo:
 					depot_id = config.get("depot_server", "depot_id")
 					for product in self._configService.productOnDepot_getObjects(
-						attributes=["id", "name", "productVersion", "packageVersion"], id=productIds, depotId=depot_id
+						attributes=["id", "name", "productVersion", "packageVersion"], productId=productIds, depotId=depot_id
 					):
 						for p_info in productInfo:
 							if p_info.id == product.id:
