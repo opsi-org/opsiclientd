@@ -1284,10 +1284,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		product_ids = [p.id for p in productInfo]
 		template = config.get("opsiclientd_notifier", "product_info")
 		product_list = ", ".join(
-			template.replace("{id}", p.id)
-			.replace("{name}", p.name)
-			.replace("{productVersion}", p.productVersion)
-			.replace("{packageVersion}", p.packageVersion)
+			template.replace("{id}", p.id or "None")
+			.replace("{name}", p.name or "None")
+			.replace("{productVersion}", p.productVersion or "None")
+			.replace("{packageVersion}", p.packageVersion or "None")
 			for p in productInfo
 			if p.id != "opsi-script"
 		)
