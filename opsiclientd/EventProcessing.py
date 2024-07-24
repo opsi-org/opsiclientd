@@ -959,15 +959,34 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 				if productInfo:
 					depot_id = config.get("depot_server", "depot_id")
+					count = 0
 					for product in self._configService.productOnDepot_getObjects(
-						attributes=["id", "name", "productVersion", "packageVersion"], productId=productIds, depotId=depot_id
+						attributes=["productId", "productVersion", "packageVersion"], productId=productIds, depotId=depot_id
+					):
+						for p_info in productInfo:
+							if p_info.id == product.productId:
+								p_info.productVersion = product.productVersion
+								p_info.packageVersion = product.packageVersion
+								count += 1
+								break
+						if count == len(productIds):
+							break
+
+					count = 0
+					for product in self._configService.product_getObjects(
+						attributes=["id", "name", "productVersion", "packageVersion"], id=productIds
 					):
 						for p_info in productInfo:
 							if p_info.id == product.id:
-								p_info.productVersion = product.productVersion
-								p_info.packageVersion = product.packageVersion
-								p_info.name = product.name
+								if p_info.productVersion == product.productVersion and p_info.packageVersion == product.packageVersion:
+									p_info.name = product.name
+								count += 1
 								break
+						if count == len(productIds):
+							break
+
+
+
 
 				self.processActionWarningTime(productInfo)
 				try:
