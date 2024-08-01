@@ -181,11 +181,19 @@ def check_signature(bin_dir: str) -> None:
 
 
 def notify_posix_terminals(message: str) -> None:
-	if not RUNNING_ON_WINDOWS and which("wall"):
-		# On non-Windows systems, use 'wall' to display a message before reboot/shutdown
-		command = [which("wall"), "-n", message]
-		logger.debug("Executing %s", command)
-		try:
-			execute(command, shell=False)
-		except Exception as err:
-			logger.warning("Failed to notify users via 'wall': %s", err)
+	if RUNNING_ON_WINDOWS:
+		logger.debug("Running on windows, not notifying terminals of reboot/shutdown")
+		return
+	try:
+		wall_path = which("wall")
+	except RuntimeError:
+		logger.warning("Binary 'wall' not found in PATH, not notifying terminals of reboot/shutdown.")
+		return
+
+	# On non-Windows systems, use 'wall' to display a message before reboot/shutdown
+	command = [wall_path, "-n", message]
+	logger.debug("Executing %s", command)
+	try:
+		execute(command, shell=False)
+	except Exception as err:
+		logger.warning("Failed to notify users via 'wall': %s", err)
