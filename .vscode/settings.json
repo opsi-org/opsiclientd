@@ -29,5 +29,6 @@
 	],
 	"mypy-type-checker.args": [
 		"--show-error-codes"
-	]
+	],
+	"python.analysis.typeCheckingMode": "basic"
 }
