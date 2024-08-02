@@ -258,17 +258,21 @@ class BaseMiddleware:
 					session.add_cookie_to_headers(headers)
 
 				host = request_headers.get("host", "localhost:4447").split(":")[0]
-				origin_scheme = "https"
-				origin_port = self._server_port
+				origin_address = f"https://{host}:{self._server_port}"
 				try:
-					origin = urlparse(request_headers["origin"])
-					origin_scheme = origin.scheme
-					if origin.port:
-						origin_port = int(origin.port)
-				except Exception:
+					# "origin" is only set for cross-origin requests
+					if request_headers["origin"]:
+						origin = urlparse(request_headers["origin"])
+						origin_address = f"{origin.scheme}://{origin.hostname}"
+						if origin.port:
+							origin_address = f"{origin_address}:{origin.port}"
+				except Exception as error:
+					logger.debug("Exception in origin handling: %s", error)
 					pass
-
-				headers.append("Access-Control-Allow-Origin", f"{origin_scheme}://{host}:{origin_port}")
+				# unfortunately we cannot set multiple origins here
+				# see https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS/Errors/CORSMultipleAllowOriginNotAllowed
+				# but we can set acao to the incoming origin address
+				headers.append("Access-Control-Allow-Origin", origin_address)
 				headers.append("Access-Control-Allow-Methods", "*")
 				headers.append(
 					"Access-Control-Allow-Headers",
