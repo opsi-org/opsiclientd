@@ -128,7 +128,6 @@ def get_basic_auth(headers: Headers) -> BasicAuth:
 class BaseMiddleware:
 	_max_authentication_failures = config.get("control_server", "max_authentication_failures")
 	_server_port: int = int(config.get("control_server", "port"))
-	_custom_access_control_allow_origin = config.get("control_server", "custom_access_control_allow_origin")
 
 	def __init__(self, app: FastAPI) -> None:
 		self._app = app

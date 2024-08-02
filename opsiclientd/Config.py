@@ -241,7 +241,6 @@ class Config(metaclass=Singleton):
 				"process_actions_event": "auto",
 				"skip_setup_firewall": False,
 				"start_delay": 0,
-				"custom_access_control_allow_origin": [],
 			},
 			"notification_server": {
 				"interface": ["127.0.0.1", "::1"],
