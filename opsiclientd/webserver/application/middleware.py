@@ -258,28 +258,23 @@ class BaseMiddleware:
 				if session:
 					session.add_cookie_to_headers(headers)
 
-				# host = request_headers.get("host", "localhost:4447").split(":")[0]
-				# origin_scheme = "https"
-				# origin_port = self._server_port
+				host = request_headers.get("host", "localhost:4447").split(":")[0]
+				origin_address = f"https://{host}:{self._server_port}"
 				logger.devel("raw origin: %s", request_headers.get("origin"))
 				try:
-					origin = urlparse(request_headers["origin"])
-					# origin_scheme = origin.scheme
-					# if origin.port:
-					# origin_port = int(origin.port)
-					if origin:
-						logger.devel("caught origin %s", origin)
+					# "origin" is only set for cross-origin requests
+					if request_headers["origin"]:
+						origin = urlparse(request_headers["origin"])
+						origin_address = f"{origin.scheme}://{origin.hostname}"
+						if origin.port:
+							origin_address = f"{origin_address}:{origin.port}"
 				except Exception as error:
 					logger.devel("Exception in origin handling: %s", error)
 					pass
-				headers.append("Access-Control-Allow-Origin", "*")
 				logger.devel("request headers: %s", list(request_headers.values()))
-				# if not self._custom_access_control_allow_origin:
-				# headers.append("Access-Control-Allow-Origin", f"{origin_scheme}://{host}:{origin_port}")
-				# else:
-				# # custom origin is set and host is in the list
-				# # unfortunately we cannot set multiple origins here
-				# # see https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS/Errors/CORSMultipleAllowOriginNotAllowed
+				# unfortunately we cannot set multiple origins here
+				# see https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS/Errors/CORSMultipleAllowOriginNotAllowed
+				headers.append("Access-Control-Allow-Origin", origin_address)
 				# headers.append("Access-Control-Allow-Origin", "*")
 				headers.append("Access-Control-Allow-Methods", "*")
 				headers.append(
