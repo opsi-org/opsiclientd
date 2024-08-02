@@ -270,9 +270,8 @@ class BaseMiddleware:
 						logger.devel("caught origin %s", origin)
 				except Exception:
 					pass
-				logger.devel("caught host %r", host)
 				logger.devel("request headers: %s", list(request_headers.values()))
-				if not self._custom_access_control_allow_origin or host not in self._custom_access_control_allow_origin:
+				if not self._custom_access_control_allow_origin:
 					headers.append("Access-Control-Allow-Origin", f"{origin_scheme}://{host}:{origin_port}")
 				else:
 					# custom origin is set and host is in the list
