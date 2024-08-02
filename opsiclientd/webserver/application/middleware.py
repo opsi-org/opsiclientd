@@ -260,7 +260,6 @@ class BaseMiddleware:
 
 				host = request_headers.get("host", "localhost:4447").split(":")[0]
 				origin_address = f"https://{host}:{self._server_port}"
-				logger.devel("raw origin: %s", request_headers.get("origin"))
 				try:
 					# "origin" is only set for cross-origin requests
 					if request_headers["origin"]:
@@ -269,13 +268,12 @@ class BaseMiddleware:
 						if origin.port:
 							origin_address = f"{origin_address}:{origin.port}"
 				except Exception as error:
-					logger.devel("Exception in origin handling: %s", error)
+					logger.debug("Exception in origin handling: %s", error)
 					pass
-				logger.devel("request headers: %s", list(request_headers.values()))
 				# unfortunately we cannot set multiple origins here
 				# see https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS/Errors/CORSMultipleAllowOriginNotAllowed
+				# but we can set acao to the incoming origin address
 				headers.append("Access-Control-Allow-Origin", origin_address)
-				# headers.append("Access-Control-Allow-Origin", "*")
 				headers.append("Access-Control-Allow-Methods", "*")
 				headers.append(
 					"Access-Control-Allow-Headers",
