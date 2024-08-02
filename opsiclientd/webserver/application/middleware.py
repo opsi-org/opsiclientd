@@ -128,6 +128,7 @@ def get_basic_auth(headers: Headers) -> BasicAuth:
 class BaseMiddleware:
 	_max_authentication_failures = config.get("control_server", "max_authentication_failures")
 	_server_port: int = int(config.get("control_server", "port"))
+	_custom_access_control_allow_origin = config.get("control_server", "custom_access_control_allow_origin")
 
 	def __init__(self, app: FastAPI) -> None:
 		self._app = app
@@ -260,15 +261,24 @@ class BaseMiddleware:
 				host = request_headers.get("host", "localhost:4447").split(":")[0]
 				origin_scheme = "https"
 				origin_port = self._server_port
+				origin_host = "unset"
 				try:
 					origin = urlparse(request_headers["origin"])
 					origin_scheme = origin.scheme
 					if origin.port:
 						origin_port = int(origin.port)
+					if origin.hostname:
+						origin_host = origin.hostname
 				except Exception:
 					pass
-
-				headers.append("Access-Control-Allow-Origin", f"{origin_scheme}://{host}:{origin_port}")
+				logger.devel("caught origin host %r", origin_host)
+				if not self._custom_access_control_allow_origin or origin_host not in self._custom_access_control_allow_origin:
+					headers.append("Access-Control-Allow-Origin", f"{origin_scheme}://{host}:{origin_port}")
+				else:
+					# custom origin is set and host is in the list
+					# unfortunately we cannot set multiple origins here
+					# see https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS/Errors/CORSMultipleAllowOriginNotAllowed
+					headers.append("Access-Control-Allow-Origin", "*")
 				headers.append("Access-Control-Allow-Methods", "*")
 				headers.append(
 					"Access-Control-Allow-Headers",
