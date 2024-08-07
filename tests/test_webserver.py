@@ -28,4 +28,4 @@ def test_authorization(test_client: OpsiclientdTestClient, opsiclientd_auth: tup
 		res = client.get("/favicon.ico")
 		assert res.status_code == 200
 		res = client.get("/rpc")
-		assert res.status_code == 403
+		assert res.status_code == 401  # This should be unauthorized 401 because we are not authenticated at all
