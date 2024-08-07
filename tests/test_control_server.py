@@ -161,9 +161,13 @@ def test_log_viewer_auth(test_client: OpsiclientdTestClient, opsiclientd_auth: t
 
 
 def test_kiosk_auth(default_config: Config, test_client: OpsiclientdTestClient) -> None:  # noqa
+	max_authentication_failures = 2
 	# Kiosk allows connection from 127.0.0.1 without auth
-	with test_client as client:
-		for _ in range(3):  # repeat to check against blocked client
+	with (
+		test_client as client,
+		patch("opsiclientd.webserver.application.middleware.BaseMiddleware._max_authentication_failures", max_authentication_failures),
+	):
+		for _ in range(max_authentication_failures + 1):  # repeat to check against blocked client
 			response = client.jsonrpc20(path="/kiosk", method="getClientId", params=[], id="1")
 			assert "error" not in response
 			assert response["result"] == default_config.get("global", "host_id")
