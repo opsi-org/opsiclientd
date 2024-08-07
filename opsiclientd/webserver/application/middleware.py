@@ -54,6 +54,12 @@ BasicAuth = namedtuple("BasicAuth", ["username", "password"])
 default_server_header = f"opsiclientd {__version__}"
 
 
+def unauthenticated_access_allowed(scope: Scope) -> bool:
+	return scope["client"][0] in ("127.0.0.1", "::1") and (
+		scope["path"].startswith(("/kiosk", "/static")) or scope["path"] in ("/", "/favicon.ico")
+	)
+
+
 def get_server_date() -> tuple[str, str]:
 	global server_date
 	now = int(time())
@@ -197,16 +203,13 @@ class BaseMiddleware:
 			session.authenticated = True
 			logger.info("User %r authenticated from %r", session.username, session.client_addr)
 		except:
-			if scope["client"][0] in ("127.0.0.1", "::1") and (
-				scope["path"].startswith(("/kiosk", "/static")) or scope["path"] in ("/", "/favicon.ico")
-			):
-				logger.info("Allow unauthenticated access to %r from localhost", scope["path"])
-			else:
-				# Add timestamp to failures list if not accessing paths that are allowed without authentication
-				if session.client_addr not in self._auth_failures:
-					self._auth_failures[session.client_addr] = []
-				self._auth_failures[session.client_addr].append(current_timestamp)
+			if unauthenticated_access_allowed(scope):
 				raise
+			# Add timestamp to failures list if not accessing paths that are allowed without authentication
+			if session.client_addr not in self._auth_failures:
+				self._auth_failures[session.client_addr] = []
+			self._auth_failures[session.client_addr].append(current_timestamp)
+			raise
 
 	async def handle_request(self, scope: Scope, receive: Receive, send: Send) -> None:
 		scope["request_headers"] = request_headers = Headers(scope=scope)
@@ -242,7 +245,13 @@ class BaseMiddleware:
 
 		if not session.authenticated:
 			self.remove_expired_sessions()
-			await self.authenticate(scope)
+			try:
+				await self.authenticate(scope)
+			except Exception:
+				if unauthenticated_access_allowed(scope):
+					logger.info("Allow unauthenticated access to %r from localhost", scope["path"])
+				else:
+					raise
 
 		async def send_wrapper(message: Message) -> None:
 			if message["type"] == "http.response.start":
