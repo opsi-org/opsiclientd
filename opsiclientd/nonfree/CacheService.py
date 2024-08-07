@@ -698,13 +698,18 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					self._backendTracker.clearModifications()
 					try:
 						instlog = os.path.join(config.get("global", "log_dir"), "opsi-script.log")
+						if not RUNNING_ON_WINDOWS:
+							# for posix, instlogs are collected in opsi-script directory
+							instlog = os.path.join(config.get("global", "log_dir"), "opsi-script", "opsi-script.log")
 						logger.debug("Checking if a custom logfile is given in global action_processor section")
 						try:
 							commandParts = config.get("action_processor", "command").split()
 							if "/logfile" in commandParts:
 								instlog = commandParts[commandParts.index("/logfile") + 1]
+							if "-logfile" in commandParts:
+								instlog = commandParts[commandParts.index("-logfile") + 1]
 						except Exception:
-							pass
+							logger.warning("Failed to get custom logfile from action_processor command")
 
 						if os.path.isfile(instlog):
 							logger.info("Syncing instlog %s", instlog)
