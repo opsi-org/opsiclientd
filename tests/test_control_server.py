@@ -163,9 +163,10 @@ def test_log_viewer_auth(test_client: OpsiclientdTestClient, opsiclientd_auth: t
 def test_kiosk_auth(default_config: Config, test_client: OpsiclientdTestClient) -> None:  # noqa
 	# Kiosk allows connection from 127.0.0.1 without auth
 	with test_client as client:
-		response = client.jsonrpc20(path="/kiosk", method="getClientId", params=[], id="1")
-		assert "error" not in response
-		assert response["result"] == default_config.get("global", "host_id")
+		for _ in range(3):  # repeat to check against blocked client
+			response = client.jsonrpc20(path="/kiosk", method="getClientId", params=[], id="1")
+			assert "error" not in response
+			assert response["result"] == default_config.get("global", "host_id")
 
 		test_client.set_client_address("1.2.3.4", 12345)
 		with pytest.raises(HTTPStatusError, match="401 Unauthorized"):
