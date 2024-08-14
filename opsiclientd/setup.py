@@ -203,13 +203,13 @@ def setup_firewall_linux() -> None:
 
 def setup_firewall_macos() -> None:
 	logger.notice("Configure MacOS firewall")
-	cmds = []
-
-	for path in ("/usr/local/bin/opsiclientd", "/usr/local/lib/opsiclientd/opsiclientd"):
-		cmds.append(["/usr/libexec/ApplicationFirewall/socketfilterfw", "--add", path])
-		cmds.append(["/usr/libexec/ApplicationFirewall/socketfilterfw", "--unblockapp", path])
-
-	for cmd in cmds:
+	path = "/usr/local/lib/opsiclientd/opsiclientd"
+	for cmd in (
+		# --add will add the app multiple times, so remove first
+		["/usr/libexec/ApplicationFirewall/socketfilterfw", "--remove", path],
+		["/usr/libexec/ApplicationFirewall/socketfilterfw", "--add", path],
+		["/usr/libexec/ApplicationFirewall/socketfilterfw", "--unblockapp", path],
+	):
 		logger.info("Running command: %s", str(cmd))
 		subprocess.call(cmd)
 
