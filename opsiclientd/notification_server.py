@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import json
-from asyncio import AbstractEventLoop, Protocol, Server, Transport, get_event_loop, run, sleep
+from asyncio import AbstractEventLoop, BaseTransport, Protocol, Server, Transport, get_event_loop, run, sleep
 from dataclasses import asdict, dataclass, field
 from threading import Event, Lock, Thread
 from typing import Any
@@ -51,11 +51,11 @@ class NotificationServerClientConnection(Protocol):
 	def subjects(self) -> list[Subject]:
 		return self._notification_server._subjects
 
-	def connection_made(self, transport: Transport) -> None:
+	def connection_made(self, transport: BaseTransport) -> None:
 		self._peer = transport.get_extra_info("peername")
 		logger.info("%s - connection made", self)
 		try:
-			self._transport = transport  # either Transport or uvloop.loop.TCPTransport (C struct) depending on backend
+			self._transport = transport  # type: ignore[assignment] # either Transport or uvloop.loop.TCPTransport (C struct) depending on backend
 			self._notification_server.client_connected(self)
 		except Exception as err:
 			logger.warning("Error handling connection_made: %s", err, exc_info=True)
