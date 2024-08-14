@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import json
-from asyncio import AbstractEventLoop, BaseTransport, Protocol, Server, Transport, get_event_loop, run, sleep
+from asyncio import AbstractEventLoop, BaseTransport, Protocol, Server, WriteTransport, get_event_loop, run, sleep
 from dataclasses import asdict, dataclass, field
 from threading import Event, Lock, Thread
 from typing import Any
@@ -39,7 +39,7 @@ class NotificationServerClientConnection(Protocol):
 		self._notification_server = notification_server
 		self._buffer = bytearray()
 		self._peer: tuple[str, int] = ("", 0)
-		self._transport: Transport
+		self._transport: WriteTransport
 		self._closed = Event()
 
 	def __str__(self) -> str:
@@ -55,14 +55,12 @@ class NotificationServerClientConnection(Protocol):
 		self._peer = transport.get_extra_info("peername")
 		logger.info("%s - connection made", self)
 		logger.devel("Transport: %r", transport)
-		logger.devel("Transport type: %s", type(transport))
-		logger.devel("Peer: %r", self._peer)
 		try:
-			assert isinstance(transport, Transport)
+			assert isinstance(transport, WriteTransport)
 			self._transport = transport
 			self._notification_server.client_connected(self)
 		except Exception as err:
-			logger.devel("Error handling connection_made: %s", err, exc_info=True)
+			logger.warning("Error handling connection_made: %s", err, exc_info=True)
 			raise
 
 	def connection_lost(self, exc: Exception | None = None) -> None:
