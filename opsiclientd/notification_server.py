@@ -54,6 +54,9 @@ class NotificationServerClientConnection(Protocol):
 	def connection_made(self, transport: BaseTransport) -> None:
 		self._peer = transport.get_extra_info("peername")
 		logger.info("%s - connection made", self)
+		logger.devel("Transport: %r", transport)
+		logger.devel("Transport type: %s", type(transport))
+		logger.devel("Peer: %r", self._peer)
 		try:
 			assert isinstance(transport, Transport)
 			self._transport = transport
