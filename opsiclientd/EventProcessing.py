@@ -707,7 +707,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 		def copy2_check_size(src: str | Path, dst: str | Path) -> None:
 			logger.debug("Copying '%s' to '%s'", src, dst)
-			shutil.copy2(src, dst)
+			if RUNNING_ON_MACOS:
+				# shutil.copy(src, dst)
+				subprocess.call(["cp", "-a", src, dst])
+			else:
+				shutil.copy2(src, dst)
 			src_size = os.stat(src).st_size
 			dst_size = os.stat(dst).st_size
 			logger.debug("Copy of '%s' to '%s' done, sizes: %d, %d", src, dst, src_size, dst_size)
