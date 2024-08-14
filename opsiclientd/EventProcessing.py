@@ -704,14 +704,24 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.info("Deleting dir '%s'", actionProcessorLocalTmpDir)
 			shutil.rmtree(actionProcessorLocalTmpDir)
 		logger.info("Copying from '%s' to '%s'", actionProcessorRemoteDir, actionProcessorLocalTmpDir)
-		shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir)
+
+		def copy2_check_size(src: str | Path, dst: str | Path) -> None:
+			logger.debug("Copying '%s' to '%s'", src, dst)
+			shutil.copy2(src, dst)
+			src_size = os.stat(src).st_size
+			dst_size = os.stat(dst).st_size
+			logger.debug("Copy of '%s' to '%s' done, sizes: %d, %d", src, dst, src_size, dst_size)
+			if src_size != dst_size:
+				raise RuntimeError(f"Copy of '{src}' to '{dst}' failed, sizes do not match: {src_size} != {dst_size}")
+
+		shutil.copytree(actionProcessorRemoteDir, actionProcessorLocalTmpDir, copy_function=copy2_check_size)
 		if RUNNING_ON_LINUX or RUNNING_ON_WINDOWS:
 			for common in os.listdir(actionProcessorCommonDir):
 				source = os.path.join(actionProcessorCommonDir, common)
 				if os.path.isdir(source):
-					shutil.copytree(source, os.path.join(actionProcessorLocalTmpDir, common))
+					shutil.copytree(source, os.path.join(actionProcessorLocalTmpDir, common), copy_function=copy2_check_size)
 				else:
-					shutil.copy2(source, os.path.join(actionProcessorLocalTmpDir, common))
+					copy2_check_size(source, os.path.join(actionProcessorLocalTmpDir, common))
 		if RUNNING_ON_WINDOWS:
 			# saving current opsi-script skin (set during opsi-client-agent setup with optional corporate identity)
 			if os.path.exists(os.path.join(actionProcessorLocalDir, "skin")) and os.listdir(os.path.join(actionProcessorLocalDir, "skin")):
@@ -984,9 +994,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 								break
 						if count == len(productIds):
 							break
-
-
-
 
 				self.processActionWarningTime(productInfo)
 				try:
