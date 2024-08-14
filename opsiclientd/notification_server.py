@@ -54,9 +54,12 @@ class NotificationServerClientConnection(Protocol):
 	def connection_made(self, transport: BaseTransport) -> None:
 		self._peer = transport.get_extra_info("peername")
 		logger.info("%s - connection made", self)
-		assert isinstance(transport, Transport)
-		self._transport = transport
-		self._notification_server.client_connected(self)
+		try:
+			self._transport = transport  # type: ignore[assignment] # either Transport or uvloop.loop.TCPTransport (C struct) depending on backend
+			self._notification_server.client_connected(self)
+		except Exception as err:
+			logger.warning("Error handling connection_made: %s", err, exc_info=True)
+			raise
 
 	def connection_lost(self, exc: Exception | None = None) -> None:
 		logger.info("%s - connection lost", self)
@@ -162,11 +165,13 @@ class NotificationServer(SubjectsObserver, Thread):
 			self.wait_ready(timeout=timeout)
 
 	def client_connected(self, client: NotificationServerClientConnection) -> None:
+		logger.debug("Client connected: %r", client)
 		if client not in self._clients:
 			self._clients.append(client)
 			self.subjectsChanged(self.getSubjects(), clients=[client])
 
 	def client_disconnected(self, client: NotificationServerClientConnection) -> None:
+		logger.debug("Client disconnected: %r", client)
 		if client in self._clients:
 			self._clients.remove(client)
 
