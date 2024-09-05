@@ -1189,13 +1189,15 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 							releasePackageName = "mshotfix-win2022"
 						elif currentBuild == 22000:
 							releasePackageName = "mshotfix-win11-21h2"
-						elif currentBuild == 22621:
+						elif currentBuild in (22621, 22631):
 							releasePackageName = "mshotfix-win11-22h2"
-						elif currentBuild > 22621:
+						elif currentBuild == 26100:
+							releasePackageName = "mshotfix-win11-24h2"
+						elif currentBuild > 26100:
 							logger.warning(
-								"Unknown windows build %s. Maybe update opsi-client-agent. Using fallback mshotfix-win11-22h2", currentBuild
+								"Unknown windows build %s. Maybe update opsi-client-agent. Using fallback mshotfix-win11-24h2", currentBuild
 							)
-							releasePackageName = "mshotfix-win11-22h2"
+							releasePackageName = "mshotfix-win11-24h2"
 						else:  # win10
 							# Setting default to 1507-Build
 							if not releaseId:
