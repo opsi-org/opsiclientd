@@ -37,7 +37,7 @@ from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, secret_filter
 from opsicommon.objects import ConfigState, ObjectToGroup, Product, ProductDependency, ProductOnClient, ProductOnDepot
 from opsicommon.system.info import is_windows
-from opsicommon.types import forceBool, forceInt, forceProductIdList, forceUnicode, forceHostId
+from opsicommon.types import forceBool, forceHostId, forceInt, forceProductIdList, forceUnicode
 from opsicommon.utils import generate_opsi_host_key
 
 from opsiclientd import __version__
@@ -88,8 +88,9 @@ class PipeControlInterface(Interface):
 		event_generator.createAndFireEvent(eventInfo=event_info, can_cancel=can_cancel)
 
 	def _processActionRequests(self, product_ids: list[str] | None = None) -> None:
-		event = self.opsiclientd.config.get("control_server", "process_actions_event")
-		if not event or event == "auto":
+		event = self.opsiclientd.config.get("control_server", "process_actions_event") or "auto"
+		logger.info("Configured process actions event: %r", event)
+		if event == "auto":
 			timer_active = False
 			on_demand_active = False
 			for event_config in getEventConfigs().values():
@@ -108,6 +109,8 @@ class PipeControlInterface(Interface):
 		event_info: dict[str, str | list[str]] = {}
 		if product_ids:
 			event_info = {"product_ids": forceProductIdList(product_ids)}
+
+		logger.info("Processing action requests with event %r and event_info %r", event, event_info)
 		self._fireEvent(name=event, event_info=event_info)
 
 	def getPossibleMethods_listOfHashes(self) -> list[dict[str, Any]]:
