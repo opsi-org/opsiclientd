@@ -1031,7 +1031,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 				else:
 					verify_modules(self._configService.backend_info(), ["vpn"])
 			except Exception as err:
-				raise RuntimeError("Cannot cache config: {err}") from err
+				raise RuntimeError("Cannot cache products: {err}") from err
 
 			try:
 				if self._configService.hostname.lower() not in ("localhost", "127.0.0.1", "::1"):
