@@ -43,6 +43,7 @@ from opsicommon.exceptions import (
 	OpsiServiceVerificationError,
 )
 from opsicommon.logging import get_logger, log_context
+from opsicommon.logging.constants import TRACE
 from opsicommon.messagebus.file_transfer import process_messagebus_message as process_filetransfer_message
 from opsicommon.messagebus.message import (
 	Error,
@@ -295,7 +296,9 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			self.service_client.messagebus.send_message(response)
 
 	async def _process_message(self, message: Message) -> None:
-		# logger.devel("Message received: %s", message.to_dict())
+		if logger.isEnabledFor(TRACE):
+			logger.trace("Message received: %s", message.to_dict())
+
 		if isinstance(message, JSONRPCRequestMessage):
 			response = JSONRPCResponseMessage(sender="@", channel=message.back_channel or message.sender, rpc_id=message.rpc_id)
 			try:
@@ -309,6 +312,8 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 					"message": str(err),
 					"data": {"class": err.__class__.__name__, "details": traceback.format_exc()},
 				}
+			if logger.isEnabledFor(TRACE):
+				logger.trace("Sending response: %s", response.to_dict())
 			await self.service_client.messagebus.async_send_message(response)
 		elif isinstance(message, TraceRequestMessage):
 			await self.service_client.messagebus.async_send_message(
