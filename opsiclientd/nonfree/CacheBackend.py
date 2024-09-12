@@ -163,6 +163,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		with_defaults: bool = True,
 	) -> dict[str, dict[str, list[Any]]]:
 		try:
+			logger.debug("Reading config values from cache file '%s'", self._configValuesCacheFile)
 			assert self._configValuesCacheFile
 			with open(self._configValuesCacheFile, "r", encoding="utf-8") as file:
 				return json.loads(file.read())
@@ -532,9 +533,10 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		)
 
 		try:
+			logger.debug("Writing config values to cache file '%s'", self._configValuesCacheFile)
 			assert self._configValuesCacheFile
 			with open(self._configValuesCacheFile, "w", encoding="utf-8") as file:
-				file.write(json.dumps(self._masterBackend.configState_getValues(None, self._clientId, True)))
+				file.write(json.dumps(self._masterBackend.configState_getValues(["clientconfig.*", "opsiclientd.*"], self._clientId, True)))
 		except Exception as err:
 			logger.error("Failed to write config values cache file '%s': %s", self._configValuesCacheFile, err)
 
