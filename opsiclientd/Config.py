@@ -275,11 +275,20 @@ class Config(metaclass=Singleton):
 	@staticmethod
 	def getBaseDirectory() -> str:
 		if RUNNING_ON_WINDOWS:
-			pfp = os.environ.get("PROGRAMFILES(X86)", os.environ.get("PROGRAMFILES", "c:\\Program Files"))
-			baseDir = os.path.join(pfp, "opsi.org", "opsi-client-agent")
+			for pfp in (
+				os.environ.get("PROGRAMFILES(X86)"),
+				"c:\\Program Files (x86)",
+				os.environ.get("PROGRAMFILES"),
+				"c:\\Program Files",
+			):
+				if pfp:
+					baseDir = os.path.join(pfp, "opsi.org", "opsi-client-agent")
+					if os.path.exists(baseDir):
+						break
 			if not os.path.exists(baseDir):
+				logger.warning("Could not find base directory (%s)", dict(os.environ))
 				try:
-					baseDir = os.path.abspath(os.path.dirname(sys.argv[0]))
+					baseDir = os.path.abspath(os.path.dirname(os.path.dirname(sys.argv[0])))
 				except Exception:
 					baseDir = "."
 		elif RUNNING_ON_MACOS:
@@ -287,6 +296,7 @@ class Config(metaclass=Singleton):
 		else:
 			baseDir = os.path.join("/usr", "lib", "opsi-client-agent")
 
+		logger.debug("Base directory is '%s'", baseDir)
 		return baseDir
 
 	@property
