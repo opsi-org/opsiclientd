@@ -17,7 +17,6 @@ import os
 import shutil
 import threading
 import time
-from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Type
@@ -44,10 +43,8 @@ from opsicommon.objects import LocalbootProduct, ProductOnClient
 from opsicommon.types import (
 	forceBool,
 	forceInt,
-	forceObjectIdList,
 	forceProductIdList,
 	forceUnicode,
-	forceUnicodeList,
 )
 from packaging import version
 
@@ -360,43 +357,6 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):
 	def accessControl_authenticated(self) -> bool:
 		return True
 
-	def configState_getValues(
-		self,
-		config_ids: list[str] | str | None = None,
-		object_ids: list[str] | str | None = None,
-		with_defaults: bool = True,
-	) -> dict[str, dict[str, list[Any]]]:
-		config_ids = forceUnicodeList(config_ids or [])
-		object_ids = forceObjectIdList(object_ids or [])
-		res: dict[str, dict[str, list[Any]]] = {}
-		if with_defaults:
-			configserver_id = self.host_getIdents(type="OpsiConfigserver")[0]  # type: ignore[attr-defined]
-			defaults = {c.id: c.defaultValues for c in self.config_getObjects(id=config_ids)}  # type: ignore[attr-defined]
-			res = {h.id: defaults.copy() for h in self.host_getObjects(attributes=["id"], id=object_ids)}  # type: ignore[attr-defined]
-			client_id_to_depot_id = {
-				ctd.getObjectId(): ctd.getValues()[0]
-				for ctd in self.configState_getObjects(objectId=object_ids, configId="clientconfig.depot.id")  # type: ignore[attr-defined]
-			}
-			depot_values: dict[str, dict[str, list[Any]]] = defaultdict(lambda: defaultdict(list))
-			depot_ids = list(set(client_id_to_depot_id.values()))
-			if configserver_id not in depot_ids:
-				depot_ids.append(configserver_id)
-			if depot_ids:
-				for config_state in self.configState_getObjects(configId=config_ids, objectId=depot_ids):  # type: ignore[attr-defined]
-					depot_values[config_state.getObjectId()][config_state.getConfigId()] = config_state.values
-			for host in self.host_getObjects(attributes=["id"], id=object_ids):  # type: ignore[attr-defined]
-				host_id = host.id
-				depot_id = client_id_to_depot_id.get(host_id)
-				if depot_id and depot_id in depot_values:
-					res[host_id].update(depot_values[depot_id])
-				elif not depot_id and configserver_id in depot_values:
-					res[host_id].update(depot_values[configserver_id])
-		for config_state in self.configState_getObjects(configId=config_ids, objectId=object_ids):  # type: ignore[attr-defined]
-			if config_state.objectId not in res:
-				res[config_state.objectId] = {}
-			res[config_state.objectId][config_state.configId] = config_state.values
-		return res
-
 	def productOnClient_getActionGroups(self, clientId: str) -> list[dict[str, Any]]:
 		"""
 		Get product action groups of action requests set for a client.
@@ -514,6 +474,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			self._opsiModulesFile = os.path.join(self._configCacheDir, "cached_modules")
 			self._opsiPasswdFile = os.path.join(self._configCacheDir, "cached_passwd")
 			self._auditHardwareConfigFile = os.path.join(self._configCacheDir, "cached_opsihwaudit.json")
+			self._configValuesCacheFile = os.path.join(self._configCacheDir, "cached_configvalues.json")
 
 			self._stopped = False
 			self._running = False
@@ -553,6 +514,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			"opsiModulesFile": self._opsiModulesFile,
 			"opsiPasswdFile": self._opsiPasswdFile,
 			"auditHardwareConfigFile": self._auditHardwareConfigFile,
+			"configValuesCacheFile": self._configValuesCacheFile,
 			"depotId": depot_id,
 		}
 		self._workBackend = SQLiteBackend(database=os.path.join(self._configCacheDir, "work.sqlite"), **backendArgs)

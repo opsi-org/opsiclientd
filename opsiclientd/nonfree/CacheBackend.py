@@ -90,6 +90,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		self._snapshotBackend: ConfigDataBackend | None = None
 		self._clientId: str | None = None
 		self._depotId: str | None = None
+		self._configValuesCacheFile: str | None = None
 		self._backendChangeListeners: list[BackendModificationListener] = []
 
 		for option, value in kwargs.items():
@@ -106,6 +107,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				self._depotId = forceHostId(value)
 			elif option == "backendinfo":
 				self._backendInfo = value
+			elif option == "configvaluescachefile":
+				self._configValuesCacheFile = value
 
 		if not self._workBackend:
 			raise BackendConfigurationError("Work backend undefined")
@@ -152,6 +155,20 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				config_states[idx].values = [self._depotId]
 		logger.trace("configState_getObjects returning %s", config_states)
 		return config_states
+
+	def configState_getValues(
+		self,
+		config_ids: list[str] | str | None = None,
+		object_ids: list[str] | str | None = None,
+		with_defaults: bool = True,
+	) -> dict[str, dict[str, list[Any]]]:
+		try:
+			assert self._configValuesCacheFile
+			with open(self._configValuesCacheFile, "r", encoding="utf-8") as file:
+				return json.loads(file.read())
+		except Exception as err:
+			logger.error("Failed to read config values cache file '%s': %s", self._configValuesCacheFile, err)
+		return {}
 
 	def _setMasterBackend(self, masterBackend: ConfigDataBackend) -> None:
 		self._masterBackend = masterBackend
@@ -513,6 +530,13 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			audit=False,
 			licenses=False,
 		)
+
+		try:
+			assert self._configValuesCacheFile
+			with open(self._configValuesCacheFile, "w", encoding="utf-8") as file:
+				file.write(json.dumps(self._masterBackend.configState_getValues(None, self._clientId, True)))
+		except Exception as err:
+			logger.error("Failed to write config values cache file '%s': %s", self._configValuesCacheFile, err)
 
 		self._snapshotBackend.backend_deleteBase()
 
