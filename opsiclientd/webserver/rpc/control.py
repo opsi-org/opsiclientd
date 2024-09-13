@@ -723,7 +723,7 @@ class ControlInterface(PipeControlInterface):
 			regex = re.compile(r"([A-Za-z]:\\.* .*.\.*)")  # match any full path with space
 			for index, part in enumerate(parts):
 				if re.search(regex, part) and not part.startswith(('"', "'")):
-					parts[index] = re.sub(regex, '"\\1"', part, count=1)
+					parts[index] = re.sub(regex, '"\\1"' if index == 0 else "'\\1'", part, count=1)
 		else:
 			raise ValueError(f"Invalid command {command}, must be str or list[str]")
 		if not parts:
