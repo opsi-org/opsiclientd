@@ -17,9 +17,9 @@ import os
 import socket
 import threading
 import time
-from pathlib import Path
 from ctypes import byref, c_char_p, c_ulong, create_string_buffer
 from datetime import datetime
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from opsicommon.logging import get_logger, log_context
@@ -138,7 +138,7 @@ class ClientConnection(threading.Thread):
 			return serialize_data(JSONRPCErrorResponse(id=0, error=str(rpc_error)), "json")
 
 	def executeRpc(
-		self, method: str, params: list[Any] | tuple[Any, ...] | None = None, with_lock: bool = True
+		self, method: str, params: list[Any] | tuple[Any, ...] | None = None, with_lock: bool = True, timeout: float = 5.0
 	) -> JSONRPCErrorResponse | JSONRPCResponse | JSONRPC20ErrorResponse | JSONRPC20Response:
 		params = params or []
 		with log_context({"instance": "control pipe"}):
@@ -154,7 +154,7 @@ class ClientConnection(threading.Thread):
 					request_json = serialize_data(request, "json")
 					logger.info("Sending request '%s' to client %s", request_json, self)
 					self.write(request_json)
-					response_json = self.read(3.0)
+					response_json = self.read(timeout)
 					if not response_json:
 						logger.warning("No response for method '%s' received from client %s", request["method"], self)
 						return JSONRPCResponse(id=rpc_id)
@@ -263,8 +263,9 @@ class ControlPipe(threading.Thread):
 		return False
 
 	def executeRpc(
-		self, method: str, *params: Any
+		self, method: str, params: list[Any] | None = None, *, timeout: float = 5.0
 	) -> list[JSONRPCResponse | JSONRPCErrorResponse | JSONRPC20Response | JSONRPC20ErrorResponse]:
+		params = params or []
 		with log_context({"instance": "control pipe"}):
 			if not self._clients:
 				raise RuntimeError("Cannot execute rpc, no client connected")
@@ -279,7 +280,7 @@ class ControlPipe(threading.Thread):
 			for client in clients:
 				if method == "loginUser" and not client.login_capable:
 					continue
-				response = client.executeRpc(method, params)
+				response = client.executeRpc(method, params, timeout=timeout)
 				responses.append(response)
 				if isinstance(response, (JSONRPCErrorResponse, JSONRPC20ErrorResponse)):
 					errors.append(str(response.error))

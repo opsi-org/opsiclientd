@@ -378,7 +378,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		if changed and self._controlPipe:
 			try:
-				self._controlPipe.executeRpc("blockLogin", self._blockLogin)
+				self._controlPipe.executeRpc("blockLogin", [self._blockLogin])
 			except Exception as rpc_error:
 				logger.debug(rpc_error)
 
@@ -903,7 +903,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._isRebootTriggered = True
 		if self._controlPipe:
 			try:
-				self._controlPipe.executeRpc("rebootTriggered", True)
+				self._controlPipe.executeRpc("rebootTriggered", [True])
 			except Exception as err:
 				logger.debug(err)
 		self.clearRebootRequest()
@@ -914,7 +914,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._isShutdownTriggered = True
 		if self._controlPipe:
 			try:
-				self._controlPipe.executeRpc("shutdownTriggered", True)
+				self._controlPipe.executeRpc("shutdownTriggered", [True])
 			except Exception as err:
 				logger.debug(err)
 		self.clearShutdownRequest()

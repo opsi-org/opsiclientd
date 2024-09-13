@@ -274,7 +274,7 @@ class OpsiclientdNT(Opsiclientd):
 		if not self._controlPipe.credentialProviderConnected(login_capable=True):
 			raise RuntimeError("No login capable opsi credential provider connected")
 		logger.info("Login capable opsi credential provider connected, calling loginUser")
-		for response in self._controlPipe.executeRpc("loginUser", username, password):
+		for response in self._controlPipe.executeRpc("loginUser", [username, password], timeout=30):
 			logger.debug("loginUser response: %r", response)
 			if isinstance(response, (JSONRPCResponse, JSONRPC20Response)) and response.result:
 				return True
