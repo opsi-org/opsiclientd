@@ -263,7 +263,7 @@ class ControlPipe(threading.Thread):
 		return False
 
 	def executeRpc(
-		self, method: str, *params: list[Any] | None = None, timeout: float = 5.0
+		self, method: str, params: list[Any] | None = None, *, timeout: float = 5.0
 	) -> list[JSONRPCResponse | JSONRPCErrorResponse | JSONRPC20Response | JSONRPC20ErrorResponse]:
 		params = params or []
 		with log_context({"instance": "control pipe"}):
