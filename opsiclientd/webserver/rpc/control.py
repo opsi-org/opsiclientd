@@ -720,7 +720,7 @@ class ControlInterface(PipeControlInterface):
 		elif isinstance(command, list):
 			parts = command
 			# catch <Drive>:.....extension and put in quotes if not already quoted
-			regex = re.compile(r"([A-Za-z]:\\.*.\.*)")  # match any ful path
+			regex = re.compile(r"([A-Za-z]:\\.* .*.\.*)")  # match any full path with space
 			for index, part in enumerate(parts):
 				if re.search(regex, part) and not part.startswith(('"', "'")):
 					parts[index] = re.sub(regex, '"\\1"', part, count=1)
