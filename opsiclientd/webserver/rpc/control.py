@@ -367,7 +367,12 @@ class ControlInterface(PipeControlInterface):
 		return f"command '{command}' executed"
 
 	def execute(
-		self, command: str, waitForEnding: bool = True, captureStderr: bool = True, encoding: str | None = None, timeout: int = 300
+		self,
+		command: str | list[str],
+		waitForEnding: bool = True,
+		captureStderr: bool = True,
+		encoding: str | None = None,
+		timeout: int = 300,
 	) -> str:
 		return System.execute(cmd=command, waitForEnding=waitForEnding, captureStderr=captureStderr, encoding=encoding, timeout=timeout)
 
@@ -691,7 +696,7 @@ class ControlInterface(PipeControlInterface):
 
 	def runAsOpsiSetupUser(
 		self,
-		command: str = "powershell.exe -ExecutionPolicy Bypass",
+		command: list[str] | str = "powershell.exe -ExecutionPolicy Bypass",
 		admin: bool = True,
 		recreate_user: bool = False,
 		remove_user: bool = False,
@@ -706,18 +711,30 @@ class ControlInterface(PipeControlInterface):
 			wait_for_ending = forceBool(wait_for_ending)
 
 		script = Path(self.opsiclientd.config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
-		# catch <Drive>:.....exe and put in quotes if not already quoted
-		if re.search("[A-Z]:.*\\.exe", command) and not command.startswith(('"', "'")):
-			command = re.sub("([A-Z]:.*\\.exe)", '"\\1"', command, count=1)
-		parts = shlex.split(command, posix=False)
+		if isinstance(command, str):
+			# quote actual command before splitting!
+			regex = re.compile("([A-Z]:.*\\.exe)")  # only match executable
+			if re.search(regex, command) and not command.startswith(('"', "'")):
+				command = re.sub(regex, '"\\1"', command, count=1)
+			parts = shlex.split(command, posix=False)
+		elif isinstance(command, list):
+			parts = command
+			# catch <Drive>:.....extension and put in quotes if not already quoted
+			regex = re.compile(r"([A-Za-z]:\\.*.\.*)")  # match any ful path
+			for index, part in enumerate(parts):
+				if re.search(regex, part) and not part.startswith(('"', "'")):
+					parts[index] = re.sub(regex, '"\\1"', part, count=1)
+		else:
+			raise ValueError(f"Invalid command {command}, must be str or list[str]")
 		if not parts:
 			raise ValueError(f"Invalid command {command}")
+
 		if len(parts) == 1:
 			script_content = f"Start-Process -FilePath {parts[0]} -Wait\r\n"
 		else:
-			script_content = (
-				f"""Start-Process -FilePath {parts[0]} -ArgumentList {','.join((f'"{entry}"' for entry in parts[1:]))} -Wait\r\n"""
-			)
+			script_content = f"""Start-Process -FilePath {parts[0]} -ArgumentList {','.join(
+				(f"'{entry}'" if entry.startswith('"') else f'"{entry}"' for entry in parts[1:])
+			)} -Wait\r\n"""
 		# WARNING: This part is not executed if the command call above initiates reboot
 		script_content += f'Remove-Item -Path "{str(script)}" -Force\r\n'
 		script.write_text(script_content, encoding="windows-1252")
