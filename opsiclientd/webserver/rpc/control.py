@@ -834,9 +834,8 @@ class ControlInterface(PipeControlInterface):
 		subprocess.run(["icacls", str(script), " /inheritance:r", "/grant:r", "SYSTEM:(OI)(CI)F"], check=False)
 
 		try:
-			elevated = " -Verb RunAs" if admin else ""
 			self._run_process_as_opsi_setup_user(
-				f'powershell.exe -ExecutionPolicy Bypass{elevated} -WindowStyle {shell_window_style} -File "{str(script)}"',
+				f'powershell.exe -ExecutionPolicy Bypass -WindowStyle {shell_window_style} -File "{str(script)}"',
 				admin,
 				recreate_user,
 			)
