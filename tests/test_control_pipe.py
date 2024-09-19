@@ -20,6 +20,7 @@ import pytest
 from opsiclientd.ControlPipe import ControlPipeFactory, PosixControlDomainSocket
 from opsiclientd.Opsiclientd import Opsiclientd
 from opsiclientd.webserver.rpc.jsonrpc import JSONRPCRequest, JSONRPCResponse, deserialize_data, jsonrpc_response_from_data, serialize_data
+
 from .utils import default_config  # noqa
 
 
@@ -92,7 +93,7 @@ def test_control_pipe() -> None:  # noqa
 		method = "some_method"
 		params = ["aßdöirkdksd", 2]
 		pipe_client.response_data = serialize_data({"id": 1, "result": "some result", "error": None}, "json")
-		response = control_pipe.executeRpc(method, *params)[0]
+		response = control_pipe.executeRpc(method, params)[0]
 
 		print(response)
 		print(pipe_client.data_received)
