@@ -37,7 +37,6 @@ pyinstaller-poetry:
       - csv
       # OPSI.Util.Ping needed for dynamic depot selection
       - OPSI.Util.Ping
-      - pkg_resources.extern
     windows:
       - pythoncom
       - win32com
