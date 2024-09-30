@@ -183,7 +183,7 @@ class Config(metaclass=Singleton):
 			logger.error("Failed to get FQDN: %s", err)
 			host_id = ""
 
-		self._config = {
+		self._config: dict[str, dict[str, Any]] = {
 			"system": {
 				"program_files_dir": "",
 			},
