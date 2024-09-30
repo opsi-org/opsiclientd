@@ -1900,6 +1900,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 								raise EventProcessingCanceled()
 							self._set_cancelable(False)
 
+							if self.event.eventConfig.cacheProducts and self.event.eventConfig.useCachedProducts:
+								self.cache_products(wait_for_ending=True)
+
 							if self.event.eventConfig.actionType == "login":
 								self.processUserLoginActions()
 							else:
@@ -1913,7 +1916,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					if self.event.eventConfig.syncConfigToServer or self.event.eventConfig.syncConfigFromServer:
 						self.sync_config(wait_for_ending=shutdown_or_reboot)
 
-					if self.event.eventConfig.cacheProducts:
+					if self.event.eventConfig.cacheProducts and not self.event.eventConfig.useCachedProducts
 						self.cache_products(wait_for_ending=shutdown_or_reboot)
 
 				finally:
