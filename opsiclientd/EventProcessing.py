@@ -1755,7 +1755,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			logger.error("Working window processing failed (start=%s, end=%s, now=%s): %s", start_str, end_str, now, err, exc_info=True)
 			return True
 
-	def cache_products(self, wait_for_ending: bool = False) -> None:
+	def cache_products(self, wait_for_ending: bool = False, fire_sync_completed_event: bool = True) -> None:
 		assert self.opsiclientd
 		if self.opsiclientd.getCacheService().isProductCacheServiceWorking():
 			logger.info("Already caching products")
@@ -1770,6 +1770,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				overallProgressObserver=self._overallProgressSubjectProxy,
 				dynamicBandwidth=self.event.eventConfig.cacheDynamicBandwidth,
 				maxBandwidth=self.event.eventConfig.cacheMaxBandwidth,
+				fireSyncCompletedEvent=fire_sync_completed_event,
 			)
 			if wait_for_ending:
 				self.setStatusMessage(_("Products cached"))
@@ -1901,7 +1902,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							self._set_cancelable(False)
 
 							if self.event.eventConfig.cacheProducts and self.event.eventConfig.useCachedProducts:
-								self.cache_products(wait_for_ending=True)
+								self.cache_products(wait_for_ending=True, fire_sync_completed_event=False)
 
 							if self.event.eventConfig.actionType == "login":
 								self.processUserLoginActions()

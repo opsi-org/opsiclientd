@@ -230,6 +230,7 @@ class CacheService(threading.Thread):
 		overallProgressObserver: ProgressSubjectProxy | None = None,
 		dynamicBandwidth: bool = True,
 		maxBandwidth: int = 0,
+		fireSyncCompletedEvent: bool = True,
 	) -> None:
 		self.initializeProductCacheService()
 		assert self._productCacheService
@@ -244,7 +245,9 @@ class CacheService(threading.Thread):
 		self._productCacheService.setDynamicBandwidth(dynamicBandwidth)
 		self._productCacheService.setMaxBandwidth(maxBandwidth)
 		self._productCacheService.cacheProducts(
-			productProgressObserver=productProgressObserver, overallProgressObserver=overallProgressObserver
+			productProgressObserver=productProgressObserver,
+			overallProgressObserver=overallProgressObserver,
+			fireSyncCompletedEvent=fireSyncCompletedEvent,
 		)
 
 		if waitForEnding:
@@ -856,6 +859,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 
 		self._impersonation = None
 		self._cacheProductsRequested = False
+		self._fireSyncCompletedEvent = True
 
 		self._maxBandwidth = 0
 		self._dynamicBandwidth = True
@@ -974,8 +978,12 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 			state.set("product_cache_service", self._state)
 
 	def cacheProducts(
-		self, productProgressObserver: ProgressSubjectProxy | None = None, overallProgressObserver: ProgressSubjectProxy | None = None
+		self,
+		productProgressObserver: ProgressSubjectProxy | None = None,
+		overallProgressObserver: ProgressSubjectProxy | None = None,
+		fireSyncCompletedEvent: bool = True,
 	) -> None:
+		self._fireSyncCompletedEvent = fireSyncCompletedEvent
 		self._cacheProductsRequested = True
 		self._productProgressObserver = productProgressObserver
 		self._overallProgressObserver = overallProgressObserver
@@ -1225,8 +1233,9 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 							self._state["products_cached"] = True
 							state.set("product_cache_service", self._state)
 
-							for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
-								eventGenerator.createAndFireEvent()
+							if self._fireSyncCompletedEvent:
+								for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
+									eventGenerator.createAndFireEvent()
 		except Exception as err:
 			logger.error("Failed to cache products: %s", err, exc_info=True)
 			timeline.addEvent(
