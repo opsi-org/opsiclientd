@@ -35,6 +35,7 @@ from opsicommon.types import (
 	forceUnicodeList,
 )
 from opsicommon.utils import Singleton
+from opsicommon.system.network import get_fqdn
 
 from opsiclientd.SystemCheck import (
 	RUNNING_ON_DARWIN,
@@ -176,6 +177,12 @@ class Config(metaclass=Singleton):
 		self._config_file_mtime: float = 0.0
 		self.disabledEventTypes: list[str] = []
 
+		try:
+			host_id = get_fqdn()
+		except Exception as err:
+			logger.error("Failed to get FQDN: %s", err)
+			host_id = ""
+
 		self._config = {
 			"system": {
 				"program_files_dir": "",
@@ -188,7 +195,7 @@ class Config(metaclass=Singleton):
 				"keep_rotated_logs": 10,
 				"max_log_size": 5.0,  # In MB
 				"max_log_transfer_size": 5.0,  # In MB
-				"host_id": System.getFQDN().lower(),
+				"host_id": host_id,
 				"opsi_host_key": "",
 				"wait_for_gui_timeout": 120,
 				"block_login_notifier": "",

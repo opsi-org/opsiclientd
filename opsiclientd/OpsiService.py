@@ -65,6 +65,7 @@ from opsicommon.messagebus.terminal import process_messagebus_message as process
 from opsicommon.messagebus.terminal import stop_running_terminals, terminals
 from opsicommon.ssl import install_ca, load_cas, remove_ca
 from opsicommon.system import lock_file
+from opsicommon.system.network import get_fqdn
 from opsicommon.types import (
 	forceBool,
 	forceFqdn,
@@ -626,11 +627,10 @@ class ServiceConnectionThread(KillableThread):
 						logger.debug(error, exc_info=True)
 
 						if isinstance(error, OpsiServiceAuthenticationError):
-							fqdn = System.getFQDN()
 							try:
-								fqdn = forceFqdn(fqdn)
+								fqdn = get_fqdn()
 							except Exception as fqdnError:
-								logger.warning("Failed to get fqdn from os, got '%s': %s", fqdn, fqdnError)
+								logger.warning("Failed to get FQDN: %s", fqdnError)
 								break
 
 							if self._username != fqdn:
