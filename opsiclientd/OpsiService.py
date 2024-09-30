@@ -68,7 +68,6 @@ from opsicommon.system import lock_file
 from opsicommon.system.network import get_fqdn
 from opsicommon.types import (
 	forceBool,
-	forceFqdn,
 	forceInt,
 	forceProductId,
 	forceString,
