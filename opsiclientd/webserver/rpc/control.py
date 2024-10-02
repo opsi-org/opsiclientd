@@ -79,21 +79,35 @@ class PipeControlInterface(Interface):
 			if not connected and disconnect:
 				service_connection.disconnectConfigService()
 
-	def _fireEvent(self, name: str, can_cancel: bool = True, event_info: dict[str, str | list[str]] | None = None) -> None:
+	def _fireEvent(
+		self,
+		name: str,
+		can_cancel: bool = True,
+		event_info: dict[str, str | list[str]] | None = None,
+		event_config: dict[str, Any] | None = None,
+	) -> None:
 		# can_cancel: Allow event cancellation for new events called via the ControlServer
 		can_cancel = forceBool(can_cancel)
 		event_info = event_info or {}
 		event_generator = getEventGenerator(name)
-		logger.notice("rpc firing event %r, event_info=%r, can_cancel=%r", name, event_info, can_cancel)
-		event_generator.createAndFireEvent(eventInfo=event_info, can_cancel=can_cancel)
+		logger.notice("Firing event %r, event_info=%r, can_cancel=%r, event_config=%r", name, event_info, can_cancel, event_config)
+		event_generator.createAndFireEvent(
+			eventInfo=event_info,
+			can_cancel=can_cancel,
+			event_config=event_config,
+		)
 
-	def _processActionRequests(self, product_ids: list[str] | None = None) -> None:
+	def _processActionRequests(self, product_ids: list[str] | None = None, visibility: str = "") -> None:
+		if visibility not in ("", "visible", "hidden"):
+			raise ValueError(f"Invalid visibility {visibility!r}, must be 'visible' or 'hidden' if set")
+
 		event = self.opsiclientd.config.get("control_server", "process_actions_event") or "auto"
+		event_configs = getEventConfigs()
 		logger.info("Configured process actions event: %r", event)
 		if event == "auto":
 			timer_active = False
 			on_demand_active = False
-			for event_config in getEventConfigs().values():
+			for event_config in event_configs.values():
 				if event_config["name"] == "timer" and event_config["active"]:
 					timer_active = True
 				elif event_config["name"] == "on_demand" and event_config["active"]:
@@ -106,12 +120,36 @@ class PipeControlInterface(Interface):
 			else:
 				raise RuntimeError("Neither timer nor on_demand event active")
 
+		try:
+			event_config = event_configs[event]
+		except KeyError as err:
+			raise ValueError(f"Event {event!r} not found") from err
+
+		additional_event_config: dict[str, Any] | None = None
+		if visibility == "visible":
+			additional_event_config = {
+				"actionProcessorDesktop": "current",
+				"eventNotifierDesktop": "current",
+			}
+		elif visibility == "hidden":
+			action_processor_command = event_config["actionProcessorCommand"]
+			if "/silent" not in action_processor_command:
+				action_processor_command += " /silent"
+			additional_event_config = {
+				"eventNotifierDesktop": "winlogon",
+				"eventNotifierCommand": "",
+				"actionProcessorDesktop": "winlogon",
+				"actionProcessorCommand": action_processor_command,
+			}
+
 		event_info: dict[str, str | list[str]] = {}
 		if product_ids:
 			event_info = {"product_ids": forceProductIdList(product_ids)}
 
-		logger.info("Processing action requests with event %r and event_info %r", event, event_info)
-		self._fireEvent(name=event, event_info=event_info)
+		logger.info(
+			"Processing action requests with event %r, event_info %r and event_config %r", event, event_info, additional_event_config
+		)
+		self._fireEvent(name=event, event_info=event_info, event_config=additional_event_config)
 
 	def getPossibleMethods_listOfHashes(self) -> list[dict[str, Any]]:
 		return self._interface_list
@@ -148,8 +186,8 @@ class KioskControlInterface(PipeControlInterface):
 	def getClientId(self) -> str:
 		return self.opsiclientd.config.get("global", "host_id")
 
-	def processActionRequests(self, product_ids: list[str] | None = None) -> None:
-		return self._processActionRequests(product_ids=product_ids)
+	def processActionRequests(self, product_ids: list[str] | None = None, visibilty: str = "") -> None:
+		return self._processActionRequests(product_ids=product_ids, visibility=visibilty)
 
 	def fireEvent_software_on_demand(self) -> None:
 		for eventGenerator in getEventGenerators(generatorClass=SwOnDemandEventGenerator):
@@ -413,8 +451,8 @@ class ControlInterface(PipeControlInterface):
 	def fireEvent(self, name: str, can_cancel: bool = True, event_info: dict[str, str | list[str]] | None = None) -> None:
 		return self._fireEvent(name=name, can_cancel=can_cancel, event_info=event_info)
 
-	def processActionRequests(self, product_ids: list[str] | None = None) -> None:
-		return self._processActionRequests(product_ids=product_ids)
+	def processActionRequests(self, product_ids: list[str] | None = None, visibilty: str = "") -> None:
+		return self._processActionRequests(product_ids=product_ids, visibility=visibilty)
 
 	def setStatusMessage(self, sessionId: int, message: str) -> None:
 		sessionId = forceInt(sessionId)

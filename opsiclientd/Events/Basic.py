@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import threading
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import opsicommon.logging
 from opsicommon.logging import get_logger
@@ -85,8 +85,20 @@ class EventGenerator(threading.Thread):
 
 		return actualConfig
 
-	def createAndFireEvent(self, eventInfo: dict[str, str | list[str]] | None = None, can_cancel: bool = False) -> None:
-		self.fireEvent(self.createEvent(eventInfo), can_cancel=can_cancel)
+	def createAndFireEvent(
+		self,
+		eventInfo: dict[str, str | list[str]] | None = None,
+		can_cancel: bool = False,
+		event_config: dict[str, Any] | None = None,
+	) -> None:
+		event = self.createEvent(eventInfo=eventInfo)
+		if event and event_config:
+			new_config = event.eventConfig.getConfig()
+			new_config.update(event_config)
+			event.eventConfig = EventConfig(eventId=event.eventConfig.getId(), **new_config)
+			logger.debug("Updated event config: %s", event.eventConfig)
+
+		self.fireEvent(event, can_cancel=can_cancel)
 
 	def createEvent(self, eventInfo: dict[str, str | list[str]] | None = None) -> Event | None:
 		logger.debug("Creating event config from info: %s", eventInfo)
