@@ -414,6 +414,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				assert self.opsiclientd
 				desktop = forceUnicodeLower(self.opsiclientd.getCurrentActiveDesktopName(sessionId))
 				logger.debug("Got current active desktop name: %s", desktop)
+				if desktop == "screen-saver":
+					logger.debug("Current active desktop is screen-saver, using default desktop")
+					desktop = "default"
 
 		if not desktop:
 			desktop = "winlogon"
@@ -1130,7 +1133,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					desktop = "default"
 				else:
 					desktop = forceUnicodeLower(self.opsiclientd.getCurrentActiveDesktopName(self.getSessionId()))
-					if desktop and desktop.lower() == "screen-saver":
+					if desktop == "screen-saver":
+						logger.debug("Current active desktop is screen-saver, using default desktop")
 						desktop = "default"
 
 			if not desktop:
