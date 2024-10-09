@@ -97,8 +97,9 @@ class PipeControlInterface(Interface):
 			event_config=event_config,
 		)
 
-	def _processActionRequests(self, product_ids: list[str] | None = None, visibility: str = "") -> None:
-		if visibility not in ("", "visible", "hidden"):
+	def _processActionRequests(self, product_ids: list[str] | None = None, visibility: str | None = None) -> None:
+		visibility = visibility or None
+		if visibility not in (None, "visible", "hidden"):
 			raise ValueError(f"Invalid visibility {visibility!r}, must be 'visible' or 'hidden' if set")
 
 		event = self.opsiclientd.config.get("control_server", "process_actions_event") or "auto"
@@ -186,7 +187,7 @@ class KioskControlInterface(PipeControlInterface):
 	def getClientId(self) -> str:
 		return self.opsiclientd.config.get("global", "host_id")
 
-	def processActionRequests(self, product_ids: list[str] | None = None, visibilty: str = "") -> None:
+	def processActionRequests(self, product_ids: list[str] | None = None, visibilty: str | None = None) -> None:
 		return self._processActionRequests(product_ids=product_ids, visibility=visibilty)
 
 	def fireEvent_software_on_demand(self) -> None:
@@ -451,7 +452,7 @@ class ControlInterface(PipeControlInterface):
 	def fireEvent(self, name: str, can_cancel: bool = True, event_info: dict[str, str | list[str]] | None = None) -> None:
 		return self._fireEvent(name=name, can_cancel=can_cancel, event_info=event_info)
 
-	def processActionRequests(self, product_ids: list[str] | None = None, visibilty: str = "") -> None:
+	def processActionRequests(self, product_ids: list[str] | None = None, visibilty: str | None = None) -> None:
 		return self._processActionRequests(product_ids=product_ids, visibility=visibilty)
 
 	def setStatusMessage(self, sessionId: int, message: str) -> None:
