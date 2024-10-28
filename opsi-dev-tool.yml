@@ -29,6 +29,11 @@ transifex:
       languages:
         - de
         - fr
+    - organization: opsi-org
+      project: opsiorg
+      resource_name: opsiclientd.pot
+      install_dir: opsiclientd_data/locale
+      min_translation_rate: 0.8
 
 pyinstaller-poetry:
   one_file: no
