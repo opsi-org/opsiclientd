@@ -509,6 +509,27 @@ def setup_on_shutdown() -> None:
 	winreg.CloseKey(key_handle)
 
 
+def setup_system() -> None:
+	if sys.platform != "win32":
+		return None
+
+	logger.notice("Setting WebDAV WebClient parameters")
+	import winreg
+
+	import win32process  # type: ignore[import]
+
+	key_handle = winreg.CreateKey(
+		winreg.HKEY_LOCAL_MACHINE,
+		r"SYSTEM\CurrentControlSet\Services\WebClient\Parameters",
+	)
+	try:
+		if win32process.IsWow64Process():
+			winreg.DisableReflectionKey(key_handle)
+		winreg.SetValueEx(key_handle, "FileSizeLimitInBytes", 0, winreg.REG_DWORD, 0xFFFFFFFF)
+	finally:
+		winreg.CloseKey(key_handle)
+
+
 def cleanup_control_server_files() -> None:
 	share_dir = Path(config.get("control_server", "files_dir"))
 	if not share_dir.exists():
@@ -552,6 +573,12 @@ def setup(full: bool = False, options: Namespace | None = None) -> None:
 		except Exception as err:
 			logger.error("Failed to setup firewall: %s", err, exc_info=True)
 			errors.append(str(err))
+
+	try:
+		setup_system()
+	except Exception as err:
+		logger.error("Failed to setup system: %s", err, exc_info=True)
+		errors.append(str(err))
 
 	try:
 		setup_on_shutdown()
