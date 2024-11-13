@@ -1,4 +1,4 @@
-image: docker.uib.gmbh/opsi/dev/pybuilder:deb9-py3.11
+image: docker.uib.gmbh/opsi/dev/pybuilder:deb9-py3.13
 
 stages:
   - test
@@ -8,7 +8,7 @@ stages:
 viruscheck:virustotal:
   stage: viruscheck
   tags:
-    - win10-py311-x86
+    - win10-py313-x86
   script:
     - Invoke-WebRequest -UseBasicParsing -Uri "$OPSIDEVTOOLS_URL_WINDOWS_X86" -OutFile opsi-dev-tools.zip
     - Expand-Archive opsi-dev-tools.zip -DestinationPath .
@@ -42,7 +42,7 @@ test:pytest-darwin:
   #when: manual
   stage: test
   tags:
-    - catalina-py311-x64
+    - catalina-py313-x64
   script:
     - poetry --version
     - poetry lock --no-update --no-cache
@@ -64,8 +64,11 @@ test:pytest-windows:
   #when: manual
   stage: test
   tags:
-    - win10-py311-x86
+    - win10-py313-x86
   script:
+    - $pythonPath = py -3.13 -c "import sys; print(sys.executable)"
+    - poetry env use $pythonPath
+    - poetry cache clear --all --quiet uibpypi
     - poetry lock --no-update --no-cache
     - poetry install
     - poetry run pytest --tb=short -x -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
@@ -157,7 +160,7 @@ build:pyinstaller-linux-x64:
 build:pyinstaller-darwin-x64:
   stage: build
   tags:
-    - catalina-py311-x64
+    - catalina-py313-x64
   script:
     #- sed -ie s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
     #- poetry update python-opsi
@@ -179,7 +182,7 @@ build:pyinstaller-darwin-x64:
 build:pyinstaller-windows-x86:
   stage: build
   tags:
-    - win10-py311-x86
+    - win10-py313-x86
   script:
     #- $env:path
     #- where.exe poetry
@@ -193,6 +196,9 @@ build:pyinstaller-windows-x86:
     - Invoke-WebRequest -UseBasicParsing -Uri "$OPSIDEVTOOLS_URL_WINDOWS_X86" -OutFile opsi-dev-tools.zip
     - Expand-Archive opsi-dev-tools.zip -DestinationPath .
     - Copy-Item opsi-dev-tool.exe opsi-dev-cli.exe
+    - $pythonPath = py -3.13 -c "import sys; print(sys.executable)"
+    - poetry env use $pythonPath
+    - poetry cache clear --all --quiet uibpypi
     - poetry lock --no-update --no-cache
     - poetry install
     - poetry run .\opsi-dev-cli.exe -l debug pyinstaller build
