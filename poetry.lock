@@ -1681,37 +1681,40 @@ version = "4.4.0.1"
 description = "The opsi python library"
 optional = false
 python-versions = ">=3.11,<3.14"
-files = []
-develop = false
+files = [
+    {file = "python_opsi-4.4.0.1-py3-none-any.whl", hash = "sha256:b7c4859290d897a62fa195903487eed9e916ae2f72edc7a47500feeba74baa8c"},
+    {file = "python_opsi-4.4.0.1.tar.gz", hash = "sha256:3f8b8ec146f388af61c0bf3d55db668b1c4aa1bbd9d8f3282e12219a5a8fc82f"},
+]
 
 [package.dependencies]
-attrs = "^24.2"
-colorlog = "^6.6"
-distro = {version = "^1.5", markers = "sys_platform == \"linux\""}
-ldap3 = "^2.9"
-lz4 = "^4.0"
-msgpack = "^1.0"
-packaging = "^24.1"
-pefile = "^2024.8"
-pexpect = "^4.8"
-psutil = "^6.0"
-pyasn1 = "^0.6"
-pycryptodome = "^3.10"
+attrs = ">=24.2,<25.0"
+colorlog = ">=6.6,<7.0"
+distro = {version = ">=1.5,<2.0", markers = "sys_platform == \"linux\""}
+ldap3 = ">=2.9,<3.0"
+lz4 = ">=4.0,<5.0"
+msgpack = ">=1.0,<2.0"
+packaging = ">=24.1,<25.0"
+pefile = ">=2024.8,<2025.0"
+pexpect = ">=4.8,<5.0"
+psutil = ">=6.0,<7.0"
+pyasn1 = ">=0.6,<0.7"
+pycryptodome = ">=3.10,<4.0"
 python-opsi-common = ">=4.4,<4.5"
-python-pam = "^2.0"
+python-pam = ">=2.0,<3.0"
 pywin32 = {version = ">=303", markers = "sys_platform == \"win32\""}
-pyzsync = "^1.2"
-ruyaml = "^0.91"
-service-identity = "^24.1"
-six = "^1.16"
+pyzsync = ">=1.2,<2.0"
+ruyaml = ">=0.91,<0.92"
+service-identity = ">=24.1,<25.0"
+six = ">=1.16,<2.0"
 sqlalchemy = ">=1.4,<2.0"
-tomlkit = "^0.13"
-typing-extensions = "^4.12"
-wmi = {version = "^1.5", markers = "sys_platform == \"win32\""}
+tomlkit = ">=0.13,<0.14"
+typing-extensions = ">=4.12,<5.0"
+wmi = {version = ">=1.5,<2.0", markers = "sys_platform == \"win32\""}
 
 [package.source]
-type = "directory"
-url = "python-opsi"
+type = "legacy"
+url = "https://pypi.uib.gmbh/simple"
+reference = "uibpypi"
 
 [[package]]
 name = "python-opsi-common"
@@ -2690,4 +2693,4 @@ reference = "uibpypi"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.13,<3.14"
-content-hash = "7ad5c283be7c172116fd02a94d99348187ab85c9864a5fbe9b2d457283dca3b1"
+content-hash = "6d9efe1afb8de14ae60b7426269a6a73c44eb2d074191b5ca544c8502baf9774"
