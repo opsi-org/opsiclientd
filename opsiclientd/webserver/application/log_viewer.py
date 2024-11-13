@@ -11,10 +11,10 @@ import re
 import threading
 import time
 
-import msgspec
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from opsicommon.logging import LEVEL_TO_NAME, OPSI_LEVEL_TO_LEVEL, get_logger
+from opsicommon.utils import msgpack_encode
 from starlette.endpoints import WebSocketEndpoint
 from starlette.status import HTTP_401_UNAUTHORIZED
 from starlette.types import Receive, Scope, Send
@@ -99,7 +99,7 @@ class LogReaderThread(threading.Thread):
 			return
 		data = b""
 		for record in self.record_buffer:
-			data += msgspec.msgpack.encode(record)
+			data += msgpack_encode(record)
 
 		if self.loop.is_closed():
 			return
