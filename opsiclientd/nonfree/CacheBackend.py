@@ -12,6 +12,7 @@ import collections
 import inspect
 import json
 import time
+import warnings
 from types import MethodType
 from typing import Any, Callable, Type
 
@@ -643,11 +644,19 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				):
 					continue
 
+				logger.trace("Adding method '%s' to execute on work backend", methodName)
 				sig, arg = get_function_signature_and_args(funcRef)
 				sig = "(self)" if sig == "()" else f"(self, {sig[1:]}"
-				logger.trace("Adding method '%s' to execute on work backend", methodName)
-				exec(f'def {methodName}{sig}: return self._executeMethod("{methodName}", {arg})')
-				setattr(self, methodName, MethodType(eval(methodName), self))
+
+				exec_locals: dict[str, Callable] = {}
+				with warnings.catch_warnings():
+					exec(
+						f'def {methodName}{sig}: return self._executeMethod("{methodName}", {arg})',
+						locals=exec_locals,
+					)
+
+				new_function = exec_locals[methodName]
+				setattr(self, methodName, MethodType(new_function, self))
 
 	def _cacheBackendInfo(self, backendInfo: dict[str, Any]) -> None:
 		with open(self._opsiModulesFile, "w", encoding="utf-8") as file:
