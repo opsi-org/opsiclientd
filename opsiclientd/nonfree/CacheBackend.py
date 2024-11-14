@@ -643,21 +643,23 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					"getProductOrdering",
 				):
 					continue
-
 				logger.trace("Adding method '%s' to execute on work backend", methodName)
-				sig, arg = get_function_signature_and_args(funcRef)
-				sig = "(self)" if sig == "()" else f"(self, {sig[1:]}"
+				try:
+					sig, arg = get_function_signature_and_args(funcRef)
+					sig = "(self)" if sig == "()" else f"(self, {sig[1:]}"
 
-				exec_locals: dict[str, Callable] = {}
-				with warnings.catch_warnings():
-					exec(
-						f'def {methodName}{sig}: return self._executeMethod("{methodName}", {arg})',
-						locals=exec_locals,
-					)
+					exec_locals: dict[str, Callable] = {}
+					with warnings.catch_warnings():
+						exec(
+							f'def {methodName}{sig}: return self._executeMethod("{methodName}", {arg})',
+							locals=exec_locals,
+						)
 
-				new_function = exec_locals[methodName]
-				setattr(self, methodName, MethodType(new_function, self))
-				logger.devel("Added %s", methodName)  # TODO: remove
+					new_function = exec_locals[methodName]
+					setattr(self, methodName, MethodType(new_function, self))
+					logger.devel("Added %s", methodName)  # TODO: remove
+				except Exception as err:
+					logger.error("Failed to create method '%s': %s", methodName, err)
 		logger.devel(self, dir(self))  # TODO: remove
 		assert hasattr(self, "config_getObjects")  # TODO: remove
 
