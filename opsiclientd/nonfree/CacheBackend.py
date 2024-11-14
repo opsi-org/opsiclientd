@@ -660,7 +660,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					logger.devel("Added %s", methodName)  # TODO: remove
 				except Exception as err:
 					logger.error("Failed to create method '%s': %s", methodName, err)
-		logger.devel(self, dir(self))  # TODO: remove
+		logger.devel(dir(self))  # TODO: remove
 		assert hasattr(self, "config_getObjects")  # TODO: remove
 
 	def _cacheBackendInfo(self, backendInfo: dict[str, Any]) -> None:
