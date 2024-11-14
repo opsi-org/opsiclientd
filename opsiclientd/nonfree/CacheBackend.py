@@ -657,11 +657,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 					new_function = exec_locals[methodName]
 					setattr(self, methodName, MethodType(new_function, self))
-					logger.devel("Added %s", methodName)  # TODO: remove
 				except Exception as err:
 					logger.error("Failed to create method '%s': %s", methodName, err)
-		logger.devel(dir(self))  # TODO: remove
-		assert hasattr(self, "config_getObjects")  # TODO: remove
 
 	def _cacheBackendInfo(self, backendInfo: dict[str, Any]) -> None:
 		with open(self._opsiModulesFile, "w", encoding="utf-8") as file:
