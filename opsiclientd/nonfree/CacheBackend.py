@@ -625,7 +625,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		with open(self._auditHardwareConfigFile, "w", encoding="utf8") as file:
 			file.write(json.dumps(auditHardwareConfig))
 
-		self._workBackend._setAuditHardwareConfig(auditHardwareConfig)
+		self._workBackend._setAuditHardwareConfig(auditHardwareConfig)  # type: ignore[attr-defined]
 		self._workBackend.backend_createBase()
 
 	def _createInstanceMethods(self) -> None:
@@ -657,6 +657,9 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 				new_function = exec_locals[methodName]
 				setattr(self, methodName, MethodType(new_function, self))
+				logger.devel("Added %s", methodName)  # TODO: remove
+		logger.devel(self, dir(self))  # TODO: remove
+		assert hasattr(self, "config_getObjects")  # TODO: remove
 
 	def _cacheBackendInfo(self, backendInfo: dict[str, Any]) -> None:
 		with open(self._opsiModulesFile, "w", encoding="utf-8") as file:
