@@ -69,7 +69,6 @@ version = "^1.5"
 git = "https://github.com/j-a-n/websocket-client.git"
 branch = "fix-get_proxy_info-for-https"
 
-
 [tool.poetry.dependencies.pywinpty]
 platform = "win32"
 version = "^2.0"
