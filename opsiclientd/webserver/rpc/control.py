@@ -38,14 +38,14 @@ from opsicommon.logging import get_logger, secret_filter
 from opsicommon.objects import ConfigState, ObjectToGroup, Product, ProductDependency, ProductOnClient, ProductOnDepot
 from opsicommon.system.info import is_windows
 from opsicommon.types import forceBool, forceHostId, forceInt, forceProductIdList, forceUnicode
-from opsicommon.utils import generate_opsi_host_key
+from opsicommon.utils import generate_opsi_host_key, make_temp_dir
 
 from opsiclientd import __version__
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
 from opsiclientd.Events.SwOnDemand import SwOnDemandEventGenerator
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import getEventGenerator, getEventGenerators
-from opsiclientd.Localization import _, get_translation_info
+from opsiclientd.Localization import get_translation_info
 from opsiclientd.OpsiService import ServiceConnection, download_from_depot
 from opsiclientd.Timeline import Timeline
 from opsiclientd.webserver.rpc.interface import Interface
@@ -732,6 +732,107 @@ class ControlInterface(PipeControlInterface):
 				wait_for_ending=wait_for_ending,
 				shell_window_style="hidden",
 			)
+
+	def runOpsiScriptContentAsOpsiSetupUser(
+		self,
+		script_content: str,
+		product_id: str | None = None,
+		admin: bool = True,
+		wait_for_ending: bool | int = 7200,
+		remove_user: bool = False,
+	) -> tuple[str, int]:
+		if re.fullmatch(r"^\d+$", str(wait_for_ending)):
+			wait_for_ending = int(wait_for_ending)
+		else:
+			wait_for_ending = forceBool(wait_for_ending)
+
+		logger.notice(
+			"Executing opsi script content as opsisetupuser (product_id=%s, admin=%s, wait_for_ending=%s, remove_user=%s)",
+			product_id,
+			admin,
+			wait_for_ending,
+			remove_user,
+		)
+
+		with make_temp_dir() as temp_dir:
+			temp_script_file_path = os.path.join(temp_dir, "script.opsiscript")
+			with open(temp_script_file_path, "w", encoding="utf-8") as temp_script_file:
+				temp_script_file.write(script_content)
+
+			config = self.opsiclientd.config
+			with self._config_service_connection() as service_connection:
+				configServiceUrl = service_connection.getConfigServiceUrl()
+				config.selectDepotserver(
+					configService=service_connection.getConfigService(),
+					mode="mount",
+					productIds=[product_id] if product_id else None,
+				)
+				depot_server_url = config.get("depot_server", "url")
+				if not depot_server_url:
+					raise RuntimeError("depot_server.url not defined")
+				depot_path = config.get_depot_path()
+				depot_drive = config.getDepotDrive()
+				if depot_path == depot_drive:
+					depot_path = depot_drive = System.get_available_drive_letter(start=depot_drive.rstrip(":")).rstrip(":") + ":"
+
+				if not os.path.isabs(temp_script_file_path):
+					temp_script_file_path = os.path.join(depot_path, os.sep, temp_script_file_path)
+
+				log_file = os.path.join(config.get("global", "log_dir"), "opsisetupuser.log")
+
+				opsi_script = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
+				param_char = "/" if platform.system().lower() == "windows" else "-"
+
+				command = [
+					opsi_script,
+					temp_script_file_path,
+					log_file,
+					f"{param_char}servicebatch",
+					f"{param_char}opsiservice",
+					configServiceUrl or "",
+					f"{param_char}clientid",
+					config.get("global", "host_id"),
+					f"{param_char}username",
+					config.get("global", "host_id"),
+					f"{param_char}password",
+					config.get("global", "opsi_host_key"),
+				]
+
+				if platform.system().lower() == "windows":
+					try:
+						output = subprocess.check_output(["powershell", "-command", "$PSVersionTable"])
+						logger.debug("Found powershell with following version information:\n%s", output)
+					except subprocess.CalledProcessError as error:
+						logger.error("Cannot execute powershell. Maybe missing in system PATH? Error: %s", error)
+						raise error
+					arg_string = ",".join([f"'\"{arg}\"'" for arg in command])
+					ps_script = f'Start-Process -Verb runas -FilePath "{opsi_script}" -ArgumentList {arg_string} -Wait'
+					command = [
+						"powershell",
+						"-ExecutionPolicy",
+						"bypass",
+						"-WindowStyle",
+						"hidden",
+						"-command",
+						ps_script,
+					]
+
+				logger.info("Executing: %s\n", command)
+				with subprocess.Popen(
+					command,
+					stderr=subprocess.STDOUT,
+					stdout=subprocess.PIPE,
+					stdin=subprocess.PIPE,
+				) as proc:
+					out, _ = proc.communicate()
+					exit_code = proc.returncode
+					logger.info("Command exit code: %s", exit_code)
+					logger.info("Command output: %s", out)
+
+		with open(log_file, "r") as log:
+			log_content = log.read()
+
+		return log_content, exit_code
 
 	def runAsOpsiSetupUser(
 		self,
