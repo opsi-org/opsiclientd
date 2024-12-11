@@ -11,6 +11,7 @@ webserver.rpc.control
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import platform
@@ -733,106 +734,81 @@ class ControlInterface(PipeControlInterface):
 				shell_window_style="hidden",
 			)
 
-	def runOpsiScriptContentAsOpsiSetupUser(
+	def runOpsiScriptContent(
 		self,
 		script_content: str,
-		product_id: str | None = None,
-		admin: bool = True,
-		wait_for_ending: bool | int = 7200,
-		remove_user: bool = False,
 	) -> tuple[str, int]:
-		if re.fullmatch(r"^\d+$", str(wait_for_ending)):
-			wait_for_ending = int(wait_for_ending)
-		else:
-			wait_for_ending = forceBool(wait_for_ending)
+		logger.notice("Executing opsi script content")
 
-		logger.notice(
-			"Executing opsi script content as opsisetupuser (product_id=%s, admin=%s, wait_for_ending=%s, remove_user=%s)",
-			product_id,
-			admin,
-			wait_for_ending,
-			remove_user,
-		)
+		try:
+			decoded_script_content = base64.b64decode(script_content).decode("utf-8")
+		except Exception:
+			decoded_script_content = script_content
+
+		base_dir = Path(self.opsiclientd.config.get("global", "base_dir"))
+		log_dir = Path("/var/log/opsi-script")
+		param_char = "-"
+
+		system = platform.system().lower()
+		if system == "windows":
+			opsi_script = base_dir / "files" / "opsi-script" / "opsi-script.exe"
+			log_dir = Path(r"c:\opsi.org\log")
+			param_char = "/"
+		elif system == "linux":
+			opsi_script = base_dir / "files" / "opsi-script" / "opsi-script"
+		elif system == "darwin":
+			opsi_script = base_dir / "files" / "opsi-script.app" / "Contents" / "MacOS" / "opsi-script"
+		else:
+			raise NotImplementedError(f"Not implemented for {platform.system()}")
+
+		try:
+			log_dir.mkdir(parents=True, exist_ok=True)
+		except Exception as exception:
+			logger.error("Could not create log directory %s: %s", log_dir, exception)
+
+		opsi_script_logfile = log_dir / "opsiclientd.log"
 
 		with make_temp_dir() as temp_dir:
-			temp_script_file_path = os.path.join(temp_dir, "script.opsiscript")
+			temp_script_file_path = os.path.join(temp_dir, "temporary_opsiscript.opsiscript")
 			with open(temp_script_file_path, "w", encoding="utf-8") as temp_script_file:
-				temp_script_file.write(script_content)
+				temp_script_file.write(decoded_script_content)
 
-			config = self.opsiclientd.config
-			with self._config_service_connection() as service_connection:
-				configServiceUrl = service_connection.getConfigServiceUrl()
-				config.selectDepotserver(
-					configService=service_connection.getConfigService(),
-					mode="mount",
-					productIds=[product_id] if product_id else None,
-				)
-				depot_server_url = config.get("depot_server", "url")
-				if not depot_server_url:
-					raise RuntimeError("depot_server.url not defined")
-				depot_path = config.get_depot_path()
-				depot_drive = config.getDepotDrive()
-				if depot_path == depot_drive:
-					depot_path = depot_drive = System.get_available_drive_letter(start=depot_drive.rstrip(":")).rstrip(":") + ":"
+			arg_list = [
+				str(temp_script_file_path),
+				str(opsi_script_logfile),
+				f"{param_char}servicebatch",
+			]
 
-				if not os.path.isabs(temp_script_file_path):
-					temp_script_file_path = os.path.join(depot_path, os.sep, temp_script_file_path)
+			if system == "windows":
+				try:
+					subprocess.check_output(["powershell", "-command", "$PSVersionTable"])
+				except subprocess.CalledProcessError as error:
+					logger.error("Cannot execute PowerShell. It may be missing from the system PATH: %s", error)
+					raise
 
-				log_file = os.path.join(config.get("global", "log_dir"), "opsisetupuser.log")
-
-				opsi_script = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
-				param_char = "/" if platform.system().lower() == "windows" else "-"
-
+				arg_string = ",".join([f"'\"{arg}\"'" for arg in arg_list])
+				ps_script = f'Start-Process -Verb runas -FilePath "{opsi_script}" -ArgumentList {arg_string} -Wait'
 				command = [
-					opsi_script,
-					temp_script_file_path,
-					log_file,
-					f"{param_char}servicebatch",
-					f"{param_char}opsiservice",
-					configServiceUrl or "",
-					f"{param_char}clientid",
-					config.get("global", "host_id"),
-					f"{param_char}username",
-					config.get("global", "host_id"),
-					f"{param_char}password",
-					config.get("global", "opsi_host_key"),
+					"powershell",
+					"-ExecutionPolicy",
+					"bypass",
+					"-WindowStyle",
+					"hidden",
+					"-command",
+					ps_script,
 				]
+			else:
+				command = [str(opsi_script)] + arg_list
 
-				if platform.system().lower() == "windows":
-					try:
-						output = subprocess.check_output(["powershell", "-command", "$PSVersionTable"])
-						logger.debug("Found powershell with following version information:\n%s", output)
-					except subprocess.CalledProcessError as error:
-						logger.error("Cannot execute powershell. Maybe missing in system PATH? Error: %s", error)
-						raise error
-					arg_string = ",".join([f"'\"{arg}\"'" for arg in command])
-					ps_script = f'Start-Process -Verb runas -FilePath "{opsi_script}" -ArgumentList {arg_string} -Wait'
-					command = [
-						"powershell",
-						"-ExecutionPolicy",
-						"bypass",
-						"-WindowStyle",
-						"hidden",
-						"-command",
-						ps_script,
-					]
+			logger.info("Executing: %s\n", command)
+			result = subprocess.run(command, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, stdin=subprocess.PIPE, text=True)
+			logger.info("Command exit code: %s", result.returncode)
+			logger.info("Command output: %s", result.stdout)
 
-				logger.info("Executing: %s\n", command)
-				with subprocess.Popen(
-					command,
-					stderr=subprocess.STDOUT,
-					stdout=subprocess.PIPE,
-					stdin=subprocess.PIPE,
-				) as proc:
-					out, _ = proc.communicate()
-					exit_code = proc.returncode
-					logger.info("Command exit code: %s", exit_code)
-					logger.info("Command output: %s", out)
+			with open(opsi_script_logfile, "r") as log:
+				log_content = log.read()
 
-		with open(log_file, "r") as log:
-			log_content = log.read()
-
-		return log_content, exit_code
+		return log_content, result.returncode
 
 	def runAsOpsiSetupUser(
 		self,
