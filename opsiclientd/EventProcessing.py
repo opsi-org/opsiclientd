@@ -905,11 +905,22 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					attributes=["actionRequest"],
 					productId=self.event.eventConfig.actionProcessorProductIds,
 				)
+				pocs = []
 				for product in self.event.eventConfig.actionProcessorProductIds:
-					if not any((current_poc.productId == product for current_poc in current_pocs)):
+					matches = [current_poc for current_poc in current_pocs if current_poc.productId == product]
+
+					if not matches:
 						logger.info("No ProductOnClient for product '%s' found. Creating.", product)
-						poc = ProductOnClient(product, "LocalbootProduct", config.get("global", "host_id"), actionRequest="setup")
-						self._configService.productOnClient_insertObject(poc)
+						pocs.append(ProductOnClient(product, "LocalbootProduct", config.get("global", "host_id"), actionRequest="setup"))
+					elif len(matches) == 1:
+						logger.debug("ProductOnClient for product '%s' found.", product)
+						if matches[0].actionRequest is None:
+							logger.info("Setting ProductOnClient for product '%s' to 'setup'", product)
+							matches[0].actionRequest = "setup"
+							pocs.append(matches[0])
+					else:
+						logger.error("Multiple ProductOnClient for product '%s' found. This should not be possible.", product)
+				self._configService.productOnClient_updateObjects(pocs)
 				# Now we have all ProductOnClient objects for the actionProcessorProductIds
 				includeProductIds = self.event.eventConfig.actionProcessorProductIds
 				actionRequests = []
@@ -939,21 +950,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						"   [%2s] product %-20s %s", len(productIds), productOnClient.productId + ":", productOnClient.actionRequest
 					)
 
-			for productOnDepot in self._configService.productOnDepot_getObjects(
-				productType="LocalbootProduct",
-				depotId=config.get("depot_server", "depot_id"),
-				attributes=["productId", "productVersion", "packageVersion"],
-				productId=productIds,
-			):
-				productInfo.append(
-					ProductInfo(
-						productOnDepot.productId,
-						productOnDepot.productVersion,
-						productOnDepot.packageVersion,
-						"",
-					)
-				)
-
 			if (not productIds) and bootmode == "BKSTD":
 				logger.notice("No product action requests set")
 				self.setStatusMessage(_("No product action requests set"))
@@ -968,6 +964,20 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				except Exception as err:
 					logger.error(err)
 			else:
+				for productOnDepot in self._configService.productOnDepot_getObjects(
+					productType="LocalbootProduct",
+					depotId=config.get("depot_server", "depot_id"),
+					attributes=["productId", "productVersion", "packageVersion"],
+					productId=productIds,
+				):
+					productInfo.append(
+						ProductInfo(
+							productOnDepot.productId,
+							productOnDepot.productVersion,
+							productOnDepot.packageVersion,
+							"",
+						)
+					)
 				state.set("installation_pending", "true")
 
 				logger.notice("Start processing action requests")
