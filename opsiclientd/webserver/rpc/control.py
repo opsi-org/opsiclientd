@@ -737,7 +737,7 @@ class ControlInterface(PipeControlInterface):
 	def runOpsiScriptContent(
 		self,
 		script_content: str,
-	) -> tuple[str, int]:
+	) -> dict[str, Any]:
 		logger.notice("Executing opsi script content")
 
 		try:
@@ -808,7 +808,7 @@ class ControlInterface(PipeControlInterface):
 			with open(opsi_script_logfile, "r") as log:
 				log_content = log.read()
 
-		return log_content, result.returncode
+		return {"exit_code": result.returncode, "log_content": log_content}
 
 	def runAsOpsiSetupUser(
 		self,
