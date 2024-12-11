@@ -899,6 +899,30 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			actionRequests = ["setup", "uninstall", "update", "always", "once", "custom"]
 
 			if self.event.eventConfig.actionProcessorProductIds:
+				current_pocs = self._configService.productOnClient_getObjects(
+					productType="LocalbootProduct",
+					clientId=config.get("global", "host_id"),
+					attributes=["actionRequest"],
+					productId=self.event.eventConfig.actionProcessorProductIds,
+				)
+				pocs = []
+				for product in self.event.eventConfig.actionProcessorProductIds:
+					matches = [current_poc for current_poc in current_pocs if current_poc.productId == product]
+
+					if not matches:
+						logger.info("No ProductOnClient for product '%s' found. Creating.", product)
+						pocs.append(ProductOnClient(product, "LocalbootProduct", config.get("global", "host_id"), actionRequest="setup"))
+					elif len(matches) == 1:
+						logger.debug("ProductOnClient for product '%s' found.", product)
+						if matches[0].actionRequest is None:
+							logger.info("Setting ProductOnClient for product '%s' to 'setup'", product)
+							matches[0].actionRequest = "setup"
+							pocs.append(matches[0])
+					else:
+						logger.error("Multiple ProductOnClient for product '%s' found. This should not be possible.", product)
+				if pocs:
+					self._configService.productOnClient_updateObjects(pocs)
+				# Now we have all ProductOnClient objects for the actionProcessorProductIds
 				includeProductIds = self.event.eventConfig.actionProcessorProductIds
 				actionRequests = []
 			else:
@@ -916,21 +940,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					productType="LocalbootProduct",
 					clientId=config.get("global", "host_id"),
 					actionRequest=actionRequests,
-					attributes=["actionRequest", "productVersion", "packageVersion"],
+					attributes=["productId", "actionRequest"],
 					productId=includeProductIds,
 				)
 				if poc.productId not in excludeProductIds
 			]:
 				if productOnClient.productId not in productIds:
 					productIds.append(productOnClient.productId)
-					productInfo.append(
-						ProductInfo(
-							productOnClient.productId,
-							productOnClient.productVersion,
-							productOnClient.packageVersion,
-							"",
-						)
-					)
 					logger.notice(
 						"   [%2s] product %-20s %s", len(productIds), productOnClient.productId + ":", productOnClient.actionRequest
 					)
@@ -949,6 +965,20 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				except Exception as err:
 					logger.error(err)
 			else:
+				for productOnDepot in self._configService.productOnDepot_getObjects(
+					productType="LocalbootProduct",
+					depotId=config.get("depot_server", "depot_id"),
+					attributes=["productId", "productVersion", "packageVersion"],
+					productId=productIds,
+				):
+					productInfo.append(
+						ProductInfo(
+							productOnDepot.productId,
+							productOnDepot.productVersion,
+							productOnDepot.packageVersion,
+							"",
+						)
+					)
 				state.set("installation_pending", "true")
 
 				logger.notice("Start processing action requests")

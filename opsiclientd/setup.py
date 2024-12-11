@@ -17,7 +17,6 @@ import sys
 from argparse import Namespace
 from pathlib import Path
 
-import packaging
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
@@ -27,6 +26,7 @@ from opsicommon.logging import get_logger, secret_filter
 from opsicommon.ssl import as_pem, create_ca, create_server_cert
 from opsicommon.system import get_system_uuid
 from opsicommon.system.network import get_fqdn, get_hostnames, get_ip_addresses
+from packaging import version
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
@@ -95,15 +95,15 @@ def setup_ssl(full: bool = False) -> None:
 				srv_crt = x509.load_pem_x509_certificate(file.read())
 				enddate = srv_crt.not_valid_after_utc.replace(tzinfo=None)
 				diff = (enddate - datetime.datetime.now()).days
-				server_cn = srv_crt.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[-1].value
+				cert_server_cn = srv_crt.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[-1].value
 				logger.info("Server cert '%s' will expire in %d days", server_cn, diff)
 				if diff <= CERT_RENEW_DAYS:
 					logger.notice("Server cert '%s' will expire in %d days, needing new cert", server_cn, diff)
 					create = True
-				elif server_cn != server_cn:
-					logger.notice("Server CN has changed from '%s' to '%s', needing new cert", server_cn, server_cn)
+				elif cert_server_cn != server_cn:
+					logger.notice("Server CN has changed from '%s' to '%s', needing new cert", cert_server_cn, server_cn)
 					create = True
-				elif full and srv_crt.issuer.get_attributes_for_oid(NameOID.COMMON_NAME)[-1].value == server_cn:
+				elif full and srv_crt.issuer.get_attributes_for_oid(NameOID.COMMON_NAME)[-1].value == cert_server_cn:
 					logger.notice("Self signed certificate found, needing new cert")
 					create = True
 					exists_self_signed = True
@@ -259,29 +259,31 @@ def install_service_windows() -> None:
 
 	import winreg
 
-	import win32process  # type: ignore[import]
+	with winreg.CreateKeyEx(
+		winreg.HKEY_LOCAL_MACHINE,
+		r"SYSTEM\CurrentControlSet\Services\opsiclientd",
+		0,
+		winreg.KEY_READ | winreg.KEY_WRITE | winreg.KEY_WOW64_64KEY,
+	) as key_handle:
+		winreg.SetValueEx(key_handle, "DependOnService", 0, winreg.REG_MULTI_SZ, ["Dhcp"])
+		# SC failure opsiclientd actions= restart/60000/restart/60000/restart/60000 reset= 86400
+		failure_actions = "80510100000000000000000003000000140000000100000060ea00000100000060ea00000100000060ea0000"
+		winreg.SetValueEx(key_handle, "FailureActions", 0, winreg.REG_BINARY, bytes.fromhex(failure_actions))
 
-	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Services\opsiclientd")
-	if win32process.IsWow64Process():
-		winreg.DisableReflectionKey(key_handle)
-	winreg.SetValueEx(key_handle, "DependOnService", 0, winreg.REG_MULTI_SZ, ["Dhcp"])
-	# SC failure opsiclientd actions= restart/60000/restart/60000/restart/60000 reset= 86400
-	failure_actions = "80510100000000000000000003000000140000000100000060ea00000100000060ea00000100000060ea0000"
-	winreg.SetValueEx(key_handle, "FailureActions", 0, winreg.REG_BINARY, bytes.fromhex(failure_actions))
-	winreg.CloseKey(key_handle)
-
-	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control")
-	if win32process.IsWow64Process():
-		winreg.DisableReflectionKey(key_handle)
-	current_timeout = 0
-	try:
-		current_timeout = winreg.QueryValueEx(key_handle, "ServicesPipeTimeout", 0)[0]
-	except Exception:
-		logger.debug("Did not get ServicesPipeTimeout from registry")
-	# Make sure to have a timeout of at least SERVICES_PIPE_TIMEOUT_WINDOWS
-	if current_timeout < SERVICES_PIPE_TIMEOUT_WINDOWS:
-		winreg.SetValueEx(key_handle, "ServicesPipeTimeout", 0, winreg.REG_DWORD, SERVICES_PIPE_TIMEOUT_WINDOWS)
-	winreg.CloseKey(key_handle)
+	with winreg.CreateKeyEx(
+		winreg.HKEY_LOCAL_MACHINE,
+		r"SYSTEM\CurrentControlSet\Control",
+		0,
+		winreg.KEY_READ | winreg.KEY_WRITE | winreg.KEY_WOW64_64KEY,
+	) as key_handle:
+		current_timeout = 0
+		try:
+			current_timeout = winreg.QueryValueEx(key_handle, "ServicesPipeTimeout", 0)[0]
+		except Exception:
+			logger.debug("Did not get ServicesPipeTimeout from registry")
+		# Make sure to have a timeout of at least SERVICES_PIPE_TIMEOUT_WINDOWS
+		if current_timeout < SERVICES_PIPE_TIMEOUT_WINDOWS:
+			winreg.SetValueEx(key_handle, "ServicesPipeTimeout", 0, winreg.REG_DWORD, SERVICES_PIPE_TIMEOUT_WINDOWS)
 
 
 def install_service_linux() -> None:
@@ -341,7 +343,7 @@ def opsi_service_setup(options: Namespace) -> None:
 			config.set("global", "opsi_host_key", clients[0].opsiHostKey)
 			try:
 				logger.debug("Connected to opsi server version %r", service_client.server_version)
-				if service_client.server_version >= packaging.version.parse("4.3"):
+				if service_client.server_version >= version.parse("4.3"):
 					logger.debug("Connected to opsi server >= 4.3")
 					system_uuid = get_system_uuid()
 					logger.debug("system_uuid: %s", system_uuid)
@@ -369,7 +371,12 @@ def cleanup_registry_uninstall() -> None:
 	while modified:
 		modified = False
 		# We need to start over iterating after key change
-		with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall") as key:
+		with winreg.OpenKeyEx(
+			winreg.HKEY_LOCAL_MACHINE,
+			r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+			0,
+			winreg.KEY_READ | winreg.KEY_WRITE | winreg.KEY_WOW64_64KEY,
+		) as key:
 			for idx in range(1024):
 				try:
 					uninstall_key = winreg.EnumKey(key, idx)
@@ -385,7 +392,7 @@ def cleanup_registry_uninstall() -> None:
 					continue
 
 				display_name = None
-				with winreg.OpenKey(key, uninstall_key) as subkey:
+				with winreg.OpenKeyEx(key, uninstall_key, 0, winreg.KEY_READ | winreg.KEY_WOW64_64KEY) as subkey:
 					try:
 						display_name = winreg.QueryValueEx(subkey, "DisplayName")[0]
 					except FileNotFoundError:
@@ -393,7 +400,7 @@ def cleanup_registry_uninstall() -> None:
 
 				if display_name and display_name.startswith("opsi-client-agent"):
 					logger.info("Removing uninstall key %r (DisplayName=%r)", uninstall_key, display_name)
-					winreg.DeleteKey(key, uninstall_key)
+					winreg.DeleteKeyEx(key, uninstall_key, winreg.KEY_WOW64_64KEY)
 					modified = True
 					# Restart iteration
 					break
@@ -406,16 +413,12 @@ def cleanup_registry_environment_path() -> None:
 	logger.notice("Cleanup registry environment PATH variable")
 	import winreg
 
-	import win32process  # type: ignore[import]
-
-	key_handle = winreg.CreateKey(
+	with winreg.CreateKeyEx(
 		winreg.HKEY_LOCAL_MACHINE,
 		r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment",
-	)
-	try:
-		if win32process.IsWow64Process():
-			winreg.DisableReflectionKey(key_handle)
-
+		0,
+		winreg.KEY_READ | winreg.KEY_WRITE | winreg.KEY_WOW64_64KEY,
+	) as key_handle:
 		try:
 			reg_value, value_type = winreg.QueryValueEx(key_handle, "PATH")
 			cur_reg_values = reg_value.split(";")
@@ -429,8 +432,6 @@ def cleanup_registry_environment_path() -> None:
 			winreg.SetValueEx(key_handle, "PATH", 0, value_type, reg_value)
 		except FileNotFoundError:
 			logger.warning("Key 'PATH' not found in registry")
-	finally:
-		winreg.CloseKey(key_handle)
 
 
 def setup_on_shutdown() -> None:
@@ -439,8 +440,6 @@ def setup_on_shutdown() -> None:
 
 	logger.notice("Creating opsi shutdown install policy")
 	import winreg
-
-	import win32process  # type: ignore[import]
 
 	GPO_NAME = "opsi shutdown install policy"
 	BASE_KEYS = [
@@ -463,50 +462,48 @@ def setup_on_shutdown() -> None:
 	script_params = "--timeout=18000 runOnShutdown()"
 
 	for base_key in BASE_KEYS:
-		base_key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, base_key)
-		if win32process.IsWow64Process():
-			winreg.DisableReflectionKey(base_key_handle)
-
-		num = -1
-		while True:
-			num += 1
-			try:
-				key_handle = winreg.OpenKey(base_key_handle, str(num))
-				(value, _type) = winreg.QueryValueEx(key_handle, "GPOName")
-				winreg.CloseKey(key_handle)
-				if value == GPO_NAME:
+		with winreg.CreateKeyEx(
+			winreg.HKEY_LOCAL_MACHINE, 0, winreg.KEY_READ | winreg.KEY_WRITE | winreg.KEY_WOW64_64KEY
+		) as base_key_handle:
+			num = -1
+			while True:
+				num += 1
+				try:
+					with winreg.OpenKeyEx(base_key_handle, str(num), 0, winreg.KEY_READ | winreg.KEY_WOW64_64KEY) as key_handle:
+						(value, _type) = winreg.QueryValueEx(key_handle, "GPOName")
+					if value == GPO_NAME:
+						break
+				except OSError:
+					# Key does not exist
 					break
-			except OSError:
-				# Key does not exist
-				break
 
-		key_handle = winreg.CreateKey(base_key_handle, str(num))
-		winreg.SetValueEx(key_handle, "GPO-ID", 0, winreg.REG_SZ, "LocalGPO")
-		winreg.SetValueEx(key_handle, "SOM-ID", 0, winreg.REG_SZ, "Local")
-		winreg.SetValueEx(key_handle, "FileSysPath", 0, winreg.REG_SZ, rf"{os.environ['SystemRoot']}\System32\GroupPolicy\Machine")
-		winreg.SetValueEx(key_handle, "DisplayName", 0, winreg.REG_SZ, GPO_NAME)
-		winreg.SetValueEx(key_handle, "GPOName", 0, winreg.REG_SZ, GPO_NAME)
-		winreg.SetValueEx(key_handle, "PSScriptOrder", 0, winreg.REG_DWORD, 1)
+			with winreg.CreateKeyEx(
+				base_key_handle, str(num), 0, winreg.KEY_READ | winreg.KEY_WRITE | winreg.KEY_WOW64_64KEY
+			) as key_handle:
+				winreg.SetValueEx(key_handle, "GPO-ID", 0, winreg.REG_SZ, "LocalGPO")
+				winreg.SetValueEx(key_handle, "SOM-ID", 0, winreg.REG_SZ, "Local")
+				winreg.SetValueEx(key_handle, "FileSysPath", 0, winreg.REG_SZ, rf"{os.environ['SystemRoot']}\System32\GroupPolicy\Machine")
+				winreg.SetValueEx(key_handle, "DisplayName", 0, winreg.REG_SZ, GPO_NAME)
+				winreg.SetValueEx(key_handle, "GPOName", 0, winreg.REG_SZ, GPO_NAME)
+				winreg.SetValueEx(key_handle, "PSScriptOrder", 0, winreg.REG_DWORD, 1)
 
-		key_handle2 = winreg.CreateKey(key_handle, "0")
-		winreg.SetValueEx(key_handle2, "Script", 0, winreg.REG_SZ, script_path)
-		winreg.SetValueEx(key_handle2, "Parameters", 0, winreg.REG_SZ, script_params)
-		winreg.SetValueEx(key_handle2, "ErrorCode", 0, winreg.REG_DWORD, 0)
-		winreg.SetValueEx(key_handle2, "IsPowershell", 0, winreg.REG_DWORD, 0)
-		winreg.SetValueEx(
-			key_handle2, "ExecTime", 0, winreg.REG_BINARY, b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-		)
+				with winreg.CreateKeyEx(key_handle, "0", 0, winreg.KEY_READ | winreg.KEY_WRITE | winreg.KEY_WOW64_64KEY) as key_handle2:
+					winreg.SetValueEx(key_handle2, "Script", 0, winreg.REG_SZ, script_path)
+					winreg.SetValueEx(key_handle2, "Parameters", 0, winreg.REG_SZ, script_params)
+					winreg.SetValueEx(key_handle2, "ErrorCode", 0, winreg.REG_DWORD, 0)
+					winreg.SetValueEx(key_handle2, "IsPowershell", 0, winreg.REG_DWORD, 0)
+					winreg.SetValueEx(
+						key_handle2, "ExecTime", 0, winreg.REG_BINARY, b"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+					)
 
-		winreg.CloseKey(key_handle2)
-		winreg.CloseKey(key_handle)
-		winreg.CloseKey(base_key_handle)
-
-	key_handle = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System")
-	if win32process.IsWow64Process():
-		winreg.DisableReflectionKey(key_handle)
-	winreg.SetValueEx(key_handle, "MaxGPOScriptWait", 0, winreg.REG_DWORD, 0)
-	# winreg.SetValueEx(key_handle, "ShutdownWithoutLogon", 0, winreg.REG_DWORD, 1)
-	winreg.CloseKey(key_handle)
+		with winreg.CreateKeyEx(
+			winreg.HKEY_LOCAL_MACHINE,
+			r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System",
+			0,
+			winreg.KEY_READ | winreg.KEY_WRITE | winreg.KEY_WOW64_64KEY,
+		) as key_handle:
+			winreg.SetValueEx(key_handle, "MaxGPOScriptWait", 0, winreg.REG_DWORD, 0)
+			# winreg.SetValueEx(key_handle, "ShutdownWithoutLogon", 0, winreg.REG_DWORD, 1)
 
 
 def setup_system() -> None:
@@ -516,18 +513,13 @@ def setup_system() -> None:
 	logger.notice("Setting WebDAV WebClient parameters")
 	import winreg
 
-	import win32process  # type: ignore[import]
-
-	key_handle = winreg.CreateKey(
+	with winreg.CreateKeyEx(
 		winreg.HKEY_LOCAL_MACHINE,
 		r"SYSTEM\CurrentControlSet\Services\WebClient\Parameters",
-	)
-	try:
-		if win32process.IsWow64Process():
-			winreg.DisableReflectionKey(key_handle)
+		0,
+		winreg.KEY_READ | winreg.KEY_WRITE | winreg.KEY_WOW64_64KEY,
+	) as key_handle:
 		winreg.SetValueEx(key_handle, "FileSizeLimitInBytes", 0, winreg.REG_DWORD, 0xFFFFFFFF)
-	finally:
-		winreg.CloseKey(key_handle)
 
 
 def cleanup_control_server_files() -> None:
