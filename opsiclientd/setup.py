@@ -463,7 +463,7 @@ def setup_on_shutdown() -> None:
 
 	for base_key in BASE_KEYS:
 		with winreg.CreateKeyEx(
-			winreg.HKEY_LOCAL_MACHINE, 0, winreg.KEY_READ | winreg.KEY_WRITE | winreg.KEY_WOW64_64KEY
+			winreg.HKEY_LOCAL_MACHINE, base_key, 0, winreg.KEY_READ | winreg.KEY_WRITE | winreg.KEY_WOW64_64KEY
 		) as base_key_handle:
 			num = -1
 			while True:
