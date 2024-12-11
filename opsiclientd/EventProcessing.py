@@ -920,7 +920,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							pocs.append(matches[0])
 					else:
 						logger.error("Multiple ProductOnClient for product '%s' found. This should not be possible.", product)
-				self._configService.productOnClient_updateObjects(pocs)
+				if pocs:
+					self._configService.productOnClient_updateObjects(pocs)
 				# Now we have all ProductOnClient objects for the actionProcessorProductIds
 				includeProductIds = self.event.eventConfig.actionProcessorProductIds
 				actionRequests = []
