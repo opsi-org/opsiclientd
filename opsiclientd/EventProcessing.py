@@ -932,10 +932,13 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					attributes=["productId", "actionRequest"],
 					productId=includeProductIds,
 				)
-				if poc.productId not in excludeProductIds and productOnClient.productId not in productIds
+				if poc.productId not in excludeProductIds
 			]:
-				productIds.append(productOnClient.productId)
-				logger.notice("   [%2s] product %-20s %s", len(productIds), productOnClient.productId + ":", productOnClient.actionRequest)
+				if productOnClient.productId not in productIds:
+					productIds.append(productOnClient.productId)
+					logger.notice(
+						"   [%2s] product %-20s %s", len(productIds), productOnClient.productId + ":", productOnClient.actionRequest
+					)
 
 			for productOnDepot in self._configService.productOnDepot_getObjects(
 				productType="LocalbootProduct",
