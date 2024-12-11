@@ -100,7 +100,6 @@ class ProductInfo:
 	productVersion: str
 	packageVersion: str
 	name: str
-	actionRequest: str | None = None
 
 
 class EventProcessingCanceled(Exception):
