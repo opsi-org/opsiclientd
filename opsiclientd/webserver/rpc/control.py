@@ -762,10 +762,6 @@ class ControlInterface(PipeControlInterface):
 
 		opsi_script_logfile = log_dir / "opsiclientd.log"
 
-		config_service_url = self.opsiclientd.config.get("config_service", "url")[0]
-		host_id = self.opsiclientd.config.get("global", "host_id")
-		opsi_host_key = self.opsiclientd.config.get("global", "opsi_host_key")
-
 		with make_temp_dir() as temp_dir:
 			temp_script_file_path = os.path.join(temp_dir, "temporary_opsiscript.opsiscript")
 			with open(temp_script_file_path, "w", encoding="utf-8") as temp_script_file:
@@ -775,9 +771,12 @@ class ControlInterface(PipeControlInterface):
 				str(temp_script_file_path),
 				str(opsi_script_logfile),
 				f"{param_char}servicebatch",
-				f"{param_char}opsiservice {config_service_url}",
-				f"{param_char}username {host_id}",
-				f"{param_char}password {opsi_host_key}",
+				f"{param_char}opsiservice",
+				self.opsiclientd.config.get("config_service", "url")[0],
+				f"{param_char}username",
+				self.opsiclientd.config.get("global", "host_id"),
+				f"{param_char}password",
+				self.opsiclientd.config.get("global", "opsi_host_key"),
 			]
 
 			if system == "windows":
@@ -802,9 +801,8 @@ class ControlInterface(PipeControlInterface):
 				command = [str(opsi_script)] + arg_list
 
 			logger.info("Executing: %s\n", command)
-			result = subprocess.run(command, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, stdin=subprocess.PIPE, text=True)
+			result = subprocess.run(command, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, stdin=subprocess.PIPE, text=True, check=True)
 			logger.info("Command exit code: %s", result.returncode)
-			logger.info("Command output: %s", result.stdout)
 
 			with open(opsi_script_logfile, "r") as log:
 				log_content = log.read()
