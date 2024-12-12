@@ -365,3 +365,14 @@ def test_download(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[st
 			assert response.headers["content-type"] in ("application/zip", "application/x-zip-compressed")
 			assert int(response.headers["content-length"]) > 0
 			assert params_received[1] == [["opsiclientd", "opsi-script"], 10, True]
+
+
+def test_run_opsiscript_content(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
+	test_client.auth = opsiclientd_auth
+	with test_client as client:
+		params = {
+			"script_content": "[Actions]\nMessage \"Hello, World!\"\nMessage \"This is a multi-line opsi script.\"",
+		}
+		response = client.jsonrpc20(path="/rpc", method="runOpsiScriptContent", params=[params], id=1)
+		assert "error" not in response
+		assert response["id"] == 1
