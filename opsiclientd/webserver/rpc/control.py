@@ -11,7 +11,6 @@ webserver.rpc.control
 
 from __future__ import annotations
 
-import base64
 import json
 import os
 import platform
@@ -740,11 +739,6 @@ class ControlInterface(PipeControlInterface):
 	) -> dict[str, Any]:
 		logger.notice("Executing opsi script content")
 
-		try:
-			decoded_script_content = base64.b64decode(script_content).decode("utf-8")
-		except Exception:
-			decoded_script_content = script_content
-
 		base_dir = Path(self.opsiclientd.config.get("global", "base_dir"))
 		log_dir = Path("/var/log/opsi-script")
 		param_char = "-"
@@ -771,7 +765,7 @@ class ControlInterface(PipeControlInterface):
 		with make_temp_dir() as temp_dir:
 			temp_script_file_path = os.path.join(temp_dir, "temporary_opsiscript.opsiscript")
 			with open(temp_script_file_path, "w", encoding="utf-8") as temp_script_file:
-				temp_script_file.write(decoded_script_content)
+				temp_script_file.write(script_content)
 
 			arg_list = [
 				str(temp_script_file_path),
@@ -808,7 +802,7 @@ class ControlInterface(PipeControlInterface):
 			with open(opsi_script_logfile, "r") as log:
 				log_content = log.read()
 
-		return {"exit_code": result.returncode, "log_content": log_content}
+		return {"exit_code": result.returncode, "stdout": result.stdout, "stderr": result.stderr, "log_content": log_content}
 
 	def runAsOpsiSetupUser(
 		self,
