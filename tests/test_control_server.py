@@ -21,6 +21,7 @@ from unittest.mock import patch
 import pytest
 import requests
 from httpx import HTTPStatusError
+from opsicommon.logging import use_logging_config
 from opsicommon.objects import ProductOnClient, serialize
 from opsicommon.system.info import is_macos
 from starlette.websockets import WebSocketDisconnect
