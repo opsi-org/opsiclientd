@@ -29,19 +29,12 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
 from OPSI import System  # type: ignore[import]
 from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
-from OPSI.Util.Message import ChoiceSubject, MessageSubject  # type: ignore[import]
+from OPSI.Util.Message import ChoiceSubject  # type: ignore[import]
+from OPSI.Util.Message import MessageSubject
 from OPSI.Util.Repository import WebDAVRepository  # type: ignore[import]
 from OPSI.Util.Thread import KillableThread  # type: ignore[import]
-from opsicommon.client.opsiservice import (
-	MessagebusListener,
-	ServiceClient,
-	ServiceConnectionListener,
-	ServiceVerificationFlags,
-)
-from opsicommon.exceptions import (
-	OpsiServiceAuthenticationError,
-	OpsiServiceVerificationError,
-)
+from opsicommon.client.opsiservice import MessagebusListener, ServiceClient, ServiceConnectionListener, ServiceVerificationFlags
+from opsicommon.exceptions import OpsiServiceAuthenticationError, OpsiServiceVerificationError
 from opsicommon.logging import get_logger, log_context
 from opsicommon.logging.constants import TRACE
 from opsicommon.messagebus.file_transfer import process_messagebus_message as process_filetransfer_message
@@ -66,13 +59,7 @@ from opsicommon.messagebus.terminal import stop_running_terminals, terminals
 from opsicommon.ssl import install_ca, load_cas, remove_ca
 from opsicommon.system import lock_file
 from opsicommon.system.network import get_fqdn
-from opsicommon.types import (
-	forceBool,
-	forceInt,
-	forceProductId,
-	forceString,
-	forceUnicode,
-)
+from opsicommon.types import forceBool, forceInt, forceProductId, forceString, forceUnicode
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
@@ -245,8 +232,8 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			self.running = False
 
 	def stop(self) -> None:
-		asyncio.run_coroutine_threadsafe(stop_running_terminals(), self._loop)
-		asyncio.run_coroutine_threadsafe(stop_running_processes(), self._loop)
+		asyncio.run_coroutine_threadsafe(stop_running_terminals(), self._loop).result(5)
+		asyncio.run_coroutine_threadsafe(stop_running_processes(), self._loop).result(5)
 		time.sleep(3)
 		self._should_stop = True
 		self.service_client.stop()
@@ -284,7 +271,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 
 	def message_received(self, message: Message) -> None:
 		try:
-			asyncio.run_coroutine_threadsafe(self._process_message(message), self._loop)
+			asyncio.run_coroutine_threadsafe(self._process_message(message), self._loop).result()
 		except Exception as err:
 			logger.error(err, exc_info=True)
 			response = GeneralErrorMessage(
@@ -708,5 +695,7 @@ def download_from_depot(product_id: str, destination: str | Path, sub_path: str 
 	)
 	repository.copy(path, str(destination))
 	repository.disconnect()
+
+	logger.info("Download completed")
 
 	logger.info("Download completed")

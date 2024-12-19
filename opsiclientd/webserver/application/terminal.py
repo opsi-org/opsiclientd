@@ -13,8 +13,8 @@ from typing import Callable
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from opsicommon.logging import get_logger
-from opsicommon.system.info import is_windows
 from opsicommon.messagebus.terminal import start_pty
+from opsicommon.system.info import is_windows
 from starlette.endpoints import WebSocketEndpoint
 from starlette.status import HTTP_401_UNAUTHORIZED
 from starlette.types import Receive, Scope, Send
@@ -120,7 +120,7 @@ class TerminalReaderThread(threading.Thread):
 				if not data:  # EOF.
 					break
 				if not self.should_stop:
-					asyncio.run_coroutine_threadsafe(self.websocket.send_bytes(data), self.loop)
+					asyncio.run_coroutine_threadsafe(self.websocket.send_bytes(data), self.loop).result(10)
 				time.sleep(0.001)
 			# except socket.timeout:
 			# continue
