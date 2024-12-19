@@ -367,12 +367,18 @@ def test_download(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[st
 			assert params_received[1] == [["opsiclientd", "opsi-script"], 10, True]
 
 
-def test_run_opsiscript_content(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
-	test_client.auth = opsiclientd_auth
-	with test_client as client:
-		params = {
-			"script_content": "[Actions]\nMessage \"Hello, World!\"\nMessage \"This is a multi-line opsi script.\"",
-		}
-		response = client.jsonrpc20(path="/rpc", method="runOpsiScriptContent", params=[params], id=1)
-		assert "error" not in response
-		assert response["id"] == 1
+def test_run_opsiscript_content(default_config: Config, tmp_path: Path, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
+	ocd = Opsiclientd()
+	with ocd.runCacheService(allow_fail=False):
+		with get_test_client(ocd) as client:
+			with pytest.raises(HTTPStatusError, match="401 Unauthorized"):
+				client.jsonrpc20(path="/opsiclientd", method="backend_info", params=[], id=1)
+
+			client.auth = opsiclientd_auth
+			params = {
+				"script_content": '[Actions]\nMessage "Hello, World!"\nMessage "This is a multi-line opsi script."',
+			}
+			with use_logging_config(stderr_level=7):
+				response = client.jsonrpc20(path="/opsiclientd", method="runOpsiScriptContent", params=params, id=1)
+			assert "error" not in response
+			assert response["id"] == 1
