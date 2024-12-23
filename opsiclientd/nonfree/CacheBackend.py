@@ -11,12 +11,16 @@ Cache-Backend for Clients.
 import inspect
 import json
 import time
+from collections import defaultdict
 from types import MethodType
 from typing import Any, Callable, Type
-from collections import defaultdict
 
 from OPSI.Backend.Backend import Backend  # type: ignore[import]
-from OPSI.Backend.Backend import BackendModificationListener, ConfigDataBackend, ModificationTrackingBackend  # type: ignore[import]
+from OPSI.Backend.Backend import (  # type: ignore[import]
+	BackendModificationListener,
+	ConfigDataBackend,
+	ModificationTrackingBackend,
+)
 from OPSI.Backend.Base.Extended import get_function_signature_and_args  # type: ignore[import]
 from OPSI.Backend.Replicator import BackendReplicator  # type: ignore[import]
 from OPSI.Util import blowfishDecrypt  # type: ignore[import]
@@ -588,7 +592,13 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			logger.debug("Writing config values to cache file '%s'", self._configValuesCacheFile)
 			assert self._configValuesCacheFile
 			with open(self._configValuesCacheFile, "w", encoding="utf-8") as file:
-				file.write(json.dumps(self._masterBackend.configState_getValues(["clientconfig.*", "opsiclientd.*"], self._clientId, True)))
+				file.write(
+					json.dumps(
+						self._masterBackend.configState_getValues(
+							config_ids=["clientconfig.*", "opsiclientd.*"], object_ids=self._clientId, with_defaults=True
+						)
+					)
+				)
 		except Exception as err:
 			logger.error("Failed to write config values cache file '%s': %s", self._configValuesCacheFile, err)
 
@@ -596,7 +606,13 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			logger.debug("Writing product property values to cache file '%s'", self._productPropertyValuesCacheFile)
 			assert self._productPropertyValuesCacheFile
 			with open(self._productPropertyValuesCacheFile, "w", encoding="utf-8") as file:
-				file.write(json.dumps(self._masterBackend.productPropertyState_getValues(filterProductIds, None, self._clientId, True)))
+				file.write(
+					json.dumps(
+						self._masterBackend.productPropertyState_getValues(
+							product_ids=filterProductIds, object_ids=self._clientId, with_defaults=True
+						)
+					)
+				)
 		except Exception as err:
 			logger.error("Failed to write product property values cache file '%s': %s", self._productPropertyValuesCacheFile, err)
 
