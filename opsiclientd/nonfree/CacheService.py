@@ -26,10 +26,7 @@ from OPSI import System  # type: ignore[import]
 from OPSI.Backend.Backend import Backend, ExtendedConfigDataBackend  # type: ignore[import]
 from OPSI.Backend.BackendManager import BackendExtender  # type: ignore[import]
 from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
-from OPSI.Backend.SQLite import (  # type: ignore[import]
-	SQLiteBackend,
-	SQLiteObjectBackendModificationTracker,
-)
+from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker  # type: ignore[import]
 from OPSI.Util import randomString  # type: ignore[import]
 from OPSI.Util.File.Opsi import PackageContentFile  # type: ignore[import]
 from OPSI.Util.Message import ProgressSubjectProxy  # type: ignore[import]
@@ -40,22 +37,14 @@ from OPSI.Util.Repository import (  # type: ignore[import]
 )
 from opsicommon.logging import get_logger, log_context
 from opsicommon.objects import LocalbootProduct, ProductOnClient
-from opsicommon.types import (
-	forceBool,
-	forceInt,
-	forceProductIdList,
-	forceUnicode,
-)
+from opsicommon.types import forceBool, forceInt, forceProductIdList, forceUnicode
 from packaging import version
 
 from opsiclientd.Config import Config
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
 from opsiclientd.nonfree import verify_modules
-from opsiclientd.nonfree.CacheBackend import (
-	ClientCacheBackend,
-	add_products_from_setup_after_install,
-)
+from opsiclientd.nonfree.CacheBackend import ClientCacheBackend, add_products_from_setup_after_install
 from opsiclientd.nonfree.RPCProductDependencyMixin import RPCProductDependencyMixin
 from opsiclientd.OpsiService import ServiceConnection
 from opsiclientd.State import State
@@ -478,6 +467,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			self._opsiPasswdFile = os.path.join(self._configCacheDir, "cached_passwd")
 			self._auditHardwareConfigFile = os.path.join(self._configCacheDir, "cached_opsihwaudit.json")
 			self._configValuesCacheFile = os.path.join(self._configCacheDir, "cached_configvalues.json")
+			self._productPropertyValuesCacheFile = os.path.join(self._configCacheDir, "cached_productpropertyvalues.json")
 
 			self._stopped = False
 			self._running = False
@@ -518,6 +508,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 			"opsiPasswdFile": self._opsiPasswdFile,
 			"auditHardwareConfigFile": self._auditHardwareConfigFile,
 			"configValuesCacheFile": self._configValuesCacheFile,
+			"productPropertyValuesCacheFile": self._productPropertyValuesCacheFile,
 			"depotId": depot_id,
 		}
 		self._workBackend = SQLiteBackend(database=os.path.join(self._configCacheDir, "work.sqlite"), **backendArgs)

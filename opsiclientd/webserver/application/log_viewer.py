@@ -103,7 +103,7 @@ class LogReaderThread(threading.Thread):
 
 		if self.loop.is_closed():
 			return
-		asyncio.run_coroutine_threadsafe(self.websocket.send_bytes(data), self.loop)
+		asyncio.run_coroutine_threadsafe(self.websocket.send_bytes(data), self.loop).result(10)
 		self.send_time = time.time()
 		self.record_buffer = []
 
