@@ -289,6 +289,7 @@ def test_cache_service_interface(default_config: Config, tmp_path: Path) -> None
 		assert "productOnClient_generateSequence" in interface
 		assert "productOnClient_getObjectsWithSequence" in interface
 		backend.productOnClient_getObjectsWithSequence()  # type: ignore[attr-defined]
+		assert hasattr(backend, "config_getObjects")  # not explicitely added to interface
 
 
 def test_cache_service_jsonrpc(default_config: Config, tmp_path: Path, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
