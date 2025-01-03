@@ -19,13 +19,12 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, AsyncGenerator, Literal
 
-import msgspec
 from fastapi import HTTPException
 from fastapi.requests import Request
 from fastapi.responses import Response
 from opsicommon.logging import get_logger
 from opsicommon.objects import deserialize, serialize
-from opsicommon.utils import compress_data, decompress_data
+from opsicommon.utils import compress_data, decompress_data, json_decode, json_encode, msgpack_decode, msgpack_encode
 from starlette.concurrency import run_in_threadpool
 
 from opsiclientd.webserver.rpc.interface import Interface
@@ -150,27 +149,19 @@ def get_response_serialization(request: Request) -> Literal["msgpack", "json"] |
 	return None
 
 
-msgpack_decoder = msgspec.msgpack.Decoder()
-json_decoder = msgspec.json.Decoder()
-
-
 def deserialize_data(data: bytes, serialization: str) -> Any:
 	if serialization == "msgpack":
-		return msgpack_decoder.decode(data)
+		return msgpack_decode(data)
 	if serialization == "json":
-		return json_decoder.decode(data)
+		return json_decode(data)
 	raise ValueError(f"Unhandled serialization {serialization!r}")
-
-
-msgpack_encoder = msgspec.msgpack.Encoder()
-json_encoder = msgspec.json.Encoder()
 
 
 def serialize_data(data: Any, serialization: str) -> bytes:
 	if serialization == "msgpack":
-		return msgpack_encoder.encode(data)
+		return msgpack_encode(data)
 	if serialization == "json":
-		return json_encoder.encode(data)
+		return json_encode(data)
 	raise ValueError(f"Unhandled serialization {serialization!r}")
 
 
