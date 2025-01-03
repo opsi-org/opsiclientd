@@ -11,17 +11,20 @@ Cache-Backend for Clients.
 import inspect
 import json
 import time
+import warnings
 from collections import defaultdict
 from types import MethodType
 from typing import Any, Callable, Type
 
-from OPSI.Backend.Backend import Backend  # type: ignore[import]
 from OPSI.Backend.Backend import (  # type: ignore[import]
+	Backend,  # type: ignore[import]
 	BackendModificationListener,
 	ConfigDataBackend,
 	ModificationTrackingBackend,
 )
-from OPSI.Backend.Base.Extended import get_function_signature_and_args  # type: ignore[import]
+from OPSI.Backend.Base.Extended import (
+	get_function_signature_and_args,  # type: ignore[import]
+)
 from OPSI.Backend.Replicator import BackendReplicator  # type: ignore[import]
 from OPSI.Util import blowfishDecrypt  # type: ignore[import]
 from opsicommon.exceptions import (  # type: ignore[import]
@@ -700,7 +703,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		with open(self._auditHardwareConfigFile, "w", encoding="utf8") as file:
 			file.write(json.dumps(auditHardwareConfig))
 
-		self._workBackend._setAuditHardwareConfig(auditHardwareConfig)
+		self._workBackend._setAuditHardwareConfig(auditHardwareConfig)  # type: ignore[attr-defined]
 		self._workBackend.backend_createBase()
 
 	def _createInstanceMethods(self) -> None:
@@ -718,12 +721,22 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					"getProductOrdering",
 				):
 					continue
-
-				sig, arg = get_function_signature_and_args(funcRef)
-				sig = "(self)" if sig == "()" else f"(self, {sig[1:]}"
 				logger.trace("Adding method '%s' to execute on work backend", methodName)
-				exec(f'def {methodName}{sig}: return self._executeMethod("{methodName}", {arg})')
-				setattr(self, methodName, MethodType(eval(methodName), self))
+				try:
+					sig, arg = get_function_signature_and_args(funcRef)
+					sig = "(self)" if sig == "()" else f"(self, {sig[1:]}"
+
+					exec_locals: dict[str, Callable] = {}
+					with warnings.catch_warnings():
+						exec(
+							f'def {methodName}{sig}: return self._executeMethod("{methodName}", {arg})',
+							locals=exec_locals,
+						)
+
+					new_function = exec_locals[methodName]
+					setattr(self, methodName, MethodType(new_function, self))
+				except Exception as err:
+					logger.error("Failed to create method '%s': %s", methodName, err)
 
 	def _cacheBackendInfo(self, backendInfo: dict[str, Any]) -> None:
 		with open(self._opsiModulesFile, "w", encoding="utf-8") as file:
