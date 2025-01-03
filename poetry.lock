@@ -1711,38 +1711,38 @@ reference = "uibpypi"
 
 [[package]]
 name = "python-opsi-common"
-version = "4.3.23.2"
+version = "4.3.23.3"
 description = "The opsi python common library"
 optional = false
 python-versions = ">=3.11,<3.14"
 files = [
-    {file = "python_opsi_common-4.3.23.2-py3-none-any.whl", hash = "sha256:3ec201aa75d4a371079b262bf095a25229c2e6c1905e4e7c9886733bb684c3a2"},
-    {file = "python_opsi_common-4.3.23.2.tar.gz", hash = "sha256:97b0ae38f8e35b46f87091f4ca8edcdf97e754809815e203731220bac1465eb1"},
+    {file = "python_opsi_common-4.3.23.3-py3-none-any.whl", hash = "sha256:3db74912e246c956cfdaa891af0c4f516005a65c80f8e79823790c580c74db18"},
+    {file = "python_opsi_common-4.3.23.3.tar.gz", hash = "sha256:b76297b2fedea21475855e713d1f277a9f642d3d1829820424deef97b24f76a8"},
 ]
 
 [package.dependencies]
-aiofiles = ">=24.1,<25.0"
-annotated-types = ">=0.7,<0.8"
-cffi = ">=1.17,<2.0"
+aiofiles = ">=24.1"
+annotated-types = ">=0.7"
+cffi = ">=1.17"
 colorlog = ">=6.6"
-cryptography = ">=43.0,<44.0"
+cryptography = ">=43.0"
 distro = ">=1.6"
 lz4 = ">=4.0"
-mailbits = ">=0.2,<0.3"
+mailbits = ">=0.2"
 msgpack = ">=1.0"
 msgspec = {git = "https://github.com/edgarrmondragon/msgspec.git", rev = "main", markers = "sys_platform == \"darwin\" or sys_platform == \"linux\""}
-packaging = ">=24.1,<25.0"
+packaging = ">=24.1"
 psutil = ">=5.8"
-ptyprocess = ">=0.7,<0.8"
+ptyprocess = ">=0.7"
 pycryptodome = ">=3.10"
-pydantic = ">=2.9,<3.0"
-pydantic-core = ">=2.20,<3.0"
+pydantic = ">=2.9"
+pydantic-core = ">=2.20"
 pywin32 = {version = ">=308", markers = "sys_platform == \"win32\""}
-pywinpty = {version = ">=2.0,<3.0", markers = "sys_platform == \"win32\""}
+pywinpty = {version = ">=2.0", markers = "sys_platform == \"win32\""}
 pyzsync = ">=1.2"
 requests = ">=2.26"
 rich = ">=13.8"
-tomlkit = ">=0.13,<0.14"
+tomlkit = ">=0.13"
 websocket-client = ">=1.4"
 wmi = {version = ">=1.5", markers = "sys_platform == \"win32\""}
 zstandard = ">=0.21"
