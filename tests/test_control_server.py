@@ -16,12 +16,12 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import mock_open, patch
 
 import pytest
 import requests
 from httpx import HTTPStatusError
-from opsicommon.logging import use_logging_config
+from opsicommon.logging import LOG_INFO, use_logging_config
 from opsicommon.objects import ProductOnClient, serialize
 from opsicommon.system.info import is_macos
 from starlette.websockets import WebSocketDisconnect
@@ -369,7 +369,7 @@ def test_download(test_client: OpsiclientdTestClient, opsiclientd_auth: tuple[st
 			assert params_received[1] == [["opsiclientd", "opsi-script"], 10, True]
 
 
-def test_run_opsiscript_content(default_config: Config, tmp_path: Path, opsiclientd_auth: tuple[str, str]) -> None:  # noqa
+def test_run_opsiscript_content(opsiclientd_auth: tuple[str, str]) -> None:  # noqa
 	ocd = Opsiclientd()
 	with ocd.runCacheService(allow_fail=False):
 		with get_test_client(ocd) as client:
@@ -380,7 +380,14 @@ def test_run_opsiscript_content(default_config: Config, tmp_path: Path, opsiclie
 			params = {
 				"script_content": '[Actions]\nMessage "Hello, World!"\nMessage "This is a multi-line opsi script."',
 			}
-			with use_logging_config(stderr_level=7):
-				response = client.jsonrpc20(path="/opsiclientd", method="runOpsiScriptContent", params=params, id=1)
+			with use_logging_config(stderr_level=LOG_INFO):
+				with (
+					patch("subprocess.run") as mock_run,
+					patch("builtins.open", mock_open(read_data="[1] Mocked log content")),
+				):
+					mock_run.return_value.returncode = 0
+					mock_run.return_value.stdout = "Mocked stdout"
+					mock_run.return_value.stderr = "Mocked stderr"
+					response = client.jsonrpc20(path="/opsiclientd", method="runOpsiScriptContent", params=params, id=2)
 			assert "error" not in response
-			assert response["id"] == 1
+			assert response["id"] == 2
