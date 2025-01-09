@@ -8,21 +8,22 @@
 Cache-Backend for Clients.
 """
 
-import collections
 import inspect
 import json
 import time
+import warnings
+from collections import defaultdict
 from types import MethodType
 from typing import Any, Callable, Type
 
 from OPSI.Backend.Backend import (  # type: ignore[import]
-	Backend,
+	Backend,  # type: ignore[import]
 	BackendModificationListener,
 	ConfigDataBackend,
 	ModificationTrackingBackend,
 )
-from OPSI.Backend.Base.Extended import (  # type: ignore[import]
-	get_function_signature_and_args,
+from OPSI.Backend.Base.Extended import (
+	get_function_signature_and_args,  # type: ignore[import]
 )
 from OPSI.Backend.Replicator import BackendReplicator  # type: ignore[import]
 from OPSI.Util import blowfishDecrypt  # type: ignore[import]
@@ -91,6 +92,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		self._clientId: str | None = None
 		self._depotId: str | None = None
 		self._configValuesCacheFile: str | None = None
+		self._productPropertyValuesCacheFile: str | None = None
 		self._backendChangeListeners: list[BackendModificationListener] = []
 
 		for option, value in kwargs.items():
@@ -109,7 +111,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				self._backendInfo = value
 			elif option == "configvaluescachefile":
 				self._configValuesCacheFile = value
-
+			elif option == "productpropertyvaluescachefile":
+				self._productPropertyValuesCacheFile = value
 		if not self._workBackend:
 			raise BackendConfigurationError("Work backend undefined")
 		if not self._snapshotBackend:
@@ -166,9 +169,65 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			logger.debug("Reading config values from cache file '%s'", self._configValuesCacheFile)
 			assert self._configValuesCacheFile
 			with open(self._configValuesCacheFile, "r", encoding="utf-8") as file:
-				return json.loads(file.read())
+				data: dict[str, dict[str, list[Any]]] = json.loads(file.read())
+
+			if not config_ids:
+				return data
+
+			if not isinstance(config_ids, list):
+				config_ids = [config_ids]
+
+			filtered_data: dict[str, dict[str, list[Any]]] = {}
+			for object_id, values1 in data.items():
+				for config_id, values2 in values1.items():
+					if config_id not in config_ids:
+						continue
+					if object_id not in filtered_data:
+						filtered_data[object_id] = {}
+					filtered_data[object_id][config_id] = values2
+
+			return data
 		except Exception as err:
 			logger.error("Failed to read config values cache file '%s': %s", self._configValuesCacheFile, err)
+		return {}
+
+	def productPropertyState_getValues(
+		self,
+		product_ids: list[str] | str | None = None,
+		property_ids: list[str] | str | None = None,
+		object_ids: list[str] | str | None = None,
+		with_defaults: bool = True,
+	) -> dict[str, dict[str, dict[str, list[Any]]]]:
+		try:
+			logger.debug("Reading product property values from cache file '%s'", self._productPropertyValuesCacheFile)
+			assert self._productPropertyValuesCacheFile
+			with open(self._productPropertyValuesCacheFile, "r", encoding="utf-8") as file:
+				data: dict[str, dict[str, dict[str, list[Any]]]] = json.loads(file.read())
+
+			if not property_ids and not product_ids:
+				return data
+
+			if product_ids and not isinstance(product_ids, list):
+				product_ids = [product_ids]
+			if property_ids and not isinstance(property_ids, list):
+				property_ids = [property_ids]
+
+			filtered_data: dict[str, dict[str, dict[str, list[Any]]]] = {}
+			for object_id, values1 in data.items():
+				for product_id, values2 in values1.items():
+					if product_ids and product_id not in product_ids:
+						continue
+					for property_id, values3 in values2.items():
+						if property_ids and property_id not in property_ids:
+							continue
+						if object_id not in filtered_data:
+							filtered_data[object_id] = {}
+						if product_id not in filtered_data[object_id]:
+							filtered_data[object_id][product_id] = {}
+						filtered_data[object_id][product_id][property_id] = values3
+			return filtered_data
+		except Exception as err:
+			logger.error("Failed to read product property values cache file '%s': %s", self._productPropertyValuesCacheFile, err)
 		return {}
 
 	def _setMasterBackend(self, masterBackend: ConfigDataBackend) -> None:
@@ -253,7 +312,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			raise BackendConfigurationError("Work backend undefined")
 
 		modifications = modifications or []
-		modifiedObjects = collections.defaultdict(list)
+		modifiedObjects = defaultdict(list)
 		logger.notice("Updating master from work backend (%d modifications)", len(modifications))
 
 		if logger.isEnabledFor(TRACE):
@@ -536,9 +595,29 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			logger.debug("Writing config values to cache file '%s'", self._configValuesCacheFile)
 			assert self._configValuesCacheFile
 			with open(self._configValuesCacheFile, "w", encoding="utf-8") as file:
-				file.write(json.dumps(self._masterBackend.configState_getValues(["clientconfig.*", "opsiclientd.*"], self._clientId, True)))
+				file.write(
+					json.dumps(
+						self._masterBackend.configState_getValues(
+							config_ids=["clientconfig.*", "opsiclientd.*"], object_ids=self._clientId, with_defaults=True
+						)
+					)
+				)
 		except Exception as err:
 			logger.error("Failed to write config values cache file '%s': %s", self._configValuesCacheFile, err)
+
+		try:
+			logger.debug("Writing product property values to cache file '%s'", self._productPropertyValuesCacheFile)
+			assert self._productPropertyValuesCacheFile
+			with open(self._productPropertyValuesCacheFile, "w", encoding="utf-8") as file:
+				file.write(
+					json.dumps(
+						self._masterBackend.productPropertyState_getValues(
+							product_ids=filterProductIds, object_ids=self._clientId, with_defaults=True
+						)
+					)
+				)
+		except Exception as err:
+			logger.error("Failed to write product property values cache file '%s': %s", self._productPropertyValuesCacheFile, err)
 
 		self._snapshotBackend.backend_deleteBase()
 
@@ -624,7 +703,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		with open(self._auditHardwareConfigFile, "w", encoding="utf8") as file:
 			file.write(json.dumps(auditHardwareConfig))
 
-		self._workBackend._setAuditHardwareConfig(auditHardwareConfig)
+		self._workBackend._setAuditHardwareConfig(auditHardwareConfig)  # type: ignore[attr-defined]
 		self._workBackend.backend_createBase()
 
 	def _createInstanceMethods(self) -> None:
@@ -642,12 +721,22 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					"getProductOrdering",
 				):
 					continue
-
-				sig, arg = get_function_signature_and_args(funcRef)
-				sig = "(self)" if sig == "()" else f"(self, {sig[1:]}"
 				logger.trace("Adding method '%s' to execute on work backend", methodName)
-				exec(f'def {methodName}{sig}: return self._executeMethod("{methodName}", {arg})')
-				setattr(self, methodName, MethodType(eval(methodName), self))
+				try:
+					sig, arg = get_function_signature_and_args(funcRef)
+					sig = "(self)" if sig == "()" else f"(self, {sig[1:]}"
+
+					exec_locals: dict[str, Callable] = {}
+					with warnings.catch_warnings():
+						exec(
+							f'def {methodName}{sig}: return self._executeMethod("{methodName}", {arg})',
+							locals=exec_locals,
+						)
+
+					new_function = exec_locals[methodName]
+					setattr(self, methodName, MethodType(new_function, self))
+				except Exception as err:
+					logger.error("Failed to create method '%s': %s", methodName, err)
 
 	def _cacheBackendInfo(self, backendInfo: dict[str, Any]) -> None:
 		with open(self._opsiModulesFile, "w", encoding="utf-8") as file:
