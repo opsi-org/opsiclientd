@@ -38,7 +38,7 @@ from opsicommon.logging import get_logger, secret_filter
 from opsicommon.objects import ConfigState, ObjectToGroup, Product, ProductDependency, ProductOnClient, ProductOnDepot
 from opsicommon.system.info import is_windows
 from opsicommon.types import forceBool, forceHostId, forceInt, forceProductIdList, forceUnicode
-from opsicommon.utils import generate_opsi_host_key
+from opsicommon.utils import generate_opsi_host_key, make_temp_dir
 
 from opsiclientd import __version__
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
@@ -732,6 +732,82 @@ class ControlInterface(PipeControlInterface):
 				wait_for_ending=wait_for_ending,
 				shell_window_style="hidden",
 			)
+
+	def runOpsiScriptContent(
+		self,
+		script_content: str,
+	) -> dict[str, Any]:
+		logger.notice("Executing opsi script content")
+
+		base_dir = Path(self.opsiclientd.config.get("global", "base_dir"))
+		log_dir = Path("/var/log/opsi-script")
+		param_char = "-"
+
+		system = platform.system().lower()
+		if system == "windows":
+			opsi_script = base_dir / "files" / "opsi-script" / "opsi-script.exe"
+			log_dir = Path(r"c:\opsi.org\log")
+			param_char = "/"
+		elif system == "linux":
+			opsi_script = base_dir / "files" / "opsi-script" / "opsi-script"
+		elif system == "darwin":
+			opsi_script = base_dir / "files" / "opsi-script.app" / "Contents" / "MacOS" / "opsi-script"
+		else:
+			raise NotImplementedError(f"Not implemented for {platform.system()}")
+
+		try:
+			log_dir.mkdir(parents=True, exist_ok=True)
+		except Exception as exception:
+			logger.error("Could not create log directory %s: %s", log_dir, exception)
+
+		opsi_script_logfile = log_dir / "opsiclientd.log"
+
+		with make_temp_dir() as temp_dir:
+			temp_script_file_path = os.path.join(temp_dir, "temporary_opsiscript.opsiscript")
+			with open(temp_script_file_path, "w", encoding="utf-8") as temp_script_file:
+				temp_script_file.write(script_content)
+
+			arg_list = [
+				str(temp_script_file_path),
+				str(opsi_script_logfile),
+				f"{param_char}servicebatch",
+				f"{param_char}opsiservice",
+				self.opsiclientd.config.get("config_service", "url")[0],
+				f"{param_char}username",
+				self.opsiclientd.config.get("global", "host_id"),
+				f"{param_char}password",
+				self.opsiclientd.config.get("global", "opsi_host_key"),
+			]
+
+			if system == "windows":
+				try:
+					subprocess.check_output(["powershell", "-command", "$PSVersionTable"])
+				except subprocess.CalledProcessError as error:
+					logger.error("Cannot execute PowerShell. It may be missing from the system PATH: %s", error)
+					raise
+
+				arg_string = ",".join([f"'\"{arg}\"'" for arg in arg_list])
+				ps_script = f'Start-Process -Verb runas -FilePath "{opsi_script}" -ArgumentList {arg_string} -Wait'
+				command = [
+					"powershell",
+					"-ExecutionPolicy",
+					"bypass",
+					"-WindowStyle",
+					"hidden",
+					"-command",
+					ps_script,
+				]
+			else:
+				command = [str(opsi_script)] + arg_list
+
+			logger.info("Executing: %s\n", command)
+			result = subprocess.run(command, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, stdin=subprocess.PIPE, text=True, check=True)
+			logger.info("Command exit code: %s", result.returncode)
+
+			with open(opsi_script_logfile, "r") as log:
+				log_content = log.read()
+
+		return {"exit_code": result.returncode, "stdout": result.stdout, "stderr": result.stderr, "log_content": log_content}
 
 	def runAsOpsiSetupUser(
 		self,
