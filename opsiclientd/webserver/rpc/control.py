@@ -134,8 +134,8 @@ class PipeControlInterface(Interface):
 			}
 		elif visibility == "hidden":
 			action_processor_command = event_config["actionProcessorCommand"]
-			if "/silent" not in action_processor_command:
-				action_processor_command += " /silent"
+			if "silent" not in action_processor_command:
+				action_processor_command += " /silent" if is_windows() else " -silent"
 			additional_event_config = {
 				"eventNotifierDesktop": "winlogon",
 				"eventNotifierCommand": "",

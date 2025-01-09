@@ -127,9 +127,12 @@ class ClientConnection(threading.Thread):
 				self.clientInfo = list(rpc.params)
 				self.login_capable = True
 				logger.info("Client %s info set to: %s", self, self.clientInfo)
-				res_class = JSONRPC20Response if isinstance(rpc, JSONRPC20Request) else JSONRPCResponse
+				if isinstance(rpc, JSONRPC20Request):
+					return serialize_data(
+						JSONRPC20Response(id=rpc.id, result=f"client {'/'.join(self.clientInfo)}/{self.client_id} registered"), "json"
+					)
 				return serialize_data(
-					res_class(id=rpc.id, result=f"client {'/'.join(self.clientInfo)}/{self.client_id} registered", error=None), "json"
+					JSONRPCResponse(id=rpc.id, result=f"client {'/'.join(self.clientInfo)}/{self.client_id} registered", error=None), "json"
 				)
 
 			return serialize_data(process_rpcs(self._controller._opsiclientdRpcInterface, rpc), "json")
