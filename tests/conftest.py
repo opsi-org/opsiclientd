@@ -56,14 +56,10 @@ def running_in_docker() -> bool:
 
 def opsiclient_running() -> bool:
 	for proc in psutil.process_iter():
-		try:
-			if proc.name() == "opsiclientd" or (
-				proc.name() in ("python", "python3")
-				and ("opsiclientd" in proc.cmdline() or "opsiclientd.__main__" in " ".join(proc.cmdline()))
-			):
-				return True
-		except psutil.ZombieProcess:
-			pass
+		if proc.name() == "opsiclientd" or (
+			proc.name() in ("python", "python3") and ("opsiclientd" in proc.cmdline() or "opsiclientd.__main__" in " ".join(proc.cmdline()))
+		):
+			return True
 	return False
 
 
