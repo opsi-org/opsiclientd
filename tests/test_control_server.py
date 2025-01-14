@@ -378,8 +378,8 @@ def test_run_opsiscript_content(opsiclientd_auth: tuple[str, str]) -> None:  # n
 
 			client.auth = opsiclientd_auth
 			params = {
-				"script_content": '[Actions]\nMessage "Hello, World!"\nMessage "This is a multi-line opsi script."',
-			}
+                "script_content": '[Actions]\\nMessage \\"Hello, World!\\"\\nMessage \\"This is a multi-line opsi script.\\"',
+            }
 			with use_logging_config(stderr_level=LOG_INFO):
 				with (
 					patch("subprocess.run") as mock_run,
