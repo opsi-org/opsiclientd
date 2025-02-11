@@ -536,7 +536,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 				if hasattr(self._configService, "backend_getLicensingInfo"):
 					info = self._configService.backend_getLicensingInfo(licenses=False, legacy_modules=False, dates=False)
 					logger.debug("Got licensing info from service: %s", info)
-					if not any(m in info["available_modules"] for m in ("vpn", "professional", "enterprise")):
+					if "vpn" not in info["available_modules"]:
 						raise RuntimeError("WAN/VPN module not licensed")
 				else:
 					verify_modules(self._configService.backend_info(), ["vpn"])
@@ -987,7 +987,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 				if hasattr(self._configService, "backend_getLicensingInfo"):
 					info = self._configService.backend_getLicensingInfo(licenses=False, legacy_modules=False, dates=False)
 					logger.debug("Got licensing info from service: %s", info)
-					if not any(m in info["available_modules"] for m in ("vpn", "professional", "enterprise")):
+					if "vpn" not in info["available_modules"]:
 						raise RuntimeError("WAN/VPN module not licensed")
 				else:
 					verify_modules(self._configService.backend_info(), ["vpn"])
