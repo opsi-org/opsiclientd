@@ -591,10 +591,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			restart_marker_config = config.check_restart_marker()
 			if restart_marker_config and RUNNING_ON_WINDOWS:
 				ctrl_alt_del_policy1 = System.getRegistryValue(
-					"HKEY_LOCAL_MACHINE", "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon", "DisableCAD"
+					System.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon", "DisableCAD"
 				)
 				ctrl_alt_del_policy2 = System.getRegistryValue(
-					"HKEY_LOCAL_MACHINE", "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "DisableCAD"
+					System.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "DisableCAD"
 				)
 				if ctrl_alt_del_policy1 == 0 or ctrl_alt_del_policy2 == 0:
 					logger.warning("Not restarting logonui.exe because policy is set to require ctrl+alt+del for login.")
