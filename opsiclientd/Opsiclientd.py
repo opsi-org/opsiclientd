@@ -590,14 +590,23 @@ class Opsiclientd(EventListener, threading.Thread):
 		try:
 			restart_marker_config = config.check_restart_marker()
 			if restart_marker_config and RUNNING_ON_WINDOWS:
-				# opsiclientd was restarted, restart LogonUI.exe to reconnect Credential Provider
-				for proc in psutil.process_iter():
-					try:
-						if proc.name().lower() == "logonui.exe":
-							logger.notice("Restart marker found, restarting LogonUI.exe")
-							proc.kill()
-					except psutil.AccessDenied as ps_err:
-						logger.info(ps_err)
+				ctrl_alt_del_policy1 = System.getRegistryValue(
+					"HKEY_LOCAL_MACHINE", "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon", "DisableCAD"
+				)
+				ctrl_alt_del_policy2 = System.getRegistryValue(
+					"HKEY_LOCAL_MACHINE", "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "DisableCAD"
+				)
+				if ctrl_alt_del_policy1 == 0 or ctrl_alt_del_policy2 == 0:
+					logger.warning("Not restarting logonui.exe because policy is set to require ctrl+alt+del for login.")
+				else:
+					# opsiclientd was restarted, restart LogonUI.exe to reconnect Credential Provider
+					for proc in psutil.process_iter():
+						try:
+							if proc.name().lower() == "logonui.exe":
+								logger.notice("Restart marker found, restarting LogonUI.exe")
+								proc.kill()
+						except psutil.AccessDenied as ps_err:
+							logger.info(ps_err)
 		except Exception as err:
 			logger.error(err, exc_info=True)
 
