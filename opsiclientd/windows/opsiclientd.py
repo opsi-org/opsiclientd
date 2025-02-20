@@ -277,7 +277,8 @@ class OpsiclientdNT(Opsiclientd):
 		for _unused in range(20):
 			if self._controlPipe.credentialProviderConnected(login_capable=True):
 				break
-			time.sleep(0.5)
+			self.sendSAS()
+			time.sleep(1.0)
 		if not self._controlPipe.credentialProviderConnected(login_capable=True):
 			raise RuntimeError("No login capable opsi credential provider connected")
 		logger.info("Login capable opsi credential provider connected, calling loginUser")

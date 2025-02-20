@@ -33,10 +33,8 @@ import psutil  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
 from OPSI import __version__ as python_opsi_version  # type: ignore[import]
 from OPSI.Util import randomString  # type: ignore[import]
-from OPSI.Util.Message import (  # type: ignore[import]
-	ChoiceSubject,
-	MessageSubject,
-)
+from OPSI.Util.Message import ChoiceSubject  # type: ignore[import]
+from OPSI.Util.Message import MessageSubject  # type: ignore[import]
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, log_context, secret_filter
 from opsicommon.package import OpsiPackage
@@ -51,16 +49,10 @@ from opsiclientd.EventProcessing import EventProcessingThread
 from opsiclientd.Events.Basic import CannotCancelEventError, Event, EventListener
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventGenerator
 from opsiclientd.Events.DaemonStartup import DaemonStartupEventGenerator
-from opsiclientd.Events.GUIStartup import (
-	GUIStartupEventConfig,
-	GUIStartupEventGenerator,
-)
+from opsiclientd.Events.GUIStartup import GUIStartupEventConfig, GUIStartupEventGenerator
 from opsiclientd.Events.Panic import PanicEvent
 from opsiclientd.Events.Utilities.Factories import EventGeneratorFactory
-from opsiclientd.Events.Utilities.Generators import (
-	createEventGenerators,
-	getEventGenerators,
-)
+from opsiclientd.Events.Utilities.Generators import createEventGenerators, getEventGenerators
 from opsiclientd.Localization import _, load_translation
 from opsiclientd.notification_server import NotificationServer
 from opsiclientd.OpsiService import PermanentServiceConnection
@@ -382,6 +374,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			except Exception as rpc_error:
 				logger.debug(rpc_error)
 
+	def sendSAS(self) -> None:
+		raise NotImplementedError(f"Not implemented on {platform.system()}")
+
 	def loginUser(self, username: str, password: str) -> bool:
 		raise NotImplementedError(f"Not implemented on {platform.system()}")
 
@@ -690,8 +685,17 @@ class Opsiclientd(EventListener, threading.Thread):
 							logger.notice("No events processing, unblocking login")
 							self.setBlockLogin(False)
 
+					# Daemon startup is done, gui is up
+					if RUNNING_ON_WINDOWS and self.isInstallationPending():
+						try:
+							# Send SAS to start LogonUI.exe and init CredentialsProviders
+							# Needed for some VPNs like OpenVPN to connect
+							self.sendSAS()
+						except Exception as error:
+							logger.error("Failed to send SAS: %s", error, exc_info=True)
+
 					try:
-						self.updateMOTD()  # Daemon startup is done, gui is up
+						self.updateMOTD()
 					except Exception as error:
 						logger.error("Failed to update message of the day: %s", error, exc_info=True)
 
