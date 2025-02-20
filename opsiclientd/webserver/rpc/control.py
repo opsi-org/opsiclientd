@@ -24,7 +24,7 @@ from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 from types import MethodType
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING, Any, Generator, cast
 from uuid import uuid4
 
 import psutil  # type: ignore[import]
@@ -52,6 +52,7 @@ from opsiclientd.webserver.rpc.interface import Interface
 
 if is_windows():
 	from opsiclientd.windows import runCommandInSession
+	from opsiclientd.windows.opsiclientd import OpsiclientdNT
 else:
 	from OPSI.System import runCommandInSession  # type: ignore
 
@@ -428,6 +429,13 @@ class ControlInterface(PipeControlInterface):
 	def lockWorkstation(self) -> None:
 		logger.notice("rpc lockWorkstation: locking workstation now")
 		System.lockWorkstation()
+
+	def sendSAS(self) -> None:
+		if not is_windows():
+			raise NotImplementedError()
+		logger.notice("rpc sendSAS: sending SAS")
+		opsiclientd = cast(OpsiclientdNT, self.opsiclientd)
+		opsiclientd.sendSAS()
 
 	def shutdown(self, waitSeconds: int = 0) -> None:
 		waitSeconds = forceInt(waitSeconds)
@@ -847,9 +855,9 @@ class ControlInterface(PipeControlInterface):
 		if len(parts) == 1:
 			script_content = f"Start-Process -FilePath {parts[0]} -Wait\r\n"
 		else:
-			script_content = f"""Start-Process -FilePath {parts[0]} -ArgumentList {','.join(
-				(f"'{entry}'" if entry.startswith('"') else f'"{entry}"' for entry in parts[1:])
-			)} -Wait\r\n"""
+			script_content = f"""Start-Process -FilePath {parts[0]} -ArgumentList {
+				",".join((f"'{entry}'" if entry.startswith('"') else f'"{entry}"' for entry in parts[1:]))
+			} -Wait\r\n"""
 		# WARNING: This part is not executed if the command call above initiates reboot
 		script_content += f'Remove-Item -Path "{str(script)}" -Force\r\n'
 		script.write_text(script_content, encoding="windows-1252")

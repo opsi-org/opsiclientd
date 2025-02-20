@@ -41,10 +41,13 @@ from opsiclientd import config
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
 from opsiclientd.ControlPipe import JSONRPC20Response, JSONRPCResponse
 from opsiclientd.Opsiclientd import Opsiclientd
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
-if not RUNNING_ON_WINDOWS:
+if os.name == "nt":
+	from ctypes import windll  # type: ignore[attr-defined]
+else:
+	windll = None
 	WindowsError = RuntimeError
+
 
 logger = get_logger()
 
@@ -62,6 +65,10 @@ class OpsiclientdNT(Opsiclientd):
 	def __init__(self) -> None:
 		Opsiclientd.__init__(self)
 		self._ms_update_installer = None
+
+	def sendSAS(self) -> None:
+		assert windll
+		windll.sas.SendSAS(0)  # pylint: disable=no-member
 
 	def suspendBitlocker(self) -> None:
 		logger.notice("Suspending bitlocker for one reboot if active")
