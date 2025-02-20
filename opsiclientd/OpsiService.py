@@ -29,10 +29,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
 from OPSI import System  # type: ignore[import]
 from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
-from OPSI.Util.Message import (
-	ChoiceSubject,  # type: ignore[import]
-	MessageSubject,
-)
+from OPSI.Util.Message import ChoiceSubject  # type: ignore[import]
+from OPSI.Util.Message import MessageSubject
 from OPSI.Util.Repository import WebDAVRepository  # type: ignore[import]
 from OPSI.Util.Thread import KillableThread  # type: ignore[import]
 from opsicommon.client.opsiservice import MessagebusListener, ServiceClient, ServiceConnectionListener, ServiceVerificationFlags
