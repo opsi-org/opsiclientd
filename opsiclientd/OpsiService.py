@@ -29,8 +29,10 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
 from OPSI import System  # type: ignore[import]
 from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
-from OPSI.Util.Message import ChoiceSubject  # type: ignore[import]
-from OPSI.Util.Message import MessageSubject
+from OPSI.Util.Message import (
+	ChoiceSubject,  # type: ignore[import]
+	MessageSubject,
+)
 from OPSI.Util.Repository import WebDAVRepository  # type: ignore[import]
 from OPSI.Util.Thread import KillableThread  # type: ignore[import]
 from opsicommon.client.opsiservice import MessagebusListener, ServiceClient, ServiceConnectionListener, ServiceVerificationFlags
@@ -40,6 +42,7 @@ from opsicommon.logging.constants import TRACE
 from opsicommon.messagebus.file_transfer import process_messagebus_message as process_filetransfer_message
 from opsicommon.messagebus.message import (
 	Error,
+	FileDownloadRequestMessage,
 	FileTransferMessage,
 	FileUploadRequestMessage,
 	GeneralErrorMessage,
@@ -322,6 +325,10 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 					if terminal:
 						destination_dir = terminal.get_cwd()
 						message.destination_dir = str(destination_dir)
+			elif isinstance(message, FileDownloadRequestMessage):
+				if message.path and "{OPSICLIENTD_LOG_FILE_PATH}" in message.path:
+					log_file_path = config.get("global", "log_file")
+					message.path = message.path.replace("{OPSICLIENTD_LOG_FILE_PATH}", log_file_path)
 			await process_filetransfer_message(message=message, send_message=self.service_client.messagebus.async_send_message)
 		elif isinstance(message, ProcessMessage):
 			await process_process_message(message=message, send_message=self.service_client.messagebus.async_send_message)
