@@ -33,26 +33,28 @@ from cryptography.hazmat.primitives import serialization
 from OPSI import System  # type: ignore[import]
 from OPSI import __version__ as python_opsi_version  # type: ignore[import]
 from OPSI.Util.Log import truncateLogData  # type: ignore[import]
-from opsicommon import __version__ as opsicommon_version
-from opsicommon.logging import get_logger, secret_filter
-from opsicommon.objects import ConfigState, ObjectToGroup, Product, ProductDependency, ProductOnClient, ProductOnDepot
-from opsicommon.system.info import is_windows
-from opsicommon.types import forceBool, forceHostId, forceInt, forceProductIdList, forceUnicode
-from opsicommon.utils import generate_opsi_host_key, make_temp_dir
-
 from opsiclientd import __version__
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
 from opsiclientd.Events.SwOnDemand import SwOnDemandEventGenerator
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
-from opsiclientd.Events.Utilities.Generators import getEventGenerator, getEventGenerators
+from opsiclientd.Events.Utilities.Generators import (getEventGenerator,
+                                                     getEventGenerators)
 from opsiclientd.Localization import _, get_translation_info
 from opsiclientd.OpsiService import ServiceConnection, download_from_depot
 from opsiclientd.Timeline import Timeline
 from opsiclientd.webserver.rpc.interface import Interface
+from opsicommon import __version__ as opsicommon_version
+from opsicommon.logging import get_logger, secret_filter
+from opsicommon.objects import (ConfigState, ObjectToGroup, Product,
+                                ProductDependency, ProductOnClient,
+                                ProductOnDepot)
+from opsicommon.system.info import is_windows
+from opsicommon.types import (forceBool, forceHostId, forceInt,
+                              forceProductIdList, forceUnicode)
+from opsicommon.utils import generate_opsi_host_key, make_temp_dir
 
 if is_windows():
 	from opsiclientd.windows import runCommandInSession
-	from opsiclientd.windows.opsiclientd import OpsiclientdNT
 else:
 	from OPSI.System import runCommandInSession  # type: ignore
 
@@ -434,6 +436,7 @@ class ControlInterface(PipeControlInterface):
 		if not is_windows():
 			raise NotImplementedError()
 		logger.notice("rpc sendSAS: sending SAS")
+		from opsiclientd.windows.opsiclientd import OpsiclientdNT
 		opsiclientd = cast(OpsiclientdNT, self.opsiclientd)
 		opsiclientd.sendSAS()
 

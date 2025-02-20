@@ -21,7 +21,6 @@ import threading
 import time
 import winreg  # type: ignore[import] # pylint: disable=import-error
 from enum import StrEnum
-
 # pyright: reportMissingImports=false
 from typing import Any
 
@@ -42,10 +41,7 @@ from opsiclientd.Config import OPSI_SETUP_USER_NAME
 from opsiclientd.ControlPipe import JSONRPC20Response, JSONRPCResponse
 from opsiclientd.Opsiclientd import Opsiclientd
 
-if os.name == "nt":
-	from ctypes import windll  # type: ignore[attr-defined]
-else:
-	windll = None
+if os.name != "nt":
 	WindowsError = RuntimeError
 
 
@@ -67,7 +63,7 @@ class OpsiclientdNT(Opsiclientd):
 		self._ms_update_installer = None
 
 	def sendSAS(self) -> None:
-		assert windll
+		from ctypes import windll  # type: ignore[attr-defined]
 		windll.sas.SendSAS(0)  # pylint: disable=no-member
 
 	def suspendBitlocker(self) -> None:
