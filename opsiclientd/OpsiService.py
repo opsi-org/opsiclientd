@@ -61,6 +61,7 @@ from opsicommon.ssl import install_ca, load_cas, remove_ca
 from opsicommon.system import lock_file
 from opsicommon.system.network import get_fqdn
 from opsicommon.types import forceBool, forceInt, forceProductId, forceString, forceUnicode
+from opsicommon.utils import PATH_PLACEHOLDERS, replace_placeholders
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
@@ -325,8 +326,8 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 						message.destination_dir = str(destination_dir)
 			elif isinstance(message, FileDownloadRequestMessage):
 				if message.path and "{OPSICLIENTD_LOG_FILE_PATH}" in message.path:
-					log_file_path = config.get("global", "log_file")
-					message.path = message.path.replace("{OPSICLIENTD_LOG_FILE_PATH}", log_file_path)
+					PATH_PLACEHOLDERS["OPSICLIENTD_LOG_FILE_PATH"] = config.get("global", "log_file")
+					message.path = replace_placeholders(message.path, PATH_PLACEHOLDERS)
 			await process_filetransfer_message(message=message, send_message=self.service_client.messagebus.async_send_message)
 		elif isinstance(message, ProcessMessage):
 			await process_process_message(message=message, send_message=self.service_client.messagebus.async_send_message)
