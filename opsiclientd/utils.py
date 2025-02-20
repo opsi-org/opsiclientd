@@ -18,8 +18,16 @@ from typing import TYPE_CHECKING
 import netifaces  # type: ignore[import]
 from opsicommon.logging import get_logger
 
+from opsiclientd.Config import Config
+
 if TYPE_CHECKING:
 	from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
+
+config = Config()
+
+PATH_PLACEHOLDERS = {
+	"{OPSICLIENTD_LOG_FILE_PATH}": config.get("global", "log_file"),
+}
 
 logger = get_logger()
 
