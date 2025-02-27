@@ -984,6 +984,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				link_handling = "no"
 			command = f"{alt_command} --link-handling {link_handling}"
 		else:
+			# Lazarus notifier
 			skin_file = ""
 			cmd = shlex.split(command)
 			for idx, arg in enumerate(cmd):
@@ -993,6 +994,11 @@ class Opsiclientd(EventListener, threading.Thread):
 			if not skin_file:
 				skin_file = os.path.join("notifier", f"{notifier_id}.ini")
 				command = f"{command} -s {skin_file}"
+
+			if RUNNING_ON_WINDOWS:
+				# Timer interval to bring the notifier to the front
+				stay_on_top = 15 if desktop == "winlogon" else 24 * 3600
+				command = f"{command} --stay-on-top {stay_on_top}"
 
 			# Lazarus notifier does not support all IDs
 			if notifier_id == "motd":
