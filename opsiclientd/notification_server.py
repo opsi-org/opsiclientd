@@ -228,8 +228,6 @@ class NotificationServer(SubjectsObserver, Thread):
 		self.notify(name="endConnection", params=[])
 		for client in self._clients:
 			client.close_connection()
-		for client in self._clients:
-			client.wait_closed(timeout=5.0)
 
 	def notify(self, name: str, params: list[Any], clients: list[NotificationServerClientConnection] | None = None) -> None:
 		if not isinstance(params, list):
@@ -289,6 +287,7 @@ class NotificationServer(SubjectsObserver, Thread):
 		logger.info(f"Notification server serving on {addrs}")
 		get_event_loop().create_task(self._server.serve_forever())
 
+		logger.debug("Server ended, waiting for should stop")
 		while not self._should_stop:
 			await sleep(1)
 
