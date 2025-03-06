@@ -1109,7 +1109,7 @@ class ControlInterface(PipeControlInterface):
 	def translateMessage(self, message: str) -> str:
 		return _(message)
 
-	def showDialog(self, title: str, message: str, timeout: float, buttons: list[dict]) -> str:
+	def showDialog(self, title: str, message: str, timeout: float, buttons: list[dict]) -> dict[str, str]:
 		"""
 		Show a dialog window on all desktops.
 		"""

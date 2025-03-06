@@ -128,7 +128,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._dialogNotificationServer: NotificationServer | None = None
 		self._dialogNotificationLock = threading.Lock()
 		self._dialogClosingThread: DialogClosingThread | None = None
-		self._dialogResult: str | None = None
+		self._dialogResult: None | dict[str, str] = None
 		self._dialogResultEvent = threading.Event()
 
 		self._blockLoginEventId: int | None = None
@@ -1256,7 +1256,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	def popupCloseCallback(self, choiceSubject: ChoiceSubject) -> None:
 		self.closePopup()
 
-	def showDialog(self, title: str, message: str, timeout: float, buttons: list[DialogButton]) -> str:
+	def showDialog(self, title: str, message: str, timeout: float, buttons: list[DialogButton]) -> dict[str, str]:
 		port = self.getDialogPort()
 		notifier_id: Final = "dialog"
 		timeout = max(1, min(timeout, 24 * 3600))
@@ -1270,8 +1270,20 @@ class Opsiclientd(EventListener, threading.Thread):
 			messageSubject = MessageSubject(id="message")
 			choiceSubject = ChoiceSubject(id="choice")
 			messageSubject.setMessage(message)
-			choiceSubject.setChoices([button.label for button in sorted(buttons, key=lambda b: b.order)])
-			choiceSubject.setCallbacks([self.dialogCloseCallback])
+			choices = []
+			callbacks = []
+			for button in sorted(buttons, key=lambda b: b.order):
+
+				def callback() -> None:
+					self.dialogCloseCallback(choiceSubject, button)
+
+				choices.append(button.label)
+				callbacks.append(callback)
+
+			choiceSubject.setChoices(choices)
+			choiceSubject.setCallbacks(callbacks)
+			self._dialogResult = None
+			self._dialogResultEvent.clear()
 
 			logger.notice("Starting popup message notification server on port %d", port)
 			try:
@@ -1335,8 +1347,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			return self._dialogResult
 		for button in buttons:
 			if button.default:
-				return button.id
-		return ""
+				return {"id": button.id, "label": button.label}
+		return {}
 
 	def closeDialog(self) -> None:
 		if self._dialogClosingThread and self._dialogClosingThread.is_alive():
@@ -1350,10 +1362,9 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to stop dialog notification server: %s", err)
 		self._dialogResultEvent.set()
 
-	def dialogCloseCallback(self, choiceSubject: ChoiceSubject) -> None:
-		selected_indexes = choiceSubject.getSelectedIndexes()
-		if selected_indexes:
-			self._dialogResult = choiceSubject.getChoices()[selected_indexes[0]]
+	def dialogCloseCallback(self, choiceSubject: ChoiceSubject, button: DialogButton) -> None:
+		self._dialogResult = {"id": button.id, "label": button.label}
+		self._dialogResultEvent.set()
 		self.closeDialog()
 
 	def collectLogfiles(self, types: list[str] | None = None, max_age_days: int | None = None, timeline_db: bool = True) -> Path:
