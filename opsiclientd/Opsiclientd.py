@@ -1275,11 +1275,13 @@ class Opsiclientd(EventListener, threading.Thread):
 			for button in sorted(buttons, key=lambda b: b.order):
 
 				def callback(choiceSubject: ChoiceSubject) -> None:
+					logger.debug("Dialog button %r (%r) clicked", button.id, button.label)
 					self.dialogCloseCallback(choiceSubject, button)
 
 				choices.append(button.label)
 				callbacks.append(callback)
 
+			logger.debug("Callback functions: %s", callbacks)
 			choiceSubject.setChoices(choices)
 			choiceSubject.setCallbacks(callbacks)
 			self._dialogResult = None
