@@ -46,6 +46,7 @@ from opsiclientd.Events.SwOnDemand import SwOnDemandEventGenerator
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import getEventGenerator, getEventGenerators
 from opsiclientd.Localization import _, get_translation_info
+from opsiclientd.Opsiclientd import DialogButton
 from opsiclientd.OpsiService import ServiceConnection, download_from_depot
 from opsiclientd.Timeline import Timeline
 from opsiclientd.webserver.rpc.interface import Interface
@@ -1109,6 +1110,12 @@ class ControlInterface(PipeControlInterface):
 	def translateMessage(self, message: str) -> str:
 		return _(message)
 
+	def showDialog(self, title: str, message: str, timeout: float, buttons: list[dict]) -> str:
+		"""
+		Show a dialog window on all desktops.
+		"""
+		return self.opsiclientd.showDialog(title=title, message=message, timeout=timeout, buttons=[DialogButton(**b) for b in buttons])
+
 
 @lru_cache
 def get_pipe_control_interface(opsiclientd: Opsiclientd) -> PipeControlInterface:
@@ -1138,4 +1145,5 @@ def get_cache_service_interface(opsiclientd: Opsiclientd) -> ControlInterface:
 	setattr(backend, "get_interface", MethodType(Interface.get_interface, backend))
 	setattr(backend, "get_method_interface", MethodType(Interface.get_method_interface, backend))
 	backend._create_interface()
+	return backend
 	return backend

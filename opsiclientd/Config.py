@@ -26,23 +26,11 @@ from OPSI.Util import blowfishDecrypt, objectToBeautifiedText  # type: ignore[im
 from OPSI.Util.File import IniFile  # type: ignore[import]
 from opsicommon.client.opsiservice import ServiceClient, ServiceVerificationFlags
 from opsicommon.logging import LOG_NOTICE, get_logger, logging_config, secret_filter
-from opsicommon.types import (
-	forceBool,
-	forceHostId,
-	forceList,
-	forceProductIdList,
-	forceUnicode,
-	forceUnicodeList,
-)
-from opsicommon.utils import Singleton
 from opsicommon.system.network import get_fqdn
+from opsicommon.types import forceBool, forceHostId, forceList, forceProductIdList, forceUnicode, forceUnicodeList
+from opsicommon.utils import Singleton
 
-from opsiclientd.SystemCheck import (
-	RUNNING_ON_DARWIN,
-	RUNNING_ON_LINUX,
-	RUNNING_ON_MACOS,
-	RUNNING_ON_WINDOWS,
-)
+from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_MACOS, RUNNING_ON_WINDOWS
 
 if TYPE_CHECKING:
 	from opsicommon.objects import OpsiDepotserver
@@ -253,6 +241,7 @@ class Config(metaclass=Singleton):
 				"interface": ["127.0.0.1", "::1"],
 				"start_port": 44000,
 				"popup_port": 45000,
+				"dialog_port": 45001,
 				"start_delay": 0,
 			},
 			"opsiclientd_rpc": {

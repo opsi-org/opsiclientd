@@ -24,17 +24,17 @@ import threading
 import time
 import urllib.request
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generator, Literal
+from typing import TYPE_CHECKING, Any, Final, Generator, Literal
 
 import psutil  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
 from OPSI import __version__ as python_opsi_version  # type: ignore[import]
 from OPSI.Util import randomString  # type: ignore[import]
-from OPSI.Util.Message import ChoiceSubject  # type: ignore[import]
-from OPSI.Util.Message import MessageSubject  # type: ignore[import]
+from OPSI.Util.Message import ChoiceSubject, MessageSubject  # type: ignore[import]
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, log_context, secret_filter
 from opsicommon.package import OpsiPackage
@@ -85,6 +85,14 @@ def sha256string(input_string: str) -> str:
 	return sha256(input_string.encode("utf-8")).digest().hex()
 
 
+@dataclass
+class DialogButton:
+	id: str
+	label: str
+	order: int = 0
+	default: bool = False
+
+
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self) -> None:
 		logger.debug("Opsiclient initiating")
@@ -116,6 +124,12 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._popupNotificationServer: NotificationServer | None = None
 		self._popupNotificationLock = threading.Lock()
 		self._popupClosingThread: PopupClosingThread | None = None
+
+		self._dialogNotificationServer: NotificationServer | None = None
+		self._dialogNotificationLock = threading.Lock()
+		self._dialogClosingThread: DialogClosingThread | None = None
+		self._dialogResult: str | None = None
+		self._dialogResultEvent = threading.Event()
 
 		self._blockLoginEventId: int | None = None
 		self._opsiclientdRunningEventId: int | None = None
@@ -968,7 +982,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	def getNotifierCommand(
 		self,
 		command: str,
-		notifier_id: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin"],
+		notifier_id: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin", "dialog"],
 		port: int | None = None,
 		link_handling: str = "no",
 		desktop: str | None = None,
@@ -980,7 +994,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		if notifier_id in config.get("opsiclientd_notifier", "alt_ids") and alt_command and Path(shlex.split(alt_command)[0]).exists():
 			elevation_required = desktop != "default"
 			if elevation_required and link_handling == "browser":
-				# Would start start elevated browser
+				# Click on link would start elevated browser
 				link_handling = "no"
 			command = f"{alt_command} --link-handling {link_handling}"
 		else:
@@ -998,6 +1012,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			# Lazarus notifier does not support all IDs
 			if notifier_id == "motd":
 				notifier_id = "popup"
+			elif notifier_id == "dialog":
+				notifier_id = "popup"
 			elif notifier_id == "shutdown_select":
 				notifier_id = "shutdown"
 			elif notifier_id == "userlogin":
@@ -1009,6 +1025,12 @@ class Opsiclientd(EventListener, threading.Thread):
 		port = config.get("notification_server", "popup_port")
 		if not port:
 			raise RuntimeError("notification_server.popup_port not defined")
+		return port
+
+	def getDialogPort(self) -> int:
+		port = config.get("notification_server", "dialog_port")
+		if not port:
+			raise RuntimeError("notification_server.dialog_port not defined")
 		return port
 
 	def updateMOTD(
@@ -1150,8 +1172,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				except Exception as err:
 					logger.warning(err, exc_info=True)
 
-			logger.info("Hide popup")
-			self.hidePopup()
+			logger.info("Close popup")
+			self.closePopup()
 
 			popupSubject = MessageSubject(id="message")
 			choiceSubject = ChoiceSubject(id="choice")
@@ -1174,8 +1196,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			sessions = sessions or System.getActiveSessionIds()
 			desktops = desktops or ["default", "winlogon"]
 			if not sessions:
-				if console_sessin_id := System.getActiveConsoleSessionId():
-					sessions = [int(console_sessin_id)]
+				if console_session_id := System.getActiveConsoleSessionId():
+					sessions = [int(console_session_id)]
 					desktops = ["winlogon"]
 			for sessionId in sessions:
 				try:
@@ -1220,7 +1242,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._popupClosingThread = PopupClosingThread(self, displaySeconds)
 				self._popupClosingThread.start()
 
-	def hidePopup(self) -> None:
+	def closePopup(self) -> None:
 		if self._popupClosingThread and self._popupClosingThread.is_alive():
 			logger.info("Stopping PopupClosingThread")
 			self._popupClosingThread.stop()
@@ -1232,7 +1254,107 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to stop popup notification server: %s", err)
 
 	def popupCloseCallback(self, choiceSubject: ChoiceSubject) -> None:
-		self.hidePopup()
+		self.closePopup()
+
+	def showDialog(self, title: str, message: str, timeout: float, buttons: list[DialogButton]) -> str:
+		port = self.getDialogPort()
+		notifier_id: Final = "dialog"
+		timeout = max(1, min(timeout, 24 * 3600))
+
+		logger.info("Acquire dialogNotificationLock")
+		with self._dialogNotificationLock:
+			logger.info("dialogNotificationLock acquired")
+			logger.info("Close dialog")
+			self.closeDialog()
+
+			messageSubject = MessageSubject(id="message")
+			choiceSubject = ChoiceSubject(id="choice")
+			messageSubject.setMessage(message)
+			choiceSubject.setChoices([button.label for button in sorted(buttons, key=lambda b: b.order)])
+			choiceSubject.setCallbacks([self.dialogCloseCallback])
+
+			logger.notice("Starting popup message notification server on port %d", port)
+			try:
+				self._dialogNotificationServer = NotificationServer(
+					address="127.0.0.1", start_port=port, subjects=[messageSubject, choiceSubject], notifier_id=notifier_id
+				)
+				with log_context({"instance": "popup notification server"}):
+					self._dialogNotificationServer.start_and_wait(timeout=10)
+			except Exception as err:
+				logger.error("Failed to start notification server: %s", err)
+				raise
+
+			sessions = System.getActiveSessionIds()
+			desktops = ["default", "winlogon"]
+			if not sessions:
+				if console_session_id := System.getActiveConsoleSessionId():
+					sessions = [int(console_session_id)]
+					desktops = ["winlogon"]
+			for sessionId in sessions:
+				try:
+					if RUNNING_ON_WINDOWS:
+						for desktop in desktops:
+							notifierCommand, elevation_required = self.getNotifierCommand(
+								command=config.get("opsiclientd_notifier", "command"),
+								notifier_id=notifier_id,
+								port=self._dialogNotificationServer.port,
+								desktop=desktop,
+							)
+							logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, sessionId, desktop)
+							proc = subprocess.Popen(  # type: ignore[call-overload]
+								notifierCommand,
+								session_id=sessionId,
+								session_env=(desktop == "default"),
+								session_elevated=elevation_required,
+								session_desktop=desktop,
+							)
+							logger.info("Process started with pid %s", proc.pid)
+					else:
+						notifierCommand, elevation_required = self.getNotifierCommand(
+							command=config.get("opsiclientd_notifier", "command"),
+							notifier_id=notifier_id,
+							port=self._dialogNotificationServer.port,
+						)
+						logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
+						runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
+				except Exception as err:
+					logger.error(
+						"Failed to start popup message notifier app in session %r on desktop %r: %s", sessionId, desktop, err, exc_info=True
+					)
+
+			if self._dialogClosingThread and self._dialogClosingThread.is_alive():
+				logger.info("Stopping DialogClosingThread")
+				self._dialogClosingThread.stop()
+
+			logger.info("Displaying dialog for %s seconds", timeout)
+			self._dialogClosingThread = DialogClosingThread(self, timeout)
+			self._dialogClosingThread.start()
+
+		self._dialogResultEvent.wait(timeout + 5)
+		if self._dialogResult:
+			return self._dialogResult
+		for button in buttons:
+			if button.default:
+				return button.id
+		return ""
+
+	def closeDialog(self) -> None:
+		if self._dialogClosingThread and self._dialogClosingThread.is_alive():
+			logger.info("Stopping DialogClosingThread")
+			self._dialogClosingThread.stop()
+		if self._dialogNotificationServer:
+			try:
+				logger.info("Stopping dialog message notification server")
+				self._dialogNotificationServer.stop()
+			except Exception as err:
+				logger.error("Failed to stop dialog notification server: %s", err)
+		self._dialogResultEvent.set()
+
+	def dialogCloseCallback(self, choiceSubject: ChoiceSubject) -> None:
+		selected_indexes = choiceSubject.getSelectedIndexes()
+		if selected_indexes:
+			self._dialogResult = choiceSubject.getChoices()[selected_indexes[0]]
+		self.closeDialog()
 
 	def collectLogfiles(self, types: list[str] | None = None, max_age_days: int | None = None, timeline_db: bool = True) -> Path:
 		now = datetime.now().timestamp()
@@ -1284,8 +1406,26 @@ class PopupClosingThread(threading.Thread):
 	def run(self) -> None:
 		while not self._should_stop.wait(1):
 			if time.time() > self.end_time:
-				logger.debug("Hiding popup window")
-				self.opsiclientd.hidePopup()
+				logger.debug("Closing popup window")
+				self.opsiclientd.closePopup()
+				break
+
+
+class DialogClosingThread(threading.Thread):
+	def __init__(self, opsiclientd: Opsiclientd, seconds: float) -> None:
+		super().__init__()
+		self.opsiclientd = opsiclientd
+		self.end_time = time.time() + seconds
+		self._should_stop = threading.Event()
+
+	def stop(self) -> None:
+		self._should_stop.set()
+
+	def run(self) -> None:
+		while not self._should_stop.wait(1):
+			if time.time() > self.end_time:
+				logger.debug("Closing dialog window")
+				self.opsiclientd.closeDialog()
 				break
 
 
@@ -1324,5 +1464,27 @@ class WaitForGUI(EventListener):
 			logger.warning("Timed out after %d seconds while waiting for GUI", timeout)
 
 	def canProcessEvent(self, event: Event, can_cancel: bool = False) -> bool:
+		# WaitForGUI should handle all Events
+		return True
+		# WaitForGUI should handle all Events
+		return True
+		# WaitForGUI should handle all Events
+		return True
+		# WaitForGUI should handle all Events
+		return True
+		# WaitForGUI should handle all Events
+		return True
+		# WaitForGUI should handle all Events
+		return True
+		# WaitForGUI should handle all Events
+		return True
+		# WaitForGUI should handle all Events
+		return True
+		# WaitForGUI should handle all Events
+		return True
+		# WaitForGUI should handle all Events
+		return True
+		# WaitForGUI should handle all Events
+		return True
 		# WaitForGUI should handle all Events
 		return True

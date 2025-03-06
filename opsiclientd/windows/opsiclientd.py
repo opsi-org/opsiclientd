@@ -21,6 +21,7 @@ import threading
 import time
 import winreg  # type: ignore[import] # pylint: disable=import-error
 from enum import StrEnum
+
 # pyright: reportMissingImports=false
 from typing import Any
 
@@ -64,6 +65,7 @@ class OpsiclientdNT(Opsiclientd):
 
 	def sendSAS(self) -> None:
 		from ctypes import windll  # type: ignore[attr-defined]
+
 		windll.sas.SendSAS(0)  # pylint: disable=no-member
 
 	def suspendBitlocker(self) -> None:
