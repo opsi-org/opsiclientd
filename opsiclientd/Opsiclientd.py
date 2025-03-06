@@ -986,7 +986,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		notifier_id: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin", "dialog"],
 		port: int | None = None,
 		link_handling: str = "no",
-		timeout: int | None = None,
+		timeout: int | float | None = None,
 		desktop: str | None = None,
 	) -> tuple[str, bool]:
 		# Notifier needs to be run with elevated rights for access
@@ -1000,7 +1000,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				link_handling = "no"
 			command = f"{alt_command} --link-handling {link_handling}"
 			if timeout:
-				command += f" --timeout {timeout}"
+				command += f" --timeout {int(timeout)}"
 		else:
 			# Lazarus notifier
 			skin_file = ""
@@ -1280,7 +1280,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			callbacks = []
 			for button in sorted(buttons, key=lambda b: b.order):
 
-				def callback(choiceSubject: ChoiceSubject, button=button) -> None:
+				def callback(choiceSubject: ChoiceSubject, button: DialogButton = button) -> None:
 					logger.debug("Dialog button %r (%r) clicked", button.id, button.label)
 					self.dialogCloseCallback(choiceSubject, button)
 
