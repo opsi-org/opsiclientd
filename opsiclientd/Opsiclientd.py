@@ -981,10 +981,12 @@ class Opsiclientd(EventListener, threading.Thread):
 
 	def getNotifierCommand(
 		self,
+		*,
 		command: str,
 		notifier_id: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin", "dialog"],
 		port: int | None = None,
 		link_handling: str = "no",
+		timeout: int | None = None,
 		desktop: str | None = None,
 	) -> tuple[str, bool]:
 		# Notifier needs to be run with elevated rights for access
@@ -997,6 +999,8 @@ class Opsiclientd(EventListener, threading.Thread):
 				# Click on link would start elevated browser
 				link_handling = "no"
 			command = f"{alt_command} --link-handling {link_handling}"
+			if timeout:
+				command += f" --timeout {timeout}"
 		else:
 			# Lazarus notifier
 			skin_file = ""
@@ -1208,6 +1212,7 @@ class Opsiclientd(EventListener, threading.Thread):
 								notifier_id=notifier_id,
 								port=self._popupNotificationServer.port,
 								link_handling=link_handling,
+								timeout=displaySeconds,
 								desktop=desktop,
 							)
 							logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, sessionId, desktop)
@@ -1225,6 +1230,7 @@ class Opsiclientd(EventListener, threading.Thread):
 							notifier_id=notifier_id,
 							port=self._popupNotificationServer.port,
 							link_handling=link_handling,
+							timeout=displaySeconds,
 						)
 						logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
 						runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
@@ -1312,6 +1318,7 @@ class Opsiclientd(EventListener, threading.Thread):
 								command=config.get("opsiclientd_notifier", "command"),
 								notifier_id=notifier_id,
 								port=self._dialogNotificationServer.port,
+								timeout=timeout,
 								desktop=desktop,
 							)
 							logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, sessionId, desktop)
@@ -1328,6 +1335,7 @@ class Opsiclientd(EventListener, threading.Thread):
 							command=config.get("opsiclientd_notifier", "command"),
 							notifier_id=notifier_id,
 							port=self._dialogNotificationServer.port,
+							timeout=timeout,
 						)
 						logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
 						runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
