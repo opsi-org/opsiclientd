@@ -1274,7 +1274,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			callbacks = []
 			for button in sorted(buttons, key=lambda b: b.order):
 
-				def callback() -> None:
+				def callback(choiceSubject: ChoiceSubject) -> None:
 					self.dialogCloseCallback(choiceSubject, button)
 
 				choices.append(button.label)
