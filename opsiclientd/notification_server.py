@@ -224,6 +224,7 @@ class NotificationServer(SubjectsObserver, Thread):
 		self.notify(name="subjectsChanged", params=[param], clients=clients)
 
 	def requestEndConnections(self) -> None:
+		logger.debug("requestEndConnections")
 		self.notify(name="endConnection", params=[])
 		for client in self._clients:
 			client.close_connection()
