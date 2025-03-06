@@ -46,7 +46,6 @@ from opsiclientd.Events.SwOnDemand import SwOnDemandEventGenerator
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import getEventGenerator, getEventGenerators
 from opsiclientd.Localization import _, get_translation_info
-from opsiclientd.Opsiclientd import DialogButton
 from opsiclientd.OpsiService import ServiceConnection, download_from_depot
 from opsiclientd.Timeline import Timeline
 from opsiclientd.webserver.rpc.interface import Interface
@@ -1114,6 +1113,8 @@ class ControlInterface(PipeControlInterface):
 		"""
 		Show a dialog window on all desktops.
 		"""
+		from opsiclientd.Opsiclientd import DialogButton
+
 		return self.opsiclientd.showDialog(title=title, message=message, timeout=timeout, buttons=[DialogButton(**b) for b in buttons])
 
 
