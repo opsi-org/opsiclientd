@@ -24,7 +24,7 @@ import threading
 import time
 import urllib.request
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
@@ -92,6 +92,20 @@ class DialogButton:
 	order: int = 0
 	default: bool = False
 
+	def as_dict(self) -> dict[str, str | int | bool]:
+		return asdict(self)
+
+
+@dataclass
+class DialogResult:
+	action: str | None = None
+	canceled: bool = False
+	timed_out: bool = False
+	button_pressed: DialogButton | None = None
+
+	def as_dict(self) -> dict[str, Any]:
+		return asdict(self)
+
 
 class Opsiclientd(EventListener, threading.Thread):
 	def __init__(self) -> None:
@@ -127,8 +141,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		self._dialogNotificationServer: NotificationServer | None = None
 		self._dialogNotificationLock = threading.Lock()
-		self._dialogClosingThread: DialogClosingThread | None = None
-		self._dialogResult: None | dict[str, str] = None
+		self._dialogResult: DialogResult = DialogResult()
 		self._dialogResultEvent = threading.Event()
 
 		self._blockLoginEventId: int | None = None
@@ -1262,7 +1275,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	def popupCloseCallback(self, choiceSubject: ChoiceSubject) -> None:
 		self.closePopup()
 
-	def showDialog(self, title: str, message: str, timeout: float, buttons: list[DialogButton]) -> dict[str, str | bool]:
+	def showDialog(self, title: str, message: str, timeout: float, buttons: list[DialogButton]) -> dict[str, Any]:
 		port = self.getDialogPort()
 		notifier_id: Final = "dialog"
 		timeout = max(1, min(timeout, 24 * 3600))
@@ -1270,9 +1283,18 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.info("Acquire dialogNotificationLock")
 		with self._dialogNotificationLock:
 			logger.info("dialogNotificationLock acquired")
+			if self._dialogNotificationServer and self._dialogNotificationServer.is_alive():
+				# Already runnning
+				self._dialogResult.canceled = True
+				self._dialogResult.action = None
+				self._dialogResultEvent.set()
+				time.sleep(1)
+
 			logger.info("Close dialog")
 			self.closeDialog()
 
+			self._dialogResult = DialogResult()
+			self._dialogResultEvent.clear()
 			messageSubject = MessageSubject(id="message")
 			choiceSubject = ChoiceSubject(id="choice")
 			messageSubject.setMessage(message)
@@ -1286,12 +1308,13 @@ class Opsiclientd(EventListener, threading.Thread):
 
 				choices.append(button.label)
 				callbacks.append(callback)
+				if button.default:
+					# Set default action
+					self._dialogResult.action = button.id
 
 			logger.debug("Callback functions: %s", callbacks)
 			choiceSubject.setChoices(choices)
 			choiceSubject.setCallbacks(callbacks)
-			self._dialogResult = None
-			self._dialogResultEvent.clear()
 
 			logger.notice("Starting popup message notification server on port %d", port)
 			try:
@@ -1344,40 +1367,25 @@ class Opsiclientd(EventListener, threading.Thread):
 						"Failed to start popup message notifier app in session %r on desktop %r: %s", sessionId, desktop, err, exc_info=True
 					)
 
-			if self._dialogClosingThread and self._dialogClosingThread.is_alive():
-				logger.info("Stopping DialogClosingThread")
-				self._dialogClosingThread.stop()
+		if not self._dialogResultEvent.wait(timeout):
+			logger.info("Dialog timed out")
+			self._dialogResult.timed_out = True
+			self.closeDialog()
 
-			logger.info("Displaying dialog for %s seconds", timeout)
-			self._dialogClosingThread = DialogClosingThread(self, timeout)
-			self._dialogClosingThread.start()
-
-		self._dialogResultEvent.wait(timeout + 5)
-		result: dict[str, str | bool] = {"id": "", "label": "", "timed_out": True}
-		if self._dialogResult:
-			result.update(self._dialogResult)
-			result["timed_out"] = False
-		else:
-			for button in buttons:
-				if button.default:
-					result["id"] = button.id
-					result["label"] = button.label
-		return result
+		return self._dialogResult.as_dict()
 
 	def closeDialog(self) -> None:
-		if self._dialogClosingThread and self._dialogClosingThread.is_alive():
-			logger.info("Stopping DialogClosingThread")
-			self._dialogClosingThread.stop()
-		if self._dialogNotificationServer:
-			try:
-				logger.info("Stopping dialog message notification server")
-				self._dialogNotificationServer.stop()
-			except Exception as err:
-				logger.error("Failed to stop dialog notification server: %s", err)
-		self._dialogResultEvent.set()
+		if not self._dialogNotificationServer:
+			return
+		try:
+			logger.info("Stopping dialog message notification server")
+			self._dialogNotificationServer.stop()
+		except Exception as err:
+			logger.error("Failed to stop dialog notification server: %s", err)
 
 	def dialogCloseCallback(self, choiceSubject: ChoiceSubject, button: DialogButton) -> None:
-		self._dialogResult = {"id": button.id, "label": button.label}
+		self._dialogResult.button_pressed = button
+		self._dialogResult.action = button.id
 		self._dialogResultEvent.set()
 		self.closeDialog()
 
@@ -1436,24 +1444,6 @@ class PopupClosingThread(threading.Thread):
 				break
 
 
-class DialogClosingThread(threading.Thread):
-	def __init__(self, opsiclientd: Opsiclientd, seconds: float) -> None:
-		super().__init__()
-		self.opsiclientd = opsiclientd
-		self.end_time = time.time() + seconds
-		self._should_stop = threading.Event()
-
-	def stop(self) -> None:
-		self._should_stop.set()
-
-	def run(self) -> None:
-		while not self._should_stop.wait(1):
-			if time.time() > self.end_time:
-				logger.debug("Closing dialog window")
-				self.opsiclientd.closeDialog()
-				break
-
-
 class WaitForGUI(EventListener):
 	def __init__(self, opsiclientd: Opsiclientd) -> None:
 		self._opsiclientd = opsiclientd
@@ -1489,27 +1479,5 @@ class WaitForGUI(EventListener):
 			logger.warning("Timed out after %d seconds while waiting for GUI", timeout)
 
 	def canProcessEvent(self, event: Event, can_cancel: bool = False) -> bool:
-		# WaitForGUI should handle all Events
-		return True
-		# WaitForGUI should handle all Events
-		return True
-		# WaitForGUI should handle all Events
-		return True
-		# WaitForGUI should handle all Events
-		return True
-		# WaitForGUI should handle all Events
-		return True
-		# WaitForGUI should handle all Events
-		return True
-		# WaitForGUI should handle all Events
-		return True
-		# WaitForGUI should handle all Events
-		return True
-		# WaitForGUI should handle all Events
-		return True
-		# WaitForGUI should handle all Events
-		return True
-		# WaitForGUI should handle all Events
-		return True
 		# WaitForGUI should handle all Events
 		return True
