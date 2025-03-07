@@ -25,6 +25,7 @@ config = Config()
 class FakeOpsiclientd(Opsiclientd):
 	def showPopup(
 		self,
+		title: str,
 		message: str,
 		notifier_id: Literal["popup", "motd"] = "popup",
 		mode: str = "prepend",

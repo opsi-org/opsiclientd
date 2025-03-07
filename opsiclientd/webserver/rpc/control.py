@@ -536,7 +536,7 @@ class ControlInterface(PipeControlInterface):
 
 	def showPopup(self, message: str, mode: str = "prepend", addTimestamp: bool = True, displaySeconds: int = 0) -> None:
 		message = forceUnicode(message)
-		self.opsiclientd.showPopup(message=message, mode=mode, addTimestamp=addTimestamp, displaySeconds=displaySeconds)
+		self.opsiclientd.showPopup(title="", message=message, mode=mode, addTimestamp=addTimestamp, displaySeconds=displaySeconds)
 
 	def deleteServerCerts(self) -> None:
 		config = self.opsiclientd.config
@@ -1146,5 +1146,4 @@ def get_cache_service_interface(opsiclientd: Opsiclientd) -> ControlInterface:
 	setattr(backend, "get_interface", MethodType(Interface.get_interface, backend))
 	setattr(backend, "get_method_interface", MethodType(Interface.get_method_interface, backend))
 	backend._create_interface()
-	return backend
 	return backend

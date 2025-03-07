@@ -1111,6 +1111,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				if relevant_sessions:
 					logger.notice("Showing user-specific message of the day")
 					self.showPopup(
+						_("Message of the day"),
 						user_message,
 						notifier_id="motd",
 						mode="replace",
@@ -1137,6 +1138,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			else:
 				logger.notice("Showing device-specific message of the day")
 				self.showPopup(
+					_("Message of the day"),
 					device_message,
 					notifier_id="motd",
 					mode="replace",
@@ -1151,6 +1153,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 	def showPopup(
 		self,
+		title: str,
 		message: str,
 		notifier_id: Literal["popup", "motd"] = "popup",
 		mode: str = "prepend",
@@ -1194,6 +1197,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 			popupSubject = MessageSubject(id="message")
 			choiceSubject = ChoiceSubject(id="choice")
+			popupSubject.setTitle(title)
 			popupSubject.setMessage(message)
 
 			logger.notice("Starting popup message notification server on port %d", port)
@@ -1297,6 +1301,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			self._dialogResultEvent.clear()
 			messageSubject = MessageSubject(id="message")
 			choiceSubject = ChoiceSubject(id="choice")
+			messageSubject.setTitle(title)
 			messageSubject.setMessage(message)
 			choices = []
 			callbacks = []
