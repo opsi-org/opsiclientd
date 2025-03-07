@@ -1262,7 +1262,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	def popupCloseCallback(self, choiceSubject: ChoiceSubject) -> None:
 		self.closePopup()
 
-	def showDialog(self, title: str, message: str, timeout: float, buttons: list[DialogButton]) -> dict[str, str]:
+	def showDialog(self, title: str, message: str, timeout: float, buttons: list[DialogButton]) -> dict[str, str | bool]:
 		port = self.getDialogPort()
 		notifier_id: Final = "dialog"
 		timeout = max(1, min(timeout, 24 * 3600))
@@ -1353,7 +1353,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			self._dialogClosingThread.start()
 
 		self._dialogResultEvent.wait(timeout + 5)
-		result = {"id": "", "label": "", "timed_out": True}
+		result: dict[str, str | bool] = {"id": "", "label": "", "timed_out": True}
 		if self._dialogResult:
 			result.update(self._dialogResult)
 			result["timed_out"] = False
