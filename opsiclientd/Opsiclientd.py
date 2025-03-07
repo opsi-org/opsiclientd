@@ -1353,12 +1353,16 @@ class Opsiclientd(EventListener, threading.Thread):
 			self._dialogClosingThread.start()
 
 		self._dialogResultEvent.wait(timeout + 5)
+		result = {"id": "", "label": "", "timed_out": True}
 		if self._dialogResult:
-			return self._dialogResult
-		for button in buttons:
-			if button.default:
-				return {"id": button.id, "label": button.label}
-		return {}
+			result.update(self._dialogResult)
+			result["timed_out"] = False
+		else:
+			for button in buttons:
+				if button.default:
+					result["id"] = button.id
+					result["label"] = button.label
+		return result
 
 	def closeDialog(self) -> None:
 		if self._dialogClosingThread and self._dialogClosingThread.is_alive():
