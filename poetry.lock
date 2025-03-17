@@ -1799,15 +1799,15 @@ reference = "uibpypi"
 
 [[package]]
 name = "python-opsi"
-version = "4.3.9.0"
+version = "4.3.9.1"
 description = "The opsi python library"
 optional = false
 python-versions = ">=3.11,<3.14"
 groups = ["main"]
 markers = "sys_platform == \"darwin\" or sys_platform == \"linux\" or sys_platform != \"darwin\" and sys_platform != \"linux\""
 files = [
-    {file = "python_opsi-4.3.9.0-py3-none-any.whl", hash = "sha256:8bafb6b6fddc0b995842493ab0419fe84fe35095e955f7edf148721fb787e18c"},
-    {file = "python_opsi-4.3.9.0.tar.gz", hash = "sha256:da628831e4f7f4ec691cb535e1e1630abbfab649799f17affd71373c66ea8281"},
+    {file = "python_opsi-4.3.9.1-py3-none-any.whl", hash = "sha256:909d8540cd7cfee6dc9525c9a0bbab25e7ee19d3e35e1d5ddcbd21d72e32b4e1"},
+    {file = "python_opsi-4.3.9.1.tar.gz", hash = "sha256:8fbcb1430e45b78376e8058734c7a32abb16752f33fbd365018dbd03f76f8331"},
 ]
 
 [package.dependencies]
@@ -1842,15 +1842,15 @@ reference = "uibpypi"
 
 [[package]]
 name = "python-opsi-common"
-version = "4.3.26.0"
+version = "4.3.26.1"
 description = "The opsi python common library"
 optional = false
 python-versions = ">=3.11,<3.14"
 groups = ["main"]
 markers = "sys_platform == \"darwin\" or sys_platform == \"linux\" or sys_platform != \"darwin\" and sys_platform != \"linux\""
 files = [
-    {file = "python_opsi_common-4.3.26.0-py3-none-any.whl", hash = "sha256:dc7f6248d2a3917bc6e2accd85ccf58ca783bf42520486ab9707291a2cff6bde"},
-    {file = "python_opsi_common-4.3.26.0.tar.gz", hash = "sha256:1a348fdee367a9d1bfbae0755d7df4e866cd83da365afaf596c8d21a4d4bf369"},
+    {file = "python_opsi_common-4.3.26.1-py3-none-any.whl", hash = "sha256:2f15e1cc5abf1072bc29b7130f77ace4e7dd5e10a42f122efdd69258474dd86e"},
+    {file = "python_opsi_common-4.3.26.1.tar.gz", hash = "sha256:ffe746cb31c6333db82b3d7b1e3d935a54dc6815151f54cc211853a52ef1a00a"},
 ]
 
 [package.dependencies]
