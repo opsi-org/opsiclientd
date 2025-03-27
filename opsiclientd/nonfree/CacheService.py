@@ -1360,24 +1360,6 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 			self._setProductCacheState(productId, "packageVersion", products[0].packageVersion, updateProductOnClient=False)
 			self._setProductCacheState(productId, "name", products[0].name, updateProductOnClient=False)
 
-			if not os.path.exists(os.path.join(self._productCacheDir, productId)):
-				os.mkdir(os.path.join(self._productCacheDir, productId))
-
-			packageContentFile = f"{productId}/{productId}.files"
-			localPackageContentFile = os.path.join(self._productCacheDir, productId, f"{productId}.files")
-			repository.download(source=packageContentFile, destination=localPackageContentFile)
-			packageInfo = PackageContentFile(localPackageContentFile).parse()
-			productSize = 0
-			fileCount = 0
-			for value in packageInfo.values():
-				if "size" in value:
-					fileCount += 1
-					productSize += int(value["size"])
-
-			logger.info(
-				"Product '%s' contains %d files with a total size of %0.3f MB", productId, fileCount, float(productSize) / (1000 * 1000)
-			)
-
 			# 7zip--rfc156094_24.09-1.opsi
 			base_product_id = productId.split("--")[0]
 			similarProductCacheDir: str | None = None
@@ -1396,6 +1378,24 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 				logger.info("Using similar product cache dir: %s", similarProductCacheDir)
 				curProductCacheDir = os.path.join(self._productCacheDir, productId)
 				os.rename(similarProductCacheDir, curProductCacheDir)
+
+			if not os.path.exists(os.path.join(self._productCacheDir, productId)):
+				os.mkdir(os.path.join(self._productCacheDir, productId))
+
+			packageContentFile = f"{productId}/{productId}.files"
+			localPackageContentFile = os.path.join(self._productCacheDir, productId, f"{productId}.files")
+			repository.download(source=packageContentFile, destination=localPackageContentFile)
+			packageInfo = PackageContentFile(localPackageContentFile).parse()
+			productSize = 0
+			fileCount = 0
+			for value in packageInfo.values():
+				if "size" in value:
+					fileCount += 1
+					productSize += int(value["size"])
+
+			logger.info(
+				"Product '%s' contains %d files with a total size of %0.3f MB", productId, fileCount, float(productSize) / (1000 * 1000)
+			)
 
 			productCacheDirSize = 0
 			if self._productCacheMaxSize > 0:
