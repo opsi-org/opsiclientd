@@ -17,8 +17,8 @@ from datetime import datetime
 
 import sqlalchemy  # type: ignore[import]
 
-# STARTUP_LOG = r"c:\opsi.org\log\opsiclientd_startup.log"
-STARTUP_LOG: str | None = None
+STARTUP_LOG: str | None = r"c:\opsi.org\log\opsiclientd_startup.log"
+# STARTUP_LOG: str | None = None
 
 
 def opsiclientd_rpc() -> None:
