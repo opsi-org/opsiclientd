@@ -946,12 +946,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if poc.productId not in excludeProductIds
 			]:
 				if productOnClient.productId not in productIds:
-					if (
-						"installation_pending" in self.event.eventConfig.preconditions
-						and productOnClient.productId not in state.get("pending_product_ids")
-						and not state.get(  # Ignore at transision from installation_pending to pending_product_ids, TODO remove in future
-							"installation_pending"
-						)
+					if "installation_pending" in self.event.eventConfig.preconditions and productOnClient.productId not in state.get(
+						"pending_product_ids", []
 					):
 						logger.info("Skipping product '%s' because it is not in pending_product_ids", productOnClient.productId)
 						continue
