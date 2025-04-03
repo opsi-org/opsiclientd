@@ -979,7 +979,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							"",
 						)
 					)
-				state.set("installation_pending", "true")
 
 				logger.notice("Start processing action requests")
 				if productIds:
@@ -1029,6 +1028,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							break
 
 				self.processActionWarningTime(productInfo)
+				state.set("installation_pending", "true")
 				try:
 					try:
 						cache_service = self.opsiclientd.getCacheService()
