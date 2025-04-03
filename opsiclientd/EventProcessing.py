@@ -946,6 +946,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if poc.productId not in excludeProductIds
 			]:
 				if productOnClient.productId not in productIds:
+					if (
+						"installation_pending" in self.event.eventConfig.preconditions
+						and productOnClient.productId not in state.get("pending_product_ids")
+						and not state.get(  # Ignore at transision from installation_pending to pending_product_ids, TODO remove in future
+							"installation_pending"
+						)
+					):
+						logger.info("Skipping product '%s' because it is not in pending_product_ids", productOnClient.productId)
+						continue
 					productIds.append(productOnClient.productId)
 					logger.notice(
 						"   [%2s] product %-20s %s", len(productIds), productOnClient.productId + ":", productOnClient.actionRequest
@@ -954,7 +963,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if (not productIds) and bootmode == "BKSTD":
 				logger.notice("No product action requests set")
 				self.setStatusMessage(_("No product action requests set"))
-				state.set("installation_pending", "false")
+				state.set("pending_product_ids", [])
+				state.delete("installation_pending")  # to get rid of previous flag, TODO: remove in future
 				try:
 					if self.event.eventConfig.useCachedConfig:
 						self.opsiclientd.getCacheService().setConfigCacheObsolete()
@@ -1028,7 +1038,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							break
 
 				self.processActionWarningTime(productInfo)
-				state.set("installation_pending", "true")
+				state.set("pending_product_ids", productIds)
+				state.delete("installation_pending")  # to get rid of previous flag, TODO: remove in future
 				try:
 					try:
 						cache_service = self.opsiclientd.getCacheService()
@@ -1067,11 +1078,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						actionRequest=["setup", "uninstall", "update", "once", "custom"],
 					)
 					logger.info("pocs_with_action: %r, productIds: %r", pocs_with_action, productIds)
-					if not any(poc for poc in pocs_with_action if not productIds or poc["productId"] in productIds):
-						# No more product actions pending of the actions requested
-						logger.info("Setting installation pending to false")
-						state.set("installation_pending", "false")
-					logger.notice("Installation pending is: %s", state.get("installation_pending"))
+					# Still products with action request (or newly set ones) after runActions
+					state.set("pending_product_ids", [poc["productId"] for poc in pocs_with_action])
+					logger.notice("Setting pending product_ids: %s", state.get("pending_product_ids"))
 				except Exception as err:
 					logger.error(err)
 		except Exception as err:

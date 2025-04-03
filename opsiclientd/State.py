@@ -99,7 +99,7 @@ class State(metaclass=Singleton):
 		if "cancel_counter" in name:
 			return self._state.get(name, 0)
 		if name == "installation_pending":
-			return forceBool(self._state.get("installation_pending", False))
+			return forceBool(self._state.get("installation_pending", False)) or len(self._state.get("pending_product_ids", [])) > 0
 		if name == "message_of_the_day":
 			return self._state.get("message_of_the_day", default)
 		try:
@@ -107,6 +107,13 @@ class State(metaclass=Singleton):
 		except KeyError:
 			logger.warning("Unknown state name '%s', returning default '%s'", name, default)
 			return default
+
+	def delete(self, name: str) -> None:
+		name = forceUnicode(name)
+		logger.debug("Deleting state '%s'", name)
+		if name in self._state:
+			del self._state[name]
+			self._writeStateFile()
 
 	def set(self, name: str, value: Any) -> None:
 		name = forceUnicode(name)
