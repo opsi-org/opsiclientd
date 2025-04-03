@@ -1218,9 +1218,8 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			actionProcessorCommand = actionProcessorCommand.replace("%service_url%", self._configServiceUrl or "?")
 			actionProcessorCommand = actionProcessorCommand.replace("%service_session%", serviceSession)
 			actionProcessorCommand = actionProcessorCommand.replace("%depot_path%", config.get_depot_path())
-			actionProcessorCommand = actionProcessorCommand.replace(
-				"%action_processor_productids%", ",".join(self.event.eventConfig.actionProcessorProductIds)
-			)
+			# With this we always explicitly tell opsi-script which products to install (!!)
+			actionProcessorCommand = actionProcessorCommand.replace("%action_processor_productids%", ",".join(productIds))
 			actionProcessorCommand += f" {additionalParams}"
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 
