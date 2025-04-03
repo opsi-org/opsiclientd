@@ -1221,7 +1221,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			# With this we always explicitly tell opsi-script which products to install (!!)
 			if "/productlist %action_processor_productIds%" not in actionProcessorCommand:
 				actionProcessorCommand += " /productlist %action_processor_productIds%"
-			actionProcessorCommand = actionProcessorCommand.replace("%action_processor_productids%", ",".join(productIds))
+			actionProcessorCommand = actionProcessorCommand.replace("%action_processor_productIds%", ",".join(productIds))
 			actionProcessorCommand += f" {additionalParams}"
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 
