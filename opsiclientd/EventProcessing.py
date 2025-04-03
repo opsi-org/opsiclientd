@@ -1220,8 +1220,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			actionProcessorCommand = actionProcessorCommand.replace("%depot_path%", config.get_depot_path())
 			# With this we always explicitly tell opsi-script which products to install (!!)
 			if "/productlist %action_processor_productIds%" not in actionProcessorCommand:
-				actionProcessorCommand += " /productlist %action_processor_productIds%"
-			actionProcessorCommand = actionProcessorCommand.replace("%action_processor_productIds%", ",".join(productIds))
+				actionProcessorCommand += " /processproducts " + ",".join(productIds)
+			actionProcessorCommand = actionProcessorCommand.replace(
+				"%action_processor_productids%", ",".join(self.event.eventConfig.actionProcessorProductIds)
+			)
+
 			actionProcessorCommand += f" {additionalParams}"
 			actionProcessorCommand = actionProcessorCommand.replace('"', '\\"')
 
