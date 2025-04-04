@@ -1034,7 +1034,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							break
 
 				self.processActionWarningTime(productInfo)
-				state.set("pending_product_ids", productIds)
+				if not state.get("pending_product_ids", []):
+					# If pending_product_ids are set, we only want to process the products in there
+					state.set("pending_product_ids", productIds)
 				state.delete("installation_pending")  # to get rid of previous flag, TODO: remove in future
 				try:
 					try:
@@ -1075,7 +1077,10 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					)
 					logger.info("pocs_with_action: %r, productIds: %r", pocs_with_action, productIds)
 					# Still products with action request (or newly set ones) after runActions
-					state.set("pending_product_ids", [poc["productId"] for poc in pocs_with_action])
+					state.set(
+						"pending_product_ids",
+						[poc["productId"] for poc in pocs_with_action if poc["productId"] in state.get("pending_product_ids", [])],
+					)
 					logger.notice("Setting pending product_ids: %s", state.get("pending_product_ids"))
 				except Exception as err:
 					logger.error(err)
