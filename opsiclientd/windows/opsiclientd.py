@@ -41,10 +41,10 @@ from opsiclientd import config
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
 from opsiclientd.ControlPipe import JSONRPC20Response, JSONRPCResponse
 from opsiclientd.Opsiclientd import Opsiclientd
-from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
-if not RUNNING_ON_WINDOWS:
+if os.name != "nt":
 	WindowsError = RuntimeError
+
 
 logger = get_logger()
 
@@ -62,6 +62,11 @@ class OpsiclientdNT(Opsiclientd):
 	def __init__(self) -> None:
 		Opsiclientd.__init__(self)
 		self._ms_update_installer = None
+
+	def sendSAS(self) -> None:
+		from ctypes import windll  # type: ignore[attr-defined]
+
+		windll.sas.SendSAS(0)  # pylint: disable=no-member
 
 	def suspendBitlocker(self) -> None:
 		logger.notice("Suspending bitlocker for one reboot if active")
@@ -267,10 +272,12 @@ class OpsiclientdNT(Opsiclientd):
 		assert self._controlPipe
 		for session_id in System.getActiveSessionIds(protocol="console"):
 			System.lockSession(session_id)
+		self.sendSAS()
 		for _unused in range(20):
 			if self._controlPipe.credentialProviderConnected(login_capable=True):
 				break
-			time.sleep(0.5)
+			self.sendSAS()
+			time.sleep(1.0)
 		if not self._controlPipe.credentialProviderConnected(login_capable=True):
 			raise RuntimeError("No login capable opsi credential provider connected")
 		logger.info("Login capable opsi credential provider connected, calling loginUser")

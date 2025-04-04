@@ -45,7 +45,7 @@ test:pytest-darwin:
     - catalina-py313-x64
   script:
     - poetry --version
-    - poetry lock --no-update --no-cache
+    #- poetry lock --no-update --no-cache
     - poetry install
     - poetry run pytest --tb=short -x -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
     - mv .coverage coverage_darwin
@@ -66,10 +66,14 @@ test:pytest-windows:
   tags:
     - win10-py313-x86
   script:
+<<<<<<< HEAD
     - $pythonPath = py -3.13 -c "import sys; print(sys.executable)"
     - poetry env use $pythonPath
     - poetry cache clear --all --quiet uibpypi
     - poetry lock --no-update --no-cache
+=======
+    #- poetry lock --no-update --no-cache
+>>>>>>> v4.3
     - poetry install
     - poetry run pytest --tb=short -x -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
     - Rename-Item -Path .coverage -NewName coverage_windows
@@ -88,7 +92,7 @@ test:pytest-linux:
   #when: manual
   stage: test
   script:
-    - poetry lock --no-update --no-cache
+    #- poetry lock --no-update --no-cache
     - poetry install
     - *run_opsiclientd
     - sleep 8
@@ -120,7 +124,7 @@ lint-pytest:
     - apt-get update
     - apt-get --yes --allow-downgrades install libsqlite3-0=3.16.2-5+deb9u1
     - apt-get --yes install sqlite3
-    - poetry lock --no-update --no-cache
+    #- poetry lock --no-update --no-cache
     - poetry install
     - poetry run ruff check opsiclientd tests
     - poetry run mypy opsiclientd tests
@@ -147,7 +151,7 @@ build:pyinstaller-linux-x64:
     - curl -o opsi-dev-tools.tar.gz "$OPSIDEVTOOLS_URL_LINUX_X64"
     - tar -xvf opsi-dev-tools.tar.gz
     - mv opsi-dev-tool opsi-dev-cli
-    - poetry lock --no-update --no-cache
+    #- poetry lock --no-update --no-cache
     - poetry install
     - poetry run ./opsi-dev-cli -l info pyinstaller build
     - mv dist/opsiclientd opsiclientd_linux_x64
@@ -169,7 +173,7 @@ build:pyinstaller-darwin-x64:
     - curl -o opsi-dev-tools.tar.gz "$OPSIDEVTOOLS_URL_DARWIN_X64"
     - tar -xvf opsi-dev-tools.tar.gz
     - mv opsi-dev-tool opsi-dev-cli
-    - poetry lock --no-update --no-cache
+    #- poetry lock --no-update --no-cache
     - poetry install
     - poetry run ./opsi-dev-cli -l info pyinstaller build
     - mv dist/opsiclientd opsiclientd_darwin_x64
@@ -196,15 +200,10 @@ build:pyinstaller-windows-x86:
     - Invoke-WebRequest -UseBasicParsing -Uri "$OPSIDEVTOOLS_URL_WINDOWS_X86" -OutFile opsi-dev-tools.zip
     - Expand-Archive opsi-dev-tools.zip -DestinationPath .
     - Copy-Item opsi-dev-tool.exe opsi-dev-cli.exe
-    - $pythonPath = py -3.13 -c "import sys; print(sys.executable)"
-    - poetry env use $pythonPath
-    - poetry cache clear --all --quiet uibpypi
-    - poetry lock --no-update --no-cache
+    #- poetry lock --no-update --no-cache
     - poetry install
     - poetry run .\opsi-dev-cli.exe -l debug pyinstaller build
-    - .\opsi-dev-cli.exe -l info -l info signserver sign dist\opsiclientd\opsiclientd.exe
-    - .\opsi-dev-cli.exe -l info -l info signserver sign dist\opsiclientd\opsiclientd_rpc.exe
-    - .\opsi-dev-cli.exe -l info -l info signserver sign dist\opsiclientd\action_processor_starter.exe
+    - .\opsi-dev-cli.exe -l info -l info signserver sign dist\opsiclientd\
     - Move-Item -Path dist\opsiclientd -Destination opsiclientd_windows_x86
     # Check if binary is working
     - opsiclientd_windows_x86\opsiclientd.exe --version

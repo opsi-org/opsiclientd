@@ -17,17 +17,17 @@ from types import MethodType
 from typing import Any, Callable, Type
 
 from OPSI.Backend.Backend import (  # type: ignore[import]
-	Backend,  # type: ignore[import]
+	Backend,
 	BackendModificationListener,
 	ConfigDataBackend,
 	ModificationTrackingBackend,
 )
-from OPSI.Backend.Base.Extended import (
-	get_function_signature_and_args,  # type: ignore[import]
+from OPSI.Backend.Base.Extended import (  # type: ignore[import]
+	get_function_signature_and_args,
 )
 from OPSI.Backend.Replicator import BackendReplicator  # type: ignore[import]
 from OPSI.Util import blowfishDecrypt  # type: ignore[import]
-from opsicommon.exceptions import (  # type: ignore[import]
+from opsicommon.exceptions import (
 	BackendConfigurationError,
 	BackendMissingDataError,
 	BackendUnaccomplishableError,
@@ -730,7 +730,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					with warnings.catch_warnings():
 						exec(
 							f'def {methodName}{sig}: return self._executeMethod("{methodName}", {arg})',
-							locals=exec_locals,
+							None,
+							exec_locals,
 						)
 
 					new_function = exec_locals[methodName]

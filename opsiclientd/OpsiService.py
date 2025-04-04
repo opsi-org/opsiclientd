@@ -40,6 +40,7 @@ from opsicommon.logging.constants import TRACE
 from opsicommon.messagebus.file_transfer import process_messagebus_message as process_filetransfer_message
 from opsicommon.messagebus.message import (
 	Error,
+	FileDownloadRequestMessage,
 	FileTransferMessage,
 	FileUploadRequestMessage,
 	GeneralErrorMessage,
@@ -60,12 +61,13 @@ from opsicommon.ssl import install_ca, load_cas, remove_ca
 from opsicommon.system import lock_file
 from opsicommon.system.network import get_fqdn
 from opsicommon.types import forceBool, forceInt, forceProductId, forceString, forceUnicode
+from opsicommon.utils import replace_placeholders
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
 from opsiclientd.Exceptions import CanceledByUserError
 from opsiclientd.Localization import _
-from opsiclientd.utils import log_network_status
+from opsiclientd.utils import PATH_PLACEHOLDERS, log_network_status
 
 if TYPE_CHECKING:
 	from opsiclientd.Opsiclientd import Opsiclientd
@@ -322,6 +324,9 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 					if terminal:
 						destination_dir = terminal.get_cwd()
 						message.destination_dir = str(destination_dir)
+			elif isinstance(message, FileDownloadRequestMessage):
+				if message.path and "{OPSICLIENTD_LOG_FILE_PATH}" in message.path:
+					message.path = replace_placeholders(message.path, PATH_PLACEHOLDERS)
 			await process_filetransfer_message(message=message, send_message=self.service_client.messagebus.async_send_message)
 		elif isinstance(message, ProcessMessage):
 			await process_process_message(message=message, send_message=self.service_client.messagebus.async_send_message)

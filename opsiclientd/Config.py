@@ -22,27 +22,16 @@ from urllib.parse import urlparse
 import netifaces  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
 from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
-from OPSI.Util import blowfishDecrypt, objectToBeautifiedText  # type: ignore[import]
+from OPSI.Util import blowfishDecrypt  # type: ignore[import]
+from OPSI.Util import objectToBeautifiedText  # type: ignore[import]
 from OPSI.Util.File import IniFile  # type: ignore[import]
 from opsicommon.client.opsiservice import ServiceClient, ServiceVerificationFlags
 from opsicommon.logging import LOG_NOTICE, get_logger, logging_config, secret_filter
-from opsicommon.types import (
-	forceBool,
-	forceHostId,
-	forceList,
-	forceProductIdList,
-	forceUnicode,
-	forceUnicodeList,
-)
-from opsicommon.utils import Singleton
 from opsicommon.system.network import get_fqdn
+from opsicommon.types import forceBool, forceHostId, forceList, forceProductIdList, forceUnicode, forceUnicodeList
+from opsicommon.utils import Singleton
 
-from opsiclientd.SystemCheck import (
-	RUNNING_ON_DARWIN,
-	RUNNING_ON_LINUX,
-	RUNNING_ON_MACOS,
-	RUNNING_ON_WINDOWS,
-)
+from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_MACOS, RUNNING_ON_WINDOWS
 
 if TYPE_CHECKING:
 	from opsicommon.objects import OpsiDepotserver
@@ -253,6 +242,7 @@ class Config(metaclass=Singleton):
 				"interface": ["127.0.0.1", "::1"],
 				"start_port": 44000,
 				"popup_port": 45000,
+				"dialog_port": 45001,
 				"start_delay": 0,
 			},
 			"opsiclientd_rpc": {
@@ -915,7 +905,7 @@ class Config(metaclass=Singleton):
 			"clientconfig.depot.id",
 			"clientconfig.depot.user",
 			"clientconfig.suspend_bitlocker_on_reboot",
-			"clientconfig.wan_vpn",
+			"clientconfig.smart_cache",
 			"opsiclientd.*",  # everything starting with opsiclientd.
 		]
 		config_states = {}
@@ -944,7 +934,7 @@ class Config(metaclass=Singleton):
 			):
 				config_states[config_state.configId] = config_state.values
 
-		wan_vpn: bool | None = None
+		smart_cache: bool | None = None
 		for config_id, values in config_states.items():
 			logger.info("Got config state from service: %r=%r", config_id, values)
 
@@ -962,10 +952,10 @@ class Config(metaclass=Singleton):
 				self.set("depot_server", "username", values[0])
 			elif config_id == "clientconfig.suspend_bitlocker_on_reboot":
 				self.set("global", "suspend_bitlocker_on_reboot", values[0])
-			elif config_id == "clientconfig.wan_vpn":
-				wan_vpn = bool(values and values[0])
-				if wan_vpn is False:
-					logger.info("WAN VPN is disabled")
+			elif config_id in "clientconfig.smart_cache":
+				smart_cache = bool(values and values[0])
+				if smart_cache is False:
+					logger.info("SmartCache WAN is disabled")
 					# Is set here so that the configs can be overwritten
 					self.setProductCachingMode(False)
 
@@ -983,8 +973,8 @@ class Config(metaclass=Singleton):
 				except Exception as err:
 					logger.error("Failed to process configState '%s': %s", config_id, err)
 
-		if wan_vpn is True:
-			logger.info("WAN VPN is enabled")
+		if smart_cache is True:
+			logger.info("SmartCache WAN is enabled")
 			# Is set here so that the configs can not be overwritten
 			self.setProductCachingMode(True)
 

@@ -24,19 +24,17 @@ import threading
 import time
 import urllib.request
 from contextlib import contextmanager
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generator, Literal
+from typing import TYPE_CHECKING, Any, Final, Generator, Literal
 
 import psutil  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
 from OPSI import __version__ as python_opsi_version  # type: ignore[import]
 from OPSI.Util import randomString  # type: ignore[import]
-from OPSI.Util.Message import (  # type: ignore[import]
-	ChoiceSubject,
-	MessageSubject,
-)
+from OPSI.Util.Message import ChoiceSubject, MessageSubject  # type: ignore[import]
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, log_context, secret_filter
 from opsicommon.package import OpsiPackage
@@ -51,16 +49,10 @@ from opsiclientd.EventProcessing import EventProcessingThread
 from opsiclientd.Events.Basic import CannotCancelEventError, Event, EventListener
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventGenerator
 from opsiclientd.Events.DaemonStartup import DaemonStartupEventGenerator
-from opsiclientd.Events.GUIStartup import (
-	GUIStartupEventConfig,
-	GUIStartupEventGenerator,
-)
+from opsiclientd.Events.GUIStartup import GUIStartupEventConfig, GUIStartupEventGenerator
 from opsiclientd.Events.Panic import PanicEvent
 from opsiclientd.Events.Utilities.Factories import EventGeneratorFactory
-from opsiclientd.Events.Utilities.Generators import (
-	createEventGenerators,
-	getEventGenerators,
-)
+from opsiclientd.Events.Utilities.Generators import createEventGenerators, getEventGenerators
 from opsiclientd.Localization import _, load_translation
 from opsiclientd.notification_server import NotificationServer
 from opsiclientd.OpsiService import PermanentServiceConnection
@@ -91,6 +83,28 @@ logger = get_logger()
 
 def sha256string(input_string: str) -> str:
 	return sha256(input_string.encode("utf-8")).digest().hex()
+
+
+@dataclass
+class DialogButton:
+	id: str
+	label: str
+	order: int = 0
+	default: bool = False
+
+	def as_dict(self) -> dict[str, str | int | bool]:
+		return asdict(self)
+
+
+@dataclass
+class DialogResult:
+	action: str | None = None
+	canceled: bool = False
+	timed_out: bool = False
+	button_pressed: DialogButton | None = None
+
+	def as_dict(self) -> dict[str, Any]:
+		return asdict(self)
 
 
 class Opsiclientd(EventListener, threading.Thread):
@@ -124,6 +138,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._popupNotificationServer: NotificationServer | None = None
 		self._popupNotificationLock = threading.Lock()
 		self._popupClosingThread: PopupClosingThread | None = None
+
+		self._dialogNotificationServer: NotificationServer | None = None
+		self._dialogNotificationLock = threading.Lock()
+		self._dialogResult: DialogResult = DialogResult()
+		self._dialogResultEvent = threading.Event()
 
 		self._blockLoginEventId: int | None = None
 		self._opsiclientdRunningEventId: int | None = None
@@ -382,6 +401,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			except Exception as rpc_error:
 				logger.debug(rpc_error)
 
+	def sendSAS(self) -> None:
+		raise NotImplementedError(f"Not implemented on {platform.system()}")
+
 	def loginUser(self, username: str, password: str) -> bool:
 		raise NotImplementedError(f"Not implemented on {platform.system()}")
 
@@ -590,14 +612,29 @@ class Opsiclientd(EventListener, threading.Thread):
 		try:
 			restart_marker_config = config.check_restart_marker()
 			if restart_marker_config and RUNNING_ON_WINDOWS:
-				# opsiclientd was restarted, restart LogonUI.exe to reconnect Credential Provider
-				for proc in psutil.process_iter():
-					try:
-						if proc.name().lower() == "logonui.exe":
-							logger.notice("Restart marker found, restarting LogonUI.exe")
-							proc.kill()
-					except psutil.AccessDenied as ps_err:
-						logger.info(ps_err)
+				try:
+					ctrl_alt_del_policy1 = System.getRegistryValue(
+						System.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon", "DisableCAD"
+					)
+				except FileNotFoundError:
+					ctrl_alt_del_policy1 = None
+				try:
+					ctrl_alt_del_policy2 = System.getRegistryValue(
+						System.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "DisableCAD"
+					)
+				except FileNotFoundError:
+					ctrl_alt_del_policy2 = None
+				if ctrl_alt_del_policy1 == 0 or ctrl_alt_del_policy2 == 0:
+					logger.warning("Not restarting logonui.exe because policy is set to require ctrl+alt+del for login.")
+				else:
+					# opsiclientd was restarted, restart LogonUI.exe to reconnect Credential Provider
+					for proc in psutil.process_iter():
+						try:
+							if proc.name().lower() == "logonui.exe":
+								logger.notice("Restart marker found, restarting LogonUI.exe")
+								proc.kill()
+						except psutil.AccessDenied as ps_err:
+							logger.info(ps_err)
 		except Exception as err:
 			logger.error(err, exc_info=True)
 
@@ -675,8 +712,17 @@ class Opsiclientd(EventListener, threading.Thread):
 							logger.notice("No events processing, unblocking login")
 							self.setBlockLogin(False)
 
+					# Daemon startup is done, gui is up
+					if RUNNING_ON_WINDOWS:
+						try:
+							# Send SAS to start LogonUI.exe and init CredentialsProviders
+							# Needed for some VPNs like OpenVPN to connect
+							self.sendSAS()
+						except Exception as error:
+							logger.error("Failed to send SAS: %s", error, exc_info=True)
+
 					try:
-						self.updateMOTD()  # Daemon startup is done, gui is up
+						self.updateMOTD()
 					except Exception as error:
 						logger.error("Failed to update message of the day: %s", error, exc_info=True)
 
@@ -948,10 +994,12 @@ class Opsiclientd(EventListener, threading.Thread):
 
 	def getNotifierCommand(
 		self,
+		*,
 		command: str,
-		notifier_id: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin"],
+		notifier_id: Literal["block_login", "popup", "motd", "action", "shutdown", "shutdown_select", "event", "userlogin", "dialog"],
 		port: int | None = None,
 		link_handling: str = "no",
+		timeout: int | float | None = None,
 		desktop: str | None = None,
 	) -> tuple[str, bool]:
 		# Notifier needs to be run with elevated rights for access
@@ -961,10 +1009,13 @@ class Opsiclientd(EventListener, threading.Thread):
 		if notifier_id in config.get("opsiclientd_notifier", "alt_ids") and alt_command and Path(shlex.split(alt_command)[0]).exists():
 			elevation_required = desktop != "default"
 			if elevation_required and link_handling == "browser":
-				# Would start start elevated browser
+				# Click on link would start elevated browser
 				link_handling = "no"
 			command = f"{alt_command} --link-handling {link_handling}"
+			if timeout:
+				command += f" --timeout {int(timeout)}"
 		else:
+			# Lazarus notifier
 			skin_file = ""
 			cmd = shlex.split(command)
 			for idx, arg in enumerate(cmd):
@@ -978,6 +1029,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			# Lazarus notifier does not support all IDs
 			if notifier_id == "motd":
 				notifier_id = "popup"
+			elif notifier_id == "dialog":
+				notifier_id = "popup"
 			elif notifier_id == "shutdown_select":
 				notifier_id = "shutdown"
 			elif notifier_id == "userlogin":
@@ -989,6 +1042,12 @@ class Opsiclientd(EventListener, threading.Thread):
 		port = config.get("notification_server", "popup_port")
 		if not port:
 			raise RuntimeError("notification_server.popup_port not defined")
+		return port
+
+	def getDialogPort(self) -> int:
+		port = config.get("notification_server", "dialog_port")
+		if not port:
+			raise RuntimeError("notification_server.dialog_port not defined")
 		return port
 
 	def updateMOTD(
@@ -1052,6 +1111,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				if relevant_sessions:
 					logger.notice("Showing user-specific message of the day")
 					self.showPopup(
+						_("Message of the day"),
 						user_message,
 						notifier_id="motd",
 						mode="replace",
@@ -1078,6 +1138,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			else:
 				logger.notice("Showing device-specific message of the day")
 				self.showPopup(
+					_("Message of the day"),
 					device_message,
 					notifier_id="motd",
 					mode="replace",
@@ -1092,6 +1153,7 @@ class Opsiclientd(EventListener, threading.Thread):
 
 	def showPopup(
 		self,
+		title: str,
 		message: str,
 		notifier_id: Literal["popup", "motd"] = "popup",
 		mode: str = "prepend",
@@ -1130,11 +1192,12 @@ class Opsiclientd(EventListener, threading.Thread):
 				except Exception as err:
 					logger.warning(err, exc_info=True)
 
-			logger.info("Hide popup")
-			self.hidePopup()
+			logger.info("Close popup")
+			self.closePopup()
 
 			popupSubject = MessageSubject(id="message")
 			choiceSubject = ChoiceSubject(id="choice")
+			popupSubject.setTitle(title)
 			popupSubject.setMessage(message)
 
 			logger.notice("Starting popup message notification server on port %d", port)
@@ -1154,8 +1217,8 @@ class Opsiclientd(EventListener, threading.Thread):
 			sessions = sessions or System.getActiveSessionIds()
 			desktops = desktops or ["default", "winlogon"]
 			if not sessions:
-				if console_sessin_id := System.getActiveConsoleSessionId():
-					sessions = [int(console_sessin_id)]
+				if console_session_id := System.getActiveConsoleSessionId():
+					sessions = [int(console_session_id)]
 					desktops = ["winlogon"]
 			for sessionId in sessions:
 				try:
@@ -1166,6 +1229,7 @@ class Opsiclientd(EventListener, threading.Thread):
 								notifier_id=notifier_id,
 								port=self._popupNotificationServer.port,
 								link_handling=link_handling,
+								timeout=displaySeconds,
 								desktop=desktop,
 							)
 							logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, sessionId, desktop)
@@ -1183,6 +1247,7 @@ class Opsiclientd(EventListener, threading.Thread):
 							notifier_id=notifier_id,
 							port=self._popupNotificationServer.port,
 							link_handling=link_handling,
+							timeout=displaySeconds,
 						)
 						logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
 						runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
@@ -1200,7 +1265,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				self._popupClosingThread = PopupClosingThread(self, displaySeconds)
 				self._popupClosingThread.start()
 
-	def hidePopup(self) -> None:
+	def closePopup(self) -> None:
 		if self._popupClosingThread and self._popupClosingThread.is_alive():
 			logger.info("Stopping PopupClosingThread")
 			self._popupClosingThread.stop()
@@ -1212,7 +1277,122 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to stop popup notification server: %s", err)
 
 	def popupCloseCallback(self, choiceSubject: ChoiceSubject) -> None:
-		self.hidePopup()
+		self.closePopup()
+
+	def showDialog(self, title: str, message: str, timeout: float, buttons: list[DialogButton]) -> dict[str, Any]:
+		port = self.getDialogPort()
+		notifier_id: Final = "dialog"
+		timeout = max(1, min(timeout, 24 * 3600))
+
+		logger.info("Acquire dialogNotificationLock")
+		with self._dialogNotificationLock:
+			logger.info("dialogNotificationLock acquired")
+			if self._dialogNotificationServer and self._dialogNotificationServer.is_alive():
+				# Already runnning
+				self._dialogResult.canceled = True
+				self._dialogResult.action = None
+				self._dialogResultEvent.set()
+				time.sleep(1)
+
+			logger.info("Close dialog")
+			self.closeDialog()
+
+			self._dialogResult = DialogResult()
+			self._dialogResultEvent.clear()
+			messageSubject = MessageSubject(id="message")
+			choiceSubject = ChoiceSubject(id="choice")
+			messageSubject.setTitle(title)
+			messageSubject.setMessage(message)
+			choices = []
+			callbacks = []
+			for button in sorted(buttons, key=lambda b: b.order):
+
+				def callback(choiceSubject: ChoiceSubject, button: DialogButton = button) -> None:
+					logger.debug("Dialog button %r (%r) clicked", button.id, button.label)
+					self.dialogCloseCallback(choiceSubject, button)
+
+				choices.append(button.label)
+				callbacks.append(callback)
+				if button.default:
+					# Set default action
+					self._dialogResult.action = button.id
+
+			logger.debug("Callback functions: %s", callbacks)
+			choiceSubject.setChoices(choices)
+			choiceSubject.setCallbacks(callbacks)
+
+			logger.notice("Starting popup message notification server on port %d", port)
+			try:
+				self._dialogNotificationServer = NotificationServer(
+					address="127.0.0.1", start_port=port, subjects=[messageSubject, choiceSubject], notifier_id=notifier_id
+				)
+				with log_context({"instance": "popup notification server"}):
+					self._dialogNotificationServer.start_and_wait(timeout=10)
+			except Exception as err:
+				logger.error("Failed to start notification server: %s", err)
+				raise
+
+			sessions = System.getActiveSessionIds()
+			desktops = ["default", "winlogon"]
+			if not sessions:
+				if console_session_id := System.getActiveConsoleSessionId():
+					sessions = [int(console_session_id)]
+					desktops = ["winlogon"]
+			for sessionId in sessions:
+				try:
+					if RUNNING_ON_WINDOWS:
+						for desktop in desktops:
+							notifierCommand, elevation_required = self.getNotifierCommand(
+								command=config.get("opsiclientd_notifier", "command"),
+								notifier_id=notifier_id,
+								port=self._dialogNotificationServer.port,
+								timeout=timeout,
+								desktop=desktop,
+							)
+							logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, sessionId, desktop)
+							proc = subprocess.Popen(  # type: ignore[call-overload]
+								notifierCommand,
+								session_id=sessionId,
+								session_env=(desktop == "default"),
+								session_elevated=elevation_required,
+								session_desktop=desktop,
+							)
+							logger.info("Process started with pid %s", proc.pid)
+					else:
+						notifierCommand, elevation_required = self.getNotifierCommand(
+							command=config.get("opsiclientd_notifier", "command"),
+							notifier_id=notifier_id,
+							port=self._dialogNotificationServer.port,
+							timeout=timeout,
+						)
+						logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
+						runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
+				except Exception as err:
+					logger.error(
+						"Failed to start popup message notifier app in session %r on desktop %r: %s", sessionId, desktop, err, exc_info=True
+					)
+
+		if not self._dialogResultEvent.wait(timeout):
+			logger.info("Dialog timed out")
+			self._dialogResult.timed_out = True
+			self.closeDialog()
+
+		return self._dialogResult.as_dict()
+
+	def closeDialog(self) -> None:
+		if not self._dialogNotificationServer:
+			return
+		try:
+			logger.info("Stopping dialog message notification server")
+			self._dialogNotificationServer.stop()
+		except Exception as err:
+			logger.error("Failed to stop dialog notification server: %s", err)
+
+	def dialogCloseCallback(self, choiceSubject: ChoiceSubject, button: DialogButton) -> None:
+		self._dialogResult.button_pressed = button
+		self._dialogResult.action = button.id
+		self._dialogResultEvent.set()
+		self.closeDialog()
 
 	def collectLogfiles(self, types: list[str] | None = None, max_age_days: int | None = None, timeline_db: bool = True) -> Path:
 		now = datetime.now().timestamp()
@@ -1264,8 +1444,8 @@ class PopupClosingThread(threading.Thread):
 	def run(self) -> None:
 		while not self._should_stop.wait(1):
 			if time.time() > self.end_time:
-				logger.debug("Hiding popup window")
-				self.opsiclientd.hidePopup()
+				logger.debug("Closing popup window")
+				self.opsiclientd.closePopup()
 				break
 
 

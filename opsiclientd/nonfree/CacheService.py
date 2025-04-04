@@ -30,11 +30,7 @@ from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTr
 from OPSI.Util import randomString  # type: ignore[import]
 from OPSI.Util.File.Opsi import PackageContentFile  # type: ignore[import]
 from OPSI.Util.Message import ProgressSubjectProxy  # type: ignore[import]
-from OPSI.Util.Repository import (  # type: ignore[import]
-	DepotToLocalDirectorySychronizer,
-	Repository,
-	getRepository,
-)
+from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, Repository, getRepository  # type: ignore[import]
 from opsicommon.logging import get_logger, log_context
 from opsicommon.objects import LocalbootProduct, ProductOnClient
 from opsicommon.types import forceBool, forceInt, forceProductIdList, forceUnicode
@@ -537,7 +533,7 @@ class ConfigCacheService(ServiceConnection, threading.Thread):
 					info = self._configService.backend_getLicensingInfo(licenses=False, legacy_modules=False, dates=False)
 					logger.debug("Got licensing info from service: %s", info)
 					if "vpn" not in info["available_modules"]:
-						raise RuntimeError("Module 'vpn' not licensed")
+						raise RuntimeError("WAN/VPN module not licensed")
 				else:
 					verify_modules(self._configService.backend_info(), ["vpn"])
 			except Exception as err:
@@ -988,7 +984,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 					info = self._configService.backend_getLicensingInfo(licenses=False, legacy_modules=False, dates=False)
 					logger.debug("Got licensing info from service: %s", info)
 					if "vpn" not in info["available_modules"]:
-						raise RuntimeError("Module 'vpn' not licensed")
+						raise RuntimeError("WAN/VPN module not licensed")
 				else:
 					verify_modules(self._configService.backend_info(), ["vpn"])
 			except Exception as err:
@@ -1364,6 +1360,25 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 			self._setProductCacheState(productId, "packageVersion", products[0].packageVersion, updateProductOnClient=False)
 			self._setProductCacheState(productId, "name", products[0].name, updateProductOnClient=False)
 
+			# 7zip--rfc156094_24.09-1.opsi
+			base_product_id = productId.split("--")[0]
+			similarProductCacheDir: str | None = None
+			curProductCacheDir: str | None = None
+			for entry in os.listdir(self._productCacheDir):
+				if entry == productId:
+					curProductCacheDir = os.path.join(self._productCacheDir, entry)
+					logger.debug("Found product cache dir: %s", entry)
+					# Exact match found, no need to continue
+					break
+				elif entry.startswith(f"{base_product_id}--"):
+					similarProductCacheDir = os.path.join(self._productCacheDir, entry)
+					logger.debug("Found similar product cache dir: %s", entry)
+
+			if not curProductCacheDir and similarProductCacheDir:
+				logger.info("Using similar product cache dir: %s", similarProductCacheDir)
+				curProductCacheDir = os.path.join(self._productCacheDir, productId)
+				os.rename(similarProductCacheDir, curProductCacheDir)
+
 			if not os.path.exists(os.path.join(self._productCacheDir, productId)):
 				os.mkdir(os.path.join(self._productCacheDir, productId))
 
@@ -1385,10 +1400,7 @@ class ProductCacheService(ServiceConnection, threading.Thread):
 			productCacheDirSize = 0
 			if self._productCacheMaxSize > 0:
 				productCacheDirSize = System.getDirectorySize(self._productCacheDir)
-				curProductSize = 0
-				curProductCacheDir = os.path.join(self._productCacheDir, productId)
-				if os.path.exists(curProductCacheDir):
-					curProductSize = System.getDirectorySize(curProductCacheDir)
+				curProductSize = System.getDirectorySize(curProductCacheDir) if curProductCacheDir else 0
 				if productCacheDirSize + productSize - curProductSize > self._productCacheMaxSize:
 					logger.info(
 						"Product cache dir sizelimit of %0.3f MB exceeded. Current size: %0.3f MB, space needed for product '%s': %0.3f MB",
