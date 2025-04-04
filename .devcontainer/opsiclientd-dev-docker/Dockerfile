@@ -1,4 +1,4 @@
-FROM docker.uib.gmbh/opsi/dev/pybuilder:deb10-py3.13
+FROM docker.uib.gmbh/opsi/dev/pybuilder:deb10-py3.11
 
 ARG DOCKER_ENV
 ARG DEBIAN_FRONTEND=noninteractive

@@ -1,4 +1,4 @@
-image: docker.uib.gmbh/opsi/dev/pybuilder:deb9-py3.13
+image: docker.uib.gmbh/opsi/dev/pybuilder:deb9-py3.11
 
 stages:
   - test
@@ -8,7 +8,7 @@ stages:
 viruscheck:virustotal:
   stage: viruscheck
   tags:
-    - win10-py313-x86
+    - win10-py311-x86
   script:
     - Invoke-WebRequest -UseBasicParsing -Uri "$OPSIDEVTOOLS_URL_WINDOWS_X86" -OutFile opsi-dev-tools.zip
     - Expand-Archive opsi-dev-tools.zip -DestinationPath .
@@ -42,7 +42,7 @@ test:pytest-darwin:
   #when: manual
   stage: test
   tags:
-    - catalina-py313-x64
+    - catalina-py311-x64
   script:
     - poetry --version
     #- poetry lock --no-update --no-cache
@@ -64,7 +64,7 @@ test:pytest-windows:
   #when: manual
   stage: test
   tags:
-    - win10-py313-x86
+    - win10-py311-x86
   script:
     #- poetry lock --no-update --no-cache
     - poetry install
@@ -157,7 +157,7 @@ build:pyinstaller-linux-x64:
 build:pyinstaller-darwin-x64:
   stage: build
   tags:
-    - catalina-py313-x64
+    - catalina-py311-x64
   script:
     #- sed -ie s'/^python-opsi = .*/python-opsi = "^4.2"/' pyproject.toml
     #- poetry update python-opsi
@@ -179,7 +179,7 @@ build:pyinstaller-darwin-x64:
 build:pyinstaller-windows-x86:
   stage: build
   tags:
-    - win10-py313-x86
+    - win10-py311-x86
   script:
     #- $env:path
     #- where.exe poetry
