@@ -946,11 +946,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if poc.productId not in excludeProductIds
 			]:
 				if productOnClient.productId not in productIds:
-					if "installation_pending" in self.event.eventConfig.preconditions and productOnClient.productId not in state.get(
-						"pending_product_ids", []
-					):
-						logger.info("Skipping product '%s' because it is not in pending_product_ids", productOnClient.productId)
-						continue
+					# always process all actions - even if only some are in pending_product_ids!
+					# if "installation_pending" in self.event.eventConfig.preconditions and productOnClient.productId not in state.get(
+					# "pending_product_ids", []
+					# ):
+					# logger.info("Skipping product '%s' because it is not in pending_product_ids", productOnClient.productId)
+					# continue
 					productIds.append(productOnClient.productId)
 					logger.notice(
 						"   [%2s] product %-20s %s", len(productIds), productOnClient.productId + ":", productOnClient.actionRequest
@@ -1028,7 +1029,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 				self.processActionWarningTime(productInfo)
 				if not state.get("pending_product_ids", []):
-					# If pending_product_ids are set, we only want to process the products in there
 					state.set("pending_product_ids", productIds)
 				state.delete("installation_pending")  # to get rid of previous flag, TODO: remove in future
 				try:
