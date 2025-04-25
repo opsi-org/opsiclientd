@@ -743,20 +743,13 @@ class ControlInterface(PipeControlInterface):
 	) -> dict[str, Any]:
 		logger.notice("Executing opsi script content")
 
-		base_dir = Path(self.opsiclientd.config.get("global", "base_dir"))
-		log_dir = Path("/var/log/opsi-script")
-		param_char = "-"
-
+		opsi_script = Path(self.opsiclientd.config.get("action_processor", "local_dir")) / self.opsiclientd.config.get(
+			"action_processor", "filename"
+		)
 		system = platform.system().lower()
-		if system == "windows":
-			opsi_script = base_dir / "files" / "opsi-script" / "opsi-script.exe"
-			log_dir = Path(r"c:\opsi.org\log")
-			param_char = "/"
-		elif system == "linux":
-			opsi_script = base_dir / "files" / "opsi-script" / "opsi-script"
-		elif system == "darwin":
-			opsi_script = base_dir / "files" / "opsi-script.app" / "Contents" / "MacOS" / "opsi-script"
-		else:
+		log_dir = Path(r"c:\opsi.org\log") if system == "windows" else Path("/var/log/opsi-script")
+		param_char = "/" if system == "windows" else "-"
+		if system not in ("windows", "linux", "darwin"):
 			raise NotImplementedError(f"Not implemented for {platform.system()}")
 
 		try:
