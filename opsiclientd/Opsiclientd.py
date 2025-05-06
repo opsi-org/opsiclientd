@@ -713,7 +713,7 @@ class Opsiclientd(EventListener, threading.Thread):
 							self.setBlockLogin(False)
 
 					# Daemon startup is done, gui is up
-					if RUNNING_ON_WINDOWS:
+					if RUNNING_ON_WINDOWS and config.get("global", "send_sas_on_startup"):
 						try:
 							# Send SAS to start LogonUI.exe and init CredentialsProviders
 							# Needed for some VPNs like OpenVPN to connect

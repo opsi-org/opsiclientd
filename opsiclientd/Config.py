@@ -22,8 +22,10 @@ from urllib.parse import urlparse
 import netifaces  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
 from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
-from OPSI.Util import blowfishDecrypt  # type: ignore[import]
-from OPSI.Util import objectToBeautifiedText  # type: ignore[import]
+from OPSI.Util import (
+	blowfishDecrypt,  # type: ignore[import]
+	objectToBeautifiedText,  # type: ignore[import]
+)
 from OPSI.Util.File import IniFile  # type: ignore[import]
 from opsicommon.client.opsiservice import ServiceClient, ServiceVerificationFlags
 from opsicommon.logging import LOG_NOTICE, get_logger, logging_config, secret_filter
@@ -188,6 +190,7 @@ class Config(metaclass=Singleton):
 				"opsi_host_key": "",
 				"wait_for_gui_timeout": 120,
 				"block_login_notifier": "",
+				"send_sas_on_startup": True,
 				"verify_server_cert": False,
 				"verify_server_cert_by_ca": False,
 				"trust_uib_opsi_ca": True,
