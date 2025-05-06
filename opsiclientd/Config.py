@@ -190,7 +190,7 @@ class Config(metaclass=Singleton):
 				"opsi_host_key": "",
 				"wait_for_gui_timeout": 120,
 				"block_login_notifier": "",
-				"send_sas_on_startup": True,
+				"send_sas_on_startup": False,
 				"verify_server_cert": False,
 				"verify_server_cert_by_ca": False,
 				"trust_uib_opsi_ca": True,
