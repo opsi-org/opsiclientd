@@ -1,6 +1,6 @@
 project:
   licenses:
-    - license: AGPL-3.0
+    - license: AGPL-3.0-only
       header: |
         opsiclientd is part of the desktop management solution opsi http://www.opsi.org
         Copyright (c) 2010-{year} uib GmbH <info@uib.de>
