@@ -44,7 +44,7 @@ test:pytest-darwin:
   tags:
     - catalina-py311-x64
   script:
-    - export UV_PYTHON="3.11"
+    - export UV_PYTHON="3.13"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - uv self update
     - uv sync --frozen
@@ -69,6 +69,7 @@ test:pytest-windows:
   script:
     - $Env:UV_PYTHON_INSTALL_DIR = "c:\\uv\\python"
     - $Env:UV_CACHE_DIR = "c:\\uv\\cache"
+    # Using Python 3.11 for compatibility with Windows 7
     - $Env:UV_PYTHON = ((uv python list --managed-python --all-arches | findstr 3.11 | findstr "\-x86\-" | findstr /v freethreaded) -split ' ')[0]
     - $Env:UV_PYTHON_PREFERENCE = "only-managed"
     - uv sync --frozen
@@ -89,7 +90,7 @@ test:pytest-linux:
   #when: manual
   stage: test
   script:
-    - export UV_PYTHON="3.11"
+    - export UV_PYTHON="3.13"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - uv self update
     - uv sync --frozen
@@ -123,7 +124,7 @@ lint-pytest:
     - apt-get update
     - apt-get --yes --allow-downgrades install libsqlite3-0=3.16.2-5+deb9u1
     - apt-get --yes install sqlite3
-    - export UV_PYTHON="3.11"
+    - export UV_PYTHON="3.13"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - uv self update
     - uv sync --frozen
@@ -152,11 +153,8 @@ build:pyinstaller-linux-x64:
     - curl -o opsi-dev-tools.tar.gz "$OPSIDEVTOOLS_URL_LINUX_X64"
     - tar -xvf opsi-dev-tools.tar.gz
     - mv opsi-dev-tool opsi-dev-cli
-    # Resulting binary not working when using managed Python 3.11.12 (import error _struct)
     - export UV_PYTHON="3.13"
     - export UV_PYTHON_PREFERENCE="only-managed"
-    #- export UV_PYTHON="3.11"
-    #- export UV_PYTHON_PREFERENCE="only-system"
     - uv self update
     - uv sync --frozen
     - uv run ./opsi-dev-cli -l info pyinstaller build
@@ -177,7 +175,7 @@ build:pyinstaller-darwin-x64:
     - curl -o opsi-dev-tools.tar.gz "$OPSIDEVTOOLS_URL_DARWIN_X64"
     - tar -xvf opsi-dev-tools.tar.gz
     - mv opsi-dev-tool opsi-dev-cli
-    - export UV_PYTHON="3.11"
+    - export UV_PYTHON="3.13"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - uv self update
     - uv sync --frozen
@@ -201,6 +199,7 @@ build:pyinstaller-windows-x86:
     - Copy-Item opsi-dev-tool.exe opsi-dev-cli.exe
     - $Env:UV_PYTHON_INSTALL_DIR = "c:\\uv\\python"
     - $Env:UV_CACHE_DIR = "c:\\uv\\cache"
+    # Using Python 3.11 for compatibility with Windows 7
     - $Env:UV_PYTHON = ((uv python list --managed-python --all-arches | findstr 3.11 | findstr "\-x86\-" | findstr /v freethreaded) -split ' ')[0]
     - $Env:UV_PYTHON_PREFERENCE = "only-managed"
     - uv run .\opsi-dev-cli.exe -l debug pyinstaller build
