@@ -35,7 +35,7 @@ transifex:
       install_dir: opsiclientd_data/locale
       min_translation_rate: 0.8
 
-pyinstaller-poetry:
+pyinstaller:
   one_file: no
   hidden_imports:
     all:
@@ -67,7 +67,7 @@ pyinstaller-poetry:
       - --exclude-module
       - tkinter
   scripts:
-    - script: run-opsiclientd
+    - script: opsiclientd/__main__.py
       binaries:
         - opsiclientd
         - opsiclientd_rpc

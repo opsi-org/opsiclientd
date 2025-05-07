@@ -26,8 +26,7 @@ RUN apt-get update \
 	bash-completion \
 	psmisc \
 	cifs-utils \
-	davfs2 \
-	&& pip install poetry
+	davfs2
 
 COPY files/ /
 

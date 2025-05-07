@@ -12,6 +12,7 @@ opsi client daemon (opsiclientd)
 import os
 import platform
 import sys
+import traceback
 import warnings
 from datetime import datetime
 
@@ -67,9 +68,24 @@ def opsiclientd() -> None:
 
 
 def main() -> None:
-	name = os.path.splitext(os.path.basename(sys.argv[0]))[0].lower()
-	if name == "opsiclientd_rpc":
-		return opsiclientd_rpc()
-	if name == "action_processor_starter":
-		return action_processor_starter()
-	return opsiclientd()
+	try:
+		name = os.path.splitext(os.path.basename(sys.argv[0]))[0].lower()
+		if name == "opsiclientd_rpc":
+			return opsiclientd_rpc()
+		if name == "action_processor_starter":
+			return action_processor_starter()
+		return opsiclientd()
+	except SystemExit as err:
+		sys.exit(err.code)
+	except KeyboardInterrupt:
+		print("Interrupted", file=sys.stderr)
+		sys.exit(1)
+	except Exception:
+		# Do not let pyinstaller handle exceptions and print:
+		# "Failed to execute script"
+		traceback.print_exc()
+		sys.exit(1)
+
+
+if __name__ == "__main__":
+	main()

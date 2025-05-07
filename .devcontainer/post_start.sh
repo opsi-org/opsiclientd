@@ -17,4 +17,4 @@ EOF
 	chmod +x /usr/bin/opsi-notifier
 fi
 
-poetry install
+uv sync --frozen
