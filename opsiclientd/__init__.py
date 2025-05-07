@@ -34,7 +34,7 @@ from opsicommon.logging import (
 from opsiclientd.Config import Config
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
-__version__ = "4.3.10.1"
+__version__ = "4.3.11.0"
 
 DEFAULT_STDERR_LOG_FORMAT = (
 	"%(log_color)s[%(opsilevel)d] [%(asctime)s.%(msecs)03d]%(reset)s [%(contextstring)-40s] %(message)s   (%(filename)s:%(lineno)d)"

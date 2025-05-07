@@ -77,7 +77,7 @@ dev = [
 	"httpx>=0.28",
 	"mock>=5.0",
 	"mypy>=1.4",
-	"pyinstaller==6.10",
+	"pyinstaller>=6.10",
 	"pytest>=8.0",
 	"pytest-cov>=6.0",
 	"ruff>=0.8",
