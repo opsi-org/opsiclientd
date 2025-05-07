@@ -152,9 +152,11 @@ build:pyinstaller-linux-x64:
     - curl -o opsi-dev-tools.tar.gz "$OPSIDEVTOOLS_URL_LINUX_X64"
     - tar -xvf opsi-dev-tools.tar.gz
     - mv opsi-dev-tool opsi-dev-cli
-    - export UV_PYTHON="3.11"
-    #- export UV_PYTHON_PREFERENCE="only-managed"
-    - export UV_PYTHON_PREFERENCE="only-system"
+    # Resulting binary not working when using managed Python 3.11.12 (import error _struct)
+    - export UV_PYTHON="3.13"
+    - export UV_PYTHON_PREFERENCE="only-managed"
+    #- export UV_PYTHON="3.11"
+    #- export UV_PYTHON_PREFERENCE="only-system"
     - uv self update
     - uv sync --frozen
     - uv run ./opsi-dev-cli -l info pyinstaller build
