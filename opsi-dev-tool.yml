@@ -51,6 +51,7 @@ pyinstaller:
       - OPSI.Backend.Manager.Authentication.NT
     linux:
       - OPSI.Backend.Manager.Authentication.PAM
+      - _struct
     darwin:
       - OPSI.Backend.Manager.Authentication.PAM
   collect_submodules:
