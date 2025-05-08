@@ -205,57 +205,6 @@ class EventProcessingThread(KillableThread):
 					raise RuntimeError("Event processing currently not cancelable")
 				self._should_cancel = True
 
-	"""
-	# ServiceConnection
-	def connectionThreadOptions(self) -> dict[str, MessageSubject]:
-		return {"statusSubject": self._statusSubject}
-
-	def connectionStart(self, configServiceUrl: str) -> None:
-		self._serviceUrlSubject.setMessage(configServiceUrl)
-		try:
-			cancellableAfter = forceInt(config.get("config_service", "user_cancelable_after"))
-			if self._notificationServer and cancellableAfter >= 0:
-				logger.info("User is allowed to cancel connection after %d seconds", cancellableAfter)
-				self._choiceSubject = ChoiceSubject(id="choice")
-		except Exception as err:
-			logger.error(err)
-
-	def connectionCancelable(self, stopConnectionCallback: Callable) -> None:
-		if self._notificationServer and self._choiceSubject:
-			self._choiceSubject.setChoices(["Stop connection"])
-			self._choiceSubject.setCallbacks([stopConnectionCallback])
-			self._notificationServer.addSubject(self._choiceSubject)
-
-	def connectionTimeoutChanged(self, timeout: float) -> None:
-		if self._detailSubjectProxy:
-			self._detailSubjectProxy.setMessage(_("Timeout: %ds") % timeout)
-
-	def connectionCanceled(self) -> None:
-		if self._notificationServer and self._choiceSubject:
-			self._notificationServer.removeSubject(self._choiceSubject)
-		self._detailSubjectProxy.setMessage("")
-		ServiceConnection.connectionCanceled(self)
-
-	def connectionTimedOut(self) -> None:
-		if self._notificationServer and self._choiceSubject:
-			self._notificationServer.removeSubject(self._choiceSubject)
-		self._detailSubjectProxy.setMessage("")
-		ServiceConnection.connectionTimedOut(self)
-
-	def connectionEstablished(self) -> None:
-		if self._notificationServer and self._choiceSubject:
-			self._notificationServer.removeSubject(self._choiceSubject)
-		self._detailSubjectProxy.setMessage("")
-
-	def connectionFailed(self, error: str) -> None:
-		if self._notificationServer and self._choiceSubject:
-			self._notificationServer.removeSubject(self._choiceSubject)
-		self._detailSubjectProxy.setMessage("")
-		ServiceConnection.connectionFailed(self, error)
-
-	# End of ServiceConnection
-	"""
-
 	def getSessionId(self) -> int | None:
 		if RUNNING_ON_WINDOWS:
 			if self.isLoginEvent:
@@ -1857,6 +1806,83 @@ class EventProcessingThread(KillableThread):
 			else:
 				path.unlink()
 
+	def wait_for_service_connection(self) -> None:
+		try:
+			if not self.service_client.connected:
+				cancellable_after = 0
+				timeout = 30
+				try:
+					cancellable_after = forceInt(config.get("config_service", "user_cancelable_after"))
+					timeout = forceInt(config.get("config_service", "connection_timeout"))
+				except Exception as err:
+					logger.error(err)
+
+				if cancellable_after >= 0:
+					logger.info("User is allowed to cancel connection after %d seconds", cancellable_after)
+
+				self._serviceUrlSubject.setMessage(self.service_client.base_url)
+				self.setStatusMessage(_("Connecting to config server '%s'") % self.service_client.base_url)
+
+				start_time = time.time()
+				is_cancelable = False
+				is_canceled = False
+
+				def cancel_callback(choiceSubject: ChoiceSubject) -> None:
+					nonlocal is_canceled
+					is_canceled = True
+
+				while True:
+					if self.service_client.connected:
+						logger.info("Connected to config server")
+						break
+
+					if is_canceled:
+						error = f"Failed to connect to config service '{self.service_client.base_url}': Canceled by user"
+						logger.error(error)
+						raise CanceledByUserError(error)
+
+					wait_time = int(time.time() - start_time)
+					time_remaining = timeout - wait_time
+
+					if time_remaining <= 0:
+						error = f"Failed to connect to config service '{self.service_client.base_url}': Timed out after {wait_time} seconds"
+						logger.error(error)
+						raise RuntimeError(error)
+
+					logger.debug(
+						"Waiting for service connection (timeout: %d, cancellable after: %d, time_remaining: %d)",
+						timeout,
+						cancellable_after,
+						time_remaining,
+					)
+					if self._detailSubjectProxy:
+						self._detailSubjectProxy.setMessage(_("Timeout: %ds") % time_remaining)
+
+					if (
+						not is_cancelable
+						and cancellable_after > 0
+						and wait_time >= cancellable_after
+						and self._notificationServer
+						and self._choiceSubject
+					):
+						is_cancelable = True
+						self._choiceSubject = ChoiceSubject(id="choice")
+						self._choiceSubject.setChoices(["Stop connection"])
+						self._choiceSubject.setCallbacks([cancel_callback])
+						self._notificationServer.addSubject(self._choiceSubject)
+
+					time.sleep(1)
+		finally:
+			if self.service_client.connected:
+				self.setStatusMessage(_("Connected to config server '%s'") % self.service_client.base_url)
+			else:
+				self.setStatusMessage(_("Failed to connect to config server '%s'") % self.service_client.base_url)
+
+			self._detailSubjectProxy.setMessage("")
+
+			if self._notificationServer and self._choiceSubject:
+				self._notificationServer.removeSubject(self._choiceSubject)
+
 	def run(self) -> None:
 		with log_context({"instance": f"event processing {self.event.eventConfig.getId()}"}):
 			assert self.opsiclientd
@@ -1932,12 +1958,7 @@ class EventProcessingThread(KillableThread):
 							)
 
 					if self.event.eventConfig.getConfigFromService or self.event.eventConfig.processActions:
-						for _iteration in range(20):
-							# TODO: User cancelable, ...
-							logger.devel("Waiting for config service to be available")
-							if self.service_client.connected:
-								break
-							time.sleep(1)
+						self.wait_for_service_connection()
 
 						if self.event.eventConfig.getConfigFromService:
 							config.readConfigFile()

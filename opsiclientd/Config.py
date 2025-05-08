@@ -203,6 +203,7 @@ class Config(metaclass=Singleton):
 				"connection_timeout": 10,
 				"user_cancelable_after": 0,
 				"sync_time_from_service": False,
+				"permanent_connection": True,
 				"reconnect_wait_min": 5,
 				"reconnect_wait_max": 120,
 			},
