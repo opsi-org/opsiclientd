@@ -1,6 +1,6 @@
 project:
   licenses:
-    - license: AGPL-3.0
+    - license: AGPL-3.0-only
       header: |
         opsiclientd is part of the desktop management solution opsi http://www.opsi.org
         Copyright (c) 2010-{year} uib GmbH <info@uib.de>
@@ -35,7 +35,7 @@ transifex:
       install_dir: opsiclientd_data/locale
       min_translation_rate: 0.8
 
-pyinstaller-poetry:
+pyinstaller:
   one_file: no
   hidden_imports:
     all:
@@ -67,7 +67,7 @@ pyinstaller-poetry:
       - --exclude-module
       - tkinter
   scripts:
-    - script: run-opsiclientd
+    - script: opsiclientd/__main__.py
       binaries:
         - opsiclientd
         - opsiclientd_rpc

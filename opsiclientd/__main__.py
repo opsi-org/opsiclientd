@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-
 # opsiclientd is part of the desktop management solution opsi http://www.opsi.org
-# Copyright (c) 2010-2024 uib GmbH <info@uib.de>
+# Copyright (c) 2010-2025 uib GmbH <info@uib.de>
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
-# License: AGPL-3.0
+# License: AGPL-3.0-only
 
 """
 opsi client daemon (opsiclientd)
@@ -12,6 +10,7 @@ opsi client daemon (opsiclientd)
 import os
 import platform
 import sys
+import traceback
 import warnings
 from datetime import datetime
 
@@ -67,9 +66,24 @@ def opsiclientd() -> None:
 
 
 def main() -> None:
-	name = os.path.splitext(os.path.basename(sys.argv[0]))[0].lower()
-	if name == "opsiclientd_rpc":
-		return opsiclientd_rpc()
-	if name == "action_processor_starter":
-		return action_processor_starter()
-	return opsiclientd()
+	try:
+		name = os.path.splitext(os.path.basename(sys.argv[0]))[0].lower()
+		if name == "opsiclientd_rpc":
+			return opsiclientd_rpc()
+		if name == "action_processor_starter":
+			return action_processor_starter()
+		return opsiclientd()
+	except SystemExit as err:
+		sys.exit(err.code)
+	except KeyboardInterrupt:
+		print("Interrupted", file=sys.stderr)
+		sys.exit(1)
+	except Exception:
+		# Do not let pyinstaller handle exceptions and print:
+		# "Failed to execute script"
+		traceback.print_exc()
+		sys.exit(1)
+
+
+if __name__ == "__main__":
+	main()

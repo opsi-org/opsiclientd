@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-
 # opsiclientd is part of the desktop management solution opsi http://www.opsi.org
-# Copyright (c) 2010-2024 uib GmbH <info@uib.de>
+# Copyright (c) 2010-2025 uib GmbH <info@uib.de>
 # This code is owned by the uib GmbH, Mainz, Germany (uib.de). All rights reserved.
-# License: AGPL-3.0
+# License: AGPL-3.0-only
 
 """
 application.middelware
@@ -319,7 +317,7 @@ class BaseMiddleware:
 
 		elif isinstance(err, HTTPException):
 			status_code = err.status_code
-			headers = err.headers
+			headers = dict(err.headers) if err.headers else None
 			error = err.detail
 
 		else:

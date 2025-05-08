@@ -1,24 +1,56 @@
-[build-system]
-requires = [ "poetry>=0.12",]
-build-backend = "poetry.masonry.api"
 
-[tool.poetry]
+[project]
 name = "opsiclientd"
 version = "4.3.11.0"
 description = "opsi client daemon. The service running on opsi clients."
-maintainers = [ "uib GmbH <info@uib.de>",]
-authors = [ "uib GmbH <info@uib.de>",]
-homepage = "https://www.opsi.org"
-license = "AGPL-3.0"
-include = [ "run-opsiclientd", "opsiclientd_data/**/*",]
-[[tool.poetry.source]]
-name = "uibpypi"
-url = "https://pypi.uib.gmbh/simple"
-priority = "primary"
+readme = "README.md"
+license = "AGPL-3.0-only"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+	"annotated-types>=0.7",
+	"anyio>=4.6",
+	"click>=8.1",
+	"fastapi>=0.115",
+	"h11>=0.14",
+	"macholib>=1.14",
+	"netifaces>=0.11",
+	"pydantic>=2.9,<2.11",
+	"pydantic-core>=2.20,<2.29",
+	"pyelftools>=0.31",
+	"python-multipart>=0.0",
+	"python-opsi>=4.3.7.1,<4.4",
+	"python-opsi-common>=4.3.25.6,<4.4",
+	"six>=1.16",
+	"starlette>=0.39",
+	"uvicorn>=0.34",
+	"websockets>=14.1",
+	"zeroconf>=0.136",
+	"cryptography>=42.0.0,<43.0.0",                 # Versions starting with 43.0 are not compatible with Windows 7
+	"pyzsync>=1.2.6,<1.3",                          # Versions starting with 1.3 are not compatible with Windows 7
+	"distro>=1.5; platform_system == 'Linux'",
+	"macholib>=1.14; platform_system == 'Darwin'",
+	"pywin32>=308; platform_system == 'Windows'",
+	"pywinpty>=2.0; platform_system == 'Windows'",
+	"wmi>=1.5; platform_system == 'Windows'",
+	"pefile>=2024.8; platform_system == 'Windows'",
+	"websocket-client>=1.8.0",
+]
 
-[[tool.poetry.source]]
-name = "PyPI"
-priority = "supplemental"
+[[project.authors]]
+name = "uib GmbH"
+email = "info@uib.de"
+
+[[project.maintainers]]
+name = "uib GmbH"
+email = "info@uib.de"
+
+[project.urls]
+Homepage = "https://www.opsi.org"
+
+[tool.uv]
+extra-index-url = ["https://pypi.uib.gmbh/simple"]
+index-strategy = "unsafe-best-match"
+package = true
 
 [tool.ruff]
 line-length = 140
@@ -29,82 +61,41 @@ disallow_untyped_defs = true
 disallow_incomplete_defs = true
 follow_imports = "silent"
 
-[tool.poetry.dependencies]
-annotated-types = "^0.7"
-anyio = "^4.6"
-click = "^8.1"
-fastapi = "^0.115"
-h11 = "^0.14"
-macholib = "^1.14"
-netifaces = "^0.11"
-pydantic = ">=2.9,<2.11"
-pydantic-core = ">=2.20,<2.29"
-pyelftools = "^0.31"
-python = "^3.11,<3.14"
-python-multipart = "^0.0"
-python-opsi = ">=4.3.7.1,<4.4"
-python-opsi-common = ">=4.3.25.6,<4.4"
-six = "^1.16"
-starlette = "^0.39"
-uvicorn = "^0.34"
-websockets = "^14.1"
-zeroconf = "^0.136"
-cryptography = ">=42.0.0,<43.0.0"
-pyzsync = ">=1.2.6,<1.3"
-
-[tool.poetry.scripts]
+[project.scripts]
 opsiclientd = "opsiclientd.__main__:opsiclientd"
 opsiclientd_rpc = "opsiclientd.__main__:opsiclientd_rpc"
 action_processor_starter = "opsiclientd.__main__:action_processor_starter"
 
 [tool.ruff.lint]
-ignore = [ "E402",]
+ignore = ["E402"]
 
 [tool.ruff.format]
 indent-style = "tab"
 
-[tool.poetry.dependencies.distro]
-platform = "linux"
-version = "^1.5"
+[dependency-groups]
+dev = [
+	"httpx>=0.28",
+	"mock>=5.0",
+	"mypy>=1.4",
+	"pyinstaller>=6.10",
+	"pytest>=8.0",
+	"pytest-cov>=6.0",
+	"ruff>=0.8",
+	"types-mock>=5.1",
+	"types-psutil>=6.0",
+	"types-pyopenssl>=24.0",
+	"types-pywin32>=308.0",
+	"types-requests>=2.31",
+	"pywin32-ctypes>=0.2; platform_system == 'Windows'",
+]
 
-[tool.poetry.dependencies.websocket-client]
-git = "https://github.com/j-a-n/websocket-client.git"
-branch = "fix-get_proxy_info-for-https"
+[tool.setuptools.package-data]
+opsiclientd_data = ["**/*"]
 
-[tool.poetry.dependencies.pywin32]
-platform = "win32"
-version = ">=308"
-
-[tool.poetry.dependencies.pywinpty]
-platform = "win32"
-version = "^2.0"
-
-[tool.poetry.dependencies.wmi]
-platform = "win32"
-version = "^1.5"
-
-[tool.poetry.dev-dependencies.macholib]
-version = "^1.14"
-platform = "darwin"
-
-[tool.poetry.dev-dependencies.pefile]
-version = "^2024.8"
-platform = "win32"
-
-[tool.poetry.dev-dependencies.pywin32-ctypes]
-version = "^0.2"
-platform = "win32"
-
-[tool.poetry.group.dev.dependencies]
-httpx = "^0.28"
-mock = "^5.0"
-mypy = "^1.4"
-pyinstaller = "6.10"
-pytest = "^8.0"
-pytest-cov = "^6.0"
-ruff = "^0.8"
-types-mock = "^5.1"
-types-psutil = "^6.0"
-types-pyopenssl = "^24.0"
-types-pywin32 = "^308.0"
-types-requests = "^2.31"
+[tool.setuptools.packages.find]
+include = [
+	"opsiclientd",
+	"opsiclientd.*",
+	"opsiclientd_data",
+	"opsiclientd_data.*",
+]
