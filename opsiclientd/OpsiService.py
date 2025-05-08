@@ -9,10 +9,9 @@ Connecting to a opsi service.
 
 from __future__ import annotations
 
+import abc  # Add this import
 import asyncio
-import random
 import re
-import shutil
 import threading
 import time
 import traceback
@@ -20,19 +19,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from traceback import TracebackException
 from types import TracebackType
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
+from urllib.parse import urlparse
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
-from OPSI import System  # type: ignore[import]
-from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
-from OPSI.Util.Message import ChoiceSubject  # type: ignore[import]
-from OPSI.Util.Message import MessageSubject
-from OPSI.Util.Repository import WebDAVRepository  # type: ignore[import]
-from OPSI.Util.Thread import KillableThread  # type: ignore[import]
-from opsicommon.client.opsiservice import MessagebusListener, ServiceClient, ServiceConnectionListener, ServiceVerificationFlags
-from opsicommon.exceptions import OpsiServiceAuthenticationError, OpsiServiceVerificationError
+from opsicommon.client.opsiservice import MessagebusListener, ServiceClient, ServiceConnectionListener
+from opsicommon.exceptions import OpsiServiceAuthenticationError
 from opsicommon.logging import get_logger, log_context
 from opsicommon.logging.constants import TRACE
 from opsicommon.messagebus.file_transfer import process_messagebus_message as process_filetransfer_message
@@ -58,21 +52,19 @@ from opsicommon.messagebus.terminal import stop_running_terminals, terminals
 from opsicommon.ssl import install_ca, load_cas, remove_ca
 from opsicommon.system import lock_file
 from opsicommon.system.network import get_fqdn
-from opsicommon.types import forceBool, forceInt, forceProductId, forceString, forceUnicode
-from opsicommon.utils import replace_placeholders
+from opsicommon.types import forceProductId, forceString, forceUnicode
+from opsicommon.utils import Singleton, replace_placeholders
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
-from opsiclientd.Exceptions import CanceledByUserError
-from opsiclientd.Localization import _
 from opsiclientd.utils import PATH_PLACEHOLDERS, log_network_status
 
 if TYPE_CHECKING:
 	from opsiclientd.Opsiclientd import Opsiclientd
+	from opsiclientd.webserver.rpc.control import ControlInterface
 
 config = Config()
 cert_file_lock = threading.Lock()
-SERVICE_CONNECT_TIMEOUT = 10  # Seconds
 
 logger = get_logger()
 
@@ -173,32 +165,62 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 				)
 
 
-class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, MessagebusListener):  # type: ignore[misc]
-	def __init__(self, opsiclientd: Opsiclientd) -> None:
-		from opsiclientd.webserver.rpc.control import ControlInterface
+def get_service_client(address: str | list[str] | None = None) -> ServiceClient:
+	if not address:
+		address = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False)
 
+	return ServiceClient(
+		address=address,
+		username=config.get("global", "host_id"),
+		password=config.get("global", "opsi_host_key"),
+		ca_cert_file=config.ca_cert_file,
+		verify=config.service_verification_flags,
+		proxy_url=config.get("global", "proxy_url"),
+		user_agent=f"opsiclientd/{__version__}",
+		connect_timeout=config.get("config_service", "connection_timeout"),
+		max_time_diff=5.0,
+		jsonrpc_create_methods=True,
+		jsonrpc_create_objects=True,
+	)
+
+
+class CombinedSingletonABCMeta(Singleton, abc.ABCMeta):
+	pass
+
+
+class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, MessagebusListener, metaclass=CombinedSingletonABCMeta):  # type: ignore[misc]
+	_initialized = False
+	opsiclientd: Opsiclientd | None = None
+
+	def __init__(self, opsiclientd: Opsiclientd | None = None) -> None:
+		if opsiclientd and not self.opsiclientd:
+			self.opsiclientd = opsiclientd
+		if self._initialized:
+			return
+		self._initialized = True
 		threading.Thread.__init__(self, name="PermanentServiceConnection")
 		ServiceConnectionListener.__init__(self)
 		MessagebusListener.__init__(self)
 		self.daemon = True
 		self.running = False
+		self.connected = False
 		self._should_stop = False
-		self._control_interface = ControlInterface(opsiclientd)
 		self._loop = asyncio.new_event_loop()
+		self._control_interface: ControlInterface | None = None
 
 		with log_context({"instance": "permanent service connection"}):
-			self.service_client = ServiceClient(
-				address=config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False),
-				username=config.get("global", "host_id"),
-				password=config.get("global", "opsi_host_key"),
-				ca_cert_file=config.ca_cert_file,
-				verify=config.service_verification_flags,
-				proxy_url=config.get("global", "proxy_url"),
-				user_agent=f"opsiclientd/{__version__}",
-				connect_timeout=config.get("config_service", "connection_timeout"),
-				max_time_diff=5.0,
-			)
+			self.service_client = get_service_client()
 			self.service_client.register_connection_listener(self)
+
+	@property
+	def control_interface(self) -> ControlInterface:
+		if not self._control_interface:
+			if not self.opsiclientd:
+				raise RuntimeError("No opsiclientd instance available")
+			from opsiclientd.webserver.rpc.control import ControlInterface
+
+			self._control_interface = ControlInterface(self.opsiclientd)
+		return self._control_interface
 
 	async def _arun(self) -> None:
 		logger.notice("Permanent service connection starting")
@@ -206,7 +228,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		connect_wait = 3
 		while not self._should_stop:
 			try:
-				logger.info("Trying to connect")
+				logger.info("Trying to connect to service")
 				await self._loop.run_in_executor(None, self.service_client.connect)
 				break
 			except Exception as err:
@@ -223,6 +245,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 
 	def run(self) -> None:
 		with log_context({"instance": "permanent service connection"}):
+			logger.notice("Permanent service connection started")
 			self.running = True
 			try:
 				self._loop.run_until_complete(self._arun())
@@ -247,9 +270,55 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 
 	def connection_open(self, service_client: ServiceClient) -> None:
 		logger.notice("Opening connection to opsi service %s", service_client.base_url)
+		log_network_status()
+
+	def update_information_from_header(self) -> None:
+		assert self.service_client
+		if not self.service_client.new_host_id or self.service_client.new_host_id == config.get("global", "host_id"):
+			return
+
+		logger.notice("Received new opsi host id %r", self.service_client.new_host_id)
+		config.set("global", "host_id", forceUnicode(self.service_client.new_host_id))
+		config.updateConfigFile(force=True)
+
+		if self.opsiclientd:
+			logger.info("Cleaning config cache after host information change")
+			try:
+				cache_service = self.opsiclientd.getCacheService()
+				cache_service.setConfigCacheFaulty()
+			except RuntimeError:
+				# No cache_service currently running
+				pass
+
+		from opsiclientd.nonfree.CacheService import ConfigCacheService
+
+		ConfigCacheService.delete_cache_dir()
 
 	def connection_established(self, service_client: ServiceClient) -> None:
-		logger.notice("Connection to opsi service %s established", service_client.base_url)
+		self.connected = True
+		logger.notice(
+			"Connected to config server '%s' (name=%s, version=%s)",
+			service_client.base_url,
+			service_client.server_name,
+			service_client.server_version,
+		)
+		# self.setStatusMessage(_("Connected to config server '%s'") % self._configServiceUrl)
+
+		if not service_client.service_is_opsiclientd():
+			self.update_information_from_header()
+
+			try:
+				client_to_depotservers = service_client.configState_getClientToDepotserver(  # type: ignore[attr-defined]
+					clientIds=config.get("global", "host_id")
+				)
+				if not client_to_depotservers:
+					raise RuntimeError(f"Failed to get depotserver for client '{config.get('global', 'host_id')}'")
+				depot_id = client_to_depotservers[0]["depotId"]
+				config.set("depot_server", "master_depot_id", depot_id)
+				config.updateConfigFile()
+			except Exception as err:
+				logger.warning(err)
+
 		try:
 			if service_client.messagebus_available:
 				logger.notice("OPSI message bus available")
@@ -264,12 +333,28 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			logger.error(err, exc_info=True)
 
 	def connection_closed(self, service_client: ServiceClient) -> None:
+		self.connected = False
 		logger.notice("Connection to opsi service %s closed", service_client.base_url)
 
 	def connection_failed(self, service_client: ServiceClient, exception: Exception) -> None:
-		logger.notice("Connection to opsi service %s failed: %s", service_client.base_url, exception)
+		self.connected = False
+		logger.error("Connection to opsi service %s failed: %s", service_client.base_url, exception)
+		# self.setStatusMessage(_("Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
+		if isinstance(exception, OpsiServiceAuthenticationError):
+			logger.error("Service verification error: %s", exception)
+			try:
+				fqdn = get_fqdn()
+				if self.service_client.username != fqdn:
+					logger.notice(
+						"Connect failed with username '%s', got FQDN '%s' from OS, trying FQDN", self.service_client.username, fqdn
+					)
+					self.service_client.username = fqdn
+			except Exception as exc:
+				logger.warning("Failed to get FQDN: %s", exc)
 
 	def message_received(self, message: Message) -> None:
+		if logger.isEnabledFor(TRACE):
+			logger.trace("Message received: %s", message.to_dict())
 		try:
 			asyncio.run_coroutine_threadsafe(self._process_message(message), self._loop).result()
 		except Exception as err:
@@ -283,15 +368,12 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			self.service_client.messagebus.send_message(response)
 
 	async def _process_message(self, message: Message) -> None:
-		if logger.isEnabledFor(TRACE):
-			logger.trace("Message received: %s", message.to_dict())
-
 		if isinstance(message, JSONRPCRequestMessage):
 			response = JSONRPCResponseMessage(sender="@", channel=message.back_channel or message.sender, rpc_id=message.rpc_id)
 			try:
 				if message.method.startswith("_"):
 					raise ValueError("Invalid method")
-				method = getattr(self._control_interface, message.method)
+				method = getattr(self.control_interface, message.method)
 				response.result = method(*(message.params or tuple()))
 			except Exception as err:
 				response.error = {
@@ -330,375 +412,45 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			await process_process_message(message=message, send_message=self.service_client.messagebus.async_send_message)
 
 
-class ServiceConnection:
-	def __init__(self, opsiclientd: Opsiclientd | None = None):
-		self.opsiclientd = opsiclientd
-		self._loadBalance = False
-		self._configServiceUrl: str | None = None
-		self._configService: JSONRPCBackend | None = None
-		self._should_stop = False
-
-	def connectionThreadOptions(self) -> dict[str, str]:
-		return {}
-
-	def connectionStart(self, configServiceUrl: str) -> None:
-		pass
-
-	def connectionCancelable(self, stopConnectionCallback: Callable) -> None:
-		pass
-
-	def connectionTimeoutChanged(self, timeout: float) -> None:
-		pass
-
-	def connectionCanceled(self) -> None:
-		error = f"Failed to connect to config service '{self._configServiceUrl}': cancelled by user"
-		logger.error(error)
-		raise CanceledByUserError(error)
-
-	def connectionTimedOut(self) -> None:
-		error = (
-			f"Failed to connect to config service '{self._configServiceUrl}': "
-			f"timed out after {config.get('config_service', 'connection_timeout')} seconds"
-		)
-		logger.error(error)
-		raise RuntimeError(error)
-
-	def connectionFailed(self, error: str) -> None:
-		error = f"Failed to connect to config service '{self._configServiceUrl}': {error}"
-		logger.error(error)
-		raise RuntimeError(error)
-
-	def connectionEstablished(self) -> None:
-		pass
-
-	def getConfigService(self) -> JSONRPCBackend:
-		if not self._configService:
-			raise RuntimeError("No config service connected")
-		return self._configService
-
-	def getConfigServiceUrl(self) -> str | None:
-		return self._configServiceUrl
-
-	def isConfigServiceConnected(self) -> bool:
-		return bool(self._configService)
-
-	def stop(self) -> None:
-		self._should_stop = True
-		self.disconnectConfigService()
-
-	def update_information_from_header(self) -> None:
-		assert self._configService
-		if not self._configService.service.new_host_id or self._configService.service.new_host_id == config.get("global", "host_id"):
-			return
-
-		assert self.opsiclientd
-		logger.notice("Received new opsi host id %r", self._configService.service.new_host_id)
-		config.set("global", "host_id", forceUnicode(self._configService.service.new_host_id))
-		config.updateConfigFile(force=True)
-		if config.get("config_service", "permanent_connection"):
-			logger.info("Reestablishing permanent service connection")
-			self.opsiclientd.stop_permanent_service_connection()
-			self.opsiclientd.start_permanent_service_connection()
-
-		if self.opsiclientd:
-			logger.info("Cleaning config cache after host information change")
-			try:
-				cache_service = self.opsiclientd.getCacheService()
-				cache_service.setConfigCacheFaulty()
-			except RuntimeError:  # No cache_service currently running
-				from opsiclientd.nonfree.CacheService import ConfigCacheService
-
-				ConfigCacheService.delete_cache_dir()
-		else:  # Called from SoftwareOnDemand or download_from_depot without opsiclientd context
-			config_cache = Path(config.get("cache_service", "storage_dir")) / "config"
-			if config_cache.exists():
-				shutil.rmtree(config_cache)
-
-	def connectConfigService(self, allowTemporaryConfigServiceUrls: bool = True) -> None:
-		try:
-			configServiceUrls = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=allowTemporaryConfigServiceUrls)
-			if not configServiceUrls:
-				raise RuntimeError("No service url defined")
-
-			if self._loadBalance and (len(configServiceUrls) > 1):
-				random.shuffle(configServiceUrls)
-
-			for urlIndex, configServiceURL in enumerate(configServiceUrls):
-				self._configServiceUrl = configServiceURL
-				assert self._configServiceUrl
-
-				kwargs = self.connectionThreadOptions()
-				logger.debug("Creating ServiceConnectionThread (url: %s)", self._configServiceUrl)
-				serviceConnectionThread = ServiceConnectionThread(
-					configServiceUrl=self._configServiceUrl,
-					username=config.get("global", "host_id"),
-					password=config.get("global", "opsi_host_key"),
-					**kwargs,
-				)
-				serviceConnectionThread.daemon = True
-
-				self.connectionStart(self._configServiceUrl)
-
-				cancellableAfter = forceInt(config.get("config_service", "user_cancelable_after"))
-				timeout = forceInt(config.get("config_service", "connection_timeout"))
-				logger.info("Starting ServiceConnectionThread, timeout is %d seconds", timeout)
-				serviceConnectionThread.start()
-				for _unused in range(5):
-					if serviceConnectionThread.running:
-						break
-					time.sleep(1)
-
-				logger.debug("ServiceConnectionThread started")
-				while serviceConnectionThread.running and timeout > 0:
-					if self._should_stop:
-						return
-					logger.debug(
-						"Waiting for ServiceConnectionThread (timeout: %d, alive: %s, cancellable in: %d)",
-						timeout,
-						serviceConnectionThread.is_alive(),
-						cancellableAfter,
-					)
-					self.connectionTimeoutChanged(timeout)
-					if cancellableAfter > 0:
-						cancellableAfter -= 1
-					if cancellableAfter == 0:
-						self.connectionCancelable(serviceConnectionThread.stopConnectionCallback)
-					time.sleep(1)
-					timeout -= 1
-
-				if serviceConnectionThread.cancelled:
-					self.connectionCanceled()
-				elif serviceConnectionThread.running:
-					serviceConnectionThread.stop()
-					if urlIndex + 1 < len(configServiceUrls):
-						# Try next url
-						continue
-					self.connectionTimedOut()
-
-				if not serviceConnectionThread.connected:
-					self.connectionFailed(serviceConnectionThread.connectionError or "Unknown error")
-
-				if serviceConnectionThread.connected and forceBool(config.get("config_service", "sync_time_from_service")):
-					logger.info("Syncing local system time from service")
-					try:
-						assert serviceConnectionThread._configService
-						System.setLocalSystemTime(serviceConnectionThread._configService.getServiceTime(utctime=True))
-					except Exception as err:
-						logger.error("Failed to sync time: '%s'", err)
-
-				self._configService = serviceConnectionThread._configService
-				self.update_information_from_header()
-
-				if self._configService and "localhost" not in configServiceURL and "127.0.0.1" not in configServiceURL:
-					try:
-						client_to_depotservers = self._configService.configState_getClientToDepotserver(
-							clientIds=config.get("global", "host_id")
-						)
-						if not client_to_depotservers:
-							raise RuntimeError(f"Failed to get depotserver for client '{config.get('global', 'host_id')}'")
-						depot_id = client_to_depotservers[0]["depotId"]
-						config.set("depot_server", "master_depot_id", depot_id)
-						config.updateConfigFile()
-					except Exception as err:
-						logger.warning(err)
-
-				self.connectionEstablished()
-				break
-		except Exception:
-			self.disconnectConfigService()
-			raise
-
-	def disconnectConfigService(self) -> None:
-		if self._configService:
-			try:
-				# stop_running_processes()?  #TODO cleanup
-				self._configService.backend_exit()
-			except Exception as exit_error:
-				logger.error("Failed to disconnect config service: %s", exit_error)
-
-		self._configService = None
-
-
-class ServiceConnectionThread(KillableThread):
-	def __init__(self, configServiceUrl: str, username: str, password: str, statusSubject: MessageSubject | None = None) -> None:
-		KillableThread.__init__(self)
-		self._configServiceUrl = configServiceUrl
-		self._username = username
-		self._password = password
-		self._statusSubject = statusSubject
-		self._configService = None
-		self.running = False
-		self.connected = False
-		self.cancelled = False
-		self.connectionError: str | None = None
-		if not self._configServiceUrl:
-			raise RuntimeError("No config service url given")
-
-	def setStatusMessage(self, message: str) -> None:
-		if not self._statusSubject:
-			return
-		self._statusSubject.setMessage(message)
-
-	def getUsername(self) -> str:
-		return self._username
-
-	def run(self) -> None:
-		with log_context({"instance": "service connection"}):
-			logger.debug("ServiceConnectionThread started...")
-			self.running = True
-			self.connected = False
-			self.cancelled = False
-
-			try:
-				compression = config.get("config_service", "compression")
-				verify = config.service_verification_flags
-				if "localhost" in self._configServiceUrl or "127.0.0.1" in self._configServiceUrl:
-					compression = False
-					verify = [ServiceVerificationFlags.ACCEPT_ALL]
-
-				log_network_status()
-				tryNum = 0
-				while not self.cancelled and not self.connected:
-					tryNum += 1
-					try:
-						logger.notice("Connecting to config server '%s' #%d", self._configServiceUrl, tryNum)
-						self.setStatusMessage(_("Connecting to config server '%s' #%d") % (self._configServiceUrl, tryNum))
-						if len(self._username.split(".")) < 3:
-							raise RuntimeError(f"Domain missing in username '{self._username}'")
-
-						logger.debug(
-							"JSONRPCBackend address=%s, verify=%s, ca_cert_file=%s, proxy_url=%s, application=%s",
-							self._configServiceUrl,
-							verify,
-							config.ca_cert_file,
-							config.get("global", "proxy_url"),
-							f"opsiclientd/{__version__}",
-						)
-
-						self._configService = JSONRPCBackend(
-							address=self._configServiceUrl,
-							username=self._username,
-							password=self._password,
-							verify=verify,
-							ca_cert_file=config.ca_cert_file,
-							proxy_url=config.get("global", "proxy_url"),
-							application=f"opsiclientd/{__version__}",
-							compression=compression,
-							ip_version=config.get("global", "ip_version"),
-							connect_timeout=SERVICE_CONNECT_TIMEOUT,
-						)
-						assert self._configService
-						self.connected = True
-						self.connectionError = None
-						server_version = self._configService.service.server_version
-						self.setStatusMessage(_("Connected to config server '%s'") % self._configServiceUrl)
-						logger.notice(
-							"Connected to config server '%s' (name=%s, version=%s)",
-							self._configServiceUrl,
-							self._configService.service.server_name,
-							server_version,
-						)
-						try:
-							update_os_ca_store(allow_remove=True)
-						except Exception as err:
-							logger.error(err, exc_info=True)
-					except OpsiServiceVerificationError as verificationError:
-						self.connectionError = forceUnicode(verificationError)
-						self.setStatusMessage(
-							_("Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl
-						)
-						logger.error("Failed to connect to config server '%s': %s", self._configServiceUrl, verificationError)
-						break
-					except Exception as error:
-						self.connectionError = forceUnicode(error)
-						self.setStatusMessage(_("Failed to connect to config server '%s'") % (self._configServiceUrl))
-						logger.info("Failed to connect to config server '%s': %s", self._configServiceUrl, error)
-						logger.debug(error, exc_info=True)
-
-						if isinstance(error, OpsiServiceAuthenticationError):
-							try:
-								fqdn = get_fqdn()
-							except Exception as fqdnError:
-								logger.warning("Failed to get FQDN: %s", fqdnError)
-								break
-
-							if self._username != fqdn:
-								logger.notice("Connect failed with username '%s', got fqdn '%s' from os, trying fqdn", self._username, fqdn)
-								self._username = fqdn
-							else:
-								break
-
-						if "is not supported by the backend" in self.connectionError.lower():
-							try:
-								from cryptography.hazmat.backends import default_backend
-
-								logger.debug(
-									"Got the following crypto backends: %s",
-									default_backend()._backends,
-								)
-							except Exception as cryptoCheckError:
-								logger.debug("Failed to get info about installed crypto modules: %s", cryptoCheckError)
-
-						for _unused in range(3):  # Sleeping before the next retry
-							time.sleep(1)
-			except Exception as err:
-				logger.error(err, exc_info=True)
-			finally:
-				self.running = False
-
-	def stopConnectionCallback(self, choiceSubject: ChoiceSubject) -> None:
-		logger.notice("Connection cancelled by user")
-		self.stop()
-
-	def stop(self) -> None:
-		logger.debug("Stopping thread")
-		self.cancelled = True
-		self.running = False
-
-
-def download_from_depot(product_id: str, destination: str | Path, sub_path: str | None = None) -> None:
+def download_from_depot(
+	product_id: str, destination: str | Path, sub_path: str | None = None, service_client: ServiceClient | None = None
+) -> None:
 	product_id = forceProductId(product_id)
 	if isinstance(destination, str):
 		destination = Path(destination).resolve()
 
-	service_connection = ServiceConnection()
-	service_connection.connectConfigService()
+	disconnect = False
+	if not service_client:
+		service_client = get_service_client()
+		disconnect = True
 
-	product_idents = service_connection.getConfigService().service.jsonrpc(method="product_getIdents", params=["hash", {"id": product_id}])
-	if not product_idents:
-		raise ValueError(f"Product {product_id!r} not available")
+	try:
+		product_idents = service_client.product_getIdents(id=product_id)  # type: ignore[attr-defined]
+		if not product_idents:
+			raise ValueError(f"Product {product_id!r} not available")
 
-	selected_depot, _depot_protocol = config.getDepot(
-		configService=service_connection.getConfigService(), productIds=[product_id], forceDepotProtocol="webdav"
-	)
+		selected_depot = config.getDepot(configService=service_client, productIds=[product_id], forceDepotProtocol="webdav")[0]
 
-	if not selected_depot:
-		raise ValueError(f"Failed to get depot server for product {product_id!r}")
+		if not selected_depot:
+			raise ValueError(f"Failed to get depot server for product {product_id!r}")
 
-	url = selected_depot.depotWebdavUrl
-	if not url:
-		raise ValueError(f"Failed to get webdav url for depot {selected_depot!r} from service")
-	logger.info("Using depot %r, webdav url %r", selected_depot, url)
+		if not selected_depot.depotWebdavUrl:
+			raise ValueError(f"Failed to get webdav url for depot {selected_depot!r} from service")
 
-	service_connection.disconnectConfigService()
+		logger.info("Using depot %r, webdav url %r", selected_depot, selected_depot.depotWebdavUrl)
+		url = urlparse(selected_depot.depotWebdavUrl)
+	finally:
+		if disconnect:
+			service_client.stop()
 
 	if not destination.is_dir():
 		destination.mkdir(parents=True)
 
-	path = f"/{product_id}{('/' + sub_path.lstrip('/') if sub_path else '')}"
+	path = f"{url.path.rstrip('/')}/{product_id}{('/' + sub_path.lstrip('/') if sub_path else '')}"
 	logger.notice("Downloading '%s' to '%s' from depot %r", path, destination, url)
-	repository = WebDAVRepository(
-		url,
-		username=config.get("global", "host_id"),
-		password=config.get("global", "opsi_host_key"),
-		verify_server_cert=config.get("global", "verify_server_cert") or config.get("global", "verify_server_cert_by_ca"),
-		ca_cert_file=config.ca_cert_file,
-		proxy_url=config.get("global", "proxy_url"),
-		ip_version=config.get("global", "ip_version"),
-	)
-	repository.copy(path, str(destination))
-	repository.disconnect()
 
-	logger.info("Download completed")
+	depot_client = get_service_client(url.geturl()[: len(url.path) * -1])
+	depot_client.download(source=path, destination=destination)
+	depot_client.disconnect()
 
 	logger.info("Download completed")

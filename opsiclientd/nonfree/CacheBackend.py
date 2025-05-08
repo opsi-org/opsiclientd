@@ -12,7 +12,7 @@ import time
 import warnings
 from collections import defaultdict
 from types import MethodType
-from typing import Any, Callable, Type
+from typing import Any, Callable, Type, cast
 
 from OPSI.Backend.Backend import (  # type: ignore[import]
 	Backend,
@@ -48,7 +48,7 @@ from opsicommon.objects import (
 from opsicommon.types import forceHostId
 
 from opsiclientd.Config import Config as OCDConfig
-from opsiclientd.OpsiService import ServiceConnection
+from opsiclientd.OpsiService import ServiceClient
 
 __all__ = ["ClientCacheBackend"]
 
@@ -56,7 +56,7 @@ config = OCDConfig()
 logger = get_logger()
 
 
-def add_products_from_setup_after_install(products: list[str], service: ServiceConnection) -> list[str]:
+def add_products_from_setup_after_install(products: list[str], service_client: ServiceClient) -> list[str]:
 	# setup_after_install is not treated as a formal dependency
 	# Adding those products here, ignoring dependencies and hoping for the best
 	# A construct big as death and twice as ugly
@@ -64,7 +64,7 @@ def add_products_from_setup_after_install(products: list[str], service: ServiceC
 	try:
 		for product in ("opsi-client-agent", "opsi-linux-client-agent", "opsi-mac-client-agent"):
 			if product in products:  # one at most
-				setup_after_install_products = service.productPropertyState_getObjects(  # type: ignore[attr-defined]
+				setup_after_install_products = service_client.productPropertyState_getObjects(  # type: ignore[attr-defined]
 					objectId=config.get("global", "host_id"),
 					productId=product,
 					propertyId="setup_after_install",
@@ -84,8 +84,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 	def __init__(self, **kwargs: Any) -> None:
 		ConfigDataBackend.__init__(self, **kwargs)
 
+		self._masterBackend: ServiceClient | None = None
 		self._workBackend: ConfigDataBackend | None = None
-		self._masterBackend: ConfigDataBackend | None = None
 		self._snapshotBackend: ConfigDataBackend | None = None
 		self._clientId: str | None = None
 		self._depotId: str | None = None
@@ -123,6 +123,14 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		self._workBackend._setContext(self)
 		self._backend = self._workBackend
 		self._createInstanceMethods()
+
+	@property
+	def depotId(self) -> str | None:
+		return self._depotId
+
+	@depotId.setter
+	def depotId(self, depotId: str) -> None:
+		self._depotId = forceHostId(depotId)
 
 	def backend_getLicensingInfo(
 		self, licenses: bool = False, legacy_modules: bool = False, dates: bool = False, allow_cache: bool = True
@@ -228,7 +236,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			logger.error("Failed to read product property values cache file '%s': %s", self._productPropertyValuesCacheFile, err)
 		return {}
 
-	def _setMasterBackend(self, masterBackend: ConfigDataBackend) -> None:
+	def _setMasterBackend(self, masterBackend: ServiceClient) -> None:
 		self._masterBackend = masterBackend
 
 	def _syncModifiedObjectsWithMaster(
@@ -323,9 +331,9 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				identValues = modification["ident"].split(ObjectClass.identSeparator)
 				identAttributes: tuple[str, ...] = tuple()
 				if modification["objectClass"] == "AuditHardware":
-					identAttributes = ("hardwareClass",) + tuple(sorted(ObjectClass.hardware_attributes[identValues[0]]))
+					identAttributes = tuple(["hardwareClass"] + sorted(ObjectClass.hardware_attributes[identValues[0]]))
 				elif modification["objectClass"] == "AuditHardwareOnHost":
-					identAttributes = ("hostId", "hardwareClass") + tuple(sorted(ObjectClass.hardware_attributes[identValues[1]]))
+					identAttributes = tuple(["hostId", "hardwareClass"] + sorted(ObjectClass.hardware_attributes[identValues[1]]))
 				else:
 					identAttributes = get_ident_attributes(ObjectClass)
 				objectFilter = {}
@@ -351,22 +359,22 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 		logger.info("modifiedObjects: %r", {m: len(modifiedObjects[m]) for m in modifiedObjects})
 		if "AuditHardwareOnHost" in modifiedObjects:
-			self._masterBackend.auditHardwareOnHost_setObsolete(self._clientId)
-			self._masterBackend.auditHardwareOnHost_updateObjects([mo["object"] for mo in modifiedObjects["AuditHardwareOnHost"]])
+			self._masterBackend.auditHardwareOnHost_setObsolete(self._clientId)  # type: ignore[attr-defined]
+			self._masterBackend.auditHardwareOnHost_updateObjects([mo["object"] for mo in modifiedObjects["AuditHardwareOnHost"]])  # type: ignore[attr-defined]
 
 		if "AuditSoftware" in modifiedObjects:
-			self._masterBackend.auditSoftware_updateObjects([mo["object"] for mo in modifiedObjects["AuditSoftware"]])
+			self._masterBackend.auditSoftware_updateObjects([mo["object"] for mo in modifiedObjects["AuditSoftware"]])  # type: ignore[attr-defined]
 
 		if "AuditSoftwareOnClient" in modifiedObjects:
-			self._masterBackend.auditSoftwareOnClient_setObsolete(self._clientId)
-			self._masterBackend.auditSoftwareOnClient_updateObjects([mo["object"] for mo in modifiedObjects["AuditSoftwareOnClient"]])
+			self._masterBackend.auditSoftwareOnClient_setObsolete(self._clientId)  # type: ignore[attr-defined]
+			self._masterBackend.auditSoftwareOnClient_updateObjects([mo["object"] for mo in modifiedObjects["AuditSoftwareOnClient"]])  # type: ignore[attr-defined]
 
 		if "OpsiClient" in modifiedObjects:
 			for mo in modifiedObjects["OpsiClient"]:
 				logger.debug("Modified OpsiClient object: %s", mo["object"])
 				if mo["object"].id != self._clientId:
 					continue
-				client_objs = self._masterBackend.host_getObjects(type="OpsiClient", id=self._clientId)
+				client_objs = self._masterBackend.host_getObjects(type="OpsiClient", id=self._clientId)  # type: ignore[attr-defined]
 				if not client_objs:
 					logger.error("Failed to get OpsiClient %r from master backend", self._clientId)
 					break
@@ -377,7 +385,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 						mo["object"].systemUUID,
 					)
 					client_objs[0].setSystemUUID(mo["object"].systemUUID)
-					self._masterBackend.host_updateObject(client_objs[0])
+					self._masterBackend.host_updateObject(client_objs[0])  # type: ignore[attr-defined]
 
 		if "ProductOnClient" in modifiedObjects:
 
@@ -528,14 +536,14 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 		productOnClients = {}
 		product_ids_with_action = []
-		for productOnClient in self._masterBackend.productOnClient_getObjects(clientId=self._clientId):
+		for productOnClient in self._masterBackend.productOnClient_getObjects(clientId=self._clientId):  # type: ignore[attr-defined]
 			productOnClients[productOnClient.productId] = productOnClient
 			if productOnClient.actionRequest not in (None, "none"):
 				product_ids_with_action.append(productOnClient.productId)
 
 		if productOnClients and product_ids_with_action:
 			updateProductOnClients = []
-			for productDependency in self._masterBackend.productDependency_getObjects(productId=product_ids_with_action):
+			for productDependency in self._masterBackend.productDependency_getObjects(productId=product_ids_with_action):  # type: ignore[attr-defined]
 				if (
 					productDependency.requiredAction not in (None, "")
 					and productDependency.productId in productOnClients
@@ -556,9 +564,9 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 						product_ids_with_action.append(productDependency.requiredProductId)
 			if updateProductOnClients:
 				# Update is sufficient, creating a ProductOnClient is not required (see comment above)
-				self._masterBackend.productOnClient_updateObjects(updateProductOnClients)
+				self._masterBackend.productOnClient_updateObjects(updateProductOnClients)  # type: ignore[attr-defined]
 
-		self._cacheBackendInfo(self._masterBackend.backend_info())
+		self._cacheBackendInfo(self._masterBackend.backend_info())  # type: ignore[attr-defined]
 
 		filterProductIds = []
 		if config.get("cache_service", "sync_products_with_actions_only"):
@@ -577,7 +585,8 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 		self._workBackend.backend_deleteBase()
 		self._workBackend.backend_createBase()
-		br = BackendReplicator(readBackend=self._masterBackend, writeBackend=self._workBackend)
+		br = BackendReplicator(readBackend=cast(Backend, self._masterBackend), writeBackend=self._workBackend)
+		assert self._clientId and self._depotId
 		br.replicate(
 			serverIds=[],
 			depotIds=[self._depotId],
@@ -595,7 +604,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			with open(self._configValuesCacheFile, "w", encoding="utf-8") as file:
 				file.write(
 					json.dumps(
-						self._masterBackend.configState_getValues(
+						self._masterBackend.configState_getValues(  # type: ignore[attr-defined]
 							config_ids=["clientconfig.*", "opsiclientd.*"], object_ids=self._clientId, with_defaults=True
 						)
 					)
@@ -609,7 +618,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 			with open(self._productPropertyValuesCacheFile, "w", encoding="utf-8") as file:
 				file.write(
 					json.dumps(
-						self._masterBackend.productPropertyState_getValues(
+						self._masterBackend.productPropertyState_getValues(  # type: ignore[attr-defined]
 							product_ids=filterProductIds, object_ids=self._clientId, with_defaults=True
 						)
 					)
@@ -619,12 +628,12 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 		self._snapshotBackend.backend_deleteBase()
 
-		licenseOnClients = self._masterBackend.licenseOnClient_getObjects(clientId=self._clientId)
+		licenseOnClients = self._masterBackend.licenseOnClient_getObjects(clientId=self._clientId)  # type: ignore[attr-defined]
 		for productOnClient in self._workBackend.productOnClient_getObjects(clientId=self._clientId):
 			if productOnClient.actionRequest in (None, "none"):
 				continue
 
-			licensePools = self._masterBackend.licensePool_getObjects(productIds=[productOnClient.productId])
+			licensePools = self._masterBackend.licensePool_getObjects(productIds=[productOnClient.productId])  # type: ignore[attr-defined]
 			if not licensePools:
 				logger.debug("No license pool found for product '%s'", productOnClient.productId)
 				continue
@@ -639,7 +648,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 						break
 				else:
 					logger.notice("Acquiring license for product '%s'", productOnClient.productId)
-					licenseOnClient = self._masterBackend.licenseOnClient_getOrCreateObject(
+					licenseOnClient = self._masterBackend.licenseOnClient_getOrCreateObject(  # type: ignore[attr-defined]
 						clientId=self._clientId, productId=productOnClient.productId
 					)
 
@@ -652,14 +661,14 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					self._fireEvent("backendModified")
 
 					statistics = {"licensePools": 0, "softwareLicenses": 0, "licenseContracts": 0}
-					for licensePool in self._masterBackend.licensePool_getObjects(id=licenseOnClient.licensePoolId):
+					for licensePool in self._masterBackend.licensePool_getObjects(id=licenseOnClient.licensePoolId):  # type: ignore[attr-defined]
 						logger.debug("Storing LicensePool: %s", licensePool)
 						self._workBackend.licensePool_insertObject(licensePool)
 						statistics["licensePools"] += 1
 
-					for softwareLicense in self._masterBackend.softwareLicense_getObjects(id=licenseOnClient.softwareLicenseId):
+					for softwareLicense in self._masterBackend.softwareLicense_getObjects(id=licenseOnClient.softwareLicenseId):  # type: ignore[attr-defined]
 						logger.debug("Storing SoftwareLicense: %s", softwareLicense)
-						for licenseContract in self._masterBackend.licenseContract_getObjects(id=softwareLicense.licenseContractId):
+						for licenseContract in self._masterBackend.licenseContract_getObjects(id=softwareLicense.licenseContractId):  # type: ignore[attr-defined]
 							logger.debug("Storing LicenseContract: %s", licenseContract)
 							self._workBackend.licenseContract_insertObject(licenseContract)
 							statistics["licenseContracts"] += 1
@@ -693,11 +702,11 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				config.get("global", "opsi_host_key"),
 			)
 
-		password = self._masterBackend.user_getCredentials(username="pcpatch", hostId=self._clientId)
+		password = self._masterBackend.user_getCredentials(username="pcpatch", hostId=self._clientId)  # type: ignore[attr-defined]
 		password = password["password"]
 		logger.notice("Creating opsi passwd file '%s' using opsi host key '%s...'", self._opsiPasswdFile, opsiHostKey[:10])
 		self.user_setCredentials(username="pcpatch", password=blowfishDecrypt(opsiHostKey, password))
-		auditHardwareConfig = self._masterBackend.auditHardware_getConfig()
+		auditHardwareConfig = self._masterBackend.auditHardware_getConfig()  # type: ignore[attr-defined]
 		with open(self._auditHardwareConfigFile, "w", encoding="utf8") as file:
 			file.write(json.dumps(auditHardwareConfig))
 

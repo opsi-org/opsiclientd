@@ -19,7 +19,6 @@ from urllib.parse import urlparse
 
 import netifaces  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
-from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
 from OPSI.Util import blowfishDecrypt, objectToBeautifiedText  # type: ignore[import]
 from OPSI.Util.File import IniFile  # type: ignore[import]
 from opsicommon.client.opsiservice import ServiceClient, ServiceVerificationFlags
@@ -204,7 +203,6 @@ class Config(metaclass=Singleton):
 				"connection_timeout": 10,
 				"user_cancelable_after": 0,
 				"sync_time_from_service": False,
-				"permanent_connection": False,
 				"reconnect_wait_min": 5,
 				"reconnect_wait_max": 120,
 			},
@@ -527,7 +525,7 @@ class Config(metaclass=Singleton):
 					return
 
 				# Check / correct value
-				if option in ("connection_timeout", "user_cancelable_after") and value < 0:
+				if option in ("connection_timeout", "user_cancelable_after") and int(value) < 0:
 					value = 0
 				elif option == "opsi_host_key":
 					if len(value) != 32:
@@ -696,14 +694,14 @@ class Config(metaclass=Singleton):
 
 	def getDepot(
 		self,
-		configService: JSONRPCBackend,
+		configService: ServiceClient,
 		event: Event | None = None,
 		productIds: list[str] | None = None,
 		masterOnly: bool = False,
 		forceDepotProtocol: str | None = None,
 	) -> tuple[OpsiDepotserver, str]:
 		productIds = forceProductIdList(productIds or [])
-		if not configService:
+		if not configService.connected:
 			raise RuntimeError("Not connected to config service")
 
 		selectedDepot = None
@@ -718,14 +716,14 @@ class Config(metaclass=Singleton):
 		config_states = {}
 		if hasattr(configService, "configState_getValues"):
 			logger.info("Using configState_getValues")
-			config_states = configService.configState_getValues(
+			config_states = configService.configState_getValues(  # type: ignore[attr-defined]
 				config_ids=config_ids, object_ids=[self.get("global", "host_id")], with_defaults=True
 			).get(self.get("global", "host_id"), {})
 		else:
 			logger.info("Using configState_getObjects")
-			for config in configService.config_getObjects(id=config_ids):
+			for config in configService.config_getObjects(id=config_ids):  # type: ignore[attr-defined]
 				config_states[config.id] = config.defaultValues
-			for config_state in configService.configState_getObjects(objectId=self.get("global", "host_id"), configId=config_ids):
+			for config_state in configService.configState_getObjects(objectId=self.get("global", "host_id"), configId=config_ids):  # type: ignore[attr-defined]
 				config_states[config_state.configId] = config_state.values
 
 		for config_id, values in config_states.items():
@@ -763,7 +761,7 @@ class Config(metaclass=Singleton):
 			logger.info("Dynamic depot selection disabled")
 
 		if not depotIds:
-			clientToDepotservers = configService.configState_getClientToDepotserver(
+			clientToDepotservers = configService.configState_getClientToDepotserver(  # type: ignore[attr-defined]
 				clientIds=[self.get("global", "host_id")], masterOnly=bool(not dynamicDepot), productIds=productIds
 			)
 			if not clientToDepotservers:
@@ -776,7 +774,7 @@ class Config(metaclass=Singleton):
 		logger.debug("Fetching depot servers %s from config service", depotIds)
 		masterDepot = None
 		alternativeDepots = []
-		for depot in configService.host_getObjects(type="OpsiDepotserver", id=depotIds):
+		for depot in configService.host_getObjects(type="OpsiDepotserver", id=depotIds):  # type: ignore[attr-defined]
 			logger.trace("Depot: %s", depot)
 			if depot.id == depotIds[0]:
 				masterDepot = depot
@@ -804,7 +802,9 @@ class Config(metaclass=Singleton):
 					}
 					try:
 						gateways = netifaces.gateways()
-						clientConfig["defaultGateway"], iface_name = gateways["default"][netifaces.AF_INET]
+						inet_gw = gateways["default"][netifaces.AF_INET]
+						clientConfig["defaultGateway"] = inet_gw[0]
+						iface_name = inet_gw[1]
 						addr = netifaces.ifaddresses(iface_name)[netifaces.AF_INET][0]
 						clientConfig["netmask"] = addr["netmask"]
 						clientConfig["ipAddress"] = addr["addr"]
@@ -820,7 +820,7 @@ class Config(metaclass=Singleton):
 
 					logger.info("Passing client configuration to depot selection algorithm: %s", clientConfig)
 
-					depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()
+					depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()  # type: ignore[attr-defined]
 					logger.trace("depotSelectionAlgorithm:\n%s", depotSelectionAlgorithm)
 
 					currentLocals = locals()
@@ -839,7 +839,7 @@ class Config(metaclass=Singleton):
 
 	def selectDepotserver(
 		self,
-		configService: JSONRPCBackend,
+		configService: ServiceClient,
 		mode: str = "mount",
 		event: Event | None = None,
 		productIds: list[str] | None = None,
@@ -874,7 +874,7 @@ class Config(metaclass=Singleton):
 		else:
 			self.set("depot_server", "url", selectedDepot.depotRemoteUrl)
 
-	def getDepotserverCredentials(self, configService: JSONRPCBackend) -> tuple[str, str]:
+	def getDepotserverCredentials(self, configService: ServiceClient) -> tuple[str, str]:
 		url = urlparse(self.get("depot_server", "url"))
 		if url.scheme in ("webdav", "webdavs", "http", "https"):
 			return (self.get("global", "host_id"), self.get("global", "opsi_host_key"))
@@ -883,15 +883,15 @@ class Config(metaclass=Singleton):
 			raise RuntimeError("Not connected to config service")
 
 		depotServerUsername = self.get("depot_server", "username")
-		encryptedDepotServerPassword = configService.user_getCredentials(username="pcpatch", hostId=self.get("global", "host_id"))[
-			"password"
-		]
+		encryptedDepotServerPassword = configService.user_getCredentials(  # type: ignore[attr-defined]
+			username="pcpatch", hostId=self.get("global", "host_id")
+		)["password"]
 		depotServerPassword = blowfishDecrypt(self.get("global", "opsi_host_key"), encryptedDepotServerPassword)
 		secret_filter.add_secrets(depotServerPassword)
 		logger.debug("Using username '%s' for depot connection", depotServerUsername)
 		return (depotServerUsername, depotServerPassword)
 
-	def getFromService(self, service_client: ServiceClient | JSONRPCBackend) -> None:
+	def getFromService(self, service_client: ServiceClient) -> None:
 		"""Get settings from service"""
 		logger.notice("Getting config from service")
 		if not service_client:
@@ -924,9 +924,9 @@ class Config(metaclass=Singleton):
 				use_get_objects = True
 		if use_get_objects:
 			logger.info("Using configState_getObjects")
-			for config in service_client.config_getObjects(id=config_ids):  # type: ignore[union-attr]
+			for config in service_client.config_getObjects(id=config_ids):  # type: ignore[attr-defined]
 				config_states[config.id] = config.defaultValues
-			for config_state in service_client.configState_getObjects(  # type: ignore[union-attr]
+			for config_state in service_client.configState_getObjects(  # type: ignore[attr-defined]
 				objectId=self.get("global", "host_id"),
 				configId=config_ids,
 			):

@@ -18,11 +18,10 @@ import subprocess
 import sys
 import threading
 import time
-from contextlib import contextmanager
 from functools import lru_cache
 from pathlib import Path
 from types import MethodType
-from typing import TYPE_CHECKING, Any, Generator
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 import psutil  # type: ignore[import]
@@ -44,7 +43,7 @@ from opsiclientd.Events.SwOnDemand import SwOnDemandEventGenerator
 from opsiclientd.Events.Utilities.Configs import getEventConfigs
 from opsiclientd.Events.Utilities.Generators import getEventGenerator, getEventGenerators
 from opsiclientd.Localization import _, get_translation_info
-from opsiclientd.OpsiService import ServiceConnection, download_from_depot
+from opsiclientd.OpsiService import PermanentServiceConnection, ServiceClient, download_from_depot
 from opsiclientd.Timeline import Timeline
 from opsiclientd.webserver.rpc.interface import Interface
 
@@ -65,17 +64,9 @@ class PipeControlInterface(Interface):
 		super().__init__()
 		self.opsiclientd = opsiclientd
 
-	@contextmanager
-	def _config_service_connection(self, disconnect: bool = True) -> Generator[ServiceConnection, None, None]:
-		service_connection = ServiceConnection(self.opsiclientd)
-		connected = service_connection.isConfigServiceConnected()
-		if not connected:
-			service_connection.connectConfigService()
-		try:
-			yield service_connection
-		finally:
-			if not connected and disconnect:
-				service_connection.disconnectConfigService()
+	@property
+	def service_client(self) -> ServiceClient:
+		return PermanentServiceConnection(self.opsiclientd).service_client
 
 	def _fireEvent(
 		self,
@@ -212,16 +203,13 @@ class KioskControlInterface(PipeControlInterface):
 		return result
 
 	def backend_setOptions(self, options: dict[str, Any]) -> None:
-		with self._config_service_connection(disconnect=False) as service_connection:
-			service_connection.getConfigService().backend_setOptions(options)
+		self.service_client.backend_setOptions(options)  # type: ignore[attr-defined]
 
 	def configState_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ConfigState]:
-		with self._config_service_connection(disconnect=False) as service_connection:
-			return service_connection.getConfigService().configState_getObjects(attributes, **filter)
+		return self.service_client.configState_getObjects(attributes, **filter)  # type: ignore[attr-defined]
 
 	def getDepotId(self, clientId: str | None = None) -> str:
-		with self._config_service_connection(disconnect=False) as service_connection:
-			return service_connection.getConfigService().getDepotId(self.opsiclientd.config.get("global", "host_id"))
+		return self.service_client.getDepotId(self.opsiclientd.config.get("global", "host_id"))  # type: ignore[attr-defined]
 
 	def configState_getClientToDepotserver(
 		self,
@@ -230,46 +218,36 @@ class KioskControlInterface(PipeControlInterface):
 		masterOnly: bool = True,
 		productIds: list[str] | None = None,
 	) -> list[dict[str, Any]]:
-		with self._config_service_connection(disconnect=False) as service_connection:
-			return service_connection.getConfigService().configState_getClientToDepotserver(depotIds, clientIds, masterOnly, productIds)
+		return self.service_client.configState_getClientToDepotserver(depotIds, clientIds, masterOnly, productIds)  # type: ignore[attr-defined]
 
 	def getGeneralConfigValue(self, key: str, objectId: str | None = None) -> str:
-		with self._config_service_connection(disconnect=False) as service_connection:
-			return service_connection.getConfigService().getGeneralConfigValue(key, objectId)
+		return self.service_client.getGeneralConfigValue(key, objectId)  # type: ignore[attr-defined]
 
 	def getKioskProductInfosForClient(self, clientId: str, addConfigs: bool = False) -> dict | list:
-		with self._config_service_connection(disconnect=False) as service_connection:
-			return service_connection.getConfigService().getKioskProductInfosForClient(forceHostId(clientId), addConfigs)
+		return self.service_client.getKioskProductInfosForClient(forceHostId(clientId), addConfigs)  # type: ignore[attr-defined]
 
 	def hostControlSafe_fireEvent(self, event: str, hostIds: list[str] | None = None) -> dict[str, Any]:
-		with self._config_service_connection(disconnect=False) as service_connection:
-			return service_connection.getConfigService().hostControlSafe_fireEvent(event, hostIds)
+		return self.service_client.hostControlSafe_fireEvent(event, hostIds)  # type: ignore[attr-defined]
 
 	def objectToGroup_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ObjectToGroup]:
-		with self._config_service_connection(disconnect=False) as service_connection:
-			return service_connection.getConfigService().objectToGroup_getObjects(attributes, **filter)
+		return self.service_client.objectToGroup_getObjects(attributes, **filter)  # type: ignore[attr-defined]
 
 	def product_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[Product]:
-		with self._config_service_connection(disconnect=False) as service_connection:
-			return service_connection.getConfigService().product_getObjects(attributes, **filter)
+		return self.service_client.product_getObjects(attributes, **filter)  # type: ignore[attr-defined]
 
 	def productDependency_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ProductDependency]:
-		with self._config_service_connection(disconnect=False) as service_connection:
-			return service_connection.getConfigService().productDependency_getObjects(attributes, **filter)
+		return self.service_client.productDependency_getObjects(attributes, **filter)  # type: ignore[attr-defined]
 
 	def productOnClient_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ProductOnClient]:
-		with self._config_service_connection(disconnect=False) as service_connection:
-			return service_connection.getConfigService().productOnClient_getObjects(attributes, **filter)
+		return self.service_client.productOnClient_getObjects(attributes, **filter)  # type: ignore[attr-defined]
 
 	def productOnDepot_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ProductOnDepot]:
-		with self._config_service_connection(disconnect=False) as service_connection:
-			return service_connection.getConfigService().productOnDepot_getObjects(attributes, **filter)
+		return self.service_client.productOnDepot_getObjects(attributes, **filter)  # type: ignore[attr-defined]
 
 	def setProductActionRequestWithDependencies(self, productId: str, clientId: str, actionRequest: str) -> None:
-		with self._config_service_connection(disconnect=False) as service_connection:
-			return service_connection.getConfigService().setProductActionRequestWithDependencies(
-				productId, forceHostId(clientId), actionRequest
-			)
+		return self.service_client.setProductActionRequestWithDependencies(  # type: ignore[attr-defined]
+			productId, forceHostId(clientId), actionRequest
+		)
 
 
 class ControlInterface(PipeControlInterface):
@@ -568,8 +546,7 @@ class ControlInterface(PipeControlInterface):
 		return sessions
 
 	def getBackendInfo(self) -> dict[str, Any]:
-		with self._config_service_connection() as service_connection:
-			return service_connection.getConfigService().backend_info()
+		return self.service_client.backend_info()  # type: ignore[attr-defined]
 
 	def getState(self, name: str, default: Any = None) -> Any:
 		"""
@@ -659,81 +636,78 @@ class ControlInterface(PipeControlInterface):
 		)
 
 		config = self.opsiclientd.config
-		with self._config_service_connection() as service_connection:
-			configServiceUrl = service_connection.getConfigServiceUrl()
-			config.selectDepotserver(
-				configService=service_connection.getConfigService(),
-				mode="mount",
-				productIds=[product_id] if product_id else None,
-			)
-			depot_server_username, depot_server_password = config.getDepotserverCredentials(
-				configService=service_connection.getConfigService()
-			)
+		service_url = self.service_client.base_url
+		config.selectDepotserver(
+			configService=self.service_client,
+			mode="mount",
+			productIds=[product_id] if product_id else None,
+		)
+		depot_server_username, depot_server_password = config.getDepotserverCredentials(configService=self.service_client)
 
-			depot_server_url = config.get("depot_server", "url")
-			if not depot_server_url:
-				raise RuntimeError("depot_server.url not defined")
-			depot_path = config.get_depot_path()
-			depot_drive = config.getDepotDrive()
-			if depot_path == depot_drive:
-				# Prefer depot drive if not in use
-				depot_path = depot_drive = System.get_available_drive_letter(start=depot_drive.rstrip(":")).rstrip(":") + ":"
+		depot_server_url = config.get("depot_server", "url")
+		if not depot_server_url:
+			raise RuntimeError("depot_server.url not defined")
+		depot_path = config.get_depot_path()
+		depot_drive = config.getDepotDrive()
+		if depot_path == depot_drive:
+			# Prefer depot drive if not in use
+			depot_path = depot_drive = System.get_available_drive_letter(start=depot_drive.rstrip(":")).rstrip(":") + ":"
 
-			if not os.path.isabs(script):
-				script = os.path.join(depot_path, os.sep, script)
+		if not os.path.isabs(script):
+			script = os.path.join(depot_path, os.sep, script)
 
-			log_file = os.path.join(config.get("global", "log_dir"), "opsisetupuser.log")
+		log_file = os.path.join(config.get("global", "log_dir"), "opsisetupuser.log")
 
-			command = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
-			if product_id:
-				product_id = f'/productid \\"{product_id}\\" '
-			else:
-				product_id = ""
+		command = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
+		if product_id:
+			product_id = f'/productid \\"{product_id}\\" '
+		else:
+			product_id = ""
 
-			command = (
-				f'\\"{command}\\" \\"{script}\\" \\"{log_file}\\" /servicebatch {product_id}'
-				f'/opsiservice \\"{configServiceUrl}\\" '
-				f'/clientid \\"{config.get("global", "host_id")}\\" '
-				f'/username \\"{config.get("global", "host_id")}\\" '
-				f'/password \\"{config.get("global", "opsi_host_key")}\\"'
-			)
+		command = (
+			f'\\"{command}\\" \\"{script}\\" \\"{log_file}\\" /servicebatch {product_id}'
+			f'/opsiservice \\"{service_url}\\" '
+			f'/clientid \\"{config.get("global", "host_id")}\\" '
+			f'/username \\"{config.get("global", "host_id")}\\" '
+			f'/password \\"{config.get("global", "opsi_host_key")}\\"'
+		)
 
-			ps_script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
+		ps_script = Path(config.get("global", "tmp_dir")) / f"run_as_opsi_setup_user_{uuid4()}.ps1"
 
-			ps_script.write_text(
-				(
-					f"$args = @("
-					f"'{config.get('global', 'host_id')}',"
-					f"'{config.get('global', 'opsi_host_key')}',"
-					f"'{config.get('control_server', 'port')}',"
-					f"'{config.get('global', 'log_file')}',"
-					f"'{config.get('global', 'log_level')}',"
-					f"'{depot_server_url}',"
-					f"'{depot_drive}',"
-					f"'{depot_server_username}',"
-					f"'{depot_server_password}',"
-					f"'-1',"
-					f"'default',"
-					f"'{command}',"
-					f"'3600',"
-					f"'{OPSI_SETUP_USER_NAME}',"
-					f"'\"\"',"
-					f"'false'"
-					f")\r\n"
-					f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args\r\n'
-					f'Remove-Item -Path "{str(ps_script)}" -Force\r\n'
-				),
-				encoding="windows-1252",
-			)
+		ps_script.write_text(
+			(
+				f"$args = @("
+				f"'{config.get('global', 'host_id')}',"
+				f"'{config.get('global', 'opsi_host_key')}',"
+				f"'{config.get('control_server', 'port')}',"
+				f"'{config.get('global', 'log_file')}',"
+				f"'{config.get('global', 'log_level')}',"
+				f"'{depot_server_url}',"
+				f"'{depot_drive}',"
+				f"'{depot_server_username}',"
+				f"'{depot_server_password}',"
+				f"'-1',"
+				f"'default',"
+				f"'{command}',"
+				f"'3600',"
+				f"'{OPSI_SETUP_USER_NAME}',"
+				f"'\"\"',"
+				f"'false'"
+				f")\r\n"
+				f'& "{os.path.join(os.path.dirname(sys.argv[0]), "action_processor_starter.exe")}" $args\r\n'
+				f'Remove-Item -Path "{str(ps_script)}" -Force\r\n'
+			),
+			encoding="windows-1252",
+		)
 
-			self._run_powershell_script_as_opsi_setup_user(
-				script=ps_script,
-				admin=admin,
-				recreate_user=False,
-				remove_user=remove_user,
-				wait_for_ending=wait_for_ending,
-				shell_window_style="hidden",
-			)
+		self._run_powershell_script_as_opsi_setup_user(
+			script=ps_script,
+			admin=admin,
+			recreate_user=False,
+			remove_user=remove_user,
+			wait_for_ending=wait_for_ending,
+			shell_window_style="hidden",
+		)
 
 	def runOpsiScriptContent(
 		self,
@@ -1020,7 +994,13 @@ class ControlInterface(PipeControlInterface):
 		)
 
 	def downloadFromDepot(self, product_id: str, destination: str, sub_path: str | None = None) -> None:
-		download_from_depot(product_id, Path(destination).resolve(), sub_path)
+		assert self.opsiclientd._permanent_service_connection, "Need permanent service connection for downloadFromDepot"
+		download_from_depot(
+			product_id=product_id,
+			destination=Path(destination).resolve(),
+			sub_path=sub_path,
+			service_client=self.opsiclientd._permanent_service_connection.service_client,
+		)
 
 	def getLogs(self, log_types: list[str] | None = None, max_age_days: int = 0) -> str:
 		file_path = self.opsiclientd.collectLogfiles(types=log_types, max_age_days=max_age_days)
@@ -1039,11 +1019,10 @@ class ControlInterface(PipeControlInterface):
 		config = self.opsiclientd.config
 
 		logger.info("Replacing opsi host key on service")
-		with self._config_service_connection() as service_connection:
-			configService = service_connection.getConfigService()
-			host = configService.host_getObjects(id=config.get("global", "host_id"))[0]
-			host.setOpsiHostKey(new_key)
-			configService.host_updateObject(host)
+
+		host = self.service_client.host_getObjects(id=config.get("global", "host_id"))[0]  # type: ignore[attr-defined]
+		host.setOpsiHostKey(new_key)
+		self.service_client.host_updateObject(host)  # type: ignore[attr-defined]
 
 		logger.info("Replacing opsi host key in config")
 		config.set("global", "opsi_host_key", new_key)

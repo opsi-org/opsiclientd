@@ -19,7 +19,7 @@ from opsicommon.logging import get_logger
 from opsiclientd.Config import Config
 
 if TYPE_CHECKING:
-	from OPSI.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
+	from opsiclientd.OpsiService import ServiceClient
 
 config = Config()
 
@@ -31,7 +31,7 @@ logger = get_logger()
 
 
 def get_include_exclude_product_ids(
-	config_service: JSONRPCBackend, includeProductGroupIds: list[str], excludeProductGroupIds: list[str]
+	config_service: ServiceClient, includeProductGroupIds: list[str], excludeProductGroupIds: list[str]
 ) -> tuple[list[str], list[str]]:
 	includeProductIds = []
 	excludeProductIds = []
@@ -41,13 +41,15 @@ def get_include_exclude_product_ids(
 
 	if includeProductGroupIds:
 		includeProductIds = [
-			obj.objectId for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds)
+			obj.objectId
+			for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds)  # type: ignore[attr-defined]
 		]
 		logger.debug("Only products ids %s will be regarded", includeProductIds)
 
 	if excludeProductGroupIds:
 		excludeProductIds = [
-			obj.objectId for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds)
+			obj.objectId
+			for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds)  # type: ignore[attr-defined]
 		]
 		logger.debug("Product ids %s will be excluded", excludeProductIds)
 

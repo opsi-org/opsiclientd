@@ -164,17 +164,25 @@ class Opsiclientd(EventListener, threading.Thread):
 	def createOpsiSetupUser(self, admin: bool = True, delete_existing: bool = False) -> dict[str, Any]:
 		raise NotImplementedError(f"Not implemented on {platform.system()}")
 
+	@contextmanager
+	def permanent_service_connection(self) -> Generator[None, None, None]:
+		self.start_permanent_service_connection()
+		try:
+			yield
+		finally:
+			self.stop_permanent_service_connection()
+
 	def start_permanent_service_connection(self) -> None:
 		if self._permanent_service_connection and self._permanent_service_connection.running:
 			return
 
-		logger.info("Starting permanent service connection")
+		logger.notice("Starting permanent service connection")
 		self._permanent_service_connection = PermanentServiceConnection(self)
 		self._permanent_service_connection.start()
 
 	def stop_permanent_service_connection(self) -> None:
 		if self._permanent_service_connection and self._permanent_service_connection.running:
-			logger.info("Stopping permanent service connection")
+			logger.notice("Stopping permanent service connection")
 			self._permanent_service_connection.stop()
 			time.sleep(1)
 			self._permanent_service_connection = None
@@ -532,8 +540,9 @@ class Opsiclientd(EventListener, threading.Thread):
 					logger.error("Unable to fire DaemonShutdownEvent from %s: %s", event_generator, err, exc_info=True)
 			if RUNNING_ON_WINDOWS and isinstance(self.login_detector, LoginDetector):
 				logger.info("Stopping LoginDetector for message of the day")
-				self.login_detector.stop()
-				self.login_detector.join(2)
+				if self.login_detector:
+					self.login_detector.stop()
+					self.login_detector.join(2)
 			for eventGenerator in getEventGenerators():
 				logger.info("Stopping event generator %s", eventGenerator)
 				eventGenerator.stop()
@@ -665,9 +674,6 @@ class Opsiclientd(EventListener, threading.Thread):
 			)
 
 			with self.runControlPipe(), self.runWebserver():
-				if config.get("config_service", "permanent_connection"):
-					self.start_permanent_service_connection()
-
 				if restart_marker_config and restart_marker_config.run_opsi_script:
 					log_dir = config.get("global", "log_dir")
 					action_processor = os.path.join(config.get("action_processor", "local_dir"), config.get("action_processor", "filename"))
@@ -704,7 +710,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						self.restart(disabled_event_types=restart_marker_config.disabled_event_types)
 						return
 
-				with self.runCacheService(), self.runEventGenerators():
+				with self.permanent_service_connection(), self.runCacheService(), self.runEventGenerators():
 					with self._eptListLock:
 						if not self._eventProcessingThreads:
 							logger.notice("No events processing, unblocking login")
@@ -729,13 +735,15 @@ class Opsiclientd(EventListener, threading.Thread):
 							self._stopEvent.wait(1)
 					finally:
 						logger.notice("opsiclientd is going down")
+						# TODO: Some cleanup needed here?
+						"""
 						with self._eptListLock:
 							for ept in self._eventProcessingThreads:
 								ept.stop()
 							for ept in self._eventProcessingThreads:
 								logger.info("Waiting for event processing thread %s", ept)
 								ept.join(5)
-
+						"""
 						if self._opsiclientdRunningEventId:
 							timeline.setEventEnd(self._opsiclientdRunningEventId)
 						logger.info("Stopping timeline")
@@ -745,7 +753,6 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error(err, exc_info=True)
 			self.setBlockLogin(False)
 		finally:
-			self.stop_permanent_service_connection()
 			self._running = False
 			for thread in threading.enumerate():
 				logger.info("Runnning thread on main thread exit: %s", thread)
@@ -875,7 +882,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	def getEventProcessingThread(self, sessionId: int) -> EventProcessingThread:
 		with self._eptListLock:
 			for ept in self._eventProcessingThreads:
-				if int(ept.getSessionId()) == int(sessionId):
+				if int(ept.getSessionId() or -1) == int(sessionId):
 					return ept
 		raise LookupError(f"Event processing thread for session {sessionId} not found")
 

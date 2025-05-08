@@ -1,17 +1,6 @@
-FROM docker.uib.gmbh/opsi/dev/pybuilder:deb10-py3.11
+FROM docker.uib.gmbh/opsi/dev/pybuilder:deb10-py3.13
 
-ARG DOCKER_ENV
-ARG DEBIAN_FRONTEND=noninteractive
-
-ENV DOCKER_ENV=${DOCKER_ENV} \
-	# python:
-	PYTHONFAULTHANDLER=1 \
-	PYTHONUNBUFFERED=1 \
-	PYTHONHASHSEED=random \
-	# pip:
-	PIP_NO_CACHE_DIR=off \
-	PIP_DISABLE_PIP_VERSION_CHECK=on \
-	PIP_DEFAULT_TIMEOUT=100
+ENV DEBIAN_FRONTEND=noninteractive
 
 # System deps:
 RUN apt-get update \

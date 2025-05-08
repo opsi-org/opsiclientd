@@ -23,7 +23,7 @@ import time
 from dataclasses import dataclass
 from ipaddress import IPv6Address, ip_address
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Literal
+from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlparse
 
 import psutil  # type: ignore[import]
@@ -58,7 +58,7 @@ from opsiclientd.Events.Utilities.Generators import reconfigureEventGenerators
 from opsiclientd.Exceptions import CanceledByUserError, ConfigurationError
 from opsiclientd.Localization import _
 from opsiclientd.notification_server import NotificationServer
-from opsiclientd.OpsiService import ServiceConnection
+from opsiclientd.OpsiService import PermanentServiceConnection, ServiceClient
 from opsiclientd.State import State
 from opsiclientd.SystemCheck import (
 	RUNNING_ON_DARWIN,
@@ -104,10 +104,9 @@ class EventProcessingCanceled(Exception):
 	pass
 
 
-class EventProcessingThread(KillableThread, ServiceConnection):
+class EventProcessingThread(KillableThread):
 	def __init__(self, opsiclientd: Opsiclientd, event: Event) -> None:
 		KillableThread.__init__(self, name="EventProcessingThread")
-		ServiceConnection.__init__(self, opsiclientd)
 
 		self.opsiclientd = opsiclientd
 		self.event = event
@@ -120,8 +119,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 		self.shutdownCancelled = False
 		self.shutdownWaitCancelled = False
-
-		self._serviceConnection = None
 
 		self._notificationServer: NotificationServer | None = None
 
@@ -151,11 +148,17 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		if self.isLoginEvent:
 			logger.info("Event is user login event")
 
+	@property
+	def service_client(self) -> ServiceClient:
+		return PermanentServiceConnection(self.opsiclientd).service_client
+
 	def _cancelable_sleep(self, secs: int) -> bool:
-		"""Wait for the given number of seconds.
+		"""
+		Wait for the given number of seconds.
 		The running event can be canceled in the meantime.
 		Returns whether the number of seconds to wait corresponds
-		to the actual time elapsed (no standby / wakeup occured)."""
+		to the actual time elapsed (no standby / wakeup occured).
+		"""
 		start = time.time()
 		while True:
 			seconds_remaining = secs - (time.time() - start)
@@ -202,6 +205,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					raise RuntimeError("Event processing currently not cancelable")
 				self._should_cancel = True
 
+	"""
 	# ServiceConnection
 	def connectionThreadOptions(self) -> dict[str, MessageSubject]:
 		return {"statusSubject": self._statusSubject}
@@ -250,8 +254,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		ServiceConnection.connectionFailed(self, error)
 
 	# End of ServiceConnection
+	"""
 
-	def getSessionId(self) -> int:
+	def getSessionId(self) -> int | None:
 		if RUNNING_ON_WINDOWS:
 			if self.isLoginEvent:
 				user_session_ids = System.getUserSessionIds(self.event.eventInfo["User"])
@@ -339,19 +344,15 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		logger.notice("Getting config from service")
 		try:
 			assert self.opsiclientd
-			if not self.isConfigServiceConnected():
+			if not self.service_client.connected:
 				logger.warning("Cannot get config from service: not connected")
 				return
 			self.setStatusMessage(_("Getting config from service"))
-			config.getFromService(self._configService)
+			config.getFromService(self.service_client)
 			config.updateConfigFile(force=True)
 			self.setStatusMessage(_("Got config from service"))
 			logger.notice("Reconfiguring event generators")
 			reconfigureEventGenerators()
-			if config.get("config_service", "permanent_connection"):
-				self.opsiclientd.start_permanent_service_connection()
-			else:
-				self.opsiclientd.stop_permanent_service_connection()
 
 		except Exception as err:
 			logger.error("Failed to get config from service: %s", err)
@@ -360,7 +361,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	def writeLogToService(self) -> None:
 		logger.notice("Writing log to service")
 		try:
-			if not self._configService or not self.isConfigServiceConnected():
+			if not self.service_client.connected:
 				logger.warning("Cannot write log to service: not connected")
 				return
 
@@ -385,7 +386,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			if config.get("global", "log_level") > LOG_INFO:
 				logging_config(file_level=LOG_INFO)
 			try:
-				self._configService.log_write("clientconnect", data=data, objectId=config.get("global", "host_id"), append=False)
+				self.service_client.log_write("clientconnect", data=data, objectId=config.get("global", "host_id"), append=False)  # type: ignore[attr-defined]
 			finally:
 				logging_config(file_level=config.get("global", "log_level"))
 		except Exception as err:
@@ -507,7 +508,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 		self.setStatusMessage(_("Mounting depot share %s") % config.get("depot_server", "url"))
 
 		mount_options = {}
-		(mount_username, mount_password) = config.getDepotserverCredentials(configService=self._configService)
+		(mount_username, mount_password) = config.getDepotserverCredentials(configService=self.service_client)
 
 		if RUNNING_ON_WINDOWS:
 			url = urlparse(config.get("depot_server", "url"))
@@ -584,7 +585,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 		try:
 			assert self.opsiclientd
-			assert self._configService
+			assert self.service_client
 			url = urlparse(config.get("depot_server", "url"))
 			actionProcessorRemoteDir = None
 			actionProcessorCommonDir = None
@@ -632,7 +633,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			else:
 				logger.notice("Local action processor exists and seems to be up to date")
 				if self.event.eventConfig.useCachedProducts:
-					self._configService.productOnClient_updateObjects(
+					self.service_client.productOnClient_updateObjects(  # type: ignore[attr-defined]
 						[
 							ProductOnClient(
 								productId=config.action_processor_name,
@@ -664,7 +665,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 			productVersion = None
 			packageVersion = None
-			for productOnDepot in self._configService.productOnDepot_getIdents(
+			for productOnDepot in self.service_client.productOnDepot_getIdents(  # type: ignore[attr-defined]
 				productType="LocalbootProduct",
 				productId=config.action_processor_name,
 				depotId=config.get("depot_server", "depot_id"),
@@ -672,7 +673,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			):
 				productVersion = productOnDepot["productVersion"]
 				packageVersion = productOnDepot["packageVersion"]
-			self._configService.productOnClient_updateObjects(
+			self.service_client.productOnClient_updateObjects(  # type: ignore[attr-defined]
 				[
 					ProductOnClient(
 						productId=config.action_processor_name,
@@ -815,11 +816,11 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 	def processUserLoginActions(self) -> None:
 		self.setStatusMessage(_("Processing login actions"))
 		try:
-			if not self._configService:
+			if not self.service_client:
 				raise RuntimeError("Not connected to config service")
 
 			productsByIdAndVersion: dict[str, dict[str, dict[str, Product]]] = {}
-			for product in self._configService.product_getObjects(type="LocalbootProduct", userLoginScript="*.*"):
+			for product in self.service_client.product_getObjects(type="LocalbootProduct", userLoginScript="*.*"):  # type: ignore[attr-defined]
 				if product.id not in productsByIdAndVersion:
 					productsByIdAndVersion[product.id] = {}
 				if product.productVersion not in productsByIdAndVersion[product.id]:
@@ -830,7 +831,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				logger.notice("No user login script found, nothing to do")
 				return
 
-			clientToDepotservers = self._configService.configState_getClientToDepotserver(clientIds=config.get("global", "host_id"))
+			clientToDepotservers = self.service_client.configState_getClientToDepotserver(clientIds=config.get("global", "host_id"))  # type: ignore[attr-defined]
 			if not clientToDepotservers:
 				raise RuntimeError(f"Failed to get depotserver for client '{config.get('global', 'host_id')}'")
 			depotId = clientToDepotservers[0]["depotId"]
@@ -842,7 +843,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 			userLoginScripts = []
 			productInfo: list[ProductInfo] = []
-			for productOnDepot in self._configService.productOnDepot_getIdents(
+			for productOnDepot in self.service_client.productOnDepot_getIdents(  # type: ignore[attr-defined]
 				productType="LocalbootProduct", depotId=depotId, returnType="dict"
 			):
 				product = (
@@ -887,7 +888,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					logger.warning("Failed to get bootmode from registry: %s", err)
 			bootmode = bootmode or "BKSTD"
 
-			if not self._configService:
+			if not self.service_client.connected:
 				raise RuntimeError("Not connected to config service")
 
 			productIds: list[str] = []
@@ -897,7 +898,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			actionRequests = ["setup", "uninstall", "update", "always", "once", "custom"]
 
 			if self.event.eventConfig.actionProcessorProductIds:
-				current_pocs = self._configService.productOnClient_getObjects(
+				current_pocs = self.service_client.productOnClient_getObjects(  # type: ignore[attr-defined]
 					productType="LocalbootProduct",
 					clientId=config.get("global", "host_id"),
 					attributes=["actionRequest"],
@@ -919,7 +920,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					else:
 						logger.error("Multiple ProductOnClient for product '%s' found. This should not be possible.", product)
 				if pocs:
-					self._configService.productOnClient_updateObjects(pocs)
+					self.service_client.productOnClient_updateObjects(pocs)  # type: ignore[attr-defined]
 				# Now we have all ProductOnClient objects for the actionProcessorProductIds
 				includeProductIds = self.event.eventConfig.actionProcessorProductIds
 				actionRequests = []
@@ -929,12 +930,14 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					logger.notice("Got product IDs from eventConfig: %r", includeProductIds)
 				else:
 					includeProductIds, excludeProductIds = get_include_exclude_product_ids(
-						self._configService, self.event.eventConfig.includeProductGroupIds, self.event.eventConfig.excludeProductGroupIds
+						self.service_client,
+						self.event.eventConfig.includeProductGroupIds,
+						self.event.eventConfig.excludeProductGroupIds,
 					)
 
 			for productOnClient in [
 				poc
-				for poc in self._configService.productOnClient_getObjects(
+				for poc in self.service_client.productOnClient_getObjects(  # type: ignore[attr-defined]
 					productType="LocalbootProduct",
 					clientId=config.get("global", "host_id"),
 					actionRequest=actionRequests,
@@ -970,7 +973,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				except Exception as err:
 					logger.error(err)
 			else:
-				for productOnDepot in self._configService.productOnDepot_getObjects(
+				for productOnDepot in self.service_client.productOnDepot_getObjects(  # type: ignore[attr-defined]
 					productType="LocalbootProduct",
 					depotId=config.get("depot_server", "depot_id"),
 					attributes=["productId", "productVersion", "packageVersion"],
@@ -988,7 +991,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				logger.notice("Start processing action requests")
 				if productIds:
 					if self.event.eventConfig.useCachedProducts:
-						if self.opsiclientd.getCacheService().productCacheCompleted(self._configService, productIds):
+						if self.opsiclientd.getCacheService().productCacheCompleted(self.service_client, productIds):
 							logger.notice("Event '%s' uses cached products and product caching is done", self.event.eventConfig.getId())
 						else:
 							raise RuntimeError(
@@ -1000,7 +1003,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 				if productInfo:
 					depot_id = config.get("depot_server", "depot_id")
 					count = 0
-					for product in self._configService.productOnDepot_getObjects(
+					for product in self.service_client.productOnDepot_getObjects(  # type: ignore[attr-defined]
 						attributes=["productId", "productVersion", "packageVersion"], productId=productIds, depotId=depot_id
 					):
 						for p_info in productInfo:
@@ -1013,7 +1016,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							break
 
 					count = 0
-					for product in self._configService.product_getObjects(
+					for product in self.service_client.product_getObjects(  # type: ignore[attr-defined]
 						attributes=["id", "name", "productVersion", "packageVersion"], id=productIds
 					):
 						for p_info in productInfo:
@@ -1050,7 +1053,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 					if (
 						cache_service
 						and self.event.eventConfig.useCachedConfig
-						and not self._configService.productOnClient_getIdents(
+						and not self.service_client.productOnClient_getIdents(  # type: ignore[attr-defined]
 							productType="LocalbootProduct",
 							clientId=config.get("global", "host_id"),
 							actionRequest=["setup", "uninstall", "update", "always", "once", "custom"],
@@ -1060,7 +1063,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 						logger.info("No more actions to perform, setting config cache obsolete")
 						cache_service.setConfigCacheObsolete()
 
-					pocs_with_action = self._configService.productOnClient_getIdents(
+					pocs_with_action = self.service_client.productOnClient_getIdents(  # type: ignore[attr-defined]
 						returnType="dict",
 						productType="LocalbootProduct",
 						clientId=config.get("global", "host_id"),
@@ -1096,7 +1099,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 
 		try:
 			assert self.opsiclientd
-			config.selectDepotserver(configService=self._configService, mode="mount", event=self.event, productIds=productIds)
+			config.selectDepotserver(configService=self.service_client, mode="mount", event=self.event, productIds=productIds)
 			if not additionalParams:
 				additionalParams = ""
 			if not self.event.getActionProcessorCommand():
@@ -1175,7 +1178,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			depotServerUsername = ""
 			depotServerPassword = ""
 			try:
-				(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self._configService)
+				(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self.service_client)
 			except Exception:
 				if not self.event.eventConfig.useCachedProducts:
 					raise
@@ -1196,9 +1199,9 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			# Run action processor
 			serviceSession = "none"
 			try:
-				serviceSession = self.getConfigService().jsonrpc_getSessionId()
-				if not serviceSession:
-					serviceSession = "none"
+				cookie = self.service_client.session_cookie
+				if cookie:
+					serviceSession = cookie.split("=")[-1] or "none"
 			except Exception:
 				pass
 
@@ -1211,7 +1214,7 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 			createEnvironment = config.get("action_processor", "create_environment")
 
 			actionProcessorCommand = config.replace(self.event.getActionProcessorCommand())
-			actionProcessorCommand = actionProcessorCommand.replace("%service_url%", self._configServiceUrl or "?")
+			actionProcessorCommand = actionProcessorCommand.replace("%service_url%", self.service_client.base_url or "?")
 			actionProcessorCommand = actionProcessorCommand.replace("%service_session%", serviceSession)
 			actionProcessorCommand = actionProcessorCommand.replace("%depot_path%", config.get_depot_path())
 			# With this we always explicitly tell opsi-script which products to install (!!)
@@ -1929,8 +1932,12 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							)
 
 					if self.event.eventConfig.getConfigFromService or self.event.eventConfig.processActions:
-						if not self.isConfigServiceConnected():
-							self.connectConfigService()
+						for _iteration in range(20):
+							# TODO: User cancelable, ...
+							logger.devel("Waiting for config service to be available")
+							if self.service_client.connected:
+								break
+							time.sleep(1)
 
 						if self.event.eventConfig.getConfigFromService:
 							config.readConfigFile()
@@ -1969,11 +1976,6 @@ class EventProcessingThread(KillableThread, ServiceConnection):
 							self.writeLogToService()
 						except Exception as err:
 							logger.error(err, exc_info=True)
-
-					try:
-						self.disconnectConfigService()
-					except Exception as err:
-						logger.error(err, exc_info=True)
 
 					config.setTemporaryConfigServiceUrls([])
 
