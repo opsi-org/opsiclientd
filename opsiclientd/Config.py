@@ -202,7 +202,7 @@ class Config(metaclass=Singleton):
 				"connection_timeout": 10,
 				"user_cancelable_after": 0,
 				"sync_time_from_service": False,
-				"permanent_connection": True,
+				"permanent_connection": False,
 				"reconnect_wait_min": 5,
 				"reconnect_wait_max": 120,
 			},
@@ -904,7 +904,7 @@ class Config(metaclass=Singleton):
 		if hasattr(service_client, "configState_getValues"):
 			use_get_objects = False
 			logger.info("Using configState_getValues")
-			config_states = service_client.configState_getValues(
+			config_states = service_client.configState_getValues(  # type: ignore[attr-defined]
 				config_ids=config_ids, object_ids=[self.get("global", "host_id")], with_defaults=True
 			).get(self.get("global", "host_id"), {})
 			if (

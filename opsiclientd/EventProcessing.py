@@ -298,6 +298,8 @@ class EventProcessingThread(KillableThread):
 				return
 
 			current_config_service_url = config.get("config_service", "url")
+			current_permanent_connection = config.get("config_service", "permanent_connection")
+
 			self.setStatusMessage(_("Getting config from service"))
 			config.getFromService(self.service_client)
 			config.updateConfigFile(force=True)
@@ -305,7 +307,10 @@ class EventProcessingThread(KillableThread):
 			logger.notice("Reconfiguring event generators")
 			reconfigureEventGenerators()
 
-			if config.get("config_service", "url") != current_config_service_url:
+			if (
+				config.get("config_service", "url") != current_config_service_url
+				or config.get("config_service", "permanent_connection") != current_permanent_connection
+			):
 				self.opsiclientd.stop_permanent_service_connection()
 				self.opsiclientd.start_permanent_service_connection()
 

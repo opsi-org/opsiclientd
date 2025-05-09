@@ -322,13 +322,16 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		try:
 			if service_client.messagebus_available:
 				logger.notice("OPSI message bus available")
-				try:
-					service_client.messagebus.reconnect_wait_min = int(config.get("config_service", "reconnect_wait_min"))
-					service_client.messagebus.reconnect_wait_max = int(config.get("config_service", "reconnect_wait_max"))
-				except Exception as err:
-					logger.error(err)
-				service_client.messagebus.register_messagebus_listener(self)
-				service_client.connect_messagebus()
+				if config.get("config_service", "permanent_connection"):
+					try:
+						service_client.messagebus.reconnect_wait_min = int(config.get("config_service", "reconnect_wait_min"))
+						service_client.messagebus.reconnect_wait_max = int(config.get("config_service", "reconnect_wait_max"))
+					except Exception as err:
+						logger.error(err)
+					service_client.messagebus.register_messagebus_listener(self)
+					service_client.connect_messagebus()
+				else:
+					logger.info("Permanent connection disabled in config")
 		except Exception as err:
 			logger.error(err, exc_info=True)
 
