@@ -303,7 +303,6 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			service_client.server_name,
 			service_client.server_version,
 		)
-		# self.setStatusMessage(_("Connected to config server '%s'") % self._configServiceUrl)
 
 		if not service_client.service_is_opsiclientd():
 			self.update_information_from_header()
@@ -343,11 +342,11 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 	def connection_failed(self, service_client: ServiceClient, exception: Exception) -> None:
 		self.connected = False
 		logger.error("Connection to opsi service %s failed: %s", service_client.base_url, exception)
-		# self.setStatusMessage(_("Failed to connect to config server '%s': Service verification failure") % self._configServiceUrl)
 		if isinstance(exception, OpsiServiceAuthenticationError):
-			logger.error("Service verification error: %s", exception)
+			logger.debug("Authentication failed, trying to get FQDN from OS")
 			try:
 				fqdn = get_fqdn()
+				logger.debug("FQDN: %s, username: %s", fqdn, self.service_client.username)
 				if self.service_client.username != fqdn:
 					logger.notice(
 						"Connect failed with username '%s', got FQDN '%s' from OS, trying FQDN", self.service_client.username, fqdn
