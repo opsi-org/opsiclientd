@@ -251,7 +251,6 @@ div.mainpage-link-box {
 
 .log-record-collapse {
 	display: inline-block;
-	margin-top: -0.2em;
 	padding-left: 5px;
 	width: 1em;
 }
@@ -273,7 +272,7 @@ div.mainpage-link-box {
 
 .log-line-multiline-collapsed>*>.log-record-message {
 	display: inline-flex;
-	height: 1.4em;
+	height: 1.2em;
 	overflow: hidden;
 }
 
