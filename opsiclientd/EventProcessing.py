@@ -1852,7 +1852,7 @@ class EventProcessingThread(KillableThread):
 						logger.error(error)
 						raise CanceledByUserError(error)
 
-					wait_time = int(time.time() - start_time)
+					wait_time = round(time.time() - start_time)
 					time_remaining = timeout - wait_time
 
 					if time_remaining <= 0:
