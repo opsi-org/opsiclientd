@@ -52,7 +52,7 @@ from opsicommon.messagebus.terminal import stop_running_terminals, terminals
 from opsicommon.ssl import install_ca, load_cas, remove_ca
 from opsicommon.system import lock_file
 from opsicommon.system.network import get_fqdn
-from opsicommon.types import forceProductId, forceString, forceUnicode
+from opsicommon.types import forceProductId, forceString
 from opsicommon.utils import Singleton, replace_placeholders
 
 from opsiclientd import __version__
@@ -205,6 +205,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		self.daemon = True
 		self.running = False
 		self.connected = False
+		self._temp_host_id = None
 		self._should_stop = False
 		self._loop = asyncio.new_event_loop()
 		self._control_interface: ControlInterface | None = None
@@ -273,13 +274,18 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		logger.notice("Opening connection to opsi service %s", service_client.base_url)
 		log_network_status()
 
-	def update_information_from_header(self) -> None:
+	def update_host_id(self) -> None:
 		assert self.service_client
-		if not self.service_client.new_host_id or self.service_client.new_host_id == config.get("global", "host_id"):
+		new_host_id = self.service_client.username
+		if self.service_client.new_host_id:
+			new_host_id = self.service_client.new_host_id
+			logger.info("Received new opsi host id %r", new_host_id)
+
+		if not new_host_id or new_host_id == config.get("global", "host_id"):
 			return
 
-		logger.notice("Received new opsi host id %r", self.service_client.new_host_id)
-		config.set("global", "host_id", forceUnicode(self.service_client.new_host_id))
+		logger.notice("Changing opsi host id from %r to %r", config.get("global", "host_id"), new_host_id)
+		config.set("global", "host_id", new_host_id)
 		config.updateConfigFile(force=True)
 
 		if self.opsiclientd:
@@ -305,7 +311,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		)
 
 		if not service_client.service_is_opsiclientd():
-			self.update_information_from_header()
+			self.update_host_id()
 
 			try:
 				client_to_depotservers = service_client.configState_getClientToDepotserver(  # type: ignore[attr-defined]
@@ -351,6 +357,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 					logger.notice(
 						"Connect failed with username '%s', got FQDN '%s' from OS, trying FQDN", self.service_client.username, fqdn
 					)
+					# If connect succeeds, the new host id will be set in connection_established() / update_host_id()
 					self.service_client.username = fqdn
 			except Exception as exc:
 				logger.warning("Failed to get FQDN: %s", exc)
