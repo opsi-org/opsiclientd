@@ -169,6 +169,7 @@ def get_service_client(address: str | list[str] | None = None) -> ServiceClient:
 	if not address:
 		address = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False)
 
+	logger.info("Using config service address: %r", address)
 	return ServiceClient(
 		address=address,
 		username=config.get("global", "host_id"),
