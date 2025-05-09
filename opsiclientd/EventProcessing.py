@@ -1869,15 +1869,11 @@ class EventProcessingThread(KillableThread):
 					if self._detailSubjectProxy:
 						self._detailSubjectProxy.setMessage(_("Timeout: %ds") % time_remaining)
 
-					if (
-						not is_cancelable
-						and cancellable_after > 0
-						and wait_time >= cancellable_after
-						and self._notificationServer
-						and self._choiceSubject
-					):
+					if not is_cancelable and cancellable_after > 0 and wait_time >= cancellable_after and self._notificationServer:
+						logger.info("User is now allowed to cancel connection after %d seconds", wait_time)
 						is_cancelable = True
 						self._choiceSubject = ChoiceSubject(id="choice")
+						assert self._choiceSubject
 						self._choiceSubject.setChoices(["Stop connection"])
 						self._choiceSubject.setCallbacks([cancel_callback])
 						self._notificationServer.addSubject(self._choiceSubject)
