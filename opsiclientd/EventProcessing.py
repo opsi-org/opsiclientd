@@ -296,12 +296,18 @@ class EventProcessingThread(KillableThread):
 			if not self.service_client.connected:
 				logger.warning("Cannot get config from service: not connected")
 				return
+
+			current_config_service_url = config.get("config_service", "url")
 			self.setStatusMessage(_("Getting config from service"))
 			config.getFromService(self.service_client)
 			config.updateConfigFile(force=True)
 			self.setStatusMessage(_("Got config from service"))
 			logger.notice("Reconfiguring event generators")
 			reconfigureEventGenerators()
+
+			if config.get("config_service", "url") != current_config_service_url:
+				self.opsiclientd.stop_permanent_service_connection()
+				self.opsiclientd.start_permanent_service_connection()
 
 		except Exception as err:
 			logger.error("Failed to get config from service: %s", err)

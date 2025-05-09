@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import os
 import platform
-import re
 import sys
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -504,16 +503,9 @@ class Config(metaclass=Singleton):
 		elif section in self._config and option in self._config[section]:
 			if section == "config_service" and option == "url":
 				urls = value
-				if not isinstance(urls, list):
+				if isinstance(urls, str):
 					urls = str(urls).split(",")
-
-				value = []
-				for url in urls:
-					url = url.strip()
-					if not re.search("https?://[^/]+", url):
-						logger.error("Bad config service url '%s'", url)
-					if url not in value:
-						value.append(url)
+				value = list(set([url.strip() for url in urls]))
 			else:
 				try:
 					if isinstance(self._config[section][option], bool):
