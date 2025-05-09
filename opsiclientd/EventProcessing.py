@@ -1861,15 +1861,17 @@ class EventProcessingThread(KillableThread):
 						raise RuntimeError(error)
 
 					logger.debug(
-						"Waiting for service connection (timeout: %d, cancellable after: %d, time_remaining: %d)",
+						"Waiting for service connection (timeout: %d, cancellable after: %d, wait_time: %d, time_remaining: %d, is_cancelable: %r)",
 						timeout,
 						cancellable_after,
+						wait_time,
 						time_remaining,
+						is_cancelable,
 					)
 					if self._detailSubjectProxy:
 						self._detailSubjectProxy.setMessage(_("Timeout: %ds") % time_remaining)
 
-					if not is_cancelable and cancellable_after > 0 and wait_time >= cancellable_after and self._notificationServer:
+					if (not is_cancelable) and cancellable_after > 0 and wait_time >= cancellable_after and self._notificationServer:
 						logger.info("User is now allowed to cancel connection after %d seconds", wait_time)
 						is_cancelable = True
 						self._choiceSubject = ChoiceSubject(id="choice")
