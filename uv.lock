@@ -1048,7 +1048,7 @@ wheels = [
 
 [[package]]
 name = "python-opsi-common"
-version = "4.3.29.2"
+version = "4.3.29.3"
 source = { registry = "https://pypi.uib.gmbh/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -1077,9 +1077,9 @@ dependencies = [
     { name = "wmi", marker = "sys_platform == 'win32'" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.29.2.tar.gz", hash = "sha256:b75f7e86bb9963a4a044ad6305876dd53586b0250491cd6bff72180f1bf13cec" }
+sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.29.3.tar.gz", hash = "sha256:aef7a8eace9bc120dd362c65297c955022b8a2e1c86eddd052facf7282503d0e" }
 wheels = [
-    { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.29.2-py3-none-any.whl", hash = "sha256:80b60756aaa91abc343ef401d52f3c04a78277e32aad70af5624e5fcba4c1445" },
+    { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.29.3-py3-none-any.whl", hash = "sha256:b325741390a8cda84e89331b171e029265ab14a081e2570e9fbd6d9beeed635d" },
 ]
 
 [[package]]
