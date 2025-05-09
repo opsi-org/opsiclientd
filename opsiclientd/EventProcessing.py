@@ -1820,6 +1820,7 @@ class EventProcessingThread(KillableThread):
 	def wait_for_service_connection(self) -> None:
 		try:
 			if not self.service_client.connected:
+				service_url = self.service_client.base_url
 				cancellable_after = 0
 				timeout = 30
 				try:
@@ -1831,8 +1832,8 @@ class EventProcessingThread(KillableThread):
 				if cancellable_after >= 0:
 					logger.info("User is allowed to cancel connection after %d seconds", cancellable_after)
 
-				self._serviceUrlSubject.setMessage(self.service_client.base_url)
-				self.setStatusMessage(_("Connecting to config server '%s'") % self.service_client.base_url)
+				self._serviceUrlSubject.setMessage(service_url)
+				self.setStatusMessage(_("Connecting to config server '%s'") % service_url)
 
 				start_time = time.time()
 				is_cancelable = False
@@ -1848,7 +1849,7 @@ class EventProcessingThread(KillableThread):
 						break
 
 					if is_canceled:
-						error = f"Failed to connect to config service '{self.service_client.base_url}': Canceled by user"
+						error = f"Failed to connect to config service '{service_url}': Canceled by user"
 						logger.error(error)
 						raise CanceledByUserError(error)
 
@@ -1856,7 +1857,7 @@ class EventProcessingThread(KillableThread):
 					time_remaining = timeout - wait_time
 
 					if time_remaining <= 0:
-						error = f"Failed to connect to config service '{self.service_client.base_url}': Timed out after {wait_time} seconds"
+						error = f"Failed to connect to config service '{service_url}': Timed out after {wait_time} seconds"
 						logger.error(error)
 						raise RuntimeError(error)
 
@@ -1870,6 +1871,10 @@ class EventProcessingThread(KillableThread):
 					)
 					if self._detailSubjectProxy:
 						self._detailSubjectProxy.setMessage(_("Timeout: %ds") % time_remaining)
+					if self.service_client.base_url != service_url:
+						service_url = self.service_client.base_url
+						self._serviceUrlSubject.setMessage(service_url)
+						self.setStatusMessage(_("Connecting to config server '%s'") % service_url)
 
 					if (not is_cancelable) and cancellable_after > 0 and wait_time >= cancellable_after and self._notificationServer:
 						logger.info("User is now allowed to cancel connection after %d seconds", wait_time)
