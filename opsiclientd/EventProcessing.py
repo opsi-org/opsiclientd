@@ -1862,7 +1862,9 @@ class EventProcessingThread(KillableThread):
 						raise RuntimeError(error)
 
 					logger.debug(
-						"Waiting for service connection (timeout: %d, cancellable after: %d, wait_time: %d, time_remaining: %d, is_cancelable: %r)",
+						"Waiting for service connection (service_url: %r / %r, timeout: %d, cancellable after: %d, wait_time: %d, time_remaining: %d, is_cancelable: %r)",
+						self.service_client.base_url,
+						service_url,
 						timeout,
 						cancellable_after,
 						wait_time,
@@ -1872,6 +1874,7 @@ class EventProcessingThread(KillableThread):
 					if self._detailSubjectProxy:
 						self._detailSubjectProxy.setMessage(_("Timeout: %ds") % time_remaining)
 					if self.service_client.base_url != service_url:
+						logger.info("Service URL changed from %r to %r", service_url, self.service_client.base_url)
 						service_url = self.service_client.base_url
 						self._serviceUrlSubject.setMessage(service_url)
 						self.setStatusMessage(_("Connecting to config server '%s'") % service_url)
