@@ -15,7 +15,8 @@ import time
 from ctypes import wintypes
 
 if os.name == "nt":
-	from ctypes import WinError, get_last_error, windll  # type: ignore[attr-defined]
+	from ctypes import get_last_error  # type: ignore[attr-defined]
+	from ctypes import WinError, windll
 else:
 	WinError = get_last_error = windll = None
 
@@ -25,17 +26,13 @@ from typing import Any, Callable
 
 import win32com.client  # type: ignore[import]
 import win32com.server.policy  # type: ignore[import]
-from OPSI.System.Windows import (  # type: ignore[import]
-	createDesktop,
-	getActiveSessionId,
-	getUserToken,
-	terminateProcess,
-	win32con,
-	win32event,
-	win32process,
-)
+from OPSI.System.Windows import createDesktop  # type: ignore[import]
+from OPSI.System.Windows import (getActiveSessionId, getUserToken,
+                                 terminateProcess, win32con, win32event,
+                                 win32process)
 from opsicommon.logging import get_logger
-from opsicommon.types import forceBool, forceInt, forceUnicode, forceUnicodeLower
+from opsicommon.types import (forceBool, forceInt, forceUnicode,
+                              forceUnicodeLower)
 
 # from Sens.h
 SENSGUID_PUBLISHER = "{5fee1bd6-5b9b-11d1-8dd2-00aa004abd5e}"
@@ -221,6 +218,7 @@ def runCommandInSession(
 
 # Reparse point handling
 FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000
+FILE_FLAG_BACKUP_SEMANTICS = 0x02000000
 GENERIC_READ = 0x80000000
 OPEN_EXISTING = 3
 INVALID_HANDLE_VALUE = wintypes.HANDLE(-1).value
@@ -295,18 +293,18 @@ class REPARSE_DATA_BUFFER(ctypes.Structure):
 	]
 
 
-def get_link_target_windows(link_path: str | Path) -> Path | None:
+def get_link_target(link_path: str | Path) -> Path | None:
 	if not isinstance(link_path, Path):
 		link_path = Path(link_path)
-	handle = CreateFileW(str(link_path), GENERIC_READ, 0, None, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, None)
-
+	handle = CreateFileW(
+		str(link_path), GENERIC_READ, 0, None, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS, None
+	)
 	if handle == INVALID_HANDLE_VALUE:
 		return None
 
 	try:
 		reparse_buffer_raw = ctypes.create_string_buffer(MAXIMUM_REPARSE_DATA_BUFFER_SIZE)
 		bytes_returned = wintypes.DWORD()
-
 		success = DeviceIoControl(
 			handle,
 			FSCTL_GET_REPARSE_POINT,
@@ -331,12 +329,11 @@ def get_link_target_windows(link_path: str | Path) -> Path | None:
 
 		if rdb.ReparseTag == IO_REPARSE_TAG_SYMLINK:
 			symlink_buffer = rdb.ReparseBuffer.SymbolicLinkReparseBuffer
-			path_buffer_start_addr = ctypes.addressof(symlink_buffer.PathBuffer)
+			path_buffer_start_addr = ctypes.addressof(symlink_buffer) + type(symlink_buffer).PathBuffer.offset
 
 			sub_name_addr = path_buffer_start_addr + symlink_buffer.SubstituteNameOffset
 			sub_name_len_chars = symlink_buffer.SubstituteNameLength // ctypes.sizeof(wintypes.WCHAR)
-			raw_target_path = ctypes.wstring_at(sub_name_addr, sub_name_len_chars)
-			target_path = raw_target_path
+			target_path = ctypes.wstring_at(sub_name_addr, sub_name_len_chars)
 
 			if symlink_buffer.Flags & SYMLINK_FLAG_RELATIVE:
 				link_dir = link_path.parent
@@ -344,19 +341,18 @@ def get_link_target_windows(link_path: str | Path) -> Path | None:
 
 		elif rdb.ReparseTag == IO_REPARSE_TAG_MOUNT_POINT:
 			mount_point_buffer = rdb.ReparseBuffer.MountPointReparseBuffer
-			path_buffer_start_addr = ctypes.addressof(mount_point_buffer.PathBuffer)
-
+			path_buffer_start_addr = ctypes.addressof(mount_point_buffer) + type(mount_point_buffer).PathBuffer.offset
 			sub_name_addr = path_buffer_start_addr + mount_point_buffer.SubstituteNameOffset
 			sub_name_len_chars = mount_point_buffer.SubstituteNameLength // ctypes.sizeof(wintypes.WCHAR)
 			target_path = ctypes.wstring_at(sub_name_addr, sub_name_len_chars)
+
 		else:
 			logger.warning("Unsupported reparse tag %r for link '%s'", rdb.ReparseTag, link_path)
 			return None
 
 		# Strip "\??\" prefix if it leads to a drive letter path (e.g., \??\C:\...)
-		if target_path.startswith("\\??\\"):
-			if len(target_path) > 4 and target_path[4] == ":" and target_path[5] == "\\":
-				target_path = target_path[4:]
+		if target_path.startswith("\\??\\") and len(target_path) > 4 and target_path[5] == ":" and target_path[6] == "\\":
+			target_path = target_path[4:]
 		return Path(target_path)
 
 	except OSError as err:

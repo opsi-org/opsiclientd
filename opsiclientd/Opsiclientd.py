@@ -32,7 +32,8 @@ import psutil  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
 from OPSI import __version__ as python_opsi_version  # type: ignore[import]
 from OPSI.Util import randomString  # type: ignore[import]
-from OPSI.Util.Message import ChoiceSubject, MessageSubject  # type: ignore[import]
+from OPSI.Util.Message import ChoiceSubject  # type: ignore[import]
+from OPSI.Util.Message import MessageSubject
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, log_context, secret_filter
 from opsicommon.package import OpsiPackage
@@ -40,29 +41,34 @@ from opsicommon.system import ensure_not_already_running
 from opsicommon.system.subprocess import patch_popen
 from opsicommon.types import forceBool, forceInt, forceUnicode
 
-from opsiclientd import Config, __version__, check_signature, config, notify_posix_terminals
+from opsiclientd import (Config, __version__, check_signature, config,
+                         notify_posix_terminals)
 from opsiclientd.ControlPipe import ControlPipe, ControlPipeFactory
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.EventProcessing import EventProcessingThread
-from opsiclientd.Events.Basic import CannotCancelEventError, Event, EventListener
+from opsiclientd.Events.Basic import (CannotCancelEventError, Event,
+                                      EventListener)
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventGenerator
 from opsiclientd.Events.DaemonStartup import DaemonStartupEventGenerator
-from opsiclientd.Events.GUIStartup import GUIStartupEventConfig, GUIStartupEventGenerator
+from opsiclientd.Events.GUIStartup import (GUIStartupEventConfig,
+                                           GUIStartupEventGenerator)
 from opsiclientd.Events.Panic import PanicEvent
 from opsiclientd.Events.Utilities.Factories import EventGeneratorFactory
-from opsiclientd.Events.Utilities.Generators import createEventGenerators, getEventGenerators
+from opsiclientd.Events.Utilities.Generators import (createEventGenerators,
+                                                     getEventGenerators)
 from opsiclientd.Localization import _, load_translation
 from opsiclientd.notification_server import NotificationServer
 from opsiclientd.OpsiService import PermanentServiceConnection
 from opsiclientd.setup import setup
 from opsiclientd.State import State
-from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_WINDOWS
+from opsiclientd.SystemCheck import (RUNNING_ON_DARWIN, RUNNING_ON_LINUX,
+                                     RUNNING_ON_WINDOWS)
 from opsiclientd.Timeline import Timeline
 from opsiclientd.webserver import Webserver
 
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.Events.Windows.UserLogin import LoginDetector
-	from opsiclientd.windows import get_link_target_windows, runCommandInSession
+	from opsiclientd.windows import get_link_target, runCommandInSession
 else:
 	from OPSI.System import runCommandInSession  # type: ignore
 	from opsicommon.system.subprocess import get_subprocess_environment
@@ -280,7 +286,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					link = inst_dir.with_name("opsiclientd_bin")
 					target: Path | None = None
 					if link.exists():
-						target = get_link_target_windows(link)
+						target = get_link_target(link)
 						if not target:
 							raise RuntimeError(f"{link} exists and is not a link")
 
