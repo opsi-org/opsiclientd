@@ -995,6 +995,9 @@ class Config(metaclass=Singleton):
 			self.set("precondition_cache_ready_user_logged_in", "products_cached", True)
 			self.set("precondition_cache_ready", "config_cached", False)
 			self.set("precondition_cache_ready", "products_cached", True)
+			# Make configurable?
+			self.set("event_on_demand", "cache_products", True)
+			self.set("event_on_demand", "use_cached_products", True)
 		else:
 			# Set back to default values (as defined in default config file)
 			self.set("event_net_connection", "active", False)
@@ -1020,3 +1023,5 @@ class Config(metaclass=Singleton):
 			self.set("precondition_cache_ready_user_logged_in", "products_cached", True)
 			self.set("precondition_cache_ready", "config_cached", True)
 			self.set("precondition_cache_ready", "products_cached", True)
+			self.set("event_on_demand", "cache_products", False)
+			self.set("event_on_demand", "use_cached_products", False)
