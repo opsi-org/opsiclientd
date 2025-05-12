@@ -12,10 +12,13 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from opsiclientd.windows import get_link_target
+import pytest
 
 
+@pytest.mark.windows
 def test_get_link_target(tmp_path: Path) -> None:
+	from opsiclientd.windows import get_link_target
+
 	test_dir = tmp_path / "test_dir" / "sub"
 	test_dir.mkdir(parents=True)
 	link = tmp_path / "link"
