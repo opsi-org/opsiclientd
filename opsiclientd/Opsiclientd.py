@@ -62,7 +62,7 @@ from opsiclientd.webserver import Webserver
 
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.Events.Windows.UserLogin import LoginDetector
-	from opsiclientd.windows import runCommandInSession
+	from opsiclientd.windows import get_link_target_windows, runCommandInSession
 else:
 	from OPSI.System import runCommandInSession  # type: ignore
 	from opsicommon.system.subprocess import get_subprocess_environment
@@ -278,32 +278,31 @@ class Opsiclientd(EventListener, threading.Thread):
 					inst1 = inst_dir.with_name("opsiclientd_bin1")
 					inst2 = inst_dir.with_name("opsiclientd_bin2")
 					link = inst_dir.with_name("opsiclientd_bin")
-					process_stdout = subprocess.run(
-						f"powershell.exe -ExecutionPolicy Bypass -Command \"Get-Item '{link}' | Select-Object -ExpandProperty Target\"",
-						text=True,
-						capture_output=True,
-						shell=False,
-						check=False,
-					).stdout.strip()
-					if link.exists() and not process_stdout:
-						raise RuntimeError(f"{link} is not a link")
+					target: Path | None = None
+					if link.exists():
+						target = get_link_target_windows(link)
+						if not target:
+							raise RuntimeError(f"{link} exists and is not a link")
 
-					logger.info("Link '%s' is pointing to '%s'", link, process_stdout)
+					logger.info("Link '%s' is pointing to '%s'", link, target)
 
-					target = Path(process_stdout)
-					logger.info("Names: inst1=%r, inst2=%r, target=%r", inst1.name, inst2.name, target.name)
-					new_dir = inst2 if target.name == inst1.name else inst1
+					logger.info("Names: inst1=%r, inst2=%r, target=%r", inst1.name, inst2.name, target.name if target else None)
+					new_dir = inst2 if target and target.name == inst1.name else inst1
 
 					if new_dir.exists():
 						logger.info("Deleting dir '%s'", new_dir)
 						shutil.rmtree(new_dir)
+
+					if link.exists():
+						logger.info("Deleting link '%s'", link)
+						link.rmdir()
 
 					logger.info("Moving '%s' to '%s'", bin_dir, new_dir)
 					bin_dir.rename(new_dir)
 
 					logger.info("Creating link '%s' pointing to '%s'", link, new_dir)
 					process_stdout = subprocess.run(
-						f'rmdir "{link}" & mklink /j "{link}" "{new_dir}"', text=True, capture_output=True, check=False, shell=True
+						f'mklink /j "{link}" "{new_dir}"', text=True, capture_output=True, check=False, shell=True
 					).stdout
 					logger.debug(process_stdout)
 				else:
