@@ -296,7 +296,6 @@ def get_link_target_windows(link_path: str | Path) -> Path | None:
 	handle = CreateFileW(str(link_path), GENERIC_READ, 0, None, OPEN_EXISTING, FILE_FLAG_OPEN_REPARSE_POINT, None)
 
 	if handle == INVALID_HANDLE_VALUE:
-		# Mimic PowerShell behavior for non-existent or inaccessible links
 		return None
 
 	try:
@@ -317,8 +316,7 @@ def get_link_target_windows(link_path: str | Path) -> Path | None:
 		if not success:
 			last_error = get_last_error()
 			if last_error == ERROR_NOT_A_REPARSE_POINT:
-				logger.debug("'%s is not a reparse point.", link_path)
-				# Mimic PowerShell behavior for non-links
+				logger.debug("'%s' is not a reparse point", link_path)
 				return None
 			logger.warning("DeviceIoControl failed for '%s': %s", link_path, WinError(last_error))
 			return None
