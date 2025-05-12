@@ -5,8 +5,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
-from asyncio import AbstractEventLoop, BaseTransport, Protocol, Server, Transport, get_event_loop, run, sleep
+from asyncio import AbstractEventLoop, BaseTransport, Protocol, Server, Transport, get_event_loop, run
 from dataclasses import asdict, dataclass, field
 from threading import Event, Lock, Thread
 from typing import Any
@@ -285,18 +286,9 @@ class NotificationServer(SubjectsObserver, Thread):
 		logger.info(f"Notification server serving on {addrs}")
 		get_event_loop().create_task(self._server.serve_forever())
 
-		logger.debug("Server ended, waiting for should stop")
+		logger.debug("Server ended, waiting for should_stop")
 		while not self._should_stop:
-			await sleep(1)
-
-		if self._server:
-			if self._clients:
-				self.requestEndConnections()
-			try:
-				logger.debug("Closing notification server")
-				self._server.close()
-			except Exception as err:
-				logger.debug(err)
+			await asyncio.sleep(0.5)
 
 	def run(self) -> None:
 		with log_context({"instance": "notification server"}):
@@ -314,10 +306,16 @@ class NotificationServer(SubjectsObserver, Thread):
 
 	def stop(self) -> None:
 		self._should_stop = True
+		if self._server and self._clients:
+			self.requestEndConnections()
+
 		with self._server_lock:
-			logger.debug("Waiting for NotificationServer thread to stop")
 			if self._server:
+				self.requestEndConnections()
 				self._server.close_clients()
 				self._server.close()
-			if not self._stopped.wait(5):
-				logger.warning("Timed out waiting NotificationServer to stop")
+				self._server = None
+
+		logger.debug("Waiting for NotificationServer thread to stop")
+		if not self._stopped.wait(5):
+			logger.warning("Timed out waiting NotificationServer to stop")
