@@ -15,6 +15,7 @@ import os
 import shutil
 import threading
 import time
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Type
@@ -820,7 +821,31 @@ class ConfigCacheService(threading.Thread):
 			shutil.rmtree(config_cache)
 
 
+def get_directory_size(path: str | Path) -> int:
+	if not isinstance(path, Path):
+		path = Path(path)
+
+	if not path.is_dir():
+		raise ValueError(f"Path '{path}' is not a directory")
+
+	total_size = 0
+	for dirpath, _dirnames, filenames in os.walk(path):
+		for filename in filenames:
+			try:
+				abs_file = os.path.join(dirpath, filename)
+				total_size += os.path.getsize(abs_file)
+			except (FileNotFoundError, PermissionError):
+				# Skip files that can't be accessed
+				pass
+	return total_size
+
+
 class ProductCacheService(threading.Thread):
+	_storage_dir: Path
+	_temp_dir: Path
+	_product_cache_dir: Path
+	_product_cache_max_size: int
+
 	def __init__(self, opsiclientd: Opsiclientd, service_client: ServiceClient) -> None:
 		threading.Thread.__init__(self, name="ProductCacheService")
 		self.opsiclientd = opsiclientd
@@ -832,48 +857,67 @@ class ProductCacheService(threading.Thread):
 		self._running = False
 		self._working = False
 		self._state: dict[str, Any] = {}
+		self._cache_dir_sizes: dict[str, int] = {}
+		self._cache_dir_lock = threading.Lock()
 
-		self._impersonation = None
-		self._cacheProductsRequested = False
-		self._fireSyncCompletedEvent = True
+		self._impersonation: System.Impersonate | None = None
+		self._cache_products_requested = False
+		self._fire_sync_completed_event = True
 
-		self._maxBandwidth = 0
-		self._dynamicBandwidth = True
+		self._max_bandwidth = 0
+		self._dynamic_andwidth = True
 
-		self._productProgressObserver: ProgressSubjectProxy | None = None
-		self._overallProgressObserver: ProgressSubjectProxy | None = None
+		self._product_progress_observer: ProgressSubjectProxy | None = None
+		self._overall_progress_observer: ProgressSubjectProxy | None = None
 
 		self._repository: Repository | None = None
 
-		if not os.path.exists(self._storageDir):
-			logger.notice("Creating cache service storage dir '%s'", self._storageDir)
-			os.makedirs(self._storageDir)
-		if not os.path.exists(self._tempDir):
-			logger.notice("Creating cache service temp dir '%s'", self._tempDir)
-			os.makedirs(self._tempDir)
-		if not os.path.exists(self._productCacheDir):
-			logger.notice("Creating cache service product cache dir '%s'", self._productCacheDir)
-			os.makedirs(self._productCacheDir)
+		if not self._storage_dir.exists():
+			logger.notice("Creating cache service storage dir '%s'", self._storage_dir)
+			self._storage_dir.mkdir(parents=True)
+		if not self._temp_dir.exists():
+			logger.notice("Creating cache service temp dir '%s'", self._temp_dir)
+			self._temp_dir.mkdir(parents=True)
+		if not self._product_cache_dir.exists():
+			logger.notice("Creating cache service product cache dir '%s'", self._product_cache_dir)
+			self._product_cache_dir.mkdir(parents=True)
 
 		pcss = state.get("product_cache_service")
 		if pcss:
 			self._state = pcss
 
+		self.update_cache_dir_sizes(force=True)
+
 	def _updateConfig(self) -> None:
-		self._storageDir = config.get("cache_service", "storage_dir")
-		self._tempDir = os.path.join(self._storageDir, "tmp")
-		self._productCacheDir = os.path.join(self._storageDir, "depot")
-		self._productCacheMaxSize = forceInt(config.get("cache_service", "product_cache_max_size"))
+		self._storage_dir = Path(config.get("cache_service", "storage_dir"))
+		self._temp_dir = self._storage_dir / "tmp"
+		self._product_cache_dir = self._storage_dir / "depot"
+		self._product_cache_max_size = forceInt(config.get("cache_service", "product_cache_max_size"))
+
+	def update_cache_dir_sizes(self, force: bool = False) -> None:
+		with self._cache_dir_lock:
+			if force:
+				self._cache_dir_sizes = {}
+			for product_cache_dir in self._product_cache_dir.iterdir():
+				if product_cache_dir.is_dir() and product_cache_dir.name not in self._cache_dir_sizes:
+					self._cache_dir_sizes[product_cache_dir.name] = get_directory_size(product_cache_dir)
+
+	def get_cache_dir_size(self, product: str | None = None) -> int:
+		self.update_cache_dir_sizes()
+		with self._cache_dir_lock:
+			if product:
+				return self._cache_dir_sizes.get(product, 0)
+			return sum(self._cache_dir_sizes.values())
 
 	def getProductCacheDir(self) -> str:
-		return self._productCacheDir
+		return str(self._product_cache_dir)
 
 	def getState(self) -> dict[str, Any]:
 		_state = self._state
 		_state["running"] = self.isRunning()
 		_state["working"] = self.isWorking()
-		_state["maxBandwidth"] = self._maxBandwidth
-		_state["dynamicBandwidth"] = self._dynamicBandwidth
+		_state["maxBandwidth"] = self._max_bandwidth
+		_state["dynamicBandwidth"] = self._dynamic_andwidth
 		return _state
 
 	def isRunning(self) -> bool:
@@ -886,10 +930,10 @@ class ProductCacheService(threading.Thread):
 		self._stopped = True
 
 	def setMaxBandwidth(self, maxBandwidth: int) -> None:
-		self._maxBandwidth = forceInt(maxBandwidth)
+		self._max_bandwidth = forceInt(maxBandwidth)
 
 	def setDynamicBandwidth(self, dynamicBandwidth: bool) -> None:
-		self._dynamicBandwidth = forceBool(dynamicBandwidth)
+		self._dynamic_andwidth = forceBool(dynamicBandwidth)
 
 	def start_caching_or_get_waiting_time(self) -> float:
 		try_after_seconds: float = 0.0
@@ -909,7 +953,7 @@ class ProductCacheService(threading.Thread):
 					heartbeat_thread.start()
 				logger.notice("Starting to cache products")
 				self._cacheProducts()
-				self._cacheProductsRequested = False
+				self._cache_products_requested = False
 				logger.info("Finished caching products")
 				return 1.0  # check again in 1 second if we have to cache
 			logger.notice("Did not cache Products, server suggested waiting time of %s", try_after_seconds)
@@ -929,7 +973,7 @@ class ProductCacheService(threading.Thread):
 			try:
 				while not self._stopped:
 					sleep_time = 1.0
-					if self._cacheProductsRequested and not self._working:
+					if self._cache_products_requested and not self._working:
 						init_from_service(service_client=self.service_client)
 						sleep_time = self.start_caching_or_get_waiting_time()
 					time.sleep(sleep_time)
@@ -941,14 +985,14 @@ class ProductCacheService(threading.Thread):
 
 	def clear_cache(self) -> None:
 		timeline.addEvent(title="Clear product cache", description="Product cache deleted", category="product_caching")
-		productCacheDir = self.getProductCacheDir()
-		if os.path.exists(productCacheDir):
-			for product in os.listdir(productCacheDir):
-				deleteDir = os.path.join(productCacheDir, product)
-				shutil.rmtree(deleteDir)
-			self._state["products"] = {}
-			self._state["products_cached"] = False
-			state.set("product_cache_service", self._state)
+		if self._product_cache_dir.exists():
+			with self._cache_dir_lock:
+				for product_cache_dir in self._product_cache_dir.iterdir():
+					shutil.rmtree(product_cache_dir)
+				self._cache_dir_sizes = {}
+				self._state["products"] = {}
+				self._state["products_cached"] = False
+				state.set("product_cache_service", self._state)
 
 	def cacheProducts(
 		self,
@@ -956,71 +1000,73 @@ class ProductCacheService(threading.Thread):
 		overallProgressObserver: ProgressSubjectProxy | None = None,
 		fireSyncCompletedEvent: bool = True,
 	) -> None:
-		self._fireSyncCompletedEvent = fireSyncCompletedEvent
-		self._cacheProductsRequested = True
-		self._productProgressObserver = productProgressObserver
-		self._overallProgressObserver = overallProgressObserver
+		self._fire_sync_completed_event = fireSyncCompletedEvent
+		self._cache_products_requested = True
+		self._product_progress_observer = productProgressObserver
+		self._overall_progress_observer = overallProgressObserver
 
-	def _freeProductCacheSpace(self, neededSpace: int = 0, neededProducts: list[str] | None = None) -> None:
-		try:
-			# neededSpace in byte
-			neededSpace = forceInt(neededSpace)
-			neededProducts = forceProductIdList(neededProducts or [])
+	def _freeProductCacheSpace(self, needed_space: int = 0, needed_products: list[str] | None = None) -> None:
+		"""
+		Free up space in the product cache directory by deleting old products.
+		needed_space: The amount of space to free up in bytes.
+		needed_products: A list of product IDs that should not be deleted.
+		"""
+		needed_space = forceInt(needed_space)
+		needed_products = forceProductIdList(needed_products or [])
+		self.update_cache_dir_sizes()
+		with self._cache_dir_lock:
 
-			maxFreeableSize = 0
-			productDirSizes = {}
-			for product in os.listdir(self._productCacheDir):
-				if product not in neededProducts:
-					productDirSizes[product] = System.getDirectorySize(os.path.join(self._productCacheDir, product))
-					maxFreeableSize += productDirSizes[product]
+			@dataclass
+			class DeletableProduct:
+				product_id: str
+				size: int
+				mtime: float = 0.0
 
-			if maxFreeableSize < neededSpace:
+			deletable_products: list[DeletableProduct] = []
+			for product_cache_dir in self._product_cache_dir.iterdir():
+				product_id = product_cache_dir.name
+				if product_id in needed_products:
+					logger.trace("Product '%s' is needed, skipping", product_id)
+					continue
+
+				deletable_product = DeletableProduct(
+					product_id=product_id,
+					size=self._cache_dir_sizes.get(product_id, 0),
+				)
+				package_content_file = product_cache_dir / f"{product_id}.files"
+				if package_content_file.exists():
+					deletable_product.mtime = package_content_file.stat().st_mtime
+
+				deletable_products.append(deletable_product)
+
+			max_freeable_size = sum(p.size for p in deletable_products)
+			if max_freeable_size < needed_space:
 				raise RuntimeError(
-					f"Needed space: {(float(neededSpace) / (1000 * 1000)):0.3f} MB, "
-					f"maximum freeable space: {(float(maxFreeableSize) / (1000 * 1000)):0.3f} MB "
-					f"(max product cache size: {(float(self._productCacheMaxSize) / (1000 * 1000)):0.0f} MB)"
+					f"Needed space: {(float(needed_space) / (1000 * 1000)):0.3f} MB, "
+					f"maximum freeable space: {(float(max_freeable_size) / (1000 * 1000)):0.3f} MB "
+					f"(max product cache size: {(float(self._product_cache_max_size) / (1000 * 1000)):0.0f} MB)"
 				)
 
-			freedSpace = 0
-			while freedSpace < neededSpace:
-				deleteProduct = None
-				eldestTime = None
-				for product, _size in productDirSizes.items():
-					packageContentFile = os.path.join(self._productCacheDir, product, f"{product}.files")
-					if not os.path.exists(packageContentFile):
-						logger.info("Package content file '%s' not found, deleting product cache to free disk space", packageContentFile)
-						deleteProduct = product
-						break
+			# Sort deletable products by mtime (older first)
+			deletable_products.sort(key=lambda p: p.mtime)
 
-					mtime = os.path.getmtime(packageContentFile)
-					if not eldestTime:
-						eldestTime = mtime
-						deleteProduct = product
-						continue
+			freed_space = 0
+			while freed_space < needed_space:
+				if not deletable_products:
+					raise RuntimeError("No more products which can be deleted")
 
-					if mtime < eldestTime:
-						eldestTime = mtime
-						deleteProduct = product
-
-				if not deleteProduct:
-					raise RuntimeError("Internal error")
-
-				deleteDir = os.path.join(self._productCacheDir, deleteProduct)
-				logger.notice("Deleting product cache directory '%s'", deleteDir)
-				if not os.path.exists(deleteDir):
-					raise RuntimeError(f"Directory '{deleteDir}' not found")
-
-				shutil.rmtree(deleteDir)
-				freedSpace += productDirSizes[deleteProduct]
-				if self._state.get("products", {}).get(deleteProduct):
-					del self._state["products"][deleteProduct]
+				delete_product = deletable_products.pop(0)
+				delete_dir = self._product_cache_dir / delete_product.product_id
+				if delete_dir.exists():
+					logger.notice("Deleting product cache directory '%s'", delete_dir)
+					shutil.rmtree(delete_dir)
+				else:
+					logger.warning("Product cache directory '%s' does not exist", delete_dir)
+				freed_space += delete_product.size
+				if self._state["products"] and self._state["products"].pop(delete_product.product_id, None):
 					state.set("product_cache_service", self._state)
 
-				del productDirSizes[deleteProduct]
-
-			logger.notice("%0.3f MB of product cache freed", float(freedSpace) / (1000 * 1000))
-		except Exception as err:
-			raise RuntimeError(f"Failed to free enough disk space for product cache: {err}") from err
+		logger.notice("%0.3f MB of product cache freed", freed_space / 1_000_000)
 
 	def _cacheProducts(self) -> None:
 		self._updateConfig()
@@ -1171,7 +1217,7 @@ class ProductCacheService(threading.Thread):
 							self._state["products_cached"] = True
 							state.set("product_cache_service", self._state)
 
-							if self._fireSyncCompletedEvent:
+							if self._fire_sync_completed_event:
 								for eventGenerator in getEventGenerators(generatorClass=SyncCompletedEventGenerator):
 									eventGenerator.createAndFireEvent()
 		except Exception as err:
@@ -1277,13 +1323,13 @@ class ProductCacheService(threading.Thread):
 
 	def _cacheProduct(self, productId: str, neededProducts: list[str]) -> None:
 		logger.notice(
-			"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)", productId, self._maxBandwidth, self._dynamicBandwidth
+			"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)", productId, self._max_bandwidth, self._dynamic_andwidth
 		)
 		self._setProductCacheState(productId, "started", time.time())
 		self._setProductCacheState(productId, "completed", None, updateProductOnClient=False)
 		self._setProductCacheState(productId, "failure", None, updateProductOnClient=False)
 
-		eventId = None
+		event_id = None
 		repository = None
 		exception = None
 		product_version = None
@@ -1311,69 +1357,103 @@ class ProductCacheService(threading.Thread):
 
 			# 7zip--rfc156094_24.09-1.opsi
 			base_product_id = productId.split("--")[0]
-			similarProductCacheDir: str | None = None
-			curProductCacheDir: str | None = None
-			for entry in os.listdir(self._productCacheDir):
-				if entry == productId:
-					curProductCacheDir = os.path.join(self._productCacheDir, entry)
-					logger.debug("Found product cache dir: %s", entry)
+			cur_product_cache_dir: Path | None = None
+			similar_product_cache_dir: Path | None = None
+			for product_cache_dir in self._product_cache_dir.iterdir():
+				if product_cache_dir.name == productId:
+					logger.debug("Found product cache dir: %s", product_cache_dir)
+					cur_product_cache_dir = product_cache_dir
 					# Exact match found, no need to continue
 					break
-				elif entry.startswith(f"{base_product_id}--"):
-					similarProductCacheDir = os.path.join(self._productCacheDir, entry)
-					logger.debug("Found similar product cache dir: %s", entry)
+				elif product_cache_dir.name.startswith(f"{base_product_id}--"):
+					logger.debug("Found similar product cache dir: %s", product_cache_dir)
+					similar_product_cache_dir = product_cache_dir
 
-			if not curProductCacheDir and similarProductCacheDir:
-				logger.info("Using similar product cache dir: %s", similarProductCacheDir)
-				curProductCacheDir = os.path.join(self._productCacheDir, productId)
-				os.rename(similarProductCacheDir, curProductCacheDir)
+			if not cur_product_cache_dir:
+				with self._cache_dir_lock:
+					cur_product_cache_dir = self._product_cache_dir / productId
+					self._cache_dir_sizes[productId] = 0
+					if similar_product_cache_dir:
+						logger.info("Using similar product cache dir: %s", similar_product_cache_dir)
+						similar_product_cache_dir.rename(cur_product_cache_dir)
+						self._cache_dir_sizes[productId] = self._cache_dir_sizes.pop(similar_product_cache_dir.name, 0)
 
-			if not os.path.exists(os.path.join(self._productCacheDir, productId)):
-				os.mkdir(os.path.join(self._productCacheDir, productId))
+			assert cur_product_cache_dir
+			if not cur_product_cache_dir.exists():
+				with self._cache_dir_lock:
+					cur_product_cache_dir.mkdir(parents=True)
 
-			packageContentFile = f"{productId}/{productId}.files"
-			localPackageContentFile = os.path.join(self._productCacheDir, productId, f"{productId}.files")
-			repository.download(source=packageContentFile, destination=localPackageContentFile)
-			packageInfo = PackageContentFile(localPackageContentFile).parse()
-			productSize = 0
-			fileCount = 0
+			package_content_file = f"{productId}/{productId}.files"
+			local_package_content_file = os.path.join(self._product_cache_dir, productId, f"{productId}.files")
+			repository.download(source=package_content_file, destination=local_package_content_file)
+			packageInfo = PackageContentFile(local_package_content_file).parse()
+			product_size = 0
+			file_count = 0
 			for value in packageInfo.values():
 				if "size" in value:
-					fileCount += 1
-					productSize += int(value["size"])
+					file_count += 1
+					product_size += int(value["size"])
+
+			logger.info("Product '%s' contains %d files with a total size of %0.3f MB", productId, file_count, product_size / 1_000_000)
+
+			total_cache_dir_size = self.get_cache_dir_size()
+			product_cache_dir_size = self.get_cache_dir_size(productId)
+			additional_size = product_size - product_cache_dir_size
+			new_total_cache_dir_size = product_cache_dir_size + additional_size
+			min_free_disk_space = 500_000_000
+			disk_free_space = System.getDiskSpaceUsage(self._product_cache_dir)["available"]
+			new_disk_free_space = disk_free_space + additional_size
 
 			logger.info(
-				"Product '%s' contains %d files with a total size of %0.3f MB", productId, fileCount, float(productSize) / (1000 * 1000)
+				"Product cache info:\n"
+				"  Product to cache: %s\n"
+				"  Product size: %0.3f MB\n"
+				"  Current product cache dir size: %0.3f MB\n"
+				"  Current total cache dir size: %0.3f MB\n"
+				"  Current free disk space: %0.3f MB\n"
+				"  New total cache dir size: %0.3f MB\n"
+				"  New free disk space: %0.3f MB\n"
+				"  Max product cache size: %0.3f MB\n"
+				"  Min free disk space: %0.3f MB\n",
+				productId,
+				product_size / 1_000_000,
+				product_cache_dir_size / 1_000_000,
+				total_cache_dir_size / 1_000_000,
+				disk_free_space / 1_000_000,
+				new_total_cache_dir_size / 1_000_000,
+				new_disk_free_space / 1_000_000,
+				self._product_cache_max_size / 1_000_000,
+				min_free_disk_space / 1_000_000,
 			)
 
-			productCacheDirSize = 0
-			if self._productCacheMaxSize > 0:
-				productCacheDirSize = System.getDirectorySize(self._productCacheDir)
-				curProductSize = System.getDirectorySize(curProductCacheDir) if curProductCacheDir else 0
-				if productCacheDirSize + productSize - curProductSize > self._productCacheMaxSize:
-					logger.info(
-						"Product cache dir sizelimit of %0.3f MB exceeded. Current size: %0.3f MB, space needed for product '%s': %0.3f MB",
-						float(self._productCacheMaxSize) / (1000 * 1000),
-						float(productCacheDirSize) / (1000 * 1000),
-						productId,
-						float(productSize) / (1000 * 1000),
-					)
-					freeSpace = self._productCacheMaxSize - productCacheDirSize
-					neededSpace = productSize - freeSpace + 1000
-					self._freeProductCacheSpace(neededSpace=neededSpace, neededProducts=neededProducts)
-					productCacheDirSize = System.getDirectorySize(self._productCacheDir)
-
-			diskFreeSpace = System.getDiskSpaceUsage(self._productCacheDir)["available"]
-			if diskFreeSpace < productSize + 500 * 1000 * 1000:
-				raise RuntimeError(
-					f"Only {(float(diskFreeSpace) / (1000 * 1000)):0.3f} MB free space available on disk, failed to cache product files"
+			needed_space_disk = min_free_disk_space - new_disk_free_space
+			if needed_space_disk > 0:
+				logger.info(
+					"Free disk space will be below %0.3f MB, need to free %0.3f MB",
+					min_free_disk_space / 1_000_000,
+					needed_space_disk / 1_000_000,
 				)
 
-			eventId = timeline.addEvent(
+			needed_space_limit = self._product_cache_max_size - new_total_cache_dir_size
+			if needed_space_limit > 0:
+				logger.info(
+					"Product cache dir will exceed max size of %0.3f MB, need to free %0.3f MB",
+					self._product_cache_max_size / 1_000_000,
+					needed_space_limit / 1_000_000,
+				)
+
+			needed_space = max(needed_space_disk, needed_space_limit)
+			if needed_space > 0:
+				try:
+					self._freeProductCacheSpace(needed_space=needed_space, needed_products=neededProducts)
+				except Exception as err:
+					raise RuntimeError(f"Failed to free enough product cache space: {err}") from err
+
+			event_id = timeline.addEvent(
 				title=f"Cache product {productId} {product_version}",
 				description=(
-					f"Caching product '{productId}' ({product_version}) of size {(float(productSize) / (1000 * 1000)):0.2f} MB\n"
-					f"max bandwidth: {self._maxBandwidth}, dynamic bandwidth: {self._dynamicBandwidth}"
+					f"Caching product '{productId}' ({product_version}) of size {(float(product_size) / (1000 * 1000)):0.2f} MB\n"
+					f"max bandwidth: {self._max_bandwidth}, dynamic bandwidth: {self._dynamic_andwidth}"
 				),
 				category="product_caching",
 				durationEvent=True,
@@ -1381,13 +1461,13 @@ class ProductCacheService(threading.Thread):
 
 			productSynchronizer = DepotToLocalDirectorySychronizer(
 				sourceDepot=repository,
-				destinationDirectory=self._productCacheDir,
+				destinationDirectory=self._product_cache_dir,
 				productIds=[productId],
-				maxBandwidth=self._maxBandwidth,
-				dynamicBandwidth=self._dynamicBandwidth,
+				maxBandwidth=self._max_bandwidth,
+				dynamicBandwidth=self._dynamic_andwidth,
 			)
 			productSynchronizer.synchronize(
-				productProgressObserver=self._productProgressObserver, overallProgressObserver=self._overallProgressObserver
+				productProgressObserver=self._product_progress_observer, overallProgressObserver=self._overall_progress_observer
 			)
 			logger.notice("Product '%s' (%s) cached", productId, product_version)
 			self._setProductCacheState(productId, "completed", time.time())
@@ -1401,8 +1481,8 @@ class ProductCacheService(threading.Thread):
 				isError=True,
 			)
 
-		if eventId:
-			timeline.setEventEnd(eventId)
+		if event_id:
+			timeline.setEventEnd(event_id)
 
 		if repository:
 			try:
