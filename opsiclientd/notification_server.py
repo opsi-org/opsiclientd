@@ -312,7 +312,8 @@ class NotificationServer(SubjectsObserver, Thread):
 		with self._server_lock:
 			if self._server:
 				self.requestEndConnections()
-				self._server.close_clients()
+				if hasattr(self._server, "close_clients"):
+					self._server.close_clients()
 				self._server.close()
 				self._server = None
 
