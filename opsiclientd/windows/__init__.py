@@ -15,8 +15,7 @@ import time
 from ctypes import wintypes
 
 if os.name == "nt":
-	from ctypes import get_last_error  # type: ignore[attr-defined]
-	from ctypes import WinError, windll
+	from ctypes import WinError, get_last_error, windll  # type: ignore[attr-defined]
 else:
 	WinError = get_last_error = windll = None
 
@@ -26,13 +25,17 @@ from typing import Any, Callable
 
 import win32com.client  # type: ignore[import]
 import win32com.server.policy  # type: ignore[import]
-from OPSI.System.Windows import createDesktop  # type: ignore[import]
-from OPSI.System.Windows import (getActiveSessionId, getUserToken,
-                                 terminateProcess, win32con, win32event,
-                                 win32process)
+from OPSI.System.Windows import (  # type: ignore[import]
+	createDesktop,
+	getActiveSessionId,
+	getUserToken,
+	terminateProcess,
+	win32con,
+	win32event,
+	win32process,
+)
 from opsicommon.logging import get_logger
-from opsicommon.types import (forceBool, forceInt, forceUnicode,
-                              forceUnicodeLower)
+from opsicommon.types import forceBool, forceInt, forceUnicode, forceUnicodeLower
 
 # from Sens.h
 SENSGUID_PUBLISHER = "{5fee1bd6-5b9b-11d1-8dd2-00aa004abd5e}"
