@@ -8,10 +8,17 @@ opsiclientd.windows
 """
 
 import ctypes
+import os
 import shlex
 import threading
 import time
-from ctypes import WinError, get_last_error, windll, wintypes
+from ctypes import wintypes
+
+if os.name == "nt":
+	from ctypes import WinError, get_last_error, windll  # type: ignore[attr-defined]
+else:
+	WinError = get_last_error = windll = None
+
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable
