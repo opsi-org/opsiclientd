@@ -305,6 +305,7 @@ class NotificationServer(SubjectsObserver, Thread):
 				self._should_stop = False
 				self._stopped.clear()
 				run(self._async_main())
+				logger.debug("Notification server async main finished")
 				self._ready.clear()
 				logger.debug("Notification server stopped")
 				self._stopped.set()
@@ -315,5 +316,8 @@ class NotificationServer(SubjectsObserver, Thread):
 		self._should_stop = True
 		with self._server_lock:
 			logger.debug("Waiting for NotificationServer thread to stop")
+			if self._server:
+				self._server.close_clients()
+				self._server.close()
 			if not self._stopped.wait(5):
 				logger.warning("Timed out waiting NotificationServer to stop")
