@@ -213,8 +213,6 @@ def runCommandInSession(
 
 
 # Reparse point handling
-kernel32 = windll("kernel32", use_last_error=True)
-
 FILE_FLAG_OPEN_REPARSE_POINT = 0x00200000
 GENERIC_READ = 0x80000000
 OPEN_EXISTING = 3
@@ -226,11 +224,11 @@ MAXIMUM_REPARSE_DATA_BUFFER_SIZE = 16 * 1024  # 16KB
 ERROR_NOT_A_REPARSE_POINT = 0x1126  # 4390
 SYMLINK_FLAG_RELATIVE = 0x00000001
 
-CreateFileW = kernel32.CreateFileW
+CreateFileW = windll.kernel32.CreateFileW
 CreateFileW.restype = wintypes.HANDLE
 CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
 
-DeviceIoControl = kernel32.DeviceIoControl
+DeviceIoControl = windll.kernel32.DeviceIoControl
 DeviceIoControl.restype = wintypes.BOOL
 DeviceIoControl.argtypes = [
 	wintypes.HANDLE,
@@ -243,7 +241,7 @@ DeviceIoControl.argtypes = [
 	ctypes.c_void_p,
 ]
 
-CloseHandle = kernel32.CloseHandle
+CloseHandle = windll.kernel32.CloseHandle
 CloseHandle.restype = wintypes.BOOL
 CloseHandle.argtypes = [wintypes.HANDLE]
 
