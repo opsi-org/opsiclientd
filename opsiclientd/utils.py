@@ -154,3 +154,22 @@ def get_disk_space_usage(path: Path | str) -> DiskSpaceUsage:
 		used=res.f_bsize * (res.f_blocks - res.f_bavail),
 		usage=(res.f_blocks - res.f_bavail) / res.f_blocks,
 	)
+
+
+def get_directory_size(path: str | Path) -> int:
+	if not isinstance(path, Path):
+		path = Path(path)
+
+	if not path.is_dir():
+		raise ValueError(f"Path '{path}' is not a directory")
+
+	total_size = 0
+	for dirpath, _dirnames, filenames in os.walk(path):
+		for filename in filenames:
+			try:
+				abs_file = os.path.join(dirpath, filename)
+				total_size += os.path.getsize(abs_file)
+			except (FileNotFoundError, PermissionError):
+				# Skip files that can't be accessed
+				pass
+	return total_size

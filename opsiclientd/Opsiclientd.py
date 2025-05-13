@@ -41,28 +41,23 @@ from opsicommon.system import ensure_not_already_running
 from opsicommon.system.subprocess import patch_popen
 from opsicommon.types import forceBool, forceInt, forceUnicode
 
-from opsiclientd import (Config, __version__, check_signature, config,
-                         notify_posix_terminals)
+from opsiclientd import Config, __version__, check_signature, config, notify_posix_terminals
 from opsiclientd.ControlPipe import ControlPipe, ControlPipeFactory
 from opsiclientd.EventConfiguration import EventConfig
 from opsiclientd.EventProcessing import EventProcessingThread
-from opsiclientd.Events.Basic import (CannotCancelEventError, Event,
-                                      EventListener)
+from opsiclientd.Events.Basic import CannotCancelEventError, Event, EventListener
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventGenerator
 from opsiclientd.Events.DaemonStartup import DaemonStartupEventGenerator
-from opsiclientd.Events.GUIStartup import (GUIStartupEventConfig,
-                                           GUIStartupEventGenerator)
+from opsiclientd.Events.GUIStartup import GUIStartupEventConfig, GUIStartupEventGenerator
 from opsiclientd.Events.Panic import PanicEvent
 from opsiclientd.Events.Utilities.Factories import EventGeneratorFactory
-from opsiclientd.Events.Utilities.Generators import (createEventGenerators,
-                                                     getEventGenerators)
+from opsiclientd.Events.Utilities.Generators import createEventGenerators, getEventGenerators
 from opsiclientd.Localization import _, load_translation
 from opsiclientd.notification_server import NotificationServer
 from opsiclientd.OpsiService import PermanentServiceConnection
 from opsiclientd.setup import setup
 from opsiclientd.State import State
-from opsiclientd.SystemCheck import (RUNNING_ON_DARWIN, RUNNING_ON_LINUX,
-                                     RUNNING_ON_WINDOWS)
+from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 from opsiclientd.webserver import Webserver
 

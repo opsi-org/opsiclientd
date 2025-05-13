@@ -100,7 +100,7 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str | N
 	log_file_without_ext, ext = os.path.splitext(log_file)  # ext contains '.'
 
 	for i in (9, 8, 7, 6, 5, 4, 3, 2, 1, 0):
-		old_lf = f"{log_file_without_ext}{ext}.{i-1}"  # old format
+		old_lf = f"{log_file_without_ext}{ext}.{i - 1}"  # old format
 		new_lf = f"{log_file_without_ext}_{i}{ext}"
 		if i > 0 and os.path.exists(old_lf):
 			try:

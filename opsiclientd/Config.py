@@ -18,7 +18,7 @@ from urllib.parse import urlparse
 
 import netifaces  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
-from OPSI.Util import blowfishDecrypt, objectToBeautifiedText  # type: ignore[import]
+from OPSI.Util import objectToBeautifiedText  # type: ignore[import]
 from OPSI.Util.File import IniFile  # type: ignore[import]
 from opsicommon.client.opsiservice import ServiceClient, ServiceVerificationFlags
 from opsicommon.logging import LOG_NOTICE, get_logger, logging_config, secret_filter
@@ -876,10 +876,7 @@ class Config(metaclass=Singleton):
 			raise RuntimeError("Not connected to config service")
 
 		depotServerUsername = self.get("depot_server", "username")
-		encryptedDepotServerPassword = configService.user_getCredentials(  # type: ignore[attr-defined]
-			username="pcpatch", hostId=self.get("global", "host_id")
-		)["password"]
-		depotServerPassword = blowfishDecrypt(self.get("global", "opsi_host_key"), encryptedDepotServerPassword)
+		depotServerPassword = configService.user_getCredentials(username="pcpatch")["password"]  # type: ignore[attr-defined]
 		secret_filter.add_secrets(depotServerPassword)
 		logger.debug("Using username '%s' for depot connection", depotServerUsername)
 		return (depotServerUsername, depotServerPassword)

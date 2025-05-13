@@ -84,7 +84,7 @@ def main() -> None:
 		file_format=DEFAULT_FILE_LOG_FORMAT,
 	)
 
-	log_instance = f'{os.path.basename(sys.argv[0]).rsplit(".", 1)[0]}_s{sessionId}'
+	log_instance = f"{os.path.basename(sys.argv[0]).rsplit('.', 1)[0]}_s{sessionId}"
 	with log_context({"instance": log_instance}):
 		logger.debug(
 			"Called with arguments: %s",

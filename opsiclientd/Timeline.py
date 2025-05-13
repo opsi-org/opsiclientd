@@ -207,7 +207,7 @@ class Timeline(metaclass=Singleton):
 		assert self._sql
 		with self._db_lock, self._sql.session() as session:
 			try:
-				self._sql.execute(session, f'delete from EVENT where `start` < "{timestamp(time.time() - 7*24*3600)}"')
+				self._sql.execute(session, f'delete from EVENT where `start` < "{timestamp(time.time() - 7 * 24 * 3600)}"')
 				self._sql.update(session, "EVENT", "`durationEvent` = 1 AND `end` is NULL", {"durationEvent": False})
 			except Exception as cleanup_error:
 				logger.error(cleanup_error)
@@ -238,7 +238,7 @@ class Timeline(metaclass=Singleton):
 						`start` TIMESTAMP,
 						`end` TIMESTAMP,
 						PRIMARY KEY (`id`)
-					) {self._sql.getTableCreationOptions('EVENT')};
+					) {self._sql.getTableCreationOptions("EVENT")};
 					"""
 				logger.debug(table)
 				self._sql.execute(session, table)
