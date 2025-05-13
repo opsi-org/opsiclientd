@@ -247,7 +247,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 					logger.info("Trying to connect to service")
 					await self._loop.run_in_executor(None, self.service_client.connect)
 					# Successfully connected, reset wait time to 1 seconds
-					self._should_connect
+					self._should_connect = False
 					connect_wait = 1
 				except Exception as err:
 					logger.info("Failed to connect: %s", err)
