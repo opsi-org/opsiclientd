@@ -193,6 +193,9 @@ class EventProcessingThread(KillableThread):
 			finally:
 				self.opsiclientd.eventLock.release()
 
+	def stop(self) -> None:
+		self.cancel()
+
 	def should_cancel(self) -> bool:
 		return self._should_cancel
 

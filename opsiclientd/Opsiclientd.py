@@ -734,15 +734,12 @@ class Opsiclientd(EventListener, threading.Thread):
 							self._stopEvent.wait(1)
 					finally:
 						logger.notice("opsiclientd is going down")
-						# TODO: Some cleanup needed here?
-						"""
 						with self._eptListLock:
 							for ept in self._eventProcessingThreads:
 								ept.stop()
 							for ept in self._eventProcessingThreads:
 								logger.info("Waiting for event processing thread %s", ept)
 								ept.join(5)
-						"""
 						if self._opsiclientdRunningEventId:
 							timeline.setEventEnd(self._opsiclientdRunningEventId)
 						logger.info("Stopping timeline")
