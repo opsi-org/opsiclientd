@@ -20,6 +20,9 @@ from opsicommon.logging import get_logger
 
 from opsiclientd.Config import Config
 
+if os.name == "nt":
+	import win32file  # type: ignore[import]
+
 if TYPE_CHECKING:
 	from opsiclientd.OpsiService import ServiceClient
 
@@ -147,7 +150,23 @@ class DiskSpaceUsage:
 
 
 def get_disk_space_usage(path: Path | str) -> DiskSpaceUsage:
-	res = os.statvfs(str(path))
+	path = str(path)
+	if os.name == "nt":
+		if len(path) == 1:
+			# Assuming a drive letter like "C"
+			path = path + ":"
+
+		(sect_per_cluster, bytes_per_sector, free_clusters, total_clusters) = win32file.GetDiskFreeSpace(path)
+		capacity = total_clusters * sect_per_cluster * bytes_per_sector
+		available = free_clusters * sect_per_cluster * bytes_per_sector
+		return DiskSpaceUsage(
+			capacity=capacity,
+			available=available,
+			used=capacity - available,
+			usage=(capacity - available) / capacity,
+		)
+
+	res = os.statvfs(path)
 	return DiskSpaceUsage(
 		capacity=res.f_bsize * res.f_blocks,
 		available=res.f_bsize * res.f_bavail,
