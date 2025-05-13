@@ -43,7 +43,7 @@ from opsiclientd.OpsiService import PermanentServiceConnection, ServiceClient
 from opsiclientd.State import State
 from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
-from opsiclientd.utils import get_include_exclude_product_ids
+from opsiclientd.utils import get_disk_space_usage, get_include_exclude_product_ids
 
 if TYPE_CHECKING:
 	from opsiclientd.Opsiclientd import Opsiclientd
@@ -1401,7 +1401,7 @@ class ProductCacheService(threading.Thread):
 			additional_size = product_size - product_cache_dir_size
 			new_total_cache_dir_size = product_cache_dir_size + additional_size
 			min_free_disk_space = 500_000_000
-			disk_free_space = System.getDiskSpaceUsage(self._product_cache_dir)["available"]
+			disk_free_space = get_disk_space_usage(self._product_cache_dir).available
 			new_disk_free_space = disk_free_space + additional_size
 
 			logger.info(

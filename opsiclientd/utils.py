@@ -9,7 +9,9 @@ utils
 
 from __future__ import annotations
 
+import os
 import struct
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -134,3 +136,21 @@ def log_network_status() -> None:
 				for entry in af_inet_list:
 					status_string += f"Interface {interface}, Address {entry.get('addr')}, Netmask {entry.get('netmask')}\n"
 	logger.info("Current network Status:\n%s", status_string)
+
+
+@dataclass
+class DiskSpaceUsage:
+	capacity: int
+	available: int
+	used: int
+	usage: float
+
+
+def get_disk_space_usage(path: Path | str) -> DiskSpaceUsage:
+	res = os.statvfs(str(path))
+	return DiskSpaceUsage(
+		capacity=res.f_bsize * res.f_blocks,
+		available=res.f_bsize * res.f_bavail,
+		used=res.f_bsize * (res.f_blocks - res.f_bavail),
+		usage=(res.f_blocks - res.f_bavail) / res.f_blocks,
+	)
