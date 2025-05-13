@@ -621,7 +621,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/a6/91/86a6eac449ddfae23
 
 [[package]]
 name = "opsiclientd"
-version = "4.3.12.1"
+version = "4.3.12.2"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },
@@ -1048,7 +1048,7 @@ wheels = [
 
 [[package]]
 name = "python-opsi-common"
-version = "4.3.29.6"
+version = "4.3.29.7"
 source = { registry = "https://pypi.uib.gmbh/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -1077,9 +1077,9 @@ dependencies = [
     { name = "wmi", marker = "sys_platform == 'win32'" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.29.6.tar.gz", hash = "sha256:d72fd8844620d6b93f616971eb6109d155013be2c3dee151a6cea240f6c786af" }
+sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.29.7.tar.gz", hash = "sha256:9541b87925aff99df1a9cbd2b4c22ab689f8ce305efef7fcc09896d83db936b6" }
 wheels = [
-    { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.29.6-py3-none-any.whl", hash = "sha256:db7e9c07b345dcb51f61fc6ff20e728dfe20ffa5097427aba7a6e6fff80b6b83" },
+    { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.29.7-py3-none-any.whl", hash = "sha256:848bdb4ca665a3189121eaaa9d175c84cd7a5cd7c0117d9eafa3c0a1dfafc7d9" },
 ]
 
 [[package]]

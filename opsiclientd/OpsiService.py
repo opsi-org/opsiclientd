@@ -208,7 +208,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		self._should_stop = False
 		self._loop = asyncio.new_event_loop()
 		self._control_interface: ControlInterface | None = None
-		self._temporary_service_url: str | None
+		self._temporary_service_url: str | None = None
 		self._should_connect = False
 
 		with log_context({"instance": "permanent service connection"}):
@@ -249,15 +249,14 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 					# Successfully connected, reset wait time to 1 seconds
 					self._should_connect
 					connect_wait = 1
-					break
 				except Exception as err:
 					logger.info("Failed to connect: %s", err)
 					logger.debug(err, exc_info=True)
-				for _sec in range(connect_wait):
-					if self._should_stop:
-						return
-					await asyncio.sleep(1)
-				connect_wait = min(round(connect_wait * 1.5), 300)
+					for _sec in range(connect_wait):
+						if self._should_stop:
+							return
+						await asyncio.sleep(1)
+					connect_wait = min(round(connect_wait * 1.5), 300)
 
 			await asyncio.sleep(1)
 
