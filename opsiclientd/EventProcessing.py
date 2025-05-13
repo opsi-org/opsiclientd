@@ -2020,7 +2020,7 @@ class EventProcessingThread(KillableThread):
 						except Exception as err:
 							logger.error(err, exc_info=True)
 
-					config.setTemporaryConfigServiceUrls([])
+					self.permanent_service_connection.set_temporary_service_url(None)
 
 					# if cancelled, skip further execution
 					if not self.should_cancel():

@@ -32,10 +32,7 @@ import psutil  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
 from OPSI import __version__ as python_opsi_version  # type: ignore[import]
 from OPSI.Util import randomString  # type: ignore[import]
-from OPSI.Util.Message import (
-	ChoiceSubject,  # type: ignore[import]
-	MessageSubject,
-)
+from OPSI.Util.Message import ChoiceSubject, MessageSubject  # type: ignore[import]
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, log_context, secret_filter
 from opsicommon.package import OpsiPackage
