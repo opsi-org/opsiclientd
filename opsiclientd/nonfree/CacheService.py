@@ -1340,6 +1340,24 @@ class ProductCacheService(threading.Thread):
 		)
 		return self._repository
 
+	def _rename_product_cache_dir(self, product_id: str, new_product_id: str) -> None:
+		if product_id == new_product_id:
+			return
+
+		with self._cache_dir_lock:
+			product_cache_dir = self._product_cache_dir / product_id
+			if not product_cache_dir.exists():
+				raise ProductCacheException(f"Product cache dir '{product_cache_dir}' does not exist")
+
+			new_product_cache_dir = self._product_cache_dir / new_product_id
+			if new_product_cache_dir.exists():
+				logger.info("Product cache dir '%s' already exists, deleting it before rename", new_product_cache_dir)
+				shutil.rmtree(new_product_cache_dir)
+
+			logger.info("Renaming product cache dir '%s' to '%s'", product_cache_dir, new_product_cache_dir)
+			product_cache_dir.rename(new_product_cache_dir)
+			self._cache_dir_sizes[new_product_id] = self._cache_dir_sizes.pop(product_id, 0)
+
 	def _cacheProduct(self, productId: str, neededProducts: list[str]) -> None:
 		logger.notice(
 			"Caching product '%s' (max bandwidth: %s, dynamic bandwidth: %s)", productId, self._max_bandwidth, self._dynamic_andwidth
@@ -1392,10 +1410,9 @@ class ProductCacheService(threading.Thread):
 				with self._cache_dir_lock:
 					cur_product_cache_dir = self._product_cache_dir / productId
 					self._cache_dir_sizes[productId] = 0
-					if similar_product_cache_dir:
-						logger.info("Using similar product cache dir: %s", similar_product_cache_dir)
-						similar_product_cache_dir.rename(cur_product_cache_dir)
-						self._cache_dir_sizes[productId] = self._cache_dir_sizes.pop(similar_product_cache_dir.name, 0)
+				if similar_product_cache_dir:
+					logger.info("Using similar product cache dir: %s", similar_product_cache_dir)
+					self._rename_product_cache_dir(similar_product_cache_dir.name, productId)
 
 			assert cur_product_cache_dir
 			if not cur_product_cache_dir.exists():

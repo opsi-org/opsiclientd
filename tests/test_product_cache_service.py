@@ -251,6 +251,31 @@ def test_cache_product(tmp_path: Path) -> None:
 		product_ids_in_cache = sorted(d.name for d in product_cache_dir.iterdir())
 		assert product_ids_in_cache == sorted(product_ids_setup)
 
+		# Test similar product cache dir
+		service_client.updated_pocs.clear()
+		product_ids_setup = [products[0].id, products[1].id]
+		available_disk_space = product_cache_service.min_free_disk_space + (product_size * 10)  # Enough space for 10 products
+		prod1_cache_dir = product_cache_dir / products[1].id
+		similar_cache_dir = product_cache_dir / f"{products[1].id}--rfc156094"
+		prod1_cache_dir.rename(similar_cache_dir)
+		product_ids_in_cache = sorted(d.name for d in product_cache_dir.iterdir())
+		assert similar_cache_dir.name in product_ids_in_cache
+
+		renamed_called_with = ("", "")
+
+		def mock_rename_product_cache_dir(product_id: str, new_product_id: str) -> None:
+			nonlocal renamed_called_with
+			renamed_called_with = (product_id, new_product_id)
+			return ProductCacheService._rename_product_cache_dir(product_cache_service, product_id, new_product_id)
+
+		with patch.object(product_cache_service, "_rename_product_cache_dir", mock_rename_product_cache_dir):
+			product_cache_service._cacheProducts()
+			assert len(product_cache_service.last_errors) == 0
+			product_ids_in_cache = sorted(d.name for d in product_cache_dir.iterdir())
+			# Must be renamed and reused
+			assert renamed_called_with == (f"{products[1].id}--rfc156094", products[1].id)
+			assert similar_cache_dir.name not in product_ids_in_cache
+
 		# Test product_cache_max_size
 		# The unneeded products cached before must be removed from the cache.
 		service_client.updated_pocs.clear()

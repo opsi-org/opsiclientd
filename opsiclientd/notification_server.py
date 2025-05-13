@@ -314,7 +314,10 @@ class NotificationServer(SubjectsObserver, Thread):
 				self.requestEndConnections()
 				if hasattr(self._server, "close_clients"):
 					self._server.close_clients()
-				self._server.close()
+				try:
+					self._server.close()
+				except Exception as err:
+					logger.warning("Error closing server: %s", err, exc_info=True)
 				self._server = None
 
 		logger.debug("Waiting for NotificationServer thread to stop")
