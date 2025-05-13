@@ -32,8 +32,10 @@ import psutil  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
 from OPSI import __version__ as python_opsi_version  # type: ignore[import]
 from OPSI.Util import randomString  # type: ignore[import]
-from OPSI.Util.Message import ChoiceSubject  # type: ignore[import]
-from OPSI.Util.Message import MessageSubject
+from OPSI.Util.Message import (
+	ChoiceSubject,  # type: ignore[import]
+	MessageSubject,
+)
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, log_context, secret_filter
 from opsicommon.package import OpsiPackage
@@ -691,7 +693,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						]
 					cmd += [
 						f"{param_char}opsiservice",
-						config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False)[0],
+						config.get("config_service", "url")[0],
 						f"{param_char}clientid",
 						config.get("global", "host_id"),
 						f"{param_char}username",

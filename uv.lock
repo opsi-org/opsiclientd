@@ -1014,7 +1014,7 @@ wheels = [
 
 [[package]]
 name = "python-opsi"
-version = "4.3.9.4"
+version = "4.3.9.5"
 source = { registry = "https://pypi.uib.gmbh/simple" }
 dependencies = [
     { name = "attrs" },
@@ -1041,14 +1041,14 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "wmi", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.9.4.tar.gz", hash = "sha256:c5881fe2acba2bb1acbe4036842f55ba01a821c8f2b10116084bfff8c0dde8d3" }
+sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.9.5.tar.gz", hash = "sha256:200c1872b72c89f980348ff8ac16990af37bb087ffba2822c726d2828db65059" }
 wheels = [
-    { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.9.4-py3-none-any.whl", hash = "sha256:25df90930f3afbee386ea0d0a1ef10f80f751382b478d15cea1085aac9dcd22a" },
+    { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.9.5-py3-none-any.whl", hash = "sha256:05196c48708d94192d073bb003adbbd19256f6dbdd757cc1f2a0d229a5f3d21c" },
 ]
 
 [[package]]
 name = "python-opsi-common"
-version = "4.3.29.3"
+version = "4.3.29.5"
 source = { registry = "https://pypi.uib.gmbh/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -1077,9 +1077,9 @@ dependencies = [
     { name = "wmi", marker = "sys_platform == 'win32'" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.29.3.tar.gz", hash = "sha256:aef7a8eace9bc120dd362c65297c955022b8a2e1c86eddd052facf7282503d0e" }
+sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.29.5.tar.gz", hash = "sha256:c6c930898ad8e1b3210333fde62178884ad327091d4694a920f2beb617624b19" }
 wheels = [
-    { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.29.3-py3-none-any.whl", hash = "sha256:b325741390a8cda84e89331b171e029265ab14a081e2570e9fbd6d9beeed635d" },
+    { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.29.5-py3-none-any.whl", hash = "sha256:7aeae83cd3c2f3e05b31828750a8ae8e2e5b9e1006f74b493060d3a8b5a7ecf4" },
 ]
 
 [[package]]

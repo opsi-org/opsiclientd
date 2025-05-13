@@ -676,15 +676,6 @@ class Config(metaclass=Singleton):
 			return self._temporary_depot_path
 		return self.get("depot_server", "drive")
 
-	def setTemporaryConfigServiceUrls(self, temporaryConfigServiceUrls: list[str]) -> None:
-		self._temporaryConfigServiceUrls = forceList(temporaryConfigServiceUrls)
-
-	def getConfigServiceUrls(self, allowTemporaryConfigServiceUrls: bool = True) -> list[str]:
-		if allowTemporaryConfigServiceUrls and self._temporaryConfigServiceUrls:
-			return self._temporaryConfigServiceUrls
-
-		return self.get("config_service", "url")
-
 	def getDepot(
 		self,
 		configService: ServiceClient,

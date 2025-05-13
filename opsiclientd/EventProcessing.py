@@ -149,8 +149,12 @@ class EventProcessingThread(KillableThread):
 			logger.info("Event is user login event")
 
 	@property
+	def permanent_service_connection(self) -> PermanentServiceConnection:
+		return PermanentServiceConnection(self.opsiclientd)
+
+	@property
 	def service_client(self) -> ServiceClient:
-		return PermanentServiceConnection(self.opsiclientd).service_client
+		return self.permanent_service_connection.service_client
 
 	def _cancelable_sleep(self, secs: int) -> bool:
 		"""
@@ -1931,7 +1935,7 @@ class EventProcessingThread(KillableThread):
 				try:
 					config.set_temporary_depot_path(None)
 					config.setTemporaryDepotDrive(None)
-					config.setTemporaryConfigServiceUrls([])
+					self.permanent_service_connection.set_temporary_service_url(None)
 
 					self.startNotificationServer()
 					try:
@@ -1968,12 +1972,13 @@ class EventProcessingThread(KillableThread):
 					if self.event.eventConfig.useCachedConfig:
 						if self.opsiclientd.getCacheService().configCacheCompleted():
 							logger.notice("Event '%s' uses cached config and config caching is done", self.event.eventConfig.getId())
-							config.setTemporaryConfigServiceUrls(["https://127.0.0.1:4441/rpc"])
+							self.permanent_service_connection.set_temporary_service_url("https://127.0.0.1:4441/rpc")
 						else:
 							raise RuntimeError(
 								f"Event '{self.event.eventConfig.getId()}' uses cached config but config caching is not done"
 							)
 
+					self.permanent_service_connection.assert_connected()
 					if self.event.eventConfig.getConfigFromService or self.event.eventConfig.processActions:
 						self.wait_for_service_connection()
 

@@ -167,7 +167,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 
 def get_service_client(address: str | list[str] | None = None) -> ServiceClient:
 	if not address:
-		address = config.getConfigServiceUrls(allowTemporaryConfigServiceUrls=False)
+		address = config.get("config_service", "url")
 
 	logger.info("Using config service address: %r", address)
 	return ServiceClient(
@@ -204,15 +204,28 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		MessagebusListener.__init__(self)
 		self.daemon = True
 		self.running = False
-		self.connected = False
 		self._temp_host_id = None
 		self._should_stop = False
 		self._loop = asyncio.new_event_loop()
 		self._control_interface: ControlInterface | None = None
+		self._temporary_service_url: str | None
+		self._should_connect = False
 
 		with log_context({"instance": "permanent service connection"}):
 			self.service_client = get_service_client()
 			self.service_client.register_connection_listener(self)
+
+	def set_temporary_service_url(self, temporary_service_url: str | None) -> None:
+		if self._temporary_service_url == temporary_service_url:
+			return
+		self.service_client.disconnect()
+		self._temporary_service_url = temporary_service_url
+		self.service_client = get_service_client(self._temporary_service_url)
+		self._should_connect = True
+
+	def assert_connected(self) -> None:
+		if not self.service_client.connected:
+			self._should_connect = True
 
 	@property
 	def control_interface(self) -> ControlInterface:
@@ -227,28 +240,32 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 	async def _arun(self) -> None:
 		logger.notice("Permanent service connection starting")
 		# Initial connect, reconnect will be handled by ServiceClient
-		connect_wait = 3
+		connect_wait = 1
 		while not self._should_stop:
-			try:
-				logger.info("Trying to connect to service")
-				await self._loop.run_in_executor(None, self.service_client.connect)
-				break
-			except Exception as err:
-				logger.info("Failed to connect: %s", err)
-				logger.debug(err, exc_info=True)
-			for _sec in range(connect_wait):
-				if self._should_stop:
-					return
-				await asyncio.sleep(1)
-			connect_wait = min(round(connect_wait * 1.5), 300)
+			if self._should_connect:
+				try:
+					logger.info("Trying to connect to service")
+					await self._loop.run_in_executor(None, self.service_client.connect)
+					# Successfully connected, reset wait time to 1 seconds
+					self._should_connect
+					connect_wait = 1
+					break
+				except Exception as err:
+					logger.info("Failed to connect: %s", err)
+					logger.debug(err, exc_info=True)
+				for _sec in range(connect_wait):
+					if self._should_stop:
+						return
+					await asyncio.sleep(1)
+				connect_wait = min(round(connect_wait * 1.5), 300)
 
-		while not self._should_stop:
 			await asyncio.sleep(1)
 
 	def run(self) -> None:
 		with log_context({"instance": "permanent service connection"}):
 			logger.notice("Permanent service connection started")
 			self.running = True
+			self._should_connect = True
 			try:
 				self._loop.run_until_complete(self._arun())
 				self._loop.close()
@@ -302,7 +319,6 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		ConfigCacheService.delete_cache_dir()
 
 	def connection_established(self, service_client: ServiceClient) -> None:
-		self.connected = True
 		logger.notice(
 			"Connected to config server '%s' (name=%s, version=%s)",
 			service_client.base_url,
@@ -342,11 +358,9 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			logger.error(err, exc_info=True)
 
 	def connection_closed(self, service_client: ServiceClient) -> None:
-		self.connected = False
 		logger.notice("Connection to opsi service %s closed", service_client.base_url)
 
 	def connection_failed(self, service_client: ServiceClient, exception: Exception) -> None:
-		self.connected = False
 		logger.error("Connection to opsi service %s failed: %s", service_client.base_url, exception)
 		if isinstance(exception, OpsiServiceAuthenticationError):
 			logger.debug("Authentication failed, trying to get FQDN from OS")
