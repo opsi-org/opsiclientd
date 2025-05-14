@@ -218,15 +218,16 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 	def set_temporary_service_url(self, temporary_service_url: str | None) -> None:
 		if self._temporary_service_url == temporary_service_url:
 			return
-		if self._temporary_service_url:
-			logger.notice("Setting temporary service URL to '%r' and reconnecting", temporary_service_url)
-		else:
-			logger.notice("Removing temporary service URL and reconnecting")
-		self._should_connect = False
-		self.service_client.disconnect()
-		self._temporary_service_url = temporary_service_url
-		self.service_client = get_service_client(self._temporary_service_url)
-		self._should_connect = True
+		with log_context({"instance": "permanent service connection"}):
+			if self._temporary_service_url:
+				logger.notice("Setting temporary service URL to '%r' and reconnecting", temporary_service_url)
+			else:
+				logger.notice("Removing temporary service URL and reconnecting")
+			self._should_connect = False
+			self.service_client.disconnect()
+			self._temporary_service_url = temporary_service_url
+			self.service_client = get_service_client(self._temporary_service_url)
+			self._should_connect = True
 
 	def assert_connected(self) -> None:
 		if not self.service_client.connected:
@@ -349,21 +350,21 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			except Exception as err:
 				logger.warning(err)
 
-		try:
-			if service_client.messagebus_available:
-				logger.notice("Message bus available, connecting")
-				if config.get("config_service", "permanent_connection"):
-					try:
-						service_client.messagebus.reconnect_wait_min = int(config.get("config_service", "reconnect_wait_min"))
-						service_client.messagebus.reconnect_wait_max = int(config.get("config_service", "reconnect_wait_max"))
-					except Exception as err:
-						logger.error(err)
-					service_client.messagebus.register_messagebus_listener(self)
-					service_client.connect_messagebus()
-				else:
-					logger.info("Permanent connection disabled in config")
-		except Exception as err:
-			logger.error(err, exc_info=True)
+			try:
+				if service_client.messagebus_available:
+					logger.notice("Message bus available, connecting")
+					if config.get("config_service", "permanent_connection"):
+						try:
+							service_client.messagebus.reconnect_wait_min = int(config.get("config_service", "reconnect_wait_min"))
+							service_client.messagebus.reconnect_wait_max = int(config.get("config_service", "reconnect_wait_max"))
+						except Exception as err:
+							logger.error(err)
+						service_client.messagebus.register_messagebus_listener(self)
+						service_client.connect_messagebus()
+					else:
+						logger.info("Permanent connection disabled in config")
+			except Exception as err:
+				logger.error(err, exc_info=True)
 
 	def connection_closed(self, service_client: ServiceClient) -> None:
 		logger.notice("Connection to opsi service %s closed", service_client.base_url)
