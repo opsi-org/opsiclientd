@@ -158,7 +158,7 @@ class BaseMiddleware:
 	def remove_expired_sessions(self) -> None:
 		for session_id in list(self._sessions):
 			if self._sessions[session_id].expired:
-				logger.info("Sesson %r expired", session_id)
+				logger.info("Session %r expired", session_id)
 				del self._sessions[session_id]
 
 	async def authenticate(self, scope: Scope) -> None:
@@ -223,7 +223,7 @@ class BaseMiddleware:
 			session = self._sessions.get(session_id)
 			if session:
 				if session.expired:
-					logger.info("Sesson %r expired", session_id)
+					logger.info("Session %r expired", session_id)
 					del self._sessions[session_id]
 					session = None
 				else:
