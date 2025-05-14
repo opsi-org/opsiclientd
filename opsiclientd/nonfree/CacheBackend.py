@@ -8,7 +8,6 @@ Cache-Backend for Clients.
 
 import inspect
 import json
-import time
 import warnings
 from collections import defaultdict
 from types import MethodType
@@ -566,8 +565,6 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 				# Update is sufficient, creating a ProductOnClient is not required (see comment above)
 				self._masterBackend.productOnClient_updateObjects(updateProductOnClients)  # type: ignore[attr-defined]
 
-		self._cacheBackendInfo(self._masterBackend.backend_info())  # type: ignore[attr-defined]
-
 		filterProductIds = []
 		if config.get("cache_service", "sync_products_with_actions_only"):
 			filterProductIds = product_ids_with_action
@@ -745,22 +742,3 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 					setattr(self, methodName, MethodType(new_function, self))
 				except Exception as err:
 					logger.error("Failed to create method '%s': %s", methodName, err)
-
-	def _cacheBackendInfo(self, backendInfo: dict[str, Any]) -> None:
-		with open(self._opsiModulesFile, "w", encoding="utf-8") as file:
-			modules = backendInfo["modules"]
-			helpermodules = backendInfo["realmodules"]
-			for module, state in modules.items():
-				if helpermodules in ("customer", "expires"):
-					continue
-				if module in helpermodules:
-					state = helpermodules[module]
-				else:
-					if state:
-						state = "yes"
-					else:
-						state = "no"
-				file.write(f"{module.lower()} = {state}\n")
-			file.write(f"customer = {modules.get('customer', '')}\n")
-			file.write(f"expires = {modules.get('expires', time.strftime('%Y-%m-%d', time.localtime(time.time())))}\n")
-			file.write(f"signature = {modules.get('signature', '')}\n")

@@ -218,6 +218,11 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 	def set_temporary_service_url(self, temporary_service_url: str | None) -> None:
 		if self._temporary_service_url == temporary_service_url:
 			return
+		if self._temporary_service_url:
+			logger.notice("Setting temporary service URL to '%r' and reconnecting", temporary_service_url)
+		else:
+			logger.notice("Removing temporary service URL and reconnecting")
+		self._should_connect = False
 		self.service_client.disconnect()
 		self._temporary_service_url = temporary_service_url
 		self.service_client = get_service_client(self._temporary_service_url)
@@ -244,8 +249,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		while not self._should_stop:
 			if self._should_connect:
 				try:
-					logger.info("Trying to connect to service")
-					await self._loop.run_in_executor(None, self.service_client.connect)
+					await self._loop.run_in_executor(None, self._connect)
 					# Successfully connected, reset wait time to 1 seconds
 					self._should_connect = False
 					connect_wait = 1
@@ -259,6 +263,11 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 					connect_wait = min(round(connect_wait * 1.5), 300)
 
 			await asyncio.sleep(1)
+
+	def _connect(self) -> None:
+		with log_context({"instance": "permanent service connection"}):
+			logger.info("Trying to connect to service: %s", self.service_client.addresses)
+			self.service_client.connect()
 
 	def run(self) -> None:
 		with log_context({"instance": "permanent service connection"}):
@@ -287,7 +296,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		self.stop()
 
 	def connection_open(self, service_client: ServiceClient) -> None:
-		logger.notice("Opening connection to opsi service %s", service_client.base_url)
+		logger.notice("Opening connection to opsi service %s", service_client.addresses)
 		log_network_status()
 
 	def update_host_id(self) -> None:
@@ -342,7 +351,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 
 		try:
 			if service_client.messagebus_available:
-				logger.notice("OPSI message bus available")
+				logger.notice("Message bus available, connecting")
 				if config.get("config_service", "permanent_connection"):
 					try:
 						service_client.messagebus.reconnect_wait_min = int(config.get("config_service", "reconnect_wait_min"))
