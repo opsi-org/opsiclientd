@@ -336,6 +336,11 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		)
 
 		if not service_client.service_is_opsiclientd():
+			try:
+				update_os_ca_store(allow_remove=True)
+			except Exception as err:
+				logger.error("Failed to update CA store: %s", err, exc_info=True)
+
 			self.update_host_id()
 
 			try:
