@@ -62,6 +62,7 @@ class OpsiclientdNT(Opsiclientd):
 		self._ms_update_installer = None
 
 	def sendSAS(self) -> None:
+		logger.notice("Sending SAS")
 		from ctypes import windll  # type: ignore[attr-defined]
 
 		windll.sas.SendSAS(0)  # pylint: disable=no-member
