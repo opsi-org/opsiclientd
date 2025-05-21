@@ -208,7 +208,6 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		self._should_stop = False
 		self._loop = asyncio.new_event_loop()
 		self._control_interface: ControlInterface | None = None
-		self._temporary_service_url: str | None = None
 		self._should_connect = False
 		self._temporary_service_client: ServiceClient | None = None
 		with log_context({"instance": "permanent service connection"}):
@@ -222,16 +221,15 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		return self._service_client
 
 	def set_temporary_service_url(self, temporary_service_url: str | None) -> None:
-		if self._temporary_service_url == temporary_service_url:
-			return
 		with log_context({"instance": "permanent service connection"}):
-			if self._temporary_service_url:
-				logger.notice("Setting temporary service URL to '%r'", temporary_service_url)
-				self._temporary_service_client = get_service_client(temporary_service_url)
-				self._temporary_service_client.connect(connect_messagebus=False)
+			if temporary_service_url:
+				if not self._temporary_service_client or self._temporary_service_client.base_url != temporary_service_url:
+					logger.notice("Setting temporary service URL to '%r'", temporary_service_url)
+					self._temporary_service_client = get_service_client(temporary_service_url)
+					self._temporary_service_client.connect(connect_messagebus=False)
 			else:
-				logger.notice("Removing temporary service URL")
 				if self._temporary_service_client:
+					logger.notice("Removing temporary service URL")
 					self._temporary_service_client.stop()
 				self._temporary_service_client = None
 
