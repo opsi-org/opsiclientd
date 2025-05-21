@@ -73,24 +73,6 @@ pyinstaller:
         - opsiclientd_rpc
         - action_processor_starter
   icon: opsiclientd_data/windows/opsi.ico
-  before_script:
-    linux:
-      - "[ -e opsi-server ] && rm -rf opsi-server"
-      - url=$(git remote -v | grep fetch | cut -f2 | sed s'#/opsiclientd.git.*#/opsi-server.git#')
-      #- branch=$(git rev-parse --abbrev-ref HEAD)
-      - branch=v4.2
-      - GIT_TERMINAL_PROMPT=0 git clone --branch $branch $url
-    darwin:
-      - "[ -e opsi-server ] && rm -rf opsi-server"
-      - url=$(git remote -v | grep fetch | cut -f2 | sed s'#/opsiclientd.git.*#/opsi-server.git#')
-      #- branch=$(git rev-parse --abbrev-ref HEAD)
-      - branch=v4.2
-      - GIT_TERMINAL_PROMPT=0 git clone --branch $branch $url
-    windows:
-      - $url = git remote -v | where { $_ -match "fetch"} | % { $_ -replace "origin\s+", "" } | % { $_ -replace "/opsiclientd.git.*", "/opsi-server.git" }
-      - $branch = "v4.2"
-      - $env:GIT_TERMINAL_PROMPT = 0
-      - git clone --branch $branch $url
   data_files:
     # from opsiclientd
     - src: opsiclientd_data/common/static_html/**
@@ -99,10 +81,7 @@ pyinstaller:
       dst: opsiclientd_data/locale/
     - src: opsiclientd_data/${PLATFORM_SYSTEM}/**
       dst: opsiclientd_data/
-    # from opsi-server
-    - src: opsi-server/opsi-server_data/etc/backendManager/extend.d/10_opsi.conf
-      dst: opsiclientd_data/extend.d/
-    - src: opsi-server/opsi-server_data/etc/backendManager/extend.d/20_legacy.conf
+    - src: opsiclientd_data/extend.d/*
       dst: opsiclientd_data/extend.d/
   dirname: opsiclientd
   after_script:
