@@ -224,7 +224,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		with log_context({"instance": "permanent service connection"}):
 			if temporary_service_url:
 				if not self._temporary_service_client or self._temporary_service_client.base_url != temporary_service_url:
-					logger.notice("Setting temporary service URL to '%r'", temporary_service_url)
+					logger.notice("Setting temporary service URL to %r", temporary_service_url)
 					self._temporary_service_client = get_service_client(temporary_service_url)
 					self._temporary_service_client.connect(connect_messagebus=False)
 			else:
@@ -234,6 +234,10 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 				self._temporary_service_client = None
 
 	def assert_connected(self) -> None:
+		if self._temporary_service_client:
+			self._temporary_service_client.assert_connected()
+			return
+
 		if not self._service_client.connected:
 			self._should_connect = True
 
@@ -307,6 +311,10 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		log_network_status()
 
 	def update_host_id(self) -> None:
+		if self._temporary_service_client:
+			logger.debug("Temporary service client, not updating host id")
+			return
+
 		assert self._service_client
 		new_host_id = self._service_client.username
 		if self._service_client.new_host_id:
@@ -382,17 +390,15 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 
 	def connection_failed(self, service_client: ServiceClient, exception: Exception) -> None:
 		logger.error("Connection to opsi service %s failed: %s", service_client.base_url, exception)
-		if isinstance(exception, OpsiServiceAuthenticationError):
+		if isinstance(exception, OpsiServiceAuthenticationError) and not service_client.service_is_opsiclientd():
 			logger.debug("Authentication failed, trying to get FQDN from OS")
 			try:
 				fqdn = get_fqdn()
-				logger.debug("FQDN: %s, username: %s", fqdn, self._service_client.username)
-				if self._service_client.username != fqdn:
-					logger.notice(
-						"Connect failed with username '%s', got FQDN '%s' from OS, trying FQDN", self._service_client.username, fqdn
-					)
+				logger.debug("FQDN: %s, username: %s", fqdn, service_client.username)
+				if service_client.username != fqdn:
+					logger.notice("Connect failed with username '%s', got FQDN '%s' from OS, trying FQDN", service_client.username, fqdn)
 					# If connect succeeds, the new host id will be set in connection_established() / update_host_id()
-					self._service_client.username = fqdn
+					service_client.username = fqdn
 			except Exception as exc:
 				logger.warning("Failed to get FQDN: %s", exc)
 
