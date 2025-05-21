@@ -688,7 +688,7 @@ requires-dist = [
     { name = "pyelftools", specifier = ">=0.31" },
     { name = "python-multipart", specifier = ">=0.0" },
     { name = "python-opsi", specifier = ">=4.3.7.1,<4.4" },
-    { name = "python-opsi-common", specifier = ">=4.3.25.6,<4.4" },
+    { name = "python-opsi-common", specifier = ">=4.3.29.11,<4.4" },
     { name = "pywin32", marker = "sys_platform == 'win32'", specifier = ">=308" },
     { name = "pywinpty", marker = "sys_platform == 'win32'", specifier = ">=2.0" },
     { name = "pyzsync", specifier = ">=1.2.6,<1.3" },

@@ -210,27 +210,33 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		self._control_interface: ControlInterface | None = None
 		self._temporary_service_url: str | None = None
 		self._should_connect = False
-
+		self._temporary_service_client: ServiceClient | None = None
 		with log_context({"instance": "permanent service connection"}):
-			self.service_client = get_service_client()
-			self.service_client.register_connection_listener(self)
+			self._service_client = get_service_client()
+			self._service_client.register_connection_listener(self)
+
+	@property
+	def service_client(self) -> ServiceClient:
+		if self._temporary_service_client:
+			return self._temporary_service_client
+		return self._service_client
 
 	def set_temporary_service_url(self, temporary_service_url: str | None) -> None:
 		if self._temporary_service_url == temporary_service_url:
 			return
 		with log_context({"instance": "permanent service connection"}):
 			if self._temporary_service_url:
-				logger.notice("Setting temporary service URL to '%r' and reconnecting", temporary_service_url)
+				logger.notice("Setting temporary service URL to '%r'", temporary_service_url)
+				self._temporary_service_client = get_service_client(temporary_service_url)
+				self._temporary_service_client.connect(connect_messagebus=False)
 			else:
-				logger.notice("Removing temporary service URL and reconnecting")
-			self._should_connect = False
-			self.service_client.disconnect()
-			self._temporary_service_url = temporary_service_url
-			self.service_client = get_service_client(self._temporary_service_url)
-			self._should_connect = True
+				logger.notice("Removing temporary service URL")
+				if self._temporary_service_client:
+					self._temporary_service_client.stop()
+				self._temporary_service_client = None
 
 	def assert_connected(self) -> None:
-		if not self.service_client.connected:
+		if not self._service_client.connected:
 			self._should_connect = True
 
 	@property
@@ -267,8 +273,8 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 
 	def _connect(self) -> None:
 		with log_context({"instance": "permanent service connection"}):
-			logger.info("Trying to connect to service: %s", self.service_client.addresses)
-			self.service_client.connect()
+			logger.info("Trying to connect to service: %s", self._service_client.addresses)
+			self._service_client.connect()
 
 	def run(self) -> None:
 		with log_context({"instance": "permanent service connection"}):
@@ -287,7 +293,9 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		asyncio.run_coroutine_threadsafe(stop_running_processes(), self._loop).result(5)
 		time.sleep(3)
 		self._should_stop = True
-		self.service_client.stop()
+		self._service_client.stop()
+		if self._temporary_service_client:
+			self._temporary_service_client.stop()
 
 	def __enter__(self) -> PermanentServiceConnection:
 		self.start()
@@ -301,10 +309,10 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		log_network_status()
 
 	def update_host_id(self) -> None:
-		assert self.service_client
-		new_host_id = self.service_client.username
-		if self.service_client.new_host_id:
-			new_host_id = self.service_client.new_host_id
+		assert self._service_client
+		new_host_id = self._service_client.username
+		if self._service_client.new_host_id:
+			new_host_id = self._service_client.new_host_id
 			logger.info("Received new opsi host id %r", new_host_id)
 
 		if not new_host_id or new_host_id == config.get("global", "host_id"):
@@ -380,13 +388,13 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			logger.debug("Authentication failed, trying to get FQDN from OS")
 			try:
 				fqdn = get_fqdn()
-				logger.debug("FQDN: %s, username: %s", fqdn, self.service_client.username)
-				if self.service_client.username != fqdn:
+				logger.debug("FQDN: %s, username: %s", fqdn, self._service_client.username)
+				if self._service_client.username != fqdn:
 					logger.notice(
-						"Connect failed with username '%s', got FQDN '%s' from OS, trying FQDN", self.service_client.username, fqdn
+						"Connect failed with username '%s', got FQDN '%s' from OS, trying FQDN", self._service_client.username, fqdn
 					)
 					# If connect succeeds, the new host id will be set in connection_established() / update_host_id()
-					self.service_client.username = fqdn
+					self._service_client.username = fqdn
 			except Exception as exc:
 				logger.warning("Failed to get FQDN: %s", exc)
 
@@ -403,7 +411,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 				ref_id=message.id,
 				error=Error(code=0, message=str(err), details=str(traceback.format_exc())),
 			)
-			self.service_client.messagebus.send_message(response)
+			self._service_client.messagebus.send_message(response)
 
 	async def _process_message(self, message: Message) -> None:
 		if isinstance(message, JSONRPCRequestMessage):
@@ -421,9 +429,9 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 				}
 			if logger.isEnabledFor(TRACE):
 				logger.trace("Sending response: %s", response.to_dict())
-			await self.service_client.messagebus.async_send_message(response)
+			await self._service_client.messagebus.async_send_message(response)
 		elif isinstance(message, TraceRequestMessage):
-			await self.service_client.messagebus.async_send_message(
+			await self._service_client.messagebus.async_send_message(
 				TraceResponseMessage(
 					sender="@",
 					channel=message.back_channel or message.sender,
@@ -434,7 +442,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 				)
 			)
 		elif isinstance(message, TerminalMessage):
-			await process_terminal_message(message=message, send_message=self.service_client.messagebus.async_send_message)
+			await process_terminal_message(message=message, send_message=self._service_client.messagebus.async_send_message)
 		elif isinstance(message, FileTransferMessage):
 			if isinstance(message, FileUploadRequestMessage):
 				if message.terminal_id and not message.destination_dir:
@@ -445,9 +453,9 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			elif isinstance(message, FileDownloadRequestMessage):
 				if message.path and "{OPSICLIENTD_LOG_FILE_PATH}" in message.path:
 					message.path = replace_placeholders(message.path, PATH_PLACEHOLDERS)
-			await process_filetransfer_message(message=message, send_message=self.service_client.messagebus.async_send_message)
+			await process_filetransfer_message(message=message, send_message=self._service_client.messagebus.async_send_message)
 		elif isinstance(message, ProcessMessage):
-			await process_process_message(message=message, send_message=self.service_client.messagebus.async_send_message)
+			await process_process_message(message=message, send_message=self._service_client.messagebus.async_send_message)
 
 
 def download_from_depot(

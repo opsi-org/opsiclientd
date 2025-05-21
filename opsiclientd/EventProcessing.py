@@ -154,7 +154,7 @@ class EventProcessingThread(KillableThread):
 
 	@property
 	def service_client(self) -> ServiceClient:
-		return self.permanent_service_connection.service_client
+		return self.permanent_service_connection._service_client
 
 	def _cancelable_sleep(self, secs: int) -> bool:
 		"""
