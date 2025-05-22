@@ -151,13 +151,15 @@ def test_cache_product(tmp_path: Path) -> None:
 		self._product_cache_dir = product_cache_dir
 		self._product_cache_max_size = product_cache_max_size
 
+	service_client = MockService()
+
 	with (
 		use_logging_config(stderr_level=LOG_INFO),
 		patch("opsiclientd.nonfree.CacheService.get_disk_space_usage", mock_get_disk_space_usage),
 		patch("opsiclientd.nonfree.CacheService.ProductCacheService._updateConfig", _updateConfig),
+		patch("opsiclientd.nonfree.CacheService.ProductCacheService.service_client", return_value=service_client),
 	):
-		service_client = MockService()
-		product_cache_service = ProductCacheService(opsiclientd=None, service_client=service_client)  # type: ignore[arg-type]
+		product_cache_service = ProductCacheService(opsiclientd=None)  # type: ignore[arg-type]
 
 		# Test opsi-script only
 		service_client.updated_pocs.clear()
