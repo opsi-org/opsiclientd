@@ -215,6 +215,10 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			self._service_client.register_connection_listener(self)
 
 	@property
+	def main_service_client(self) -> ServiceClient:
+		return self._service_client
+
+	@property
 	def service_client(self) -> ServiceClient:
 		if self._temporary_service_client:
 			return self._temporary_service_client

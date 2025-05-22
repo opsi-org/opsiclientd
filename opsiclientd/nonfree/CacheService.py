@@ -60,13 +60,16 @@ logger = get_logger()
 
 
 class TransferSlotHeartbeat(threading.Thread):
-	def __init__(self, service_client: ServiceClient, depot_id: str, client_id: str) -> None:
+	def __init__(self, depot_id: str, client_id: str) -> None:
 		super().__init__(daemon=True)
 		self.should_stop = False
-		self.service_client = service_client
 		self.depot_id = depot_id
 		self.client_id = client_id
 		self.slot_id = None
+
+	@property
+	def service_client(self) -> ServiceClient:
+		return PermanentServiceConnection().service_client
 
 	def acquire(self) -> dict[str, str | float]:
 		response = self.service_client.depot_acquireTransferSlot(self.depot_id, self.client_id, self.slot_id)  # type: ignore[attr-defined]
@@ -103,7 +106,7 @@ class CacheService(threading.Thread):
 		self._configCacheService: ConfigCacheService | None = None
 
 	@property
-	def config_service_client(self) -> ServiceClient:
+	def service_client(self) -> ServiceClient:
 		return PermanentServiceConnection(self._opsiclientd).service_client
 
 	def stop(self) -> None:
@@ -114,12 +117,12 @@ class CacheService(threading.Thread):
 
 	def initializeProductCacheService(self) -> None:
 		if not self._productCacheService:
-			self._productCacheService = ProductCacheService(self._opsiclientd, self.config_service_client)
+			self._productCacheService = ProductCacheService(self._opsiclientd)
 			self._productCacheService.start()
 
 	def initializeConfigCacheService(self) -> None:
 		if not self._configCacheService:
-			self._configCacheService = ConfigCacheService(self._opsiclientd, self.config_service_client)
+			self._configCacheService = ConfigCacheService(self._opsiclientd)
 			self._configCacheService.start()
 
 	def setConfigCacheObsolete(self) -> None:
@@ -476,11 +479,10 @@ def init_from_service(service_client: ServiceClient) -> None:
 
 
 class ConfigCacheService(threading.Thread):
-	def __init__(self, opsiclientd: Opsiclientd, service_client: ServiceClient) -> None:
+	def __init__(self, opsiclientd: Opsiclientd) -> None:
 		try:
 			threading.Thread.__init__(self, name="ConfigCacheService")
 			self.opsiclientd = opsiclientd
-			self.service_client = service_client
 
 			self._configBackend: Backend | None = None
 			self._configCacheDir = os.path.join(config.get("cache_service", "storage_dir"), "config")
@@ -515,6 +517,10 @@ class ConfigCacheService(threading.Thread):
 			except Exception:
 				pass
 			raise err
+
+	@property
+	def service_client(self) -> ServiceClient:
+		return PermanentServiceConnection(self.opsiclientd).main_service_client
 
 	@property
 	def syncConfigToServerError(self) -> Exception | None:
@@ -847,10 +853,9 @@ class ProductCacheService(threading.Thread):
 	_product_cache_max_size: int
 	min_free_disk_space = 500_000_000
 
-	def __init__(self, opsiclientd: Opsiclientd, service_client: ServiceClient) -> None:
+	def __init__(self, opsiclientd: Opsiclientd) -> None:
 		threading.Thread.__init__(self, name="ProductCacheService")
 		self.opsiclientd = opsiclientd
-		self.service_client = service_client
 
 		self._updateConfig()
 
@@ -889,6 +894,10 @@ class ProductCacheService(threading.Thread):
 			self._state = pcss
 
 		self.update_cache_dir_sizes(force=True)
+
+	@property
+	def service_client(self) -> ServiceClient:
+		return PermanentServiceConnection(self.opsiclientd).service_client
 
 	def _updateConfig(self) -> None:
 		self._storage_dir = Path(config.get("cache_service", "storage_dir"))
@@ -951,7 +960,7 @@ class ProductCacheService(threading.Thread):
 		depot_id = self.service_client.configState_getClientToDepotserver(clientIds=config.get("global", "host_id"))[0]["depotId"]  # type: ignore[attr-defined]
 		try:
 			if hasattr(self.service_client, "depot_acquireTransferSlot"):
-				heartbeat_thread = TransferSlotHeartbeat(self.service_client, depot_id, config.get("global", "host_id"))
+				heartbeat_thread = TransferSlotHeartbeat(depot_id, config.get("global", "host_id"))
 				logger.notice("Acquiring transfer slot")
 				response = heartbeat_thread.acquire()
 				try_after_seconds = float(response.get("retry_after") or 0.0)
