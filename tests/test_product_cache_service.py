@@ -157,7 +157,7 @@ def test_cache_product(tmp_path: Path) -> None:
 		use_logging_config(stderr_level=LOG_INFO),
 		patch("opsiclientd.nonfree.CacheService.get_disk_space_usage", mock_get_disk_space_usage),
 		patch("opsiclientd.nonfree.CacheService.ProductCacheService._updateConfig", _updateConfig),
-		patch("opsiclientd.nonfree.CacheService.ProductCacheService.service_client", return_value=service_client),
+		patch("opsiclientd.nonfree.CacheService.ProductCacheService.service_client", service_client),
 	):
 		product_cache_service = ProductCacheService(opsiclientd=None)  # type: ignore[arg-type]
 
