@@ -273,13 +273,16 @@ class OpsiclientdNT(Opsiclientd):
 			System.lockSession(session_id)
 
 		for seconds in range(20):
-			if self._controlPipe.credentialProviderConnected(login_capable=True):
+			cpc = self._controlPipe.credentialProviderConnected(login_capable=True)
+			logger.debug("Login capable opsi credential provider connected: %s", cpc)
+			if cpc:
 				break
 			if seconds > 10:
 				self.sendSAS()
 			time.sleep(1.0)
 		if not self._controlPipe.credentialProviderConnected(login_capable=True):
 			raise RuntimeError("No login capable opsi credential provider connected")
+
 		logger.info("Login capable opsi credential provider connected, calling loginUser")
 		for response in self._controlPipe.executeRpc("loginUser", [username, password], timeout=30):
 			logger.debug("loginUser response: %r", response)
