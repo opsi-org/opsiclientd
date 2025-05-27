@@ -277,7 +277,7 @@ class OpsiclientdNT(Opsiclientd):
 			logger.debug("Login capable opsi credential provider connected: %s", cpc)
 			if cpc:
 				break
-			if seconds > 10:
+			if seconds > 3:
 				self.sendSAS()
 			time.sleep(1.0)
 		if not self._controlPipe.credentialProviderConnected(login_capable=True):
