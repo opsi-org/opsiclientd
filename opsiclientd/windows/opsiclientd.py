@@ -271,11 +271,12 @@ class OpsiclientdNT(Opsiclientd):
 		assert self._controlPipe
 		for session_id in System.getActiveSessionIds(protocol="console"):
 			System.lockSession(session_id)
-		self.sendSAS()
-		for _unused in range(20):
+
+		for seconds in range(20):
 			if self._controlPipe.credentialProviderConnected(login_capable=True):
 				break
-			self.sendSAS()
+			if seconds > 10:
+				self.sendSAS()
 			time.sleep(1.0)
 		if not self._controlPipe.credentialProviderConnected(login_capable=True):
 			raise RuntimeError("No login capable opsi credential provider connected")
