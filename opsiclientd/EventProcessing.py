@@ -1897,10 +1897,12 @@ class EventProcessingThread(KillableThread):
 
 					time.sleep(1)
 		finally:
+			service_url = self.service_client.base_url
+			self._serviceUrlSubject.setMessage(service_url)
 			if self.service_client.connected:
-				self.setStatusMessage(_("Connected to config server '%s'") % self.service_client.base_url)
+				self.setStatusMessage(_("Connected to config server '%s'") % service_url)
 			else:
-				self.setStatusMessage(_("Failed to connect to config server '%s'") % self.service_client.base_url)
+				self.setStatusMessage(_("Failed to connect to config server '%s'") % service_url)
 
 			self._detailSubjectProxy.setMessage("")
 
