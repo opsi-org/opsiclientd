@@ -88,6 +88,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		self._snapshotBackend: ConfigDataBackend | None = None
 		self._clientId: str | None = None
 		self._depotId: str | None = None
+		self._backendInfo: dict[str, Any] = {}
 		self._configValuesCacheFile: str | None = None
 		self._productPropertyValuesCacheFile: str | None = None
 		self._backendChangeListeners: list[BackendModificationListener] = []
@@ -135,6 +136,9 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		self, licenses: bool = False, legacy_modules: bool = False, dates: bool = False, allow_cache: bool = True
 	) -> dict[str, tuple[str, ...]]:
 		return {"available_modules": OPSI_MODULE_IDS}
+
+	def backend_info(self) -> dict[str, Any]:
+		return self._backendInfo
 
 	def log_write(self, logType: str, data: str, objectId: str | None = None, append: bool = False) -> None:
 		pass

@@ -543,7 +543,11 @@ class ConfigCacheService(threading.Thread):
 		self._snapshotBackend.backend_createBase()
 
 		self._cacheBackend = ClientCacheBackend(
-			workBackend=self._workBackend, snapshotBackend=self._snapshotBackend, clientId=clientId, **backendArgs
+			workBackend=self._workBackend,
+			snapshotBackend=self._snapshotBackend,
+			clientId=clientId,
+			backendInfo={"opsiVersion": self._state.get("server_version", "4.3.0.0"), "modules": {"valid": False}, "realmodules": {}},
+			**backendArgs,
 		)
 
 		self._createConfigBackend()
