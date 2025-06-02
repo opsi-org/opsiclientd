@@ -49,5 +49,5 @@ class OpsiclientdPosix(Opsiclientd):
 		shutdownFile = os.path.join(self._PID_DIR, "shutdown")
 		return os.path.exists(shutdownFile)
 
-	def loginUser(self, username: str, password: str) -> bool:
+	def loginUser(self, domain: str, username: str, password: str) -> bool:
 		raise NotImplementedError("Not implemented on posix")

@@ -32,7 +32,7 @@ import win32net  # type: ignore[import]
 import win32netcon  # type: ignore[import]
 import win32security  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
-from opsicommon.logging import get_logger  # type: ignore[import]
+from opsicommon.logging import get_logger, secret_filter  # type: ignore[import]
 from opsicommon.types import forceBool  # type: ignore[import]
 
 from opsiclientd import config
@@ -267,7 +267,8 @@ class OpsiclientdNT(Opsiclientd):
 		assert self._ms_update_installer
 		return self._ms_update_installer.isBusy
 
-	def loginUser(self, username: str, password: str) -> bool:
+	def loginUser(self, domain: str, username: str, password: str) -> bool:
+		secret_filter.add_secrets(password)
 		assert self._controlPipe
 		for session_id in System.getActiveSessionIds(protocol="console"):
 			System.lockSession(session_id)
@@ -283,8 +284,8 @@ class OpsiclientdNT(Opsiclientd):
 		if not self._controlPipe.credentialProviderConnected(login_capable=True):
 			raise RuntimeError("No login capable opsi credential provider connected")
 
-		logger.info("Login capable opsi credential provider connected, calling loginUser")
-		for response in self._controlPipe.executeRpc("loginUser", [username, password], timeout=30):
+		logger.info("Login capable opsi credential provider connected, calling loginUser (domain=%r, username=%r)", domain, username)
+		for response in self._controlPipe.executeRpc("loginUser", [domain, username, password], timeout=30):
 			logger.debug("loginUser response: %r", response)
 			if isinstance(response, (JSONRPCResponse, JSONRPC20Response)) and response.result:
 				return True

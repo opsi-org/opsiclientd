@@ -409,7 +409,7 @@ class Opsiclientd(EventListener, threading.Thread):
 	def sendSAS(self) -> None:
 		raise NotImplementedError(f"Not implemented on {platform.system()}")
 
-	def loginUser(self, username: str, password: str) -> bool:
+	def loginUser(self, domain: str, username: str, password: str) -> bool:
 		raise NotImplementedError(f"Not implemented on {platform.system()}")
 
 	def isRunning(self) -> bool:

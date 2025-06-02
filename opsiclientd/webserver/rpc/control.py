@@ -14,6 +14,7 @@ import os
 import platform
 import re
 import shlex
+import socket
 import subprocess
 import sys
 import threading
@@ -578,9 +579,16 @@ class ControlInterface(PipeControlInterface):
 		return eval(code_lines[-1])
 
 	def loginUser(self, username: str, password: str) -> None:
+		secret_filter.add_secrets(password)
 		try:
-			secret_filter.add_secrets(password)
-			self.opsiclientd.loginUser(username, password)
+			if "\\" in username:
+				domain, username = username.split("\\", 1)
+			elif "@" in username:
+				username, domain = username.split("@", 1)
+			else:
+				domain = socket.gethostname()
+			domain = domain.strip().upper()
+			self.opsiclientd.loginUser(domain, username, password)
 		except Exception as err:
 			logger.error(err, exc_info=True)
 			raise
