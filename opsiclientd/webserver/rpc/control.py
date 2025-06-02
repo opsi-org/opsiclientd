@@ -597,7 +597,7 @@ class ControlInterface(PipeControlInterface):
 		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
 			System.logoffSession(session_id)
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
-		self.opsiclientd.loginUser(user_info["name"], user_info["password"])
+		self.opsiclientd.loginUser(socket.gethostname().upper(), user_info["name"], user_info["password"])
 
 	def getOpenFiles(self, process_filter: str = ".*", path_filter: str = ".*") -> list[dict[str, str]]:
 		re_process_filter = re.compile(process_filter, flags=re.IGNORECASE)
@@ -903,7 +903,7 @@ class ControlInterface(PipeControlInterface):
 					break
 				time.sleep(0.5)
 
-		self.opsiclientd.loginUser(user_info["name"], user_info["password"])
+		self.opsiclientd.loginUser(socket.gethostname().upper(), user_info["name"], user_info["password"])
 
 	def _run_powershell_script_as_opsi_setup_user(
 		self,
