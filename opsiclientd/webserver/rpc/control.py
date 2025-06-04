@@ -737,7 +737,7 @@ class ControlInterface(PipeControlInterface):
 		except Exception as exception:
 			logger.error("Could not create log directory %s: %s", log_dir, exception)
 
-		opsi_script_logfile = log_dir / "opsiclientd.log"
+		opsi_script_logfile = log_dir / "opsi-script-ad-hoc.log"
 
 		with make_temp_dir() as temp_dir:
 			temp_script_file_path = os.path.join(temp_dir, "temporary_opsiscript.opsiscript")
