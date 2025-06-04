@@ -20,6 +20,7 @@ import pytest
 from fastapi.testclient import TestClient
 from httpx._auth import BasicAuth
 from httpx._models import Cookies
+from httpx._types import AuthTypes
 from opsicommon.objects import deserialize, serialize
 from starlette.types import Scope
 
@@ -82,13 +83,16 @@ class OpsiclientdTestClient(TestClient):
 		return self._username, self._password
 
 	@auth.setter
-	def auth(self, basic_auth: tuple[str, str] | None) -> None:
-		if basic_auth is None:
-			self._username = self._password = None
-			self._auth = None
-		else:
-			self._username, self._password = basic_auth
+	def auth(self, auth: AuthTypes) -> None:
+		if not isinstance(auth, tuple):
+			raise ValueError("Auth type not supported")
+
+		self._username = str(auth[0]) if auth[0] else None
+		self._password = str(auth[1]) if auth[1] else None
+		if self._username and self._password:
 			self._auth = BasicAuth(self._username, self._password)
+		else:
+			self._auth = None
 
 	def reset_cookies(self) -> None:
 		self.cookies = Cookies()

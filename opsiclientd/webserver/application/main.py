@@ -31,7 +31,7 @@ config = Config()
 def setup_application(opsiclientd: Opsiclientd) -> FastAPI:
 	set_opsiclientd(opsiclientd)
 	app = FastAPI()
-	app.add_middleware(BaseMiddleware)
+	app.add_middleware(BaseMiddleware)  # type: ignore[arg-type]
 	setup_index(app)
 	setup_info(app)
 	setup_upload(app)

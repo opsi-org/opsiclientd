@@ -818,8 +818,9 @@ class EventProcessingThread(KillableThread):
 					.get(productOnDepot["productVersion"], {})
 					.get(productOnDepot["packageVersion"])
 				)
-				if not product:
+				if not product or not product.userLoginScript:
 					continue
+
 				logger.info(
 					"User login script '%s' found for product %s_%s-%s",
 					product.userLoginScript,
@@ -828,7 +829,7 @@ class EventProcessingThread(KillableThread):
 					product.packageVersion,
 				)
 				userLoginScripts.append(os.path.join(productDir, product.userLoginScript))
-				productInfo.append(ProductInfo(product.id, product.productVersion, product.packageVersion, product.name))
+				productInfo.append(ProductInfo(product.id, product.productVersion, product.packageVersion, product.name or ""))
 
 			if not userLoginScripts:
 				logger.notice("No user login script found, nothing to do")
