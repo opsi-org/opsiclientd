@@ -8,7 +8,7 @@ def mocked_translation(input: str) -> str:
 	return "Dies ist ein Test mit %s, %.2f und %d"
 
 
-def test_localization():
+def test_localization() -> None:
 	# Test that the translation function is callable
 	assert callable(_), "Translation function should be callable"
 
