@@ -967,6 +967,13 @@ class EventProcessingThread(KillableThread):
 							)
 
 				additionalParams = ""
+				if includeProductIds or excludeProductIds:
+					if RUNNING_ON_LINUX or RUNNING_ON_DARWIN:
+						additionalParams = "-processproducts " + ",".join(productIds)
+					elif RUNNING_ON_WINDOWS:
+						additionalParams = "/processproducts " + ",".join(productIds)
+					else:
+						logger.error("Unknown operating system - skipping processproducts parameter for action processor call")
 
 				if productInfo:
 					depot_id = config.get("depot_server", "depot_id")
@@ -1185,12 +1192,6 @@ class EventProcessingThread(KillableThread):
 			actionProcessorCommand = actionProcessorCommand.replace("%service_url%", self.service_client.base_url or "?")
 			actionProcessorCommand = actionProcessorCommand.replace("%service_session%", serviceSession)
 			actionProcessorCommand = actionProcessorCommand.replace("%depot_path%", config.get_depot_path())
-			# With this we always explicitly tell opsi-script which products to install (!!)
-			if "productlist %action_processor_productIds%" not in actionProcessorCommand and productIds:
-				if RUNNING_ON_WINDOWS:
-					actionProcessorCommand += " /processproducts " + ",".join(productIds)
-				else:
-					actionProcessorCommand += " -processproducts " + ",".join(productIds)
 			actionProcessorCommand = actionProcessorCommand.replace(
 				"%action_processor_productids%", ",".join(self.event.eventConfig.actionProcessorProductIds)
 			)
