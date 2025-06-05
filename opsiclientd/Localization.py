@@ -10,6 +10,7 @@ Localisation of opsiclientd.
 import gettext
 import locale
 import platform
+import re
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -21,6 +22,12 @@ logger = get_logger()
 locale_path: Path | None = None
 translation: gettext.GNUTranslations | None = None
 translation_func = None
+PLACEHOLDER_PATTERN = re.compile(r"%[:\.\d]*[diouxXeEfFgGcrs%]")
+
+
+def extract_percent_placeholders(s: str) -> list[str]:
+	# Matches %s, %d, %.2f, etc.
+	return re.findall(PLACEHOLDER_PATTERN, s)
 
 
 def _(message: str) -> str:
@@ -28,6 +35,13 @@ def _(message: str) -> str:
 	if not translation_func:
 		return message
 	translated_message = translation_func(message)
+	if extract_percent_placeholders(message) != extract_percent_placeholders(translated_message):
+		logger.warning(
+			"Translation of %r to %r changed the number of placeholders, using original message instead.",
+			message,
+			translated_message,
+		)
+		return message
 	logger.trace("Translated %r to %r", message, translated_message)
 	return translated_message
 
