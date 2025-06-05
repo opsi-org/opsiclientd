@@ -84,7 +84,7 @@ class State(metaclass=Singleton):
 						env = proc.environ()
 						if env.get("DISPLAY") and proc.uids()[0] >= 1000:
 							return True
-					except psutil.AccessDenied:
+					except (psutil.AccessDenied, psutil.NoSuchProcess):
 						pass
 			elif RUNNING_ON_DARWIN:
 				if Path("/dev/console").owner() != "root":

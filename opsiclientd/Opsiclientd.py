@@ -639,7 +639,7 @@ class Opsiclientd(EventListener, threading.Thread):
 							if proc.name().lower() == "logonui.exe":
 								logger.notice("Restart marker found, restarting LogonUI.exe")
 								proc.kill()
-						except psutil.AccessDenied as ps_err:
+						except (psutil.AccessDenied, psutil.NoSuchProcess) as ps_err:
 							logger.info(ps_err)
 		except Exception as err:
 			logger.error(err, exc_info=True)
