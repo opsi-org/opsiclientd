@@ -285,14 +285,26 @@ def install_service_windows() -> None:
 
 
 def install_service_linux() -> None:
-	logger.notice("Install systemd service")
+	logger.notice("Install opsiclientd service")
 	# subprocess.check_call(["systemctl", "daemon-reload"])
 	subprocess.check_call(["systemctl", "enable", "opsiclientd.service"])
 
 
 def install_service_macos() -> None:
-	logger.notice("Bootstrap launchd service")
-	subprocess.check_call(["launchctl", "bootstrap", "system", "/Library/LaunchDaemons/org.opsi.opsiclientd.plist"])
+	logger.notice("Install opsiclientd service")
+	proc = subprocess.run(
+		["launchctl", "bootstrap", "system", "/Library/LaunchDaemons/org.opsi.opsiclientd.plist"],
+		check=False,
+		capture_output=True,
+		text=True
+	)
+	logger.debug("launchctl bootstrap output: %s", proc.stderr or '' + proc.stdout or '')
+	if proc.returncode not in (0, 37):
+		# 37 is the error code for "already bootstrapped"
+		error = f"Failed to launchctl bootstrap opsiclientd service: {proc.returncode} - {proc.stderr or '' + proc.stdout or ''}"
+		logger.error(error)
+		raise RuntimeError(error)
+
 
 
 def install_service() -> None:
