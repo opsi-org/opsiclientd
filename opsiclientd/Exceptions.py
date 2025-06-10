@@ -11,7 +11,7 @@ from opsicommon.types import forceUnicode
 
 
 class OpsiclientdError(Exception):
-	ExceptionShortDescription = "Opsiclientd error"
+	ExceptionShortDescription = "opsiclientd error"
 
 	def __init__(self, message: str = "") -> None:
 		Exception.__init__(self)

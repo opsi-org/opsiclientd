@@ -188,7 +188,7 @@ class KioskControlInterface(PipeControlInterface):
 	def getConfigDataFromOpsiclientd(self, get_depot_id: bool = True, get_active_events: bool = True) -> dict[str, Any]:
 		result: dict[str, Any] = {}
 		result["opsiclientd_version"] = (
-			f"Opsiclientd {__version__} [python-opsi={python_opsi_version}python-opsi-common={opsicommon_version}]"
+			f"opsiclientd {__version__} [python-opsi={python_opsi_version}python-opsi-common={opsicommon_version}]"
 		)
 
 		if get_depot_id:

@@ -110,7 +110,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		logger.debug("Opsiclient initiating")
 
 		EventListener.__init__(self)
-		threading.Thread.__init__(self, name="Opsiclientd")
+		threading.Thread.__init__(self, name="opsiclientd")
 
 		self.config: Config = config
 		self.state: State = state
@@ -650,7 +650,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			parent = psutil.Process(os.getpid()).parent()
 			parent_name = parent.name() if parent else None
 			event_title = (
-				f"Opsiclientd {__version__} [python-opsi={python_opsi_version},python-opsi-common={opsicommon_version}] "
+				f"opsiclientd {__version__} [python-opsi={python_opsi_version},python-opsi-common={opsicommon_version}] "
 				f"running on {platform.platform()!r}"
 			)
 			logger.essential(event_title)
