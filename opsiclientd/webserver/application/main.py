@@ -19,6 +19,7 @@ from opsiclientd.webserver.application.info import setup as setup_info
 from opsiclientd.webserver.application.kiosk import setup as setup_kiosk
 from opsiclientd.webserver.application.log_viewer import setup as setup_log_viewer
 from opsiclientd.webserver.application.middleware import BaseMiddleware
+from opsiclientd.webserver.application.python_executor import setup as setup_python_executor
 from opsiclientd.webserver.application.terminal import setup as setup_terminal
 from opsiclientd.webserver.application.upload import setup as setup_upload
 
@@ -40,6 +41,7 @@ def setup_application(opsiclientd: Opsiclientd) -> FastAPI:
 	setup_log_viewer(app)
 	setup_terminal(app)
 	setup_cache_service(app)
+	setup_python_executor(app)
 	if config.get("control_server", "kiosk_api_active"):
 		setup_kiosk(app)
 	return app
