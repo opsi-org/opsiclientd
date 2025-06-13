@@ -1007,7 +1007,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		# to the binary, config, log file and winlogon desktop
 		elevation_required = True
 		alt_command = config.get("opsiclientd_notifier", "alt_command")
-		if notifier_id in config.get("opsiclientd_notifier", "alt_ids") and alt_command and Path(shlex.split(alt_command)[0]).exists():
+		if notifier_id in config.get("opsiclientd_notifier", "alt_ids") and alt_command:
 			elevation_required = desktop != "default"
 			if elevation_required and link_handling == "browser":
 				# Click on link would start elevated browser
