@@ -292,19 +292,23 @@ def install_service_linux() -> None:
 
 def install_service_macos() -> None:
 	logger.notice("Install opsiclientd service")
+	proc = subprocess.run(["launchctl", "list"], check=False, capture_output=True, text=True)
+	if "org.opsi.opsiclientd" in proc.stdout:  # on arm machines trying to bootstraps a present service leads to IO-Errors
+		logger.info("opsiclientd service already installed")
+		return
+
 	proc = subprocess.run(
 		["launchctl", "bootstrap", "system", "/Library/LaunchDaemons/org.opsi.opsiclientd.plist"],
 		check=False,
 		capture_output=True,
-		text=True
+		text=True,
 	)
-	logger.debug("launchctl bootstrap output: %s", proc.stderr or '' + proc.stdout or '')
+	logger.debug("launchctl bootstrap output: %s", proc.stderr or "" + proc.stdout or "")
 	if proc.returncode not in (0, 37):
 		# 37 is the error code for "already bootstrapped"
 		error = f"Failed to launchctl bootstrap opsiclientd service: {proc.returncode} - {proc.stderr or '' + proc.stdout or ''}"
 		logger.error(error)
 		raise RuntimeError(error)
-
 
 
 def install_service() -> None:
