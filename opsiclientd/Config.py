@@ -914,6 +914,14 @@ class Config(metaclass=Singleton):
 				config_states[config_state.configId] = config_state.values
 
 		smart_cache: bool | None = None
+		if "clientconfig.smart_cache" in config_states and config_states["clientconfig.smart_cache"]:
+			smart_cache = bool(config_states["clientconfig.smart_cache"][0])
+			logger.info("SmartCache WAN is set to %s", smart_cache)
+			if smart_cache is False:
+				logger.info("SmartCache WAN is disabled")
+				# Is set here so that the configs can be overwritten
+				self.setProductCachingMode(False)
+
 		for config_id, values in config_states.items():
 			logger.info("Got config state from service: %r=%r", config_id, values)
 
@@ -931,13 +939,8 @@ class Config(metaclass=Singleton):
 				self.set("depot_server", "username", values[0])
 			elif config_id == "clientconfig.suspend_bitlocker_on_reboot":
 				self.set("global", "suspend_bitlocker_on_reboot", values[0])
-			elif config_id in "clientconfig.smart_cache":
-				smart_cache = bool(values and values[0])
-				if smart_cache is False:
-					logger.info("SmartCache WAN is disabled")
-					# Is set here so that the configs can be overwritten
-					self.setProductCachingMode(False)
-
+			elif config_id == "clientconfig.smart_cache":
+				continue  # handled above (False) and below (True)
 			elif config_id.startswith("opsiclientd."):
 				try:
 					parts = config_id.lower().split(".")
