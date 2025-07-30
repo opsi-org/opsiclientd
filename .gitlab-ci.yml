@@ -195,7 +195,7 @@ build:pyinstaller-windows-x86:
     - $Env:UV_PYTHON = ((uv python list --managed-python --all-arches | findstr 3.11 | findstr "\-x86\-" | findstr /v freethreaded) -split ' ')[0]
     - $Env:UV_PYTHON_PREFERENCE = "only-managed"
     - uv run opsi-dev-cli -l debug pyinstaller build
-    - opsi-dev-cli -l info -l info signserver sign dist\opsiclientd\
+    - opsi-dev-cli -l info signserver sign dist\opsiclientd\
     - Move-Item -Path dist\opsiclientd -Destination opsiclientd_windows_x86
     # Check if binary is working
     - opsiclientd_windows_x86\opsiclientd.exe --version
