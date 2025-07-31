@@ -88,6 +88,7 @@ pyinstaller:
     linux:
       - mv dist/opsiclientd/_internal/opsiclientd_data dist/opsiclientd/
       - chmod -R g-w,o-w dist/opsiclientd
+      - rm dist/opsiclientd/_internal/libpam.so*  # remove libpam.so* files so pam find_library falls back to system libpam
     darwin:
       - mv dist/opsiclientd/_internal/opsiclientd_data dist/opsiclientd/
       - chmod -R g-w,o-w dist/opsiclientd
