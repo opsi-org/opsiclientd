@@ -303,7 +303,7 @@ class BaseMiddleware:
 		error = None
 
 		if isinstance(err, (BackendAuthenticationError, BackendPermissionDeniedError)):
-			logger.warning(err, exc_info=True)
+			logger.warning(err)
 			status_code = status.HTTP_401_UNAUTHORIZED
 			if scope["request_headers"].get("X-Requested-With", "").lower() != "xmlhttprequest":
 				headers = AUTH_HEADERS
