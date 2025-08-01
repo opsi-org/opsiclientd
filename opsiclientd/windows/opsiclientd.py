@@ -271,7 +271,9 @@ class OpsiclientdNT(Opsiclientd):
 		secret_filter.add_secrets(password)
 		assert self._controlPipe
 		for session_id in System.getActiveSessionIds(protocol="console"):
-			System.lockSession(session_id)
+			if self.getCurrentActiveDesktopName(session_id).lower() != "winlogon":
+				System.lockSession(session_id)
+			break
 
 		for seconds in range(20):
 			cpc = self._controlPipe.credentialProviderConnected(login_capable=True)
