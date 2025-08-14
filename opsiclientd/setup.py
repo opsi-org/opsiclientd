@@ -435,14 +435,16 @@ def cleanup_registry_environment_path() -> None:
 	) as key_handle:
 		try:
 			reg_value, value_type = winreg.QueryValueEx(key_handle, "PATH")
+			logger.debug("Current PATH value (%r): %r", value_type, reg_value)
 			cur_reg_values = reg_value.split(";")
 			# Remove empty values and values containing "pywin32_system32" and "opsi"
 			reg_values = list(dict.fromkeys(v for v in cur_reg_values if v and not ("pywin32_system32" in v and "opsi" in v)))
 			if reg_values == cur_reg_values:
-				# Unchanged
+				logger.debug("PATH value unchanged")
 				return
 
 			reg_value = ";".join(reg_values)
+			logger.debug("Setting new PATH value (%r): %r", value_type, reg_values)
 			winreg.SetValueEx(key_handle, "PATH", 0, value_type, reg_value)
 		except FileNotFoundError:
 			logger.warning("Key 'PATH' not found in registry")
