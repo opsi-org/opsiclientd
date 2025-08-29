@@ -271,7 +271,8 @@ class OpsiclientdNT(Opsiclientd):
 		secret_filter.add_secrets(password)
 		assert self._controlPipe
 		for session_id in System.getActiveSessionIds(protocol="console"):
-			if self.getCurrentActiveDesktopName(session_id).lower() != "winlogon":
+			desktop = self.getCurrentActiveDesktopName(session_id)
+			if desktop and desktop.lower() != "winlogon":
 				System.lockSession(session_id)
 			break
 
