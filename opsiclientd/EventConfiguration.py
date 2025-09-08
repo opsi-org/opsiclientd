@@ -91,6 +91,7 @@ class EventConfig:
 		self.syncConfigFromServer = forceBool(conf.get("syncConfigFromServer", False))
 		self.useCachedConfig = forceBool(conf.get("useCachedConfig", False))
 		self.workingWindow = str(conf.get("workingWindow", ""))
+		self.priority = int(conf.get("priority", 0))
 
 	def getConfig(self) -> dict[str, Any]:
 		config = {}
