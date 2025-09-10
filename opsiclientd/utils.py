@@ -15,8 +15,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import netifaces  # type: ignore[import]
 from opsicommon.logging import get_logger
+from opsicommon.system.network import get_network_info
 
 from opsiclientd.Config import Config
 
@@ -132,12 +132,10 @@ def get_version_from_dos_binary(filename: str | Path) -> str:
 
 def log_network_status() -> None:
 	status_string = ""
-	for interface in netifaces.interfaces():
-		for protocol in (netifaces.AF_INET, netifaces.AF_INET6):
-			af_inet_list = netifaces.ifaddresses(interface).get(protocol, {})
-			if af_inet_list:
-				for entry in af_inet_list:
-					status_string += f"Interface {interface}, Address {entry.get('addr')}, Netmask {entry.get('netmask')}\n"
+	for interface in get_network_info().interfaces:
+		status_string += (
+			f"Interface {interface.name}, Address {interface.address}, Family {interface.family}, Netmask {interface.netmask}\n"
+		)
 	logger.info("Current network Status:\n%s", status_string)
 
 
