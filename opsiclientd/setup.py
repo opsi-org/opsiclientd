@@ -8,7 +8,6 @@ setup tasks
 """
 
 import datetime
-import ipaddress
 import os
 import subprocess
 import sys
@@ -23,7 +22,7 @@ from opsicommon.client.opsiservice import ServiceClient
 from opsicommon.logging import get_logger, secret_filter
 from opsicommon.ssl import as_pem, create_ca, create_server_cert
 from opsicommon.system import get_system_uuid
-from opsicommon.system.network import get_fqdn, get_hostnames, get_ip_addresses
+from opsicommon.system.network import get_fqdn, get_hostnames, get_network_info
 from packaging import version
 
 from opsiclientd import __version__
@@ -47,12 +46,12 @@ SERVICES_PIPE_TIMEOUT_WINDOWS = 120000
 
 def get_ips() -> set[str]:
 	ips = {"127.0.0.1", "::1"}
-	for addr in get_ip_addresses():
-		if addr["family"] in ("ipv4", "ipv6") and addr["address"] not in ips:
-			if addr["address"].startswith("fe80"):
+	for interface in get_network_info().interfaces:
+		if interface.address.compressed not in ips:
+			if interface.address.is_link_local:
 				continue
 			try:
-				ips.add(ipaddress.ip_address(addr["address"]).compressed)
+				ips.add(interface.address.compressed)
 			except ValueError as err:
 				logger.warning(err)
 	return ips
