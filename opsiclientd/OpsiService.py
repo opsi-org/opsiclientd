@@ -171,7 +171,7 @@ def get_service_client(address: str | list[str] | None = None) -> ServiceClient:
 	logger.info("Using config service address: %r", address)
 
 	start_time = datetime.now()
-	connect_timeout = 0.00001  # for testing!
+	connect_timeout = 0.0000001  # for testing!
 	while (datetime.now() - start_time).total_seconds() < config.get("config_service", "connection_timeout"):
 		try:
 			return ServiceClient(
