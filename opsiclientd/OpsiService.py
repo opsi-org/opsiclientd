@@ -168,21 +168,30 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 def get_service_client(address: str | list[str] | None = None) -> ServiceClient:
 	if not address:
 		address = config.get("config_service", "url")
-
 	logger.info("Using config service address: %r", address)
-	return ServiceClient(
-		address=address,
-		username=config.get("global", "host_id"),
-		password=config.get("global", "opsi_host_key"),
-		ca_cert_file=config.ca_cert_file,
-		verify=config.service_verification_flags,
-		proxy_url=config.get("global", "proxy_url"),
-		user_agent=f"opsiclientd/{__version__}",
-		connect_timeout=config.get("config_service", "connection_timeout"),
-		max_time_diff=5.0,
-		jsonrpc_create_methods=True,
-		jsonrpc_create_objects=True,
-	)
+
+	start_time = datetime.now()
+	connect_timeout = 0.0001  # for testing!
+	while datetime.now() - start_time < config.get("config_service", "connection_timeout"):
+		try:
+			return ServiceClient(
+				address=address,
+				username=config.get("global", "host_id"),
+				password=config.get("global", "opsi_host_key"),
+				ca_cert_file=config.ca_cert_file,
+				verify=config.service_verification_flags,
+				proxy_url=config.get("global", "proxy_url"),
+				user_agent=f"opsiclientd/{__version__}",
+				connect_timeout=connect_timeout,
+				max_time_diff=5.0,
+				jsonrpc_create_methods=True,
+				jsonrpc_create_objects=True,
+			)
+		except Exception as err:  # TODO: more specific
+			logger.warning("Failed to connect to server: %s", err)
+			connect_timeout += connect_timeout / 2
+
+	raise RuntimeError(f"Failed to create service client for address {address!r}")
 
 
 class CombinedSingletonABCMeta(Singleton, abc.ABCMeta):
