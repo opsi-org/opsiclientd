@@ -172,7 +172,7 @@ def get_service_client(address: str | list[str] | None = None) -> ServiceClient:
 
 	start_time = datetime.now()
 	connect_timeout = 0.0001  # for testing!
-	while datetime.now() - start_time < config.get("config_service", "connection_timeout"):
+	while (datetime.now() - start_time).total_seconds() < config.get("config_service", "connection_timeout"):
 		try:
 			return ServiceClient(
 				address=address,
