@@ -171,8 +171,9 @@ def get_service_client(address: str | list[str] | None = None) -> ServiceClient:
 	logger.info("Using config service address: %r", address)
 
 	start_time = datetime.now()
-	connect_timeout = 0.0000001  # for testing!
+	connect_timeout = 0.000000001  # for testing!
 	while (datetime.now() - start_time).total_seconds() < config.get("config_service", "connection_timeout"):
+		logger.devel("Trying connect with timeout %f", connect_timeout)
 		try:
 			return ServiceClient(
 				address=address,
@@ -189,7 +190,8 @@ def get_service_client(address: str | list[str] | None = None) -> ServiceClient:
 			)
 		except Exception as err:  # TODO: more specific
 			logger.warning("Failed to connect to server: %s", err)
-			connect_timeout += connect_timeout / 2
+			# connect_timeout += connect_timeout / 2
+			connect_timeout *= 10
 
 	raise RuntimeError(f"Failed to create service client for address {address!r}")
 
