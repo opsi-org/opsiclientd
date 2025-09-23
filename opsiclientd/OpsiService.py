@@ -165,7 +165,7 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 				)
 
 
-def get_service_client(address: str | list[str] | None = None, connect_timeout: float = 10.0) -> ServiceClient:
+def get_service_client(address: str | list[str] | None = None, connect_timeout: float = 0.000000001) -> ServiceClient:
 	if not address:
 		address = config.get("config_service", "url")
 	logger.info("Using config service address: %r", address)
