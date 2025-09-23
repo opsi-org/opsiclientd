@@ -165,12 +165,11 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 				)
 
 
-def get_service_client(address: str | list[str] | None = None, connect_timeout: float = 0.000000001) -> ServiceClient:
+def get_service_client(address: str | list[str] | None = None, connect_timeout: float = 10.0) -> ServiceClient:
 	if not address:
 		address = config.get("config_service", "url")
 	logger.info("Using config service address: %r", address)
 
-	logger.devel("Trying connect with timeout %f", connect_timeout)
 	return ServiceClient(
 		address=address,
 		username=config.get("global", "host_id"),
@@ -397,7 +396,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 		logger.error("Connection to opsi service %s failed: %s", service_client.base_url, exception)
 		if isinstance(exception, OpsiServiceTimeoutError):
 			logger.info("Connection timed out, increasing connect_timeout")
-			self._service_client._connect_timeout *= 10
+			self._service_client._connect_timeout *= 1.5
 		if isinstance(exception, OpsiServiceAuthenticationError) and not service_client.service_is_opsiclientd():
 			logger.debug("Authentication failed, trying to get FQDN from OS")
 			try:
