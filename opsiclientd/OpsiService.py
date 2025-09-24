@@ -428,7 +428,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 				if message.method.startswith("_"):
 					raise ValueError("Invalid method")
 				method = getattr(self.control_interface, message.method)
-				response.result = method(*(message.params or tuple()))
+				await self._loop.run_in_executor(None, method, *(message.params or tuple()))
 			except Exception as err:
 				response.error = {
 					"code": 0,
