@@ -26,7 +26,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.x509.oid import NameOID
 from opsicommon.client.opsiservice import MessagebusListener, ServiceClient, ServiceConnectionListener
-from opsicommon.exceptions import OpsiServiceAuthenticationError
+from opsicommon.exceptions import OpsiServiceAuthenticationError, OpsiServiceTimeoutError
 from opsicommon.logging import get_logger, log_context
 from opsicommon.logging.constants import TRACE
 from opsicommon.messagebus.file_transfer import process_messagebus_message as process_filetransfer_message
@@ -165,11 +165,11 @@ def update_os_ca_store(allow_remove: bool = False) -> None:
 				)
 
 
-def get_service_client(address: str | list[str] | None = None) -> ServiceClient:
+def get_service_client(address: str | list[str] | None = None, connect_timeout: float = 10.0) -> ServiceClient:
 	if not address:
 		address = config.get("config_service", "url")
-
 	logger.info("Using config service address: %r", address)
+
 	return ServiceClient(
 		address=address,
 		username=config.get("global", "host_id"),
@@ -178,7 +178,7 @@ def get_service_client(address: str | list[str] | None = None) -> ServiceClient:
 		verify=config.service_verification_flags,
 		proxy_url=config.get("global", "proxy_url"),
 		user_agent=f"opsiclientd/{__version__}",
-		connect_timeout=config.get("config_service", "connection_timeout"),
+		connect_timeout=connect_timeout,
 		max_time_diff=5.0,
 		jsonrpc_create_methods=True,
 		jsonrpc_create_objects=True,
@@ -394,6 +394,9 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 
 	def connection_failed(self, service_client: ServiceClient, exception: Exception) -> None:
 		logger.error("Connection to opsi service %s failed: %s", service_client.base_url, exception)
+		if isinstance(exception, OpsiServiceTimeoutError):
+			logger.info("Connection timed out, increasing connect_timeout")
+			self._service_client._connect_timeout *= 1.5
 		if isinstance(exception, OpsiServiceAuthenticationError) and not service_client.service_is_opsiclientd():
 			logger.debug("Authentication failed, trying to get FQDN from OS")
 			try:

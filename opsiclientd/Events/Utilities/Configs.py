@@ -270,6 +270,8 @@ def getEventConfigs() -> dict[str, dict[str, Any]]:
 						eventConfigs[eventConfigId]["includeProductGroupIds"] = forceList(value)
 					elif key == "working_window":
 						eventConfigs[eventConfigId]["workingWindow"] = str(value)
+					elif key == "priority":
+						eventConfigs[eventConfigId]["priority"] = int(value)
 					else:
 						logger.error("Skipping unknown option '%s' in definition of event '%s'", key, eventConfigId)
 						for section in list(config.getDict()):

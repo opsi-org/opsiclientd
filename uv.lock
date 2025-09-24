@@ -294,6 +294,15 @@ wheels = [
 ]
 
 [[package]]
+name = "dnspython"
+version = "2.8.0"
+source = { registry = "https://pypi.uib.gmbh/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/8c/8b/57666417c0f90f08bcafa776861060426765fdb422eb10212086fb811d26/dnspython-2.8.0.tar.gz", hash = "sha256:181d3c6996452cb1189c4046c61599b84a5a86e099562ffde77d26984ff26d0f", size = 368251, upload-time = "2025-09-07T18:58:00.022Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ba/5a/18ad964b0086c6e62e2e7500f7edc89e3faa45033c71c1893d34eed2b2de/dnspython-2.8.0-py3-none-any.whl", hash = "sha256:01d9bbc4a2d76bf0db7c1f729812ded6d912bd318d3b1cf81d30c0f845dbf3af", size = 331094, upload-time = "2025-09-07T18:57:58.071Z" },
+]
+
+[[package]]
 name = "fastapi"
 version = "0.115.12"
 source = { registry = "https://pypi.uib.gmbh/simple" }
@@ -620,7 +629,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/a6/91/86a6eac449ddfae23
 
 [[package]]
 name = "opsiclientd"
-version = "4.3.13.9"
+version = "4.3.14.1"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },
@@ -1071,19 +1080,20 @@ wheels = [
 
 [[package]]
 name = "python-opsi-common"
-version = "4.3.31.2"
+version = "4.3.39.2"
 source = { registry = "https://pypi.uib.gmbh/simple" }
 dependencies = [
     { name = "aiofiles" },
     { name = "annotated-types" },
-    { name = "cffi" },
     { name = "colorlog" },
     { name = "cryptography" },
     { name = "distro" },
+    { name = "dnspython" },
     { name = "lz4" },
     { name = "mailbits" },
     { name = "msgpack" },
     { name = "msgspec", marker = "sys_platform != 'win32'" },
+    { name = "netifaces" },
     { name = "packaging" },
     { name = "psutil" },
     { name = "ptyprocess" },
@@ -1096,13 +1106,14 @@ dependencies = [
     { name = "requests" },
     { name = "rich" },
     { name = "tomlkit" },
+    { name = "types-netifaces" },
     { name = "websocket-client" },
     { name = "wmi", marker = "sys_platform == 'win32'" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.31.2.tar.gz", hash = "sha256:6735537ea8491884952c854b9ca9611afeaa3eb1f82b12b62195d8f2e8b42b85" }
+sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.39.2.tar.gz", hash = "sha256:c1c1c3a7aa0d011a6f5748ea97f07ed044d711cc01f4ee46e41556e80f213209" }
 wheels = [
-    { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.31.2-py3-none-any.whl", hash = "sha256:494275eab79fe9374872d061ee5755b6ef4dbd848c937309b13763ea2a2021f9" },
+    { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.39.2-py3-none-any.whl", hash = "sha256:e3c2d3e533fc353dc5456a6bbba353ed98ed5fa98e6f40ac8e5d7f1846b766be" },
 ]
 
 [[package]]
@@ -1373,6 +1384,15 @@ source = { registry = "https://pypi.uib.gmbh/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/17/20/7b9e8068bc2db2432389e40683f5d04c1901f72c150332f6749aa37bc5ef/types_mock-5.2.0.20250516.tar.gz", hash = "sha256:aab7d3d9ad3814f2f8da12cc8e42d9be7d38200c5f214e3c0278c38fa01299d7", size = 11220, upload-time = "2025-05-16T03:08:11.623Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/21/80/9e4a5f6dddb4ee046884e06ce6c80bc2266604e3452154a0e383a6f49414/types_mock-5.2.0.20250516-py3-none-any.whl", hash = "sha256:e50fbd0c3be8bcea25c30a47fac0b7a6ca22f630ef2f53416a73b319b39dfde1", size = 10516, upload-time = "2025-05-16T03:08:10.798Z" },
+]
+
+[[package]]
+name = "types-netifaces"
+version = "0.11.0.20241025"
+source = { registry = "https://pypi.uib.gmbh/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5e/72/6b9d2bc6a0709c071687bd29afdf9069db64c751df647475c761cfca6841/types-netifaces-0.11.0.20241025.tar.gz", hash = "sha256:0877b98a80e53e08dcb0e2d562772f6d0c4eee8bd0e1101a1ee78d17a88c3c8d", size = 2688, upload-time = "2024-10-25T02:45:03.523Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b0/ea/503f8bc06ab9903e0302d9b94f10d3fb8f599353874cb7e8b6d2fd453079/types_netifaces-0.11.0.20241025-py3-none-any.whl", hash = "sha256:b760315d043acbb1f96232094ab05751f1cec9863df09cd95f533bd1aaee6da8", size = 3023, upload-time = "2024-10-25T02:45:02.462Z" },
 ]
 
 [[package]]
