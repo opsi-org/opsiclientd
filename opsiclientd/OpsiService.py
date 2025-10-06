@@ -479,6 +479,7 @@ def download_from_depot(
 	disconnect = False
 	if not service_client:
 		service_client = get_service_client()
+		service_client.connect()
 		disconnect = True
 
 	try:
