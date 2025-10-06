@@ -479,6 +479,7 @@ def download_from_depot(
 	disconnect = False
 	if not service_client:
 		service_client = get_service_client()
+		service_client.connect()
 		disconnect = True
 
 	try:
@@ -495,7 +496,7 @@ def download_from_depot(
 			raise ValueError(f"Failed to get webdav url for depot {selected_depot!r} from service")
 
 		logger.info("Using depot %r, webdav url %r", selected_depot, selected_depot.depotWebdavUrl)
-		url = urlparse(selected_depot.depotWebdavUrl)
+		url = urlparse(selected_depot.depotWebdavUrl.replace("webdavs://", "https://"))
 	finally:
 		if disconnect:
 			service_client.stop()
