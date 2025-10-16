@@ -12,13 +12,14 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from opsicommon.logging import LOG_INFO, use_logging_config
 from opsicommon.objects import Config, ConfigState, Host, LocalbootProduct, OpsiDepotserver, Product, ProductOnClient, ProductOnDepot
 from opsicommon.package.associated_files import create_package_content_file
 
 from opsiclientd.Config import Config as OpsiclientdConfig
+from opsiclientd.EventProcessing import EventProcessingThread
 from opsiclientd.nonfree.CacheService import ProductCacheService
 from opsiclientd.State import State
 from opsiclientd.utils import DiskSpaceUsage, get_directory_size
@@ -312,3 +313,24 @@ def test_cache_product(tmp_path: Path) -> None:
 		product_cache_service.clear_cache()
 		assert len(list(product_cache_dir.iterdir())) == 0
 		assert product_cache_service._cache_dir_sizes == {}
+
+
+def test_pause_resume_product_caching_on_metered_net_connection() -> None:
+	cache_service = ProductCacheService(opsiclientd=MagicMock())
+	opsiclientd = MagicMock()
+	opsiclientd.getCacheService.return_value = MagicMock(_productCacheService=cache_service)
+
+	event = MagicMock()
+	event.eventConfig.getId.return_value = "net_connection_cost"
+	event.eventInfo = {"ConnectionCost": 2}
+
+	with patch.object(cache_service, "pause_caching") as pause_mock, patch.object(cache_service, "resume_caching") as resume_mock:
+		thread = EventProcessingThread(opsiclientd, event)
+		thread.run()
+		pause_mock.assert_called_once()
+		resume_mock.assert_not_called()
+
+		event.eventInfo = {"ConnectionCost": 1}
+		thread = EventProcessingThread(opsiclientd, event)
+		thread.run()
+		resume_mock.assert_called_once()

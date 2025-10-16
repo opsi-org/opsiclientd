@@ -21,6 +21,7 @@ import tempfile
 import threading
 import time
 from dataclasses import dataclass
+from enum import IntEnum
 from ipaddress import IPv6Address, ip_address
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
@@ -90,6 +91,22 @@ logger = get_logger()
 config = Config()
 state = State()
 timeline = Timeline()
+
+
+class ConnectionCost(IntEnum):
+	"""
+	Network connection cost levels as defined by Windows NLM_CONNECTION_COST enumeration.
+	Reference: https://learn.microsoft.com/en-us/windows/win32/api/netlistmgr/ne-netlistmgr-nlm_connection_cost
+	"""
+
+	UNKNOWN = 0
+	UNRESTRICTED = 0x1
+	FIXED = 0x2
+	VARIABLE = 0x4
+	OVERDATALIMIT = 0x10000
+	CONGESTED = 0x20000
+	ROAMING = 0x40000
+	APPROACHINGDATALIMIT = 0x80000
 
 
 @dataclass
@@ -1938,6 +1955,44 @@ class EventProcessingThread(KillableThread):
 				self.waitCancelled = False
 				self._set_cancelable(True)
 				self.opsiclientd.setBlockLogin(self.event.eventConfig.blockLogin)
+
+				if self.event.eventConfig.getId() == "net_connection_cost":
+					connection_cost = None
+					if "TargetInstance" in self.event.eventInfo and isinstance(self.event.eventInfo["TargetInstance"], dict):
+						connection_cost = self.event.eventInfo["TargetInstance"].get("ConnectionCost")
+					elif "ConnectionCost" in self.event.eventInfo:
+						connection_cost = self.event.eventInfo["ConnectionCost"]
+
+					logger.info("NetConnectionCost event: ConnectionCost=%r", connection_cost)
+					cache_service = self.opsiclientd.getCacheService()._productCacheService
+
+					if cache_service is not None:
+						connection_cost_int = 0
+						if isinstance(connection_cost, int):
+							connection_cost_int = connection_cost
+						elif isinstance(connection_cost, str):
+							try:
+								connection_cost_int = int(connection_cost, 0)
+							except ValueError:
+								connection_cost_int = getattr(ConnectionCost, connection_cost.upper(), 0)
+						elif isinstance(connection_cost, list):
+							for item in connection_cost:
+								if isinstance(item, int):
+									connection_cost_int |= item
+								elif isinstance(item, str):
+									try:
+										connection_cost_int |= int(item, 0)
+									except ValueError:
+										connection_cost_int |= getattr(ConnectionCost, item.upper(), 0)
+
+						if connection_cost_int & (ConnectionCost.FIXED | ConnectionCost.VARIABLE):
+							logger.notice("Metered connection detected, pausing product caching")
+							cache_service.pause_caching()
+						else:
+							logger.notice("Unmetered connection, resuming product caching")
+							cache_service.resume_caching()
+					else:
+						logger.debug("No product cache service, cannot pause/resume caching")
 
 				try:
 					config.set_temporary_depot_path(None)
