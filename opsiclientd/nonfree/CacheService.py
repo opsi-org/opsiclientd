@@ -28,7 +28,7 @@ from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTr
 from OPSI.Util import randomString  # type: ignore[import]
 from OPSI.Util.File.Opsi import PackageContentFile  # type: ignore[import]
 from OPSI.Util.Message import ProgressSubjectProxy  # type: ignore[import]
-from OPSI.Util.Repository import DepotToLocalDirectorySychronizer, Repository, getRepository  # type: ignore[import]
+from OPSI.Util.Repository import Repository, getRepository  # type: ignore[import]
 from opsicommon.logging import get_logger, log_context
 from opsicommon.objects import LocalbootProduct, ProductOnClient
 from opsicommon.types import forceBool, forceInt, forceProductIdList
@@ -38,6 +38,7 @@ from opsiclientd.Config import Config
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
 from opsiclientd.Events.Utilities.Generators import getEventGenerators
 from opsiclientd.nonfree.CacheBackend import ClientCacheBackend, add_products_from_setup_after_install
+from opsiclientd.nonfree.DepotSync import DepotToLocalDirectorySynchronizer
 from opsiclientd.nonfree.RPCProductDependencyMixin import RPCProductDependencyMixin
 from opsiclientd.OpsiService import PermanentServiceConnection, ServiceClient
 from opsiclientd.State import State
@@ -883,6 +884,9 @@ class ProductCacheService(threading.Thread):
 
 		self._repository: Repository | None = None
 
+		self._pause_event = threading.Event()
+		self._pause_event.set()
+
 		if not self._storage_dir.exists():
 			logger.notice("Creating cache service storage dir '%s'", self._storage_dir)
 			self._storage_dir.mkdir(parents=True)
@@ -988,12 +992,21 @@ class ProductCacheService(threading.Thread):
 					logger.debug("Joining transfer slot heartbeat thread")
 					heartbeat_thread.join()
 
+	def pause_caching(self) -> None:
+		logger.notice("Pausing product caching")
+		self._pause_event.clear()
+
+	def resume_caching(self) -> None:
+		logger.notice("Resuming product caching")
+		self._pause_event.set()
+
 	def run(self) -> None:
 		with log_context({"instance": "product cache service"}):
 			self._running = True
 			logger.notice("Product cache service started")
 			try:
 				while not self._stopped:
+					self._pause_event.wait()
 					sleep_time = 1.0
 					if self._cache_products_requested and not self._working:
 						init_from_service(service_client=self.service_client)
@@ -1502,12 +1515,13 @@ class ProductCacheService(threading.Thread):
 				durationEvent=True,
 			)
 
-			productSynchronizer = DepotToLocalDirectorySychronizer(
+			productSynchronizer = DepotToLocalDirectorySynchronizer(
 				sourceDepot=repository,
 				destinationDirectory=str(self._product_cache_dir),
 				productIds=[productId],
 				maxBandwidth=self._max_bandwidth,
 				dynamicBandwidth=self._dynamic_andwidth,
+				pause_event=self._pause_event,
 			)
 			productSynchronizer.synchronize(
 				productProgressObserver=self._product_progress_observer, overallProgressObserver=self._overall_progress_observer
