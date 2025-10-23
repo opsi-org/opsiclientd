@@ -1170,6 +1170,7 @@ class ProductCacheService(threading.Thread):
 				if "mshotfix" in productIds:
 					# Determine correct mshotfix package for the system
 					additional_mshotfix_package = get_mshotfix_package_name()
+					logger.info("Determined system specific mshotfix package: %s", additional_mshotfix_package)
 					if additional_mshotfix_package and additional_mshotfix_package in productOnDepotIds:
 						logger.debug("Releasepackage '%s' found on depot '%s'", additional_mshotfix_package, masterDepotId)
 						logger.info(
