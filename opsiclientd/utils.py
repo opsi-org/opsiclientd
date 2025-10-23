@@ -209,11 +209,11 @@ def get_mshotfix_package_name() -> str | None:
 	currentBuild = 0
 	subKey = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"
 	try:
-		get_registry_value(subKey, "CurrentBuild")
+		currentBuild = get_registry_value(subKey, "CurrentBuild")
 	except Exception as reg_err:
 		logger.error("Failed to read registry value %s %s: %s", subKey, "CurrentBuild", reg_err)
 	try:
-		get_registry_value(subKey, "ReleaseID")
+		releaseId = get_registry_value(subKey, "ReleaseID")
 	except Exception as reg_err:
 		logger.error("Failed to read registry value %s %s: %s", subKey, "ReleaseID", reg_err)
 
