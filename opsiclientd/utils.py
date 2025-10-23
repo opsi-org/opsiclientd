@@ -10,6 +10,7 @@ utils
 from __future__ import annotations
 
 import os
+import platform
 import struct
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,8 +20,11 @@ from opsicommon.logging import get_logger
 from opsicommon.system.network import get_network_info
 
 from opsiclientd.Config import Config
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 if os.name == "nt":
+	import winreg  # type: ignore[import]
+
 	import win32file  # type: ignore[import]
 
 if TYPE_CHECKING:
@@ -190,3 +194,87 @@ def get_directory_size(path: str | Path) -> int:
 				# Skip files that can't be accessed
 				pass
 	return total_size
+
+
+def get_mshotfix_package_name() -> str | None:
+	if not RUNNING_ON_WINDOWS:
+		return None
+
+	arch = "x64"
+	if platform.machine().lower() in ("arm64", "aarch64"):
+		arch = "arm64"
+	elif platform.machine().lower() in ("x86", "i386", "i486", "i586", "i686", "i786"):
+		arch = "x86"
+	releaseId = ""
+	currentBuild = 0
+	subKey = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"
+	try:
+		get_registry_value(subKey, "CurrentBuild")
+	except Exception as reg_err:
+		logger.error("Failed to read registry value %s %s: %s", subKey, "CurrentBuild", reg_err)
+	try:
+		get_registry_value(subKey, "ReleaseID")
+	except Exception as reg_err:
+		logger.error("Failed to read registry value %s %s: %s", subKey, "ReleaseID", reg_err)
+
+	releasePackageName = None
+	if currentBuild >= 10000 and currentBuild < 20000:  # win10
+		# Setting default to 1507-Build
+		if not releaseId:
+			releaseId = "1507"
+		releasePackageName = f"mshotfix-win10-{releaseId}-{arch}-glb"
+	elif currentBuild == 20348:
+		releasePackageName = "mshotfix-win2022"
+	elif currentBuild == 22000:
+		releasePackageName = "mshotfix-win11-21h2"
+	elif currentBuild in (22621, 22631):  # 22h2 and 22h2 with enablement package
+		releasePackageName = "mshotfix-win11-22h2"
+	elif currentBuild in (26100, 26200):  # 24h2 and 25h2
+		releasePackageName = "mshotfix-win11-24h2"
+	elif currentBuild > 26200:
+		logger.warning("Unknown windows build %s. Maybe update opsi-client-agent. Using fallback mshotfix-win11-24h2", currentBuild)
+		releasePackageName = "mshotfix-win11-24h2"
+	else:
+		logger.warning("Unknown windows build %s. Using fallback mshotfix-win10-1507-x64-glb", currentBuild)
+		releasePackageName = "mshotfix-win10-1507-x64-glb"
+
+	if arch == "arm64" and "win11" in releasePackageName:
+		releasePackageName += "-arm64"  # arm64 specific package for win11
+	return releasePackageName
+
+
+# TODO: move to opsicommon or opsi-script
+def get_registry_value(sub_key: str, value_name: str, root=None) -> str:  # type: ignore[no-untyped-def]
+	if not RUNNING_ON_WINDOWS:
+		raise RuntimeError("Can only access registry on Windows")
+
+	root = root or winreg.HKEY_LOCAL_MACHINE  # type: ignore[attr-defined]
+
+	flags = winreg.KEY_READ  # type: ignore[attr-defined]
+	flags |= winreg.KEY_WOW64_32KEY if platform.architecture()[0] == "32bit" else winreg.KEY_WOW64_64KEY  # type: ignore[attr-defined]
+
+	with winreg.OpenKeyEx(root, sub_key, 0, flags) as hkey:  # type: ignore[attr-defined]
+		return winreg.QueryValueEx(hkey, value_name)[0]  # type: ignore[attr-defined]
+
+
+# TODO: move to opsicommon or opsi-script
+def set_registry_value(sub_key: str, value_name: str, value: str | int, root=None) -> None:  # type: ignore[no-untyped-def]
+	if not RUNNING_ON_WINDOWS:
+		return
+
+	root = root or winreg.HKEY_LOCAL_MACHINE  # type: ignore[attr-defined]
+
+	flags = winreg.KEY_WRITE  # type: ignore[attr-defined]
+	flags |= winreg.KEY_WOW64_32KEY if platform.architecture()[0] == "32bit" else winreg.KEY_WOW64_64KEY  # type: ignore[attr-defined]
+
+	with winreg.CreateKeyEx(root, sub_key, 0, flags) as hkey:  # type: ignore[attr-defined]
+		if isinstance(value, int):
+			winreg.SetValueEx(  # type: ignore[attr-defined]
+				hkey,
+				value_name,
+				0,
+				winreg.REG_QWORD if value > 0xFFFFFFFF else winreg.REG_DWORD,  # type: ignore[attr-defined]
+				value,
+			)
+		else:
+			winreg.SetValueEx(hkey, value_name, 0, winreg.REG_SZ, value)  # type: ignore[attr-defined]

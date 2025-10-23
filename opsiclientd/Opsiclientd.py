@@ -58,6 +58,7 @@ from opsiclientd.setup import setup
 from opsiclientd.State import State
 from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
+from opsiclientd.utils import get_registry_value
 from opsiclientd.webserver import Webserver
 
 if RUNNING_ON_WINDOWS:
@@ -619,14 +620,12 @@ class Opsiclientd(EventListener, threading.Thread):
 			restart_marker_config = config.check_restart_marker()
 			if restart_marker_config and RUNNING_ON_WINDOWS:
 				try:
-					ctrl_alt_del_policy1 = System.getRegistryValue(
-						System.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon", "DisableCAD"
-					)
+					ctrl_alt_del_policy1 = get_registry_value("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon", "DisableCAD")
 				except FileNotFoundError:
 					ctrl_alt_del_policy1 = None
 				try:
-					ctrl_alt_del_policy2 = System.getRegistryValue(
-						System.HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "DisableCAD"
+					ctrl_alt_del_policy2 = get_registry_value(
+						"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", "DisableCAD"
 					)
 				except FileNotFoundError:
 					ctrl_alt_del_policy2 = None
