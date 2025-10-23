@@ -17,7 +17,6 @@ import tempfile
 from logging.handlers import RotatingFileHandler
 
 import psutil
-from OPSI import __version__ as python_opsi_version  # type: ignore[import]
 from OPSI.System import execute, which  # type: ignore[import]
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import (
@@ -49,7 +48,7 @@ parser.add_argument(
 	"--version",
 	"-V",
 	action="version",
-	version=f"{__version__} [python-opsi={python_opsi_version},python-opsi-common={opsicommon_version}]",
+	version=f"{__version__} [python-opsi-common={opsicommon_version}]",
 )
 parser.add_argument(
 	"--log-level", "-l", dest="logLevel", type=int, choices=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], default=LOG_NONE, help="Set the log-level."

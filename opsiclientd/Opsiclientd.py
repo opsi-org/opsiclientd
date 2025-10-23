@@ -30,7 +30,6 @@ from typing import TYPE_CHECKING, Any, Final, Generator, Literal
 
 import psutil  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
-from OPSI import __version__ as python_opsi_version  # type: ignore[import]
 from OPSI.Util import randomString  # type: ignore[import]
 from OPSI.Util.Message import ChoiceSubject, MessageSubject  # type: ignore[import]
 from opsicommon import __version__ as opsicommon_version
@@ -648,10 +647,7 @@ class Opsiclientd(EventListener, threading.Thread):
 		try:
 			parent = psutil.Process(os.getpid()).parent()
 			parent_name = parent.name() if parent else None
-			event_title = (
-				f"opsiclientd {__version__} [python-opsi={python_opsi_version},python-opsi-common={opsicommon_version}] "
-				f"running on {platform.platform()!r}"
-			)
+			event_title = f"opsiclientd {__version__} [python-opsi-common={opsicommon_version}] running on {platform.platform()!r}"
 			logger.essential(event_title)
 			event_description = f"Parent process: {parent_name}\n"
 			logger.essential(f"Parent process: {parent_name}")

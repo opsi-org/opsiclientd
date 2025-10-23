@@ -29,7 +29,6 @@ import psutil  # type: ignore[import]
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from OPSI import System  # type: ignore[import]
-from OPSI import __version__ as python_opsi_version  # type: ignore[import]
 from OPSI.Util.Log import truncateLogData  # type: ignore[import]
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, secret_filter
@@ -187,9 +186,7 @@ class KioskControlInterface(PipeControlInterface):
 
 	def getConfigDataFromOpsiclientd(self, get_depot_id: bool = True, get_active_events: bool = True) -> dict[str, Any]:
 		result: dict[str, Any] = {}
-		result["opsiclientd_version"] = (
-			f"opsiclientd {__version__} [python-opsi={python_opsi_version}python-opsi-common={opsicommon_version}]"
-		)
+		result["opsiclientd_version"] = f"opsiclientd {__version__} [python-opsi-common={opsicommon_version}]"
 
 		if get_depot_id:
 			result["depot_id"] = self.opsiclientd.config.get("depot_server", "master_depot_id")
