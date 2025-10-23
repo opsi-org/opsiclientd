@@ -70,6 +70,7 @@ from opsiclientd.SystemCheck import (
 from opsiclientd.Timeline import Timeline
 from opsiclientd.utils import (
 	get_include_exclude_product_ids,
+	get_registry_value,
 	get_version_from_dos_binary,
 	get_version_from_elf_binary,
 	get_version_from_mach_binary,
@@ -868,7 +869,7 @@ class EventProcessingThread(KillableThread):
 			bootmode = None
 			if RUNNING_ON_WINDOWS:
 				try:
-					bootmode = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\general", "bootmode").upper()
+					bootmode = get_registry_value("SOFTWARE\\opsi.org\\general", "bootmode").upper()
 				except Exception as err:
 					logger.warning("Failed to get bootmode from registry: %s", err)
 			bootmode = bootmode or "BKSTD"

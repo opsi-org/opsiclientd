@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.11, <3.14"
 resolution-markers = [
     "sys_platform == 'darwin'",
@@ -629,7 +629,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/a6/91/86a6eac449ddfae23
 
 [[package]]
 name = "opsiclientd"
-version = "4.3.14.1"
+version = "4.3.14.4"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },
@@ -696,7 +696,7 @@ requires-dist = [
     { name = "pydantic-core", specifier = ">=2.20,<2.29" },
     { name = "pyelftools", specifier = ">=0.31" },
     { name = "python-multipart", specifier = ">=0.0" },
-    { name = "python-opsi", specifier = ">=4.3.9.7,<4.4" },
+    { name = "python-opsi", specifier = ">=4.3.9.8,<4.4" },
     { name = "python-opsi-common", specifier = ">=4.3.30.3,<4.4" },
     { name = "pywin32", marker = "sys_platform == 'win32'", specifier = ">=308" },
     { name = "pywinpty", marker = "sys_platform == 'win32'", specifier = ">=2.0" },
@@ -1046,7 +1046,7 @@ wheels = [
 
 [[package]]
 name = "python-opsi"
-version = "4.3.9.7"
+version = "4.3.9.8"
 source = { registry = "https://pypi.uib.gmbh/simple" }
 dependencies = [
     { name = "attrs" },
@@ -1073,9 +1073,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "wmi", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.9.7.tar.gz", hash = "sha256:fa1ff121260c1cdc9916b1c6b8048798047fb8a66db094e70da6d307d4327ec7" }
+sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.9.8.tar.gz", hash = "sha256:671303b451c81d6c8f65870f8bbd84914192cc076e9e7230b5af42a579ace903" }
 wheels = [
-    { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.9.7-py3-none-any.whl", hash = "sha256:64c72baa003128a50448531edb970128993892fbb6914d4dbc2ef80f4305962b" },
+    { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.9.8-py3-none-any.whl", hash = "sha256:1aca17c7dbb162a91ef582db7b4b5c6bfa4cab4ee467eedfcdbb47f28f27d879" },
 ]
 
 [[package]]

@@ -39,6 +39,7 @@ from opsiclientd import config
 from opsiclientd.Config import OPSI_SETUP_USER_NAME
 from opsiclientd.ControlPipe import JSONRPC20Response, JSONRPCResponse
 from opsiclientd.Opsiclientd import Opsiclientd
+from opsiclientd.utils import get_registry_value, set_registry_value
 
 if os.name != "nt":
 	WindowsError = RuntimeError
@@ -93,14 +94,14 @@ class OpsiclientdNT(Opsiclientd):
 		super().rebootMachine(waitSeconds)
 
 	def clearRebootRequest(self) -> None:
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
+		set_registry_value("SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
 
 	def clearShutdownRequest(self) -> None:
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
+		set_registry_value("SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
 
 	def isRebootRequested(self) -> bool:
 		try:
-			rebootRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested")
+			rebootRequested = int(get_registry_value("SOFTWARE\\opsi.org\\winst", "RebootRequested"))
 		except Exception as error:
 			logger.warning("Failed to get RebootRequested from registry: %s", error)
 			rebootRequested = 0
@@ -116,7 +117,7 @@ class OpsiclientdNT(Opsiclientd):
 
 	def isShutdownRequested(self) -> bool:
 		try:
-			shutdownRequested = System.getRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested")
+			shutdownRequested = int(get_registry_value("SOFTWARE\\opsi.org\\winst", "ShutdownRequested"))
 		except Exception as err:
 			logger.info("Failed to get shutdownRequested from registry: %s", err)
 			shutdownRequested = 0
