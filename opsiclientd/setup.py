@@ -179,7 +179,8 @@ def setup_firewall_linux() -> None:
 	cmds = []
 	if os.path.exists("/usr/bin/firewall-cmd"):
 		# openSUSE Leap
-		cmds.append(["/usr/bin/firewall-cmd", f"--add-port={port}/tcp", "--zone", "public"])
+		cmds.append(["/usr/bin/firewall-cmd", f"--add-port={port}/tcp", "--zone", "external", "--permanent"])
+		cmds.append(["/usr/bin/firewall-cmd", "--reload"])
 	elif os.path.exists("/sbin/SuSEfirewall2"):
 		# other SUSE
 		cmds.append(["/sbin/SuSEfirewall2", "open", "EXT", "TCP", f"{port}"])
