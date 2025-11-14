@@ -395,8 +395,9 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 	def connection_failed(self, service_client: ServiceClient, exception: Exception) -> None:
 		logger.error("Connection to opsi service %s failed: %s", service_client.base_url, exception)
 		if isinstance(exception, OpsiServiceTimeoutError):
-			logger.info("Connection timed out, increasing connect_timeout")
-			self._service_client._connect_timeout *= 1.5
+			if self._service_client._connect_timeout < 90:
+				logger.info("Connection timed out, increasing connect_timeout")
+				self._service_client._connect_timeout = int(self._service_client._connect_timeout * 1.5)
 		if isinstance(exception, OpsiServiceAuthenticationError) and not service_client.service_is_opsiclientd():
 			logger.debug("Authentication failed, trying to get FQDN from OS")
 			try:
