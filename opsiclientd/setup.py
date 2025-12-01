@@ -13,12 +13,14 @@ import subprocess
 import sys
 from argparse import Namespace
 from pathlib import Path
+from time import monotonic, sleep
 
 from cryptography import x509
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKey
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 from cryptography.x509.oid import NameOID
 from opsicommon.client.opsiservice import ServiceClient
+from opsicommon.exceptions import OpsiServiceTimeoutError
 from opsicommon.logging import get_logger, secret_filter
 from opsicommon.ssl import as_pem, create_ca, create_server_cert
 from opsicommon.system import get_system_uuid
@@ -28,11 +30,7 @@ from packaging import version
 from opsiclientd import __version__
 from opsiclientd.Config import Config
 from opsiclientd.OpsiService import update_os_ca_store
-from opsiclientd.SystemCheck import (
-	RUNNING_ON_LINUX,
-	RUNNING_ON_MACOS,
-	RUNNING_ON_WINDOWS,
-)
+from opsiclientd.SystemCheck import RUNNING_ON_LINUX, RUNNING_ON_MACOS, RUNNING_ON_WINDOWS
 
 if not RUNNING_ON_WINDOWS:
 	WindowsError = RuntimeError
@@ -334,6 +332,12 @@ def opsi_service_setup(options: Namespace) -> None:
 	service_address = getattr(options, "service_address", None) or config.get("config_service", "url")[0]
 	service_username = getattr(options, "service_username", None) or config.get("global", "host_id")
 	service_password = getattr(options, "service_password", None) or config.get("global", "opsi_host_key")
+	try:
+		service_timeout = int(getattr(options, "service_timeout", 0))
+	except Exception:
+		service_timeout = 180
+	service_timeout = max(10, service_timeout)
+
 	if getattr(options, "client_id", None):
 		config.set("global", "host_id", options.client_id)
 	if not config.get("global", "host_id"):
@@ -344,7 +348,23 @@ def opsi_service_setup(options: Namespace) -> None:
 
 	logger.notice("Connecting to '%s' as '%s'", service_address, service_username)
 	service_client = get_service_client(address=service_address, username=service_username, password=service_password)
-	service_client.connect()
+	start = monotonic()
+	while True:
+		try:
+			service_client.connect()
+			break
+		except Exception as exc:
+			if monotonic() - start >= service_timeout:
+				logger.error("Failed to connect to service within timeout of %d seconds: %s", service_timeout, exc, exc_info=True)
+				raise RuntimeError(f"Failed to connect to service within timeout of {service_timeout} seconds: {exc}") from exc
+
+			logger.warning("Failed to connect to service: %s, retrying in 5 seconds", exc)
+
+			if isinstance(exc, OpsiServiceTimeoutError) and service_client._connect_timeout < 30:
+				logger.info("Connection timed out, increasing connect_timeout")
+				service_client._connect_timeout = int(service_client._connect_timeout * 1.25)
+
+			sleep(5)
 
 	try:
 		update_os_ca_store(allow_remove=False)

@@ -64,6 +64,7 @@ parser.add_argument(
 parser.add_argument("--service-address", default=None, help="Service address to use for setup.")
 parser.add_argument("--service-username", default=None, help="Username to use for service connection (setup).")
 parser.add_argument("--service-password", default=None, help="Password to use for service connection (setup).")
+parser.add_argument("--service-timeout", default=180, type=int, help="Timeout for service connection (setup).")
 parser.add_argument("--client-id", default=None, help="Client id to use for setup (fqdn is used if omitted).")
 parser.add_argument(
 	"action",
