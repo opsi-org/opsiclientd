@@ -1410,7 +1410,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				if content.is_dir():
 					collect_matching_files(content, result_path / content.name, patterns, max_age_days)
 
-		filename = f"logs-{config.get('global', 'host_id')}-{datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S')}"
+		filename = f"logs-{config.get('global', 'host_id')}-{datetime.now(tz=timezone.utc).strftime('%Y-%m-%d_%H-%M-%S')}"
 		outfile = Path(config.get("control_server", "files_dir")) / filename
 		compression = "zip"
 		with tempfile.TemporaryDirectory() as tempdir:
