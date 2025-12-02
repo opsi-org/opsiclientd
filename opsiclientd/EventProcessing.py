@@ -30,8 +30,8 @@ from urllib.parse import urlparse
 import psutil  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
 from OPSI.Object import ProductOnClient  # type: ignore[import]
-from OPSI.Util.Message import (
-	ChoiceSubject,  # type: ignore[import]
+from OPSI.Util.Message import (  # type: ignore[import]
+	ChoiceSubject,
 	MessageSubject,
 	MessageSubjectProxy,
 	ProgressSubjectProxy,
