@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.11, <3.14"
 resolution-markers = [
     "sys_platform == 'darwin'",
@@ -629,7 +629,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/a6/91/86a6eac449ddfae23
 
 [[package]]
 name = "opsiclientd"
-version = "4.3.15.1"
+version = "4.3.15.6"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },
@@ -1046,11 +1046,12 @@ wheels = [
 
 [[package]]
 name = "python-opsi"
-version = "4.3.9.8"
+version = "4.3.10.4"
 source = { registry = "https://pypi.uib.gmbh/simple" }
 dependencies = [
     { name = "attrs" },
     { name = "colorlog" },
+    { name = "cryptography" },
     { name = "distro", marker = "sys_platform == 'linux'" },
     { name = "ldap3" },
     { name = "lz4" },
@@ -1073,9 +1074,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "wmi", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.9.8.tar.gz", hash = "sha256:671303b451c81d6c8f65870f8bbd84914192cc076e9e7230b5af42a579ace903" }
+sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.10.4.tar.gz", hash = "sha256:8b20da220f17751e6814d98d00be225dab8471fbd12ce14bde85ea77e99347ab" }
 wheels = [
-    { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.9.8-py3-none-any.whl", hash = "sha256:1aca17c7dbb162a91ef582db7b4b5c6bfa4cab4ee467eedfcdbb47f28f27d879" },
+    { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.10.4-py3-none-any.whl", hash = "sha256:cbbc289be410948d67b44f540a4b55ad9b36e385ace5803b08dd73d7faa8abef" },
 ]
 
 [[package]]
