@@ -30,22 +30,22 @@ from urllib.parse import urlparse
 import psutil  # type: ignore[import]
 from OPSI import System  # type: ignore[import]
 from OPSI.Object import ProductOnClient  # type: ignore[import]
-from OPSI.Util.Message import (  # type: ignore[import]
-	ChoiceSubject,
+from OPSI.Util.Message import (
+	ChoiceSubject,  # type: ignore[import]
 	MessageSubject,
 	MessageSubjectProxy,
 	ProgressSubjectProxy,
 )
 from OPSI.Util.Path import cd  # type: ignore[import]
 from OPSI.Util.Thread import KillableThread  # type: ignore[import]
-from opsicommon.logging import (  # type: ignore[import]
+from opsicommon.logging import (
 	LOG_INFO,
 	get_logger,
 	log_context,
 	logging_config,
 )
 from opsicommon.objects import Product
-from opsicommon.types import (  # type: ignore[import]
+from opsicommon.types import (
 	forceInt,
 	forceStringList,
 	forceUnicode,
@@ -61,12 +61,7 @@ from opsiclientd.Localization import _
 from opsiclientd.notification_server import NotificationServer
 from opsiclientd.OpsiService import PermanentServiceConnection, ServiceClient
 from opsiclientd.State import State
-from opsiclientd.SystemCheck import (
-	RUNNING_ON_DARWIN,
-	RUNNING_ON_LINUX,
-	RUNNING_ON_MACOS,
-	RUNNING_ON_WINDOWS,
-)
+from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_MACOS, RUNNING_ON_WINDOWS
 from opsiclientd.Timeline import Timeline
 from opsiclientd.utils import (
 	get_include_exclude_product_ids,
@@ -77,9 +72,12 @@ from opsiclientd.utils import (
 )
 
 if RUNNING_ON_WINDOWS:
+	import pywintypes
+
 	from opsiclientd.windows import runCommandInSession
 else:
 	from OPSI.System import runCommandInSession  # type: ignore
+
 
 if TYPE_CHECKING:
 	from subprocess import Popen
@@ -549,7 +547,16 @@ class EventProcessingThread(KillableThread):
 					logger.notice("Using windows workaround to mount depot %s", depot_server_url)
 			except ValueError as error:
 				logger.info("Not an IP address '%s', using %s for depot mount: %s", depot_url_parsed.hostname, depot_server_url, error)
-		System.mount(depot_server_url, config.getDepotDrive(), username=mount_username, password=mount_password, **mount_options)
+		try:
+			System.mount(depot_server_url, config.getDepotDrive(), username=mount_username, password=mount_password, **mount_options)
+		except Exception as err:
+			logger.error("Failed to mount depot share: %s", err)
+			if RUNNING_ON_WINDOWS and isinstance(err, pywintypes.error) and err.args[0] == 1219:
+				# Multiple connections to a server or shared resource by the same user
+				logger.debug("Trying to list existing network connections")
+				result = System.execute("net use", captureStderr=True, waitForEnding=True, timeout=30, shell=True)
+				logger.notice(result)
+			raise
 
 		self._depotShareMounted = True
 
