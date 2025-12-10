@@ -32,7 +32,7 @@ class DepotToLocalDirectorySynchronizer:
 		productIds: Optional[Sequence[str]] = None,
 		maxBandwidth: int = 0,
 		dynamicBandwidth: bool = False,
-		pause_event: Optional[threading.Event] = None,
+		continue_event: Optional[threading.Event] = None,
 	) -> None:
 		productIds = productIds or []
 		self._sourceDepot: Any = sourceDepot
@@ -43,7 +43,7 @@ class DepotToLocalDirectorySynchronizer:
 		self._fileInfo: Optional[dict[str, Any]] = None
 		os.makedirs(self._destinationDirectory, exist_ok=True)
 		self._sourceDepot.setBandwidth(dynamicBandwidth=dynamicBandwidth, maxBandwidth=maxBandwidth)
-		self._pause_event = pause_event
+		self._continue_event = continue_event
 
 	def _synchronizeDirectories(self, source: str, destination: str, progressSubject: Optional[ProgressSubject] = None) -> None:
 		source = forceUnicode(source)
@@ -68,6 +68,9 @@ class DepotToLocalDirectorySynchronizer:
 
 		# Start sync
 		for item in self._sourceDepot.content(source):
+			if self._continue_event:
+				self._continue_event.wait()
+
 			source = forceUnicode(source)
 			sourcePath = source + "/" + item["name"]
 			destinationPath = os.path.join(destination, item["name"])
@@ -126,7 +129,7 @@ class DepotToLocalDirectorySynchronizer:
 						)
 						if os.path.exists(partialEndFile):
 							os.remove(partialEndFile)
-						self._sourceDepot.download(sourcePath, partialEndFile, startByteNumber=localSize, pauseEvent=self._pause_event)
+						self._sourceDepot.download(sourcePath, partialEndFile, startByteNumber=localSize, pauseEvent=self._continue_event)
 
 						with open(destinationPath, "ab") as f1:
 							with open(partialEndFile, "rb") as f2:
@@ -147,7 +150,7 @@ class DepotToLocalDirectorySynchronizer:
 								sourcePath,
 								partialStartFile,
 								endByteNumber=localSize - 1,
-								pauseEvent=self._pause_event,
+								pauseEvent=self._continue_event,
 							)
 
 							with open(partialStartFile, "ab") as f1:
@@ -178,7 +181,9 @@ class DepotToLocalDirectorySynchronizer:
 					if os.path.exists(destinationPath):
 						os.remove(destinationPath)
 					logger.info("Downloading file '%s'", item["name"])
-					self._sourceDepot.download(sourcePath, destinationPath, progressSubject=progressSubject, pauseEvent=self._pause_event)
+					self._sourceDepot.download(
+						sourcePath, destinationPath, progressSubject=progressSubject, pauseEvent=self._continue_event
+					)
 
 				md5s = md5sum(destinationPath)
 				if md5s != self._fileInfo[relSource]["md5sum"]:
@@ -206,6 +211,9 @@ class DepotToLocalDirectorySynchronizer:
 			overallProgressSubject.attachObserver(overallProgressObserver)
 
 		for self._productId in self._productIds:
+			if self._continue_event:
+				self._continue_event.wait()
+
 			productProgressSubject = ProgressSubject(
 				id="sync_product_" + self._productId,
 				type="product_sync",
@@ -231,7 +239,9 @@ class DepotToLocalDirectorySynchronizer:
 
 				logger.info("Downloading package content file")
 				packageContentFile = os.path.join(productDestinationDirectory, f"{self._productId}.files")
-				self._sourceDepot.download(f"{self._productId}/{self._productId}.files", packageContentFile, pauseEvent=self._pause_event)
+				self._sourceDepot.download(
+					f"{self._productId}/{self._productId}.files", packageContentFile, pauseEvent=self._continue_event
+				)
 				self._fileInfo = PackageContentFile(packageContentFile).parse()
 
 				size = 0

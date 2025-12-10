@@ -36,7 +36,7 @@ from packaging import version
 
 from opsiclientd.Config import Config
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
-from opsiclientd.Events.Utilities.Generators import getEventGenerators
+from opsiclientd.Events.Utilities.Generators import getEventGenerator, getEventGenerators
 from opsiclientd.nonfree.CacheBackend import ClientCacheBackend, add_products_from_setup_after_install
 from opsiclientd.nonfree.DepotSync import DepotToLocalDirectorySynchronizer
 from opsiclientd.nonfree.RPCProductDependencyMixin import RPCProductDependencyMixin
@@ -884,8 +884,8 @@ class ProductCacheService(threading.Thread):
 
 		self._repository: Repository | None = None
 
-		self._pause_event = threading.Event()
-		self._pause_event.set()
+		self._continue_event = threading.Event()
+		self._continue_event.set()
 
 		if not self._storage_dir.exists():
 			logger.notice("Creating cache service storage dir '%s'", self._storage_dir)
@@ -993,20 +993,43 @@ class ProductCacheService(threading.Thread):
 					heartbeat_thread.join()
 
 	def pause_caching(self) -> None:
-		logger.notice("Pausing product caching")
-		self._pause_event.clear()
+		self._continue_event.clear()
+		timeline.addEvent(
+			title="Product caching paused",
+			description="Unavailable or metered network detected.",
+			category="product_caching",
+		)
+		with log_context({"instance": "product cache service"}):
+			logger.notice("Product caching paused")
 
 	def resume_caching(self) -> None:
-		logger.notice("Resuming product caching")
-		self._pause_event.set()
+		self._continue_event.set()
+		timeline.addEvent(
+			title="Product caching resumed",
+			description="Unmetered network detected.",
+			category="product_caching",
+		)
+		with log_context({"instance": "product cache service"}):
+			logger.notice("Product caching resumed")
 
 	def run(self) -> None:
 		with log_context({"instance": "product cache service"}):
 			self._running = True
 			logger.notice("Product cache service started")
+
+			event_generator = getEventGenerator("net_connection_cost")
+			last_event_info = event_generator.getLastEventInfo() if event_generator else None
+			if last_event_info:
+				connected = last_event_info.get("is_connected", False)
+				metered = last_event_info.get("is_metered", True)
+				if connected and not metered:
+					self.resume_caching()
+				else:
+					self.pause_caching()
+
 			try:
 				while not self._stopped:
-					self._pause_event.wait()
+					self._continue_event.wait()
 					sleep_time = 1.0
 					if self._cache_products_requested and not self._working:
 						init_from_service(service_client=self.service_client)
@@ -1487,7 +1510,7 @@ class ProductCacheService(threading.Thread):
 				productIds=[productId],
 				maxBandwidth=self._max_bandwidth,
 				dynamicBandwidth=self._dynamic_andwidth,
-				pause_event=self._pause_event,
+				continue_event=self._continue_event,
 			)
 			productSynchronizer.synchronize(
 				productProgressObserver=self._product_progress_observer, overallProgressObserver=self._overall_progress_observer

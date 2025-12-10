@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
 from opsicommon.logging import LOG_INFO, use_logging_config
 from opsicommon.objects import Config, ConfigState, Host, LocalbootProduct, OpsiDepotserver, Product, ProductOnClient, ProductOnDepot
 from opsicommon.package.associated_files import create_package_content_file
@@ -315,6 +316,7 @@ def test_cache_product(tmp_path: Path) -> None:
 		assert product_cache_service._cache_dir_sizes == {}
 
 
+@pytest.mark.windows
 def test_pause_resume_product_caching_on_metered_net_connection() -> None:
 	cache_service = ProductCacheService(opsiclientd=MagicMock())
 	opsiclientd = MagicMock()
@@ -322,15 +324,32 @@ def test_pause_resume_product_caching_on_metered_net_connection() -> None:
 
 	event = MagicMock()
 	event.eventConfig.getId.return_value = "net_connection_cost"
-	event.eventInfo = {"ConnectionCost": 2}
+	event.eventConfig.cache_products = True
 
 	with patch.object(cache_service, "pause_caching") as pause_mock, patch.object(cache_service, "resume_caching") as resume_mock:
+		# Test Case 1: Metered connection
+		event.eventInfo = {"is_connected": True, "is_metered": True}
+		pause_mock.reset_mock()
+		resume_mock.reset_mock()
 		thread = EventProcessingThread(opsiclientd, event)
-		thread.run()
+		thread.cache_products()
 		pause_mock.assert_called_once()
 		resume_mock.assert_not_called()
 
-		event.eventInfo = {"ConnectionCost": 1}
+		# Test Case 2: Unmetered connection
+		event.eventInfo = {"is_connected": True, "is_metered": False}
+		pause_mock.reset_mock()
+		resume_mock.reset_mock()
 		thread = EventProcessingThread(opsiclientd, event)
-		thread.run()
+		thread.cache_products()
 		resume_mock.assert_called_once()
+		pause_mock.assert_not_called()
+
+		# Test Case 3: Disconnected
+		event.eventInfo = {"is_connected": False, "is_metered": False}
+		pause_mock.reset_mock()
+		resume_mock.reset_mock()
+		thread = EventProcessingThread(opsiclientd, event)
+		thread.cache_products()
+		pause_mock.assert_called_once()
+		resume_mock.assert_not_called()
