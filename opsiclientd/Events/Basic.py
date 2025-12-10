@@ -45,6 +45,7 @@ class EventGenerator(threading.Thread):
 		self._stopped = False
 		self._event: threading.Event | None = None
 		self._lastEventOccurence: float | None = None
+		self.lastEventInfo: dict[str, Any] | None = None
 
 	def __str__(self) -> str:
 		return f"<{self.__class__.__name__} {self._generatorConfig.getId()}>"
@@ -151,6 +152,7 @@ class EventGenerator(threading.Thread):
 			return
 
 		self._lastEventOccurence = time.time()
+		self.lastEventInfo = event.eventInfo
 
 		logger.info("Firing event '%s'", event)
 		logger.info("Event info:")
@@ -199,6 +201,9 @@ class EventGenerator(threading.Thread):
 			if not keep_lock:
 				logger.trace("release lock (Basic)")
 				self._opsiclientd.eventLock.release()
+
+	def getLastEventInfo(self) -> dict[str, Any] | None:
+		return self.lastEventInfo
 
 	def run(self) -> None:
 		with opsicommon.logging.log_context({"instance": f"event generator {self._generatorConfig.getId()}"}):
