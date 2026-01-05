@@ -48,7 +48,7 @@ def createEventGenerators(opsiclientd: Opsiclientd) -> None:
 	_EVENT_GENERATORS[EVENT_CONFIG_TYPE_PANIC] = EventGeneratorFactory(opsiclientd, panicEventConfig)
 	enabled_events[EVENT_CONFIG_TYPE_PANIC] = True
 
-	event_types: dict[str, list[tuple[str, str]]] = {}
+	event_types: dict[str, set[tuple[str, str]]] = {}
 
 	event_configs = getEventConfigs()
 	# Create event generators for events without preconditions
@@ -74,8 +74,8 @@ def createEventGenerators(opsiclientd: Opsiclientd) -> None:
 			logger.info("Event generator '%s' created", eventConfigId)
 			enabled_events[eventConfigId] = True
 			if eventType not in event_types:
-				event_types[eventType] = []
-			event_types[eventType].append((eventConfigId, mainEventConfigId))
+				event_types[eventType] = set()
+			event_types[eventType].add((eventConfigId, mainEventConfigId))
 		except Exception as err:
 			logger.error("Failed to create event generator '%s': %s", mainEventConfigId, err)
 
@@ -110,8 +110,8 @@ def createEventGenerators(opsiclientd: Opsiclientd) -> None:
 			logger.info("Event config '%s' added to event generator '%s'", eventConfigId, mainEventConfigId)
 			enabled_events[eventConfigId] = True
 			if eventType not in event_types:
-				event_types[eventType] = []
-			event_types[eventType].append((eventConfigId, mainEventConfigId))
+				event_types[eventType] = set()
+			event_types[eventType].add((eventConfigId, mainEventConfigId))
 		except Exception as err:
 			logger.error("Failed to add event config '%s' to event generator '%s': %s", eventConfigId, mainEventConfigId, err)
 
