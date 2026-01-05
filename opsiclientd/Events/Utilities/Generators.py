@@ -23,6 +23,7 @@ from opsiclientd.Events.Utilities.Factories import (
 	EventConfigFactory,
 	EventGeneratorFactory,
 )
+from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 if TYPE_CHECKING:
 	from opsiclientd.Opsiclientd import Opsiclientd
@@ -47,6 +48,8 @@ def createEventGenerators(opsiclientd: Opsiclientd) -> None:
 	_EVENT_GENERATORS[EVENT_CONFIG_TYPE_PANIC] = EventGeneratorFactory(opsiclientd, panicEventConfig)
 	enabled_events[EVENT_CONFIG_TYPE_PANIC] = True
 
+	event_types: dict[str, list[tuple[str, str]]] = {}
+
 	event_configs = getEventConfigs()
 	# Create event generators for events without preconditions
 	for eventConfigId, eventConfig in copy.deepcopy(event_configs).items():
@@ -70,6 +73,9 @@ def createEventGenerators(opsiclientd: Opsiclientd) -> None:
 			_EVENT_GENERATORS[eventConfigId] = EventGeneratorFactory(opsiclientd, ec)
 			logger.info("Event generator '%s' created", eventConfigId)
 			enabled_events[eventConfigId] = True
+			if eventType not in event_types:
+				event_types[eventType] = []
+			event_types[eventType].append((eventConfigId, mainEventConfigId))
 		except Exception as err:
 			logger.error("Failed to create event generator '%s': %s", mainEventConfigId, err)
 
@@ -103,8 +109,19 @@ def createEventGenerators(opsiclientd: Opsiclientd) -> None:
 			_EVENT_GENERATORS[mainEventConfigId].addEventConfig(ec)
 			logger.info("Event config '%s' added to event generator '%s'", eventConfigId, mainEventConfigId)
 			enabled_events[eventConfigId] = True
+			if eventType not in event_types:
+				event_types[eventType] = []
+			event_types[eventType].append((eventConfigId, mainEventConfigId))
 		except Exception as err:
 			logger.error("Failed to add event config '%s' to event generator '%s': %s", eventConfigId, mainEventConfigId, err)
+
+	if not RUNNING_ON_WINDOWS and event_types.get("daemon startup"):
+		# If daemon startup is enabled, do not enable gui startup on non-Windows systems
+		for eventConfigId, mainEventConfigId in event_types.get("gui startup", []):
+			logger.notice("Disabling event '%s' because 'daemon startup' is enabled", eventConfigId)
+			enabled_events[eventConfigId] = False
+			if mainEventConfigId in _EVENT_GENERATORS:
+				del _EVENT_GENERATORS[mainEventConfigId]
 
 	logger.notice("Configured events: %s", ", ".join(sorted(list(enabled_events))))
 	logger.notice("Enabled events: %s", ", ".join(sorted([evt_id for evt_id in enabled_events if enabled_events[evt_id]])))
