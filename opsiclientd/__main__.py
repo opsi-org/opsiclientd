@@ -36,7 +36,7 @@ def action_processor_starter() -> None:
 
 def opsiclientd() -> None:
 	# Disable sqlalchemy 2.0 deprecation warnings
-	sqlalchemy.util.deprecations.SILENCE_UBER_WARNING = True
+	sqlalchemy.util.deprecations.SILENCE_UBER_WARNING = True  # type: ignore[possibly-missing-attribute]
 	if getattr(sys, "frozen", False):
 		# Disable resource warnings if frozen
 		warnings.simplefilter("ignore", ResourceWarning)

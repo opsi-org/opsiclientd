@@ -313,7 +313,7 @@ class NotificationServer(SubjectsObserver, Thread):
 			if self._server:
 				self.requestEndConnections()
 				if hasattr(self._server, "close_clients"):
-					self._server.close_clients()
+					self._server.close_clients()  # type: ignore[call-non-callable]
 				try:
 					self._server.close()
 				except Exception as err:

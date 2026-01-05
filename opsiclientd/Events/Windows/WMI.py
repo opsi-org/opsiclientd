@@ -89,7 +89,7 @@ class WMIEventGenerator(EventGenerator):
 			try:
 				wqlResult = self._watcher(timeout_ms=500)
 				break
-			except wmi.x_wmi_timed_out:
+			except wmi.x_wmi_timed_out:  # type: ignore[possibly-missing-attribute]
 				continue
 			except Exception:
 				if self._opsiclientd.is_stopping():

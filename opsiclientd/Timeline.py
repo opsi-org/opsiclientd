@@ -310,4 +310,4 @@ class Timeline(metaclass=Singleton):
 			return []
 
 		with self._db_lock, self._sql.session() as session:
-			return self._sql.getSet(session, "select * from EVENT")
+			return self._sql.getSet(session, "select * from EVENT")  # type: ignore[invalid-return-type]

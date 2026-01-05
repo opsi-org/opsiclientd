@@ -75,7 +75,7 @@ class State(metaclass=Singleton):
 		name = forceUnicode(name)
 		if name == "user_logged_in":
 			if RUNNING_ON_WINDOWS:
-				for session in System.getActiveSessionInformation():
+				for session in System.getActiveSessionInformation():  # type: ignore[possibly-missing-attribute]
 					if session["UserName"] != OPSI_SETUP_USER_NAME:
 						return True
 			elif RUNNING_ON_LINUX:

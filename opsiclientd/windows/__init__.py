@@ -17,7 +17,7 @@ from ctypes import wintypes
 if os.name == "nt":
 	from ctypes import WinError, get_last_error, windll  # type: ignore[attr-defined]
 else:
-	WinError = get_last_error = windll = None
+	WinError = get_last_error = windll = lambda *args, **kwargs: None
 
 from pathlib import Path
 from types import ModuleType
@@ -71,11 +71,11 @@ def importWmiAndPythoncom(importWmi: bool = True, importPythoncom: bool = True) 
 
 					if not wmi and importWmi and pythoncom:
 						logger.debug("Importing wmi")
-						pythoncom.CoInitialize()
+						pythoncom.CoInitialize()  # type: ignore[possibly-missing-attribute]
 						try:
 							import wmi  # type: ignore[import]
 						finally:
-							pythoncom.CoUninitialize()
+							pythoncom.CoUninitialize()  # type: ignore[possibly-missing-attribute]
 				except Exception as import_error:
 					logger.warning("Failed to import: %s, retrying in 2 seconds", import_error)
 					time.sleep(2)
@@ -189,7 +189,16 @@ def runCommandInSession(
 	for attempt in range(1, max_attempts + 1):
 		logger.notice("Executing: '%s' in session '%s' on desktop '%s'", command, sessionId, desktop)
 		(hProcess, hThread, dwProcessId, dwThreadId) = win32process.CreateProcessAsUser(
-			userToken, None, command, None, None, 1, dwCreationFlags, None, None, sti
+			userToken,
+			None,  # type: ignore[invalid-argument-type]
+			command,
+			None,  # type: ignore[invalid-argument-type]
+			None,  # type: ignore[invalid-argument-type]
+			1,
+			dwCreationFlags,
+			None,
+			None,  # type: ignore[invalid-argument-type]
+			sti,
 		)
 
 		logger.info("Process startet, pid: %d", dwProcessId)
@@ -232,11 +241,11 @@ MAXIMUM_REPARSE_DATA_BUFFER_SIZE = 16 * 1024  # 16KB
 ERROR_NOT_A_REPARSE_POINT = 0x1126  # 4390
 SYMLINK_FLAG_RELATIVE = 0x00000001
 
-CreateFileW = windll.kernel32.CreateFileW
+CreateFileW = windll.kernel32.CreateFileW  # type: ignore[possibly-missing-attribute]
 CreateFileW.restype = wintypes.HANDLE
 CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
 
-DeviceIoControl = windll.kernel32.DeviceIoControl
+DeviceIoControl = windll.kernel32.DeviceIoControl  # type: ignore[possibly-missing-attribute]
 DeviceIoControl.restype = wintypes.BOOL
 DeviceIoControl.argtypes = [
 	wintypes.HANDLE,
@@ -249,7 +258,7 @@ DeviceIoControl.argtypes = [
 	ctypes.c_void_p,
 ]
 
-CloseHandle = windll.kernel32.CloseHandle
+CloseHandle = windll.kernel32.CloseHandle  # type: ignore[possibly-missing-attribute]
 CloseHandle.restype = wintypes.BOOL
 CloseHandle.argtypes = [wintypes.HANDLE]
 

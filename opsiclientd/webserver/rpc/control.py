@@ -354,9 +354,9 @@ class ControlInterface(PipeControlInterface):
 		if sessionId:
 			sessionId = forceInt(sessionId)
 		else:
-			sessionId = System.getActiveSessionId()
+			sessionId = System.getActiveSessionId()  # type: ignore[possibly-missing-attribute]
 			if sessionId is None:
-				sessionId = System.getActiveConsoleSessionId()
+				sessionId = System.getActiveConsoleSessionId()  # type: ignore[possibly-missing-attribute]
 
 		if desktop:
 			desktop = forceUnicode(desktop)
@@ -387,21 +387,21 @@ class ControlInterface(PipeControlInterface):
 		encoding: str | None = None,
 		timeout: int = 300,
 	) -> str:
-		return System.execute(cmd=command, waitForEnding=waitForEnding, captureStderr=captureStderr, encoding=encoding, timeout=timeout)
+		return System.execute(cmd=command, waitForEnding=waitForEnding, captureStderr=captureStderr, encoding=encoding, timeout=timeout)  # type: ignore[possibly-missing-attribute]
 
 	def logoffSession(self, session_id: str | None = None, username: str | None = None) -> None:
-		System.logoffSession(session_id=session_id, username=username)
+		System.logoffSession(session_id=session_id, username=username)  # type: ignore[possibly-missing-attribute]
 
 	def logoffCurrentUser(self) -> None:
 		logger.notice("rpc logoffCurrentUser: logging of current user now")
-		System.logoffCurrentUser()
+		System.logoffCurrentUser()  # type: ignore[possibly-missing-attribute]
 
 	def lockSession(self, session_id: str | None = None, username: str | None = None) -> None:
-		System.lockSession(session_id=session_id, username=username)
+		System.lockSession(session_id=session_id, username=username)  # type: ignore[possibly-missing-attribute]
 
 	def lockWorkstation(self) -> None:
 		logger.notice("rpc lockWorkstation: locking workstation now")
-		System.lockWorkstation()
+		System.lockWorkstation()  # type: ignore[possibly-missing-attribute]
 
 	def sendSAS(self) -> None:
 		logger.notice("rpc sendSAS: sending SAS")
@@ -538,7 +538,7 @@ class ControlInterface(PipeControlInterface):
 					file.write(cert.public_bytes(encoding=serialization.Encoding.PEM))
 
 	def getActiveSessions(self) -> list[dict[str, str | int | bool | None]]:
-		sessions = System.getActiveSessionInformation()
+		sessions = System.getActiveSessionInformation()  # type: ignore[possibly-missing-attribute]
 		for session in sessions:
 			session["LogonDomain"] = session.get("DomainName")
 		return sessions
@@ -591,8 +591,8 @@ class ControlInterface(PipeControlInterface):
 			raise
 
 	def loginOpsiSetupUser(self, admin: bool = True, recreate_user: bool = False) -> None:
-		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
-			System.logoffSession(session_id)
+		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):  # type: ignore[possibly-missing-attribute]
+			System.logoffSession(session_id)  # type: ignore[possibly-missing-attribute]
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 		self.opsiclientd.loginUser(socket.gethostname().upper(), user_info["name"], user_info["password"])
 
@@ -656,7 +656,7 @@ class ControlInterface(PipeControlInterface):
 		depot_drive = config.getDepotDrive()
 		if depot_path == depot_drive:
 			# Prefer depot drive if not in use
-			depot_path = depot_drive = System.get_available_drive_letter(start=depot_drive.rstrip(":")).rstrip(":") + ":"
+			depot_path = depot_drive = System.get_available_drive_letter(start=depot_drive.rstrip(":")).rstrip(":") + ":"  # type: ignore[possibly-missing-attribute]
 
 		if not os.path.isabs(script):
 			script = os.path.join(depot_path, os.sep, script)
@@ -851,8 +851,8 @@ class ControlInterface(PipeControlInterface):
 		import win32profile  # type: ignore[import]
 		import win32security  # type: ignore[import]
 
-		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
-			System.logoffSession(session_id)
+		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):  # type: ignore[possibly-missing-attribute]
+			System.logoffSession(session_id)  # type: ignore[possibly-missing-attribute]
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 
 		logon = win32security.LogonUser(
@@ -941,8 +941,8 @@ class ControlInterface(PipeControlInterface):
 							logger.warning("Timed out after %r seconds while waiting for process to complete", timeout)
 							break
 				finally:
-					for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
-						System.logoffSession(session_id)
+					for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):  # type: ignore[possibly-missing-attribute]
+						System.logoffSession(session_id)  # type: ignore[possibly-missing-attribute]
 					if script.exists():
 						script.unlink()
 					if remove_user:
@@ -1120,5 +1120,5 @@ def get_cache_service_interface(opsiclientd: Opsiclientd) -> ControlInterface:
 	setattr(backend, "_create_interface", MethodType(Interface._create_interface, backend))
 	setattr(backend, "get_interface", MethodType(Interface.get_interface, backend))
 	setattr(backend, "get_method_interface", MethodType(Interface.get_method_interface, backend))
-	backend._create_interface()
-	return backend
+	backend._create_interface()  # type: ignore[unresolved-attribute]
+	return backend  # type: ignore[invalid-return-type]

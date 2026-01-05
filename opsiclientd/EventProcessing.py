@@ -214,24 +214,24 @@ class EventProcessingThread(KillableThread):
 	def getSessionId(self) -> int | None:
 		if RUNNING_ON_WINDOWS:
 			if self.isLoginEvent:
-				user_session_ids = System.getUserSessionIds(self.event.eventInfo["User"])
+				user_session_ids = System.getUserSessionIds(self.event.eventInfo["User"])  # type: ignore[possibly-missing-attribute]
 				if user_session_ids:
 					session_id = user_session_ids[0]
 					logger.info("Using session id of user '%s': %s", self.event.eventInfo["User"], session_id)
 					return session_id
 
 			# Prefer active console/rdp sessions
-			for session in System.getActiveSessionInformation():
+			for session in System.getActiveSessionInformation():  # type: ignore[possibly-missing-attribute]
 				if session.get("StateName") == "active":
 					session_id = session["SessionId"]
 					logger.info("Using session id of user '%s': %s", session.get("UserName"), session_id)
 					return session_id
 
-			session_id = System.getActiveConsoleSessionId()
+			session_id = System.getActiveConsoleSessionId()  # type: ignore[possibly-missing-attribute]
 			logger.info("Using active console session id: %s", session_id)
 			return session_id
 
-		session_id = System.getActiveSessionId()
+		session_id = System.getActiveSessionId()  # type: ignore[possibly-missing-attribute]
 		logger.info("Using active session id: %s", session_id)
 		return session_id
 
@@ -480,21 +480,21 @@ class EventProcessingThread(KillableThread):
 			url = urlparse(config.get("depot_server", "url"))
 			try:
 				if url.scheme in ("smb", "cifs"):
-					System.setRegistryValue(
-						System.HKEY_LOCAL_MACHINE,
+					System.setRegistryValue(  # type: ignore[possibly-missing-attribute]
+						System.HKEY_LOCAL_MACHINE,  # type: ignore[possibly-missing-attribute]
 						f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\{url.hostname}",
 						"file",
 						1,
 					)
 				elif url.scheme in ("webdavs", "https"):
-					System.setRegistryValue(
-						System.HKEY_LOCAL_MACHINE,
+					System.setRegistryValue(  # type: ignore[possibly-missing-attribute]
+						System.HKEY_LOCAL_MACHINE,  # type: ignore[possibly-missing-attribute]
 						f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\{url.hostname}@SSL@{url.port}",
 						"file",
 						1,
 					)
-					System.setRegistryValue(
-						System.HKEY_LOCAL_MACHINE,
+					System.setRegistryValue(  # type: ignore[possibly-missing-attribute]
+						System.HKEY_LOCAL_MACHINE,  # type: ignore[possibly-missing-attribute]
 						"SYSTEM\\CurrentControlSet\\Services\\WebClient\\Parameters",
 						"FileSizeLimitInBytes",
 						0xFFFFFFFF,
@@ -531,13 +531,13 @@ class EventProcessingThread(KillableThread):
 			except ValueError as error:
 				logger.info("Not an IP address '%s', using %s for depot mount: %s", depot_url_parsed.hostname, depot_server_url, error)
 		try:
-			System.mount(depot_server_url, config.getDepotDrive(), username=mount_username, password=mount_password, **mount_options)
+			System.mount(depot_server_url, config.getDepotDrive(), username=mount_username, password=mount_password, **mount_options)  # type: ignore[possibly-missing-attribute]
 		except Exception as err:
 			logger.error("Failed to mount depot share: %s", err)
 			if RUNNING_ON_WINDOWS and isinstance(err, pywintypes.error) and err.args[0] == 1219:
 				# Multiple connections to a server or shared resource by the same user
 				logger.debug("Trying to list existing network connections")
-				result = System.execute("net use", captureStderr=True, waitForEnding=True, timeout=30, shell=True)
+				result = System.execute("net use", captureStderr=True, waitForEnding=True, timeout=30, shell=True)  # type: ignore[possibly-missing-attribute]
 				logger.notice(result)
 			raise
 
@@ -549,7 +549,7 @@ class EventProcessingThread(KillableThread):
 			return
 		try:
 			logger.notice("Unmounting depot share")
-			System.umount(config.getDepotDrive())
+			System.umount(config.getDepotDrive())  # type: ignore[possibly-missing-attribute]
 			self._depotShareMounted = False
 		except Exception as err:
 			logger.warning(err)
@@ -719,8 +719,8 @@ class EventProcessingThread(KillableThread):
 		if RUNNING_ON_WINDOWS:
 			logger.notice("Setting permissions for opsi-script")
 			opsi_script_dir = actionProcessorLocalDir.replace("\\\\", "\\")
-			System.execute(f'icacls "{opsi_script_dir}" /q /c /t /reset', shell=False)
-			System.execute(f'icacls "{opsi_script_dir}" /grant *S-1-5-32-545:(OI)(CI)RX', shell=False)
+			System.execute(f'icacls "{opsi_script_dir}" /q /c /t /reset', shell=False)  # type: ignore[possibly-missing-attribute]
+			System.execute(f'icacls "{opsi_script_dir}" /grant *S-1-5-32-545:(OI)(CI)RX', shell=False)  # type: ignore[possibly-missing-attribute]
 		else:
 			if RUNNING_ON_LINUX:
 				symlink = os.path.join("/usr/bin", actionProcessorFilename.split("/")[-1])
@@ -777,7 +777,7 @@ class EventProcessingThread(KillableThread):
 				' -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y"'
 				' -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"'
 			)
-			System.execute(cmd, shell=False)
+			System.execute(cmd, shell=False)  # type: ignore[possibly-missing-attribute]
 		elif RUNNING_ON_LINUX:
 			logger.info("Copying from '%s' to '%s'", actionProcessorRemoteDir, actionProcessorLocalDir)
 			for fn in os.listdir(actionProcessorRemoteDir):
@@ -1132,14 +1132,17 @@ class EventProcessingThread(KillableThread):
 			if RUNNING_ON_WINDOWS:
 				# Setting some registry values before starting action
 				# Mainly for action processor
-				System.setRegistryValue(
-					System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depoturl", config.get("depot_server", "url")
+				System.setRegistryValue(  # type: ignore[possibly-missing-attribute]
+					System.HKEY_LOCAL_MACHINE,  # type: ignore[possibly-missing-attribute]
+					"SOFTWARE\\opsi.org\\shareinfo",
+					"depoturl",
+					config.get("depot_server", "url"),
 				)
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", config.getDepotDrive())
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configurl", "<deprecated>")
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configdrive", "<deprecated>")
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsurl", "<deprecated>")
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsdrive", "<deprecated>")
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", config.getDepotDrive())  # type: ignore[possibly-missing-attribute]
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configurl", "<deprecated>")  # type: ignore[possibly-missing-attribute]
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configdrive", "<deprecated>")  # type: ignore[possibly-missing-attribute]
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsurl", "<deprecated>")  # type: ignore[possibly-missing-attribute]
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsdrive", "<deprecated>")  # type: ignore[possibly-missing-attribute]
 
 			# action processor desktop can be one of current / winlogon / default
 			desktop = self.event.eventConfig.actionProcessorDesktop
@@ -1439,7 +1442,7 @@ class EventProcessingThread(KillableThread):
 						for notifierHandle, notifierPid in zip(notifierHandles, notifierPids):
 							if hasattr(notifierHandle, "poll"):
 								notifierHandle.poll()
-							System.terminateProcess(processId=notifierPid)
+							System.terminateProcess(processId=notifierPid)  # type: ignore[possibly-missing-attribute]
 					except Exception:
 						pass
 
@@ -1666,7 +1669,7 @@ class EventProcessingThread(KillableThread):
 									for notifierHandle, notifierPid in zip(notifierHandles, notifierPids):
 										if hasattr(notifierHandle, "poll"):
 											notifierHandle.poll()
-										System.terminateProcess(processId=notifierPid)
+										System.terminateProcess(processId=notifierPid)  # type: ignore[possibly-missing-attribute]
 								except Exception:
 									pass
 						except Exception as err:
@@ -1973,10 +1976,10 @@ class EventProcessingThread(KillableThread):
 					self.setStatusMessage(_("Processing event %s") % self.event.eventConfig.getName())
 
 					if self.event.eventConfig.logoffCurrentUser:
-						System.logoffCurrentUser()
+						System.logoffCurrentUser()  # type: ignore[possibly-missing-attribute]
 						time.sleep(15)
 					elif self.event.eventConfig.lockWorkstation:
-						System.lockWorkstation()
+						System.lockWorkstation()  # type: ignore[possibly-missing-attribute]
 						time.sleep(15)
 
 					if self.should_cancel():
@@ -2120,7 +2123,7 @@ class EventProcessingThread(KillableThread):
 						time.sleep(0.1)
 						if psutil.pid_exists(notifierPid):
 							logger.trace("killing notifier with pid %s", notifierPid)
-							System.terminateProcess(processId=notifierPid)
+							System.terminateProcess(processId=notifierPid)  # type: ignore[possibly-missing-attribute]
 				except Exception as error:
 					logger.error("Could not kill notifier: %s", error, exc_info=True)
 

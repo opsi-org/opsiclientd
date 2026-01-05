@@ -484,17 +484,17 @@ class Config(metaclass=Singleton):
 
 		if RUNNING_ON_WINDOWS and (option.endswith("_dir") or option.endswith("_file")):
 			if ":" in value and ":\\" not in value:
-				logger.warning("Correcting path '%s' to '%s'", value, value.replace(":", ":\\"))
-				value = value.replace(":", ":\\")
+				logger.warning("Correcting path '%s' to '%s'", value, str(value).replace(":", ":\\"))
+				value = str(value).replace(":", ":\\")
 
 		if option.endswith("_dir") or option.endswith("_file"):
 			arch = "64" if "64" in platform.architecture()[0] else "32"
-			value = value.replace("%arch%", arch)
+			value = str(value).replace("%arch%", arch)
 
 		if section.startswith("event_") or section.startswith("precondition_"):
 			if option.endswith("_warning_time") or option.endswith("_user_cancelable"):
 				try:
-					value = int(value)
+					value = int(str(value))
 				except ValueError:
 					value = 0
 			elif option in ("active",):
@@ -518,14 +518,14 @@ class Config(metaclass=Singleton):
 					return
 
 				# Check / correct value
-				if option in ("connection_timeout", "user_cancelable_after") and int(value) < 0:
+				if option in ("connection_timeout", "user_cancelable_after") and int(str(value)) < 0:
 					value = 0
 				elif option == "opsi_host_key":
-					if len(value) != 32:
+					if len(str(value)) != 32:
 						raise ValueError("Bad opsi host key, length != 32")
-					secret_filter.add_secrets(value)
+					secret_filter.add_secrets(str(value))
 				elif option in ("depot_id", "host_id"):
-					value = forceHostId(value.replace("_", "-"))
+					value = forceHostId(str(value).replace("_", "-"))
 
 		else:
 			logger.warning("Refusing to set value '%s' for invalid config %s.%s", value, section, option)

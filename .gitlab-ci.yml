@@ -127,7 +127,7 @@ lint-pytest:
     - uv self update
     - uv sync --frozen
     - uv run ruff check opsiclientd tests
-    - uv run mypy opsiclientd tests
+    - uv run ty check opsiclientd tests
     - for db in coverage_*; do sqlite3 $db 'update file set path=replace(substr(path,instr(path,"opsiclientd")+12),"\","/");'; done
     - echo -e '[run]\nrelative_files = True\n' > .coveragerc
     - uv run coverage combine coverage_*

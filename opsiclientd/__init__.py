@@ -150,7 +150,7 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str | N
 			else:
 				logger.trace(args)
 
-	http.client.HTTPConnection.debuglevel = 1
+	http.client.HTTPConnection.debuglevel = 1  # type: ignore[possibly-missing-attribute]
 	http.client.print = log_http  # type: ignore[attr-defined]
 
 

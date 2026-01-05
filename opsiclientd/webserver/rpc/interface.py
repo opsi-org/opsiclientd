@@ -76,7 +76,7 @@ def get_method_interface(
 		deprecated = True
 
 	return MethodInterface(
-		name=func.__name__,
+		name=getattr(func, "__name__", str(func)),
 		params=params,
 		args=args,
 		varargs=spec.varargs,

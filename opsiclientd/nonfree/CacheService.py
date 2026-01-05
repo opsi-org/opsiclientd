@@ -358,13 +358,13 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):
 
 		action_groups: list[dict] = []
 		for group in self.get_product_action_groups(product_on_clients).get(clientId, []):
-			group.product_on_clients = [
+			group.product_on_clients = [  # type: ignore[invalid-assignment]
 				poc.to_hash()  # type: ignore[misc]
 				for poc in group.product_on_clients
 				if poc.actionRequest and poc.actionRequest != "none"
 			]
 			if group.product_on_clients:
-				group.dependencies = {
+				group.dependencies = {  # type: ignore[invalid-assignment]
 					product_id: [d.to_hash() for d in dep]  # type: ignore[misc]
 					for product_id, dep in group.dependencies.items()
 				}
@@ -872,7 +872,7 @@ class ProductCacheService(threading.Thread):
 		self._cache_dir_lock = threading.Lock()
 		self.last_errors: list[Exception] = []
 
-		self._impersonation: System.Impersonate | None = None
+		self._impersonation: System.Impersonate | None = None  # type: ignore[possibly-missing-attribute]
 		self._cache_products_requested = False
 		self._fire_sync_completed_event = True
 
@@ -1338,7 +1338,7 @@ class ProductCacheService(threading.Thread):
 		(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self.service_client)
 		mount = True
 		if RUNNING_ON_WINDOWS:
-			self._impersonation = System.Impersonate(username=depotServerUsername, password=depotServerPassword)
+			self._impersonation = System.Impersonate(username=depotServerUsername, password=depotServerPassword)  # type: ignore[possibly-missing-attribute]
 			self._impersonation.start(logonType="NEW_CREDENTIALS")
 			mount = False
 		mount_point = None
