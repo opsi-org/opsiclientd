@@ -217,6 +217,7 @@ class Config(metaclass=Singleton):
 			},
 			"cache_service": {
 				"product_cache_max_size": 6000000000,
+				"pause_on_metered": False,
 				"extension_config_dir": "",
 				"include_product_group_ids": [],
 				"exclude_product_group_ids": [],
@@ -968,7 +969,6 @@ class Config(metaclass=Singleton):
 			self.set("event_net_connection", "active", False)
 			self.set("event_timer", "active", True)
 			if RUNNING_ON_WINDOWS:
-				self.set("event_net_connection_cost", "active", True)
 				self.set("event_gui_startup", "active", False)
 				self.set("event_opsiclientd_start", "active", False)
 				self.set("event_gui_startup{cache_ready}", "active", True)
@@ -995,7 +995,6 @@ class Config(metaclass=Singleton):
 			self.set("event_net_connection", "active", False)
 			self.set("event_timer", "active", False)
 			if RUNNING_ON_WINDOWS:
-				self.set("event_net_connection_cost", "active", False)
 				self.set("event_gui_startup", "active", True)
 				self.set("event_gui_startup{cache_ready}", "active", True)
 				self.set("event_opsiclientd_start", "active", False)

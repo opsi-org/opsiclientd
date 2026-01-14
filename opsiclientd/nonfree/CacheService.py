@@ -36,7 +36,8 @@ from packaging import version
 
 from opsiclientd.Config import Config
 from opsiclientd.Events.SyncCompleted import SyncCompletedEventGenerator
-from opsiclientd.Events.Utilities.Generators import getEventGenerator, getEventGenerators
+from opsiclientd.Events.Utilities.Generators import getEventGenerators
+from opsiclientd.Events.Windows.WinRT import WinRTNetworkStatusMonitor
 from opsiclientd.nonfree.CacheBackend import ClientCacheBackend, add_products_from_setup_after_install
 from opsiclientd.nonfree.DepotSync import DepotToLocalDirectorySynchronizer
 from opsiclientd.nonfree.RPCProductDependencyMixin import RPCProductDependencyMixin
@@ -886,6 +887,8 @@ class ProductCacheService(threading.Thread):
 
 		self._continue_event = threading.Event()
 		self._continue_event.set()
+		self._pause_on_metered = config.get("cache_service", "pause_on_metered")
+		self._network_monitor: WinRTNetworkStatusMonitor | None = None
 
 		if not self._storage_dir.exists():
 			logger.notice("Creating cache service storage dir '%s'", self._storage_dir)
@@ -954,6 +957,9 @@ class ProductCacheService(threading.Thread):
 
 	def stop(self) -> None:
 		self._stopped = True
+		if self._network_monitor:
+			self._network_monitor.stop()
+			self._network_monitor = None
 
 	def setMaxBandwidth(self, maxBandwidth: int) -> None:
 		self._max_bandwidth = forceInt(maxBandwidth)
@@ -1012,26 +1018,26 @@ class ProductCacheService(threading.Thread):
 		with log_context({"instance": "product cache service"}):
 			logger.notice("Product caching resumed")
 
+	def _on_network_status_change(self, connected: bool, metered: bool) -> None:
+		"""
+		Callback for network status changes.
+		Pauses or resumes product caching based on the network state.
+		"""
+		with log_context({"instance": "product cache service"}):
+			logger.info(f"Network status changed: connected={connected}, metered={metered}")
+			if not connected or metered:
+				self.pause_caching()
+			else:
+				self.resume_caching()
+
 	def run(self) -> None:
 		with log_context({"instance": "product cache service"}):
 			self._running = True
 			logger.notice("Product cache service started")
-
-			event_generator = getEventGenerator("net_connection_cost")
-			last_event_info = event_generator.getLastEventInfo() if event_generator else None
-			if last_event_info:
-				connected = last_event_info.get("is_connected", False)
-				metered = last_event_info.get("is_metered", True)
-				if connected and not metered:
-					self.resume_caching()
-				else:
-					self.pause_caching()
-
 			try:
 				while not self._stopped:
-					self._continue_event.wait()
 					sleep_time = 1.0
-					if self._cache_products_requested and not self._working:
+					if self._cache_products_requested and not self._working and self._continue_event.is_set():
 						init_from_service(service_client=self.service_client)
 						sleep_time = self.start_caching_or_get_waiting_time()
 					time.sleep(sleep_time)
@@ -1058,6 +1064,12 @@ class ProductCacheService(threading.Thread):
 		overallProgressObserver: ProgressSubjectProxy | None = None,
 		fireSyncCompletedEvent: bool = True,
 	) -> None:
+		if self._pause_on_metered and RUNNING_ON_WINDOWS and not self._network_monitor:
+			try:
+				self._network_monitor = WinRTNetworkStatusMonitor(self._on_network_status_change)
+			except Exception as err:
+				logger.error("Failed to initialize network monitor: %s", err)
+				self._network_monitor = None
 		self._fire_sync_completed_event = fireSyncCompletedEvent
 		self._cache_products_requested = True
 		self._product_progress_observer = productProgressObserver

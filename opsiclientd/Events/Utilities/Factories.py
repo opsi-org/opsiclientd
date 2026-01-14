@@ -50,10 +50,7 @@ if RUNNING_ON_WINDOWS:
 		UserLoginEventConfig,
 		UserLoginEventGenerator,
 	)
-	from opsiclientd.Events.Windows.WinRT import (
-		WinRTEventConfig,
-		WinRTEventGenerator,
-	)
+
 
 if TYPE_CHECKING:
 	from opsiclientd.Opsiclientd import Opsiclientd
@@ -99,9 +96,6 @@ def EventConfigFactory(eventType: str, eventId: str, **kwargs: Any) -> EventConf
 			return UserLoginEventConfig(eventId, **kwargs)
 		if eventType == "system shutdown":
 			return SystemShutdownEventConfig(eventId, **kwargs)
-		if eventType.startswith("winrt_"):
-			handler = eventType[6:]  # Extract handler from type: "winrt_network_cost" -> "network_cost"
-			return WinRTEventConfig(eventId, handler=handler, **kwargs)
 
 	raise TypeError(f"Unknown event config type '{eventType}'")
 
@@ -137,7 +131,5 @@ def EventGeneratorFactory(opsiclientd: Opsiclientd, eventConfig: EventConfig) ->
 			return UserLoginEventGenerator(opsiclientd, eventConfig)
 		if isinstance(eventConfig, SystemShutdownEventConfig):
 			return SystemShutdownEventGenerator(opsiclientd, eventConfig)
-		if isinstance(eventConfig, WinRTEventConfig):
-			return WinRTEventGenerator(opsiclientd, eventConfig)
 
 	raise TypeError(f"Unhandled event config '{eventConfig}'")

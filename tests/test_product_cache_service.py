@@ -20,7 +20,6 @@ from opsicommon.objects import Config, ConfigState, Host, LocalbootProduct, Opsi
 from opsicommon.package.associated_files import create_package_content_file
 
 from opsiclientd.Config import Config as OpsiclientdConfig
-from opsiclientd.EventProcessing import EventProcessingThread
 from opsiclientd.nonfree.CacheService import ProductCacheService
 from opsiclientd.State import State
 from opsiclientd.utils import DiskSpaceUsage, get_directory_size
@@ -319,37 +318,25 @@ def test_cache_product(tmp_path: Path) -> None:
 @pytest.mark.windows
 def test_pause_resume_product_caching_on_metered_net_connection() -> None:
 	cache_service = ProductCacheService(opsiclientd=MagicMock())
-	opsiclientd = MagicMock()
-	opsiclientd.getCacheService.return_value = MagicMock(_productCacheService=cache_service)
-
-	event = MagicMock()
-	event.eventConfig.getId.return_value = "net_connection_cost"
-	event.eventConfig.cache_products = True
 
 	with patch.object(cache_service, "pause_caching") as pause_mock, patch.object(cache_service, "resume_caching") as resume_mock:
 		# Test Case 1: Metered connection
-		event.eventInfo = {"is_connected": True, "is_metered": True}
 		pause_mock.reset_mock()
 		resume_mock.reset_mock()
-		thread = EventProcessingThread(opsiclientd, event)
-		thread.cache_products()
+		cache_service._on_network_status_change(connected=True, metered=True)
 		pause_mock.assert_called_once()
 		resume_mock.assert_not_called()
 
 		# Test Case 2: Unmetered connection
-		event.eventInfo = {"is_connected": True, "is_metered": False}
 		pause_mock.reset_mock()
 		resume_mock.reset_mock()
-		thread = EventProcessingThread(opsiclientd, event)
-		thread.cache_products()
+		cache_service._on_network_status_change(connected=True, metered=False)
 		resume_mock.assert_called_once()
 		pause_mock.assert_not_called()
 
 		# Test Case 3: Disconnected
-		event.eventInfo = {"is_connected": False, "is_metered": False}
 		pause_mock.reset_mock()
 		resume_mock.reset_mock()
-		thread = EventProcessingThread(opsiclientd, event)
-		thread.cache_products()
+		cache_service._on_network_status_change(connected=False, metered=False)
 		pause_mock.assert_called_once()
 		resume_mock.assert_not_called()
