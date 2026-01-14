@@ -588,7 +588,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/a6/91/86a6eac449ddfae23
 
 [[package]]
 name = "opsiclientd"
-version = "4.3.16.1"
+version = "4.3.16.2"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },
@@ -1039,7 +1039,7 @@ wheels = [
 
 [[package]]
 name = "python-opsi-common"
-version = "4.3.46.0"
+version = "4.3.51.1"
 source = { registry = "https://pypi.uib.gmbh/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -1050,7 +1050,7 @@ dependencies = [
     { name = "dnspython" },
     { name = "lz4" },
     { name = "mailbits" },
-    { name = "msgpack" },
+    { name = "msgpack", marker = "sys_platform == 'win32'" },
     { name = "msgspec", marker = "sys_platform != 'win32'" },
     { name = "netifaces" },
     { name = "packaging" },
@@ -1065,14 +1065,13 @@ dependencies = [
     { name = "requests" },
     { name = "rich" },
     { name = "tomlkit" },
-    { name = "types-netifaces" },
     { name = "websocket-client" },
     { name = "wmi", marker = "sys_platform == 'win32'" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.46.0.tar.gz", hash = "sha256:ead65e80158169b288017fb59989aa44fe5c9b32958d6cea2a3aaeca4667c7e1" }
+sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.51.1.tar.gz", hash = "sha256:5b2a77cd0388447698faf717f1b9c4534e9a61ac85ec3cab6e3d9fa61e31ae01" }
 wheels = [
-    { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.46.0-py3-none-any.whl", hash = "sha256:fed897a1868b463165ad4a27417b33dfb88e0ac864b89a9aea240e09be5b5214" },
+    { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.51.1-py3-none-any.whl", hash = "sha256:d9960079391f0743312e960bb62dad701dbf4e7e532993d3276246a515b322db" },
 ]
 
 [[package]]
@@ -1368,15 +1367,6 @@ source = { registry = "https://pypi.uib.gmbh/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/17/20/7b9e8068bc2db2432389e40683f5d04c1901f72c150332f6749aa37bc5ef/types_mock-5.2.0.20250516.tar.gz", hash = "sha256:aab7d3d9ad3814f2f8da12cc8e42d9be7d38200c5f214e3c0278c38fa01299d7", size = 11220, upload-time = "2025-05-16T03:08:11.623Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/21/80/9e4a5f6dddb4ee046884e06ce6c80bc2266604e3452154a0e383a6f49414/types_mock-5.2.0.20250516-py3-none-any.whl", hash = "sha256:e50fbd0c3be8bcea25c30a47fac0b7a6ca22f630ef2f53416a73b319b39dfde1", size = 10516, upload-time = "2025-05-16T03:08:10.798Z" },
-]
-
-[[package]]
-name = "types-netifaces"
-version = "0.11.0.20241025"
-source = { registry = "https://pypi.uib.gmbh/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5e/72/6b9d2bc6a0709c071687bd29afdf9069db64c751df647475c761cfca6841/types-netifaces-0.11.0.20241025.tar.gz", hash = "sha256:0877b98a80e53e08dcb0e2d562772f6d0c4eee8bd0e1101a1ee78d17a88c3c8d", size = 2688, upload-time = "2024-10-25T02:45:03.523Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/b0/ea/503f8bc06ab9903e0302d9b94f10d3fb8f599353874cb7e8b6d2fd453079/types_netifaces-0.11.0.20241025-py3-none-any.whl", hash = "sha256:b760315d043acbb1f96232094ab05751f1cec9863df09cd95f533bd1aaee6da8", size = 3023, upload-time = "2024-10-25T02:45:02.462Z" },
 ]
 
 [[package]]
