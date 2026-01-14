@@ -8,7 +8,7 @@ stages:
 viruscheck:virustotal:
   stage: viruscheck
   tags:
-    - win10-py311-x86
+    - win10-x64
   script:
     - irm "${OPSIDEVTOOLS_INSTALLER_URL_WINDOWS_X86}" | iex
     - opsi-dev-cli -l info --output-format summary virustotal check opsiclientd_windows_x86\opsiclientd.exe --allow-detections=5 > viruscheck.txt
@@ -23,26 +23,12 @@ viruscheck:virustotal:
     variables:
       - $SKIP_TESTS
 
-.run_opsiclientd: &run_opsiclientd |
-  mkdir -p /var/log/opsi-client-agent
-  mkdir -p /etc/opsi-client-agent
-  # cp opsiclientd_data/linux/opsiclientd.conf /etc/opsi-client-agent/opsiclientd.conf
-  # sed -i s'/url =.*/url = /' /etc/opsi-client-agent/opsiclientd.conf
-  # sed -i s'/host_id =.*/host_id = testclient.opsi.org/' /etc/opsi-client-agent/opsiclientd.conf
-  # sed -i s'/opsi_host_key =.*/opsi_host_key = opsiopsiopsiopsiopsiopsiopsiopsi/' /etc/opsi-client-agent/opsiclientd.conf
-  # sed -i s'#static_dir =.*#static_dir = opsiclientd_data/common/static_html#' /etc/opsi-client-agent/opsiclientd.conf
-  # openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes -keyout /etc/opsi-client-agent/opsiclientd.pem -out /etc/opsi-client-agent/opsiclientd.pem -subj "/CN=testclient.opsi.org"
-  mkdir -p /usr/share/opsi-client-agent/opsiclientd
-  cp -a opsiclientd_data/common/static_html /usr/share/opsi-client-agent/opsiclientd/static_html
-  uv run opsiclientd --config-file=tests/data/opsiclientd.conf -l 1 &
-
 test:pytest-darwin:
-  #when: manual
   stage: test
   tags:
     - catalina-py311-x64
   script:
-    - export UV_PYTHON="3.13"
+    - export UV_PYTHON="3.14-x86_64"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - uv self update
     - uv sync --frozen
@@ -60,16 +46,16 @@ test:pytest-darwin:
       - $SKIP_TESTS
 
 test:pytest-windows:
-  #when: manual
   stage: test
   tags:
-    - win10-py311-x86
+    - win10-x64
   script:
     - $Env:UV_PYTHON_INSTALL_DIR = "c:\\uv\\python"
     - $Env:UV_CACHE_DIR = "c:\\uv\\cache"
     # Using Python 3.11 for compatibility with Windows 7
-    - $Env:UV_PYTHON = ((uv python list --managed-python --all-arches | findstr 3.11 | findstr "\-x86\-" | findstr /v freethreaded) -split ' ')[0]
+    - $Env:UV_PYTHON = "3.11-x86"
     - $Env:UV_PYTHON_PREFERENCE = "only-managed"
+    - $Env:RUSTUP_TOOLCHAIN = "stable-i686-pc-windows-msvc"
     - uv sync --frozen
     - uv run pytest --tb=short -x -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
     - Rename-Item -Path .coverage -NewName coverage_windows
@@ -85,15 +71,18 @@ test:pytest-windows:
       - $SKIP_TESTS
 
 test:pytest-linux:
-  #when: manual
   stage: test
   script:
-    - export UV_PYTHON="3.13"
+    - export UV_PYTHON="3.14-x86_64"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - uv self update
     - uv sync --frozen
-    - *run_opsiclientd
+    # Start opsiclientd in background
+    - mkdir -p /var/log/opsi-client-agent /etc/opsi-client-agent /usr/share/opsi-client-agent/opsiclientd
+    - cp -a opsiclientd_data/common/static_html /usr/share/opsi-client-agent/opsiclientd/static_html
+    - uv run opsiclientd --config-file=tests/data/opsiclientd.conf -l 1 &
     - sleep 8
+    # Run tests
     - uv run pytest --tb=short -x -o junit_family=xunit2 --junitxml=testreport.xml --cov-config .coveragerc --cov opsiclientd --cov-report term --cov-report xml -v tests
     - mv .coverage coverage_linux
   artifacts:
@@ -108,7 +97,6 @@ test:pytest-linux:
       - $SKIP_TESTS
 
 lint-pytest:
-  #when: manual
   stage: test
   needs:
     # We want to combine test coverage from all test jobs
@@ -119,20 +107,16 @@ lint-pytest:
     - job: test:pytest-linux
       artifacts: true
   script:
-    - apt-get update
-    - apt-get --yes --allow-downgrades install libsqlite3-0=3.16.2-5+deb9u1
-    - apt-get --yes install sqlite3
-    - export UV_PYTHON="3.13"
+    - export UV_PYTHON="3.14-x86_64"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - uv self update
     - uv sync --frozen
     - uv run ruff check opsiclientd tests
     - uv run ty check opsiclientd tests
-    - for db in coverage_*; do sqlite3 $db 'update file set path=replace(substr(path,instr(path,"opsiclientd")+12),"\","/");'; done
-    - echo -e '[run]\nrelative_files = True\n' > .coveragerc
-    - uv run coverage combine coverage_*
-    - uv run coverage xml
-    - uv run coverage report
+    - opsi-dev-cli self upgrade
+    - opsi-dev-cli -l info testing merge-junit-testreports testreport_*.xml testreport.xml
+    - opsi-dev-cli -l info testing merge-coverage-files coverage_* .coverage
+    - opsi-dev-cli -l info testing coverage-report
   coverage: '/TOTAL\s+\d+\s+\d+\s+(\d+)%/'
   artifacts:
     name: "opsiclientd_test"
@@ -146,11 +130,11 @@ lint-pytest:
 build:pyinstaller-linux-x64:
   stage: build
   script:
+    - export UV_PYTHON="3.14-x86_64"
+    - export UV_PYTHON_PREFERENCE="only-managed"
     - TRANSIFEX_MIN_REVIEW_RATE=0.0
     - '[ "$CI_COMMIT_TAG" = "" ] || TRANSIFEX_MIN_REVIEW_RATE=1.0'
     - curl -sS "${OPSIDEVTOOLS_INSTALLER_URL_LINUX_X64}" | sh
-    - export UV_PYTHON="3.13"
-    - export UV_PYTHON_PREFERENCE="only-managed"
     - uv self update
     - uv sync --frozen
     - uv run opsi-dev-cli -l info pyinstaller build
@@ -166,11 +150,11 @@ build:pyinstaller-macos-x64:
   tags:
     - catalina-py311-x64
   script:
+    - export UV_PYTHON="3.14-x86_64"
+    - export UV_PYTHON_PREFERENCE="only-managed"
     - TRANSIFEX_MIN_REVIEW_RATE=0.0
     - '[ "$CI_COMMIT_TAG" = "" ] || TRANSIFEX_MIN_REVIEW_RATE=1.0'
     - curl -sS "${OPSIDEVTOOLS_INSTALLER_URL_MACOS_X64}" | sh
-    - export UV_PYTHON="3.13"
-    - export UV_PYTHON_PREFERENCE="only-managed"
     - uv self update
     - uv sync --frozen
     - uv run opsi-dev-cli -l info pyinstaller build
@@ -184,16 +168,17 @@ build:pyinstaller-macos-x64:
 build:pyinstaller-windows-x86:
   stage: build
   tags:
-    - win10-py311-x86
+    - win10-x64
   script:
-    - $Env:TRANSIFEX_MIN_REVIEW_RATE="0.0"
-    - if ($CI_COMMIT_TAG) { $Env:TRANSIFEX_MIN_REVIEW_RATE="1.0" }
     - $Env:UV_PYTHON_INSTALL_DIR = "c:\\uv\\python"
     - $Env:UV_CACHE_DIR = "c:\\uv\\cache"
-    - irm "${OPSIDEVTOOLS_INSTALLER_URL_WINDOWS_X86}" | iex
     # Using Python 3.11 for compatibility with Windows 7
-    - $Env:UV_PYTHON = ((uv python list --managed-python --all-arches | findstr 3.11 | findstr "\-x86\-" | findstr /v freethreaded) -split ' ')[0]
+    - $Env:UV_PYTHON = "3.11-x86"
     - $Env:UV_PYTHON_PREFERENCE = "only-managed"
+    - $Env:RUSTUP_TOOLCHAIN = "stable-i686-pc-windows-msvc"
+    - $Env:TRANSIFEX_MIN_REVIEW_RATE="0.0"
+    - if ($CI_COMMIT_TAG) { $Env:TRANSIFEX_MIN_REVIEW_RATE="1.0" }
+    - irm "${OPSIDEVTOOLS_INSTALLER_URL_WINDOWS_X86}" | iex
     - uv run opsi-dev-cli -l debug pyinstaller build
     - opsi-dev-cli -l info signserver sign dist\opsiclientd\
     - Move-Item -Path dist\opsiclientd -Destination opsiclientd_windows_x86
@@ -206,3 +191,29 @@ build:pyinstaller-windows-x86:
     name: "opsiclientd_windows_x86"
     paths:
       - opsiclientd_windows_x86\opsiclientd.exe
+
+build:pyinstaller-windows-x64:
+  stage: build
+  tags:
+    - win10-x64
+  script:
+    - $Env:UV_PYTHON_INSTALL_DIR = "c:\\uv\\python"
+    - $Env:UV_CACHE_DIR = "c:\\uv\\cache"
+    - $Env:UV_PYTHON = "3.14-x86_64"
+    - $Env:UV_PYTHON_PREFERENCE = "only-managed"
+    - $Env:RUSTUP_TOOLCHAIN = "stable-x86_64-pc-windows-msvc"
+    - $Env:TRANSIFEX_MIN_REVIEW_RATE="0.0"
+    - if ($CI_COMMIT_TAG) { $Env:TRANSIFEX_MIN_REVIEW_RATE="1.0" }
+    - irm "${OPSIDEVTOOLS_INSTALLER_URL_WINDOWS_X64}" | iex
+    - uv run opsi-dev-cli -l debug pyinstaller build
+    - opsi-dev-cli -l info signserver sign dist\opsiclientd\
+    - Move-Item -Path dist\opsiclientd -Destination opsiclientd_windows_x64
+    # Check if binary is working
+    - opsiclientd_windows_x64\opsiclientd.exe --version
+    # Push to biaryindex
+    - if (! $CI_COMMIT_TAG) {opsi-dev-cli -l info binary push opsiclientd_windows_x64 --prerelease="$CI_JOB_ID"}
+    - if ($CI_COMMIT_TAG) {opsi-dev-cli -l info binary push opsiclientd_windows_x64}
+  artifacts:
+    name: "opsiclientd_windows_x64"
+    paths:
+      - opsiclientd_windows_x64\opsiclientd.exe
