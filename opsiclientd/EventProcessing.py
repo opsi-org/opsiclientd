@@ -1783,16 +1783,6 @@ class EventProcessingThread(KillableThread):
 	def cache_products(self, wait_for_ending: bool = False, fire_sync_completed_event: bool = True) -> None:
 		assert self.opsiclientd
 
-		if self.event.eventConfig.getId() == "net_connection_cost":
-			connected = self.event.eventInfo.get("is_connected", False)
-			metered = self.event.eventInfo.get("is_metered", True)
-			cache_service = self.opsiclientd.getCacheService()._productCacheService
-			if cache_service is not None:
-				if connected and not metered:
-					cache_service.resume_caching()
-				else:
-					cache_service.pause_caching()
-
 		if self.opsiclientd.getCacheService().isProductCacheServiceWorking():
 			logger.info("Already caching products")
 			return
