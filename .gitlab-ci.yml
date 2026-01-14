@@ -28,7 +28,7 @@ test:pytest-darwin:
   tags:
     - catalina-py311-x64
   script:
-    - export UV_PYTHON="3.14-x86_64"
+    - export UV_PYTHON="3.13-x86_64"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - uv self update
     - uv sync --frozen
@@ -73,7 +73,7 @@ test:pytest-windows:
 test:pytest-linux:
   stage: test
   script:
-    - export UV_PYTHON="3.14-x86_64"
+    - export UV_PYTHON="3.13-x86_64"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - uv self update
     - uv sync --frozen
@@ -107,7 +107,7 @@ lint-pytest:
     - job: test:pytest-linux
       artifacts: true
   script:
-    - export UV_PYTHON="3.14-x86_64"
+    - export UV_PYTHON="3.13-x86_64"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - uv self update
     - uv sync --frozen
@@ -130,7 +130,7 @@ lint-pytest:
 build:pyinstaller-linux-x64:
   stage: build
   script:
-    - export UV_PYTHON="3.14-x86_64"
+    - export UV_PYTHON="3.13-x86_64"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - TRANSIFEX_MIN_REVIEW_RATE=0.0
     - '[ "$CI_COMMIT_TAG" = "" ] || TRANSIFEX_MIN_REVIEW_RATE=1.0'
@@ -150,7 +150,7 @@ build:pyinstaller-macos-x64:
   tags:
     - catalina-py311-x64
   script:
-    - export UV_PYTHON="3.14-x86_64"
+    - export UV_PYTHON="3.13-x86_64"
     - export UV_PYTHON_PREFERENCE="only-managed"
     - TRANSIFEX_MIN_REVIEW_RATE=0.0
     - '[ "$CI_COMMIT_TAG" = "" ] || TRANSIFEX_MIN_REVIEW_RATE=1.0'
@@ -199,7 +199,7 @@ build:pyinstaller-windows-x64:
   script:
     - $Env:UV_PYTHON_INSTALL_DIR = "c:\\uv\\python"
     - $Env:UV_CACHE_DIR = "c:\\uv\\cache"
-    - $Env:UV_PYTHON = "3.14-x86_64"
+    - $Env:UV_PYTHON = "3.13-x86_64"
     - $Env:UV_PYTHON_PREFERENCE = "only-managed"
     - $Env:RUSTUP_TOOLCHAIN = "stable-x86_64-pc-windows-msvc"
     - $Env:TRANSIFEX_MIN_REVIEW_RATE="0.0"
