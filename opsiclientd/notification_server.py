@@ -304,9 +304,9 @@ class NotificationServer(SubjectsObserver, Thread):
 				else:
 					logger.error("Notification server error: %s", err, exc_info=True)
 
-			self._ready.clear()
 			self._stopped.set()
-			logger.debug("Notification server stopped")
+			self._ready.clear()
+			logger.info("Notification server stopped")
 
 	def stop(self) -> None:
 		self._should_stop = True
@@ -326,4 +326,4 @@ class NotificationServer(SubjectsObserver, Thread):
 
 		logger.debug("Waiting for NotificationServer thread to stop")
 		if not self._stopped.wait(5):
-			logger.warning("Timed out waiting NotificationServer to stop")
+			logger.info("Timed out waiting NotificationServer to stop")
