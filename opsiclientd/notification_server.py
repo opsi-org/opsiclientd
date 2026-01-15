@@ -302,7 +302,10 @@ class NotificationServer(SubjectsObserver, Thread):
 				logger.debug("Notification server stopped")
 				self._stopped.set()
 			except Exception as err:
-				logger.error("Notification server error: %s", err, exc_info=True)
+				if self._should_stop:
+					logger.debug("Notification server stopping, ignoring error: %s", err, exc_info=True)
+				else:
+					logger.error("Notification server error: %s", err, exc_info=True)
 
 	def stop(self) -> None:
 		self._should_stop = True
