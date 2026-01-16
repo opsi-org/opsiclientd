@@ -1000,8 +1000,11 @@ class ProductCacheService(threading.Thread):
 					heartbeat_thread.join()
 
 	def pause_caching(self, reason: str) -> None:
-		msg = f"Product caching paused because {reason}."
+		if not self._continue_event.is_set():
+			# Already paused
+			return
 		self._continue_event.clear()
+		msg = f"Product caching paused because {reason}."
 		self._pause_event_id = timeline.addEvent(
 			title="Product caching paused",
 			description=msg,
@@ -1012,8 +1015,11 @@ class ProductCacheService(threading.Thread):
 			logger.notice(msg)
 
 	def resume_caching(self, reason: str) -> None:
-		msg = f"Product caching resumed because {reason}."
+		if self._continue_event.is_set():
+			# Not paused
+			return
 		self._continue_event.set()
+		msg = f"Product caching resumed because {reason}."
 		add_event = True
 		if self._pause_event_id:
 			add_event = timeline.setEventEnd(self._pause_event_id) <= 0
