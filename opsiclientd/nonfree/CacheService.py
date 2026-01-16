@@ -887,6 +887,7 @@ class ProductCacheService(threading.Thread):
 
 		self._continue_event = threading.Event()
 		self._continue_event.set()
+		self._pause_event_id = 0
 		self._pause_on_metered = config.get("cache_service", "pause_on_metered")
 		self._network_monitor: WinRTNetworkStatusMonitor | None = None
 
@@ -998,25 +999,34 @@ class ProductCacheService(threading.Thread):
 					logger.debug("Joining transfer slot heartbeat thread")
 					heartbeat_thread.join()
 
-	def pause_caching(self) -> None:
+	def pause_caching(self, reason: str) -> None:
+		msg = f"Product caching paused because {reason}."
 		self._continue_event.clear()
-		timeline.addEvent(
+		self._pause_event_id = timeline.addEvent(
 			title="Product caching paused",
-			description="Unavailable or metered network detected.",
+			description=msg,
 			category="product_caching",
+			durationEvent=True,
 		)
 		with log_context({"instance": "product cache service"}):
-			logger.notice("Product caching paused")
+			logger.notice(msg)
 
-	def resume_caching(self) -> None:
+	def resume_caching(self, reason: str) -> None:
+		msg = f"Product caching resumed because {reason}."
 		self._continue_event.set()
-		timeline.addEvent(
-			title="Product caching resumed",
-			description="Unmetered network detected.",
-			category="product_caching",
-		)
+		add_event = True
+		if self._pause_event_id:
+			add_event = timeline.setEventEnd(self._pause_event_id) <= 0
+			self._pause_event_id = 0
+		if add_event:
+			# Failed to end previous event (event ID missing or not found in DB), add a new one
+			timeline.addEvent(
+				title="Product caching resumed",
+				description=msg,
+				category="product_caching",
+			)
 		with log_context({"instance": "product cache service"}):
-			logger.notice("Product caching resumed")
+			logger.notice(msg)
 
 	def _on_network_status_change(self, connected: bool, metered: bool) -> None:
 		"""
@@ -1026,9 +1036,9 @@ class ProductCacheService(threading.Thread):
 		with log_context({"instance": "product cache service"}):
 			logger.info(f"Network status changed: connected={connected}, metered={metered}")
 			if not connected or metered:
-				self.pause_caching()
+				self.pause_caching(reason="the network is disconnected" if not connected else "the network is metered")
 			else:
-				self.resume_caching()
+				self.resume_caching(reason="the network is connected and unmetered")
 
 	def run(self) -> None:
 		with log_context({"instance": "product cache service"}):
