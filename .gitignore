@@ -2,6 +2,7 @@
 /build
 /dist
 /opsiclientd-dev-data
+/testreport.xml
 
 *~
 *.pyc
