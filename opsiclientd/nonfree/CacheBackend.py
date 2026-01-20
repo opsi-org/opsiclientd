@@ -13,22 +13,12 @@ from collections import defaultdict
 from types import MethodType
 from typing import Any, Callable, Type, cast
 
-from OPSI.Backend.Backend import (  # type: ignore[import]
-	Backend,
-	BackendModificationListener,
-	ConfigDataBackend,
-	ModificationTrackingBackend,
-)
-from OPSI.Backend.Base.Extended import (  # type: ignore[import]
-	get_function_signature_and_args,
-)
+from OPSI.Backend.Backend import Backend  # type: ignore[import]
+from OPSI.Backend.Backend import BackendModificationListener, ConfigDataBackend, ModificationTrackingBackend
+from OPSI.Backend.Base.Extended import get_function_signature_and_args  # type: ignore[import]
 from OPSI.Backend.Replicator import BackendReplicator  # type: ignore[import]
 from OPSI.Util import blowfishDecrypt  # type: ignore[import]
-from opsicommon.exceptions import (
-	BackendConfigurationError,
-	BackendMissingDataError,
-	BackendUnaccomplishableError,
-)
+from opsicommon.exceptions import BackendConfigurationError, BackendMissingDataError, BackendUnaccomplishableError
 from opsicommon.license import OPSI_MODULE_IDS
 from opsicommon.logging import get_logger
 from opsicommon.logging.constants import TRACE
@@ -72,7 +62,7 @@ def add_products_from_setup_after_install(products: list[str], service_client: S
 					add_products += [
 						sai_product
 						for sai_product in setup_after_install_products[0].values
-						if sai_product not in products and sai_product not in add_products
+						if sai_product and sai_product not in products and sai_product not in add_products
 					]
 	except Exception as err:
 		logger.warning("Failed to add setup_after_install products to filteredProductIds: %s", err)
@@ -541,7 +531,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		product_ids_with_action = []
 		for productOnClient in self._masterBackend.productOnClient_getObjects(clientId=self._clientId):  # type: ignore[attr-defined]
 			productOnClients[productOnClient.productId] = productOnClient
-			if productOnClient.actionRequest not in (None, "none"):
+			if productOnClient.productId and productOnClient.actionRequest not in (None, "none"):
 				product_ids_with_action.append(productOnClient.productId)
 
 		if productOnClients and product_ids_with_action:
@@ -744,5 +734,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 
 					new_function = exec_locals[methodName]
 					setattr(self, methodName, MethodType(new_function, self))
+				except Exception as err:
+					logger.error("Failed to create method '%s': %s", methodName, err)
 				except Exception as err:
 					logger.error("Failed to create method '%s': %s", methodName, err)
