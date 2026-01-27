@@ -313,7 +313,7 @@ class Opsiclientd(EventListener, threading.Thread):
 					inst_dir.rename(old_dir)
 
 					logger.info("Installing '%s' into '%s'", bin_dir, inst_dir)
-					bin_dir.rename(inst_dir)
+					shutil.move(bin_dir, inst_dir)
 
 				self.restart(3)
 		finally:
