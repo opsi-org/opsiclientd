@@ -423,18 +423,6 @@ wheels = [
 ]
 
 [[package]]
-name = "ldap3"
-version = "2.9.1"
-source = { registry = "https://pypi.uib.gmbh/simple" }
-dependencies = [
-    { name = "pyasn1" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/43/ac/96bd5464e3edbc61595d0d69989f5d9969ae411866427b2500a8e5b812c0/ldap3-2.9.1.tar.gz", hash = "sha256:f3e7fc4718e3f09dda568b57100095e0ce58633bcabbed8667ce3f8fbaa4229f", size = 398830, upload-time = "2021-07-18T06:34:21.786Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/f6/71d6ec9f18da0b2201287ce9db6afb1a1f637dedb3f0703409558981c723/ldap3-2.9.1-py2.py3-none-any.whl", hash = "sha256:5869596fc4948797020d3f03b7939da938778a0f9e2009f7a072ccf92b8e8d70", size = 432192, upload-time = "2021-07-18T06:34:12.905Z" },
-]
-
-[[package]]
 name = "lz4"
 version = "4.4.4"
 source = { registry = "https://pypi.uib.gmbh/simple" }
@@ -595,7 +583,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/a6/91/86a6eac449ddfae23
 
 [[package]]
 name = "opsiclientd"
-version = "4.3.17.2"
+version = "4.3.17.3"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },
@@ -1011,14 +999,12 @@ wheels = [
 
 [[package]]
 name = "python-opsi"
-version = "4.3.10.4"
+version = "4.3.10.7"
 source = { registry = "https://pypi.uib.gmbh/simple" }
 dependencies = [
-    { name = "attrs" },
     { name = "colorlog" },
     { name = "cryptography" },
-    { name = "distro", marker = "sys_platform == 'linux'" },
-    { name = "ldap3" },
+    { name = "distro" },
     { name = "lz4" },
     { name = "msgpack" },
     { name = "packaging" },
@@ -1039,9 +1025,9 @@ dependencies = [
     { name = "typing-extensions" },
     { name = "wmi", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.10.4.tar.gz", hash = "sha256:8b20da220f17751e6814d98d00be225dab8471fbd12ce14bde85ea77e99347ab" }
+sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.10.7.tar.gz", hash = "sha256:ed040808b30fc3670e64ec5569a154563439c0d19311ade0b8bec8be0ae53fe1" }
 wheels = [
-    { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.10.4-py3-none-any.whl", hash = "sha256:cbbc289be410948d67b44f540a4b55ad9b36e385ace5803b08dd73d7faa8abef" },
+    { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.10.7-py3-none-any.whl", hash = "sha256:0ea7794ae515ea6b5a5aa46f97ec09163b7b2fa99ca50681c86bded8e18c4635" },
 ]
 
 [[package]]
