@@ -71,8 +71,6 @@ from opsiclientd.utils import (
 )
 
 if RUNNING_ON_WINDOWS:
-	import pywintypes
-
 	from opsiclientd.windows import runCommandInSession
 else:
 	from OPSI.System import runCommandInSession  # type: ignore
@@ -534,12 +532,15 @@ class EventProcessingThread(KillableThread):
 			System.mount(depot_server_url, config.getDepotDrive(), username=mount_username, password=mount_password, **mount_options)  # type: ignore[possibly-missing-attribute]
 		except Exception as err:
 			logger.error("Failed to mount depot share: %s", err)
-			if RUNNING_ON_WINDOWS and isinstance(err, pywintypes.error) and err.args[0] == 1219:
+			if RUNNING_ON_WINDOWS and "1219" in str(err):
 				# Multiple connections to a server or shared resource by the same user
 				logger.debug("Trying to list existing network connections")
-				result = System.execute("net use", captureStderr=True, waitForEnding=True, timeout=30, shell=True)  # type: ignore[possibly-missing-attribute]
-				logger.notice(result)
-			raise
+				try:
+					result = System.execute("net use", captureStderr=True, waitForEnding=True, timeout=30, shell=True)  # type: ignore[possibly-missing-attribute]
+					logger.notice("net use output:\n%s", "\n".join(result))
+				except Exception as err2:
+					logger.warning("Failed to list network connections: %s", err2)
+			raise err
 
 		self._depotShareMounted = True
 
