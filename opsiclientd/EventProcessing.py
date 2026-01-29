@@ -600,6 +600,17 @@ class EventProcessingThread(KillableThread):
 			actionProcessorLocalFile = os.path.join(actionProcessorLocalDir, actionProcessorFilename)
 			actionProcessorRemoteFile = os.path.join(actionProcessorRemoteDir, actionProcessorFilename)
 
+			productVersion = None
+			packageVersion = None
+			for productOnDepot in self.service_client.productOnDepot_getIdents(  # type: ignore[attr-defined]
+				productType="LocalbootProduct",
+				productId=config.action_processor_name,
+				depotId=config.get("depot_server", "depot_id"),
+				returnType="dict",
+			):
+				productVersion = productOnDepot["productVersion"]
+				packageVersion = productOnDepot["packageVersion"]
+
 			if not os.path.exists(actionProcessorLocalFile):
 				logger.notice("Action processor needs update because file '%s' not found", actionProcessorLocalFile)
 			elif abs(os.stat(actionProcessorLocalFile).st_mtime - os.stat(actionProcessorRemoteFile).st_mtime) > 10:
@@ -614,6 +625,8 @@ class EventProcessingThread(KillableThread):
 							ProductOnClient(
 								productId=config.action_processor_name,
 								productType="LocalbootProduct",
+								productVersion=productVersion,
+								packageVersion=packageVersion,
 								clientId=config.get("global", "host_id"),
 								installationStatus="installed",
 								actionProgress="",
@@ -639,16 +652,6 @@ class EventProcessingThread(KillableThread):
 				self.updateActionProcessorOld(actionProcessorRemoteDir)
 			logger.notice("Local action processor successfully updated")
 
-			productVersion = None
-			packageVersion = None
-			for productOnDepot in self.service_client.productOnDepot_getIdents(  # type: ignore[attr-defined]
-				productType="LocalbootProduct",
-				productId=config.action_processor_name,
-				depotId=config.get("depot_server", "depot_id"),
-				returnType="dict",
-			):
-				productVersion = productOnDepot["productVersion"]
-				packageVersion = productOnDepot["packageVersion"]
 			self.service_client.productOnClient_updateObjects(  # type: ignore[attr-defined]
 				[
 					ProductOnClient(
