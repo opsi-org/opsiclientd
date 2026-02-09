@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import abc  # Add this import
 import asyncio
+import os
 import re
 import threading
 import time
@@ -57,7 +58,7 @@ from opsicommon.utils import Singleton, replace_placeholders
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
-from opsiclientd.utils import PATH_PLACEHOLDERS, log_network_status
+from opsiclientd.utils import log_network_status
 
 if TYPE_CHECKING:
 	from opsiclientd.Opsiclientd import Opsiclientd
@@ -463,8 +464,14 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 						destination_dir = terminal.get_cwd()
 						message.destination_dir = str(destination_dir)
 			elif isinstance(message, FileDownloadRequestMessage):
-				if message.path and "{OPSICLIENTD_LOG_FILE_PATH}" in message.path:
-					message.path = replace_placeholders(message.path, PATH_PLACEHOLDERS)
+				if message.path:
+					message.path = replace_placeholders(
+						message.path,
+						{
+							"{OPSICLIENTD_LOG_FILE_PATH}": config.get("global", "log_file"),
+							"{OPSI_SCRIPT_LOG_FILE_PATH}": os.path.join(config.get("global", "log_dir"), "opsi-script", "opsi-script.log"),
+						},
+					)
 			await process_filetransfer_message(message=message, send_message=self._service_client.messagebus.async_send_message)
 		elif isinstance(message, ProcessMessage):
 			await process_process_message(message=message, send_message=self._service_client.messagebus.async_send_message)

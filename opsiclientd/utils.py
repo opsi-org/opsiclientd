@@ -32,9 +32,6 @@ if TYPE_CHECKING:
 
 config = Config()
 
-PATH_PLACEHOLDERS = {
-	"{OPSICLIENTD_LOG_FILE_PATH}": config.get("global", "log_file"),
-}
 
 logger = get_logger()
 
