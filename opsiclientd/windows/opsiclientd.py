@@ -17,16 +17,15 @@ import subprocess
 import sys
 import threading
 import time
-import winreg  # type: ignore[import] # pylint: disable=import-error
+import winreg
 from enum import StrEnum
 
 # pyright: reportMissingImports=false
 from typing import Any
 
+import psutil  # type: ignore[import]
 import pywintypes  # type: ignore[import]
 import win32api  # type: ignore[import]
-import win32com.client  # type: ignore[import]
-import win32com.server.policy  # type: ignore[import]
 import win32con  # type: ignore[import]
 import win32net  # type: ignore[import]
 import win32netcon  # type: ignore[import]
@@ -71,7 +70,7 @@ class OpsiclientdNT(Opsiclientd):
 	def suspendBitlocker(self) -> None:
 		logger.notice("Suspending bitlocker for one reboot if active")
 		try:
-			System.execute(  # type: ignore[possibly-missing-attribute]
+			System.execute(
 				'powershell.exe -ExecutionPolicy Bypass -Command "'
 				"foreach($v in Get-BitLockerVolume)"
 				"{if ($v.EncryptionPercentage -gt 0)"
@@ -131,7 +130,7 @@ class OpsiclientdNT(Opsiclientd):
 
 		import winreg
 
-		import win32process  # type: ignore[import]
+		import win32process
 
 		class CheckType(StrEnum):
 			KEY_EXISTS = "key_exists"
@@ -257,24 +256,16 @@ class OpsiclientdNT(Opsiclientd):
 		return is_windows_reboot_pending
 
 	def isWindowsInstallerBusy(self) -> bool:
-		if not self._ms_update_installer:
-			from opsiclientd.windows import importWmiAndPythoncom
-
-			(_wmi, _pythoncom) = importWmiAndPythoncom(importWmi=False, importPythoncom=True)
-			assert _pythoncom
-			_pythoncom.CoInitialize()
-			session = win32com.client.Dispatch("Microsoft.Update.Session")
-			self._ms_update_installer = session.CreateUpdateInstaller()
-		assert self._ms_update_installer
-		return self._ms_update_installer.isBusy
+		# since win11: ms_update_installer.isBusy is always False when wuauserv is running, so we check the service instead
+		return psutil.win_service_get("wuauserv").status() == "running"
 
 	def loginUser(self, domain: str, username: str, password: str) -> bool:
 		secret_filter.add_secrets(password)
 		assert self._controlPipe
-		for session_id in System.getActiveSessionIds(protocol="console"):  # type: ignore[possibly-missing-attribute]
+		for session_id in System.getActiveSessionIds(protocol="console"):
 			desktop = self.getCurrentActiveDesktopName(session_id)
 			if desktop and desktop.lower() != "winlogon":
-				System.lockSession(session_id)  # type: ignore[possibly-missing-attribute]
+				System.lockSession(session_id)
 			break
 
 		for seconds in range(20):
@@ -506,14 +497,14 @@ class OpsiclientdNT5(OpsiclientdNT):
 
 	def shutdownMachine(self, waitSeconds: int = 3) -> None:
 		self._isShutdownTriggered = True
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)  # type: ignore[possibly-missing-attribute]
+		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
 
 		# Running in thread to avoid failure of shutdown (device not ready)
 		ShutdownThread().start()
 
 	def rebootMachine(self, waitSeconds: int = 3) -> None:
 		self._isRebootTriggered = True
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)  # type: ignore[possibly-missing-attribute]
+		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
 
 		# Running in thread to avoid failure of reboot (device not ready)
 		RebootThread().start()
@@ -526,7 +517,7 @@ class ShutdownThread(threading.Thread):
 	def run(self) -> None:
 		while True:
 			try:
-				System.shutdown(0)  # type: ignore[possibly-missing-attribute]
+				System.shutdown(0)
 				logger.notice("Shutdown initiated")
 				break
 			except Exception as err:
@@ -542,7 +533,7 @@ class RebootThread(threading.Thread):
 	def run(self) -> None:
 		while True:
 			try:
-				System.reboot(0)  # type: ignore[possibly-missing-attribute]
+				System.reboot(0)
 				logger.notice("Reboot initiated")
 				break
 			except Exception as err:
