@@ -26,8 +26,6 @@ from typing import Any
 import psutil  # type: ignore[import]
 import pywintypes  # type: ignore[import]
 import win32api  # type: ignore[import]
-import win32com.client  # type: ignore[import]
-import win32com.server.policy  # type: ignore[import]
 import win32con  # type: ignore[import]
 import win32net  # type: ignore[import]
 import win32netcon  # type: ignore[import]
