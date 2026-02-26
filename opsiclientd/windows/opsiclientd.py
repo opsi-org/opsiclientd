@@ -257,7 +257,7 @@ class OpsiclientdNT(Opsiclientd):
 
 	def isWindowsInstallerBusy(self) -> bool:
 		# since win11: ms_update_installer.isBusy is always False when wuauserv is running, so we check the service instead
-		return psutil.win_service_get("wuauserv").status() == "running"
+		return psutil.win_service_get("wuauserv").status() == "running"  # type: ignore[possibly-missing-attribute]
 
 	def loginUser(self, domain: str, username: str, password: str) -> bool:
 		secret_filter.add_secrets(password)
