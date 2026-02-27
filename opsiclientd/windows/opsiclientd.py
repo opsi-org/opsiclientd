@@ -23,10 +23,9 @@ from enum import StrEnum
 # pyright: reportMissingImports=false
 from typing import Any
 
+import psutil  # type: ignore[import]
 import pywintypes  # type: ignore[import]
 import win32api  # type: ignore[import]
-import win32com.client  # type: ignore[import]
-import win32com.server.policy  # type: ignore[import]
 import win32con  # type: ignore[import]
 import win32net  # type: ignore[import]
 import win32netcon  # type: ignore[import]
@@ -257,16 +256,14 @@ class OpsiclientdNT(Opsiclientd):
 		return is_windows_reboot_pending
 
 	def isWindowsInstallerBusy(self) -> bool:
-		if not self._ms_update_installer:
-			from opsiclientd.windows import importWmiAndPythoncom
-
-			(_wmi, _pythoncom) = importWmiAndPythoncom(importWmi=False, importPythoncom=True)
-			assert _pythoncom
-			_pythoncom.CoInitialize()
-			session = win32com.client.Dispatch("Microsoft.Update.Session")
-			self._ms_update_installer = session.CreateUpdateInstaller()
-		assert self._ms_update_installer
-		return self._ms_update_installer.isBusy
+		# since win11: ms_update_installer.isBusy is always False when TrustedInstaller is running, so we check the service instead
+		for p in psutil.process_iter():
+			try:
+				if "trustedinstaller" in p.name().lower():
+					return True
+			except (psutil.NoSuchProcess, psutil.AccessDenied):
+				pass  # process terminated or access denied, ignore
+		return False
 
 	def loginUser(self, domain: str, username: str, password: str) -> bool:
 		secret_filter.add_secrets(password)
