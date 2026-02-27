@@ -257,7 +257,13 @@ class OpsiclientdNT(Opsiclientd):
 
 	def isWindowsInstallerBusy(self) -> bool:
 		# since win11: ms_update_installer.isBusy is always False when TrustedInstaller is running, so we check the service instead
-		return "trustedinstaller" in (p.name().lower() for p in psutil.process_iter())
+		for p in psutil.process_iter():
+			try:
+				if "trustedinstaller" in p.name().lower():
+					return True
+			except (psutil.NoSuchProcess, psutil.AccessDenied):
+				pass  # process terminated or access denied, ignore
+		return False
 
 	def loginUser(self, domain: str, username: str, password: str) -> bool:
 		secret_filter.add_secrets(password)
