@@ -11,7 +11,7 @@ import socket
 import time
 from threading import Thread
 
-from OPSI.Util.Message import ChoiceSubject  # type: ignore[import]
+from opsi_legacy.Util.Message import ChoiceSubject  # type: ignore[import]
 
 from opsiclientd.notification_server import NotificationRPC, NotificationServer
 
