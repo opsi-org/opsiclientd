@@ -40,19 +40,19 @@ pyinstaller:
   hidden_imports:
     all:
       - csv
-      # OPSI.Util.Ping needed for dynamic depot selection
-      - OPSI.Util.Ping
+      # opsi_legacy.Util.Ping needed for dynamic depot selection
+      - opsi_legacy.Util.Ping
     windows:
       - pythoncom
       - win32com
       - pywintypes
       - win32api
       - win32timezone
-      - OPSI.Backend.Manager.Authentication.NT
+      - opsi_legacy.Backend.Manager.Authentication.NT
     linux:
-      - OPSI.Backend.Manager.Authentication.PAM
+      - opsi_legacy.Backend.Manager.Authentication.PAM
     darwin:
-      - OPSI.Backend.Manager.Authentication.PAM
+      - opsi_legacy.Backend.Manager.Authentication.PAM
   collect_submodules:
     - uvicorn
     - websockets
