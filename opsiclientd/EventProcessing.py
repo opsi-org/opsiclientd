@@ -27,29 +27,15 @@ from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlparse
 
 import psutil  # type: ignore[import]
-from OPSI import System  # type: ignore[import]
-from OPSI.Object import ProductOnClient  # type: ignore[import]
-from OPSI.Util.Message import (  # type: ignore[import]
-	ChoiceSubject,
-	MessageSubject,
-	MessageSubjectProxy,
-	ProgressSubjectProxy,
-)
-from OPSI.Util.Path import cd  # type: ignore[import]
-from OPSI.Util.Thread import KillableThread  # type: ignore[import]
-from opsicommon.logging import (
-	LOG_INFO,
-	get_logger,
-	log_context,
-	logging_config,
-)
+from opsi_legacy import System  # type: ignore[import]
+from opsi_legacy.Object import ProductOnClient  # type: ignore[import]
+from opsi_legacy.Util.Message import ChoiceSubject  # type: ignore[import]
+from opsi_legacy.Util.Message import MessageSubject, MessageSubjectProxy, ProgressSubjectProxy
+from opsi_legacy.Util.Path import cd  # type: ignore[import]
+from opsi_legacy.Util.Thread import KillableThread  # type: ignore[import]
+from opsicommon.logging import LOG_INFO, get_logger, log_context, logging_config
 from opsicommon.objects import Product
-from opsicommon.types import (
-	forceInt,
-	forceStringList,
-	forceUnicode,
-	forceUnicodeLower,
-)
+from opsicommon.types import forceInt, forceStringList, forceUnicode, forceUnicodeLower
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
@@ -73,7 +59,7 @@ from opsiclientd.utils import (
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.windows import runCommandInSession
 else:
-	from OPSI.System import runCommandInSession  # type: ignore
+	from opsi_legacy.System import runCommandInSession  # type: ignore
 
 
 if TYPE_CHECKING:

@@ -12,7 +12,11 @@ from dataclasses import asdict, dataclass, field
 from threading import Event, Lock, Thread
 from typing import Any
 
-from OPSI.Util.Message import ChoiceSubject, Subject, SubjectsObserver  # type: ignore[import]
+from opsi_legacy.Util.Message import (
+	ChoiceSubject,  # type: ignore[import]
+	Subject,
+	SubjectsObserver,
+)
 from opsicommon.logging import get_logger, log_context
 
 logger = get_logger()

@@ -13,7 +13,7 @@ from typing import Any
 
 from Crypto.Hash import MD5
 from Crypto.Signature import pkcs1_15
-from OPSI.Util import getPublicKey  # type: ignore[import]
+from opsi_legacy.Util import getPublicKey  # type: ignore[import]
 from opsicommon.logging import get_logger
 
 logger = get_logger()

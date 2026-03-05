@@ -17,7 +17,7 @@ import tempfile
 from logging.handlers import RotatingFileHandler
 
 import psutil
-from OPSI.System import execute, which  # type: ignore[import]
+from opsi_legacy.System import execute, which
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import (
 	LOG_DEBUG,

@@ -31,8 +31,11 @@ import win32con  # type: ignore[import]
 import win32net  # type: ignore[import]
 import win32netcon  # type: ignore[import]
 import win32security  # type: ignore[import]
-from OPSI import System  # type: ignore[import]
-from opsicommon.logging import get_logger, secret_filter  # type: ignore[import]
+from opsi_legacy import System  # type: ignore[import]
+from opsicommon.logging import (
+	get_logger,  # type: ignore[import]
+	secret_filter,
+)
 from opsicommon.types import forceBool  # type: ignore[import]
 
 from opsiclientd import config

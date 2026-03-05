@@ -666,7 +666,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/a6/91/86a6eac449ddfae23
 
 [[package]]
 name = "opsiclientd"
-version = "4.3.17.6"
+version = "4.3.17.7"
 source = { editable = "." }
 dependencies = [
     { name = "annotated-types" },
@@ -683,8 +683,8 @@ dependencies = [
     { name = "pydantic-core" },
     { name = "pyelftools" },
     { name = "python-multipart" },
-    { name = "python-opsi" },
     { name = "python-opsi-common" },
+    { name = "python-opsi-legacy" },
     { name = "pywin32", marker = "sys_platform == 'win32'" },
     { name = "pywinpty", marker = "sys_platform == 'win32'" },
     { name = "pyzsync" },
@@ -737,8 +737,8 @@ requires-dist = [
     { name = "pydantic-core", specifier = ">=2.20,<2.29" },
     { name = "pyelftools", specifier = ">=0.31" },
     { name = "python-multipart", specifier = ">=0.0" },
-    { name = "python-opsi", specifier = ">=4.3.9.8,<4.4" },
     { name = "python-opsi-common", specifier = ">=4.3.30.3,<4.4" },
+    { name = "python-opsi-legacy", specifier = ">=4.3.9.8,<4.4" },
     { name = "pywin32", marker = "sys_platform == 'win32'", specifier = ">=308" },
     { name = "pywinpty", marker = "sys_platform == 'win32'", specifier = ">=2.0" },
     { name = "pyzsync", specifier = ">=1.2.6,<1.3" },
@@ -1081,39 +1081,6 @@ wheels = [
 ]
 
 [[package]]
-name = "python-opsi"
-version = "4.3.10.7"
-source = { registry = "https://pypi.uib.gmbh/simple" }
-dependencies = [
-    { name = "colorlog" },
-    { name = "cryptography" },
-    { name = "distro" },
-    { name = "lz4" },
-    { name = "msgpack" },
-    { name = "packaging" },
-    { name = "pefile" },
-    { name = "pexpect" },
-    { name = "psutil" },
-    { name = "pyasn1" },
-    { name = "pycryptodome" },
-    { name = "python-opsi-common" },
-    { name = "python-pam" },
-    { name = "pywin32", marker = "sys_platform == 'win32'" },
-    { name = "pyzsync" },
-    { name = "ruyaml" },
-    { name = "service-identity" },
-    { name = "six" },
-    { name = "sqlalchemy" },
-    { name = "tomlkit" },
-    { name = "typing-extensions" },
-    { name = "wmi", marker = "sys_platform == 'win32'" },
-]
-sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.10.7.tar.gz", hash = "sha256:ed040808b30fc3670e64ec5569a154563439c0d19311ade0b8bec8be0ae53fe1" }
-wheels = [
-    { url = "https://pypi.uib.gmbh/packages/python_opsi-4.3.10.7-py3-none-any.whl", hash = "sha256:0ea7794ae515ea6b5a5aa46f97ec09163b7b2fa99ca50681c86bded8e18c4635" },
-]
-
-[[package]]
 name = "python-opsi-common"
 version = "4.3.54.11"
 source = { registry = "https://pypi.uib.gmbh/simple" }
@@ -1149,6 +1116,39 @@ dependencies = [
 sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.54.11.tar.gz", hash = "sha256:d02d21b99f02901016910d60bd828f0a6ae30d3ee839e7a6d5032073a8abec1d" }
 wheels = [
     { url = "https://pypi.uib.gmbh/packages/python_opsi_common-4.3.54.11-py3-none-any.whl", hash = "sha256:9cffdac58c578254a0a06e743e2538404ed3caf17ea0a768788bab38efc40086" },
+]
+
+[[package]]
+name = "python-opsi-legacy"
+version = "4.3.11.0"
+source = { registry = "https://pypi.uib.gmbh/simple" }
+dependencies = [
+    { name = "colorlog" },
+    { name = "cryptography" },
+    { name = "distro" },
+    { name = "lz4" },
+    { name = "msgpack" },
+    { name = "packaging" },
+    { name = "pefile" },
+    { name = "pexpect" },
+    { name = "psutil" },
+    { name = "pyasn1" },
+    { name = "pycryptodome" },
+    { name = "python-opsi-common" },
+    { name = "python-pam" },
+    { name = "pywin32", marker = "sys_platform == 'win32'" },
+    { name = "pyzsync" },
+    { name = "ruyaml" },
+    { name = "service-identity" },
+    { name = "six" },
+    { name = "sqlalchemy" },
+    { name = "tomlkit" },
+    { name = "typing-extensions" },
+    { name = "wmi", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://pypi.uib.gmbh/packages/python_opsi_legacy-4.3.11.0.tar.gz", hash = "sha256:e9e175f07362be77fc666e32e7bbfeadd93d347dc373b3b4fdd3087d3e6d3ffc" }
+wheels = [
+    { url = "https://pypi.uib.gmbh/packages/python_opsi_legacy-4.3.11.0-py3-none-any.whl", hash = "sha256:c5fea68235356754ee7e33eaf43944c561d8bf7e22c4a5e286a5e1bf71042375" },
 ]
 
 [[package]]

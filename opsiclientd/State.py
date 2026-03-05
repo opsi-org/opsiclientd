@@ -14,17 +14,13 @@ from pathlib import Path
 from typing import Any
 
 import psutil
-from OPSI import System  # type: ignore[import]
+from opsi_legacy import System  # type: ignore[import]
 from opsicommon.logging import get_logger
 from opsicommon.types import forceBool, forceUnicode
 from opsicommon.utils import Singleton
 
 from opsiclientd.Config import OPSI_SETUP_USER_NAME, Config
-from opsiclientd.SystemCheck import (
-	RUNNING_ON_DARWIN,
-	RUNNING_ON_LINUX,
-	RUNNING_ON_WINDOWS,
-)
+from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_WINDOWS
 
 config = Config()
 logger = get_logger()

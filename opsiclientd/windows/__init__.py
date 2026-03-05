@@ -16,6 +16,7 @@ from ctypes import wintypes
 
 if os.name == "nt":
 	from ctypes import WinError, get_last_error, windll  # type: ignore[attr-defined]
+
 else:
 	WinError = get_last_error = windll = lambda *args, **kwargs: None
 
@@ -25,8 +26,8 @@ from typing import Any, Callable
 
 import win32com.client  # type: ignore[import]
 import win32com.server.policy  # type: ignore[import]
-from OPSI.System.Windows import (  # type: ignore[import]
-	createDesktop,
+from opsi_legacy.System.Windows import (
+	createDesktop,  # type: ignore[import]
 	getActiveSessionId,
 	getUserToken,
 	terminateProcess,

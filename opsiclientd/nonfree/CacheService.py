@@ -21,14 +21,17 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Type
 from urllib.parse import urlparse
 
-from OPSI import System  # type: ignore[import]
-from OPSI.Backend.Backend import Backend, ExtendedConfigDataBackend  # type: ignore[import]
-from OPSI.Backend.BackendManager import BackendExtender  # type: ignore[import]
-from OPSI.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker  # type: ignore[import]
-from OPSI.Util import randomString  # type: ignore[import]
-from OPSI.Util.File.Opsi import PackageContentFile  # type: ignore[import]
-from OPSI.Util.Message import ProgressSubjectProxy  # type: ignore[import]
-from OPSI.Util.Repository import Repository, getRepository  # type: ignore[import]
+from opsi_legacy import System  # type: ignore[import]
+from opsi_legacy.Backend.Backend import Backend  # type: ignore[import]
+from opsi_legacy.Backend.Backend import ExtendedConfigDataBackend
+from opsi_legacy.Backend.BackendManager import BackendExtender  # type: ignore[import]
+from opsi_legacy.Backend.SQLite import SQLiteBackend  # type: ignore[import]
+from opsi_legacy.Backend.SQLite import SQLiteObjectBackendModificationTracker
+from opsi_legacy.Util import randomString  # type: ignore[import]
+from opsi_legacy.Util.File.Opsi import PackageContentFile  # type: ignore[import]
+from opsi_legacy.Util.Message import ProgressSubjectProxy  # type: ignore[import]
+from opsi_legacy.Util.Repository import Repository  # type: ignore[import]
+from opsi_legacy.Util.Repository import getRepository
 from opsicommon.logging import get_logger, log_context
 from opsicommon.objects import LocalbootProduct, ProductOnClient
 from opsicommon.types import forceBool, forceInt, forceProductIdList

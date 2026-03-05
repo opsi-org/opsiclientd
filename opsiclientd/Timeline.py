@@ -32,8 +32,8 @@ import threading
 import time
 from typing import Any
 
-from OPSI.Backend.SQLite import SQLite  # type: ignore[import]
-from OPSI.Util import timestamp  # type: ignore[import]
+from opsi_legacy.Backend.SQLite import SQLite  # type: ignore[import]
+from opsi_legacy.Util import timestamp  # type: ignore[import]
 from opsicommon.logging import get_logger
 from opsicommon.types import forceBool, forceInt, forceOpsiTimestamp, forceUnicode
 from opsicommon.utils import Singleton

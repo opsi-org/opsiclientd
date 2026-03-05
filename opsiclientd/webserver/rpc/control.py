@@ -28,8 +28,8 @@ from uuid import uuid4
 import psutil  # type: ignore[import]
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
-from OPSI import System  # type: ignore[import]
-from OPSI.Util.Log import truncateLogData  # type: ignore[import]
+from opsi_legacy import System  # type: ignore[import]
+from opsi_legacy.Util.Log import truncateLogData  # type: ignore[import]
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, secret_filter
 from opsicommon.objects import ConfigState, ObjectToGroup, Product, ProductDependency, ProductOnClient, ProductOnDepot
@@ -50,7 +50,7 @@ from opsiclientd.webserver.rpc.interface import Interface
 if is_windows():
 	from opsiclientd.windows import runCommandInSession
 else:
-	from OPSI.System import runCommandInSession  # type: ignore
+	from opsi_legacy.System import runCommandInSession  # type: ignore
 
 if TYPE_CHECKING:
 	from opsiclientd.Opsiclientd import Opsiclientd

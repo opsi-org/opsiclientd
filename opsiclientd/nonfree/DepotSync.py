@@ -13,11 +13,11 @@ import shutil
 import threading
 from typing import Any, Optional, Sequence
 
-from OPSI.Util import md5sum  # type: ignore[import]
-from OPSI.Util.File.Opsi import PackageContentFile  # type: ignore[import]
-from OPSI.Util.Message import ProgressSubject  # type: ignore[import]
-from OPSI.Util.Path import cd  # type: ignore[import]
-from OPSI.Util.Repository import Repository  # type: ignore[import]
+from opsi_legacy.Util import md5sum  # type: ignore[import]
+from opsi_legacy.Util.File.Opsi import PackageContentFile  # type: ignore[import]
+from opsi_legacy.Util.Message import ProgressSubject  # type: ignore[import]
+from opsi_legacy.Util.Path import cd  # type: ignore[import]
+from opsi_legacy.Util.Repository import Repository  # type: ignore[import]
 from opsicommon.logging import get_logger
 from opsicommon.types import forceUnicode, forceUnicodeList
 
