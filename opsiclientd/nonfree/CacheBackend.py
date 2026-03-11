@@ -13,8 +13,12 @@ from collections import defaultdict
 from types import MethodType
 from typing import Any, Callable, Type, cast
 
-from opsi_legacy.Backend.Backend import Backend  # type: ignore[import]
-from opsi_legacy.Backend.Backend import BackendModificationListener, ConfigDataBackend, ModificationTrackingBackend
+from opsi_legacy.Backend.Backend import (
+	Backend,  # type: ignore[import]
+	BackendModificationListener,
+	ConfigDataBackend,
+	ModificationTrackingBackend,
+)
 from opsi_legacy.Backend.Base.Extended import get_function_signature_and_args  # type: ignore[import]
 from opsi_legacy.Backend.Replicator import BackendReplicator  # type: ignore[import]
 from opsi_legacy.Util import blowfishDecrypt  # type: ignore[import]
@@ -551,7 +555,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 						productDependency.requiredProductId,
 						productDependency.requiredAction,
 					)
-					productOnClients[productDependency.requiredProductId].actionRequest = productDependency.productAction
+					productOnClients[productDependency.requiredProductId].actionRequest = productDependency.requiredAction
 					updateProductOnClients.append(productOnClients[productDependency.requiredProductId])
 					if productDependency.requiredProductId not in product_ids_with_action:
 						product_ids_with_action.append(productDependency.requiredProductId)
