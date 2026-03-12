@@ -14,7 +14,7 @@ import traceback
 import warnings
 from datetime import datetime
 
-import sqlalchemy  # type: ignore[import]
+import sqlalchemy
 
 STARTUP_LOG: str | None = r"c:\opsi.org\log\opsiclientd_startup.log"
 # STARTUP_LOG: str | None = None
@@ -57,7 +57,7 @@ def opsiclientd() -> None:
 	except Exception as err:
 		print(f"ERROR: {err}", file=sys.stderr)
 		try:
-			from opsicommon.logging import logger  # type: ignore[import]
+			from opsicommon.logging import logger
 
 			logger.critical(err, exc_info=True)
 		except Exception as log_err:

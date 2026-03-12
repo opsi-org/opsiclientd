@@ -15,8 +15,8 @@ import sys
 from ipaddress import IPv6Address, ip_address
 from urllib.parse import urlparse
 
-from opsi_legacy import System  # type: ignore[import]
-from opsi_legacy.Backend.JSONRPC import JSONRPCBackend  # type: ignore[import]
+from opsi_legacy import System
+from opsi_legacy.Backend.JSONRPC import JSONRPCBackend
 from opsicommon.logging import LOG_NONE, get_logger, init_logging, log_context, secret_filter
 
 from opsiclientd import DEFAULT_FILE_LOG_FORMAT, DEFAULT_STDERR_LOG_FORMAT

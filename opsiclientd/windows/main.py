@@ -13,15 +13,15 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-import ntsecuritycon  # type: ignore[import]
-import opsicommon.logging  # type: ignore[import]
-import psutil  # type: ignore[import]
-import win32api  # type: ignore[import]
+import ntsecuritycon
+import opsicommon.logging
+import psutil
+import win32api
 
 # pyright: reportMissingImports=false
-import win32con  # type: ignore[import]
-import win32process  # type: ignore[import]
-import win32security  # type: ignore[import]
+import win32con
+import win32process
+import win32security
 from opsicommon.logging import LOG_NONE, get_logger
 from opsicommon.logging import init_logging as oc_init_logging
 
@@ -57,9 +57,9 @@ def run_as_system(command: str) -> None:
 	newprivs = [(_id, win32security.SE_PRIVILEGE_ENABLED)]
 	win32security.AdjustTokenPrivileges(duplicatedCurrentProcessToken, False, newprivs)  # type: ignore[arg-type]
 
-	win32security.SetThreadToken(win32api.GetCurrentThread(), duplicatedCurrentProcessToken)  # type: ignore[no-untyped-call]
+	win32security.SetThreadToken(win32api.GetCurrentThread(), duplicatedCurrentProcessToken)
 
-	currentProcessToken = win32security.OpenThreadToken(win32api.GetCurrentThread(), win32con.MAXIMUM_ALLOWED, False)  # type: ignore[no-untyped-call]
+	currentProcessToken = win32security.OpenThreadToken(win32api.GetCurrentThread(), win32con.MAXIMUM_ALLOWED, False)
 	sessionId = win32security.GetTokenInformation(currentProcessToken, ntsecuritycon.TokenSessionId)
 
 	pid = None
@@ -92,7 +92,7 @@ def run_as_system(command: str) -> None:
 	privs = tuple(newprivs)
 	win32security.AdjustTokenPrivileges(systemToken, False, newprivs)  # type: ignore[arg-type]
 
-	win32security.SetThreadToken(win32api.GetCurrentThread(), systemToken)  # type: ignore[no-untyped-call]
+	win32security.SetThreadToken(win32api.GetCurrentThread(), systemToken)
 
 	hToken = win32security.DuplicateTokenEx(
 		ExistingToken=lsassProcessToken,

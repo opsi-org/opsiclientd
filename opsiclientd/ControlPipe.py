@@ -36,7 +36,7 @@ from opsiclientd.webserver.rpc.jsonrpc import (
 )
 
 if os.name == "nt":
-	from ctypes import windll  # type: ignore[attr-defined]
+	from ctypes import windll
 else:
 	windll = None
 
@@ -133,7 +133,7 @@ class ClientConnection(threading.Thread):
 					JSONRPCResponse(id=rpc.id, result=f"client {'/'.join(self.clientInfo)}/{self.client_id} registered", error=None), "json"
 				)
 
-			return serialize_data(process_rpcs(self._controller._opsiclientdRpcInterface, rpc), "json")  # type: ignore[has-type]
+			return serialize_data(process_rpcs(self._controller._opsiclientdRpcInterface, rpc), "json")
 		except Exception as rpc_error:
 			logger.error(rpc_error, exc_info=True)
 			return serialize_data(JSONRPCErrorResponse(id=0, error=str(rpc_error)), "json")

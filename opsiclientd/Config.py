@@ -17,9 +17,9 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 import netifaces  # type: ignore[import]
-from opsi_legacy import System  # type: ignore[import]
-from opsi_legacy.Util import objectToBeautifiedText  # type: ignore[import]
-from opsi_legacy.Util.File import IniFile  # type: ignore[import]
+from opsi_legacy import System
+from opsi_legacy.Util import objectToBeautifiedText
+from opsi_legacy.Util.File import IniFile
 from opsicommon.client.opsiservice import ServiceClient, ServiceVerificationFlags
 from opsicommon.logging import LOG_NOTICE, get_logger, logging_config, secret_filter
 from opsicommon.system.network import get_fqdn

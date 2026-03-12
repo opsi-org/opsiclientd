@@ -25,11 +25,11 @@ from types import MethodType
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-import psutil  # type: ignore[import]
+import psutil
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
-from opsi_legacy import System  # type: ignore[import]
-from opsi_legacy.Util.Log import truncateLogData  # type: ignore[import]
+from opsi_legacy import System
+from opsi_legacy.Util.Log import truncateLogData
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, secret_filter
 from opsicommon.objects import ConfigState, ObjectToGroup, Product, ProductDependency, ProductOnClient, ProductOnDepot
@@ -50,7 +50,7 @@ from opsiclientd.webserver.rpc.interface import Interface
 if is_windows():
 	from opsiclientd.windows import runCommandInSession
 else:
-	from opsi_legacy.System import runCommandInSession  # type: ignore
+	from opsi_legacy.System import runCommandInSession
 
 if TYPE_CHECKING:
 	from opsiclientd.Opsiclientd import Opsiclientd
@@ -845,11 +845,11 @@ class ControlInterface(PipeControlInterface):
 		# https://bugs.python.org/file46988/issue.py
 		if not is_windows():
 			raise NotImplementedError(f"Not implemented on {platform.system()}")
-		import winreg  # type: ignore[import]
+		import winreg
 
-		import pywintypes  # type: ignore[import]
-		import win32profile  # type: ignore[import]
-		import win32security  # type: ignore[import]
+		import pywintypes
+		import win32profile
+		import win32security
 
 		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):  # type: ignore[possibly-missing-attribute]
 			System.logoffSession(session_id)  # type: ignore[possibly-missing-attribute]
@@ -894,9 +894,9 @@ class ControlInterface(PipeControlInterface):
 			logon.close()
 
 		assert self.opsiclientd._controlPipe, "Control pipe not initialized"
-		if not self.opsiclientd._controlPipe.credentialProviderConnected():  # type: ignore[attr-defined]
+		if not self.opsiclientd._controlPipe.credentialProviderConnected():
 			for _unused in range(20):
-				if self.opsiclientd._controlPipe.credentialProviderConnected():  # type: ignore[attr-defined]
+				if self.opsiclientd._controlPipe.credentialProviderConnected():
 					break
 				time.sleep(0.5)
 
@@ -946,7 +946,7 @@ class ControlInterface(PipeControlInterface):
 					if script.exists():
 						script.unlink()
 					if remove_user:
-						self.opsiclientd.cleanup_opsi_setup_user()  # type: ignore[attr-defined]
+						self.opsiclientd.cleanup_opsi_setup_user()
 		except Exception as err:
 			logger.error(err, exc_info=True)
 			raise

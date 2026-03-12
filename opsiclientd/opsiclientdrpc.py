@@ -14,7 +14,7 @@ import sys
 from typing import NoReturn
 
 # Do not remove this import, it's needed by using this module from CLI
-from opsi_legacy import System  # type: ignore  # noqa
+from opsi_legacy import System  # noqa
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.client.opsiservice import RPC_TIMEOUTS, ServiceClient
 from opsicommon.logging import LOG_DEBUG, LOG_NONE, get_logger, init_logging, log_context, secret_filter

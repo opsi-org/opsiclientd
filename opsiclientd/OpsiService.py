@@ -190,7 +190,7 @@ class CombinedSingletonABCMeta(Singleton, abc.ABCMeta):
 	pass
 
 
-class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, MessagebusListener, metaclass=CombinedSingletonABCMeta):  # type: ignore[misc]
+class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, MessagebusListener, metaclass=CombinedSingletonABCMeta):
 	_initialized = False
 	opsiclientd: Opsiclientd | None = None
 

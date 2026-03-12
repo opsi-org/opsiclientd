@@ -11,45 +11,22 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from opsiclientd.Events.Basic import EventConfig, EventGenerator
+from opsiclientd.EventConfiguration import EventConfig
+from opsiclientd.Events.Basic import EventGenerator
 from opsiclientd.Events.Custom import CustomEventConfig, CustomEventGenerator
-from opsiclientd.Events.DaemonShutdown import (
-	DaemonShutdownEventConfig,
-	DaemonShutdownEventGenerator,
-)
-from opsiclientd.Events.DaemonStartup import (
-	DaemonStartupEventConfig,
-	DaemonStartupEventGenerator,
-)
-from opsiclientd.Events.GUIStartup import (
-	GUIStartupEventConfig,
-	GUIStartupEventGenerator,
-)
+from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventConfig, DaemonShutdownEventGenerator
+from opsiclientd.Events.DaemonStartup import DaemonStartupEventConfig, DaemonStartupEventGenerator
+from opsiclientd.Events.GUIStartup import GUIStartupEventConfig, GUIStartupEventGenerator
 from opsiclientd.Events.Panic import PanicEventConfig, PanicEventGenerator
-from opsiclientd.Events.ProcessActionRequests import (
-	ProcessActionRequestsEventConfig,
-	ProcessActionRequestsEventGenerator,
-)
-from opsiclientd.Events.SwOnDemand import (
-	SwOnDemandEventConfig,
-	SwOnDemandEventGenerator,
-)
-from opsiclientd.Events.SyncCompleted import (
-	SyncCompletedEventConfig,
-	SyncCompletedEventGenerator,
-)
+from opsiclientd.Events.ProcessActionRequests import ProcessActionRequestsEventConfig, ProcessActionRequestsEventGenerator
+from opsiclientd.Events.SwOnDemand import SwOnDemandEventConfig, SwOnDemandEventGenerator
+from opsiclientd.Events.SyncCompleted import SyncCompletedEventConfig, SyncCompletedEventGenerator
 from opsiclientd.Events.Timer import TimerEventConfig, TimerEventGenerator
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 if RUNNING_ON_WINDOWS:
-	from opsiclientd.Events.Windows.SystemShutdown import (
-		SystemShutdownEventConfig,
-		SystemShutdownEventGenerator,
-	)
-	from opsiclientd.Events.Windows.UserLogin import (
-		UserLoginEventConfig,
-		UserLoginEventGenerator,
-	)
+	from opsiclientd.Events.Windows.SystemShutdown import SystemShutdownEventConfig, SystemShutdownEventGenerator
+	from opsiclientd.Events.Windows.UserLogin import UserLoginEventConfig, UserLoginEventGenerator
 
 
 if TYPE_CHECKING:
@@ -120,7 +97,7 @@ def EventGeneratorFactory(opsiclientd: Opsiclientd, eventConfig: EventConfig) ->
 	if isinstance(eventConfig, ProcessActionRequestsEventConfig):
 		return ProcessActionRequestsEventGenerator(opsiclientd, eventConfig)
 	if isinstance(eventConfig, CustomEventConfig):
-		return CustomEventGenerator(opsiclientd, eventConfig)
+		return CustomEventGenerator(opsiclientd, eventConfig)  # type: ignore[invalid-argument-type]
 	if isinstance(eventConfig, SwOnDemandEventConfig):
 		return SwOnDemandEventGenerator(opsiclientd, eventConfig)
 	if isinstance(eventConfig, GUIStartupEventConfig):

@@ -13,7 +13,7 @@ from typing import Any
 
 import psutil
 import pytest
-import sqlalchemy.util.deprecations  # type: ignore[import]
+import sqlalchemy.util.deprecations
 import urllib3
 from _pytest.config import Config
 from _pytest.logging import LogCaptureHandler

@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse, Response
-from opsi_legacy.Backend.Manager.Authentication import AuthenticationModule  # type: ignore[import]
+from opsi_legacy.Backend.Manager.Authentication import AuthenticationModule
 from opsicommon.exceptions import BackendAuthenticationError, BackendPermissionDeniedError
 from opsicommon.logging import get_logger, secret_filter
 from opsicommon.logging.constants import TRACE
@@ -139,11 +139,11 @@ class BaseMiddleware:
 		self._auth_failures: dict[str, list[int]] = {}
 		self._auth_module: AuthenticationModule | None = None
 		if is_linux():
-			import opsi_legacy.Backend.Manager.Authentication.PAM  # type: ignore[import]
+			import opsi_legacy.Backend.Manager.Authentication.PAM
 
 			self._auth_module = opsi_legacy.Backend.Manager.Authentication.PAM.PAMAuthentication()
 		elif is_windows():
-			import opsi_legacy.Backend.Manager.Authentication.NT  # type: ignore[import]
+			import opsi_legacy.Backend.Manager.Authentication.NT
 
 			self._auth_module = opsi_legacy.Backend.Manager.Authentication.NT.NTAuthentication("S-1-5-32-544")
 

@@ -26,13 +26,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlparse
 
-import psutil  # type: ignore[import]
-from opsi_legacy import System  # type: ignore[import]
-from opsi_legacy.Object import ProductOnClient  # type: ignore[import]
-from opsi_legacy.Util.Message import ChoiceSubject  # type: ignore[import]
-from opsi_legacy.Util.Message import MessageSubject, MessageSubjectProxy, ProgressSubjectProxy
-from opsi_legacy.Util.Path import cd  # type: ignore[import]
-from opsi_legacy.Util.Thread import KillableThread  # type: ignore[import]
+import psutil
+from opsi_legacy import System
+from opsi_legacy.Object import ProductOnClient
+from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject, MessageSubjectProxy, ProgressSubjectProxy
+from opsi_legacy.Util.Path import cd
+from opsi_legacy.Util.Thread import KillableThread
 from opsicommon.logging import LOG_INFO, get_logger, log_context, logging_config
 from opsicommon.objects import Product
 from opsicommon.types import forceInt, forceStringList, forceUnicode, forceUnicodeLower
@@ -59,7 +58,7 @@ from opsiclientd.utils import (
 if RUNNING_ON_WINDOWS:
 	from opsiclientd.windows import runCommandInSession
 else:
-	from opsi_legacy.System import runCommandInSession  # type: ignore
+	from opsi_legacy.System import runCommandInSession
 
 
 if TYPE_CHECKING:
@@ -1583,7 +1582,7 @@ class EventProcessingThread(KillableThread):
 											choices.append(_("Reboot at %s") % f" {hour:02d}:00")
 										else:
 											choices.append(_("Shutdown at %s") % f" {hour:02d}:00")
-										callbacks.append(self.abortShutdownCallback)
+										callbacks.append(self.abortShutdownCallback)  # type: ignore[invalid-argument-type]
 										if hour == self.event.eventConfig.shutdownLatestSelectableHour:
 											break
 								else:
@@ -1591,7 +1590,7 @@ class EventProcessingThread(KillableThread):
 										choices.append(_("Reboot later"))
 									else:
 										choices.append(_("Shutdown later"))
-									callbacks.append(self.abortShutdownCallback)
+									callbacks.append(self.abortShutdownCallback)  # type: ignore[invalid-argument-type]
 
 							choice_subject.setChoices(choices)
 							choice_subject.setCallbacks(callbacks)

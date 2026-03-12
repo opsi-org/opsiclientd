@@ -416,7 +416,7 @@ def cleanup_registry_uninstall() -> None:
 					uninstall_key = winreg.EnumKey(key, idx)
 					logger.debug("Processing key %r", uninstall_key)
 				except WindowsError as err:
-					if err.errno == 22:  # type: ignore[attr-defined]
+					if err.errno == 22:
 						logger.debug("No more subkeys")
 						break
 					logger.debug(err)

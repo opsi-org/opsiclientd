@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import psutil
-from opsi_legacy import System  # type: ignore[import]
+from opsi_legacy import System
 from opsicommon.logging import get_logger
 from opsicommon.types import forceBool, forceUnicode
 from opsicommon.utils import Singleton

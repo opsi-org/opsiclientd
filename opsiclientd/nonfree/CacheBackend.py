@@ -14,14 +14,14 @@ from types import MethodType
 from typing import Any, Callable, Type, cast
 
 from opsi_legacy.Backend.Backend import (
-	Backend,  # type: ignore[import]
+	Backend,
 	BackendModificationListener,
 	ConfigDataBackend,
 	ModificationTrackingBackend,
 )
-from opsi_legacy.Backend.Base.Extended import get_function_signature_and_args  # type: ignore[import]
-from opsi_legacy.Backend.Replicator import BackendReplicator  # type: ignore[import]
-from opsi_legacy.Util import blowfishDecrypt  # type: ignore[import]
+from opsi_legacy.Backend.Base.Extended import get_function_signature_and_args
+from opsi_legacy.Backend.Replicator import BackendReplicator
+from opsi_legacy.Util import blowfishDecrypt
 from opsicommon.exceptions import BackendConfigurationError, BackendMissingDataError, BackendUnaccomplishableError
 from opsicommon.license import OPSI_MODULE_IDS
 from opsicommon.logging import get_logger

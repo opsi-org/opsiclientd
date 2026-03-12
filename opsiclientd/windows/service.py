@@ -53,7 +53,7 @@ class OpsiclientdService(win32serviceutil.ServiceFramework):
 			raise
 
 	def GetAcceptedControls(self) -> int:
-		rc = win32serviceutil.ServiceFramework.GetAcceptedControls(self)  # type: ignore[no-untyped-call]
+		rc = win32serviceutil.ServiceFramework.GetAcceptedControls(self)
 		rc |= win32service.SERVICE_ACCEPT_POWEREVENT
 		return rc  # additionally accept SERVICE_ACCEPT_POWEREVENT
 
@@ -147,7 +147,7 @@ def start_service() -> None:
 		logger.essential("opsiclientd service start")
 		servicemanager.Initialize()
 		servicemanager.PrepareToHostSingle(OpsiclientdService)
-		servicemanager.StartServiceCtrlDispatcher()  # type: ignore[no-untyped-call]
+		servicemanager.StartServiceCtrlDispatcher()
 
 
 def handle_commandline(argv: Sequence[str] | None = None) -> None:

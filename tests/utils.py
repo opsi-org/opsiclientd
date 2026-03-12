@@ -76,7 +76,7 @@ class OpsiclientdTestClient(TestClient):
 		super().__enter__()
 		return self
 
-	@property  # type: ignore[override]
+	@property
 	def auth(self) -> tuple[str, str] | None:
 		if self._username is None or self._password is None:
 			return None

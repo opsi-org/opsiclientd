@@ -23,10 +23,9 @@ from opsiclientd.Config import Config
 from opsiclientd.SystemCheck import RUNNING_ON_WINDOWS
 
 if os.name == "nt":
-	import winreg  # type: ignore[import]
+	import winreg
 
-	import win32file  # type: ignore[import]
-
+	import win32file
 if TYPE_CHECKING:
 	from opsiclientd.OpsiService import ServiceClient
 
@@ -81,7 +80,7 @@ def read_fixed_file_info(data: bytes) -> str:
 
 
 def get_version_from_mach_binary(filename: str | Path) -> str:
-	from macholib import MachO  # type: ignore[import]
+	from macholib import MachO
 
 	machofile = MachO.MachO(str(filename))
 	fpc_offset, fpc_size = 0, 0
@@ -102,11 +101,11 @@ def get_version_from_mach_binary(filename: str | Path) -> str:
 
 
 def get_version_from_elf_binary(filename: str | Path) -> str:
-	from elftools.elf.elffile import ELFFile  # type: ignore[import]
+	from elftools.elf.elffile import ELFFile
 
 	with open(filename, "rb") as file:
-		elffile = ELFFile(file)  # type: ignore[no-untyped-call]
-		for section in elffile.iter_sections():  # type: ignore[no-untyped-call]
+		elffile = ELFFile(file)
+		for section in elffile.iter_sections():
 			if section.name == "fpc.resources":
 				return read_fixed_file_info(section.data())
 
@@ -114,7 +113,7 @@ def get_version_from_elf_binary(filename: str | Path) -> str:
 
 
 def get_version_from_dos_binary(filename: str | Path) -> str:
-	import pefile  # type: ignore[import]
+	import pefile
 
 	try:
 		pef = pefile.PE(str(filename))
@@ -241,37 +240,37 @@ def get_mshotfix_package_name() -> str | None:
 
 
 # TODO: move to opsicommon or opsi-script
-def get_registry_value(sub_key: str, value_name: str, root=None) -> str:  # type: ignore[no-untyped-def]
+def get_registry_value(sub_key: str, value_name: str, root=None) -> str:
 	if not RUNNING_ON_WINDOWS:
 		raise RuntimeError("Can only access registry on Windows")
 
-	root = root or winreg.HKEY_LOCAL_MACHINE  # type: ignore[attr-defined]
+	root = root or winreg.HKEY_LOCAL_MACHINE
 
-	flags = winreg.KEY_READ  # type: ignore[attr-defined]
-	flags |= winreg.KEY_WOW64_32KEY if platform.architecture()[0] == "32bit" else winreg.KEY_WOW64_64KEY  # type: ignore[attr-defined]
+	flags = winreg.KEY_READ
+	flags |= winreg.KEY_WOW64_32KEY if platform.architecture()[0] == "32bit" else winreg.KEY_WOW64_64KEY
 
-	with winreg.OpenKeyEx(root, sub_key, 0, flags) as hkey:  # type: ignore[attr-defined]
-		return winreg.QueryValueEx(hkey, value_name)[0]  # type: ignore[attr-defined]
+	with winreg.OpenKeyEx(root, sub_key, 0, flags) as hkey:
+		return winreg.QueryValueEx(hkey, value_name)[0]
 
 
 # TODO: move to opsicommon or opsi-script
-def set_registry_value(sub_key: str, value_name: str, value: str | int, root=None) -> None:  # type: ignore[no-untyped-def]
+def set_registry_value(sub_key: str, value_name: str, value: str | int, root=None) -> None:
 	if not RUNNING_ON_WINDOWS:
 		return
 
-	root = root or winreg.HKEY_LOCAL_MACHINE  # type: ignore[attr-defined]
+	root = root or winreg.HKEY_LOCAL_MACHINE
 
-	flags = winreg.KEY_WRITE  # type: ignore[attr-defined]
-	flags |= winreg.KEY_WOW64_32KEY if platform.architecture()[0] == "32bit" else winreg.KEY_WOW64_64KEY  # type: ignore[attr-defined]
+	flags = winreg.KEY_WRITE
+	flags |= winreg.KEY_WOW64_32KEY if platform.architecture()[0] == "32bit" else winreg.KEY_WOW64_64KEY
 
-	with winreg.CreateKeyEx(root, sub_key, 0, flags) as hkey:  # type: ignore[attr-defined]
+	with winreg.CreateKeyEx(root, sub_key, 0, flags) as hkey:
 		if isinstance(value, int):
-			winreg.SetValueEx(  # type: ignore[attr-defined]
+			winreg.SetValueEx(
 				hkey,
 				value_name,
 				0,
-				winreg.REG_QWORD if value > 0xFFFFFFFF else winreg.REG_DWORD,  # type: ignore[attr-defined]
+				winreg.REG_QWORD if value > 0xFFFFFFFF else winreg.REG_DWORD,
 				value,
 			)
 		else:
-			winreg.SetValueEx(hkey, value_name, 0, winreg.REG_SZ, value)  # type: ignore[attr-defined]
+			winreg.SetValueEx(hkey, value_name, 0, winreg.REG_SZ, value)

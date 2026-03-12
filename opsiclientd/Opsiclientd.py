@@ -28,11 +28,10 @@ from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Generator, Literal
 
-import psutil  # type: ignore[import]
-from opsi_legacy import System  # type: ignore[import]
-from opsi_legacy.Util import randomString  # type: ignore[import]
-from opsi_legacy.Util.Message import ChoiceSubject  # type: ignore[import]
-from opsi_legacy.Util.Message import MessageSubject
+import psutil
+from opsi_legacy import System
+from opsi_legacy.Util import randomString
+from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, log_context, secret_filter
 from opsicommon.package import OpsiPackage
@@ -65,7 +64,7 @@ if RUNNING_ON_WINDOWS:
 	from opsiclientd.Events.Windows.UserLogin import LoginDetector
 	from opsiclientd.windows import get_link_target, runCommandInSession
 else:
-	from opsi_legacy.System import runCommandInSession  # type: ignore
+	from opsi_legacy.System import runCommandInSession
 	from opsicommon.system.subprocess import get_subprocess_environment
 
 if TYPE_CHECKING:

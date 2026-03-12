@@ -11,7 +11,7 @@ import socket
 import time
 from threading import Thread
 
-from opsi_legacy.Util.Message import ChoiceSubject  # type: ignore[import]
+from opsi_legacy.Util.Message import ChoiceSubject
 
 from opsiclientd.notification_server import NotificationRPC, NotificationServer
 
@@ -22,12 +22,12 @@ def test_start_stop_notification_server() -> None:
 	choice_subject = ChoiceSubject(id="choice")
 	choice_subject.setChoices(["abort", "start"])
 	subjects = [choice_subject]
-	notification_server1 = NotificationServer(address=address, start_port=start_port, subjects=subjects)
+	notification_server1 = NotificationServer(address=address, start_port=start_port, subjects=subjects)  # type: ignore[invalid-argument-type]
 	notification_server1.start()
 	notification_server1.wait_ready(5)
 	assert notification_server1.port == start_port
 
-	notification_server2 = NotificationServer(address=address, start_port=start_port, subjects=subjects)
+	notification_server2 = NotificationServer(address=address, start_port=start_port, subjects=subjects)  # type: ignore[invalid-argument-type]
 	notification_server2.start()
 	notification_server2.wait_ready(5)
 	assert notification_server2.port == start_port + 1
@@ -90,7 +90,7 @@ def test_notification_server_multi_client() -> None:
 	choice_subject = ChoiceSubject(id="choice", callbacks=[abort_callback, start_callback])
 	choice_subject.setChoices(["abort", "start"])
 	subjects = [choice_subject]
-	notification_server = NotificationServer(address=address, start_port=start_port, subjects=subjects)
+	notification_server = NotificationServer(address=address, start_port=start_port, subjects=subjects)  # type: ignore[invalid-argument-type]
 	notification_server.start()
 	notification_server.wait_ready(5)
 	assert notification_server.port == start_port

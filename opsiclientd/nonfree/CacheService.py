@@ -21,17 +21,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Type
 from urllib.parse import urlparse
 
-from opsi_legacy import System  # type: ignore[import]
-from opsi_legacy.Backend.Backend import Backend  # type: ignore[import]
-from opsi_legacy.Backend.Backend import ExtendedConfigDataBackend
-from opsi_legacy.Backend.BackendManager import BackendExtender  # type: ignore[import]
-from opsi_legacy.Backend.SQLite import SQLiteBackend  # type: ignore[import]
-from opsi_legacy.Backend.SQLite import SQLiteObjectBackendModificationTracker
-from opsi_legacy.Util import randomString  # type: ignore[import]
-from opsi_legacy.Util.File.Opsi import PackageContentFile  # type: ignore[import]
-from opsi_legacy.Util.Message import ProgressSubjectProxy  # type: ignore[import]
-from opsi_legacy.Util.Repository import Repository  # type: ignore[import]
-from opsi_legacy.Util.Repository import getRepository
+from opsi_legacy import System
+from opsi_legacy.Backend.Backend import Backend, ExtendedConfigDataBackend
+from opsi_legacy.Backend.BackendManager import BackendExtender
+from opsi_legacy.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker
+from opsi_legacy.Util import randomString
+from opsi_legacy.Util.File.Opsi import PackageContentFile
+from opsi_legacy.Util.Message import ProgressSubjectProxy
+from opsi_legacy.Util.Repository import Repository, getRepository
 from opsicommon.logging import get_logger, log_context
 from opsicommon.objects import LocalbootProduct, ProductOnClient
 from opsicommon.types import forceBool, forceInt, forceProductIdList
@@ -363,14 +360,11 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):
 		action_groups: list[dict] = []
 		for group in self.get_product_action_groups(product_on_clients).get(clientId, []):
 			group.product_on_clients = [  # type: ignore[invalid-assignment]
-				poc.to_hash()  # type: ignore[misc]
-				for poc in group.product_on_clients
-				if poc.actionRequest and poc.actionRequest != "none"
+				poc.to_hash() for poc in group.product_on_clients if poc.actionRequest and poc.actionRequest != "none"
 			]
 			if group.product_on_clients:
 				group.dependencies = {  # type: ignore[invalid-assignment]
-					product_id: [d.to_hash() for d in dep]  # type: ignore[misc]
-					for product_id, dep in group.dependencies.items()
+					product_id: [d.to_hash() for d in dep] for product_id, dep in group.dependencies.items()
 				}
 				action_groups.append(group)  # type: ignore[arg-type]
 

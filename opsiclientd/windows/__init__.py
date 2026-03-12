@@ -15,7 +15,7 @@ import time
 from ctypes import wintypes
 
 if os.name == "nt":
-	from ctypes import WinError, get_last_error, windll  # type: ignore[attr-defined]
+	from ctypes import WinError, get_last_error, windll
 
 else:
 	WinError = get_last_error = windll = lambda *args, **kwargs: None
@@ -24,17 +24,9 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable
 
-import win32com.client  # type: ignore[import]
-import win32com.server.policy  # type: ignore[import]
-from opsi_legacy.System.Windows import (
-	createDesktop,  # type: ignore[import]
-	getActiveSessionId,
-	getUserToken,
-	terminateProcess,
-	win32con,
-	win32event,
-	win32process,
-)
+import win32com.client
+import win32com.server.policy
+from opsi_legacy.System.Windows import createDesktop, getActiveSessionId, getUserToken, terminateProcess, win32con, win32event, win32process
 from opsicommon.logging import get_logger
 from opsicommon.types import forceBool, forceInt, forceUnicode, forceUnicodeLower
 
@@ -48,8 +40,8 @@ PROGID_EventSubscription = "EventSystem.EventSubscription"
 
 IID_ISensLogon = "{d597bab3-5b9f-11d1-8dd2-00aa004abd5e}"
 
-wmi = None  # type: ignore[var-annotated]
-pythoncom = None  # type: ignore[var-annotated]
+wmi = None
+pythoncom = None
 importWmiAndPythoncomLock = threading.Lock()
 
 logger = get_logger()
@@ -68,15 +60,15 @@ def importWmiAndPythoncom(importWmi: bool = True, importPythoncom: bool = True) 
 				try:
 					if not pythoncom and importPythoncom:
 						logger.debug("Importing pythoncom")
-						import pythoncom  # type: ignore[import]
+						import pythoncom
 
 					if not wmi and importWmi and pythoncom:
 						logger.debug("Importing wmi")
-						pythoncom.CoInitialize()  # type: ignore[possibly-missing-attribute]
+						pythoncom.CoInitialize()
 						try:
 							import wmi  # type: ignore[import]
 						finally:
-							pythoncom.CoUninitialize()  # type: ignore[possibly-missing-attribute]
+							pythoncom.CoUninitialize()
 				except Exception as import_error:
 					logger.warning("Failed to import: %s, retrying in 2 seconds", import_error)
 					time.sleep(2)
@@ -218,7 +210,7 @@ def runCommandInSession(
 
 		exitCode = win32process.GetExitCodeProcess(hProcess)
 		log = logger.notice if exitCode == 0 else logger.warning
-		log("Process %d ended with exit code %d", dwProcessId, exitCode)  # type: ignore
+		log("Process %d ended with exit code %d", dwProcessId, exitCode)
 		# Can occur with the DeviceLock software on system startup
 		# -1073741502 / 0xc0000142 / STATUS_DLL_INIT_FAILED
 		if exitCode == -1073741502 and attempt < max_attempts:
@@ -373,3 +365,5 @@ def get_link_target(link_path: str | Path) -> Path | None:
 		return None
 	finally:
 		CloseHandle(handle)
+		logger.warning("Error processing reparse point for '%s': %s", link_path, err)
+		return None
