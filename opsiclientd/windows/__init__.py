@@ -365,5 +365,3 @@ def get_link_target(link_path: str | Path) -> Path | None:
 		return None
 	finally:
 		CloseHandle(handle)
-		logger.warning("Error processing reparse point for '%s': %s", link_path, err)
-		return None
