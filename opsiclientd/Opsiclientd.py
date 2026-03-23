@@ -28,6 +28,9 @@ from hashlib import sha256
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final, Generator, Literal
 
+import opsi_legacy
+
+sys.modules["OPSI"] = opsi_legacy
 import psutil
 from opsi_legacy import System
 from opsi_legacy.Util import randomString
@@ -69,6 +72,7 @@ else:
 
 if TYPE_CHECKING:
 	from opsiclientd.nonfree.CacheService import CacheService
+
 
 patch_popen()
 load_translation()
