@@ -212,7 +212,7 @@ class OpsiclientdNT(Opsiclientd):
 		if win32process.IsWow64Process():
 			access |= winreg.KEY_WOW64_64KEY
 
-		for key, sub_key, value_name, check in checks:
+		for sub_key, value_name, check in checks:
 			reboot_check_result = False
 			key_exists = False
 			value_exists = False
@@ -230,21 +230,20 @@ class OpsiclientdNT(Opsiclientd):
 			except Exception:
 				pass
 
-			if CheckType.KEY_EXISTS:
+			if check == CheckType.KEY_EXISTS:
 				reboot_check_result = key_exists
-			elif CheckType.VALUE_EXISTS:
+			elif check == CheckType.VALUE_EXISTS:
 				reboot_check_result = value_exists
-			elif CheckType.VALUE_NOT_ZERO:
+			elif check == CheckType.VALUE_NOT_ZERO:
 				reboot_check_result = reg_value != 0
-			elif CheckType.ANY_SUB_KEY_EXISTS:
+			elif check == CheckType.ANY_SUB_KEY_EXISTS:
 				reboot_check_result = any_sub_key_exists
 
 			if reboot_check_result:
 				is_windows_reboot_pending = True
 
 			logger.info(
-				"Reboot check %r - %r - %r - %r: key_exists=%r, value_exists=%r, value=%r, result=%r",
-				key,
+				"Reboot check %r - %r - %r: key_exists=%r, value_exists=%r, value=%r, result=%r",
 				sub_key,
 				value_name,
 				check,
