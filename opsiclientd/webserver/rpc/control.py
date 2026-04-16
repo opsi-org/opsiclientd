@@ -98,12 +98,12 @@ class PipeControlInterface(Interface):
 			timer_active = False
 			on_demand_active = False
 			sync_completed_reboot = False
-			for event_config in event_configs.values():
-				if event_config["name"] == "timer" and event_config["active"]:
+			for event_config_id, event_config in event_configs.items():
+				if event_config_id == "timer" and event_config["active"]:
 					timer_active = True
-				elif event_config["name"] == "on_demand" and event_config["active"]:
+				elif event_config_id == "on_demand" and event_config["active"]:
 					on_demand_active = True
-				elif event_config["name"] == "sync_completed{cache_ready}" and event_config["reboot"]:
+				elif event_config_id == "sync_completed{cache_ready}" and event_config["reboot"]:
 					# Client will reboot after sync is completed
 					sync_completed_reboot = True
 
