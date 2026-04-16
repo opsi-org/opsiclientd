@@ -930,7 +930,7 @@ class Config(metaclass=Singleton):
 			and config_states["clientconfig.smart_cache.sync_completed_action"]
 		):
 			val = config_states["clientconfig.smart_cache.sync_completed_action"][0]
-			if val in ("reboot", "none"):
+			if val in ("none", "process", "reboot"):
 				smart_cache_sync_completed_action = val
 				logger.info("SmartCache sync completed action is set to %r", smart_cache_sync_completed_action)
 			else:
@@ -979,7 +979,7 @@ class Config(metaclass=Singleton):
 		logger.notice("Got config from service")
 		logger.debug("Config is now:\n %s", objectToBeautifiedText(self.getDict()))
 
-	def setProductCachingMode(self, activated: bool, sync_completed_action: Literal["reboot", "none"] | None = None) -> None:
+	def setProductCachingMode(self, activated: bool, sync_completed_action: Literal["none", "process", "reboot"] | None = None) -> None:
 		if activated:
 			self.set("event_net_connection", "active", False)
 			self.set("event_timer", "active", True)
@@ -1002,8 +1002,16 @@ class Config(metaclass=Singleton):
 			self.set("precondition_cache_ready_user_logged_in", "products_cached", True)
 			self.set("precondition_cache_ready", "config_cached", False)
 			self.set("precondition_cache_ready", "products_cached", True)
-			self.set("event_sync_completed{cache_ready_user_logged_in}", "reboot", sync_completed_action == "reboot")
-			self.set("event_sync_completed{cache_ready}", "reboot", sync_completed_action == "reboot")
+			# sync_completed_action can be "none", "process" or "reboot"
+			for section in ("event_sync_completed{cache_ready_user_logged_in}", "event_sync_completed{cache_ready}"):
+				self.set(section, "reboot", False)
+				self.set(section, "process_actions", False)
+				self.set(section, "use_cached_products", False)
+				if sync_completed_action == "reboot":
+					self.set(section, "reboot", True)
+				elif sync_completed_action == "process":
+					self.set(section, "process_actions", True)
+					self.set(section, "use_cached_products", True)
 			# Make configurable?
 			self.set("event_on_demand", "cache_products", True)
 			self.set("event_on_demand", "use_cached_products", True)
@@ -1032,7 +1040,9 @@ class Config(metaclass=Singleton):
 			self.set("precondition_cache_ready_user_logged_in", "products_cached", True)
 			self.set("precondition_cache_ready", "config_cached", True)
 			self.set("precondition_cache_ready", "products_cached", True)
-			self.set("event_sync_completed{cache_ready_user_logged_in}", "reboot", True)
-			self.set("event_sync_completed{cache_ready}", "reboot", True)
+			for section in ("event_sync_completed{cache_ready_user_logged_in}", "event_sync_completed{cache_ready}"):
+				self.set(section, "reboot", False)
+				self.set(section, "process_actions", False)
+				self.set(section, "use_cached_products", False)
 			self.set("event_on_demand", "cache_products", False)
 			self.set("event_on_demand", "use_cached_products", False)
