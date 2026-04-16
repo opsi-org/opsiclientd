@@ -13,7 +13,7 @@ import os
 import platform
 import sys
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlparse
 
 import netifaces  # type: ignore[import]
@@ -886,6 +886,7 @@ class Config(metaclass=Singleton):
 			"clientconfig.depot.user",
 			"clientconfig.suspend_bitlocker_on_reboot",
 			"clientconfig.smart_cache",
+			"clientconfig.smart_cache.sync_completed_action",
 			"opsiclientd.*",  # everything starting with opsiclientd.
 		]
 		config_states = {}
@@ -915,6 +916,7 @@ class Config(metaclass=Singleton):
 				config_states[config_state.configId] = config_state.values
 
 		smart_cache: bool | None = None
+		smart_cache_sync_completed_action = "none"
 		if "clientconfig.smart_cache" in config_states and config_states["clientconfig.smart_cache"]:
 			smart_cache = bool(config_states["clientconfig.smart_cache"][0])
 			logger.info("SmartCache WAN is set to %s", smart_cache)
@@ -922,6 +924,19 @@ class Config(metaclass=Singleton):
 				logger.info("SmartCache WAN is disabled")
 				# Is set here so that the configs can be overwritten
 				self.setProductCachingMode(False)
+
+		if (
+			"clientconfig.smart_cache.sync_completed_action" in config_states
+			and config_states["clientconfig.smart_cache.sync_completed_action"]
+		):
+			val = config_states["clientconfig.smart_cache.sync_completed_action"][0]
+			if val in ("reboot", "none"):
+				smart_cache_sync_completed_action = val
+				logger.info("SmartCache sync completed action is set to %r", smart_cache_sync_completed_action)
+			else:
+				logger.error(
+					"Invalid value for clientconfig.smart_cache.sync_completed_action: %s, using %r", val, smart_cache_sync_completed_action
+				)
 
 		for config_id, values in config_states.items():
 			logger.info("Got config state from service: %r=%r", config_id, values)
@@ -959,12 +974,12 @@ class Config(metaclass=Singleton):
 		if smart_cache is True:
 			logger.info("SmartCache WAN is enabled")
 			# Is set here so that the configs can not be overwritten
-			self.setProductCachingMode(True)
+			self.setProductCachingMode(True, sync_completed_action=smart_cache_sync_completed_action)
 
 		logger.notice("Got config from service")
 		logger.debug("Config is now:\n %s", objectToBeautifiedText(self.getDict()))
 
-	def setProductCachingMode(self, activated: bool) -> None:
+	def setProductCachingMode(self, activated: bool, sync_completed_action: Literal["reboot", "none"] | None = None) -> None:
 		if activated:
 			self.set("event_net_connection", "active", False)
 			self.set("event_timer", "active", True)
@@ -987,6 +1002,8 @@ class Config(metaclass=Singleton):
 			self.set("precondition_cache_ready_user_logged_in", "products_cached", True)
 			self.set("precondition_cache_ready", "config_cached", False)
 			self.set("precondition_cache_ready", "products_cached", True)
+			self.set("event_sync_completed{cache_ready_user_logged_in}", "reboot", sync_completed_action == "reboot")
+			self.set("event_sync_completed{cache_ready}", "reboot", sync_completed_action == "reboot")
 			# Make configurable?
 			self.set("event_on_demand", "cache_products", True)
 			self.set("event_on_demand", "use_cached_products", True)
@@ -1015,5 +1032,7 @@ class Config(metaclass=Singleton):
 			self.set("precondition_cache_ready_user_logged_in", "products_cached", True)
 			self.set("precondition_cache_ready", "config_cached", True)
 			self.set("precondition_cache_ready", "products_cached", True)
+			self.set("event_sync_completed{cache_ready_user_logged_in}", "reboot", True)
+			self.set("event_sync_completed{cache_ready}", "reboot", True)
 			self.set("event_on_demand", "cache_products", False)
 			self.set("event_on_demand", "use_cached_products", False)
