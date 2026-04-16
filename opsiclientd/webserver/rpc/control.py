@@ -107,6 +107,9 @@ class PipeControlInterface(Interface):
 					# Client will reboot after sync is completed
 					sync_completed_reboot = True
 
+			logger.info(
+				"Timer active: %s, on_demand active: %s, sync_completed_reboot: %s", timer_active, on_demand_active, sync_completed_reboot
+			)
 			if timer_active and sync_completed_reboot:
 				event = "timer"
 			elif on_demand_active:
