@@ -75,6 +75,98 @@ timeline = Timeline()
 
 
 @dataclass
+class DesktopSession:
+	id: int
+	desktop: str
+	user: str
+	win_state: str | None = None
+
+
+def win_get_sessions(protocol: str | None = None, user: str | None = None) -> list[DesktopSession]:
+	import win32ts
+
+	WTS_PROTOCOLS = {
+		"console": win32ts.WTS_PROTOCOL_TYPE_CONSOLE,
+		"citrix": win32ts.WTS_PROTOCOL_TYPE_ICA,
+		"rdp": win32ts.WTS_PROTOCOL_TYPE_RDP,
+	}
+
+	WTS_STATES = {
+		win32ts.WTSActive: "active",
+		win32ts.WTSDisconnected: "disconnected",
+	}
+
+	if protocol is not None:
+		if protocol not in WTS_PROTOCOLS:
+			logger.warning("Invalid session protocol '%s'", protocol)
+			protocol = None
+		else:
+			protocol = WTS_PROTOCOLS[protocol]
+
+	server = win32ts.WTS_CURRENT_SERVER_HANDLE
+	sessions: list[DesktopSession] = []
+	for session in win32ts.WTSEnumerateSessions(server):
+		# WTS_CONNECTSTATE_CLASS:
+		# WTSActive,WTSConnected,WTSConnectQuery,WTSShadow,WTSDisconnected,WTSIdle,WTSListen,WTSReset,WTSDown,WTSInit
+		state = WTS_STATES.get(session.get("State"))
+		if not state:
+			continue
+		session_user = win32ts.WTSQuerySessionInformation(server, session["SessionId"], win32ts.WTSUserName)
+		if not session_user or (user and session_user != user):
+			continue
+		if protocol and protocol != win32ts.WTSQuerySessionInformation(server, session["SessionId"], win32ts.WTSClientProtocolType):
+			continue
+		sessions.append(
+			DesktopSession(
+				id=int(session["SessionId"]),
+				desktop=forceUnicodeLower(
+					win32ts.WTSQuerySessionInformation(server, session["SessionId"], win32ts.WTSWorkingDirectory) or "default"
+				),
+				user=session_user or "",
+				win_state=state,
+			)
+		)
+	return sessions
+
+
+def lin_get_sessions(user: str | None = None, limit_to_one_per_user: bool = True) -> list[DesktopSession]:
+	sessions: list[DesktopSession] = []
+	for proc in psutil.process_iter():
+		try:
+			env = proc.environ()
+			if env.get("USER") and env.get("DISPLAY") and env.get("XDG_SESSION_CLASS"):
+				if env.get("DISPLAY") == ":1024":
+					continue  # never try to use :1024 session as it seems to break gdm!
+				if user and env.get("USER") != user:
+					continue
+				if not any((session.id == int(env["DISPLAY"][1:]) for session in sessions)):
+					sessions.append(DesktopSession(id=int(env["DISPLAY"][1:]), desktop=env.get("XDG_SESSION_CLASS"), user=env["USER"]))
+		except (psutil.AccessDenied, psutil.NoSuchProcess) as err:
+			logger.debug(err)
+	print(sessions)
+	if limit_to_one_per_user:
+		relevant_users = [user] if user else [entry.user for entry in sessions]
+		relevant_sessions: list[DesktopSession] = []
+		for single_user in relevant_users:
+			relevant_sessions.append(
+				min([user_session for user_session in sessions if user_session.user == single_user], key=lambda x: x.id)
+			)
+		sessions = relevant_sessions
+	return sessions
+
+
+def get_sessions(*, protocol: str | None = None, user: str | None = None) -> list[DesktopSession]:
+	if RUNNING_ON_WINDOWS:
+		return win_get_sessions(protocol=protocol, user=user)
+	elif RUNNING_ON_LINUX:
+		return lin_get_sessions(user=user)
+	elif RUNNING_ON_MACOS:
+		return [DesktopSession(id=1, desktop="default", user=os.getenv("USER") or "")]
+	else:
+		raise RuntimeError("Unsupported operating system")
+
+
+@dataclass
 class ProductInfo:
 	id: str
 	productVersion: str
@@ -195,28 +287,28 @@ class EventProcessingThread(KillableThread):
 				self._should_cancel = True
 
 	def getSessionId(self) -> int | None:
+		sessions = get_sessions()
+
 		if RUNNING_ON_WINDOWS:
 			if self.isLoginEvent:
-				user_session_ids = System.getUserSessionIds(self.event.eventInfo["User"])  # type: ignore[possibly-missing-attribute]
-				if user_session_ids:
-					session_id = user_session_ids[0]
+				user_sessions = [session for session in sessions if session.user == self.event.eventInfo["User"]]
+				if user_sessions:
+					session_id = user_sessions[0].id
 					logger.info("Using session id of user '%s': %s", self.event.eventInfo["User"], session_id)
-					return session_id
-
-			# Prefer active console/rdp sessions
-			for session in System.getActiveSessionInformation():  # type: ignore[possibly-missing-attribute]
-				if session.get("StateName") == "active":
-					session_id = session["SessionId"]
-					logger.info("Using session id of user '%s': %s", session.get("UserName"), session_id)
-					return session_id
+					return int(session_id)
+			for session in sessions:  # try to find active session first, then fallback to active console session
+				if session.win_state == "active":
+					session_id = session.id
+					logger.info("Using active session id: %s", session_id)
+					return int(session_id)
 
 			session_id = System.getActiveConsoleSessionId()  # type: ignore[possibly-missing-attribute]
 			logger.info("Using active console session id: %s", session_id)
 			return session_id
 
-		session_id = System.getActiveSessionId()  # type: ignore[possibly-missing-attribute]
+		session_id = min((int(session.id) for session in sessions)) if sessions else None
 		logger.info("Using active session id: %s", session_id)
-		return session_id
+		return session_id  # seems like this is ignored for non-windows
 
 	def setStatusMessage(self, message: str) -> None:
 		logger.debug("Setting status message to: %s", message)

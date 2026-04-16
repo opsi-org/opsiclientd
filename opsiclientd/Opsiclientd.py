@@ -45,7 +45,7 @@ from opsicommon.types import forceBool, forceInt, forceUnicode
 from opsiclientd import Config, __version__, check_signature, config, notify_posix_terminals
 from opsiclientd.ControlPipe import ControlPipe, ControlPipeFactory
 from opsiclientd.EventConfiguration import EventConfig
-from opsiclientd.EventProcessing import EventProcessingThread
+from opsiclientd.EventProcessing import EventProcessingThread, get_sessions
 from opsiclientd.Events.Basic import CannotCancelEventError, Event, EventListener
 from opsiclientd.Events.DaemonShutdown import DaemonShutdownEventGenerator
 from opsiclientd.Events.DaemonStartup import DaemonStartupEventGenerator
@@ -893,9 +893,11 @@ class Opsiclientd(EventListener, threading.Thread):
 			raise RuntimeError("opsiclientd_rpc command not defined")
 
 		if sessionId is None:
-			sessionId = System.getActiveSessionId()  # type: ignore[possibly-missing-attribute]
-			if sessionId is None:
-				sessionId = System.getActiveConsoleSessionId()  # type: ignore[possibly-missing-attribute]
+			sessions = get_sessions()
+			if sessions:
+				sessionId = sessions[0].id
+			else:
+				sessionId = System.getActiveConsoleSessionId()
 
 		assert sessionId
 
@@ -923,8 +925,10 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		desktop = forceUnicode(desktop)
 		if sessionId is None:
-			sessionId = System.getActiveSessionId()  # type: ignore[possibly-missing-attribute]
-			if sessionId is None:
+			sessions = get_sessions()
+			if sessions:
+				sessionId = sessions[0].id
+			else:
 				sessionId = System.getActiveConsoleSessionId()  # type: ignore[possibly-missing-attribute]
 		sessionId = forceInt(sessionId)
 
@@ -1061,7 +1065,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.info("Message of the day is disabled")
 			return []
 
-		sessions = System.getActiveSessionInformation()  # type: ignore[possibly-missing-attribute]
+		sessions = get_sessions()
 		logger.debug("Found sessions: %s", sessions)
 		host_id = config.get("global", "host_id")
 		messages_shown: list[str] = []
@@ -1104,7 +1108,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			else:
 				relevant_sessions = []
 				for entry in sessions:
-					if sha256string(user_message) == message_of_the_day_state.get("last_user_message_hash", {}).get(entry.get("UserName")):
+					if sha256string(user_message) == message_of_the_day_state.get("last_user_message_hash", {}).get(entry.user):
 						logger.info("Not showing user-specific message of the day, because it was already shown")
 						continue
 					relevant_sessions.append(entry)
@@ -1117,12 +1121,12 @@ class Opsiclientd(EventListener, threading.Thread):
 						mode="replace",
 						addTimestamp=False,
 						link_handling="browser",
-						sessions=[entry.get("SessionId") for entry in relevant_sessions],
+						sessions=[entry.id for entry in relevant_sessions],
 						desktops=["default"],
 					)
 					messages_shown.append("user")
 					for entry in relevant_sessions:
-						message_of_the_day_state["last_user_message_hash"][entry.get("UserName")] = sha256string(user_message)
+						message_of_the_day_state["last_user_message_hash"][entry.user] = sha256string(user_message)
 		else:
 			# Show device message
 			if not device_message:
@@ -1144,7 +1148,6 @@ class Opsiclientd(EventListener, threading.Thread):
 					mode="replace",
 					addTimestamp=False,
 					link_handling="no",
-					sessions=[entry.get("SessionId") for entry in sessions],
 				)
 				message_of_the_day_state["last_device_message_hash"] = sha256string(device_message)
 				messages_shown.append("device")
@@ -1214,13 +1217,13 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setChoices([_("Close")])
 			choiceSubject.setCallbacks([self.popupCloseCallback])
 
-			sessions = sessions or System.getActiveSessionIds()  # type: ignore[possibly-missing-attribute]
+			session_ids = sessions or [session.id for session in get_sessions()]
 			desktops = desktops or ["default", "winlogon"]
-			if not sessions:
+			if not session_ids:
 				if console_session_id := System.getActiveConsoleSessionId():  # type: ignore[possibly-missing-attribute]
-					sessions = [int(console_session_id)]
+					session_ids = [int(console_session_id)]
 					desktops = ["winlogon"]
-			for sessionId in sessions:
+			for sessionId in session_ids:
 				try:
 					if RUNNING_ON_WINDOWS:
 						for desktop in desktops:
@@ -1233,7 +1236,7 @@ class Opsiclientd(EventListener, threading.Thread):
 								desktop=desktop,
 							)
 							logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, sessionId, desktop)
-							proc = subprocess.Popen(  # type: ignore[call-overload]
+							proc = subprocess.Popen(  # ty: ignore[no-matching-overload]
 								notifierCommand,
 								session_id=sessionId,
 								session_env=(desktop == "default"),
@@ -1332,13 +1335,13 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to start notification server: %s", err)
 				raise
 
-			sessions = System.getActiveSessionIds()  # type: ignore[possibly-missing-attribute]
+			session_ids = [session.id for session in get_sessions()]
 			desktops = ["default", "winlogon"]
-			if not sessions:
+			if not session_ids:
 				if console_session_id := System.getActiveConsoleSessionId():  # type: ignore[possibly-missing-attribute]
-					sessions = [int(console_session_id)]
+					session_ids = [int(console_session_id)]
 					desktops = ["winlogon"]
-			for sessionId in sessions:
+			for sessionId in session_ids:
 				try:
 					if RUNNING_ON_WINDOWS:
 						for desktop in desktops:
@@ -1350,7 +1353,7 @@ class Opsiclientd(EventListener, threading.Thread):
 								desktop=desktop,
 							)
 							logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, sessionId, desktop)
-							proc = subprocess.Popen(  # type: ignore[call-overload]
+							proc = subprocess.Popen(  # ty: ignore[no-matching-overload]
 								notifierCommand,
 								session_id=sessionId,
 								session_env=(desktop == "default"),
