@@ -89,6 +89,9 @@ ignore = ["E402"]
 [tool.ruff.format]
 indent-style = "tab"
 
+[tool.ty.environment]
+python = ".venv/bin/python"
+
 [tool.setuptools.package-data]
 opsiclientd_data = ["**/*"]
 

@@ -897,7 +897,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			if sessions:
 				sessionId = sessions[0].id
 			else:
-				sessionId = System.getActiveConsoleSessionId()
+				sessionId = System.getActiveConsoleSessionId()  # ty: ignore[possibly-missing-attribute]
 
 		assert sessionId
 
