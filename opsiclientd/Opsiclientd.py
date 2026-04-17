@@ -344,7 +344,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				subprocess.Popen(
 					"net stop opsiclientd & net start opsiclientd",
 					shell=True,
-					creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,  # type: ignore[attr-defined]  # only windows
+					creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS,  # ty: ignore[unresolved-attribute]  # only windows
 				)
 			else:
 				logger.notice("Executing: %s", self._argv)
@@ -370,14 +370,14 @@ class Opsiclientd(EventListener, threading.Thread):
 				if handleNotifier and RUNNING_ON_WINDOWS:
 					logger.info("Starting block login notifier app")
 					# Start block login notifier on physical console
-					sessionId = System.getActiveConsoleSessionId()  # type: ignore[possibly-missing-attribute]
+					sessionId = System.getActiveConsoleSessionId()
 					while True:
 						try:
 							desktop = "winlogon"
 							notifierCommand, _elevation_required = self.getNotifierCommand(
 								command=config.get("global", "block_login_notifier"), notifier_id="block_login", desktop=desktop
 							)
-							self._blockLoginNotifierPid = System.runCommandInSession(  # type: ignore[possibly-missing-attribute]
+							self._blockLoginNotifierPid = System.runCommandInSession(
 								command=notifierCommand,
 								sessionId=sessionId,
 								desktop=desktop,
@@ -395,7 +395,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			if handleNotifier and self._blockLoginNotifierPid:
 				try:
 					logger.info("Terminating block login notifier app (pid %s)", self._blockLoginNotifierPid)
-					System.terminateProcess(processId=self._blockLoginNotifierPid)  # type: ignore[possibly-missing-attribute]
+					System.terminateProcess(processId=self._blockLoginNotifierPid)
 				except Exception as err:
 					log = logger.warning
 					if isinstance(err, OSError) and getattr(err, "errno", None) == 87:
@@ -441,7 +441,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.warning("Ignoring domain part of user to run action processor '%s'", run_as_user)
 			run_as_user = run_as_user.split("\\", -1)
 
-		if not recreate and self._actionProcessorUserName and self._actionProcessorUserPassword and System.existsUser(username=run_as_user):  # type: ignore[possibly-missing-attribute]
+		if not recreate and self._actionProcessorUserName and self._actionProcessorUserPassword and System.existsUser(username=run_as_user):
 			return
 
 		self._actionProcessorUserName = run_as_user
@@ -450,9 +450,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._actionProcessorUserPassword = "$!?" + str(randomString(16)) + "!/%"
 		secret_filter.add_secrets(self._actionProcessorUserPassword)
 
-		if System.existsUser(username=run_as_user):  # type: ignore[possibly-missing-attribute]
-			System.deleteUser(username=run_as_user)  # type: ignore[possibly-missing-attribute]
-		System.createUser(username=run_as_user, password=self._actionProcessorUserPassword, groups=[System.getAdminGroupName()])  # type: ignore[possibly-missing-attribute]
+		if System.existsUser(username=run_as_user):
+			System.deleteUser(username=run_as_user)
+		System.createUser(username=run_as_user, password=self._actionProcessorUserPassword, groups=[System.getAdminGroupName()])
 
 	def deleteActionProcessorUser(self) -> None:
 		if not config.get("action_processor", "delete_user"):
@@ -461,11 +461,11 @@ class Opsiclientd(EventListener, threading.Thread):
 		if not self._actionProcessorUserName:
 			return
 
-		if not System.existsUser(username=self._actionProcessorUserName):  # type: ignore[possibly-missing-attribute]
+		if not System.existsUser(username=self._actionProcessorUserName):
 			return
 
 		logger.notice("Deleting local user '%s'", self._actionProcessorUserName)
-		System.deleteUser(username=self._actionProcessorUserName)  # type: ignore[possibly-missing-attribute]
+		System.deleteUser(username=self._actionProcessorUserName)
 		self._actionProcessorUserName = ""
 		self._actionProcessorUserPassword = ""
 
@@ -700,7 +700,7 @@ class Opsiclientd(EventListener, threading.Thread):
 						f"opsiclientd_restart_marker={config.restart_marker}",
 					]
 					logger.notice("Running startup script: %s", cmd)
-					System.execute(cmd, shell=False, waitForEnding=True, timeout=3600)  # type: ignore[possibly-missing-attribute]
+					System.execute(cmd, shell=False, waitForEnding=True, timeout=3600)
 
 					restart_marker_config = config.check_restart_marker()
 					if restart_marker_config and restart_marker_config.restart_service:
@@ -893,9 +893,9 @@ class Opsiclientd(EventListener, threading.Thread):
 			raise RuntimeError("opsiclientd_rpc command not defined")
 
 		if sessionId is None:
-			sessionId = System.getActiveSessionId()  # type: ignore[possibly-missing-attribute]
+			sessionId = System.getActiveSessionId()
 			if sessionId is None:
-				sessionId = System.getActiveConsoleSessionId()  # type: ignore[possibly-missing-attribute]
+				sessionId = System.getActiveConsoleSessionId()
 
 		assert sessionId
 
@@ -923,9 +923,9 @@ class Opsiclientd(EventListener, threading.Thread):
 
 		desktop = forceUnicode(desktop)
 		if sessionId is None:
-			sessionId = System.getActiveSessionId()  # type: ignore[possibly-missing-attribute]
+			sessionId = System.getActiveSessionId()
 			if sessionId is None:
-				sessionId = System.getActiveConsoleSessionId()  # type: ignore[possibly-missing-attribute]
+				sessionId = System.getActiveConsoleSessionId()
 		sessionId = forceInt(sessionId)
 
 		rpc = f"noop(System.switchDesktop('{desktop}'))"
@@ -954,7 +954,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.debug(err)
 		self.clearRebootRequest()
 		notify_posix_terminals(f"Rebooting in {waitSeconds} seconds")
-		System.reboot(wait=waitSeconds)  # type: ignore[possibly-missing-attribute]
+		System.reboot(wait=waitSeconds)
 
 	def shutdownMachine(self, waitSeconds: int = 3) -> None:
 		self._isShutdownTriggered = True
@@ -965,7 +965,7 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.debug(err)
 		self.clearShutdownRequest()
 		notify_posix_terminals(f"Shutdown in {waitSeconds} seconds")
-		System.shutdown(wait=waitSeconds)  # type: ignore[possibly-missing-attribute]
+		System.shutdown(wait=waitSeconds)
 
 	def isRebootTriggered(self) -> bool:
 		if self._isRebootTriggered:
@@ -1061,7 +1061,7 @@ class Opsiclientd(EventListener, threading.Thread):
 			logger.info("Message of the day is disabled")
 			return []
 
-		sessions = System.getActiveSessionInformation()  # type: ignore[possibly-missing-attribute]
+		sessions = System.getActiveSessionInformation()
 		logger.debug("Found sessions: %s", sessions)
 		host_id = config.get("global", "host_id")
 		messages_shown: list[str] = []
@@ -1214,10 +1214,10 @@ class Opsiclientd(EventListener, threading.Thread):
 			choiceSubject.setChoices([_("Close")])
 			choiceSubject.setCallbacks([self.popupCloseCallback])
 
-			sessions = sessions or System.getActiveSessionIds()  # type: ignore[possibly-missing-attribute]
+			sessions = sessions or System.getActiveSessionIds()
 			desktops = desktops or ["default", "winlogon"]
 			if not sessions:
-				if console_session_id := System.getActiveConsoleSessionId():  # type: ignore[possibly-missing-attribute]
+				if console_session_id := System.getActiveConsoleSessionId():
 					sessions = [int(console_session_id)]
 					desktops = ["winlogon"]
 			for sessionId in sessions:
@@ -1233,7 +1233,7 @@ class Opsiclientd(EventListener, threading.Thread):
 								desktop=desktop,
 							)
 							logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, sessionId, desktop)
-							proc = subprocess.Popen(  # type: ignore[call-overload]
+							proc = subprocess.Popen(  # ty: ignore[no-matching-overload]
 								notifierCommand,
 								session_id=sessionId,
 								session_env=(desktop == "default"),
@@ -1332,10 +1332,10 @@ class Opsiclientd(EventListener, threading.Thread):
 				logger.error("Failed to start notification server: %s", err)
 				raise
 
-			sessions = System.getActiveSessionIds()  # type: ignore[possibly-missing-attribute]
+			sessions = System.getActiveSessionIds()
 			desktops = ["default", "winlogon"]
 			if not sessions:
-				if console_session_id := System.getActiveConsoleSessionId():  # type: ignore[possibly-missing-attribute]
+				if console_session_id := System.getActiveConsoleSessionId():
 					sessions = [int(console_session_id)]
 					desktops = ["winlogon"]
 			for sessionId in sessions:
@@ -1350,7 +1350,7 @@ class Opsiclientd(EventListener, threading.Thread):
 								desktop=desktop,
 							)
 							logger.info("Running notifier command %r in session %r on desktop %r", notifierCommand, sessionId, desktop)
-							proc = subprocess.Popen(  # type: ignore[call-overload]
+							proc = subprocess.Popen(  # ty: ignore[no-matching-overload]
 								notifierCommand,
 								session_id=sessionId,
 								session_env=(desktop == "default"),

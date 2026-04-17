@@ -58,7 +58,7 @@ def test_motd_update_without_valid_until(default_config: Config, tmp_path: Path,
 				user_message="Test message user",
 				user_message_valid_until=0,
 				device_message="Test message device",
-				device_message_valid_until=None,  # type: ignore[arg-type]
+				device_message_valid_until=None,  # ty: ignore[invalid-argument-type]
 			)
 			second = controlServer.messageOfTheDayUpdated(user_message="Test message user", device_message="Test message device")
 

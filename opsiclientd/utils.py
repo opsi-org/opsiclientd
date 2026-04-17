@@ -47,14 +47,14 @@ def get_include_exclude_product_ids(
 	if includeProductGroupIds:
 		includeProductIds = [
 			obj.objectId
-			for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds)  # type: ignore[attr-defined]
+			for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=includeProductGroupIds)  # ty: ignore[unresolved-attribute]
 		]
 		logger.debug("Only products ids %s will be regarded", includeProductIds)
 
 	if excludeProductGroupIds:
 		excludeProductIds = [
 			obj.objectId
-			for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds)  # type: ignore[attr-defined]
+			for obj in config_service.objectToGroup_getObjects(groupType="ProductGroup", groupId=excludeProductGroupIds)  # ty: ignore[unresolved-attribute]
 		]
 		logger.debug("Product ids %s will be excluded", excludeProductIds)
 

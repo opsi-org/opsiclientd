@@ -7,6 +7,8 @@
 Application state.
 """
 
+from __future__ import annotations
+
 import json
 import os
 import threading
@@ -17,7 +19,6 @@ import psutil
 from opsi_legacy import System
 from opsicommon.logging import get_logger
 from opsicommon.types import forceBool, forceUnicode
-from opsicommon.utils import Singleton
 
 from opsiclientd.Config import OPSI_SETUP_USER_NAME, Config
 from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_WINDOWS
@@ -26,11 +27,16 @@ config = Config()
 logger = get_logger()
 
 
-class State(metaclass=Singleton):
-	_initialized = False
+class State:
+	_instance: State | None = None
+
+	def __new__(cls, *args: Any, **kwargs: Any) -> State:
+		if cls._instance is None:
+			cls._instance = super().__new__(cls, *args, **kwargs)
+		return cls._instance
 
 	def __init__(self) -> None:
-		if self._initialized:
+		if getattr(self, "_initialized", False):
 			return
 		self._initialized = True
 		self._state: dict[str, Any] = {}
@@ -71,7 +77,7 @@ class State(metaclass=Singleton):
 		name = forceUnicode(name)
 		if name == "user_logged_in":
 			if RUNNING_ON_WINDOWS:
-				for session in System.getActiveSessionInformation():  # type: ignore[possibly-missing-attribute]
+				for session in System.getActiveSessionInformation():
 					if session["UserName"] != OPSI_SETUP_USER_NAME:
 						return True
 			elif RUNNING_ON_LINUX:

@@ -197,24 +197,24 @@ class EventProcessingThread(KillableThread):
 	def getSessionId(self) -> int | None:
 		if RUNNING_ON_WINDOWS:
 			if self.isLoginEvent:
-				user_session_ids = System.getUserSessionIds(self.event.eventInfo["User"])  # type: ignore[possibly-missing-attribute]
+				user_session_ids = System.getUserSessionIds(self.event.eventInfo["User"])
 				if user_session_ids:
 					session_id = user_session_ids[0]
 					logger.info("Using session id of user '%s': %s", self.event.eventInfo["User"], session_id)
 					return session_id
 
 			# Prefer active console/rdp sessions
-			for session in System.getActiveSessionInformation():  # type: ignore[possibly-missing-attribute]
+			for session in System.getActiveSessionInformation():
 				if session.get("StateName") == "active":
 					session_id = session["SessionId"]
 					logger.info("Using session id of user '%s': %s", session.get("UserName"), session_id)
 					return session_id
 
-			session_id = System.getActiveConsoleSessionId()  # type: ignore[possibly-missing-attribute]
+			session_id = System.getActiveConsoleSessionId()
 			logger.info("Using active console session id: %s", session_id)
 			return session_id
 
-		session_id = System.getActiveSessionId()  # type: ignore[possibly-missing-attribute]
+		session_id = System.getActiveSessionId()
 		logger.info("Using active session id: %s", session_id)
 		return session_id
 
@@ -335,7 +335,7 @@ class EventProcessingThread(KillableThread):
 			if config.get("global", "log_level") > LOG_INFO:
 				logging_config(file_level=LOG_INFO)
 			try:
-				self.service_client.log_write("clientconnect", data=data, objectId=config.get("global", "host_id"), append=False)  # type: ignore[attr-defined]
+				self.service_client.log_write("clientconnect", data=data, objectId=config.get("global", "host_id"), append=False)  # ty: ignore[unresolved-attribute]
 			finally:
 				logging_config(file_level=config.get("global", "log_level"))
 		except Exception as err:
@@ -463,21 +463,21 @@ class EventProcessingThread(KillableThread):
 			url = urlparse(config.get("depot_server", "url"))
 			try:
 				if url.scheme in ("smb", "cifs"):
-					System.setRegistryValue(  # type: ignore[possibly-missing-attribute]
-						System.HKEY_LOCAL_MACHINE,  # type: ignore[possibly-missing-attribute]
+					System.setRegistryValue(
+						System.HKEY_LOCAL_MACHINE,
 						f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\{url.hostname}",
 						"file",
 						1,
 					)
 				elif url.scheme in ("webdavs", "https"):
-					System.setRegistryValue(  # type: ignore[possibly-missing-attribute]
-						System.HKEY_LOCAL_MACHINE,  # type: ignore[possibly-missing-attribute]
+					System.setRegistryValue(
+						System.HKEY_LOCAL_MACHINE,
 						f"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Internet Settings\\ZoneMap\\Domains\\{url.hostname}@SSL@{url.port}",
 						"file",
 						1,
 					)
-					System.setRegistryValue(  # type: ignore[possibly-missing-attribute]
-						System.HKEY_LOCAL_MACHINE,  # type: ignore[possibly-missing-attribute]
+					System.setRegistryValue(
+						System.HKEY_LOCAL_MACHINE,
 						"SYSTEM\\CurrentControlSet\\Services\\WebClient\\Parameters",
 						"FileSizeLimitInBytes",
 						0xFFFFFFFF,
@@ -514,14 +514,14 @@ class EventProcessingThread(KillableThread):
 			except ValueError as error:
 				logger.info("Not an IP address '%s', using %s for depot mount: %s", depot_url_parsed.hostname, depot_server_url, error)
 		try:
-			System.mount(depot_server_url, config.getDepotDrive(), username=mount_username, password=mount_password, **mount_options)  # type: ignore[possibly-missing-attribute]
+			System.mount(depot_server_url, config.getDepotDrive(), username=mount_username, password=mount_password, **mount_options)
 		except Exception as err:
 			logger.error("Failed to mount depot share: %s", err)
 			if RUNNING_ON_WINDOWS and "1219" in str(err):
 				# Multiple connections to a server or shared resource by the same user
 				logger.debug("Trying to list existing network connections")
 				try:
-					result = System.execute("net use", captureStderr=True, waitForEnding=True, timeout=30, shell=True)  # type: ignore[possibly-missing-attribute]
+					result = System.execute("net use", captureStderr=True, waitForEnding=True, timeout=30, shell=True)
 					logger.notice("net use output:\n%s", "\n".join(result))
 				except Exception as err2:
 					logger.warning("Failed to list network connections: %s", err2)
@@ -535,7 +535,7 @@ class EventProcessingThread(KillableThread):
 			return
 		try:
 			logger.notice("Unmounting depot share")
-			System.umount(config.getDepotDrive())  # type: ignore[possibly-missing-attribute]
+			System.umount(config.getDepotDrive())
 			self._depotShareMounted = False
 		except Exception as err:
 			logger.warning(err)
@@ -587,7 +587,7 @@ class EventProcessingThread(KillableThread):
 
 			productVersion = None
 			packageVersion = None
-			for productOnDepot in self.service_client.productOnDepot_getIdents(  # type: ignore[attr-defined]
+			for productOnDepot in self.service_client.productOnDepot_getIdents(  # ty: ignore[unresolved-attribute]
 				productType="LocalbootProduct",
 				productId=config.action_processor_name,
 				depotId=config.get("depot_server", "depot_id"),
@@ -605,7 +605,7 @@ class EventProcessingThread(KillableThread):
 			else:
 				logger.notice("Local action processor exists and seems to be up to date")
 				if self.event.eventConfig.useCachedProducts:
-					self.service_client.productOnClient_updateObjects(  # type: ignore[attr-defined]
+					self.service_client.productOnClient_updateObjects(  # ty: ignore[unresolved-attribute]
 						[
 							ProductOnClient(
 								productId=config.action_processor_name,
@@ -637,7 +637,7 @@ class EventProcessingThread(KillableThread):
 				self.updateActionProcessorOld(actionProcessorRemoteDir)
 			logger.notice("Local action processor successfully updated")
 
-			self.service_client.productOnClient_updateObjects(  # type: ignore[attr-defined]
+			self.service_client.productOnClient_updateObjects(  # ty: ignore[unresolved-attribute]
 				[
 					ProductOnClient(
 						productId=config.action_processor_name,
@@ -708,8 +708,8 @@ class EventProcessingThread(KillableThread):
 		if RUNNING_ON_WINDOWS:
 			logger.notice("Setting permissions for opsi-script")
 			opsi_script_dir = actionProcessorLocalDir.replace("\\\\", "\\")
-			System.execute(f'icacls "{opsi_script_dir}" /q /c /t /reset', shell=False)  # type: ignore[possibly-missing-attribute]
-			System.execute(f'icacls "{opsi_script_dir}" /grant *S-1-5-32-545:(OI)(CI)RX', shell=False)  # type: ignore[possibly-missing-attribute]
+			System.execute(f'icacls "{opsi_script_dir}" /q /c /t /reset', shell=False)
+			System.execute(f'icacls "{opsi_script_dir}" /grant *S-1-5-32-545:(OI)(CI)RX', shell=False)
 		else:
 			if RUNNING_ON_LINUX:
 				symlink = os.path.join("/usr/bin", actionProcessorFilename.split("/")[-1])
@@ -766,7 +766,7 @@ class EventProcessingThread(KillableThread):
 				' -actn ace -ace "n:S-1-5-32-544;p:full;s:y" -ace "n:S-1-5-32-545;p:read_ex;s:y"'
 				' -actn clear -clr "dacl,sacl" -actn rstchldrn -rst "dacl,sacl"'
 			)
-			System.execute(cmd, shell=False)  # type: ignore[possibly-missing-attribute]
+			System.execute(cmd, shell=False)
 		elif RUNNING_ON_LINUX:
 			logger.info("Copying from '%s' to '%s'", actionProcessorRemoteDir, actionProcessorLocalDir)
 			for fn in os.listdir(actionProcessorRemoteDir):
@@ -784,7 +784,7 @@ class EventProcessingThread(KillableThread):
 				raise RuntimeError("Not connected to config service")
 
 			productsByIdAndVersion: dict[str, dict[str, dict[str, Product]]] = {}
-			for product in self.service_client.product_getObjects(type="LocalbootProduct", userLoginScript="*.*"):  # type: ignore[attr-defined]
+			for product in self.service_client.product_getObjects(type="LocalbootProduct", userLoginScript="*.*"):  # ty: ignore[unresolved-attribute]
 				if product.id not in productsByIdAndVersion:
 					productsByIdAndVersion[product.id] = {}
 				if product.productVersion not in productsByIdAndVersion[product.id]:
@@ -795,7 +795,7 @@ class EventProcessingThread(KillableThread):
 				logger.notice("No user login script found, nothing to do")
 				return
 
-			clientToDepotservers = self.service_client.configState_getClientToDepotserver(clientIds=config.get("global", "host_id"))  # type: ignore[attr-defined]
+			clientToDepotservers = self.service_client.configState_getClientToDepotserver(clientIds=config.get("global", "host_id"))  # ty: ignore[unresolved-attribute]
 			if not clientToDepotservers:
 				raise RuntimeError(f"Failed to get depotserver for client '{config.get('global', 'host_id')}'")
 			depotId = clientToDepotservers[0]["depotId"]
@@ -807,7 +807,7 @@ class EventProcessingThread(KillableThread):
 
 			userLoginScripts = []
 			productInfo: list[ProductInfo] = []
-			for productOnDepot in self.service_client.productOnDepot_getIdents(  # type: ignore[attr-defined]
+			for productOnDepot in self.service_client.productOnDepot_getIdents(  # ty: ignore[unresolved-attribute]
 				productType="LocalbootProduct", depotId=depotId, returnType="dict"
 			):
 				product = (
@@ -863,7 +863,7 @@ class EventProcessingThread(KillableThread):
 			actionRequests = ["setup", "uninstall", "update", "always", "once", "custom"]
 
 			if self.event.eventConfig.actionProcessorProductIds:
-				current_pocs = self.service_client.productOnClient_getObjects(  # type: ignore[attr-defined]
+				current_pocs = self.service_client.productOnClient_getObjects(  # ty: ignore[unresolved-attribute]
 					productType="LocalbootProduct",
 					clientId=config.get("global", "host_id"),
 					attributes=["actionRequest"],
@@ -885,7 +885,7 @@ class EventProcessingThread(KillableThread):
 					else:
 						logger.error("Multiple ProductOnClient for product '%s' found. This should not be possible.", product)
 				if pocs:
-					self.service_client.productOnClient_updateObjects(pocs)  # type: ignore[attr-defined]
+					self.service_client.productOnClient_updateObjects(pocs)  # ty: ignore[unresolved-attribute]
 				# Now we have all ProductOnClient objects for the actionProcessorProductIds
 				includeProductIds = self.event.eventConfig.actionProcessorProductIds
 				actionRequests = []
@@ -902,7 +902,7 @@ class EventProcessingThread(KillableThread):
 
 			for productOnClient in [
 				poc
-				for poc in self.service_client.productOnClient_getObjects(  # type: ignore[attr-defined]
+				for poc in self.service_client.productOnClient_getObjects(  # ty: ignore[unresolved-attribute]
 					productType="LocalbootProduct",
 					clientId=config.get("global", "host_id"),
 					actionRequest=actionRequests,
@@ -938,7 +938,7 @@ class EventProcessingThread(KillableThread):
 				except Exception as err:
 					logger.error(err)
 			else:
-				for productOnDepot in self.service_client.productOnDepot_getObjects(  # type: ignore[attr-defined]
+				for productOnDepot in self.service_client.productOnDepot_getObjects(  # ty: ignore[unresolved-attribute]
 					productType="LocalbootProduct",
 					depotId=config.get("depot_server", "depot_id"),
 					attributes=["productId", "productVersion", "packageVersion"],
@@ -975,7 +975,7 @@ class EventProcessingThread(KillableThread):
 				if productInfo:
 					depot_id = config.get("depot_server", "depot_id")
 					count = 0
-					for product in self.service_client.productOnDepot_getObjects(  # type: ignore[attr-defined]
+					for product in self.service_client.productOnDepot_getObjects(  # ty: ignore[unresolved-attribute]
 						attributes=["productId", "productVersion", "packageVersion"], productId=productIds, depotId=depot_id
 					):
 						for p_info in productInfo:
@@ -988,7 +988,7 @@ class EventProcessingThread(KillableThread):
 							break
 
 					count = 0
-					for product in self.service_client.product_getObjects(  # type: ignore[attr-defined]
+					for product in self.service_client.product_getObjects(  # ty: ignore[unresolved-attribute]
 						attributes=["id", "name", "productVersion", "packageVersion"], id=productIds
 					):
 						for p_info in productInfo:
@@ -1025,7 +1025,7 @@ class EventProcessingThread(KillableThread):
 					if (
 						cache_service
 						and self.event.eventConfig.useCachedConfig
-						and not self.service_client.productOnClient_getIdents(  # type: ignore[attr-defined]
+						and not self.service_client.productOnClient_getIdents(  # ty: ignore[unresolved-attribute]
 							productType="LocalbootProduct",
 							clientId=config.get("global", "host_id"),
 							actionRequest=["setup", "uninstall", "update", "always", "once", "custom"],
@@ -1035,7 +1035,7 @@ class EventProcessingThread(KillableThread):
 						logger.info("No more actions to perform, setting config cache obsolete")
 						cache_service.setConfigCacheObsolete()
 
-					pocs_with_action = self.service_client.productOnClient_getIdents(  # type: ignore[attr-defined]
+					pocs_with_action = self.service_client.productOnClient_getIdents(  # ty: ignore[unresolved-attribute]
 						returnType="dict",
 						productType="LocalbootProduct",
 						clientId=config.get("global", "host_id"),
@@ -1121,17 +1121,17 @@ class EventProcessingThread(KillableThread):
 			if RUNNING_ON_WINDOWS:
 				# Setting some registry values before starting action
 				# Mainly for action processor
-				System.setRegistryValue(  # type: ignore[possibly-missing-attribute]
-					System.HKEY_LOCAL_MACHINE,  # type: ignore[possibly-missing-attribute]
+				System.setRegistryValue(
+					System.HKEY_LOCAL_MACHINE,
 					"SOFTWARE\\opsi.org\\shareinfo",
 					"depoturl",
 					config.get("depot_server", "url"),
 				)
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", config.getDepotDrive())  # type: ignore[possibly-missing-attribute]
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configurl", "<deprecated>")  # type: ignore[possibly-missing-attribute]
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configdrive", "<deprecated>")  # type: ignore[possibly-missing-attribute]
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsurl", "<deprecated>")  # type: ignore[possibly-missing-attribute]
-				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsdrive", "<deprecated>")  # type: ignore[possibly-missing-attribute]
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "depotdrive", config.getDepotDrive())
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configurl", "<deprecated>")
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "configdrive", "<deprecated>")
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsurl", "<deprecated>")
+				System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\shareinfo", "utilsdrive", "<deprecated>")
 
 			# action processor desktop can be one of current / winlogon / default
 			desktop = self.event.eventConfig.actionProcessorDesktop
@@ -1430,8 +1430,8 @@ class EventProcessingThread(KillableThread):
 						time.sleep(3)
 						for notifierHandle, notifierPid in zip(notifierHandles, notifierPids):
 							if hasattr(notifierHandle, "poll"):
-								notifierHandle.poll()
-							System.terminateProcess(processId=notifierPid)  # type: ignore[possibly-missing-attribute]
+								notifierHandle.poll()  # ty: ignore[call-non-callable]
+							System.terminateProcess(processId=notifierPid)
 					except Exception:
 						pass
 
@@ -1582,7 +1582,7 @@ class EventProcessingThread(KillableThread):
 											choices.append(_("Reboot at %s") % f" {hour:02d}:00")
 										else:
 											choices.append(_("Shutdown at %s") % f" {hour:02d}:00")
-										callbacks.append(self.abortShutdownCallback)  # type: ignore[invalid-argument-type]
+										callbacks.append(self.abortShutdownCallback)  # ty: ignore[invalid-argument-type]
 										if hour == self.event.eventConfig.shutdownLatestSelectableHour:
 											break
 								else:
@@ -1590,7 +1590,7 @@ class EventProcessingThread(KillableThread):
 										choices.append(_("Reboot later"))
 									else:
 										choices.append(_("Shutdown later"))
-									callbacks.append(self.abortShutdownCallback)  # type: ignore[invalid-argument-type]
+									callbacks.append(self.abortShutdownCallback)  # ty: ignore[invalid-argument-type]
 
 							choice_subject.setChoices(choices)
 							choice_subject.setCallbacks(callbacks)
@@ -1657,8 +1657,8 @@ class EventProcessingThread(KillableThread):
 									time.sleep(3)
 									for notifierHandle, notifierPid in zip(notifierHandles, notifierPids):
 										if hasattr(notifierHandle, "poll"):
-											notifierHandle.poll()
-										System.terminateProcess(processId=notifierPid)  # type: ignore[possibly-missing-attribute]
+											notifierHandle.poll()  # ty: ignore[call-non-callable]
+										System.terminateProcess(processId=notifierPid)
 								except Exception:
 									pass
 						except Exception as err:
@@ -1955,10 +1955,10 @@ class EventProcessingThread(KillableThread):
 					self.setStatusMessage(_("Processing event %s") % self.event.eventConfig.getName())
 
 					if self.event.eventConfig.logoffCurrentUser:
-						System.logoffCurrentUser()  # type: ignore[possibly-missing-attribute]
+						System.logoffCurrentUser()
 						time.sleep(15)
 					elif self.event.eventConfig.lockWorkstation:
-						System.lockWorkstation()  # type: ignore[possibly-missing-attribute]
+						System.lockWorkstation()
 						time.sleep(15)
 
 					if self.should_cancel():
@@ -2098,11 +2098,11 @@ class EventProcessingThread(KillableThread):
 					time.sleep(3)
 					for notifierHandle, notifierPid in zip(notifierHandles, notifierPids):
 						if psutil.pid_exists(notifierPid) and hasattr(notifierHandle, "poll"):
-							notifierHandle.poll()
+							notifierHandle.poll()  # ty: ignore[call-non-callable]
 						time.sleep(0.1)
 						if psutil.pid_exists(notifierPid):
 							logger.trace("killing notifier with pid %s", notifierPid)
-							System.terminateProcess(processId=notifierPid)  # type: ignore[possibly-missing-attribute]
+							System.terminateProcess(processId=notifierPid)
 				except Exception as error:
 					logger.error("Could not kill notifier: %s", error, exc_info=True)
 

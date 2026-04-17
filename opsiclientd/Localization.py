@@ -74,10 +74,10 @@ def load_translation(languages: Iterable[str] | None = None) -> None:
 				raise
 			import ctypes
 
-			windll = ctypes.windll.kernel32  # type: ignore
+			windll = ctypes.windll.kernel32  # ty: ignore
 			windll.GetUserDefaultUILanguage()
 			lang = locale.windows_locale[windll.GetUserDefaultUILanguage()]
-			languages = gettext._expand_lang(lang)  # type: ignore
+			languages = gettext._expand_lang(lang)  # ty: ignore
 			logger.debug(
 				"Failed to load translations without specified language, trying languages %r from GetUserDefaultUILanguage", languages
 			)
@@ -86,7 +86,7 @@ def load_translation(languages: Iterable[str] | None = None) -> None:
 		translation_func = translation.gettext
 		logger.debug("Using translation: %r", translation.info())
 		if logger.isEnabledFor(TRACE):
-			logger.trace("Translation catalog:\n%s", "\n".join(f"'{k}' => '{v}'" for k, v in translation._catalog.items() if k))  # type: ignore
+			logger.trace("Translation catalog:\n%s", "\n".join(f"'{k}' => '{v}'" for k, v in translation._catalog.items() if k))  # ty: ignore
 
 	except Exception as err:
 		logger.debug("Failed to load translation from '%s': %s", locale_path, err)
@@ -115,5 +115,5 @@ def get_translation_info() -> dict[str, Any]:
 	}
 	if translation:
 		data["translation_info"] = translation.info()
-		data["translation_info"]["catalog"] = dict(translation._catalog)  # type: ignore[attr-defined]
+		data["translation_info"]["catalog"] = dict(translation._catalog)  # ty: ignore[unresolved-attribute,invalid-assignment]
 	return data

@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlparse
 
-import netifaces  # type: ignore[import]
+import netifaces  # ty: ignore[unresolved-import]
 from opsi_legacy import System
 from opsi_legacy.Util import objectToBeautifiedText
 from opsi_legacy.Util.File import IniFile
@@ -24,7 +24,6 @@ from opsicommon.client.opsiservice import ServiceClient, ServiceVerificationFlag
 from opsicommon.logging import LOG_NOTICE, get_logger, logging_config, secret_filter
 from opsicommon.system.network import get_fqdn
 from opsicommon.types import forceBool, forceHostId, forceList, forceProductIdList, forceUnicode, forceUnicodeList
-from opsicommon.utils import Singleton
 
 from opsiclientd.SystemCheck import RUNNING_ON_DARWIN, RUNNING_ON_LINUX, RUNNING_ON_MACOS, RUNNING_ON_WINDOWS
 
@@ -96,8 +95,9 @@ class NoConfigOptionFoundException(ValueError):
 	pass
 
 
-class Config(metaclass=Singleton):
-	_initialized = False
+class Config:
+	_instance: Config | None = None
+
 	WINDOWS_DEFAULT_PATHS = {
 		"global": {
 			"tmp_dir": "c:\\opsi.org\\tmp",
@@ -148,8 +148,13 @@ class Config(metaclass=Singleton):
 		"depot_server": {"drive": "/private/var/opsisetupadmin/opsi_depot"},
 	}
 
+	def __new__(cls, *args: Any, **kwargs: Any) -> Config:
+		if cls._instance is None:
+			cls._instance = super().__new__(cls)
+		return cls._instance
+
 	def __init__(self) -> None:
-		if self._initialized:
+		if getattr(self, "_initialized", False):
 			return
 		self._initialized = True
 
@@ -701,14 +706,14 @@ class Config(metaclass=Singleton):
 		config_states = {}
 		if hasattr(configService, "configState_getValues"):
 			logger.info("Using configState_getValues")
-			config_states = configService.configState_getValues(  # type: ignore[attr-defined]
+			config_states = configService.configState_getValues(  # ty: ignore[call-non-callable]
 				config_ids=config_ids, object_ids=[self.get("global", "host_id")], with_defaults=True
 			).get(self.get("global", "host_id"), {})
 		else:
 			logger.info("Using configState_getObjects")
-			for config in configService.config_getObjects(id=config_ids):  # type: ignore[attr-defined]
+			for config in configService.config_getObjects(id=config_ids):  # ty: ignore[unresolved-attribute]
 				config_states[config.id] = config.defaultValues
-			for config_state in configService.configState_getObjects(objectId=self.get("global", "host_id"), configId=config_ids):  # type: ignore[attr-defined]
+			for config_state in configService.configState_getObjects(objectId=self.get("global", "host_id"), configId=config_ids):  # ty: ignore[unresolved-attribute]
 				config_states[config_state.configId] = config_state.values
 
 		for config_id, values in config_states.items():
@@ -746,7 +751,7 @@ class Config(metaclass=Singleton):
 			logger.info("Dynamic depot selection disabled")
 
 		if not depotIds:
-			clientToDepotservers = configService.configState_getClientToDepotserver(  # type: ignore[attr-defined]
+			clientToDepotservers = configService.configState_getClientToDepotserver(  # ty: ignore[unresolved-attribute]
 				clientIds=[self.get("global", "host_id")], masterOnly=bool(not dynamicDepot), productIds=productIds
 			)
 			if not clientToDepotservers:
@@ -759,7 +764,7 @@ class Config(metaclass=Singleton):
 		logger.debug("Fetching depot servers %s from config service", depotIds)
 		masterDepot = None
 		alternativeDepots = []
-		for depot in configService.host_getObjects(type="OpsiDepotserver", id=depotIds):  # type: ignore[attr-defined]
+		for depot in configService.host_getObjects(type="OpsiDepotserver", id=depotIds):  # ty: ignore[unresolved-attribute]
 			logger.trace("Depot: %s", depot)
 			if depot.id == depotIds[0]:
 				masterDepot = depot
@@ -805,7 +810,7 @@ class Config(metaclass=Singleton):
 
 					logger.info("Passing client configuration to depot selection algorithm: %s", clientConfig)
 
-					depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()  # type: ignore[attr-defined]
+					depotSelectionAlgorithm = configService.getDepotSelectionAlgorithm()  # ty: ignore[unresolved-attribute]
 					logger.trace("depotSelectionAlgorithm:\n%s", depotSelectionAlgorithm)
 
 					currentLocals = locals()
@@ -868,7 +873,7 @@ class Config(metaclass=Singleton):
 			raise RuntimeError("Not connected to config service")
 
 		depotServerUsername = self.get("depot_server", "username")
-		depotServerPassword = configService.user_getCredentials(username="pcpatch")["password"]  # type: ignore[attr-defined]
+		depotServerPassword = configService.user_getCredentials(username="pcpatch")["password"]  # ty: ignore[unresolved-attribute]
 		secret_filter.add_secrets(depotServerPassword)
 		logger.debug("Using username '%s' for depot connection", depotServerUsername)
 		return (depotServerUsername, depotServerPassword)
@@ -894,7 +899,7 @@ class Config(metaclass=Singleton):
 		if hasattr(service_client, "configState_getValues"):
 			use_get_objects = False
 			logger.info("Using configState_getValues")
-			config_states = service_client.configState_getValues(  # type: ignore[attr-defined]
+			config_states = service_client.configState_getValues(  # ty: ignore[call-non-callable]
 				config_ids=config_ids, object_ids=[self.get("global", "host_id")], with_defaults=True
 			).get(self.get("global", "host_id"), {})
 			if (
@@ -907,9 +912,9 @@ class Config(metaclass=Singleton):
 				use_get_objects = True
 		if use_get_objects:
 			logger.info("Using configState_getObjects")
-			for config in service_client.config_getObjects(id=config_ids):  # type: ignore[attr-defined]
+			for config in service_client.config_getObjects(id=config_ids):  # ty: ignore[unresolved-attribute]
 				config_states[config.id] = config.defaultValues
-			for config_state in service_client.configState_getObjects(  # type: ignore[attr-defined]
+			for config_state in service_client.configState_getObjects(  # ty: ignore[unresolved-attribute]
 				objectId=self.get("global", "host_id"),
 				configId=config_ids,
 			):

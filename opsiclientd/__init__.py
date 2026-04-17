@@ -124,9 +124,9 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str | N
 		return f"{tmp[0]}_{int(tmp[2]) - 1}.{tmp[1]}"
 
 	handler = get_all_handlers(handler_type=RotatingFileHandler)[0]
-	handler.namer = namer  # type: ignore[attr-defined]
+	handler.namer = namer  # ty: ignore[unresolved-attribute]
 	try:
-		handler.doRollover()  # type: ignore[attr-defined]
+		handler.doRollover()  # ty: ignore[unresolved-attribute]
 	except Exception as err:
 		logger.error("Failed to rotate log file: %s", err)
 	if log_filter:
@@ -150,8 +150,8 @@ def init_logging(log_dir: str, stderr_level: int = LOG_NONE, log_filter: str | N
 			else:
 				logger.trace(args)
 
-	http.client.HTTPConnection.debuglevel = 1  # type: ignore[possibly-missing-attribute]
-	http.client.print = log_http  # type: ignore[attr-defined]
+	http.client.HTTPConnection.debuglevel = 1  # ty: ignore[possibly-missing-submodule]
+	http.client.print = log_http  # ty: ignore[possibly-missing-submodule]
 
 
 def check_signature(bin_dir: str) -> None:

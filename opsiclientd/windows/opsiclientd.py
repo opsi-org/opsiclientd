@@ -48,7 +48,7 @@ logger = get_logger()
 
 
 def opsiclientd_factory() -> OpsiclientdNT:
-	windowsVersion = sys.getwindowsversion()  # type: ignore[attr-defined]
+	windowsVersion = sys.getwindowsversion()  # ty: ignore[unresolved-attribute]
 	if windowsVersion.major == 5:  # NT5: XP
 		return OpsiclientdNT5()
 	if windowsVersion.major >= 6:  # NT6: Vista / Windows7 and later
@@ -63,14 +63,14 @@ class OpsiclientdNT(Opsiclientd):
 
 	def sendSAS(self) -> None:
 		logger.info("Sending SAS")
-		from ctypes import windll  # type: ignore[attr-defined]
+		from ctypes import windll  # ty: ignore[unresolved-import]
 
 		windll.sas.SendSAS(0)  # pylint: disable=no-member
 
 	def suspendBitlocker(self) -> None:
 		logger.notice("Suspending bitlocker for one reboot if active")
 		try:
-			System.execute(  # type: ignore[possibly-missing-attribute]
+			System.execute(
 				'powershell.exe -ExecutionPolicy Bypass -Command "'
 				"foreach($v in Get-BitLockerVolume)"
 				"{if ($v.EncryptionPercentage -gt 0)"
@@ -267,10 +267,10 @@ class OpsiclientdNT(Opsiclientd):
 	def loginUser(self, domain: str, username: str, password: str) -> bool:
 		secret_filter.add_secrets(password)
 		assert self._controlPipe
-		for session_id in System.getActiveSessionIds(protocol="console"):  # type: ignore[possibly-missing-attribute]
+		for session_id in System.getActiveSessionIds(protocol="console"):  # ty: ignore[unknown-argument]
 			desktop = self.getCurrentActiveDesktopName(session_id)
 			if desktop and desktop.lower() != "winlogon":
-				System.lockSession(session_id)  # type: ignore[possibly-missing-attribute]
+				System.lockSession(session_id)
 			break
 
 		for seconds in range(20):
@@ -298,13 +298,13 @@ class OpsiclientdNT(Opsiclientd):
 		while modified:
 			modified = False
 			# We need to start over iterating after key change
-			with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList") as key:  # type: ignore[attr-defined]
+			with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList") as key:  # ty: ignore[unresolved-attribute]
 				for idx in range(1024):
 					try:
-						profile_key = winreg.EnumKey(key, idx)  # type: ignore[attr-defined]
+						profile_key = winreg.EnumKey(key, idx)  # ty: ignore[unresolved-attribute]
 						logger.debug("Processing profile key %r", profile_key)
 					except WindowsError as err:
-						if err.errno == 22:  # type: ignore[attr-defined]
+						if err.errno == 22:  # ty: ignore[unresolved-attribute]
 							logger.debug("No more subkeys")
 							break
 						logger.debug(err)
@@ -312,8 +312,8 @@ class OpsiclientdNT(Opsiclientd):
 					sid = profile_key.replace(".bak", "")
 
 					try:
-						with winreg.OpenKey(key, profile_key) as subkey:  # type: ignore[attr-defined]
-							profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]  # type: ignore[attr-defined]
+						with winreg.OpenKey(key, profile_key) as subkey:  # ty: ignore[unresolved-attribute]
+							profile_path = winreg.QueryValueEx(subkey, "ProfileImagePath")[0]  # ty: ignore[unresolved-attribute]
 							if keep_sid and sid == keep_sid:
 								keep_profile = profile_path
 								continue
@@ -332,7 +332,7 @@ class OpsiclientdNT(Opsiclientd):
 						continue
 
 					try:
-						win32api.RegUnLoadKey(win32con.HKEY_USERS, profile_key)  # type: ignore[arg-type]
+						win32api.RegUnLoadKey(win32con.HKEY_USERS, profile_key)  # ty: ignore[invalid-argument-type]
 					except pywintypes.error as err:
 						logger.debug(err)
 
@@ -362,20 +362,20 @@ class OpsiclientdNT(Opsiclientd):
 							logger.warning("Failed to delete user %r %r (exitcode %d): %s", cmd, username, res.returncode, out)
 							try:
 								logger.info("Deleting user %r via windows api", username)
-								win32net.NetUserDel(None, username)  # type: ignore[arg-type]
+								win32net.NetUserDel(None, username)  # ty: ignore[invalid-argument-type]
 							except Exception as err:
 								logger.warning("Failed to delete user %r via windows api: %s", username, err)
 
 					else:
 						logger.info("User %r, sid %r does not exist, deleting key", username, sid)
 						try:
-							winreg.DeleteKey(key, profile_key)  # type: ignore[attr-defined]
+							winreg.DeleteKey(key, profile_key)  # ty: ignore[unresolved-attribute]
 							modified = True
 						except OSError as err:
 							logger.debug(err)
 
 					try:
-						winreg.DeleteKey(winreg.HKEY_USERS, sid)  # type: ignore[attr-defined]
+						winreg.DeleteKey(winreg.HKEY_USERS, sid)  # ty: ignore[unresolved-attribute]
 					except OSError as err:
 						logger.debug(err)
 					if modified:
@@ -502,14 +502,14 @@ class OpsiclientdNT5(OpsiclientdNT):
 
 	def shutdownMachine(self, waitSeconds: int = 3) -> None:
 		self._isShutdownTriggered = True
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)  # type: ignore[possibly-missing-attribute]
+		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "ShutdownRequested", 0)
 
 		# Running in thread to avoid failure of shutdown (device not ready)
 		ShutdownThread().start()
 
 	def rebootMachine(self, waitSeconds: int = 3) -> None:
 		self._isRebootTriggered = True
-		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)  # type: ignore[possibly-missing-attribute]
+		System.setRegistryValue(System.HKEY_LOCAL_MACHINE, "SOFTWARE\\opsi.org\\winst", "RebootRequested", 0)
 
 		# Running in thread to avoid failure of reboot (device not ready)
 		RebootThread().start()
@@ -522,7 +522,7 @@ class ShutdownThread(threading.Thread):
 	def run(self) -> None:
 		while True:
 			try:
-				System.shutdown(0)  # type: ignore[possibly-missing-attribute]
+				System.shutdown(0)
 				logger.notice("Shutdown initiated")
 				break
 			except Exception as err:
@@ -538,7 +538,7 @@ class RebootThread(threading.Thread):
 	def run(self) -> None:
 		while True:
 			try:
-				System.reboot(0)  # type: ignore[possibly-missing-attribute]
+				System.reboot(0)
 				logger.notice("Reboot initiated")
 				break
 			except Exception as err:

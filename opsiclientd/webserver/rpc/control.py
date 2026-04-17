@@ -208,13 +208,13 @@ class KioskControlInterface(PipeControlInterface):
 		return result
 
 	def backend_setOptions(self, options: dict[str, Any]) -> None:
-		self.service_client.backend_setOptions(options)  # type: ignore[attr-defined]
+		self.service_client.backend_setOptions(options)  # ty: ignore[unresolved-attribute]
 
 	def configState_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ConfigState]:
-		return self.service_client.configState_getObjects(attributes, **filter)  # type: ignore[attr-defined]
+		return self.service_client.configState_getObjects(attributes, **filter)  # ty: ignore[unresolved-attribute]
 
 	def getDepotId(self, clientId: str | None = None) -> str:
-		return self.service_client.getDepotId(self.opsiclientd.config.get("global", "host_id"))  # type: ignore[attr-defined]
+		return self.service_client.getDepotId(self.opsiclientd.config.get("global", "host_id"))  # ty: ignore[unresolved-attribute]
 
 	def configState_getClientToDepotserver(
 		self,
@@ -223,34 +223,34 @@ class KioskControlInterface(PipeControlInterface):
 		masterOnly: bool = True,
 		productIds: list[str] | None = None,
 	) -> list[dict[str, Any]]:
-		return self.service_client.configState_getClientToDepotserver(depotIds, clientIds, masterOnly, productIds)  # type: ignore[attr-defined]
+		return self.service_client.configState_getClientToDepotserver(depotIds, clientIds, masterOnly, productIds)  # ty: ignore[unresolved-attribute]
 
 	def getGeneralConfigValue(self, key: str, objectId: str | None = None) -> str:
-		return self.service_client.getGeneralConfigValue(key, objectId)  # type: ignore[attr-defined]
+		return self.service_client.getGeneralConfigValue(key, objectId)  # ty: ignore[unresolved-attribute]
 
 	def getKioskProductInfosForClient(self, clientId: str, addConfigs: bool = False) -> dict | list:
-		return self.service_client.getKioskProductInfosForClient(forceHostId(clientId), addConfigs)  # type: ignore[attr-defined]
+		return self.service_client.getKioskProductInfosForClient(forceHostId(clientId), addConfigs)  # ty: ignore[unresolved-attribute]
 
 	def hostControlSafe_fireEvent(self, event: str, hostIds: list[str] | None = None) -> dict[str, Any]:
-		return self.service_client.hostControlSafe_fireEvent(event, hostIds)  # type: ignore[attr-defined]
+		return self.service_client.hostControlSafe_fireEvent(event, hostIds)  # ty: ignore[unresolved-attribute]
 
 	def objectToGroup_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ObjectToGroup]:
-		return self.service_client.objectToGroup_getObjects(attributes, **filter)  # type: ignore[attr-defined]
+		return self.service_client.objectToGroup_getObjects(attributes, **filter)  # ty: ignore[unresolved-attribute]
 
 	def product_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[Product]:
-		return self.service_client.product_getObjects(attributes, **filter)  # type: ignore[attr-defined]
+		return self.service_client.product_getObjects(attributes, **filter)  # ty: ignore[unresolved-attribute]
 
 	def productDependency_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ProductDependency]:
-		return self.service_client.productDependency_getObjects(attributes, **filter)  # type: ignore[attr-defined]
+		return self.service_client.productDependency_getObjects(attributes, **filter)  # ty: ignore[unresolved-attribute]
 
 	def productOnClient_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ProductOnClient]:
-		return self.service_client.productOnClient_getObjects(attributes, **filter)  # type: ignore[attr-defined]
+		return self.service_client.productOnClient_getObjects(attributes, **filter)  # ty: ignore[unresolved-attribute]
 
 	def productOnDepot_getObjects(self, attributes: list[str] | None = None, **filter: Any) -> list[ProductOnDepot]:
-		return self.service_client.productOnDepot_getObjects(attributes, **filter)  # type: ignore[attr-defined]
+		return self.service_client.productOnDepot_getObjects(attributes, **filter)  # ty: ignore[unresolved-attribute]
 
 	def setProductActionRequestWithDependencies(self, productId: str, clientId: str, actionRequest: str) -> None:
-		return self.service_client.setProductActionRequestWithDependencies(  # type: ignore[attr-defined]
+		return self.service_client.setProductActionRequestWithDependencies(  # ty: ignore[unresolved-attribute]
 			productId, forceHostId(clientId), actionRequest
 		)
 
@@ -361,9 +361,9 @@ class ControlInterface(PipeControlInterface):
 		if sessionId:
 			sessionId = forceInt(sessionId)
 		else:
-			sessionId = System.getActiveSessionId()  # type: ignore[possibly-missing-attribute]
+			sessionId = System.getActiveSessionId()
 			if sessionId is None:
-				sessionId = System.getActiveConsoleSessionId()  # type: ignore[possibly-missing-attribute]
+				sessionId = System.getActiveConsoleSessionId()
 
 		if desktop:
 			desktop = forceUnicode(desktop)
@@ -373,7 +373,7 @@ class ControlInterface(PipeControlInterface):
 		logger.notice("rpc runCommand: executing command '%s' in session %d on desktop '%s'", command, sessionId, desktop)
 
 		if use_subprocess:
-			proc = subprocess.Popen(  # type: ignore[call-overload]
+			proc = subprocess.Popen(  # ty: ignore[no-matching-overload]
 				command,
 				session_id=sessionId,
 				session_env=(desktop == "default"),
@@ -394,21 +394,21 @@ class ControlInterface(PipeControlInterface):
 		encoding: str | None = None,
 		timeout: int = 300,
 	) -> str:
-		return System.execute(cmd=command, waitForEnding=waitForEnding, captureStderr=captureStderr, encoding=encoding, timeout=timeout)  # type: ignore[possibly-missing-attribute]
+		return System.execute(cmd=command, waitForEnding=waitForEnding, captureStderr=captureStderr, encoding=encoding, timeout=timeout)
 
 	def logoffSession(self, session_id: str | None = None, username: str | None = None) -> None:
-		System.logoffSession(session_id=session_id, username=username)  # type: ignore[possibly-missing-attribute]
+		System.logoffSession(session_id=session_id, username=username)
 
 	def logoffCurrentUser(self) -> None:
 		logger.notice("rpc logoffCurrentUser: logging of current user now")
-		System.logoffCurrentUser()  # type: ignore[possibly-missing-attribute]
+		System.logoffCurrentUser()
 
 	def lockSession(self, session_id: str | None = None, username: str | None = None) -> None:
-		System.lockSession(session_id=session_id, username=username)  # type: ignore[possibly-missing-attribute]
+		System.lockSession(session_id=session_id, username=username)
 
 	def lockWorkstation(self) -> None:
 		logger.notice("rpc lockWorkstation: locking workstation now")
-		System.lockWorkstation()  # type: ignore[possibly-missing-attribute]
+		System.lockWorkstation()
 
 	def sendSAS(self) -> None:
 		logger.notice("rpc sendSAS: sending SAS")
@@ -545,13 +545,13 @@ class ControlInterface(PipeControlInterface):
 					file.write(cert.public_bytes(encoding=serialization.Encoding.PEM))
 
 	def getActiveSessions(self) -> list[dict[str, str | int | bool | None]]:
-		sessions = System.getActiveSessionInformation()  # type: ignore[possibly-missing-attribute]
+		sessions = System.getActiveSessionInformation()
 		for session in sessions:
 			session["LogonDomain"] = session.get("DomainName")
 		return sessions
 
 	def getBackendInfo(self) -> dict[str, Any]:
-		return self.service_client.backend_info()  # type: ignore[attr-defined]
+		return self.service_client.backend_info()  # ty: ignore[unresolved-attribute]
 
 	def getState(self, name: str, default: Any = None) -> Any:
 		"""
@@ -598,8 +598,8 @@ class ControlInterface(PipeControlInterface):
 			raise
 
 	def loginOpsiSetupUser(self, admin: bool = True, recreate_user: bool = False) -> None:
-		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):  # type: ignore[possibly-missing-attribute]
-			System.logoffSession(session_id)  # type: ignore[possibly-missing-attribute]
+		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
+			System.logoffSession(session_id)
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 		self.opsiclientd.loginUser(socket.gethostname().upper(), user_info["name"], user_info["password"])
 
@@ -663,7 +663,7 @@ class ControlInterface(PipeControlInterface):
 		depot_drive = config.getDepotDrive()
 		if depot_path == depot_drive:
 			# Prefer depot drive if not in use
-			depot_path = depot_drive = System.get_available_drive_letter(start=depot_drive.rstrip(":")).rstrip(":") + ":"  # type: ignore[possibly-missing-attribute]
+			depot_path = depot_drive = System.get_available_drive_letter(start=depot_drive.rstrip(":")).rstrip(":") + ":"
 
 		if not os.path.isabs(script):
 			script = os.path.join(depot_path, os.sep, script)
@@ -858,8 +858,8 @@ class ControlInterface(PipeControlInterface):
 		import win32profile
 		import win32security
 
-		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):  # type: ignore[possibly-missing-attribute]
-			System.logoffSession(session_id)  # type: ignore[possibly-missing-attribute]
+		for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
+			System.logoffSession(session_id)
 		user_info = self.opsiclientd.createOpsiSetupUser(admin=admin, delete_existing=recreate_user)
 
 		logon = win32security.LogonUser(
@@ -875,7 +875,7 @@ class ControlInterface(PipeControlInterface):
 				try:
 					# This will create the user home dir and ntuser.dat gets loaded
 					# Can fail if C:\users\default\ntuser.dat is locked by an other process
-					hkey = win32profile.LoadUserProfile(logon, {"UserName": user_info["name"]})  # type: ignore[arg-type]
+					hkey = win32profile.LoadUserProfile(logon, {"UserName": user_info["name"]})  # ty: ignore[invalid-argument-type]
 					break
 				except pywintypes.error as err:
 					logger.warning("Failed to load user profile (attempt #%d): %s", attempt, err)
@@ -886,16 +886,16 @@ class ControlInterface(PipeControlInterface):
 			try:
 				# env = win32profile.CreateEnvironmentBlock(logon, False)
 				str_sid = win32security.ConvertSidToStringSid(user_info["user_sid"])
-				reg_key = winreg.OpenKey(  # type: ignore[attr-defined]
-					winreg.HKEY_USERS,  # type: ignore[attr-defined]
+				reg_key = winreg.OpenKey(  # ty: ignore[unresolved-attribute]
+					winreg.HKEY_USERS,  # ty: ignore[unresolved-attribute]
 					str_sid + r"\Software\Microsoft\Windows NT\CurrentVersion\Winlogon",
 					0,
-					winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,  # type: ignore[attr-defined]
+					winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY,  # ty: ignore[unresolved-attribute]
 				)
 				with reg_key:
-					winreg.SetValueEx(reg_key, "Shell", 0, winreg.REG_SZ, command)  # type: ignore[attr-defined]
+					winreg.SetValueEx(reg_key, "Shell", 0, winreg.REG_SZ, command)  # ty: ignore[unresolved-attribute]
 			finally:
-				win32profile.UnloadUserProfile(logon, hkey)  # type: ignore[arg-type]
+				win32profile.UnloadUserProfile(logon, hkey)  # ty: ignore[invalid-argument-type]
 
 		finally:
 			logon.close()
@@ -948,8 +948,8 @@ class ControlInterface(PipeControlInterface):
 							logger.warning("Timed out after %r seconds while waiting for process to complete", timeout)
 							break
 				finally:
-					for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):  # type: ignore[possibly-missing-attribute]
-						System.logoffSession(session_id)  # type: ignore[possibly-missing-attribute]
+					for session_id in System.getUserSessionIds(OPSI_SETUP_USER_NAME):
+						System.logoffSession(session_id)
 					if script.exists():
 						script.unlink()
 					if remove_user:
@@ -1020,7 +1020,7 @@ class ControlInterface(PipeControlInterface):
 		logger.notice("Delivering file %s", file_path)
 		with open(file_path, "rb") as file_handle:
 			# requests accepts "Dictionary, list of tuples, bytes, or file-like object to send in the body of the Request" as data
-			response = self.opsiclientd._permanent_service_connection.service_client.post("/file-transfer", data=file_handle)  # type: ignore[call-overload]
+			response = self.opsiclientd._permanent_service_connection.service_client.post("/file-transfer", data=file_handle)  # ty: ignore[no-matching-overload]
 			logger.debug("Got response with status %s: %s", response.status_code, response.content.decode("utf-8"))
 			return json.loads(response.content.decode("utf-8"))
 
@@ -1032,9 +1032,9 @@ class ControlInterface(PipeControlInterface):
 
 		logger.info("Replacing opsi host key on service")
 
-		host = self.service_client.host_getObjects(id=config.get("global", "host_id"))[0]  # type: ignore[attr-defined]
+		host = self.service_client.host_getObjects(id=config.get("global", "host_id"))[0]  # ty: ignore[unresolved-attribute]
 		host.setOpsiHostKey(new_key)
-		self.service_client.host_updateObject(host)  # type: ignore[attr-defined]
+		self.service_client.host_updateObject(host)  # ty: ignore[unresolved-attribute]
 
 		logger.info("Replacing opsi host key in config")
 		config.set("global", "opsi_host_key", new_key)
@@ -1127,5 +1127,5 @@ def get_cache_service_interface(opsiclientd: Opsiclientd) -> ControlInterface:
 	setattr(backend, "_create_interface", MethodType(Interface._create_interface, backend))
 	setattr(backend, "get_interface", MethodType(Interface.get_interface, backend))
 	setattr(backend, "get_method_interface", MethodType(Interface.get_method_interface, backend))
-	backend._create_interface()  # type: ignore[unresolved-attribute]
-	return backend  # type: ignore[invalid-return-type]
+	backend._create_interface()  # ty: ignore[unresolved-attribute]
+	return backend  # ty: ignore[invalid-return-type]

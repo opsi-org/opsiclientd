@@ -74,13 +74,13 @@ class TransferSlotHeartbeat(threading.Thread):
 		return PermanentServiceConnection().service_client
 
 	def acquire(self) -> dict[str, str | float]:
-		response = self.service_client.depot_acquireTransferSlot(self.depot_id, self.client_id, self.slot_id)  # type: ignore[attr-defined]
+		response = self.service_client.depot_acquireTransferSlot(self.depot_id, self.client_id, self.slot_id)  # ty: ignore[unresolved-attribute]
 		self.slot_id = response.get("slot_id")
 		logger.debug("Transfer slot Heartbeat %s, response: %s", self.slot_id, response)
 		return response
 
 	def release(self) -> None:
-		response = self.service_client.depot_releaseTransferSlot(self.depot_id, self.client_id, self.slot_id)  # type: ignore[attr-defined]
+		response = self.service_client.depot_releaseTransferSlot(self.depot_id, self.client_id, self.slot_id)  # ty: ignore[unresolved-attribute]
 		logger.debug("releaseTransferSlot response: %s", response)
 
 	def run(self) -> None:
@@ -259,7 +259,7 @@ class CacheService(threading.Thread):
 		masterDepotId = config.get("depot_server", "master_depot_id")
 		if workingWithCachedConfig:
 			depotIds = []
-			for depot in configService.host_getObjects(type="OpsiDepotserver"):  # type: ignore[attr-defined]
+			for depot in configService.host_getObjects(type="OpsiDepotserver"):  # ty: ignore[unresolved-attribute]
 				depotIds.append(depot.id)
 			if masterDepotId not in depotIds:
 				self.setConfigCacheFaulty()
@@ -270,7 +270,7 @@ class CacheService(threading.Thread):
 
 		productOnDepots = {
 			productOnDepot.productId: productOnDepot
-			for productOnDepot in configService.productOnDepot_getObjects(depotId=masterDepotId, productId=productIds)  # type: ignore[attr-defined]
+			for productOnDepot in configService.productOnDepot_getObjects(depotId=masterDepotId, productId=productIds)  # ty: ignore[unresolved-attribute]
 		}
 		logger.trace("productCacheCompleted: productOnDepots=%s", productOnDepots)
 
@@ -355,18 +355,18 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):
 		"""
 		Get product action groups of action requests set for a client.
 		"""
-		product_on_clients = self.productOnClient_getObjects(clientId=clientId)  # type: ignore[attr-defined]
+		product_on_clients = self.productOnClient_getObjects(clientId=clientId)  # ty: ignore[unresolved-attribute]
 
 		action_groups: list[dict] = []
 		for group in self.get_product_action_groups(product_on_clients).get(clientId, []):
-			group.product_on_clients = [  # type: ignore[invalid-assignment]
+			group.product_on_clients = [  # ty: ignore[invalid-assignment]
 				poc.to_hash() for poc in group.product_on_clients if poc.actionRequest and poc.actionRequest != "none"
 			]
 			if group.product_on_clients:
-				group.dependencies = {  # type: ignore[invalid-assignment]
+				group.dependencies = {  # ty: ignore[invalid-assignment]
 					product_id: [d.to_hash() for d in dep] for product_id, dep in group.dependencies.items()
 				}
-				action_groups.append(group)  # type: ignore[arg-type]
+				action_groups.append(group)  # ty: ignore[invalid-argument-type]
 
 		return action_groups
 
@@ -400,9 +400,9 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):
 		the method behaves like `productOnClient_getObjects` (which is faster).
 		"""
 		if attributes and "actionSequence" not in attributes:
-			return self.productOnClient_getObjects(attributes, **filter)  # type: ignore[attr-defined]
+			return self.productOnClient_getObjects(attributes, **filter)  # ty: ignore[unresolved-attribute]
 
-		product_on_clients = self.productOnClient_getObjects(attributes, **filter)  # type: ignore[attr-defined]
+		product_on_clients = self.productOnClient_getObjects(attributes, **filter)  # ty: ignore[unresolved-attribute]
 		action_requests = {(poc.clientId, poc.productId): poc.actionRequest for poc in product_on_clients}
 		product_on_clients = self.productOnClient_generateSequence(product_on_clients)
 		for poc in product_on_clients:
@@ -417,12 +417,12 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):
 			raise ValueError(f"Invalid sort algorithm {sortAlgorithm!r}")
 
 		products_by_id_and_version: dict[tuple[str, str, str], LocalbootProduct] = {}
-		for product in self.product_getObjects(type="LocalbootProduct"):  # type: ignore[attr-defined]
+		for product in self.product_getObjects(type="LocalbootProduct"):  # ty: ignore[unresolved-attribute]
 			products_by_id_and_version[(product.id, product.productVersion, product.packageVersion)] = product
 
 		product_ids = []
 		product_on_clients = []
-		for product_on_depot in self.productOnDepot_getObjects(depotId=depotId, productType="LocalbootProduct"):  # type: ignore[attr-defined]
+		for product_on_depot in self.productOnDepot_getObjects(depotId=depotId, productType="LocalbootProduct"):  # ty: ignore[unresolved-attribute]
 			product = products_by_id_and_version.get(
 				(product_on_depot.productId, product_on_depot.productVersion, product_on_depot.packageVersion)
 			)
@@ -456,7 +456,7 @@ class ConfigCacheServiceBackendExtension43(RPCProductDependencyMixin):
 
 def init_from_service(service_client: ServiceClient) -> None:
 	try:
-		info = service_client.backend_getLicensingInfo(licenses=False, legacy_modules=False, dates=False)  # type: ignore[attr-defined]
+		info = service_client.backend_getLicensingInfo(licenses=False, legacy_modules=False, dates=False)  # ty: ignore[unresolved-attribute]
 		logger.debug("Got licensing info from service: %s", info)
 		if "vpn" not in info["available_modules"]:
 			raise RuntimeError("WAN/VPN module not licensed")
@@ -465,7 +465,7 @@ def init_from_service(service_client: ServiceClient) -> None:
 
 	try:
 		if not service_client.service_is_opsiclientd():
-			client_to_depotservers = service_client.configState_getClientToDepotserver(  # type: ignore[attr-defined]
+			client_to_depotservers = service_client.configState_getClientToDepotserver(  # ty: ignore[unresolved-attribute]
 				clientIds=config.get("global", "host_id")
 			)
 			if not client_to_depotservers:
@@ -668,7 +668,7 @@ class ConfigCacheService(threading.Thread):
 							with open(instlog, "r", encoding="utf-8", errors="replace") as file:
 								data = file.read()
 
-							self.service_client.log_write("instlog", data=data, objectId=config.get("global", "host_id"), append=False)  # type: ignore[attr-defined]
+							self.service_client.log_write("instlog", data=data, objectId=config.get("global", "host_id"), append=False)  # ty: ignore[unresolved-attribute]
 					except Exception as err:
 						logger.error("Failed to sync instlog: %s", err)
 
@@ -730,7 +730,7 @@ class ConfigCacheService(threading.Thread):
 
 				productOnClients = [
 					poc
-					for poc in self.service_client.productOnClient_getObjects(  # type: ignore[attr-defined]
+					for poc in self.service_client.productOnClient_getObjects(  # ty: ignore[unresolved-attribute]
 						productType="LocalbootProduct",
 						clientId=config.get("global", "host_id"),
 						# Exclude 'always'!
@@ -870,7 +870,7 @@ class ProductCacheService(threading.Thread):
 		self._cache_dir_lock = threading.Lock()
 		self.last_errors: list[Exception] = []
 
-		self._impersonation: System.Impersonate | None = None  # type: ignore[possibly-missing-attribute]
+		self._impersonation: System.Impersonate | None = None
 		self._cache_products_requested = False
 		self._fire_sync_completed_event = True
 
@@ -969,7 +969,7 @@ class ProductCacheService(threading.Thread):
 		try_after_seconds: float = 0.0
 		heartbeat_thread = None
 
-		depot_id = self.service_client.configState_getClientToDepotserver(clientIds=config.get("global", "host_id"))[0]["depotId"]  # type: ignore[attr-defined]
+		depot_id = self.service_client.configState_getClientToDepotserver(clientIds=config.get("global", "host_id"))[0]["depotId"]  # ty: ignore[unresolved-attribute]
 		try:
 			if hasattr(self.service_client, "depot_acquireTransferSlot"):
 				heartbeat_thread = TransferSlotHeartbeat(depot_id, config.get("global", "host_id"))
@@ -1176,7 +1176,7 @@ class ProductCacheService(threading.Thread):
 			productIds = []
 			productOnClients = [
 				poc
-				for poc in self.service_client.productOnClient_getObjects(  # type: ignore[attr-defined]
+				for poc in self.service_client.productOnClient_getObjects(  # ty: ignore[unresolved-attribute]
 					productType="LocalbootProduct",
 					clientId=config.get("global", "host_id"),
 					actionRequest=["setup", "uninstall", "update", "always", "once", "custom"],
@@ -1198,7 +1198,7 @@ class ProductCacheService(threading.Thread):
 				masterDepotId = config.get("depot_server", "master_depot_id")
 
 				# Get all productOnDepots!
-				productOnDepots = self.service_client.productOnDepot_getObjects(depotId=masterDepotId)  # type: ignore[attr-defined]
+				productOnDepots = self.service_client.productOnDepot_getObjects(depotId=masterDepotId)  # ty: ignore[unresolved-attribute]
 				productOnDepotIds = [productOnDepot.productId for productOnDepot in productOnDepots]
 				logger.debug("Product ids on depot %s: %s", masterDepotId, productOnDepotIds)
 				errorProductIds = []
@@ -1318,7 +1318,7 @@ class ProductCacheService(threading.Thread):
 			actionResult = "failed"
 
 		if actionProgress and updateProductOnClient:
-			self.service_client.productOnClient_updateObjects(  # type: ignore[attr-defined]
+			self.service_client.productOnClient_updateObjects(  # ty: ignore[unresolved-attribute]
 				[
 					ProductOnClient(
 						productId=productId,
@@ -1363,7 +1363,7 @@ class ProductCacheService(threading.Thread):
 		(depotServerUsername, depotServerPassword) = config.getDepotserverCredentials(configService=self.service_client)
 		mount = True
 		if RUNNING_ON_WINDOWS:
-			self._impersonation = System.Impersonate(username=depotServerUsername, password=depotServerPassword)  # type: ignore[possibly-missing-attribute]
+			self._impersonation = System.Impersonate(username=depotServerUsername, password=depotServerPassword)
 			self._impersonation.start(logonType="NEW_CREDENTIALS")
 			mount = False
 		mount_point = None
@@ -1414,11 +1414,11 @@ class ProductCacheService(threading.Thread):
 			if not masterDepotId:
 				raise ValueError("Cannot cache product files: depot_server.master_depot_id undefined")
 
-			productOnDepots = self.service_client.productOnDepot_getObjects(depotId=masterDepotId, productId=productId)  # type: ignore[attr-defined]
+			productOnDepots = self.service_client.productOnDepot_getObjects(depotId=masterDepotId, productId=productId)  # ty: ignore[unresolved-attribute]
 			if not productOnDepots:
 				raise RuntimeError(f"Product '{productId}' not found on depot '{masterDepotId}'")
 			product_version = f"{productOnDepots[0].productVersion}-{productOnDepots[0].packageVersion}"
-			products = self.service_client.product_getObjects(  # type: ignore[attr-defined]
+			products = self.service_client.product_getObjects(  # ty: ignore[unresolved-attribute]
 				attributes=["id", "productVersion", "packageVersion", "name"],
 				id=productId,
 				productVersion=productOnDepots[0].productVersion,

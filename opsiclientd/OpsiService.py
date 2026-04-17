@@ -9,7 +9,6 @@ Connecting to a opsi service.
 
 from __future__ import annotations
 
-import abc  # Add this import
 import asyncio
 import os
 import re
@@ -54,7 +53,7 @@ from opsicommon.ssl import install_ca, load_cas, remove_ca
 from opsicommon.system import lock_file
 from opsicommon.system.network import get_fqdn
 from opsicommon.types import forceProductId, forceString
-from opsicommon.utils import Singleton, replace_placeholders
+from opsicommon.utils import replace_placeholders
 
 from opsiclientd import __version__
 from opsiclientd.Config import Config
@@ -186,18 +185,19 @@ def get_service_client(address: str | list[str] | None = None, connect_timeout: 
 	)
 
 
-class CombinedSingletonABCMeta(Singleton, abc.ABCMeta):
-	pass
-
-
-class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, MessagebusListener, metaclass=CombinedSingletonABCMeta):
-	_initialized = False
+class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, MessagebusListener):
 	opsiclientd: Opsiclientd | None = None
+	_instance: PermanentServiceConnection | None = None
+
+	def __new__(cls, *args, **kwargs) -> PermanentServiceConnection:
+		if not cls._instance:
+			cls._instance = super().__new__(cls)
+		return cls._instance
 
 	def __init__(self, opsiclientd: Opsiclientd | None = None) -> None:
 		if opsiclientd and not self.opsiclientd:
 			self.opsiclientd = opsiclientd
-		if self._initialized:
+		if getattr(self, "_initialized", False):
 			return
 		self._initialized = True
 		threading.Thread.__init__(self, name="PermanentServiceConnection")
@@ -363,7 +363,7 @@ class PermanentServiceConnection(threading.Thread, ServiceConnectionListener, Me
 			self.update_host_id()
 
 			try:
-				client_to_depotservers = service_client.configState_getClientToDepotserver(  # type: ignore[attr-defined]
+				client_to_depotservers = service_client.configState_getClientToDepotserver(  # ty: ignore[unresolved-attribute]
 					clientIds=config.get("global", "host_id")
 				)
 				if not client_to_depotservers:
@@ -491,7 +491,7 @@ def download_from_depot(
 		disconnect = True
 
 	try:
-		product_idents = service_client.product_getIdents(id=product_id)  # type: ignore[attr-defined]
+		product_idents = service_client.product_getIdents(id=product_id)  # ty: ignore[unresolved-attribute]
 		if not product_idents:
 			raise ValueError(f"Product {product_id!r} not available")
 

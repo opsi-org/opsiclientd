@@ -153,32 +153,32 @@ class RPCProductDependencyMixin(Protocol):
 			product_on_clients_by_client_id[poc.clientId].append(poc)
 			product_ids.add(poc.productId)
 		client_ids = list(product_on_clients_by_client_id)
-		client_to_depot = {c2d["clientId"]: c2d["depotId"] for c2d in self.configState_getClientToDepotserver(clientIds=client_ids)}
+		client_to_depot = {c2d["clientId"]: c2d["depotId"] for c2d in self.configState_getClientToDepotserver(clientIds=client_ids)}  # ty: ignore[unresolved-attribute]
 		depot_ids = list(set(client_to_depot.values()))
 		product_action_groups: dict[str, list[ProductActionGroup]] = {c: [] for c in client_ids}
 
 		if product_ids:
 			# Prefill caches
-			for dependency in self.productDependency_getObjects(productId=list(product_ids)):
+			for dependency in self.productDependency_getObjects(productId=list(product_ids)):  # ty: ignore[unresolved-attribute]
 				pdkey = (dependency.productId, dependency.productVersion, dependency.packageVersion)
 				if pdkey not in product_dependency_cache:
 					product_dependency_cache[pdkey] = []
 				product_dependency_cache[pdkey].append(dependency)
 				product_ids.add(dependency.requiredProductId)
 
-			for product in self.product_getObjects(id=list(product_ids)):
+			for product in self.product_getObjects(id=list(product_ids)):  # ty: ignore[unresolved-attribute]
 				pkey = (product.id, product.productVersion, product.packageVersion)
 				product_cache[pkey] = product
 
 			if depot_ids:
-				for product_on_depot in self.productOnDepot_getObjects(productId=list(product_ids), depotId=depot_ids):
+				for product_on_depot in self.productOnDepot_getObjects(productId=list(product_ids), depotId=depot_ids):  # ty: ignore[unresolved-attribute]
 					podkey = (product_on_depot.depotId, product_on_depot.productId)
 					product_on_depot_cache[podkey] = product_on_depot
 
 		def get_product(product_id: str, product_version: str, package_version: str) -> Product:
 			pkey = (product_id, product_version, package_version)
 			if pkey not in product_cache:
-				objs = self.product_getObjects(
+				objs = self.product_getObjects(  # ty: ignore[unresolved-attribute]
 					id=product_id,
 					productVersion=product_version,
 					packageVersion=package_version,
@@ -194,7 +194,7 @@ class RPCProductDependencyMixin(Protocol):
 		) -> ProductOnDepot:
 			pkey = (depot_id, product_id)
 			if pkey not in product_on_depot_cache:
-				objs = self.productOnDepot_getObjects(productId=product_id, depotId=depot_id)
+				objs = self.productOnDepot_getObjects(productId=product_id, depotId=depot_id)  # ty: ignore[unresolved-attribute]
 				if not objs:
 					raise OpsiProductNotAvailableOnDepotError(
 						f"Product {product_id!r} (version: {product_version}-{package_version}) not found on depot {depot_id}"
@@ -213,7 +213,7 @@ class RPCProductDependencyMixin(Protocol):
 		def get_product_dependencies(product_id: str, product_version: str, package_version: str) -> list[ProductDependency]:
 			pkey = (product_id, product_version, package_version)
 			if pkey not in product_dependency_cache:
-				objs = self.productDependency_getObjects(
+				objs = self.productDependency_getObjects(  # ty: ignore[unresolved-attribute]
 					productId=product_id, productVersion=product_version, packageVersion=package_version
 				)
 				product_dependency_cache[pkey] = objs
@@ -227,7 +227,7 @@ class RPCProductDependencyMixin(Protocol):
 						product_on_client_cache[pkey] = poc
 						break
 			if pkey not in product_on_client_cache:
-				objs = self.productOnClient_getObjects(productId=product_id, clientId=client_id)
+				objs = self.productOnClient_getObjects(productId=product_id, clientId=client_id)  # ty: ignore[unresolved-attribute]
 				if not objs:
 					poc = ProductOnClient(productId=product_id, productType=product_type, clientId=client_id)
 					poc.setDefaults()

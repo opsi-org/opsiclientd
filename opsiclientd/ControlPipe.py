@@ -373,11 +373,11 @@ class NTPipeClientConnection(ClientConnection):
 		chBuf = create_string_buffer(self._controller.bufferSize)
 		cbRead = c_ulong(0)
 		cbAvailable = c_ulong(0)
-		fSuccess = windll.kernel32.PeekNamedPipe(  # type: ignore[possibly-missing-attribute]
+		fSuccess = windll.kernel32.PeekNamedPipe(  # ty: ignore[unresolved-attribute]
 			self._connection, chBuf, self._controller.bufferSize, byref(cbRead), byref(cbAvailable), None
 		)
 		if fSuccess != 1:
-			error = windll.kernel32.GetLastError()  # type: ignore[possibly-missing-attribute]
+			error = windll.kernel32.GetLastError()  # ty: ignore[unresolved-attribute]
 			if error == 109:  # ERROR_BROKEN_PIPE
 				self.clientDisconnected()
 
@@ -387,17 +387,17 @@ class NTPipeClientConnection(ClientConnection):
 			logger.trace("Reading from pipe")
 			chBuf = create_string_buffer(self._controller.bufferSize)
 			cbRead = c_ulong(0)
-			fSuccess = windll.kernel32.ReadFile(self._connection, chBuf, self._controller.bufferSize, byref(cbRead), None)  # type: ignore[possibly-missing-attribute]
+			fSuccess = windll.kernel32.ReadFile(self._connection, chBuf, self._controller.bufferSize, byref(cbRead), None)  # ty: ignore[unresolved-attribute]
 			logger.trace("Read %d bytes from pipe", cbRead.value)
 			if cbRead.value > 0:
 				data += chBuf.value
 
 			if fSuccess != 1:
-				if windll.kernel32.GetLastError() == 234:  # ERROR_MORE_DATA  # type: ignore[possibly-missing-attribute]
+				if windll.kernel32.GetLastError() == 234:  # ERROR_MORE_DATA  # ty: ignore[unresolved-attribute]
 					continue
 				if data:
 					return data
-				if windll.kernel32.GetLastError() == 109:  # ERROR_BROKEN_PIPE  # type: ignore[possibly-missing-attribute]
+				if windll.kernel32.GetLastError() == 109:  # ERROR_BROKEN_PIPE  # ty: ignore[unresolved-attribute]
 					self.clientDisconnected()
 
 			return data
@@ -410,11 +410,11 @@ class NTPipeClientConnection(ClientConnection):
 		data += b"\0"
 
 		cbWritten = c_ulong(0)
-		fSuccess = windll.kernel32.WriteFile(self._connection, c_char_p(data), len(data), byref(cbWritten), None)  # type: ignore[possibly-missing-attribute]
-		windll.kernel32.FlushFileBuffers(self._connection)  # type: ignore[possibly-missing-attribute]
+		fSuccess = windll.kernel32.WriteFile(self._connection, c_char_p(data), len(data), byref(cbWritten), None)  # ty: ignore[unresolved-attribute]
+		windll.kernel32.FlushFileBuffers(self._connection)  # ty: ignore[unresolved-attribute]
 		logger.trace("Wrote %d bytes to pipe", cbWritten.value)
 		if not fSuccess:
-			error = windll.kernel32.GetLastError()  # type: ignore[possibly-missing-attribute]
+			error = windll.kernel32.GetLastError()  # ty: ignore[unresolved-attribute]
 			if error in (232, 109):  # ERROR_NO_DATA, ERROR_BROKEN_PIPE
 				self.clientDisconnected()
 				return False
@@ -445,9 +445,9 @@ class NTControlPipe(ControlPipe):
 	def teardown(self) -> None:
 		if self._pipe:
 			try:
-				windll.kernel32.FlushFileBuffers(self._pipe)  # type: ignore[possibly-missing-attribute]
-				windll.kernel32.DisconnectNamedPipe(self._pipe)  # type: ignore[possibly-missing-attribute]
-				windll.kernel32.CloseHandle(self._pipe)  # type: ignore[possibly-missing-attribute]
+				windll.kernel32.FlushFileBuffers(self._pipe)  # ty: ignore[unresolved-attribute]
+				windll.kernel32.DisconnectNamedPipe(self._pipe)  # ty: ignore[unresolved-attribute]
+				windll.kernel32.CloseHandle(self._pipe)  # ty: ignore[unresolved-attribute]
 			except Exception:
 				pass
 
@@ -460,7 +460,7 @@ class NTControlPipe(ControlPipe):
 		PIPE_UNLIMITED_INSTANCES = 255
 		NMPWAIT_USE_DEFAULT_WAIT = 0
 		INVALID_HANDLE_VALUE = -1
-		self._pipe = windll.kernel32.CreateNamedPipeA(  # type: ignore[possibly-missing-attribute]
+		self._pipe = windll.kernel32.CreateNamedPipeA(  # ty: ignore[unresolved-attribute]
 			self._pipeName.encode("ascii"),
 			PIPE_ACCESS_DUPLEX,
 			PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
@@ -471,12 +471,12 @@ class NTControlPipe(ControlPipe):
 			None,
 		)
 		if self._pipe == INVALID_HANDLE_VALUE:
-			raise RuntimeError(f"Failed to create named pipe: {windll.kernel32.GetLastError()}")  # type: ignore[possibly-missing-attribute]
+			raise RuntimeError(f"Failed to create named pipe: {windll.kernel32.GetLastError()}")  # ty: ignore[unresolved-attribute]
 
 		logger.debug("Pipe %s created, waiting for client to connect", self._pipeName)
 		# This call is blocking until a client connects
-		fConnected = windll.kernel32.ConnectNamedPipe(self._pipe, None)  # type: ignore[possibly-missing-attribute]
-		if fConnected == 0 and windll.kernel32.GetLastError() == 535:  # type: ignore[possibly-missing-attribute]
+		fConnected = windll.kernel32.ConnectNamedPipe(self._pipe, None)  # ty: ignore[unresolved-attribute]
+		if fConnected == 0 and windll.kernel32.GetLastError() == 535:  # ty: ignore[unresolved-attribute]
 			# ERROR_PIPE_CONNECTED
 			fConnected = 1
 
@@ -485,6 +485,6 @@ class NTControlPipe(ControlPipe):
 			self._client_id += 1
 			return (self._pipe, f"#{self._client_id}")
 
-		error = windll.kernel32.GetLastError()  # type: ignore[possibly-missing-attribute]
-		windll.kernel32.CloseHandle(self._pipe)  # type: ignore[possibly-missing-attribute]
+		error = windll.kernel32.GetLastError()  # ty: ignore[unresolved-attribute]
+		windll.kernel32.CloseHandle(self._pipe)  # ty: ignore[unresolved-attribute]
 		raise RuntimeError(f"Failed to connect to pipe (error: {error})")

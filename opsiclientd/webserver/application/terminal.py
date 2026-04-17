@@ -167,11 +167,11 @@ class TerminalWebsocket(WebSocketEndpoint):
 		if not shell:
 			shell = "powershell.exe" if is_windows() else "bash"
 		try:
-			lines = int(lines)  # type: ignore[arg-type]
+			lines = int(lines)  # ty: ignore[invalid-argument-type]
 		except (ValueError, TypeError):
 			lines = 30
 		try:
-			columns = int(columns)  # type: ignore[arg-type]
+			columns = int(columns)  # ty: ignore[invalid-argument-type]
 		except (ValueError, TypeError):
 			columns = 120
 

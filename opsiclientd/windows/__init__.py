@@ -66,7 +66,7 @@ def importWmiAndPythoncom(importWmi: bool = True, importPythoncom: bool = True) 
 						logger.debug("Importing wmi")
 						pythoncom.CoInitialize()
 						try:
-							import wmi  # type: ignore[import]
+							import wmi  # ty: ignore[unresolved-import]
 						finally:
 							pythoncom.CoUninitialize()
 				except Exception as import_error:
@@ -81,7 +81,7 @@ class SensLogon(win32com.server.policy.DesignatedWrapPolicy):
 	_public_methods_ = ["Logon", "Logoff", "StartShell", "DisplayLock", "DisplayUnlock", "StartScreenSaver", "StopScreenSaver"]
 
 	def __init__(self, callback: Callable) -> None:
-		self._wrap_(self)  # type: ignore[attr-defined]
+		self._wrap_(self)  # ty: ignore[unresolved-attribute]
 		self._callback = callback
 
 	def subscribe(self) -> None:
@@ -183,14 +183,14 @@ def runCommandInSession(
 		logger.notice("Executing: '%s' in session '%s' on desktop '%s'", command, sessionId, desktop)
 		(hProcess, hThread, dwProcessId, dwThreadId) = win32process.CreateProcessAsUser(
 			userToken,
-			None,  # type: ignore[invalid-argument-type]
+			None,  # ty: ignore[invalid-argument-type]
 			command,
-			None,  # type: ignore[invalid-argument-type]
-			None,  # type: ignore[invalid-argument-type]
+			None,  # ty: ignore[invalid-argument-type]
+			None,  # ty: ignore[invalid-argument-type]
 			1,
 			dwCreationFlags,
 			None,
-			None,  # type: ignore[invalid-argument-type]
+			None,  # ty: ignore[invalid-argument-type]
 			sti,
 		)
 
@@ -234,11 +234,11 @@ MAXIMUM_REPARSE_DATA_BUFFER_SIZE = 16 * 1024  # 16KB
 ERROR_NOT_A_REPARSE_POINT = 0x1126  # 4390
 SYMLINK_FLAG_RELATIVE = 0x00000001
 
-CreateFileW = windll.kernel32.CreateFileW  # type: ignore[possibly-missing-attribute]
+CreateFileW = windll.kernel32.CreateFileW  # ty: ignore[unresolved-attribute]
 CreateFileW.restype = wintypes.HANDLE
 CreateFileW.argtypes = [wintypes.LPCWSTR, wintypes.DWORD, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD, wintypes.DWORD, wintypes.HANDLE]
 
-DeviceIoControl = windll.kernel32.DeviceIoControl  # type: ignore[possibly-missing-attribute]
+DeviceIoControl = windll.kernel32.DeviceIoControl  # ty: ignore[unresolved-attribute]
 DeviceIoControl.restype = wintypes.BOOL
 DeviceIoControl.argtypes = [
 	wintypes.HANDLE,
@@ -251,7 +251,7 @@ DeviceIoControl.argtypes = [
 	ctypes.c_void_p,
 ]
 
-CloseHandle = windll.kernel32.CloseHandle  # type: ignore[possibly-missing-attribute]
+CloseHandle = windll.kernel32.CloseHandle  # ty: ignore[unresolved-attribute]
 CloseHandle.restype = wintypes.BOOL
 CloseHandle.argtypes = [wintypes.HANDLE]
 

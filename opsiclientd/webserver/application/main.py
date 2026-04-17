@@ -32,7 +32,7 @@ config = Config()
 def setup_application(opsiclientd: Opsiclientd) -> FastAPI:
 	set_opsiclientd(opsiclientd)
 	app = FastAPI()
-	app.add_middleware(BaseMiddleware)  # type: ignore[arg-type]
+	app.add_middleware(BaseMiddleware)  # ty: ignore[invalid-argument-type]
 	setup_index(app)
 	setup_info(app)
 	setup_upload(app)

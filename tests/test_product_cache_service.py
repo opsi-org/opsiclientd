@@ -160,7 +160,7 @@ def test_cache_product(tmp_path: Path) -> None:
 		patch("opsiclientd.nonfree.CacheService.ProductCacheService._updateConfig", _updateConfig),
 		patch("opsiclientd.nonfree.CacheService.ProductCacheService.service_client", service_client),
 	):
-		product_cache_service = ProductCacheService(opsiclientd=None)  # type: ignore[arg-type]
+		product_cache_service = ProductCacheService(opsiclientd=None)  # ty: ignore[invalid-argument-type]
 
 		# Test opsi-script only
 		service_client.updated_pocs.clear()
