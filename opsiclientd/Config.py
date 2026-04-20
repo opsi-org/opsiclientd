@@ -9,6 +9,7 @@ Configuring opsiclientd.
 
 from __future__ import annotations
 
+import json
 import os
 import platform
 import sys
@@ -18,10 +19,10 @@ from urllib.parse import urlparse
 
 import netifaces  # ty: ignore[unresolved-import]
 from opsi_legacy import System
-from opsi_legacy.Util import objectToBeautifiedText
 from opsi_legacy.Util.File import IniFile
 from opsicommon.client.opsiservice import ServiceClient, ServiceVerificationFlags
 from opsicommon.logging import LOG_NOTICE, get_logger, logging_config, secret_filter
+from opsicommon.objects import serialize
 from opsicommon.system.network import get_fqdn
 from opsicommon.types import forceBool, forceHostId, forceList, forceProductIdList, forceUnicode, forceUnicodeList
 
@@ -597,7 +598,7 @@ class Config:
 		self.set("control_server", "static_dir", self.get("control_server", "static_dir").replace("/", os.sep))
 
 		logger.notice("Config read")
-		logger.debug("Config is now:\n %s", objectToBeautifiedText(self._config))
+		logger.debug("Config is now:\n %s", json.dumps(serialize(self.getDict()), indent=4))
 
 	def updateConfigFile(self, force: bool = False) -> None:
 		logger.info("Updating config file: '%s'", self.get("global", "config_file"))
@@ -982,7 +983,7 @@ class Config:
 			self.setProductCachingMode(True, sync_completed_action=smart_cache_sync_completed_action)
 
 		logger.notice("Got config from service")
-		logger.debug("Config is now:\n %s", objectToBeautifiedText(self.getDict()))
+		logger.debug("Config is now:\n %s", json.dumps(serialize(self.getDict()), indent=4))
 
 	def setProductCachingMode(self, activated: bool, sync_completed_action: Literal["none", "process", "reboot"] | None = None) -> None:
 		if activated:

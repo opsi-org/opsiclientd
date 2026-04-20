@@ -13,6 +13,7 @@ from collections import defaultdict
 from types import MethodType
 from typing import Any, Callable, Type, cast
 
+from opsi.crypt.blowfish import blowfish_decrypt
 from opsi_legacy.Backend.Backend import (
 	Backend,
 	BackendModificationListener,
@@ -21,7 +22,6 @@ from opsi_legacy.Backend.Backend import (
 )
 from opsi_legacy.Backend.Base.Extended import get_function_signature_and_args
 from opsi_legacy.Backend.Replicator import BackendReplicator
-from opsi_legacy.Util import blowfishDecrypt
 from opsicommon.exceptions import BackendConfigurationError, BackendMissingDataError, BackendUnaccomplishableError
 from opsicommon.license import OPSI_MODULE_IDS
 from opsicommon.logging import get_logger
@@ -700,7 +700,7 @@ class ClientCacheBackend(ConfigDataBackend, ModificationTrackingBackend):
 		password = self._masterBackend.user_getCredentials(username="pcpatch", hostId=self._clientId)  # ty: ignore[unresolved-attribute]
 		password = password["password"]
 		logger.notice("Creating opsi passwd file '%s' using opsi host key '%s...'", self._opsiPasswdFile, opsiHostKey[:10])
-		self.user_setCredentials(username="pcpatch", password=blowfishDecrypt(opsiHostKey, password))
+		self.user_setCredentials(username="pcpatch", password=blowfish_decrypt(opsiHostKey, password))
 		auditHardwareConfig = self._masterBackend.auditHardware_getConfig()  # ty: ignore[unresolved-attribute]
 		with open(self._auditHardwareConfigFile, "w", encoding="utf8") as file:
 			file.write(json.dumps(auditHardwareConfig))

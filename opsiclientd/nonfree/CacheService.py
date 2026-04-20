@@ -21,11 +21,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Type
 from urllib.parse import urlparse
 
+from opsi.crypt.secret import SecretAlphabet, generate_secret
 from opsi_legacy import System
 from opsi_legacy.Backend.Backend import Backend, ExtendedConfigDataBackend
 from opsi_legacy.Backend.BackendManager import BackendExtender
 from opsi_legacy.Backend.SQLite import SQLiteBackend, SQLiteObjectBackendModificationTracker
-from opsi_legacy.Util import randomString
 from opsi_legacy.Util.File.Opsi import PackageContentFile
 from opsi_legacy.Util.Message import ProgressSubjectProxy
 from opsi_legacy.Util.Repository import Repository, getRepository
@@ -1368,7 +1368,10 @@ class ProductCacheService(threading.Thread):
 			mount = False
 		mount_point = None
 		if RUNNING_ON_DARWIN:
-			mount_point = str(Path(config.get("depot_server", "drive")).parent / f".cifs-mount.{randomString(5)}")
+			mount_point = str(
+				Path(config.get("depot_server", "drive")).parent
+				/ f".cifs-mount.{generate_secret(5, alphabet=SecretAlphabet.ASCII_LETTERS)}"
+			)
 		self._repository = getRepository(
 			config.get("depot_server", "url"),
 			username=depotServerUsername,

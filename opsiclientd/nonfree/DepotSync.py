@@ -11,12 +11,13 @@ opsiclientd.nonfree.DepotSync
 import os
 import shutil
 import threading
+from pathlib import Path
 from typing import Any, Optional, Sequence
 
-from opsi_legacy.Util import md5sum
-from opsi_legacy.Util.File.Opsi import PackageContentFile
+from opsi.crypt.hash import compute_file_hash
+from opsi.opsi.package import PackageContentFileEntry, parse_package_content_file
+from opsi.system.environment import chdir
 from opsi_legacy.Util.Message import ProgressSubject
-from opsi_legacy.Util.Path import cd
 from opsi_legacy.Util.Repository import Repository
 from opsicommon.logging import get_logger
 from opsicommon.types import forceUnicode, forceUnicodeList
@@ -29,18 +30,18 @@ class DepotToLocalDirectorySynchronizer:
 		self,
 		sourceDepot: Repository,
 		destinationDirectory: str,
-		productIds: Optional[Sequence[str]] = None,
+		productIds: Sequence[str] | None = None,
 		maxBandwidth: int = 0,
 		dynamicBandwidth: bool = False,
-		continue_event: Optional[threading.Event] = None,
+		continue_event: threading.Event | None = None,
 	) -> None:
 		productIds = productIds or []
 		self._sourceDepot: Any = sourceDepot
 		self._destinationDirectory: str = forceUnicode(destinationDirectory)
 		self._productIds: list[str] = forceUnicodeList(productIds)
-		self._productId: Optional[str] = None
+		self._productId: str | None = None
 		self._linkFiles: dict[str, str] = {}
-		self._fileInfo: Optional[dict[str, Any]] = None
+		self._fileInfo: dict[str, PackageContentFileEntry] | None = None
 		os.makedirs(self._destinationDirectory, exist_ok=True)
 		self._sourceDepot.setBandwidth(dynamicBandwidth=dynamicBandwidth, maxBandwidth=maxBandwidth)
 		self._continue_event = continue_event
@@ -79,7 +80,7 @@ class DepotToLocalDirectorySynchronizer:
 				continue
 			if not self._fileInfo or relSource not in self._fileInfo:
 				continue
-			if self._fileInfo[relSource]["type"] == "d":
+			if self._fileInfo[relSource].type == "d":
 				self._synchronizeDirectories(sourcePath, destinationPath, progressSubject)
 			else:
 				logger.debug(
@@ -88,20 +89,22 @@ class DepotToLocalDirectorySynchronizer:
 					destinationPath,
 					self._fileInfo[relSource],
 				)
-				if self._fileInfo[relSource]["type"] == "l":
-					self._linkFiles[relSource] = self._fileInfo[relSource]["target"]
+				if self._fileInfo[relSource].type == "l":
+					target = self._fileInfo[relSource].target
+					if target:
+						self._linkFiles[relSource] = target
 					continue
 				size = 0
 				localSize = 0
 				exists = False
-				if self._fileInfo[relSource]["type"] == "f":
-					size = int(self._fileInfo[relSource]["size"])
+				if self._fileInfo[relSource].type == "f":
+					size = self._fileInfo[relSource].size
 					exists = os.path.exists(destinationPath)
 					if exists and os.path.isdir(destinationPath):
 						shutil.rmtree(destinationPath)
 						exists = False
 					if exists:
-						md5s = md5sum(destinationPath)
+						md5s = compute_file_hash(Path(destinationPath), "md5")
 						logger.debug(
 							"Destination file '%s' already exists (size: %s, md5sum: %s)",
 							destinationPath,
@@ -109,7 +112,7 @@ class DepotToLocalDirectorySynchronizer:
 							md5s,
 						)
 						localSize = os.path.getsize(destinationPath)
-						if localSize == size and md5s == self._fileInfo[relSource]["md5sum"]:
+						if localSize == size and md5s == self._fileInfo[relSource].md5sum:
 							continue
 
 				if progressSubject:
@@ -135,8 +138,8 @@ class DepotToLocalDirectorySynchronizer:
 							with open(partialEndFile, "rb") as f2:
 								shutil.copyfileobj(f2, f1)
 
-						md5s = md5sum(destinationPath)
-						if md5s != self._fileInfo[relSource]["md5sum"]:
+						md5s = compute_file_hash(Path(destinationPath), "md5")
+						if md5s != self._fileInfo[relSource].md5sum:
 							logger.info("MD5sum of composed file differs after downloading end part")
 							if os.path.exists(partialStartFile):
 								os.remove(partialStartFile)
@@ -160,8 +163,8 @@ class DepotToLocalDirectorySynchronizer:
 							if os.path.exists(destinationPath):
 								os.remove(destinationPath)
 							os.rename(partialStartFile, destinationPath)
-							md5s = md5sum(destinationPath)
-							if md5s != self._fileInfo[relSource]["md5sum"]:
+							md5s = compute_file_hash(Path(destinationPath), "md5")
+							if md5s != self._fileInfo[relSource].md5sum:
 								logger.info("MD5sum of composed file differs after downloading start part")
 								raise RuntimeError("MD5sum differs")
 						composed = True
@@ -185,11 +188,10 @@ class DepotToLocalDirectorySynchronizer:
 						sourcePath, destinationPath, progressSubject=progressSubject, pauseEvent=self._continue_event
 					)
 
-				md5s = md5sum(destinationPath)
-				if md5s != self._fileInfo[relSource]["md5sum"]:
+				md5s = compute_file_hash(Path(destinationPath), "md5")
+				if md5s != self._fileInfo[relSource].md5sum:
 					error = (
-						f"Failed to download '{item['name']}': "
-						f"MD5sum mismatch (local:{md5s} != remote:{self._fileInfo[relSource]['md5sum']})"
+						f"Failed to download '{item['name']}': MD5sum mismatch (local:{md5s} != remote:{self._fileInfo[relSource].md5sum})"
 					)
 					logger.error(error)
 					raise RuntimeError(error)
@@ -222,7 +224,7 @@ class DepotToLocalDirectorySynchronizer:
 			productProgressSubject.setMessage("Synchronizing product %s" % self._productId)
 			if productProgressObserver:
 				productProgressSubject.attachObserver(productProgressObserver)
-			packageContentFile = None
+			package_content_file = None
 
 			try:
 				self._linkFiles = {}
@@ -233,47 +235,44 @@ class DepotToLocalDirectorySynchronizer:
 					self._destinationDirectory,
 				)
 
-				productDestinationDirectory = os.path.join(self._destinationDirectory, self._productId)
-				if not os.path.isdir(productDestinationDirectory):
-					os.mkdir(productDestinationDirectory)
+				product_destination_directory = Path(self._destinationDirectory) / self._productId
+				product_destination_directory.mkdir(exist_ok=True)
 
 				logger.info("Downloading package content file")
-				packageContentFile = os.path.join(productDestinationDirectory, f"{self._productId}.files")
+				package_content_file = product_destination_directory / f"{self._productId}.files"
 				self._sourceDepot.download(
-					f"{self._productId}/{self._productId}.files", packageContentFile, pauseEvent=self._continue_event
+					f"{self._productId}/{self._productId}.files", str(package_content_file), pauseEvent=self._continue_event
 				)
-				self._fileInfo = PackageContentFile(packageContentFile).parse()
 
+				self._fileInfo = {}
 				size = 0
-				for value in self._fileInfo.values():
-					try:
-						size += int(value["size"])
-					except KeyError:
-						pass
+				for entry in parse_package_content_file(package_content_file):
+					self._fileInfo[entry.filename] = entry
+					size += entry.size
 
 				productProgressSubject.setMessage("Synchronizing product %s (%.2fkByte)" % (self._productId, (size / 1000)))
 				productProgressSubject.setEnd(size)
 				productProgressSubject.setEndChangable(False)
 
-				self._synchronizeDirectories(self._productId, productDestinationDirectory, productProgressSubject)
+				self._synchronizeDirectories(self._productId, str(product_destination_directory), productProgressSubject)
 
 				links = list(self._linkFiles.keys())
 				links.sort()
 				for linkDestination in links:
 					linkSource = self._linkFiles[linkDestination]
 
-					with cd(productDestinationDirectory):
+					with chdir(product_destination_directory):
 						if os.name == "nt":
 							if linkSource.startswith("/"):
 								linkSource = linkSource[1:]
 							if linkDestination.startswith("/"):
 								linkDestination = linkDestination[1:]
 							linkSource = os.path.join(
-								productDestinationDirectory,
+								str(product_destination_directory),
 								linkSource.replace("/", "\\"),
 							)
 							linkDestination = os.path.join(
-								productDestinationDirectory,
+								str(product_destination_directory),
 								linkDestination.replace("/", "\\"),
 							)
 							if os.path.exists(linkDestination):
@@ -304,8 +303,8 @@ class DepotToLocalDirectorySynchronizer:
 							os.symlink(linkSource, linkDestination)
 			except Exception as error:
 				productProgressSubject.setMessage("Failed to sync product %s: %s" % (self._productId, error))
-				if packageContentFile and os.path.exists(packageContentFile):
-					os.unlink(packageContentFile)
+				if package_content_file:
+					package_content_file.unlink(missing_ok=True)
 				raise
 
 			if overallProgressSubject:

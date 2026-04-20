@@ -27,13 +27,11 @@ from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlparse
 
 import psutil
+from opsi.system.environment import chdir
 from opsi_legacy import System
-from opsi_legacy.Object import ProductOnClient
 from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject, MessageSubjectProxy, ProgressSubjectProxy
-from opsi_legacy.Util.Path import cd
-from opsi_legacy.Util.Thread import KillableThread
 from opsicommon.logging import LOG_INFO, get_logger, log_context, logging_config
-from opsicommon.objects import Product
+from opsicommon.objects import Product, ProductOnClient
 from opsicommon.types import forceInt, forceStringList, forceUnicode, forceUnicodeLower
 
 from opsiclientd import __version__
@@ -86,9 +84,9 @@ class EventProcessingCanceled(Exception):
 	pass
 
 
-class EventProcessingThread(KillableThread):
+class EventProcessingThread(threading.Thread):
 	def __init__(self, opsiclientd: Opsiclientd, event: Event) -> None:
-		KillableThread.__init__(self, name="EventProcessingThread")
+		super().__init__(name="EventProcessingThread")
 
 		self.opsiclientd = opsiclientd
 		self.event = event
@@ -1261,7 +1259,7 @@ class EventProcessingThread(KillableThread):
 
 					self.setStatusMessage(_("Action processor is running"))
 
-					with cd(tmpdir):
+					with chdir(Path(tmpdir)):
 						runCommandInSession(
 							command=command,
 							sessionId=self.getSessionId(),

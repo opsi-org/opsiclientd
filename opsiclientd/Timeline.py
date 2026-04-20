@@ -35,7 +35,6 @@ import time
 from typing import Any
 
 from opsi_legacy.Backend.SQLite import SQLite
-from opsi_legacy.Util import timestamp
 from opsicommon.logging import get_logger
 from opsicommon.types import forceBool, forceInt, forceOpsiTimestamp, forceUnicode
 
@@ -121,6 +120,10 @@ function onResize() {
 """
 
 
+def timestamp(secs: float = 0.0) -> str:
+	return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(secs or time.time()))
+
+
 class Timeline:
 	"""Timeline"""
 
@@ -151,7 +154,7 @@ class Timeline:
 
 	def stop(self) -> None:
 		self._stopped = True
-		end = forceOpsiTimestamp(timestamp())
+		end = timestamp()
 
 		if self._sql:
 			with self._db_lock, self._sql.session() as session:

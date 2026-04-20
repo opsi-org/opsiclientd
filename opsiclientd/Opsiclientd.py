@@ -32,8 +32,8 @@ import opsi_legacy
 
 sys.modules["OPSI"] = opsi_legacy
 import psutil
+from opsi.crypt.secret import SecretAlphabet, generate_secret
 from opsi_legacy import System
-from opsi_legacy.Util import randomString
 from opsi_legacy.Util.Message import ChoiceSubject, MessageSubject
 from opsicommon import __version__ as opsicommon_version
 from opsicommon.logging import get_logger, log_context, secret_filter
@@ -447,7 +447,9 @@ class Opsiclientd(EventListener, threading.Thread):
 		self._actionProcessorUserName = run_as_user
 		logger.notice(f"Creating local user '{run_as_user}'")
 
-		self._actionProcessorUserPassword = "$!?" + str(randomString(16)) + "!/%"
+		self._actionProcessorUserPassword = generate_secret(
+			22, alphabet=(SecretAlphabet.ASCII_LETTERS, SecretAlphabet.DIGITS), required_chars="$!?/%"
+		)
 		secret_filter.add_secrets(self._actionProcessorUserPassword)
 
 		if System.existsUser(username=run_as_user):
