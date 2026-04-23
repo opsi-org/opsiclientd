@@ -987,20 +987,21 @@ class Config:
 
 	def setProductCachingMode(self, activated: bool, sync_completed_action: Literal["none", "process", "reboot"] | None = None) -> None:
 		if activated:
+			start_event = "event_gui_startup" if RUNNING_ON_WINDOWS else "event_opsiclientd_start"
+
 			self.set("event_net_connection", "active", False)
 			self.set("event_timer", "active", True)
-			if RUNNING_ON_WINDOWS:
-				self.set("event_gui_startup", "active", False)
-				self.set("event_opsiclientd_start", "active", False)
-				self.set("event_gui_startup{cache_ready}", "active", True)
-				self.set("event_gui_startup{cache_ready}", "use_cached_config", False)
-				self.set("event_gui_startup{cache_ready}", "use_cached_products", True)
+			self.set("event_gui_startup", "active", True)
+			self.set("event_opsiclientd_start", "active", False)
+
+			for section in (start_event, f"{start_event}{{cache_ready}}"):
+				self.set(section, "active", True)
+				self.set(section, "use_cached_config", False)
+				self.set(section, "use_cached_products", True)
 			else:
 				self.set("event_gui_startup", "active", False)
-				self.set("event_opsiclientd_start", "active", False)
-				self.set("event_opsiclientd_start{cache_ready}", "active", True)
-				self.set("event_opsiclientd_start{cache_ready}", "use_cached_config", False)
-				self.set("event_opsiclientd_start{cache_ready}", "use_cached_products", True)
+				self.set("event_opsiclientd_start", "active", True)
+
 			self.set("event_sync", "sync_config_from_server", False)
 			self.set("event_sync", "sync_config_to_server", False)
 			self.set("event_sync", "cache_products", True)
@@ -1018,7 +1019,6 @@ class Config:
 				elif sync_completed_action == "process":
 					self.set(section, "process_actions", True)
 					self.set(section, "use_cached_products", True)
-			# Make configurable?
 			self.set("event_on_demand", "cache_products", True)
 			self.set("event_on_demand", "use_cached_products", True)
 		else:
