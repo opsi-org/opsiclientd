@@ -997,6 +997,10 @@ class Config:
 				self.set(f"{start_event}{precondition}", "active", True)
 				self.set(f"{start_event}{precondition}", "use_cached_config", False)
 				self.set(f"{start_event}{precondition}", "use_cached_products", True)
+			self.set(f"{start_event}", "cache_products", True)
+
+			self.set("event_on_demand", "cache_products", True)
+			self.set("event_on_demand", "use_cached_products", True)
 
 			self.set("event_sync", "sync_config_from_server", False)
 			self.set("event_sync", "sync_config_to_server", False)
@@ -1019,8 +1023,6 @@ class Config:
 					self.set(section, "process_actions", True)
 					self.set(section, "use_cached_products", True)
 
-			self.set("event_on_demand", "cache_products", True)
-			self.set("event_on_demand", "use_cached_products", True)
 		else:
 			# Set back to default values (as defined in default config file)
 			self.set("event_net_connection", "active", False)
@@ -1032,6 +1034,10 @@ class Config:
 				self.set(f"{start_event}{precondition}", "active", True)
 				self.set(f"{start_event}{precondition}", "use_cached_config", True)
 				self.set(f"{start_event}{precondition}", "use_cached_products", True)
+			self.set(f"{start_event}", "cache_products", False)
+
+			self.set("event_on_demand", "cache_products", False)
+			self.set("event_on_demand", "use_cached_products", False)
 
 			self.set("event_sync", "sync_config_from_server", True)
 			self.set("event_sync", "sync_config_to_server", True)
@@ -1047,6 +1053,3 @@ class Config:
 				self.set(section, "reboot", False)
 				self.set(section, "process_actions", False)
 				self.set(section, "use_cached_products", False)
-
-			self.set("event_on_demand", "cache_products", False)
-			self.set("event_on_demand", "use_cached_products", False)
