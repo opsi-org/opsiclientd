@@ -1986,6 +1986,7 @@ class EventProcessingThread(threading.Thread):
 
 					self.permanent_service_connection.assert_connected()
 					if self.event.eventConfig.getConfigFromService or self.event.eventConfig.processActions:
+						logger.notice("Waiting for connection to config server")
 						self.wait_for_service_connection()
 
 						if self.event.eventConfig.getConfigFromService:
@@ -2000,6 +2001,7 @@ class EventProcessingThread(threading.Thread):
 							self._set_cancelable(False)
 
 							if self.event.eventConfig.cacheProducts and self.event.eventConfig.useCachedProducts:
+								logger.info("Event '%s' should cache products and uses cached products", self.event.eventConfig.getId())
 								self.cache_products(wait_for_ending=True, fire_sync_completed_event=False)
 
 							if self.event.eventConfig.actionType == "login":
