@@ -989,10 +989,10 @@ class Config:
 		if activated:
 			start_event = "event_gui_startup" if RUNNING_ON_WINDOWS else "event_opsiclientd_start"
 
+			self.set("event_gui_startup", "active", False)
+			self.set("event_opsiclientd_start", "active", False)
 			self.set("event_net_connection", "active", False)
 			self.set("event_timer", "active", True)
-			self.set("event_gui_startup", "active", True)
-			self.set("event_opsiclientd_start", "active", False)
 
 			for section in (start_event, f"{start_event}{{cache_ready}}"):
 				self.set(section, "active", True)
