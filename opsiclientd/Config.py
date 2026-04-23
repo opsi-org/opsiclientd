@@ -994,7 +994,9 @@ class Config:
 			for precondition in ("", "{cache_ready}"):
 				self.set(f"event_gui_startup{precondition}", "active", False)
 				self.set(f"event_opsiclientd_start{precondition}", "active", False)
-				self.set(f"{start_event}{precondition}", "active", True)
+				if not precondition:
+					# cache-ready not needed, actions will be processed on startup no matter if cache is ready or not
+					self.set(f"{start_event}{precondition}", "active", True)
 				self.set(f"{start_event}{precondition}", "cache_products", True)
 				self.set(f"{start_event}{precondition}", "use_cached_config", False)
 				self.set(f"{start_event}{precondition}", "use_cached_products", True)
