@@ -1253,7 +1253,8 @@ class Opsiclientd(EventListener, threading.Thread):
 							timeout=displaySeconds,
 						)
 						logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
-						runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
+						# sessionId is int for windows and str for posix
+						runCommandInSession(command=notifierCommand, sessionId=f":{sessionId}", waitForProcessEnding=False)  # ty: ignore[invalid-argument-type]
 				except Exception as err:
 					logger.error(
 						"Failed to start popup message notifier app in session %r on desktop %r: %s", sessionId, desktop, err, exc_info=True
@@ -1369,7 +1370,7 @@ class Opsiclientd(EventListener, threading.Thread):
 							timeout=timeout,
 						)
 						logger.info("Running notifier command %r in session %r", notifierCommand, sessionId)
-						runCommandInSession(command=notifierCommand, sessionId=sessionId, waitForProcessEnding=False)
+						runCommandInSession(command=notifierCommand, sessionId=f":{sessionId}", waitForProcessEnding=False)  # ty: ignore[invalid-argument-type]
 				except Exception as err:
 					logger.error(
 						"Failed to start popup message notifier app in session %r on desktop %r: %s", sessionId, desktop, err, exc_info=True
