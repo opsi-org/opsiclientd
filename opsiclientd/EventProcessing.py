@@ -1357,7 +1357,7 @@ class EventProcessingThread(KillableThread):
 					with cd(tmpdir):
 						runCommandInSession(
 							command=command,
-							sessionId=self.getSessionId(),
+							sessionId=f":{self.getSessionId()}",  # ty: ignore[invalid-argument-type]
 							waitForProcessEnding=True,
 							timeoutSeconds=self.event.eventConfig.actionProcessorTimeout,
 						)
