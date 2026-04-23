@@ -143,7 +143,7 @@ def lin_get_sessions(user: str | None = None, limit_to_one_per_user: bool = True
 					sessions.append(DesktopSession(id=int(env["DISPLAY"][1:]), desktop=session_class, user=env["USER"]))
 		except (psutil.AccessDenied, psutil.NoSuchProcess) as err:
 			logger.debug(err)
-	print(sessions)
+	logger.devel(sessions)
 	if limit_to_one_per_user:
 		relevant_users = [user] if user else [entry.user for entry in sessions]
 		relevant_sessions: list[DesktopSession] = []
@@ -152,6 +152,7 @@ def lin_get_sessions(user: str | None = None, limit_to_one_per_user: bool = True
 				min([user_session for user_session in sessions if user_session.user == single_user], key=lambda x: x.id)
 			)
 		sessions = relevant_sessions
+	logger.devel(sessions)
 	return sessions
 
 
