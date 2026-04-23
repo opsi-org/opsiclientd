@@ -466,7 +466,7 @@ class EventProcessingThread(KillableThread):
 		try:
 			process, _hThread, processId, _dwThreadId = runCommandInSession(
 				command=command,
-				sessionId=sessionId,
+				sessionId=sessionId if RUNNING_ON_WINDOWS else f":{sessionId}",  # ty: ignore[invalid-argument-type]
 				desktop=desktop,
 				waitForProcessEnding=waitForProcessEnding,
 				timeoutSeconds=timeoutSeconds,
