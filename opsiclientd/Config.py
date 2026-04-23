@@ -995,9 +995,9 @@ class Config:
 				self.set(f"event_gui_startup{precondition}", "active", False)
 				self.set(f"event_opsiclientd_start{precondition}", "active", False)
 				self.set(f"{start_event}{precondition}", "active", True)
+				self.set(f"{start_event}{precondition}", "cache_products", True)
 				self.set(f"{start_event}{precondition}", "use_cached_config", False)
 				self.set(f"{start_event}{precondition}", "use_cached_products", True)
-			self.set(f"{start_event}", "cache_products", True)
 
 			self.set("event_on_demand", "cache_products", True)
 			self.set("event_on_demand", "use_cached_products", True)
@@ -1032,9 +1032,9 @@ class Config:
 				self.set(f"event_gui_startup{precondition}", "active", False)
 				self.set(f"event_opsiclientd_start{precondition}", "active", False)
 				self.set(f"{start_event}{precondition}", "active", True)
+				self.set(f"{start_event}{precondition}", "cache_products", False)
 				self.set(f"{start_event}{precondition}", "use_cached_config", True)
 				self.set(f"{start_event}{precondition}", "use_cached_products", True)
-			self.set(f"{start_event}", "cache_products", False)
 
 			self.set("event_on_demand", "cache_products", False)
 			self.set("event_on_demand", "use_cached_products", False)
