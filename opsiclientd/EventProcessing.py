@@ -145,7 +145,7 @@ def lin_get_sessions(user: str | None = None, limit_to_one_per_user: bool = True
 			logger.debug(err)
 	logger.devel(sessions)
 	if limit_to_one_per_user:
-		relevant_users = [user] if user else [entry.user for entry in sessions]
+		relevant_users = [user] if user else list({entry.user for entry in sessions})
 		relevant_sessions: list[DesktopSession] = []
 		for single_user in relevant_users:
 			relevant_sessions.append(
