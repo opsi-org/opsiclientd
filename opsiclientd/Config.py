@@ -986,31 +986,30 @@ class Config:
 		logger.debug("Config is now:\n %s", json.dumps(serialize(self.getDict()), indent=4))
 
 	def setProductCachingMode(self, activated: bool, sync_completed_action: Literal["none", "process", "reboot"] | None = None) -> None:
+		start_event = "event_gui_startup" if RUNNING_ON_WINDOWS else "event_opsiclientd_start"
 		if activated:
-			start_event = "event_gui_startup" if RUNNING_ON_WINDOWS else "event_opsiclientd_start"
-
-			self.set("event_gui_startup", "active", False)
-			self.set("event_opsiclientd_start", "active", False)
 			self.set("event_net_connection", "active", False)
 			self.set("event_timer", "active", True)
 
-			for section in (start_event, f"{start_event}{{cache_ready}}"):
-				self.set(section, "active", True)
-				self.set(section, "use_cached_config", False)
-				self.set(section, "use_cached_products", True)
-			else:
-				self.set("event_gui_startup", "active", False)
-				self.set("event_opsiclientd_start", "active", True)
+			for precondition in ("", "{cache_ready}"):
+				self.set(f"event_gui_startup{precondition}", "active", False)
+				self.set(f"event_opsiclientd_start{precondition}", "active", False)
+				self.set(f"{start_event}{precondition}", "active", True)
+				self.set(f"{start_event}{precondition}", "use_cached_config", False)
+				self.set(f"{start_event}{precondition}", "use_cached_products", True)
 
 			self.set("event_sync", "sync_config_from_server", False)
 			self.set("event_sync", "sync_config_to_server", False)
 			self.set("event_sync", "cache_products", True)
+
 			self.set("precondition_cache_ready_user_logged_in", "config_cached", False)
 			self.set("precondition_cache_ready_user_logged_in", "products_cached", True)
 			self.set("precondition_cache_ready", "config_cached", False)
 			self.set("precondition_cache_ready", "products_cached", True)
+
 			# sync_completed_action can be "none", "process" or "reboot"
-			for section in ("event_sync_completed{cache_ready_user_logged_in}", "event_sync_completed{cache_ready}"):
+			for precondition in ("{cache_ready_user_logged_in}", "{cache_ready}"):
+				section = f"event_sync_completed{precondition}"
 				self.set(section, "reboot", False)
 				self.set(section, "process_actions", False)
 				self.set(section, "use_cached_products", False)
@@ -1019,36 +1018,35 @@ class Config:
 				elif sync_completed_action == "process":
 					self.set(section, "process_actions", True)
 					self.set(section, "use_cached_products", True)
+
 			self.set("event_on_demand", "cache_products", True)
 			self.set("event_on_demand", "use_cached_products", True)
 		else:
 			# Set back to default values (as defined in default config file)
 			self.set("event_net_connection", "active", False)
 			self.set("event_timer", "active", False)
-			if RUNNING_ON_WINDOWS:
-				self.set("event_gui_startup", "active", True)
-				self.set("event_gui_startup{cache_ready}", "active", True)
-				self.set("event_opsiclientd_start", "active", False)
-				self.set("event_opsiclientd_start{cache_ready}", "active", False)
-			else:
-				self.set("event_gui_startup", "active", False)
-				self.set("event_gui_startup{cache_ready}", "active", False)
-				self.set("event_opsiclientd_start", "active", True)
-				self.set("event_opsiclientd_start{cache_ready}", "active", True)
-			self.set("event_gui_startup{cache_ready}", "use_cached_config", True)
-			self.set("event_gui_startup{cache_ready}", "use_cached_products", True)
-			self.set("event_opsiclientd_start{cache_ready}", "use_cached_config", True)
-			self.set("event_opsiclientd_start{cache_ready}", "use_cached_products", True)
+
+			for precondition in ("", "{cache_ready}"):
+				self.set(f"event_gui_startup{precondition}", "active", False)
+				self.set(f"event_opsiclientd_start{precondition}", "active", False)
+				self.set(f"{start_event}{precondition}", "active", True)
+				self.set(f"{start_event}{precondition}", "use_cached_config", True)
+				self.set(f"{start_event}{precondition}", "use_cached_products", True)
+
 			self.set("event_sync", "sync_config_from_server", True)
 			self.set("event_sync", "sync_config_to_server", True)
 			self.set("event_sync", "cache_products", True)
+
 			self.set("precondition_cache_ready_user_logged_in", "config_cached", True)
 			self.set("precondition_cache_ready_user_logged_in", "products_cached", True)
 			self.set("precondition_cache_ready", "config_cached", True)
 			self.set("precondition_cache_ready", "products_cached", True)
-			for section in ("event_sync_completed{cache_ready_user_logged_in}", "event_sync_completed{cache_ready}"):
+
+			for precondition in ("{cache_ready_user_logged_in}", "{cache_ready}"):
+				section = f"event_sync_completed{precondition}"
 				self.set(section, "reboot", False)
 				self.set(section, "process_actions", False)
 				self.set(section, "use_cached_products", False)
+
 			self.set("event_on_demand", "cache_products", False)
 			self.set("event_on_demand", "use_cached_products", False)
